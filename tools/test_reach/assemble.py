@@ -41,7 +41,7 @@ What it cannot see, and what I did about it:
 
 ## 1. Native test groups
 
-{n} entries: the {n-3} `SCRAPERX_ONLY` groups of `tests/simulation_tests.cpp` (the second `swing` block is shadowed by the first and never runs: `run_swing` runs only in the full run), the full run (`scraperx_sim.athletic_traversal`: every `run_*` in main(); the groups `matron-chase` and `matron-grab` run only in their own slice, as the comments in main() say), and the two other test executables.
+{n} entries: the {n-3} `SCRAPERX_ONLY` groups of `tests/simulation_tests.cpp`, the full run (`scraperx_sim.athletic_traversal`: every `run_*` in main(); the groups `matron-chase` and `matron-grab` run only in their own slice, as the comments in main() say), and the two other test executables.
 
 "Src functions reached" is the group's size without the per-tick step: the smaller, the cheaper and more focused. The last column lists the `src/sim` and bridge `.cpp` files that no more than 30% of groups reach: what makes the group different.
 
@@ -105,7 +105,6 @@ Run with `tools/godot/godot --headless --path godot --script res://tests/<name>.
 - `src/sim/matron_mover.hpp`: interface only, no code.
 - Bridge (`src/bridge/scraperx_simulation.cpp`): the native groups do not link it; every `get_*_state` and `_bind_methods` is reached only by the touch scenarios and the game.
 - Presentation: {", ".join("`"+x.replace("godot/presentation/","")+"`" for x in gd["unreach"])}. See section 7 for what that means.
-- `SCRAPERX_ONLY=swing` runs the parkour list (`run_brachiation` ... `run_c7`), not `run_swing` (the AS-012 swing): the second `swing` block in main() is never reached. `run_swing` runs only in the full run.
 
 ## Method (to regenerate)
 

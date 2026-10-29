@@ -2,7 +2,7 @@
 
 Look up the file (or function, with its line number) you changed; the row names the native groups and touch scenarios that run it. This serves `CLAUDE.md` "Test only what a change reaches": run those, cheapest first, once, and say in the report which and why. It is a lookup, not a verdict: read "How far to trust it" first.
 
-Built 2026-10-29 on claude/test-reach-tools-20261029 at commit 32fa84b. Regenerate when the test lists, the kit's body order or the call structure change a lot (the method is below); a stale map is worse than none.
+Built 2026-10-29 on claude/maps-refresh-20261029 at commit 1bd28c1. Regenerate when the test lists, the kit's body order or the call structure change a lot (the method is below); a stale map is worse than none.
 
 ## How to use it (30 seconds)
 
@@ -18,7 +18,7 @@ Built from the code, not from names: every `src/sim`, `src/bridge` and `tests/*.
 
 What it cannot see, and what I did about it:
 
-- **Every group ticks the world.** `Simulation::advance_frame` reaches 90 of the `src` files from any group, so plain reachability says "all tests reach everything". The per-tick step is therefore cut out: **T1** is reach without passing through it (setup calls, debug hooks, requests, accessors). Code that only runs in the tick when the right state holds is not separated by T1.
+- **Every group ticks the world.** `Simulation::advance_frame` reaches 92 of the `src` files from any group, so plain reachability says "all tests reach everything". The per-tick step is therefore cut out: **T1** is reach without passing through it (setup calls, debug hooks, requests, accessors). Code that only runs in the tick when the right state holds is not separated by T1.
 - **O (observes).** A group counts as observing a function if it reaches the function (tick included) and its test code reads a struct field (`MatronSnapshot.grabs`, `Snapshot.zipline_riding`, ...) that the function also touches. Fields read by more than 35% of groups are ignored as noise. This is evidence a test watches the function's effect, not proof it runs the branch you changed.
 - **D** is the strongest: some test function calls the function directly. It is rarely complete (a group that reaches the code through the tick is not a D).
 - **Virtual calls** are followed to every override; Jolt callbacks (contact listener and layer filters) are tied to every `PhysicsSystem::Update`; `make_unique`/`emplace` construct edges go to the class's constructors; a destructor counts with its constructor. Function pointers stored in tables, `std::function`, and GDScript signals/`call_deferred` by string are followed only when the name is a literal in a `connect`/`call_deferred`/`Callable` call; anything else is missed (GD side: **may run via signals/scene wiring**).
@@ -26,7 +26,7 @@ What it cannot see, and what I did about it:
 
 ## 1. Native test groups
 
-105 entries: the 102 `SCRAPERX_ONLY` groups of `tests/simulation_tests.cpp` (the second `swing` block is shadowed by the first and never runs: `run_swing` runs only in the full run), the full run (`scraperx_sim.athletic_traversal`: every `run_*` in main(); the groups `matron-chase` and `matron-grab` run only in their own slice, as the comments in main() say), and the two other test executables.
+106 entries: the 103 `SCRAPERX_ONLY` groups of `tests/simulation_tests.cpp`, the full run (`scraperx_sim.athletic_traversal`: every `run_*` in main(); the groups `matron-chase` and `matron-grab` run only in their own slice, as the comments in main() say), and the two other test executables.
 
 "Src functions reached" is the group's size without the per-tick step: the smaller, the cheaper and more focused. The last column lists the `src/sim` and bridge `.cpp` files that no more than 30% of groups reach: what makes the group different.
 
@@ -83,9 +83,9 @@ What it cannot see, and what I did about it:
 | `well` | - | run_well_stage_a, run_well_stage_b, run_well_stage_c, run_well_band | 591 | - |
 | `ascent` | - | run_ascent | 592 | - |
 | `derrick` | - | run_derrick | 593 | - |
-| `swing (shadowed second block: never runs)` | - | run_swing | 593 | - |
+| `swing` | - | run_swing | 593 | - |
 | `wheel` | - | run_wheel | 593 | - |
-| `matron-stand` | scraperx_sim.matron-stand | run_matron_stand | 594 | matron_stalk.cpp |
+| `matron-stand` | scraperx_sim.matron-stand | run_matron_stand | 594 | - |
 | `matron-pipe` | - | run_matron_pipe | 595 | - |
 | `spreader` | - | run_yard_crane_spreader | 595 | - |
 | `stack` | - | run_stack | 595 | - |
@@ -100,7 +100,7 @@ What it cannot see, and what I did about it:
 | `matron-pursuit` | - | run_matron_pursuit | 613 | matron_fatality.cpp, physics_world_arm.cpp, physics_world_grab.cpp |
 | `matron-player-independence` | - | run_matron_player_independence | 620 | matron_fatality.cpp, matron_moves.cpp, physics_world_arm.cpp, physics_world_grab.cpp |
 | `matron-ring-descent` | - | run_matron_ring_descent | 625 | matron_fatality.cpp, physics_world_arm.cpp, physics_world_grab.cpp |
-| `matron-found-climb` | - | run_matron_found_climb | 628 | matron_fatality.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_grab.cpp |
+| `matron-found-climb` | - | run_matron_found_climb | 628 | matron_fatality.cpp, physics_world_arm.cpp, physics_world_grab.cpp |
 | `matron-ladders` | scraperx_sim.matron-ladders | run_matron_ladders | 629 | matron_moves.cpp |
 | `matron-tower` | scraperx_sim.matron-tower | run_matron_tower_proof | 630 | matron_moves.cpp |
 | `matron-ways` | - | run_matron_ways | 631 | matron_moves.cpp |
@@ -108,36 +108,37 @@ What it cannot see, and what I did about it:
 | `matron-chase` | scraperx_sim.matron-chase | run_matron_chase | 634 | matron_fatality.cpp, physics_world_arm.cpp, physics_world_grab.cpp |
 | `matron-climb-scan` | - | run_matron_climb_scan | 635 | matron_moves.cpp |
 | `up` | - | run_up_controls | 640 | - |
-| `teeter` | - | run_teeter | 667 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `save` | - | run_save | 672 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `twin` | - | run_twin | 680 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `bay` | - | run_bay | 681 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `corpse` | - | run_corpse, run_arm_break | 687 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `magnet` | - | run_yard_crane_magnet | 697 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `swing` | - | run_brachiation, run_pipe_gallery, run_slide, run_speed_vault, run_wall_run, run_wall_climb +11 | 705 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `AS-007-E` | - | run_wet_e | 707 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `strike` | - | run_strike | 708 | fabricated.cpp, matron_fatality.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `AS-007` | - | run_wet_isolation, run_wet_e, run_wet_handling, run_wet_band, run_wet_route | 710 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `fabricated` | - | run_fabricated | 726 | fabricated.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `matron-fatality` | - | run_matron_fatality | 729 | fabricated.cpp, matron_fatality.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `matron-grab` | scraperx_sim.matron-grab | run_matron_grab, run_matron_arm, run_matron_fatality | 755 | fabricated.cpp, matron_fatality.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
-| `matron-exam` | - | run_matron_exam | 846 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-chain` | scraperx_sim.matron-chain | run_matron_chain | 847 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-narrow` | - | run_matron_narrow | 847 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-towers` | scraperx_sim.matron-towers | run_matron_towers | 847 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-exam-climber` | - | run_matron_exam_climber | 848 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-climb-board` | - | run_matron_climb_board | 862 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-climb` | - | run_matron_climb, run_matron_climb_board, run_matron_climb_scan | 875 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-hearing` | scraperx_sim.matron-hearing | test_matron_hearing | 952 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-sight` | scraperx_sim.matron-sight | test_matron_sight | 952 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-exam-routecraft` | - | run_matron_exam_routecraft | 953 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `shared_survival (own exe)` | scraperx_sim.shared_survival | main | 953 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-board-walls` | scraperx_sim.matron-board-walls | run_matron_board_walls | 954 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-climb-support` | scraperx_sim.matron-climb-support | test_matron_climb_support | 954 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-exam-descent` | - | run_matron_exam_descent | 954 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-stalk` | scraperx_sim.matron-stalk | test_matron_stalk, test_matron_ladder_head | 958 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `matron-routecraft` | - | run_matron_routecraft | 969 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_fabricated.cpp |
-| `(all: scraperx_sim.athletic_traversal)` | scraperx_sim.athletic_traversal | run_pulley_static_end, run_matron_exam, run_core_traversal, run_fall_checkpoint, run_world_solids, run_twin_geometry +96 | 1304 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_stalk.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `teeter` | - | run_teeter | 667 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `save` | - | run_save | 672 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `twin` | - | run_twin | 680 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `bay` | - | run_bay | 681 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `corpse` | - | run_corpse, run_arm_break | 687 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `magnet` | - | run_yard_crane_magnet | 697 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `parkour-moves` | - | run_brachiation, run_pipe_gallery, run_slide, run_speed_vault, run_wall_run, run_wall_climb +11 | 705 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `AS-007-E` | - | run_wet_e | 707 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `strike` | - | run_strike | 708 | fabricated.cpp, matron_fatality.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `AS-007` | - | run_wet_isolation, run_wet_e, run_wet_handling, run_wet_band, run_wet_route | 710 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `fabricated` | - | run_fabricated | 726 | fabricated.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `matron-fatality` | - | run_matron_fatality | 729 | fabricated.cpp, matron_fatality.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `matron-grab` | scraperx_sim.matron-grab | run_matron_grab, run_matron_arm, run_matron_fatality | 755 | fabricated.cpp, matron_fatality.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
+| `matron-exam` | - | run_matron_exam | 851 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-chain` | scraperx_sim.matron-chain | run_matron_chain | 852 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-narrow` | - | run_matron_narrow | 852 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-towers` | scraperx_sim.matron-towers | run_matron_towers | 852 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-exam-climber` | - | run_matron_exam_climber | 853 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-climb-board` | - | run_matron_climb_board | 867 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-climb` | - | run_matron_climb, run_matron_climb_board, run_matron_climb_scan | 880 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-hearing` | scraperx_sim.matron-hearing | test_matron_hearing | 961 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-sight` | scraperx_sim.matron-sight | test_matron_sight | 961 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-exam-routecraft` | - | run_matron_exam_routecraft | 962 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `shared_survival (own exe)` | scraperx_sim.shared_survival | main | 962 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-board-walls` | scraperx_sim.matron-board-walls | run_matron_board_walls | 963 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-climb-support` | scraperx_sim.matron-climb-support | test_matron_climb_support | 963 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-exam-descent` | - | run_matron_exam_descent | 963 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-honest` | scraperx_sim.matron-honest | test_matron_honest | 963 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-stalk` | scraperx_sim.matron-stalk | test_matron_stalk, test_matron_ladder_head | 968 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `matron-routecraft` | - | run_matron_routecraft | 978 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_fabricated.cpp |
+| `(all: scraperx_sim.athletic_traversal)` | scraperx_sim.athletic_traversal | run_pulley_static_end, run_matron_exam, run_core_traversal, run_fall_checkpoint, run_world_solids, run_twin_geometry +96 | 1313 | bridge/scraperx_simulation.cpp, fabricated.cpp, matron_fatality.cpp, matron_moves.cpp, matron_perception.cpp, physics_world_arm.cpp, physics_world_fabricated.cpp, physics_world_fatality.cpp, physics_world_grab.cpp |
 
 Not groups but also tests: `tests/twin_geometry_test.py <pre-relocation commit>` (compares `src/sim/world_solids.inc` boxes against a base commit; no `src/sim/*.cpp` is run); CI runs `ctest` plus a bare `./build/host/scraperx_sim_tests` (every group in the default order).
 
@@ -147,99 +148,101 @@ Not groups but also tests: `tests/twin_geometry_test.py <pre-relocation commit>`
 
 | Source file | Lines | Run these (tier, narrowest first) | Groups reaching it without the tick | Groups reaching it only via the tick | Verdict |
 |---|---|---|---|---|---|
-| `src/bridge/scraperx_simulation.cpp` | 2129 | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16 | 88 | specific |
-| `src/bridge/scraperx_simulation.hpp` | 297 | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16 | 88 | specific |
-| `src/sim/band_counterweight_well.cpp` | 1089 | **D** `matron-routecraft` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/band_facade_crane.cpp` | 549 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/band_midstack_service.cpp` | 1226 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/band_plate_shop.cpp` | 507 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/band_stack.cpp` | 1708 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/band_wet_isolation.cpp` | 799 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/bay.cpp` | 328 | **T1+O** `shared_survival (own exe)` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/bay.hpp` | 185 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/climb_c6.cpp` | 146 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/climb_c7.cpp` | 187 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/corpse.cpp` | 222 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/corpse.hpp` | 113 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/crew.cpp` | 357 | **T1+O** `matron-climb-scan`, `matron-exam`, `matron-chain`, `matron-narrow` +10 more · **T1** ~all (91) | 105 | 0 | core: ~every group |
-| `src/sim/crew.hpp` | 141 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/fabricated.cpp` | 210 | **D** `fabricated` · **T1** `teeter`, `save`, `twin`, `bay` +24 more | 29 | 75 | specific |
-| `src/sim/forklift.cpp` | 481 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/forklift.hpp` | 176 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/impacts.cpp` | 112 | **D** `stock`, `matron-crash`, `matron` · **T1+O** `up-throw`, `forklift`, `crane`, `up` +1 more · **T1** ~all (97) | 105 | 0 | core: ~every group |
-| `src/sim/impacts.hpp` | 88 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/loose_stock.cpp` | 871 | **D** `stock`, `forklift`, `spreader`, `crane` +1 more · **T1** ~all (100) | 105 | 0 | core: ~every group |
-| `src/sim/loose_stock.hpp` | 152 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/matron.cpp` | 4643 | **D** `jumpbuffer`, `edge-stand`, `workers`, `C6` +100 more · **T1** `twin-geometry` | 105 | 0 | core: ~every group |
-| `src/sim/matron.hpp` | 2610 | **D** `jumpbuffer`, `edge-stand`, `workers`, `C6` +100 more · **T1** `twin-geometry` | 105 | 0 | core: ~every group |
-| `src/sim/matron_climb.cpp` | 258 | **T1+O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` +9 more · **T1** ~all (92) | 105 | 0 | core: ~every group |
-| `src/sim/matron_contact.cpp` | 112 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/matron_fatality.cpp` | 339 | **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +18 more | 22 | 77 | specific |
-| `src/sim/matron_found_climb.cpp` | 774 | **T1+O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` +13 more · **T1** ~all (88) | 105 | 0 | core: ~every group |
-| `src/sim/matron_grip.hpp` | 79 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/matron_hold.cpp` | 1533 | **D** `matron-routecraft` · **T1+O** `matron-traverse`, `matron-pursuit`, `matron-ring-descent`, `matron-tower` +4 more · **T1** ~all (96) | 105 | 0 | core: ~every group |
-| `src/sim/matron_journey.cpp` | 532 | **D** `matron-board-walls`, `matron-climb-support`, `matron-exam-descent` · **T1+O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +9 more · **T1** ~all (89) | 105 | 0 | core: ~every group |
-| `src/sim/matron_line.cpp` | 388 | **T1** ~all (105) | 105 | 0 | core: ~every group |
+| `src/bridge/scraperx_simulation.cpp` | 2129 | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17 | 88 | specific |
+| `src/bridge/scraperx_simulation.hpp` | 297 | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17 | 88 | specific |
+| `src/sim/band_counterweight_well.cpp` | 1089 | **D** `matron-routecraft` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/band_facade_crane.cpp` | 549 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/band_midstack_service.cpp` | 1226 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/band_plate_shop.cpp` | 507 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/band_stack.cpp` | 1708 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/band_wet_isolation.cpp` | 799 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/bay.cpp` | 328 | **T1+O** `shared_survival (own exe)` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/bay.hpp` | 185 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/climb_c6.cpp` | 146 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/climb_c7.cpp` | 187 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/corpse.cpp` | 222 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/corpse.hpp` | 113 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/crew.cpp` | 357 | **T1+O** `matron-climb-scan`, `matron-exam`, `matron-chain`, `matron-narrow` +11 more · **T1** ~all (91) | 106 | 0 | core: ~every group |
+| `src/sim/crew.hpp` | 141 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/fabricated.cpp` | 210 | **D** `fabricated` · **T1** `teeter`, `save`, `twin`, `bay` +25 more | 30 | 75 | specific |
+| `src/sim/forklift.cpp` | 481 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/forklift.hpp` | 176 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/impacts.cpp` | 112 | **D** `stock`, `matron-crash`, `matron` · **T1+O** `up-throw`, `forklift`, `crane`, `up` +1 more · **T1** ~all (98) | 106 | 0 | core: ~every group |
+| `src/sim/impacts.hpp` | 88 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/loose_stock.cpp` | 871 | **D** `stock`, `forklift`, `spreader`, `crane` +1 more · **T1** ~all (101) | 106 | 0 | core: ~every group |
+| `src/sim/loose_stock.hpp` | 152 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/matron.cpp` | 4669 | **D** `jumpbuffer`, `edge-stand`, `workers`, `C6` +101 more · **T1** `twin-geometry` | 106 | 0 | core: ~every group |
+| `src/sim/matron.hpp` | 2640 | **D** `jumpbuffer`, `edge-stand`, `workers`, `C6` +101 more · **T1** `twin-geometry` | 106 | 0 | core: ~every group |
+| `src/sim/matron_climb.cpp` | 258 | **T1+O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` +9 more · **T1** ~all (93) | 106 | 0 | core: ~every group |
+| `src/sim/matron_contact.cpp` | 112 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/matron_fatality.cpp` | 339 | **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +19 more | 23 | 77 | specific |
+| `src/sim/matron_found_climb.cpp` | 774 | **T1+O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` +13 more · **T1** ~all (89) | 106 | 0 | core: ~every group |
+| `src/sim/matron_grip.hpp` | 79 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/matron_hold.cpp` | 1533 | **D** `matron-routecraft` · **T1+O** `matron-traverse`, `matron-pursuit`, `matron-ring-descent`, `matron-tower` +4 more · **T1** ~all (97) | 106 | 0 | core: ~every group |
+| `src/sim/matron_journey.cpp` | 533 | **D** `matron-board-walls`, `matron-climb-support`, `matron-exam-descent` · **T1+O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +9 more · **T1** ~all (90) | 106 | 0 | core: ~every group |
+| `src/sim/matron_line.cpp` | 388 | **T1** ~all (106) | 106 | 0 | core: ~every group |
 | `src/sim/matron_mover.hpp` | 114 | - | 0 | 0 | NO TEST REACHES IT |
-| `src/sim/matron_moves.cpp` | 368 | **T1** `matron-moves`, `matron-player-independence`, `matron-ladders`, `matron-tower` +18 more | 22 | 82 | specific |
-| `src/sim/matron_pipe.cpp` | 730 | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** ~all (97) | 105 | 0 | core: ~every group |
-| `src/sim/matron_routecraft.cpp` | 603 | **D** `matron-routecraft` · **T1+O** `fabricated`, `matron-exam`, `matron-climb`, `matron-exam-routecraft` · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` +1 more · **T1** `matron-stand`, `matron-pursuit`, `matron-found-climb`, `teeter` +23 more | 32 | 72 | specific |
-| `src/sim/matron_routecraft.hpp` | 145 | **D** `matron-routecraft` · **T1+O** `matron-exam-routecraft` · **T1** ~all (103) | 105 | 0 | core: ~every group |
-| `src/sim/matron_stalk.cpp` | 221 | **T1+O** `matron-climb-board`, `matron-climb`, `matron-board-walls`, `matron-climb-support` +2 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-stand`, `matron-found-climb`, `teeter`, `save` +21 more | 31 | 73 | specific |
-| `src/sim/matron_travel.cpp` | 87 | **T1+O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +12 more · **T1** ~all (89) | 105 | 0 | core: ~every group |
-| `src/sim/matron_traversal.cpp` | 3381 | **D** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-chase` +11 more · **T1+O** `matron-traverse`, `matron-pursuit`, `matron-ring-descent`, `fabricated` · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` · **T1** `matron-stand`, `matron-found-climb`, `teeter`, `save` +16 more | 39 | 65 | specific |
-| `src/sim/matron_traversal.hpp` | 422 | **D** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +12 more · **T1** ~all (89) | 105 | 0 | core: ~every group |
-| `src/sim/mechanism_kit.cpp` | 2295 | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** ~all (97) | 105 | 0 | core: ~every group |
-| `src/sim/mechanism_kit.hpp` | 940 | **D** `magnet` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/physics_world.cpp` | 1439 | **T1+O** `stock`, `matron-crash`, `up-throw`, `forklift` +15 more · **T1** ~all (86) | 105 | 0 | core: ~every group |
-| `src/sim/physics_world.hpp` | 1243 | **T1** ~all (105) | 105 | 0 | core: ~every group |
+| `src/sim/matron_moves.cpp` | 368 | **T1** `matron-moves`, `matron-player-independence`, `matron-ladders`, `matron-tower` +19 more | 23 | 82 | specific |
+| `src/sim/matron_perception.cpp` | 187 | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17 | 88 | specific |
+| `src/sim/matron_perception.hpp` | 129 | **D** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +3 more | 17 | 88 | specific |
+| `src/sim/matron_pipe.cpp` | 730 | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** ~all (98) | 106 | 0 | core: ~every group |
+| `src/sim/matron_routecraft.cpp` | 603 | **D** `matron-routecraft` · **T1+O** `fabricated`, `matron-exam`, `matron-climb`, `matron-exam-routecraft` · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` +1 more · **T1** `matron-stand`, `matron-pursuit`, `matron-found-climb`, `teeter` +24 more | 33 | 72 | specific |
+| `src/sim/matron_routecraft.hpp` | 145 | **D** `matron-routecraft` · **T1+O** `matron-exam-routecraft` · **T1** ~all (104) | 106 | 0 | core: ~every group |
+| `src/sim/matron_stalk.cpp` | 203 | **T1+O** `matron-climb-board`, `matron-climb`, `matron-board-walls`, `matron-climb-support` +2 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-stand`, `matron-found-climb`, `teeter`, `save` +22 more | 32 | 73 | specific |
+| `src/sim/matron_travel.cpp` | 87 | **T1+O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +12 more · **T1** ~all (90) | 106 | 0 | core: ~every group |
+| `src/sim/matron_traversal.cpp` | 3381 | **D** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-chase` +11 more · **T1+O** `matron-traverse`, `matron-pursuit`, `matron-ring-descent`, `fabricated` · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` · **T1** `matron-stand`, `matron-found-climb`, `teeter`, `save` +17 more | 40 | 65 | specific |
+| `src/sim/matron_traversal.hpp` | 422 | **D** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +12 more · **T1** ~all (90) | 106 | 0 | core: ~every group |
+| `src/sim/mechanism_kit.cpp` | 2295 | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +5 more · **T1** ~all (97) | 106 | 0 | core: ~every group |
+| `src/sim/mechanism_kit.hpp` | 940 | **D** `magnet` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/physics_world.cpp` | 1441 | **T1+O** `stock`, `matron-crash`, `up-throw`, `forklift` +15 more · **T1** ~all (87) | 106 | 0 | core: ~every group |
+| `src/sim/physics_world.hpp` | 1243 | **T1** ~all (106) | 106 | 0 | core: ~every group |
 | `src/sim/physics_world_arm.cpp` | 259 | **O** `matron-climb-scan`, `matron-climb-board`, `matron-climb` · **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +19 more | 23 | 68 | specific |
-| `src/sim/physics_world_climb.cpp` | 796 | **T1+O** `matron-routecraft` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/physics_world_fabricated.cpp` | 243 | **T1** `teeter`, `save`, `twin`, `bay` +25 more | 29 | 75 | specific |
+| `src/sim/physics_world_climb.cpp` | 796 | **T1+O** `matron-routecraft` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/physics_world_fabricated.cpp` | 243 | **T1** `teeter`, `save`, `twin`, `bay` +26 more | 30 | 75 | specific |
 | `src/sim/physics_world_fatality.cpp` | 415 | **O** `matron-climb-scan`, `matron-climb-board`, `matron-climb` · **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13 | 78 | specific |
 | `src/sim/physics_world_grab.cpp` | 556 | **O** `matron-climb-scan`, `matron-climb-board`, `matron-climb`, `matron-routecraft` · **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +19 more | 23 | 68 | specific |
-| `src/sim/physics_world_movement.cpp` | 1259 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/physics_world_one_arm.cpp` | 162 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/physics_world_probes.cpp` | 1212 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/physics_world_state.cpp` | 888 | **T1+O** `edge-stand`, `twin-geometry`, `workers`, `C6` +71 more · **T1** `jumpbuffer`, `slingshot`, `trapeze`, `look` +26 more | 105 | 0 | core: ~every group |
-| `src/sim/physics_world_strike.cpp` | 290 | **T1+O** `strike` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/physics_world_support.hpp` | 860 | **D** `matron-exam` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/physics_world_traversal.cpp` | 790 | **T1+O** `matron-climb`, `matron-routecraft` · **T1** ~all (103) | 105 | 0 | core: ~every group |
+| `src/sim/physics_world_movement.cpp` | 1259 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/physics_world_one_arm.cpp` | 162 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/physics_world_probes.cpp` | 1212 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/physics_world_state.cpp` | 888 | **T1+O** `edge-stand`, `twin-geometry`, `workers`, `C6` +73 more · **T1** `jumpbuffer`, `slingshot`, `trapeze`, `look` +25 more | 106 | 0 | core: ~every group |
+| `src/sim/physics_world_strike.cpp` | 290 | **T1+O** `strike` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/physics_world_support.hpp` | 860 | **D** `matron-exam` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/physics_world_traversal.cpp` | 790 | **T1+O** `matron-climb`, `matron-routecraft` · **T1** ~all (104) | 106 | 0 | core: ~every group |
 | `src/sim/physics_world_water.cpp` | 101 | - | 0 | 91 | tick-only (gated by runtime state) |
-| `src/sim/pipe_gallery.cpp` | 92 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/rope_constraint.cpp` | 244 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/rope_constraint.hpp` | 122 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/shared_survival.cpp` | 207 | **D** `shared_survival (own exe)` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/shared_survival.hpp` | 100 | **D** `shared_survival (own exe)` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/simulation.cpp` | 1708 | **D** `jumpbuffer`, `edge-stand`, `twin-geometry`, `workers` +88 more · **T1+O** `matron-hearing`, `shared_survival (own exe)`, `matron-climb-support`, `matron-stalk` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +5 more | 105 | 0 | core: ~every group |
-| `src/sim/simulation.hpp` | 1937 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/slingshot.cpp` | 1073 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/slingshot.hpp` | 214 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/slingshot_model.cpp` | 76 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/summit.cpp` | 323 | **T1+O** `shared_survival (own exe)` · **T1** ~all (104) | 105 | 0 | core: ~every group |
+| `src/sim/pipe_gallery.cpp` | 92 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/rope_constraint.cpp` | 244 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/rope_constraint.hpp` | 122 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/shared_survival.cpp` | 207 | **D** `shared_survival (own exe)` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/shared_survival.hpp` | 100 | **D** `shared_survival (own exe)` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/simulation.cpp` | 1708 | **D** `jumpbuffer`, `edge-stand`, `twin-geometry`, `workers` +88 more · **T1+O** `matron-hearing`, `shared_survival (own exe)`, `matron-climb-support`, `matron-honest` +1 more · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +5 more | 106 | 0 | core: ~every group |
+| `src/sim/simulation.hpp` | 1937 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/slingshot.cpp` | 1073 | **T1+O** `matron-honest` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/slingshot.hpp` | 214 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/slingshot_model.cpp` | 76 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/summit.cpp` | 323 | **T1+O** `shared_survival (own exe)` · **T1** ~all (105) | 106 | 0 | core: ~every group |
 | `src/sim/summit.hpp` | 106 | **T1** `summit` | 1 | 0 | specific |
-| `src/sim/swing.cpp` | 595 | **T1+O** `shared_survival (own exe)` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/swing.hpp` | 163 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/trapeze.cpp` | 366 | **T1+O** `shared_survival (own exe)` · **T1** ~all (104) | 105 | 0 | core: ~every group |
+| `src/sim/swing.cpp` | 595 | **T1+O** `shared_survival (own exe)` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/swing.hpp` | 163 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/trapeze.cpp` | 366 | **T1+O** `shared_survival (own exe)` · **T1** ~all (105) | 106 | 0 | core: ~every group |
 | `src/sim/trapeze.hpp` | 152 | **T1** `trapeze`, `spreader`, `crane`, `up` +1 more | 5 | 86 | specific |
-| `src/sim/twin_tower.cpp` | 194 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/barrel_helix.cpp` | 44 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/cascade_mast.cpp` | 78 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/crown_gondola.cpp` | 34 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/gravity_balance.cpp` | 34 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/luffing_derrick.cpp` | 145 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/pitman_lift.cpp` | 121 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/rack_climber.cpp` | 35 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/slab_incline.cpp` | 179 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/stone_wheel.cpp` | 264 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/traction_tram.cpp` | 49 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/vertical_machine.cpp` | 124 | **T1+O** `shared_survival (own exe)` · **T1** ~all (104) | 105 | 0 | core: ~every group |
-| `src/sim/vertical/vertical_route.cpp` | 523 | **T1** ~all (105) | 105 | 0 | core: ~every group |
+| `src/sim/twin_tower.cpp` | 194 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/barrel_helix.cpp` | 44 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/cascade_mast.cpp` | 78 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/crown_gondola.cpp` | 34 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/gravity_balance.cpp` | 34 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/luffing_derrick.cpp` | 145 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/pitman_lift.cpp` | 121 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/rack_climber.cpp` | 35 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/slab_incline.cpp` | 179 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/stone_wheel.cpp` | 264 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/traction_tram.cpp` | 49 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/vertical_machine.cpp` | 124 | **T1+O** `shared_survival (own exe)` · **T1** ~all (105) | 106 | 0 | core: ~every group |
+| `src/sim/vertical/vertical_route.cpp` | 523 | **T1** ~all (106) | 106 | 0 | core: ~every group |
 | `src/sim/vertical/vertical_route.hpp` | 214 | **T1** `tram`, `pitman`, `helix`, `incline` +5 more | 9 | 0 | specific |
-| `src/sim/yard_crane.cpp` | 898 | **T1+O** `crane`, `shared_survival (own exe)` · **T1** ~all (103) | 105 | 0 | core: ~every group |
-| `src/sim/yard_crane.hpp` | 312 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/zipline.cpp` | 375 | **T1** ~all (105) | 105 | 0 | core: ~every group |
-| `src/sim/zipline.hpp` | 215 | **T1** ~all (105) | 105 | 0 | core: ~every group |
+| `src/sim/yard_crane.cpp` | 898 | **T1+O** `crane`, `shared_survival (own exe)` · **T1** ~all (104) | 106 | 0 | core: ~every group |
+| `src/sim/yard_crane.hpp` | 312 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/zipline.cpp` | 375 | **T1** ~all (106) | 106 | 0 | core: ~every group |
+| `src/sim/zipline.hpp` | 215 | **T1** ~all (106) | 106 | 0 | core: ~every group |
 
 Header-only files have inline functions only; `matron_mover.hpp` is a pure interface (no function bodies), so no test "reaches" it by itself: its `Mover::step` is reached through the ways that implement it (`TravelWay`, `PipeWay`, the climb and line ways).
 
@@ -268,132 +271,132 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 104-138 | `cage_parts` | **T1** ~all (105) | 105/0 |  |
-| 140-319 | `build_stage_a` | **T1** ~all (105) | 105/0 |  |
-| 384-428 | `boom_parts` | **T1** ~all (105) | 105/0 |  |
-| 430-590 | `build_stage_b` | **T1** ~all (105) | 105/0 |  |
-| 726-998 | `build_stage_c` | **T1** ~all (105) | 105/0 |  |
-| 1032-1078 | `build_climbing_route` | **T1** ~all (105) | 105/0 |  |
+| 104-138 | `cage_parts` | **T1** ~all (106) | 106/0 |  |
+| 140-319 | `build_stage_a` | **T1** ~all (106) | 106/0 |  |
+| 384-428 | `boom_parts` | **T1** ~all (106) | 106/0 |  |
+| 430-590 | `build_stage_b` | **T1** ~all (106) | 106/0 |  |
+| 726-998 | `build_stage_c` | **T1** ~all (106) | 106/0 |  |
+| 1032-1078 | `build_climbing_route` | **T1** ~all (106) | 106/0 |  |
 
 ### `src/sim/band_facade_crane.cpp` (549 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 167-207 | `build_frame` | **T1** ~all (105) | 105/0 |  |
-| 237-308 | `build_stage_j` | **T1** ~all (105) | 105/0 |  |
-| 335-413 | `build_stage_k` | **T1** ~all (105) | 105/0 |  |
-| 438-515 | `build_stage_l` | **T1** ~all (105) | 105/0 |  |
+| 167-207 | `build_frame` | **T1** ~all (106) | 106/0 |  |
+| 237-308 | `build_stage_j` | **T1** ~all (106) | 106/0 |  |
+| 335-413 | `build_stage_k` | **T1** ~all (106) | 106/0 |  |
+| 438-515 | `build_stage_l` | **T1** ~all (106) | 106/0 |  |
 
 ### `src/sim/band_midstack_service.cpp` (1226 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 158-184 | `build_frame` | **T1** ~all (105) | 105/0 |  |
-| 242-321 | `build_stage_m` | **T1** ~all (105) | 105/0 |  |
-| 358-423 | `build_c4` | **T1** ~all (105) | 105/0 |  |
-| 504-574 | `build_stage_n_frame` | **T1** ~all (105) | 105/0 |  |
-| 576-659 | `build_stage_n` | **T1** ~all (105) | 105/0 |  |
-| 838-872 | `build_c5_frame` | **T1** ~all (105) | 105/0 |  |
-| 874-959 | `build_c5` | **T1** ~all (105) | 105/0 |  |
-| 961-1039 | `build_stage_o_frame` | **T1** ~all (105) | 105/0 |  |
-| 1041-1191 | `build_stage_o` | **T1** ~all (105) | 105/0 |  |
+| 158-184 | `build_frame` | **T1** ~all (106) | 106/0 |  |
+| 242-321 | `build_stage_m` | **T1** ~all (106) | 106/0 |  |
+| 358-423 | `build_c4` | **T1** ~all (106) | 106/0 |  |
+| 504-574 | `build_stage_n_frame` | **T1** ~all (106) | 106/0 |  |
+| 576-659 | `build_stage_n` | **T1** ~all (106) | 106/0 |  |
+| 838-872 | `build_c5_frame` | **T1** ~all (106) | 106/0 |  |
+| 874-959 | `build_c5` | **T1** ~all (106) | 106/0 |  |
+| 961-1039 | `build_stage_o_frame` | **T1** ~all (106) | 106/0 |  |
+| 1041-1191 | `build_stage_o` | **T1** ~all (106) | 106/0 |  |
 
 ### `src/sim/band_plate_shop.cpp` (507 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 153-226 | `build_stage_g` | **T1** ~all (105) | 105/0 |  |
-| 268-358 | `build_stage_h` | **T1** ~all (105) | 105/0 |  |
-| 385-465 | `build_stage_i` | **T1** ~all (105) | 105/0 |  |
+| 153-226 | `build_stage_g` | **T1** ~all (106) | 106/0 |  |
+| 268-358 | `build_stage_h` | **T1** ~all (106) | 106/0 |  |
+| 385-465 | `build_stage_i` | **T1** ~all (106) | 106/0 |  |
 
 ### `src/sim/band_stack.cpp` (1708 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 158-183 | `cage_parts` | **T1** ~all (105) | 105/0 |  |
-| 217-378 | `build_s1_headframe` | **T1** ~all (105) | 105/0 |  |
-| 380-454 | `build_yard_traversal` | **T1** ~all (105) | 105/0 |  |
-| 456-542 | `build_s1` | **T1** ~all (105) | 105/0 |  |
-| 612-649 | `build_deck2_traversal` | **T1** ~all (105) | 105/0 |  |
-| 651-723 | `build_c1_traversal_enhancements` | **T1** ~all (105) | 105/0 |  |
-| 725-825 | `build_c1` | **T1** ~all (105) | 105/0 |  |
-| 895-920 | `s2_cage_parts` | **T1** ~all (105) | 105/0 |  |
-| 922-955 | `s2_beam_parts` | **T1** ~all (105) | 105/0 |  |
-| 957-989 | `build_crossover_gangway` | **T1** ~all (105) | 105/0 |  |
-| 991-1018 | `build_deck4_traversal` | **T1** ~all (105) | 105/0 |  |
-| 1033-1093 | `build_s2_frame` | **T1** ~all (105) | 105/0 |  |
-| 1095-1148 | `build_s2` | **T1** ~all (105) | 105/0 |  |
-| 1162-1196 | `build_c2_traversal_enhancements` | **T1** ~all (105) | 105/0 |  |
-| 1198-1307 | `build_c2` | **T1** ~all (105) | 105/0 |  |
-| 1363-1394 | `build_north_crossover_gangway` | **T1** ~all (105) | 105/0 |  |
-| 1396-1421 | `s3_cage_parts` | **T1** ~all (105) | 105/0 |  |
-| 1464-1499 | `build_s3_frame` | **T1** ~all (105) | 105/0 |  |
-| 1501-1558 | `build_s3` | **T1** ~all (105) | 105/0 |  |
-| 1571-1679 | `build_c3` | **T1** ~all (105) | 105/0 |  |
+| 158-183 | `cage_parts` | **T1** ~all (106) | 106/0 |  |
+| 217-378 | `build_s1_headframe` | **T1** ~all (106) | 106/0 |  |
+| 380-454 | `build_yard_traversal` | **T1** ~all (106) | 106/0 |  |
+| 456-542 | `build_s1` | **T1** ~all (106) | 106/0 |  |
+| 612-649 | `build_deck2_traversal` | **T1** ~all (106) | 106/0 |  |
+| 651-723 | `build_c1_traversal_enhancements` | **T1** ~all (106) | 106/0 |  |
+| 725-825 | `build_c1` | **T1** ~all (106) | 106/0 |  |
+| 895-920 | `s2_cage_parts` | **T1** ~all (106) | 106/0 |  |
+| 922-955 | `s2_beam_parts` | **T1** ~all (106) | 106/0 |  |
+| 957-989 | `build_crossover_gangway` | **T1** ~all (106) | 106/0 |  |
+| 991-1018 | `build_deck4_traversal` | **T1** ~all (106) | 106/0 |  |
+| 1033-1093 | `build_s2_frame` | **T1** ~all (106) | 106/0 |  |
+| 1095-1148 | `build_s2` | **T1** ~all (106) | 106/0 |  |
+| 1162-1196 | `build_c2_traversal_enhancements` | **T1** ~all (106) | 106/0 |  |
+| 1198-1307 | `build_c2` | **T1** ~all (106) | 106/0 |  |
+| 1363-1394 | `build_north_crossover_gangway` | **T1** ~all (106) | 106/0 |  |
+| 1396-1421 | `s3_cage_parts` | **T1** ~all (106) | 106/0 |  |
+| 1464-1499 | `build_s3_frame` | **T1** ~all (106) | 106/0 |  |
+| 1501-1558 | `build_s3` | **T1** ~all (106) | 106/0 |  |
+| 1571-1679 | `build_c3` | **T1** ~all (106) | 106/0 |  |
 
 ### `src/sim/band_wet_isolation.cpp` (799 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 285-390 | `build_stage_d` | **T1** ~all (105) | 105/0 |  |
-| 412-602 | `build_stage_e` | **T1** ~all (105) | 105/0 |  |
-| 604-647 | `build_stage_f` | **T1** ~all (105) | 105/0 |  |
-| 649-690 | `build_plate_and_header` | **T1** ~all (105) | 105/0 |  |
-| 737-775 | `build_climbing_route` | **T1** ~all (105) | 105/0 |  |
+| 285-390 | `build_stage_d` | **T1** ~all (106) | 106/0 |  |
+| 412-602 | `build_stage_e` | **T1** ~all (106) | 106/0 |  |
+| 604-647 | `build_stage_f` | **T1** ~all (106) | 106/0 |  |
+| 649-690 | `build_plate_and_header` | **T1** ~all (106) | 106/0 |  |
+| 737-775 | `build_climbing_route` | **T1** ~all (106) | 106/0 |  |
 
 ### `src/sim/loose_stock.cpp` (871 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 74-372 | `make_spec` | **T1** ~all (105) | 105/0 |  |
-| 376-444 | `add_stock_yard` | **T1** ~all (105) | 105/0 |  |
-| 472-499 | `LooseStock::placements` | **D** `stock`, `forklift`, `spreader`, `crane` +1 more · **T1** ~all (100) | 105/0 |  |
-| 507-538 | `LooseStock::sound` | **T1** ~all (105) | 105/0 |  |
-| 591-616 | `LooseStock::add_piece` | **T1+O** `stock`, `forklift`, `spreader`, `crane` +1 more · **T1** ~all (100) | 105/0 |  |
-| 637-664 | `spot_templates` | **T1** ~all (105) | 105/0 |  |
-| 713-869 | `LooseStock::dress_tower` | **T1** ~all (105) | 105/0 |  |
+| 74-372 | `make_spec` | **T1** ~all (106) | 106/0 |  |
+| 376-444 | `add_stock_yard` | **T1** ~all (106) | 106/0 |  |
+| 472-499 | `LooseStock::placements` | **D** `stock`, `forklift`, `spreader`, `crane` +1 more · **T1** ~all (101) | 106/0 |  |
+| 507-538 | `LooseStock::sound` | **T1** ~all (106) | 106/0 |  |
+| 591-616 | `LooseStock::add_piece` | **T1+O** `stock`, `forklift`, `spreader`, `crane` +1 more · **T1** ~all (101) | 106/0 |  |
+| 637-664 | `spot_templates` | **T1** ~all (106) | 106/0 |  |
+| 713-869 | `LooseStock::dress_tower` | **T1** ~all (106) | 106/0 |  |
 
 ### `src/sim/matron.cpp`
 
 > State-gated code: T1 and O are weak here. Take the group from the **senses and hunt, balance, pace, cable** row of section 4, then confirm it with this row.
- (4643 lines)
+ (4669 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 74-238 | `Matron::Matron` | **D** `matron-hearing`, `matron-sight`, `shared_survival (own exe)`, `matron-board-walls` +2 more · **T1+O** `matron-climb-scan`, `matron-exam`, `matron-chain`, `matron-narrow` +4 more · **T1** ~all (91) | 105/0 |  |
-| 283-307 | `Matron::set_home` | **T1** ~all (105) | 105/0 |  |
-| 309-336 | `Matron::place_for_test` | **D** `jumpbuffer`, `edge-stand`, `workers`, `C6` +100 more | 25/79 |  |
-| 433-462 | `Matron::look_at` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 464-543 | `Matron::muffled_distance` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 570-594 | `Matron::onto_floor_lines` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 613-788 | `Matron::route_toward` | **T1** `matron-moves`, `matron-player-independence`, `matron-ladders`, `matron-tower` +18 more | 22/82 |  |
-| 813-842 | `Matron::way_clear` | **T1** `matron-moves`, `matron-player-independence`, `matron-ladders`, `matron-tower` +18 more | 22/82 |  |
-| 917-963 | `Matron::feel_floor` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 965-1028 | `Matron::settle_level` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1030-1055 | `Matron::off_its_steel` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1057-1827 | `Matron::walk_toward` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +3 more · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 16/88 |  |
-| 1831-1856 | `Matron::step_turn` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1863-1896 | `Matron::step_rage` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1910-1934 | `Matron::step_planks` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1936-1964 | `Matron::restore_planks` | **T1** `matron-stand`, `matron-found-climb`, `teeter`, `save` +27 more | 31/73 |  |
-| 1994-2143 | `Matron::trap_step` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 2195-2224 | `Matron::take_way` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 2240-3286 | `Matron::pre_step` | **D** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more · **O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +4 more | 9/90 |  |
-| 3288-3344 | `Matron::post_step` | **D** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 3425-3477 | `Matron::fetch_stock` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 3479-3505 | `Matron::take_stock` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 3527-3576 | `Matron::throw_stock` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 3622-3804 | `Matron::restore` | **D** `jumpbuffer`, `edge-stand`, `workers`, `C6` +100 more | 31/73 |  |
-| 3844-3911 | `Matron::sense_near` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 3916-4121 | `Matron::take_blow` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 4145-4170 | `Matron::shape_fits` | **T1+O** `matron-routecraft` · **T1** `matron-traverse`, `matron-exam`, `matron-chain`, `matron-narrow` +12 more | 17/87 |  |
-| 4179-4203 | `Matron::lie_down` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 4226-4262 | `Matron::sole_contact` | **T1** ~all (105) | 105/0 |  |
-| 4289-4330 | `Matron::brace_at_edges` | **T1+O** `matron-exam-descent` · **O** `matron-climb-scan`, `matron-climb-board`, `matron-climb` · **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +4 more | 9/90 |  |
-| 4333-4383 | `Matron::step_knocked` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 4385-4641 | `Matron::refresh_view` | **T1+O** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +4 more · **T1** ~all (97) | 105/0 |  |
+| 72-236 | `Matron::Matron` | **D** `matron-hearing`, `matron-sight`, `shared_survival (own exe)`, `matron-board-walls` +3 more · **T1+O** `matron-climb-scan`, `matron-exam`, `matron-chain`, `matron-narrow` +4 more · **T1** ~all (91) | 106/0 |  |
+| 281-305 | `Matron::set_home` | **T1** ~all (106) | 106/0 |  |
+| 307-334 | `Matron::place_for_test` | **D** `jumpbuffer`, `edge-stand`, `workers`, `C6` +101 more | 26/79 |  |
+| 431-460 | `Matron::look_at` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 462-541 | `Matron::muffled_distance` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 568-592 | `Matron::onto_floor_lines` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 611-786 | `Matron::route_toward` | **T1** `matron-moves`, `matron-player-independence`, `matron-ladders`, `matron-tower` +19 more | 23/82 |  |
+| 811-840 | `Matron::way_clear` | **T1** `matron-moves`, `matron-player-independence`, `matron-ladders`, `matron-tower` +19 more | 23/82 |  |
+| 915-961 | `Matron::feel_floor` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 963-1026 | `Matron::settle_level` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1028-1053 | `Matron::off_its_steel` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1055-1825 | `Matron::walk_toward` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +3 more · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +6 more | 17/88 |  |
+| 1829-1854 | `Matron::step_turn` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1861-1894 | `Matron::step_rage` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1908-1932 | `Matron::step_planks` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1934-1962 | `Matron::restore_planks` | **T1+O** `matron-honest` · **T1** `matron-stand`, `matron-found-climb`, `teeter`, `save` +27 more | 32/73 |  |
+| 1992-2154 | `Matron::trap_step` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 2207-2236 | `Matron::take_way` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 2252-3265 | `Matron::pre_step` | **D** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more · **O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +4 more | 10/90 |  |
+| 3267-3323 | `Matron::post_step` | **D** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 3424-3481 | `Matron::fetch_stock` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 3496-3528 | `Matron::take_stock` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 3550-3599 | `Matron::throw_stock` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 3645-3831 | `Matron::restore` | **D** `jumpbuffer`, `edge-stand`, `workers`, `C6` +101 more | 32/73 |  |
+| 3871-3938 | `Matron::sense_near` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 3943-4148 | `Matron::take_blow` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 4172-4197 | `Matron::shape_fits` | **T1+O** `matron-routecraft` · **T1** `matron-traverse`, `matron-exam`, `matron-chain`, `matron-narrow` +13 more | 18/87 |  |
+| 4206-4230 | `Matron::lie_down` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 4253-4289 | `Matron::sole_contact` | **T1** ~all (106) | 106/0 |  |
+| 4316-4357 | `Matron::brace_at_edges` | **T1+O** `matron-exam-descent` · **O** `matron-climb-scan`, `matron-climb-board`, `matron-climb` · **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 10/90 |  |
+| 4360-4409 | `Matron::step_knocked` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 4411-4667 | `Matron::refresh_view` | **T1+O** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more · **T1** ~all (97) | 106/0 |  |
 
-### `src/sim/matron.hpp` (2610 lines)
+### `src/sim/matron.hpp` (2640 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
@@ -406,15 +409,15 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 91-122 | `Matron::found_floor` | **T1+O** `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 16/88 |  |
-| 124-265 | `Matron::find_climb` | **T1+O** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +6 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-climb-board`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +2 more | 16/88 |  |
-| 311-380 | `Matron::follow_found_climb` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
-| 387-420 | `RoutecraftWay::step` | **T1+O** `matron-exam-routecraft`, `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +10 more | 16/88 |  |
-| 434-463 | `RoutecraftWay::view` | **T1+O** `matron-exam-routecraft`, `matron-routecraft` · **T1** ~all (103) | 105/0 |  |
-| 494-558 | `Matron::start_journey` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-climb-board`, `matron-hearing`, `matron-sight` +4 more | 16/88 |  |
-| 560-616 | `Matron::end_journey` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-stand`, `matron-pursuit`, `matron-found-climb`, `teeter` +20 more | 32/72 |  |
-| 618-705 | `Matron::step_journey` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +5 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +3 more | 16/88 |  |
-| 730-763 | `JourneyWay::view` | **T1+O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` +9 more · **T1** ~all (92) | 105/0 |  |
+| 91-122 | `Matron::found_floor` | **T1+O** `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 17/88 |  |
+| 124-265 | `Matron::find_climb` | **T1+O** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +6 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-climb-board`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +3 more | 17/88 |  |
+| 311-380 | `Matron::follow_found_climb` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
+| 387-420 | `RoutecraftWay::step` | **T1+O** `matron-exam-routecraft`, `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 17/88 |  |
+| 434-463 | `RoutecraftWay::view` | **T1+O** `matron-exam-routecraft`, `matron-routecraft` · **T1** ~all (104) | 106/0 |  |
+| 494-558 | `Matron::start_journey` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-climb-board`, `matron-hearing`, `matron-sight` +5 more | 17/88 |  |
+| 560-616 | `Matron::end_journey` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-stand`, `matron-pursuit`, `matron-found-climb`, `teeter` +21 more | 33/72 |  |
+| 618-705 | `Matron::step_journey` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +5 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +4 more | 17/88 |  |
+| 730-763 | `JourneyWay::view` | **T1+O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` +9 more · **T1** ~all (93) | 106/0 |  |
 
 ### `src/sim/matron_hold.cpp`
 
@@ -425,26 +428,26 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 |---|---|---|---|---|
 | 47-85 | `Matron::begin_grab` | **D** `matron-routecraft` | 1/90 |  |
 | 104-168 | `Matron::grip_lost` | **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +9 more | 13/78 |  |
-| 224-337 | `Matron::choose_rim` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 364-448 | `Matron::choose_fatal_edge` | **O** `matron-traverse`, `matron-pursuit`, `matron-ring-descent`, `matron-tower` +4 more · **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 450-475 | `Matron::hang_room` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 508-551 | `Matron::fall_impact_mps` | **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +18 more | 22/77 |  |
-| 615-1054 | `Matron::step_hold` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1097-1199 | `Matron::step_armplay` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1242-1281 | `Matron::arm_repose` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1288-1319 | `Matron::spare_side` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
-| 1419-1444 | `Matron::over_her_deck` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +5 more | 9/90 |  |
+| 224-337 | `Matron::choose_rim` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 364-448 | `Matron::choose_fatal_edge` | **O** `matron-traverse`, `matron-pursuit`, `matron-ring-descent`, `matron-tower` +4 more · **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 450-475 | `Matron::hang_room` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 508-551 | `Matron::fall_impact_mps` | **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +19 more | 23/77 |  |
+| 615-1054 | `Matron::step_hold` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1097-1199 | `Matron::step_armplay` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1242-1281 | `Matron::arm_repose` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1288-1319 | `Matron::spare_side` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
+| 1419-1444 | `Matron::over_her_deck` | **T1** `matron-hearing`, `matron-sight`, `matron-exam-routecraft`, `shared_survival (own exe)` +6 more | 10/90 |  |
 
 ### `src/sim/matron_journey.cpp`
 
 > State-gated code: T1 and O are weak here. Take the group from the **climbing** row of section 4, then confirm it with this row.
- (532 lines)
+ (533 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 61-127 | `Matron::region_under` | **T1+O** `matron-tower`, `matron-ways`, `matron-climb-scan`, `matron-climb` · **O** `matron-ring-descent`, `matron-chase` · **T1** `matron-ladders`, `matron-exam`, `matron-chain`, `matron-narrow` +12 more | 20/84 |  |
-| 145-198 | `Matron::travel_to` | **T1+O** `matron-exam-climber`, `matron-climb`, `matron-board-walls`, `matron-climb-support` +1 more · **T1** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` +11 more | 20/84 |  |
-| 200-487 | `Matron::step_travel` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +6 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +2 more | 16/88 |  |
+| 61-127 | `Matron::region_under` | **T1+O** `matron-tower`, `matron-ways`, `matron-climb-scan`, `matron-climb` · **O** `matron-ring-descent`, `matron-chase` · **T1** `matron-ladders`, `matron-exam`, `matron-chain`, `matron-narrow` +13 more | 21/84 |  |
+| 145-198 | `Matron::travel_to` | **T1+O** `matron-exam-climber`, `matron-climb`, `matron-board-walls`, `matron-climb-support` +1 more · **T1** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` +12 more | 21/84 |  |
+| 200-488 | `Matron::step_travel` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +6 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +3 more | 17/88 |  |
 
 ### `src/sim/matron_pipe.cpp`
 
@@ -453,12 +456,12 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 71-106 | `Matron::pipe_rail_hold` | **T1** `matron-traverse`, `matron-exam`, `matron-chain`, `matron-narrow` +13 more | 17/87 |  |
-| 111-138 | `Matron::pipe_face_hold` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
-| 142-167 | `Matron::get_on_pipe` | **T1** `matron-traverse`, `matron-exam`, `matron-chain`, `matron-narrow` +13 more | 17/87 |  |
-| 169-204 | `Matron::get_off_pipe` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
-| 223-553 | `Matron::ride_pipe` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +3 more · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 16/88 |  |
-| 563-600 | `Matron::follow_pipe` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
+| 71-106 | `Matron::pipe_rail_hold` | **T1** `matron-traverse`, `matron-exam`, `matron-chain`, `matron-narrow` +14 more | 18/87 |  |
+| 111-138 | `Matron::pipe_face_hold` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
+| 142-167 | `Matron::get_on_pipe` | **T1** `matron-traverse`, `matron-exam`, `matron-chain`, `matron-narrow` +14 more | 18/87 |  |
+| 169-204 | `Matron::get_off_pipe` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
+| 223-553 | `Matron::ride_pipe` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +3 more · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +6 more | 17/88 |  |
+| 563-600 | `Matron::follow_pipe` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
 
 ### `src/sim/matron_routecraft.cpp`
 
@@ -467,11 +470,11 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 118-144 | `MatronRoutecraft::resume_transition` | **T1+O** `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 16/88 |  |
-| 162-246 | `MatronRoutecraft::plan` | **T1+O** `matron-exam`, `matron-climb`, `matron-exam-routecraft`, `matron-routecraft` · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` +2 more · **T1** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +8 more | 16/88 |  |
-| 335-487 | `MatronRoutecraft::advance_plan` | **T1+O** `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 16/88 |  |
-| 488-545 | `MatronRoutecraft::hold` | **T1+O** `matron-exam-routecraft`, `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +10 more | 16/88 |  |
-| 563-602 | `MatronRoutecraft::step` | **D** `matron-routecraft` · **T1+O** `matron-exam-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +10 more | 16/88 |  |
+| 118-144 | `MatronRoutecraft::resume_transition` | **T1+O** `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 17/88 |  |
+| 162-246 | `MatronRoutecraft::plan` | **T1+O** `matron-exam`, `matron-climb`, `matron-exam-routecraft`, `matron-routecraft` · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` +2 more · **T1** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +9 more | 17/88 |  |
+| 335-487 | `MatronRoutecraft::advance_plan` | **T1+O** `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 17/88 |  |
+| 488-545 | `MatronRoutecraft::hold` | **T1+O** `matron-exam-routecraft`, `matron-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 17/88 |  |
+| 563-602 | `MatronRoutecraft::step` | **D** `matron-routecraft` · **T1+O** `matron-exam-routecraft` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 17/88 |  |
 
 ### `src/sim/matron_traversal.cpp`
 
@@ -480,45 +483,45 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 142-178 | `gap_flight` | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +12 more | 24/80 |  |
-| 248-274 | `Budget::take` | **D** `matron-climb` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 16/88 |  |
-| 334-365 | `Climber::revalidate` | **T1+O** `matron-climb` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 16/88 |  |
-| 367-402 | `Climber::take_hold` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
-| 404-434 | `Climber::find_rung` | **T1+O** `matron-narrow`, `matron-climb`, `matron-stalk` · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-towers`, `matron-exam-climber` +9 more | 16/88 |  |
-| 436-479 | `Climber::find_lip` | **T1+O** `matron-climb`, `matron-stalk` · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +10 more | 16/88 |  |
-| 492-533 | `Climber::plant_leg` | **T1+O** `matron-climb`, `matron-exam-descent` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +10 more | 16/88 |  |
-| 535-569 | `Climber::planted_leg_contact` | **T1+O** `matron-climb` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 16/88 |  |
-| 576-644 | `Climber::drive_leg` | **T1+O** `matron-climb`, `matron-exam-descent` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +10 more | 16/88 |  |
-| 699-742 | `Climber::stand` | **D** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-climb` · **T1+O** `matron-exam-climber`, `matron-climb-board`, `matron-exam-descent` · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 16/88 |  |
-| 744-847 | `Climber::walk` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +3 more · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 16/88 |  |
-| 860-887 | `Climber::begin` | **D** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +2 more · **T1+O** `matron-climb-support`, `matron-exam-descent`, `matron-stalk` · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-traverse`, `matron-exam`, `matron-hearing`, `matron-sight` +4 more | 17/87 |  |
-| 924-959 | `Climber::step` | **D** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +2 more · **T1+O** `matron-exam-descent` · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 16/88 |  |
-| 988-1076 | `Climber::step_rung_up` | **T1+O** `matron-narrow`, `matron-climb-board`, `matron-climb`, `matron-stalk` · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-towers`, `matron-exam-climber` +8 more | 16/88 |  |
-| 1080-1109 | `Climber::begin_mantle_from_hang` | **T1+O** `matron-narrow`, `matron-exam-climber`, `matron-climb-board`, `matron-climb` +1 more · **O** `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-towers`, `matron-hearing` +7 more | 16/88 |  |
-| 1114-1251 | `Climber::step_mantle` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +4 more | 16/88 |  |
-| 1259-1365 | `Climber::step_dyno` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +4 more | 16/88 |  |
-| 1370-1492 | `Climber::step_rung_down` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +4 more | 16/88 |  |
-| 1499-1654 | `Climber::step_pole` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +5 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +3 more | 16/88 |  |
-| 1660-1772 | `Climber::step_gap` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +5 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +3 more | 16/88 |  |
-| 1777-1844 | `Climber::step_jump` | **T1+O** `matron-narrow`, `matron-climb-board`, `matron-climb`, `matron-exam-descent` +1 more · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-towers`, `matron-exam-climber` +7 more | 16/88 |  |
-| 1849-1970 | `Climber::step_drop` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +4 more | 16/88 |  |
-| 2038-2241 | `AffordanceMap::scan` | **D** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +2 more · **T1+O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +3 more · **O** `matron-traverse`, `matron-pursuit` · **T1** `matron-fatality`, `matron-grab`, `matron-exam`, `matron-climb-board` +7 more | 24/80 |  |
-| 2248-2350 | `AffordanceMap::split_patches` | **T1+O** `matron-ring-descent`, `matron-tower`, `matron-ways`, `matron-chase` +2 more · **O** `matron-traverse`, `matron-pursuit` · **T1** `matron-ladders`, `matron-fatality`, `matron-grab`, `matron-exam` +14 more | 24/80 |  |
-| 2352-2435 | `AffordanceMap::build_regions` | **T1+O** `matron-ring-descent`, `matron-tower`, `matron-ways`, `matron-chase` +2 more · **O** `AS-010-c4`, `matron-traverse`, `stack`, `body-order` +3 more · **T1** `matron-ladders`, `matron-fatality`, `matron-grab`, `matron-exam` +14 more | 24/80 |  |
-| 2490-2982 | `AffordanceMap::build_edges` | **T1+O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +12 more · **O** `AS-010-c4`, `matron-traverse`, `stack`, `body-order` +3 more · **T1** `matron-fatality`, `matron-grab`, `matron-exam`, `matron-hearing` +4 more | 24/80 |  |
-| 2984-3064 | `AffordanceMap::plan` | **D** `matron-tower`, `matron-chase`, `matron-chain`, `matron-narrow` +5 more · **T1+O** `matron-ladders`, `matron-ways`, `matron-climb-scan`, `matron-exam-descent` +1 more · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` +1 more · **T1** `matron-exam`, `matron-climb-board`, `matron-hearing`, `matron-sight` +3 more | 21/83 |  |
-| 3066-3125 | `AffordanceMap::walk_path` | **T1+O** `matron-climb` · **O** `matron-traverse`, `matron-pursuit`, `matron-ring-descent`, `matron-tower` +3 more · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 16/88 |  |
-| 3150-3379 | `traversal::grid_walk` | **D** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +2 more · **T1+O** `matron-climb-scan` · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` +1 more · **T1** `matron-exam`, `matron-climb-board`, `matron-hearing`, `matron-sight` +6 more | 17/87 |  |
+| 142-178 | `gap_flight` | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +13 more | 25/80 |  |
+| 248-274 | `Budget::take` | **D** `matron-climb` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 17/88 |  |
+| 334-365 | `Climber::revalidate` | **T1+O** `matron-climb` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 17/88 |  |
+| 367-402 | `Climber::take_hold` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
+| 404-434 | `Climber::find_rung` | **T1+O** `matron-narrow`, `matron-climb`, `matron-stalk` · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-towers`, `matron-exam-climber` +10 more | 17/88 |  |
+| 436-479 | `Climber::find_lip` | **T1+O** `matron-climb`, `matron-stalk` · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 17/88 |  |
+| 492-533 | `Climber::plant_leg` | **T1+O** `matron-climb`, `matron-exam-descent` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 17/88 |  |
+| 535-569 | `Climber::planted_leg_contact` | **T1+O** `matron-climb` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 17/88 |  |
+| 576-644 | `Climber::drive_leg` | **T1+O** `matron-climb`, `matron-exam-descent` · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +11 more | 17/88 |  |
+| 699-742 | `Climber::stand` | **D** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-climb` · **T1+O** `matron-exam-climber`, `matron-climb-board`, `matron-exam-descent` · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +6 more | 17/88 |  |
+| 744-847 | `Climber::walk` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +3 more · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +6 more | 17/88 |  |
+| 860-887 | `Climber::begin` | **D** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +2 more · **T1+O** `matron-climb-support`, `matron-exam-descent`, `matron-stalk` · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-traverse`, `matron-exam`, `matron-hearing`, `matron-sight` +5 more | 18/87 |  |
+| 924-959 | `Climber::step` | **D** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +2 more · **T1+O** `matron-exam-descent` · **O** `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +6 more | 17/88 |  |
+| 988-1076 | `Climber::step_rung_up` | **T1+O** `matron-narrow`, `matron-climb-board`, `matron-climb`, `matron-stalk` · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-towers`, `matron-exam-climber` +9 more | 17/88 |  |
+| 1080-1109 | `Climber::begin_mantle_from_hang` | **T1+O** `matron-narrow`, `matron-exam-climber`, `matron-climb-board`, `matron-climb` +1 more · **O** `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-towers`, `matron-hearing` +8 more | 17/88 |  |
+| 1114-1251 | `Climber::step_mantle` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 17/88 |  |
+| 1259-1365 | `Climber::step_dyno` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 17/88 |  |
+| 1370-1492 | `Climber::step_rung_down` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 17/88 |  |
+| 1499-1654 | `Climber::step_pole` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +5 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +4 more | 17/88 |  |
+| 1660-1772 | `Climber::step_gap` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +5 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +4 more | 17/88 |  |
+| 1777-1844 | `Climber::step_jump` | **T1+O** `matron-narrow`, `matron-climb-board`, `matron-climb`, `matron-exam-descent` +1 more · **O** `matron-ladders`, `matron-tower`, `matron-climb-scan` · **T1** `matron-exam`, `matron-chain`, `matron-towers`, `matron-exam-climber` +8 more | 17/88 |  |
+| 1849-1970 | `Climber::step_drop` | **T1+O** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +4 more · **O** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-climb-scan` · **T1** `matron-exam`, `matron-hearing`, `matron-sight`, `matron-exam-routecraft` +5 more | 17/88 |  |
+| 2038-2241 | `AffordanceMap::scan` | **D** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +2 more · **T1+O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +3 more · **O** `matron-traverse`, `matron-pursuit` · **T1** `matron-fatality`, `matron-grab`, `matron-exam`, `matron-climb-board` +8 more | 25/80 |  |
+| 2248-2350 | `AffordanceMap::split_patches` | **T1+O** `matron-ring-descent`, `matron-tower`, `matron-ways`, `matron-chase` +2 more · **O** `matron-traverse`, `matron-pursuit` · **T1** `matron-ladders`, `matron-fatality`, `matron-grab`, `matron-exam` +15 more | 25/80 |  |
+| 2352-2435 | `AffordanceMap::build_regions` | **T1+O** `matron-ring-descent`, `matron-tower`, `matron-ways`, `matron-chase` +2 more · **O** `AS-010-c4`, `matron-traverse`, `stack`, `body-order` +3 more · **T1** `matron-ladders`, `matron-fatality`, `matron-grab`, `matron-exam` +15 more | 25/80 |  |
+| 2490-2982 | `AffordanceMap::build_edges` | **T1+O** `matron-ring-descent`, `matron-ladders`, `matron-tower`, `matron-ways` +12 more · **O** `AS-010-c4`, `matron-traverse`, `stack`, `body-order` +3 more · **T1** `matron-fatality`, `matron-grab`, `matron-exam`, `matron-hearing` +5 more | 25/80 |  |
+| 2984-3064 | `AffordanceMap::plan` | **D** `matron-tower`, `matron-chase`, `matron-chain`, `matron-narrow` +5 more · **T1+O** `matron-ladders`, `matron-ways`, `matron-climb-scan`, `matron-exam-descent` +1 more · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` +1 more · **T1** `matron-exam`, `matron-climb-board`, `matron-hearing`, `matron-sight` +4 more | 22/83 |  |
+| 3066-3125 | `AffordanceMap::walk_path` | **T1+O** `matron-climb` · **O** `matron-traverse`, `matron-pursuit`, `matron-ring-descent`, `matron-tower` +3 more · **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 17/88 |  |
+| 3150-3379 | `traversal::grid_walk` | **D** `matron-chain`, `matron-narrow`, `matron-towers`, `matron-exam-climber` +2 more · **T1+O** `matron-climb-scan` · **O** `AS-010-c4`, `stack`, `body-order`, `determinism` +1 more · **T1** `matron-exam`, `matron-climb-board`, `matron-hearing`, `matron-sight` +7 more | 18/87 |  |
 
 ### `src/sim/mechanism_kit.cpp` (2295 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 98-138 | `make_shape` | **T1** ~all (105) | 105/0 |  |
-| 147-187 | `Kit::~Kit` | **T1** ~all (105) | 105/0 |  |
-| 191-223 | `Kit::add_body` | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** ~all (97) | 105/0 |  |
+| 98-138 | `make_shape` | **T1** ~all (106) | 106/0 |  |
+| 147-187 | `Kit::~Kit` | **T1** ~all (106) | 106/0 |  |
+| 191-223 | `Kit::add_body` | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** ~all (98) | 106/0 |  |
 | 225-250 | `Kit::add_shape_body` | **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13/0 |  |
-| 296-324 | `Kit::add_guide` | **T1** ~all (105) | 105/0 |  |
+| 296-324 | `Kit::add_guide` | **T1** ~all (106) | 106/0 |  |
 | 748-777 | `Kit::govern` | - | 0/91 | per-tick only |
 | 779-869 | `Kit::pre_step` | - | 0/91 | per-tick only |
 | 883-915 | `Kit::land_stream` | - | 0/91 | per-tick only |
@@ -527,13 +530,13 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 | 1209-1248 | `Kit::press` | - | 0/91 | per-tick only |
 | 1250-1334 | `Kit::flow_water` | - | 0/91 | per-tick only |
 | 1336-1398 | `Kit::flow_air` | - | 0/91 | per-tick only |
-| 1449-1516 | `Kit::travel_envelopes` | **T1** ~all (105) | 105/0 |  |
-| 1553-1588 | `Kit::connect_rope` | **T1** ~all (105) | 105/0 |  |
+| 1449-1516 | `Kit::travel_envelopes` | **T1** ~all (106) | 106/0 |  |
+| 1553-1588 | `Kit::connect_rope` | **T1** ~all (106) | 106/0 |  |
 | 1670-1707 | `Kit::hook_target` | - | 0/91 | per-tick only |
-| 1795-1853 | `Kit::capture` | **T1** ~all (105) | 105/0 |  |
+| 1795-1853 | `Kit::capture` | **T1** ~all (106) | 106/0 |  |
 | 1855-1960 | `Kit::restore` | **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13/78 |  |
-| 2058-2084 | `Kit::rope_polyline` | **T1** `swing (shadowed second block: never runs)`, `body-order`, `determinism`, `mast` +2 more | 6/0 |  |
-| 2086-2124 | `Kit::cable_polyline` | **T1** `swing (shadowed second block: never runs)`, `body-order`, `determinism`, `mast` +2 more | 6/0 |  |
+| 2058-2084 | `Kit::rope_polyline` | **T1** `swing`, `body-order`, `determinism`, `mast` +2 more | 6/0 |  |
+| 2086-2124 | `Kit::cable_polyline` | **T1** `swing`, `body-order`, `determinism`, `mast` +2 more | 6/0 |  |
 
 ### `src/sim/mechanism_kit.hpp` (940 lines)
 
@@ -541,20 +544,20 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 |---|---|---|---|---|
 
 
-### `src/sim/physics_world.cpp` (1439 lines)
+### `src/sim/physics_world.cpp` (1441 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 34-410 | `PhysicsWorld::PhysicsWorld` | **T1+O** `stock`, `forklift`, `spreader`, `crane` +10 more · **T1** ~all (91) | 105/0 |  |
-| 412-454 | `PhysicsWorld::~PhysicsWorld` | **T1** ~all (105) | 105/0 |  |
-| 500-928 | `PhysicsWorld::step` | **O** `stock`, `matron-crash`, `up-throw`, `forklift` +4 more | 0/91 | per-tick only |
-| 947-982 | `PhysicsWorld::slingshot_prediction` | - | 0/0 | **no test reaches** |
-| 1014-1038 | `PhysicsWorld::add_shape_body` | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** ~all (97) | 105/0 |  |
-| 1069-1102 | `PhysicsWorld::body_id_for_entity` | - | 0/91 | per-tick only |
-| 1110-1156 | `PhysicsWorld::build_world_solids` | **T1** ~all (105) | 105/0 |  |
-| 1205-1277 | `PhysicsWorld::build_stack` | **T1** ~all (105) | 105/0 |  |
-| 1286-1313 | `PhysicsWorld::create_constraint` | **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +19 more | 23/68 |  |
-| 1328-1357 | `PhysicsWorld::update_support_motion` | - | 0/91 | per-tick only |
+| 34-410 | `PhysicsWorld::PhysicsWorld` | **T1+O** `stock`, `forklift`, `spreader`, `crane` +10 more · **T1** ~all (92) | 106/0 |  |
+| 412-454 | `PhysicsWorld::~PhysicsWorld` | **T1** ~all (106) | 106/0 |  |
+| 500-930 | `PhysicsWorld::step` | **O** `stock`, `matron-crash`, `up-throw`, `forklift` +4 more | 0/91 | per-tick only |
+| 949-984 | `PhysicsWorld::slingshot_prediction` | - | 0/0 | **no test reaches** |
+| 1016-1040 | `PhysicsWorld::add_shape_body` | **T1+O** `matron-climb-scan`, `matron-chain`, `matron-narrow`, `matron-towers` +4 more · **T1** ~all (98) | 106/0 |  |
+| 1071-1104 | `PhysicsWorld::body_id_for_entity` | - | 0/91 | per-tick only |
+| 1112-1158 | `PhysicsWorld::build_world_solids` | **T1** ~all (106) | 106/0 |  |
+| 1207-1279 | `PhysicsWorld::build_stack` | **T1** ~all (106) | 106/0 |  |
+| 1288-1315 | `PhysicsWorld::create_constraint` | **T1** `water`, `one-arm`, `matron-arm`, `matron-moves` +19 more | 23/68 |  |
+| 1330-1359 | `PhysicsWorld::update_support_motion` | - | 0/91 | per-tick only |
 
 ### `src/sim/physics_world.hpp` (1243 lines)
 
@@ -635,15 +638,15 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 | 220-309 | `PhysicsWorld::restore_from_checkpoint` | **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13/78 |  |
 | 322-363 | `PhysicsWorld::write_save` | **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13/0 |  |
 | 368-490 | `PhysicsWorld::read_save` | **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13/0 |  |
-| 492-534 | `PhysicsWorld::read_machine_state` | **T1+O** `handling`, `AS-008-wreck`, `AS-008-band`, `AS-009-band` +29 more · **T1** `jumpbuffer`, `edge-stand`, `twin-geometry`, `workers` +68 more | 105/0 |  |
-| 536-886 | `PhysicsWorld::read_state` | **T1+O** `edge-stand`, `twin-geometry`, `workers`, `C6` +59 more · **T1** `jumpbuffer`, `handling`, `slingshot`, `trapeze` +38 more | 105/0 |  |
+| 492-534 | `PhysicsWorld::read_machine_state` | **T1+O** `handling`, `AS-008-wreck`, `AS-008-band`, `AS-009-band` +33 more · **T1** `jumpbuffer`, `edge-stand`, `twin-geometry`, `workers` +65 more | 106/0 |  |
+| 536-886 | `PhysicsWorld::read_state` | **T1+O** `edge-stand`, `twin-geometry`, `workers`, `C6` +60 more · **T1** `jumpbuffer`, `handling`, `slingshot`, `trapeze` +38 more | 106/0 |  |
 
 ### `src/sim/physics_world_support.hpp` (860 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 360-433 | `PlayerContactListener::observe_support` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
-| 484-612 | `detail::spawn_position` | **T1** ~all (105) | 105/0 |  |
+| 360-433 | `PlayerContactListener::observe_support` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
+| 484-612 | `detail::spawn_position` | **T1** ~all (106) | 106/0 |  |
 
 ### `src/sim/physics_world_traversal.cpp` (790 lines)
 
@@ -676,7 +679,7 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 | 1176-1205 | `Simulation::matron_journey` | **D** `matron-ladders`, `matron-tower`, `matron-ways`, `matron-chase` +3 more | 7/0 |  |
 | 1262-1305 | `Simulation::debug_matron_fixture` | **D** `matron-player-independence` | 1/0 |  |
 | 1325-1507 | `Simulation::matron_state` | **D** `matron-ladder`, `matron-room`, `matron-collision`, `matron-crash` +25 more | 29/0 |  |
-| 1545-1579 | `Simulation::swing_state` | **D** `swing (shadowed second block: never runs)` | 1/0 |  |
+| 1545-1579 | `Simulation::swing_state` | **D** `swing` | 1/0 |  |
 | 1678-1706 | `Simulation::lift_state` | **D** `tram`, `pitman`, `helix`, `incline` +5 more | 9/0 |  |
 
 ### `src/sim/simulation.hpp` (1937 lines)
@@ -689,14 +692,14 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 64-191 | `Slingshot::Slingshot` | **T1** ~all (105) | 105/0 |  |
+| 64-191 | `Slingshot::Slingshot` | **T1** ~all (106) | 106/0 |  |
 | 217-249 | `Slingshot::create_aim_gimbal` | **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13/78 |  |
 | 421-469 | `Slingshot::attach` | **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13/78 |  |
-| 536-576 | `Slingshot::refresh_state` | **T1** ~all (105) | 105/0 |  |
-| 578-639 | `Slingshot::finish_previous_step` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
+| 536-576 | `Slingshot::refresh_state` | **T1** ~all (106) | 106/0 |  |
+| 578-639 | `Slingshot::finish_previous_step` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
 | 641-713 | `Slingshot::pre_step` | - | 0/91 | per-tick only |
-| 715-744 | `Slingshot::drive_ratchet` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
-| 746-820 | `Slingshot::OnStep` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
+| 715-744 | `Slingshot::drive_ratchet` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
+| 746-820 | `Slingshot::OnStep` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
 | 862-887 | `Slingshot::finish_recovery` | - | 0/91 | per-tick only |
 | 912-967 | `Slingshot::restore` | **T1** `teeter`, `save`, `twin`, `bay` +9 more | 13/78 |  |
 | 969-1005 | `Slingshot::reset` | - | 0/0 | **no test reaches** |
@@ -706,20 +709,20 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 61-150 | `frame_parts` | **T1** ~all (105) | 105/0 |  |
-| 268-342 | `Swing::Swing` | **T1** ~all (105) | 105/0 |  |
-| 431-459 | `Swing::machine_energy` | **T1** ~all (105) | 105/0 |  |
-| 484-531 | `Swing::OnStep` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +12 more | 16/88 |  |
+| 61-150 | `frame_parts` | **T1** ~all (106) | 106/0 |  |
+| 268-342 | `Swing::Swing` | **T1** ~all (106) | 106/0 |  |
+| 431-459 | `Swing::machine_energy` | **T1** ~all (106) | 106/0 |  |
+| 484-531 | `Swing::OnStep` | **T1** `matron-exam`, `matron-chain`, `matron-narrow`, `matron-towers` +13 more | 17/88 |  |
 | 533-558 | `Swing::post_step` | - | 0/91 | per-tick only |
 
 ### `src/sim/vertical/vertical_route.cpp` (523 lines)
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 22-125 | `Route::Route` | **T1** ~all (105) | 105/0 |  |
+| 22-125 | `Route::Route` | **T1** ~all (106) | 106/0 |  |
 | 156-186 | `Route::at` | **T1** `tram`, `pitman`, `helix`, `incline` +5 more | 9/82 |  |
-| 224-257 | `Route::build_late` | **T1** ~all (105) | 105/0 |  |
-| 259-328 | `Route::build_wheel_reload` | **T1** ~all (105) | 105/0 |  |
+| 224-257 | `Route::build_late` | **T1** ~all (106) | 106/0 |  |
+| 259-328 | `Route::build_wheel_reload` | **T1** ~all (106) | 106/0 |  |
 | 341-461 | `Route::pre_step` | - | 0/91 | per-tick only |
 | 463-502 | `Route::pitman_step` | - | 0/91 | per-tick only |
 
@@ -727,15 +730,15 @@ Every function of 25 or more lines (40 in headers) in a file of 500 or more line
 
 | Lines | Function | Run these (tier, narrowest first) | Reached w/o tick / only via tick | Note |
 |---|---|---|---|---|
-| 53-84 | `mast_parts` | **T1** ~all (105) | 105/0 |  |
-| 97-165 | `jib_parts` | **T1** ~all (105) | 105/0 |  |
-| 302-346 | `dock_parts` | **T1+O** `crane` · **T1** ~all (104) | 105/0 |  |
-| 361-451 | `YardCrane::YardCrane` | **T1+O** `crane`, `shared_survival (own exe)` · **T1** ~all (103) | 105/0 |  |
+| 53-84 | `mast_parts` | **T1** ~all (106) | 106/0 |  |
+| 97-165 | `jib_parts` | **T1** ~all (106) | 106/0 |  |
+| 302-346 | `dock_parts` | **T1+O** `crane` · **T1** ~all (105) | 106/0 |  |
+| 361-451 | `YardCrane::YardCrane` | **T1+O** `crane`, `shared_survival (own exe)` · **T1** ~all (104) | 106/0 |  |
 | 484-556 | `YardCrane::magnet_contact` | - | 0/91 | per-tick only |
 | 558-584 | `YardCrane::work_magnet` | - | 0/91 | per-tick only |
 | 586-640 | `YardCrane::spreader_seat` | - | 0/91 | per-tick only |
 | 699-811 | `YardCrane::pre_step` | - | 0/91 | per-tick only |
-| 813-858 | `YardCrane::post_step` | **T1** ~all (105) | 105/0 |  |
+| 813-858 | `YardCrane::post_step` | **T1** ~all (106) | 106/0 |  |
 
 
 ## 4. Matron subject index (what her tests watch)
@@ -746,7 +749,7 @@ Her code is one state machine, so reach alone cannot tell the holds tests from t
 |---|---|---|
 | Her hold, arm tears, fatality (she grabs, carries, tears, kills) | matron_hold.cpp, matron_fatality.cpp, physics_world_grab.cpp, physics_world_arm.cpp, physics_world_fatality.cpp, physics_world_one_arm.cpp, matron_grip.hpp | `matron-grab` (92), `matron-fatality` (59), `matron-arm` (37), `matron` (12), `matron-remaining` (10), `matron-mischief` (1), `one-arm` (1), `matron-chase` (1), `strike` (1), `matron-climb-board` (1), `matron-climb` (1), `matron-routecraft` (1) |
 | Her climbing (ladders, mantles, found climbs, journeys) | matron_climb.cpp, matron_traversal.cpp, matron_routecraft.cpp, matron_found_climb.cpp, matron_journey.cpp, matron_travel.cpp, matron_contact.cpp | `matron-climb` (44), `matron-climb-scan` (43), `matron` (37), `matron-remaining` (34), `matron-found-climb` (33), `matron-pipe` (32), `matron-tower` (11), `matron-ways` (7), `matron-ladders` (6), `matron-chase` (6), `matron-moves` (5), `matron-ladder` (4), `matron-traverse` (3), `bay` (3), `matron-pursuit` (2), `matron-player-independence` (2), `matron-routecraft` (2), `matron-ring-descent` (1), `matron-climb-board` (1) |
-| Her senses and hunt (hearing, sight, lead, fooled, wary) | matron.cpp (state machine, hunt), matron_moves.cpp | `matron` (9), `matron-hearing` (9), `matron-crash` (8), `matron-sight` (7), `matron-remaining` (6), `matron-balance` (5), `matron-chase` (5), `matron-room` (3), `matron-moves` (2), `matron-pipe` (1), `matron-arm` (1), `matron-grab` (1) |
+| Her senses and hunt (hearing, sight, lead, fooled, wary) | matron.cpp (state machine, hunt), matron_moves.cpp | `matron` (9), `matron-hearing` (9), `matron-crash` (8), `matron-sight` (7), `matron-honest` (7), `matron-remaining` (6), `matron-balance` (5), `matron-chase` (5), `matron-room` (3), `matron-moves` (2), `matron-pipe` (1), `matron-arm` (1), `matron-grab` (1) |
 | Her balance and the player's blows (strike, stagger, knockdown, rage) | physics_world_strike.cpp, matron.cpp | `strike` (11), `matron-remaining` (8), `matron` (8), `matron-balance` (7), `matron-collision` (4), `matron-chase` (4), `matron-mischief` (2), `matron-pipe` (2), `matron-grab` (2), `matron-stand` (1), `matron-moves` (1), `matron-pursuit` (1), `matron-player-independence` (1) |
 | Her corner pipe | matron_pipe.cpp | `matron-pipe` (11), `matron-remaining` (11), `matron` (11), `matron-found-climb` (4), `matron-climb-scan` (4), `matron-climb` (4), `matron-pursuit` (2), `matron-chase` (2), `matron-traverse` (1), `matron-moves` (1), `matron-player-independence` (1), `matron-ring-descent` (1), `matron-ways` (1) |
 | Her cable and catwalk (lines, rotten planks) | matron_line.cpp, matron.cpp | `matron` (8), `matron-remaining` (4), `matron-moves` (4), `matron-chase` (2), `matron-player-independence` (1) |
@@ -921,6 +924,7 @@ Columns: spawn is the id passed to `configure_initial_spawn`; "game functions" a
 | `src/sim/matron_journey.cpp` | `touch_gyro_aim`, `touch_room_hearing`, `touch_pause`, `touch_voice_echo`, `touch_mic_consent`, `touch_roll` +1 more | `touch_gyro_aim`, `touch_room_hearing`, `touch_route_hint`, `touch_pause`, `touch_voice_echo`, `touch_mic_consent` +2 more | 7/8 |
 | `src/sim/matron_line.cpp` | `touch_gyro_aim`, `touch_room_hearing`, `touch_pause`, `touch_voice_echo`, `touch_mic_consent`, `touch_roll` +1 more | `look_matron_gallery`, `touch_gyro_aim`, `touch_room_hearing`, `touch_birds`, `look_her_chart`, `touch_route_hint` +22 more | 7/28 |
 | `src/sim/matron_moves.cpp` | - | `touch_gyro_aim`, `touch_room_hearing`, `touch_birds`, `look_her_chart`, `touch_route_hint`, `touch_pause` +4 more | 0/10 |
+| `src/sim/matron_perception.cpp` | - | `touch_gyro_aim`, `touch_room_hearing`, `touch_pause`, `touch_voice_echo`, `touch_mic_consent`, `touch_roll` +1 more | 0/7 |
 | `src/sim/matron_pipe.cpp` | `touch_gyro_aim`, `touch_room_hearing`, `touch_pause`, `touch_voice_echo`, `touch_mic_consent`, `touch_roll` +1 more | `look_matron_gallery`, `touch_gyro_aim`, `touch_room_hearing`, `touch_birds`, `look_her_chart`, `touch_route_hint` +18 more | 7/24 |
 | `src/sim/matron_routecraft.cpp` | - | `touch_gyro_aim`, `touch_room_hearing`, `touch_birds`, `look_her_chart`, `touch_route_hint`, `touch_pause` +4 more | 0/10 |
 | `src/sim/matron_stalk.cpp` | - | `touch_gyro_aim`, `touch_room_hearing`, `touch_pause`, `touch_voice_echo`, `touch_mic_consent`, `touch_roll` +1 more | 0/7 |
@@ -972,9 +976,9 @@ Columns: spawn is the id passed to `configure_initial_spawn`; "game functions" a
 | File | Lines | Functions run by a scenario | Per-frame core | Scenarios that call into it (narrowest first) | Headless tests | Verdict |
 |---|---|---|---|---|---|---|
 | `audio/audio_director.gd` | 1817 | 66 | 62/66 | `audio_mix`, `audio_fall` | footstep_contact_test.gd | scenario-specific |
-| `audio/her_takes.gd` | 185 | 12 | 12/12 | `touch_matron_act` | her_takes_test.gd | scenario-specific |
-| `audio/matron_sound.gd` | 483 | 9 | 9/9 | - | - | per-frame core only (every scenario) |
-| `audio/sound_bank.gd` | 1659 | 91 | 1/91 | - | - | per-frame core only (every scenario) |
+| `audio/her_takes.gd` | 183 | 12 | 12/12 | `touch_matron_act` | her_takes_test.gd | scenario-specific |
+| `audio/matron_sound.gd` | 447 | 9 | 9/9 | - | - | per-frame core only (every scenario) |
+| `audio/sound_bank.gd` | 1606 | 88 | 1/88 | - | - | per-frame core only (every scenario) |
 | `audio/story_radio_player.gd` | 275 | 22 | 9/22 | `touch_her_chart_fast` | - | scenario-specific |
 | `audio/voice_lines.gd` | 137 | 0 | 0/0 | - | - | no scenario or test reaches it |
 | `canopy_view.gd` | 154 | 6 | 5/6 | `touch_slingshot` | - | scenario-specific |
@@ -1027,7 +1031,7 @@ Columns: spawn is the id passed to `configure_initial_spawn`; "game functions" a
 | `ui/consent_screen.gd` | 119 | 7 | 6/7 | `touch_her_chart_fast`, `touch_mic_consent`, `touch_save` | - | scenario-specific |
 | `ui/hud.gd` | 563 | 22 | 22/22 | `touch_lethal_feedback` | - | scenario-specific |
 | `ui/input_router.gd` | 368 | 17 | 17/17 | - | - | per-frame core only (every scenario) |
-| `ui/licences.gd` | 161 | 1 | 1/1 | - | - | per-frame core only (every scenario) |
+| `ui/licences.gd` | 171 | 1 | 1/1 | - | - | per-frame core only (every scenario) |
 | `ui/pause_menu.gd` | 735 | 38 | 31/38 | `touch_pause`, `touch_mic_consent`, `touch_save` | - | scenario-specific |
 | `ui/settings_store.gd` | 211 | 6 | 6/6 | `touch_pause` | - | scenario-specific |
 | `ui/title_screen.gd` | 168 | 10 | 7/10 | `touch_title`, `touch_save` | - | scenario-specific |
@@ -1070,21 +1074,21 @@ Columns: spawn is the id passed to `configure_initial_spawn`; "game functions" a
 | 1679-1728 | `update_bay` | - | yes |
 | 1743-1778 | `update_wet_e` | - | yes |
 
-### `audio/sound_bank.gd` (1659 lines)
+### `audio/sound_bank.gd` (1606 lines)
 
 | Lines | Function | Scenarios that call it (narrowest first) | Per-frame core |
 |---|---|---|---|
-| 33-131 | `build` | - | no |
-| 143-173 | `build_her` | - | no |
-| 371-396 | `_drip` | - | no |
-| 413-438 | `_creak` | - | no |
-| 782-846 | `_matron_wake` | - | no |
-| 878-907 | `_her_bed` | - | no |
-| 1357-1382 | `_resonate` | - | no |
-| 1387-1414 | `_wav` | - | no |
-| 1434-1473 | `_glottal` | - | no |
-| 1474-1515 | `_formants` | - | no |
-| 1571-1598 | `_add_glide` | - | no |
+| 33-126 | `build` | - | no |
+| 139-166 | `build_her` | - | no |
+| 364-389 | `_drip` | - | no |
+| 406-431 | `_creak` | - | no |
+| 775-839 | `_matron_wake` | - | no |
+| 871-900 | `_her_bed` | - | no |
+| 1304-1329 | `_resonate` | - | no |
+| 1334-1361 | `_wav` | - | no |
+| 1381-1420 | `_glottal` | - | no |
+| 1421-1462 | `_formants` | - | no |
+| 1518-1545 | `_add_glide` | - | no |
 
 ### `first_person_arms.gd` (951 lines)
 
@@ -1284,7 +1288,7 @@ Run with `tools/godot/godot --headless --path godot --script res://tests/<name>.
 |---|---|---|
 | `tests/footstep_contact_test.gd` | `audio/audio_director.gd` | 31 |
 | `tests/gore_shots_test.gd` | `life/gore/gore_view.gd`, `life/matron_view.gd` | 269 |
-| `tests/her_takes_test.gd` | `audio/her_takes.gd` | 154 |
+| `tests/her_takes_test.gd` | `audio/her_takes.gd` | 158 |
 | `tests/matron_figure_test.gd` | `life/matron_look.gd`, `life/matron_view.gd` | 254 |
 | `tests/matron_perception_climb_test.gd` | `life/matron_view.gd` | 37 |
 | `tests/matron_presentation_test.gd` | `life/matron_view.gd` | 245 |
@@ -1296,7 +1300,6 @@ Run with `tools/godot/godot --headless --path godot --script res://tests/<name>.
 - `src/sim/matron_mover.hpp`: interface only, no code.
 - Bridge (`src/bridge/scraperx_simulation.cpp`): the native groups do not link it; every `get_*_state` and `_bind_methods` is reached only by the touch scenarios and the game.
 - Presentation: `audio/voice_lines.gd`, `identity/portrait_face_fit.gd`, `life/climber/climber_body_rig.gd`. See section 7 for what that means.
-- `SCRAPERX_ONLY=swing` runs the parkour list (`run_brachiation` ... `run_c7`), not `run_swing` (the AS-012 swing): the second `swing` block in main() is never reached. `run_swing` runs only in the full run.
 
 ## Method (to regenerate)
 
