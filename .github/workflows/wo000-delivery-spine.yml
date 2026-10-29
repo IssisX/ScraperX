@@ -502,9 +502,27 @@ jobs:
           CHECKPOINT_ID="${GITHUB_SHA::12}"
           APK_NAME="ScraperX-Claude-${CHECKPOINT_ID}-arm64.apk"
           mkdir -p build/apk artifacts/apk
+          # Godot's all_resources export includes imported audio despite the
+          # preset exclude filter. Stage unapproved source streams outside
+          # res:// for this export only; restore them even if export fails.
+          voice_hold="$(mktemp -d)"
+          restore_story_voices() {
+            for voice in "${voice_hold}"/*; do
+              [ -e "${voice}" ] || continue
+              mv -- "${voice}" godot/audio/story_radio/
+            done
+            rmdir -- "${voice_hold}"
+          }
+          trap restore_story_voices EXIT
+          for voice in godot/audio/story_radio/*.ogg godot/audio/story_radio/*.ogg.import; do
+            [ -f "${voice}" ] || continue
+            mv -- "${voice}" "${voice_hold}/"
+          done
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
             2>&1 | tee artifacts/godot-android-export.log
+          restore_story_voices
+          trap - EXIT
           test -s "build/apk/${APK_NAME}"
           unzip -l "build/apk/${APK_NAME}" | tee artifacts/apk-contents.log
           grep -F "lib/arm64-v8a/libscraperx_native.so" artifacts/apk-contents.log
