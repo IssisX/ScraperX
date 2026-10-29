@@ -302,6 +302,10 @@ struct MatronSnapshot final {
     double pipe_slam_mps = 0.0;
     double pipe_peak_force_n = 0.0;
     double pipe_peak_power_w = 0.0;
+    // The riser she is on, or was last (her scan's): its axis (y 0) and half section.
+    Vector3 pipe_axis{};
+    double pipe_half_x = 0.0, pipe_half_z = 0.0;
+    bool pipe_on_face = false;   // her hands on its face, hand over hand
     // The bay (bay.hpp): her hands holding its leaf and what they hold up, N;
     // her trap's phase (Matron::Trap: 0 none .. 4 holding, 5 climbing out)
     // and how many times she set it this run.

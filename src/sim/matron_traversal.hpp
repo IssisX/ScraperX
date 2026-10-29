@@ -143,6 +143,8 @@ enum class MoveKind : std::uint8_t {
     JumpCatch = 7,  // a jump to a bar or the bottom of a ladder; then up it
     HangDrop = 8,
     GapJump = 9,    // a supported run and short leg drive, then ballistic flight to a lower floor
+    RiserUp = 10,   // up a riser's face hand over hand, feet braced (the Matron's own, matron_pipe.cpp; not the Climber's)
+    RiserDown = 11,
 };
 [[nodiscard]] const char *move_name(MoveKind kind) noexcept;
 

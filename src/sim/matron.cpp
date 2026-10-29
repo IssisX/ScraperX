@@ -342,11 +342,7 @@ void Matron::hear_for_test(const RVec3 at) {
     }
 }
 
-void Matron::rule_out_pipe_for_test() {
-    for (PipeWayMemory &way : pipe_ways_) {
-        way.ruled_out = true;
-    }
-}
+void Matron::rule_out_pipe_for_test() { pipe_ruled_out_ = true; }
 
 void Matron::let_go_for_test() {
     // Her hands open on the way that holds her, as a hold giving way opens them.
@@ -363,9 +359,20 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
     }
     climb_retry_s_ = 0.0F;
     if (pipe) {
+        // The riser of hers nearest her from her floor, the way asked.
+        if (!body_in_world_ || pipe_ruled_out_) {
+            return false;
+        }
+        const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-        const float to = floor_y + (down ? -kStackPitch : kStackPitch);
-        return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
+        const float toward = down ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::max();
+        const int route = riser_between(floor_y, toward, float(at.GetX()), float(at.GetZ()), -1);
+        if (route < 0) {
+            return false;
+        }
+        pipe_route_ = route;
+        const RiserRoute &r = riser_routes_[static_cast<std::size_t>(route)];
+        return down ? get_on_pipe(r.hi.floor_y, r.lo.floor_y) : get_on_pipe(r.lo.floor_y, r.hi.floor_y);
     }
     return index >= 0 && take_climb(index, down);
 }
@@ -2391,8 +2398,7 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         body_in_world_ && in_footprint &&
         ((taking != nullptr && taking->view().has_goal &&
           std::abs(player_floor_y - taking->view().goal_floor_y) < 0.1F) ||
-         (stage_ != Stage::Pest && pipe_reaches(level_floor) && pipe_reaches(player_floor_y) &&
-          std::abs(std::abs(player_floor_y - level_floor) - kStackPitch) < 0.1F));
+         (stage_ != Stage::Pest && riser_joins(level_floor, player_floor_y)));
     player_on_deck_ = on_deck || player_climb >= 0 || by_her_pipe;
     // The player's way on her level, remembered (matron_moves.cpp).
     if (on_deck && body_in_world_) {
@@ -2750,8 +2756,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, no longer frail: chased longer.
-            const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
-            const bool by_pipe = elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward);
+            const bool by_pipe = elsewhere && stage_ != Stage::Pest && !pipe_ruled_out_ &&
+                                 riser_between(floor_y, lead_floor_, ax, az, -1) >= 0;
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
             // walking to, a journey or a travel she is on, a climb she is
@@ -3748,9 +3754,11 @@ void Matron::restore(const Saved &saved) {
         climbs_done_ = 0;
         // A restore is a world changed: every way of her pipe is worth trying
         // again (one ruled out stays out).
-        for (PipeWayMemory &way : pipe_ways_) {
-            way.failures = 0;
-            way.blocked_until_s = 0.0F;
+        for (RiserRoute &route : riser_routes_) {
+            for (PipeWayMemory &way : route.ways) {
+                way.failures = 0;
+                way.blocked_until_s = 0.0F;
+            }
         }
         physics_.GetBodyInterface().SetGravityFactor(body_, 1.0F);
         unrig_s_ = 0.0F;

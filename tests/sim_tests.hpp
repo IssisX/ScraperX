@@ -901,6 +901,7 @@ void test_matron_sight();
 void test_matron_stalk();
 void test_matron_ladder_head();
 void test_matron_climb_support();
+void test_matron_riser();
 void run_matron_crash();
 void run_matron_mischief();
 void run_matron_collision();

@@ -10,6 +10,12 @@
 #include "sim/matron.hpp"
 #include "sim_tests_decks.hpp"
 
+// The exam's own place: on the north band by the shaft's corner pipe (the
+// riser at x 15.8, z -134.2), where these legs set her down. Her code knows no
+// riser by place; she takes the one her scan offers nearest her.
+constexpr double kCornerPipeStandX = 14.85;
+constexpr double kCornerPipeStandZ = -132.55;
+
 namespace {
 using scraperx_test_decks::Deck;
 using scraperx_test_decks::deck_at;
@@ -91,13 +97,13 @@ void run_matron_traverse() {
         {"C3 duct down: the duct to the landing", false, true, {-10.5, 137.2, -143.4}, 135.5,
          Deck::None},
         {"corner pipe down: 154 to 143", true, true,
-         {Matron::kPipeDeckX, 154.0, Matron::kPipeDeckZ}, 143.0, Deck::Deck143},
+         {kCornerPipeStandX, 154.0, kCornerPipeStandZ}, 143.0, Deck::Deck143},
         {"corner pipe up: 143 to 154", true, false,
-         {Matron::kPipeDeckX, 143.0, Matron::kPipeDeckZ}, 154.0, Deck::Deck154},
+         {kCornerPipeStandX, 143.0, kCornerPipeStandZ}, 154.0, Deck::Deck154},
         {"corner pipe down: 143 to 132", true, true,
-         {Matron::kPipeDeckX, 143.0, Matron::kPipeDeckZ}, 132.0, Deck::Deck132},
+         {kCornerPipeStandX, 143.0, kCornerPipeStandZ}, 132.0, Deck::Deck132},
         {"corner pipe up: 132 to 143", true, false,
-         {Matron::kPipeDeckX, 132.0, Matron::kPipeDeckZ}, 143.0, Deck::Deck143},
+         {kCornerPipeStandX, 132.0, kCornerPipeStandZ}, 143.0, Deck::Deck143},
     }};
     for (const Leg &leg : legs) {
         const Result r = take(leg);

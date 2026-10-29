@@ -5,14 +5,17 @@
 // tick of a native run against the rest of what the simulation says. The
 // presentation plants a limb, and rides or lifts her body onto a floor, only
 // on these, so they must be her real floor and her real grip, this tick:
-//  - never a second grip (none of her movers holds two);
+//  - a second grip only on a riser, hand over hand, where both her hands
+//    hold its face: within her reach, at the riser (no other mover holds two);
 //  - her floor where her soles can be on it (under her middle or her feet's
 //    span, no lower than her legs reach);
 //  - her grip within her reach, and where the mover that has her shows its
 //    hand (on a hold that does not move, the same point);
 //  - on her pipe, hand over hand, her feet's brace on the riser: level with
 //    her shins, within her legs' reach, at the riser (and how often she has
-//    one, for the pipe's own check);
+//    one, and how often both hands, for the pipe's own check);
+// The riser is the one her state says she is on (pipe_axis, pipe_half_*):
+// her code knows no riser by place.
 // Counted, not failed: at rest with no grip and no floor exported (a body
 // holding her up that walk_toward does not stand on), and, during a
 // two-handed move, the old inferences the view drew from before S6 (a second
@@ -33,13 +36,14 @@ struct MatronContactAudit {
     long two_handed = 0;
     long invented_hand2 = 0;    // the old climb_hand2_known, a second hold the simulation does not hold
     long invented_feet = 0;     // the old climb_feet_support_known with no floor under her
-    long second_grip = 0;       // FAIL: a second grip exported
+    long second_grip = 0;       // FAIL: a second grip exported off a riser's face, out of reach or off the riser
     long floor_off_her = 0;     // FAIL: the exported floor not one her soles can be on
     long grip_out_of_reach = 0; // FAIL: the exported grip out of her reach
     long grip_off_mover = 0;    // FAIL: the exported grip not where the mover shows her hand
     long resting_unowned = 0;   // counted: still, holding nothing, no floor exported
     long pipe_face = 0;         // on her pipe hand over hand, her hand on the riser (not a deck's rail)
     long braced = 0;            // ... with her feet's brace exported
+    long two_hands = 0;         // ... with both hands on its face
     long brace_off_her = 0;     // FAIL: the brace not level with her shins, in her legs' reach, at the riser
     double worst_grip_mover_m = 0.0;
     int still_ticks = 0;
@@ -55,7 +59,15 @@ struct MatronContactAudit {
     static constexpr double kMoverHandM = 0.05;
     static constexpr double kShinM = static_cast<double>(scraperx::sim::Matron::kBraceShinM);
     static constexpr double kBraceReachM = static_cast<double>(scraperx::sim::Matron::kBraceReachM);
-    static constexpr double kRiserOffAxisM = 0.8;   // the riser's 0.35 m half and its flange to 0.55 m, and room
+    static constexpr double kRiserOffAxisM = 0.8;   // at most: the corner riser's 0.35 m half and its flange to 0.55 m, and room
+    // On the riser she is on: within its half diagonal and a flange's reach
+    // (0.36 m) of its axis, and never past kRiserOffAxisM.
+    static double riser_off_axis_m(const scraperx::sim::MatronSnapshot &m) {
+        return std::min(kRiserOffAxisM, std::hypot(m.pipe_half_x, m.pipe_half_z) + 0.36);
+    }
+    static double off_axis(const scraperx::sim::MatronSnapshot &m, const scraperx::sim::Vector3 &p) {
+        return std::hypot(p.x - m.pipe_axis.x, p.z - m.pipe_axis.z);
+    }
 
     void tick(const scraperx::sim::MatronSnapshot &m) {
         using scraperx::sim::traversal::MoveKind;
@@ -69,7 +81,14 @@ struct MatronContactAudit {
             if (m.climb_hand2_known) ++invented_hand2;
             if (m.climb_feet_support_known && !m.contact_supported) ++invented_feet;
         }
-        if (m.contact_hand2_held) ++second_grip;
+        if (m.contact_hand2_held) {
+            const double reach2 = std::hypot(m.contact_hand2.x - m.position.x, m.contact_hand2.y - m.position.y,
+                                             m.contact_hand2.z - m.position.z);
+            if (!m.on_pipe || !m.contact_hand_held || reach2 > kReachM || off_axis(m, m.contact_hand2) > riser_off_axis_m(m) ||
+                off_axis(m, m.contact_hand) > riser_off_axis_m(m)) {
+                ++second_grip;
+            }
+        }
         if (m.contact_supported) {
             ++supported;
             const double below = m.position.y - m.contact_feet.y;
@@ -88,21 +107,18 @@ struct MatronContactAudit {
                 if (d > kMoverHandM) ++grip_off_mover;
             }
         }
-        const double hand_off_axis =
-            std::hypot(m.contact_hand.x - static_cast<double>(scraperx::sim::Matron::kPipeCentreX),
-                       m.contact_hand.z - static_cast<double>(scraperx::sim::Matron::kPipeCentreZ));
-        if (m.on_pipe && m.contact_hand_held && hand_off_axis <= kRiserOffAxisM && !m.pipe_sliding && !m.pipe_stunned &&
-            !m.pipe_head_down) {
+        const double hand_off_axis = off_axis(m, m.contact_hand);
+        if (m.on_pipe && m.pipe_on_face && m.contact_hand_held && hand_off_axis <= riser_off_axis_m(m) && !m.pipe_sliding &&
+            !m.pipe_stunned && !m.pipe_head_down) {
             ++pipe_face;
             if (m.contact_braced) ++braced;
+            if (m.contact_hand2_held) ++two_hands;
         }
         if (m.contact_braced) {
             const double shin_y = m.position.y - kStandCenterM + kShinM;
             const double reach = std::hypot(m.contact_brace.x - m.position.x, m.contact_brace.z - m.position.z);
-            const double off_axis = std::hypot(m.contact_brace.x - static_cast<double>(scraperx::sim::Matron::kPipeCentreX),
-                                               m.contact_brace.z - static_cast<double>(scraperx::sim::Matron::kPipeCentreZ));
             if (!m.on_pipe || std::abs(m.contact_brace.y - shin_y) > 0.02 || reach > kBraceReachM + 0.02 ||
-                off_axis > kRiserOffAxisM) {
+                off_axis(m, m.contact_brace) > riser_off_axis_m(m)) {
                 ++brace_off_her;
             }
         }
@@ -124,7 +140,7 @@ struct MatronContactAudit {
                   << ", invented floor " << invented_feet << "); second grips " << second_grip << ", floor off her "
                   << floor_off_her << ", grip out of reach " << grip_out_of_reach << ", grip off the mover's hand "
                   << grip_off_mover << " (worst " << worst_grip_mover_m << " m), still with no floor or grip "
-                  << resting_unowned << "; on her pipe's face " << pipe_face << ", braced " << braced
+                  << resting_unowned << "; on her pipe's face " << pipe_face << ", braced " << braced << ", both hands " << two_hands
                   << ", brace off her " << brace_off_her << '\n';
     }
 };

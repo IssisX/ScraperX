@@ -42,6 +42,8 @@ const char *move_name(const MoveKind kind) noexcept {
     case MoveKind::JumpCatch: return "jump_catch";
     case MoveKind::HangDrop: return "hang_drop";
     case MoveKind::GapJump: return "gap_jump";
+    case MoveKind::RiserUp: return "riser_up";
+    case MoveKind::RiserDown: return "riser_down";
     }
     return "?";
 }
@@ -944,6 +946,8 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::JumpCatch: step_jump(dt, budget); break;
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
     case MoveKind::GapJump: step_gap(dt, budget); break;
+    case MoveKind::RiserUp:
+    case MoveKind::RiserDown: break;   // her riser is the Matron's own move (matron_pipe.cpp), never begun here
     }
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
@@ -2094,10 +2098,10 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
             poles_.push_back({mid.GetX(), mid.GetZ(), std::max(sx, sz), leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
             continue;
         }
-        // A riser: tall, roughly square, too thick to wrap, with standing
-        // faces she can climb by friction. Recorded in addition to any patch
+        // A riser: tall, roughly square (its faces level, along x and z), too
+        // thick to wrap, with standing faces she can climb by friction. Recorded in addition to any patch
         // its top makes, so existing planning over its top is unchanged.
-        if (sy >= 5.0F && std::max(sx, sz) > 0.16F && std::max(sx, sz) <= 1.50F && std::min(sx, sz) >= 0.15F &&
+        if (leaf.axis_aligned && sy >= 5.0F && std::max(sx, sz) > 0.16F && std::max(sx, sz) <= 1.50F && std::min(sx, sz) >= 0.15F &&
             std::max(sx, sz) <= 3.0F * std::min(sx, sz)) {
             risers_.push_back({mid.GetX(), mid.GetZ(), 0.5F * sx, 0.5F * sz, leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
         }
