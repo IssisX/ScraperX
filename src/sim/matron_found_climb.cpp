@@ -422,6 +422,8 @@ MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*bu
 void Matron::RoutecraftWay::cancel() {
     m_.routecraft_.cancel();
     m_.routecraft_mine_ = false;
+    m_.routecraft_recovering_ = false;
+    m_.found_ = FoundClimb{};
 }
 
 MoverStatus Matron::RoutecraftWay::status() const {
