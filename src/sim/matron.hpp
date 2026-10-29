@@ -109,6 +109,7 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include "sim/matron_mover.hpp"
+#include "sim/matron_perception.hpp"
 #include "sim/matron_routecraft.hpp"
 #include "sim/matron_traversal.hpp"
 
@@ -996,6 +997,7 @@ public:
         std::uint64_t entity = 0;
         JPH::Vec3 handle = JPH::Vec3::sZero();   // where a hand takes it, in its own frame
         float mass_kg = 0.0F;   // read from its body by set_throwables (infinite: not a moving body)
+        JPH::Vec3 laid = JPH::Vec3::sZero();   // where it lay when given (set_throwables): her deck as she knows it
     };
 
     struct PlankView {
@@ -1218,9 +1220,10 @@ public:
     Matron(const Matron &) = delete;
     Matron &operator=(const Matron &) = delete;
 
-    // `loudness`: 0..1 from the player's movement this tick (see the .cpp);
-    // `player` is the body's centre.
-    void pre_step(float dt, JPH::RVec3 player, float loudness);
+    // `him`: the player's true state this tick (his body's centre, the noise
+    // his movement makes), which she cannot open: Perception turns it into her
+    // evidence (matron_perception.hpp) before anything of hers decides.
+    void pre_step(float dt, const Stimulus &him);
     // Opt-in native goal. Facing selects the approach side, never a route.
     bool request_climb_goal(JPH::RVec3 goal, JPH::Vec3 facing);
     void cancel_climb_goal() noexcept { routecraft_.cancel(); }
@@ -1253,9 +1256,13 @@ public:
     // The stock she may take and throw (at most 32 pieces): given once it is laid.
     void set_throwables(std::vector<Throwable> throwables);
     // The entity in the player's hands this tick, 0 for none: given before
-    // pre_step. A throwable they hold becomes theirs to her, and she never
-    // takes it out of their hands.
-    void set_player_holding(std::uint64_t entity) noexcept { player_holding_ = entity; }
+    // pre_step. Hers only as she sees it (Evidence::seen_holding: a throwable
+    // she sees in his hands becomes his to her); and her contact sense counts
+    // it as part of his body (sense_near: carried into her, it is his push).
+    void set_player_holding(std::uint64_t entity) noexcept {
+        extras_.holding(entity);
+        push_load_ = entity;
+    }
     // Whatever is in her hands let go where it is, and no piece gone for: a
     // checkpoint's restore does this before any body is put back.
     void drop_stock();
@@ -1281,6 +1288,8 @@ public:
     // kOwnSoundM of her body: what she strikes herself) and carries to her.
     // Past kMaxSounds in a tick the rest are not heard (the world gives the
     // hardest hits first).
+    // How far a sound of full loudness carries.
+    static constexpr float kFullHearingM = 55.0F;
     static constexpr std::size_t kMaxSounds = 16;
     static constexpr float kOwnSoundM = 1.5F;
     void hear(float x, float y, float z, float loudness) noexcept {
@@ -1298,7 +1307,7 @@ public:
     // player who has left the deck (up a machine) is out of her reach and
     // checkpoints as ever.
     [[nodiscard]] bool freezes_checkpoint() const noexcept {
-        return view_.released && view_.alive && player_on_deck_;
+        return view_.released && view_.alive && checkpoint_freeze_;
     }
     // Reports (once) that she has just burst out, so the world commits the
     // checkpoint where the player stands.
@@ -1421,8 +1430,8 @@ public:
     // lies), given before pre_step: her hand goes there.
     void set_player_ankle(const JPH::RVec3 ankle) noexcept { player_ankle_ = ankle; }
     // Where his head faces (the sim's facing and look pitch; zero when he
-    // faces nowhere): read only through her eyes (face_turned_to_her).
-    void set_player_look(const JPH::Vec3 look) noexcept { player_look_ = look; }
+    // faces nowhere): read only through her eyes (Perception: watched).
+    void set_player_look(const JPH::Vec3 look) noexcept { extras_.look(look); }
     // She lets go this tick: the push to give them (world), once.
     [[nodiscard]] bool take_let_go(JPH::Vec3 &push) noexcept {
         if (!let_go_) {
@@ -1684,7 +1693,6 @@ private:
     // real line through the world's solids.
     [[nodiscard]] Glimpse look_at(JPH::RVec3 target, float range) const;
     // The stalk (matron_stalk.cpp).
-    [[nodiscard]] bool face_turned_to_her(JPH::RVec3 player) const;
     [[nodiscard]] bool stalk_encounter() const noexcept {
         return noticed_ && !stalk_spent_ && stage_ == Stage::Pest;
     }
@@ -1753,7 +1761,7 @@ private:
     // tick (those return before the hunt looks). She remembers which line,
     // and where it lets off. She does not move for it, and the Turn's clock
     // stays where it is until her feet are hers again.
-    void notice_ridden_line(JPH::RVec3 player);
+    void notice_ridden_line();
     // The line follow_line goes to from here (-1 for none), and whether she is on its ramp.
     [[nodiscard]] int line_to_take(float ax, float az) const;
     [[nodiscard]] bool on_line_ramp(JPH::RVec3 at) const;
@@ -1869,9 +1877,8 @@ private:
     // corner on her level and onto it. False when it does not go that way, or
     // she is frail.
     bool follow_pipe(float dt, JPH::RVec3 at);
-    // A riser of hers joins these two floors (pipe_reaches: one is a deck of any).
+    // A riser of hers joins these two floors.
     [[nodiscard]] bool riser_joins(float a, float b);
-    [[nodiscard]] bool pipe_reaches(float floor_y);
     // Her hands on the rail of the deck she is leaving: false (and nothing
     // started) when there is no rail top in her reach.
     bool get_on_pipe(float from_floor, float to_floor);
@@ -2108,9 +2115,16 @@ private:
     // Her mischief (above): the piece she would go for, or -1; going for it
     // (true while she walks to it or takes it); holding and throwing it.
     [[nodiscard]] int stock_to_fetch(float ax, float az) const;
+    // Light stock of her deck she sees out of the place it was laid: moved,
+    // and the player's to her (handled_).
+    void notice_moved_stock();
+    static constexpr float kMovedStockM = 1.5F;
     bool fetch_stock(float dt, float ax, float az, bool allow_catwalk);
     bool throw_stock(float dt, JPH::RVec3 at, JPH::RVec3 player);
-    void take_stock(int index);
+    // True when her hands took it: never a load another constraint already
+    // holds (his carry), which her hands feel held fast (load_held_elsewhere).
+    bool take_stock(int index);
+    [[nodiscard]] bool load_held_elsewhere(JPH::BodyID body) const;
     void hold_stock(float dt);
     void release_stock(JPH::Vec3 velocity, JPH::Vec3 spin, bool thrown);
     [[nodiscard]] JPH::Vec3 hands_offset() const noexcept;
@@ -2126,7 +2140,7 @@ private:
     // (step_knocked), down onto the steel and up off it.
     void sense_near();
     void take_blow(float dt);
-    void step_knocked(float dt, JPH::RVec3 player);
+    void step_knocked(float dt);
     void lie_down(float fall_x, float fall_z);
     void stand_up();
     [[nodiscard]] bool room_to_stand(JPH::RVec3 at) const;
@@ -2195,6 +2209,9 @@ private:
     std::uint32_t travel_replans0_ = 0;
     float travel_wait_s_ = 0.0F;
     static constexpr float kYieldReachM = 1.3F;
+    // How old a sighting, a sound or a touch of him on her climb may be and
+    // still make her give way (evidence with an age).
+    static constexpr float kYieldMemoryS = 0.5F;
     static constexpr float kYieldClearM = 1.6F;
     void step_travel(float dt);
     [[nodiscard]] int region_under() const;
@@ -2347,7 +2364,7 @@ private:
     std::uint32_t shoves_ = 0;
     std::vector<Throwable> throwables_;
     std::uint32_t handled_ = 0;
-    std::uint64_t player_holding_ = 0;
+    std::uint64_t push_load_ = 0;   // the load in his hands: a contact filter only (sense_near)
     int fetch_ = -1;
     float fetch_best_m_ = 0.0F;        // the nearest she has come to it on this fetch
     float fetch_stall_s_ = 0.0F;       // since she last came nearer
@@ -2363,7 +2380,18 @@ private:
     std::uint32_t takes_ = 0;
     std::uint32_t throws_ = 0;
     bool released_edge_ = false;
-    bool player_on_deck_ = false;
+    // The world's checkpoint rule (freezes_checkpoint), set at the boundary
+    // (Perception) and read by nothing of hers.
+    bool checkpoint_freeze_ = false;
+    // The perception boundary (matron_perception.hpp): what the world tells
+    // her of him between ticks (hers to write, never to read), and what she
+    // perceived of him, with its age. Her decisions read ev_.
+    friend class Perception;
+    StimulusExtras extras_;
+    Evidence ev_;
+    // Where this tick's evidence has him, else where she last saw, heard or
+    // felt him within `max_age_s` (the newest): false when she has nothing.
+    [[nodiscard]] bool knows_where(float max_age_s, JPH::RVec3 &at) const noexcept;
     struct Sound {
         bool heard = false;
         float x = 0.0F, y = 0.0F, z = 0.0F;
@@ -2415,6 +2443,7 @@ private:
     JPH::BodyID bay_leaf_;
     bool bay_open_ = true;
     bool bay_hooked_ = false;
+    bool bay_hook_known_ = false;   // the chain on the leaf, as she last saw or felt it
     Trap trap_ = Trap::Off;
     float trap_s_ = 0.0F;        // in this phase
     float trap_lost_s_ = 0.0F;   // holding with the player gone
@@ -2424,8 +2453,9 @@ private:
     static constexpr float kTrapLostM = 25.0F;          // holding, the player farther than this from her
     static constexpr float kTrapLostSeconds = 20.0F;    // for this long: she gives it up
     // Her trap's step (true: it moved her this tick), and whether she lets go.
-    bool trap_step(float dt, JPH::RVec3 at, JPH::RVec3 player, bool saw, bool heard, bool on_deck);
-    bool trap_lets_go(JPH::RVec3 player, float dt, bool perceived);
+    // `him`: where her evidence has him this tick, read only when she saw or heard him.
+    bool trap_step(float dt, JPH::RVec3 at, JPH::RVec3 him, bool saw, bool heard);
+    bool trap_lets_go(JPH::RVec3 him, float dt, bool perceived);
     int guess_climb_ = -1;
     int climb_ = -1;                 // the scanned climb her rung way has her on (-1: none)
     JPH::RVec3 climb_hand_ = JPH::RVec3::sZero();   // her hand on it: the hold she has, reaches for, or last had
@@ -2446,7 +2476,6 @@ private:
     Sense lead_sense_ = Sense::None;
     bool glimpsed_ = false;
     // The stalk (matron_stalk.cpp).
-    JPH::Vec3 player_look_ = JPH::Vec3::sZero();
     bool watched_ = false;
     bool noticed_ = false;
     bool stalking_ = false;

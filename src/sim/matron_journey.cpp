@@ -228,12 +228,13 @@ void Matron::step_travel(const float dt) {
         return;
     }
     // The player on a climb she means to take (on it, at its foot, or at
-    // its head): the way is theirs. Any climb, from its own line and span.
+    // its head), as she saw, heard or felt him there just now: the way is
+    // theirs. Any climb, from its own line and span.
     const auto player_on = [&](const traversal::MoveSpec &spec) {
-        if (player_.IsInvalid() || !bodies.IsAdded(player_)) {
+        RVec3 p;
+        if (!knows_where(kYieldMemoryS, p)) {
             return false;
         }
-        const RVec3 p = bodies.GetPosition(player_);
         const float lo = std::min(spec.bottom_y, spec.start.GetY()) - 2.5F;
         const float hi = std::max(spec.top_y, spec.goal_top) + 0.5F;
         return distance_xz(float(p.GetX()), float(p.GetZ()), spec.line.GetX(), spec.line.GetZ()) < kYieldReachM &&

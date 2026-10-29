@@ -34,6 +34,10 @@ int main() {
         test_matron_sight();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-honest") {
+        test_matron_honest();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-stalk") {
         test_matron_stalk();
         test_matron_ladder_head();
@@ -80,7 +84,7 @@ int main() {
         run_workers();
         return EXIT_SUCCESS;
     }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "swing") {
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "parkour-moves") {
         run_brachiation();
         run_pipe_gallery();
         run_slide();

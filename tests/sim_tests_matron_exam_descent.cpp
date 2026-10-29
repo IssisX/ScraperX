@@ -294,7 +294,7 @@ DescentResult descend(World &w) {
         }
 
         const Vec3 velocity_before = w.physics.GetBodyInterface().GetLinearVelocity(w.matron->body());
-        w.matron->pre_step(kDt, RVec3(1000.0, 1000.0, 1000.0), 0.0F);
+        w.matron->pre_step(kDt, Stimulus(RVec3(1000.0, 1000.0, 1000.0), 0.0F));
         const Vec3 commanded_velocity = w.physics.GetBodyInterface().GetLinearVelocity(w.matron->body());
         Vec3 actual_force = Vec3::sZero();
         {
@@ -502,7 +502,7 @@ GapObstructionResult obstructed_gap(const bool after_plan) {
     constexpr int kObstructionTicks = 15 * 90;
     for (int tick = 0; after_plan && out.planned && !out.rejected && tick < kObstructionTicks; ++tick) {
         const Vec3 velocity_before = bodies.GetLinearVelocity(w.matron->body());
-        w.matron->pre_step(kDt, RVec3(1000.0, 1000.0, 1000.0), 0.0F);
+        w.matron->pre_step(kDt, Stimulus(RVec3(1000.0, 1000.0, 1000.0), 0.0F));
         const Vec3 commanded_velocity = bodies.GetLinearVelocity(w.matron->body());
         Vec3 force = Vec3::sZero();
         {

@@ -45,7 +45,7 @@ struct ClimbWorld {
     void tick(Matron &matron) {
         // A visible noisy climber on the known ladder yields a head-of-ladder
         // lead through the normal perception and Turn initiation paths.
-        matron.pre_step(dt, RVec3(5, 160, -129.55), 1.0F);
+        matron.pre_step(dt, Stimulus(RVec3(5, 160, -129.55), 1.0F));
         physics.Update(dt, 1, &temp, &jobs);
         matron.post_step(dt);
     }
@@ -82,7 +82,7 @@ void test_board_ends_at_wall() {
     world.awake(matron);
     world.physics.GetBodyInterface().SetPosition(matron.body(), RVec3(0, g + Matron::kStandCentre, -131.5), EActivation::Activate);
     const auto tick = [&] {
-        matron.pre_step(ClimbWorld::dt, RVec3(40, g, -100), 0.0F);
+        matron.pre_step(ClimbWorld::dt, Stimulus(RVec3(40, g, -100), 0.0F));
         world.physics.Update(ClimbWorld::dt, 1, &world.temp, &world.jobs);
         matron.post_step(ClimbWorld::dt);
     };
@@ -163,7 +163,7 @@ BoardWallRun board_wall_run(const unsigned seed, const bool up) {
                            : RVec3(0, g + h + Matron::kStandCentre, a_z);   // down: from atop A
     world.physics.GetBodyInterface().SetPosition(matron.body(), start, EActivation::Activate);
     const auto tick = [&] {
-        matron.pre_step(ClimbWorld::dt, RVec3(40, g, -100), 0.0F);
+        matron.pre_step(ClimbWorld::dt, Stimulus(RVec3(40, g, -100), 0.0F));
         world.physics.Update(ClimbWorld::dt, 1, &world.temp, &world.jobs);
         matron.post_step(ClimbWorld::dt);
     };
@@ -358,7 +358,7 @@ void test_matron_riser() {
     world.physics.GetBodyInterface().SetPosition(matron.body(), RVec3(6.5, g + Matron::kStandCentre, -137.0),
                                                  EActivation::Activate);
     const auto tick = [&] {
-        matron.pre_step(ClimbWorld::dt, RVec3(40, g, -100), 0.0F);
+        matron.pre_step(ClimbWorld::dt, Stimulus(RVec3(40, g, -100), 0.0F));
         world.physics.Update(ClimbWorld::dt, 1, &world.temp, &world.jobs);
         matron.post_step(ClimbWorld::dt);
     };

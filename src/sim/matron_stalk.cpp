@@ -30,24 +30,6 @@ float distance_xz(const float ax, const float az, const float bx, const float bz
 }
 }  // namespace
 
-bool Matron::face_turned_to_her(const RVec3 player) const {
-    if (player_look_.LengthSq() < 0.25F) {
-        return false;   // he faces nowhere in particular
-    }
-    const Eyes e = eyes();
-    if (!e.open) {
-        return false;
-    }
-    const RVec3 head = player + RVec3(0.0, kPlayerEyeAboveCentreM, 0.0);
-    const Vec3 to_her(e.at - head);
-    const float length = to_her.Length();
-    if (length > 1.0e-3F && player_look_.Normalized().Dot(to_her / length) < kFaceTurnedCos) {
-        return false;
-    }
-    // His face, seen: her eyes on his head, not a read of where he looks.
-    return look_at(head, kEyeRangeM) == Glimpse::Sight;
-}
-
 void Matron::end_encounter() noexcept {
     noticed_ = false;
     watched_ = false;

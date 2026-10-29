@@ -898,6 +898,7 @@ void run_one_arm_route();
 void run_matron_ladder();
 void test_matron_hearing();
 void test_matron_sight();
+void test_matron_honest();
 void test_matron_stalk();
 void test_matron_ladder_head();
 void test_matron_climb_support();

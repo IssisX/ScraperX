@@ -97,7 +97,7 @@ struct Fixture {
         const auto cpu_started=std::clock();
         const auto started=std::chrono::steady_clock::now();
         if(planner) planner->step(physics,matron->body(),dt,expansion_budget,transition_budget,query_budget);
-        else matron->pre_step(dt,RVec3(300,154,300),0);
+        else matron->pre_step(dt, Stimulus(RVec3(300,154,300), 0));
         const double step_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-started).count();
         const double step_cpu_ms=1000.0*(std::clock()-cpu_started)/CLOCKS_PER_SEC;
         if(was_planning || r.phase!=MatronRoutecraft::PlanPhase::None || r.plans>old_plans) {

@@ -334,15 +334,6 @@ bool Matron::riser_joins(const float a, const float b) {
     return false;
 }
 
-bool Matron::pipe_reaches(const float floor_y) {
-    for (const RiserRoute &r : riser_routes()) {
-        if (std::abs(r.lo.floor_y - floor_y) <= kOnSteelM || std::abs(r.hi.floor_y - floor_y) <= kOnSteelM) {
-            return true;
-        }
-    }
-    return false;
-}
-
 // ---- her hands on it -------------------------------------------------------
 
 bool Matron::riser_face_probe(const RVec3 at, const float y, const float side, RiserHold &out) const {
