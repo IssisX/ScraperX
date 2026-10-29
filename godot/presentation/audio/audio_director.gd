@@ -14,6 +14,7 @@ extends Node
 const SoundBank := preload("res://presentation/audio/sound_bank.gd")
 const HerTakes := preload("res://presentation/audio/her_takes.gd")
 const VoiceLines := preload("res://presentation/audio/voice_lines.gd")
+const MatronSpeech := preload("res://presentation/audio/matron_speech.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 
 const BUS_EFFECTS := &"Effects"
@@ -161,6 +162,13 @@ var matron_cues := {}
 # her hands are in (matron_sound.gd hear_hold numbers them), 0 outside one.
 var her_takes := HerTakes.new()
 var matron_encounter := 0
+# Her spoken lines (matron_speech.gd): the line she says at a moment, one mouth. `matron_caption` is the
+# line while it is said; `matron_speech.log` has each line said, for the scripted runs.
+var matron_speech := MatronSpeech.new()
+var matron_caption := ""
+var matron_lines_suppressed := 0
+var _her_speech: AudioStreamPlayer3D
+var _her_speech_left := 0.0
 var radio_cues := 0      # the foreman's radio opened or closed, counted for the tests
 # The forklift, heard where it stands: its engine, its pump and its valve
 # (the relief blowing off, or the lowering valve letting the load down), each
@@ -287,6 +295,7 @@ func _ready() -> void:
 		_her_shots.append(_her_player(BUS_EFFECTS, 6.0, 90.0, true))
 	for i in HER_VOICE_PLAYERS:
 		_her_shots.append(_her_player(BUS_MATRON, 4.0, 60.0, true))
+	_her_speech = _her_player(BUS_MATRON, 4.0, 60.0, true)
 	_her_shot_rank.resize(_her_shots.size())
 	_her_shot_t.resize(_her_shots.size())
 	_her_shot_family.resize(_her_shots.size())
@@ -1240,6 +1249,32 @@ func matron_cue(name: StringName, at: Vector3, volume_db: float, pitch: float = 
 	return _her_cue(name, at, volume_db, pitch) > 0.0
 
 
+# A line of hers for `moment` (matron_speech.gd: hunting, sees, grab, drop, rip, free, lost, last), said
+# from `at`; the line's number, 0 when she has none or her mouth is full with another line. Counted and
+# timed whether or not a device mixes it, so the headless runs can follow it.
+func matron_say(moment: StringName, at: Vector3, volume_db: float = 0.0) -> int:
+	if _her_speech_left > 0.0:
+		matron_lines_suppressed += 1
+		return 0
+	var said := matron_speech.choose(moment, matron_encounter)
+	if said.is_empty():
+		return 0
+	matron_caption = matron_speech.caption(int(said["line"]))
+	if _silent or _her_speech == null:
+		# No device mixes it: it takes as long as it is long (about 0.4 s a word).
+		_her_speech_left = 0.4 * float(matron_caption.split(" ", false).size())
+		return int(said["line"])
+	var stream := matron_speech.stream(String(said["clip"]))
+	if stream == null:
+		return 0
+	_her_speech.stream = stream
+	_her_speech.position = at
+	_her_speech.volume_db = volume_db
+	_her_speech.play()
+	_her_speech_left = stream.get_length()
+	return int(said["line"])
+
+
 # The same, and how long what started runs (0: nothing did). Counted before
 # anything else, so the scripted runs count what was cued whether or not a
 # bank or a device plays it; a clip no bank has plays nothing. A take of her
@@ -1330,6 +1365,8 @@ func matron_cue_one_of(names: Array, at: Vector3, volume_db: float) -> StringNam
 
 # Another of her voice, not a breath, playing now.
 func _her_mouth_busy() -> bool:
+	if _her_speech_left > 0.0:
+		return true
 	for i in range(HER_BODY_PLAYERS, HER_BODY_PLAYERS + HER_VOICE_PLAYERS):
 		if _her_shots[i].playing and _her_shot_family[i] != &"matron_breath":
 			return true
@@ -1389,6 +1426,9 @@ func matron_strain(at: Vector3, volume_db: float, pitch: float) -> void:
 func matron_layers(delta: float, data: Dictionary, out: bool, head: Vector3, distance: float,
 		listener_y: float) -> void:
 	_her_clock += delta
+	_her_speech_left = maxf(0.0, _her_speech_left - delta)
+	if _her_speech_left <= 0.0:
+		matron_caption = ""
 	_her_wake_s = maxf(0.0, _her_wake_s - delta)
 	_her_breath_in = maxf(0.0, _her_breath_in - delta)
 	var state := int(data["state"])
