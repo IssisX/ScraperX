@@ -4,7 +4,7 @@ extends Node
 const MANIFEST_PATH := "res://audio/story_radio/manifest.json"
 const RADIO_DIRECTORY := "res://audio/story_radio/"
 const BUS := &"Effects"
-# Owner voice rule: stock Kokoro takes are not approved as game voices.
+# Owner voice rule: unapproved stock recordings may never play.
 const VOICE_RECORDINGS_APPROVED := false
 
 var _scene_voice: AudioStreamPlayer3D
