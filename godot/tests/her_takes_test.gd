@@ -96,6 +96,10 @@ func _degenerate() -> void:
 	var takes := HerTakes.new(7)
 	_check(takes.choose(&"matron_laugh", 0, 0.0) == -1, "an empty bank chose a take")
 	_check(takes.choose(&"no_such", 3, 0.0) == -1, "a family not hers chose a take")
+	_check(not HerTakes.FAMILIES.has(&"matron_croak") and not HerTakes.FAMILIES.has(&"matron_cluck"),
+		"owner-rejected mouth families are still selectable")
+	_check(takes.choose(&"matron_croak", 4, 0.0) == -1 and takes.choose(&"matron_cluck", 4, 0.0) == -1,
+		"owner-rejected mouth family chose a take")
 	# A singleton: once, then silent while it is the last she played (and in
 	# her ring), whatever time passes.
 	var k := takes.choose(&"matron_laugh", 1, 0.0)
@@ -128,7 +132,7 @@ func _degenerate() -> void:
 # running, never within her ring.
 func _mixed() -> void:
 	var bank := {&"matron_breath": 3, &"matron_effort": 1, &"matron_laugh": 1, &"matron_swallow": 1,
-		&"matron_sniff": 1, &"matron_cluck": 1, &"matron_rip": 2, &"matron_hit": 1, &"matron_shriek": 2,
+		&"matron_sniff": 1, &"matron_rip": 2, &"matron_hit": 1, &"matron_shriek": 2,
 		&"matron_step": 3, &"matron_plant": 3}
 	var names := bank.keys()
 	for seed_value in 10:
