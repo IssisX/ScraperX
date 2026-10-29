@@ -17,7 +17,9 @@
 //    upkeep audited (Matron::audit_shapes, on from main); at exit her stance
 //    shape (or her down shape) may never have been deeper than Matron::kInsideSteelM in steel she
 //    collides with for more than Matron::kInsideSteelTicks ticks running, nor
-//    deeper than Matron::kTunnelM in any tick (shape_audit_at_exit). Ticks
+//    deeper than Matron::kTunnelM in any tick (shape_audit_at_exit), where
+//    her old capsule would not be as deep (steel a test's setup put her in,
+//    the routecraft exam's poles through her start, is printed apart). Ticks
 //    still on her old capsule (a test put her where no stance shape fits,
 //    the routecraft exam's poles through her start) are printed apart. Every matron group checks it for its own runs:
 //    her walk, her hunt low, her ladders, pipe, holds and fatality.
@@ -169,16 +171,20 @@ void shape_audit_at_exit() {
         return;
     }
     const double upkeep_us = 1.0e6 * a.upkeep_s / static_cast<double>(a.ticks);
-    std::printf("  matron shape audit: %ld ticks (upright %ld, low %ld, climb %ld, pipe %ld, down %ld, hold %ld), "
-                "%ld switches, %ld refused, deepest in the steel %.3f m, upkeep %.2f us a tick\n",
+    std::printf("  matron shape audit: %ld ticks (upright %ld, low %ld, climb %ld, pipe %ld, down %ld, hold %ld, "
+                "lift %ld, %ld switches, %ld refused, deepest in the steel %.3f m, upkeep %.2f us a tick\n",
                 a.ticks, a.per_stance[0], a.per_stance[1], a.per_stance[2], a.per_stance[3], a.per_stance[4],
-                a.per_stance[5], a.switches, a.refused, static_cast<double>(a.worst_depth_m), upkeep_us);
-    std::printf("  matron shape: deepest by stance %.3f %.3f %.3f %.3f %.3f %.3f m; %ld ticks past %.2f m, none for "
+                a.per_stance[5], a.per_stance[6], a.switches, a.refused, static_cast<double>(a.worst_depth_m), upkeep_us);
+    std::printf("  matron shape: deepest by stance %.3f %.3f %.3f %.3f %.3f %.3f %.3f m; %ld ticks past %.2f m, none for "
                 "long: %s\n",
                 static_cast<double>(a.worst_depth_by_stance[0]), static_cast<double>(a.worst_depth_by_stance[1]),
                 static_cast<double>(a.worst_depth_by_stance[2]), static_cast<double>(a.worst_depth_by_stance[3]),
                 static_cast<double>(a.worst_depth_by_stance[4]), static_cast<double>(a.worst_depth_by_stance[5]),
+                static_cast<double>(a.worst_depth_by_stance[6]),
                 a.inside_steel, static_cast<double>(Matron::kInsideSteelM), a.sitting == 0 ? "yes" : "no");
+    std::printf("  matron shape: %ld ticks in steel her old capsule was as deep in there (put there by a test's "
+                "setup, not by her shape; deepest %.3f m)\n",
+                a.placed_ticks, static_cast<double>(a.placed_worst_m));
     std::printf("  matron shape: %ld ticks still on her old capsule where no stance shape fitted (deepest %.3f m in the "
                 "steel there: where a test put her)\n",
                 a.planning_ticks, static_cast<double>(a.planning_worst_m));
@@ -201,10 +207,10 @@ void start_matron_shape_audit() {
 
 void run_matron_shape() {
     const Capsule old{{0.0, -0.75, 0.0}, {0.0, 0.75, 0.0}, 0.30};
-    const char *names[] = {"upright", "low", "climb", "pipe", "down", "hold"};
+    const char *names[] = {"upright", "low", "climb", "pipe", "down", "hold", "lift"};
     std::vector<Fit> fits;
     for (const Matron::Stance stance : {Matron::Stance::Upright, Matron::Stance::Low, Matron::Stance::Climb,
-                                        Matron::Stance::Pipe, Matron::Stance::Hold}) {
+                                        Matron::Stance::Pipe, Matron::Stance::Hold, Matron::Stance::Lift}) {
         const int s = static_cast<int>(stance);
         const Fit before = fit_of(s, old);
         const Fit after = fit_of(s, capsule_of(stance));
