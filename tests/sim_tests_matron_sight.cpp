@@ -43,7 +43,7 @@ struct SightWorld {
     // Far off the tower's footprint and silent: nothing of him reaches her.
     static RVec3 away() { return RVec3(80, 144, -150); }
     void tick(Matron &matron, const RVec3 player = away(), const float loudness = 0.0F) {
-        matron.pre_step(dt, player, loudness);
+        matron.pre_step(dt, Stimulus(player, loudness));
         physics.Update(dt, 1, &temp, &jobs);
         matron.post_step(dt);
     }

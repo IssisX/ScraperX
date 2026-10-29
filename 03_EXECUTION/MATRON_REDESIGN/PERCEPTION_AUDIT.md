@@ -18,6 +18,20 @@ Every line in `matron*.cpp` and `matron.hpp` that names `player` (a `grep` for `
 2. **B2 The hush**: her "silence for silence" reads his raw noise level at any distance and cancels when he is within 4 m, unseen (`matron_moves.cpp:308,318`).
 3. **B3 Giving way**: on her own journeys she yields to him on the ladder she means to take by reading his position, with no sight (`matron_journey.cpp:202-215,326`).
 
+## Closed (branch `claude/matron-honest-perception-20261029`)
+
+The structural fix below is built. The world hands her his true state as a `Stimulus` she cannot open (`src/sim/matron_perception.hpp`: private fields, read only by `Perception`). Once a tick `Perception::take` turns it into her `Evidence`: seen this tick and where (`saw`, `glimpsed`, `sees_far`, `watched`, `close_look`, `seen_holding`), heard this tick and from where with its level at her ear (`sound`, `breath`, `loudness`, `carry_m`, `level`), the ladder he was perceived on, her hand on him in a hold (`touch`), and the last sighting and sound with their ages. `pre_step` takes the `Stimulus`, not a position; nothing after the boundary has `px`, `pz`, `d` or `on_deck` from his body.
+
+- B1: crumbs are dropped only where she saw or heard him (`matron.cpp`, after the lead).
+- B2, B5: `hush_step` and `choose_pace` get his noise as heard (0 when none reached her) and the distance to where her evidence has him, else to her lead.
+- B3: `player_on` (`matron_journey.cpp`) uses `knows_where(kYieldMemoryS)`: seen, heard or felt within 0.5 s.
+- B4: stock is his to her only when she sees it in his hands (`Evidence::seen_holding`); a lifted piece is off her floor, so the fetch drops it without reading what he holds. The carried load stays a contact filter in `sense_near` (his push, felt).
+- C1: the checkpoint flag is set at the boundary and read only by `freezes_checkpoint`.
+- C2: unchanged; read only while her grip is on him (touch). A measured-load input belongs with the hold restage (`matron_hold.cpp`).
+- C3: the chain on the leaf is known by her eyes on the leaf or by feeling it take the leaf (`bay_hook_known_`).
+- C4: unchanged; the ankle is read by hold code and the world's catch test (hands-on range), never by her decisions.
+- Proof: native group `matron-honest`: with her evidence frozen, his true position moved (inside solid steel, standing or walking) leaves 3600 of her ticks bit-identical. On the old code it parted at tick 578.
+
 ## The channel
 
 Everything comes in through one door: `Matron::pre_step(float dt, JPH::RVec3 player, float loudness)` (`matron.hpp:1134`), called at `physics_world.cpp:720` with the player body's true position and a loudness. Inside it, `px`, `pz`, `d` (`matron.cpp:2444`, distance on the floor plane) and `on_deck` (`matron.cpp:2284`) are computed from the true position before any perception test, and stay in scope for the whole function. Four of the five cheats are one of those values used where a sight or hearing result should stand. Other things handed to her, all classified below:

@@ -16,8 +16,8 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
    the tree being shipped.
 4. The full native suite, every touch scenario and the Android build are CI's job, never also local.
    Before a push to `ScraperX-Claude`, run `wo000-delivery-spine.yml` once on `<agent>/integrate-<job>`
-   (pushing it runs the proof) or dispatch it: that run is the proof (off trunk it stops with the
-   expected KeyError at "Preserve Android updates"). The full native suite runs locally only when a
+   (pushing it runs the proof) or dispatch it: that run is the proof (off trunk every job is green but
+   `publish-checkpoint`, which stops with the expected KeyError at "Preserve Android updates"). The full native suite runs locally only when a
    change reaches the whole world (the kit's body order, the world's solids, shared physics or tuning,
    the contact listener, save layout) and no CI run is coming.
 5. Read the PASS/FAIL lines and the lines around a failure, not whole logs.
@@ -96,7 +96,8 @@ For every agent; `AGENTS.md` points other agents here.
 - **Protected changes:** a test's checks (a `require`, limit, timeout, skip, ctest slice), world
   geometry, and her force, power, mass, leg-travel or launch limits change only by a PR into
   `ScraperX-Claude` holding just that change, with a plain before/after. The integrator merges it once
-  green on proof steps 1-19 with a second agent's LAND and no open blocker; the owner can overturn any
+  green on every proof job but `publish-checkpoint` (off trunk its signing step stops with the
+  expected KeyError) with a second agent's LAND and no open blocker; the owner can overturn any
   merge (2026-10-28, 10-29). Everything else lands without a PR.
 - **Local tests match CI or do not count:** CI's compilers and flags (host g++ 13.3 as on
   `ubuntu-24.04`; NDK `29.0.14206865` clang; the CMake flags in `wo000-delivery-spine.yml`). CI stays
