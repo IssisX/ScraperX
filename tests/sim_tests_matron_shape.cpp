@@ -14,10 +14,12 @@
 //    her frame's six directions (the body that hits with nothing shown).
 //    Her old capsule's numbers are printed beside them.
 // 2. She never sits in the steel: every run of this process has her stance
-//    upkeep audited (Matron::audit_shapes, on from main); at exit her shape
-//    may never have been deeper than Matron::kInsideSteelM in steel she
+//    upkeep audited (Matron::audit_shapes, on from main); at exit her stance
+//    shape (or her down shape) may never have been deeper than Matron::kInsideSteelM in steel she
 //    collides with for more than Matron::kInsideSteelTicks ticks running, nor
-//    deeper than Matron::kTunnelM in any tick (shape_audit_at_exit). Every matron group checks it for its own runs:
+//    deeper than Matron::kTunnelM in any tick (shape_audit_at_exit). Ticks
+//    still on her old capsule (a test put her where no stance shape fits,
+//    the routecraft exam's poles through her start) are printed apart. Every matron group checks it for its own runs:
 //    her walk, her hunt low, her ladders, pipe, holds and fatality.
 
 #include "sim_tests.hpp"
@@ -177,6 +179,9 @@ void shape_audit_at_exit() {
                 static_cast<double>(a.worst_depth_by_stance[2]), static_cast<double>(a.worst_depth_by_stance[3]),
                 static_cast<double>(a.worst_depth_by_stance[4]), static_cast<double>(a.worst_depth_by_stance[5]),
                 a.inside_steel, static_cast<double>(Matron::kInsideSteelM), a.sitting == 0 ? "yes" : "no");
+    std::printf("  matron shape: %ld ticks still on her old capsule where no stance shape fitted (deepest %.3f m in the "
+                "steel there: where a test put her)\n",
+                a.planning_ticks, static_cast<double>(a.planning_worst_m));
     if (a.sitting != 0 || a.worst_depth_m > Matron::kTunnelM) {
         std::fprintf(stderr, "FAIL: matron shape: her body sat in the steel %ld ticks, deepest %.3f m\n", a.sitting,
                      static_cast<double>(a.worst_depth_m));
