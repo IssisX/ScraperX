@@ -5,6 +5,10 @@ Design work for the experiences that take the place of ladders and pulled starts
 through. Every design a workflow produces is listed with its ideas, chosen or not, so the owner
 can pick any of them (the owner, 2026-10-20: *"Maybe I'll like one that you didn't choose"*).
 
+> **Archived 2026-10-29:** the workflows' verbatim JSON (`panel_results/`) is out of the tree;
+> their designs, ideas and scores are below and in `glass_tube_designs.md`.
+> `03_EXECUTION/ARCHIVE_INDEX.md` says how to get the JSON back.
+
 ## The chiller drop, 256 to 298 m
 
 `chiller_drop_spec.md` is the panel's one spec. `panel_results/wf_de938b84-896.json` holds the

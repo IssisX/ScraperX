@@ -4,8 +4,8 @@ ScraperX is a clean-room Godot 4.7 / C++17 project governed by the authority pac
 
 ## Where the project is
 
-Two classes of work, defined once in [`00_START_HERE.md`](00_START_HERE.md) §4 and never sharing
-an identifier:
+Two classes of work, named in [`00_START_HERE.md`](00_START_HERE.md) ("Where things live"; the full vocabulary
+table is in [`00_START_HERE_ARCHIVE.md`](00_START_HERE_ARCHIVE.md)) and never sharing an identifier:
 
 - **Kernel Work Orders** `WO-000`–`WO-013` in `03_EXECUTION/KERNEL/` — foundational engineering that proves
   one tool type each on the `KX-*` substrate. A **closed set**. All fourteen are in source.
@@ -15,7 +15,7 @@ an identifier:
 `B00`–`B11` are Atlas band IDs — floors of the tower. They are never filenames and never tickets.
 
 ```
-00_START_HERE.md              position, vocabulary, ledgers — read this first
+00_START_HERE.md              the rules in force and where things are — read this first
 01_PRODUCT_AUTHORITY/         what the game is     (laws, GDD, atlas, + support/ provenance)
 02_ENGINEERING_AUTHORITY/     how work is executed (protocol, TDD, evidence snapshot)
 03_EXECUTION/KERNEL/          WO-000 .. WO-013     closed; regression substrate

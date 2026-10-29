@@ -63,8 +63,9 @@ the laugh above was (varispeed, pitch and speed together): `matron_growl_loop_1`
 `matron_laugh_2` and `matron_effort_1` by 10%, `matron_growl_rage_loop_2`, `matron_shriek_3` and
 `matron_laugh_1` by 8%; `matron_effort_1` also has its hiss taken out. Each is its own performance,
 not a pitched copy of another take. The breath already had three takes of the pick and gets none.
-Her croak, cluck and sniff had no real candidate in that round and are still made in code
-(`sound_bank.gd`) until recordings replace them.
+Sniff takes are real, individually recorded, nonoverlapping CC0 performances
+documented in the Sniff takes section below. No source is pitch-shifted into
+a second performance.
 
 | File | Source | Title | Author | License | Part used (s of the source, placed at) |
 |---|---|---|---|---|---|
@@ -109,3 +110,22 @@ Her croak, cluck and sniff had no real candidate in that round and are still mad
 |  | https://freesound.org/people/ABouch/sounds/174943/ | Breaking Frozen Celery | ABouch | CC0 1.0 (LAION Freesound, train row 193542) | 19.12-19.52, at 0.35 |
 |  | https://freesound.org/people/spookymodem/sounds/249811/ | Crunching Bones.wav | spookymodem | CC0 1.0 (FSD50K) | 0.75-1.35, at 0.70 |
 |  | https://freesound.org/people/Iamgiorgio/sounds/371830/ | I7_dripping ceiling.mp3 | Iamgiorgio | CC0 1.0 (FSD50K) | 3.40-3.63, at 1.27 |
+
+## Sniff takes (2026-10-29)
+
+Four independent human nose-inhales are retained: three separate performances
+from padpad and one from OwlStorm. The owner rejected the other two proposed
+mouth-sound families; their recordings and cue registrations are removed.
+
+The sources below are Freesound CC0 1.0 dedications. Delivery clips came from
+public HQ Ogg previews, not uncompressed WAVs; source SHA-256 and exact cuts
+are pinned in `tools/audio/matron_mouth_takes.py`. Clips are mono 22,050 Hz,
+high-passed at 75 Hz, boundary-faded and peak-aligned without pitch shifting.
+The owner has not yet auditioned these retained takes.
+
+| File | Source URL | Uploader | License | Exact source interval (seconds) |
+|---|---|---|---|---|
+| `matron_sniff_0.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 0.62–1.33 |
+| `matron_sniff_1.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 2.51–3.35 |
+| `matron_sniff_2.ogg` | https://freesound.org/people/padpad/sounds/516473/ | padpad | CC0 1.0 | 4.35–5.20 |
+| `matron_sniff_3.ogg` | https://freesound.org/people/OwlStorm/sounds/151218/ | OwlStorm | CC0 1.0 | 0.05–0.59 |
