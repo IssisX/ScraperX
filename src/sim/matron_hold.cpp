@@ -147,6 +147,10 @@ void Matron::grip_lost(const bool torn, const bool fought) noexcept {
             // body away; the hold ends after them (step_armplay).
             return;
         }
+        if (reel_) {
+            end_reel(physics_.GetBodyInterface().GetPosition(player_));
+            return;
+        }
         if (torn && !fought && arm_tears_ == hold_tears_at_ && armplay_for_test_ != 0 &&
             hold_retakes_ < kMaxRetakes) {
             // Torn out of her hand by the world, not by them (her heave
@@ -591,14 +595,46 @@ bool Matron::deck_close_below(const RVec3 player, const float feet) const {
 }
 
 void Matron::end_hold(const State next) {
+    if (grip_on_) {
+        let_go_ = true;
+        let_go_push_ = Vec3::sZero();
+    }
     state_ = next;
     hold_s_ = 0.0F;
     hold_phase_ = 0;
     grip_on_ = false;
+    grip_was_on_ = false;
+    player_braced_ = false;
+    thrash_ = 0.0F;
+    wrist_on_ = false;
+    wrist_reseat_ = false;
+    arm_throw_ = false;
+    leg_toss_ = false;
+    retake_ = false;
     reel_ = false;
+    reel_to_floor_ = false;
+    spare_walk_ = false;
+    spare_side_set_ = false;
+    spare_tries_ = 0;
+    fatal_hold_ = false;
+    fatal_path_ = FatalPath::None;
     fatal_hang_ = false;
+    fatal_dropped_ = false;
+    fatal_edge_ = RVec3::sZero();
+    fatal_s_ = 0.0F;
+    fatal_carry_s_ = 0.0F;
+    fatal_window_s_ = 0.0F;
+    fatal_check_ticks_ = 0;
+    fatal_lethal_ = false;
+    fatal_toss_ = 0.0F;
+    fatal_lethal_mps_ = 0.0F;
+    fatal_rim0_ = Vec3::sZero();
+    watch_still_s_ = 0.0F;
+    watch_y_ = 0.0F;
     pull_n_ = kHandReachPullN;
+    pull2_n_ = kHandReachPullN;
     arm_reach_m_ = kArmReachM;
+    fatal_work_reset();
     if (next == State::Searching) {
         search_s_ = 0.0F;
         search_budget_s_ = 1.0e9F;
@@ -779,6 +815,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             ++brace_losses_;
             state_ = State::Carry;
             hold_s_ = brace_losses_ % 3 == 0 ? kCarryMaxSeconds : 0.0F;   // the third time, she gives it up
+            if (brace_losses_ % 3 == 0 && fatal_hold_) {
+                fatal_carry_s_ = kFatalCarryS;
+            }
             hold_phase_ = 0;
             fatal_hang_ = false;
             break;
@@ -1007,9 +1046,28 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     break;
                 }
             } else if (hold_s_ > 8.0F) {
+                spare_walk_ = false;
                 ++spare_tries_;
-                hold_phase_ = 0;
-                hold_s_ = 0.0F;
+                if (spare_tries_ > 2) {
+                    let_go_ = true;
+                    let_go_push_ = Vec3::sZero();
+                    grip_on_ = false;
+                    hold_phase_ = 2;
+                    hold_s_ = 0.0F;
+                    if (reel_to_floor_) {
+                        reel_ = false;
+                        reel_to_floor_ = false;
+                        fatal_floor();
+                        break;
+                    }
+                    if (reel_) {
+                        end_reel(player);
+                        break;
+                    }
+                } else {
+                    hold_phase_ = 0;
+                    hold_s_ = 0.0F;
+                }
             }
         } else {
             // The collar put straight; then she walks off.
@@ -1389,6 +1447,14 @@ void Matron::fatal_release() noexcept {
 // the fatality's release. In the fatality's hold it is his escape: alive,
 // one-armed, on her deck. After the rip has begun, nothing frees him.
 bool Matron::his_blow() {
+    if (state_ == State::Grab && !grip_on_) {
+        grab_cooldown_s_ = kRegrabAfterTearS;
+        end_hold(State::Searching);
+        resume_state_ = State::Searching;
+        state_ = State::Staggering;
+        stagger_s_ = kStaggerMinSeconds;
+        return true;
+    }
     if (!body_in_hold() || rip_begun() || reel_) {
         return false;
     }

@@ -317,9 +317,15 @@ void Matron::ride_line() {
     zipline_->set_other_brake(at_end && (over_shaft(at) || !deck)
                                   ? 0.0F
                                   : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
-    if (at_end && ((still && down_here) || (!still && carried_lands))) {
+    if (at_end && still && !down_here) {
+        line_stall_s_ += 1.0F / 90.0F;
+    } else {
+        line_stall_s_ = 0.0F;
+    }
+    if (at_end && ((still && (down_here || line_stall_s_ >= 2.0F)) || (!still && carried_lands))) {
         zipline_->unclip_other();
         on_line_ = false;
+        line_stall_s_ = 0.0F;
         // The cable was what riding_ meant. Leaving it has to clear that
         // before the hunt runs this tick, or the cling stands her still
         // and her swing on never happens: she drops where she was, in the
@@ -338,7 +344,11 @@ void Matron::report_line() {
 }
 
 void Matron::restore_line() noexcept {
+    if (zipline_ != nullptr && on_line_) {
+        zipline_->unclip_other();
+    }
     on_line_ = false;
+    line_stall_s_ = 0.0F;
     cable_slides_ = 0;
 }
 
@@ -363,6 +373,7 @@ void Matron::LineWay::cancel() {
         m_.zipline_->unclip_other();
     }
     m_.on_line_ = false;
+    m_.line_stall_s_ = 0.0F;
     m_.riding_ = false;
     m_.let_go_s_ = 0.0F;
 }

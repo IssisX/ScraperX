@@ -293,5 +293,327 @@ void test_matron_climb_support() {
     }
     }
     test_board_ends_at_wall();
+    run_matron_state_exits();
     std::cout << "PASS matron climb support: missing steel, sensor exclusion, actual support removal, blocked ascent and floor recovery\n";
+}
+
+namespace scraperx::sim {
+struct MatronStateExitAccess {
+    static bool check_end_hold_cleans_all(ClimbWorld &world) {
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, BodyID());
+        world.awake(m);
+        m.state_ = Matron::State::Claimed;
+        m.grip_on_ = true;
+        m.wrist_on_ = true;
+        m.wrist_reseat_ = true;
+        m.arm_throw_ = true;
+        m.leg_toss_ = true;
+        m.retake_ = true;
+        m.reel_to_floor_ = true;
+        m.spare_walk_ = true;
+        m.spare_side_set_ = true;
+        m.spare_tries_ = 2;
+        m.fatal_hold_ = true;
+        m.fatal_path_ = Matron::FatalPath::Floor;
+        m.fatal_dropped_ = true;
+        m.fatal_edge_ = RVec3(1.0, 2.0, 3.0);
+        m.fatal_s_ = 4.0F;
+        m.fatal_carry_s_ = 3.0F;
+        m.fatal_window_s_ = 2.0F;
+        m.fatal_check_ticks_ = 7;
+        m.fatal_lethal_ = true;
+        m.fatal_toss_ = true;
+        m.fatal_beat_ = 4;
+        m.fatal_sub_ = 1;
+        m.watch_still_s_ = 1.5F;
+        m.pull2_n_ = 400.0F;
+        m.end_hold(Matron::State::Searching);
+        return m.state_ == Matron::State::Searching &&
+               m.let_go_ &&
+               !m.grip_on_ &&
+               !m.wrist_on_ &&
+               !m.wrist_reseat_ &&
+               !m.arm_throw_ &&
+               !m.leg_toss_ &&
+               !m.retake_ &&
+               !m.reel_to_floor_ &&
+               !m.spare_walk_ &&
+               !m.spare_side_set_ &&
+               m.spare_tries_ == 0 &&
+               !m.fatal_hold_ &&
+               m.fatal_path_ == Matron::FatalPath::None &&
+               !m.fatal_dropped_ &&
+               m.fatal_edge_ == RVec3::sZero() &&
+               m.fatal_s_ == 0.0F &&
+               m.fatal_carry_s_ == 0.0F &&
+               m.fatal_window_s_ == 0.0F &&
+               m.fatal_check_ticks_ == 0 &&
+               !m.fatal_lethal_ &&
+               !m.fatal_toss_ &&
+               m.watch_still_s_ == 0.0F &&
+               m.pull2_n_ == Matron::kHandReachPullN;
+    }
+
+    static bool check_save_and_restore_clean_all(ClimbWorld &world) {
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, BodyID());
+        world.awake(m);
+        m.state_ = Matron::State::Staggering;
+        const auto saved_stagger = m.save();
+        m.state_ = Matron::State::Down;
+        const auto saved_down = m.save();
+        m.travel_.active = true;
+        m.armplay_done_ = true;
+        m.armplay_reposes_ = 2;
+        m.hold_retakes_ = 1;
+        m.hold_tears_at_ = 1;
+        m.fatal_beat_ = 5;
+        m.fatal_sub_ = 1;
+        m.chase_way_held_ = true;
+        m.clamber_hist_n_ = 3;
+        m.clamber_refused_until_ = 50.0F;
+        m.commit_s_ = 2.0F;
+        m.allow_catwalk_ = true;
+        m.search_s_ = 9.0F;
+        m.emerge_s_ = 4.0F;
+        m.sound_count_ = 2;
+        m.pipe_swat_body_ = BodyID(1);
+        m.restore(saved_stagger);
+        return saved_stagger.state == Matron::State::Hunting &&
+               saved_down.state == Matron::State::Hunting &&
+               !m.travel_.active &&
+               !m.armplay_done_ &&
+               m.armplay_reposes_ == 0 &&
+               m.hold_retakes_ == 0 &&
+               m.hold_tears_at_ == 0 &&
+               m.fatal_beat_ == 0 &&
+               m.fatal_sub_ == 0 &&
+               !m.chase_way_held_ &&
+               m.clamber_hist_n_ == 0 &&
+               m.clamber_refused_until_ < 0.0F &&
+               m.commit_s_ == 0.0F &&
+               !m.allow_catwalk_ &&
+               m.search_s_ == 0.0F &&
+               m.state_ == Matron::State::Emerging && m.emerge_s_ == 0.4F &&
+               m.sound_count_ == 0 &&
+               m.pipe_swat_body_.IsInvalid();
+    }
+
+    static bool check_grab_reach_interruptions(ClimbWorld &world) {
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, BodyID());
+        world.awake(m);
+        // (a) His blow landing while she is reaching in State::Grab (!grip_on_)
+        m.state_ = Matron::State::Grab;
+        m.grip_on_ = false;
+        m.hold_s_ = 0.05F;
+        m.blow_by_player_ = true;
+        const bool blow_aborted = m.his_blow() &&
+                                  m.state_ == Matron::State::Staggering &&
+                                  m.resume_state_ == Matron::State::Searching &&
+                                  m.grab_cooldown_s_ >= Matron::kRegrabAfterTearS;
+        // (b) Machine moving steel under her (riding_) while reaching in State::Grab
+        const BodyID plat = world.box(Vec3(4.0F, 0.2F, 4.0F), RVec3(5.0, Matron::kDeckTop + 2.0F, -129.55));
+        world.physics.GetBodyInterface().SetMotionType(plat, EMotionType::Kinematic, EActivation::Activate);
+        world.physics.GetBodyInterface().SetLinearVelocity(plat, Vec3(0.0F, 1.5F, 0.0F));
+        world.physics.GetBodyInterface().SetPosition(
+            m.body(), RVec3(5.0, Matron::kDeckTop + 2.2F + Matron::kStandCentre, -129.55), EActivation::Activate);
+        m.state_ = Matron::State::Grab;
+        m.grip_on_ = false;
+        m.grab_cooldown_s_ = 0.0F;
+        m.feel_floor(ClimbWorld::dt);
+        const bool ride_aborted = m.riding_ &&
+                                  m.state_ != Matron::State::Grab &&
+                                  m.grab_cooldown_s_ >= Matron::kGrabCooldownSeconds;
+        return blow_aborted && ride_aborted;
+    }
+
+    static bool check_release_and_unrig_stagger_exits(ClimbWorld &world) {
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, BodyID());
+        world.awake(m);
+        // Knockdown from State::Release or State::Grab (!grip_on_) must clean hold fields
+        m.state_ = Matron::State::Release;
+        m.hold_phase_ = 1;
+        m.hold_s_ = 0.25F;
+        m.wrist_on_ = true;
+        m.knock_down();
+        const bool release_cleaned = m.state_ == Matron::State::Down &&
+                                     m.hold_phase_ == 0 &&
+                                     m.hold_s_ == 0.0F &&
+                                     !m.wrist_on_;
+        return release_cleaned;
+    }
+
+    static bool check_claimed_timeout_and_dangle_fatal_carry(ClimbWorld &world) {
+        const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), RVec3(5.0, Matron::kDeckTop + 1.0F, -129.0));
+        world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, player);
+        world.awake(m);
+        // (a) Claimed beat give-up (> kFatalGiveUpSeconds) must signal let_go_
+        m.state_ = Matron::State::Claimed;
+        m.fatal_beat_ = 1;
+        m.fatal_sub_ = 0;
+        m.grip_on_ = true;
+        m.let_go_ = false;
+        m.hold_s_ = Matron::kFatalGiveUpSeconds + 0.1F;
+        m.step_claimed(ClimbWorld::dt, RVec3(5.0, Matron::kDeckTop + Matron::kStandCentre, -129.55), Matron::kDeckTop);
+        const bool claimed_lets_go = m.fatal_beat_ == 8 && !m.grip_on_ && m.let_go_;
+
+        // (b) Dangle 3rd brace loss in fatal_hold_ must advance fatal_carry_s_ so Carry goes to fatal_floor()
+        m.state_ = Matron::State::Dangle;
+        m.grip_on_ = true;
+        m.fatal_hold_ = true;
+        m.fatal_carry_s_ = 0.0F;
+        m.brace_losses_ = 2;
+        m.rim_x_ = 50.0F;
+        m.rim_z_ = -129.55F;
+        m.hold_s_ = 1.0F;
+        m.step_hold(ClimbWorld::dt, RVec3(5.0, Matron::kDeckTop + 1.0F, -129.0));
+        const bool dangle_exits_loop = m.state_ == Matron::State::Carry &&
+                                       m.fatal_carry_s_ >= Matron::kFatalCarryS;
+        return claimed_lets_go && dangle_exits_loop;
+    }
+
+    static bool check_spare_bounded_retries(ClimbWorld &world) {
+        const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), RVec3(5.0, Matron::kDeckTop + 1.0F, -129.0));
+        world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, player);
+        world.awake(m);
+        m.state_ = Matron::State::Spare;
+        m.grip_on_ = true;
+        m.let_go_ = false;
+        m.hold_phase_ = 1;
+        m.spare_walk_ = true;
+        m.spare_tries_ = 2;
+        m.hold_s_ = 8.1F;
+        m.step_hold(ClimbWorld::dt, RVec3(5.0, Matron::kDeckTop + 1.0F, -129.0));
+        return !m.spare_walk_ && m.hold_phase_ == 2 && !m.grip_on_ && m.let_go_;
+    }
+
+    static bool check_reel_break_and_calm_backoff(ClimbWorld &world) {
+        const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), RVec3(5.0, Matron::kDeckTop + 1.0F, -128.0));
+        world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, player);
+        world.awake(m);
+        // (a) grip_lost during reel_ must end_reel with 30 s back-off, not retake()
+        m.state_ = Matron::State::Carry;
+        m.grip_on_ = true;
+        m.reel_ = true;
+        m.retake_ = false;
+        m.calm_s_ = 0.0F;
+        m.grab_cooldown_s_ = 0.0F;
+        const float hold_off = m.hands_off_after_hold();
+        m.grip_lost(true, false);
+        const bool reel_backed_off = !m.reel_ &&
+                                     !m.retake_ &&
+                                     hold_off >= Matron::kRegrabAfterTearS &&
+                                     m.state_ == Matron::State::Staggering &&
+                                     m.resume_state_ == Matron::State::Searching &&
+                                     m.grab_cooldown_s_ >= Matron::kRegrabAfterTearS;
+        // (b) While calm_s_ > 0, pre_step in Hunting transitions to Shuffling (patrols away)
+        m.state_ = Matron::State::Hunting;
+        m.calm_s_ = 25.0F;
+        m.pre_step(ClimbWorld::dt, RVec3(5.0, Matron::kDeckTop + 1.0F, -128.0), 1.0F);
+        const bool patrols_away = m.state_ == Matron::State::Shuffling && m.calm_s_ > 20.0F;
+        return reel_backed_off && patrols_away;
+    }
+
+    static bool check_cooldowns_tick_during_mover(ClimbWorld &world) {
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, BodyID());
+        world.awake(m);
+        m.state_ = Matron::State::Hunting;
+        m.journey_active_ = true;
+        m.grab_cooldown_s_ = 10.0F;
+        m.shove_cooldown_s_ = 2.0F;
+        m.calm_s_ = 10.0F;
+        m.throw_cooldown_s_ = 5.0F;
+        m.fetch_refused_s_ = 5.0F;
+        m.climb_retry_s_ = 2.0F;
+        m.pre_step(ClimbWorld::dt, RVec3(5.0, Matron::kDeckTop + 1.0F, -128.0), 0.0F);
+        return m.grab_cooldown_s_ < 10.0F &&
+               m.shove_cooldown_s_ < 2.0F &&
+               m.calm_s_ < 10.0F &&
+               m.throw_cooldown_s_ < 5.0F &&
+               m.fetch_refused_s_ < 5.0F &&
+               std::abs(m.climb_retry_s_ - (2.0F - ClimbWorld::dt)) < 1.0e-4F;
+    }
+
+    static bool check_subphase_interruptions_and_stalls(ClimbWorld &world) {
+        Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, BodyID());
+        world.awake(m);
+        // (a) PipePhase::Slide stall exits pipe after kPipeStallS
+        m.pipe_phase_ = Matron::PipePhase::Slide;
+        m.pipe_from_ = Matron::kRingFloor;
+        m.pipe_to_ = Matron::kDeckTop;
+        m.pipe_swat_body_ = BodyID(2);
+        m.pipe_slide_mps_ = 3.0F;
+        m.pipe_stall_s_ = 0.0F;
+        for (int i = 0; i < 90 * 4 && m.pipe_phase_ != Matron::PipePhase::Off; ++i) {
+            m.ride_pipe(ClimbWorld::dt);
+        }
+        const bool pipe_slide_exited = m.pipe_phase_ == Matron::PipePhase::Off &&
+                                       m.pipe_swat_body_.IsInvalid() &&
+                                       m.pipe_slide_mps_ == 0.0F;
+        // (b) Trap::Holding when level_ != bay_level_ and Trap::ClimbOut timeout exit to Trap::Off
+        m.trap_ = Matron::Trap::Holding;
+        m.level_ = 0;
+        m.bay_level_ = 2;
+        m.trap_step(ClimbWorld::dt, RVec3(0.0, Matron::kDeckTop, -150.0), RVec3(0.0, Matron::kDeckTop, -150.0), false, false, true);
+        const bool trap_holding_exited = m.trap_ == Matron::Trap::Off;
+
+        m.trap_ = Matron::Trap::ClimbOut;
+        m.level_ = 2;
+        m.bay_level_ = 2;
+        m.trap_s_ = 21.0F;
+        m.trap_step(ClimbWorld::dt, RVec3(0.0, Matron::kDeckTop, -150.0), RVec3(0.0, Matron::kDeckTop, -150.0), false, false, true);
+        const bool trap_climbout_exited = m.trap_ == Matron::Trap::Off;
+
+        // (c) RoutecraftWay::cancel clears found_.active and routecraft_recovering_
+        m.found_.active = true;
+        m.routecraft_recovering_ = true;
+        m.routecraft_way_.cancel();
+        const bool routecraft_cleaned = !m.found_.active && !m.routecraft_recovering_;
+
+        return pipe_slide_exited && trap_holding_exited && trap_climbout_exited && routecraft_cleaned;
+    }
+};
+} // namespace scraperx::sim
+
+void run_matron_state_exits() {
+    ClimbWorld world;
+    const bool c1 = MatronStateExitAccess::check_end_hold_cleans_all(world);
+    const bool c2 = MatronStateExitAccess::check_save_and_restore_clean_all(world);
+    const bool c3 = MatronStateExitAccess::check_grab_reach_interruptions(world);
+    const bool c4 = MatronStateExitAccess::check_release_and_unrig_stagger_exits(world);
+    const bool c5 = MatronStateExitAccess::check_claimed_timeout_and_dangle_fatal_carry(world);
+    const bool c6 = MatronStateExitAccess::check_spare_bounded_retries(world);
+    const bool c7 = MatronStateExitAccess::check_reel_break_and_calm_backoff(world);
+    const bool c8 = MatronStateExitAccess::check_cooldowns_tick_during_mover(world);
+    const bool c9 = MatronStateExitAccess::check_subphase_interruptions_and_stalls(world);
+    std::cout << "  matron state exits: end_hold=" << c1
+              << " restore=" << c2
+              << " grab_reach=" << c3
+              << " release_down=" << c4
+              << " claimed_dangle=" << c5
+              << " spare_retry=" << c6
+              << " reel_calm=" << c7
+              << " mover_cooldowns=" << c8
+              << " subphase_stalls=" << c9 << "\n";
+    require(c1, "matron state exits: end_hold resets all hold, armplay, spare and fatality state and signals let_go");
+    require(c2, "matron state exits: save and restore clear active travel, hold, fatality and perception state");
+    require(c3, "matron state exits: reaching Grab aborts cleanly on player blow or moving machine steel");
+    require(c4, "matron state exits: knockdown during Release cleans hold phase and wrist state");
+    require(c5, "matron state exits: Claimed beat give-up releases Jolt grip and Dangle 3rd brace loss exits fatal Carry loop");
+    require(c6, "matron state exits: Spare bounded retries release grip and set down after stalled walk");
+    require(c7, "matron state exits: reel line break grants 30 s back-off and calm_s patrols away in Shuffling");
+    require(c8, "matron state exits: cooldown timers tick once per step while a Mover owns her body");
+    require(c9, "matron state exits: PipePhase::Slide stall, Trap mismatch/timeout and RoutecraftWay cancel clean up");
+    std::cout << "PASS matron state exits: all 9 state-exit groups verified\n";
 }
