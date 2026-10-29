@@ -233,6 +233,9 @@ void caught_at(Simulation &s, const double x, const double z, const double her_x
         tick(s);
     }
     s.debug_place_matron(scraperx::sim::Vector3{her_x, 154.0, her_z});
+    // Facing him: her sight is her eyes (matron.hpp kSightHalfFovRad), and
+    // these catches start with him in it, as her old all-round sight had.
+    s.debug_face_matron(std::atan2(x - her_x, z - her_z));
 }
 
 // By the east band's rail at `z` (x 18), her 1.6 m along the band.

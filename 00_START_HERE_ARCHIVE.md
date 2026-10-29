@@ -13,6 +13,9 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 2026-10-29 | Said in chat: she comes back after she dies (*"Okay, that's what we do. I don't like these things that are blocking."*): a checkpoint restore brings a dead Matron back; killing her holds until he dies. The summit ending (seat the crew's last beam) and the next parked feature (dread before she is seen) taken as the integrator's picks, overturnable | `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md`; rule 8 |
+| 2026-10-29 | Said in chat, on finding reference voices for her: *"We shouldn't be trying to find real voices because it's not gonna work. They need to be all AI generated."* | `00_START_HERE.md` rule 43 |
+| 2026-10-29 | Said in chat, on her first draft lines: *"Yeah, I want to see some lines from her. And they need to be adult, creepy, ominous, profane, vulgar, ugly, nasty weird type shit"*; then *"you know exactly what we're looking for"*; then *"I liked them all, so let's have variety. We don't want repetitive sounds. That ruins everything. We want a deeply immersive, engaging environment."* | `00_START_HERE.md` rule 43 |
 | 2026-10-29 | Said in chat: *"it's not just a third person view. It is supposed to be a whole cinematic, dramatic experience."* | `00_START_HERE.md` rule 33 |
 | 2026-10-29 | Said in chat, after a helper was told to restage her holds any real way it likes: *"Yes, that is the way I want to code, where the helpers get to pick any way of doing something within our constraints and such, just like you did here that helps me tremendously"* | `00_START_HERE.md` rule 60 |
 | 2026-10-29 | Said in chat: *"you should be using godot-runtime, which is like Playwright for Godot, which allows you to see the game. So.....wtf chuck?"*, then *"You need to save that so you don't make the same mistake."* | `CLAUDE.md` "Look at the game; you are never blind"; `00_START_HERE.md` rule 28 |
@@ -21,6 +24,108 @@ row here.
 | 2026-10-29 | Said in chat, to the integrator: *"Check/contribute issue 3 and PR's ( If you can do this every 10 to 15 minutes, that would be helpful.)"* | `00_START_HERE.md` rule 60 |
 | 2026-10-29 | Said in chat, relayed by the integrator at the cull: *"you need to tell me when I should open a new session"*. An agent tells the owner before its context gets costly | `00_START_HERE.md` rule 16 |
 | 2026-10-28 | Said in chat, relayed by the integrator at the cull: *"always tell me if I am [wrong]. Always, always, always, always, always."* Every agent tells the owner plainly when an idea or instruction of his is wrong or worse than an alternative, every time | `00_START_HERE.md` rule 9 (with the 2026-10-20 row "Doubt what the owner says") |
+
+## Owner calls recovered from the archived log and handoff (cull 3, 2026-10-29)
+
+When `03_EXECUTION/ACTIVE_GOAL_PROGRESS.md` and `03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_2026-10-28.md`
+left the tree, every owner call in them that no rule or row here carried was listed, so none is
+lost. Nothing here is in force on its own; a call becomes a rule only as a line in `00_START_HERE.md`.
+
+**Line references** are to the files as of `5a663eb2`: `L1849-1857` means
+`git show 5a663eb2:03_EXECUTION/ACTIVE_GOAL_PROGRESS.md`, lines 1849 to 1857; `H` means
+`git show 5a663eb2:03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_2026-10-28.md`. **Quotes** are the
+owner's words as the log gives them; where there is no quote the log paraphrased him. **Status**:
+*built* (the code is named), *superseded* (the rule is named), *open*, or *uncertain*. A built
+status is the log's own statement at 2026-10-22, plus a check of the code where a name is given.
+
+### A. The Matron
+
+| ID | Date | Where | The call | Status |
+|---|---|---|---|---|
+| A1 | 2026-10-19 | L1849-1857, L1789-1797, L2250-2252 | Her stages (pest, dangerous, fully changed) follow one rage number, fed only by sound that reaches her ear; quiet lowers it, and after a quiet stretch she drops a stage. No floor rises with time: a silent climber can keep her a pest to the top (his choice, told the ending's hunt may then not come). Her look follows the exposure (time out) and only worsens. The player is never told the rule: they read her look, her breathing, how she moves, what she does to their work, and the foreman's radio hints (*"She's quiet. Keep it that way."*), never a meter or a caption | built: `Matron::step_rage`, `Stage`, `exposure` (`src/sim/matron.cpp`, `matron.hpp`). The log reads her stage from the music box's tempo and pitch: superseded by rule 41 (the music box stays deleted). The rage numbers were the agent's, to be tuned |
+| A2 | 2026-10-19 | L1750-1751 | The stages' shove: a pest shoves away from herself; dangerous, with him within 3 m of the shaft's rim, she aims the shove at the rim (*"she tries to nudge him off a band"*); fully changed, she kills with her hands | built: `Matron::shove_direction` and `shoves` (`matron.cpp`). Superseded in part: her hands are now a hold with the fatality and arm tears (rules 32 to 35) |
+| A3 | 2026-10-19 | L1618-1621, L2142-2143, L2247-2249 | She carries things and throws things; the old "never carrying" is dropped as never meant. Her meddling with the route must be undoable; the deaths she causes are not undone "unless that is intentionally wanted". Asked and not yet built: she shoves stock he placed off edges and resets or jams machines he set, more the higher her stage | built in part: `throw_stock`, `fetch_stock`, `Unrigging` (`matron.cpp`). Open: shoving his placed stock off edges and resetting or jamming his machines, not built when the log ended (2026-10-22) |
+| A4 | 2026-10-18 | L2241-2246, L2144 | Her mind, "decision 9, A + B + C": A frail first (rides lifts and lines like anyone), then the Turn (runs the parkour moves). B she meddles only in undoable ways (sends a lift away, waits quiet at a choke point, boards the lift you called), never making the summit impossible. C she learns a trick you repeat within a run and forgets it when the run ends. Her senses stay honest: hearing and sight, a last-known place and a guess where you are going, never the forklift | built: the header of `matron.hpp` ("Her mind"; what she learns lasts the run and a restore forgets it) and `step_turn` (`matron.cpp`) |
+| A5 | 2026-10-16/17 | L868-915, L2234-2238 | The founding call: *"something is RELEASED and chases you"*: a frail old woman in a steel locker on the 154 m deck who hunts by sound, and by sight at close range. The Turn is his *"ghoul mode"*, a broken, jerky movement mode. He asked for movable crates, beams and containers on her deck to use against her | built: the locker, the hunt, the Turn (`matron.cpp`); the crates and the ingot dolly (log L909-915, native group `matron`). "One way to kill her" is widened by the 10-20 row *"She can die in many ways"* (parked, rule 64) |
+| A6 | 2026-10-19 night | L1490-1515 | The goal set that night: *"She's redesigned from scratch as a real ragged rough foul old woman with a body that isn't too thin (not fat either, but "old-woman fat"), pale, wrinkly aged skin, detailed hands (not nubs or pegs), working individual fingers (will add to creepiness to see), a cloth dirty uniform and actual 'working' hair. Her eyes track you, and all her current moves still play. She comes down the shaft after you. One shaft pipe becomes hers to climb. You hear her at least 4 seconds before she arrives, and a drum dropped on her knocks her off without killing her. Knock her down, then throw what you carry. A hard enough blow puts her down for a few seconds, and swiping up while carrying something throws (a quick appearing throw-arc helper non obstructive overlay would be nice -if you agree)"*. The agent agreed to the arc: faint, only while the thumb swipes with a load | built: her figure (`tools/body/`, `godot/presentation/life/matron/`; rule 36), the pipe (`src/sim/matron_pipe.cpp`), the knock-down (rule 34), the throw and its arc (`godot/presentation/throw_arc_view.gd`) |
+| A7 | 2026-10-18 | L2191-2195, L2155-2160 | *"I'm not sure matron should be level dependent"*: she hears in three dimensions through the open shaft and stairwells, muffled by each deck, and what she hears on another level sends her there by the routes she can use. Also *"GOOD immersive physics linked audio for things like the forklift, crane, and everything else"*, with sound linked to the Matron: every real collision is heard by its material and by her, and loud machines draw her too | built: the carried path and muffling of her hearing (`muffled_distance`, `carry_m` in `matron.cpp`) and her ears taking impacts and machines (`Matron::hear` in `physics_world.cpp`) |
+
+### B. The story and the tone (2026-10-19, "the owner's answers")
+
+| ID | Where | The call | Status |
+|---|---|---|---|
+| B1 | L1859-1865, L1627-1629 | The premise: a Kellerworks worker sneaks onto his own site on a weekend to do parkour (badging in at the gate, which logs him) and wakes the Matron, a coworker exposed by a lost weld-inspection X-ray source. She is between him and the gate, so the only way off is up, and he ends by seating the overtime crew's last beam (topping out). Fun turns to horror. The full record was an external artifact (not in the tree) | open: no story code; the Photo ID page and the story radio are built and gated (rule 39) |
+| B2 | L1866-1870 | She changes in three stages driven by what the climber does (noise, machines started, loads placed): a pest who unrigs, resets, shoves, carries off and throws things; then dangerous; then fully changed as the exposure sets in. She kills the overtime crew: *"signs first, bodies higher up"* | superseded in part: signs by rule 24, "your bodies tended" by rule 39; the bodies half is unaddressed. Stages: see A1 |
+| B3 | L1871-1872 | The foreman speaks on the radio from the yard (a human voice): furious, then the lifeline, then admitting he covered up her accident | built, gated: `godot/presentation/audio/story_radio_player.gd` and the 40 cues in `godot/audio/story_radio/`; hooked up after the Matron fixes (rule 39) |
+| B4 | L1873-1876 | The yard crane, the forklifts and the grappling hook join the main climb; a line-throwing harpoon, found partway up, gives the high ground against her | built: `yard_crane`, `forklift`, the hook (`hook` slice); the harpoon is replaced by the laser welder and nail gun, parked (rule 64) |
+| B5 | L1876-1880 | Morning to night with playing time; the night must be readable (floodlights, a helmet lamp, rings lit behind you, moon and city glow); no radiation gameplay | built in part: the sun and moon cycle (`sky_cycle.gd`); the readable-night items are open |
+
+### C. Movement, controls and feel
+
+| ID | Date | Where | The call | Status |
+|---|---|---|---|---|
+| C1 | 2026-10-14 | L113-117, L752 | *"Movement should feel acrobatic and primate-like."* The grappling hook comes later as a toy like the slingshot (it may skip things; it is never the intended route), found as an extra about 25-30% up (around 200-240 m), where finding it feels like a reward. Order: the draw-call repair and a build, then the parkour overhaul (his "IMPORTANT TASK": physical ledge catches and mantles, brachiation, slides, speed vaults, wall-runs), then the hook | built: the parkour set (`PLANNING/PARKOUR_MOVE_SET.md`, `physics_world_climb.cpp`, `physics_world_traversal.cpp`) and the hook found on the 220 ring. Tension with B4 (the hook "joins the main climb") is unresolved |
+| C2 | 2026-10-17 | L1065 | *"The movement alone should be a reason to play"* (the Mirror's Edge study) | open as a goal; the study's ten-item list is the agent's (see U5) |
+| C3 | 2026-10-17 | L1118-1120, L1195-1197 | Ziplines: *"hands never slide on a long cable"*; the trolley rolls and nothing of the rider touches the wire. The end is his own idea: *"a brake the rider uses, or a death slamming into the end"* | built: `src/sim/zipline.cpp` (trolley, hand brake, the sprung stop's slam), native `zipline`, `touch_zipline_slam` |
+| C4 | 2026-10-16 | L835-836, L2217 | He chose A + B for the top of the route: a dead searchlight lit by landing hard on a plate, and a runway arm with a windsock for the parachute jump. The ending beyond it is his and still open | built: `src/sim/summit.*`, `summit_view.gd`, `touch_summit`. The ending: open |
+| C5 | 2026-10-17 | L1174-1181, L2127-2131 | *"Deaths looked like garbage."* He wants real physical consequences for the climber: bone breaks and blood, the camera shaking and the hands feeling it, the voice yelling | built: the corpse (`src/sim/corpse.hpp`), the broken ankle and arm, the first-person body, blood on the lens, the fear yells (rule 44) |
+| C6 | 2026-10-18 | L1416-1418 | Running *"sounds too tap-dance like; it needs to be more thud like, not high pitched"* | built, per the log: the footfalls' rhythm and tone (`godot/presentation/gait.gd`, `audio/`); code-made steps stay (rule 40) |
+| C7 | undated | L728-731 | The slingshot's slow-motion 360-degree launch (his "1A"): the other branch's version looked scripted, as if the sling were not what threw the rider, and its slow motion ran too long and slowed the push itself. So the push plays at full speed and slow time starts only after the pouch lets go | built: `godot/presentation/launch_shot.gd`, `slingshot_view.gd`, `touch_slingshot` |
+| C8 | 2026-10-18 | L2161-2170 | Advanced moves through the thumbsticks or gestures, *"something elegant and intuitive"*, not on-screen buttons that take the eyes off the run; done as one piece of work, never piecemeal inside other tasks | built: swipes up and down and the reversed stick (`godot/presentation/ui/touch_controls.gd`, `input_router.gd`). Buttons: rule 46 |
+
+### D. The world, stock and machines
+
+| ID | Date | Where | The call | Status |
+|---|---|---|---|---|
+| D1 | 2026-10-17 | L1044-1045 | *"Little lived-in spots all over the structure, never confined to a few places."* | built: the spot finder for loose stock (`src/sim/loose_stock.hpp`, `physics_world.cpp`); rule 50 says only "add stock and dressing freely" |
+| D2 | 2026-10-17/18 | L2132-2135, L1329-1330, L934, L1365-1366 | Heavy stock goes up the tower only where the crane or a forklift could really have put it. A big yard crane *"that lifts the forklift, the containers and the stock onto the structure"*, and forklifts up there; every heavy piece stands on a pallet or skid so forks fit | built: `src/sim/yard_crane.*`, `forklift.hpp`, forkable stock; `touch_yard_crane`, `touch_forklift` |
+| D3 | 2026-10-18 | L2171-2175 | The crane's end gets *"a correct end-effector like a clamp and/or grip ... and that we can control them easily"* and *"multiple ways to grip things"* | built: the lifting magnet and the container spreader (`touch_crane_magnet`, `touch_crane_spreader`); the plate clamp: open |
+| D4 | asked 2026-10-17 | L2153-2154 | Diegetic machine controls: grab the forklift's real lift lever and the forks rise (judged feasible: about 5 for the forklift, about 8 for every machine) | open |
+| D5 | 2026-10-20 | L89 | For the chiller drop: *"Old saves are refused, as the owner accepted."* | uncertain: accepted when the chiller drop was rebuilt (`chiller_drop_spec.md`); whether saves are refused now was not checked |
+
+### E. How work is done
+
+| ID | Date | Where | The call | Status |
+|---|---|---|---|---|
+| E1 | undated (task #112) | L788-790 | Splitting the four giant source files was *"the owner's top priority"*: into 37 files of 270 to 960 lines, one subsystem or one family of tests each, output byte-identical | built: `simulation.cpp`, `simulation_tests.cpp`, `ui_test_driver.gd`, `main.gd` are split. A rule for small files: none |
+| E2 | 2026-10-09 | L3-9, L23 | The ten-phase goal plus Phase 10, paid-release readiness: *"Same goal, ScraperX-Claude"*. Its spec, `ACTIVE_GOAL_PHASED_SCOPE.md`, is only on branch `ChatGPT`; the phase table with its estimates is only in the archived log | uncertain: the phase estimates were the agent's; the goal itself stands as the release plan (`PLANNING/RELEASE_PLAN.md`) |
+
+### F. Questions put to the owner and never answered (as of the log, 2026-10-22)
+
+| ID | Where | The question | Status |
+|---|---|---|---|
+| F1 | L2218-2220 | Ledge pull-up speed: A keep it fast (recommended; under half a second, faster than a real person) or B make it realistic (about twice as slow) | open |
+| F2 | L2226-2228, L19-21, L698-705 | Three machines run on motors (the cascade mast, the barrel helix, the crown gondola): A rework so you power them (recommended), B keep the motors. The rack climber is tied to it. His 10-20 *"machines need not be man-powered"* (rule 54) only partly answers it | open |
+| F3 | L2229-2230 | Platforms that dip when walked on: built, but it broke the crane-arm ride, which needs a latch first. A leave it out (recommended), B add the latch | open |
+| F4 | L2231-2233, L2239-2240 | A store build needs his release key in GitHub's secret settings, which only he can add. Still his: the store name, the price, whether the code stays public, the credits, and whether he has the rights to the fall-scream voice clip | open (`PLANNING/RELEASE_PLAN.md` covers the store name only) |
+| F5 | L698-699 | The gravity balance's site (462.25-487.25 m, release plan item 16) and whether it gets an action of its own | open |
+| F6 | L2201-2210 | Pressure ideas he has not picked: gust fronts; the falling walkway; the drum run; wreckage slides (a reason to go down); rope down with the hook | open (this was the only copy) |
+
+### G. From the integrator handoff of 2026-10-28 (`H`)
+
+| ID | Date | The call | Status |
+|---|---|---|---|
+| G1 | 2026-10-28 | A dedicated, always-visible PUNCH button: *"having an appearing and disappearing punch button ... is going to be frustrating."* Action goes back to the environment; a whiff when nothing is in reach; the same button breaks free when held; greyed, never hidden, in the air or mid-lunge | built: `B_PUNCH` in `godot/presentation/ui/touch_controls.gd` ("always on screen: greyed when none can be thrown") |
+| G2 | 2026-10-27 | A mix note: the ambience and the footsteps are too loud | open: no later record that the levels were changed |
+| G3 | 2026-10-28 | Her sounds: *"not repeat the same sound 3 times in a row when [she's] got [the] player"* | built as rule 42 and `godot/presentation/audio/her_takes.gd` |
+| G4 | 2026-10-28 | The rest of his round-2 takes (42 CC0 files on `claude/wip-notes-20261027`) as variants: the question was open, waiting on his yes | built: `godot/presentation/audio/matron/CREDITS.md`, "More takes (2026-10-29)" adds them |
+| G5 | 2026-10-28 | C2 cradle ladder: the pick was "leave it" | decided by the integrator's pick; no change recorded |
+| G6 | 2026-10-28 | Her sight: 360 degrees from low rays with no field of view; give her a frame from her head and eyes, and label hearing as hearing (issue #3 comment) | built on trunk: the merge of her sight (`65e7f86`). Her stalk: merged with it; his answer to the integrator's stalk pick is not recorded |
+
+### H. Uncertain: his call or the agent's design
+
+| ID | Where | What | Note |
+|---|---|---|---|
+| U1 | L2211-2212 | Turned down: a swinging ferry (too like the swing), a stomp pump, breath at altitude, draining meters, rising water | the log does not say who turned them down |
+| U2 | L1775-1780 | The Matron as the site's first-aid attendant (white tunic, cap, dark cardigan, recolored by exposure) | may come from the story answers or be the agent's design; her look is now rule 36 |
+| U3 | L1761-1773, L1627-1629 | The foreman-radio design (each line triggered by a place or event, never a timer, once per launch, shown as captions) and the story handoff's build order | the names were "the handoff's proposals" |
+| U4 | L1608-1610 | Her first act, 154 m to the 220 ring, "readable as a character" | the agent proposed it and he said keep going |
+| U5 | L1065-1092 | The ten Mirror's Edge items (ghost time trials and the rest) | agent proposals; only C2 is his |
+| U6 | L15, L17 | "No coyote time, decided against Governing Law 40" and "the 20 m/s lethal rule decided first" | law-level decisions, not recorded as the owner's calls |
+
+Caveats if A1, A6 or B2 to B4 are ever copied out: the music box is gone (rule 41); "signs first"
+is rule 24; the climber's name "Navarro" is replaced (rule 47); the log's synthesized breath and
+shriek are rule 40's rejected sounds; ChatGPT's role is rule 61.
 
 ## Owner directives: finished or superseded rows
 
