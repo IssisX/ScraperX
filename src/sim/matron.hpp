@@ -283,6 +283,44 @@ public:
     static constexpr float kEyeRangeM = 16.0F;
     static constexpr float kPeripheralHalfFovRad = 1.745F;
     static constexpr float kPeripheralM = 4.0F;
+    // The stalk (matron_stalk.cpp). The owner, 2026-10-28: not a one-track
+    // mind. She stalks a player who has seen her; she takes one who has not.
+    // RULE, general: she stalks while
+    //   - he has turned his face to her, and she saw it (his head's facing
+    //     from the sim, his head seen by her eyes; a free read of his camera
+    //     is not hers), at least once since this encounter began;
+    //   - her rage is still a pest's (his noise has not made her Dangerous);
+    //   - she has had him in sight within kStalkSightMemoryS, on her own floor;
+    //   - she has stalked him under kStalkPatienceS;
+    //   - he is beyond kStalkStrikeM of her;
+    //   - he does not run: his run heard (kStalkRunLoudness, as loud as the
+    //     run that reels her in at her fastest) makes him prey to chase.
+    // Any of those broken, she attacks: the hunt, the Turn, her catch, her
+    // hold and the fatality, all as they were. Stalking: under his gaze she
+    // freezes; looked away from, she closes, striding (kStrideMps) beyond
+    // kStalkFarM, creeping (kCreepMps) to kStalkNearM, and there she holds,
+    // facing him. Her sight-triggered Turn waits while she stalks.
+    static constexpr float kStalkNearM = 3.0F;
+    static constexpr float kStalkFarM = 6.0F;
+    static constexpr float kStalkStrikeM = 1.6F;
+    static constexpr float kStalkPatienceS = 20.0F;
+    static constexpr float kStalkSightMemoryS = 1.0F;
+    static constexpr float kStalkRunLoudness = 0.35F;
+    // His face turned to her: her eyes within 35 degrees of where his head
+    // faces (the middle of a person's view, where a figure is looked at, not
+    // glimpsed). His eyes: 0.7 m over his capsule's middle (1.6 m standing).
+    static constexpr float kFaceTurnedCos = 0.819F;
+    static constexpr float kPlayerEyeAboveCentreM = 0.7F;
+    // The ladder he climbs (matron_stalk.cpp): in a stalk, seen on a ladder
+    // off her floor and watched kAmbushWatchS, she weighs her way to its head
+    // (her scan's plan, not by that ladder) against his (what is left of it
+    // at the rate she saw him climb). Hers shorter by kAmbushMarginS, she
+    // goes there by her own travel and waits at its head, facing it, up to
+    // kAmbushWaitS. Else as before: after him, up the same ladder, or not.
+    static constexpr float kAmbushWatchS = 0.5F;
+    static constexpr float kAmbushMarginS = 2.0F;
+    static constexpr float kAmbushWaitS = 45.0F;
+    static constexpr float kAmbushColumnM = 1.0F;   // edges at the same ladder: its rungs, either way
     // What she has of him, and how: the provenance of a lead.
     enum class Sense : std::uint8_t { None = 0, Sight = 1, Peripheral = 2, Hearing = 3, Touch = 4 };
     // One look at a point: unseen, at the edge of her eye, or seen.
@@ -1067,6 +1105,14 @@ public:
         bool glimpsed = false;            // the player at the edge of her eye this tick (not a sighting)
         float eye_x = 0.0F, eye_y = 0.0F, eye_z = 0.0F;   // her eyes (Matron::eyes)
         float eye_yaw = 0.0F;                            // where her head faces
+        bool watched = false;        // his face turned to her, seen by her this tick
+        bool noticed = false;        // ...at least once this encounter
+        bool stalking = false;       // stalking him (matron_stalk.cpp), not attacking
+        float stalk_s = 0.0F;        // seconds stalked this encounter
+        std::uint32_t stalk_attacks = 0;   // stalks that ended in her attack, this run
+        bool ambush = false;         // after the ladder he climbs, to its head
+        bool ambush_waiting = false; // at its head, waiting
+        std::uint32_t ambushes = 0;  // ladders she went round to the head of, this run
         bool lead_valid = false;
         std::uint32_t acoustic_queries = 0;
         float lead_floor_y = kDeckTop;   // the level of her lead (where she heard or saw the player)
@@ -1301,6 +1347,8 @@ public:
     // True accepts the destination. A free, airborne body waits for real
     // support before executing a route; acceptance does not promise arrival.
     bool travel_to(int region);
+    // The same, with edges her plan leaves out (a ladder with him on it).
+    bool travel_to(int region, const std::vector<int> &avoid);
     [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
     struct Journey {
         bool active = false;
@@ -1374,6 +1422,9 @@ public:
     // Where the player's ankle is (the feet end of the body, however it
     // lies), given before pre_step: her hand goes there.
     void set_player_ankle(const JPH::RVec3 ankle) noexcept { player_ankle_ = ankle; }
+    // Where his head faces (the sim's facing and look pitch; zero when he
+    // faces nowhere): read only through her eyes (face_turned_to_her).
+    void set_player_look(const JPH::Vec3 look) noexcept { player_look_ = look; }
     // She lets go this tick: the push to give them (world), once.
     [[nodiscard]] bool take_let_go(JPH::Vec3 &push) noexcept {
         if (!let_go_) {
@@ -1634,6 +1685,22 @@ private:
     // One look from her eyes at `target`, out to `range`: the cone, then a
     // real line through the world's solids.
     [[nodiscard]] Glimpse look_at(JPH::RVec3 target, float range) const;
+    // The stalk (matron_stalk.cpp).
+    [[nodiscard]] bool face_turned_to_her(JPH::RVec3 player) const;
+    [[nodiscard]] bool stalk_encounter() const noexcept {
+        return noticed_ && !stalk_spent_ && stage_ == Stage::Pest;
+    }
+    void end_encounter() noexcept;
+    // One hunt tick of the stalk, her way (wx, wz) already chosen: true when
+    // it had her feet this tick.
+    bool stalk_step(float dt, float ax, float az, float feet_y, float wx, float wz);
+    // Him seen on a ladder off her floor (an edge of her scan): his climb
+    // rate as she saw it, and her way round to its head.
+    void watch_climber(int edge, float player_y, float dt);
+    bool start_ambush(int edge, JPH::RVec3 at, float player_y);
+    // Her ambush's tick, from arrival on the head's floor: to its head, and
+    // waiting there. True when it had her feet this tick.
+    bool ambush_step(float dt, float ax, float az, float feet_y, bool saw);
     // How far a sound at `from` has to carry to an ear at `to` (above); and
     // the decks (static floors) the straight line between passes through.
     [[nodiscard]] float carry_m(JPH::RVec3 from, JPH::RVec3 to) const;
@@ -2324,6 +2391,30 @@ private:
     bool lead_seen_ = false;
     Sense lead_sense_ = Sense::None;
     bool glimpsed_ = false;
+    // The stalk (matron_stalk.cpp).
+    JPH::Vec3 player_look_ = JPH::Vec3::sZero();
+    bool watched_ = false;
+    bool noticed_ = false;
+    bool stalking_ = false;
+    bool stalk_spent_ = false;
+    float stalk_s_ = 0.0F;
+    std::uint32_t stalk_attacks_ = 0;
+    struct Ambush {
+        bool active = false;
+        bool waiting = false;
+        int edge = -1;
+        float head_x = 0.0F, head_z = 0.0F, head_y = 0.0F;   // where he tops out
+        float line_x = 0.0F, line_z = 0.0F;                  // the ladder
+        float wait_s = 0.0F;
+    };
+    Ambush ambush_;
+    std::uint32_t ambushes_ = 0;
+    int seen_climb_ = -1;          // the ladder she last saw him on
+    float seen_climb_y_ = 0.0F;    // his height on it, and when
+    float seen_climb_t_ = 0.0F;
+    float seen_climb_watch_s_ = 0.0F;
+    float seen_climb_rate_ = -1.0F;   // m/s up it as she saw it; -1 unknown
+    float ambush_weighed_t_ = -1.0F;  // the reading of his pace her way round was last weighed against
     bool wary_ = false;
     float peer_s_ = 0.0F;
     std::uint32_t fooled_ = 0;

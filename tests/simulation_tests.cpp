@@ -30,6 +30,11 @@ int main() {
         test_matron_sight();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-stalk") {
+        test_matron_stalk();
+        test_matron_ladder_head();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder") {
         run_matron_ladder();
         return EXIT_SUCCESS;

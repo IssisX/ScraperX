@@ -139,6 +139,10 @@ bool Matron::travel_to(const Vec3 feet) {
 }
 
 bool Matron::travel_to(const int region) {
+    return travel_to(region, {});
+}
+
+bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     if (scanned_ == nullptr || !body_in_world_ || dead_ || lying_ || kneeling_ ||
         region < 0 || static_cast<std::size_t>(region) >= scanned_->regions().size()) {
         return false;
@@ -162,14 +166,14 @@ bool Matron::travel_to(const int region) {
     // then replans from her actual landing before executing any move.
     std::vector<int> route;
     const int from = here >= 0 ? here : travel_.region;
-    if (from >= 0) route = scanned_->plan(from, region);
+    if (from >= 0) route = scanned_->plan(from, region, avoid);
     if (here >= 0 && route.empty() && here != region) {
         return false;
     }
     // Her hands on this body (a respawn gives her a new one). Invalid or
     // unreachable requests above leave her existing controller untouched.
     climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
-    travel_avoid_.clear();
+    travel_avoid_ = avoid;
     travel_edges_ = std::move(route);
     travel_.active = true;   // already there still earns a supported, quiet arrival
     chase_way_held_ = true;  // a travel taken holds the chase window past its own ticks

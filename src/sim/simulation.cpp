@@ -1445,6 +1445,14 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.glimpsed = view.glimpsed;
     result.eye = Vector3{view.eye_x, view.eye_y, view.eye_z};
     result.eye_yaw = view.eye_yaw;
+    result.watched = view.watched;
+    result.noticed = view.noticed;
+    result.stalking = view.stalking;
+    result.stalk_s = view.stalk_s;
+    result.stalk_attacks = view.stalk_attacks;
+    result.ambush = view.ambush;
+    result.ambush_waiting = view.ambush_waiting;
+    result.ambushes = view.ambushes;
     result.lead_valid = view.lead_valid;
     result.acoustic_queries = view.acoustic_queries;
     result.rage = view.rage;

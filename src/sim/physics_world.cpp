@@ -717,6 +717,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // His ankle; in her fingers, the point of it they hold.
     matron_->set_player_ankle(grip_ != nullptr ? bodies.GetWorldTransform(player_id_) * grip_on_body_
                                                : player_ankle(bodies));
+    // Where his head faces (his facing, his look's pitch): hers to read only
+    // through her eyes.
+    {
+        const float cos_p = std::cos(look_pitch_);
+        matron_->set_player_look(facing_.IsNearZero()
+                                     ? JPH::Vec3::sZero()
+                                     : JPH::Vec3(facing_.GetX() * cos_p, std::sin(look_pitch_), facing_.GetZ() * cos_p));
+    }
     matron_->pre_step(delta_seconds, player_at,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                static_cast<float>(commands.room_loudness)));

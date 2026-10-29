@@ -260,6 +260,11 @@ struct MatronSnapshot final {
     bool glimpsed = false;
     Vector3 eye{};
     double eye_yaw = 0.0;
+    // The stalk: his face turned to her (seen), stalking, and the ladder's
+    // head she went round to.
+    bool watched = false, noticed = false, stalking = false, ambush = false, ambush_waiting = false;
+    double stalk_s = 0.0;
+    std::uint32_t stalk_attacks = 0, ambushes = 0;
     std::uint32_t acoustic_queries = 0;
     double lead_floor_y = 154.0;   // the level of her lead: its floor's top
     // Her stages (matron.hpp): her rage, 0..1, the stage it has her in (0 a
