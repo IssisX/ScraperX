@@ -946,7 +946,7 @@ public:
     // pace), as she lets go on the way: he leaves her hand moving out at
     // least this fast (the edge's choice counts on it; the let-go itself
     // foresees his fall from how he really moves).
-    static constexpr float kFatalThrustMps = 0.8F;
+    static constexpr float kFatalThrustMps = 0.3F;
     static constexpr float kFatalHeaveBackM = 0.25F;   // her heave back before a thrust out
 
     // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): every

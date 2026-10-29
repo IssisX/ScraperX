@@ -1049,8 +1049,10 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                                out * kFatalDropOutM;
             const RVec3 heave = in_reach(drop) - out * kFatalHeaveBackM;
             const RVec3 aim = fatal_heave_back_ ? heave : drop;
-            pose_hand(dt, aim, kHandSpeedMps, her_v);
-            if (Vec3(in_reach(aim) - hand_target_).Length() < 0.02F) {
+            // (Back at her hand's pace; the thrust out at her reaching pace.
+            // Held still out there while his fall from there already kills.)
+            pose_hand(dt, aim, fatal_heave_back_ ? kHandSpeedMps : kHandReachSpeedMps, her_v);
+            if (Vec3(in_reach(aim) - hand_target_).Length() < 0.02F && (fatal_heave_back_ || !fatal_lethal_)) {
                 fatal_heave_back_ = !fatal_heave_back_;
             }
             const float swing_out = (bodies.GetLinearVelocity(player_) - her_v).Dot(out);
@@ -1064,7 +1066,10 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     (void)fatal_shift(feet);
                 }
             }
-            if (due && fatal_lethal_ && swing_out >= 0.0F && fatal_s_ <= kFatalLetGoByS) {
+            // His middle over open air (kFatalOpenAirM past the lip).
+            const float out_past = float(player.GetX() - fatal_edge_.GetX()) * rim_nx_ +
+                                   float(player.GetZ() - fatal_edge_.GetZ()) * rim_nz_;
+            if (due && fatal_lethal_ && swing_out >= 0.0F && out_past >= kFatalOpenAirM && fatal_s_ <= kFatalLetGoByS) {
                 fatal_release();
             } else if (fatal_s_ >= kFatalLetGoByS) {
                 // No let-go that kills, in time: back in over the edge, set
