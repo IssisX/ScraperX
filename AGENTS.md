@@ -1,7 +1,8 @@
 # Rules for every agent in this repo
 
-The owner's dated directives are in `00_START_HERE.md`, which is the authority. `CLAUDE.md` holds
-the rules that keep being broken, and they apply to every agent, whatever its name. Read it first.
+The rules in force are in `00_START_HERE.md` ("Rules in force"), which is the authority; the owner's
+dated words are in `00_START_HERE_ARCHIVE.md`. `CLAUDE.md` spells out the rules that keep being
+broken, and they apply to every agent, whatever its name. Read it first.
 
 The short version:
 
