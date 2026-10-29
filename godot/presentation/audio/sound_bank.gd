@@ -120,15 +120,10 @@ func build() -> void:
 # matron_layers): breath a pest, a growl dangerous, the rage growl over a
 # rough bed fully changed.
 #
-# Her voice, and what her hands do to a body, are real recordings
-# (HER_RECORDED, CC0, each one's source in HER_DIR's CREDITS.md), never made
-# here. Made here, from their own seed: the air she presses on (the beds), her
-# weight on the steel, her joints, and (until recordings replace them: the
-# spec's shortlist, HER_SOUND_VARIATION_SPEC.md) her croak, cluck and sniff --
-# struck flesh and the deck under it, weight a phone can play (_add_thump),
-# wet mouth sounds (_add_grains, _add_glide), joints (_slip), and the croak a
-# glottal source (_glottal) through a throat (_formants). Her mouth working is
-# no longer a loop made here: it is retired.
+# Her voice, her croak, her tongue cluck and her sniff, and what her hands
+# do to a body, are real recorded CC0 takes in HER_DIR (sources and exact
+# recording intervals in CREDITS.md). Only nonhuman beds, footfalls and
+# joints remain made here. Her synthesized mouth loop stays retired.
 const HER_DIR := "res://presentation/audio/matron/"
 # Her recordings by clip name: how many takes, each <name>_<take>.ogg. A name
 # ending _loop plays as a loop (each file's end is crossfaded into its head).
@@ -137,7 +132,8 @@ const HER_DIR := "res://presentation/audio/matron/"
 # in that round, so no recorded family of hers has fewer than 3.
 const HER_RECORDED := {&"matron_growl_loop": 3, &"matron_growl_rage_loop": 3, &"matron_strain_loop": 3,
 	&"matron_breath": 3, &"matron_shriek": 6, &"matron_laugh": 3, &"matron_effort": 3, &"matron_hit": 3,
-	&"matron_swallow": 3, &"matron_rip": 6, &"matron_plant": 3}
+	&"matron_swallow": 3, &"matron_rip": 6, &"matron_plant": 3,
+	&"matron_croak": 4, &"matron_cluck": 4, &"matron_sniff": 4}
 
 
 func build_her() -> void:
@@ -163,9 +159,6 @@ func build_her() -> void:
 	clips[&"matron_bed_rough_loop"] = [_loop(bed, 0.4)]
 	clips[&"matron_step"] = _variants(3, _her_step)
 	clips[&"matron_joints"] = _variants(3, _her_joints)
-	clips[&"matron_croak"] = _variants(1, _her_croak)
-	clips[&"matron_cluck"] = _variants(1, _her_cluck)
-	clips[&"matron_sniff"] = _variants(1, _her_sniff)
 	build_msec = Time.get_ticks_msec() - started
 
 
@@ -936,52 +929,6 @@ func _her_joints() -> PackedFloat32Array:
 	var grist := _resonate(_slip(out.size(), 25.0, 35.0), 1200.0, 2.0)
 	for i in out.size():
 		out[i] += grist[i] * 0.5 * (1.0 - float(i) / float(out.size()))
-	return out
-
-
-# The croak (a death rattle, Ju-On's): GLOT at 32-40 -> 20-26 Hz, jitter
-# 25%, every pulse its own, into 450/1100/2600 Hz at Q x1.3; two swells; a
-# wet click to end.
-func _her_croak() -> PackedFloat32Array:
-	var length := _rng.randf_range(1.0, 1.4)
-	var n := int(length * MIX_RATE)
-	var out := _bandpass(_formants(_glottal(n, _rng.randf_range(32.0, 40.0), _rng.randf_range(20.0, 26.0), 0.25,
-		0.4, 0.3, 1500.0, 0.08), 450.0, 1100.0, 2600.0, 1.3), 350.0, 4500.0)
-	for i in n:
-		var u := float(i) / float(n)
-		out[i] *= minf(1.0, 4.0 * u * (1.0 - u) * 2.0) * (0.55 + 0.45 * absf(fmod(u * 2.0, 1.0) * 2.0 - 1.0))
-	_peak(out, 0.9)
-	_add_band_noise(out, length - 0.08, 0.003, 0.6, 0.001, 2500.0, 6000.0)
-	return out
-
-
-# A cluck of the tongue off the palate: a 2.2 kHz knock (Q 5, 8 ms), a
-# click, a 3.5 kHz tick 30 ms after.
-func _her_cluck() -> PackedFloat32Array:
-	var out := _silence(0.18)
-	_add_mode(out, 2200.0, 0.0, 0.06, 1.0, 0.008, 5.0)
-	_add_band_noise(out, 0.0, 0.0015, 0.8, 0.0005, 1500.0, 6000.0)
-	_add_mode(out, 3500.0, 0.03, 0.03, 0.4, 0.004, 6.0)
-	return out
-
-
-# A sniff at something she likes: 3-5 pulls of 60-120 ms (noise into 2.8
-# kHz Q 3 under a 70 Hz flutter), then a wet snort.
-func _her_sniff() -> PackedFloat32Array:
-	var out := _silence(0.8)
-	var at := 0.0
-	for k in _rng.randi_range(3, 5):
-		var d := _rng.randf_range(0.06, 0.12)
-		var count := int(d * MIX_RATE)
-		var pull := _resonate(_band_noise_buffer(count, 1500.0, 5000.0), 2800.0, 3.0)
-		_rough(pull, 70.0, 0.5)
-		var first := int(at * MIX_RATE)
-		for j in count:
-			if first + j < out.size():
-				out[first + j] += pull[j] * 4.0 * sin(PI * float(j) / float(count))
-		at += d + _rng.randf_range(0.02, 0.05)
-	_add_band_noise(out, minf(at + 0.03, 0.65), 0.08, 0.6, 0.03, 300.0, 1500.0)
-	_add_grains(out, minf(at + 0.03, 0.65), 0.1, 40.0, 40.0, 0.5, 2.0, 2000.0, 5000.0, 0.3)
 	return out
 
 
