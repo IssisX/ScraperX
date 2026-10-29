@@ -3206,13 +3206,15 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
     });
 }
 
-std::vector<int> AffordanceMap::plan(const int from, const int to, const std::vector<int> &avoid) const {
+std::vector<int> AffordanceMap::plan(const int from, const int to, const std::vector<int> &avoid,
+                                     const std::vector<std::pair<int, Edge>> &extra) const {
     std::vector<int> result;
     if (from < 0 || to < 0 || from >= static_cast<int>(regions_.size()) || to >= static_cast<int>(regions_.size())) {
         return result;
     }
     std::vector<float> dist(regions_.size(), std::numeric_limits<float>::max());
-    std::vector<int> via(regions_.size(), -1);
+    constexpr int kNone = std::numeric_limits<int>::min();   // ids below zero are `extra`'s
+    std::vector<int> via(regions_.size(), kNone);
     using Item = std::pair<float, int>;
     std::priority_queue<Item, std::vector<Item>, std::greater<>> open;
     dist[static_cast<std::size_t>(from)] = 0.0F;
@@ -3275,14 +3277,29 @@ std::vector<int> AffordanceMap::plan(const int from, const int to, const std::ve
                 open.push({nd, it->to});
             }
         }
+        for (const auto &[id, e] : extra) {
+            if (e.from != r || e.to < 0 || e.to >= static_cast<int>(regions_.size())) continue;
+            if (std::find(avoid.begin(), avoid.end(), id) != avoid.end()) continue;
+            const float nd = d + e.cost;
+            if (nd < dist[static_cast<std::size_t>(e.to)]) {
+                dist[static_cast<std::size_t>(e.to)] = nd;
+                via[static_cast<std::size_t>(e.to)] = id;
+                open.push({nd, e.to});
+            }
+        }
     }
-    if (from == to || via[static_cast<std::size_t>(to)] < 0) {
+    if (from == to || via[static_cast<std::size_t>(to)] == kNone) {
         return result;
     }
     for (int r = to; r != from;) {
         const int e = via[static_cast<std::size_t>(r)];
         result.push_back(e);
-        r = edges_[static_cast<std::size_t>(e)].from;
+        if (e >= 0) {
+            r = edges_[static_cast<std::size_t>(e)].from;
+        } else {
+            const auto x = std::find_if(extra.begin(), extra.end(), [e](const std::pair<int, Edge> &p) { return p.first == e; });
+            r = x->second.from;
+        }
     }
     std::reverse(result.begin(), result.end());
     return result;

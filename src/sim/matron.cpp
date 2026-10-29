@@ -2399,6 +2399,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         } else {
             (void)way->step(dt, account);
         }
+        // The bodies near her after her journey's move, as in her hunt: a
+        // drum dropped on her on a riser reads as the blow it is (take_blow).
+        sense_near();
         if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
         return;
     }
@@ -4002,7 +4005,8 @@ void Matron::take_blow(const float dt) {
     sensed_ = false;
     // On the pipe her hands hold her against her weight: a blow is read the
     // same way, but in all three directions, and only on the pipe itself.
-    const bool on_pipe = pipe_way_.status() == MoverStatus::Running;
+    // (Her hunt's pipe way, or her journey on a riser: the same hands.)
+    const bool on_pipe = pipe_way_.status() == MoverStatus::Running || (travel_riser_ && pipe_phase_ != PipePhase::Off);
     const Mover *held_by = holder();
     if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof) ||
         state_ == State::Down || state_ == State::Emerging) {

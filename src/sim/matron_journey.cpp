@@ -549,39 +549,22 @@ std::vector<int> Matron::plan_with_risers(const int from, const int goal, const 
     if (!direct.empty() || from == goal || pipe_ruled_out_) {
         return direct;
     }
-    // Where the steel offers her map no way, one of her risers between:
-    // walked to and from over her map's own plan.
-    const auto cost = [&](const std::vector<int> &plan) {
-        float c = 0.0F;
-        for (const int k : plan) c += scanned_->edges()[static_cast<std::size_t>(k)].cost;
-        return c;
-    };
+    // Where the steel offers her map no way: her risers beside it, one graph: a route takes
+    // as many of them as the way needs (a tall riser climbed deck to deck),
+    // each walked to and from over her map.
+    std::vector<std::pair<int, traversal::Edge>> risers;
     const auto &routes = riser_routes();
-    std::vector<int> best;
-    float best_cost = std::numeric_limits<float>::max();
     for (std::size_t i = 0; i < routes.size(); ++i) {
         for (int down = 0; down < 2; ++down) {
-            const int id = -(2 * static_cast<int>(i) + down) - 1;
-            if (std::find(avoid.begin(), avoid.end(), id) != avoid.end() ||
-                !pipe_way_open(2 * static_cast<int>(i) + down)) {
-                continue;
-            }
+            const int way = 2 * static_cast<int>(i) + down;
+            if (!pipe_way_open(way)) continue;
             const RiserDeck &a = down != 0 ? routes[i].hi : routes[i].lo;
             const RiserDeck &b = down != 0 ? routes[i].lo : routes[i].hi;
-            if (a.region < 0 || b.region < 0) continue;
-            std::vector<int> pre, post;
-            if (a.region != from && (pre = scanned_->plan(from, a.region, avoid)).empty()) continue;
-            if (b.region != goal && (post = scanned_->plan(b.region, goal, avoid)).empty()) continue;
-            const float c = cost(pre) + travel_edge(id).cost + cost(post);
-            if (c < best_cost) {
-                best_cost = c;
-                best = pre;
-                best.push_back(id);
-                best.insert(best.end(), post.begin(), post.end());
-            }
+            if (a.region < 0 || b.region < 0 || a.region == b.region) continue;
+            risers.emplace_back(-way - 1, travel_edge(-way - 1));
         }
     }
-    return best;
+    return scanned_->plan(from, goal, avoid, risers);
 }
 
 traversal::Edge Matron::travel_edge(const int k) {

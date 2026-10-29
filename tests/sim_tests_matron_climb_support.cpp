@@ -4,6 +4,8 @@
 #include "sim/physics_world_support.hpp"
 #include "matron_contact_audit.hpp"
 
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
+
 #include <random>
 
 namespace {
@@ -433,8 +435,90 @@ void test_matron_riser() {
     require(std::abs(down.end_feet_y - g) < 0.1F, "matron riser: down, on the floor");
     require(matron.view().pipe_peak_force_n <= law::kForceN + 0.5F && matron.view().pipe_peak_power_w <= law::kPowerW + 0.5F,
             "matron riser: her grip within her one force and power budget");
+    // A drum let go onto her as her journey takes her up the post again, as
+    // onto her on her hunt's pipe (run_matron_pipe): her grip torn, alive.
+    {
+        BodyInterface &bi = world.physics.GetBodyInterface();
+        BodyCreationSettings ds(new CylinderShape(0.44F, 0.27F), RVec3(0, g - 10.0, -100), Quat::sIdentity(),
+                                EMotionType::Dynamic, detail::object_layers::kMoving);
+        ds.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+        ds.mMassPropertiesOverride.mMass = 55.0F;
+        const BodyID drum = bi.CreateAndAddBody(ds, EActivation::DontActivate);
+        world.bodies.push_back(drum);
+        // Out of her locker's rise (Emerging reads no blow), as she is on any journey of the game's.
+        for (int i = 0; i < 180 && matron.view().state == Matron::State::Emerging; ++i) tick();
+        const std::uint32_t slams = matron.view().pipe_slams;
+        require(matron.travel_to(deck_region), "matron riser drum: a journey up the post again");
+        bool dropped = false;
+        for (int t = 0; t < 90 * 120 && matron.journey().active && matron.view().alive; ++t) {
+            tick();
+            const Matron::View &v = matron.view();
+            const float feet = v.y - Matron::kStandCentre - g;
+            if (!dropped && v.on_pipe && v.contact_hand_held && !v.pipe_sliding && feet > 3.0F) {
+                bi.SetPositionAndRotation(drum, RVec3(v.x, v.y + 2.6, v.z), Quat::sIdentity(), EActivation::Activate);
+                bi.SetLinearVelocity(drum, Vec3(0.0F, -2.0F, 0.0F));
+                dropped = true;
+            }
+            if (dropped && matron.view().pipe_slams > slams) break;
+        }
+        const Matron::View &v = matron.view();
+        std::cout << "  matron riser drum: dropped " << dropped << " slams " << v.pipe_slams - slams << " alive "
+                  << v.alive << "\n";
+        require(dropped && v.pipe_slams == slams + 1 && v.alive,
+                "matron riser drum: a drum dropped on her on her journey's riser tears her grip, alive, as in her hunt");
+    }
     std::cout << "PASS scraperx_sim matron riser: up_s=" << up.seconds << " down_s=" << down.seconds
               << " hips_m=" << std::max(up.worst_hips_m, down.worst_hips_m) << "\n";
+
+    // Two stories of risers and no other way: a post from the floor up a
+    // deck's face, a second from that deck up a higher deck's face. Her
+    // journey plans one search over her map and her risers, both posts in it.
+    {
+        ClimbWorld w;
+        w.box(Vec3(2.5F, 4.0F, 4.0F), RVec3(0.5, g + 4.0, -142));     // lower deck: x -2..3, z -146..-138, top g + 8
+        w.box(Vec3(0.2F, 4.0F, 0.2F), RVec3(3.5, g + 4.0, -140));      // its post: x 3.3..3.7, from the floor
+        w.box(Vec3(1.75F, 4.0F, 2.0F), RVec3(-0.25, g + 12.0, -144));  // upper deck: x -2..1.5, z -146..-142, top g + 16
+        w.box(Vec3(0.2F, 4.0F, 0.2F), RVec3(2.0, g + 12.0, -144));     // its post: x 1.8..2.2, on the lower deck
+        Matron m(w.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kOnSteel, BodyID());
+        w.awake(m);
+        m.set_stage_for_test(Matron::Stage::Dangerous);
+        w.physics.GetBodyInterface().SetPosition(m.body(), RVec3(7.5, g + Matron::kStandCentre, -137.0),
+                                                 EActivation::Activate);
+        const auto t2 = [&] {
+            m.pre_step(ClimbWorld::dt, Stimulus(RVec3(40, g, -100), 0.0F));
+            w.physics.Update(ClimbWorld::dt, 1, &w.temp, &w.jobs);
+            m.post_step(ClimbWorld::dt);
+        };
+        for (int i = 0; i < 90 && m.scanned_routes() == nullptr; ++i) t2();
+        require(m.scanned_routes() != nullptr, "matron riser chain: she reads the world");
+        const auto *map2 = m.scanned_routes();
+        const int low = map2->region_at(Vec3(7.5F, g, -137.0F));
+        const int mid = map2->region_at(Vec3(2.5F, g + 8.0F, -140.0F));
+        const int high = map2->region_at(Vec3(0.0F, g + 16.0F, -144.0F));
+        std::cout << "  matron riser chain: risers " << map2->risers().size() << " regions floor " << low << " mid "
+                  << mid << " top " << high << "\n";
+        require(low >= 0 && mid >= 0 && high >= 0 && map2->plan(low, high).empty() && map2->plan(low, mid).empty() &&
+                    map2->plan(mid, high).empty(),
+                "matron riser chain: her map has no other way between the floor and either deck");
+        const bool planned = m.travel_to(high);
+        int risers_taken = 0;
+        bool was_on = false;
+        int t = 0;
+        for (; planned && t < 90 * 240 && m.journey().active; ++t) {
+            t2();
+            const bool on = m.view().on_pipe;
+            if (on && !was_on) ++risers_taken;
+            was_on = on;
+        }
+        const float feet = float(w.physics.GetBodyInterface().GetPosition(m.body()).GetY()) - Matron::kStandCentre;
+        std::cout << "  matron riser chain: planned " << planned << " arrived " << m.journey().arrivals << " risers taken "
+                  << risers_taken << " in " << float(t) / 90.0F << " s, feet at " << feet - g << " m\n";
+        require(planned && !m.journey().active && m.journey().arrivals > 0 && risers_taken >= 2 &&
+                    std::abs(feet - (g + 16.0F)) < 0.1F,
+                "matron riser chain: her journey takes both posts, one after the other, onto the upper deck");
+        std::cout << "PASS scraperx_sim matron riser chain: s=" << float(t) / 90.0F << "\n";
+    }
 }
 
 namespace scraperx::sim {

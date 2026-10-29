@@ -411,7 +411,11 @@ public:
     // Directed search: the edges, in order, from one region to another
     // (usable edges only). Empty if there is no way.
     // avoid: edges not to take (ones this journey already found it cannot start).
-    [[nodiscard]] std::vector<int> plan(int from, int to, const std::vector<int> &avoid = {}) const;
+    // `extra` holds ways of hers the scan does not hold (her risers), each
+    // with its own id below zero: one search over both, so a route may take
+    // any number of them between the scanned edges.
+    [[nodiscard]] std::vector<int> plan(int from, int to, const std::vector<int> &avoid = {},
+                                        const std::vector<std::pair<int, Edge>> &extra = {}) const;
     // A walk inside one region: patch-to-patch waypoints (feet).
     [[nodiscard]] std::vector<JPH::Vec3> walk_path(JPH::Vec3 from, JPH::Vec3 to) const;
     [[nodiscard]] int patch_at(JPH::Vec3 feet, float tol) const;
