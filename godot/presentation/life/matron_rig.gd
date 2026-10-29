@@ -627,7 +627,8 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		claims |= CLAIM_HAND
 		# On a two-handed move the left wrist goes to a second hold
 		# only when the simulation has her hand on one
-		# (contact_hand2_held; none of her movers holds two today);
+		# (contact_hand2_held; on a mover's two-handed move none holds two
+		# today, only her hands on a riser's face do);
 		# otherwise to the one hold, never to a point the view
 		# invented.
 		if two_handed:
@@ -654,8 +655,18 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		into.y = 0.0
 		var side := Vector3.UP.cross(into.normalized()) if into.length() > 0.01 else Vector3.RIGHT
 		_ride(0.0)
-		_reach("r", inv * (grip + side * 0.08), wp)
-		_reach("l", inv * (grip - side * 0.08), wp)
+		if bool(data.get("contact_hand2_held", false)):
+			# Both hands on its face where the simulation has them, one over
+			# the other: each wrist to the hold on its own side.
+			var grip2: Vector3 = data["contact_hand2"]
+			var right := grip if (grip - grip2).dot(side) >= 0.0 else grip2
+			var left := grip2 if right == grip else grip
+			_reach("r", inv * right, wp)
+			_reach("l", inv * left, wp)
+			claims |= CLAIM_HAND2
+		else:
+			_reach("r", inv * (grip + side * 0.08), wp)
+			_reach("l", inv * (grip - side * 0.08), wp)
 		claims |= CLAIM_HAND | CLAIM_HANG
 		if bool(data.get("contact_braced", false)):
 			var brace: Vector3 = data["contact_brace"]

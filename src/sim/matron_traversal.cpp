@@ -43,6 +43,8 @@ const char *move_name(const MoveKind kind) noexcept {
     case MoveKind::HangDrop: return "hang_drop";
     case MoveKind::GapJump: return "gap_jump";
     case MoveKind::LedgeJump: return "ledge_jump";
+    case MoveKind::RiserUp: return "riser_up";
+    case MoveKind::RiserDown: return "riser_down";
     }
     return "?";
 }
@@ -953,6 +955,8 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::LedgeJump: step_ledge_jump(dt, budget); break;
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
     case MoveKind::GapJump: step_gap(dt, budget); break;
+    case MoveKind::RiserUp:
+    case MoveKind::RiserDown: break;   // her riser is the Matron's own move (matron_pipe.cpp), never begun here
     }
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
@@ -2165,6 +2169,7 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
     edges_.clear();
     ladders_.clear();
     poles_.clear();
+    risers_.clear();
     patch_links_.clear();
     stats_ = ScanStats{};
 
@@ -2216,6 +2221,13 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
             poles_.push_back({mid.GetX(), mid.GetZ(), std::max(sx, sz), leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
             continue;
         }
+        // A riser: tall, roughly square (its faces level, along x and z), too
+        // thick to wrap, with standing faces she can climb by friction. Recorded in addition to any patch
+        // its top makes, so existing planning over its top is unchanged.
+        if (leaf.axis_aligned && sy >= 5.0F && std::max(sx, sz) > 0.16F && std::max(sx, sz) <= 1.50F && std::min(sx, sz) >= 0.15F &&
+            std::max(sx, sz) <= 3.0F * std::min(sx, sz)) {
+            risers_.push_back({mid.GetX(), mid.GetZ(), 0.5F * sx, 0.5F * sz, leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
+        }
         if (leaf.axis_aligned && std::min(sx, sz) >= 0.18F) {   // a board or ledge down to 0.18 m: her soles fit
             Patch p;
             p.body = leaf.body;
@@ -2252,9 +2264,31 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
                                     return ends >= 2;
                                 }),
                  poles_.end());
+    // A ladder's stile is no riser either, by the same bar-end rule.
+    risers_.erase(std::remove_if(risers_.begin(), risers_.end(),
+                                 [&](const Riser &riser) {
+                                     int ends = 0;
+                                     for (const Bar &bar : bars) {
+                                         const float y = bar.c.GetY();
+                                         if (y < riser.bottom - 0.05F || y > riser.top + 0.05F) {
+                                             continue;
+                                         }
+                                         const Vec3 along = bar.along_x ? Vec3::sAxisX() : Vec3::sAxisZ();
+                                         for (const float side : {-1.0F, 1.0F}) {
+                                             const Vec3 end = bar.c + along * (side * bar.half);
+                                             if (std::hypot(end.GetX() - riser.x, end.GetZ() - riser.z) <=
+                                                 0.5F * std::max(2.0F * riser.half_x, 2.0F * riser.half_z) + 0.12F) {
+                                                 ++ends;
+                                             }
+                                         }
+                                     }
+                                     return ends >= 2;
+                                 }),
+                  risers_.end());
     stats_.patches = static_cast<std::uint32_t>(patches_.size());
     stats_.bars = static_cast<std::uint32_t>(bars.size());
     stats_.poles = static_cast<std::uint32_t>(poles_.size());
+    stats_.risers = static_cast<std::uint32_t>(risers_.size());
 
     // 3a. What stands on a top splits it (split_patches).
     split_patches(physics, ignore, limits);
@@ -3172,13 +3206,15 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
     });
 }
 
-std::vector<int> AffordanceMap::plan(const int from, const int to, const std::vector<int> &avoid) const {
+std::vector<int> AffordanceMap::plan(const int from, const int to, const std::vector<int> &avoid,
+                                     const std::vector<std::pair<int, Edge>> &extra) const {
     std::vector<int> result;
     if (from < 0 || to < 0 || from >= static_cast<int>(regions_.size()) || to >= static_cast<int>(regions_.size())) {
         return result;
     }
     std::vector<float> dist(regions_.size(), std::numeric_limits<float>::max());
-    std::vector<int> via(regions_.size(), -1);
+    constexpr int kNone = std::numeric_limits<int>::min();   // ids below zero are `extra`'s
+    std::vector<int> via(regions_.size(), kNone);
     using Item = std::pair<float, int>;
     std::priority_queue<Item, std::vector<Item>, std::greater<>> open;
     dist[static_cast<std::size_t>(from)] = 0.0F;
@@ -3241,14 +3277,29 @@ std::vector<int> AffordanceMap::plan(const int from, const int to, const std::ve
                 open.push({nd, it->to});
             }
         }
+        for (const auto &[id, e] : extra) {
+            if (e.from != r || e.to < 0 || e.to >= static_cast<int>(regions_.size())) continue;
+            if (std::find(avoid.begin(), avoid.end(), id) != avoid.end()) continue;
+            const float nd = d + e.cost;
+            if (nd < dist[static_cast<std::size_t>(e.to)]) {
+                dist[static_cast<std::size_t>(e.to)] = nd;
+                via[static_cast<std::size_t>(e.to)] = id;
+                open.push({nd, e.to});
+            }
+        }
     }
-    if (from == to || via[static_cast<std::size_t>(to)] < 0) {
+    if (from == to || via[static_cast<std::size_t>(to)] == kNone) {
         return result;
     }
     for (int r = to; r != from;) {
         const int e = via[static_cast<std::size_t>(r)];
         result.push_back(e);
-        r = edges_[static_cast<std::size_t>(e)].from;
+        if (e >= 0) {
+            r = edges_[static_cast<std::size_t>(e)].from;
+        } else {
+            const auto x = std::find_if(extra.begin(), extra.end(), [e](const std::pair<int, Edge> &p) { return p.first == e; });
+            r = x->second.from;
+        }
     }
     std::reverse(result.begin(), result.end());
     return result;

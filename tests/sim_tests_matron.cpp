@@ -662,8 +662,9 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
             first_hold = i;
         }
         const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
-        const bool on_line = std::hypot(m.position.x - static_cast<double>(Matron::kPipeLineX),
-                                        m.position.z - static_cast<double>(Matron::kPipeLineZ)) < 0.25;
+        // Out on the riser (by the riser she is on, as her state exports it),
+        // not still at the rail over the deck.
+        const bool on_line = std::hypot(m.position.x - m.pipe_axis.x, m.position.z - m.pipe_axis.z) < 1.3;
         if (drum_at_feet > 0.0 && !dropped && m.on_pipe && on_line && !m.pipe_sliding && feet < drum_at_feet) {
             // Let go over the corner rail onto her, from a metre and a half up.
             s.debug_launch_kit_body(drum, {m.position.x, m.position.y + 2.6, m.position.z}, {0.0, -2.0, 0.0});
@@ -729,6 +730,8 @@ void run_matron_pipe() {
         require(r.contacts.clean(), "matron pipe: her exported contacts are hers on the way down (S6)");
         require(r.contacts.pipe_face > 0 && r.contacts.braced == r.contacts.pipe_face,
                 "matron pipe: hand over hand on the riser, her feet braced on it every tick (S6)");
+        require(r.contacts.two_hands == r.contacts.pipe_face,
+                "matron pipe: both her hands on the riser's face every tick she climbs it (S6)");
         std::cout << "PASS scraperx_sim matron pipe dangerous: warned_s=" << r.warned_s << " holds=" << r.holds << "\n";
     }
     // Fully changed: head first, and still heard 4 s ahead.

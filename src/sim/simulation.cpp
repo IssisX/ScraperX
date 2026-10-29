@@ -1482,6 +1482,10 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.pipe_slam_mps = view.pipe_slam_mps;
     result.pipe_peak_force_n = view.pipe_peak_force_n;
     result.pipe_peak_power_w = view.pipe_peak_power_w;
+    result.pipe_axis = {view.pipe_axis.GetX(), 0.0, view.pipe_axis.GetZ()};
+    result.pipe_half_x = view.pipe_half_x;
+    result.pipe_half_z = view.pipe_half_z;
+    result.pipe_on_face = view.pipe_on_face;
     result.bracing = view.bracing_structure;
     result.support_n = view.support_n;
     result.trap = view.trap;

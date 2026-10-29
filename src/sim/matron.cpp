@@ -340,11 +340,7 @@ void Matron::hear_for_test(const RVec3 at) {
     }
 }
 
-void Matron::rule_out_pipe_for_test() {
-    for (PipeWayMemory &way : pipe_ways_) {
-        way.ruled_out = true;
-    }
-}
+void Matron::rule_out_pipe_for_test() { pipe_ruled_out_ = true; }
 
 void Matron::let_go_for_test() {
     // Her hands open on the way that holds her, as a hold giving way opens them.
@@ -361,9 +357,20 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
     }
     climb_retry_s_ = 0.0F;
     if (pipe) {
+        // The riser of hers nearest her from her floor, the way asked.
+        if (!body_in_world_ || pipe_ruled_out_) {
+            return false;
+        }
+        const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-        const float to = floor_y + (down ? -kStackPitch : kStackPitch);
-        return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
+        const float toward = down ? -std::numeric_limits<float>::max() : std::numeric_limits<float>::max();
+        const int route = riser_between(floor_y, toward, float(at.GetX()), float(at.GetZ()), -1);
+        if (route < 0) {
+            return false;
+        }
+        pipe_route_ = route;
+        const RiserRoute &r = riser_routes_[static_cast<std::size_t>(route)];
+        return down ? get_on_pipe(r.hi.floor_y, r.lo.floor_y) : get_on_pipe(r.lo.floor_y, r.hi.floor_y);
     }
     return index >= 0 && take_climb(index, down);
 }
@@ -2392,6 +2399,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         } else {
             (void)way->step(dt, account);
         }
+        // The bodies near her after her journey's move, as in her hunt: a
+        // drum dropped on her on a riser reads as the blow it is (take_blow).
+        sense_near();
         if (shared_survival_) shared_survival_->pre_step(BodyID(), false);
         return;
     }
@@ -2751,8 +2761,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, no longer frail: chased longer.
-            const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
-            const bool by_pipe = elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward);
+            const bool by_pipe = elsewhere && stage_ != Stage::Pest && !pipe_ruled_out_ &&
+                                 riser_between(floor_y, lead_floor_, ax, az, -1) >= 0;
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
             // walking to, a journey or a travel she is on, a climb she is
@@ -3821,9 +3831,11 @@ void Matron::restore(const Saved &saved) {
         climbs_done_ = 0;
         // A restore is a world changed: every way of her pipe is worth trying
         // again (one ruled out stays out).
-        for (PipeWayMemory &way : pipe_ways_) {
-            way.failures = 0;
-            way.blocked_until_s = 0.0F;
+        for (RiserRoute &route : riser_routes_) {
+            for (PipeWayMemory &way : route.ways) {
+                way.failures = 0;
+                way.blocked_until_s = 0.0F;
+            }
         }
         physics_.GetBodyInterface().SetGravityFactor(body_, 1.0F);
         unrig_s_ = 0.0F;
@@ -3993,7 +4005,8 @@ void Matron::take_blow(const float dt) {
     sensed_ = false;
     // On the pipe her hands hold her against her weight: a blow is read the
     // same way, but in all three directions, and only on the pipe itself.
-    const bool on_pipe = pipe_way_.status() == MoverStatus::Running;
+    // (Her hunt's pipe way, or her journey on a riser: the same hands.)
+    const bool on_pipe = pipe_way_.status() == MoverStatus::Running || (travel_riser_ && pipe_phase_ != PipePhase::Off);
     const Mover *held_by = holder();
     if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof) ||
         state_ == State::Down || state_ == State::Emerging) {
