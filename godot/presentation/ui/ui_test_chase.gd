@@ -173,8 +173,21 @@ func _matron_touch(device: int) -> bool:
 		return _fail("the climber died in the chase")
 	if int(m["planks_fallen"]) < 1:
 		return _fail("she died without a plate giving way (she was last at %s, at %s)" % [str(m["position"]), str(_position())])
+	if not _matron_contacts_owned():
+		return false
 	_detail = "plates_down=%d deaths=%d steps_heard=%d" % [int(_matron_state()["planks_fallen"]),
 		int(_native().get_death_count()), int(_main._audio.matron_cues.get(&"matron_step", 0))]
+	return true
+
+
+# S6: her figure drawn only on what the simulation has her standing on and
+# holding (matron_view.gd _check_contacts). Fails the scenario when any frame
+# drew a limb planted, or her body ridden, lifted or hung, on a contact the
+# simulation does not have.
+func _matron_contacts_owned() -> bool:
+	var unowned := int(_main._matron_view.unowned_frames)
+	if unowned > 0:
+		return _fail("her figure was drawn on a contact the simulation does not have, %d frames" % unowned)
 	return true
 
 
@@ -280,6 +293,8 @@ func _matron_ride_touch(device: int) -> bool:
 		return at.z > -128.9 and absf(at.y - 177.3) < 0.06, 3.0)
 	if not landed:
 		return _fail("she leapt but did not come down on the ring (at %s)" % str(_matron_state()["position"]))
+	if not _matron_contacts_owned():
+		return false
 	_detail = "deaths_on_ride=%d stranded_6s=%s leaps=%d she_at=%s" % [int(_native().get_death_count()) - deaths,
 		str(stranded), int(_matron_state()["leaps"]), str(_matron_state()["position"])]
 	return true
@@ -446,6 +461,8 @@ func _matron_line_touch(device: int) -> bool:
 	if not down:
 		return _fail("she never let go over 143's band (on line %s, at %s, level %.2f)" % [
 			str(_matron_state()["on_line"]), str(_matron_state()["position"]), float(_matron_state()["floor_y"])])
+	if not _matron_contacts_owned():
+		return false
 	_detail = "slides=%d she_at=%s deaths=%d" % [int(_matron_state()["cable_slides"]), str(_matron_state()["position"]),
 		int(_native().get_death_count())]
 	return true
@@ -544,6 +561,8 @@ func _bay_touch(device: int) -> bool:
 	var cues: Dictionary = _main._audio.bay_cues
 	if int(cues.get(&"trip", 0)) < 1 or int(cues.get(&"hook", 0)) < 1 or int(cues.get(&"restart", 0)) < 1:
 		return _fail("the bay's trip, hook and restart were not all heard (%s)" % str(cues))
+	if not _matron_contacts_owned():
+		return false
 	_detail = "support_n=%.0f trips=%d hooks=%d restarts=%d deaths=%d" % [float(held["support_n"]),
 		int(cues.get(&"trip", 0)), int(cues.get(&"hook", 0)), int(cues.get(&"restart", 0)),
 		int(_native().get_death_count())]
@@ -617,6 +636,8 @@ func _matron_climb_touch(device: int) -> bool:
 	await _pose("matron_climb_over")
 	if int(_native().get_death_count()) != 0:
 		return _fail("the climber died")
+	if not _matron_contacts_owned():
+		return false
 	_detail = "climbs=%d at_foot_s=%.1f rungs_heard=%d she_at=%s" % [int(_matron_state()["climbs"]), at_foot, rungs_heard,
 		str(her)]
 	return true

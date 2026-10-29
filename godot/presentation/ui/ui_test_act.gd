@@ -288,6 +288,8 @@ func _act_play(device: int) -> bool:
 		return false
 	if not await _act_way_up(device):
 		return false
+	if not _matron_contacts_owned():
+		return false
 	_detail = "stages_seen=%s deaths=%d she_at=%s" % [str(_act_stages_seen.keys()), int(_native().get_death_count()),
 		str(_matron_state()["position"])]
 	return true
@@ -896,6 +898,8 @@ func _matron_heave_touch(device: int) -> bool:
 	if int(_native().get_death_count()) != deaths or not bool(_matron_state()["alive"]):
 		return _fail("a death in the heave (deaths %d, she alive %s)" % [int(_native().get_death_count()),
 			str(_matron_state()["alive"])])
+	if not _matron_contacts_owned():
+		return false
 	_detail = "blow_mps=%.3f knockdowns=%d throws=%d" % [float(_matron_state()["blow_mps"]),
 		int(_matron_state()["knockdowns"]), int(_native().get_throw_count())]
 	return true
@@ -946,6 +950,8 @@ func _matron_pipe_touch(device: int) -> bool:
 	if not await _pipe_down_after_you(device):
 		return false
 	if not await _pipe_drum_onto_her(device):
+		return false
+	if not _matron_contacts_owned():
 		return false
 	var m := _matron_state()
 	_detail = "warned_s=%.2f holds=%d flanges=%d slams=%d slam_mps=%.2f knockdowns=%d" % [

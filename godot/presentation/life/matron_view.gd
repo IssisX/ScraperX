@@ -206,6 +206,12 @@ var _burst_next := 1.5
 var _burst_kind := 0
 var _burst_n := 0
 var burst_active := false
+# Her limbs planted, and her body ridden, only on the simulation's own
+# contacts (contact_*); false: the old inferences, as for a native without
+# them. unowned_*: the frames drawn otherwise (_check_contacts).
+var contact_truth := true
+var unowned_now := false
+var unowned_frames := 0
 # Her limbs put down this frame on all fours (matron_rig.gd landed: limb, world
 # point, surface), for her sounds.
 var plants: Array = []
@@ -884,6 +890,30 @@ func _turn_yaw(sim_yaw: float, delta: float, data: Dictionary) -> void:
 	_twist = clampf(_yaw_lag, -TWIST_MAX, TWIST_MAX)
 
 
+# Each frame drawn, what the contact pass drew as so (matron_rig.gd claims)
+# against what the simulation has (its contact_* facts): a limb planted, or
+# her body ridden or lifted onto a floor, without her feet on one; a second
+# hand on a second hold she does not have; her body hung from hands that hold
+# nothing. unowned_frames counts the frames with any.
+func _check_contacts(data: Dictionary) -> void:
+	unowned_now = false
+	if not data.has("contact_supported"):
+		return
+	var c: int = _rig.claims
+	var feet := bool(data["contact_supported"])
+	var hung := bool(data.get("contact_hand_held", false)) or bool(data.get("contact_line", false))
+	if (c & (MatronRig.CLAIM_PLANTS | MatronRig.CLAIM_RIDE | MatronRig.CLAIM_FEET)) != 0 and not feet:
+		unowned_now = true
+	if (c & MatronRig.CLAIM_HAND2) != 0 and not bool(data.get("contact_hand2_held", false)):
+		unowned_now = true
+	if (c & MatronRig.CLAIM_HANG) != 0 and not hung:
+		unowned_now = true
+	if (c & MatronRig.CLAIM_BRACE) != 0 and not bool(data.get("contact_braced", false)):
+		unowned_now = true
+	if unowned_now:
+		unowned_frames += 1
+
+
 # The hold as the native has it this frame (main_feel.gd reads it once and
 # hands it on before update_view).
 func set_hold(hold: Dictionary) -> void:
@@ -916,6 +946,7 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	_apply_flinch(delta)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
+	_check_contacts(data)
 	fresh_frame = false
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
 	_rig.step_hair(delta)
@@ -1005,6 +1036,12 @@ func _ease_hands(data: Dictionary, delta: float) -> void:
 		return
 	var want: Vector3 = data["climb_hand"]
 	var want2: Vector3 = data["climb_hand2"] if data.has("climb_hand2") else want
+	if contact_truth and data.has("contact_hand_held"):
+		# her hand where its grip is on what it holds (moving with that body),
+		# else where her move reaches to; a second hand only on a second grip
+		if bool(data["contact_hand_held"]):
+			want = data["contact_hand"]
+		want2 = data["contact_hand2"] if bool(data.get("contact_hand2_held", false)) else want
 	if _hands_fresh or _pose_fresh or _held_shown[0].distance_to(want) > 1.5 or _held_shown[1].distance_to(want2) > 1.5:
 		_held_shown[0] = want
 		_held_shown[1] = want2
@@ -2083,6 +2120,10 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		_twist_shown = float(ts[0])
 		_twist_v = float(ts[1])
 	var falling := out and _fall_speed < -6.0 and centre.y < float(data.get("floor_y", DECK)) + 0.4
+	if contact_truth and data.has("contact_supported"):
+		# never falling while the simulation has her on a floor or in a hold
+		falling = falling and not bool(data["contact_supported"]) \
+			and not bool(data.get("contact_hand_held", false)) and not bool(data.get("contact_line", false))
 	_last_pos = centre
 	# Her body as the simulation moves it, followed exactly: a run, a fall,
 	# a climb's move (never more than ROOT_TICK_M a tick, or her fall's own
@@ -2123,7 +2164,9 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	fresh_frame = _pose_fresh
 	_fours_gate(data, falling, delta)
 	_hold_gate(data, delta)
-	var climb_want := 1.0 if bool(data.get("climbing", false)) and data.has("climb_hand") else 0.0
+	# her limbs reach for a climb's holds, and on her pipe for the riser at her grip and brace
+	var on_riser := bool(data.get("on_pipe", false)) and bool(data.get("contact_hand_held", false))
+	var climb_want := 1.0 if (bool(data.get("climbing", false)) and data.has("climb_hand")) or on_riser else 0.0
 	if _pose_fresh:
 		_w_climb = climb_want
 		_w_climb_v = 0.0

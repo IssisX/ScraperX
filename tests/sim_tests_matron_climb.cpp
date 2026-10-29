@@ -9,6 +9,7 @@
 // a hold on a dynamic body pushing back on it). Nothing here sets her
 // position after the start: every meter she makes, her capped forces make.
 #include "sim_tests.hpp"
+#include "matron_contact_audit.hpp"
 #include "sim/matron.hpp"
 #include "sim/matron_traversal.hpp"
 #include "sim/physics_world_support.hpp"
@@ -1810,10 +1811,12 @@ bool journey_leg(Simulation &s, const traversal::AffordanceMap &map, const doubl
     Simulation::MatronJourney j = s.matron_journey();
     double peak = 0.0;
     double min_gravity = 1.0;
+    MatronContactAudit contacts;   // S6: what the presentation plants her on, every frame of the leg
     while (j.active && t < limit_s) {
         (void)s.advance_frame(1.0 / 60.0);
         t += 1.0 / 60.0;
         j = s.matron_journey();
+        contacts.tick(s.matron_state());
         peak = std::max(peak, j.peak_force_n);
         min_gravity = std::min(min_gravity, j.gravity_factor);
     }
@@ -1824,6 +1827,8 @@ bool journey_leg(Simulation &s, const traversal::AffordanceMap &map, const doubl
     require(min_gravity == 1.0, "her gravity stays on through every journey");
     require(peak <= traversal::Limits{}.total_force_n + 1.0, "every journey force within her shared cap");
     require(j.moves_failed == failed_before, "every move of a journey leg ends Done (no recovery counted as a climb)");
+    contacts.report("journey");
+    require(contacts.clean(), "her exported floor and grip are hers every frame of a journey (S6)");
     return !j.active && j.arrivals > 0 && std::abs(got - top) < 0.3;
 }
 
@@ -1856,12 +1861,16 @@ void test_tower_journeys() {
         require(e.debug_matron_travel(220.25), "the 220 exam: a plan to try");
         double t = 0.0;
         Simulation::MatronJourney j = e.matron_journey();
+        MatronContactAudit contacts;
         while (j.active && t < 120.0) {
             (void)e.advance_frame(1.0 / 60.0);
             t += 1.0 / 60.0;
             j = e.matron_journey();
+            contacts.tick(e.matron_state());
             require(j.gravity_factor == 1.0 && j.peak_force_n <= traversal::Limits{}.total_force_n + 1.0, "the 220 exam: laws hold");
         }
+        contacts.report("the 220 exam");
+        require(contacts.clean(), "the 220 exam: her exported floor and grip are hers every frame (S6)");
         const double at = j.region >= 0 ? m.regions()[static_cast<std::size_t>(j.region)].top : -1.0;
         std::cout << "  matron 198.25 -> 220.25 panel: " << (j.arrivals > 0 && std::abs(at - 220.25) < 0.3 ? "arrived" : "refused")
                   << " after " << t << " s, failed starts " << (j.moves_failed - failed_before) << ", standing on " << at << "\n";

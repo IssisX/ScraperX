@@ -231,6 +231,9 @@ const RIDE_W := 7.0               # rad/s: her body's ride onto her feet, low-pa
 # left, fore left, hind right, fore right) and how high a limb is lifted.
 const PLANT_LIMBS := [["an_l", 0.0], ["wr_l", 0.25], ["an_r", 0.5], ["wr_r", 0.75]]
 const PLANT_LIFT_M := 0.12
+# Her feet off her floor (the simulation's): a limb that was held to it goes
+# where its phase has it under her body, eased this fast from where it was drawn.
+const RELEASE_TAU := 0.05
 # How fast a limb's pole turns to the side its pose bends to (rad/s).
 const POLE_RAD_S := 6.0
 # Her gripping arm drawn out to the held ankle, at most this many times its length.
@@ -269,6 +272,16 @@ var _ik_frame := 0
 # "an_r" / "wr_r", at: the world point, surface: what it went down on}), and
 # each arm's stretch.
 var landed: Array[Dictionary] = []
+# What this frame's contact pass drew as so (CLAIM_*), for the view's check
+# against the simulation's own contacts (matron_view.gd _check_contacts).
+const CLAIM_PLANTS := 1     # a limb planted on her floor (all fours)
+const CLAIM_RIDE := 2       # her body ridden onto her floor
+const CLAIM_HAND2 := 4      # her second hand on a second hold
+const CLAIM_FEET := 8       # her body lifted onto a floor under her feet in a climb
+const CLAIM_HAND := 16      # her hand reaching to a climb's hold (or its target)
+const CLAIM_HANG := 32      # her body hung from her hands (rungs, pipe, line)
+const CLAIM_BRACE := 64     # her feet against her pipe's riser
+var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
@@ -391,8 +404,12 @@ func _ride(dy: float) -> void:
 # her body goes over it, lifted when the pose is behind it, and swung along a
 # low arc to where it goes down next, ahead. As much as she is on all fours
 # (`w`): from the pose's own limb toward the plant. A limb put down is
-# reported in `landed`, for her sound.
-func _plant_limbs(data: Dictionary, w: float) -> void:
+# reported in `landed`, for her sound. `free`: the simulation has nothing
+# under her feet, so no limb is held to a floor: from that frame each one its
+# phase has down goes where that phase has it under her body (eased from where
+# it was drawn, RELEASE_TAU), and is held to the floor again, from there, once
+# her feet are on one.
+func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 	var phase: float = view._gait_phase
 	var cycle: float = view._gait_cycle_m
 	var dt: float = view._dt
@@ -430,6 +447,10 @@ func _plant_limbs(data: Dictionary, w: float) -> void:
 			var x := s_half - 2.0 * s_half * (u / duty) if now else -s_half + 2.0 * s_half * ((u - duty) / (1.0 - duty))
 			target = neutral + Vector3(0.0, 0.0, x)
 			st = {"stance": now, "lock": xf * target, "from": target, "at": target}
+		elif now and free:
+			var x := s_half - 2.0 * s_half * (u / duty)
+			target = (st["at"] as Vector3).lerp(neutral + Vector3(0.0, 0.0, x), 1.0 - exp(-dt / RELEASE_TAU))
+			st["lock"] = xf * target
 		elif now:
 			if not bool(st["stance"]):
 				# down: where the swing has it now (at its end, unless her gait
@@ -449,7 +470,7 @@ func _plant_limbs(data: Dictionary, w: float) -> void:
 			var e := sw * sw * (3.0 - 2.0 * sw)
 			target = (st["from"] as Vector3).lerp(down, e) + Vector3(0.0, lift_h * sin(PI * sw), 0.0)
 		st["stance"] = now
-		if now:
+		if now and not free:
 			down_mask |= bit
 		bit *= 2
 		st["at"] = target
@@ -541,6 +562,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 	stretch["l"] = 1.0
 	stretch["r"] = 1.0
 	landed.clear()
+	claims = 0
 	_ik_frame += 1
 	var state := int(data.get("state", 0))
 	# Laid out on the steel, or turned over head first down her pipe: the figure
@@ -552,10 +574,19 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 	var climbing := bool(data.get("climbing", false)) or bool(data.get("on_pipe", false))
 	var on_line := bool(data.get("on_line", false))
 	var airborne := falling or float(view._fall_speed) > 1.0 or bool(data.get("climb_airborne", false))
+	# What the simulation itself has her standing on and holding (its
+	# contact_* facts, matron_contact.cpp): a limb is planted, and her body
+	# ridden or lifted onto a floor, only on those, and on the frame her feet
+	# have nothing under them every plant lets go. A native without them (or
+	# contact_truth off): the old inferences.
+	var truth := view != null and bool(view.contact_truth) and data.has("contact_supported")
+	var supported := bool(data.get("contact_supported", false))
+	var feet_free := truth and not supported
 	# On all fours (only the dangerous and the changed, and the Turn's lunge:
 	# a pest hurries after you upright), as much as the view has her down;
 	# whatever she goes on to (a climb, a leap), her limbs leave their plants
-	# as that weight goes, never in a frame.
+	# as that weight goes; and from the frame her feet leave her floor no limb
+	# is held to it (each eased back under her body, _plant_limbs).
 	var wf := float(view._w_fours) if view != null else 0.0
 	if wf <= 0.001:
 		_plants.clear()
@@ -568,52 +599,98 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		# old contact behaviour, and their feet are never lifted.
 		var two_handed := bool(data.get("climb_move_active", false)) and String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]
 		# Feet first, so the hand reach is solved from where the body
-		# ends up: on a two-handed move, when the bridge reports a
-		# real feet support point within reach of the feet, the body
-		# rides just enough for the lowest foot to meet it. A support
-		# farther than that (feet in mid-air under a lip) lifts
+		# ends up: on a two-handed move, when the simulation has her
+		# feet on a floor (contact_feet) within reach of the feet, the
+		# body rides just enough for the lowest foot to meet it. A
+		# floor farther than that (feet in mid-air under a lip) lifts
 		# nothing, so the figure never floats toward a deck it has
-		# not reached. Without a known support point the feet pose
-		# is untouched.
+		# not reached. With nothing under her feet the feet pose is
+		# untouched.
 		var lift := 0.0
-		if two_handed and bool(data.get("climb_feet_support_known", false)) and data.has("climb_feet_support"):
-			var sup: Vector3 = skel.global_transform.affine_inverse() * (data["climb_feet_support"] as Vector3)
+		var feet_known := supported
+		if not truth:
+			feet_known = bool(data.get("climb_feet_support_known", false)) and data.has("climb_feet_support")
+		if two_handed and feet_known:
+			var at: Vector3 = data["contact_feet"] if truth else data["climb_feet_support"]
+			var sup: Vector3 = skel.global_transform.affine_inverse() * at
 			var dy := sup.y - _lowest_foot()
 			if absf(dy) <= 0.3:
 				lift = dy
+				claims |= CLAIM_FEET
 		# her body's ride on its spring here too: onto the support, and off
 		# the deck's ride as the climb starts, never in a frame
 		_ride(lift)
 		if wf > 0.001:
-			_plant_limbs(data, wf)
+			_plant_limbs(data, wf, feet_free)
 		var wc := float(view._w_climb) if view != null else 1.0
 		_reach("r", skel.global_transform.affine_inverse() * hand, wc)
-		# On a two-handed move the left wrist goes to the bridge's own
-		# second hold when the native validated one
-		# (climb_hand2_known), and only then; an unvalidated second
-		# hold falls back to the one hold, exactly as before, never
-		# to a point the view invented.
+		claims |= CLAIM_HAND
+		# On a two-handed move the left wrist goes to a second hold
+		# only when the simulation has her hand on one
+		# (contact_hand2_held; none of her movers holds two today);
+		# otherwise to the one hold, never to a point the view
+		# invented.
 		if two_handed:
 			var hand_l: Vector3 = hand
-			if bool(data.get("climb_hand2_known", false)) and data.has("climb_hand2"):
-				hand_l = held[1] if held.size() >= 2 else data["climb_hand2"]
+			var second := bool(data.get("contact_hand2_held", false))
+			if not truth:
+				second = bool(data.get("climb_hand2_known", false)) and data.has("climb_hand2")
+			if second:
+				hand_l = held[1] if held.size() >= 2 else (data["contact_hand2"] if truth else data["climb_hand2"])
+				claims |= CLAIM_HAND2
 			_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+		if down_mask != 0:
+			claims |= CLAIM_PLANTS
+		return
+	if truth and bool(data.get("on_pipe", false)) and bool(data.get("contact_hand_held", false)) \
+			and not bool(data.get("pipe_sliding", false)) and not bool(data.get("pipe_stunned", false)):
+		# On her pipe: her hands round its face at her grip, her feet against
+		# it where her legs press (contact_brace), her body where the
+		# simulation has it: laid back between them, never hung in the air.
+		var wp := float(view._w_climb) if view != null else 1.0
+		var inv := skel.global_transform.affine_inverse()
+		var grip: Vector3 = data["contact_hand"]
+		var into := grip - skel.global_position
+		into.y = 0.0
+		var side := Vector3.UP.cross(into.normalized()) if into.length() > 0.01 else Vector3.RIGHT
+		_ride(0.0)
+		_reach("r", inv * (grip + side * 0.08), wp)
+		_reach("l", inv * (grip - side * 0.08), wp)
+		claims |= CLAIM_HAND | CLAIM_HANG
+		if bool(data.get("contact_braced", false)):
+			var brace: Vector3 = data["contact_brace"]
+			_reach_chain("hp_r", "kn_r", "an_r", inv * (brace + side * 0.12), wp)
+			_reach_chain("hp_l", "kn_l", "an_l", inv * (brace - side * 0.12), wp)
+			claims |= CLAIM_BRACE
+		_plants.clear()
+		down_mask = 0
 		return
 	if climbing or on_line:
-		var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)
-		_ride(clampf(HANDS_ON_RUNG_Y - top - 0.1, 0.0, 0.8))
+		# her body hung from her hands only on a grip (or a line) the
+		# simulation has; otherwise it is not lifted to them
+		if not truth or bool(data.get("contact_hand_held", false)) or bool(data.get("contact_line", false)):
+			var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)
+			_ride(clampf(HANDS_ON_RUNG_Y - top - 0.1, 0.0, 0.8))
+			claims |= CLAIM_HANG
+		else:
+			_ride(0.0)
 		if wf > 0.001:
-			_plant_limbs(data, wf)
+			_plant_limbs(data, wf, feet_free)
+		if down_mask != 0:
+			claims |= CLAIM_PLANTS
 		return
-	if airborne:
+	if airborne or feet_free:
 		_ride(0.0)
 	else:
-		# feet on the deck: the body rides up or down to the lower foot
+		# feet on her floor: the body rides up or down to the lower foot
 		_ride(clampf(-_lowest_foot(), -0.15, 0.3))
+		claims |= CLAIM_RIDE
 	if view == null:
 		return
 	if wf > 0.001:
-		_plant_limbs(data, wf)
+		_plant_limbs(data, wf, feet_free)
+	if down_mask != 0:
+		claims |= CLAIM_PLANTS
 	# Her hand on the climber's ankle, and in the rip her other on his arm
 	# (the view keeps the last of each while her hand comes off it).
 	if float(view._w_hold) > 0.001:

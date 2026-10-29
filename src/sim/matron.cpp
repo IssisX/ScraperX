@@ -4432,6 +4432,7 @@ void Matron::refresh_view() {
             view_.climb_feet_support_known = false;
         }
     }
+    refresh_contact_view();
     BodyInterface &bodies = physics_.GetBodyInterface();
     for (std::size_t i = 0; i < planks_.size(); ++i) {
         PlankView &view = plank_views_[i];

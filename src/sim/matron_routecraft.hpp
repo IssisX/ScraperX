@@ -60,6 +60,17 @@ public:
                (!planning() || holding_.has_value());
     }
     const Report &report() const noexcept { return report_; }
+    // The hold her hand has while it holds (its body, member and the point in
+    // the body's center-of-mass frame); false when it holds none.
+    bool grip(JPH::BodyID &body, JPH::SubShapeID &sub, JPH::Vec3 &local) const noexcept {
+        if (!holding_.has_value() || holding_->grip.body.IsInvalid()) {
+            return false;
+        }
+        body = holding_->grip.body;
+        sub = holding_->grip.sub;
+        local = holding_->grip.local;
+        return true;
+    }
 private:
     friend struct MatronRoutecraftTestAccess;
     struct Grip { JPH::BodyID body; JPH::SubShapeID sub; JPH::Vec3 local; JPH::RVec3 point; };

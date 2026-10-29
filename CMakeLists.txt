@@ -54,6 +54,7 @@ add_library(scraperx_sim STATIC
     src/sim/bay.cpp
     src/sim/matron_routecraft.cpp
     src/sim/matron_found_climb.cpp
+    src/sim/matron_contact.cpp
     src/sim/matron.cpp
     src/sim/matron_traversal.cpp
     src/sim/matron_journey.cpp

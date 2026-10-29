@@ -650,6 +650,11 @@ public:
     static constexpr float kPipeSqueezeN = 4500.0F;
     static constexpr float kPipeFriction = 0.7F;
     static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
+    // Her feet's brace on the riser, hand over hand (matron_contact.cpp): from
+    // her shins, this far over her soles, level toward its axis, within her
+    // legs' reach (her line is 0.6 m off the riser's west face).
+    static constexpr float kBraceShinM = 0.45F;
+    static constexpr float kBraceReachM = 1.0F;
     static constexpr float kPipeDownMps = 2.6F;
     static constexpr float kPipeUpMps = 0.7F;
     static constexpr float kPipeChangedDownBurstMps = 4.2F;
@@ -971,6 +976,31 @@ public:
         int climb_phase = 0;
         bool climb_move_active = false;
         bool climb_airborne = false;
+        // Her contacts as the simulation itself has them this tick
+        // (refresh_contact_view): what her feet stand on by walk_toward's own
+        // test (center and foot-span rays, a floor's normal, her fall against
+        // it), and what the mover that has her really holds. Facts for the
+        // presentation only: nothing reads them back, nothing is pushed.
+        // Supported: her feet on a floor. Hand held: her hand's grip.
+        // Hand 2: a second grip, which no mover takes today. Line: her
+        // forearms on a line's cable. Brace: on her pipe, the riser's face
+        // her feet press against (the other side of her hands' squeeze).
+        bool contact_supported = false;
+        JPH::BodyID contact_feet_body;
+        JPH::SubShapeID contact_feet_sub;
+        JPH::RVec3 contact_feet = JPH::RVec3::sZero();
+        bool contact_hand_held = false;
+        JPH::BodyID contact_hand_body;
+        JPH::SubShapeID contact_hand_sub;
+        JPH::RVec3 contact_hand = JPH::RVec3::sZero();
+        bool contact_hand2_held = false;
+        JPH::BodyID contact_hand2_body;
+        JPH::SubShapeID contact_hand2_sub;
+        JPH::RVec3 contact_hand2 = JPH::RVec3::sZero();
+        bool contact_line = false;
+        bool contact_braced = false;
+        JPH::BodyID contact_brace_body;
+        JPH::RVec3 contact_brace = JPH::RVec3::sZero();
         bool climb_sliding = false;
         bool climb_leg_driving = false;
         bool climb_bar_traverse = false;
@@ -1910,6 +1940,9 @@ private:
     void step_planks(float dt);
     void restore_planks();
     void refresh_view();
+    // The contact facts of view_ (contact_*), from the movers' grips and her
+    // floor as walk_toward finds it (matron_contact.cpp). Read-only.
+    void refresh_contact_view();
     // Her balance (above): the moving bodies near her and the velocity her
     // feet set, taken after she moves (sense_near); the blow they deal her,
     // read after the step (take_blow); and her staggering and lying there
