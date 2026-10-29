@@ -357,6 +357,13 @@ struct Pole {     // a vertical member she can wrap (section up to kPoleMaxSecti
     float section = 0.0F;
     float bottom = 0.0F, top = 0.0F;
 };
+struct Riser {    // a tall, roughly square vertical member she can climb by
+                  // friction on its faces (too thick to wrap): its centre,
+                  // half section each way, and the heights it spans
+    float x = 0.0F, z = 0.0F;
+    float half_x = 0.0F, half_z = 0.0F;
+    float bottom = 0.0F, top = 0.0F;
+};
 struct Region {
     int id = -1;
     float top = 0.0F;   // area-weighted
@@ -375,7 +382,7 @@ struct Edge {
 
 struct ScanStats {
     double seconds = 0.0;
-    std::uint32_t bodies = 0, leaves = 0, patches = 0, usable_patches = 0, bars = 0, ladders = 0, poles = 0;
+    std::uint32_t bodies = 0, leaves = 0, patches = 0, usable_patches = 0, bars = 0, ladders = 0, poles = 0, risers = 0;
     std::uint32_t regions = 0, edges = 0, usable_edges = 0, capsule_queries = 0, split_patches = 0;
 };
 
@@ -388,6 +395,7 @@ public:
     [[nodiscard]] const std::vector<Edge> &edges() const noexcept { return edges_; }
     [[nodiscard]] const std::vector<Ladder> &ladders() const noexcept { return ladders_; }
     [[nodiscard]] const std::vector<Pole> &poles() const noexcept { return poles_; }
+    [[nodiscard]] const std::vector<Riser> &risers() const noexcept { return risers_; }
     [[nodiscard]] const std::vector<Patch> &patches() const noexcept { return patches_; }
     [[nodiscard]] const ScanStats &stats() const noexcept { return stats_; }
     // The region whose walkable top is under these feet (within 0.3 m), or -1.
@@ -415,6 +423,7 @@ private:
     std::vector<Edge> edges_;
     std::vector<Ladder> ladders_;
     std::vector<Pole> poles_;
+    std::vector<Riser> risers_;
     std::vector<std::vector<int>> patch_links_;
     ScanStats stats_;
 };
