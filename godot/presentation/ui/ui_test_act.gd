@@ -836,6 +836,20 @@ func _heave_pitch(d: float) -> float:
 	return 0.5 * asin(minf(1.0, 9.81 * x / (5.8 * 5.8))) - 0.14
 
 
+# Where she will be when it gets there: a player leads a pest coming at him,
+# aiming the arc at the distance she will have closed to by then (her
+# closing speed, read off the frames), not where she stood as he threw. With
+# her eyes on him she comes straight at him (Matron::straight_to) at 6.8 m/s:
+# aimed at 3.3 m, the box met her at 1.7 m high and only staggered her.
+func _heave_meet(d: float, closing: float) -> float:
+	var meet := d
+	for _i in 3:
+		var x := maxf(meet - 0.65, 0.5)
+		var t := x / (5.8 * cos(_heave_pitch(meet) + 0.14))
+		meet = maxf(d - closing * t, 0.65)
+	return meet
+
+
 func _matron_heave_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _sprint_to(device, Vector2(8.0, -128.5), 1.0, 6.0):
@@ -861,6 +875,8 @@ func _matron_heave_touch(device: int) -> bool:
 	var last: Vector3 = _matron_state()["position"]
 	var close := false
 	var waited := 0.0
+	var last_d := -1.0
+	var closing := 0.0
 	while waited < 90.0 and not close:
 		await get_tree().process_frame
 		var dt := maxf(get_process_delta_time(), 1.0e-4)
@@ -870,9 +886,14 @@ func _matron_heave_touch(device: int) -> bool:
 		var lead := her + (her - last) / dt * 0.22 - _position()
 		last = her
 		var d := Vector2(her.x - _position().x, her.z - _position().z).length()
+		# Her closing speed, steadied over a few frames (the sim steps
+		# under the frame, so one frame's change is uneven).
+		if last_d > 0.0:
+			closing = lerpf(closing, maxf(0.0, (last_d - d) / dt), 0.3)
+		last_d = d
 		if int(m["state"]) == MATRON_STATE_HUNTING and int(m["stage"]) == 0 and d < 9.0:
 			_main._yaw = atan2(-lead.x, -lead.z)
-			_main._pitch = _heave_pitch(d)
+			_main._pitch = _heave_pitch(_heave_meet(d, closing))
 			close = d < 3.4
 	if not close:
 		return _fail("no pest came for the climber (state %d, stage %d)" % [int(_matron_state()["state"]),
