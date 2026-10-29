@@ -438,6 +438,21 @@ void Simulation::PhysicsWorld::move_hands(const JPH::BodyInterface &bodies, cons
     if (grip.valid) {
         set_hand(bodies, hand, grip);
         regrip_cooldown_ticks_ = kClimbRegripTicks;
+        return;
+    }
+    // A narrow or offset member may be in the other hand's search box
+    // but not this one's. Try that hand before giving up the regrip;
+    // only one hand can change holds in a tick.
+    if (!one_arm() && (up_input > kClimbInputDeadzone ||
+                       up_input < -kClimbInputDeadzone)) {
+        const std::uint32_t other = 1U - hand;
+        const float other_across = other == 0 ? -kClimbHandSpan : kClimbHandSpan;
+        const Grip other_grip = find_grip(
+            centre, hand_aim(centre, height, other_across), traversal_normal_);
+        if (other_grip.valid) {
+            set_hand(bodies, other, other_grip);
+            regrip_cooldown_ticks_ = kClimbRegripTicks;
+        }
     }
 }
 
