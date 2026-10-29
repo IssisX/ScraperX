@@ -957,7 +957,9 @@ void Matron::feel_floor(const float dt) {
             } else if (state_ == State::Peering) {
                 peer_s_ = 0.0F;
                 stand_down();
-            } else if (state_ == State::Grab && !grip_on_) {
+            } else if (state_ == State::Grab && !grip_on_ && bodies.GetObjectLayer(hit.mBodyID) == moving_layer()) {
+                // Moving steel under her: not her own hand (layer kHand), which her ray also
+                // finds while it reaches and is no floor.
                 ++grab_misses_;
                 grab_cooldown_s_ = std::max(grab_cooldown_s_, kGrabCooldownSeconds);
                 end_hold(State::Hunting);
@@ -2585,9 +2587,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             look_s_ = 1.0F;
             take_lead(px, pz, floor_of(float(ev.seen_at.GetY())), 0.0F, Sense::Peripheral);
             wary_ = false;
-            if (calm_s_ <= 0.0F) {
-                state_ = State::Hunting;
-            }
+            state_ = State::Hunting;
         } else if (crash_heard || heard) {
             // The louder sound at her ear: a crash, or the player.
             const bool crash_first =
@@ -2618,9 +2618,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
                 wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
-                if (calm_s_ <= 0.0F) {
-                    state_ = State::Hunting;
-                }
+                state_ = State::Hunting;
             }
         }
         // His way on her level, as she perceived it (matron_moves.cpp): each
@@ -2742,14 +2740,6 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         }
         const bool allow = on_catwalk || commit_s_ > 0.0F;
         allow_catwalk_ = allow;
-        if (calm_s_ > 0.0F &&
-            (state_ == State::Hunting || state_ == State::Searching || state_ == State::Peering)) {
-            peer_s_ = 0.0F;
-            turn_ = Turn::None;
-            turn_s_ = 0.0F;
-            state_ = State::Shuffling;
-            pick_patrol(ax, az);
-        }
         float wx = ax;
         float wz = az;
         if (state_ == State::Hunting && ambush_.active &&

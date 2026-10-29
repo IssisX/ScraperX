@@ -418,6 +418,7 @@ struct MatronStateExitAccess {
         // (b) Machine moving steel under her (riding_) while reaching in State::Grab
         const BodyID plat = world.box(Vec3(4.0F, 0.2F, 4.0F), RVec3(5.0, Matron::kDeckTop + 2.0F, -129.55));
         world.physics.GetBodyInterface().SetMotionType(plat, EMotionType::Kinematic, EActivation::Activate);
+        world.physics.GetBodyInterface().SetObjectLayer(plat, detail::object_layers::kMoving);
         world.physics.GetBodyInterface().SetLinearVelocity(plat, Vec3(0.0F, 1.5F, 0.0F));
         world.physics.GetBodyInterface().SetPosition(
             m.body(), RVec3(5.0, Matron::kDeckTop + 2.2F + Matron::kStandCentre, -129.55), EActivation::Activate);
