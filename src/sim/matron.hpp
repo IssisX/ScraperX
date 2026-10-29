@@ -787,6 +787,8 @@ public:
     // takes them again from (grip_lost).
     static constexpr float kShoulderUpM = 1.80F;      // over her feet
     static constexpr float kArmReachM = 1.4F;
+    // What she works with her hands she holds inside her reach by this much.
+    static constexpr float kWorkMarginM = 0.15F;
     static constexpr float kStoopReachM = 2.1F;
     static constexpr float kArmRetractMps = 0.9F;
     static constexpr float kHandMassKg = 6.0F;
@@ -2222,6 +2224,7 @@ private:
         JPH::Vec3 board_at = JPH::Vec3::sZero(), exit_at = JPH::Vec3::sZero();   // the landings' nearest points
         float from_travel = 0.0F, to_travel = 0.0F;
         float t = 0.0F, still_s = 0.0F;
+        float lean_n = 0.0F;   // her hands' push past a shove, into a pin that stands
     };
     [[nodiscard]] bool hoist_footprint(const HoistFeed &h, JPH::AABox &box, float &floor_top) const;
     [[nodiscard]] int hoist_landing(const JPH::AABox &car, float floor_top, JPH::Vec3 &point) const;

@@ -5,7 +5,7 @@
 // what holds it (a pin shoved clear along its own guide; a trip line's
 // hanging handle weighed down), a ride standing on its floor, and off at the
 // far stop onto the landing there. Her hands push from her one budget (8 kN,
-// 22 kW) and push her back as hard; nothing here sets her position or speed.
+// 44 kW) and push her back as hard; nothing here sets her position or speed.
 
 #include "sim/matron.hpp"
 
@@ -27,6 +27,8 @@ constexpr float kLandingTolM = 0.35F;    // a landing's top this near the stop's
 constexpr float kLandingGapM = 1.6F;     // and this near the car's floor, across
 constexpr float kBoardMps = 1.0F;
 constexpr float kHandPushN = 1500.0F;    // a firm shove: what a pin's shoes hold, and more
+constexpr float kLeanStillMps = 0.05F;   // a pin slower than this under her hands stands
+constexpr float kLeanRateNps = 2000.0F;  // how fast she leans harder into one that stands
 constexpr float kPushReachM = 0.35F;     // she stands this short of what she pushes
 constexpr float kWorkGiveUpS = 25.0F;
 constexpr float kRideStillS = 1.0F;
@@ -34,12 +36,6 @@ constexpr float kExitGiveUpS = 20.0F;
 
 float distance_xz(const float ax, const float az, const float bx, const float bz) {
     return std::hypot(ax - bx, az - bz);
-}
-
-float xz_gap(const AABox &box, const float x, const float z) {
-    const float dx = std::max({box.mMin.GetX() - x, 0.0F, x - box.mMax.GetX()});
-    const float dz = std::max({box.mMin.GetZ() - z, 0.0F, z - box.mMax.GetZ()});
-    return std::hypot(dx, dz);
 }
 } // namespace
 
@@ -229,16 +225,32 @@ void Matron::step_hoist(const float dt) {
             along = along.Normalized();
             const Vec3 mid = pb.GetCenter();
             const float half = std::abs(pb.GetExtent().GetX() * along.GetX()) + std::abs(pb.GetExtent().GetZ() * along.GetZ());
-            const Vec3 stand = mid - along * (half + kRadius + kPushReachM);
+            // Behind it, near enough that its near end sits inside her reach
+            // from her shoulder (less her working margin): a pin low on its
+            // guide brings her in close, never nearer than her own body.
+            const float drop = std::max(0.0F, floor_top + kShoulderUpM - pb.mMax.GetY());
+            const float in_reach = kArmReachM - kWorkMarginM;
+            const float back = drop < in_reach ? std::sqrt(in_reach * in_reach - drop * drop) : 0.0F;
+            const float off = std::clamp(back, kRadius, kRadius + kPushReachM);
+            const Vec3 stand = mid - along * (half + off);
             const Vec3 goal(std::clamp(stand.GetX(), box.mMin.GetX() + kRadius, box.mMax.GetX() - kRadius), floor_top,
                             std::clamp(stand.GetZ(), box.mMin.GetZ() + kRadius, box.mMax.GetZ() - kRadius));
             const float used = climber_->walk_between(dt, goal, kBoardMps, 0.0F);
-            // Her hands reach it from where she stands (her one arm reach,
-            // Matron::kArmReachM), as near as the car lets her get.
-            if (xz_gap(pb, feet.GetX(), feet.GetZ()) < kRadius + kArmReachM) {
+            // Her hands reach it as they reach anything: from her shoulder,
+            // her one arm's reach (kArmReachM) to the nearest of it.
+            const Vec3 shoulder = Vec3(at + shoulder_local());
+            if (pb.GetSqDistanceTo(shoulder) < kArmReachM * kArmReachM) {
                 const traversal::Limits budget;
-                const float v = std::max(0.3F, bodies.GetLinearVelocity(pin.body).Dot(along));
-                const float force = std::min({kHandPushN, budget.total_force_n - used, budget.power_w / v});
+                const float moving = bodies.GetLinearVelocity(pin.body).Dot(along);
+                const float v = std::max(0.3F, moving);
+                // A pin that will not give to her shove she leans into,
+                // harder each moment it stands, up to what her one budget
+                // leaves her feet; once it goes, she eases back to a shove.
+                hoist_.lean_n = moving < kLeanStillMps
+                                    ? std::min(hoist_.lean_n + kLeanRateNps * dt, budget.total_force_n - kHandPushN)
+                                    : std::max(0.0F, hoist_.lean_n - kLeanRateNps * dt);
+                const float force =
+                    std::min({kHandPushN + hoist_.lean_n, budget.total_force_n - used, budget.power_w / v});
                 if (force > 0.0F) {
                     const Vec3 push = along * force;
                     bodies.AddForce(pin.body, push, EActivation::Activate);
