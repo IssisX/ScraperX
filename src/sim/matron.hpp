@@ -1004,6 +1004,7 @@ public:
         std::uint64_t entity = 0;
         JPH::Vec3 handle = JPH::Vec3::sZero();   // where a hand takes it, in its own frame
         float mass_kg = 0.0F;   // read from its body by set_throwables (infinite: not a moving body)
+        JPH::Vec3 laid = JPH::Vec3::sZero();   // where it lay when given (set_throwables): her deck as she knows it
     };
 
     struct PlankView {
@@ -2061,6 +2062,10 @@ private:
     // Her mischief (above): the piece she would go for, or -1; going for it
     // (true while she walks to it or takes it); holding and throwing it.
     [[nodiscard]] int stock_to_fetch(float ax, float az) const;
+    // Light stock of her deck she sees out of the place it was laid: moved,
+    // and the player's to her (handled_).
+    void notice_moved_stock();
+    static constexpr float kMovedStockM = 1.5F;
     bool fetch_stock(float dt, float ax, float az, bool allow_catwalk);
     bool throw_stock(float dt, JPH::RVec3 at, JPH::RVec3 player);
     void take_stock(int index);

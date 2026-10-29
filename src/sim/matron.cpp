@@ -2521,7 +2521,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // The straight line across the shaft: plain sight at long range, by
         // the same eyes.
         sees_far_ = ev.sees_far;
-        // What she sees in his hands is his to her.
+        // What she sees in his hands is his to her; so is light stock of her
+        // deck she sees out of its place.
+        notice_moved_stock();
         if (ev.seen_holding != 0) {
             for (std::size_t i = 0; i < throwables_.size(); ++i) {
                 if (throwables_[i].entity == ev.seen_holding) {
@@ -3366,6 +3368,27 @@ void Matron::set_throwables(std::vector<Throwable> throwables) {
         const float inverse_mass =
             lock.Succeeded() && lock.GetBody().IsDynamic() ? lock.GetBody().GetMotionProperties()->GetInverseMass() : 0.0F;
         t.mass_kg = inverse_mass > 0.0F ? 1.0F / inverse_mass : std::numeric_limits<float>::infinity();
+        t.laid = lock.Succeeded() ? Vec3(lock.GetBody().GetPosition()) : Vec3::sZero();
+    }
+}
+
+void Matron::notice_moved_stock() {
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 at = bodies.GetPosition(body_);
+    for (std::size_t i = 0; i < throwables_.size(); ++i) {
+        const Throwable &t = throwables_[i];
+        if ((handled_ & (1U << i)) != 0U || static_cast<int>(i) == held_ || static_cast<int>(i) == thrown_ ||
+            t.mass_kg > kTakeMaxKg || !bodies.IsAdded(t.body)) {
+            continue;
+        }
+        const RVec3 p = bodies.GetPosition(t.body);
+        if (distance_xz(float(p.GetX()), float(p.GetZ()), t.laid.GetX(), t.laid.GetZ()) < kMovedStockM &&
+            std::abs(float(p.GetY()) - t.laid.GetY()) < kMovedStockM) {
+            continue;
+        }
+        if (Vec3(p - at).Length() <= kEyeRangeM && look_at(p, kEyeRangeM) == Glimpse::Sight) {
+            handled_ |= 1U << i;
+        }
     }
 }
 
