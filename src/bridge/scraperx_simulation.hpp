@@ -217,6 +217,12 @@ public:
     [[nodiscard]] godot::Dictionary get_bay_state() const;
     void light_summit();
     void prepare_matron();
+    // TEST-ONLY (looking at her moves by eye): the native tests' own setup
+    // hooks (Simulation::debug_*). debug_matron_travel_to sends her, by her
+    // own plan, to the region her scan reads under those feet (false: none,
+    // or no plan). Nothing in play calls them; they change no rule of hers.
+    void debug_place_matron(godot::Vector3 feet);
+    [[nodiscard]] bool debug_matron_travel_to(godot::Vector3 feet);
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;
