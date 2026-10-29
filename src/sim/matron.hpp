@@ -715,6 +715,8 @@ public:
     static constexpr float kHandSpeedMps = 1.8F;      // her hand's pose moves no faster
     static constexpr float kHandReachSpeedMps = 4.0F;
     static constexpr float kHandPullN = 2600.0F;
+    static constexpr float kLadderPullMaxForceN = 8000.0F;
+    static constexpr float kLadderPullMaxPowerW = 22000.0F;
     static constexpr float kHandReachPullN = 900.0F;
     static constexpr float kRipRampNps = 2000.0F;     // against a braced player, her pull grows this fast
     static constexpr float kRipMaxN = 3400.0F;
@@ -1139,6 +1141,7 @@ public:
     const MatronRoutecraft::Report &climb_report() const noexcept { return routecraft_.report(); }
     // The force her feet drive put on her body this tick (walk_toward), when no climb has it.
     float foot_force_n() const noexcept { return foot_force_n_; }
+    float foot_power_w() const noexcept { return foot_power_w_; }
     // The bay's district (bay.hpp), its lifetime the world's: detach before
     // destroying it. Her hands' support goes through it (her trap).
     void set_shared_survival(SharedSurvival *encounter) noexcept;
@@ -1202,7 +1205,7 @@ public:
     void post_step(float dt);
 
     // True once her hands are on the player.
-    [[nodiscard]] bool caught(JPH::RVec3 player) const noexcept;
+    [[nodiscard]] bool caught(JPH::RVec3 player, bool on_ladder = false) const noexcept;
     // While true the checkpoint is not renewed (see above): she is out and
     // alive and the player is on her deck, up a climb from it, or on a deck
     // her corner pipe is taking her to or (no longer frail) joins to hers. A
@@ -1316,6 +1319,7 @@ public:
     [[nodiscard]] float arm_reach_m() const noexcept { return arm_reach_m_; }
     [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
+    void set_player_on_ladder(const bool climbing) noexcept { player_on_ladder_ = climbing; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;
     // Her grip gone: `torn` out of her hand (else let go); `fought` when the
@@ -2074,6 +2078,7 @@ private:
     bool grip_on_ = false;
     bool grip_was_on_ = false;
     bool player_braced_ = false;
+    bool player_on_ladder_ = false;
     float thrash_ = 0.0F;
     float pull_n_ = kHandReachPullN;
     float arm_reach_m_ = kArmReachM;

@@ -896,6 +896,7 @@ void run_matron_arm();
 void run_matron_fatality();
 void run_one_arm_route();
 void run_matron_ladder();
+void run_matron_ladder_pull();
 void test_matron_hearing();
 void test_matron_climb_support();
 void run_matron_crash();

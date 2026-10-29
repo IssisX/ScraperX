@@ -717,6 +717,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // His ankle; in her fingers, the point of it they hold.
     matron_->set_player_ankle(grip_ != nullptr ? bodies.GetWorldTransform(player_id_) * grip_on_body_
                                                : player_ankle(bodies));
+    matron_->set_player_on_ladder(traversal_state_ == TraversalState::Climbing);
     matron_->pre_step(delta_seconds, player_at,
                       std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                static_cast<float>(commands.room_loudness)));
@@ -851,17 +852,17 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     // Her hands on the player (matron.hpp, her hands): at every stage, she
     // takes hold.
-    if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_))) {
+    if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_),
+                                        traversal_state_ == TraversalState::Climbing)) {
         // No kill on touch. Her hand goes for the ankle (matron_hold.cpp);
-        // what follows is physics. A body already on a ladder is not an ankle
-        // to stoop for: pulling him off the first rungs is what kept the climb
-        // from ever starting.
-        if (matron_->grab_ready() && traversal_state_ != TraversalState::Climbing) {
+        // what follows is physics. A ladder offers no immunity: her hand has
+        // to reach the ankle and overcome the same finite grip as any load.
+        if (matron_->grab_ready()) {
             matron_->count_catch();
             matron_->begin_grab(bodies.GetPosition(player_id_));
         } else if (matron_->shoves() && matron_->shove_ready()) {
-            // While her hands cannot take hold (a grab's cooldown, a body on
-            // a ladder), short of fully changed: a pest's shove away from her,
+            // While her hands cannot take hold (a grab's cooldown),
+            // short of fully changed: a pest's shove away from her,
             // a dangerous one's at the rim. Not a catch.
             matron_->count_shove();
             shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));

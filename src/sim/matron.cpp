@@ -3177,7 +3177,7 @@ void Matron::post_step(const float dt) {
     refresh_view();
 }
 
-bool Matron::caught(const RVec3 player) const noexcept {
+bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
     const Mover *way = holder();
@@ -3187,6 +3187,9 @@ bool Matron::caught(const RVec3 player) const noexcept {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    if (on_ladder) {
+        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kStoopReachM;
+    }
     return distance_xz(float(at.GetX()), float(at.GetZ()), float(player.GetX()), float(player.GetZ())) < kCatchM &&
            std::abs(at.GetY() - player.GetY()) < 1.4;
 }

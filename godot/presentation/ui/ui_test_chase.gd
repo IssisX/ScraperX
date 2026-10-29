@@ -581,13 +581,18 @@ func _matron_climb_touch(device: int) -> bool:
 	await _face(Vector2(0.0, 1.0))
 	if not await _offered(&"climb", "CLIMB", "HOLD"):
 		return _fail("Action read '%s' facing the ladder, not CLIMB HOLD" % _action_label())
-	# As she bursts out of her locker, 7 m off, up the ladder.
-	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 30.0):
-		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
+	# Climb before she bursts: a reachable ankle is no longer immune on a
+	# rung. The ascent/chase checks below still require her actual climb.
+	# Use the visible strain cue so she sees the climber still on the ladder
+	# when she emerges, after the player has had time to clear her ankle reach.
+	if not await _wait_until(func() -> bool: return float(_matron_state()["strain"]) >= 0.75, 30.0):
+		return _fail("the locker never reached its climbing departure cue")
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == TRAVERSAL_CLIMBING, 0.5):
 		return _fail("CLIMB did not take hold of the ladder")
 	_move(device, 1.0)
+	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 30.0):
+		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
 	# Frail, she comes to its foot and stands looking up; in the Turn she
 	# takes hold.
 	var at_foot := 0.0

@@ -261,7 +261,8 @@ bool Simulation::PhysicsWorld::grab_pre_step(JPH::BodyInterface &bodies, StepCom
     if (brace_ != nullptr && commands.release_requested) {
         destroy_grab_constraint(brace_);
     }
-    if (held || player_free_rot_ || matron_->claimed()) {
+    const bool ladder_grip = traversal_state_ == TraversalState::Climbing;
+    if ((held && !ladder_grip) || player_free_rot_ || matron_->claimed()) {
         // Held, or not yet back on their feet: the body is hers, or the
         // ground's; only the thrash is theirs.
         commands.move_input_x = 0.0;
@@ -276,15 +277,18 @@ bool Simulation::PhysicsWorld::grab_pre_step(JPH::BodyInterface &bodies, StepCom
         commands.rig_requested = false;
         commands.parachute_toggle_requested = false;
     }
-    if (held) {
+    if (held && !ladder_grip) {
         release_carry();
         clear_traversal();
+        set_player_free_rotation(bodies, true);
         parachute_deployed_ = false;
     }
-    return held;
+    return held && !ladder_grip;
 }
 
 void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const float /*dt*/) noexcept {
+    ladder_pull_force_n_ = 0.0F;
+    ladder_pull_power_w_ = 0.0F;
     matron_->set_player_braced(brace_ != nullptr);
     matron_->set_thrash(grip_ != nullptr ? thrash_ : 0.0F);
     const bool holding = matron_->holding();
@@ -348,7 +352,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     if (matron_->reaching() && grip_ == nullptr) {
         const JPH::RVec3 ankle = player_ankle(bodies);
         if (JPH::Vec3(ankle - hand).Length() <= Matron::kGripCloseM) {
-            set_player_free_rotation(bodies, true);
+            if (traversal_state_ != TraversalState::Climbing) set_player_free_rotation(bodies, true);
             // First a bare point: the body comes over into the hang about it
             // (the hinge's cone is taken on once it is in it).
             JPH::PointConstraintSettings grip;
@@ -374,9 +378,21 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
                       kHandDampNspm * (matron_->hand_target_velocity() - hand_v);
     // She holds the weight in her hand (the body's, while she has it).
     force += JPH::Vec3(0.0F, (grip_ != nullptr ? kPlayerMassKg : 0.0F) * 9.81F * 0.9F, 0.0F);
-    const float cap = matron_->hand_pull_n();
+    float cap = matron_->hand_pull_n();
+    const bool ladder_pull = traversal_state_ == TraversalState::Climbing;
+    if (ladder_pull) {
+        cap = std::min(cap, std::max(0.0F, Matron::kLadderPullMaxForceN - matron_->foot_force_n()));
+    }
     if (force.Length() > cap) {
         force *= cap / force.Length();
+    }
+    if (ladder_pull) {
+        const JPH::Vec3 relative_v = hand_v - bodies.GetLinearVelocity(matron_->body());
+        const float power = force.Dot(relative_v);
+        const float available = std::max(0.0F, Matron::kLadderPullMaxPowerW - matron_->foot_power_w());
+        if (power > available) force *= available / power;
+        ladder_pull_force_n_ = force.Length() + matron_->foot_force_n();
+        ladder_pull_power_w_ = std::max(0.0F, force.Dot(relative_v)) + matron_->foot_power_w();
     }
     bodies.AddForce(hand_id_, force);
     bodies.AddForce(matron_->body(), -force);

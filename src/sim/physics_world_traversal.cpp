@@ -500,6 +500,23 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
             gap > pull ? traversal_entry_offset_ * ((gap - pull) / gap) : JPH::Vec3::sZero();
         traversal_desired_ = from_support_local(bodies, traversal_body_, traversal_local_hold_) +
                              traversal_entry_offset_;
+        // Ask for the next point through force, never by replacing velocity.
+        // Compensate gravity and the current momentum; the finite grip below
+        // can refuse this demand, allowing any external load to pull it away.
+        const JPH::Vec3 target_v = JPH::Vec3(traversal_desired_ - current) / delta_seconds;
+        float mass = kPlayerMassKg;
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), player_id_);
+            if (lock.Succeeded()) mass = 1.0F / lock.GetBody().GetMotionProperties()->GetInverseMass();
+        }
+        climb_grip_force_ = mass *
+            ((target_v - bodies.GetLinearVelocity(player_id_)) / delta_seconds -
+             physics_system_.GetGravity());
+        const float capacity = kClimbGripPerHandN * (arms_lost() == 2 ? 0.0F : one_arm() ? 1.0F : 2.0F);
+        const float demand = climb_grip_force_.Length();
+        if (demand > capacity) climb_grip_force_ *= capacity / demand;
+        bodies.AddForce(player_id_, climb_grip_force_);
+        return;
     } else {
         traversal_progress_ =
             std::min(1.0, traversal_progress_ + static_cast<double>(delta_seconds) /
@@ -512,6 +529,23 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
 }
 
 void Simulation::PhysicsWorld::resolve_traversal_outcome(JPH::BodyInterface &bodies) noexcept {
+    if (traversal_state_ == TraversalState::Climbing) {
+        // A tracking error is not itself a lost grip: finite hands may still
+        // arrest momentum. They open only after the solve has carried the
+        // body beyond the existing reach of every remaining hand.
+        const JPH::RVec3 shoulder = bodies.GetPosition(player_id_) + JPH::Vec3(0, kClimbHandMid, 0);
+        for (std::size_t hand = 0; hand < 2; ++hand) {
+            if (!arm_lost_[hand] && hands_[hand].valid &&
+                JPH::Vec3(hand_point(bodies, static_cast<std::uint32_t>(hand)) - shoulder).Length() <= kClimbHandMaxReachM) {
+                return;
+            }
+        }
+        ++climb_grip_slips_;
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
+        clear_traversal();
+        return;
+    }
     if (traversal_state_ == TraversalState::Hanging || traversal_state_ == TraversalState::Swinging) {
         return;   // held by the arms, nothing placed to fall behind
     }
