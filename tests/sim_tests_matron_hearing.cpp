@@ -34,7 +34,7 @@ struct HearingWorld {
     }
     BodyID box(const Vec3 half, const RVec3 at) { return shape(new BoxShape(half), at); }
     void tick(Matron &matron, const RVec3 player = RVec3(80, 144, -150), const float loudness = 0.0F) {
-        matron.pre_step(dt, player, loudness);
+        matron.pre_step(dt, Stimulus(player, loudness));
         physics.Update(dt, 1, &temp, &jobs);
         matron.post_step(dt);
         require(matron.view().acoustic_queries <= Matron::kMaxAcousticQueries,
