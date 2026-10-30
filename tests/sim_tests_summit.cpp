@@ -282,5 +282,38 @@ void run_summit_ending() {
     require(!s.summit_state().sling_free && s.summit_state().ending == 0 &&
                 !s.summit_state().beam_seated && std::abs(beam_y() - hanging_y) < 0.02,
             "ending restore: a previous unrig cannot leave the restored hanging load without its chains");
+    // Negative boundary: the beam really is seated and unrigged, but a
+    // parachute opened on a near-grade hop must not become a summit return.
+    // Only this adversarial input uses the test launch hook; the positive
+    // runway-to-grade flight above remains entirely player-controlled.
+    {
+        Simulation low(InitialSpawn::Summit);
+        (void)low.advance_frame(1.0);
+        require(walk_to(low, 8.0, -185.0, 5.0, 0.15) &&
+                    walk_to(low, Summit::kWorkX, Summit::kWorkZ, 12.0, 0.12),
+                "ending low-hop falsifier: reach the real chain block");
+        (void)low.set_move_input(0, 0);
+        (void)low.set_summit_lower(true);
+        (void)low.advance_frame(9.0);
+        (void)low.set_summit_lower(false);
+        (void)low.advance_frame(1.0);
+        require(low.summit_state().beam_seated && low.request_summit_unrig(),
+                "ending low-hop falsifier: the load is physically seated before unrigging");
+        (void)low.advance_frame(1.0);
+        require(low.summit_state().ending == 2 && low.summit_state().sling_free,
+                "ending low-hop falsifier: real unrig completed");
+        low.debug_launch_player(scraperx::sim::Vector3{-80.0, 6.0, -185.0},
+                                scraperx::sim::Vector3{0.0, -2.0, 0.0});
+        require(low.request_parachute(), "ending low-hop falsifier: deploy on the airborne hop");
+        (void)low.advance_frame(Simulation::kFixedStepSeconds);
+        require(low.snapshot().parachute_deployed && low.summit_state().ending == 2,
+                "ending low-hop falsifier: a near-grade canopy cannot qualify as summit flight");
+        for (int tick = 0; tick < 20 * 90; ++tick) {
+            (void)low.advance_frame(Simulation::kFixedStepSeconds);
+            require(low.summit_state().ending != 4,
+                    "ending low-hop falsifier: the short canopy descent must never earn Home");
+            if (low.snapshot().player_grounded || low.snapshot().death_count != 0) break;
+        }
+    }
     std::cout << "PASS scraperx_sim summit-ending: physical beam, slack unrig, canopy, home, restore\n";
 }
