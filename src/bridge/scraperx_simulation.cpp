@@ -1797,6 +1797,10 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["exposure"] = state.exposure;
     out["shoves"] = static_cast<std::int64_t>(state.shoves);
     out["carrying"] = static_cast<std::int64_t>(state.carrying);
+    out["stock_handle"] = to_godot(state.stock_handle);
+    out["stock_constraint"] = to_godot(state.stock_constraint);
+    out["stock_rotation"] = to_godot(state.stock_rotation);
+    out["stock_size"] = to_godot(state.stock_size);
     out["takes"] = static_cast<std::int64_t>(state.takes);
     out["throws"] = static_cast<std::int64_t>(state.throws);
     out["staggers"] = static_cast<std::int64_t>(state.staggers);
