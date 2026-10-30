@@ -2308,6 +2308,11 @@ func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_pos
 	if _native == null:
 		return
 	_clock += delta
+	# A native release ends the visual attachment on this frame even when
+	# she is outside the render range; no cached hand target owns the prop.
+	prop_attached = int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+	if not prop_attached:
+		prop_hand_error_m = INF
 	var state := int(data["state"])
 	if state != _last_state:
 		_state_age = 0.0
