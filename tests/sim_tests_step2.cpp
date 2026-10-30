@@ -176,7 +176,7 @@ void run_step2_movement() {
     const auto on_176 = climb.snapshot();
     require(climb_grip_offered, "the ladder's rungs must be offered as a hold");
     // Preserve the measured peak on a failure; the PASS summary is below the check.
-    std::cout << "step2 climb speed: peak_mps=" << climb_rate_peak << '\\n';
+    std::cout << "step2 climb speed: peak_mps=" << climb_rate_peak << '\n';
     require(climb_rate_peak <= 0.91, "the climb must be no faster than 0.9 m/s");
     require(hand_reach_worst <= 1.0, "the hands must stay within an arm's reach of the shoulders");
     require(regrips >= 20, "the hands must go hand over hand up the ladder");
