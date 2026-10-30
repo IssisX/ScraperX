@@ -690,20 +690,24 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
     }
-    // Stage A is a gravity counterweight pair. It makes running noise only
-    // when its physical bodies are actually moving: a pulled handle or an
-    // open catch is not itself a sound source. The speed scale matches the
-    // presentation's generic machine loop; native remains the authority for
-    // the consequential fact that the Matron heard it.
+    // Stage A is a passive gravity counterweight pair, not a powered drive.
+    // It makes running noise only when its physical bodies actually move: a
+    // pulled handle or an open catch is not itself a sound source. CHOSEN:
+    // full-speed guide/rope noise is 0.35, the yard crane's unloaded-hoist
+    // baseline, and scales down with actual speed. That keeps a sealed Matron
+    // locker outside its ordinary running reach while an awake Matron nearby
+    // can hear it; native remains the authority for that consequence.
     constexpr float kWellMachineMoveMps = 0.1F;
-    constexpr float kWellMachineFullMps = 3.0F;
+    constexpr float kWellMachineFullMps = 2.5F;
+    constexpr float kWellMachineFullLoudness = 0.35F;
     for (const kit::BodyIndex body : {well_.a_cage, well_.a_skip}) {
         const float speed = kit_->body_velocity(body).Length();
         if (speed < kWellMachineMoveMps) {
             continue;
         }
         const JPH::RVec3 at = kit_->body_center_of_mass(body);
-        const float loudness = std::min(1.0F, speed / kWellMachineFullMps);
+        const float loudness =
+            kWellMachineFullLoudness * std::min(1.0F, speed / kWellMachineFullMps);
         matron_->hear(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
                       static_cast<float>(at.GetZ()), loudness);
     }
