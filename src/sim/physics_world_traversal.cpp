@@ -498,8 +498,72 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
         const float gap = traversal_entry_offset_.Length();
         traversal_entry_offset_ =
             gap > pull ? traversal_entry_offset_ * ((gap - pull) / gap) : JPH::Vec3::sZero();
+        const JPH::RVec3 previous_desired = traversal_desired_;
         traversal_desired_ = from_support_local(bodies, traversal_body_, traversal_local_hold_) +
                              traversal_entry_offset_;
+        // Ask for the next point through force, never by replacing velocity.
+        // Compensate gravity and the current momentum; the finite grip below
+        // can refuse this demand, allowing any external load to pull it away.
+        // The previous one-tick position correction demanded acceleration
+        // proportional to 1/dt^2. At 90 Hz it saturated even with no
+        // external load, so the body lagged its moving holds and could slip
+        // on ordinary climbs. Track over a hand-regrip interval instead:
+        // the finite hand force still yields to a real external pull.
+        constexpr float kClimbTrackSeconds = 0.20F;
+        const JPH::Vec3 support_v = bodies.GetPointVelocity(traversal_body_, traversal_desired_);
+        float mass = kPlayerMassKg;
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), player_id_);
+            if (lock.Succeeded()) mass = 1.0F / lock.GetBody().GetMotionProperties()->GetInverseMass();
+        }
+        // A position spring with only 1/T velocity damping overshoots a
+        // steady climb (the 0.9 m/s input can produce a faster body). Use
+        // critical damping: acceleration = error/T^2 - 2*relative_v/T.
+        // Both terms are forces, still subject to the existing grip cap.
+        const JPH::Vec3 player_v = bodies.GetLinearVelocity(player_id_);
+        if (climb_sliding_) {
+            // The slide advances its hold under gravity, up to kClimbSlideMps.
+            // Feed that velocity and acceleration into the finite-force servo;
+            // position-only critical damping makes the body trail the rungs.
+            const JPH::Vec3 slide_v(0.0F, -climb_slide_mps_, 0.0F);
+            const JPH::Vec3 slide_a =
+                climb_slide_mps_ < kClimbSlideMps ? physics_system_.GetGravity() : JPH::Vec3::sZero();
+            const JPH::Vec3 error(traversal_desired_ - current);
+            climb_grip_force_ = mass *
+                (slide_a + error / (kClimbTrackSeconds * kClimbTrackSeconds) -
+                 4.0F * (player_v - support_v - slide_v) / kClimbTrackSeconds -
+                 physics_system_.GetGravity());
+        } else {
+            // The hold advances at the commanded climb speed. Damping toward
+            // a stationary support instead of that moving hold leaves the
+            // climber behind, even on an uninterrupted ordinary ascent.
+            // Use the hold's measured per-tick velocity, not an extra speed
+            // allowance: the same finite grip still has to supply the force.
+            const JPH::Vec3 hold_v = JPH::Vec3(traversal_desired_ - previous_desired) / delta_seconds;
+            const JPH::Vec3 target_v = support_v +
+                JPH::Vec3(traversal_desired_ - current) / kClimbTrackSeconds;
+            climb_grip_force_ = mass *
+                ((target_v - player_v) / kClimbTrackSeconds -
+                 (player_v - hold_v) / kClimbTrackSeconds -
+                 physics_system_.GetGravity());
+            // With one hand the force cap saturates during the initial haul.
+            // The accumulated position error can then drive the body faster
+            // than the hold after it catches up. Brake only that excess speed
+            // through the same finite grip force, never by setting velocity.
+            if (one_arm()) {
+                const JPH::Vec3 commanded = hold_v - support_v;
+                if (!commanded.IsNearZero()) {
+                    const JPH::Vec3 direction = commanded.Normalized();
+                    const float excess_mps = std::max(0.0F, (player_v - hold_v).Dot(direction));
+                    climb_grip_force_ -= direction * (2.0F * mass * excess_mps / kClimbTrackSeconds);
+                }
+            }
+        }
+        const float capacity = kClimbGripPerHandN * (arms_lost() == 2 ? 0.0F : one_arm() ? 1.0F : 2.0F);
+        const float demand = climb_grip_force_.Length();
+        if (demand > capacity) climb_grip_force_ *= capacity / demand;
+        bodies.AddForce(player_id_, climb_grip_force_);
+        return;
     } else {
         traversal_progress_ =
             std::min(1.0, traversal_progress_ + static_cast<double>(delta_seconds) /
@@ -512,6 +576,23 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
 }
 
 void Simulation::PhysicsWorld::resolve_traversal_outcome(JPH::BodyInterface &bodies) noexcept {
+    if (traversal_state_ == TraversalState::Climbing) {
+        // A tracking error is not itself a lost grip: finite hands may still
+        // arrest momentum. They open only after the solve has carried the
+        // body beyond the existing reach of every remaining hand.
+        const JPH::RVec3 shoulder = bodies.GetPosition(player_id_) + JPH::Vec3(0, kClimbHandMid, 0);
+        for (std::size_t hand = 0; hand < 2; ++hand) {
+            if (!arm_lost_[hand] && hands_[hand].valid &&
+                JPH::Vec3(hand_point(bodies, static_cast<std::uint32_t>(hand)) - shoulder).Length() <= kClimbHandMaxReachM) {
+                return;
+            }
+        }
+        ++climb_grip_slips_;
+        bodies.SetGravityFactor(player_id_, 1.0F);
+        regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
+        clear_traversal();
+        return;
+    }
     if (traversal_state_ == TraversalState::Hanging || traversal_state_ == TraversalState::Swinging) {
         return;   // held by the arms, nothing placed to fall behind
     }

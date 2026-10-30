@@ -2461,6 +2461,10 @@ void run_matron_ladder() {
     {
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
+        // This exam measures her ascent, independently of the player's
+        // ankle-pull encounter (proved in matron-ladder-pull). Rungs no
+        // longer grant immunity, so hold off her player attacks here.
+        s.debug_hold_matron_hands(200.0);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron climb: settle");
         require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0), "matron climb: a sprint toward her locker");

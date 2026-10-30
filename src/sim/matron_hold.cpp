@@ -678,7 +678,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     // A braced player (their hands on a rail): her pull grows, finite.
     if (grip_on_) {
         pull_n_ = player_braced_ ? std::min(kRipMaxN, pull_n_ + kRipRampNps * dt) : kHandPullN;
-        arm_reach_m_ = std::max(kArmReachM, arm_reach_m_ - kArmRetractMps * dt);
+        // A shortening spring limit would be a second, unbudgeted actuator.
+        // On a ladder only the charged hand/feet forces supply her pull.
+        if (!player_on_ladder_) arm_reach_m_ = std::max(kArmReachM, arm_reach_m_ - kArmRetractMps * dt);
     }
     const auto carry_pose = [&] {
         return RVec3(at.GetX(), feet + kCarryHandUpM, at.GetZ()) + right * kCarrySideM;
@@ -704,6 +706,14 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                 grab_cooldown_s_ = kGrabCooldownSeconds;
                 end_hold(State::Hunting);
             }
+            break;
+        }
+        if (player_on_ladder_) {
+            // Fingers alone do not open his hands. Back away, pulling the
+            // ankle through her finite hand; his ordinary grip decides when
+            // it can no longer hold. Only then does the normal hold proceed.
+            walk_toward(dt, ax - fwd.GetX(), az - fwd.GetZ(), kHuntMps * kCarryPaceScale);
+            pose_hand(dt, RVec3(ax, player_ankle_.GetY(), az) + fwd * kCatchM, kHandSpeedMps);
             break;
         }
         if (fatal_hold_) {
