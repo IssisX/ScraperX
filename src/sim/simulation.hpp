@@ -986,6 +986,11 @@ struct Snapshot final {
     bool edge_drop_available = false;
     Vector3 edge_drop_point{};
     std::uint64_t climb_count = 0;
+    double climb_grip_force_n = 0.0;
+    std::uint64_t climb_grip_slips = 0;
+    double ladder_pull_force_n = 0.0;
+    double ladder_pull_power_w = 0.0;
+    double player_gravity_factor = 1.0;
     // The fireman's slide down a climb's holds (physics_world kClimbSlideMps).
     bool player_climb_sliding = false;
     std::uint64_t climb_slide_count = 0;

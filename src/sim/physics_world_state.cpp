@@ -695,6 +695,11 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.edge_drop_point =
         edge_affordance_.valid ? to_vector3(edge_affordance_.ledge) : Vector3{};
     state_.climb_count = climb_count_;
+    state_.climb_grip_force_n = climb_grip_force_.Length();
+    state_.climb_grip_slips = climb_grip_slips_;
+    state_.ladder_pull_force_n = ladder_pull_force_n_;
+    state_.ladder_pull_power_w = ladder_pull_power_w_;
+    state_.player_gravity_factor = bodies.GetGravityFactor(player_id_);
     state_.player_climb_sliding = climb_sliding_;
     state_.climb_slide_count = climb_slide_count_;
     state_.swing_catch_count = swing_catch_count_;

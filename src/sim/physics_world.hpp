@@ -873,6 +873,8 @@ public:
     };
     JPH::Vec3 traversal_normal_{JPH::Vec3::sZero()};
     HandHold hands_[2]{};
+    JPH::Vec3 climb_grip_force_ = JPH::Vec3::sZero();
+    std::uint64_t climb_grip_slips_ = 0;
     std::uint32_t regrip_cooldown_ticks_ = 0;
     std::uint64_t climb_count_ = 0;
     float climb_slide_mps_ = 0.0F;        // the fireman's slide's speed down the holds
@@ -990,6 +992,8 @@ public:
     int upright_contact_ticks_ = 0;
     float upright_s_ = 0.0F;
     float grip_load_n_ = 0.0F;
+    float ladder_pull_force_n_ = 0.0F;
+    float ladder_pull_power_w_ = 0.0F;
     float grip_peak_n_ = 0.0F;
     float grip_strain_ns_ = 0.0F;
     int grip_over_ticks_ = 0;

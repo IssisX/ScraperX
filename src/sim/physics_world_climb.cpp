@@ -16,7 +16,7 @@ void Simulation::PhysicsWorld::load_hold(JPH::BodyInterface &bodies) noexcept {
         return;
     }
     const JPH::RVec3 at = from_support_local(bodies, traversal_body_, traversal_local_ledge_);
-    bodies.AddForce(traversal_body_, physics_system_.GetGravity() * kPlayerMassKg, at);
+    bodies.AddForce(traversal_body_, -climb_grip_force_, at);
 }
 
 // The hold nearest `aim` that a hand in front of `centre` can close
@@ -239,7 +239,8 @@ void Simulation::PhysicsWorld::begin_climb(JPH::BodyInterface &bodies, const Gri
     traversal_progress_ = 0.0;
     traversal_stall_ticks_ = 0;
     traversal_desired_ = hold;
-    bodies.SetGravityFactor(player_id_, 0.0F);
+    bodies.SetGravityFactor(player_id_, 1.0F);
+    climb_grip_force_ = JPH::Vec3::sZero();
     take_hand_holds(bodies, hold, grip);
     climb_sliding_ = false;
     climb_slide_mps_ = 0.0F;
@@ -373,8 +374,10 @@ void Simulation::PhysicsWorld::update_climb(JPH::BodyInterface &bodies, const St
         traversal_local_hold_ = to_support_local(bodies, traversal_body_, next);
         traversal_local_ledge_ = to_support_local(bodies, traversal_body_, carries.point);
     }
-    move_hands(bodies, from_support_local(bodies, traversal_body_, traversal_local_hold_),
-               up_input, side_input);
+    // Regrip relative to the actual shoulders, not the requested hold.
+    // A finite-force climber can lag the request; hands must not jump ahead
+    // of the body and then be judged out of reach in the same physics tick.
+    move_hands(bodies, bodies.GetPosition(player_id_), up_input, side_input);
 }
 
 // Hand over hand: the hand furthest behind the way the body moves
@@ -419,7 +422,7 @@ void Simulation::PhysicsWorld::move_hands(const JPH::BodyInterface &bodies, cons
     for (std::uint32_t hand = 0; hand < 2 && mover < 0; ++hand) {
         const JPH::RVec3 shoulder = centre + JPH::Vec3(0.0F, kClimbHandMid, 0.0F);
         if (!hands_[hand].valid ||
-            JPH::Vec3(hand_point(bodies, hand) - shoulder).Length() > 0.95F) {
+            JPH::Vec3(hand_point(bodies, hand) - shoulder).Length() > kClimbHandMaxReachM) {
             mover = static_cast<std::int32_t>(hand);
             across = hand == 0 ? -kClimbHandSpan : kClimbHandSpan;
         }
@@ -435,6 +438,21 @@ void Simulation::PhysicsWorld::move_hands(const JPH::BodyInterface &bodies, cons
     if (grip.valid) {
         set_hand(bodies, hand, grip);
         regrip_cooldown_ticks_ = kClimbRegripTicks;
+        return;
+    }
+    // A narrow or offset member may be in the other hand's search box
+    // but not this one's. Try that hand before giving up the regrip;
+    // only one hand can change holds in a tick.
+    if (!one_arm() && (up_input > kClimbInputDeadzone ||
+                       up_input < -kClimbInputDeadzone)) {
+        const std::uint32_t other = 1U - hand;
+        const float other_across = other == 0 ? -kClimbHandSpan : kClimbHandSpan;
+        const Grip other_grip = find_grip(
+            centre, hand_aim(centre, height, other_across), traversal_normal_);
+        if (other_grip.valid) {
+            set_hand(bodies, other, other_grip);
+            regrip_cooldown_ticks_ = kClimbRegripTicks;
+        }
     }
 }
 
@@ -767,6 +785,7 @@ Simulation::PhysicsWorld::Beam Simulation::PhysicsWorld::beam_underfoot(const JP
 }
 
 void Simulation::PhysicsWorld::clear_traversal() noexcept {
+    climb_grip_force_ = JPH::Vec3::sZero();
     drop_hang_arms();
     if (zip_riding_) {
         zipline_->unclip();   // the hands open; the trolley stays on the line
