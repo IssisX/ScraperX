@@ -938,11 +938,26 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         break;
     }
     case State::ArmPlay: {
-        // She walks to her spot. Her hand lifts him. It does not reach further
-        // out: doing that during the pull threw him off the deck.
-        walk_toward(dt, rim_x_, rim_z_, std::min(0.8F, 3.0F * xz(ax, az, rim_x_, rim_z_)));
+        // On the deck side of the rail, the pull is in from the steel. At the
+        // lip a kick throws him down the shaft, and one spot along the rail
+        // hooks a still body. Already past the rail, she stays put: a snag
+        // there is the re-pose's to break, not a yank back onto the deck.
+        const float lip_x = rim_x_ + rim_nx_ * kRimStandM;
+        const float lip_z = rim_z_ + rim_nz_ * kRimStandM;
+        const float past = (float(player.GetX()) - lip_x) * rim_nx_ + (float(player.GetZ()) - lip_z) * rim_nz_;
+        float walk_x = rim_x_;
+        float walk_z = rim_z_;
+        float hold_x = float(at.GetX());
+        float hold_z = float(at.GetZ());
+        if (past < 0.15F) {
+            walk_x = lip_x - rim_nx_ * (kRimStandM + 1.2F);
+            walk_z = lip_z - rim_nz_ * (kRimStandM + 1.2F);
+            hold_x = walk_x;
+            hold_z = walk_z;
+        }
+        walk_toward(dt, walk_x, walk_z, std::min(0.8F, 3.0F * xz(ax, az, walk_x, walk_z)));
         yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
-        pose_hand(dt, RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()), 0.6F * kHandSpeedMps);
+        pose_hand(dt, RVec3(hold_x, feet + kCarryHandUpM + 0.35F, hold_z), 0.6F * kHandSpeedMps);
         step_armplay(dt, player, at, feet);
         break;
     }
@@ -975,8 +990,11 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // Back up over the rail.
             const RVec3 over = RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()) + out * 0.3F;
             pose_hand(dt, over, in_pace * kHandSpeedMps);
-            if (Vec3(over - hand_target_).Length() < 0.02F) {
+            // The spot beside the rail can be too tight for that reach. She
+            // does not wait on it: the set-down still happens.
+            if (Vec3(over - hand_target_).Length() < 0.02F || hold_s_ > 2.0F) {
                 hold_phase_ = 1;
+                hold_s_ = 0.0F;
             }
             spare_side_set_ = false;
         } else if (hold_phase_ == 1) {
