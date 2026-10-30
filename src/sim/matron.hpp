@@ -1285,9 +1285,11 @@ public:
         unrig_way_ = -1;
         return way;
     }
-    // A sound in the world she can hear like the player's noise (a hit: a
-    // crate crashing down; a machine running), at its loudness (0..1, a sound
-    // of 1 carries kFullHearingM): given before pre_step, heard in it. She
+    // An unidentified sound in the world she can hear like the player's noise
+    // (a hit, a crate crashing down), at its loudness (0..1, a sound of 1
+    // carries kFullHearingM): given before pre_step, heard in it. Known running
+    // machinery uses hear_machine so investigating it cannot masquerade as a
+    // player deception. She
     // takes the loudest at her ear of a tick's that is not her own (within
     // kOwnSoundM of her body: what she strikes herself) and carries to her.
     // Past kMaxSounds in a tick the rest are not heard (the world gives the
