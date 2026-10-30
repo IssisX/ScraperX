@@ -98,13 +98,17 @@ container even on trunk (`handoffs/OPERATIONS_NOTES.md`), so it has never been p
 - Size: large: write the lines (he approves them), generate takes (pattern:
   `src/voice/generate_story_voice.py`), his picks by ear, cues per event through `her_takes.gd`.
 
-### 6. The summit has no ending (C4)
-- Asked: the top of the route (A + B built); *"the ending beyond it is the owner's"*.
-- Status: **A and B built** (`src/sim/summit.hpp`, `sim_tests_summit.cpp:124,182-188`,
-  `touch_summit`); **the ending: not built.** After it there is a "THE TOP" toast and a flash
-  (`main_feel.gd:165-182`) and nothing else.
-- Hurts: 4 for the few who finish.
-- Size: large, and it is his call first (a decision in `handoffs/OWNER_DECISIONS_PENDING.md`).
+### 6. Seat the crew's last beam (C4; owner picked 2026-10-29)
+- Asked: physically seat the overtime crew's last beam, the foreman's last line,
+  then return by parachute.
+- Candidate built on `chatgpt/summit-ending-20261029`: tandem chain blocks lower
+  the last beam onto two independently contacted bearing stools; only an unloaded,
+  settled beam earns the foreman's admission. FREE SLING removes its two rope
+  constraints. The live parachute descent to ground earns the quiet end card.
+- The existing searchlight and runway remain. Native `summit-ending`, touch
+  `touch_summit_ending`, and captures cover the new path. Proof is pending;
+  this gap stays open until the protected PR is green and the integrator lands it.
+- Design and proof status: `handoffs/SUMMIT_ENDING.md`.
 
 ### 7. Her death is permanent
 - Asked: nothing directly; rule 64 parks "her death and return (she's done this before)".

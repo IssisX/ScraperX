@@ -172,6 +172,15 @@ struct SlingshotSnapshot final {
 // The summit (task 92): the searchlight's state, and the striker plate that
 // lights it.
 struct SummitSnapshot final {
+    std::uint8_t ending = 0;          // Summit::Ending: unfinished .. home
+    bool beam_seated = false;
+    bool sling_free = false;
+    bool left_bearing = false;
+    bool right_bearing = false;
+    bool work_in_reach = false;
+    bool can_unrig = false;
+    double chain_paid_m = 0.0;
+    double chain_tension_n = 0.0;
     bool lit = false;                 // the lamp is lit for good
     double striker_travel_m = 0.0;    // the plate's way down from its rest
     double striker_peak_m = 0.0;      // the deepest it has gone
@@ -1748,6 +1757,8 @@ public:
     [[nodiscard]] MatronFixtureSample debug_matron_fixture(const Vector3 *place = nullptr);
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
+    [[nodiscard]] bool set_summit_lower(bool held) noexcept;
+    [[nodiscard]] bool request_summit_unrig() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;
     // Drop lets go; Crouch held pulls up on it.
     [[nodiscard]] bool request_trapeze_action() noexcept;
@@ -1928,6 +1939,8 @@ private:
     bool lift_haul_ = false;
     bool forklift_action_ = false;
     double forklift_lift_ = 0.0;
+    bool summit_lower_ = false;
+    bool summit_unrig_ = false;
     bool yard_crane_take_ = false;
     bool yard_crane_operate_ = false;
     bool yard_crane_device_ = false;

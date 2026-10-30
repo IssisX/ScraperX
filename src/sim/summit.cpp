@@ -4,6 +4,9 @@
 #include "sim/summit.hpp"
 
 #include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Body/BodyLockMulti.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/RayCast.h>
 
 #include <algorithm>
 #include <cmath>
@@ -297,8 +300,195 @@ Summit::Summit(PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit
 }
 
 Summit::~Summit() {
+    for (auto &chain : chains_) {
+        if (chain != nullptr) system_.RemoveConstraint(chain);
+    }
     if (lamp_hinge_ != nullptr) system_.RemoveConstraint(lamp_hinge_);
     if (striker_slide_ != nullptr) system_.RemoveConstraint(striker_slide_);
+}
+
+void Summit::build_ending() {
+    const RVec3 origin(kBeamX, kDeckTop, kBeamZ);
+    std::vector<Part> steel;
+    // The two stools stand on the existing deck. Cheeks guide the flanges;
+    // they do not hold the beam up. The strongback carries the chain blocks.
+    for (const float x : {-3.0F, 3.0F}) {
+        const std::size_t i = x < 0 ? 0 : 1;
+        const std::vector<Part> stool{
+            box(Vec3(0.35F, 1.2F, 0.35F), Vec3(0, 1.2F, 0), Material::Steel, 0),
+            box(Vec3(0.5F, 0.08F, 0.45F), Vec3(0, 2.32F, 0), Material::Rust, 0)};
+        bearings_[i] = kit_.add_body(i == 0 ? kLeftBearingEntity : kRightBearingEntity, stool,
+                                     origin + Vec3(x, 0, 0), Quat::sIdentity(), 0, 0.8F);
+        for (const float z : {-0.46F, 0.46F}) {
+            steel.push_back(box(Vec3(0.35F, 0.85F, 0.06F), Vec3(x, 3.25F, z), Material::Yellow, 0));
+        }
+        steel.push_back(box(Vec3(0.08F, 2.5F, 0.08F), Vec3(x, 2.5F, 0.8F), Material::Steel, 0));
+    }
+    steel.push_back(box(Vec3(3.15F, 0.12F, 0.16F), Vec3(0, 5.0F, 0.8F), Material::Yellow, 0));
+    for (const float x : {-2.0F, 2.0F}) {
+        steel.push_back(box(Vec3(0.12F, 0.12F, 0.5F), Vec3(x, 5.0F, 0.4F), Material::Steel, 0));
+        steel.push_back(box(Vec3(0.2F, 0.2F, 0.15F), Vec3(x, 4.8F, 0), Material::Rust, 0));
+    }
+    // A drive shaft brings the brake outboard of the load. Working beside
+    // the beam lets the climber see both bearings while the steel settles.
+    // Keep the wheel and its supports clear of the deck's south-side walk
+    // (z=-185) to the parachute arm. The handle is reached from that walk.
+    constexpr float brake_dx = kWorkX - kBeamX;
+    constexpr float brake_z = -0.25F;
+    steel.push_back(box(Vec3(-brake_dx * 0.5F, 0.08F, 0.08F),
+                        Vec3(brake_dx * 0.5F, 1.2F, brake_z), Material::Steel, 0));
+    // The shaft bears on a pedestal at either end, rather than floating.
+    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(0, 0.6F, brake_z), Material::Steel, 0));
+    steel.push_back(box(Vec3(0.12F, 0.6F, 0.12F), Vec3(brake_dx, 0.6F, brake_z), Material::Steel, 0));
+    steel.push_back(box(Vec3(0.28F, 0.1F, 0.18F), Vec3(brake_dx, 1.2F, brake_z), Material::Yellow, 0));
+    ending_frame_ = kit_.add_body(kEndingFrameEntity, steel, origin, Quat::sIdentity(), 0, 0.8F);
+    const std::vector<Part> beam{
+        box(Vec3(3.35F, 0.06F, 0.3F), Vec3(0, -0.24F, 0), Material::Steel, 300),
+        box(Vec3(3.35F, 0.06F, 0.3F), Vec3(0, 0.24F, 0), Material::Steel, 300),
+        box(Vec3(3.35F, 0.18F, 0.045F), Vec3::sZero(), Material::Rust, 300)};
+    last_beam_ = kit_.add_body(kLastBeamEntity, beam, RVec3(kBeamX, kBeamSeatY + kBeamLift, kBeamZ),
+                               Quat::sIdentity(), 900.0F, 0.8F);
+    kit_.set_continuous_collision(last_beam_);
+    kit_.set_damping(last_beam_, 0.15F, 0.2F);
+    // Same tension-only hoist used by the yard crane. Paying out its length
+    // releases the brake; gravity lowers the load. No body pose or velocity
+    // is prescribed, and releasing Action holds the chain where it is.
+    rig_chains(0.0F);
+}
+
+void Summit::rig_chains(const float slack) {
+    const std::array<BodyID, 2> ids{kit_.body_id(ending_frame_), kit_.body_id(last_beam_)};
+    BodyLockMultiWrite lock(system_.GetBodyLockInterface(), ids.data(), 2);
+    Body &frame = *lock.GetBody(0);
+    Body &load = *lock.GetBody(1);
+    for (std::size_t i = 0; i < chains_.size(); ++i) {
+        const float x = i == 0 ? -2.0F : 2.0F;
+        PulleyConstraintSettings rope;
+        rope.mSpace = EConstraintSpace::WorldSpace;
+        rope.mBodyPoint1 = RVec3(kBeamX + x, kChainTop, kBeamZ);
+        rope.mBodyPoint2 = load.GetWorldTransform() * Vec3(x, 0.3F, 0);
+        rope.mMinLength = 0.0F;
+        rope.mMaxLength = static_cast<float>((rope.mBodyPoint1 - rope.mBodyPoint2).Length()) + slack;
+        if (chains_[i] == nullptr) {
+            chains_[i] = new kit::RopeConstraint(frame, load, rope, true);
+            system_.AddConstraint(chains_[i]);
+        } else {
+            chains_[i]->SetMaxLength(rope.mMaxLength);
+            chains_[i]->ResetWarmStart();
+        }
+    }
+}
+
+bool Summit::work_in_reach(const RVec3 player) const noexcept {
+    const Vec3 to = Vec3(player - RVec3(kWorkX, kDeckTop + 0.9F, kWorkZ));
+    return to.LengthSq() <= 1.3F * 1.3F;
+}
+
+bool Summit::can_unrig() const noexcept {
+    return state_.beam_seated && !state_.sling_free && state_.chain_tension_n < 100.0F &&
+           state_.chain_paid_m > kBeamLift + 0.1F;
+}
+
+void Summit::work(const float dt, const bool lower, const bool unrig, const bool able, const RVec3 player) {
+    if (!last_beam_.valid() || !able || !work_in_reach(player) || state_.sling_free) return;
+    if (unrig && can_unrig()) {
+        for (auto &chain : chains_) {
+            system_.RemoveConstraint(chain);
+            chain = nullptr;
+        }
+        state_.sling_free = true;
+        state_.ending = Ending::Unrigged;
+        return;
+    }
+    if (lower) {
+        const float paid = std::min(kBeamLift + kChainSlack, state_.chain_paid_m + kChainRate * dt);
+        for (auto &chain : chains_) chain->SetMaxLength(chain->GetMaxLength() + paid - state_.chain_paid_m);
+        state_.chain_paid_m = paid;
+    }
+}
+
+bool Summit::bearing(const int side) const {
+    // A short ray from the actual underside at each end must meet the top
+    // of that stool. Neither a proximity zone nor a chain can stand in for
+    // steel beneath the flange. This also rejects a suspended or tipped beam.
+    class StoolOnly final : public BodyFilter {
+    public:
+        explicit StoolOnly(const BodyID id) : id_(id) {}
+        bool ShouldCollide(const BodyID &id) const override { return id == id_; }
+    private:
+        BodyID id_;
+    };
+    const auto &bodies = system_.GetBodyInterface();
+    const BodyID stool = kit_.body_id(bearings_[side < 0 ? 0 : 1]);
+    if (!system_.WereBodiesInContact(kit_.body_id(last_beam_), stool)) return false;
+    const RVec3 foot = bodies.GetWorldTransform(kit_.body_id(last_beam_)) * Vec3(side * 3.0F, -0.3F, 0);
+    const RRayCast ray(foot + Vec3(0, 0.01F, 0), Vec3(0, -0.025F, 0));
+    RayCastResult hit;
+    if (!system_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, StoolOnly(stool))) return false;
+    const RVec3 at = ray.GetPointOnRay(hit.mFraction);
+    const BodyLockRead lock(system_.GetBodyLockInterface(), hit.mBodyID);
+    return lock.Succeeded() && lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mSubShapeID2, at).GetY() > 0.95F &&
+           std::abs(static_cast<float>(at.GetY()) - kBearingTop) < 0.01F;
+}
+
+void Summit::read_ending(const float dt, const bool grounded, const bool chute, const RVec3 player,
+                         const std::uint64_t deaths) {
+    if (!last_beam_.valid()) return;
+    const auto &bodies = system_.GetBodyInterface();
+    state_.left_bearing = bearing(-1);
+    state_.right_bearing = bearing(1);
+    bool slack = true;
+    state_.chain_tension_n = 0.0F;
+    for (std::size_t i = 0; i < chains_.size(); ++i) {
+        const auto &chain = chains_[i];
+        if (chain == nullptr) continue;
+        const float x = i == 0 ? -2.0F : 2.0F;
+        const RVec3 at = bodies.GetWorldTransform(kit_.body_id(last_beam_)) * Vec3(x, 0.3F, 0);
+        const float lies = static_cast<float>((RVec3(kBeamX + x, kChainTop, kBeamZ) - at).Length());
+        slack = slack && chain->GetMaxLength() - lies > 0.05F;
+        state_.chain_tension_n += std::abs(chain->GetTotalLambdaPosition()) / dt;
+    }
+    const bool settled = slack && state_.chain_tension_n < 100.0F &&
+                         state_.left_bearing && state_.right_bearing &&
+                         bodies.GetLinearVelocity(kit_.body_id(last_beam_)).Length() < 0.03F &&
+                         bodies.GetAngularVelocity(kit_.body_id(last_beam_)).Length() < 0.02F;
+    bearing_seconds_ = settled ? bearing_seconds_ + dt : 0.0F;
+    state_.beam_seated = bearing_seconds_ >= 0.4F;
+    if (state_.ending == Ending::Unfinished && state_.beam_seated) state_.ending = Ending::Seated;
+    if (!state_.sling_free || !state_.beam_seated) return;
+    if (state_.ending == Ending::Canopy &&
+        (deaths != flight_deaths_ || (!chute && !grounded) || (grounded && player.GetY() >= 5.0F)))
+        state_.ending = Ending::Unrigged;
+    // Qualify a return only while the canopy is carrying him away from the
+    // summit. A hop near grade (or reopening after a lower-deck landing) is
+    // not a parachute descent from the top. A high-altitude stow/reopen can
+    // still qualify again, but an interrupted lower descent cannot.
+    constexpr float kCanopyStartWindowM = 50.0F;
+    if (state_.ending == Ending::Unrigged && chute && !grounded &&
+        player.GetY() < kDeckTop - 5.0F && player.GetY() > kDeckTop - kCanopyStartWindowM) {
+        flight_deaths_ = deaths;
+        state_.ending = Ending::Canopy;
+    }
+    if (state_.ending == Ending::Canopy && chute && grounded && player.GetY() < 5.0F && deaths == flight_deaths_)
+        state_.ending = Ending::Home;
+}
+
+void Summit::restore_ending() {
+    if (!last_beam_.valid()) return;
+    // The save format already stores the kit bodies. Rebuild the safe hoist
+    // topology from those bodies, never snap a saved beam back to its build
+    // position. Radio and the final descent are per launch, like the rest of
+    // the foreman's captions; a resumed seated load can be unrigged again.
+    const bool seated = bearing(-1) && bearing(1);
+    const float slack = seated ? kChainSlack : 0.0F;
+    rig_chains(slack);
+    state_.sling_free = false;
+    state_.beam_seated = false;
+    state_.ending = Ending::Unfinished;
+    state_.chain_paid_m = std::clamp(static_cast<float>(kBeamSeatY + kBeamLift -
+        system_.GetBodyInterface().GetPosition(kit_.body_id(last_beam_)).GetY()) + slack,
+        0.0F, kBeamLift + kChainSlack);
+    bearing_seconds_ = 0;
 }
 
 void Summit::pre_step() {

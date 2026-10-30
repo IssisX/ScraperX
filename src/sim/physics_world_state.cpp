@@ -268,6 +268,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
         truck->restore();
     }
     yard_crane_->restore();
+    summit_->restore_ending();
     zipline_->restore();
     zip_riding_ = false;
     restore_carry_topology(checkpoint_.carrying_entity);

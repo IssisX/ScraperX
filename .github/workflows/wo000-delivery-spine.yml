@@ -486,7 +486,7 @@ jobs:
         run: |
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
-          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave \
+          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave \
               touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
               touch_tram touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
@@ -566,6 +566,23 @@ jobs:
           # WO-005: spawn is outdoors at grade with the tower still ahead.
           grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
           grep -F "tower_height=1600" artifacts/godot-runtime.log
+
+      # The summit must play through the rendered touch path; its last beam,
+      # foreman, city, parachute and return are captured by the real viewport.
+      - name: Render the complete summit ending through touch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/screenshots
+          timeout 400s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
+            -- --uitest=touch_summit_ending "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/summit" \
+            2>&1 | tee artifacts/summit-ending-rendered.log
+          grep -F "SCRAPERX_UITEST PASS touch_summit_ending " artifacts/summit-ending-rendered.log
+          for frame in ending_hanging_beam ending_seated_foreman ending_city ending_parachute ending_home; do
+            test -s "artifacts/screenshots/summit_${frame}.png"
+          done
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/summit-ending-rendered.log; then exit 1; fi
 
       - name: Measure the mix a player hears
         shell: bash
