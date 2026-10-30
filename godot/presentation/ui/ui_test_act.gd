@@ -109,6 +109,13 @@ func _act_sample_prop() -> void:
 		_act_prop_seen["samples"] = int(_act_prop_seen["samples"]) + 1
 		_act_prop_seen["worst_hand_m"] = maxf(float(_act_prop_seen["worst_hand_m"]),
 			_main._matron_view.prop_hand_error_m)
+		var n: int = int(_act_prop_seen["samples"])
+		if n in [1, 2, 3, 8, 30, 90, 360, 900, 1399]:
+			var rig = _main._matron_view._rig
+			print("SCRAPERX_PROP_SAMPLE n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s stretch_r=%.3f stretch_l=%.3f governed=%d" % [
+				n, _main._matron_view.prop_hand_error_m, str(m.get("stock_handle", Vector3.ZERO)),
+				str(rig.bone_world("wr_r").origin), str(rig.bone_world("wr_l").origin),
+				str(rig.bone_world("sh_r").origin), float(rig.stretch["r"]), float(rig.stretch["l"]), int(rig.governed)])
 
 
 func _act_capturing() -> bool:
