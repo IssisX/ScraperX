@@ -1434,6 +1434,13 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.climb_force_n = view.climb_force_n;
     result.climb_lunge_drive = view.climb_lunge_drive;
     result.foot_power_w = view.foot_power_w;
+    result.load_held = view.load_held;
+    result.load_mass_kg = view.load_mass_kg;
+    result.load_offset_m = view.load_offset_m;
+    result.load_moment_nm = view.load_moment_nm;
+    result.load_cop_shift_m = view.load_cop_shift_m;
+    result.load_stance_base_m = view.load_stance_base_m;
+    result.load_pull_m = view.load_pull_m;
     result.climb_grips = view.climb_grips;
     result.climb_releases = view.climb_releases;
     result.mantling = view.mantling;

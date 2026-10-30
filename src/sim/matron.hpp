@@ -1091,6 +1091,19 @@ public:
         float climb_force_n = 0.0F;
         bool climb_lunge_drive = false;
         float foot_power_w = 0.0F;   // her feet's positive power this tick (lunge or walk), from their Budget
+        // Her held load's tip, measured every tick (S1, matron_load): the
+        // grip-held player's mass, its horizontal offset from her centre,
+        // the moment that offset makes about her feet, and how far the
+        // combined centre moves toward the load. S2 reads the shift back
+        // into a decision: the stance base she stands on, and the pull
+        // applied to the load this tick.
+        bool load_held = false;
+        float load_mass_kg = 0.0F;
+        float load_offset_m = 0.0F;
+        float load_moment_nm = 0.0F;
+        float load_cop_shift_m = 0.0F;
+        float load_stance_base_m = 0.0F;
+        float load_pull_m = 0.0F;
         std::uint32_t climb_grips = 0;
         std::uint32_t climb_releases = 0;
         bool mantling = false;
@@ -1429,6 +1442,12 @@ public:
     void set_player_on_ladder(const bool climbing) noexcept { player_on_ladder_ = climbing; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;
+    // S1 measurement: the grab world reports both centres and the held
+    // mass every tick, so refresh_view can publish the load's tip.
+    // Matron does only the arithmetic; the mass stays the grab world's
+    // own constant. No behaviour.
+    void report_held_load(JPH::RVec3 her_pos, JPH::RVec3 player_pos, float player_mass_kg,
+                          bool held) noexcept;
     // Her grip gone: `torn` out of her hand (else let go); `fought` when the
     // player fought it this hold (kicked, thrashed, braced on a rail). Torn
     // with no fight (the world's doing: her heave against the rail, a snag),
@@ -2232,6 +2251,17 @@ private:
     float arm_reach_m_ = kArmReachM;
     JPH::RVec3 hand_target_ = JPH::RVec3::sZero();
     JPH::Vec3 hand_target_v_ = JPH::Vec3::sZero();
+    // S1 measured load tip, refreshed by report_held_load every tick.
+    bool load_held_ = false;
+    float load_mass_kg_ = 0.0F;
+    float load_offset_m_ = 0.0F;
+    float load_moment_nm_ = 0.0F;
+    float load_cop_shift_m_ = 0.0F;
+    float load_stance_base_m_ = 0.0F;   // S2: the base she stands on this tick
+    float load_pull_m_ = 0.0F;          // S2: pull applied to the load this tick
+    float load_dir_x_ = 0.0F;   // unit XZ from her centre toward the load, else 0
+    float load_dir_z_ = 0.0F;
+    bool load_staggered_ = false;   // S2 extreme valve fired once this hold
     float rim_x_ = 0.0F, rim_z_ = 0.0F;     // where she stands at the rail
     float rim_nx_ = 0.0F, rim_nz_ = 1.0F;   // out over the shaft from there
     bool aim_ledge_ = false;

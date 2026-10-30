@@ -250,6 +250,14 @@ struct MatronSnapshot final {
     double climb_force_n = 0.0;
     bool climb_lunge_drive = false;
     double foot_power_w = 0.0;
+    // Held-load tip, from Matron::View (S1 measurement, no behaviour).
+    bool load_held = false;
+    double load_mass_kg = 0.0;
+    double load_offset_m = 0.0;
+    double load_moment_nm = 0.0;
+    double load_cop_shift_m = 0.0;
+    double load_stance_base_m = 0.0;
+    double load_pull_m = 0.0;
     std::uint32_t climb_grips = 0, climb_releases = 0;
     bool mantling = false;
     double lead_x = 0.0, lead_z = 0.0, lead_age_s = 0.0;
