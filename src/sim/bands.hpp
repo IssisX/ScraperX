@@ -26,6 +26,7 @@ struct CounterweightWell final {
     kit::CatchIndex a_catch;
     kit::AnchorIndex a_cage_anchor;
     kit::AnchorIndex a_bollard_anchor;
+    JPH::RVec3 a_head_sound = JPH::RVec3::sZero();  // fixed head-sheave/rope acoustic source
 
     // Stage B, the derrick boom.
     kit::BodyIndex b_cage;
