@@ -517,8 +517,14 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
             const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), player_id_);
             if (lock.Succeeded()) mass = 1.0F / lock.GetBody().GetMotionProperties()->GetInverseMass();
         }
+        // A position spring with only 1/T velocity damping overshoots a
+        // steady climb (the 0.9 m/s input can produce a faster body). Use
+        // critical damping: acceleration = error/T^2 - 2*relative_v/T.
+        // Both terms are forces, still subject to the existing grip cap.
+        const JPH::Vec3 player_v = bodies.GetLinearVelocity(player_id_);
         climb_grip_force_ = mass *
-            ((target_v - bodies.GetLinearVelocity(player_id_)) / kClimbTrackSeconds -
+            ((target_v - player_v) / kClimbTrackSeconds -
+             (player_v - support_v) / kClimbTrackSeconds -
              physics_system_.GetGravity());
         const float capacity = kClimbGripPerHandN * (arms_lost() == 2 ? 0.0F : one_arm() ? 1.0F : 2.0F);
         const float demand = climb_grip_force_.Length();
