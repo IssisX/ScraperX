@@ -35,6 +35,18 @@ pose is held still and the hair settles, or without the 1/30 s step cap) and
 The copy is checked against the recording one step at a time (about 4e-5 m,
 the game's float32 rounding).
 
+## Check (pass/fail, in CI)
+
+    python3 tools/matron_probe/check.py <dir> [<dir> ...] [--stride N] [--report FILE]
+
+Fails (exit 1, last line `MATRON_DRAWN FAIL: ...`) on a bone drawn more than 5% over its rest length, a drawn
+hand more than 5 cm from the grip the sim says it holds, a foot that slides more than 5 cm while she stands,
+and hair or skirt more than 3 mm inside her body. The tolerances are the law; a known defect is listed in
+`EXPECTED` with the exit-board item that fixes it, and an expected failure that stops failing fails the check
+too (remove it from the list). CI runs it in the `touch-2` shard on `touch_matron_act` and the look
+scenarios (`look_matron_moves`, `look_matron_hold`, `look_matron_fatal`); about 3 minutes to record, 2 to check
+at `--stride 10`. Limb vertices inside her torso are not measured.
+
 ## Status (2026-10-28)
 
 Unfinished: the skirt's baseline is her bind pose (an A-pose), so its numbers
