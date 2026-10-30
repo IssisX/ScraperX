@@ -1460,6 +1460,10 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.exposure = view.exposure;
     result.shoves = view.shoves;
     result.carrying = view.carrying;
+    result.stock_handle = {view.stock_handle.GetX(), view.stock_handle.GetY(), view.stock_handle.GetZ()};
+    result.stock_constraint = {view.stock_constraint.GetX(), view.stock_constraint.GetY(), view.stock_constraint.GetZ()};
+    result.stock_rotation = to_sim_quaternion(view.stock_rotation);
+    result.stock_size = {view.stock_size.GetX(), view.stock_size.GetY(), view.stock_size.GetZ()};
     result.takes = view.takes;
     result.throws = view.throws;
     result.staggers = view.staggers;
