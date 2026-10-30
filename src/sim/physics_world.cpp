@@ -701,7 +701,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     constexpr float kWellMachineFullMps = 2.5F;
     constexpr float kWellMachineFullLoudness = 0.35F;
     const float well_speed = kit_->body_velocity(well_.a_cage).Length();
-    if (well_speed >= kWellMachineMoveMps) {
+    // Clinging to moving steel is proprioceptively her ride, not an external
+    // acoustic lead. Feeding that same machine back through hear() makes her
+    // chase the support under her instead of the player she rode after.
+    if (well_speed >= kWellMachineMoveMps && !matron_->view().clinging) {
         const JPH::RVec3 at = kit_->body_center_of_mass(well_.a_cage);
         const float loudness =
             kWellMachineFullLoudness * std::min(1.0F, well_speed / kWellMachineFullMps);
