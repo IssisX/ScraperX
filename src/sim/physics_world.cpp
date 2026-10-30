@@ -680,9 +680,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     vertical_->pre_step(delta_seconds, commands.lift_action, grounded_ ? support_entity_id_ : 0,
                         commands.lift_haul);
     summit_->pre_step();
-    // What the Matron can hear besides the player (matron.hpp hear): the last
-    // step's hits, hardest first; the Counterweight Well's Stage A cage and
-    // skip from their actual motion; then the yard crane's drives while they run.
+    // What the Matron can hear besides the player: the last step's impacts,
+    // hardest first; Stage A from its actual cage/guide motion; then the yard
+    // crane's drives while they run. Machines carry known-machine provenance.
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
         // Her own throw coming down is not a sound to her (matron.hpp).
@@ -702,8 +702,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     constexpr float kWellMachineFullLoudness = 0.35F;
     const float well_speed = kit_->body_velocity(well_.a_cage).Length();
     // Clinging to moving steel is proprioceptively her ride, not an external
-    // acoustic lead. Feeding that same machine back through hear() makes her
-    // chase the support under her instead of the player she rode after.
+    // acoustic lead. Do not feed that same support back as something else to
+    // investigate while it has her body.
     if (well_speed >= kWellMachineMoveMps && !matron_->view().clinging) {
         const JPH::RVec3 at = kit_->body_center_of_mass(well_.a_cage);
         const float loudness =
