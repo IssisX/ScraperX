@@ -111,6 +111,13 @@ func _act_sample_prop() -> void:
 		_act_prop_seen["samples"] = int(_act_prop_seen["samples"]) + 1
 		_act_prop_seen["worst_hand_m"] = maxf(old_peak, error_m)
 		var n: int = int(_act_prop_seen["samples"])
+		if error_m > old_peak:
+			var rig = _main._matron_view._rig
+			_act_prop_seen["worst_frame"] = n
+			_act_prop_seen["worst_geometry"] = "handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s stretch_r=%.3f stretch_l=%.3f governed=%d" % [
+				str(m.get("stock_handle", Vector3.ZERO)), str(rig.bone_world("wr_r").origin),
+				str(rig.bone_world("wr_l").origin), str(rig.bone_world("sh_r").origin),
+				float(rig.stretch["r"]), float(rig.stretch["l"]), int(rig.governed)]
 		if n > 3 and error_m > 0.05 and error_m > old_peak + 0.03:
 			print("SCRAPERX_PROP_PEAK n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s governed=%d" % [
 				n, error_m, str(m.get("stock_handle", Vector3.ZERO)),
@@ -539,6 +546,9 @@ func _act_pest_unseen(device: int) -> bool:
 			int(_act_prop_seen["attached_frames"]), int(_act_prop_seen["other_carry_frames"]),
 			int(_matron_state()["carrying"]), int(_matron_state()["takes"]),
 			str(_main._matron_view.prop_attached), float(_main._matron_view.prop_hand_error_m)])
+		print("SCRAPERX_PROP_WORST n=%d error_m=%.3f %s" % [
+			int(_act_prop_seen.get("worst_frame", 0)), float(_act_prop_seen["worst_hand_m"]),
+			String(_act_prop_seen.get("worst_geometry", "no rendered carry contact"))])
 		return _fail("her drawn wrist missed the real toolbox handle: samples %d, worst %.3f m (limit 0.05 m)" % [
 			int(_act_prop_seen["samples"]), float(_act_prop_seen["worst_hand_m"])])
 	if int(_native().get_well_a_rope_end_entity_id()) == WELL_A_CAGE_ENTITY:
