@@ -61,10 +61,14 @@ shipped code: nothing under this folder is loaded by the game or built by CI.
 Her one encounter built since: the bay on the 154 m deck, where she holds a
 failing walkway leaf up on her palms as bait. As built, with its numbers and
 tests: `shared_survival/THE_BAY.md`. The other agent's native core it is built
-on, and that agent's own records: `shared_survival/HANDOFF.md`,
-`shared_survival/TEST_RESULTS.md`, `shared_survival/PLAN_2026-10-21.md`.
+on; that agent's own records (its handoff, test log and plan) are archived:
+`03_EXECUTION/ARCHIVE_INDEX.md`.
 
 ## What is here
+
+> **Archived 2026-10-29:** `panel_results/`, `prototypes/`, `routecraft_evidence/` and the
+> shared-survival plan and test log below are out of the tree. Every file, what it was and how
+> to get it back is in `03_EXECUTION/ARCHIVE_INDEX.md`.
 
 - `panel_results/` holds what the design workflows returned, verbatim.
   - `wf_a3b89fc2-b78.json` is the redesign's prototype tracks. The body track

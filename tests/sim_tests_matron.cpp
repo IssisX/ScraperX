@@ -525,9 +525,15 @@ void run_matron_balance() {
         // straight along the band, and the throw's way to her is clear.
         require(walk_to(h, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "matron heave: west along the band with it");
         // Still, the toolbox held, until she comes for the climber in sight:
-        // from 9 m the view kept on her (where she will be a moment on, as a
-        // thrower leads a runner), and the throw at 3.4 m.
+        // from 9 m the view on her (where she will be a moment on, as a
+        // thrower leads a runner). His face seen, she stalks him (her stalk,
+        // matron_stalk.cpp): she stands under his gaze, so he looks off along
+        // the band and lets her come in to her band (3 m); within 3.4 m the
+        // view back on her, and the throw once the box has come round in
+        // front of him and settled (thrown mid-swing it flies off her line).
         bool coming = false;
+        int turned = 0;
+        auto box_was = h.kit_body_position(h.kit_body_index(box));
         auto last = h.matron_state().position;
         for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz) && !coming; ++i) {
             tick(h);
@@ -540,8 +546,24 @@ void run_matron_balance() {
             last = m.position;
             const double d = std::hypot(m.position.x - p.x, m.position.z - p.z);
             if (m.state == kStateHunting && m.stage == 0 && d < 9.0) {
-                (void)h.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
-                coming = d < 3.4;
+                if (turned > 0 || (m.stalking && d < 3.4)) {
+                    // In at her band's edge: the view back on her, and the
+                    // throw once the box has come round in front of him.
+                    (void)h.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
+                    const auto b = h.kit_body_position(h.kit_body_index(box));
+                    const bool in_front = ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
+                    ++turned;
+                    require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
+                            "matron heave: the toolbox comes round in front of him");
+                    const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
+                    box_was = b;
+                    coming = in_front && swing < 0.002 && turned >= static_cast<int>(Simulation::kTickRateHz) / 4;
+                } else if (m.stalking) {
+                    (void)h.set_facing(-(m.position.x - p.x) / d, -(m.position.z - p.z) / d);
+                } else {
+                    (void)h.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
+                    coming = d < 3.4;
+                }
             }
         }
         require(coming, "matron heave: a pest comes for the climber");
@@ -963,12 +985,15 @@ void run_matron_crash() {
         require(drawn.state == kStateHunting && !drawn.wary &&
                     !drawn.lead_seen && std::hypot(drawn.lead_x - crash.at.x, drawn.lead_z - crash.at.z) < 0.01,
                 "matron crash: the hit draws her: she goes for it, not wary");
-        // Away south, crouched; she goes to the hit, searches it, finds nobody.
+        // Away, crouched, off the band's open line to the east rim beside the
+        // crates; she goes to the hit, searches it, finds nobody. (Her sight
+        // is her eyes, 1.69 m up: crouched in the open down the band, as this
+        // went before, she sees him over the crates.)
         (void)s.set_crouch_input(true);
         double closest = 1.0e9;
         bool stood_down = false;
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !stood_down; ++i) {
-            (void)steer(s, 24.5, Matron::kBandSouthZ, false);
+            (void)steer(s, 26.5, -151.0, false);
             tick(s);
             const auto m = s.matron_state();
             closest = std::min(closest, std::hypot(m.position.x - crash.at.x, m.position.z - crash.at.z));
@@ -1129,7 +1154,7 @@ void run_matron() {
                 "matron: following the climber over the rotten catwalk is the end of her");
         require(crossed.end.planks_fallen >= 1, "matron: a plate she stood on is down");
         require(crossed.deaths == 0, "matron: the climber crossed alive");
-        // She does not come back: a death of the player later leaves her dead.
+        // She stays dead until something is restored (run_matron_restore: a player's death brings her back).
         stand_still(s, 5.0);
         require(s.matron_state().state == kStateDead, "matron: dead, she stays dead");
     }
@@ -1442,6 +1467,20 @@ void run_matron() {
         (void)s.set_move_input(0.0, 0.0);
         bool winding = false;
         for (int i = 0; i < 45 * static_cast<int>(Simulation::kTickRateHz) && !winding; ++i) {
+            // He waits looking on up the band, his face off her as she
+            // comes: a face turned to her, seen, is her stalk (matron-stalk,
+            // matron_stalk.cpp), which holds her sight's Turn back. This leg
+            // meets the Turn.
+            {
+                const auto her = s.matron_state().position;
+                const auto me = s.snapshot().player_position;
+                const double hx = her.x - me.x;
+                const double hz = her.z - me.z;
+                const double l = std::hypot(hx, hz);
+                if (l > 0.1) {
+                    (void)s.set_facing(-hx / l, -hz / l);
+                }
+            }
             tick(s);
             winding = s.matron_state().turn == static_cast<std::uint8_t>(Matron::Turn::Windup);
         }
@@ -1609,7 +1648,9 @@ void run_matron() {
         // Come within her reach and the Turn takes her over it.
         bool leapt = false;
         for (int i = 0; i < 25 * static_cast<int>(Simulation::kTickRateHz) && !leapt; ++i) {
-            (void)steer(s, -2.0, Matron::kRingNorthZ, false);
+            // At a run: prey that runs at her is no stalk's (her stalk is
+            // spent on his run heard, matron_stalk.cpp), and the Turn has her.
+            (void)steer(s, -2.0, Matron::kRingNorthZ, true);
             tick(s);
             leapt = s.matron_state().leaps > 0;
         }
@@ -1629,6 +1670,55 @@ void run_matron() {
                   << " island_s=" << island_s << " leaps=" << over.leaps << "\n";
     }
     run_matron_remaining();
+}
+
+// ---- a restore brings her back: a long fall ends her, and the world put back has her in it ----
+// Her death is the fall's (kLethalLandingMps); the checkpoint is where she burst out. A death of the player
+// restores that checkpoint, and the restore must not skip her for being dead: she comes back alive, out of
+// her locker as she was at the checkpoint, and hunts again.
+void run_matron_restore() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    wake_and_wait_east(s);
+    require(wait_for_her(s, 14.0, 40.0), "matron restore: she comes (the checkpoint is where she burst out)");
+    require(s.matron_state().alive, "matron restore: alive before the fall");
+    // 16 m onto the south band's deck: a landing past kLethalLandingMps (16 m/s).
+    s.debug_place_matron(scraperx::sim::Vector3{0.0, 154.0 + 16.0, static_cast<double>(Matron::kBandSouthZ)});
+    bool dead = false;
+    for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && !dead; ++i) {
+        tick(s);
+        dead = s.matron_state().state == kStateDead;
+    }
+    require(dead && !s.matron_state().alive, "matron restore: a 16 m fall is the end of her");
+    // Dead she stays dead for as long as nothing is restored.
+    stand_still(s, 3.0);
+    require(s.matron_state().state == kStateDead && !s.matron_state().alive,
+            "matron restore: dead, and nothing has brought her back");
+    // Put the world back: the player's death restores the checkpoint.
+    const auto deaths_before = s.snapshot().death_count;
+    const auto at = s.snapshot().player_position;
+    s.debug_launch_player(scraperx::sim::Vector3{0.0, at.y + 0.5, -150.0}, scraperx::sim::Vector3{0.0, -5.0, 0.0});
+    for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && s.snapshot().death_count == deaths_before; ++i) {
+        tick(s);
+    }
+    require(s.snapshot().death_count > deaths_before, "matron restore: the player's fall into the shaft is a death");
+    const auto back = s.matron_state();
+    require(back.alive && (back.state == kStateEmerging || back.state == kStateHunting),
+            "matron restore: the restore brings her back alive, out of her locker as she was at the checkpoint");
+    // She acts again: she hunts, and walks away from her locker.
+    bool hunting = false;
+    double walked_m = 0.0;
+    for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !(hunting && walked_m > 3.0); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        require(m.alive, "matron restore: she stays alive once back");
+        hunting = hunting || m.state == kStateHunting;
+        walked_m = std::hypot(m.position.x - back.position.x, m.position.z - back.position.z);
+    }
+    require(hunting && walked_m > 3.0, "matron restore: restored, she hunts again and walks");
+    std::cout << "PASS scraperx_sim matron restore: dead by a 16 m fall, brought back by the restore, hunts again, walked "
+              << walked_m << " m\n";
 }
 
 void run_matron_remaining() {
@@ -1993,6 +2083,7 @@ void run_matron_remaining() {
     run_matron_balance();
     run_matron_pipe();
     run_matron_room();
+    run_matron_restore();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----

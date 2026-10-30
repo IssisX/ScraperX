@@ -78,6 +78,7 @@ void run_matron_pace() {
     std::uint32_t hushes = 0;
     bool was_hushed = false;
     int corner = 0;
+    int way = 1;   // round the corners: +1, or back the other way
     double phase_s = 0.0;
     std::uint32_t staggers = 0, vaults = 0, clambers = 0, step_ups = 0;
     std::uint8_t last_turn = 0;
@@ -88,6 +89,24 @@ void run_matron_pace() {
         const int phase = static_cast<int>(phase_s / 12.0) % 3;
         const auto her = s.matron_state();
         const int her_state = static_cast<int>(her.state);
+        {
+            // A leader does not walk into her: with her ahead of him on his
+            // way, close and nearer than his corner, he turns and leads her
+            // round the other way (her stalk stands still under his eyes, and
+            // walked into, takes him).
+            const auto p = s.snapshot().player_position;
+            const double cx = corners[corner][0] - p.x;
+            const double cz = corners[corner][1] - p.z;
+            const double hx = her.position.x - p.x;
+            const double hz = her.position.z - p.z;
+            const double to_corner = std::hypot(cx, cz);
+            const double to_her = std::hypot(hx, hz);
+            if (her_state == kHunting && phase != 2 && to_her < 8.0 && to_her < to_corner && to_corner > 0.6 &&
+                (cx * hx + cz * hz) > 0.5 * to_corner * to_her) {
+                way = -way;
+                corner = (corner + way + 4) % 4;
+            }
+        }
         if (her_state == kSearching || her_state == kShuffling || her_state == kGuarding || her_state == kPeering) {
             // She has lost him (a hold ends with him set down on her deck, and
             // she leaves him a while): he comes back to her, at a run, as a
@@ -97,7 +116,7 @@ void run_matron_pace() {
             (void)s.set_move_input(0.0, 0.0);
             (void)s.set_sprint_input(false);
         } else if (steer_to(s, corners[corner][0], corners[corner][1], phase == 0)) {
-            corner = (corner + 1) % 4;
+            corner = (corner + way + 4) % 4;
         }
         // The leader keeps to the deck's bands: put on a ladder's rungs (her
         // shove at its foot while her hands are off him after a hold), he lets

@@ -55,6 +55,10 @@ REQUIRED_CUES = {
 }
 
 
+def voice_entries(voice: dict) -> list:
+    return [voice] + ([voice['remade']] if 'remade' in voice else [])
+
+
 def verify_recordings(directory: Path, manifest: dict) -> None:
     receipt = json.loads((directory / 'generation_receipt.json').read_text())
     cues = manifest['cues']
@@ -62,9 +66,13 @@ def verify_recordings(directory: Path, manifest: dict) -> None:
         if key not in cues or cues[key]['speaker'] != speaker:
             raise ValueError(f'story cue {key}: required {speaker} recording is missing')
     for speaker in set(REQUIRED_CUES.values()):
-        voice = manifest['voices'][speaker]
-        if not all(voice.get(field) for field in ('generation', 'provenance', 'license', 'source')):
-            raise ValueError(f'story voice {speaker}: missing generation/license provenance')
+        # A speaker partly remade carries the new method's provenance under 'remade'.
+        for voice in voice_entries(manifest['voices'][speaker]):
+            if not all(voice.get(field) for field in ('generation', 'provenance', 'license', 'source')):
+                raise ValueError(f'story voice {speaker}: missing generation/license provenance')
+            notice = directory / voice['license'].get('notice', '')
+            if not notice.is_file() or not notice.read_text().strip():
+                raise ValueError(f'story voice {speaker}: license notice {notice.name!r} is missing or empty')
     for key, cue in cues.items():
         audio = directory / f'{key}.ogg'
         digest = hashlib.sha256(audio.read_bytes()).hexdigest()
@@ -80,27 +88,44 @@ def verify_recordings(directory: Path, manifest: dict) -> None:
 
 
 def verify(apk: Path) -> int:
-    source = Path(__file__).resolve().parents[1] / 'godot/audio/story_radio/manifest.json'
+    root = Path(__file__).resolve().parents[1]
+    source = root / 'godot/audio/story_radio/manifest.json'
     expected = json.loads(source.read_text())
     verify_recordings(source.parent, expected)
+
+    # The owner's approval gate: this APK may carry cue provenance and
+    # captions, but no unapproved human speech streams or remaps.
+    player = (root / 'godot/presentation/audio/story_radio_player.gd').read_text()
+    if not re.search(r'^const VOICE_RECORDINGS_APPROVED := false$', player, re.MULTILINE):
+        raise ValueError('story voice approval gate changed; review the APK exclusion contract')
+
     with zipfile.ZipFile(apk) as package:
         actual = json.loads(package.read('assets/audio/story_radio/manifest.json'))
         if actual != expected:
             raise ValueError('story manifest: exported copy differs from source')
-        if not package.read('assets/audio/story_radio/KOKORO_LICENSE.txt'):
-            raise ValueError('story voice license: expected nonempty packaged notice')
+        # Trunk has both original and partly remade voice provenance.
+        notices = sorted({entry['license']['notice'] for voice in expected['voices'].values()
+                          for entry in voice_entries(voice)})
+        for notice in notices:
+            if not package.read('assets/audio/story_radio/' + notice):
+                raise ValueError(f'story voice license: expected nonempty packaged notice {notice}')
+        names = package.namelist()
+        forbidden = []
+        keys = set(expected['cues'])
         for key, cue in expected['cues'].items():
-            resource = cue['file']
-            if resource != f'res://audio/story_radio/{key}.ogg':
-                raise ValueError(f'story cue {key}: unexpected resource path {resource!r}')
-            imported = 'assets/' + resource.removeprefix('res://') + '.import'
-            remap = package.read(imported).decode()
-            path = re.search(r'^path="res://([^"\n]+)"$', remap, re.MULTILINE)
-            if path is None:
-                raise ValueError(f'story cue {key}: {imported} has no imported stream path')
-            stream = 'assets/' + path[1]
-            if package.getinfo(stream).file_size == 0:
-                raise ValueError(f'story cue {key}: empty packaged stream {stream}')
+            if cue['file'] != f'res://audio/story_radio/{key}.ogg':
+                raise ValueError(f'story cue {key}: unexpected resource path {cue["file"]!r}')
+        for name in names:
+            if name.startswith('assets/audio/story_radio/') and (
+                    name.endswith('.ogg') or name.endswith('.ogg.import')):
+                forbidden.append(name)
+            if name.startswith('assets/.godot/imported/'):
+                filename = name.rsplit('/', 1)[-1]
+                if any(filename.startswith(f'{key}.ogg-') for key in keys):
+                    forbidden.append(name)
+        if forbidden:
+            raise ValueError('unapproved story voice included in APK: ' +
+                             ', '.join(sorted(forbidden)[:8]))
     return len(expected['cues'])
 
 
@@ -112,4 +137,4 @@ if __name__ == '__main__':
         count = verify(artifact)
     except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
         raise SystemExit(f'STORY_RADIO_PACKAGE FAIL {artifact}: {error}') from error
-    print(f'STORY_RADIO_PACKAGE PASS cues={count} manifest=exact imported_streams=present recording_hashes=exact')
+    print(f'STORY_RADIO_PACKAGE PASS cues={count} manifest=exact voice_streams=excluded recording_hashes=exact')

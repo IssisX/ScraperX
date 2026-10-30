@@ -112,7 +112,7 @@ bool Matron::on_line_ramp(const RVec3 at) const {
     return feet >= floor_y + 0.15F && feet <= float(line.stand.GetY()) + 0.25F && (on_strip || on_stand);
 }
 
-void Matron::notice_ridden_line(const RVec3 player) {
+void Matron::notice_ridden_line() {
     if (zipline_ == nullptr || !zipline_->riding() || !body_in_world_ || dead_) {
         return;
     }
@@ -125,7 +125,7 @@ void Matron::notice_ridden_line(const RVec3 player) {
     // return before that ran, so a player who took the line in front of
     // her left no lead, and the Turn she had already started sat frozen
     // until the climb let go.
-    if (Vec3(player - at).Length() > kSightM || !sees(at + RVec3(0.0, -0.5, 0.0), player - RVec3(0.0, 0.3, 0.0))) {
+    if (!ev_.close_look || Vec3(ev_.seen_at - at).Length() > kSightM) {
         return;
     }
     const RVec3 end = zipline_->lines()[static_cast<std::size_t>(line)].bottom_floor;
@@ -137,6 +137,7 @@ void Matron::notice_ridden_line(const RVec3 player) {
     since_heard_s_ = 0.0F;
     pursuit_s_ = 0.0F;
     lead_seen_ = true;
+    lead_sense_ = Sense::Sight;
     lead_valid_ = true;
     wary_ = false;
 }
@@ -317,9 +318,15 @@ void Matron::ride_line() {
     zipline_->set_other_brake(at_end && (over_shaft(at) || !deck)
                                   ? 0.0F
                                   : kCableFriction * kMassKg * gravity * across / Zipline::kHandBrakeMaxN);
-    if (at_end && ((still && down_here) || (!still && carried_lands))) {
+    if (at_end && still && !down_here) {
+        line_stall_s_ += 1.0F / 90.0F;
+    } else {
+        line_stall_s_ = 0.0F;
+    }
+    if (at_end && ((still && (down_here || line_stall_s_ >= 2.0F)) || (!still && carried_lands))) {
         zipline_->unclip_other();
         on_line_ = false;
+        line_stall_s_ = 0.0F;
         // The cable was what riding_ meant. Leaving it has to clear that
         // before the hunt runs this tick, or the cling stands her still
         // and her swing on never happens: she drops where she was, in the
@@ -338,7 +345,11 @@ void Matron::report_line() {
 }
 
 void Matron::restore_line() noexcept {
+    if (zipline_ != nullptr && on_line_) {
+        zipline_->unclip_other();
+    }
     on_line_ = false;
+    line_stall_s_ = 0.0F;
     cable_slides_ = 0;
 }
 
@@ -363,6 +374,7 @@ void Matron::LineWay::cancel() {
         m_.zipline_->unclip_other();
     }
     m_.on_line_ = false;
+    m_.line_stall_s_ = 0.0F;
     m_.riding_ = false;
     m_.let_go_s_ = 0.0F;
 }

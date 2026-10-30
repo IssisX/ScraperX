@@ -336,6 +336,8 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         hand_arm_ = create_constraint(arm, matron_->body(), hand_id_, false);
     }
     if (hand_id_.IsInvalid()) {
+        arm_drive(bodies, 0.0F);
+        fatality_drive(bodies, 0.0F);
         return;
     }
     if (hand_arm_ != nullptr) {

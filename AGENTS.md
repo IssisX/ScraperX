@@ -1,7 +1,8 @@
 # Rules for every agent in this repo
 
-The owner's dated directives are in `00_START_HERE.md`, which is the authority. `CLAUDE.md` holds
-the rules that keep being broken, and they apply to every agent, whatever its name. Read it first.
+The rules in force are in `00_START_HERE.md` ("Rules in force"), which is the authority; the owner's
+dated words are in `00_START_HERE_ARCHIVE.md`. `CLAUDE.md` spells out the rules that keep being
+broken, and they apply to every agent, whatever its name. Read it first.
 
 The short version:
 
@@ -11,7 +12,8 @@ The short version:
 - Her climbing is general skills only: no per-route, per-deck or per-transition code. Gravity on.
   Every force on her comes from her one budget; no velocity writes; at most 0.20 m per 1/90 s tick.
 - Never weaken, skip or delete a test. Test checks, world geometry and her force/physics limits
-  change only by a PR into `ScraperX-Claude`, which only the owner merges.
+  change only by a PR into `ScraperX-Claude`, holding just that change; the integrator merges it
+  once green with a second agent's LAND, and the owner can overturn any merge.
 - Android builds are clang C++17 with `-Werror`: no structured bindings captured by lambdas.
 - Test only what the change reaches (`SCRAPERX_ONLY=<group>`); CI's proof run
   (`<agent>/integrate-<job>` branches) is the final proof.

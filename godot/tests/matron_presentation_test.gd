@@ -29,13 +29,15 @@ const MOVES := [
 	["pole_down", {"climbing": true, "climb_move_active": true, "climb_move": "pole_down", "climb_phase": 2}],
 	["jump_catch_windup", {"climbing": true, "climb_move_active": true, "climb_move": "jump_catch", "climb_phase": 1}],
 	["jump_catch_airborne", {"climbing": true, "climb_move_active": true, "climb_move": "jump_catch", "climb_phase": 3, "climb_airborne": true}],
+	["ledge_jump_windup", {"climbing": true, "climb_move_active": true, "climb_move": "ledge_jump", "climb_phase": 1}],
+	["ledge_jump_airborne", {"climbing": true, "climb_move_active": true, "climb_move": "ledge_jump", "climb_phase": 3, "climb_airborne": true}],
 	["hang_drop_phase0", {"climbing": true, "climb_move_active": true, "climb_move": "hang_drop", "climb_phase": 0}],
 	["hang_drop_airborne", {"climbing": true, "climb_move_active": true, "climb_move": "hang_drop", "climb_phase": 3, "climb_airborne": true}],
 	["gap_jump_drive", {"climbing": true, "climb_move_active": true, "climb_move": "gap_jump", "climb_phase": 1, "climb_leg_driving": true}],
 	["gap_jump_airborne", {"climbing": true, "climb_move_active": true, "climb_move": "gap_jump", "climb_phase": 3, "climb_airborne": true}],
 ]
 # Moves whose fingerprint must differ from the ladder baseline by > 0.2 rad.
-const DISTINCT := ["rung_down_phase0", "rung_down_phase2", "mantle", "step_down_grounded", "step_down_airborne", "pole_up", "pole_down", "jump_catch_windup", "jump_catch_airborne", "hang_drop_phase0", "hang_drop_airborne", "gap_jump_drive", "gap_jump_airborne"]
+const DISTINCT := ["rung_down_phase0", "rung_down_phase2", "mantle", "step_down_grounded", "step_down_airborne", "pole_up", "pole_down", "jump_catch_windup", "jump_catch_airborne", "ledge_jump_windup", "ledge_jump_airborne", "hang_drop_phase0", "hang_drop_airborne", "gap_jump_drive", "gap_jump_airborne"]
 
 var _out := ""
 var _view: Node3D

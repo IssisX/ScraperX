@@ -81,7 +81,7 @@ void Matron::begin_grab(const RVec3 player) {
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     hand_target_ = at + shoulder_local();
     hand_target_v_ = Vec3::sZero();
-    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
+    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
 }
 
 void Matron::grip_taken() noexcept {
@@ -145,6 +145,10 @@ void Matron::grip_lost(const bool torn, const bool fought) noexcept {
             // The arm hers already (left in her other hand as the body
             // pulled away, tear_grip, or torn before): its beats go on, the
             // body away; the hold ends after them (step_armplay).
+            return;
+        }
+        if (reel_) {
+            end_reel(physics_.GetBodyInterface().GetPosition(player_));
             return;
         }
         if (torn && !fought && arm_tears_ == hold_tears_at_ && armplay_for_test_ != 0 &&
@@ -591,14 +595,46 @@ bool Matron::deck_close_below(const RVec3 player, const float feet) const {
 }
 
 void Matron::end_hold(const State next) {
+    if (grip_on_) {
+        let_go_ = true;
+        let_go_push_ = Vec3::sZero();
+    }
     state_ = next;
     hold_s_ = 0.0F;
     hold_phase_ = 0;
     grip_on_ = false;
+    grip_was_on_ = false;
+    player_braced_ = false;
+    thrash_ = 0.0F;
+    wrist_on_ = false;
+    wrist_reseat_ = false;
+    arm_throw_ = false;
+    leg_toss_ = false;
+    retake_ = false;
     reel_ = false;
+    reel_to_floor_ = false;
+    spare_walk_ = false;
+    spare_side_set_ = false;
+    spare_tries_ = 0;
+    fatal_hold_ = false;
+    fatal_path_ = FatalPath::None;
     fatal_hang_ = false;
+    fatal_dropped_ = false;
+    fatal_edge_ = RVec3::sZero();
+    fatal_s_ = 0.0F;
+    fatal_carry_s_ = 0.0F;
+    fatal_window_s_ = 0.0F;
+    fatal_check_ticks_ = 0;
+    fatal_lethal_ = false;
+    fatal_toss_ = 0.0F;
+    fatal_lethal_mps_ = 0.0F;
+    fatal_rim0_ = Vec3::sZero();
+    watch_still_s_ = 0.0F;
+    watch_y_ = 0.0F;
     pull_n_ = kHandReachPullN;
+    pull2_n_ = kHandReachPullN;
     arm_reach_m_ = kArmReachM;
+    fatal_work_reset();
     if (next == State::Searching) {
         search_s_ = 0.0F;
         search_budget_s_ = 1.0e9F;
@@ -779,6 +815,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             ++brace_losses_;
             state_ = State::Carry;
             hold_s_ = brace_losses_ % 3 == 0 ? kCarryMaxSeconds : 0.0F;   // the third time, she gives it up
+            if (brace_losses_ % 3 == 0 && fatal_hold_) {
+                fatal_carry_s_ = kFatalCarryS;
+            }
             hold_phase_ = 0;
             fatal_hang_ = false;
             break;
@@ -983,11 +1022,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             const bool ready = !spare_walk_ && Vec3(down - hand_target_).Length() < 0.02F &&
                                (spare_deck_ || rail_in > 0.5F) &&
                                (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_));
-            if (ready && !deck_close_below(player, feet)) {
-                spare_walk_ = true;
-                spare_to_x_ = ax - rim_nx_ * 0.5F;
-                spare_to_z_ = az - rim_nz_ * 0.5F;
-            } else if (ready) {
+            // Let go: her hand opens, and the hold goes on to the collar put straight. True when
+            // the hold ended instead (hauled back in, or set down after his blow).
+            const auto set_down = [&]() {
                 let_go_ = true;
                 let_go_push_ = Vec3::sZero();
                 grip_on_ = false;
@@ -999,14 +1036,47 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     reel_ = false;
                     reel_to_floor_ = false;
                     fatal_floor();
-                    break;
+                    return true;
                 }
                 if (reel_) {
                     // Set down after his blow: her stagger, then after him.
                     end_reel(player);
+                    return true;
+                }
+                return false;
+            };
+            const auto walk_on = [&]() {
+                spare_walk_ = true;
+                spare_to_x_ = ax - rim_nx_ * 0.5F;
+                spare_to_z_ = az - rim_nz_ * 0.5F;
+            };
+            if (spare_tries_ > 2) {
+                // Tried three times and not set down: no more back up and over. Her deck close
+                // under his body, she sets him down; not, she keeps hold and walks him on toward
+                // her deck, a step at a time (spare_walk_), never letting go over the drop. A step
+                // that stops short of its spot is looked at again from where she is (hold_s_ times
+                // it), so each look moves her at least a little inward.
+                if (deck_close_below(player, feet)) {
+                    spare_walk_ = false;
+                    if (set_down()) {
+                        break;
+                    }
+                } else if (spare_walk_) {
+                    if (hold_s_ > kSpareStepSeconds) {
+                        spare_walk_ = false;
+                    }
+                } else {
+                    walk_on();
+                    hold_s_ = 0.0F;
+                }
+            } else if (ready && !deck_close_below(player, feet)) {
+                walk_on();
+            } else if (ready) {
+                if (set_down()) {
                     break;
                 }
-            } else if (hold_s_ > 8.0F) {
+            } else if (hold_s_ > 8.0F && spare_tries_ <= 2) {
+                spare_walk_ = false;
                 ++spare_tries_;
                 hold_phase_ = 0;
                 hold_s_ = 0.0F;
@@ -1043,7 +1113,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             over = (hold_s_ >= kFatalWatchS && watch_still_s_ >= kFatalStillS) || hold_s_ >= kFatalWatchMaxS;
         }
         if (over) {
-            take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
+            take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
             end_hold(State::Searching);
         }
         break;
@@ -1389,6 +1459,14 @@ void Matron::fatal_release() noexcept {
 // the fatality's release. In the fatality's hold it is his escape: alive,
 // one-armed, on her deck. After the rip has begun, nothing frees him.
 bool Matron::his_blow() {
+    if (state_ == State::Grab && !grip_on_) {
+        grab_cooldown_s_ = kRegrabAfterTearS;
+        end_hold(State::Searching);
+        resume_state_ = State::Searching;
+        state_ = State::Staggering;
+        stagger_s_ = kStaggerMinSeconds;
+        return true;
+    }
     if (!body_in_hold() || rip_begun() || reel_) {
         return false;
     }
@@ -1468,7 +1546,7 @@ void Matron::begin_reel(const RVec3 at, const RVec3 player) {
 // (Staggering), then she is after him by sound, her hands off him
 // kRegrabAfterTearS.
 void Matron::end_reel(const RVec3 player) {
-    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
+    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
     // Freed: no fatality to show (its path, its edge, and the way out over
     // its drop).
     fatal_path_ = FatalPath::None;

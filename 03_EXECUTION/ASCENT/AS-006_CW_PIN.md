@@ -421,5 +421,5 @@ ring, caught with a jump (`build_climbing_route` in `src/sim/band_counterweight_
 
 **The Matron's first act (2026-10-19).** `touch_matron_act` plays the band from the 154 m deck to
 the 220 ring with her in each of her three stages and back, by touch; its ladder and climbing route
-are the way on after her (`03_EXECUTION/ACTIVE_GOAL_PROGRESS.md`, "Her first act, played by
+are the way on after her (the progress log, archived: `03_EXECUTION/ARCHIVE_INDEX.md`, "Her first act, played by
 touch").

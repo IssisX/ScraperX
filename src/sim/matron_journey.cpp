@@ -139,6 +139,10 @@ bool Matron::travel_to(const Vec3 feet) {
 }
 
 bool Matron::travel_to(const int region) {
+    return travel_to(region, {});
+}
+
+bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     if (scanned_ == nullptr || !body_in_world_ || dead_ || lying_ || kneeling_ ||
         region < 0 || static_cast<std::size_t>(region) >= scanned_->regions().size()) {
         return false;
@@ -162,14 +166,14 @@ bool Matron::travel_to(const int region) {
     // then replans from her actual landing before executing any move.
     std::vector<int> route;
     const int from = here >= 0 ? here : travel_.region;
-    if (from >= 0) route = scanned_->plan(from, region);
+    if (from >= 0) route = scanned_->plan(from, region, avoid);
     if (here >= 0 && route.empty() && here != region) {
         return false;
     }
     // Her hands on this body (a respawn gives her a new one). Invalid or
     // unreachable requests above leave her existing controller untouched.
     climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
-    travel_avoid_.clear();
+    travel_avoid_ = avoid;
     travel_edges_ = std::move(route);
     travel_.active = true;   // already there still earns a supported, quiet arrival
     chase_way_held_ = true;  // a travel taken holds the chase window past its own ticks
@@ -198,12 +202,13 @@ void Matron::step_travel(const float dt) {
     const RVec3 at = bodies.GetPosition(body_);
     speed_ = 0.0F;
     // The player on a climb she means to take (on it, at its foot, or at
-    // its head): the way is theirs. Any climb, from its own line and span.
+    // its head), as she saw, heard or felt him there just now: the way is
+    // theirs. Any climb, from its own line and span.
     const auto player_on = [&](const traversal::MoveSpec &spec) {
-        if (player_.IsInvalid() || !bodies.IsAdded(player_)) {
+        RVec3 p;
+        if (!knows_where(kYieldMemoryS, p)) {
             return false;
         }
-        const RVec3 p = bodies.GetPosition(player_);
         const float lo = std::min(spec.bottom_y, spec.start.GetY()) - 2.5F;
         const float hi = std::max(spec.top_y, spec.goal_top) + 0.5F;
         return distance_xz(float(p.GetX()), float(p.GetZ()), spec.line.GetX(), spec.line.GetZ()) < kYieldReachM &&
@@ -521,6 +526,26 @@ MoverView Matron::TravelWay::view() const {
         m_.travel_.goal < static_cast<int>(m_.scanned_->regions().size())) {
         v.has_goal = true;
         v.goal_floor_y = m_.scanned_->regions()[static_cast<std::size_t>(m_.travel_.goal)].top;
+    }
+    // The move her travel is making, shown as her journey's is (her drawn
+    // body poses the move her climber is in; a hand only once it holds).
+    if (m_.climber_ != nullptr && m_.climber_->status() == traversal::Climber::Status::Running &&
+        m_.climber_->view().active) {
+        const traversal::ClimbView &climber = m_.climber_->view();
+        v.move_active = true;
+        v.move = climber.kind;
+        v.phase = climber.phase;
+        v.airborne = climber.airborne;
+        v.sliding = climber.sliding;
+        v.leg_driving = climber.leg_driving;
+        if (climber.holding) {
+            v.hands = true;
+            v.hand_shown = true;
+            v.hand = climber.hand;
+            v.force_shown = true;
+            v.force_n = climber.force_n;
+            v.hand_held = true;
+        }
     }
     return v;
 }

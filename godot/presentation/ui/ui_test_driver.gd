@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_uncanny.gd"
+extends "res://presentation/ui/ui_test_look.gd"
 
 # Scripted proof that every control path reaches the native authority. Each
 # scenario injects events through the real viewport input pipeline -- the
@@ -12,7 +12,7 @@ extends "res://presentation/ui/ui_test_uncanny.gd"
 # --capture=<prefix> under a real renderer, each scenario also saves the
 # screen at its most telling moment as <prefix>_<pose>.png.
 
-# (Scenarios: ui_test_base.gd .. ui_test_act.gd, one family per file.)
+# (Scenarios: ui_test_base.gd .. ui_test_look.gd, one family per file.)
 
 const SCENARIOS := {
 	"touch_jump": 8,
@@ -135,6 +135,12 @@ const SCENARIOS := {
 	"look_matron_catwalk": 11,
 	"look_matron_gallery": 11,
 	"look_matron_stock": 11,
+	# The Matron look suite (tools/look/look.sh, ui_test_look.gd): stills of
+	# her moves, her hold and her fatality from cameras about her body
+	# (renders only, not in CI).
+	"look_matron_moves": 11,
+	"look_matron_hold": 11,
+	"look_matron_fatal": 11,
 	# Loose stock in the yard: a drum carried and set down (look_stock_yard:
 	# renders only, not in CI).
 	"touch_stock": 8,
@@ -219,6 +225,7 @@ const SCENARIOS := {
 	"touch_stack": 8,
 	# The foreman's radio: his first line as the climber steps into S1's cage.
 	"touch_radio": 8,
+	"touch_photo_id_radio": 8,
 	"pad_stack": 8,
 	"keyboard_stack": 8,
 	# The fear voice on a ~12 m drop lived through: a yelp, then the cry for
@@ -463,6 +470,12 @@ func _run() -> void:
 			ok = await _look_matron_gallery()
 		"look_matron_stock":
 			ok = await _look_matron("stock")
+		"look_matron_moves":
+			ok = await _look_set("moves")
+		"look_matron_hold":
+			ok = await _look_set("hold")
+		"look_matron_fatal":
+			ok = await _look_set("fatal")
 		"touch_stock":
 			ok = await _stock_touch(InputRouter.Device.TOUCH)
 		"touch_forklift":
@@ -531,6 +544,8 @@ func _run() -> void:
 			ok = await _stack_upper(InputRouter.Device.KEYBOARD_MOUSE)
 		"touch_radio":
 			ok = await _touch_radio(InputRouter.Device.TOUCH)
+		"touch_photo_id_radio":
+			ok = await _touch_photo_id_radio()
 		"touch_stack":
 			ok = await _stack(InputRouter.Device.TOUCH)
 		"pad_stack":

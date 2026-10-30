@@ -85,11 +85,13 @@ Then:
 
 ## 3. Place, without duplicates
 
-- **Owner rules:** a row in `00_START_HERE.md`'s "Owner directives" table, newest first:
-  `| <date> | <the lesson as a concise, well-said passage in plain words, with the owner's quote> | <status: in force, and what changes> |`
+- **Owner rules:** two places. One line in `00_START_HERE.md`'s "Rules in force", in its group,
+  numbered, ending with the date (`(10-29)`), in plain words with the owner's exact meaning; and his
+  words as a row in `00_START_HERE_ARCHIVE.md`'s "The owner's words since the 2026-10-29 cull" table,
+  newest first: `| <date> | <his quote and what it means> | <the rule that carries it> |`
   (the owner, 2026-10-20: *"i like when you up-interpret my rough input into beautifully said
-  concise passages"*; the passage keeps the owner's exact meaning, the quote keeps the words).
-  If a row already says it, update that row's status instead of adding one.
+  concise passages"*). If a rule already says it, amend that rule and add its date instead of adding
+  a line; a newer word that overrules a rule replaces it, and the archive row says what it ended.
 - **Engineering rules** that belong to a plan or a subsystem: that document's rules section
   (for example `03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md` section 2.6 for the climb).
 - **Skills:** `.claude/skills/<name>/SKILL.md` (a short frontmatter `name` and `description`, then

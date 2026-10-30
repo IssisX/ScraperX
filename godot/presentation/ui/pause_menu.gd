@@ -10,12 +10,15 @@ signal resume_requested
 signal quit_requested
 signal restart_requested
 signal settings_changed
+signal identity_changed
 
 const NEW_CLIMB_TEXT := "NEW CLIMB"
 const NEW_CLIMB_CONFIRM_TEXT := "CONFIRM: START OVER"
 
 const UiStyle := preload("res://presentation/ui/ui_style.gd")
 const SettingsStore := preload("res://presentation/ui/settings_store.gd")
+const WorkIdPage := preload("res://presentation/identity/work_id_page.gd")
+const IdentityStore := preload("res://presentation/identity/player_identity_store.gd")
 
 const PAGE_NONE := &""
 const PAGE_CONTROLS := &"controls"
@@ -24,10 +27,13 @@ const PAGE_GRAPHICS := &"graphics"
 const PAGE_DISPLAY := &"display"
 const PAGE_AUDIO := &"audio"
 const PAGE_LICENCES := &"licences"
+const PAGE_WORK_ID := &"work_id"
 const Licences := preload("res://presentation/ui/licences.gd")
 const SETTING_PAGES := [PAGE_SETTINGS, PAGE_GRAPHICS, PAGE_DISPLAY, PAGE_AUDIO]
 
 var settings: SettingsStore
+var identity_store: RefCounted
+var _identity_page: Control
 var family := UiStyle.Family.KEYBOARD
 var summary := ""
 
@@ -79,6 +85,8 @@ func open(current_family: int, current_summary: String) -> void:
 
 
 func close() -> void:
+	if is_instance_valid(_identity_page):
+		_identity_page.cancel_photo()
 	visible = false
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused != null and is_ancestor_of(focused):
@@ -150,6 +158,11 @@ func back() -> void:
 
 
 func _show_page(page: StringName) -> void:
+	if is_instance_valid(_identity_page):
+		if page == PAGE_WORK_ID:
+			_identity_page.refresh()
+		else:
+			_identity_page.cancel_photo()
 	_page = page
 	_plate.visible = page != PAGE_NONE
 	_controls_page.visible = page == PAGE_CONTROLS
@@ -230,7 +243,7 @@ func _build(viewport_size: Vector2) -> void:
 	entries += [[&"restart", NEW_CLIMB_TEXT],
 		[PAGE_CONTROLS, "CONTROLS"], [PAGE_SETTINGS, "SETTINGS"],
 		[PAGE_GRAPHICS, "GRAPHICS"], [PAGE_DISPLAY, "DISPLAY"], [PAGE_AUDIO, "AUDIO"],
-		[PAGE_LICENCES, "LICENCES"]]
+		[PAGE_WORK_ID, "WORK ID"], [PAGE_LICENCES, "LICENCES"]]
 	if not OS.has_feature("mobile"):
 		entries.append([&"quit", "QUIT TO DESKTOP"])
 	for entry in entries:
@@ -254,6 +267,7 @@ func _build(viewport_size: Vector2) -> void:
 			button.text = NEW_CLIMB_CONFIRM_TEXT)
 	(_side_buttons[PAGE_CONTROLS] as Button).pressed.connect(_show_page.bind(PAGE_CONTROLS))
 	(_side_buttons[PAGE_LICENCES] as Button).pressed.connect(_show_page.bind(PAGE_LICENCES))
+	(_side_buttons[PAGE_WORK_ID] as Button).pressed.connect(_show_page.bind(PAGE_WORK_ID))
 	for page in SETTING_PAGES:
 		(_side_buttons[page] as Button).pressed.connect(_show_page.bind(page))
 	if _side_buttons.has(&"quit"):
@@ -285,10 +299,35 @@ func _build(viewport_size: Vector2) -> void:
 		safe.end.y - _content.position.y - 64.0 * _u)
 	_build_controls_page()
 	_build_licences_page()
+	_build_work_id_page()
 	_build_settings_page()
 	_build_graphics_page()
 	_build_display_page()
 	_build_audio_page()
+
+
+# Keep the optional local-photo workflow scrollable on narrow Fold panels.
+func _build_work_id_page() -> void:
+	if identity_store == null:
+		identity_store = IdentityStore.new()
+	var scroll := ScrollContainer.new()
+	scroll.name = "WorkIdScroll"
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	scroll.visible = false
+	_content.add_child(scroll)
+	_pages[PAGE_WORK_ID] = scroll
+	var body := VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", int(roundf(18.0 * _u)))
+	scroll.add_child(body)
+	body.add_child(_label("WORK ID", 38.0, UiStyle.PAPER, UiStyle.font_heavy()))
+	_identity_page = WorkIdPage.new()
+	_identity_page.configure(identity_store, _u)
+	body.add_child(_identity_page)
+	_identity_page.photo_changed.connect(func() -> void: identity_changed.emit())
+	_page_first[PAGE_WORK_ID] = _identity_page.choose_button
 
 
 # The menus' theme at layout unit u (the title screen shares it).
