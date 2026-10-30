@@ -29,7 +29,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
-#include <iostream>
+#include <iostream> // PR #48 diagnostic branch only
 
 namespace scraperx::sim {
 namespace {
