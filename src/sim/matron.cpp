@@ -961,7 +961,7 @@ void Matron::feel_floor(const float dt) {
                 state_ = State::Guarding;
             } else if (state_ == State::Peering) {
                 peer_s_ = 0.0F;
-                stand_down();
+                stand_down(!lead_machine_);
             } else if (state_ == State::Grab && !grip_on_ && bodies.GetObjectLayer(hit.mBodyID) == moving_layer()) {
                 // Moving steel under her: not her own hand (layer kHand), which her ray also
                 // finds while it reaches and is no floor.
