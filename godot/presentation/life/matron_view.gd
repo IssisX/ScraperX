@@ -226,6 +226,10 @@ var _burst_tail := 0.0
 # for these).
 var _held_shown := PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
 var _hands_fresh := true
+# Rendered wrist distance from the authoritative carried handle, in meters.
+# INF when no native prop constraint is active (including the throw tick).
+var prop_hand_error_m := INF
+var prop_attached := false
 # Going down a line's bare cable: the sparks off her forearms.
 var _sparks: CPUParticles3D
 var _planks: Array[MeshInstance3D] = []
@@ -948,6 +952,14 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	_apply_flinch(delta)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
+	prop_attached = int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+	prop_hand_error_m = INF
+	if prop_attached:
+		var handle: Vector3 = data["stock_handle"]
+		prop_hand_error_m = _rig.bone_world("wr_r").origin.distance_to(handle)
+		var size: Vector3 = data.get("stock_size", Vector3.ZERO)
+		if maxf(size.x, size.z) >= 0.38:
+			prop_hand_error_m = maxf(prop_hand_error_m, _rig.bone_world("wr_l").origin.distance_to(handle))
 	_check_contacts(data)
 	fresh_frame = false
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
@@ -1950,14 +1962,6 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	_limb(_p["hp_r"], _p["kn_r"], legs_back, knees)
 	_p["an_l"].rotation.x = -0.2
 	_p["an_r"].rotation.x = -0.2
-	# A piece of the player's stock in her hands (her mischief): both arms out
-	# before her chest under it, elbows bent, whatever her legs are doing.
-	if int(data.get("carrying", 0)) != 0:
-		arms_fwd = 1.35
-		arms_bend = 0.55
-		arms_splay = 0.08
-		arms_alt = 0.0
-		bend_alt = 0.0
 	# Her arms toward what her hands hold (the ankle, his arm), as much as her
 	# hands are on them: the reach (matron_rig.gd hold_reach) turns each joint
 	# from here, never the long way round.
