@@ -75,6 +75,8 @@ const WELL_A_CAGE_ENTITY := 2000
 const ACT_POSE_FRAMES := 5
 
 var _act_box := 0
+var _act_prop_seen := {"samples": 0, "worst_hand_m": 0.0, "holding_frames": 0,
+	"visible_frames": 0, "attached_frames": 0, "other_carry_frames": 0}
 var _act_stages_seen := {}
 var _act_drawing := true
 var _act_view_back := Vector2(NAN, NAN)   # the view's yaw and pitch before a screenshot aimed it
@@ -82,6 +84,53 @@ var _act_running := false   # screenshots are the act's own while it plays
 # Deaths the act means at this point: none (her hands are no death on touch,
 # and the run she makes hers ends without one).
 var _act_deaths_allowed := 0
+
+
+# Observe the real carrying interval, which starts while the climber is
+# descending to 143 m, before _act_pest_unseen begins. Count only live
+# simulation frames with the actual carried toolbox and a rendered wrist.
+func _act_sample_prop() -> void:
+	if _act_box == 0 or _main.freeze_sim:
+		return
+	var m := _matron_state()
+	var holding := int(m["carrying"]) == _act_box
+	if not holding:
+		if int(m["carrying"]) != 0:
+			_act_prop_seen["other_carry_frames"] = int(_act_prop_seen["other_carry_frames"]) + 1
+		return
+	_act_prop_seen["holding_frames"] = int(_act_prop_seen["holding_frames"]) + 1
+	var shown: bool = bool(_main._matron_view.figure_shown())
+	var attached: bool = bool(_main._matron_view.prop_attached)
+	if shown:
+		_act_prop_seen["visible_frames"] = int(_act_prop_seen["visible_frames"]) + 1
+	if attached:
+		_act_prop_seen["attached_frames"] = int(_act_prop_seen["attached_frames"]) + 1
+	if shown and attached:
+		var old_peak: float = float(_act_prop_seen["worst_hand_m"])
+		var error_m: float = float(_main._matron_view.prop_hand_error_m)
+		_act_prop_seen["samples"] = int(_act_prop_seen["samples"]) + 1
+		_act_prop_seen["worst_hand_m"] = maxf(old_peak, error_m)
+		var n: int = int(_act_prop_seen["samples"])
+		if error_m > old_peak:
+			var rig = _main._matron_view._rig
+			_act_prop_seen["worst_frame"] = n
+			_act_prop_seen["worst_geometry"] = "handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s stretch_r=%.3f stretch_l=%.3f governed=%d" % [
+				str(m.get("stock_handle", Vector3.ZERO)), str(rig.bone_world("wr_r").origin),
+				str(rig.bone_world("wr_l").origin), str(rig.bone_world("sh_r").origin),
+				float(rig.stretch["r"]), float(rig.stretch["l"]), int(rig.governed)]
+		if n > 3 and error_m > 0.05 and error_m > old_peak + 0.03:
+			print("SCRAPERX_PROP_PEAK n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s governed=%d" % [
+				n, error_m, str(m.get("stock_handle", Vector3.ZERO)),
+				str(_main._matron_view._rig.bone_world("wr_r").origin),
+				str(_main._matron_view._rig.bone_world("wr_l").origin),
+				str(_main._matron_view._rig.bone_world("sh_r").origin),
+				int(_main._matron_view._rig.governed)])
+		if n <= 45 or n in [90, 360, 900, 1399]:
+			var rig = _main._matron_view._rig
+			print("SCRAPERX_PROP_SAMPLE n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s stretch_r=%.3f stretch_l=%.3f governed=%d" % [
+				n, _main._matron_view.prop_hand_error_m, str(m.get("stock_handle", Vector3.ZERO)),
+				str(rig.bone_world("wr_r").origin), str(rig.bone_world("wr_l").origin),
+				str(rig.bone_world("sh_r").origin), float(rig.stretch["r"]), float(rig.stretch["l"]), int(rig.governed)])
 
 
 func _act_capturing() -> bool:
@@ -403,6 +452,10 @@ func _act_asleep(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) != 0, 1.0):
 		return _fail("PICK UP did not put the toolbox in the hands")
 	_act_box = int(_native().get_carrying_entity_id())
+	_act_prop_seen = {"samples": 0, "worst_hand_m": 0.0, "holding_frames": 0,
+		"visible_frames": 0, "attached_frames": 0, "other_carry_frames": 0}
+	if not get_tree().process_frame.is_connected(_act_sample_prop):
+		get_tree().process_frame.connect(_act_sample_prop)
 	# Over the bay on its leaf (src/sim/bay.hpp), then to her door.
 	for leg in [ACT_BAY_WEST, ACT_BAY_EAST, ACT_TOOLBOX_DOOR]:
 		if not await _act_creep_to(device, leg, 0.2, 14.0, 0.5):
@@ -480,11 +533,24 @@ func _act_pest_unseen(device: int) -> bool:
 			moved = Vector2(box.x, box.z).distance_to(ACT_TOOLBOX_DOOR) > 2.0
 		seen["carried"] = bool(seen["carried"]) or holding or moved
 		return int(m["unrigs"]) >= 1 and int(m["state"]) == MATRON_STATE_GUARDING, 150.0, "pest_unseen")
+	if get_tree().process_frame.is_connected(_act_sample_prop):
+		get_tree().process_frame.disconnect(_act_sample_prop)
 	if not done:
 		return _fail("she never stood guard having undone the cage's rope (state %d, unrigs %d)" % [
 			int(_matron_state()["state"]), int(_matron_state()["unrigs"])])
 	if not bool(seen["carried"]) or int(_matron_state()["takes"]) < 1:
 		return _fail("a pest, she never took the toolbox from her door (takes %d)" % int(_matron_state()["takes"]))
+	if int(_act_prop_seen["samples"]) < 3 or float(_act_prop_seen["worst_hand_m"]) > 0.05:
+		print("SCRAPERX_PROP_DIAG holding_frames=%d visible_frames=%d attached_frames=%d other_carry_frames=%d final_carry=%d final_takes=%d final_prop_attached=%s final_prop_error_m=%.3f" % [
+			int(_act_prop_seen["holding_frames"]), int(_act_prop_seen["visible_frames"]),
+			int(_act_prop_seen["attached_frames"]), int(_act_prop_seen["other_carry_frames"]),
+			int(_matron_state()["carrying"]), int(_matron_state()["takes"]),
+			str(_main._matron_view.prop_attached), float(_main._matron_view.prop_hand_error_m)])
+		print("SCRAPERX_PROP_WORST n=%d error_m=%.3f %s" % [
+			int(_act_prop_seen.get("worst_frame", 0)), float(_act_prop_seen["worst_hand_m"]),
+			String(_act_prop_seen.get("worst_geometry", "no rendered carry contact"))])
+		return _fail("her drawn wrist missed the real toolbox handle: samples %d, worst %.3f m (limit 0.05 m)" % [
+			int(_act_prop_seen["samples"]), float(_act_prop_seen["worst_hand_m"])])
 	if int(_native().get_well_a_rope_end_entity_id()) == WELL_A_CAGE_ENTITY:
 		return _fail("her unrigging left the rope's end on the cage's eye")
 	if int(_matron_state()["stage"]) != STAGE_PEST or int(_native().get_death_count()) != 0:
