@@ -498,6 +498,7 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
         const float gap = traversal_entry_offset_.Length();
         traversal_entry_offset_ =
             gap > pull ? traversal_entry_offset_ * ((gap - pull) / gap) : JPH::Vec3::sZero();
+        const JPH::RVec3 previous_desired = traversal_desired_;
         traversal_desired_ = from_support_local(bodies, traversal_body_, traversal_local_hold_) +
                              traversal_entry_offset_;
         // Ask for the next point through force, never by replacing velocity.
@@ -535,9 +536,15 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
                  4.0F * (player_v - support_v - slide_v) / kClimbTrackSeconds -
                  physics_system_.GetGravity());
         } else {
+            // The hold advances at the commanded climb speed. Damping toward
+            // a stationary support instead of that moving hold leaves the
+            // climber behind, even on an uninterrupted ordinary ascent.
+            // Use the hold's measured per-tick velocity, not an extra speed
+            // allowance: the same finite grip still has to supply the force.
+            const JPH::Vec3 hold_v = JPH::Vec3(traversal_desired_ - previous_desired) / delta_seconds;
             climb_grip_force_ = mass *
                 ((target_v - player_v) / kClimbTrackSeconds -
-                 (player_v - support_v) / kClimbTrackSeconds -
+                 (player_v - hold_v) / kClimbTrackSeconds -
                  physics_system_.GetGravity());
         }
         const float capacity = kClimbGripPerHandN * (arms_lost() == 2 ? 0.0F : one_arm() ? 1.0F : 2.0F);
