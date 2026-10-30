@@ -512,23 +512,19 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 	_reach(s, want, 1.0, "hold_" + s)
 
 
-# Last contact correction for the constrained toolbox. The two-bone reach
-# leaves a transient gap when the elbow's required rotation is rate-limited.
-# The wrist joint itself follows the physical handle in skeleton space;
-# govern() applies the same positional speed ceiling as every other bone.
-# This changes neither the native constraint nor any joint or stretch limit.
-func _prop_wrist_contact(s: String, at_world: Vector3) -> void:
-	var wrist := "wr_" + s
-	var point: Vector3 = skel.global_transform.affine_inverse() * at_world
-	var delta := point - _gpos(wrist)
-	if delta.length() > 0.02:
-		_shift_bone_global(wrist, delta)
-
-
 # `held`: her holds as the view draws them, eased onto each new one (the
 # view's _ease_hands); without it, the native's own holds.
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
 	var prop_intent := int(data.get("carrying", 0)) != 0 or int(data.get("stock_seeking", 0)) != 0
+	var carrying := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+	# Preserve the preceding frame's governed wrist positions before govern()
+	# updates them. The contact correction must not spend a second motion budget.
+	var wrist_before := {}
+	if carrying:
+		for side in ["r", "l"]:
+			var idx: int = _governed_bones.find(int(bone_idx["wr_" + side]))
+			if idx >= 0 and idx < _govern_pos.size():
+				wrist_before[side] = _govern_pos[idx]
 	if prop_intent and not _prop_arm_pose.is_empty() and not bool(view.fresh_frame):
 		for bone in PROP_ARM_JOINTS:
 			var i: int = bone_idx[bone]
@@ -542,11 +538,51 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 			skel.set_bone_pose_position(i, last.move_toward(nominal, cap))
 	_contact(data, falling, held)
 	govern()
+	# Only the physical constraint owns attachment. The native handle is the
+	# contact target, not a visual approximation. Finish the wrists AFTER the
+	# joint governor, but clamp each wrist to its original per-frame position
+	# budget from the saved previous pose. No second budget is added.
+	if carrying and wrist_before.has("r"):
+		var handle: Vector3 = data["stock_handle"]
+		var size: Vector3 = data.get("stock_size", Vector3.ZERO)
+		var two_hands := maxf(size.x, size.z) >= 0.38
+		var across := Vector3.ZERO
+		if two_hands:
+			var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY)
+			across = (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1)
+		_finish_prop_wrist("r", handle + across, wrist_before["r"])
+		if two_hands and wrist_before.has("l"):
+			_finish_prop_wrist("l", handle - across, wrist_before["l"])
 	_prop_arm_pose.clear()
 	if prop_intent:
 		for bone in PROP_ARM_JOINTS:
 			var i: int = bone_idx[bone]
 			_prop_arm_pose[bone] = [skel.get_bone_pose_rotation(i), skel.get_bone_pose_position(i)]
+
+
+# An actual grasp's terminal wrist contact, corrected only within the
+# existing per-frame GOVERN_M_S budget. The underlying arm's two-bone IK
+# and physics handle remain authoritative; only the drawn end joint shifts.
+func _finish_prop_wrist(side: String, at_world: Vector3, prior: Vector3) -> void:
+	var bone := "wr_" + side
+	var id: int = bone_idx[bone]
+	var idx: int = _governed_bones.find(id)
+	if idx < 0:
+		return
+	var target: Vector3 = skel.global_transform.affine_inverse() * at_world
+	var offset: Vector3 = target - _gpos(bone)
+	if offset.length() <= 0.02:
+		return
+	var parent: int = skel.get_bone_parent(id)
+	var parent_basis: Basis = skel.get_bone_global_pose(parent).basis if parent >= 0 else Basis.IDENTITY
+	var desired: Vector3 = skel.get_bone_pose_position(id) + parent_basis.inverse() * offset
+	var speed: float = GOVERN_BURST_M_S if bool(view.burst_active) else GOVERN_M_S
+	var limit: float = speed * maxf(float(view._dt), 0.0)
+	var placed: Vector3 = prior + (desired - prior).limit_length(limit)
+	skel.set_bone_pose_position(id, placed)
+	_govern_pos[idx] = placed
+	if placed.distance_to(desired) > 0.0001:
+		governed += 1
 
 
 # Every bone of her body (not her hair, eyes or fingers) turned this frame
@@ -745,13 +781,6 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 			hold_reach("r", handle + across, 1.0)
 			if two_hands:
 				hold_reach("l", handle - across, 1.0)
-			# Her hands may complete the IK solve more slowly than the
-			# constrained piece moves; keep the real contact on the wrists,
-			# with the existing 3 m/s positional ceiling enforced by govern.
-			if carrying:
-				_prop_wrist_contact("r", handle + across)
-				if two_hands:
-					_prop_wrist_contact("l", handle - across)
 	# Her hand on the climber's ankle, and in the rip her other on his arm
 	# (the view keeps the last of each while her hand comes off it).
 	if float(view._w_hold) > 0.001:
