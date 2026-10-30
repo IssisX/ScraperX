@@ -211,6 +211,17 @@ void Matron::step_stance(const float dt) {
         stance_ = Stance::Down;
     }
     if (g_shape_audit_on) {
+        const RVec3 at = bodies.GetPosition(body_);
+        // A placement puts her somewhere. Physics does not move her a metre
+        // in one tick (kTunnelM is 0.15 m; a metre is a test's SetPosition).
+        // The static bodies she already overlaps there are the setup. A later
+        // walk into other steel is not.
+        const float jumped = have_shape_pos_ ? float((at - shape_pos_).Length()) : 1.0e9F;
+        if (!have_shape_pos_ || jumped > 1.0F) {
+            note_setup_overlaps();
+        }
+        shape_pos_ = at;
+        have_shape_pos_ = true;
         g_shape_audit.upkeep_s +=
             std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
         ++g_shape_audit.ticks;
@@ -218,7 +229,11 @@ void Matron::step_stance(const float dt) {
         const float depth = steel_depth();
         if (on_planning_shape()) {
             // Not yet on a stance shape (none has fitted where she was put):
-            // her old capsule, counted apart.
+            // her old capsule, counted apart. Clear of steel here ends the
+            // placement's exemption too.
+            if (depth <= kInsideSteelM) {
+                setup_live_ = false;
+            }
             ++g_shape_audit.planning_ticks;
             g_shape_audit.planning_worst_m = std::max(g_shape_audit.planning_worst_m, depth);
             steel_ticks_ = 0;
@@ -226,26 +241,23 @@ void Matron::step_stance(const float dt) {
                 std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
             return;
         }
-        if (!placed_by_test(depth)) {
-            g_shape_audit.worst_depth_m = std::max(g_shape_audit.worst_depth_m, depth);
-        }
         float &worst = g_shape_audit.worst_depth_by_stance[static_cast<std::size_t>(stance_)];
         worst = std::max(worst, depth);
-        // Steel her old capsule would be as deep in where she is (a test's
-        // pole put through her, a blow's stock against her) is where she was
-        // put, not where her shape took her: counted apart.
-        const bool placed = depth > kInsideSteelM && steel_depth(shape_.GetPtr()) >= depth - 0.005F;
-        if (placed) {
+        // Clear of steel ends the placement's exemption. Until then, only the
+        // bodies recorded at that placement, and no deeper, are put there.
+        if (depth <= kInsideSteelM) {
+            setup_live_ = false;
+            steel_ticks_ = 0;
+        } else if (placed_by_test(depth)) {
             ++g_shape_audit.placed_ticks;
             g_shape_audit.placed_worst_m = std::max(g_shape_audit.placed_worst_m, depth);
             steel_ticks_ = 0;
-        } else if (depth > kInsideSteelM) {
+        } else {
+            g_shape_audit.worst_depth_m = std::max(g_shape_audit.worst_depth_m, depth);
             ++g_shape_audit.inside_steel;
             if (++steel_ticks_ > kInsideSteelTicks) {
                 ++g_shape_audit.sitting;
             }
-        } else {
-            steel_ticks_ = 0;
         }
         g_shape_audit.query_s +=
             std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
@@ -254,10 +266,6 @@ void Matron::step_stance(const float dt) {
 
 // A taller capsule's room: free of everything but her own body (sensors
 // aside), resting on a floor allowed.
-bool Matron::placed_by_test(const float depth) const {
-    return depth > kInsideSteelM && steel_depth(shape_.GetPtr()) >= depth - 0.005F;
-}
-
 bool Matron::stance_fits(const Shape *shape, const RVec3 at) const {
     AllHitCollisionCollector<CollideShapeCollector> hits;
     CollideShapeSettings settings;
@@ -285,6 +293,104 @@ bool Matron::stance_fits(const Shape *shape, const RVec3 at) const {
 bool Matron::on_planning_shape() const {
     const RefConst<Shape> have = physics_.GetBodyInterface().GetShape(body_);
     return have.GetPtr() == shape_.GetPtr();
+}
+
+// Static bodies her shape penetrates past kInsideSteelM. Same filters as
+// steel_depth: what she collides with, sensors and moving bodies aside.
+int Matron::collect_steel(const Shape *as, SetupOverlap *out, const int cap) const {
+    if (out == nullptr || cap <= 0) {
+        return 0;
+    }
+    const BodyLockRead her(physics_.GetBodyLockInterface(), body_);
+    if (!her.Succeeded()) {
+        return 0;
+    }
+    const Body &body = her.GetBody();
+    AllHitCollisionCollector<CollideShapeCollector> hits;
+    CollideShapeSettings settings;
+    settings.mMaxSeparationDistance = 0.0F;
+    IgnoreMultipleBodiesFilter not_us;
+    not_us.Reserve(2);
+    not_us.IgnoreBody(body_);
+    not_us.IgnoreBody(player_);
+    const ObjectLayer layer = body.GetObjectLayer();
+    const Shape *shape = as != nullptr ? as : body.GetShape();
+    physics_.GetNarrowPhaseQuery().CollideShape(shape, Vec3::sReplicate(1.0F),
+                                                RMat44::sTranslation(body.GetPosition() + RVec3(shape->GetCenterOfMass())),
+                                                settings, body.GetPosition(), hits,
+                                                physics_.GetDefaultBroadPhaseLayerFilter(layer),
+                                                physics_.GetDefaultLayerFilter(layer), not_us);
+    int n = 0;
+    for (const CollideShapeResult &hit : hits.mHits) {
+        if (hit.mPenetrationDepth <= kInsideSteelM) {
+            continue;
+        }
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mBodyID2);
+        if (!lock.Succeeded() || lock.GetBody().IsSensor() || lock.GetBody().IsDynamic()) {
+            continue;
+        }
+        int slot = -1;
+        for (int i = 0; i < n; ++i) {
+            if (out[i].body == hit.mBodyID2) {
+                slot = i;
+                break;
+            }
+        }
+        if (slot >= 0) {
+            out[slot].depth = std::max(out[slot].depth, hit.mPenetrationDepth);
+            continue;
+        }
+        if (n < cap) {
+            out[n].body = hit.mBodyID2;
+            out[n].depth = hit.mPenetrationDepth;
+            ++n;
+            continue;
+        }
+        int shallow = 0;
+        for (int i = 1; i < n; ++i) {
+            if (out[i].depth < out[shallow].depth) {
+                shallow = i;
+            }
+        }
+        if (hit.mPenetrationDepth > out[shallow].depth) {
+            out[shallow].body = hit.mBodyID2;
+            out[shallow].depth = hit.mPenetrationDepth;
+        }
+    }
+    return n;
+}
+
+void Matron::note_setup_overlaps() {
+    setup_overlap_n_ = collect_steel(nullptr, setup_overlaps_.data(), static_cast<int>(setup_overlaps_.size()));
+    setup_live_ = setup_overlap_n_ > 0;
+}
+
+// True only while she is still in steel a placement recorded, and no deeper
+// than that placement measured. The old tall capsule is not the test: every
+// stance capsule sits inside it, so a walk into a wall used to look placed.
+bool Matron::placed_by_test(const float depth) const {
+    if (!setup_live_ || depth <= kInsideSteelM || setup_overlap_n_ == 0) {
+        return false;
+    }
+    SetupOverlap hits[16];
+    const int n = collect_steel(nullptr, hits, 16);
+    if (n == 0) {
+        return false;
+    }
+    for (int i = 0; i < n; ++i) {
+        bool known = false;
+        for (int k = 0; k < setup_overlap_n_; ++k) {
+            const SetupOverlap &was = setup_overlaps_[static_cast<std::size_t>(k)];
+            if (was.body == hits[i].body && hits[i].depth <= was.depth + 0.005F) {
+                known = true;
+                break;
+            }
+        }
+        if (!known) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // How deep her body is in the steel this tick: the deepest penetration of
@@ -324,8 +430,18 @@ float Matron::steel_depth(const Shape *as) const {
 
 void Matron::refresh_shape_view() {
     view_.shape_switches = stance_switches_;
+    // lie_down installs its own capsule (along the fall, or the short kneel).
+    // The upright stance is not that body.
+    if (lying_ && down_shape_ != nullptr) {
+        view_.stance = static_cast<std::uint8_t>(Stance::Down);
+        view_.shape_a = down_a_;
+        view_.shape_b = down_b_;
+        view_.shape_r = down_r_;
+        return;
+    }
     if (body_in_world_ && on_planning_shape()) {
         // The journey's tall capsule, not the stance one she is waiting to take.
+        view_.stance = static_cast<std::uint8_t>(stance_);
         view_.shape_a = {0.0F, -kHalfHeight, 0.0F};
         view_.shape_b = {0.0F, kHalfHeight, 0.0F};
         view_.shape_r = kRadius;

@@ -257,7 +257,7 @@ public:
         long inside_steel = 0;      // ticks her shape was deeper than kInsideSteelM in the steel
         long sitting = 0;           // ... past kInsideSteelTicks running: sitting in it
         float worst_depth_by_stance[kStanceCount] = {};
-        long placed_ticks = 0;      // ticks in steel her old capsule was as deep in there (put there, not taken)
+        long placed_ticks = 0;      // ticks in steel a placement put her in (those bodies, no deeper)
         float placed_worst_m = 0.0F;
         long planning_ticks = 0;    // ticks on her old capsule, no stance shape fitted yet (not audited)
         float planning_worst_m = 0.0F;
@@ -2179,6 +2179,11 @@ private:
     [[nodiscard]] bool on_planning_shape() const;
     [[nodiscard]] bool stance_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
     [[nodiscard]] float steel_depth(const JPH::Shape *as = nullptr) const;
+    // A placement (she was put somewhere, a jump of a metre or more, or the
+    // first tick) records the static bodies she already overlaps. Only those,
+    // and no deeper than that placement measured, count as put there. A walk
+    // into other steel does not.
+    void note_setup_overlaps();
     [[nodiscard]] bool placed_by_test(float depth) const;
     void refresh_shape_view();
     // Off an edge she will not go, staggering or sliding on the steel: her
@@ -2639,6 +2644,24 @@ private:
     bool lying_ = false;           // her shape is a lying (or kneeling) one
     bool kneeling_ = false;
     JPH::Ref<JPH::Shape> down_shape_;
+    // The capsule lie_down installed, relative to her middle: the view exports
+    // this, not the upright stance, while she is down.
+    JPH::Vec3 down_a_ = JPH::Vec3(0.0F, -0.75F, 0.0F);
+    JPH::Vec3 down_b_ = JPH::Vec3(0.0F, 0.75F, 0.0F);
+    float down_r_ = kRadius;
+    // Static bodies she overlapped at the last placement, for the steel audit.
+    struct SetupOverlap {
+        JPH::BodyID body;
+        float depth = 0.0F;
+    };
+    std::array<SetupOverlap, 8> setup_overlaps_{};
+    int setup_overlap_n_ = 0;
+    bool setup_live_ = false;          // still in that placement's steel; clear of it ends the exemption
+    bool have_shape_pos_ = false;
+    JPH::RVec3 shape_pos_ = JPH::RVec3::sZero();
+    // Static penetrations of `shape` (null: the shape she has) past kInsideSteelM,
+    // one entry per body, the deepest. Returns how many were written, at most `cap`.
+    [[nodiscard]] int collect_steel(const JPH::Shape *shape, SetupOverlap *out, int cap) const;
     Stance stance_ = Stance::Upright;
     Stance stance_want_ = Stance::Upright;
     float stance_want_s_ = 0.0F;

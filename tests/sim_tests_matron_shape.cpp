@@ -17,11 +17,13 @@
 //    upkeep audited (Matron::audit_shapes, on from main); at exit her stance
 //    shape (or her down shape) may never have been deeper than Matron::kInsideSteelM in steel she
 //    collides with for more than Matron::kInsideSteelTicks ticks running, nor
-//    deeper than Matron::kTunnelM in any tick (shape_audit_at_exit), where
-//    her old capsule would not be as deep (steel a test's setup put her in,
-//    the routecraft exam's poles through her start, is printed apart). Ticks
-//    still on her old capsule (a test put her where no stance shape fits,
-//    the routecraft exam's poles through her start) are printed apart. Every matron group checks it for its own runs:
+//    deeper than Matron::kTunnelM in any tick (shape_audit_at_exit). Steel a
+//    placement put her in (a jump of a metre or more, the bodies she already
+//    overlapped there, no deeper, until she is clear of them) is printed
+//    apart. A walk into other steel is not: the old tall capsule is not the
+//    test, because every stance capsule sits inside it. Ticks still on her
+//    old capsule (none of her stance shapes fitted where she was put) are
+//    printed apart. Every matron group checks it for its own runs:
 //    her walk, her hunt low, her ladders, pipe, holds and fatality.
 
 #include "sim_tests.hpp"
@@ -182,8 +184,7 @@ void shape_audit_at_exit() {
                 static_cast<double>(a.worst_depth_by_stance[4]), static_cast<double>(a.worst_depth_by_stance[5]),
                 static_cast<double>(a.worst_depth_by_stance[6]),
                 a.inside_steel, static_cast<double>(Matron::kInsideSteelM), a.sitting == 0 ? "yes" : "no");
-    std::printf("  matron shape: %ld ticks in steel her old capsule was as deep in there (put there by a test's "
-                "setup, not by her shape; deepest %.3f m)\n",
+    std::printf("  matron shape: %ld ticks in steel a placement put her in (those bodies, no deeper; deepest %.3f m)\n",
                 a.placed_ticks, static_cast<double>(a.placed_worst_m));
     std::printf("  matron shape: %ld ticks still on her old capsule where no stance shape fitted (deepest %.3f m in the "
                 "steel there: where a test put her)\n",
