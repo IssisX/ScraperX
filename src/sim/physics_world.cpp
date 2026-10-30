@@ -708,12 +708,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         const JPH::RVec3 at = kit_->body_center_of_mass(well_.a_cage);
         const float loudness =
             kWellMachineFullLoudness * std::min(1.0F, well_speed / kWellMachineFullMps);
-        matron_->hear(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
-                      static_cast<float>(at.GetZ()), loudness);
+        matron_->hear_machine(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
+                              static_cast<float>(at.GetZ()), loudness);
     }
     for (const YardCrane::Noise &noise : yard_crane_->noises()) {
         if (noise.loudness > 0.0F) {
-            matron_->hear(noise.x, noise.y, noise.z, noise.loudness);
+            matron_->hear_machine(noise.x, noise.y, noise.z, noise.loudness);
         }
     }
     // Her ways out to guard: Stage A's cage, while it is down at her deck;
