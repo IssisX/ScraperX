@@ -4,6 +4,7 @@
 #include "sim/physics_world.hpp"
 #include "sim/twin_tower.hpp"
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <iostream>
 
 namespace scraperx::sim::detail {
 
@@ -752,6 +753,30 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     matron_->pre_step(delta_seconds,
                       Stimulus(player_at, std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
                                                    static_cast<float>(commands.room_loudness))));
+    {
+        const Matron::View &mv = matron_->view();
+        if (mv.released && mv.y > 175.0F && mv.y < 179.5F &&
+            mv.x > -16.0F && mv.x < 10.0F && mv.z > -134.0F && mv.z < -126.0F) {
+            std::cerr << "PR48_VIEW state=" << static_cast<int>(mv.state)
+                      << " pos=" << mv.x << "," << mv.y << "," << mv.z
+                      << " cling=" << mv.clinging
+                      << " lead=" << mv.lead_x << "," << mv.lead_z
+                      << " lead_floor=" << mv.lead_floor_y
+                      << " lead_age=" << mv.lead_age_s
+                      << " sense=" << static_cast<int>(mv.lead_sense)
+                      << " valid=" << mv.lead_valid
+                      << " fooled=" << mv.fooled
+                      << " wary=" << mv.wary
+                      << " rage=" << mv.rage
+                      << " stage=" << static_cast<int>(mv.stage)
+                      << " turn=" << static_cast<int>(mv.turn)
+                      << " turn_s=" << mv.turn_s
+                      << " stalking=" << mv.stalking
+                      << " sees=" << mv.sees_player
+                      << " stalk_attacks=" << mv.stalk_attacks
+                      << "\n";
+        }
+    }
     grab_drive(bodies, delta_seconds);
     strike_step(bodies, commands, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
