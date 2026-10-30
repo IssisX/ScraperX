@@ -546,6 +546,18 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
                 ((target_v - player_v) / kClimbTrackSeconds -
                  (player_v - hold_v) / kClimbTrackSeconds -
                  physics_system_.GetGravity());
+            // With one hand the force cap saturates during the initial haul.
+            // The accumulated position error can then drive the body faster
+            // than the hold after it catches up. Brake only that excess speed
+            // through the same finite grip force, never by setting velocity.
+            if (one_arm()) {
+                const JPH::Vec3 commanded = hold_v - support_v;
+                if (!commanded.IsNearZero()) {
+                    const JPH::Vec3 direction = commanded.Normalized();
+                    const float excess_mps = std::max(0.0F, (player_v - hold_v).Dot(direction));
+                    climb_grip_force_ -= direction * (2.0F * mass * excess_mps / kClimbTrackSeconds);
+                }
+            }
         }
         const float capacity = kClimbGripPerHandN * (arms_lost() == 2 ? 0.0F : one_arm() ? 1.0F : 2.0F);
         const float demand = climb_grip_force_.Length();
