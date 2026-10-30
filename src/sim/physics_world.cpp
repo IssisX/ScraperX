@@ -690,24 +690,21 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
     }
-    // Stage A is a passive gravity counterweight pair, not a powered drive.
-    // It makes running noise only when its physical bodies actually move: a
-    // pulled handle or an open catch is not itself a sound source. CHOSEN:
+    // Stage A is one passive gravity-counterweight machine, not two
+    // independent things to investigate. Its player-facing cage/guide is the
+    // acoustic source; the paired skip's motion is the same mechanism and
+    // must not create a second false lead while she is riding the cage.
+    // A pulled handle or open catch alone is still silent. CHOSEN:
     // full-speed guide/rope noise is 0.35, the yard crane's unloaded-hoist
-    // baseline, and scales down with actual speed. That keeps a sealed Matron
-    // locker outside its ordinary running reach while an awake Matron nearby
-    // can hear it; native remains the authority for that consequence.
+    // baseline, and scales down with the cage's actual speed.
     constexpr float kWellMachineMoveMps = 0.1F;
     constexpr float kWellMachineFullMps = 2.5F;
     constexpr float kWellMachineFullLoudness = 0.35F;
-    for (const kit::BodyIndex body : {well_.a_cage, well_.a_skip}) {
-        const float speed = kit_->body_velocity(body).Length();
-        if (speed < kWellMachineMoveMps) {
-            continue;
-        }
-        const JPH::RVec3 at = kit_->body_center_of_mass(body);
+    const float well_speed = kit_->body_velocity(well_.a_cage).Length();
+    if (well_speed >= kWellMachineMoveMps) {
+        const JPH::RVec3 at = kit_->body_center_of_mass(well_.a_cage);
         const float loudness =
-            kWellMachineFullLoudness * std::min(1.0F, speed / kWellMachineFullMps);
+            kWellMachineFullLoudness * std::min(1.0F, well_speed / kWellMachineFullMps);
         matron_->hear(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
                       static_cast<float>(at.GetZ()), loudness);
     }
