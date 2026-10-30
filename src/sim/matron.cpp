@@ -822,6 +822,7 @@ void Matron::pick_patrol(const float ax, const float az) {
             continue;
         }
         patrol_ = static_cast<int>(loop);
+        patrol_dir_ = 1;
         float best = std::numeric_limits<float>::max();
         for (std::size_t i = 0; i < nodes.size(); ++i) {
             const Node &node = level.nodes[static_cast<std::size_t>(nodes[i])];
@@ -832,6 +833,33 @@ void Matron::pick_patrol(const float ax, const float az) {
             }
         }
         return;
+    }
+}
+
+void Matron::patrol_away(const float ax, const float az, const float px, const float pz) {
+    pick_patrol(ax, az);
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    if (patrol_ < 0 || static_cast<std::size_t>(patrol_) >= level.patrols.size()) {
+        return;
+    }
+    const std::vector<int> &nodes = level.patrols[static_cast<std::size_t>(patrol_)];
+    const int n = static_cast<int>(nodes.size());
+    if (n < 2 || patrol_node_ < 0 || patrol_node_ >= n) {
+        return;
+    }
+    const auto from_him = [&](const int k) {
+        const int idx = (k % n + n) % n;
+        const Node &node = level.nodes[static_cast<std::size_t>(nodes[static_cast<std::size_t>(idx)])];
+        return distance_xz(px, pz, node.x, node.z);
+    };
+    // The neighbor farther from him, and that way on round the loop.
+    const int i = patrol_node_;
+    if (from_him(i - 1) > from_him(i + 1)) {
+        patrol_dir_ = -1;
+        patrol_node_ = (i - 1 + n) % n;
+    } else {
+        patrol_dir_ = 1;
+        patrol_node_ = (i + 1) % n;
     }
 }
 
@@ -2222,6 +2250,12 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
     shove_cooldown_s_ = std::max(0.0F, shove_cooldown_s_ - dt);
     grab_cooldown_s_ = std::max(0.0F, grab_cooldown_s_ - dt);
     calm_s_ = std::max(0.0F, calm_s_ - dt);
+    if (back_off_) {
+        back_off_s_ = std::max(0.0F, back_off_s_ - dt);
+        if (back_off_s_ <= 0.0F) {
+            back_off_ = false;
+        }
+    }
     throw_cooldown_s_ = std::max(0.0F, throw_cooldown_s_ - dt);
     fetch_refused_s_ = std::max(0.0F, fetch_refused_s_ - dt);
     if (fetch_refused_s_ <= 0.0F) {
@@ -2480,7 +2514,10 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
             // noise's height is not a floor she can see.
             take_lead(px, pz, float(player.GetY()) - 0.9F, heard ? loudness : 0.3F, true);
             wary_ = false;
-            state_ = State::Hunting;
+            // Leaving him: she does not turn a look into a hunt.
+            if (!back_off_) {
+                state_ = State::Hunting;
+            }
         } else if (crash_heard || heard) {
             // The louder sound at her ear: a crash, or the player.
             const bool crash_first =
@@ -2511,7 +2548,9 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
                 take_lead(sx, sz, sfloor, loud, false);
                 wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
-                state_ = State::Hunting;
+                if (!back_off_) {
+                    state_ = State::Hunting;
+                }
             }
         }
         // A guess where the player is going: seen or heard riding a line, to
@@ -3078,7 +3117,8 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         const std::vector<int> &loop = here.patrols[static_cast<std::size_t>(patrol_)];
         const Node &next = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         if (distance_xz(ax, az, next.x, next.z) < 1.5F) {
-            patrol_node_ = (patrol_node_ + 1) % static_cast<int>(loop.size());
+            const int n = static_cast<int>(loop.size());
+            patrol_node_ = (patrol_node_ + patrol_dir_ + n) % n;
         }
         const Node &goal = here.nodes[static_cast<std::size_t>(loop[static_cast<std::size_t>(patrol_node_)])];
         route_toward(ax, az, goal.x, goal.z, on_catwalk, wx, wz);
@@ -3112,7 +3152,11 @@ void Matron::pre_step(const float dt, const RVec3 player, const float loudness) 
         turn_ = Turn::None;
         if (body_in_world_) {
             const RVec3 here = physics_.GetBodyInterface().GetPosition(body_);
-            pick_patrol(float(here.GetX()), float(here.GetZ()));
+            if (back_off_) {
+                patrol_away(float(here.GetX()), float(here.GetZ()), float(player.GetX()), float(player.GetZ()));
+            } else {
+                pick_patrol(float(here.GetX()), float(here.GetZ()));
+            }
         }
     }
     step_rage(dt);
@@ -3527,6 +3571,9 @@ void Matron::restore(const Saved &saved) {
         hold_s_ = 0.0F;
         grab_cooldown_s_ = 0.0F;
         calm_s_ = 0.0F;
+        back_off_ = false;
+        back_off_s_ = 0.0F;
+        patrol_dir_ = 1;
         grip_on_ = false;
         grip_was_on_ = false;
         player_braced_ = false;

@@ -500,6 +500,7 @@ int Simulation::PhysicsWorld::active_forklift() const noexcept {
 void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
+    her_force_on_him_n_ = 0.0F;
     StepCommands commands = requested;
     // A punch under way owns his hands (physics_world_strike.cpp).
     strike_owns_hands(commands);
@@ -1371,6 +1372,10 @@ void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JP
 void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JPH::Vec3 direction) noexcept {
     const JPH::Vec3 velocity = direction * Matron::kShoveMps + JPH::Vec3(0.0F, Matron::kShoveUpMps, 0.0F);
     bodies.SetLinearVelocity(player_id_, velocity);
+    // The velocity write is the old shove. What it does to him, as a force
+    // over this tick, is what a check of "no force on him" has to see.
+    const float kick = velocity.Length() * kPlayerMassKg * static_cast<float>(Simulation::kTickRateHz);
+    her_force_on_him_n_ = std::max(her_force_on_him_n_, kick);
     ++stumble_count_;
     landing_response_ = LandingResponse::Stumble;
     landing_loss_ = 0.6 * kLandingMaxLoss;

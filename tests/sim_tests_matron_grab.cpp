@@ -1,12 +1,13 @@
 // Her hold (sim/matron_hold.cpp, sim/physics_world_grab.cpp): at every stage,
-// her hand on a player is no death. She takes an ankle, carries them upside
-// down to the shaft's rail, holds them out over the drop, tears an arm off,
-// and sets them back on the deck, never letting go over open air. Her grip
-// is finite: a still body hangs; a thrashing one tears free (once she has its
-// wrist, leaving the arm in her other hand). Nothing teleports. Caught, a
-// blow that is not his own frees nobody; his own, before the rip, does. Her
-// second catch is the fatality (run_matron_fatality). These meet her fully
-// changed, as written; her stage changes none of it.
+// her hand on a player is no death. She takes an ankle, and once his body is
+// up her pull tears an arm off (4 to 6 s from her fingers closing). She sets
+// him back on the deck, never with his body past an edge, and for 30 s after
+// the tear or after his blow she leaves him. Her grip is finite: a still body
+// hangs; a thrashing one tears free (once she has its wrist, leaving the arm
+// in her other hand). Nothing teleports. Caught, a blow that is not his own
+// frees nobody; his own, before the rip, does. Her second catch is the
+// fatality (run_matron_fatality). These meet her fully changed, as written;
+// her stage changes none of it.
 
 #include "sim_tests.hpp"
 
@@ -87,9 +88,35 @@ void meet_her(Simulation &s, const double x, const double z) {
 double up_y(const scraperx::sim::Snapshot &p) {
     // The body's up (its local Y) in the world, from its rotation.
     const double x = p.player_rot_x, y = p.player_rot_y, z = p.player_rot_z, w = p.player_rot_w;
-    return 1.0 - 2.0 * (x * x + z * z);
     (void)y;
     (void)w;
+    return 1.0 - 2.0 * (x * x + z * z);
+}
+
+// His middle and both ends of his capsule have her deck under them. The
+// cylinder is 0.55 m; the 0.35 m radius is what debug_support_y does not add,
+// so the ends are checked a radius inside the skin and the support depth
+// still has to find deck.
+bool body_on_her_deck(Simulation &s, const scraperx::sim::Snapshot &p) {
+    const double x = p.player_rot_x, y = p.player_rot_y, z = p.player_rot_z, w = p.player_rot_w;
+    const double ax = 2.0 * (x * y - w * z);
+    const double ay = 1.0 - 2.0 * (x * x + z * z);
+    const double az = 2.0 * (y * z + w * x);
+    constexpr double kCylinderM = 0.55;
+    const scraperx::sim::Vector3 c = p.player_position;
+    const scraperx::sim::Vector3 pts[] = {
+        c,
+        {c.x + ax * kCylinderM, c.y, c.z + az * kCylinderM},
+        {c.x - ax * kCylinderM, c.y, c.z - az * kCylinderM},
+    };
+    (void)ay;
+    for (const scraperx::sim::Vector3 &q : pts) {
+        const double under = s.debug_support_y(q, 2.4);
+        if (!(under > 153.4 && under < 154.6)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 struct HoldRun {
@@ -279,12 +306,14 @@ void run_matron_grab() {
             bool was_held = false;
             std::uint64_t lets_go = s.snapshot().grip_release_count;
             double let_go_x = 1.0e9;
+            bool body_inside = true;
             const HoldRun r = hold_run(s, 60.0, [&](int, const scraperx::sim::MatronSnapshot &) {
                 s.debug_set_matron_stage(1);
                 (void)s.set_move_input(0.0, 0.0);
                 const auto q = s.snapshot();
                 if (was_held && !q.held_by_matron && q.grip_release_count > lets_go) {
                     let_go_x = std::min(let_go_x, q.player_position.x);
+                    body_inside = body_inside && body_on_her_deck(s, q);
                 }
                 lets_go = q.grip_release_count;
                 was_held = q.held_by_matron;
@@ -297,6 +326,7 @@ void run_matron_grab() {
             // The east band's side over the shaft (its rail) is at x 17: her deck is past it, east.
             require(r.m.releases == 0 && let_go_x > 17.0 && let_go_x < 1.0e8,
                     "matron rail: an ordinary hold sets him down over her deck, never lets go over open air");
+            require(body_inside, "matron rail: the let-go does not leave his body past a deck's outer edge");
             require(r.grabbed && r.ended && r.p.arm_tear_count == 1 && r.p.one_arm,
                     "matron rail: a still body caught by the rail loses one arm, wherever her heave goes");
             require(r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
@@ -318,6 +348,10 @@ void run_matron_grab() {
         Simulation s(InitialSpawn::Deck154);
         at_the_rail(s, -159.5);
         s.debug_matron_hold(0, 3.0);
+        // The rip normally starts as soon as she has him. This check is the
+        // one where he is already out over the drop when it begins, so the
+        // rip waits until his body is past the rail.
+        s.debug_matron_armplay(0);
         constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
         double snagged_at = -1.0;
         double torn_at = -1.0;
@@ -325,6 +359,9 @@ void run_matron_grab() {
         const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
             s.debug_set_matron_stage(1);
             (void)s.set_move_input(0.0, 0.0);
+            if (m.state == kDangle && s.snapshot().player_position.x < Matron::kShaftHalfM) {
+                s.debug_matron_armplay(-1);
+            }
             if (snagged_at < 0.0 && m.state == kArmPlay) {
                 s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN));
                 snagged_at = i / 90.0;
@@ -421,7 +458,7 @@ void run_matron_grab() {
         Simulation s(InitialSpawn::Deck154);
         at_the_rail(s, -159.5);
         s.debug_matron_hold(0, 3.0);
-        s.debug_matron_armplay(3);
+        s.debug_matron_armplay(0);
         constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
         const std::uint64_t deaths = s.snapshot().death_count;
         bool snagged = false;
@@ -432,6 +469,9 @@ void run_matron_grab() {
         for (int i = 0; i < 40 * 90; ++i) {
             s.debug_set_matron_stage(1);
             (void)s.set_move_input(0.0, 0.0);
+            if (s.matron_state().state == kDangle && s.snapshot().player_position.x < Matron::kShaftHalfM) {
+                s.debug_matron_armplay(3);
+            }
             if (!snagged && s.matron_state().state == kArmPlay) {
                 s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN));
                 snagged = true;
@@ -744,6 +784,83 @@ void run_matron_grab() {
                 "matron regrab: then they take him again");
         std::cout << "PASS scraperx_sim matron regrab: blocked " << Matron::kRegrabAfterTearS << " s, grabbed at "
                   << grabbed_at << " s\n";
+    }
+    // ---- fingers closing to the arm tearing, 4 to 6 s, at the act's rail and
+    //      two other catch spots. The length is her pull, not a clock ----
+    {
+        const auto rip_at = [](const char *name, const double x, const double z, const double hx, const double hz) {
+            Simulation s(InitialSpawn::Deck154);
+            caught_at(s, x, z, hx, hz);
+            const auto grabs0 = s.matron_state().grabs;
+            double fingers = -1.0;
+            double torn = -1.0;
+            for (int i = 0; i < 30 * 90 && torn < 0.0; ++i) {
+                s.debug_set_matron_stage(1);
+                (void)s.set_move_input(0.0, 0.0);
+                tick(s);
+                const auto m = s.matron_state();
+                const auto p = s.snapshot();
+                if (fingers < 0.0 && m.grabs > grabs0) {
+                    fingers = i / 90.0;
+                }
+                if (p.arm_tear_count > 0) {
+                    torn = i / 90.0;
+                }
+            }
+            const double took = torn - fingers;
+            std::cout << "  matron rip length " << name << ": fingers " << fingers << " s, tear " << torn
+                      << " s, took " << took << " s\n";
+            require(fingers >= 0.0 && torn > fingers && took >= 4.0 && took <= 6.0,
+                    "matron rip length: from her fingers closing to the arm tearing, 4 to 6 s");
+        };
+        rip_at("act rail", 18.0, -159.5, 18.3, -157.9);
+        rip_at("east band", 21.5, -145.0, 21.8, -143.4);
+        rip_at("north band", -12.0, -132.0, -10.4, -131.7);
+        std::cout << "PASS scraperx_sim matron rip length: 4 to 6 s at three catch spots\n";
+    }
+    // ---- the 30 s after an arm torn and him set down: no force on him, and
+    //      she ends farther from him than she started. Stage stays dangerous,
+    //      so a shove would count ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        at_the_rail(s, -159.5);
+        bool walked_off = false;
+        for (int i = 0; i < 80 * 90 && !walked_off; ++i) {
+            const int was = s.matron_state().state;
+            s.debug_set_matron_stage(1);
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            walked_off = was == kSpare && s.matron_state().state != kSpare;
+        }
+        require(walked_off && s.snapshot().arm_tear_count == 1 && !s.snapshot().held_by_matron,
+                "matron back off: an arm off, set down, and she walks off");
+        const auto m0 = s.matron_state();
+        const auto p0 = s.snapshot();
+        const double start =
+            std::hypot(m0.position.x - p0.player_position.x, m0.position.z - p0.player_position.z);
+        const auto shoves = m0.shoves;
+        const auto grabs = m0.grabs;
+        double peak_force = 0.0;
+        bool clean = true;
+        const int block = static_cast<int>(Matron::kRegrabAfterTearS * 90.0) - 5;
+        for (int i = 0; i < block; ++i) {
+            s.debug_set_matron_stage(1);
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            const auto m = s.matron_state();
+            const auto p = s.snapshot();
+            peak_force = std::max(peak_force, p.her_force_on_him_n);
+            clean = clean && m.shoves == shoves && !p.held_by_matron && m.grabs == grabs;
+        }
+        const auto m1 = s.matron_state();
+        const auto p1 = s.snapshot();
+        const double end = std::hypot(m1.position.x - p1.player_position.x, m1.position.z - p1.player_position.z);
+        std::cout << "  matron back off: " << start << " m to " << end << " m, peak force " << peak_force
+                  << " N, clean " << clean << "\n";
+        require(clean && peak_force == 0.0,
+                "matron back off: during the 30 s block her force on him is zero and she does not take him");
+        require(end > start + 0.5, "matron back off: she ends farther from him than she started");
+        std::cout << "PASS scraperx_sim matron back off: " << start << " m to " << end << " m\n";
     }
 }
 

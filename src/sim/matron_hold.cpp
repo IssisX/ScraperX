@@ -717,6 +717,13 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         break;
     }
     case State::Carry: {
+        // His body is up. An ordinary hold starts the pull now, unless a test
+        // is holding it (armplay_for_test_ == 0) until he is out over the
+        // drop. The tear is her pull reaching its impulse, not the dangle's
+        // hang. The fatality's carry is unchanged.
+        if (!fatal_hold_ && !armplay_done_ && hold_s_ > 0.05F && begin_armplay(State::Dangle)) {
+            break;
+        }
         const float off = xz(ax, az, rim_x_, rim_z_);
         if (off > kRimArriveM) {
             float wx = rim_x_;
@@ -922,11 +929,13 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         break;
     }
     case State::ArmPlay: {
+        // She walks to her spot (a re-pose moves that spot back, and her weight
+        // comes with it). Her hand lifts him. It does not reach further out:
+        // the dangle already did that, and doing it again during the pull
+        // threw him off the deck and yanked a snagged body free too soon.
         walk_toward(dt, rim_x_, rim_z_, std::min(0.8F, 3.0F * xz(ax, az, rim_x_, rim_z_)));
         yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
-        // The body hauled up in her fist, its arms to her other hand.
-        pose_hand(dt, RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()) + Vec3(rim_nx_, 0.0F, rim_nz_) * kHeaveOutM,
-                  0.6F * kHandSpeedMps);
+        pose_hand(dt, RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()), 0.6F * kHandSpeedMps);
         step_armplay(dt, player, at, feet);
         break;
     }
@@ -978,15 +987,24 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // lets go once her hand is there (a body hung against her short
             // of it). Whichever: only with her deck found close under his
             // body; not, she keeps hold and walks him on (spare_walk_).
-            const float rail_in = (rim_x_ + rim_nx_ * kRimStandM - float(player.GetX())) * rim_nx_ +
-                                  (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
-            const bool ready = !spare_walk_ && Vec3(down - hand_target_).Length() < 0.02F &&
-                               (spare_deck_ || rail_in > 0.5F) &&
-                               (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_));
-            if (ready && !deck_close_below(player, feet)) {
+            const bool lowered = player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_);
+            const bool ready = !spare_walk_ && Vec3(down - hand_target_).Length() < 0.02F && lowered;
+            // The whole of him over her deck. Past an edge, she walks him on
+            // toward her own feet (she is standing on it) and does not let go.
+            if (ready && !body_inside_deck(player, feet)) {
                 spare_walk_ = true;
-                spare_to_x_ = ax - rim_nx_ * 0.5F;
-                spare_to_z_ = az - rim_nz_ * 0.5F;
+                float dx = ax - float(player.GetX());
+                float dz = az - float(player.GetZ());
+                const float apart = std::hypot(dx, dz);
+                if (apart > 0.05F) {
+                    dx /= apart;
+                    dz /= apart;
+                } else {
+                    dx = -rim_nx_;
+                    dz = -rim_nz_;
+                }
+                spare_to_x_ = ax + dx * 0.5F;
+                spare_to_z_ = az + dz * 0.5F;
             } else if (ready) {
                 let_go_ = true;
                 let_go_push_ = Vec3::sZero();
@@ -1020,11 +1038,18 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             }
             pose_hand(dt, shoulder + to, 0.5F * kHandSpeedMps);
             if (hold_s_ >= kSpareSetSeconds) {
-                // She walks off; an arm torn this hold, her hands stay off
-                // him kRegrabAfterTearS.
-                calm_s_ = kSpareCalmSeconds;
-                grab_cooldown_s_ = std::max(kSpareCalmSeconds, hands_off_after_hold());
+                // She walks off. An arm torn this hold: the 30 s block, her
+                // patrol away from him, no force on him. end_hold picks the
+                // nearest node; the block then turns that the way that leaves him.
+                const bool torn = arm_tears_ != hold_tears_at_;
+                if (!torn) {
+                    calm_s_ = kSpareCalmSeconds;
+                    grab_cooldown_s_ = std::max(kSpareCalmSeconds, hands_off_after_hold());
+                }
                 end_hold(State::Shuffling);
+                if (torn) {
+                    begin_back_off(float(player.GetX()), float(player.GetZ()));
+                }
             }
         }
         break;
@@ -1043,14 +1068,57 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             over = (hold_s_ >= kFatalWatchS && watch_still_s_ >= kFatalStillS) || hold_s_ >= kFatalWatchMaxS;
         }
         if (over) {
-            take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
-            end_hold(State::Searching);
+            if (!fatal_dropped_ && arm_tears_ != hold_tears_at_) {
+                end_hold(State::Shuffling);
+                begin_back_off(float(player.GetX()), float(player.GetZ()));
+            } else {
+                take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
+                end_hold(State::Searching);
+            }
         }
         break;
     }
     default:
         break;
     }
+}
+
+bool Matron::body_inside_deck(const RVec3 player, const float feet) const {
+    // His capsule (cylinder 0.55 m, radius 0.35 m: half of him is 0.9 m).
+    // deck_close_below already casts a sphere of his radius, so the samples
+    // are his middle and the two ends of the cylinder. A body hung nearly
+    // straight down does not reach 0.9 m out to the side; only the lean does.
+    // A point past an edge has no deck under it.
+    const Quat rot = physics_.GetBodyInterface().GetRotation(player_);
+    const Vec3 axis = rot.RotateAxisY();
+    constexpr float kRadiusM = 0.35F;
+    constexpr float kCylinderM = kPlayerHalfM - kRadiusM;
+    const Vec3 end = axis * kCylinderM;
+    const RVec3 samples[] = {
+        player,
+        RVec3(player.GetX() + end.GetX(), player.GetY(), player.GetZ() + end.GetZ()),
+        RVec3(player.GetX() - end.GetX(), player.GetY(), player.GetZ() - end.GetZ()),
+    };
+    for (const RVec3 &sample : samples) {
+        if (!deck_close_below(sample, feet)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// The 30 s after an arm torn and him set down, or after his blow frees him.
+// No grab, no shove, and her patrol walked the way that leaves him.
+void Matron::begin_back_off(const float px, const float pz) noexcept {
+    back_off_ = true;
+    back_off_s_ = kRegrabAfterTearS;
+    calm_s_ = std::max(calm_s_, kRegrabAfterTearS);
+    grab_cooldown_s_ = std::max(grab_cooldown_s_, kRegrabAfterTearS);
+    if (!body_in_world_) {
+        return;
+    }
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    patrol_away(float(at.GetX()), float(at.GetZ()), px, pz);
 }
 
 // The dangle over: back up over the rail and set down on her deck (Spare),
@@ -1470,12 +1538,12 @@ void Matron::begin_reel(const RVec3 at, const RVec3 player) {
 void Matron::end_reel(const RVec3 player) {
     take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, true);
     // Freed: no fatality to show (its path, its edge, and the way out over
-    // its drop).
+    // its drop). She leaves him for the block, then hunts.
     fatal_path_ = FatalPath::None;
     fatal_edge_ = RVec3::sZero();
+    begin_back_off(float(player.GetX()), float(player.GetZ()));
     end_hold(State::Searching);
-    grab_cooldown_s_ = kRegrabAfterTearS;
-    resume_state_ = State::Searching;
+    resume_state_ = State::Shuffling;
     state_ = State::Staggering;
     stagger_s_ = kStaggerMinSeconds;
 }

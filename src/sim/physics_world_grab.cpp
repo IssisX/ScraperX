@@ -284,7 +284,7 @@ bool Simulation::PhysicsWorld::grab_pre_step(JPH::BodyInterface &bodies, StepCom
     return held;
 }
 
-void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const float /*dt*/) noexcept {
+void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const float dt) noexcept {
     matron_->set_player_braced(brace_ != nullptr);
     matron_->set_thrash(grip_ != nullptr ? thrash_ : 0.0F);
     const bool holding = matron_->holding();
@@ -296,7 +296,9 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         const bool let_go = matron_->take_let_go(push);
         tear_grip(false);
         if (let_go) {
-            bodies.AddImpulse(player_id_, push * kPlayerMassKg);
+            const JPH::Vec3 impulse = push * kPlayerMassKg;
+            bodies.AddImpulse(player_id_, impulse);
+            her_force_on_him_n_ = std::max(her_force_on_him_n_, impulse.Length() / std::max(dt, 1.0e-4F));
         }
         destroy_grab_constraint(hand_arm_);
         remove_and_destroy(bodies, hand_id_);
@@ -441,7 +443,9 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     if (matron_->take_let_go(push)) {
         // She lets go: the push is her arm's, at most kReleasePushMps.
         tear_grip(false);
-        bodies.AddImpulse(player_id_, push * kPlayerMassKg);
+        const JPH::Vec3 impulse = push * kPlayerMassKg;
+        bodies.AddImpulse(player_id_, impulse);
+        her_force_on_him_n_ = std::max(her_force_on_him_n_, impulse.Length() / std::max(dt, 1.0e-4F));
     }
 }
 
@@ -470,6 +474,12 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         }
     } else {
         grip_load_n_ = 0.0F;
+    }
+    if (grip_ != nullptr) {
+        her_force_on_him_n_ = std::max(her_force_on_him_n_, grip_load_n_);
+    }
+    if (wrist_ != nullptr) {
+        her_force_on_him_n_ = std::max(her_force_on_him_n_, wrist_load_n_);
     }
     if (snag_ != nullptr &&
         static_cast<JPH::PointConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition().Length() / std::max(dt, 1.0e-4F) >

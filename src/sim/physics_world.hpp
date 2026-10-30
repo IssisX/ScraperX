@@ -1068,6 +1068,9 @@ public:
     int last_severed_side_ = -1;
     float wrist_load_n_ = 0.0F;
     float wrist_strain_ns_ = 0.0F;
+    // Force she put on him this tick: her grip, her pull on the wrist, a
+    // let-go's impulse, or a shove. Zero when she is not touching him.
+    float her_force_on_him_n_ = 0.0F;
     float severed_arm_s_ = 0.0F;
     bool severed_arm_thrown_ = false;
     float severed_arm_thrown_y_ = 0.0F;

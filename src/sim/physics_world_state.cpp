@@ -822,6 +822,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
         }
         state_.wrist_load_n = wrist_load_n_;
         state_.wrist_strain_ns = wrist_strain_ns_;
+        state_.her_force_on_him_n = her_force_on_him_n_;
         state_.wrist_side = wrist_side_;
         state_.one_arm = one_arm();
         state_.claimed_by_matron = matron_->claimed();

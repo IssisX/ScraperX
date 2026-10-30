@@ -763,10 +763,9 @@ public:
     static constexpr float kSpareSetSeconds = 1.2F;   // the collar put straight
     static constexpr float kSpareCalmSeconds = 20.0F; // then she walks off, no hunt this long
     // After any arm torn off, set down alive (spared, or pulled out of her
-    // hand), her hands do not take him again for this long (the owner,
-    // 2026-10-28: after an arm tear she can't grab him again right away).
-    // Spared, she walks off first (kSpareCalmSeconds), then hunts him by
-    // sound; a touch meanwhile is her shove, short of fully changed.
+    // hand), or after his blow frees him, she leaves him for this long (the
+    // owner, 2026-10-28): no grab and no shove, and she walks her own patrol
+    // away from him. When it ends she hunts again.
     static constexpr float kRegrabAfterTearS = 30.0F;
     // His own blow landed in her hold before the rip (the owner, 2026-10-27:
     // it frees him; his punch's tag, player_blow_landed, however small the
@@ -885,38 +884,43 @@ public:
 
     // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): every
     // hold, at every stage (Cory, 2026-10-27: every time she catches you she
-    // rips an arm off, for sure), while the player has an arm: after the
-    // dangle (or where she stands, when she cannot get them to the rail), her
-    // other hand takes a wrist and pulls it away from the body, her pull
-    // rising from kArmPullStartN at kRipRampNps to kArmPullMaxN (the ankle
-    // hand then holds the pull and the weight: under its cap; she grips it
-    // hard, the strain counted only past kGripRipFloorN). She does not give
-    // it up: her hand not at the wrist in kArmReachSeconds, or the shoulder
-    // not torn kArmPullSeconds into the pull, she re-poses (arm_repose: a
-    // step of kArmReposeStepM back from the body, hauling it after her, her
-    // weight in it; out of reach, her hand for the nearer wrist again), up
-    // to kMaxArmReposes times; past that, the arm still not hers, she keeps
-    // the ankle and sets him down on her deck (Spare, deck only: her deck
-    // close under his body, not only under her hand; none, she walks him
-    // on along her lines), no arm off, so a body caught on steel never
-    // loops her. Once her other hand goes for his arm, no blow
-    // breaks it; once it has the wrist, nothing does: her ankle grip lost,
-    // the arm stays in that hand (the State comment). The shoulder tears
-    // (physics) at kArmTearNs of the wrist's load past kArmHoldN; the arm
-    // (kArmMassKg) is hers: lifted to her face, swung, thrown (kArmThrowMps)
-    // onto the deck behind her. The whole of it kArmPlaySeconds from the
-    // tear. The last arm gone, the run is hers (Claimed).
+    // rips an arm off, for sure), while the player has an arm. Once his body
+    // is up in her fist she takes a wrist and pulls (the dangle's hang is
+    // after the tear, not before it; a test may hold the rip until he is out
+    // over a drop): her pull rises from kArmPullStartN at kRipRampNps to kArmPullMaxN (the ankle hand then holds
+    // the pull and the weight: under its cap; she grips it hard, the strain
+    // counted only past kGripRipFloorN). She does not give it up: her hand not
+    // at the wrist in kArmReachSeconds, or the shoulder not torn kArmPullSeconds
+    // into the pull, she re-poses (arm_repose: a step of kArmReposeStepM back
+    // from the body, hauling it after her, her weight in it; out of reach, her
+    // hand for the nearer wrist again), up to kMaxArmReposes times; past that,
+    // the arm still not hers, she keeps the ankle and sets him down on her deck
+    // (Spare, deck only: the whole of his body over her deck, not only her
+    // hand; none, she walks him on toward her own feet), no arm off, so a
+    // body caught on steel never loops her. Once her other hand goes for his
+    // arm, no blow breaks it; once it has the wrist, nothing does: her ankle
+    // grip lost, the arm stays in that hand (the State comment). The shoulder
+    // tears (physics) at kArmTearNs of the wrist's load past kArmHoldN; the
+    // arm (kArmMassKg) is hers: lifted to her face, swung, thrown
+    // (kArmThrowMps) onto the deck behind her. The whole of the show is
+    // kArmPlaySeconds from the tear. The last arm gone, the run is hers
+    // (Claimed). From her fingers closing to the tear is 4 to 6 s, and that
+    // length is this pull reaching kArmTearNs, not a clock.
     static constexpr float kArmPullStartN = 1500.0F;
     static constexpr float kArmPullMaxN = 2600.0F;
     static constexpr float kGripRipFloorN = 3500.0F;
     static constexpr float kArmHoldN = 1500.0F;
-    static constexpr float kArmTearNs = 600.0F;
+    // Her pull, from kArmPullStartN up to kArmPullMaxN, puts about 1,100 N
+    // past kArmHoldN on the wrist once it is up. This is the impulse that
+    // pull delivers in about three seconds, so the reach after her fingers
+    // close lands the tear in 4 to 6 s.
+    static constexpr float kArmTearNs = 2600.0F;
     static constexpr float kArmMassKg = 4.5F;
     static constexpr float kArmThrowMps = 7.5F;
     static constexpr float kArmPlaySeconds = 4.5F;
     static constexpr float kArmPullMoveMps = 0.5F;
     static constexpr float kArmReachSeconds = 3.5F;
-    static constexpr float kArmPullSeconds = 4.0F;
+    static constexpr float kArmPullSeconds = 8.0F;   // a healthy pull is not given up before the tear
     static constexpr float kArmReposeStepM = 1.0F;
     static constexpr int kMaxArmReposes = 4;
     struct Throwable {
@@ -1228,7 +1232,7 @@ public:
     // ladder) do they shove, once in its cooldown, along shove_direction: a
     // pest's or a dangerous Matron's; fully changed, never.
     [[nodiscard]] bool shoves() const noexcept { return stage_ != Stage::Changed; }
-    [[nodiscard]] bool shove_ready() const noexcept { return shove_cooldown_s_ <= 0.0F; }
+    [[nodiscard]] bool shove_ready() const noexcept { return shove_cooldown_s_ <= 0.0F && !back_off_; }
     void count_shove() noexcept {
         ++shoves_;
         shove_cooldown_s_ = kShoveCooldownSeconds;
@@ -1304,7 +1308,9 @@ public:
     bool climb_for_test(bool pipe, bool down);
 
     // The hold's interface to the physics (physics_world_grab.cpp).
-    [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_; }
+    [[nodiscard]] bool grab_ready() const noexcept {
+        return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_ && !back_off_;
+    }
     void begin_grab(JPH::RVec3 player);
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
@@ -1624,6 +1630,9 @@ private:
     // Of her level's patrol loops, the one she can walk onto from here, and
     // its node nearest her.
     void pick_patrol(float ax, float az);
+    // The same loop, walking the way that leaves the player: the neighbor of
+    // the nearest node that sits farther from him, and that way round.
+    void patrol_away(float ax, float az, float px, float pz);
     // After a lead on a level below, down a line toward it (to it, or to a
     // level between): to its stand, and in the Turn onto its cable. False
     // when no line does.
@@ -1890,6 +1899,13 @@ private:
     // Her deck close under his body (his breadth swept down from his middle):
     // where any set-down lets go of him.
     [[nodiscard]] bool deck_close_below(JPH::RVec3 player, float feet) const;
+    // The whole of his body over her deck: his middle, his ends, and his
+    // breadth. A set-down does not let go while any of that is past an edge.
+    [[nodiscard]] bool body_inside_deck(JPH::RVec3 player, float feet) const;
+    // The 30 s after an arm torn and him set down, or after his blow frees
+    // him: no force on him, and her patrol walked away from him.
+    void begin_back_off(float px, float pz) noexcept;
+    [[nodiscard]] bool backing_off() const noexcept { return back_off_; }
     // A straight walk from (ax, az) to (x, z) on her floor (its top within a
     // step of `feet` all the way, nothing built across it at her hips).
     [[nodiscard]] bool straight_on_floor(float ax, float az, float x, float z, float feet) const;
@@ -2065,12 +2081,15 @@ private:
     float speed_ = 0.0F;
     float yaw_ = 0.0F;
     int patrol_node_ = 0;
+    int patrol_dir_ = 1;       // which way round the loop (+1 the authored way)
     bool patrol_only_ = false; // tests: no post to guard, the loop only
 
     // The hold (matron_hold.cpp).
     float hold_s_ = 0.0F;
     float grab_cooldown_s_ = 0.0F;
     float calm_s_ = 0.0F;            // after a Spare: she walks off, no hunt
+    bool back_off_ = false;          // the 30 s block: no force on him, patrol away
+    float back_off_s_ = 0.0F;
     bool grip_on_ = false;
     bool grip_was_on_ = false;
     bool player_braced_ = false;

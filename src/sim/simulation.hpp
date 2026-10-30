@@ -1098,6 +1098,8 @@ struct Snapshot final {
     double severed_arm_rot_x = 0.0, severed_arm_rot_y = 0.0, severed_arm_rot_z = 0.0, severed_arm_rot_w = 1.0;
     double wrist_load_n = 0.0;
     double wrist_strain_ns = 0.0;
+    // Force she put on him this tick (her grip, the wrist pull, a let-go, a shove).
+    double her_force_on_him_n = 0.0;
     int wrist_side = -1;          // the arm she has by the wrist (0 left, 1 right)
     bool one_arm = false;
     Vector3 matron_hand2{};
