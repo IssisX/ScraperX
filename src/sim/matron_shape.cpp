@@ -226,7 +226,7 @@ void Matron::step_stance(const float dt) {
             std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
         ++g_shape_audit.ticks;
         ++g_shape_audit.per_stance[static_cast<std::size_t>(stance_)];
-        const float depth = steel_depth();
+        float depth = steel_depth();
         if (on_planning_shape()) {
             // Not yet on a stance shape (none has fitted where she was put):
             // her old capsule, counted apart. Clear of steel here ends the
@@ -243,6 +243,25 @@ void Matron::step_stance(const float dt) {
         }
         float &worst = g_shape_audit.worst_depth_by_stance[static_cast<std::size_t>(stance_)];
         worst = std::max(worst, depth);
+        // The stance capsule is built inside the planning one. Where the
+        // stance shape is deeper anyway, it is not that volume: put the
+        // planning capsule back for the next solve, and audit that body.
+        // Where the planning capsule is as deep, she really is in the steel
+        // and the sample stands.
+        if (depth > kInsideSteelM) {
+            const float tall = steel_depth(shape_.GetPtr());
+            if (tall + 0.01F < depth) {
+                bodies.SetShape(body_, shape_, false, EActivation::Activate);
+                depth = steel_depth();
+                if (depth <= kInsideSteelM) {
+                    setup_live_ = false;
+                    steel_ticks_ = 0;
+                    g_shape_audit.query_s +=
+                        std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+                    return;
+                }
+            }
+        }
         // Clear of steel ends the placement's exemption. Until then, only the
         // bodies recorded at that placement, and no deeper, are put there.
         if (depth <= kInsideSteelM) {
@@ -253,6 +272,15 @@ void Matron::step_stance(const float dt) {
             g_shape_audit.placed_worst_m = std::max(g_shape_audit.placed_worst_m, depth);
             steel_ticks_ = 0;
         } else {
+            if (depth >= g_shape_audit.worst_depth_m) {
+                const float tall = steel_depth(shape_.GetPtr());
+                g_shape_audit.worst_tall_m = tall;
+                g_shape_audit.worst_x = float(at.GetX());
+                g_shape_audit.worst_y = float(at.GetY());
+                g_shape_audit.worst_z = float(at.GetZ());
+                g_shape_audit.worst_stance = static_cast<int>(stance_);
+                g_shape_audit.worst_state = static_cast<int>(state_);
+            }
             g_shape_audit.worst_depth_m = std::max(g_shape_audit.worst_depth_m, depth);
             ++g_shape_audit.inside_steel;
             if (++steel_ticks_ > kInsideSteelTicks) {

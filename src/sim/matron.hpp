@@ -262,6 +262,10 @@ public:
         long planning_ticks = 0;    // ticks on her old capsule, no stance shape fitted yet (not audited)
         float planning_worst_m = 0.0F;
         float worst_depth_m = 0.0F;
+        float worst_tall_m = 0.0F;  // the planning capsule's depth at the worst non-exempt sample
+        float worst_x = 0.0F, worst_y = 0.0F, worst_z = 0.0F;
+        int worst_stance = 0;
+        int worst_state = 0;
         long switches = 0;          // family changes made
         long refused = 0;           // ticks a wanted shape did not fit and she kept hers
         long per_stance[kStanceCount] = {};

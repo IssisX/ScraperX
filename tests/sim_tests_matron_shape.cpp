@@ -189,6 +189,12 @@ void shape_audit_at_exit() {
     std::printf("  matron shape: %ld ticks still on her old capsule where no stance shape fitted (deepest %.3f m in the "
                 "steel there: where a test put her)\n",
                 a.planning_ticks, static_cast<double>(a.planning_worst_m));
+    if (a.worst_depth_m > 0.0F) {
+        std::printf("  matron shape: worst non-exempt %.3f m at (%.2f, %.2f, %.2f) stance %d state %d, planning capsule "
+                    "%.3f m there\n",
+                    static_cast<double>(a.worst_depth_m), static_cast<double>(a.worst_x), static_cast<double>(a.worst_y),
+                    static_cast<double>(a.worst_z), a.worst_stance, a.worst_state, static_cast<double>(a.worst_tall_m));
+    }
     if (a.sitting != 0 || a.worst_depth_m > Matron::kTunnelM) {
         std::fprintf(stderr, "FAIL: matron shape: her body sat in the steel %ld ticks, deepest %.3f m\n", a.sitting,
                      static_cast<double>(a.worst_depth_m));
