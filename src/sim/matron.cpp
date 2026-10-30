@@ -2564,6 +2564,14 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // A sound louder at her ear than the player draws her to it instead.
         const Sound crash = pick(at, std::numeric_limits<float>::max());
         const bool crash_heard = crash.heard;
+        // A known running machine is a current signal, not stale evidence like
+        // a crash or the player's last footfall. Once it is no longer audible,
+        // stop investigating that machine without erasing the player encounter.
+        // Any player evidence or another world sound below replaces it normally.
+        if (lead_machine_ && !crash_heard && !saw && !glimpsed && !heard) {
+            stand_down(false);
+            break;
+        }
         // The level at her ear this tick, for her rage: the louder there of
         // the player and the picked sound.
         heard_level_ = std::max(crash_heard ? picked_level : 0.0F, ev.level);
