@@ -809,7 +809,22 @@ void run_matron_mischief() {
             if (took_at < 0.0 && m.carrying == box) {
                 took_at = i / static_cast<double>(Simulation::kTickRateHz);
             }
+            if (m.carrying == box) {
+                const double gap = std::hypot(std::hypot(m.stock_handle.x - m.stock_constraint.x,
+                                                         m.stock_handle.z - m.stock_constraint.z),
+                                              m.stock_handle.y - m.stock_constraint.y);
+                const double qnorm = m.stock_rotation.x * m.stock_rotation.x +
+                                     m.stock_rotation.y * m.stock_rotation.y +
+                                     m.stock_rotation.z * m.stock_rotation.z +
+                                     m.stock_rotation.w * m.stock_rotation.w;
+                require(gap < 1.0 && m.stock_size.x > 0.01 && m.stock_size.y > 0.01 &&
+                            std::abs(qnorm - 1.0) < 0.01,
+                        "matron prop: real handle, moving constraint, shape and orientation exported while held");
+            }
             if (m.throws > 0) {
+                require(m.carrying == 0 && m.stock_handle.x == 0.0 && m.stock_handle.y == 0.0 &&
+                            m.stock_handle.z == 0.0,
+                        "matron prop: native handle detaches on the throw tick");
                 thrown = true;
                 const auto b = s.kit_body_position(box_body);
                 const auto p = s.snapshot().player_position;
