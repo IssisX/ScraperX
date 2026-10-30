@@ -5,7 +5,8 @@ on:
     # ScraperX-Claude is the write/implementation branch. ScraperX-2 carries its
     # own copy of this workflow, so listing it here was inert routing.
     # <agent>/integrate-* branches get the proof run on push, for agents that
-    # cannot dispatch it; off ScraperX-Claude it still stops at the signing step.
+    # cannot dispatch it; off ScraperX-Claude it still stops at the signing step
+    # in publish-checkpoint after every proof job is green.
     branches: [ScraperX-Claude, '*/integrate-*']
   workflow_dispatch:
 
@@ -15,7 +16,7 @@ permissions:
 # Every commit is an immutable build candidate. A newer push must never cancel an
 # older commit's build, otherwise that commit can lose its APK. "Build candidate",
 # not "checkpoint": a checkpoint in ScraperX is the in-sim commit_checkpoint(), and
-# the word is not reused for CI artefacts.
+# the word is not reused for CI artifacts.
 concurrency:
   group: scraperx-checkpoint-${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: false
@@ -27,7 +28,7 @@ env:
   ANDROID_HOME: /usr/local/lib/android/sdk
   ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
   ANDROID_NDK_VERSION: 29.0.14206865
-  # Compiler cache (ccache) for every native build in both jobs. CMake reads these
+  # Compiler cache (ccache) for every native build. CMake reads these
   # two variables on first configure; the cache only skips recompiling identical
   # inputs, so the binaries and every proof are unchanged. The Jolt build uses a
   # precompiled header, which ccache accepts only with this sloppiness.
@@ -40,83 +41,115 @@ env:
   CCACHE_MAXSIZE: 1500M
 
 jobs:
-  moving-support-truth:
+  host-build:
     runs-on: ubuntu-24.04
-    # Past an hour since the yard crane (runs 536, 537: every proof green, cut off in the APK export);
-    # 78 minutes by run 546, and the gesture controls' scenarios add more.
-    timeout-minutes: 120
+    timeout-minutes: 30
 
     steps:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
+      - name: Verify story radio source assets and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c 'import json; from pathlib import Path; from ci.verify_story_radio_package import verify_recordings; p = Path("godot/audio/story_radio"); verify_recordings(p, json.loads((p / "manifest.json").read_text())); print("STORY_RADIO_SOURCE PASS")'
+
+      - name: Restore the FetchContent dependency cache (Jolt, godot-cpp, Monocypher)
+        uses: actions/cache@v4
+        with:
+          path: build/host/_deps
+          key: deps-host-ubuntu2404-${{ hashFiles('CMakeLists.txt', 'third_party/jolt_patch.cmake') }}
+
       - name: Restore the compiler cache
         uses: actions/cache@v4
         with:
           path: /home/runner/.cache/ccache
-          key: ccache-${{ github.job }}-${{ github.sha }}
+          key: ccache-host-ubuntu2404-${{ github.sha }}
           restore-keys: |
-            ccache-${{ github.job }}-
+            ccache-host-ubuntu2404-
 
-      - name: Configure Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-
-      - name: Install build and render prerequisites
+      - name: Install host build prerequisites
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install --yes ninja-build ccache xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
-          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
-          test -x "${SDKMANAGER_PATH}"
-          yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
-          "${SDKMANAGER_PATH}" "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
+          sudo apt-get install --yes ninja-build ccache
 
-      - name: Install verified Godot 4.7 editor and Android template
+      - name: Build native host graph
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
-          curl --fail --location --retry 3 \
-            --output tools/godot/godot.zip \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
-          unzip -q tools/godot/godot.zip -d tools/godot
-          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
-          chmod +x tools/godot/godot
-
-          curl --fail --location --retry 3 \
-            --output tools/godot/templates.tpz \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
-          echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
-          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
-            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
-          tools/godot/godot --version
-
-      - name: Build native host graph and run the full native suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts
           cmake -S . -B build/host -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_parkour_flow_tests scraperx_native --parallel 2
-          ctest --test-dir build/host --output-on-failure | tee artifacts/native-tests.log
-          grep -F "100% tests passed" artifacts/native-tests.log
-          ./build/host/scraperx_parkour_flow_tests | tee artifacts/parkour-flow.log
-          grep -F "PASS scraperx_sim parkour flow" artifacts/parkour-flow.log
-          # The falsifiers' own proof lines. ctest --output-on-failure prints a
-          # passing test's stdout nowhere, so native-tests.log carries only the
-          # aggregate verdict -- every PASS line the suite emits was invisible
-          # to this workflow until now. Run the binary directly for them.
-          # set -o pipefail means a non-zero exit still fails the step.
-          ./build/host/scraperx_sim_tests | tee artifacts/native-falsifiers.log
+          cmake --build build/host --target scraperx_sim_tests scraperx_shared_survival_tests scraperx_parkour_flow_tests scraperx_native --parallel 4
+          test -s build/host/scraperx_sim_tests
+          test -s build/host/scraperx_shared_survival_tests
+          test -s build/host/scraperx_parkour_flow_tests
+          test -s godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+
+      - name: Share host native binaries with test jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/host/CTestTestfile.cmake
+            build/host/DartConfiguration.tcl
+            build/host/_deps/*/CTestTestfile.cmake
+            build/host/scraperx_sim_tests
+            build/host/scraperx_shared_survival_tests
+            build/host/scraperx_parkour_flow_tests
+            godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+          if-no-files-found: error
+          retention-days: 1
+
+  native-tests:
+    needs: host-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - athletic-traversal
+          - matron-slices-1
+          - matron-slices-2
+          - matron-slices-3
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Download host native binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: host-build-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Restore executable permissions on host test binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x build/host/scraperx_sim_tests build/host/scraperx_shared_survival_tests build/host/scraperx_parkour_flow_tests
+          mkdir -p artifacts
+
+      - name: Run athletic_traversal, shared_survival, parkour_flow and verify all falsifier proof lines
+        if: matrix.shard == 'athletic-traversal'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Runs scraperx_sim.shared_survival, scraperx_sim.athletic_traversal, and
+          # scraperx_sim.parkour_flow once via ctest -V so every PASS line is captured
+          # directly without re-running the 14-minute binary a second time.
+          ctest --test-dir build/host \
+            -R "^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow)$" \
+            -V --output-on-failure | tee artifacts/native-falsifiers.log
+          grep -F "100% tests passed" artifacts/native-falsifiers.log
+          grep -F "PASS scraperx_sim parkour flow" artifacts/native-falsifiers.log
+          cp artifacts/native-falsifiers.log artifacts/parkour-flow.log
+          cp artifacts/native-falsifiers.log artifacts/native-tests-athletic-traversal.log
           for proof in \
             "PASS scraperx_sim pulley seam" \
             "PASS scraperx_sim moving-support truth" \
@@ -244,49 +277,92 @@ jobs:
           awk -F'again_y=' '/AS-006 band/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
             artifacts/native-falsifiers.log
 
-      - name: Run Godot at Fold aspect through native machine authority and capture proof
+      - name: Run CTest Matron slice group 1 (ladder, hearing, climb-support, crash, tower)
+        if: matrix.shard == 'matron-slices-1'
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p artifacts/screenshots godot/.godot
+          ctest --test-dir build/host \
+            -R "^scraperx_sim\.(matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower)$" \
+            -j 2 --output-on-failure | tee artifacts/native-tests-matron-1.log
+          grep -F "100% tests passed" artifacts/native-tests-matron-1.log
+
+      - name: Run CTest Matron slice group 2 (chain, towers, board-walls, ladders, stand)
+        if: matrix.shard == 'matron-slices-2'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ctest --test-dir build/host \
+            -R "^scraperx_sim\.(matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$" \
+            -j 2 --output-on-failure | tee artifacts/native-tests-matron-2.log
+          grep -F "100% tests passed" artifacts/native-tests-matron-2.log
+
+      - name: Run CTest Matron slice group 3 (remaining, chase, grab, and any new CTest slices)
+        if: matrix.shard == 'matron-slices-3'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ctest --test-dir build/host \
+            -E "^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow|matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower|matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$" \
+            -j 2 --output-on-failure | tee artifacts/native-tests-matron-3.log
+          grep -F "100% tests passed" artifacts/native-tests-matron-3.log
+
+      - name: Upload shard native logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-logs-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/*.log
+          if-no-files-found: error
+          retention-days: 1
+
+  godot-touch:
+    needs: host-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - touch-1
+          - touch-2
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Download host native library
+        uses: actions/download-artifact@v4
+        with:
+          name: host-build-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Restore cached Godot 4.7 editor archive
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/scraperx-godot
+          key: godot-editor-${{ env.GODOT_VERSION }}-${{ env.GODOT_BINARY_SHA256 }}
+
+      - name: Install verified Godot 4.7 editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+          mkdir -p /home/runner/.cache/scraperx-godot tools/godot godot/.godot artifacts
+          if ! echo "${GODOT_BINARY_SHA256}  /home/runner/.cache/scraperx-godot/godot.zip" | sha256sum --check 2>/dev/null; then
+            curl --fail --location --retry 3 \
+              --output /home/runner/.cache/scraperx-godot/godot.zip \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          fi
+          echo "${GODOT_BINARY_SHA256}  /home/runner/.cache/scraperx-godot/godot.zip" | sha256sum --check
+          unzip -q /home/runner/.cache/scraperx-godot/godot.zip -d tools/godot
+          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+          chmod +x tools/godot/godot
           printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
             > godot/.godot/extension_list.cfg
-          grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
-            godot/.godot/extension_list.cfg
-          timeout 300s xvfb-run -a -s "-screen 0 1728x1485x24" \
-            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 2400 \
-            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo006-approach-and-machine.png" \
-            2>&1 | tee artifacts/godot-runtime.log
-          test -s artifacts/screenshots/wo006-approach-and-machine.png
-          grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
-          grep -F "work_order=WO-006" artifacts/godot-runtime.log
-          # WO-004: the viewport is the Fold inner panel, not a phone strip.
-          grep -F "SCRAPERX_WO004_VIEWPORT_PROOF" artifacts/godot-runtime.log
-          grep -F "width=2160 height=1856" artifacts/godot-runtime.log
-          grep -F "aspect=1.164" artifacts/godot-runtime.log
-          grep -F "stretch=expand" artifacts/godot-runtime.log
-          # WO-005: spawn is outdoors at grade with the tower still ahead.
-          grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
-          grep -F "tower_height=1600" artifacts/godot-runtime.log
+          tools/godot/godot --version
 
-      # The summit's physical payoff must also be readable in the rendered game.
-      # Headless touch proofs cannot show whether the beam and both bearings are visible.
-      - name: Render the complete summit ending through touch
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 400s xvfb-run -a -s "-screen 0 1296x1114x24" \
-            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
-            -- --uitest=touch_summit_ending "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/summit" \
-            2>&1 | tee artifacts/summit-ending-rendered.log
-          grep -F "SCRAPERX_UITEST PASS touch_summit_ending " artifacts/summit-ending-rendered.log
-          for frame in ending_hanging_beam ending_seated_foreman ending_city ending_parachute ending_home; do
-            test -s "artifacts/screenshots/summit_${frame}.png"
-          done
-          if grep -E "SCRIPT ERROR|Parse Error" artifacts/summit-ending-rendered.log; then exit 1; fi
-
-      # Blocking Android delivery gate: the touch control paths
-      - name: Drive every control path through the real input pipeline
+      # Blocking Android delivery gate: the touch control paths (shard 1: core traversal, buttons, and bands up to C5)
+      - name: Drive control paths through the real input pipeline (shard 1)
+        if: matrix.shard == 'touch-1'
         shell: bash
         run: |
           set -euo pipefail
@@ -390,29 +466,129 @@ jobs:
           # the climb up and the drop from a hang, the slide, the roll, the
           # wall run, the trapeze, the wall kicks and the ladder.
           # --fixed-fps makes simulated time exact however fast the runner is.
-          : > artifacts/godot-uitest.log
-          for scenario in touch_jump touch_move_look touch_body touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop \
-              touch_hang_climb touch_monkey_bars touch_swing_launch touch_zipline touch_zipline_slam touch_pipe_gallery touch_slide touch_speed_vault touch_precision touch_wall_run touch_wall_climb touch_tuck touch_flow touch_springboard touch_quickturn touch_hook touch_hook_rope touch_birds touch_workers touch_works touch_clouds touch_chute touch_lethal_feedback touch_arm_break touch_pause \
-              touch_wall_kick touch_ladder touch_route_hint \
-              touch_jump_buttons touch_vault_buttons touch_double_tap_vault_buttons touch_crouch_buttons touch_quickturn_buttons touch_hang_climb_buttons \
-              touch_hang_drop_buttons touch_slide_buttons touch_roll_buttons touch_wall_run_buttons touch_trapeze_buttons touch_wall_kick_buttons touch_ladder_buttons \
-              touch_rig touch_boom touch_debris \
-              touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title touch_stack_upper \
-              touch_stack touch_wet \
-              touch_shop touch_crane \
-              touch_service touch_c4 touch_n touch_c5 touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel touch_tram \
-              touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
+          : > artifacts/godot-uitest-touch-1.log
+          for scenario in touch_jump touch_move_look touch_body touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop touch_hang_climb touch_monkey_bars touch_swing_launch \
+              touch_zipline touch_zipline_slam touch_pipe_gallery touch_slide touch_speed_vault touch_precision touch_wall_run touch_wall_climb touch_tuck touch_flow touch_springboard touch_quickturn \
+              touch_hook touch_hook_rope touch_birds touch_workers touch_works touch_clouds touch_chute touch_lethal_feedback touch_arm_break touch_pause touch_wall_kick touch_ladder \
+              touch_route_hint touch_jump_buttons touch_vault_buttons touch_double_tap_vault_buttons touch_crouch_buttons touch_quickturn_buttons touch_hang_climb_buttons touch_hang_drop_buttons touch_slide_buttons touch_roll_buttons touch_wall_run_buttons touch_trapeze_buttons \
+              touch_wall_kick_buttons touch_ladder_buttons touch_rig touch_boom touch_debris touch_photo_id_radio touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title \
+              touch_stack_upper touch_stack touch_wet touch_shop touch_crane touch_service touch_c4 touch_n touch_c5; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
-              -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest.log
-            grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest.log
+              -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest-touch-1.log
+            grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest-touch-1.log
           done
-          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest.log; then exit 1; fi
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest-touch-1.log; then exit 1; fi
+
+      # Blocking Android delivery gate: the touch control paths (shard 2: stage O, upper climbs, Matron, yard machines, uncanny, and twin)
+      - name: Drive control paths through the real input pipeline (shard 2)
+        if: matrix.shard == 'touch-2'
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > artifacts/godot-uitest-touch-2.log
+          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave \
+              touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
+              touch_tram touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
+            timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
+              -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest-touch-2.log
+            grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest-touch-2.log
+          done
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest-touch-2.log; then exit 1; fi
+
+      - name: Upload shard touch logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-touch-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/godot-uitest-*.log
+          if-no-files-found: error
+          retention-days: 1
+
+  godot-audits-and-mix:
+    needs: host-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Download host native library
+        uses: actions/download-artifact@v4
+        with:
+          name: host-build-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Restore cached Godot 4.7 editor archive
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/scraperx-godot
+          key: godot-editor-${{ env.GODOT_VERSION }}-${{ env.GODOT_BINARY_SHA256 }}
+
+      - name: Install render prerequisites and verified Godot 4.7 editor
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
+          chmod +x godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+          mkdir -p /home/runner/.cache/scraperx-godot tools/godot artifacts
+          if ! echo "${GODOT_BINARY_SHA256}  /home/runner/.cache/scraperx-godot/godot.zip" | sha256sum --check 2>/dev/null; then
+            curl --fail --location --retry 3 \
+              --output /home/runner/.cache/scraperx-godot/godot.zip \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          fi
+          echo "${GODOT_BINARY_SHA256}  /home/runner/.cache/scraperx-godot/godot.zip" | sha256sum --check
+          unzip -q /home/runner/.cache/scraperx-godot/godot.zip -d tools/godot
+          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+          chmod +x tools/godot/godot
+          tools/godot/godot --version
+
+      - name: Run Godot at Fold aspect through native machine authority and capture proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/screenshots godot/.godot
+          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            > godot/.godot/extension_list.cfg
+          grep -F 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            godot/.godot/extension_list.cfg
+          timeout 300s xvfb-run -a -s "-screen 0 1728x1485x24" \
+            tools/godot/godot --verbose --path godot --rendering-method gl_compatibility --quit-after 2400 \
+            -- --ci "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/wo006-approach-and-machine.png" \
+            2>&1 | tee artifacts/godot-runtime.log
+          test -s artifacts/screenshots/wo006-approach-and-machine.png
+          grep -F "SCRAPERX_EXTENSION_LOADED" artifacts/godot-runtime.log
+          grep -F "work_order=WO-006" artifacts/godot-runtime.log
+          # WO-004: the viewport is the Fold inner panel, not a phone strip.
+          grep -F "SCRAPERX_WO004_VIEWPORT_PROOF" artifacts/godot-runtime.log
+          grep -F "width=2160 height=1856" artifacts/godot-runtime.log
+          grep -F "aspect=1.164" artifacts/godot-runtime.log
+          grep -F "stretch=expand" artifacts/godot-runtime.log
+          # WO-005: spawn is outdoors at grade with the tower still ahead.
+          grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
+          grep -F "tower_height=1600" artifacts/godot-runtime.log
+
+      # The summit must play through the rendered touch path; its last beam,
+      # foreman, city, parachute and return are captured by the real viewport.
+      - name: Render the complete summit ending through touch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/screenshots
+          timeout 400s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
+            -- --uitest=touch_summit_ending "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/summit" \
+            2>&1 | tee artifacts/summit-ending-rendered.log
+          grep -F "SCRAPERX_UITEST PASS touch_summit_ending " artifacts/summit-ending-rendered.log
+          for frame in ending_hanging_beam ending_seated_foreman ending_city ending_parachute ending_home; do
+            test -s "artifacts/screenshots/summit_${frame}.png"
+          done
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/summit-ending-rendered.log; then exit 1; fi
 
       - name: Measure the mix a player hears
         shell: bash
         run: |
           set -euo pipefail
-          # The headless runs above use the Dummy audio driver, which never
+          # The headless runs use the Dummy audio driver, which never
           # mixes, so they can only count cues. Movie Maker mixes that same
           # driver frame by frame; audio_mix (ui_test_driver.gd) captures what
           # leaves Master and requires audible ambience and footsteps above
@@ -435,7 +611,7 @@ jobs:
           set -euo pipefail
           # src/sim/world_solids.inc is generated from the presentation's
           # builders (godot/presentation/solid_export.gd). The native suite
-          # above ran against the committed table; this proves that table is
+          # ran against the committed table; this proves that table is
           # still exactly what the builders draw.
           timeout 300s tools/godot/godot --headless --path godot \
             -- "--export-solids=${GITHUB_WORKSPACE}/artifacts/world_solids.regenerated.inc" \
@@ -497,10 +673,58 @@ jobs:
             --script res://tests/matron_perception_climb_test.gd 2>&1 | tee artifacts/matron-perception-climb.log
           grep -q '^MATRON_PERCEPTION_CLIMB PASS' artifacts/matron-perception-climb.log
 
+      - name: Upload Godot audit and mix artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: godot-audits-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 1
+
+  android-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Restore the Android FetchContent dependency cache (Jolt, godot-cpp, Monocypher)
+        uses: actions/cache@v4
+        with:
+          path: build/android-arm64/_deps
+          key: deps-android-arm64-${{ env.ANDROID_NDK_VERSION }}-${{ hashFiles('CMakeLists.txt', 'third_party/jolt_patch.cmake') }}
+
+      - name: Restore the Android compiler cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/ccache
+          key: ccache-android-arm64-${{ github.sha }}
+          restore-keys: |
+            ccache-android-arm64-
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build ccache
+          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -x "${SDKMANAGER_PATH}"
+          yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
+          "${SDKMANAGER_PATH}" "ndk;${ANDROID_NDK_VERSION}"
+
       - name: Cross-compile native graph for Android arm64
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p artifacts
           cmake -S . -B build/android-arm64 -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
@@ -509,9 +733,86 @@ jobs:
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release
-          cmake --build build/android-arm64 --target scraperx_native --parallel 2
+          cmake --build build/android-arm64 --target scraperx_native --parallel 4
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
           file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+
+      - name: Share Android arm64 native library
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
+            artifacts/android-native-library.log
+          if-no-files-found: error
+          retention-days: 1
+
+  android-apk:
+    needs: [host-build, android-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Download host native library
+        uses: actions/download-artifact@v4
+        with:
+          name: host-build-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Download Android arm64 native library
+        uses: actions/download-artifact@v4
+        with:
+          name: android-build-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -x "${SDKMANAGER_PATH}"
+          yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
+          "${SDKMANAGER_PATH}" "platform-tools" "build-tools;36.1.0" "platforms;android-36"
+
+      - name: Restore cached Godot 4.7 editor and Android export template archives
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/scraperx-godot-apk
+          key: godot-apk-${{ env.GODOT_VERSION }}-${{ env.GODOT_BINARY_SHA256 }}-${{ env.GODOT_TEMPLATES_SHA256 }}
+
+      - name: Install verified Godot 4.7 editor and Android template
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+          chmod +x godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
+          mkdir -p /home/runner/.cache/scraperx-godot-apk tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          if ! echo "${GODOT_BINARY_SHA256}  /home/runner/.cache/scraperx-godot-apk/godot.zip" | sha256sum --check 2>/dev/null; then
+            curl --fail --location --retry 3 \
+              --output /home/runner/.cache/scraperx-godot-apk/godot.zip \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          fi
+          echo "${GODOT_BINARY_SHA256}  /home/runner/.cache/scraperx-godot-apk/godot.zip" | sha256sum --check
+          unzip -q /home/runner/.cache/scraperx-godot-apk/godot.zip -d tools/godot
+          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
+          chmod +x tools/godot/godot
+
+          if ! echo "${GODOT_TEMPLATES_SHA256}  /home/runner/.cache/scraperx-godot-apk/templates.tpz" | sha256sum --check 2>/dev/null; then
+            curl --fail --location --retry 3 \
+              --output /home/runner/.cache/scraperx-godot-apk/templates.tpz \
+              "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          fi
+          echo "${GODOT_TEMPLATES_SHA256}  /home/runner/.cache/scraperx-godot-apk/templates.tpz" | sha256sum --check
+          unzip -q -j /home/runner/.cache/scraperx-godot-apk/templates.tpz templates/android_debug.apk \
+            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
+          tools/godot/godot --version
 
       - name: Export checkpoint Android arm64 APK
         shell: bash
@@ -519,7 +820,25 @@ jobs:
           set -euo pipefail
           CHECKPOINT_ID="${GITHUB_SHA::12}"
           APK_NAME="ScraperX-Claude-${CHECKPOINT_ID}-arm64.apk"
-          mkdir -p build/apk artifacts/apk
+          mkdir -p build/apk artifacts/apk godot/.godot
+          printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
+            > godot/.godot/extension_list.cfg
+          # Godot's all_resources mode can package imported audio even when
+          # export_presets.cfg excludes the source .ogg files. Temporarily
+          # stage unapproved recordings outside res:// for this export only.
+          voice_hold="$(mktemp -d)"
+          restore_story_voices() {
+            for voice in "${voice_hold}"/*; do
+              [ -e "${voice}" ] || continue
+              mv -- "${voice}" godot/audio/story_radio/
+            done
+            rmdir -- "${voice_hold}"
+          }
+          trap restore_story_voices EXIT
+          for voice in godot/audio/story_radio/*.ogg godot/audio/story_radio/*.ogg.import; do
+            [ -f "${voice}" ] || continue
+            mv -- "${voice}" "${voice_hold}/"
+          done
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
             2>&1 | tee artifacts/godot-android-export.log
@@ -544,10 +863,72 @@ jobs:
           # AI branches' builds. Permanent for this branch.
           .github/scripts/check_apk_identity.sh "build/apk/${APK_NAME}" | tee artifacts/apk-identity.log
 
-      - name: Record evidence boundaries
+      - name: Verify exported story-radio package
         shell: bash
         run: |
           set -euo pipefail
+          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
+          python3 ci/verify_story_radio_package.py "build/apk/${APK_NAME}"
+
+      - name: Upload checkpoint APK and logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-checkpoint:
+    needs: [host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Download proof artifacts from all jobs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-${{ github.run_id }}-${{ github.run_attempt }}'
+          merge-multiple: true
+          path: staged-artifacts
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install the Android build tools the signing step uses (apksigner)
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -x "${SDKMANAGER_PATH}"
+          yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
+          "${SDKMANAGER_PATH}" "build-tools;36.1.0"
+
+      - name: Assemble unified artifacts directory and record evidence boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          # Each job uploaded its own artifacts/ folder as the artifact's root, so
+          # its apk/, screenshots/ and logs download at the top of staged-artifacts;
+          # a job that uploaded paths from two roots (android-build) keeps an
+          # artifacts/ prefix. The host binaries (build/, godot/) are not evidence.
+          for entry in staged-artifacts/* staged-artifacts/.[!.]*; do
+            [ -e "${entry}" ] || continue
+            case "$(basename "${entry}")" in
+              build|godot) ;;
+              artifacts) cp -a "${entry}/." artifacts/ ;;
+              *) cp -a "${entry}" artifacts/ ;;
+            esac
+          done
+          test -n "$(find artifacts -name '*.apk' -print -quit)"
+          cat artifacts/native-tests-*.log > artifacts/native-tests.log
+          cat artifacts/godot-uitest-touch-1.log artifacts/godot-uitest-touch-2.log > artifacts/godot-uitest.log
           cat > artifacts/WO-006-EVIDENCE.md <<EOF
           # WO-004..006 Evidence
 
@@ -593,7 +974,7 @@ jobs:
   # Owner, 2026-10-28: no APK on every trunk push; playtests use a local
   # build. A manual dispatch still makes one.
   playtest-apk:
-    needs: moving-support-truth
+    needs: [host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk]
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -602,13 +983,24 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
-      - name: Restore the compiler cache
-        uses: actions/cache@v4
+      - name: Download verified checkpoint APK
+        uses: actions/download-artifact@v4
         with:
-          path: /home/runner/.cache/ccache
-          key: ccache-${{ github.job }}-${{ github.sha }}
-          restore-keys: |
-            ccache-${{ github.job }}-
+          name: android-apk-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Stage playtest APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
+          mkdir -p playtest
+          if [ -s "apk/${APK_NAME}" ]; then
+            cp -a "apk/${APK_NAME}" "playtest/${APK_NAME}"
+          elif [ -s "artifacts/apk/${APK_NAME}" ]; then
+            cp -a "artifacts/apk/${APK_NAME}" "playtest/${APK_NAME}"
+          fi
+          test -s "playtest/${APK_NAME}"
+          unzip -l "playtest/${APK_NAME}" | grep -F "lib/arm64-v8a/libscraperx_native.so"
 
       - name: Configure Java 17
         uses: actions/setup-java@v4
@@ -616,72 +1008,15 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Android SDK and NDK
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes ninja-build ccache
-          SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
-          test -x "${SDKMANAGER_PATH}"
-          yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
-          "${SDKMANAGER_PATH}" "platform-tools" "build-tools;36.1.0" "platforms;android-36" "ndk;${ANDROID_NDK_VERSION}"
-
-      - name: Install verified Godot 4.7 editor and Android template
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p tools/godot "${HOME}/.local/share/godot/export_templates/4.7.stable"
-          curl --fail --location --retry 3 \
-            --output tools/godot/godot.zip \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          echo "${GODOT_BINARY_SHA256}  tools/godot/godot.zip" | sha256sum --check
-          unzip -q tools/godot/godot.zip -d tools/godot
-          mv "tools/godot/Godot_v${GODOT_VERSION}_linux.x86_64" tools/godot/godot
-          chmod +x tools/godot/godot
-          curl --fail --location --retry 3 \
-            --output tools/godot/templates.tpz \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
-          echo "${GODOT_TEMPLATES_SHA256}  tools/godot/templates.tpz" | sha256sum --check
-          unzip -q -j tools/godot/templates.tpz templates/android_debug.apk \
-            -d "${HOME}/.local/share/godot/export_templates/4.7.stable"
-
-      - name: Build the native library for the editor and for Android arm64
-        shell: bash
-        run: |
-          set -euo pipefail
-          cmake -S . -B build/host -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DSCRAPERX_BUILD_BRIDGE=ON \
-            -DSCRAPERX_WITH_JOLT=ON \
-            -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_native --parallel 2
-          cmake -S . -B build/android-arm64 -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE="${ANDROID_HOME}/ndk/${ANDROID_NDK_VERSION}/build/cmake/android.toolchain.cmake" \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-24 \
-            -DSCRAPERX_BUILD_BRIDGE=ON \
-            -DSCRAPERX_WITH_JOLT=ON \
-            -DGODOTCPP_TARGET=template_release
-          cmake --build build/android-arm64 --target scraperx_native --parallel 2
-          test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
-
-      - name: Export the playtest APK
-        shell: bash
-        run: |
-          set -euo pipefail
-          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
-          mkdir -p playtest
-          tools/godot/godot --headless --path godot \
-            --export-debug "Android arm64" "${GITHUB_WORKSPACE}/playtest/${APK_NAME}"
-          test -s "playtest/${APK_NAME}"
-          unzip -l "playtest/${APK_NAME}" | grep -F "lib/arm64-v8a/libscraperx_native.so"
-
       - name: Verify playtest Android APK identity
         shell: bash
         run: |
           set -euo pipefail
+          if [ -z "$(find "${ANDROID_HOME}/build-tools" -type f -name aapt2 2>/dev/null)" ]; then
+            SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+            yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true
+            "${SDKMANAGER_PATH}" "build-tools;36.1.0"
+          fi
           APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
           .github/scripts/check_apk_identity.sh "playtest/${APK_NAME}"
 

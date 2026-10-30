@@ -842,6 +842,7 @@ public:
     static constexpr float kReleasePoseSeconds = 1.0F;
     static constexpr float kSpareSetSeconds = 1.2F;   // the collar put straight
     static constexpr float kSpareCalmSeconds = 20.0F; // then she walks off, no hunt this long
+    static constexpr float kSpareStepSeconds = 3.0F;  // a step walking him on, past three tries, that stops short
     // After any arm torn off, set down alive (spared, or pulled out of her
     // hand), her hands do not take him again for this long (the owner,
     // 2026-10-28: after an arm tear she can't grab him again right away).
@@ -1206,7 +1207,8 @@ public:
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
-    // puts her back at her locker at that stage). Once dead she stays dead.
+    // puts her back at her locker at that stage). A dead Matron is kept as hunting,
+    // so a restore brings her back whole.
     struct Saved {
         State state = State::Dormant;
         float strain_s = 0.0F;
@@ -1601,8 +1603,11 @@ public:
     // end, a death's restore too): a touch is her shove, not a catch.
     void hold_grab_for_test(const bool held) noexcept { grab_held_for_test_ = held; }
     [[nodiscard]] Saved save() const noexcept {
-        // A hold is never saved: a checkpoint has her after the player.
-        return {state_ >= State::Grab ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
+        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Nor is
+        // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
+        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
+                              state_ == State::Dead;
+        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
     }
     void restore(const Saved &saved);
 
@@ -1612,6 +1617,7 @@ public:
     [[nodiscard]] std::uint64_t catches() const noexcept { return catches_; }
     [[nodiscard]] float strain_force_peak_n() const noexcept { return plank_peak_n_; }
     [[nodiscard]] JPH::BodyID body() const noexcept { return body_; }
+    friend struct MatronStateExitAccess;
 
 private:
     struct Node {
@@ -1968,6 +1974,7 @@ private:
     bool pipe_rail_hold(float deck, JPH::RVec3 at);
     bool pipe_face_hold(JPH::RVec3 at, float y);
     // Down on the steel from a blow (take_blow), the way (fall_x_, fall_z_).
+    void clear_interrupted_actions(bool keep_travel = false);
     void knock_down();
     // A lead: a place she heard (or saw) the player, or a crash, on the level
     // whose floor is `floor`, at that loudness.
@@ -2002,7 +2009,7 @@ private:
     void begin_reel(JPH::RVec3 at, JPH::RVec3 player);
     void end_reel(JPH::RVec3 player);
     [[nodiscard]] float hands_off_after_hold() const noexcept {
-        return arm_tears_ != hold_tears_at_ ? kRegrabAfterTearS : kAfterReleaseSeconds;
+        return (arm_tears_ != hold_tears_at_ || reel_) ? kRegrabAfterTearS : kAfterReleaseSeconds;
     }
     bool choose_fatal_edge(float ax, float az, float feet);
     // The speed down at which a body at `com` (rotation `rot`, moving at `v`,
@@ -2358,6 +2365,7 @@ private:
     int guess_line_ = -1;
     float lead_floor_ = kDeckTop;
     bool on_line_ = false;
+    float line_stall_s_ = 0.0F;
     std::uint32_t cable_slides_ = 0;
     // Climbs: the ones she knows, the one whose head she guessed, the one
     // she is on (-1, none) and whether she is over its head.

@@ -219,6 +219,18 @@ public:
     bool set_summit_lower(bool held);
     bool request_summit_unrig();
     void prepare_matron();
+    // TEST-ONLY (the look suite, tools/look and ui_test_look.gd): the native
+    // tests' own setup hooks (Simulation::debug_*), so a look scenario can put
+    // her where a still needs her and let the simulation take her on from
+    // there. Nothing in play calls them; they change no rule of hers.
+    void debug_place_matron(godot::Vector3 feet);
+    void debug_set_matron_stage(std::int64_t stage);
+    [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down);
+    void debug_matron_hear(godot::Vector3 at);
+    void debug_launch_player(godot::Vector3 at, godot::Vector3 velocity);
+    void debug_lose_arm(std::int64_t side);
+    // Sends her, by her own plan, to the region her scan reads under those feet (false: none, or no plan).
+    [[nodiscard]] bool debug_matron_travel_to(godot::Vector3 feet);
     [[nodiscard]] bool request_trapeze_action();
     [[nodiscard]] bool request_trapeze_drop();
     [[nodiscard]] godot::Dictionary get_trapeze_state() const;
