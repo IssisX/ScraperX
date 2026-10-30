@@ -118,7 +118,7 @@ func _act_sample_prop() -> void:
 				str(_main._matron_view._rig.bone_world("wr_l").origin),
 				str(_main._matron_view._rig.bone_world("sh_r").origin),
 				int(_main._matron_view._rig.governed)])
-		if n in [1, 2, 3, 8, 30, 90, 360, 900, 1399]:
+		if n <= 45 or n in [90, 360, 900, 1399]:
 			var rig = _main._matron_view._rig
 			print("SCRAPERX_PROP_SAMPLE n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s stretch_r=%.3f stretch_l=%.3f governed=%d" % [
 				n, _main._matron_view.prop_hand_error_m, str(m.get("stock_handle", Vector3.ZERO)),
