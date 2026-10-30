@@ -834,7 +834,8 @@ bool Matron::way_clear(const float fx, const float fz, const float tx, const flo
     return !knee_hit.HadHit();
 }
 
-void Matron::take_lead(const float x, const float z, const float floor, const float loudness, const Sense sense) {
+void Matron::take_lead(const float x, const float z, const float floor, const float loudness, const Sense sense,
+                       const bool machine) {
     noise_heard_ = loudness;
     heard_x_ = x;
     heard_z_ = z;
@@ -847,13 +848,17 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
     // her ears are not.
     lead_seen_ = sense == Sense::Sight || sense == Sense::Touch;
     lead_sense_ = sense;
+    lead_machine_ = machine;
     lead_valid_ = true;
     chase_way_held_ = false;  // a fresh lead earns its own chase window
 }
 
-void Matron::stand_down() {
-    end_encounter();
+void Matron::stand_down(const bool end_player_encounter) {
+    if (end_player_encounter) {
+        end_encounter();
+    }
     lead_valid_ = false;
+    lead_machine_ = false;
     chase_way_held_ = false;
     turn_ = Turn::None;
     turn_s_ = 0.0F;
@@ -2485,7 +2490,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
         if (crash.heard) {
-            take_lead(crash.x, crash.z, floor_of(crash.y), crash.loudness, Sense::Hearing);
+            take_lead(crash.x, crash.z, floor_of(crash.y), crash.loudness, Sense::Hearing, crash.machine);
             state_ = State::Straining;
             strain_s_ = 0.0F;
         } else if (ev.sound && ev.carry_m <= kWakeNoiseM) {
@@ -2602,7 +2607,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
                 // The chase goes on by ear: the same lead, moved on.
-                take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                take_lead(sx, sz, sfloor, loud, Sense::Hearing, crash_first && crash.machine);
                 wary_ = wary_ && !close;
             } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
@@ -2615,7 +2620,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // A fresh lead: once fooled, checked from a vantage first (on
                 // her level: another's she cannot see for its deck, she goes
                 // by the way there).
-                take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                take_lead(sx, sz, sfloor, loud, Sense::Hearing, crash_first && crash.machine);
                 wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
                 state_ = State::Hunting;
@@ -3131,8 +3136,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             walk_toward(dt, ax, az, 0.0F);
             yaw_ = turn_toward(yaw_, std::atan2(heard_x_ - ax, heard_z_ - az), kTurnRate, dt);
             if (peer_s_ >= kPeerSeconds) {
-                ++fooled_;   // nobody there: another noise that lied
-                stand_down();
+                if (!lead_machine_) {
+                    ++fooled_;   // nobody there: another unidentified noise that lied
+                }
+                stand_down(!lead_machine_);
             }
             break;
         }
@@ -3150,8 +3157,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             }
             if (search_s_ >= kSearchSeconds || search_trip_s_ >= search_budget_s_ ||
                 (!lead_seen_ && since_heard_s_ > kAcousticMemorySeconds)) {
-                if (!lead_seen_) ++fooled_;
-                stand_down();
+                if (!lead_seen_ && !lead_machine_) {
+                    ++fooled_;
+                }
+                stand_down(!lead_machine_);
                 break;
             }
             if (to_place > 1.5F) {
@@ -3742,6 +3751,7 @@ void Matron::restore(const Saved &saved) {
         wary_ = false;
         lead_seen_ = false;
         lead_sense_ = Sense::None;
+        lead_machine_ = false;
         glimpsed_ = false;
         end_encounter();
         lead_valid_ = false;
