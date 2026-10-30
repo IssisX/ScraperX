@@ -4540,6 +4540,21 @@ void Matron::refresh_view() {
     view_.stock_constraint = RVec3::sZero();
     view_.stock_rotation = Quat::sIdentity();
     view_.stock_size = Vec3::sZero();
+    view_.stock_seeking = 0;
+    view_.stock_seek_handle = RVec3::sZero();
+    view_.stock_seek_rotation = Quat::sIdentity();
+    view_.stock_seek_size = Vec3::sZero();
+    if (held_ < 0 && fetch_ >= 0 && static_cast<std::size_t>(fetch_) < throwables_.size()) {
+        const Throwable &candidate = throwables_[static_cast<std::size_t>(fetch_)];
+        const BodyLockRead seek_lock(physics_.GetBodyLockInterface(), candidate.body);
+        if (seek_lock.Succeeded()) {
+            const Body &piece = seek_lock.GetBody();
+            view_.stock_seeking = candidate.entity;
+            view_.stock_seek_handle = piece.GetWorldTransform() * candidate.handle;
+            view_.stock_seek_rotation = piece.GetRotation();
+            view_.stock_seek_size = piece.GetShape()->GetLocalBounds().GetSize();
+        }
+    }
     if (held_ >= 0 && hold_ != nullptr && body_in_world_) {
         const Throwable &t = throwables_[static_cast<std::size_t>(held_)];
         const BodyLockRead lock(physics_.GetBodyLockInterface(), t.body);

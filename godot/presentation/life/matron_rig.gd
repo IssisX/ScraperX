@@ -691,21 +691,24 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		_plant_limbs(data, wf, feet_free)
 	if down_mask != 0:
 		claims |= CLAIM_PLANTS
-	# A carried piece remains attached only while the native point constraint
-	# exists. Reach to its actual handle, not a guessed pose ahead of her chest.
-	# Larger shapes take two hands on either side of that handle; their spread
-	# follows the body's rotation rather than her facing.
-	if int(data.get("carrying", 0)) != 0 and data.has("stock_handle"):
-		var handle: Vector3 = data["stock_handle"]
-		var size: Vector3 = data.get("stock_size", Vector3.ZERO)
-		var two_hands := maxf(size.x, size.z) >= 0.38
-		var across := Vector3.ZERO
-		if two_hands and data.has("stock_rotation"):
-			var rotation: Quaternion = data["stock_rotation"]
-			across = (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1)
-		hold_reach("r", handle + across, 1.0)
-		if two_hands:
-			hold_reach("l", handle - across, 1.0)
+	# The native knows which handle she is walking toward before taking it.
+	# Put her hands on that moving physical point during the approach, so the
+	# first constrained frame does not start with a half-meter visual reach.
+	# A far-off target is never a claim of contact: reach begins only when the
+	# existing physical handle has come within the drawn arms' range.
+	var carrying := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+	var seeking := not carrying and int(data.get("stock_seeking", 0)) != 0 and data.has("stock_seek_handle")
+	if carrying or seeking:
+		var handle: Vector3 = data["stock_handle"] if carrying else data["stock_seek_handle"]
+		var size: Vector3 = data.get("stock_size", Vector3.ZERO) if carrying else data.get("stock_seek_size", Vector3.ZERO)
+		var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY) if carrying else data.get("stock_seek_rotation", Quaternion.IDENTITY)
+		var shoulder: Vector3 = bone_world("sh_r").origin
+		if carrying or shoulder.distance_to(handle) < 1.6:
+			var two_hands := maxf(size.x, size.z) >= 0.38
+			var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
+			hold_reach("r", handle + across, 1.0)
+			if two_hands:
+				hold_reach("l", handle - across, 1.0)
 	# Her hand on the climber's ankle, and in the rip her other on his arm
 	# (the view keeps the last of each while her hand comes off it).
 	if float(view._w_hold) > 0.001:

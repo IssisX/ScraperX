@@ -1129,6 +1129,11 @@ public:
         JPH::RVec3 stock_constraint = JPH::RVec3::sZero();
         JPH::Quat stock_rotation = JPH::Quat::sIdentity();
         JPH::Vec3 stock_size = JPH::Vec3::sZero();
+        // Read-only approach target, available before the point constraint is taken.
+        std::uint64_t stock_seeking = 0;
+        JPH::RVec3 stock_seek_handle = JPH::RVec3::sZero();
+        JPH::Quat stock_seek_rotation = JPH::Quat::sIdentity();
+        JPH::Vec3 stock_seek_size = JPH::Vec3::sZero();
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
         std::uint32_t staggers = 0;     // blows that took her balance, this run

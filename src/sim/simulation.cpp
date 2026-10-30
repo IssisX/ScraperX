@@ -1464,6 +1464,10 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.stock_constraint = {view.stock_constraint.GetX(), view.stock_constraint.GetY(), view.stock_constraint.GetZ()};
     result.stock_rotation = to_sim_quaternion(view.stock_rotation);
     result.stock_size = {view.stock_size.GetX(), view.stock_size.GetY(), view.stock_size.GetZ()};
+    result.stock_seeking = view.stock_seeking;
+    result.stock_seek_handle = {view.stock_seek_handle.GetX(), view.stock_seek_handle.GetY(), view.stock_seek_handle.GetZ()};
+    result.stock_seek_rotation = to_sim_quaternion(view.stock_seek_rotation);
+    result.stock_seek_size = {view.stock_seek_size.GetX(), view.stock_seek_size.GetY(), view.stock_seek_size.GetZ()};
     result.takes = view.takes;
     result.throws = view.throws;
     result.staggers = view.staggers;
