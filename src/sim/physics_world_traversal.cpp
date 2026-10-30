@@ -511,8 +511,6 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
         // the finite hand force still yields to a real external pull.
         constexpr float kClimbTrackSeconds = 0.20F;
         const JPH::Vec3 support_v = bodies.GetPointVelocity(traversal_body_, traversal_desired_);
-        const JPH::Vec3 target_v = support_v +
-            JPH::Vec3(traversal_desired_ - current) / kClimbTrackSeconds;
         float mass = kPlayerMassKg;
         {
             const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), player_id_);
@@ -542,6 +540,8 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
             // Use the hold's measured per-tick velocity, not an extra speed
             // allowance: the same finite grip still has to supply the force.
             const JPH::Vec3 hold_v = JPH::Vec3(traversal_desired_ - previous_desired) / delta_seconds;
+            const JPH::Vec3 target_v = hold_v +
+                JPH::Vec3(traversal_desired_ - current) / kClimbTrackSeconds;
             climb_grip_force_ = mass *
                 ((target_v - player_v) / kClimbTrackSeconds -
                  (player_v - hold_v) / kClimbTrackSeconds -
