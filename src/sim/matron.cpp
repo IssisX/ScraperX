@@ -29,6 +29,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <iostream>
 
 namespace scraperx::sim {
 namespace {
@@ -4655,6 +4656,29 @@ void Matron::refresh_view() {
         view_.x = kLockerX;
         view_.y = home_y_ + kStandCentre;
         view_.z = kLockerZ;
+    }
+    if (view_.released && view_.y > 175.0F && view_.y < 179.5F &&
+        view_.x > -16.0F && view_.x < 10.0F && view_.z > -134.0F && view_.z < -126.0F) {
+        std::cerr << "PR48_DIAG t=" << clock_s_
+                  << " state=" << static_cast<int>(state_)
+                  << " pos=" << view_.x << "," << view_.y << "," << view_.z
+                  << " cling=" << riding_
+                  << " lead=" << heard_x_ << "," << heard_z_
+                  << " lead_floor=" << lead_floor_
+                  << " lead_age=" << since_heard_s_
+                  << " lead_sense=" << static_cast<int>(lead_sense_)
+                  << " lead_valid=" << lead_valid_
+                  << " fooled=" << fooled_
+                  << " wary=" << wary_
+                  << " rage=" << rage_
+                  << " stage=" << static_cast<int>(stage_)
+                  << " turn=" << static_cast<int>(turn_)
+                  << " turn_s=" << turn_s_
+                  << " turn_cd=" << turn_cooldown_s_
+                  << " sight_far_s=" << sight_far_s_
+                  << " stalking=" << stalking_
+                  << " stalk_spent=" << stalk_spent_
+                  << "\n";
     }
     // Second climb hold + feet support: VIEW PLUMBING ONLY. Nothing here
     // moves her, grips, or changes a climb: it only reports two points
