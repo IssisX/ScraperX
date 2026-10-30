@@ -285,6 +285,12 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
+# Keep the last governed arm pose while a physical prop is being approached or
+# carried. Restarting the IK from unrelated walk/search poses each frame can
+# pull a wrist off an otherwise stationary handle before govern clips it.
+const PROP_ARM_JOINTS := ["sh_l", "sh_l_x", "el_l", "el_l_x",
+	"sh_r", "sh_r_x", "el_r", "el_r_x"]
+var _prop_arm_pose := {}
 
 
 func _gpos(n: String) -> Vector3:
@@ -509,8 +515,25 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 # `held`: her holds as the view draws them, eased onto each new one (the
 # view's _ease_hands); without it, the native's own holds.
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
+	var prop_intent := int(data.get("carrying", 0)) != 0 or int(data.get("stock_seeking", 0)) != 0
+	if prop_intent and not _prop_arm_pose.is_empty() and not bool(view.fresh_frame):
+		for bone in PROP_ARM_JOINTS:
+			var i: int = bone_idx[bone]
+			var prior: Array = _prop_arm_pose[bone]
+			skel.set_bone_pose_rotation(i, prior[0])
+			# Previous forearm length eases back toward rest at the existing
+			# position-rate limit rather than collapsing when her state shifts.
+			var nominal := skel.get_bone_pose_position(i)
+			var last: Vector3 = prior[1]
+			var cap := GOVERN_M_S * maxf(float(view._dt), 0.0)
+			skel.set_bone_pose_position(i, last.move_toward(nominal, cap))
 	_contact(data, falling, held)
 	govern()
+	_prop_arm_pose.clear()
+	if prop_intent:
+		for bone in PROP_ARM_JOINTS:
+			var i: int = bone_idx[bone]
+			_prop_arm_pose[bone] = [skel.get_bone_pose_rotation(i), skel.get_bone_pose_position(i)]
 
 
 # Every bone of her body (not her hair, eyes or fingers) turned this frame
@@ -703,7 +726,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		var size: Vector3 = data.get("stock_size", Vector3.ZERO) if carrying else data.get("stock_seek_size", Vector3.ZERO)
 		var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY) if carrying else data.get("stock_seek_rotation", Quaternion.IDENTITY)
 		var shoulder: Vector3 = bone_world("sh_r").origin
-		if carrying or shoulder.distance_to(handle) < 1.6:
+		if carrying or shoulder.distance_to(handle) < 2.5:
 			var two_hands := maxf(size.x, size.z) >= 0.38
 			var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
 			hold_reach("r", handle + across, 1.0)
