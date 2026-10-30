@@ -470,10 +470,19 @@ func _act_wake_and_go_below(device: int) -> bool:
 # Out, a pest: unseen, she takes the toolbox from her door and carries it
 # off, and at her post undoes Stage A's rope.
 func _act_pest_unseen(device: int) -> bool:
-	var seen := {"carried": false, "samples": 0, "worst_hand_m": 0.0}
+	var seen := {"carried": false, "samples": 0, "worst_hand_m": 0.0,
+		"holding_frames": 0, "visible_frames": 0, "attached_frames": 0, "other_carry_frames": 0}
 	var done: bool = await _act_wait(func() -> bool:
 		var m := _matron_state()
 		var holding := _act_box != 0 and int(m["carrying"]) == _act_box
+		if holding:
+			seen["holding_frames"] = int(seen["holding_frames"]) + 1
+			if _main._matron_view.figure_shown():
+				seen["visible_frames"] = int(seen["visible_frames"]) + 1
+			if _main._matron_view.prop_attached:
+				seen["attached_frames"] = int(seen["attached_frames"]) + 1
+		elif int(m["carrying"]) != 0:
+			seen["other_carry_frames"] = int(seen["other_carry_frames"]) + 1
 		if holding and _main._matron_view.figure_shown() and _main._matron_view.prop_attached:
 			seen["samples"] = int(seen["samples"]) + 1
 			seen["worst_hand_m"] = maxf(float(seen["worst_hand_m"]), _main._matron_view.prop_hand_error_m)
@@ -489,6 +498,10 @@ func _act_pest_unseen(device: int) -> bool:
 	if not bool(seen["carried"]) or int(_matron_state()["takes"]) < 1:
 		return _fail("a pest, she never took the toolbox from her door (takes %d)" % int(_matron_state()["takes"]))
 	if int(seen["samples"]) < 3 or float(seen["worst_hand_m"]) > 0.05:
+		print("SCRAPERX_PROP_DIAG holding_frames=%d visible_frames=%d attached_frames=%d other_carry_frames=%d final_carry=%d final_takes=%d final_prop_attached=%s final_prop_error_m=%.3f" % [
+			int(seen["holding_frames"]), int(seen["visible_frames"]), int(seen["attached_frames"]),
+			int(seen["other_carry_frames"]), int(_matron_state()["carrying"]), int(_matron_state()["takes"]),
+			str(_main._matron_view.prop_attached), float(_main._matron_view.prop_hand_error_m)])
 		return _fail("her drawn wrist missed the real toolbox handle: samples %d, worst %.3f m (limit 0.05 m)" % [
 			int(seen["samples"]), float(seen["worst_hand_m"])])
 	if int(_native().get_well_a_rope_end_entity_id()) == WELL_A_CAGE_ENTITY:
