@@ -872,6 +872,15 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     hold_s_ = 0.0F;
                     spare_walk_ = false;
                 }
+            } else if (arm_tears_ != hold_tears_at_) {
+                // The arm is already off. Hanging him out over the rail again
+                // hooks a still body, the grip tears, and a re-take is only
+                // before the arm. Hold him where the rip left him, then set
+                // him down.
+                pose_hand(dt, RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()), 0.6F * kHandSpeedMps);
+                if (hold_s_ >= dangle_s_) {
+                    finish_dangle();
+                }
             } else {
                 pose_hand(dt, low, 0.6F * kHandSpeedMps, her_v);
                 if (Vec3(low - hand_target_).Length() < 0.02F) {
@@ -929,10 +938,8 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         break;
     }
     case State::ArmPlay: {
-        // She walks to her spot (a re-pose moves that spot back, and her weight
-        // comes with it). Her hand lifts him. It does not reach further out:
-        // the dangle already did that, and doing it again during the pull
-        // threw him off the deck and yanked a snagged body free too soon.
+        // She walks to her spot. Her hand lifts him. It does not reach further
+        // out: doing that during the pull threw him off the deck.
         walk_toward(dt, rim_x_, rim_z_, std::min(0.8F, 3.0F * xz(ax, az, rim_x_, rim_z_)));
         yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
         pose_hand(dt, RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()), 0.6F * kHandSpeedMps);

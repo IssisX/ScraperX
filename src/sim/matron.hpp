@@ -1356,6 +1356,9 @@ public:
     [[nodiscard]] float grip_strain_floor_n() const noexcept {
         return state_ == State::ArmPlay || fatal_hold_ ? kGripRipFloorN : kGripStrainFloorN;
     }
+    // A still body caught on steel does not leave her hand during the rip.
+    // His kicks and his thrashing still do: the world counts those as fought.
+    [[nodiscard]] bool snag_holds_in_rip() const noexcept { return state_ == State::ArmPlay; }
     void set_player_body(const JPH::RVec3 wrist, const int arms_left) noexcept {
         player_wrist_ = wrist;
         player_arms_left_ = arms_left;

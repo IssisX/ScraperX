@@ -465,12 +465,19 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
                         : static_cast<JPH::PointConstraint *>(grip_.GetPtr())->GetTotalLambdaPosition();
         grip_load_n_ = lambda.Length() / std::max(dt, 1.0e-4F);
         grip_peak_n_ = std::max(grip_peak_n_, grip_load_n_);
-        grip_over_ticks_ = grip_load_n_ > Matron::kGripMaxForceN ? grip_over_ticks_ + 1 : 0;
-        grip_strain_ns_ = std::max(0.0F, grip_strain_ns_ +
-                                             std::max(0.0F, grip_load_n_ - matron_->grip_strain_floor_n()) * dt -
-                                             Matron::kGripStrainDecay * dt);
-        if (grip_over_ticks_ >= 2 || grip_strain_ns_ > Matron::kGripTearNs) {
-            tear_grip(true);
+        // The rip holds a still body through a rail. Only a fight (a kick, a
+        // thrash, a brace) tears it then. Before the rip, the world still can.
+        if (matron_->snag_holds_in_rip() && !grip_fought_) {
+            grip_over_ticks_ = 0;
+            grip_strain_ns_ = std::max(0.0F, grip_strain_ns_ - Matron::kGripStrainDecay * dt);
+        } else {
+            grip_over_ticks_ = grip_load_n_ > Matron::kGripMaxForceN ? grip_over_ticks_ + 1 : 0;
+            grip_strain_ns_ = std::max(0.0F, grip_strain_ns_ +
+                                                 std::max(0.0F, grip_load_n_ - matron_->grip_strain_floor_n()) * dt -
+                                                 Matron::kGripStrainDecay * dt);
+            if (grip_over_ticks_ >= 2 || grip_strain_ns_ > Matron::kGripTearNs) {
+                tear_grip(true);
+            }
         }
     } else {
         grip_load_n_ = 0.0F;
