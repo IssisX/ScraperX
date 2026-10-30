@@ -687,15 +687,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
         // Her own throw coming down is not a sound to her (matron.hpp).
         if (loud > 0.0F && hit.entity != matron_->thrown_entity()) {
-            const bool stage_a_machine =
-                hit.entity == kWellACageEntityId || hit.entity == kWellASkipEntityId;
-            if (stage_a_machine) {
-                matron_->hear_machine(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y),
-                                      static_cast<float>(hit.at.z), loud);
-            } else {
-                matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y),
-                              static_cast<float>(hit.at.z), loud);
-            }
+            matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y),
+                          static_cast<float>(hit.at.z), loud);
         }
     }
     // Stage A is one passive gravity-counterweight machine, not two
