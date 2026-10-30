@@ -274,6 +274,10 @@ struct MatronSnapshot final {
     double exposure = 0.0;
     std::uint32_t shoves = 0;   // the player thrown off their feet by her hands, this run
     std::uint64_t carrying = 0; // the stock in her hands (its entity), 0 for none
+    Vector3 stock_handle{};       // throwable's physical handle, in world coordinates
+    Vector3 stock_constraint{};   // her moving constraint anchor, in world coordinates
+    Quaternion stock_rotation{};  // actual throwable body rotation
+    Vector3 stock_size{};        // local shape bounds, for one- or two-hand presentation
     std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
     std::uint32_t throws = 0;   // and threw at the player
     // Her balance (matron.hpp): blows that took it and that took her off her
