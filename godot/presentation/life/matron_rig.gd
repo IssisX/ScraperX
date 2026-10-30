@@ -488,7 +488,7 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 # the wrist from where her pose has it toward `at_world` as far as `w`, the
 # arm drawn out (upper arm and forearm both, their "_x" bones slid) as long as
 # that reach needs, never past HOLD_STRETCH_MAX its own length.
-func hold_reach(s: String, at_world: Vector3, w: float) -> void:
+func hold_reach(s: String, at_world: Vector3, w: float, prop := false) -> void:
 	var target := skel.global_transform.affine_inverse() * at_world
 	var sh := _gpos("sh_" + s)
 	var el := _gpos("el_" + s)
@@ -509,7 +509,66 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 			var i: int = bone_idx[bn]
 			skel.set_bone_pose_position(i, skel.get_bone_pose_position(i) * k)
 	stretch[s] = base_s * k
-	_reach(s, want, 1.0, "hold_" + s)
+	if prop:
+		prop_reach(s, want)
+	else:
+		_reach(s, want, 1.0, "hold_" + s)
+
+
+# Prop-only rate-aware reach. The unconstrained two-bone solution can turn
+# an elbow farther than the existing governor permits. Governing that finished
+# solution afterwards sends the wrist *away* from the real handle. Instead,
+# solve the furthest wrist target whose shoulder and elbow rotations fit the
+# SAME angular budget, using the preceding governed pose as the start.
+# This does not change a physics point, limb length limit, or govern rate.
+func prop_reach(s: String, at_world: Vector3) -> void:
+	var target: Vector3 = skel.global_transform.affine_inverse() * at_world
+	var shoulder_name := "sh_" + s
+	var elbow_name := "el_" + s
+	var wrist_name := "wr_" + s
+	var shoulder_id: int = bone_idx[shoulder_name]
+	var elbow_id: int = bone_idx[elbow_name]
+	var shoulder_before: Quaternion = skel.get_bone_pose_rotation(shoulder_id)
+	var elbow_before: Quaternion = skel.get_bone_pose_rotation(elbow_id)
+	var wrist_before := _gpos(wrist_name)
+	var key := "prop_" + s
+	var saved_pole: Array = _pole.get(key, []).duplicate()
+	var index_sh := _governed_bones.find(shoulder_id)
+	var index_el := _governed_bones.find(elbow_id)
+	var dt: float = maxf(float(view._dt), 0.0)
+	var cap: float = (GOVERN_BURST_RAD_S if bool(view.burst_active) else GOVERN_RAD_S) * dt
+	var last_sh: Quaternion = _govern_last[index_sh] if index_sh >= 0 else shoulder_before
+	var last_el: Quaternion = _govern_last[index_el] if index_el >= 0 else elbow_before
+	var low := 0.0
+	var high := 1.0
+	var best := 0.0
+	for attempt in 9:
+		var fraction := 1.0 if attempt == 0 else 0.5 * (low + high)
+		skel.set_bone_pose_rotation(shoulder_id, shoulder_before)
+		skel.set_bone_pose_rotation(elbow_id, elbow_before)
+		if saved_pole.is_empty():
+			_pole.erase(key)
+		else:
+			_pole[key] = saved_pole
+		_reach(s, wrist_before.lerp(target, fraction), 1.0, key)
+		var turn_sh: float = last_sh.angle_to(skel.get_bone_pose_rotation(shoulder_id))
+		var turn_el: float = last_el.angle_to(skel.get_bone_pose_rotation(elbow_id))
+		var closer := _gpos(wrist_name).distance_to(target) <= wrist_before.distance_to(target) + 0.0001
+		if turn_sh <= cap + 0.0001 and turn_el <= cap + 0.0001 and closer:
+			best = fraction
+			low = fraction
+			if fraction >= 1.0:
+				break
+		else:
+			high = fraction
+	skel.set_bone_pose_rotation(shoulder_id, shoulder_before)
+	skel.set_bone_pose_rotation(elbow_id, elbow_before)
+	if saved_pole.is_empty():
+		_pole.erase(key)
+	else:
+		_pole[key] = saved_pole
+	if best > 0.0:
+		_reach(s, wrist_before.lerp(target, best), 1.0, key)
 
 
 # `held`: her holds as the view draws them, eased onto each new one (the
@@ -729,9 +788,9 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		if carrying or shoulder.distance_to(handle) < 2.5:
 			var two_hands := maxf(size.x, size.z) >= 0.38
 			var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
-			hold_reach("r", handle + across, 1.0)
+			hold_reach("r", handle + across, 1.0, true)
 			if two_hands:
-				hold_reach("l", handle - across, 1.0)
+				hold_reach("l", handle - across, 1.0, true)
 	# Her hand on the climber's ankle, and in the rip her other on his arm
 	# (the view keeps the last of each while her hand comes off it).
 	if float(view._w_hold) > 0.001:
