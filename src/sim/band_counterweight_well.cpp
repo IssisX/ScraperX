@@ -165,11 +165,6 @@ void build_stage_a(kit::Kit &kit, CounterweightWell &well) {
                                   JPH::RVec3(kCageEyeLocal);
     const JPH::RVec3 cage_sheave(eye_bottom.GetX(), kSheaveY, eye_bottom.GetZ());
     const JPH::RVec3 skip_sheave(kSkipCenterX, kSheaveY, kSkipCenterZ);
-    // Stage A's running sound comes from the fixed head hardware the rope
-    // actually passes over, not from the travelling cage or skip bodies.
-    well.a_head_sound = JPH::RVec3(
-        0.5 * (cage_sheave.GetX() + skip_sheave.GetX()), kSheaveY,
-        0.5 * (cage_sheave.GetZ() + skip_sheave.GetZ()));
     // The rope's free length below the cage's sheave, with the skip in its
     // catch, and the height at which the bollard's eye takes kBollardSlack
     // off it.
