@@ -459,7 +459,13 @@ void Summit::read_ending(const float dt, const bool grounded, const bool chute, 
     if (state_.ending == Ending::Canopy &&
         (deaths != flight_deaths_ || (!chute && !grounded) || (grounded && player.GetY() >= 5.0F)))
         state_.ending = Ending::Unrigged;
-    if (state_.ending == Ending::Unrigged && chute && !grounded && player.GetY() < kDeckTop - 5.0F) {
+    // Qualify a return only while the canopy is carrying him away from the
+    // summit. A hop near grade (or reopening after a lower-deck landing) is
+    // not a parachute descent from the top. A high-altitude stow/reopen can
+    // still qualify again, but an interrupted lower descent cannot.
+    constexpr float kCanopyStartWindowM = 50.0F;
+    if (state_.ending == Ending::Unrigged && chute && !grounded &&
+        player.GetY() < kDeckTop - 5.0F && player.GetY() > kDeckTop - kCanopyStartWindowM) {
         flight_deaths_ = deaths;
         state_.ending = Ending::Canopy;
     }
