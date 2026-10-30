@@ -919,11 +919,14 @@ func _feel_strike(delta: float) -> void:
 func _arms_delta(delta: float) -> float:
 	return 0.0 if _strike_feel.frozen() else delta
 
-# Her hands on the body (life/matron_hold_camera.gd): while held, dangled or
-# claimed the head is the body's quaternion with the free look clamped about
-# it; the fatality's beats frame over that. A plain overlay carries the spin
-# vignette and the closing black.
-var _hold_cam: RefCounted = preload("res://presentation/life/matron_hold_camera.gd").new()
+# Her hands on the body (life/matron_hold_camera.gd): from her grab to his
+# release or his death the view is third person, out where both bodies are
+# seen whole, the look orbiting it, kept clear of steel; at the fatality's
+# let-go, slow motion, the pull-out down the drop and the fade, the sim run
+# fast while black till the death's restore. A plain overlay carries the
+# black.
+const HoldCam := preload("res://presentation/life/matron_hold_camera.gd")
+var _hold_cam: RefCounted = HoldCam.new()
 var _hold_veil: ColorRect = null
 # The runs she has ended (the native's count). Each one builds the world
 # again, her look over it with it: main.gd has that made behind its card.
@@ -938,13 +941,14 @@ func _feel_hold(delta: float) -> void:
 	if _runs_she_ended >= 0 and ended > _runs_she_ended:
 		_her_world_new = true
 	_runs_she_ended = ended
-	var held_basis: Basis = _hold_cam.orient(hold, _camera.basis, _yaw, _pitch, delta, _reduced_motion)
-	# Only while she has the body: written back every frame, an unchanged
-	# basis still re-reads the camera's angles inside +-90 deg of pitch, and a
-	# roll's view (turned over past that) reads as never having turned.
+	var deaths := int(_native.get_death_count()) * 1000 + ended
+	var view: Transform3D = _hold_cam.frame(hold, _matron_view.head_world_position(), _camera.global_transform,
+		Vector2(_yaw, _pitch), _camera.fov, deaths, delta, _hold_cast)
+	# Only while the view is out: written back every frame, an unchanged
+	# basis still re-reads the camera's angles inside +-90 deg of pitch.
 	if _hold_cam.active():
-		_camera.basis = held_basis
-	var veil: float = maxf(_hold_cam.vignette() * 0.6, _hold_cam.black())
+		_camera.global_transform = view
+	var veil: float = _hold_cam.black()
 	if veil > 0.002 and _hold_veil == null:
 		_hold_veil = ColorRect.new()
 		_hold_veil.color = Color(0, 0, 0, 0)
@@ -956,6 +960,17 @@ func _feel_hold(delta: float) -> void:
 		layer.add_child(_hold_veil)
 	if _hold_veil != null:
 		_hold_veil.color.a = veil
+
+## The hold camera's cast (HoldCam.cone_cast) through the native's look ray.
+func _hold_cast(from: Vector3, to: Vector3, skip: Vector3, radius: float) -> float:
+	return HoldCam.cone_cast(_native, from, to, radius, skip)
+
+## Where his eyes are for her eyes and the world's nearness: his eye, or his
+## drawn head while the view is out of it.
+func _his_eye() -> Vector3:
+	if _hold_cam.third_person() and _gore != null and _gore.victim != null and _gore.victim.visible:
+		return _gore.victim.head_position()
+	return _camera.global_position
 
 # Gore (life/gore/gore_view.gd): wounds, blood and the lens, from the hold
 # state. Always full: there is no setting that softens it. The same read of
@@ -971,6 +986,9 @@ func _feel_gore(her_state: Dictionary, delta: float, hold: Dictionary) -> void:
 		add_child(_gore)
 		_gore.attach_arms(_arms)
 		_gore.matron_view = _matron_view
+	_gore.outside = _hold_cam.third_person()
+	_gore.grip_at = _matron_view.holding_hand_world()
+	_gore.lens_on = not _gore.outside
 	_gore.update_view(hold, her_state, delta, _camera, float(her_state.get("floor_y", 0.0)))
 	_matron_view.hear_hold(hold)
 
@@ -1017,7 +1035,7 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		# her sounds of it.
 		var her_hold: Dictionary = _native.get_matron_hold_state() if _native.has_method("get_matron_hold_state") else {}
 		_matron_view.set_hold(her_hold)
-		_matron_view.update_view(her_state, delta, _camera.global_position, position)
+		_matron_view.update_view(her_state, delta, _his_eye(), position)
 		_feel_her(her_state, position)
 		_feel_gore(her_state, delta, her_hold)
 	if _forklift_view != null:
@@ -1096,7 +1114,9 @@ func _feel_death(delta: float) -> void:
 			_break_pulses.append(BREAK_PULSE_GAP_S * float(i + 1))
 		var head: Transform3D = CorpseView.head_of(_corpses)
 		_death_look = head.basis.inverse() * Vector3(-sin(_yaw), 0.0, -cos(_yaw))
-		_death_cam_left = DEATH_CAM_MAX_S
+		# The fatality's death is waited on in black (matron_hold_camera.gd):
+		# no ride on the corpse, the restored body's eye comes up out of it.
+		_death_cam_left = 0.0 if _hold_cam.awaiting_death() else DEATH_CAM_MAX_S
 		_death_cam_shown = 0.0
 		_death_shake = clampf(0.4 + 0.3 * (hard - 1.0), 0.4, 1.0)
 	_corpse_view.update_view(_corpses, _death_cam_left > 0.0 and _death_cam_shown < DEATH_CAM_HEAD_S + 0.1)

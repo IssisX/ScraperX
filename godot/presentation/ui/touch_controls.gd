@@ -100,6 +100,7 @@ class TouchButton:
 	var dimmed := false
 	var hold := false
 	var label := ""
+	var note := ""              # over the button (the hang window's seconds)
 	var icon: StringName = &""
 	var tone := 0
 	var index := -1
@@ -575,12 +576,14 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 
 	# The punch: never moves, never goes. Greyed when none can be thrown (in
 	# the air, a lunge, no fist: a press then is ignored); in her hand before
-	# the rip it reads BREAK FREE, its fill pulsing.
+	# the rip it reads BREAK FREE, its fill pulsing; in the fatality's hang
+	# window the seconds left are over it.
 	var punch: TouchButton = _buttons[B_PUNCH]
 	var fist: Dictionary = ctx.get("punch", {})
 	punch.shown = true
 	punch.enabled = bool(fist.get("ready", false))
 	punch.label = String(fist.get("label", "PUNCH"))
+	punch.note = String(fist.get("count", ""))
 	punch.tone = TONE_DANGER if bool(fist.get("break_free", false)) else (TONE_PRIMARY if punch.enabled else TONE_NORMAL)
 
 	# Drop lets go of a ledge or a climb's holds, and at an edge behind the
@@ -690,6 +693,10 @@ func _draw_button(button: TouchButton) -> void:
 		UiStyle.text_centered(self, UiStyle.font_label(), button.label,
 			button.center + Vector2(0.0, radius + 30.0 * _u), int(roundf(25.0 * _u)),
 			UiStyle.with_alpha(UiStyle.PAPER, dim * alpha), int(roundf(6.0 * _u)))
+	if not button.note.is_empty():
+		UiStyle.text_centered(self, UiStyle.font_label(), button.note,
+			button.center - Vector2(0.0, radius + 14.0 * _u), int(roundf(30.0 * _u)),
+			UiStyle.with_alpha(accent, alpha), int(roundf(6.0 * _u)))
 
 
 func _draw_stick() -> void:

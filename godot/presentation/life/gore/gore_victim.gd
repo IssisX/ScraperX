@@ -67,6 +67,149 @@ func _pose_lying() -> void:
 	body.turn("neck_hi", Quaternion(Vector3.RIGHT, -0.25))
 
 
+# Hung from her hand (the hold, seen from outside): the held leg's ankle
+# where her fingers have it (the native's held_ankle, the point her drawn hand
+# is put on: matron_view.gd), the other leg and the arms hanging under
+# gravity as far as their joints let them, swaying; in the rip, the arm she
+# pulls reaching for her other hand. Out of her hand (the let-go's fall) the
+# legs hang straight from the body.
+const FREE_LEG_MAX := 1.2      # the free leg off its line, toward world down (rad)
+const SWAY := 0.18
+const GRIP_TRUST_M := 0.5      # her drawn hand this near the native ankle: his ankle goes into it
+var hanging := false
+var held_side := -1            # the leg her fingers have: 2 left, 3 right
+var _clock := 0.0
+
+
+func hang(hold: Dictionary, lost: Array, delta: float, grip_at := Vector3.INF) -> void:
+	hanging = true
+	_clock += delta
+	var skel := body.skel
+	for n in ["hp_l", "hp_r", "kn_l", "kn_r", "sh_l", "sh_r", "el_l", "el_r", "neck_hi"]:
+		var i := int(body.bone[n])
+		skel.set_bone_pose_rotation(i, skel.get_bone_rest(i).basis.get_rotation_quaternion())
+	var q: Quaternion = hold.get("body_rotation", Quaternion.IDENTITY)
+	if not q.is_normalized():
+		q = q.normalized() if q.length() > 1.0e-6 else Quaternion.IDENTITY
+	var body_down := q * Vector3.DOWN
+	var ankle: Vector3 = hold.get("held_ankle", Vector3.ZERO)
+	var gripped := bool(hold.get("held", false)) and ankle.length_squared() > 1.0e-6
+	held_side = -1
+	if gripped:
+		held_side = 2 if not bool(lost[2]) else (3 if not bool(lost[3]) else -1)
+	for k in [2, 3]:
+		if bool(lost[k]):
+			continue
+		var s := "l" if k == 2 else "r"
+		if k == held_side:
+			# Into her drawn hand where it is on him (it is put on this same
+			# native point, drawn by her own reach), else the native point.
+			var at := ankle
+			if grip_at.is_finite() and grip_at.distance_to(ankle) < GRIP_TRUST_M:
+				at = grip_at
+			_leg_to(s, at, q * Vector3.FORWARD)
+			continue
+		var sway := Vector3(sin(_clock * 2.3 + float(k)), 0.0, cos(_clock * 1.9 + float(k))) * SWAY
+		var dir := body_down
+		if gripped:
+			# Hung by the other ankle: this leg falls toward world down, as far
+			# as a hip opens.
+			var to_down := Vector3.DOWN + sway
+			var a := minf(body_down.angle_to(to_down), FREE_LEG_MAX)
+			var axis := body_down.cross(to_down)
+			if axis.length() > 1.0e-4:
+				dir = body_down.rotated(axis.normalized(), a)
+		_aim_dir("hp_" + s, "an_" + s, dir)
+	for k in [0, 1]:
+		if bool(lost[k]):
+			continue
+		var s := "l" if k == 0 else "r"
+		var hand2: Vector3 = hold.get("matron_hand2", Vector3.ZERO)
+		if int(hold.get("wrist_side", -1)) == k and hand2.length_squared() > 1.0e-6:
+			_aim_at("sh_" + s, "wr_" + s, hand2)
+			continue
+		# Arms hang (past his head, hung head down), a little out, swaying.
+		var out := q * Vector3(0.35 if k == 1 else -0.35, 0.0, 0.0)
+		var flail := Vector3(sin(_clock * 3.1 + 1.7 * float(k)), 0.0, cos(_clock * 2.7 + 0.9 * float(k))) * SWAY * 1.5
+		_aim_dir("sh_" + s, "wr_" + s, Vector3.DOWN + out + flail)
+
+
+func unhang() -> void:
+	hanging = false
+	held_side = -1
+	_pose_lying()
+
+
+## His held ankle as drawn (the leg her fingers have), for a test.
+func held_ankle_drawn() -> Vector3:
+	if held_side < 2:
+		return Vector3.INF
+	return body.world_bone("an_l" if held_side == 2 else "an_r").origin
+
+
+# The leg's ankle to `world_at` by two-bone reach: the knee bent toward
+# `front` (his front, world) as much as the hip-to-ankle span is short of the
+# leg's length.
+func _leg_to(s: String, world_at: Vector3, front: Vector3) -> void:
+	var hip := body.world_bone("hp_" + s).origin
+	var knee := body.world_bone("kn_" + s).origin
+	var foot := body.world_bone("an_" + s).origin
+	var thigh := hip.distance_to(knee)
+	var shin := knee.distance_to(foot)
+	var to := world_at - hip
+	var d := clampf(to.length(), absf(thigh - shin) + 0.01, thigh + shin - 0.001)
+	var dir := to.normalized() if to.length() > 1.0e-4 else front
+	var axis := dir.cross(front)
+	if axis.length() < 1.0e-4:
+		axis = dir.cross(Vector3.UP if absf(dir.y) < 0.9 else Vector3.RIGHT)
+	axis = axis.normalized()
+	var a := acos(clampf((thigh * thigh + d * d - shin * shin) / (2.0 * thigh * d), -1.0, 1.0))
+	var knee_at := hip + dir.rotated(axis, a) * thigh
+	_aim_at("hp_" + s, "kn_" + s, knee_at)
+	_aim_at("kn_" + s, "an_" + s, world_at)
+
+
+# Turn the bone `root` so the limb's `tip` lies toward `world_dir` from it.
+func _aim_dir(root: String, tip: String, world_dir: Vector3) -> void:
+	var skel := body.skel
+	var want := (skel.global_transform.basis.inverse() * world_dir)
+	if want.length() < 1.0e-5:
+		return
+	_turn_to(root, tip, want.normalized())
+
+
+# Turn the bone `root` so the limb's `tip` goes to `world_at`.
+func _aim_at(root: String, tip: String, world_at: Vector3) -> void:
+	var skel := body.skel
+	var at := skel.global_transform.affine_inverse() * world_at
+	var from := skel.get_bone_global_pose(int(body.bone[root])).origin
+	if (at - from).length() < 1.0e-4:
+		return
+	_turn_to(root, tip, (at - from).normalized())
+
+
+func _turn_to(root: String, tip: String, want: Vector3) -> void:
+	var skel := body.skel
+	var ri := int(body.bone[root])
+	var rg := skel.get_bone_global_pose(ri)
+	var cur := skel.get_bone_global_pose(int(body.bone[tip])).origin - rg.origin
+	if cur.length() < 1.0e-4:
+		return
+	cur = cur.normalized()
+	var arc: Quaternion
+	if cur.dot(want) < -0.9999:
+		var axis := cur.cross(Vector3.RIGHT)
+		if axis.length() < 1.0e-3:
+			axis = cur.cross(Vector3.FORWARD)
+		arc = Quaternion(axis.normalized(), PI)
+	else:
+		arc = Quaternion(cur, want)
+	var new_basis := Basis(arc) * rg.basis.orthonormalized()
+	var parent := skel.get_bone_parent(ri)
+	var pb := skel.get_bone_global_pose(parent).basis.orthonormalized() if parent >= 0 else Basis()
+	skel.set_bone_pose_rotation(ri, (pb.inverse() * new_basis).get_rotation_quaternion())
+
+
 func apply(lost: Array, strain: Array, crush_amount: float, soak: float) -> void:
 	crush = clampf(crush_amount, 0.0, 1.0)
 	var worst := -1
