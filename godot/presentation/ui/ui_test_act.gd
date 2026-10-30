@@ -99,8 +99,8 @@ func _act_sample_prop() -> void:
 			_act_prop_seen["other_carry_frames"] = int(_act_prop_seen["other_carry_frames"]) + 1
 		return
 	_act_prop_seen["holding_frames"] = int(_act_prop_seen["holding_frames"]) + 1
-	var shown := _main._matron_view.figure_shown()
-	var attached := _main._matron_view.prop_attached
+	var shown: bool = bool(_main._matron_view.figure_shown())
+	var attached: bool = bool(_main._matron_view.prop_attached)
 	if shown:
 		_act_prop_seen["visible_frames"] = int(_act_prop_seen["visible_frames"]) + 1
 	if attached:
