@@ -26,10 +26,13 @@ extends RefCounted
 ## The arm rip is its own shot, and it does not slow the sim. While she is
 ## tearing the arm (state ArmPlay), and for RIP_HOLD_S after it leaves, the
 ## stick stops moving the camera. The camera holds still, up and out, looking
-## at her hand on him and then at the arm as it goes. The fatality's let-go
-## still owns the frame once he is falling. If that wide place has no air,
-## the ordinary hold frame stays: the shot will not push through steel just
-## to look farther away.
+## at her hand on him and then at the arm as it goes. The ankle grip breaks
+## in the same tick the arm leaves (tear_grip): held goes false and she stays
+## in ArmPlay. The shot and the third person stay through that, and for
+## RIP_HOLD_S after the arm leaves even if ArmPlay has ended. The fatality's
+## let-go still owns the frame once he is falling. If that wide place has no
+## air, the ordinary hold frame stays: the shot will not push through steel
+## just to look farther away.
 
 const ENGAGE_S := 0.35          # eye to third person
 const DISENGAGE_S := 0.5        # third person back to the eye (a set-down, a spare)
@@ -242,7 +245,14 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 					floor_black_at_death = black()
 			_awaiting_death = false
 			_landed_pending = true
-	var want := (held or claimed or _awaiting_death or _landed_pending) and _black_after < 0.0
+	# tear_grip severs the arm and drops the ankle grip in one tick, and
+	# she stays in ArmPlay. The view stays out of his eye for that, and for
+	# RIP_HOLD_S after the arm leaves. The let-go over the drop still wins.
+	var arm_play := int(hold.get("state", -1)) == ARM_PLAY_STATE
+	var tear_hold := _since_tear >= 0.0 and _since_tear < RIP_HOLD_S
+	var falling := _since_release >= 0.0 and not held
+	var rip_keeps := (arm_play or tear_hold) and not falling and not claimed
+	var want := (held or claimed or _awaiting_death or _landed_pending or rip_keeps) and _black_after < 0.0
 	# The fade.
 	if _awaiting_death or _landed_pending:
 		if _since_release >= 0.0:
@@ -297,7 +307,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		his_feet = him + body_q * Vector3(0.0, -0.85, 0.0)
 	var her_feet := her_head + Vector3(0.0, -2.3, 0.0)
 	var want_pivot := her_chest.lerp(him, PIVOT_HIS_SHARE)
-	var falling := _since_release >= 0.0 and not held
+	# falling was decided with the grip, above: the let-go, not a spare.
 	if falling:
 		# Over the drop, the pivot stays where it was at the let-go.
 		want_pivot = _pivot
@@ -406,8 +416,8 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	# The arm rip's shot. The frame above already picked the open side and
 	# stayed out of the steel. This replaces it only while she is taking the
 	# arm, and only where that wider place is actually open.
-	var tear_hold := _since_tear >= 0.0 and _since_tear < RIP_HOLD_S
-	var want_rip := held and not claimed and not falling and (int(hold.get("state", -1)) == ARM_PLAY_STATE or tear_hold)
+	# Held is not required. The grip is already gone when the arm leaves.
+	var want_rip := not claimed and not falling and (arm_play or tear_hold)
 	_rip = move_toward(_rip, 1.0 if want_rip else 0.0, RIP_EASE * delta)
 	rip_active = false
 	rip_dist = 0.0

@@ -1,8 +1,9 @@
 extends SceneTree
 ## The arm-rip camera, with no native and no world: open air, her hand on
 ## him, then the arm leaves. Proves the shot is wide, still, aimed at the
-## arm, and that it does not slow the sim. The fatality let-go still owns
-## the frame once he is falling.
+## arm, and that it does not slow the sim. The ankle grip breaks in the same
+## tick, and the shot stays. The fatality let-go still owns the frame once
+## he is falling.
 ##   godot --headless --path godot --script res://tests/rip_shot_probe.gd
 
 const Cam := preload("res://presentation/life/matron_hold_camera.gd")
@@ -65,6 +66,39 @@ func _initialize() -> void:
 		print("RIP_SHOT arm leaving, still unslowed, aim_deg=%.2f: PASS" % torn_deg)
 	else:
 		_fail("tear", "holds %s scale %s aim %.2f dist %.2f" % [cam.rip_holds, cam.time_scale(), torn_deg, cam.rip_dist])
+	# tear_grip: the ankle grip is gone in the same tick the arm leaves, and
+	# she stays in ArmPlay. The shot must not fall back into his eye.
+	var loose := Cam.new()
+	var wild := Cam.new()
+	var loose_view := _run(loose, _hold(13, 0, him, hand, false, severed), head, eye, Vector2.ZERO, 1.2)
+	var wild_view := _run(wild, _hold(13, 0, him, hand, false, severed), head, eye, Vector2.ZERO, 1.2)
+	for _i in 60:
+		loose_view = loose.frame(_hold(15, 1, him, hand, true, severed, false), head, loose_view, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+		wild_view = wild.frame(_hold(15, 1, him, hand, true, severed, false), head, wild_view, Vector2(1.7, -0.8), 75.0, 0, 1.0 / 60.0, _open)
+	var loose_subject: Vector3 = him.lerp(severed, 0.45)
+	var loose_aim: Vector3 = (-loose_view.basis.z).normalized()
+	var loose_want: Vector3 = (loose_subject - loose_view.origin).normalized()
+	var loose_deg := rad_to_deg(loose_aim.angle_to(loose_want))
+	var loose_stick := loose_view.origin.distance_to(wild_view.origin)
+	if loose.third_person() and loose.rip_active and loose.time_scale() == 1.0 and loose.rip_dist >= 5.0 and loose_deg < 8.0 and int(loose.rip_holds) == 1 and loose_stick < 0.15:
+		print("RIP_SHOT grip broken, shot held (aim %.2f stick %.3f): PASS" % [loose_deg, loose_stick])
+	else:
+		_fail("grip-broken", "third %s active %s scale %s dist %.2f aim %.2f holds %s stick %.3f" % [loose.third_person(), loose.rip_active, loose.time_scale(), loose.rip_dist, loose_deg, loose.rip_holds, loose_stick])
+	# ArmPlay ends inside the 1.4 s. The shot still holds.
+	for _i in 20:
+		loose_view = loose.frame(_hold(12, 1, him, hand, true, severed, false), head, loose_view, Vector2(1.2, 0.4), 75.0, 0, 1.0 / 60.0, _open)
+		wild_view = wild.frame(_hold(12, 1, him, hand, true, severed, false), head, wild_view, Vector2(-1.1, 0.6), 75.0, 0, 1.0 / 60.0, _open)
+	if loose.third_person() and loose.rip_active and loose.time_scale() == 1.0 and loose_view.origin.distance_to(wild_view.origin) < 0.15:
+		print("RIP_SHOT after ArmPlay, still inside 1.4 s: PASS")
+	else:
+		_fail("after-armplay", "third %s active %s scale %s stick %.3f" % [loose.third_person(), loose.rip_active, loose.time_scale(), loose_view.origin.distance_to(wild_view.origin)])
+	# Past 1.4 s, and no longer in ArmPlay, the wide shot ends. The sim stays at full rate.
+	for _i in 40:
+		loose_view = loose.frame(_hold(12, 1, him, hand, true, severed, false), head, loose_view, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+	if not loose.rip_active and loose.time_scale() == 1.0:
+		print("RIP_SHOT hold ended after 1.4 s, sim still full rate: PASS")
+	else:
+		_fail("hold-end", "active %s scale %s" % [loose.rip_active, loose.time_scale()])
 	# Once he is falling, the let-go owns the frame. The rip shot steps aside.
 	var drop: Transform3D = cam.frame(_hold(15, 1, him, hand, true, severed, false, 1), head, torn, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
 	for _i in 10:
