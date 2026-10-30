@@ -75,6 +75,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
       player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
+    build_stance_shapes();
     // Her deck: down the middle of each band, the catwalk across, and in off
     // the north band round the ladder's west rail to its foot; her post in the
     // mouth of Stage A's cage, facing out over the band; the cage's eye on its
@@ -3343,6 +3344,9 @@ void Matron::post_step(const float dt) {
     }
     fall_vy_ = body_in_world_ && !dead_ ? physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() : 0.0F;
     refresh_view();
+    // Her collision body for the stance she is in now (matron_shape.cpp).
+    step_stance(dt);
+    refresh_shape_view();
 }
 
 bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
@@ -3855,6 +3859,9 @@ void Matron::restore(const Saved &saved) {
         lying_ = false;
         kneeling_ = false;
         down_shape_ = nullptr;
+        down_a_ = Vec3(0.0F, -kHalfHeight, 0.0F);
+        down_b_ = Vec3(0.0F, kHalfHeight, 0.0F);
+        down_r_ = kRadius;
         stagger_s_ = 0.0F;
         down_s_ = 0.0F;
         down_for_s_ = 0.0F;
@@ -4298,12 +4305,23 @@ void Matron::lie_down(const float fall_x, const float fall_z) {
     kneeling_ = false;
     if (shape_fits(lying, at)) {
         down_shape_ = lying;
+        // Segment ends relative to her middle. The quarter-turn about `across`
+        // lays the capsule's axis along the fall; its centre sits
+        // kStandCentre - kRadius under her middle, on the steel.
+        const float drop = -(kStandCentre - kRadius);
+        down_a_ = Vec3(-fall.GetX() * kHalfHeight, drop, -fall.GetZ() * kHalfHeight);
+        down_b_ = Vec3(fall.GetX() * kHalfHeight, drop, fall.GetZ() * kHalfHeight);
+        down_r_ = kRadius;
     } else {
         constexpr float kKneelHalf = 0.15F;   // a 0.9 m heap on her knees
         const Ref<Shape> kneel = new RotatedTranslatedShape(
             Vec3(0.0F, -(kStandCentre - kRadius - kKneelHalf), 0.0F), Quat::sIdentity(), new CapsuleShape(kKneelHalf, kRadius));
         kneeling_ = true;
         down_shape_ = kneel;
+        const float cy = -(kStandCentre - kRadius - kKneelHalf);
+        down_a_ = Vec3(0.0F, cy - kKneelHalf, 0.0F);
+        down_b_ = Vec3(0.0F, cy + kKneelHalf, 0.0F);
+        down_r_ = kRadius;
     }
     bodies.SetShape(body_, down_shape_, false, EActivation::Activate);
     bodies.SetFriction(body_, kDownFriction);
@@ -4317,6 +4335,9 @@ void Matron::stand_up() {
     lying_ = false;
     kneeling_ = false;
     down_shape_ = nullptr;
+    down_a_ = Vec3(0.0F, -kHalfHeight, 0.0F);
+    down_b_ = Vec3(0.0F, kHalfHeight, 0.0F);
+    down_r_ = kRadius;
     set_s_ = kSetSeconds;
     // Up, she looks about her where she fell (not back at an old noise: what
     // put her down was no lie, and nothing she is fooled by).

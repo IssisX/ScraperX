@@ -282,6 +282,14 @@ class Recorder extends Node:
 			int(bool(data.get("climb_hand2_known", false))), "%.5f" % ch2.x, "%.5f" % ch2.y, "%.5f" % ch2.z,
 			"%.5f" % player.x, "%.5f" % player.y, "%.5f" % player.z,
 			surf[0], surf[1], surf[2], surf[3], "" if burst == null else str(int(bool(burst)))]
+		# Her collision capsule as the native exports it (matron_shape.cpp), blank before it did.
+		if data.has("shape_r"):
+			var sa: Vector3 = data["shape_a"]
+			var sb: Vector3 = data["shape_b"]
+			row.append_array([int(data.get("stance", 0)), "%.5f" % sa.x, "%.5f" % sa.y, "%.5f" % sa.z,
+				"%.5f" % sb.x, "%.5f" % sb.y, "%.5f" % sb.z, "%.4f" % float(data["shape_r"])])
+		else:
+			row.append_array(["", "", "", "", "", "", "", ""])
 		var out := PackedStringArray()
 		for v in row:
 			out.append(str(v))
@@ -350,4 +358,5 @@ class Recorder extends Node:
 		"climb_airborne", "climb_move_active", "climb_move", "carrying", "bracing", "mantling", "fall_v",
 		"px", "py", "pz", "rx", "ry", "rz", "yaw", "ryaw", "floor_y", "hold_state", "held", "grip_on",
 		"hx", "hy", "hz", "h2x", "h2y", "h2z", "ch_known", "chx", "chy", "chz", "ch2_known", "ch2x", "ch2y", "ch2z",
-		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst"]
+		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst",
+		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r"]

@@ -214,11 +214,66 @@ public:
     static constexpr float kHomeDeckTop = kDeckTop;
     static constexpr float kLockerY = kHomeDeckTop;
 
-    // Her body: 2.1 m tall standing, 220 kg.
+    // Her body: 220 kg; her middle kStandCentre over her soles. kRadius and
+    // kHalfHeight are the room her ways plan for (a 2.1 m capsule about her
+    // middle, matron_traversal, routecraft, found climbs, room_to_stand); the
+    // body that collides is her stance's own capsule (matron_shape.cpp).
     static constexpr float kMassKg = 220.0F;
     static constexpr float kRadius = 0.30F;
     static constexpr float kHalfHeight = 0.75F;
     static constexpr float kStandCentre = kHalfHeight + kRadius;
+
+    // Her collision body by stance family (matron_shape.cpp), chosen from her
+    // simulated state; each a capsule in her body frame (y up from her middle,
+    // z forward along her yaw), turned with her yaw in kStanceYawBins steps.
+    enum class Stance : std::uint8_t { Upright = 0, Low = 1, Climb = 2, Pipe = 3, Down = 4, Hold = 5, Lift = 6 };
+    static constexpr int kStanceCount = 7;
+    static constexpr int kStanceYawBins = 16;
+    struct StanceCapsule {
+        float ay, az;   // one end of its segment (height over her middle, forward of it)
+        float by, bz;   // the other
+        float radius;
+    };
+    [[nodiscard]] static StanceCapsule stance_capsule(Stance stance) noexcept;
+    [[nodiscard]] static int stance_bin(float yaw) noexcept;
+    // On the hunt over this speed at stage 0 she hurries upright (the view's
+    // pest hobble); otherwise she is low.
+    static constexpr float kLowHuntMps = 1.0F;
+    // A new family is tried once wanted this long (her drawn body takes about
+    // 0.35-0.7 s to go over: matron_view.gd BLEND_W, FOURS_BLEND_W).
+    static constexpr float kStanceDwellS = 0.2F;
+    // Deeper than kInsideSteelM into a body that does not move, more than
+    // kInsideSteelTicks ticks running, is sitting in the steel (Jolt's own
+    // contact slop is 0.02 m; a hard landing's first tick or two sink a few
+    // centimetres more before her contacts push her out); deeper than
+    // kTunnelM in any one tick is going through it.
+    static constexpr float kInsideSteelM = 0.05F;
+    static constexpr int kInsideSteelTicks = 3;
+    static constexpr float kTunnelM = 0.15F;
+    // Test-only: every Matron's stance upkeep counted, process-wide (her
+    // shape check, sim_tests_matron_shape.cpp). Observation only.
+    struct ShapeAudit {
+        long ticks = 0;
+        long inside_steel = 0;      // ticks her shape was deeper than kInsideSteelM in the steel
+        long sitting = 0;           // ... past kInsideSteelTicks running: sitting in it
+        float worst_depth_by_stance[kStanceCount] = {};
+        long placed_ticks = 0;      // ticks in steel a placement put her in (those bodies, no deeper)
+        float placed_worst_m = 0.0F;
+        long planning_ticks = 0;    // ticks on her old capsule, no stance shape fitted yet (not audited)
+        float planning_worst_m = 0.0F;
+        float worst_depth_m = 0.0F;
+        float worst_tall_m = 0.0F;  // the planning capsule's depth at the worst non-exempt sample
+        float worst_x = 0.0F, worst_y = 0.0F, worst_z = 0.0F;
+        int worst_stance = 0;
+        int worst_state = 0;
+        long switches = 0;          // family changes made
+        long refused = 0;           // ticks a wanted shape did not fit and she kept hers
+        long per_stance[kStanceCount] = {};
+        double upkeep_s = 0.0;      // wall time of the upkeep itself (the game's cost)
+        double query_s = 0.0;       // ... with the audit's own steel query
+    };
+    static void audit_shapes(bool on) noexcept;
+    [[nodiscard]] static const ShapeAudit &shape_audit() noexcept;
 
     // Sound through the tower (above). CHOSEN: a steel deck takes 20 dB off
     // a sound (as ten times the distance would); turning round the shaft's
@@ -1146,6 +1201,13 @@ public:
         float down_s = 0.0F;            // seconds on the steel
         float down_left_s = 0.0F;       // of the time she lies there; 0 and still down: pinned, crawling to room
         bool on_pipe = false;           // on the shaft's corner pipe (getting on, on it, getting off)
+        // Her collision body (matron_shape.cpp): its stance family, and its
+        // capsule as it is turned now, relative to her middle (world axes).
+        std::uint8_t stance = 0;
+        JPH::Vec3 shape_a = JPH::Vec3(0.0F, -0.75F, 0.0F);
+        JPH::Vec3 shape_b = JPH::Vec3(0.0F, 0.75F, 0.0F);
+        float shape_r = 0.30F;
+        std::uint32_t shape_switches = 0;
         bool pipe_head_down = false;    // coming down it head first (fully changed)
         bool pipe_sliding = false;      // torn off it, sliding on her legs to the flange under her
         bool pipe_stunned = false;      // slammed onto a flange
@@ -2113,6 +2175,21 @@ private:
     void stand_up();
     [[nodiscard]] bool room_to_stand(JPH::RVec3 at) const;
     [[nodiscard]] bool shape_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
+    // Her collision body by stance (matron_shape.cpp).
+    void build_stance_shapes();
+    [[nodiscard]] Stance wanted_stance() const;
+    [[nodiscard]] const JPH::Shape *stance_shape(Stance stance, float yaw) const;
+    void step_stance(float dt);
+    [[nodiscard]] bool on_planning_shape() const;
+    [[nodiscard]] bool stance_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
+    [[nodiscard]] float steel_depth(const JPH::Shape *as = nullptr) const;
+    // A placement (she was put somewhere, a jump of a metre or more, or the
+    // first tick) records the static bodies she already overlaps. Only those,
+    // and no deeper than that placement measured, count as put there. A walk
+    // into other steel does not.
+    void note_setup_overlaps();
+    [[nodiscard]] bool placed_by_test(float depth) const;
+    void refresh_shape_view();
     // Off an edge she will not go, staggering or sliding on the steel: her
     // feet and hands take her at it (no floor within a step's drop ahead).
     void brace_at_edges(float dt);
@@ -2571,6 +2648,30 @@ private:
     bool lying_ = false;           // her shape is a lying (or kneeling) one
     bool kneeling_ = false;
     JPH::Ref<JPH::Shape> down_shape_;
+    // The capsule lie_down installed, relative to her middle: the view exports
+    // this, not the upright stance, while she is down.
+    JPH::Vec3 down_a_ = JPH::Vec3(0.0F, -0.75F, 0.0F);
+    JPH::Vec3 down_b_ = JPH::Vec3(0.0F, 0.75F, 0.0F);
+    float down_r_ = kRadius;
+    // Static bodies she overlapped at the last placement, for the steel audit.
+    struct SetupOverlap {
+        JPH::BodyID body;
+        float depth = 0.0F;
+    };
+    std::array<SetupOverlap, 8> setup_overlaps_{};
+    int setup_overlap_n_ = 0;
+    bool setup_live_ = false;          // still in that placement's steel; clear of it ends the exemption
+    bool have_shape_pos_ = false;
+    JPH::RVec3 shape_pos_ = JPH::RVec3::sZero();
+    // Static penetrations of `shape` (null: the shape she has) past kInsideSteelM,
+    // one entry per body, the deepest. Returns how many were written, at most `cap`.
+    [[nodiscard]] int collect_steel(const JPH::Shape *shape, SetupOverlap *out, int cap) const;
+    Stance stance_ = Stance::Upright;
+    Stance stance_want_ = Stance::Upright;
+    float stance_want_s_ = 0.0F;
+    std::uint32_t stance_switches_ = 0;
+    int steel_ticks_ = 0;   // ticks running her shape has been in the steel (the audit's)
+    std::array<std::array<JPH::Ref<JPH::Shape>, kStanceYawBins>, kStanceCount> stance_shapes_;
     std::uint32_t staggers_ = 0;
     std::uint32_t knockdowns_ = 0;
     float blow_mps_ = 0.0F;

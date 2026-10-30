@@ -1479,6 +1479,13 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.down_s = view.down_s;
     result.down_left_s = view.down_left_s;
     result.on_pipe = view.on_pipe;
+    result.stance = view.stance;
+    result.shape_a = {result.position.x + view.shape_a.GetX(), result.position.y + view.shape_a.GetY(),
+                      result.position.z + view.shape_a.GetZ()};
+    result.shape_b = {result.position.x + view.shape_b.GetX(), result.position.y + view.shape_b.GetY(),
+                      result.position.z + view.shape_b.GetZ()};
+    result.shape_r = view.shape_r;
+    result.shape_switches = view.shape_switches;
     result.pipe_head_down = view.pipe_head_down;
     result.pipe_sliding = view.pipe_sliding;
     result.pipe_stunned = view.pipe_stunned;
