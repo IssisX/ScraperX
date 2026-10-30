@@ -22,6 +22,17 @@ extends RefCounted
 ## the sim stepped fast while black until the death's restore lands (the
 ## native's death count), then the fade in on the restored body's eye. Her
 ## floor version (claimed, the Black beat) fades the same way.
+##
+## The arm rip is its own shot, and it does not slow the sim. While she is
+## tearing the arm (state ArmPlay), and for RIP_HOLD_S after it leaves, the
+## stick stops moving the camera. The camera holds still, up and out, looking
+## at her hand on him and then at the arm as it goes. The ankle grip breaks
+## in the same tick the arm leaves (tear_grip): held goes false and she stays
+## in ArmPlay. The shot and the third person stay through that, and for
+## RIP_HOLD_S after the arm leaves even if ArmPlay has ended. The fatality's
+## let-go still owns the frame once he is falling. If that wide place has no
+## air, the ordinary hold frame stays: the shot will not push through steel
+## just to look farther away.
 
 const ENGAGE_S := 0.35          # eye to third person
 const DISENGAGE_S := 0.5        # third person back to the eye (a set-down, a spare)
@@ -67,6 +78,14 @@ const BLACK_HOLD_S := 0.12
 const FADE_IN_S := 0.6
 const FLOOR_BLACK_BEAT := 9     # Matron::Fatal Black (her floor version)
 const FLOOR_FADE_S := 0.35      # her floor version's fade: full inside its 0.5 s Black beat
+# The arm rip, seen. Matron::State::ArmPlay is 15. No slow motion here: the
+# pull's length belongs to the sim, and a timer on the camera must not change it.
+const ARM_PLAY_STATE := 15
+const RIP_PITCH := 0.70         # up, looking down on her hand and the arm
+const RIP_DIST := 6.6           # out from the pair; the close frame is what played as jank
+const RIP_HOLD_S := 1.4         # the wide shot stays after the arm leaves
+const RIP_EASE := 2.4           # how fast the shot takes the frame (per second)
+const RIP_MIN_M := 3.2          # less open air than this and the wide shot is not taken
 
 var _w := 0.0                   # third person's share of the view, 0..1
 var _engaged := false
@@ -107,6 +126,12 @@ var slow_ticks_s := 0.0         # seconds of the let-go's slow motion
 var floor_black_full_after := -1.0   # seconds from her floor Black beat to full black
 var floor_black_at_death := -1.0     # the black when her floor version's death landed (before the wait to full)
 var _floor_s := 0.0
+var _tears_seen := -1
+var _since_tear := -1.0
+var _rip := 0.0                 # 0 the ordinary hold frame, 1 the rip shot
+var rip_active := false
+var rip_dist := 0.0             # metres from the camera to the arm it is framing
+var rip_holds := 0              # times the arm leaving locked this shot
 
 
 func active() -> bool:
@@ -173,6 +198,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var hand: Vector3 = hold.get("matron_hand", Vector3.ZERO)
 	var hand_on := bool(hold.get("matron_hand_present", false))
 	_step_beats(hold, delta)
+	_note_rip(hold, delta)
 	# The let-go over the drop: its count rises once.
 	var release := int(hold.get("fatal_release_beat", 0))
 	if _release_seen < 0 or release < _release_seen:
@@ -219,7 +245,14 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 					floor_black_at_death = black()
 			_awaiting_death = false
 			_landed_pending = true
-	var want := (held or claimed or _awaiting_death or _landed_pending) and _black_after < 0.0
+	# tear_grip severs the arm and drops the ankle grip in one tick, and
+	# she stays in ArmPlay. The view stays out of his eye for that, and for
+	# RIP_HOLD_S after the arm leaves. The let-go over the drop still wins.
+	var arm_play := int(hold.get("state", -1)) == ARM_PLAY_STATE
+	var tear_hold := _since_tear >= 0.0 and _since_tear < RIP_HOLD_S
+	var falling := _since_release >= 0.0 and not held
+	var rip_keeps := (arm_play or tear_hold) and not falling and not claimed
+	var want := (held or claimed or _awaiting_death or _landed_pending or rip_keeps) and _black_after < 0.0
 	# The fade.
 	if _awaiting_death or _landed_pending:
 		if _since_release >= 0.0:
@@ -274,7 +307,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		his_feet = him + body_q * Vector3(0.0, -0.85, 0.0)
 	var her_feet := her_head + Vector3(0.0, -2.3, 0.0)
 	var want_pivot := her_chest.lerp(him, PIVOT_HIS_SHARE)
-	var falling := _since_release >= 0.0 and not held
+	# falling was decided with the grip, above: the let-go, not a spare.
 	if falling:
 		# Over the drop, the pivot stays where it was at the let-go.
 		want_pivot = _pivot
@@ -380,6 +413,34 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	# more is clear of steel).
 	clearance = free - _dist
 	var cam := _pivot + way * _dist
+	# The arm rip's shot. The frame above already picked the open side and
+	# stayed out of the steel. This replaces it only while she is taking the
+	# arm, and only where that wider place is actually open.
+	# Held is not required. The grip is already gone when the arm leaves.
+	var want_rip := not claimed and not falling and (arm_play or tear_hold)
+	_rip = move_toward(_rip, 1.0 if want_rip else 0.0, RIP_EASE * delta)
+	rip_active = false
+	rip_dist = 0.0
+	if _rip > 0.001 and not falling:
+		var hand_pt: Vector3 = hand if hand_on else hold.get("hand", him)
+		var subject: Vector3 = hand_pt.lerp(him, 0.35)
+		if tear_hold and bool(hold.get("severed_arm_present", false)):
+			var severed: Vector3 = hold.get("severed_arm_position", him)
+			subject = him.lerp(severed, 0.45)
+		var rip_way := _orbit(_side_yaw, RIP_PITCH)
+		var rip_free: float = cast.call(_pivot, _pivot + rip_way * (RIP_DIST + CAM_RADIUS), skip, CAM_RADIUS)
+		var rip_allowed := maxf(0.0, minf(RIP_DIST, rip_free - CAM_RADIUS))
+		if rip_allowed >= RIP_MIN_M:
+			cam = cam.lerp(_pivot + rip_way * rip_allowed, _rip)
+			look_at = look_at.lerp(subject, _rip)
+			var to_cam := cam - _pivot
+			if to_cam.length() > 1.0e-3:
+				var back: float = cast.call(_pivot, cam, skip, CAM_RADIUS)
+				if back - CAM_RADIUS < to_cam.length():
+					cam = _pivot + to_cam.normalized() * maxf(0.0, back - CAM_RADIUS)
+			rip_dist = cam.distance_to(subject)
+			rip_active = _rip > 0.5
+			clearance = rip_free - cam.distance_to(_pivot)
 	_cam = cam
 	pivot = _pivot
 	var to_look := look_at - cam
@@ -403,6 +464,18 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var q := eye.basis.get_rotation_quaternion().slerp(basis.get_rotation_quaternion(), s)
 	_last_view = Transform3D(Basis(q), mid)
 	return _last_view
+
+
+func _note_rip(hold: Dictionary, delta: float) -> void:
+	var tears := int(hold.get("arm_tear_count", 0))
+	if _tears_seen < 0 or tears < _tears_seen:
+		_tears_seen = tears
+	elif tears > _tears_seen:
+		_tears_seen = tears
+		_since_tear = 0.0
+		rip_holds += 1
+	if _since_tear >= 0.0:
+		_since_tear += delta
 
 
 static func _orbit(yaw: float, pitch: float) -> Vector3:
