@@ -521,8 +521,7 @@ func hold_reach(s: String, at_world: Vector3, w: float, prop := false) -> void:
 # solve the furthest wrist target whose shoulder and elbow rotations fit the
 # SAME angular budget, using the preceding governed pose as the start.
 # This does not change a physics point, limb length limit, or govern rate.
-func prop_reach(s: String, at_world: Vector3) -> void:
-	var target: Vector3 = skel.global_transform.affine_inverse() * at_world
+func prop_reach(s: String, target: Vector3) -> void:
 	var shoulder_name := "sh_" + s
 	var elbow_name := "el_" + s
 	var wrist_name := "wr_" + s
