@@ -167,7 +167,19 @@ void Matron::step_stance(const float dt) {
     stance_want_s_ = want == stance_want_ ? stance_want_s_ + dt : 0.0F;
     stance_want_ = want;
     BodyInterface &bodies = physics_.GetBodyInterface();
-    if (want != Stance::Down) {
+    // A journey was scanned and is moved for the tall capsule (capsule_free,
+    // the found-climb probe). A shorter body walks into gaps that scan never
+    // offered her, and the move then has nothing to hold. While that journey
+    // runs she keeps the tall capsule, where it still fits. Off a journey the
+    // stance capsule is hers, a shorter one taken at once.
+    if (travel_.active && want != Stance::Down) {
+        if (!on_planning_shape()) {
+            const RVec3 at = bodies.GetPosition(body_);
+            if (stance_fits(shape_.GetPtr(), at)) {
+                bodies.SetShape(body_, shape_, false, EActivation::Activate);
+            }
+        }
+    } else if (want != Stance::Down) {
         const Shape *target = stance_shape(want, yaw_);
         const RefConst<Shape> have = bodies.GetShape(body_);
         // A new family is taken once it has been wanted kStanceDwellS (her
@@ -311,6 +323,14 @@ float Matron::steel_depth(const Shape *as) const {
 }
 
 void Matron::refresh_shape_view() {
+    view_.shape_switches = stance_switches_;
+    if (body_in_world_ && on_planning_shape()) {
+        // The journey's tall capsule, not the stance one she is waiting to take.
+        view_.shape_a = {0.0F, -kHalfHeight, 0.0F};
+        view_.shape_b = {0.0F, kHalfHeight, 0.0F};
+        view_.shape_r = kRadius;
+        return;
+    }
     const StanceCapsule c = stance_capsule(stance_);
     view_.stance = static_cast<std::uint8_t>(stance_);
     const float yaw = kTwoPi * static_cast<float>(stance_bin(yaw_)) / static_cast<float>(kStanceYawBins);
