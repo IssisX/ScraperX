@@ -522,10 +522,24 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
         // critical damping: acceleration = error/T^2 - 2*relative_v/T.
         // Both terms are forces, still subject to the existing grip cap.
         const JPH::Vec3 player_v = bodies.GetLinearVelocity(player_id_);
-        climb_grip_force_ = mass *
-            ((target_v - player_v) / kClimbTrackSeconds -
-             (player_v - support_v) / kClimbTrackSeconds -
-             physics_system_.GetGravity());
+        if (climb_sliding_) {
+            // The slide advances its hold under gravity, up to kClimbSlideMps.
+            // Feed that velocity and acceleration into the finite-force servo;
+            // position-only critical damping makes the body trail the rungs.
+            const JPH::Vec3 slide_v(0.0F, -climb_slide_mps_, 0.0F);
+            const JPH::Vec3 slide_a =
+                climb_slide_mps_ < kClimbSlideMps ? physics_system_.GetGravity() : JPH::Vec3::sZero();
+            const JPH::Vec3 error(traversal_desired_ - current);
+            climb_grip_force_ = mass *
+                (slide_a + error / (kClimbTrackSeconds * kClimbTrackSeconds) -
+                 4.0F * (player_v - support_v - slide_v) / kClimbTrackSeconds -
+                 physics_system_.GetGravity());
+        } else {
+            climb_grip_force_ = mass *
+                ((target_v - player_v) / kClimbTrackSeconds -
+                 (player_v - support_v) / kClimbTrackSeconds -
+                 physics_system_.GetGravity());
+        }
         const float capacity = kClimbGripPerHandN * (arms_lost() == 2 ? 0.0F : one_arm() ? 1.0F : 2.0F);
         const float demand = climb_grip_force_.Length();
         if (demand > capacity) climb_grip_force_ *= capacity / demand;
