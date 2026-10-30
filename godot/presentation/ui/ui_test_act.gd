@@ -106,10 +106,18 @@ func _act_sample_prop() -> void:
 	if attached:
 		_act_prop_seen["attached_frames"] = int(_act_prop_seen["attached_frames"]) + 1
 	if shown and attached:
+		var old_peak: float = float(_act_prop_seen["worst_hand_m"])
+		var error_m: float = float(_main._matron_view.prop_hand_error_m)
 		_act_prop_seen["samples"] = int(_act_prop_seen["samples"]) + 1
-		_act_prop_seen["worst_hand_m"] = maxf(float(_act_prop_seen["worst_hand_m"]),
-			_main._matron_view.prop_hand_error_m)
+		_act_prop_seen["worst_hand_m"] = maxf(old_peak, error_m)
 		var n: int = int(_act_prop_seen["samples"])
+		if n > 3 and error_m > 0.05 and error_m > old_peak + 0.03:
+			print("SCRAPERX_PROP_PEAK n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s governed=%d" % [
+				n, error_m, str(m.get("stock_handle", Vector3.ZERO)),
+				str(_main._matron_view._rig.bone_world("wr_r").origin),
+				str(_main._matron_view._rig.bone_world("wr_l").origin),
+				str(_main._matron_view._rig.bone_world("sh_r").origin),
+				int(_main._matron_view._rig.governed)])
 		if n in [1, 2, 3, 8, 30, 90, 360, 900, 1399]:
 			var rig = _main._matron_view._rig
 			print("SCRAPERX_PROP_SAMPLE n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s stretch_r=%.3f stretch_l=%.3f governed=%d" % [
