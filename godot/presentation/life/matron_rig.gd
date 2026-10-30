@@ -531,7 +531,19 @@ func prop_reach(s: String, at_world: Vector3) -> void:
 	var shoulder_before: Quaternion = skel.get_bone_pose_rotation(shoulder_id)
 	var elbow_before: Quaternion = skel.get_bone_pose_rotation(elbow_id)
 	var wrist_before := _gpos(wrist_name)
-	var key := "prop_" + s
+	var key := "hold_" + s
+	# While she reaches from a distance, the established unconstrained IK
+	# gives her hands their approach. Rate-aware corrections only begin once
+	# that hand is already on the physical handle; otherwise an unreachable
+	# initial trial could leave the arm frozen beside her body.
+	var miss := wrist_before.distance_to(target)
+	if miss > 0.15:
+		_reach(s, target, 1.0, key)
+		return
+	# The handle has not moved appreciably off a correctly drawn wrist:
+	# keeping the governed pose avoids an unnecessary full-pole swing.
+	if miss <= 0.025:
+		return
 	var saved_pole: Array = _pole.get(key, []).duplicate()
 	var index_sh := _governed_bones.find(shoulder_id)
 	var index_el := _governed_bones.find(elbow_id)
@@ -569,6 +581,10 @@ func prop_reach(s: String, at_world: Vector3) -> void:
 		_pole[key] = saved_pole
 	if best > 0.0:
 		_reach(s, wrist_before.lerp(target, best), 1.0, key)
+	else:
+		# Keep the original continuously improving reach if no reduced
+		# candidate can meet the angular cap on this particular frame.
+		_reach(s, target, 1.0, key)
 
 
 # `held`: her holds as the view draws them, eased onto each new one (the
