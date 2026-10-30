@@ -681,13 +681,31 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                         commands.lift_haul);
     summit_->pre_step();
     // What the Matron can hear besides the player (matron.hpp hear): the last
-    // step's hits, hardest first, then the yard crane's drives while they run.
+    // step's hits, hardest first; the Counterweight Well's Stage A cage and
+    // skip from their actual motion; then the yard crane's drives while they run.
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
         // Her own throw coming down is not a sound to her (matron.hpp).
         if (loud > 0.0F && hit.entity != matron_->thrown_entity()) {
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
+    }
+    // Stage A is a gravity counterweight pair. It makes running noise only
+    // when its physical bodies are actually moving: a pulled handle or an
+    // open catch is not itself a sound source. The speed scale matches the
+    // presentation's generic machine loop; native remains the authority for
+    // the consequential fact that the Matron heard it.
+    constexpr float kWellMachineMoveMps = 0.1F;
+    constexpr float kWellMachineFullMps = 3.0F;
+    for (const kit::BodyIndex body : {well_.a_cage, well_.a_skip}) {
+        const float speed = kit_->body_velocity(body).Length();
+        if (speed < kWellMachineMoveMps) {
+            continue;
+        }
+        const JPH::RVec3 at = kit_->body_center_of_mass(body);
+        const float loudness = std::min(1.0F, speed / kWellMachineFullMps);
+        matron_->hear(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
+                      static_cast<float>(at.GetZ()), loudness);
     }
     for (const YardCrane::Noise &noise : yard_crane_->noises()) {
         if (noise.loudness > 0.0F) {
