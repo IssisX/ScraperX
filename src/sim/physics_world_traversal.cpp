@@ -540,7 +540,7 @@ void Simulation::PhysicsWorld::drive_traversal(JPH::BodyInterface &bodies, const
             // Use the hold's measured per-tick velocity, not an extra speed
             // allowance: the same finite grip still has to supply the force.
             const JPH::Vec3 hold_v = JPH::Vec3(traversal_desired_ - previous_desired) / delta_seconds;
-            const JPH::Vec3 target_v = hold_v +
+            const JPH::Vec3 target_v = support_v +
                 JPH::Vec3(traversal_desired_ - current) / kClimbTrackSeconds;
             climb_grip_force_ = mass *
                 ((target_v - player_v) / kClimbTrackSeconds -
