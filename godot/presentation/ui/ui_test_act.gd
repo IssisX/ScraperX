@@ -470,10 +470,13 @@ func _act_wake_and_go_below(device: int) -> bool:
 # Out, a pest: unseen, she takes the toolbox from her door and carries it
 # off, and at her post undoes Stage A's rope.
 func _act_pest_unseen(device: int) -> bool:
-	var seen := {"carried": false}
+	var seen := {"carried": false, "samples": 0, "worst_hand_m": 0.0}
 	var done: bool = await _act_wait(func() -> bool:
 		var m := _matron_state()
 		var holding := _act_box != 0 and int(m["carrying"]) == _act_box
+		if holding and _main._matron_view.figure_shown() and _main._matron_view.prop_attached:
+			seen["samples"] = int(seen["samples"]) + 1
+			seen["worst_hand_m"] = maxf(float(seen["worst_hand_m"]), _main._matron_view.prop_hand_error_m)
 		var moved := false
 		if _act_box != 0 and int(m["takes"]) >= 1:
 			var box: Vector3 = _native().get_kit_body_transform(_native().get_kit_body_index(_act_box)).origin
@@ -485,6 +488,9 @@ func _act_pest_unseen(device: int) -> bool:
 			int(_matron_state()["state"]), int(_matron_state()["unrigs"])])
 	if not bool(seen["carried"]) or int(_matron_state()["takes"]) < 1:
 		return _fail("a pest, she never took the toolbox from her door (takes %d)" % int(_matron_state()["takes"]))
+	if int(seen["samples"]) < 3 or float(seen["worst_hand_m"]) > 0.05:
+		return _fail("her drawn wrist missed the real toolbox handle: samples %d, worst %.3f m (limit 0.05 m)" % [
+			int(seen["samples"]), float(seen["worst_hand_m"])])
 	if int(_native().get_well_a_rope_end_entity_id()) == WELL_A_CAGE_ENTITY:
 		return _fail("her unrigging left the rope's end on the cage's eye")
 	if int(_matron_state()["stage"]) != STAGE_PEST or int(_native().get_death_count()) != 0:
