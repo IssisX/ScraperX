@@ -3349,7 +3349,13 @@ bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
     const Mover *way = holder();
+    // A travel way owns her body (travel_to: she is about nothing else, and
+    // its tick runs before the hunt): a contact on the way must not turn
+    // into a catch or a shove. Without this, a travelling Matron grabs a
+    // player she merely walks past, cancelling the travel and breaking
+    // his climb (matron-climb-board, player climb with her travelling).
     if (bracing_structure() || !body_in_world_ || dead_ || riding_ || (way != nullptr && way->view().held) ||
+        (way != nullptr && way->view().tick == MoverTick::Travel) ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
          state_ != State::Guarding && state_ != State::Peering && state_ != State::Unrigging)) {
         return false;
