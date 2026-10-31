@@ -203,19 +203,18 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Extending stock can change world body order. Apply the conditional whole-world test rule in
   `CLAUDE.md`, and check current assignments before starting.
 
-### 15. "He is never helpless" depends on stock being at hand (rule 34)
-- **Current source check:** `src/sim/player_strike_limits.hpp` sets a 1,500 N cap and
-  `src/sim/physics_world_strike.cpp` uses three contact ticks and a power limit. The
-  below-threshold conclusion below is an estimate, not a runtime result; a real strike and
-  balance test is needed before calling punch ineffective at every stage.
-- Status: **partly built.** A knock-down works with thrown stock and machines
-  (`take_blow` `matron.cpp:4040-4143`; `sim_tests_matron.cpp:377,450,481,591`; `touch_matron_heave`).
-  By arithmetic, not run: the punch is at most 1,500 N (`player_strike_limits.hpp:14`) over 3
-  contact ticks (`physics_world_strike.cpp:30`), about 50 N·s on 220 kg, 0.23 m/s, under the
-  pest's 0.245 m/s absorb (`matron.hpp:660-661`), so a punch alone does not stagger her at any
-  stage. The only seeded throwables are the two toolboxes on deck 154 (gap 9). At the dangerous
-  and fully changed stages a chest hit only staggers her; only a low hit takes her feet.
-- Hurts: 3. Size: small to retune; protected (her force limits and thresholds), by PR.
+### 15. A hard blow and escape (rule 34)
+- Asked: a hard enough blow takes her balance or puts her down for seconds, alive.
+- **Partially implemented; runtime unverified here:** `Matron::take_blow` in
+  `src/sim/matron.cpp` evaluates impulses, stance, strike height and stage before staggering or
+  knockdown. Its `his_blow` path handles a player's tagged blow during a hold. The player strike
+  in `src/sim/physics_world_strike.cpp` uses three contact ticks, capped by the force and power
+  in `src/sim/player_strike_limits.hpp`; `tests/sim_tests_matron.cpp` and `touch_matron_heave`
+  define stock/machine checks.
+- The prior audit estimated a punch at about 50 N·s and concluded it cannot stagger any stage.
+  That arithmetic is **not a runtime proof** and does not by itself cover stance, repeated
+  contacts or hold escape. The availability of useful stock along the whole route also remains
+  unverified. Any threshold or force-limit change is protected under rule 4.
 
 ### 16. Nothing tests that her movement is continuous (rule 37)
 - **Current source check:** `godot/presentation/life/matron_rig.gd` `govern` applies
