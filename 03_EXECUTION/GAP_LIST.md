@@ -141,20 +141,17 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   and the assignment board before taking a follow-up.
 
 ### 10. Loud machines mostly do not draw her (A7)
-- **Current source check:** `Simulation::PhysicsWorld::step` in `src/sim/physics_world.cpp`
-  feeds impact ledger events and yard crane noises to `Matron::hear`; the forklift noise path
-  is in `src/sim/physics_world_movement.cpp`. [PR #48](https://github.com/IssisX/ScraperX/pull/48)
-  is unmerged. The complete absence claims below require a separate audit of all machine sources.
-- Asked: every real collision heard by material and by her; loud machines draw her too.
-- Status: **partly built.** Carried path and per-deck muffling: `carry_m` (`matron.cpp:545-568`);
-  hearing is not level-bound (`:2537`); tests `sim_tests_matron_hearing.cpp:52-196`.
-  She hears only the impact ledger's hits by energy (`physics_world.cpp:685-691`), only loose
-  stock, forklifts, crane devices and fabricated objects are tracked (`:388-399`), and the
-  machines that draw her are the yard crane's drives (`:692-696`) and the forklift as the driver's
-  noise (`physics_world_movement.cpp:1241-1252`). Cages, counterweights, plates, doors, the lifts
-  and the player's own wall hits do not reach her. The shaft is a hard-coded box (`matron.hpp:237`).
-- Hurts: 3. Running a lift or a winch is silent to her.
-- Size: medium: a general machine-noise source from measured motion or force into `Matron::hear`.
+- Asked: collisions heard by material and by her, and loud machines draw her.
+- **Partial; runtime unverified here:** `Simulation::PhysicsWorld::step` in
+  `src/sim/physics_world.cpp` sends energy-scaled `ImpactLedger` events and yard-crane drive
+  noises to `Matron::hear`. Its constructor tracks loose stock, forklift frames and carriages,
+  and crane hook, magnet and spreader. `src/sim/physics_world_movement.cpp` includes forklift
+  driving in player loudness; `Matron::carry_m` in `src/sim/matron.cpp` accounts for the path.
+- The earlier audit identified cages, counterweights, plates, doors, lifts and wall hits as
+  missing sources. The cited tracker does not register those machine bodies directly, but the
+  complete absence of indirect sound paths and gameplay effects is **unverified**. The separate
+  [PR #48](https://github.com/IssisX/ScraperX/pull/48) proposes Stage A hearing and is unmerged;
+  it is not trunk. A general measured-motion/force sound path remains a possible follow-up.
 
 ### 11. The night above 143 m is the moon and machine lights (B5)
 - **Current source check:** `godot/presentation/sky_cycle.gd` `setup` and its update path
