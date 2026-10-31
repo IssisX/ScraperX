@@ -24,6 +24,7 @@ void Matron::refresh_contact_view() {
     view_.contact_feet_body = BodyID();
     view_.contact_feet_sub = SubShapeID();
     view_.contact_feet = RVec3::sZero();
+    view_.contact_support_velocity = Vec3::sZero();
     view_.contact_hand_held = false;
     view_.contact_hand_body = BodyID();
     view_.contact_hand_sub = SubShapeID();
@@ -50,6 +51,7 @@ void Matron::refresh_contact_view() {
         view_.contact_feet_body = sole.body;
         view_.contact_feet_sub = sole.sub;
         view_.contact_feet = sole.point;
+        view_.contact_support_velocity = sole.velocity;
     }
     // Her hand: the grip of the mover that has her, where it is now on its
     // body (it moves with what it holds).

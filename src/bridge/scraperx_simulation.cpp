@@ -1748,6 +1748,9 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
                                          static_cast<real_t>(state.contact_feet.z));
     out["contact_feet_body"] = static_cast<std::int64_t>(state.contact_feet_body);
     out["contact_feet_sub"] = static_cast<std::int64_t>(state.contact_feet_sub);
+    out["contact_support_velocity"] = godot::Vector3(static_cast<real_t>(state.contact_support_velocity.x),
+                                                     static_cast<real_t>(state.contact_support_velocity.y),
+                                                     static_cast<real_t>(state.contact_support_velocity.z));
     out["contact_hand_held"] = state.contact_hand_held;
     out["contact_hand"] = godot::Vector3(static_cast<real_t>(state.contact_hand.x),
                                          static_cast<real_t>(state.contact_hand.y),

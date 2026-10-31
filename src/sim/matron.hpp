@@ -1128,6 +1128,8 @@ public:
         JPH::BodyID contact_feet_body;
         JPH::SubShapeID contact_feet_sub;
         JPH::RVec3 contact_feet = JPH::RVec3::sZero();
+        // Her floor's point velocity this tick, zero when unsupported.
+        JPH::Vec3 contact_support_velocity = JPH::Vec3::sZero();
         bool contact_hand_held = false;
         JPH::BodyID contact_hand_body;
         JPH::SubShapeID contact_hand_sub;

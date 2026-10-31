@@ -1416,6 +1416,8 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.contact_feet = {view.contact_feet.GetX(), view.contact_feet.GetY(), view.contact_feet.GetZ()};
     result.contact_feet_body = view.contact_feet_body.GetIndexAndSequenceNumber();
     result.contact_feet_sub = view.contact_feet_sub.GetValue();
+    result.contact_support_velocity = {view.contact_support_velocity.GetX(), view.contact_support_velocity.GetY(),
+                                       view.contact_support_velocity.GetZ()};
     result.contact_hand_held = view.contact_hand_held;
     result.contact_hand = {view.contact_hand.GetX(), view.contact_hand.GetY(), view.contact_hand.GetZ()};
     result.contact_hand_body = view.contact_hand_body.GetIndexAndSequenceNumber();
