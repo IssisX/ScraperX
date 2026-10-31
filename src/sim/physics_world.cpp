@@ -47,6 +47,13 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                          object_layer_pair_filter_);
     physics_system_.SetContactListener(&contact_listener_);
 
+    // Her CCD must start before a tick can exceed the existing tunnel bound:
+    // 0.15 m / 0.30 m radius, rather than Jolt's default 0.75 radii (0.225 m).
+    auto collision_settings = physics_system_.GetPhysicsSettings();
+    collision_settings.mLinearCastThreshold = std::min(collision_settings.mLinearCastThreshold,
+                                                       Matron::kTunnelM / Matron::kRadius);
+    physics_system_.SetPhysicsSettings(collision_settings);
+
     auto &bodies = physics_system_.GetBodyInterface();
 
     // Grade: the yard the player is born on, outdoors, wide enough to walk
@@ -759,14 +766,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // off them.
     contact_listener_.set_planted_grip(
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
-    // Contacts must be solved before a fast fall travels past the existing
-    // tunnel bound. Keep the 90 Hz force/control tick; subdivide only Jolt's
-    // collision solve, using the body's actual speed rather than its pose.
-    const auto her_body = matron_->body();
-    const float her_travel = bodies.IsAdded(her_body)
-        ? bodies.GetLinearVelocity(her_body).Length() * delta_seconds : 0.0F;
-    const int collision_steps = std::max(1, static_cast<int>(std::ceil(her_travel / Matron::kTunnelM)));
-    physics_system_.Update(delta_seconds, collision_steps, &temp_allocator_, &job_system_);
+    physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
     kit_->post_step(delta_seconds);
     bay_->post_step();
     impacts_->post_step(carried_entity_);

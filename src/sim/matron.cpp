@@ -197,6 +197,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
                                   EMotionType::Dynamic, static_cast<ObjectLayer>(moving_layer_));
     settings.mAllowedDOFs = EAllowedDOFs::TranslationX | EAllowedDOFs::TranslationY | EAllowedDOFs::TranslationZ;
     settings.mAllowSleeping = false;
+    settings.mMotionQuality = EMotionQuality::LinearCast;
     settings.mFriction = 0.0F;
     settings.mLinearDamping = 0.0F;
     settings.mUserData = kEntity;

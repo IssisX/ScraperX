@@ -1,4 +1,4 @@
-# Applied by FetchContent to the pinned Jolt checkout (CMakeLists.txt, PATCH_COMMAND). Two patches,
+# Applied by FetchContent to the pinned Jolt checkout (CMakeLists.txt, PATCH_COMMAND). Three patches,
 # each idempotent on its own file: a patched tree is left as it is, and a tree with neither the
 # pinned nor the patched text stops the configure, so a Jolt bump re-checks each instead of
 # silently dropping it.
@@ -34,6 +34,26 @@ if(at_patched LESS 0)
     string(REPLACE "${pinned}" "${patched}" text "${text}")
     file(WRITE "${part}" "${text}")
     message(STATUS "jolt_patch.cmake: IndependentAxisConstraintPart lever arms initialised")
+endif()
+
+# ---------------------------------------------------------------------------------------------
+# 3. CCD's secondary AABB prune must sweep the shape bounds center. A shape
+# with an offset center of mass has the same bounds extent but a different
+# center; sweeping its COM can reject an imminent collision before casting.
+# Run before the contact-sort cache guard below so restored caches receive it.
+set(system "${JOLT_SOURCE_DIR}/Jolt/Physics/PhysicsSystem.cpp")
+file(READ "${system}" text)
+set(ccd_pinned "RayAABox(Vec3(mShapeCast.mCenterOfMassStart.GetTranslation()), RayInvDirection(direction), bounds.mMin, bounds.mMax)")
+set(ccd_patched "RayAABox(mShapeCast.mShapeWorldBounds.GetCenter(), RayInvDirection(direction), bounds.mMin, bounds.mMax)")
+string(FIND "${text}" "${ccd_patched}" at_ccd_patched)
+if(at_ccd_patched LESS 0)
+    string(FIND "${text}" "${ccd_pinned}" at_ccd_pinned)
+    if(at_ccd_pinned LESS 0)
+        message(FATAL_ERROR "jolt_patch.cmake: CCD AABB prune no longer matches the pinned source; re-check the shape bounds center")
+    endif()
+    string(REPLACE "${ccd_pinned}" "${ccd_patched}" text "${text}")
+    file(WRITE "${system}" "${text}")
+    message(STATUS "jolt_patch.cmake: CCD AABB prune follows the shape bounds center")
 endif()
 
 # ---------------------------------------------------------------------------------------------

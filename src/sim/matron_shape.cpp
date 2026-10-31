@@ -228,18 +228,10 @@ void Matron::step_stance(const float dt) {
         ++g_shape_audit.per_stance[static_cast<std::size_t>(stance_)];
         float depth = steel_depth();
         if (on_planning_shape()) {
-            // Not yet on a stance shape (none has fitted where she was put):
-            // her old capsule, counted apart. Clear of steel here ends the
-            // placement's exemption too.
-            if (depth <= kInsideSteelM) {
-                setup_live_ = false;
-            }
+            // A journey may retain the planning capsule. Count its samples,
+            // then apply the same audit to the body actually installed.
             ++g_shape_audit.planning_ticks;
             g_shape_audit.planning_worst_m = std::max(g_shape_audit.planning_worst_m, depth);
-            steel_ticks_ = 0;
-            g_shape_audit.query_s +=
-                std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-            return;
         }
         float &worst = g_shape_audit.worst_depth_by_stance[static_cast<std::size_t>(stance_)];
         worst = std::max(worst, depth);

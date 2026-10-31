@@ -21,13 +21,16 @@
 //    placement put her in (a jump of a metre or more, the bodies she already
 //    overlapped there, no deeper, until she is clear of them) is printed
 //    apart. A walk into other steel is not: the old tall capsule is not the
-//    test, because every stance capsule sits inside it. Ticks still on her
-//    old capsule (none of her stance shapes fitted where she was put) are
-//    printed apart. Every matron group checks it for its own runs:
+//    test, because every stance capsule sits inside it. Ticks on her planning capsule (a journey, or waiting for a
+//    stance to fit) are also audited and printed apart. Every matron group checks it for its own runs:
 //    her walk, her hunt low, her ladders, pipe, holds and fatality.
 
 #include "sim_tests.hpp"
 #include "sim/matron.hpp"
+#include "sim/physics_world_support.hpp"
+#include <Jolt/Core/JobSystemSingleThreaded.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 
 #include <algorithm>
 #include <array>
@@ -167,6 +170,51 @@ Fit fit_of(const int stance, const Capsule &cap) {
     return f;
 }
 
+// One measured pre-impact tick. The capsule is 0.029712 m above the slab
+// and travels 0.1974 m. OffsetCOM must not make CCD prune away the floor.
+void check_offset_capsule_ccd() {
+    using namespace JPH;
+    using namespace scraperx::sim;
+    detail::JoltRuntimeLease runtime;
+    detail::BroadPhaseLayerInterface broad;
+    detail::ObjectVsBroadPhaseFilter vs;
+    detail::ObjectLayerPairFilter pairs;
+    TempAllocatorImpl temp(8 * 1024 * 1024);
+    JobSystemSingleThreaded jobs(1024);
+    PhysicsSystem physics;
+    physics.Init(128, 0, 128, 128, broad, vs, pairs);
+    auto config = physics.GetPhysicsSettings();
+    config.mLinearCastThreshold = Matron::kTunnelM / Matron::kRadius;
+    physics.SetPhysicsSettings(config);
+    physics.SetGravity(Vec3(0.0F, -9.81F, 0.0F));
+    auto &bodies = physics.GetBodyInterface();
+    BodyCreationSettings floor(new BoxShape(Vec3(4.0F, 0.25F, 4.0F)), RVec3(0.0, -0.25, 0.0),
+                               Quat::sIdentity(), EMotionType::Static, detail::object_layers::kStatic);
+    const BodyID slab = bodies.CreateAndAddBody(floor, EActivation::DontActivate);
+    const auto c = Matron::stance_capsule(Matron::Stance::Low);
+    const Ref<Shape> placed = new RotatedTranslatedShape(Vec3(0.0F, 0.5F * (c.ay + c.by), 0.0F),
+        Quat::sIdentity(), new CapsuleShape(0.5F * (c.by - c.ay), c.radius));
+    const Ref<Shape> shape = new OffsetCenterOfMassShape(placed, -placed->GetCenterOfMass());
+    BodyCreationSettings actor(shape, RVec3(0.0, Matron::kStandCentre + 0.029712F, 0.0),
+                               Quat::sIdentity(), EMotionType::Dynamic, detail::object_layers::kMoving);
+    actor.mAllowedDOFs = EAllowedDOFs::TranslationX | EAllowedDOFs::TranslationY | EAllowedDOFs::TranslationZ;
+    actor.mLinearDamping = 0.0F;
+    actor.mFriction = 0.0F;
+    actor.mMotionQuality = EMotionQuality::LinearCast;
+    actor.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+    actor.mMassPropertiesOverride.mMass = Matron::kMassKg;
+    const BodyID body = bodies.CreateAndAddBody(actor, EActivation::Activate);
+    bodies.SetLinearVelocity(body, Vec3(0.0F, -17.658010F, 0.0F));
+    physics.Update(1.0F / 90.0F, 1, &temp, &jobs);
+    const float penetration = std::max(0.0F, Matron::kStandCentre - float(bodies.GetPosition(body).GetY()));
+    const float vy = bodies.GetLinearVelocity(body).GetY();
+    bodies.RemoveBody(body); bodies.DestroyBody(body);
+    bodies.RemoveBody(slab); bodies.DestroyBody(slab);
+    require(penetration <= 0.025F && std::abs(vy) < 0.01F,
+            "matron shape CCD: offset-center capsule stops on the slab within contact slop");
+    std::printf("PASS scraperx_sim matron shape CCD: penetration=%.6f m vy=%.6f\n", penetration, vy);
+}
+
 void shape_audit_at_exit() {
     const Matron::ShapeAudit &a = Matron::shape_audit();
     if (a.ticks == 0) {
@@ -186,8 +234,8 @@ void shape_audit_at_exit() {
                 a.inside_steel, static_cast<double>(Matron::kInsideSteelM), a.sitting == 0 ? "yes" : "no");
     std::printf("  matron shape: %ld ticks in steel a placement put her in (those bodies, no deeper; deepest %.3f m)\n",
                 a.placed_ticks, static_cast<double>(a.placed_worst_m));
-    std::printf("  matron shape: %ld ticks still on her old capsule where no stance shape fitted (deepest %.3f m in the "
-                "steel there: where a test put her)\n",
+    std::printf("  matron shape: %ld audited ticks on her planning capsule (deepest %.3f m in the "
+                "steel during journeys or waiting for fit)\n",
                 a.planning_ticks, static_cast<double>(a.planning_worst_m));
     if (a.worst_depth_m > 0.0F) {
         std::printf("  matron shape: worst non-exempt %.3f m at (%.2f, %.2f, %.2f) stance %d state %d, planning capsule "
@@ -213,6 +261,7 @@ void start_matron_shape_audit() {
 }
 
 void run_matron_shape() {
+    check_offset_capsule_ccd();
     const Capsule old{{0.0, -0.75, 0.0}, {0.0, 0.75, 0.0}, 0.30};
     const char *names[] = {"upright", "low", "climb", "pipe", "down", "hold", "lift"};
     std::vector<Fit> fits;
