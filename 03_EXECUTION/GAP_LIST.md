@@ -262,10 +262,10 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Asked: wreckage must leave a physical way onward.
 - **Partial test coverage; results not run here:** `tests/sim_tests_well.cpp` defines B and C
   wreck paths, `tests/sim_tests_plate.cpp` `run_plate_wreckage` covers G/H/I, and
-  `tests/sim_tests_crane.cpp` `run_crane_wreckage` covers J/K/L. The earlier audit found no
-  corresponding S1–S3, D–F, M–O or vertical-machine proof; that absence and each actual route
-  remain **unverified**. The historical plan calls for a 0–221 m backup path; its current
-  implementation needs a separate source and gameplay check. Run the applicable existing
+  `tests/sim_tests_crane.cpp` `run_crane_wreckage` covers J/K/L. A search for wreckage and backup-path terms across `tests` found these named checks but
+  did not identify equivalent checks for S1–S3, D–F, M–O or vertical machines; differently
+  named tests and actual routes remain unverified. `03_EXECUTION/handoffs/PARKED_FEATURES_2026-10-29.md`
+  item 9 historically calls the backup path open; that handoff is not proof of its current state. Run the applicable existing
   scenarios at the candidate revision; test existence alone is not a pass.
 
 ### 19. Her fingers, cloth and pipe warning (A6)
