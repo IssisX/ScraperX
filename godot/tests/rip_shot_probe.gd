@@ -11,6 +11,7 @@ const Cam := preload("res://presentation/life/matron_hold_camera.gd")
 var _fails := 0
 var _block_center := Vector3.INF
 var _block_radius := 0.05
+var _dest_blocked := false
 
 
 func _initialize() -> void:
@@ -115,12 +116,31 @@ func _initialize() -> void:
 		print("RIP_SHOT blocked blend, shot not claimed (clearance %.2f): PASS" % blocked.clearance)
 	else:
 		_fail("blocked-blend", "active %s dist %.2f clearance %.2f" % [blocked.rip_active, blocked.rip_dist, blocked.clearance])
+	# The beam clears. One frame must be one eased step, not the whole shot.
+	# The shot comes back over the ease, still unslowed.
 	_block_center = Vector3.INF
-	blocked_view = blocked.frame(_hold(15, 0, him, hand, false, severed), head, blocked_view, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
-	if blocked.rip_active:
-		print("RIP_SHOT blocked blend, shot returns in open air: PASS")
+	var opened: Transform3D = blocked.frame(_hold(15, 0, him, hand, false, severed), head, blocked_view, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+	var snap := opened.origin.distance_to(blocked_view.origin)
+	for _i in 90:
+		opened = blocked.frame(_hold(15, 0, him, hand, false, severed), head, opened, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+	if snap < 0.45 and blocked.rip_active and blocked.rip_dist >= 5.0 and blocked.time_scale() == 1.0:
+		print("RIP_SHOT blocked blend clears without a snap (%.3f m): PASS" % snap)
 	else:
-		_fail("blocked-blend-return", "active %s" % blocked.rip_active)
+		_fail("blocked-blend-return", "snap %.3f active %s dist %.2f" % [snap, blocked.rip_active, blocked.rip_dist])
+	# Thirty frames with the wide place closed, then one open frame. The
+	# weight must not have reached 1 while blocked.
+	_dest_blocked = true
+	var gate := Cam.new()
+	var closed := _run(gate, _hold(13, 0, him, hand, false, severed), head, eye, Vector2.ZERO, 1.2)
+	for _i in 30:
+		closed = gate.frame(_hold(15, 0, him, hand, false, severed), head, closed, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+	_dest_blocked = false
+	var first: Transform3D = gate.frame(_hold(15, 0, him, hand, false, severed), head, closed, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+	var jump := first.origin.distance_to(closed.origin)
+	if jump < 0.45 and gate.time_scale() == 1.0:
+		print("RIP_SHOT blocked then clear, no snap (%.3f m): PASS" % jump)
+	else:
+		_fail("blocked-clear", "jump %.3f scale %s active %s" % [jump, gate.time_scale(), gate.rip_active])
 	# Once he is falling, the let-go owns the frame. The rip shot steps aside.
 	var drop: Transform3D = cam.frame(_hold(15, 1, him, hand, true, severed, false, 1), head, torn, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
 	for _i in 10:
@@ -164,7 +184,15 @@ func _hold(state: int, tears: int, him: Vector3, hand: Vector3, arm: bool, sever
 
 
 func _open(a: Vector3, b: Vector3, _skip: Vector3, _radius: float) -> float:
-	return a.distance_to(b)
+	var open_d := a.distance_to(b)
+	if not _dest_blocked or open_d < 1.0e-4:
+		return open_d
+	var dir := (b - a) / open_d
+	var pitch := asin(clampf(dir.y, -1.0, 1.0))
+	# The wide destination cast only. Everything else stays open.
+	if absf(open_d - 6.9) < 0.08 and pitch > 0.55:
+		return 2.3
+	return open_d
 
 
 func _blocked(a: Vector3, b: Vector3, _skip: Vector3, _radius: float) -> float:
