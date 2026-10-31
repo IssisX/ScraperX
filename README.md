@@ -10,7 +10,7 @@ table is in [`00_START_HERE_ARCHIVE.md`](00_START_HERE_ARCHIVE.md)) and never sh
 - **Kernel Work Orders** `WO-000`–`WO-013` in `03_EXECUTION/KERNEL/` — foundational engineering that proves
   one tool type each on the `KX-*` substrate. A **closed set**. All fourteen are in source.
 - **Ascent Slices** `AS-001`–`AS-015` in `03_EXECUTION/ASCENT/` — the actual 1.6 km climb, one Atlas band
-  at a time. This is where new work happens.
+  at a time. Consult issue #3 for current assignments.
 
 `B00`–`B11` are Atlas band IDs — floors of the tower. They are never filenames and never tickets.
 
@@ -19,29 +19,26 @@ table is in [`00_START_HERE_ARCHIVE.md`](00_START_HERE_ARCHIVE.md)) and never sh
 01_PRODUCT_AUTHORITY/         what the game is     (laws, GDD, atlas, + support/ provenance)
 02_ENGINEERING_AUTHORITY/     how work is executed (protocol, TDD, evidence snapshot)
 03_EXECUTION/KERNEL/          WO-000 .. WO-013     closed; regression substrate
-03_EXECUTION/ASCENT/          AS-001 .. AS-015     the live queue
+03_EXECUTION/ASCENT/          AS-001 .. AS-015     ascent specifications
 03_EXECUTION/PLANNING/        the ascent authoring contract
 03_EXECUTION/TEMPLATES/       ticket forms
 src/ tests/ godot/            implementation truth
 ```
 
-**Proven** (CI run [`35727055407`](https://github.com/IssisX/ScraperX/actions/runs/35727055407),
-all steps green): 10 native falsifiers at exit 0; Godot 4.7 at Fold inner-panel aspect
-`2160x1856`; Android arm64 APK carrying `libscraperx_native.so`.
+The source contains ascent bands beyond AS-001, a Matron, a crew, and summit
+mechanics. For example, `src/sim/crew.cpp` creates workers,
+`src/sim/simulation.cpp` exposes `Simulation::summit_state`, and
+`godot/presentation/main_feel.gd` presents the summit state. Source presence
+alone is not a playthrough or a claim that these features are complete.
 
-The kernel proves: a native 90 Hz Jolt player; moving-support point velocity; vault / mantle /
-ledge / hang; a coupled steam plant whose every link reads the previous link's real body state;
-fall, parachute and automatic commit; freight on a finite jib; a seated beam that changes
-traversal; a process volume that decides whether a grate is walkable.
+**Next work:** use the [assignment board and latest comments on issue #3](https://github.com/IssisX/ScraperX/issues/3),
+check open pull requests, and reconcile candidates against current trunk. The
+[numbered gap list](03_EXECUTION/GAP_LIST.md) records unfinished requirements;
+its source and proof references must be checked against the current revision.
+Unmerged branches are not trunk.
 
-`AS-001` builds the first real campaign ground: an apron, an 18 m intake belt, a 12 m / 5 t yard
-jib, a 4 t pack physically pinning a landing dog, a switchback stair and an exposed facade ladder
-to +24 m. The stair is shut because freight is standing in the dog's swing, and it opens because
-the jib moved that freight.
-
-**Next:** `AS-002` — first legal stand at +40 m. Planned, not coded.
-
-Still absent: bands B01–B11 above the hall deck, NPCs, missions, and the summit.
+**Historical evidence:** [CI run 35727055407](https://github.com/IssisX/ScraperX/actions/runs/35727055407)
+reported the earlier kernel proof, not the current trunk's full-game status.
 
 ## Build
 
