@@ -62,4 +62,4 @@ proof of a complete ascent or a device playthrough.
 
 ## Claim boundary
 
-An APK artifact proves production by the current source. It does not prove installation, execution on Android, or Fold 6 behavior. Those remain separate evidence states.
+An APK artifact proves an APK was produced by the source revision and build identified in its evidence. It does not prove installation, execution on Android, or Fold 6 behavior. Those remain separate evidence states.
