@@ -651,6 +651,13 @@ jobs:
             --script res://tests/her_takes_test.gd 2>&1 | tee artifacts/her-takes.log
           grep -F "HER_TAKES PASS fails=0" artifacts/her-takes.log
 
+      - name: The rip camera enters and returns without a cut or lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools/godot/godot --headless --path godot --script res://tests/rip_shot_probe.gd 2>&1 | tee artifacts/rip-shot-probe.log
+          grep -q 'RIP_SHOT PASS' artifacts/rip-shot-probe.log
+
       - name: The Matron's figure, eyes and hair
         shell: bash
         run: |
