@@ -17,7 +17,7 @@ The short version:
 - Android builds are clang C++17 with `-Werror`: no structured bindings captured by lambdas.
 - Test only what the change reaches (`SCRAPERX_ONLY=<group>`); CI's proof run
   (`<agent>/integrate-<job>` branches) is the final proof.
-- American spelling. No AI model names in repo files. Docs-only commits end with `[skip ci]`.
+- American spelling. No AI model names in repo files. Docs-only commits normally end with `[skip ci]`, but spelling, wording, and commit-message/tag nitpicks are never merge blockers and never justify rewriting commits or rerunning CI.
 - Lower-cost agents may run tests, builds and the rule check, but may not delete branches, force-push or land work.
 
 Tools: `REPO_MAP.md` (where things are), `tools/rule_check/rule_check.py` (run before landing),
