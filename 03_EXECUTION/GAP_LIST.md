@@ -1,8 +1,8 @@
 # Gap list: what the owner asked for that the game does not do yet
 
 Built from the recovered owner calls (`00_START_HERE_ARCHIVE.md`, "Owner calls recovered from the
-archived log and handoff"), the rules in force (`00_START_HERE.md`) and the original static audit at `2ac7fa1` (2026-10-29). Corrections below inspect trunk
-`dea9cfcba0923242fc6046d88aada9726a1b97e1`; no game, device, visual or audio run was made
+archived log and handoff"), the rules in force (`00_START_HERE.md`) and the original static audit at `2ac7fa1` (2026-10-29). Corrections inspect `dea9cfcba0923242fc6046d88aada9726a1b97e1` and the
+`tests/sim_tests_stock.cpp` delta on trunk `65896fbd11ed2048bbd0a102b252008a8cc3db98`; no game, device, visual or audio run was made
 for this revision. Source and test definitions establish implementation or coverage, not a pass.
 Older line numbers can drift; search the cited symbol. Issue #3 and open PRs own current assignments.
 
@@ -182,7 +182,7 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   a lost X-ray source, the only way off is up; she kills the overtime crew, bodies higher up.
 - Status: **B1 partial:** the gate, badge-in and X-ray source remain unverified. The topping-out beam now exists:
   `src/sim/summit.cpp` `Summit::build_ending` and `read_ending` (gap 6). **B2 historical finding; current status requires review**:
-  workers cannot die (`src/sim/crew.hpp:37`), `matron.cpp` never touches `Crew`, about ten live
+  the earlier audit said workers cannot die (`src/sim/crew.hpp:37`), `matron.cpp` never touches `Crew`, and about ten live
   workers stand from 22 to 418 m (`crew.cpp:61-79`), corpses are the climber's alone
   (`corpse.hpp:1-15`).
 - Hurts: 3 each. Rule 50 wants every feature to have its reason in the story.
@@ -234,8 +234,8 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   stage drives pose and sound (`matron_view.gd:768-771,1701,1872`, `audio_director.gd:1358-1453`);
   no meter anywhere (`hud.gd`). Test `sim_tests_matron.cpp:2037-2106`. **Deviations**: pain also
   feeds her rage (`kStaggerRage`, `kKnockdownRage`, `matron.hpp:694-695`; `matron.cpp:4108,4140`),
-  against "fed only by sound"; the former croak claim is obsolete (gap 2); no test covers Changed back
-  to Dangerous (`grep kRageChangedDown tests godot` is empty); no radio hint (gap 12).
+  against "fed only by sound"; the former croak claim is obsolete (gap 2); no test directly names `kRageChangedDown` in `tests` or `godot` (this search does not prove
+  absence of indirect coverage); the requested radio hint remains to be checked (gap 12).
 - Hurts: 2. Size: small each.
 
 ### 18. A wrecked machine leaves a way on (rule 51)
@@ -315,7 +315,9 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 | Rule 51 a causal world; rule 55 no test pieces | `loose_stock.hpp:65-92`; `simulation.hpp:117-124` | native `stock`, `touch_stock` |
 | Rule 36 her look (static only) | `matron_look.gd:7-9,229-246` | only a contrast check; the face and thinness are by eye |
 
-## Corrections to the recovered list and to other documents
+## Historical corrections to the recovered list and other documents
+
+These earlier findings require rechecking against the current revision before use as facts or assignments.
 
 - The older B3 dead-code finding is historical: `main.gd` now instantiates `StoryRadioPlayer`;
   its approval gate remains false. See gap 12 for the remaining trigger and story questions.
