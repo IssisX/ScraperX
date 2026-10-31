@@ -237,6 +237,7 @@ struct MatronSnapshot final {
     Vector3 contact_feet{};
     std::uint32_t contact_feet_body = 0xffffffffU;
     std::uint32_t contact_feet_sub = 0xffffffffU;
+    Vector3 contact_support_velocity{};
     bool contact_hand_held = false;
     Vector3 contact_hand{};
     std::uint32_t contact_hand_body = 0xffffffffU;
