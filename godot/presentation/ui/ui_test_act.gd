@@ -358,6 +358,8 @@ func _act_cam_watch() -> void:
 		_act_cam["held_s"] = 0.0
 	if third and float(cam.black()) < 0.01 and float(cam.clearance) < INF:
 		_act_cam["clear_min"] = minf(float(_act_cam["clear_min"]), float(cam.clearance))
+	if int(cam.rip_holds) > 0 and bool(cam.rip_active):
+		_act_snap("act_hold_rip")
 	if bool(hold["fatal_hang"]) and float(hold["fatal_window_s"]) >= 0.6:
 		_act_snap("act_hold_hang_window")
 	if int(cam.lets_go_seen) > 0 and float(cam.black()) < 0.05:
@@ -372,10 +374,10 @@ func _act_cam_watch() -> void:
 
 func _act_cam_log() -> void:
 	var cam: RefCounted = _main._hold_cam
-	print("SCRAPERX_ACT_VIEW held=%d third=%d gap_frames=%d gap_max=%.3f clear_min=%.3f lets_go=%d deaths_waited=%d slow_s=%.2f black_full_after=%.2f death_after=%.2f" % [
+	print("SCRAPERX_ACT_VIEW held=%d third=%d gap_frames=%d gap_max=%.3f clear_min=%.3f lets_go=%d deaths_waited=%d slow_s=%.2f black_full_after=%.2f death_after=%.2f rip_holds=%d rip_dist=%.2f" % [
 		int(_act_cam["held"]), int(_act_cam["third"]), int(_act_cam["gap_frames"]), float(_act_cam["gap_max"]),
 		float(_act_cam["clear_min"]), int(cam.lets_go_seen), int(cam.deaths_waited), float(cam.slow_ticks_s),
-		float(cam.black_full_after), float(cam.death_after)])
+		float(cam.black_full_after), float(cam.death_after), int(cam.rip_holds), float(cam.rip_dist)])
 
 
 # A still of this frame (once a pose), drawn and written two frames' ends
