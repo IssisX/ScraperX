@@ -272,33 +272,27 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   movement; the earlier audit found later stages no longer frail. Visual and gameplay fit remain
   unverified.
 
-### 21. Background and process gaps (low for the player)
-- **Current source check:** `src/sim/vertical/vertical_machine.cpp` registers the two
-  vertical machine IDs and `src/sim/matron_pipe.cpp` uses `kStackPitch`. Registration
-  is not proof of placement or playability. Other broad absence/coverage claims below remain
-  UNVERIFIED until their production wiring and actual runs are checked.
-- **Rule 39**: `godot/presentation/ui/pause_menu.gd` `_build_work_id_page` instantiates
-  `WorkIdPage`, and `godot/presentation/main.gd` instantiates `StoryRadioPlayer`.
-  `story_radio_player.gd` keeps voice approval false. **Partial:** gameplay cue triggering,
-  approved recordings and consistency with the owner's story remain to be verified; call sites
-  alone are not playback proof. The timing of this existing hookup against rule 39 is for review.
-- **Rule 57**: the chart is built (`godot/presentation/uncanny/`, five CI scenarios) but not
-  linked to the Matron sim (`grep chart src/sim/matron*` is empty), has no speech to text, and the
-  export asks for no INTERNET or CAMERA permission (`export_presets.cfg:30-31` has vibrate and
-  record_audio). Hurts 2. Size large (server models, rule 58).
-- **Rule 56 and 27**: the climb above 340 m is the non-canonical AS-007 to AS-010
-  (`touch_stack` climbs them to 750 m); `sx.gravity_balance` and `sx.rack_climber` are defined
-  (`vertical_machine.cpp:112,114`) but unplaced and untested; no scenario plays the canonical route
-  from the start. Hurts 1 to 2. Size large (about 400 m of ported machines) and medium for one
-  chained scenario that would be slow in CI.
-- **Rules 30, 31**: per-place constants remain (`matron.hpp:437-438` post, `:514-533` ladders and
-  riser, `:720-726` pipe; the hand-drawn levels at `matron.cpp:75-141`; `matron_pipe.cpp` is a
-  per-route climb of 730 lines). Deck-to-deck up and down has test coverage among 132, 143, 154 and 176.25
-  (`sim_tests_matron_pursuit.cpp:125,213,297`); the islands above 176.25 and below 132 are
-  UNVERIFIED. `kStackPitch` 11 m is baked into the pipe logic. Hurts 1 to 2. Size large.
-- **Housekeeping**: the music box mesh is still in `matron.glb` (freed at load,
-  `matron_look.gd:177`; a dead `box_cord` pivot remains); `matron.hpp:13` still says the catwalk is
-  "the one thing that kills her". Size small.
+### 21. Background and process gaps
+- **Rule 39, identity and radio — partial:** `godot/presentation/ui/pause_menu.gd`
+  `_build_work_id_page` creates `WorkIdPage`; `godot/presentation/main.gd` instantiates
+  `StoryRadioPlayer`; `godot/presentation/audio/story_radio_player.gd`
+  `VOICE_RECORDINGS_APPROVED` is false. Cue triggering and approved recordings need separate
+  verification. The timing of this existing hookup versus rule 39 remains for owner review.
+- **Rule 57, chart — partial:** `godot/presentation/uncanny/` has the chart and
+  `voice_keeper.gd` requests microphone permission. The earlier audit found no Matron-sim
+  connection, speech-to-text, INTERNET or CAMERA export permission; verify current wiring and
+  permissions before treating those absence findings as settled. Obtain in-game consent as asked.
+- **Rules 56 and 27, ascent — unresolved:** `src/sim/vertical/vertical_machine.cpp` registers
+  `sx.gravity_balance.v1` and `sx.rack_climber.v1`; registration is not placement or a playable
+  route. The old audit says AS-007–AS-010 are used above 340 m despite rule 56 calling them
+  non-canonical, and that no scenario plays the canonical route from the start. Check actual
+  route and revision-specific runs; do not silently change the rule.
+- **Rules 30 and 31, Matron travel — partial:** `src/sim/matron_pipe.cpp` uses `kStackPitch`
+  and `src/sim/matron.cpp` retains level data; `tests/sim_tests_matron_pursuit.cpp` defines
+  pursuit cases. Coverage above 176.25 m and below 132 m is unverified. Place-specific data
+  alone does not prove that the general-skill requirement fails.
+- **Historical housekeeping:** the old audit identified a discarded music-box mesh/pivot and
+  stale catwalk comment. Check the current asset and load path before opening work.
 
 ## Earlier source and test inventory (not a current verification verdict)
 
