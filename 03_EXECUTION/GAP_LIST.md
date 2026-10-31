@@ -238,17 +238,15 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   to Dangerous (`grep kRageChangedDown tests godot` is empty); no radio hint (gap 12).
 - Hurts: 2. Size: small each.
 
-### 18. A wrecked machine leaves a way on: tested for some bands only (rule 51)
-- **Current test definitions:** `run_plate_wreckage` in `tests/sim_tests_plate.cpp`,
-  `tests/sim_tests_well.cpp` and `run_crane_wreckage` in `tests/sim_tests_crane.cpp`
-  contain the cited scenarios. Test presence is not a passing run; other bands and backup paths
-  remain UNVERIFIED without their own source and runtime checks.
-- Status: **partly built.** Wreckage tests: AS-006 B and C (`sim_tests_well.cpp:373,772`), AS-008 G,
-  H, I (`sim_tests_plate.cpp:518,545,562`), AS-009 J, K, L (`sim_tests_crane.cpp:345,361,375`).
-  None found for S1 to S3, AS-007 D to F, AS-010 M to O or the vertical machines (UNVERIFIED
-  whether they leave a way on). The plan's backup path for 0-221 m is not built
-  (`PARKED_FEATURES` item 9).
-- Hurts: 2. Size: medium to prove or fix each.
+### 18. A wrecked machine leaves a way on (rule 51)
+- Asked: wreckage must leave a physical way onward.
+- **Partial test coverage; results not run here:** `tests/sim_tests_well.cpp` defines B and C
+  wreck paths, `tests/sim_tests_plate.cpp` `run_plate_wreckage` covers G/H/I, and
+  `tests/sim_tests_crane.cpp` `run_crane_wreckage` covers J/K/L. The earlier audit found no
+  corresponding S1–S3, D–F, M–O or vertical-machine proof; that absence and each actual route
+  remain **unverified**. The historical plan calls for a 0–221 m backup path; its current
+  implementation needs a separate source and gameplay check. Run the applicable existing
+  scenarios at the candidate revision; test existence alone is not a pass.
 
 ### 19. Her body: fingers, cloth and the 4 s warning are thin (A6)
 - **Current source check:** `godot/presentation/life/matron_view.gd` creates finger pivots
