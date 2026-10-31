@@ -153,19 +153,16 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   [PR #48](https://github.com/IssisX/ScraperX/pull/48) proposes Stage A hearing and is unmerged;
   it is not trunk. A general measured-motion/force sound path remains a possible follow-up.
 
-### 11. The night above 143 m is the moon and machine lights (B5)
-- **Current source check:** `godot/presentation/sky_cycle.gd` `setup` and its update path
-  implement sun/moon lighting and lamp gain; `godot/presentation/main_world.gd`
-  `_build_lighting` builds yard lights. Night readability and the full list of absent lights
-  are UNVERIFIED at runtime.
-- Asked: morning to night; the night readable: floodlights, a helmet lamp, rings lit behind you,
-  moon and city glow.
-- Status: **partly built.** Sun, moon and stars with lamps boosted 6x at night
-  (`sky_cycle.gd:17-35,143`); yard masts and four tower-foot floods (`main_world.gd:640-679`);
-  stack lamps only on levels 1 to 13, up to 143 m (`:484-510`). **Missing**: a helmet lamp (no
-  match for helmet, headlamp or torch), lit rings behind the climber, a city glow. The cycle loops
-  on 24 real minutes and does not follow the climb (`settings_store.gd:86-87`).
-- Hurts: 3. Size: medium; a helmet `SpotLight3D` is small, the rest needs tuning by eye.
+### 11. Night lighting and the climb (B5)
+- Asked: a readable morning-to-night climb with floodlights, a helmet lamp, rings lit behind the
+  climber, moon and city glow.
+- **Partial; visual quality unverified:** `godot/presentation/sky_cycle.gd` implements the
+  sun/moon cycle, sky and night lamp gain; its default `day_minutes` is 24. The light rig in
+  `godot/presentation/main_world.gd` builds site lights, including stack-level lamps.
+- The earlier audit found no helmet lamp, lit rings behind the climber or city glow, and said
+  the cycle did not follow climbing. Those absence and design conclusions are **unverified**
+  at this revision; inspect their production wiring and the rendered night before assigning a
+  change. The default alone does not prove what settings a player actually uses.
 
 ### 12. Foreman radio and story cues (B3)
 - Asked: the foreman on the radio: furious, then the lifeline, then admitting he covered up her
