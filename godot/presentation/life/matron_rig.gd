@@ -870,8 +870,10 @@ func step_hair(delta: float) -> void:
 				var q: Vector3 = (pts[k] as Vector3).lerp(above + down * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
 				var d := q - above
 				q = above + (d.normalized() if d.length() > 1e-6 else down) * seg
-				q = _outside(q, skull, _skull_radius)
-				q = _outside(q, back, BACK_RADIUS)
+				# The point can sit outside the skull and the back while the ribbon
+				# between this point and the one above still cuts through them.
+				q = _segment_outside(above, q, seg, skull, _skull_radius)
+				q = _segment_outside(above, q, seg, back, BACK_RADIUS)
 				pts[k] = q
 		# The bones from the points: each turned from hanging (its rest, down its
 		# parent) to the way its strand now runs.
@@ -891,3 +893,50 @@ func _outside(q: Vector3, centre: Vector3, radius: float) -> Vector3:
 	if l >= radius or l < 1e-6:
 		return q
 	return centre + d / l * radius
+
+
+# Child of a fixed-length segment, swung the smallest amount that puts the
+# whole segment outside the sphere. Length stays exact. No extra radius.
+func _segment_outside(a: Vector3, b: Vector3, length: float, centre: Vector3, radius: float) -> Vector3:
+	if (a - centre).length() < radius:
+		var pushed := _outside(b, centre, radius)
+		var pd := pushed - a
+		if pd.length() < 1e-6:
+			pd = Vector3.DOWN
+		return a + pd.normalized() * length
+	var dir := b - a
+	if dir.length() < 1e-6:
+		dir = Vector3.DOWN
+	var d := dir.normalized()
+	if not _segment_hits(a, d, length, centre, radius):
+		return a + d * length
+	var toward := centre - a
+	var axis := toward.cross(d)
+	if axis.length() < 1e-6:
+		axis = toward.cross(Vector3.UP)
+		if axis.length() < 1e-6:
+			axis = toward.cross(Vector3.RIGHT)
+	axis = axis.normalized()
+	var lo := 0.0
+	var hi := PI
+	for _i in 16:
+		var mid := (lo + hi) * 0.5
+		var trial := (Basis(axis, mid) * d).normalized()
+		if _segment_hits(a, trial, length, centre, radius):
+			lo = mid
+		else:
+			hi = mid
+	return a + (Basis(axis, hi) * d).normalized() * length
+
+
+func _segment_hits(a: Vector3, d_unit: Vector3, length: float, centre: Vector3, radius: float) -> bool:
+	var oc := a - centre
+	var bb := 2.0 * oc.dot(d_unit)
+	var cc := oc.dot(oc) - radius * radius
+	var disc := bb * bb - 4.0 * cc
+	if disc < 0.0:
+		return false
+	var s := sqrt(disc)
+	var t1 := (-bb - s) * 0.5
+	var t2 := (-bb + s) * 0.5
+	return t1 < length and t2 > 0.0
