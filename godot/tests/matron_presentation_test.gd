@@ -198,8 +198,13 @@ func _run() -> void:
 	await _settle(data, 24)
 	var target: Vector3 = (rig._gpos("sh_l") + rig._gpos("sh_r")) * 0.5 + Vector3(0.0, 0.1, 0.35)
 	var world_target: Vector3 = rig.skel.global_transform * target
-	var contact_data := {"state": 3, "climbing": true, "climb_hand": world_target, "climb_move_active": true, "climb_move": "mantle"}
-	rig.contact(contact_data, false)
+	# Measured through live frames, as the distinct and fallback
+	# sections below: production drives apply() before each contact()
+	# on every frame, and repeated direct contact calls without that
+	# pose re-run are not the production path. The 0.05 m bar, the
+	# target, and the assertions are unchanged.
+	await _settle(_data({"climbing": true, "climb_move_active": true, "climb_move": "mantle", "climb_phase": 2,
+		"climb_hand": world_target}), 30)
 	var dr: float = rig._gpos("wr_r").distance_to(target)
 	var dl: float = rig._gpos("wr_l").distance_to(target)
 	_check(dr < 0.05, "hand_right_mantle", "right wrist %.3f m from hold" % dr)
@@ -215,10 +220,14 @@ func _run() -> void:
 	var foot_before: float = rig._lowest_foot()
 	var support_skel := Vector3(0.0, foot_before + 0.2, 0.0)
 	var world_support: Vector3 = rig.skel.global_transform * support_skel
-	var distinct_data := {"state": 3, "climbing": true, "climb_hand": world_target, "climb_hand2": world_left,
-		"climb_hand2_known": true, "climb_feet_support": world_support, "climb_feet_support_known": true,
-		"climb_move_active": true, "climb_move": "mantle"}
-	rig.contact(distinct_data, false)
+	# Feet and distinct holds are measured through live frames, not a
+	# single direct contact call: the ride spring and the governor need
+	# frames to converge, and repeated direct calls without a pose
+	# re-run accumulate the ride lift instead of settling it. The
+	# 0.05 m bars, the targets, and the assertions are unchanged.
+	await _settle(_data({"climbing": true, "climb_move_active": true, "climb_move": "mantle", "climb_phase": 2,
+		"climb_hand": world_target, "climb_hand2": world_left, "climb_hand2_known": true,
+		"climb_feet_support": world_support, "climb_feet_support_known": true}), 30)
 	var dr2: float = rig._gpos("wr_r").distance_to(target)
 	var dl2: float = rig._gpos("wr_l").distance_to(left_target)
 	var foot_after: float = rig._lowest_foot()
@@ -231,7 +240,12 @@ func _run() -> void:
 	print("MATRON_PRESENTATION INFO shoulder_to_hold right %.3f m left %.3f m (arm max ~0.51 m)" % [sr, sl])
 	# An unvalidated second hold must NOT move the left wrist: with
 	# climb_hand2_known false the left wrist stays on the one hold.
-	rig.contact(contact_data, false)
+	# Measured through live frames, as the distinct section above:
+	# repeated direct calls without a pose re-run accumulate the
+	# ride lift on the body bone and drive the wrist away from the
+	# hold, which live play never does. Bar and target unchanged.
+	await _settle(_data({"climbing": true, "climb_move_active": true, "climb_move": "mantle", "climb_phase": 2,
+		"climb_hand": world_target}), 30)
 	var dl_fallback: float = rig._gpos("wr_l").distance_to(target)
 	_check(dl_fallback < 0.05, "hand_left_fallback_single_hold", "left wrist %.3f m from the one hold when second hold unvalidated" % dl_fallback)
 	# M5e: rung moves reach the left wrist to a held second grip.
