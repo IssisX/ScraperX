@@ -448,6 +448,23 @@ void run_matron_balance() {
                   << (m.kneeling ? " kneeling" : " lying") << "\n";
         require(knocked == kDown && m.knockdowns == 1 && m.staggers == 0,
                 "matron balance: a toolbox heaved at an upright pest puts her down");
+        // The body she has while down is the one lie_down installed, not the
+        // upright stance capsule (that one is about 1.19 m tall).
+        {
+            const double dx = m.shape_b.x - m.shape_a.x;
+            const double dy = m.shape_b.y - m.shape_a.y;
+            const double dz = m.shape_b.z - m.shape_a.z;
+            const double span = std::sqrt(dx * dx + dy * dy + dz * dz);
+            if (m.kneeling) {
+                require(span < 0.40 && std::abs(dy) > 0.20,
+                        "matron balance: down, her collision body is the short kneeling capsule");
+            } else {
+                const double fall = std::sqrt(m.fall_x * m.fall_x + m.fall_z * m.fall_z);
+                const double along = fall > 1.0e-3 ? std::abs(dx * m.fall_x + dz * m.fall_z) / fall : span;
+                require(std::abs(span - 2.0 * Matron::kHalfHeight) < 0.05 && std::abs(dy) < 0.05 && along > 1.40,
+                        "matron balance: down, her collision body lies along the fall");
+            }
+        }
         // Down she has no hands: the rage it costs her, and up again.
         require(m.rage >= Matron::kKnockdownRage - 0.01, "matron balance: a knockdown feeds her rage");
         require(rises(static_cast<double>(Matron::kPestDownSeconds) + 2.0), "matron balance: up again, on her deck, alive");
@@ -2099,6 +2116,7 @@ void run_matron_remaining() {
     run_matron_pipe();
     run_matron_room();
     run_matron_restore();
+    run_matron_shape();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----
