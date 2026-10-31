@@ -508,8 +508,9 @@ def quat_arc_matrix(a, b):
 
 class HairSolver:
     """A copy of matron_rig.gd step_hair. Segments stay outside the skull and the
-    upper-back sphere, then walk sideways-and-down out of the collar and belt
-    cylinders. rest="head" pulls toward the head's down; rest="world" toward
+    upper-back sphere, walk sideways-and-down out of the collar, belt and neck
+    cylinders, then take a horizontal step back from the chest-front slope.
+    rest="head" pulls toward the head's down; rest="world" toward
     world down. clamp=False drops the 1/30 s cap."""
 
     def __init__(self, run, rest="head", clamp=True):
@@ -535,6 +536,7 @@ class HairSolver:
         self.head = run.bone_index["head"]
         self.chest = run.bone_index["chest"]
         self.belt = run.bone_index["spine_mid"]
+        self.neck = run.bone_index["neck_lo"]
         self.n = self.idx.shape[1]
 
     def spheres(self, wb):
@@ -586,6 +588,8 @@ class HairSolver:
                 q = _seg_out_batch(above, q, self.seg, back, self.run.back_r)
                 q = _ring_batch(above, q, self.seg, wb[self.chest], 0.091, 0.154, 0.138)
                 q = _ring_batch(above, q, self.seg, wb[self.belt], -0.001, 0.042, 0.192)
+                q = _ring_batch(above, q, self.seg, wb[self.neck], -0.01, 0.105, 0.095)
+                q = _front_batch(above, q, self.seg, wb[self.chest])
                 pts[:, k] = q
         return wind_clock
 
@@ -741,6 +745,82 @@ def _ring_batch(a, b, length, bone, y0, y1, radius):
     out = np.empty_like(b)
     for i in range(len(b)):
         out[i] = _ring_one(a[i], b[i], float(length[i]), bone, y0, y1, radius)
+    return out
+
+
+def _chest_front_z(y):
+    """Same knots as matron_rig.gd _chest_front_z."""
+    if y <= -0.25:
+        return 0.249
+    if y <= -0.15:
+        return 0.249 + (0.228 - 0.249) * (y + 0.25) / 0.10
+    if y <= -0.05:
+        return 0.228 + (0.179 - 0.228) * (y + 0.15) / 0.10
+    if y <= 0.05:
+        return 0.179 + (0.173 - 0.179) * (y + 0.05) / 0.10
+    if y <= 0.12:
+        return 0.173 + (0.116 - 0.173) * (y - 0.05) / 0.07
+    if y <= 0.18:
+        return 0.116 + (0.098 - 0.116) * (y - 0.12) / 0.06
+    return 0.098
+
+
+def _front_one(a, b, length, bone):
+    """Same rule as matron_rig.gd _clear_front. Horizontal only, never up."""
+    origin = bone[:3, 3]
+    axis = bone[:3, 1]
+    al = np.linalg.norm(axis)
+    if al < 1e-8:
+        return b
+    axis = axis / al
+    fwd = bone[:3, 2]
+    fwd = fwd / max(np.linalg.norm(fwd), 1e-8)
+    side = bone[:3, 0]
+    side = side / max(np.linalg.norm(side), 1e-8)
+    for _ in range(8):
+        worst = 0.0
+        sx = 0.0
+        for s in range(8):
+            p = a + (b - a) * (s / 7.0)
+            rel = p - origin
+            x = float(np.dot(rel, side))
+            y = float(np.dot(rel, axis))
+            z = float(np.dot(rel, fwd))
+            if abs(x) > 0.16 or y < -0.25 or y > 0.18:
+                continue
+            ex = z - _chest_front_z(y)
+            if ex > worst:
+                worst = ex
+                sx = x
+        if worst <= 0.001:
+            return b
+        back = -fwd
+        back[1] = min(back[1], 0.0)
+        if np.linalg.norm(back) < 0.35:
+            back = side * (1.0 if sx >= 0.0 else -1.0)
+            back[1] = 0.0
+        if np.linalg.norm(back) < 1e-6:
+            back = np.array([0.0, 0.0, -1.0])
+        back = back / np.linalg.norm(back)
+        d = b - a
+        if np.linalg.norm(d) < 1e-6:
+            d = np.array([0.0, -1.0, 0.0])
+        else:
+            d = d / np.linalg.norm(d)
+        gain = min(0.70, worst / length)
+        trial = d + back * gain
+        if trial[1] > -0.15:
+            trial[1] = -0.15
+        if np.linalg.norm(trial) < 1e-6:
+            trial = np.array([0.0, -1.0, 0.0])
+        b = a + trial / np.linalg.norm(trial) * length
+    return b
+
+
+def _front_batch(a, b, length, bone):
+    out = np.empty_like(b)
+    for i in range(len(b)):
+        out[i] = _front_one(a[i], b[i], float(length[i]), bone)
     return out
 
 

@@ -851,6 +851,7 @@ func step_hair(delta: float) -> void:
 	var skull := head * _skull_local
 	var chest := bone_world("chest")
 	var belt := bone_world("spine_mid")
+	var neck := bone_world("neck_lo")
 	var back := chest * Vector3(0.0, 0.05, -0.05)
 	var down := head.basis * Vector3.DOWN
 	for ch in _chains:
@@ -896,6 +897,15 @@ func step_hair(delta: float) -> void:
 				# local Y 0.091..0.154, buckle 0.192 on spine_mid local Y -0.001..0.042.
 				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138)
 				q = _clear_ring(above, q, seg, belt, -0.001, 0.042, 0.192)
+				# The neck is a cylinder the collar ring does not cover. Measured on
+				# the posed cloth: max radial 0.089, so 0.095 sits the strand just
+				# outside it. Y -0.01..0.105 is the neck on neck_lo.
+				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095)
+				# The chest front is a slope, not a wider cylinder. A point can be
+				# outside the collar radius and still be in front of the cloth.
+				# Walk it back in the horizontal, never up: aiming the whole lock
+				# straight backward dropped the hang under the gate.
+				q = _clear_front(above, q, seg, chest)
 				pts[k] = q
 		# The bones from the points: each turned from hanging (its rest, down its
 		# parent) to the way its strand now runs.
@@ -1018,3 +1028,68 @@ func _ring_out(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float
 	if out.length() < 1e-4:
 		out = Vector3(a.x - origin.x, 0.0, a.z - origin.z)
 	return out
+
+
+# Front of the chest cloth in chest-local Y, the larger of the guard and the
+# head-down pose. Chest-weighted verts only, so the arms are not in it.
+func _chest_front_z(y: float) -> float:
+	if y <= -0.25:
+		return 0.249
+	if y <= -0.15:
+		return lerpf(0.249, 0.228, (y + 0.25) / 0.10)
+	if y <= -0.05:
+		return lerpf(0.228, 0.179, (y + 0.15) / 0.10)
+	if y <= 0.05:
+		return lerpf(0.179, 0.173, (y + 0.05) / 0.10)
+	if y <= 0.12:
+		return lerpf(0.173, 0.116, (y - 0.05) / 0.07)
+	if y <= 0.18:
+		return lerpf(0.116, 0.098, (y - 0.12) / 0.06)
+	return 0.098
+
+
+# If the segment is in front of that slope, and still over the torso (|local x|
+# under 0.16, so a shoulder is not the torso), step the child backward in the
+# horizontal. Never add an upward step.
+func _clear_front(a: Vector3, b: Vector3, length: float, bone: Transform3D) -> Vector3:
+	var origin := bone.origin
+	var axis := bone.basis.y.normalized()
+	var fwd := bone.basis.z.normalized()
+	var side := bone.basis.x.normalized()
+	for _guard in 8:
+		var worst := 0.0
+		var sx := 0.0
+		for s in 8:
+			var p: Vector3 = a.lerp(b, float(s) / 7.0)
+			var rel := p - origin
+			var x := rel.dot(side)
+			var y := rel.dot(axis)
+			var z := rel.dot(fwd)
+			if absf(x) > 0.16 or y < -0.25 or y > 0.18:
+				continue
+			var ex := z - _chest_front_z(y)
+			if ex > worst:
+				worst = ex
+				sx = x
+		if worst <= 0.001:
+			return b
+		var back := -fwd
+		back.y = minf(back.y, 0.0)
+		if back.length() < 0.35:
+			back = side * (1.0 if sx >= 0.0 else -1.0)
+			back.y = 0.0
+		if back.length() < 1e-6:
+			back = Vector3(0.0, 0.0, -1.0)
+		back = back.normalized()
+		var d := b - a
+		if d.length() < 1e-6:
+			d = Vector3.DOWN
+		else:
+			d = d.normalized()
+		var gain := minf(0.70, worst / length)
+		var trial := d + back * gain
+		trial.y = minf(trial.y, -0.15)
+		if trial.length() < 1e-6:
+			trial = Vector3.DOWN
+		b = a + trial.normalized() * length
+	return b
