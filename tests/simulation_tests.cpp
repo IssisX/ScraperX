@@ -329,6 +329,10 @@ int main() {
         run_matron_mischief();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit-ending") {
+        run_summit_ending();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit") {
         run_summit();
         run_summit_arm();
@@ -604,6 +608,7 @@ int main() {
     run_c7();
     run_summit();
     run_summit_arm();
+    run_summit_ending();
     run_matron_player_independence();
     run_matron_routecraft();
     run_matron_exam_routecraft();

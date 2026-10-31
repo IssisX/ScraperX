@@ -325,6 +325,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_hold_state"), &ScraperXSimulation::get_matron_hold_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_summit_lower", "held"), &ScraperXSimulation::set_summit_lower);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_summit_unrig"), &ScraperXSimulation::request_summit_unrig);
     godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
     // TEST-ONLY: the look suite's setup (see the header); nothing in play calls these.
     godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
@@ -1986,6 +1988,15 @@ godot::Dictionary ScraperXSimulation::get_summit_state() const {
     const sim::SummitSnapshot state = simulation_->summit_state();
     godot::Dictionary out;
     out["lit"] = state.lit;
+    out["ending"] = state.ending;
+    out["beam_seated"] = state.beam_seated;
+    out["sling_free"] = state.sling_free;
+    out["left_bearing"] = state.left_bearing;
+    out["right_bearing"] = state.right_bearing;
+    out["work_in_reach"] = state.work_in_reach;
+    out["can_unrig"] = state.can_unrig;
+    out["chain_paid"] = state.chain_paid_m;
+    out["chain_tension"] = state.chain_tension_n;
     out["striker_travel"] = state.striker_travel_m;
     out["striker_peak"] = state.striker_peak_m;
     out["trip_travel"] = state.trip_travel_m;
@@ -1995,6 +2006,8 @@ godot::Dictionary ScraperXSimulation::get_summit_state() const {
 }
 
 void ScraperXSimulation::light_summit() { simulation_->light_summit(); }
+bool ScraperXSimulation::set_summit_lower(const bool held) { return simulation_->set_summit_lower(held); }
+bool ScraperXSimulation::request_summit_unrig() { return simulation_->request_summit_unrig(); }
 
 // Her look over the tower (every way she climbs is one her scan finds) is
 // seconds of work. The game asks for it before play, so it never lands in

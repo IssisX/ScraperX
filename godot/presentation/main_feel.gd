@@ -76,6 +76,7 @@ const KIT_DYNAMIC_ENTITY_MIN := 2000
 const FALL_AIRBORNE := 1
 const FALL_PARACHUTING := 2
 var _summit_announced := false
+var _ending_shown := 0
 var _ci_mode := false
 # Tests only: the simulation held still while frames are still drawn and the
 # camera still turns (a capture run's screenshot, so that its frames do not
@@ -175,7 +176,7 @@ func _announce_summit() -> void:
 	_summit_announced = true
 	var seconds := float(landing["summit_seconds"])
 	var deaths := int(landing["summit_deaths"])
-	_hud.toast("THE TOP", "%.1f M  /  %d:%02d  /  %d %s" % [float(landing["route_top"]), int(seconds) / 60,
+	_hud.toast("THE CREW'S LAST BEAM", "%.1f M  /  %d:%02d  /  %d %s" % [float(landing["route_top"]), int(seconds) / 60,
 		int(seconds) % 60, deaths, "FALL" if deaths == 1 else "FALLS"], UiStyle.AMBER, 8.0)
 	_hud.flash(UiStyle.AMBER)
 	_haptic(&"press", 1.0)
@@ -1027,6 +1028,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_swing_view.update_view(_native.get_swing_state())
 	if _zipline_view != null:
 		_feel_zipline(delta)
+	var ending := int(_native.get_summit_state()["ending"])
+	if ending >= 2 and _ending_shown < 2:
+		_hud.toast("TAKE THE SKY HOME", "THE RUNWAY IS CLEAR. YOUR PARACHUTE IS THE WAY BACK.", UiStyle.PAPER, 6.0)
+	_ending_shown = maxi(_ending_shown, ending)
 	if _summit_view != null:
 		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	if _matron_view != null:
