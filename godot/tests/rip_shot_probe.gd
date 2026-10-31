@@ -139,6 +139,8 @@ func _initialize() -> void:
 		_fail("exit-cut", "worst %.3f active %s scale %s" % [leave_worst, leave.rip_active, leave.time_scale()])
 	_check_blocked_exit(him, head, hand, eye, severed, false)
 	_check_blocked_exit(him, head, hand, eye, severed, true)
+	_check_blocked_exit(him, head, hand, eye, head + Vector3(0.0, -0.75, 0.0), false)
+	_check_blocked_exit(him, head, hand, eye, head + Vector3(0.0, -0.75, 0.0), true)
 	# Blocked blend: the destination ray is clear, but a steel protrusion
 	# sits on the blended ray close to the pivot. The wide shot must not
 	# be claimed for a camera that steel has pulled back to the pivot.
@@ -213,6 +215,7 @@ func _check_blocked_exit(him: Vector3, head: Vector3, hand: Vector3, eye: Transf
 	if old_free < span + Cam.CAM_RADIUS - 0.001 or next_free >= next.distance_to(camera.pivot) - 0.001:
 		_fail("exit-fixture", "current %.3f/%.3f next %.3f/%.3f" % [old_free, span, next_free, next.distance_to(camera.pivot)])
 	var worst := 0.0
+	var worst_turn := 0.0
 	var crossed := false
 	for i in 300:
 		var after: Transform3D = camera.frame(_hold(12, 1, him, hand, true, severed, still_held), head, eye, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _exit_cast)
@@ -220,15 +223,16 @@ func _check_blocked_exit(him: Vector3, head: Vector3, hand: Vector3, eye: Transf
 		if travel.length() > 0.001:
 			crossed = crossed or _exit_cast(view.origin, after.origin, Vector3.INF, 0.0) < travel.length() - 0.001
 		worst = maxf(worst, travel.length())
+		worst_turn = maxf(worst_turn, rad_to_deg(view.basis.get_rotation_quaternion().angle_to(after.basis.get_rotation_quaternion())))
 		view = after
 	var returned := not camera.rip_active and float(camera.get("_rip")) <= 0.001
 	returned = returned and camera.third_person() == still_held
 	if not still_held:
 		returned = returned and view.origin.distance_to(eye.origin) < 0.001
-	if returned and worst < 0.45 and not crossed and camera.time_scale() == 1.0:
-		print("RIP_SHOT blocked exit returned held=%s, no cut (%.3f m): PASS" % [still_held, worst])
+	if returned and worst < 0.45 and worst_turn < 10.0 and not crossed and camera.time_scale() == 1.0:
+		print("RIP_SHOT blocked exit returned held=%s, no cut (%.3f m, %.2f deg): PASS" % [still_held, worst, worst_turn])
 	else:
-		_fail("blocked-exit", "held %s returned %s worst %.3f crossed %s" % [still_held, returned, worst, crossed])
+		_fail("blocked-exit", "held %s returned %s worst %.3f turn %.2f crossed %s" % [still_held, returned, worst, worst_turn, crossed])
 	_exit_world.center = Vector3.INF
 
 

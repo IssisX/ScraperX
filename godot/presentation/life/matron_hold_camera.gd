@@ -86,6 +86,7 @@ const RIP_DIST := 6.6           # out from the pair; the close frame is what pla
 const RIP_HOLD_S := 1.4         # the wide shot stays after the arm leaves
 const RIP_EASE := 2.4           # how fast the shot takes the frame (per second)
 const RIP_MIN_M := 3.2          # less open air than this and the wide shot is not taken
+const RIP_RETURN_RAD_S := 4.0  # turn continuously while the blocked exit passes its pivot
 
 var _w := 0.0                   # third person's share of the view, 0..1
 var _engaged := false
@@ -129,7 +130,7 @@ var _floor_s := 0.0
 var _tears_seen := -1
 var _since_tear := -1.0
 var _rip := 0.0                 # 0 the ordinary hold frame, 1 the rip shot
-var _rip_return_leg := 0        # blocked exit: 1 in to the pivot, 2 out to the hold frame
+var _rip_return_leg := 0        # blocked exit: 1 inward, 2 outward, 3 finish the aim
 var rip_active := false
 var rip_dist := 0.0             # metres from the camera to the arm it is framing
 var rip_holds := 0              # times the arm leaving locked this shot
@@ -431,6 +432,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var want_rip := not claimed and not falling and (arm_play or tear_hold)
 	rip_active = false
 	rip_dist = 0.0
+	var returning_rip := false
 	if claimed or falling:
 		_rip_return_leg = 0
 		_rip = move_toward(_rip, 0.0, RIP_EASE * delta)
@@ -463,6 +465,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		if not _rip_step_clear(hold_cam, wide, placed_w, skip, cast):
 			placed_w = 0.0
 		if _rip_return_leg != 0:
+			returning_rip = true
 			cam = _rip_return_step(hold_cam, skip, cast, delta)
 			look_at = look_at.lerp(subject, _rip)
 			var return_dir := cam - _pivot
@@ -494,6 +497,17 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	if to_look.length() > 1.0e-3:
 		var up := Vector3.UP if absf(to_look.normalized().dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 		basis = Basis.looking_at(to_look, up)
+	if returning_rip:
+		# Near the pivot the look direction can reverse in one frame even
+		# though the camera itself only moved a few centimetres. Finish the
+		# turn before returning ownership to the ordinary/eye transition.
+		var previous := _last_view.basis.get_rotation_quaternion()
+		var desired := basis.get_rotation_quaternion()
+		var angle := previous.angle_to(desired)
+		var turn := RIP_RETURN_RAD_S * delta
+		basis = Basis(previous.slerp(desired, minf(1.0, turn / maxf(angle, 1.0e-6))))
+		if _rip_return_leg == 3 and angle <= turn:
+			_rip_return_leg = 0
 	var out := Transform3D(basis, cam)
 	if _w >= 0.999:
 		_last_view = out
@@ -537,7 +551,7 @@ func _rip_return_step(hold_cam: Vector3, skip: Vector3, ray: Callable, delta: fl
 		if _rip_return_leg == 1:
 			_rip_return_leg = 2
 		else:
-			_rip_return_leg = 0
+			_rip_return_leg = 3
 			_rip = 0.0
 	if _rip_return_leg == 2:
 		_rip = minf(_rip, next.distance_to(hold_cam) / maxf(1.0e-3, _pivot.distance_to(hold_cam)))
