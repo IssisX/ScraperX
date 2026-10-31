@@ -98,6 +98,7 @@ For every agent; `AGENTS.md` points other agents here.
   green on every proof job but `publish-checkpoint` (off trunk its signing step stops with the
   expected KeyError) with a second agent's LAND and no open blocker; the owner can overturn any
   merge (2026-10-28, 10-29). Everything else lands without a PR.
+- **Merge blockers are substantive:** spelling, wording, and commit-message/tag nitpicks never block a PR or justify rewriting commits or rerunning CI. Only real physics, gameplay, or test failures block a merge (owner, 2026-10-31).
 - **Local tests match CI or do not count:** CI's compilers and flags (host g++ 13.3 as on
   `ubuntu-24.04`; NDK `29.0.14206865` clang; the CMake flags in `wo000-delivery-spine.yml`). CI stays
   the final proof; its ccache changes no result.
