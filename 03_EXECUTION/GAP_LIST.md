@@ -248,22 +248,16 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   implementation needs a separate source and gameplay check. Run the applicable existing
   scenarios at the candidate revision; test existence alone is not a pass.
 
-### 19. Her body: fingers, cloth and the 4 s warning are thin (A6)
-- **Current source check:** `godot/presentation/life/matron_view.gd` creates finger pivots
-  and updates curl; `godot/presentation/life/matron_rig.gd` maps the skirt bone. Contact and
-  actual appearance require rendered inspection. `touch_matron_pipe` is not listed in the
-  inspected CI scenario loop; no assertion about all possible warning tests follows from that.
-- Fingers: four fingers of three joints and a thumb of two, each on a spring (`matron_view.gd:676-692,2012-2032`), but
-  the curl is one value per hand per state (`:2000-2009`) and stays 0.35 in every hold state, so
-  by the code the fingers do not wrap the ankle (UNVERIFIED by eye). Size small for variation,
-  medium to wrap an ankle or rung.
-- Cloth: one skirt bone on a canned sway (`:2041-2046`, `matron_rig.gd:194`), no cloth motion.
-  Size medium.
-- The 4 s warning: asserted in the sim only (`sim_tests_matron.cpp:723,740` `warned_s >= 4.0`);
-  the touch-level check is in `touch_matron_pipe`, which the inspected workflow does not list (gap 0). Size small.
-- Body proportions ("not too thin") are checked by no test (`matron_stats.json` is read by no code).
-  Size small, by eye with the runtime.
-- Hurts: 2.
+### 19. Her fingers, cloth and pipe warning (A6)
+- Asked: a believable body, fingers and cloth, plus the pipe warning.
+- **Partial implementation; visual result unverified:** `godot/presentation/life/matron_view.gd`
+  builds finger pivots and updates their curls; `matron_rig.gd` maps a skirt bone. The earlier
+  audit found common state-driven curls and a canned skirt sway, with no proven ankle/rung wrap;
+  inspect the rendered production path before deciding what needs work.
+- **Warning coverage:** `tests/sim_tests_matron.cpp` contains the four-second warning assertion;
+  the touch check is `touch_matron_pipe` in `godot/presentation/ui/ui_test_act.gd`. The inspected
+  `.github/workflows/wo000-delivery-spine.yml` does not list that scenario. This is coverage
+  configuration, not proof that it fails everywhere. Body proportions also require visual review.
 
 ### 20. Smaller owner calls not met
 - **Current source check:** `godot/presentation/main_feel.gd` `_announce_summit` reports
