@@ -292,9 +292,10 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   for “plate clamp” and `plate_clamp` returned no match; an implementation under another name
   is not ruled out. `src/sim/yard_crane.hpp` contains magnet and spreader. Verify owner intent
   and operation before proposing a new machine part.
-- **A4 frail first then Turn — partial:** `src/sim/matron_found_climb.cpp` contains stage-based
-  movement; the earlier audit found later stages no longer frail. Visual and gameplay fit remain
-  unverified.
+- **A4 frail first then Turn — partial:** `Matron::find_climb` and `follow_found_climb` in
+  `src/sim/matron_found_climb.cpp` restrict a Pest outside the Turn while later stages can
+  attempt the corresponding descent/journey. This is stage-based behavior, not proof of the
+  full frail-to-strong presentation; visual and gameplay fit remain unverified.
 
 ### 21. Background and process gaps
 - **Rule 39, identity and radio — partial:** `godot/presentation/ui/pause_menu.gd`
