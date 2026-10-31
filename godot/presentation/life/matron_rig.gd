@@ -850,6 +850,7 @@ func step_hair(delta: float) -> void:
 	var head := bone_world("head")
 	var skull := head * _skull_local
 	var chest := bone_world("chest")
+	var belt := bone_world("spine_mid")
 	var back := chest * Vector3(0.0, 0.05, -0.05)
 	var down := head.basis * Vector3.DOWN
 	for ch in _chains:
@@ -889,6 +890,12 @@ func step_hair(delta: float) -> void:
 				# between this point and the one above still cuts through them.
 				q = _segment_outside(above, q, seg, skull, _skull_radius)
 				q = _segment_outside(above, q, seg, back, BACK_RADIUS)
+				# Collar and belt are rings the two spheres do not cover. Walk the
+				# segment out sideways and down. A lift along the chest axis spends
+				# the hang. Measured radii, not a knob: collar 0.138 on chest
+				# local Y 0.091..0.154, buckle 0.192 on spine_mid local Y -0.001..0.042.
+				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138)
+				q = _clear_ring(above, q, seg, belt, -0.001, 0.042, 0.192)
 				pts[k] = q
 		# The bones from the points: each turned from hanging (its rest, down its
 		# parent) to the way its strand now runs.
@@ -955,3 +962,59 @@ func _segment_hits(a: Vector3, d_unit: Vector3, length: float, centre: Vector3, 
 	var t1 := (-bb - s) * 0.5
 	var t2 := (-bb + s) * 0.5
 	return t1 < length and t2 > 0.0
+
+
+# The clothing ring is a slice of a cylinder on a posed bone. If the segment
+# enters it, tilt the child toward the horizontal way out, still downward.
+func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: float, y1: float, radius: float) -> Vector3:
+	var origin := bone.origin
+	var axis := bone.basis.y.normalized()
+	for _guard in 6:
+		if _ring_depth(a, b, origin, axis, y0, y1, radius) <= 0.001:
+			return b
+		var horiz := _ring_out(a, b, origin, axis, y0, y1)
+		horiz = Vector3(horiz.x, 0.0, horiz.z)
+		if horiz.length() < 1e-4:
+			horiz = Vector3(0.0, 0.0, -1.0)
+		horiz = horiz.normalized()
+		var d := b - a
+		if d.length() < 1e-6:
+			d = Vector3.DOWN
+		d = d.normalized()
+		var trial := d + horiz * 0.45
+		trial.y = minf(trial.y, -0.15)
+		if trial.length() < 1e-6:
+			trial = Vector3.DOWN
+		b = a + trial.normalized() * length
+	return b
+
+
+func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float, radius: float) -> float:
+	var worst := 0.0
+	for s in 8:
+		var p: Vector3 = a.lerp(b, float(s) / 7.0)
+		var along := (p - origin).dot(axis)
+		if along < y0 - 0.01 or along > y1 + 0.01:
+			continue
+		var radial := (p - origin) - axis * along
+		worst = maxf(worst, radius - radial.length())
+	return worst
+
+
+func _ring_out(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float) -> Vector3:
+	var best := 1.0e9
+	var out := Vector3.ZERO
+	for s in 8:
+		var p: Vector3 = a.lerp(b, float(s) / 7.0)
+		var rel := p - origin
+		var along := rel.dot(axis)
+		if along < y0 - 0.01 or along > y1 + 0.01:
+			continue
+		var radial := rel - axis * along
+		var rl := radial.length()
+		if rl < best:
+			best = rl
+			out = radial
+	if out.length() < 1e-4:
+		out = Vector3(a.x - origin.x, 0.0, a.z - origin.z)
+	return out
