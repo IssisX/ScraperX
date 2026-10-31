@@ -6,11 +6,10 @@ archived log and handoff"), the rules in force (`00_START_HERE.md`) and the orig
 for this revision. Source and test definitions establish implementation or coverage, not a pass.
 Older line numbers can drift; search the cited symbol. Issue #3 and open PRs own current assignments.
 
-**Audit limit:** entries 0, 2–8, 12–13, 17 and the identity/radio part of 21 have targeted
-current-source corrections below. The retained findings in 1, 9–11, 14–16, 18–20 and the
-remaining parts of 21 are the earlier static audit, not fully reconciled at `dea9cfc`. Treat
-their status, cited line numbers and proposed next work as UNVERIFIED until checked against
-current source and workflow; do not use them alone to assign work.
+**Audit limit:** entries 0–21 have targeted
+current-source corrections below. Some retained detailed findings and suggested next work are still the earlier static audit,
+not fully reconciled at `dea9cfc`; those are marked historical or unverified below. Do not use
+them alone to assign work.
 
 **Ranking** is by how much the gap hurts the player's belief in the game, worst first
 (impact 1 = invisible, 5 = breaks the game), ties broken by how many players meet it. **Size** is
@@ -33,9 +32,12 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 ## Ranked gaps
 
 ### 1. Pulled starts and ladders still carry the route above 221 m (rules 52, 53)
+- **Current source check:** `src/sim/band_facade_crane.cpp` `add_handle` and its route
+  ladder construction still exist; the exact historical counts and whether each is encountered
+  on the live route are UNVERIFIED. Run the relevant route before making a player-impact claim.
 - Asked: *"3D chutes and ladders"* is what he does not want; no new route ladder or pull-started
   lift; each stage a new action (rules 52, 53).
-- Status: **not met** above 221 m, partly below.
+- Historical assessment: **not met** above 221 m, partly below; exact coverage unverified now.
 - Evidence: 20 hanging-handle or lanyard entities (`src/sim/simulation.hpp:1312-1452`), 14 above
   221 m (wet D, F, header; plate G, H, I; crane J, K, L; midstack M, N, O). Three motor lifts
   started by Action (`src/sim/vertical/vertical_route.cpp:407-418`: cascade mast, barrel helix,
@@ -44,7 +46,7 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   (`band_wet_isolation.cpp:742-760`), at least six ladders on the 0-221 m climb
   (`band_stack.cpp:550,802,1155,1267,1619,1639`; `band_counterweight_well.cpp:1007`).
   C6, C7, the swing and the slingshot add none.
-- Hurts: 4. His most repeated complaint, and every player climbing 340-640 m meets it.
+- Hurts: 4. His most repeated complaint, and the frequency on actual player paths is unverified.
 - Size: large. A redesign per machine of about a day each; each new machine is talked through with
   him first (rule 52).
 
@@ -127,6 +129,9 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   assertion is small.
 
 ### 9. She does not wreck his work (A3, A4 B and C)
+- **Current source check:** `Matron::fetch_stock` in `src/sim/matron.cpp` is gated to Pest;
+  `notice_moved_stock` uses sight, and `State::Unrigging` / `State::Guarding` remain. The full
+  earlier list of missing machine interactions and stock counts has not been rederived.
 - Asked: carries and throws stock (built); shoves stock he placed off edges, resets or jams
   machines he set, more at higher stages; meddles only undoably (sends a lift away, waits at a
   choke point, boards the lift he called); learns a trick he repeats within a run.
@@ -143,6 +148,10 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   capped-force push, and machine use as one general skill, no per-machine code (rule 30).
 
 ### 10. Loud machines mostly do not draw her (A7)
+- **Current source check:** `Simulation::PhysicsWorld::step` in `src/sim/physics_world.cpp`
+  feeds impact ledger events and yard crane noises to `Matron::hear`; the forklift noise path
+  is in `src/sim/physics_world_movement.cpp`. [PR #48](https://github.com/IssisX/ScraperX/pull/48)
+  is unmerged. The complete absence claims below require a separate audit of all machine sources.
 - Asked: every real collision heard by material and by her; loud machines draw her too.
 - Status: **partly built.** Carried path and per-deck muffling: `carry_m` (`matron.cpp:545-568`);
   hearing is not level-bound (`:2537`); tests `sim_tests_matron_hearing.cpp:52-196`.
@@ -155,6 +164,10 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Size: medium: a general machine-noise source from measured motion or force into `Matron::hear`.
 
 ### 11. The night above 143 m is the moon and machine lights (B5)
+- **Current source check:** `godot/presentation/sky_cycle.gd` `setup` and its update path
+  implement sun/moon lighting and lamp gain; `godot/presentation/main_world.gd`
+  `_build_lighting` builds yard lights. Night readability and the full list of absent lights
+  are UNVERIFIED at runtime.
 - Asked: morning to night; the night readable: floodlights, a helmet lamp, rings lit behind you,
   moon and city glow.
 - Status: **partly built.** Sun, moon and stars with lamps boosted 6x at night
@@ -189,16 +202,22 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Size: B1 large (a gate scene, a source prop, the crew story, and the cast
   conflict settled first). B2 medium (a dead-worker state or placed props, plus triggers).
 
-### 14. Nothing is lived-in above 396 m (D1)
+### 14. Lived-in spot finder stops at 396 m (D1)
+- **Current source check:** the ring candidates in `src/sim/loose_stock.cpp` end at
+  `176.25 + 22 * 10 = 396.25 m`. This bounds that spot finder, not every possible object
+  above that height; the title and “nothing” claim below are broader than this evidence.
 - Asked: little lived-in spots all over the structure.
 - Status: **partly built.** The spot finder walks rings every 11 m to 143 m, then 176.25 + 22k for
-  k = 0..10, so to 396.25 m (`loose_stock.cpp:734-741`); nothing from 396 to 802.64 m, about half
-  the climb. Ziplines also stop at 396 m (`physics_world.cpp:340-345`). `sim_tests_stock.cpp:74`
+  k = 0..10, so to 396.25 m (`loose_stock.cpp:734-741`); the finder adds no higher rings; other authored dressing above 396 m is unverified. Ziplines also stop at 396 m (`physics_world.cpp:340-345`). `sim_tests_stock.cpp:74`
   asserts at least 60 pieces, not coverage by height.
 - Hurts: 3. Size: medium, and it changes body order, which makes it a whole-world change
   (see the conditional full-suite rule in `CLAUDE.md`, "Test only what a change reaches").
 
 ### 15. "He is never helpless" depends on stock being at hand (rule 34)
+- **Current source check:** `src/sim/player_strike_limits.hpp` sets a 1,500 N cap and
+  `src/sim/physics_world_strike.cpp` uses three contact ticks and a power limit. The
+  below-threshold conclusion below is an estimate, not a runtime result; a real strike and
+  balance test is needed before calling punch ineffective at every stage.
 - Status: **partly built.** A knock-down works with thrown stock and machines
   (`take_blow` `matron.cpp:4040-4143`; `sim_tests_matron.cpp:377,450,481,591`; `touch_matron_heave`).
   By arithmetic, not run: the punch is at most 1,500 N (`player_strike_limits.hpp:14`) over 3
@@ -209,6 +228,9 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Hurts: 3. Size: small to retune; protected (her force limits and thresholds), by PR.
 
 ### 16. Nothing tests that her movement is continuous (rule 37)
+- **Current source check:** `godot/presentation/life/matron_rig.gd` `govern` applies
+  `GOVERN_RAD_S` / `GOVERN_BURST_RAD_S` to selected bones, excluding hair, eyes and fingers.
+  This is implementation evidence, not proof of smooth drawn motion or a complete test inventory.
 - Status: **built in code, unproven.** Drawn between ticks (`matron_view.gd:2100,2314`;
   `simulation.cpp:691`); body bones clamped to 11.5 rad/s, 19 in a burst
   (`matron_rig.gd:254-259,520-560`); hair, eyes and fingers excluded. The only test is one wrist
@@ -228,6 +250,10 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Hurts: 2. Size: small each.
 
 ### 18. A wrecked machine leaves a way on: tested for some bands only (rule 51)
+- **Current test definitions:** `run_plate_wreckage` in `tests/sim_tests_plate.cpp`,
+  `tests/sim_tests_well.cpp` and `run_crane_wreckage` in `tests/sim_tests_crane.cpp`
+  contain the cited scenarios. Test presence is not a passing run; other bands and backup paths
+  remain UNVERIFIED without their own source and runtime checks.
 - Status: **partly built.** Wreckage tests: AS-006 B and C (`sim_tests_well.cpp:373,772`), AS-008 G,
   H, I (`sim_tests_plate.cpp:518,545,562`), AS-009 J, K, L (`sim_tests_crane.cpp:345,361,375`).
   None found for S1 to S3, AS-007 D to F, AS-010 M to O or the vertical machines (UNVERIFIED
@@ -236,6 +262,10 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Hurts: 2. Size: medium to prove or fix each.
 
 ### 19. Her body: fingers, cloth and the 4 s warning are thin (A6)
+- **Current source check:** `godot/presentation/life/matron_view.gd` creates finger pivots
+  and updates curl; `godot/presentation/life/matron_rig.gd` maps the skirt bone. Contact and
+  actual appearance require rendered inspection. `touch_matron_pipe` is not listed in the
+  inspected CI scenario loop; no assertion about all possible warning tests follows from that.
 - Fingers: four fingers of three joints and a thumb of two, each on a spring (`matron_view.gd:676-692,2012-2032`), but
   the curl is one value per hand per state (`:2000-2009`) and stays 0.35 in every hold state, so
   by the code the fingers do not wrap the ankle (UNVERIFIED by eye). Size small for variation,
@@ -249,6 +279,9 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Hurts: 2.
 
 ### 20. Smaller owner calls not met
+- **Current source check:** `godot/presentation/main_feel.gd` `_announce_summit` reports
+  time and deaths. The remaining absence claims below are historical and require a fresh
+  repository-wide implementation search before use as an assignment.
 - **D4 diegetic machine controls** (grab the forklift's real lever): not built; the forklift is
   "Action takes the controls" (`forklift.hpp:10-14`), the crane a remote and buttons
   (`yard_crane.hpp:14-19`); only the hanging handles are physical grabs. Hurts 2. Size medium for
@@ -260,6 +293,10 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   frail (`matron_found_climb.cpp:127,324,365`).
 
 ### 21. Background and process gaps (low for the player)
+- **Current source check:** `src/sim/vertical/vertical_machine.cpp` registers the two
+  vertical machine IDs and `src/sim/matron_pipe.cpp` uses `kStackPitch`. Registration
+  is not proof of placement or playability. Other broad absence/coverage claims below remain
+  UNVERIFIED until their production wiring and actual runs are checked.
 - **Rule 39**: `godot/presentation/ui/pause_menu.gd` `_build_work_id_page` instantiates
   `WorkIdPage`, and `godot/presentation/main.gd` instantiates `StoryRadioPlayer`.
   `story_radio_player.gd` keeps voice approval false. **Partial:** gameplay cue triggering,
