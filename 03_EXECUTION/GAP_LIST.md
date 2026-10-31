@@ -193,17 +193,21 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - Hurts: 3. It is the only story channel. Size: medium for lines, triggers and wiring; the voices
   wait on his picks by ear. Which cast he means is his call (listed in the owner decisions).
 
-### 13. The story's premise and its crew are missing (B1, B2)
-- Asked: a worker sneaks onto his own site on a weekend (badging in), wakes a coworker exposed by
-  a lost X-ray source, the only way off is up; she kills the overtime crew, bodies higher up.
-- Status: **B1 partial:** the gate, badge-in and X-ray source remain unverified. The topping-out beam now exists:
-  `src/sim/summit.cpp` `Summit::build_ending` and `read_ending` (gap 6). **B2 historical finding; current status requires review**:
-  the earlier audit said workers cannot die (`src/sim/crew.hpp:37`), `matron.cpp` never touches `Crew`, and about ten live
-  workers stand from 22 to 418 m (`crew.cpp:61-79`), corpses are the climber's alone
-  (`corpse.hpp:1-15`).
-- Hurts: 3 each. Rule 50 wants every feature to have its reason in the story.
-- Size: B1 large (a gate scene, a source prop, the crew story, and the cast
-  conflict settled first). B2 medium (a dead-worker state or placed props, plus triggers).
+### 13. The story's premise and its crew (B1, B2)
+- Asked: a worker sneaks onto his own site on a weekend and badges in, wakes a coworker
+  exposed to a lost X-ray source, and can escape only upward; she kills the overtime crew and
+  their bodies are found higher up.
+- **Partial implementation:** `src/sim/summit.cpp` `Summit::build_ending` creates the last beam,
+  and `godot/presentation/life/foreman_radio.gd` `LINES` references Saturday and the accident.
+  A search of `src` and `godot` code and scene/JSON files for X-ray, badge-in and overtime
+  found the beam and related caption but no named X-ray-source or badge-in sequence. An
+  implementation under different terminology and its runtime presentation are unverified.
+- `src/sim/crew.cpp` `Crew::Crew` constructs six yard workers and eight on tower decks from
+  22 to 418.25 m; `src/sim/crew.hpp` `Crew::State` contains walking, working, yielding,
+  startled and stumbling, with no death state. `PhysicsWorld` steps the crew; searches of the
+  Matron files found no `Crew` reference. This supports a missing explicit worker-death path,
+  but does not prove all possible indirect interactions or rendered bodies absent. The request
+  for her to kill the overtime crew and leave bodies remains open.
 
 ### 14. Lived-in spot finder stops at 396 m (D1)
 - Asked: little lived-in spots throughout the structure.
