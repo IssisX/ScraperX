@@ -47,13 +47,6 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                          object_layer_pair_filter_);
     physics_system_.SetContactListener(&contact_listener_);
 
-    // Her CCD must start before a tick can exceed the existing tunnel bound:
-    // 0.15 m / 0.30 m radius, rather than Jolt's default 0.75 radii (0.225 m).
-    auto collision_settings = physics_system_.GetPhysicsSettings();
-    collision_settings.mLinearCastThreshold = std::min(collision_settings.mLinearCastThreshold,
-                                                       Matron::kTunnelM / Matron::kRadius);
-    physics_system_.SetPhysicsSettings(collision_settings);
-
     auto &bodies = physics_system_.GetBodyInterface();
 
     // Grade: the yard the player is born on, outdoors, wide enough to walk
