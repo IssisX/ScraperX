@@ -831,7 +831,17 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 // Nothing at all in the way above it, from 2 cm over the floor
                 // (a toe plate or a bolted plate lower than a hand's width is
                 // in the way too).
-                const RefConst<Shape> room = new BoxShape(Vec3(0.5F * spot.width, 1.24F, 0.5F * spot.depth));
+                // The clearance box follows the spot's frame, not the world
+                // axes: width runs along the band, depth out from the shaft.
+                // On the east/west sides the old world-axis box put width
+                // radially, so it crossed the shaft-edge structure at 17 m
+                // and rejected every east/west candidate — measured 2026-10-31:
+                // zero east and zero west spots on all 13 stack rings, while
+                // north/south (where width already ran along x) dressed fine.
+                const bool sideways = std::abs(out.GetX()) > 0.5F;
+                const RefConst<Shape> room =
+                    new BoxShape(sideways ? Vec3(0.5F * spot.depth, 1.24F, 0.5F * spot.width)
+                                          : Vec3(0.5F * spot.width, 1.24F, 0.5F * spot.depth));
                 const RVec3 room_middle = middle - Vec3(0.0F, 1.3F - 1.26F, 0.0F);
                 AnyHitCollisionCollector<CollideShapeCollector> in_the_way;
                 query.CollideShape(room, Vec3::sReplicate(1.0F),
