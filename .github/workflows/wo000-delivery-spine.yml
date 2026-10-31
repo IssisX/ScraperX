@@ -651,6 +651,17 @@ jobs:
             --script res://tests/her_takes_test.gd 2>&1 | tee artifacts/her-takes.log
           grep -F "HER_TAKES PASS fails=0" artifacts/her-takes.log
 
+      - name: Her lines never repeat
+        shell: bash
+        run: |
+          set -euo pipefail
+          # All 43 lines of HER_LINES_DRAFT.md have their three clips and a caption; a moment of hers never
+          # says the line it just said nor plays the clip it just played (rule 42), driven through
+          # matron_sound.gd the way the game drives it; the apron wipe says "Waste not." (line 27).
+          timeout 300s tools/godot/godot --headless --path godot \
+            --script res://tests/matron_speech_test.gd 2>&1 | tee artifacts/matron-speech.log
+          grep -F "MATRON_SPEECH PASS fails=0" artifacts/matron-speech.log
+
       - name: The Matron's figure, eyes and hair
         shell: bash
         run: |
