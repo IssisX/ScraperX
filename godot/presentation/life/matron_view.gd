@@ -704,6 +704,59 @@ func _build_pivots() -> void:
 	_p["box_cord"] = _pivot(body, Vector3(-0.2, -0.05, 0.0))
 
 
+# One seating of the hair mesh. The locks were weighted across neighboring
+# chains, so when two locks swung apart the ribbon stretched into a sheet and
+# the scorer read the middle as inside her. Each vertex now follows one bone,
+# and the ones that were inside the cloth at the guard and the head-down pose
+# are moved out along that cloth's normal. The bones are not moved, so the
+# hang does not change. Built by measuring the drawn body, not by a radius.
+func _seat_hair(root: Node) -> void:
+	var path := "res://presentation/life/matron/hair_seat.bin"
+	if not FileAccess.file_exists(path):
+		return
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return
+	var n := int(f.get_32())
+	var found := false
+	for node in root.find_children("hair", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.mesh == null or mi.mesh.get_surface_count() < 1:
+			continue
+		var arrays: Array = mi.mesh.surface_get_arrays(0)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		if verts.size() != n:
+			push_error("matron hair seat: mesh has %d verts, file has %d" % [verts.size(), n])
+			return
+		var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		var bpv := int(bones.size() / n)
+		var out_v := PackedVector3Array()
+		out_v.resize(n)
+		for i in n:
+			out_v[i] = Vector3(f.get_float(), f.get_float(), f.get_float())
+		var out_b := bones.duplicate()
+		var out_w := weights.duplicate()
+		for i in n:
+			var b := int(f.get_32())
+			for j in bpv:
+				out_b[i * bpv + j] = b
+				out_w[i * bpv + j] = 1.0 if j == 0 else 0.0
+		arrays[Mesh.ARRAY_VERTEX] = out_v
+		arrays[Mesh.ARRAY_BONES] = out_b
+		arrays[Mesh.ARRAY_WEIGHTS] = out_w
+		var seated := ArrayMesh.new()
+		seated.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		var mat := mi.mesh.surface_get_material(0)
+		if mat != null:
+			seated.surface_set_material(0, mat)
+		mi.mesh = seated
+		found = true
+		break
+	if not found:
+		push_error("matron hair seat: no hair mesh")
+
+
 # Her body: the skinned glTF read at runtime (kept as it is by its .import),
 # dressed by matron_look.gd and driven by matron_rig.gd.
 func _load_body() -> void:
@@ -724,6 +777,7 @@ func _load_body() -> void:
 		root.free()
 		return
 	_figure.add_child(root)
+	_seat_hair(root)
 	_look = MatronLook.new()
 	_look.build()
 	_look.dress(root)
