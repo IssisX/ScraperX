@@ -138,11 +138,17 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   Pest and `matron.hpp` `kTakeMaxKg` is 25 kg. The same file's `State::Unrigging` and
   `State::Guarding` cover undoing rigging and guarding an exit. `fooled_` tracks noises leading
   to nobody; that is not evidence of learning a repeated player action.
-- The earlier audit identified missing edge shoves, jamming/resetting, sending a cage away and
-  boarding a player-called lift; `matron.hpp` documents clinging to a floor already moving and
-  says she does not send a cage away. Those broader absence findings and the exact eligible-stock
-  count remain **unverified** without a complete interaction-path search. Check current open PRs
-  and the assignment board before taking a follow-up.
+- `LooseStock::lay_matron_throwables` in `src/sim/loose_stock.cpp` adds two toolboxes and
+  a drum at deck 154; `src/sim/physics_world.cpp` supplies the last three pieces to
+  `Matron::set_throwables` (`LooseStock::kMatronThrowables`). Other stock exists, but is not
+  automatically in that particular list. `Matron::walk_toward` in `src/sim/matron.cpp` can
+  push a blocking dynamic stock/fabricated body and checks nearby voids when selecting a
+  direction; this does not establish deliberate shoving of player-placed stock off an edge.
+  `PhysicsWorld::step` handles `take_unrig` by unhooking the selected A/B rope.
+- `matron.hpp` documents clinging to a moving floor and says she does not send a cage away.
+  General jamming/resetting, boarding a called lift, deliberate edge shoves and learning a
+  repeated trick remain unverified beyond these observed paths. Test presence or code comments
+  are not gameplay proof. Check current assignments before taking a follow-up.
 
 ### 10. Loud machines mostly do not draw her (A7)
 - Asked: collisions heard by material and by her, and loud machines draw her.
