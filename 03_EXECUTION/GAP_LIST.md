@@ -6,10 +6,10 @@ archived log and handoff"), the rules in force (`00_START_HERE.md`) and the orig
 for this revision. Source and test definitions establish implementation or coverage, not a pass.
 Older line numbers can drift; search the cited symbol. Issue #3 and open PRs own current assignments.
 
-**Audit limit:** entries 0–21 have targeted
-current-source corrections below. Some retained detailed findings and suggested next work are still the earlier static audit,
-not fully reconciled at `dea9cfc`; those are marked historical or unverified below. Do not use
-them alone to assign work.
+**Evidence boundary:** entries 0–21 distinguish inspected source and test definitions from
+historical findings and unverified behavior. Named searches do not rule out code under other
+names, and static inspection does not prove a gameplay or device result. Check current
+assignments and evidence before starting work.
 
 **Ranking** is by how much the gap hurts the player's belief in the game, worst first
 (impact 1 = invisible, 5 = breaks the game), ties broken by how many players meet it. **Size** is
