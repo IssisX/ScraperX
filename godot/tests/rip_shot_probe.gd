@@ -107,6 +107,7 @@ func _initialize() -> void:
 		print("RIP_SHOT let-go took the frame back (scale %.2f): PASS" % cam.time_scale())
 	else:
 		_fail("let-go", "rip_active %s scale %s" % [cam.rip_active, cam.time_scale()])
+	_obstruction(him, head, hand, eye, severed)
 	print("RIP_SHOT %s" % ("PASS" if _fails == 0 else "FAIL"))
 	quit(1 if _fails > 0 else 0)
 
@@ -143,6 +144,85 @@ func _hold(state: int, tears: int, him: Vector3, hand: Vector3, arm: bool, sever
 
 func _open(a: Vector3, b: Vector3, _skip: Vector3, _radius: float) -> float:
 	return a.distance_to(b)
+
+
+## Destination ray clear, the in-between blend cut by steel. The shot must not
+## call that cut-short camera a rip, and the clearance must be the ray the
+## camera actually sits on.
+func _obstruction(him: Vector3, head: Vector3, hand: Vector3, eye: Transform3D, severed: Vector3) -> void:
+	_cast_mode = "wall"
+	var wall := Cam.new()
+	var view := _run(wall, _hold(13, 0, him, hand, false, severed), head, eye, Vector2.ZERO, 1.2)
+	var sunk := false
+	var lied := false
+	for _i in 90:
+		var before := view.origin
+		view = wall.frame(_hold(15, 0, him, hand, false, severed), head, view, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _cast)
+		var placed := view.origin.distance_to(wall.pivot)
+		var along := view.origin - wall.pivot
+		if along.length() > 1.0e-3:
+			var free: float = _cast(wall.pivot, view.origin, Vector3.INF, 0.3)
+			if free + 1.0e-3 < placed:
+				sunk = true
+		if wall.rip_active and placed < 3.2:
+			sunk = true
+		if wall.rip_active:
+			var past_way := along.normalized()
+			var past: float = _cast(wall.pivot, wall.pivot + past_way * (placed + 0.3), Vector3.INF, 0.3)
+			if absf(float(wall.clearance) - (past - placed)) > 0.05:
+				lied = true
+		if view.origin.distance_to(before) > 0.45 and _i > 0:
+			sunk = true
+	if not sunk and not lied and (not wall.rip_active or view.origin.distance_to(wall.pivot) >= 3.2):
+		print("RIP_SHOT blocked blend kept (active %s dist %.2f): PASS" % [wall.rip_active, view.origin.distance_to(wall.pivot)])
+	else:
+		_fail("blocked-blend", "sunk %s lied %s active %s dist %.2f clearance %.2f" % [sunk, lied, wall.rip_active, view.origin.distance_to(wall.pivot), wall.clearance])
+	# Thirty frames with the wide place closed, then one frame of open air.
+	# The weight must not have reached 1 while blocked, so the first open
+	# frame is one eased step, not the whole shot.
+	_cast_mode = "blocked"
+	var gate := Cam.new()
+	var blocked := _run(gate, _hold(13, 0, him, hand, false, severed), head, eye, Vector2.ZERO, 1.2)
+	for _i in 30:
+		blocked = gate.frame(_hold(15, 0, him, hand, false, severed), head, blocked, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _cast)
+	_cast_mode = "open"
+	var opened: Transform3D = gate.frame(_hold(15, 0, him, hand, false, severed), head, blocked, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _cast)
+	var jump := opened.origin.distance_to(blocked.origin)
+	if jump < 0.45 and gate.time_scale() == 1.0:
+		print("RIP_SHOT blocked then clear, no snap (%.3f m): PASS" % jump)
+	else:
+		_fail("blocked-clear", "jump %.3f scale %s active %s" % [jump, gate.time_scale(), gate.rip_active])
+	for _i in 90:
+		opened = gate.frame(_hold(15, 0, him, hand, false, severed), head, opened, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+	if gate.rip_active and gate.rip_dist >= 5.0 and gate.time_scale() == 1.0:
+		print("RIP_SHOT open air after the beam still arrives: PASS")
+	else:
+		_fail("after-beam", "active %s dist %.2f scale %s" % [gate.rip_active, gate.rip_dist, gate.time_scale()])
+
+
+var _cast_mode := "open"
+
+
+func _cast(a: Vector3, b: Vector3, skip: Vector3, radius: float) -> float:
+	var len := a.distance_to(b)
+	if _cast_mode == "open" or len < 1.0e-4:
+		return len
+	var dir := (b - a) / len
+	var pitch := asin(clampf(dir.y, -1.0, 1.0))
+	if _cast_mode == "blocked":
+		# The wide destination cast, and nothing else.
+		if absf(len - 6.9) < 0.08 and pitch > 0.55:
+			return 2.3
+		return len
+	if _cast_mode == "wall":
+		# Destination ray is open. A blend that has climbed off the hold
+		# pitch is cut short, the way a beam clips the in-between point.
+		if absf(len - 6.9) < 0.08 and pitch > 0.55:
+			return 6.9
+		if pitch > 0.50 and absf(len - 6.9) >= 0.08:
+			return 0.6
+		return len
+	return _open(a, b, skip, radius)
 
 
 func _fail(where: String, detail: String) -> void:

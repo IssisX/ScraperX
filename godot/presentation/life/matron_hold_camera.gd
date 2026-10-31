@@ -415,13 +415,16 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var cam := _pivot + way * _dist
 	# The arm rip's shot. The frame above already picked the open side and
 	# stayed out of the steel. This replaces it only while she is taking the
-	# arm, and only where that wider place is actually open.
+	# arm, and only one eased step that the cast actually reaches. The weight
+	# does not advance while a beam blocks that step, so the frame the beam
+	# clears does not jump. A blend the steel cuts short of the wide shot is
+	# not called the shot: the last clear frame stays.
 	# Held is not required. The grip is already gone when the arm leaves.
+	var hold_cam := cam
 	var want_rip := not claimed and not falling and (arm_play or tear_hold)
-	_rip = move_toward(_rip, 1.0 if want_rip else 0.0, RIP_EASE * delta)
 	rip_active = false
 	rip_dist = 0.0
-	if _rip > 0.001 and not falling:
+	if want_rip:
 		var hand_pt: Vector3 = hand if hand_on else hold.get("hand", him)
 		var subject: Vector3 = hand_pt.lerp(him, 0.35)
 		if tear_hold and bool(hold.get("severed_arm_present", false)):
@@ -430,17 +433,31 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		var rip_way := _orbit(_side_yaw, RIP_PITCH)
 		var rip_free: float = cast.call(_pivot, _pivot + rip_way * (RIP_DIST + CAM_RADIUS), skip, CAM_RADIUS)
 		var rip_allowed := maxf(0.0, minf(RIP_DIST, rip_free - CAM_RADIUS))
-		if rip_allowed >= RIP_MIN_M:
-			cam = cam.lerp(_pivot + rip_way * rip_allowed, _rip)
+		var wide := _pivot + rip_way * rip_allowed
+		var target_w := 1.0 if rip_allowed >= RIP_MIN_M else 0.0
+		var proposed_w := move_toward(_rip, target_w, RIP_EASE * delta)
+		var placed_w := proposed_w if _rip_step_clear(hold_cam, wide, proposed_w, skip, cast) else _rip
+		if not _rip_step_clear(hold_cam, wide, placed_w, skip, cast):
+			placed_w = 0.0
+		_rip = placed_w
+		if _rip > 0.001 and rip_allowed >= RIP_MIN_M:
+			var rip_at := hold_cam.lerp(wide, _rip)
+			var to_cam := rip_at - _pivot
+			var rip_len := to_cam.length()
+			var rip_dir := rip_way
+			var rip_back := 0.0
+			if rip_len > 1.0e-3:
+				rip_dir = to_cam / rip_len
+				rip_back = cast.call(_pivot, rip_at, skip, CAM_RADIUS)
+			var placed_len := minf(rip_len, maxf(0.0, rip_back - CAM_RADIUS))
+			cam = _pivot + rip_dir * placed_len
 			look_at = look_at.lerp(subject, _rip)
-			var to_cam := cam - _pivot
-			if to_cam.length() > 1.0e-3:
-				var back: float = cast.call(_pivot, cam, skip, CAM_RADIUS)
-				if back - CAM_RADIUS < to_cam.length():
-					cam = _pivot + to_cam.normalized() * maxf(0.0, back - CAM_RADIUS)
 			rip_dist = cam.distance_to(subject)
-			rip_active = _rip > 0.5
-			clearance = rip_free - cam.distance_to(_pivot)
+			rip_active = _rip > 0.5 and placed_len >= RIP_MIN_M - 1.0e-3
+			var past: float = cast.call(_pivot, _pivot + rip_dir * (placed_len + CAM_RADIUS), skip, CAM_RADIUS)
+			clearance = past - placed_len
+	else:
+		_rip = move_toward(_rip, 0.0, RIP_EASE * delta)
 	_cam = cam
 	pivot = _pivot
 	var to_look := look_at - cam
@@ -464,6 +481,21 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var q := eye.basis.get_rotation_quaternion().slerp(basis.get_rotation_quaternion(), s)
 	_last_view = Transform3D(Basis(q), mid)
 	return _last_view
+
+
+## True when the eased blend from the hold frame to the wide shot is a point
+## the cast reaches. The radius margin is not steel: open air returns the
+## point's own distance and still counts. A beam that stops the ray short does
+## not.
+func _rip_step_clear(hold_cam: Vector3, wide: Vector3, weight: float, skip: Vector3, cast: Callable) -> bool:
+	if weight <= 0.001:
+		return true
+	var proposed := hold_cam.lerp(wide, weight)
+	var length := proposed.distance_to(_pivot)
+	if length <= 1.0e-3:
+		return true
+	var back: float = cast.call(_pivot, proposed, skip, CAM_RADIUS)
+	return back + 1.0e-3 >= length
 
 
 func _note_rip(hold: Dictionary, delta: float) -> void:
