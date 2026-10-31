@@ -77,6 +77,21 @@ void Matron::refresh_contact_view() {
         view_.contact_hand_sub = sub;
         view_.contact_hand = bodies.GetCenterOfMassTransform(body) * local;
     }
+    // Her second grip (M5d): only the climber's validated second hold, on a
+    // rung climb, reported exactly while it is held. The fields above were
+    // zeroed at the top of this function, so anything else — no climber, no
+    // steel, no second hold, a body gone from the world — leaves
+    // contact_hand2_held false, as before. This is the climb branch of
+    // contact truth; the upright fallthrough is untouched.
+    if (climber_ != nullptr && climber_->on_steel() && climber_->hold2().valid()) {
+        const auto &second = climber_->hold2();
+        if (bodies.IsAdded(second.body)) {
+            view_.contact_hand2_held = true;
+            view_.contact_hand2_body = second.body;
+            view_.contact_hand2_sub = second.sub;
+            view_.contact_hand2 = bodies.GetCenterOfMassTransform(second.body) * second.local;
+        }
+    }
     // On her pipe, hand over hand (her hand on its face): her squeeze is her
     // hands' pull against her feet's push, so her feet are on the riser too.
     // Level from her shins toward the steel her hand holds, the first steel

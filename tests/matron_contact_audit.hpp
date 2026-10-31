@@ -5,7 +5,9 @@
 // tick of a native run against the rest of what the simulation says. The
 // presentation plants a limb, and rides or lifts her body onto a floor, only
 // on these, so they must be her real floor and her real grip, this tick:
-//  - never a second grip (none of her movers holds two);
+//  - a second grip only as the climber's validated second hold on a rung
+//    climb: same body and member as the first grip, a distinct point on
+//    that rung, within her reach. Any other second grip is still a FAIL;
 //  - her floor where her soles can be on it (under her middle or her feet's
 //    span, no lower than her legs reach);
 //  - her grip within her reach, and where the mover that has her shows its
@@ -33,7 +35,8 @@ struct MatronContactAudit {
     long two_handed = 0;
     long invented_hand2 = 0;    // the old climb_hand2_known, a second hold the simulation does not hold
     long invented_feet = 0;     // the old climb_feet_support_known with no floor under her
-    long second_grip = 0;       // FAIL: a second grip exported
+    long second_grip = 0;       // FAIL: a second grip exported that is not the validated rung second hold below
+    long real_second_grip = 0;  // counted, not failed: the climber's validated second hold on the same rung
     long floor_off_her = 0;     // FAIL: the exported floor not one her soles can be on
     long grip_out_of_reach = 0; // FAIL: the exported grip out of her reach
     long grip_off_mover = 0;    // FAIL: the exported grip not where the mover shows her hand
@@ -69,7 +72,29 @@ struct MatronContactAudit {
             if (m.climb_hand2_known) ++invented_hand2;
             if (m.climb_feet_support_known && !m.contact_supported) ++invented_feet;
         }
-        if (m.contact_hand2_held) ++second_grip;
+        if (m.contact_hand2_held) {
+            // M5d: a second grip is real only as the climber's second hold
+            // on a rung climb — same body and member as the first grip, a
+            // distinct point on that rung, within her reach. Anything else
+            // exported as a second grip is still the old failure.
+            const bool rung = m.climb_move_active &&
+                              (k == MoveKind::RungUp || k == MoveKind::RungDown);
+            const double hand2_apart = std::hypot(m.contact_hand2.x - m.contact_hand.x,
+                                                  m.contact_hand2.y - m.contact_hand.y,
+                                                  m.contact_hand2.z - m.contact_hand.z);
+            const double hand2_reach = std::hypot(m.contact_hand2.x - m.position.x,
+                                                  m.contact_hand2.y - m.position.y,
+                                                  m.contact_hand2.z - m.position.z);
+            const bool valid_second = rung && m.contact_hand_held &&
+                                      m.contact_hand2_body == m.contact_hand_body &&
+                                      m.contact_hand2_sub == m.contact_hand_sub && hand2_apart >= 0.10 &&
+                                      hand2_apart <= 0.60 && hand2_reach <= kReachM;
+            if (valid_second) {
+                ++real_second_grip;
+            } else {
+                ++second_grip;
+            }
+        }
         if (m.contact_supported) {
             ++supported;
             const double below = m.position.y - m.contact_feet.y;
@@ -121,7 +146,8 @@ struct MatronContactAudit {
     void report(const char *name) const {
         std::cout << "    contacts (" << name << "): " << ticks << " ticks, on a floor " << supported << ", in a grip " << held
                   << ", two-handed moves " << two_handed << " (the old view's invented second hand " << invented_hand2
-                  << ", invented floor " << invented_feet << "); second grips " << second_grip << ", floor off her "
+                  << ", invented floor " << invented_feet << "); second grips " << second_grip << " (real rung second grips "
+                  << real_second_grip << "), floor off her "
                   << floor_off_her << ", grip out of reach " << grip_out_of_reach << ", grip off the mover's hand "
                   << grip_off_mover << " (worst " << worst_grip_mover_m << " m), still with no floor or grip "
                   << resting_unowned << "; on her pipe's face " << pipe_face << ", braced " << braced

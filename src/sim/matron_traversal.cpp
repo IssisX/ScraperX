@@ -294,6 +294,9 @@ Vec3 Climber::relative_velocity() const {
         support = bodies.GetPointVelocity(foot_.body, foot_world_);
     } else if (hold_.valid() && bodies.IsAdded(hold_.body)) {
         support = bodies.GetPointVelocity(hold_.body, hold_world_);
+        if (hold2_.valid() && hold2_.body == hold_.body && hold2_.sub == hold_.sub) {
+            support = 0.5F * (support + bodies.GetPointVelocity(hold2_.body, hold2_world_));
+        }
     } else {
         BodyID by;
         if (supported(nullptr, &by) && !by.IsInvalid()) {
@@ -655,9 +658,19 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
                     Budget &budget, const bool carry_weight, const RVec3 at_hold) {
     (void)dt;
     BodyInterface &bodies = physics_.GetBodyInterface();
+    // M5c: a held second grip on the same member is a second anchor, not
+    // a pose. The support velocity is the mean of the two grips' point
+    // velocities and the reaction is split half/half between the two grip
+    // points. The drive is still one budget.take() call, so total force
+    // and power are unchanged; on static members both point velocities
+    // are zero and the reaction is skipped, so nothing moves.
+    const bool two_anchors = hold2_.valid() && hold2_.body == hold_.body && hold2_.sub == hold_.sub;
     Vec3 support_v = Vec3::sZero();
     if (hold_.valid()) {
         support_v = bodies.GetPointVelocity(hold_.body, at_hold);
+        if (two_anchors) {
+            support_v = 0.5F * (support_v + bodies.GetPointVelocity(hold2_.body, hold2_world_));
+        }
     }
     const Vec3 rel = velocity() - support_v;
     const Vec3 error = target_centre - center();
@@ -669,7 +682,12 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
     }
     const Vec3 force = budget.take(want);
     bodies.AddForce(body_, force);
-    push_reaction(force, at_hold);
+    if (two_anchors) {
+        push_reaction(0.5F * force, at_hold);
+        push_reaction(0.5F * force, hold2_world_);
+    } else {
+        push_reaction(force, at_hold);
+    }
 }
 
 bool Climber::floor_under(const RVec3 c, const Vec3 off) const {
@@ -883,6 +901,8 @@ void Climber::begin(const MoveSpec &spec) {
     stall_s_ = 0.0F;
     best_progress_ = -std::numeric_limits<float>::max();
     hold_ = Hold{};
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
     lip_ = Hold{};
     sliding_ = false;
     mantle_after_ = false;
@@ -900,6 +920,10 @@ void Climber::cancel() {
         ++view_.releases;
     }
     hold_ = Hold{};
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
+    view_.holding2 = false;
+    view_.hand2 = RVec3::sZero();
     status_ = Status::Idle;
     view_.active = false;
     view_.holding = false;
@@ -911,6 +935,10 @@ void Climber::fail(const Failure failure) {
         ++view_.releases;
     }
     hold_ = Hold{};
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
+    view_.holding2 = false;
+    view_.hand2 = RVec3::sZero();
     failure_ = failure;
     status_ = Status::Failed;
     view_.last_failure = failure;
@@ -924,9 +952,61 @@ void Climber::finish() {
         ++view_.releases;
     }
     hold_ = Hold{};
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
+    view_.holding2 = false;
+    view_.hand2 = RVec3::sZero();
     status_ = Status::Done;
     view_.holding = false;
     view_.active = false;
+}
+
+// M5b: the second hand takes, keeps, or releases its grip on the first
+// hold's rung. Same member (body and sub-shape), same general take_hold
+// path the first hold uses, offset along the rung so the two grips are
+// distinct points; revalidated every tick by the same revalidate() the
+// first hold uses. When the first hold moves to another member (the next
+// rung, a lip at the top), the old second grip is released and a new one
+// is taken on the new rung in the same tick, if the rung is long enough
+// for two hands. Force from both anchors is M5c (drive() and
+// relative_velocity()), not this maintenance.
+void Climber::maintain_second_hold() {
+    if (!hold_.valid() || dyno_ != 0) {
+        hold2_ = Hold{};
+        hold2_world_ = RVec3::sZero();
+        return;
+    }
+    if (hold2_.valid()) {
+        if (hold2_.body == hold_.body && hold2_.sub == hold_.sub && revalidate(hold2_, hold2_world_)) {
+            return;   // still the same rung, still valid
+        }
+        hold2_ = Hold{};
+        hold2_world_ = RVec3::sZero();
+    }
+    const Vec3 across(-spec_.out.GetZ(), 0.0F, spec_.out.GetX());
+    if (across.LengthSq() < 1.0e-6F) {
+        return;
+    }
+    const float offset = std::min(0.45F, spec_.bar_half - 0.05F);
+    if (offset < 0.10F) {
+        return;   // rung too short for two hands
+    }
+    for (const float sign : {1.0F, -1.0F}) {
+        Hold cand;
+        RVec3 where;
+        if (!take_hold(hold_world_ + across * (sign * offset), 0.05F, true, cand, &where)) {
+            continue;
+        }
+        if (cand.body != hold_.body || cand.sub != hold_.sub) {
+            continue;   // another member is not the second grip
+        }
+        if ((Vec3(where - hold_world_)).Length() < 0.10F) {
+            continue;   // the first grip twice is not a second grip
+        }
+        hold2_ = cand;
+        hold2_world_ = where;
+        return;
+    }
 }
 
 Climber::Status Climber::step(const float dt) {
@@ -954,6 +1034,12 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
     case MoveKind::GapJump: step_gap(dt, budget); break;
     }
+    // M5b: second grip, rung climbs only, maintained after the move's own
+    // step and before the view is written. fail()/finish() already cleared
+    // it, so only a still-running rung move can hold one.
+    if (status_ == Status::Running && (spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::RungDown)) {
+        maintain_second_hold();
+    }
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
     view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
@@ -963,6 +1049,8 @@ Climber::Status Climber::step(const float dt) {
     view_.sliding = sliding_;
     view_.holding = hold_.valid();
     view_.hand = hold_world_;
+    view_.holding2 = hold2_.valid();
+    view_.hand2 = hold2_world_;
     view_.airborne = !foot_.valid() && !hold_.valid() && !supported();
     return status_;
 }

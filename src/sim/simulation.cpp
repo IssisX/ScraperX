@@ -1423,6 +1423,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.contact_hand2_held = view.contact_hand2_held;
     result.contact_hand2 = {view.contact_hand2.GetX(), view.contact_hand2.GetY(), view.contact_hand2.GetZ()};
     result.contact_hand2_body = view.contact_hand2_body.GetIndexAndSequenceNumber();
+    result.contact_hand2_sub = view.contact_hand2_sub.GetValue();
     result.contact_line = view.contact_line;
     result.contact_braced = view.contact_braced;
     result.contact_brace = {view.contact_brace.GetX(), view.contact_brace.GetY(), view.contact_brace.GetZ()};

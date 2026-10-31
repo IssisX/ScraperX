@@ -201,6 +201,9 @@ struct ClimbView {
     float leg_travel_m = 0.0F;    // extension of the planted leg during this push
     Failure last_failure = Failure::None;
     JPH::RVec3 hand = JPH::RVec3::sZero();
+    // Her second hand's grip (M5): mirrors hold2_ below, nothing else.
+    bool holding2 = false;
+    JPH::RVec3 hand2 = JPH::RVec3::sZero();
     // This tick a top-out has her up: her middle over the floor it was going
     // for, her soles within the clearance it pulled them to over the lip. Only
     // her weight is left to come onto her feet (its own Done waits for that).
@@ -242,6 +245,23 @@ public:
     [[nodiscard]] bool on_steel() const noexcept { return hold_.valid(); }
     // The hold her hand has now (its body and member; invalid when none).
     [[nodiscard]] const Hold &hold() const noexcept { return hold_; }
+    // Her second grip (M5 contract): a hold taken by her second hand, on the
+    // SAME member (body and sub-shape) as her first hold, through the
+    // general hold-taking path, revalidated every tick by the same
+    // revalidate() (same member bounds, anchor on the member, within
+    // reach), and released the moment it stops being that, or the first
+    // hold is released or moves to another member, or the move ends, fails,
+    // or is cancelled. Driving from both anchors under the one budget is
+    // M5c (drive() and relative_velocity()), not this contract. What this contract
+    // guarantees is grip state and truthful reporting, never a pose: a
+    // second hold that has not been taken and revalidated this way must
+    // never move her second wrist (the old view inference is not a grip).
+    // M5c: while this grip holds, drive() and relative_velocity() use
+    // both anchors under the one budget; the grip itself bears no extra
+    // budget and no per-hand budget exists.
+    [[nodiscard]] const Hold &hold2() const noexcept { return hold2_; }
+    [[nodiscard]] JPH::RVec3 hold2_world() const noexcept { return hold2_world_; }
+    [[nodiscard]] bool second_holding() const noexcept { return hold2_.valid(); }
     // Her velocity against what she pushes on (the hold at its anchor, else
     // the floor under her): the velocity her power budget is charged on.
     [[nodiscard]] JPH::Vec3 relative_velocity() const;
@@ -264,6 +284,10 @@ private:
     void fail(Failure failure);
     void finish();
     bool take_hold(JPH::RVec3 near, float radius, bool bar_only, Hold &out, JPH::RVec3 *where = nullptr) const;
+    // M5b: keep the second grip on the first hold's rung member, or take it
+    // there, or release it. Rung climbs only; never a pose, never a
+    // different member, never during a dyno throw.
+    void maintain_second_hold();
     bool find_rung(float from_y, float to_y, bool upward, Hold &out, JPH::RVec3 &where) const;
     bool find_lip(JPH::Vec3 toward, float near_y, Hold &out, JPH::RVec3 &where) const;
     void drive(float dt, JPH::Vec3 target_centre, JPH::Vec3 target_velocity, float stiffness, Budget &budget,
@@ -305,6 +329,8 @@ private:
     float target_y_ = 0.0F;
     Hold hold_;
     JPH::RVec3 hold_world_ = JPH::RVec3::sZero();
+    Hold hold2_;   // M5 second grip; invalid unless it meets the contract above
+    JPH::RVec3 hold2_world_ = JPH::RVec3::sZero();
     JPH::Vec3 hang_off_ = JPH::Vec3::sZero();   // a hang drop's hang point, from its hold
     Hold lip_;
     JPH::RVec3 lip_world_ = JPH::RVec3::sZero();
