@@ -114,6 +114,48 @@ void run_loose_stock() {
                 "stock: every piece is a kit body");
         placed.push_back(piece_at(s, i));
     }
+    // Tower pieces per dress_tower ring, before settling. Rings are the stack
+    // rings 11..143 m and the upper rings 176.25..396.25 m, as in
+    // LooseStock::dress_tower. The old total-only check (tower pieces > 60)
+    // passes even if one ring is left bare, so each ring is gated here: a
+    // piece's center sits under 3 m above its ring's floor (spot pieces stack
+    // at most about 1.5 m up), and rings are at least 11 m apart, so the
+    // band cannot cross-assign. Measured on trunk 403fb9ab: every ring
+    // dressed, unassigned 0.
+    {
+        std::vector<double> rings;
+        for (int level = 1; level <= 13; ++level) {
+            rings.push_back(11.0 * static_cast<double>(level));
+        }
+        for (int k = 0; k <= 10; ++k) {
+            rings.push_back(176.25 + 22.0 * static_cast<double>(k));
+        }
+        std::vector<int> per_ring(rings.size(), 0);
+        int unassigned = 0;
+        for (int i = tabled; i < towered; ++i) {
+            const double y = placed[static_cast<std::size_t>(i)].y;
+            bool hit = false;
+            for (std::size_t r = 0; r < rings.size(); ++r) {
+                if (y >= rings[r] && y < rings[r] + 3.0) {
+                    ++per_ring[r];
+                    hit = true;
+                    break;
+                }
+            }
+            if (!hit) {
+                ++unassigned;
+            }
+        }
+        std::cout << "  stock: tower pieces per ring:";
+        for (std::size_t r = 0; r < rings.size(); ++r) {
+            std::cout << " " << rings[r] << ":" << per_ring[r];
+        }
+        std::cout << " unassigned:" << unassigned << "\n";
+        require(unassigned == 0, "stock: every tower piece sits within 3 m above a dress_tower ring");
+        for (std::size_t r = 0; r < rings.size(); ++r) {
+            require(per_ring[r] > 0, "stock: every dress_tower ring is dressed");
+        }
+    }
     require(s.advance_frame(12.0).accepted, "stock: the settling interval is accepted");
     double worst = 0.0;
     int worst_piece = -1;
