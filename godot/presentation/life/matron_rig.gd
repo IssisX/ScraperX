@@ -40,6 +40,31 @@ const WIND_DIR := Vector3(0.93, 0.0, 0.37)
 const HAIR_ITERATIONS := 3
 const HAIR_JUMP_M := 1.0      # a root that moved this far in a frame (a respawn) restarts the hang
 const BACK_RADIUS := 0.17
+# How far past a posed body volume a drawn hair ribbon must sit, so a strand
+# whose centre line clears a volume still does not draw through it.
+const HAIR_RIBBON_M := 0.015
+const HAIR_FACE_R := 0.07
+const HAIR_FACE_OFF := Vector3(0.0, -0.04, 0.06)
+# Lower face (mouth/chin, forward and below the face sphere) and ears.
+# Centres are relative to the skull centre, like HAIR_FACE_OFF, so they
+# move with her posed head. Radii were checked against the scalp ring:
+# the nearest hair root is 0.093 m from the lower-face centre (total
+# push radius 0.070 m) and 0.059 m from an ear centre (total 0.060 m),
+# so these volumes cover face/ears without swallowing the root ring
+# the earlier skull-to-jaw capsule swallowed.
+const HAIR_LOWER_FACE_R := 0.055
+const HAIR_LOWER_FACE_OFF := Vector3(0.0, -0.105, 0.05)
+const HAIR_EAR_R := 0.045
+const HAIR_EAR_OFF := Vector3(0.11, -0.04, -0.01)
+const HAIR_NECK_R := 0.075
+const HAIR_SHOULDER_R := 0.09
+# Torso capsule radius: back depth, not shoulder width — a 0.17 m cylinder
+# around the centreline floats the hair off her back and costs hang.
+# The original 0.17 m back sphere above still covers the upper back.
+const HAIR_TORSO_R := 0.13
+# One verlet substep is at most this long: a slow frame is split, never
+# shortened, so the hair moves all of real time instead of two-thirds of it.
+const HAIR_SUBSTEP := 1.0 / 60.0
 
 var skel: Skeleton3D
 var view: Node3D
@@ -77,7 +102,8 @@ func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
 		var n_chain := _chains.size()
 		_chains.append({"idx": idx, "root_local": _v(c["root"]) - head_at, "seg": float(c["segment_m"]),
 			"pts": [], "prev": [], "damp": HAIR_DAMP + (_hash(n_chain * 3 + 1) - 0.5) * 0.08,
-			"give": 1.0 + (_hash(n_chain * 3 + 2) - 0.5) * 2.0 * LOCK_VARY, "phase": _hash(n_chain * 3 + 3) * TAU})
+			"give": 1.0 + (_hash(n_chain * 3 + 2) - 0.5) * 2.0 * LOCK_VARY, "phase": _hash(n_chain * 3 + 3) * TAU,
+			"side": Vector3.ZERO})
 	if hair.has("skull"):
 		_skull_local = _v(hair["skull"]) - head_at
 		_skull_radius = float(hair["skull_radius"])
@@ -827,16 +853,41 @@ func _hash(n: int) -> float:
 
 
 # --- her hair, after the bones above it are posed.
+# The volumes below are fitted fresh each frame from the posed bones, so
+# they follow her wherever she bends: a head sphere, a face sphere
+# forward and down from the skull centre, a lower-face sphere and ear
+# spheres (the lower face and ears the old skull sphere missed — a
+# capsule from skull to jaw would swallow the scalp ring the strands
+# root in), a neck capsule, shoulder spheres, and a
+# torso capsule. A pushed strand slides along a volume surface: most
+# of its tangential motion survives the radial push, so it drapes down
+# under gravity instead of sticking at first contact. A strand is kept
+# out of every volume as a segment, not as isolated points, with a ribbon
+# margin past the surface, so a chord between two cleared points cannot
+# dip through a volume between them. Each chain remembers the side it
+# was pushed to, in world space, so a pitch-forward crawl cannot
+# flip a strand through her head to the other side — and so a strand
+# the head turns under is not held on a side that has rotated through
+# her head. Her rest direction
+# is world down, not head down: hanging hair falls with gravity even
+# when her head is down. The rigid drawn tail past the last simulated
+# point is clamped the same way, by moving the last point.
 func step_hair(delta: float) -> void:
 	if _chains.is_empty():
 		return
-	var dt := clampf(delta, 1.0 / 240.0, 1.0 / 30.0)
-	_wind_clock += dt
 	var head := bone_world("head")
 	var skull := head * _skull_local
 	var chest := bone_world("chest")
 	var back := chest * Vector3(0.0, 0.05, -0.05)
-	var down := head.basis * Vector3.DOWN
+	var volumes := _hair_volumes(head, skull, chest, back)
+	# World down, not head down.
+	var down := Vector3.DOWN
+	var subs := clampi(ceili(maxf(delta, 0.0) / HAIR_SUBSTEP), 1, 8)
+	var dt := delta / float(subs) if subs > 0 else delta
+	# Verlet gravity does not split linearly: subs steps of dt/subs give
+	# a total gravity coefficient of (subs+1)/(2*subs), not 1. Scale the
+	# acceleration so a slow frame pulls exactly as hard as a fast one.
+	var grav_scale := 1.0 if subs <= 1 else 2.0 * float(subs) / float(subs + 1)
 	for ch in _chains:
 		var idx: Array = ch["idx"]
 		var n := idx.size()
@@ -850,31 +901,73 @@ func step_hair(delta: float) -> void:
 			for k in n + 1:
 				pts.append(root + down * seg * float(k))
 				prev.append(root + down * seg * float(k))
+			var side := (root - skull)
+			ch["side"] = side.normalized() if side.length() > 1e-6 else Vector3.BACK
 		pts[0] = root
 		prev[0] = root
 		var damp: float = ch["damp"]
 		var give: float = ch["give"]
-		# A gust rises and falls on its own, each lock catching it a little out of
-		# step with its neighbors; the tips catch the most of it.
 		var phase: float = ch["phase"]
-		var gust := maxf(0.0, sin(TAU * WIND_RATE * _wind_clock)) * (0.6 + 0.4 * sin(TAU * WIND_RATE * 3.1 * _wind_clock + phase))
-		var wind := WIND_DIR * WIND_MS2 * gust
-		for k in range(1, n + 1):
-			var cur: Vector3 = pts[k]
-			var vel: Vector3 = (cur - (prev[k] as Vector3)) * damp
-			prev[k] = cur
-			pts[k] = cur + vel + (HAIR_GRAVITY + wind * (float(k) / float(n))) * dt * dt
-		for _it in HAIR_ITERATIONS:
+		var last_push := Vector3.ZERO
+		for _sub in subs:
+			_wind_clock += dt
+			# A gust rises and falls on its own, each lock catching it a little out of
+			# step with its neighbors; the tips catch the most of it.
+			var gust := maxf(0.0, sin(TAU * WIND_RATE * _wind_clock)) * (0.6 + 0.4 * sin(TAU * WIND_RATE * 3.1 * _wind_clock + phase))
+			var wind := WIND_DIR * WIND_MS2 * gust
+			pts[0] = root
+			prev[0] = root
 			for k in range(1, n + 1):
-				var above: Vector3 = pts[k - 1]
-				var q: Vector3 = (pts[k] as Vector3).lerp(above + down * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
-				var d := q - above
-				q = above + (d.normalized() if d.length() > 1e-6 else down) * seg
-				q = _outside(q, skull, _skull_radius)
-				q = _outside(q, back, BACK_RADIUS)
-				pts[k] = q
+				var cur: Vector3 = pts[k]
+				var vel: Vector3 = (cur - (prev[k] as Vector3)) * damp
+				prev[k] = cur
+				pts[k] = cur + vel + (HAIR_GRAVITY + wind * (float(k) / float(n))) * grav_scale * dt * dt
+			for _it in HAIR_ITERATIONS:
+				for k in range(1, n + 1):
+					var above: Vector3 = pts[k - 1]
+					var q: Vector3 = (pts[k] as Vector3).lerp(above + down * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
+					var d := q - above
+					q = above + (d.normalized() if d.length() > 1e-6 else down) * seg
+					var pushed := _hair_push(q, above, volumes, (ch["side"] as Vector3), seg)
+					q = pushed[0]
+					var push_dir: Vector3 = pushed[1]
+					if push_dir.length() > 1e-6:
+						ch["side"] = ((ch["side"] as Vector3).lerp(push_dir.normalized(), 0.3)).normalized()
+					if k == n:
+						last_push = push_dir
+					pts[k] = q
+			# A strand that ends free of every volume re-adopts the side
+			# its tip now sits on, instead of staying trapped on the side
+			# a violent pose change pushed it to. Without this, the
+			# remembered side is a trap: the only way back is through her head.
+			# Stronger still: a strand whose tip is not hanging at all
+			# (folded up beside her head) has no side worth remembering,
+			# so it re-adopts its actual side at once, pushed or not.
+			var tip_dir2: Vector3 = (pts[n] as Vector3) - skull
+			var folded := (pts[0] as Vector3).y - (pts[n] as Vector3).y < 0.1
+			if folded and tip_dir2.length() > 1e-6:
+				ch["side"] = tip_dir2.normalized()
+			elif last_push.length() < 1e-6:
+				var tip_dir: Vector3 = (pts[n] as Vector3) - skull
+				if tip_dir.length() > _skull_radius + 0.05:
+					ch["side"] = ((ch["side"] as Vector3).lerp(tip_dir.normalized(), 0.1)).normalized()
+			# The rigid drawn tail past the last simulated point: if it would
+			# draw through a volume, move the last point so it clears.
+			if n >= 2:
+				var tail_dir: Vector3 = (pts[n] as Vector3) - (pts[n - 1] as Vector3)
+				if tail_dir.length() > 1e-6:
+					tail_dir = tail_dir.normalized()
+					var tail_end: Vector3 = (pts[n] as Vector3) + tail_dir * seg
+					var tail_pushed := _hair_push(tail_end, pts[n], volumes, (ch["side"] as Vector3), seg)
+					pts[n] = (pts[n] as Vector3) + ((tail_pushed[0] as Vector3) - tail_end)
 		# The bones from the points: each turned from hanging (its rest, down its
 		# parent) to the way its strand now runs.
+		# Rotation alone is not enough: a bone's rest position steps 0.09 m,
+		# so a solver segment stretched by a volume push (0.136 m at the
+		# record-982 collar point) still draws 0.09 m, and the drawn chain
+		# lags the pushed solver points back into the body, about 47 mm
+		# by segment 3. Carry the solver segment length in the bone
+		# position too, so the drawn bone origins sit on the solver points.
 		var parent_basis := head.basis
 		for k in n:
 			var bi: int = idx[k]
@@ -882,7 +975,166 @@ func step_hair(delta: float) -> void:
 			var local_dir := (parent_basis.inverse() * dir).normalized()
 			var rot := Quaternion(Vector3.DOWN, local_dir) if local_dir.dot(Vector3.DOWN) > -0.999 else Quaternion(Vector3.RIGHT, PI)
 			skel.set_bone_pose_rotation(bi, rot)
+			if k == 0:
+				skel.set_bone_pose_position(bi, ch["root_local"] as Vector3)
+			else:
+				var prev_len := (pts[k] as Vector3).distance_to(pts[k - 1] as Vector3)
+				skel.set_bone_pose_position(bi, Vector3(0.0, -prev_len, 0.0))
 			parent_basis = parent_basis * Basis(rot)
+
+
+# One volume per entry: a capsule from a to b with radius r (a sphere
+# when a == b), fitted from posed bone transforms this frame.
+func _hair_volumes(head: Transform3D, skull: Vector3, chest: Transform3D, back: Vector3) -> Array:
+	var vols: Array = []
+	vols.append({"a": skull, "b": skull, "r": _skull_radius, "side": true})
+	vols.append({"a": head * (_skull_local + HAIR_FACE_OFF), "b": head * (_skull_local + HAIR_FACE_OFF), "r": HAIR_FACE_R, "side": true})
+	vols.append({"a": head * (_skull_local + HAIR_LOWER_FACE_OFF), "b": head * (_skull_local + HAIR_LOWER_FACE_OFF), "r": HAIR_LOWER_FACE_R, "side": true})
+	for s in [-1.0, 1.0]:
+		var ear_off := Vector3(HAIR_EAR_OFF.x * s, HAIR_EAR_OFF.y, HAIR_EAR_OFF.z)
+		vols.append({"a": head * (_skull_local + ear_off), "b": head * (_skull_local + ear_off), "r": HAIR_EAR_R, "side": true})
+	if int(bone_idx.get("neck_lo", -1)) >= 0:
+		vols.append({"a": bone_world("neck_lo").origin, "b": head.origin, "r": HAIR_NECK_R, "side": false})
+	vols.append({"a": back, "b": back, "r": BACK_RADIUS, "side": false})
+	if int(bone_idx.get("body", -1)) >= 0 and int(bone_idx.get("spine_mid", -1)) >= 0:
+		# From spine_mid down, not from the chest: the chest region is
+		# already covered by the back sphere and the neck capsule, and a
+		# torso capsule ending at the chest would push strands above it
+		# upward, a shelf for a folded strand to rest on.
+		vols.append({"a": bone_world("spine_mid").origin, "b": bone_world("body").origin, "r": HAIR_TORSO_R, "side": false})
+	for s in ["l", "r"]:
+		if int(bone_idx.get("sh_" + s, -1)) >= 0:
+			var sh: Vector3 = bone_world("sh_" + s).origin
+			vols.append({"a": sh, "b": sh, "r": HAIR_SHOULDER_R, "side": false})
+	return vols
+
+
+func _closest_on_segment(p: Vector3, a: Vector3, b: Vector3) -> Vector3:
+	var ab := b - a
+	var denom := ab.length_squared()
+	if denom < 1e-12:
+		return a
+	var t := clampf((p - a).dot(ab) / denom, 0.0, 1.0)
+	return a + ab * t
+
+
+# Closest pair between segments p1-q1 and p2-q2, as [point_on_first, point_on_second].
+func _seg_seg_closest(p1: Vector3, q1: Vector3, p2: Vector3, q2: Vector3) -> Array:
+	var d1 := q1 - p1
+	var d2 := q2 - p2
+	var r := p1 - p2
+	var a := d1.dot(d1)
+	var e := d2.dot(d2)
+	var f := d2.dot(r)
+	if a < 1e-12 and e < 1e-12:
+		return [p1, p2]
+	if a < 1e-12:
+		return [p1, _closest_on_segment(p1, p2, q2)]
+	if e < 1e-12:
+		return [_closest_on_segment(p2, p1, q1), p2]
+	var b := d1.dot(d2)
+	var c := d1.dot(r)
+	var denom := a * e - b * b
+	var s := clampf((b * f - c * e) / denom, 0.0, 1.0) if absf(denom) > 1e-12 else 0.0
+	var t := (b * s + f) / e
+	if t < 0.0:
+		t = 0.0
+		s = clampf(-c / a, 0.0, 1.0)
+	elif t > 1.0:
+		t = 1.0
+		s = clampf((b - c) / a, 0.0, 1.0)
+	return [p1 + d1 * s, p2 + d2 * t]
+
+
+# Push q out of every volume, first as a point (capsule test), then as
+# the segment from above to q, so a chord cannot dip through between
+# two cleared points. Returns [new_q, first_push_direction_or_zero].
+# The remembered side applies only to head/face volumes, where a flip
+# means crossing through her head; for torso/shoulder volumes a strand
+# must be free to slide past, and replacing its push direction with
+# the side would hold it at that height. Even for head/face, the side
+# only blends into the push (never replaces it), so the outward and
+# downward components that let a draped strand slide off survive.
+# Passes repeat until nothing moves, because a push out of one volume
+# can land inside another. The result is clamped back to about one
+# segment length from above: a push that stretches a segment lets the
+# strand fold or stretch over following frames.
+# The clamp is never the last word. A strand root sits pinned inside
+# the skull push sphere (about 0.009 m inside it), so shortening a
+# pushed point back toward its root drags the point back inside the
+# sphere; with the clamp last, the final position ends inside. So the
+# order is: volume passes, then the clamp, then one final volume pass
+# with no clamp after it. A final point may run a little long, but the
+# bone directions downstream are normalized, so a long segment only
+# moves where the strand hangs, not how long it draws.
+func _hair_push(q: Vector3, above: Vector3, volumes: Array, side_world: Vector3, seg: float) -> Array:
+	var out := q
+	var push_dir := Vector3.ZERO
+	for _pass in 3:
+		var res := _hair_push_pass(out, q, above, volumes, side_world)
+		out = res[0]
+		if push_dir.length() < 1e-6 and (res[2] as Vector3).length() > 1e-6:
+			push_dir = res[2]
+		if not (res[1] as bool):
+			break
+	var dd := out - above
+	if dd.length() > seg * 1.05:
+		out = above + dd.normalized() * seg * 1.05
+	# No slide on the final pass: it must end outside, and a slide
+	# here could dip the point back inside a volume with no pass
+	# left to correct it.
+	var res := _hair_push_pass(out, q, above, volumes, side_world, false)
+	out = res[0]
+	if push_dir.length() < 1e-6 and (res[2] as Vector3).length() > 1e-6:
+		push_dir = res[2]
+	return [out, push_dir]
+
+
+# One pass of volume pushes over out. Returns [out, moved, first_push_dir].
+func _hair_push_pass(out: Vector3, q: Vector3, above: Vector3, volumes: Array, side_world: Vector3, slide: bool = true) -> Array:
+	var moved := false
+	var push_dir := Vector3.ZERO
+	for vol in volumes:
+		var a: Vector3 = vol["a"]
+		var b: Vector3 = vol["b"]
+		var r: float = vol["r"] + HAIR_RIBBON_M
+		var use_side: bool = bool(vol.get("side", false)) and side_world.length() > 1e-6
+		var closest: Vector3 = _closest_on_segment(out, a, b)
+		var d := out - closest
+		if d.length() < r:
+			var dir := d.normalized() if d.length() > 1e-6 else (out - a).normalized() if (out - a).length() > 1e-6 else Vector3.UP
+			if use_side and dir.dot(side_world) < 0.0:
+				dir = (dir + side_world.normalized()).normalized()
+			out = closest + dir * r
+			# Slide, don't stop: a radial push that snaps the point
+			# to the nearest surface point throws away its motion
+			# along the surface, so a draped strand sticks at first
+			# contact instead of sliding down under gravity. Keep
+			# most of the point's tangential offset from its incoming
+			# position; the next pass re-pushes it if the slide
+			# re-enters a volume.
+			if slide:
+				var rel := q - out
+				out += (rel - dir * rel.dot(dir)) * 0.75
+			moved = true
+			if push_dir.length() < 1e-6:
+				push_dir = dir
+		var pair := _seg_seg_closest(above, out, a, b)
+		var seg_pt: Vector3 = pair[0]
+		var axis_pt: Vector3 = pair[1]
+		var sd := seg_pt - axis_pt
+		if sd.length() < r:
+			var dir := sd.normalized() if sd.length() > 1e-6 else (out - a).normalized() if (out - a).length() > 1e-6 else Vector3.UP
+			if use_side and dir.dot(side_world) < 0.0:
+				dir = (dir + side_world.normalized()).normalized()
+			out += dir * (r - sd.length())
+			if slide:
+				var rel2 := q - out
+				out += (rel2 - dir * rel2.dot(dir)) * 0.75
+			moved = true
+			if push_dir.length() < 1e-6:
+				push_dir = dir
+	return [out, moved, push_dir]
 
 
 func _outside(q: Vector3, centre: Vector3, radius: float) -> Vector3:
