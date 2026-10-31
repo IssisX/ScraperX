@@ -122,8 +122,7 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   (`sim_tests_strike.cpp:204-236` requires it refused after the rip).
 - A rip shot is implemented in `matron_hold_camera.gd` (`rip_active`, `_note_rip`); its current runtime and visual quality are unverified here. [PR #59](https://github.com/IssisX/ScraperX/pull/59) adds grab, tear and fatal-hang haptics; its focused Godot event-routing and script-load checks passed. Vibration on a physical device remains unverified.
 - Missing: a shot per beat (`beat_cuts` is a counter, `:98,412-418`; `fov_offset()` and
-  `vignette()` return 0.0, `:121-127`), haptics for the grab, the rip and the hang
-  (`main_feel.gd` covers only the pipe knocks and a "her" pulse), a hold-specific mix, her voice
+  `vignette()` return 0.0, `:121-127`), a hold-specific mix, her voice
   (gap 5). No test asserts third person from grab to release; the camera is only logged
   (`ui_test_act.gd:278-329,750`).
 - Hurts: 3. Size: large and visual; use the available production-path visual tooling, and report any tool or environment blocker. The missing
