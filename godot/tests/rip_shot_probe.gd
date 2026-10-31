@@ -8,6 +8,25 @@ extends SceneTree
 
 const Cam := preload("res://presentation/life/matron_hold_camera.gd")
 
+# Analytic collision fixture behind the production cone_cast interface.
+# A thin steel member blocks the next exit ray, but not the current camera.
+class ExitWorld extends RefCounted:
+	var center := Vector3.INF
+	func get_look_target(origin: Vector3, direction: Vector3, length: float) -> Dictionary:
+		if not center.is_finite():
+			return {"hit": false}
+		var oc := origin - center
+		var b := oc.dot(direction)
+		var discriminant := b * b - (oc.length_squared() - 0.005 * 0.005)
+		if discriminant < 0.0:
+			return {"hit": false}
+		var distance := -b - sqrt(discriminant)
+		if distance < 0.0 or distance > length:
+			return {"hit": false}
+		return {"hit": true, "distance": distance, "entity": 11, "point": origin + direction * distance}
+
+var _exit_world := ExitWorld.new()
+
 var _fails := 0
 var _block_center := Vector3.INF
 var _block_radius := 0.05
@@ -118,6 +137,8 @@ func _initialize() -> void:
 		print("RIP_SHOT exit eases, no cut (%.3f m): PASS" % leave_worst)
 	else:
 		_fail("exit-cut", "worst %.3f active %s scale %s" % [leave_worst, leave.rip_active, leave.time_scale()])
+	_check_blocked_exit(him, head, hand, eye, severed, false)
+	_check_blocked_exit(him, head, hand, eye, severed, true)
 	# Blocked blend: the destination ray is clear, but a steel protrusion
 	# sits on the blended ray close to the pivot. The wide shot must not
 	# be claimed for a camera that steel has pulled back to the pivot.
@@ -167,6 +188,48 @@ func _initialize() -> void:
 		_fail("let-go", "rip_active %s scale %s" % [cam.rip_active, cam.time_scale()])
 	print("RIP_SHOT %s" % ("PASS" if _fails == 0 else "FAIL"))
 	quit(1 if _fails > 0 else 0)
+
+
+func _exit_cast(a: Vector3, b: Vector3, skip: Vector3, radius: float) -> float:
+	return Cam.cone_cast(_exit_world, a, b, radius, skip)
+
+
+func _check_blocked_exit(him: Vector3, head: Vector3, hand: Vector3, eye: Transform3D, severed: Vector3, still_held: bool) -> void:
+	_exit_world.center = Vector3.INF
+	var camera := Cam.new()
+	var view := eye
+	for i in 72:
+		view = camera.frame(_hold(13, 0, him, hand, false, severed), head, eye, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _exit_cast)
+	for i in 72:
+		view = camera.frame(_hold(15, 1, him, hand, true, severed), head, eye, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _exit_cast)
+	var yaw: float = camera.get("_side_yaw")
+	var ordinary: Vector3 = camera.pivot + camera.call("_orbit", yaw, Cam.BASE_PITCH) * float(camera.get("_dist"))
+	var wide: Vector3 = camera.pivot + camera.call("_orbit", yaw, Cam.RIP_PITCH) * Cam.RIP_DIST
+	var next: Vector3 = ordinary.lerp(wide, 1.0 - Cam.RIP_EASE / 60.0)
+	_exit_world.center = camera.pivot + (next - camera.pivot) * 0.85
+	var span := view.origin.distance_to(camera.pivot)
+	var old_free := _exit_cast(camera.pivot, view.origin + (view.origin - camera.pivot).normalized() * Cam.CAM_RADIUS, Vector3.INF, Cam.CAM_RADIUS)
+	var next_free := _exit_cast(camera.pivot, next, Vector3.INF, Cam.CAM_RADIUS)
+	if old_free < span + Cam.CAM_RADIUS - 0.001 or next_free >= next.distance_to(camera.pivot) - 0.001:
+		_fail("exit-fixture", "current %.3f/%.3f next %.3f/%.3f" % [old_free, span, next_free, next.distance_to(camera.pivot)])
+	var worst := 0.0
+	var crossed := false
+	for i in 300:
+		var after: Transform3D = camera.frame(_hold(12, 1, him, hand, true, severed, still_held), head, eye, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _exit_cast)
+		var travel := after.origin - view.origin
+		if travel.length() > 0.001:
+			crossed = crossed or _exit_cast(view.origin, after.origin, Vector3.INF, 0.0) < travel.length() - 0.001
+		worst = maxf(worst, travel.length())
+		view = after
+	var returned := not camera.rip_active and float(camera.get("_rip")) <= 0.001
+	returned = returned and camera.third_person() == still_held
+	if not still_held:
+		returned = returned and view.origin.distance_to(eye.origin) < 0.001
+	if returned and worst < 0.45 and not crossed and camera.time_scale() == 1.0:
+		print("RIP_SHOT blocked exit returned held=%s, no cut (%.3f m): PASS" % [still_held, worst])
+	else:
+		_fail("blocked-exit", "held %s returned %s worst %.3f crossed %s" % [still_held, returned, worst, crossed])
+	_exit_world.center = Vector3.INF
 
 
 func _run(cam: RefCounted, hold: Dictionary, head: Vector3, eye: Transform3D, look: Vector2, seconds: float) -> Transform3D:

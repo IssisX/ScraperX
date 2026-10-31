@@ -129,6 +129,7 @@ var _floor_s := 0.0
 var _tears_seen := -1
 var _since_tear := -1.0
 var _rip := 0.0                 # 0 the ordinary hold frame, 1 the rip shot
+var _rip_return_leg := 0        # blocked exit: 1 in to the pivot, 2 out to the hold frame
 var rip_active := false
 var rip_dist := 0.0             # metres from the camera to the arm it is framing
 var rip_holds := 0              # times the arm leaving locked this shot
@@ -252,7 +253,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var arm_play := int(hold.get("state", -1)) == ARM_PLAY_STATE
 	var tear_hold := _since_tear >= 0.0 and _since_tear < RIP_HOLD_S
 	var falling := _since_release >= 0.0 and not held
-	var rip_keeps := (arm_play or tear_hold or _rip > 0.001) and not falling and not claimed
+	var rip_keeps := (arm_play or tear_hold or _rip > 0.001 or _rip_return_leg != 0) and not falling and not claimed
 	var want := (held or claimed or _awaiting_death or _landed_pending or rip_keeps) and _black_after < 0.0
 	# The fade.
 	if _awaiting_death or _landed_pending:
@@ -297,6 +298,9 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		_w = move_toward(_w, 0.0, delta / DISENGAGE_S)
 	if _w <= 0.001:
 		_engaged = false
+		_rip = 0.0
+		_rip_return_leg = 0
+		rip_active = false
 		_first_frame = true
 		clearance = INF
 		return eye
@@ -428,8 +432,11 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	rip_active = false
 	rip_dist = 0.0
 	if claimed or falling:
+		_rip_return_leg = 0
 		_rip = move_toward(_rip, 0.0, RIP_EASE * delta)
-	elif want_rip or _rip > 0.001:
+	elif want_rip or _rip > 0.001 or _rip_return_leg != 0:
+		if want_rip:
+			_rip_return_leg = 0
 		var hand_pt: Vector3 = hand if hand_on else hold.get("hand", him)
 		var subject: Vector3 = hand_pt.lerp(him, 0.35)
 		# On the way out, keep looking at the arm that left. While ArmPlay
@@ -444,11 +451,27 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		var wide := _pivot + rip_way * rip_allowed
 		var target_w := 1.0 if want_rip and rip_allowed >= RIP_MIN_M else 0.0
 		var proposed_w := move_toward(_rip, target_w, RIP_EASE * delta)
-		var placed_w := proposed_w if _rip_step_clear(hold_cam, wide, proposed_w, skip, cast) else _rip
+		var step_clear := _rip_step_clear(hold_cam, wide, proposed_w, skip, cast)
+		# A blocked entrance waits. A blocked exit needs a way home: both
+		# camera rays have already been checked from the pivot, so retract
+		# along the current ray and then follow the ordinary ray out. This
+		# makes progress without either jumping the obstruction or keeping
+		# the cinematic alive solely because its weight cannot decrease.
+		if not want_rip and not step_clear and _rip_return_leg == 0:
+			_rip_return_leg = 1
+		var placed_w := proposed_w if step_clear else _rip
 		if not _rip_step_clear(hold_cam, wide, placed_w, skip, cast):
 			placed_w = 0.0
-		_rip = placed_w
-		if _rip > 0.001 and rip_allowed >= RIP_MIN_M:
+		if _rip_return_leg != 0:
+			cam = _rip_return_step(hold_cam, skip, cast, delta)
+			look_at = look_at.lerp(subject, _rip)
+			var return_dir := cam - _pivot
+			if return_dir.length() > 1.0e-3:
+				var past: float = cast.call(_pivot, cam + return_dir.normalized() * CAM_RADIUS, skip, CAM_RADIUS)
+				clearance = past - return_dir.length()
+		else:
+			_rip = placed_w
+		if _rip_return_leg == 0 and _rip > 0.001 and rip_allowed >= RIP_MIN_M:
 			var rip_at := hold_cam.lerp(wide, _rip)
 			var to_cam := rip_at - _pivot
 			var rip_len := to_cam.length()
@@ -501,6 +524,24 @@ func _rip_step_clear(hold_cam: Vector3, wide: Vector3, weight: float, skip: Vect
 		return true
 	var back: float = ray.call(_pivot, proposed, skip, CAM_RADIUS)
 	return back + 1.0e-3 >= span
+
+
+func _rip_return_step(hold_cam: Vector3, skip: Vector3, ray: Callable, delta: float) -> Vector3:
+	var goal := _pivot if _rip_return_leg == 1 else hold_cam
+	var next := _cam.move_toward(goal, RIP_DIST * RIP_EASE * delta)
+	var travel := next - _cam
+	if travel.length() > 1.0e-3:
+		var free: float = ray.call(_cam, next + travel.normalized() * CAM_RADIUS, skip, CAM_RADIUS)
+		next = _cam + travel.normalized() * minf(travel.length(), maxf(0.0, free - CAM_RADIUS))
+	if next.distance_to(goal) < 1.0e-3:
+		if _rip_return_leg == 1:
+			_rip_return_leg = 2
+		else:
+			_rip_return_leg = 0
+			_rip = 0.0
+	if _rip_return_leg == 2:
+		_rip = minf(_rip, next.distance_to(hold_cam) / maxf(1.0e-3, _pivot.distance_to(hold_cam)))
+	return next
 
 
 func _note_rip(hold: Dictionary, delta: float) -> void:
