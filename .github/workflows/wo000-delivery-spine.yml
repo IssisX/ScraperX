@@ -91,6 +91,14 @@ jobs:
           test -s build/host/scraperx_parkour_flow_tests
           test -s godot/addons/scraperx_native/bin/linux/libscraperx_native.so
 
+      - name: Verify every CTest test runs in exactly one shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_ctest_shard_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml \
+            --test-dir build/host
+
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
         with:
