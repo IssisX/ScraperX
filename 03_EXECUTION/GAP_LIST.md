@@ -32,23 +32,20 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 ## Ranked gaps
 
 ### 1. Pulled starts and ladders still carry the route above 221 m (rules 52, 53)
-- **Current source check:** `src/sim/band_facade_crane.cpp` `add_handle` and its route
-  ladder construction still exist; the exact historical counts and whether each is encountered
-  on the live route are UNVERIFIED. Run the relevant route before making a player-impact claim.
-- Asked: *"3D chutes and ladders"* is what he does not want; no new route ladder or pull-started
-  lift; each stage a new action (rules 52, 53).
-- Historical assessment: **not met** above 221 m, partly below; exact coverage unverified now.
-- Evidence: 20 hanging-handle or lanyard entities (`src/sim/simulation.hpp:1312-1452`), 14 above
-  221 m (wet D, F, header; plate G, H, I; crane J, K, L; midstack M, N, O). Three motor lifts
-  started by Action (`src/sim/vertical/vertical_route.cpp:407-418`: cascade mast, barrel helix,
-  crown gondola). A repeating "L of boards plus ladder" climb from 352 to 616 m
-  (`band_plate_shop.cpp:476-483`, `band_facade_crane.cpp:525-533`), ladders at 242, 308 and 340
-  (`band_wet_isolation.cpp:742-760`), at least six ladders on the 0-221 m climb
-  (`band_stack.cpp:550,802,1155,1267,1619,1639`; `band_counterweight_well.cpp:1007`).
-  C6, C7, the swing and the slingshot add none.
-- Hurts: 4. His most repeated complaint, and the frequency on actual player paths is unverified.
-- Size: large. A redesign per machine of about a day each; each new machine is talked through with
-  him first (rule 52).
+- Asked: no new route ladder or pull-started lift; each stage a new physical action, with a few
+  ladders and easy backup paths allowed under rule 52.
+- **Partial implementation; policy fit and gameplay impact unverified:**
+  `src/sim/band_plate_shop.cpp` `build_climbing_route` builds repeated board-and-ladder
+  segments from 340.25 m to 484 m. `src/sim/band_facade_crane.cpp` `build_climbing_route`
+  continues the pattern from 484 m and adds a ladder to TP-640. `add_handle` in that file
+  constructs lanyard handles. `src/sim/vertical/vertical_route.cpp` handles Action commands
+  for machine deck/entry/exit roles, except its separately handled machines.
+- The earlier audit counted 20 handle/lanyard entities, 14 above 221 m, and named wet D/F/header,
+  plate G/H/I, crane J/K/L and midstack M/N/O. It also counted three Action-started motor lifts
+  and lower-route ladders. These counts and whether each is required on the live route are
+  **historical, not reverified**. Do not use them as current coverage or claim that every player
+  meets them. Existing machines are not automatically authorized for replacement; rule 52 and
+  the current assignment board govern any proposed work.
 
 ### 2. Rejected mouth cues and generated human sounds (rule 41)
 - Asked: no cluck or croak. **Implemented in source, runtime and listening unverified:**
