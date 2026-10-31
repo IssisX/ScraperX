@@ -235,25 +235,6 @@ void Matron::step_stance(const float dt) {
         }
         float &worst = g_shape_audit.worst_depth_by_stance[static_cast<std::size_t>(stance_)];
         worst = std::max(worst, depth);
-        // The stance capsule is built inside the planning one. Where the
-        // stance shape is deeper anyway, it is not that volume: put the
-        // planning capsule back for the next solve, and audit that body.
-        // Where the planning capsule is as deep, she really is in the steel
-        // and the sample stands.
-        if (depth > kInsideSteelM) {
-            const float tall = steel_depth(shape_.GetPtr());
-            if (tall + 0.01F < depth) {
-                bodies.SetShape(body_, shape_, false, EActivation::Activate);
-                depth = steel_depth();
-                if (depth <= kInsideSteelM) {
-                    setup_live_ = false;
-                    steel_ticks_ = 0;
-                    g_shape_audit.query_s +=
-                        std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-                    return;
-                }
-            }
-        }
         // Clear of steel ends the placement's exemption. Until then, only the
         // bodies recorded at that placement, and no deeper, are put there.
         if (depth <= kInsideSteelM) {
