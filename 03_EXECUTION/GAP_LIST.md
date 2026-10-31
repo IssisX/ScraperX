@@ -1,124 +1,116 @@
 # Gap list: what the owner asked for that the game does not do yet
 
 Built from the recovered owner calls (`00_START_HERE_ARCHIVE.md`, "Owner calls recovered from the
-archived log and handoff"), the rules in force (`00_START_HERE.md`) and the code on trunk at
-`2ac7fa1` (2026-10-29). Static reading only: nothing was run, and nothing visual or by ear was
-judged (those say UNVERIFIED). Every file:line was read; line numbers move, so grep the name.
+archived log and handoff"), the rules in force (`00_START_HERE.md`) and the original static audit at `2ac7fa1` (2026-10-29). Corrections inspect `dea9cfcba0923242fc6046d88aada9726a1b97e1` and the
+`tests/sim_tests_stock.cpp` delta on trunk `65896fbd11ed2048bbd0a102b252008a8cc3db98`; no game, device, visual or audio run was made
+for this revision. Source and test definitions establish implementation or coverage, not a pass.
+Older line numbers can drift; search the cited symbol. Issue #3 and open PRs own current assignments.
+
+**Evidence boundary:** entries 0–21 distinguish inspected source and test definitions from
+historical findings and unverified behavior. Named searches do not rule out code under other
+names, and static inspection does not prove a gameplay or device result. Check current
+assignments and evidence before starting work.
 
 **Ranking** is by how much the gap hurts the player's belief in the game, worst first
 (impact 1 = invisible, 5 = breaks the game), ties broken by how many players meet it. **Size** is
 small (hours), medium (a day), large (several days), as work for one agent including its test.
 A change to a test's checks, world geometry or her force limits is a protected change (PR only).
-Gaps 0 to 5 are the ones to hand out first.
+The ordering is historical, not an assignment or current priority; check the issue board and open PRs.
 
-## 0. Coverage hole (put first by the integrator)
+## 0. Coverage hole
 
-**`touch_matron_pipe` is not run by CI, and the other Matron checks that look at her are not
-either.** The touch step's scenario loop (`.github/workflows/wo000-delivery-spine.yml:378-392`)
-has `touch_matron`, `_ride`, `_line`, `_climb`, `_act`, `_heave` and `touch_room_hearing`, not
-`touch_matron_pipe` (her pipe descent and its 4 s warning). The Godot headless tests CI runs are
-`her_takes_test`, `matron_figure_test` and `matron_perception_climb_test`; `gore_shots_test.gd`,
-`matron_presentation_test.gd` and `script_load_test.gd` are not in the workflow. The loop passes no
-`--capture`, so CI takes no still of her body or her hold. The scenario also fails in the cloud
-container even on trunk (`handoffs/OPERATIONS_NOTES.md`), so it has never been proved anywhere.
-- Hurts: 3. Her corner-pipe descent is a feature the owner asked for (A6) and nothing watches it.
-- Size: small to add it to the loop and the headless tests to the workflow; medium if it also
-  fails in CI (it dies at the drum in the container, cause not found).
+**Partial coverage; runtime status requires a revision-specific run.** The scenario loop in
+`.github/workflows/wo000-delivery-spine.yml` runs `touch_matron_act` and other Matron scenarios,
+but does not list `touch_matron_pipe`. It runs `matron_figure_test.gd` and separately captures
+`touch_summit_ending`; it does not list `gore_shots_test.gd`, `matron_presentation_test.gd` or
+`script_load_test.gd`. Check the workflow itself for the full current list.
+
+Historical: the earlier pipe staging failed at drum pickup; it is not evidence that the scenario
+has never passed anywhere. [PR #29](https://github.com/IssisX/ScraperX/pull/29) proposes a fix,
+but is unmerged. Do not infer visual approval from a headless run or screenshots merely existing.
 
 ## Ranked gaps
 
 ### 1. Pulled starts and ladders still carry the route above 221 m (rules 52, 53)
-- Asked: *"3D chutes and ladders"* is what he does not want; no new route ladder or pull-started
-  lift; each stage a new action (rules 52, 53).
-- Status: **not met** above 221 m, partly below.
-- Evidence: 20 hanging-handle or lanyard entities (`src/sim/simulation.hpp:1312-1452`), 14 above
-  221 m (wet D, F, header; plate G, H, I; crane J, K, L; midstack M, N, O). Three motor lifts
-  started by Action (`src/sim/vertical/vertical_route.cpp:407-418`: cascade mast, barrel helix,
-  crown gondola). A repeating "L of boards plus ladder" climb from 352 to 616 m
-  (`band_plate_shop.cpp:476-483`, `band_facade_crane.cpp:525-533`), ladders at 242, 308 and 340
-  (`band_wet_isolation.cpp:742-760`), at least six ladders on the 0-221 m climb
-  (`band_stack.cpp:550,802,1155,1267,1619,1639`; `band_counterweight_well.cpp:1007`).
-  C6, C7, the swing and the slingshot add none.
-- Hurts: 4. His most repeated complaint, and every player climbing 340-640 m meets it.
-- Size: large. A redesign per machine of about a day each; each new machine is talked through with
-  him first (rule 52).
+- Asked: no new route ladder or pull-started lift; each stage a new physical action, with a few
+  ladders and easy backup paths allowed under rule 52.
+- **Partial implementation; policy fit and gameplay impact unverified:**
+  `src/sim/band_plate_shop.cpp` `build_climbing_route` builds repeated board-and-ladder
+  segments from 340.25 m to 484 m. `src/sim/band_facade_crane.cpp` `build_climbing_route`
+  continues the pattern from 484 m and adds a ladder to TP-640. `add_handle` in that file
+  constructs lanyard handles. `src/sim/vertical/vertical_route.cpp` handles Action commands
+  for machine deck/entry/exit roles, except its separately handled machines.
+- `src/sim/simulation.hpp` defines 20 named handle entity IDs: five well, four wet,
+  three plate-shop, four crane, three service and one stack. These are IDs, not 20 active
+  route pulls: `src/sim/band_wet_isolation.cpp` passes `kWetDValveHandleEntityId` to
+  `add_retired`, while D drain, F and header have other handles. The upper-band groups have
+  14 IDs including that retired one. Requirement and encounter frequency are unverified.
+- `src/sim/band_wet_isolation.cpp` `build_climbing_route` also places route ladders at
+  242.25, 308.25 and the 340 m plate top. `src/sim/vertical/vertical_route.cpp` places
+  cascade mast, barrel helix and crown gondola and routes Action through machine commands;
+  this source evidence alone does not prove every machine is mandatory or played successfully.
+  The earlier lower-route ladder count remains historical. Rule 52 governs proposed changes.
 
-### 2. Her cluck and croak are still in the game (rule 41)
-- Asked: *"She's not a freakin chicken or a frog bro."* (10-29): no cluck or croak.
-- Status: **not done; the cue plays at every grab.**
-- Evidence: `godot/presentation/audio/matron_sound.gd:171` (croak at a stage up), `:241`, `:317`,
-  `:336` (croak); `:236`, `:339`, `:367` (her hand closes on his ankle), `:430` (the spare)
-  (cluck). Both are code-made one-takes (`sound_bank.gd:166-167`; `matron/CREDITS.md` says so).
-  Other human sounds still code-made: `matron_wake` (`sound_bank.gd:113,782`) and the climber's
-  breath (`:82-83`), which rule 40 does not allow either.
-- Hurts: 4. It is the first sound at a grab, and the owner has already rejected it by ear.
-- Size: small to remove the 8 call sites, the 2 bank entries and the `her_takes.gd:36-37`
-  families. Replacing the wake and the breath with real takes needs his picks by ear (candidates:
-  `HER_SOUND_VARIATION_SPEC.md:169-170`).
+### 2. Rejected mouth cues and generated human sounds (rule 41)
+- Asked: no cluck or croak. **Implemented in source, runtime and listening unverified:**
+  `godot/presentation/audio/matron_sound.gd` no longer calls either family, and
+  `sound_bank.gd` no longer registers them. `audio_director.gd` still lists the old names in
+  `HER_VOICE_CLIPS`; a name in that list alone does not prove a sound plays.
+- **Remaining:** `sound_bank.gd` still generates `matron_wake` and the climber's breath in
+  `_matron_wake` and `_breath`. The sniff bank is recorded; see
+  `godot/presentation/audio/matron/CREDITS.md`. Check the actual sound and the owner's ear
+  approval before calling the sound work complete.
 
-### 3. She cannot pull him off a ladder (rule 35)
-- Asked: *"pull"*: in reach she pulls him off a ladder by the ankle (10-28).
-- Status: **not built, and the code does the opposite.**
-- Evidence: `src/sim/physics_world.cpp:862-868` takes a hold only when
-  `traversal_state_ != TraversalState::Climbing`; its comment says pulling him off the first rungs
-  "is what kept the climb from ever starting". A pest or dangerous Matron shoves him instead
-  (`:869-875`); a fully changed one does nothing (`Matron::shoves()`, `matron.hpp:1321`). No test
-  covers a grab on a ladder.
-- Hurts: 4. A ladder is a safe place from her hands, and ladders are most of the climb.
-- Size: medium, and it can grow: the grab must come out of a climbing state with a physical
-  grip tear-off and a recovery path (rule 29, "he can always recover"), plus tests.
+### 3. Pulling him off a ladder (rule 35)
+- Asked: in reach she pulls him off by the ankle. **Implemented; runtime unverified for this
+  inspection:** `src/sim/physics_world.cpp` calls `Matron::caught` while climbing;
+  `src/sim/physics_world_grab.cpp` applies the ladder pull, and `Matron::step_hold` in
+  `src/sim/matron_hold.cpp` drives it. `tests/sim_tests_matron_ladder_pull.cpp` defines finite
+  grip, force budget and release checks. The former claim that climbing is excluded is obsolete.
+- Run the relevant native and actual touch path at the revision being evaluated; inspect the
+  open assignments before taking any follow-up.
 
-### 4. She still reads his true position, so hiding does not work (rule 29)
-- Asked: perception is evidence with an age (rule 29); her rage is fed only by sound that reaches
-  her ear (A1).
-- Status: **five leaks still present** from `MATRON_REDESIGN/PERCEPTION_AUDIT.md`:
-  - B1 crumbs: `src/sim/matron.cpp:2399` `drop_crumb` from his true position every tick; read at
-    `matron_moves.cpp:120-151`, used in Searching.
-  - B2 hush: `matron.cpp:3115` `hush_step(dt, saw, d, loudness)`; `matron_moves.cpp:308,318` read
-    raw loudness and `distance < 4.0`.
-  - B3 journey yield: `matron_journey.cpp:206-219,330` `player_on` reads his position, no sight.
-  - B4 handled stock: `matron.cpp:2317` `handled_ |=` from `player_holding_`; `:3407`.
-  - B5 pace: `matron.cpp:3122`; `matron_moves.cpp:69-71` `distance > 15.0F ? 2 : 1`.
-  Also C1 `player_on_deck_`, C2 `player_braced_` (`matron_hold.cpp:644`) and C4 the true ankle
-  handed in every tick (`physics_world.cpp:718`).
-- Hurts: 4. A player who goes quiet or hides is still found, which breaks the whole point of
-  "she hunts by sound".
-- Size: small each (the audit gives the replacement for each), about a day together. The mischief
-  and crash/room tests lean on B4 and B1, so their checks change; that is a protected PR. The
-  structural fix (an evidence record in place of `pre_step(dt, player, loudness)`) is large.
+### 4. Perception and hiding (rule 29)
+- Asked: perception is evidence with an age; rage is fed by sound reaching her ear.
+- **Implemented in part; overall behavior unverified here.** The old five-leak list is not a
+  current finding: `Matron::pre_step` in `src/sim/matron.cpp` now derives `d` from `ev.fix`
+  or the heard lead, feeds crumbs from `ev.seen_at` / `ev.heard_at`, uses `ev.seen_holding`,
+  and passes the resulting distance and heard loudness to `hush_step` and `choose_pace` in
+  `src/sim/matron_moves.cpp`.
+- The original audit also identified true player position in journey yielding, player-on-deck
+  and braced state, and the true ankle position passed during a hold. `Matron::step_travel` in
+  `src/sim/matron_journey.cpp` still has `player_on` checks; inspect
+  their actual inputs and purpose before classifying them as a perception leak. Contact/hold
+  state (`src/sim/matron_hold.cpp`) likewise requires a separate causal check. Do not claim
+  that hiding works, or fails, across the game without a relevant runtime test. Rage deviations
+  remain in gap 17.
 
-### 5. She has no voice lines (rule 43)
-- Asked: a condescending, merciless nurse talking to a child, profane, emasculating; the last, at
-  the apron wipe, *"Waste not."* (10-21).
-- Status: **not built.** There is no line text and no voice asset for her; `voice/` and
-  `voice_lines.gd` are the climber's. Only the sim hook exists: `Matron::waste_not_` is counted
-  at the Wipe beat (`matron_fatality.cpp:70-72`) and exported (`scraperx_simulation.cpp:1848,1934`);
-  no `.gd` reads it.
-- Hurts: 4. The fatality is mute apart from grunts.
-- Size: large: write the lines (he approves them), generate takes (pattern:
-  `src/voice/generate_story_voice.py`), his picks by ear, cues per event through `her_takes.gd`.
+### 5. Her voice lines (rule 43)
+- Asked: all lines in `03_EXECUTION/MATRON_REDESIGN/HER_LINES_DRAFT.md` with varied delivery,
+  including “Waste not.” The text exists; the old claim that no line text exists is wrong.
+- **Incomplete on trunk:** `Matron::fatal_next` in `src/sim/matron_fatality.cpp` increments
+  `waste_not_`; the spoken Matron-line system and approved takes remain to be established.
+  `godot/presentation/audio/voice_lines.gd` is the climber's voice, not proof of hers.
+- Check [issue #3](https://github.com/IssisX/ScraperX/issues/3) and open PRs before starting;
+  unmerged voice work is not trunk. Approval by ear is separate from source and test coverage.
 
-### 6. Seat the crew's last beam (C4; owner picked 2026-10-29)
-- Asked: physically seat the overtime crew's last beam, the foreman's last line,
-  then return by parachute.
-- Candidate built on `chatgpt/summit-ending-20261029`: tandem chain blocks lower
-  the last beam onto two independently contacted bearing stools; only an unloaded,
-  settled beam earns the foreman's admission. FREE SLING removes its two rope
-  constraints. The live parachute descent to ground earns the quiet end card.
-- The existing searchlight and runway remain. Native `summit-ending`, touch
-  `touch_summit_ending`, and captures cover the new path. Proof is pending;
-  this gap stays open until the protected PR is green and the integrator lands it.
-- Design and proof status: `handoffs/SUMMIT_ENDING.md`.
+### 6. Seat the crew's last beam (C4)
+- Asked: physically seat the last beam, hear the foreman's admission, return by parachute.
+- **Implemented on trunk; runtime not reverified in this documentation pass:**
+  `src/sim/summit.cpp` `Summit::build_ending`, `work` and `read_ending` build the beam,
+  require contact and settling, free the sling and track the canopy return. The foreman's
+  `last_beam` caption is cued by `godot/presentation/life/foreman_radio.gd` `_watch`, called by `update`.
+  `godot/presentation/main_feel.gd` reads the ending state.
+- `tests/sim_tests_summit.cpp` and the workflow's `touch_summit_ending` and rendered capture
+  define proof paths; their existence does not prove they pass at this revision. See the
+  [historical handoff](handoffs/SUMMIT_ENDING.md) for candidate-era evidence.
 
-### 7. Her death is permanent
-- Asked: nothing directly; rule 64 parks "her death and return (she's done this before)".
-- Status: **a bug against that design.** A landing of 16 m/s or more kills her
-  (`matron.cpp:3322-3330`, `kLethalLandingMps` `matron.hpp:432`), which sets `dead_`. Nothing ever
-  clears it, and `Matron::restore` skips a dead Matron (`matron.cpp:3635`), so she is gone for the
-  rest of the run, across the player's deaths and checkpoint restores.
-- Hurts: 3. A player can end the threat for good by dropping her off the catwalk.
-- Size: small to make a restore bring her back as she was; the "comes back worse" design is
-  parked (rule 64).
+### 7. Her death and checkpoint restore
+- **Implemented in source; runtime unverified here:** `Matron::restore` in `src/sim/matron.cpp`
+  clears `dead_` and restores the saved state; `tests/sim_tests_matron.cpp` `run_matron_restore` defines checks for the
+  restore. The earlier claim that death is always permanent across checkpoint restore is obsolete.
+- The broader “comes back worse” design remains a separate owner decision under rule 64;
+  restoring a checkpoint is not proof of that design.
 
 ### 8. The hold is a camera, not yet a cinematic (rule 33)
 - Asked: third person from grab to release or death; PUNCH works; *"a whole cinematic, dramatic
@@ -128,105 +120,132 @@ container even on trunk (`handoffs/OPERATIONS_NOTES.md`), so it has never been p
   135,222,269-390`; applied at `main.gd:447-453`); gore always on (`gore_view.gd:9`); her sounds cued
   per beat (`matron_sound.gd:360-440`). PUNCH works only before the rip and in the hang window
   (`sim_tests_strike.cpp:204-236` requires it refused after the rip).
+- A rip shot is implemented in `matron_hold_camera.gd` (`rip_active`, `_note_rip`); its current runtime and visual quality are unverified here. At the inspected trunk revision, grab, tear and hang haptics were missing. [PR #59](https://github.com/IssisX/ScraperX/pull/59) adds those events. Its independent review reports that focused Godot event-routing and script-load checks passed; those checks do not establish physical-device vibration. Integration and landing are tracked separately in the PR.
 - Missing: a shot per beat (`beat_cuts` is a counter, `:98,412-418`; `fov_offset()` and
-  `vignette()` return 0.0, `:121-127`), a tear beat, haptics for the grab, the rip and the hang
-  (`main_feel.gd` covers only the pipe knocks and a "her" pulse), a hold-specific mix, her voice
+  `vignette()` return 0.0, `:121-127`), a hold-specific mix, her voice
   (gap 5). No test asserts third person from grab to release; the camera is only logged
   (`ui_test_act.gd:278-329,750`).
-- Hurts: 3. Size: large and visual; it needs the Godot runtime for every iteration. The missing
+- Hurts: 3. Size: large and visual; use the available production-path visual tooling, and report any tool or environment blocker. The missing
   assertion is small.
 
 ### 9. She does not wreck his work (A3, A4 B and C)
-- Asked: carries and throws stock (built); shoves stock he placed off edges, resets or jams
-  machines he set, more at higher stages; meddles only undoably (sends a lift away, waits at a
-  choke point, boards the lift he called); learns a trick he repeats within a run.
-- Status: **partly built.** Take and throw: `matron.cpp:3401-3527`, pest only (`:3426`), three
-  throwables in the whole world (`loose_stock.hpp:123`, `loose_stock.cpp:579-585`: two toolboxes
-  and a drum she cannot lift, `kTakeMaxKg` 25). Unrig (`matron.cpp:3177-3203`) and guarding the
-  way out's mouth (`:3206-3225`) are built. **Not built**: shoving his placed stock off an edge
-  (the only crate push, `:1711-1757`, never pushes over an edge), jamming or resetting machines,
-  sending a lift away (a stated choice: she never sends a cage, `matron.hpp:85-86`), boarding the
-  lift he called (she only clings to a floor already moving, `matron.cpp:915-960`), and any
-  learning beyond `fooled_` (`:2613,2625,3133`).
-- Hurts: 3. The "she wrecks your work" threat is nearly absent.
-- Size: large. A lawful version needs her to perceive what he placed (gap 4), a general
-  capped-force push, and machine use as one general skill, no per-machine code (rule 30).
+- Asked: carry and throw stock, shove placed stock off edges, reset or jam machines, send a lift
+  away or board one he called, wait at a choke point, and learn repeated tricks within a run;
+  meddling must be undoable.
+- **Partial implementation; runtime unverified here:** `src/sim/matron.cpp` `notice_moved_stock`,
+  `fetch_stock`, `take_stock` and `throw_stock` implement the stock path; fetching is limited to
+  Pest and `matron.hpp` `kTakeMaxKg` is 25 kg. The same file's `State::Unrigging` and
+  `State::Guarding` cover undoing rigging and guarding an exit. `fooled_` tracks noises leading
+  to nobody; that is not evidence of learning a repeated player action.
+- `LooseStock::lay_matron_throwables` in `src/sim/loose_stock.cpp` adds two toolboxes and
+  a drum at deck 154; `src/sim/physics_world.cpp` supplies the last three pieces to
+  `Matron::set_throwables` (`LooseStock::kMatronThrowables`). Other stock exists, but is not
+  automatically in that particular list. `Matron::walk_toward` in `src/sim/matron.cpp` can
+  push a blocking dynamic stock/fabricated body and checks nearby voids when selecting a
+  direction; this does not establish deliberate shoving of player-placed stock off an edge.
+  `PhysicsWorld::step` handles `take_unrig` by unhooking the selected A/B rope.
+- `matron.hpp` documents clinging to a moving floor and says she does not send a cage away.
+  General jamming/resetting, boarding a called lift, deliberate edge shoves and learning a
+  repeated trick remain unverified beyond these observed paths. Test presence or code comments
+  are not gameplay proof. Check current assignments before taking a follow-up.
 
 ### 10. Loud machines mostly do not draw her (A7)
-- Asked: every real collision heard by material and by her; loud machines draw her too.
-- Status: **partly built.** Carried path and per-deck muffling: `carry_m` (`matron.cpp:545-568`);
-  hearing is not level-bound (`:2537`); tests `sim_tests_matron_hearing.cpp:52-196`.
-  She hears only the impact ledger's hits by energy (`physics_world.cpp:685-691`), only loose
-  stock, forklifts, crane devices and fabricated objects are tracked (`:388-399`), and the
-  machines that draw her are the yard crane's drives (`:692-696`) and the forklift as the driver's
-  noise (`physics_world_movement.cpp:1241-1252`). Cages, counterweights, plates, doors, the lifts
-  and the player's own wall hits do not reach her. The shaft is a hard-coded box (`matron.hpp:237`).
-- Hurts: 3. Running a lift or a winch is silent to her.
-- Size: medium: a general machine-noise source from measured motion or force into `Matron::hear`.
+- Asked: collisions heard by material and by her, and loud machines draw her.
+- **Partial; runtime unverified here:** `Simulation::PhysicsWorld::step` in
+  `src/sim/physics_world.cpp` sends energy-scaled `ImpactLedger` events and yard-crane drive
+  noises to `Matron::hear`. Its constructor tracks loose stock, forklift frames and carriages,
+  and crane hook, magnet and spreader. `src/sim/physics_world_movement.cpp` includes forklift
+  driving in player loudness; `Matron::carry_m` in `src/sim/matron.cpp` accounts for the path.
+- The earlier audit identified cages, counterweights, plates, doors, lifts and wall hits as
+  missing sources. The cited tracker does not register those machine bodies directly, but the
+  complete absence of indirect sound paths and gameplay effects is **unverified**. The separate
+  [PR #48](https://github.com/IssisX/ScraperX/pull/48) proposes Stage A hearing and is unmerged;
+  it is not trunk. A general measured-motion/force sound path remains a possible follow-up.
 
-### 11. The night above 143 m is the moon and machine lights (B5)
-- Asked: morning to night; the night readable: floodlights, a helmet lamp, rings lit behind you,
-  moon and city glow.
-- Status: **partly built.** Sun, moon and stars with lamps boosted 6x at night
-  (`sky_cycle.gd:17-35,143`); yard masts and four tower-foot floods (`main_world.gd:640-679`);
-  stack lamps only on levels 1 to 13, up to 143 m (`:484-510`). **Missing**: a helmet lamp (no
-  match for helmet, headlamp or torch), lit rings behind the climber, a city glow. The cycle loops
-  on 24 real minutes and does not follow the climb (`settings_store.gd:86-87`).
-- Hurts: 3. Size: medium; a helmet `SpotLight3D` is small, the rest needs tuning by eye.
+### 11. Night lighting and the climb (B5)
+- Asked: a readable morning-to-night climb with floodlights, a helmet lamp, rings lit behind the
+  climber, moon and city glow.
+- **Partial; visual quality unverified:** `godot/presentation/sky_cycle.gd` implements the
+  sun/moon cycle, sky and night lamp gain; its default `day_minutes` is 24. The light rig in
+  `godot/presentation/main_world.gd` builds site lights, including stack-level lamps.
+- `godot/presentation/main.gd` creates the sky cycle, applies `SettingsStore.day_minutes`
+  when time-of-day is automatic, or fixes the selected hour; `sky_cycle.gd` advances the hour
+  from `delta`, not climb height. `godot/presentation/ui/settings_store.gd` defaults to 24
+  minutes and permits 8–60; `pause_menu.gd` exposes both settings. Stack lamps in
+  `main_world.gd` are placed on odd numbered stack levels, not every level.
+- A source search for helmet, headlamp, flashlight, city glow and lit-ring identifiers in
+  `src` and `godot` found no named player helmet lamp or climb-following light. This does not
+  rule out an implementation under another name or establish whether night is readable. The
+  requested helmet lamp, illuminated rings behind the climber and city glow remain open until
+  production-path and rendered review establishes them.
 
-### 12. The foreman radio is four lines and goes quiet at 220 m (B3)
+### 12. Foreman radio and story cues (B3)
 - Asked: the foreman on the radio: furious, then the lifeline, then admitting he covered up her
   accident; her stage hints (*"She's quiet. Keep it that way."*) (A1).
-- Status: **partly built.** `godot/presentation/life/foreman_radio.gd:20-26` has four fixed
-  captions, no voice, cued by place or event once per launch (`:69-84`); wired at `main.gd:185-188`.
-  Silent above 220.5 m. No cover-up line; "She's quiet" appears nowhere. The recorded set
-  (`story_radio_player.gd`, 40 cues) is **not wired anywhere** (no `.gd`, `.tscn` or
-  `project.godot` mentions it) and is cast Iona, Ro, Ari and Dev, not Brenner and Miller; 36 of
-  the 40 are Kokoro takes (rule 40 does not allow them); the `VOICE_RECORDINGS_APPROVED` gate its
-  `AUTHORING.md` cites exists in no code; `ci/verify_story_radio_package.py` is not run by CI.
+- Status: **partly built.** `godot/presentation/life/foreman_radio.gd:20-26` has place/event captions, no voice, cued by place or event once per launch (`:69-84`); wired at `main.gd:185-188`.
+  The earlier four-line/220.5 m ceiling is historical. The summit admission is now the `last_beam` caption in `foreman_radio.gd`. The recorded
+  set is instantiated by `main.gd` as `StoryRadioPlayer`, and its
+  `VOICE_RECORDINGS_APPROVED` gate is false in `story_radio_player.gd`. Instantiation does
+  not establish that gameplay triggers these cues; inspect the active call path and voice
+  approvals. The cast and recording choices still need reconciliation with the owner's story. `.github/workflows/wo000-delivery-spine.yml` invokes `ci/verify_story_radio_package.py`
+  on the APK and imports `verify_recordings` for a source check; actual results require a run.
 - Hurts: 3. It is the only story channel. Size: medium for lines, triggers and wiring; the voices
   wait on his picks by ear. Which cast he means is his call (listed in the owner decisions).
 
-### 13. The story's premise and its crew are missing (B1, B2)
-- Asked: a worker sneaks onto his own site on a weekend (badging in), wakes a coworker exposed by
-  a lost X-ray source, the only way off is up; she kills the overtime crew, bodies higher up.
-- Status: **B1 not built**: the only traces are the word "Saturday" in a caption
-  (`foreman_radio.gd:22`) and a comment on the badge (`:73`); no gate, badge-in, X-ray source,
-  overtime crew or topping-out beam in any `.cpp`, `.hpp`, `.gd` or `.json`. **B2 not built**:
-  workers cannot die (`src/sim/crew.hpp:37`), `matron.cpp` never touches `Crew`, about ten live
-  workers stand from 22 to 418 m (`crew.cpp:61-79`), corpses are the climber's alone
-  (`corpse.hpp:1-15`).
-- Hurts: 3 each. Rule 50 wants every feature to have its reason in the story.
-- Size: B1 large (a gate scene, a source prop, the crew story, a topping-out beat, and the cast
-  conflict settled first). B2 medium (a dead-worker state or placed props, plus triggers).
+### 13. The story's premise and its crew (B1, B2)
+- Asked: a worker sneaks onto his own site on a weekend and badges in, wakes a coworker
+  exposed to a lost X-ray source, and can escape only upward; she kills the overtime crew and
+  their bodies are found higher up.
+- **Partial implementation:** `src/sim/summit.cpp` `Summit::build_ending` creates the last beam,
+  and `godot/presentation/life/foreman_radio.gd` `LINES` references Saturday and the accident.
+  A search of `src` and `godot` code and scene/JSON files for X-ray, badge-in and overtime
+  found the beam and related caption but no named X-ray-source or badge-in sequence. An
+  implementation under different terminology and its runtime presentation are unverified.
+- `src/sim/crew.cpp` `Crew::Crew` constructs six yard workers and eight on tower decks from
+  22 to 418.25 m; `src/sim/crew.hpp` `Crew::State` contains walking, working, yielding,
+  startled and stumbling, with no death state. `PhysicsWorld` steps the crew; searches of the
+  Matron files found no `Crew` reference. This supports a missing explicit worker-death path,
+  but does not prove all possible indirect interactions or rendered bodies absent. The request
+  for her to kill the overtime crew and leave bodies remains open.
 
-### 14. Nothing is lived-in above 396 m (D1)
-- Asked: little lived-in spots all over the structure.
-- Status: **partly built.** The spot finder walks rings every 11 m to 143 m, then 176.25 + 22k for
-  k = 0..10, so to 396.25 m (`loose_stock.cpp:734-741`); nothing from 396 to 802.64 m, about half
-  the climb. Ziplines also stop at 396 m (`physics_world.cpp:340-345`). `sim_tests_stock.cpp:74`
-  asserts at least 60 pieces, not coverage by height.
-- Hurts: 3. Size: medium, and it changes body order, which makes it a whole-world change
-  (`CLAUDE.md` item 4: the full native suite runs locally).
+### 14. Lived-in spot finder stops at 396 m (D1)
+- Asked: little lived-in spots throughout the structure.
+- **Partial implementation:** `LooseStock::dress_tower` in `src/sim/loose_stock.cpp` builds
+  candidate rings at 11–143 m and 176.25–396.25 m; it does not generate higher rings. This
+  does not establish that every other authored object above 396 m is absent.
+- **Test definition on current trunk `65896fbd11ed2048bbd0a102b252008a8cc3db98`:**
+  `tests/sim_tests_stock.cpp` `run_loose_stock` now checks every `dress_tower` ring for at
+  least one piece and checks that tower pieces map to a ring. The old statement that the test
+  checks only the total is obsolete. This test does not cover dressing above 396.25 m; no run
+  at that revision was performed for this documentation change. `src/sim/physics_world.cpp`
+  constructs upper ziplines through the same 176.25 + 22k ring range.
+- Extending stock can change world body order. Apply the conditional whole-world test rule in
+  `CLAUDE.md`, and check current assignments before starting.
 
-### 15. "He is never helpless" depends on stock being at hand (rule 34)
-- Status: **partly built.** A knock-down works with thrown stock and machines
-  (`take_blow` `matron.cpp:4040-4143`; `sim_tests_matron.cpp:377,450,481,591`; `touch_matron_heave`).
-  By arithmetic, not run: the punch is at most 1,500 N (`player_strike_limits.hpp:14`) over 3
-  contact ticks (`physics_world_strike.cpp:30`), about 50 N·s on 220 kg, 0.23 m/s, under the
-  pest's 0.245 m/s absorb (`matron.hpp:660-661`), so a punch alone does not stagger her at any
-  stage. The only seeded throwables are the two toolboxes on deck 154 (gap 9). At the dangerous
-  and fully changed stages a chest hit only staggers her; only a low hit takes her feet.
-- Hurts: 3. Size: small to retune; protected (her force limits and thresholds), by PR.
+### 15. A hard blow and escape (rule 34)
+- Asked: a hard enough blow takes her balance or puts her down for seconds, alive.
+- **Partially implemented; runtime unverified here:** `Matron::take_blow` in
+  `src/sim/matron.cpp` evaluates impulses, stance, strike height and stage before staggering or
+  knockdown. Its `his_blow` path handles a player's tagged blow during a hold. The player strike
+  in `src/sim/physics_world_strike.cpp` uses three contact ticks, capped by the force and power
+  in `src/sim/player_strike_limits.hpp`; `tests/sim_tests_matron.cpp` and `touch_matron_heave`
+  define stock/machine checks.
+- The prior audit estimated a punch at about 50 N·s and concluded it cannot stagger any stage.
+  That arithmetic is **not a runtime proof** and does not by itself cover stance, repeated
+  contacts or hold escape. The availability of useful stock along the whole route also remains
+  unverified. Any threshold or force-limit change is protected under rule 4.
 
-### 16. Nothing tests that her movement is continuous (rule 37)
-- Status: **built in code, unproven.** Drawn between ticks (`matron_view.gd:2100,2314`;
-  `simulation.cpp:691`); body bones clamped to 11.5 rad/s, 19 in a burst
-  (`matron_rig.gd:254-259,520-560`); hair, eyes and fingers excluded. The only test is one wrist
-  anchor within 0.03 m (`matron_perception_climb_test.gd`).
-- Hurts: 3 (jerky motion was a complaint on 10-27, and a regression would not be caught).
-- Size: small: a headless test through `_update_figure` recording the peak bone speed
-  (`matron_figure_test.gd` has the harness).
+### 16. Movement continuity (rule 37)
+- Asked: continuous drawn motion, no snapped poses, body joints at most 20 rad/s and hands
+  reaching each hold.
+- **Implemented in part; complete runtime coverage unverified:**
+  `godot/presentation/life/matron_rig.gd` `govern` limits selected bone rotation to
+  `GOVERN_RAD_S` 11.5 or `GOVERN_BURST_RAD_S` 19, excluding hair, eyes and fingers;
+  `matron_view.gd` `_update_figure` drives the figure. `godot/tests/matron_figure_test.gd`
+  exercises poses, and `matron_perception_climb_test.gd` checks a wrist anchor. Test definitions
+  do not establish all drawn transitions, hand contacts or visual smoothness. A production-path
+  time series of actual bone speeds and contact positions, plus visual review, would address
+  the remaining proof gap; inspect existing tests before adding a new protected check.
 
 ### 17. Her mood hints, the stage-up cue and a missing test (A1 leftovers)
 - Status: **core built.** `step_rage` `matron.cpp:1863-1896`, constants `matron.hpp:581-594`, no
@@ -234,67 +253,78 @@ container even on trunk (`handoffs/OPERATIONS_NOTES.md`), so it has never been p
   stage drives pose and sound (`matron_view.gd:768-771,1701,1872`, `audio_director.gd:1358-1453`);
   no meter anywhere (`hud.gd`). Test `sim_tests_matron.cpp:2037-2106`. **Deviations**: pain also
   feeds her rage (`kStaggerRage`, `kKnockdownRage`, `matron.hpp:694-695`; `matron.cpp:4108,4140`),
-  against "fed only by sound"; the stage-up cue is the croak (gap 2); no test covers Changed back
-  to Dangerous (`grep kRageChangedDown tests godot` is empty); no radio hint (gap 12).
+  against "fed only by sound"; the former croak claim is obsolete (gap 2); no test directly names `kRageChangedDown` in `tests` or `godot` (this search does not prove
+  absence of indirect coverage); the requested radio hint remains to be checked (gap 12).
 - Hurts: 2. Size: small each.
 
-### 18. A wrecked machine leaves a way on: tested for some bands only (rule 51)
-- Status: **partly built.** Wreckage tests: AS-006 B and C (`sim_tests_well.cpp:373,772`), AS-008 G,
-  H, I (`sim_tests_plate.cpp:518,545,562`), AS-009 J, K, L (`sim_tests_crane.cpp:345,361,375`).
-  None found for S1 to S3, AS-007 D to F, AS-010 M to O or the vertical machines (UNVERIFIED
-  whether they leave a way on). The plan's backup path for 0-221 m is not built
-  (`PARKED_FEATURES` item 9).
-- Hurts: 2. Size: medium to prove or fix each.
+### 18. A wrecked machine leaves a way on (rule 51)
+- Asked: wreckage must leave a physical way onward.
+- **Partial test coverage; results not run here:** `tests/sim_tests_well.cpp` defines B and C
+  wreck paths, `tests/sim_tests_plate.cpp` `run_plate_wreckage` covers G/H/I, and
+  `tests/sim_tests_crane.cpp` `run_crane_wreckage` covers J/K/L. A search for wreckage and backup-path terms across `tests` found these named checks but
+  did not identify equivalent checks for S1–S3, D–F, M–O or vertical machines; differently
+  named tests and actual routes remain unverified. `03_EXECUTION/handoffs/PARKED_FEATURES_2026-10-29.md`
+  item 9 historically calls the backup path open; that handoff is not proof of its current state. Run the applicable existing
+  scenarios at the candidate revision; test existence alone is not a pass.
 
-### 19. Her body: fingers, cloth and the 4 s warning are thin (A6)
-- Fingers: four fingers of three joints and a thumb of two, each on a spring (`matron_view.gd:676-692,2012-2032`), but
-  the curl is one value per hand per state (`:2000-2009`) and stays 0.35 in every hold state, so
-  by the code the fingers do not wrap the ankle (UNVERIFIED by eye). Size small for variation,
-  medium to wrap an ankle or rung.
-- Cloth: one skirt bone on a canned sway (`:2041-2046`, `matron_rig.gd:194`), no cloth motion.
-  Size medium.
-- The 4 s warning: asserted in the sim only (`sim_tests_matron.cpp:723,740` `warned_s >= 4.0`);
-  the touch-level check is in `touch_matron_pipe`, which CI does not run (gap 0). Size small.
-- Body proportions ("not too thin") are checked by no test (`matron_stats.json` is read by no code).
-  Size small, by eye with the runtime.
-- Hurts: 2.
+### 19. Her fingers, cloth and pipe warning (A6)
+- Asked: a believable body, fingers and cloth, plus the pipe warning.
+- **Partial implementation; visual result unverified:** `godot/presentation/life/matron_view.gd`
+  builds finger pivots and updates their curls; `matron_rig.gd` maps a skirt bone. The earlier
+  audit found common state-driven curls and a canned skirt sway, with no proven ankle/rung wrap;
+  inspect the rendered production path before deciding what needs work.
+- **Warning coverage:** `tests/sim_tests_matron.cpp` contains the four-second warning assertion;
+  the touch check is `touch_matron_pipe` in `godot/presentation/ui/ui_test_act.gd`. The inspected
+  `.github/workflows/wo000-delivery-spine.yml` does not list that scenario. This is coverage
+  configuration, not proof that it fails everywhere. Body proportions also require visual review.
 
-### 20. Smaller owner calls not met
-- **D4 diegetic machine controls** (grab the forklift's real lever): not built; the forklift is
-  "Action takes the controls" (`forklift.hpp:10-14`), the crane a remote and buttons
-  (`yard_crane.hpp:14-19`); only the hanging handles are physical grabs. Hurts 2. Size medium for
-  the forklift, large for every machine.
-- **C2 movement as a reason to play**: no time trial, ghost or best time (only the "THE TOP"
-  toast, `main_feel.gd:165-182`). Hurts 2. Size medium; the ideas were the agent's.
-- **D3 plate clamp**: not built (zero hits in `src`, `godot`, `tests`, `03_EXECUTION`); the magnet
-  and the spreader are. Hurts 1. Size medium, on the magnet's pattern.
-- **A4 (A)** frail first then the Turn: built, but a dangerous or changed Matron is no longer
-  frail (`matron_found_climb.cpp:127,324,365`).
+### 20. Smaller owner calls
+- **D4 diegetic controls — partial:** `src/sim/forklift.hpp` describes Action taking controls;
+  `src/sim/yard_crane.hpp` describes the remote and buttons. The requested grab of a physical
+  forklift lever remains a historical missing finding pending a full control-path check.
+- **C2 movement incentives — partial:** `godot/presentation/main_feel.gd` `_announce_summit`
+  shows elapsed time and deaths. A search of `src`, `godot` and `tests` for `time_trial`, `best_time`, “time trial”
+  and “ghost” found no named feature (a test uses “ghost mass”); unnamed implementations remain
+  possible. `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` item 10 treats a best time
+  or ghost as an owner decision; do not implement on the search result alone.
+- **D3 plate clamp — no named implementation found:** a search of `src`, `godot`, and `tests`
+  for “plate clamp” and `plate_clamp` returned no match; an implementation under another name
+  is not ruled out. `src/sim/yard_crane.hpp` contains magnet and spreader. Verify owner intent
+  and operation before proposing a new machine part.
+- **A4 frail first then Turn — partial:** `Matron::find_climb` and `follow_found_climb` in
+  `src/sim/matron_found_climb.cpp` restrict a Pest outside the Turn while later stages can
+  attempt the corresponding descent/journey. This is stage-based behavior, not proof of the
+  full frail-to-strong presentation; visual and gameplay fit remain unverified.
 
-### 21. Background and process gaps (low for the player)
-- **Rule 39**: the story radio, the Photo ID page and the identity folder have no call site
-  (`work_id_page.gd` has no instantiator); the rule says "after the Matron fixes", so not yet is
-  consistent. Hurts 1 now. Size medium to wire (a node, `present(state)` feeds, a settings page, a
-  scenario); large if the two casts are reconciled.
-- **Rule 57**: the chart is built (`godot/presentation/uncanny/`, five CI scenarios) but not
-  linked to the Matron sim (`grep chart src/sim/matron*` is empty), has no speech to text, and the
-  export asks for no INTERNET or CAMERA permission (`export_presets.cfg:30-31` has vibrate and
-  record_audio). Hurts 2. Size large (server models, rule 58).
-- **Rule 56 and 27**: the climb above 340 m is the non-canonical AS-007 to AS-010
-  (`touch_stack` climbs them to 750 m); `sx.gravity_balance` and `sx.rack_climber` are defined
-  (`vertical_machine.cpp:112,114`) but unplaced and untested; no scenario plays the canonical route
-  from the start. Hurts 1 to 2. Size large (about 400 m of ported machines) and medium for one
-  chained scenario that would be slow in CI.
-- **Rules 30, 31**: per-place constants remain (`matron.hpp:437-438` post, `:514-533` ladders and
-  riser, `:720-726` pipe; the hand-drawn levels at `matron.cpp:75-141`; `matron_pipe.cpp` is a
-  per-route climb of 730 lines). Deck-to-deck up and down is proven among 132, 143, 154 and 176.25
-  (`sim_tests_matron_pursuit.cpp:125,213,297`); the islands above 176.25 and below 132 are
-  UNVERIFIED. `kStackPitch` 11 m is baked into the pipe logic. Hurts 1 to 2. Size large.
-- **Housekeeping**: the music box mesh is still in `matron.glb` (freed at load,
-  `matron_look.gd:177`; a dead `box_cord` pivot remains); `matron.hpp:13` still says the catwalk is
-  "the one thing that kills her". Size small.
+### 21. Background and process gaps
+- **Rule 39, identity and radio — partial:** `godot/presentation/ui/pause_menu.gd`
+  `_build_work_id_page` creates `WorkIdPage`; `godot/presentation/main.gd` instantiates
+  `StoryRadioPlayer`; `godot/presentation/audio/story_radio_player.gd`
+  `VOICE_RECORDINGS_APPROVED` is false. Cue triggering and approved recordings need separate
+  verification. The timing of this existing hookup versus rule 39 remains for owner review.
+- **Rule 57, chart — partial:** `godot/presentation/uncanny/` has the chart and
+  `voice_keeper.gd` requests microphone permission. `godot/export_presets.cfg` enables `permissions/record_audio`; no INTERNET or CAMERA entry
+  appeared in the inspected preset. `godot/presentation/main.gd` instantiates `Uncanny`; `uncanny.gd` creates
+  `HerChart`, uses native observations and records voice/echo events. A `chart|uncanny`
+  search of `src/sim/matron*.cpp` and `*.hpp` returned no matches; indirect wiring or
+  speech-to-text under other names is not ruled out. The workflow lists five related
+  scenarios: `touch_her_chart`, `touch_her_chart_fast`, `touch_mic_consent`,
+  `touch_voice_echo` and `touch_room_hearing`; their results require a run. Obtain in-game consent as asked.
+- **Rules 56 and 27, ascent — unresolved:** `src/sim/vertical/vertical_machine.cpp` registers
+  `sx.gravity_balance.v1` and `sx.rack_climber.v1`; registration is not placement or a playable
+  route. The old audit says AS-007–AS-010 are used above 340 m despite rule 56 calling them
+  non-canonical, and that no scenario plays the canonical route from the start. Check actual
+  route and revision-specific runs; do not silently change the rule.
+- **Rules 30 and 31, Matron travel — partial:** `src/sim/matron_pipe.cpp` uses `kStackPitch`
+  and `src/sim/matron.cpp` retains level data; `tests/sim_tests_matron_pursuit.cpp` defines
+  pursuit cases. Coverage above 176.25 m and below 132 m is unverified. Place-specific data
+  alone does not prove that the general-skill requirement fails.
+- **Housekeeping:** `godot/presentation/life/matron_look.gd` `dress` frees a mesh named
+  `music_box`; `matron_view.gd` still creates and rotates a `box_cord` pivot. Whether the
+  current GLB contains the mesh requires asset inspection; the old catwalk comment finding
+  is historical. Do not infer visual or gameplay impact from these code paths alone.
 
-## Checked and built (nothing to do)
+## Earlier source and test inventory (not a current verification verdict)
 
 | Call | Evidence | Test |
 |---|---|---|
@@ -315,10 +345,12 @@ container even on trunk (`handoffs/OPERATIONS_NOTES.md`), so it has never been p
 | Rule 51 a causal world; rule 55 no test pieces | `loose_stock.hpp:65-92`; `simulation.hpp:117-124` | native `stock`, `touch_stock` |
 | Rule 36 her look (static only) | `matron_look.gd:7-9,229-246` | only a contrast check; the face and thinness are by eye |
 
-## Corrections to the recovered list and to other documents
+## Historical corrections to the recovered list and other documents
 
-- The recovered B3 row says "built, gated": it is dead code, nothing instantiates it. The radio
-  that runs is the four-line `foreman_radio.gd`.
+These earlier findings require rechecking against the current revision before use as facts or assignments.
+
+- The older B3 dead-code finding is historical: `main.gd` now instantiates `StoryRadioPlayer`;
+  its approval gate remains false. See gap 12 for the remaining trigger and story questions.
 - The recovered B4 row says built: the crane, forklifts and hook exist and are tested, but no band
   file references the crane or a forklift and no route machine needs the hook
   (`has_hook_` appears only in `physics_world_probes.cpp` and `physics_world_state.cpp`); its only
@@ -334,7 +366,7 @@ container even on trunk (`handoffs/OPERATIONS_NOTES.md`), so it has never been p
   nothing unasked") also conflicts with rule 43, which is a rule in force.
 - Rule 56 and the archive row call AS-007 to AS-010 "not canonical", yet `touch_stack` climbs them
   and no canonical machines stand between 340 and 750 m (gap 21).
-- `matron/CREDITS.md` and `PARKED_FEATURES` both say her chart is "largely built"; it is built to
+- `matron/CREDITS.md` and `PARKED_FEATURES` both say her chart is "largely built"; it is implemented to
   its steps 1 and 3 and her hearing the room (`HER_CHART.md:100-115`).
 
 ## Waiting on him (rule 64): status only, not to be built unasked
@@ -346,7 +378,7 @@ container even on trunk (`handoffs/OPERATIONS_NOTES.md`), so it has never been p
   edge-of-view or HUD signal before she is seen.
 - Her limbs torn off: **not built.** Her sim body is one capsule (`matron.cpp:78`); her limbs are
   drawn only; no harpoon, laser welder or nail gun exists. Size large.
-- Her death and return: **partly built** (gap 7). No kill-shot weapon, no revive.
+- Her death and checkpoint restore are implemented in source (gap 7); the broader return design remains parked. No kill-shot weapon was found in the earlier audit.
 - More decks: **partly built**, see gap 21.
 - Tower two: the broken bridge is built (`twin_tower.*`, native `twin`, `touch_twin`); the property
   damage climb was not checked.

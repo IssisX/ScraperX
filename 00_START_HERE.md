@@ -92,13 +92,27 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 **Waiting on him** (talked through before anything is built; menu: `03_EXECUTION/handoffs/PARKED_FEATURES_2026-10-29.md`)
 64. Dread before she is seen, kept for later (10-27); her limbs torn off, her death and return (*"she's done this before"*), a laser welder and nail gun instead of a harpoon (10-20); tower two, earned by believable architecture only, and its property-damage climb (10-21); the chiller drop and glass tube, untouched (10-20); lift governors (plan §11).
 
+## Interpretation and unresolved conflicts
+
+The numbered rules above remain the owner's policy. Tool availability is not guaranteed by a
+past session: check the current environment and report a missing runtime rather than claiming a
+visual run. Rule 28 still calls for visual review. Rule 27's full-ascent green criterion and
+rule 3's proof-job merge criterion are not equivalent; record both results and seek an owner
+interpretation before treating partial CI as satisfying the full-ascent rule. Rule 15's pause
+on new multi-agent workflows and rules 60–62's active board/management instructions need a
+current owner decision if their application conflicts. Rule 39's “after the Matron fixes” timing
+and existing identity/radio call sites (`godot/presentation/ui/pause_menu.gd`
+`_build_work_id_page`; `godot/presentation/main.gd` `_story_radio`) also need review.
+The newer specific voice instruction in rule 43 should be read alongside rule 40, not silently
+replaced by the older general sound rule.
+
 ## Current position
 
-The board and latest comments on issue #3 (handoffs are posted there): trunk's state, who holds what, what is next. `03_EXECUTION/handoffs/OPERATIONS_NOTES.md` says how to build, prove and playtest. Proof is CI (`wo000-delivery-spine.yml`). The old position table, ledgers and CI evidence are in the archive.
+The board and latest comments on issue #3 (handoffs are posted there): trunk's state, who holds what, what is next. `03_EXECUTION/handoffs/OPERATIONS_NOTES.md` says how to build, prove and playtest. CI configuration is `.github/workflows/wo000-delivery-spine.yml`; cite the exact run and revision, and separately report the full-ascent and device evidence required by the rules. The old position table, ledgers and CI evidence are in the archive.
 
 ## Where things live
 
-Tickets: `03_EXECUTION/ASCENT/` (AS-001–015, live) and `KERNEL/` (WO-000–013, closed: never a new `WO-*`); `PLANNING/` holds the ascent contract and mechanism plan. Atlas bands `B00`–`B11` are never a filename or ticket; no `CP-*` document class; retired IDs never return (`ASCENT_PRE_RESOLUTION.md` §5.1). `Mechanism-Ideas-and-archetypes.md` is the owner's input, never edited. Vocabulary and retired names: the archive.
+Tickets: `03_EXECUTION/ASCENT/` (AS-001–015 specifications; consult the board for assignments) and `KERNEL/` (WO-000–013, closed: never a new `WO-*`); `PLANNING/` holds the ascent contract and mechanism plan. Atlas bands `B00`–`B11` are never a filename or ticket; no `CP-*` document class; retired IDs never return (`ASCENT_PRE_RESOLUTION.md` §5.1). `Mechanism-Ideas-and-archetypes.md` is the owner's input, never edited. Vocabulary and retired names: the archive.
 
 ## Loading context and claims
 
