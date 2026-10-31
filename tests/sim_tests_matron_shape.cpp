@@ -172,7 +172,7 @@ Fit fit_of(const int stance, const Capsule &cap) {
 
 // One measured pre-impact tick. The capsule is 0.029712 m above the slab
 // and travels 0.1974 m. OffsetCOM must not make CCD prune away the floor.
-void check_offset_capsule_ccd() {
+void check_offset_capsule_ccd(const bool matron) {
     using namespace JPH;
     using namespace scraperx::sim;
     detail::JoltRuntimeLease runtime;
@@ -183,9 +183,6 @@ void check_offset_capsule_ccd() {
     JobSystemSingleThreaded jobs(1024);
     PhysicsSystem physics;
     physics.Init(128, 0, 128, 128, broad, vs, pairs);
-    auto config = physics.GetPhysicsSettings();
-    config.mLinearCastThreshold = Matron::kTunnelM / Matron::kRadius;
-    physics.SetPhysicsSettings(config);
     physics.SetGravity(Vec3(0.0F, -9.81F, 0.0F));
     auto &bodies = physics.GetBodyInterface();
     BodyCreationSettings floor(new BoxShape(Vec3(4.0F, 0.25F, 4.0F)), RVec3(0.0, -0.25, 0.0),
@@ -201,6 +198,7 @@ void check_offset_capsule_ccd() {
     actor.mLinearDamping = 0.0F;
     actor.mFriction = 0.0F;
     actor.mMotionQuality = EMotionQuality::LinearCast;
+    actor.mUserData = matron ? Matron::kEntity : 0;
     actor.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
     actor.mMassPropertiesOverride.mMass = Matron::kMassKg;
     const BodyID body = bodies.CreateAndAddBody(actor, EActivation::Activate);
@@ -210,9 +208,15 @@ void check_offset_capsule_ccd() {
     const float vy = bodies.GetLinearVelocity(body).GetY();
     bodies.RemoveBody(body); bodies.DestroyBody(body);
     bodies.RemoveBody(slab); bodies.DestroyBody(slab);
-    require(penetration <= 0.025F && std::abs(vy) < 0.01F,
-            "matron shape CCD: offset-center capsule stops on the slab within contact slop");
-    std::printf("PASS scraperx_sim matron shape CCD: penetration=%.6f m vy=%.6f\n", penetration, vy);
+    if (matron) {
+        require(penetration <= 0.025F && std::abs(vy) < 0.01F,
+                "matron shape CCD: offset-center capsule stops on the slab within contact slop");
+    } else {
+        require(penetration > Matron::kTunnelM && vy < -17.0F,
+                "matron shape CCD: untagged body retains canonical activation threshold");
+    }
+    std::printf("PASS scraperx_sim matron shape CCD: matron=%d penetration=%.6f m vy=%.6f\n",
+                int(matron), penetration, vy);
 }
 
 void shape_audit_at_exit() {
@@ -261,7 +265,8 @@ void start_matron_shape_audit() {
 }
 
 void run_matron_shape() {
-    check_offset_capsule_ccd();
+    check_offset_capsule_ccd(true);
+    check_offset_capsule_ccd(false);
     const Capsule old{{0.0, -0.75, 0.0}, {0.0, 0.75, 0.0}, 0.30};
     const char *names[] = {"upright", "low", "climb", "pipe", "down", "hold", "lift"};
     std::vector<Fit> fits;
