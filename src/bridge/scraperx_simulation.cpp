@@ -1758,6 +1758,8 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["contact_hand2"] = godot::Vector3(static_cast<real_t>(state.contact_hand2.x),
                                           static_cast<real_t>(state.contact_hand2.y),
                                           static_cast<real_t>(state.contact_hand2.z));
+    out["contact_hand2_body"] = static_cast<std::int64_t>(state.contact_hand2_body);
+    out["contact_hand2_sub"] = static_cast<std::int64_t>(state.contact_hand2_sub);
     out["contact_line"] = state.contact_line;
     out["contact_braced"] = state.contact_braced;
     out["contact_brace"] = godot::Vector3(static_cast<real_t>(state.contact_brace.x),

@@ -667,8 +667,10 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		var hand: Vector3 = held[0] if held.size() >= 1 else data["climb_hand"]
 		# Two-handed moves (mantle on the lip, jump_catch on the bar,
 		# pole with hands close together, hang_drop from the lip).
-		# Rung moves are not two-handed here: they keep exactly the
-		# old contact behaviour, and their feet are never lifted.
+		# Rung moves are not two-handed for their feet: their feet
+		# are never lifted, but their left wrist now reaches a held
+		# second grip (M5e); without one they keep exactly the old
+		# contact behaviour.
 		var two_handed := bool(data.get("climb_move_active", false)) and String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]
 		# Feet first, so the hand reach is solved from where the body
 		# ends up: on a two-handed move, when the simulation has her
@@ -697,12 +699,16 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		var wc := float(view._w_climb) if view != null else 1.0
 		_reach("r", skel.global_transform.affine_inverse() * hand, wc)
 		claims |= CLAIM_HAND
-		# On a two-handed move the left wrist goes to a second hold
-		# only when the simulation has her hand on one
-		# (contact_hand2_held; none of her movers holds two today);
-		# otherwise to the one hold, never to a point the view
-		# invented.
-		if two_handed:
+		# The left wrist goes to a second hold only when the
+		# simulation has her hand on one (contact_hand2_held under
+		# truth, climb_hand2_known otherwise): on a two-handed move
+		# it falls back to the one hold, on a rung move to nothing
+		# at all (the old rung behaviour), never to a point the
+		# view invented. Climb-branch movers hold two on rung
+		# climbs now (M5b/M5d); the guard is unchanged, the hold is
+		# made valid by gripping.
+		var rung_move := String(data.get("climb_move", "")) in ["rung_up", "rung_down"]
+		if two_handed or rung_move:
 			var hand_l: Vector3 = hand
 			var second := bool(data.get("contact_hand2_held", false))
 			if not truth:
@@ -710,7 +716,9 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 			if second:
 				hand_l = held[1] if held.size() >= 2 else (data["contact_hand2"] if truth else data["climb_hand2"])
 				claims |= CLAIM_HAND2
-			_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+			elif two_handed:
+				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
 		if down_mask != 0:
 			claims |= CLAIM_PLANTS
 		return
@@ -739,8 +747,15 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		return
 	if climbing or on_line:
 		# her body hung from her hands only on a grip (or a line) the
-		# simulation has; otherwise it is not lifted to them
-		if not truth or bool(data.get("contact_hand_held", false)) or bool(data.get("contact_line", false)):
+		# simulation has; otherwise it is not lifted to them. With
+		# both grips held the two fixed wrists already place her
+		# body, so the 2.6 m ride retires there (M5e); anywhere else
+		# it stays exactly as before.
+		var both := truth and bool(data.get("contact_hand_held", false)) and bool(data.get("contact_hand2_held", false))
+		if both:
+			_ride(0.0)
+			claims |= CLAIM_HANG
+		elif not truth or bool(data.get("contact_hand_held", false)) or bool(data.get("contact_line", false)):
 			var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)
 			_ride(clampf(HANDS_ON_RUNG_Y - top - 0.1, 0.0, 0.8))
 			claims |= CLAIM_HANG

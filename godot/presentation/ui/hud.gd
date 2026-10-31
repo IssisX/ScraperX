@@ -489,7 +489,9 @@ func _draw_radio() -> void:
 	var cx := _safe.position.x + _safe.size.x * 0.5
 	var width := maxf(UiStyle.text_width(UiStyle.font_heavy(), radio_who, who_size),
 		UiStyle.text_width(UiStyle.font_label(), radio_text, line_size)) + 56.0 * u
-	var rect := Rect2(Vector2(cx - width * 0.5, _safe.end.y - 430.0 * u), Vector2(width, 96.0 * u))
+	# Keep radio text above the touch action controls, including long final lines.
+	var top := _safe.end.y - (690.0 if touch_active else 430.0) * u
+	var rect := Rect2(Vector2(cx - width * 0.5, top), Vector2(width, 96.0 * u))
 	UiStyle.plate(self, rect, UiStyle.with_alpha(UiStyle.INK, 0.82), UiStyle.with_alpha(UiStyle.HAZARD, 0.9),
 		3.0 * u, 10.0 * u)
 	UiStyle.text(self, UiStyle.font_heavy(), radio_who, Vector2(cx, rect.position.y + 30.0 * u), who_size,

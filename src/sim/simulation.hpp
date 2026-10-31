@@ -244,6 +244,7 @@ struct MatronSnapshot final {
     bool contact_hand2_held = false;
     Vector3 contact_hand2{};
     std::uint32_t contact_hand2_body = 0xffffffffU;
+    std::uint32_t contact_hand2_sub = 0xffffffffU;
     bool contact_line = false;
     // On her pipe: the riser's face her feet press against.
     bool contact_braced = false;

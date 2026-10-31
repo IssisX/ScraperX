@@ -189,6 +189,98 @@ void test_rungs() {
     std::cout << "PASS scraperx_sim matron climb rungs up and down: peak_n=" << w.peak_force << "\n";
 }
 
+void test_second_hold() {
+    // M5a: the second hand really grips. On a rung climb the climber must
+    // take a second hold on the SAME rung member as the first hold, through
+    // the general hold path, and report it only while it is held. On trunk
+    // this fails: the second hold is never taken (second_ticks stays 0).
+    ClimbWorld w;
+    w.deck(4.0F);
+    w.rungs(0.3F, 3.9F);
+    w.spawn(RVec3(0, 0, 1.0F));
+    Climber climber(w.physics, w.her, {w.her, BodyID()});
+    climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
+    long second_ticks = 0;
+    const auto up = w.run(climber, 30.0F, [&](int) {
+        if (!climber.second_holding()) return;
+        ++second_ticks;
+        require(climber.hold2().body == climber.hold().body && climber.hold2().sub == climber.hold().sub,
+                "matron climb second hold: second grip on the same rung member as the first");
+        const RVec3 d = climber.view().hand2 - climber.view().hand;
+        const double apart = std::hypot(double(d.GetX()), double(d.GetY()), double(d.GetZ()));
+        require(apart >= 0.10 && apart <= 0.60,
+                "matron climb second hold: second grip a distinct point on the rung, not the first grip twice");
+        require(climber.view().holding2, "matron climb second hold: view mirrors the second grip while held");
+    });
+    (void)w.settle(1.0F);
+    std::cout << "  matron climb second hold: up " << int(up) << " second-held ticks " << second_ticks << "\n";
+    require(up == Climber::Status::Done, "matron climb second hold: rung climb still completes");
+    require(second_ticks >= 90, "matron climb second hold: second hand grips for a real stretch of the climb");
+    require(!climber.second_holding() && !climber.view().holding2,
+            "matron climb second hold: no stale second grip once the move is done");
+    MoveSpec down = ladder_up(4.0F, 0.3F, 3.9F);
+    down.kind = MoveKind::RungDown;
+    down.start = Vec3(0, 4.0F, -1.35F);
+    down.goal = Vec3(0, 0, -0.5F);
+    down.goal_top = 0.0F;
+    climber.begin(down);
+    long second_ticks_down = 0;
+    const auto dn = w.run(climber, 40.0F, [&](int) {
+        if (!climber.second_holding()) return;
+        ++second_ticks_down;
+        require(climber.hold2().body == climber.hold().body && climber.hold2().sub == climber.hold().sub,
+                "matron climb second hold: second grip on the same rung member as the first, going down");
+    });
+    (void)w.settle(1.0F);
+    std::cout << "  matron climb second hold: down " << int(dn) << " second-held ticks " << second_ticks_down << "\n";
+    require(dn == Climber::Status::Done, "matron climb second hold: rung descent still completes");
+    require(second_ticks_down >= 90, "matron climb second hold: second hand grips for a real stretch of the descent");
+    require(!climber.second_holding(), "matron climb second hold: no stale second grip once the descent is done");
+    std::cout << "PASS scraperx_sim matron climb second hold: up ticks=" << second_ticks << " down ticks=" << second_ticks_down
+              << "\n";
+}
+
+void test_drive_from_both_anchors() {
+    // M5c: when the second grip is held, the rung drive's support is BOTH
+    // grips, not the first alone: the velocity her power budget is charged
+    // on is her velocity against the MEAN of the two grips' point
+    // velocities, and the drive reaction is split half/half between the
+    // two grip points. One budget.take() call still grants the whole
+    // drive, so total force and power are unchanged; on static members
+    // both point velocities are zero and the change is null.
+    // On trunk this fails: relative_velocity() uses the first grip alone,
+    // so it misses half the second grip's point velocity on a member
+    // that moves under her hands.
+    ClimbWorld w;
+    w.deck(4.0F);
+    // Kinematic rungs, spinning slowly about their own vertical axis: the
+    // two grips' point velocities differ, so a single-anchor support
+    // velocity is measurably wrong while the mean is exact.
+    for (float y = 0.3F; y <= 3.9F + 1.0e-3F; y += 0.3F) {
+        const BodyID rung = w.box(Vec3(0.25F, 0.02F, 0.02F), RVec3(0, y, -0.95F), false, EMotionType::Kinematic);
+        w.physics.GetBodyInterface().SetAngularVelocity(rung, Vec3(0.0F, 0.5F, 0.0F));
+    }
+    w.spawn(RVec3(0, 0, -0.5F));   // already at the ladder's stand point
+    Climber climber(w.physics, w.her, {w.her, BodyID()});
+    climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
+    int checked = 0;
+    for (int tick = 0; tick < 90 * 10 && checked < 5; ++tick) {
+        w.tick(climber);
+        if (climber.status() != Climber::Status::Running) break;
+        if (!climber.second_holding()) continue;
+        const Vec3 body_vel = w.physics.GetBodyInterface().GetLinearVelocity(w.her);
+        const Vec3 pv1 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold().body, climber.view().hand);
+        const Vec3 pv2 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold2().body, climber.view().hand2);
+        const Vec3 expected = body_vel - 0.5F * (pv1 + pv2);
+        const Vec3 got = climber.relative_velocity();
+        require((got - expected).Length() < 0.02F,
+                "matron climb drive from both anchors: budget charged on the mean of both grips' point velocities");
+        ++checked;
+    }
+    require(checked >= 5, "matron climb drive from both anchors: second grip held long enough to check");
+    std::cout << "PASS scraperx_sim matron climb drive from both anchors: checked ticks=" << checked << "\n";
+}
+
 void test_rung_failures() {
     // A gap wider than her long reach and a throw cross (2.1 m): she climbs
     // to it and can go no higher; she lets go and falls.
@@ -1798,6 +1890,8 @@ void run_matron_climb() {
     test_jump_catch_escape_margin();
     test_power_moving_bar();
     test_rungs();
+    test_second_hold();
+    test_drive_from_both_anchors();
     test_rung_failures();
     test_pole();
     test_capped_launches();

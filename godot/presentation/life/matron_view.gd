@@ -1582,9 +1582,12 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		# or "walk", no case matches and the ladder pose above is
 		# untouched. Hands: both arms pose together here because these
 		# moves hold with both hands; the rig reaches the right wrist
-		# to climb_hand and the left wrist to the bridge's own second
-		# hold climb_hand2 when the native validated it, falling back
-		# to the one hold otherwise (see matron_rig.gd contact()).
+		# to climb_hand and the left wrist to the held second grip
+		# (contact_hand2 under contact truth, the bridge's own
+		# climb_hand2 when the native validated it without truth),
+		# falling back to the one hold on two-handed moves and to
+		# nothing on rung moves otherwise (see matron_rig.gd
+		# contact()).
 		# Feet: legs/knees above are the feet pose; the support under
 		# them is the bridge's climb_feet_support point when known,
 		# else the floor_y / support_n already exported.
