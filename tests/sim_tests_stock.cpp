@@ -176,6 +176,59 @@ void run_loose_stock() {
     // Settling is not a hit: nothing is heard from stock left alone.
     std::cout << "  stock: " << s.impacts().size() << " hits heard while settling\n";
     require(s.impacts().empty(), "stock: left alone, nothing is struck");
+    // Dress_tower side coverage after settling, where the pieces actually
+    // lie in play. Rings as in LooseStock::dress_tower (stack 11..143 m,
+    // upper 176.25..396.25 m); side by dominant axis from the ring centre
+    // (0, -150), matching dress_tower's four out directions. The gate is
+    // per band, not per ring: a ring holds at most 3 stack spots, so one
+    // ring cannot cover four sides, but each band must dress every side.
+    // Measured before the room-box fix: stack east/west were zero on all
+    // 13 rings. The per-ring count gate is a separate, pending package
+    // (fb-bot/expand-world-20261031, unlanded); this gate does not redo it.
+    {
+        std::vector<double> rings;
+        for (int level = 1; level <= 13; ++level) rings.push_back(11.0 * static_cast<double>(level));
+        for (int k = 0; k <= 10; ++k) rings.push_back(176.25 + 22.0 * static_cast<double>(k));
+        std::vector<std::array<int, 4>> per_side(rings.size(), {0, 0, 0, 0});
+        int unassigned = 0;
+        for (int i = tabled; i < towered; ++i) {
+            const auto p = piece_at(s, i);
+            int ring = -1;
+            for (std::size_t r = 0; r < rings.size(); ++r) {
+                if (p.y >= rings[r] - 0.1 && p.y < rings[r] + 3.0) { ring = static_cast<int>(r); break; }
+            }
+            if (ring < 0) { ++unassigned; continue; }
+            const double dx = p.x, dz = p.z + 150.0;
+            int side = 0;
+            if (std::abs(dx) >= std::abs(dz)) side = dx > 0 ? 1 : 3;
+            else side = dz > 0 ? 0 : 2;
+            ++per_side[static_cast<std::size_t>(ring)][static_cast<std::size_t>(side)];
+        }
+        std::cout << "  stock probe: settled tower pieces per ring sides N/E/S/W (unassigned " << unassigned
+                  << "):\n";
+        for (std::size_t r = 0; r < rings.size(); ++r) {
+            std::cout << "    " << rings[r] << ": " << per_side[r][0] << "/" << per_side[r][1] << "/"
+                      << per_side[r][2] << "/" << per_side[r][3] << "\n";
+        }
+        for (const char *band : {"stack", "upper"}) {
+            const bool is_stack = band[0] == 's';
+            const std::size_t lo = is_stack ? 0 : 13, hi = is_stack ? 13 : rings.size();
+            std::array<int, 4> tot{0, 0, 0, 0}, hit{0, 0, 0, 0};
+            for (std::size_t r = lo; r < hi; ++r)
+                for (int s = 0; s < 4; ++s) {
+                    tot[static_cast<std::size_t>(s)] += per_side[r][static_cast<std::size_t>(s)];
+                    if (per_side[r][static_cast<std::size_t>(s)] > 0) ++hit[static_cast<std::size_t>(s)];
+                }
+            std::cout << "  stock probe: " << band << " side totals N/E/S/W " << tot[0] << "/" << tot[1] << "/"
+                      << tot[2] << "/" << tot[3] << ", rings hit " << hit[0] << "/" << hit[1] << "/" << hit[2]
+                      << "/" << hit[3] << " of " << (hi - lo) << "\n";
+            for (int s = 0; s < 4; ++s) {
+                require(tot[static_cast<std::size_t>(s)] > 0,
+                        is_stack ? "stock: every side of the stack band is dressed"
+                                 : "stock: every side of the upper band is dressed");
+            }
+        }
+    }
     // How loud a hit is to the Matron, by its energy.
     require(ImpactLedger::loudness(ImpactLedger::kSilentJ) == 0.0F &&
                 ImpactLedger::loudness(ImpactLedger::kFullJ) == 1.0F &&
