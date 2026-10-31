@@ -259,19 +259,18 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   `.github/workflows/wo000-delivery-spine.yml` does not list that scenario. This is coverage
   configuration, not proof that it fails everywhere. Body proportions also require visual review.
 
-### 20. Smaller owner calls not met
-- **Current source check:** `godot/presentation/main_feel.gd` `_announce_summit` reports
-  time and deaths. The remaining absence claims below are historical and require a fresh
-  repository-wide implementation search before use as an assignment.
-- **D4 diegetic machine controls** (grab the forklift's real lever): not built; the forklift is
-  "Action takes the controls" (`forklift.hpp:10-14`), the crane a remote and buttons
-  (`yard_crane.hpp:14-19`); only the hanging handles are physical grabs. Hurts 2. Size medium for
-  the forklift, large for every machine.
-- **C2 movement as a reason to play**: no time trial, ghost or best time (the summit toast reports elapsed time and deaths (`main_feel.gd` `_announce_summit`)). Hurts 2. Size medium; the ideas were the agent's.
-- **D3 plate clamp**: not built (zero hits in `src`, `godot`, `tests`, `03_EXECUTION`); the magnet
-  and the spreader are. Hurts 1. Size medium, on the magnet's pattern.
-- **A4 (A)** frail first then the Turn: built, but a dangerous or changed Matron is no longer
-  frail (`matron_found_climb.cpp:127,324,365`).
+### 20. Smaller owner calls
+- **D4 diegetic controls — partial:** `src/sim/forklift.hpp` describes Action taking controls;
+  `src/sim/yard_crane.hpp` describes the remote and buttons. The requested grab of a physical
+  forklift lever remains a historical missing finding pending a full control-path check.
+- **C2 movement incentives — partial:** `godot/presentation/main_feel.gd` `_announce_summit`
+  shows elapsed time and deaths. A time trial, ghost and persistent best time were not found in
+  the earlier audit; their current absence is unverified. They were ideas, not owner mandates.
+- **D3 plate clamp — unverified:** the old audit found magnet and spreader implementations but
+  no plate clamp. Recheck implementation and owner intent before proposing a new machine part.
+- **A4 frail first then Turn — partial:** `src/sim/matron_found_climb.cpp` contains stage-based
+  movement; the earlier audit found later stages no longer frail. Visual and gameplay fit remain
+  unverified.
 
 ### 21. Background and process gaps (low for the player)
 - **Current source check:** `src/sim/vertical/vertical_machine.cpp` registers the two
