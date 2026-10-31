@@ -305,8 +305,12 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   verification. The timing of this existing hookup versus rule 39 remains for owner review.
 - **Rule 57, chart — partial:** `godot/presentation/uncanny/` has the chart and
   `voice_keeper.gd` requests microphone permission. `godot/export_presets.cfg` enables `permissions/record_audio`; no INTERNET or CAMERA entry
-  appeared in the inspected preset. The earlier audit found no Matron-sim connection or
-  speech-to-text; those wiring findings remain unverified. Obtain in-game consent as asked.
+  appeared in the inspected preset. `godot/presentation/main.gd` instantiates `Uncanny`; `uncanny.gd` creates
+  `HerChart`, uses native observations and records voice/echo events. A `chart|uncanny`
+  search of `src/sim/matron*.cpp` and `*.hpp` returned no matches; indirect wiring or
+  speech-to-text under other names is not ruled out. The workflow lists five related
+  scenarios: `touch_her_chart`, `touch_her_chart_fast`, `touch_mic_consent`,
+  `touch_voice_echo` and `touch_room_hearing`; their results require a run. Obtain in-game consent as asked.
 - **Rules 56 and 27, ascent — unresolved:** `src/sim/vertical/vertical_machine.cpp` registers
   `sx.gravity_balance.v1` and `sx.rack_climber.v1`; registration is not placement or a playable
   route. The old audit says AS-007–AS-010 are used above 340 m despite rule 56 calling them
@@ -316,8 +320,10 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   and `src/sim/matron.cpp` retains level data; `tests/sim_tests_matron_pursuit.cpp` defines
   pursuit cases. Coverage above 176.25 m and below 132 m is unverified. Place-specific data
   alone does not prove that the general-skill requirement fails.
-- **Historical housekeeping:** the old audit identified a discarded music-box mesh/pivot and
-  stale catwalk comment. Check the current asset and load path before opening work.
+- **Housekeeping:** `godot/presentation/life/matron_look.gd` `dress` frees a mesh named
+  `music_box`; `matron_view.gd` still creates and rotates a `box_cord` pivot. Whether the
+  current GLB contains the mesh requires asset inspection; the old catwalk comment finding
+  is historical. Do not infer visual or gameplay impact from these code paths alone.
 
 ## Earlier source and test inventory (not a current verification verdict)
 
