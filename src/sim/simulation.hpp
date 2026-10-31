@@ -309,6 +309,13 @@ struct MatronSnapshot final {
     // stories she set out along it, her hands' holds (knocks), flanges passed
     // (bongs) and slammed onto, and the last slam's speed.
     bool on_pipe = false;
+    // Her collision body (Matron::Stance; matron_shape.cpp): its family, and
+    // its capsule in world, its segment's ends and radius.
+    std::uint8_t stance = 0;
+    Vector3 shape_a{};
+    Vector3 shape_b{};
+    double shape_r = 0.0;
+    std::uint32_t shape_switches = 0;
     bool pipe_head_down = false;
     bool pipe_sliding = false;
     bool pipe_stunned = false;
