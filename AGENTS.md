@@ -22,5 +22,7 @@ The short version:
 
 Tools: `REPO_MAP.md` (where things are), `tools/rule_check/rule_check.py` (run before landing),
 `03_EXECUTION/REVIEW_CHECKLIST.md` (the second agent's review), `03_EXECUTION/handoffs/TEMPLATE.yml`
-(the one handoff form, posted on issue #3 addressed to the agent it is for). Coordination: the
-assignment board on issue #3.
+(the one handoff form, posted on issue #3 addressed to the agent it is for). Coordination and current assignments: the
+[issue #3 board](https://github.com/IssisX/ScraperX/issues/3). Historical owner evidence is in
+`00_START_HERE_ARCHIVE.md`; the active rules and unresolved conflicts are in `00_START_HERE.md`.
+Check that tools exist in the current session; an old tool instruction is not evidence of availability.

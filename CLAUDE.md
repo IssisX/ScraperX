@@ -57,12 +57,11 @@ Code may still make steel, air, steps and beds. The owner picks the candidates b
 ## Look at the game; you are never blind
 
 2026-10-29: *"you should be using godot-runtime, which is like Playwright for Godot, which allows you
-to see the game. So.....wtf chuck?"* The Godot MCP runtime works in this container: run
-`mcp__godot__run_project` with `projectPath` `godot` (the repo's `godot/` folder) and `background:
-true`, then `take_screenshot`, `simulate_input` or `run_script`, and `stop_project` when done (one
-session at a time). Launch it this way; attaching to a game already running is what failed before.
-Visual work (her body, hair, contacts, camera, UI) is checked by eye this way before it lands, and
-"we can't see it" is never said: try `run_project` first.
+to see the game. So.....wtf chuck?"* When the Godot MCP runtime is available, launch `mcp__godot__run_project` with `projectPath`
+`godot` and `background: true`, then use screenshots/input and stop the project. Availability is
+session-specific: inspect the tools and environment before relying on it. If unavailable, report
+the exact blocker and use an authorized alternative when possible; do not claim a visual check
+occurred. The owner rule requiring visual review remains in `00_START_HERE.md` rule 28.
 
 ## Managing the agents
 
