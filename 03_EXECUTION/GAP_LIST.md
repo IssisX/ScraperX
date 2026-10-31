@@ -264,10 +264,14 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   `src/sim/yard_crane.hpp` describes the remote and buttons. The requested grab of a physical
   forklift lever remains a historical missing finding pending a full control-path check.
 - **C2 movement incentives — partial:** `godot/presentation/main_feel.gd` `_announce_summit`
-  shows elapsed time and deaths. A time trial, ghost and persistent best time were not found in
-  the earlier audit; their current absence is unverified. They were ideas, not owner mandates.
-- **D3 plate clamp — unverified:** the old audit found magnet and spreader implementations but
-  no plate clamp. Recheck implementation and owner intent before proposing a new machine part.
+  shows elapsed time and deaths. A search of `src`, `godot` and `tests` for `time_trial`, `best_time`, “time trial”
+  and “ghost” found no named feature (a test uses “ghost mass”); unnamed implementations remain
+  possible. `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` item 10 treats a best time
+  or ghost as an owner decision; do not implement on the search result alone.
+- **D3 plate clamp — no named implementation found:** a search of `src`, `godot`, and `tests`
+  for “plate clamp” and `plate_clamp` returned no match; an implementation under another name
+  is not ruled out. `src/sim/yard_crane.hpp` contains magnet and spreader. Verify owner intent
+  and operation before proposing a new machine part.
 - **A4 frail first then Turn — partial:** `src/sim/matron_found_climb.cpp` contains stage-based
   movement; the earlier audit found later stages no longer frail. Visual and gameplay fit remain
   unverified.
@@ -279,9 +283,9 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   `VOICE_RECORDINGS_APPROVED` is false. Cue triggering and approved recordings need separate
   verification. The timing of this existing hookup versus rule 39 remains for owner review.
 - **Rule 57, chart — partial:** `godot/presentation/uncanny/` has the chart and
-  `voice_keeper.gd` requests microphone permission. The earlier audit found no Matron-sim
-  connection, speech-to-text, INTERNET or CAMERA export permission; verify current wiring and
-  permissions before treating those absence findings as settled. Obtain in-game consent as asked.
+  `voice_keeper.gd` requests microphone permission. `godot/export_presets.cfg` enables `permissions/record_audio`; no INTERNET or CAMERA entry
+  appeared in the inspected preset. The earlier audit found no Matron-sim connection or
+  speech-to-text; those wiring findings remain unverified. Obtain in-game consent as asked.
 - **Rules 56 and 27, ascent — unresolved:** `src/sim/vertical/vertical_machine.cpp` registers
   `sx.gravity_balance.v1` and `sx.rack_climber.v1`; registration is not placement or a playable
   route. The old audit says AS-007–AS-010 are used above 340 m despite rule 56 calling them
