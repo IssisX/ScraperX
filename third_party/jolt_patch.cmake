@@ -1,4 +1,4 @@
-# Applied by FetchContent to the pinned Jolt checkout (CMakeLists.txt, PATCH_COMMAND). Three patches,
+# Applied by FetchContent to the pinned Jolt checkout (CMakeLists.txt, PATCH_COMMAND). Four patches,
 # each idempotent on its own file: a patched tree is left as it is, and a tree with neither the
 # pinned nor the patched text stops the configure, so a Jolt bump re-checks each instead of
 # silently dropping it.
@@ -54,6 +54,43 @@ if(at_ccd_patched LESS 0)
     string(REPLACE "${ccd_pinned}" "${ccd_patched}" text "${text}")
     file(WRITE "${system}" "${text}")
     message(STATUS "jolt_patch.cmake: CCD AABB prune follows the shape bounds center")
+endif()
+
+# ---------------------------------------------------------------------------------------------
+# 4. Only the Matron needs the earlier CCD activation: the canonical 0.75
+# inner-radius trigger is necessary for the incline trolley to throw its rider.
+# The Matron's own 0.15 m single-tick steel limit needs 0.15 / 0.30 = 0.5.
+# Read her authoritative entity id and limits instead of copying constants
+# into Jolt; the injected branch applies only to her tagged dynamic body.
+set(matron_header "${CMAKE_CURRENT_LIST_DIR}/../src/sim/matron.hpp")
+file(READ "${matron_header}" matron_text)
+string(REGEX MATCH "static constexpr std::uint64_t kEntity = ([0-9]+);" matron_match "${matron_text}")
+if(NOT matron_match)
+    message(FATAL_ERROR "jolt_patch.cmake: cannot find Matron::kEntity for actor-local CCD")
+endif()
+set(matron_entity "${CMAKE_MATCH_1}")
+string(REGEX MATCH "static constexpr float kRadius = ([0-9.]+)F;" matron_match "${matron_text}")
+if(NOT matron_match)
+    message(FATAL_ERROR "jolt_patch.cmake: cannot find Matron::kRadius for actor-local CCD")
+endif()
+set(matron_radius "${CMAKE_MATCH_1}")
+string(REGEX MATCH "static constexpr float kTunnelM = ([0-9.]+)F;" matron_match "${matron_text}")
+if(NOT matron_match)
+    message(FATAL_ERROR "jolt_patch.cmake: cannot find Matron::kTunnelM for actor-local CCD")
+endif()
+set(matron_tunnel "${CMAKE_MATCH_1}")
+set(ccd_actor_pinned "float linear_cast_threshold_sq = Square(mPhysicsSettings.mLinearCastThreshold * inner_radius);")
+set(ccd_actor_patched
+    "float linear_cast_threshold = body.GetUserData() == ${matron_entity} ? min(mPhysicsSettings.mLinearCastThreshold, ${matron_tunnel}f / ${matron_radius}f) : mPhysicsSettings.mLinearCastThreshold;\n\t\t\t\t\tfloat linear_cast_threshold_sq = Square(linear_cast_threshold * inner_radius);")
+string(FIND "${text}" "${ccd_actor_patched}" at_ccd_actor_patched)
+if(at_ccd_actor_patched LESS 0)
+    string(FIND "${text}" "${ccd_actor_pinned}" at_ccd_actor_pinned)
+    if(at_ccd_actor_pinned LESS 0)
+        message(FATAL_ERROR "jolt_patch.cmake: actor CCD threshold no longer matches pinned Jolt; inspect the integration seam")
+    endif()
+    string(REPLACE "${ccd_actor_pinned}" "${ccd_actor_patched}" text "${text}")
+    file(WRITE "${system}" "${text}")
+    message(STATUS "jolt_patch.cmake: Matron-only CCD activation, canonical trigger for other bodies")
 endif()
 
 # ---------------------------------------------------------------------------------------------
