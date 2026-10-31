@@ -216,17 +216,17 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   contacts or hold escape. The availability of useful stock along the whole route also remains
   unverified. Any threshold or force-limit change is protected under rule 4.
 
-### 16. Nothing tests that her movement is continuous (rule 37)
-- **Current source check:** `godot/presentation/life/matron_rig.gd` `govern` applies
-  `GOVERN_RAD_S` / `GOVERN_BURST_RAD_S` to selected bones, excluding hair, eyes and fingers.
-  This is implementation evidence, not proof of smooth drawn motion or a complete test inventory.
-- Status: **built in code, unproven.** Drawn between ticks (`matron_view.gd:2100,2314`;
-  `simulation.cpp:691`); body bones clamped to 11.5 rad/s, 19 in a burst
-  (`matron_rig.gd:254-259,520-560`); hair, eyes and fingers excluded. The only test is one wrist
-  anchor within 0.03 m (`matron_perception_climb_test.gd`).
-- Hurts: 3 (jerky motion was a complaint on 10-27, and a regression would not be caught).
-- Size: small: a headless test through `_update_figure` recording the peak bone speed
-  (`matron_figure_test.gd` has the harness).
+### 16. Movement continuity (rule 37)
+- Asked: continuous drawn motion, no snapped poses, body joints at most 20 rad/s and hands
+  reaching each hold.
+- **Implemented in part; complete runtime coverage unverified:**
+  `godot/presentation/life/matron_rig.gd` `govern` limits selected bone rotation to
+  `GOVERN_RAD_S` 11.5 or `GOVERN_BURST_RAD_S` 19, excluding hair, eyes and fingers;
+  `matron_view.gd` `_update_figure` drives the figure. `godot/tests/matron_figure_test.gd`
+  exercises poses, and `matron_perception_climb_test.gd` checks a wrist anchor. Test definitions
+  do not establish all drawn transitions, hand contacts or visual smoothness. A production-path
+  time series of actual bone speeds and contact positions, plus visual review, would address
+  the remaining proof gap; inspect existing tests before adding a new protected check.
 
 ### 17. Her mood hints, the stage-up cue and a missing test (A1 leftovers)
 - Status: **core built.** `step_rage` `matron.cpp:1863-1896`, constants `matron.hpp:581-594`, no
