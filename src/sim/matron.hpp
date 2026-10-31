@@ -245,7 +245,7 @@ public:
     // Deeper than kInsideSteelM into a body that does not move, more than
     // kInsideSteelTicks ticks running, is sitting in the steel (Jolt's own
     // contact slop is 0.02 m; a hard landing's first tick or two sink a few
-    // centimetres more before her contacts push her out); deeper than
+    // centimeters more before her contacts push her out); deeper than
     // kTunnelM in any one tick is going through it.
     static constexpr float kInsideSteelM = 0.05F;
     static constexpr int kInsideSteelTicks = 3;
@@ -2183,7 +2183,7 @@ private:
     [[nodiscard]] bool on_planning_shape() const;
     [[nodiscard]] bool stance_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
     [[nodiscard]] float steel_depth(const JPH::Shape *as = nullptr) const;
-    // A placement (she was put somewhere, a jump of a metre or more, or the
+    // A placement (she was put somewhere, a jump of a meter or more, or the
     // first tick) records the static bodies she already overlaps. Only those,
     // and no deeper than that placement measured, count as put there. A walk
     // into other steel does not.

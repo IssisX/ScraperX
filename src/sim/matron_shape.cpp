@@ -3,7 +3,7 @@
 // of her middle, hunts low on all fours, hangs from her hands on a climb and
 // hugs her pipe; her old body was one upright 2.10 m capsule about her middle
 // in every pose, so her head and shoulders went through rails 0.4 m ahead of
-// it and its empty top, half a metre over her head, struck the player.
+// it and its empty top, half a meter over her head, struck the player.
 //
 // Now each stance family has its own capsule, set in her body frame from her
 // drawn body as the probe measured it (tools/matron_probe/shape_fit.py):
@@ -12,7 +12,7 @@
 //    poses her from, never from the view;
 //  - each capsule turns with her yaw (kStanceYawBins shapes made once, a
 //    switch between them is a pointer swap and a broadphase update);
-//  - every capsule's centre of mass is put back at her body's origin, her
+//  - every capsule's center of mass is put back at her body's origin, her
 //    middle, so everything that reads her middle (her floor rays, her held
 //    stock's hands, her journey's support probe) reads what it did, and her
 //    standing families keep their lowest point at her soles (kStandCentre
@@ -110,7 +110,7 @@ void Matron::build_stance_shapes() {
             const Quat onto = length > 1.0e-4F ? Quat::sFromTo(Vec3::sAxisY(), axis / length) : Quat::sIdentity();
             const Ref<Shape> placed =
                 new RotatedTranslatedShape(0.5F * (wa + wb), onto, new CapsuleShape(0.5F * length, c.radius));
-            // Her centre of mass stays at her middle, whatever the shape.
+            // Her center of mass stays at her middle, whatever the shape.
             stance_shapes_[static_cast<std::size_t>(s)][static_cast<std::size_t>(k)] =
                 new OffsetCenterOfMassShape(placed, -placed->GetCenterOfMass());
         }
@@ -212,8 +212,8 @@ void Matron::step_stance(const float dt) {
     }
     if (g_shape_audit_on) {
         const RVec3 at = bodies.GetPosition(body_);
-        // A placement puts her somewhere. Physics does not move her a metre
-        // in one tick (kTunnelM is 0.15 m; a metre is a test's SetPosition).
+        // A placement puts her somewhere. Physics does not move her a meter
+        // in one tick (kTunnelM is 0.15 m; a meter is a test's SetPosition).
         // The static bodies she already overlaps there are the setup. A later
         // walk into other steel is not.
         const float jumped = have_shape_pos_ ? float((at - shape_pos_).Length()) : 1.0e9F;

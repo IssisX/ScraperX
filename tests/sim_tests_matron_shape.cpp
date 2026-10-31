@@ -18,7 +18,7 @@
 //    shape (or her down shape) may never have been deeper than Matron::kInsideSteelM in steel she
 //    collides with for more than Matron::kInsideSteelTicks ticks running, nor
 //    deeper than Matron::kTunnelM in any tick (shape_audit_at_exit). Steel a
-//    placement put her in (a jump of a metre or more, the bodies she already
+//    placement put her in (a jump of a meter or more, the bodies she already
 //    overlapped there, no deeper, until she is clear of them) is printed
 //    apart. A walk into other steel is not: the old tall capsule is not the
 //    test, because every stance capsule sits inside it. Ticks on her planning capsule (a journey, or waiting for a
