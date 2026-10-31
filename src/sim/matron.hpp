@@ -1298,9 +1298,11 @@ public:
         unrig_way_ = -1;
         return way;
     }
-    // A sound in the world she can hear like the player's noise (a hit: a
-    // crate crashing down; a machine running), at its loudness (0..1, a sound
-    // of 1 carries kFullHearingM): given before pre_step, heard in it. She
+    // An unidentified sound in the world she can hear like the player's noise
+    // (a hit, a crate crashing down), at its loudness (0..1, a sound of 1
+    // carries kFullHearingM): given before pre_step, heard in it. Known running
+    // machinery uses hear_machine so investigating it cannot masquerade as a
+    // player deception. She
     // takes the loudest at her ear of a tick's that is not her own (within
     // kOwnSoundM of her body: what she strikes herself) and carries to her.
     // Past kMaxSounds in a tick the rest are not heard (the world gives the
@@ -1311,7 +1313,16 @@ public:
     static constexpr float kOwnSoundM = 1.5F;
     void hear(float x, float y, float z, float loudness) noexcept {
         if (loudness > 0.0F && sound_count_ < kMaxSounds) {
-            sounds_[sound_count_++] = {true, x, y, z, loudness > 1.0F ? 1.0F : loudness};
+            sounds_[sound_count_++] = {true, x, y, z, loudness > 1.0F ? 1.0F : loudness, false};
+        }
+    }
+    // A known running machine is still audible and can be investigated, but
+    // reaching it with no player there is not evidence that the player fooled
+    // her. That provenance also preserves an existing player encounter across
+    // the environmental distraction.
+    void hear_machine(float x, float y, float z, float loudness) noexcept {
+        if (loudness > 0.0F && sound_count_ < kMaxSounds) {
+            sounds_[sound_count_++] = {true, x, y, z, loudness > 1.0F ? 1.0F : loudness, true};
         }
     }
     void post_step(float dt);
@@ -1992,9 +2003,11 @@ private:
     void knock_down();
     // A lead: a place she heard (or saw) the player, or a crash, on the level
     // whose floor is `floor`, at that loudness.
-    void take_lead(float x, float z, float floor, float loudness, Sense sense);
+    void take_lead(float x, float z, float floor, float loudness, Sense sense, bool machine = false);
     // Back to her post if there is a way out to guard, else the patrol.
-    void stand_down();
+    // A known machine lead ends without erasing what she learned of the
+    // current player encounter.
+    void stand_down(bool end_player_encounter = true);
     void step_hold(float dt, JPH::RVec3 player);
     void end_hold(State next);
     void finish_dangle();
@@ -2365,6 +2378,7 @@ private:
         bool heard = false;
         float x = 0.0F, y = 0.0F, z = 0.0F;
         float loudness = 0.0F;
+        bool machine = false;
     };
     std::array<Sound, kMaxSounds> sounds_{};
     std::size_t sound_count_ = 0;
@@ -2444,6 +2458,7 @@ private:
     mutable std::uint32_t acoustic_queries_ = 0;
     bool lead_seen_ = false;
     Sense lead_sense_ = Sense::None;
+    bool lead_machine_ = false;
     bool glimpsed_ = false;
     // The stalk (matron_stalk.cpp).
     bool watched_ = false;

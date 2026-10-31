@@ -685,18 +685,38 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                   grounded_ && traversal_state_ == TraversalState::None && carried_id_.IsInvalid() &&
                   !matron_->holding() && !matron_->claimed(), bodies.GetPosition(player_id_));
     summit_->pre_step();
-    // What the Matron can hear besides the player (matron.hpp hear): the last
-    // step's hits, hardest first, then the yard crane's drives while they run.
+    // What the Matron can hear besides the player: the last step's impacts,
+    // hardest first; Stage A from its actual cage/guide motion; then the yard
+    // crane's drives while they run. Machines carry known-machine provenance.
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
         // Her own throw coming down is not a sound to her (matron.hpp).
         if (loud > 0.0F && hit.entity != matron_->thrown_entity()) {
-            matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
+            matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y),
+                          static_cast<float>(hit.at.z), loud);
         }
+    }
+    // Stage A is one passive gravity-counterweight machine, not two
+    // independent things to investigate. Its player-facing cage/guide is the
+    // acoustic source; the paired skip's motion is the same mechanism and
+    // must not create a second false lead while she is riding the cage.
+    // A pulled handle or open catch alone is still silent. CHOSEN:
+    // full-speed guide/rope noise is 0.35, the yard crane's unloaded-hoist
+    // baseline, and scales down with the cage's actual speed.
+    constexpr float kWellMachineMoveMps = 0.1F;
+    constexpr float kWellMachineFullMps = 2.5F;
+    constexpr float kWellMachineFullLoudness = 0.35F;
+    const float well_speed = kit_->body_velocity(well_.a_cage).Length();
+    if (well_speed >= kWellMachineMoveMps) {
+        const JPH::RVec3 at = kit_->body_center_of_mass(well_.a_cage);
+        const float loudness =
+            kWellMachineFullLoudness * std::min(1.0F, well_speed / kWellMachineFullMps);
+        matron_->hear_machine(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
+                              static_cast<float>(at.GetZ()), loudness);
     }
     for (const YardCrane::Noise &noise : yard_crane_->noises()) {
         if (noise.loudness > 0.0F) {
-            matron_->hear(noise.x, noise.y, noise.z, noise.loudness);
+            matron_->hear_machine(noise.x, noise.y, noise.z, noise.loudness);
         }
     }
     // Her ways out to guard: Stage A's cage, while it is down at her deck;
