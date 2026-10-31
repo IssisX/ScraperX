@@ -126,23 +126,19 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   assertion is small.
 
 ### 9. She does not wreck his work (A3, A4 B and C)
-- **Current source check:** `Matron::fetch_stock` in `src/sim/matron.cpp` is gated to Pest;
-  `notice_moved_stock` uses sight, and `State::Unrigging` / `State::Guarding` remain. The full
-  earlier list of missing machine interactions and stock counts has not been rederived.
-- Asked: carries and throws stock (built); shoves stock he placed off edges, resets or jams
-  machines he set, more at higher stages; meddles only undoably (sends a lift away, waits at a
-  choke point, boards the lift he called); learns a trick he repeats within a run.
-- Status: **partly built.** Take and throw: `matron.cpp:3401-3527`, pest only (`:3426`), three
-  throwables in the whole world (`loose_stock.hpp:123`, `loose_stock.cpp:579-585`: two toolboxes
-  and a drum she cannot lift, `kTakeMaxKg` 25). Unrig (`matron.cpp:3177-3203`) and guarding the
-  way out's mouth (`:3206-3225`) are built. **Not built**: shoving his placed stock off an edge
-  (the only crate push, `:1711-1757`, never pushes over an edge), jamming or resetting machines,
-  sending a lift away (a stated choice: she never sends a cage, `matron.hpp:85-86`), boarding the
-  lift he called (she only clings to a floor already moving, `matron.cpp:915-960`), and any
-  learning beyond `fooled_` (`:2613,2625,3133`).
-- Hurts: 3. The "she wrecks your work" threat is nearly absent.
-- Size: large. A lawful version needs her to perceive what he placed (gap 4), a general
-  capped-force push, and machine use as one general skill, no per-machine code (rule 30).
+- Asked: carry and throw stock, shove placed stock off edges, reset or jam machines, send a lift
+  away or board one he called, wait at a choke point, and learn repeated tricks within a run;
+  meddling must be undoable.
+- **Partial implementation; runtime unverified here:** `src/sim/matron.cpp` `notice_moved_stock`,
+  `fetch_stock`, `take_stock` and `throw_stock` implement the stock path; fetching is limited to
+  Pest and `matron.hpp` `kTakeMaxKg` is 25 kg. The same file's `State::Unrigging` and
+  `State::Guarding` cover undoing rigging and guarding an exit. `fooled_` tracks noises leading
+  to nobody; that is not evidence of learning a repeated player action.
+- The earlier audit identified missing edge shoves, jamming/resetting, sending a cage away and
+  boarding a player-called lift; `matron.hpp` documents clinging to a floor already moving and
+  says she does not send a cage away. Those broader absence findings and the exact eligible-stock
+  count remain **unverified** without a complete interaction-path search. Check current open PRs
+  and the assignment board before taking a follow-up.
 
 ### 10. Loud machines mostly do not draw her (A7)
 - **Current source check:** `Simulation::PhysicsWorld::step` in `src/sim/physics_world.cpp`
