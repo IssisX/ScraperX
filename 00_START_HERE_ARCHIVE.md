@@ -541,3 +541,10 @@ second "content package" outside this tree.
 `MANIFEST.txt` and `SHA256SUMS.txt` are a **frozen snapshot of the v1.1 delivery package**. Their
 paths predate this layout and are not maintained. They are kept as a delivery record, not as an
 index of the tree.
+
+
+---
+
+## 2026-10-31 — Merge blockers are substantive
+
+Owner decision: PR merge gating must ignore spelling, wording, and commit-message or tag nitpicks. Those nits must not cause commit rewrites or CI reruns. A merge is blocked only by a real physics, gameplay, or test failure. This decision was issued while ordering PR #55 and the combined #62/#59/#60 work landed after their functional proof jobs passed.
