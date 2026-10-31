@@ -169,10 +169,16 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
 - **Partial; visual quality unverified:** `godot/presentation/sky_cycle.gd` implements the
   sun/moon cycle, sky and night lamp gain; its default `day_minutes` is 24. The light rig in
   `godot/presentation/main_world.gd` builds site lights, including stack-level lamps.
-- The earlier audit found no helmet lamp, lit rings behind the climber or city glow, and said
-  the cycle did not follow climbing. Those absence and design conclusions are **unverified**
-  at this revision; inspect their production wiring and the rendered night before assigning a
-  change. The default alone does not prove what settings a player actually uses.
+- `godot/presentation/main.gd` creates the sky cycle, applies `SettingsStore.day_minutes`
+  when time-of-day is automatic, or fixes the selected hour; `sky_cycle.gd` advances the hour
+  from `delta`, not climb height. `godot/presentation/ui/settings_store.gd` defaults to 24
+  minutes and permits 8–60; `pause_menu.gd` exposes both settings. Stack lamps in
+  `main_world.gd` are placed on odd numbered stack levels, not every level.
+- A source search for helmet, headlamp, flashlight, city glow and lit-ring identifiers in
+  `src` and `godot` found no named player helmet lamp or climb-following light. This does not
+  rule out an implementation under another name or establish whether night is readable. The
+  requested helmet lamp, illuminated rings behind the climber and city glow remain open until
+  production-path and rendered review establishes them.
 
 ### 12. Foreman radio and story cues (B3)
 - Asked: the foreman on the radio: furious, then the lifeline, then admitting he covered up her
