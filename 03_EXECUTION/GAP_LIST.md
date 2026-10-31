@@ -190,15 +190,18 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   conflict settled first). B2 medium (a dead-worker state or placed props, plus triggers).
 
 ### 14. Lived-in spot finder stops at 396 m (D1)
-- **Current source check:** the ring candidates in `src/sim/loose_stock.cpp` end at
-  `176.25 + 22 * 10 = 396.25 m`. This bounds that spot finder, not every possible object
-  above that height; the title and “nothing” claim below are broader than this evidence.
-- Asked: little lived-in spots all over the structure.
-- Status: **partly built.** The spot finder walks rings every 11 m to 143 m, then 176.25 + 22k for
-  k = 0..10, so to 396.25 m (`loose_stock.cpp:734-741`); the finder adds no higher rings; other authored dressing above 396 m is unverified. Ziplines also stop at 396 m (`physics_world.cpp:340-345`). `sim_tests_stock.cpp:74`
-  asserts at least 60 pieces, not coverage by height.
-- Hurts: 3. Size: medium, and it changes body order, which makes it a whole-world change
-  (see the conditional full-suite rule in `CLAUDE.md`, "Test only what a change reaches").
+- Asked: little lived-in spots throughout the structure.
+- **Partial implementation:** `LooseStock::dress_tower` in `src/sim/loose_stock.cpp` builds
+  candidate rings at 11–143 m and 176.25–396.25 m; it does not generate higher rings. This
+  does not establish that every other authored object above 396 m is absent.
+- **Test definition on current trunk `65896fbd11ed2048bbd0a102b252008a8cc3db98`:**
+  `tests/sim_tests_stock.cpp` `run_loose_stock` now checks every `dress_tower` ring for at
+  least one piece and checks that tower pieces map to a ring. The old statement that the test
+  checks only the total is obsolete. This test does not cover dressing above 396.25 m; no run
+  at that revision was performed for this documentation change. `src/sim/physics_world.cpp`
+  constructs upper ziplines through the same 176.25 + 22k ring range.
+- Extending stock can change world body order. Apply the conditional whole-world test rule in
+  `CLAUDE.md`, and check current assignments before starting.
 
 ### 15. "He is never helpless" depends on stock being at hand (rule 34)
 - **Current source check:** `src/sim/player_strike_limits.hpp` sets a 1,500 N cap and
