@@ -55,7 +55,10 @@ cmake --build build/host
 ctest --test-dir build/host --output-on-failure
 ```
 
-The GitHub Actions workflow performs the full proof path: the full native suite, Linux GDExtension loading, a runtime rendered at the Galaxy Z Fold 6 inner-panel aspect (2160x1856) that walks the tower approach and observes the coupled machine work, one rendered first-person capture, Android arm64 cross-compilation, Godot export, APK inspection, checksums, and artifact publication.
+The configured GitHub Actions workflow, `.github/workflows/wo000-delivery-spine.yml`,
+contains native, Godot, touch, Android export and artifact jobs. Inspect a specific run and
+its revision for actual outcomes; configured jobs, skipped jobs and screenshots are not
+proof of a complete ascent or a device playthrough.
 
 ## Claim boundary
 
