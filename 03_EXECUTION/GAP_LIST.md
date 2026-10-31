@@ -40,12 +40,16 @@ but is unmerged. Do not infer visual approval from a headless run or screenshots
   continues the pattern from 484 m and adds a ladder to TP-640. `add_handle` in that file
   constructs lanyard handles. `src/sim/vertical/vertical_route.cpp` handles Action commands
   for machine deck/entry/exit roles, except its separately handled machines.
-- The earlier audit counted 20 handle/lanyard entities, 14 above 221 m, and named wet D/F/header,
-  plate G/H/I, crane J/K/L and midstack M/N/O. It also counted three Action-started motor lifts
-  and lower-route ladders. These counts and whether each is required on the live route are
-  **historical, not reverified**. Do not use them as current coverage or claim that every player
-  meets them. Existing machines are not automatically authorized for replacement; rule 52 and
-  the current assignment board govern any proposed work.
+- `src/sim/simulation.hpp` defines 20 named handle entity IDs: five well, four wet,
+  three plate-shop, four crane, three service and one stack. These are IDs, not 20 active
+  route pulls: `src/sim/band_wet_isolation.cpp` passes `kWetDValveHandleEntityId` to
+  `add_retired`, while D drain, F and header have other handles. The upper-band groups have
+  14 IDs including that retired one. Requirement and encounter frequency are unverified.
+- `src/sim/band_wet_isolation.cpp` `build_climbing_route` also places route ladders at
+  242.25, 308.25 and the 340 m plate top. `src/sim/vertical/vertical_route.cpp` places
+  cascade mast, barrel helix and crown gondola and routes Action through machine commands;
+  this source evidence alone does not prove every machine is mandatory or played successfully.
+  The earlier lower-route ladder count remains historical. Rule 52 governs proposed changes.
 
 ### 2. Rejected mouth cues and generated human sounds (rule 41)
 - Asked: no cluck or croak. **Implemented in source, runtime and listening unverified:**
