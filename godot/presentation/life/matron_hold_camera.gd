@@ -246,12 +246,13 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 			_awaiting_death = false
 			_landed_pending = true
 	# tear_grip severs the arm and drops the ankle grip in one tick, and
-	# she stays in ArmPlay. The view stays out of his eye for that, and for
-	# RIP_HOLD_S after the arm leaves. The let-go over the drop still wins.
+	# she stays in ArmPlay. The view stays out of his eye for that, for
+	# RIP_HOLD_S after the arm leaves, and while the wide shot is still
+	# easing back onto the hold frame. The let-go over the drop still wins.
 	var arm_play := int(hold.get("state", -1)) == ARM_PLAY_STATE
 	var tear_hold := _since_tear >= 0.0 and _since_tear < RIP_HOLD_S
 	var falling := _since_release >= 0.0 and not held
-	var rip_keeps := (arm_play or tear_hold) and not falling and not claimed
+	var rip_keeps := (arm_play or tear_hold or _rip > 0.001) and not falling and not claimed
 	var want := (held or claimed or _awaiting_death or _landed_pending or rip_keeps) and _black_after < 0.0
 	# The fade.
 	if _awaiting_death or _landed_pending:
@@ -417,23 +418,31 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	# stayed out of the steel. The weight advances only along a step the cast
 	# reaches, so a beam in the way does not bank a full shot that would jump
 	# the frame it clears. A step the steel cuts short is not the shot: the
-	# last clear frame stays, and it is not claimed.
+	# last clear frame stays, and it is not claimed. Leaving the shot eases
+	# the same way: the weight comes back to the ordinary hold frame, and
+	# that weight is what the camera uses, so the first open-to-closed frame
+	# is one step, not a cut. The let-go still owns the frame while he falls.
 	# Held is not required. The grip is already gone when the arm leaves.
 	var hold_cam := cam
 	var want_rip := not claimed and not falling and (arm_play or tear_hold)
 	rip_active = false
 	rip_dist = 0.0
-	if want_rip:
+	if claimed or falling:
+		_rip = move_toward(_rip, 0.0, RIP_EASE * delta)
+	elif want_rip or _rip > 0.001:
 		var hand_pt: Vector3 = hand if hand_on else hold.get("hand", him)
 		var subject: Vector3 = hand_pt.lerp(him, 0.35)
-		if tear_hold and bool(hold.get("severed_arm_present", false)):
+		# On the way out, keep looking at the arm that left. While ArmPlay
+		# is still the shot, the arm is the subject only for the hold after
+		# it tears; before that it is her hand.
+		if bool(hold.get("severed_arm_present", false)) and (tear_hold or not want_rip):
 			var severed: Vector3 = hold.get("severed_arm_position", him)
 			subject = him.lerp(severed, 0.45)
 		var rip_way := _orbit(_side_yaw, RIP_PITCH)
 		var rip_free: float = cast.call(_pivot, _pivot + rip_way * (RIP_DIST + CAM_RADIUS), skip, CAM_RADIUS)
 		var rip_allowed := maxf(0.0, minf(RIP_DIST, rip_free - CAM_RADIUS))
 		var wide := _pivot + rip_way * rip_allowed
-		var target_w := 1.0 if rip_allowed >= RIP_MIN_M else 0.0
+		var target_w := 1.0 if want_rip and rip_allowed >= RIP_MIN_M else 0.0
 		var proposed_w := move_toward(_rip, target_w, RIP_EASE * delta)
 		var placed_w := proposed_w if _rip_step_clear(hold_cam, wide, proposed_w, skip, cast) else _rip
 		if not _rip_step_clear(hold_cam, wide, placed_w, skip, cast):
@@ -455,8 +464,6 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 			rip_active = _rip > 0.5 and placed_len >= RIP_MIN_M - 1.0e-3
 			var past: float = cast.call(_pivot, _pivot + rip_dir * (placed_len + CAM_RADIUS), skip, CAM_RADIUS)
 			clearance = past - placed_len
-	else:
-		_rip = move_toward(_rip, 0.0, RIP_EASE * delta)
 	_cam = cam
 	pivot = _pivot
 	var to_look := look_at - cam

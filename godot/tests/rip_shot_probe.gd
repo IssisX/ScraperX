@@ -102,6 +102,22 @@ func _initialize() -> void:
 		print("RIP_SHOT hold ended after 1.4 s, sim still full rate: PASS")
 	else:
 		_fail("hold-end", "active %s scale %s" % [loose.rip_active, loose.time_scale()])
+	# The return itself, with no look input, so the ordinary frame has not
+	# been orbited away from the shot. Every frame of the ease stays under
+	# the same step bound. A cut back onto the hold camera fails it.
+	var leave := Cam.new()
+	var leave_view := _run(leave, _hold(13, 0, him, hand, false, severed), head, eye, Vector2.ZERO, 1.2)
+	for _i in 60:
+		leave_view = leave.frame(_hold(15, 1, him, hand, true, severed, false), head, leave_view, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+	var leave_worst := 0.0
+	for _i in 90:
+		var leave_next: Transform3D = leave.frame(_hold(12, 1, him, hand, true, severed, false), head, leave_view, Vector2.ZERO, 75.0, 0, 1.0 / 60.0, _open)
+		leave_worst = maxf(leave_worst, leave_next.origin.distance_to(leave_view.origin))
+		leave_view = leave_next
+	if leave_worst < 0.45 and not leave.rip_active and leave.time_scale() == 1.0:
+		print("RIP_SHOT exit eases, no cut (%.3f m): PASS" % leave_worst)
+	else:
+		_fail("exit-cut", "worst %.3f active %s scale %s" % [leave_worst, leave.rip_active, leave.time_scale()])
 	# Blocked blend: the destination ray is clear, but a steel protrusion
 	# sits on the blended ray close to the pivot. The wide shot must not
 	# be claimed for a camera that steel has pulled back to the pivot.
