@@ -2,9 +2,13 @@ name: ScraperX — independent shared-toolchain consumer proof
 
 on:
   push:
-    branches: [chatgpt/integrate-shared-toolchain-release-20261101]
+    # Reprove the installed toolchain whenever its consumer entrypoints change,
+    # including after this PR lands on the only authoritative trunk.
+    branches: [ScraperX-Claude, chatgpt/integrate-shared-toolchain-release-20261101]
     paths:
       - .github/workflows/shared-toolchain-consumer-smoke.yml
+      - tools/shared-toolchain/install.sh
+      - .claude/godot-mcp.sh
   workflow_dispatch:
 
 permissions:
