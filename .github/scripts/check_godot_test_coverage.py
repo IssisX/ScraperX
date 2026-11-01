@@ -64,31 +64,61 @@ def invoked_scripts(workflow_text):
     Only a literal Godot executable in a run block counts. A workflow
     description, commented command, or echo of a test path does not execute
     that test. Backslash continuations are joined before shell tokenization.
-    Unrecognized command forms fail closed as uncovered tests.
+    Unrecognized, conditional, masked, or data-only commands fail closed.
     """
     invoked = set()
     in_run = False
     block_indent = 0
     pending = ""
+    heredoc_end = ""
+    control_stack = []
     for line in workflow_text.splitlines():
         stripped = line.strip()
         indent = len(line) - len(line.lstrip(" "))
         if in_run and stripped and indent <= block_indent:
             in_run = False
             pending = ""
+            heredoc_end = ""
+            control_stack = []
         if not in_run:
             match = RUN_BLOCK_RE.match(line)
             if match:
                 in_run = True
                 block_indent = len(match.group(1))
             continue
+        if heredoc_end:
+            if stripped == heredoc_end:
+                heredoc_end = ""
+            continue
         if not stripped or stripped.startswith("#"):
+            continue
+        # A conditional or loop body may never run. Do not count commands
+        # inside shell control structures as unconditional test coverage.
+        opener = re.match(r"(?:if|for|while|until|case)\b", stripped)
+        closer = re.match(r"(?:fi|done|esac)\b", stripped)
+        if opener:
+            end = "fi" if stripped.startswith("if ") else "esac" if stripped.startswith("case ") else "done"
+            if not re.search(r"\b" + end + r"\b", stripped):
+                control_stack.append(end)
+            continue
+        if control_stack:
+            if closer and stripped.split()[0] == control_stack[-1]:
+                control_stack.pop()
+            continue
+        # Here-document contents are data even if they resemble commands.
+        heredoc = re.search(r"<<-?\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)['\"]?", stripped)
+        if heredoc:
+            heredoc_end = heredoc.group(1)
             continue
         if stripped.endswith("\\"):
             pending += stripped[:-1] + " "
             continue
         command = pending + stripped
         pending = ""
+        # A fallback can turn a failing test into a successful CI step.
+        # Conservatively reject compound commands rather than count them.
+        if "||" in command or "&&" in command or ";" in command:
+            continue
         if "--script" not in command or "res://tests/" not in command:
             continue
         try:
@@ -122,9 +152,13 @@ def invoked_scripts(workflow_text):
                 break
         if i >= len(tokens) or tokens[i] != "tools/godot/godot":
             continue
-        for i, token in enumerate(tokens):
-            if token == "--script" and i + 1 < len(tokens):
-                match = TEST_PATH_RE.fullmatch(tokens[i + 1])
+        args = tokens[i + 1:]
+        # Godot stops parsing engine flags after --; later tokens are game args.
+        if "--" in args:
+            args = args[:args.index("--")]
+        for i, token in enumerate(args):
+            if token == "--script" and i + 1 < len(args):
+                match = TEST_PATH_RE.fullmatch(args[i + 1])
             elif token.startswith("--script="):
                 match = TEST_PATH_RE.fullmatch(token[len("--script="):])
             else:
