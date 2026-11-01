@@ -14,10 +14,22 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # before the server can look for it.
 # A failed install still starts the server: its project-config tools need no
 # Godot, and it names the missing binary itself when a tool needs one.
+# A preinstalled shared bundle takes precedence over fresh downloads.
+# It is opt-in through SCRAPERX_TOOLCHAIN_DIR and is never auto-fetched here.
+if [[ -z "${GODOT_PATH:-}" && -x "${SCRAPERX_TOOLCHAIN_DIR:-}/bin/godot" ]]; then
+  export GODOT_PATH="${SCRAPERX_TOOLCHAIN_DIR}/bin/godot"
+fi
 if [[ "${CLAUDE_CODE_REMOTE:-}" == "true" && -z "${GODOT_PATH:-}" ]]; then
   if ! bash "${repo_root}/.claude/install-godot.sh"; then
     echo "godot-mcp.sh: install-godot.sh failed; starting with whatever Godot is already present" >&2
   fi
+fi
+
+mcp_command=(npx --yes "${SERVER_PACKAGE}")
+if [[ -x "${SCRAPERX_TOOLCHAIN_DIR:-}/bin/node" &&
+      -f "${SCRAPERX_TOOLCHAIN_DIR:-}/mcp/node_modules/godot-mcp-runtime/dist/index.js" ]]; then
+  mcp_command=("${SCRAPERX_TOOLCHAIN_DIR}/bin/node"
+    "${SCRAPERX_TOOLCHAIN_DIR}/mcp/node_modules/godot-mcp-runtime/dist/index.js")
 fi
 
 # An explicit GODOT_PATH wins; otherwise the SHA-pinned binary that CI and
@@ -44,7 +56,7 @@ export GODOT_MCP_DISABLE_ELICITATION=1
 # xvfb-run is not used because it merges the child's stderr into stdout.
 if [[ "$(uname -s)" != Linux || -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] ||
   ! command -v Xvfb >/dev/null 2>&1; then
-  exec npx --yes "${SERVER_PACKAGE}"
+  exec "${mcp_command[@]}"
 fi
 
 xvfb_pid=""
@@ -71,7 +83,7 @@ export DISPLAY=":${display_number}"
 
 # Background job with stdin passed through explicitly (a non-interactive shell
 # would otherwise give it /dev/null), so the trap can still stop Xvfb on exit.
-npx --yes "${SERVER_PACKAGE}" <&0 &
+"${mcp_command[@]}" <&0 &
 server_pid=$!
 trap 'kill -TERM "${server_pid}" 2>/dev/null || true' TERM INT HUP
 
