@@ -59,8 +59,8 @@ KNOWN_GAPS = {
     ),
 }
 
-TEST_PATH_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\\.gd)\\Z")
-RUN_BLOCK_RE = re.compile(r"^(\\s*)run:\\s*\\|[-+]?\\s*(?:#.*)?$")
+TEST_PATH_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\.gd)\Z")
+RUN_BLOCK_RE = re.compile(r"^(\s*)run:\s*\|[-+]?\s*(?:#.*)?$")
 
 
 def invoked_scripts(workflow_text):
