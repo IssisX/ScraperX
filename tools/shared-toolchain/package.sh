@@ -76,7 +76,9 @@ npm install --prefix "$stage/mcp" --save-exact --omit=dev --no-audit --no-fund  
 [[ "$("$stage/bin/ninja" --version)" == '1.12.1' ]]
 "$stage/bin/godot" --headless --version | grep -F '4.7.stable'
 "$stage/bin/node" --version | grep -E '^v22\.'
-[[ "$("$stage/bin/node" -p 'require(process.argv[1]).version'     "$stage/mcp/node_modules/godot-mcp-runtime/package.json")" == '3.8.1' ]]
+mcp_version="$("$stage/bin/node" -p 'require(process.argv[1]).version'     "$stage/mcp/node_modules/godot-mcp-runtime/package.json")"
+printf 'SHARED_MCP_VERSION=%s\\n' "$mcp_version"
+[[ "$mcp_version" == '3.8.1' ]] || { echo "package: expected MCP 3.8.1 but got $mcp_version" >&2; exit 1; }
 cat > "$stage/README.txt" <<EOF
 ScraperX shared toolchain: Linux x86_64, built on Ubuntu 24.04.
 CMake 3.31.10; Ninja 1.12.1; Godot 4.7-stable; Node 22; godot-mcp-runtime 3.8.1.
@@ -87,8 +89,10 @@ or a replacement for required physics/gameplay/CI tests.
 EOF
 
 asset="ScraperX-toolchain-linux-x86_64-v1.tar.gz"
+echo "PACKAGE_ARCHIVE_BEGIN"
 tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner     -czf "$output_dir/$asset" -C "$work" reusable-toolchain
 (cd "$output_dir" && sha256sum "$asset" > "$asset.sha256")
+echo "PACKAGE_ARCHIVE_SHA_VERIFIED_SOURCE"
 
 # Exercise the real consumer installer, its exact-version verification,
 # integrity check, and cache reuse before publishing any release.
