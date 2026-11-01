@@ -101,6 +101,42 @@ void Matron::grip_taken() noexcept {
     }
 }
 
+void Matron::report_held_load(const JPH::RVec3 her_pos, const JPH::RVec3 player_pos, const float player_mass_kg,
+                              const bool held) noexcept {
+    if (!held || !body_in_world_ || player_mass_kg <= 0.0F) {
+        load_held_ = false;
+        load_mass_kg_ = 0.0F;
+        load_offset_m_ = 0.0F;
+        load_moment_nm_ = 0.0F;
+        load_cop_shift_m_ = 0.0F;
+        load_stance_base_m_ = kUprightBaseM;
+        load_dir_x_ = 0.0F;
+        load_dir_z_ = 0.0F;
+        return;
+    }
+    const float dx = static_cast<float>(player_pos.GetX() - her_pos.GetX());
+    const float dz = static_cast<float>(player_pos.GetZ() - her_pos.GetZ());
+    const float offset = std::hypot(dx, dz);
+    load_held_ = true;
+    load_mass_kg_ = player_mass_kg;
+    load_offset_m_ = offset;
+    load_moment_nm_ = player_mass_kg * 9.81F * offset;
+    load_cop_shift_m_ = player_mass_kg * offset / (kMassKg + player_mass_kg);
+    load_dir_x_ = offset > 1.0e-4F ? dx / offset : 0.0F;
+    load_dir_z_ = offset > 1.0e-4F ? dz / offset : 0.0F;
+    // S2 stance, first answer: carrying a load past the upright base, the
+    // reported stance base switches to the crouch base; anything else, the
+    // upright base. This is a threshold for the View export (S3 draws
+    // from it) — NOT a foot-placement change in sim: her body is one
+    // capsule driven by walk_toward, and no sim code reads this value
+    // (the extreme valve that once did is removed, 2026-10-31: it broke
+    // tear holds). Do not describe it as physical widening.
+    load_stance_base_m_ = (state_ == State::Carry && !fatal_hold_ &&
+                            load_cop_shift_m_ > kUprightBaseM)
+                               ? kCrouchBaseM
+                               : kUprightBaseM;
+}
+
 void Matron::grip_lost(const bool torn, const bool fought) noexcept {
     const bool had = grip_on_;
     grip_on_ = false;
@@ -686,6 +722,22 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         return RVec3(at.GetX(), feet + kCarryHandUpM, at.GetZ()) + right * kCarrySideM;
     };
     const auto stand = [&] { walk_toward(dt, ax, az, 0.0F); };
+    // S2 extreme valve, REMOVED (2026-10-31, proven wrong, not tuned):
+    // the valve interrupted Carry with stagger-then-Spare whenever the
+    // measured shift passed the crouch base (0.45 m). Measured ordinary
+    // carries cluster on both sides of that line — S2 probe worst
+    // 0.449706 m, valve-test max 0.453031 m, dangerous hold 0.4541 m —
+    // so no threshold there separates an uncarriable load from an
+    // ordinary hold, and the "extreme" scenario's peak is SMALLER than
+    // the dangerous hold's. The interruption broke owner-blessed holds:
+    // the dangerous hold failed on a shove from the pull-in and, with
+    // the pull off, on a valve stagger that cost it its tear; the pest
+    // hold ended spared with no tear. Disabling both interventions
+    // restores the dangerous hold exactly (single grab, no shove, tear).
+    // The body is rotation-locked, so the measured shift is not a real
+    // tip in any case; the shift stays exported (S1) and the widened
+    // stance stays the threshold, but no shift value abandons a hold.
+    // (The old valve test is replaced by a natural-outcome probe below.)
     switch (state_) {
     case State::Grab: {
         if (!grip_on_) {
@@ -792,7 +844,33 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                 }
             }
         }
-        pose_hand(dt, carry_pose(), kHandSpeedMps, her_v);
+        // S2 counter-lean. Step actuator, named: walk_toward above, her
+        // feet, already driving this case. The pull itself is the hand
+        // target: while the load's shift exceeds the upright base, move
+        // the hand toward her centreline by the amount that would bring
+        // the shift back to the base, never pulling the body's offset
+        // below 0.25 m. A carried load moves with her, so a sideways
+        // step cannot close its relative shift — only bringing the load
+        // in can, and the cap below is what bounds the remainder: the
+        // ankle-held body hangs diagonally, so even a hand at her
+        // centreline leaves its centre well outboard.
+        // Non-fatal Carry only: fatal holds keep their choreography,
+        // and Dangle/Spare keep their poses.
+        RVec3 pose = carry_pose();
+        float pull_applied = 0.0F;
+        if (!fatal_hold_ && load_held_ && load_cop_shift_m_ > kUprightBaseM) {
+            const float need = (load_cop_shift_m_ - kUprightBaseM) * (kMassKg + load_mass_kg_) / load_mass_kg_;
+            // Capped (2026-10-31): the uncapped pull ran to ~0.74 m of
+            // hand travel in late Carry and broke the dangerous hold
+            // (extra grip + shove where trunk tears cleanly). The cap
+            // keeps a real pull in late Carry (the S2 stance test
+            // requires med_pull > 0) while leaving ordinary Carry
+            // geometry close enough to trunk that holds still tear.
+            pull_applied = std::min({need, std::max(0.0F, load_offset_m_ - 0.25F), kCarryPullCapM});
+            pose = RVec3(pose.GetX() - load_dir_x_ * pull_applied, pose.GetY(), pose.GetZ() - load_dir_z_ * pull_applied);
+        }
+        pose_hand(dt, pose, kHandSpeedMps, her_v);
+        load_pull_m_ = pull_applied;
         if (fatal_hold_ && state_ == State::Carry) {
             // The fatality's edge not reached in the carry's time: the floor
             // version, where she stands.
