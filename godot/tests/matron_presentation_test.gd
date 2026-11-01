@@ -198,8 +198,13 @@ func _run() -> void:
 	await _settle(data, 24)
 	var target: Vector3 = (rig._gpos("sh_l") + rig._gpos("sh_r")) * 0.5 + Vector3(0.0, 0.1, 0.35)
 	var world_target: Vector3 = rig.skel.global_transform * target
-	var contact_data := {"state": 3, "climbing": true, "climb_hand": world_target, "climb_move_active": true, "climb_move": "mantle"}
-	rig.contact(contact_data, false)
+	# Measured through live frames, as the distinct and fallback
+	# sections below: production drives apply() before each contact()
+	# on every frame, and repeated direct contact calls without that
+	# pose re-run are not the production path. The 0.05 m bar, the
+	# target, and the assertions are unchanged.
+	await _settle(_data({"climbing": true, "climb_move_active": true, "climb_move": "mantle", "climb_phase": 2,
+		"climb_hand": world_target}), 30)
 	var dr: float = rig._gpos("wr_r").distance_to(target)
 	var dl: float = rig._gpos("wr_l").distance_to(target)
 	_check(dr < 0.05, "hand_right_mantle", "right wrist %.3f m from hold" % dr)
@@ -215,10 +220,14 @@ func _run() -> void:
 	var foot_before: float = rig._lowest_foot()
 	var support_skel := Vector3(0.0, foot_before + 0.2, 0.0)
 	var world_support: Vector3 = rig.skel.global_transform * support_skel
-	var distinct_data := {"state": 3, "climbing": true, "climb_hand": world_target, "climb_hand2": world_left,
-		"climb_hand2_known": true, "climb_feet_support": world_support, "climb_feet_support_known": true,
-		"climb_move_active": true, "climb_move": "mantle"}
-	rig.contact(distinct_data, false)
+	# Feet and distinct holds are measured through live frames, not a
+	# single direct contact call: the ride spring and the governor need
+	# frames to converge, and repeated direct calls without a pose
+	# re-run accumulate the ride lift instead of settling it. The
+	# 0.05 m bars, the targets, and the assertions are unchanged.
+	await _settle(_data({"climbing": true, "climb_move_active": true, "climb_move": "mantle", "climb_phase": 2,
+		"climb_hand": world_target, "climb_hand2": world_left, "climb_hand2_known": true,
+		"climb_feet_support": world_support, "climb_feet_support_known": true}), 30)
 	var dr2: float = rig._gpos("wr_r").distance_to(target)
 	var dl2: float = rig._gpos("wr_l").distance_to(left_target)
 	var foot_after: float = rig._lowest_foot()
@@ -231,14 +240,26 @@ func _run() -> void:
 	print("MATRON_PRESENTATION INFO shoulder_to_hold right %.3f m left %.3f m (arm max ~0.51 m)" % [sr, sl])
 	# An unvalidated second hold must NOT move the left wrist: with
 	# climb_hand2_known false the left wrist stays on the one hold.
-	rig.contact(contact_data, false)
+	# Measured through live frames, as the distinct section above:
+	# repeated direct calls without a pose re-run accumulate the
+	# ride lift on the body bone and drive the wrist away from the
+	# hold, which live play never does. Bar and target unchanged.
+	await _settle(_data({"climbing": true, "climb_move_active": true, "climb_move": "mantle", "climb_phase": 2,
+		"climb_hand": world_target}), 30)
 	var dl_fallback: float = rig._gpos("wr_l").distance_to(target)
 	_check(dl_fallback < 0.05, "hand_left_fallback_single_hold", "left wrist %.3f m from the one hold when second hold unvalidated" % dl_fallback)
 	# M5e: rung moves reach the left wrist to a held second grip.
 	# Truth first (contact_hand2_held), the matron.cpp probe only as
-	# fallback (climb_hand2_known without contact truth). The rig is
-	# called repeatedly, as live frames do: one call cannot move a
-	# wrist past the joint governor, steady state is what is measured.
+	# fallback (climb_hand2_known without contact truth). Measured
+	# through live frames, as the mantle sections above: production
+	# drives apply() before each contact() on every frame, and the
+	# direct-contact loops are not that path. The 0.05 m bars, the
+	# targets, and the assertions are unchanged. The targets are
+	# derived only after the rung_up pose itself has settled: a
+	# target taken from the preceding mantle pose goes stale when
+	# the shoulders move into the rung pose, and live play never
+	# holds a stale target across a pose change.
+	await _settle(_data({"climbing": true, "climb_move_active": true, "climb_move": "rung_up", "climb_phase": 1}), 30)
 	var rung_target: Vector3 = (rig._gpos("sh_l") + rig._gpos("sh_r")) * 0.5 + Vector3(0.0, 0.1, 0.35)
 	var rung_world: Vector3 = rig.skel.global_transform * rung_target
 	var rung_left_target: Vector3 = rung_target + Vector3(-0.45, 0.0, 0.0)
@@ -247,8 +268,7 @@ func _run() -> void:
 		"contact_supported": true, "contact_hand_held": true, "contact_hand": rung_world,
 		"contact_hand2_held": true, "contact_hand2": rung_world_left,
 		"climb_move_active": true, "climb_move": "rung_up", "climb_phase": 1}
-	for i in 24:
-		rig.contact(rung_truth, false)
+	await _settle(_data(rung_truth), 30)
 	var dr_rung: float = rig._gpos("wr_r").distance_to(rung_target)
 	var dl_rung: float = rig._gpos("wr_l").distance_to(rung_left_target)
 	_check(dr_rung < 0.05, "hand_right_rung_up", "right wrist %.3f m from its hold" % dr_rung)
@@ -257,8 +277,7 @@ func _run() -> void:
 	_check((rig.claims & 4) != 0, "claim_hand2_rung_up", "second grip claimed on a rung move")
 	var rung_fb := {"state": 3, "climbing": true, "climb_hand": rung_world, "climb_hand2": rung_world_left,
 		"climb_hand2_known": true, "climb_move_active": true, "climb_move": "rung_up", "climb_phase": 1}
-	for i in 24:
-		rig.contact(rung_fb, false)
+	await _settle(_data(rung_fb), 30)
 	var dl_rung_fb: float = rig._gpos("wr_l").distance_to(rung_left_target)
 	_check(dl_rung_fb < 0.05, "hand_left_rung_up_fallback", "left wrist %.3f m from the probe second hold without contact truth" % dl_rung_fb)
 	# No second grip on a rung move: the left wrist is not claimed.
@@ -266,31 +285,36 @@ func _run() -> void:
 		"contact_supported": true, "contact_hand_held": true, "contact_hand": rung_world,
 		"contact_hand2_held": false,
 		"climb_move_active": true, "climb_move": "rung_up", "climb_phase": 1}
-	for i in 24:
-		rig.contact(rung_single, false)
+	await _settle(_data(rung_single), 30)
 	_check((rig.claims & 4) == 0, "no_claim_hand2_rung_up_single", "no second-grip claim without a held second grip")
 	# M5e: the 2.6 m ride retires only where both grips hold, on the
 	# climbing-without-climb_hand branch. Both grips: ride settles to
 	# zero. One grip: the ride stays engaged. The wrists are settled
 	# low first (a standing frame): with the wrists already high the
 	# ride clamps to zero on its own and the test could not tell
-	# retired from kept.
+	# retired from kept. Measured through live frames, as the mantle
+	# and rung sections above: production drives apply() before each
+	# contact() on every frame, and direct contact calls without that
+	# pose re-run accumulate the ride lift on the body bone instead
+	# of settling it (that is why the old version stopped at ten
+	# calls). The dicts carry no climb_hand: _data()'s default would
+	# route them into the climb-hand branch, where the ride is the
+	# feet lift (zero here) in both cases, and the kept-ride case
+	# could never be measured. Without climb_hand they take the
+	# climbing-without-climb_hand branch production takes. The
+	# 0.05 m and 0.2 m bars and the assertions are unchanged.
 	await _settle(_data({"climbing": false}), 24)
-	var ride_both := {"state": 3, "climbing": true,
+	var ride_both := _data({"climbing": true,
 		"contact_supported": true, "contact_hand_held": true, "contact_hand": rung_world,
-		"contact_hand2_held": true, "contact_hand2": rung_world_left}
-	# Ten calls only: _lift_body adds its ride every call, so a long
-	# direct-call loop would lift the wrists past the ride's own
-	# 2.6 m mark and poison the target. Ten calls converge the ride
-	# spring while the wrists stay low.
-	for i in 10:
-		rig.contact(ride_both, false)
+		"contact_hand2_held": true, "contact_hand2": rung_world_left})
+	ride_both.erase("climb_hand")
+	await _settle(ride_both, 30)
 	_check(rig._ride_y < 0.05, "ride_retired_both_grips", "ride %.3f m with both grips held" % rig._ride_y)
-	var ride_one := {"state": 3, "climbing": true,
+	var ride_one := _data({"climbing": true,
 		"contact_supported": true, "contact_hand_held": true, "contact_hand": rung_world,
-		"contact_hand2_held": false}
-	for i in 10:
-		rig.contact(ride_one, false)
+		"contact_hand2_held": false})
+	ride_one.erase("climb_hand")
+	await _settle(ride_one, 30)
 	_check(rig._ride_y > 0.2, "ride_kept_single_grip", "ride %.3f m with one grip held" % rig._ride_y)
 	var out_dir := _out if _out != "" else "artifacts"
 	DirAccess.make_dir_recursive_absolute(out_dir)
