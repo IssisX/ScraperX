@@ -381,7 +381,41 @@ void Matron::step_travel(const float dt) {
             return;
         }
         if (travel_walk_.empty()) {
-            travel_walk_ = scanned_->walk_path(feet, e.spec.start);
+            // The map's patch links, for a long way or where the search found
+            // nothing. Those links are the steel alone: a player standing on
+            // a board one body wide is not in them, and the polyline walks
+            // through his capsule. That is not a walk. On a long way, ask the
+            // floor search once before refusing; up close it already ran.
+            const std::vector<Vec3> patches = scanned_->walk_path(feet, e.spec.start);
+            const traversal::Occupant him = traversal::occupant_of(physics_, player_);
+            const traversal::Limits lim = climber_->limits();
+            const bool through_him =
+                traversal::path_meets_occupant(feet, patches, him, lim.radius, lim.center_above_feet());
+            if (!through_him) {
+                travel_walk_ = patches;
+            } else if (to_start >= 40.0F) {
+                const std::vector<Vec3> around =
+                    traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)}, lim, feet,
+                                         e.spec.start);
+                if (!around.empty() &&
+                    !traversal::path_meets_occupant(feet, around, him, lim.radius, lim.center_above_feet())) {
+                    travel_walk_ = around;
+                }
+            }
+            if (travel_walk_.empty()) {
+                // He is on the only line the patches drew. Stand. If he is
+                // still there when the usual give-up passes, that move is
+                // not hers from here.
+                ++travel_.yields;
+                climber_->walk_between(dt, feet, 0.0F);
+                travel_yield_s_ += dt;
+                if (travel_yield_s_ > kYieldGiveUpS) {
+                    travel_yield_s_ = 0.0F;
+                    travel_avoid_.push_back(travel_edges_[static_cast<std::size_t>(travel_.step)]);
+                    travel_.step = travel_.steps;
+                }
+                return;
+            }
         }
         travel_walk_i_ = 0;
     }

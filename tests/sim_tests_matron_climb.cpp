@@ -2236,7 +2236,65 @@ void test_travel_walk_round_player() {
     require(!j.active && j.arrivals > 0, "travel walk round player: she still gets down the stack");
 }
 
-void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); test_travel_walk_round_player(); }
+// A static patch walk does not know the player is there. On a board one
+// body wide the polyline is his capsule, so it is not a walk; her feet's
+// search finds nothing either. On open floor the same search goes round him
+// and that way does not enter his capsule. The journey's long-way fallback
+// (matron_journey.cpp) refuses a patch polyline this check calls true.
+void test_patch_walk_refuses_occupied_board() {
+    const traversal::Limits lim;
+    const float player_radius = 0.35F;    // physics_world_tuning.hpp kPlayerRadius
+    const float player_half = 0.90F;      // kPlayerHalfHeight
+    const auto stand_player = [&](ClimbWorld &w, const RVec3 feet) {
+        BodyCreationSettings s(new CapsuleShape(player_half, player_radius),
+                               feet + Vec3(0, player_half + player_radius, 0), Quat::sIdentity(), EMotionType::Static,
+                               detail::object_layers::kStatic);
+        const BodyID id = w.physics.GetBodyInterface().CreateAndAddBody(s, EActivation::DontActivate);
+        w.bodies.push_back(id);
+        return id;
+    };
+    ClimbWorld narrow;
+    narrow.box(Vec3(0.15F, 0.05F, 10.0F), RVec3(0, 3.05F, 0));   // 0.30 m board, top 3.10, 20 m long
+    const float board_top = 3.10F;
+    const BodyID on_board = stand_player(narrow, RVec3(0, board_top, 0));
+    traversal::AffordanceMap board_map;
+    board_map.scan(narrow.physics, AABox(Vec3(-2, 2, -12), Vec3(2, 6, 12)), {BodyID(), on_board}, lim);
+    const Vec3 from(0, board_top, -9.0F);
+    const Vec3 to(0, board_top, 9.0F);
+    require(board_map.patch_at(from, 0.4F) >= 0 && board_map.patch_at(to, 0.4F) >= 0,
+            "occupied board: both ends are walkable patches");
+    const std::vector<Vec3> patches = board_map.walk_path(from, to);
+    const traversal::Occupant him = traversal::occupant_of(narrow.physics, on_board);
+    require(him.present, "occupied board: his capsule is a body");
+    std::cout << "  patch walk on a 0.30 m board meets him " << traversal::path_meets_occupant(from, patches, him, lim.radius, lim.center_above_feet())
+              << " points " << patches.size() << "\n";
+    require(traversal::path_meets_occupant(from, patches, him, lim.radius, lim.center_above_feet()),
+            "occupied board: the patch walk goes through the player");
+    const std::vector<Vec3> blocked =
+        traversal::grid_walk(narrow.physics, {BodyID(), on_board}, lim, from, to, 3.0F, 0.2F, 20000);
+    require(blocked.empty(), "occupied board: her feet find no way past him on a board one body wide");
+
+    ClimbWorld wide;
+    const BodyID on_floor = stand_player(wide, RVec3(0, 0, 0));
+    const Vec3 wide_from(0, 0, -6.0F);
+    const Vec3 wide_to(0, 0, 6.0F);
+    const std::vector<Vec3> around =
+        traversal::grid_walk(wide.physics, {BodyID(), on_floor}, lim, wide_from, wide_to, 8.0F, 0.4F, 20000);
+    const traversal::Occupant wide_him = traversal::occupant_of(wide.physics, on_floor);
+    std::cout << "  wide floor way round him: points " << around.size() << " meets "
+              << traversal::path_meets_occupant(wide_from, around, wide_him, lim.radius, lim.center_above_feet()) << "\n";
+    require(!around.empty(), "wide floor: her feet go round a player standing on it");
+    require(!traversal::path_meets_occupant(wide_from, around, wide_him, lim.radius, lim.center_above_feet()),
+            "wide floor: the way round does not enter his capsule");
+    std::cout << "PASS scraperx_sim matron patch walk refuses an occupied one-body board\n";
+}
+
+void run_matron_climb_board() {
+    test_patch_walk_refuses_occupied_board();
+    test_narrow_board();
+    test_player_unchanged();
+    test_travel_walk_round_player();
+}
 
 // One deck box, something laid across its top. A curb within a step (and a
 // block on part of it) leaves it one floor; a wall taller than a step across

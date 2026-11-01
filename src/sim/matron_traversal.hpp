@@ -362,6 +362,25 @@ std::vector<JPH::Vec3> grid_walk(const JPH::PhysicsSystem &physics, const Ignore
                                  JPH::Vec3 from, JPH::Vec3 to, float margin = 8.0F, float cell = 0.4F,
                                  int max_nodes = 20000);
 
+// A body as the upright disc its shape's own bounds occupy. This is the
+// reading grid_walk already uses for the player: local bounds about his
+// position, not a rotated world box.
+struct Occupant {
+    JPH::Vec3 xz;
+    float radius;
+    float bottom;
+    float top;
+    bool present;
+};
+
+[[nodiscard]] Occupant occupant_of(const JPH::PhysicsSystem &physics, JPH::BodyID id);
+
+// True when the polyline from `from` through `path` comes inside her radius
+// plus his, where the two bodies overlap in height. A static patch walk does
+// not know he is standing there. A true result is not a walk.
+[[nodiscard]] bool path_meets_occupant(JPH::Vec3 from, const std::vector<JPH::Vec3> &path, const Occupant &who,
+                                       float her_radius, float center_above_feet);
+
 // ---------------------------------------------------------------------------
 // The scanner: what the tower's steel offers her.
 

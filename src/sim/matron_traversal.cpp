@@ -3426,6 +3426,60 @@ bool Climber::feel_for_rungs(const JPH::Vec3 from, const JPH::Vec3 dir, const fl
     }
     return false;
 }
+
+Occupant occupant_of(const PhysicsSystem &physics, const BodyID id) {
+    Occupant who{};
+    if (id.IsInvalid()) {
+        return who;
+    }
+    const Shape *shape = physics.GetBodyInterface().GetShape(id);
+    if (shape == nullptr) {
+        return who;
+    }
+    const AABox bounds = shape->GetLocalBounds();
+    const RVec3 centre = physics.GetBodyInterface().GetPosition(id);
+    who.xz = Vec3(float(centre.GetX()), 0.0F, float(centre.GetZ()));
+    who.radius = 0.5F * std::max(bounds.GetSize().GetX(), bounds.GetSize().GetZ());
+    const float half_y = 0.5F * bounds.GetSize().GetY();
+    who.bottom = float(centre.GetY()) - half_y;
+    who.top = float(centre.GetY()) + half_y;
+    who.present = true;
+    return who;
+}
+
+bool path_meets_occupant(const Vec3 from, const std::vector<Vec3> &path, const Occupant &who, const float her_radius,
+                         const float center_above_feet) {
+    if (!who.present) {
+        return false;
+    }
+    const float clear = her_radius + who.radius + 0.05F;
+    const float her_top = 2.0F * center_above_feet;
+    const auto hits = [&](const Vec3 a, const Vec3 b) {
+        const float span = std::hypot(b.GetX() - a.GetX(), b.GetZ() - a.GetZ());
+        const int n = std::max(1, static_cast<int>(std::ceil(span / 0.2F)));
+        for (int i = 0; i <= n; ++i) {
+            const float t = float(i) / float(n);
+            const Vec3 p = a + (b - a) * t;
+            if (p.GetY() < who.top && who.bottom < p.GetY() + her_top &&
+                std::hypot(p.GetX() - who.xz.GetX(), p.GetZ() - who.xz.GetZ()) < clear) {
+                return true;
+            }
+        }
+        return false;
+    };
+    Vec3 prev = from;
+    if (path.empty()) {
+        return hits(from, from);
+    }
+    for (const Vec3 &p : path) {
+        if (hits(prev, p)) {
+            return true;
+        }
+        prev = p;
+    }
+    return false;
+}
+
 std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, const Limits &limits, const Vec3 from,
                            const Vec3 to, const float margin, const float cell, const int max_nodes) {
     // The grid on the goal: its lines pass through the goal (a narrow board
@@ -3539,22 +3593,7 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
     // these probes, and only the player was excepted, so her walk went
     // straight through his spot and her body shoved his across the deck.
     // His shape, not a named radius: a capsule's own bounds give it.
-    Vec3 player_at = Vec3::sZero();
-    float player_radius = 0.0F, player_bottom = 0.0F, player_top = 0.0F;
-    bool player_in_way = false;
-    if (!ignore.player.IsInvalid()) {
-        const Shape *shape = physics.GetBodyInterface().GetShape(ignore.player);
-        if (shape != nullptr) {
-            const AABox bounds = shape->GetLocalBounds();
-            const RVec3 centre = physics.GetBodyInterface().GetPosition(ignore.player);
-            player_at = Vec3(float(centre.GetX()), 0.0F, float(centre.GetZ()));
-            player_radius = 0.5F * std::max(bounds.GetSize().GetX(), bounds.GetSize().GetZ());
-            const float half_y = 0.5F * bounds.GetSize().GetY();
-            player_bottom = float(centre.GetY()) - half_y;
-            player_top = float(centre.GetY()) + half_y;
-            player_in_way = true;
-        }
-    }
+    const Occupant player = occupant_of(physics, ignore.player);
     struct Node {
         float g = std::numeric_limits<float>::max();
         float feet = 0.0F;
@@ -3616,8 +3655,8 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
                 // through him. The goal itself stays exempt, as in stand():
                 // the move's own approach is the judge there, and a goal
                 // beside him must stay reachable.
-                if (player_in_way && feet < player_top && player_bottom < feet + 2.0F * limits.center_above_feet() &&
-                    std::hypot(bx - player_at.GetX(), bz - player_at.GetZ()) < limits.radius + player_radius + 0.05F &&
+                if (player.present && feet < player.top && player.bottom < feet + 2.0F * limits.center_above_feet() &&
+                    std::hypot(bx - player.xz.GetX(), bz - player.xz.GetZ()) < limits.radius + player.radius + 0.05F &&
                     std::hypot(bx - to.GetX(), bz - to.GetZ()) > 1.0F) {
                     continue;
                 }
