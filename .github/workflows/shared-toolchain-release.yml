@@ -1,0 +1,97 @@
+name: ScraperX — publish shared Linux x86_64 toolchain
+
+on:
+  # One bounded initial publication; no build or release on gameplay pushes.
+  push:
+    branches: [chatgpt/integrate-shared-toolchain-release-20261101]
+    paths:
+      - .github/workflows/shared-toolchain-release.yml
+      - tools/shared-toolchain/**
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scraperx-shared-toolchain-linux-x86_64-v1
+  cancel-in-progress: false
+
+jobs:
+  package-and-publish:
+    if: github.repository == 'IssisX/ScraperX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+
+      - name: Install Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Reject versioned release overwrite
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=scraperx-toolchain-linux-x86_64-v1
+          if gh release view "$tag" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release $tag already exists; never silently overwrite published binaries" >&2
+            exit 1
+          fi
+
+      - name: Install packaging prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes python3-venv ninja-build git unzip
+
+      - name: Build, validate and archive exact pinned toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash tools/shared-toolchain/package.sh "$RUNNER_TEMP/shared-toolchain-assets"
+          test -s "$RUNNER_TEMP/shared-toolchain-assets/ScraperX-toolchain-linux-x86_64-v1.tar.gz"
+          test -s "$RUNNER_TEMP/shared-toolchain-assets/ScraperX-toolchain-linux-x86_64-v1.tar.gz.sha256"
+
+      - name: Preserve independent build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-toolchain-linux-x86_64-v1-${{ github.run_id }}
+          path: ${{ runner.temp }}/shared-toolchain-assets/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish immutable versioned GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=scraperx-toolchain-linux-x86_64-v1
+          cd "$RUNNER_TEMP/shared-toolchain-assets"
+          cat > release-notes.txt <<'NOTES'
+          Shared ScraperX engineering toolchain, Ubuntu 24.04 / Linux x86_64.
+          CMake 3.31.8; Ninja 1.12.1; Godot 4.7-stable; Node 22;
+          godot-mcp-runtime 3.8.1; exact CMake-pinned Jolt, godot-cpp,
+          and Monocypher sources. The installer validates the SHA-256 asset,
+          runtime versions, and source directories before use.
+
+          This release is an engineering convenience, NOT a native-game build,
+          Android/ARM package, or proof of Godot visual/gameplay behavior.
+          Installation: bash tools/shared-toolchain/install.sh
+          Full usage: tools/shared-toolchain/README.md
+          NOTES
+          gh release create "$tag" \
+            "ScraperX-toolchain-linux-x86_64-v1.tar.gz" \
+            "ScraperX-toolchain-linux-x86_64-v1.tar.gz.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target ScraperX-Claude \
+            --title "ScraperX shared engineering toolchain (Linux x86_64) v1" \
+            --notes-file release-notes.txt \
+            --latest=false
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets,tagName \
+            --jq '{tag: .tagName, assets: [.assets[].name]}'
