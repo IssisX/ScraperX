@@ -87,6 +87,39 @@ def _quote_after_line(line, quote=None):
     return quote
 
 
+def _shell_syntax(line):
+    """Return unquoted, uncommented shell syntax for structural checks."""
+    quote = None
+    escaped = False
+    word_start = True
+    syntax = []
+    for char in line:
+        if escaped:
+            syntax.append(" ")
+            escaped = False
+            word_start = False
+            continue
+        if char == "\\" and quote != "'":
+            syntax.append(" ")
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            syntax.append(" ")
+            continue
+        if char == "#" and word_start:
+            break
+        if char in ("'", '"'):
+            quote = char
+            syntax.append(" ")
+            word_start = False
+            continue
+        syntax.append(char)
+        word_start = char.isspace() or char in "|&;()<>"
+    return "".join(syntax)
+
+
 def _safe_command_prefix(command):
     """Return a shell command before an unquoted pipe, or reject unsafe forms."""
     quote = None
@@ -153,10 +186,15 @@ def _heredoc_delimiter(command):
             quote = char
             word_start = False
             continue
-        if command.startswith("<<", index):
-            match = re.match(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1", command[index:])
+        if command.startswith("<<", index) and not command.startswith("<<<", index):
+            match = re.match(
+                r"""<<-?\s*(?:'([^']+)'|"([^"]+)"|([^\s;&|()<>]+))""",
+                command[index:],
+            )
             if match:
-                return match.group(2)
+                return next(value for value in match.groups() if value is not None)
+            # Unsupported heredoc syntax must never make its data executable.
+            return "\0"
         word_start = char.isspace() or char in "|&;()<>"
     return None
 
@@ -213,7 +251,7 @@ def invoked_scripts(workflow_text):
         closer = re.match(r"(?:fi|done|esac)\b", stripped)
         if opener:
             end = "fi" if stripped.startswith("if ") else "esac" if stripped.startswith("case ") else "done"
-            if not re.search(r"\b" + end + r"\b", stripped):
+            if not re.search(r"(?:^|;)\s*" + end + r"\b", _shell_syntax(stripped)):
                 control_stack.append(end)
             continue
         if control_stack:
@@ -223,7 +261,8 @@ def invoked_scripts(workflow_text):
         # Defining a shell function does not execute its body. Even a later
         # call cannot prove coverage without resolving the function's behavior.
         if function_depth:
-            function_depth = max(0, function_depth + stripped.count("{") - stripped.count("}"))
+            code = _shell_syntax(stripped)
+            function_depth = max(0, function_depth + code.count("{") - code.count("}"))
             continue
         # Bash also accepts a function signature followed by { on the next
         # line. A definition is not an invocation, even when never called.
@@ -242,7 +281,8 @@ def invoked_scripts(workflow_text):
             r"(?:function\s+)?[A-Za-z_][A-Za-z0-9_]*(?:\s*\(\s*\))?\s*\{",
             stripped,
         ):
-            function_depth = max(0, stripped.count("{") - stripped.count("}"))
+            code = _shell_syntax(stripped)
+            function_depth = max(0, code.count("{") - code.count("}"))
             continue
         # Here-document contents are data, but quoted/commented << is not.
         heredoc_end = _heredoc_delimiter(stripped)
