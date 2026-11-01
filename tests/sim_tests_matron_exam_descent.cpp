@@ -636,12 +636,12 @@ void survivable_free_drop() {
                       << " patches=" << scan->stats().patches
                       << " regions=" << scan->stats().regions
                       << " edges=" << scan->stats().edges
-                      << " usable_edges=" << scan->stats().usable_edges << '\\n';
+                      << " usable_edges=" << scan->stats().usable_edges << '\n';
             for (const traversal::Edge &edge : scan->edges()) {
                 if (edge.kind != traversal::MoveKind::FreeDrop) continue;
                 std::cerr << "SAFE_DROP_EDGE from=" << edge.from << " to=" << edge.to
                           << " top=" << edge.spec.top_y << " goal=" << edge.spec.goal_top
-                          << " usable=" << edge.usable << " reason=" << edge.reason << '\\n';
+                          << " usable=" << edge.usable << " reason=" << edge.reason << '\n';
             }
         }
         require(planned && offered_drop,
