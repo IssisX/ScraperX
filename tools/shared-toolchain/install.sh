@@ -74,7 +74,7 @@ else
     curl --fail --location --retry 3 --silent --show-error --output "$tmp/$asset.sha256" "$base/$asset.sha256"
     curl --fail --location --retry 3 --silent --show-error --output "$tmp/$asset" "$base/$asset"
 fi
-(cd "$tmp" && sha256sum --check --strict "$asset.sha256")
+(cd "$tmp" && sha256sum --check --strict "$asset.sha256" >&2)
 # Only the expected top-level directory may be extracted.
 tar -tzf "$tmp/$asset" | awk '
     $0 != "reusable-toolchain/" &&
