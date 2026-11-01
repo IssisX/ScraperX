@@ -177,6 +177,7 @@ def invoked_scripts(workflow_text):
     control_stack = []
     multiline_quote = None
     function_depth = 0
+    function_pending = False
     for line in workflow_text.splitlines():
         stripped = line.strip()
         indent = len(line) - len(line.lstrip(" "))
@@ -187,6 +188,7 @@ def invoked_scripts(workflow_text):
             control_stack = []
             multiline_quote = None
             function_depth = 0
+            function_pending = False
         if not in_run:
             match = RUN_BLOCK_RE.match(line)
             if match:
@@ -222,6 +224,19 @@ def invoked_scripts(workflow_text):
         # call cannot prove coverage without resolving the function's behavior.
         if function_depth:
             function_depth = max(0, function_depth + stripped.count("{") - stripped.count("}"))
+            continue
+        # Bash also accepts a function signature followed by { on the next
+        # line. A definition is not an invocation, even when never called.
+        if function_pending:
+            function_pending = False
+            if stripped == "{":
+                function_depth = 1
+                continue
+        if re.fullmatch(
+            r"(?:function\s+)?[A-Za-z_][A-Za-z0-9_]*\s*\(\s*\)",
+            stripped,
+        ) or re.fullmatch(r"function\s+[A-Za-z_][A-Za-z0-9_]*", stripped):
+            function_pending = True
             continue
         if re.match(
             r"(?:function\s+)?[A-Za-z_][A-Za-z0-9_]*(?:\s*\(\s*\))?\s*\{",
