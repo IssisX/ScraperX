@@ -15,9 +15,6 @@ jobs:
     if: github.repository == 'IssisX/ScraperX'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    env:
-      SCRAPERX_TOOLCHAIN_CACHE_DIR: ${{ runner.temp }}/scraperx-consumer-toolchain
-
     steps:
       - name: Checkout exact consumer revision
         uses: actions/checkout@v4
@@ -26,6 +23,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          export SCRAPERX_TOOLCHAIN_CACHE_DIR="$RUNNER_TEMP/scraperx-consumer-toolchain"
 
           # This is a new runner, not the publishing job's staging directory.
           toolchain="$(bash tools/shared-toolchain/install.sh)"
