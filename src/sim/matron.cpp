@@ -606,30 +606,52 @@ float Matron::floor_of(const float y) const {
 // her collision scan does. Use the closest local top within the player's
 // standing height, without borrowing a distant deck or knowing his state.
 float Matron::floor_at(const float x, const float y, const float z) const {
-    if (scanned_ != nullptr) {
-        float best = std::numeric_limits<float>::max();
-        float floor = 0.0F;
-        bool found = false;
-        for (const traversal::Patch &p : scanned_->patches()) {
-            if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
-                z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
-                p.top > y + 0.15F || y - p.top > 2.2F) {
-                continue;
-            }
-            const float distance = std::abs(y - 0.9F - p.top);
-            if (distance < best) {
-                best = distance;
-                floor = p.top;
-                found = true;
-            }
-        }
-        if (found) return floor;
-    }
-    // Off scanned steel, preserve the known-level lookup. Below its lowest
-    // entry, never manufacture an 11 m lead from a ground-level sound.
     float lowest = std::numeric_limits<float>::max();
     for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
-    return y < lowest - 0.5F ? y - 0.9F : floor_of(y);
+    if (y < lowest - 0.5F) {
+        if (scanned_ != nullptr) {
+            float best = std::numeric_limits<float>::max();
+            float floor = 0.0F;
+            bool found = false;
+            for (const traversal::Patch &p : scanned_->patches()) {
+                if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
+                    z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
+                    p.top > y + 0.15F || y - p.top > 2.2F) {
+                    continue;
+                }
+                const float distance = std::abs(y - 0.9F - p.top);
+                if (distance < best) {
+                    best = distance;
+                    floor = p.top;
+                    found = true;
+                }
+            }
+            if (found) return floor;
+        }
+        return y - 0.9F;
+    }
+    if (zipline_ != nullptr) {
+        for (const Zipline::Line &line : zipline_->lines()) {
+            const float sx = float(line.stand.GetX());
+            const float sz = float(line.stand.GetZ());
+            const float fx = float(line.ramp_foot.GetX());
+            const float fz = float(line.ramp_foot.GetZ());
+            const float rx = sx - fx;
+            const float rz = sz - fz;
+            const float rlen = std::hypot(rx, rz);
+            if (rlen > 0.1F) {
+                const float along = ((x - fx) * rx + (z - fz) * rz) / rlen;
+                const float across = std::abs((x - fx) * rz - (z - fz) * rx) / rlen;
+                const float stand_y = float(line.stand.GetY());
+                const float top_floor = float(line.top_floor.GetY());
+                if (along >= -0.5F && along <= rlen + 0.85F && across <= 1.2F &&
+                    y >= top_floor - 0.5F && y <= stand_y + 2.5F) {
+                    return top_floor;
+                }
+            }
+        }
+    }
+    return floor_of(y);
 }
 
 bool Matron::on_catwalk_line(const float x, const float z, const float margin) {

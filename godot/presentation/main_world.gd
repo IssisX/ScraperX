@@ -223,9 +223,22 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 						Vector3(cx + face * STACK_HALF_EXTENT, mid_y, cz + mid_along), oxidised)
 					brace_z.rotation = Vector3(-pitch, 0.0, 0.0)
 
+	_build_first_floor_ladder(galvanised)
 	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
 	_build_stack_megastructure(mill_scale, oxidised, rust_deep, rust_bright, galvanised,
 		faded, timber)
+
+# The grade-to-first-deck inspection ladder is a real static collision path.
+# Rungs and stiles are exported as physical solids, not just visible dressing.
+func _build_first_floor_ladder(metal: Material) -> void:
+	var line_x := 12.0
+	var line_z := STACK_CENTER.z + STACK_HALF_EXTENT + 0.4
+	for side in [-1.0, 1.0]:
+		_add_box("StairStringer", Vector3(0.08, STACK_LEVEL_HEIGHT, 0.08),
+			Vector3(line_x + side * 0.60, STACK_LEVEL_HEIGHT * 0.5, line_z), metal)
+	for rung in range(27):
+		_add_box("GradeLadderRung", Vector3(1.2, 0.08, 0.08),
+			Vector3(line_x, 1.45 + float(rung) * 0.36, line_z), metal)
 
 # Everything that makes the frame read as one vast building rather than a
 # repeated scaffold: splayed footings, clad machine halls with lit windows,
