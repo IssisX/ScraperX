@@ -604,8 +604,8 @@ void reject_free_drop_through_overhead_steel() {
     // straight exit-to-landing diagonal. The scanner must not mistake a
     // collision-free diagonal for a collision-free ballistic flight.
     for (const float sign : {-1.0F, 1.0F}) {
-        (void)world.box(Vec3(0.14F, 0.16F, 2.5F), Vec3(40.0F + sign * 4.4F, 8.20F, 0.0F));
-        (void)world.box(Vec3(2.5F, 0.16F, 0.14F), Vec3(40.0F, 8.20F, sign * 4.4F));
+        (void)world.box(Vec3(0.14F, 0.16F, 2.5F), Vec3(40.0F + sign * 4.4F, 9.50F, 0.0F));
+        (void)world.box(Vec3(2.5F, 0.16F, 0.14F), Vec3(40.0F, 9.50F, sign * 4.4F));
     }
     world.matron->place_for_test(world.course.world(Vec3(40.0F, 11.0F, 0.0F)));
     for (int tick = 0; tick < 40; ++tick)
