@@ -58,6 +58,78 @@ TEST_PATH_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\.gd)\Z")
 RUN_BLOCK_RE = re.compile(r"^(\s*)run:\s*\|[-+]?\s*(?:#.*)?$")
 
 
+
+def _quote_after_line(line, quote=None):
+    """Track shell quote state across physical lines, ignoring comments/escapes."""
+    escaped = False
+    word_start = True
+    for char in line:
+        if escaped:
+            escaped = False
+            word_start = False
+            continue
+        if char == "\\" and quote != "'":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            continue
+        if char == "#" and word_start:
+            break
+        if char in ("'", '"'):
+            quote = char
+            word_start = False
+        elif char.isspace() or char in "|&;()<>":
+            word_start = True
+        else:
+            word_start = False
+    return quote
+
+
+def _safe_command_prefix(command):
+    """Return a shell command before an unquoted pipe, or reject unsafe forms."""
+    quote = None
+    escaped = False
+    word_start = True
+    first_pipe = None
+    for index, char in enumerate(command):
+        if escaped:
+            escaped = False
+            word_start = False
+            continue
+        if char == "\\" and quote != "'":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            continue
+        if char == "#" and word_start:
+            break
+        if char in ("'", '"'):
+            quote = char
+            word_start = False
+            continue
+        if char == ";":
+            return None
+        if char == "|":
+            if command[index:index + 2] == "||":
+                return None
+            if first_pipe is None:
+                first_pipe = index
+            word_start = True
+            continue
+        if char == "&":
+            # >& and &> redirect streams; a bare & backgrounds the test.
+            if index > 0 and command[index - 1] == ">" or command[index:index + 2] == "&>":
+                word_start = True
+                continue
+            return None
+        word_start = char.isspace() or char in "()<>"
+    return None if quote else command[:first_pipe] if first_pipe is not None else command
+
+
 def invoked_scripts(workflow_text):
     """Find Godot test commands in shell run blocks, not mentions or comments.
 
@@ -72,6 +144,7 @@ def invoked_scripts(workflow_text):
     pending = ""
     heredoc_end = ""
     control_stack = []
+    multiline_quote = None
     for line in workflow_text.splitlines():
         stripped = line.strip()
         indent = len(line) - len(line.lstrip(" "))
@@ -80,6 +153,7 @@ def invoked_scripts(workflow_text):
             pending = ""
             heredoc_end = ""
             control_stack = []
+            multiline_quote = None
         if not in_run:
             match = RUN_BLOCK_RE.match(line)
             if match:
@@ -90,7 +164,13 @@ def invoked_scripts(workflow_text):
             if stripped == heredoc_end:
                 heredoc_end = ""
             continue
-        if not stripped or stripped.startswith("#"):
+        if not stripped or (stripped.startswith("#") and not multiline_quote):
+            continue
+        # Quoted data can span physical lines; none of its lines is a command.
+        was_quoted = multiline_quote is not None
+        multiline_quote = _quote_after_line(stripped, multiline_quote)
+        if was_quoted or multiline_quote:
+            pending = ""
             continue
         # A conditional or loop body may never run. Do not count commands
         # inside shell control structures as unconditional test coverage.
@@ -117,19 +197,15 @@ def invoked_scripts(workflow_text):
         pending = ""
         # A fallback can turn a failing test into a successful CI step.
         # Conservatively reject compound commands rather than count them.
-        if "||" in command or "&&" in command or ";" in command:
-            continue
-        if "--script" not in command or "res://tests/" not in command:
+        command = _safe_command_prefix(command)
+        if command is None or "--script" not in command or "res://tests/" not in command:
             continue
         try:
             tokens = shlex.split(command, comments=True, posix=True)
         except ValueError as exc:
             raise ValueError(f"cannot parse Godot test command {command!r}") from exc
-        # Count only a Godot executable, not a Godot path passed to echo or
-        # another command. Shell control operators delimit the command.
-        for operator in ("|", "||", "&&", ";"):
-            if operator in tokens:
-                tokens = tokens[:tokens.index(operator)]
+        # Count only a Godot executable, not a path passed to echo or
+        # another command. The shell scanner already isolated the pipeline head.
         i = 0
         while i < len(tokens):
             if tokens[i] == "env":
