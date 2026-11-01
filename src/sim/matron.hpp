@@ -717,6 +717,7 @@ public:
     static constexpr float kUprightBaseM = 0.08F;     // frail on her feet: an old woman's narrow, shuffling base
     static constexpr float kCrouchHeightM = 0.55F;
     static constexpr float kCrouchBaseM = 0.45F;
+    static constexpr float kCarryPullCapM = 0.10F;  // M4 S2 counter-lean cap: an uncapped pull (~0.74 m) broke tear holds; 0.10 m keeps a real pull without it
     static constexpr float kPestStepM = 0.02F;
     static constexpr float kDangerousStepM = 0.30F;
     static constexpr float kChangedStepM = 0.75F;
@@ -1148,6 +1149,19 @@ public:
         float climb_force_n = 0.0F;
         bool climb_lunge_drive = false;
         float foot_power_w = 0.0F;   // her feet's positive power this tick (lunge or walk), from their Budget
+        // Her held load's tip, measured every tick (S1, matron_load): the
+        // grip-held player's mass, its horizontal offset from her centre,
+        // the moment that offset makes about her feet, and how far the
+        // combined centre moves toward the load. S2 reads the shift back
+        // into a decision: the stance base she stands on, and the pull
+        // applied to the load this tick.
+        bool load_held = false;
+        float load_mass_kg = 0.0F;
+        float load_offset_m = 0.0F;
+        float load_moment_nm = 0.0F;
+        float load_cop_shift_m = 0.0F;
+        float load_stance_base_m = 0.0F;
+        float load_pull_m = 0.0F;
         std::uint32_t climb_grips = 0;
         std::uint32_t climb_releases = 0;
         bool mantling = false;
@@ -1469,6 +1483,9 @@ public:
     // Tests only: her hands open on the climb or the pipe she is on, as a hold
     // that gave way would open them.
     void let_go_for_test();
+    // Tests only: a column at (x, z) failed under her, left alone a while
+    // (Simulation::debug_matron_block_column).
+    void block_column_for_test(float x, float z);
     // The corner pipe ruled out for her (Simulation::debug_matron_rule_out_pipe).
     void rule_out_pipe_for_test();
     // Tests only (Simulation::debug_matron_rule_out_hang): no edge of her
@@ -1503,6 +1520,12 @@ public:
     void set_player_on_ladder(const bool climbing) noexcept { player_on_ladder_ = climbing; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;
+    // S1 measurement: the grab world reports both centres and the held
+    // mass every tick, so refresh_view can publish the load's tip.
+    // Matron does only the arithmetic; the mass stays the grab world's
+    // own constant. No behaviour.
+    void report_held_load(JPH::RVec3 her_pos, JPH::RVec3 player_pos, float player_mass_kg,
+                          bool held) noexcept;
     // Her grip gone: `torn` out of her hand (else let go); `fought` when the
     // player fought it this hold (kicked, thrashed, braced on a rail). Torn
     // with no fight (the world's doing: her heave against the rail, a snag),
@@ -2270,6 +2293,9 @@ private:
     bool journey_active_ = false;
     bool journey_moving_ = false;   // a move (not a walk) under way
     int journey_leg_ticks_ = 0;
+    float journey_leg_best_ = 1.0e9F;   // closest she has been to the current leg
+    float journey_leg_progress_ = 1.0e9F;   // distance to the current leg when its clock last reset
+    int journey_leg_stall_ticks_ = 0;   // ticks since that closest point improved
     bool journey_retreating_ = false;   // walking back along reached legs after a leg timed out
     int journey_wait_ticks_ = 0;    // a scan at most every 2 s; 30 s after a failure
     float routecraft_release_floor_ = 0;
@@ -2321,6 +2347,16 @@ private:
     float arm_reach_m_ = kArmReachM;
     JPH::RVec3 hand_target_ = JPH::RVec3::sZero();
     JPH::Vec3 hand_target_v_ = JPH::Vec3::sZero();
+    // S1 measured load tip, refreshed by report_held_load every tick.
+    bool load_held_ = false;
+    float load_mass_kg_ = 0.0F;
+    float load_offset_m_ = 0.0F;
+    float load_moment_nm_ = 0.0F;
+    float load_cop_shift_m_ = 0.0F;
+    float load_stance_base_m_ = 0.0F;   // S2: the base she stands on this tick
+    float load_pull_m_ = 0.0F;          // S2: pull applied to the load this tick
+    float load_dir_x_ = 0.0F;   // unit XZ from her centre toward the load, else 0
+    float load_dir_z_ = 0.0F;
     float rim_x_ = 0.0F, rim_z_ = 0.0F;     // where she stands at the rail
     float rim_nx_ = 0.0F, rim_nz_ = 1.0F;   // out over the shaft from there
     bool aim_ledge_ = false;

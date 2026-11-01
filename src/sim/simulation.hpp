@@ -261,6 +261,14 @@ struct MatronSnapshot final {
     double climb_force_n = 0.0;
     bool climb_lunge_drive = false;
     double foot_power_w = 0.0;
+    // Held-load tip, from Matron::View (S1 measurement, no behaviour).
+    bool load_held = false;
+    double load_mass_kg = 0.0;
+    double load_offset_m = 0.0;
+    double load_moment_nm = 0.0;
+    double load_cop_shift_m = 0.0;
+    double load_stance_base_m = 0.0;
+    double load_pull_m = 0.0;
     std::uint32_t climb_grips = 0, climb_releases = 0;
     bool mantling = false;
     double lead_x = 0.0, lead_z = 0.0, lead_age_s = 0.0;
@@ -1699,6 +1707,8 @@ public:
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.
     void debug_matron_let_go() noexcept;
+    // Tests only: a column at (x, z) failed under her, left alone a while.
+    void debug_matron_block_column(double x, double z) noexcept;
     // The Matron's climbing (matron_traversal.hpp): what the tower's steel
     // offers her, scanned from the real collision geometry on first use.
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();

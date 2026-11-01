@@ -46,12 +46,6 @@ KNOWN_GAPS = {
         "studio measurement probe, writes a probe directory for the "
         "scorer; no pass/fail verdict, not a CI gate"
     ),
-    "script_load_test.gd": (
-        "invocation owed, not yet proven: runs every presentation "
-        "script plus the native bridge, so its local proof needs a "
-        "built native library, which was not complete at package "
-        "time; add its audits step together with removing this entry"
-    ),
 }
 
 TEST_PATH_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\.gd)\Z")

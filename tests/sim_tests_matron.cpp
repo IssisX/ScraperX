@@ -1633,6 +1633,12 @@ void run_matron() {
         int support_velocity_bad = 0;
         double support_rate_gap_max = 0.0;
         double support_rate_max = 0.0;
+        // Moving-support carriage truth: the horizontal channel of the
+        // exported support velocity, and her centre against the cage
+        // floor's own rectangle, over the same rising window.
+        double support_svh_max = 0.0;
+        double ride_dx_max = 0.0;
+        double ride_dz_max = 0.0;
         double prev_travel = s.snapshot().well_a_cage_travel;
         for (int i = 0; i < 25 * static_cast<int>(Simulation::kTickRateHz) && s.snapshot().well_a_cage_travel < 21.99;
              ++i) {
@@ -1642,6 +1648,8 @@ void run_matron() {
             const double travel = s.snapshot().well_a_cage_travel;
             aboard = aboard || m.position.y > 155.05 + 0.5 * travel + 1.0;
             if (travel > 1.0) {
+                ride_dx_max = std::max(ride_dx_max, std::abs(m.position.x - Matron::kCageACenterX));
+                ride_dz_max = std::max(ride_dz_max, std::abs(m.position.z - Matron::kCagesCenterZ));
                 clung_all_way = clung_all_way && m.clinging && m.position.y > 155.05 + travel - 0.3;
                 // Moving-floor proof: while sole-supported on the rising cage,
                 // her exported support velocity must be the cage's, up and
@@ -1657,6 +1665,7 @@ void run_matron() {
                     if (svy <= 0.2 || svh >= 0.3) {
                         ++support_velocity_bad;
                     }
+                    support_svh_max = std::max(support_svh_max, svh);
                     const double cage_rate = (travel - prev_travel) / Simulation::kFixedStepSeconds;
                     support_rate_gap_max = std::max(support_rate_gap_max, std::abs(svy - cage_rate));
                     support_rate_max = std::max(support_rate_max, cage_rate);
@@ -1669,11 +1678,28 @@ void run_matron() {
                   << ", supported ride ticks " << supported_ride_ticks << ", support velocity bad "
                   << support_velocity_bad << ", support rate gap max " << support_rate_gap_max << " m/s, cage rate max "
                   << support_rate_max << " m/s\n";
+        std::cout << "  matron ride: support svh max " << support_svh_max << " m/s, centre off cage centre dx max "
+                  << ride_dx_max << " m, dz max " << ride_dz_max << " m\n";
         require(aboard && clung_all_way, "matron ride: she stepped into the cage as it left and held on to the top");
         require(supported_ride_ticks > 0 && support_velocity_bad == 0,
                 "matron ride: supported on the rising cage, her support velocity is the cage's");
         require(support_rate_gap_max < 0.15,
                 "matron ride: supported on the rising cage, her support velocity matches the cage's rise rate");
+        // Horizontal rate truth: the cage's guide is vertical only, so
+        // its horizontal rate is exactly zero; the exported horizontal
+        // support velocity must match it within the same 0.15 m/s
+        // tolerance the vertical rate match uses. (The old svh < 0.3
+        // direction bound above stays untouched.)
+        require(support_svh_max < 0.15,
+                "matron ride: supported on the rising cage, her support velocity matches the cage's zero horizontal rate");
+        // Carriage truth: while aboard, her centre stays within the cage
+        // floor's own rectangle grown by her capsule radius — the floor
+        // is 1.50 m by 1.40 m half-extents about its centre
+        // (band_counterweight_well.cpp kCageHalfX/kCageHalfZ). Past
+        // floor-half plus radius, no part of her upright capsule can
+        // still be over the floor: she has left the cage.
+        require(ride_dx_max <= 1.50 + Matron::kRadius && ride_dz_max <= 1.40 + Matron::kRadius,
+                "matron ride: aboard the rising cage, her centre stays within the cage floor");
         require(s.snapshot().death_count == deaths, "matron ride: clinging, she took nobody on the way up");
         require(with_her_s > alone_s + 0.5, "matron ride: her weight slows the cage away");
         // At the top: out of the cage's mouth and across the 1.09 m to the ring,
