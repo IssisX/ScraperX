@@ -146,6 +146,7 @@ enum class MoveKind : std::uint8_t {
     HangDrop = 8,
     GapJump = 9,    // a supported run and short leg drive, then ballistic flight to a lower floor
     LedgeJump = 10, // a jump to a lip; then a hang and its mantle onto the floor over it
+    FreeDrop = 11,  // a surveyed, survivable fall from a broad static top onto real support
 };
 [[nodiscard]] const char *move_name(MoveKind kind) noexcept;
 
