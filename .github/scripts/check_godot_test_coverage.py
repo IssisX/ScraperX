@@ -57,6 +57,12 @@ KNOWN_GAPS = {
 TEST_PATH_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\.gd)\Z")
 RUN_BLOCK_RE = re.compile(r"^(\s*)(?:-\s+)?run:\s*\|[-+]?\s*(?:#.*)?$")
 RUN_SCALAR_RE = re.compile(r"^\s*(?:-\s+)?run:\s+(?![|>])(.+?)\s*$")
+# An uncalled shell function can have a brace, subshell or compound-command body.
+# Static line scanning cannot safely establish where an arbitrary body ends.
+SHELL_FUNCTION_RE = re.compile(
+    r"^(?:function\s+[A-Za-z_][A-Za-z0-9_]*(?:\s*\(\s*\))?"
+    r"|[A-Za-z_][A-Za-z0-9_]*\s*\(\s*\))(?=\s|[({]|$)"
+)
 
 
 
@@ -215,8 +221,7 @@ def invoked_scripts(workflow_text):
     heredoc_end = ""
     control_stack = []
     multiline_quote = None
-    function_depth = 0
-    function_pending = False
+    function_opaque = False
     for line in workflow_text.splitlines():
         stripped = line.strip()
         indent = len(line) - len(line.lstrip(" "))
@@ -226,8 +231,7 @@ def invoked_scripts(workflow_text):
             heredoc_end = ""
             control_stack = []
             multiline_quote = None
-            function_depth = 0
-            function_pending = False
+            function_opaque = False
         if not in_run:
             match = RUN_BLOCK_RE.match(line)
             if match:
@@ -258,9 +262,19 @@ def invoked_scripts(workflow_text):
         heredoc_end = _heredoc_delimiter(stripped)
         if heredoc_end:
             continue
-        # A conditional or loop body may never run. Do not count commands
-        # inside shell control structures as unconditional test coverage.
+        # A function definition never proves its body ran. Shell function
+        # bodies may use { ... }, ( ... ), if ... fi, for ... done, etc.
+        # Do not infer the end of an arbitrary body from a closing brace:
+        # once a definition appears, this run block is opaque to the guard.
+        # Put direct Godot invocations in a separate run step to prove them.
         syntax = _shell_syntax(stripped)
+        if SHELL_FUNCTION_RE.match(syntax):
+            function_opaque = True
+        if function_opaque:
+            continue
+
+        # Conditional and loop bodies may never run and do not count as
+        # unconditional coverage either.
         opener = re.match(r"(?:if|for|while|until|case)\b", syntax)
         closer = re.match(r"(?:fi|done|esac)\b", syntax)
         if opener:
@@ -271,32 +285,6 @@ def invoked_scripts(workflow_text):
         if control_stack:
             if closer and closer.group(0) == control_stack[-1]:
                 control_stack.pop()
-            continue
-        # Defining a shell function does not execute its body. Even a later
-        # call cannot prove coverage without resolving the function's behavior.
-        if function_depth:
-            code = _shell_syntax(stripped)
-            function_depth = max(0, function_depth + code.count("{") - code.count("}"))
-            continue
-        # Bash also accepts a function signature followed by { on the next
-        # line. A definition is not an invocation, even when never called.
-        if function_pending:
-            function_pending = False
-            if stripped == "{":
-                function_depth = 1
-                continue
-        if re.fullmatch(
-            r"(?:function\s+)?[A-Za-z_][A-Za-z0-9_]*\s*\(\s*\)",
-            stripped,
-        ) or re.fullmatch(r"function\s+[A-Za-z_][A-Za-z0-9_]*", stripped):
-            function_pending = True
-            continue
-        if re.match(
-            r"(?:function\s+)?[A-Za-z_][A-Za-z0-9_]*(?:\s*\(\s*\))?\s*\{",
-            stripped,
-        ):
-            code = _shell_syntax(stripped)
-            function_depth = max(0, code.count("{") - code.count("}"))
             continue
         if stripped.endswith("\\"):
             pending += stripped[:-1] + " "
@@ -352,12 +340,50 @@ def invoked_scripts(workflow_text):
     return invoked
 
 
+
+def _check_function_guard():
+    """Regression checks for uncalled Bash functions, exercised by CI itself."""
+    command = "tools/godot/godot --headless --path godot --script res://tests/fixture_test.gd"
+    cases = {
+        "subshell": "run_tests() (\n  " + command + "\n)\n",
+        "keyword_subshell": "function run_tests() (\n  " + command + "\n)\n",
+        "conditional": "run_tests() if true; then\n  " + command + "\nfi\n",
+        "keyword_conditional": "function run_tests() if true; then\n  " + command + "\nfi\n",
+        "loop": "run_tests() for i in 1; do\n  " + command + "\ndone\n",
+        "keyword_loop": "function run_tests() for i in 1; do\n  " + command + "\ndone\n",
+        "brace": "run_tests() {\n  " + command + "\n}\n",
+        "split_signature": "run_tests()\n{\n  " + command + "\n}\n",
+        "bare_keyword": "function run_tests\n{\n  " + command + "\n}\n",
+    }
+    for name, shell in cases.items():
+        run = "steps:\n  - run: |\n" + "".join(
+            "      " + line + "\n" for line in shell.splitlines()
+        )
+        found = invoked_scripts(run)
+        if found:
+            raise AssertionError(f"uncalled {name} function counted as CI coverage: {found}")
+    # A separate step is a new execution context: direct invocations there
+    # remain countable even when a previous step defines a shell function.
+    preceding = "steps:\n  - run: |\n      run_tests() {\n        :\n      }\n"
+    direct = "  - run: |\n      " + command + "\n"
+    if invoked_scripts(preceding + direct) != {"fixture_test.gd"}:
+        raise AssertionError("direct Godot invocation in a later step was lost")
+    if invoked_scripts("steps:\n  - run: |\n      " + command + "\n") != {"fixture_test.gd"}:
+        raise AssertionError("direct Godot invocation without functions was lost")
+    return len(cases) + 2
+
 def main():
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow", default=root / ".github/workflows/wo000-delivery-spine.yml")
     parser.add_argument("--test-dir", default=root / "godot/tests")
+    parser.add_argument("--self-test", action="store_true", help="run parser regressions only")
     args = parser.parse_args()
+
+    fixture_count = _check_function_guard()
+    if args.self_test:
+        print(f"PASS: {fixture_count} Godot coverage parser regression checks")
+        return 0
 
     workflow_text = Path(args.workflow).read_text()
     test_dir = Path(args.test_dir)
