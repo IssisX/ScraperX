@@ -43,6 +43,7 @@ const char *move_name(const MoveKind kind) noexcept {
     case MoveKind::HangDrop: return "hang_drop";
     case MoveKind::GapJump: return "gap_jump";
     case MoveKind::LedgeJump: return "ledge_jump";
+    case MoveKind::FreeDrop: return "free_drop";
     }
     return "?";
 }
@@ -1032,6 +1033,7 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::JumpCatch: step_jump(dt, budget); break;
     case MoveKind::LedgeJump: step_ledge_jump(dt, budget); break;
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
+    case MoveKind::FreeDrop: step_drop(dt, budget, false); break;
     case MoveKind::GapJump: step_gap(dt, budget); break;
     }
     // M5b: second grip, rung climbs only, maintained after the move's own
@@ -2049,6 +2051,10 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
     const float feet = float(c.GetY()) - limits_.center_above_feet();
     const Vec3 out = flat(spec_.goal - spec_.start).NormalizedOr(spec_.out);
     if (phase_ == 0) {
+        if (spec_.kind == MoveKind::FreeDrop && (!supported() || std::abs(velocity().GetY()) > 0.6F)) {
+            fail(Failure::NotSupported);  // never launch a planned fall from air or a moving support
+            return status_;
+        }
         if (horizontal(spec_.start - c) > 0.25F) {
             if (phase_s_ > 10.0F) {
                 fail(Failure::Stalled);
@@ -3000,7 +3006,14 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
         }
     }
 
-    // Lips between regions: a mantle up; a step or a hang-drop down.
+    // A free drop is an alternative to a long ladder, not an extension of
+    // hang/drop reach. She falls under Jolt gravity with no airborne thrust.
+    // Use a conservative impact speed below Matron's 16 m/s lethal landing.
+    // The scan starts this move only on broad stationary steel, with a clear
+    // exterior flight corridor to stationary support below.
+    constexpr float kFreeDropImpactMps = 15.0F;
+    const float free_drop_max_m = kFreeDropImpactMps * kFreeDropImpactMps / (2.0F * kGravity);
+    // Lips between regions: mantle up, step/hang down, or a survivable free drop.
     const float cell = 3.0F;
     std::unordered_map<long long, std::vector<int>> grid;
     for (std::size_t i = 0; i < patches_.size(); ++i) {
@@ -3014,7 +3027,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
         const Patch &lo = patches_[i];
         const int y0 = cell_of(lo.top, 5.0F);
         seen.clear();
-        for (int y = y0; y <= y0 + 1; ++y)
+        for (int y = y0; y <= y0 + 3; ++y)
             for (int x = cell_of(lo.min_x - 0.7F, cell); x <= cell_of(lo.max_x + 0.7F, cell); ++x)
                 for (int z = cell_of(lo.min_z - 0.7F, cell); z <= cell_of(lo.max_z + 0.7F, cell); ++z) {
                     const auto it = grid.find(cell_key(x, y, z));
@@ -3022,11 +3035,72 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     for (const int j : it->second) {
                         const Patch &hi = patches_[static_cast<std::size_t>(j)];
                         const float rise = hi.top - lo.top;
-                        if (hi.region == lo.region || rise <= limits.step_max_m || rise > limits.drop_max_m) continue;
+                        if (hi.region == lo.region || rise <= limits.step_max_m || rise > free_drop_max_m) continue;
                         const float gap = gap_xz(lo, hi);
                         if (gap > 1.4F) continue;
                         if (std::find(seen.begin(), seen.end(), j) != seen.end()) continue;
                         seen.push_back(j);
+                        if (rise > limits.drop_max_m) {
+                            // Find a real exit on the OUTSIDE of the high
+                            // support. A landing directly under a deck is not
+                            // proof of a clear fall past that same deck.
+                            if (hi.narrow || lo.narrow ||
+                                physics.GetBodyInterface().GetMotionType(hi.body) != EMotionType::Static ||
+                                physics.GetBodyInterface().GetMotionType(lo.body) != EMotionType::Static) continue;
+                            bool found_drop = false;
+                            for (int side = 0; side < 4 && !found_drop; ++side) {
+                                const Vec3 outward = side == 0 ? Vec3(-1, 0, 0) :
+                                                     side == 1 ? Vec3(1, 0, 0) :
+                                                     side == 2 ? Vec3(0, 0, -1) : Vec3(0, 0, 1);
+                                for (const float fraction : {0.20F, 0.50F, 0.80F}) {
+                                    const float x = side < 2 ? (side == 0 ? hi.min_x : hi.max_x) :
+                                                    hi.min_x + fraction * (hi.max_x - hi.min_x);
+                                    const float z = side >= 2 ? (side == 2 ? hi.min_z : hi.max_z) :
+                                                    hi.min_z + fraction * (hi.max_z - hi.min_z);
+                                    const Vec3 lip(x, hi.top, z);
+                                    const Vec3 start = lip - outward * (limits.radius + 0.22F);
+                                    const Vec3 exit = lip + outward * (limits.radius + 0.18F);
+                                    // A planted approach gives at most ~1.6 m/s.
+                                    // Flight carries that momentum; the move
+                                    // never applies steering forces in the air.
+                                    const Vec3 landing = lip + outward * (limits.radius + 2.80F) -
+                                                         Vec3(0, rise, 0);
+                                    const float inset = limits.radius + 0.15F;
+                                    if (landing.GetX() < lo.min_x + inset || landing.GetX() > lo.max_x - inset ||
+                                        landing.GetZ() < lo.min_z + inset || landing.GetZ() > lo.max_z - inset)
+                                        continue;
+                                    if (!capsule_free(physics, ignore, limits, start) ||
+                                        !capsule_free(physics, ignore, limits, exit) ||
+                                        !capsule_free(physics, ignore, limits, landing))
+                                        continue;
+                                    ++stats_.capsule_queries;
+                                    if (!gap_segment_free(physics, ignore, limits, start, exit)) continue;
+                                    ++stats_.capsule_queries;
+                                    if (!gap_segment_free(physics, ignore, limits, exit, landing)) continue;
+                                    Edge down;
+                                    down.from = hi.region;
+                                    down.to = lo.region;
+                                    down.kind = MoveKind::FreeDrop;
+                                    down.spec.kind = down.kind;
+                                    down.spec.start = start;
+                                    down.spec.goal = landing;
+                                    down.spec.goal_top = lo.top;
+                                    down.spec.top_y = hi.top;
+                                    down.spec.bottom_y = lo.top;
+                                    down.spec.out = outward;
+                                    // Prefer an existing climb if one is
+                                    // available; no mandatory death-defying
+                                    // shortcut over a perfectly good ladder.
+                                    down.cost = 40.0F + rise;
+                                    down.usable = true;
+                                    down.reason = "clear stationary takeoff and ballistic corridor to a survivable landing";
+                                    add_edge(std::move(down));
+                                    found_drop = true;
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
                         const Vec3 lc((lo.min_x + lo.max_x) * 0.5F, lo.top, (lo.min_z + lo.max_z) * 0.5F);
                         Vec3 lip = closest_on(hi, lc, 0.0F);
                         if (gap > 0.6F) {
