@@ -46,9 +46,9 @@ for dependency in jolt godot_cpp monocypher; do
     # The repository commit is still authoritative. Fail if the freshly
     # fetched source is not the commit the current CMake pins.
     case "$dependency" in
-        jolt) pin="$(sed -n -E 's/^set\\(SCRAPERX_JOLT_COMMIT "([0-9a-f]{40})".*/\\1/p' CMakeLists.txt)" ;;
-        godot_cpp) pin="$(sed -n -E 's/^set\\(SCRAPERX_GODOT_CPP_COMMIT "([0-9a-f]{40})".*/\\1/p' CMakeLists.txt)" ;;
-        monocypher) pin="$(sed -n -E 's/^set\\(SCRAPERX_MONOCYPHER_COMMIT "([0-9a-f]{40})".*/\\1/p' CMakeLists.txt)" ;;
+        jolt) pin="$(sed -n -E 's/^set\(SCRAPERX_JOLT_COMMIT "([0-9a-f]{40})".*/\1/p' CMakeLists.txt)" ;;
+        godot_cpp) pin="$(sed -n -E 's/^set\(SCRAPERX_GODOT_CPP_COMMIT "([0-9a-f]{40})".*/\1/p' CMakeLists.txt)" ;;
+        monocypher) pin="$(sed -n -E 's/^set\(SCRAPERX_MONOCYPHER_COMMIT "([0-9a-f]{40})".*/\1/p' CMakeLists.txt)" ;;
     esac
     [[ "${#pin}" -eq 40 && "$(git -C "$src" rev-parse HEAD)" == "$pin" ]] || {
         echo "package: wrong source revision for $dependency (expected $pin)" >&2; exit 1;
@@ -66,7 +66,7 @@ npm install --prefix "$stage/mcp" --save-exact --omit=dev --no-audit --no-fund  
 "$stage/bin/cmake" --version | grep -F 'cmake version 3.31.8'
 [[ "$("$stage/bin/ninja" --version)" == '1.12.1' ]]
 "$stage/bin/godot" --headless --version | grep -F '4.7.stable'
-"$stage/bin/node" --version | grep -E '^v22\\.'
+"$stage/bin/node" --version | grep -E '^v22\.'
 [[ "$("$stage/bin/node" -p 'require(process.argv[1]).version'     "$stage/mcp/node_modules/godot-mcp-runtime/package.json")" == '3.8.1' ]]
 cat > "$stage/README.txt" <<EOF
 ScraperX shared toolchain: Linux x86_64, built on Ubuntu 24.04.
