@@ -35,7 +35,7 @@ check() {
        -f "$dir/deps/jolt/Build/CMakeLists.txt" &&
        -f "$dir/deps/godot-cpp/CMakeLists.txt" &&
        -f "$dir/deps/monocypher/src/monocypher.c" ]] || return 1
-    "$dir/bin/cmake" --version 2>/dev/null | grep -Eq '^cmake version 3[.]31[.](8|10) || return 1
+    "$dir/bin/cmake" --version 2>/dev/null | grep -Eq '^cmake version 3[.]31[.](8|10)$' || return 1
     [[ "$("$dir/bin/ninja" --version 2>/dev/null)" == "1.12.1" ]] || return 1
     "$dir/bin/godot" --headless --version 2>/dev/null | grep -Fq "4.7.stable" || return 1
     "$dir/bin/node" --version 2>/dev/null | grep -Eq '^v22\.' || return 1

@@ -29,7 +29,7 @@ cp -a "$cmake_module/data/share/." "$stage/share/"
 curl --fail --location --retry 3 --silent --show-error \
     --output "$work/ninja-linux.zip" \
     "https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip"
-printf '%s  %s\\n' \
+printf '%s  %s\n' \
     '6f98805688d19672bd699fbbfa2c2cf0fc054ac3df1f0e6a47664d963d530255' \
     "$work/ninja-linux.zip" | sha256sum --check --strict
 unzip -p "$work/ninja-linux.zip" ninja > "$stage/bin/ninja"
