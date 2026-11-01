@@ -165,6 +165,73 @@ void run_first_floor_descent() {
             }
         }
     }
+    if (from_id < 0 || goal_id < 0) {
+        const auto &stats = map.stats();
+        int patches11 = 0, patches_grade = 0, regions11 = 0, regions_grade = 0;
+        int supported11 = 0, supported_grade = 0;
+        std::vector<std::vector<int>> adjacency(regions.size());
+        for (const auto &p : patches) {
+            if (std::abs(p.top - 11.0F) <= 0.35F) ++patches11;
+            if (std::abs(p.top) <= 0.35F) ++patches_grade;
+        }
+        for (const auto &e : map.edges()) {
+            if (e.usable && e.from >= 0 && e.to >= 0 &&
+                static_cast<std::size_t>(e.from) < regions.size() &&
+                static_cast<std::size_t>(e.to) < regions.size())
+                adjacency[static_cast<std::size_t>(e.from)].push_back(e.to);
+        }
+        std::vector<unsigned char> reached(regions.size(), 0);
+        std::vector<int> frontier;
+        for (const auto &r : regions) {
+            Vector3 spot{};
+            if (std::abs(r.top - 11.0F) <= 0.35F) {
+                ++regions11;
+                if (standing_spot(r.id, spot)) {
+                    ++supported11;
+                    reached[static_cast<std::size_t>(r.id)] = 1;
+                    frontier.push_back(r.id);
+                }
+            }
+            if (std::abs(r.top) <= 0.35F) {
+                ++regions_grade;
+                if (standing_spot(r.id, spot)) ++supported_grade;
+            }
+        }
+        for (std::size_t i = 0; i < frontier.size(); ++i) {
+            for (const int next : adjacency[static_cast<std::size_t>(frontier[i])]) {
+                if (!reached[static_cast<std::size_t>(next)]) {
+                    reached[static_cast<std::size_t>(next)] = 1;
+                    frontier.push_back(next);
+                }
+            }
+        }
+        int reachable_grade = 0;
+        for (const auto &r : regions)
+            if (std::abs(r.top) <= 0.35F && reached[static_cast<std::size_t>(r.id)])
+                ++reachable_grade;
+        std::cerr << "SCRAPERX_GRADE_ROUTE_DIAG patches=" << stats.usable_patches
+                  << " regions=" << stats.regions << " edges=" << stats.edges
+                  << " usable_edges=" << stats.usable_edges << " ladders=" << stats.ladders
+                  << " poles=" << stats.poles << " patches11=" << patches11
+                  << " patches_grade=" << patches_grade << " regions11=" << regions11
+                  << " regions_grade=" << regions_grade << " supported11=" << supported11
+                  << " supported_grade=" << supported_grade << " reachable_regions="
+                  << frontier.size() << " reachable_grade=" << reachable_grade << '\n';
+        int listed = 0;
+        for (const auto &e : map.edges()) {
+            if (e.from < 0 || e.to < 0 ||
+                static_cast<std::size_t>(e.from) >= regions.size() ||
+                static_cast<std::size_t>(e.to) >= regions.size()) continue;
+            const float from_y = regions[static_cast<std::size_t>(e.from)].top;
+            const float to_y = regions[static_cast<std::size_t>(e.to)].top;
+            if (from_y > 13.0F || from_y < -1.0F || to_y > 13.0F || to_y < -1.0F ||
+                std::abs(from_y - to_y) < 0.7F) continue;
+            std::cerr << "SCRAPERX_GRADE_EDGE from=" << e.from << " y=" << from_y
+                      << " to=" << e.to << " y=" << to_y << " usable=" << e.usable
+                      << " kind=" << static_cast<int>(e.kind) << " reason=" << e.reason << '\n';
+            if (++listed >= 24) break;
+        }
+    }
     require(from_id >= 0 && goal_id >= 0,
             "matron first floor: scan contains a traversable 11 m to grade route");
     s.debug_launch_player(Vector3{goal.x, goal.y + 0.3, goal.z}, Vector3{0.0, 0.0, 0.0});
