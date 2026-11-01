@@ -2294,6 +2294,7 @@ private:
     bool journey_moving_ = false;   // a move (not a walk) under way
     int journey_leg_ticks_ = 0;
     float journey_leg_best_ = 1.0e9F;   // closest she has been to the current leg
+    float journey_leg_progress_ = 1.0e9F;   // distance to the current leg when its clock last reset
     int journey_leg_stall_ticks_ = 0;   // ticks since that closest point improved
     bool journey_retreating_ = false;   // walking back along reached legs after a leg timed out
     int journey_wait_ticks_ = 0;    // a scan at most every 2 s; 30 s after a failure

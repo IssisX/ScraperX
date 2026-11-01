@@ -659,6 +659,7 @@ void Matron::step_journey(const float dt) {
         journey_leg_ = 0;
         journey_leg_ticks_ = 0;
         journey_leg_best_ = 1.0e9F;
+        journey_leg_progress_ = 1.0e9F;
         journey_leg_stall_ticks_ = 0;
         journey_retreating_ = false;   // fresh legs for a fresh edge: no retreat is owed
     }
@@ -680,6 +681,7 @@ void Matron::step_journey(const float dt) {
             ++journey_leg_;
             journey_leg_ticks_ = 0;
             journey_leg_best_ = 1.0e9F;
+            journey_leg_progress_ = 1.0e9F;
             journey_leg_stall_ticks_ = 0;
         } else if (++journey_leg_ticks_ > 20 * 90) {
             if (!journey_retreating_ && journey_leg_ > 0) {
@@ -697,6 +699,7 @@ void Matron::step_journey(const float dt) {
                 journey_leg_ = 0;
                 journey_leg_ticks_ = 0;
                 journey_leg_best_ = 1.0e9F;
+                journey_leg_progress_ = 1.0e9F;
                 journey_leg_stall_ticks_ = 0;
                 journey_retreating_ = true;
             } else {
@@ -707,8 +710,8 @@ void Matron::step_journey(const float dt) {
             // A leg point her body cannot stand on (a turn point near
             // the move's start, inside the planner's no-body-check
             // radius round it, against a wall face): she pins against
-            // the face 0.15 m short with zero velocity, and the flat
-            // 20 s timeout would fail the whole journey for it. Travel
+            // the face 0.15 m short with zero velocity, and the 20 s
+            // no-progress timeout would fail the whole journey for it. Travel
             // already passes a waypoint this way; the journey does the
             // same for an intermediate leg only — never the move's own
             // start, which keeps its strict reach, and never while she
@@ -723,10 +726,21 @@ void Matron::step_journey(const float dt) {
             } else {
                 ++journey_leg_stall_ticks_;
             }
+            // The leg clock is a no-progress clock, not a total-time clock:
+            // a leg she is walking at speed must not time out for being
+            // long (a collapsed straight run over open floor is tens of
+            // metres). Every 2 m of progress restarts the 20 s clock; a
+            // leg that gains less than 2 m in 20 s still times out
+            // exactly as before, pinned or crawling.
+            if (dist < journey_leg_progress_ - 2.0F) {
+                journey_leg_progress_ = dist;
+                journey_leg_ticks_ = 0;
+            }
             if (journey_leg_stall_ticks_ > 72 && dist < 1.5F && journey_leg_ + 1 < journey_legs_.size()) {
                 ++journey_leg_;
                 journey_leg_ticks_ = 0;
                 journey_leg_best_ = 1.0e9F;
+                journey_leg_progress_ = 1.0e9F;
                 journey_leg_stall_ticks_ = 0;
                 return;
             }
