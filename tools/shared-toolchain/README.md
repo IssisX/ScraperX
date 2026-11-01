@@ -84,3 +84,29 @@ replace a release in place.
 
 This toolchain is not a proof of ScraperX gameplay correctness. Keep native,
 Godot, Android, visual-playtest and independent-review gates separate.
+
+## Integrity and historical v1 provenance
+
+The v1 GitHub Release archive is independently pinned to SHA-256
+`138c0a94c9ce44cc99cda847e71b7948f0e04a051cf442f17730a8526726f571`
+in the installer. The downloaded checksum manifest must match that pinned
+value; replacing both remote assets cannot silently change the installed
+bundle. An offline `--from-archive` user supplies a SHA-256 value explicitly
+and is responsible for trusting that value.
+
+Installer validation rejects archive entries and links escaping the bundle.
+For fresh installations it records a manifest of installed files, directories
+and symlinks. Subsequent `--verify` and reuse detect cache alterations; a
+failed check refuses to overwrite the cache. Previously installed v1 caches
+which lack a manifest remain reusable after version checks, but emit a warning:
+they are **not** file-integrity-verified. A new installation at a separate cache
+path is needed for file-level verification.
+
+The already-published v1 tag points to trunk commit
+`bf96dac64cdb814fde5cfd51c5ebf39be5c18444`, but the packaging
+workflow built the archive from
+`5ec2496eba267375b7d0fd3acab0a0f9bc009efa`.
+This is historical provenance, not a claim that the tag is a valid source
+checkout for the v1 packager. Do not move the tag or change the v1 assets.
+Future versioned release workflows must target their exact checked-out
+packaging commit rather than the moving trunk branch.
