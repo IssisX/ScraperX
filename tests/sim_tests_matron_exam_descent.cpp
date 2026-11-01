@@ -614,11 +614,13 @@ void survivable_free_drop() {
         const bool planned = world.matron->travel_to(
             Vec3(world.course.world(Vec3(40.0F, 0.0F, 0.0F))));
         const traversal::AffordanceMap *scan = world.matron->scanned_routes();
+        const float expected_upper_y = float(world.course.world(Vec3(40.0F, 11.0F, 0.0F)).GetY());
+        const float expected_lower_y = float(world.course.world(Vec3(40.0F, 0.0F, 0.0F)).GetY());
         bool offered_drop = false;
         for (const traversal::Edge &edge : scan->edges()) {
             if (edge.kind == traversal::MoveKind::FreeDrop && edge.usable &&
-                std::abs(edge.spec.top_y - 11.0F) < 0.10F &&
-                std::abs(edge.spec.goal_top) < 0.10F) {
+                std::abs(edge.spec.top_y - expected_upper_y) < 0.10F &&
+                std::abs(edge.spec.goal_top - expected_lower_y) < 0.10F) {
                 offered_drop = true;
             }
         }
