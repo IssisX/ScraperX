@@ -31,6 +31,7 @@ Usage:
 
 import argparse
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -58,12 +59,61 @@ KNOWN_GAPS = {
     ),
 }
 
-INVOCATION_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\.gd)")
+TEST_PATH_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\\.gd)\\Z")
+RUN_BLOCK_RE = re.compile(r"^(\\s*)run:\\s*\\|[-+]?\\s*(?:#.*)?$")
 
 
 def invoked_scripts(workflow_text):
-    """Return the res://tests/*.gd names invoked anywhere in the workflow."""
-    return set(INVOCATION_RE.findall(workflow_text))
+    """Find Godot test commands in shell run blocks, not mentions or comments.
+
+    Only a literal Godot executable in a run block counts. A workflow
+    description, commented command, or echo of a test path does not execute
+    that test. Backslash continuations are joined before shell tokenization.
+    Unrecognized command forms fail closed as uncovered tests.
+    """
+    invoked = set()
+    in_run = False
+    block_indent = 0
+    pending = ""
+    for line in workflow_text.splitlines():
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip(" "))
+        if in_run and stripped and indent <= block_indent:
+            in_run = False
+            pending = ""
+        if not in_run:
+            match = RUN_BLOCK_RE.match(line)
+            if match:
+                in_run = True
+                block_indent = len(match.group(1))
+            continue
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.endswith("\\"):
+            pending += stripped[:-1] + " "
+            continue
+        command = pending + stripped
+        pending = ""
+        if "--script" not in command or "res://tests/" not in command:
+            continue
+        try:
+            tokens = shlex.split(command, comments=True, posix=True)
+        except ValueError as exc:
+            raise ValueError(f"cannot parse Godot test command {command!r}") from exc
+        if not tokens or tokens[0] not in ("timeout", "tools/godot/godot", "xvfb-run", "env"):
+            continue
+        if "tools/godot/godot" not in tokens:
+            continue
+        for i, token in enumerate(tokens):
+            if token == "--script" and i + 1 < len(tokens):
+                match = TEST_PATH_RE.fullmatch(tokens[i + 1])
+            elif token.startswith("--script="):
+                match = TEST_PATH_RE.fullmatch(token[len("--script="):])
+            else:
+                continue
+            if match:
+                invoked.add(match.group(1))
+    return invoked
 
 
 def main():
