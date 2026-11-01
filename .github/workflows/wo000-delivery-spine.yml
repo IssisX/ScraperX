@@ -704,6 +704,15 @@ jobs:
             --script res://tests/matron_perception_climb_test.gd 2>&1 | tee artifacts/matron-perception-climb.log
           grep -q '^MATRON_PERCEPTION_CLIMB PASS' artifacts/matron-perception-climb.log
 
+      - name: Check Matron presentation holds, mantle, rung and ride
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300s tools/godot/godot --headless --path godot \
+            --script res://tests/matron_presentation_test.gd 2>&1 | tee artifacts/matron-presentation.log
+          ! grep -q 'MATRON_PRESENTATION FAIL' artifacts/matron-presentation.log
+          grep -q '^MATRON_PRESENTATION PASS$' artifacts/matron-presentation.log
+
       - name: Check Matron hold haptics fire once per event
         shell: bash
         run: |

@@ -46,11 +46,6 @@ KNOWN_GAPS = {
         "studio measurement probe, writes a probe directory for the "
         "scorer; no pass/fail verdict, not a CI gate"
     ),
-    "matron_presentation_test.gd": (
-        "pending the presentation landing: FAILs on trunk in the "
-        "mantle section, so gating it now would turn the audits job "
-        "red; add its audits step together with removing this entry"
-    ),
     "script_load_test.gd": (
         "invocation owed, not yet proven: runs every presentation "
         "script plus the native bridge, so its local proof needs a "

@@ -1577,7 +1577,10 @@ void run_matron() {
         require(s.matron_state().state == kStateDormant, "matron ride: rigging the cage did not wake her");
         // Export check on a static floor: her support velocity is the floor's
         // point velocity, zero here. Unconditional: unsupported also yields
-        // zero, so this proves the plumbing, not support-ness.
+        // zero, so this proves the plumbing, not support-ness. (A supported
+        // require was tried here and reverted: dormant, she has no body in
+        // the world yet — body_in_world_ starts false and spawn_body runs
+        // only on emerge — so supported is correctly false at settle.)
         {
             const auto settle_m = s.matron_state();
             std::cout << "  matron ride: static-floor support velocity (" << settle_m.contact_support_velocity.x << ", "
@@ -1628,6 +1631,9 @@ void run_matron() {
         bool aboard = false;
         int supported_ride_ticks = 0;
         int support_velocity_bad = 0;
+        double support_rate_gap_max = 0.0;
+        double support_rate_max = 0.0;
+        double prev_travel = s.snapshot().well_a_cage_travel;
         for (int i = 0; i < 25 * static_cast<int>(Simulation::kTickRateHz) && s.snapshot().well_a_cage_travel < 21.99;
              ++i) {
             tick(s);
@@ -1639,7 +1645,10 @@ void run_matron() {
                 clung_all_way = clung_all_way && m.clinging && m.position.y > 155.05 + travel - 0.3;
                 // Moving-floor proof: while sole-supported on the rising cage,
                 // her exported support velocity must be the cage's, up and
-                // near-vertical (the cage rises ~2.1 m/s).
+                // near-vertical (the cage rises ~2.1 m/s). Direction alone
+                // would pass a 0.3 m/s support velocity on a 2.1 m/s cage,
+                // so the vertical component must also match the cage's own
+                // per-tick rise rate within 0.15 m/s.
                 if (m.contact_supported) {
                     ++supported_ride_ticks;
                     const double svy = m.contact_support_velocity.y;
@@ -1648,16 +1657,23 @@ void run_matron() {
                     if (svy <= 0.2 || svh >= 0.3) {
                         ++support_velocity_bad;
                     }
+                    const double cage_rate = (travel - prev_travel) / Simulation::kFixedStepSeconds;
+                    support_rate_gap_max = std::max(support_rate_gap_max, std::abs(svy - cage_rate));
+                    support_rate_max = std::max(support_rate_max, cage_rate);
                 }
             }
+            prev_travel = travel;
         }
         std::cout << "  matron ride: aboard " << aboard << ", clung all the way " << clung_all_way << ", the ride "
                   << with_her_s << " s with her, " << alone_s << " s alone; deaths " << s.snapshot().death_count - deaths
                   << ", supported ride ticks " << supported_ride_ticks << ", support velocity bad "
-                  << support_velocity_bad << "\n";
+                  << support_velocity_bad << ", support rate gap max " << support_rate_gap_max << " m/s, cage rate max "
+                  << support_rate_max << " m/s\n";
         require(aboard && clung_all_way, "matron ride: she stepped into the cage as it left and held on to the top");
         require(supported_ride_ticks > 0 && support_velocity_bad == 0,
                 "matron ride: supported on the rising cage, her support velocity is the cage's");
+        require(support_rate_gap_max < 0.15,
+                "matron ride: supported on the rising cage, her support velocity matches the cage's rise rate");
         require(s.snapshot().death_count == deaths, "matron ride: clinging, she took nobody on the way up");
         require(with_her_s > alone_s + 0.5, "matron ride: her weight slows the cage away");
         // At the top: out of the cage's mouth and across the 1.09 m to the ring,
