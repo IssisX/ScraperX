@@ -388,7 +388,14 @@ MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*bu
         return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
     }
     BodyInterface &bodies = m_.physics_.GetBodyInterface();
+    BodyID grip_body;
+    SubShapeID grip_sub;
+    Vec3 grip_local;
+    const bool held_before = m_.routecraft_.grip(grip_body, grip_sub, grip_local);
     m_.routecraft_.step(m_.physics_, m_.body_, dt);
+    if (held_before && !m_.routecraft_.grip(grip_body, grip_sub, grip_local)) {
+        ++m_.climb_releases_;
+    }
     m_.stride_ += bodies.GetLinearVelocity(m_.body_).Length() * dt;   // each rung rings
     if (m_.routecraft_.report().force > 0) {
         m_.routecraft_release_floor_ = float(bodies.GetPosition(m_.body_).GetY()) - kStandCentre;
