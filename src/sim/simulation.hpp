@@ -1707,6 +1707,8 @@ public:
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.
     void debug_matron_let_go() noexcept;
+    // Tests only: a column at (x, z) failed under her, left alone a while.
+    void debug_matron_block_column(double x, double z) noexcept;
     // The Matron's climbing (matron_traversal.hpp): what the tower's steel
     // offers her, scanned from the real collision geometry on first use.
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();

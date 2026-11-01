@@ -1151,6 +1151,10 @@ void Simulation::debug_matron_let_go() noexcept {
     physics_world_->matron().let_go_for_test();
 }
 
+void Simulation::debug_matron_block_column(const double x, const double z) noexcept {
+    physics_world_->matron().block_column_for_test(static_cast<float>(x), static_cast<float>(z));
+}
+
 const traversal::AffordanceMap &Simulation::matron_affordances() {
     return physics_world_->matron_affordances();
 }

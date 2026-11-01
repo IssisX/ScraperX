@@ -294,6 +294,10 @@ void Matron::block_climb_at(const float x, const float z) {
     block_climb(cell_key(x, z), true);
 }
 
+void Matron::block_column_for_test(const float x, const float z) {
+    block_climb_at(x, z);
+}
+
 bool Matron::column_blocked_near(const float x, const float z) const {
     for (const float dx : {-kColumnCellM, 0.0F, kColumnCellM}) {
         for (const float dz : {-kColumnCellM, 0.0F, kColumnCellM}) {
@@ -531,22 +535,30 @@ bool Matron::start_journey(const RVec3 at) {
     if (from < 0 || to < 0 || from == to) {
         return false;
     }
-    const std::vector<int> plan = map.plan(from, to);
+    // A column that failed under her is left alone by this plan too (one the
+    // bar climber only refused may still serve the Climber's own moves):
+    // the plan avoids its edges and takes another route, instead of the
+    // whole journey being refused because its cheapest way uses it. The
+    // predicate is unchanged (failed blocks only), so a refusal still
+    // blocks nothing; and with no way past, the plan comes back empty
+    // and the journey is refused exactly as before.
+    std::vector<int> avoid;
+    for (int i = 0; i < static_cast<int>(map.edges().size()); ++i) {
+        const traversal::Edge &edge = map.edges()[static_cast<std::size_t>(i)];
+        if (edge.kind != traversal::MoveKind::Walk &&
+            column_blocked_near(edge.spec.line.GetX(), edge.spec.line.GetZ())) {
+            avoid.push_back(i);
+        }
+    }
+    const std::vector<int> plan = map.plan(from, to, avoid);
     if (plan.empty()) {
         return false;
-    }
-    // A column that failed under her is left alone by this plan too (one the
-    // bar climber only refused may still serve the Climber's own moves).
-    for (const int e : plan) {
-        const traversal::Edge &edge = map.edges()[static_cast<std::size_t>(e)];
-        if (edge.kind != traversal::MoveKind::Walk && column_blocked_near(edge.spec.line.GetX(), edge.spec.line.GetZ())) {
-            return false;
-        }
     }
     journey_.clear();
     for (const int e : plan) {
         journey_.push_back(map.edges()[static_cast<std::size_t>(e)]);
     }
+
     journey_at_ = 0;
     journey_legs_.clear();
     journey_leg_ = 0;
@@ -646,6 +658,8 @@ void Matron::step_journey(const float dt) {
         journey_legs_.push_back(to);
         journey_leg_ = 0;
         journey_leg_ticks_ = 0;
+        journey_leg_best_ = 1.0e9F;
+        journey_leg_stall_ticks_ = 0;
         journey_retreating_ = false;   // fresh legs for a fresh edge: no retreat is owed
     }
     // A pole within arm's reach of where she stands, on her floor: she grips
@@ -665,6 +679,8 @@ void Matron::step_journey(const float dt) {
         if (Vec3(off.GetX(), 0.0F, off.GetZ()).Length() < 0.12F) {
             ++journey_leg_;
             journey_leg_ticks_ = 0;
+            journey_leg_best_ = 1.0e9F;
+            journey_leg_stall_ticks_ = 0;
         } else if (++journey_leg_ticks_ > 20 * 90) {
             if (!journey_retreating_ && journey_leg_ > 0) {
                 // Wedged on the way to a move's start (a wall's push, a
@@ -680,12 +696,40 @@ void Matron::step_journey(const float dt) {
                 journey_legs_ = std::move(back);
                 journey_leg_ = 0;
                 journey_leg_ticks_ = 0;
+                journey_leg_best_ = 1.0e9F;
+                journey_leg_stall_ticks_ = 0;
                 journey_retreating_ = true;
             } else {
                 end_journey(true);   // no headway: a way that does not serve
             }
             return;
         } else {
+            // A leg point her body cannot stand on (a turn point near
+            // the move's start, inside the planner's no-body-check
+            // radius round it, against a wall face): she pins against
+            // the face 0.15 m short with zero velocity, and the flat
+            // 20 s timeout would fail the whole journey for it. Travel
+            // already passes a waypoint this way; the journey does the
+            // same for an intermediate leg only — never the move's own
+            // start, which keeps its strict reach, and never while she
+            // is still closing on the leg. The legs past the pinned
+            // point lead on toward the start (through the gap the wall
+            // leaves, if there is one); if there is none, the next leg
+            // pins the same way and the journey still fails on timeout.
+            const float dist = Vec3(off.GetX(), 0.0F, off.GetZ()).Length();
+            if (dist < journey_leg_best_ - 0.05F) {
+                journey_leg_best_ = dist;
+                journey_leg_stall_ticks_ = 0;
+            } else {
+                ++journey_leg_stall_ticks_;
+            }
+            if (journey_leg_stall_ticks_ > 72 && dist < 1.5F && journey_leg_ + 1 < journey_legs_.size()) {
+                ++journey_leg_;
+                journey_leg_ticks_ = 0;
+                journey_leg_best_ = 1.0e9F;
+                journey_leg_stall_ticks_ = 0;
+                return;
+            }
             (void)climber_->walk_between(dt, leg, 1.2F);
             yaw_ = turn_toward(yaw_, std::atan2(off.GetX(), off.GetZ()), kTurnRate, dt);
         }

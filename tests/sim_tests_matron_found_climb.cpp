@@ -7,6 +7,7 @@
 
 #include "sim_tests.hpp"
 #include "matron_contact_audit.hpp"
+#include "sim/matron_traversal.hpp"
 
 #include <cmath>
 #include <iostream>
@@ -178,6 +179,115 @@ void run_matron_found_climb() {
         require(l.fall_free_ticks > 0, "matron found climb: her fall exported as a fall, no floor and no grip under her (S6)");
         require(l.arrived, "matron found climb: and plans again from where she landed, and reaches the climber");
         require(l.gravity_kept && l.worst_step < 0.2, "matron found climb: gravity on, never carried or snapped");
+    }
+    // A failed column closes that column, not the journey: with every
+    // column of her cheapest way blocked (re-blocked as the blocks tick
+    // down, so the failure stays live), she still takes the next route
+    // the planner offers instead of standing out the block. The hop is
+    // a 1.39 m lip from open ground onto a platform: too high to walk
+    // (the 0.43 m lip tried first let her walk up it, climbs 0 throughout),
+    // served in parallel by a mantle and by a mantle-plus-gap-jump route,
+    // with no bar column in her 14 m search box spanning it (find_climb
+    // needs a 2 m column), so no bar climb can rescue the test either
+    // way; only the journey's plan decides.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(1.0).accepted, "matron found climb: settle");
+        const Vector3 from{0.0, 0.0, -60.0};
+        const Vector3 prey{-8.3, 1.3, -115.0};
+        s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
+        s.launch_matron_for_test(Vector3{from.x, from.y + 1.05, from.z});
+        s.debug_matron_rule_out_pipe();
+        s.debug_set_matron_stage(1);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const scraperx::sim::traversal::AffordanceMap &map = s.matron_affordances();
+        const int home = map.region_at(JPH::Vec3(float(from.x), float(from.y), float(from.z)));
+        const int goal = map.region_at(JPH::Vec3(float(prey.x), float(prey.y), float(prey.z)));
+        require(home >= 0 && goal >= 0, "matron found climb: blocked-column staging, both floors on her scan");
+        const std::vector<int> cheapest = map.plan(home, goal);
+        require(!cheapest.empty(), "matron found climb: blocked-column staging, a cheapest way exists");
+        std::vector<std::pair<float, float>> blocked;
+        for (const int e : cheapest) {
+            const scraperx::sim::traversal::Edge &edge = map.edges()[static_cast<std::size_t>(e)];
+            if (edge.kind == scraperx::sim::traversal::MoveKind::Walk) continue;
+            const std::pair<float, float> line{edge.spec.line.GetX(), edge.spec.line.GetZ()};
+            if (std::find(blocked.begin(), blocked.end(), line) == blocked.end()) blocked.push_back(line);
+            std::cout << "  matron found climb: cheapest edge " << e << " kind " << int(edge.kind) << " line ("
+                      << line.first << ", " << line.second << ")\n";
+        }
+        require(!blocked.empty() && blocked.size() <= 8,
+                "matron found climb: blocked-column staging, the cheapest way's columns fit her block list");
+        // A second route past every blocked column, close enough for her
+        // journey's own scan (12 m round her and the heard spot).
+        std::vector<int> avoid;
+        for (std::size_t i = 0; i < map.edges().size(); ++i) {
+            const scraperx::sim::traversal::Edge &edge = map.edges()[i];
+            if (edge.kind == scraperx::sim::traversal::MoveKind::Walk) continue;
+            for (const auto &line : blocked) {
+                if (std::abs(edge.spec.line.GetX() - line.first) <= 1.5F &&
+                    std::abs(edge.spec.line.GetZ() - line.second) <= 1.5F) {
+                    avoid.push_back(static_cast<int>(i));
+                    break;
+                }
+            }
+        }
+        const std::vector<int> second = map.plan(home, goal, avoid);
+        for (const int e : second) {
+            const scraperx::sim::traversal::Edge &edge = map.edges()[static_cast<std::size_t>(e)];
+            std::cout << "  matron found climb: second-route edge " << e << " kind " << int(edge.kind) << " line ("
+                      << edge.spec.line.GetX() << ", " << edge.spec.line.GetZ() << ")\n";
+        }
+        require(!second.empty(),
+                "matron found climb: blocked-column staging, a second route exists past the blocked columns");
+        const float lo_x = std::min(float(from.x), float(prey.x)) - 12.0F;
+        const float hi_x = std::max(float(from.x), float(prey.x)) + 12.0F;
+        const float lo_z = std::min(float(from.z), float(prey.z)) - 12.0F;
+        const float hi_z = std::max(float(from.z), float(prey.z)) + 12.0F;
+        for (const int e : second) {
+            const scraperx::sim::traversal::Edge &edge = map.edges()[static_cast<std::size_t>(e)];
+            if (edge.kind == scraperx::sim::traversal::MoveKind::Walk) continue;
+            require(edge.spec.line.GetX() >= lo_x && edge.spec.line.GetX() <= hi_x &&
+                        edge.spec.line.GetZ() >= lo_z && edge.spec.line.GetZ() <= hi_z,
+                    "matron found climb: blocked-column staging, the second route stays inside her journey's scan");
+        }
+        const auto block_all = [&] {
+            for (const auto &line : blocked) s.debug_matron_block_column(line.first, line.second);
+        };
+        block_all();
+        const int hz = static_cast<int>(Simulation::kTickRateHz);
+        bool arrived = false, alive = true, gravity_kept = true;
+        int on_goal = 0;
+        for (int i = 0; i < 420 * hz && !arrived; ++i) {
+            if (i % (8 * hz) == 0) {
+                s.debug_matron_hear(prey);
+                block_all();
+            }
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            const auto m = s.matron_state();
+            gravity_kept = gravity_kept && s.debug_matron_gravity_factor() == 1.0;
+            if (!m.alive) {
+                alive = false;
+                break;
+            }
+            if (i % (5 * hz) == 0) {
+                std::cout << "  matron found climb: blocked columns at " << (i / hz) << " s, feet ("
+                          << m.position.x << "," << (m.position.y - 1.05) << "," << m.position.z << "), climbing "
+                          << m.climbing << ", climbs " << m.climbs << '\n';
+            }
+            const bool there = std::abs(m.position.y - 1.05 - prey.y) < 0.35 && !m.climbing;
+            on_goal = there ? on_goal + 1 : 0;
+            if (on_goal >= hz) arrived = true;
+        }
+        {
+            const auto m = s.matron_state();
+            std::cout << "  matron found climb: blocked columns, arrived " << arrived << ", alive " << alive
+                      << ", final feet (" << m.position.x << "," << (m.position.y - 1.05) << "," << m.position.z
+                      << "), climbs " << m.climbs << ", climbing " << m.climbing << '\n';
+        }
+        require(alive && gravity_kept, "matron found climb: blocked columns, she lives with gravity on");
+        require(arrived, "matron found climb: a failed column closes that column, not the journey");
     }
     std::cout << "PASS scraperx_sim matron found climb\n";
 }

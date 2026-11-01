@@ -1483,6 +1483,9 @@ public:
     // Tests only: her hands open on the climb or the pipe she is on, as a hold
     // that gave way would open them.
     void let_go_for_test();
+    // Tests only: a column at (x, z) failed under her, left alone a while
+    // (Simulation::debug_matron_block_column).
+    void block_column_for_test(float x, float z);
     // The corner pipe ruled out for her (Simulation::debug_matron_rule_out_pipe).
     void rule_out_pipe_for_test();
     // Tests only (Simulation::debug_matron_rule_out_hang): no edge of her
@@ -2290,6 +2293,8 @@ private:
     bool journey_active_ = false;
     bool journey_moving_ = false;   // a move (not a walk) under way
     int journey_leg_ticks_ = 0;
+    float journey_leg_best_ = 1.0e9F;   // closest she has been to the current leg
+    int journey_leg_stall_ticks_ = 0;   // ticks since that closest point improved
     bool journey_retreating_ = false;   // walking back along reached legs after a leg timed out
     int journey_wait_ticks_ = 0;    // a scan at most every 2 s; 30 s after a failure
     float routecraft_release_floor_ = 0;
