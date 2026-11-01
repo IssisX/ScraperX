@@ -627,6 +627,23 @@ void survivable_free_drop() {
                     "safe drop: no route when the landing is too narrow for the ballistic runout");
             continue;
         }
+        if (!planned || !offered_drop) {
+            const Vec3 start_feet(world.course.world(Vec3(40.0F, 11.0F, 0.0F)));
+            const Vec3 landing_feet(world.course.world(Vec3(40.0F, 0.0F, 0.0F)));
+            std::cerr << "SAFE_DROP_DIAG planned=" << planned << " edge=" << offered_drop
+                      << " upper_region=" << scan->region_at(start_feet)
+                      << " lower_region=" << scan->region_at(landing_feet)
+                      << " patches=" << scan->stats().patches
+                      << " regions=" << scan->stats().regions
+                      << " edges=" << scan->stats().edges
+                      << " usable_edges=" << scan->stats().usable_edges << '\\n';
+            for (const traversal::Edge &edge : scan->edges()) {
+                if (edge.kind != traversal::MoveKind::FreeDrop) continue;
+                std::cerr << "SAFE_DROP_EDGE from=" << edge.from << " to=" << edge.to
+                          << " top=" << edge.spec.top_y << " goal=" << edge.spec.goal_top
+                          << " usable=" << edge.usable << " reason=" << edge.reason << '\\n';
+            }
+        }
         require(planned && offered_drop,
                 "safe drop: a clear static landing 11 m below gives a directed physical route");
         const traversal::Limits limits;
