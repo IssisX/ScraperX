@@ -1,0 +1,31 @@
+name: ScraperX temporary source snapshot (diagnostic)
+on:
+  push:
+    branches:
+      - chatgpt/source-snapshot-20261101
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact tracked tree
+        uses: actions/checkout@v4
+      - name: Archive tracked source without credentials or build caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          git ls-files -z | tar --null -czf /tmp/scraperx-source.tar.gz -T -
+          git rev-parse HEAD > /tmp/scraperx-source-commit.txt
+          sha256sum /tmp/scraperx-source.tar.gz > /tmp/scraperx-source.sha256
+      - name: Save source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraperx-source-${{ github.sha }}
+          path: |
+            /tmp/scraperx-source.tar.gz
+            /tmp/scraperx-source-commit.txt
+            /tmp/scraperx-source.sha256
+          if-no-files-found: error
+          retention-days: 1
