@@ -8,6 +8,16 @@ on:
     paths:
       - .github/workflows/shared-toolchain-consumer-smoke.yml
       - tools/shared-toolchain/install.sh
+      - tools/shared-toolchain/integrity.py
+      - tools/shared-toolchain/test_install.py
+      - .claude/godot-mcp.sh
+  pull_request:
+    branches: [ScraperX-Claude, chatgpt/integrate-shared-toolchain-release-20261101]
+    paths:
+      - .github/workflows/shared-toolchain-consumer-smoke.yml
+      - tools/shared-toolchain/install.sh
+      - tools/shared-toolchain/integrity.py
+      - tools/shared-toolchain/test_install.py
       - .claude/godot-mcp.sh
   workflow_dispatch:
 
@@ -22,6 +32,10 @@ jobs:
     steps:
       - name: Checkout exact consumer revision
         uses: actions/checkout@v4
+
+      - name: Exercise installer security and cache regression tests
+        shell: bash
+        run: python3 tools/shared-toolchain/test_install.py -v
 
       - name: Install published release, prove offline reuse, compile and launch MCP
         shell: bash
