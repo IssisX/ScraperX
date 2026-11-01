@@ -39,7 +39,8 @@ struct Leg {
 
 // Her at `from` (feet), dangerous; the climber heard at `prey` (feet) every
 // 8 s. Until she stands a second on the prey's floor.
-Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const double let_go_at = 1.0e9) {
+Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const double let_go_at = 1.0e9,
+        const bool first_stage = false) {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron found climb: settle");
@@ -47,7 +48,7 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const doub
     s.launch_matron_for_test(Vector3{from.x, from.y + 1.05, from.z});
     // The corner pipe ruled out: the way she takes is one she finds.
     s.debug_matron_rule_out_pipe();
-    s.debug_set_matron_stage(1);
+    s.debug_set_matron_stage(first_stage ? 0 : 1);
     const int hz = static_cast<int>(Simulation::kTickRateHz);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
     Leg out;
@@ -56,6 +57,7 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const doub
     int on_goal = 0;
     int let_go_tick = -1;
     for (int i = 0; i < static_cast<int>(seconds) * hz; ++i) {
+        if (first_stage) s.debug_set_matron_stage(0);
         if (i % (8 * hz) == 0) {
             s.debug_matron_hear(prey);
         }
@@ -113,6 +115,19 @@ void require_contacts(const Leg &l) {
 } // namespace
 
 void run_matron_found_climb() {
+    // Ordinary pursuit from her initial stage must use the same physical
+    // steel and capped-force moves in either direction. Earlier tests only
+    // set her dangerous stage, leaving first-stage travel unexercised.
+    for (const bool down : {false, true}) {
+        const Vector3 lower{1.0, 154.0, -129.0};
+        const Vector3 upper{5.0, 176.25, -127.5};
+        const Leg l = leg(down ? upper : lower, down ? lower : upper, 120.0, 1.0e9, true);
+        report(down ? "initial stage down a deck" : "initial stage up a deck", l);
+        require_contacts(l);
+        require(l.alive && l.arrived, "matron found climb: initial stage follows prey between floors, both ways");
+        require(l.gravity_kept && l.her_hands, "matron found climb: first-stage traversal uses real grips and gravity");
+        require(l.worst_step < 0.2, "matron found climb: first-stage travel never snaps");
+    }
     {
         const Leg l = leg(Vector3{1.0, 154.0, -129.0}, Vector3{5.0, 176.25, -127.5}, 120.0);
         report("154 up to the 176.25 ring", l);
