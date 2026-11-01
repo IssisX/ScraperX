@@ -156,13 +156,20 @@ void run_first_floor_descent() {
             Vector3 goal_spot{};
             if (!standing_spot(to.id, goal_spot)) continue;
             const auto route = map.plan(from.id, to.id);
-            if (!route.empty() && route.size() < best_edges) {
-                best_edges = route.size();
-                from_id = from.id;
-                goal_id = to.id;
-                start = from_spot;
-                goal = goal_spot;
-            }
+            if (route.empty() || route.size() >= best_edges) continue;
+            // The grade region spans the yard and beyond. Pursue the grounded
+            // endpoint of her real directed route, not a distant patch centre.
+            const auto &last_edge = map.edges()[static_cast<std::size_t>(route.back())];
+            if (!last_edge.usable || last_edge.to != to.id) continue;
+            const Vector3 landing{last_edge.spec.goal.GetX(), last_edge.spec.goal.GetY(),
+                                  last_edge.spec.goal.GetZ()};
+            const double support = s.debug_support_y(Vector3{landing.x, landing.y + 0.05, landing.z}, 0.5);
+            if (std::isnan(support) || std::abs(support - landing.y) > 0.05) continue;
+            best_edges = route.size();
+            from_id = from.id;
+            goal_id = to.id;
+            start = from_spot;
+            goal = landing;
         }
     }
     require(from_id >= 0 && goal_id >= 0,
