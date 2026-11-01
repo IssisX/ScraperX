@@ -50,12 +50,6 @@ KNOWN_GAPS = {
         "mantle section, so gating it now would turn the audits job "
         "red; add its audits step together with removing this entry"
     ),
-    "script_load_test.gd": (
-        "invocation owed, not yet proven: runs every presentation "
-        "script plus the native bridge, so its local proof needs a "
-        "built native library, which was not complete at package "
-        "time; add its audits step together with removing this entry"
-    ),
 }
 
 INVOCATION_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\.gd)")

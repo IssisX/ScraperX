@@ -712,6 +712,21 @@ jobs:
             --script res://tests/matron_hold_haptics_test.gd 2>&1 | tee artifacts/matron-hold-haptics.log
           grep -q '^MATRON_HOLD_HAPTICS PASS' artifacts/matron-hold-haptics.log
 
+      - name: Check every presentation script loads and the native bridge answers
+        shell: bash
+        run: |
+          set -euo pipefail
+          # script_load_test.gd walks res://presentation (parse + compile
+          # every script) and requires the native ScraperXSimulation class
+          # to answer get_matron_hold_state() with 10 fatality_beat_edges.
+          # Both lines are gated: the scripts line alone would pass even
+          # if the bridge half failed, so a single '^SCRIPT_LOAD PASS'
+          # grep is not enough here.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/script_load_test.gd 2>&1 | tee artifacts/script-load.log
+          grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
+          grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
+
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4
         with:
