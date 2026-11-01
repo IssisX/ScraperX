@@ -4549,6 +4549,13 @@ void Matron::refresh_view() {
     // kTurnLungePowerW); the report says when the force shown is that drive.
     view_.climb_lunge_drive = !shown.force_shown && foot_lunge_;
     view_.foot_power_w = foot_power_w_;
+    view_.load_held = load_held_;
+    view_.load_mass_kg = load_mass_kg_;
+    view_.load_offset_m = load_offset_m_;
+    view_.load_moment_nm = load_moment_nm_;
+    view_.load_cop_shift_m = load_cop_shift_m_;
+    view_.load_stance_base_m = load_stance_base_m_;
+    view_.load_pull_m = load_pull_m_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
     // Over a climb's head: her rung way's move pushing her up over its lip.
