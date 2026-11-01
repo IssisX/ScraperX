@@ -398,6 +398,10 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     }
     bodies.AddForce(hand_id_, force);
     bodies.AddForce(matron_->body(), -force);
+    // S1 measurement only: report the held body's tip every tick. The
+    // force above is unchanged; this call writes no force, no velocity.
+    matron_->report_held_load(bodies.GetPosition(matron_->body()), bodies.GetPosition(player_id_),
+                              grip_ != nullptr ? kPlayerMassKg : 0.0F, grip_ != nullptr);
     if (grip_ != nullptr) {
         // In the hang (the body within the cone of her hand's down), the
         // grip takes on its hinge: a 35 degree swing cone, +-20 twist, made
