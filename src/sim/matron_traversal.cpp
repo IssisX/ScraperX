@@ -3077,6 +3077,25 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                                     if (!gap_segment_free(physics, ignore, limits, start, exit)) continue;
                                     ++stats_.capsule_queries;
                                     if (!gap_segment_free(physics, ignore, limits, exit, landing)) continue;
+                                    // The straight exit-to-landing sweep is below the
+                                    // ballistic path: an overhead beam can sit above
+                                    // that diagonal yet intersect her falling body.
+                                    // Cover the volume between the diagonal and the
+                                    // zero-upward-speed gravity arc. Five overlapping
+                                    // capsule-width cross-sections conservatively
+                                    // reject steel in this previously unchecked space.
+                                    bool flight_clear = true;
+                                    for (int sample = 1; sample <= 4; ++sample) {
+                                        const float u = float(sample) / 5.0F;
+                                        const Vec3 chord = exit + (landing - exit) * u;
+                                        const Vec3 arc = chord + Vec3(0.0F, rise * u * (1.0F - u), 0.0F);
+                                        ++stats_.capsule_queries;
+                                        if (!gap_segment_free(physics, ignore, limits, chord, arc)) {
+                                            flight_clear = false;
+                                            break;
+                                        }
+                                    }
+                                    if (!flight_clear) continue;
                                     Edge down;
                                     down.from = hi.region;
                                     down.to = lo.region;
