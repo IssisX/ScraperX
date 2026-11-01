@@ -1259,6 +1259,7 @@ def report(sc, out_dir, held_still=True):
                         sw[0][0] if sw else "", "%.4f" % sw[1][0] if sw else "",
                         *["%.4f" % f.get(k, np.nan) for k in ("gap_foot_l", "gap_foot_r", "gap_palm_l", "gap_palm_r")]])
     limbs_report(sc, say, out_dir)
+    upright_feet_report(sc, say, out_dir)
     with open(os.path.join(out_dir, "summary.txt"), "w") as fh:
         fh.write("\n".join(lines) + "\n")
     print("\n".join(lines))
@@ -1392,6 +1393,148 @@ def limbs_report(sc, say, out_dir):
         len(steps), "" if not steps else "; worst %.3f m (allowed %.3f) at t=%.2f (%s)" % (
             max(steps, key=lambda s: s[0] / s[1])[0], max(steps, key=lambda s: s[0] / s[1])[1],
             max(steps, key=lambda s: s[0] / s[1])[2]["t"], max(steps, key=lambda s: s[0] / s[1])[2]["mode"])))
+
+
+def upright_feet_report(sc, say, out_dir):
+    """M6 S0 baseline: feet only, upright frames only. Same thresholds as
+    limbs_report (PLANT/FLOAT/SINK 0.03 m; skate over max(2.5 v dt, 0.05 m)).
+    Upright = grounded (as in limbs_report) AND not kneeling AND not all
+    fours AND not a turn lunge. Palms are excluded: on all fours the hands
+    are plants too, and this slice must not credit or blame them for
+    upright feet. A foot above its surface while it swings is normal
+    walking, so per-foot float is reported as height error, not as a
+    defect; the defect count is frames where BOTH feet are over 0.03 m
+    above their surfaces while upright (no foot down at all)."""
+    run, rows, frames = sc.run, sc.rows, sc.frames
+    dt = sc.stride / run.fps
+
+    def upright(f):
+        i = f["row"]
+        if rows["climbing"][i] or rows["on_pipe"][i] or rows["on_line"][i] or rows["clinging"][i] \
+                or rows["head_down"][i] or rows["climb_airborne"][i] or rows["fall_v"][i] < -1.0 \
+                or (rows["state"][i] == 11 and not rows["kneeling"][i]):
+            return False
+        if rows["kneeling"][i] or rows["turn"][i] == 2 or "all fours" in f["mode"]:
+            return False
+        return True
+
+    def scenario(f):
+        i = f["row"]
+        if rows["turn"][i] == 1:
+            return "turning"
+        if rows["speed"][i] < 0.1:
+            return "standing"
+        return "walking"
+
+    stats = {}
+
+    def st_for(name):
+        return stats.setdefault(name, {"frames": 0, "pairs": 0,
+                                       "feet": {ft: {"planted_pairs": 0, "skate": 0, "worst_d": 0.0,
+                                                     "worst_ratio": 0.0, "planted_ds": [],
+                                                     "slides": [], "float": 0, "worst_float": 0.0,
+                                                     "sink": 0, "worst_sink": 0.0,
+                                                     "planted_abs_gap": []} for ft in ("foot_l", "foot_r")},
+                                       "both_float": 0})
+
+    cur_slide = {}
+    for f in frames:
+        if not upright(f):
+            cur_slide = {}
+            continue
+        name = scenario(f)
+        st = st_for(name)
+        st["frames"] += 1
+        gl = f.get("gap_foot_l", np.nan)
+        gr = f.get("gap_foot_r", np.nan)
+        if np.isfinite(gl) and np.isfinite(gr) and min(gl, gr) > FLOAT_M:
+            st["both_float"] += 1
+        for ft, g in (("foot_l", gl), ("foot_r", gr)):
+            if not np.isfinite(g):
+                continue
+            if g > FLOAT_M:
+                st["feet"][ft]["float"] += 1
+                st["feet"][ft]["worst_float"] = max(st["feet"][ft]["worst_float"], float(g))
+            if g < -SINK_M:
+                st["feet"][ft]["sink"] += 1
+                st["feet"][ft]["worst_sink"] = max(st["feet"][ft]["worst_sink"], float(-g))
+            if abs(g) < PLANT_M:
+                st["feet"][ft]["planted_abs_gap"].append(abs(float(g)))
+    for a, b in zip(frames, frames[1:]):
+        if b["rec"] - a["rec"] != sc.stride or not (upright(a) and upright(b)):
+            cur_slide = {}
+            continue
+        na, nb = scenario(a), scenario(b)
+        if na != nb:
+            cur_slide = {}
+            continue
+        st = st_for(na)
+        st["pairs"] += 1
+        v = max(rows["speed"][a["row"]], rows["speed"][b["row"]])
+        allow = max(2.5 * v * dt, 0.05)
+        moving = abs(rows["floor_y"][b["row"]] - rows["floor_y"][a["row"]]) > 0.005
+        names = [na] + (["moving_support"] if moving else [])
+        for name in names:
+            mst = st_for(name)
+            if name == "moving_support":
+                mst["frames"] += 0  # pairs only; frame counts live in the base scenario
+                mst["pairs"] += 1
+            for ft in ("foot_l", "foot_r"):
+                ga, gb = a.get("gap_" + ft, np.nan), b.get("gap_" + ft, np.nan)
+                if not (np.isfinite(ga) and np.isfinite(gb)):
+                    continue
+                if abs(ga) < PLANT_M and abs(gb) < PLANT_M:
+                    d = float(np.linalg.norm((b[ft] - a[ft])[[0, 2]]))
+                    mst["feet"][ft]["planted_pairs"] += 1
+                    mst["feet"][ft]["planted_ds"].append(d)
+                    if d > allow:
+                        mst["feet"][ft]["skate"] += 1
+                        mst["feet"][ft]["worst_d"] = max(mst["feet"][ft]["worst_d"], d)
+                        mst["feet"][ft]["worst_ratio"] = max(mst["feet"][ft]["worst_ratio"], d / allow)
+                    key = (name, ft)
+                    cur_slide[key] = cur_slide.get(key, 0.0) + d
+                elif (name, ft) in cur_slide:
+                    mst["feet"][ft]["slides"].append(cur_slide.pop((name, ft)))
+    for (name, ft), dsum in cur_slide.items():
+        st_for(name)["feet"][ft]["slides"].append(dsum)
+    say("")
+    say("M6 S0 upright feet only (feet, not palms; all fours, kneeling and turn lunges excluded):")
+    with open(os.path.join(out_dir, "upright_feet.csv"), "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["scenario", "foot", "frames", "pairs", "planted_pairs", "skate_frames", "worst_skate_m",
+                    "worst_skate_ratio", "median_planted_move_m", "slide_episodes_over_0.05m", "longest_slide_m",
+                    "both_feet_float_frames", "foot_float_frames", "worst_foot_float_m", "foot_sink_frames",
+                    "worst_foot_sink_m", "median_planted_abs_gap_m", "worst_planted_abs_gap_m"])
+        for name in ("standing", "walking", "turning", "moving_support"):
+            st = stats.get(name)
+            if not st:
+                say("  %-16s no upright frames" % name)
+                continue
+            for ft in ("foot_l", "foot_r"):
+                f = st["feet"][ft]
+                ds = f["planted_ds"]
+                gaps = f["planted_abs_gap"]
+                big = [s for s in f["slides"] if s > 0.05]
+                say("  %-16s %s: frames %d, planted pairs %d, skate %d (worst %.3f m, %.2fx allow), "
+                    "median planted move %.4f m, slides>0.05 m: %d (longest %.3f m), "
+                    "both-feet-float %d, foot float %d (worst %.3f m), sink %d (worst %.3f m), "
+                    "planted |gap| median %.4f m worst %.4f m" % (
+                        name, ft, st["frames"], f["planted_pairs"], f["skate"], f["worst_d"],
+                        f["worst_ratio"], float(np.median(ds)) if ds else 0.0, len(big),
+                        max(big) if big else 0.0, st["both_float"], f["float"], f["worst_float"],
+                        f["sink"], f["worst_sink"], float(np.median(gaps)) if gaps else 0.0,
+                        max(gaps) if gaps else 0.0))
+                w.writerow([name, ft, st["frames"], f["planted_pairs"], f["planted_pairs"], f["skate"],
+                            "%.4f" % f["worst_d"], "%.3f" % f["worst_ratio"],
+                            "%.4f" % (float(np.median(ds)) if ds else 0.0), len(big),
+                            "%.4f" % (max(big) if big else 0.0), st["both_float"], f["float"],
+                            "%.4f" % f["worst_float"], f["sink"], "%.4f" % f["worst_sink"],
+                            "%.4f" % (float(np.median(gaps)) if gaps else 0.0),
+                            "%.4f" % (max(gaps) if gaps else 0.0)])
+    say("  NOTE: moving_support pairs are the subset of upright pairs where floor_y moved >0.005 m "
+        "between frames; the probe records no support velocity, so foot displacement there is "
+        "world displacement, not support-relative drift. Support-relative drift is UNMEASURED "
+        "by this probe and is owed by S4, not claimed here.")
 
 
 def compare(dirs):
