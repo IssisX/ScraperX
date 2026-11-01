@@ -1,0 +1,134 @@
+name: ScraperX — independent shared-toolchain consumer proof
+
+on:
+  push:
+    # Reprove the installed toolchain whenever its consumer entrypoints change,
+    # including after this PR lands on the only authoritative trunk.
+    branches: [ScraperX-Claude, chatgpt/integrate-shared-toolchain-release-20261101]
+    paths:
+      - .github/workflows/shared-toolchain-consumer-smoke.yml
+      - tools/shared-toolchain/install.sh
+      - .claude/godot-mcp.sh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-consumer:
+    if: github.repository == 'IssisX/ScraperX'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact consumer revision
+        uses: actions/checkout@v4
+
+      - name: Install published release, prove offline reuse, compile and launch MCP
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SCRAPERX_TOOLCHAIN_CACHE_DIR="$RUNNER_TEMP/scraperx-consumer-toolchain"
+
+          # This is a new runner, not the publishing job's staging directory.
+          toolchain="$(bash tools/shared-toolchain/install.sh)"
+          test "$toolchain" = "$SCRAPERX_TOOLCHAIN_CACHE_DIR"
+          export SCRAPERX_TOOLCHAIN_DIR="$toolchain"
+          export GODOT_PATH="$toolchain/bin/godot"
+          export PATH="$toolchain/bin:$PATH"
+          test "$(bash tools/shared-toolchain/install.sh --verify)" = "$toolchain"
+
+          # Cache reuse must not contact GitHub or an npm registry.
+          mkdir -p "$RUNNER_TEMP/no-network-bin"
+          printf '#!/bin/sh\necho "unexpected download" >&2\nexit 95\n' > "$RUNNER_TEMP/no-network-bin/curl"
+          chmod +x "$RUNNER_TEMP/no-network-bin/curl"
+          test "$(PATH="$RUNNER_TEMP/no-network-bin:$PATH" bash tools/shared-toolchain/install.sh)" = "$toolchain"
+          echo 'CONSUMER_INSTALL_REUSE PASS'
+
+          # Compile the actual game against the released source trees, with
+          # FetchContent network fetches explicitly disabled.
+          cmake -S . -B "$RUNNER_TEMP/shared-consumer-build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON \
+            -DGODOTCPP_TARGET=template_release \
+            -DFETCHCONTENT_FULLY_DISCONNECTED=ON \
+            -DFETCHCONTENT_SOURCE_DIR_JOLT="$toolchain/deps/jolt" \
+            -DFETCHCONTENT_SOURCE_DIR_GODOT_CPP="$toolchain/deps/godot-cpp" \
+            -DFETCHCONTENT_SOURCE_DIR_MONOCYPHER="$toolchain/deps/monocypher"
+          cmake --build "$RUNNER_TEMP/shared-consumer-build" \
+            --target scraperx_native scraperx_sim_tests --parallel 4
+          test -s godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+          SCRAPERX_ONLY=matron-found-climb "$RUNNER_TEMP/shared-consumer-build/scraperx_sim_tests"
+          echo 'CONSUMER_NATIVE_BUILD PASS'
+
+          # Validate the repository's actual MCP launcher through the stdio
+          # initialization protocol, not just node --check or a package file.
+          python3 - <<'PY'
+          import json
+          import os
+          import select
+          import signal
+          import subprocess
+          import time
+
+          process = subprocess.Popen(
+              ["bash", ".claude/godot-mcp.sh"],
+              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE, start_new_session=True, bufsize=0,
+          )
+          pending = bytearray()
+
+          def request(method, request_id, params=None):
+              message = {"jsonrpc": "2.0", "id": request_id, "method": method}
+              if params is not None:
+                  message["params"] = params
+              process.stdin.write((json.dumps(message) + "\n").encode())
+              process.stdin.flush()
+              deadline = time.monotonic() + 35
+              while time.monotonic() < deadline:
+                  while b"\n" in pending:
+                      line, _, remainder = pending.partition(b"\n")
+                      pending[:] = remainder
+                      try:
+                          result = json.loads(line)
+                      except ValueError:
+                          raise RuntimeError("MCP emitted invalid JSON on stdout")
+                      if result.get("id") == request_id:
+                          if "error" in result:
+                              raise RuntimeError(f"MCP {method} failed: {result['error']}")
+                          return result.get("result", {})
+                  ready, _, _ = select.select(
+                      [process.stdout], [], [], deadline - time.monotonic()
+                  )
+                  if not ready:
+                      break
+                  block = os.read(process.stdout.fileno(), 65536)
+                  if not block:
+                      raise RuntimeError(f"MCP exited early with code {process.poll()}")
+                  pending.extend(block)
+              raise TimeoutError(f"MCP {method} did not respond within 35 seconds")
+
+          try:
+              initialized = request("initialize", 1, {
+                  "protocolVersion": "2025-03-26",
+                  "capabilities": {},
+                  "clientInfo": {"name": "scraperx-consumer-proof", "version": "1.0"},
+              })
+              if not initialized.get("serverInfo"):
+                  raise RuntimeError("MCP initialize lacked serverInfo")
+              process.stdin.write(
+                  b'{"jsonrpc":"2.0","method":"notifications/initialized"}\n'
+              )
+              process.stdin.flush()
+              tools = request("tools/list", 2).get("tools", [])
+              names = {tool.get("name") for tool in tools}
+              if "run_project" not in names:
+                  raise RuntimeError(f"MCP missing run_project tool: {sorted(names)}")
+              print("CONSUMER_MCP_HANDSHAKE PASS run_project available", flush=True)
+          finally:
+              os.killpg(process.pid, signal.SIGTERM)
+              try:
+                  process.communicate(timeout=8)
+              except subprocess.TimeoutExpired:
+                  os.killpg(process.pid, signal.SIGKILL)
+                  process.communicate()
+          PY
