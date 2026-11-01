@@ -115,6 +115,27 @@ jobs:
             --workflow .github/workflows/wo000-delivery-spine.yml \
             --test-dir godot/tests
 
+      - name: Verify no owner-blocked change rides this branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The rule check is the pre-landing gate in AGENTS.md: a BLOCK is a
+          # protected file, a removed or loosened test check, or a budget
+          # number changed. CI green must not bless a branch carrying one,
+          # so this step fails only on BLOCK. REVIEW findings still pass
+          # and stay for the reviewer, as they do in a local run.
+          # The step must never pass vacuously, so it fails loudly when
+          # the merge-base with trunk cannot be computed.
+          git fetch --depth=1 origin ScraperX-Claude
+          TRUNK="$(git rev-parse FETCH_HEAD)"
+          git fetch --deepen=100 origin || true
+          MB="$(git merge-base "$TRUNK" HEAD)" || { echo "rule_check: cannot compute merge-base with trunk"; exit 1; }
+          echo "rule_check: trunk $TRUNK merge-base $MB head $(git rev-parse HEAD)"
+          rc=0
+          python3 tools/rule_check/rule_check.py "$TRUNK" HEAD || rc=$?
+          if [ "$rc" -eq 2 ]; then echo "rule_check: BLOCK found, failing"; exit 1; fi
+          echo "rule_check: no BLOCK (exit $rc)"
+
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
         with:
