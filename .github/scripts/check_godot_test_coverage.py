@@ -56,6 +56,7 @@ KNOWN_GAPS = {
 
 TEST_PATH_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\.gd)\Z")
 RUN_BLOCK_RE = re.compile(r"^(\s*)(?:-\s+)?run:\s*\|[-+]?\s*(?:#.*)?$")
+RUN_SCALAR_RE = re.compile(r"^\s*(?:-\s+)?run:\s+(?![|>])(.+?)\s*$")
 
 
 
@@ -232,7 +233,14 @@ def invoked_scripts(workflow_text):
             if match:
                 in_run = True
                 block_indent = len(match.group(1))
-            continue
+                continue
+            scalar = RUN_SCALAR_RE.match(line)
+            if not scalar:
+                continue
+            stripped = scalar.group(1)
+            # Quoted YAML scalar syntax needs YAML decoding; fail closed.
+            if stripped.startswith(("'", '"')):
+                continue
         if heredoc_end:
             if stripped == heredoc_end:
                 heredoc_end = ""
@@ -245,17 +253,23 @@ def invoked_scripts(workflow_text):
         if was_quoted or multiline_quote:
             pending = ""
             continue
+        # Heredoc data must be excluded even inside a skipped control body:
+        # otherwise a data line saying "fi" could close the control stack.
+        heredoc_end = _heredoc_delimiter(stripped)
+        if heredoc_end:
+            continue
         # A conditional or loop body may never run. Do not count commands
         # inside shell control structures as unconditional test coverage.
-        opener = re.match(r"(?:if|for|while|until|case)\b", stripped)
-        closer = re.match(r"(?:fi|done|esac)\b", stripped)
+        syntax = _shell_syntax(stripped)
+        opener = re.match(r"(?:if|for|while|until|case)\b", syntax)
+        closer = re.match(r"(?:fi|done|esac)\b", syntax)
         if opener:
-            end = "fi" if stripped.startswith("if ") else "esac" if stripped.startswith("case ") else "done"
-            if not re.search(r"(?:^|;)\s*" + end + r"\b", _shell_syntax(stripped)):
+            end = "fi" if opener.group(0) == "if" else "esac" if opener.group(0) == "case" else "done"
+            if not re.search(r"(?:^|;)\s*" + end + r"\b", syntax):
                 control_stack.append(end)
             continue
         if control_stack:
-            if closer and stripped.split()[0] == control_stack[-1]:
+            if closer and closer.group(0) == control_stack[-1]:
                 control_stack.pop()
             continue
         # Defining a shell function does not execute its body. Even a later
@@ -283,10 +297,6 @@ def invoked_scripts(workflow_text):
         ):
             code = _shell_syntax(stripped)
             function_depth = max(0, code.count("{") - code.count("}"))
-            continue
-        # Here-document contents are data, but quoted/commented << is not.
-        heredoc_end = _heredoc_delimiter(stripped)
-        if heredoc_end:
             continue
         if stripped.endswith("\\"):
             pending += stripped[:-1] + " "
