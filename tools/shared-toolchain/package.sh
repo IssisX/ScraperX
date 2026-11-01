@@ -20,11 +20,20 @@ mkdir -p "$stage"/{bin,share,deps,mcp}
 # The official, versioned Python wheels contain relocatable CMake bin/share
 # and Ninja binaries. The live CI workflow remains the Godot SHA authority.
 python3 -m venv "$work/venv"
-"$work/venv/bin/pip" install --disable-pip-version-check --no-cache-dir     'cmake==3.31.10' 'ninja==1.12.1'
+"$work/venv/bin/pip" install --disable-pip-version-check --no-cache-dir     'cmake==3.31.10'
 cmake_module="$("$work/venv/bin/python" -c 'import cmake,pathlib; print(pathlib.Path(cmake.__file__).parent)')"
 cp -a "$cmake_module/data/bin/." "$stage/bin/"
 cp -a "$cmake_module/data/share/." "$stage/share/"
-cp -L "$work/venv/bin/ninja" "$stage/bin/ninja"
+# Official Ninja 1.12.1 ZIP, independently cross-checked against
+# Espressif's IDF tools manifest. A PyPI wheel for 1.12.1 is unavailable.
+curl --fail --location --retry 3 --silent --show-error \
+    --output "$work/ninja-linux.zip" \
+    "https://github.com/ninja-build/ninja/releases/download/v1.12.1/ninja-linux.zip"
+printf '%s  %s\\n' \
+    '6f98805688d19672bd699fbbfa2c2cf0fc054ac3df1f0e6a47664d963d530255' \
+    "$work/ninja-linux.zip" | sha256sum --check --strict
+unzip -p "$work/ninja-linux.zip" ninja > "$stage/bin/ninja"
+chmod +x "$stage/bin/ninja"
 
 # CI's own installer checks the exact pinned Godot release ZIP SHA before
 # putting the editor at tools/godot/godot.
