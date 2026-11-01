@@ -1,12 +1,8 @@
 name: ScraperX — publish shared Linux x86_64 toolchain
 
 on:
-  # One bounded initial publication; no build or release on gameplay pushes.
-  push:
-    branches: [chatgpt/integrate-shared-toolchain-release-20261101]
-    paths:
-      - .github/workflows/shared-toolchain-release.yml
-      - tools/shared-toolchain/**
+  # Publish only for an explicitly versioned release; never automatically
+  # retry an immutable existing tag after documentation or integration edits.
   workflow_dispatch:
 
 permissions:

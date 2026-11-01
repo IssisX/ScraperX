@@ -54,26 +54,25 @@ remain available. In a graphical session, run the Godot project with
 and close the runtime after proof. Headless or scripted native tests do not
 replace visual gameplay evidence.
 
-## Reuse the existing saved November 1 archive
+## About the earlier November 1 backup archive
 
-For a trusted offline copy of
-`ScraperX-reusable-toolchain-linux-x86_64-20261101.tar.gz`, the archive SHA-256 is
-`00366ce2e81ae6807215077c039c7f81a9199c6c25e733e04018559cd6da743a`.
-Install it with:
+The previous conversation's saved
+`ScraperX-reusable-toolchain-linux-x86_64-20261101.tar.gz`
+(SHA-256 `00366ce2e81ae6807215077c039c7f81a9199c6c25e733e04018559cd6da743a`)
+is a backup with CMake 3.31.8, Ninja, Godot and MCP dependencies,
+**but it does not contain `bin/node`**. Do not pass that legacy archive to
+this installer as though it had the published v1 layout: the strict
+toolchain check will reject it. Agents should use the published release v1
+asset, which includes Node 22 and passes the real install/cache test.
 
-```bash
-SCRAPERX_TOOLCHAIN_ARCHIVE_SHA256=00366ce2e81ae6807215077c039c7f81a9199c6c25e733e04018559cd6da743a \
-  bash tools/shared-toolchain/install.sh \
-  --from-archive ScraperX-reusable-toolchain-linux-x86_64-20261101.tar.gz
-```
-
-The smaller stand-alone MCP archive is a redundant, separately preserved
-backup; the full bundle already includes that runtime.
+The smaller stand-alone MCP archive remains a separately preserved backup.
+These old conversation Library archives are not automatically shared with
+other agents.
 
 ## Release ownership and verification
 
-`.github/workflows/shared-toolchain-release.yml` is a manually reusable
-and one-time integration-branch-triggered publishing job. It resolves the
+`.github/workflows/shared-toolchain-release.yml` is a manually triggered,
+versioned publishing job. It resolves the
 dependency commits from **CMakeLists.txt**, verifies the Godot editor using
 the authoritative delivery-spine SHA pin, builds the portable package,
 runs the real offline installer and cache-reuse checks, uploads an artifact
