@@ -100,9 +100,32 @@ def invoked_scripts(workflow_text):
             tokens = shlex.split(command, comments=True, posix=True)
         except ValueError as exc:
             raise ValueError(f"cannot parse Godot test command {command!r}") from exc
-        if not tokens or tokens[0] not in ("timeout", "tools/godot/godot", "xvfb-run", "env"):
-            continue
-        if "tools/godot/godot" not in tokens:
+        # Count only a Godot executable, not a Godot path passed to echo or
+        # another command. Shell control operators delimit the command.
+        for operator in ("|", "||", "&&", ";"):
+            if operator in tokens:
+                tokens = tokens[:tokens.index(operator)]
+        i = 0
+        while i < len(tokens):
+            if tokens[i] == "env":
+                i += 1
+                while i < len(tokens) and re.fullmatch(
+                    r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[i]
+                ):
+                    i += 1
+            elif tokens[i] == "timeout":
+                if i + 1 >= len(tokens) or not re.fullmatch(
+                    r"\d+(?:\.\d+)?[smhd]?", tokens[i + 1]
+                ):
+                    break
+                i += 2
+            elif tokens[i] == "xvfb-run":
+                i += 1
+                while i < len(tokens) and tokens[i] in ("-a", "-s"):
+                    i += 2 if tokens[i] == "-s" else 1
+            else:
+                break
+        if i >= len(tokens) or tokens[i] != "tools/godot/godot":
             continue
         for i, token in enumerate(tokens):
             if token == "--script" and i + 1 < len(tokens):
