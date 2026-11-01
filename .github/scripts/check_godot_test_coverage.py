@@ -55,7 +55,7 @@ KNOWN_GAPS = {
 }
 
 TEST_PATH_RE = re.compile(r"res://tests/([A-Za-z0-9_]+\.gd)\Z")
-RUN_BLOCK_RE = re.compile(r"^(\s*)run:\s*\|[-+]?\s*(?:#.*)?$")
+RUN_BLOCK_RE = re.compile(r"^(\s*)(?:-\s+)?run:\s*\|[-+]?\s*(?:#.*)?$")
 
 
 
@@ -130,6 +130,37 @@ def _safe_command_prefix(command):
     return None if quote else command[:first_pipe] if first_pipe is not None else command
 
 
+def _heredoc_delimiter(command):
+    """Find a shell heredoc operator outside quoted or commented text."""
+    quote = None
+    escaped = False
+    word_start = True
+    for index, char in enumerate(command):
+        if escaped:
+            escaped = False
+            word_start = False
+            continue
+        if char == "\\" and quote != "'":
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+            continue
+        if char == "#" and word_start:
+            break
+        if char in ("'", '"'):
+            quote = char
+            word_start = False
+            continue
+        if command.startswith("<<", index):
+            match = re.match(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1", command[index:])
+            if match:
+                return match.group(2)
+        word_start = char.isspace() or char in "|&;()<>"
+    return None
+
+
 def invoked_scripts(workflow_text):
     """Find Godot test commands in shell run blocks, not mentions or comments.
 
@@ -145,6 +176,7 @@ def invoked_scripts(workflow_text):
     heredoc_end = ""
     control_stack = []
     multiline_quote = None
+    function_depth = 0
     for line in workflow_text.splitlines():
         stripped = line.strip()
         indent = len(line) - len(line.lstrip(" "))
@@ -154,6 +186,7 @@ def invoked_scripts(workflow_text):
             heredoc_end = ""
             control_stack = []
             multiline_quote = None
+            function_depth = 0
         if not in_run:
             match = RUN_BLOCK_RE.match(line)
             if match:
@@ -185,10 +218,20 @@ def invoked_scripts(workflow_text):
             if closer and stripped.split()[0] == control_stack[-1]:
                 control_stack.pop()
             continue
-        # Here-document contents are data even if they resemble commands.
-        heredoc = re.search(r"<<-?\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)['\"]?", stripped)
-        if heredoc:
-            heredoc_end = heredoc.group(1)
+        # Defining a shell function does not execute its body. Even a later
+        # call cannot prove coverage without resolving the function's behavior.
+        if function_depth:
+            function_depth = max(0, function_depth + stripped.count("{") - stripped.count("}"))
+            continue
+        if re.match(
+            r"(?:function\s+)?[A-Za-z_][A-Za-z0-9_]*(?:\s*\(\s*\))?\s*\{",
+            stripped,
+        ):
+            function_depth = max(0, stripped.count("{") - stripped.count("}"))
+            continue
+        # Here-document contents are data, but quoted/commented << is not.
+        heredoc_end = _heredoc_delimiter(stripped)
+        if heredoc_end:
             continue
         if stripped.endswith("\\"):
             pending += stripped[:-1] + " "
