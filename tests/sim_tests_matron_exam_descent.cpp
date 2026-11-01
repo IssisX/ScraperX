@@ -596,6 +596,35 @@ void rejected_pending_requests() {
 }
 
 
+void reject_free_drop_through_overhead_steel() {
+    World world(4);
+    (void)world.box(Vec3(10.0F, 0.10F, 10.0F), Vec3(40.0F, -0.10F, 0.0F));
+    const BodyID upper = world.box(Vec3(2.5F, 0.10F, 2.5F), Vec3(40.0F, 10.90F, 0.0F));
+    // Four steel beams intercept the actual falling arc but sit ABOVE the
+    // straight exit-to-landing diagonal. The scanner must not mistake a
+    // collision-free diagonal for a collision-free ballistic flight.
+    for (const float sign : {-1.0F, 1.0F}) {
+        (void)world.box(Vec3(0.14F, 0.16F, 2.5F), Vec3(40.0F + sign * 4.4F, 8.20F, 0.0F));
+        (void)world.box(Vec3(2.5F, 0.16F, 0.14F), Vec3(40.0F, 8.20F, sign * 4.4F));
+    }
+    world.matron->place_for_test(world.course.world(Vec3(40.0F, 11.0F, 0.0F)));
+    for (int tick = 0; tick < 40; ++tick)
+        (void)world.physics.Update(kDt, 1, &world.temp, &world.jobs);
+    require(world.on(upper), "overhead steel: actor must start on upper support");
+    (void)world.matron->travel_to(Vec3(world.course.world(Vec3(40.0F, 0.0F, 0.0F))));
+    const traversal::AffordanceMap *scan = world.matron->scanned_routes();
+    require(scan != nullptr, "overhead steel: real scanner must run");
+    const float upper_y = float(world.course.world(Vec3(40.0F, 11.0F, 0.0F)).GetY());
+    const float lower_y = float(world.course.world(Vec3(40.0F, 0.0F, 0.0F)).GetY());
+    for (const traversal::Edge &edge : scan->edges()) {
+        require(!(edge.kind == traversal::MoveKind::FreeDrop && edge.usable &&
+                  std::abs(edge.spec.top_y - upper_y) < 0.10F &&
+                  std::abs(edge.spec.goal_top - lower_y) < 0.10F),
+                "overhead steel: reject a free drop whose actual flight intersects a steel beam");
+    }
+    std::cout << "PASS scraperx_sim matron safe drop: overhead steel blocks every flight corridor\n";
+}
+
 void survivable_free_drop() {
     // A deck directly above a larger grade slab has no ladder. This is
     // deliberately an 11 m drop; the ordinary hang/drop limit is 4.60 m.
@@ -701,6 +730,7 @@ void survivable_free_drop() {
 
 void run_matron_exam_descent() {
     rejected_pending_requests();
+    reject_free_drop_through_overhead_steel();
     survivable_free_drop();
     int passed = 0;
     for (std::uint32_t seed = 1; seed <= kSeeds; ++seed) {
