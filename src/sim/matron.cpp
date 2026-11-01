@@ -2807,9 +2807,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // lead's floor. The scan's own floor, not the hand-listed
             // levels_ table, says where she stands: a bridge, a board or a
             // duct top is a floor to her scan though it is in no levels_
-            // entry, and a lead on it is not elsewhere to her. Frail, a pest
-            // gets none of this: otherwise the stage rule below would hand
-            // her 40 s she has not earned.
+            // entry, and a lead on it is not elsewhere to her. The same
+            // scanned route is available to her initial stage: a confirmed
+            // physical way, not her anger, earns the longer pursuit window.
             const float own_floor_y = floor_y;
             const bool elsewhere_own = elsewhere;
             const auto toward_lead = [&](const float goal_floor) {
