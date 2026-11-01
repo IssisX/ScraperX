@@ -1823,6 +1823,8 @@ private:
     // The floor of the level a sound at height y is on (the highest under
     // it, within a story), or her own when it is on none.
     [[nodiscard]] float floor_of(float y) const;
+    // An observed position's supporting scan surface, including floors below her level list.
+    [[nodiscard]] float floor_at(float x, float y, float z) const;
     // (x, z) put on the nearest of her level's floor lines (not the
     // catwalk's, not a gap's): somewhere on her level she can stand.
     void onto_floor_lines(float &x, float &z) const;
