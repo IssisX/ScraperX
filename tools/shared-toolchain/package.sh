@@ -20,7 +20,7 @@ mkdir -p "$stage"/{bin,share,deps,mcp}
 # The official, versioned Python wheels contain relocatable CMake bin/share
 # and Ninja binaries. The live CI workflow remains the Godot SHA authority.
 python3 -m venv "$work/venv"
-"$work/venv/bin/pip" install --disable-pip-version-check --no-cache-dir     'cmake==3.31.8' 'ninja==1.12.1'
+"$work/venv/bin/pip" install --disable-pip-version-check --no-cache-dir     'cmake==3.31.10' 'ninja==1.12.1'
 cmake_module="$("$work/venv/bin/python" -c 'import cmake,pathlib; print(pathlib.Path(cmake.__file__).parent)')"
 cp -a "$cmake_module/data/bin/." "$stage/bin/"
 cp -a "$cmake_module/data/share/." "$stage/share/"
@@ -63,14 +63,14 @@ printf '%s\n' '{"name":"scraperx-godot-mcp-runtime","private":true,"version":"1.
 npm install --prefix "$stage/mcp" --save-exact --omit=dev --no-audit --no-fund     'godot-mcp-runtime@3.8.1'
 [[ -f "$stage/mcp/node_modules/godot-mcp-runtime/dist/index.js" ]]
 
-"$stage/bin/cmake" --version | grep -F 'cmake version 3.31.8'
+"$stage/bin/cmake" --version | grep -F 'cmake version 3.31.10'
 [[ "$("$stage/bin/ninja" --version)" == '1.12.1' ]]
 "$stage/bin/godot" --headless --version | grep -F '4.7.stable'
 "$stage/bin/node" --version | grep -E '^v22\.'
 [[ "$("$stage/bin/node" -p 'require(process.argv[1]).version'     "$stage/mcp/node_modules/godot-mcp-runtime/package.json")" == '3.8.1' ]]
 cat > "$stage/README.txt" <<EOF
 ScraperX shared toolchain: Linux x86_64, built on Ubuntu 24.04.
-CMake 3.31.8; Ninja 1.12.1; Godot 4.7-stable; Node 22; godot-mcp-runtime 3.8.1.
+CMake 3.31.10; Ninja 1.12.1; Godot 4.7-stable; Node 22; godot-mcp-runtime 3.8.1.
 Jolt, godot-cpp, Monocypher source commits are pinned by ScraperX CMakeLists.txt.
 Godot editor ZIP is verified against wo000-delivery-spine.yml.
 This bundle is not an Android/ARM build, a compiled ScraperX game,

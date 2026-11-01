@@ -75,7 +75,7 @@ jobs:
           cd "$RUNNER_TEMP/shared-toolchain-assets"
           cat > release-notes.txt <<'NOTES'
           Shared ScraperX engineering toolchain, Ubuntu 24.04 / Linux x86_64.
-          CMake 3.31.8; Ninja 1.12.1; Godot 4.7-stable; Node 22;
+          CMake 3.31.10; Ninja 1.12.1; Godot 4.7-stable; Node 22;
           godot-mcp-runtime 3.8.1; exact CMake-pinned Jolt, godot-cpp,
           and Monocypher sources. The installer validates the SHA-256 asset,
           runtime versions, and source directories before use.

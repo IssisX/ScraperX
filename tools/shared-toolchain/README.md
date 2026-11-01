@@ -26,7 +26,7 @@ shared persistent volume. On ephemeral runners, this still requires a download;
 the package eliminates repeated compilation and dependency resolution, not
 the laws of network storage.
 
-The bundle includes CMake 3.31.8, Ninja 1.12.1, Godot 4.7-stable,
+The bundle includes CMake 3.31.10 (3.31.8 in the archived bundle), Ninja 1.12.1, Godot 4.7-stable,
 Node 22, godot-mcp-runtime 3.8.1 and the **exact** CMake-pinned Jolt,
 godot-cpp and Monocypher source trees. It is built for Ubuntu 24.04 x86_64,
 not Android/ARM, macOS or arbitrary Linux ABI combinations. Jolt is a pinned
