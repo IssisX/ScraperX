@@ -2195,7 +2195,48 @@ void test_player_unchanged() {
             "player climbing is the same with her travelling nearby");
 }
 
-void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); }
+// A travelling Matron's walk to her next move's start goes round a player
+// standing on it, not through him. Her feet's search reads the real world,
+// and his body is in it: on the old code her walk went straight through his
+// spot (the probes excepted his body, like they except hers) and her 220 kg
+// body shoved his 85 kg body across the deck — friction 0, no damping,
+// nothing stops him. The park point is on her measured walk down the stack
+// from home (11, 154, -126.2) to the rung-down start (-6, 155.18, -133.15):
+// she passes (-2, -128.9) about 8 s in, 6 m from that start, so the
+// next-climb yield (1.3 m from its line) does not cover it.
+void test_travel_walk_round_player() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    require(s.advance_frame(1.0).accepted, "travel walk round player: settle");
+    const double px = -2.0, pz = -128.9;
+    const double support = s.debug_support_y(Vector3{px, 160.0, pz}, 10.0);
+    require(std::abs(support - 154.0) < 0.3, "travel walk round player: the park point is open deck 154 floor");
+    s.debug_launch_player(Vector3{px, support + 1.0, pz}, Vector3{0.0, 0.0, 0.0});
+    require(s.advance_frame(1.0).accepted, "travel walk round player: player settles");
+    const auto p0 = s.snapshot().player_position;
+    require(s.debug_matron_travel(132.0), "travel walk round player: she sets off down the stack");
+    double t = 0.0, near = 1.0e9, moved = 0.0;
+    Simulation::MatronJourney j = s.matron_journey();
+    while (j.active && t < 120.0) {
+        (void)s.advance_frame(1.0 / 60.0);
+        t += 1.0 / 60.0;
+        j = s.matron_journey();
+        const auto her = s.matron_state().position;
+        const auto pp = s.snapshot().player_position;
+        near = std::min(near, std::hypot(her.x - p0.x, her.z - p0.z));
+        moved = std::max(moved, std::hypot(pp.x - p0.x, pp.z - p0.z));
+    }
+    const auto p1 = s.snapshot().player_position;
+    std::cout << "  player parked " << p0.x << "," << p0.y << "," << p0.z << ", her nearest pass " << near
+              << " m, player moved " << moved << " m to " << p1.x << "," << p1.y << "," << p1.z << ", arrivals "
+              << j.arrivals << " active " << j.active << " after " << t << " s\n";
+    require(near < 1.5, "travel walk round player: she really came past his spot (placement check)");
+    require(moved <= 0.5, "travel walk round player: she walks round him, not through him");
+    require(p1.y > 153.0 && p1.y < 157.0, "travel walk round player: he stays on deck 154");
+    require(!j.active && j.arrivals > 0, "travel walk round player: she still gets down the stack");
+}
+
+void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); test_travel_walk_round_player(); }
 
 // One deck box, something laid across its top. A curb within a step (and a
 // block on part of it) leaves it one floor; a wall taller than a step across

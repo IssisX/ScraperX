@@ -3533,6 +3533,28 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
         }
         return false;
     };
+    // The player, where he stands now: her feet's search reads the real
+    // world, and his body is in it. A cell her body would stand on inside
+    // his capsule is no way for her — a loose crate counts the same way in
+    // these probes, and only the player was excepted, so her walk went
+    // straight through his spot and her body shoved his across the deck.
+    // His shape, not a named radius: a capsule's own bounds give it.
+    Vec3 player_at = Vec3::sZero();
+    float player_radius = 0.0F, player_bottom = 0.0F, player_top = 0.0F;
+    bool player_in_way = false;
+    if (!ignore.player.IsInvalid()) {
+        const Shape *shape = physics.GetBodyInterface().GetShape(ignore.player);
+        if (shape != nullptr) {
+            const AABox bounds = shape->GetLocalBounds();
+            const RVec3 centre = physics.GetBodyInterface().GetPosition(ignore.player);
+            player_at = Vec3(float(centre.GetX()), 0.0F, float(centre.GetZ()));
+            player_radius = 0.5F * std::max(bounds.GetSize().GetX(), bounds.GetSize().GetZ());
+            const float half_y = 0.5F * bounds.GetSize().GetY();
+            player_bottom = float(centre.GetY()) - half_y;
+            player_top = float(centre.GetY()) + half_y;
+            player_in_way = true;
+        }
+    }
     struct Node {
         float g = std::numeric_limits<float>::max();
         float feet = 0.0F;
@@ -3589,6 +3611,15 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
                 if (!stand(i, k, cur_feet, feet, bx, bz) || feet - cur_feet > limits.step_max_m + 0.08F ||
                     cur_feet - feet > 1.0F) {
                     continue;   // no floor for her there from here (maybe from another side)
+                }
+                // He stands there, on her height: walk round him, not
+                // through him. The goal itself stays exempt, as in stand():
+                // the move's own approach is the judge there, and a goal
+                // beside him must stay reachable.
+                if (player_in_way && feet < player_top && player_bottom < feet + 2.0F * limits.center_above_feet() &&
+                    std::hypot(bx - player_at.GetX(), bz - player_at.GetZ()) < limits.radius + player_radius + 0.05F &&
+                    std::hypot(bx - to.GetX(), bz - to.GetZ()) > 1.0F) {
+                    continue;
                 }
                 if (feet - cur_feet > 0.04F) {
                     // A step up takes a tread wide enough across her way for
