@@ -96,6 +96,9 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
     session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
     retire the old one once its in-flight helpers have reported.
   - A worker session whose job has landed is retired, never reused for new work.
+- Never medium effort (2026-11-02: *"Medium effort level is too little for what I need here in this
+  complex game"*). Every Claude session and helper runs above medium: set it on every helper you
+  start, and name it in every brief and handoff.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 

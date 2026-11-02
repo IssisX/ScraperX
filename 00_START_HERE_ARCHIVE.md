@@ -570,3 +570,13 @@ Owner, on the decisions put to him: *"Make the other decisions for me. Thanks fo
 things. I said answer for me. So that means the decisions did go through."* The restore of his rule
 wording went through, and Claude decided questions 1 and 6–11 of
 `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` by their picks (`CLAUDE.md`, Talking to the owner).
+
+---
+
+## 2026-11-02 — Never medium effort
+
+Owner, to the integrator: *"Medium effort level is too little for what I need here in this complex
+game - you should have known that."* Every Claude session and helper working on ScraperX runs above
+medium reasoning effort (rule 62). The integrator sets it on every helper it starts and names it in
+every brief and handoff.
+
