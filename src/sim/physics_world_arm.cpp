@@ -23,6 +23,7 @@
 namespace scraperx::sim {
 namespace {
 constexpr float kHandSpringNpm = 3500.0F;
+constexpr float kWrenchSpringScale = 3.0F;
 constexpr float kHandDampNspm = 500.0F;
 constexpr float kWristCloseM = 0.14F;
 // The arm, in the body's frame: the shoulder and the wrist hanging past the
@@ -233,7 +234,10 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
             }
         }
     }
-    JPH::Vec3 force = kHandSpringNpm * JPH::Vec3(matron_->hand2_target() - hand) +
+    // Wrenching his wrist (her real arm: its pose never far past the wrist),
+    // her pull reaches her muscle's cap (hand2_pull_n) over a short stretch.
+    const float spring = matron_->pulling_wrist() ? kWrenchSpringScale * kHandSpringNpm : kHandSpringNpm;
+    JPH::Vec3 force = spring * JPH::Vec3(matron_->hand2_target() - hand) +
                       kHandDampNspm * (matron_->hand2_target_velocity() - bodies.GetLinearVelocity(hand2_id_));
     if (arm_in_hand_ != nullptr) {
         force += JPH::Vec3(0.0F, Matron::kArmMassKg * 9.81F, 0.0F);
