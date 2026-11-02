@@ -2349,11 +2349,11 @@ std::vector<ColumnSteel> column_steel(const PhysicsSystem &physics, const Ignore
 bool cast_down(const std::vector<ColumnSteel> &steel, const std::vector<std::uint32_t> &in_row, const RRayCast &ray,
                const RayInvDirection &inverse, RayCastResult &hit) {
     const Vec3 origin(ray.mOrigin);
-    const float z = origin.GetZ();
+    const float x = origin.GetX(), z = origin.GetZ();
     for (const std::uint32_t b : in_row) {
         const ColumnSteel &body = steel[b];
         const Vec3 lo = body.bounds.mMin, hi = body.bounds.mMax;
-        if (!(lo.GetZ() <= z && z <= hi.GetZ())) continue;
+        if (!(lo.GetX() <= x && x <= hi.GetX() && lo.GetZ() <= z && z <= hi.GetZ())) continue;
         const float entry = RayAABox4(origin, inverse, lo.SplatX(), lo.SplatY(), lo.SplatZ(), hi.SplatX(), hi.SplatY(),
                                       hi.SplatZ()).GetX();
         if (entry < hit.mFraction) (void)body.shape.CastRay(ray, hit);
@@ -2644,15 +2644,24 @@ void AffordanceMap::split_patches(const PhysicsSystem &physics, const Ignore &ig
         const RayInvDirection inverse(down);
         std::vector<std::uint32_t> in_row;
         for (int ix = 0; ix < nx; ++ix) {
-            const float x = std::min(p.min_x + (float(ix) + 0.5F) * kCell, p.max_x - 0.01F);
-            // The bodies whose bounds take in this x: a vertical ray outside
-            // a body's x (or z) slab misses its bounds (RayAABox4's parallel
-            // test), so it is never tried against the shape.
+            // The bodies whose bounds come within 1 mm of this row's x: a
+            // vertical ray outside a body's x (or z) slab misses its bounds
+            // (RayAABox4's parallel test, made on each ray below), so it is
+            // never tried against the shape.
+            const float row_x = std::min(p.min_x + (float(ix) + 0.5F) * kCell, p.max_x - 0.01F);
             in_row.clear();
             for (std::uint32_t b = 0; b < steel.size(); ++b) {
-                if (steel[b].bounds.mMin.GetX() <= x && x <= steel[b].bounds.mMax.GetX()) in_row.push_back(b);
+                if (steel[b].bounds.mMin.GetX() - 1.0e-3F <= row_x && row_x <= steel[b].bounds.mMax.GetX() + 1.0e-3F) {
+                    in_row.push_back(b);
+                }
             }
             for (int iz = 0; iz < nz; ++iz) {
+                // Each ray's own x, worked out in here as it always was: out
+                // in the row, beside its multiply, the compiler may fuse the
+                // two into one rounding, and a ray a float's last bit over
+                // reads a face that ends exactly there as open (a cell of
+                // the 44 m deck did).
+                const float x = std::min(p.min_x + (float(ix) + 0.5F) * kCell, p.max_x - 0.01F);
                 const float z = std::min(p.min_z + (float(iz) + 0.5F) * kCell, p.max_z - 0.01F);
                 const RRayCast ray(RVec3(x, from_y, z), down);
                 RayCastResult hit;
