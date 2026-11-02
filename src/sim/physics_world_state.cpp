@@ -360,10 +360,13 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.list(k.grip_rating);
     // After them, the fabricated objects, when there are any (a save with
     // none ends here, as it always has).
-    // Optional checkpoint damage extension, ahead of fabricated entries.
-    w.pod(std::uint32_t{0x31474d44U});
-    w.pod(checkpoint_.matron.damage_ns);
-    w.pod(checkpoint_.matron.player_damage_ns);
+    // Keep the original terminal-grips save unchanged when there is no damage.
+    // Only damaged checkpoints need the optional extension before fabricated entries.
+    if (checkpoint_.matron.damage_ns > 0.0F || checkpoint_.matron.player_damage_ns > 0.0F) {
+        w.pod(std::uint32_t{0x31474d44U});
+        w.pod(checkpoint_.matron.damage_ns);
+        w.pod(checkpoint_.matron.player_damage_ns);
+    }
     write_fabricated(w);
 }
 
