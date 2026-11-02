@@ -67,7 +67,7 @@ HAIR_CHAINS = 20
 HAIR_SEGMENTS = 5
 HAIR_SEGMENT_M = 0.09
 # Her skirt's cloth proxy: columns round her, segments from waist to hem.
-SKIRT_COLS = 16
+SKIRT_COLS = 32
 SKIRT_ROWS = 6
 
 # Her dress: a faded institutional blue-grey, so it reads apart from her pale
@@ -993,7 +993,7 @@ def build():
     for c_ in range(SKIRT_COLS):
         parent = "body"
         row_names = []
-        for r_ in range(SKIRT_ROWS):
+        for r_ in range(SKIRT_ROWS + 1):     # the last bone rides the hem
             name = "sk%d_%d" % (c_, r_)
             add_bone(name, parent, sk_pts[c_, r_], "cloth")
             names.append(name)
@@ -1001,7 +1001,7 @@ def build():
             row_names.append(name)
             parent = name
         sk_names.append(row_names)
-    Wfull = np.concatenate([Wfull, np.zeros((len(Wfull), SKIRT_COLS * SKIRT_ROWS))], 1)
+    Wfull = np.concatenate([Wfull, np.zeros((len(Wfull), SKIRT_COLS * (SKIRT_ROWS + 1)))], 1)
     Srest = h.rest_mats(bones, byname)
     on_body = np.zeros(len(names))
     on_body[col["body"]] = 1.0
@@ -1019,31 +1019,40 @@ def build():
             d_ = np.linalg.norm(np.cross(sel - A, ax_), axis=1)
             capsules.append([a_, b_, float(np.percentile(d_, 90)) if len(d_) else 0.06])
 
-    def skirt_w(P):
-        """Each point on the two nearest columns and, down each, the two
-        nearest segments."""
-        P = np.asarray(P, float)
-        Wk = np.zeros((len(P), len(names)))
-        az = np.arctan2(P[:, 0] - cx, P[:, 2] - czs) % (2 * math.pi)
-        fc = az / (2 * math.pi) * SKIRT_COLS
+    def skirt_grid_w(ii, jj):
+        """Weights by place on the skirt's own grid (ring ii, segment jj), so
+        every point is the exact blend of the cloth points around it."""
+        ii = np.asarray(ii, float)
+        jj = np.asarray(jj, float)
+        Wk = np.zeros((len(ii), len(names)))
+        fr = np.interp(ii, i_rows, np.arange(SKIRT_ROWS + 1))
+        r0 = np.minimum(np.floor(fr).astype(int), SKIRT_ROWS - 1)
+        fra = fr - r0
+        fc = (jj % nseg) / nseg * SKIRT_COLS
         c0 = np.floor(fc).astype(int) % SKIRT_COLS
         a = fc - np.floor(fc)
-        for cc, wc in ((c0, 1.0 - a), ((c0 + 1) % SKIRT_COLS, a)):
-            for n_ in range(len(P)):
-                ys = sk_pts[cc[n_], :, 1]
-                fr = float(np.interp(-P[n_, 1], -ys, np.arange(SKIRT_ROWS + 1)))
-                r0 = min(int(fr), SKIRT_ROWS - 1)
-                fra = min(fr - r0, 1.0)
-                r1 = min(r0 + 1, SKIRT_ROWS - 1)
-                Wk[n_, col[sk_names[cc[n_]][r0]]] += wc[n_] * (1.0 - fra)
-                Wk[n_, col[sk_names[cc[n_]][r1]]] += wc[n_] * fra
+        for n_ in range(len(ii)):
+            for cc, wc in ((c0[n_], 1.0 - a[n_]), ((c0[n_] + 1) % SKIRT_COLS, a[n_])):
+                Wk[n_, col[sk_names[cc][r0[n_]]]] += wc * (1.0 - fra[n_])
+                Wk[n_, col[sk_names[cc][r0[n_] + 1]]] += wc * fra[n_]
         # Snap to whole 1/257 steps that sum exactly: each is 255 of Godot's
         # 16-bit weight units, so the stored weights still sum to one (a 1e-4
         # shortfall moves a vertex ~1 cm when skinned 200 m from the origin).
         q = np.round(Wk * 257.0)
-        rows_ = np.arange(len(P))
+        rows_ = np.arange(len(ii))
         q[rows_, np.argmax(q, 1)] += 257.0 - q.sum(1)
         return q / 257.0
+
+    def skirt_w(P):
+        """Loft points come ring by ring, nseg + 1 to a ring (the seam twice)."""
+        nr_ = len(P) // (nseg + 1)
+        ii, jj = np.meshgrid(np.arange(nr_), np.arange(nseg + 1), indexing="ij")
+        ii = ii.ravel().astype(float)
+        if nr_ != nring:          # the turned-in hem: each point where it sits up the skirt
+            ys_ = np.array([r_[:, 1] for r_ in rings])            # (nring, nseg)
+            j_ = jj.ravel() % nseg
+            ii = np.array([np.interp(-P[q, 1], -ys_[:, j_[q]], np.arange(nring)) for q in range(len(P))])
+        return skirt_grid_w(ii, jj.ravel())
 
     def _old_skirt_w(P):
         Wk = np.zeros((len(P), len(names)))
@@ -1083,8 +1092,9 @@ def build():
             tri_ += [[a_, a_ + 2, a_ + 1], [a_ + 1, a_ + 2, a_ + 3]]
         bind_pts = body_bind(pts)
         nrm = np.tile(U[j], (len(pts), 1))
-        skirt.add(bind_pts, nrm, np.zeros((len(pts), 2)), skirt_w(pts), tri_)
-        skirt.add(bind_pts, -nrm, np.zeros((len(pts), 2)), skirt_w(pts), np.array(tri_)[:, ::-1])
+        thr_w = np.tile(skirt_grid_w([nring - 1], [j]), (len(pts), 1))   # one thread moves as its root does
+        skirt.add(bind_pts, nrm, np.zeros((len(pts), 2)), thr_w, tri_)
+        skirt.add(bind_pts, -nrm, np.zeros((len(pts), 2)), thr_w, np.array(tri_)[:, ::-1])
     P_all = np.concatenate(skirt.P)
     Vr_all, _ = h.skin_points(P_all, np.concatenate(skirt.W), Srest)
     skirt.C = [cloth_color(Vr_all, DRESS)]

@@ -44,6 +44,7 @@ const BACK_RADIUS := 0.17
 # with distance constraints down each column, round each ring and across each
 # cell, kept out of her thigh and shin capsules (the build's measured radii
 # plus SKIRT_CLEAR_M). The skirt is skinned to the proxy's bones.
+const SKIRT_TURN := true
 const SKIRT_DAMP := 0.9
 const SKIRT_ITERATIONS := 8
 const SKIRT_CLEAR_M := 0.012
@@ -73,7 +74,6 @@ var _sk_prev: Array = []
 var _sk_links: Array = []       # [a_col, a_row, b_col, b_row, rest length]
 var _sk_capsules: Array = []    # [bone a, bone b, radius]
 var _sk_body := -1
-var _sk_dbg := 0
 
 
 func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
@@ -1057,32 +1057,33 @@ func step_skirt(delta: float) -> void:
 	# only as her pelvis is: neighbours share one turn, so the blend between
 	# them is the cloth's own shape between its points (a bone turned to its
 	# own triangle tears the blend apart, measured 3.4x).
-	var turn := pelvis.basis.orthonormalized()
+	var pturn := pelvis.basis.orthonormalized()
 	for c in _sk_cols:
 		var parent := skel.get_bone_global_pose(_sk_body)
-		for r in _sk_rows:
+		var cl := (c + _sk_cols - 1) % _sk_cols
+		var cr := (c + 1) % _sk_cols
+		for r in _sk_rows + 1:
 			var bi: int = _sk_bones[c][r]
 			var rest := skel.get_bone_global_rest(bi)
+			var turn := pturn
+			if SKIRT_TURN:
+				var up := maxi(r - 1, 0)
+				var dn := mini(r + 1, _sk_rows)
+				turn = (_sk_frame(_sk_pts[c][dn] - _sk_pts[c][up], _sk_pts[cr][r] - _sk_pts[cl][r]) \
+						* _sk_frame(pturn * ((_sk_rest[c][dn] as Vector3) - _sk_rest[c][up]),
+							pturn * ((_sk_rest[cr][r] as Vector3) - _sk_rest[cl][r])).transposed()) * pturn
 			var global := Transform3D(turn * rest.basis, _sk_pts[c][r])
 			var local := parent.affine_inverse() * global
 			skel.set_bone_pose_position(bi, local.origin)
 			skel.set_bone_pose_rotation(bi, local.basis.get_rotation_quaternion())
 			parent = global
-	_sk_dbg += 1
-	if OS.has_environment("SK_DEBUG") and _sk_dbg % 60 == 1:
-		var worst := 0.0
-		var wl: Array = []
-		for link in _sk_links:
-			var l := (_sk_pts[link[0]][link[1]] as Vector3).distance_to(_sk_pts[link[2]][link[3]])
-			if l / maxf(float(link[4]), 1e-6) > worst:
-				worst = l / maxf(float(link[4]), 1e-6)
-				wl = link
-		print("SKDBG worst link ", wl)
-		var off := 0.0
-		for c in _sk_cols:
-			for r in _sk_rows:
-				off = maxf(off, skel.get_bone_global_pose(_sk_bones[c][r]).origin.distance_to(_sk_pts[c][r]))
-		print("SKDBG link_worst=%.3f bone_off=%.4f" % [worst, off])
+
+
+# An orthonormal frame from the cloth's down and round-the-ring directions.
+func _sk_frame(down: Vector3, round_: Vector3) -> Basis:
+	var y := down.normalized()
+	var z := round_.cross(y).normalized()
+	return Basis(y.cross(z), y, z)
 
 
 func _out_of_capsule(q: Vector3, a: Vector3, b: Vector3, radius: float) -> Vector3:
