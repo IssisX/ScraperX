@@ -2288,7 +2288,8 @@ private:
     // The body in her hand, or hers already: from her fingers closing on the
     // ankle till she lets go, and the whole of the fatality.
     [[nodiscard]] bool body_in_hold() const noexcept {
-        return state_ == State::Claimed || (holding_state(state_) && grip_on_);
+        // (and between two of her holds on him: her regrip)
+        return state_ == State::Claimed || (holding_state(state_) && (grip_on_ || regrip_ || hand2_on_ != 0));
     }
     // The rip begun: her other hand on its way to his arm (ArmPlay), an arm
     // off already this hold, or the fatality.
