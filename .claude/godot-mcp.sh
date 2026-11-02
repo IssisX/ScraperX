@@ -4,9 +4,14 @@
 # this script may write to it.
 set -euo pipefail
 
+# Never resolve a command through an unverified toolchain cache.
+original_path="${PATH:-}"
+PATH="/usr/local/bin:/usr/bin:/bin"
+export PATH
+
 SERVER_PACKAGE="godot-mcp-runtime@3.8.1"
 
-repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd -- "${BASH_SOURCE[0]%/*}/.." && pwd -P)"
 
 # The server probes for Godot once at startup and caches a miss for its whole
 # lifetime, and nothing orders MCP startup after the SessionStart hook. In a
@@ -24,21 +29,35 @@ if [[ -n "${SCRAPERX_TOOLCHAIN_DIR:-}" ]]; then
     toolchain_verified=true
   else
     echo "godot-mcp.sh: shared toolchain failed integrity verification; using independent tools" >&2
-    if [[ "${GODOT_PATH:-}" == "${SCRAPERX_TOOLCHAIN_DIR}/bin/godot" ]]; then
-      unset GODOT_PATH
-    fi
-    # The inherited PATH may also contain this untrusted cache's bin directory.
-    safe_path=()
-    IFS=: read -r -a path_parts <<< "${PATH:-}"
-    for path_part in "${path_parts[@]}"; do
-      if [[ "${path_part}" != "${SCRAPERX_TOOLCHAIN_DIR}/bin" ]]; then
-        safe_path+=("${path_part}")
-      fi
-    done
-    PATH="$(IFS=:; echo "${safe_path[*]}")"
-    export PATH
   fi
 fi
+
+# Restore the caller's non-cache tools only after the integrity gate.  A
+# rejected cache must not be able to supply even dirname, bash or npx through
+# PATH aliases (including trailing slashes and directory symlinks).
+if [[ -n "${SCRAPERX_TOOLCHAIN_DIR:-}" && "$toolchain_verified" != true ]]; then
+  cache_root="$(realpath -m -- "$SCRAPERX_TOOLCHAIN_DIR")"
+  safe_path=()
+  IFS=: read -r -a path_parts <<< "$original_path"
+  for path_part in "${path_parts[@]}"; do
+    [[ -n "$path_part" ]] || continue
+    resolved_part="$(realpath -m -- "$path_part")"
+    if [[ "$resolved_part" != "$cache_root" && "$resolved_part" != "$cache_root/"* ]]; then
+      safe_path+=("$path_part")
+    fi
+  done
+  PATH="$(IFS=:; echo "${safe_path[*]}")"
+  [[ -n "$PATH" ]] || PATH="/usr/local/bin:/usr/bin:/bin"
+  if [[ -n "${GODOT_PATH:-}" ]]; then
+    resolved_godot="$(realpath -m -- "$GODOT_PATH")"
+    if [[ "$resolved_godot" == "$cache_root" || "$resolved_godot" == "$cache_root/"* ]]; then
+      unset GODOT_PATH
+    fi
+  fi
+else
+  PATH="$original_path"
+fi
+export PATH
 if [[ "$toolchain_verified" == true && -z "${GODOT_PATH:-}" &&
       -x "${SCRAPERX_TOOLCHAIN_DIR}/bin/godot" ]]; then
   export GODOT_PATH="${SCRAPERX_TOOLCHAIN_DIR}/bin/godot"
