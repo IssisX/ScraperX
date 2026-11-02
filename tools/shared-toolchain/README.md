@@ -12,8 +12,9 @@ From the ScraperX repository checkout:
 ```bash
 toolchain="$(bash tools/shared-toolchain/install.sh)"
 export SCRAPERX_TOOLCHAIN_DIR="$toolchain"
-export PATH="$toolchain/bin:$PATH"
 export GODOT_PATH="$toolchain/bin/godot"
+# Use "$toolchain/bin/cmake" and "$toolchain/bin/ninja" by absolute path.
+# Do not add the cache to session-wide PATH before integrity verification.
 ```
 
 The installer downloads the versioned GitHub Release
@@ -36,13 +37,14 @@ of ScraperX to match the repository's compiler flags and patches.
 ## Build without re-fetching sources
 
 ```bash
-cmake -S . -B build/host -G Ninja -DCMAKE_BUILD_TYPE=Release \
+"$SCRAPERX_TOOLCHAIN_DIR/bin/cmake" -S . -B build/host -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$SCRAPERX_TOOLCHAIN_DIR/bin/ninja" -DCMAKE_BUILD_TYPE=Release \
   -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON \
   -DGODOTCPP_TARGET=template_release \
   -DFETCHCONTENT_SOURCE_DIR_JOLT="$SCRAPERX_TOOLCHAIN_DIR/deps/jolt" \
   -DFETCHCONTENT_SOURCE_DIR_GODOT_CPP="$SCRAPERX_TOOLCHAIN_DIR/deps/godot-cpp" \
   -DFETCHCONTENT_SOURCE_DIR_MONOCYPHER="$SCRAPERX_TOOLCHAIN_DIR/deps/monocypher"
-cmake --build build/host --target scraperx_sim_tests scraperx_native --parallel 4
+"$SCRAPERX_TOOLCHAIN_DIR/bin/cmake" --build build/host --target scraperx_sim_tests scraperx_native --parallel 4
 SCRAPERX_ONLY=matron-found-climb build/host/scraperx_sim_tests
 ```
 
@@ -97,10 +99,9 @@ and is responsible for trusting that value.
 Installer validation rejects archive entries and links escaping the bundle.
 For fresh installations it records a manifest of installed files, directories
 and symlinks. Subsequent `--verify` and reuse detect cache alterations; a
-failed check refuses to overwrite the cache. Previously installed v1 caches
-which lack a manifest remain reusable after version checks, but emit a warning:
-they are **not** file-integrity-verified. A new installation at a separate cache
-path is needed for file-level verification.
+failed check refuses to overwrite the cache. Previously installed v1 caches without the pinned inventory manifest are
+rejected before executing cached tools. Install into a fresh cache directory
+instead; a missing or rewritten manifest is never treated as a legacy success.
 
 The already-published v1 tag points to trunk commit
 `bf96dac64cdb814fde5cfd51c5ebf39be5c18444`, but the packaging
