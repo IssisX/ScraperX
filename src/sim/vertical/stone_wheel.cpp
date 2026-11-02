@@ -49,6 +49,7 @@ std::unique_ptr<Machine> stone_wheel(BuildContext c) {
     const float rest_offset = DegreesToRadians(-8.0f);
     constexpr float kTurn = -1.0f;        // the wheel's forward sense about +z
     constexpr float kSpeed = .08f;        // the brake's governed turn, rad/s
+    constexpr float kBackNoise = 1.0e-3f; // rad/s: slower than this backward is the wheel at rest
     constexpr float kGroundY = -17.2f;    // as placed, the yard is 17.2 m under the origin
     const float centre_y = 3.43f + kDrop + kRadius * std::cos(rest_offset);   // bottom floor top 3.43 m
     const Vec3 centre(0, centre_y, 0);
@@ -247,7 +248,10 @@ std::unique_ptr<Machine> stone_wheel(BuildContext c) {
         const float omega = kTurn * world.GetBodyInterface().GetAngularVelocity(wheel_id).Dot(wheel_axis);
         auto &motor = hinge->GetMotorSettings();
         hinge->SetMotorState(EMotorState::Velocity);
-        if (omega < 0.0f) {
+        // Turning back is a real backward turn, not rounding noise about a wheel at rest: at exactly
+        // zero a hold that answers noise holds the wheel against the stone forever (it stuck so with
+        // -ffp-contract=off, where a resting wheel read omega a hair under zero).
+        if (omega < -kBackNoise) {
             motor.SetTorqueLimits(-300000.0f, 300000.0f);
             hinge->SetTargetAngularVelocity(0.0f);
         } else {
