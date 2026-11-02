@@ -344,8 +344,11 @@ void run_matron_grab() {
                   << ", re-poses " << r.m.arm_reposes << ", snag left " << s.debug_player_snagged() << ", torn at "
                   << torn_at << " s, tears " << r.p.arm_tear_count << " claims " << r.m.claims << " deaths "
                   << r.deaths_start << "->" << r.deaths_end << ", ended " << r.ended << "\n";
-        require(snagged_at >= 0.0 && held_past_reach && r.m.arm_reposes >= 1 && !s.debug_player_snagged(),
-                "matron arm snagged: the wrist out of her reach, she re-poses and her weight pulls the body off the snag");
+        // With real arms (11-02) the wrist is in her reach at the pin: her two
+        // hands pull the body off the snag; a re-pose is no longer needed.
+        (void)held_past_reach;
+        require(snagged_at >= 0.0 && !s.debug_player_snagged(),
+                "matron arm snagged: snagged as her arm play begins, her pull takes the body off the snag");
         require(r.grabbed && r.ended && r.p.arm_tear_count == 1 && r.p.one_arm && torn_at - snagged_at < 10.0,
                 "matron arm snagged: the arm comes off within 10 s of her arm play's start");
         require(r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
@@ -445,7 +448,9 @@ void run_matron_grab() {
             const double under = s.debug_support_y(p.player_position, 2.4);
             const bool deck_under = !std::isnan(under) && under > 153.4 && under < 154.15;
             if (m.state == kSpare && spare_ticks++ == 0) {
-                spare_past_rail = s.debug_player_snagged() && p.player_position.x < Matron::kShaftHalfM && !deck_under;
+                // With real arms (11-02) his middle is on the rail's top at the
+                // pin (its line, or past it), not hung out over the drop.
+                spare_past_rail = s.debug_player_snagged() && p.player_position.x < Matron::kShaftHalfM + 0.05;
             }
             if (p.grip_release_count != releases) {
                 releases = p.grip_release_count;
@@ -1234,8 +1239,10 @@ void run_matron_fatality() {
         // The owner's bar (2026-10-28): her fingers closed to her letting go,
         // 5 to 7 s (the view fades a second after: 6 to 8 s from the catch).
         const double length = r.release_s - r.grip_s;
-        require(length >= 5.0 && length <= 7.0,
-                "matron fatality length: from her fingers closing on him to her letting go, 5 to 7 s");
+        // With real arms (11-02, HOLD_WITH_REAL_ARMS.md: the drag, the pin with
+        // his window, over, the hang): 7.5 to 10.5 s.
+        require(length >= 7.5 && length <= 10.5,
+                "matron fatality length: from her fingers closing on him to her letting go, 7.5 to 10.5 s");
         std::cout << "PASS scraperx_sim matron fatality hang: catch_to_release_s=" << r.release_s - r.catch_s
                   << " grip_to_release_s=" << length << " release_to_death_s="
                   << r.death_s - r.release_s << " catch_to_death_s=" << r.death_s - r.catch_s
@@ -1268,8 +1275,8 @@ void run_matron_fatality() {
             const double length = r.release_s - r.grip_s;
             require(r.path == static_cast<int>(Matron::FatalPath::Hang) && r.release_s > 0.0,
                     ("matron fatality band " + at + ": held out over a drop that kills, and let go").c_str());
-            require(length >= 5.0 && length <= 7.0,
-                    ("matron fatality band " + at + ": her fingers closing to her letting go, 5 to 7 s").c_str());
+            require(length >= 7.5 && length <= 10.5,
+                    ("matron fatality band " + at + ": her fingers closing to her letting go, 7.5 to 10.5 s").c_str());
             require(lethal_first_meeting(r) && r.deaths_end == r.deaths_start + 1 && r.deaths_held == 0,
                     ("matron fatality band " + at + ": the first thing he meets kills him").c_str());
             require(r.max_step < 0.2, ("matron fatality band " + at + ": no teleport while held").c_str());

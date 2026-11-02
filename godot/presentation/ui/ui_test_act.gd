@@ -314,6 +314,9 @@ func _matron_act_touch(device: int) -> bool:
 # Every frame it is watched: Action is never the punch (it has its own
 # button, the owner's), and on touch that button is always on screen.
 var _act_punch_missed := 0
+# Her hold's beats seen at the rail (src/sim/matron.hpp hold_beat: 1 down, 2 the
+# drag, 3 the rail pin, 4 over, 5 hanging by one ankle; the owner, 11-02).
+var _act_beats := {}
 var _act_punch_over := 0
 
 func _act_punch_watch() -> void:
@@ -336,6 +339,9 @@ var _act_snapped := {}
 
 func _act_cam_watch() -> void:
 	var hold: Dictionary = _native().get_matron_hold_state()
+	var beat := int(hold.get("hold_beat", 0))
+	if beat > 0:
+		_act_beats[beat] = int(_act_beats.get(beat, 0)) + 1
 	var cam: RefCounted = _main._hold_cam
 	var third := bool(cam.third_person())
 	if bool(hold["held"]):
@@ -778,6 +784,11 @@ func _act_dangerous_and_changed(device: int) -> bool:
 	if int(hold["arm_tears"]) != 1 or not bool(hold["one_arm"]):
 		return _fail("dangerous, her hold at the rail did not tear one arm off (tears %d, one arm %s)" % [
 			int(hold["arm_tears"]), str(hold["one_arm"])])
+	# Her hold with real arms, all five beats (the owner, 11-02).
+	_act_log("rail_beats %s" % str(_act_beats))
+	for beat in [1, 2, 3, 4, 5]:
+		if not _act_beats.has(beat):
+			return _fail("her hold at the rail skipped beat %d of the five (seen %s)" % [beat, str(_act_beats)])
 	if bool(hold["claimed"]) or int(hold["runs_ended_by_matron"]) != 0 or int(_native().get_death_count()) != 0:
 		return _fail("one arm gone at the rail was more than an arm (claimed %s, runs ended %d, deaths %d)" % [
 			str(hold["claimed"]), int(hold["runs_ended_by_matron"]), int(_native().get_death_count())])
