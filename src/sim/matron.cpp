@@ -2709,7 +2709,11 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         if (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Hunt) {
             const bool turns = way->view().turns;
             (void)way->step(dt, account);
-            if (turns) {
+            // A mover may forbid starting/driving a Turn while it owns her
+            // body, but a Turn already in progress still spends real time.
+            // Otherwise a sound-triggered lunge begun before a pipe/climb can
+            // remain latched for the whole traversal.
+            if (turns || turn_ != Turn::None) {
                 step_turn(dt, d, heard_level_);
             }
             break;
