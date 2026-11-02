@@ -595,10 +595,143 @@ void rejected_pending_requests() {
     std::cout << "PASS scraperx_sim matron descent pending request: free fall accepted, invalid destinations preserve state\n";
 }
 
+
+void reject_free_drop_through_overhead_steel() {
+    World world(4);
+    (void)world.box(Vec3(10.0F, 0.10F, 10.0F), Vec3(40.0F, -0.10F, 0.0F));
+    const BodyID upper = world.box(Vec3(2.5F, 0.10F, 2.5F), Vec3(40.0F, 10.90F, 0.0F));
+    // Four steel beams intercept the actual falling arc but sit ABOVE the
+    // straight exit-to-landing diagonal. The scanner must not mistake a
+    // collision-free diagonal for a collision-free ballistic flight.
+    for (const float sign : {-1.0F, 1.0F}) {
+        (void)world.box(Vec3(0.14F, 0.16F, 2.5F), Vec3(40.0F + sign * 4.4F, 9.50F, 0.0F));
+        (void)world.box(Vec3(2.5F, 0.16F, 0.14F), Vec3(40.0F, 9.50F, sign * 4.4F));
+    }
+    world.matron->place_for_test(world.course.world(Vec3(40.0F, 11.0F, 0.0F)));
+    for (int tick = 0; tick < 40; ++tick)
+        (void)world.physics.Update(kDt, 1, &world.temp, &world.jobs);
+    require(world.on(upper), "overhead steel: actor must start on upper support");
+    (void)world.matron->travel_to(Vec3(world.course.world(Vec3(40.0F, 0.0F, 0.0F))));
+    const traversal::AffordanceMap *scan = world.matron->scanned_routes();
+    require(scan != nullptr, "overhead steel: real scanner must run");
+    const float upper_y = float(world.course.world(Vec3(40.0F, 11.0F, 0.0F)).GetY());
+    const float lower_y = float(world.course.world(Vec3(40.0F, 0.0F, 0.0F)).GetY());
+    for (const traversal::Edge &edge : scan->edges()) {
+        require(!(edge.kind == traversal::MoveKind::FreeDrop && edge.usable &&
+                  std::abs(edge.spec.top_y - upper_y) < 0.10F &&
+                  std::abs(edge.spec.goal_top - lower_y) < 0.10F),
+                "overhead steel: reject a free drop whose actual flight intersects a steel beam");
+    }
+    std::cout << "PASS scraperx_sim matron safe drop: overhead steel blocks every flight corridor\n";
+}
+
+void survivable_free_drop() {
+    // A deck directly above a larger grade slab has no ladder. This is
+    // deliberately an 11 m drop; the ordinary hang/drop limit is 4.60 m.
+    // The same course with a narrow grade slab must reject the move.
+    for (const bool landing_available : {false, true}) {
+        World world(4);
+        const BodyID grade = world.box(
+            Vec3(landing_available ? 10.0F : 2.9F, 0.10F, landing_available ? 10.0F : 2.9F),
+            Vec3(40.0F, -0.10F, 0.0F));
+        const BodyID upper = world.box(Vec3(2.5F, 0.10F, 2.5F), Vec3(40.0F, 10.90F, 0.0F));
+        world.matron->place_for_test(world.course.world(Vec3(40.0F, 11.0F, 0.0F)));
+        for (int tick = 0; tick < 40; ++tick) (void)world.physics.Update(kDt, 1, &world.temp, &world.jobs);
+        require(world.on(upper), "safe drop: actor must start on real upper support");
+        require(world.physics.GetBodyInterface().GetGravityFactor(world.matron->body()) == 1.0F,
+                "safe drop: gravity is active at departure");
+        const bool planned = world.matron->travel_to(
+            Vec3(world.course.world(Vec3(40.0F, 0.0F, 0.0F))));
+        const traversal::AffordanceMap *scan = world.matron->scanned_routes();
+        const float expected_upper_y = float(world.course.world(Vec3(40.0F, 11.0F, 0.0F)).GetY());
+        const float expected_lower_y = float(world.course.world(Vec3(40.0F, 0.0F, 0.0F)).GetY());
+        bool offered_drop = false;
+        for (const traversal::Edge &edge : scan->edges()) {
+            if (edge.kind == traversal::MoveKind::FreeDrop && edge.usable &&
+                std::abs(edge.spec.top_y - expected_upper_y) < 0.10F &&
+                std::abs(edge.spec.goal_top - expected_lower_y) < 0.10F) {
+                offered_drop = true;
+            }
+        }
+        if (!landing_available) {
+            require(!planned && !offered_drop,
+                    "safe drop: no route when the landing is too narrow for the ballistic runout");
+            continue;
+        }
+        if (!planned || !offered_drop) {
+            const Vec3 start_feet(world.course.world(Vec3(40.0F, 11.0F, 0.0F)));
+            const Vec3 landing_feet(world.course.world(Vec3(40.0F, 0.0F, 0.0F)));
+            std::cerr << "SAFE_DROP_DIAG planned=" << planned << " edge=" << offered_drop
+                      << " upper_region=" << scan->region_at(start_feet)
+                      << " lower_region=" << scan->region_at(landing_feet)
+                      << " patches=" << scan->stats().patches
+                      << " regions=" << scan->stats().regions
+                      << " edges=" << scan->stats().edges
+                      << " usable_edges=" << scan->stats().usable_edges << '\n';
+            for (const traversal::Edge &edge : scan->edges()) {
+                if (edge.kind != traversal::MoveKind::FreeDrop) continue;
+                std::cerr << "SAFE_DROP_EDGE from=" << edge.from << " to=" << edge.to
+                          << " top=" << edge.spec.top_y << " goal=" << edge.spec.goal_top
+                          << " usable=" << edge.usable << " reason=" << edge.reason << '\n';
+            }
+        }
+        require(planned && offered_drop,
+                "safe drop: a clear static landing 11 m below gives a directed physical route");
+        const traversal::Limits limits;
+        bool used_drop = false, airborne = false, landed = false, alive = true;
+        float worst_step = 0.0F, greatest_fall = 0.0F;
+        RVec3 last = world.physics.GetBodyInterface().GetPosition(world.matron->body());
+        std::uint32_t max_arrivals = 0;
+        for (int tick = 0; tick < 90 * 45; ++tick) {
+            const Vec3 before = world.physics.GetBodyInterface().GetLinearVelocity(world.matron->body());
+            world.matron->pre_step(kDt, Stimulus(RVec3(1000.0, 1000.0, 1000.0), 0.0F));
+            const Vec3 after = world.physics.GetBodyInterface().GetLinearVelocity(world.matron->body());
+            require((after - before).Length() <= 1.0e-4F,
+                    "safe drop: no controller velocity write");
+            const traversal::Climber *climber = world.matron->climber();
+            if (climber != nullptr && climber->view().kind == traversal::MoveKind::FreeDrop &&
+                climber->view().active) used_drop = true;
+            {
+                const BodyLockRead lock(world.physics.GetBodyLockInterface(), world.matron->body());
+                require(lock.Succeeded(), "safe drop: active body must remain readable");
+                require(lock.GetBody().GetAccumulatedForce().Length() <= limits.total_force_n + 0.1F,
+                        "safe drop: all movement forces stay in one budget");
+            }
+            (void)world.physics.Update(kDt, 1, &world.temp, &world.jobs);
+            world.matron->post_step(kDt);
+            alive = world.matron->view().alive;
+            if (!alive) break;
+            const RVec3 now = world.physics.GetBodyInterface().GetPosition(world.matron->body());
+            const Vec3 velocity = world.physics.GetBodyInterface().GetLinearVelocity(world.matron->body());
+            worst_step = std::max(worst_step, float((now - last).Length()));
+            greatest_fall = std::max(greatest_fall, -velocity.GetY());
+            last = now;
+            require(world.physics.GetBodyInterface().GetGravityFactor(world.matron->body()) == 1.0F,
+                    "safe drop: gravity stays on during the descent");
+            airborne = airborne || (!world.on(upper) && !world.on(grade) && velocity.GetY() < -1.0F);
+            max_arrivals = std::max(max_arrivals, world.matron->journey().arrivals);
+            if (max_arrivals > 0 && world.on(grade)) {
+                landed = true;
+                break;
+            }
+        }
+        require(alive && used_drop && airborne && landed && max_arrivals > 0,
+                "safe drop: actual airborne free fall survives and arrives on real lower support");
+        require(greatest_fall < Matron::kLethalLandingMps && greatest_fall > Matron::kHardLandingMps,
+                "safe drop: impact speed is hard but survivable under the existing landing law");
+        require(worst_step < 0.20F, "safe drop: no position snap over a 90 Hz physics tick");
+        std::cout << "PASS scraperx_sim matron safe drop: 11 m, airborne, grounded, alive; worst_step="
+                  << worst_step << " peak_descent=" << greatest_fall << '\n';
+    }
+}
+
+
 } // namespace
 
 void run_matron_exam_descent() {
     rejected_pending_requests();
+    reject_free_drop_through_overhead_steel();
+    survivable_free_drop();
     int passed = 0;
     for (std::uint32_t seed = 1; seed <= kSeeds; ++seed) {
         const Course c = course_for(seed);
