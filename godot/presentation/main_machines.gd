@@ -134,6 +134,7 @@ func _build_kit() -> void:
 	# one mesh per material, moving with it; the static bodies' parts with
 	# the dressing's batcher.
 	var statics_batcher := Batcher.new()
+	statics_batcher.occlusion = _occlusion
 	var started := Time.get_ticks_usec()
 	for body in int(_native.get_kit_body_count()):
 		var node := Node3D.new()
@@ -219,8 +220,10 @@ func _build_kit() -> void:
 		glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		glass.visibility_range_end = BATCH_NEAR_RANGE
 		statics.add_child(glass)
-	_batch_report += "kit statics %d parts -> %d meshes, %d wet, %d ms; " % [statics_batcher.parts,
-		statics_batcher.emit(statics), statics_batcher.wet_parts, (Time.get_ticks_usec() - started) / 1000]
+	var made := statics_batcher.emit(statics)
+	_batch_report += "kit statics %d parts -> %d meshes, %d wet, %d ms (shading %d ms, %d ringed); " % [
+		statics_batcher.parts, made, statics_batcher.wet_parts, (Time.get_ticks_usec() - started) / 1000,
+		statics_batcher.shade_ms, statics_batcher.occlusion.rings_laid if statics_batcher.occlusion != null else 0]
 	# Start-up's batching cost, in the log (environment plan, jobs 6 and 8).
 	print("SCRAPERX_BATCH %s" % _batch_report)
 	var cable := BoxMesh.new()
