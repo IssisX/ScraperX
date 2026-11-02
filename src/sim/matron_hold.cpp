@@ -1678,14 +1678,8 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
             // Along the band beside her and a little in off the rail, low,
             // her real arm's short lever (kArmThrowRealScale): it lands on her
             // deck, not down the shaft or off the band's far side.
-            // Along the rail's line (the way nearer her right, whatever her
-            // turn at the throw) and in off it.
             const Vec3 inboard(-rim_nx_, 0.0F, -rim_nz_);
-            Vec3 along(rim_nz_, 0.0F, -rim_nx_);
-            if (along.Dot(right) < 0.0F) {
-                along = -along;
-            }
-            arm_throw_v_ = (along * 0.85F + inboard * 0.5F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() *
+            arm_throw_v_ = (right * 0.95F + inboard * 0.3F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() *
                            (kArmThrowRealScale * kArmThrowMps);
         }
         if (hold_s_ >= kArmPlaySeconds) {
