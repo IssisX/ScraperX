@@ -15,7 +15,7 @@ Checks, each over every recorded frame unless noted, with its tolerance:
            a bone and its parent, against the rest pose; arms are the shoulder and elbow bones, legs the
            hip, knee and ankle). Hair and eyes are not bones she poses and are skipped. Each frame is
            counted under the one cause it is drawn in, so a known cause covers only its own frames:
-             stretch_arm_hold   a hold (score.HOLD_STATES)
+             stretch_arm_hold   a hold (score.HOLD_STATES), or its reach fading after it (hold_weight)
              stretch_arm_reach  her stock reach (the probe's stock_reach column: carrying or seeking a handle)
              stretch_arm_turn, stretch_leg_turn
                                 the Turn (turn > 0), whose limb_scale 1.3 (matron_view.gd) draws her arms 1.3x
@@ -97,7 +97,7 @@ EXPECTED = {
 
 def stretch_cause(rows, i, turning):
     """The one cause a frame is drawn in, for the stretch checks: hold, reach, turn, or "" (none)."""
-    if int(rows["hold_state"][i]) in score.HOLD_STATES:
+    if int(rows["hold_state"][i]) in score.HOLD_STATES or ("hold_weight" in rows and rows["hold_weight"][i] > 0.001):
         return "hold"
     if "stock_reach" in rows and rows["stock_reach"][i] > 0:
         return "reach"

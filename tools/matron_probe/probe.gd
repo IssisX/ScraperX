@@ -307,6 +307,11 @@ class Recorder extends Node:
 		var stock_size: Vector3 = data.get("stock_size", Vector3.ZERO) if carrying_stock else data.get("stock_seek_size", Vector3.ZERO)
 		row.append_array([1 if carrying_stock else (2 if seeking_stock else 0),
 			int((carrying_stock or seeking_stock) and maxf(stock_size.x, stock_size.z) >= 0.38)])
+		# Her hold's reach weight (matron_view.gd _w_hold, _w_hold2): the rig draws her hand to the hold while
+		# it fades after the hold state ends, as her hand comes off him.
+		var w_hold := maxf(float(view.get("_w_hold") if view.get("_w_hold") != null else 0.0),
+			float(view.get("_w_hold2") if view.get("_w_hold2") != null else 0.0))
+		row.append("%.4f" % w_hold)
 		if hold.has("held_ankle"):
 			var ankle: Vector3 = hold["held_ankle"]
 			row.append_array(["%.5f" % ankle.x, "%.5f" % ankle.y, "%.5f" % ankle.z])
@@ -384,4 +389,4 @@ class Recorder extends Node:
 		"contact_hand2_held", "contact_hand2x", "contact_hand2y", "contact_hand2z",
 		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r",
 		"contact_hand_held", "contact_handx", "contact_handy", "contact_handz",
-		"stock_reach", "stock_two_hands", "held_anklex", "held_ankley", "held_anklez"]
+		"stock_reach", "stock_two_hands", "hold_weight", "held_anklex", "held_ankley", "held_anklez"]
