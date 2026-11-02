@@ -84,8 +84,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
-            -DGODOTCPP_TARGET=template_release
-          cmake --build build/host --target scraperx_sim_tests scraperx_shared_survival_tests scraperx_parkour_flow_tests scraperx_native --parallel 4
+            -DGODOTCPP_TARGET=template_release \
+            -DSCRAPERX_BUILD_DIGEST=ON
+          cmake --build build/host --target scraperx_sim_tests scraperx_shared_survival_tests scraperx_parkour_flow_tests scraperx_native scraperx_determinism_digest --parallel 4
           test -s build/host/scraperx_sim_tests
           test -s build/host/scraperx_shared_survival_tests
           test -s build/host/scraperx_parkour_flow_tests
@@ -135,6 +136,22 @@ jobs:
           python3 tools/rule_check/rule_check.py "$TRUNK" HEAD || rc=$?
           if [ "$rc" -eq 2 ]; then echo "rule_check: BLOCK found, failing"; exit 1; fi
           echo "rule_check: no BLOCK (exit $rc)"
+
+      - name: Device determinism digest (host)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/determinism
+          build/host/scraperx_determinism_digest | tee artifacts/determinism/host.txt
+          test -s artifacts/determinism/host.txt
+
+      - name: Share the host determinism digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: determinism-host-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/determinism/host.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
@@ -829,10 +846,29 @@ jobs:
             -DANDROID_PLATFORM=android-24 \
             -DSCRAPERX_BUILD_BRIDGE=ON \
             -DSCRAPERX_WITH_JOLT=ON \
-            -DGODOTCPP_TARGET=template_release
-          cmake --build build/android-arm64 --target scraperx_native --parallel 4
+            -DGODOTCPP_TARGET=template_release \
+            -DSCRAPERX_BUILD_DIGEST=ON
+          cmake --build build/android-arm64 --target scraperx_native scraperx_determinism_digest --parallel 4
           test -s godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so
           file godot/addons/scraperx_native/bin/android/arm64/libscraperx_native.so | tee artifacts/android-native-library.log
+
+      - name: Device determinism digest (arm64 under qemu-aarch64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get install --yes qemu-user-static
+          mkdir -p artifacts/determinism
+          file build/android-arm64/scraperx_determinism_digest
+          qemu-aarch64-static build/android-arm64/scraperx_determinism_digest | tee artifacts/determinism/arm64.txt
+          test -s artifacts/determinism/arm64.txt
+
+      - name: Share the arm64 determinism digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: determinism-arm64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/determinism/arm64.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Share Android arm64 native library
         uses: actions/upload-artifact@v4
@@ -843,6 +879,30 @@ jobs:
             artifacts/android-native-library.log
           if-no-files-found: error
           retention-days: 1
+
+  device-determinism:
+    # The phone must compute what CI proved: the same scan graph and the same
+    # fixed touch replay, bit for bit, on the host and on arm64.
+    needs: [host-build, android-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Fetch the host digest
+        uses: actions/download-artifact@v4
+        with:
+          name: determinism-host-${{ github.run_id }}-${{ github.run_attempt }}
+          path: determinism/host
+      - name: Fetch the arm64 digest
+        uses: actions/download-artifact@v4
+        with:
+          name: determinism-arm64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: determinism/arm64
+      - name: Host and arm64 compute the same
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -u determinism/host/host.txt determinism/arm64/arm64.txt
+          echo "DEVICE DETERMINISM PASS: $(wc -l < determinism/host/host.txt) lines identical"
 
   android-apk:
     needs: [host-build, android-build]
