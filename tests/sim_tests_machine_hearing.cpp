@@ -78,6 +78,50 @@ void run_machine_hearing() {
         (void)s.advance_frame(3.0);
     }
     std::cout << "  machine hearing: " << runners << " running sources heard moving\n";
+    // Her ear, end to end (no hearing injected): for every rider part that
+    // runs, she is put awake 3 m from it and past the loudest run's reach,
+    // the part is set running by hand, and Matron::hear's own pick decides.
+    // Past its reach no source is heard. Within it, a source on a level she
+    // keeps (her decks up to the 198 ring) is heard; above them she is on her
+    // way back to her own levels (a journey hears nothing), so there the near
+    // case is printed, not gated.
+    {
+        int heard_near = 0;
+        int checked = 0;
+        for (const auto &part : parts) {
+            if (!part.runs) {
+                continue;
+            }
+            const std::uint32_t body = s.kit_body_index(part.entity);
+            const scraperx::sim::Vector3 at = s.kit_body_position(body);
+            const auto listen = [&](const double off) {
+                s.debug_place_matron(scraperx::sim::Vector3{at.x + off, at.y, at.z});
+                (void)s.advance_frame(1.0 / 60.0);
+                double heard = 0.0;
+                for (int i = 0; i < 6; ++i) {
+                    s.debug_launch_kit_body(body, s.kit_body_position(body), {0.0, 1.5, 0.0});
+                    (void)s.advance_frame(1.0 / 60.0);
+                    heard = std::max(heard, s.matron_state().noise_heard);
+                }
+                (void)s.advance_frame(3.0);
+                return heard;
+            };
+            const double reach = ImpactLedger::kRunMaxLoudness * Matron::kFullHearingM;
+            const double near = listen(3.0);
+            const double far = listen(reach + 20.0);
+            std::cout << "  machine hearing: entity " << part.entity << " heard " << near << " at 3 m, " << far << " at "
+                      << reach + 20.0 << " m\n";
+            ++checked;
+            heard_near += near > 0.0 ? 1 : 0;
+            require(far == 0.0, "machine hearing: past its reach a running machine is not heard");
+            if (at.y < 200.0) {
+                require(near > 0.0, "machine hearing: 3 m from a running machine on her levels she hears it");
+            }
+        }
+        std::cout << "  machine hearing: her ear: " << heard_near << " of " << checked << " heard near\n";
+        require(heard_near >= 3, "machine hearing: she hears the running machines on her levels");
+    }
+
     require(runners >= 8, "machine hearing: the stages' running sources are heard");
     (void)s.advance_frame(10.0);
     std::cout << "  machine hearing: " << s.machine_noises().size() << " running after settling\n";
