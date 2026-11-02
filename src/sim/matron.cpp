@@ -2340,6 +2340,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     thrown_s_ = std::max(0.0F, thrown_s_ - dt);
     look_s_ = std::max(0.0F, look_s_ - dt);
     climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+    // A mover that opts out of Turn owns her body, not the passage of time.
+    // It cannot start/drive a Turn, but one already active still ages to its
+    // normal end even when this mover returns before the Hunting block.
+    if (const Mover *way = holder(); way != nullptr && !way->view().turns && turn_ != Turn::None) {
+        step_turn(dt, 0.0F, 0.0F);
+    }
     // A way she took herself (her journey, her bars) has her body until it
     // ends, first in her tick; knocked about, held or dead, it ends.
     for (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Owns; way = holder()) {
@@ -2709,11 +2715,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         if (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Hunt) {
             const bool turns = way->view().turns;
             (void)way->step(dt, account);
-            // A mover may forbid starting/driving a Turn while it owns her
-            // body, but a Turn already in progress still spends real time.
-            // Otherwise a sound-triggered lunge begun before a pipe/climb can
-            // remain latched for the whole traversal.
-            if (turns || turn_ != Turn::None) {
+            if (turns) {
                 step_turn(dt, d, heard_level_);
             }
             break;
