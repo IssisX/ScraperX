@@ -115,7 +115,7 @@ void run_loose_stock() {
         placed.push_back(piece_at(s, i));
     }
     // Tower pieces per dress_tower ring, before settling. Rings are the stack
-    // rings 11..143 m and the upper rings 176.25..396.25 m, as in
+    // rings 11..143 m and the upper rings 176.25..616.25 m, as in
     // LooseStock::dress_tower. The old total-only check (tower pieces > 60)
     // passes even if one ring is left bare, so each ring is gated here: a
     // piece's center sits under 3 m above its ring's floor (spot pieces stack
@@ -127,7 +127,7 @@ void run_loose_stock() {
         for (int level = 1; level <= 13; ++level) {
             rings.push_back(11.0 * static_cast<double>(level));
         }
-        for (int k = 0; k <= 10; ++k) {
+        for (int k = 0; k <= 20; ++k) {
             rings.push_back(176.25 + 22.0 * static_cast<double>(k));
         }
         std::vector<int> per_ring(rings.size(), 0);

@@ -692,7 +692,7 @@ public:
 
 // Where the spots may be: the stack's deck rings (11 m to 143 m: the 154 m
 // deck has its own seven, set for the Matron) and the upper rings (176 m to
-// 396 m), each a square ring round the shaft centred on (0, -150).
+// 616 m), each a square ring round the shaft centred on (0, -150).
 constexpr float kRingCentreX = 0.0F;
 constexpr float kRingCentreZ = -150.0F;
 // Every spot this far along its ring from the last, at most this many a ring.
@@ -736,7 +736,7 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
         tops.push_back(11.0F * static_cast<float>(level));
     }
     const std::size_t stack_rings = tops.size();
-    for (int k = 0; k <= 10; ++k) {
+    for (int k = 0; k <= 20; ++k) {
         tops.push_back(176.25F + 22.0F * static_cast<float>(k));
     }
     // The four sides, each by the direction out from the shaft across it.
@@ -763,7 +763,7 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
             const auto floor_out = [&](const float d) {
                 return floor_at(kRingCentreX + out.GetX() * d, kRingCentreZ + out.GetZ() * d, top, ignored);
             };
-            for (float d = 10.0F; d < 30.0F; d += 0.5F) {
+            for (float d = top > 400.0F ? 2.0F : 10.0F; d < 30.0F; d += 0.5F) {
                 if (floor_out(d)) {
                     edge = d;
                     for (float back = d - 0.05F; back > d - 0.5F && floor_out(back); back -= 0.05F) {
@@ -807,10 +807,13 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 const RVec3 middle = at(0.0F, near + 0.5F * spot.depth) + Vec3(0.0F, 1.3F, 0.0F);
                 // No machine, nor any body that moves, within kMachineClear of
                 // it.
-                const RefConst<Shape> around =
-                    new BoxShape(Vec3(0.5F * spot.width + kMachineClear, 2.5F, 0.5F * spot.width + kMachineClear));
+                // Above 396.25 m the rings are the bands' own kit slabs, so the
+                // box starts 5 cm over the floor there.
+                const bool kit_ring = top > 400.0F;
+                const RefConst<Shape> around = new BoxShape(
+                    Vec3(0.5F * spot.width + kMachineClear, kit_ring ? 1.225F : 2.5F, 0.5F * spot.width + kMachineClear));
                 AnyHitCollisionCollector<CollideShapeCollector> near_it;
-                query.CollideShape(around, Vec3::sReplicate(1.0F), RMat44::sRotationTranslation(Quat::sIdentity(), middle),
+                query.CollideShape(around, Vec3::sReplicate(1.0F), RMat44::sRotationTranslation(Quat::sIdentity(), kit_ring ? middle - Vec3(0.0F, 0.025F, 0.0F) : middle),
                                    CollideShapeSettings(), middle, near_it, {}, {}, machines);
                 if (near_it.HadHit()) {
                     continue;
