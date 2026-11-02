@@ -1308,8 +1308,10 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         at_spot();
         const RVec3 pin = pin_pose(at, feet);
         const RVec3 belt = belt_pose(at, feet);
-        pose_hand(dt, pin, 0.6F * kHandSpeedMps);
-        pose_hand2(dt, belt, 0.6F * kHandSpeedMps);
+        // (The fatality's haul at her hand's full pace: no time to savor it.)
+        const float haul = (fatal_hold_ ? 1.0F : 0.6F) * kHandSpeedMps;
+        pose_hand(dt, pin, haul);
+        pose_hand2(dt, belt, haul);
         if ((to_spot < 0.15F && Vec3(pin - hand_target_).Length() < 0.05F &&
              Vec3(belt - hand2_target_).Length() < 0.05F) ||
             hold_s_ > kPinHaulS) {
@@ -1419,13 +1421,16 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const bool square = std::abs(axis.Dot(along)) < 0.45F;
         const RVec3 in = rail_pose(at, feet, rail_up_ + kOverInUpM, kOverInOutM, kHangSideM);
         const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
-        if (!square && hold_s_ < 3.0F && !over_up_) {
+        if (!square && hold_s_ < 1.5F && !over_up_) {
             pose_hand2(dt, in, 0.8F * kHandSpeedMps);
             break;
         }
         over_up_ = true;   // squared (or as square as he comes): up from here
         pose_hand2(dt, up, 0.8F * kHandSpeedMps);
-        if ((past > kOverOutPastM && Vec3(up - hand2_target_).Length() < 0.1F) || hold_s_ > 6.0F) {
+        // Going over: his ankle up, his body tipping head down past the rail
+        // (her first hand on his middle keeps it at the rail's top till then).
+        if ((Vec3(up - hand2_target_).Length() < 0.1F && (axis.GetY() < -0.2F || past > kOverOutPastM)) ||
+            hold_s_ > 4.0F) {
             // His middle out: her first hand from his belt to his ankle.
             begin_regrip(Grip::Ankle);
             hold_phase_ = 6;
@@ -1467,7 +1472,10 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // Hanging by one ankle against the outside of her deck.
         at_spot();
         const RVec3 hang = rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM, kHangSideM);
-        pose_hand(dt, hang, kHandSpeedMps);
+        if (!fatal_hold_) {
+            // (The fatality's hand goes out to her let-go pose below instead.)
+            pose_hand(dt, hang, kHandSpeedMps);
+        }
         if (hold_s_ > 1.5F && physics_.GetBodyInterface().GetRotation(player_).RotateAxisY().GetY() > -0.5F &&
             over_tries_ < 2) {
             // Not over (lying on the rail's top): up again, and over.
@@ -1494,7 +1502,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         if (due || --fatal_check_ticks_ <= 0) {
             fatal_check_ticks_ = 3;
             foresee_fall(player, out);
-            if (!fatal_lethal_ && xz(ax, az, rim_x_, rim_z_) < 0.1F) {
+            if (!fatal_lethal_ && xz(ax, az, rim_x_, rim_z_) < 0.2F) {
                 (void)fatal_shift(feet);
             }
         }

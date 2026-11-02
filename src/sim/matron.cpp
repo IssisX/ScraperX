@@ -4713,6 +4713,7 @@ void Matron::refresh_view() {
     view_.trunk_pitch = trunk_.pitch;
     view_.swats = swats_;
     view_.hand2_active = hand2_active();
+    view_.hold_phase = static_cast<std::uint8_t>(hold_phase_);
     if (shown.bar_traverse) {
         view_.hand_x = float(shown.hand.GetX()); view_.hand_y = float(shown.hand.GetY()); view_.hand_z = float(shown.hand.GetZ());
         view_.support_n = shown.force_n;
