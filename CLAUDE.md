@@ -96,6 +96,9 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
     session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
     retire the old one once its in-flight helpers have reported.
   - A worker session whose job has landed is retired, never reused for new work.
+  - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
+    own session (`create_session`), not inside the integrator, so a handoff never waits on it
+    (2026-11-02: *"Shouldn't it be in the new session?"*).
 - Never medium effort (2026-11-02: *"Medium effort level is too little for what I need here in this
   complex game"*). Every Claude session and helper runs above medium: set it on every helper you
   start, and name it in every brief and handoff.
