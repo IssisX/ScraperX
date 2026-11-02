@@ -310,32 +310,6 @@ struct SlingshotShot final {
     scraperx::sim::Snapshot end{};
 };
 
-// ---- PE 3, gap 18 (rule 51): O wrecked leaves a way on ---------------------------
-// O's ram freed with nobody aboard: the cab goes up alone and stays on its
-// dogs at the head. The way on from the 728 deck is the ladder up through the
-// 750 deck's hatch, climbed with the player's own limits, and he stands on
-// the 750 deck beside the spent cab.
-void run_o_wreckage() {
-    using scraperx::sim::InitialSpawn;
-    using scraperx::sim::Simulation;
-    Simulation o(InitialSpawn::Deck728);
-    (void)o.advance_frame(1.0);
-    double freed = -1.0;
-    require(pull_o_handle(o, &freed) && walk_to(o, 5.2, -150.0, 3.0, 0.15) && o.service_state().o_cab_travel < 0.01,
-            "O wreck: the ram freed and the rider off onto the 728 deck before the cab moves");
-    const ORide alone = ride_service_o(o, false, freed);
-    require(alone.settled && o.service_state().o_cab_travel >= 21.1 && o.snapshot().player_position.y < 729.5,
-            "O wreck: the cab gone up alone to its head, the rider left on the 728 deck");
-    const double spent = o.service_state().o_cab_travel;
-    require(walk_to(o, 10.7, -155.0, 10.0) && climb_wet_hold(o, 10.7, -157.43, 0.0, -1.0, false, 750.5),
-            "O wreck: up the ladder through the 750 deck's hatch");
-    require(standing_above(o.snapshot(), kO750Top - 0.1) && o.snapshot().death_count == 0,
-            "O wreck: on the 750 deck past the spent cab, alive");
-    require(std::abs(o.service_state().o_cab_travel - spent) < 0.05, "O wreck: the spent cab stays on its dogs");
-    std::cout << "PASS scraperx_sim AS-010 wreckage O: cab_travel=" << spent
-              << " deck_y=" << o.snapshot().player_position.y << '\n';
-}
-
 SlingshotShot slingshot_shot(const double draw_seconds, const bool chute) {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
