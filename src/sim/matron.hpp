@@ -591,11 +591,11 @@ public:
     // The Turn: now and then, on the hunt, something in her breaks. She stops
     // dead (the wind-up: a spine cracking, a head turning the wrong way, the
     // one warning), then lunges in jerks, bursts faster than a sprint and
-    // stumbling pauses, with feet that snap rather than step. It starts when
-    // she has a clear line to the player within kTurnTriggerM, or the player
-    // lands hard with the noise carrying under kTurnNoiseM to her; then not
-    // again for a while. It
-    // is no faster on the whole than her usual hunt, only harder to read.
+    // stumbling pauses, with feet that snap rather than step. Her stage's
+    // cooldown is the maximum active-hunt wait. After the first part of that
+    // interval, sustained close sight or a strong sound at her ear may start
+    // it early; at the deadline it starts anyway. Silence and distance can
+    // delay the Turn, never veto it forever.
     enum class Turn : std::uint8_t {
         None = 0,
         Windup = 1,
@@ -603,8 +603,8 @@ public:
     };
     static constexpr float kTurnTriggerM = 13.0F;
     static constexpr float kTurnSightSeconds = 0.5F;
-    static constexpr float kTurnNoiseM = 20.0F;
-    static constexpr float kTurnNoiseLoudness = 0.95F;   // a landing of 8 m/s or more
+    static constexpr float kTurnEarLevel = 0.20F;        // sound level after reach/occlusion, regardless of source
+    static constexpr float kTurnReadyFraction = 0.20F;   // first 20% of the stage interval is anti-spam
     static constexpr float kTurnWindupSeconds = 0.9F;
     static constexpr float kTurnLungeSeconds = 3.2F;
     static constexpr float kTurnCooldownSeconds = 18.0F;
@@ -2163,7 +2163,7 @@ private:
     void pose_hand2(float dt, JPH::RVec3 target, float speed);
     // The Turn's clock: `distance_to_player` across, `carried_m` how far the
     // player's noise carried to her.
-    void step_turn(float dt, float distance_to_player, float loudness, float carried_m);
+    void step_turn(float dt, float distance_to_player, float heard_level);
     // Her rage and stage, from the level at her ear this tick; her exposure.
     void step_rage(float dt);
     [[nodiscard]] float turn_cooldown_seconds() const noexcept;
@@ -2437,7 +2437,7 @@ private:
     float commit_s_ = 0.0F;
     Turn turn_ = Turn::None;
     float turn_s_ = 0.0F;
-    float turn_cooldown_s_ = kTurnCooldownSeconds * 0.5F;
+    float turn_cooldown_s_ = kTurnCooldownPestSeconds;
     float sight_far_s_ = 0.0F;
     float rage_ = 0.0F;
     Stage stage_ = Stage::Pest;
