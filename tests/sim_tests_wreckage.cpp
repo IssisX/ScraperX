@@ -211,7 +211,110 @@ void run_de_wreckage() {
 }
 
 
+// ---- The vertical machines (src/sim/vertical) --------------------------------------
+// Defined in sim_tests_rides.cpp.
+bool ride_to_top(Simulation &s, std::size_t index, double *ride_s);
+
+bool pitman_ride(Simulation &s, double *ride_s);
+
+namespace {
+// A machine worked by Action, sent off with nobody aboard and called back:
+// from its lower receiver (entry) onto its deck, Action, straight back off
+// onto the receiver; the deck goes to its top empty. CALL from the receiver
+// brings it back, and it is boarded and ridden to the top, then stepped off
+// onto the upper receiver (at `entry` again: these stand one over the other).
+bool wreck_and_call(Simulation &s, const std::size_t index, const double ex, const double ez, const double dx,
+                    const double dz, const char *name) {
+    const auto lift = [&s] { return s.lift_state(); };
+    const bool on_entry = walk_to(s, ex, ez, 8.0) && s.advance_frame(0.5).accepted &&
+                          lift().machine == static_cast<int>(index) && lift().role == 2;
+    const bool on_deck = on_entry && walk_to(s, dx, dz, 6.0) && s.advance_frame(0.5).accepted && lift().role == 1;
+    if (!on_deck) {
+        std::cout << "  " << name << " wreck: entry " << on_entry << " deck " << on_deck << '\n';
+        return false;
+    }
+    (void)s.request_lift_action();
+    const bool off = walk_to(s, ex, ez, 4.0, 0.15) && s.advance_frame(0.3).accepted && lift().role == 2;
+    const bool gone = off && wait_for(s, 150.0, [&](const scraperx::sim::Snapshot &) {
+                          return std::abs(lift().travels[index] - 1.0) < 0.01 && !lift().moving;
+                      });
+    if (!gone) {
+        std::cout << "  " << name << " wreck: off " << off << " travel " << lift().travels[index] << '\n';
+        return false;
+    }
+    (void)s.request_lift_action();
+    const bool back = wait_for(s, 150.0, [&](const scraperx::sim::Snapshot &) {
+        return lift().travels[index] < 0.01 && !lift().moving;
+    });
+    double ride_s = 0.0;
+    const bool rode = back && walk_to(s, dx, dz, 6.0) && ride_to_top(s, index, &ride_s) && walk_to(s, ex, ez, 6.0) &&
+                      s.advance_frame(0.5).accepted && lift().role == 3;
+    std::cout << "  " << name << " wreck: called back " << back << ", ridden " << rode << " in " << ride_s << " s\n";
+    return rode && s.snapshot().death_count == 0;
+}
+} // namespace
+
+// The cascade mast, then the barrel helix: each sent up empty, called back
+// from its lower receiver, ridden on (the pitman lift between them as built).
+void run_mast_helix_wreckage() {
+    Simulation s(InitialSpawn::Ring264West);
+    (void)s.advance_frame(1.0);
+    require(walk_to(s, -19.5, -150.0, 12.0) && wreck_and_call(s, 0, -16.0, -150.0, -10.65, -150.0, "mast"),
+            "mast wreck: sent up empty, called back, ridden to its upper receiver");
+    double pitman_s = 0.0;
+    require(pitman_ride(s, &pitman_s), "mast/helix wreck: the pitman to 314.89 m");
+    require(wreck_and_call(s, 2, -27.0, -149.0, -30.8, -149.0, "helix"),
+            "helix wreck: sent up empty, called back, ridden to its upper receiver");
+    std::cout << "PASS scraperx_sim vertical wreckage mast+helix: top_y=" << s.snapshot().player_position.y << '\n';
+}
+
+// The crown gondola sent off with nobody aboard: Action from its cabin, the
+// rider straight back off onto the lower receiver; the cabin carries itself
+// over the crown empty. The way on: CALL from the receiver brings it back,
+// boarded and ridden to the top.
+void run_crown_wreckage() {
+    constexpr std::size_t kCrown = 3;
+    Simulation s(InitialSpawn::Deck750);
+    (void)s.advance_frame(1.0);
+    require(walk_to(s, 10.8, -152.0, 8.0) && walk_to(s, 11.3, -152.0, 3.0, 0.06), "crown wreck: to the east parapet");
+    (void)s.set_facing(1.0, 0.0);
+    (void)s.advance_frame(0.3);
+    (void)s.request_traversal();
+    require(hold_stick(s, 0.0, 0.0, 1.0, 0.0, 2.0,
+                       [](const scraperx::sim::Snapshot &state) {
+                           return state.traversal_state == scraperx::sim::TraversalState::None &&
+                                  state.player_grounded && state.player_position.x > 12.4;
+                       }) &&
+                walk_to(s, 13.5, -152.0, 4.0) && walk_to(s, 17.3, -152.0, 6.0) && s.advance_frame(0.5).accepted &&
+                s.lift_state().machine == static_cast<int>(kCrown) && s.lift_state().role == 1,
+            "crown wreck: over the parapet onto the cabin");
+    (void)s.request_lift_action();
+    const bool off = walk_to(s, 13.5, -152.0, 4.0, 0.15) && s.advance_frame(0.3).accepted;
+    const auto at = s.lift_state();
+    std::cout << "  crown wreck: off " << off << " machine " << at.machine << " role " << at.role << " travel "
+              << at.travels[kCrown] << '\n';
+    require(off && at.role == 2, "crown wreck: sent, and straight back off onto the lower receiver");
+    require(wait_for(s, 120.0, [&s](const scraperx::sim::Snapshot &) {
+                const auto lift = s.lift_state();
+                return std::abs(lift.travels[kCrown] - 1.0) < 0.01 && !lift.moving;
+            }),
+            "crown wreck: the cabin gone over the crown empty");
+    (void)s.request_lift_action();
+    require(wait_for(s, 120.0, [&s](const scraperx::sim::Snapshot &) {
+                const auto lift = s.lift_state();
+                return lift.travels[kCrown] < 0.01 && !lift.moving;
+            }),
+            "crown wreck: CALL from the lower receiver brings the cabin back");
+    double ride_s = 0.0;
+    require(walk_to(s, 17.3, -152.0, 6.0) && ride_to_top(s, kCrown, &ride_s) && s.snapshot().death_count == 0,
+            "crown wreck: boarded and ridden over the crown");
+    std::cout << "PASS scraperx_sim vertical wreckage crown: ride_s=" << ride_s
+              << " top_y=" << s.snapshot().player_position.y << '\n';
+}
+
 void run_wreck_way_on() {
+    run_mast_helix_wreckage();
+    run_crown_wreckage();
     run_de_wreckage();
     run_s1_wreckage();
     run_m_wreckage();
