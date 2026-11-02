@@ -1207,7 +1207,8 @@ void Matron::begin_pin() {
     pin_rim_[1] = rim_z_;
     pin_rim_[2] = rim_nx_;
     pin_rim_[3] = rim_nz_;
-    begin_regrip(Grip::Collar);
+    // Her hand opens on his ankle for his collar only with her deck under
+    // him (step_rail, phase 0).
     fatal_window_s_ = 0.0F;
     fatal_hang_ = false;
     if (fatal_hold_) {
@@ -1238,6 +1239,27 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
     };
     switch (hold_phase_) {
     case 0: {
+        if (grip_point_ == Grip::Ankle && !regrip_) {
+            // Her deck under the whole of him first (a drag's slide can take
+            // his body on past her toward the edge): she keeps his ankle and
+            // steps back in, hauling him after her.
+            const float in_from_rail = (rim_x_ + rim_nx_ * kRimStandM - float(player.GetX())) * rim_nx_ +
+                                       (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
+            const Vec3 his_v = physics_.GetBodyInterface().GetLinearVelocity(player_);
+            const bool at_rest = Vec3(his_v.GetX(), 0.0F, his_v.GetZ()).Length() < 0.4F;
+            if (pin_here_ || (in_from_rail >= 0.4F && at_rest && deck_close_below(player, feet))) {
+                begin_regrip(Grip::Collar);
+                break;   // the world opens her hand this tick
+            } else {
+                walk_toward(dt, rim_x_ - rim_nx_ * kBackInWalkM, rim_z_ - rim_nz_ * kBackInWalkM, 0.6F);
+                yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
+                pose_hand(dt, RVec3(at.GetX(), feet + kDragHandUpM, at.GetZ()) - out * 0.3F, kHandSpeedMps);
+                if (hold_s_ > 2.0F * kPinReachS) {
+                    back_in();
+                }
+                break;
+            }
+        }
         // His collar: she steps in to his chest and takes it.
         const RVec3 c = player_collar_;
         const float off = xz(ax, az, float(c.GetX()), float(c.GetZ()));
@@ -1480,7 +1502,9 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const RVec3 mid = physics_.GetBodyInterface().GetPosition(player_);
         const float mid_past = (float(mid.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
                                (float(mid.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-        if (due && fatal_lethal_ && mid_past >= kFatalOpenAirM + 0.02F && fatal_s_ <= kFatalLetGoByS) {
+        // And hanging settled a moment (not still swinging in from the over).
+        if (due && fatal_lethal_ && hold_s_ >= kFatalHangSettleS && mid_past >= kFatalOpenAirM + 0.02F &&
+            fatal_s_ <= kFatalLetGoByS) {
             fatal_release();
         } else if (fatal_s_ >= kFatalLetGoByS) {
             reel_ = true;

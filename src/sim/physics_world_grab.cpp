@@ -567,8 +567,9 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
     } else {
         brace_load_n_ = 0.0F;
     }
-    if (player_free_rot_ && grip_ == nullptr && (grounded_ || body_down_on_ground(bodies))) {
-        // A body down on the steel slides to a stop: the player's own
+    if (player_free_rot_ && (grounded_ || body_down_on_ground(bodies))) {
+        // A body down on the steel slides to a stop, in her hand or not (her
+        // drag of it across the deck meets it too): the player's own
         // shape has no friction (its feet do that, and they are not
         // under it), so the ground's is applied here, mu ~0.7.
         JPH::Vec3 v = bodies.GetLinearVelocity(player_id_);
