@@ -699,8 +699,11 @@ constexpr float kRingCentreZ = -150.0F;
 constexpr float kSpotSpacing = 9.0F;
 constexpr int kSpotsPerStackRing = 3;
 constexpr int kSpotsPerUpperRing = 2;
-// (The 706 deck and the summit are felt for too, but have no floor
-// kMachineClear from every machine today, so they get none.)
+// The 706 deck and the summit keep their places in the list (so each deck's
+// templates stay as measured) but are not felt for: felt for on the grid
+// (11-02), neither has a floor kMachineClear from every machine, and the
+// search cost 0.8 s each at load.
+constexpr std::array<float, 2> kBareTopDecks{706.1F, 802.64F};
 constexpr std::array<float, 7> kTopDecks{640.25F, 662.1F, 684.1F, 706.1F, 728.1F, 750.1F, 802.64F};
 constexpr int kSpotsPerTopDeck = 1;
 // The decks the yard crane lands loads on (yard_crane.hpp), and their spots:
@@ -760,6 +763,9 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                          : ring < stack_rings  ? kSpotsPerStackRing
                          : ring < ring_count   ? kSpotsPerUpperRing
                                                : kSpotsPerTopDeck;
+        if (ring >= ring_count && std::find(kBareTopDecks.begin(), kBareTopDecks.end(), top) != kBareTopDecks.end()) {
+            continue;
+        }
         std::vector<RVec3> spots;
         // Each ring starts on another side and at another place along it, so
         // no two rings are dressed alike.
@@ -791,12 +797,12 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
             if (edge < 0.0F && !top_deck) {
                 continue;
             }
-            const float first_row = top_deck ? -45.0F : edge;
-            const float last_row = top_deck ? 45.0F : edge;
+            const float first_row = top_deck ? -24.0F : edge;
+            const float last_row = top_deck ? 24.0F : edge;
             for (float row = first_row; row <= last_row + 0.01F; row += 1.5F) {
             const float start =
-                top_deck ? -45.0F : -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
-            const float stop = top_deck ? 45.0F : edge - 2.0F;
+                top_deck ? -24.0F : -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
+            const float stop = top_deck ? 24.0F : edge - 2.0F;
             for (float a = start; a <= stop && static_cast<int>(spots.size()) < most; a += 1.5F) {
                 const bool crane_spot = crane_deck && spots.size() % 2 == 0;
                 const std::vector<SpotTemplate> &kinds = crane_spot ? crane_spot_templates() : spot_templates();
@@ -825,6 +831,15 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                     query.CastRay(RRayCast(at(0.0F, 0.4F) + Vec3(0.0F, 1.05F, 0.0F), out * -0.6F), rail);
                 const float near = railed ? 0.15F : 0.6F;
                 const float far = near + spot.depth + kWalkway;
+                // On a top deck most of the grid is off the floor: its first
+                // floor sample (the level check's own) is felt for first.
+                if (top_deck) {
+                    const RVec3 first = at(-0.5F * spot.width, near);
+                    float first_floor = top;
+                    if (!floor_at(static_cast<float>(first.GetX()), static_cast<float>(first.GetZ()), top, first_floor)) {
+                        continue;
+                    }
+                }
                 const RVec3 middle = at(0.0F, near + 0.5F * spot.depth) + Vec3(0.0F, 1.3F, 0.0F);
                 // No machine, nor any body that moves, within kMachineClear of
                 // it.
