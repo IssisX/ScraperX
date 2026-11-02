@@ -23,7 +23,7 @@
 namespace scraperx::sim {
 namespace {
 constexpr float kHandSpringNpm = 3500.0F;
-constexpr float kWrenchSpringScale = 3.0F;
+constexpr float kWrenchSpringScale = 1.3F;
 constexpr float kHandDampNspm = 500.0F;
 constexpr float kWristCloseM = 0.14F;
 // The arm, in the body's frame: the shoulder and the wrist hanging past the
