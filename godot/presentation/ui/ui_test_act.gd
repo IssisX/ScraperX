@@ -1204,6 +1204,7 @@ const PIPE_WARNING_S := 4.0
 
 var _pipe_drum := 0
 var _pipe_drum_rest := Vector3.ZERO   # where it was set down
+var _pipe_stage := {}
 # Her first knock on the pipe and her feet on 143 after it, in process frames
 # (-1 till then), kept by _pipe_watching while `on`.
 var _pipe_watch := {}
@@ -1213,6 +1214,8 @@ func _matron_pipe_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _pipe_drum_to_corner(device):
 		return false
+	_pipe_stage = {"on": true, "min_gap_m": INF, "lost": false}
+	_pipe_stage_trace()
 	if int(_matron_state()["state"]) == MATRON_STATE_DORMANT and not await _wake_matron(device):
 		return false
 	if not await _walk_to(device, Vector2(2.5, -130.4), 0.3, 10.0, true):
@@ -1222,7 +1225,9 @@ func _matron_pipe_touch(device: int) -> bool:
 	if not await _act_wait(func() -> bool: return bool(_matron_state()["released"]), 40.0, "pipe_out"):
 		return _fail("she never came out of her locker")
 	if not await _pipe_down_after_you(device):
+		_pipe_stage["on"] = false
 		return false
+	_pipe_stage["on"] = false
 	if not await _pipe_drum_onto_her(device):
 		return false
 	if not _matron_contacts_owned():
@@ -1272,17 +1277,30 @@ func _pipe_drum_at() -> Vector3:
 	return _native().get_kit_body_transform(_native().get_kit_body_index(_pipe_drum)).origin
 
 
+# Observe the real stock and Matron from set-down, including the zipline ride.
+# The later pipe sound watcher starts too late to establish stock clearance.
+func _pipe_stage_trace() -> void:
+	while bool(_pipe_stage["on"]):
+		var m := _matron_state()
+		var her: Vector3 = m["position"]
+		var drum := _pipe_drum_at()
+		var away := Vector2(drum.x - her.x, drum.z - her.z).length()
+		if absf(drum.y - her.y) < 2.0:
+			_pipe_stage["min_gap_m"] = minf(float(_pipe_stage["min_gap_m"]), away)
+		var moved := Vector2(drum.x - _pipe_drum_rest.x, drum.z - _pipe_drum_rest.z).length()
+		if not bool(_pipe_stage["lost"]) and (moved > 0.8 or drum.y < MATRON_DECK_Y):
+			_pipe_stage["lost"] = true
+			print("SCRAPERX_PIPE cache departed t=%.1f drum=%s her=%s gap=%.2f stage=%d" % [
+				float(Engine.get_process_frames()) / 60.0, str(drum), str(her), away, int(m["stage"])])
+		await get_tree().process_frame
+
+
 # Kept every frame while _pipe_watch["on"]: her first knock on the pipe, and
 # her feet on 143 off it after that.
 func _pipe_watching() -> void:
 	while bool(_pipe_watch["on"]):
 		var m := _matron_state()
 		var frame := int(Engine.get_process_frames())
-		var her: Vector3 = m["position"]
-		var drum := _pipe_drum_at()
-		if drum.y >= MATRON_DECK_Y and absf(her.y - drum.y) < 2.0:
-			_pipe_watch["stage_gap_m"] = minf(float(_pipe_watch["stage_gap_m"]),
-				Vector2(her.x - drum.x, her.z - drum.z).length())
 		if int(_pipe_watch["first"]) < 0 and int(m["pipe_holds"]) > int(_pipe_watch["holds0"]):
 			_pipe_watch["first"] = frame
 			_pipe_watch["clangs0"] = int(_main._audio.matron_cues.get(&"clang", 0))
@@ -1301,7 +1319,7 @@ func _pipe_watching() -> void:
 func _pipe_down_after_you(device: int) -> bool:
 	await _crouch_on(device, false)
 	_pipe_watch = {"on": true, "holds0": int(_matron_state()["pipe_holds"]), "first": -1, "arrived": -1,
-		"clangs0": 0, "clangs": 0, "warned_s": 0.0, "stage_gap_m": INF}
+		"clangs0": 0, "clangs": 0, "warned_s": 0.0}
 	_pipe_watching()
 	var links := int(_matron_state()["pipe_links"])
 	var took: bool = await _act_laps(device, Vector2(-3.0, ACT_143_EDGE_Z), Vector2(-10.5, ACT_143_EDGE_Z),
@@ -1340,7 +1358,7 @@ func _pipe_heard_coming() -> bool:
 # off, she slams onto the flange below her, alive; no loaded rail-side walk.
 func _pipe_drum_onto_her(device: int) -> bool:
 	var rest := _pipe_drum_at()
-	var gap := float(_pipe_watch["stage_gap_m"])
+	var gap := float(_pipe_stage["min_gap_m"])
 	print("SCRAPERX_PIPE stage gap %.2f m, drum %s" % [gap, str(rest)])
 	if not is_finite(gap) or gap <= PIPE_STAGING_CLEARANCE_M or rest.y < MATRON_DECK_Y:
 		return _fail("the cached drum was not outside her shove corridor (gap %.2f m, drum %s)" % [
