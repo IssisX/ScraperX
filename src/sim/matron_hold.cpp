@@ -1482,7 +1482,8 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         away = away.Length() > 1.0e-3F ? away.Normalized() : Vec3(0.0F, -1.0F, 0.0F);
         const RVec3 chest = shoulder_of(at, -1.0F) + Vec3(0.0F, -0.25F, 0.0F) + fwd * 0.1F;
         const RVec3 wrench = Vec3(chest - player_wrist_).Dot(away) < -0.3F ? chest : player_wrist_ + away * 0.8F;
-        pose_hand2(dt, wrench, 8.0F * kArmPullMoveMps);
+        // Her wrench builds at half the pace of her reach, not all at once.
+        pose_hand2(dt, wrench, 4.0F * kArmPullMoveMps);
         // No give-up: the shoulder not torn kArmPullSeconds into the pull
         // (her pull spent on her own arm's reach, not on it), she re-poses
         // with the wrist in her hand, her weight put into it.
