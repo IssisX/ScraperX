@@ -42,7 +42,10 @@ integrator cannot set it. So every time one opens, Cory is told in the same mess
 with the level picked. He set lane A and lane B to xhigh. At 5:30 PM: Fable's design v3 adopted step by step
 (`03_EXECUTION/PLANNING/AGENT_TEAM_DESIGN.md`, no Linear, no new paid services; the orchestrator
 and eye run on his $100 monthly Anthropic API credit). Step A done at 5:33 PM: one issue per job
-(J-001..J-031, #108-#138), `work/BOARD.md` generated, `@codex` wake tested on J-029 (#136). Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+(J-001..J-031, #108-#138), `work/BOARD.md` generated, `@codex` wake tested on J-029 (#136). Codex is out of quota: nothing is planned around it,
+no @codex wakes or reviews (*"We can't depend on that"*). At 5:39 PM on his go: one Claude session builds step B
+(switchboard v0, J-031 #138) with his setup cut to two steps, Muse's bridge sending mail too (*"Do as much of it
+for me as you can"*). Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
