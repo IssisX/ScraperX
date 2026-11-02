@@ -41,6 +41,72 @@ bool steer_to(Simulation &s, const double x, const double z, const bool sprint) 
 } // namespace
 
 void run_matron_pace() {
+    // Turn contract: sound is judged by what actually reaches her ear, not by
+    // a source-type special case. A loud room input can therefore trip an
+    // eligible Turn while the player is still outside the 13 m sight trigger.
+    {
+        Simulation t(InitialSpawn::Deck154);
+        t.place_matron_home(154.0F);
+        require(t.advance_frame(1.0).accepted, "matron turn sound: settle");
+        t.debug_set_matron_stage(0);
+        t.debug_fix_matron_pace(0);
+        t.debug_launch_player({20.0, 154.9, -150.0}, {0.0, 0.0, 0.0});
+        t.launch_matron_for_test({-20.0, 155.05, -150.0});
+        require(t.set_room_loudness(1.0), "matron turn sound: loud room accepted");
+        int turn_tick = -1;
+        double turn_distance = 0.0;
+        for (int i = 0; i < 15 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            t.debug_set_matron_stage(0);
+            tick(t);
+            const auto m = t.matron_state();
+            const auto p = t.snapshot().player_position;
+            if (m.turn != 0) {
+                turn_tick = i;
+                turn_distance = std::hypot(m.position.x - p.x, m.position.z - p.z);
+                break;
+            }
+        }
+        require(turn_tick >= 0 && turn_distance > Matron::kTurnTriggerM,
+                "matron turn sound: ear-level room noise starts Turn before sight range");
+    }
+
+    // A quiet/distant player cannot veto the Turn forever. Keep an active
+    // acoustic lead refreshed through the existing test seam while moving the
+    // actual player to the opposite corner, so sight stays outside 13 m and no
+    // real ear-level sound is fed. Pest must still Turn by its bounded deadline.
+    {
+        Simulation t(InitialSpawn::Deck154);
+        t.place_matron_home(154.0F);
+        require(t.advance_frame(1.0).accepted, "matron turn deadline: settle");
+        t.debug_set_matron_stage(0);
+        t.debug_fix_matron_pace(0);
+        t.launch_matron_for_test({-20.0, 155.05, -130.0});
+        require(t.set_room_loudness(0.0), "matron turn deadline: room silent");
+        int turn_tick = -1;
+        double turn_distance = 0.0;
+        const int hz = static_cast<int>(Simulation::kTickRateHz);
+        for (int i = 0; i < 50 * hz; ++i) {
+            t.debug_set_matron_stage(0);
+            if (i % hz == 0) {
+                const auto m = t.matron_state();
+                const double px = m.position.x >= 0.0 ? -20.0 : 20.0;
+                const double pz = m.position.z >= -150.0 ? -170.0 : -130.0;
+                t.debug_launch_player({px, 154.9, pz}, {0.0, 0.0, 0.0});
+                t.debug_matron_hear({px, 154.0, pz});
+            }
+            tick(t);
+            const auto m = t.matron_state();
+            const auto p = t.snapshot().player_position;
+            if (m.turn != 0) {
+                turn_tick = i;
+                turn_distance = std::hypot(m.position.x - p.x, m.position.z - p.z);
+                break;
+            }
+        }
+        require(turn_tick >= 0 && turn_tick <= 46 * hz && turn_distance > Matron::kTurnTriggerM,
+                "matron turn deadline: active far hunt forces a Turn by Pest deadline");
+    }
+
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron pace: settle");
