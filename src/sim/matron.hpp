@@ -1005,7 +1005,7 @@ public:
     // With real arms (HOLD_WITH_REAL_ARMS.md: the drag, the pin with his
     // window, over, the hang) the hold takes longer than the heave it replaced.
     static constexpr float kFatalLetGoFromS = 8.0F;
-    static constexpr float kFatalLetGoByS = 11.5F;
+    static constexpr float kFatalLetGoByS = 13.0F;
     static constexpr float kFatalHangSettleS = 0.7F;   // hanging this long before her fingers open
     static constexpr float kFatalShiftM = 0.4F;
     static constexpr float kFatalShiftMaxM = 1.5F;
@@ -1052,7 +1052,7 @@ public:
     // from there, as he moves, kills.
     static constexpr float kFatalDropOutM = 1.35F;
     static constexpr float kFatalDropUpM = 2.1F;
-    static constexpr float kFatalOpenAirM = 0.45F;  // (his middle hangs ~0.5 m past the lip under her 0.5 m arm)
+    static constexpr float kFatalOpenAirM = 0.5F;
 
     // The five beats' poses (HOLD_WITH_REAL_ARMS.md), every one within her
     // real arm (kRealArmM). From her middle at the rail (kRimStandM in from
@@ -1099,7 +1099,7 @@ public:
     static constexpr float kBackInSideM = 0.20F;
     // Set back on her deck: the rail his pulley, her hand in and down.
     static constexpr float kBackInM = 0.30F;
-    static constexpr float kFatalOutM = 0.30F;   // the fatality's let-go: her arm out past the hang
+    static constexpr float kFatalOutM = 0.45F;   // the fatality's let-go: leaning over the rail, her arm out (clamped to her real arm)
     static constexpr float kBackInLiftM = 0.45F;  // his ankle lifted clear over the rail's top first
     static constexpr float kBackInWalkM = 2.2F;
     static constexpr float kBackInSlope = 0.85F;   // tan 40 degrees

@@ -1497,12 +1497,13 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // he is, as he moves, is foreseen to kill; none by kFatalLetGoByS, she
         // hauls him back in for her floor version.
         const bool due = fatal_s_ >= kFatalLetGoFromS;
-        pose_hand(dt, rail_pose(at, feet, rail_up_ + kHangUpM + 0.1F, kHangOutM + kFatalOutM, kHangSideM),
+        pose_hand(dt, rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM + kFatalOutM, kHangSideM),
                   kHandSpeedMps);
         if (due || --fatal_check_ticks_ <= 0) {
             fatal_check_ticks_ = 3;
             foresee_fall(player, out);
-            if (!fatal_lethal_ && xz(ax, az, rim_x_, rim_z_) < 0.2F) {
+            // (Shifted only once he hangs settled: not for a swing in.)
+            if (!fatal_lethal_ && hold_s_ >= kFatalHangSettleS && xz(ax, az, rim_x_, rim_z_) < 0.2F) {
                 (void)fatal_shift(feet);
             }
         }
