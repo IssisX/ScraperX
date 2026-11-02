@@ -985,8 +985,9 @@ public:
     // Steel may stand out under the edge (the beams under the decks below, a
     // deck's edge beam), so her arm gives him a toss out as her fingers open:
     // the least of kFatalTossMps out over the drop that the foreseen fall
-    // needs (at most 0.9 m/s: 72 N*s, under her 8,000 N in the tick she lets
-    // go), for what is left of his swing. The edge itself must kill with no toss,
+    // needs, at least 0.9 m/s so his feet end (under her short arm, 11-02)
+    // clears her deck's lip, at most 1.0 m/s (85 N*s: 7,650 N in the tick
+    // she lets go, under her 8,000 N), for what is left of his swing. The edge itself must kill with no toss,
     // from his hang and kFatalSwayM either side of it along the edge.
     // A first meeting side-on (a wall, a beam's edge he would graze) is
     // foreseen not to kill: how hard a graze closes is not foreseeable.
@@ -994,7 +995,7 @@ public:
     static constexpr float kFatalChooseMarginM = 0.15F;
     static constexpr float kFatalLetGoMarginM = 0.12F;
     static constexpr float kFatalSwayM = 0.3F;
-    static constexpr std::array<float, 4> kFatalTossMps{0.0F, 0.3F, 0.6F, 0.9F};
+    static constexpr std::array<float, 2> kFatalTossMps{0.9F, 1.0F};
     // From her fingers closing on his ankle to her letting go, no sooner than
     // kFatalLetGoFromS and no later than kFatalLetGoByS (the viewer fades a
     // second after it: 6-8 s from the catch to the fade). Not lethal by then
