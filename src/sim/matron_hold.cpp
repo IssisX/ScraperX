@@ -1507,20 +1507,18 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // hanging settled a moment (not still swinging in
         // from the over): his fall foreseen from there kills, she lets go;
         // it does not, she steps along the edge (fatal_shift) and decides
-        // again at a later swing out.
+        // again once he settles there.
         const BodyInterface &bodies = physics_.GetBodyInterface();
         const Vec3 his_v = bodies.GetLinearVelocity(player_);
         const bool swinging_out = his_v.Dot(out) >= 0.0F && std::hypot(his_v.GetX(), his_v.GetZ()) < 0.5F;
         const Vec3 her_v = bodies.GetLinearVelocity(body_);
         const bool standing = std::hypot(her_v.GetX(), her_v.GetZ()) < 0.2F && xz(ax, az, rim_x_, rim_z_) < 0.2F;
         const bool head_down = bodies.GetRotation(player_).RotateAxisY().GetY() < -0.9F;
-        const bool decide = due && swinging_out && standing && head_down && hold_s_ >= kFatalHangSettleS;
+        const bool settled = due && standing && hold_s_ >= kFatalHangSettleS;
+        const bool decide = settled && swinging_out && head_down;
         if (decide || --fatal_check_ticks_ <= 0) {
             fatal_check_ticks_ = 3;
             foresee_fall(player, out);
-            if (decide && !fatal_lethal_) {
-                (void)fatal_shift(feet);
-            }
         }
         // His middle out over open air (kFatalOpenAirM past the edge).
         const RVec3 mid = bodies.GetPosition(player_);
@@ -1535,6 +1533,11 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             hold_phase_ = 0;
             hold_s_ = 0.0F;
             spare_walk_ = false;
+        } else if ((decide && !fatal_lethal_) || (settled && hold_s_ >= kFatalHangSettleS + 1.0F)) {
+            // Not to kill from here, or a second hung here without a let-go
+            // (lying against her deck's face): a step along the edge, and he
+            // settles again there; no spot for it, another second.
+            hold_s_ = fatal_shift(feet) ? 0.0F : kFatalHangSettleS;
         }
         break;
     }
