@@ -159,8 +159,9 @@ fi
         (self.cache / ".scraperx-integrity.json").unlink()
         marker = self.root / "untrusted-cmake-ran"
         cmake = self.cache / "bin/cmake"
-        cmake.write_text("#!/bin/sh\nprintf 'ran\\\n' > " +
-                         shlex.quote(str(marker)) + "\necho 'cmake version 3.31.10'\n")
+        cmake.write_text("#!/bin/sh\n" + "echo ran > " +
+                         shlex.quote(str(marker)) + "\n" +
+                         "echo 'cmake version 3.31.10'\n")
         cmake.chmod(0o755)
         checked = self.execute("--verify")
         self.assertNotEqual(checked.returncode, 0)
@@ -207,13 +208,13 @@ fi
         marker = self.root / "cached-node-ran"
         fallback = self.root / "npx-fallback-ran"
         node = self.cache / "bin/node"
-        node.write_text("#!/bin/sh\nprintf 'ran\\\n' > " +
+        node.write_text("#!/bin/sh\n" + "echo ran > " +
                         shlex.quote(str(marker)) + "\n")
         node.chmod(0o755)
         fake_bin = self.root / "fake-launcher-bin"
         fake_bin.mkdir()
         npx = fake_bin / "npx"
-        npx.write_text("#!/bin/sh\nprintf 'fallback\\\n' > " +
+        npx.write_text("#!/bin/sh\n" + "echo fallback > " +
                        shlex.quote(str(fallback)) + "\n")
         npx.chmod(0o755)
         variables = os.environ.copy()
