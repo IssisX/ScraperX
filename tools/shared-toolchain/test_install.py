@@ -142,9 +142,9 @@ class InstallerTests(unittest.TestCase):
         marker = self.root / "forged-curl-executed"
         curl = fake_bin / "curl"
         curl.write_text(
-            "#!/bin/sh\\n"
-            + "echo forged > " + shlex.quote(str(marker)) + "\\n"
-            + "exit 0\\n"
+            "#!/bin/sh\n"
+            + "echo forged > " + shlex.quote(str(marker)) + "\n"
+            + "exit 0\n"
         )
         curl.chmod(0o755)
         # A local dead proxy prevents real downloads; the attacker's PATH
@@ -259,16 +259,16 @@ class InstallerTests(unittest.TestCase):
         for name in ("dirname", "python3", "sha256sum", "node"):
             command = self.cache / "bin" / name
             command.write_text(
-                "#!/bin/sh\\n"
-                + "echo executed > " + shlex.quote(str(marker)) + "\\n"
-                + ("echo b912841dcc620a2764899d431d2cf34afe8ae4c807b5189768c2370b8da8d1de\\n"
-                   if name == "sha256sum" else "exit 0\\n")
+                "#!/bin/sh\n"
+                + "echo executed > " + shlex.quote(str(marker)) + "\n"
+                + ("echo b912841dcc620a2764899d431d2cf34afe8ae4c807b5189768c2370b8da8d1de\n"
+                   if name == "sha256sum" else "exit 0\n")
             )
             command.chmod(0o755)
         fake_bin = self.root / "safe-bin"
         fake_bin.mkdir()
         npx = fake_bin / "npx"
-        npx.write_text("#!/bin/sh\\necho fallback > " + shlex.quote(str(fallback)) + "\\n")
+        npx.write_text("#!/bin/sh\necho fallback > " + shlex.quote(str(fallback)) + "\n")
         npx.chmod(0o755)
         alias = self.root / "cache-alias"
         alias.symlink_to(self.cache, target_is_directory=True)
