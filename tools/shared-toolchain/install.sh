@@ -52,10 +52,8 @@ mkdir -p "$(dirname "$cache")"
 exec {lock_fd}> "${cache}.lock"
 flock "$lock_fd"
 if [[ -d "$cache" ]]; then
-    check "$cache" || {
-        echo "install: existing cache failed validation at $cache; refusing to overwrite it" >&2
-        exit 1
-    }
+    # A stamped cache must pass byte-integrity checks before any cached binary runs.
+    # Legacy caches retain the existing version-only compatibility behavior.
     if [[ -f "$cache/.scraperx-integrity.json" ]]; then
         python3 "$script_dir/integrity.py" verify "$cache" || {
             echo "install: existing cache integrity check failed at $cache" >&2
@@ -64,6 +62,10 @@ if [[ -d "$cache" ]]; then
     else
         echo "install: existing legacy cache has no file-integrity manifest; version checks only" >&2
     fi
+    check "$cache" || {
+        echo "install: existing cache failed validation at $cache; refusing to overwrite it" >&2
+        exit 1
+    }
     printf '%s\n' "$cache"
     exit 0
 fi

@@ -4,6 +4,7 @@ import hashlib
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
 import tarfile
 import tempfile
@@ -131,6 +132,22 @@ fi
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("pinned v1 release digest", result.stderr)
         self.assertFalse(self.cache.exists())
+
+    def test_tampered_cached_executable_never_runs_before_rejection(self):
+        archive, digest = self.bundle()
+        self.assertEqual(self.offline(archive, digest).returncode, 0)
+        marker = self.root / "tampered-cmake-executed"
+        cmake = self.cache / "bin/cmake"
+        cmake.write_text(
+            "#!/bin/sh\n"
+            + f"printf 'executed\\n' > {shlex.quote(str(marker))}\n"
+            + 'echo "cmake version 3.31.10"\n'
+        )
+        cmake.chmod(0o755)
+        checked = self.execute("--verify")
+        self.assertNotEqual(checked.returncode, 0)
+        self.assertIn("integrity check failed", checked.stderr)
+        self.assertFalse(marker.exists(), "tampered executable ran before integrity verification")
 
     def test_concurrent_reuse(self):
         archive, digest = self.bundle()
