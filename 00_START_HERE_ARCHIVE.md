@@ -602,3 +602,12 @@ Then: *"Let's try to be aware of the quota. It's already at 75%, dude."* And: *"
 doing that. You should ask me how many workers to open up and give suggestions from now on."*
 `CLAUDE.md`, Managing the agents.
 
+---
+
+## 2026-11-02 — Effort is his call, not a "never medium" rule
+
+Correcting the "Never medium effort" entry above: *"No, I don't have a never medium. I just didn't
+like when you automatically assigned it medium and didn't ask me what level I wanted it at."* He set
+every session to high. The integrator asks him the effort level, with a suggestion, whenever it asks
+to open a Claude session or helper.
+
