@@ -1006,7 +1006,7 @@ public:
     // window, over, the hang) the hold takes longer than the heave it replaced.
     static constexpr float kFatalLetGoFromS = 8.0F;
     static constexpr float kFatalLetGoByS = 11.5F;
-    static constexpr float kFatalHangSettleS = 0.7F;   // hanging this long before her fingers open
+    static constexpr float kFatalHangSettleS = 0.4F;   // hanging this long before her fingers open
     static constexpr float kFatalShiftM = 0.4F;
     static constexpr float kFatalShiftMaxM = 1.5F;
     // Let go, she watches him fall at least kFatalWatchS, and on until he is
@@ -1052,7 +1052,7 @@ public:
     // from there, as he moves, kills.
     static constexpr float kFatalDropOutM = 1.35F;
     static constexpr float kFatalDropUpM = 2.1F;
-    static constexpr float kFatalOpenAirM = 0.5F;
+    static constexpr float kFatalOpenAirM = 0.45F;  // (his middle hangs ~0.5 m past the lip under her 0.5 m arm)
 
     // The five beats' poses (HOLD_WITH_REAL_ARMS.md), every one within her
     // real arm (kRealArmM). From her middle at the rail (kRimStandM in from
@@ -1382,6 +1382,7 @@ public:
         float trunk_pitch = 0.0F;       // and its pitch forward (rad)
         std::uint32_t swats = 0;        // beat 1: her swats
         bool hand2_active = false;      // her second hand out (hand2_active)
+        std::uint8_t hold_phase = 0;    // within her hold's state (matron_hold.cpp step_rail's phases)
         bool aim_ledge = false;         // a ledge below her rail spot to let go onto
         float aim_x = 0.0F, aim_y = 0.0F, aim_z = 0.0F;
     };
