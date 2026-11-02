@@ -153,6 +153,11 @@ func _q(n: String) -> Quaternion:
 
 
 func apply() -> void:
+	if view != null:
+		damage_stage = int(view.damage_stage)
+		stagger_left_s = float(view.stagger_left_s)
+		limp_weight = float(view.limp_weight)
+		lean_offset = view.damage_lean
 	var tq := _q("torso")
 	var pel := Quaternion.IDENTITY.slerp(tq, PELVIS_SHARE)
 	var bp: Vector3 = (p["body"] as Node3D).position
@@ -285,6 +290,10 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
+var damage_stage := 0
+var stagger_left_s := 0.0
+var limp_weight := 0.0
+var lean_offset := Vector3.ZERO
 # Keep the last governed arm pose while a physical prop is being approached or
 # carried. Restarting the IK from unrelated walk/search poses each frame can
 # pull a wrist off an otherwise stationary handle before govern clips it.
@@ -441,7 +450,9 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 		var floor_y := DECK_WRIST_Y if hand else _ankle_y
 		var neutral := Vector3(root.x * 1.1, floor_y, root.z + (0.1 if hand else -0.02))
 		var reach_h := sqrt(maxf(0.0, pow(0.92 * length, 2.0) - pow(maxf(0.0, root.y - floor_y), 2.0)))
-		var s_half := clampf(0.8 * reach_h, 0.05, 0.45)
+		var limb_limp := limp_weight if s == "r" else 0.0
+		var s_half := clampf(0.8 * reach_h, 0.05, 0.45) * (1.0 - 0.22 * limb_limp)
+		var limb_lift_h := lift_h * (1.0 - 0.45 * limb_limp)
 		var duty := clampf(2.0 * s_half / maxf(cycle, 0.1), 0.25, 0.7)
 		var u := fposmod(phase / TAU + float(limb[1]), 1.0)
 		var now := u < duty
@@ -474,7 +485,7 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 				st["from"] = inv * (st["lock"] as Vector3)
 			var sw := clampf((u - duty) / (1.0 - duty), 0.0, 1.0)
 			var e := sw * sw * (3.0 - 2.0 * sw)
-			target = (st["from"] as Vector3).lerp(down, e) + Vector3(0.0, lift_h * sin(PI * sw), 0.0)
+			target = (st["from"] as Vector3).lerp(down, e) + Vector3(0.0, limb_lift_h * sin(PI * sw), 0.0)
 		st["stance"] = now
 		if now and not free:
 			down_mask |= bit

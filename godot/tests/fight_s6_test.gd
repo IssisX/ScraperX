@@ -314,7 +314,7 @@ func _test_stage_blood_tell(view: Node3D) -> void:
 		var db: float = float(db_v) if db_v != null else -1.0
 		var shader_blood := 0.0
 		if view._look != null and view._look._apron_soak != null:
-			var sb_v: Variant = view._look._apron_soak.get_shader_parameter("blood")
+			var sb_v: Variant = view._look._apron_soak.get_shader_parameter("soak")
 			if sb_v != null:
 				shader_blood = float(sb_v)
 		if st == 0:

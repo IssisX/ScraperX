@@ -1817,6 +1817,10 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["staggers"] = static_cast<std::int64_t>(state.staggers);
     out["knockdowns"] = static_cast<std::int64_t>(state.knockdowns);
     out["blow_mps"] = state.blow_mps;
+    out["damage_ns"] = state.damage_ns;
+    out["player_damage_ns"] = state.player_damage_ns;
+    out["damage_stage"] = static_cast<std::int64_t>(state.damage_stage);
+    out["stagger_left_s"] = state.stagger_left_s;
     out["fall"] = godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
     out["kneeling"] = state.kneeling;
     out["down_s"] = state.down_s;

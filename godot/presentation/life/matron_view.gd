@@ -258,6 +258,14 @@ var _head_yaw := 0.0
 var figure_frames := 0
 var door_tore_off := 0
 var bolts_shown_popped := 0
+# Fighting S6 stage tells (from MatronSnapshot::damage_stage and stagger_left_s).
+var damage_stage := 0
+var stagger_left_s := 0.0
+var limp_weight := 0.0
+var _limp_v := 0.0
+var damage_lean := Vector3.ZERO
+var guard_drop := 0.0
+var damage_blood := 0.0
 
 
 func setup(native: Object, audio: Object = null) -> void:
@@ -789,7 +797,9 @@ func _load_body() -> void:
 func apply_gore(soak: float, spatter: float, smear: float, hands: float, hand_l: Vector3, hand_r: Vector3,
 		floor_y: float = 0.0) -> void:
 	if _look != null:
-		_look.apply_gore(soak, spatter, smear, hands, hand_l, hand_r, floor_y)
+		var sb := damage_blood
+		_look.apply_gore(maxf(soak, sb), maxf(spatter, sb * 0.7), maxf(smear, sb * 0.5),
+			maxf(hands, sb * 0.4), hand_l, hand_r, floor_y)
 
 
 # The exposure's work on her look (matron_look.gd), one way.
@@ -822,6 +832,9 @@ func _fours_gate(data: Dictionary, falling: bool, delta: float) -> void:
 		if _fours:
 			_fours_since = 0.0
 		_fours = false
+	elif bool(data.get("on_all_fours", false)):
+		_fours = true
+		_fours_since = 0.0
 	elif _fours_since >= FOURS_HOLD_S:
 		if not _fours and ((speed > FOURS_ON_MPS and stage > 0) or turn == 2):
 			_fours = true
@@ -2002,6 +2015,38 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 				arms_fwd = 1.9
 				arms_bend = 0.2
 				arms_splay = 0.35
+	damage_stage = clampi(int(data.get("damage_stage", 0)), 0, 4)
+	stagger_left_s = maxf(0.0, float(data.get("stagger_left_s", 0.0)))
+	var want_limp := float(damage_stage) * 0.25
+	if _pose_fresh or delta <= 0.0:
+		limp_weight = want_limp
+		_limp_v = 0.0
+	else:
+		var ls := spring(limp_weight, _limp_v, want_limp, FOURS_BLEND_W, delta)
+		limp_weight = clampf(float(ls[0]), 0.0, 1.0)
+		_limp_v = float(ls[1])
+	if not falling and not climbing and state != STATE_DOWN and not on_line and not bracing \
+			and not pipe_stunned and not pipe_sliding:
+		var st_k := float(damage_stage) * 0.25
+		var stag_k := clampf(stagger_left_s / 0.8, 0.0, 1.5)
+		damage_lean = Vector3(0.18 * st_k + 0.14 * stag_k, -0.10 * st_k, 0.22 * st_k + 0.16 * stag_k)
+		guard_drop = 0.32 * st_k + 0.18 * stag_k
+		pitch += damage_lean.x
+		twist += damage_lean.y
+		side_bend += damage_lean.z
+		head_pitch += 0.14 * st_k + 0.10 * stag_k
+		head_roll += 0.18 * st_k
+		if not holding and guard_drop > 0.0:
+			arms_fwd = maxf(0.05, arms_fwd - guard_drop)
+			arms_bend = maxf(0.05, arms_bend - 0.5 * guard_drop)
+		legs_back *= 1.0 - 0.35 * limp_weight
+		g_leg_r *= 1.0 - 0.35 * limp_weight
+		g_knee_r *= 1.0 - 0.40 * limp_weight
+		g_hip -= 0.014 * limp_weight * maxf(0.0, sin(_gait_phase))
+		g_pitch += 0.05 * limp_weight * maxf(0.0, sin(_gait_phase))
+	else:
+		damage_lean = Vector3.ZERO
+		guard_drop = 0.0
 	body.position = Vector3(0.0, hip_y, 0.0)
 	# standing, the turn she has not made with her body: her neck round first,
 	# her chest the rest (_turn_yaw)
@@ -2223,6 +2268,15 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_figure.visible = true
 	figure_frames += 1
 	_apply_exposure(float(data.get("exposure", 0.0)))
+	damage_stage = clampi(int(data.get("damage_stage", 0)), 0, 4)
+	stagger_left_s = maxf(0.0, float(data.get("stagger_left_s", 0.0)))
+	damage_blood = float(damage_stage) * 0.18
+	if _look != null and _rig != null:
+		if damage_blood > 0.0:
+			_look.apply_gore(damage_blood, damage_blood * 0.7, damage_blood * 0.5, damage_blood * 0.4,
+				_rig.bone_world("wr_l").origin, _rig.bone_world("wr_r").origin, float(data.get("floor_y", 0.0)))
+		elif _pose_fresh:
+			_look.apply_gore(0.0, 0.0, 0.0, 0.0, Vector3.ZERO, Vector3.ZERO, float(data.get("floor_y", 0.0)))
 	_figure.global_position = Vector3(centre.x, centre.y - STAND_CENTRE, centre.z)
 	_figure.rotation = Vector3(0.0, _drawn_yaw, 0.0)
 	_dt = delta

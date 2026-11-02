@@ -516,7 +516,8 @@ func _process(delta: float) -> void:
 		var view_ahead := Vector2(-sin(_yaw), -cos(_yaw))
 		var view_right := Vector2(cos(_yaw), -sin(_yaw))
 		_hud.her_marker = {"bearing": atan2(flat.dot(view_right), flat.dot(view_ahead)), "dist": flat.length(),
-			"rise": at.y - climber.y}
+			"rise": at.y - climber.y, "damage_stage": int(her.get("damage_stage", 0)),
+			"stagger_left_s": float(her.get("stagger_left_s", 0.0))}
 	else:
 		_hud.her_marker = {}
 	_hud.radio_text = _radio.text

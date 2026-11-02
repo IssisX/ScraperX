@@ -123,6 +123,7 @@ func update_hud(ctx: Dictionary, delta: float) -> void:
 	_flash = maxf(0.0, _flash - delta * 1.5)
 	lens_blood = maxf(0.0, lens_blood - delta * 0.22)
 	_blood_age += delta
+	sync_her_damage_tells()
 	queue_redraw()
 
 
@@ -510,25 +511,50 @@ var route_marks := 0
 # positive to his right), "dist" across the ground and "rise" above him, in
 # meters. Empty while she is in her locker or dead.
 var her_marker := {}
+var her_damage_pips := 0
+var her_stagger_cue := 0.0
+
+
+func sync_her_damage_tells() -> void:
+	if her_marker.is_empty():
+		her_damage_pips = 0
+		her_stagger_cue = 0.0
+		return
+	her_damage_pips = clampi(int(her_marker.get("damage_stage", 0)), 0, 4)
+	her_stagger_cue = maxf(0.0, float(her_marker.get("stagger_left_s", 0.0)))
+
 
 func _draw_her_marker() -> void:
+	sync_her_damage_tells()
 	var u := _u
 	var outline := int(roundf(5.0 * u))
 	var c := Vector2(size.x * 0.5, _safe.position.y + 96.0 * u)
-	var bearing := float(her_marker["bearing"])
+	var bearing := float(her_marker.get("bearing", 0.0))
 	var way := Vector2(sin(bearing), -cos(bearing))
 	# A soft backing so the marker holds over snow, sky and sodium glare.
 	UiStyle.plate(self, Rect2(c - Vector2(230.0 * u, 56.0 * u), Vector2(460.0 * u, 160.0 * u)),
 		UiStyle.with_alpha(UiStyle.INK, 0.42), Color(0.0, 0.0, 0.0, 0.0), 0.0, 18.0 * u)
-	draw_arc(c, 40.0 * u, 0.0, TAU, 48, UiStyle.with_alpha(UiStyle.PAPER, 0.55), 3.0 * u, true)
-	UiStyle.triangle(self, c + way * 40.0 * u, 20.0 * u, way, UiStyle.HAZARD)
-	var rise := float(her_marker["rise"])
+	var ring_col := UiStyle.AMBER if her_stagger_cue > 0.0 else UiStyle.with_alpha(UiStyle.PAPER, 0.55)
+	draw_arc(c, 40.0 * u, 0.0, TAU, 48, ring_col, 3.0 * u, true)
+	UiStyle.triangle(self, c + way * 40.0 * u, 20.0 * u, way, UiStyle.AMBER if her_stagger_cue > 0.0 else UiStyle.HAZARD)
+	if her_damage_pips > 0 or her_stagger_cue > 0.0:
+		var pip_y := c.y + 54.0 * u
+		var pip_step := 18.0 * u
+		var pip_r := 5.0 * u
+		for i in range(4):
+			var pip_c := Vector2(c.x + (float(i) - 1.5) * pip_step, pip_y)
+			if i < her_damage_pips:
+				var col := UiStyle.AMBER if her_stagger_cue > 0.0 else UiStyle.HAZARD
+				UiStyle.disc(self, pip_c, pip_r, col)
+			else:
+				UiStyle.ring(self, pip_c, pip_r, UiStyle.with_alpha(UiStyle.PAPER, 0.35), 1.5 * u)
+	var rise := float(her_marker.get("rise", 0.0))
 	var height := ""
 	if rise >= 2.0:
 		height = "  %d M ABOVE" % int(roundf(rise))
 	elif rise <= -2.0:
 		height = "  %d M BELOW" % int(roundf(-rise))
-	UiStyle.text(self, UiStyle.font_label(), "HER %d M%s" % [int(roundf(float(her_marker["dist"]))), height],
+	UiStyle.text(self, UiStyle.font_label(), "HER %d M%s" % [int(roundf(float(her_marker.get("dist", 0.0)))), height],
 		c + Vector2(0.0, 88.0 * u), int(roundf(32.0 * u)), UiStyle.HAZARD, HORIZONTAL_ALIGNMENT_CENTER, outline)
 
 func _draw_route_hint() -> void:
