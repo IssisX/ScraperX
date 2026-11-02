@@ -75,6 +75,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
       player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
+    build_stance_shapes();
     // Her deck: down the middle of each band, the catwalk across, and in off
     // the north band round the ladder's west rail to its foot; her post in the
     // mouth of Stage A's cage, facing out over the band; the cage's eye on its
@@ -196,6 +197,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
                                   EMotionType::Dynamic, static_cast<ObjectLayer>(moving_layer_));
     settings.mAllowedDOFs = EAllowedDOFs::TranslationX | EAllowedDOFs::TranslationY | EAllowedDOFs::TranslationZ;
     settings.mAllowSleeping = false;
+    settings.mMotionQuality = EMotionQuality::LinearCast;
     settings.mFriction = 0.0F;
     settings.mLinearDamping = 0.0F;
     settings.mUserData = kEntity;
@@ -3343,18 +3345,30 @@ void Matron::post_step(const float dt) {
     }
     fall_vy_ = body_in_world_ && !dead_ ? physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() : 0.0F;
     refresh_view();
+    // Her collision body for the stance she is in now (matron_shape.cpp).
+    step_stance(dt);
+    refresh_shape_view();
 }
 
-bool Matron::caught(const RVec3 player) const noexcept {
+bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
     const Mover *way = holder();
+    // A travel way owns her body (travel_to: she is about nothing else, and
+    // its tick runs before the hunt): a contact on the way must not turn
+    // into a catch or a shove. Without this, a travelling Matron grabs a
+    // player she merely walks past, cancelling the travel and breaking
+    // his climb (matron-climb-board, player climb with her travelling).
     if (bracing_structure() || !body_in_world_ || dead_ || riding_ || (way != nullptr && way->view().held) ||
+        (way != nullptr && way->view().tick == MoverTick::Travel) ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
          state_ != State::Guarding && state_ != State::Peering && state_ != State::Unrigging)) {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    if (on_ladder) {
+        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kStoopReachM;
+    }
     return distance_xz(float(at.GetX()), float(at.GetZ()), float(player.GetX()), float(player.GetZ())) < kCatchM &&
            std::abs(at.GetY() - player.GetY()) < 1.4;
 }
@@ -3852,6 +3866,9 @@ void Matron::restore(const Saved &saved) {
         lying_ = false;
         kneeling_ = false;
         down_shape_ = nullptr;
+        down_a_ = Vec3(0.0F, -kHalfHeight, 0.0F);
+        down_b_ = Vec3(0.0F, kHalfHeight, 0.0F);
+        down_r_ = kRadius;
         stagger_s_ = 0.0F;
         down_s_ = 0.0F;
         down_for_s_ = 0.0F;
@@ -4295,12 +4312,23 @@ void Matron::lie_down(const float fall_x, const float fall_z) {
     kneeling_ = false;
     if (shape_fits(lying, at)) {
         down_shape_ = lying;
+        // Segment ends relative to her middle. The quarter-turn about `across`
+        // lays the capsule's axis along the fall; its centre sits
+        // kStandCentre - kRadius under her middle, on the steel.
+        const float drop = -(kStandCentre - kRadius);
+        down_a_ = Vec3(-fall.GetX() * kHalfHeight, drop, -fall.GetZ() * kHalfHeight);
+        down_b_ = Vec3(fall.GetX() * kHalfHeight, drop, fall.GetZ() * kHalfHeight);
+        down_r_ = kRadius;
     } else {
         constexpr float kKneelHalf = 0.15F;   // a 0.9 m heap on her knees
         const Ref<Shape> kneel = new RotatedTranslatedShape(
             Vec3(0.0F, -(kStandCentre - kRadius - kKneelHalf), 0.0F), Quat::sIdentity(), new CapsuleShape(kKneelHalf, kRadius));
         kneeling_ = true;
         down_shape_ = kneel;
+        const float cy = -(kStandCentre - kRadius - kKneelHalf);
+        down_a_ = Vec3(0.0F, cy - kKneelHalf, 0.0F);
+        down_b_ = Vec3(0.0F, cy + kKneelHalf, 0.0F);
+        down_r_ = kRadius;
     }
     bodies.SetShape(body_, down_shape_, false, EActivation::Activate);
     bodies.SetFriction(body_, kDownFriction);
@@ -4314,6 +4342,9 @@ void Matron::stand_up() {
     lying_ = false;
     kneeling_ = false;
     down_shape_ = nullptr;
+    down_a_ = Vec3(0.0F, -kHalfHeight, 0.0F);
+    down_b_ = Vec3(0.0F, kHalfHeight, 0.0F);
+    down_r_ = kRadius;
     set_s_ = kSetSeconds;
     // Up, she looks about her where she fell (not back at an old noise: what
     // put her down was no lie, and nothing she is fooled by).
@@ -4518,6 +4549,13 @@ void Matron::refresh_view() {
     // kTurnLungePowerW); the report says when the force shown is that drive.
     view_.climb_lunge_drive = !shown.force_shown && foot_lunge_;
     view_.foot_power_w = foot_power_w_;
+    view_.load_held = load_held_;
+    view_.load_mass_kg = load_mass_kg_;
+    view_.load_offset_m = load_offset_m_;
+    view_.load_moment_nm = load_moment_nm_;
+    view_.load_cop_shift_m = load_cop_shift_m_;
+    view_.load_stance_base_m = load_stance_base_m_;
+    view_.load_pull_m = load_pull_m_;
     view_.climb_grips = climb_grips_;
     view_.climb_releases = climb_releases_;
     // Over a climb's head: her rung way's move pushing her up over its lip.
@@ -4536,6 +4574,36 @@ void Matron::refresh_view() {
     view_.trap = static_cast<std::uint8_t>(trap_);
     view_.traps = traps_;
     view_.carrying = held_ >= 0 ? throwables_[static_cast<std::size_t>(held_)].entity : 0;
+    view_.stock_handle = RVec3::sZero();
+    view_.stock_constraint = RVec3::sZero();
+    view_.stock_rotation = Quat::sIdentity();
+    view_.stock_size = Vec3::sZero();
+    view_.stock_seeking = 0;
+    view_.stock_seek_handle = RVec3::sZero();
+    view_.stock_seek_rotation = Quat::sIdentity();
+    view_.stock_seek_size = Vec3::sZero();
+    if (held_ < 0 && fetch_ >= 0 && static_cast<std::size_t>(fetch_) < throwables_.size()) {
+        const Throwable &candidate = throwables_[static_cast<std::size_t>(fetch_)];
+        const BodyLockRead seek_lock(physics_.GetBodyLockInterface(), candidate.body);
+        if (seek_lock.Succeeded()) {
+            const Body &piece = seek_lock.GetBody();
+            view_.stock_seeking = candidate.entity;
+            view_.stock_seek_handle = piece.GetWorldTransform() * candidate.handle;
+            view_.stock_seek_rotation = piece.GetRotation();
+            view_.stock_seek_size = piece.GetShape()->GetLocalBounds().GetSize();
+        }
+    }
+    if (held_ >= 0 && hold_ != nullptr && body_in_world_) {
+        const Throwable &t = throwables_[static_cast<std::size_t>(held_)];
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), t.body);
+        if (lock.Succeeded()) {
+            const Body &piece = lock.GetBody();
+            view_.stock_handle = piece.GetWorldTransform() * t.handle;
+            view_.stock_constraint = physics_.GetBodyInterface().GetCenterOfMassPosition(body_) + hold_offset_;
+            view_.stock_rotation = piece.GetRotation();
+            view_.stock_size = piece.GetShape()->GetLocalBounds().GetSize();
+        }
+    }
     view_.takes = takes_;
     view_.throws = throws_;
     view_.staggers = staggers_;

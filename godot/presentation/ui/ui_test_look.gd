@@ -281,6 +281,13 @@ func _look_shot(shot: String, what: String, azimuths: Array, el: float, with_him
 			await RenderingServer.frame_post_draw
 		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 		saved = get_viewport().get_texture().get_image().save_png(path) == OK
+		# The same still with her collision body laid over her (the body the
+		# player and the steel meet): <shot>_body.png.
+		var body := _look_body_overlay()
+		for i in LOOK_HOLD_FRAMES:
+			await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("%s_%s_body.png" % [_capture_prefix, shot])
+		body.queue_free()
 	_look_render(false)
 	for layer in _look_hidden:
 		(layer as CanvasLayer).visible = true
@@ -302,6 +309,34 @@ func _look_shot(shot: String, what: String, azimuths: Array, el: float, with_him
 			f.seek_end()
 			f.store_line(line)
 			f.close()
+
+
+# Her collision capsule as the native has it this tick (shape_a, shape_b,
+# shape_r: matron_shape.cpp), or, from a native that does not export it, her
+# old upright capsule (2.10 m, r 0.30, about her middle): translucent red,
+# seen through her.
+func _look_body_overlay() -> MeshInstance3D:
+	var m := _matron_state()
+	var at: Vector3 = m["position"]
+	var a: Vector3 = m.get("shape_a", at + Vector3(0.0, -0.75, 0.0))
+	var b: Vector3 = m.get("shape_b", at + Vector3(0.0, 0.75, 0.0))
+	var r := float(m.get("shape_r", 0.30))
+	var mesh := CapsuleMesh.new()
+	mesh.radius = r
+	mesh.height = a.distance_to(b) + 2.0 * r
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.no_depth_test = true
+	mat.albedo_color = Color(1.0, 0.1, 0.1, 0.32)
+	mesh.material = mat
+	var node := MeshInstance3D.new()
+	node.mesh = mesh
+	_main.add_child(node)
+	var axis := (b - a).normalized() if a.distance_to(b) > 1.0e-4 else Vector3.UP
+	var basis := Basis(Quaternion(Vector3.UP, axis)) if absf(axis.dot(Vector3.UP)) < 0.9999 else Basis.IDENTITY
+	node.global_transform = Transform3D(basis, 0.5 * (a + b))
+	return node
 
 
 # What was measured of her at a still: on her pipe, how far each drawn wrist

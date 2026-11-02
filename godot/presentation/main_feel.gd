@@ -76,6 +76,7 @@ const KIT_DYNAMIC_ENTITY_MIN := 2000
 const FALL_AIRBORNE := 1
 const FALL_PARACHUTING := 2
 var _summit_announced := false
+var _ending_shown := 0
 var _ci_mode := false
 # Tests only: the simulation held still while frames are still drawn and the
 # camera still turns (a capture run's screenshot, so that its frames do not
@@ -175,7 +176,7 @@ func _announce_summit() -> void:
 	_summit_announced = true
 	var seconds := float(landing["summit_seconds"])
 	var deaths := int(landing["summit_deaths"])
-	_hud.toast("THE TOP", "%.1f M  /  %d:%02d  /  %d %s" % [float(landing["route_top"]), int(seconds) / 60,
+	_hud.toast("THE CREW'S LAST BEAM", "%.1f M  /  %d:%02d  /  %d %s" % [float(landing["route_top"]), int(seconds) / 60,
 		int(seconds) % 60, deaths, "FALL" if deaths == 1 else "FALLS"], UiStyle.AMBER, 8.0)
 	_hud.flash(UiStyle.AMBER)
 	_haptic(&"press", 1.0)
@@ -240,6 +241,9 @@ const HAPTICS := {
 	&"press": [12, 0.3],
 	&"tick": [16, 0.35],
 	&"grab": [30, 0.6],
+	&"matron_grab": [45, 0.8],
+	&"matron_tear": [80, 1.0],
+	&"matron_hang": [65, 0.9],
 	&"vault": [24, 0.65],
 	&"mantle": [42, 0.75],
 	&"balance": [18, 0.30],
@@ -263,7 +267,7 @@ const HAPTICS := {
 
 # Kinds that always get through the throttle: they mark a moment that
 # matters more than whatever buzzed a few milliseconds before.
-const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip"]
+const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip", &"matron_grab", &"matron_tear", &"matron_hang"]
 const HAPTIC_GAP_MS := 50
 var haptic_counts := {}   # kind -> pulses sent (counted in CI too, never sent there)
 var _haptic_next_ms := 0
@@ -932,11 +936,32 @@ var _hold_veil: ColorRect = null
 # again, her look over it with it: main.gd has that made behind its card.
 var _runs_she_ended := -1
 var _her_world_new := false
+var _hold_events_seen := false
+var _hold_grabs := 0
+var _hold_tears := 0
+var _hold_hang := false
+
+func _feel_hold_events(hold: Dictionary) -> void:
+	var grabs := int(hold.get("grabs", 0))
+	var tears := int(hold.get("arm_tears", 0))
+	var hang := bool(hold.get("fatal_hang", false))
+	if _hold_events_seen:
+		if grabs > _hold_grabs:
+			_haptic(&"matron_grab")
+		if tears > _hold_tears:
+			_haptic(&"matron_tear")
+		if hang and not _hold_hang:
+			_haptic(&"matron_hang")
+	_hold_events_seen = true
+	_hold_grabs = grabs
+	_hold_tears = tears
+	_hold_hang = hang
 
 func _feel_hold(delta: float) -> void:
 	if _matron_view == null or not _native.has_method("get_matron_hold_state"):
 		return
 	var hold: Dictionary = _native.get_matron_hold_state()
+	_feel_hold_events(hold)
 	var ended := int(hold.get("runs_ended_by_matron", 0))
 	if _runs_she_ended >= 0 and ended > _runs_she_ended:
 		_her_world_new = true
@@ -1027,6 +1052,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 		_swing_view.update_view(_native.get_swing_state())
 	if _zipline_view != null:
 		_feel_zipline(delta)
+	var ending := int(_native.get_summit_state()["ending"])
+	if ending >= 2 and _ending_shown < 2:
+		_hud.toast("TAKE THE SKY HOME", "THE RUNWAY IS CLEAR. YOUR PARACHUTE IS THE WAY BACK.", UiStyle.PAPER, 6.0)
+	_ending_shown = maxi(_ending_shown, ending)
 	if _summit_view != null:
 		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	if _matron_view != null:

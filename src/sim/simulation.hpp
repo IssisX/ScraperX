@@ -172,6 +172,15 @@ struct SlingshotSnapshot final {
 // The summit (task 92): the searchlight's state, and the striker plate that
 // lights it.
 struct SummitSnapshot final {
+    std::uint8_t ending = 0;          // Summit::Ending: unfinished .. home
+    bool beam_seated = false;
+    bool sling_free = false;
+    bool left_bearing = false;
+    bool right_bearing = false;
+    bool work_in_reach = false;
+    bool can_unrig = false;
+    double chain_paid_m = 0.0;
+    double chain_tension_n = 0.0;
     bool lit = false;                 // the lamp is lit for good
     double striker_travel_m = 0.0;    // the plate's way down from its rest
     double striker_peak_m = 0.0;      // the deepest it has gone
@@ -228,6 +237,7 @@ struct MatronSnapshot final {
     Vector3 contact_feet{};
     std::uint32_t contact_feet_body = 0xffffffffU;
     std::uint32_t contact_feet_sub = 0xffffffffU;
+    Vector3 contact_support_velocity{};
     bool contact_hand_held = false;
     Vector3 contact_hand{};
     std::uint32_t contact_hand_body = 0xffffffffU;
@@ -235,6 +245,7 @@ struct MatronSnapshot final {
     bool contact_hand2_held = false;
     Vector3 contact_hand2{};
     std::uint32_t contact_hand2_body = 0xffffffffU;
+    std::uint32_t contact_hand2_sub = 0xffffffffU;
     bool contact_line = false;
     // On her pipe: the riser's face her feet press against.
     bool contact_braced = false;
@@ -250,6 +261,14 @@ struct MatronSnapshot final {
     double climb_force_n = 0.0;
     bool climb_lunge_drive = false;
     double foot_power_w = 0.0;
+    // Held-load tip, from Matron::View (S1 measurement, no behaviour).
+    bool load_held = false;
+    double load_mass_kg = 0.0;
+    double load_offset_m = 0.0;
+    double load_moment_nm = 0.0;
+    double load_cop_shift_m = 0.0;
+    double load_stance_base_m = 0.0;
+    double load_pull_m = 0.0;
     std::uint32_t climb_grips = 0, climb_releases = 0;
     bool mantling = false;
     double lead_x = 0.0, lead_z = 0.0, lead_age_s = 0.0;
@@ -274,6 +293,14 @@ struct MatronSnapshot final {
     double exposure = 0.0;
     std::uint32_t shoves = 0;   // the player thrown off their feet by her hands, this run
     std::uint64_t carrying = 0; // the stock in her hands (its entity), 0 for none
+    Vector3 stock_handle{};       // throwable's physical handle, in world coordinates
+    Vector3 stock_constraint{};   // her moving constraint anchor, in world coordinates
+    Quaternion stock_rotation{};  // actual throwable body rotation
+    Vector3 stock_size{};        // local shape bounds, for one- or two-hand presentation
+    std::uint64_t stock_seeking = 0; // target object being approached, 0 otherwise
+    Vector3 stock_seek_handle{}; // target's actual world handle, before pickup
+    Quaternion stock_seek_rotation{};
+    Vector3 stock_seek_size{};
     std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
     std::uint32_t throws = 0;   // and threw at the player
     // Her balance (matron.hpp): blows that took it and that took her off her
@@ -291,6 +318,13 @@ struct MatronSnapshot final {
     // stories she set out along it, her hands' holds (knocks), flanges passed
     // (bongs) and slammed onto, and the last slam's speed.
     bool on_pipe = false;
+    // Her collision body (Matron::Stance; matron_shape.cpp): its family, and
+    // its capsule in world, its segment's ends and radius.
+    std::uint8_t stance = 0;
+    Vector3 shape_a{};
+    Vector3 shape_b{};
+    double shape_r = 0.0;
+    std::uint32_t shape_switches = 0;
     bool pipe_head_down = false;
     bool pipe_sliding = false;
     bool pipe_stunned = false;
@@ -978,6 +1012,11 @@ struct Snapshot final {
     bool edge_drop_available = false;
     Vector3 edge_drop_point{};
     std::uint64_t climb_count = 0;
+    double climb_grip_force_n = 0.0;
+    std::uint64_t climb_grip_slips = 0;
+    double ladder_pull_force_n = 0.0;
+    double ladder_pull_power_w = 0.0;
+    double player_gravity_factor = 1.0;
     // The fireman's slide down a climb's holds (physics_world kClimbSlideMps).
     bool player_climb_sliding = false;
     std::uint64_t climb_slide_count = 0;
@@ -1668,6 +1707,8 @@ public:
     void debug_matron_hear(Vector3 at) noexcept;
     // Tests only: her hands open on the climb or pipe she is on.
     void debug_matron_let_go() noexcept;
+    // Tests only: a column at (x, z) failed under her, left alone a while.
+    void debug_matron_block_column(double x, double z) noexcept;
     // The Matron's climbing (matron_traversal.hpp): what the tower's steel
     // offers her, scanned from the real collision geometry on first use.
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();
@@ -1735,6 +1776,8 @@ public:
     [[nodiscard]] MatronFixtureSample debug_matron_fixture(const Vector3 *place = nullptr);
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
+    [[nodiscard]] bool set_summit_lower(bool held) noexcept;
+    [[nodiscard]] bool request_summit_unrig() noexcept;
     // The trapeze: Action catches the bar in the air when it is in reach;
     // Drop lets go; Crouch held pulls up on it.
     [[nodiscard]] bool request_trapeze_action() noexcept;
@@ -1915,6 +1958,8 @@ private:
     bool lift_haul_ = false;
     bool forklift_action_ = false;
     double forklift_lift_ = 0.0;
+    bool summit_lower_ = false;
+    bool summit_unrig_ = false;
     bool yard_crane_take_ = false;
     bool yard_crane_operate_ = false;
     bool yard_crane_device_ = false;

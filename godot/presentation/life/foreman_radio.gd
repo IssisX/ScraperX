@@ -19,6 +19,7 @@ const TOWER_ENTITY := 11
 # Act 1, in the order the climb meets them. Jack Miller the climber, Walt
 # Brenner the foreman (the owner, 2026-10-21: plain American names).
 const LINES := {
+	&"last_beam": "I signed her accident off as her fault. The beam's home, Jack. Your turn.",
 	&"s1_cage": "Miller? It's Saturday. What are you doing on my tower?",
 	&"stack": "Get down before somebody sees you.",
 	&"locker": "What was that? Miller, get away from that locker.",
@@ -67,6 +68,15 @@ func update(delta: float, ctx: Dictionary) -> void:
 
 
 func _watch(ctx: Dictionary) -> void:
+	# The beam's physical seating is the story payoff. Never queue old
+	# climb instructions over his admission, and never synthesize his voice.
+	if bool(ctx.get("beam_seated", false)):
+		if not _said.has(&"last_beam"):
+			_queue.clear()
+			_left = 0.0
+			_gap = 0.0
+			_cue(&"last_beam")
+		return
 	var y := float(ctx.get("y", 0.0))
 	var support := int(ctx.get("support", 0))
 	var released := bool(ctx.get("matron_released", false))

@@ -533,6 +533,12 @@ constexpr float kHangPullInSpeed = 3.0F;
 constexpr float kHangShoulderAboveCentre = 0.45F;
 constexpr float kLedgeGripMaxForceN = 4500.0F;
 constexpr float kLedgeGripTearImpulseNs = 350.0F;
+// Climbing a rung has a finite hand-handhold coupling, independent of any
+// antagonist. Young et al., Human Factors, doi:10.1177/0018720809355969,
+// measured 691 +/- 132 N for one hand on a high-friction horizontal cylinder.
+// CHOSEN: 900 N per usable hand for this strong climber (not a population
+// mean). The controller can supply only this force; overload moves the body.
+constexpr float kClimbGripPerHandN = 900.0F;
 // The body hanging is not a dead weight: the shoulders and core still its
 // swing under the hands with up to kHangSteadyForceN (CHOSEN, about 0.36 body
 // weights), against its motion relative to the hands across the arms, at
@@ -651,6 +657,7 @@ constexpr float kClimbDownSpeed = 1.2F;
 constexpr float kClimbSideSpeed = 0.6F;
 constexpr double kClimbInputDeadzone = 0.2;
 constexpr float kClimbHandHigh = 0.80F;
+constexpr float kClimbHandMaxReachM = 0.95F; // existing hand regrip reach, now shared with grip loss
 // Climbing on up needs a hold from chest height: a body pushes up on holds at
 // its chest, so it rises to the top of a pipe, not an arm's length short.
 constexpr float kClimbMoveAim = 0.50F;

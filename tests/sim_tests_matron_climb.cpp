@@ -189,6 +189,98 @@ void test_rungs() {
     std::cout << "PASS scraperx_sim matron climb rungs up and down: peak_n=" << w.peak_force << "\n";
 }
 
+void test_second_hold() {
+    // M5a: the second hand really grips. On a rung climb the climber must
+    // take a second hold on the SAME rung member as the first hold, through
+    // the general hold path, and report it only while it is held. On trunk
+    // this fails: the second hold is never taken (second_ticks stays 0).
+    ClimbWorld w;
+    w.deck(4.0F);
+    w.rungs(0.3F, 3.9F);
+    w.spawn(RVec3(0, 0, 1.0F));
+    Climber climber(w.physics, w.her, {w.her, BodyID()});
+    climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
+    long second_ticks = 0;
+    const auto up = w.run(climber, 30.0F, [&](int) {
+        if (!climber.second_holding()) return;
+        ++second_ticks;
+        require(climber.hold2().body == climber.hold().body && climber.hold2().sub == climber.hold().sub,
+                "matron climb second hold: second grip on the same rung member as the first");
+        const RVec3 d = climber.view().hand2 - climber.view().hand;
+        const double apart = std::hypot(double(d.GetX()), double(d.GetY()), double(d.GetZ()));
+        require(apart >= 0.10 && apart <= 0.60,
+                "matron climb second hold: second grip a distinct point on the rung, not the first grip twice");
+        require(climber.view().holding2, "matron climb second hold: view mirrors the second grip while held");
+    });
+    (void)w.settle(1.0F);
+    std::cout << "  matron climb second hold: up " << int(up) << " second-held ticks " << second_ticks << "\n";
+    require(up == Climber::Status::Done, "matron climb second hold: rung climb still completes");
+    require(second_ticks >= 90, "matron climb second hold: second hand grips for a real stretch of the climb");
+    require(!climber.second_holding() && !climber.view().holding2,
+            "matron climb second hold: no stale second grip once the move is done");
+    MoveSpec down = ladder_up(4.0F, 0.3F, 3.9F);
+    down.kind = MoveKind::RungDown;
+    down.start = Vec3(0, 4.0F, -1.35F);
+    down.goal = Vec3(0, 0, -0.5F);
+    down.goal_top = 0.0F;
+    climber.begin(down);
+    long second_ticks_down = 0;
+    const auto dn = w.run(climber, 40.0F, [&](int) {
+        if (!climber.second_holding()) return;
+        ++second_ticks_down;
+        require(climber.hold2().body == climber.hold().body && climber.hold2().sub == climber.hold().sub,
+                "matron climb second hold: second grip on the same rung member as the first, going down");
+    });
+    (void)w.settle(1.0F);
+    std::cout << "  matron climb second hold: down " << int(dn) << " second-held ticks " << second_ticks_down << "\n";
+    require(dn == Climber::Status::Done, "matron climb second hold: rung descent still completes");
+    require(second_ticks_down >= 90, "matron climb second hold: second hand grips for a real stretch of the descent");
+    require(!climber.second_holding(), "matron climb second hold: no stale second grip once the descent is done");
+    std::cout << "PASS scraperx_sim matron climb second hold: up ticks=" << second_ticks << " down ticks=" << second_ticks_down
+              << "\n";
+}
+
+void test_drive_from_both_anchors() {
+    // M5c: when the second grip is held, the rung drive's support is BOTH
+    // grips, not the first alone: the velocity her power budget is charged
+    // on is her velocity against the MEAN of the two grips' point
+    // velocities, and the drive reaction is split half/half between the
+    // two grip points. One budget.take() call still grants the whole
+    // drive, so total force and power are unchanged; on static members
+    // both point velocities are zero and the change is null.
+    // On trunk this fails: relative_velocity() uses the first grip alone,
+    // so it misses half the second grip's point velocity on a member
+    // that moves under her hands.
+    ClimbWorld w;
+    w.deck(4.0F);
+    // Kinematic rungs, spinning slowly about their own vertical axis: the
+    // two grips' point velocities differ, so a single-anchor support
+    // velocity is measurably wrong while the mean is exact.
+    for (float y = 0.3F; y <= 3.9F + 1.0e-3F; y += 0.3F) {
+        const BodyID rung = w.box(Vec3(0.25F, 0.02F, 0.02F), RVec3(0, y, -0.95F), false, EMotionType::Kinematic);
+        w.physics.GetBodyInterface().SetAngularVelocity(rung, Vec3(0.0F, 0.5F, 0.0F));
+    }
+    w.spawn(RVec3(0, 0, -0.5F));   // already at the ladder's stand point
+    Climber climber(w.physics, w.her, {w.her, BodyID()});
+    climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
+    int checked = 0;
+    for (int tick = 0; tick < 90 * 10 && checked < 5; ++tick) {
+        w.tick(climber);
+        if (climber.status() != Climber::Status::Running) break;
+        if (!climber.second_holding()) continue;
+        const Vec3 body_vel = w.physics.GetBodyInterface().GetLinearVelocity(w.her);
+        const Vec3 pv1 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold().body, climber.view().hand);
+        const Vec3 pv2 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold2().body, climber.view().hand2);
+        const Vec3 expected = body_vel - 0.5F * (pv1 + pv2);
+        const Vec3 got = climber.relative_velocity();
+        require((got - expected).Length() < 0.02F,
+                "matron climb drive from both anchors: budget charged on the mean of both grips' point velocities");
+        ++checked;
+    }
+    require(checked >= 5, "matron climb drive from both anchors: second grip held long enough to check");
+    std::cout << "PASS scraperx_sim matron climb drive from both anchors: checked ticks=" << checked << "\n";
+}
+
 void test_rung_failures() {
     // A gap wider than her long reach and a throw cross (2.1 m): she climbs
     // to it and can go no higher; she lets go and falls.
@@ -1798,6 +1890,8 @@ void run_matron_climb() {
     test_jump_catch_escape_margin();
     test_power_moving_bar();
     test_rungs();
+    test_second_hold();
+    test_drive_from_both_anchors();
     test_rung_failures();
     test_pole();
     test_capped_launches();
@@ -2101,7 +2195,48 @@ void test_player_unchanged() {
             "player climbing is the same with her travelling nearby");
 }
 
-void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); }
+// A travelling Matron's walk to her next move's start goes round a player
+// standing on it, not through him. Her feet's search reads the real world,
+// and his body is in it: on the old code her walk went straight through his
+// spot (the probes excepted his body, like they except hers) and her 220 kg
+// body shoved his 85 kg body across the deck — friction 0, no damping,
+// nothing stops him. The park point is on her measured walk down the stack
+// from home (11, 154, -126.2) to the rung-down start (-6, 155.18, -133.15):
+// she passes (-2, -128.9) about 8 s in, 6 m from that start, so the
+// next-climb yield (1.3 m from its line) does not cover it.
+void test_travel_walk_round_player() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    require(s.advance_frame(1.0).accepted, "travel walk round player: settle");
+    const double px = -2.0, pz = -128.9;
+    const double support = s.debug_support_y(Vector3{px, 160.0, pz}, 10.0);
+    require(std::abs(support - 154.0) < 0.3, "travel walk round player: the park point is open deck 154 floor");
+    s.debug_launch_player(Vector3{px, support + 1.0, pz}, Vector3{0.0, 0.0, 0.0});
+    require(s.advance_frame(1.0).accepted, "travel walk round player: player settles");
+    const auto p0 = s.snapshot().player_position;
+    require(s.debug_matron_travel(132.0), "travel walk round player: she sets off down the stack");
+    double t = 0.0, near = 1.0e9, moved = 0.0;
+    Simulation::MatronJourney j = s.matron_journey();
+    while (j.active && t < 120.0) {
+        (void)s.advance_frame(1.0 / 60.0);
+        t += 1.0 / 60.0;
+        j = s.matron_journey();
+        const auto her = s.matron_state().position;
+        const auto pp = s.snapshot().player_position;
+        near = std::min(near, std::hypot(her.x - p0.x, her.z - p0.z));
+        moved = std::max(moved, std::hypot(pp.x - p0.x, pp.z - p0.z));
+    }
+    const auto p1 = s.snapshot().player_position;
+    std::cout << "  player parked " << p0.x << "," << p0.y << "," << p0.z << ", her nearest pass " << near
+              << " m, player moved " << moved << " m to " << p1.x << "," << p1.y << "," << p1.z << ", arrivals "
+              << j.arrivals << " active " << j.active << " after " << t << " s\n";
+    require(near < 1.5, "travel walk round player: she really came past his spot (placement check)");
+    require(moved <= 0.5, "travel walk round player: she walks round him, not through him");
+    require(p1.y > 153.0 && p1.y < 157.0, "travel walk round player: he stays on deck 154");
+    require(!j.active && j.arrivals > 0, "travel walk round player: she still gets down the stack");
+}
+
+void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); test_travel_walk_round_player(); }
 
 // One deck box, something laid across its top. A curb within a step (and a
 // block on part of it) leaves it one floor; a wall taller than a step across

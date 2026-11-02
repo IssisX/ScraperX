@@ -214,11 +214,66 @@ public:
     static constexpr float kHomeDeckTop = kDeckTop;
     static constexpr float kLockerY = kHomeDeckTop;
 
-    // Her body: 2.1 m tall standing, 220 kg.
+    // Her body: 220 kg; her middle kStandCentre over her soles. kRadius and
+    // kHalfHeight are the room her ways plan for (a 2.1 m capsule about her
+    // middle, matron_traversal, routecraft, found climbs, room_to_stand); the
+    // body that collides is her stance's own capsule (matron_shape.cpp).
     static constexpr float kMassKg = 220.0F;
     static constexpr float kRadius = 0.30F;
     static constexpr float kHalfHeight = 0.75F;
     static constexpr float kStandCentre = kHalfHeight + kRadius;
+
+    // Her collision body by stance family (matron_shape.cpp), chosen from her
+    // simulated state; each a capsule in her body frame (y up from her middle,
+    // z forward along her yaw), turned with her yaw in kStanceYawBins steps.
+    enum class Stance : std::uint8_t { Upright = 0, Low = 1, Climb = 2, Pipe = 3, Down = 4, Hold = 5, Lift = 6 };
+    static constexpr int kStanceCount = 7;
+    static constexpr int kStanceYawBins = 16;
+    struct StanceCapsule {
+        float ay, az;   // one end of its segment (height over her middle, forward of it)
+        float by, bz;   // the other
+        float radius;
+    };
+    [[nodiscard]] static StanceCapsule stance_capsule(Stance stance) noexcept;
+    [[nodiscard]] static int stance_bin(float yaw) noexcept;
+    // On the hunt over this speed at stage 0 she hurries upright (the view's
+    // pest hobble); otherwise she is low.
+    static constexpr float kLowHuntMps = 1.0F;
+    // A new family is tried once wanted this long (her drawn body takes about
+    // 0.35-0.7 s to go over: matron_view.gd BLEND_W, FOURS_BLEND_W).
+    static constexpr float kStanceDwellS = 0.2F;
+    // Deeper than kInsideSteelM into a body that does not move, more than
+    // kInsideSteelTicks ticks running, is sitting in the steel (Jolt's own
+    // contact slop is 0.02 m; a hard landing's first tick or two sink a few
+    // centimeters more before her contacts push her out); deeper than
+    // kTunnelM in any one tick is going through it.
+    static constexpr float kInsideSteelM = 0.05F;
+    static constexpr int kInsideSteelTicks = 3;
+    static constexpr float kTunnelM = 0.15F;
+    // Test-only: every Matron's stance upkeep counted, process-wide (her
+    // shape check, sim_tests_matron_shape.cpp). Observation only.
+    struct ShapeAudit {
+        long ticks = 0;
+        long inside_steel = 0;      // ticks her shape was deeper than kInsideSteelM in the steel
+        long sitting = 0;           // ... past kInsideSteelTicks running: sitting in it
+        float worst_depth_by_stance[kStanceCount] = {};
+        long placed_ticks = 0;      // ticks in steel a placement put her in (those bodies, no deeper)
+        float placed_worst_m = 0.0F;
+        long planning_ticks = 0;    // ticks on her old capsule, no stance shape fitted yet (not audited)
+        float planning_worst_m = 0.0F;
+        float worst_depth_m = 0.0F;
+        float worst_tall_m = 0.0F;  // the planning capsule's depth at the worst non-exempt sample
+        float worst_x = 0.0F, worst_y = 0.0F, worst_z = 0.0F;
+        int worst_stance = 0;
+        int worst_state = 0;
+        long switches = 0;          // family changes made
+        long refused = 0;           // ticks a wanted shape did not fit and she kept hers
+        long per_stance[kStanceCount] = {};
+        double upkeep_s = 0.0;      // wall time of the upkeep itself (the game's cost)
+        double query_s = 0.0;       // ... with the audit's own steel query
+    };
+    static void audit_shapes(bool on) noexcept;
+    [[nodiscard]] static const ShapeAudit &shape_audit() noexcept;
 
     // Sound through the tower (above). CHOSEN: a steel deck takes 20 dB off
     // a sound (as ten times the distance would); turning round the shaft's
@@ -662,6 +717,7 @@ public:
     static constexpr float kUprightBaseM = 0.08F;     // frail on her feet: an old woman's narrow, shuffling base
     static constexpr float kCrouchHeightM = 0.55F;
     static constexpr float kCrouchBaseM = 0.45F;
+    static constexpr float kCarryPullCapM = 0.10F;  // M4 S2 counter-lean cap: an uncapped pull (~0.74 m) broke tear holds; 0.10 m keeps a real pull without it
     static constexpr float kPestStepM = 0.02F;
     static constexpr float kDangerousStepM = 0.30F;
     static constexpr float kChangedStepM = 0.75F;
@@ -795,6 +851,8 @@ public:
     static constexpr float kHandSpeedMps = 1.8F;      // her hand's pose moves no faster
     static constexpr float kHandReachSpeedMps = 4.0F;
     static constexpr float kHandPullN = 2600.0F;
+    static constexpr float kLadderPullMaxForceN = 8000.0F;
+    static constexpr float kLadderPullMaxPowerW = 22000.0F;
     static constexpr float kHandReachPullN = 900.0F;
     static constexpr float kRipRampNps = 2000.0F;     // against a braced player, her pull grows this fast
     static constexpr float kRipMaxN = 3400.0F;
@@ -1071,6 +1129,8 @@ public:
         JPH::BodyID contact_feet_body;
         JPH::SubShapeID contact_feet_sub;
         JPH::RVec3 contact_feet = JPH::RVec3::sZero();
+        // Her floor's point velocity this tick, zero when unsupported.
+        JPH::Vec3 contact_support_velocity = JPH::Vec3::sZero();
         bool contact_hand_held = false;
         JPH::BodyID contact_hand_body;
         JPH::SubShapeID contact_hand_sub;
@@ -1089,6 +1149,19 @@ public:
         float climb_force_n = 0.0F;
         bool climb_lunge_drive = false;
         float foot_power_w = 0.0F;   // her feet's positive power this tick (lunge or walk), from their Budget
+        // Her held load's tip, measured every tick (S1, matron_load): the
+        // grip-held player's mass, its horizontal offset from her centre,
+        // the moment that offset makes about her feet, and how far the
+        // combined centre moves toward the load. S2 reads the shift back
+        // into a decision: the stance base she stands on, and the pull
+        // applied to the load this tick.
+        bool load_held = false;
+        float load_mass_kg = 0.0F;
+        float load_offset_m = 0.0F;
+        float load_moment_nm = 0.0F;
+        float load_cop_shift_m = 0.0F;
+        float load_stance_base_m = 0.0F;
+        float load_pull_m = 0.0F;
         std::uint32_t climb_grips = 0;
         std::uint32_t climb_releases = 0;
         bool mantling = false;
@@ -1124,6 +1197,16 @@ public:
         float exposure = 0.0F;      // 0..1: how far the source's work shows, by her time out
         std::uint32_t shoves = 0;   // the player thrown off their feet by her hands, this run
         std::uint64_t carrying = 0; // the entity of the stock in her hands, 0 for none
+        // Read-only physical carry geometry. No pose or motion decision reads these.
+        JPH::RVec3 stock_handle = JPH::RVec3::sZero();
+        JPH::RVec3 stock_constraint = JPH::RVec3::sZero();
+        JPH::Quat stock_rotation = JPH::Quat::sIdentity();
+        JPH::Vec3 stock_size = JPH::Vec3::sZero();
+        // Read-only approach target, available before the point constraint is taken.
+        std::uint64_t stock_seeking = 0;
+        JPH::RVec3 stock_seek_handle = JPH::RVec3::sZero();
+        JPH::Quat stock_seek_rotation = JPH::Quat::sIdentity();
+        JPH::Vec3 stock_seek_size = JPH::Vec3::sZero();
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
         std::uint32_t staggers = 0;     // blows that took her balance, this run
@@ -1134,6 +1217,13 @@ public:
         float down_s = 0.0F;            // seconds on the steel
         float down_left_s = 0.0F;       // of the time she lies there; 0 and still down: pinned, crawling to room
         bool on_pipe = false;           // on the shaft's corner pipe (getting on, on it, getting off)
+        // Her collision body (matron_shape.cpp): its stance family, and its
+        // capsule as it is turned now, relative to her middle (world axes).
+        std::uint8_t stance = 0;
+        JPH::Vec3 shape_a = JPH::Vec3(0.0F, -0.75F, 0.0F);
+        JPH::Vec3 shape_b = JPH::Vec3(0.0F, 0.75F, 0.0F);
+        float shape_r = 0.30F;
+        std::uint32_t shape_switches = 0;
         bool pipe_head_down = false;    // coming down it head first (fully changed)
         bool pipe_sliding = false;      // torn off it, sliding on her legs to the flange under her
         bool pipe_stunned = false;      // slammed onto a flange
@@ -1235,6 +1325,7 @@ public:
     const MatronRoutecraft::Report &climb_report() const noexcept { return routecraft_.report(); }
     // The force her feet drive put on her body this tick (walk_toward), when no climb has it.
     float foot_force_n() const noexcept { return foot_force_n_; }
+    float foot_power_w() const noexcept { return foot_power_w_; }
     // The bay's district (bay.hpp), its lifetime the world's: detach before
     // destroying it. Her hands' support goes through it (her trap).
     void set_shared_survival(SharedSurvival *encounter) noexcept;
@@ -1304,7 +1395,7 @@ public:
     void post_step(float dt);
 
     // True once her hands are on the player.
-    [[nodiscard]] bool caught(JPH::RVec3 player) const noexcept;
+    [[nodiscard]] bool caught(JPH::RVec3 player, bool on_ladder = false) const noexcept;
     // While true the checkpoint is not renewed (see above): she is out and
     // alive and the player is on her deck, up a climb from it, or on a deck
     // her corner pipe is taking her to or (no longer frail) joins to hers. A
@@ -1392,6 +1483,9 @@ public:
     // Tests only: her hands open on the climb or the pipe she is on, as a hold
     // that gave way would open them.
     void let_go_for_test();
+    // Tests only: a column at (x, z) failed under her, left alone a while
+    // (Simulation::debug_matron_block_column).
+    void block_column_for_test(float x, float z);
     // The corner pipe ruled out for her (Simulation::debug_matron_rule_out_pipe).
     void rule_out_pipe_for_test();
     // Tests only (Simulation::debug_matron_rule_out_hang): no edge of her
@@ -1423,8 +1517,15 @@ public:
     [[nodiscard]] float arm_reach_m() const noexcept { return arm_reach_m_; }
     [[nodiscard]] float hand_pull_n() const noexcept { return pull_n_; }
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
+    void set_player_on_ladder(const bool climbing) noexcept { player_on_ladder_ = climbing; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;
+    // S1 measurement: the grab world reports both centres and the held
+    // mass every tick, so refresh_view can publish the load's tip.
+    // Matron does only the arithmetic; the mass stays the grab world's
+    // own constant. No behaviour.
+    void report_held_load(JPH::RVec3 her_pos, JPH::RVec3 player_pos, float player_mass_kg,
+                          bool held) noexcept;
     // Her grip gone: `torn` out of her hand (else let go); `fought` when the
     // player fought it this hold (kicked, thrashed, braced on a rail). Torn
     // with no fight (the world's doing: her heave against the rail, a snag),
@@ -2099,6 +2200,21 @@ private:
     void stand_up();
     [[nodiscard]] bool room_to_stand(JPH::RVec3 at) const;
     [[nodiscard]] bool shape_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
+    // Her collision body by stance (matron_shape.cpp).
+    void build_stance_shapes();
+    [[nodiscard]] Stance wanted_stance() const;
+    [[nodiscard]] const JPH::Shape *stance_shape(Stance stance, float yaw) const;
+    void step_stance(float dt);
+    [[nodiscard]] bool on_planning_shape() const;
+    [[nodiscard]] bool stance_fits(const JPH::Shape *shape, JPH::RVec3 at) const;
+    [[nodiscard]] float steel_depth(const JPH::Shape *as = nullptr) const;
+    // A placement (she was put somewhere, a jump of a meter or more, or the
+    // first tick) records the static bodies she already overlaps. Only those,
+    // and no deeper than that placement measured, count as put there. A walk
+    // into other steel does not.
+    void note_setup_overlaps();
+    [[nodiscard]] bool placed_by_test(float depth) const;
+    void refresh_shape_view();
     // Off an edge she will not go, staggering or sliding on the steel: her
     // feet and hands take her at it (no floor within a step's drop ahead).
     void brace_at_edges(float dt);
@@ -2177,6 +2293,9 @@ private:
     bool journey_active_ = false;
     bool journey_moving_ = false;   // a move (not a walk) under way
     int journey_leg_ticks_ = 0;
+    float journey_leg_best_ = 1.0e9F;   // closest she has been to the current leg
+    float journey_leg_progress_ = 1.0e9F;   // distance to the current leg when its clock last reset
+    int journey_leg_stall_ticks_ = 0;   // ticks since that closest point improved
     bool journey_retreating_ = false;   // walking back along reached legs after a leg timed out
     int journey_wait_ticks_ = 0;    // a scan at most every 2 s; 30 s after a failure
     float routecraft_release_floor_ = 0;
@@ -2222,11 +2341,22 @@ private:
     bool grip_on_ = false;
     bool grip_was_on_ = false;
     bool player_braced_ = false;
+    bool player_on_ladder_ = false;
     float thrash_ = 0.0F;
     float pull_n_ = kHandReachPullN;
     float arm_reach_m_ = kArmReachM;
     JPH::RVec3 hand_target_ = JPH::RVec3::sZero();
     JPH::Vec3 hand_target_v_ = JPH::Vec3::sZero();
+    // S1 measured load tip, refreshed by report_held_load every tick.
+    bool load_held_ = false;
+    float load_mass_kg_ = 0.0F;
+    float load_offset_m_ = 0.0F;
+    float load_moment_nm_ = 0.0F;
+    float load_cop_shift_m_ = 0.0F;
+    float load_stance_base_m_ = 0.0F;   // S2: the base she stands on this tick
+    float load_pull_m_ = 0.0F;          // S2: pull applied to the load this tick
+    float load_dir_x_ = 0.0F;   // unit XZ from her centre toward the load, else 0
+    float load_dir_z_ = 0.0F;
     float rim_x_ = 0.0F, rim_z_ = 0.0F;     // where she stands at the rail
     float rim_nx_ = 0.0F, rim_nz_ = 1.0F;   // out over the shaft from there
     bool aim_ledge_ = false;
@@ -2556,6 +2686,30 @@ private:
     bool lying_ = false;           // her shape is a lying (or kneeling) one
     bool kneeling_ = false;
     JPH::Ref<JPH::Shape> down_shape_;
+    // The capsule lie_down installed, relative to her middle: the view exports
+    // this, not the upright stance, while she is down.
+    JPH::Vec3 down_a_ = JPH::Vec3(0.0F, -0.75F, 0.0F);
+    JPH::Vec3 down_b_ = JPH::Vec3(0.0F, 0.75F, 0.0F);
+    float down_r_ = kRadius;
+    // Static bodies she overlapped at the last placement, for the steel audit.
+    struct SetupOverlap {
+        JPH::BodyID body;
+        float depth = 0.0F;
+    };
+    std::array<SetupOverlap, 8> setup_overlaps_{};
+    int setup_overlap_n_ = 0;
+    bool setup_live_ = false;          // still in that placement's steel; clear of it ends the exemption
+    bool have_shape_pos_ = false;
+    JPH::RVec3 shape_pos_ = JPH::RVec3::sZero();
+    // Static penetrations of `shape` (null: the shape she has) past kInsideSteelM,
+    // one entry per body, the deepest. Returns how many were written, at most `cap`.
+    [[nodiscard]] int collect_steel(const JPH::Shape *shape, SetupOverlap *out, int cap) const;
+    Stance stance_ = Stance::Upright;
+    Stance stance_want_ = Stance::Upright;
+    float stance_want_s_ = 0.0F;
+    std::uint32_t stance_switches_ = 0;
+    int steel_ticks_ = 0;   // ticks running her shape has been in the steel (the audit's)
+    std::array<std::array<JPH::Ref<JPH::Shape>, kStanceYawBins>, kStanceCount> stance_shapes_;
     std::uint32_t staggers_ = 0;
     std::uint32_t knockdowns_ = 0;
     float blow_mps_ = 0.0F;

@@ -325,6 +325,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_hold_state"), &ScraperXSimulation::get_matron_hold_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_summit_lower", "held"), &ScraperXSimulation::set_summit_lower);
+    godot::ClassDB::bind_method(godot::D_METHOD("request_summit_unrig"), &ScraperXSimulation::request_summit_unrig);
     godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
     // TEST-ONLY: the look suite's setup (see the header); nothing in play calls these.
     godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
@@ -1746,6 +1748,9 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
                                          static_cast<real_t>(state.contact_feet.z));
     out["contact_feet_body"] = static_cast<std::int64_t>(state.contact_feet_body);
     out["contact_feet_sub"] = static_cast<std::int64_t>(state.contact_feet_sub);
+    out["contact_support_velocity"] = godot::Vector3(static_cast<real_t>(state.contact_support_velocity.x),
+                                                     static_cast<real_t>(state.contact_support_velocity.y),
+                                                     static_cast<real_t>(state.contact_support_velocity.z));
     out["contact_hand_held"] = state.contact_hand_held;
     out["contact_hand"] = godot::Vector3(static_cast<real_t>(state.contact_hand.x),
                                          static_cast<real_t>(state.contact_hand.y),
@@ -1756,6 +1761,8 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["contact_hand2"] = godot::Vector3(static_cast<real_t>(state.contact_hand2.x),
                                           static_cast<real_t>(state.contact_hand2.y),
                                           static_cast<real_t>(state.contact_hand2.z));
+    out["contact_hand2_body"] = static_cast<std::int64_t>(state.contact_hand2_body);
+    out["contact_hand2_sub"] = static_cast<std::int64_t>(state.contact_hand2_sub);
     out["contact_line"] = state.contact_line;
     out["contact_braced"] = state.contact_braced;
     out["contact_brace"] = godot::Vector3(static_cast<real_t>(state.contact_brace.x),
@@ -1797,6 +1804,14 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["exposure"] = state.exposure;
     out["shoves"] = static_cast<std::int64_t>(state.shoves);
     out["carrying"] = static_cast<std::int64_t>(state.carrying);
+    out["stock_handle"] = to_godot(state.stock_handle);
+    out["stock_constraint"] = to_godot(state.stock_constraint);
+    out["stock_rotation"] = to_godot(state.stock_rotation);
+    out["stock_size"] = to_godot(state.stock_size);
+    out["stock_seeking"] = static_cast<std::int64_t>(state.stock_seeking);
+    out["stock_seek_handle"] = to_godot(state.stock_seek_handle);
+    out["stock_seek_rotation"] = to_godot(state.stock_seek_rotation);
+    out["stock_seek_size"] = to_godot(state.stock_seek_size);
     out["takes"] = static_cast<std::int64_t>(state.takes);
     out["throws"] = static_cast<std::int64_t>(state.throws);
     out["staggers"] = static_cast<std::int64_t>(state.staggers);
@@ -1807,6 +1822,10 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["down_s"] = state.down_s;
     out["down_left_s"] = state.down_left_s;
     out["on_pipe"] = state.on_pipe;
+    out["stance"] = static_cast<int>(state.stance);
+    out["shape_a"] = godot::Vector3(state.shape_a.x, state.shape_a.y, state.shape_a.z);
+    out["shape_b"] = godot::Vector3(state.shape_b.x, state.shape_b.y, state.shape_b.z);
+    out["shape_r"] = state.shape_r;
     out["pipe_head_down"] = state.pipe_head_down;
     out["pipe_sliding"] = state.pipe_sliding;
     out["pipe_stunned"] = state.pipe_stunned;
@@ -1974,6 +1993,15 @@ godot::Dictionary ScraperXSimulation::get_summit_state() const {
     const sim::SummitSnapshot state = simulation_->summit_state();
     godot::Dictionary out;
     out["lit"] = state.lit;
+    out["ending"] = state.ending;
+    out["beam_seated"] = state.beam_seated;
+    out["sling_free"] = state.sling_free;
+    out["left_bearing"] = state.left_bearing;
+    out["right_bearing"] = state.right_bearing;
+    out["work_in_reach"] = state.work_in_reach;
+    out["can_unrig"] = state.can_unrig;
+    out["chain_paid"] = state.chain_paid_m;
+    out["chain_tension"] = state.chain_tension_n;
     out["striker_travel"] = state.striker_travel_m;
     out["striker_peak"] = state.striker_peak_m;
     out["trip_travel"] = state.trip_travel_m;
@@ -1983,6 +2011,8 @@ godot::Dictionary ScraperXSimulation::get_summit_state() const {
 }
 
 void ScraperXSimulation::light_summit() { simulation_->light_summit(); }
+bool ScraperXSimulation::set_summit_lower(const bool held) { return simulation_->set_summit_lower(held); }
+bool ScraperXSimulation::request_summit_unrig() { return simulation_->request_summit_unrig(); }
 
 // Her look over the tower (every way she climbs is one her scan finds) is
 // seconds of work. The game asks for it before play, so it never lands in

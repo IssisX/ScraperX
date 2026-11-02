@@ -226,6 +226,10 @@ var _burst_tail := 0.0
 # for these).
 var _held_shown := PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
 var _hands_fresh := true
+# Rendered wrist distance from the authoritative carried handle, in meters.
+# INF when no native prop constraint is active (including the throw tick).
+var prop_hand_error_m := INF
+var prop_attached := false
 # Going down a line's bare cable: the sparks off her forearms.
 var _sparks: CPUParticles3D
 var _planks: Array[MeshInstance3D] = []
@@ -700,6 +704,59 @@ func _build_pivots() -> void:
 	_p["box_cord"] = _pivot(body, Vector3(-0.2, -0.05, 0.0))
 
 
+# One seating of the hair mesh. The locks were weighted across neighboring
+# chains, so when two locks swung apart the ribbon stretched into a sheet and
+# the scorer read the middle as inside her. Each vertex now follows one bone,
+# and the ones that were inside the cloth at the guard and the head-down pose
+# are moved out along that cloth's normal. The bones are not moved, so the
+# hang does not change. Built by measuring the drawn body, not by a radius.
+func _seat_hair(root: Node) -> void:
+	var path := "res://presentation/life/matron/hair_seat.bin"
+	if not FileAccess.file_exists(path):
+		return
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return
+	var n := int(f.get_32())
+	var found := false
+	for node in root.find_children("hair", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.mesh == null or mi.mesh.get_surface_count() < 1:
+			continue
+		var arrays: Array = mi.mesh.surface_get_arrays(0)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		if verts.size() != n:
+			push_error("matron hair seat: mesh has %d verts, file has %d" % [verts.size(), n])
+			return
+		var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+		var bpv := int(bones.size() / n)
+		var out_v := PackedVector3Array()
+		out_v.resize(n)
+		for i in n:
+			out_v[i] = Vector3(f.get_float(), f.get_float(), f.get_float())
+		var out_b := bones.duplicate()
+		var out_w := weights.duplicate()
+		for i in n:
+			var b := int(f.get_32())
+			for j in bpv:
+				out_b[i * bpv + j] = b
+				out_w[i * bpv + j] = 1.0 if j == 0 else 0.0
+		arrays[Mesh.ARRAY_VERTEX] = out_v
+		arrays[Mesh.ARRAY_BONES] = out_b
+		arrays[Mesh.ARRAY_WEIGHTS] = out_w
+		var seated := ArrayMesh.new()
+		seated.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		var mat := mi.mesh.surface_get_material(0)
+		if mat != null:
+			seated.surface_set_material(0, mat)
+		mi.mesh = seated
+		found = true
+		break
+	if not found:
+		push_error("matron hair seat: no hair mesh")
+
+
 # Her body: the skinned glTF read at runtime (kept as it is by its .import),
 # dressed by matron_look.gd and driven by matron_rig.gd.
 func _load_body() -> void:
@@ -720,6 +777,7 @@ func _load_body() -> void:
 		root.free()
 		return
 	_figure.add_child(root)
+	_seat_hair(root)
 	_look = MatronLook.new()
 	_look.build()
 	_look.dress(root)
@@ -948,6 +1006,14 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	_apply_flinch(delta)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
+	prop_attached = int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+	prop_hand_error_m = INF
+	if prop_attached:
+		var handle: Vector3 = data["stock_handle"]
+		prop_hand_error_m = _rig.bone_world("wr_r").origin.distance_to(handle)
+		var size: Vector3 = data.get("stock_size", Vector3.ZERO)
+		if maxf(size.x, size.z) >= 0.38:
+			prop_hand_error_m = maxf(prop_hand_error_m, _rig.bone_world("wr_l").origin.distance_to(handle))
 	_check_contacts(data)
 	fresh_frame = false
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
@@ -1570,9 +1636,12 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		# or "walk", no case matches and the ladder pose above is
 		# untouched. Hands: both arms pose together here because these
 		# moves hold with both hands; the rig reaches the right wrist
-		# to climb_hand and the left wrist to the bridge's own second
-		# hold climb_hand2 when the native validated it, falling back
-		# to the one hold otherwise (see matron_rig.gd contact()).
+		# to climb_hand and the left wrist to the held second grip
+		# (contact_hand2 under contact truth, the bridge's own
+		# climb_hand2 when the native validated it without truth),
+		# falling back to the one hold on two-handed moves and to
+		# nothing on rung moves otherwise (see matron_rig.gd
+		# contact()).
 		# Feet: legs/knees above are the feet pose; the support under
 		# them is the bridge's climb_feet_support point when known,
 		# else the floor_y / support_n already exported.
@@ -1950,14 +2019,6 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	_limb(_p["hp_r"], _p["kn_r"], legs_back, knees)
 	_p["an_l"].rotation.x = -0.2
 	_p["an_r"].rotation.x = -0.2
-	# A piece of the player's stock in her hands (her mischief): both arms out
-	# before her chest under it, elbows bent, whatever her legs are doing.
-	if int(data.get("carrying", 0)) != 0:
-		arms_fwd = 1.35
-		arms_bend = 0.55
-		arms_splay = 0.08
-		arms_alt = 0.0
-		bend_alt = 0.0
 	# Her arms toward what her hands hold (the ankle, his arm), as much as her
 	# hands are on them: the reach (matron_rig.gd hold_reach) turns each joint
 	# from here, never the long way round.
@@ -2304,6 +2365,11 @@ func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_pos
 	if _native == null:
 		return
 	_clock += delta
+	# A native release ends the visual attachment on this frame even when
+	# she is outside the render range; no cached hand target owns the prop.
+	prop_attached = int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+	if not prop_attached:
+		prop_hand_error_m = INF
 	var state := int(data["state"])
 	if state != _last_state:
 		_state_age = 0.0
