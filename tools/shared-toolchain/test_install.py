@@ -12,6 +12,8 @@ import tarfile
 import tempfile
 import unittest
 
+from integrity import inventory
+
 HERE = Path(__file__).resolve().parent
 INSTALL = HERE / "install.sh"
 INTEGRITY = HERE / "integrity.py"
@@ -44,6 +46,9 @@ class InstallerTests(unittest.TestCase):
         (self.stage / "mcp/node_modules/godot-mcp-runtime/package.json").write_text(
             '{"version":"3.8.1"}\n')
         self.cache = self.root / "installed"
+        self.offline_archive = None
+        self.offline_digest = None
+        self.offline_manifest_digest = None
 
     def bundle(self):
         archive = self.root / ASSET
@@ -51,16 +56,32 @@ class InstallerTests(unittest.TestCase):
             tar.add(self.stage, arcname="reusable-toolchain")
         return archive, hashlib.sha256(archive.read_bytes()).hexdigest()
 
+    def fixture_manifest_digest(self):
+        serialized = json.dumps(inventory(self.stage), sort_keys=True,
+                                separators=(",", ":")) + "\n"
+        return hashlib.sha256(serialized.encode()).hexdigest()
+
     def execute(self, *options, env=None):
         variables = os.environ.copy()
         variables["SCRAPERX_TOOLCHAIN_CACHE_DIR"] = str(self.cache)
         variables.update(env or {})
+        if self.offline_manifest_digest is not None and "--from-archive" not in options:
+            options = (*options, "--from-archive", self.offline_archive)
+            variables["SCRAPERX_TOOLCHAIN_ARCHIVE_SHA256"] = self.offline_digest
+            variables["SCRAPERX_TOOLCHAIN_MANIFEST_SHA256"] = self.offline_manifest_digest
         return subprocess.run(["bash", str(INSTALL), *map(str, options)], env=variables,
                               capture_output=True, text=True, timeout=20)
 
     def offline(self, archive, digest):
-        return self.execute("--from-archive", archive,
-                            env={"SCRAPERX_TOOLCHAIN_ARCHIVE_SHA256": digest})
+        result = self.execute("--from-archive", archive,
+                              env={"SCRAPERX_TOOLCHAIN_ARCHIVE_SHA256": digest,
+                                   "SCRAPERX_TOOLCHAIN_MANIFEST_SHA256":
+                                       self.fixture_manifest_digest()})
+        if result.returncode == 0:
+            self.offline_archive = archive
+            self.offline_digest = digest
+            self.offline_manifest_digest = self.fixture_manifest_digest()
+        return result
 
     def test_offline_install_and_reuse(self):
         archive, digest = self.bundle()
@@ -230,7 +251,8 @@ fi
         archive, digest = self.bundle()
         variables = os.environ.copy()
         variables.update(SCRAPERX_TOOLCHAIN_CACHE_DIR=str(self.cache),
-                         SCRAPERX_TOOLCHAIN_ARCHIVE_SHA256=digest)
+                         SCRAPERX_TOOLCHAIN_ARCHIVE_SHA256=digest,
+                         SCRAPERX_TOOLCHAIN_MANIFEST_SHA256=self.fixture_manifest_digest())
         commands = ["bash", str(INSTALL), "--from-archive", str(archive)]
         one = subprocess.Popen(commands, env=variables, stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE, text=True)
@@ -241,6 +263,9 @@ fi
         self.assertEqual(one.returncode, 0, err1)
         self.assertEqual(two.returncode, 0, err2)
         self.assertEqual(out1, out2)
+        self.offline_archive = archive
+        self.offline_digest = digest
+        self.offline_manifest_digest = self.fixture_manifest_digest()
         self.assertEqual(self.execute("--verify").returncode, 0)
 
     def test_failed_install_does_not_leave_partial_cache(self):
