@@ -4,6 +4,9 @@
 // run_plate_wreckage (G/H/I) and run_crane_wreckage (J/K/L) do.
 #include "sim_tests.hpp"
 
+#include "sim/vertical/vertical_route.hpp"
+
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -268,6 +271,75 @@ void run_mast_helix_wreckage() {
     std::cout << "PASS scraperx_sim vertical wreckage mast+helix: top_y=" << s.snapshot().player_position.y << '\n';
 }
 
+namespace {
+// The incline's helpers, as sim_tests_ground.cpp has them (copied).
+constexpr std::uint64_t kInclineDeck = scraperx::sim::vertical::Route::kInclineDynamicFirst;
+constexpr std::uint64_t kInclineTrip = kInclineDeck + 1;
+constexpr std::uint64_t kInclineBrake = kInclineDeck + 2;
+constexpr double kOffBrakeM = 1.0;
+constexpr double kNearHeadM = 4.0;
+constexpr double kOffBrakeNearM = 0.5;
+
+void incline_hold_on(Simulation &s, std::uint64_t entity, int ticks, double offset_x = 0.0) {
+    for (int i = 0; i < ticks; ++i) {
+        auto at = s.kit_body_position(s.kit_body_index(entity));
+        at.x -= offset_x;
+        const auto me = s.snapshot().player_position;
+        const double dx = at.x - me.x, dz = at.z - me.z, d = std::hypot(dx, dz);
+        const double gain = std::min(1.0, d / 0.3);
+        (void)s.set_move_input(d > 0.05 ? gain * dx / d : 0.0, d > 0.05 ? gain * dz / d : 0.0);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+}
+
+bool board_incline_trolley(Simulation &s) {
+    return walk_to(s, 6.0, -70.0, 20.0) && walk_to(s, -13.4, -86.0, 20.0) && walk_to(s, -13.4, -103.0, 12.0) &&
+           s.advance_frame(0.5).accepted && s.lift_state().machine == 5 && s.lift_state().role == 2 &&
+           walk_to(s, -10.0, -103.08, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 1;
+}
+} // namespace
+
+// The slab incline tripped with nobody aboard: on the trip plate, the pin
+// pulled, and straight back off onto the boarding platform; the slab sends
+// the empty trolley up. The way on: CALL from the boarding platform winds it
+// back down and re-arms it, and it is ridden to deck 3 on its brake.
+void run_incline_wreckage() {
+    Simulation s(InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(1.0);
+    require(board_incline_trolley(s), "incline wreck: onto the trolley");
+    incline_hold_on(s, kInclineTrip, 60);
+    require(s.lift_state().incline_state == 1, "incline wreck: the trip plate pulls the pin");
+    require(walk_to(s, -13.4, -103.0, 4.0, 0.15) && s.advance_frame(0.3).accepted && s.lift_state().role == 2,
+            "incline wreck: straight back off onto the boarding platform");
+    require(wait_for(s, 60.0, [&s](const scraperx::sim::Snapshot &) {
+                return s.lift_state().travels[5] > 0.99 && s.lift_state().incline_speed_mps < 0.05;
+            }),
+            "incline wreck: the trolley gone up empty");
+    (void)s.request_lift_action();
+    require(wait_for(s, 180.0, [&s](const scraperx::sim::Snapshot &) {
+                return s.lift_state().travels[5] < 0.005 && s.lift_state().incline_state == 0;
+            }),
+            "incline wreck: CALL from the boarding platform winds it down and re-arms it");
+    require(walk_to(s, -10.0, -103.08, 6.0) && s.advance_frame(0.5).accepted && s.lift_state().role == 1,
+            "incline wreck: back onto the trolley");
+    incline_hold_on(s, kInclineTrip, 60);
+    const double length = scraperx::sim::vertical::Route::kInclineSlabTravel;
+    for (int i = 0; i < 90 * 60; ++i) {
+        const auto lift = s.lift_state();
+        const double remaining = (1.0 - lift.travels[5]) * length;
+        const double allowed = std::min(2.5, std::sqrt(2.0 * 0.8 * std::max(0.0, remaining - 0.5)) + 0.2);
+        if (lift.travels[5] > 0.995 && lift.incline_speed_mps < 0.05) break;
+        incline_hold_on(s, kInclineBrake, 1,
+                        lift.incline_speed_mps > allowed ? 0.0 : remaining < kNearHeadM ? kOffBrakeNearM : kOffBrakeM);
+    }
+    require(s.lift_state().travels[5] > 0.995 && walk_to(s, -13.4, -120.4, 6.0) && walk_to(s, -13.4, -126.0, 8.0) &&
+                s.advance_frame(1.0).accepted && s.snapshot().death_count == 0 &&
+                s.snapshot().player_position.y > 33.7,
+            "incline wreck: ridden on its brake to the head and onto deck 3, alive");
+    std::cout << "PASS scraperx_sim vertical wreckage incline: deck3_y=" << s.snapshot().player_position.y << '\n';
+}
+
 // The crown gondola sent off with nobody aboard: Action from its cabin, the
 // rider straight back off onto the lower receiver; the cabin carries itself
 // over the crown empty. The way on: CALL from the receiver brings it back,
@@ -313,6 +385,7 @@ void run_crown_wreckage() {
 }
 
 void run_wreck_way_on() {
+    run_incline_wreckage();
     run_mast_helix_wreckage();
     run_crown_wreckage();
     run_de_wreckage();
