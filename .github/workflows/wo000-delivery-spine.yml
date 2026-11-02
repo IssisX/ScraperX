@@ -717,6 +717,18 @@ jobs:
           ! grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log
           test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 21
 
+      - name: The Matron's feet plant when she walks
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Upright walking feet stay where they were put while her body
+          # goes over them (matron_rig.gd upright plants); standing feet
+          # are already still, and the shuffle plants at two speeds.
+          timeout 180s tools/godot/godot --headless --path godot \
+            --script res://tests/matron_foot_plant_test.gd 2>&1 | tee artifacts/matron-foot-plant.log
+          ! grep -q '^MATRON_FOOT_PLANT FAIL' artifacts/matron-foot-plant.log
+          test "$(grep -c '^MATRON_FOOT_PLANT PASS' artifacts/matron-foot-plant.log)" -eq 7
+
       - name: Check Matron perception and physical contact presentation
         shell: bash
         run: |
