@@ -240,6 +240,10 @@ const POLE_RAD_S := 6.0
 # length: her real arm (the owner, 2026-11-02: never stretched; the native puts
 # every hold within it, matron.hpp kRealArmM, and bends her trunk to it).
 const HOLD_STRETCH_MAX := 1.05
+# A prop in her hands (the toolbox, the stock) keeps the old reach for now: its
+# own work, not the hold's (HOLD_WITH_REAL_ARMS.md is the hold's).
+const PROP_STRETCH_MAX := 2.7
+const PROP_SHOULDER_M := 0.4
 # Her look laid on her neck to this far (matron_view.gd NECK_TWIST_MAX), the
 # rest on her chest.
 const LOOK_NECK_MAX := 1.92
@@ -493,14 +497,15 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 # the wrist from where her pose has it toward `at_world` as far as `w`, the
 # arm drawn out (upper arm and forearm both, their "_x" bones slid) as long as
 # that reach needs, never past HOLD_STRETCH_MAX its own length.
-func hold_reach(s: String, at_world: Vector3, w: float) -> void:
+func hold_reach(s: String, at_world: Vector3, w: float, stretch_max := HOLD_STRETCH_MAX,
+		shoulder_m := HOLD_SHOULDER_M) -> void:
 	var target := skel.global_transform.affine_inverse() * at_world
 	var sh := _gpos("sh_" + s)
 	var el := _gpos("el_" + s)
 	var wr := _gpos("wr_" + s)
 	var arm := sh.distance_to(el) + el.distance_to(wr)
 	var base_s := (p["sh_" + s] as Node3D).scale.y if p.has("sh_" + s) else 1.0
-	var k_max := HOLD_STRETCH_MAX / maxf(base_s, 0.01)
+	var k_max := stretch_max / maxf(base_s, 0.01)
 	var want := wr.lerp(target, w)
 	var need := sh.distance_to(want)
 	var k := clampf(need / maxf(HOLD_ARM_OUT * arm, 0.01), 1.0, k_max)
@@ -509,7 +514,7 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 	if beyond > 0.0:
 		# the arm out as far as it goes: her shoulder pulled up out of her
 		# toward it
-		_shift_bone_global("sh_" + s, (want - sh).normalized() * minf(beyond, HOLD_SHOULDER_M))
+		_shift_bone_global("sh_" + s, (want - sh).normalized() * minf(beyond, shoulder_m))
 	if k > 1.0001:
 		for bn in ["sh_%s_x" % s, "el_%s_x" % s]:
 			var i: int = bone_idx[bn]
@@ -801,9 +806,9 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		if carrying or shoulder.distance_to(handle) < 2.5:
 			var two_hands := maxf(size.x, size.z) >= 0.38
 			var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
-			hold_reach("r", handle + across, 1.0)
+			hold_reach("r", handle + across, 1.0, PROP_STRETCH_MAX, PROP_SHOULDER_M)
 			if two_hands:
-				hold_reach("l", handle - across, 1.0)
+				hold_reach("l", handle - across, 1.0, PROP_STRETCH_MAX, PROP_SHOULDER_M)
 	# Her hand on the climber's ankle, and in the rip her other on his arm
 	# (the view keeps the last of each while her hand comes off it).
 	if float(view._w_hold) > 0.001:
