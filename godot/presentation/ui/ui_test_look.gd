@@ -54,6 +54,8 @@ func _look_set(set_name: String) -> bool:
 			ok = await _look_hold(false)
 		"fatal":
 			ok = await _look_hold(true)
+		"grade_ladder":
+			ok = await _look_grade_ladder()
 	_look_render(true)
 	return ok
 
@@ -112,6 +114,44 @@ func _look_moves() -> bool:
 	await _look_shot("pipe_side", "the same moment from her open side, the riser's face edge on: her hands and feet against it",
 		[90.0, -90.0, 115.0, -115.0], 4.0)
 	return true
+
+
+# --- grade ladder (x=12.0, z=-123.6): descending 11 m to grade, ascending to 11 m ---
+
+func _look_grade_ladder() -> bool:
+	var n: Object = _native()
+	# The grade-to-first-deck ladder: line x=12.0, z=-123.6, rungs y=1.45..10.81.
+	# Stage 1: Matron on 11 m deck head, descending the ladder toward grade.
+	n.debug_place_matron(Vector3(12.0, 11.0, -124.15))
+	n.debug_set_matron_stage(0)
+	await _look_sim(0.35)
+	# Sound at grade to guide her descent down the ladder
+	n.debug_matron_hear(Vector3(12.0, 0.0, -123.6))
+	var down_step := func() -> bool:
+		var m := _matron_state()
+		return bool(m["climbing"]) and Vector3(m["position"]).y - LOOK_STAND_CENTRE < 9.0
+	await _look_until(down_step, 15.0, 0.0)
+	await _look_shot("grade_ladder_descending", "descending the grade ladder (x=12, z=-123.6) from 11 m to 0 m: hands and feet on GradeLadderRung",
+		[160.0, -160.0, 90.0, -90.0], 4.0)
+
+	# Close-up framing on her hands and feet
+	var pts := _look_points(false)
+	await _look_shot("grade_ladder_rungs_detail", "close-up of hands and feet gripping GradeLadderRung bars during descent",
+		[180.0, 0.0], 2.5)
+
+	# Stage 2: Climbing back up from grade toward 11 m
+	n.debug_place_matron(Vector3(12.0, 0.0, -124.15))
+	n.debug_set_matron_stage(0)
+	await _look_sim(0.35)
+	n.debug_matron_hear(Vector3(12.0, 11.0, -123.6))
+	var up_step := func() -> bool:
+		var m := _matron_state()
+		return bool(m["climbing"]) and Vector3(m["position"]).y - LOOK_STAND_CENTRE > 3.0
+	await _look_until(up_step, 15.0, 0.0)
+	await _look_shot("grade_ladder_ascending", "climbing up the grade ladder toward the 11 m deck: rungs gripped under her hands",
+		[160.0, -160.0, 90.0, -90.0], 4.0)
+	return true
+
 
 
 # --- her hands on him: the grab, upside down, the rip; the fatality ----------
