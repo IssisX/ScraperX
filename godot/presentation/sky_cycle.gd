@@ -63,6 +63,7 @@ func setup(sun: DirectionalLight3D, fill: DirectionalLight3D, environment: Envir
 	# bright dome and read near-white (observed); the scene is lit by the sun,
 	# the fill, the sky ambient and its own lamps.
 	_environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	_air_depth_end = _environment.fog_depth_end
 	_apply()
 
 
@@ -102,7 +103,10 @@ func set_hour(value: float) -> void:
 
 
 func _process(delta: float) -> void:
-	if day_minutes <= 0.0 or _sun == null:
+	if _sun == null:
+		return
+	_thin_air()
+	if day_minutes <= 0.0:
 		return
 	hour = fposmod(hour + delta * 24.0 / (day_minutes * 60.0), 24.0)
 	_step_clock += delta
@@ -147,13 +151,51 @@ func _apply() -> void:
 	_sky_material.set_shader_parameter(&"day_factor", day)
 	_sky_material.set_shader_parameter(&"dusk_factor", dusk)
 	_sky_material.set_shader_parameter(&"light_is_moon", is_moon)
-	# Fog is the air between the eye and the far slopes: it takes the colour
-	# of the horizon it is lit against.
+	_apply_air(day, dusk)
+	# Eyes adapt: night is dark, not black -- the yard stays readable by
+	# moonlight and its own lamps.
+	_environment.tonemap_exposure = lerpf(NIGHT_EXPOSURE, DAY_EXPOSURE, day) * exposure_scale
+
+
+# The air between the eye and the far slopes (main.tscn holds the rest: depth
+# fog from 100 m to 3 km, curve 0.7, at most 80%, aerial perspective
+# 0.6, no height term). It is lit at the sky's own brightness, so distance
+# lightens toward the horizon instead of greying toward the rock; the aerial
+# perspective takes the dome's colour in each direction, so the haze warms
+# on the sun's side and goes dark with the night sky, never glowing above it.
+# The height term is off: Godot's is the same at every distance, so it laid a
+# flat veil over the yard and turned the valley floor into one sheet.
+# water_feel.gd holds the air (AIR_HELD_META) while the eye is under water.
+const AIR_HELD_META := &"air_held"
+const AIR_ENERGY := 1.0
+const AIR_SUN_SCATTER_DAY := 0.15
+const AIR_SUN_SCATTER_NIGHT := 0.04
+# Haze thins with height: the eye at y sees the air of the yard stretched by
+# exp(y / AIR_THIN_HEIGHT), so the range that is half-veiled from the yard is
+# about half as veiled from the 800 m summit (observed: at the yard's depth
+# the summit view went milky). Followed every frame; it is two float writes.
+const AIR_THIN_HEIGHT := 1200.0
+var _air_depth_end := 3000.0
+
+
+func _thin_air() -> void:
+	if _environment.has_meta(AIR_HELD_META):
+		return
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var depth_end := _air_depth_end * exp(maxf(camera.global_position.y, 0.0) / AIR_THIN_HEIGHT)
+	if absf(depth_end - _environment.fog_depth_end) > 1.0:
+		_environment.fog_depth_end = depth_end
+
+
+func _apply_air(day: float, dusk: float) -> void:
+	if _environment.has_meta(AIR_HELD_META):
+		return
+	# The horizon colours are sky.gdshader's horizon_day and horizon_night.
 	var horizon_day := Color(0.60, 0.66, 0.73)
 	var horizon_night := Color(0.08, 0.10, 0.155)
 	var fog := horizon_night.lerp(horizon_day, day).lerp(Color(0.78, 0.55, 0.40), dusk * 0.4)
 	_environment.fog_light_color = fog
-	_environment.fog_light_energy = lerpf(0.25, 0.4, day)
-	# Eyes adapt: night is dark, not black -- the yard stays readable by
-	# moonlight and its own lamps.
-	_environment.tonemap_exposure = lerpf(NIGHT_EXPOSURE, DAY_EXPOSURE, day) * exposure_scale
+	_environment.fog_light_energy = AIR_ENERGY
+	_environment.fog_sun_scatter = lerpf(AIR_SUN_SCATTER_NIGHT, AIR_SUN_SCATTER_DAY, day)

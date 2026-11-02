@@ -14,6 +14,9 @@ const TINT := Color(0.09, 0.16, 0.13, 0.0)
 const TINT_ALPHA := 0.62
 const FOG_COLOR := Color(0.07, 0.12, 0.1)
 const FOG_DENSITY := 0.35
+const FOG_FIELDS := [&"fog_enabled", &"fog_mode", &"fog_light_color", &"fog_light_energy",
+	&"fog_density", &"fog_aerial_perspective", &"fog_sun_scatter", &"fog_height_density"]
+const AIR_HELD_META := &"air_held"   # sky_cycle.gd AIR_HELD_META
 
 var _entries := -1
 var _strokes := -1
@@ -109,15 +112,24 @@ func _apply_fog(camera: Camera3D) -> void:
 	if world == null or world.environment == null:
 		return
 	var env := world.environment
+	# The air above is depth fog lit by the sky (sky_cycle.gd _apply_air); the
+	# murk is exponential and lit by nothing, so every air field is saved,
+	# replaced and given back, and the sky cycle is held off it meanwhile.
 	if _under > 0.001:
 		if _fog_saved.is_empty():
-			_fog_saved = {"enabled": env.fog_enabled, "color": env.fog_light_color,
-				"density": env.fog_density}
+			for key in FOG_FIELDS:
+				_fog_saved[key] = env.get(key)
+			env.set_meta(AIR_HELD_META, true)
 		env.fog_enabled = true
-		env.fog_light_color = (_fog_saved["color"] as Color).lerp(FOG_COLOR, _under)
-		env.fog_density = lerpf(float(_fog_saved["density"]), FOG_DENSITY, _under)
+		env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
+		env.fog_light_energy = 1.0
+		env.fog_aerial_perspective = 0.0
+		env.fog_sun_scatter = 0.0
+		env.fog_height_density = 0.0
+		env.fog_light_color = (_fog_saved["fog_light_color"] as Color).lerp(FOG_COLOR, _under)
+		env.fog_density = FOG_DENSITY * _under
 	elif not _fog_saved.is_empty():
-		env.fog_enabled = bool(_fog_saved["enabled"])
-		env.fog_light_color = _fog_saved["color"]
-		env.fog_density = float(_fog_saved["density"])
+		for key in FOG_FIELDS:
+			env.set(key, _fog_saved[key])
+		env.remove_meta(AIR_HELD_META)
 		_fog_saved = {}

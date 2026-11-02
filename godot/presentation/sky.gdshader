@@ -101,5 +101,15 @@ void sky() {
 		col = mix(col, cloud, density * 0.92);
 	}
 
+	// Dither: Compatibility draws into 8 bits with no debanding, so the wide,
+	// soft horizon gradient bands on an AMOLED. Triangular noise of about one
+	// output step, relative to the colour so it holds at night's exposure as
+	// at noon's. Screen pixels only; the radiance map stays smooth.
+	if (!AT_CUBEMAP_PASS) {
+		vec2 pixel = floor(FRAGCOORD.xy);
+		float noise = hash(pixel) - hash(pixel + vec2(57.0, 113.0));
+		col *= 1.0 + noise * 0.012;
+	}
+
 	COLOR = col;
 }
