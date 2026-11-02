@@ -82,6 +82,15 @@ occurred. The owner rule requiring visual review remains in `00_START_HERE.md` r
   GitHub comments each need the owner's approval (10-29).
 - Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
   board, linked once from #3.
+- Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
+  and wasteful, we should create another whenever that happens, which you determine for me"*). The
+  integrator decides, without asking him, and covers every Claude session, its own included.
+  - When to change: a session that has compacted twice, has run 48 hours, or spends its turns
+    re-reading more than working.
+  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`), start the fresh
+    session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
+    retire the old one once its in-flight helpers have reported.
+  - A worker session whose job has landed is retired, never reused for new work.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 

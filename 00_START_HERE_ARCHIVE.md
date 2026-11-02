@@ -548,3 +548,12 @@ index of the tree.
 ## 2026-10-31 — Merge blockers are substantive
 
 Owner decision: PR merge gating must ignore spelling, wording, and commit-message or tag nitpicks. Those nits must not cause commit rewrites or CI reruns. A merge is blocked only by a real physics, gameplay, or test failure. This decision was issued while ordering PR #55 and the combined #62/#59/#60 work landed after their functional proof jobs passed.
+
+---
+
+## 2026-11-02 — The integrator watches the sessions
+
+Owner, to the integrator: *"Remember, you need to also monitor the sessions, and if they get too long
+and wasteful, we should create another whenever that happens, which you determine for me."* The
+integrator decides when a Claude session (its own included) is too long or wasteful, hands off to a
+fresh one and retires the old one, without asking him (rule 62; `CLAUDE.md`, Managing the agents).
