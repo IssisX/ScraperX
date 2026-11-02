@@ -14,9 +14,32 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # before the server can look for it.
 # A failed install still starts the server: its project-config tools need no
 # Godot, and it names the missing binary itself when a tool needs one.
-# A preinstalled shared bundle takes precedence over fresh downloads.
-# It is opt-in through SCRAPERX_TOOLCHAIN_DIR and is never auto-fetched here.
-if [[ -z "${GODOT_PATH:-}" && -x "${SCRAPERX_TOOLCHAIN_DIR:-}/bin/godot" ]]; then
+# A preinstalled shared bundle is opt-in through SCRAPERX_TOOLCHAIN_DIR.
+# Never execute its binaries or MCP JavaScript before the pinned manifest and
+# entire inventory pass the same verification gate as install.sh.
+toolchain_verified=false
+if [[ -n "${SCRAPERX_TOOLCHAIN_DIR:-}" ]]; then
+  if bash "${repo_root}/tools/shared-toolchain/install.sh" --verify >/dev/null 2>&1; then
+    toolchain_verified=true
+  else
+    echo "godot-mcp.sh: shared toolchain failed integrity verification; using independent tools" >&2
+    if [[ "${GODOT_PATH:-}" == "${SCRAPERX_TOOLCHAIN_DIR}/bin/godot" ]]; then
+      unset GODOT_PATH
+    fi
+    # The inherited PATH may also contain this untrusted cache's bin directory.
+    safe_path=()
+    IFS=: read -r -a path_parts <<< "${PATH:-}"
+    for path_part in "${path_parts[@]}"; do
+      if [[ "${path_part}" != "${SCRAPERX_TOOLCHAIN_DIR}/bin" ]]; then
+        safe_path+=("${path_part}")
+      fi
+    done
+    PATH="$(IFS=:; echo "${safe_path[*]}")"
+    export PATH
+  fi
+fi
+if [[ "$toolchain_verified" == true && -z "${GODOT_PATH:-}" &&
+      -x "${SCRAPERX_TOOLCHAIN_DIR}/bin/godot" ]]; then
   export GODOT_PATH="${SCRAPERX_TOOLCHAIN_DIR}/bin/godot"
 fi
 if [[ "${CLAUDE_CODE_REMOTE:-}" == "true" && -z "${GODOT_PATH:-}" ]]; then
@@ -26,8 +49,8 @@ if [[ "${CLAUDE_CODE_REMOTE:-}" == "true" && -z "${GODOT_PATH:-}" ]]; then
 fi
 
 mcp_command=(npx --yes "${SERVER_PACKAGE}")
-if [[ -x "${SCRAPERX_TOOLCHAIN_DIR:-}/bin/node" &&
-      -f "${SCRAPERX_TOOLCHAIN_DIR:-}/mcp/node_modules/godot-mcp-runtime/dist/index.js" ]]; then
+if [[ "$toolchain_verified" == true && -x "${SCRAPERX_TOOLCHAIN_DIR}/bin/node" &&
+      -f "${SCRAPERX_TOOLCHAIN_DIR}/mcp/node_modules/godot-mcp-runtime/dist/index.js" ]]; then
   mcp_command=("${SCRAPERX_TOOLCHAIN_DIR}/bin/node"
     "${SCRAPERX_TOOLCHAIN_DIR}/mcp/node_modules/godot-mcp-runtime/dist/index.js")
 fi
