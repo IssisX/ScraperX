@@ -45,6 +45,7 @@ const BACK_RADIUS := 0.17
 # cell, kept out of her thigh and shin capsules (the build's measured radii
 # plus SKIRT_CLEAR_M). The skirt is skinned to the proxy's bones.
 const SKIRT_TURN := true
+const SKIRT_TURN_SPAN := 1
 const SKIRT_DAMP := 0.9
 const SKIRT_ITERATIONS := 8
 const SKIRT_CLEAR_M := 0.012
@@ -1053,15 +1054,14 @@ func step_skirt(delta: float) -> void:
 				var fix := d * ((l - float(link[4])) / l)
 				_sk_pts[ac][ar] = pa + fix * (wa / (wa + wb))
 				_sk_pts[bc][br] = pb - fix * (wb / (wa + wb))
-	# The bones from the points. Each bone is placed on its point and turned
-	# only as her pelvis is: neighbours share one turn, so the blend between
-	# them is the cloth's own shape between its points (a bone turned to its
-	# own triangle tears the blend apart, measured 3.4x).
+	# The bones from the points. Each bone sits on its point, turned as the
+	# cloth there turns (down its column, round its ring, from one neighbour
+	# each side; wider spans measured worse).
 	var pturn := pelvis.basis.orthonormalized()
 	for c in _sk_cols:
 		var parent := skel.get_bone_global_pose(_sk_body)
-		var cl := (c + _sk_cols - 1) % _sk_cols
-		var cr := (c + 1) % _sk_cols
+		var cl := (c + _sk_cols - SKIRT_TURN_SPAN) % _sk_cols
+		var cr := (c + SKIRT_TURN_SPAN) % _sk_cols
 		for r in _sk_rows + 1:
 			var bi: int = _sk_bones[c][r]
 			var rest := skel.get_bone_global_rest(bi)
