@@ -68,7 +68,7 @@ HAIR_SEGMENTS = 5
 HAIR_SEGMENT_M = 0.09
 # Her skirt's cloth proxy: columns round her, segments from waist to hem.
 SKIRT_COLS = 32
-SKIRT_ROWS = 6
+SKIRT_ROWS = 10
 
 # Her dress: a faded institutional blue-grey, so it reads apart from her pale
 # skin and grey hair (the owner, 2026-10-20: "everything is a shade of white
@@ -963,13 +963,28 @@ def build():
             continue
         rel = sl - np.array([cx, 0, czs])
         rad[i] = (rel[:, [0, 2]] @ U[:, [0, 2]].T).max(0)
-    ease = 0.016 + 0.018 * np.clip(ts * 3, 0, 1) + 0.055 * ts ** 1.5   # roomy over her hips and belly
+    ease = 0.016 + 0.018 * np.clip(ts * 3, 0, 1) + 0.10 * ts ** 1.5   # roomy over her hips and belly
     rad = rad + ease[:, None]
     for i in range(1, nring):
         rad[i] = np.maximum(rad[i], rad[i - 1] - 0.002)
     for _ in range(3):
         rad = 0.25 * np.roll(rad, 1, 1) + 0.5 * rad + 0.25 * np.roll(rad, -1, 1)
     folds = 1.0 + 0.035 * ts[:, None] ** 1.2 * np.sin(th[None, :] * 11 + 0.6 * np.sin(th[None, :] * 3))
+    # Tears and folds turn only at the cloth's columns, straight between
+    # them, so each torn segment of hem and each fold face is the blend of
+    # the proxy points at its ends (a tear between columns tore the skin).
+    jc_ = np.arange(SKIRT_COLS + 1) * nseg / SKIRT_COLS
+    js_ = np.arange(nseg)
+
+    def by_columns(f):
+        at = f[..., np.round(jc_[:-1]).astype(int) % nseg]
+        at = np.concatenate([at, at[..., :1]], -1)
+        if f.ndim == 1:
+            return np.interp(js_, jc_, at)
+        return np.stack([np.interp(js_, jc_, a_) for a_ in at])
+    raise_m = by_columns(raise_m)
+    folds = by_columns(folds)
+    rad = by_columns(rad)
     rings = []
     for i, t in enumerate(ts):
         y = top_y + (hem_y + raise_m - top_y) * t    # each column ends at its own torn hem

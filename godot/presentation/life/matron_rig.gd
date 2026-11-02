@@ -44,7 +44,7 @@ const BACK_RADIUS := 0.17
 # with distance constraints down each column, round each ring and across each
 # cell, kept out of her thigh and shin capsules (the build's measured radii
 # plus SKIRT_CLEAR_M). The skirt is skinned to the proxy's bones.
-const SKIRT_TURN := true
+const SKIRT_TURN := false
 const SKIRT_TURN_SPAN := 1
 const SKIRT_DAMP := 0.9
 const SKIRT_ITERATIONS := 8
