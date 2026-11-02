@@ -1377,9 +1377,20 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
                            (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
         pose_hand(dt, rail_pose(at, feet, rail_up_ + kBeltUpM + 0.1F, kBeltOutM + kOverPushM, kBeltSideM),
                   0.8F * kHandSpeedMps);
+        // Square across the rail first: his ankle drawn in behind her till his
+        // body points out over it (not along it); then up.
+        const Vec3 axis = physics_.GetBodyInterface().GetRotation(player_).RotateAxisY();
+        const Vec3 along(rim_nz_, 0.0F, -rim_nx_);
+        const bool square = std::abs(axis.Dot(along)) < 0.45F;
+        const RVec3 in = rail_pose(at, feet, rail_up_ + kOverInUpM, kOverInOutM, kHangSideM);
         const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
+        if (!square && hold_s_ < 3.0F && !over_up_) {
+            pose_hand2(dt, in, 0.8F * kHandSpeedMps);
+            break;
+        }
+        over_up_ = true;   // squared (or as square as he comes): up from here
         pose_hand2(dt, up, 0.8F * kHandSpeedMps);
-        if ((past > kOverOutPastM && Vec3(up - hand2_target_).Length() < 0.1F) || hold_s_ > 4.0F) {
+        if ((past > kOverOutPastM && Vec3(up - hand2_target_).Length() < 0.1F) || hold_s_ > 6.0F) {
             // His middle out: her first hand from his belt to his ankle.
             begin_regrip(Grip::Ankle);
             hold_phase_ = 6;
@@ -1553,12 +1564,13 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         // her muscle (capped) put the pull on the wrist.
         // Away from her other hand, which keeps the ankle: the body drawn
         // out between her two hands, whichever side the arm is on.
-        // With her real arm (kRealArmM) the pull is hers, not her arm's
-        // reach: she wrenches the wrist in to her chest while her first hand
-        // holds his body out (the pin), her pull capped (pull2_n_).
         Vec3 away = Vec3(player_wrist_ - hand_target_);
         away = away.Length() > 1.0e-3F ? away.Normalized() : Vec3(0.0F, -1.0F, 0.0F);
-        const RVec3 chest = shoulder_of(at, -1.0F) + Vec3(0.0F, -0.25F, 0.0F) + fwd * 0.1F;
+        // With her real arm (kRealArmM) the pull is hers, not her arm's
+        // reach: she wrenches the wrist in past her shoulder while her first
+        // hand holds his body out (the pin), her pull capped (pull2_n_) over
+        // the stretch to it (physics_world_arm.cpp kWrenchSpringScale).
+        const RVec3 chest = shoulder_of(at, -1.0F) - fwd * 0.2F;
         const RVec3 wrench = Vec3(chest - player_wrist_).Dot(away) < -0.3F ? chest : player_wrist_ + away * 0.8F;
         // Her wrench builds at half the pace of her reach, not all at once.
         pose_hand2(dt, wrench, 4.0F * kArmPullMoveMps);
