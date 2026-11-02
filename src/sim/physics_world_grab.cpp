@@ -595,7 +595,15 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         }
     }
     swat_down_s_ = std::max(0.0F, swat_down_s_ - dt);
-    if (player_free_rot_ && grip_ == nullptr && !matron_->claimed() && swat_down_s_ <= 0.0F) {
+    // In her hands (either hand, or between grips), no handback, and none
+    // begun on her deck carried over: let go over the drop, he falls as he
+    // turns, not righted in the air.
+    const bool in_hand = grip_ != nullptr || hand2_grip_ != nullptr || matron_->regripping();
+    if (in_hand) {
+        upright_s_ = 0.0F;
+        upright_contact_ticks_ = 0;
+    }
+    if (player_free_rot_ && !in_hand && !matron_->claimed() && swat_down_s_ <= 0.0F) {
         // The handback: on the ground (or a hold in hand), a capped PD torque
         // to upright; the DOFs lock once it is and the pose is clear.
         upright_contact_ticks_ = grounded_ || traversal_state_ != TraversalState::None || in_water_
