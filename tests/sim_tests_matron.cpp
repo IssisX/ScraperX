@@ -1036,7 +1036,7 @@ void run_matron_crash() {
                           << " noise=" << m.noise_heard
                           << " pos=(" << m.position.x << "," << m.position.z << ")"
                           << " lead=(" << m.lead_x << "," << m.lead_z << ")"
-                          << " target=(" << m.target_x << "," << m.target_z << ")\\n";
+                          << " target=(" << m.target_x << "," << m.target_z << ")\n";
             }
             stood_down = m.state == kStateGuarding;
         }
