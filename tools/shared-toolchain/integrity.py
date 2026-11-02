@@ -33,6 +33,10 @@ def validate_archive(archive_path):
                 target = member.linkname
                 if not target or target.startswith("/"):
                     raise ValueError(f"unsafe link {name!r} -> {target!r}")
+                # A parent component may traverse an earlier symlink, even when
+                # lexical normalization appears to stay under the archive root.
+                if ".." in target.split("/"):
+                    raise ValueError(f"link escapes archive root via parent traversal: {name!r} -> {target!r}")
                 if member.issym():
                     target = posixpath.normpath(posixpath.join(posixpath.dirname(name), target))
                 else:
