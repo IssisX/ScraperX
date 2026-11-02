@@ -988,8 +988,12 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // The collar put straight; then she walks off.
             pose_hand(dt, player + RVec3(0.0, 0.5, 0.0), 0.5F * kHandSpeedMps);
             if (hold_s_ >= kSpareSetSeconds) {
-                calm_s_ = kSpareCalmSeconds;
+                // She walks off for as long as her hands stay off him (rule
+                // 35: 30 s after a tear she lets him run), not hunting him
+                // meanwhile with no way to take hold (her body would only
+                // shove him along, off an edge).
                 grab_cooldown_s_ = std::max(kSpareCalmSeconds, hands_off_after_hold());
+                calm_s_ = grab_cooldown_s_;
                 end_hold(State::Shuffling);
             }
         }
