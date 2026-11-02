@@ -1,3 +1,14 @@
+**Decided 2026-11-02 by Claude for the owner** (*"Make the other decisions for me."*; he can overturn any), each by its pick below:
+- 1, the radio: foreman.
+- 6, her wrecking: stock first.
+- 7, the first pressure idea: gusts.
+- 8, the gravity balance: skip.
+- 9, real levers: the forklift, as a trial.
+- 10, a best time or ghost: no.
+- 11, store details: later.
+
+His own call the same day: her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
 # Decisions waiting on the owner (2026-10-29)
