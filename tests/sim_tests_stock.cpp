@@ -127,8 +127,12 @@ void run_loose_stock() {
         for (int level = 1; level <= 13; ++level) {
             rings.push_back(11.0 * static_cast<double>(level));
         }
-        for (int k = 0; k <= 20; ++k) {
+        for (int k = 0; k <= 10; ++k) {
             rings.push_back(176.25 + 22.0 * static_cast<double>(k));
+        }
+        // PE 2: the bands' rings above 396.25 m, to 616.25 m, gated as well.
+        for (double top = 418.25; top <= 616.3; top += 22.0) {
+            rings.push_back(top);
         }
         std::vector<int> per_ring(rings.size(), 0);
         int unassigned = 0;
