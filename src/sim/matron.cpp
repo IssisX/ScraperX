@@ -2924,8 +2924,13 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             } else if (elsewhere && take_way(dt, at, account)) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable), or by her map's ways across
-                // the tower (its ladders up and down), or up a climb.
-                step_turn(dt, d, heard_level_);
+                // the tower (its ladders up and down), or up a climb. A mover
+                // that opts out of Turn cannot start one on the same tick it
+                // takes her body; a Turn already active still spends time.
+                const Mover *way = holder();
+                if (way == nullptr || way->view().turns || turn_ != Turn::None) {
+                    step_turn(dt, d, heard_level_);
+                }
                 break;
             } else {
                 // A pest's mischief first: what she holds thrown at the player
