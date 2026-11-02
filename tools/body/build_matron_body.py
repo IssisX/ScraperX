@@ -66,6 +66,9 @@ BODY_AGE = [("targets/stomach/stomach-pregnant-incr.target", 0.55),   # the soft
 HAIR_CHAINS = 20
 HAIR_SEGMENTS = 5
 HAIR_SEGMENT_M = 0.09
+# Her skirt's cloth proxy: columns round her, segments from waist to hem.
+SKIRT_COLS = 16
+SKIRT_ROWS = 6
 
 # Her dress: a faded institutional blue-grey, so it reads apart from her pale
 # skin and grey hair (the owner, 2026-10-20: "everything is a shade of white
@@ -972,7 +975,77 @@ def build():
         y = top_y + (hem_y + raise_m - top_y) * t    # each column ends at its own torn hem
         rings.append(np.stack([cx + U[:, 0] * rad[i] * folds[i], y, czs + U[:, 2] * rad[i] * folds[i]], 1))
 
+    # The skirt is cloth (#89, ruling 11-02 4:18 PM): a coarse proxy of
+    # SKIRT_COLS columns of SKIRT_ROWS segments, hung from her pelvis, that
+    # matron_rig.gd step_skirt() moves as cloth; the skirt is skinned to the
+    # proxy's bones, not to her thighs. Its bind shape is its rest shape (hung
+    # on her standing pelvis), so an edge's as-loaded length is its length as
+    # cloth at rest.
+    i_rows = [int(round(r * (nring - 1) / SKIRT_ROWS)) for r in range(SKIRT_ROWS + 1)]
+    j_cols = [int(round(c * nseg / SKIRT_COLS)) % nseg for c in range(SKIRT_COLS)]
+    on_body = np.zeros(len(names))
+    on_body[col["body"]] = 1.0
+
+    def body_bind(P):
+        return h.unskin_points(np.asarray(P, float), np.tile(on_body, (len(P), 1)), Srest)
+    sk_pts = np.array([[body_bind(rings[i][[j]])[0] for i in i_rows] for j in j_cols])   # (cols, rows + 1, 3)
+    sk_names = []
+    for c_ in range(SKIRT_COLS):
+        parent = "body"
+        row_names = []
+        for r_ in range(SKIRT_ROWS):
+            name = "sk%d_%d" % (c_, r_)
+            add_bone(name, parent, sk_pts[c_, r_], "cloth")
+            names.append(name)
+            col[name] = len(names) - 1
+            row_names.append(name)
+            parent = name
+        sk_names.append(row_names)
+    Wfull = np.concatenate([Wfull, np.zeros((len(Wfull), SKIRT_COLS * SKIRT_ROWS))], 1)
+    Srest = h.rest_mats(bones, byname)
+    on_body = np.zeros(len(names))
+    on_body[col["body"]] = 1.0
+    # Her legs as the cloth meets them: a capsule round each thigh and shin,
+    # its radius the leg's own (rest pose), in bind space.
+    rest_at = {b["name"]: (Srest[i_] @ np.r_[b["pos"], 1.0])[:3] for i_, b in enumerate(bones)}
+    capsules = []
+    for s_ in "lr":
+        for a_, b_ in (("hp_" + s_, "kn_" + s_), ("kn_" + s_, "an_" + s_)):
+            A, B = rest_at[a_], rest_at[b_]
+            ax_ = (B - A) / np.linalg.norm(B - A)
+            sel = Vr[is_body & (wsum(a_, a_ + "_x") > 0.5)]
+            u_ = (sel - A) @ ax_
+            sel = sel[(u_ > 0.1 * np.linalg.norm(B - A)) & (u_ < 0.9 * np.linalg.norm(B - A))]
+            d_ = np.linalg.norm(np.cross(sel - A, ax_), axis=1)
+            capsules.append([a_, b_, float(np.percentile(d_, 90)) if len(d_) else 0.06])
+
     def skirt_w(P):
+        """Each point on the two nearest columns and, down each, the two
+        nearest segments."""
+        P = np.asarray(P, float)
+        Wk = np.zeros((len(P), len(names)))
+        az = np.arctan2(P[:, 0] - cx, P[:, 2] - czs) % (2 * math.pi)
+        fc = az / (2 * math.pi) * SKIRT_COLS
+        c0 = np.floor(fc).astype(int) % SKIRT_COLS
+        a = fc - np.floor(fc)
+        for cc, wc in ((c0, 1.0 - a), ((c0 + 1) % SKIRT_COLS, a)):
+            for n_ in range(len(P)):
+                ys = sk_pts[cc[n_], :, 1]
+                fr = float(np.interp(-P[n_, 1], -ys, np.arange(SKIRT_ROWS + 1)))
+                r0 = min(int(fr), SKIRT_ROWS - 1)
+                fra = min(fr - r0, 1.0)
+                r1 = min(r0 + 1, SKIRT_ROWS - 1)
+                Wk[n_, col[sk_names[cc[n_]][r0]]] += wc[n_] * (1.0 - fra)
+                Wk[n_, col[sk_names[cc[n_]][r1]]] += wc[n_] * fra
+        # Snap to whole 1/257 steps that sum exactly: each is 255 of Godot's
+        # 16-bit weight units, so the stored weights still sum to one (a 1e-4
+        # shortfall moves a vertex ~1 cm when skinned 200 m from the origin).
+        q = np.round(Wk * 257.0)
+        rows_ = np.arange(len(P))
+        q[rows_, np.argmax(q, 1)] += 257.0 - q.sum(1)
+        return q / 257.0
+
+    def _old_skirt_w(P):
         Wk = np.zeros((len(P), len(names)))
         tt = np.clip((top_y - P[:, 1]) / (top_y - hem_y), 0, 1)
         thigh = 0.85 * tt ** 1.2
@@ -984,7 +1057,7 @@ def build():
         return Wk
 
     def to_bind(rs):
-        return [h.unskin_points(r, skirt_w(r), Srest) for r in rs]
+        return [body_bind(r) for r in rs]
     skirt = h.Part("skirt_cloth", "cloth")
     hem_ring = rings[-1]
     inner = [hem_ring, hem_ring * np.array([0.985, 1.0, 0.985]) + np.array([cx * 0.015, 0.02, czs * 0.015])]
@@ -1008,7 +1081,7 @@ def build():
         for q in range(4):
             a_ = 2 * q
             tri_ += [[a_, a_ + 2, a_ + 1], [a_ + 1, a_ + 2, a_ + 3]]
-        bind_pts = h.unskin_points(pts, skirt_w(pts), Srest)
+        bind_pts = body_bind(pts)
         nrm = np.tile(U[j], (len(pts), 1))
         skirt.add(bind_pts, nrm, np.zeros((len(pts), 2)), skirt_w(pts), tri_)
         skirt.add(bind_pts, -nrm, np.zeros((len(pts), 2)), skirt_w(pts), np.array(tri_)[:, ::-1])
@@ -1267,7 +1340,10 @@ def build():
         contacts["wr_" + s_] = {"knuckles": local("wr_" + s_, J["finger3-1%s____head" % mh])}
     eyes_out = {s: {"bone": "eye_" + s, "centre": [float(x) for x in eye_centre[s]]} for s in "lr"}
     json.dump({"bones": rig, "stats": stats, "contacts": contacts, "hair": {"chains": chains, "skull": [float(x) for x in head_c],
-               "skull_radius": 0.1}, "eyes": eyes_out}, open(os.path.join(OUT, "matron_rig.json"), "w"), indent=1)
+               "skull_radius": 0.1}, "eyes": eyes_out,
+               "skirt": {"cols": SKIRT_COLS, "rows": SKIRT_ROWS, "bones": sk_names,
+                         "points": [[[float(x) for x in pt] for pt in colm] for colm in sk_pts],
+                         "capsules": capsules}}, open(os.path.join(OUT, "matron_rig.json"), "w"), indent=1)
     json.dump(stats, open(os.path.join(OUT, "matron_stats.json"), "w"), indent=1)
     return stats, (V, VT, body_tris, Wfull, col, J, byname, in_hair, is_body)
 

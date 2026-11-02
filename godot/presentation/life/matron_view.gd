@@ -1032,6 +1032,7 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	fresh_frame = false
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
 	_rig.step_hair(delta)
+	_rig.step_skirt(delta)
 
 
 # Her joints, hips and limb swell go to this frame's pose on their springs

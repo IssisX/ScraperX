@@ -35,7 +35,6 @@
   "belt": 512,
   "buckle": 12,
   "shoes": 1333,
-  "music_box": 36,
   "skin": 18601,
   "stockings": 2452,
   "eyes": 1060,
@@ -46,6 +45,6 @@
   "lashes": 368,
   "hair": 27220
  },
- "triangles_total": 74122,
- "bones": 161
+ "triangles_total": 74086,
+ "bones": 257
 }

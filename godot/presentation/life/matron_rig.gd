@@ -40,6 +40,16 @@ const WIND_DIR := Vector3(0.93, 0.0, 0.37)
 const HAIR_ITERATIONS := 3
 const HAIR_JUMP_M := 1.0      # a root that moved this far in a frame (a respawn) restarts the hang
 const BACK_RADIUS := 0.17
+# Her skirt as cloth (#89): a proxy of points hung from her pelvis, verlet
+# with distance constraints down each column, round each ring and across each
+# cell, kept out of her thigh and shin capsules (the build's measured radii
+# plus SKIRT_CLEAR_M). The skirt is skinned to the proxy's bones.
+const SKIRT_DAMP := 0.9
+const SKIRT_ITERATIONS := 8
+const SKIRT_CLEAR_M := 0.012
+# Each row drawn toward its place hung on her hips, by this much a pass: the
+# top hugs her hips, the hem swings.
+const SKIRT_SHAPE := [0.0, 0.35, 0.18, 0.08, 0.04, 0.02, 0.01]
 
 var skel: Skeleton3D
 var view: Node3D
@@ -54,6 +64,16 @@ var _chains: Array = []
 var _skull_local := Vector3.ZERO
 var _skull_radius := 0.1
 var _wind_clock := 0.0
+var _sk_cols := 0
+var _sk_rows := 0
+var _sk_bones: Array = []       # [col][row] bone index
+var _sk_rest: Array = []        # [col][row + 1] bind position (skeleton space)
+var _sk_pts: Array = []
+var _sk_prev: Array = []
+var _sk_links: Array = []       # [a_col, a_row, b_col, b_row, rest length]
+var _sk_capsules: Array = []    # [bone a, bone b, radius]
+var _sk_body := -1
+var _sk_dbg := 0
 
 
 func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
@@ -68,6 +88,7 @@ func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
 		if int(bone_idx[b["name"]]) < 0:
 			push_error("matron rig: the body has no bone %s" % b["name"])
 	_place_pivots()
+	_setup_skirt(rig.get("skirt", {}))
 	var hair: Dictionary = rig.get("hair", {})
 	var head_at := _pos("head")
 	for c in hair.get("chains", []):
@@ -917,6 +938,162 @@ func step_hair(delta: float) -> void:
 			var rot := Quaternion(Vector3.DOWN, local_dir) if local_dir.dot(Vector3.DOWN) > -0.999 else Quaternion(Vector3.RIGHT, PI)
 			skel.set_bone_pose_rotation(bi, rot)
 			parent_basis = parent_basis * Basis(rot)
+
+
+func _setup_skirt(sk: Dictionary) -> void:
+	if sk.is_empty():
+		return
+	_sk_cols = int(sk["cols"])
+	_sk_rows = int(sk["rows"])
+	_sk_body = skel.find_bone("body")
+	for c in _sk_cols:
+		var row_b: Array = []
+		for n in sk["bones"][c]:
+			row_b.append(skel.find_bone(n))
+		_sk_bones.append(row_b)
+		var row_p: Array = []
+		for pt in sk["points"][c]:
+			row_p.append(_v(pt))
+		_sk_rest.append(row_p)
+	for c in _sk_cols:
+		var c1 := (c + 1) % _sk_cols
+		for r in _sk_rows + 1:
+			if r < _sk_rows:
+				_sk_link(c, r, c, r + 1)
+				_sk_link(c, r, c1, r + 1)
+				_sk_link(c1, r, c, r + 1)
+			if r > 0:
+				_sk_link(c, r, c1, r)
+				# bending: two along, two round, so a row cannot fold flat
+				_sk_link(c, r, (c + 2) % _sk_cols, r)
+			if r + 2 <= _sk_rows:
+				_sk_link(c, r, c, r + 2)
+	# A capsule never reaches a point of the skirt as it hangs at rest: the
+	# cloth at rest is the shape it was made in.
+	for cap in sk.get("capsules", []):
+		var a := skel.get_bone_global_rest(skel.find_bone(str(cap[0]))).origin
+		var b := skel.get_bone_global_rest(skel.find_bone(str(cap[1]))).origin
+		var radius := float(cap[2])
+		for c in _sk_cols:
+			for r in range(1, _sk_rows + 1):
+				var q: Vector3 = _sk_rest[c][r]
+				var ab := b - a
+				var t := clampf((q - a).dot(ab) / maxf(ab.length_squared(), 1e-8), 0.0, 1.0)
+				radius = minf(radius, q.distance_to(a + ab * t) - SKIRT_CLEAR_M - 0.005)
+		_sk_capsules.append([cap[0], cap[1], maxf(radius, 0.02)])
+
+
+func _sk_link(ac: int, ar: int, bc: int, br: int) -> void:
+	_sk_links.append([ac, ar, bc, br, (_sk_rest[ac][ar] as Vector3).distance_to(_sk_rest[bc][br])])
+
+
+# The skirt, once a frame after her pose: in skeleton space throughout.
+func step_skirt(delta: float) -> void:
+	if _sk_cols == 0 or _sk_body < 0:
+		return
+	var dt := clampf(delta, 1.0 / 240.0, 1.0 / 30.0)
+	var to_skel := skel.global_transform.affine_inverse()
+	# Her pelvis now, against its bind: where the waist ring hangs.
+	var pelvis := skel.get_bone_global_pose(_sk_body) * skel.get_bone_global_rest(_sk_body).affine_inverse()
+	var g := to_skel.basis * HAIR_GRAVITY
+	var caps: Array = []
+	for cap in _sk_capsules:
+		caps.append([to_skel * bone_world(str(cap[0])).origin, to_skel * bone_world(str(cap[1])).origin, float(cap[2]) + SKIRT_CLEAR_M])
+	var fresh := _sk_pts.size() != _sk_cols or (_sk_pts[0][0] as Vector3).distance_to(pelvis * (_sk_rest[0][0] as Vector3)) > HAIR_JUMP_M
+	if fresh:
+		_sk_pts.clear()
+		_sk_prev.clear()
+		for c in _sk_cols:
+			var a: Array = []
+			var b: Array = []
+			for r in _sk_rows + 1:
+				a.append(pelvis * (_sk_rest[c][r] as Vector3))
+				b.append(pelvis * (_sk_rest[c][r] as Vector3))
+			_sk_pts.append(a)
+			_sk_prev.append(b)
+	for c in _sk_cols:
+		var pc: Array = _sk_pts[c]
+		var vc: Array = _sk_prev[c]
+		for r in _sk_rows + 1:
+			if r == 0:
+				pc[0] = pelvis * (_sk_rest[c][0] as Vector3)
+				vc[0] = pc[0]
+				continue
+			var cur: Vector3 = pc[r]
+			var vel: Vector3 = (cur - (vc[r] as Vector3)) * SKIRT_DAMP
+			vc[r] = cur
+			pc[r] = cur + vel + g * dt * dt
+	# Out of her legs first, then the cloth's own lengths last, so it never
+	# stretches; a point the lengths pull back into a leg is pushed out again
+	# next pass (and next frame).
+	for _it in SKIRT_ITERATIONS:
+		for c in _sk_cols:
+			for r in range(1, _sk_rows + 1):
+				var q: Vector3 = _sk_pts[c][r]
+				q = q.lerp(pelvis * (_sk_rest[c][r] as Vector3), float(SKIRT_SHAPE[mini(r, SKIRT_SHAPE.size() - 1)]))
+				for cap in caps:
+					q = _out_of_capsule(q, cap[0], cap[1], cap[2])
+				_sk_pts[c][r] = q
+		for _pass in 2:
+			for link in _sk_links:
+				var ac: int = link[0]
+				var ar: int = link[1]
+				var bc: int = link[2]
+				var br: int = link[3]
+				var pa: Vector3 = _sk_pts[ac][ar]
+				var pb: Vector3 = _sk_pts[bc][br]
+				var d := pb - pa
+				var l := d.length()
+				if l < 1e-6:
+					continue
+				var wa := 0.0 if ar == 0 else 1.0
+				var wb := 0.0 if br == 0 else 1.0
+				if wa + wb <= 0.0:
+					continue
+				var fix := d * ((l - float(link[4])) / l)
+				_sk_pts[ac][ar] = pa + fix * (wa / (wa + wb))
+				_sk_pts[bc][br] = pb - fix * (wb / (wa + wb))
+	# The bones from the points. Each bone is placed on its point and turned
+	# only as her pelvis is: neighbours share one turn, so the blend between
+	# them is the cloth's own shape between its points (a bone turned to its
+	# own triangle tears the blend apart, measured 3.4x).
+	var turn := pelvis.basis.orthonormalized()
+	for c in _sk_cols:
+		var parent := skel.get_bone_global_pose(_sk_body)
+		for r in _sk_rows:
+			var bi: int = _sk_bones[c][r]
+			var rest := skel.get_bone_global_rest(bi)
+			var global := Transform3D(turn * rest.basis, _sk_pts[c][r])
+			var local := parent.affine_inverse() * global
+			skel.set_bone_pose_position(bi, local.origin)
+			skel.set_bone_pose_rotation(bi, local.basis.get_rotation_quaternion())
+			parent = global
+	_sk_dbg += 1
+	if OS.has_environment("SK_DEBUG") and _sk_dbg % 60 == 1:
+		var worst := 0.0
+		var wl: Array = []
+		for link in _sk_links:
+			var l := (_sk_pts[link[0]][link[1]] as Vector3).distance_to(_sk_pts[link[2]][link[3]])
+			if l / maxf(float(link[4]), 1e-6) > worst:
+				worst = l / maxf(float(link[4]), 1e-6)
+				wl = link
+		print("SKDBG worst link ", wl)
+		var off := 0.0
+		for c in _sk_cols:
+			for r in _sk_rows:
+				off = maxf(off, skel.get_bone_global_pose(_sk_bones[c][r]).origin.distance_to(_sk_pts[c][r]))
+		print("SKDBG link_worst=%.3f bone_off=%.4f" % [worst, off])
+
+
+func _out_of_capsule(q: Vector3, a: Vector3, b: Vector3, radius: float) -> Vector3:
+	var ab := b - a
+	var t := clampf((q - a).dot(ab) / maxf(ab.length_squared(), 1e-8), 0.0, 1.0)
+	var c := a + ab * t
+	var d := q - c
+	var l := d.length()
+	if l >= radius or l < 1e-6:
+		return q
+	return c + d / l * radius
 
 
 func _outside(q: Vector3, centre: Vector3, radius: float) -> Vector3:
