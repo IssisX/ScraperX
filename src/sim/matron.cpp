@@ -2902,6 +2902,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 }
                 turn_ = Turn::None;
                 turn_s_ = 0.0F;
+                // The next hunt earns its own Turn interval; an expired
+                // deadline from this hunt must not trigger on fresh evidence.
+                turn_cooldown_s_ = turn_cooldown_seconds();
+                sight_far_s_ = 0.0F;
                 state_ = State::Searching;
                 search_s_ = 0.0F;
                 search_budget_s_ = 1.0e9F;
