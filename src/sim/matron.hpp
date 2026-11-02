@@ -1823,6 +1823,8 @@ private:
     // The floor of the level a sound at height y is on (the highest under
     // it, within a story), or her own when it is on none.
     [[nodiscard]] float floor_of(float y) const;
+    // An observed position's supporting scan surface, including floors below her level list.
+    [[nodiscard]] float floor_at(float x, float y, float z) const;
     // (x, z) put on the nearest of her level's floor lines (not the
     // catwalk's, not a gap's): somewhere on her level she can stand.
     void onto_floor_lines(float &x, float &z) const;
@@ -2294,7 +2296,6 @@ private:
     bool journey_moving_ = false;   // a move (not a walk) under way
     int journey_leg_ticks_ = 0;
     float journey_leg_best_ = 1.0e9F;   // closest she has been to the current leg
-    float journey_leg_progress_ = 1.0e9F;   // distance to the current leg when its clock last reset
     int journey_leg_stall_ticks_ = 0;   // ticks since that closest point improved
     bool journey_retreating_ = false;   // walking back along reached legs after a leg timed out
     int journey_wait_ticks_ = 0;    // a scan at most every 2 s; 30 s after a failure

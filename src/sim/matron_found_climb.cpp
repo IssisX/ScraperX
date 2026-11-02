@@ -124,9 +124,6 @@ bool Matron::found_floor(const float x, const float z, const float from_y, const
 bool Matron::find_climb(const RVec3 at, FoundClimb &out) const {
     const float feet = float(at.GetY()) - kStandCentre;
     const bool up = lead_floor_ > feet;
-    if (!up && stage_ == Stage::Pest && turn_ == Turn::None) {
-        return false;
-    }
     const float low = std::min(feet, lead_floor_) - 3.0F;
     const float high = std::max(feet, lead_floor_) + 4.0F;
     const RVec3 middle(at.GetX(), 0.5F * (low + high), at.GetZ());
@@ -325,9 +322,8 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
         find_wait_ticks_ = kFindEveryTicks;
         if (!find_climb(at, found_)) {
             // No bar column: a way she plans over the steel round her.
-            const bool frail = stage_ == Stage::Pest && turn_ == Turn::None;
             const bool still = std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F;
-            const bool started = !frail && still && journey_way_.begin(MoverGoal{at, heard_x_, heard_z_, lead_floor_, true});
+            const bool started = still && journey_way_.begin(MoverGoal{at, heard_x_, heard_z_, lead_floor_, true});
             return started;
         }
     }
@@ -365,10 +361,6 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
         std::abs(float(at.GetY()) - kStandCentre - found_.from_y) > 0.15F) {
         return true;
     }
-    // Frail, a pest takes hold only in her Turn.
-    if (stage_ == Stage::Pest && turn_ == Turn::None) {
-        return true;
-    }
     if (request_climb_goal(found_.goal, found_.facing)) {
         routecraft_mine_ = true;
         climbing_key_ = found_.key;
@@ -396,7 +388,14 @@ MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*bu
         return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
     }
     BodyInterface &bodies = m_.physics_.GetBodyInterface();
+    BodyID grip_body;
+    SubShapeID grip_sub;
+    Vec3 grip_local;
+    const bool held_before = m_.routecraft_.grip(grip_body, grip_sub, grip_local);
     m_.routecraft_.step(m_.physics_, m_.body_, dt);
+    if (held_before && !m_.routecraft_.grip(grip_body, grip_sub, grip_local)) {
+        ++m_.climb_releases_;
+    }
     m_.stride_ += bodies.GetLinearVelocity(m_.body_).Length() * dt;   // each rung rings
     if (m_.routecraft_.report().force > 0) {
         m_.routecraft_release_floor_ = float(bodies.GetPosition(m_.body_).GetY()) - kStandCentre;
@@ -659,7 +658,6 @@ void Matron::step_journey(const float dt) {
         journey_leg_ = 0;
         journey_leg_ticks_ = 0;
         journey_leg_best_ = 1.0e9F;
-        journey_leg_progress_ = 1.0e9F;
         journey_leg_stall_ticks_ = 0;
         journey_retreating_ = false;   // fresh legs for a fresh edge: no retreat is owed
     }
@@ -681,7 +679,6 @@ void Matron::step_journey(const float dt) {
             ++journey_leg_;
             journey_leg_ticks_ = 0;
             journey_leg_best_ = 1.0e9F;
-            journey_leg_progress_ = 1.0e9F;
             journey_leg_stall_ticks_ = 0;
         } else if (++journey_leg_ticks_ > 20 * 90) {
             if (!journey_retreating_ && journey_leg_ > 0) {
@@ -699,7 +696,6 @@ void Matron::step_journey(const float dt) {
                 journey_leg_ = 0;
                 journey_leg_ticks_ = 0;
                 journey_leg_best_ = 1.0e9F;
-                journey_leg_progress_ = 1.0e9F;
                 journey_leg_stall_ticks_ = 0;
                 journey_retreating_ = true;
             } else {
@@ -710,8 +706,8 @@ void Matron::step_journey(const float dt) {
             // A leg point her body cannot stand on (a turn point near
             // the move's start, inside the planner's no-body-check
             // radius round it, against a wall face): she pins against
-            // the face 0.15 m short with zero velocity, and the 20 s
-            // no-progress timeout would fail the whole journey for it. Travel
+            // the face 0.15 m short with zero velocity, and the flat
+            // 20 s timeout would fail the whole journey for it. Travel
             // already passes a waypoint this way; the journey does the
             // same for an intermediate leg only — never the move's own
             // start, which keeps its strict reach, and never while she
@@ -726,21 +722,10 @@ void Matron::step_journey(const float dt) {
             } else {
                 ++journey_leg_stall_ticks_;
             }
-            // The leg clock is a no-progress clock, not a total-time clock:
-            // a leg she is walking at speed must not time out for being
-            // long (a collapsed straight run over open floor is tens of
-            // metres). Every 2 m of progress restarts the 20 s clock; a
-            // leg that gains less than 2 m in 20 s still times out
-            // exactly as before, pinned or crawling.
-            if (dist < journey_leg_progress_ - 2.0F) {
-                journey_leg_progress_ = dist;
-                journey_leg_ticks_ = 0;
-            }
             if (journey_leg_stall_ticks_ > 72 && dist < 1.5F && journey_leg_ + 1 < journey_legs_.size()) {
                 ++journey_leg_;
                 journey_leg_ticks_ = 0;
                 journey_leg_best_ = 1.0e9F;
-                journey_leg_progress_ = 1.0e9F;
                 journey_leg_stall_ticks_ = 0;
                 return;
             }
