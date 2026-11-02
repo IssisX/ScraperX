@@ -6,6 +6,10 @@ set -euo pipefail
 release_tag="scraperx-toolchain-linux-x86_64-v1"
 asset="ScraperX-toolchain-linux-x86_64-v1.tar.gz"
 repo="IssisX/ScraperX"
+# This is an independent trust anchor; a checksum downloaded beside an archive
+# does not authenticate that archive if both release assets are replaced.
+published_sha256="138c0a94c9ce44cc99cda847e71b7948f0e04a051cf442f17730a8526726f571"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cache="${SCRAPERX_TOOLCHAIN_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME}/.cache}/scraperx/shared-toolchain-linux-x86_64-v1}"
 archive_override=""
 verify_only=false
@@ -27,6 +31,7 @@ done
     exit 2
 }
 command -v flock >/dev/null || { echo "install: flock required" >&2; exit 2; }
+command -v python3 >/dev/null || { echo "install: python3 required" >&2; exit 2; }
 
 check() {
     local dir="$1" version
@@ -47,6 +52,16 @@ mkdir -p "$(dirname "$cache")"
 exec {lock_fd}> "${cache}.lock"
 flock "$lock_fd"
 if [[ -d "$cache" ]]; then
+    # A stamped cache must pass byte-integrity checks before any cached binary runs.
+    # Legacy caches retain the existing version-only compatibility behavior.
+    if [[ -f "$cache/.scraperx-integrity.json" ]]; then
+        python3 "$script_dir/integrity.py" verify "$cache" || {
+            echo "install: existing cache integrity check failed at $cache" >&2
+            exit 1
+        }
+    else
+        echo "install: existing legacy cache has no file-integrity manifest; version checks only" >&2
+    fi
     check "$cache" || {
         echo "install: existing cache failed validation at $cache; refusing to overwrite it" >&2
         exit 1
@@ -72,16 +87,17 @@ else
     base="https://github.com/$repo/releases/download/$release_tag"
     command -v curl >/dev/null || { echo "install: curl required" >&2; exit 2; }
     curl --fail --location --retry 3 --silent --show-error --output "$tmp/$asset.sha256" "$base/$asset.sha256"
+    [[ "$(cat "$tmp/$asset.sha256")" == "$published_sha256  $asset" ]] || {
+        echo "install: published manifest differs from pinned v1 release digest" >&2
+        exit 1
+    }
     curl --fail --location --retry 3 --silent --show-error --output "$tmp/$asset" "$base/$asset"
 fi
 (cd "$tmp" && sha256sum --check --strict "$asset.sha256" >&2)
-# Only the expected top-level directory may be extracted.
-tar -tzf "$tmp/$asset" | awk '
-    $0 != "reusable-toolchain/" &&
-    ($0 !~ /^reusable-toolchain\// || $0 ~ /(^|\/)\.\.($|\/)/) { bad = 1 }
-    END { exit bad }
-' || { echo "install: archive contains an unsafe or unexpected path" >&2; exit 1; }
+# Reject non-regular archive types, path traversal and links outside the bundle.
+python3 "$script_dir/integrity.py" archive "$tmp/$asset"
 tar -xzf "$tmp/$asset" -C "$tmp"
 check "$tmp/reusable-toolchain" || { echo "install: extracted toolchain failed version and source checks" >&2; exit 1; }
+python3 "$script_dir/integrity.py" stamp "$tmp/reusable-toolchain"
 mv -- "$tmp/reusable-toolchain" "$cache"
 printf '%s\n' "$cache"

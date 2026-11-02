@@ -81,11 +81,13 @@ jobs:
           Installation: bash tools/shared-toolchain/install.sh
           Full usage: tools/shared-toolchain/README.md
           NOTES
+          printf '\nPackaging source commit: %s\n' "$(git rev-parse HEAD)" >> release-notes.txt
+          printf 'Archive SHA-256: %s\n' "$(awk '{print $1}' ScraperX-toolchain-linux-x86_64-v1.tar.gz.sha256)" >> release-notes.txt
           gh release create "$tag" \
             "ScraperX-toolchain-linux-x86_64-v1.tar.gz" \
             "ScraperX-toolchain-linux-x86_64-v1.tar.gz.sha256" \
             --repo "$GITHUB_REPOSITORY" \
-            --target ScraperX-Claude \
+            --target "$(git rev-parse HEAD)" \
             --title "ScraperX shared engineering toolchain (Linux x86_64) v1" \
             --notes-file release-notes.txt \
             --latest=false
