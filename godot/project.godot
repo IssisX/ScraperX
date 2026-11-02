@@ -53,6 +53,3 @@ lights_and_shadows/directional_shadow/size.mobile=4096
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=3
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality.mobile=2
 environment/defaults/default_clear_color=Color(0.055, 0.055, 0.058, 1)
-
-[autoload]
-McpBridge="*res://.mcp/godot-runtime/bridge/mcp_bridge.gd"
