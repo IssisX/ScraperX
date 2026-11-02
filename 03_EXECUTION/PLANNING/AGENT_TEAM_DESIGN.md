@@ -1,333 +1,314 @@
-# How the agents should work together: a design from scratch
+# How the agents should work together: a design from scratch (v2)
 
 Written 2026-11-02 at the owner's request: *"invent the best way for multiple intelligent AIs to work
 together on hard code problems ... Do not tune my current setup; assume all of it can be replaced."*
-This is a proposal, not a rule. Nothing here is built yet. Section 8 is the one piece to build this
-week.
+Revised the same day after his three corrections: *"There's also find-skills too. Don't rule out
+anything. There has to be a better way for multiple AIs to collaborate. Only Claude can see it
+really. The other ones don't do it right."*
 
-## 0. The one idea
+This is a proposal, not a rule. Nothing here is built. Section 9 is what to build this week.
 
-**Nothing in the loop may depend on a human paste, a human memory, or a model's memory.**
+## 0. The three ideas
 
-Three consequences, and the whole design falls out of them:
+1. **One brain, many hands.** Agents from different vendors cannot share a context window, so
+   "thinking together" through a shared thread never happens; they take turns. The fix is to put the
+   joint reasoning in one place: a hosted Claude *orchestrator* that holds the whole problem in one
+   context and calls the other agents as tools, with the same evidence, and reads their answers back
+   into that one context. The others are hands and second opinions; the orchestrator is the room
+   where the thinking happens. It runs on the API with a hard dollar budget, not on the $100 plan.
+2. **A tracker that wakes agents by assignment, not a thread that waits for a paste.** Linear
+   (already connected to this session) starts Codex and Devin when an issue is delegated to them,
+   and its Agents API lets the orchestrator be an agent too. Assign, and it wakes. Nobody pastes.
+3. **Claude is the only eye, so make the eye cheap and automatic.** CI already captures screenshots
+   under xvfb. Every look-check becomes a fixed screenshot set that a Claude vision call judges for
+   cents through the API, with a written rubric. Live Godot sessions on the plan are kept for
+   scenes CI cannot capture yet, and each one becomes a CI capture the first time it is needed.
 
-1. **The coordinator is a program, not a model.** A GitHub Actions workflow (the *switchboard*)
-   assigns work, wakes agents, enforces budgets and merges. It costs no tokens, never forgets, never
-   garbles, and runs single-threaded so two agents can never claim one job.
-2. **Shared memory is files in the repo, not a thread.** One small file per job, one short context
-   file, one ledger of rulings. An agent reads about two kilobytes to start, never a history.
-3. **An agent is in the loop only if a machine can wake it.** Claude wakes on labels and schedules,
-   Codex on `@codex`, Grok through its API, Muse through email with a bridge back. An agent that only
-   acts when the owner pastes a prompt is not a teammate; it is a consultant, and the design gives it
-   no job on any critical path.
+Everything the owner does today as router, relay and memory moves to Linear, the orchestrator or
+a file. His phone is for decisions, taste and money.
 
-Everything the owner does today as router, relay and memory is done by the switchboard or by a file.
-His phone is for two things: decisions and money.
+## 1. What was considered, and what it is for
 
-## 1. The parts
+Nothing ruled out. Each row says what it adds and what it costs; section 2 picks.
 
-### 1.1 The switchboard (GitHub Actions, Python, no model)
-
-A workflow `switchboard.yml` with one `concurrency` group, so only one copy ever runs. It is woken by:
-
-| Event | What it does |
-|---|---|
-| issue labeled `job` | creates `work/jobs/J-NNN.yml` from the issue, status `draft` |
-| job file reaches `ready` (push to `work/`) | assigns an owner by the rule in 2.2 and sends the wake message |
-| `pull_request` opened or synchronized | links the PR to its job, runs the rule check, waits for the proof |
-| `workflow_run` of the proof completed | green: asks for a cross-vendor review; red: sets `FIX-CI` on the job and the owner's digest |
-| `pull_request_review` or verdict comment | parses `LAND` / `FIX` / `NOTE`; merges when the merge rule in 2.5 holds |
-| `issue_comment` on a job issue | folds one-line progress into the job log; parses owner decision words |
-| `repository_dispatch` from the email bridge | posts Muse's reply on the job issue under the bot identity |
-| `schedule` hourly | the sweep: stalls, QUIET jobs, budget resets, thread rotation, the digest at 7:00 AM Central |
-
-It is the only writer of the fields `owner`, `reviewer`, `status` and `budget`. Agents request; the
-switchboard decides. The existing `tools/board/sweep.py` is about half of it already.
-
-### 1.2 Shared state: the `work/` directory
-
-| File | Size bound | Who writes | What it is |
+| Option | What it adds | Cost | Verdict |
 |---|---|---|---|
-| `work/CONTEXT.md` | 200 lines | PR only | the stable facts every agent needs: the laws, branch names, test commands, where things live, the verdict form |
-| `work/jobs/J-NNN.yml` | 60 lines | switchboard (fields), owner agent (log) | one job: `id`, `title`, `class`, `hard`, `invariant`, `files`, `reach`, `needs`, `owner`, `reviewer`, `status`, `branch`, `pr`, `evidence`, `log` |
-| `work/jobs/J-NNN/` | per file 300 words | the round's agents | hard jobs only: `hypotheses.md`, `rounds/r1.md` ..., `probes/*.sh` |
-| `work/LEDGER.md` | append-only, rotated monthly | switchboard | rulings and owner decisions, one dated line each |
-| `work/budget.yml` | 20 lines | switchboard; owner by one comment | Claude runs allowed per day and week, used, resets; per-agent concurrency |
-| `work/agents.yml` | 40 lines | PR only | each agent: wake method, hands (push, CI), eyes (can read screenshots), channels, max open jobs |
-| `work/BOARD.md` | generated | switchboard | the rendered board, read-only, for the owner's eye |
+| **Linear as tracker and wake switch** | delegate an issue to Codex or Devin and they start; comments and progress come back on the issue; Agents API (developer preview, free) lets our own agent be delegated to; good phone app | Free plan: 250 issues, no AI credits. Basic about $10 a user a month. Linear's own coding sessions (Claude Code or Codex inside Linear) use prepaid AI credits, roughly $0.07 to $0.20 a run by third-party reports | **use** as the board and the wake switch |
+| **Anthropic hosted agents (Managed Agents)** | a Claude agent that Anthropic runs: its own sandbox, scheduled runs, session budgets that pause at a dollar cap, workflows that fan out many sub-agents, a grader that iterates toward a rubric | $0.08 per running session-hour plus tokens at API rates; standard top tier $4 per million input, $20 per million output, cache reads about $0.20 | **use** as the orchestrator |
+| **Claude GitHub Action on the plan** | `@claude` or a label wakes a stateless Claude run against the Max plan's caps, with the official `claude_code_oauth_token` input | $0 beyond the plan; one bug report of auth failing after a Pro-to-Max upgrade | **use** for stateless jobs that must stay on the plan; API key as the fallback |
+| **Codex via Linear delegation** | reliable wake; `@codex` on GitHub issues is reported broken or ambiguous since August to October 2026 | included in the ChatGPT plan, with its review limit | **use**, through Linear, not GitHub mentions |
+| **Devin** | a second wakeable builder with its own sandbox, delegated from Linear or Slack; Devin Review for PRs | $20 a month plus about $2.25 per ACU, about $9 per active hour | **optional**; add when Codex's limit is the bottleneck |
+| **Grok through the xAI API** | a cheap second reviewer and hypothesis generator, called as a tool by the orchestrator | about $2 per million input, $6 per million output (third-party listings; confirm at docs.x.ai) | **use** as a tool |
+| **Muse by email** | the Matron specialist; a free Apps Script bridge turns its replies into comments without the owner approving each | $0 | **use**, off every critical path |
+| **Slack Code channels** | a channel where Claude, Devin and (per Slack) Codex can be tagged; a good phone view | Slack plan; whether one bot can wake another in a channel is unverified | **later**, for the owner's view only |
+| **Claude Tag (Claude in Slack)** | a persistent Claude in a Slack channel the owner can talk to from his phone | plan-dependent | **later**, same reason |
+| **Skills catalog** | searched the owner's catalog for multi-agent, orchestration, collaboration, swarm: nothing. Public catalogs have "orchestrator" and "agent-orchestration" skills, all Claude-only subagent fan-out, plus an "ask-codex" skill that lets a Claude session consult Codex | free | **not the answer**; the orchestrator's tools do the cross-vendor part. The `ask-codex` idea is reused as a tool |
+| **Claude Code's own workflows and subagents** | fan-out inside one Claude session | plan tokens | **use inside the orchestrator** for parallel probes, never as the team |
+| **GitHub issues as the board** (today) | nothing the above lacks | free | **retire**; GitHub keeps code, PRs, CI |
 
-The job file's `log` holds the last twenty lines; older lines move to `work/archive/J-NNN.log`. A
-job's discussion lives on its own GitHub issue, which the switchboard closes at sixty comments after
-writing a ten-line summary into the job file and opening a continuation. A thread of 842 comments is
-unreachable because no thread is global and no thread is allowed past sixty.
+## 2. The design
 
-Issues #3 and #87 are retired as boards. #3 stays as the record.
+### 2.1 Parts and where each runs
 
-### 1.3 The agents, by what wakes them
+| Part | Runs on | Pays with |
+|---|---|---|
+| **Board**: one Linear issue per job; the owner's phone app | Linear | free or $10 a month |
+| **Orchestrator**: one hosted Claude agent, registered as a Linear agent; woken by delegation, by a schedule, and by GitHub events through a small relay | Anthropic hosted agents, API | tokens plus $0.08 an hour, under a session budget |
+| **Hands**: Codex (Linear delegation), Grok (API tool), Devin (optional), Muse (email) | each vendor's own cloud | each vendor's plan or API |
+| **Proof**: the existing CI; a `probe` workflow for experiments; a `screens` job for the fixed screenshot set | GitHub Actions | free on a public repo; about $0.008 a Linux minute past free minutes on a private one |
+| **Eye**: Claude vision calls on the screenshot set, by the orchestrator | API | cents per set |
+| **Live eye**: a Claude Code cloud session with the Godot runtime, only for `eyes-live` jobs | the $100 plan | the plan's caps; at most one open |
+| **Memory**: `work/CONTEXT.md` (200 lines), `work/LEDGER.md` (rulings), `work/jobs/<id>/` for a hard job's hypotheses and probes | the repo | free |
+| **Merger**: a GitHub Actions workflow with no model in it | GitHub Actions | free |
 
-| Agent | Wakes by | Hands | Eyes | Used for | Pays with |
-|---|---|---|---|---|---|
-| **Claude** (cloud) | label `needs:claude` through the official Claude GitHub Action; a twice-daily scheduled task that opens a fresh session for the queue | push, CI, Godot runtime, Android | live Godot runtime and CI screenshots | live look-checks, Android build failures, security reviews, the closing round of a hard job, anything the others left red | the $100 plan's caps; budget-capped by file |
-| **Codex** (cloud) | `@codex review` on a PR (works today); `@codex` on an issue to start a task, if his Codex settings allow it | push, CI | CI screenshots | first builder for C++ and GDScript jobs; reviewer of every PR | the ChatGPT plan, with its review limit |
-| **Grok** (xAI API) | the switchboard calls the API with the wake message | none; the switchboard is its hands: it returns a unified diff or a verdict in fixed form, the switchboard commits it to the job branch, CI proves it | CI screenshots (image input) | second builder, second reviewer, hypothesis rounds | per token |
-| **Muse** (email) | the switchboard emails the wake message; the bridge posts its reply | none; patches it emails are committed by the switchboard | screenshots attached to the email | the Matron's design and review, hypothesis rounds; never on a critical path (hours of latency) | free |
-| **Owner** | the 7:00 AM digest; the Decisions issue | merges nothing by hand | the two images a taste call needs | decisions, money, overturning anything | his time |
+### 2.2 What the orchestrator is
 
-The two Grok-based bots: if they can be reached by an API they are the Grok row; if they only act on
-a paste, they are retired. The design does not give a paste-only agent a job.
+One agent definition, versioned in the repo as files. Its tools:
 
-Jobs declare `needs:` from the set `build`, `android`, `eyes`, `eyes-live`, `security`, `matron`.
-The switchboard matches needs to `agents.yml`. `eyes` is satisfied by CI's screenshot set, which any
-vision model can read; `eyes-live` (something CI does not capture yet) is the only need that forces
-Claude.
+- `read_job`, `write_log`, `set_status` on Linear (its own agent identity; it is the delegate, the
+  owner stays the assignee);
+- `delegate(agent, job)`: delegates a Linear issue to Codex or Devin, or emails Muse;
+- `ask(vendor, question, evidence)`: one call to Grok, Codex or Muse with a fixed evidence pack,
+  answer returned into the orchestrator's context (the `ask-codex` idea, generalized);
+- `run_probe(script)`: dispatches the probe workflow and waits for the result;
+- `look(set)`: fetches a screenshot set from a CI run and judges it against the job's rubric;
+- `git` and `gh` in its sandbox for reading code and opening PRs;
+- `decide(question, options, pick)`: posts a three-line decision for the owner on the Linear issue
+  and starts the ten-minute clock.
 
-## 2. How work moves (the messages)
+Each job is its own session with its own dollar budget. The session ends when the job's PR merges
+or the budget pauses it; a paused session is a line in the owner's digest, never a silent stall.
+Its memory between jobs is `work/`, not its own transcript, so no session grows for weeks.
 
-### 2.1 A job is born
+### 2.3 How a job moves
 
-Anyone opens an issue with the `job` label, or the owner writes one comment `job: her skirt clips
-the rail` anywhere. The switchboard creates the job file with status `draft` and wakes the cheapest
-free agent as *specifier*. The specifier fills four fields and nothing else:
+1. **Born.** The owner, or any agent, creates a Linear issue with the `job` label. The
+   orchestrator wakes (delegation webhook), reads the issue and `work/CONTEXT.md`, and writes the
+   four fields on the issue: `invariant` (the finish fact), `files` (owned functions), `reach`
+   (tests it reaches), `needs` (`build`, `android`, `eyes`, `eyes-live`, `security`, `matron`). An
+   issue without an invariant cannot leave `Triage`.
+2. **Assigned.** The orchestrator delegates by rule: needs matched against `work/agents.yml`,
+   fewest open jobs, Codex before Devin before Grok-as-tool. Linear records the delegate; a second
+   delegation of the same issue is refused by the orchestrator, which is single-threaded per issue.
+   Duplicate claims are impossible, not discouraged.
+3. **Worked.** The hand works in its own sandbox and posts progress on the Linear issue (Codex and
+   Devin do this natively). The orchestrator reads the issue, never a history.
+4. **Proved.** The PR says `Job: <id>`. CI runs on the branch. The `screens` job adds the fixed
+   screenshot set when `needs` has `eyes`.
+5. **Reviewed.** The merger asks a different vendor from the author for a review (Codex reviews
+   Claude's and Muse's work; Grok, through the orchestrator, reviews Codex's; Claude reviews only
+   `security`). The eye runs on the screenshot set and posts its judgment, with the rubric line it
+   failed, as a review.
+6. **Merged.** By the merger, no model, no person: proof green on the head, one `LAND` from a
+   different vendor on that head, the eye's `LAND` when `eyes` is a need, no open `FIX`, no
+   rule-check `BLOCK`. Protected changes the same way (owner, 10-28, 10-29). The owner can overturn
+   any merge; the ledger records it.
 
-```yaml
-invariant: "After a 1 m drop onto the rail, no skirt vertex is inside the rail mesh for 60 ticks."
-files: [src/matron/cloth.cpp:step_skirt, godot/matron/skirt.gd:_physics_process]
-reach: [native:matron_cloth, touch:summit_ending]
-needs: [build, eyes]
-```
+The verdict form: `LAND`; `FIX` with a deterministic failure (command, input, expected, observed),
+otherwise downgraded to `NOTE`; `NOTE` never blocks (owner, 10-31).
 
-The switchboard refuses `ready` without an invariant that names a checkable fact and a `reach`
-that names tests. No job without a finish fact can be assigned.
+### 2.4 The eye
 
-### 2.2 Assignment (the claim nobody can race)
+The owner's standard: *"Only Claude can see it really."* So the eye is Claude, and the design's job
+is to make Claude's looking cheap, repeatable and off his quota:
 
-Deterministic and single-threaded: among agents whose `agents.yml` row covers every `needs`, the
-one with the fewest open jobs; ties by the order in `agents.yml`. The switchboard writes `owner:` and
-`branch: <agent>/J-NNN`. Agents cannot write `owner:`; a push that changes it is reverted by the
-switchboard and logged. Duplicate claims are impossible, not discouraged.
+- **A fixed screenshot set per scene**, captured by CI: same scenes, same frames, same resolution,
+  the trunk's set beside the PR's. Today's `godot-audits-and-mix` job already does this for the
+  approach and the summit; each `LOOK` job adds its scene once.
+- **A rubric per set**, written in words in `work/looks/<scene>.md`: what must be true (her hand
+  on the hold, no skirt through the rail, the camera framing the five beats).
+- **The judgment** is one Claude vision call per set, from the orchestrator, through the API: about
+  thirty thousand input tokens for twenty images, around ten cents at the standard top tier. It
+  answers `LAND` or `FIX` with the rubric line and the frame.
+- **Taste** (does this look right, not is it correct) goes to the owner as two images and one
+  question. Nothing else does.
+- **Live** looking (driving the Godot runtime, new scenes) stays on a Claude Code cloud session on
+  the plan, at most one open, closed when the job closes. Each live scene becomes a CI capture the
+  first time, so the live need shrinks weekly.
 
-### 2.3 The wake message (the only prompt anyone ever receives)
+### 2.5 Thinking together: the modes
 
-Generated from the job file by one template, the same text on every channel, at most forty lines:
+The orchestrator holds the room. The others are consulted into it. Bounded by construction: a
+question to a vendor is one call with a fixed evidence pack and a three-hundred-word answer in the
+form `CLAIM / EVIDENCE / NEXT PROBE / CHANGES MY MIND`.
 
-```
-JOB J-041  her skirt clips the rail  (class REPAIR, hard: no)
-File: work/jobs/J-041.yml   Context: work/CONTEXT.md   Branch: codex/J-041
-Invariant: After a 1 m drop onto the rail, no skirt vertex is inside the rail mesh for 60 ticks.
-Files you own: src/matron/cloth.cpp:step_skirt, godot/matron/skirt.gd:_physics_process
-Tests this reaches: SCRAPERX_ONLY=matron_cloth; touch summit_ending
-Finish: PR into ScraperX-Claude with "Job: J-041" in the body; the proof green on your branch.
-Reply form: one line per real step as a comment on issue #NNN ("HH:MM what", Central).
-          Blocked: "BLOCKED: what, needs whom". Done: the PR link.
-Rules: work/CONTEXT.md section 2. Do not edit owner:, reviewer:, status:.
-```
+**INVESTIGATE, the hypothesis tournament** (today's case: the phone's physics digests differ from
+the host's).
+1. The orchestrator writes the evidence pack and asks two or three vendors for hypotheses, in the
+   form above, each with a probe script.
+2. It dedupes them into `work/jobs/<id>/hypotheses.md` and runs every probe through the probe
+   workflow (host, and Android when the job says so).
+3. It reads the results, marks each hypothesis alive or dead, and asks the vendors again with the
+   results. Three rounds at most.
+4. The arbiter is the probe: the hypothesis that survived its own falsifier and whose repair makes
+   the failing test pass becomes a REPAIR job. Two survivors after round three: the orchestrator
+   picks and writes the one observation that would overturn the pick.
 
-Nothing is relayed by a person, so nothing is garbled. The owner never composes a prompt again.
+**IMPLEMENT, hard: spec, attack, race.**
+1. The orchestrator writes the invariant and the test that proves it; a protected test goes as its
+   own PR first.
+2. It asks a different vendor to attack: every way the test could pass while the goal fails. The
+   spec and test are tightened before any code exists.
+3. Two hands from different vendors build on two branches; CI scores both against the same test.
+   The orchestrator picks: the only green one; both green, the smaller diff with fewer protected
+   changes; neither, back to step 1 with both failure reports.
 
-### 2.4 Progress
+**REPAIR with a known invariant:** one hand, one cross-vendor review, merge by rule.
 
-One line per real step, as a comment on the job issue; the switchboard folds it into the job log.
-Agents read the job file and `CONTEXT.md`, never the issue history. A job quiet for three hours
-gets one ping; quiet for six, the switchboard reassigns it and logs why.
+**LOOK:** the eye in 2.4, and the owner for taste.
 
-### 2.5 Done, review, merge
-
-1. The PR body says `Job: J-NNN`. The proof runs on the agent's branch.
-2. Green: the switchboard asks for a review from a **different vendor** than the author (Codex for
-   Claude's and Muse's work, Grok for Codex's, Claude only when `needs: security`).
-3. The verdict is one of three words at the top of the review:
-   - `LAND`
-   - `FIX` followed by a deterministic failure: command, input, expected, observed. A `FIX` without
-     one is downgraded to `NOTE` by the switchboard and does not block (owner, 10-31: only real
-     physics, gameplay or test failures block).
-   - `NOTE` (advice; never blocks)
-4. Merge, done by the switchboard with no model and no person: proof green on the head, one
-   `LAND` from a different vendor on that head, no open `FIX`, the rule check without a `BLOCK`.
-   Protected changes merge the same way (owner, 10-28, 10-29). The owner can overturn any merge;
-   the ledger records it.
-
-## 3. Hard problems: how the agents think together
-
-Models from different vendors cannot share a context window, and in free debate they drift toward
-agreement and toward length. So "thinking together" is **rounds with a fixed form, in shared files,
-with evidence as the arbiter.** The round form is bounded by construction: three rounds, three
-hundred words per agent per round, every entry under the same four headings:
-
-```
-CLAIM:      one sentence
-EVIDENCE:   file:line, a test name, a CI run, a screenshot path; or "none yet"
-NEXT PROBE: the single cheapest experiment that could kill the claim (a script path under probes/)
-CHANGES MY MIND: the observation that would
-```
-
-The job's `class` and `hard` flag pick one of four modes.
-
-### 3.1 INVESTIGATE: the hypothesis tournament
-
-For an unknown cause (today's example: the phone's physics digests differ from the host's).
-
-1. **Round 0.** The switchboard sends the same evidence pack (the job file, the failing output, the
-   last diff that touched the files) to two or three agents from different vendors. Each returns one
-   or two hypotheses in the round form. The switchboard merges them into `hypotheses.md`, deduped,
-   each with its probe script.
-2. **Probes run in CI.** A `probe.yml` workflow runs every script under `work/jobs/J-NNN/probes/`
-   on the host and, where the job says so, on the Android build. Results are appended under each
-   hypothesis: alive or dead, with the output.
-3. **Rounds 1 and 2.** Each agent reads `hypotheses.md` with the results and, in the same form,
-   marks each hypothesis alive or dead, may add one new one, and names the next probe. The switchboard
-   runs the probes again.
-4. **The arbiter is the probe.** A hypothesis that survived its own falsifying probe and whose
-   repair makes the failing test pass wins; it becomes a REPAIR job. Two survivors after round 2:
-   one Claude run reads the file and picks, stating the single observation that would overturn the
-   pick. Nobody persuades anybody; the experiment decides.
-
-Cost: at most 3 rounds x 300 words x 3 agents of model output, plus CI minutes. Compare: the
-determinism question today has three branches and several hundred comments and no verdict.
-
-### 3.2 IMPLEMENT, hard: spec, attack, race
-
-For a feature whose approach is uncertain (her hold with real arms was one).
-
-1. **Spec.** The specifier writes the invariant and the test that proves it. The test is the
-   contract; if it changes a protected check, it goes as its own PR first.
-2. **Attack.** An agent from another vendor writes, in the round form, every way the test could pass
-   while the goal fails (a snapped pose that the tick sampler misses; a reach that stretches). The
-   spec and test are tightened. This is the step that today's reviews do after the code exists, when
-   it is expensive.
-3. **Race.** Two builders from different vendors implement on `race/J-NNN/a` and `race/J-NNN/b`.
-   CI scores both against the same test. The switchboard picks: the only green one; both green,
-   the smaller diff with fewer protected changes; neither, back to the spec with both failure reports.
-   The loser's reviewer notes fold into the winner before merge.
-
-A race doubles build tokens and costs no human time. It runs only when `hard: yes`, which the
-specifier sets and the switchboard can veto by budget.
-
-### 3.3 REPAIR with a known invariant
-
-One builder, one cross-vendor review, merge by the rule. No ceremony.
-
-### 3.4 LOOK (her body, hair, contacts, camera)
-
-CI already captures screenshots under xvfb and uploads them (`godot-audits-and-mix` in the proof).
-The design makes that the eye for everyone: every PR that touches a `LOOK` job gets a fixed
-screenshot set (same scenes, same frames, same resolution) and the previous trunk set beside it. The
-reviewer, any vision model, writes what changed in words against the invariant. Only a taste call
-(does this look right) goes to the owner, as two images and one question. Claude's live runtime is
-reserved for scenes CI does not capture yet; each such scene becomes a CI capture the first time it
-is needed, so the live need shrinks every week.
-
-## 4. How disagreements end
+### 2.6 How disagreements end
 
 In this order; the first rule that applies wins, and the ledger records which.
 
-1. **A CI result settles it.** A test, a probe, a screenshot diff.
-2. **A deterministic repro settles a review.** `FIX` carries one or it is a `NOTE`.
-3. **No test can settle it: it is a design call.** Three lines to the owner on the Decisions issue:
-   what the choice is, what each word does, the pick and why. Ten minutes unanswered, the pick
-   stands (owner, 10-27). Ledger.
-4. **Taste** (look, sound): the owner, with the two candidates.
-5. **Rules conflict:** the newer dated rule in `00_START_HERE.md` wins; the switchboard links the line.
+1. A CI result settles it: a test, a probe, the eye's rubric line.
+2. A deterministic repro settles a review. `FIX` carries one or it is a `NOTE`.
+3. No test can settle it: a design call. Three lines to the owner on the Linear issue: the choice,
+   what each word does, the pick and why. Ten minutes unanswered, the pick stands (owner, 10-27).
+4. Taste: the owner, with the two candidates.
+5. Rules conflict: the newer dated rule in `00_START_HERE.md` wins.
 
-Seniority is used exactly once: the closing pick of a tournament, one Claude run. Nowhere else does
-any model outrank evidence.
+The orchestrator's own judgment is used once: the closing pick of a tournament. Nowhere else does a
+model outrank evidence.
 
-## 5. Budgets that cannot be blown
+### 2.7 Budgets that cannot be blown
 
-`work/budget.yml`:
+- **The orchestrator** has a session budget in dollars per job (start at $8 for a hard job, $2 for
+  a review) and a monthly cap on the API account. At the cap it pauses and says so. The owner raises
+  a number with one comment on the issue: `budget 12`.
+- **The plan** is touched only by live-eye sessions (at most one open) and by the Claude GitHub
+  Action for jobs marked `plan-only`; `work/budget.yml` caps both per day and the merger enforces it.
+- **Every run is stateless**: a job session starts from the Linear issue and `work/CONTEXT.md`,
+  does one job, ends. No session reaches 550,000 tokens; no answer comes from memory.
+- **Vendors** are called through tools with a per-day cap each in `work/budget.yml` (Grok $3 a
+  day; Codex by its plan; Devin by ACU count).
+- Every run's start, end, job and cost goes to `work/archive/runs.log`; after one week the budgets
+  are set from the log, not from a guess.
 
-```yaml
-claude:
-  max_concurrent: 1        # one run at a time, ever
-  runs_per_day: 6          # the Action and the scheduled session both count
-  runs_per_week: 30
-  used_today: 0
-  reserved_for: [eyes-live, android, security, tournament-close]
-codex: {max_concurrent: 2}
-grok:  {max_concurrent: 2, usd_per_day: 3}
-muse:  {max_concurrent: 1}
-```
-
-- The switchboard will not start a Claude run past the budget. It queues the job under
-  `needs:claude` and lists it in the digest. The owner raises a number with one comment:
-  `budget claude day 8`.
-- **Every Claude run is stateless.** It starts from the job file, does one job, writes its log,
-  and ends. No standing integrator session, so no session reaches 550,000 tokens, no compaction, no
-  answering from memory. The hourly check becomes a cron with no model in it.
-- A standing Claude session exists only for `eyes-live` work and closes when the job closes; the
-  wake message says so and the digest lists any session open past six hours.
-- Reviews default to the cheapest vendor that can see the artifact. Claude reviews only `security`.
-- The switchboard writes every run's start, end and job to `work/archive/runs.log`. After one week
-  the owner sets the budget from that log instead of from a guess.
-
-## 6. What this removes outright
+## 3. What this removes outright
 
 | Problem | Why it cannot happen |
 |---|---|
-| The owner is the router | every agent in the loop has a machine wake; the switchboard sends every wake message; a paste-only agent has no job |
-| History grows huge and gets re-read | no global thread; a job file is sixty lines; a job issue closes at sixty comments; agents read two files, never a history |
-| Duplicate and raced claims | one single-threaded writer of `owner:`; agents cannot claim; a push that changes `owner:` is reverted |
-| Garbled relays | the wake message is generated from the job file by one template and sent by the switchboard; no human composes or retypes |
-| Claude usage burned by many sessions | `max_concurrent: 1` enforced by the program that starts runs; stateless runs; no standing manager |
-| Reviews and looks bottleneck on Claude | cross-vendor review by rule; CI's screenshot set is the eye for every vision model; `eyes-live` shrinks as scenes join CI |
-| Side by side, never together | the tournament, the attack step and the race are the joint reasoning, bounded and evidence-judged |
+| The owner is the router | delegation in Linear wakes Codex and Devin; the orchestrator wakes on delegation and schedule; Muse's replies arrive by bridge; no agent in the loop needs a paste |
+| History grows huge and gets re-read | no global thread; a job is one Linear issue; the orchestrator's memory is `work/`, not its transcript; each session starts from two kilobytes |
+| Duplicate and raced claims | one delegate per issue, set by one single-threaded orchestrator; Linear refuses the rest |
+| Garbled relays | the wake is the issue itself; the evidence pack is generated; no human composes or retypes |
+| Claude usage burned by many sessions | the joint reasoning runs on the API under a dollar cap, not on the plan; the plan holds at most one live-eye session, enforced by the merger |
+| Reviews and looks bottleneck on Claude | cross-vendor review by rule; the eye is a ten-cent API call on a CI artifact, not a session |
+| Side by side, never together | the orchestrator holds one context for the problem and consults the others into it; tournaments, attacks and races are bounded and evidence-judged |
 
-What it does not remove: Muse's hours of email latency (so Muse is off every critical path), Codex's
-review limit (so Grok is the second reviewer), and the owner's taste calls (by design).
+What it does not remove: Muse's hours of latency (off every critical path), Codex's review limit
+(Grok and Devin are the second reviewers), and the owner's taste calls (by design).
 
-## 7. Costs, honestly
+## 4. Costs, honestly
 
-**Money per month, estimated.** Nothing here is measured yet; the first week's `runs.log` replaces
-every number below.
+Estimates; nothing is measured yet. The first week's `runs.log` replaces every number.
 
-| Item | Cost | Note |
+| Item | Per month, estimated | Note |
 |---|---|---|
-| GitHub Actions | $0 if the repo is public; private: 2,000 free minutes on Free, 3,000 on Pro ($4); past that about $0.008 per Linux minute | a full proof is about 150 runner-minutes, about $1.20 past the free minutes; probes 5 to 30 minutes each; a busy private month could reach $30 to $60. Check the repo's plan and visibility. |
-| Claude | the $100 plan as now | the Claude GitHub Action can run on a token from `claude setup-token` on that plan, against the same caps; confirm the input name in the Action's current README before relying on it. Overflow on an API key: the standard top tier is $4 per million input tokens and $20 per million output; a stateless job run is roughly $1 to $5, a review roughly $0.50 (prices as of 2026-10; estimates) |
-| Codex | included in the ChatGPT plan | its review limit was hit on 10-29; a Codex task started from an Action with an API key is the overflow, per token, price unverified here |
-| Grok API | per token, price unverified here; budget-capped at $3 a day in the file | a review is about 50,000 input and 5,000 output tokens |
-| Muse, email bridge | $0 | Google Apps Script on his account, a GitHub token in its properties |
-| **Claude usage** | lower than today by construction | today: a standing session re-reading on every event and hourly, plus helpers opened by hand. New: zero model tokens on the hourly check; Claude runs only on `needs:claude`, at most one at a time, each starting from two kilobytes of context |
-| **His phone** | about ten minutes a day | the 7:00 AM digest (what landed, what is red, what waits on him) and the Decisions issue; nothing else needs him |
+| Anthropic API account | $40 to $120 | a hard job session about $5 to $8 (three to four hours running, a few million mostly cached input tokens, under two hundred thousand output); a review about $1; an eye judgment about $0.10; set a monthly cap on the account first |
+| The $100 plan | as now | now spent on live-eye sessions and plan-only jobs instead of a standing manager |
+| Linear | $0 to $10 | Free plan holds 250 issues; Basic if that runs out or Loops are wanted |
+| Grok API | $5 to $30 | capped at $3 a day in the file |
+| Codex | as now | the review limit stays; Devin takes overflow if added |
+| Devin (optional) | $20 plus about $9 per active hour | only if Codex's limit becomes the bottleneck |
+| GitHub Actions | $0 public; $30 to $60 busy private | a proof is about 150 runner-minutes; probes and screens 5 to 30 minutes |
+| Muse bridge, email | $0 | Apps Script on his Google account |
+| **His phone** | about ten minutes a day | the morning digest on Linear, the decisions on the issues, taste calls with two images |
 
-**What he gives up.** Reading the live board for comfort (it is a generated file now), and the
-feeling of a manager on call. The manager is a cron.
+The honest trade: this converts his quota problem into a dollar problem with a cap he sets. The
+plan's caps stay the limit on live looking only.
 
-## 8. The first step this week
+## 5. What each message contains
 
-The smallest build that gets most of the benefit: **switchboard v0 plus the `work/` directory**,
-one PR, one Claude session, closed when the PR lands.
+- **Wake (delegation)**: the Linear issue with the four fields; nothing else is sent.
+- **Evidence pack (orchestrator to a vendor)**: the invariant, the failing output, the diff that
+  last touched the files, the probe results so far; under four thousand words, generated.
+- **Answer (vendor to orchestrator)**: `CLAIM / EVIDENCE / NEXT PROBE / CHANGES MY MIND`, three
+  hundred words.
+- **Progress (hand to issue)**: one line per real step, `HH:MM what`, Central.
+- **Verdict (reviewer or eye to PR)**: `LAND`, `FIX` plus repro, or `NOTE`.
+- **Decision (orchestrator to owner)**: three lines and a word to answer with.
+- **Digest (orchestrator to owner, 7:00 AM Central)**: landed, red, waiting on him, paused by
+  budget, sessions open.
 
-In the PR:
-1. `work/CONTEXT.md`, `work/agents.yml`, `work/budget.yml`, and `work/jobs/` with #87's body
-   migrated into one file per open job. `work/BOARD.md` generated from them.
-2. `tools/switchboard/` grown from `tools/board/sweep.py`: the sweep, plus the four actions it
-   can take today without new accounts: post `@codex review` when a PR is green with no verdict;
-   enable auto-merge when the merge rule holds; set `FIX-CI` on the job and the digest when red; email
-   the wake message to Muse for jobs it owns.
-3. `.github/workflows/switchboard.yml`: the triggers in 1.1, one concurrency group, hourly cron,
-   the 7:00 AM Central digest as an email and a comment on the Decisions issue.
-4. The Claude GitHub Action, triggered only by the label `needs:claude`, behind the budget check.
-5. `tools/switchboard/muse_bridge.gs`: the Apps Script the owner pastes once; it polls the
-   `MUSE_TO_CLAUDE:` label every five minutes and fires `repository_dispatch`.
-6. The hourly scheduled task and the standing integrator session retired once the cron has run
+## 6. What the owner gives up
+
+Reading a live board for comfort (Linear is the board now), the feeling of a manager on call (the
+manager is a hosted agent that wakes on events), and the illusion that a shared thread is
+collaboration.
+
+## 7. Where the previous design (v1) was wrong
+
+- It made the coordinator a GitHub Actions script and kept the joint reasoning in files that agents
+  take turns reading. That removes the router but never gets two models into one context. The
+  orchestrator does.
+- It let any vision model judge screenshots. The owner's experience says no; the eye is Claude only,
+  made cheap through the API.
+- It used `@codex` on GitHub, which is reported unreliable since August 2026. Linear delegation is
+  the documented path.
+
+## 8. Open checks before building
+
+Each is one lookup, none blocks the first step:
+- Linear's Agents API is a developer preview; confirm the delegation webhook works on the Free
+  plan, or budget Basic.
+- The orchestrator on hosted agents needs an Anthropic Console account with prepaid credits and a
+  monthly cap; confirm the cap is set before the first session.
+- The Claude GitHub Action on the plan: one report of auth failing after a Pro-to-Max upgrade; test
+  once with a trivial job before relying on it.
+- Grok's current API price at docs.x.ai.
+- Whether Codex's Linear delegation can push to `ScraperX-Claude` side branches with its current
+  GitHub app permissions.
+
+## 9. The first step this week
+
+Two things, in this order, each small, each useful on its own.
+
+**Step A, today, no code: Linear becomes the board and Codex's wake.**
+1. Create a Linear team `ScraperX` with the open jobs from issue #87's body, the four fields in the
+   description, labels `job`, `hard`, `needs:*`.
+2. Connect Codex to Linear (the owner, in Codex's settings: GitHub and Linear). Delegate one small
+   job to Codex and watch it start without a paste.
+3. Retire #87 as a board; one comment there points to Linear.
+
+**Step B, this week, one PR, one Claude Code session closed when it lands: the merger, the eye and
+the bridge.**
+1. `work/CONTEXT.md`, `work/agents.yml`, `work/budget.yml`, `work/looks/` with the rubric for the
+   two scenes CI already captures.
+2. `.github/workflows/merger.yml`: on proof completion and reviews, the merge rule in 2.3 step 6,
+   the cross-vendor review request, the eye's judgment (one API call on the screenshot artifact, API
+   key in a repository secret), and the 7:00 AM Central digest posted to Linear.
+3. `tools/switchboard/muse_bridge.gs`: the Apps Script for Muse's replies.
+4. The hourly scheduled task and the standing integrator session retired once the merger has run
    green twice.
 
-Owner's one-time setup, about fifteen minutes, most of it on a computer:
-- a repository secret with the Claude token from `claude setup-token`;
-- a repository secret with a Gmail app password for the switchboard's outgoing mail (needs
-  two-step verification on the Google account);
-- paste the Apps Script, set its GitHub token, run it once to grant Gmail access;
-- confirm in Codex's GitHub settings whether `@codex` on an issue starts a task.
+**Step C, next week, the orchestrator**: the hosted agent definition as files, registered as a
+Linear agent, with the `ask`, `run_probe` and `look` tools, run first on the determinism question
+as a tournament, under an $8 budget. That is the first time the team thinks together.
 
-Not in this step, each a later PR of its own: the Grok API row, the probe workflow and the
-tournament (3.1), the race (3.2), the fixed screenshot set for LOOK jobs (3.4).
+Owner's one-time setup, about twenty minutes: an Anthropic Console account with a monthly cap and
+an API key as a repository secret; Codex connected to Linear; a Gmail app password secret for the
+bridge's outgoing mail; the Apps Script pasted with a GitHub token.
 
-**Why this first.** Steps 1 to 3 alone end the owner as router for Codex and Claude, end the global
-thread, and make the claim race impossible. Step 4 ends standing sessions. Everything in section 3
-builds on `work/jobs/` and the probe workflow and can wait a week without losing anything.
+## Sources checked on 2026-11-02
 
-### What the Claude manager session does to start it
-
-Posted as one prompt in the owner's reply; the gist: open one PR with items 1 to 5 above, test the
-switchboard dry-run against the live repo (`--dry-run` prints every action it would take and takes
-none), write the owner's four setup lines into the PR body, and retire itself when the PR lands.
+- Linear agents and delegation: https://linear.app/integrations/agents ,
+  https://linear.app/developers/agents , https://linear.app/changelog/2026-06-11-coding-sessions
+- Linear pricing and credits (third-party trackers): https://omidsaffari.com/blog/linear-pricing ,
+  https://linear.app/legal/ai-addendum
+- Codex GitHub mentions, reported state: https://github.com/openai/codex/issues/54382 ,
+  https://github.com/openai/codex/issues/34425 , https://github.com/openai/codex/issues/42098
+- Hosted agents pricing and workflows (third-party): https://www.truefoundry.com/blog/claude-managed-agents-pricing ,
+  https://imisofts.com/blog/claude-managed-agents-pricing/ ,
+  https://alphasignal.ai/news/anthropic-s-managed-agents-gets-budget-caps-geo-pinning-and-smarter-advisor
+- Claude GitHub Action on a subscription: https://code.claude.com/docs/en/github-actions ,
+  https://github.com/anthropics/claude-code-action/issues/1281
+- Devin pricing (third-party): https://www.eesel.ai/blog/cognition-ai-pricing ,
+  https://aitoolpick.org/blog/devin-pricing-2026/
+- Grok API pricing (third-party): https://www.morphllm.com/grok-api-pricing ,
+  https://www.cloudzero.com/blog/grok-pricing/
+- Slack Code channels: https://cryptobriefing.com/slack-vibe-coding-ai-agents/ ,
+  https://claude.com/fr-fr/blog/claude-code-and-slack
+- Public skill catalogs: https://skillselion.com/skills/erichowens/some_claude_skills/orchestrator ,
+  https://vibeindex.ai/skills/yeachan-heo/oh-my-claudecode/ask-codex
