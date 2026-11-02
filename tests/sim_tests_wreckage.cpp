@@ -16,6 +16,30 @@ constexpr double kN706Top = 706.1;
 constexpr double kO750Top = 750.1;
 } // namespace
 
+// S1 stepped on and straight off: the water sends the empty cage up, and
+// drained at the foot the bucket brings it back down by itself. The way on
+// is S1 itself: boarded again and ridden to deck 2.
+void run_s1_wreckage() {
+    Simulation s(InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(0.5);
+    require(board_s1(s) && walk_to(s, 10.0, -116.5, 6.0), "S1 wreck: on its plate and straight off again");
+    bool sent_up = false;
+    bool back = false;
+    for (std::uint32_t tick = 0; tick < 90 * 120 && !back; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = s.stack_state();
+        sent_up = sent_up || state.s1_cage_travel >= kS1Travel - 0.01;
+        back = sent_up && std::abs(state.s1_cage_travel) <= 0.02 && state.s1_catch_latched && s1_plate_at_rest(s);
+    }
+    require(sent_up && back, "S1 wreck: the cage sent up empty and back down by itself");
+    require(board_s1(s), "S1 wreck: boarded again from the yard");
+    const S1Ride ride = ride_s1(s, 90.0);
+    require(ride.reached_top && ride.rode_on_cage && s.snapshot().death_count == 0,
+            "S1 wreck: ridden to deck 2 after the empty trip, alive");
+    std::cout << "PASS scraperx_sim stack wreckage S1: ride_s=" << ride.seconds
+              << " rider_y=" << s.snapshot().player_position.y << '\n';
+}
+
 // M's chock pulled with its shackle free: the reel falls its shaft for
 // nothing and the cage stays on TP-640. The way on is the backup ladder from
 // TP-640 up through the 662 deck's hatch.
@@ -93,6 +117,7 @@ void run_o_wreckage() {
 }
 
 void run_wreck_way_on() {
+    run_s1_wreckage();
     run_m_wreckage();
     run_n_wreckage();
     run_o_wreckage();
