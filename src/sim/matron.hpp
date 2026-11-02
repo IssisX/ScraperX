@@ -999,8 +999,10 @@ public:
     // along the edge, kFatalShiftM a step, kFatalShiftMaxM in all), she
     // hauls him back in and her floor version runs: she never lets go into a
     // fall he can survive.
-    static constexpr float kFatalLetGoFromS = 5.2F;
-    static constexpr float kFatalLetGoByS = 6.8F;
+    // With real arms (HOLD_WITH_REAL_ARMS.md: the drag, the pin with his
+    // window, over, the hang) the hold takes longer than the heave it replaced.
+    static constexpr float kFatalLetGoFromS = 8.0F;
+    static constexpr float kFatalLetGoByS = 10.5F;
     static constexpr float kFatalShiftM = 0.4F;
     static constexpr float kFatalShiftMaxM = 1.5F;
     // Let go, she watches him fall at least kFatalWatchS, and on until he is
@@ -1079,6 +1081,8 @@ public:
     static constexpr float kOverUpM = 0.70F;
     static constexpr float kOverOutM = 0.30F;
     static constexpr float kHandoffS = 3.0F;
+    static constexpr float kOverPushM = 0.45F;     // her belt hand out past its pin pose
+    static constexpr float kOverOutPastM = 0.35F;  // his middle this far out: she lets go of his belt
     // Beat 5, hanging by one ankle: her hand on the rail's top, just out past
     // its line, him head down against the outside of her deck.
     static constexpr float kHangUpM = 0.08F;
