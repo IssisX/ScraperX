@@ -7,6 +7,7 @@ extends "res://presentation/main_geometry.gd"
 
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
+const FarWorld := preload("res://presentation/far_world.gd")
 
 # The neighboring shaft. Mirrors TwinTower in the native world.
 const TWIN_TOWER_CENTER := Vector3(-30.0, 800.0, -264.0)
@@ -739,13 +740,20 @@ func _build_basin() -> void:
 	var meadow := _material(Color("3f4634"), 0.0, 0.96, Color.BLACK, 1.0, _bump_concrete)
 	# A frame around the grade (x in [-240, 240], z in [-300, 180]), not a
 	# sheet under it: two surfaces 0.3 m apart z-fight from any distance.
+	# Drawn by far_world.gd (the ground's pattern and the towers' long shadow);
+	# the boxes stay, hidden, as the floor's solids.
 	var floor_y := VALLEY_FLOOR_TOP - 0.5
+	var floor_pieces := []
 	for piece in [
 			[Vector3(5200.0, 1.0, 2400.0), Vector3(0.0, floor_y, -1500.0)],
 			[Vector3(5200.0, 1.0, 2320.0), Vector3(0.0, floor_y, 1340.0)],
 			[Vector3(2360.0, 1.0, 480.0), Vector3(-1420.0, floor_y, -60.0)],
 			[Vector3(2360.0, 1.0, 480.0), Vector3(1420.0, floor_y, -60.0)]]:
-		_add_box("ValleyFloor", piece[0], piece[1], meadow)
+		_add_box("ValleyFloor", piece[0], piece[1], meadow).visible = false
+		floor_pieces.append(piece)
+	var far_world := FarWorld.new()
+	far_world.build(self, floor_pieces, VALLEY_FLOOR_TOP)
+	add_child(far_world)
 
 	var rock := _material(Color("353b41"), 0.03, 0.93)
 	var rock_warm := _material(Color("3d3934"), 0.03, 0.93)

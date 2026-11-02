@@ -42,6 +42,8 @@ float fbm(vec2 p) {
 	return sum;
 }
 
+#include "res://presentation/sky_horizon.gdshaderinc"
+
 void sky() {
 	vec3 dir = normalize(EYEDIR);
 	float up = dir.y;
@@ -82,6 +84,8 @@ void sky() {
 			col += sun_col * exp(-angle * 3.5) * 0.06 * day_factor;
 		}
 	}
+
+	col = far_horizon(col, dir, horizon, to_light, day_factor);
 
 	// Cloud deck: a plane far overhead, so clouds foreshorten toward the
 	// horizon and thin into the haze there.
