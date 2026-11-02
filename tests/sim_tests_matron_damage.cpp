@@ -67,6 +67,10 @@ Hit hit(const bool punch, const bool stock, const bool test_down) {
                 "damage: impacts while Down accrue no damage");
     }
     if (punch && !test_down) {
+        std::cout << "damage attribution trace: total=" << out.total
+                  << " player=" << out.player << " physical_strike=" << out.strike
+                  << " matron_state=" << m.state
+                  << " strike_hits=" << s.snapshot().strike_hit_count << "\n";
         require(s.snapshot().strike_hit_count == 1 && out.strike > 0.0,
                 "damage: one actual punch lands");
         require(std::abs(out.player - out.strike) < 0.02,
