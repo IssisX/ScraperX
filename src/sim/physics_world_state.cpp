@@ -358,15 +358,7 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     // what each grip holds and its rating.
     w.list(k.grip_load);
     w.list(k.grip_rating);
-    // After them, the fabricated objects, when there are any (a save with
-    // none ends here, as it always has).
-    // Keep the original terminal-grips save unchanged when there is no damage.
-    // Only damaged checkpoints need the optional extension before fabricated entries.
-    if (checkpoint_.matron.damage_ns > 0.0F || checkpoint_.matron.player_damage_ns > 0.0F) {
-        w.pod(std::uint32_t{0x31474d44U});
-        w.pod(checkpoint_.matron.damage_ns);
-        w.pod(checkpoint_.matron.player_damage_ns);
-    }
+    // Fabricated objects follow the grips with the original save layout.
     write_fabricated(w);
 }
 
@@ -420,14 +412,6 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
              r.list_up_to(k.grip_rating, c.grip_rating.size()) && k.grip_rating.size() == k.grip_load.size() &&
              std::all_of(k.grip_rating.begin(), k.grip_rating.end(),
                          [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
-    }
-    // Older saves omit this extension; their damage starts at zero.
-    std::uint32_t next = 0;
-    if (ok && r.peek(next) && next == 0x31474d44U) {
-        ok = r.pod(next) && r.pod(loaded.matron.damage_ns) && r.pod(loaded.matron.player_damage_ns) &&
-             std::isfinite(loaded.matron.damage_ns) && std::isfinite(loaded.matron.player_damage_ns) &&
-             loaded.matron.damage_ns >= 0.0F && loaded.matron.player_damage_ns >= 0.0F &&
-             loaded.matron.player_damage_ns <= loaded.matron.damage_ns;
     }
     // After the grips, the fabricated objects: a save of a world with none
     // (every save made before them) ends before.
