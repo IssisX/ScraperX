@@ -84,8 +84,9 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
   synergistically ... not constantly waiting on me"*):
   - Nobody waits: every agent holds two or more jobs. Blocked 30 minutes, it posts `BLOCKED: what,
     needs whom` and starts the next one; the integrator clears BLOCKED lines first.
-  - The integrator runs `python3 tools/board/sweep.py` every 15 minutes and acts on every line in
-    the same sweep: MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
+  - The integrator runs `python3 tools/board/sweep.py` on every hourly check, and on events when the
+    board has moved, and acts on every line in the same sweep (no 15-minute timer; 11-02: *"drop 15"*;
+    PR events, agent messages and the hourly check drive the work): MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
     FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
   - Reviews are cross-model, and Claude's usage is the scarce budget (2026-11-02: *"That's why so
     much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
@@ -101,8 +102,8 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
   reports stay short.
 - Hand out the hard work (2026-10-27: *"don't give them cheap, weak shit. They are intelligent"*):
   post it on #3 whole (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
-  The integrator checks the board and the PRs every 10-15 minutes from a server-side scheduled task (it also
-  resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
+  The integrator acts on PR events and agent messages as they arrive, and checks the board hourly from a
+  server-side scheduled task (it also resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
   and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
   (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
   GitHub comments each need the owner's approval (10-29).
