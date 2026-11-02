@@ -592,3 +592,13 @@ enough to clear the rail, about 2.9 m, past her real reach of about 2.7 m, and t
 her arm up to 2.7 times to match) and proposed five beats with real arms; the owner chose them:
 *"5 beats"*. Rule 33; `03_EXECUTION/MATRON_REDESIGN/HOLD_WITH_REAL_ARMS.md`.
 
+---
+
+## 2026-11-02 — Ask before opening Claude workers
+
+Owner, after the integrator opened several Claude worker sessions and the five-hour quota reached
+75%: *"You have to watch how many workers you have, though, because it's going to go real fast."*
+Then: *"Let's try to be aware of the quota. It's already at 75%, dude."* And: *"Dude, you can't keep
+doing that. You should ask me how many workers to open up and give suggestions from now on."*
+`CLAUDE.md`, Managing the agents.
+

@@ -92,8 +92,10 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
     much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
     first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
     loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. The number of Claude worker sessions follows the usage he has free: two when it is tight,
-    more when he frees it (11-02: *"you can use more agents here now"*).
+    free. **Ask him before opening any Claude worker session or Claude helper**: how many, which jobs,
+    roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
+    that. You should ask me how many workers to open up and give suggestions from now on"*; the
+    session's quota hit 75% in under three hours). Work for ChatGPT, Grok and Muse needs no ask.
   - One owner per function: the board splits shared files by function, so no two agents edit the
   same function.
   - One integrate branch per job, reused; no new diagnostic branch for every try.
