@@ -92,7 +92,8 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
     much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
     first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
     loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. **Ask him before opening any Claude worker session or Claude helper**: how many, which jobs,
+    free. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+    "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
     roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
     that. You should ask me how many workers to open up and give suggestions from now on"*; the
     session's quota hit 75% in under three hours). Work for ChatGPT, Grok and Muse needs no ask.
