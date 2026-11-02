@@ -36,6 +36,10 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
   (2026-10-27: *"you can't give me these large blocks of text"*).
 - No answer after 10 minutes: the pick decides; say so on the work's issue and go on; he can still
   overturn it (2026-10-27: *"go with your recommendations. Let's go with 5 or 10 minutes."*).
+- He has handed his open decisions to the integrator (2026-11-02: *"Make the other decisions for
+  me ... I said answer for me. So that means the decisions did go through."*). Make the call,
+  record it in `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` with its reason, and tell him in
+  one line after. Ask first only when something cannot be undone. He can overturn any call.
 - Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
   Central"), never a fixed offset; CI, GitHub and `date` report UTC, so convert (2026-10-18, 10-20,
   10-27: *"If using UTC, please switch permanently."*).
@@ -57,11 +61,12 @@ Code may still make steel, air, steps and beds. The owner picks the candidates b
 ## Look at the game; you are never blind
 
 2026-10-29: *"you should be using godot-runtime, which is like Playwright for Godot, which allows you
-to see the game. So.....wtf chuck?"* When the Godot MCP runtime is available, launch `mcp__godot__run_project` with `projectPath`
-`godot` and `background: true`, then use screenshots/input and stop the project. Availability is
-session-specific: inspect the tools and environment before relying on it. If unavailable, report
-the exact blocker and use an authorized alternative when possible; do not claim a visual check
-occurred. The owner rule requiring visual review remains in `00_START_HERE.md` rule 28.
+to see the game. So.....wtf chuck?"* The Godot MCP runtime works in this container: run
+`mcp__godot__run_project` with `projectPath` `godot` (the repo's `godot/` folder) and `background:
+true`, then `take_screenshot`, `simulate_input` or `run_script`, and `stop_project` when done (one
+session at a time). Launch it this way; attaching to a game already running is what failed before.
+Visual work (her body, hair, contacts, camera, UI) is checked by eye this way before it lands, and
+"we can't see it" is never said: try `run_project` first.
 
 ## Managing the agents
 

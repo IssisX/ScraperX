@@ -89,11 +89,30 @@ force" first; this file holds only what they do not.
   - Matron hearing and the Turn (#3 6566474026).
   - Merge blockers are substantive (10-31).
   - The summit ending is the last beam; it is landed.
-- **Waiting on Cory**, asked 11:15 AM Central: restore his wording of two rules that agents rewrote
-  while Claude was away, or keep theirs. The two are `CLAUDE.md` "Look at the game; you are never
-  blind" (softened to "when available") and the "Interpretation and unresolved conflicts" section of
-  `00_START_HERE.md`. Claude's pick is **restore**. If he gives no answer within 10 minutes, the pick
-  decides. Note the outcome on #3.
+- **Decided 11-02: restore.** Agents had rewritten two of his rules while Claude was away, and his
+  wording is back:
+  - `CLAUDE.md` "Look at the game; you are never blind" had been softened to "when available".
+  - The "Interpretation and unresolved conflicts" section of `00_START_HERE.md` told agents to ask
+    him before counting CI as green; it is removed.
+  - Cory: *"I said answer for me. So that means the decisions did go through."*
+- **He hands his open decisions to the integrator** (*"Make the other decisions for me."*,
+  `CLAUDE.md`). Claude decided questions 1 and 6–11 of `OWNER_DECISIONS_PENDING.md` by their picks:
+  - foreman
+  - stock first
+  - gusts
+  - skip
+  - forklift trial
+  - no ghost
+  - store later
+
+  These are work to schedule on the board after the Matron exit board.
+- **His own call, 11-02: "Damage does not persist."** It supersedes correction 3 of the fighting
+  spec ("commit stores damage_ns, restore returns it").
+  - A checkpoint rewind or a reload brings her back undamaged and alive (rule 34).
+  - For #83 this means: drop the `DMG1` save extension and the restore-to-Dead branch, make
+    `restore` zero both damage meters, and test that damage taken before a committed checkpoint is
+    gone after rewinding to it.
+  - That also answers #83's open question about a rewind after her death.
 
 ## The Matron exit board (13 items)
 

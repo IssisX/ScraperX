@@ -557,3 +557,16 @@ Owner, to the integrator: *"Remember, you need to also monitor the sessions, and
 and wasteful, we should create another whenever that happens, which you determine for me."* The
 integrator decides when a Claude session (its own included) is too long or wasteful, hands off to a
 fresh one and retires the old one, without asking him (rule 62; `CLAUDE.md`, Managing the agents).
+
+---
+
+## 2026-11-02 — Her damage does not persist; the integrator decides for him
+
+Owner, on the S7 damage meter: *"Damage does not persist."* A checkpoint rewind or a reload brings
+the Matron back undamaged (rule 34). This supersedes correction 3 of the fighting spec ("commit
+stores damage_ns, restore returns it").
+
+Owner, on the decisions put to him: *"Make the other decisions for me. Thanks for catching these
+things. I said answer for me. So that means the decisions did go through."* The restore of his rule
+wording went through, and Claude decided questions 1 and 6–11 of
+`03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` by their picks (`CLAUDE.md`, Talking to the owner).

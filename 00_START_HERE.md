@@ -48,7 +48,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 31. She goes deck to deck, up and down, and climbs *"mostly anything"*; nothing hard-wired that more decks would undo; it ships in the game and its APK (10-19, 10-21, 10-22).
 32. Her fatality and arm tears: *"Do not soften it ... like a Mortal Kombat fatality."* Full intensity, no toggle, no tamer substitute (10-21); short and playable (10-28).
 33. Her holds: third person from her grab to his release or death; PUNCH works while held; she is intimate and interactive (10-28). Not just a camera: from grab to release or death it is a whole cinematic, dramatic experience (10-29).
-34. He is never helpless: a hard enough blow takes her balance or puts her down for seconds, alive (10-19).
+34. He is never helpless: a hard enough blow takes her balance or puts her down for seconds, alive (10-19). Her damage does not persist: a checkpoint rewind or a reload brings her back undamaged (11-02).
 35. In reach she pulls him off a ladder by the ankle; for 30 s after a tear, or after his blow frees him, she backs off and lets him run (10-28). Her locker on deck 1 (11 m) stays; the floor fatality there is fine (10-28).
 36. Her look: a real old woman's body and skin, an uncanny adult-horror face, never thin, red-skinned or Halloween; the elite graphics are hers (10-19).
 37. Her movement is continuous: drawn between ticks, no snapped poses, joints at most 20 rad/s, hands reaching each hold (10-27).
@@ -91,20 +91,6 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 
 **Waiting on him** (talked through before anything is built; menu: `03_EXECUTION/handoffs/PARKED_FEATURES_2026-10-29.md`)
 64. Dread before she is seen, kept for later (10-27); her limbs torn off, her death and return (*"she's done this before"*), a laser welder and nail gun instead of a harpoon (10-20); tower two, earned by believable architecture only, and its property-damage climb (10-21); the chiller drop and glass tube, untouched (10-20); lift governors (plan §11).
-
-## Interpretation and unresolved conflicts
-
-The numbered rules above remain the owner's policy. Tool availability is not guaranteed by a
-past session: check the current environment and report a missing runtime rather than claiming a
-visual run. Rule 28 still calls for visual review. Rule 27's full-ascent green criterion and
-rule 3's proof-job merge criterion are not equivalent; record both results and seek an owner
-interpretation before treating partial CI as satisfying the full-ascent rule. Rule 15's pause
-on new multi-agent workflows and rules 60–62's active board/management instructions need a
-current owner decision if their application conflicts. Rule 39's “after the Matron fixes” timing
-and existing identity/radio call sites (`godot/presentation/ui/pause_menu.gd`
-`_build_work_id_page`; `godot/presentation/main.gd` `_story_radio`) also need review.
-The newer specific voice instruction in rule 43 should be read alongside rule 40, not silently
-replaced by the older general sound rule.
 
 ## Current position
 
