@@ -30,7 +30,10 @@ Hit hit(const bool punch, const bool stock, const bool test_down) {
     const Vector3 p = s.snapshot().player_position;
     (void)s.set_facing(0.0, 1.0);
     s.launch_matron_for_test({p.x, p.y - 0.20, p.z + 1.05});
-    for (int i = 0; i < 90 && s.matron_state().state != static_cast<int>(Matron::State::Hunting); ++i) tick(s);
+    for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) &&
+                    s.matron_state().state != static_cast<int>(Matron::State::Hunting); ++i) tick(s);
+    require(s.matron_state().state == static_cast<int>(Matron::State::Hunting),
+            "damage: Matron must finish Emerging before a judged blow");
     s.debug_set_matron_stage(test_down ? 0 : 2);
     for (int i = 0; i < 90 && !s.snapshot().strike_offered; ++i) {
         const Vector3 me = s.snapshot().player_position, her = s.matron_state().position;
@@ -69,7 +72,7 @@ Hit hit(const bool punch, const bool stock, const bool test_down) {
     if (punch && !test_down) {
         std::cout << "damage attribution trace: total=" << out.total
                   << " player=" << out.player << " physical_strike=" << out.strike
-                  << " matron_state=" << m.state
+                  << " matron_state=" << static_cast<int>(m.state)
                   << " strike_hits=" << s.snapshot().strike_hit_count << "\n";
         require(s.snapshot().strike_hit_count == 1 && out.strike > 0.0,
                 "damage: one actual punch lands");
