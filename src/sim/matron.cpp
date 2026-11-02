@@ -2711,7 +2711,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             (void)way->step(dt, account);
             // A mover may forbid starting/driving a Turn while it owns her
             // body, but a Turn already in progress still spends real time.
-            // Otherwise a sound-triggered lunge begun before a pipe/climb can
+            // Otherwise a sound-triggered lunge begun before a no-Turn mover can
             // remain latched for the whole traversal.
             if (turns || turn_ != Turn::None) {
                 step_turn(dt, d, heard_level_);
