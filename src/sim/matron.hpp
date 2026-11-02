@@ -750,6 +750,20 @@ public:
     // Pain is borrowed rage: a knockdown adds this, a stagger this.
     static constexpr float kKnockdownRage = 0.08F;
     static constexpr float kStaggerRage = 0.02F;
+    // Fighting S7: persistent judged-blow impulse (N-s) and damage stages 0..4.
+    static constexpr float kDamageStage1Ns = 1200.0F;
+    static constexpr float kDamageStage2Ns = 2700.0F;
+    static constexpr float kDamageStage3Ns = 4200.0F;
+    static constexpr float kDamageStage4Ns = 5400.0F;
+    static constexpr float kKillDamageNs = 6000.0F;
+    static constexpr float kDamageStageRecoveryStep = 0.15F;
+    [[nodiscard]] static constexpr std::uint8_t damage_stage_for(const float damage_ns) noexcept {
+        return damage_ns >= kDamageStage4Ns   ? 4
+               : damage_ns >= kDamageStage3Ns ? 3
+               : damage_ns >= kDamageStage2Ns ? 2
+               : damage_ns >= kDamageStage1Ns ? 1
+                                              : 0;
+    }
     // The shaft's corner pipe (the owner, 2026-10-19: "She comes down the
     // shaft after you. One shaft pipe becomes hers to climb."): the north-east
     // riser (world_solids.inc Riser: 0.7 m square at x 15.8, z -134.2, solid
@@ -1212,6 +1226,10 @@ public:
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
+        float damage_ns = 0.0F;         // total judged-blow impulse (N-s) from all valid sources
+        float player_damage_ns = 0.0F;  // player-strike share of damage_ns (attribution only)
+        std::uint8_t damage_stage = 0;  // 0..4 from damage_ns
+        float stagger_left_s = 0.0F;    // remaining stagger catch-up time
         float fall_x = 0.0F, fall_z = 1.0F;   // down: the way she fell (her head that way)
         bool kneeling = false;          // down where lying did not fit: crumpled on her knees
         float down_s = 0.0F;            // seconds on the steel
@@ -1306,6 +1324,8 @@ public:
         Stage stage = Stage::Pest;
         float exposure_s = 0.0F;
         std::uint32_t handled = 0;   // the throwables the player has handled, a bit each
+        float damage_ns = 0.0F;
+        float player_damage_ns = 0.0F;
     };
 
     Matron(JPH::PhysicsSystem &physics, std::uint32_t static_layer, std::uint32_t moving_layer,

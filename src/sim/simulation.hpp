@@ -309,6 +309,10 @@ struct MatronSnapshot final {
     std::uint32_t staggers = 0;
     std::uint32_t knockdowns = 0;
     double blow_mps = 0.0;
+    double damage_ns = 0.0;
+    double player_damage_ns = 0.0;
+    std::uint8_t damage_stage = 0;
+    double stagger_left_s = 0.0;
     double fall_x = 0.0, fall_z = 1.0;
     bool kneeling = false;
     double down_s = 0.0;

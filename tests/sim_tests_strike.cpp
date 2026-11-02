@@ -7,6 +7,7 @@
 #include "sim_tests.hpp"
 
 #include "sim/matron.hpp"
+#include "sim/physics_world_support.hpp"
 #include "sim/player_strike_limits.hpp"
 
 #include <cmath>
@@ -168,6 +169,9 @@ void run_strike() {
         }
         blow_hits = s.snapshot().strike_hit_count;
         dv = s.snapshot().strike_impulse_ns / scraperx::sim::Matron::kMassKg;
+        require(std::abs(s.matron_state().damage_ns - s.snapshot().strike_impulse_ns) < 0.05 &&
+                    std::abs(s.matron_state().player_damage_ns - s.snapshot().strike_impulse_ns) < 0.05,
+                "strike: landed punch accumulates its 50 N-s into damage_ns and player_damage_ns");
     }
     std::cout << "  strike blow: hits=" << blow_hits << " her_blow_mps=" << blow_mps << " impulse/mass=" << dv << "\n";
     require(blow_hits == 1 && dv > 0.0 && blow_mps >= 0.8 * dv && blow_mps <= 1.5 * dv + 0.05,
@@ -396,6 +400,183 @@ void run_strike() {
         tick(s);
         require(airborne && !ready && s.snapshot().strike_count == before,
                 "strike: in the air the punch is greyed and a press throws none");
+    }
+    // Fighting S7: persistent damage_ns, player_damage_ns, stage boundaries (0..4, 6000 DEAD),
+    // mixed-source window shares, (1 + 0.15 * stage) stagger/Down scaling, checkpoints, and Down pause.
+    {
+        using namespace JPH;
+        using scraperx::sim::Matron;
+        using scraperx::sim::Stimulus;
+        namespace detail = scraperx::sim::detail;
+        static_assert(Matron::damage_stage_for(0.0F) == 0 && Matron::damage_stage_for(1199.0F) == 0 &&
+                      Matron::damage_stage_for(1200.0F) == 1 && Matron::damage_stage_for(2699.0F) == 1 &&
+                      Matron::damage_stage_for(2700.0F) == 2 && Matron::damage_stage_for(4199.0F) == 2 &&
+                      Matron::damage_stage_for(4200.0F) == 3 && Matron::damage_stage_for(5399.0F) == 3 &&
+                      Matron::damage_stage_for(5400.0F) == 4 && Matron::damage_stage_for(5999.0F) == 4);
+        struct DamageWorld {
+            detail::JoltRuntimeLease runtime;
+            detail::BroadPhaseLayerInterface layers;
+            detail::ObjectVsBroadPhaseFilter broad;
+            detail::ObjectLayerPairFilter pairs;
+            TempAllocatorImpl temp{8 * 1024 * 1024};
+            JobSystemThreadPool jobs{cMaxPhysicsJobs, cMaxPhysicsBarriers, 1};
+            PhysicsSystem physics;
+            BodyID floor{}, player{}, striker{};
+            const float dt = 1.0F / 90.0F;
+            DamageWorld() {
+                physics.Init(512, 0, 512, 512, layers, broad, pairs);
+                BodyInterface &b = physics.GetBodyInterface();
+                floor = b.CreateAndAddBody(
+                    BodyCreationSettings(new BoxShape(Vec3(200.0F, 0.5F, 200.0F)), RVec3(0.0, 153.5, -130.0),
+                                         Quat::sIdentity(), EMotionType::Static, detail::object_layers::kStatic),
+                    EActivation::DontActivate);
+                player = b.CreateAndAddBody(
+                    BodyCreationSettings(new SphereShape(0.35F), RVec3(20.0, 155.0, -150.0), Quat::sIdentity(),
+                                         EMotionType::Kinematic, detail::object_layers::kMoving),
+                    EActivation::DontActivate);
+                BodyCreationSettings crate(new SphereShape(0.25F), RVec3(20.0, 158.0, -150.0), Quat::sIdentity(),
+                                           EMotionType::Dynamic, detail::object_layers::kMoving);
+                crate.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+                crate.mMassPropertiesOverride.mMass = 40.0F;
+                crate.mGravityFactor = 0.0F;
+                striker = b.CreateAndAddBody(crate, EActivation::DontActivate);
+            }
+            ~DamageWorld() {
+                BodyInterface &b = physics.GetBodyInterface();
+                for (const BodyID id : {striker, player, floor}) {
+                    if (b.IsAdded(id)) b.RemoveBody(id);
+                    if (!id.IsInvalid()) b.DestroyBody(id);
+                }
+            }
+            void step(Matron &m) {
+                m.pre_step(dt, Stimulus(RVec3(20.0, 155.0, -150.0), 0.0F));
+                physics.Update(dt, 1, &temp, &jobs);
+                m.post_step(dt);
+            }
+            void wake(Matron &m, const float damage_ns = 0.0F, const float player_ns = 0.0F) {
+                Matron::Saved saved{};
+                saved.state = Matron::State::Hunting;
+                saved.damage_ns = damage_ns;
+                saved.player_damage_ns = player_ns;
+                m.restore(saved);
+                for (int i = 0; i < 40; ++i) step(m);
+                m.place_for_test(RVec3(0.0, 154.0, -130.0));
+                m.face_for_test(0.0F);
+                step(m);
+                require(m.view().alive && m.view().state == Matron::State::Hunting, "S7: hunting on floor");
+            }
+            void punch_ns(Matron &m, const float ns, const bool quiet_after = true) {
+                const RVec3 at = physics.GetBodyInterface().GetPosition(m.body());
+                m.pre_step(dt, Stimulus(RVec3(20.0, 155.0, -150.0), 0.0F));
+                m.struck_by_player(Vec3(0.0F, 0.0F, -ns), at + RVec3(0.0, 0.0, 1.0), false);
+                physics.Update(dt, 1, &temp, &jobs);
+                m.post_step(dt);
+                if (quiet_after && m.view().alive) {
+                    for (int i = 0; i < Matron::kBlowQuietTicks; ++i) step(m);
+                }
+            }
+            void punch_to(Matron &m, const float target_ns) {
+                while (m.view().alive && m.view().damage_ns + 1.0e-3F < target_ns)
+                    punch_ns(m, std::min(40.0F, target_ns - m.view().damage_ns), true);
+            }
+            void fire_striker(Matron &m, const float speed_mps) {
+                BodyInterface &b = physics.GetBodyInterface();
+                const RVec3 at = b.GetPosition(m.body());
+                b.SetPositionAndRotation(striker, at + RVec3(0.0, 0.1, 0.56), Quat::sIdentity(), EActivation::Activate);
+                b.SetLinearAndAngularVelocity(striker, Vec3(0.0F, 0.0F, -speed_mps), Vec3::sZero());
+            }
+            void park_striker() {
+                BodyInterface &b = physics.GetBodyInterface();
+                b.SetPositionAndRotation(striker, RVec3(20.0, 158.0, -150.0), Quat::sIdentity(), EActivation::DontActivate);
+                b.SetLinearAndAngularVelocity(striker, Vec3::sZero(), Vec3::sZero());
+            }
+        };
+        DamageWorld w;
+        Matron m(w.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                 detail::object_layers::kStatic, w.player);
+        w.wake(m);
+        require(m.view().damage_ns == 0.0F && m.view().player_damage_ns == 0.0F && m.view().damage_stage == 0,
+                "S7 boundary: 0 N-s starts at stage 0");
+        const float thresholds[5] = {1200.0F, 2700.0F, 4200.0F, 5400.0F, 6000.0F};
+        for (int s = 0; s < 5; ++s) {
+            const float below = thresholds[s] - 1.0F;
+            w.punch_to(m, below);
+            require(std::abs(m.view().damage_ns - below) < 0.05F && std::abs(m.view().player_damage_ns - below) < 0.05F &&
+                        m.view().damage_stage == static_cast<std::uint8_t>(s) && m.view().alive,
+                    "S7 boundary: 1 N-s below threshold stays in lower stage and alive");
+            w.punch_ns(m, 1.0F, true);
+            if (s < 4) {
+                require(std::abs(m.view().damage_ns - thresholds[s]) < 0.05F &&
+                            m.view().damage_stage == static_cast<std::uint8_t>(s + 1) && m.view().alive,
+                        "S7 boundary: crossing threshold advances stage");
+            } else {
+                require(std::abs(m.view().damage_ns - Matron::kKillDamageNs) < 0.05F &&
+                            std::abs(m.view().player_damage_ns - Matron::kKillDamageNs) < 0.05F &&
+                            m.view().damage_stage == 4 && !m.view().alive && m.view().state == Matron::State::Dead,
+                        "S7 boundary: 6000 N-s kills her without a stage 5");
+            }
+        }
+        w.wake(m);
+        w.fire_striker(m, 4.0F);
+        w.step(m);
+        w.park_striker();
+        for (int i = 0; i < Matron::kBlowQuietTicks; ++i) w.step(m);
+        const float env_only_ns = m.view().damage_ns;
+        require(env_only_ns > 80.0F && m.view().player_damage_ns == 0.0F,
+                "S7 env: environmental blow counts in damage_ns with 0 player_damage_ns");
+        w.wake(m);
+        w.fire_striker(m, 4.0F);
+        w.step(m);   // tick 0: environmental striker contacts her, opening the window
+        w.park_striker();
+        w.punch_ns(m, 50.0F, true);   // tick 1 (same judged window): 50 N-s player punch
+        require(std::abs(m.view().player_damage_ns - 50.0F) < 0.05F &&
+                    std::abs(m.view().damage_ns - (env_only_ns + 50.0F)) < 5.0F,
+                "S7 mixed window: each source contributes its real share only (no double-count, no whole-window-to-player)");
+        float stagger0 = 0.0F, down0 = 0.0F, pace0 = 0.0F;
+        const float stage_ns[5] = {0.0F, 1200.0F, 2700.0F, 4200.0F, 5400.0F};
+        for (int st = 0; st < 5; ++st) {
+            w.wake(m, stage_ns[st], stage_ns[st]);
+            if (st == 0) pace0 = m.view().pace_mps;
+            require(std::abs(m.view().pace_mps - pace0) < 1.0e-5F && m.view().damage_stage == st,
+                    "S7 scaling: offensive pace never scales with damage stage");
+            w.punch_ns(m, 150.0F, false);
+            require(m.view().state == Matron::State::Staggering, "S7 scaling: 150 N-s staggers her");
+            if (st == 0) stagger0 = m.view().stagger_left_s;
+            const float scale = 1.0F + 0.15F * static_cast<float>(st);
+            require(std::abs(m.view().stagger_left_s - stagger0 * scale) < 0.02F,
+                    "S7 scaling: stagger time scales by 1 + 0.15 * stage");
+            w.wake(m, stage_ns[st], stage_ns[st]);
+            w.punch_ns(m, 450.0F, false);
+            require(m.view().state == Matron::State::Down, "S7 scaling: 450 N-s knocks her down");
+            if (st == 0) down0 = m.view().down_left_s;
+            require(std::abs(m.view().down_left_s - down0 * scale) < 0.02F,
+                    "S7 scaling: Down time scales by 1 + 0.15 * stage");
+        }
+        const float down_dmg = m.view().damage_ns, down_plr = m.view().player_damage_ns;
+        w.punch_ns(m, 200.0F, false);
+        w.fire_striker(m, 5.0F);
+        for (int i = 0; i < 6; ++i) w.step(m);
+        w.park_striker();
+        require(m.view().state == Matron::State::Down && std::abs(m.view().damage_ns - down_dmg) < 0.01F &&
+                    std::abs(m.view().player_damage_ns - down_plr) < 0.01F,
+                "S7 Down pause: blows during Down are ignored");
+        w.wake(m, 400.0F, 150.0F);
+        const Matron::Saved cp1 = m.save();
+        w.punch_ns(m, 150.0F, true);
+        w.punch_to(m, 1300.0F);
+        const Matron::Saved cp2 = m.save();
+        w.punch_ns(m, 4700.0F, false);
+        require(!m.view().alive && m.view().state == Matron::State::Dead, "S7 checkpoint: killed before restore");
+        m.restore(cp2);
+        require(m.view().alive && std::abs(m.view().damage_ns - 1300.0F) < 0.05F &&
+                    std::abs(m.view().player_damage_ns - 1050.0F) < 0.05F && m.view().damage_stage == 1,
+                "S7 checkpoint: restore returns cp2 damage_ns and player_damage_ns");
+        m.restore(cp1);
+        require(m.view().alive && std::abs(m.view().damage_ns - 400.0F) < 0.05F &&
+                    std::abs(m.view().player_damage_ns - 150.0F) < 0.05F && m.view().damage_stage == 0,
+                "S7 checkpoint: rewinding to earlier checkpoint cp1 rewinds damage");
+        std::cout << "PASS scraperx_sim fighting S7: env_ns=" << env_only_ns << " stagger0=" << stagger0
+                  << " down0=" << down0 << "\n";
     }
     std::cout << "PASS scraperx_sim strike: impulse_ns=" << close.impulse_ns << "\n";
 }
