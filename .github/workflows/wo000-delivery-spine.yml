@@ -721,6 +721,19 @@ jobs:
             --script res://tests/her_takes_test.gd 2>&1 | tee artifacts/her-takes.log
           grep -F "HER_TAKES PASS fails=0" artifacts/her-takes.log
 
+      - name: Her lines never repeat
+        shell: bash
+        run: |
+          set -euo pipefail
+          # All 43 lines of HER_LINES_DRAFT.md have their three clips and a caption; a moment of hers never
+          # says the line it just said nor plays the clip it just played (rule 42), driven through
+          # matron_sound.gd the way the game drives it; the apron wipe says "Waste not." (line 27) even
+          # over a line in her mouth, and no word to his back follows a hold her hand ended; in the
+          # director her one mouth: a line of hers never sounds with her shriek or her growl.
+          timeout 300s tools/godot/godot --headless --path godot \
+            --script res://tests/matron_speech_test.gd 2>&1 | tee artifacts/matron-speech.log
+          grep -F "MATRON_SPEECH PASS fails=0" artifacts/matron-speech.log
+
       - name: The rip camera enters and returns without a cut or lock
         shell: bash
         run: |
@@ -989,6 +1002,10 @@ jobs:
 
   publish-checkpoint:
     needs: [host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk]
+    # Trunk only: off trunk its signing step always stopped with a KeyError,
+    # so "green" had to mean "every job but this one". Skipped there, a green
+    # run is simply every job green (integrator, 2026-11-02).
+    if: github.ref == 'refs/heads/ScraperX-Claude'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
@@ -1084,7 +1101,11 @@ jobs:
   # build. A manual dispatch still makes one.
   playtest-apk:
     needs: [host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk]
-    if: github.event_name == 'workflow_dispatch'
+    # Trunk only, like publish-checkpoint: its signer maps the branch name to
+    # an identity and stops with a KeyError on any other branch, so a proof
+    # dispatched on an agent's branch went red here with every test green
+    # (integrator, 2026-11-02, #95).
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/ScraperX-Claude'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
