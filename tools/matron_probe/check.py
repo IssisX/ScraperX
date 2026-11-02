@@ -91,7 +91,30 @@ CLIMB_ITEM = "no exit item yet: her drawn hands are off the climb's grip (report
 PLANT_ITEM = "no exit item yet: a foot slides up to 6.8 cm while she is nearly still (reported 2026-10-29)"
 HAIR_ITEM = "exit item 10, hair"
 SKIRT_ITEM = "exit item 10, hair and cloth (the skirt's baseline is her bind pose, an A-pose)"
+ARM_ITEM = "no exit item yet: her drawn arm stretches with no hold, reach or Turn (measured 2026-11-02)"
 EXPECTED = {
+    ("stretch_arm", "touch_matron_act"): (ARM_ITEM, 15, 16.568),
+    ("stretch_arm_hold", "touch_matron_act"): (HOLD_ITEM, 2165, 203.769),
+    ("stretch_arm_reach", "touch_matron_act"): (REACH_ITEM, 32, 221.972),
+    ("stretch_arm_turn", "touch_matron_act"): (TURN_ITEM, 625, 30.000),
+    ("stretch_leg_turn", "touch_matron_act"): (TURN_ITEM, 567, 6.000),
+    ("grip_climb", "touch_matron_act"): (CLIMB_ITEM, 1759, 1.898),
+    ("plant", "touch_matron_act"): (PLANT_ITEM, 60, 0.068),
+    ("hair", "touch_matron_act"): (HAIR_ITEM, 14525, 0.203),
+    ("skirt", "touch_matron_act"): (SKIRT_ITEM, 16167, 0.126),
+    ("grip_climb", "look_matron_moves"): (CLIMB_ITEM, 1494, 1.556),
+    ("plant", "look_matron_moves"): (PLANT_ITEM, 4, 0.057),
+    ("hair", "look_matron_moves"): (HAIR_ITEM, 1617, 0.192),
+    ("skirt", "look_matron_moves"): (SKIRT_ITEM, 1415, 0.114),
+    ("stretch_arm_hold", "look_matron_hold"): (HOLD_ITEM, 634, 206.990),
+    ("grip_hold", "look_matron_hold"): (HOLD_ITEM, 19, 0.183),
+    ("plant", "look_matron_hold"): (PLANT_ITEM, 1, 0.063),
+    ("hair", "look_matron_hold"): (HAIR_ITEM, 612, 0.089),
+    ("skirt", "look_matron_hold"): (SKIRT_ITEM, 506, 0.086),
+    ("stretch_arm_hold", "look_matron_fatal"): (HOLD_ITEM, 373, 198.334),
+    ("plant", "look_matron_fatal"): (PLANT_ITEM, 1, 0.063),
+    ("hair", "look_matron_fatal"): (HAIR_ITEM, 425, 0.126),
+    ("skirt", "look_matron_fatal"): (SKIRT_ITEM, 291, 0.086),
 }
 
 
