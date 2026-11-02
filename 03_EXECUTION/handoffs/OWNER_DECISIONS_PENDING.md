@@ -33,7 +33,8 @@ agents (*"suggest what settings we should use against what we are doing ... Ther
 of stuff that you're not even thinking about"*). The weekly limit resets Monday 11 AM; heavy days
 and light days are fine (*"peaks and valleys"*). He makes up for heavy days with light ones (*"to make up
 for it"*). The security review and lane B sessions opened at 4:56 PM on a misread were closed
-unused at 5:00 PM; they wait for his yes. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+unused at 5:00 PM. At 5:00 PM he asked for one more session and left the pick to Claude: lane B
+(jobs 6, 8), high; the integrator moved to xhigh. He wants no settings to tap: Claude picks and sets. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
