@@ -1915,9 +1915,9 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 			# what she holds (matron.hpp Trunk: her hips over her feet, her
 			# trunk's pitch), and her lean makes up what her drawn arm still
 			# falls short of. Her knees bend under hips brought down.
-			var hip_k := clampf(float(_hold["hip_up"]), 0.6, 1.0)
-			hip_y = 0.97 * hip_k
-			var bend := acos(clampf(hip_k, 0.5, 1.0))
+			var hip_k := clampf(float(_hold["hip_up"]), 0.5, 0.99)
+			hip_y = hip_k
+			var bend := acos(clampf(hip_k / 0.99, 0.5, 1.0))
 			pitch = float(_hold["trunk_pitch"]) + _hold_lean
 			knees = 2.0 * bend + 0.1
 			legs_fwd = bend + 0.15 * sin(step) * clampf(speed, 0.0, 1.0)

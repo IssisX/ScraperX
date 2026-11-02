@@ -932,7 +932,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                                  ? std::max(kPinHereUpM - 0.25F, rail_up_)
                                  : std::min(kBackInTopM, rail_up_ + 0.15F + kBackInSlope * std::max(0.0F, her_in - kRimStandM));
             RVec3 in = RVec3(at.GetX(), feet + up, at.GetZ()) -
-                       out * (grip_point_ != Grip::Ankle ? kBackInM : 0.0F) + right * kHangSideM;
+                       out * (grip_point_ != Grip::Ankle ? kBackInM : 0.0F) + right * kBackInSideM;
             if (grip_point_ == Grip::Ankle && !pin_here_ && rail_in < 0.0F && !back_lifted_) {
                 // His ankle not over the rail's top yet: up clear of it first
                 // (not hauled into its side).
@@ -1377,7 +1377,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
                            (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
         pose_hand(dt, rail_pose(at, feet, rail_up_ + kBeltUpM + 0.1F, kBeltOutM + kOverPushM, kBeltSideM),
                   0.8F * kHandSpeedMps);
-        const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, -kHangSideM);
+        const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
         pose_hand2(dt, up, 0.8F * kHandSpeedMps);
         if ((past > kOverOutPastM && Vec3(up - hand2_target_).Length() < 0.1F) || hold_s_ > 4.0F) {
             // His middle out: her first hand from his belt to his ankle.
