@@ -3699,8 +3699,9 @@ void Matron::restore(const Saved &saved) {
     // A restore puts her back as the checkpoint had her, dead or not: the world is put
     // back and she is part of it (her death is not kept; matron.hpp, Saved).
     dead_ = false;
-    damage_ns_ = saved.damage_ns;
-    player_damage_ns_ = saved.player_damage_ns;
+    // A checkpoint rewind or reload restores her alive and undamaged.
+    damage_ns_ = 0.0F;
+    player_damage_ns_ = 0.0F;
     {
         remove_body();
         end_hold(saved.state);
@@ -3891,11 +3892,6 @@ void Matron::restore(const Saved &saved) {
             emerge_s_ = 0.4F;
         }
         restore_planks();
-    }
-    if (damage_lethal_at_ns(damage_ns_)) {
-        dead_ = true;
-        state_ = State::Dead;
-        remove_body();
     }
     refresh_view();
 }
