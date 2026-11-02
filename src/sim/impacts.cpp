@@ -34,6 +34,18 @@ bool ImpactLedger::track_machine(const JPH::BodyID body, const std::uint64_t ent
     return true;
 }
 
+JPH::BodyID ImpactLedger::machine_body(const std::uint64_t entity) const noexcept {
+    if (std::none_of(machines_.begin(), machines_.end(), [entity](const Machine &m) { return m.entity == entity; })) {
+        return JPH::BodyID();
+    }
+    for (const Tracked &t : tracked_) {
+        if (t.entity == entity) {
+            return t.body;
+        }
+    }
+    return JPH::BodyID();
+}
+
 float ImpactLedger::run_loudness(const float mass_kg, const float speed_mps) noexcept {
     if (speed_mps < kRunMinMps) {
         return 0.0F;

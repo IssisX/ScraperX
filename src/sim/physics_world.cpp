@@ -729,10 +729,31 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     summit_->pre_step();
     // What the Matron can hear besides the player (matron.hpp hear): the last
     // step's hits, hardest first, then the yard crane's drives while they run.
+    // A machine part she is on or against (a leaf, a platform, a cage she
+    // steps onto) is struck by her own weight: her own sound, as her body's
+    // within kOwnSoundM is, though its center lies farther off. Read from the
+    // part's bounds, grown by kOwnTouchM, only for a hit (deterministic).
+    const auto matron_on_machine = [this, &bodies](const std::uint64_t entity) {
+        constexpr float kOwnTouchM = 0.3F;
+        const JPH::BodyID part = impacts_->machine_body(entity);
+        if (part.IsInvalid()) {
+            return false;
+        }
+        JPH::AABox box;
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), part);
+            if (!lock.Succeeded()) {
+                return false;
+            }
+            box = lock.GetBody().GetWorldSpaceBounds();
+        }
+        box.ExpandBy(JPH::Vec3::sReplicate(kOwnTouchM));
+        return box.Contains(JPH::Vec3(bodies.GetPosition(matron_->body())));
+    };
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
         // Her own throw coming down is not a sound to her (matron.hpp).
-        if (loud > 0.0F && hit.entity != matron_->thrown_entity()) {
+        if (loud > 0.0F && hit.entity != matron_->thrown_entity() && !matron_on_machine(hit.entity)) {
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
     }
