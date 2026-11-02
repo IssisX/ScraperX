@@ -2303,6 +2303,7 @@ private:
     [[nodiscard]] JPH::RVec3 rail_pose(JPH::RVec3 at, float feet, float up, float out, float side) const noexcept;
     void begin_regrip(Grip point) noexcept;
     void reset_beats() noexcept;
+    [[nodiscard]] JPH::Vec3 swat_direction(JPH::RVec3 player) const;
     void begin_pin();
     void step_rail(float dt, JPH::RVec3 player, JPH::RVec3 at, float feet);
     [[nodiscard]] JPH::RVec3 pin_pose(JPH::RVec3 at, float feet) const noexcept;

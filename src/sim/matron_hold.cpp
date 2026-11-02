@@ -772,7 +772,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     if (!swat_given_) {
                         swat_given_ = true;
                         swat_due_ = true;
-                        swat_dir_ = shove_direction(player);
+                        swat_dir_ = swat_direction(player);
                         ++swats_;
                     }
                     // Her hand with the swat, at his chest.
@@ -789,8 +789,12 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // Beat 2's start: down to his ankle, her feet taking her to it
             // (a man knocked down lies a step or two off), bent for it.
             const float reach_off = xz(ax, az, float(ankle.GetX()), float(ankle.GetZ()));
-            if (reach_off > 0.55F && !player_on_ladder_) {
-                walk_toward(dt, float(ankle.GetX()), float(ankle.GetZ()), std::min(kHuntMps, 0.5F + 2.0F * reach_off));
+            if (reach_off > 0.6F && !player_on_ladder_) {
+                // To his ankle, stopping short of it (her body never walks
+                // into his and shoves it along).
+                const float k = (reach_off - 0.6F) / reach_off;
+                walk_toward(dt, ax + (float(ankle.GetX()) - ax) * k, az + (float(ankle.GetZ()) - az) * k,
+                            std::min(kHuntMps, 0.5F + 2.0F * (reach_off - 0.6F)));
             } else {
                 stand();
             }
@@ -924,11 +928,11 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // the rail, at most kBackInTopM over her feet).
             const float her_in = (rim_x_ + rim_nx_ * kRimStandM - ax) * rim_nx_ +
                                  (rim_z_ + rim_nz_ * kRimStandM - az) * rim_nz_;
-            const float up = grip_point_ == Grip::Collar
+            const float up = grip_point_ != Grip::Ankle
                                  ? std::max(kPinHereUpM - 0.25F, rail_up_)
                                  : std::min(kBackInTopM, rail_up_ + 0.15F + kBackInSlope * std::max(0.0F, her_in - kRimStandM));
             RVec3 in = RVec3(at.GetX(), feet + up, at.GetZ()) -
-                       out * (grip_point_ == Grip::Collar ? kBackInM : 0.0F) + right * kHangSideM;
+                       out * (grip_point_ != Grip::Ankle ? kBackInM : 0.0F) + right * kHangSideM;
             if (grip_point_ == Grip::Ankle && !pin_here_ && rail_in < 0.0F && !back_lifted_) {
                 // His ankle not over the rail's top yet: up clear of it first
                 // (not hauled into its side).
@@ -952,7 +956,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                 spare_side_ = spare_side(at, feet, right, out, spare_deck_);
                 spare_side_set_ = true;
             }
-            const RVec3 down = RVec3(at.GetX(), feet + 0.55F, at.GetZ()) + spare_side_ * 0.6F;
+            const RVec3 down = RVec3(at.GetX(), feet + 0.55F, at.GetZ()) + spare_side_;
             pose_hand(dt, down, in_pace * kHandSpeedMps);
             const auto set_down = [&]() {
                 let_go_ = true;
@@ -1137,6 +1141,34 @@ RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
     return rail_pose(at, feet, up, out, kPinSideM);
 }
 
+// Beat 1's swat: away from her, else the other way, else to either side:
+// the first with her deck under where he falls (a body length on), never off
+// an edge (no kill on touch).
+Vec3 Matron::swat_direction(const RVec3 player) const {
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    Vec3 away(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
+    away = away.LengthSq() > 1.0e-4F ? away.Normalized() : Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    const Vec3 side(away.GetZ(), 0.0F, -away.GetX());
+    const float feet = float(at.GetY()) - kStandCentre;
+    IgnoreMultipleBodiesFilter skip;
+    skip.IgnoreBody(body_);
+    skip.IgnoreBody(player_);
+    for (const Vec3 dir : {away, side, -side, -away}) {
+        bool deck = true;
+        for (const float on : {0.9F, 1.8F}) {
+            const RVec3 from(player.GetX() + dir.GetX() * on, feet + 1.0F, player.GetZ() + dir.GetZ() * on);
+            RayCastResult under;
+            deck = deck && physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -1.6F, 0.0F)), under, {}, {},
+                                                                skip) &&
+                   std::abs(1.0F - 1.6F * under.mFraction) < 0.4F;
+        }
+        if (deck) {
+            return dir;
+        }
+    }
+    return -away;
+}
+
 void Matron::reset_beats() noexcept {
     grip_point_ = Grip::Ankle;
     regrip_ = false;
@@ -1230,17 +1262,23 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // The haul: back to her spot, her second hand on his belt; his collar
         // out past the rail and his belt up on its top: his middle balanced
         // on it, his back to it, his head and shoulders out over the drop.
-        at_spot();
         hand2_want_ = 2;
         pull2_n_ = hand2_on_ == 2 ? kHandPullN : kHandReachPullN;
         if (hand2_on_ != 2) {
+            // She steps in to his middle (his collar in her first hand), her
+            // second hand for his belt.
+            const RVec3 b = player_belt_;
+            const float off = xz(ax, az, float(b.GetX()), float(b.GetZ()));
+            walk_toward(dt, float(b.GetX()), float(b.GetZ()), off > 0.5F ? std::min(0.8F, 1.5F * (off - 0.5F)) : 0.0F);
+            yaw_ = turn_to(yaw_, std::atan2(float(b.GetX()) - ax, float(b.GetZ()) - az), kHoldTurnRate, dt);
             pose_hand(dt, hand_target_, kHandSpeedMps);
-            pose_hand2(dt, player_belt_, kHandReachSpeedMps);
+            pose_hand2(dt, b, kHandReachSpeedMps);
             if (hold_s_ > kPinReachS) {
                 back_in();
             }
             break;
         }
+        at_spot();
         const RVec3 pin = pin_pose(at, feet);
         const RVec3 belt = belt_pose(at, feet);
         pose_hand(dt, pin, 0.6F * kHandSpeedMps);
