@@ -1844,35 +1844,8 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     stride_ += speed_ * dt;
 }
 
-// The Turn's clock and triggers (see matron.hpp). The stage interval is
-// a maximum wait while she is actively Hunting. Close sustained sight or any
-// sufficiently strong sound at her ear can start it after the anti-spam part
-// of that interval; the deadline starts it even if the player stays quiet/far.
-void Matron::step_turn(const float dt, const float distance_to_player, const float heard_level) {
-    sight_far_s_ = sees_far_ ? sight_far_s_ + dt : 0.0F;
+void Matron::age_turn(const float dt) {
     if (turn_ == Turn::None) {
-        if (state_ != State::Hunting) {
-            sight_far_s_ = 0.0F;
-            return;
-        }
-        const float interval_s = turn_cooldown_seconds();
-        // Rage can shorten the interval while a Turn is brewing. Calming does
-        // not erase elapsed pressure: a nearly due Turn remains nearly due.
-        turn_cooldown_s_ = std::min(turn_cooldown_s_, interval_s);
-        turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
-        const float elapsed_s = interval_s - turn_cooldown_s_;
-        const bool ready = elapsed_s >= interval_s * kTurnReadyFraction;
-        // Stalking him her sight does not start the Turn: she is watching him
-        // on purpose (matron_stalk.cpp: stalking_, this tick's stalk). Sound
-        // at her ear still can.
-        const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds &&
-                                     distance_to_player <= kTurnTriggerM && !stalking_;
-        const bool loud_at_ear = heard_level >= kTurnEarLevel;
-        const bool deadline = turn_cooldown_s_ <= 0.0F;
-        if (deadline || (ready && (close_and_clear || loud_at_ear))) {
-            turn_ = Turn::Windup;
-            turn_s_ = 0.0F;
-        }
         return;
     }
     turn_s_ += dt;
@@ -1883,6 +1856,40 @@ void Matron::step_turn(const float dt, const float distance_to_player, const flo
         turn_ = Turn::None;
         turn_s_ = 0.0F;
         turn_cooldown_s_ = turn_cooldown_seconds();
+    }
+}
+
+// The Turn's trigger clock (see matron.hpp). The stage interval is a maximum
+// wait while she is actively Hunting. Close sustained sight or any sufficiently
+// strong sound at her ear can start it after the anti-spam part of that interval;
+// the deadline starts it even if the player stays quiet/far.
+void Matron::step_turn(const float dt, const float distance_to_player, const float heard_level) {
+    sight_far_s_ = sees_far_ ? sight_far_s_ + dt : 0.0F;
+    if (turn_ != Turn::None) {
+        age_turn(dt);
+        return;
+    }
+    if (state_ != State::Hunting) {
+        sight_far_s_ = 0.0F;
+        return;
+    }
+    const float interval_s = turn_cooldown_seconds();
+    // Rage can shorten the interval while a Turn is brewing. Calming does
+    // not erase elapsed pressure: a nearly due Turn remains nearly due.
+    turn_cooldown_s_ = std::min(turn_cooldown_s_, interval_s);
+    turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
+    const float elapsed_s = interval_s - turn_cooldown_s_;
+    const bool ready = elapsed_s >= interval_s * kTurnReadyFraction;
+    // Stalking him her sight does not start the Turn: she is watching him
+    // on purpose (matron_stalk.cpp: stalking_, this tick's stalk). Sound
+    // at her ear still can.
+    const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds &&
+                                 distance_to_player <= kTurnTriggerM && !stalking_;
+    const bool loud_at_ear = heard_level >= kTurnEarLevel;
+    const bool deadline = turn_cooldown_s_ <= 0.0F;
+    if (deadline || (ready && (close_and_clear || loud_at_ear))) {
+        turn_ = Turn::Windup;
+        turn_s_ = 0.0F;
     }
 }
 
@@ -2343,8 +2350,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     // A mover that opts out of Turn owns her body, not the passage of time.
     // It cannot start/drive a Turn, but one already active still ages to its
     // normal end even when this mover returns before the Hunting block.
-    if (const Mover *way = holder(); way != nullptr && !way->view().turns && turn_ != Turn::None) {
-        step_turn(dt, 0.0F, 0.0F);
+    if (const Mover *way = holder(); way != nullptr && !way->view().turns) {
+        age_turn(dt);
     }
     // A way she took herself (her journey, her bars) has her body until it
     // ends, first in her tick; knocked about, held or dead, it ends.
@@ -2930,8 +2937,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // that opts out of Turn cannot start one on the same tick it
                 // takes her body; a Turn already active still spends time.
                 const Mover *way = holder();
-                if (way == nullptr || way->view().turns || turn_ != Turn::None) {
+                if (way == nullptr || way->view().turns) {
                     step_turn(dt, d, heard_level_);
+                } else {
+                    age_turn(dt);
                 }
                 break;
             } else {
