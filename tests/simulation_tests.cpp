@@ -426,6 +426,10 @@ int main() {
         run_service_o();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "wreck-way-on") {
+        run_o_wreckage();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "slingshot") {
         run_slingshot();
@@ -569,6 +573,7 @@ int main() {
     run_service_n();
     run_service_c5();
     run_service_o();
+    run_o_wreckage();
     run_service_band();
     run_service_route();
     run_determinism();
