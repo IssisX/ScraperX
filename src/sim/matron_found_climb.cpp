@@ -321,14 +321,9 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
         }
         find_wait_ticks_ = kFindEveryTicks;
         if (!find_climb(at, found_)) {
-            // No bar column: a way she plans over the steel round her. Frail,
-            // she still watches/waits when the lead is explicitly the player's
-            // climb or line; a floor lead is different and may be pursued.
-            const bool frail_on_player_way = stage_ == Stage::Pest && turn_ == Turn::None &&
-                                             (guess_climb_ >= 0 || guess_line_ >= 0);
+            // No bar column: a way she plans over the steel round her.
             const bool still = std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F;
-            const bool started = !frail_on_player_way && still &&
-                                 journey_way_.begin(MoverGoal{at, heard_x_, heard_z_, lead_floor_, true});
+            const bool started = still && journey_way_.begin(MoverGoal{at, heard_x_, heard_z_, lead_floor_, true});
             return started;
         }
     }
@@ -364,14 +359,6 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
     // (one that lands at the foot lands first, and its landing counts).
     if (std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) > 0.3F ||
         std::abs(float(at.GetY()) - kStandCentre - found_.from_y) > 0.15F) {
-        return true;
-    }
-    // Preserve the frail-stage contract for the player's current route:
-    // she can walk to it and watch, but does not take hold until her Turn.
-    // A later floor lead clears guess_climb_/guess_line_ in take_lead(), so
-    // ordinary first-stage cross-floor pursuit remains available.
-    if (stage_ == Stage::Pest && turn_ == Turn::None &&
-        (guess_climb_ >= 0 || guess_line_ >= 0)) {
         return true;
     }
     if (request_climb_goal(found_.goal, found_.facing)) {
