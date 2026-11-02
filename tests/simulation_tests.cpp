@@ -164,6 +164,10 @@ int main() {
         run_forklift_strain();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "machine-hearing") {
+        run_machine_hearing();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "crane") {
         run_yard_crane();
         return EXIT_SUCCESS;
@@ -645,6 +649,7 @@ int main() {
     run_yard_crane();
     run_yard_crane_magnet();
     run_yard_crane_spreader();
+    run_machine_hearing();
     run_ascent();
 
     return EXIT_SUCCESS;
