@@ -17,7 +17,6 @@ on:
     types: [completed]
     branches:
       - ChatGPT
-      - Gemini
       - ScraperX-Claude
       - ScraperX-Grok
   push:
@@ -292,7 +291,9 @@ jobs:
             version_code="$(sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" "$badging" | head -n 1)"
             test "$version_code" = "$(jq -r '.version_code' "${tmp}/version.json")"
             test "$version_code" -gt "$previous_code"
-            current_sha="$(gh api "/repos/${REPO}/branches/${branch_q}" --jq '.commit.sha')"
+            # A deleted branch must not stop the other models' APKs: Gemini's
+            # branch was removed on 11-02 and every refresh died here with a 404.
+            current_sha="$(gh api "/repos/${REPO}/branches/${branch_q}" --jq '.commit.sha' 2>/dev/null)" || current_sha=""
 
             update_manifest "$label" "$(jq -n \
               --arg branch "$branch" \
@@ -337,7 +338,6 @@ jobs:
           }
 
           publish_branch "ChatGPT" "ChatGPT" "com.cory.scraperx.chatgpt" "ScraperX-ChatGPT"
-          publish_branch "Gemini" "Gemini" "com.cory.scraperx.gemini" "ScraperX-Gemini"
           publish_branch "Claude" "ScraperX-Claude" "com.cory.scraperx.claude" "ScraperX-Claude"
           publish_branch "Grok" "ScraperX-Grok" "com.cory.scraperx.grok" "ScraperX-Grok"
 
@@ -368,7 +368,7 @@ jobs:
             echo
             echo "| Model | Branch | Source | Current head? | Download |"
             echo "|---|---|---|---:|---|"
-            for label in ChatGPT Gemini Claude Grok; do
+            for label in ChatGPT Claude Grok; do
               status="$(jq -r --arg label "$label" '.builds[$label].status // "missing"' out/manifest.json)"
               if test "$status" = "ok"; then
                 branch="$(jq -r --arg label "$label" '.builds[$label].branch' out/manifest.json)"
