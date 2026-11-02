@@ -16,8 +16,8 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
    the tree being shipped.
 4. The full native suite, every touch scenario and the Android build are CI's job, never also local.
    Before a push to `ScraperX-Claude`, run `wo000-delivery-spine.yml` once on `<agent>/integrate-<job>`
-   (pushing it runs the proof) or dispatch it: that run is the proof (off trunk every job is green but
-   `publish-checkpoint`, which stops with the expected KeyError at "Preserve Android updates"). The full native suite runs locally only when a
+   (pushing it runs the proof) or dispatch it: that run is the proof (every job green; `publish-checkpoint`
+   runs on trunk only, skipped elsewhere since 11-02). The full native suite runs locally only when a
    change reaches the whole world (the kit's body order, the world's solids, shared physics or tuning,
    the contact listener, save layout) and no CI run is coming.
 5. Read the PASS/FAIL lines and the lines around a failure, not whole logs.
@@ -71,16 +71,29 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
 ## Managing the agents
 
 2026-10-22: *"I need more management help from you telling the other agents what to do"*.
-- Issue #3 holds one ASSIGNMENT BOARD: every agent's queue in order and who integrates whose work
-  (never their own). Agents work their queue without waiting for the owner, post after each step and
-  mark ⏳/✅. Update the board instead of handing him prompts: he pastes one universal prompt ("read
-  the board, do your queue"), and his plain comments on #3 are orders to every agent.
+- The live board is issue #87's **body** (2026-11-02, replacing #3's 842-comment thread; #3 stays the
+  record). Only the integrator edits the body. Agents read the body and the comments since their own
+  last one, never the history, and post one line per real step. He pastes one universal prompt ("read
+  the board, do your queue"), and his plain comments there are orders to every agent. When the board
+  issue passes about 150 comments, the integrator opens a fresh one and links it once.
+- Working in tandem (2026-11-02: *"figure out how all of you agents can communicate and work
+  synergistically ... not constantly waiting on me"*):
+  - Nobody waits: every agent holds two or more jobs. Blocked 30 minutes, it posts `BLOCKED: what,
+    needs whom` and starts the next one; the integrator clears BLOCKED lines first.
+  - The integrator runs `python3 tools/board/sweep.py` every 15 minutes and acts on every line in
+    the same sweep: MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
+    FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
+  - Reviews are cross-model: work by ChatGPT, Gemini, Grok or Muse gets a Claude reviewer at
+    extra-high effort; Claude's work gets Codex, or an independent Claude reviewer when Codex is out.
+  - One owner per function: the board splits shared files by function, so no two agents edit the
+  same function.
+  - One integrate branch per job, reused; no new diagnostic branch for every try.
 - Progress over testing (*"we want them to figure out hard coding problems and make progress, not just
   test shit"*): give agents real problems in code; tests are the proof, not the job; a blocker is reported only after a real attempt;
   reports stay short.
 - Hand out the hard work (2026-10-27: *"don't give them cheap, weak shit. They are intelligent"*):
   post it on #3 whole (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
-  The integrator checks #3 and the PRs every 10-15 minutes from a server-side scheduled task (it also
+  The integrator checks the board and the PRs every 10-15 minutes from a server-side scheduled task (it also
   resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
   and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
   (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
@@ -115,8 +128,8 @@ For every agent; `AGENTS.md` points other agents here.
 - **Protected changes:** a test's checks (a `require`, limit, timeout, skip, ctest slice), world
   geometry, and her force, power, mass, leg-travel or launch limits change only by a PR into
   `ScraperX-Claude` holding just that change, with a plain before/after. The integrator merges it once
-  green on every proof job but `publish-checkpoint` (off trunk its signing step stops with the
-  expected KeyError) with a second agent's LAND and no open blocker; the owner can overturn any
+  green on every proof job (`publish-checkpoint` runs on trunk only; on heads proved before 11-02 it
+  stops off trunk with a KeyError and does not count) with a second agent's LAND and no open blocker; the owner can overturn any
   merge (2026-10-28, 10-29). Everything else lands without a PR.
 - **Merge blockers are substantive:** spelling, wording, and commit-message/tag nitpicks never block a PR or justify rewriting commits or rerunning CI. Only real physics, gameplay, or test failures block a merge (owner, 2026-10-31).
 - **Local tests match CI or do not count:** CI's compilers and flags (host g++ 13.3 as on

@@ -964,6 +964,10 @@ jobs:
 
   publish-checkpoint:
     needs: [host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk]
+    # Trunk only: off trunk its signing step always stopped with a KeyError,
+    # so "green" had to mean "every job but this one". Skipped there, a green
+    # run is simply every job green (integrator, 2026-11-02).
+    if: github.ref == 'refs/heads/ScraperX-Claude'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
