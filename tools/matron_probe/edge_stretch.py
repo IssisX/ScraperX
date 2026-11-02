@@ -57,7 +57,7 @@ def main(argv=None):
             st = int(states[row]) if row >= 0 and np.isfinite(states[row]) else -1
             if st in HOLD_STATES:
                 hold_max = max(hold_max, r[j])
-            if STATE_NAMES.get(st, "") in ("Falling", "Fallen", "Knocked", "Topple", "Downed"):
+            if STATE_NAMES.get(st, "") in ("Staggering", "Down"):
                 fall_max = max(fall_max, r[j])
             over += int(r[j] > a.gate)
             if r[j] > best[0]:
