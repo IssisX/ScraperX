@@ -705,17 +705,25 @@ func _build_pivots() -> void:
 
 
 # One seating of the hair mesh. The locks were weighted across neighboring
-# chains, so when two locks swung apart the ribbon stretched into a sheet and
-# the scorer read the middle as inside her. Each vertex now follows one bone,
-# and the ones that were inside the cloth at the guard and the head-down pose
-# are moved out along that cloth's normal. The bones are not moved, so the
-# hang does not change. Built by measuring the drawn body, not by a radius.
+# chains, so when two locks swung apart a ribbon's two edges tore apart. Each
+# ribbon now follows the one solver chain that runs nearest it, both of its
+# edges with the same weights, blended along that chain (the head above its
+# root), so a ribbon bends with its lock and cannot open across two. The
+# positions are the seated ones (moved out of the cloth at the guard and the
+# head-down pose); the bones are not moved, so the hang does not change.
+# Written by tools/matron_probe/seat_hair.py from a probe recording.
+const HAIR_SEAT_MAGIC := 0x32534548  # "HES2": positions, four bones and four weights a vertex
+
+
 func _seat_hair(root: Node) -> void:
 	var path := "res://presentation/life/matron/hair_seat.bin"
 	if not FileAccess.file_exists(path):
 		return
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
+		return
+	if int(f.get_32()) != HAIR_SEAT_MAGIC:
+		push_error("matron hair seat: %s is not a weighted seat" % path)
 		return
 	var n := int(f.get_32())
 	var found := false
@@ -738,10 +746,16 @@ func _seat_hair(root: Node) -> void:
 		var out_b := bones.duplicate()
 		var out_w := weights.duplicate()
 		for i in n:
-			var b := int(f.get_32())
 			for j in bpv:
-				out_b[i * bpv + j] = b
-				out_w[i * bpv + j] = 1.0 if j == 0 else 0.0
+				out_b[i * bpv + j] = int(f.get_32()) if j < 4 else 0
+			if bpv < 4:
+				for _j in 4 - bpv:
+					f.get_32()
+		for i in n:
+			for j in maxi(bpv, 4):
+				var w := f.get_float() if j < 4 else 0.0
+				if j < bpv:
+					out_w[i * bpv + j] = w
 		arrays[Mesh.ARRAY_VERTEX] = out_v
 		arrays[Mesh.ARRAY_BONES] = out_b
 		arrays[Mesh.ARRAY_WEIGHTS] = out_w
