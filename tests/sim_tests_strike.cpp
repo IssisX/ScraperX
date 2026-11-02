@@ -454,13 +454,7 @@ void run_strike() {
                 m.post_step(dt);
             }
             void wake(Matron &m, const float damage_ns = 0.0F, const float player_ns = 0.0F) {
-                Matron::Saved saved{};
-                saved.state = Matron::State::Hunting;
-                saved.rage = 0.5F;
-                saved.stage = Matron::Stage::Dangerous;
-                saved.damage_ns = damage_ns;
-                saved.player_damage_ns = player_ns;
-                m.restore(saved);
+                m.restore({Matron::State::Hunting, 0.0F, 0.5F, Matron::Stage::Dangerous, 0.0F, 0, damage_ns, player_ns});
                 m.place_for_test(RVec3(0.0, 154.0, -130.0));
                 m.face_for_test(0.0F);
                 step(m);
@@ -472,9 +466,7 @@ void run_strike() {
                 m.struck_by_player(Vec3(0.0F, 0.0F, -ns), at + RVec3(0.0, 0.0, 1.0), false);
                 physics.Update(dt, 1, &temp, &jobs);
                 m.post_step(dt);
-                if (quiet_after && m.view().alive) {
-                    for (int i = 0; i < Matron::kBlowQuietTicks; ++i) step(m);
-                }
+                for (int i = 0; quiet_after && m.view().alive && i < Matron::kBlowQuietTicks; ++i) step(m);
             }
             void punch_to(Matron &m, const float target_ns) {
                 while (m.view().alive && m.view().damage_ns + 1.0e-3F < target_ns)
@@ -482,8 +474,8 @@ void run_strike() {
             }
             void fire_striker(Matron &m, const float speed_mps) {
                 BodyInterface &b = physics.GetBodyInterface();
-                const RVec3 at = b.GetPosition(m.body());
-                b.SetPositionAndRotation(striker, at + RVec3(0.0, 0.2, 0.56), Quat::sIdentity(), EActivation::Activate);
+                b.SetPositionAndRotation(striker, b.GetPosition(m.body()) + RVec3(0.0, 0.2, 0.56), Quat::sIdentity(),
+                                         EActivation::Activate);
                 b.SetLinearAndAngularVelocity(striker, Vec3(0.0F, 0.0F, -speed_mps), Vec3::sZero());
             }
             void park_striker() {
