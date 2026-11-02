@@ -456,6 +456,7 @@ void run_strike() {
             void wake(Matron &m, const float damage_ns = 0.0F, const float player_ns = 0.0F) {
                 Matron::Saved saved{};
                 saved.state = Matron::State::Hunting;
+                saved.rage = 0.5F;
                 saved.stage = Matron::Stage::Dangerous;
                 saved.damage_ns = damage_ns;
                 saved.player_damage_ns = player_ns;
@@ -482,7 +483,7 @@ void run_strike() {
             void fire_striker(Matron &m, const float speed_mps) {
                 BodyInterface &b = physics.GetBodyInterface();
                 const RVec3 at = b.GetPosition(m.body());
-                b.SetPositionAndRotation(striker, at + RVec3(0.0, 0.1, 0.56), Quat::sIdentity(), EActivation::Activate);
+                b.SetPositionAndRotation(striker, at + RVec3(0.0, 0.2, 0.56), Quat::sIdentity(), EActivation::Activate);
                 b.SetLinearAndAngularVelocity(striker, Vec3(0.0F, 0.0F, -speed_mps), Vec3::sZero());
             }
             void park_striker() {
