@@ -2161,8 +2161,9 @@ private:
     // fatal_toss_ and fatal_lethal_mps_.
     void foresee_fall(JPH::RVec3 player, JPH::Vec3 out);
     void pose_hand2(float dt, JPH::RVec3 target, float speed);
-    // The Turn's clock: `distance_to_player` across, `carried_m` how far the
-    // player's noise carried to her.
+    // The active Turn's elapsed-time owner, independent of perception.
+    void age_turn(float dt);
+    // The Turn trigger clock: distance across and lawful sound level at her ear.
     void step_turn(float dt, float distance_to_player, float heard_level);
     // Her rage and stage, from the level at her ear this tick; her exposure.
     void step_rage(float dt);
