@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <limits>
 
 namespace {
 using scraperx::sim::InitialSpawn;
@@ -39,7 +40,8 @@ struct Leg {
 
 // Her at `from` (feet), dangerous; the climber heard at `prey` (feet) every
 // 8 s. Until she stands a second on the prey's floor.
-Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const double let_go_at = 1.0e9) {
+Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const double let_go_at = 1.0e9,
+        const bool first_stage = false) {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron found climb: settle");
@@ -47,7 +49,7 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const doub
     s.launch_matron_for_test(Vector3{from.x, from.y + 1.05, from.z});
     // The corner pipe ruled out: the way she takes is one she finds.
     s.debug_matron_rule_out_pipe();
-    s.debug_set_matron_stage(1);
+    s.debug_set_matron_stage(first_stage ? 0 : 1);
     const int hz = static_cast<int>(Simulation::kTickRateHz);
     (void)s.advance_frame(Simulation::kFixedStepSeconds);
     Leg out;
@@ -56,6 +58,7 @@ Leg leg(const Vector3 from, const Vector3 prey, const double seconds, const doub
     int on_goal = 0;
     int let_go_tick = -1;
     for (int i = 0; i < static_cast<int>(seconds) * hz; ++i) {
+        if (first_stage) s.debug_set_matron_stage(0);
         if (i % (8 * hz) == 0) {
             s.debug_matron_hear(prey);
         }
@@ -112,7 +115,116 @@ void require_contacts(const Leg &l) {
 
 } // namespace
 
+// The first real stack floor is 11 m, not the 154 m deck used by the
+// existing climbing lab. Prove that a scanner-connected descent to grade is
+// actually pursued by her first stage. Choose endpoints from real, walkable
+// collision patches; no authored route or synthetic move is permitted.
+void run_first_floor_descent() {
+    Simulation s(InitialSpawn::Deck154);
+    require(s.place_matron_home(11.0F), "matron first floor: 11 m home exists");
+    require(s.advance_frame(1.0).accepted, "matron first floor: settle");
+    const scraperx::sim::traversal::AffordanceMap &map = s.matron_affordances();
+    const auto &regions = map.regions();
+    const auto &patches = map.patches();
+    const auto standing_spot = [&](const int id, Vector3 &spot) {
+        float best = 0.0F;
+        const auto &region = regions[static_cast<std::size_t>(id)];
+        for (const int index : region.patches) {
+            const auto &p = patches[static_cast<std::size_t>(index)];
+            if (p.narrow) continue;
+            const float area = (p.max_x - p.min_x) * (p.max_z - p.min_z);
+            if (area <= best) continue;
+            const Vector3 candidate{0.5 * double(p.min_x + p.max_x), p.top,
+                                    0.5 * double(p.min_z + p.max_z)};
+            const double support = s.debug_support_y(Vector3{candidate.x, candidate.y + 0.05, candidate.z}, 0.5);
+            if (std::isnan(support) || std::abs(support - candidate.y) > 0.05) continue;
+            best = area;
+            spot = candidate;
+        }
+        return best > 0.0F;
+    };
+    int from_id = -1;
+    int goal_id = -1;
+    Vector3 start{}, goal{};
+    std::size_t best_edges = std::numeric_limits<std::size_t>::max();
+    for (const auto &from : regions) {
+        if (std::abs(from.top - 11.0F) > 0.35F) continue;
+        Vector3 from_spot{};
+        if (!standing_spot(from.id, from_spot)) continue;
+        for (const auto &to : regions) {
+            if (std::abs(to.top) > 0.35F) continue;
+            Vector3 goal_spot{};
+            if (!standing_spot(to.id, goal_spot)) continue;
+            const auto route = map.plan(from.id, to.id);
+            if (route.empty() || route.size() >= best_edges) continue;
+            // The grade region spans the yard and beyond. Pursue the grounded
+            // endpoint of her real directed route, not a distant patch centre.
+            const auto &last_edge = map.edges()[static_cast<std::size_t>(route.back())];
+            if (!last_edge.usable || last_edge.to != to.id) continue;
+            const Vector3 landing{last_edge.spec.goal.GetX(), last_edge.spec.goal.GetY(),
+                                  last_edge.spec.goal.GetZ()};
+            const double support = s.debug_support_y(Vector3{landing.x, landing.y + 0.05, landing.z}, 0.5);
+            if (std::isnan(support) || std::abs(support - landing.y) > 0.05) continue;
+            best_edges = route.size();
+            from_id = from.id;
+            goal_id = to.id;
+            start = from_spot;
+            goal = landing;
+        }
+    }
+    require(from_id >= 0 && goal_id >= 0,
+            "matron first floor: scan contains a traversable 11 m to grade route");
+    s.debug_launch_player(Vector3{goal.x, goal.y + 0.3, goal.z}, Vector3{0.0, 0.0, 0.0});
+    s.debug_place_matron(start);
+    s.debug_matron_rule_out_pipe();
+    s.debug_set_matron_stage(0);
+    (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    auto last = s.matron_state().position;
+    double worst_step = 0.0;
+    int on_grade = 0;
+    bool arrived = false;
+    const int hz = static_cast<int>(Simulation::kTickRateHz);
+    for (int i = 0; i < 240 * hz; ++i) {
+        s.debug_set_matron_stage(0);
+        if (i % (8 * hz) == 0) s.debug_matron_hear(goal);
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto m = s.matron_state();
+        worst_step = std::max(worst_step, std::hypot(m.position.x - last.x, m.position.y - last.y,
+                                                    m.position.z - last.z));
+        last = m.position;
+        require(m.alive, "matron first floor: descent survives");
+        require(s.debug_matron_gravity_factor() == 1.0, "matron first floor: gravity remains on");
+        const bool there = !m.climbing && !m.on_pipe &&
+                           std::abs(m.position.y - scraperx::sim::Matron::kStandCentre - goal.y) < 0.45 &&
+                           std::hypot(m.position.x - goal.x, m.position.z - goal.z) < 2.5;
+        on_grade = there ? on_grade + 1 : 0;
+        if (on_grade >= hz) {
+            arrived = true;
+            std::cout << "  matron first floor: 11 m -> grade, arrived in "
+                      << double(i) / hz << " s, worst step " << worst_step << " m\n";
+            break;
+        }
+    }
+    require(arrived, "matron first floor: she follows the player down to grade under her own power");
+    require(worst_step < 0.2, "matron first floor: never carried or snapped");
+}
+
 void run_matron_found_climb() {
+    run_first_floor_descent();
+    // Ordinary pursuit from her initial stage must use the same physical
+    // steel and capped-force moves in either direction. Earlier tests only
+    // set her dangerous stage, leaving first-stage travel unexercised.
+    for (const bool down : {false, true}) {
+        const Vector3 lower{1.0, 154.0, -129.0};
+        const Vector3 upper{5.0, 176.25, -127.5};
+        const Leg l = leg(down ? upper : lower, down ? lower : upper, 120.0, 1.0e9, true);
+        report(down ? "initial stage down a deck" : "initial stage up a deck", l);
+        require_contacts(l);
+        require(l.alive && l.arrived, "matron found climb: initial stage follows prey between floors, both ways");
+        require(l.gravity_kept && l.her_hands, "matron found climb: first-stage traversal uses real grips and gravity");
+        require(l.worst_step < 0.2, "matron found climb: first-stage travel never snaps");
+    }
     {
         const Leg l = leg(Vector3{1.0, 154.0, -129.0}, Vector3{5.0, 176.25, -127.5}, 120.0);
         report("154 up to the 176.25 ring", l);
@@ -288,79 +400,6 @@ void run_matron_found_climb() {
         }
         require(alive && gravity_kept, "matron found climb: blocked columns, she lives with gravity on");
         require(arrived, "matron found climb: a failed column closes that column, not the journey");
-    }
-    // A long first leg, walked out, not timed out: the same staging as the
-    // blocked-columns block, but the claim is about the FIRST journey.
-    // Its first walk leg is a collapsed straight run of about 35 m (measured
-    // 2026-11-01 on this staging), which at the journey walk's 1.2 m/s
-    // needs about 30 s. A flat 20 s leg clock fails that leg while she is
-    // still walking it at full speed, so the journey retreats and a second
-    // journey, after the hunt mover has walked her south, does the job
-    // instead (climbs 2 on the old clock). A leg clock that only fires on
-    // no progress lets the first journey walk its leg out (climbs 1).
-    // The second-route checks live in the block above and are not repeated.
-    {
-        Simulation s(InitialSpawn::Deck154);
-        s.place_matron_home(154.0F);
-        require(s.advance_frame(1.0).accepted, "matron found climb: settle");
-        const Vector3 from{0.0, 0.0, -60.0};
-        const Vector3 prey{-8.3, 1.3, -115.0};
-        s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
-        s.launch_matron_for_test(Vector3{from.x, from.y + 1.05, from.z});
-        s.debug_matron_rule_out_pipe();
-        s.debug_set_matron_stage(1);
-        (void)s.advance_frame(Simulation::kFixedStepSeconds);
-        const scraperx::sim::traversal::AffordanceMap &map = s.matron_affordances();
-        const int home = map.region_at(JPH::Vec3(float(from.x), float(from.y), float(from.z)));
-        const int goal = map.region_at(JPH::Vec3(float(prey.x), float(prey.y), float(prey.z)));
-        require(home >= 0 && goal >= 0, "matron found climb: long-leg staging, both floors on her scan");
-        const std::vector<int> cheapest = map.plan(home, goal);
-        require(!cheapest.empty(), "matron found climb: long-leg staging, a cheapest way exists");
-        std::vector<std::pair<float, float>> blocked;
-        for (const int e : cheapest) {
-            const scraperx::sim::traversal::Edge &edge = map.edges()[static_cast<std::size_t>(e)];
-            if (edge.kind == scraperx::sim::traversal::MoveKind::Walk) continue;
-            const std::pair<float, float> line{edge.spec.line.GetX(), edge.spec.line.GetZ()};
-            if (std::find(blocked.begin(), blocked.end(), line) == blocked.end()) blocked.push_back(line);
-        }
-        require(!blocked.empty() && blocked.size() <= 8,
-                "matron found climb: long-leg staging, the cheapest way's columns fit her block list");
-        const auto block_all = [&] {
-            for (const auto &line : blocked) s.debug_matron_block_column(line.first, line.second);
-        };
-        block_all();
-        const int hz = static_cast<int>(Simulation::kTickRateHz);
-        bool arrived = false, alive = true, gravity_kept = true;
-        int on_goal = 0;
-        for (int i = 0; i < 420 * hz && !arrived; ++i) {
-            if (i % (8 * hz) == 0) {
-                s.debug_matron_hear(prey);
-                block_all();
-            }
-            (void)s.set_move_input(0.0, 0.0);
-            (void)s.advance_frame(Simulation::kFixedStepSeconds);
-            const auto m = s.matron_state();
-            gravity_kept = gravity_kept && s.debug_matron_gravity_factor() == 1.0;
-            if (!m.alive) {
-                alive = false;
-                break;
-            }
-            if (i % (5 * hz) == 0) {
-                std::cout << "  matron found climb: long first leg at " << (i / hz) << " s, feet ("
-                          << m.position.x << "," << (m.position.y - 1.05) << "," << m.position.z
-                          << "), climbing " << m.climbing << ", climbs " << m.climbs << '\n';
-            }
-            const bool there = std::abs(m.position.y - 1.05 - prey.y) < 0.35 && !m.climbing;
-            on_goal = there ? on_goal + 1 : 0;
-            if (on_goal >= hz) arrived = true;
-        }
-        const auto m = s.matron_state();
-        std::cout << "  matron found climb: long first leg, arrived " << arrived << ", alive " << alive
-                  << ", final feet (" << m.position.x << "," << (m.position.y - 1.05) << "," << m.position.z
-                  << "), climbs " << m.climbs << ", climbing " << m.climbing << '\n';
-        require(alive && gravity_kept, "matron found climb: long first leg, she lives with gravity on");
-        require(arrived, "matron found climb: long first leg, she reaches the climber");
-        require(m.climbs == 1, "matron found climb: long first leg, her first journey walks it out, no failed attempt");
     }
     std::cout << "PASS scraperx_sim matron found climb\n";
 }
