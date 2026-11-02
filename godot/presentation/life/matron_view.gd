@@ -885,7 +885,7 @@ func _hold_gate(data: Dictionary, delta: float) -> void:
 	if _rig != null:
 		short = maxf(float(_rig.hold_short["r"]), float(_rig.hold_short["l"]))
 	if holding:
-		_hold_lean = clampf(_hold_lean + (1.2 if short > 0.005 else -0.6) * delta, 0.0, 0.7)
+		_hold_lean = clampf(_hold_lean + (0.8 if short > 0.03 else -1.0) * delta, 0.0, 0.35)
 	else:
 		_hold_lean = maxf(0.0, _hold_lean - delta)
 	if _pose_fresh:
@@ -1915,9 +1915,9 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 			# what she holds (matron.hpp Trunk: her hips over her feet, her
 			# trunk's pitch), and her lean makes up what her drawn arm still
 			# falls short of. Her knees bend under hips brought down.
-			var hip_k := clampf(float(_hold["hip_up"]), 0.6, 1.0)
-			hip_y = 0.97 * hip_k
-			var bend := acos(clampf(hip_k, 0.5, 1.0))
+			var hip_k := clampf(float(_hold["hip_up"]), 0.5, 0.99)
+			hip_y = hip_k
+			var bend := acos(clampf(hip_k / 0.99, 0.5, 1.0))
 			pitch = float(_hold["trunk_pitch"]) + _hold_lean
 			knees = 2.0 * bend + 0.1
 			legs_fwd = bend + 0.15 * sin(step) * clampf(speed, 0.0, 1.0)

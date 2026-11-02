@@ -863,12 +863,15 @@ public:
     // hand at most kTrunkPitchMaxRad, her shoulders kShoulderSideM either
     // side of it. Her hand's physical limit in a hold is the farthest of that
     // envelope from her standing shoulder (kHoldArmLimitM).
-    static constexpr float kRealArmM = 0.90F;
-    static constexpr float kHipUpM = 1.00F;
-    static constexpr float kHipLowM = 0.70F;
-    static constexpr float kTrunkM = 0.80F;
+    // Her drawn body as the rig has it (measured in the game, 11-02): her
+    // arm 0.51 m shoulder to wrist (out to HOLD_ARM_OUT, 5% stretch: 0.50 m),
+    // her hips 0.99 m up, her trunk 0.45 m, her shoulders 0.16 m either side.
+    static constexpr float kRealArmM = 0.50F;
+    static constexpr float kHipUpM = 0.99F;
+    static constexpr float kHipLowM = 0.55F;
+    static constexpr float kTrunkM = 0.45F;
     static constexpr float kTrunkPitchMaxRad = 1.40F;
-    static constexpr float kShoulderSideM = 0.20F;
+    static constexpr float kShoulderSideM = 0.16F;
     static constexpr float kHoldArmLimitM = 1.95F;
     static constexpr float kArmReachM = 1.4F;
     static constexpr float kStoopReachM = 2.1F;
@@ -1056,18 +1059,18 @@ public:
     // line (rail_up_: the rail, or a bare lip), `side` to her right.
     // Beat 2, the drag: his ankle at her side, low, as she walks to the rail.
     static constexpr float kDragHandUpM = 0.80F;
-    static constexpr float kDragHandSideM = 0.35F;
-    static constexpr float kDragHandBackM = 0.15F;
+    static constexpr float kDragHandSideM = 0.30F;
+    static constexpr float kDragHandBackM = 0.10F;
     // Beat 3, the rail pin: his collar hauled up over the rail's top, his back
     // on it, his head and shoulders out over the drop; her face to his for
     // kPinWindowS (his window: his blow frees him), then her other hand for
     // his arm. kPinReachS to take his collar, kPinHaulS to haul him there.
     // Her first hand on his collar out past the rail, her second on his belt
     // at its line: his middle balanced on its top.
-    static constexpr float kPinUpM = 0.40F;
-    static constexpr float kPinOutM = 0.92F;
-    static constexpr float kPinSideM = 0.20F;
-    static constexpr float kBeltUpM = 0.40F;
+    static constexpr float kPinUpM = 0.30F;
+    static constexpr float kPinOutM = 0.62F;
+    static constexpr float kPinSideM = 0.15F;
+    static constexpr float kBeltUpM = 0.35F;
     static constexpr float kBeltOutM = 0.42F;
     static constexpr float kBeltSideM = -0.15F;
     static constexpr float kPinBalanceM = 0.05F;
@@ -1083,19 +1086,22 @@ public:
     static constexpr float kOverUpM = 0.70F;
     static constexpr float kOverOutM = 0.30F;
     static constexpr float kHandoffS = 3.0F;
-    static constexpr float kOverPushM = 0.45F;     // her belt hand out past its pin pose
+    static constexpr float kOverPushM = 0.15F;     // her belt hand out past its pin pose
     static constexpr float kOverOutPastM = 0.35F;  // his middle this far out: she lets go of his belt
     // Beat 5, hanging by one ankle: her hand on the rail's top, just out past
     // its line, him head down against the outside of her deck.
     static constexpr float kHangUpM = 0.08F;
     static constexpr float kHangOutM = 0.50F;
-    static constexpr float kHangSideM = 0.20F;
+    // On her centre line: his ankle passed hand to hand without carrying it
+    // along the rail (which turns him along it).
+    static constexpr float kHangSideM = 0.0F;
+    static constexpr float kBackInSideM = 0.20F;
     // Set back on her deck: the rail his pulley, her hand in and down.
     static constexpr float kBackInM = 0.30F;
     static constexpr float kBackInLiftM = 0.45F;  // his ankle lifted clear over the rail's top first
     static constexpr float kBackInWalkM = 2.2F;
     static constexpr float kBackInSlope = 0.85F;   // tan 40 degrees
-    static constexpr float kBackInTopM = 2.55F;   // by the ankle: she walks back this far at most, hauling
+    static constexpr float kBackInTopM = 1.85F;   // by the ankle: she walks back this far at most, hauling
 
     // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): every
     // hold, at every stage (Cory, 2026-10-27: every time she catches you she
