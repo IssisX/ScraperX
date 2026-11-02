@@ -115,6 +115,27 @@ jobs:
             --workflow .github/workflows/wo000-delivery-spine.yml \
             --test-dir godot/tests
 
+      - name: Verify no owner-blocked change rides this branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The rule check is the pre-landing gate in AGENTS.md: a BLOCK is a
+          # protected file, a removed or loosened test check, or a budget
+          # number changed. CI green must not bless a branch carrying one,
+          # so this step fails only on BLOCK. REVIEW findings still pass
+          # and stay for the reviewer, as they do in a local run.
+          # The step must never pass vacuously, so it fails loudly when
+          # the merge-base with trunk cannot be computed.
+          git fetch --depth=1 origin ScraperX-Claude
+          TRUNK="$(git rev-parse FETCH_HEAD)"
+          git fetch --deepen=100 origin || true
+          MB="$(git merge-base "$TRUNK" HEAD)" || { echo "rule_check: cannot compute merge-base with trunk"; exit 1; }
+          echo "rule_check: trunk $TRUNK merge-base $MB head $(git rev-parse HEAD)"
+          rc=0
+          python3 tools/rule_check/rule_check.py "$TRUNK" HEAD || rc=$?
+          if [ "$rc" -eq 2 ]; then echo "rule_check: BLOCK found, failing"; exit 1; fi
+          echo "rule_check: no BLOCK (exit $rc)"
+
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
         with:
@@ -675,6 +696,19 @@ jobs:
             --script res://tests/her_takes_test.gd 2>&1 | tee artifacts/her-takes.log
           grep -F "HER_TAKES PASS fails=0" artifacts/her-takes.log
 
+      - name: Her lines never repeat
+        shell: bash
+        run: |
+          set -euo pipefail
+          # All 43 lines of HER_LINES_DRAFT.md have their three clips and a caption; a moment of hers never
+          # says the line it just said nor plays the clip it just played (rule 42), driven through
+          # matron_sound.gd the way the game drives it; the apron wipe says "Waste not." (line 27) even
+          # over a line in her mouth, and no word to his back follows a hold her hand ended; in the
+          # director her one mouth: a line of hers never sounds with her shriek or her growl.
+          timeout 300s tools/godot/godot --headless --path godot \
+            --script res://tests/matron_speech_test.gd 2>&1 | tee artifacts/matron-speech.log
+          grep -F "MATRON_SPEECH PASS fails=0" artifacts/matron-speech.log
+
       - name: The rip camera enters and returns without a cut or lock
         shell: bash
         run: |
@@ -720,6 +754,21 @@ jobs:
           timeout 60s tools/godot/godot --headless --path godot \
             --script res://tests/matron_hold_haptics_test.gd 2>&1 | tee artifacts/matron-hold-haptics.log
           grep -q '^MATRON_HOLD_HAPTICS PASS' artifacts/matron-hold-haptics.log
+
+      - name: Check every presentation script loads and the native bridge answers
+        shell: bash
+        run: |
+          set -euo pipefail
+          # script_load_test.gd walks res://presentation (parse + compile
+          # every script) and requires the native ScraperXSimulation class
+          # to answer get_matron_hold_state() with 10 fatality_beat_edges.
+          # Both lines are gated: the scripts line alone would pass even
+          # if the bridge half failed, so a single '^SCRIPT_LOAD PASS'
+          # grep is not enough here.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/script_load_test.gd 2>&1 | tee artifacts/script-load.log
+          grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
+          grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
 
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4
@@ -928,6 +977,10 @@ jobs:
 
   publish-checkpoint:
     needs: [host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk]
+    # Trunk only: off trunk its signing step always stopped with a KeyError,
+    # so "green" had to mean "every job but this one". Skipped there, a green
+    # run is simply every job green (integrator, 2026-11-02).
+    if: github.ref == 'refs/heads/ScraperX-Claude'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 

@@ -15,6 +15,10 @@
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
+#include <Jolt/Core/StreamOut.h>
+#include <Jolt/Core/StreamUtils.h>
+#include <Jolt/Geometry/RayAABox.h>
+#include <Jolt/Physics/PhysicsSystem.h>
 
 #include <algorithm>
 #include <utility>
@@ -22,6 +26,8 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <mutex>
+#include <type_traits>
 #include <queue>
 #include <string>
 #include <unordered_map>
@@ -43,6 +49,7 @@ const char *move_name(const MoveKind kind) noexcept {
     case MoveKind::HangDrop: return "hang_drop";
     case MoveKind::GapJump: return "gap_jump";
     case MoveKind::LedgeJump: return "ledge_jump";
+    case MoveKind::FreeDrop: return "free_drop";
     }
     return "?";
 }
@@ -1032,6 +1039,7 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::JumpCatch: step_jump(dt, budget); break;
     case MoveKind::LedgeJump: step_ledge_jump(dt, budget); break;
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
+    case MoveKind::FreeDrop: step_drop(dt, budget, false); break;
     case MoveKind::GapJump: step_gap(dt, budget); break;
     }
     // M5b: second grip, rung climbs only, maintained after the move's own
@@ -2049,6 +2057,10 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
     const float feet = float(c.GetY()) - limits_.center_above_feet();
     const Vec3 out = flat(spec_.goal - spec_.start).NormalizedOr(spec_.out);
     if (phase_ == 0) {
+        if (spec_.kind == MoveKind::FreeDrop && (!supported() || std::abs(velocity().GetY()) > 0.6F)) {
+            fail(Failure::NotSupported);  // never launch a planned fall from air or a moving support
+            return status_;
+        }
         if (horizontal(spec_.start - c) > 0.25F) {
             if (phase_s_ > 10.0F) {
                 fail(Failure::Stalled);
@@ -2246,7 +2258,143 @@ bool AffordanceMap::capsule_free(const PhysicsSystem &physics, const Ignore &ign
     return !collector.HadHit();
 }
 
+namespace {
+// Everything a scan reads, written out exactly: the bounds, who she and the
+// player are, her limits, and every fixed (static or kinematic), non-sensor
+// body in the world in body-ID order: its ID, motion type, layer, user
+// data, transform and whole shape. Dynamic bodies and sensors are left out
+// because no query of the scan sees them, and so is a body taken out of the
+// world but not destroyed (RemoveBody alone): it keeps its ID, place and
+// shape, but every query of the scan goes through the broadphase, which no
+// longer holds it. Written in, a deck taken out after one scan would give
+// the next scan the old map back, deck and all.
+class KeyStream final : public StreamOut {
+public:
+    explicit KeyStream(std::string &out) : out_(out) {}
+    void WriteBytes(const void *data, const size_t bytes) override {
+        out_.append(static_cast<const char *>(data), bytes);
+    }
+    bool IsFailed() const override { return false; }
+
+private:
+    std::string &out_;
+};
+
+std::string steel_key(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits) {
+    static_assert(std::is_trivially_copyable_v<Limits>);
+    std::string key;
+    KeyStream out(key);
+    out.Write(bounds.mMin);
+    out.Write(bounds.mMax);
+    out.Write(ignore.self.GetIndexAndSequenceNumber());
+    out.Write(ignore.player.GetIndexAndSequenceNumber());
+    out.Write(ignore.layer);
+    out.WriteBytes(&limits, sizeof(Limits));
+    BodyIDVector ids;
+    physics.GetBodies(ids);
+    std::sort(ids.begin(), ids.end());
+    Shape::ShapeToIDMap shapes;
+    Shape::MaterialToIDMap materials;
+    const Layers layers(physics, ignore);
+    for (const BodyID id : ids) {
+        BodyLockRead lock(physics.GetBodyLockInterface(), id);
+        if (!lock.Succeeded()) continue;
+        const Body &body = lock.GetBody();
+        if (body.IsSensor() || body.IsDynamic() || !body.IsInBroadPhase()) continue;
+        out.Write(id.GetIndexAndSequenceNumber());
+        out.Write(static_cast<std::uint8_t>(body.GetMotionType()));
+        out.Write(body.GetObjectLayer());
+        // Whether her probes see it at all (this world's layer filters).
+        out.Write(layers.bp().ShouldCollide(body.GetBroadPhaseLayer()));
+        out.Write(layers.ol().ShouldCollide(body.GetObjectLayer()));
+        out.Write(body.GetUserData());
+        out.Write(body.GetCenterOfMassPosition());
+        out.Write(body.GetRotation());
+        body.GetShape()->SaveWithChildren(out, shapes, materials);
+    }
+    return key;
+}
+
+// One body a column of rays may hit: its shape where it stands and the
+// bounds the broadphase holds for it.
+struct ColumnSteel {
+    TransformedShape shape;
+    AABox bounds;
+};
+
+// The bodies a ray inside this box could reach, found once, under the same
+// layer and body filters NarrowPhaseQuery::CastRay applies.
+std::vector<ColumnSteel> column_steel(const PhysicsSystem &physics, const Ignore &ignore, const BodyFilter &filter,
+                                      const AABox &column) {
+    BodyListCollector found;
+    physics.GetBroadPhaseQuery().CollideAABox(column, found, Layers(physics, ignore).bp(), Layers(physics, ignore).ol());
+    std::sort(found.ids.begin(), found.ids.end());
+    std::vector<ColumnSteel> steel;
+    steel.reserve(found.ids.size());
+    for (const BodyID id : found.ids) {
+        if (!filter.ShouldCollide(id)) continue;
+        BodyLockRead lock(physics.GetBodyLockInterface(), id);
+        if (!lock.SucceededAndIsInBroadPhase()) continue;
+        const Body &body = lock.GetBody();
+        if (!filter.ShouldCollideLocked(body)) continue;
+        steel.push_back({body.GetTransformedShape(), body.GetWorldSpaceBounds()});
+    }
+    return steel;
+}
+
+// The closest hit of a ray on that steel: the same test, body for body, as
+// NarrowPhaseQuery::CastRay (the broadphase's bounds test, RayAABox4, before
+// the shape's own), so the same nearest fraction; only the walk of the
+// broadphase tree for every ray is gone.
+bool cast_down(const std::vector<ColumnSteel> &steel, const std::vector<std::uint32_t> &in_row, const RRayCast &ray,
+               const RayInvDirection &inverse, RayCastResult &hit) {
+    const Vec3 origin(ray.mOrigin);
+    const float x = origin.GetX(), z = origin.GetZ();
+    for (const std::uint32_t b : in_row) {
+        const ColumnSteel &body = steel[b];
+        const Vec3 lo = body.bounds.mMin, hi = body.bounds.mMax;
+        if (!(lo.GetX() <= x && x <= hi.GetX() && lo.GetZ() <= z && z <= hi.GetZ())) continue;
+        const float entry = RayAABox4(origin, inverse, lo.SplatX(), lo.SplatY(), lo.SplatZ(), hi.SplatX(), hi.SplatY(),
+                                      hi.SplatZ()).GetX();
+        if (entry < hit.mFraction) (void)body.shape.CastRay(ray, hit);
+    }
+    return hit.mFraction <= 1.0F;
+}
+
+// The scans this process has made, newest last: a few worlds' worth.
+struct ScanMemo {
+    std::mutex mutex;
+    std::vector<std::pair<std::string, AffordanceMap>> maps;
+};
+ScanMemo &scan_memo() {
+    static ScanMemo memo;
+    return memo;
+}
+constexpr std::size_t kScanMemoMaps = 6;
+} // namespace
+
 void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits) {
+    const auto started = std::chrono::steady_clock::now();
+    std::string key = steel_key(physics, bounds, ignore, limits);
+    ScanMemo &memo = scan_memo();
+    {
+        const std::lock_guard<std::mutex> hold(memo.mutex);
+        for (const auto &[seen, map] : memo.maps) {
+            if (seen == key) {
+                *this = map;
+                stats_.seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+                return;
+            }
+        }
+    }
+    scan_steel(physics, bounds, ignore, limits);
+    const std::lock_guard<std::mutex> hold(memo.mutex);
+    if (memo.maps.size() >= kScanMemoMaps) memo.maps.erase(memo.maps.begin());
+    memo.maps.emplace_back(std::move(key), *this);
+}
+
+void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore,
+                               const Limits &limits) {
     const auto started = std::chrono::steady_clock::now();
     patches_.clear();
     regions_.clear();
@@ -2485,17 +2633,43 @@ void AffordanceMap::split_patches(const PhysicsSystem &physics, const Ignore &ig
         // From over her head: a beam or pipe she cannot pass under parts the
         // floor as surely as a wall does.
         const float from_y = p.top + 2.0F * limits.center_above_feet() + 0.05F;
-        for (int ix = 0; ix < nx; ++ix)
+        const float depth = from_y - p.top + 0.1F;
+        // The steel over this top, gathered once: every ray below stays
+        // inside this column (taken 5 cm wider all round), so it can only
+        // hit what is in it.
+        const std::vector<ColumnSteel> steel = column_steel(
+            physics, ignore, filter,
+            AABox(Vec3(p.min_x - 0.05F, p.top - 0.15F, p.min_z - 0.05F), Vec3(p.max_x + 0.05F, from_y + 0.05F, p.max_z + 0.05F)));
+        const Vec3 down(0.0F, -depth, 0.0F);
+        const RayInvDirection inverse(down);
+        std::vector<std::uint32_t> in_row;
+        for (int ix = 0; ix < nx; ++ix) {
+            // The bodies whose bounds come within 1 mm of this row's x: a
+            // vertical ray outside a body's x (or z) slab misses its bounds
+            // (RayAABox4's parallel test, made on each ray below), so it is
+            // never tried against the shape.
+            const float row_x = std::min(p.min_x + (float(ix) + 0.5F) * kCell, p.max_x - 0.01F);
+            in_row.clear();
+            for (std::uint32_t b = 0; b < steel.size(); ++b) {
+                if (steel[b].bounds.mMin.GetX() - 1.0e-3F <= row_x && row_x <= steel[b].bounds.mMax.GetX() + 1.0e-3F) {
+                    in_row.push_back(b);
+                }
+            }
             for (int iz = 0; iz < nz; ++iz) {
+                // Each ray's own x, worked out in here as it always was: out
+                // in the row, beside its multiply, the compiler may fuse the
+                // two into one rounding, and a ray a float's last bit over
+                // reads a face that ends exactly there as open (a cell of
+                // the 44 m deck did).
                 const float x = std::min(p.min_x + (float(ix) + 0.5F) * kCell, p.max_x - 0.01F);
                 const float z = std::min(p.min_z + (float(iz) + 0.5F) * kCell, p.max_z - 0.01F);
-                const float depth = from_y - p.top + 0.1F;
+                const RRayCast ray(RVec3(x, from_y, z), down);
                 RayCastResult hit;
-                const bool any = physics.GetNarrowPhaseQuery().CastRay(RRayCast(RVec3(x, from_y, z), Vec3(0.0F, -depth, 0.0F)), hit,
-                                                                       Layers(physics, ignore).bp(), Layers(physics, ignore).ol(), filter);
+                const bool any = cast_down(steel, in_row, ray, inverse, hit);
                 const float h = any ? from_y - hit.mFraction * depth : p.top;
                 floor[static_cast<std::size_t>(ix * nz + iz)] = h <= p.top + limits.step_max_m ? 1 : 0;
             }
+        }
         // Connected floor cells (4-way), each component cut into rectangles
         // greedily (runs along z, grown along x while they match).
         std::vector<int> comp(floor.size(), -1);
@@ -3000,7 +3174,14 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
         }
     }
 
-    // Lips between regions: a mantle up; a step or a hang-drop down.
+    // A free drop is an alternative to a long ladder, not an extension of
+    // hang/drop reach. She falls under Jolt gravity with no airborne thrust.
+    // Use a conservative impact speed below Matron's 16 m/s lethal landing.
+    // The scan starts this move only on broad stationary steel, with a clear
+    // exterior flight corridor to stationary support below.
+    constexpr float kFreeDropImpactMps = 15.0F;
+    const float free_drop_max_m = kFreeDropImpactMps * kFreeDropImpactMps / (2.0F * kGravity);
+    // Lips between regions: mantle up, step/hang down, or a survivable free drop.
     const float cell = 3.0F;
     std::unordered_map<long long, std::vector<int>> grid;
     for (std::size_t i = 0; i < patches_.size(); ++i) {
@@ -3014,7 +3195,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
         const Patch &lo = patches_[i];
         const int y0 = cell_of(lo.top, 5.0F);
         seen.clear();
-        for (int y = y0; y <= y0 + 1; ++y)
+        for (int y = y0; y <= y0 + 3; ++y)
             for (int x = cell_of(lo.min_x - 0.7F, cell); x <= cell_of(lo.max_x + 0.7F, cell); ++x)
                 for (int z = cell_of(lo.min_z - 0.7F, cell); z <= cell_of(lo.max_z + 0.7F, cell); ++z) {
                     const auto it = grid.find(cell_key(x, y, z));
@@ -3022,11 +3203,91 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     for (const int j : it->second) {
                         const Patch &hi = patches_[static_cast<std::size_t>(j)];
                         const float rise = hi.top - lo.top;
-                        if (hi.region == lo.region || rise <= limits.step_max_m || rise > limits.drop_max_m) continue;
+                        if (hi.region == lo.region || rise <= limits.step_max_m || rise > free_drop_max_m) continue;
                         const float gap = gap_xz(lo, hi);
                         if (gap > 1.4F) continue;
                         if (std::find(seen.begin(), seen.end(), j) != seen.end()) continue;
                         seen.push_back(j);
+                        if (rise > limits.drop_max_m) {
+                            // Find a real exit on the OUTSIDE of the high
+                            // support. A landing directly under a deck is not
+                            // proof of a clear fall past that same deck.
+                            if (hi.narrow || lo.narrow ||
+                                physics.GetBodyInterface().GetMotionType(hi.body) != EMotionType::Static ||
+                                physics.GetBodyInterface().GetMotionType(lo.body) != EMotionType::Static) continue;
+                            bool found_drop = false;
+                            for (int side = 0; side < 4 && !found_drop; ++side) {
+                                const Vec3 outward = side == 0 ? Vec3(-1, 0, 0) :
+                                                     side == 1 ? Vec3(1, 0, 0) :
+                                                     side == 2 ? Vec3(0, 0, -1) : Vec3(0, 0, 1);
+                                for (const float fraction : {0.20F, 0.50F, 0.80F}) {
+                                    const float x = side < 2 ? (side == 0 ? hi.min_x : hi.max_x) :
+                                                    hi.min_x + fraction * (hi.max_x - hi.min_x);
+                                    const float z = side >= 2 ? (side == 2 ? hi.min_z : hi.max_z) :
+                                                    hi.min_z + fraction * (hi.max_z - hi.min_z);
+                                    const Vec3 lip(x, hi.top, z);
+                                    const Vec3 start = lip - outward * (limits.radius + 0.22F);
+                                    const Vec3 exit = lip + outward * (limits.radius + 0.18F);
+                                    // A planted approach gives at most ~1.6 m/s.
+                                    // Flight carries that momentum; the move
+                                    // never applies steering forces in the air.
+                                    const Vec3 landing = lip + outward * (limits.radius + 2.80F) -
+                                                         Vec3(0, rise, 0);
+                                    const float inset = limits.radius + 0.15F;
+                                    if (landing.GetX() < lo.min_x + inset || landing.GetX() > lo.max_x - inset ||
+                                        landing.GetZ() < lo.min_z + inset || landing.GetZ() > lo.max_z - inset)
+                                        continue;
+                                    if (!capsule_free(physics, ignore, limits, start) ||
+                                        !capsule_free(physics, ignore, limits, exit) ||
+                                        !capsule_free(physics, ignore, limits, landing))
+                                        continue;
+                                    ++stats_.capsule_queries;
+                                    if (!gap_segment_free(physics, ignore, limits, start, exit)) continue;
+                                    ++stats_.capsule_queries;
+                                    if (!gap_segment_free(physics, ignore, limits, exit, landing)) continue;
+                                    // The straight exit-to-landing sweep is below the
+                                    // ballistic path: an overhead beam can sit above
+                                    // that diagonal yet intersect her falling body.
+                                    // Cover the volume between the diagonal and the
+                                    // zero-upward-speed gravity arc. Five overlapping
+                                    // capsule-width cross-sections conservatively
+                                    // reject steel in this previously unchecked space.
+                                    bool flight_clear = true;
+                                    for (int sample = 1; sample <= 4; ++sample) {
+                                        const float u = float(sample) / 5.0F;
+                                        const Vec3 chord = exit + (landing - exit) * u;
+                                        const Vec3 arc = chord + Vec3(0.0F, rise * u * (1.0F - u), 0.0F);
+                                        ++stats_.capsule_queries;
+                                        if (!gap_segment_free(physics, ignore, limits, chord, arc)) {
+                                            flight_clear = false;
+                                            break;
+                                        }
+                                    }
+                                    if (!flight_clear) continue;
+                                    Edge down;
+                                    down.from = hi.region;
+                                    down.to = lo.region;
+                                    down.kind = MoveKind::FreeDrop;
+                                    down.spec.kind = down.kind;
+                                    down.spec.start = start;
+                                    down.spec.goal = landing;
+                                    down.spec.goal_top = lo.top;
+                                    down.spec.top_y = hi.top;
+                                    down.spec.bottom_y = lo.top;
+                                    down.spec.out = outward;
+                                    // Prefer an existing climb if one is
+                                    // available; no mandatory death-defying
+                                    // shortcut over a perfectly good ladder.
+                                    down.cost = 40.0F + rise;
+                                    down.usable = true;
+                                    down.reason = "clear stationary takeoff and ballistic corridor to a survivable landing";
+                                    add_edge(std::move(down));
+                                    found_drop = true;
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
                         const Vec3 lc((lo.min_x + lo.max_x) * 0.5F, lo.top, (lo.min_z + lo.max_z) * 0.5F);
                         Vec3 lip = closest_on(hi, lc, 0.0F);
                         if (gap > 0.6F) {

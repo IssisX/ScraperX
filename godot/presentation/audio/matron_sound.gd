@@ -59,6 +59,24 @@ const REACH_M := 140.0
 # Cues due later: at most this many waiting.
 const DUE_SLOTS := 6
 
+# Her lines (matron_speech.gd). Hunting by ear she talks to him now and then, near enough to hear; in a
+# hold she talks while she carries and dangles him; no two lines of hers sooner than SAY_GAP_S. What she
+# says on a clock (SAY_CHATTER) gives way to what she says to something that happens (SAY_EVENT: the
+# sight of him, the grab, the dangle, the rip, his getting free, the hunt lost), which waits out the gap
+# rather than being lost, the newest in place of an older one; and everything gives way to her last word
+# (SAY_LAST, the apron wiped), said at once with priority over whatever is in her mouth. A line her mouth
+# is too full for (audio_director.gd matron_say: MOUTH_FULL) is asked for again each frame for SAY_WAIT_S.
+const SAY_M := 30.0
+const HUNT_SAY_GAP_S := Vector2(9.0, 16.0)
+const HOLD_SAY_GAP_S := Vector2(6.0, 9.0)
+const SAY_GAP_S := 3.0
+const SAY_WAIT_S := 4.0
+const SAY_CHATTER := 1
+const SAY_EVENT := 2
+const SAY_LAST := 3
+const STATE_CARRY := 13
+const STATE_DANGLE := 14
+
 var _audio: Object
 # The rest after her dread (the locker's burst sets it too, matron_view.gd).
 var dread_in := 0.0
@@ -123,6 +141,20 @@ var _due_at := PackedVector3Array()
 var _due_db := PackedFloat32Array()
 var _due_pitch := PackedFloat32Array()
 
+# One line of hers pending: its moment ("" none), the seconds to it (below 0: waiting on her mouth), the
+# hold it belongs to (0: none), and how much it matters (SAY_CHATTER, SAY_EVENT, SAY_LAST).
+var _say_moment := &""
+var _say_after := 0.0
+var _say_enc := 0
+var _say_rank := 0
+var _say_gap := 0.0
+# The hold she is in ended by her hand, or will be (hear_hold): let go, set down, claimed, an arm torn off.
+var _hold_hers := false
+var _spares_seen := -1
+var _hunt_say_in := 0.0
+var _hold_say_in := 0.0
+var _waste_seen := -1
+
 
 func _init(audio: Object) -> void:
 	_audio = audio
@@ -152,12 +184,25 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	var d := feet.distance_to(player_position)
 	dread_in = maxf(0.0, dread_in - delta)
 	_tick_due(delta)
+	_tick_say(delta)
 	# She sees the player: her dread, near enough and not too soon again.
 	var sees := bool(data["sees_player"])
 	if on and sees and not _was_seen and dread_in <= 0.0 and d < DREAD_M:
 		_audio.matron_dread(head, d, stage)
 		dread_in = DREAD_REST_S
+		_say_later(0.9, &"sees", 0, SAY_EVENT)
 	_was_seen = sees
+	# By ear she talks to him now and then (never once she sees him: that is her other moment); the hunt
+	# lost, a word as she gives it up.
+	if on and state == STATE_HUNTING and not sees and d < SAY_M:
+		_hunt_say_in -= delta
+		if _hunt_say_in <= 0.0:
+			_hunt_say_in = randf_range(HUNT_SAY_GAP_S.x, HUNT_SAY_GAP_S.y)
+			_say_later(0.0, &"hunting")
+	else:
+		_hunt_say_in = randf_range(HUNT_SAY_GAP_S.x, HUNT_SAY_GAP_S.y)
+	if on and _state_seen == STATE_HUNTING and (state == STATE_SEARCHING or state == STATE_SHUFFLING) and d < SAY_M:
+		_say_later(0.6, &"lost", 0, SAY_EVENT)
 	# The Turn: her loops cut (matron_layers) and her joints going in the
 	# wind-up; the shriek as she lunges, and a slam at every burst of it.
 	if turn != _turn_seen:
@@ -327,12 +372,44 @@ func hear_hold(hold: Dictionary) -> void:
 	# go, set down, or the run hers): what was due in it is dropped.
 	var state := int(hold.get("state", 0))
 	var holding := state >= STATE_GRAB and state <= STATE_CLAIMED
+	# What her hand does to end a hold (lets him go over the drop, sets him down, claims him, tears an arm
+	# off) is kept for the whole hold from the frame it comes: its count rises while the hold goes on (the
+	# range above takes in her Release, and the arm's play goes on after the tear), and the trackers
+	# below follow every frame, so by the hold's end they have seen it.
+	var let_go := int(hold.get("fatal_release_beat", 0))
+	var releases := int(hold.get("releases", 0))
+	var spares := int(hold.get("spares", 0))
+	var claims := int(hold.get("claims", 0))
+	var tears := int(hold.get("arm_tear_count", 0))
+	var hers := _rose(let_go, _let_go_seen) or _rose(releases, _releases_seen) or _rose(spares, _spares_seen) \
+			or _rose(claims, _claims_seen) or _rose(tears, _tears_seen)
 	if holding and not _holding:
 		_encounter += 1
 		_laughed = false
-	elif _holding and not holding:
+		_hold_hers = false
+		_hold_say_in = randf_range(HOLD_SAY_GAP_S.x, HOLD_SAY_GAP_S.y)
+		_say_later(0.3, &"grab", _encounter, SAY_EVENT)
+	if hers and (holding or _holding):
+		_hold_hers = true
+	if _holding and not holding:
 		_drop_due(_encounter)
+		if _say_enc == _encounter:
+			_say_moment = &""
+		# He has hit her, or got away (nothing her hand did ended it): a word to his back.
+		if not _hold_hers:
+			_say_later(0.5, &"free", 0, SAY_EVENT)
 	_holding = holding
+	# In her hands, carrying or dangling him, she talks (never the line just said: matron_speech.gd).
+	if on and holding and (state == STATE_CARRY or state == STATE_DANGLE):
+		_hold_say_in -= _dt
+		if _hold_say_in <= 0.0:
+			_hold_say_in = randf_range(HOLD_SAY_GAP_S.x, HOLD_SAY_GAP_S.y)
+			_say_later(0.0, &"drop", _encounter)
+	# The apron wiped: her last word, over whatever is in her mouth.
+	var waste := int(hold.get("waste_not", 0))
+	if on and _waste_seen >= 0 and waste > _waste_seen:
+		_say_later(0.0, &"last", 0, SAY_LAST)
+	_waste_seen = waste
 	_audio.matron_encounter = _encounter if holding else 0
 	# Lifted (a carry), then held out (a dangle): a breath each.
 	var carries := int(hold.get("carries", 0))
@@ -342,6 +419,7 @@ func hear_hold(hold: Dictionary) -> void:
 	var dangles := int(hold.get("dangles", 0))
 	if on and _dangles_seen >= 0 and dangles > _dangles_seen:
 		_cue(&"matron_breath", _head, -4.0, 1.0)
+		_say_later(1.0, &"drop", _encounter, SAY_EVENT)
 	_dangles_seen = dangles
 	# Playing with the arm: the leather of her grip creaking with the strain
 	# on the wrist, louder toward the tear (pitched only within her strain's
@@ -361,10 +439,10 @@ func hear_hold(hold: Dictionary) -> void:
 	_beat_seen = beat
 	# An arm torn off: the rip where it parted, his crack and his cry, then
 	# (the hold's one) her laugh.
-	var tears := int(hold.get("arm_tear_count", 0))
 	if on and _tears_seen >= 0 and tears > _tears_seen:
 		_cue(&"matron_rip", hold.get("severed_arm_position", hand), 4.0, 1.0)
 		_audio.arm_break(hold.get("player_position", hand))
+		_say_later(0.4, &"rip", _encounter, SAY_EVENT)
 		if not _laughed:
 			_laughed = true
 			_due(LAUGH_AFTER_TEAR_S, &"matron_laugh", _head, 0.0, 1.0, _encounter)
@@ -381,9 +459,6 @@ func hear_hold(hold: Dictionary) -> void:
 	_hang_seen = hang
 	# Let go over the drop, at a ledge, set back on the deck, or claimed: the
 	# hold's laugh if it has not had it, else a breath.
-	var let_go := int(hold.get("fatal_release_beat", 0))
-	var releases := int(hold.get("releases", 0))
-	var claims := int(hold.get("claims", 0))
 	if on and ((_let_go_seen >= 0 and let_go > _let_go_seen) or (_releases_seen >= 0 and releases > _releases_seen)
 			or (_claims_seen >= 0 and claims > _claims_seen)):
 		if not _laughed:
@@ -392,6 +467,7 @@ func hear_hold(hold: Dictionary) -> void:
 			_cue(&"matron_breath", _head, -2.0, 1.0)
 	_let_go_seen = let_go
 	_releases_seen = releases
+	_spares_seen = spares
 	_claims_seen = claims
 
 
@@ -403,6 +479,43 @@ func plant(at: Vector3, speed: float) -> void:
 		return
 	_plant_gap = PLANT_GAP_S
 	_cue(&"matron_plant", at, lerpf(PLANT_DB.x, PLANT_DB.y, clampf(speed / 7.0, 0.0, 1.0)), randf_range(0.8, 0.95))
+
+
+# A line of hers at `moment`, `after` seconds from now, said only while she is out and near and (in a
+# hold, `encounter`) the hold goes on. `rank`: chatter only when no line is pending and none was said
+# within SAY_GAP_S; an event in place of a pending one that matters no more (not a hold's own line for
+# one outside it), waiting out the gap; her last word in place of anything, at once.
+func _say_later(after: float, moment: StringName, encounter: int = 0, rank: int = SAY_CHATTER) -> void:
+	if _say_moment != &"" and (rank == SAY_CHATTER or _say_rank > rank
+			or (_say_rank == rank and _say_enc != 0 and encounter == 0)):
+		return
+	if rank == SAY_CHATTER and _say_gap > 0.0:
+		return
+	_say_moment = moment
+	_say_after = after if rank == SAY_LAST else maxf(after, _say_gap)
+	_say_enc = encounter
+	_say_rank = rank
+
+
+func _tick_say(delta: float) -> void:
+	_say_gap = maxf(0.0, _say_gap - delta)
+	if _say_moment == &"":
+		return
+	_say_after -= delta
+	if _say_after > 0.0:
+		return
+	if _on and (_say_enc == 0 or (_holding and _say_enc == _encounter)):
+		var said: int = _audio.matron_say(_say_moment, _head, 0.0, _say_rank == SAY_LAST)
+		if said < 0 and _say_after > -SAY_WAIT_S:
+			return   # her mouth too full for it (another line, a shriek): asked for again next frame
+		if said > 0:
+			_say_gap = SAY_GAP_S
+	_say_moment = &""
+
+
+# A count of the native's that rose since the frame before (none before the first frame seen).
+static func _rose(count: int, seen: int) -> bool:
+	return seen >= 0 and count > seen
 
 
 func _cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> bool:
