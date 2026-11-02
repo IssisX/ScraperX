@@ -48,20 +48,20 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	# paint smooth, the rusted beams pitted.
 	var drum_paint: Array[Material] = []
 	for colour in [Color("2c4a73"), Color("a07c1c"), Color("72291e")]:
-		drum_paint.append(main._material(colour, 0.0, 0.7, Color.BLACK, 1.0, main._bump_smooth))
+		drum_paint.append(main._surfaced(colour, 0.0, 0.7, main._surface_paint))
 	var beam_paint: Array[Material] = [
-		main._material(Color("36383b"), 0.3, 0.5, Color.BLACK, 1.0, main._bump_smooth),
-		main._material(Color("3a271d"), 0.0, 0.93, Color.BLACK, 1.0, main._bump_rust)]
+		main._surfaced(Color("36383b"), 0.3, 0.5, main._surface_mill_scale),
+		main._surfaced(Color("3a271d"), 0.0, 0.93, main._surface_rust)]
 	# Gas bottles in their gases' colours (oxygen black, acetylene maroon,
 	# argon blue), their caps left steel; the reels' wound cable black
 	# rubber; the toolboxes red, blue or yellow enamel.
 	var bottle_paint: Array[Material] = []
 	for colour in [Color("1c1c1e"), Color("6b1e24"), Color("2d5f8a")]:
-		bottle_paint.append(main._material(colour, 0.0, 0.55, Color.BLACK, 1.0, main._bump_smooth))
+		bottle_paint.append(main._surfaced(colour, 0.0, 0.55, main._surface_paint))
 	var cable_paint: Material = main._material(Color("141414"), 0.0, 0.82)
 	var toolbox_paint: Array[Material] = []
 	for colour in [Color("a3231c"), Color("1f4f8f"), Color("c9a227")]:
-		toolbox_paint.append(main._material(colour, 0.0, 0.45, Color.BLACK, 1.0, main._bump_smooth))
+		toolbox_paint.append(main._surfaced(colour, 0.0, 0.45, main._surface_paint))
 	var stock: PackedInt32Array = native.get_loose_stock()
 	for i in range(0, stock.size() - 2, 3):
 		var entity := int(native.get_kit_body_entity_id(stock[i]))
