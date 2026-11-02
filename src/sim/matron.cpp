@@ -3330,7 +3330,6 @@ void Matron::post_step(const float dt) {
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
         if (landed_hard) {
-            drop_stock();
             dead_ = true;
             state_ = State::Dead;
             clear_interrupted_actions(false);
@@ -4161,7 +4160,6 @@ void Matron::take_blow(const float dt) {
         dead_ = true;
         state_ = State::Dead;
         clear_interrupted_actions(false);
-        drop_stock();
         // Keep the actual Jolt body in the world. Her existing Down collision
         // settles on real steel; the rendered collapse follows the same state.
         const Vec3 fall(impulse.GetX(), 0.0F, impulse.GetZ());
