@@ -116,7 +116,103 @@ void run_o_wreckage() {
               << " deck_y=" << o.snapshot().player_position.y << '\n';
 }
 
+// ---- D-F, the wet band (220 -> 340 m) ---------------------------------------------
+// Defined in sim_tests_wet.cpp.
+bool seat_wet_spool(Simulation &simulation);
+
+namespace {
+// The band's climbing route, 220 -> TP-340, as run_wet_route climbs it
+// (copied: that test's own steps, the player's limits).
+bool climb_wet_route(Simulation &route) {
+    using scraperx::sim::TraversalState;
+    if (!(walk_to(route, 3.5, -130.5, 6.0, 0.1) && walk_to(route, 3.5, -132.4, 6.0, 0.1) &&
+          climb_wet_hold(route, 2.5, -132.4, 0.0, 1.0, false, 242.5))) {
+        std::cout << "  wet route: short of the 242 ring at (" << route.snapshot().player_position.x << ", " << route.snapshot().player_position.y << ", " << route.snapshot().player_position.z << ")\n";
+        return false;
+    }
+    if (!(walk_to(route, -1.0, -131.2, 8.0, 0.1) && climb_wet_hold(route, -1.0, -133.2, 0.0, 1.0, true, 264.5))) {
+        std::cout << "  wet route: short of the 264 ring\n";
+        return false;
+    }
+    if (!walk_to(route, 1.2, -131.4, 6.0, 0.08)) {
+        return false;
+    }
+    (void)route.set_facing(0.0, 1.0);
+    (void)hold_stick(route, 0.0, -0.4, 0.0, 1.0, 2.0,
+                     [](const scraperx::sim::Snapshot &state) { return state.player_position.z <= -132.09; });
+    (void)route.advance_frame(0.3);
+    if (!route.snapshot().edge_drop_available) {
+        std::cout << "  wet route: no drop at the bulkhead\n";
+        return false;
+    }
+    (void)route.request_release();
+    if (!wait_for(route, 1.5, [](const scraperx::sim::Snapshot &state) {
+            return state.traversal_state == TraversalState::Hanging;
+        }) ||
+        !hold_stick(route, 1.0, 0.0, 0.0, 1.0, 6.0,
+                    [](const scraperx::sim::Snapshot &state) { return state.player_position.x >= 3.45; })) {
+        std::cout << "  wet route: the hang under the bulkhead\n";
+        return false;
+    }
+    (void)route.request_jump();
+    if (!wait_for(route, 2.5, [](const scraperx::sim::Snapshot &state) { return standing_above(state, 264.5); })) {
+        return false;
+    }
+    if (!(walk_to(route, 5.35, -132.2, 6.0, 0.1) && walk_to(route, 5.35, -134.4, 6.0, 0.1) &&
+          walk_to(route, 5.0, -134.4, 6.0, 0.1) && climb_wet_hold(route, 5.0, -134.2, 0.0, 1.0, false, 286.5))) {
+        std::cout << "  wet route: short of the 286 ring\n";
+        return false;
+    }
+    if (!(walk_to(route, 4.0, -133.0, 6.0, 0.1) && walk_to(route, 4.0, -135.1, 6.0, 0.1) &&
+          climb_wet_hold(route, 3.0, -135.1, 0.0, 1.0, false, 308.5))) {
+        std::cout << "  wet route: short of the 308 ring\n";
+        return false;
+    }
+    if (!(walk_to(route, 1.5, -134.0, 6.0, 0.1) && climb_wet_hold(route, 1.5, -135.95, 0.0, 1.0, true, 330.5))) {
+        std::cout << "  wet route: short of the 330 ring\n";
+        return false;
+    }
+    if (!climb_wet_hold(route, 3.0, -134.9, 0.0, -1.0, false, 340.5)) {
+        std::cout << "  wet route: short of TP-340\n";
+        return false;
+    }
+    return true;
+}
+} // namespace
+
+// D's spool seated, the rider off its platform before the water lifts it: D
+// rises empty to E's doors. E set off with nobody in it (a 55 kg drum on its
+// deck, as "E loads" sets it off): the cab blows up the shaft empty. The way
+// on past both is the band's climbing route, climbed to TP-340.
+void run_de_wreckage() {
+    Simulation w(InitialSpawn::Ring220North);
+    (void)w.advance_frame(1.0);
+    require(seat_wet_spool(w) && walk_to(w, 13.0, -130.2, 4.0, 0.15),
+            "D wreck: the spool seated and the rider off the platform");
+    const bool d_up = wait_for(w, 120.0, [&](const scraperx::sim::Snapshot &) {
+        return w.wet_state().d_platform_travel >= 35.95;
+    });
+    require(d_up && w.snapshot().player_position.y < 222.0, "D wreck: the platform gone up empty, the rider on the 220 ring");
+    std::uint32_t drum = Simulation::kKitNone;
+    for (std::uint32_t i = 0; i < w.loose_stock_count() && drum == Simulation::kKitNone; ++i) {
+        if (w.loose_stock_piece(i).kind == 3) {
+            drum = w.kit_body_index(Simulation::kLooseStockFirstEntity + i);
+        }
+    }
+    require(drum != Simulation::kKitNone, "E wreck: a drum is found");
+    w.debug_launch_kit_body(drum, {13.0, 256.4, -136.65}, {0.0, 0.0, 0.0});
+    require(wait_for(w, 40.0, [&](const scraperx::sim::Snapshot &) { return w.wet_state().e_cab_travel > 40.0; }),
+            "E wreck: the cab blown up the shaft empty");
+    require(walk_to(w, 9.0, -129.4, 8.0, 0.1) && walk_to(w, 4.0, -129.2, 8.0, 0.1), "D/E wreck: back along the 220 ring to the route's foot");
+    require(climb_wet_route(w) && standing_above(w.snapshot(), 340.4) && w.snapshot().death_count == 0,
+            "D/E wreck: the band's route climbed past both spent lifts to TP-340");
+    std::cout << "PASS scraperx_sim AS-007 wreckage D+E: d_travel=" << w.wet_state().d_platform_travel
+              << " e_travel=" << w.wet_state().e_cab_travel << " top_y=" << w.snapshot().player_position.y << '\n';
+}
+
+
 void run_wreck_way_on() {
+    run_de_wreckage();
     run_s1_wreckage();
     run_m_wreckage();
     run_n_wreckage();
