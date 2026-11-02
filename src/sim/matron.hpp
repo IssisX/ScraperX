@@ -1133,6 +1133,7 @@ public:
     static constexpr float kArmTearNs = 600.0F;
     static constexpr float kArmMassKg = 4.5F;
     static constexpr float kArmThrowMps = 7.5F;
+    static constexpr float kArmThrowRealScale = 0.6F;   // her real arm's short lever
     static constexpr float kArmPlaySeconds = 4.5F;
     static constexpr float kArmPullMoveMps = 0.5F;
     static constexpr float kArmReachSeconds = 3.5F;
