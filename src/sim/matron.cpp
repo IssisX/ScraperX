@@ -859,6 +859,8 @@ void Matron::stand_down() {
     chase_way_held_ = false;
     turn_ = Turn::None;
     turn_s_ = 0.0F;
+    turn_cooldown_s_ = turn_cooldown_seconds();
+    sight_far_s_ = 0.0F;
     wary_ = false;
     peer_s_ = 0.0F;
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
@@ -1842,19 +1844,32 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     stride_ += speed_ * dt;
 }
 
-// The Turn's clock and its two triggers (see matron.hpp). Only simulation
-// state decides: her distance, the line, the player's landing, the cooldown.
-void Matron::step_turn(const float dt, const float distance_to_player, const float loudness, const float carried_m) {
+// The Turn's clock and triggers (see matron.hpp). The stage interval is
+// a maximum wait while she is actively Hunting. Close sustained sight or any
+// sufficiently strong sound at her ear can start it after the anti-spam part
+// of that interval; the deadline starts it even if the player stays quiet/far.
+void Matron::step_turn(const float dt, const float distance_to_player, const float heard_level) {
     sight_far_s_ = sees_far_ ? sight_far_s_ + dt : 0.0F;
     if (turn_ == Turn::None) {
+        if (state_ != State::Hunting) {
+            sight_far_s_ = 0.0F;
+            return;
+        }
+        const float interval_s = turn_cooldown_seconds();
+        // Rage can shorten the interval while a Turn is brewing. Calming does
+        // not erase elapsed pressure: a nearly due Turn remains nearly due.
+        turn_cooldown_s_ = std::min(turn_cooldown_s_, interval_s);
         turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
+        const float elapsed_s = interval_s - turn_cooldown_s_;
+        const bool ready = elapsed_s >= interval_s * kTurnReadyFraction;
         // Stalking him her sight does not start the Turn: she is watching him
-        // on purpose (matron_stalk.cpp: stalking_, this tick's stalk). His
-        // noise still can.
-        const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= kTurnTriggerM &&
-                                     !stalking_;
-        const bool hard_landing = loudness >= kTurnNoiseLoudness && carried_m <= kTurnNoiseM;
-        if (turn_cooldown_s_ <= 0.0F && (close_and_clear || hard_landing)) {
+        // on purpose (matron_stalk.cpp: stalking_, this tick's stalk). Sound
+        // at her ear still can.
+        const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds &&
+                                     distance_to_player <= kTurnTriggerM && !stalking_;
+        const bool loud_at_ear = heard_level >= kTurnEarLevel;
+        const bool deadline = turn_cooldown_s_ <= 0.0F;
+        if (deadline || (ready && (close_and_clear || loud_at_ear))) {
             turn_ = Turn::Windup;
             turn_s_ = 0.0F;
         }
@@ -2695,7 +2710,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             const bool turns = way->view().turns;
             (void)way->step(dt, account);
             if (turns) {
-                step_turn(dt, d, loudness, ev.carry_m);
+                step_turn(dt, d, heard_level_);
             }
             break;
         }
@@ -2906,7 +2921,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable), or by her map's ways across
                 // the tower (its ladders up and down), or up a climb.
-                step_turn(dt, d, loudness, ev.carry_m);
+                step_turn(dt, d, heard_level_);
                 break;
             } else {
                 // A pest's mischief first: what she holds thrown at the player
@@ -3101,10 +3116,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // The stalk: his face turned to her, she freezes; turned
                 // away, she closes to her band and holds (matron_stalk.cpp).
                 if (stalk_step(dt, ax, az, feet_y, wx, wz)) {
-                    step_turn(dt, d, loudness, ev.carry_m);
+                    step_turn(dt, d, heard_level_);
                     break;
                 }
-                step_turn(dt, d, loudness, ev.carry_m);
+                step_turn(dt, d, heard_level_);
                 // Her hands on the player take hold (or, while they cannot,
                 // shove, short of fully changed): her feet stand meanwhile,
                 // and do not drive her body on into the player, carrying them
@@ -3745,7 +3760,7 @@ void Matron::restore(const Saved &saved) {
         pursuit_s_ = 0.0F;
         turn_ = Turn::None;
         turn_s_ = 0.0F;
-        turn_cooldown_s_ = kTurnCooldownSeconds * 0.5F;
+        turn_cooldown_s_ = kTurnCooldownPestSeconds;
         sight_far_s_ = 0.0F;
         // A new run: what she learned of the player's tricks is forgotten.
         fooled_ = 0;
