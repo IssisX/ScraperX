@@ -35,7 +35,9 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
   for the game, Claude's pick and why, and the word he answers with; no block of text, no table of
   numbers or file names; the detail lives in the linked document (2026-10-27: *"you can't give me
   these large blocks of text"*; 11-02: *"give me a little more context ... just a tiny bit more in
-  your questions when I'm making decisions ... Just slightly"*).
+  your questions when I'm making decisions ... Just slightly ... at the very end of your
+  responses"*). The `🟣 **YOUR MOVE:**` line itself carries that context, since it is what he reads:
+  one or two sentences saying what the choice is, what each answer word does, and Claude's pick.
 - No answer after 10 minutes: the pick decides; say so on the work's issue and go on; he can still
   overturn it (2026-10-27: *"go with your recommendations. Let's go with 5 or 10 minutes."*).
 - He has handed his open decisions to the integrator (2026-11-02: *"Make the other decisions for
