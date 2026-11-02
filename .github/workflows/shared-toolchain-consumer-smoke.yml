@@ -33,6 +33,14 @@ jobs:
       - name: Checkout exact consumer revision
         uses: actions/checkout@v4
 
+      - name: Record published bundle manifest digest for security pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          export SCRAPERX_TOOLCHAIN_CACHE_DIR="$RUNNER_TEMP/scraperx-digest-discovery"
+          toolchain="$(bash tools/shared-toolchain/install.sh)"
+          printf 'PUBLISHED_TOOLCHAIN_MANIFEST_SHA256=%s\\n' "$(sha256sum "$toolchain/.scraperx-integrity.json" | cut -d ' ' -f1)"
+
       - name: Exercise installer security and cache regression tests
         shell: bash
         run: python3 tools/shared-toolchain/test_install.py -v
