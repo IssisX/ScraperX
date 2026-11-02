@@ -139,23 +139,27 @@ class InstallerTests(unittest.TestCase):
         archive, digest = self.bundle()
         fake_bin = self.root / "fake-bin"
         fake_bin.mkdir()
+        marker = self.root / "forged-curl-executed"
         curl = fake_bin / "curl"
-        curl.write_text('''#!/usr/bin/env bash
-set -euo pipefail
-while (($#)); do
-    if [[ "$1" == "--output" ]]; then out="$2"; shift 2; else shift; fi
-done
-if [[ "$out" == *.sha256 ]]; then
-    printf '%s  %s\\n' "$FORGED_HASH" 'ScraperX-toolchain-linux-x86_64-v1.tar.gz' > "$out"
-else
-    cp "$FORGED_ARCHIVE" "$out"
-fi
-''')
+        curl.write_text(
+            "#!/bin/sh\\n"
+            + "echo forged > " + shlex.quote(str(marker)) + "\\n"
+            + "exit 0\\n"
+        )
         curl.chmod(0o755)
-        result = self.execute(env={"PATH": f"{fake_bin}:{os.environ['PATH']}",
-                                   "FORGED_ARCHIVE": str(archive), "FORGED_HASH": digest})
+        # A local dead proxy prevents real downloads; the attacker's PATH
+        # entry must never run before the pinned download is validated.
+        result = self.execute(env={
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "HTTPS_PROXY": "http://127.0.0.1:1",
+            "https_proxy": "http://127.0.0.1:1",
+            "NO_PROXY": "",
+            "no_proxy": "",
+            "FORGED_ARCHIVE": str(archive),
+            "FORGED_HASH": digest,
+        })
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("pinned v1 release digest", result.stderr)
+        self.assertFalse(marker.exists(), "PATH replaced the trusted curl")
         self.assertFalse(self.cache.exists())
 
     def test_tampered_cached_executable_never_runs_before_rejection(self):
@@ -246,6 +250,71 @@ fi
         self.assertEqual(launched.returncode, 0, launched.stderr)
         self.assertFalse(marker.exists(), "launcher ran tampered cached node")
         self.assertTrue(fallback.exists(), "launcher did not use safe npx fallback")
+
+    def test_cache_path_poisoning_cannot_bypass_verification(self):
+        archive, digest = self.bundle()
+        self.assertEqual(self.offline(archive, digest).returncode, 0)
+        marker = self.root / "poisoned-cache-command-ran"
+        fallback = self.root / "safe-npx-fallback-ran"
+        for name in ("dirname", "python3", "sha256sum", "node"):
+            command = self.cache / "bin" / name
+            command.write_text(
+                "#!/bin/sh\\n"
+                + "echo executed > " + shlex.quote(str(marker)) + "\\n"
+                + ("echo b912841dcc620a2764899d431d2cf34afe8ae4c807b5189768c2370b8da8d1de\\n"
+                   if name == "sha256sum" else "exit 0\\n")
+            )
+            command.chmod(0o755)
+        fake_bin = self.root / "safe-bin"
+        fake_bin.mkdir()
+        npx = fake_bin / "npx"
+        npx.write_text("#!/bin/sh\\necho fallback > " + shlex.quote(str(fallback)) + "\\n")
+        npx.chmod(0o755)
+        alias = self.root / "cache-alias"
+        alias.symlink_to(self.cache, target_is_directory=True)
+        for entry in (str(self.cache / "bin"), str(self.cache / "bin") + "/",
+                      str(alias / "bin")):
+            path = f"{entry}:{fake_bin}:{os.environ['PATH']}"
+            verified = self.execute("--verify", env={"PATH": path})
+            self.assertNotEqual(verified.returncode, 0)
+            self.assertFalse(marker.exists(), "unverified cache tool executed by installer")
+            fallback.unlink(missing_ok=True)
+            variables = os.environ.copy()
+            variables.update(SCRAPERX_TOOLCHAIN_DIR=str(self.cache),
+                             GODOT_PATH=str(alias / "bin/godot"),
+                             DISPLAY=":99", PATH=path)
+            launched = subprocess.run(["/usr/bin/bash", str(LAUNCHER)], env=variables,
+                                      capture_output=True, text=True, timeout=15)
+            self.assertEqual(launched.returncode, 0, launched.stderr)
+            self.assertFalse(marker.exists(), "unverified cache tool executed by MCP")
+            self.assertTrue(fallback.exists(), "safe fallback was not reached")
+
+    def test_directory_symlink_alias_cannot_hide_chained_escape(self):
+        archive = self.root / "aliased-links.tar.gz"
+        with tarfile.open(archive, "w:gz") as tar:
+            for name in ("reusable-toolchain", "reusable-toolchain/R",
+                         "reusable-toolchain/bin"):
+                entry = tarfile.TarInfo(name)
+                entry.type = tarfile.DIRTYPE
+                tar.addfile(entry)
+            alias = tarfile.TarInfo("reusable-toolchain/A")
+            alias.type = tarfile.SYMTYPE
+            alias.linkname = "R"
+            tar.addfile(alias)
+            for index in range(1, 13):
+                entry = tarfile.TarInfo(f"reusable-toolchain/A/l{index}")
+                entry.type = tarfile.SYMTYPE
+                entry.linkname = "." if index == 1 else f"l{index - 1}/.."
+                tar.addfile(entry)
+            entry = tarfile.TarInfo("reusable-toolchain/bin/godot")
+            entry.type = tarfile.SYMTYPE
+            entry.linkname = "../R/l12/bin/sh"
+            tar.addfile(entry)
+        checked = subprocess.run([sys.executable, str(INTEGRITY), "archive", str(archive)],
+                                 capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(checked.returncode, 0,
+                            "directory alias bypassed the archive symlink table")
+        self.assertIn("parent resolves", checked.stderr)
 
     def test_concurrent_reuse(self):
         archive, digest = self.bundle()
