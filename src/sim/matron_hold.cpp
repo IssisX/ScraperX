@@ -1499,23 +1499,28 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const bool due = fatal_s_ >= kFatalLetGoFromS;
         pose_hand(dt, rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM + kFatalOutM, kHangSideM),
                   kHandSpeedMps);
-        if (due || --fatal_check_ticks_ <= 0) {
+        // Decided at his swing out (away from her deck's face), she standing
+        // at her spot, him hanging settled a moment (not still swinging in
+        // from the over): his fall foreseen from there kills, she lets go;
+        // it does not, she steps along the edge (fatal_shift) and decides
+        // again at a later swing out.
+        const BodyInterface &bodies = physics_.GetBodyInterface();
+        const bool swinging_out = bodies.GetLinearVelocity(player_).Dot(out) >= 0.0F;
+        const Vec3 her_v = bodies.GetLinearVelocity(body_);
+        const bool standing = std::hypot(her_v.GetX(), her_v.GetZ()) < 0.2F && xz(ax, az, rim_x_, rim_z_) < 0.2F;
+        const bool decide = due && swinging_out && standing && hold_s_ >= kFatalHangSettleS;
+        if (decide || --fatal_check_ticks_ <= 0) {
             fatal_check_ticks_ = 3;
             foresee_fall(player, out);
-            // (Shifted only once he hangs settled: not for a swing in.)
-            if (!fatal_lethal_ && hold_s_ >= kFatalHangSettleS && xz(ax, az, rim_x_, rim_z_) < 0.2F) {
+            if (decide && !fatal_lethal_) {
                 (void)fatal_shift(feet);
             }
         }
         // His middle out over open air (kFatalOpenAirM past the edge).
-        const RVec3 mid = physics_.GetBodyInterface().GetPosition(player_);
+        const RVec3 mid = bodies.GetPosition(player_);
         const float mid_past = (float(mid.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
                                (float(mid.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-        // And hanging settled a moment (not still swinging in from the over),
-        // let go on his swing out, away from her deck's face.
-        const bool swinging_out = physics_.GetBodyInterface().GetLinearVelocity(player_).Dot(out) >= 0.0F;
-        if (due && fatal_lethal_ && hold_s_ >= kFatalHangSettleS && mid_past >= kFatalOpenAirM + 0.02F &&
-            swinging_out && fatal_s_ <= kFatalLetGoByS) {
+        if (decide && fatal_lethal_ && mid_past >= kFatalOpenAirM + 0.02F && fatal_s_ <= kFatalLetGoByS) {
             fatal_release();
         } else if (fatal_s_ >= kFatalLetGoByS) {
             reel_ = true;
