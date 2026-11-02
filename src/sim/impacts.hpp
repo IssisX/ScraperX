@@ -77,6 +77,8 @@ public:
         bool runs = false;
     };
     [[nodiscard]] const std::vector<Machine> &machines() const noexcept { return machines_; }
+    // The body of a part taken by track_machine; invalid for anything else.
+    [[nodiscard]] JPH::BodyID machine_body(std::uint64_t entity) const noexcept;
     // After the physics step: the hits of this tick. `carried` is the entity in
     // the player's hands (0 for none).
     void post_step(std::uint64_t carried);
