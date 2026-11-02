@@ -48,7 +48,6 @@ jobs:
           test "$toolchain" = "$SCRAPERX_TOOLCHAIN_CACHE_DIR"
           export SCRAPERX_TOOLCHAIN_DIR="$toolchain"
           export GODOT_PATH="$toolchain/bin/godot"
-          export PATH="$toolchain/bin:$PATH"
           test "$(bash tools/shared-toolchain/install.sh --verify)" = "$toolchain"
 
           # Cache reuse must not contact GitHub or an npm registry.
@@ -60,7 +59,8 @@ jobs:
 
           # Compile the actual game against the released source trees, with
           # FetchContent network fetches explicitly disabled.
-          cmake -S . -B "$RUNNER_TEMP/shared-consumer-build" -G Ninja \
+          "$toolchain/bin/cmake" -S . -B "$RUNNER_TEMP/shared-consumer-build" -G Ninja \
+            -DCMAKE_MAKE_PROGRAM="$toolchain/bin/ninja" \
             -DCMAKE_BUILD_TYPE=Release \
             -DSCRAPERX_BUILD_BRIDGE=ON -DSCRAPERX_WITH_JOLT=ON \
             -DGODOTCPP_TARGET=template_release \
@@ -68,7 +68,7 @@ jobs:
             -DFETCHCONTENT_SOURCE_DIR_JOLT="$toolchain/deps/jolt" \
             -DFETCHCONTENT_SOURCE_DIR_GODOT_CPP="$toolchain/deps/godot-cpp" \
             -DFETCHCONTENT_SOURCE_DIR_MONOCYPHER="$toolchain/deps/monocypher"
-          cmake --build "$RUNNER_TEMP/shared-consumer-build" \
+          "$toolchain/bin/cmake" --build "$RUNNER_TEMP/shared-consumer-build" \
             --target scraperx_native scraperx_sim_tests --parallel 4
           test -s godot/addons/scraperx_native/bin/linux/libscraperx_native.so
           SCRAPERX_ONLY=matron-found-climb "$RUNNER_TEMP/shared-consumer-build/scraperx_sim_tests"
