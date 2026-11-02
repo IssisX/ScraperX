@@ -1480,7 +1480,9 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const RVec3 mid = physics_.GetBodyInterface().GetPosition(player_);
         const float mid_past = (float(mid.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
                                (float(mid.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-        if (due && fatal_lethal_ && mid_past >= kFatalOpenAirM + 0.02F && fatal_s_ <= kFatalLetGoByS) {
+        // And hanging settled a moment (not still swinging in from the over).
+        if (due && fatal_lethal_ && hold_s_ >= kFatalHangSettleS && mid_past >= kFatalOpenAirM + 0.02F &&
+            fatal_s_ <= kFatalLetGoByS) {
             fatal_release();
         } else if (fatal_s_ >= kFatalLetGoByS) {
             reel_ = true;
