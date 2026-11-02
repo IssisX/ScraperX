@@ -1305,9 +1305,12 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         if (hand2_on_ == 2) {
             pose_hand2(dt, belt_pose(at, feet), kHandSpeedMps);
         }
-        // (The fatality's window is in the hang, below: on to the over.)
+        // His window, face to face (his punch reaches her face: his blow
+        // frees him); the fatality's is kFatalHangWindowS.
+        fatal_hang_ = fatal_hold_;
         fatal_window_s_ += dt;
-        if (fatal_hold_ || fatal_window_s_ >= kPinWindowS) {
+        if (fatal_window_s_ >= (fatal_hold_ ? kFatalHangWindowS : kPinWindowS)) {
+            fatal_hang_ = false;
             fatal_window_s_ = 0.0F;
             if (pin_here_) {
                 hand2_want_ = 0;
@@ -1458,25 +1461,18 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             }
             break;
         }
-        // The fatality: his window first (kFatalHangWindowS, hanging head
-        // down by her arm: his crunch and punch reach her wrist, his blow frees
-        // him), then her let-go, no sooner than kFatalLetGoFromS after her
-        // fingers closed, once his fall from where he is, as he moves, is
-        // foreseen to kill; none by kFatalLetGoByS, she hauls him back in for
-        // her floor version.
-        fatal_window_s_ += dt;
-        fatal_hang_ = fatal_window_s_ < kFatalHangWindowS;
-        const bool due = fatal_s_ >= kFatalLetGoFromS && !fatal_hang_;
-        if (!fatal_hang_) {
-            // His window over: out as far as her arm goes, him clear of the
-            // deck's face for the fall.
-            pose_hand(dt, rail_pose(at, feet, rail_up_ + kHangUpM + 0.1F, kHangOutM + kFatalOutM, kHangSideM),
-                      kHandSpeedMps);
-        }
+        // The fatality's let-go (his window was at the pin): out as far as her
+        // arm goes, him clear of the deck's face; no sooner than
+        // kFatalLetGoFromS after her fingers closed, once his fall from where
+        // he is, as he moves, is foreseen to kill; none by kFatalLetGoByS, she
+        // hauls him back in for her floor version.
+        const bool due = fatal_s_ >= kFatalLetGoFromS;
+        pose_hand(dt, rail_pose(at, feet, rail_up_ + kHangUpM + 0.1F, kHangOutM + kFatalOutM, kHangSideM),
+                  kHandSpeedMps);
         if (due || --fatal_check_ticks_ <= 0) {
             fatal_check_ticks_ = 3;
             foresee_fall(player, out);
-            if (!fatal_lethal_ && !fatal_hang_ && xz(ax, az, rim_x_, rim_z_) < 0.1F) {
+            if (!fatal_lethal_ && xz(ax, az, rim_x_, rim_z_) < 0.1F) {
                 (void)fatal_shift(feet);
             }
         }
