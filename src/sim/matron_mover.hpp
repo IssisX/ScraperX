@@ -56,7 +56,7 @@ enum class MoverTick : std::uint8_t {
 // body; hand stays the last hold it had.
 struct MoverView {
     MoverTick tick = MoverTick::Hunt;
-    bool turns = false;            // her Turn's clock runs after its step (step_turn)
+    bool turns = false;            // this mover may start/drive Turn; an already-active Turn still ages
     // What its having her body means to the rest of her:
     bool drives = false;           // it moves her body: her stride's drive is off, and a travel waits off a floor
     bool held = false;             // it holds her on its steel or cable: she catches nobody and is not re-landed
