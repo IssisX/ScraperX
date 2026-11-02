@@ -699,6 +699,10 @@ constexpr float kRingCentreZ = -150.0F;
 constexpr float kSpotSpacing = 9.0F;
 constexpr int kSpotsPerStackRing = 3;
 constexpr int kSpotsPerUpperRing = 2;
+// (The 706 deck and the summit are felt for too, but have no floor
+// kMachineClear from every machine today, so they get none.)
+constexpr std::array<float, 7> kTopDecks{640.25F, 662.1F, 684.1F, 706.1F, 728.1F, 750.1F, 802.64F};
+constexpr int kSpotsPerTopDeck = 1;
 // The decks the yard crane lands loads on (yard_crane.hpp), and their spots:
 // more of them, every other one what only the crane could have brought.
 constexpr std::array<float, 3> kCraneDecks{11.0F, 22.0F, 44.0F};
@@ -739,6 +743,12 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     for (int k = 0; k <= 20; ++k) {
         tops.push_back(176.25F + 22.0F * static_cast<float>(k));
     }
+    // Above the rings: TP-640, the midstack decks (662 to 750 m) and the
+    // summit, one spot each at most (small decks the route crosses).
+    const std::size_t ring_count = tops.size();
+    for (const float deck : kTopDecks) {
+        tops.push_back(deck);
+    }
     // The four sides, each by the direction out from the shaft across it.
     const std::array<Vec3, 4> sides = {Vec3(0.0F, 0.0F, 1.0F), Vec3(1.0F, 0.0F, 0.0F), Vec3(0.0F, 0.0F, -1.0F),
                                        Vec3(-1.0F, 0.0F, 0.0F)};
@@ -746,7 +756,10 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     for (std::size_t ring = 0; ring < tops.size(); ++ring) {
         const float top = tops[ring];
         const bool crane_deck = std::find(kCraneDecks.begin(), kCraneDecks.end(), top) != kCraneDecks.end();
-        const int most = crane_deck ? kSpotsPerCraneRing : ring < stack_rings ? kSpotsPerStackRing : kSpotsPerUpperRing;
+        const int most = crane_deck            ? kSpotsPerCraneRing
+                         : ring < stack_rings  ? kSpotsPerStackRing
+                         : ring < ring_count   ? kSpotsPerUpperRing
+                                               : kSpotsPerTopDeck;
         std::vector<RVec3> spots;
         // Each ring starts on another side and at another place along it, so
         // no two rings are dressed alike.
@@ -772,17 +785,25 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                     break;
                 }
             }
-            if (edge < 0.0F) {
+            // A top deck is solid across the shaft: its spots are felt for on
+            // a 1.5 m grid over it instead, every row out from the middle.
+            const bool top_deck = ring >= ring_count;
+            if (edge < 0.0F && !top_deck) {
                 continue;
             }
-            const float start = -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
-            for (float a = start; a <= edge - 2.0F && static_cast<int>(spots.size()) < most; a += 1.5F) {
+            const float first_row = top_deck ? -45.0F : edge;
+            const float last_row = top_deck ? 45.0F : edge;
+            for (float row = first_row; row <= last_row + 0.01F; row += 1.5F) {
+            const float start =
+                top_deck ? -45.0F : -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
+            const float stop = top_deck ? 45.0F : edge - 2.0F;
+            for (float a = start; a <= stop && static_cast<int>(spots.size()) < most; a += 1.5F) {
                 const bool crane_spot = crane_deck && spots.size() % 2 == 0;
                 const std::vector<SpotTemplate> &kinds = crane_spot ? crane_spot_templates() : spot_templates();
                 const SpotTemplate &spot =
                     kinds[static_cast<std::size_t>(taken + static_cast<int>(ring)) % kinds.size()];
-                const RVec3 origin(kRingCentreX + out.GetX() * edge + along.GetX() * a, top,
-                                   kRingCentreZ + out.GetZ() * edge + along.GetZ() * a);
+                const RVec3 origin(kRingCentreX + out.GetX() * row + along.GetX() * a, top,
+                                   kRingCentreZ + out.GetZ() * row + along.GetZ() * a);
                 const auto at = [&](const float u, const float v) {
                     return origin + along * u + out * v;
                 };
@@ -866,6 +887,7 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 }
                 spots.push_back(origin);
                 ++taken;
+            }
             }
         }
     }

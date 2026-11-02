@@ -134,6 +134,11 @@ void run_loose_stock() {
         for (double top = 418.25; top <= 616.3; top += 22.0) {
             rings.push_back(top);
         }
+        // PE 2: TP-640 and the midstack decks (706 and the summit have no
+        // spot clear of their machines; see LooseStock kTopDecks).
+        for (const double top : {640.25, 662.1, 684.1, 728.1, 750.1}) {
+            rings.push_back(top);
+        }
         std::vector<int> per_ring(rings.size(), 0);
         int unassigned = 0;
         for (int i = tabled; i < towered; ++i) {
