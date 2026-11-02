@@ -200,7 +200,7 @@ fi
                                  capture_output=True, text=True, timeout=10)
         self.assertNotEqual(checked.returncode, 0,
                             "chained relative symlinks escaped archive root")
-        self.assertIn("unsafe", checked.stderr)
+        self.assertIn("link escapes", checked.stderr)
 
     def test_mcp_launcher_refuses_tampered_cached_node(self):
         archive, digest = self.bundle()
