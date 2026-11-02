@@ -600,7 +600,7 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
     // turns, not righted in the air. (Between grips on her deck, as she
     // takes his collar, he may get up.)
     const bool fatal = matron_->fatal_holding();
-    const bool in_hand = grip_ != nullptr || (fatal && hand2_grip_ != nullptr);
+    const bool in_hand = grip_ != nullptr || (fatal && (hand2_grip_ != nullptr || matron_->bare_lip_over()));
     if (fatal && in_hand) {
         upright_s_ = 0.0F;
         upright_contact_ticks_ = 0;
