@@ -7,7 +7,39 @@
 - 10, a best time or ghost: no.
 - 11, store details: later.
 
-His own call the same day: her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+Tower two's face (environment job 14), 12:56 PM Central by the 10-minute rule on Claude's pick:
+**face**. The 1.6 km second tower is surfaced as poured concrete, look only, no new solids or holds
+and nothing implying a route; its climb stays parked (rule 64). Reason: it fills a third of the view
+from the yard as a flat pale slab, a main cause of the unreal look, and promises nothing about the climb.
+
+Her size, 1:53 PM Central, decided by Claude (he: *"Just answer for me"*): **as drawn**. Her drawn
+body is about 1.5 m with 0.51 m arms inside a 2.1 m sim capsule; the hold's beats fit that arm rather
+than scaling her up. Reason: her look is a hunched old woman (rule 36), and the beats work with it.
+
+His own calls the same day: her hold over the edge uses real arms in five beats (*"5 beats"*);
+Gemini is off the team. At 2:27 PM: the hold session finishes its job, then the integrator closes it
+and opens one Claude session (high effort) for environment lane A, job 3 (light that shows form),
+then job 12 (night and lamps) (*"Open it once hold is done"*). Grok does hard engineering only, no
+reviews (*"give Grok real hard. Not do a fucking review"*). At 3:20 PM: the integrator merges a PR
+itself once it has a cross-model LAND and is green, with no ask (*"If everything is cool, yes, merge
+it. Automatically."*). At 3:23 PM, Claude's call: device determinism may change host results (the
+phone matching CI outranks today's host numbers); the scenarios it moves are fixed as test drift,
+never by weakening a check. At 4:25 PM: the integrator runs at max effort; every other Claude
+session at high. Two Claude sessions, three at most, never ten (*"I just want 2 MAYBE 3 sessions"*). At 4:49 PM:
+each time he gives a usage %, the integrator turns it into a pace (where the 5-hour window will end)
+and recommends every lever against the work at hand: open or close sessions, each one's effort and
+model, sub-agents, workflows (his opt-in), a Claude security review, moving work to the other
+agents (*"suggest what settings we should use against what we are doing ... There's tons and tons
+of stuff that you're not even thinking about"*). The weekly limit resets Monday 11 AM; heavy days
+and light days are fine (*"peaks and valleys"*). He makes up for heavy days with light ones (*"to make up
+for it"*). The security review and lane B sessions opened at 4:56 PM on a misread were closed
+unused at 5:00 PM. At 5:00 PM he asked for one more session and left the pick to Claude: lane B
+(jobs 6, 8), high; the integrator moved to xhigh. He wants no settings to tap: Claude picks and sets. At 5:05 PM: check before every answer, even at more usage;
+never answer from memory or by shortcut (*"I prefer you use a little more effort and usage and get the
+answers correct and do the checks and everything and thinking first"*). Found at 5:10 PM: a session the integrator opens
+starts with no effort set (its menu shows medium), whatever the environment variable says; the
+integrator cannot set it. So every time one opens, Cory is told in the same message to set its effort,
+with the level picked. He set lane A and lane B to xhigh. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
