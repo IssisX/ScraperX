@@ -4100,7 +4100,7 @@ void Matron::take_blow(const float dt) {
         // The player's fist: a striker closing on her by definition, its
         // impulse along the floor hers.
         struck = true;
-        player_ns = Vec3(player_blow_ns_.GetX(), 0.0F, player_blow_ns_.GetZ()).Length();
+        player_ns = player_blow_ns_.Length();
         impulse += Vec3(player_blow_ns_.GetX(), 0.0F, player_blow_ns_.GetZ()) / kMassKg;
         if (blow_quiet_ >= kBlowQuietTicks) {
             blow_low_ = false;
@@ -4145,9 +4145,9 @@ void Matron::take_blow(const float dt) {
     damage_ns_ += environment_ns + player_ns;
     player_damage_ns_ += player_ns;
     if (damage_lethal_at_ns(damage_ns_)) {
-        drop_stock();
         dead_ = true;
         state_ = State::Dead;
+        clear_interrupted_actions(false); // release her grip before the lethal body removal
         remove_body();
         return;
     }
