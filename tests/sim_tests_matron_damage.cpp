@@ -80,6 +80,24 @@ Hit hit(const bool punch, const bool stock, const bool test_down) {
                 "damage: player attribution is only the actual judged fist impulse");
     }
     if (punch && !stock) {
+        // Move her away without resetting the judged live damage. The player's
+        // grounded checkpoint can then commit after the hit, not just before it.
+        require(out.total > 0.0 && out.player > 0.0,
+                "damage: real punch has accumulated before checkpoint");
+        const std::uint64_t commits_before = s.snapshot().checkpoint_commit_count;
+        s.debug_place_matron({0.0, 11.0, 0.0});
+        for (int i = 0; i < 180 && s.snapshot().checkpoint_commit_count == commits_before; ++i) tick(s);
+        require(s.snapshot().checkpoint_commit_count > commits_before,
+                "damage: a checkpoint actually commits after judged damage");
+        const auto damaged_save = s.save_game();
+        require(damaged_save.size() == earlier.size(),
+                "damage: a damaged checkpoint has the unchanged disk-save layout");
+        require(s.load_game(damaged_save.data(), damaged_save.size()),
+                "damage: damaged checkpoint loads without a damage extension");
+        require(s.matron_state().alive &&
+                    s.matron_state().damage_ns == 0.0 &&
+                    s.matron_state().player_damage_ns == 0.0,
+                "damage: reload after a damaged checkpoint restores her alive and undamaged");
         require(s.load_game(earlier.data(), earlier.size()), "damage: saved checkpoint restores");
         require(s.matron_state().damage_ns == 0.0 && s.matron_state().player_damage_ns == 0.0,
                 "damage: rewind to earlier checkpoint removes later damage");
