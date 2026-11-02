@@ -63,12 +63,7 @@ SKIP_EXACT = {"audio_mix", "audio_fall", "perf_top", "perf_grade"}
 
 # Registered touch scenarios in no shard for a tracked reason. Warning,
 # not failure; stale the moment the scenario appears in a shard.
-KNOWN_GAPS = {
-    "touch_matron_pipe": (
-        "encounter-owned known trunk failure (drum staging decision "
-        "pending); runs locally, in no CI touch shard yet"
-    ),
-}
+KNOWN_GAPS = {}
 
 
 def shard_lists(workflow_text):
