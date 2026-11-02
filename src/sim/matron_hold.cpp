@@ -1136,7 +1136,7 @@ RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
     const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
                        (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
     const float err = past - kPinBalanceM;
-    const float out = kPinOutM - std::clamp(1.2F * err, -0.15F, 0.55F);
+    const float out = kPinOutM - std::clamp(1.2F * err, -0.3F, 0.55F);
     const float up = rail_up_ + kPinUpM + std::clamp(0.8F * err, 0.0F, 0.35F);
     return rail_pose(at, feet, up, out, kPinSideM);
 }
@@ -1499,16 +1499,20 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const bool due = fatal_s_ >= kFatalLetGoFromS;
         pose_hand(dt, rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM + kFatalOutM, kHangSideM),
                   kHandSpeedMps);
-        // Decided at his swing out (away from her deck's face), she standing
-        // at her spot, him hanging settled a moment (not still swinging in
+        // Decided at the end of his swing (slow, never in toward her deck's
+        // face), she standing
+        // at her spot, him head down (his feet end clear of her lip) and
+        // hanging settled a moment (not still swinging in
         // from the over): his fall foreseen from there kills, she lets go;
         // it does not, she steps along the edge (fatal_shift) and decides
         // again at a later swing out.
         const BodyInterface &bodies = physics_.GetBodyInterface();
-        const bool swinging_out = bodies.GetLinearVelocity(player_).Dot(out) >= 0.0F;
+        const Vec3 his_v = bodies.GetLinearVelocity(player_);
+        const bool swinging_out = his_v.Dot(out) >= 0.0F && std::hypot(his_v.GetX(), his_v.GetZ()) < 0.5F;
         const Vec3 her_v = bodies.GetLinearVelocity(body_);
         const bool standing = std::hypot(her_v.GetX(), her_v.GetZ()) < 0.2F && xz(ax, az, rim_x_, rim_z_) < 0.2F;
-        const bool decide = due && swinging_out && standing && hold_s_ >= kFatalHangSettleS;
+        const bool head_down = bodies.GetRotation(player_).RotateAxisY().GetY() < -0.9F;
+        const bool decide = due && swinging_out && standing && head_down && hold_s_ >= kFatalHangSettleS;
         if (decide || --fatal_check_ticks_ <= 0) {
             fatal_check_ticks_ = 3;
             foresee_fall(player, out);
