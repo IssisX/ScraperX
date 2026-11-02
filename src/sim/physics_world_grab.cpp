@@ -386,8 +386,11 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     // Her fingers close on the ankle when the hand is at it.
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
     if (matron_->reaching() && grip_ == nullptr) {
-        const bool to_ankle = matron_->grip_point() == Matron::Grip::Ankle;
-        const JPH::RVec3 ankle = to_ankle ? player_ankle(bodies) : player_collar(bodies);
+        const Matron::Grip point = matron_->grip_point();
+        const bool to_ankle = point == Matron::Grip::Ankle;
+        const JPH::RVec3 ankle = to_ankle                        ? player_ankle(bodies)
+                                 : point == Matron::Grip::Collar ? player_collar(bodies)
+                                                                 : bodies.GetPosition(player_id_);
         if (JPH::Vec3(ankle - hand).Length() <= Matron::kGripCloseM) {
             grip_on_ankle_ = to_ankle;
             if (traversal_state_ != TraversalState::Climbing) set_player_free_rotation(bodies, true);

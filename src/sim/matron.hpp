@@ -1078,6 +1078,8 @@ public:
     // Beat 4, over: her second hand takes his ankle (kHandoffS at most), her
     // first takes it from it; she lifts it kOverUpM over the rail's top and
     // brings it out onto the top (beat 5's pose): he tips over the rail.
+    static constexpr float kOverInUpM = 0.35F;   // first his ankle in at her side
+    static constexpr float kOverInOutM = -0.05F;
     static constexpr float kOverUpM = 0.70F;
     static constexpr float kOverOutM = 0.30F;
     static constexpr float kHandoffS = 3.0F;
@@ -1594,7 +1596,7 @@ public:
         return (state_ == State::Grab && !grip_on_ && hold_phase_ == 1) || (regrip_ && !grip_on_);
     }
     // What her first hand holds, or goes for: his ankle or his collar.
-    enum class Grip : std::uint8_t { Ankle = 0, Collar = 1 };
+    enum class Grip : std::uint8_t { Ankle = 0, Collar = 1, Belt = 2 };
     [[nodiscard]] Grip grip_point() const noexcept { return grip_point_; }
     // She opens her first hand to take him by another point (the hold goes
     // on: grip_lost ignores it). Once.
@@ -2561,7 +2563,9 @@ private:
     bool pin_here_ = false;                // no rail: the pin against her, then set down
     bool over_up_ = false;                 // beat 4: his ankle up over the rail's top
     bool back_lifted_ = false;             // back in: his ankle lifted clear over the rail's top
-    bool relaid_ = false;                  // beat 4's start: him laid back across the rail again by his belt
+    bool relaid_ = false;
+    int over_tries_ = 0;
+    float pin_rim_[4] = {0.0F, 0.0F, 0.0F, 1.0F};   // the rail she pins him on: x, z, out x, out z                   // beat 4 again: not over the first time                  // beat 4's start: him laid back across the rail again by his belt
     float rail_up_ = 0.0F;                 // the top of the steel at her rail's line, over her feet
     std::uint32_t swats_ = 0;
     // The fatality's hold (kFatalTargetS); a restore clears all but the counts.
