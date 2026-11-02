@@ -17,7 +17,10 @@ body is about 1.5 m with 0.51 m arms inside a 2.1 m sim capsule; the hold's beat
 than scaling her up. Reason: her look is a hunched old woman (rule 36), and the beats work with it.
 
 His own calls the same day: her hold over the edge uses real arms in five beats (*"5 beats"*);
-Gemini is off the team. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+Gemini is off the team. At 2:27 PM: the hold session finishes its job, then the integrator closes it
+and opens one Claude session (high effort) for environment lane A, job 3 (light that shows form),
+then job 12 (night and lamps) (*"Open it once hold is done"*). Grok does hard engineering only, no
+reviews (*"give Grok real hard. Not do a fucking review"*). Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
