@@ -595,12 +595,13 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         }
     }
     swat_down_s_ = std::max(0.0F, swat_down_s_ - dt);
-    // In either of her hands, no handback, and none begun on her deck is
-    // carried over: let go over the drop, he falls as he turns, not righted
-    // in the air. (Between grips on her deck, as she takes his collar, he
-    // may get up.)
-    const bool in_hand = grip_ != nullptr || hand2_grip_ != nullptr;
-    if (in_hand) {
+    // In her fatality, in either of her hands no handback, and none begun
+    // on her deck is carried over: let go over the drop, he falls as he
+    // turns, not righted in the air. (Between grips on her deck, as she
+    // takes his collar, he may get up.)
+    const bool fatal = matron_->fatal_holding();
+    const bool in_hand = grip_ != nullptr || (fatal && hand2_grip_ != nullptr);
+    if (fatal && in_hand) {
         upright_s_ = 0.0F;
         upright_contact_ticks_ = 0;
     }
