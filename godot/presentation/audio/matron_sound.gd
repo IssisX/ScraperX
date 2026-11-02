@@ -77,6 +77,7 @@ var _shoves_seen := -1
 var _throws_seen := -1
 var _leaps_seen := -1
 var _climbs_seen := -1
+var _blow_prev := -1.0
 var _catches_seen := -1
 var _takes_seen := -1
 var _unrigs_seen := -1
@@ -200,6 +201,13 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 		_cue(&"scrape", feet, -4.0, randf_range(0.9, 1.1))
 		_cue(&"matron_hit", head, -8.0, _pitch())
 	_staggers_seen = staggers
+	# A landed blow that did not stagger her still reads: a grunt at her
+	# head, scaled by the judged blow (0.758 m/s is a heavy kick's blow).
+	# Edge-triggered on the blow rising from zero, so a held value grunts once.
+	var blow := float(data.get("blow_mps", 0.0))
+	if on and _blow_prev >= 0.0 and blow > 0.0 and _blow_prev == 0.0:
+		_cue(&"matron_hit", head, lerpf(-14.0, -2.0, clampf(blow / 0.758, 0.0, 1.0)), _pitch())
+	_blow_prev = blow
 	# A shove, a throw, a leap over a gap, a ladder taken after the player:
 	# her shriek.
 	var shoves := int(data.get("shoves", 0))
