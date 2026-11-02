@@ -907,7 +907,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // it, walking back, the rail his pulley): her face still to it,
             // him still in her fist.
             const float facing_edge = yaw_;
-            const float back = reel_ && grip_point_ != Grip::Ankle ? kReelBackM : kBackInWalkM;
+            // (In the fatality, by his collar or belt from her short arm, she
+            // walks back as far as by the ankle: his middle well in.)
+            const float back = reel_ && grip_point_ != Grip::Ankle && !fatal_hold_ ? kReelBackM : kBackInWalkM;
             walk_toward(dt, rim_x_ - rim_nx_ * back, rim_z_ - rim_nz_ * back, reel_ ? 1.2F : 0.6F);
             yaw_ = turn_to(facing_edge, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
         } else {
@@ -2003,8 +2005,16 @@ void Matron::end_reel(const RVec3 player) {
     // its drop).
     fatal_path_ = FatalPath::None;
     fatal_edge_ = RVec3::sZero();
+    const bool fatal = fatal_hold_;
     end_hold(State::Searching);
     grab_cooldown_s_ = kRegrabAfterTearS;
+    if (fatal) {
+        // His escape from her fatality: she lets him run while her hands
+        // stay off him (rule 35, as after a tear), not after him with no way
+        // to take hold (her body would only shove him along, off the edge).
+        calm_s_ = grab_cooldown_s_;
+        shove_cooldown_s_ = grab_cooldown_s_;   // nor shoves him at the rim
+    }
     resume_state_ = State::Searching;
     state_ = State::Staggering;
     stagger_s_ = kStaggerMinSeconds;
