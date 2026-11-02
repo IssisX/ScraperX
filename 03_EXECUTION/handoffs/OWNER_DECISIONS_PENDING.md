@@ -7,7 +7,13 @@
 - 10, a best time or ghost: no.
 - 11, store details: later.
 
-His own call the same day: her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+Tower two's face (environment job 14), 12:56 PM Central by the 10-minute rule on Claude's pick:
+**face**. The 1.6 km second tower is surfaced as poured concrete, look only, no new solids or holds
+and nothing implying a route; its climb stays parked (rule 64). Reason: it fills a third of the view
+from the yard as a flat pale slab, a main cause of the unreal look, and promises nothing about the climb.
+
+His own calls the same day: her hold over the edge uses real arms in five beats (*"5 beats"*);
+Gemini is off the team. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
