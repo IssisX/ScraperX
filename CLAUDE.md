@@ -91,7 +91,8 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
     much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
     first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
     loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. At most two Claude worker sessions run at once, besides the integrator.
+    free. The number of Claude worker sessions follows the usage he has free: two when it is tight,
+    more when he frees it (11-02: *"you can use more agents here now"*).
   - One owner per function: the board splits shared files by function, so no two agents edit the
   same function.
   - One integrate branch per job, reused; no new diagnostic branch for every try.
