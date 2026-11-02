@@ -162,13 +162,16 @@ var matron_cues := {}
 # her hands are in (matron_sound.gd hear_hold numbers them), 0 outside one.
 var her_takes := HerTakes.new()
 var matron_encounter := 0
-# Her spoken lines (matron_speech.gd): the line she says at a moment, one mouth. `matron_caption` is the
-# line while it is said; `matron_speech.log` has each line said, for the scripted runs.
+# Her spoken lines (matron_speech.gd): the line she says at a moment, one mouth (matron_say). `matron_caption`
+# is the line while it is said; `matron_speech.log` has each line said, and the counts below what her mouth
+# refused or cut, for the scripted runs.
 var matron_speech := MatronSpeech.new()
 var matron_caption := ""
-var matron_lines_suppressed := 0
+var matron_lines_suppressed := 0   # lines asked for while her mouth was full of what matters as much or more
+var matron_lines_cut := 0          # lines cut off by a sound of her mouth that mattered more
 var _her_speech: AudioStreamPlayer3D
 var _her_speech_left := 0.0
+var _her_speech_rank := 0
 var radio_cues := 0      # the foreman's radio opened or closed, counted for the tests
 # The forklift, heard where it stands: its engine, its pump and its valve
 # (the relief blowing off, or the lowering valve letting the load down), each
@@ -1160,6 +1163,15 @@ const HER_RANK := {&"matron_shriek": 3, &"matron_wake": 3, &"matron_rip": 3, &"m
 const HER_VOICE_CLIPS := [&"matron_breath", &"matron_shriek", &"matron_croak", &"matron_cluck",
 	&"matron_swallow", &"matron_sniff", &"matron_effort", &"matron_hit", &"matron_laugh"]
 const HER_PITCH := Vector2(0.85, 1.15)
+# Her one mouth: a line of hers (matron_say) is of HER_LINE_RANK, her last word (the apron wiped) of
+# HER_LAST_RANK, above any sound of her voice; a sound of her voice is of its HER_RANK (a required
+# reaction at least 3). While she says a line nothing else of her mouth sounds: her growl is held silent,
+# and a sound of her voice starts only if it outranks the line, which it then cuts. A line starts only
+# over sounds of her voice it outranks, which it cuts; else her mouth is full (MOUTH_FULL) and it may be
+# asked for again once it is not.
+const HER_LINE_RANK := 2
+const HER_LAST_RANK := 4
+const MOUTH_FULL := -1
 # Every shriek at HER_SHRIEK_DB, never two within HER_SHRIEK_GAP_S.
 const HER_SHRIEK_DB := -3.0
 const HER_SHRIEK_GAP_S := 0.6
@@ -1231,6 +1243,13 @@ var _her_hush_db := 0.0
 var _her_strain_db := HER_OFF_DB
 var _her_strain_at := Vector3.ZERO
 var _her_strain_pitch := 1.0
+# A sound of her voice (not a line) sounding: the seconds still to run of it, and the most it matters;
+# timed whether or not a device mixes it (a 3D player reports playing only from its next physics tick).
+var _her_voice_left := 0.0
+var _her_voice_rank := 0
+# Her growl's level wanted this frame (HER_OFF_DB: none), held silent while she says a line; for the
+# scripted runs.
+var matron_growl_db := HER_OFF_DB
 
 
 func _her_player(bus: StringName, unit_size: float, reach: float, filtered: bool) -> AudioStreamPlayer3D:
@@ -1250,23 +1269,32 @@ func matron_cue(name: StringName, at: Vector3, volume_db: float, pitch: float = 
 
 
 # A line of hers for `moment` (matron_speech.gd: hunting, sees, grab, drop, rip, free, lost, last), said
-# from `at`; the line's number, 0 when she has none or her mouth is full with another line. Counted and
-# timed whether or not a device mixes it, so the headless runs can follow it.
-func matron_say(moment: StringName, at: Vector3, volume_db: float = 0.0) -> int:
-	if _her_speech_left > 0.0:
+# from `at`: the line's number; 0 when she has none for it; MOUTH_FULL while her mouth is full of what
+# matters as much or more (another line, a shriek), so it may be asked for again. With `priority` it is
+# her last word (the apron wiped), which takes her mouth from whatever is in it. What it outranks is cut.
+# Counted and timed whether or not a device mixes it, so the headless runs can follow it.
+func matron_say(moment: StringName, at: Vector3, volume_db: float = 0.0, priority: bool = false) -> int:
+	var rank := HER_LAST_RANK if priority else HER_LINE_RANK
+	if (_her_speech_left > 0.0 and _her_speech_rank >= rank) or (_her_voice_left > 0.0 and _her_voice_rank >= rank):
 		matron_lines_suppressed += 1
-		return 0
+		return MOUTH_FULL
 	var said := matron_speech.choose(moment, matron_encounter)
 	if said.is_empty():
 		return 0
+	var stream: AudioStream = null
+	if not _silent and _her_speech != null:
+		stream = matron_speech.stream(String(said["clip"]))
+		if stream == null:
+			return 0
+	# One mouth: the line she was saying and any sound of her voice give way to it.
+	_her_hush()
+	_her_voice_hush()
 	matron_caption = matron_speech.caption(int(said["line"]))
-	if _silent or _her_speech == null:
+	_her_speech_rank = rank
+	if stream == null:
 		# No device mixes it: it takes as long as it is long (about 0.4 s a word).
 		_her_speech_left = 0.4 * float(matron_caption.split(" ", false).size())
 		return int(said["line"])
-	var stream := matron_speech.stream(String(said["clip"]))
-	if stream == null:
-		return 0
 	_her_speech.stream = stream
 	_her_speech.position = at
 	_her_speech.volume_db = volume_db
@@ -1281,6 +1309,9 @@ func matron_say(moment: StringName, at: Vector3, volume_db: float = 0.0) -> int:
 # own bank is chosen by her_takes (no take twice running, none twice in her
 # ring); with no audio device it is chosen and recorded all the same, as if
 # it had started, so the scripted runs check what she would have played.
+# While she says a line (matron_say), a sound of her voice that does not
+# outrank it waits for none (it is dropped, a breath too), and one that does
+# cuts the line: her one mouth, with a device or without.
 func _her_cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> float:
 	matron_cues[name] = int(matron_cues.get(name, 0)) + 1
 	if name == &"matron_shriek":
@@ -1292,6 +1323,11 @@ func _her_cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> 
 		return 0.0
 	var voice := name in HER_VOICE_CLIPS
 	var rank := int(HER_RANK.get(name, 1))
+	var required := bool(HerTakes.FAMILIES[name][5]) if HerTakes.FAMILIES.has(name) else false
+	var mouth := maxi(rank, 3) if required else rank
+	if voice and _her_speech_left > 0.0 and mouth <= _her_speech_rank:
+		her_takes.suppressed[&"speaking"] = int(her_takes.suppressed.get(&"speaking", 0)) + 1
+		return 0.0
 	if _her_ready and _her_bank.clips.has(name) and HerTakes.is_hers(name):
 		var takes: Array = _her_bank.clips[name]
 		var take := her_takes.choose(name, takes.size(), _her_clock)
@@ -1305,7 +1341,6 @@ func _her_cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> 
 			# A required reaction (a blow's hit, a tear's rip) is never dropped:
 			# it takes a player from whatever of hers is playing (the spec:
 			# optional voice gives way to a required reaction).
-			var required := bool(HerTakes.FAMILIES[name][5]) if HerTakes.FAMILIES.has(name) else false
 			if voice and not required and rank < 3 and name != &"matron_breath" and _her_mouth_busy():
 				her_takes.suppressed[&"busy"] = int(her_takes.suppressed.get(&"busy", 0)) + 1
 				return 0.0
@@ -1325,6 +1360,8 @@ func _her_cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> 
 			_her_shot_t[i] = _her_clock
 			_her_shot_family[i] = name
 			length /= maxf(player.pitch_scale, 0.01)
+		if voice:
+			_her_voice_start(length, mouth)
 		her_takes.commit(name, take, _her_clock, matron_encounter)
 		return length
 	if _silent:
@@ -1344,6 +1381,8 @@ func _her_cue(name: StringName, at: Vector3, volume_db: float, pitch: float) -> 
 	_her_shot_rank[i] = rank
 	_her_shot_t[i] = _her_clock
 	_her_shot_family[i] = name
+	if voice:
+		_her_voice_start(stream.get_length() / maxf(player.pitch_scale, 0.01), mouth)
 	return stream.get_length()
 
 
@@ -1363,14 +1402,48 @@ func matron_cue_one_of(names: Array, at: Vector3, volume_db: float) -> StringNam
 	return &""
 
 
-# Another of her voice, not a breath, playing now.
+# Another of her voice, not a breath, playing now (a line of hers is kept
+# apart: _her_cue).
 func _her_mouth_busy() -> bool:
-	if _her_speech_left > 0.0:
-		return true
 	for i in range(HER_BODY_PLAYERS, HER_BODY_PLAYERS + HER_VOICE_PLAYERS):
 		if _her_shots[i].playing and _her_shot_family[i] != &"matron_breath":
 			return true
 	return false
+
+
+# A sound of her voice started, `length` s of it, of rank `mouth`: the line
+# she was saying (one it outranks: _her_cue) is cut, and her mouth is full of
+# it until it ends.
+func _her_voice_start(length: float, mouth: int) -> void:
+	_her_hush()
+	_her_voice_rank = maxi(_her_voice_rank, mouth) if _her_voice_left > 0.0 else mouth
+	_her_voice_left = maxf(_her_voice_left, length)
+
+
+# The line she is saying cut off: a sound of her mouth that matters more
+# takes it.
+func _her_hush() -> void:
+	if _her_speech_left <= 0.0:
+		return
+	matron_lines_cut += 1
+	_her_speech_left = 0.0
+	_her_speech_rank = 0
+	matron_caption = ""
+	if _her_speech != null:
+		_her_speech.stop()
+
+
+# What of her voice is sounding cut off: a line that outranks it takes her
+# mouth.
+func _her_voice_hush() -> void:
+	if _her_voice_left <= 0.0:
+		return
+	_her_voice_left = 0.0
+	_her_voice_rank = 0
+	if _silent:
+		return
+	for i in range(HER_BODY_PLAYERS, HER_BODY_PLAYERS + HER_VOICE_PLAYERS):
+		_her_shots[i].stop()
 
 
 # One of her one-shot players for a cue of `rank`: a free one, else the one
@@ -1429,6 +1502,11 @@ func matron_layers(delta: float, data: Dictionary, out: bool, head: Vector3, dis
 	_her_speech_left = maxf(0.0, _her_speech_left - delta)
 	if _her_speech_left <= 0.0:
 		matron_caption = ""
+		_her_speech_rank = 0
+	_her_voice_left = maxf(0.0, _her_voice_left - delta)
+	if _her_voice_left <= 0.0:
+		_her_voice_rank = 0
+	var speaking := _her_speech_left > 0.0
 	_her_wake_s = maxf(0.0, _her_wake_s - delta)
 	_her_breath_in = maxf(0.0, _her_breath_in - delta)
 	var state := int(data["state"])
@@ -1461,6 +1539,11 @@ func matron_layers(delta: float, data: Dictionary, out: bool, head: Vector3, dis
 				growl = lerpf(-20.0, -4.0, 1.0 if turn == 2 else _her_heat)
 			elif distance < HER_BREATH_M:
 				breath = 1
+	# One mouth: no growl while she says a line (cut as it begins, below; up
+	# again at HER_RISE_DB_S once it ends). A breath waits too (_her_cue).
+	if speaking:
+		growl = HER_OFF_DB
+	matron_growl_db = growl
 	if breath > 0 and _her_breath_in <= 0.0:
 		var u := clampf(distance / HER_BREATH_M, 0.0, 1.0)
 		var length := _her_cue(&"matron_breath", head, lerpf(-1.0, -14.0, u) if breath == 1 else 0.0,
@@ -1491,7 +1574,7 @@ func matron_layers(delta: float, data: Dictionary, out: bool, head: Vector3, dis
 	_her_level(HER_BED, &"matron_bed_rough_loop" if stage >= 2 else &"matron_bed_loop",
 		minf(bed + trim, cap), delta, windup, false, head)
 	_her_level(HER_GROWL, &"matron_growl_rage_loop" if stage >= 2 or turn == 2 else &"matron_growl_loop",
-		minf(growl + trim, cap), delta, windup, lunge, head)
+		minf(growl + trim, cap), delta, windup or speaking, lunge and not speaking, head)
 	_her_level(HER_STRAIN, &"matron_strain_loop", minf(strain + trim, cap), delta, windup, false, _her_strain_at)
 
 

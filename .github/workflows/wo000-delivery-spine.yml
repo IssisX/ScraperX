@@ -702,7 +702,9 @@ jobs:
           set -euo pipefail
           # All 43 lines of HER_LINES_DRAFT.md have their three clips and a caption; a moment of hers never
           # says the line it just said nor plays the clip it just played (rule 42), driven through
-          # matron_sound.gd the way the game drives it; the apron wipe says "Waste not." (line 27).
+          # matron_sound.gd the way the game drives it; the apron wipe says "Waste not." (line 27) even
+          # over a line in her mouth, and no word to his back follows a hold her hand ended; in the
+          # director her one mouth: a line of hers never sounds with her shriek or her growl.
           timeout 300s tools/godot/godot --headless --path godot \
             --script res://tests/matron_speech_test.gd 2>&1 | tee artifacts/matron-speech.log
           grep -F "MATRON_SPEECH PASS fails=0" artifacts/matron-speech.log
