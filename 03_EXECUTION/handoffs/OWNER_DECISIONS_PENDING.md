@@ -12,6 +12,10 @@ Tower two's face (environment job 14), 12:56 PM Central by the 10-minute rule on
 and nothing implying a route; its climb stays parked (rule 64). Reason: it fills a third of the view
 from the yard as a flat pale slab, a main cause of the unreal look, and promises nothing about the climb.
 
+Her size, 1:53 PM Central, decided by Claude (he: *"Just answer for me"*): **as drawn**. Her drawn
+body is about 1.5 m with 0.51 m arms inside a 2.1 m sim capsule; the hold's beats fit that arm rather
+than scaling her up. Reason: her look is a hunched old woman (rule 36), and the beats work with it.
+
 His own calls the same day: her hold over the edge uses real arms in five beats (*"5 beats"*);
 Gemini is off the team. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 

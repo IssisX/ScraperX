@@ -41,7 +41,10 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
 - No answer after 10 minutes: the pick decides; say so on the work's issue and go on; he can still
   overturn it (2026-10-27: *"go with your recommendations. Let's go with 5 or 10 minutes."*).
 - He has handed his open decisions to the integrator (2026-11-02: *"Make the other decisions for
-  me ... I said answer for me. So that means the decisions did go through."*). Make the call,
+  me ... I said answer for me. So that means the decisions did go through."*). Game and design calls
+  are made, not asked (11-02: *"Just answer for me, man. You're asking me too many questions about the
+  game that are obvious and not enough about the other shit."*); what he is asked about is the other
+  shit: Claude sessions, quota, effort levels, cost. Make the call,
   record it in `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` with its reason, and tell him in
   one line after. Ask first only when something cannot be undone. He can overturn any call.
 - Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
