@@ -3,6 +3,10 @@
 # Prints only the absolute toolchain directory on stdout.
 set -euo pipefail
 
+# A cache-provided dirname, python3 or sha256sum must never validate itself.
+PATH="/usr/local/bin:/usr/bin:/bin"
+export PATH
+
 release_tag="scraperx-toolchain-linux-x86_64-v1"
 asset="ScraperX-toolchain-linux-x86_64-v1.tar.gz"
 repo="IssisX/ScraperX"
@@ -12,7 +16,7 @@ published_sha256="138c0a94c9ce44cc99cda847e71b7948f0e04a051cf442f17730a8526726f5
 # Independently pins the installed inventory, not a manifest writable inside the cache.
 # Derived from the verified published v1 archive on Actions run 41493313123.
 published_manifest_sha256="b912841dcc620a2764899d431d2cf34afe8ae4c807b5189768c2370b8da8d1de"
-script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+script_dir="$(cd -- "${BASH_SOURCE[0]%/*}" && pwd -P)"
 cache="${SCRAPERX_TOOLCHAIN_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME}/.cache}/scraperx/shared-toolchain-linux-x86_64-v1}"
 archive_override=""
 verify_only=false
@@ -52,7 +56,7 @@ check() {
 }
 
 mkdir -p "$(dirname "$cache")"
-exec {lock_fd}> "${cache}.lock"
+exec {lock_fd}>> "${cache}.lock"
 flock "$lock_fd"
 if [[ -d "$cache" ]]; then
     # The expected inventory digest lives in this trusted script, never in the
