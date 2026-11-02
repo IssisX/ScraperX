@@ -25,7 +25,7 @@ itself once it has a cross-model LAND and is green, with no ask (*"If everything
 it. Automatically."*). At 3:23 PM, Claude's call: device determinism may change host results (the
 phone matching CI outranks today's host numbers); the scenarios it moves are fixed as test drift,
 never by weakening a check. At 4:25 PM: the integrator runs at max effort; every other Claude
-session at high. Two Claude sessions, three at most, never ten (*"I just want 2 MAYBE 3 sessions"*). At 5:00 PM:
+session at high. Two Claude sessions, three at most, never ten (*"I just want 2 MAYBE 3 sessions"*). At 4:49 PM:
 each time he gives a usage %, the integrator turns it into a pace (where the 5-hour window will end)
 and recommends every lever against the work at hand: open or close sessions, each one's effort and
 model, sub-agents, workflows (his opt-in), a Claude security review, moving work to the other
