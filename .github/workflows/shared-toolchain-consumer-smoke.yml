@@ -4,7 +4,7 @@ on:
   push:
     # Reprove the installed toolchain whenever its consumer entrypoints change,
     # including after this PR lands on the only authoritative trunk.
-    branches: [ScraperX-Claude, chatgpt/integrate-shared-toolchain-release-20261101]
+    branches: [ScraperX-Claude, chatgpt/integrate-shared-toolchain-release-20261101, "**/integrate-*"]
     paths:
       - .github/workflows/shared-toolchain-consumer-smoke.yml
       - tools/shared-toolchain/install.sh
@@ -146,3 +146,31 @@ jobs:
                   os.killpg(process.pid, signal.SIGKILL)
                   process.communicate()
           PY
+ 
+      - name: Reject PATH-poisoned published cache before MCP execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache="$RUNNER_TEMP/scraperx-consumer-toolchain"
+          poison_marker="$RUNNER_TEMP/unverified-cache-ran"
+          fallback_marker="$RUNNER_TEMP/safe-fallback-ran"
+          fake_bin="$RUNNER_TEMP/safe-npx"
+          mkdir -p "$fake_bin"
+          for name in dirname python3 sha256sum node; do
+            printf '#!/bin/sh\nprintf poisoned > "$POISON_MARKER"\nexit 0\n' > "$cache/bin/$name"
+            chmod +x "$cache/bin/$name"
+          done
+          printf '#!/bin/sh\nprintf fallback > "$FALLBACK_MARKER"\n' > "$fake_bin/npx"
+          chmod +x "$fake_bin/npx"
+          if PATH="$cache/bin:$PATH" SCRAPERX_TOOLCHAIN_CACHE_DIR="$cache" \
+              POISON_MARKER="$poison_marker" /usr/bin/bash tools/shared-toolchain/install.sh --verify; then
+            echo 'Unverified cache passed installer verification' >&2
+            exit 1
+          fi
+          PATH="$cache/bin/:$fake_bin:$PATH" SCRAPERX_TOOLCHAIN_DIR="$cache" \
+            GODOT_PATH="$cache/bin/godot" DISPLAY=:99 \
+            POISON_MARKER="$poison_marker" FALLBACK_MARKER="$fallback_marker" \
+            /usr/bin/bash .claude/godot-mcp.sh
+          test ! -e "$poison_marker"
+          test -e "$fallback_marker"
+          echo 'CONSUMER_POISONED_PATH_REJECTED PASS'
