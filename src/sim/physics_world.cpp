@@ -397,6 +397,48 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     track(yard_crane_->hook_body(), ImpactSound::Machine);
     track(yard_crane_->magnet_body(), ImpactSound::HeavySteel);
     track(yard_crane_->spreader_body(), ImpactSound::HeavySteel);
+    // The tower's machines (gap 10): each stage's moving parts, after the
+    // older tracked bodies so their order is unchanged. The rider's part
+    // (cage, cab, platform, traveler) is the stage's running source; its
+    // counterweight, boom or leaf is the same mechanism and is heard only
+    // when it strikes, so one machine is one lead.
+    const auto machine = [this](const kit::BodyIndex body, const ImpactSound sound, const bool runs) {
+        (void)impacts_->track_machine(kit_->body_id(body), kit_->body_entity(body), sound,
+                                      kit_->body_mass(body), runs);
+    };
+    constexpr ImpactSound kM = ImpactSound::Machine;
+    constexpr ImpactSound kS = ImpactSound::HeavySteel;
+    machine(well_.a_cage, kM, true);
+    machine(well_.a_skip, kS, false);
+    machine(well_.b_cage, kM, true);
+    machine(well_.b_boom, kS, false);
+    machine(well_.c_platform, kM, true);
+    machine(well_.c_dumpster, ImpactSound::Container, false);
+    machine(wet_.d_platform, kM, true);
+    machine(wet_.e_cab, kM, true);
+    machine(wet_.e_door, kS, false);
+    machine(wet_.e_leaf_east, kS, false);
+    machine(wet_.f_platform, kM, true);
+    machine(wet_.f_accumulator, kS, false);
+    machine(shop_.g_platform, kM, true);
+    machine(shop_.g_tower, kS, false);
+    machine(shop_.h_platform, kM, true);
+    machine(shop_.h_girder, kS, false);
+    machine(shop_.i_cage, kM, true);
+    machine(shop_.i_monolith, kS, false);
+    machine(shop_.i_domino, kS, false);
+    machine(crane_.j_traveler, kM, true);
+    machine(crane_.j_wagon, kS, false);
+    machine(crane_.k_cage, kM, true);
+    machine(crane_.k_jib, kS, false);
+    machine(crane_.l_cab, kM, true);
+    machine(crane_.l_weight, kS, false);
+    machine(service_.m_cage, kM, true);
+    machine(service_.n_cage, kM, true);
+    machine(service_.n_hopper, kS, false);
+    machine(service_.o_cab, kM, true);
+    machine(service_.o_wheel, kS, false);
+    machine(bay_->leaf_body(), kS, false);
 
     summit_->build_ending();
 
@@ -693,6 +735,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         if (loud > 0.0F && hit.entity != matron_->thrown_entity()) {
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
+    }
+    // The tower's machines while they run, from their measured motion.
+    for (const ImpactLedger::Running &run : impacts_->running()) {
+        matron_->hear(static_cast<float>(run.at.GetX()), static_cast<float>(run.at.GetY()),
+                      static_cast<float>(run.at.GetZ()), run.loudness);
     }
     for (const YardCrane::Noise &noise : yard_crane_->noises()) {
         if (noise.loudness > 0.0F) {

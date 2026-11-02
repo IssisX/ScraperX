@@ -46,6 +46,37 @@ public:
     explicit ImpactLedger(JPH::PhysicsSystem &physics) : physics_(physics) {}
 
     void track(JPH::BodyID body, std::uint64_t entity, ImpactSound sound, float mass_kg);
+    // A tower machine's moving part (a cage, cab, platform, counterweight,
+    // boom, door leaf): its hits are read like any tracked body's. With `runs`
+    // it is also the machine's running source: while it moves at least
+    // kRunMinMps its guides, ropes and wheels are heard from its measured
+    // kinetic energy (run_loudness). Only dynamic bodies are taken; a static
+    // or kinematic one is skipped and false comes back.
+    bool track_machine(JPH::BodyID body, std::uint64_t entity, ImpactSound sound, float mass_kg, bool runs);
+    // A running machine this tick: where, and how loud (0..1).
+    struct Running {
+        std::uint64_t entity = 0;
+        JPH::RVec3 at = JPH::RVec3::sZero();
+        float speed_mps = 0.0F;
+        float loudness = 0.0F;
+    };
+    // Running noise: below kRunMinMps a machine is quiet (creep, settling).
+    // Above, loudness(half m v^2) times kRunShare, held to kRunMaxLoudness
+    // (the yard crane's unloaded hoist, 0.35): a machine running is quieter
+    // than the same energy spent in one strike.
+    static constexpr float kRunMinMps = 0.1F;
+    static constexpr float kRunShare = 0.5F;
+    static constexpr float kRunMaxLoudness = 0.35F;
+    [[nodiscard]] static float run_loudness(float mass_kg, float speed_mps) noexcept;
+    // The running machines of the last step, in the order they were tracked.
+    [[nodiscard]] const std::vector<Running> &running() const noexcept { return running_; }
+    // The machine parts taken by track_machine, in that order: entity, and
+    // whether it is its stage's running source.
+    struct Machine {
+        std::uint64_t entity = 0;
+        bool runs = false;
+    };
+    [[nodiscard]] const std::vector<Machine> &machines() const noexcept { return machines_; }
     // After the physics step: the hits of this tick. `carried` is the entity in
     // the player's hands (0 for none).
     void post_step(std::uint64_t carried);
@@ -74,11 +105,14 @@ private:
         JPH::Vec3 last_velocity = JPH::Vec3::sZero();
         int quiet_ticks = 0;
         float last_energy_j = 0.0F;
+        bool runs = false;
     };
 
     JPH::PhysicsSystem &physics_;
     std::vector<Tracked> tracked_;
     std::vector<ImpactSnapshot> tick_;
+    std::vector<Running> running_;
+    std::vector<Machine> machines_;
     std::array<ImpactSnapshot, kKept> ring_{};
     std::size_t ring_next_ = 0;
     std::size_t ring_count_ = 0;

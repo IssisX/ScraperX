@@ -19,6 +19,28 @@ void ImpactLedger::track(const JPH::BodyID body, const std::uint64_t entity, con
     tick_.reserve(tracked_.size());
 }
 
+bool ImpactLedger::track_machine(const JPH::BodyID body, const std::uint64_t entity, const ImpactSound sound,
+                                 const float mass_kg, const bool runs) {
+    if (body.IsInvalid() || mass_kg <= 0.0F ||
+        physics_.GetBodyInterface().GetMotionType(body) != JPH::EMotionType::Dynamic) {
+        return false;
+    }
+    track(body, entity, sound, mass_kg);
+    tracked_.back().runs = runs;
+    machines_.push_back({entity, runs});
+    if (runs) {
+        running_.reserve(tracked_.size());
+    }
+    return true;
+}
+
+float ImpactLedger::run_loudness(const float mass_kg, const float speed_mps) noexcept {
+    if (speed_mps < kRunMinMps) {
+        return 0.0F;
+    }
+    return std::min(kRunMaxLoudness, kRunShare * loudness(0.5F * mass_kg * speed_mps * speed_mps));
+}
+
 float ImpactLedger::loudness(const float energy_j) noexcept {
     if (energy_j <= kSilentJ) {
         return 0.0F;
@@ -29,6 +51,7 @@ float ImpactLedger::loudness(const float energy_j) noexcept {
 void ImpactLedger::post_step(const std::uint64_t carried) {
     const JPH::BodyInterface &bodies = physics_.GetBodyInterface();
     tick_.clear();
+    running_.clear();
     for (Tracked &t : tracked_) {
         if (t.quiet_ticks > 0) {
             --t.quiet_ticks;
@@ -41,6 +64,13 @@ void ImpactLedger::post_step(const std::uint64_t carried) {
         const JPH::Vec3 velocity = bodies.GetLinearVelocity(t.body);
         const float change = (velocity - t.last_velocity).Length();
         t.last_velocity = velocity;
+        if (t.runs) {
+            const float speed = velocity.Length();
+            const float run = run_loudness(t.mass_kg, speed);
+            if (run > 0.0F) {
+                running_.push_back({t.entity, bodies.GetCenterOfMassPosition(t.body), speed, run});
+            }
+        }
         if (t.entity == carried || change < kMinChangeMps) {
             continue;
         }
@@ -86,6 +116,7 @@ void ImpactLedger::resync() {
         t.last_energy_j = 0.0F;
     }
     tick_.clear();
+    running_.clear();
 }
 
 void ImpactLedger::resync_body(const std::uint64_t entity) {

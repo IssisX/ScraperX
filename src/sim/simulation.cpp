@@ -928,6 +928,25 @@ std::uint64_t Simulation::last_impact_sequence() const noexcept {
     return physics_world_->impacts().last_sequence();
 }
 
+std::vector<Simulation::MachinePart> Simulation::machine_parts() const {
+    std::vector<MachinePart> parts;
+    for (const ImpactLedger::Machine &m : physics_world_->impacts().machines()) {
+        parts.push_back({m.entity, m.runs});
+    }
+    return parts;
+}
+
+std::vector<Simulation::MachineNoise> Simulation::machine_noises() const {
+    std::vector<MachineNoise> noises;
+    for (const ImpactLedger::Running &r : physics_world_->impacts().running()) {
+        noises.push_back({r.entity,
+                          {static_cast<double>(r.at.GetX()), static_cast<double>(r.at.GetY()),
+                           static_cast<double>(r.at.GetZ())},
+                          r.speed_mps, r.loudness});
+    }
+    return noises;
+}
+
 std::uint32_t Simulation::forklift_count() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->forklift_count());
 }
