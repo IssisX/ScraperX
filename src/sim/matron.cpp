@@ -601,6 +601,37 @@ float Matron::floor_of(const float y) const {
     return best;
 }
 
+// A sound or sighting belongs to the steel below its actual position, not
+// automatically to her own deck. The levels table does not include grade;
+// her collision scan does. Use the closest local top within the player's
+// standing height, without borrowing a distant deck or knowing his state.
+float Matron::floor_at(const float x, const float y, const float z) const {
+    if (scanned_ != nullptr) {
+        float best = std::numeric_limits<float>::max();
+        float floor = 0.0F;
+        bool found = false;
+        for (const traversal::Patch &p : scanned_->patches()) {
+            if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
+                z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
+                p.top > y + 0.15F || y - p.top > 2.2F) {
+                continue;
+            }
+            const float distance = std::abs(y - 0.9F - p.top);
+            if (distance < best) {
+                best = distance;
+                floor = p.top;
+                found = true;
+            }
+        }
+        if (found) return floor;
+    }
+    // Off scanned steel, preserve the known-level lookup. Below its lowest
+    // entry, never manufacture an 11 m lead from a ground-level sound.
+    float lowest = std::numeric_limits<float>::max();
+    for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
+    return y < lowest - 0.5F ? y - 0.9F : floor_of(y);
+}
+
 bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
     return std::abs(z - kMidZ) < 1.4F && std::abs(x) < 17.6F + margin;
 }
@@ -2487,11 +2518,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
         if (crash.heard) {
-            take_lead(crash.x, crash.z, floor_of(crash.y), crash.loudness, Sense::Hearing);
+            take_lead(crash.x, crash.z, floor_at(crash.x, crash.y, crash.z), crash.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
         } else if (ev.sound && ev.carry_m <= kWakeNoiseM) {
-            take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()), floor_of(float(ev.heard_at.GetY())),
+            take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
+                      floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())),
                       ev.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -2587,7 +2619,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             look_x_ = px;
             look_z_ = pz;
             look_s_ = 1.0F;
-            take_lead(px, pz, floor_of(float(ev.seen_at.GetY())), 0.0F, Sense::Peripheral);
+            take_lead(px, pz, floor_at(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
             wary_ = false;
             state_ = State::Hunting;
         } else if (crash_heard || heard) {
@@ -2599,7 +2631,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             const float sx = crash_first ? crash.x : float(ev.heard_at.GetX());
             const float sy = crash_first ? crash.y : float(ev.heard_at.GetY());
             const float sz = crash_first ? crash.z : float(ev.heard_at.GetZ());
-            const float sfloor = floor_of(sy);
+            const float sfloor = floor_at(sx, sy, sz);
             const float loud = crash_first ? crash.loudness : loudness;
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
@@ -2626,9 +2658,11 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // His way on her level, as she perceived it (matron_moves.cpp): each
         // crumb a place she saw or heard him, as old as that evidence.
         if (saw || glimpsed) {
-            drop_crumb(float(ev.seen_at.GetX()), float(ev.seen_at.GetZ()), floor_of(float(ev.seen_at.GetY())));
+            drop_crumb(float(ev.seen_at.GetX()), float(ev.seen_at.GetZ()),
+                       floor_at(float(ev.seen_at.GetX()), float(ev.seen_at.GetY()), float(ev.seen_at.GetZ())));
         } else if (selected_player_sound) {
-            drop_crumb(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()), floor_of(float(ev.heard_at.GetY())));
+            drop_crumb(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
+                       floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())));
         }
         // A guess where the player is going: seen or heard riding a line, to
         // its far end.
@@ -2645,15 +2679,18 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // checks from a vantage (wary), but one she goes after by her way there.
         if (ev.climb >= 0 && (saw || selected_player_sound)) {
             const Climb c = climb_spec(ev.climb);
-            heard_x_ = c.top_x;
-            heard_z_ = c.top_z;
-            lead_floor_ = c.head_y;
+            const float my_floor = float(at.GetY()) - kStandCentre;
+            const bool descending = std::abs(my_floor - c.head_y) < 0.6F &&
+                                    float((saw ? ev.seen_at : ev.heard_at).GetY()) < c.head_y + 0.2F;
+            heard_x_ = descending ? c.x : c.top_x;
+            heard_z_ = descending ? c.z : c.top_z;
+            lead_floor_ = descending ? c.foot_y : c.head_y;
             guess_climb_ = ev.climb;
             wary_ = false;
         }
         // Seen up a ladder in a stalk: round to its head by another way, if
         // hers is the shorter (matron_stalk.cpp).
-        if (ev.climb >= 0 && saw) {
+        if (ev.climb >= 0 && saw && lead_floor_ > float(at.GetY()) - kStandCentre + 0.6F) {
             watch_climber(ev.climb, float(ev.seen_at.GetY()), dt);
             if (state_ == State::Hunting && stalk_encounter() && turn_ == Turn::None && !ambush_.active &&
                 !held_in_hunt() && holder() == nullptr) {
@@ -2750,7 +2787,14 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         }
         if (state_ == State::Hunting) {
             // Going to look from a vantage is not losing track: she goes on to it.
-            const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+            const float feet_y = float(at.GetY()) - kStandCentre;
+            float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+            int own_region = -1;
+            if (scanned_ != nullptr) {
+                own_region = scanned_->region_at(Vec3(ax, feet_y, az));
+                if (own_region < 0) own_region = region_under();
+                if (own_region >= 0) floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
+            }
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, no longer frail: chased longer.
             const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
@@ -2763,28 +2807,20 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // lead's floor. The scan's own floor, not the hand-listed
             // levels_ table, says where she stands: a bridge, a board or a
             // duct top is a floor to her scan though it is in no levels_
-            // entry, and a lead on it is not elsewhere to her. Frail, a pest
-            // gets none of this: otherwise the stage rule below would hand
-            // her 40 s she has not earned.
-            const float feet_y = float(at.GetY()) - kStandCentre;
-            float own_floor_y = floor_y;
-            int own_region = -1;
-            if (elsewhere && scanned_ != nullptr) {
-                own_region = scanned_->region_at(Vec3(ax, feet_y, az));
-                if (own_region < 0) {
-                    own_region = region_under();
-                }
-                if (own_region >= 0) {
-                    own_floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
-                }
-            }
-            const bool elsewhere_own = std::abs(lead_floor_ - own_floor_y) > 1.0F;
+            // entry, and a lead on it is not elsewhere to her. A real floor
+            // lead may use the same scanned route at her initial stage. An
+            // explicitly observed climb/line keeps the existing frail contract:
+            // watch/walk to that route and wait for her Turn before taking it.
+            const float own_floor_y = floor_y;
+            const bool elsewhere_own = elsewhere;
+            const bool frail_on_player_way = stage_ == Stage::Pest && turn_ == Turn::None &&
+                                             (guess_line_ >= 0 || guess_climb_ >= 0);
             const auto toward_lead = [&](const float goal_floor) {
                 return std::abs(goal_floor - lead_floor_) < std::abs(own_floor_y - lead_floor_) ||
                        std::abs(goal_floor - lead_floor_) <= 1.0F;
             };
             bool by_own_way = false;
-            if (stage_ != Stage::Pest && elsewhere_own) {
+            if (elsewhere_own && !frail_on_player_way) {
                 // A way of hers that knows the floor it takes her to (a found
                 // climb she is walking to, a journey, a travel), toward her
                 // lead from the floor it sets out from; or one that has her.
@@ -3263,8 +3299,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::Claimed:
         // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand,
         // and her hands on it: a lead she has, seen, where it is.
-        take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()), floor_of(float(ev.felt_at.GetY())), noise_heard_,
-                  Sense::Touch);
+        take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()),
+                  floor_at(float(ev.felt_at.GetX()), float(ev.felt_at.GetY()), float(ev.felt_at.GetZ())),
+                  noise_heard_, Sense::Touch);
         step_hold(dt, ev.felt_at);
         break;
     case State::Staggering:
