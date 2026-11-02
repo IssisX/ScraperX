@@ -20,7 +20,12 @@ His own calls the same day: her hold over the edge uses real arms in five beats 
 Gemini is off the team. At 2:27 PM: the hold session finishes its job, then the integrator closes it
 and opens one Claude session (high effort) for environment lane A, job 3 (light that shows form),
 then job 12 (night and lamps) (*"Open it once hold is done"*). Grok does hard engineering only, no
-reviews (*"give Grok real hard. Not do a fucking review"*). Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+reviews (*"give Grok real hard. Not do a fucking review"*). At 3:20 PM: the integrator merges a PR
+itself once it has a cross-model LAND and is green, with no ask (*"If everything is cool, yes, merge
+it. Automatically."*). At 3:23 PM, Claude's call: device determinism may change host results (the
+phone matching CI outranks today's host numbers); the scenarios it moves are fixed as test drift,
+never by weakening a check. At 4:25 PM: the integrator runs at max effort; every other Claude
+session at high. Two Claude sessions, three at most, never ten (*"I just want 2 MAYBE 3 sessions"*). Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
