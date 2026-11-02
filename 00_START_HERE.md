@@ -29,7 +29,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 18. American spelling, converting old British spellings in files you touch (10-18). No AI model names in repo files but the commit trailer; your notes stay out; kill by process id, never `pkill -f` (10-19, 10-20).
 
 **Talking to the owner** (he is on a phone)
-19. Every message ends with what he does now; decisions come in two or three short lines; times are US Central, never UTC (`CLAUDE.md`; 10-18, 10-20, 10-22, 10-27).
+19. Every message ends with what he does now; decisions come in a few short lines with slightly more context (what it is, why now, what each answer means, the pick and why; 11-02); times are US Central, never UTC (`CLAUDE.md`; 10-18, 10-20, 10-22, 10-27).
 20. Concise and plain: options as a short list; few questions, one simple answer each; things named by what they are, never internal labels; changes, never heartbeats; when asked, say simply what you are doing (10-19, 10-20, 10-22).
 21. At milestones, a four-part status (now, background, where we're going, next move) split by colored dots; a milestone reached gets its own marked line; reports open with what is done for good (10-20, 10-21).
 22. His rough words come back as concise, well-made passages with his exact meaning, his words kept beside them in documents (10-20).

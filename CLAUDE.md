@@ -31,9 +31,11 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
   he must pass on goes whole in one copyable block, naming the agent; never ask him to edit, combine
   or fill one in (2026-10-22: *"always end with a clear instruction for me and the prompt if I need
   to share one"*).
-- A decision is two or three short lines: what it is, Claude's pick, the word he answers with; no
-  block of text, no table of numbers or file names; the detail lives in the linked document
-  (2026-10-27: *"you can't give me these large blocks of text"*).
+- A decision is a few short lines: what it is and why it matters now, what each answer would mean
+  for the game, Claude's pick and why, and the word he answers with; no block of text, no table of
+  numbers or file names; the detail lives in the linked document (2026-10-27: *"you can't give me
+  these large blocks of text"*; 11-02: *"give me a little more context ... just a tiny bit more in
+  your questions when I'm making decisions ... Just slightly"*).
 - No answer after 10 minutes: the pick decides; say so on the work's issue and go on; he can still
   overturn it (2026-10-27: *"go with your recommendations. Let's go with 5 or 10 minutes."*).
 - He has handed his open decisions to the integrator (2026-11-02: *"Make the other decisions for
