@@ -126,6 +126,8 @@ if(SCRAPERX_WITH_JOLT)
     set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
     # Jolt then builds with -ffp-contract=off and without -mfma / JPH_USE_FMADD.
     set(USE_FMADD OFF CACHE BOOL "" FORCE)
+    # Jolt's own trigonometry and ordering, the same bits on x86-64 and arm64.
+    set(CROSS_PLATFORM_DETERMINISTIC ON CACHE BOOL "" FORCE)
 
     FetchContent_Declare(
         jolt

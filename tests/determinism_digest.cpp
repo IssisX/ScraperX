@@ -65,7 +65,14 @@ void scan_graph() {
     const auto &map = s.matron_affordances();
     Digest d;
     std::uint32_t usable = 0;
+    std::uint32_t index = 0;
     for (const auto &e : map.edges()) {
+        Digest one;
+        one.add(e.cost);
+        one.add(e.spec.start);
+        one.add(e.spec.goal);
+        std::printf("  edge %u %d>%d k%d u%d %016llx\n", index++, e.from, e.to, static_cast<int>(e.kind),
+                    e.usable ? 1 : 0, static_cast<unsigned long long>(one.value()));
         d.mix(static_cast<std::uint64_t>(static_cast<std::int64_t>(e.from)));
         d.mix(static_cast<std::uint64_t>(static_cast<std::int64_t>(e.to)));
         d.mix(static_cast<std::uint64_t>(e.kind));
@@ -98,14 +105,24 @@ void touch_replay() {
         }
         tick(s);
         if ((t + 1) % per_second == 0) {
-            Digest d;
+            Digest d, kit;
             const auto snap = s.snapshot();
             d.add(snap.player_position);
             const auto her = s.matron_state();
             d.add(her.position);
+            int first_body = -1;
             for (std::uint32_t i = 0; i < s.kit_body_count(); ++i) {
-                d.add(s.kit_body_position(i));
+                Digest one;
+                one.add(s.kit_body_position(i));
+                kit.mix(one.value());
+                d.mix(one.value());
+                if (first_body < 0 && t + 1 == per_second) {
+                    std::printf("  body %u %016llx\n", i, static_cast<unsigned long long>(one.value()));
+                }
             }
+            (void)first_body;
+            std::printf("  her=(%.9g,%.9g,%.9g) kit=%016llx\n", her.position.x, her.position.y, her.position.z,
+                        static_cast<unsigned long long>(kit.value()));
             std::printf("replay t=%ds player=(%.9g,%.9g,%.9g) digest=%016llx\n", (t + 1) / per_second,
                         snap.player_position.x, snap.player_position.y, snap.player_position.z,
                         static_cast<unsigned long long>(d.value()));
