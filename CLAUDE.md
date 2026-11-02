@@ -80,7 +80,7 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
 ## Managing the agents
 
 2026-10-22: *"I need more management help from you telling the other agents what to do"*.
-- The live board is issue #87's **body** (2026-11-02, replacing #3's 842-comment thread; #3 stays the
+- The live board is issue #107's **body** (2026-11-02; it replaced #87, which replaced #3's 842-comment thread; both stay the
   record). Only the integrator edits the body. Agents read the body and the comments since their own
   last one, never the history, and post one line per real step. He pastes one universal prompt ("read
   the board, do your queue"), and his plain comments there are orders to every agent. The board holds
