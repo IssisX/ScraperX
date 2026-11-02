@@ -1552,7 +1552,7 @@ bool Matron::his_blow() {
         end_hold(State::Searching);
         resume_state_ = State::Searching;
         state_ = State::Staggering;
-        stagger_s_ = kStaggerMinSeconds;
+        stagger_s_ = kStaggerMinSeconds * damage_recovery_scale();
         return true;
     }
     if (!body_in_hold() || rip_begun() || reel_) {
@@ -1643,7 +1643,7 @@ void Matron::end_reel(const RVec3 player) {
     grab_cooldown_s_ = kRegrabAfterTearS;
     resume_state_ = State::Searching;
     state_ = State::Staggering;
-    stagger_s_ = kStaggerMinSeconds;
+    stagger_s_ = kStaggerMinSeconds * damage_recovery_scale();
 }
 
 // The last arm gone: the run is hers (Claimed, matron_fatality.cpp), at every

@@ -456,10 +456,10 @@ void run_strike() {
             void wake(Matron &m, const float damage_ns = 0.0F, const float player_ns = 0.0F) {
                 Matron::Saved saved{};
                 saved.state = Matron::State::Hunting;
+                saved.stage = Matron::Stage::Dangerous;
                 saved.damage_ns = damage_ns;
                 saved.player_damage_ns = player_ns;
                 m.restore(saved);
-                for (int i = 0; i < 40; ++i) step(m);
                 m.place_for_test(RVec3(0.0, 154.0, -130.0));
                 m.face_for_test(0.0F);
                 step(m);
@@ -546,8 +546,8 @@ void run_strike() {
             require(std::abs(m.view().stagger_left_s - stagger0 * scale) < 0.02F,
                     "S7 scaling: stagger time scales by 1 + 0.15 * stage");
             w.wake(m, stage_ns[st], stage_ns[st]);
-            w.punch_ns(m, 450.0F, false);
-            require(m.view().state == Matron::State::Down, "S7 scaling: 450 N-s knocks her down");
+            w.punch_ns(m, 500.0F, false);
+            require(m.view().state == Matron::State::Down, "S7 scaling: 500 N-s knocks her down");
             if (st == 0) down0 = m.view().down_left_s;
             require(std::abs(m.view().down_left_s - down0 * scale) < 0.02F,
                     "S7 scaling: Down time scales by 1 + 0.15 * stage");

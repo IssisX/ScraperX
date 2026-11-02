@@ -1728,7 +1728,8 @@ public:
         // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
         const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
                               state_ == State::Dead;
-        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
+        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_, damage_ns_,
+                player_damage_ns_};
     }
     void restore(const Saved &saved);
 
@@ -2257,6 +2258,10 @@ private:
     [[nodiscard]] float step_reach() const noexcept;
     [[nodiscard]] float recover_accel() const noexcept;
     [[nodiscard]] float down_seconds() const noexcept;
+    [[nodiscard]] std::uint8_t damage_stage() const noexcept { return damage_stage_for(damage_ns_); }
+    [[nodiscard]] float damage_recovery_scale() const noexcept {
+        return 1.0F + kDamageStageRecoveryStep * static_cast<float>(damage_stage());
+    }
 
     MatronRoutecraft routecraft_;
     bool routecraft_recovering_ = false;
@@ -2733,6 +2738,11 @@ private:
     std::uint32_t staggers_ = 0;
     std::uint32_t knockdowns_ = 0;
     float blow_mps_ = 0.0F;
+    JPH::Vec3 blow_env_change_ = JPH::Vec3::sZero();
+    JPH::Vec3 blow_env_impulse_ = JPH::Vec3::sZero();
+    float blow_env_ns_ = 0.0F;
+    float damage_ns_ = 0.0F;
+    float player_damage_ns_ = 0.0F;
     // The corner pipe (above): where she is along her way on it.
     enum class PipePhase : std::uint8_t { Off, Mount, Climb, Dismount, Slide, Stunned };
     PipePhase pipe_phase_ = PipePhase::Off;
