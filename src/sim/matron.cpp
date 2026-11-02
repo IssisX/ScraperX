@@ -2807,17 +2807,20 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // lead's floor. The scan's own floor, not the hand-listed
             // levels_ table, says where she stands: a bridge, a board or a
             // duct top is a floor to her scan though it is in no levels_
-            // entry, and a lead on it is not elsewhere to her. The same
-            // scanned route is available to her initial stage: a confirmed
-            // physical way, not her anger, earns the longer pursuit window.
+            // entry, and a lead on it is not elsewhere to her. A real floor
+            // lead may use the same scanned route at her initial stage. An
+            // explicitly observed climb/line keeps the existing frail contract:
+            // watch/walk to that route and wait for her Turn before taking it.
             const float own_floor_y = floor_y;
             const bool elsewhere_own = elsewhere;
+            const bool frail_on_player_way = stage_ == Stage::Pest && turn_ == Turn::None &&
+                                             (guess_line_ >= 0 || guess_climb_ >= 0);
             const auto toward_lead = [&](const float goal_floor) {
                 return std::abs(goal_floor - lead_floor_) < std::abs(own_floor_y - lead_floor_) ||
                        std::abs(goal_floor - lead_floor_) <= 1.0F;
             };
             bool by_own_way = false;
-            if (elsewhere_own) {
+            if (elsewhere_own && !frail_on_player_way) {
                 // A way of hers that knows the floor it takes her to (a found
                 // climb she is walking to, a journey, a travel), toward her
                 // lead from the floor it sets out from; or one that has her.
