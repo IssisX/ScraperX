@@ -73,6 +73,20 @@ def validate_archive(archive_path):
                 continue
             raise ValueError(f"unsupported archive entry type: {name!r}")
 
+    # GNU tar extracts through directory aliases.  A member under A/ when
+    # A -> R would be written under R/ while our symlink table would still
+    # record A/member, letting a chained link evade resolution.  Reject such
+    # entries regardless of member order; internal npm links remain valid.
+    for name in seen:
+        parent = posixpath.dirname(name)
+        if parent == ".":
+            continue
+        actual_parent = resolve_archive_path(parent.split("/"), symlinks)
+        if actual_parent != parent:
+            raise ValueError(
+                f"unsafe archive entry {name!r}: parent resolves to {actual_parent!r}"
+            )
+
     # Resolve against every archive symlink, regardless of member order.
     # Lexical normpath is insufficient: l1 -> ., l2 -> l1/.. can climb
     # above ROOT even though each link text looks locally contained.
