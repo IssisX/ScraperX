@@ -172,6 +172,16 @@ void run_strike() {
         require(std::abs(s.matron_state().damage_ns - s.snapshot().strike_impulse_ns) < 0.05 &&
                     std::abs(s.matron_state().player_damage_ns - s.snapshot().strike_impulse_ns) < 0.05,
                 "strike: landed punch accumulates its 50 N-s into damage_ns and player_damage_ns");
+        // The checkpoint is committed automatically on firm footing.
+        // Save/load bytes must preserve the committed damage, not only Matron::Saved.
+        require(s.snapshot().player_grounded, "S7 disk save: player grounded after the judged punch");
+        const double committed_total = s.matron_state().damage_ns;
+        const double committed_player = s.matron_state().player_damage_ns;
+        const std::vector<std::uint8_t> bytes = s.save_game();
+        require(s.load_game(bytes.data(), bytes.size()), "S7 disk save: serialized checkpoint loads");
+        require(std::abs(s.matron_state().damage_ns - committed_total) < 0.05 &&
+                    std::abs(s.matron_state().player_damage_ns - committed_player) < 0.05,
+                "S7 disk save: load preserves both judged damage and attributed share");
     }
     std::cout << "  strike blow: hits=" << blow_hits << " her_blow_mps=" << blow_mps << " impulse/mass=" << dv << "\n";
     require(blow_hits == 1 && dv > 0.0 && blow_mps >= 0.8 * dv && blow_mps <= 1.5 * dv + 0.05,
