@@ -39,7 +39,10 @@ never answer from memory or by shortcut (*"I prefer you use a little more effort
 answers correct and do the checks and everything and thinking first"*). Found at 5:10 PM: a session the integrator opens
 starts with no effort set (its menu shows medium), whatever the environment variable says; the
 integrator cannot set it. So every time one opens, Cory is told in the same message to set its effort,
-with the level picked. He set lane A and lane B to xhigh. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+with the level picked. He set lane A and lane B to xhigh. At 5:30 PM: Fable's design v3 adopted step by step
+(`03_EXECUTION/PLANNING/AGENT_TEAM_DESIGN.md`, no Linear, no new paid services; the orchestrator
+and eye run on his $100 monthly Anthropic API credit). Step A done at 5:33 PM: one issue per job
+(J-001..J-031, #108-#138), `work/BOARD.md` generated, `@codex` wake tested on J-029 (#136). Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
