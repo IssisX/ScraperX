@@ -38,7 +38,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 
 **Testing and CI**
 25. Test only what a change reaches; the full suite, every touch scenario and the Android build are CI's (`CLAUDE.md`; 10-18, 10-19, 10-20, 10-22).
-26. Every push changing code, assets, tests or CI runs CI; only docs-only commits carry `[skip ci]`; a red build is fixed first; every tested change is pushed (10-20).
+26. Every push changing code, assets, tests or CI runs CI; only docs-only commits carry `[skip ci]`; a red build is fixed first; every tested change is pushed (10-20). Spelling, wording, and commit-message/tag nitpicks never block a merge and never justify rewriting commits or rerunning CI; only real physics, gameplay, or test failures block (10-31).
 27. No build is green unless the ascent is played through the game's own input from its start (09-26).
 28. Drive and look at the game with the Godot MCP tools (`run_project`, then screenshots), not the bare binary; visual work is checked by eye this way before it lands; never claim we can't see it; CI's headless runs stay (10-20, 10-21, 10-27, 10-29).
 
@@ -48,7 +48,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 31. She goes deck to deck, up and down, and climbs *"mostly anything"*; nothing hard-wired that more decks would undo; it ships in the game and its APK (10-19, 10-21, 10-22).
 32. Her fatality and arm tears: *"Do not soften it ... like a Mortal Kombat fatality."* Full intensity, no toggle, no tamer substitute (10-21); short and playable (10-28).
 33. Her holds: third person from her grab to his release or death; PUNCH works while held; she is intimate and interactive (10-28). Not just a camera: from grab to release or death it is a whole cinematic, dramatic experience (10-29).
-34. He is never helpless: a hard enough blow takes her balance or puts her down for seconds, alive (10-19).
+34. He is never helpless: a hard enough blow takes her balance or puts her down for seconds, alive (10-19). Her damage does not persist: a checkpoint rewind or a reload brings her back undamaged (11-02).
 35. In reach she pulls him off a ladder by the ankle; for 30 s after a tear, or after his blow frees him, she backs off and lets him run (10-28). Her locker on deck 1 (11 m) stays; the floor fatality there is fine (10-28).
 36. Her look: a real old woman's body and skin, an uncanny adult-horror face, never thin, red-skinned or Halloween; the elite graphics are hers (10-19).
 37. Her movement is continuous: drawn between ticks, no snapped poses, joints at most 20 rad/s, hands reaching each hold (10-27).
@@ -86,7 +86,7 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 **Agents and the board**
 60. Manage through issue #3 as `CLAUDE.md` says: its ASSIGNMENT BOARD holds every queue and who integrates whose work (never their own); agents work it without waiting, as thinking partners; his comments there are orders; hard jobs go out whole, never cheap work; tests are the proof, not the job; a blocker only after a real try; the integrator checks #3 and the PRs every 10-15 minutes, posting only on change; other work gets its own issue (10-22, 10-27, 10-29). A brief states the goal, the laws and limits, and the finish facts, and leaves the agent free to pick any way of doing it within them; it may suggest options, never dictate one (10-29: *"the helpers get to pick any way of doing something within our constraints"*).
 61. ChatGPT, Claude and Muse all work here, each on its strengths, until we get her past authored routes (10-29: *"We have ChatGPT Claude (you) and Muse to use"*; it ends 10-27's "ChatGPT is not part of this"). Muse writes to the integrator by email (`MUSE_TO_CLAUDE:`), since each of its GitHub comments needs his approval; the integrator answers by email (`CLAUDE_TO_MUSE:`) or on #3 (10-29).
-62. The master integrator seat is Claude's (assignments, landing order, merges); PE's posts are proposals (10-28).
+62. The master integrator seat is Claude's (assignments, landing order, merges); PE's posts are proposals (10-28). The integrator watches the Claude sessions and, when one grows too long or wasteful, starts a fresh one with a handoff and retires the old one, deciding itself (`CLAUDE.md`; 11-02).
 63. This file never names the next job: it comes from him and the board (10-22).
 
 **Waiting on him** (talked through before anything is built; menu: `03_EXECUTION/handoffs/PARKED_FEATURES_2026-10-29.md`)
@@ -94,11 +94,11 @@ The owner's rules, one line each, dated 2026-MM-DD; his full words are in the ar
 
 ## Current position
 
-The board and latest comments on issue #3 (handoffs are posted there): trunk's state, who holds what, what is next. `03_EXECUTION/handoffs/OPERATIONS_NOTES.md` says how to build, prove and playtest. Proof is CI (`wo000-delivery-spine.yml`). The old position table, ledgers and CI evidence are in the archive.
+The board and latest comments on issue #3 (handoffs are posted there): trunk's state, who holds what, what is next. `03_EXECUTION/handoffs/OPERATIONS_NOTES.md` says how to build, prove and playtest. CI configuration is `.github/workflows/wo000-delivery-spine.yml`; cite the exact run and revision, and separately report the full-ascent and device evidence required by the rules. The old position table, ledgers and CI evidence are in the archive.
 
 ## Where things live
 
-Tickets: `03_EXECUTION/ASCENT/` (AS-001–015, live) and `KERNEL/` (WO-000–013, closed: never a new `WO-*`); `PLANNING/` holds the ascent contract and mechanism plan. Atlas bands `B00`–`B11` are never a filename or ticket; no `CP-*` document class; retired IDs never return (`ASCENT_PRE_RESOLUTION.md` §5.1). `Mechanism-Ideas-and-archetypes.md` is the owner's input, never edited. Vocabulary and retired names: the archive.
+Tickets: `03_EXECUTION/ASCENT/` (AS-001–015 specifications; consult the board for assignments) and `KERNEL/` (WO-000–013, closed: never a new `WO-*`); `PLANNING/` holds the ascent contract and mechanism plan. Atlas bands `B00`–`B11` are never a filename or ticket; no `CP-*` document class; retired IDs never return (`ASCENT_PRE_RESOLUTION.md` §5.1). `Mechanism-Ideas-and-archetypes.md` is the owner's input, never edited. Vocabulary and retired names: the archive.
 
 ## Loading context and claims
 

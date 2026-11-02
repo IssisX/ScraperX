@@ -33,7 +33,9 @@ float distance_xz(const float ax, const float az, const float bx, const float bz
 // her feet down onto the floor under it (as low as that floor lets her hang).
 traversal::MoveSpec down_of(const traversal::MoveSpec &up) {
     traversal::MoveSpec down = up;
-    down.kind = up.kind == traversal::MoveKind::Mantle ? traversal::MoveKind::HangDrop : traversal::MoveKind::RungDown;
+    down.kind = up.kind == traversal::MoveKind::Mantle || up.kind == traversal::MoveKind::LedgeJump
+                    ? traversal::MoveKind::HangDrop
+                    : traversal::MoveKind::RungDown;
     down.start = up.goal;
     down.goal = up.start;
     down.goal_top = up.start.GetY();

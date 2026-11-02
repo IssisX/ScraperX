@@ -29,6 +29,8 @@ const SOCK_LENGTH := 3.6
 const SOCK_RINGS := 6
 const SOCK_SEGMENTS := 10
 
+var _last_beam: Node3D
+var _chains: Array[MeshInstance3D] = []
 var _lamp: Node3D
 var _beam: MeshInstance3D
 var _beam_material: ShaderMaterial
@@ -52,6 +54,21 @@ func setup(kit_root: Node3D) -> void:
 		_far_visible(_lamp)
 		_build_lamp_lights()
 	_build_sock()
+	_last_beam = kit_root.get_node_or_null("KitBody2968") as Node3D
+	for i in 2:
+		var link := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.035
+		mesh.bottom_radius = 0.035
+		mesh.height = 1.0
+		mesh.radial_segments = 6
+		link.mesh = mesh
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color(0.16, 0.18, 0.20)
+		material.metallic = 0.8
+		link.material_override = material
+		add_child(link)
+		_chains.append(link)
 
 
 # What a kit body's parts are drawn to is its size's worth of metres; the dead
@@ -223,6 +240,15 @@ static func wind_at(t: float) -> float:
 
 
 func update_view(state: Dictionary, delta: float, clock: float) -> void:
+	if _last_beam != null:
+		for i in _chains.size():
+			var x := -2.0 if i == 0 else 2.0
+			var top := Vector3(-7.0 + x, 807.64, -184.0)
+			var end := _last_beam.global_transform * Vector3(x, 0.3, 0.0)
+			var run := end - top
+			_chains[i].visible = not bool(state["sling_free"])
+			_chains[i].transform = Transform3D(Basis(Quaternion(Vector3.UP, run.normalized())).scaled(
+				Vector3(1.0, run.length(), 1.0)), (top + end) * 0.5)
 	_lit = bool(state["lit"])
 	if _first_update:
 		# A world that opens already lit (the profile remembers the climb that

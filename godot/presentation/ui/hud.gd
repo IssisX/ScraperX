@@ -171,7 +171,7 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 	var action: Dictionary = ctx["action"]
 	match action["id"]:
 		&"punch", &"climb", &"pick_up", &"set_down", &"hook", &"unhook", &"slingshot", &"swing", &"lift", \
-				&"crane_take", &"crane_device":
+				&"crane_take", &"crane_device", &"summit_lower", &"summit_unrig":
 			out.append(_prompt(&"action", action["label"], action["detail"]))
 	# The yard crane's remote in hand: CRANE works it, and lets it go.
 	if bool(ctx.get("crane_operating", false)):
@@ -189,6 +189,9 @@ func _build_prompts(ctx: Dictionary) -> Array[Dictionary]:
 
 func _draw() -> void:
 	if _ctx.is_empty():
+		return
+	if int(_ctx.get("ending", 0)) == 4:
+		_draw_ending()
 		return
 	if _flash > 0.0:
 		draw_rect(Rect2(Vector2.ZERO, size), UiStyle.with_alpha(_flash_color, 0.34 * _flash * _flash))
@@ -486,7 +489,9 @@ func _draw_radio() -> void:
 	var cx := _safe.position.x + _safe.size.x * 0.5
 	var width := maxf(UiStyle.text_width(UiStyle.font_heavy(), radio_who, who_size),
 		UiStyle.text_width(UiStyle.font_label(), radio_text, line_size)) + 56.0 * u
-	var rect := Rect2(Vector2(cx - width * 0.5, _safe.end.y - 430.0 * u), Vector2(width, 96.0 * u))
+	# Keep radio text above the touch action controls, including long final lines.
+	var top := _safe.end.y - (690.0 if touch_active else 430.0) * u
+	var rect := Rect2(Vector2(cx - width * 0.5, top), Vector2(width, 96.0 * u))
 	UiStyle.plate(self, rect, UiStyle.with_alpha(UiStyle.INK, 0.82), UiStyle.with_alpha(UiStyle.HAZARD, 0.9),
 		3.0 * u, 10.0 * u)
 	UiStyle.text(self, UiStyle.font_heavy(), radio_who, Vector2(cx, rect.position.y + 30.0 * u), who_size,
@@ -561,3 +566,16 @@ func _draw_precision() -> void:
 	var radius := lerpf(22.0, 14.0, UiStyle.ease_out_back(_precision_cue)) * u
 	UiStyle.ring(self, at, radius, color, 2.5 * u)
 	UiStyle.disc(self, at, 2.5 * u, color)
+
+
+# The card is reached only after the native observes the unrigged beam and
+# an uninterrupted canopy flight to ground. It leaves the world running.
+func _draw_ending() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.025, 0.035, 0.045, 0.90))
+	var c := size * 0.5
+	UiStyle.text(self, UiStyle.font_heavy(), "SCRAPERX", c + Vector2(0, -80 * _u),
+		roundi(62 * _u), UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
+	UiStyle.text(self, UiStyle.font_label(), "THE LAST BEAM IS HOME. SO ARE YOU.", c,
+		roundi(26 * _u), UiStyle.PAPER, HORIZONTAL_ALIGNMENT_CENTER)
+	UiStyle.text(self, UiStyle.font_label(), "A game by Cory", c + Vector2(0, 90 * _u),
+		roundi(22 * _u), UiStyle.AMBER, HORIZONTAL_ALIGNMENT_CENTER)

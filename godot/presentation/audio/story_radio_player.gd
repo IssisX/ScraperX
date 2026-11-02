@@ -4,6 +4,8 @@ extends Node
 const MANIFEST_PATH := "res://audio/story_radio/manifest.json"
 const RADIO_DIRECTORY := "res://audio/story_radio/"
 const BUS := &"Effects"
+# Owner voice rule: unapproved stock recordings may never play.
+const VOICE_RECORDINGS_APPROVED := false
 
 var _scene_voice: AudioStreamPlayer3D
 var _scene_position := Vector3.ZERO
@@ -148,12 +150,13 @@ func configure(manifest_path: String = MANIFEST_PATH) -> bool:
 				_missing_keys[key] = "invalid recording speech envelope"
 				continue
 		_cues[key] = cue.duplicate(true)
-		var stream := _load_voice_stream(path)
-		if stream == null:
-			_missing_keys[key] = "recording unavailable: " + path
-		else:
-			_streams[key] = stream
-	_status = "ready"
+		if VOICE_RECORDINGS_APPROVED:
+			var stream := _load_voice_stream(path)
+			if stream == null:
+				_missing_keys[key] = "recording unavailable: " + path
+			else:
+				_streams[key] = stream
+	_status = "ready" if VOICE_RECORDINGS_APPROVED else "voice_unapproved"
 	return true
 
 
@@ -194,6 +197,9 @@ func present(state: Dictionary, _delta: float) -> void:
 		_status = "copy_mismatch" if _cues.has(key) else "missing_cue"
 		if not _cues.has(key):
 			_missing_keys[key] = "cue absent from manifest"
+		return
+	if not VOICE_RECORDINGS_APPROVED:
+		_status = "voice_unapproved"
 		return
 	if _played_ids.has(id):
 		if _active_id != id:
@@ -264,6 +270,10 @@ func readback() -> Dictionary:
 		"spatial": player == _scene_voice and is_instance_valid(_scene_voice),
 		"scheduled_plays": _scheduled_plays, "missing_keys": _missing_keys.duplicate(),
 		"manifest_error": _manifest_error, "status": _status, "quiesced": _quiesced}
+
+
+func cue_metadata(key: StringName) -> Dictionary:
+	return (_cues.get(String(key), {}) as Dictionary).duplicate(true)
 
 
 # Only available validated recordings contribute to caption lifetimes. The

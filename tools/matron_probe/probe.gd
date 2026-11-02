@@ -262,6 +262,7 @@ class Recorder extends Node:
 		for limb in [["an_l", "heel", "toe"], ["an_r", "heel", "toe"], ["wr_l", "knuckles", ""], ["wr_r", "knuckles", ""]]:
 			surf.append(_surface(native, pos, limb, vis))
 		var burst: Variant = view.get("burst_active")
+		var contact_hand2: Vector3 = data.get("contact_hand2", Vector3.ZERO)
 		var row := [_frame, rec, "%.5f" % _t_game, "%.5f" % float(native.get_simulation_time_seconds()), "%.6f" % delta,
 			int(bool(main.get("freeze_sim"))), int(get_tree().paused), int(vis),
 			int(data.get("state", 0)), int(data.get("stage", 0)), int(data.get("turn", 0)),
@@ -281,7 +282,17 @@ class Recorder extends Node:
 			int(bool(data.get("climbing", false)) and data.has("climb_hand")), "%.5f" % ch.x, "%.5f" % ch.y, "%.5f" % ch.z,
 			int(bool(data.get("climb_hand2_known", false))), "%.5f" % ch2.x, "%.5f" % ch2.y, "%.5f" % ch2.z,
 			"%.5f" % player.x, "%.5f" % player.y, "%.5f" % player.z,
-			surf[0], surf[1], surf[2], surf[3], "" if burst == null else str(int(bool(burst)))]
+			surf[0], surf[1], surf[2], surf[3], "" if burst == null else str(int(bool(burst))),
+			int(bool(data.get("contact_hand2_held", false))),
+			"%.5f" % contact_hand2.x, "%.5f" % contact_hand2.y, "%.5f" % contact_hand2.z]
+		# Her collision capsule as the native exports it (matron_shape.cpp), blank before it did.
+		if data.has("shape_r"):
+			var sa: Vector3 = data["shape_a"]
+			var sb: Vector3 = data["shape_b"]
+			row.append_array([int(data.get("stance", 0)), "%.5f" % sa.x, "%.5f" % sa.y, "%.5f" % sa.z,
+				"%.5f" % sb.x, "%.5f" % sb.y, "%.5f" % sb.z, "%.4f" % float(data["shape_r"])])
+		else:
+			row.append_array(["", "", "", "", "", "", "", ""])
 		var out := PackedStringArray()
 		for v in row:
 			out.append(str(v))
@@ -350,4 +361,6 @@ class Recorder extends Node:
 		"climb_airborne", "climb_move_active", "climb_move", "carrying", "bracing", "mantling", "fall_v",
 		"px", "py", "pz", "rx", "ry", "rz", "yaw", "ryaw", "floor_y", "hold_state", "held", "grip_on",
 		"hx", "hy", "hz", "h2x", "h2y", "h2z", "ch_known", "chx", "chy", "chz", "ch2_known", "ch2x", "ch2y", "ch2z",
-		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst"]
+		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst",
+		"contact_hand2_held", "contact_hand2x", "contact_hand2y", "contact_hand2z",
+		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r"]

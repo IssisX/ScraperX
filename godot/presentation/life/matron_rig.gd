@@ -285,6 +285,12 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
+# Keep the last governed arm pose while a physical prop is being approached or
+# carried. Restarting the IK from unrelated walk/search poses each frame can
+# pull a wrist off an otherwise stationary handle before govern clips it.
+const PROP_ARM_JOINTS := ["sh_l", "sh_l_x", "el_l", "el_l_x",
+	"sh_r", "sh_r_x", "el_r", "el_r_x"]
+var _prop_arm_pose := {}
 
 
 func _gpos(n: String) -> Vector3:
@@ -509,8 +515,74 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 # `held`: her holds as the view draws them, eased onto each new one (the
 # view's _ease_hands); without it, the native's own holds.
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
+	var prop_intent := int(data.get("carrying", 0)) != 0 or int(data.get("stock_seeking", 0)) != 0
+	var carrying := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+	# Preserve the preceding frame's governed wrist positions before govern()
+	# updates them. The contact correction must not spend a second motion budget.
+	var wrist_before := {}
+	if carrying:
+		for side in ["r", "l"]:
+			var idx: int = _governed_bones.find(int(bone_idx["wr_" + side]))
+			if idx >= 0 and idx < _govern_pos.size():
+				wrist_before[side] = _govern_pos[idx]
+	if prop_intent and not _prop_arm_pose.is_empty() and not bool(view.fresh_frame):
+		for bone in PROP_ARM_JOINTS:
+			var i: int = bone_idx[bone]
+			var prior: Array = _prop_arm_pose[bone]
+			skel.set_bone_pose_rotation(i, prior[0])
+			# Previous forearm length eases back toward rest at the existing
+			# position-rate limit rather than collapsing when her state shifts.
+			var nominal := skel.get_bone_pose_position(i)
+			var last: Vector3 = prior[1]
+			var cap := GOVERN_M_S * maxf(float(view._dt), 0.0)
+			skel.set_bone_pose_position(i, last.move_toward(nominal, cap))
 	_contact(data, falling, held)
 	govern()
+	# Only the physical constraint owns attachment. The native handle is the
+	# contact target, not a visual approximation. Finish the wrists AFTER the
+	# joint governor, but clamp each wrist to its original per-frame position
+	# budget from the saved previous pose. No second budget is added.
+	if carrying and wrist_before.has("r"):
+		var handle: Vector3 = data["stock_handle"]
+		var size: Vector3 = data.get("stock_size", Vector3.ZERO)
+		var two_hands := maxf(size.x, size.z) >= 0.38
+		var across := Vector3.ZERO
+		if two_hands:
+			var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY)
+			across = (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1)
+		_finish_prop_wrist("r", handle + across, wrist_before["r"])
+		if two_hands and wrist_before.has("l"):
+			_finish_prop_wrist("l", handle - across, wrist_before["l"])
+	_prop_arm_pose.clear()
+	if prop_intent:
+		for bone in PROP_ARM_JOINTS:
+			var i: int = bone_idx[bone]
+			_prop_arm_pose[bone] = [skel.get_bone_pose_rotation(i), skel.get_bone_pose_position(i)]
+
+
+# An actual grasp's terminal wrist contact, corrected only within the
+# existing per-frame GOVERN_M_S budget. The underlying arm's two-bone IK
+# and physics handle remain authoritative; only the drawn end joint shifts.
+func _finish_prop_wrist(side: String, at_world: Vector3, prior: Vector3) -> void:
+	var bone := "wr_" + side
+	var id: int = bone_idx[bone]
+	var idx: int = _governed_bones.find(id)
+	if idx < 0:
+		return
+	var target: Vector3 = skel.global_transform.affine_inverse() * at_world
+	var offset: Vector3 = target - _gpos(bone)
+	if offset.length() <= 0.02:
+		return
+	var parent: int = skel.get_bone_parent(id)
+	var parent_basis: Basis = skel.get_bone_global_pose(parent).basis if parent >= 0 else Basis.IDENTITY
+	var desired: Vector3 = skel.get_bone_pose_position(id) + parent_basis.inverse() * offset
+	var speed: float = GOVERN_BURST_M_S if bool(view.burst_active) else GOVERN_M_S
+	var limit: float = speed * maxf(float(view._dt), 0.0)
+	var placed: Vector3 = prior + (desired - prior).limit_length(limit)
+	skel.set_bone_pose_position(id, placed)
+	_govern_pos[idx] = placed
+	if placed.distance_to(desired) > 0.0001:
+		governed += 1
 
 
 # Every bone of her body (not her hair, eyes or fingers) turned this frame
@@ -595,8 +667,10 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		var hand: Vector3 = held[0] if held.size() >= 1 else data["climb_hand"]
 		# Two-handed moves (mantle on the lip, jump_catch on the bar,
 		# pole with hands close together, hang_drop from the lip).
-		# Rung moves are not two-handed here: they keep exactly the
-		# old contact behaviour, and their feet are never lifted.
+		# Rung moves are not two-handed for their feet: their feet
+		# are never lifted, but their left wrist now reaches a held
+		# second grip (M5e); without one they keep exactly the old
+		# contact behaviour.
 		var two_handed := bool(data.get("climb_move_active", false)) and String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]
 		# Feet first, so the hand reach is solved from where the body
 		# ends up: on a two-handed move, when the simulation has her
@@ -625,12 +699,16 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		var wc := float(view._w_climb) if view != null else 1.0
 		_reach("r", skel.global_transform.affine_inverse() * hand, wc)
 		claims |= CLAIM_HAND
-		# On a two-handed move the left wrist goes to a second hold
-		# only when the simulation has her hand on one
-		# (contact_hand2_held; none of her movers holds two today);
-		# otherwise to the one hold, never to a point the view
-		# invented.
-		if two_handed:
+		# The left wrist goes to a second hold only when the
+		# simulation has her hand on one (contact_hand2_held under
+		# truth, climb_hand2_known otherwise): on a two-handed move
+		# it falls back to the one hold, on a rung move to nothing
+		# at all (the old rung behaviour), never to a point the
+		# view invented. Climb-branch movers hold two on rung
+		# climbs now (M5b/M5d); the guard is unchanged, the hold is
+		# made valid by gripping.
+		var rung_move := String(data.get("climb_move", "")) in ["rung_up", "rung_down"]
+		if two_handed or rung_move:
 			var hand_l: Vector3 = hand
 			var second := bool(data.get("contact_hand2_held", false))
 			if not truth:
@@ -638,7 +716,9 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 			if second:
 				hand_l = held[1] if held.size() >= 2 else (data["contact_hand2"] if truth else data["climb_hand2"])
 				claims |= CLAIM_HAND2
-			_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+			elif two_handed:
+				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
 		if down_mask != 0:
 			claims |= CLAIM_PLANTS
 		return
@@ -667,8 +747,15 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		return
 	if climbing or on_line:
 		# her body hung from her hands only on a grip (or a line) the
-		# simulation has; otherwise it is not lifted to them
-		if not truth or bool(data.get("contact_hand_held", false)) or bool(data.get("contact_line", false)):
+		# simulation has; otherwise it is not lifted to them. With
+		# both grips held the two fixed wrists already place her
+		# body, so the 2.6 m ride retires there (M5e); anywhere else
+		# it stays exactly as before.
+		var both := truth and bool(data.get("contact_hand_held", false)) and bool(data.get("contact_hand2_held", false))
+		if both:
+			_ride(0.0)
+			claims |= CLAIM_HANG
+		elif not truth or bool(data.get("contact_hand_held", false)) or bool(data.get("contact_line", false)):
 			var top := maxf(_gpos("wr_l").y, _gpos("wr_r").y)
 			_ride(clampf(HANDS_ON_RUNG_Y - top - 0.1, 0.0, 0.8))
 			claims |= CLAIM_HANG
@@ -691,6 +778,24 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		_plant_limbs(data, wf, feet_free)
 	if down_mask != 0:
 		claims |= CLAIM_PLANTS
+	# The native knows which handle she is walking toward before taking it.
+	# Put her hands on that moving physical point during the approach, so the
+	# first constrained frame does not start with a half-meter visual reach.
+	# A far-off target is never a claim of contact: reach begins only when the
+	# existing physical handle has come within the drawn arms' range.
+	var carrying := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+	var seeking := not carrying and int(data.get("stock_seeking", 0)) != 0 and data.has("stock_seek_handle")
+	if carrying or seeking:
+		var handle: Vector3 = data["stock_handle"] if carrying else data["stock_seek_handle"]
+		var size: Vector3 = data.get("stock_size", Vector3.ZERO) if carrying else data.get("stock_seek_size", Vector3.ZERO)
+		var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY) if carrying else data.get("stock_seek_rotation", Quaternion.IDENTITY)
+		var shoulder: Vector3 = bone_world("sh_r").origin
+		if carrying or shoulder.distance_to(handle) < 2.5:
+			var two_hands := maxf(size.x, size.z) >= 0.38
+			var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
+			hold_reach("r", handle + across, 1.0)
+			if two_hands:
+				hold_reach("l", handle - across, 1.0)
 	# Her hand on the climber's ankle, and in the rip her other on his arm
 	# (the view keeps the last of each while her hand comes off it).
 	if float(view._w_hold) > 0.001:
@@ -745,6 +850,8 @@ func step_hair(delta: float) -> void:
 	var head := bone_world("head")
 	var skull := head * _skull_local
 	var chest := bone_world("chest")
+	var belt := bone_world("spine_mid")
+	var neck := bone_world("neck_lo")
 	var back := chest * Vector3(0.0, 0.05, -0.05)
 	var down := head.basis * Vector3.DOWN
 	for ch in _chains:
@@ -780,8 +887,25 @@ func step_hair(delta: float) -> void:
 				var q: Vector3 = (pts[k] as Vector3).lerp(above + down * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
 				var d := q - above
 				q = above + (d.normalized() if d.length() > 1e-6 else down) * seg
-				q = _outside(q, skull, _skull_radius)
-				q = _outside(q, back, BACK_RADIUS)
+				# The point can sit outside the skull and the back while the ribbon
+				# between this point and the one above still cuts through them.
+				q = _segment_outside(above, q, seg, skull, _skull_radius)
+				q = _segment_outside(above, q, seg, back, BACK_RADIUS)
+				# Collar and belt are rings the two spheres do not cover. Walk the
+				# segment out sideways and down. A lift along the chest axis spends
+				# the hang. Measured radii, not a knob: collar 0.138 on chest
+				# local Y 0.091..0.154, buckle 0.192 on spine_mid local Y -0.001..0.042.
+				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138)
+				q = _clear_ring(above, q, seg, belt, -0.001, 0.042, 0.192)
+				# The neck is a cylinder the collar ring does not cover. Measured on
+				# the posed cloth: max radial 0.089, so 0.095 sits the strand just
+				# outside it. Y -0.01..0.105 is the neck on neck_lo.
+				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095)
+				# The chest front is a slope, not a wider cylinder. A point can be
+				# outside the collar radius and still be in front of the cloth.
+				# Walk it back in the horizontal, never up: aiming the whole lock
+				# straight backward dropped the hang under the gate.
+				q = _clear_front(above, q, seg, chest)
 				pts[k] = q
 		# The bones from the points: each turned from hanging (its rest, down its
 		# parent) to the way its strand now runs.
@@ -801,3 +925,171 @@ func _outside(q: Vector3, centre: Vector3, radius: float) -> Vector3:
 	if l >= radius or l < 1e-6:
 		return q
 	return centre + d / l * radius
+
+
+# Child of a fixed-length segment, swung the smallest amount that puts the
+# whole segment outside the sphere. Length stays exact. No extra radius.
+func _segment_outside(a: Vector3, b: Vector3, length: float, centre: Vector3, radius: float) -> Vector3:
+	if (a - centre).length() < radius:
+		var pushed := _outside(b, centre, radius)
+		var pd := pushed - a
+		if pd.length() < 1e-6:
+			pd = Vector3.DOWN
+		return a + pd.normalized() * length
+	var dir := b - a
+	if dir.length() < 1e-6:
+		dir = Vector3.DOWN
+	var d := dir.normalized()
+	if not _segment_hits(a, d, length, centre, radius):
+		return a + d * length
+	var toward := centre - a
+	var axis := toward.cross(d)
+	if axis.length() < 1e-6:
+		axis = toward.cross(Vector3.UP)
+		if axis.length() < 1e-6:
+			axis = toward.cross(Vector3.RIGHT)
+	axis = axis.normalized()
+	var lo := 0.0
+	var hi := PI
+	for _i in 16:
+		var mid := (lo + hi) * 0.5
+		var trial := (Basis(axis, mid) * d).normalized()
+		if _segment_hits(a, trial, length, centre, radius):
+			lo = mid
+		else:
+			hi = mid
+	return a + (Basis(axis, hi) * d).normalized() * length
+
+
+func _segment_hits(a: Vector3, d_unit: Vector3, length: float, centre: Vector3, radius: float) -> bool:
+	var oc := a - centre
+	var bb := 2.0 * oc.dot(d_unit)
+	var cc := oc.dot(oc) - radius * radius
+	var disc := bb * bb - 4.0 * cc
+	if disc < 0.0:
+		return false
+	var s := sqrt(disc)
+	var t1 := (-bb - s) * 0.5
+	var t2 := (-bb + s) * 0.5
+	return t1 < length and t2 > 0.0
+
+
+# The clothing ring is a slice of a cylinder on a posed bone. If the segment
+# enters it, tilt the child toward the horizontal way out, still downward.
+func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: float, y1: float, radius: float) -> Vector3:
+	var origin := bone.origin
+	var axis := bone.basis.y.normalized()
+	for _guard in 6:
+		if _ring_depth(a, b, origin, axis, y0, y1, radius) <= 0.001:
+			return b
+		var horiz := _ring_out(a, b, origin, axis, y0, y1)
+		horiz = Vector3(horiz.x, 0.0, horiz.z)
+		if horiz.length() < 1e-4:
+			horiz = Vector3(0.0, 0.0, -1.0)
+		horiz = horiz.normalized()
+		var d := b - a
+		if d.length() < 1e-6:
+			d = Vector3.DOWN
+		d = d.normalized()
+		var trial := d + horiz * 0.45
+		trial.y = minf(trial.y, -0.15)
+		if trial.length() < 1e-6:
+			trial = Vector3.DOWN
+		b = a + trial.normalized() * length
+	return b
+
+
+func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float, radius: float) -> float:
+	var worst := 0.0
+	for s in 8:
+		var p: Vector3 = a.lerp(b, float(s) / 7.0)
+		var along := (p - origin).dot(axis)
+		if along < y0 - 0.01 or along > y1 + 0.01:
+			continue
+		var radial := (p - origin) - axis * along
+		worst = maxf(worst, radius - radial.length())
+	return worst
+
+
+func _ring_out(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float) -> Vector3:
+	var best := 1.0e9
+	var out := Vector3.ZERO
+	for s in 8:
+		var p: Vector3 = a.lerp(b, float(s) / 7.0)
+		var rel := p - origin
+		var along := rel.dot(axis)
+		if along < y0 - 0.01 or along > y1 + 0.01:
+			continue
+		var radial := rel - axis * along
+		var rl := radial.length()
+		if rl < best:
+			best = rl
+			out = radial
+	if out.length() < 1e-4:
+		out = Vector3(a.x - origin.x, 0.0, a.z - origin.z)
+	return out
+
+
+# Front of the chest cloth in chest-local Y, the larger of the guard and the
+# head-down pose. Chest-weighted verts only, so the arms are not in it.
+func _chest_front_z(y: float) -> float:
+	if y <= -0.25:
+		return 0.249
+	if y <= -0.15:
+		return lerpf(0.249, 0.228, (y + 0.25) / 0.10)
+	if y <= -0.05:
+		return lerpf(0.228, 0.179, (y + 0.15) / 0.10)
+	if y <= 0.05:
+		return lerpf(0.179, 0.173, (y + 0.05) / 0.10)
+	if y <= 0.12:
+		return lerpf(0.173, 0.116, (y - 0.05) / 0.07)
+	if y <= 0.18:
+		return lerpf(0.116, 0.098, (y - 0.12) / 0.06)
+	return 0.098
+
+
+# If the segment is in front of that slope, and still over the torso (|local x|
+# under 0.16, so a shoulder is not the torso), step the child backward in the
+# horizontal. Never add an upward step.
+func _clear_front(a: Vector3, b: Vector3, length: float, bone: Transform3D) -> Vector3:
+	var origin := bone.origin
+	var axis := bone.basis.y.normalized()
+	var fwd := bone.basis.z.normalized()
+	var side := bone.basis.x.normalized()
+	for _guard in 8:
+		var worst := 0.0
+		var sx := 0.0
+		for s in 8:
+			var p: Vector3 = a.lerp(b, float(s) / 7.0)
+			var rel := p - origin
+			var x := rel.dot(side)
+			var y := rel.dot(axis)
+			var z := rel.dot(fwd)
+			if absf(x) > 0.16 or y < -0.25 or y > 0.18:
+				continue
+			var ex := z - _chest_front_z(y)
+			if ex > worst:
+				worst = ex
+				sx = x
+		if worst <= 0.001:
+			return b
+		var back := -fwd
+		back.y = minf(back.y, 0.0)
+		if back.length() < 0.35:
+			back = side * (1.0 if sx >= 0.0 else -1.0)
+			back.y = 0.0
+		if back.length() < 1e-6:
+			back = Vector3(0.0, 0.0, -1.0)
+		back = back.normalized()
+		var d := b - a
+		if d.length() < 1e-6:
+			d = Vector3.DOWN
+		else:
+			d = d.normalized()
+		var gain := minf(0.70, worst / length)
+		var trial := d + back * gain
+		trial.y = minf(trial.y, -0.15)
+		if trial.length() < 1e-6:
+			trial = Vector3.DOWN
+		b = a + trial.normalized() * length
+	return b

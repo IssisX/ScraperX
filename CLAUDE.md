@@ -36,6 +36,10 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
   (2026-10-27: *"you can't give me these large blocks of text"*).
 - No answer after 10 minutes: the pick decides; say so on the work's issue and go on; he can still
   overturn it (2026-10-27: *"go with your recommendations. Let's go with 5 or 10 minutes."*).
+- He has handed his open decisions to the integrator (2026-11-02: *"Make the other decisions for
+  me ... I said answer for me. So that means the decisions did go through."*). Make the call,
+  record it in `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` with its reason, and tell him in
+  one line after. Ask first only when something cannot be undone. He can overturn any call.
 - Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
   Central"), never a fixed offset; CI, GitHub and `date` report UTC, so convert (2026-10-18, 10-20,
   10-27: *"If using UTC, please switch permanently."*).
@@ -83,6 +87,15 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
   GitHub comments each need the owner's approval (10-29).
 - Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
   board, linked once from #3.
+- Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
+  and wasteful, we should create another whenever that happens, which you determine for me"*). The
+  integrator decides, without asking him, and covers every Claude session, its own included.
+  - When to change: a session that has compacted twice, has run 48 hours, or spends its turns
+    re-reading more than working.
+  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`), start the fresh
+    session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
+    retire the old one once its in-flight helpers have reported.
+  - A worker session whose job has landed is retired, never reused for new work.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 
@@ -99,6 +112,7 @@ For every agent; `AGENTS.md` points other agents here.
   green on every proof job but `publish-checkpoint` (off trunk its signing step stops with the
   expected KeyError) with a second agent's LAND and no open blocker; the owner can overturn any
   merge (2026-10-28, 10-29). Everything else lands without a PR.
+- **Merge blockers are substantive:** spelling, wording, and commit-message/tag nitpicks never block a PR or justify rewriting commits or rerunning CI. Only real physics, gameplay, or test failures block a merge (owner, 2026-10-31).
 - **Local tests match CI or do not count:** CI's compilers and flags (host g++ 13.3 as on
   `ubuntu-24.04`; NDK `29.0.14206865` clang; the CMake flags in `wo000-delivery-spine.yml`). CI stays
   the final proof; its ccache changes no result.

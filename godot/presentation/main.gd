@@ -12,6 +12,8 @@ extends "res://presentation/main_feel.gd"
 const TouchControls := preload("res://presentation/ui/touch_controls.gd")
 const Hud := preload("res://presentation/ui/hud.gd")
 const PauseMenu := preload("res://presentation/ui/pause_menu.gd")
+const PlayerIdentityStore := preload("res://presentation/identity/player_identity_store.gd")
+const StoryRadioPlayer := preload("res://presentation/audio/story_radio_player.gd")
 const TitleScreen := preload("res://presentation/ui/title_screen.gd")
 # Loaded only for --uitest runs, so shipping builds never parse test code.
 const UI_TEST_DRIVER_PATH := "res://presentation/ui/ui_test_driver.gd"
@@ -90,6 +92,8 @@ var _touch: Control
 var _throw_arc: Node3D
 var _throw_path := PackedVector3Array()
 var _pause_menu: Control
+var _player_identity := PlayerIdentityStore.new()
+var _story_radio: Node
 var _uitest: Node
 var _force_touch := false
 var _uitest_scenario := ""
@@ -162,6 +166,10 @@ func _ready() -> void:
 	_audio.name = "AudioDirector"
 	_audio.sky = _sky_cycle
 	add_child(_audio)
+	# Unapproved stock voice recordings must not reach the player.
+	_story_radio = StoryRadioPlayer.new()
+	_story_radio.name = "StoryRadio"
+	_audio.add_child(_story_radio)
 	_build_arms()
 	_build_hook_view()
 	_build_interface()
@@ -420,6 +428,8 @@ func _process(delta: float) -> void:
 	# A hand line (the pitman lift's) is hauled while ACTION is held.
 	_hauling = bool(intent.get("action_held", false)) and _ctx.get("action", {}).get("id", &"") == &"haul"
 	_native.set_lift_haul(_hauling)
+	_native.set_summit_lower(bool(intent.get("action_held", false)) and
+		_ctx.get("action", {}).get("id", &"") == &"summit_lower")
 	# The forklift's forks, while driving: Jump held raises, Crouch held lowers.
 	var forks := 0.0
 	if bool(_ctx.get("forklift_driving", false)):
@@ -495,6 +505,7 @@ func _process(delta: float) -> void:
 		"y": climber.y,
 		"support": int(_native.get_support_entity_id()),
 		"matron_released": bool(her["released"]),
+		"beam_seated": int(_native.get_summit_state()["ending"]) >= 1,
 	})
 	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
 	# her a few seconds after she burst out): her bearing off his view, how
@@ -594,6 +605,7 @@ func _build_interface() -> void:
 	_pause_menu = PauseMenu.new()
 	_pause_menu.name = "PauseMenu"
 	_pause_menu.settings = _settings
+	_pause_menu.identity_store = _player_identity
 	pause_layer.add_child(_pause_menu)
 
 	_router.device_changed.connect(_on_device_changed)
@@ -1105,6 +1117,10 @@ func _perform_action() -> void:
 			_native.request_release()
 		&"hook_take":
 			_native.request_hook_take()
+		&"summit_unrig":
+			_native.request_summit_unrig()
+		&"summit_lower":
+			pass # Held through the input router, like the existing hand line.
 		&"haul":
 			pass   # held, not tapped: see _process
 		&"pick_up":

@@ -75,6 +75,8 @@ const WELL_A_CAGE_ENTITY := 2000
 const ACT_POSE_FRAMES := 5
 
 var _act_box := 0
+var _act_prop_seen := {"samples": 0, "worst_hand_m": 0.0, "holding_frames": 0,
+	"visible_frames": 0, "attached_frames": 0, "other_carry_frames": 0}
 var _act_stages_seen := {}
 var _act_drawing := true
 var _act_view_back := Vector2(NAN, NAN)   # the view's yaw and pitch before a screenshot aimed it
@@ -82,6 +84,53 @@ var _act_running := false   # screenshots are the act's own while it plays
 # Deaths the act means at this point: none (her hands are no death on touch,
 # and the run she makes hers ends without one).
 var _act_deaths_allowed := 0
+
+
+# Observe the real carrying interval, which starts while the climber is
+# descending to 143 m, before _act_pest_unseen begins. Count only live
+# simulation frames with the actual carried toolbox and a rendered wrist.
+func _act_sample_prop() -> void:
+	if _act_box == 0 or _main.freeze_sim:
+		return
+	var m := _matron_state()
+	var holding := int(m["carrying"]) == _act_box
+	if not holding:
+		if int(m["carrying"]) != 0:
+			_act_prop_seen["other_carry_frames"] = int(_act_prop_seen["other_carry_frames"]) + 1
+		return
+	_act_prop_seen["holding_frames"] = int(_act_prop_seen["holding_frames"]) + 1
+	var shown: bool = bool(_main._matron_view.figure_shown())
+	var attached: bool = bool(_main._matron_view.prop_attached)
+	if shown:
+		_act_prop_seen["visible_frames"] = int(_act_prop_seen["visible_frames"]) + 1
+	if attached:
+		_act_prop_seen["attached_frames"] = int(_act_prop_seen["attached_frames"]) + 1
+	if shown and attached:
+		var old_peak: float = float(_act_prop_seen["worst_hand_m"])
+		var error_m: float = float(_main._matron_view.prop_hand_error_m)
+		_act_prop_seen["samples"] = int(_act_prop_seen["samples"]) + 1
+		_act_prop_seen["worst_hand_m"] = maxf(old_peak, error_m)
+		var n: int = int(_act_prop_seen["samples"])
+		if error_m > old_peak:
+			var rig = _main._matron_view._rig
+			_act_prop_seen["worst_frame"] = n
+			_act_prop_seen["worst_geometry"] = "handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s stretch_r=%.3f stretch_l=%.3f governed=%d" % [
+				str(m.get("stock_handle", Vector3.ZERO)), str(rig.bone_world("wr_r").origin),
+				str(rig.bone_world("wr_l").origin), str(rig.bone_world("sh_r").origin),
+				float(rig.stretch["r"]), float(rig.stretch["l"]), int(rig.governed)]
+		if n > 3 and error_m > 0.05 and error_m > old_peak + 0.03:
+			print("SCRAPERX_PROP_PEAK n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s governed=%d" % [
+				n, error_m, str(m.get("stock_handle", Vector3.ZERO)),
+				str(_main._matron_view._rig.bone_world("wr_r").origin),
+				str(_main._matron_view._rig.bone_world("wr_l").origin),
+				str(_main._matron_view._rig.bone_world("sh_r").origin),
+				int(_main._matron_view._rig.governed)])
+		if n <= 45 or n in [90, 360, 900, 1399]:
+			var rig = _main._matron_view._rig
+			print("SCRAPERX_PROP_SAMPLE n=%d error_m=%.3f handle=%s wrist_r=%s wrist_l=%s shoulder_r=%s stretch_r=%.3f stretch_l=%.3f governed=%d" % [
+				n, _main._matron_view.prop_hand_error_m, str(m.get("stock_handle", Vector3.ZERO)),
+				str(rig.bone_world("wr_r").origin), str(rig.bone_world("wr_l").origin),
+				str(rig.bone_world("sh_r").origin), float(rig.stretch["r"]), float(rig.stretch["l"]), int(rig.governed)])
 
 
 func _act_capturing() -> bool:
@@ -309,6 +358,8 @@ func _act_cam_watch() -> void:
 		_act_cam["held_s"] = 0.0
 	if third and float(cam.black()) < 0.01 and float(cam.clearance) < INF:
 		_act_cam["clear_min"] = minf(float(_act_cam["clear_min"]), float(cam.clearance))
+	if int(cam.rip_holds) > 0 and bool(cam.rip_active):
+		_act_snap("act_hold_rip")
 	if bool(hold["fatal_hang"]) and float(hold["fatal_window_s"]) >= 0.6:
 		_act_snap("act_hold_hang_window")
 	if int(cam.lets_go_seen) > 0 and float(cam.black()) < 0.05:
@@ -323,10 +374,10 @@ func _act_cam_watch() -> void:
 
 func _act_cam_log() -> void:
 	var cam: RefCounted = _main._hold_cam
-	print("SCRAPERX_ACT_VIEW held=%d third=%d gap_frames=%d gap_max=%.3f clear_min=%.3f lets_go=%d deaths_waited=%d slow_s=%.2f black_full_after=%.2f death_after=%.2f" % [
+	print("SCRAPERX_ACT_VIEW held=%d third=%d gap_frames=%d gap_max=%.3f clear_min=%.3f lets_go=%d deaths_waited=%d slow_s=%.2f black_full_after=%.2f death_after=%.2f rip_holds=%d rip_dist=%.2f" % [
 		int(_act_cam["held"]), int(_act_cam["third"]), int(_act_cam["gap_frames"]), float(_act_cam["gap_max"]),
 		float(_act_cam["clear_min"]), int(cam.lets_go_seen), int(cam.deaths_waited), float(cam.slow_ticks_s),
-		float(cam.black_full_after), float(cam.death_after)])
+		float(cam.black_full_after), float(cam.death_after), int(cam.rip_holds), float(cam.rip_dist)])
 
 
 # A still of this frame (once a pose), drawn and written two frames' ends
@@ -403,6 +454,10 @@ func _act_asleep(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) != 0, 1.0):
 		return _fail("PICK UP did not put the toolbox in the hands")
 	_act_box = int(_native().get_carrying_entity_id())
+	_act_prop_seen = {"samples": 0, "worst_hand_m": 0.0, "holding_frames": 0,
+		"visible_frames": 0, "attached_frames": 0, "other_carry_frames": 0}
+	if not get_tree().process_frame.is_connected(_act_sample_prop):
+		get_tree().process_frame.connect(_act_sample_prop)
 	# Over the bay on its leaf (src/sim/bay.hpp), then to her door.
 	for leg in [ACT_BAY_WEST, ACT_BAY_EAST, ACT_TOOLBOX_DOOR]:
 		if not await _act_creep_to(device, leg, 0.2, 14.0, 0.5):
@@ -480,11 +535,24 @@ func _act_pest_unseen(device: int) -> bool:
 			moved = Vector2(box.x, box.z).distance_to(ACT_TOOLBOX_DOOR) > 2.0
 		seen["carried"] = bool(seen["carried"]) or holding or moved
 		return int(m["unrigs"]) >= 1 and int(m["state"]) == MATRON_STATE_GUARDING, 150.0, "pest_unseen")
+	if get_tree().process_frame.is_connected(_act_sample_prop):
+		get_tree().process_frame.disconnect(_act_sample_prop)
 	if not done:
 		return _fail("she never stood guard having undone the cage's rope (state %d, unrigs %d)" % [
 			int(_matron_state()["state"]), int(_matron_state()["unrigs"])])
 	if not bool(seen["carried"]) or int(_matron_state()["takes"]) < 1:
 		return _fail("a pest, she never took the toolbox from her door (takes %d)" % int(_matron_state()["takes"]))
+	if int(_act_prop_seen["samples"]) < 3 or float(_act_prop_seen["worst_hand_m"]) > 0.05:
+		print("SCRAPERX_PROP_DIAG holding_frames=%d visible_frames=%d attached_frames=%d other_carry_frames=%d final_carry=%d final_takes=%d final_prop_attached=%s final_prop_error_m=%.3f" % [
+			int(_act_prop_seen["holding_frames"]), int(_act_prop_seen["visible_frames"]),
+			int(_act_prop_seen["attached_frames"]), int(_act_prop_seen["other_carry_frames"]),
+			int(_matron_state()["carrying"]), int(_matron_state()["takes"]),
+			str(_main._matron_view.prop_attached), float(_main._matron_view.prop_hand_error_m)])
+		print("SCRAPERX_PROP_WORST n=%d error_m=%.3f %s" % [
+			int(_act_prop_seen.get("worst_frame", 0)), float(_act_prop_seen["worst_hand_m"]),
+			String(_act_prop_seen.get("worst_geometry", "no rendered carry contact"))])
+		return _fail("her drawn wrist missed the real toolbox handle: samples %d, worst %.3f m (limit 0.05 m)" % [
+			int(_act_prop_seen["samples"]), float(_act_prop_seen["worst_hand_m"])])
 	if int(_native().get_well_a_rope_end_entity_id()) == WELL_A_CAGE_ENTITY:
 		return _fail("her unrigging left the rope's end on the cage's eye")
 	if int(_matron_state()["stage"]) != STAGE_PEST or int(_native().get_death_count()) != 0:
@@ -1330,4 +1398,97 @@ func _pipe_drum_onto_her(device: int) -> bool:
 	if not bool(_matron_state()["alive"]) or int(_native().get_death_count()) != deaths:
 		return _fail("the drop killed someone (she alive %s, deaths %d)" % [str(_matron_state()["alive"]),
 			int(_native().get_death_count())])
+	return true
+
+
+# The last beam, the foreman's admission and the way home. Only the initial
+# summit spawn is a fixture; every later move is real touch input.
+const ENDING_WORK := Vector2(-10.6, -185.25)
+const ENDING_BEAM_ENTITY := 2968
+func _summit_ending() -> bool:
+	_act_running = true
+	_act_draw(false)
+	var ok: bool = await _play_summit_ending()
+	_act_draw(true)
+	_act_running = false
+	return ok
+
+
+func _play_summit_ending() -> bool:
+	var device := InputRouter.Device.TOUCH
+	if not await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0):
+		return _fail("ending: the summit spawn never stood on the deck")
+	await _seconds(2.0)
+	if int(_native().get_summit_state()["ending"]) != 0:
+		return _fail("ending: arrival alone completed the beam")
+	if not (await _go(device, Vector2(8.0, -185.0), 0.15, 6.0) and
+			await _go(device, ENDING_WORK, 0.12, 12.0)):
+		return _fail("ending: the walk to the chain block stalled at %s" % str(_position()))
+	await _look_at_point(_native().get_kit_body_transform(
+		_native().get_kit_body_index(ENDING_BEAM_ENTITY)).origin)
+	if not await _offered(&"summit_lower", "LOWER LAST BEAM"):
+		return _fail("ending: the chain block did not offer LOWER LAST BEAM")
+	await _pose("ending_hanging_beam")
+	var at := _center(&"action")
+	_touch(4, at, true)
+	await _seconds(2.0)
+	_touch(4, at, false)
+	await _seconds(0.6)
+	var paid := float(_native().get_summit_state()["chain_paid"])
+	if paid < 0.3 or paid > 0.5 or bool(_native().get_summit_state()["beam_seated"]):
+		return _fail("ending: partial lowering was not physical (paid %.3f)" % paid)
+	await _seconds(1.0)
+	if absf(float(_native().get_summit_state()["chain_paid"]) - paid) > 0.005:
+		return _fail("ending: the chain kept paying out after the thumb lifted")
+	at = _center(&"action")
+	_touch(4, at, true)
+	var seated: bool = await _wait_until(func() -> bool:
+		return _ctx()["action"]["id"] == &"summit_unrig", 8.0)
+	_touch(4, at, false)
+	if not seated:
+		return _fail("ending: the beam never unloaded both chains: %s" % str(_native().get_summit_state()))
+	var state: Dictionary = _native().get_summit_state()
+	if not (bool(state["left_bearing"]) and bool(state["right_bearing"]) and bool(state["beam_seated"])):
+		return _fail("ending: FREE SLING offered without two physical bearings")
+	if not await _wait_until(func() -> bool: return _main._radio.text == _main._radio.LINES[&"last_beam"], 1.0):
+		return _fail("ending: the foreman's final caption never followed seating")
+	var said := int(_main._radio.lines_said)
+	await _look_at_point(_native().get_kit_body_transform(
+		_native().get_kit_body_index(ENDING_BEAM_ENTITY)).origin)
+	await _pose("ending_seated_foreman")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_summit_state()["sling_free"]), 0.5):
+		return _fail("ending: FREE SLING did not release the unloaded hoist")
+	await _seconds(2.0)
+	if not bool(_native().get_summit_state()["beam_seated"]) or int(_native().get_summit_state()["ending"]) != 2:
+		return _fail("ending: the beam lost its steel after unrigging")
+	await _tilt(0.0)
+	if not (await _go(device, Vector2(-10.5, -185.0), 0.2, 8.0) and
+			await _go(device, Vector2(-11.0, -187.5), 0.15, 4.0) and
+			await _go(device, Vector2(SUMMIT_ARM_END_X + 6.0, -187.5), 0.2, 14.0)):
+		return _fail("ending: the existing runway could not be reached")
+	await _face(Vector2(-1.0, 0.0))
+	await _pose("ending_city")
+	_move(device, 1.0)
+	var off: bool = await _wait_until(func() -> bool:
+		return not bool(_ctx()["grounded"]) and _position().x < SUMMIT_ARM_END_X - 0.5, 4.0)
+	_move(device, 0.0)
+	if not off:
+		return _fail("ending: the run never cleared the runway")
+	if not await _wait_until(func() -> bool:
+		return _main._touch.is_button_shown(&"chute") and -_velocity().y > 12.0, 4.0):
+		return _fail("ending: the falling player could not deploy a chute")
+	_tap(0, _center(&"chute"))
+	if not await _wait_until(func() -> bool: return int(_native().get_summit_state()["ending"]) == 3, 2.0):
+		return _fail("ending: the native never observed the live canopy descent")
+	await _pose("ending_parachute")
+	if not await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 160.0):
+		return _fail("ending: the parachute never reached the ground")
+	await _frames(2)
+	if int(_native().get_death_count()) != 0 or int(_native().get_summit_state()["ending"]) != 4:
+		return _fail("ending: the end card was not earned by a living descent")
+	if int(_main._radio.lines_said) != said:
+		return _fail("ending: the final radio line repeated during the descent")
+	await _pose("ending_home")
+	_detail = "beam=two_bearings sling=free final_caption=once canopy=live home=ground deaths=0"
 	return true

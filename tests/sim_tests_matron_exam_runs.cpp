@@ -17,6 +17,8 @@
 #include <Jolt/Core/JobSystemSingleThreaded.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/CollideShape.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 
 #include <iostream>
 #include <memory>
@@ -76,6 +78,31 @@ struct Run {
     exam::Verdict verdict;
     float seconds = 0.0F;
 };
+
+// The executor starts at the foot, rather than walking in from start_at.
+// Find that foot outside the actual steel: the old fixed z=-0.6 put the
+// capsule inside the bottom blocks of ledge stacks before its first tick.
+RVec3 clear_floor_start(World &w) {
+    CapsuleShape capsule(Matron::kHalfHeight, Matron::kRadius);
+    const IgnoreSingleBodyFilter not_her(w.matron->body());
+    RVec3 feet(0.0, kBaseY, -0.6);
+    bool clear = false;
+    for (; feet.GetZ() >= w.s.start_feet.mMin.GetZ() + Matron::kRadius;
+         feet -= Vec3(0.0F, 0.0F, 0.5F * Matron::kRadius)) {
+        AllHitCollisionCollector<CollideShapeCollector> hits;
+        const RVec3 middle = feet + Vec3(0.0F, Matron::kStandCentre, 0.0F);
+        w.physics.GetNarrowPhaseQuery().CollideShape(&capsule, Vec3::sReplicate(1.0F),
+            RMat44::sTranslation(middle), CollideShapeSettings{}, middle, hits,
+            w.physics.GetDefaultBroadPhaseLayerFilter(object_layers::kMoving),
+            w.physics.GetDefaultLayerFilter(object_layers::kMoving), not_her);
+        clear = std::none_of(hits.mHits.begin(), hits.mHits.end(), [](const CollideShapeResult &hit) {
+            return hit.mPenetrationDepth > 0.01F;
+        });
+        if (clear) break;
+    }
+    require(clear, "matron exam routecraft: the starting capsule is clear of the generated steel");
+    return feet;
+}
 
 // From `from` (feet) to a standing goal `to` (feet), judged on `support` and `feet_box`.
 Run climb(World &w, const RVec3 from, const RVec3 to, const BodyID support, const AABox &feet_box) {
@@ -164,7 +191,7 @@ void run_matron_exam_routecraft() {
             World w(seed);
             p = w.s.params;
             const float h = p.height_m;
-            up = climb(w, RVec3(0.0, kBaseY, -0.6), RVec3(0.0, kBaseY + h, p.standoff_m + 0.6F), w.s.goal, w.s.goal_feet);
+            up = climb(w, clear_floor_start(w), RVec3(0.0, kBaseY + h, p.standoff_m + 0.6F), w.s.goal, w.s.goal_feet);
         }
         {
             World w(seed);

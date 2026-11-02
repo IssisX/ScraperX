@@ -207,7 +207,13 @@ func _read_context() -> Dictionary:
 		her_hold = _native.get_matron_hold_state()
 	var punch := punch_button(strike, her_hold)
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
-	if crane_operating:
+	var summit: Dictionary = _native.get_summit_state()
+	if grounded and free and carrying == 0 and bool(summit["work_in_reach"]) and not bool(summit["sling_free"]):
+		if bool(summit["can_unrig"]):
+			action = {"id": &"summit_unrig", "icon": &"unhook", "label": "FREE SLING", "detail": "BOTH ENDS BEAR ON STEEL"}
+		else:
+			action = {"id": &"summit_lower", "icon": &"down", "label": "LOWER LAST BEAM", "detail": "HOLD: EASE IT ONTO BOTH BEARINGS"}
+	elif crane_operating:
 		var hook_at: Vector3 = crane["hook"]
 		var reading := "HOOK %d M  PULL %.1f T" % [roundi(hook_at.y), float(crane["hoist_n"]) / 9810.0]
 		if bool(crane["hoist_stalled"]):
@@ -413,6 +419,7 @@ func _read_context() -> Dictionary:
 			(grounded and free and edge_drop and carrying == 0 and not forklift_driving) or \
 			sling_seated or bool(sling["recovering"]) or (swing_seated and bool(swing["may_leave"])) or \
 			trapeze_hanging,
+		"ending": int(summit["ending"]),
 		"sling_seated": sling_seated,
 		"swing_seated": swing_seated,
 		"trapeze_hanging": trapeze_hanging,

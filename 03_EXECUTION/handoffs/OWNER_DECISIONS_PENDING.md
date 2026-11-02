@@ -1,3 +1,14 @@
+**Decided 2026-11-02 by Claude for the owner** (*"Make the other decisions for me."*; he can overturn any), each by its pick below:
+- 1, the radio: foreman.
+- 6, her wrecking: stock first.
+- 7, the first pressure idea: gusts.
+- 8, the gravity balance: skip.
+- 9, real levers: the forklift, as a trial.
+- 10, a best time or ghost: no.
+- 11, store details: later.
+
+His own call the same day: her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
 # Decisions waiting on the owner (2026-10-29)
@@ -38,9 +49,9 @@ edge of the view, which makes her felt before she is seen.
 Answer: **dread**, **limbs**, **return**, **tower**, **chiller** or **governors**.
 
 **5. What happens at the top?**
-Landing on the summit gives a "THE TOP" toast and then nothing. He said the ending is his.
-Pick: the ending he already told us: seat the crew's last beam, the foreman's last line, then stop.
-Answer: **beam**, or say what you want instead.
+**Decided 2026-10-29: beam.** The owner assigned the physical last-beam task,
+the foreman's last caption, and the parachute return. Implementation and proof:
+`SUMMIT_ENDING.md`. No further choice is blocking it.
 
 **6. How far does she wreck your work?**
 He asked for her to shove stock he placed off edges and to jam machines he set. She only takes two
