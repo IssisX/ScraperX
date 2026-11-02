@@ -2807,20 +2807,22 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // lead's floor. The scan's own floor, not the hand-listed
             // levels_ table, says where she stands: a bridge, a board or a
             // duct top is a floor to her scan though it is in no levels_
-            // entry, and a lead on it is not elsewhere to her. A real floor
-            // lead may use the same scanned route at her initial stage. An
-            // explicitly observed climb/line keeps the existing frail contract:
-            // watch/walk to that route and wait for her Turn before taking it.
+            // entry, and a lead on it is not elsewhere to her. Frail only
+            // waits for her Turn while the player is actually Turn-eligible:
+            // clear in her far sight and within the Turn's 13 m trigger. If
+            // he is farther away or no longer clear, Turn cannot happen and
+            // must not strand her at the route.
             const float own_floor_y = floor_y;
             const bool elsewhere_own = elsewhere;
-            const bool frail_on_player_way = stage_ == Stage::Pest && turn_ == Turn::None &&
-                                             (guess_line_ >= 0 || guess_climb_ >= 0);
+            const bool player_route = guess_line_ >= 0 || guess_climb_ >= 0;
+            const bool frail_waits_for_turn = stage_ == Stage::Pest && turn_ == Turn::None &&
+                                              player_route && sees_far_ && d <= kTurnTriggerM;
             const auto toward_lead = [&](const float goal_floor) {
                 return std::abs(goal_floor - lead_floor_) < std::abs(own_floor_y - lead_floor_) ||
                        std::abs(goal_floor - lead_floor_) <= 1.0F;
             };
             bool by_own_way = false;
-            if (elsewhere_own && !frail_on_player_way) {
+            if (elsewhere_own && !frail_waits_for_turn) {
                 // A way of hers that knows the floor it takes her to (a found
                 // climb she is walking to, a journey, a travel), toward her
                 // lead from the floor it sets out from; or one that has her.
@@ -2938,7 +2940,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     walk_toward(dt, wx, wz, kSearchMps);
                     break;
                 }
-            } else if (elsewhere && take_way(dt, at, account)) {
+            } else if (elsewhere && !frail_waits_for_turn && take_way(dt, at, account)) {
                 // After the lead along the corner pipe (no longer frail), down
                 // a line (its stand, its cable), or by her map's ways across
                 // the tower (its ladders up and down), or up a climb.
