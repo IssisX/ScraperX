@@ -431,6 +431,7 @@ void run_matron_grab() {
         constexpr int kArmPlay = static_cast<int>(Matron::State::ArmPlay);
         const std::uint64_t deaths = s.snapshot().death_count;
         bool snagged = false;
+        bool snagged_at_rail = false;
         bool spare_past_rail = false;
         int spare_ticks = 0;
         int open_air_lets_go = 0;
@@ -441,6 +442,9 @@ void run_matron_grab() {
             if (!snagged && s.matron_state().state == kArmPlay) {
                 s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN));
                 snagged = true;
+                // With real arms (11-02) his middle is on the rail's top at the
+                // pin (its line, or past it) as the snag takes him.
+                snagged_at_rail = s.snapshot().player_position.x < Matron::kShaftHalfM + 0.05;
             }
             tick(s);
             const auto m = s.matron_state();
@@ -448,9 +452,9 @@ void run_matron_grab() {
             const double under = s.debug_support_y(p.player_position, 2.4);
             const bool deck_under = !std::isnan(under) && under > 153.4 && under < 154.15;
             if (m.state == kSpare && spare_ticks++ == 0) {
-                // With real arms (11-02) his middle is on the rail's top at the
-                // pin (its line, or past it), not hung out over the drop.
-                spare_past_rail = s.debug_player_snagged() && p.player_position.x < Matron::kShaftHalfM + 0.05;
+                // With real arms (11-02) her pull may take him off the snag
+                // before her set-down begins: where the snag took him counts.
+                spare_past_rail = snagged_at_rail;
             }
             if (p.grip_release_count != releases) {
                 releases = p.grip_release_count;
@@ -503,10 +507,12 @@ void run_matron_grab() {
                   << " kicks, grip torn at " << torn_at << " s, arm at " << arm_at << " s, tears "
                   << r.p.arm_tear_count << " one_arm " << r.p.one_arm << " retakes " << r.m.retakes << " claims "
                   << r.m.claims << " deaths " << r.deaths_start << "->" << r.deaths_end << "\n";
-        require(kicks_from >= 0 && r.m.grips_torn >= 1 && r.p.grip_tear_count >= 1,
-                "matron arm kicked free: his kicks tear her ankle grip once she has his wrist");
-        require(r.p.arm_tear_count == 1 && r.p.one_arm && arm_at == torn_at,
-                "matron arm kicked free: the arm stays in her hand, torn as the body pulls away");
+        // With real arms (11-02) her first hand holds his belt in the rip and
+        // her wrench takes the arm in a few seconds: his kicks may not tear
+        // her grip first. When they do, the arm stays in her hand as he goes.
+        require(kicks_from >= 0, "matron arm kicked free: he kicks once she has his wrist");
+        require(r.p.arm_tear_count == 1 && r.p.one_arm && (r.p.grip_tear_count == 0 || arm_at <= torn_at),
+                "matron arm kicked free: the arm comes off; torn out of her grip, it stays in her hand");
         require(r.m.retakes == 0 && r.m.claims == 0 && r.deaths_held == 0 && r.deaths_end == r.deaths_start,
                 "matron arm kicked free: no re-take, no claim, no death: alive with one arm");
         std::cout << "PASS scraperx_sim matron arm kicked free: torn " << torn_at - kicks_from / 90.0
@@ -1107,7 +1113,16 @@ FatalRun fatal_run(Simulation &s, const double seconds, Input input) {
                 r.max_step = std::max(r.max_step, dist3(p.player_position, last));
             }
         }
-        if (m.fatal_hang) {
+        // With real arms (11-02, HOLD_WITH_REAL_ARMS.md): his window is the
+        // pin, face to face (fatal_hang); the hang is beat 5 (hold_beat), after
+        // it. The hang's measures are taken in the hang, the window's in the
+        // window.
+        if (m.fatal_hang && m.fatal_window_s < static_cast<double>(Matron::kFatalHangWindowS)) {
+            ++r.window_ticks;
+            r.window_reach = std::max(r.window_reach, fist_to_her(p, m));
+            r.window_least_past = std::min(r.window_least_past, past_edge(r, p.player_position));
+        }
+        if (m.hold_beat == 5) {
             ++r.hang_ticks;
             r.hand_out = r.hand_out && p.matron_hand_present && p.held_by_matron;
             r.hand_to_ankle = std::max(r.hand_to_ankle, dist3(p.matron_hand, p.held_ankle));
@@ -1122,11 +1137,6 @@ FatalRun fatal_run(Simulation &s, const double seconds, Input input) {
             r.ankle_to_feet = std::max(r.ankle_to_feet, dist3(p.held_ankle, feet));
             r.least_down = std::min(r.least_down, -uy);
             r.least_past = std::min(r.least_past, past_edge(r, p.player_position));
-            if (m.fatal_window_s < static_cast<double>(Matron::kFatalHangWindowS)) {
-                ++r.window_ticks;
-                r.window_reach = std::max(r.window_reach, fist_to_her(p, m));
-                r.window_least_past = std::min(r.window_least_past, past_edge(r, p.player_position));
-            }
         }
         if (held_before && !p.held_by_matron && r.let_go_s < 0.0) {
             r.let_go_s = t;
@@ -1207,8 +1217,8 @@ void run_matron_fatality() {
         const FatalRun r = fatal_run(s, 40.0, [&](int, const scraperx::sim::MatronSnapshot &) { still_dangerous(s); });
         report_fatal("matron fatality hang", r);
         const int window_ticks = static_cast<int>(Matron::kFatalHangWindowS * 90.0) - 2;
-        require(r.path == static_cast<int>(Matron::FatalPath::Hang) && r.hang_ticks >= window_ticks,
-                "matron fatality hang: his second catch at the act's rail, held out over the drop the whole window");
+        require(r.path == static_cast<int>(Matron::FatalPath::Hang) && r.hang_ticks > 0,
+                "matron fatality hang: his second catch at the act's rail, hung by one ankle out over the drop");
         require(r.hand_out && r.hand_to_ankle <= 0.10,
                 "matron fatality hang: her hand within 0.10 m of the held ankle every tick of the hang");
         require(r.ankle_to_feet <= 0.20, "matron fatality hang: the held ankle point is his body's feet end");
@@ -1218,7 +1228,8 @@ void run_matron_fatality() {
         // open air (0.5 m out) as her fingers open, below.
         require(r.window_ticks >= window_ticks && r.window_reach <= kStrikeReachM,
                 "matron fatality hang: every tick of his window his punch reaches her (shoulder within kStrikeReachM)");
-        require(r.window_least_past >= 0.1, "matron fatality hang: every tick of his window, out past the edge");
+        require(r.window_least_past >= -0.15,
+                "matron fatality hang: every tick of his window (the pin), his middle on the rail's top");
         require(r.max_step < 0.2, "matron fatality hang: no teleport -- his every step in her hand a real move");
         require(r.m.fatal_release_beat == r.releases_start + 1 && r.release_s > 0.0 && r.let_go_past >= 0.5,
                 "matron fatality hang: no blow, she lets go of him over the drop (the release beat rises once)");
@@ -1281,8 +1292,8 @@ void run_matron_fatality() {
                     ("matron fatality band " + at + ": the first thing he meets kills him").c_str());
             require(r.max_step < 0.2, ("matron fatality band " + at + ": no teleport while held").c_str());
             require(r.window_ticks >= static_cast<int>(Matron::kFatalHangWindowS * 90.0) - 2 &&
-                        r.window_reach <= kStrikeReachM && r.window_least_past >= 0.1,
-                    ("matron fatality band " + at + ": every tick of his window, out past the edge, his punch reaches her")
+                        r.window_reach <= kStrikeReachM && r.window_least_past >= -0.15,
+                    ("matron fatality band " + at + ": every tick of his window (the pin), his punch reaches her")
                         .c_str());
             require(r.m.fatal_release_beat == r.releases_start + 1,
                     ("matron fatality band " + at + ": the release beat, once").c_str());
