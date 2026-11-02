@@ -757,6 +757,15 @@ jobs:
           grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
 
+      - name: Check Fighting S6 stage tells presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/fight_s6_test.gd 2>&1 | tee artifacts/fight-s6.log
+          ! grep -q '^FIGHT_S6 FAIL' artifacts/fight-s6.log
+          test "$(grep -c '^FIGHT_S6 PASS' artifacts/fight-s6.log)" -ge 38
+
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4
         with:
