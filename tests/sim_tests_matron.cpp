@@ -1028,7 +1028,19 @@ void run_matron_crash() {
             (void)steer(s, Matron::kBandX, Matron::kBandSouthZ, false);
             tick(s);
             const auto m = s.matron_state();
+            const auto p = s.snapshot();
             closest = std::min(closest, std::hypot(m.position.x - crash.at.x, m.position.z - crash.at.z));
+            if (i % static_cast<int>(Simulation::kTickRateHz) == 0) {
+                std::cout << "CRASH_SEARCH_DIAG t=" << i / static_cast<int>(Simulation::kTickRateHz)
+                          << " state=" << int(m.state) << " matron=" << m.position.x << "," << m.position.z
+                          << " player=" << p.player_position.x << "," << p.player_position.z
+                          << " to_hit=" << std::hypot(m.position.x - crash.at.x, m.position.z - crash.at.z)
+                          << " sees=" << m.sees_player << " heard=" << m.noise_heard
+                          << " lead=" << m.lead_x << "," << m.lead_z << " lead_seen=" << m.lead_seen
+                          << " target=" << m.target_x << "," << m.target_z
+                          << " fooled=" << m.fooled << " wary=" << m.wary
+                          << " deaths=" << p.death_count << "\n";
+            }
             stood_down = m.state == kStateGuarding;
         }
         std::cout << "  matron crash: she came within " << closest << " m of the hit; fooled " << s.matron_state().fooled
