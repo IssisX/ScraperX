@@ -101,6 +101,42 @@ void Matron::grip_taken() noexcept {
     }
 }
 
+void Matron::report_held_load(const JPH::RVec3 her_pos, const JPH::RVec3 player_pos, const float player_mass_kg,
+                              const bool held) noexcept {
+    if (!held || !body_in_world_ || player_mass_kg <= 0.0F) {
+        load_held_ = false;
+        load_mass_kg_ = 0.0F;
+        load_offset_m_ = 0.0F;
+        load_moment_nm_ = 0.0F;
+        load_cop_shift_m_ = 0.0F;
+        load_stance_base_m_ = kUprightBaseM;
+        load_dir_x_ = 0.0F;
+        load_dir_z_ = 0.0F;
+        return;
+    }
+    const float dx = static_cast<float>(player_pos.GetX() - her_pos.GetX());
+    const float dz = static_cast<float>(player_pos.GetZ() - her_pos.GetZ());
+    const float offset = std::hypot(dx, dz);
+    load_held_ = true;
+    load_mass_kg_ = player_mass_kg;
+    load_offset_m_ = offset;
+    load_moment_nm_ = player_mass_kg * 9.81F * offset;
+    load_cop_shift_m_ = player_mass_kg * offset / (kMassKg + player_mass_kg);
+    load_dir_x_ = offset > 1.0e-4F ? dx / offset : 0.0F;
+    load_dir_z_ = offset > 1.0e-4F ? dz / offset : 0.0F;
+    // S2 stance, first answer: carrying a load past the upright base, the
+    // reported stance base switches to the crouch base; anything else, the
+    // upright base. This is a threshold for the View export (S3 draws
+    // from it) — NOT a foot-placement change in sim: her body is one
+    // capsule driven by walk_toward, and no sim code reads this value
+    // (the extreme valve that once did is removed, 2026-10-31: it broke
+    // tear holds). Do not describe it as physical widening.
+    load_stance_base_m_ = (state_ == State::Carry && !fatal_hold_ &&
+                            load_cop_shift_m_ > kUprightBaseM)
+                               ? kCrouchBaseM
+                               : kUprightBaseM;
+}
+
 void Matron::grip_lost(const bool torn, const bool fought) noexcept {
     const bool had = grip_on_;
     grip_on_ = false;
@@ -145,6 +181,10 @@ void Matron::grip_lost(const bool torn, const bool fought) noexcept {
             // The arm hers already (left in her other hand as the body
             // pulled away, tear_grip, or torn before): its beats go on, the
             // body away; the hold ends after them (step_armplay).
+            return;
+        }
+        if (reel_) {
+            end_reel(physics_.GetBodyInterface().GetPosition(player_));
             return;
         }
         if (torn && !fought && arm_tears_ == hold_tears_at_ && armplay_for_test_ != 0 &&
@@ -591,14 +631,46 @@ bool Matron::deck_close_below(const RVec3 player, const float feet) const {
 }
 
 void Matron::end_hold(const State next) {
+    if (grip_on_) {
+        let_go_ = true;
+        let_go_push_ = Vec3::sZero();
+    }
     state_ = next;
     hold_s_ = 0.0F;
     hold_phase_ = 0;
     grip_on_ = false;
+    grip_was_on_ = false;
+    player_braced_ = false;
+    thrash_ = 0.0F;
+    wrist_on_ = false;
+    wrist_reseat_ = false;
+    arm_throw_ = false;
+    leg_toss_ = false;
+    retake_ = false;
     reel_ = false;
+    reel_to_floor_ = false;
+    spare_walk_ = false;
+    spare_side_set_ = false;
+    spare_tries_ = 0;
+    fatal_hold_ = false;
+    fatal_path_ = FatalPath::None;
     fatal_hang_ = false;
+    fatal_dropped_ = false;
+    fatal_edge_ = RVec3::sZero();
+    fatal_s_ = 0.0F;
+    fatal_carry_s_ = 0.0F;
+    fatal_window_s_ = 0.0F;
+    fatal_check_ticks_ = 0;
+    fatal_lethal_ = false;
+    fatal_toss_ = 0.0F;
+    fatal_lethal_mps_ = 0.0F;
+    fatal_rim0_ = Vec3::sZero();
+    watch_still_s_ = 0.0F;
+    watch_y_ = 0.0F;
     pull_n_ = kHandReachPullN;
+    pull2_n_ = kHandReachPullN;
     arm_reach_m_ = kArmReachM;
+    fatal_work_reset();
     if (next == State::Searching) {
         search_s_ = 0.0F;
         search_budget_s_ = 1.0e9F;
@@ -642,12 +714,30 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     // A braced player (their hands on a rail): her pull grows, finite.
     if (grip_on_) {
         pull_n_ = player_braced_ ? std::min(kRipMaxN, pull_n_ + kRipRampNps * dt) : kHandPullN;
-        arm_reach_m_ = std::max(kArmReachM, arm_reach_m_ - kArmRetractMps * dt);
+        // A shortening spring limit would be a second, unbudgeted actuator.
+        // On a ladder only the charged hand/feet forces supply her pull.
+        if (!player_on_ladder_) arm_reach_m_ = std::max(kArmReachM, arm_reach_m_ - kArmRetractMps * dt);
     }
     const auto carry_pose = [&] {
         return RVec3(at.GetX(), feet + kCarryHandUpM, at.GetZ()) + right * kCarrySideM;
     };
     const auto stand = [&] { walk_toward(dt, ax, az, 0.0F); };
+    // S2 extreme valve, REMOVED (2026-10-31, proven wrong, not tuned):
+    // the valve interrupted Carry with stagger-then-Spare whenever the
+    // measured shift passed the crouch base (0.45 m). Measured ordinary
+    // carries cluster on both sides of that line — S2 probe worst
+    // 0.449706 m, valve-test max 0.453031 m, dangerous hold 0.4541 m —
+    // so no threshold there separates an uncarriable load from an
+    // ordinary hold, and the "extreme" scenario's peak is SMALLER than
+    // the dangerous hold's. The interruption broke owner-blessed holds:
+    // the dangerous hold failed on a shove from the pull-in and, with
+    // the pull off, on a valve stagger that cost it its tear; the pest
+    // hold ended spared with no tear. Disabling both interventions
+    // restores the dangerous hold exactly (single grab, no shove, tear).
+    // The body is rotation-locked, so the measured shift is not a real
+    // tip in any case; the shift stays exported (S1) and the widened
+    // stance stays the threshold, but no shift value abandons a hold.
+    // (The old valve test is replaced by a natural-outcome probe below.)
     switch (state_) {
     case State::Grab: {
         if (!grip_on_) {
@@ -668,6 +758,14 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                 grab_cooldown_s_ = kGrabCooldownSeconds;
                 end_hold(State::Hunting);
             }
+            break;
+        }
+        if (player_on_ladder_) {
+            // Fingers alone do not open his hands. Back away, pulling the
+            // ankle through her finite hand; his ordinary grip decides when
+            // it can no longer hold. Only then does the normal hold proceed.
+            walk_toward(dt, ax - fwd.GetX(), az - fwd.GetZ(), kHuntMps * kCarryPaceScale);
+            pose_hand(dt, RVec3(ax, player_ankle_.GetY(), az) + fwd * kCatchM, kHandSpeedMps);
             break;
         }
         if (fatal_hold_) {
@@ -746,7 +844,33 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                 }
             }
         }
-        pose_hand(dt, carry_pose(), kHandSpeedMps, her_v);
+        // S2 counter-lean. Step actuator, named: walk_toward above, her
+        // feet, already driving this case. The pull itself is the hand
+        // target: while the load's shift exceeds the upright base, move
+        // the hand toward her centreline by the amount that would bring
+        // the shift back to the base, never pulling the body's offset
+        // below 0.25 m. A carried load moves with her, so a sideways
+        // step cannot close its relative shift — only bringing the load
+        // in can, and the cap below is what bounds the remainder: the
+        // ankle-held body hangs diagonally, so even a hand at her
+        // centreline leaves its centre well outboard.
+        // Non-fatal Carry only: fatal holds keep their choreography,
+        // and Dangle/Spare keep their poses.
+        RVec3 pose = carry_pose();
+        float pull_applied = 0.0F;
+        if (!fatal_hold_ && load_held_ && load_cop_shift_m_ > kUprightBaseM) {
+            const float need = (load_cop_shift_m_ - kUprightBaseM) * (kMassKg + load_mass_kg_) / load_mass_kg_;
+            // Capped (2026-10-31): the uncapped pull ran to ~0.74 m of
+            // hand travel in late Carry and broke the dangerous hold
+            // (extra grip + shove where trunk tears cleanly). The cap
+            // keeps a real pull in late Carry (the S2 stance test
+            // requires med_pull > 0) while leaving ordinary Carry
+            // geometry close enough to trunk that holds still tear.
+            pull_applied = std::min({need, std::max(0.0F, load_offset_m_ - 0.25F), kCarryPullCapM});
+            pose = RVec3(pose.GetX() - load_dir_x_ * pull_applied, pose.GetY(), pose.GetZ() - load_dir_z_ * pull_applied);
+        }
+        pose_hand(dt, pose, kHandSpeedMps, her_v);
+        load_pull_m_ = pull_applied;
         if (fatal_hold_ && state_ == State::Carry) {
             // The fatality's edge not reached in the carry's time: the floor
             // version, where she stands.
@@ -779,6 +903,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             ++brace_losses_;
             state_ = State::Carry;
             hold_s_ = brace_losses_ % 3 == 0 ? kCarryMaxSeconds : 0.0F;   // the third time, she gives it up
+            if (brace_losses_ % 3 == 0 && fatal_hold_) {
+                fatal_carry_s_ = kFatalCarryS;
+            }
             hold_phase_ = 0;
             fatal_hang_ = false;
             break;
@@ -983,11 +1110,9 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             const bool ready = !spare_walk_ && Vec3(down - hand_target_).Length() < 0.02F &&
                                (spare_deck_ || rail_in > 0.5F) &&
                                (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_));
-            if (ready && !deck_close_below(player, feet)) {
-                spare_walk_ = true;
-                spare_to_x_ = ax - rim_nx_ * 0.5F;
-                spare_to_z_ = az - rim_nz_ * 0.5F;
-            } else if (ready) {
+            // Let go: her hand opens, and the hold goes on to the collar put straight. True when
+            // the hold ended instead (hauled back in, or set down after his blow).
+            const auto set_down = [&]() {
                 let_go_ = true;
                 let_go_push_ = Vec3::sZero();
                 grip_on_ = false;
@@ -999,14 +1124,47 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     reel_ = false;
                     reel_to_floor_ = false;
                     fatal_floor();
-                    break;
+                    return true;
                 }
                 if (reel_) {
                     // Set down after his blow: her stagger, then after him.
                     end_reel(player);
+                    return true;
+                }
+                return false;
+            };
+            const auto walk_on = [&]() {
+                spare_walk_ = true;
+                spare_to_x_ = ax - rim_nx_ * 0.5F;
+                spare_to_z_ = az - rim_nz_ * 0.5F;
+            };
+            if (spare_tries_ > 2) {
+                // Tried three times and not set down: no more back up and over. Her deck close
+                // under his body, she sets him down; not, she keeps hold and walks him on toward
+                // her deck, a step at a time (spare_walk_), never letting go over the drop. A step
+                // that stops short of its spot is looked at again from where she is (hold_s_ times
+                // it), so each look moves her at least a little inward.
+                if (deck_close_below(player, feet)) {
+                    spare_walk_ = false;
+                    if (set_down()) {
+                        break;
+                    }
+                } else if (spare_walk_) {
+                    if (hold_s_ > kSpareStepSeconds) {
+                        spare_walk_ = false;
+                    }
+                } else {
+                    walk_on();
+                    hold_s_ = 0.0F;
+                }
+            } else if (ready && !deck_close_below(player, feet)) {
+                walk_on();
+            } else if (ready) {
+                if (set_down()) {
                     break;
                 }
-            } else if (hold_s_ > 8.0F) {
+            } else if (hold_s_ > 8.0F && spare_tries_ <= 2) {
+                spare_walk_ = false;
                 ++spare_tries_;
                 hold_phase_ = 0;
                 hold_s_ = 0.0F;
@@ -1389,6 +1547,14 @@ void Matron::fatal_release() noexcept {
 // the fatality's release. In the fatality's hold it is his escape: alive,
 // one-armed, on her deck. After the rip has begun, nothing frees him.
 bool Matron::his_blow() {
+    if (state_ == State::Grab && !grip_on_) {
+        grab_cooldown_s_ = kRegrabAfterTearS;
+        end_hold(State::Searching);
+        resume_state_ = State::Searching;
+        state_ = State::Staggering;
+        stagger_s_ = kStaggerMinSeconds;
+        return true;
+    }
     if (!body_in_hold() || rip_begun() || reel_) {
         return false;
     }

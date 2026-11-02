@@ -49,6 +49,12 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
+      - name: Verify story radio source assets and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c 'import json; from pathlib import Path; from ci.verify_story_radio_package import verify_recordings; p = Path("godot/audio/story_radio"); verify_recordings(p, json.loads((p / "manifest.json").read_text())); print("STORY_RADIO_SOURCE PASS")'
+
       - name: Restore the FetchContent dependency cache (Jolt, godot-cpp, Monocypher)
         uses: actions/cache@v4
         with:
@@ -84,6 +90,51 @@ jobs:
           test -s build/host/scraperx_shared_survival_tests
           test -s build/host/scraperx_parkour_flow_tests
           test -s godot/addons/scraperx_native/bin/linux/libscraperx_native.so
+
+      - name: Verify every CTest test runs in exactly one shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_ctest_shard_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml \
+            --test-dir build/host
+
+      - name: Verify every touch scenario runs in a touch shard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_touch_shard_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml \
+            --driver godot/presentation/ui/ui_test_driver.gd
+
+      - name: Verify every godot test runs in CI or is a known gap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_godot_test_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml \
+            --test-dir godot/tests
+
+      - name: Verify no owner-blocked change rides this branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The rule check is the pre-landing gate in AGENTS.md: a BLOCK is a
+          # protected file, a removed or loosened test check, or a budget
+          # number changed. CI green must not bless a branch carrying one,
+          # so this step fails only on BLOCK. REVIEW findings still pass
+          # and stay for the reviewer, as they do in a local run.
+          # The step must never pass vacuously, so it fails loudly when
+          # the merge-base with trunk cannot be computed.
+          git fetch --depth=1 origin ScraperX-Claude
+          TRUNK="$(git rev-parse FETCH_HEAD)"
+          git fetch --deepen=100 origin || true
+          MB="$(git merge-base "$TRUNK" HEAD)" || { echo "rule_check: cannot compute merge-base with trunk"; exit 1; }
+          echo "rule_check: trunk $TRUNK merge-base $MB head $(git rev-parse HEAD)"
+          rc=0
+          python3 tools/rule_check/rule_check.py "$TRUNK" HEAD || rc=$?
+          if [ "$rc" -eq 2 ]; then echo "rule_check: BLOCK found, failing"; exit 1; fi
+          echo "rule_check: no BLOCK (exit $rc)"
 
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
@@ -465,7 +516,7 @@ jobs:
               touch_zipline touch_zipline_slam touch_pipe_gallery touch_slide touch_speed_vault touch_precision touch_wall_run touch_wall_climb touch_tuck touch_flow touch_springboard touch_quickturn \
               touch_hook touch_hook_rope touch_birds touch_workers touch_works touch_clouds touch_chute touch_lethal_feedback touch_arm_break touch_pause touch_wall_kick touch_ladder \
               touch_route_hint touch_jump_buttons touch_vault_buttons touch_double_tap_vault_buttons touch_crouch_buttons touch_quickturn_buttons touch_hang_climb_buttons touch_hang_drop_buttons touch_slide_buttons touch_roll_buttons touch_wall_run_buttons touch_trapeze_buttons \
-              touch_wall_kick_buttons touch_ladder_buttons touch_rig touch_boom touch_debris touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title \
+              touch_wall_kick_buttons touch_ladder_buttons touch_rig touch_boom touch_debris touch_photo_id_radio touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title \
               touch_stack_upper touch_stack touch_wet touch_shop touch_crane touch_service touch_c4 touch_n touch_c5; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest-touch-1.log
@@ -480,7 +531,7 @@ jobs:
         run: |
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
-          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave \
+          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave \
               touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
               touch_tram touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
@@ -561,6 +612,23 @@ jobs:
           grep -F "SCRAPERX_WO005_APPROACH_PROOF" artifacts/godot-runtime.log
           grep -F "tower_height=1600" artifacts/godot-runtime.log
 
+      # The summit must play through the rendered touch path; its last beam,
+      # foreman, city, parachute and return are captured by the real viewport.
+      - name: Render the complete summit ending through touch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/screenshots
+          timeout 400s xvfb-run -a -s "-screen 0 1296x1114x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --fixed-fps 60 \
+            -- --uitest=touch_summit_ending "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/summit" \
+            2>&1 | tee artifacts/summit-ending-rendered.log
+          grep -F "SCRAPERX_UITEST PASS touch_summit_ending " artifacts/summit-ending-rendered.log
+          for frame in ending_hanging_beam ending_seated_foreman ending_city ending_parachute ending_home; do
+            test -s "artifacts/screenshots/summit_${frame}.png"
+          done
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/summit-ending-rendered.log; then exit 1; fi
+
       - name: Measure the mix a player hears
         shell: bash
         run: |
@@ -628,6 +696,13 @@ jobs:
             --script res://tests/her_takes_test.gd 2>&1 | tee artifacts/her-takes.log
           grep -F "HER_TAKES PASS fails=0" artifacts/her-takes.log
 
+      - name: The rip camera enters and returns without a cut or lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools/godot/godot --headless --path godot --script res://tests/rip_shot_probe.gd 2>&1 | tee artifacts/rip-shot-probe.log
+          grep -q 'RIP_SHOT PASS' artifacts/rip-shot-probe.log
+
       - name: The Matron's figure, eyes and hair
         shell: bash
         run: |
@@ -649,6 +724,38 @@ jobs:
           timeout 60s tools/godot/godot --headless --path godot \
             --script res://tests/matron_perception_climb_test.gd 2>&1 | tee artifacts/matron-perception-climb.log
           grep -q '^MATRON_PERCEPTION_CLIMB PASS' artifacts/matron-perception-climb.log
+
+      - name: Check Matron presentation holds, mantle, rung and ride
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300s tools/godot/godot --headless --path godot \
+            --script res://tests/matron_presentation_test.gd 2>&1 | tee artifacts/matron-presentation.log
+          ! grep -q 'MATRON_PRESENTATION FAIL' artifacts/matron-presentation.log
+          grep -q '^MATRON_PRESENTATION PASS$' artifacts/matron-presentation.log
+
+      - name: Check Matron hold haptics fire once per event
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60s tools/godot/godot --headless --path godot \
+            --script res://tests/matron_hold_haptics_test.gd 2>&1 | tee artifacts/matron-hold-haptics.log
+          grep -q '^MATRON_HOLD_HAPTICS PASS' artifacts/matron-hold-haptics.log
+
+      - name: Check every presentation script loads and the native bridge answers
+        shell: bash
+        run: |
+          set -euo pipefail
+          # script_load_test.gd walks res://presentation (parse + compile
+          # every script) and requires the native ScraperXSimulation class
+          # to answer get_matron_hold_state() with 10 fatality_beat_edges.
+          # Both lines are gated: the scripts line alone would pass even
+          # if the bridge half failed, so a single '^SCRIPT_LOAD PASS'
+          # grep is not enough here.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/script_load_test.gd 2>&1 | tee artifacts/script-load.log
+          grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
+          grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
 
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4
@@ -800,6 +907,22 @@ jobs:
           mkdir -p build/apk artifacts/apk godot/.godot
           printf '%s\n' 'res://addons/scraperx_native/scraperx_native.gdextension' \
             > godot/.godot/extension_list.cfg
+          # Godot's all_resources mode can package imported audio even when
+          # export_presets.cfg excludes the source .ogg files. Temporarily
+          # stage unapproved recordings outside res:// for this export only.
+          voice_hold="$(mktemp -d)"
+          restore_story_voices() {
+            for voice in "${voice_hold}"/*; do
+              [ -e "${voice}" ] || continue
+              mv -- "${voice}" godot/audio/story_radio/
+            done
+            rmdir -- "${voice_hold}"
+          }
+          trap restore_story_voices EXIT
+          for voice in godot/audio/story_radio/*.ogg godot/audio/story_radio/*.ogg.import; do
+            [ -f "${voice}" ] || continue
+            mv -- "${voice}" "${voice_hold}/"
+          done
           tools/godot/godot --headless --path godot \
             --export-debug "Android arm64" "${GITHUB_WORKSPACE}/build/apk/${APK_NAME}" \
             2>&1 | tee artifacts/godot-android-export.log
@@ -823,6 +946,13 @@ jobs:
           # package, and nothing that would stop it installing beside the other
           # AI branches' builds. Permanent for this branch.
           .github/scripts/check_apk_identity.sh "build/apk/${APK_NAME}" | tee artifacts/apk-identity.log
+
+      - name: Verify exported story-radio package
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_NAME="ScraperX-Claude-${GITHUB_SHA::12}-arm64.apk"
+          python3 ci/verify_story_radio_package.py "build/apk/${APK_NAME}"
 
       - name: Upload checkpoint APK and logs
         uses: actions/upload-artifact@v4

@@ -24,6 +24,7 @@ void Matron::refresh_contact_view() {
     view_.contact_feet_body = BodyID();
     view_.contact_feet_sub = SubShapeID();
     view_.contact_feet = RVec3::sZero();
+    view_.contact_support_velocity = Vec3::sZero();
     view_.contact_hand_held = false;
     view_.contact_hand_body = BodyID();
     view_.contact_hand_sub = SubShapeID();
@@ -50,6 +51,7 @@ void Matron::refresh_contact_view() {
         view_.contact_feet_body = sole.body;
         view_.contact_feet_sub = sole.sub;
         view_.contact_feet = sole.point;
+        view_.contact_support_velocity = sole.velocity;
     }
     // Her hand: the grip of the mover that has her, where it is now on its
     // body (it moves with what it holds).
@@ -76,6 +78,21 @@ void Matron::refresh_contact_view() {
         view_.contact_hand_body = body;
         view_.contact_hand_sub = sub;
         view_.contact_hand = bodies.GetCenterOfMassTransform(body) * local;
+    }
+    // Her second grip (M5d): only the climber's validated second hold, on a
+    // rung climb, reported exactly while it is held. The fields above were
+    // zeroed at the top of this function, so anything else — no climber, no
+    // steel, no second hold, a body gone from the world — leaves
+    // contact_hand2_held false, as before. This is the climb branch of
+    // contact truth; the upright fallthrough is untouched.
+    if (climber_ != nullptr && climber_->on_steel() && climber_->hold2().valid()) {
+        const auto &second = climber_->hold2();
+        if (bodies.IsAdded(second.body)) {
+            view_.contact_hand2_held = true;
+            view_.contact_hand2_body = second.body;
+            view_.contact_hand2_sub = second.sub;
+            view_.contact_hand2 = bodies.GetCenterOfMassTransform(second.body) * second.local;
+        }
     }
     // On her pipe, hand over hand (her hand on its face): her squeeze is her
     // hands' pull against her feet's push, so her feet are on the riser too.

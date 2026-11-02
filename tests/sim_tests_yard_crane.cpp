@@ -8,6 +8,7 @@
 #include "sim/twin_tower.hpp"
 #include "sim/forklift.hpp"
 #include "sim/loose_stock.hpp"
+#include "sim/summit.hpp"
 #include "sim/yard_crane.hpp"
 #include "sim_tests.hpp"
 
@@ -20,6 +21,7 @@ using scraperx::sim::Bay;
 using scraperx::sim::Forklift;
 using scraperx::sim::LooseStock;
 using scraperx::sim::Simulation;
+using scraperx::sim::Summit;
 using scraperx::sim::YardCrane;
 
 namespace {
@@ -741,17 +743,21 @@ void run_yard_crane_magnet() {
     require(top != 0 && bottom != 0 && beam != 0 && plates != 0, "magnet: the slabs, the beam and the plate stack");
     const auto at = body_at(s, YardCrane::kMagnetEntity);
     require(std::abs(at.y - 0.244) < 0.02, "magnet: it lies on its face in the yard");
-    // The crane's steel and its two devices are the kit's last six bodies
-    // but those built since, after them: the machines' weights, the Matron's
-    // throwables, the bay's five and the broken bridge's three (its frame,
-    // leaf and trip flag), each built after what was before it, so saves from
-    // before them line up.
+    // The crane's steel and its two devices precede the machines' weights,
+    // the Matron's throwables, the bay's five, the broken bridge's three,
+    // and the summit's four ending bodies, in that exact append order.
+    // Earlier save-game body indices must still line up.
     const auto last = s.kit_body_count();
-    require(s.kit_body_entity(last - 3) == scraperx::sim::TwinTower::kFrameEntity &&
-                s.kit_body_entity(last - 2) == scraperx::sim::TwinTower::kLeafEntity &&
-                s.kit_body_entity(last - 1) == scraperx::sim::TwinTower::kFlagEntity,
-            "magnet: the broken bridge is appended after every pre-existing kit body");
-    const auto count = s.kit_body_count() - 3;
+    require(last >= 7 &&
+                s.kit_body_entity(last - 7) == scraperx::sim::TwinTower::kFrameEntity &&
+                s.kit_body_entity(last - 6) == scraperx::sim::TwinTower::kLeafEntity &&
+                s.kit_body_entity(last - 5) == scraperx::sim::TwinTower::kFlagEntity &&
+                s.kit_body_entity(last - 4) == Summit::kLeftBearingEntity &&
+                s.kit_body_entity(last - 3) == Summit::kRightBearingEntity &&
+                s.kit_body_entity(last - 2) == Summit::kEndingFrameEntity &&
+                s.kit_body_entity(last - 1) == Summit::kLastBeamEntity,
+            "magnet: the broken bridge and summit rigging append after pre-existing kit bodies");
+    const auto count = last - 7;
     constexpr std::uint32_t kBayBodies = 5;
     const auto weights =
         static_cast<std::uint32_t>(LooseStock::kMachineWeights + LooseStock::kMatronThrowables) + kBayBodies;

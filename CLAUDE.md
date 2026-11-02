@@ -57,12 +57,11 @@ Code may still make steel, air, steps and beds. The owner picks the candidates b
 ## Look at the game; you are never blind
 
 2026-10-29: *"you should be using godot-runtime, which is like Playwright for Godot, which allows you
-to see the game. So.....wtf chuck?"* The Godot MCP runtime works in this container: run
-`mcp__godot__run_project` with `projectPath` `godot` (the repo's `godot/` folder) and `background:
-true`, then `take_screenshot`, `simulate_input` or `run_script`, and `stop_project` when done (one
-session at a time). Launch it this way; attaching to a game already running is what failed before.
-Visual work (her body, hair, contacts, camera, UI) is checked by eye this way before it lands, and
-"we can't see it" is never said: try `run_project` first.
+to see the game. So.....wtf chuck?"* When the Godot MCP runtime is available, launch `mcp__godot__run_project` with `projectPath`
+`godot` and `background: true`, then use screenshots/input and stop the project. Availability is
+session-specific: inspect the tools and environment before relying on it. If unavailable, report
+the exact blocker and use an authorized alternative when possible; do not claim a visual check
+occurred. The owner rule requiring visual review remains in `00_START_HERE.md` rule 28.
 
 ## Managing the agents
 
@@ -99,6 +98,7 @@ For every agent; `AGENTS.md` points other agents here.
   green on every proof job but `publish-checkpoint` (off trunk its signing step stops with the
   expected KeyError) with a second agent's LAND and no open blocker; the owner can overturn any
   merge (2026-10-28, 10-29). Everything else lands without a PR.
+- **Merge blockers are substantive:** spelling, wording, and commit-message/tag nitpicks never block a PR or justify rewriting commits or rerunning CI. Only real physics, gameplay, or test failures block a merge (owner, 2026-10-31).
 - **Local tests match CI or do not count:** CI's compilers and flags (host g++ 13.3 as on
   `ubuntu-24.04`; NDK `29.0.14206865` clang; the CMake flags in `wo000-delivery-spine.yml`). CI stays
   the final proof; its ccache changes no result.

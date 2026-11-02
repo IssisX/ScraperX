@@ -199,6 +199,10 @@ void Matron::step_claimed(const float dt, const RVec3 at, const float feet) {
     // A beat the world will not let her finish (a jammed rope, a body caught
     // on a post): she is done with it, and with them.
     if (hold_s_ > kFatalGiveUpSeconds && beat != Fatal::Wipe && beat != Fatal::Black) {
+        if (grip_on_) {
+            let_go_ = true;
+            let_go_push_ = Vec3::sZero();
+        }
         grip_on_ = false;
         fatal_next(static_cast<int>(Fatal::Wipe));
         return;

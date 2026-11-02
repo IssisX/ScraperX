@@ -10,12 +10,19 @@ int main() {
     // still shows every result up to that moment (fully buffered, a group
     // stopped at 90 s showed only its first 14 of 24 passes).
     std::setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
+    // Her collision body audited every tick of every run (matron shape: no
+    // tick in the steel, checked at exit; sim_tests_matron_shape.cpp).
+    start_matron_shape_audit();
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-remaining") {
         run_matron_remaining();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb-support") {
         test_matron_climb_support();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-state-exits") {
+        run_matron_state_exits();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-crash") {
@@ -185,6 +192,14 @@ int main() {
         run_strike();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder-pull") {
+        run_matron_ladder_pull();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-load") {
+        run_matron_load();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-grab") {
         run_matron_grab();
         run_matron_arm();
@@ -282,6 +297,10 @@ int main() {
         run_matron();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-shape") {
+        run_matron_shape();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-stand") {
         run_matron_stand();
         return EXIT_SUCCESS;
@@ -312,6 +331,10 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-mischief") {
         run_matron_mischief();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit-ending") {
+        run_summit_ending();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit") {
@@ -589,6 +612,7 @@ int main() {
     run_c7();
     run_summit();
     run_summit_arm();
+    run_summit_ending();
     run_matron_player_independence();
     run_matron_routecraft();
     run_matron_exam_routecraft();

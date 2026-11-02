@@ -48,6 +48,8 @@ const char *move_name(const MoveKind kind) noexcept {
     case MoveKind::JumpCatch: return "jump_catch";
     case MoveKind::HangDrop: return "hang_drop";
     case MoveKind::GapJump: return "gap_jump";
+    case MoveKind::LedgeJump: return "ledge_jump";
+    case MoveKind::FreeDrop: return "free_drop";
     }
     return "?";
 }
@@ -128,6 +130,13 @@ float leg_speed_cap(const Limits &limits) {
 }
 
 constexpr float kGapHopM = 0.16F;
+// A jump is planted for her hands this far past what she jumps for, the
+// same margin the scan's reach check keeps (a drive that only just gets
+// her hands there loses it to the tick it toes off on).
+constexpr float kJumpOverreachM = 0.08F;
+// How near the take-off she sets for a jump to a lip; the scan checks her
+// flight from every spot inside it.
+constexpr float kTakeoffToleranceM = 0.15F;
 constexpr float kGapRunMps = 3.2F;
 constexpr float kGapDropM = 1.25F;
 constexpr float kPlanTickS = 1.0F / 90.0F;
@@ -292,6 +301,9 @@ Vec3 Climber::relative_velocity() const {
         support = bodies.GetPointVelocity(foot_.body, foot_world_);
     } else if (hold_.valid() && bodies.IsAdded(hold_.body)) {
         support = bodies.GetPointVelocity(hold_.body, hold_world_);
+        if (hold2_.valid() && hold2_.body == hold_.body && hold2_.sub == hold_.sub) {
+            support = 0.5F * (support + bodies.GetPointVelocity(hold2_.body, hold2_world_));
+        }
     } else {
         BodyID by;
         if (supported(nullptr, &by) && !by.IsInvalid()) {
@@ -653,9 +665,19 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
                     Budget &budget, const bool carry_weight, const RVec3 at_hold) {
     (void)dt;
     BodyInterface &bodies = physics_.GetBodyInterface();
+    // M5c: a held second grip on the same member is a second anchor, not
+    // a pose. The support velocity is the mean of the two grips' point
+    // velocities and the reaction is split half/half between the two grip
+    // points. The drive is still one budget.take() call, so total force
+    // and power are unchanged; on static members both point velocities
+    // are zero and the reaction is skipped, so nothing moves.
+    const bool two_anchors = hold2_.valid() && hold2_.body == hold_.body && hold2_.sub == hold_.sub;
     Vec3 support_v = Vec3::sZero();
     if (hold_.valid()) {
         support_v = bodies.GetPointVelocity(hold_.body, at_hold);
+        if (two_anchors) {
+            support_v = 0.5F * (support_v + bodies.GetPointVelocity(hold2_.body, hold2_world_));
+        }
     }
     const Vec3 rel = velocity() - support_v;
     const Vec3 error = target_centre - center();
@@ -667,7 +689,12 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
     }
     const Vec3 force = budget.take(want);
     bodies.AddForce(body_, force);
-    push_reaction(force, at_hold);
+    if (two_anchors) {
+        push_reaction(0.5F * force, at_hold);
+        push_reaction(0.5F * force, hold2_world_);
+    } else {
+        push_reaction(force, at_hold);
+    }
 }
 
 bool Climber::floor_under(const RVec3 c, const Vec3 off) const {
@@ -881,6 +908,8 @@ void Climber::begin(const MoveSpec &spec) {
     stall_s_ = 0.0F;
     best_progress_ = -std::numeric_limits<float>::max();
     hold_ = Hold{};
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
     lip_ = Hold{};
     sliding_ = false;
     mantle_after_ = false;
@@ -898,6 +927,10 @@ void Climber::cancel() {
         ++view_.releases;
     }
     hold_ = Hold{};
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
+    view_.holding2 = false;
+    view_.hand2 = RVec3::sZero();
     status_ = Status::Idle;
     view_.active = false;
     view_.holding = false;
@@ -909,6 +942,10 @@ void Climber::fail(const Failure failure) {
         ++view_.releases;
     }
     hold_ = Hold{};
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
+    view_.holding2 = false;
+    view_.hand2 = RVec3::sZero();
     failure_ = failure;
     status_ = Status::Failed;
     view_.last_failure = failure;
@@ -922,9 +959,61 @@ void Climber::finish() {
         ++view_.releases;
     }
     hold_ = Hold{};
+    hold2_ = Hold{};
+    hold2_world_ = RVec3::sZero();
+    view_.holding2 = false;
+    view_.hand2 = RVec3::sZero();
     status_ = Status::Done;
     view_.holding = false;
     view_.active = false;
+}
+
+// M5b: the second hand takes, keeps, or releases its grip on the first
+// hold's rung. Same member (body and sub-shape), same general take_hold
+// path the first hold uses, offset along the rung so the two grips are
+// distinct points; revalidated every tick by the same revalidate() the
+// first hold uses. When the first hold moves to another member (the next
+// rung, a lip at the top), the old second grip is released and a new one
+// is taken on the new rung in the same tick, if the rung is long enough
+// for two hands. Force from both anchors is M5c (drive() and
+// relative_velocity()), not this maintenance.
+void Climber::maintain_second_hold() {
+    if (!hold_.valid() || dyno_ != 0) {
+        hold2_ = Hold{};
+        hold2_world_ = RVec3::sZero();
+        return;
+    }
+    if (hold2_.valid()) {
+        if (hold2_.body == hold_.body && hold2_.sub == hold_.sub && revalidate(hold2_, hold2_world_)) {
+            return;   // still the same rung, still valid
+        }
+        hold2_ = Hold{};
+        hold2_world_ = RVec3::sZero();
+    }
+    const Vec3 across(-spec_.out.GetZ(), 0.0F, spec_.out.GetX());
+    if (across.LengthSq() < 1.0e-6F) {
+        return;
+    }
+    const float offset = std::min(0.45F, spec_.bar_half - 0.05F);
+    if (offset < 0.10F) {
+        return;   // rung too short for two hands
+    }
+    for (const float sign : {1.0F, -1.0F}) {
+        Hold cand;
+        RVec3 where;
+        if (!take_hold(hold_world_ + across * (sign * offset), 0.05F, true, cand, &where)) {
+            continue;
+        }
+        if (cand.body != hold_.body || cand.sub != hold_.sub) {
+            continue;   // another member is not the second grip
+        }
+        if ((Vec3(where - hold_world_)).Length() < 0.10F) {
+            continue;   // the first grip twice is not a second grip
+        }
+        hold2_ = cand;
+        hold2_world_ = where;
+        return;
+    }
 }
 
 Climber::Status Climber::step(const float dt) {
@@ -948,8 +1037,16 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::PoleUp: step_pole(dt, budget, true); break;
     case MoveKind::PoleDown: step_pole(dt, budget, false); break;
     case MoveKind::JumpCatch: step_jump(dt, budget); break;
+    case MoveKind::LedgeJump: step_ledge_jump(dt, budget); break;
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
+    case MoveKind::FreeDrop: step_drop(dt, budget, false); break;
     case MoveKind::GapJump: step_gap(dt, budget); break;
+    }
+    // M5b: second grip, rung climbs only, maintained after the move's own
+    // step and before the view is written. fail()/finish() already cleared
+    // it, so only a still-running rung move can hold one.
+    if (status_ == Status::Running && (spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::RungDown)) {
+        maintain_second_hold();
     }
     view_.force_n = budget.used;
     view_.power_w = budget.power_used;
@@ -960,6 +1057,8 @@ Climber::Status Climber::step(const float dt) {
     view_.sliding = sliding_;
     view_.holding = hold_.valid();
     view_.hand = hold_world_;
+    view_.holding2 = hold2_.valid();
+    view_.hand2 = hold2_world_;
     view_.airborne = !foot_.valid() && !hold_.valid() && !supported();
     return status_;
 }
@@ -1849,6 +1948,107 @@ Climber::Status Climber::step_jump(const float dt, Budget &budget) {
     return status_;
 }
 
+// --- jump to a lip ------------------------------------------------------------
+// Phases: 0 to the take-off, 1 set, 2 leg drive, 3 in the air; caught, she
+// mantles over the lip as a Mantle (her hang, then over it onto its floor).
+// The spec's line is the lip point itself (at its height, on its edge),
+// start is her take-off feet on the floor below, goal is her stand on the
+// floor over it, goal_top is the lip's height, and out points from the
+// floor over it toward the floor below. A lip past her hands' jump reach
+// is refused by the scan, and a drive that cannot put her hands on it
+// fails OutOfRange before she leaves the floor; in the air, nothing to
+// catch is a miss, and she falls.
+Climber::Status Climber::step_ledge_jump(const float dt, Budget &budget) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 c = center();
+    const float feet = float(c.GetY()) - limits_.center_above_feet();
+    const Vec3 lip(spec_.line.GetX(), spec_.goal_top, spec_.line.GetZ());
+    if (phase_ == 0) {
+        if (horizontal(spec_.start - c) > kTakeoffToleranceM || flat(velocity()).Length() > 0.3F) {
+            if (phase_s_ > 8.0F) {
+                fail(Failure::Stalled);
+                return status_;
+            }
+            walk(dt, Vec3(spec_.start.GetX(), feet, spec_.start.GetZ()), 1.2F, budget);
+            return status_;
+        }
+        phase_ = 1;
+        phase_s_ = 0.0F;
+    }
+    if (phase_ == 1) {
+        if (phase_s_ < 0.25F) {
+            return status_;   // set
+        }
+        if (!plant_leg(spec_.goal_top + kJumpOverreachM)) return status_;
+        phase_ = 2;
+        phase_s_ = 0.0F;
+    }
+    if (phase_ == 2) {
+        if (drive_leg(dt, budget)) {
+            ++view_.launches;
+            phase_ = 3;
+            phase_s_ = 0.0F;
+        }
+        return status_;
+    }
+    // In the air: no thrust, gravity only. Her hands are her centre plus
+    // her reach over it; a lip is caught when her hands are at its height
+    // and within her hand reach of it, while she is not still rising fast.
+    // The steel she takes must be inside the reach that keeps a hold
+    // (revalidate): a lip her hands fall short of is not caught, so it is
+    // never a hold dropped on the next tick for being out of her reach.
+    const Vec3 v = velocity();
+    const RVec3 hands = c + Vec3(0.0F, limits_.hand_above_center, 0.0F);
+    const bool near_lip = std::abs(float(hands.GetY()) - spec_.goal_top) < 0.25F &&
+                          horizontal(lip - hands) <= limits_.reach_out;
+    if (near_lip && v.GetY() < 0.8F) {
+        Hold lip_hold;
+        RVec3 lip_at;
+        if (take_hold(RVec3(lip), limits_.catch_radius_m, false, lip_hold, &lip_at) && revalidate(lip_hold, lip_at)) {
+            const Vec3 support_v = bodies.GetPointVelocity(lip_hold.body, lip_at);
+            if ((v - support_v).Length() > limits_.catch_arrest_mps) {
+                ++view_.misses;
+                fail(Failure::RippedOff);
+                return status_;
+            }
+            hold_ = lip_hold;
+            hold_world_ = lip_at;
+            lip_ = lip_hold;
+            lip_world_ = lip_at;
+            ++view_.grips;
+            ++view_.catches;
+            // Over it by the mantle she already knows: the lip she hangs
+            // from, its floor as her goal, no new move invented here.
+            spec_.kind = MoveKind::Mantle;
+            view_.kind = MoveKind::Mantle;
+            begin_mantle_from_hang();
+            return status_;
+        }
+        // At the lip's height and reach, but no member there: the lip is
+        // gone, and falling past it is the miss below, not a catch.
+    }
+    float support_top = 0.0F;
+    // A floor under her soles while she is still rising off it is the floor
+    // she toed off (a short jump leaves it slowly), not a landing: only a
+    // floor she has come back down onto, or stands on, ends the jump.
+    if (v.GetY() < 0.3F && supported(&support_top)) {
+        // She came down on the floor over the lip itself: that is the top,
+        // not a miss (a short lip, a high jump).
+        if (std::abs(support_top - spec_.goal_top) < 0.3F && std::abs(v.GetY()) < 0.3F) {
+            finish();
+        } else {
+            ++view_.misses;
+            fail(Failure::Missed);
+        }
+        return status_;
+    }
+    if ((v.GetY() < 0.0F && float(hands.GetY()) < spec_.goal_top - 0.3F) || phase_s_ > 2.0F) {
+        ++view_.misses;
+        fail(Failure::Missed);
+    }
+    return status_;
+}
+
 // --- off an edge: a step down, or a hang and a drop --------------------------------
 // Phases: 0 to the edge, 1 hands on the lip and down to a hang, 2 let go,
 // 3 falling; done when her feet are on real support at the goal.
@@ -1857,6 +2057,10 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
     const float feet = float(c.GetY()) - limits_.center_above_feet();
     const Vec3 out = flat(spec_.goal - spec_.start).NormalizedOr(spec_.out);
     if (phase_ == 0) {
+        if (spec_.kind == MoveKind::FreeDrop && (!supported() || std::abs(velocity().GetY()) > 0.6F)) {
+            fail(Failure::NotSupported);  // never launch a planned fall from air or a moving support
+            return status_;
+        }
         if (horizontal(spec_.start - c) > 0.25F) {
             if (phase_s_ > 10.0F) {
                 fail(Failure::Stalled);
@@ -1909,6 +2113,19 @@ Climber::Status Climber::step_drop(const float dt, Budget &budget, const bool ha
                 const RVec3 below = RVec3(spec_.goal) + Vec3(0.0F, limits_.center_above_feet() + 0.05F, 0.0F);
                 if (Vec3(below - at).Length() < limits_.hang_below_hold + limits_.radius + 0.6F && capsule_free(below)) {
                     hang_at = below;
+                }
+            }
+            // Still no room: steel under the lip stands out past it (a beam
+            // or fascia under a deck's edge). She hangs farther out off the
+            // face, her arms reaching back in to the lip, no farther out than
+            // the reach that keeps a hold (revalidate).
+            for (float k = limits_.radius + 0.12F; !capsule_free(hang_at) && k <= limits_.reach_out + 1.0e-4F; k += 0.04F) {
+                RVec3 farther = at + out * k - Vec3(0.0F, limits_.hang_below_hold, 0.0F);
+                if (float(farther.GetY()) < lowest) {
+                    farther = RVec3(farther.GetX(), lowest, farther.GetZ());
+                }
+                if (capsule_free(farther)) {
+                    hang_at = farther;
                 }
             }
             if (!capsule_free(hang_at)) {
@@ -2944,7 +3161,14 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
         }
     }
 
-    // Lips between regions: a mantle up; a step or a hang-drop down.
+    // A free drop is an alternative to a long ladder, not an extension of
+    // hang/drop reach. She falls under Jolt gravity with no airborne thrust.
+    // Use a conservative impact speed below Matron's 16 m/s lethal landing.
+    // The scan starts this move only on broad stationary steel, with a clear
+    // exterior flight corridor to stationary support below.
+    constexpr float kFreeDropImpactMps = 15.0F;
+    const float free_drop_max_m = kFreeDropImpactMps * kFreeDropImpactMps / (2.0F * kGravity);
+    // Lips between regions: mantle up, step/hang down, or a survivable free drop.
     const float cell = 3.0F;
     std::unordered_map<long long, std::vector<int>> grid;
     for (std::size_t i = 0; i < patches_.size(); ++i) {
@@ -2958,7 +3182,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
         const Patch &lo = patches_[i];
         const int y0 = cell_of(lo.top, 5.0F);
         seen.clear();
-        for (int y = y0; y <= y0 + 1; ++y)
+        for (int y = y0; y <= y0 + 3; ++y)
             for (int x = cell_of(lo.min_x - 0.7F, cell); x <= cell_of(lo.max_x + 0.7F, cell); ++x)
                 for (int z = cell_of(lo.min_z - 0.7F, cell); z <= cell_of(lo.max_z + 0.7F, cell); ++z) {
                     const auto it = grid.find(cell_key(x, y, z));
@@ -2966,11 +3190,91 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     for (const int j : it->second) {
                         const Patch &hi = patches_[static_cast<std::size_t>(j)];
                         const float rise = hi.top - lo.top;
-                        if (hi.region == lo.region || rise <= limits.step_max_m || rise > limits.drop_max_m) continue;
+                        if (hi.region == lo.region || rise <= limits.step_max_m || rise > free_drop_max_m) continue;
                         const float gap = gap_xz(lo, hi);
                         if (gap > 1.4F) continue;
                         if (std::find(seen.begin(), seen.end(), j) != seen.end()) continue;
                         seen.push_back(j);
+                        if (rise > limits.drop_max_m) {
+                            // Find a real exit on the OUTSIDE of the high
+                            // support. A landing directly under a deck is not
+                            // proof of a clear fall past that same deck.
+                            if (hi.narrow || lo.narrow ||
+                                physics.GetBodyInterface().GetMotionType(hi.body) != EMotionType::Static ||
+                                physics.GetBodyInterface().GetMotionType(lo.body) != EMotionType::Static) continue;
+                            bool found_drop = false;
+                            for (int side = 0; side < 4 && !found_drop; ++side) {
+                                const Vec3 outward = side == 0 ? Vec3(-1, 0, 0) :
+                                                     side == 1 ? Vec3(1, 0, 0) :
+                                                     side == 2 ? Vec3(0, 0, -1) : Vec3(0, 0, 1);
+                                for (const float fraction : {0.20F, 0.50F, 0.80F}) {
+                                    const float x = side < 2 ? (side == 0 ? hi.min_x : hi.max_x) :
+                                                    hi.min_x + fraction * (hi.max_x - hi.min_x);
+                                    const float z = side >= 2 ? (side == 2 ? hi.min_z : hi.max_z) :
+                                                    hi.min_z + fraction * (hi.max_z - hi.min_z);
+                                    const Vec3 lip(x, hi.top, z);
+                                    const Vec3 start = lip - outward * (limits.radius + 0.22F);
+                                    const Vec3 exit = lip + outward * (limits.radius + 0.18F);
+                                    // A planted approach gives at most ~1.6 m/s.
+                                    // Flight carries that momentum; the move
+                                    // never applies steering forces in the air.
+                                    const Vec3 landing = lip + outward * (limits.radius + 2.80F) -
+                                                         Vec3(0, rise, 0);
+                                    const float inset = limits.radius + 0.15F;
+                                    if (landing.GetX() < lo.min_x + inset || landing.GetX() > lo.max_x - inset ||
+                                        landing.GetZ() < lo.min_z + inset || landing.GetZ() > lo.max_z - inset)
+                                        continue;
+                                    if (!capsule_free(physics, ignore, limits, start) ||
+                                        !capsule_free(physics, ignore, limits, exit) ||
+                                        !capsule_free(physics, ignore, limits, landing))
+                                        continue;
+                                    ++stats_.capsule_queries;
+                                    if (!gap_segment_free(physics, ignore, limits, start, exit)) continue;
+                                    ++stats_.capsule_queries;
+                                    if (!gap_segment_free(physics, ignore, limits, exit, landing)) continue;
+                                    // The straight exit-to-landing sweep is below the
+                                    // ballistic path: an overhead beam can sit above
+                                    // that diagonal yet intersect her falling body.
+                                    // Cover the volume between the diagonal and the
+                                    // zero-upward-speed gravity arc. Five overlapping
+                                    // capsule-width cross-sections conservatively
+                                    // reject steel in this previously unchecked space.
+                                    bool flight_clear = true;
+                                    for (int sample = 1; sample <= 4; ++sample) {
+                                        const float u = float(sample) / 5.0F;
+                                        const Vec3 chord = exit + (landing - exit) * u;
+                                        const Vec3 arc = chord + Vec3(0.0F, rise * u * (1.0F - u), 0.0F);
+                                        ++stats_.capsule_queries;
+                                        if (!gap_segment_free(physics, ignore, limits, chord, arc)) {
+                                            flight_clear = false;
+                                            break;
+                                        }
+                                    }
+                                    if (!flight_clear) continue;
+                                    Edge down;
+                                    down.from = hi.region;
+                                    down.to = lo.region;
+                                    down.kind = MoveKind::FreeDrop;
+                                    down.spec.kind = down.kind;
+                                    down.spec.start = start;
+                                    down.spec.goal = landing;
+                                    down.spec.goal_top = lo.top;
+                                    down.spec.top_y = hi.top;
+                                    down.spec.bottom_y = lo.top;
+                                    down.spec.out = outward;
+                                    // Prefer an existing climb if one is
+                                    // available; no mandatory death-defying
+                                    // shortcut over a perfectly good ladder.
+                                    down.cost = 40.0F + rise;
+                                    down.usable = true;
+                                    down.reason = "clear stationary takeoff and ballistic corridor to a survivable landing";
+                                    add_edge(std::move(down));
+                                    found_drop = true;
+                                    break;
+                                }
+                            }
+                            continue;
+                        }
                         const Vec3 lc((lo.min_x + lo.max_x) * 0.5F, lo.top, (lo.min_z + lo.max_z) * 0.5F);
                         Vec3 lip = closest_on(hi, lc, 0.0F);
                         if (gap > 0.6F) {
@@ -3111,6 +3415,74 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                             up.usable = below_ok && above_ok;
                             if (!up.usable) up.reason += "; blocked: capsule sweep";
                             add_edge(up);
+                        } else {
+                            // Past a mantle's reach, a lip she can jump to:
+                            // her planted leg puts her hands on it, she
+                            // catches it and mantles over it. The take-off
+                            // must sit close enough to the lip that her
+                            // centre, walking to it, still lands inside her
+                            // hand reach of the lip in the air.
+                            Edge jump = up;
+                            jump.kind = MoveKind::LedgeJump;
+                            jump.spec.kind = MoveKind::LedgeJump;
+                            jump.spec.line = lip;
+                            jump.cost = 3.0F + rise + 6.0F;
+                            const float speed_cap = leg_speed_cap(limits);
+                            // A lip is a hold she jumps for: no higher over
+                            // her feet than any hold she may jump for (the
+                            // player's escape margin), and inside her legs' reach.
+                            const bool jump_ok =
+                                speed_cap > 0.0F && rise <= limits.jump_hold_max_m &&
+                                rise + kJumpOverreachM <= limits.hand_reach_standing() + limits.leg_travel_m +
+                                                   speed_cap * speed_cap / (2.0F * kGravity);
+                            // Her flight: her capsule straight up off the
+                            // floor below until her hands are at the lip,
+                            // from every spot she may set on round the
+                            // take-off. Steel over that floor (the underside
+                            // of the floor over it, where the floor below
+                            // runs in under the lip) stops the jump under its
+                            // head, short of the lip; the take-off moves out
+                            // from the lip along the floor below until her
+                            // flight is clear, no farther than the lip's
+                            // reach from it allows.
+                            const float flight_rise = std::max(rise + kJumpOverreachM - limits.hand_reach_standing(), 0.0F);
+                            const Vec3 away = up.spec.out;
+                            const Vec3 across(-away.GetZ(), 0.0F, away.GetX());
+                            const auto flight_clear = [&](const Vec3 feet) {
+                                // Her own standing capsule, raised in steps to
+                                // where her hands meet the lip: steel she only
+                                // stands beside (a post, a rail) is not over her,
+                                // and a spot round the take-off she cannot stand
+                                // on at all is not one she sets on.
+                                const int steps = std::max(1, int(std::ceil(flight_rise / 0.1F)));
+                                if (!capsule_free(physics, ignore, limits, feet)) return false;
+                                for (const Vec3 off : {Vec3::sZero(), away * kTakeoffToleranceM, away * -kTakeoffToleranceM,
+                                                       across * kTakeoffToleranceM, across * -kTakeoffToleranceM}) {
+                                    if (!capsule_free(physics, ignore, limits, feet + off)) continue;
+                                    for (int s = 1; s <= steps; ++s) {
+                                        const Vec3 f = feet + off + Vec3(0.0F, flight_rise * float(s) / float(steps), 0.0F);
+                                        if (!capsule_free(physics, ignore, limits, f)) return false;
+                                    }
+                                }
+                                return true;
+                            };
+                            Vec3 takeoff = below;
+                            bool flight_ok = below_ok && flight_clear(takeoff);
+                            for (float k = 0.05F; below_ok && !flight_ok && k <= 0.7F + 1.0e-4F; k += 0.05F) {
+                                const Vec3 b = closest_on(lo, below + away * k, limits.radius + 0.1F);
+                                if (horizontal(b - lip) > 0.7F) break;
+                                if (capsule_free(physics, ignore, limits, b) && flight_clear(b)) {
+                                    takeoff = b;
+                                    flight_ok = true;
+                                }
+                            }
+                            jump.spec.start = takeoff;
+                            jump.usable = below_ok && above_ok && horizontal(takeoff - lip) <= 0.7F && jump_ok && flight_ok;
+                            if (!below_ok || !above_ok) jump.reason += "; blocked: capsule sweep";
+                            if (horizontal(takeoff - lip) > 0.7F) jump.reason += "; blocked: take-off too far from the lip";
+                            if (!jump_ok) jump.reason += "; blocked: lip past her hands' jump reach";
+                            if (below_ok && !flight_ok) jump.reason += "; blocked: steel over her flight to the lip";
+                            add_edge(jump);
                         }
                         Edge down = up;
                         down.from = hi.region;
@@ -3409,6 +3781,28 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
         }
         return false;
     };
+    // The player, where he stands now: her feet's search reads the real
+    // world, and his body is in it. A cell her body would stand on inside
+    // his capsule is no way for her — a loose crate counts the same way in
+    // these probes, and only the player was excepted, so her walk went
+    // straight through his spot and her body shoved his across the deck.
+    // His shape, not a named radius: a capsule's own bounds give it.
+    Vec3 player_at = Vec3::sZero();
+    float player_radius = 0.0F, player_bottom = 0.0F, player_top = 0.0F;
+    bool player_in_way = false;
+    if (!ignore.player.IsInvalid()) {
+        const Shape *shape = physics.GetBodyInterface().GetShape(ignore.player);
+        if (shape != nullptr) {
+            const AABox bounds = shape->GetLocalBounds();
+            const RVec3 centre = physics.GetBodyInterface().GetPosition(ignore.player);
+            player_at = Vec3(float(centre.GetX()), 0.0F, float(centre.GetZ()));
+            player_radius = 0.5F * std::max(bounds.GetSize().GetX(), bounds.GetSize().GetZ());
+            const float half_y = 0.5F * bounds.GetSize().GetY();
+            player_bottom = float(centre.GetY()) - half_y;
+            player_top = float(centre.GetY()) + half_y;
+            player_in_way = true;
+        }
+    }
     struct Node {
         float g = std::numeric_limits<float>::max();
         float feet = 0.0F;
@@ -3465,6 +3859,15 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
                 if (!stand(i, k, cur_feet, feet, bx, bz) || feet - cur_feet > limits.step_max_m + 0.08F ||
                     cur_feet - feet > 1.0F) {
                     continue;   // no floor for her there from here (maybe from another side)
+                }
+                // He stands there, on her height: walk round him, not
+                // through him. The goal itself stays exempt, as in stand():
+                // the move's own approach is the judge there, and a goal
+                // beside him must stay reachable.
+                if (player_in_way && feet < player_top && player_bottom < feet + 2.0F * limits.center_above_feet() &&
+                    std::hypot(bx - player_at.GetX(), bz - player_at.GetZ()) < limits.radius + player_radius + 0.05F &&
+                    std::hypot(bx - to.GetX(), bz - to.GetZ()) > 1.0F) {
+                    continue;
                 }
                 if (feet - cur_feet > 0.04F) {
                     // A step up takes a tread wide enough across her way for

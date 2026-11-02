@@ -189,6 +189,98 @@ void test_rungs() {
     std::cout << "PASS scraperx_sim matron climb rungs up and down: peak_n=" << w.peak_force << "\n";
 }
 
+void test_second_hold() {
+    // M5a: the second hand really grips. On a rung climb the climber must
+    // take a second hold on the SAME rung member as the first hold, through
+    // the general hold path, and report it only while it is held. On trunk
+    // this fails: the second hold is never taken (second_ticks stays 0).
+    ClimbWorld w;
+    w.deck(4.0F);
+    w.rungs(0.3F, 3.9F);
+    w.spawn(RVec3(0, 0, 1.0F));
+    Climber climber(w.physics, w.her, {w.her, BodyID()});
+    climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
+    long second_ticks = 0;
+    const auto up = w.run(climber, 30.0F, [&](int) {
+        if (!climber.second_holding()) return;
+        ++second_ticks;
+        require(climber.hold2().body == climber.hold().body && climber.hold2().sub == climber.hold().sub,
+                "matron climb second hold: second grip on the same rung member as the first");
+        const RVec3 d = climber.view().hand2 - climber.view().hand;
+        const double apart = std::hypot(double(d.GetX()), double(d.GetY()), double(d.GetZ()));
+        require(apart >= 0.10 && apart <= 0.60,
+                "matron climb second hold: second grip a distinct point on the rung, not the first grip twice");
+        require(climber.view().holding2, "matron climb second hold: view mirrors the second grip while held");
+    });
+    (void)w.settle(1.0F);
+    std::cout << "  matron climb second hold: up " << int(up) << " second-held ticks " << second_ticks << "\n";
+    require(up == Climber::Status::Done, "matron climb second hold: rung climb still completes");
+    require(second_ticks >= 90, "matron climb second hold: second hand grips for a real stretch of the climb");
+    require(!climber.second_holding() && !climber.view().holding2,
+            "matron climb second hold: no stale second grip once the move is done");
+    MoveSpec down = ladder_up(4.0F, 0.3F, 3.9F);
+    down.kind = MoveKind::RungDown;
+    down.start = Vec3(0, 4.0F, -1.35F);
+    down.goal = Vec3(0, 0, -0.5F);
+    down.goal_top = 0.0F;
+    climber.begin(down);
+    long second_ticks_down = 0;
+    const auto dn = w.run(climber, 40.0F, [&](int) {
+        if (!climber.second_holding()) return;
+        ++second_ticks_down;
+        require(climber.hold2().body == climber.hold().body && climber.hold2().sub == climber.hold().sub,
+                "matron climb second hold: second grip on the same rung member as the first, going down");
+    });
+    (void)w.settle(1.0F);
+    std::cout << "  matron climb second hold: down " << int(dn) << " second-held ticks " << second_ticks_down << "\n";
+    require(dn == Climber::Status::Done, "matron climb second hold: rung descent still completes");
+    require(second_ticks_down >= 90, "matron climb second hold: second hand grips for a real stretch of the descent");
+    require(!climber.second_holding(), "matron climb second hold: no stale second grip once the descent is done");
+    std::cout << "PASS scraperx_sim matron climb second hold: up ticks=" << second_ticks << " down ticks=" << second_ticks_down
+              << "\n";
+}
+
+void test_drive_from_both_anchors() {
+    // M5c: when the second grip is held, the rung drive's support is BOTH
+    // grips, not the first alone: the velocity her power budget is charged
+    // on is her velocity against the MEAN of the two grips' point
+    // velocities, and the drive reaction is split half/half between the
+    // two grip points. One budget.take() call still grants the whole
+    // drive, so total force and power are unchanged; on static members
+    // both point velocities are zero and the change is null.
+    // On trunk this fails: relative_velocity() uses the first grip alone,
+    // so it misses half the second grip's point velocity on a member
+    // that moves under her hands.
+    ClimbWorld w;
+    w.deck(4.0F);
+    // Kinematic rungs, spinning slowly about their own vertical axis: the
+    // two grips' point velocities differ, so a single-anchor support
+    // velocity is measurably wrong while the mean is exact.
+    for (float y = 0.3F; y <= 3.9F + 1.0e-3F; y += 0.3F) {
+        const BodyID rung = w.box(Vec3(0.25F, 0.02F, 0.02F), RVec3(0, y, -0.95F), false, EMotionType::Kinematic);
+        w.physics.GetBodyInterface().SetAngularVelocity(rung, Vec3(0.0F, 0.5F, 0.0F));
+    }
+    w.spawn(RVec3(0, 0, -0.5F));   // already at the ladder's stand point
+    Climber climber(w.physics, w.her, {w.her, BodyID()});
+    climber.begin(ladder_up(4.0F, 0.3F, 3.9F));
+    int checked = 0;
+    for (int tick = 0; tick < 90 * 10 && checked < 5; ++tick) {
+        w.tick(climber);
+        if (climber.status() != Climber::Status::Running) break;
+        if (!climber.second_holding()) continue;
+        const Vec3 body_vel = w.physics.GetBodyInterface().GetLinearVelocity(w.her);
+        const Vec3 pv1 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold().body, climber.view().hand);
+        const Vec3 pv2 = w.physics.GetBodyInterface().GetPointVelocity(climber.hold2().body, climber.view().hand2);
+        const Vec3 expected = body_vel - 0.5F * (pv1 + pv2);
+        const Vec3 got = climber.relative_velocity();
+        require((got - expected).Length() < 0.02F,
+                "matron climb drive from both anchors: budget charged on the mean of both grips' point velocities");
+        ++checked;
+    }
+    require(checked >= 5, "matron climb drive from both anchors: second grip held long enough to check");
+    std::cout << "PASS scraperx_sim matron climb drive from both anchors: checked ticks=" << checked << "\n";
+}
+
 void test_rung_failures() {
     // A gap wider than her long reach and a throw cross (2.1 m): she climbs
     // to it and can go no higher; she lets go and falls.
@@ -595,6 +687,130 @@ void test_capped_launches() {
         require(w.gravity_always, "matron launch: gravity stays on through the jump and the fall");
     }
     std::cout << "PASS scraperx_sim matron capped launches: force, power, stroke, reaction, support loss, cancellation\n";
+}
+
+MoveSpec ledge_jump_spec(const float top) {
+    MoveSpec s;
+    s.kind = MoveKind::LedgeJump;
+    s.line = Vec3(0, top, -1.0F);   // the lip point, on the deck's south face
+    s.out = Vec3(0, 0, 1);
+    s.bottom_y = 0.0F;
+    s.top_y = top;
+    s.start = Vec3(0, 0, -0.6F);    // the take-off the scan insets off the lip
+    s.goal = Vec3(0, top, -2.0F);
+    s.goal_top = top;
+    return s;
+}
+
+void test_ledge_jump() {
+    // A ledge 0.5 to 1.0 m above her standing reach (2.45 m): jump, catch
+    // the lip, hang, mantle onto the deck, every tick inside her budget.
+    for (const float top : {2.95F, 3.20F, 3.45F}) {
+        ClimbWorld w;
+        w.deck(top);
+        w.spawn(RVec3(0, 0, 1.0F));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        climber.begin(ledge_jump_spec(top));
+        RVec3 prev = w.at();
+        float max_step = 0.0F;
+        const auto st = w.run(climber, 40.0F, [&](int) {
+            const RVec3 now = w.at();
+            max_step = std::max(max_step, float((now - prev).Length()));
+            prev = now;
+        });
+        const float settled = w.settle(1.0F);
+        std::cout << "  matron climb ledge jump " << top << ": " << int(st) << " (" << traversal::failure_name(climber.failure())
+                  << ") launches " << climber.view().launches << " catches " << climber.view().catches << " feet " << settled
+                  << " max step " << max_step << " m\n";
+        require(st == Climber::Status::Done && climber.view().launches == 1 && climber.view().catches == 1 &&
+                    std::abs(settled - top) < 0.05F && w.gravity_always && max_step <= 0.20F + 0.001F,
+                "matron climb: a ledge above her standing reach, jumped to, caught, hung from and mantled onto");
+    }
+    // The scan finds it, the planner takes it, and the scanned spec itself
+    // executes: no hand-built move in this leg. She is spawned on the
+    // scanned take-off, so the leg tests the jump, not the walk to it.
+    {
+        ClimbWorld w;
+        w.deck(3.20F);
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-14.0F, -2.0F, -14.0F), Vec3(14.0F, 16.0F, 8.0F)), {BodyID(), BodyID()});
+        const int from = map.region_at(Vec3(0, 0, 1.0F));
+        const int to = map.region_at(Vec3(0, 3.20F, -2.0F));
+        require(from >= 0 && to >= 0 && from != to, "matron climb: the scan separates the floor from the deck over it");
+        const std::vector<int> plan = map.plan(from, to);
+        int ledge = -1;
+        for (const int e : plan)
+            if (map.edges()[static_cast<std::size_t>(e)].kind == MoveKind::LedgeJump) ledge = e;
+        require(ledge >= 0, "matron climb: the planner offers the ledge jump to the deck over the floor");
+        const traversal::Edge &edge = map.edges()[static_cast<std::size_t>(ledge)];
+        require(edge.usable && std::abs(edge.spec.goal_top - 3.20F) < 0.01F && std::abs(edge.spec.start.GetY()) < 0.01F,
+                "matron climb: the scanned ledge jump stands on the floor below and tops out on the deck");
+        w.spawn(RVec3(edge.spec.start.GetX(), edge.spec.start.GetY(), edge.spec.start.GetZ()));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        climber.begin(edge.spec);
+        const auto st = w.run(climber, 40.0F);
+        const float settled = w.settle(1.0F);
+        std::cout << "  matron climb ledge jump planned: " << int(st) << " feet " << settled << "\n";
+        require(st == Climber::Status::Done && std::abs(settled - 3.20F) < 0.05F,
+                "matron climb: the planned ledge jump ends standing on the deck");
+    }
+    // A miss: the deck is gone while she is in the air. She falls back to
+    // the floor, and a fresh scan finds no ledge jump left to replan to.
+    {
+        ClimbWorld w;
+        const BodyID deck = w.box(Vec3(5, 0.5F * 3.20F, 3), RVec3(0, 0.5F * 3.20F, -4));
+        w.spawn(RVec3(0, 0, 1.0F));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        climber.begin(ledge_jump_spec(3.20F));
+        float highest = 0.0F;
+        const auto st = w.run(climber, 20.0F, [&](int) {
+            if (climber.view().launches == 1 && w.physics.GetBodyInterface().IsAdded(deck))
+                w.physics.GetBodyInterface().RemoveBody(deck);
+            highest = std::max(highest, w.feet());
+        });
+        const float landed = w.settle();
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-14.0F, -2.0F, -14.0F), Vec3(14.0F, 16.0F, 8.0F)), {w.her, BodyID()});
+        bool jump_left = false;
+        for (const traversal::Edge &e : map.edges())
+            if (e.kind == MoveKind::LedgeJump && e.usable) jump_left = true;
+        std::cout << "  matron climb ledge jump miss: " << traversal::failure_name(climber.failure()) << " highest feet " << highest
+                  << " landed " << landed << " jump left " << jump_left << "\n";
+        require(st == Climber::Status::Failed && climber.failure() == Failure::Missed && climber.view().misses == 1,
+                "matron climb: nothing to catch at the lip is a miss");
+        require(highest > 0.6F && highest < 1.6F && std::abs(landed) < 0.05F && !jump_left,
+                "matron climb: the missed ledge jump falls back to the floor and replans to nothing");
+    }
+    // Out of reach: a lip past her legs' limit is not launched for, and
+    // the planner offers no jump to a lip past the scan's lip range.
+    {
+        const traversal::Limits budget;
+        const float ballistic = budget.launch_dv_mps * budget.launch_dv_mps / (2.0F * 9.81F);
+        const float too_high = budget.center_above_feet() + budget.hand_above_center + budget.leg_travel_m + ballistic + 0.80F;
+        ClimbWorld w;
+        w.deck(too_high + 1.5F);
+        w.spawn(RVec3(0, 0, 1.0F));
+        Climber climber(w.physics, w.her, {w.her, BodyID()});
+        climber.begin(ledge_jump_spec(too_high + 1.5F));
+        const auto st = w.run(climber, 20.0F);
+        require(st == Climber::Status::Failed && climber.failure() == Failure::OutOfRange && climber.view().launches == 0,
+                "matron climb: a ledge jump past her legs' limit is not launched");
+    }
+    {
+        ClimbWorld w;
+        w.deck(5.0F);
+        w.spawn(RVec3(0, 0, 1.0F));
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-14.0F, -2.0F, -14.0F), Vec3(14.0F, 16.0F, 8.0F)), {w.her, BodyID()});
+        const int from = map.region_at(Vec3(0, 0, 1.0F));
+        const int to = map.region_at(Vec3(0, 5.0F, -2.0F));
+        const std::vector<int> plan = from >= 0 && to >= 0 ? map.plan(from, to) : std::vector<int>{};
+        bool jump_offered = false;
+        for (const int e : plan)
+            if (map.edges()[static_cast<std::size_t>(e)].kind == MoveKind::LedgeJump) jump_offered = true;
+        require(!jump_offered, "matron climb: the planner refuses a ledge out of jump reach");
+    }
+    std::cout << "PASS scraperx_sim matron climb ledge jump: catch, planned, miss, out of range\n";
 }
 
 void test_jump() {
@@ -1674,10 +1890,13 @@ void run_matron_climb() {
     test_jump_catch_escape_margin();
     test_power_moving_bar();
     test_rungs();
+    test_second_hold();
+    test_drive_from_both_anchors();
     test_rung_failures();
     test_pole();
     test_capped_launches();
     test_jump();
+    test_ledge_jump();
     test_drops_and_mantle();
     test_dynamic_support();
     test_mantle_moving_ledge();
@@ -1976,7 +2195,48 @@ void test_player_unchanged() {
             "player climbing is the same with her travelling nearby");
 }
 
-void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); }
+// A travelling Matron's walk to her next move's start goes round a player
+// standing on it, not through him. Her feet's search reads the real world,
+// and his body is in it: on the old code her walk went straight through his
+// spot (the probes excepted his body, like they except hers) and her 220 kg
+// body shoved his 85 kg body across the deck — friction 0, no damping,
+// nothing stops him. The park point is on her measured walk down the stack
+// from home (11, 154, -126.2) to the rung-down start (-6, 155.18, -133.15):
+// she passes (-2, -128.9) about 8 s in, 6 m from that start, so the
+// next-climb yield (1.3 m from its line) does not cover it.
+void test_travel_walk_round_player() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    require(s.advance_frame(1.0).accepted, "travel walk round player: settle");
+    const double px = -2.0, pz = -128.9;
+    const double support = s.debug_support_y(Vector3{px, 160.0, pz}, 10.0);
+    require(std::abs(support - 154.0) < 0.3, "travel walk round player: the park point is open deck 154 floor");
+    s.debug_launch_player(Vector3{px, support + 1.0, pz}, Vector3{0.0, 0.0, 0.0});
+    require(s.advance_frame(1.0).accepted, "travel walk round player: player settles");
+    const auto p0 = s.snapshot().player_position;
+    require(s.debug_matron_travel(132.0), "travel walk round player: she sets off down the stack");
+    double t = 0.0, near = 1.0e9, moved = 0.0;
+    Simulation::MatronJourney j = s.matron_journey();
+    while (j.active && t < 120.0) {
+        (void)s.advance_frame(1.0 / 60.0);
+        t += 1.0 / 60.0;
+        j = s.matron_journey();
+        const auto her = s.matron_state().position;
+        const auto pp = s.snapshot().player_position;
+        near = std::min(near, std::hypot(her.x - p0.x, her.z - p0.z));
+        moved = std::max(moved, std::hypot(pp.x - p0.x, pp.z - p0.z));
+    }
+    const auto p1 = s.snapshot().player_position;
+    std::cout << "  player parked " << p0.x << "," << p0.y << "," << p0.z << ", her nearest pass " << near
+              << " m, player moved " << moved << " m to " << p1.x << "," << p1.y << "," << p1.z << ", arrivals "
+              << j.arrivals << " active " << j.active << " after " << t << " s\n";
+    require(near < 1.5, "travel walk round player: she really came past his spot (placement check)");
+    require(moved <= 0.5, "travel walk round player: she walks round him, not through him");
+    require(p1.y > 153.0 && p1.y < 157.0, "travel walk round player: he stays on deck 154");
+    require(!j.active && j.arrivals > 0, "travel walk round player: she still gets down the stack");
+}
+
+void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); test_travel_walk_round_player(); }
 
 // One deck box, something laid across its top. A curb within a step (and a
 // block on part of it) leaves it one floor; a wall taller than a step across

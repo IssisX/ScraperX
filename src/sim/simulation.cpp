@@ -553,6 +553,8 @@ void Simulation::step_fixed() noexcept {
     commands.lift_haul = lift_haul_;
     commands.forklift_action = forklift_action_;
     commands.forklift_lift = forklift_lift_;
+    commands.summit_lower = summit_lower_;
+    commands.summit_unrig = summit_unrig_;
     commands.yard_crane_take = yard_crane_take_;
     commands.yard_crane_operate = yard_crane_operate_;
     commands.yard_crane_device = yard_crane_device_;
@@ -583,6 +585,7 @@ void Simulation::step_fixed() noexcept {
     trapeze_drop_ = false;
     lift_action_ = false;
     forklift_action_ = false;
+    summit_unrig_ = false;
     yard_crane_take_ = false;
     yard_crane_operate_ = false;
     yard_crane_device_ = false;
@@ -1148,6 +1151,10 @@ void Simulation::debug_matron_let_go() noexcept {
     physics_world_->matron().let_go_for_test();
 }
 
+void Simulation::debug_matron_block_column(const double x, const double z) noexcept {
+    physics_world_->matron().block_column_for_test(static_cast<float>(x), static_cast<float>(z));
+}
+
 const traversal::AffordanceMap &Simulation::matron_affordances() {
     return physics_world_->matron_affordances();
 }
@@ -1413,6 +1420,8 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.contact_feet = {view.contact_feet.GetX(), view.contact_feet.GetY(), view.contact_feet.GetZ()};
     result.contact_feet_body = view.contact_feet_body.GetIndexAndSequenceNumber();
     result.contact_feet_sub = view.contact_feet_sub.GetValue();
+    result.contact_support_velocity = {view.contact_support_velocity.GetX(), view.contact_support_velocity.GetY(),
+                                       view.contact_support_velocity.GetZ()};
     result.contact_hand_held = view.contact_hand_held;
     result.contact_hand = {view.contact_hand.GetX(), view.contact_hand.GetY(), view.contact_hand.GetZ()};
     result.contact_hand_body = view.contact_hand_body.GetIndexAndSequenceNumber();
@@ -1420,6 +1429,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.contact_hand2_held = view.contact_hand2_held;
     result.contact_hand2 = {view.contact_hand2.GetX(), view.contact_hand2.GetY(), view.contact_hand2.GetZ()};
     result.contact_hand2_body = view.contact_hand2_body.GetIndexAndSequenceNumber();
+    result.contact_hand2_sub = view.contact_hand2_sub.GetValue();
     result.contact_line = view.contact_line;
     result.contact_braced = view.contact_braced;
     result.contact_brace = {view.contact_brace.GetX(), view.contact_brace.GetY(), view.contact_brace.GetZ()};
@@ -1434,6 +1444,13 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.climb_force_n = view.climb_force_n;
     result.climb_lunge_drive = view.climb_lunge_drive;
     result.foot_power_w = view.foot_power_w;
+    result.load_held = view.load_held;
+    result.load_mass_kg = view.load_mass_kg;
+    result.load_offset_m = view.load_offset_m;
+    result.load_moment_nm = view.load_moment_nm;
+    result.load_cop_shift_m = view.load_cop_shift_m;
+    result.load_stance_base_m = view.load_stance_base_m;
+    result.load_pull_m = view.load_pull_m;
     result.climb_grips = view.climb_grips;
     result.climb_releases = view.climb_releases;
     result.mantling = view.mantling;
@@ -1460,6 +1477,14 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.exposure = view.exposure;
     result.shoves = view.shoves;
     result.carrying = view.carrying;
+    result.stock_handle = {view.stock_handle.GetX(), view.stock_handle.GetY(), view.stock_handle.GetZ()};
+    result.stock_constraint = {view.stock_constraint.GetX(), view.stock_constraint.GetY(), view.stock_constraint.GetZ()};
+    result.stock_rotation = to_sim_quaternion(view.stock_rotation);
+    result.stock_size = {view.stock_size.GetX(), view.stock_size.GetY(), view.stock_size.GetZ()};
+    result.stock_seeking = view.stock_seeking;
+    result.stock_seek_handle = {view.stock_seek_handle.GetX(), view.stock_seek_handle.GetY(), view.stock_seek_handle.GetZ()};
+    result.stock_seek_rotation = to_sim_quaternion(view.stock_seek_rotation);
+    result.stock_seek_size = {view.stock_seek_size.GetX(), view.stock_seek_size.GetY(), view.stock_seek_size.GetZ()};
     result.takes = view.takes;
     result.throws = view.throws;
     result.staggers = view.staggers;
@@ -1471,6 +1496,13 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.down_s = view.down_s;
     result.down_left_s = view.down_left_s;
     result.on_pipe = view.on_pipe;
+    result.stance = view.stance;
+    result.shape_a = {result.position.x + view.shape_a.GetX(), result.position.y + view.shape_a.GetY(),
+                      result.position.z + view.shape_a.GetZ()};
+    result.shape_b = {result.position.x + view.shape_b.GetX(), result.position.y + view.shape_b.GetY(),
+                      result.position.z + view.shape_b.GetZ()};
+    result.shape_r = view.shape_r;
+    result.shape_switches = view.shape_switches;
     result.pipe_head_down = view.pipe_head_down;
     result.pipe_sliding = view.pipe_sliding;
     result.pipe_stunned = view.pipe_stunned;
@@ -1531,6 +1563,16 @@ BaySnapshot Simulation::bay_state() const noexcept {
 SummitSnapshot Simulation::summit_state() const noexcept {
     const auto &state = physics_world_->summit().state();
     SummitSnapshot result;
+    result.ending = static_cast<std::uint8_t>(state.ending);
+    result.beam_seated = state.beam_seated;
+    result.sling_free = state.sling_free;
+    result.left_bearing = state.left_bearing;
+    result.right_bearing = state.right_bearing;
+    result.can_unrig = physics_world_->summit().can_unrig();
+    result.chain_paid_m = state.chain_paid_m;
+    result.chain_tension_n = state.chain_tension_n;
+    const auto player = snapshot_.player_position;
+    result.work_in_reach = physics_world_->summit().work_in_reach(JPH::RVec3(player.x, player.y, player.z));
     result.lit = state.lit;
     result.striker_travel_m = state.striker_travel_m;
     result.striker_peak_m = state.striker_peak_m;
@@ -1541,6 +1583,18 @@ SummitSnapshot Simulation::summit_state() const noexcept {
 }
 
 void Simulation::light_summit() noexcept { physics_world_->summit().light(); }
+
+bool Simulation::set_summit_lower(const bool held) noexcept {
+    summit_lower_ = held;
+    return true;
+}
+
+bool Simulation::request_summit_unrig() noexcept {
+    const auto state = summit_state();
+    if (!state.work_in_reach || !state.can_unrig) return false;
+    summit_unrig_ = true;
+    return true;
+}
 
 SwingSnapshot Simulation::swing_state() const noexcept {
     const auto to_vector = [](const JPH::RVec3 p) {

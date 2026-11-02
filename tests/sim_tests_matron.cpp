@@ -448,6 +448,23 @@ void run_matron_balance() {
                   << (m.kneeling ? " kneeling" : " lying") << "\n";
         require(knocked == kDown && m.knockdowns == 1 && m.staggers == 0,
                 "matron balance: a toolbox heaved at an upright pest puts her down");
+        // The body she has while down is the one lie_down installed, not the
+        // upright stance capsule (that one is about 1.19 m tall).
+        {
+            const double dx = m.shape_b.x - m.shape_a.x;
+            const double dy = m.shape_b.y - m.shape_a.y;
+            const double dz = m.shape_b.z - m.shape_a.z;
+            const double span = std::sqrt(dx * dx + dy * dy + dz * dz);
+            if (m.kneeling) {
+                require(span < 0.40 && std::abs(dy) > 0.20,
+                        "matron balance: down, her collision body is the short kneeling capsule");
+            } else {
+                const double fall = std::sqrt(m.fall_x * m.fall_x + m.fall_z * m.fall_z);
+                const double along = fall > 1.0e-3 ? std::abs(dx * m.fall_x + dz * m.fall_z) / fall : span;
+                require(std::abs(span - 2.0 * Matron::kHalfHeight) < 0.05 && std::abs(dy) < 0.05 && along > 1.40,
+                        "matron balance: down, her collision body lies along the fall");
+            }
+        }
         // Down she has no hands: the rage it costs her, and up again.
         require(m.rage >= Matron::kKnockdownRage - 0.01, "matron balance: a knockdown feeds her rage");
         require(rises(static_cast<double>(Matron::kPestDownSeconds) + 2.0), "matron balance: up again, on her deck, alive");
@@ -809,7 +826,22 @@ void run_matron_mischief() {
             if (took_at < 0.0 && m.carrying == box) {
                 took_at = i / static_cast<double>(Simulation::kTickRateHz);
             }
+            if (m.carrying == box) {
+                const double gap = std::hypot(std::hypot(m.stock_handle.x - m.stock_constraint.x,
+                                                         m.stock_handle.z - m.stock_constraint.z),
+                                              m.stock_handle.y - m.stock_constraint.y);
+                const double qnorm = m.stock_rotation.x * m.stock_rotation.x +
+                                     m.stock_rotation.y * m.stock_rotation.y +
+                                     m.stock_rotation.z * m.stock_rotation.z +
+                                     m.stock_rotation.w * m.stock_rotation.w;
+                require(gap < 1.0 && m.stock_size.x > 0.01 && m.stock_size.y > 0.01 &&
+                            std::abs(qnorm - 1.0) < 0.01,
+                        "matron prop: real handle, moving constraint, shape and orientation exported while held");
+            }
             if (m.throws > 0) {
+                require(m.carrying == 0 && m.stock_handle.x == 0.0 && m.stock_handle.y == 0.0 &&
+                            m.stock_handle.z == 0.0,
+                        "matron prop: native handle detaches on the throw tick");
                 thrown = true;
                 const auto b = s.kit_body_position(box_body);
                 const auto p = s.snapshot().player_position;
@@ -1154,7 +1186,7 @@ void run_matron() {
                 "matron: following the climber over the rotten catwalk is the end of her");
         require(crossed.end.planks_fallen >= 1, "matron: a plate she stood on is down");
         require(crossed.deaths == 0, "matron: the climber crossed alive");
-        // She does not come back: a death of the player later leaves her dead.
+        // She stays dead until something is restored (run_matron_restore: a player's death brings her back).
         stand_still(s, 5.0);
         require(s.matron_state().state == kStateDead, "matron: dead, she stays dead");
     }
@@ -1543,6 +1575,20 @@ void run_matron() {
         require(s.advance_frame(1.0).accepted, "matron ride: settle");
         require(board_well_a(s) && rig_well_a(s), "matron ride: Stage A's cage rigged");
         require(s.matron_state().state == kStateDormant, "matron ride: rigging the cage did not wake her");
+        // Export check on a static floor: her support velocity is the floor's
+        // point velocity, zero here. Unconditional: unsupported also yields
+        // zero, so this proves the plumbing, not support-ness. (A supported
+        // require was tried here and reverted: dormant, she has no body in
+        // the world yet — body_in_world_ starts false and spawn_body runs
+        // only on emerge — so supported is correctly false at settle.)
+        {
+            const auto settle_m = s.matron_state();
+            std::cout << "  matron ride: static-floor support velocity (" << settle_m.contact_support_velocity.x << ", "
+                      << settle_m.contact_support_velocity.y << ", " << settle_m.contact_support_velocity.z << ")\n";
+            require(std::hypot(std::hypot(settle_m.contact_support_velocity.x, settle_m.contact_support_velocity.y),
+                               settle_m.contact_support_velocity.z) < 0.05,
+                    "matron ride: static floor support velocity near zero");
+        }
         require(go(s, -10.0, -129.2, false, 6.0) && go(s, 0.0, -128.6, true, 4.0, 0.8),
                 "matron ride: out of the cage, a sprint toward her locker");
         require(s.matron_state().state == kStateStraining, "matron ride: the sprint woke her");
@@ -1583,6 +1629,17 @@ void run_matron() {
         double with_her_s = 0.0;
         bool clung_all_way = true;
         bool aboard = false;
+        int supported_ride_ticks = 0;
+        int support_velocity_bad = 0;
+        double support_rate_gap_max = 0.0;
+        double support_rate_max = 0.0;
+        // Moving-support carriage truth: the horizontal channel of the
+        // exported support velocity, and her centre against the cage
+        // floor's own rectangle, over the same rising window.
+        double support_svh_max = 0.0;
+        double ride_dx_max = 0.0;
+        double ride_dz_max = 0.0;
+        double prev_travel = s.snapshot().well_a_cage_travel;
         for (int i = 0; i < 25 * static_cast<int>(Simulation::kTickRateHz) && s.snapshot().well_a_cage_travel < 21.99;
              ++i) {
             tick(s);
@@ -1591,13 +1648,58 @@ void run_matron() {
             const double travel = s.snapshot().well_a_cage_travel;
             aboard = aboard || m.position.y > 155.05 + 0.5 * travel + 1.0;
             if (travel > 1.0) {
+                ride_dx_max = std::max(ride_dx_max, std::abs(m.position.x - Matron::kCageACenterX));
+                ride_dz_max = std::max(ride_dz_max, std::abs(m.position.z - Matron::kCagesCenterZ));
                 clung_all_way = clung_all_way && m.clinging && m.position.y > 155.05 + travel - 0.3;
+                // Moving-floor proof: while sole-supported on the rising cage,
+                // her exported support velocity must be the cage's, up and
+                // near-vertical (the cage rises ~2.1 m/s). Direction alone
+                // would pass a 0.3 m/s support velocity on a 2.1 m/s cage,
+                // so the vertical component must also match the cage's own
+                // per-tick rise rate within 0.15 m/s.
+                if (m.contact_supported) {
+                    ++supported_ride_ticks;
+                    const double svy = m.contact_support_velocity.y;
+                    const double svh =
+                        std::hypot(m.contact_support_velocity.x, m.contact_support_velocity.z);
+                    if (svy <= 0.2 || svh >= 0.3) {
+                        ++support_velocity_bad;
+                    }
+                    support_svh_max = std::max(support_svh_max, svh);
+                    const double cage_rate = (travel - prev_travel) / Simulation::kFixedStepSeconds;
+                    support_rate_gap_max = std::max(support_rate_gap_max, std::abs(svy - cage_rate));
+                    support_rate_max = std::max(support_rate_max, cage_rate);
+                }
             }
+            prev_travel = travel;
         }
         std::cout << "  matron ride: aboard " << aboard << ", clung all the way " << clung_all_way << ", the ride "
                   << with_her_s << " s with her, " << alone_s << " s alone; deaths " << s.snapshot().death_count - deaths
-                  << "\n";
+                  << ", supported ride ticks " << supported_ride_ticks << ", support velocity bad "
+                  << support_velocity_bad << ", support rate gap max " << support_rate_gap_max << " m/s, cage rate max "
+                  << support_rate_max << " m/s\n";
+        std::cout << "  matron ride: support svh max " << support_svh_max << " m/s, centre off cage centre dx max "
+                  << ride_dx_max << " m, dz max " << ride_dz_max << " m\n";
         require(aboard && clung_all_way, "matron ride: she stepped into the cage as it left and held on to the top");
+        require(supported_ride_ticks > 0 && support_velocity_bad == 0,
+                "matron ride: supported on the rising cage, her support velocity is the cage's");
+        require(support_rate_gap_max < 0.15,
+                "matron ride: supported on the rising cage, her support velocity matches the cage's rise rate");
+        // Horizontal rate truth: the cage's guide is vertical only, so
+        // its horizontal rate is exactly zero; the exported horizontal
+        // support velocity must match it within the same 0.15 m/s
+        // tolerance the vertical rate match uses. (The old svh < 0.3
+        // direction bound above stays untouched.)
+        require(support_svh_max < 0.15,
+                "matron ride: supported on the rising cage, her support velocity matches the cage's zero horizontal rate");
+        // Carriage truth: while aboard, her centre stays within the cage
+        // floor's own rectangle grown by her capsule radius — the floor
+        // is 1.50 m by 1.40 m half-extents about its centre
+        // (band_counterweight_well.cpp kCageHalfX/kCageHalfZ). Past
+        // floor-half plus radius, no part of her upright capsule can
+        // still be over the floor: she has left the cage.
+        require(ride_dx_max <= 1.50 + Matron::kRadius && ride_dz_max <= 1.40 + Matron::kRadius,
+                "matron ride: aboard the rising cage, her centre stays within the cage floor");
         require(s.snapshot().death_count == deaths, "matron ride: clinging, she took nobody on the way up");
         require(with_her_s > alone_s + 0.5, "matron ride: her weight slows the cage away");
         // At the top: out of the cage's mouth and across the 1.09 m to the ring,
@@ -1670,6 +1772,55 @@ void run_matron() {
                   << " island_s=" << island_s << " leaps=" << over.leaps << "\n";
     }
     run_matron_remaining();
+}
+
+// ---- a restore brings her back: a long fall ends her, and the world put back has her in it ----
+// Her death is the fall's (kLethalLandingMps); the checkpoint is where she burst out. A death of the player
+// restores that checkpoint, and the restore must not skip her for being dead: she comes back alive, out of
+// her locker as she was at the checkpoint, and hunts again.
+void run_matron_restore() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    wake_and_wait_east(s);
+    require(wait_for_her(s, 14.0, 40.0), "matron restore: she comes (the checkpoint is where she burst out)");
+    require(s.matron_state().alive, "matron restore: alive before the fall");
+    // 16 m onto the south band's deck: a landing past kLethalLandingMps (16 m/s).
+    s.debug_place_matron(scraperx::sim::Vector3{0.0, 154.0 + 16.0, static_cast<double>(Matron::kBandSouthZ)});
+    bool dead = false;
+    for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && !dead; ++i) {
+        tick(s);
+        dead = s.matron_state().state == kStateDead;
+    }
+    require(dead && !s.matron_state().alive, "matron restore: a 16 m fall is the end of her");
+    // Dead she stays dead for as long as nothing is restored.
+    stand_still(s, 3.0);
+    require(s.matron_state().state == kStateDead && !s.matron_state().alive,
+            "matron restore: dead, and nothing has brought her back");
+    // Put the world back: the player's death restores the checkpoint.
+    const auto deaths_before = s.snapshot().death_count;
+    const auto at = s.snapshot().player_position;
+    s.debug_launch_player(scraperx::sim::Vector3{0.0, at.y + 0.5, -150.0}, scraperx::sim::Vector3{0.0, -5.0, 0.0});
+    for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz) && s.snapshot().death_count == deaths_before; ++i) {
+        tick(s);
+    }
+    require(s.snapshot().death_count > deaths_before, "matron restore: the player's fall into the shaft is a death");
+    const auto back = s.matron_state();
+    require(back.alive && (back.state == kStateEmerging || back.state == kStateHunting),
+            "matron restore: the restore brings her back alive, out of her locker as she was at the checkpoint");
+    // She acts again: she hunts, and walks away from her locker.
+    bool hunting = false;
+    double walked_m = 0.0;
+    for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !(hunting && walked_m > 3.0); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        require(m.alive, "matron restore: she stays alive once back");
+        hunting = hunting || m.state == kStateHunting;
+        walked_m = std::hypot(m.position.x - back.position.x, m.position.z - back.position.z);
+    }
+    require(hunting && walked_m > 3.0, "matron restore: restored, she hunts again and walks");
+    std::cout << "PASS scraperx_sim matron restore: dead by a 16 m fall, brought back by the restore, hunts again, walked "
+              << walked_m << " m\n";
 }
 
 void run_matron_remaining() {
@@ -2034,6 +2185,8 @@ void run_matron_remaining() {
     run_matron_balance();
     run_matron_pipe();
     run_matron_room();
+    run_matron_restore();
+    run_matron_shape();
     // ---- her rage (the owner, 2026-10-19): fed only by sound at her ear, it
     //      moves her up a stage; quiet moves her back down, and not before her
     //      rage is well under the mark it rose past ----
@@ -2411,6 +2564,10 @@ void run_matron_ladder() {
     {
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
+        // This exam measures her ascent, independently of the player's
+        // ankle-pull encounter (proved in matron-ladder-pull). Rungs no
+        // longer grant immunity, so hold off her player attacks here.
+        s.debug_hold_matron_hands(200.0);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron climb: settle");
         require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0), "matron climb: a sprint toward her locker");
