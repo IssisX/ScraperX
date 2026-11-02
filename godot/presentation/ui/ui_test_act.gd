@@ -1197,14 +1197,12 @@ func _matron_heave_touch(device: int) -> bool:
 # after; as she climbs, a shove sends the drum off the edge onto her: torn
 # off, she slams onto the flange below, alive, and nobody is dead.
 const PIPE_DRUM_PICK := Vector2(-15.0, -125.95)
-# The drum waits in the north band's corner by the shaft, east of where she
-# comes along the band to her pipe (walking the edge she barges through
-# whatever lies on it): set down from here, facing south, and taken up again
-# from 0.75 m off where it lies.
-const PIPE_DRUM_SET_FROM := Vector2(16.6, -128.4)
-# At the rail over her line (x 15.15), west of the riser's flanges (to x
-# 15.25): the drum held out under the rail's bar, thrown down past them.
-const PIPE_THROW_FROM := Vector2(14.75, -132.55)
+# Cache the drum outside the Matron's 4 m stock-shove corridor, on the east
+# band's supported inner lane. Throw directly from this cache after returning
+# over the bay: no exposed corner rest and no slow carry to her pipe rail.
+const PIPE_DRUM_SET_FROM := Vector2(19.0, -128.4)
+const PIPE_THROW_TARGET := Vector2(14.85, -133.75)
+const PIPE_STAGING_CLEARANCE_M := 4.0
 const PIPE_WARNING_S := 4.0
 
 var _pipe_drum := 0
@@ -1284,6 +1282,11 @@ func _pipe_watching() -> void:
 	while bool(_pipe_watch["on"]):
 		var m := _matron_state()
 		var frame := int(Engine.get_process_frames())
+		var her: Vector3 = m["position"]
+		var drum := _pipe_drum_at()
+		if drum.y >= MATRON_DECK_Y and absf(her.y - drum.y) < 2.0:
+			_pipe_watch["stage_gap_m"] = minf(float(_pipe_watch["stage_gap_m"]),
+				Vector2(her.x - drum.x, her.z - drum.z).length())
 		if int(_pipe_watch["first"]) < 0 and int(m["pipe_holds"]) > int(_pipe_watch["holds0"]):
 			_pipe_watch["first"] = frame
 			_pipe_watch["clangs0"] = int(_main._audio.matron_cues.get(&"clang", 0))
@@ -1302,7 +1305,7 @@ func _pipe_watching() -> void:
 func _pipe_down_after_you(device: int) -> bool:
 	await _crouch_on(device, false)
 	_pipe_watch = {"on": true, "holds0": int(_matron_state()["pipe_holds"]), "first": -1, "arrived": -1,
-		"clangs0": 0, "clangs": 0, "warned_s": 0.0}
+		"clangs0": 0, "clangs": 0, "warned_s": 0.0, "stage_gap_m": INF}
 	_pipe_watching()
 	var links := int(_matron_state()["pipe_links"])
 	var took: bool = await _act_laps(device, Vector2(-3.0, ACT_143_EDGE_Z), Vector2(-10.5, ACT_143_EDGE_Z),
@@ -1334,30 +1337,36 @@ func _pipe_heard_coming() -> bool:
 	return true
 
 
-# Back along the band to the drum by the shaft's edge while she comes up the
-# pipe after the climber: taken up, held out under the rail over her, the eyes
-# down the pipe. With her a few metres below the deck and climbing, a swipe up
-# throws it down onto her (knock her down, then throw what you carry): torn
-# off, she slams onto the flange below her, alive.
+# The stock survives Matron's walk down to the pipe outside her shove reach.
+# Come back over the supported bay and take it from the inner lane, not the
+# exposed north rim. Throw from the cache itself: the climb window no longer
+# includes a loaded walk toward the rail.
 func _pipe_drum_onto_her(device: int) -> bool:
-	var take_from := Vector2(_pipe_drum_rest.x, _pipe_drum_rest.z + 0.75)
-	if not (await _sprint_to(device, Vector2(take_from.x, -127.2), 1.0, 10.0) and \
+	var rest := _pipe_drum_at()
+	var gap := float(_pipe_watch["stage_gap_m"])
+	print("SCRAPERX_PIPE stage gap %.2f m, drum %s" % [gap, str(rest)])
+	if not is_finite(gap) or gap <= PIPE_STAGING_CLEARANCE_M or rest.y < MATRON_DECK_Y:
+		return _fail("the cached drum was not outside her shove corridor (gap %.2f m, drum %s)" % [
+			gap, str(rest)])
+	var take_from := Vector2(_pipe_drum_rest.x, _pipe_drum_rest.z - 0.75)
+	if not (await _walk_to(device, ACT_BAY_WEST, 0.20, 6.0) and \
+			await _sprint_to(device, ACT_BAY_EAST, 0.25, 6.0) and \
+			await _sprint_to(device, Vector2(take_from.x, -129.4), 0.35, 10.0) and \
 			await _walk_to(device, take_from, 0.08, 4.0)):
-		return _fail("the run back round to the drum stalled at %s" % str(_position()))
-	await _face(Vector2(0.0, -1.0))
+		return _fail("the supported bay return to the cached drum failed at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
 	if not await _offered(&"pick_up", "PICK UP"):
-		return _fail("Action read '%s' at the drum by the edge, not PICK UP (drum at %s, me at %s, carry target %d, pitch %.2f)" % [
+		return _fail("Action read '%s' at the cached drum, not PICK UP (drum at %s, me at %s, carry target %d, pitch %.2f)" % [
 			_action_label(), str(_pipe_drum_at()), str(_position()), int(_native().get_carry_target_entity_id()),
 			float(_main._pitch)])
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == _pipe_drum, 1.0):
-		return _fail("PICK UP did not put the drum in the hands")
-	await _tilt(-1.2)
-	if not await _walk_to(device, PIPE_THROW_FROM, 0.08, 4.0):
-		return _fail("the step to the rail with the drum stalled at %s" % str(_position()))
-	await _face(Vector2(0.0, -1.0))
+		return _fail("PICK UP did not put the cached drum in the hands")
+	await _tilt(-0.85)
+	await _face(PIPE_THROW_TARGET - _act_me_xz())
 	var held := _pipe_drum_at()
-	print("SCRAPERX_PIPE held out at (%.2f, %.2f, %.2f), me %s" % [held.x, held.y, held.z, str(_position())])
+	print("SCRAPERX_PIPE throw-ready drum (%.2f, %.2f, %.2f), me %s, gap %.2f m" % [
+		held.x, held.y, held.z, str(_position()), gap])
 	var links := int(_matron_state()["pipe_links"])
 	var climbing: bool = await _act_wait(func() -> bool:
 		var m := _matron_state()
