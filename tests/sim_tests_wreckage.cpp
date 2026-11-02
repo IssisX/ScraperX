@@ -11,9 +11,34 @@ using scraperx::sim::InitialSpawn;
 using scraperx::sim::Simulation;
 
 namespace {
+constexpr double k662Top = 662.1;
 constexpr double kN706Top = 706.1;
 constexpr double kO750Top = 750.1;
 } // namespace
+
+// M's chock pulled with its shackle free: the reel falls its shaft for
+// nothing and the cage stays on TP-640. The way on is the backup ladder from
+// TP-640 up through the 662 deck's hatch.
+void run_m_wreckage() {
+    Simulation m(InitialSpawn::PlateTop640);
+    (void)m.advance_frame(1.0);
+    require(walk_to(m, -3.0, -144.3, 12.0) && pull_service_chock(m), "M wreck: the chock pulled, the shackle free");
+    (void)m.advance_frame(15.0);
+    const auto spent = m.service_state();
+    require(spent.m_reel_travel > 22.0 && spent.m_cage_travel < 0.05, "M wreck: the reel fallen, the cage left on TP-640");
+    const bool walked = walk_to(m, 3.0, -144.3, 10.0) && walk_to(m, 8.9, -144.3, 10.0, 0.1) &&
+                        walk_to(m, 10.3, -144.3, 6.0, 0.1) && walk_to(m, 10.3, -146.3, 6.0, 0.1) &&
+                        walk_to(m, 8.9, -146.02, 6.0, 0.08);
+    const auto at = m.snapshot();
+    std::cout << "  M wreck: at the ladder's foot " << walked << " (" << at.player_position.x << ", "
+              << at.player_position.y << ", " << at.player_position.z << ") grip " << at.grip_available << '\n';
+    require(walked && climb_wet_hold(m, 8.9, -146.02, 0.0, 1.0, false, k662Top + 0.4),
+            "M wreck: up the backup ladder through the 662 deck's hatch");
+    require(standing_above(m.snapshot(), k662Top - 0.1) && m.snapshot().death_count == 0,
+            "M wreck: on the 662 deck past the spent lift, alive");
+    std::cout << "PASS scraperx_sim AS-010 wreckage M: reel_travel=" << spent.m_reel_travel
+              << " deck_y=" << m.snapshot().player_position.y << '\n';
+}
 
 // N's flap opened and the rider out: the cage goes up alone and sits on its
 // dogs at the head. The way on is the backup ladder from the 684 deck up
@@ -68,6 +93,7 @@ void run_o_wreckage() {
 }
 
 void run_wreck_way_on() {
+    run_m_wreckage();
     run_n_wreckage();
     run_o_wreckage();
 }
