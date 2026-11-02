@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Validate a transferable toolchain archive and detect cache changes."""
+from collections import deque
 import hashlib
 import json
 import os
@@ -17,8 +18,40 @@ def contained(path):
     return path == ROOT or path.startswith(ROOT + "/")
 
 
+def resolve_archive_path(parts, symlinks):
+    """Resolve tar paths in extraction order, expanding links before '..'."""
+    pending = deque(parts)
+    resolved = []
+    expansions = 0
+    while pending:
+        part = pending.popleft()
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if len(resolved) <= 1:
+                raise ValueError("link escapes archive root through parent traversal")
+            resolved.pop()
+            continue
+        if not resolved and part != ROOT:
+            raise ValueError(f"link escapes archive root: {part!r}")
+        resolved.append(part)
+        name = "/".join(resolved)
+        if name in symlinks:
+            expansions += 1
+            if expansions > len(symlinks) * 2 + 1:
+                raise ValueError(f"cyclic archive symlink: {name!r}")
+            resolved.pop()
+            pending.extendleft(reversed(symlinks[name].split("/")))
+    result = "/".join(resolved)
+    if not contained(result):
+        raise ValueError(f"link escapes archive root: {result!r}")
+    return result
+
+
 def validate_archive(archive_path):
     seen = set()
+    symlinks = {}
+    hardlinks = []
     with tarfile.open(archive_path, "r:gz") as archive:
         for member in archive:
             name = member.name.rstrip("/")
@@ -33,18 +66,32 @@ def validate_archive(archive_path):
                 target = member.linkname
                 if not target or target.startswith("/"):
                     raise ValueError(f"unsafe link {name!r} -> {target!r}")
-                # A parent component may traverse an earlier symlink, even when
-                # lexical normalization appears to stay under the archive root.
-                if ".." in target.split("/"):
-                    raise ValueError(f"link escapes archive root via parent traversal: {name!r} -> {target!r}")
                 if member.issym():
-                    target = posixpath.normpath(posixpath.join(posixpath.dirname(name), target))
+                    symlinks[normalized] = target
                 else:
-                    target = posixpath.normpath(target)
-                if not contained(target):
-                    raise ValueError(f"link escapes archive root: {name!r} -> {member.linkname!r}")
+                    hardlinks.append((normalized, target))
                 continue
             raise ValueError(f"unsupported archive entry type: {name!r}")
+
+    # Resolve against every archive symlink, regardless of member order.
+    # Lexical normpath is insufficient: l1 -> ., l2 -> l1/.. can climb
+    # above ROOT even though each link text looks locally contained.
+    for name in seen:
+        try:
+            resolve_archive_path(name.split("/"), symlinks)
+        except ValueError as error:
+            raise ValueError(f"unsafe archive entry {name!r}: {error}") from error
+    for name, target in symlinks.items():
+        try:
+            resolve_archive_path(posixpath.dirname(name).split("/") + target.split("/"),
+                                 symlinks)
+        except ValueError as error:
+            raise ValueError(f"link escapes archive root: {name!r} -> {target!r}: {error}") from error
+    for name, target in hardlinks:
+        try:
+            resolve_archive_path(target.split("/"), symlinks)
+        except ValueError as error:
+            raise ValueError(f"link escapes archive root: {name!r} -> {target!r}: {error}") from error
 
 
 def inventory(root):
