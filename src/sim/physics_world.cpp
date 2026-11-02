@@ -758,7 +758,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         }
     }
     // The tower's machines while they run, from their measured motion.
+    // A cage or platform she rides is her own sound too.
     for (const ImpactLedger::Running &run : impacts_->running()) {
+        if (matron_on_machine(run.entity)) {
+            continue;
+        }
         matron_->hear(static_cast<float>(run.at.GetX()), static_cast<float>(run.at.GetY()),
                       static_cast<float>(run.at.GetZ()), run.loudness);
     }
