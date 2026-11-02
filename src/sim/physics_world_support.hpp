@@ -849,6 +849,11 @@ public:
         at_ += count;
         return true;
     }
+    [[nodiscard]] bool peek(std::uint32_t &value) const noexcept {
+        if (size_ - at_ < sizeof(value)) return false;
+        std::memcpy(&value, data_ + at_, sizeof(value));
+        return true;
+    }
     [[nodiscard]] bool done() const noexcept { return at_ == size_; }
 
 private:

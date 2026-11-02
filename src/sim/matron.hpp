@@ -1211,6 +1211,9 @@ public:
         std::uint32_t throws = 0;   // and threw at the player, this run
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet
+        float damage_ns = 0.0F;         // judged physical impulse, all sources
+        float player_damage_ns = 0.0F;  // the player's share only
+        std::uint8_t damage_stage = 0;  // 0..4; death is State::Dead
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
         float fall_x = 0.0F, fall_z = 1.0F;   // down: the way she fell (her head that way)
         bool kneeling = false;          // down where lying did not fit: crumpled on her knees
@@ -1306,7 +1309,20 @@ public:
         Stage stage = Stage::Pest;
         float exposure_s = 0.0F;
         std::uint32_t handled = 0;   // the throwables the player has handled, a bit each
+        float damage_ns = 0.0F;
+        float player_damage_ns = 0.0F;
     };
+
+    static constexpr float kKillDamageNs = 6000.0F;
+    static constexpr float kDamageTuneMinNs = 4000.0F;
+    static constexpr float kDamageTuneMaxNs = 8000.0F;
+    static constexpr std::uint8_t damage_stage_for_ns(const float ns) noexcept {
+        return ns >= 5400.0F ? 4 : ns >= 4200.0F ? 3 : ns >= 2700.0F ? 2 : ns >= 1200.0F ? 1 : 0;
+    }
+    static constexpr bool damage_lethal_at_ns(const float ns) noexcept { return ns >= kKillDamageNs; }
+    static constexpr float damage_recovery_scale_for_ns(const float ns) noexcept {
+        return 1.0F + 0.15F * damage_stage_for_ns(ns);
+    }
 
     Matron(JPH::PhysicsSystem &physics, std::uint32_t static_layer, std::uint32_t moving_layer,
            std::uint32_t steel_layer, JPH::BodyID player);
@@ -1708,7 +1724,8 @@ public:
         // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
         const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
                               state_ == State::Dead;
-        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
+        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
+                damage_ns_, player_damage_ns_};
     }
     void restore(const Saved &saved);
 
@@ -2665,6 +2682,8 @@ private:
     // The blow being dealt (above): her change, the strikers' impulse on her
     // mass (horizontal), and a weight's come down on her; since the last
     // tick a striker was against her; what kind of blow it is.
+    float damage_ns_ = 0.0F;
+    float player_damage_ns_ = 0.0F;
     JPH::Vec3 blow_change_ = JPH::Vec3::sZero();
     JPH::Vec3 blow_impulse_ = JPH::Vec3::sZero();
     float blow_above_ = 0.0F;
