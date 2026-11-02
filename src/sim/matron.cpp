@@ -3329,7 +3329,22 @@ void Matron::post_step(const float dt) {
         const float vy = bodies.GetLinearVelocity(body_).GetY();
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
-        if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+        if (landed_hard) {
+            drop_stock();
+            dead_ = true;
+            state_ = State::Dead;
+            clear_interrupted_actions(false);
+            const Vec3 velocity = bodies.GetLinearVelocity(body_);
+            const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
+            if (flat.LengthSq() > 1.0e-6F) {
+                const Vec3 along = flat.Normalized();
+                fall_x_ = along.GetX();
+                fall_z_ = along.GetZ();
+            }
+            down_for_s_ = 0.0F;
+            lie_down(fall_x_, fall_z_);
+        } else if (bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+            // No support exists below the world: this body cannot settle.
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
