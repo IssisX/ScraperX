@@ -293,11 +293,10 @@ class Recorder extends Node:
 				"%.5f" % sb.x, "%.5f" % sb.y, "%.5f" % sb.z, "%.4f" % float(data["shape_r"])])
 		else:
 			row.append_array(["", "", "", "", "", "", "", ""])
-		# The grips the native says her hands hold on a climb or pipe (contact_hand and contact_hand2).
-		var chand: Vector3 = data.get("contact_hand", Vector3.ZERO)
-		var chand2: Vector3 = data.get("contact_hand2", Vector3.ZERO)
-		row.append_array([int(bool(data.get("contact_hand_held", false))), "%.5f" % chand.x, "%.5f" % chand.y, "%.5f" % chand.z,
-			int(bool(data.get("contact_hand2_held", false))), "%.5f" % chand2.x, "%.5f" % chand2.y, "%.5f" % chand2.z])
+		# Her other hand's grip on a climb or pipe (contact_hand, beside contact_hand2 above).
+		var contact_hand: Vector3 = data.get("contact_hand", Vector3.ZERO)
+		row.append_array([int(bool(data.get("contact_hand_held", false))),
+			"%.5f" % contact_hand.x, "%.5f" % contact_hand.y, "%.5f" % contact_hand.z])
 		var out := PackedStringArray()
 		for v in row:
 			out.append(str(v))
@@ -369,4 +368,4 @@ class Recorder extends Node:
 		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst",
 		"contact_hand2_held", "contact_hand2x", "contact_hand2y", "contact_hand2z",
 		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r",
-		"chand_held", "chandx", "chandy", "chandz", "chand2_held", "chand2x", "chand2y", "chand2z"]
+		"contact_hand_held", "contact_handx", "contact_handy", "contact_handz"]

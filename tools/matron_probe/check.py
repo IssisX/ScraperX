@@ -103,10 +103,16 @@ def palm_gap(run, wb, point):
 
 
 def grip_failures(run):
+    """(gap, kind, rec, t) for each grip the drawn hand is off, and notes on what was measured against what."""
     rows = run.rows
     out = []
+    notes = []
     since = None
-    have_contact = "chand_held" in rows
+    climbs = [(kind, col) for kind, col in (("climb", "contact_hand"), ("climb2", "contact_hand2"))
+              if col + "_held" in rows]
+    for col in ("contact_hand", "contact_hand2"):
+        if col + "_held" not in rows:
+            notes.append("grip_climb not measured for %s: the recording has no %s columns" % (col, col))
     for rec in range(run.nrec):
         i = run.row_of_rec[rec]
         if i < 0:
@@ -118,10 +124,9 @@ def grip_failures(run):
         want = []
         if held and t - since >= GRIP_FROM_S:
             want.append(("hold", np.array([rows["hx"][i], rows["hy"][i], rows["hz"][i]])))
-        if have_contact and rows["chand_held"][i] > 0:
-            want.append(("climb", np.array([rows["chandx"][i], rows["chandy"][i], rows["chandz"][i]])))
-        if have_contact and rows["chand2_held"][i] > 0:
-            want.append(("climb2", np.array([rows["chand2x"][i], rows["chand2y"][i], rows["chand2z"][i]])))
+        for kind, col in climbs:
+            if rows[col + "_held"][i] > 0:
+                want.append((kind, np.array([rows[col + "x"][i], rows[col + "y"][i], rows[col + "z"][i]])))
         if not want:
             continue
         wb = run.world_bones(rec)
@@ -129,7 +134,7 @@ def grip_failures(run):
             gap = palm_gap(run, wb, point)
             if gap > GRIP_M:
                 out.append((gap, kind, rec, t))
-    return out
+    return out, notes
 
 
 def plant_failures(run):
@@ -210,8 +215,11 @@ def main():
             key = "stretch_arm" if bone.startswith(ARM_BONES) else "stretch_leg"
             found[key].append(((ratio - 1.0) * 100.0, "%s drawn %.2fx its rest length, %d frames" % (bone, ratio, count), rec,
                                run.rows["t"][run.row_of_rec[rec]]))
-        for gap, kind, rec, t in grip_failures(run):
+        grips, notes = grip_failures(run)
+        for gap, kind, rec, t in grips:
             found["grip_hold" if kind == "hold" else "grip_climb"].append((gap, kind, rec, t))
+        for note in notes:
+            say("  note: " + note)
         for drift, foot, rec, t in plant_failures(run):
             found["plant"].append((drift, foot, rec, t))
         pen, secs = penetration_failures(run, args.stride)
