@@ -1136,7 +1136,9 @@ RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
     const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
                        (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
     const float err = past - kPinBalanceM;
-    const float out = kPinOutM - std::clamp(1.2F * err, -0.3F, 0.55F);
+    // (Firmer back toward the rail in the fatality, whose window must keep
+    // him on its top every tick.)
+    const float out = kPinOutM - std::clamp(1.2F * err, fatal_hold_ ? -0.3F : -0.15F, 0.55F);
     const float up = rail_up_ + kPinUpM + std::clamp(0.8F * err, 0.0F, 0.35F);
     return rail_pose(at, feet, up, out, kPinSideM);
 }
