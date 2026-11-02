@@ -1309,8 +1309,6 @@ public:
         Stage stage = Stage::Pest;
         float exposure_s = 0.0F;
         std::uint32_t handled = 0;   // the throwables the player has handled, a bit each
-        float damage_ns = 0.0F;
-        float player_damage_ns = 0.0F;
     };
 
     static constexpr float kKillDamageNs = 6000.0F;
@@ -1722,8 +1720,7 @@ public:
         // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
         const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
                               state_ == State::Dead;
-        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
-                damage_ns_, player_damage_ns_};
+        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
     }
     void restore(const Saved &saved);
 
