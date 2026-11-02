@@ -236,13 +236,15 @@ const PLANT_LIFT_M := 0.12
 const RELEASE_TAU := 0.05
 # How fast a limb's pole turns to the side its pose bends to (rad/s).
 const POLE_RAD_S := 6.0
-# Her gripping arm drawn out to the held ankle, at most this many times its length.
-const HOLD_STRETCH_MAX := 2.7
+# Her gripping arm drawn out to what it holds, at most this many times its
+# length: her real arm (the owner, 2026-11-02: never stretched; the native puts
+# every hold within it, matron.hpp kRealArmM, and bends her trunk to it).
+const HOLD_STRETCH_MAX := 1.05
 # Her look laid on her neck to this far (matron_view.gd NECK_TWIST_MAX), the
 # rest on her chest.
 const LOOK_NECK_MAX := 1.92
-# and past that, her shoulder pulled out toward it at most this far
-const HOLD_SHOULDER_M := 0.4
+# and past that, her shoulder blade drawn out toward it at most this far
+const HOLD_SHOULDER_M := 0.08
 # drawn out so the arm is this far out to its length at the ankle (bent a
 # little: never locked straight)
 const HOLD_ARM_OUT := 0.93
@@ -285,6 +287,9 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
+# How far each hold's point was past her arm's reach this frame (hold_reach):
+# the view leans her into it (matron_view.gd _hold_lean).
+var hold_short := {"l": 0.0, "r": 0.0}
 # Keep the last governed arm pose while a physical prop is being approached or
 # carried. Restarting the IK from unrelated walk/search poses each frame can
 # pull a wrist off an otherwise stationary handle before govern clips it.
@@ -500,6 +505,7 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 	var need := sh.distance_to(want)
 	var k := clampf(need / maxf(HOLD_ARM_OUT * arm, 0.01), 1.0, k_max)
 	var beyond := need - HOLD_ARM_OUT * arm * k_max
+	hold_short[s] = maxf(beyond, 0.0) * w
 	if beyond > 0.0:
 		# the arm out as far as it goes: her shoulder pulled up out of her
 		# toward it
@@ -631,6 +637,8 @@ func govern() -> void:
 
 
 func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void:
+	hold_short["l"] = 0.0
+	hold_short["r"] = 0.0
 	stretch["l"] = 1.0
 	stretch["r"] = 1.0
 	landed.clear()

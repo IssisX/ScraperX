@@ -1068,6 +1068,7 @@ public:
     static constexpr float kBeltUpM = 0.40F;
     static constexpr float kBeltOutM = 0.42F;
     static constexpr float kBeltSideM = -0.15F;
+    static constexpr float kPinBalanceM = 0.05F;
     static constexpr float kPinHereUpM = 1.25F;   // no rail: him held up against her
     static constexpr float kPinWindowS = 2.5F;
     static constexpr float kPinReachS = 3.0F;
@@ -1365,6 +1366,7 @@ public:
         float hip_up = kHipUpM;         // her trunk in a hold (Trunk): hips over her feet
         float trunk_pitch = 0.0F;       // and its pitch forward (rad)
         std::uint32_t swats = 0;        // beat 1: her swats
+        bool hand2_active = false;      // her second hand out (hand2_active)
         bool aim_ledge = false;         // a ledge below her rail spot to let go onto
         float aim_x = 0.0F, aim_y = 0.0F, aim_z = 0.0F;
     };
@@ -2555,6 +2557,7 @@ private:
     bool pin_here_ = false;                // no rail: the pin against her, then set down
     bool over_up_ = false;                 // beat 4: his ankle up over the rail's top
     bool back_lifted_ = false;             // back in: his ankle lifted clear over the rail's top
+    bool relaid_ = false;                  // beat 4's start: him laid back across the rail again by his belt
     float rail_up_ = 0.0F;                 // the top of the steel at her rail's line, over her feet
     std::uint32_t swats_ = 0;
     // The fatality's hold (kFatalTargetS); a restore clears all but the counts.

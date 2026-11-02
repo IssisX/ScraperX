@@ -1402,6 +1402,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.hip_up = view.hip_up;
     result.trunk_pitch = view.trunk_pitch;
     result.swats = view.swats;
+    result.hand2_active = view.hand2_active;
     result.aim = Vector3{view.aim_x, view.aim_y, view.aim_z};
     result.fooled = view.fooled;
     result.wary = view.wary;

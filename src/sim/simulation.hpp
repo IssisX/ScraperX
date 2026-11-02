@@ -404,6 +404,7 @@ struct MatronSnapshot final {
     double hip_up = 1.0;           // her trunk in a hold: hips over her feet (m)
     double trunk_pitch = 0.0;      // and its pitch forward (rad)
     std::uint32_t swats = 0;
+    bool hand2_active = false;     // her second hand out (the belt, his arm, his ankle)
     Vector3 aim{};
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.

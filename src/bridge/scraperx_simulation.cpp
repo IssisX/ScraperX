@@ -1870,6 +1870,7 @@ godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
     out["hip_up"] = m.hip_up;
     out["trunk_pitch"] = m.trunk_pitch;
     out["swats"] = static_cast<std::int64_t>(m.swats);
+    out["hand2_active"] = m.hand2_active;
     out["hand2"] = to_godot(m.hand2);
     out["armplay_beat"] = static_cast<std::int64_t>(m.armplay_beat);
     out["fatal_beat_view"] = static_cast<std::int64_t>(m.fatal_beat);

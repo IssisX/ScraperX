@@ -4712,6 +4712,7 @@ void Matron::refresh_view() {
     view_.hip_up = trunk_.hip_up;
     view_.trunk_pitch = trunk_.pitch;
     view_.swats = swats_;
+    view_.hand2_active = hand2_active();
     if (shown.bar_traverse) {
         view_.hand_x = float(shown.hand.GetX()); view_.hand_y = float(shown.hand.GetY()); view_.hand_z = float(shown.hand.GetZ());
         view_.support_n = shown.force_n;

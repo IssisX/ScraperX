@@ -1117,8 +1117,19 @@ RVec3 Matron::belt_pose(const RVec3 at, const float feet) const noexcept {
 }
 
 RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
-    return pin_here_ ? rail_pose(at, feet, kPinHereUpM, 0.50F, kPinSideM)
-                     : rail_pose(at, feet, rail_up_ + kPinUpM, kPinOutM, kPinSideM);
+    if (pin_here_) {
+        return rail_pose(at, feet, kPinHereUpM, 0.50F, kPinSideM);
+    }
+    // His middle kept balanced on the rail's top (kPinBalanceM past its
+    // line): slipping out, her hand on his collar comes in and up; in, out.
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 middle = bodies.GetPosition(player_);
+    const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                       (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+    const float err = past - kPinBalanceM;
+    const float out = kPinOutM - std::clamp(1.2F * err, -0.15F, 0.55F);
+    const float up = rail_up_ + kPinUpM + std::clamp(0.8F * err, 0.0F, 0.35F);
+    return rail_pose(at, feet, up, out, kPinSideM);
 }
 
 void Matron::reset_beats() noexcept {
@@ -1132,6 +1143,7 @@ void Matron::reset_beats() noexcept {
     pin_here_ = false;
     over_up_ = false;
     back_lifted_ = false;
+    relaid_ = false;
     rail_up_ = 0.0F;
 }
 
@@ -1172,6 +1184,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
     };
     const auto back_in = [&] {
         // Out of her plan: back in over the rail and set down.
+        ++spares_;
         hand2_want_ = 0;
         regrip_ = false;
         state_ = State::Spare;
@@ -1265,7 +1278,27 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             spare_here();
             break;
         }
-        if (hand2_on_ != 1) {
+        if (!relaid_) {
+            // Her second hand back on his belt: him laid back across the
+            // rail's top again (his ankles inboard, in her reach).
+            hand2_want_ = 2;
+            pose_hand(dt, pin_pose(at, feet), kHandSpeedMps);
+            if (hand2_on_ != 2) {
+                pull2_n_ = kHandReachPullN;
+                pose_hand2(dt, player_belt_, kHandReachSpeedMps);
+            } else {
+                pull2_n_ = kHandPullN;
+                const RVec3 belt = belt_pose(at, feet);
+                pose_hand2(dt, belt, 0.6F * kHandSpeedMps);
+                if (Vec3(belt - hand2_target_).Length() < 0.05F) {
+                    relaid_ = true;
+                    hold_s_ = 0.0F;
+                }
+            }
+            if (hold_s_ > 2.0F * kHandoffS) {
+                back_in();
+            }
+        } else if (hand2_on_ != 1) {
             hand2_want_ = 1;
             pull2_n_ = kHandReachPullN;
             pose_hand(dt, pin_pose(at, feet), kHandSpeedMps);
