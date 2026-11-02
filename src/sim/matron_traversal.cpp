@@ -2263,7 +2263,11 @@ namespace {
 // player are, her limits, and every fixed (static or kinematic), non-sensor
 // body in the world in body-ID order: its ID, motion type, layer, user
 // data, transform and whole shape. Dynamic bodies and sensors are left out
-// because no query of the scan sees them.
+// because no query of the scan sees them, and so is a body taken out of the
+// world but not destroyed (RemoveBody alone): it keeps its ID, place and
+// shape, but every query of the scan goes through the broadphase, which no
+// longer holds it. Written in, a deck taken out after one scan would give
+// the next scan the old map back, deck and all.
 class KeyStream final : public StreamOut {
 public:
     explicit KeyStream(std::string &out) : out_(out) {}
@@ -2296,7 +2300,7 @@ std::string steel_key(const PhysicsSystem &physics, const AABox &bounds, const I
         BodyLockRead lock(physics.GetBodyLockInterface(), id);
         if (!lock.Succeeded()) continue;
         const Body &body = lock.GetBody();
-        if (body.IsSensor() || body.IsDynamic()) continue;
+        if (body.IsSensor() || body.IsDynamic() || !body.IsInBroadPhase()) continue;
         out.Write(id.GetIndexAndSequenceNumber());
         out.Write(static_cast<std::uint8_t>(body.GetMotionType()));
         out.Write(body.GetObjectLayer());
