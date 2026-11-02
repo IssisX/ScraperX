@@ -97,6 +97,13 @@ the rail pin, and it gives him less to do.
   the rail. 3 Pin: collar and belt (two hands), his window and the arm tear; PUNCH works. 4 Over: the
   body squared to the rail, the belt pushed out while the ankle lifts. 5 Hang by one ankle; the
   ordinary hold sets him back on her deck (Spare), the fatality lets go over a drop foreseen to kill.
+- On the north band's spot (-6, -129) no edge in her reach can take the hang (past its outside's
+  lip a beam at her deck's height; under its shaft side a deck 2 m down): she does her floor version
+  there (in the protected checks PR).
+- In the fatality she leans over the rail for the let-go, decides it at the end of his swing (head
+  down, she standing still), and flicks him out 0.9 to 1.0 m/s (under her 8 kN); his handback waits
+  while either of her hands holds him, so he is not righted in the air.
+- Screenshots of each beat, from the Godot runtime: `hold_shots/`.
 - The fatality takes 7.5 to 13 s from her fingers closing to her letting go (the drag, the pin with
   his window, the over, the hang); the owner's bar was 5 to 7 s. That bar is his call, in the
   protected checks PR.
