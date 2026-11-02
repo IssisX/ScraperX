@@ -83,8 +83,11 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
 - The live board is issue #87's **body** (2026-11-02, replacing #3's 842-comment thread; #3 stays the
   record). Only the integrator edits the body. Agents read the body and the comments since their own
   last one, never the history, and post one line per real step. He pastes one universal prompt ("read
-  the board, do your queue"), and his plain comments there are orders to every agent. When the board
-  issue passes about 150 comments, the integrator opens a fresh one and links it once.
+  the board, do your queue"), and his plain comments there are orders to every agent. The board holds
+  claims, BLOCKED lines, verdicts and rulings only; a hard job's technical findings go on its own PR
+  or issue, linked from the board. When the board issue passes 100 comments, the integrator opens a
+  fresh one ("Board: live jobs (N)"), carries the body over and links it once (11-02: never near #3's
+  size).
 - Working in tandem (2026-11-02: *"figure out how all of you agents can communicate and work
   synergistically ... not constantly waiting on me"*):
   - Nobody waits: every agent holds two or more jobs. Blocked 30 minutes, it posts `BLOCKED: what,
