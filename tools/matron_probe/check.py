@@ -13,13 +13,22 @@ Checks, each over every recorded frame unless noted, with its tolerance:
   stretch_arm, stretch_leg
            a bone drawn longer than its rest length by more than STRETCH_PCT percent (the distance between
            a bone and its parent, against the rest pose; arms are the shoulder and elbow bones, legs the
-           hip, knee and ankle). Hair and eyes are not bones she poses and are skipped.
+           hip, knee and ankle). Hair and eyes are not bones she poses and are skipped. Each frame is
+           counted under the one cause it is drawn in, so a known cause covers only its own frames:
+             stretch_arm_hold   a hold (score.HOLD_STATES)
+             stretch_arm_reach  her stock reach (the probe's stock_reach column: carrying or seeking a handle)
+             stretch_arm_turn, stretch_leg_turn
+                                the Turn (turn > 0), whose limb_scale 1.3 (matron_view.gd) draws her arms 1.3x
+                                and her thighs and shins 1.06x by design
+             stretch_arm, stretch_leg
+                                every other frame
   grip_hold, grip_climb
            while the sim says a hand of hers holds something, the drawn hand (the line from a wrist to its
            knuckles, the nearer hand) more than GRIP_M from the sim's grip point: the hold (the held ankle,
            where her fingers hold him by the native's grip, the point her drawn hand closes on, not her
-           hand's commanded target, which it lags; from GRIP_FROM_S into the hold) and the climb or pipe
-           grip (contact_hand and contact_hand2, when the native says they are held).
+           hand's commanded target, which it lags; from GRIP_FROM_S into the hold; a held frame without a
+           held ankle is a failure) and the climb or pipe grip (contact_hand and contact_hand2, when the
+           native says they are held).
   plant    a drawn foot that is down (its lowest point within PLANT_M of the surface under it) while she
            stands still on a floor (not climbing, held, knocked down or turning; under STILL_MPS), more than
            PLANT_DRIFT_M across the ground from where it came down. A jump of the root over TELEPORT_M in a
@@ -31,8 +40,16 @@ Checks, each over every recorded frame unless noted, with its tolerance:
 
 Not measured: limb vertices inside her torso (only hair and skirt are scored against her body).
 
-EXPECTED names a known defect and the exit-board item that fixes it. The tolerance stays the law; a
-known defect is marked, never tolerated.
+Counting: each check counts failing frames (a plant, slides; hair and skirt, points inside) and keeps the
+worst amount, per scenario.
+
+EXPECTED names a known defect, keyed by (check, scenario), with the exit-board item that fixes it and
+today's failing count and worst amount. The tolerance stays the law; a known defect is marked, never
+tolerated, and is strict both ways:
+  - more failures than COUNT_MARGIN over its count, or a worst amount more than PEAK_MARGIN over its
+    worst, is a regression and FAILS;
+  - no failure at all is an XPASS and FAILS, so the entry is removed;
+  - a failure in a (check, scenario) with no entry FAILS.
 """
 import argparse
 import os
@@ -54,22 +71,43 @@ PLANT_DRIFT_M = 0.05
 HIT_M = score.HIT_M
 MIN_REST_M = 0.01          # a bone shorter at rest than this has no length to measure
 ARM_BONES = ("sh_", "el_")
-CHECKS = ("stretch_arm", "stretch_leg", "grip_hold", "grip_climb", "plant", "hair", "skirt")
-# check -> the exit-board item that fixes the known defect (strict: when it stops failing, remove it).
-# Found on trunk 1bd28c1 (touch_matron_act, 2026-10-29); the tolerance stays the law.
+CHECKS = ("stretch_arm", "stretch_arm_hold", "stretch_arm_reach", "stretch_arm_turn", "stretch_leg",
+          "stretch_leg_turn", "grip_hold", "grip_climb", "plant", "hair", "skirt")
+UNIT = {c: "%" for c in CHECKS if c.startswith("stretch")}
+# A known defect's bounds: its failing count may grow by this fraction (at least COUNT_MIN frames) and its
+# worst amount by this fraction, before it reads as a regression (frame timing moves a few frames run to run).
+COUNT_MARGIN = 0.10
+COUNT_MIN = 3
+PEAK_MARGIN = 0.05
+# Her drawn limbs come back from the Turn's limb_scale over the frames after it ends (measured: up to 10
+# frames at 60 fps); those frames are still the Turn's.
+TURN_TAIL_S = 0.2
+# (check, scenario) -> (the exit-board item that fixes it, today's failing count, today's worst amount).
+# Measured on CI (godot-touch touch-2's drawn-body step); see README.md for the run.
+HOLD_ITEM = "exit item 4, holds at a real arm's length (hold worker, PR #37)"
+REACH_ITEM = "her stock reach with real arms (Builder job 3; PROP_STRETCH_MAX 2.7, matron_rig.gd two-handed reach)"
+TURN_ITEM = "the Turn's limb_scale 1.3 (matron_view.gd), by design; the owner's call (rule 36)"
+CLIMB_ITEM = "no exit item yet: her drawn hands are off the climb's grip (reported 2026-10-29)"
+PLANT_ITEM = "no exit item yet: a foot slides up to 6.8 cm while she is nearly still (reported 2026-10-29)"
+HAIR_ITEM = "exit item 10, hair"
+SKIRT_ITEM = "exit item 10, hair and cloth (the skirt's baseline is her bind pose, an A-pose)"
 EXPECTED = {
-    "stretch_arm": "exit item 4, holds at a real arm's length (PR #37)",
-    "grip_hold": "exit item 4, holds at a real arm's length (PR #37)",
-    "stretch_leg": "no exit item yet: her legs are drawn 6% over (reported 2026-10-29)",
-    "grip_climb": "no exit item yet: her drawn hands are off the climb's grip (reported 2026-10-29)",
-    "plant": "no exit item yet: a foot slides up to 8.5 cm while she is nearly still (reported 2026-10-29)",
-    "hair": "exit item 10, hair",
-    "skirt": "exit item 10, hair and cloth (the skirt's baseline is her bind pose, an A-pose)",
 }
 
 
+def stretch_cause(rows, i, turning):
+    """The one cause a frame is drawn in, for the stretch checks: hold, reach, turn, or "" (none)."""
+    if int(rows["hold_state"][i]) in score.HOLD_STATES:
+        return "hold"
+    if "stock_reach" in rows and rows["stock_reach"][i] > 0:
+        return "reach"
+    if turning:
+        return "turn"
+    return ""
+
+
 def stretch_failures(run):
-    """(ratio, bone, rec) for the worst frame of each stretched bone, and the count of frames."""
+    """check -> (pct over, what, rec, t) per failing frame: its worst stretched bone that frame."""
     nb = len(run.bone_names)
     origin = score.xf(run.bones_raw.reshape(run.nrec, nb, 12))[..., :, 3]
     parent = run.parent
@@ -77,17 +115,32 @@ def stretch_failures(run):
     skip = np.array([n.startswith("hair") or n.startswith("eye") for n in run.bone_names])
     use = (parent >= 0) & (rest > MIN_REST_M) & ~skip
     idx = np.nonzero(use)[0]
+    arm = np.array([run.bone_names[b].startswith(ARM_BONES) for b in idx])
     length = np.linalg.norm(origin[:, idx] - origin[:, parent[idx]], axis=2)
     ratio = length / rest[idx]
-    recs = np.nonzero(run.row_of_rec >= 0)[0]
-    out = []
-    for k, bone in enumerate(idx):
-        r = ratio[recs, k]
-        over = np.nonzero(r > 1.0 + STRETCH_PCT / 100.0)[0]
-        if over.size:
-            worst = over[np.argmax(r[over])]
-            out.append((float(r[worst]), run.bone_names[bone], int(recs[worst]), int(over.size)))
-    return sorted(out, reverse=True)
+    out = {}
+    limit = 1.0 + STRETCH_PCT / 100.0
+    rows = run.rows
+    last_turn = -1.0e9
+    for rec in np.nonzero(run.row_of_rec >= 0)[0]:
+        i = run.row_of_rec[rec]
+        t = float(rows["t"][i])
+        if rows["turn"][i] > 0:
+            last_turn = t
+        turning = t - last_turn <= TURN_TAIL_S
+        cause = stretch_cause(rows, i, turning)
+        for limb, mask in (("arm", arm), ("leg", ~arm)):
+            r = np.where(mask, ratio[rec], 0.0)
+            k = int(np.argmax(r))
+            if r[k] > limit:
+                # Her legs have one known cause, the Turn (a hold or a reach draws only her arms).
+                c = cause if limb == "arm" else ("turn" if turning else "")
+                check = "stretch_" + limb + ("_" + c if c else "")
+                bone = run.bone_names[idx[k]]
+                what = "%s drawn %.2fx its rest length (state %d, turn %d%s)" % (
+                    bone, r[k], int(rows["state"][i]), int(rows["turn"][i]), ", " + c if c else "")
+                out.setdefault(check, []).append(((float(r[k]) - 1.0) * 100.0, what, int(rec), float(rows["t"][i])))
+    return out
 
 
 def palm_gap(run, wb, point):
@@ -140,7 +193,12 @@ def grip_failures(run):
         want = []
         if held and t - since >= GRIP_FROM_S:
             point, ankle = held_point(rows, i, have_ankle)
-            on_target += 0 if ankle else 1
+            if not ankle:
+                # The native says she holds him and gives no point her fingers hold: a failure, not a
+                # quiet measure against her hand's target.
+                on_target += 1
+                out.append((float("inf"), "hold, no held ankle", rec, t))
+                continue
             want.append(("hold", point))
         for kind, col in climbs:
             if rows[col + "_held"][i] > 0:
@@ -153,7 +211,7 @@ def grip_failures(run):
             if gap > GRIP_M:
                 out.append((gap, kind, rec, t))
     if on_target:
-        notes.append("grip_hold: %d held frames had no held ankle%s and were measured against her hand's target"
+        notes.append("grip_hold: %d held frames had no held ankle%s: each is a failure"
                      % (on_target, "" if have_ankle else " column"))
     return out, notes
 
@@ -213,60 +271,75 @@ def penetration_failures(run, stride):
     return out, sc.elapsed
 
 
+def verdict(check, scenario, items):
+    """(word, failed, text) for one (check, scenario)."""
+    known = EXPECTED.get((check, scenario))
+    count = len(items)
+    peak = max((a for a, _, _, _ in items), default=0.0)
+    unit = UNIT.get(check, " m")
+    if not known:
+        if count:
+            return "FAIL", True, "%d failures, worst %.3f%s" % (count, peak, unit)
+        return "PASS", False, ""
+    why, was_count, was_peak = known
+    if not count:
+        return "XPASS", True, "no failure now; it was expected until %s. Remove it from EXPECTED." % why
+    count_bound = max(int(np.ceil(was_count * (1.0 + COUNT_MARGIN))), was_count + COUNT_MIN)
+    peak_bound = was_peak * (1.0 + PEAK_MARGIN)
+    text = "%d failures (known %d, bound %d), worst %.3f%s (known %.3f, bound %.3f); %s" % (
+        count, was_count, count_bound, peak, unit, was_peak, peak_bound, why)
+    if count > count_bound or peak > peak_bound:
+        return "FAIL", True, "REGRESSION past its known defect: " + text
+    return "XFAIL", False, text
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("runs", nargs="+")
     ap.add_argument("--stride", type=int, default=10, help="score hair and skirt every Nth frame")
     ap.add_argument("--report", default="")
     args = ap.parse_args()
-    results = {}      # check -> list of (amount, what, rec, t)
     lines = []
+    failed = []
 
     def say(text):
         lines.append(text)
         print(text, flush=True)
 
+    ran = set()
     for path in args.runs:
         run = score.Run(path)
         name = os.path.basename(os.path.normpath(path))
+        ran.add(name)
         frames = int((run.row_of_rec >= 0).sum())
         say("== %s: %d drawn frames at %d fps" % (name, frames, run.fps))
-        found = {name_: [] for name_ in CHECKS}
-        for ratio, bone, rec, count in stretch_failures(run):
-            key = "stretch_arm" if bone.startswith(ARM_BONES) else "stretch_leg"
-            found[key].append(((ratio - 1.0) * 100.0, "%s drawn %.2fx its rest length, %d frames" % (bone, ratio, count), rec,
-                               run.rows["t"][run.row_of_rec[rec]]))
+        if "stock_reach" not in run.rows:
+            say("  note: the recording has no stock_reach column: reach frames count as stretch_arm")
+        found = {c: [] for c in CHECKS}
+        for check, items in stretch_failures(run).items():
+            found[check].extend(items)
         grips, notes = grip_failures(run)
         for gap, kind, rec, t in grips:
-            found["grip_hold" if kind == "hold" else "grip_climb"].append((gap, kind, rec, t))
+            found["grip_hold" if kind.startswith("hold") else "grip_climb"].append((gap, kind, rec, t))
         for note in notes:
             say("  note: " + note)
         for drift, foot, rec, t in plant_failures(run):
             found["plant"].append((drift, foot, rec, t))
         pen, secs = penetration_failures(run, args.stride)
         found["hair"], found["skirt"] = pen["hair"], pen["skirt"]
-        for check, items in found.items():
-            results.setdefault(check, []).extend((a, w, "%s:%d" % (name, r), t) for a, w, r, t in items)
-            say("  %-8s %d failures" % (check, len(items)))
+        for check in CHECKS:
+            items = sorted(found[check], reverse=True)
+            word, bad, text = verdict(check, name, items)
+            say("  %-5s %-17s %s" % (word, check, text or "%d failures" % len(items)))
+            if items and word != "PASS":
+                for amount, what, rec, t in items[:6]:
+                    say("        frame %s:%d t=%.2f s: %s %.3f%s" % (name, rec, t, what, amount, UNIT.get(check, " m")))
+            if bad:
+                failed.append("%s/%s" % (check, name))
         say("  (hair and skirt scored every %d frames: %.0f s)" % (args.stride, secs))
-    failed = []
-    say("")
-    for check in CHECKS:
-        items = sorted(results.get(check, []), reverse=True)
-        known = EXPECTED.get(check)
-        unit = "%" if check.startswith("stretch") else " m"
-        if items:
-            say("%s %s: %d failures%s" % ("XFAIL" if known else "FAIL", check, len(items),
-                                          " (expected, fixed by %s)" % known if known else ""))
-            for amount, what, rec, t in items[:12]:
-                say("    %s frame %s t=%.2f s: %s %.3f%s" % ("  ", rec, t, what, amount, unit))
-            if not known:
-                failed.append(check)
-        elif known:
-            say("XPASS %s: no failure now; it was expected until %s. Remove it from EXPECTED." % (check, known))
-            failed.append(check)
-        else:
-            say("PASS %s" % check)
+    for (check, scenario) in sorted(EXPECTED):
+        if scenario not in ran:
+            say("note: %s/%s expected but its scenario was not recorded" % (check, scenario))
     if args.report:
         with open(args.report, "w") as fh:
             fh.write("\n".join(lines) + "\n")

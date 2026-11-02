@@ -300,6 +300,13 @@ class Recorder extends Node:
 		var contact_hand: Vector3 = data.get("contact_hand", Vector3.ZERO)
 		row.append_array([int(bool(data.get("contact_hand_held", false))),
 			"%.5f" % contact_hand.x, "%.5f" % contact_hand.y, "%.5f" % contact_hand.z])
+		# Which stock reach of hers is active (matron_rig.gd: 1 carrying, 2 seeking a handle), and whether it is
+		# her two-handed one: a reach draws her arms to the handle, as a hold does.
+		var carrying_stock := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+		var seeking_stock := not carrying_stock and int(data.get("stock_seeking", 0)) != 0 and data.has("stock_seek_handle")
+		var stock_size: Vector3 = data.get("stock_size", Vector3.ZERO) if carrying_stock else data.get("stock_seek_size", Vector3.ZERO)
+		row.append_array([1 if carrying_stock else (2 if seeking_stock else 0),
+			int((carrying_stock or seeking_stock) and maxf(stock_size.x, stock_size.z) >= 0.38)])
 		if hold.has("held_ankle"):
 			var ankle: Vector3 = hold["held_ankle"]
 			row.append_array(["%.5f" % ankle.x, "%.5f" % ankle.y, "%.5f" % ankle.z])
@@ -377,4 +384,4 @@ class Recorder extends Node:
 		"contact_hand2_held", "contact_hand2x", "contact_hand2y", "contact_hand2z",
 		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r",
 		"contact_hand_held", "contact_handx", "contact_handy", "contact_handz",
-		"held_anklex", "held_ankley", "held_anklez"]
+		"stock_reach", "stock_two_hands", "held_anklex", "held_ankley", "held_anklez"]
