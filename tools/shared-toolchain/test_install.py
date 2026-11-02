@@ -159,8 +159,8 @@ fi
         (self.cache / ".scraperx-integrity.json").unlink()
         marker = self.root / "untrusted-cmake-ran"
         cmake = self.cache / "bin/cmake"
-        cmake.write_text("#!/bin/sh\\nprintf 'ran\\\\n' > " +
-                         shlex.quote(str(marker)) + "\\necho 'cmake version 3.31.10'\\n")
+        cmake.write_text("#!/bin/sh\nprintf 'ran\\\n' > " +
+                         shlex.quote(str(marker)) + "\necho 'cmake version 3.31.10'\n")
         cmake.chmod(0o755)
         checked = self.execute("--verify")
         self.assertNotEqual(checked.returncode, 0)
@@ -170,11 +170,11 @@ fi
         archive, digest = self.bundle()
         self.assertEqual(self.offline(archive, digest).returncode, 0)
         cmake = self.cache / "bin/cmake"
-        cmake.write_text("#!/bin/sh\\necho 'cmake version 3.31.10'\\n# altered\\n")
+        cmake.write_text("#!/bin/sh\necho 'cmake version 3.31.10'\n# altered\n")
         manifest = self.cache / ".scraperx-integrity.json"
         contents = json.loads(manifest.read_text())
         contents["bin/cmake"] = ["file", hashlib.sha256(cmake.read_bytes()).hexdigest()]
-        manifest.write_text(json.dumps(contents, sort_keys=True, separators=(",", ":")) + "\\n")
+        manifest.write_text(json.dumps(contents, sort_keys=True, separators=(",", ":")) + "\n")
         checked = self.execute("--verify")
         self.assertNotEqual(checked.returncode, 0,
                             "rewritten manifest must not become its own trust anchor")
@@ -207,14 +207,14 @@ fi
         marker = self.root / "cached-node-ran"
         fallback = self.root / "npx-fallback-ran"
         node = self.cache / "bin/node"
-        node.write_text("#!/bin/sh\\nprintf 'ran\\\\n' > " +
-                        shlex.quote(str(marker)) + "\\n")
+        node.write_text("#!/bin/sh\nprintf 'ran\\\n' > " +
+                        shlex.quote(str(marker)) + "\n")
         node.chmod(0o755)
         fake_bin = self.root / "fake-launcher-bin"
         fake_bin.mkdir()
         npx = fake_bin / "npx"
-        npx.write_text("#!/bin/sh\\nprintf 'fallback\\\\n' > " +
-                       shlex.quote(str(fallback)) + "\\n")
+        npx.write_text("#!/bin/sh\nprintf 'fallback\\\n' > " +
+                       shlex.quote(str(fallback)) + "\n")
         npx.chmod(0o755)
         variables = os.environ.copy()
         variables.update(SCRAPERX_TOOLCHAIN_DIR=str(self.cache), GODOT_PATH="/usr/bin/true",
