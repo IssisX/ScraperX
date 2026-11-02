@@ -1614,8 +1614,10 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         if (hold_s_ > 3.5F && !arm_throw_ && arm_throws_ < arm_tears_) {
             ++arm_throws_;
             arm_throw_ = true;
-            // Along the band beside her, low: it lands on her deck.
-            arm_throw_v_ = (right * 0.95F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() * kArmThrowMps;
+            // In off the rail, behind her and to her side, low: it lands on
+            // her deck (not down the shaft).
+            const Vec3 inboard(-rim_nx_, 0.0F, -rim_nz_);
+            arm_throw_v_ = (inboard * 0.8F + right * 0.45F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() * kArmThrowMps;
         }
         if (hold_s_ >= kArmPlaySeconds) {
             hold_phase_ = 5;
