@@ -1086,7 +1086,7 @@ public:
     static constexpr float kOverUpM = 0.70F;
     static constexpr float kOverOutM = 0.30F;
     static constexpr float kHandoffS = 3.0F;
-    static constexpr float kOverPushM = 0.30F;     // her belt hand out past its pin pose
+    static constexpr float kOverPushM = 0.15F;     // her belt hand out past its pin pose
     static constexpr float kOverOutPastM = 0.35F;  // his middle this far out: she lets go of his belt
     // Beat 5, hanging by one ankle: her hand on the rail's top, just out past
     // its line, him head down against the outside of her deck.

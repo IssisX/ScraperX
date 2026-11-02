@@ -885,7 +885,7 @@ func _hold_gate(data: Dictionary, delta: float) -> void:
 	if _rig != null:
 		short = maxf(float(_rig.hold_short["r"]), float(_rig.hold_short["l"]))
 	if holding:
-		_hold_lean = clampf(_hold_lean + (1.2 if short > 0.005 else -0.6) * delta, 0.0, 0.7)
+		_hold_lean = clampf(_hold_lean + (0.8 if short > 0.03 else -1.0) * delta, 0.0, 0.35)
 	else:
 		_hold_lean = maxf(0.0, _hold_lean - delta)
 	if _pose_fresh:
