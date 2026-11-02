@@ -1098,6 +1098,7 @@ public:
     static constexpr float kBackInSideM = 0.20F;
     // Set back on her deck: the rail his pulley, her hand in and down.
     static constexpr float kBackInM = 0.30F;
+    static constexpr float kFatalOutM = 0.30F;   // the fatality's let-go: her arm out past the hang
     static constexpr float kBackInLiftM = 0.45F;  // his ankle lifted clear over the rail's top first
     static constexpr float kBackInWalkM = 2.2F;
     static constexpr float kBackInSlope = 0.85F;   // tan 40 degrees
@@ -1605,6 +1606,8 @@ public:
     // What her first hand holds, or goes for: his ankle or his collar.
     enum class Grip : std::uint8_t { Ankle = 0, Collar = 1, Belt = 2 };
     [[nodiscard]] Grip grip_point() const noexcept { return grip_point_; }
+    // Her first hand between two holds on him (the hold goes on).
+    [[nodiscard]] bool regripping() const noexcept { return regrip_ && holding_state(state_); }
     // She opens her first hand to take him by another point (the hold goes
     // on: grip_lost ignores it). Once.
     [[nodiscard]] bool take_regrip_let_go() noexcept {
