@@ -1274,7 +1274,12 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             pose_hand(dt, hand_target_, kHandSpeedMps);
             pose_hand2(dt, b, kHandReachSpeedMps);
             if (hold_s_ > kPinReachS) {
-                back_in();
+                // His belt out of her other hand's reach (steel in the way):
+                // the pin by his collar alone.
+                hand2_want_ = 0;
+                hold_phase_ = 2;
+                hold_s_ = 0.0F;
+                fatal_window_s_ = 0.0F;
             }
             break;
         }
@@ -1297,7 +1302,9 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // blow frees him: his_blow).
         at_spot();
         pose_hand(dt, pin_pose(at, feet), kHandSpeedMps);
-        pose_hand2(dt, belt_pose(at, feet), kHandSpeedMps);
+        if (hand2_on_ == 2) {
+            pose_hand2(dt, belt_pose(at, feet), kHandSpeedMps);
+        }
         fatal_hang_ = true;
         fatal_window_s_ += dt;
         if (fatal_window_s_ >= (fatal_hold_ ? kFatalHangWindowS : kPinWindowS)) {
@@ -1313,8 +1320,11 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
                 break;
             }
             // Her first hand from his collar to his belt beside her second
-            // (his middle held on the rail's top: he cannot slide off it).
-            begin_regrip(Grip::Belt);
+            // (his middle held on the rail's top: he cannot slide off it);
+            // her second not on it, her first keeps his collar.
+            if (hand2_on_ == 2) {
+                begin_regrip(Grip::Belt);
+            }
             hold_phase_ = 3;
             hold_s_ = 0.0F;
         }
@@ -1330,7 +1340,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             }
             break;
         }
-        pose_hand(dt, belt_pose(at, feet), kHandSpeedMps);
+        pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), kHandSpeedMps);
         if (fatal_hold_) {
             hold_phase_ = 4;
             hold_s_ = 0.0F;
@@ -1350,7 +1360,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // Over's start: back at her spot, his middle on the rail's top in her
         // first hand; her second hand to his ankle.
         at_spot();
-        pose_hand(dt, belt_pose(at, feet), kHandSpeedMps);
+        pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), kHandSpeedMps);
         if (to_spot > 0.2F && hold_s_ < 2.0F * kHandoffS) {
             break;
         }
