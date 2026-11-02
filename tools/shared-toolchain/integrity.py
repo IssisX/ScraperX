@@ -79,7 +79,7 @@ def validate_archive(archive_path):
     # entries regardless of member order; internal npm links remain valid.
     for name in seen:
         parent = posixpath.dirname(name)
-        if parent == ".":
+        if parent in ("", "."):
             continue
         actual_parent = resolve_archive_path(parent.split("/"), symlinks)
         if actual_parent != parent:
