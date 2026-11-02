@@ -720,8 +720,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
     // His ankle; in her fingers, the point of it they hold.
-    matron_->set_player_ankle(grip_ != nullptr ? bodies.GetWorldTransform(player_id_) * grip_on_body_
-                                               : player_ankle(bodies));
+    matron_->set_player_ankle(grip_ != nullptr && grip_on_ankle_ ? bodies.GetWorldTransform(player_id_) * grip_on_body_
+                                                                 : player_ankle(bodies));
+    matron_->set_player_collar(player_collar(bodies));
+    matron_->set_player_belt(bodies.GetPosition(player_id_));
+    // Down: off his feet, lying (beat 1 of her hold).
+    matron_->set_player_down(player_free_rot_ && bodies.GetRotation(player_id_).RotateAxisY().GetY() < 0.6F);
     // Where his head faces (his facing, his look's pitch): hers to read only
     // through her eyes.
     {

@@ -53,6 +53,7 @@ void Simulation::PhysicsWorld::despawn_severed_arm(JPH::BodyInterface &bodies) n
 
 void Simulation::PhysicsWorld::arm_reset(JPH::BodyInterface &bodies) noexcept {
     destroy_grab_constraint(wrist_);
+    destroy_grab_constraint(hand2_grip_);
     destroy_grab_constraint(hand2_arm_);
     if (!hand2_id_.IsInvalid()) {
         destroy_grab_constraint(arm_in_hand_);
@@ -153,9 +154,14 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     // Her second hand works while her first has the body, in the fatality,
     // and while it holds an arm the body pulled away from (tear_grip).
     const bool active =
-        matron_->hand2_active() && (grip_ != nullptr || matron_->claimed() || arm_in_hand_ != nullptr);
+        matron_->hand2_active() &&
+        (grip_ != nullptr || hand2_grip_ != nullptr || matron_->claimed() || arm_in_hand_ != nullptr);
     if (!active && !hand2_id_.IsInvalid()) {
         destroy_grab_constraint(wrist_);
+        if (hand2_grip_ != nullptr) {
+            destroy_grab_constraint(hand2_grip_);
+            matron_->hand2_lost();
+        }
         destroy_grab_constraint(hand2_arm_);
         if (arm_in_hand_ != nullptr) {
             // Still in her hand at the end: dropped where it is.
@@ -204,6 +210,27 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
         if (wrist_ != nullptr) {
             wrist_strain_ns_ = 0.0F;
             matron_->wrist_taken();
+        }
+    }
+    // Her second hand on his belt (the haul up onto the rail) or his ankle
+    // (the handoff before she tips him over).
+    const int want2 = matron_->hand2_wants();
+    if (hand2_grip_ != nullptr && want2 != hand2_grip_point_) {
+        destroy_grab_constraint(hand2_grip_);
+        matron_->hand2_lost();
+    }
+    if (want2 != 0) {
+        const JPH::RVec3 ankle = want2 == 1 ? player_ankle(bodies) : bodies.GetPosition(player_id_);
+        if (hand2_grip_ == nullptr && JPH::Vec3(ankle - hand).Length() <= Matron::kGripCloseM) {
+            JPH::PointConstraintSettings grip;
+            grip.mSpace = JPH::EConstraintSpace::WorldSpace;
+            grip.mPoint1 = hand;
+            grip.mPoint2 = hand;
+            hand2_grip_ = create_constraint(grip, hand2_id_, player_id_, false);
+            if (hand2_grip_ != nullptr) {
+                hand2_grip_point_ = want2;
+                matron_->hand2_taken();
+            }
         }
     }
     JPH::Vec3 force = kHandSpringNpm * JPH::Vec3(matron_->hand2_target() - hand) +

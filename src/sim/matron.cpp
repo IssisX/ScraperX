@@ -3367,7 +3367,8 @@ bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     if (on_ladder) {
-        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kStoopReachM;
+        // In her real arm's reach (kRealArmM), her trunk leaning to it.
+        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kRealArmM + 0.35F;
     }
     return distance_xz(float(at.GetX()), float(at.GetZ()), float(player.GetX()), float(player.GetZ())) < kCatchM &&
            std::abs(at.GetY() - player.GetY()) < 1.4;
@@ -4706,6 +4707,11 @@ void Matron::refresh_view() {
     view_.hand_x = float(hand_target_.GetX());
     view_.hand_y = float(hand_target_.GetY());
     view_.hand_z = float(hand_target_.GetZ());
+    view_.hold_beat = static_cast<std::uint8_t>(hold_beat());
+    view_.grip_point = static_cast<std::uint8_t>(grip_point_);
+    view_.hip_up = trunk_.hip_up;
+    view_.trunk_pitch = trunk_.pitch;
+    view_.swats = swats_;
     if (shown.bar_traverse) {
         view_.hand_x = float(shown.hand.GetX()); view_.hand_y = float(shown.hand.GetY()); view_.hand_z = float(shown.hand.GetZ());
         view_.support_n = shown.force_n;

@@ -991,6 +991,10 @@ public:
     // Where her fingers hold him, in his body's frame (set as they close,
     // and again as the hinge is taken on): the held ankle point.
     JPH::Vec3 grip_on_body_ = JPH::Vec3::sZero();
+    bool grip_on_ankle_ = true;   // her first hand's grip is on his ankle (else his collar)
+    int swat_ticks_ = 0;          // her swat's force still to give (Matron::kSwatTicks)
+    float swat_down_s_ = 0.0F;    // knocked down by it: his getting up waits this long
+    JPH::Vec3 swat_dir_ = JPH::Vec3::sZero();
     int upright_contact_ticks_ = 0;
     float upright_s_ = 0.0F;
     float grip_load_n_ = 0.0F;
@@ -1024,6 +1028,8 @@ public:
     bool grab_pre_step(JPH::BodyInterface &bodies, StepCommands &commands, float dt) noexcept;
     // The player's ankle: the feet end of the body, however it lies.
     [[nodiscard]] JPH::RVec3 player_ankle(const JPH::BodyInterface &bodies) const noexcept;
+    // The top of his chest, on his body's line (her hand at the rail pin).
+    [[nodiscard]] JPH::RVec3 player_collar(const JPH::BodyInterface &bodies) const noexcept;
     void grab_drive(JPH::BodyInterface &bodies, float dt) noexcept;
     void grab_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
     // The player's strike (physics_world_strike.cpp).
@@ -1058,7 +1064,7 @@ public:
     void grab_reset(JPH::BodyInterface &bodies) noexcept;
     void set_player_free_rotation(JPH::BodyInterface &bodies, bool free) noexcept;
     void destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept;
-    void tear_grip(bool torn) noexcept;
+    void tear_grip(bool torn, bool regrip = false) noexcept;
     [[nodiscard]] bool upright_pose_clear(JPH::RVec3 centre) const noexcept;
 
     // Arms (physics_world_arm.cpp): lost per side (0 left, 1 right), until a
@@ -1067,6 +1073,9 @@ public:
     JPH::BodyID hand2_id_;
     JPH::Ref<JPH::TwoBodyConstraint> hand2_arm_;
     JPH::Ref<JPH::TwoBodyConstraint> wrist_;
+    // Her second hand on his ankle (the handoff before she tips him over).
+    JPH::Ref<JPH::TwoBodyConstraint> hand2_grip_;
+    int hand2_grip_point_ = 0;   // Matron::hand2_wants: 1 his ankle, 2 his belt
     JPH::Ref<JPH::TwoBodyConstraint> arm_in_hand_;
     JPH::BodyID severed_arm_id_;
     JPH::Ref<JPH::Shape> severed_arm_shape_;

@@ -399,6 +399,11 @@ struct MatronSnapshot final {
     double hold_s = 0.0;
     Vector3 hand{};
     bool aim_ledge = false;
+    std::uint8_t hold_beat = 0;    // her hold's beat: 1 down, 2 drag, 3 rail pin, 4 over, 5 hang, 6 set down
+    std::uint8_t grip_point = 0;   // her first hand on: 0 his ankle, 1 his collar
+    double hip_up = 1.0;           // her trunk in a hold: hips over her feet (m)
+    double trunk_pitch = 0.0;      // and its pitch forward (rad)
+    std::uint32_t swats = 0;
     Vector3 aim{};
     static constexpr int kPlanks = 11;
     // x, y, z, qx, qy, qz, qw per plate; bolted and gone as 0/1.

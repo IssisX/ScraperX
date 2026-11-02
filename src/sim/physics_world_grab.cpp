@@ -127,7 +127,7 @@ bool Simulation::PhysicsWorld::upright_pose_clear(const JPH::RVec3 centre) const
     return true;
 }
 
-void Simulation::PhysicsWorld::tear_grip(const bool torn) noexcept {
+void Simulation::PhysicsWorld::tear_grip(const bool torn, const bool regrip) noexcept {
     if (grip_ == nullptr) {
         return;
     }
@@ -145,7 +145,7 @@ void Simulation::PhysicsWorld::tear_grip(const bool torn) noexcept {
     grip_over_ticks_ = 0;
     if (torn) {
         ++grip_tear_count_;
-    } else {
+    } else if (!regrip) {
         ++grip_release_count_;
     }
     destroy_grab_constraint(brace_);
@@ -173,11 +173,17 @@ JPH::RVec3 Simulation::PhysicsWorld::player_ankle(const JPH::BodyInterface &bodi
     return bodies.GetWorldTransform(player_id_) * JPH::Vec3(0.0F, -(kPlayerHalfHeight - 0.08F), 0.0F);
 }
 
+JPH::RVec3 Simulation::PhysicsWorld::player_collar(const JPH::BodyInterface &bodies) const noexcept {
+    return bodies.GetWorldTransform(player_id_) * JPH::Vec3(0.0F, kPlayerHalfHeight - 0.35F, 0.0F);
+}
+
 void Simulation::PhysicsWorld::grab_reset(JPH::BodyInterface &bodies) noexcept {
     destroy_grab_constraint(grip_);
     destroy_grab_constraint(brace_);
     destroy_grab_constraint(snag_);
     destroy_grab_constraint(hand_arm_);
+    swat_ticks_ = 0;
+    swat_down_s_ = 0.0F;
     if (!hand_id_.IsInvalid()) {
         remove_and_destroy(bodies, hand_id_);
         hand_id_ = JPH::BodyID();
@@ -339,6 +345,34 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         arm.mLimitsSpringSettings.mDamping = 0.8F;
         hand_arm_ = create_constraint(arm, matron_->body(), hand_id_, false);
     }
+    // Beat 1: her swat, kSwatN at his chest for kSwatTicks, its reaction on her.
+    {
+        JPH::Vec3 dir;
+        if (matron_->take_swat(dir) && traversal_state_ != TraversalState::Climbing) {
+            swat_ticks_ = Matron::kSwatTicks;
+            swat_down_s_ = Matron::kSwatDownS;
+            swat_dir_ = dir;
+            set_player_free_rotation(bodies, true);
+        }
+        if (swat_ticks_ > 0) {
+            --swat_ticks_;
+            // Her hand at his chest and her foot hooking his feet the other
+            // way: a couple that takes his feet from under him (his capsule
+            // has no friction of its own to trip on). Each within her budget,
+            // their reaction on her.
+            const JPH::RVec3 chest = player_collar(bodies);
+            const JPH::RVec3 feet = player_ankle(bodies);
+            const JPH::Vec3 push = swat_dir_ * Matron::kSwatN;
+            const JPH::Vec3 sweep = -swat_dir_ * (Matron::kSwatSweepScale * Matron::kSwatN);
+            bodies.AddForce(player_id_, push, chest);
+            bodies.AddForce(player_id_, sweep, feet);
+            bodies.AddForce(matron_->body(), -(push + sweep));
+        }
+    }
+    if (matron_->take_regrip_let_go() && grip_ != nullptr) {
+        // Her first hand opens to take him by another point (the hold goes on).
+        tear_grip(false, true);
+    }
     if (hand_id_.IsInvalid()) {
         arm_drive(bodies, 0.0F);
         fatality_drive(bodies, 0.0F);
@@ -352,8 +386,10 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     // Her fingers close on the ankle when the hand is at it.
     const JPH::RVec3 player_at = bodies.GetPosition(player_id_);
     if (matron_->reaching() && grip_ == nullptr) {
-        const JPH::RVec3 ankle = player_ankle(bodies);
+        const bool to_ankle = matron_->grip_point() == Matron::Grip::Ankle;
+        const JPH::RVec3 ankle = to_ankle ? player_ankle(bodies) : player_collar(bodies);
         if (JPH::Vec3(ankle - hand).Length() <= Matron::kGripCloseM) {
+            grip_on_ankle_ = to_ankle;
             if (traversal_state_ != TraversalState::Climbing) set_player_free_rotation(bodies, true);
             // First a bare point: the body comes over into the hang about it
             // (the hinge's cone is taken on once it is in it).
@@ -408,7 +444,8 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         // where the body already is (no snap); the point stays where it is.
         const JPH::Quat rot = bodies.GetRotation(player_id_);
         const JPH::Vec3 up = rot.RotateAxisY();
-        if (!grip_swing_ && -up.GetY() >= std::cos(kGripConeRad - 0.05F)) {
+        if (!grip_swing_ && grip_on_ankle_ && !matron_->grip_turns_freely() &&
+            -up.GetY() >= std::cos(kGripConeRad - 0.05F)) {
             const JPH::RVec3 pivot = bodies.GetPosition(hand_id_);
             JPH::SwingTwistConstraintSettings hinge;
             hinge.mSpace = JPH::EConstraintSpace::WorldSpace;
@@ -429,6 +466,22 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
                 destroy_grab_constraint(grip_);
                 grip_ = made;
                 grip_swing_ = true;
+                grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * pivot);
+            }
+        }
+        if (grip_swing_ && matron_->grip_turns_freely()) {
+            // Hauled back in over the rail: her fist turns on his ankle (a
+            // point, where it already is: no snap).
+            const JPH::RVec3 pivot = bodies.GetPosition(hand_id_);
+            JPH::PointConstraintSettings point;
+            point.mSpace = JPH::EConstraintSpace::WorldSpace;
+            point.mPoint1 = pivot;
+            point.mPoint2 = pivot;
+            JPH::Ref<JPH::TwoBodyConstraint> made = create_constraint(point, hand_id_, player_id_, false);
+            if (made != nullptr) {
+                destroy_grab_constraint(grip_);
+                grip_ = made;
+                grip_swing_ = false;
                 grip_on_body_ = JPH::Vec3(bodies.GetWorldTransform(player_id_).Inversed() * pivot);
             }
         }
@@ -537,7 +590,8 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
             bodies.SetAngularVelocity(player_id_, w);
         }
     }
-    if (player_free_rot_ && grip_ == nullptr && !matron_->claimed()) {
+    swat_down_s_ = std::max(0.0F, swat_down_s_ - dt);
+    if (player_free_rot_ && grip_ == nullptr && !matron_->claimed() && swat_down_s_ <= 0.0F) {
         // The handback: on the ground (or a hold in hand), a capped PD torque
         // to upright; the DOFs lock once it is and the pose is clear.
         upright_contact_ticks_ = grounded_ || traversal_state_ != TraversalState::None || in_water_

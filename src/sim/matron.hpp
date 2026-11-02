@@ -660,6 +660,16 @@ public:
     static constexpr float kShoveUpMps = 2.0F;
     static constexpr float kShoveCooldownSeconds = 1.5F;
     static constexpr float kShoveEdgeReachM = 3.0F;
+    // Beat 1 of her hold (HOLD_WITH_REAL_ARMS.md): a standing man she
+    // means to take, she knocks down first: her swat, kSwatN (her budget)
+    // for kSwatTicks at his chest and her foot sweeping his feet the other
+    // way (kSwatSweepScale), its reaction on her; then she waits up
+    // to kSwatWaitS for him to be down before her hand goes for his ankle.
+    static constexpr float kSwatN = 3000.0F;
+    static constexpr int kSwatTicks = 4;
+    static constexpr float kSwatDownS = 1.0F;   // knocked down: his getting up starts after this
+    static constexpr float kSwatSweepScale = 0.8F;   // her foot at his feet, of kSwatN, the other way
+    static constexpr float kSwatWaitS = 1.6F;
     // Her mischief as a pest (the owner, 2026-10-19: she carries things off
     // and throws them at you): light stock the player has handled is theirs
     // to her. Hunting as a pest, with the player more than kThrowMinM off,
@@ -844,6 +854,22 @@ public:
     // can the world (her heave hooking a still body on a rail), a tear she
     // takes them again from (grip_lost).
     static constexpr float kShoulderUpM = 1.80F;      // over her feet
+    // Her real arm (the owner, 2026-11-02; HOLD_WITH_REAL_ARMS.md): every
+    // hand pose of a hold is within kRealArmM of her shoulder (her drawn arm,
+    // matron_view.gd UPPER_ARM + FOREARM 0.94 m, out to matron_rig.gd
+    // HOLD_ARM_OUT, 5% stretch at most). The shoulder is where her trunk puts
+    // it (Matron::Trunk): her hips at kHipUpM over her feet, down to
+    // kHipLowM with her knees bent, her trunk kTrunkM long pitched toward the
+    // hand at most kTrunkPitchMaxRad, her shoulders kShoulderSideM either
+    // side of it. Her hand's physical limit in a hold is the farthest of that
+    // envelope from her standing shoulder (kHoldArmLimitM).
+    static constexpr float kRealArmM = 0.90F;
+    static constexpr float kHipUpM = 1.00F;
+    static constexpr float kHipLowM = 0.70F;
+    static constexpr float kTrunkM = 0.80F;
+    static constexpr float kTrunkPitchMaxRad = 1.40F;
+    static constexpr float kShoulderSideM = 0.20F;
+    static constexpr float kHoldArmLimitM = 1.95F;
     static constexpr float kArmReachM = 1.4F;
     static constexpr float kStoopReachM = 2.1F;
     static constexpr float kArmRetractMps = 0.9F;
@@ -1021,6 +1047,48 @@ public:
     static constexpr float kFatalDropOutM = 1.35F;
     static constexpr float kFatalDropUpM = 2.1F;
     static constexpr float kFatalOpenAirM = 0.5F;
+
+    // The five beats' poses (HOLD_WITH_REAL_ARMS.md), every one within her
+    // real arm (kRealArmM). From her middle at the rail (kRimStandM in from
+    // it), `out` over the drop, `up` over the top of the steel at the rail's
+    // line (rail_up_: the rail, or a bare lip), `side` to her right.
+    // Beat 2, the drag: his ankle at her side, low, as she walks to the rail.
+    static constexpr float kDragHandUpM = 0.80F;
+    static constexpr float kDragHandSideM = 0.35F;
+    static constexpr float kDragHandBackM = 0.15F;
+    // Beat 3, the rail pin: his collar hauled up over the rail's top, his back
+    // on it, his head and shoulders out over the drop; her face to his for
+    // kPinWindowS (his window: his blow frees him), then her other hand for
+    // his arm. kPinReachS to take his collar, kPinHaulS to haul him there.
+    // Her first hand on his collar out past the rail, her second on his belt
+    // at its line: his middle balanced on its top.
+    static constexpr float kPinUpM = 0.40F;
+    static constexpr float kPinOutM = 0.92F;
+    static constexpr float kPinSideM = 0.20F;
+    static constexpr float kBeltUpM = 0.40F;
+    static constexpr float kBeltOutM = 0.42F;
+    static constexpr float kBeltSideM = -0.15F;
+    static constexpr float kPinHereUpM = 1.25F;   // no rail: him held up against her
+    static constexpr float kPinWindowS = 2.5F;
+    static constexpr float kPinReachS = 3.0F;
+    static constexpr float kPinHaulS = 6.0F;
+    // Beat 4, over: her second hand takes his ankle (kHandoffS at most), her
+    // first takes it from it; she lifts it kOverUpM over the rail's top and
+    // brings it out onto the top (beat 5's pose): he tips over the rail.
+    static constexpr float kOverUpM = 0.70F;
+    static constexpr float kOverOutM = 0.30F;
+    static constexpr float kHandoffS = 3.0F;
+    // Beat 5, hanging by one ankle: her hand on the rail's top, just out past
+    // its line, him head down against the outside of her deck.
+    static constexpr float kHangUpM = 0.08F;
+    static constexpr float kHangOutM = 0.50F;
+    static constexpr float kHangSideM = 0.20F;
+    // Set back on her deck: the rail his pulley, her hand in and down.
+    static constexpr float kBackInM = 0.30F;
+    static constexpr float kBackInLiftM = 0.45F;  // his ankle lifted clear over the rail's top first
+    static constexpr float kBackInWalkM = 2.2F;
+    static constexpr float kBackInSlope = 0.85F;   // tan 40 degrees
+    static constexpr float kBackInTopM = 2.55F;   // by the ankle: she walks back this far at most, hauling
 
     // ArmPlay (matron_hold.cpp; the physics in physics_world_arm.cpp): every
     // hold, at every stage (Cory, 2026-10-27: every time she catches you she
@@ -1292,6 +1360,11 @@ public:
         bool grip_on = false;
         float hold_s = 0.0F;            // seconds in this hold state
         float hand_x = 0.0F, hand_y = 0.0F, hand_z = 0.0F;   // her hand's pose
+        std::uint8_t hold_beat = 0;     // 1 down, 2 drag, 3 rail pin, 4 over, 5 hang, 6 set down (hold_beat)
+        std::uint8_t grip_point = 0;    // what her first hand holds: 0 his ankle, 1 his collar
+        float hip_up = kHipUpM;         // her trunk in a hold (Trunk): hips over her feet
+        float trunk_pitch = 0.0F;       // and its pitch forward (rad)
+        std::uint32_t swats = 0;        // beat 1: her swats
         bool aim_ledge = false;         // a ledge below her rail spot to let go onto
         float aim_x = 0.0F, aim_y = 0.0F, aim_z = 0.0F;
     };
@@ -1508,7 +1581,61 @@ public:
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_; }
     void begin_grab(JPH::RVec3 player);
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
-    [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
+    // Her first hand going for the point it is to close on (grip_point): the
+    // ankle of a man who is down (beat 1 done) or on a ladder, or, in a hold,
+    // the next point she takes him by (regripping: his collar at the rail).
+    [[nodiscard]] bool reaching() const noexcept {
+        return (state_ == State::Grab && !grip_on_ && hold_phase_ == 1) || (regrip_ && !grip_on_);
+    }
+    // What her first hand holds, or goes for: his ankle or his collar.
+    enum class Grip : std::uint8_t { Ankle = 0, Collar = 1 };
+    [[nodiscard]] Grip grip_point() const noexcept { return grip_point_; }
+    // She opens her first hand to take him by another point (the hold goes
+    // on: grip_lost ignores it). Once.
+    [[nodiscard]] bool take_regrip_let_go() noexcept {
+        if (!regrip_let_go_) {
+            return false;
+        }
+        regrip_let_go_ = false;
+        return true;
+    }
+    // Beat 1: her swat, along `dir` (once); the world puts kSwatN on his
+    // chest for kSwatTicks, its reaction on her.
+    [[nodiscard]] bool take_swat(JPH::Vec3 &dir) noexcept {
+        if (!swat_due_) {
+            return false;
+        }
+        swat_due_ = false;
+        dir = swat_dir_;
+        return true;
+    }
+    // His body down (off his feet, lying), and his collar (the top of his
+    // chest), given before pre_step.
+    void set_player_down(const bool down) noexcept { player_down_ = down; }
+    void set_player_collar(const JPH::RVec3 collar) noexcept { player_collar_ = collar; }
+    // Her second hand's grip in the pin: 0 none, 1 his ankle (the handoff
+    // before she tips him over), 2 his belt (the haul up onto the rail).
+    [[nodiscard]] int hand2_wants() const noexcept { return hand2_want_; }
+    // Hauling him back in over the rail by the ankle: her grip turns freely
+    // (no swing cone), so his body tilts to slide across the rail's top.
+    [[nodiscard]] bool grip_turns_freely() const noexcept {
+        return state_ == State::Spare && grip_point_ == Grip::Ankle;
+    }
+    void hand2_taken() noexcept { hand2_on_ = hand2_want_; }
+    void hand2_lost() noexcept { hand2_on_ = 0; }
+    void set_player_belt(const JPH::RVec3 belt) noexcept { player_belt_ = belt; }
+    // Her trunk in a hold (her real arm's reach, kRealArmM): her hips over her
+    // feet, her trunk's pitch forward, her shoulder that holds (View).
+    struct Trunk {
+        float hip_up = kHipUpM;
+        float pitch = 0.0F;
+    };
+    [[nodiscard]] Trunk trunk() const noexcept { return trunk_; }
+    [[nodiscard]] JPH::RVec3 shoulder_of(JPH::RVec3 at, float side) const noexcept;
+    // The beat of her hold (HOLD_WITH_REAL_ARMS.md): 0 none, 1 down, 2 the
+    // drag, 3 the rail pin, 4 over, 5 hanging by one ankle; 6 set back on her
+    // deck.
+    [[nodiscard]] int hold_beat() const noexcept;
     // Knocked off her feet: her body's capsule stands over where she lies.
     [[nodiscard]] bool down() const noexcept { return state_ == State::Down; }
     [[nodiscard]] JPH::RVec3 hand_target() const noexcept { return hand_target_; }
@@ -1549,7 +1676,8 @@ public:
 
     // Her second hand (ArmPlay).
     [[nodiscard]] bool hand2_active() const noexcept {
-        return (state_ == State::ArmPlay && hold_phase_ < 5) || (claimed() && fatal_beat_ == 5);
+        return (state_ == State::ArmPlay && hold_phase_ < 5) || (claimed() && fatal_beat_ == 5) || hand2_want_ != 0 ||
+               hand2_on_ != 0;
     }
     [[nodiscard]] bool reaching_wrist() const noexcept { return state_ == State::ArmPlay && hold_phase_ == 0; }
     [[nodiscard]] bool pulling_wrist() const noexcept { return state_ == State::ArmPlay && hold_phase_ == 1; }
@@ -1559,7 +1687,12 @@ public:
     // She grips it hard in the rip, and in the fatality's hold (only his blow
     // frees him from it: the world's snags on her carry and her heave do not).
     [[nodiscard]] float grip_strain_floor_n() const noexcept {
-        return state_ == State::ArmPlay || fatal_hold_ ? kGripRipFloorN : kGripStrainFloorN;
+        // And with him out past the rail by one ankle (beats 4 and 5, and on the
+        // way back in): the world's tug there is no escape.
+        return state_ == State::ArmPlay || fatal_hold_ || (state_ == State::Dangle && hold_phase_ >= 1) ||
+                       state_ == State::Spare
+                   ? kGripRipFloorN
+                   : kGripStrainFloorN;
     }
     void set_player_body(const JPH::RVec3 wrist, const int arms_left) noexcept {
         player_wrist_ = wrist;
@@ -2152,6 +2285,20 @@ private:
     bool choose_rim(float ax, float az);
     [[nodiscard]] bool braced_at_rim(float ax, float az) const noexcept;
     void pose_hand(float dt, JPH::RVec3 target, float speed, JPH::Vec3 carried = JPH::Vec3::sZero());
+    // Her trunk bent to put her hand's pose within her real arm (kRealArmM),
+    // eased; both hands' poses brought within her arm of its shoulders.
+    void bend_to_hands(float dt, JPH::RVec3 at, float feet);
+    // The top of the steel at her rail's line (rail_up_), from where she stands.
+    void find_rail_top(JPH::RVec3 at, float feet);
+    // Her pose of each beat, from where she stands at the rail: `up` over her
+    // feet, `out` over the drop from her middle, `side` to her right.
+    [[nodiscard]] JPH::RVec3 rail_pose(JPH::RVec3 at, float feet, float up, float out, float side) const noexcept;
+    void begin_regrip(Grip point) noexcept;
+    void reset_beats() noexcept;
+    void begin_pin();
+    void step_rail(float dt, JPH::RVec3 player, JPH::RVec3 at, float feet);
+    [[nodiscard]] JPH::RVec3 pin_pose(JPH::RVec3 at, float feet) const noexcept;
+    [[nodiscard]] JPH::RVec3 belt_pose(JPH::RVec3 at, float feet) const noexcept;
     // His shoulder's distance from her body (her at `at`, his middle at
     // `player`), and so as far as his swing (`swing_v`) carries it: what his
     // punch must reach (kFatalReachM).
@@ -2392,6 +2539,24 @@ private:
     int spare_tries_ = 0;                  // set-downs that ran out of time, this hold
     std::uint32_t hold_tears_at_ = 0;      // arm_tears_ as this hold began
     JPH::RVec3 player_ankle_ = JPH::RVec3::sZero();
+    JPH::RVec3 player_collar_ = JPH::RVec3::sZero();
+    // The five beats (matron_hold.cpp; HOLD_WITH_REAL_ARMS.md).
+    Trunk trunk_{};
+    Grip grip_point_ = Grip::Ankle;
+    bool regrip_ = false;                  // her first hand to take him by grip_point_ next
+    bool regrip_let_go_ = false;           // and the world opens it first (take_regrip_let_go)
+    int hand2_want_ = 0;                   // her second hand for his ankle (1) or belt (2)
+    int hand2_on_ = 0;                     // and on it
+    JPH::RVec3 player_belt_ = JPH::RVec3::sZero();
+    bool swat_due_ = false;
+    bool swat_given_ = false;
+    JPH::Vec3 swat_dir_ = JPH::Vec3::sZero();
+    bool player_down_ = false;
+    bool pin_here_ = false;                // no rail: the pin against her, then set down
+    bool over_up_ = false;                 // beat 4: his ankle up over the rail's top
+    bool back_lifted_ = false;             // back in: his ankle lifted clear over the rail's top
+    float rail_up_ = 0.0F;                 // the top of the steel at her rail's line, over her feet
+    std::uint32_t swats_ = 0;
     // The fatality's hold (kFatalTargetS); a restore clears all but the counts.
     bool fatal_hold_ = false;              // this catch is the second: his one arm left
     FatalPath fatal_path_ = FatalPath::None;
