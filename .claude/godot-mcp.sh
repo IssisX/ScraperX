@@ -19,7 +19,8 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # entire inventory pass the same verification gate as install.sh.
 toolchain_verified=false
 if [[ -n "${SCRAPERX_TOOLCHAIN_DIR:-}" ]]; then
-  if bash "${repo_root}/tools/shared-toolchain/install.sh" --verify >/dev/null 2>&1; then
+  if SCRAPERX_TOOLCHAIN_CACHE_DIR="${SCRAPERX_TOOLCHAIN_DIR}" \
+      bash "${repo_root}/tools/shared-toolchain/install.sh" --verify >/dev/null 2>&1; then
     toolchain_verified=true
   else
     echo "godot-mcp.sh: shared toolchain failed integrity verification; using independent tools" >&2
