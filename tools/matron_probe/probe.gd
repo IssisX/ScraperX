@@ -293,10 +293,18 @@ class Recorder extends Node:
 				"%.5f" % sb.x, "%.5f" % sb.y, "%.5f" % sb.z, "%.4f" % float(data["shape_r"])])
 		else:
 			row.append_array(["", "", "", "", "", "", "", ""])
-		# Her other hand's grip on a climb or pipe (contact_hand, beside contact_hand2 above).
+		# Her other hand's grip on a climb or pipe (contact_hand, beside contact_hand2 above), and the held
+		# ankle: where her fingers hold him in a hold, from his body and the grip (physics_world_state.cpp;
+		# zero while they do not), the point her drawn hand closes on (matron_view.gd _hold_gate), not "hand"
+		# above, her hand's commanded target. Blank from a native without it.
 		var contact_hand: Vector3 = data.get("contact_hand", Vector3.ZERO)
 		row.append_array([int(bool(data.get("contact_hand_held", false))),
 			"%.5f" % contact_hand.x, "%.5f" % contact_hand.y, "%.5f" % contact_hand.z])
+		if hold.has("held_ankle"):
+			var ankle: Vector3 = hold["held_ankle"]
+			row.append_array(["%.5f" % ankle.x, "%.5f" % ankle.y, "%.5f" % ankle.z])
+		else:
+			row.append_array(["", "", ""])
 		var out := PackedStringArray()
 		for v in row:
 			out.append(str(v))
@@ -368,4 +376,5 @@ class Recorder extends Node:
 		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst",
 		"contact_hand2_held", "contact_hand2x", "contact_hand2y", "contact_hand2z",
 		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r",
-		"contact_hand_held", "contact_handx", "contact_handy", "contact_handz"]
+		"contact_hand_held", "contact_handx", "contact_handy", "contact_handz",
+		"held_anklex", "held_ankley", "held_anklez"]

@@ -16,9 +16,10 @@ Checks, each over every recorded frame unless noted, with its tolerance:
            hip, knee and ankle). Hair and eyes are not bones she poses and are skipped.
   grip_hold, grip_climb
            while the sim says a hand of hers holds something, the drawn hand (the line from a wrist to its
-           knuckles, the nearer hand) more than GRIP_M from the sim's grip point: the hold (his ankle, from
-           GRIP_FROM_S into it) and the climb or pipe grip (contact_hand and contact_hand2, when the native
-           says they are held).
+           knuckles, the nearer hand) more than GRIP_M from the sim's grip point: the hold (the held ankle,
+           where her fingers hold him by the native's grip, the point her drawn hand closes on, not her
+           hand's commanded target, which it lags; from GRIP_FROM_S into the hold) and the climb or pipe
+           grip (contact_hand and contact_hand2, when the native says they are held).
   plant    a drawn foot that is down (its lowest point within PLANT_M of the surface under it) while she
            stands still on a floor (not climbing, held, knocked down or turning; under STILL_MPS), more than
            PLANT_DRIFT_M across the ground from where it came down. A jump of the root over TELEPORT_M in a
@@ -102,17 +103,32 @@ def palm_gap(run, wb, point):
     return best
 
 
+def held_point(rows, i, have_ankle):
+    """Where her fingers hold him in a hold: the held ankle (the native's held_ankle, from his body and her
+    grip, the point her drawn hand closes on in matron_view.gd _hold_gate), not "hand" (hx, hy, hz: her
+    hand's commanded target, which the ankle lags). Her hand's target only where the recording has no held
+    ankle (a probe or native from before it, or zero: her fingers are not on him), as the renderer falls
+    back to it. Returns (point, True when it is the held ankle)."""
+    if have_ankle:
+        ankle = np.array([rows["held_anklex"][i], rows["held_ankley"][i], rows["held_anklez"][i]])
+        if np.all(np.isfinite(ankle)) and float(np.dot(ankle, ankle)) > 1.0e-6:
+            return ankle, True
+    return np.array([rows["hx"][i], rows["hy"][i], rows["hz"][i]]), False
+
+
 def grip_failures(run):
     """(gap, kind, rec, t) for each grip the drawn hand is off, and notes on what was measured against what."""
     rows = run.rows
     out = []
     notes = []
     since = None
+    have_ankle = "held_anklex" in rows
     climbs = [(kind, col) for kind, col in (("climb", "contact_hand"), ("climb2", "contact_hand2"))
               if col + "_held" in rows]
     for col in ("contact_hand", "contact_hand2"):
         if col + "_held" not in rows:
             notes.append("grip_climb not measured for %s: the recording has no %s columns" % (col, col))
+    on_target = 0
     for rec in range(run.nrec):
         i = run.row_of_rec[rec]
         if i < 0:
@@ -123,7 +139,9 @@ def grip_failures(run):
         since = (t if since is None else since) if held else None
         want = []
         if held and t - since >= GRIP_FROM_S:
-            want.append(("hold", np.array([rows["hx"][i], rows["hy"][i], rows["hz"][i]])))
+            point, ankle = held_point(rows, i, have_ankle)
+            on_target += 0 if ankle else 1
+            want.append(("hold", point))
         for kind, col in climbs:
             if rows[col + "_held"][i] > 0:
                 want.append((kind, np.array([rows[col + "x"][i], rows[col + "y"][i], rows[col + "z"][i]])))
@@ -134,6 +152,9 @@ def grip_failures(run):
             gap = palm_gap(run, wb, point)
             if gap > GRIP_M:
                 out.append((gap, kind, rec, t))
+    if on_target:
+        notes.append("grip_hold: %d held frames had no held ankle%s and were measured against her hand's target"
+                     % (on_target, "" if have_ankle else " column"))
     return out, notes
 
 
