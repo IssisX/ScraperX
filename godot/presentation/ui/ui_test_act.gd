@@ -1188,14 +1188,11 @@ func _matron_heave_touch(device: int) -> bool:
 # Her corner pipe (the owner's goal, 2026-10-19: she comes down the shaft
 # after you; one shaft pipe is hers to climb; you hear her at least 4 s before
 # she arrives; a drum dropped on her knocks her off without killing her).
-# Asleep, the drum by the north band's rail carried quietly along the band and
-# set down by the shaft's edge over her pipe, west of its flanges; its clank
-# (or a sprint by her locker) wakes her. The line down to 143 while she strains, and
-# crouched round under her post. Out, sprints along 143's shaft edge make her
-# dangerous: she takes the corner pipe down after the climber, a knock on the
-# steel at every hold. Up the riser to her deck, and she comes back up the pipe
-# after; as she climbs, a shove sends the drum off the edge onto her: torn
-# off, she slams onto the flange below, alive, and nobody is dead.
+# Asleep, carry the north-band drum to a cache beyond the path to her pipe.
+# Wake her, ride the line to 143, and make enough noise below for her to follow.
+# Cross back over the bay on the supported lane, recover the untouched drum,
+# and throw it from the cache onto her ascending pipe. She comes off the pipe
+# alive and slams onto the flange; nobody dies.
 const PIPE_DRUM_PICK := Vector2(-15.0, -125.95)
 # Cache the drum outside the Matron's 4 m stock-shove corridor, on the east
 # band's supported inner lane. Throw directly from this cache after returning
@@ -1237,8 +1234,8 @@ func _matron_pipe_touch(device: int) -> bool:
 	return true
 
 
-# The drum from the north band's rail, carried along the band (quietly: she
-# sleeps on) and set down by the shaft's edge over her pipe.
+# Carry the drum quietly from the north band's rail to the supported cache;
+# she stays asleep, and the loose drum stays outside her approach to the pipe.
 func _pipe_drum_to_corner(device: int) -> bool:
 	if not await _act_creep_to(device, PIPE_DRUM_PICK, 0.08, 14.0, 0.5):
 		return _fail("the walk to the drum stalled at %s" % str(_position()))
@@ -1264,8 +1261,7 @@ func _pipe_drum_to_corner(device: int) -> bool:
 	var drum := _pipe_drum_at()
 	print("SCRAPERX_PIPE drum set down at (%.2f, %.2f, %.2f), her state %d" % [drum.x, drum.y, drum.z,
 		int(_matron_state()["state"])])
-	# (The turn to set it down swings it: where it lies is near enough, in the
-	# corner and off her way along the edge.)
+	# The turn to set it down swings it; verify where it actually comes to rest.
 	if drum.y < MATRON_DECK_Y or Vector2(drum.x, drum.z).distance_to(PIPE_DRUM_SET_FROM + Vector2(0.0, -0.6)) > 0.8:
 		return _fail("the drum did not come to rest in the corner by the shaft (at %s)" % str(drum))
 	_pipe_drum_rest = drum
@@ -1339,8 +1335,9 @@ func _pipe_heard_coming() -> bool:
 
 # The stock survives Matron's walk down to the pipe outside her shove reach.
 # Come back over the supported bay and take it from the inner lane, not the
-# exposed north rim. Throw from the cache itself: the climb window no longer
-# includes a loaded walk toward the rail.
+# exposed north rim. The swipe from the cache itself
+# throws it down onto her (knock her down, then throw what you carry): torn
+# off, she slams onto the flange below her, alive; no loaded rail-side walk.
 func _pipe_drum_onto_her(device: int) -> bool:
 	var rest := _pipe_drum_at()
 	var gap := float(_pipe_watch["stage_gap_m"])
@@ -1354,6 +1351,8 @@ func _pipe_drum_onto_her(device: int) -> bool:
 			await _sprint_to(device, Vector2(take_from.x, -129.4), 0.35, 10.0) and \
 			await _walk_to(device, take_from, 0.08, 4.0)):
 		return _fail("the supported bay return to the cached drum failed at %s" % str(_position()))
+	if _position().y < MATRON_DECK_Y + 0.5:
+		return _fail("the return to the cached drum left the upper deck (at %s)" % str(_position()))
 	await _face(Vector2(0.0, 1.0))
 	if not await _offered(&"pick_up", "PICK UP"):
 		return _fail("Action read '%s' at the cached drum, not PICK UP (drum at %s, me at %s, carry target %d, pitch %.2f)" % [
