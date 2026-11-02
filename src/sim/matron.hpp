@@ -1314,8 +1314,6 @@ public:
     };
 
     static constexpr float kKillDamageNs = 6000.0F;
-    static constexpr float kDamageTuneMinNs = 4000.0F;
-    static constexpr float kDamageTuneMaxNs = 8000.0F;
     static constexpr std::uint8_t damage_stage_for_ns(const float ns) noexcept {
         return ns >= 5400.0F ? 4 : ns >= 4200.0F ? 3 : ns >= 2700.0F ? 2 : ns >= 1200.0F ? 1 : 0;
     }
