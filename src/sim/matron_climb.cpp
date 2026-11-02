@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 #include <memory>
 
@@ -171,6 +172,15 @@ void Matron::step_climb(const float dt) {
     if (status == traversal::Climber::Status::Done) {
         release_climb(false);
     } else if (status != traversal::Climber::Status::Running) {
+        // TEMPORARY #91 diagnosis: distinguish a missing rung, lost contact,
+        // blocked finish or stall before changing the mover or its test.
+        const RVec3 feet = bodies.GetPosition(body_) - Vec3(0.0F, kStandCentre, 0.0F);
+        std::fprintf(stderr,
+                     "MATRON_CLIMB_FAIL edge=%d failure=%s phase=%d grips=%u holding=%d topped=%d feet=(%.3f,%.3f,%.3f) goal=(%.3f,%.3f,%.3f) hand=(%.3f,%.3f,%.3f) releases_before=%llu\n",
+                     climb_, traversal::failure_name(move.last_failure), move.phase, move.grips,
+                     int(move.holding), int(move.topped), float(feet.GetX()), float(feet.GetY()), float(feet.GetZ()),
+                     c.top_x, c.lip_y, c.top_z, float(move.hand.GetX()), float(move.hand.GetY()), float(move.hand.GetZ()),
+                     static_cast<unsigned long long>(climb_releases_));
         release_climb(true);
     } else if (move.topped) {
         // Up over its head, her body over its floor: her rung way is done and
