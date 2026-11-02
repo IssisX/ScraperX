@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 
 namespace scraperx::sim {
@@ -360,6 +361,21 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
     if (body_in_world_ && !pipe) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         index = nearest_climb(float(at.GetX()), float(at.GetZ()), float(at.GetY()) - kStandCentre, down);
+        // Temporary exact-head CI diagnostic: which scanned edge did the 176 m down test select?
+        if (down && float(at.GetY()) - kStandCentre > 170.0F) {
+            Climb selected{};
+            if (index >= 0 && climb_of(index, selected)) {
+                const auto &spec = scanned_->edges()[static_cast<std::size_t>(index)].spec;
+                std::fprintf(stderr,
+                             "MATRON_CLIMB_DIAG edge=%d kind=%d at=(%.3f,%.3f,%.3f) foot=%.3f head=%.3f lip=%.3f start=(%.3f,%.3f) top=(%.3f,%.3f) spec_goal_y=%.3f\\n",
+                             index, static_cast<int>(spec.kind), float(at.GetX()), float(at.GetY()) - kStandCentre,
+                             float(at.GetZ()), selected.foot_y, selected.head_y, selected.lip_y,
+                             selected.x, selected.z, selected.top_x, selected.top_z, float(spec.goal.GetY()));
+            } else {
+                std::fprintf(stderr, "MATRON_CLIMB_DIAG no-edge at=(%.3f,%.3f,%.3f)\\n",
+                             float(at.GetX()), float(at.GetY()) - kStandCentre, float(at.GetZ()));
+            }
+        }
     }
     climb_retry_s_ = 0.0F;
     if (pipe) {
