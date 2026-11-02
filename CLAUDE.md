@@ -84,8 +84,9 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
     the same sweep: MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
     FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
   - Reviews are cross-model, and Claude's usage is the scarce budget (2026-11-02: *"That's why so
-    much of the session's usage was used up so quickly"*): reviews go to Codex, Gemini, Grok or
-    ChatGPT first (pairs on the board); a Claude reviewer only for security or when nobody else is
+    much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
+    first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
+    loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
     free. At most two Claude worker sessions run at once, besides the integrator.
   - One owner per function: the board splits shared files by function, so no two agents edit the
   same function.
