@@ -1476,7 +1476,11 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
                 (void)fatal_shift(feet);
             }
         }
-        if (due && fatal_lethal_ && fatal_s_ <= kFatalLetGoByS) {
+        // His middle out over open air (kFatalOpenAirM past the edge).
+        const RVec3 mid = physics_.GetBodyInterface().GetPosition(player_);
+        const float mid_past = (float(mid.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                               (float(mid.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+        if (due && fatal_lethal_ && mid_past >= kFatalOpenAirM + 0.02F && fatal_s_ <= kFatalLetGoByS) {
             fatal_release();
         } else if (fatal_s_ >= kFatalLetGoByS) {
             reel_ = true;
