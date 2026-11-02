@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """Offline adversarial checks for the real shared-toolchain installer."""
 import hashlib
+import json
 import os
 from pathlib import Path
 import shutil
 import shlex
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
 
 HERE = Path(__file__).resolve().parent
 INSTALL = HERE / "install.sh"
+INTEGRITY = HERE / "integrity.py"
+LAUNCHER = HERE.parent.parent / ".claude/godot-mcp.sh"
 ASSET = "ScraperX-toolchain-linux-x86_64-v1.tar.gz"
 
 
@@ -148,6 +152,78 @@ fi
         self.assertNotEqual(checked.returncode, 0)
         self.assertIn("integrity check failed", checked.stderr)
         self.assertFalse(marker.exists(), "tampered executable ran before integrity verification")
+
+    def test_deleted_manifest_never_executes_cached_binary(self):
+        archive, digest = self.bundle()
+        self.assertEqual(self.offline(archive, digest).returncode, 0)
+        (self.cache / ".scraperx-integrity.json").unlink()
+        marker = self.root / "untrusted-cmake-ran"
+        cmake = self.cache / "bin/cmake"
+        cmake.write_text("#!/bin/sh\\nprintf 'ran\\\\n' > " +
+                         shlex.quote(str(marker)) + "\\necho 'cmake version 3.31.10'\\n")
+        cmake.chmod(0o755)
+        checked = self.execute("--verify")
+        self.assertNotEqual(checked.returncode, 0)
+        self.assertFalse(marker.exists(), "missing manifest permitted executable to run")
+
+    def test_rewritten_manifest_cannot_authorize_modified_binary(self):
+        archive, digest = self.bundle()
+        self.assertEqual(self.offline(archive, digest).returncode, 0)
+        cmake = self.cache / "bin/cmake"
+        cmake.write_text("#!/bin/sh\\necho 'cmake version 3.31.10'\\n# altered\\n")
+        manifest = self.cache / ".scraperx-integrity.json"
+        contents = json.loads(manifest.read_text())
+        contents["bin/cmake"] = ["file", hashlib.sha256(cmake.read_bytes()).hexdigest()]
+        manifest.write_text(json.dumps(contents, sort_keys=True, separators=(",", ":")) + "\\n")
+        checked = self.execute("--verify")
+        self.assertNotEqual(checked.returncode, 0,
+                            "rewritten manifest must not become its own trust anchor")
+
+    def test_chained_relative_links_cannot_escape_bundle(self):
+        archive = self.root / "chained-links.tar.gz"
+        with tarfile.open(archive, "w:gz") as tar:
+            for name in ("reusable-toolchain", "reusable-toolchain/bin"):
+                entry = tarfile.TarInfo(name)
+                entry.type = tarfile.DIRTYPE
+                tar.addfile(entry)
+            for index in range(1, 12):
+                entry = tarfile.TarInfo(f"reusable-toolchain/l{index}")
+                entry.type = tarfile.SYMTYPE
+                entry.linkname = "." if index == 1 else f"l{index - 1}/.."
+                tar.addfile(entry)
+            entry = tarfile.TarInfo("reusable-toolchain/bin/godot")
+            entry.type = tarfile.SYMTYPE
+            entry.linkname = "../l11/bin/sh"
+            tar.addfile(entry)
+        checked = subprocess.run([sys.executable, str(INTEGRITY), "archive", str(archive)],
+                                 capture_output=True, text=True, timeout=10)
+        self.assertNotEqual(checked.returncode, 0,
+                            "chained relative symlinks escaped archive root")
+        self.assertIn("unsafe", checked.stderr)
+
+    def test_mcp_launcher_refuses_tampered_cached_node(self):
+        archive, digest = self.bundle()
+        self.assertEqual(self.offline(archive, digest).returncode, 0)
+        marker = self.root / "cached-node-ran"
+        fallback = self.root / "npx-fallback-ran"
+        node = self.cache / "bin/node"
+        node.write_text("#!/bin/sh\\nprintf 'ran\\\\n' > " +
+                        shlex.quote(str(marker)) + "\\n")
+        node.chmod(0o755)
+        fake_bin = self.root / "fake-launcher-bin"
+        fake_bin.mkdir()
+        npx = fake_bin / "npx"
+        npx.write_text("#!/bin/sh\\nprintf 'fallback\\\\n' > " +
+                       shlex.quote(str(fallback)) + "\\n")
+        npx.chmod(0o755)
+        variables = os.environ.copy()
+        variables.update(SCRAPERX_TOOLCHAIN_DIR=str(self.cache), GODOT_PATH="/usr/bin/true",
+                         DISPLAY=":99", PATH=f"{fake_bin}:{os.environ['PATH']}")
+        launched = subprocess.run(["bash", str(LAUNCHER)], env=variables,
+                                  capture_output=True, text=True, timeout=15)
+        self.assertEqual(launched.returncode, 0, launched.stderr)
+        self.assertFalse(marker.exists(), "launcher ran tampered cached node")
+        self.assertTrue(fallback.exists(), "launcher did not use safe npx fallback")
 
     def test_concurrent_reuse(self):
         archive, digest = self.bundle()
