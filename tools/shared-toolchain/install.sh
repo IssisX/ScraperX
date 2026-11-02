@@ -9,6 +9,9 @@ repo="IssisX/ScraperX"
 # This is an independent trust anchor; a checksum downloaded beside an archive
 # does not authenticate that archive if both release assets are replaced.
 published_sha256="138c0a94c9ce44cc99cda847e71b7948f0e04a051cf442f17730a8526726f571"
+# Independently pins the installed inventory, not a manifest writable inside the cache.
+# Derived from the verified published v1 archive on Actions run 41493313123.
+published_manifest_sha256="b912841dcc620a2764899d431d2cf34afe8ae4c807b5189768c2370b8da8d1de"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cache="${SCRAPERX_TOOLCHAIN_CACHE_DIR:-${XDG_CACHE_HOME:-${HOME}/.cache}/scraperx/shared-toolchain-linux-x86_64-v1}"
 archive_override=""
@@ -52,16 +55,33 @@ mkdir -p "$(dirname "$cache")"
 exec {lock_fd}> "${cache}.lock"
 flock "$lock_fd"
 if [[ -d "$cache" ]]; then
-    # A stamped cache must pass byte-integrity checks before any cached binary runs.
-    # Legacy caches retain the existing version-only compatibility behavior.
-    if [[ -f "$cache/.scraperx-integrity.json" ]]; then
-        python3 "$script_dir/integrity.py" verify "$cache" || {
-            echo "install: existing cache integrity check failed at $cache" >&2
+    # The expected inventory digest lives in this trusted script, never in the
+    # cache being checked. Fail closed before running any cached executable.
+    expected_manifest_sha256="$published_manifest_sha256"
+    if [[ -n "$archive_override" ]]; then
+        [[ -f "$archive_override" && -n "${SCRAPERX_TOOLCHAIN_ARCHIVE_SHA256:-}" &&
+           -n "${SCRAPERX_TOOLCHAIN_MANIFEST_SHA256:-}" ]] || {
+            echo "install: offline cache reuse requires archive and both SHA-256 trust anchors" >&2
+            exit 2
+        }
+        [[ "$(sha256sum "$archive_override" | cut -d ' ' -f1)" == "$SCRAPERX_TOOLCHAIN_ARCHIVE_SHA256" ]] || {
+            echo "install: offline archive differs from caller-provided digest" >&2
             exit 1
         }
-    else
-        echo "install: existing legacy cache has no file-integrity manifest; version checks only" >&2
+        expected_manifest_sha256="$SCRAPERX_TOOLCHAIN_MANIFEST_SHA256"
     fi
+    [[ -f "$cache/.scraperx-integrity.json" ]] || {
+        echo "install: existing cache lacks integrity manifest at $cache; refusing reuse" >&2
+        exit 1
+    }
+    [[ "$(sha256sum "$cache/.scraperx-integrity.json" | cut -d ' ' -f1)" == "$expected_manifest_sha256" ]] || {
+        echo "install: existing cache manifest differs from pinned inventory digest at $cache" >&2
+        exit 1
+    }
+    python3 "$script_dir/integrity.py" verify "$cache" || {
+        echo "install: existing cache integrity check failed at $cache" >&2
+        exit 1
+    }
     check "$cache" || {
         echo "install: existing cache failed validation at $cache; refusing to overwrite it" >&2
         exit 1
@@ -99,5 +119,15 @@ python3 "$script_dir/integrity.py" archive "$tmp/$asset"
 tar -xzf "$tmp/$asset" -C "$tmp"
 check "$tmp/reusable-toolchain" || { echo "install: extracted toolchain failed version and source checks" >&2; exit 1; }
 python3 "$script_dir/integrity.py" stamp "$tmp/reusable-toolchain"
+expected_manifest_sha256="$published_manifest_sha256"
+if [[ -n "$archive_override" ]]; then
+    expected_manifest_sha256="${SCRAPERX_TOOLCHAIN_MANIFEST_SHA256:-}"
+fi
+if [[ -n "$expected_manifest_sha256" ]]; then
+    [[ "$(sha256sum "$tmp/reusable-toolchain/.scraperx-integrity.json" | cut -d ' ' -f1)" == "$expected_manifest_sha256" ]] || {
+        echo "install: installed inventory differs from expected manifest digest" >&2
+        exit 1
+    }
+fi
 mv -- "$tmp/reusable-toolchain" "$cache"
 printf '%s\n' "$cache"
