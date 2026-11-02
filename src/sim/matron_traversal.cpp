@@ -2539,7 +2539,7 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
     stats_.usable_patches = static_cast<std::uint32_t>(patches_.size());
 
     // 4. Ladders: bars on one line, stacked at a climbing pitch.
-    std::sort(bars.begin(), bars.end(), [](const Bar &a, const Bar &b) {
+    std::stable_sort(bars.begin(), bars.end(), [](const Bar &a, const Bar &b) {
         if (a.along_x != b.along_x) return a.along_x < b.along_x;
         const float ka = a.along_x ? a.c.GetZ() : a.c.GetX();
         const float kb = b.along_x ? b.c.GetZ() : b.c.GetX();
@@ -3514,7 +3514,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     }
                 }
     }
-    std::sort(edges_.begin(), edges_.end(), [](const Edge &a, const Edge &b) {
+    std::stable_sort(edges_.begin(), edges_.end(), [](const Edge &a, const Edge &b) {
         if (a.from != b.from) return a.from < b.from;
         if (a.to != b.to) return a.to < b.to;
         return a.kind < b.kind;
