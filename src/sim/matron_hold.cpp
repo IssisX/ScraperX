@@ -166,7 +166,7 @@ void Matron::grip_lost(const bool torn, const bool fought) noexcept {
         return;
     }
     if (had && holding_state(state_)) {
-        if (fatal_hold_ && state_ == State::Dangle && hold_phase_ >= 4) {
+        if (fatal_hold_ && state_ == State::Dangle && hold_phase_ >= 5) {
             // Out of her fist with him out past the edge, over the drop (his
             // thrashing, the world), into a fall foreseen to kill: he goes
             // down it all the same (the release beat). Short of it (hooked on
@@ -177,7 +177,7 @@ void Matron::grip_lost(const bool torn, const bool fought) noexcept {
             const float past = (float(player_ankle_.GetX()) - lip_x) * rim_nx_ +
                                (float(player_ankle_.GetZ()) - lip_z) * rim_nz_;
             const BodyInterface &bodies = physics_.GetBodyInterface();
-            if ((hold_phase_ >= 5 || past > 0.3F) && !no_kill_foreseen_ &&
+            if ((hold_phase_ >= 7 || past > 0.3F) && !no_kill_foreseen_ &&
                 fall_impact_mps(bodies.GetPosition(player_), bodies.GetRotation(player_),
                                 bodies.GetLinearVelocity(player_), bodies.GetAngularVelocity(player_),
                                 kFatalLetGoMarginM) >= kFatalLandMps) {
@@ -877,10 +877,11 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         step_rail(dt, player, at, feet);
         break;
     case State::ArmPlay: {
-        // The pin held (her first hand on his collar), his arm to her other.
+        // The pin held (her first hand on his belt, or his collar with no
+        // rail), his arm to her other.
         walk_toward(dt, rim_x_, rim_z_, std::min(0.8F, 3.0F * xz(ax, az, rim_x_, rim_z_)));
         yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
-        pose_hand(dt, pin_pose(at, feet), 0.6F * kHandSpeedMps);
+        pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), 0.6F * kHandSpeedMps);
         step_armplay(dt, player, at, feet);
         break;
     }
@@ -1148,6 +1149,7 @@ void Matron::reset_beats() noexcept {
     over_up_ = false;
     back_lifted_ = false;
     relaid_ = false;
+    over_tries_ = 0;
     rail_up_ = 0.0F;
 }
 
@@ -1167,6 +1169,12 @@ void Matron::begin_pin() {
     hold_phase_ = 0;
     over_up_ = false;
     find_rail_top(at, feet);
+    // The rail she pins him on (her re-poses in the rip step back from it:
+    // over is at this one).
+    pin_rim_[0] = rim_x_;
+    pin_rim_[1] = rim_z_;
+    pin_rim_[2] = rim_nx_;
+    pin_rim_[3] = rim_nz_;
     begin_regrip(Grip::Collar);
     fatal_window_s_ = 0.0F;
     fatal_hang_ = false;
@@ -1256,98 +1264,117 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         fatal_window_s_ += dt;
         if (fatal_window_s_ >= (fatal_hold_ ? kFatalHangWindowS : kPinWindowS)) {
             fatal_hang_ = false;
-            if (fatal_hold_ || pin_here_) {
-                hold_phase_ = 3;
-                hold_s_ = 0.0F;
-            } else if (player_arms_left_ <= 0) {
-                claim();
-            } else {
-                // Her second hand off his belt for his arm.
+            if (pin_here_) {
                 hand2_want_ = 0;
-                if (!begin_armplay(State::Dangle)) {
-                    hold_phase_ = 3;
-                    hold_s_ = 0.0F;
+                if (player_arms_left_ <= 0) {
+                    claim();
+                } else if (fatal_hold_ || !begin_armplay(State::Dangle)) {
+                    ++spares_;
+                    spare_here();
                 }
+                break;
             }
+            // Her first hand from his collar to his belt beside her second
+            // (his middle held on the rail's top: he cannot slide off it).
+            begin_regrip(Grip::Belt);
+            hold_phase_ = 3;
+            hold_s_ = 0.0F;
         }
         break;
     }
     case 3: {
-        // Over's start: her second hand to his ankle, her first takes it
-        // from it.
         at_spot();
-        if (pin_here_) {
-            hand2_want_ = 0;
-            ++spares_;
-            spare_here();
-            break;
-        }
-        if (!relaid_) {
-            // Her second hand back on his belt: him laid back across the
-            // rail's top again (his ankles inboard, in her reach).
-            hand2_want_ = 2;
-            pose_hand(dt, pin_pose(at, feet), kHandSpeedMps);
-            if (hand2_on_ != 2) {
-                pull2_n_ = kHandReachPullN;
-                pose_hand2(dt, player_belt_, kHandReachSpeedMps);
-            } else {
-                pull2_n_ = kHandPullN;
-                const RVec3 belt = belt_pose(at, feet);
-                pose_hand2(dt, belt, 0.6F * kHandSpeedMps);
-                if (Vec3(belt - hand2_target_).Length() < 0.05F) {
-                    relaid_ = true;
-                    hold_s_ = 0.0F;
-                }
-            }
-            if (hold_s_ > 2.0F * kHandoffS) {
+        pose_hand2(dt, belt_pose(at, feet), kHandSpeedMps);
+        if (regrip_) {
+            pose_hand(dt, player_belt_, kHandReachSpeedMps);
+            if (hold_s_ > kHandoffS) {
                 back_in();
             }
-        } else if (grip_point_ == Grip::Collar && !regrip_) {
-            // His belt (his middle) in her second hand: her first lets go of
-            // his collar for his ankle.
-            begin_regrip(Grip::Ankle);
-        } else if (regrip_) {
-            pose_hand(dt, player_ankle_, kHandReachSpeedMps);
-            pose_hand2(dt, belt_pose(at, feet), kHandSpeedMps);
+            break;
+        }
+        pose_hand(dt, belt_pose(at, feet), kHandSpeedMps);
+        if (fatal_hold_) {
+            hold_phase_ = 4;
+            hold_s_ = 0.0F;
+        } else if (player_arms_left_ <= 0) {
+            claim();
+        } else {
+            // Her second hand off his belt for his arm.
+            hand2_want_ = 0;
+            if (!begin_armplay(State::Dangle)) {
+                hold_phase_ = 4;
+                hold_s_ = 0.0F;
+            }
+        }
+        break;
+    }
+    case 4: {
+        // Over's start: back at her spot, his middle on the rail's top in her
+        // first hand; her second hand to his ankle.
+        at_spot();
+        pose_hand(dt, belt_pose(at, feet), kHandSpeedMps);
+        if (to_spot > 0.2F && hold_s_ < 2.0F * kHandoffS) {
+            break;
+        }
+        hand2_want_ = 1;
+        if (hand2_on_ != 1) {
+            pull2_n_ = kHandReachPullN;
+            pose_hand2(dt, player_ankle_, kHandReachSpeedMps);
             if (hold_s_ > 2.0F * kHandoffS) {
                 back_in();
             }
         } else {
-            hold_phase_ = 4;
+            pull2_n_ = kHandPullN;
+            hold_phase_ = 5;
+            hold_s_ = 0.0F;
+        }
+        break;
+    }
+    case 5: {
+        // Over: her first hand pushes his middle out over the rail, her
+        // second lifts his ankle up over its top.
+        at_spot();
+        const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
+        const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                           (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+        pose_hand(dt, rail_pose(at, feet, rail_up_ + kBeltUpM + 0.1F, kBeltOutM + kOverPushM, kBeltSideM),
+                  0.8F * kHandSpeedMps);
+        const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, -kHangSideM);
+        pose_hand2(dt, up, 0.8F * kHandSpeedMps);
+        if ((past > kOverOutPastM && Vec3(up - hand2_target_).Length() < 0.1F) || hold_s_ > 4.0F) {
+            // His middle out: her first hand from his belt to his ankle.
+            begin_regrip(Grip::Ankle);
+            hold_phase_ = 6;
             hold_s_ = 0.0F;
             over_up_ = false;
         }
         break;
     }
-    case 4: {
-        // Over: his ankle up over the rail's top, then out onto it.
+    case 6: {
+        // Her first hand takes his ankle from her second, up over the rail's
+        // top and out onto it: he tips over head first.
         at_spot();
         const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
         const RVec3 hang = rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM, kHangSideM);
-        // His middle past the rail's line: her second hand on his belt
-        // pushes it out over as her first lifts his ankle; well out, she lets
-        // go of the belt and he tips over head first.
-        const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
-        const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
-                           (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-        if (hand2_want_ == 2) {
-            pose_hand2(dt, rail_pose(at, feet, rail_up_ + kBeltUpM, kBeltOutM + kOverPushM, kBeltSideM),
-                       0.8F * kHandSpeedMps);
-            if (past > kOverOutPastM || hold_s_ > 3.0F) {
-                hand2_want_ = 0;
+        if (regrip_) {
+            pose_hand(dt, player_ankle_, kHandReachSpeedMps);
+            if (hold_s_ > kHandoffS) {
+                back_in();
             }
+            break;
         }
+        hand2_want_ = 0;
         if (!over_up_) {
             pose_hand(dt, up, 0.8F * kHandSpeedMps);
-            over_up_ = Vec3(up - hand_target_).Length() < 0.05F && hand2_want_ == 0;
+            over_up_ = Vec3(up - hand_target_).Length() < 0.05F;
         } else {
             pose_hand(dt, hang, 0.6F * kHandSpeedMps);
             if (Vec3(hang - hand_target_).Length() < 0.03F) {
-                hold_phase_ = 5;
+                hold_phase_ = 7;
                 hold_s_ = 0.0F;
             }
         }
-        if (hold_s_ > 8.0F) {
+        if (hold_s_ > 10.0F) {
             back_in();
         }
         break;
@@ -1357,6 +1384,15 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         at_spot();
         const RVec3 hang = rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM, kHangSideM);
         pose_hand(dt, hang, kHandSpeedMps);
+        if (hold_s_ > 1.5F && physics_.GetBodyInterface().GetRotation(player_).RotateAxisY().GetY() > -0.5F &&
+            over_tries_ < 2) {
+            // Not over (lying on the rail's top): up again, and over.
+            ++over_tries_;
+            hold_phase_ = 6;
+            hold_s_ = 0.0F;
+            over_up_ = false;
+            break;
+        }
         if (!fatal_hold_) {
             if (hold_s_ >= dangle_s_) {
                 finish_dangle();
@@ -1395,7 +1431,7 @@ int Matron::hold_beat() const noexcept {
     case State::Carry:
         return 2;
     case State::Dangle:
-        return hold_phase_ <= 2 ? 3 : (hold_phase_ <= 4 ? 4 : 5);
+        return hold_phase_ <= 3 ? 3 : (hold_phase_ <= 6 ? 4 : 5);
     case State::ArmPlay:
         return 3;
     case State::Spare:
@@ -1544,9 +1580,13 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
             hold_phase_ = 0;
             grab_cooldown_s_ = hands_off_after_hold();
         } else if (armplay_then_ == State::Dangle && !pin_here_) {
-            // Back to the pin, then over the rail (beat 4).
+            // Back to the rail she pinned him on, then over it (beat 4).
+            rim_x_ = pin_rim_[0];
+            rim_z_ = pin_rim_[1];
+            rim_nx_ = pin_rim_[2];
+            rim_nz_ = pin_rim_[3];
             state_ = State::Dangle;
-            hold_phase_ = 3;
+            hold_phase_ = 4;
             hold_s_ = 0.0F;
         } else {
             // No rail (or carried too long): set back on the deck beside her.
