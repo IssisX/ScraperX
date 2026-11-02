@@ -11,9 +11,11 @@ stretched out arms. ... If hanging me over the edge is such a problem, then we d
 
 ## Why her arms stretch (from the code, trunk `d9b35d7e`)
 
-Her drawn arm is about 0.9 m long from shoulder to wrist (`UPPER_ARM` 0.44 + `FOREARM` 0.5;
-`LIMB_REACH_M` 0.85, `godot/presentation/life/matron_view.gd`). Her shoulder is 1.80 m over her feet
-(`kShoulderUpM`, `src/sim/matron.hpp`). The sim puts her hand much farther away than that, and the
+Her drawn arm, measured on the skinned body in the Godot runtime (11-02, skeleton scale 1), is
+0.51 m from shoulder to wrist (upper arm 0.27 + forearm 0.24). Her shoulder is 1.32 m over her feet
+(hunched; head 1.44 m): she is drawn about 1.5 m tall inside a 2.1 m sim capsule. The old numbers
+here (a 0.94 m arm, a 1.80 m shoulder: `kShoulderUpM`) were the sim's, not the drawn body's.
+The sim puts her hand much farther away than that, and the
 drawing then pulls the arm out to reach it, up to 2.7 times its length (`HOLD_STRETCH_MAX`,
 `godot/presentation/life/matron_rig.gd` `hold_reach`).
 
@@ -27,8 +29,8 @@ drawing then pulls the arm out to reach it, up to 2.7 times its length (`HOLD_ST
 ## What is really impossible, and what is not
 
 - **Impossible:** lifting a 1.8 m man upside down by the ankles so that his head clears a 1.09 m
-  rail. His ankles would have to be about 2.9 m up (1.09 + 1.8), and with a real arm she reaches
-  about 2.7 m (1.80 + 0.94). That is the heave the code does now, and it is why it stretches her.
+  rail. His ankles would have to be about 2.9 m up (1.09 + 1.8), and with her real arm she reaches
+  about 1.8 m (1.32 + 0.51). That is the heave the code does now, and it is why it stretches her.
 - **Not impossible, and what people really do:** tip him over the rail with the rail as the pivot,
   and keep hold of his ankle as he goes over. Or pin him backward over the rail first. Every hand
   position below fits a real arm.
@@ -84,3 +86,23 @@ the rail pin, and it gives him less to do.
   checked by eye with the Godot runtime (rule 28), with screenshots of each beat.
 - Forces stay within her capped budget. Nothing snaps or teleports (rule 29).
 - The test checks that change go as their own protected PR with a plain before/after (rule 4).
+
+## As built (11-02, branch `claude/matron-hold-real-arms-20261102`)
+
+- Her size stays as drawn; the sim fits the beats to it: `kRealArmM` 0.50 m, a trunk of hip height
+  and pitch (`bend_to_hands`) chosen each tick so each hand's pose is within her arm of its
+  shoulder, and both hands clamped there. The view caps every arm bone at 5% (`HOLD_STRETCH_MAX`
+  1.05); the toolbox and stock carry keep their own caps (`PROP_STRETCH_MAX`), left for later.
+- 1 Down: a swat (a 3 kN couple, chest and feet, 4 ticks) toward the deck. 2 Drag: by the ankle to
+  the rail. 3 Pin: collar and belt (two hands), his window and the arm tear; PUNCH works. 4 Over: the
+  body squared to the rail, the belt pushed out while the ankle lifts. 5 Hang by one ankle; the
+  ordinary hold sets him back on her deck (Spare), the fatality lets go over a drop foreseen to kill.
+- The fatality takes 7.5 to 11.5 s from her fingers closing to her letting go (the drag, the pin with
+  his window, the over, the hang); the owner's bar was 5 to 7 s. That bar is his call, in the
+  protected checks PR.
+
+## Handoff
+
+- Done: the five beats in the sim and the view, the touch scenario's beat check (beats 1 to 5 seen),
+  screenshots of each beat in the Godot runtime.
+- Left: the stock's reach (`PROP_STRETCH_MAX` 2.7) for a later job; the fatality's length for Cory.
