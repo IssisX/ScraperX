@@ -1006,7 +1006,7 @@ public:
     // window, over, the hang) the hold takes longer than the heave it replaced.
     static constexpr float kFatalLetGoFromS = 8.0F;
     static constexpr float kFatalLetGoByS = 11.5F;
-    static constexpr float kFatalHangSettleS = 0.4F;   // hanging this long before her fingers open
+    static constexpr float kFatalHangSettleS = 0.7F;   // hanging this long before her fingers open
     static constexpr float kFatalShiftM = 0.4F;
     static constexpr float kFatalShiftMaxM = 1.5F;
     // Let go, she watches him fall at least kFatalWatchS, and on until he is
