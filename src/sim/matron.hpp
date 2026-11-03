@@ -827,7 +827,6 @@ public:
     static constexpr float kPipeTuckAheadM = 0.25F;
     static constexpr float kPipeTuckFromM = 0.07F;
     static constexpr float kPipeTuckRate = 2.5F;
-    static constexpr float kPipeUntuckOnRiserRate = 0.6F;
     // Her tuck as drawn follows the one asked of her about kPipeTuckDrawnTauS
     // behind (the view's eased pose), so she tucks for where she will be
     // kPipeTuckLeadS on, and her reach is judged from her tuck as drawn.
@@ -2815,6 +2814,7 @@ private:
     // a flange (stunned); or nothing, between holds (falling to her catch).
     enum class PipeGrip : std::uint8_t { None, Rail, Face, Lip, Feet, Legs };
     PipeGrip pipe_grip_ = PipeGrip::None;
+    bool pipe_top_hold(float top_y, float z, JPH::RVec3 at, PipeGrip grip);
     // Her hold, taken: kept in its body's frame.
     void pipe_take(PipeGrip grip, JPH::BodyID body, JPH::SubShapeID member, JPH::RVec3 point);
     // Her hand (Rail, Face, Lip) or her feet (Feet) where she has them this
