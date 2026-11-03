@@ -150,6 +150,7 @@ func _ready() -> void:
 		_export_solids()
 		return
 	if _audit == null:
+		preload("res://presentation/detail_kit.gd").attach(self, $TowerPresentation)
 		_batch_static_dressing($TowerPresentation)
 	for lamp in _light_rig.get_children():
 		if lamp is OmniLight3D:
