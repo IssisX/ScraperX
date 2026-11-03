@@ -27,21 +27,6 @@ float distance_xz(const float ax, const float az, const float bx, const float bz
     return std::hypot(ax - bx, az - bz);
 }
 
-// The way down a climb her scan read going up, as her scan pairs the two
-// (AffordanceMap::build_edges): the same steel, from the floor at its head
-// she would have topped out onto to the floor at its foot she would have
-// set out from. Down a ladder's rungs; off a lip, hanging from it and then
-// her feet down onto the floor under it (as low as that floor lets her hang).
-traversal::MoveSpec down_of(const traversal::MoveSpec &up) {
-    traversal::MoveSpec down = up;
-    down.kind = up.kind == traversal::MoveKind::Mantle || up.kind == traversal::MoveKind::LedgeJump
-                    ? traversal::MoveKind::HangDrop
-                    : traversal::MoveKind::RungDown;
-    down.start = up.goal;
-    down.goal = up.start;
-    down.goal_top = up.start.GetY();
-    return down;
-}
 } // namespace
 
 bool Matron::follow_climb(const float dt, const RVec3 at) {
