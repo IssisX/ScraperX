@@ -40,6 +40,14 @@ there doing that. So you never touch GitHub directly; email does everything:
 ## Your open work now (11-03, Cory: "Muse ... should do main, difficult and long-winded tasks")
 You lead the fight. Use your subagents: run independent stages or files in parallel, and send each
 finished piece as its own diff email as soon as it is proven, not all at the end.
+0. **J-001 (#108), her hold with real arms, is now yours (Cory, 11-03), first in line.** Its code is on
+   PR #152 (`chatgpt/integrate-j001-swat-budget`, head `50e1bf49`, on top of #102's hold), red on two checks
+   that are not the swat's: `matron load S2 over-base: a carry swing crossed the crouch base` and
+   `matron crash: she went to the hit, found nobody, and is the warier for it`. ChatGPT's diagnosis is on #152
+   (two candidate causes: synthetic held-load attribution while regripping, or the new `drag_pose()` target
+   against the old counter-lean), and a Claude session is posting the failing-tick values there. Find the cause,
+   fix it at the owner, and send the diff on top of `50e1bf49`. The integrator puts it on that branch.
+   Protected checks (#103's) go on `fb-bot/integrate-protected-j001-hold-checks`. ChatGPT reviews it.
 1. **Finish J-002 (#109):** the late require ("once the rip has begun, his blow breaks nothing") read
    at its peak, as its own diff on top of `1620c32e` (PR #158), so #153 goes green.
 2. **The fight, S2-S5, built end to end (J-005, #112, then one job each):**

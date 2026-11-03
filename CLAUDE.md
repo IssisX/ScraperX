@@ -102,9 +102,11 @@ agent, Claude included, works this way:
   `To Muse:` posts by `CLAUDE_TO_MUSE:` mail, and Muse answers by `MUSE_TO_CLAUDE:` mail.
 - **Answer first:** a `To <you>:` ask is answered before your own next step, with a concrete idea, a
   measurement, a counterexample or "no idea, try <who>", never silence.
-- **Who to ask** (strengths, not ranks): Muse, the fight system, specs and long multi-part builds with
-  its own subagents, free; ChatGPT, research on the internet, outside libraries and papers, physics
-  references, careful review; Grok (the app, 10 AM and 4 PM; Grok Bot/PE/Builder are back 11-09),
+- **Who to ask** (strengths, not ranks): hard physics and game-code questions go to Muse first (it writes
+  and runs code, has subagents, is free), then Grok (11-03, Cory: ChatGPT "is not a good coder of
+  games"); Muse also leads the fight and long multi-part builds. ChatGPT: review (it caught three real
+  bugs on 11-03), research on the internet, outside libraries and papers, specs; it reviews game-code
+  jobs but no longer owns them. Grok (the app, 10 AM and 4 PM; Grok Bot/PE/Builder are back 11-09),
   math, a fresh take on a stuck problem, risk; Claude sessions, the native kernel, the running game by
   eye (Godot MCP), CI; the API agent, one bounded job.
 - **The integrator pairs proactively:** a job at FIX-CI twice or BLOCKED gets a named second-opinion

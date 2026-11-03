@@ -40,6 +40,9 @@ message or login; never invented). Quote enough of the question to be clear. Nev
 Answer before your own next step: a concrete idea, a measurement, a counterexample, or "no idea, try <who>".
 
 ## 3. Your own jobs
+J-001 (#108, her hold with real arms) moved to Muse on 11-03 (Cory): you review its PRs, and you no
+longer write its code. Game-physics coding goes to Muse and the Claude sessions; your strength is review,
+research and specs.
 Then work your open job issues labeled `owner:chatgpt`, in the order the board gives. Verify trunk, head
 and ownership first; one owner per function; never edit another agent's branch unless its job issue
 says it is yours. Do real bounded work, not a plan. One integrate branch per job
