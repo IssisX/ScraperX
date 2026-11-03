@@ -270,18 +270,20 @@ def galvanised(seed=404, n=512, tile=1.0):
 
 def mill_scale(seed=505, n=512, tile=1.0):
     """Mill scale: the blue-black forged skin, crazed with fine cracks, lifted
-    off in patches where rust has got under it -- rougher and warmer there."""
+    off in small sparse patches where rust has got under it -- rougher and
+    warmer there. (Larger, denser patches repeated every metre across a big
+    deck and read as camouflage in its sky reflection: S5.)"""
     px = tile / n
     f1, f2, _ = worley((n, n), (40, 40), seed + 1)
     craze = 1.0 - smoothstep(0.0, 1.3, f2 - f1)
-    lift = smoothstep(0.55, 0.85, spectral((n, n), 2.8, seed + 2, fmin=3, fmax=90))
+    lift = smoothstep(1.1, 1.4, spectral((n, n), 2.4, seed + 2, fmin=8, fmax=160))
     skin = spectral((n, n), 2.2, seed + 3, fmin=30)
     broad = spectral((n, n), 3.5, seed + 4, fmin=1, fmax=8)
     height = 0.00004 * skin - 0.00012 * craze * (1.0 - lift) - 0.00025 * lift \
         + 0.0001 * spectral((n, n), 2.0, seed + 5, fmin=60) * lift
-    lum = 0.86 + 0.04 * skin - 0.14 * craze * (1.0 - lift) + 0.08 * lift + 0.05 * broad
+    lum = 0.86 + 0.04 * skin - 0.14 * craze * (1.0 - lift) + 0.06 * lift + 0.02 * broad
     tint = tint_field(lift, (1.25, 0.95, 0.70))
-    rough = 0.82 + 0.05 * skin + 0.25 * lift + 0.05 * craze
+    rough = 0.84 + 0.05 * skin + 0.15 * lift + 0.05 * craze
     alb, mean = albedo_map(lum, tint, rough)
     return alb, normal_map(height, (px, px)), mean
 
