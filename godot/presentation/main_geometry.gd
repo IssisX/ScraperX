@@ -7,6 +7,7 @@ extends Node3D
 # script); each extends the one before and calls only itself and below.
 
 const LaunchShot := preload("res://presentation/launch_shot.gd")
+const Plants := preload("res://presentation/plants.gd")
 
 # Locomotion-feel camera response. Pure presentation, driven every frame by
 # native player position/velocity/grounded state already read below -- never
@@ -48,65 +49,13 @@ func _corrugation_texture() -> ImageTexture:
 			image.set_pixel(i, j, Color(n.x * 0.5 + 0.5, 0.5, n.z * 0.5 + 0.5))
 	return ImageTexture.create_from_image(image)
 
-# One stylised conifer: a trunk and three descending, widening canopy tiers.
-# Cheap enough to scatter by the dozen, varied enough per-instance (scale,
-# yaw, a hue jitter across the greens) that a cluster doesn't read as one
-# mesh copy-pasted.
+# Trees and scrub live in plants.gd (lane E); these delegates keep every
+# caller unchanged.
 func _add_tree(at: Vector3, height: float, rng: RandomNumberGenerator) -> void:
-	var hue_jitter := rng.randf_range(-0.03, 0.03)
-	var canopy := _material(Color(0.16 + hue_jitter, 0.28 + hue_jitter, 0.14, 1.0), 0.0, 0.92)
-	var trunk_material := _material(Color("362316"), 0.0, 0.9)
-
-	var tree := Node3D.new()
-	tree.name = "Conifer"
-	tree.position = at
-	tree.rotation.y = rng.randf_range(0.0, TAU)
-	tree.scale = Vector3.ONE * rng.randf_range(0.85, 1.25)
-	$TowerPresentation.add_child(tree)
-
-	var trunk_height := height * 0.32
-	_add_cylinder("TreeTrunk", height * 0.045, trunk_height,
-		Vector3(0.0, trunk_height * 0.5, 0.0), trunk_material, tree)
-	for tier in range(3):
-		var t := float(tier) / 2.0
-		var tier_radius := lerpf(height * 0.34, height * 0.11, t)
-		var tier_height := height * 0.4
-		var tier_y := trunk_height + t * height * 0.5
-		_add_cone("TreeCanopy", tier_radius, tier_height,
-			Vector3(0.0, tier_y + tier_height * 0.5, 0.0), canopy, tree)
-
-# Low scrub and ground bushes: irregular clusters of squashed spheres, no
-# trunk, filling the gap between bare grade and full trees. A lobe rests on
-# the ground or on a lobe laid before it; one that would float clear of both
-# is set down on the ground.
-const SCRUB_SQUASH := 0.72
+	Plants.add_tree(self, $TowerPresentation, at, height, rng)
 
 func _add_bush(at: Vector3, spread: float, rng: RandomNumberGenerator) -> void:
-	var hue_jitter := rng.randf_range(-0.04, 0.04)
-	var bush_material := _material(Color(0.2 + hue_jitter, 0.3 + hue_jitter, 0.15, 1.0), 0.0, 0.94)
-	var bush := Node3D.new()
-	bush.name = "Scrub"
-	bush.position = at
-	$TowerPresentation.add_child(bush)
-	var laid: Array[Vector4] = []   # each lobe laid: its middle and radius
-	for _lobe in range(rng.randi_range(3, 5)):
-		var lobe_at := Vector3(rng.randf_range(-spread, spread), rng.randf_range(0.1, spread * 0.5),
-			rng.randf_range(-spread, spread))
-		var radius := rng.randf_range(spread * 0.45, spread * 0.75)
-		if lobe_at.y > radius * SCRUB_SQUASH and not _lobe_rests(lobe_at, radius, laid):
-			lobe_at.y = radius * SCRUB_SQUASH
-		laid.append(Vector4(lobe_at.x, lobe_at.y, lobe_at.z, radius))
-		var lobe := _add_sphere("ScrubLobe", radius, lobe_at, bush_material, bush)
-		lobe.scale.y = SCRUB_SQUASH
-
-# Whether a squashed lobe touches one already laid: in the space where both
-# are round again (heights over SCRUB_SQUASH).
-static func _lobe_rests(at: Vector3, radius: float, laid: Array[Vector4]) -> bool:
-	for other in laid:
-		var apart := Vector3(at.x - other.x, (at.y - other.y) / SCRUB_SQUASH, at.z - other.z)
-		if apart.length() < radius + other.w:
-			return true
-	return false
+	Plants.add_bush(self, $TowerPresentation, at, spread, rng)
 
 func _add_sphere(node_name: String, radius: float, at: Vector3,
 		material: Material, parent: Node3D = null) -> MeshInstance3D:

@@ -26,8 +26,8 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
 ## Talking to the owner (he is on a phone)
 
 - End every message with one plain line saying what he does now ("Nothing to do" is fine), set apart
-  so it stands out: a `---` rule, then `🟣 **YOUR MOVE:**` and the line. Status uses colored dots: 🟢 done,
-  🟡 in progress, 🔴 broken or blocked, ⚪ next, 🟣 his (2026-10-29). A prompt
+  so it stands out: a `---` rule, then `🟣 **YOUR MOVE:**` and the line. Colored dots (🟢 done, 🟡 in progress, 🔴 broken or blocked, ⚪ next, 🟣 his; 2026-10-29) only on a
+  status report he asks for, never on every answer (11-02: *"Stop with all the color for every single thing I ask you"*); a plain question gets a plain answer. A prompt
   he must pass on goes whole in one copyable block, naming the agent; never ask him to edit, combine
   or fill one in (2026-10-22: *"always end with a clear instruction for me and the prompt if I need
   to share one"*).
@@ -41,7 +41,12 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
 - No answer after 10 minutes: the pick decides; say so on the work's issue and go on; he can still
   overturn it (2026-10-27: *"go with your recommendations. Let's go with 5 or 10 minutes."*).
 - He has handed his open decisions to the integrator (2026-11-02: *"Make the other decisions for
-  me ... I said answer for me. So that means the decisions did go through."*). Make the call,
+  me ... I said answer for me. So that means the decisions did go through."*). Obvious game and design
+  calls are made, not asked (11-02: *"Just answer for me, man. You're asking me too many questions
+  about the game that are obvious and not enough about the other shit."*; then *"not every single game
+  call, but, you know"*): the big ones (a new feature, her look or story, something that changes how
+  the game plays) still go to him, briefly. Always ask him about the other shit: Claude sessions,
+  quota, effort levels, cost. Make the call,
   record it in `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` with its reason, and tell him in
   one line after. Ask first only when something cannot be undone. He can overturn any call.
 - Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
@@ -75,24 +80,31 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
 ## Managing the agents
 
 2026-10-22: *"I need more management help from you telling the other agents what to do"*.
-- The live board is issue #87's **body** (2026-11-02, replacing #3's 842-comment thread; #3 stays the
+- The live board is issue #107's **body** (2026-11-02; it replaced #87, which replaced #3's 842-comment thread; both stay the
   record). Only the integrator edits the body. Agents read the body and the comments since their own
   last one, never the history, and post one line per real step. He pastes one universal prompt ("read
-  the board, do your queue"), and his plain comments there are orders to every agent. When the board
-  issue passes about 150 comments, the integrator opens a fresh one and links it once.
+  the board, do your queue"), and his plain comments there are orders to every agent. The board holds
+  claims, BLOCKED lines, verdicts and rulings only; a hard job's technical findings go on its own PR
+  or issue, linked from the board. When the board issue passes 100 comments, the integrator opens a
+  fresh one ("Board: live jobs (N)"), carries the body over and links it once (11-02: never near #3's
+  size).
 - Working in tandem (2026-11-02: *"figure out how all of you agents can communicate and work
   synergistically ... not constantly waiting on me"*):
   - Nobody waits: every agent holds two or more jobs. Blocked 30 minutes, it posts `BLOCKED: what,
     needs whom` and starts the next one; the integrator clears BLOCKED lines first.
-  - The integrator runs `python3 tools/board/sweep.py` every 15 minutes and acts on every line in
-    the same sweep: MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
+  - The integrator runs `python3 tools/board/sweep.py` on every hourly check, and on events when the
+    board has moved, and acts on every line in the same sweep (no 15-minute timer; 11-02: *"drop 15"*;
+    PR events, agent messages and the hourly check drive the work): MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
     FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
   - Reviews are cross-model, and Claude's usage is the scarce budget (2026-11-02: *"That's why so
     much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
     first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
     loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. The number of Claude worker sessions follows the usage he has free: two when it is tight,
-    more when he frees it (11-02: *"you can use more agents here now"*).
+    free. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+    "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
+    roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
+    that. You should ask me how many workers to open up and give suggestions from now on"*; the
+    session's quota hit 75% in under three hours). Work for ChatGPT, Grok and Muse needs no ask.
   - One owner per function: the board splits shared files by function, so no two agents edit the
   same function.
   - One integrate branch per job, reused; no new diagnostic branch for every try.
@@ -101,8 +113,8 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
   reports stay short.
 - Hand out the hard work (2026-10-27: *"don't give them cheap, weak shit. They are intelligent"*):
   post it on #3 whole (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
-  The integrator checks the board and the PRs every 10-15 minutes from a server-side scheduled task (it also
-  resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
+  The integrator acts on PR events and agent messages as they arrive, and checks the board hourly from a
+  server-side scheduled task (it also resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
   and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
   (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
   GitHub comments each need the owner's approval (10-29).
@@ -120,9 +132,10 @@ Visual work (her body, hair, contacts, camera, UI) is checked by eye this way be
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
     (2026-11-02: *"Shouldn't it be in the new session?"*).
-- Never medium effort (2026-11-02: *"Medium effort level is too little for what I need here in this
-  complex game"*). Every Claude session and helper runs above medium: set it on every helper you
-  start, and name it in every brief and handoff.
+- Effort level is his call (2026-11-02: *"I don't have a never medium. I just didn't like when you
+  automatically assigned it medium and didn't ask me what level I wanted it at."*). When asking him
+  before opening a Claude session or helper, ask the effort level too, with a suggestion; never
+  default it silently. He set every session to high on 11-02.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 
