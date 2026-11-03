@@ -1285,8 +1285,8 @@ void run_matron_fatality() {
             report_fatal(("matron fatality band " + at).c_str(), r);
             if (spot[0] < 0.0 && r.path == static_cast<int>(Matron::FatalPath::Floor)) {
                 // With real arms (11-02): on the north band no edge in her reach
-                // she can tip him over (past its outside's lip a beam at her
-                // deck's height; under its shaft side a deck 2 m down): her
+                // she can tip him over yet (its outside a bare lip, no rail to
+                // lay him over; under its shaft side a deck 2 m down): her
                 // floor version where she stands, and the same restart.
                 const std::vector<int> floor_beats{0, 1, 8, 9};
                 require(r.beats == floor_beats && r.claimed_s > 0.0 && r.m.fatal_release_beat == r.releases_start,
