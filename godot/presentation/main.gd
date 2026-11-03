@@ -506,6 +506,8 @@ func _process(delta: float) -> void:
 		"support": int(_native.get_support_entity_id()),
 		"matron_released": bool(her["released"]),
 		"beam_seated": int(_native.get_summit_state()["ending"]) >= 1,
+		"deaths": int(_native.get_death_count()),
+		"throws": int(_native.get_throw_count()),
 	})
 	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
 	# her a few seconds after she burst out): her bearing off his view, how

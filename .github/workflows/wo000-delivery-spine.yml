@@ -702,6 +702,28 @@ jobs:
             --script res://tests/footstep_contact_test.gd 2>&1 | tee artifacts/footstep-contact.log
           test "$(grep -c '^FOOTSTEP_CONTACT PASS' artifacts/footstep-contact.log)" -eq 5
 
+      - name: Far hits arrive as sound does
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A hit past 40 m starts after distance / 343 s, a near one at once,
+          # one past the reach never; the hits in flight are bounded and a
+          # restore drops them.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/impact_delay_test.gd 2>&1 | tee artifacts/impact-delay.log
+          test "$(grep -c '^IMPACT_DELAY PASS' artifacts/impact-delay.log)" -eq 10
+          ! grep -q '^IMPACT_DELAY FAIL' artifacts/impact-delay.log
+
+      - name: The foreman counts falls and throws
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A count is news only when it steps up by one while he listens, once a launch.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/foreman_tally_test.gd 2>&1 | tee artifacts/foreman-tally.log
+          test "$(grep -c '^FOREMAN_TALLY PASS' artifacts/foreman-tally.log)" -eq 12
+          ! grep -q '^FOREMAN_TALLY FAIL' artifacts/foreman-tally.log
+
       - name: Her takes never repeat
         shell: bash
         run: |

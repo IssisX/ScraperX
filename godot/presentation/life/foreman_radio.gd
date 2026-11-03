@@ -24,12 +24,24 @@ const LINES := {
 	&"stack": "Get down before somebody sees you.",
 	&"locker": "What was that? Miller, get away from that locker.",
 	&"ring_220": "Don't come down. She's below you. The only way off is the top.",
+	# The count of what the climb has cost, in his dry words: observations,
+	# never hints and never scolding.
+	&"fall_1": "Miller, I heard that from here. Tell me you're moving.",
+	&"fall_5": "Five now. I'm not saying anything. I'm counting.",
+	&"fall_12": "Twelve. I stopped writing them down.",
+	&"throws_12": "Somebody's throwing my stock around up there.",
 }
+# The falls (deaths) and throws that set those lines off, each when the count
+# steps up onto it during this launch.
+const TALLY_FALLS := {1: &"fall_1", 5: &"fall_5", 12: &"fall_12"}
+const TALLY_THROWS := {12: &"throws_12"}
 
 var text := ""         # the line showing; "" between lines
 var who := ""
 var lines_said := 0    # for the tests
 var _said := {}        # beat -> true, once it has been queued
+var _last_deaths := -1 # the counts last read; -1 before the first read
+var _last_throws := -1
 var _queue: Array[StringName] = []
 var _left := 0.0       # seconds the line showing has to run
 var _gap := 0.0        # seconds of air between lines
@@ -77,6 +89,7 @@ func _watch(ctx: Dictionary) -> void:
 			_gap = 0.0
 			_cue(&"last_beam")
 		return
+	_tally(int(ctx.get("deaths", 0)), int(ctx.get("throws", 0)))
 	var y := float(ctx.get("y", 0.0))
 	var support := int(ctx.get("support", 0))
 	var released := bool(ctx.get("matron_released", false))
@@ -92,6 +105,19 @@ func _watch(ctx: Dictionary) -> void:
 	# The 220 ring with her out below: the lifeline.
 	if released and y > 220.5:
 		_cue(&"ring_220")
+
+
+# A count is news only when it steps up by one while the radio watches. The
+# first read, a jump (a saved climb loaded) and a drop (a restore) are history:
+# they move the baseline and say nothing.
+func _tally(deaths: int, throws: int) -> void:
+	if _last_deaths >= 0:
+		if deaths == _last_deaths + 1 and TALLY_FALLS.has(deaths):
+			_cue(TALLY_FALLS[deaths])
+		if throws == _last_throws + 1 and TALLY_THROWS.has(throws):
+			_cue(TALLY_THROWS[throws])
+	_last_deaths = deaths
+	_last_throws = throws
 
 
 func _cue(beat: StringName) -> void:

@@ -101,6 +101,11 @@ const IMPACT_USUAL_KG := [160.0, 55.0, 1500.0, 3750.0, 3000.0]
 const IMPACT_FLOOR_DB := -36.0
 const IMPACT_PLAYERS := 6
 const IMPACTS_PER_FRAME := 3
+# Hits farther than this arrive late, by the speed of sound (343 m/s): at most
+# IMPACT_REACH_M / 343 = 0.47 s. At most IMPACT_PENDING_MAX hits are in flight.
+const IMPACT_FAR_M := 40.0
+const SPEED_OF_SOUND_MPS := 343.0
+const IMPACT_PENDING_MAX := 24
 const IMPACT_REACH_M := 160.0
 
 # Counted whether or not the bank has finished building, so the scripted
@@ -228,7 +233,11 @@ var breaths := 0
 var _breath_phase := 0.0
 # Hits heard, by ImpactSound, counted whether or not the bank is ready.
 var impacts_heard := {}
+# Hits started (after their travel time), counted whether or not the bank is ready.
+var impacts_started := 0
 var _impact_seen := 0
+var _impact_clock := 0.0          # seconds of frames fed to update(), the clock the delays run on
+var _impact_pending: Array = []   # [due on _impact_clock, hit], oldest first
 var _impact_players: Array[AudioStreamPlayer3D] = []
 var _next_impact := 0
 
@@ -439,6 +448,7 @@ func ui_tap(back: bool = false) -> void:
 func update(delta: float, position: Vector3, velocity: Vector3, grounded: bool,
 		support_entity: int, traversal: int, chute: bool, deaths: int, crouched: bool,
 		support_point_velocity: Vector3 = Vector3.ZERO) -> void:
+	_release_impacts(delta)
 	if not _silent:
 		_update_dread(delta)
 	# Strides are the feet moving over what they stand on: a rider carried by a
@@ -596,15 +606,56 @@ func update_impacts(impacts: Array, listener: Vector3) -> void:
 		return
 	if int(impacts.back()["sequence"]) < _impact_seen:
 		_impact_seen = 0
-	var fresh: Array = []
+		_impact_pending.clear()   # a restore put the world back: hits in flight never happened
+	var near: Array = []
 	for hit in impacts:
 		if int(hit["sequence"]) <= _impact_seen:
 			continue
 		var sound := int(hit["sound"])
 		impacts_heard[sound] = int(impacts_heard.get(sound, 0)) + 1
-		if (hit["at"] as Vector3).distance_to(listener) <= IMPACT_REACH_M:
-			fresh.append(hit)
+		var distance := (hit["at"] as Vector3).distance_to(listener)
+		if distance > IMPACT_REACH_M:
+			continue
+		var delay := impact_delay_s(distance)
+		if delay <= 0.0:
+			near.append(hit)
+			continue
+		# Far hits arrive as sound does: after distance / the speed of sound.
+		_impact_pending.append([_impact_clock + delay, hit])
+		if _impact_pending.size() > IMPACT_PENDING_MAX:
+			_impact_pending.pop_front()   # saturation: the oldest in flight is dropped
 	_impact_seen = int(impacts.back()["sequence"])
+	_start_impacts(near)
+
+
+# Seconds before a hit `distance` metres from the listener is heard: nothing
+# up to IMPACT_FAR_M (a near thud must not read as lag), then the time sound
+# takes to cross the whole distance. Presentation only: the Matron hears the
+# native's list of hits, never this.
+static func impact_delay_s(distance: float) -> float:
+	if distance <= IMPACT_FAR_M:
+		return 0.0
+	return distance / SPEED_OF_SOUND_MPS
+
+
+# Once a frame: hits whose sound has now crossed the distance are started.
+func _release_impacts(delta: float) -> void:
+	_impact_clock += delta
+	if _impact_pending.is_empty():
+		return
+	var due: Array = []
+	var waiting: Array = []
+	for item in _impact_pending:
+		if float(item[0]) <= _impact_clock:
+			due.append(item[1])
+		else:
+			waiting.append(item)
+	_impact_pending = waiting
+	_start_impacts(due)
+
+
+func _start_impacts(fresh: Array) -> void:
+	impacts_started += fresh.size()
 	if not _bank_ready or _silent or fresh.is_empty():
 		return
 	fresh.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
