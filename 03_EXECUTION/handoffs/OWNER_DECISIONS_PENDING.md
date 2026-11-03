@@ -45,7 +45,10 @@ and eye run on his $100 monthly Anthropic API credit). Step A done at 5:33 PM: o
 (J-001..J-031, #108-#138), `work/BOARD.md` generated, `@codex` wake tested on J-029 (#136). Codex is out of quota: nothing is planned around it,
 no @codex wakes or reviews (*"We can't depend on that"*). At 5:39 PM on his go: one Claude session builds step B
 (switchboard v0, J-031 #138) with his setup cut to two steps, Muse's bridge sending mail too (*"Do as much of it
-for me as you can"*). Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+for me as you can"*). At 6:32 PM, his words "keep, fresh, review": her fatality stays
+inside his 5-7 s bar (the beats are trimmed; #103's 7.5-13 s window is not landed); a fresh Claude
+session (high) does that trim and the north band spot's bare-lip hang; a Claude security review
+session (xhigh) reviews the switchboard #139 and the toolchain #86. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
