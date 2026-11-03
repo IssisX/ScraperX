@@ -614,3 +614,13 @@ to open a Claude session or helper.
 
 - 2026-11-02, on helpers that outlive the integrator (moved from CLAUDE.md 11-03): *"Shouldn't it be in the new session?"*
 - 2026-10-22, opening "Managing the agents" (moved from CLAUDE.md 11-03): *"I need more management help from you telling the other agents what to do"*.
+
+---
+
+## 2026-11-03 — Permission questions were temporary; Opus is rules and master integrator
+
+Owner, after the session cited rule 7 as a reason never to ask: *"The permission questions were just
+for a short period of time. shouldn't be a hard rule."* Then: *"Opus should do rules master
+integrator."* Read as: rule 7's "no permission or git questions" is softened (ask when a call is
+really his; tool permissions stay granted), and Opus holds the master integrator seat and keeps the
+rules. `00_START_HERE.md` rules 7 and 62.
