@@ -2,3 +2,7 @@
 # creates this file with this entry when it is missing; committing it keeps a
 # run from leaving an untracked file behind.
 .mcp/
+
+# Godot writes a .uid beside every script on import; the repo tracks none (the
+# scenes load by path), so a local run must not leave 100 untracked files.
+*.uid
