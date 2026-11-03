@@ -154,36 +154,23 @@ agent, Claude included, works this way:
   (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` mail), because its
   GitHub comments each need the owner's approval (10-29).
 - **Tasking the team is the integrator's job, every hour, unasked** (11-03: *"it's concerning that I said
-  that and then you're immediately sending jobs to Muse as if that wasn't your job the entire time ...
-  or else this whole collaboration shit we set up is pointless"*). If Cory has to tell the integrator to
-  hand out work or to make agents help each other, the integrator has already failed. On every hourly
-  check, before anything else but the size check:
-  - **Load by strength.** Each agent holds work matched to what it is best at (the "Who to ask" list
-    above): Muse the hardest builds (it is the strongest builder and free), Grok the math and the stuck
-    problems, ChatGPT reviews, research and specs, Claude sessions the kernel, CI and the game by eye,
-    the API agent one bounded job. A job whose owner is out, stuck or mismatched moves to the best free
-    agent the same hour; tell the board in one line.
-  - **Muse never runs dry** (*"keep constantly tasking it out. With grand derived tasks"*). Under three
-    big unstarted jobs in `work/tasks/muse.md`: derive the next grand task from what the owner asked for
-    (`03_EXECUTION/GAP_LIST.md`, her exit items, his rulings), a whole player-facing system or set piece,
-    never a small fix; open the job issue owned by Muse, written whole (goal, why it is hard, laws, files,
-    finish facts); add it to the queue, keep one more in reserve, and mail it. Muse may propose its own;
-    the integrator rules within the hour.
-  - **Make them talk.** For every active hard job, check that its owner has asked the right other agent
-    where it is guessing, and that every `To <Name>:` ask has an answer. If not, post the ask yourself
-    with the facts, or relay it to Muse by mail. A finding one agent makes that another's job needs is
-    passed on the same hour.
-  - **Prove it in the report.** The check's notes say what each agent got this hour and which questions
-    were routed, so a missed hour shows.
-- **Threads stay small** (11-03: issue #3 reached 860 comments, *"super, super wasteful, and the
-  context/size built up enormously"*). Every agent reads a thread's body plus the comments since its own
-  last one, never the history. A step is one line; a status that changes is edited in place, not
-  reposted; findings go once, on the job's own issue or PR. The integrator's hourly notes replace the
-  board body's "This hour" section; they are never a new comment. On every hourly check the integrator
-  checks comment counts: the board moves to a fresh issue at 100; a job issue past 40 gets its state
-  written into its body (where it stands, what is decided, what is next) and readers start from there;
-  a PR past 40 is replaced by a fresh PR from the same branch with that summary. A retired thread is
-  closed the same hour, and no rule file points at it.
+  that and then you're immediately sending jobs to Muse as if that wasn't your job the entire time"*).
+  If Cory has to say it, the integrator already failed. The hourly check (`work/tasks/integrator-hourly.md`,
+  step T) loads every agent by strength, keeps Muse in grand derived tasks (*"keep constantly tasking it
+  out"*), rules on Muse's own proposals within the hour (*"Muse can propose too. That is very
+  important."*), and makes sure every guess gets asked and every ask gets answered.
+- **Nothing grows without a cap** (11-03: #3 reached 860 comments, *"super, super wasteful ... I want to
+  make sure we're not doing the same thing"*). Whatever is re-read grows the cost of every read, so each
+  of these has a cap, checked on every hourly check (step C), and is trimmed the same hour:
+  - a session's context, 400k tokens (above);
+  - the board, 100 comments, then a fresh one; a job issue or PR, 40, then its state goes into its body
+    (or a fresh PR) and readers start there; retired threads are closed;
+  - this file, 20 KB: a new rule replaces or shortens an old one, and dated quotes past a week move to
+    `00_START_HERE_ARCHIVE.md`; the same for each `work/tasks/` file (8 KB) and the scheduled task's
+    prompt (a pointer to `work/tasks/integrator-hourly.md`, never the steps themselves);
+  - reads: a thread's body plus what is new since your last read, never the history; long logs,
+    transcripts and threads go to a subagent and only its answer comes back;
+  - posts: one line per real step; a changing status is edited in place, never reposted.
 - Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
   board, linked once from the board.
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
