@@ -599,10 +599,19 @@ class Switch:
         key = f"orchestrator#{number}"
         attempt = dt.datetime.fromisoformat(at.replace("Z", "+00:00"))
         since = (attempt - dt.timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        session = claude_calls.find_session(self.claude(), b.orchestrator_agent_id, since, {"switchboard_key": key, "run": run})
-        if session:
-            self.out(f"WATCH       #{number} found the session of run {run}: {session}")
-            self.gh.comment(number, self.started_comment(number, session, run, b.orchestrator_session_usd, " (found after an unanswered start)"))
+        search = claude_calls.find_session(self.claude(), b.orchestrator_agent_id, since, {"switchboard_key": key, "run": run})
+        if search.session:
+            self.out(f"WATCH       #{number} found the session of run {run}: {search.session}")
+            self.gh.comment(number, self.started_comment(number, search.session, run, b.orchestrator_session_usd, " (found after an unanswered start)"))
+            return
+        if not search.exhausted:
+            # The page cap came first: "not found" proves nothing, so the reserve stays and a person is told, once.
+            self.out(f"WATCH       #{number} run {run}: {claude_calls.MAX_LIST_PAGES} pages of sessions read without a match or an end: unresolved")
+            if not any(MARK.format(kind="orchestrator-unresolved", pr=number, head=run) in x for x in mine):
+                self.gh.comment(number, f"Switchboard, {central(self.now)}: could not tell whether the session of run `{run}` exists: "
+                                        f"{claude_calls.MAX_LIST_PAGES} pages of the agent's newer sessions held no match and the listing went on. "
+                                        f"The reserve stays on the ledger and no second session is started; look for it in the Console."
+                                        f"\n\n{MARK.format(kind='orchestrator-unresolved', pr=number, head=run)}")
             return
         if self.now - attempt < GIVE_UP_AFTER:
             self.out(f"WATCH       #{number} no session yet for run {run}; looking again next sweep")

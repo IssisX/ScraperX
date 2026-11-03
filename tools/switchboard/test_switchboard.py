@@ -401,12 +401,20 @@ class FakeSessions:
 
     def __init__(self, states):
         self.states, self.sent, self.reads = states, [], []
-        self.listing, self.lists = [], []
+        self.listing, self.pages, self.lists, self.next_fetches = [], None, [], 0
         self.events = types.SimpleNamespace(list=self._events, send=self._send)
 
     def list(self, agent_id, created_at_gte, limit, order):
         self.lists.append((agent_id, created_at_gte, limit, order))
-        return types_ns(data=list(self.listing))
+        return self._page(0)
+
+    def _page(self, i):
+        pages = self.pages if self.pages is not None else [self.listing]
+
+        def advance():
+            self.next_fetches += 1
+            return self._page(i + 1)
+        return types_ns(data=list(pages[i]), has_next_page=lambda: i + 1 < len(pages), get_next_page=advance)
 
     def retrieve(self, session_id):
         self.reads.append(session_id)
@@ -591,10 +599,12 @@ class SessionWatcher(unittest.TestCase):
                 f"{switch.MARK.format(kind='orchestrator', pr=number, head='-')}\n{switch.UNKNOWN_MARK.format(run=run, at=at)}")
         return {"body": body, "user": {"login": BOT}}
 
-    def reconcile(self, comments, listing=(), ledger=(reserve_line(),)):
+    def reconcile(self, comments, listing=(), ledger=(reserve_line(),), pages=None):
         gh = FakeGH([issue()], {138: comments})
         sw = make_switch(gh, {}, ledger)
         sw.sessions.listing = list(listing)
+        if pages is not None:
+            sw.sessions.pages = pages
         return sw, gh, sw.watch_sessions()
 
     def test_an_unknown_start_is_found_by_its_metadata_and_watched_as_usual(self):
@@ -613,6 +623,32 @@ class SessionWatcher(unittest.TestCase):
         # With that comment on the issue the next sweep reads the session like any other.
         sw2, gh2, _ = self.watch({SESSION: {"status": "running"}}, comments=[self.unknown_comment(10), {"body": body, "user": {"login": BOT}}])
         self.assertEqual(sw2.sessions.reads, [SESSION])
+
+    def test_a_match_on_the_second_page_is_found(self):
+        mine = types_ns(id=SESSION, metadata={"switchboard_key": "orchestrator#138", "run": RUN})
+        newer = [types_ns(id=f"sesn_n{i}", metadata={"run": "ffffffffffff"}) for i in range(20)]
+        sw, gh, _ = self.reconcile([self.unknown_comment(40)], pages=[newer, [mine]])
+        self.assertEqual((sw.sessions.next_fetches, sw.appended), (1, []))   # 40 minutes old, but it exists: not written off
+        self.assertEqual(sw.start_comment([{"body": gh.posted[0][1], "user": {"login": BOT}}], 138), (SESSION, RUN))
+
+    def test_not_found_counts_only_after_every_page_was_read(self):
+        newer = [types_ns(id=f"sesn_n{i}", metadata={}) for i in range(20)]
+        sw, gh, _ = self.reconcile([self.unknown_comment(40)], pages=[newer, newer, newer])
+        self.assertEqual(sw.sessions.next_fetches, 2)
+        self.assertEqual(money.parse_log(sw.appended[0])[0].usd, Decimal("0"))   # exhausted: written off
+
+    def test_hitting_the_page_cap_keeps_the_reserve_and_says_unresolved_once(self):
+        newer = [types_ns(id=f"sesn_n{i}", metadata={}) for i in range(20)]
+        unknown = self.unknown_comment(40)
+        sw, gh, _ = self.reconcile([unknown], pages=[newer] * 25)
+        self.assertEqual(sw.sessions.next_fetches, claude_calls.MAX_LIST_PAGES - 1)   # ten pages read, no more
+        self.assertEqual(sw.appended, [])                                              # no $0 end
+        (number, body), = gh.posted
+        self.assertIn(switch.MARK.format(kind="orchestrator-unresolved", pr=138, head=RUN), body)
+        self.assertNotIn("orchestrator-cleared", body)
+        self.assertTrue(sw.start_blocked([unknown, {"body": body, "user": {"login": BOT}}], 138))   # still no second session
+        sw2, gh2, _ = self.reconcile([unknown, {"body": body, "user": {"login": BOT}}], pages=[newer] * 25)
+        self.assertEqual((gh2.posted, sw2.appended), ([], []))                         # the note is not repeated
 
     def test_an_unknown_start_not_found_yet_waits(self):
         sw, gh, _ = self.reconcile([self.unknown_comment(29)])
@@ -765,7 +801,7 @@ class SdkRequests(unittest.TestCase):
         self.assertIn("order=desc", seen[1][2])
         self.assertIn("session.status_idle", seen[1][2])
 
-    def test_create_carries_the_metadata_and_find_session_reads_one_bounded_page(self):
+    def test_create_carries_the_metadata_and_find_session_reads_a_bounded_page(self):
         seen = []
 
         def handler(req):
@@ -779,12 +815,40 @@ class SdkRequests(unittest.TestCase):
         args = ("agent_1", "env_1", "J-031 #138", "go", Decimal("8.00"), "https://github.com/IssisX/ScraperX", "ghp_test", "ScraperX-Claude", "")
         self.assertEqual(claude_calls.start_session(c, *args, {"switchboard_key": "orchestrator#138", "run": RUN}), SESSION)
         self.assertEqual(json.loads(seen[0][3])["metadata"], {"switchboard_key": "orchestrator#138", "run": RUN})
-        self.assertEqual(claude_calls.find_session(c, "agent_1", "2026-11-03T14:00:00Z", {"switchboard_key": "orchestrator#138", "run": RUN}), SESSION)
-        self.assertIsNone(claude_calls.find_session(c, "agent_1", "2026-11-03T14:00:00Z", {"run": "000000000000"}))
+        self.assertEqual(claude_calls.find_session(c, "agent_1", "2026-11-03T14:00:00Z", {"switchboard_key": "orchestrator#138", "run": RUN}),
+                         claude_calls.Search(SESSION, False))
+        self.assertEqual(claude_calls.find_session(c, "agent_1", "2026-11-03T14:00:00Z", {"run": "000000000000"}),
+                         claude_calls.Search(None, True))   # the only page, no next: exhausted
         method, path, query, body = seen[1]
         self.assertEqual((method, path, body), ("GET", "/v1/sessions", ""))
         for want in ("agent_id=agent_1", "created_at%5Bgte%5D=2026-11-03T14%3A00%3A00Z", "limit=20", "order=desc"):
             self.assertIn(want, query)
+
+    def test_find_session_follows_the_cursor_to_the_next_page_with_the_same_filters(self):
+        seen = []
+
+        def handler(req):
+            seen.append(req.url.query.decode())
+            if "page=p2" in req.url.query.decode():
+                return httpx2.Response(200, json={"data": [{"id": SESSION, "metadata": {"run": RUN}}], "next_page": None})
+            return httpx2.Response(200, json={"data": [{"id": f"sesn_n{i}", "metadata": {}} for i in range(20)], "next_page": "p2"})
+        got = claude_calls.find_session(self.client(handler), "agent_1", "2026-11-03T14:00:00Z", {"run": RUN})
+        self.assertEqual(got, claude_calls.Search(SESSION, False))
+        self.assertEqual(len(seen), 2)
+        for q in seen:
+            for want in ("agent_id=agent_1", "created_at%5Bgte%5D=2026-11-03T14%3A00%3A00Z", "limit=20", "order=desc"):
+                self.assertIn(want, q)
+        self.assertIn("page=p2", seen[1])
+
+    def test_find_session_stops_at_the_page_cap_and_says_it_did_not_finish(self):
+        seen = []
+
+        def endless(req):
+            seen.append(req.url.query.decode())
+            return httpx2.Response(200, json={"data": [{"id": "sesn_x", "metadata": {}}], "next_page": f"p{len(seen) + 1}"})
+        got = claude_calls.find_session(self.client(endless), "agent_1", "2026-11-03T14:00:00Z", {"run": RUN})
+        self.assertEqual(got, claude_calls.Search(None, False))
+        self.assertEqual(len(seen), claude_calls.MAX_LIST_PAGES)
 
     def test_a_session_id_is_checked_before_it_reaches_a_url(self):
         with self.assertRaises(claude_calls.ClaudeCallError):

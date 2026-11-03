@@ -230,7 +230,8 @@ def start_session(c, agent_id: str, environment_id: str, title: str, message: st
 
 
 # ---------- the session watcher ----------
-LIST_LIMIT = 20                        # one page of the newest sessions: find_session never pages on
+LIST_LIMIT = 20                        # sessions to a page
+MAX_LIST_PAGES = 10                    # find_session reads at most this many pages (200 sessions)
 SESSION_ID = re.compile(r"sesn_[A-Za-z0-9]+")
 FINISHED_STOPS = ("end_turn", "budget_reached", "retries_exhausted", "refusal")   # idle, and nobody will resume it
 MAX_PENDING = 50                       # one send answers at most this many pending calls; the rest are re-emitted
@@ -304,18 +305,30 @@ def deny_pending(c, session_id: str, event_ids: Sequence[str]) -> int:
     return len(ids)
 
 
-def find_session(c, agent_id: str, since: str, metadata: Mapping[str, str]) -> str | None:
-    """The id of a session of `agent_id` created at or after `since` (ISO 8601 UTC) whose metadata holds
-    every pair in `metadata`, from one page of the newest LIST_LIMIT; None if there is none."""
+@dataclasses.dataclass(frozen=True)
+class Search:
+    session: str | None    # the matching session's id, None if none was seen
+    exhausted: bool        # True only if the listing was read to its last page: "not found" is proof only then
+
+
+def find_session(c, agent_id: str, since: str, metadata: Mapping[str, str]) -> Search:
+    """Look for a session of `agent_id` created at or after `since` (ISO 8601 UTC) whose metadata holds every
+    pair in `metadata`: the listing, newest first, LIST_LIMIT to a page, at most MAX_LIST_PAGES pages.
+    No match is `exhausted` only when the last page was reached; past the cap the answer is unknown."""
     a = _errors()
     try:
         page = c.beta.sessions.list(agent_id=agent_id, created_at_gte=since, limit=LIST_LIMIT, order="desc")
-        for s in page.data[:LIST_LIMIT]:
-            have = s.metadata or {}
-            if all(have.get(k) == v for k, v in metadata.items()) and SESSION_ID.fullmatch(str(s.id)):
-                return str(s.id)
+        for n in range(MAX_LIST_PAGES):
+            for s in page.data[:LIST_LIMIT]:
+                have = s.metadata or {}
+                if all(have.get(k) == v for k, v in metadata.items()) and SESSION_ID.fullmatch(str(s.id)):
+                    return Search(str(s.id), False)
+            if not page.has_next_page():
+                return Search(None, True)
+            if n + 1 < MAX_LIST_PAGES:
+                page = page.get_next_page()
     except a.APIStatusError as err:
         raise ClaudeCallError(f"beta.sessions.list answered HTTP {err.status_code}") from err
     except a.APIConnectionError as err:
         raise ClaudeCallError(f"beta.sessions.list could not connect ({why(err)})") from err
-    return None
+    return Search(None, False)
