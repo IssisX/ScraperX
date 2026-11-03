@@ -767,6 +767,14 @@ void Matron::step_journey(const float dt) {
         journey_legs_.clear();
         return;
     }
+    // Temporary diagnostic: identify the exact journey edge at climb acquisition.
+    if (edge.kind == traversal::MoveKind::RungUp || edge.kind == traversal::MoveKind::RungDown) {
+        std::fprintf(stderr,
+                     "MATRON_JOURNEY_BEGIN edge=%zu kind=%d feet=(%.3f,%.3f,%.3f) start=(%.3f,%.3f,%.3f) goal=(%.3f,%.3f,%.3f)\\n",
+                     journey_at_, int(edge.kind), feet.GetX(), feet.GetY(), feet.GetZ(),
+                     edge.spec.start.GetX(), edge.spec.start.GetY(), edge.spec.start.GetZ(),
+                     edge.spec.goal.GetX(), edge.spec.goal.GetY(), edge.spec.goal.GetZ());
+    }
     climber_->begin(edge.spec);
     journey_moving_ = true;
 }
