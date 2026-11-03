@@ -51,11 +51,9 @@ finished piece as its own diff email as soon as it is proven, not all at the end
 1. **Finish J-002 (#109):** the late require ("once the rip has begun, his blow breaks nothing") read
    at its peak, as its own diff on top of `1620c32e` (PR #158), so #153 goes green.
 2. **The fight, S2-S5, built end to end (J-005, #112, then one job each):**
-   - Send your corrected `FIGHTING_SYSTEM_SPEC.md` as a diff adding `03_EXECUTION/FIGHT/FIGHTING_SYSTEM_SPEC.md`
-     (docs only).
-   - For each of S2, S3, S4 and S5, email `MUSE_TO_CLAUDE: J-005 scope S<n>` with four lines:
-     invariant, files, reach (which native groups and touch scenarios), finish fact. The integrator
-     opens each as its own job issue owned by you, the same hour.
+   - Your spec is on trunk (`03_EXECUTION/FIGHT/FIGHTING_SYSTEM_SPEC.md`, with your two corrections), and
+     your scopes are job issues: S2 low sweep J-033 #164, S3 heavy kick J-034 #165, S4 jab-cross J-035
+     #166, S5 slip J-036 #167.
    - Then build them in order of dependency, each stage its own diff (and its own PR); a new or
      changed test check goes in its own protected diff with a before/after. Native kernel first
      (`src/sim/`), then the Godot view where the stage shows on screen.
