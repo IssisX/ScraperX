@@ -65,6 +65,10 @@ the switchboard's session watcher (J-031 follow-up) goes to a Claude Sonnet sess
 first job is J-029 (small). Reason: the hosted pipeline has never run once, so it starts on a small
 job, and the hard native job goes where it can't stall unseen.
 
+**11-03, Cory: "Queue it for muse"** (destructible moving things): J-038 (#169), Muse's, right after the fight
+(S2-S6). Snapping joints on the machines first, then breakable props; pre-broken pieces become loose stock; rule
+51, the phone, determinism and saves hold; her budget is unchanged.
+
 **11-03, 10:11 AM Central, decided by the integrator** (Cory: use Muse's intelligence, free, for as many of
 the big, difficult things as is best): J-004 (#111, S6 tells) and J-006 (#113, the grade ladder, PR #91,
 then J-007 #114 behind it) move from ChatGPT to Muse; ChatGPT reviews them. Muse runs the ladder on a
