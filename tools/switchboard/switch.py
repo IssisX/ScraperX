@@ -226,7 +226,7 @@ class Switch:
         if not issue:
             return ""
         comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments")
-        return rules.budget_override(c.get("body") or "" for c in comments)
+        return rules.budget_override(((c.get("body") or "", c["user"]["login"]) for c in comments), self.team)
 
     def gate(self, kind: str, job: str, cost: Decimal, cap: str, key: str) -> money.Check:
         """The budget check before a paid call; a refusal is logged once per key per UTC day."""

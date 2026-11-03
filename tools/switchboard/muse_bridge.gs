@@ -20,7 +20,8 @@
  *                 permission: it would let the token submit reviews, which the switch reads.
  *   REPO          optional, default IssisX/ScraperX
  *   MUSE_TO       optional, where Muse reads mail; default this account's own address
- *   MUSE_FROM     optional, comma-separated senders allowed to post as Muse; default this account's address
+ *   MUSE_FROM     optional; only this account's own address can ever post (see authentic_), so a
+ *                 list without it posts nothing
  * The token is read from the properties only, sent only to api.github.com, and never logged.
  */
 
@@ -165,24 +166,19 @@ function inbound_() {
 }
 
 /**
- * True only when the mail provably comes from an allowed sender; anyone can forge the From line.
- * Mail from this account's own address must carry Gmail's SENT label (a forged From that arrives
- * from outside never does). Any other allowed sender needs Gmail's `dmarc=pass` for its own domain.
+ * True only when the mail provably comes from this account itself; anyone can forge the From line.
+ * Such mail carries Gmail's SENT label, which a forged From arriving from outside never does. No
+ * other sender is accepted: an Authentication-Results header can be prepended by whoever sent the
+ * mail, so it proves nothing here.
  */
 function authentic_(cfg, m) {
   var addr = senderAddress_(m.getFrom());
-  if (cfg.from.indexOf(addr) < 0) return false;
-  if (addr === cfg.me) {
-    if (typeof Gmail === 'undefined') {
-      throw new Error('Muse bridge: add the Gmail API service (Editor > Services) so mail can be checked');
-    }
-    var meta = Gmail.Users.Messages.get('me', m.getId(), { format: 'minimal' });
-    return (meta.labelIds || []).indexOf('SENT') >= 0;
+  if (addr !== cfg.me || cfg.from.indexOf(addr) < 0) return false;
+  if (typeof Gmail === 'undefined') {
+    throw new Error('Muse bridge: add the Gmail API service (Editor > Services) so mail can be checked');
   }
-  var domain = addr.split('@')[1] || '';
-  var auth = String(m.getHeader('Authentication-Results') || '');
-  var dm = auth.match(/\bdmarc=pass\b[^;]*?header\.from=([^\s;]+)/i);
-  return !!domain && !!dm && dm[1].toLowerCase() === domain;
+  var meta = Gmail.Users.Messages.get('me', m.getId(), { format: 'minimal' });
+  return (meta.labelIds || []).indexOf('SENT') >= 0;
 }
 
 function senderAddress_(from) {

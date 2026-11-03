@@ -219,8 +219,13 @@ class Board(unittest.TestCase):
         self.assertEqual(rules.job_of_pr("Fixes it.\nJob: J-012\n"), "J-012")
         self.assertEqual(rules.job_of_pr(None), "")
         self.assertEqual(rules.job_of_title("J-031 Switchboard v0"), "J-031")
-        self.assertEqual(rules.budget_override(["budget 12", "ok", "Budget 15.50\nthanks"]), "15.50")
-        self.assertEqual(rules.budget_override(["my budget 12 is fine"]), "")
+        self.assertEqual(rules.budget_override([("budget 12", "IssisX"), ("ok", "IssisX"), ("Budget 15.50\nthanks", "IssisX")], TEAM), "15.50")
+        self.assertEqual(rules.budget_override([("my budget 12 is fine", "IssisX")], TEAM), "")
+
+    def test_budget_override_ignores_outsiders_and_the_bot(self):
+        self.assertEqual(rules.budget_override([("budget 100", "outside-team")], TEAM), "")
+        self.assertEqual(rules.budget_override([("budget 9", "IssisX"), ("budget 100", "outside-team")], TEAM), "9")
+        self.assertEqual(rules.budget_override([("budget 100", "github-actions[bot]")], TEAM), "")
 
     def test_jobs_found_through_their_titles(self):
         got = rules.jobs_by_pr_mention({"J-012": "J-012 Her drawn-body checks (#100, supersedes #43)",

@@ -288,10 +288,17 @@ def is_stale(head_committed_at: str, now_iso: str, days: int) -> bool:
     return (now - head).total_seconds() > days * 86400
 
 
-def budget_override(bodies: Iterable[str]) -> str:
-    """The newest `budget N` line in the given comment bodies (oldest first), as a string, or ""."""
+def budget_override(comments: Iterable[tuple[str, str]], team: Team) -> str:
+    """The newest `budget N` line in the given (body, login) comments (oldest first), as a string, or "".
+
+    Only the team's own logins can raise a job's cap: the repo is public, so anyone can comment, and
+    the workflow bot never sets budgets for itself.
+    """
     found = ""
-    for b in bodies:
+    for b, login in comments:
+        login = login.strip().lower()
+        if login not in team.verdict_logins or login == BOT_LOGIN:
+            continue
         for m in BUDGET_LINE.finditer(b):
             found = m.group("usd")
     return found
