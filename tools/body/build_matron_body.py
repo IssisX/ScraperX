@@ -963,7 +963,7 @@ def build():
             continue
         rel = sl - np.array([cx, 0, czs])
         rad[i] = (rel[:, [0, 2]] @ U[:, [0, 2]].T).max(0)
-    ease = 0.016 + 0.018 * np.clip(ts * 3, 0, 1) + 0.10 * ts ** 1.5   # roomy over her hips and belly
+    ease = 0.016 + 0.018 * np.clip(ts * 3, 0, 1) + 0.18 * ts   # roomy over her hips and belly
     rad = rad + ease[:, None]
     for i in range(1, nring):
         rad[i] = np.maximum(rad[i], rad[i - 1] - 0.002)
@@ -1030,9 +1030,10 @@ def build():
             ax_ = (B - A) / np.linalg.norm(B - A)
             sel = Vr[is_body & (wsum(a_, a_ + "_x") > 0.5)]
             u_ = (sel - A) @ ax_
-            sel = sel[(u_ > 0.1 * np.linalg.norm(B - A)) & (u_ < 0.9 * np.linalg.norm(B - A))]
+            lo_ = 0.35 if a_.startswith("hp") else 0.1    # matron_rig.gd SKIRT_THIGH_FROM: below her seat
+            sel = sel[(u_ > lo_ * np.linalg.norm(B - A)) & (u_ < 0.9 * np.linalg.norm(B - A))]
             d_ = np.linalg.norm(np.cross(sel - A, ax_), axis=1)
-            capsules.append([a_, b_, float(np.percentile(d_, 90)) if len(d_) else 0.06])
+            capsules.append([a_, b_, float(np.percentile(d_, 75)) if len(d_) else 0.06])
 
     def skirt_grid_w(ii, jj):
         """Weights by place on the skirt's own grid (ring ii, segment jj), so

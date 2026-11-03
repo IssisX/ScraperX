@@ -45,6 +45,11 @@ const BACK_RADIUS := 0.17
 # cell, kept out of her thigh and shin capsules (the build's measured radii
 # plus SKIRT_CLEAR_M). The skirt is skinned to the proxy's bones.
 const SKIRT_TURN := false
+const SKIRT_RIDE := false
+# The thigh's capsule starts this far down it: above, her hip is under the
+# cloth's pinned waist, and a capsule from the hip joint shoves the cloth
+# off her side when she crouches.
+const SKIRT_THIGH_FROM := 0.35
 const SKIRT_TURN_SPAN := 1
 const SKIRT_DAMP := 0.9
 const SKIRT_ITERATIONS := 8
@@ -72,6 +77,7 @@ var _sk_bones: Array = []       # [col][row] bone index
 var _sk_rest: Array = []        # [col][row + 1] bind position (skeleton space)
 var _sk_pts: Array = []
 var _sk_prev: Array = []
+var _sk_down: Array = []        # [col][row] rest length to the next point down
 var _sk_links: Array = []       # [a_col, a_row, b_col, b_row, rest length]
 var _sk_capsules: Array = []    # [bone a, bone b, radius]
 var _sk_body := -1
@@ -956,6 +962,10 @@ func _setup_skirt(sk: Dictionary) -> void:
 		for pt in sk["points"][c]:
 			row_p.append(_v(pt))
 		_sk_rest.append(row_p)
+		var row_d: Array = []
+		for r in range(row_p.size() - 1):
+			row_d.append((row_p[r] as Vector3).distance_to(row_p[r + 1]))
+		_sk_down.append(row_d)
 	for c in _sk_cols:
 		var c1 := (c + 1) % _sk_cols
 		for r in _sk_rows + 1:
@@ -974,6 +984,8 @@ func _setup_skirt(sk: Dictionary) -> void:
 	for cap in sk.get("capsules", []):
 		var a := skel.get_bone_global_rest(skel.find_bone(str(cap[0]))).origin
 		var b := skel.get_bone_global_rest(skel.find_bone(str(cap[1]))).origin
+		var from := SKIRT_THIGH_FROM if str(cap[0]).begins_with("hp") else 0.0
+		a = a.lerp(b, from)
 		var radius := float(cap[2])
 		for c in _sk_cols:
 			for r in range(1, _sk_rows + 1):
@@ -981,7 +993,7 @@ func _setup_skirt(sk: Dictionary) -> void:
 				var ab := b - a
 				var t := clampf((q - a).dot(ab) / maxf(ab.length_squared(), 1e-8), 0.0, 1.0)
 				radius = minf(radius, q.distance_to(a + ab * t) - SKIRT_CLEAR_M - 0.005)
-		_sk_capsules.append([cap[0], cap[1], maxf(radius, 0.02)])
+		_sk_capsules.append([cap[0], cap[1], maxf(radius, 0.02), from])
 
 
 func _sk_link(ac: int, ar: int, bc: int, br: int) -> void:
@@ -999,7 +1011,8 @@ func step_skirt(delta: float) -> void:
 	var g := to_skel.basis * HAIR_GRAVITY
 	var caps: Array = []
 	for cap in _sk_capsules:
-		caps.append([to_skel * bone_world(str(cap[0])).origin, to_skel * bone_world(str(cap[1])).origin, float(cap[2]) + SKIRT_CLEAR_M])
+		var cb := to_skel * bone_world(str(cap[1])).origin
+		caps.append([(to_skel * bone_world(str(cap[0])).origin).lerp(cb, float(cap[3])), cb, float(cap[2]) + SKIRT_CLEAR_M])
 	var fresh := _sk_pts.size() != _sk_cols or (_sk_pts[0][0] as Vector3).distance_to(pelvis * (_sk_rest[0][0] as Vector3)) > HAIR_JUMP_M
 	if fresh:
 		_sk_pts.clear()
@@ -1034,6 +1047,13 @@ func step_skirt(delta: float) -> void:
 				q = q.lerp(pelvis * (_sk_rest[c][r] as Vector3), float(SKIRT_SHAPE[mini(r, SKIRT_SHAPE.size() - 1)]))
 				for cap in caps:
 					q = _out_of_capsule(q, cap[0], cap[1], cap[2])
+				if SKIRT_RIDE:
+					# Pushed out by a leg, the cloth swings up round it on its
+					# column (its length to the point above kept), not stretched.
+					var above: Vector3 = _sk_pts[c][r - 1]
+					q = above + (q - above).normalized() * float(_sk_down[c][r - 1])
+					for cap in caps:
+						q = _out_of_capsule(q, cap[0], cap[1], cap[2])
 				_sk_pts[c][r] = q
 		for _pass in 2:
 			for link in _sk_links:
