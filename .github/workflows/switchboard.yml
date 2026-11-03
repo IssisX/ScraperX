@@ -1,0 +1,202 @@
+name: Switchboard
+
+# The wake switch and merger of design v3 step B (job J-031). No model decides here: see
+# tools/switchboard/switch.py and work/CONTEXT.md.
+#
+# Every event except pull_request runs this file from the DEFAULT branch (`main`), so the switch is
+# live only once this file is on `main` too. Each run checks out trunk (ScraperX-Claude) for the code
+# and config. No third-party action is used: the checkout is plain git over the public URL, so no
+# credential is written to disk. Event text (titles, bodies, labels) reaches the scripts only through
+# env, quoted, never through an expression inside `run:`.
+
+on:
+  workflow_run:
+    workflows: ["ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"]
+    types: [completed]
+  issue_comment:
+    types: [created]
+  issues:
+    types: [labeled]
+  schedule:
+    - cron: "17 * * * *"      # the hourly sweep
+    - cron: "0 12,13 * * *"   # the digest: whichever of these is 7:00 AM Central posts it (CDT, then CST)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print every action, take none
+        type: boolean
+        default: true
+      digest:
+        description: Post (or print) the digest now
+        type: boolean
+        default: false
+  pull_request:
+    branches: [ScraperX-Claude]
+    paths:
+      - "tools/switchboard/**"
+      - "work/*.yml"
+      - "work/looks/**"
+      - ".github/workflows/switchboard.yml"
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('switchboard-selftest-{0}', github.ref) || 'switchboard' }}
+  cancel-in-progress: false
+
+env:
+  TRUNK: ScraperX-Claude
+
+jobs:
+  # A PR that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
+  selftest:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      actions: read
+    steps:
+      - name: Check out the PR's merge commit
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git clone -q --filter=blob:none --no-checkout "https://github.com/${REPO}.git" src
+          git -C src fetch -q --no-tags origin "+refs/pull/${PR}/merge:refs/remotes/pr/merge" "+refs/heads/${TRUNK}:refs/remotes/origin/${TRUNK}"
+          git -C src checkout -q --detach refs/remotes/pr/merge
+      - name: Install the hash-pinned dependencies (wheels only)
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
+            -r src/tools/switchboard/requirements.txt
+      - name: Unit tests of the switch's decisions
+        run: .venv/bin/python -m unittest discover -s src/tools/switchboard -p 'test_*.py' -v
+      - name: Dry run against the live repo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO"
+          .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO" --part steer --force-digest
+
+  # The paid part: the automatic Claude review, the eye, the orchestrator (off in v0). The only job
+  # holding ANTHROPIC_API_KEY. Its code never merges; contents: write is for the ledger branch.
+  ask:
+    if: >-
+      github.event_name == 'workflow_run' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'schedule' && github.event.schedule == '17 * * * *') ||
+      (github.event_name == 'issues' && github.event.label.name == 'needs:orchestrator') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+        (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
+         contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK')))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write        # appends work/archive/runs.log on the switchboard/ledger branch
+      issues: write          # verdict and note comments
+      pull-requests: write   # comments on PRs
+      actions: read          # proof runs and the screenshot artifact
+    steps:
+      - name: Check out trunk
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git clone -q --filter=blob:none --branch "$TRUNK" --single-branch "https://github.com/${REPO}.git" src
+      - name: Install the hash-pinned dependencies (wheels only)
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
+            -r src/tools/switchboard/requirements.txt
+      - name: Run the switch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PART: ${{ github.job }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABEL: ${{ github.event.label.name }}
+          DISPATCH_DRY: ${{ inputs.dry_run }}
+          DISPATCH_DIGEST: ${{ inputs.digest }}
+        run: |
+          set -euo pipefail
+          args=(--part "$PART" --repo "$REPO" --root src)
+          case "$EVENT" in
+            workflow_run) args+=(--sha "$RUN_SHA") ;;
+            issue_comment) args+=(--pr "$ISSUE_NUMBER") ;;
+            issues) args+=(--issue "$ISSUE_NUMBER" --label "$LABEL") ;;
+            schedule) if [ "$SCHEDULE" = "0 12,13 * * *" ]; then args+=(--digest); fi ;;
+            workflow_dispatch)
+              if [ "$DISPATCH_DIGEST" = "true" ]; then args+=(--force-digest); fi
+              if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi ;;
+          esac
+          .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
+
+  # The free part: the merge rule, review asks, one owner per issue, the digest. No API key.
+  steer:
+    needs: ask
+    if: >-
+      always() && github.event_name != 'pull_request' && needs.ask.result != 'cancelled' && (
+        github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:')
+      ) && (
+        github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
+          (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
+           contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK')))
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write        # the merge
+      issues: write          # labels, notes, the Digest issue
+      pull-requests: write   # the merge and PR comments
+      actions: write         # dispatch the trunk proof after a merge (a token merge starts no push run)
+    steps:
+      - name: Check out trunk
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git clone -q --filter=blob:none --branch "$TRUNK" --single-branch "https://github.com/${REPO}.git" src
+      - name: Install the hash-pinned dependencies (wheels only)
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
+            -r src/tools/switchboard/requirements.txt
+      - name: Run the switch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PART: ${{ github.job }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABEL: ${{ github.event.label.name }}
+          DISPATCH_DRY: ${{ inputs.dry_run }}
+          DISPATCH_DIGEST: ${{ inputs.digest }}
+        run: |
+          set -euo pipefail
+          args=(--part "$PART" --repo "$REPO" --root src)
+          case "$EVENT" in
+            workflow_run) args+=(--sha "$RUN_SHA") ;;
+            issue_comment) args+=(--pr "$ISSUE_NUMBER") ;;
+            issues) args+=(--issue "$ISSUE_NUMBER" --label "$LABEL") ;;
+            schedule) if [ "$SCHEDULE" = "0 12,13 * * *" ]; then args+=(--digest); fi ;;
+            workflow_dispatch)
+              if [ "$DISPATCH_DIGEST" = "true" ]; then args+=(--force-digest); fi
+              if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi ;;
+          esac
+          .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
+
