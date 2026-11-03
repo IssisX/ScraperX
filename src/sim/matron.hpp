@@ -2136,6 +2136,10 @@ private:
     // body, member and point.
     bool pipe_top_under(float x, float top_y, float z, JPH::BodyID &body, JPH::SubShapeID &member,
                         JPH::RVec3 &point) const;
+    // The riser's own top under her middle `at` (straight down its axis), if
+    // it ends below her within a catch's fall: its height. False where the
+    // riser goes on past her (the ray starts in its steel) or nothing is met.
+    bool pipe_riser_top_under(JPH::RVec3 at, float &top_y) const;
 
     // A point within her real arm's reach of a shoulder, her middle at `at`
     // and facing her yaw (kPipeShoulder*, kPipeHandReachM).

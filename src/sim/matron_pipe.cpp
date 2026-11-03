@@ -99,6 +99,26 @@ bool Matron::pipe_top_under(const float x, const float top_y, const float z, Bod
     return false;
 }
 
+bool Matron::pipe_riser_top_under(const RVec3 at, float &top_y) const {
+    const ClimbBodyFilter filter(body_, player_);
+    const RRayCast ray(RVec3(kPipeCentreX, at.GetY(), kPipeCentreZ), Vec3(0.0F, -(kStandCentre + kPipeCatchFallM), 0.0F));
+    RayCastSettings settings;
+    settings.mTreatConvexAsSolid = true;   // starting inside the riser: a hit at 0, it goes on past her
+    ClosestHitCollisionCollector<CastRayCollector> hit;
+    physics_.GetNarrowPhaseQuery().CastRay(ray, settings, hit, {}, {}, filter);
+    if (!hit.HadHit() || hit.mHit.mFraction <= 0.0F) {
+        return false;
+    }
+    const RVec3 point = ray.GetPointOnRay(hit.mHit.mFraction);
+    const BodyLockRead lock(physics_.GetBodyLockInterface(), hit.mHit.mBodyID);
+    if (!lock.Succeeded() || !lock.GetBody().IsStatic() ||
+        lock.GetBody().GetWorldSpaceSurfaceNormal(hit.mHit.mSubShapeID2, point).GetY() < 0.7F) {
+        return false;
+    }
+    top_y = float(point.GetY());
+    return true;
+}
+
 void Matron::pipe_take(const PipeGrip grip, const BodyID body, const SubShapeID member, const RVec3 point) {
     const BodyLockRead lock(physics_.GetBodyLockInterface(), body);
     pipe_support_ = body;
@@ -568,13 +588,13 @@ void Matron::ride_pipe(const float dt) {
                 next_step(PipeStep::Catch);
                 return;
             }
-            // Where the riser ends at this deck (154) she falls to it: off
-            // the rail just fast enough to be at her line when she has fallen
-            // to its top, else at kPipeStepOffMps.
+            // Where the riser ends below her (its top found straight down its
+            // axis) she falls to it: off the rail just fast enough to be at
+            // her line when she has fallen to its top, else at kPipeStepOffMps.
             target = Vec3(kPipeLineX, perch_y, kPipeLineZ);
             rate = kPipeStepOffMps;
-            if (deck > kDeckTop - 0.1F) {
-                const float fall = std::max(0.1F, float(at.GetY()) - (kDeckTop + kPipeCatchOverTopM));
+            if (float riser_top = 0.0F; pipe_riser_top_under(at, riser_top)) {
+                const float fall = std::max(0.1F, float(at.GetY()) - (riser_top + kPipeCatchOverTopM));
                 const float out = std::max(0.0F, distance_xz(ax, az, kPipeLineX, kPipeLineZ) - kPipeFootSpanM);
                 rate = std::clamp(out / std::sqrt(2.0F * fall / 9.81F), 0.2F, kPipeStepOffMps);
             }
