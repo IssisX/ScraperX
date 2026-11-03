@@ -782,6 +782,7 @@ void run_matron_found_climb();
 void run_plate_shop();
 void run_plate_band();
 void run_plate_route();
+void run_route_pockets();
 bool climb_wreck(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
                  const double fz, const std::uint64_t entity, const double top);
 void run_plate_wreckage();
