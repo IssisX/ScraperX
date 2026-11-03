@@ -2281,6 +2281,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     const traversal::Limits law{};
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     feet_budget_lunge_ = false;
+    stock_push_force_n_ = 0.0F;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
                                      state_ == State::Staggering || (way != nullptr && way->view().drives)) {
@@ -2684,6 +2685,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             } else {
                 hold_stock(dt);
             }
+        }
+        if (throw_stroke_s_ >= 0.0F) {
+            throw_stroke(dt);
         }
         if (throw_windup_s_ >= 0.0F && (!saw || held_ < 0 || state_ != State::Hunting)) {
             throw_windup_s_ = -1.0F;
@@ -3748,7 +3752,6 @@ bool Matron::pick_shove_edge(const int index, Vec3 &dir, float &lip_m) const {
 }
 
 bool Matron::shove_stock(const float dt, const float ax, const float az, const bool allow_catwalk) {
-    stock_shove_force_n_ = 0.0F;
     if (held_ >= 0 || fetch_ >= 0 || turn_ != Turn::None || wary_ || throw_cooldown_s_ > 0.0F) {
         stock_shove_ = -1;
         return false;
@@ -3881,7 +3884,7 @@ bool Matron::shove_stock(const float dt, const float ax, const float az, const b
         bodies.AddForce(t.body, granted, face);
         bodies.AddForce(body_, -granted);
         foot_drive_dv_ -= (granted / kMassKg) * dt;
-        stock_shove_force_n_ = granted.Length();
+        stock_push_force_n_ = granted.Length();
     }
     brace_at_edges(dt);
     speed_ = flat.Length();
@@ -3903,7 +3906,9 @@ void Matron::release_stock(const Vec3 velocity, const Vec3 spin, const bool thro
     BodyInterface &bodies = physics_.GetBodyInterface();
     bodies.ActivateBody(t.body);
     if (thrown) {
-        bodies.SetLinearAndAngularVelocity(t.body, velocity, spin);
+        (void)spin;
+        throw_v_ = velocity;
+        throw_stroke_s_ = 0.0F;
         thrown_ = index;
         thrown_s_ = kThrowQuietSeconds;
         throw_cooldown_s_ = kThrowCooldownSeconds;
@@ -3911,7 +3916,40 @@ void Matron::release_stock(const Vec3 velocity, const Vec3 spin, const bool thro
     }
 }
 
+void Matron::throw_stroke(const float dt) {
+    if (thrown_ < 0 || !body_in_world_) {
+        throw_stroke_s_ = -1.0F;
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const Throwable &t = throwables_[static_cast<std::size_t>(thrown_)];
+    const Vec3 pv = bodies.GetLinearVelocity(t.body);
+    const RVec3 hands = bodies.GetCenterOfMassPosition(body_) + hands_offset();
+    const float speed = throw_v_.Length();
+    const Vec3 left = throw_v_ - pv;
+    // Up to the throw's speed, out of her hands' reach, or the stroke spent:
+    // it has left them.
+    if (speed < 1.0e-3F || left.Dot(throw_v_ / speed) <= 0.05F * speed ||
+        Vec3(bodies.GetCenterOfMassPosition(t.body) - hands).Length() > kHandsSlipM ||
+        throw_stroke_s_ >= kThrowStrokeSeconds + 0.1F) {
+        throw_stroke_s_ = -1.0F;
+        return;
+    }
+    const float remaining = std::max(kThrowStrokeSeconds - throw_stroke_s_, 2.0F * dt);
+    throw_stroke_s_ += dt;
+    // Her hands hold it up against its weight as they drive it.
+    const Vec3 want = left * (t.mass_kg / remaining) - physics_.GetGravity() * t.mass_kg;
+    const Vec3 granted = feet_push(dt, want, &pv);
+    if (granted.LengthSq() > 0.0F) {
+        bodies.AddForce(t.body, granted);
+        bodies.AddForce(body_, -granted);
+        foot_drive_dv_ -= (granted / kMassKg) * dt;
+        stock_push_force_n_ = granted.Length();
+    }
+}
+
 void Matron::drop_stock() {
+    throw_stroke_s_ = -1.0F;
     fetch_ = -1;
     stock_shove_ = -1;
     throw_windup_s_ = -1.0F;
@@ -4656,7 +4694,7 @@ bool Matron::sole_contact(const RVec3 at, const Vec3 velocity, const float yaw, 
     return false;
 }
 
-Vec3 Matron::feet_push(const float dt, const Vec3 want_force) {
+Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const work_velocity) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     if (!body_in_world_ || dt <= 0.0F || want_force.LengthSq() <= 1.0e-8F) {
         return Vec3::sZero();
@@ -4667,7 +4705,7 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force) {
     if (!sole_contact(at, velocity, yaw_, sole) || !bodies.IsAdded(sole.body)) {
         return Vec3::sZero();   // nothing under her to push on
     }
-    feet_budget_.velocity = velocity - sole.velocity;
+    feet_budget_.velocity = work_velocity != nullptr ? *work_velocity : velocity - sole.velocity;
     const Vec3 granted = feet_budget_.take(want_force);
     if (granted.LengthSq() > 0.0F) {
         bodies.AddForce(body_, granted);
@@ -4867,7 +4905,7 @@ void Matron::refresh_view() {
     view_.takes = takes_;
     view_.throws = throws_;
     view_.stock_shoves = stock_shoves_;
-    view_.stock_shove_force_n = stock_shove_force_n_;
+    view_.stock_push_force_n = stock_push_force_n_;
     view_.staggers = staggers_;
     view_.knockdowns = knockdowns_;
     view_.blow_mps = blow_mps_;

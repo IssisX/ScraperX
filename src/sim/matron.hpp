@@ -709,6 +709,12 @@ public:
     static constexpr float kThrowWindupSeconds = 0.35F;
     static constexpr float kThrowCooldownSeconds = 6.0F;
     static constexpr float kThrowQuietSeconds = 2.5F;
+    // The throw is a push of her hands (J-016): out of her grip, the piece
+    // is driven up to the throw's speed over kThrowStrokeSeconds by a force
+    // from her feet's tick account (its work at the piece's speed against
+    // her power), its opposite on her; it leaves her hands at that speed, or
+    // when it is out of their reach (kHandsSlipM), never set going.
+    static constexpr float kThrowStrokeSeconds = 0.2F;
     // A piece she gets no nearer to (it lies where her feet cannot take her:
     // past a rail, in a cage's back) she gives up on, and leaves a while.
     static constexpr float kFetchStallSeconds = 1.5F;
@@ -1282,7 +1288,7 @@ public:
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
         std::uint32_t stock_shoves = 0;   // and shoved off a lip, this run
-        float stock_shove_force_n = 0.0F; // her hands' push on the piece this tick
+        float stock_push_force_n = 0.0F; // her hands' push on a piece this tick (a shove, a throw)
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
@@ -2279,6 +2285,7 @@ private:
     [[nodiscard]] bool load_held_elsewhere(JPH::BodyID body) const;
     void hold_stock(float dt);
     void release_stock(JPH::Vec3 velocity, JPH::Vec3 spin, bool thrown);
+    void throw_stroke(float dt);
     [[nodiscard]] JPH::Vec3 hands_offset() const noexcept;
     void step_planks(float dt);
     void restore_planks();
@@ -2330,7 +2337,10 @@ private:
     // granted from this tick's feet_budget_, the equal and opposite force on
     // what she stands on (if it moves), and reported like her stride. Nothing
     // under her, no push. Returns what was granted.
-    JPH::Vec3 feet_push(float dt, JPH::Vec3 want_force);
+    // `work_velocity`, when given, is the velocity of the point the push
+    // does its work at (her hands on a piece she throws), for the power cap;
+    // else her own relative to the floor.
+    JPH::Vec3 feet_push(float dt, JPH::Vec3 want_force, const JPH::Vec3 *work_velocity = nullptr);
     [[nodiscard]] float step_reach() const noexcept;
     [[nodiscard]] float recover_accel() const noexcept;
     [[nodiscard]] float down_seconds() const noexcept;
@@ -2556,6 +2566,8 @@ private:
     JPH::Vec3 hold_offset_ = JPH::Vec3::sZero();   // the hand point, from her centre, drawn in
     float throw_windup_s_ = -1.0F;                 // < 0: not rearing back
     float throw_cooldown_s_ = 0.0F;
+    float throw_stroke_s_ = -1.0F;                 // < 0: no throw leaving her hands
+    JPH::Vec3 throw_v_ = JPH::Vec3::sZero();       // the speed it leaves them at
     int thrown_ = -1;
     float thrown_s_ = 0.0F;
     std::uint32_t takes_ = 0;
@@ -2564,7 +2576,7 @@ private:
     JPH::Vec3 stock_shove_dir_ = JPH::Vec3::sZero();   // flat, toward its lip
     float stock_shove_best_m_ = 0.0F;      // the nearest it has come to the lip
     float stock_shove_stall_s_ = 0.0F;     // since it last came nearer
-    float stock_shove_force_n_ = 0.0F;     // this tick's push on it
+    float stock_push_force_n_ = 0.0F;     // this tick's push of her hands on a piece (shove, throw)
     bool stock_shove_pushing_ = false;     // her hands on it (else walking to its far side)
     JPH::RVec3 stock_shove_from_ = JPH::RVec3::sZero();   // where it lay when she set her hands on it
     std::uint32_t stock_shoves_ = 0;

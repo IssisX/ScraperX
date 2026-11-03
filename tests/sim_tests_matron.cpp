@@ -960,7 +960,7 @@ WreckRun matron_wreck_run(const bool trace) {
                             {0.0, 0.0, 0.0});
     (void)s.advance_frame(1.0);
     const auto set_at = s.kit_body_position(drum_body);
-    std::cout << "  matron wreck: drum set at (" << set_at.x << ", " << set_at.y << ", " << set_at.z << ")\n";
+    std::cout << "  matron wreck: drum (entity " << drum << ") set at (" << set_at.x << ", " << set_at.y << ", " << set_at.z << ")\n";
     require(set_at.y > 154.4, "matron wreck: the drum stands upright by the rungs");
     // A sprint past her locker wakes her; back west, crouched, to wait in
     // her sight on the band west of the drum, out of her hands' reach. Over
@@ -984,9 +984,9 @@ WreckRun matron_wreck_run(const bool trace) {
         const auto p = s.kit_body_position(drum_body);
         const double step = std::hypot(std::hypot(p.x - last.x, p.z - last.z), p.y - last.y);
         last = p;
-        if (m.stock_shove_force_n > 0.0) {
+        if (m.stock_push_force_n > 0.0) {
             ++run.push_ticks;
-            run.peak_push_n = std::max(run.peak_push_n, m.stock_shove_force_n);
+            run.peak_push_n = std::max(run.peak_push_n, m.stock_push_force_n);
             run.peak_force_n = std::max(run.peak_force_n, m.climb_force_n);
             run.peak_power_w = std::max(run.peak_power_w, m.foot_power_w);
             // On her floor, pushed: never a jump in its place.
@@ -999,7 +999,7 @@ WreckRun matron_wreck_run(const bool trace) {
         }
         if (trace && i % 30 == 0) {
             std::cout << "    t " << i << " her (" << m.position.x << ", " << m.position.z << ") state " << int(m.state)
-                      << " seeking " << m.stock_seeking << " push " << m.stock_shove_force_n << " N; drum (" << p.x
+                      << " seeking " << m.stock_seeking << " push " << m.stock_push_force_n << " N; drum (" << p.x
                       << ", " << p.y << ", " << p.z << ")\n";
         }
         if (m.stock_shoves > 0 && run.shove_tick < 0) {
@@ -1017,9 +1017,94 @@ WreckRun matron_wreck_run(const bool trace) {
             "matron wreck: the shoved drum is still a load he can lift");
     return run;
 }
+// The toolbox he set down east of the bay, taken and thrown at him (the
+// mischief run's legs): her throw a push of her hands within her feet's
+// account, never a speed set. The worst force and power of her feet while it
+// leaves her hands, and its largest change of speed in a tick then.
+struct ThrowRun {
+    std::uint32_t throws = 0;
+    double peak_force_n = 0.0;
+    double peak_power_w = 0.0;
+    double peak_push_n = 0.0;
+    double peak_dv_mps = 0.0;
+    double top_mps = 0.0;
+    double nearest_m = 1.0e9;
+};
+
+ThrowRun matron_throw_run() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    require(s.advance_frame(1.0).accepted, "matron wreck throw: settle");
+    require(walk_to(s, -6.5, -125.95, 6.0, 0.08), "matron wreck throw: to the toolbox");
+    (void)s.set_facing(0.0, 1.0);
+    (void)s.advance_frame(0.4);
+    const std::uint64_t box = s.snapshot().carry_target_entity_id;
+    (void)s.request_pick_up();
+    (void)s.advance_frame(0.4);
+    require(box != 0 && s.snapshot().carrying_entity_id == box, "matron wreck throw: picked up");
+    require(go(s, -4.6, Matron::kBandNorthZ, false, 12.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 12.0, 0.2) &&
+                go(s, 2.0, -126.6, false, 12.0, 0.2),
+            "matron wreck throw: carried east across the bay on its leaf");
+    stand_still(s, 0.4);
+    (void)s.request_set_down();
+    (void)s.advance_frame(1.0);
+    const std::uint32_t box_body = s.kit_body_index(box);
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+            "matron wreck throw: a sprint toward her locker wakes her");
+    (void)s.set_crouch_input(true);
+    require(go(s, -6.0, Matron::kBandNorthZ, false, 30.0, 0.3), "matron wreck throw: back west, crouched");
+    (void)s.set_crouch_input(false);
+    stand_still(s, 0.2);
+    const scraperx::sim::traversal::Limits limits{};
+    ThrowRun run;
+    auto last_v = s.kit_body_velocity(box_body);
+    for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        const auto v = s.kit_body_velocity(box_body);
+        const double dv = std::hypot(std::hypot(v.x - last_v.x, v.z - last_v.z), v.y - last_v.y);
+        last_v = v;
+        if (m.throws > 0 && m.stock_push_force_n > 0.0) {
+            run.peak_push_n = std::max(run.peak_push_n, m.stock_push_force_n);
+            run.peak_force_n = std::max(run.peak_force_n, m.climb_force_n);
+            run.peak_power_w = std::max(run.peak_power_w, m.foot_power_w);
+            run.peak_dv_mps = std::max(run.peak_dv_mps, dv);
+            run.top_mps = std::max(run.top_mps, std::hypot(std::hypot(v.x, v.z), v.y));
+            require(m.climb_force_n <= static_cast<double>(limits.total_force_n) + 1.0 &&
+                        m.foot_power_w <= static_cast<double>(limits.power_w) + 1.0,
+                    "matron wreck throw: the throw is within her feet's 8 kN / 44 kW");
+        }
+        if (m.throws > 0) {
+            const auto b = s.kit_body_position(box_body);
+            const auto p = s.snapshot().player_position;
+            run.nearest_m = std::min(run.nearest_m, std::hypot(std::hypot(b.x - p.x, b.z - p.z), b.y - p.y));
+        }
+        run.throws = m.throws;
+        if (m.throws > 0 && m.stock_push_force_n == 0.0 && run.peak_push_n > 0.0 && v.y == 0.0) {
+            break;
+        }
+        if (m.throws > 0 && run.nearest_m < 1.2 && i % 9 == 0 && v.y == 0.0) {
+            break;
+        }
+    }
+    return run;
+}
 }  // namespace
 
 void run_matron_wreck() {
+    {
+        const ThrowRun t = matron_throw_run();
+        std::cout << "  matron wreck throw: throws " << t.throws << ", peak push " << t.peak_push_n << " N, peak feet "
+                  << t.peak_force_n << " N / " << t.peak_power_w << " W, top speed " << t.top_mps
+                  << " m/s, largest change in a tick " << t.peak_dv_mps << " m/s, nearest " << t.nearest_m << " m\n";
+        require(t.throws >= 1 && t.peak_push_n > 0.0, "matron wreck throw: she throws it with a push of her hands");
+        require(t.top_mps > 0.8 * static_cast<double>(Matron::kThrowMps),
+                "matron wreck throw: her push brings it up to the throw's speed");
+        require(t.peak_dv_mps < 2.0, "matron wreck throw: pushed up to speed, never set going (under 2 m/s a tick)");
+        std::cout << "PASS scraperx_sim matron wreck throw: peak_push_n=" << t.peak_push_n
+                  << " peak_dv_mps=" << t.peak_dv_mps << " nearest_m=" << t.nearest_m << "\n";
+    }
     const bool trace = std::getenv("SCRAPERX_WRECK_TRACE") != nullptr;
     const WreckRun a = matron_wreck_run(trace);
     std::cout << "  matron wreck: shoves " << a.shoves << " at tick " << a.shove_tick << ", push ticks "
