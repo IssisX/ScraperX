@@ -154,7 +154,9 @@ For every agent; `AGENTS.md` points other agents here.
   PR. A second agent then reviews with `03_EXECUTION/REVIEW_CHECKLIST.md`.
 - **Protected changes:** a test's checks (a `require`, limit, timeout, skip, ctest slice), world
   geometry, and her force, power, mass, leg-travel or launch limits change only by a PR into
-  `ScraperX-Claude` holding just that change, with a plain before/after. The integrator merges it once
+  `ScraperX-Claude` holding just that change, with a plain before/after, from a branch named
+  `<agent>/integrate-protected-<job>`: there CI reports the rule check's BLOCK and still runs every test
+  (Cory, 11-03: *"Approve I don't want to have to keep saying approve."*). The integrator merges it once
   green on every proof job (`publish-checkpoint` runs on trunk only; on heads proved before 11-02 it
   stops off trunk with a KeyError and does not count) with a second agent's LAND and no open blocker; the owner can overturn any
   merge (2026-10-28, 10-29). Everything else lands without a PR.
