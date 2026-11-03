@@ -65,6 +65,13 @@ the switchboard's session watcher (J-031 follow-up) goes to a Claude Sonnet sess
 first job is J-029 (small). Reason: the hosted pipeline has never run once, so it starts on a small
 job, and the hard native job goes where it can't stall unseen.
 
+**11-03, 10:11 AM Central, decided by the integrator** (Cory: use Muse's intelligence, free, for as many of
+the big, difficult things as is best): J-004 (#111, S6 tells) and J-006 (#113, the grade ladder, PR #91,
+then J-007 #114 behind it) move from ChatGPT to Muse; ChatGPT reviews them. Muse runs the ladder on a
+subagent beside the fight, and is the first stop for every agent's hard physics question. Reason: the
+rule of 9:55 AM (ChatGPT no longer owns game-code jobs) applied to the two game-code jobs it still held.
+J-003 stays ChatGPT's while in review; Builder's and PE's jobs wait for them (back 11-09).
+
 **11-03, 9:37 AM Central, decided by the integrator** (J-032, #157): her way over the pipe rail is a
 **tuck vault and step-off**. She presses up on the rail with her real arms, tucks her legs under her,
 perches on the rail top, then steps off and catches the riser. Reason: every contact stays within her

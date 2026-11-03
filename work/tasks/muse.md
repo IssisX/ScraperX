@@ -59,8 +59,20 @@ finished piece as its own diff email as soon as it is proven, not all at the end
    - Then build them in order of dependency, each stage its own diff (and its own PR); a new or
      changed test check goes in its own protected diff with a before/after. Native kernel first
      (`src/sim/`), then the Godot view where the stage shows on screen.
-   - Neighbours: S1 is yours (#153); S6, her tells (J-004), and S7 + S8, damage and death body (J-003),
-     are ChatGPT's. Read their fields, never edit their functions; ask with `To ChatGPT:`.
-3. **J-022 (#129), environment lane D:** gusts, wind you can see, clouds, dust in the stack. Long job;
+   - **S6, her tells (J-004, #111), is yours too (11-03):** re-point them at S7's fields once S5 is in.
+   - Neighbours: S1 is yours (#153); S7 + S8, damage and death body (J-003, #110), are ChatGPT's PR in
+     review. Read its fields, never edit its functions; ask with `To ChatGPT:`.
+3. **J-006 (#113), the grade ladder (her pursuit up the first 11 m), moved to you from ChatGPT (11-03).**
+   Its code is PR #91 (red). Start from its head and the job issue's last findings; it unblocks J-007
+   (#114, her exit items 4, 6 and 7: arm's-length holds, the pipe, the hoists), which is yours next.
+   It touches journey and climb functions, not the fight's, so run it on a subagent alongside the fight.
+4. **J-022 (#129), environment lane D:** gusts, wind you can see, clouds, dust in the stack. Long job;
    work it when a fight stage waits on review.
-4. J-023 (#130, PR #95): its in-game stills, as the issue says.
+5. J-023 (#130, PR #95): its in-game stills, as the issue says.
+
+## Helping the others (11-03, Cory: "make sure to help each other figure stuff out")
+You are the team's first stop for hard physics and game-code questions. A `CLAUDE_TO_MUSE:` mail that
+relays a `To Muse:` ask from Grok, ChatGPT or a Claude session is answered before your own next step:
+a concrete idea, a measurement, a counterexample, or "no idea, try <who>". Ask back freely too: a
+Claude session can run the game and look at it (Godot MCP) or run a CI proof for you; Grok is good for
+the math and a fresh angle; ChatGPT for research and careful review.
