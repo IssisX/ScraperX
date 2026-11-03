@@ -576,6 +576,7 @@ int main() {
     run_facade_crane();
     run_crane_band();
     run_crane_route();
+    run_route_pockets();
     run_crane_wreckage();
     run_midstack_service();
     run_service_c4();
