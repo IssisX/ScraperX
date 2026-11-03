@@ -362,11 +362,14 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
             // their reaction on her.
             const JPH::RVec3 chest = player_collar(bodies);
             const JPH::RVec3 feet = player_ankle(bodies);
-            const JPH::Vec3 push = swat_dir_ * Matron::kSwatN;
-            const JPH::Vec3 sweep = -swat_dir_ * (Matron::kSwatSweepScale * Matron::kSwatN);
-            bodies.AddForce(player_id_, push, chest);
-            bodies.AddForce(player_id_, sweep, feet);
-            bodies.AddForce(matron_->body(), -(push + sweep));
+            const JPH::Vec3 push = matron_->grant_swat_force(
+                swat_dir_ * Matron::kSwatN, bodies.GetPointVelocity(player_id_, chest));
+            const JPH::Vec3 sweep = matron_->grant_swat_force(
+                -swat_dir_ * (Matron::kSwatSweepScale * Matron::kSwatN),
+                bodies.GetPointVelocity(player_id_, feet));
+            if (push.LengthSq() > 0.0F) bodies.AddForce(player_id_, push, chest);
+            if (sweep.LengthSq() > 0.0F) bodies.AddForce(player_id_, sweep, feet);
+            if ((push + sweep).LengthSq() > 0.0F) bodies.AddForce(matron_->body(), -(push + sweep));
         }
     }
     if (matron_->take_regrip_let_go() && grip_ != nullptr) {
