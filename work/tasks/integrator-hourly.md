@@ -14,6 +14,12 @@ K. **How the agents reach each other** (Cory, 11-03: *"We worked hard to get thi
    check `subject:MUSE_TO_CLAUDE newer_than:1h` on **every event you handle**, not only hourly, and act on it at once
    or hand it to a subagent (Cory, 11-03: *"nothing should sit for 15 minutes"*); post it on GitHub yourself if the
    bridge has not.
+D. **Delegate, never sit** (Cory, 11-03: *"doesn't leave shit sitting ... knows how to delegate and constantly does
+   it"*). Anything that waits on you longer than a few minutes goes out at once: applying a Muse diff, reading a long
+   log, a CI fix, a render check go to a subagent (Agent tool) or the worker session that owns the job, while you
+   keep handling events. Never two agents on the same thing: before handing out work, check the board and the job's
+   owner label; one owner per job, one reviewer per PR. No re-reading what you already read, no re-running a check
+   that passed on that head, no status post that says nothing new.
 S. **Size.** `get_session` (no id): at 400k `used_tokens` or more, hand off (handoff file,
    `create_session`, move this task and the PR subscriptions, archive yourself). Same check for each
    Claude worker session; archive any whose job has landed. **Every handoff, the integrator's or a
