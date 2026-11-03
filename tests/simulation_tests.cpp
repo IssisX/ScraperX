@@ -401,6 +401,11 @@ int main() {
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "route-pockets") {
+        run_route_pockets();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-009-route") {
         run_crane_route();
         return EXIT_SUCCESS;
