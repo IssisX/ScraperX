@@ -187,6 +187,12 @@ agent, Claude included, works this way:
     integrator's own first; or one that has compacted, run 48 hours, or spends its turns re-reading more than working
     (11-03: *"I don't want to have to tell you over and over and over again to watch the session's size"*; the 11-03
     integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context, so cost grows with size.
+  - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
+    $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
+    after every commit, proof run or big read. At 300k it writes its handoff (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
+    head, done, open failure with its repro, measured and ruled out, next step) and tells the integrator; at 400k
+    it stops. The integrator also checks every worker's size on each event it handles, and every brief it writes
+    carries this rule. Builds and tests write to a file and only their PASS/FAIL lines are read, never a whole log.
   - Keep the integrator's context small: subscribe only to PRs it opened or must merge itself (protected,
     workflow); the switchboard and the hourly sweep cover the rest. Send big reads (logs, transcripts, audits) to a
     subagent and keep only its answer.
