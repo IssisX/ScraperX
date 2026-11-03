@@ -1,4 +1,4 @@
-# Integrator handoff, 11-03, 5:35 PM Central
+# Integrator handoff, 11-03, 4:35 PM Central
 
 From `session_01W3SSN2Y8JGNMvmxc394dkf` (written at 516k; the line is now 700k, note at 600k) to the next integrator.
 Read `CLAUDE.md`, then steps K, D, S and C of `work/tasks/integrator-hourly.md`, then this file; run
