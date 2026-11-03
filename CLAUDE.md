@@ -156,8 +156,14 @@ agent, Claude included, works this way:
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
   integrator decides, without asking him, and covers every Claude session, its own included.
-  - When to change: a session that has compacted twice, has run 48 hours, or spends its turns
-    re-reading more than working.
+  - When to change: a session at **400k context tokens** (40%; `get_session` →
+    `external_metadata.context_usage.used_tokens`), checked on every hourly check for every Claude session, the
+    integrator's own first; or one that has compacted, run 48 hours, or spends its turns re-reading more than working
+    (11-03: *"I don't want to have to tell you over and over and over again to watch the session's size"*; the 11-03
+    integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context, so cost grows with size.
+  - Keep the integrator's context small: subscribe only to PRs it opened or must merge itself (protected,
+    workflow); the switchboard and the hourly sweep cover the rest. Send big reads (logs, transcripts, audits) to a
+    subagent and keep only its answer.
   - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`), start the fresh
     session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
     retire the old one once its in-flight helpers have reported.
