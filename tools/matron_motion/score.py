@@ -19,9 +19,15 @@ own turn in the world (her body turning, not a joint) has its own line. Frames
 where her drawn place moves more than JUMP_M in one frame are listed: a snap
 there is not a joint's rate but is not continuous either.
 
+Arms. Her drawn arm's length, shoulder to knuckles, against its own bones'
+length (meta arm_reach): longer by over ARM_OVER_M is an arm drawn stretched
+(rule 33: her real arms, never stretched), listed in her holds and outside.
+
 Holds. A hold is a run of frames in which the simulation says a hand holds a
 point (contact_hand, contact_hand2: her climbing contacts; climb_hand,
-climb_hand2: the hold her climb is on; the ankle she holds the climber by);
+climb_hand2: the hold her climb is on; the climber's ankle where her
+fingers hold him; and her_hand, the hand body her muscle drives while it is
+out, against her drawn hand);
 a new one starts where the point jumps over HOLD_JUMP_M in a frame. Reached:
 her nearer hand (the knuckles as the rig places them) comes within GRIP_M of
 the point. Kept: from REACH_S into the hold, the share of drawn frames her
@@ -43,6 +49,7 @@ GRIP_M = 0.10            # as tools/matron_probe/score.py GRIP_M
 REACH_S = 0.3
 HOLD_JUMP_M = 0.3
 JUMP_M = 0.5
+ARM_OVER_M = 0.02
 HOLD_STATES = (12, 13, 14, 15, 16, 17, 18)   # matron_probe/score.py: Grab .. Claimed
 STATE_NAMES = {0: "Dormant", 1: "Straining", 2: "Emerging", 3: "Hunting", 4: "Searching", 5: "Shuffling", 6: "Dead",
                7: "Guarding", 8: "Peering", 9: "Unrigging", 10: "Staggering", 11: "Down", 12: "Grab", 13: "Carry",
@@ -83,6 +90,10 @@ def mode(row):
     s = STATE_NAMES.get(int(row["state"]), row["state"])
     if int(row["climbing"]):
         s += " climbing"
+    if int(row.get("on_pipe") or 0):
+        s += " on pipe"
+    if int(row.get("clinging") or 0):
+        s += " clinging"
     if row.get("climb_move") and int(row.get("climb_move_active") or 0):
         s += " " + row["climb_move"]
     if row.get("burst") == "1":
@@ -202,6 +213,39 @@ def score(path):
             w.writerow([names[j], int(body[j]), "%.3f" % per_bone[j], at["t"] if at else "", at["f"] if at else "",
                         mode(at) if at else ""])
 
+    # ---- arms ------------------------------------------------------------------------------------------------
+    reach = meta.get("arm_reach", {})
+    say("")
+    say("ARMS (drawn shoulder to knuckles against the arm's own length, %s; over by more than %.2f m):" % (
+        ", ".join("%s %.3f m" % kv for kv in sorted(reach.items())) or "unknown", ARM_OVER_M))
+    runs = []
+    cur = None
+    for r in drawn:
+        over_m = -math.inf
+        for s in "lr":
+            sh, kn = point(r, "sh_%s_" % s), point(r, "knuckles_%s_" % s)
+            if s in reach and np.all(np.isfinite(sh)) and np.all(np.isfinite(kn)):
+                over_m = max(over_m, float(np.linalg.norm(kn - sh)) - float(reach[s]))
+        in_hold = int(r["state"]) in HOLD_STATES
+        if over_m > ARM_OVER_M:
+            if cur is not None and cur["hold"] == in_hold and int(r["f"]) == cur["f"] + 1:
+                cur["f"] = int(r["f"])
+                cur["t1"] = r["t"]
+                cur["n"] += 1
+                cur["max"] = max(cur["max"], over_m)
+            else:
+                cur = {"hold": in_hold, "f": int(r["f"]), "t0": r["t"], "t1": r["t"], "n": 1, "max": over_m,
+                       "mode": mode(r)}
+                runs.append(cur)
+        else:
+            cur = None
+    for label, hold in (("in her holds of the climber", True), ("outside them", False)):
+        mine = [x for x in runs if x["hold"] == hold]
+        say("  %s: %d frames in %d runs%s" % (label, sum(x["n"] for x in mine), len(mine), "" if not mine else
+            "; longest by %.2f m" % max(x["max"] for x in mine)))
+        for x in sorted(mine, key=lambda x: -x["max"])[:5]:
+            say("    +%.2f m, %d frames from t=%s (%s)" % (x["max"], x["n"], x["t0"], x["mode"]))
+
     # ---- holds -----------------------------------------------------------------------------------------------
     def hands(row):
         out = []
@@ -210,8 +254,6 @@ def score(path):
             if np.all(np.isfinite(p)):
                 out.append(p)
         return out
-
-    reach = meta.get("arm_reach", {})
 
     def out_of_reach(row, p):
         """How far the point lies beyond the nearer arm's reach (<= 0: within it); NaN if unknown."""
@@ -223,8 +265,12 @@ def score(path):
         return best if best < math.inf else math.nan
 
     episodes = []
-    sources = list(HOLD_SOURCES) + [("ankle", None, "ankle_")]
+    sources = list(HOLD_SOURCES) + [("ankle", None, "ankle_"), ("her_hand", "her_hand_present", "her_hand_")]
+    missing = set()
     for name, flag, prefix in sources:
+        if rows and ((flag is not None and flag not in rows[0]) or prefix + "x" not in rows[0]):
+            missing.add(name)
+            continue
         cur = None
         for r in rows:
             if flag is None:
@@ -280,6 +326,9 @@ def score(path):
     for name, _, _ in sources:
         mine = [x for x in results if x[0]["source"] == name]
         seen = [x for x in mine if x[3]]
+        if name in missing:
+            say("  %-13s not in this recording (an older record.gd)" % name)
+            continue
         if not mine:
             say("  %-13s none in this run" % name)
             continue

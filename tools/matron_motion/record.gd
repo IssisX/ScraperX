@@ -123,7 +123,8 @@ class Recorder extends Node:
 			"climb_move_active", "climb_move", "burst", "rx", "ry", "rz",
 			"hand_held", "hand_x", "hand_y", "hand_z", "hand2_held", "hand2_x", "hand2_y", "hand2_z",
 			"ch_known", "chx", "chy", "chz", "ch2_known", "ch2x", "ch2y", "ch2z", "climb_grips",
-			"hold_state", "held", "ankle_x", "ankle_y", "ankle_z", "deaths"]
+			"hold_state", "held", "ankle_x", "ankle_y", "ankle_z", "deaths", "on_pipe", "clinging",
+			"her_hand_present", "her_hand_x", "her_hand_y", "her_hand_z"]
 		for s in SIDES:
 			var keys: Array = (contacts.get("wr_" + s, {}) as Dictionary).keys()
 			keys.sort()
@@ -203,7 +204,10 @@ class Recorder extends Node:
 		var hand2: Vector3 = data.get("contact_hand2", Vector3.ZERO)
 		var ch: Vector3 = data.get("climb_hand", Vector3.ZERO)
 		var ch2: Vector3 = data.get("climb_hand2", ch)
-		var ankle: Vector3 = hold.get("hand", Vector3.ZERO)
+		# The climber's ankle where her fingers hold him, and the hand body her
+		# muscle drives while it is out (the simulation's hand, not the drawn one).
+		var ankle: Vector3 = hold.get("held_ankle", Vector3.ZERO)
+		var her_hand: Vector3 = hold.get("hand", Vector3.ZERO)
 		var burst: Variant = view.get("burst_active")
 		var row := [_frame, rec, "%.5f" % _t_game, "%.5f" % float(native.get_simulation_time_seconds()),
 			"%.6f" % delta, int(bool(main.get("freeze_sim"))), int(get_tree().paused), int(vis),
@@ -217,7 +221,9 @@ class Recorder extends Node:
 			int(bool(data.get("climb_hand2_known", false))), "%.5f" % ch2.x, "%.5f" % ch2.y, "%.5f" % ch2.z,
 			int(data.get("climb_grips", 0)),
 			int(hold.get("state", 0)), int(bool(hold.get("held", false))), "%.5f" % ankle.x, "%.5f" % ankle.y,
-			"%.5f" % ankle.z, int(native.get_death_count())]
+			"%.5f" % ankle.z, int(native.get_death_count()), int(bool(data.get("on_pipe", false))),
+			int(bool(data.get("clinging", false))), int(bool(hold.get("matron_hand_present", false))),
+			"%.5f" % her_hand.x, "%.5f" % her_hand.y, "%.5f" % her_hand.z]
 		for s in SIDES:
 			if vis:
 				var shoulder: Vector3 = _rig.bone_world("sh_" + s).origin
