@@ -30,8 +30,10 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	name = "StockView"
 	var ribbed: Texture2D = main._corrugation_texture()
 	var container_paint: Array[Material] = []
-	for colour in [Color("7b3422"), Color("34506b"), Color("42603f"), Color("8d8f88"), Color("9a5a26")]:
-		var material: StandardMaterial3D = main._material(colour, 0.35, 0.78)
+	# Paint, not metal (metallic 0), its colours sun-faded and dirtied the way
+	# a container's are after years in the weather: no candy.
+	for colour in [Color("6a3527"), Color("33465a"), Color("3e5440"), Color("7d7f79"), Color("8a5530")]:
+		var material: StandardMaterial3D = main._material(colour, 0.0, 0.74)
 		material.normal_enabled = true
 		material.normal_texture = ribbed
 		material.uv1_triplanar = true
@@ -45,21 +47,21 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	# Weathered like the rest of the steel: grime and the streaks of rust, the
 	# paint smooth, the rusted beams pitted.
 	var drum_paint: Array[Material] = []
-	for colour in [Color("2c4a73"), Color("a9851f"), Color("7c2a1e")]:
-		drum_paint.append(main._material(colour, 0.35, 0.72, Color.BLACK, 1.0, main._bump_smooth))
+	for colour in [Color("2c4a73"), Color("a07c1c"), Color("72291e")]:
+		drum_paint.append(main._material(colour, 0.0, 0.7, Color.BLACK, 1.0, main._bump_smooth))
 	var beam_paint: Array[Material] = [
-		main._material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, main._bump_smooth),
-		main._material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, main._bump_rust)]
+		main._material(Color("36383b"), 0.3, 0.5, Color.BLACK, 1.0, main._bump_smooth),
+		main._material(Color("3a271d"), 0.0, 0.93, Color.BLACK, 1.0, main._bump_rust)]
 	# Gas bottles in their gases' colours (oxygen black, acetylene maroon,
 	# argon blue), their caps left steel; the reels' wound cable black
 	# rubber; the toolboxes red, blue or yellow enamel.
 	var bottle_paint: Array[Material] = []
 	for colour in [Color("1c1c1e"), Color("6b1e24"), Color("2d5f8a")]:
-		bottle_paint.append(main._material(colour, 0.3, 0.55, Color.BLACK, 1.0, main._bump_smooth))
+		bottle_paint.append(main._material(colour, 0.0, 0.55, Color.BLACK, 1.0, main._bump_smooth))
 	var cable_paint: Material = main._material(Color("141414"), 0.0, 0.82)
 	var toolbox_paint: Array[Material] = []
 	for colour in [Color("a3231c"), Color("1f4f8f"), Color("c9a227")]:
-		toolbox_paint.append(main._material(colour, 0.45, 0.45, Color.BLACK, 1.0, main._bump_smooth))
+		toolbox_paint.append(main._material(colour, 0.0, 0.45, Color.BLACK, 1.0, main._bump_smooth))
 	var stock: PackedInt32Array = native.get_loose_stock()
 	for i in range(0, stock.size() - 2, 3):
 		var entity := int(native.get_kit_body_entity_id(stock[i]))

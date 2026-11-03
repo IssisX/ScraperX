@@ -54,7 +54,9 @@ void fragment() {
 	colour = mix(colour, vec3(0.025, 0.024, 0.022), max(crack * 0.85, stain * 0.42));
 	ALBEDO = colour;
 	ROUGHNESS = clamp(mix(0.62, 0.9, wear) - 0.25 * max(crack, stain), 0.2, 1.0);
-	SPECULAR = 0.35;
+	// Its pores hide much of it from the sky: below 0.25 this renderer
+	// occludes the sky's rough-surface sheen (main_geometry.gd POROUS_SPECULAR).
+	SPECULAR = 0.22;
 	NORMAL_MAP = texture(relief, p * 0.6).rgb;
 	NORMAL_MAP_DEPTH = 0.5;
 }

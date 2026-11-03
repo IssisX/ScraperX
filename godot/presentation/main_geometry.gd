@@ -7,6 +7,7 @@ extends Node3D
 # script); each extends the one before and calls only itself and below.
 
 const LaunchShot := preload("res://presentation/launch_shot.gd")
+const Plants := preload("res://presentation/plants.gd")
 
 # Locomotion-feel camera response. Pure presentation, driven every frame by
 # native player position/velocity/grounded state already read below -- never
@@ -32,7 +33,8 @@ func rust_deepen(source: Material) -> Material:
 	var base := source as StandardMaterial3D
 	if base == null:
 		return source
-	return _material(base.albedo_color.darkened(0.35), base.metallic, base.roughness)
+	return _material(base.albedo_color.darkened(0.35), base.metallic, base.roughness, Color.BLACK, 1.0,
+		base.normal_texture as NoiseTexture2D)
 
 # Corrugated steel, as a normal map: one rib per texture repeat, across u.
 func _corrugation_texture() -> ImageTexture:
@@ -44,65 +46,13 @@ func _corrugation_texture() -> ImageTexture:
 			image.set_pixel(i, j, Color(n.x * 0.5 + 0.5, 0.5, n.z * 0.5 + 0.5))
 	return ImageTexture.create_from_image(image)
 
-# One stylised conifer: a trunk and three descending, widening canopy tiers.
-# Cheap enough to scatter by the dozen, varied enough per-instance (scale,
-# yaw, a hue jitter across the greens) that a cluster doesn't read as one
-# mesh copy-pasted.
+# Trees and scrub live in plants.gd (lane E); these delegates keep every
+# caller unchanged.
 func _add_tree(at: Vector3, height: float, rng: RandomNumberGenerator) -> void:
-	var hue_jitter := rng.randf_range(-0.03, 0.03)
-	var canopy := _material(Color(0.16 + hue_jitter, 0.28 + hue_jitter, 0.14, 1.0), 0.0, 0.92)
-	var trunk_material := _material(Color("362316"), 0.0, 0.9)
-
-	var tree := Node3D.new()
-	tree.name = "Conifer"
-	tree.position = at
-	tree.rotation.y = rng.randf_range(0.0, TAU)
-	tree.scale = Vector3.ONE * rng.randf_range(0.85, 1.25)
-	$TowerPresentation.add_child(tree)
-
-	var trunk_height := height * 0.32
-	_add_cylinder("TreeTrunk", height * 0.045, trunk_height,
-		Vector3(0.0, trunk_height * 0.5, 0.0), trunk_material, tree)
-	for tier in range(3):
-		var t := float(tier) / 2.0
-		var tier_radius := lerpf(height * 0.34, height * 0.11, t)
-		var tier_height := height * 0.4
-		var tier_y := trunk_height + t * height * 0.5
-		_add_cone("TreeCanopy", tier_radius, tier_height,
-			Vector3(0.0, tier_y + tier_height * 0.5, 0.0), canopy, tree)
-
-# Low scrub and ground bushes: irregular clusters of squashed spheres, no
-# trunk, filling the gap between bare grade and full trees. A lobe rests on
-# the ground or on a lobe laid before it; one that would float clear of both
-# is set down on the ground.
-const SCRUB_SQUASH := 0.72
+	Plants.add_tree(self, $TowerPresentation, at, height, rng)
 
 func _add_bush(at: Vector3, spread: float, rng: RandomNumberGenerator) -> void:
-	var hue_jitter := rng.randf_range(-0.04, 0.04)
-	var bush_material := _material(Color(0.2 + hue_jitter, 0.3 + hue_jitter, 0.15, 1.0), 0.0, 0.94)
-	var bush := Node3D.new()
-	bush.name = "Scrub"
-	bush.position = at
-	$TowerPresentation.add_child(bush)
-	var laid: Array[Vector4] = []   # each lobe laid: its middle and radius
-	for _lobe in range(rng.randi_range(3, 5)):
-		var lobe_at := Vector3(rng.randf_range(-spread, spread), rng.randf_range(0.1, spread * 0.5),
-			rng.randf_range(-spread, spread))
-		var radius := rng.randf_range(spread * 0.45, spread * 0.75)
-		if lobe_at.y > radius * SCRUB_SQUASH and not _lobe_rests(lobe_at, radius, laid):
-			lobe_at.y = radius * SCRUB_SQUASH
-		laid.append(Vector4(lobe_at.x, lobe_at.y, lobe_at.z, radius))
-		var lobe := _add_sphere("ScrubLobe", radius, lobe_at, bush_material, bush)
-		lobe.scale.y = SCRUB_SQUASH
-
-# Whether a squashed lobe touches one already laid: in the space where both
-# are round again (heights over SCRUB_SQUASH).
-static func _lobe_rests(at: Vector3, radius: float, laid: Array[Vector4]) -> bool:
-	for other in laid:
-		var apart := Vector3(at.x - other.x, (at.y - other.y) / SCRUB_SQUASH, at.z - other.z)
-		if apart.length() < radius + other.w:
-			return true
-	return false
+	Plants.add_bush(self, $TowerPresentation, at, spread, rng)
 
 func _add_sphere(node_name: String, radius: float, at: Vector3,
 		material: Material, parent: Node3D = null) -> MeshInstance3D:
@@ -291,16 +241,27 @@ func _make_weathering_texture() -> NoiseTexture2D:
 	return tex
 
 # Streaks that start somewhere and fade as they run down (texture v is down
-# the face under triplanar mapping), tiling in both directions. Seeded: the
+# a wall: the batcher lays them, STREAK_UV_SCALE), tiling in both
+# directions. Columns below STREAK_CLEAR_U carry none: every face that is not
+# a wall, and every mesh the batcher did not lay, samples there. Seeded: the
 # same streaks every run.
+const STREAK_UV_SCALE := 0.22
+const STREAK_CLEAR_U := 0.0625
+const STREAK_FLOOR_UV := Vector2(0.03125, 0.5)
+# A face whose normal leans further from level than this is a floor or a
+# ceiling: water runs down walls, not across floors (picture 12 of the
+# environment plan: streaks lying across the 340 m floor).
+const STREAK_WALL_MAX_NY := 0.5
+
 func _make_streak_texture() -> ImageTexture:
 	const SIZE := 256
 	var alpha := PackedFloat32Array()
 	alpha.resize(SIZE * SIZE)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9137
+	var clear := int(ceilf(STREAK_CLEAR_U * SIZE)) + 2
 	for streak in 110:
-		var x0 := rng.randi_range(0, SIZE - 1)
+		var x0 := rng.randi_range(clear, SIZE - 5)
 		var width := rng.randi_range(1, 4)
 		var y0 := rng.randi_range(0, SIZE - 1)
 		var length := rng.randi_range(24, 210)
@@ -341,6 +302,16 @@ func _make_bump_texture(seed_value: int, frequency: float, strength: float,
 	tex.noise = noise
 	return tex
 
+# A porous surface (rust, concrete, timber, matt paint, cloth) hides much of
+# its own face from the sky in its pits and pores. This renderer's sky
+# reflection adds a rough surface's sheen whatever its colour (its
+# environment term, env.y * clamp(50 * f0, metallic, 1)), so a dark porous
+# albedo read near-white under it (sky_cycle.gd). A specular level below
+# 0.25 (f0 below 0.02) is how a material says its cavities occlude: at
+# POROUS_SPECULAR the sheen is POROUS_SPECULAR / 0.25 of the open surface's.
+const POROUS_SPECULAR := 0.22
+const POROUS_ROUGHNESS := 0.8
+
 func _material(color: Color, metallic: float, roughness: float,
 		emission: Color = Color.BLACK, emission_energy: float = 1.0,
 		bump: NoiseTexture2D = null) -> StandardMaterial3D:
@@ -348,6 +319,8 @@ func _material(color: Color, metallic: float, roughness: float,
 	material.albedo_color = color
 	material.metallic = metallic
 	material.roughness = roughness
+	if metallic < 0.05 and roughness >= POROUS_ROUGHNESS:
+		material.metallic_specular = POROUS_SPECULAR
 	if emission != Color.BLACK:
 		material.emission_enabled = true
 		material.emission = emission
@@ -357,12 +330,16 @@ func _material(color: Color, metallic: float, roughness: float,
 		material.normal_texture = bump
 		if _weathering != null:
 			material.albedo_texture = _weathering
+			# The batcher may carry this one's colour in its vertices: the
+			# weathering is shared by every finish, never a picture of its own.
+			material.set_meta(&"weathered", true)
 		if _streaks != null and bump != _bump_timber:
+			# On UV2, which only the batcher lays: down walls, never on floors.
 			material.detail_enabled = true
 			material.detail_albedo = _streaks
 			material.detail_mask = _detail_mask
 			material.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX
-			material.detail_uv_layer = BaseMaterial3D.DETAIL_UV_1
+			material.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
 		material.uv1_triplanar = true
 		material.uv1_triplanar_sharpness = 1.0
 		material.uv1_scale = Vector3(0.22, 0.22, 0.22)
@@ -420,6 +397,7 @@ class Batcher:
 		var tangents := PackedFloat32Array()
 		var uvs := PackedVector2Array()
 		var colours := PackedColorArray()
+		var uv2s := PackedVector2Array()
 		var indices := PackedInt32Array()
 		var origin := Vector3.ZERO
 		var material: Material
@@ -475,7 +453,7 @@ class Batcher:
 	# never wet; so is glowing or see-through material (lamps, glass, water).
 	func _finish(material: Material, wet: bool = false) -> Array:
 		var standard := material as StandardMaterial3D
-		if standard == null or standard.albedo_texture != null:
+		if standard == null or (standard.albedo_texture != null and not standard.has_meta(&"weathered")):
 			var own := "id%d" % material.get_instance_id()
 			if not finishes.has(own):
 				finishes[own] = material
@@ -484,10 +462,13 @@ class Batcher:
 			and standard.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
 		var normal := standard.normal_texture.get_instance_id() if standard.normal_enabled \
 			and standard.normal_texture != null else 0
-		var signature := "%.3f|%.3f|%s|%.2f|%d|%d|%s" % [standard.metallic, standard.roughness,
-			standard.emission.to_html() if standard.emission_enabled else "-",
+		var albedo := standard.albedo_texture.get_instance_id() if standard.albedo_texture != null else 0
+		var detail := standard.detail_albedo.get_instance_id() if standard.detail_enabled \
+			and standard.detail_albedo != null else 0
+		var signature := "%.3f|%.3f|%.3f|%s|%.2f|%d|%d|%s|%d|%d" % [standard.metallic, standard.roughness,
+			standard.metallic_specular, standard.emission.to_html() if standard.emission_enabled else "-",
 			standard.normal_scale if standard.normal_enabled else 0.0, normal, standard.cull_mode,
-			str(standard.uv1_scale)] + ("|wet" if wet else "")
+			str(standard.uv1_scale), albedo, detail] + ("|wet" if wet else "")
 		if not finishes.has(signature):
 			var shared := standard.duplicate() as StandardMaterial3D
 			shared.albedo_color = Color.WHITE
@@ -539,6 +520,7 @@ class Batcher:
 			else:
 				group.tangents.append_array(PackedFloat32Array([1.0, 0.0, 0.0, 1.0]))
 			group.uvs.append(uvs[i] if i < uvs.size() else Vector2.ZERO)
+			group.uv2s.append(Batcher.streak_uv(at * vertices[i], group.normals[group.normals.size() - 1]))
 			group.colours.append(colour)
 		if indices.is_empty():
 			for i in vertices.size():
@@ -547,6 +529,15 @@ class Batcher:
 			for index in indices:
 				group.indices.append(base + index)
 
+	# Where a vertex samples the streaks (UV2): down a wall, from its height
+	# and its run along the wall in world metres, so streaks meet across
+	# parts; a floor or a ceiling samples the streaks' clear columns.
+	static func streak_uv(world: Vector3, normal: Vector3) -> Vector2:
+		if absf(normal.y) > STREAK_WALL_MAX_NY:
+			return STREAK_FLOOR_UV
+		var along := Vector3(-normal.z, 0.0, normal.x).normalized()
+		return Vector2(world.dot(along), -world.y) * STREAK_UV_SCALE
+
 	static func commit(group: Group) -> MeshInstance3D:
 		var arrays := []
 		arrays.resize(Mesh.ARRAY_MAX)
@@ -554,6 +545,7 @@ class Batcher:
 		arrays[Mesh.ARRAY_NORMAL] = group.normals
 		arrays[Mesh.ARRAY_TANGENT] = group.tangents
 		arrays[Mesh.ARRAY_TEX_UV] = group.uvs
+		arrays[Mesh.ARRAY_TEX_UV2] = group.uv2s
 		arrays[Mesh.ARRAY_COLOR] = group.colours
 		arrays[Mesh.ARRAY_INDEX] = group.indices
 		var mesh := ArrayMesh.new()
