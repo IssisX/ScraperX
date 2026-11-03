@@ -23,7 +23,7 @@ on:
   issues:
     types: [labeled]
   schedule:
-    - cron: "17 * * * *"      # the hourly sweep
+    - cron: "2,17,32,47 * * * *"   # the sweep, every 15 minutes (Actions minutes are free on this public repo)
     - cron: "0 12,13 * * *"   # the digest: whichever of these is 7:00 AM Central posts it (CDT, then CST)
   workflow_dispatch:
     inputs:
@@ -96,7 +96,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_run' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.event.schedule == '17 * * * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '2,17,32,47 * * * *') ||
       (github.event_name == 'issues' && github.event.label.name == 'needs:orchestrator') ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
         (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
