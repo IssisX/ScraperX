@@ -30,6 +30,11 @@ S. **Size.** `get_session` (no id): at 400k `used_tokens` or more, hand off (han
    (a worker: "post your asks as step K says").
 C. **Caps** (CLAUDE.md, "Nothing grows without a cap"): issue and PR comment counts (`list_issues`
    ordered by COMMENTS), `CLAUDE.md` size (`wc -c`), and every other cap listed there. Act on any over its cap now.
+   **Open PRs: nothing builds up** (Cory, 11-03: *"Nothing should be fucking building up"*). A PR whose change
+   landed elsewhere or that a newer PR replaced is closed by its owner the hour it is replaced; any open PR idle
+   24 h with no owner step is put to its owner that hour (`To <Name>: close or next step`) and retired by the
+   integrator the next hour, one at a time with its evidence. A subagent that edits code runs with
+   `isolation: "worktree"`, never in the integrator's checkout; the integrator merges from its own worktree.
 T. **Task the team, unasked.**
    a. Every agent holds work matched to its strength (Muse the hardest builds, free; Grok math and stuck
       problems; ChatGPT review, research, specs; Claude sessions the kernel, CI, the game by eye; the
