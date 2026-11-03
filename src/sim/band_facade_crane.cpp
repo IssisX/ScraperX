@@ -576,11 +576,80 @@ void build_springboard(std::vector<Part> &route) {
                          {edge + 0.34F + 0.08F, 528.05F, -155.0F + 0.08F}, Material::Yellow));
 }
 
+// The stepping stones, 528 -> 550 (J-017, rules 52 and 53), along z = -154.5: a
+// pole up a pier on the 528 ring's east band to a lane at 539.0 that ends in a
+// 3.5 m pit. Across it, 2.5 m on, two posts rising 0.8 m each and then a block
+// 2.4 m up, each landed on by the precision jump (kPrecisionMinM..MaxM, up to
+// 1.2 m up): the look is lowered onto the post's top and Jump takes the feet
+// there. A jump from the lane that has no sighted landing falls into the pit
+// (3.5 m, a hang up its east wall gets out); a sprint jump overshoots the
+// posts. The block carries a second pole beside a fascia girder on the 550
+// ring's west band.
+constexpr float kPjZ = -154.5F;
+constexpr float kPjDeck = 539.0F;
+constexpr float kPjPit = kPjDeck - 3.5F;        // the pit's floor
+constexpr float kPjLip = 4.0F;                  // the lane's west end
+constexpr float kPjStoneOne = 1.5F;             // the posts' centres
+constexpr float kPjStoneTwo = -1.0F;
+constexpr float kPjStep = 0.8F;                 // each post's rise over the last
+constexpr float kPjBlockEast = -4.0F;           // the landing block's east face
+constexpr float kPjBlockWest = -8.5F;
+constexpr float kPjBlockTop = kPjDeck + 3.0F * kPjStep;
+constexpr float kPjPierX0 = 8.0F;
+constexpr float kPjPierX1 = 10.0F;
+
+void build_stones(std::vector<Part> &route) {
+    const float lo = kPjZ - 2.0F;
+    const float hi = kPjZ + 2.0F;
+    const auto rail = [&route](const float x0, const float x1, const float z0, const float z1, const float y) {
+        route.push_back(span({x0, y, z0}, {x1, y + 0.8F, z1}, Material::Yellow));
+    };
+    const float pole_x = 0.5F * (kPjPierX0 + kPjPierX1);
+    // The east pier on the ring with its wing and pole, as the springboard's.
+    route.push_back(span({kPjPierX0, 528.25F, lo - 2.0F}, {kPjPierX1, kPjDeck, hi}, Material::Concrete));
+    route.push_back(span({pole_x - 0.08F, 528.25F, lo - 2.0F - 0.22F}, {pole_x + 0.08F, kPjDeck - 0.2F, lo - 2.0F - 0.06F},
+                         Material::Yellow));
+    rail(kPjPierX1 - 0.08F, kPjPierX1, lo - 2.0F, hi, kPjDeck);
+    rail(kPjPierX0, kPjPierX0 + 0.08F, lo - 2.0F, lo, kPjDeck);
+    rail(kPjPierX0, pole_x - 0.6F, lo - 2.0F, lo - 2.0F + 0.08F, kPjDeck);
+    rail(pole_x + 0.6F, kPjPierX1, lo - 2.0F, lo - 2.0F + 0.08F, kPjDeck);
+    // The lane and the solid under its west end (the pit's east wall, a hang's face).
+    route.push_back(span({kPjLip, kPjDeck - 0.3F, lo}, {kPjPierX1, kPjDeck, hi}, Material::Galvanised));
+    route.push_back(span({kPjLip, kPjPit, lo}, {kPjPierX0, kPjDeck - 0.3F, hi}, Material::Concrete));
+    rail(kPjLip, kPjPierX0, lo, lo + 0.08F, kPjDeck);
+    rail(kPjLip, kPjPierX1, hi - 0.08F, hi, kPjDeck);
+    // The pit floor, railed along its sides.
+    route.push_back(span({kPjBlockEast, kPjPit - 0.3F, lo}, {kPjLip, kPjPit, hi}, Material::Galvanised));
+    rail(kPjBlockEast, kPjLip, lo, lo + 0.08F, kPjPit);
+    rail(kPjBlockEast, kPjLip, hi - 0.08F, hi, kPjPit);
+    // The two posts, 0.8 m across, from the pit floor.
+    for (int i = 0; i < 2; ++i) {
+        const float x = i == 0 ? kPjStoneOne : kPjStoneTwo;
+        const float top = kPjDeck + kPjStep * static_cast<float>(i + 1);
+        route.push_back(span({x - 0.4F, kPjPit, kPjZ - 0.4F}, {x + 0.4F, top, kPjZ + 0.4F}, Material::Steel));
+    }
+    // The landing block, solid from the pit floor, railed on its top but at its east face.
+    route.push_back(span({kPjBlockWest, kPjPit, lo}, {kPjBlockEast, kPjBlockTop, hi}, Material::Concrete));
+    rail(kPjBlockWest, kPjBlockEast, lo, lo + 0.08F, kPjBlockTop);
+    rail(kPjBlockWest, kPjBlockEast, hi - 0.08F, hi, kPjBlockTop);
+    rail(kPjBlockWest, kPjBlockWest + 0.08F, lo, hi, kPjBlockTop);
+    // The second pole stands 0.14 m off a fascia girder on the 550 ring's west
+    // inner edge, clear of the ring's south band (inner edge z = -155.62).
+    const float edge = -ring_inner(550.0F);
+    route.push_back(span({edge - 0.3F, 548.9F, -155.8F}, {edge + 0.2F, 550.25F, -153.2F}, Material::Steel));
+    route.push_back(span({edge + 0.34F - 0.08F, kPjBlockTop, kPjZ - 0.08F},
+                         {edge + 0.34F + 0.08F, 550.05F, kPjZ + 0.08F}, Material::Yellow));
+}
+
 void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     for (float h = 484.0F; h < 615.9F; h += 22.0F) {
         if (h == 506.0F) {
             build_springboard(route);   // the 506 -> 528 gap
+            continue;
+        }
+        if (h == 528.0F) {
+            build_stones(route);   // the 528 -> 550 gap
             continue;
         }
         const float s = ring_inner(h);
