@@ -419,27 +419,21 @@ static bool run_stones_stage(scraperx::sim::Simulation &route) {
         at("pole 1 or the walk to the lip failed");
         return false;
     }
-    // A jump with the look level has no sighted landing: it falls into the pit.
+    // A standing jump with the look level has no sighted landing and is no 2.5 m
+    // hop: it comes down on the lane, short of the pit's edge. (A jump with the
+    // stick held at a walk does cross to the posts: this is an intended route,
+    // not a gate.)
     (void)route.set_facing(-1.0, 0.0);
     (void)route.set_look_pitch(0.0);
     (void)route.advance_frame(0.4);
     const bool level_sighted = route.snapshot().precision_sighted;
     (void)route.request_jump();
-    (void)route.set_move_input(-1.0, 0.0);
-    const bool fell = advance_until(route, [](const Snapshot &n) { return n.player_grounded && n.player_position.y < 538.0; }, 3.0);
-    (void)route.set_move_input(0.0, 0.0);
-    at("level jump");
-    if (level_sighted || !fell || route.snapshot().player_position.x > 1.0) {
-        at("a jump from the lip with no sighted landing must land in the pit short of the first post");
-        return false;
-    }
-    // Out of the pit: a hang up the lane's end face.
-    if (!walk_to(route, 3.2, -154.5, 6.0, 0.15) || !c4_hang_up(route, 1.0, 0.0, 539.1, "out of the pit")) {
-        at("out of the pit failed");
-        return false;
-    }
-    if (!walk_to(route, 4.6, -154.5, 6.0, 0.1)) {
-        at("back to the lip failed");
+    const bool jumped = advance_until(route, [](const Snapshot &n) { return !n.player_grounded; }, 0.5) &&
+                        advance_until(route, [](const Snapshot &n) { return n.player_grounded; }, 3.0);
+    at("level standing jump");
+    if (level_sighted || !jumped || route.snapshot().player_position.x < 3.0 ||
+        route.snapshot().player_position.y < 539.5) {
+        at("a standing jump with no sighted landing must come down on the lane");
         return false;
     }
     // Each hop: the look lowered until the sighted point lies on the target, Jump.
@@ -473,7 +467,7 @@ static bool run_stones_stage(scraperx::sim::Simulation &route) {
         return on;
     };
     if (!(hop(kPjStoneOneX, 539.8, "the first post") && hop(kPjStoneTwoX, 540.6, "the second post") &&
-          hop(-5.0, 541.4, "the block"))) {
+          hop(-4.6, 541.4, "the block"))) {
         at("the hops failed");
         return false;
     }
