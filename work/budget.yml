@@ -11,6 +11,7 @@ caps:
 # check https://platform.claude.com/docs/en/about-claude/pricing when changing a model.
 prices_per_mtok:
   claude-opus-5-5: {input: "4.00", output: "20.00"}
+  claude-sonnet-5-5: {input: "2.00", output: "10.00"}
 
 # Each paid call: worst case = counted input tokens x input price + max_tokens x output price.
 calls:
@@ -25,12 +26,17 @@ calls:
     effort: medium
     max_input_tokens: 60000
 
-# Step C, next week. OFF in v0: an issue labeled `job` and `needs:orchestrator` gets a note, not a session.
+# Step C (Cory, 11-03: build it now). The hosted API agent: a job issue labeled `job` and
+# `needs:orchestrator` starts one Managed Agents session that mounts the repo, does the job on its own
+# `claude/integrate-<job>` branch and opens a PR. It runs claude-opus-5-5 at high effort (Cory, 11-03;
+# set at provisioning, tools/switchboard/provision_agent.py). The ids come from the workflow's `provision` dispatch; until
+# they are filled in, a labeled issue gets a note, not a session.
 orchestrator:
-  enabled: false
-  agent_id: ""          # a Managed Agents agent id (agent_...), made in step C
-  environment_id: ""    # its environment id (env_...)
-  session_usd: "2.00"   # the hosted session's own hard budget; reserved in full against the caps
+  enabled: true
+  agent_id: "agent_01N97aEHhD4VMkwztdqi4AjK"          # provision run 41659958364 (11-03), agent version 1
+  environment_id: "env_01NVqATJMjSwjknrF6hXovuc"
+  vault_id: "vlt_011CggCXtRkFLAxcGW7ZXbMi"    # GH_TOKEN for the GitHub REST API
+  session_usd: "8.00"   # each session's own hard budget (Opus high); reserved in full against the day and job caps
 
 # The plan ($100 subscription) is not spent by the switch: live-eye sessions stay at most one open
 # (design 2.4) and are opened by the integrator after asking the owner, as CLAUDE.md says.

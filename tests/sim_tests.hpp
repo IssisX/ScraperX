@@ -812,6 +812,7 @@ bool pull_o_handle(scraperx::sim::Simulation &simulation, double *freed_at = nul
 ORide ride_service_o(scraperx::sim::Simulation &simulation, const bool rider_aboard, const double ram_freed_at);
 bool step_off_o(scraperx::sim::Simulation &simulation);
 void run_service_o();
+void run_wreck_way_on();
 void run_slingshot();
 std::vector<std::uint64_t> world_bits(const scraperx::sim::Simulation &simulation);
 void run_swing();

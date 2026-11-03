@@ -925,37 +925,61 @@ void run_matron_mischief() {
 void run_matron_crash() {
     // ---- a hit on her deck draws her (the owner, 2026-10-18: sound is how she
     //      hunts). She searches where she lost the player; out of her earshot
-    //      and her sight, the player shoves crate S into crate N; she hears the
-    //      hit and goes to it, not wary, finds nobody, and is the warier ----
+    //      and her sight, the player shoves loose stock off the 176.25 ring
+    //      onto her deck; she hears the hit and goes to it, not wary, finds
+    //      nobody, and is the warier ----
     {
+        constexpr double kDropFromX = 23.6;   // east of piece 246 on the ring
+        constexpr double kDropZ = -145.2;
+        constexpr double kTipX = 20.9;        // past the ring's inner edge, it falls
+        constexpr double kLipX = 21.9;        // he goes no further west than this
+        constexpr double kAwayZ = -150.0;     // then south along the ring to here
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron crash: settle");
+        // Quietly to the foot of her home ladder; the cue there wakes her, and
+        // while she strains he is up the ladder to the 176.25 ring.
         (void)s.set_crouch_input(true);
-        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 40.0, 0.3),
-                "matron crash: quietly reach the north-east waiting point");
+        require(walk_to(s, 3.5, -128.2, 30.0) && walk_to(s, 3.5, -129.8, 4.0) && walk_to(s, 5.0, -129.6, 4.0, 0.08),
+                "matron crash: quietly reach the waiting point at her ladder's foot");
         require(s.matron_state().state == kStateDormant, "matron crash: quiet approach did not wake her");
-        require(s.set_room_loudness(1.0), "matron crash: real room-noise cue at north-east");
+        require(s.set_room_loudness(1.0), "matron crash: real room-noise cue at her ladder's foot");
         tick(s);
         require(s.set_room_loudness(0.0), "matron crash: room quiet after wake cue");
         require(s.matron_state().state == kStateStraining, "matron crash: the localized cue woke her");
         (void)s.set_crouch_input(false);
-        // Straining, and then emerging, she hears nothing: to the north-east
-        // corner to be there as she bursts out, then off down the east band.
-        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 10.0, 0.3), "matron crash: to the north-east corner");
+        (void)s.set_facing(0.0, 1.0);
+        require(s.request_traversal() && s.advance_frame(0.2).accepted && is_climbing(s.snapshot()),
+                "matron crash: the ladder taken");
+        bool topped = false;
         bool out = false;
+        auto waking_lead = s.matron_state();
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !topped; ++i) {
+            (void)s.set_move_input(0.0, 1.0);
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+            topped = standing_above(s.snapshot(), 176.5);
+            if (!out && s.matron_state().state == kStateEmerging) {
+                out = true;
+                waking_lead = s.matron_state();
+            }
+        }
+        require(topped, "matron crash: up onto the 176 ring");
+        (void)s.set_move_input(0.0, 0.0);
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !out; ++i) {
             tick(s);
             out = s.matron_state().state == kStateEmerging;
+            if (out) {
+                waking_lead = s.matron_state();
+            }
         }
         require(out, "matron crash: she bursts out");
-        const auto waking_lead = s.matron_state();
-        require(go(s, Matron::kBandX, -143.0, true, 3.0, 0.6) && s.matron_state().state == kStateEmerging,
-                "matron crash: a sprint down the east band while she is still emerging");
-        (void)s.set_crouch_input(true);
-        require(go(s, Matron::kBandX, -157.6, false, 10.0, 0.3) && go(s, 24.5, -156.2, false, 6.0, 0.15),
-                "matron crash: a creep round behind crate S");
+        // Along the ring to piece 246, out of her sight above her.
+        require(go(s, kDropFromX, Matron::kRingNorthZ, false, 20.0, 0.3) && go(s, kDropFromX, kDropZ + 1.0, false, 30.0, 0.2) &&
+                    walk_to(s, kDropFromX, kDropZ, 6.0, 0.05),
+                "matron crash: along the ring to piece 246");
+        (void)s.set_move_input(0.0, 0.0);
         bool searching = false;
         bool heard_early = false;
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !searching; ++i) {
@@ -971,16 +995,34 @@ void run_matron_crash() {
                     lost.lead_x == waking_lead.lead_x && lost.lead_z == waking_lead.lead_z &&
                     std::hypot(lost.position.x - waking_lead.lead_x, lost.position.z - waking_lead.lead_z) < 2.0,
                 "matron crash: she searches the waking evidence without tracking hidden movement");
-        // Up, and crate S shoved north into crate N.
-        (void)s.set_crouch_input(false);
+        // While she searches, he shoves piece 246 west off the ring's inner
+        // edge; it lands loud on her deck below (ruling #117, 6:22 PM).
+        constexpr std::uint64_t kDropped = LooseStock::kFirstEntity + 246;
         std::uint64_t seen = s.last_impact_sequence();
         scraperx::sim::ImpactSnapshot last_tick_loudest{};
         scraperx::sim::ImpactSnapshot crash{};
         bool heard = false;
         double player_from_her = 0.0;
+        bool shoved = false;
         for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz) && !heard; ++i) {
-            (void)s.set_move_input(0.0, 1.0);
-            (void)s.set_facing(0.0, 1.0);
+            // A shove at it till it tips over the inner edge (never himself
+            // past the edge's lip), then back and off south along the ring.
+            const auto piece = stock(s, 246);
+            const auto at = s.snapshot().player_position;
+            shoved = shoved || piece.x < kTipX || at.x < kLipX;
+            const bool back = shoved && at.x < kDropFromX;
+            const bool away = shoved && !back && at.z > kAwayZ;
+            double mx = piece.x - at.x;
+            double mz = piece.z - at.z;
+            const double ml = std::max(std::hypot(mx, mz), 1.0e-6);
+            mx /= ml;
+            mz /= ml;
+            if (shoved) {
+                mx = back ? 1.0 : 0.0;
+                mz = away ? -1.0 : 0.0;
+            }
+            (void)s.set_move_input(mx, mz);
+            (void)s.set_facing(shoved ? 0.0 : mx, shoved ? -1.0 : mz);
             tick(s);
             const auto m = s.matron_state();
             const auto p = s.snapshot();
@@ -1005,27 +1047,24 @@ void run_matron_crash() {
         const auto drawn = s.matron_state();
         const double loud = ImpactLedger::loudness(static_cast<float>(crash.energy_j));
         const double crash_d = std::hypot(crash.at.x - drawn.position.x, crash.at.z - drawn.position.z);
-        std::cout << "  matron crash: heard the hit on crate N (" << crash.energy_j << " J, loudness " << loud << ") "
+        std::cout << "  matron crash: heard the dropped piece land (" << crash.energy_j << " J, loudness " << loud << ") "
                   << crash_d << " m off; the player " << player_from_her << " m off; state=" << int(drawn.state)
                   << " wary=" << drawn.wary << " target=" << drawn.target_x << "," << drawn.target_z
                   << " lead=" << drawn.lead_x << "," << drawn.lead_z << " hit=" << crash.at.x << "," << crash.at.z << "\n";
-        require(heard && crash.entity == LooseStock::kFirstEntity + static_cast<std::uint64_t>(LooseStock::kDeckCrateNorth),
-                "matron crash: she hears crate S strike crate N");
+        require(heard && crash.entity == kDropped, "matron crash: she hears the dropped piece land");
         require(drawn.noise_heard == loud, "matron crash: what she heard is the hit, at its loudness");
         require(player_from_her > 0.30 * 55.0 && !drawn.sees_player,
                 "matron crash: the player is out of her earshot and her sight");
         require(drawn.state == kStateHunting && !drawn.wary &&
                     !drawn.lead_seen && std::hypot(drawn.lead_x - crash.at.x, drawn.lead_z - crash.at.z) < 0.01,
                 "matron crash: the hit draws her: she goes for it, not wary");
-        // Away, crouched, off the band's open line to the east rim beside the
-        // crates; she goes to the hit, searches it, finds nobody. (Her sight
-        // is her eyes, 1.69 m up: crouched in the open down the band, as this
-        // went before, she sees him over the crates.)
+        // He stays up on the ring, crouched and still, out of her sight; she
+        // goes to the hit, searches it, finds nobody.
         (void)s.set_crouch_input(true);
         double closest = 1.0e9;
         bool stood_down = false;
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !stood_down; ++i) {
-            (void)steer(s, 26.5, -151.0, false);
+            (void)s.set_move_input(0.0, 0.0);
             tick(s);
             const auto m = s.matron_state();
             closest = std::min(closest, std::hypot(m.position.x - crash.at.x, m.position.z - crash.at.z));

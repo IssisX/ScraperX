@@ -59,6 +59,12 @@ he answers with. Ordered by how much his answer unblocks. If he does not answer 
 pick decides and the issue says so (`CLAUDE.md`). Detail lives in `03_EXECUTION/GAP_LIST.md` and
 `00_START_HERE_ARCHIVE.md`, "Owner calls recovered ...". Checked against trunk `503958c`.
 
+**11-03, 9:03 AM Central, decided by the integrator** (he asked for up to 3 sessions: 2 Opus high, 1 Sonnet
+xhigh; read as 3 including the integrator): J-032 goes to a Claude Opus session, not the API agent;
+the switchboard's session watcher (J-031 follow-up) goes to a Claude Sonnet session; the API agent's
+first job is J-029 (small). Reason: the hosted pipeline has never run once, so it starts on a small
+job, and the hard native job goes where it can't stall unseen.
+
 ## Questions
 
 **1. Whose story is on the radio?**

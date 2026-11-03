@@ -64,6 +64,7 @@ class Budget:
     orchestrator_environment_id: str
     orchestrator_session_usd: Decimal
     max_log_bytes: int
+    orchestrator_vault_id: str = ""
 
     def price(self, model: str) -> Price:
         if model not in self.prices:
@@ -101,7 +102,7 @@ def budget_from_config(cfg: Mapping) -> Budget:
         raise BudgetConfigError("orchestrator.session_usd must not exceed caps.job_usd")
     return Budget(day, month, job, prices, calls, bool(orch.get("enabled", False)),
                   str(orch.get("agent_id") or ""), str(orch.get("environment_id") or ""), session_usd,
-                  int(cfg.get("max_log_bytes", 900_000)))
+                  int(cfg.get("max_log_bytes", 900_000)), str(orch.get("vault_id") or ""))
 
 
 @dataclasses.dataclass(frozen=True)

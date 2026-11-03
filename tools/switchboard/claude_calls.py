@@ -92,6 +92,18 @@ class Result:
     output_tokens: int
 
 
+
+def why(err: BaseException) -> str:
+    """The underlying causes of a connection error, by class and first line (no headers or keys)."""
+    out, seen, e = [], 0, err.__cause__ or err.__context__
+    while e is not None and seen < 4:
+        name = type(e).__name__
+        # A protocol error quotes the offending header, which can be the key itself: class only.
+        text = "" if "Protocol" in name or "Header" in name else (str(e).splitlines()[0][:160] if str(e) else "")
+        out.append(f"{name}: {text}" if text else name)
+        e, seen = e.__cause__ or e.__context__, seen + 1
+    return "; ".join(out) or type(err).__name__
+
 def client():
     import anthropic  # imported here so the free parts of the switch run without the SDK
     return anthropic.Anthropic(timeout=REQUEST_TIMEOUT_S, max_retries=0)
@@ -109,7 +121,7 @@ def count_tokens(c, model: str, system: str, content: Sequence[Mapping]) -> int:
     except a.APIStatusError as err:
         raise ClaudeCallError(f"count_tokens({model}) answered HTTP {err.status_code}") from err
     except a.APIConnectionError as err:
-        raise ClaudeCallError(f"count_tokens({model}) could not connect") from err
+        raise ClaudeCallError(f"count_tokens({model}) could not connect ({why(err)})") from err
     return int(r.input_tokens)
 
 
@@ -129,7 +141,7 @@ def ask_json(c, model: str, max_tokens: int, effort: str, system: str, content: 
     except a.APIStatusError as err:
         raise ClaudeCallError(f"messages.create({model}) answered HTTP {err.status_code}") from err
     except a.APIConnectionError as err:
-        raise ClaudeCallError(f"messages.create({model}) could not connect") from err
+        raise ClaudeCallError(f"messages.create({model}) could not connect ({why(err)})") from err
     data = None
     if r.stop_reason == "end_turn":
         text = next((b.text for b in r.content if b.type == "text"), "")
@@ -157,19 +169,30 @@ def cents(amount: Decimal) -> str:
     return str(c)
 
 
-def start_session(c, agent_id: str, environment_id: str, title: str, message: str, budget_usd: Decimal) -> str:
-    """Start one hosted orchestrator session with a hard dollar budget; returns its id."""
+def start_session(c, agent_id: str, environment_id: str, title: str, message: str, budget_usd: Decimal,
+                  repo_url: str, repo_token: str, branch: str, vault_id: str) -> str:
+    """Start one hosted API-agent session with a hard dollar budget; returns its id.
+
+    The repository is mounted at /workspace/ScraperX on `branch`; git push goes through the session's
+    repo proxy with `repo_token`, which never enters the sandbox. The vault holds GH_TOKEN for the
+    GitHub REST API (PRs, comments), substituted at egress only.
+    """
     a = _errors()
+    if not repo_token:
+        raise ClaudeCallError("no repository token for the session (AGENT_GITHUB_TOKEN)")
     try:
         s = c.beta.sessions.create(
             agent=agent_id,
             environment_id=environment_id,
             title=title[:200],
+            resources=[{"type": "github_repository", "url": repo_url, "mount_path": "/workspace/ScraperX",
+                        "authorization_token": repo_token, "checkout": {"type": "branch", "name": branch}}],
+            vault_ids=[vault_id] if vault_id else [],
             initial_events=[{"type": "user.message", "content": [{"type": "text", "text": message}]}],
             budget={"type": "limit", "max_list_cost": {"amount": cents(budget_usd), "currency": "USD"}},
         )
     except a.APIStatusError as err:
         raise ClaudeCallError(f"beta.sessions.create answered HTTP {err.status_code}") from err
     except a.APIConnectionError as err:
-        raise ClaudeCallError("beta.sessions.create could not connect") from err
+        raise ClaudeCallError(f"beta.sessions.create could not connect ({why(err)})") from err
     return str(s.id)

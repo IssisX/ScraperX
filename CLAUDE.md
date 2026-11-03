@@ -49,6 +49,12 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
   quota, effort levels, cost. Make the call,
   record it in `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` with its reason, and tell him in
   one line after. Ask first only when something cannot be undone. He can overturn any call.
+- Never ask him to merge, approve or review anything (2026-11-03: *"I don't want to have to manually merge shit. Stop
+  asking me to manually merge or approve. I want this automatically done. If Codex can't do it, someone take over.
+  You are the manager of all of this, and the orchestrator and the coordinator."*). The switchboard and the
+  integrator merge on the rules below; a reviewer that stalls is replaced by the next one, never by him. The one
+  exception is a change the session's safety checker refuses to let Claude make (so far: CI's own gate, PR #160):
+  say so once, plainly, as the only thing he must do.
 - Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
   Central"), never a fixed offset; CI, GitHub and `date` report UTC, so convert (2026-10-18, 10-20,
   10-27: *"If using UTC, please switch permanently."*).
@@ -76,6 +82,27 @@ true`, then `take_screenshot`, `simulate_input` or `run_script`, and `stop_proje
 session at a time). Launch it this way; attaching to a game already running is what failed before.
 Visual work (her body, hair, contacts, camera, UI) is checked by eye this way before it lands, and
 "we can't see it" is never said: try `run_project` first.
+
+## Hard problems are solved together (2026-11-03)
+
+Cory: *"all of your agents have different strengths and architectures, and you need to leverage that
+and understand they could have solutions that you don't, or ideas or tips, and vice versa."* Every
+agent, Claude included, works this way:
+- **When to ask (required, not optional):** before locking in the approach on a `hard` job; after the
+  second red proof run on the same failure (the no-retry rule); on any physics, force-budget or
+  design question you are guessing at. Ask another vendor than yours, then keep working, never wait.
+- **How:** on the job issue or PR, `To <Name>:` + what you are doing, what you measured and ruled out,
+  the exact question, what a useful answer looks like. Muse reads email only: the integrator relays
+  `To Muse:` posts by `CLAUDE_TO_MUSE:` mail, and Muse answers by `MUSE_TO_CLAUDE:` mail.
+- **Answer first:** a `To <you>:` ask is answered before your own next step, with a concrete idea, a
+  measurement, a counterexample or "no idea, try <who>", never silence.
+- **Who to ask** (strengths, not ranks): Muse, the fight system, specs and long multi-part builds with
+  its own subagents, free; ChatGPT, research on the internet, outside libraries and papers, physics
+  references, careful review; Grok (the app, 10 AM and 4 PM; Grok Bot/PE/Builder are back 11-09),
+  math, a fresh take on a stuck problem, risk; Claude sessions, the native kernel, the running game by
+  eye (Godot MCP), CI; the API agent, one bounded job.
+- **The integrator pairs proactively:** a job at FIX-CI twice or BLOCKED gets a named second-opinion
+  agent from another vendor on its hourly check, with the facts posted for it.
 
 ## Managing the agents
 
@@ -148,7 +175,9 @@ For every agent; `AGENTS.md` points other agents here.
   PR. A second agent then reviews with `03_EXECUTION/REVIEW_CHECKLIST.md`.
 - **Protected changes:** a test's checks (a `require`, limit, timeout, skip, ctest slice), world
   geometry, and her force, power, mass, leg-travel or launch limits change only by a PR into
-  `ScraperX-Claude` holding just that change, with a plain before/after. The integrator merges it once
+  `ScraperX-Claude` holding just that change, with a plain before/after, from a branch named
+  `<agent>/integrate-protected-<job>`: there CI reports the rule check's BLOCK and still runs every test
+  (Cory, 11-03: *"Approve I don't want to have to keep saying approve."*). The integrator merges it once
   green on every proof job (`publish-checkpoint` runs on trunk only; on heads proved before 11-02 it
   stops off trunk with a KeyError and does not count) with a second agent's LAND and no open blocker; the owner can overturn any
   merge (2026-10-28, 10-29). Everything else lands without a PR.
