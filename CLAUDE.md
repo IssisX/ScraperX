@@ -204,7 +204,7 @@ agent, Claude included, works this way:
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
    .
-- Effort, never medium (11-03): Opus sessions at high (strong already; xhigh burns his quota faster),
+- Effort, never medium (11-03): Opus sessions at high (strong already; xhigh burns quota faster),
   Sonnet at xhigh (half Opus's cost, so the extra thinking is cheap). `create_session` has no effort
   field and the repo setting did not take: `get_session` 6 min after start; if off, tell him in one line.
 
