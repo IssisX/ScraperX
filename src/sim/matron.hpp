@@ -291,6 +291,8 @@ public:
     static constexpr float kDeckMuffle = 10.0F;
     static constexpr float kBendMuffle = 1.4F;
     static constexpr float kShaftHalfM = 17.0F;
+    static constexpr float kCatwalkHalfM = 0.9F;   // the bridge across the shaft: its plank's half width and a little
+    static constexpr float kCatwalkEndM = 17.3F;   // and its ends, at the rails' line
     static constexpr float kDeckDepthM = 0.6F;
 
     // The build-up.
@@ -907,6 +909,7 @@ public:
     static constexpr float kCarrySideM = 0.7F;
     static constexpr float kCarryMaxSeconds = 10.0F;
     static constexpr float kRimStandM = 0.42F;        // her middle this far in from the shaft's rail
+    static constexpr float kRimBraceLostM = 2.5F;     // in the rail's beats, this far off her spot: pulled off it
     static constexpr float kRimArriveM = 0.30F;
     static constexpr float kRimBraceM = 0.9F;        // braced: her middle within this of the rail
     static constexpr float kRimSearchM = 16.0F;       // rail spots she weighs for a ledge below
@@ -1003,11 +1006,45 @@ public:
     // along the edge, kFatalShiftM a step, kFatalShiftMaxM in all), she
     // hauls him back in and her floor version runs: she never lets go into a
     // fall he can survive.
-    // With real arms (HOLD_WITH_REAL_ARMS.md: the drag, the pin with his
-    // window, over, the hang) the hold takes longer than the heave it replaced.
-    static constexpr float kFatalLetGoFromS = 8.0F;
-    static constexpr float kFatalLetGoByS = 13.0F;
-    static constexpr float kFatalHangSettleS = 0.7F;   // hanging this long before her fingers open
+    // From kFatalLetGoLateS she lets go once his fall kills and he is head
+    // down, not waiting for the end of his swing.
+    static constexpr float kFatalLetGoFromS = 5.0F;
+    static constexpr float kFatalLetGoByS = 7.0F;
+    static constexpr float kFatalLetGoLateS = 6.5F;
+    static constexpr float kFatalHangSettleS = 0.25F;   // hanging this long before her fingers open
+    // Her pace in the fatality's beats (step_rail), of an ordinary hold's
+    // (her walk to her spot and to his collar, her hands hauling him).
+    static constexpr float kFatalPaceScale = 1.6F;
+    // His window at a rail: the pin alone kFatalPinS, then her grips shift
+    // for the over (her first hand to his belt, her second to his ankle,
+    // him squared across the rail) while it goes on, him face to face on the
+    // rail's top; she tips him over once it is done, after squaring him at
+    // most kFatalSquareS.
+    static constexpr float kFatalPinS = 1.0F;
+    static constexpr float kFatalSquareS = 0.3F;
+    static constexpr float kFatalLiftEarlyS = 0.5F;   // his ankle's lift starts this long before his window ends
+    // Her let-go decided at the end of his swing: in toward her deck's face
+    // no faster than this (her toss out and the foreseen fall decide).
+    static constexpr float kFatalInSwingMps = 0.3F;
+    static constexpr float kFatalSwingMps = 1.0F;   // and his swing (along the edge too) no faster than this
+    static constexpr float kCollarSideM = 0.45F;   // the fatality: her stand off his body's line, taking his collar
+    // The fatality's haul from his side (step_rail): his collar and belt in
+    // front of her, this high over her feet and this far out, till she
+    // stands at her spot facing the rail (within kFatalHaulFaceRad).
+    static constexpr float kFatalHaulCollarUpM = 1.30F;
+    static constexpr float kFatalHaulBeltUpM = 0.95F;
+    static constexpr float kFatalHaulOutM = 0.45F;
+    static constexpr float kFatalHaulFaceRad = 0.35F;
+    static constexpr float kFatalLeashM = 0.20F;
+    // His last arm: after her swat she takes his collar, not his ankle, and
+    // drags him by it to her edge (HOLD_WITH_REAL_ARMS.md, the fatality).
+    static constexpr bool kFatalByCollar = true;
+    // Her haul's walk to her spot at most kFatalDriveMps; there and not yet
+    // turned to the rail (him held hard against the steel), she gives her
+    // turn kFatalDriveSettleS.
+    static constexpr float kFatalDriveMps = 2.0F;
+    static constexpr float kFatalDriveSettleS = 0.5F;
+    static constexpr float kFatalHangDownY = 0.85F;   // his body's up this far down: hanging (beat 5)
     static constexpr float kFatalShiftM = 0.4F;
     static constexpr float kFatalShiftMaxM = 1.5F;
     // Let go, she watches him fall at least kFatalWatchS, and on until he is
@@ -1090,6 +1127,9 @@ public:
     static constexpr float kHandoffS = 3.0F;
     static constexpr float kOverPushM = 0.15F;     // her belt hand out past its pin pose
     static constexpr float kOverOutPastM = 0.35F;  // his middle this far out: she lets go of his belt
+    static constexpr float kBareLipPushM = 0.50F;  // a bare lip: her belt hand out past its pin pose, sliding him off it
+    static constexpr float kBareLipTipM = 0.25F;   // his middle this far past a bare lip: her fingers open on his belt
+    static constexpr float kBareLipHangUpM = 0.30F;   // a bare lip's hang: her hand this high (her deck's height is past her bent arm)
     // Beat 5, hanging by one ankle: her hand on the rail's top, just out past
     // its line, him head down against the outside of her deck.
     static constexpr float kHangUpM = 0.08F;
@@ -1137,6 +1177,11 @@ public:
     static constexpr float kArmMassKg = 4.5F;
     static constexpr float kArmThrowMps = 7.5F;
     static constexpr float kArmThrowRealScale = 0.6F;   // her real arm's short lever
+    static constexpr float kArmLandRollM = 0.8F;        // her deck under where it lands and this far on
+    // The torn arm, a limb on the steel: its grip, its bounce, its roll damped.
+    static constexpr float kArmFriction = 0.9F;
+    static constexpr float kArmRestitution = 0.05F;
+    static constexpr float kArmAngularDamping = 3.0F;
     static constexpr float kArmPlaySeconds = 4.5F;
     static constexpr float kArmPullMoveMps = 0.5F;
     static constexpr float kArmReachSeconds = 3.5F;
@@ -1611,6 +1656,11 @@ public:
     [[nodiscard]] Grip grip_point() const noexcept { return grip_point_; }
     // Her first hand between two holds on him (the hold goes on).
     [[nodiscard]] bool regripping() const noexcept { return regrip_ && holding_state(state_); }
+    // Over a bare lip, between her belt hand opening and her hands on his
+    // ankle (step_rail): his getting up waits.
+    [[nodiscard]] bool bare_lip_over() const noexcept {
+        return bare_lip_ && regrip_ && holding_state(state_) && hold_phase_ >= 4;
+    }
     // She opens her first hand to take him by another point (the hold goes
     // on: grip_lost ignores it). Once.
     [[nodiscard]] bool take_regrip_let_go() noexcept {
@@ -2276,6 +2326,8 @@ private:
     // her and to hang the body there (and its way over the edge); and a
     // fall from where he would really hang that kills.
     [[nodiscard]] bool hang_room(float sx, float sz, float nx, float nz, float feet) const;
+    [[nodiscard]] bool hang_room_real(float sx, float sz, float nx, float nz, float feet) const;
+    [[nodiscard]] bool lethal_from_real(float sx, float sz, float nx, float nz, float feet) const;
     [[nodiscard]] bool lethal_from(float sx, float sz, float nx, float nz, float feet) const;
     // The let-go not lethal: her stand a step along the edge toward one that
     // is (false: none within kFatalShiftMaxM).
@@ -2580,6 +2632,8 @@ private:
     bool back_lifted_ = false;             // back in: his ankle lifted clear over the rail's top
     bool relaid_ = false;
     int over_tries_ = 0;
+    float fatal_drive_at_s_ = 0.0F;   // the fatality's drive: at her spot this long, not yet turned
+    bool bare_lip_ = false;   // the fatality at a bare lip (begin_pin): tipped off it, his ankle taken as it came
     float pin_rim_[4] = {0.0F, 0.0F, 0.0F, 1.0F};   // the rail she pins him on: x, z, out x, out z                   // beat 4 again: not over the first time                  // beat 4's start: him laid back across the rail again by his belt
     float rail_up_ = 0.0F;                 // the top of the steel at her rail's line, over her feet
     std::uint32_t swats_ = 0;
