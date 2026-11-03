@@ -65,6 +65,13 @@ the switchboard's session watcher (J-031 follow-up) goes to a Claude Sonnet sess
 first job is J-029 (small). Reason: the hosted pipeline has never run once, so it starts on a small
 job, and the hard native job goes where it can't stall unseen.
 
+**11-03, 9:37 AM Central, decided by the integrator** (J-032, #157): her way over the pipe rail is a
+**tuck vault and step-off**. She presses up on the rail with her real arms, tucks her legs under her,
+perches on the rail top, then steps off and catches the riser. Reason: every contact stays within her
+real reach under the existing contact audit, with no world change and no launch outside her limits.
+The alternatives were a leap (it can't go up) and rungs on the rail post (protected geometry; changes
+the corner's look). He can overturn it.
+
 ## Questions
 
 **1. Whose story is on the radio?**
