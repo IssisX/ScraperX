@@ -2,7 +2,7 @@
   "mcpServers": {
     "godot": {
       "type": "stdio",
-      "command": "bash",
+      "command": "/bin/bash",
       "args": ["${CLAUDE_PROJECT_DIR:-.}/.claude/godot-mcp.sh"]
     },
     "godot-docs": {

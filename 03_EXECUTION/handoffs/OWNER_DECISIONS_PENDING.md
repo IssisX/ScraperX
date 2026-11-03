@@ -20,7 +20,35 @@ His own calls the same day: her hold over the edge uses real arms in five beats 
 Gemini is off the team. At 2:27 PM: the hold session finishes its job, then the integrator closes it
 and opens one Claude session (high effort) for environment lane A, job 3 (light that shows form),
 then job 12 (night and lamps) (*"Open it once hold is done"*). Grok does hard engineering only, no
-reviews (*"give Grok real hard. Not do a fucking review"*). Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
+reviews (*"give Grok real hard. Not do a fucking review"*). At 3:20 PM: the integrator merges a PR
+itself once it has a cross-model LAND and is green, with no ask (*"If everything is cool, yes, merge
+it. Automatically."*). At 3:23 PM, Claude's call: device determinism may change host results (the
+phone matching CI outranks today's host numbers); the scenarios it moves are fixed as test drift,
+never by weakening a check. At 4:25 PM: the integrator runs at max effort; every other Claude
+session at high. Two Claude sessions, three at most, never ten (*"I just want 2 MAYBE 3 sessions"*). At 4:49 PM:
+each time he gives a usage %, the integrator turns it into a pace (where the 5-hour window will end)
+and recommends every lever against the work at hand: open or close sessions, each one's effort and
+model, sub-agents, workflows (his opt-in), a Claude security review, moving work to the other
+agents (*"suggest what settings we should use against what we are doing ... There's tons and tons
+of stuff that you're not even thinking about"*). The weekly limit resets Monday 11 AM; heavy days
+and light days are fine (*"peaks and valleys"*). He makes up for heavy days with light ones (*"to make up
+for it"*). The security review and lane B sessions opened at 4:56 PM on a misread were closed
+unused at 5:00 PM. At 5:00 PM he asked for one more session and left the pick to Claude: lane B
+(jobs 6, 8), high; the integrator moved to xhigh. He wants no settings to tap: Claude picks and sets. At 5:05 PM: check before every answer, even at more usage;
+never answer from memory or by shortcut (*"I prefer you use a little more effort and usage and get the
+answers correct and do the checks and everything and thinking first"*). Found at 5:10 PM: a session the integrator opens
+starts with no effort set (its menu shows medium), whatever the environment variable says; the
+integrator cannot set it. So every time one opens, Cory is told in the same message to set its effort,
+with the level picked. He set lane A and lane B to xhigh. At 5:30 PM: Fable's design v3 adopted step by step
+(`03_EXECUTION/PLANNING/AGENT_TEAM_DESIGN.md`, no Linear, no new paid services; the orchestrator
+and eye run on his $100 monthly Anthropic API credit). Step A done at 5:33 PM: one issue per job
+(J-001..J-031, #108-#138), `work/BOARD.md` generated, `@codex` wake tested on J-029 (#136). Codex is out of quota: nothing is planned around it,
+no @codex wakes or reviews (*"We can't depend on that"*). At 5:39 PM on his go: one Claude session builds step B
+(switchboard v0, J-031 #138) with his setup cut to two steps, Muse's bridge sending mail too (*"Do as much of it
+for me as you can"*). At 6:32 PM, his words "keep, fresh, review": her fatality stays
+inside his 5-7 s bar (the beats are trimmed; #103's 7.5-13 s window is not landed); a fresh Claude
+session (high) does that trim and the north band spot's bare-lip hang; a Claude security review
+session (xhigh) reviews the switchboard #139 and the toolchain #86. Her damage does not persist; a checkpoint rewind or a reload brings her back undamaged (rule 34).
 
 **Decided 2026-10-29:** her voice lines: write (all 43 kept, 10-29); she comes back: back (owner); the summit ending: beam and next parked feature: dread (his picks by the 10-minute rule, owner: "I don't like these things that are blocking"; he can overturn).
 
@@ -30,6 +58,39 @@ Short on purpose: he reads these on a phone. Each one is what it is, Claude's pi
 he answers with. Ordered by how much his answer unblocks. If he does not answer in 10 minutes, the
 pick decides and the issue says so (`CLAUDE.md`). Detail lives in `03_EXECUTION/GAP_LIST.md` and
 `00_START_HERE_ARCHIVE.md`, "Owner calls recovered ...". Checked against trunk `503958c`.
+
+**11-03, 9:03 AM Central, decided by the integrator** (he asked for up to 3 sessions: 2 Opus high, 1 Sonnet
+xhigh; read as 3 including the integrator): J-032 goes to a Claude Opus session, not the API agent;
+the switchboard's session watcher (J-031 follow-up) goes to a Claude Sonnet session; the API agent's
+first job is J-029 (small). Reason: the hosted pipeline has never run once, so it starts on a small
+job, and the hard native job goes where it can't stall unseen.
+
+**11-03, Cory: "Queue it for muse"** (destructible moving things): J-038 (#169), Muse's, right after the fight
+(S2-S6). Rescoped by Cory the same hour: the tower's machines are never destructible (they must stay usable so he can
+ascend), but the loose things (what the forklift and
+crane lift, barrels, boxes, shipping containers): they dent with the force of the hit, crates break into loose
+stock; rule 51, the phone, determinism and saves hold; her budget is unchanged.
+
+**11-03, 10:11 AM Central, decided by the integrator** (Cory: use Muse's intelligence, free, for as many of
+the big, difficult things as is best): J-004 (#111, S6 tells) and J-006 (#113, the grade ladder, PR #91,
+then J-007 #114 behind it) move from ChatGPT to Muse; ChatGPT reviews them. Muse runs the ladder on a
+subagent beside the fight, and is the first stop for every agent's hard physics question. Reason: the
+rule of 9:55 AM (ChatGPT no longer owns game-code jobs) applied to the two game-code jobs it still held.
+J-003 stays ChatGPT's while in review; Builder's and PE's jobs wait for them (back 11-09).
+
+**11-03, 9:37 AM Central, decided by the integrator** (J-032, #157): her way over the pipe rail is a
+**tuck vault and step-off**. She presses up on the rail with her real arms, tucks her legs under her,
+perches on the rail top, then steps off and catches the riser. Reason: every contact stays within her
+real reach under the existing contact audit, with no world change and no launch outside her limits.
+The alternatives were a leap (it can't go up) and rungs on the rail post (protected geometry; changes
+the corner's look). He can overturn it.
+
+**11-03, 11:55 AM Central, decided by the integrator** (J-032, #157): she picks up the toolbox in her
+act with **A**: her stoop starts earlier, so she is down when the take happens, and her hand reaches
+for the handle only once it is inside her real arm. She scoops it up at a run. Reason: the act keeps
+its beats and timing; B (she slows first) shifted the act's later beats before; C snaps the box.
+Same hour, J-001 (#108): Muse takes the fix on #102's hold line, as Muse proposed. The strain budget
+(a physics limit) is not changed.
 
 ## Questions
 

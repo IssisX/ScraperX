@@ -4112,6 +4112,8 @@ void Matron::take_blow(const float dt) {
             blow_change_ = Vec3::sZero();
             blow_impulse_ = Vec3::sZero();
             blow_above_ = 0.0F;
+            // Window closed: the export closes with it, so the next landing edges again.
+            blow_mps_ = 0.0F;
         }
         return;
     }

@@ -328,6 +328,7 @@ struct MatronSnapshot final {
     bool pipe_head_down = false;
     bool pipe_sliding = false;
     bool pipe_stunned = false;
+    double pipe_tuck = 0.0;
     bool pipe_listening = false;
     std::uint32_t pipe_links = 0;
     std::uint32_t pipe_holds = 0;

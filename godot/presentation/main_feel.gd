@@ -255,6 +255,8 @@ const HAPTICS := {
 	&"release": [14, 0.30],
 	&"strain": [28, 0.40],
 	&"land": [34, 0.85],
+	&"strike_punch": [14, 0.40],
+	&"strike_land": [24, 0.50],
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
 	&"death": [150, 1.0],
@@ -267,7 +269,7 @@ const HAPTICS := {
 
 # Kinds that always get through the throttle: they mark a moment that
 # matters more than whatever buzzed a few milliseconds before.
-const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip", &"matron_grab", &"matron_tear", &"matron_hang"]
+const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip", &"matron_grab", &"matron_tear", &"matron_hang", &"strike_land"]
 const HAPTIC_GAP_MS := 50
 var haptic_counts := {}   # kind -> pulses sent (counted in CI too, never sent there)
 var _haptic_next_ms := 0
@@ -911,6 +913,10 @@ func _feel_strike(delta: float) -> void:
 				_matron_view.flinch(normal, impulse)
 			if _gore != null:
 				_gore._on_strike(at, normal, impulse)
+			# Two beats: the fist's contact, then what it earned. The second
+			# fires inside the 50 ms throttle window, so it needs priority.
+			_haptic(&"strike_punch", clampf(impulse / 50.0, 0.3, 1.0))
+			_haptic(&"strike_land", clampf(impulse / 66.7, 0.4, 1.0))
 	if _matron_view != null:
 		_matron_view.hold_frame = _strike_feel.frozen()
 	# Only while the kick is live: writing the basis re-reads the camera's
