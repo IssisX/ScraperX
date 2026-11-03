@@ -4,13 +4,16 @@
 # writes before a runtime run, and a warm npx cache for the server package.
 # Hook stdout becomes session context, so all tool output goes to stderr.
 set -euo pipefail
+# Session provisioning must not resolve commands from an unverified cache.
+PATH="/usr/local/bin:/usr/bin:/bin"
+export PATH
 exec 3>&1 1>&2
 
 if [[ "${CLAUDE_CODE_REMOTE:-}" != "true" ]]; then
   exit 0
 fi
 
-cd "${CLAUDE_PROJECT_DIR:-$(dirname -- "${BASH_SOURCE[0]}")/../..}"
+cd "${CLAUDE_PROJECT_DIR:-${BASH_SOURCE[0]%/*}/../..}"
 
 bash .claude/install-godot.sh
 godot_reported="$(tools/godot/godot --headless --version)"
