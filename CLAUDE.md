@@ -83,6 +83,27 @@ session at a time). Launch it this way; attaching to a game already running is w
 Visual work (her body, hair, contacts, camera, UI) is checked by eye this way before it lands, and
 "we can't see it" is never said: try `run_project` first.
 
+## Hard problems are solved together (2026-11-03)
+
+Cory: *"all of your agents have different strengths and architectures, and you need to leverage that
+and understand they could have solutions that you don't, or ideas or tips, and vice versa."* Every
+agent, Claude included, works this way:
+- **When to ask (required, not optional):** before locking in the approach on a `hard` job; after the
+  second red proof run on the same failure (the no-retry rule); on any physics, force-budget or
+  design question you are guessing at. Ask another vendor than yours, then keep working, never wait.
+- **How:** on the job issue or PR, `To <Name>:` + what you are doing, what you measured and ruled out,
+  the exact question, what a useful answer looks like. Muse reads email only: the integrator relays
+  `To Muse:` posts by `CLAUDE_TO_MUSE:` mail, and Muse answers by `MUSE_TO_CLAUDE:` mail.
+- **Answer first:** a `To <you>:` ask is answered before your own next step, with a concrete idea, a
+  measurement, a counterexample or "no idea, try <who>", never silence.
+- **Who to ask** (strengths, not ranks): Muse, the fight system, specs and long multi-part builds with
+  its own subagents, free; ChatGPT, research on the internet, outside libraries and papers, physics
+  references, careful review; Grok (the app, 10 AM and 4 PM; Grok Bot/PE/Builder are back 11-09),
+  math, a fresh take on a stuck problem, risk; Claude sessions, the native kernel, the running game by
+  eye (Godot MCP), CI; the API agent, one bounded job.
+- **The integrator pairs proactively:** a job at FIX-CI twice or BLOCKED gets a named second-opinion
+  agent from another vendor on its hourly check, with the facts posted for it.
+
 ## Managing the agents
 
 2026-10-22: *"I need more management help from you telling the other agents what to do"*.

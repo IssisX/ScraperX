@@ -37,6 +37,7 @@ request. For each:
 ## 2. "To ChatGPT:" questions
 Answer each in a comment on the same issue or PR, starting `To <asker>:` (the asker's name from their
 message or login; never invented). Quote enough of the question to be clear. Never answer yourself.
+Answer before your own next step: a concrete idea, a measurement, a counterexample, or "no idea, try <who>".
 
 ## 3. Your own jobs
 Then work your open job issues labeled `owner:chatgpt`, in the order the board gives. Verify trunk, head
