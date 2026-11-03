@@ -3439,6 +3439,26 @@ void Matron::notice_moved_stock() {
             handled_ |= 1U << i;
         }
     }
+    // A piece she sees him stand on (a step of his, a leg up) is his too.
+    if (player_.IsInvalid() || !bodies.IsAdded(player_)) {
+        return;
+    }
+    const RVec3 him = bodies.GetPosition(player_);
+    if (Vec3(him - at).Length() > kEyeRangeM) {
+        return;
+    }
+    const IgnoreSingleBodyFilter not_him(player_);
+    RayCastResult under;
+    if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(him, Vec3(0.0F, -1.6F, 0.0F)), under, {}, {}, not_him)) {
+        return;
+    }
+    for (std::size_t i = 0; i < throwables_.size(); ++i) {
+        const Throwable &t = throwables_[i];
+        if (t.body == under.mBodyID && (handled_ & (1U << i)) == 0U && t.mass_kg <= kStockShoveMaxKg &&
+            look_at(him, kEyeRangeM) == Glimpse::Sight) {
+            handled_ |= 1U << i;
+        }
+    }
 }
 
 Vec3 Matron::hands_offset() const noexcept {
@@ -4905,6 +4925,7 @@ void Matron::refresh_view() {
     view_.takes = takes_;
     view_.throws = throws_;
     view_.stock_shoves = stock_shoves_;
+    view_.stock_handled = handled_;
     view_.stock_push_force_n = stock_push_force_n_;
     view_.staggers = staggers_;
     view_.knockdowns = knockdowns_;

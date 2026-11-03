@@ -1288,6 +1288,7 @@ public:
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
         std::uint32_t stock_shoves = 0;   // and shoved off a lip, this run
+        std::uint32_t stock_handled = 0;  // her throwables she counts his, a bit each
         float stock_push_force_n = 0.0F; // her hands' push on a piece this tick (a shove, a throw)
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet

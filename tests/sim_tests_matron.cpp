@@ -940,6 +940,7 @@ struct WreckRun {
     double peak_step_m = 0.0;
     int push_ticks = 0;
     scraperx::sim::Vector3 rest{};
+    bool stood_his = false;
 };
 
 WreckRun matron_wreck_run(const bool trace) {
@@ -1011,6 +1012,20 @@ WreckRun matron_wreck_run(const bool trace) {
     }
     run.shoves = s.matron_state().stock_shoves;
     run.rest = s.kit_body_position(drum_body);
+    // Stock he uses is his too: the toolbox east of her post (her second
+    // throwable), never moved, stood on by him in her sight.
+    {
+        const std::uint32_t toolbox = s.kit_body_index(LooseStock::kFirstEntity + first + 1);
+        const auto top = s.kit_body_position(toolbox);
+        require((s.matron_state().stock_handled & 2U) == 0U, "matron wreck: the unmoved toolbox is not his yet");
+        s.debug_launch_player({top.x, top.y + 0.2 + 0.95, top.z}, {0.0, 0.0, 0.0});
+        bool his = false;
+        for (int i = 0; i < 2 * static_cast<int>(Simulation::kTickRateHz) && !his; ++i) {
+            tick(s);
+            his = (s.matron_state().stock_handled & 2U) != 0U;
+        }
+        run.stood_his = his;
+    }
     require(s.snapshot().death_count == 0, "matron wreck: no death");
     // His to fetch back: a plain body, still a load his hands can lift.
     require(s.kit_body_enabled(drum_body) && s.kit_body_carry_kind(drum_body) != 0,
@@ -1114,6 +1129,7 @@ void run_matron_wreck() {
     require(a.shoves == 1 && a.push_ticks > 0, "matron wreck: she shoves the drum he set down off the lip");
     require(a.rest.y < 153.0, "matron wreck: it lies under her floor, in the bay");
     require(a.peak_step_m < 0.1, "matron wreck: pushed, never snapped (under 0.1 m a tick on her floor)");
+    require(a.stood_his, "matron wreck: the toolbox he stands on in her sight is his to her");
     const WreckRun b = matron_wreck_run(false);
     require(b.shove_tick == a.shove_tick && b.rest.x == a.rest.x && b.rest.y == a.rest.y && b.rest.z == a.rest.z,
             "matron wreck: the same run twice is the same shove");
