@@ -5,15 +5,19 @@
  *   OUT  The switchboard asks Muse by posting a comment that starts `CLAUDE_TO_MUSE:` on an issue and
  *        labeling the issue `wake:muse`. This script mails each such comment it has not sent yet to
  *        Muse, then removes the label.
- *   IN   Mail whose subject starts `MUSE_TO_CLAUDE:` (from an allowed sender) is posted as a comment:
+ *   IN   Mail whose subject starts `MUSE_TO_CLAUDE:` (from an allowed sender, proven by more than the
+ *        forgeable From line: see authentic_) is posted as a comment:
  *        on #N when the subject names `#N`, else on the job issue `J-NNN` the subject names, else on
  *        the board #107. Its first line is `**Muse (via email bridge): <subject>**`, so a subject like
  *        `MUSE_TO_CLAUDE: review of #100 @ 1a2b3c4d: LAND` is a verdict the switch reads.
  *
- * Setup (once): Project Settings > Script properties > add GITHUB_TOKEN; then run `setup` and allow.
+ * Setup (once): Editor > Services (+) > add "Gmail API" (identifier Gmail); Project Settings > Script
+ * properties > add GITHUB_TOKEN; then run `setup` and allow. Keep the project unshared: anyone with
+ * edit access can read the script properties.
  * Script properties:
  *   GITHUB_TOKEN  required. A fine-grained token, repository IssisX/ScraperX only, with
- *                 Issues: Read and write, Pull requests: Read and write (Metadata: Read comes with it).
+ *                 Issues: Read and write only (Metadata: Read comes with it). No Pull requests
+ *                 permission: it would let the token submit reviews, which the switch reads.
  *   REPO          optional, default IssisX/ScraperX
  *   MUSE_TO       optional, where Muse reads mail; default this account's own address
  *   MUSE_FROM     optional, comma-separated senders allowed to post as Muse; default this account's address
@@ -56,6 +60,7 @@ function props_() {
   return {
     store: p,
     token: token,
+    me: me.trim().toLowerCase(),
     repo: p.getProperty('REPO') || DEFAULT_REPO,
     to: p.getProperty('MUSE_TO') || me,
     from: (p.getProperty('MUSE_FROM') || me).split(',').map(function (s) { return s.trim().toLowerCase(); })
@@ -133,8 +138,9 @@ function inbound_() {
       var subject = m.getSubject() || '';
       var at = subject.indexOf('MUSE_TO_CLAUDE:');
       if (at < 0) return;
-      if (cfg.from.indexOf(senderAddress_(m.getFrom())) < 0) {
-        remember_(cfg, 'posted_message_ids', done, m.getId());  // not from an allowed sender: never posted
+      if (!authentic_(cfg, m)) {
+        remember_(cfg, 'posted_message_ids', done, m.getId());  // not provably from an allowed sender: never posted
+        console.warn('Muse bridge: skipped message ' + m.getId() + ': sender not allowed or not authenticated');
         return;
       }
       var rest = subject.slice(at + 'MUSE_TO_CLAUDE:'.length).replace(/[*\r\n`]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -156,6 +162,27 @@ function inbound_() {
     });
     thread.addLabel(doneLabel);
   });
+}
+
+/**
+ * True only when the mail provably comes from an allowed sender; anyone can forge the From line.
+ * Mail from this account's own address must carry Gmail's SENT label (a forged From that arrives
+ * from outside never does). Any other allowed sender needs Gmail's `dmarc=pass` for its own domain.
+ */
+function authentic_(cfg, m) {
+  var addr = senderAddress_(m.getFrom());
+  if (cfg.from.indexOf(addr) < 0) return false;
+  if (addr === cfg.me) {
+    if (typeof Gmail === 'undefined') {
+      throw new Error('Muse bridge: add the Gmail API service (Editor > Services) so mail can be checked');
+    }
+    var meta = Gmail.Users.Messages.get('me', m.getId(), { format: 'minimal' });
+    return (meta.labelIds || []).indexOf('SENT') >= 0;
+  }
+  var domain = addr.split('@')[1] || '';
+  var auth = String(m.getHeader('Authentication-Results') || '');
+  var dm = auth.match(/\bdmarc=pass\b[^;]*?header\.from=([^\s;]+)/i);
+  return !!domain && !!dm && dm[1].toLowerCase() === domain;
 }
 
 function senderAddress_(from) {

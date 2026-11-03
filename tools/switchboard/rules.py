@@ -49,6 +49,7 @@ class Team:
     human_reviewers: Sequence[str]   # agent keys asked to review Claude-authored work, in order
     matron_reviewer: str             # agent key preferred when the job needs matron
     agent_vendor: Mapping[str, str]  # agent key -> vendor
+    verdict_logins: frozenset[str]   # lowercased GitHub logins whose comments may carry a verdict
 
     def vendor_of_branch(self, ref: str) -> str:
         for prefix, vendor in self.vendor_of_prefix:
@@ -87,8 +88,12 @@ def team_from_config(cfg: Mapping) -> Team:
             raise ValueError(f"agents.yml: review names unknown agent {h!r}")
     if not humans:
         raise ValueError("agents.yml: review.claude_authored_asks must name at least one agent")
+    logins = cfg.get("verdict_logins")
+    if not isinstance(logins, Sequence) or isinstance(logins, str) or not logins:
+        raise ValueError("agents.yml: `verdict_logins` must list the GitHub logins whose verdicts count")
     prefixes.sort(key=lambda pv: -len(pv[0]))  # longest prefix wins
-    return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor)
+    return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor,
+                frozenset(str(l).strip().lower() for l in logins))
 
 
 def _has_repro(body: str) -> bool:
@@ -99,8 +104,11 @@ def _has_repro(body: str) -> bool:
 def parse_verdict(body: str, created_at: str, author_login: str, team: Team) -> Verdict | None:
     """One comment or review body -> its verdict, or None when its first line is not a verdict.
 
-    Only the first line is read, so a quoted verdict further down never counts.
+    Only the first line is read, so a quoted verdict further down never counts. The repo is public,
+    so a comment from a login outside verdict_logins is never a verdict: anyone can comment.
     """
+    if author_login.strip().lower() not in team.verdict_logins:
+        return None
     first = body.lstrip().split("\n", 1)[0]
     m = VERDICT_HEAD.match(first)
     if not m:

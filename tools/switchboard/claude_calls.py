@@ -94,7 +94,7 @@ class Result:
 
 def client():
     import anthropic  # imported here so the free parts of the switch run without the SDK
-    return anthropic.Anthropic(timeout=REQUEST_TIMEOUT_S, max_retries=2)
+    return anthropic.Anthropic(timeout=REQUEST_TIMEOUT_S, max_retries=0)
 
 
 def _errors():
@@ -125,7 +125,7 @@ def ask_json(c, model: str, max_tokens: int, effort: str, system: str, content: 
             output_config={"effort": effort, "format": {"type": "json_schema", "schema": dict(schema)}},
         )
     except a.RateLimitError as err:
-        raise ClaudeCallError(f"messages.create({model}) rate-limited after retries") from err
+        raise ClaudeCallError(f"messages.create({model}) rate-limited (no retry here: the next run tries again)") from err
     except a.APIStatusError as err:
         raise ClaudeCallError(f"messages.create({model}) answered HTTP {err.status_code}") from err
     except a.APIConnectionError as err:
