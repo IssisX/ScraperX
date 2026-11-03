@@ -690,13 +690,32 @@ func _draw_button(button: TouchButton) -> void:
 	var icon_color := UiStyle.INK if pressed else UiStyle.with_alpha(UiStyle.PAPER, dim * alpha)
 	UiStyle.draw_icon(self, button.icon, button.center, radius * 0.78, icon_color, 4.0 * _u)
 	if not button.label.is_empty():
-		UiStyle.text_centered(self, UiStyle.font_label(), button.label,
-			button.center + Vector2(0.0, radius + 30.0 * _u), int(roundf(25.0 * _u)),
-			UiStyle.with_alpha(UiStyle.PAPER, dim * alpha), int(roundf(10.0 * _u)))
+		var label_size := int(roundf(25.0 * _u))
+		var label_color := UiStyle.with_alpha(UiStyle.PAPER, dim * alpha)
+		var lines := _label_lines(button.label, label_size, radius)
+		for i in lines.size():
+			UiStyle.text_centered(self, UiStyle.font_label(), lines[i],
+				button.center + Vector2(0.0, radius + 30.0 * _u + float(i) * 28.0 * _u), label_size,
+				label_color, int(roundf(10.0 * _u)))
 	if not button.note.is_empty():
 		UiStyle.text_centered(self, UiStyle.font_label(), button.note,
 			button.center - Vector2(0.0, radius + 14.0 * _u), int(roundf(30.0 * _u)),
 			UiStyle.with_alpha(accent, alpha), int(roundf(10.0 * _u)))
+
+
+# A label wider than its button's own column would run into the next button
+# (LOWER LAST BEAM into JUMP on the summit's hanging beam): it breaks at the
+# space nearest its middle into two lines, each centred under the button.
+func _label_lines(label: String, size: int, radius: float) -> PackedStringArray:
+	var font := UiStyle.font_label()
+	var room := 2.4 * radius
+	if UiStyle.text_width(font, label, size) <= room or not label.contains(" "):
+		return PackedStringArray([label])
+	var best := -1
+	for i in label.length():
+		if label[i] == " " and (best < 0 or absi(i - label.length() / 2) < absi(best - label.length() / 2)):
+			best = i
+	return PackedStringArray([label.substr(0, best), label.substr(best + 1)])
 
 
 func _draw_stick() -> void:
