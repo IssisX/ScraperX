@@ -559,6 +559,9 @@ bool run_gorge(scraperx::sim::Simulation &route) {
     (void)route.advance_frame(Simulation::kFixedStepSeconds * 2);
     double toward = 0.6;   // the stick into the first wall, on +z
     (void)route.set_move_input(1.0, toward);
+    // `kicks` counts the jumps asked for (bookkeeping); the wall kicks that landed are the
+    // simulation's own wall_kick_count, from its value on entry.
+    const std::uint64_t native_at_entry = route.snapshot().wall_kick_count;
     std::uint64_t kicks = 0;
     std::uint64_t steps_at_last_kick = 0;
     for (int tick = 0; tick < 5 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
@@ -567,7 +570,7 @@ bool run_gorge(scraperx::sim::Simulation &route) {
         if (n.player_grounded) {
             break;
         }
-        if (n.player_wall_running && n.wall_kick_count == kicks && n.wall_step_count > steps_at_last_kick) {
+        if (n.player_wall_running && n.wall_kick_count - native_at_entry == kicks && n.wall_step_count > steps_at_last_kick) {
             toward = -toward;
             (void)route.request_jump();
             (void)route.set_move_input(1.0, toward);
@@ -579,9 +582,10 @@ bool run_gorge(scraperx::sim::Simulation &route) {
     (void)route.set_move_input(0.0, 0.0);
     (void)route.set_sprint_input(false);
     const Snapshot end = route.snapshot();
-    std::cout << "route: gorge chain: " << kicks << " kicks, down at (" << end.player_position.x << ", "
-              << end.player_position.y << ", " << end.player_position.z << ")\n";
-    if (!(kicks >= 3 && end.player_position.x > 10.5 && standing_above(end, 407.1))) {
+    const std::uint64_t native_kicks = end.wall_kick_count - native_at_entry;
+    std::cout << "route: gorge chain: " << kicks << " jumps asked, " << native_kicks << " wall kicks landed, down at ("
+              << end.player_position.x << ", " << end.player_position.y << ", " << end.player_position.z << ")\n";
+    if (!(native_kicks >= 3 && end.player_position.x > 10.5 && standing_above(end, 407.1))) {
         return false;
     }
     return gantry_pole(route, 10.3, -160.6, 1.0, 0.0, 418.4, "pole 2");
