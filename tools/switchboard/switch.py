@@ -523,7 +523,8 @@ class Switch:
             self.out(f"DIGEST      not yet: {central(self.now)}")
             return
         issues = self.gh.paged(f"repos/{self.gh.repo}/issues?labels={DIGEST_LABEL}&state=open")
-        issue = next((i for i in issues if i["title"] == DIGEST_TITLE and "pull_request" not in i), None)
+        # Found by its label, not its title, so the owner can rename the issue freely.
+        issue = next((i for i in issues if "pull_request" not in i), None)
         today = local.strftime("%A %B %-d")
         if issue:
             recent = self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments?since="
