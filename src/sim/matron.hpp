@@ -827,6 +827,14 @@ public:
     static constexpr float kPipeTuckAheadM = 0.25F;
     static constexpr float kPipeTuckFromM = 0.07F;
     static constexpr float kPipeTuckRate = 2.5F;
+    static constexpr float kPipeUntuckOnRiserRate = 0.6F;
+    // Her tuck as drawn follows the one asked of her about kPipeTuckDrawnTauS
+    // behind (the view's eased pose), so she tucks for where she will be
+    // kPipeTuckLeadS on, and her reach is judged from her tuck as drawn.
+    static constexpr float kPipeTuckLeadS = 0.3F;
+    static constexpr float kPipeTuckDrawnTauS = 0.25F;
+    // Up on a rail's top, tucking, or down off it: at most this fast.
+    static constexpr float kPipePressMps = 0.8F;
     // Perched, she steps off toward her line at kPipeStepOffMps; let go, she
     // catches the riser within kPipeCatchFallM of falling, or is off it.
     static constexpr float kPipeStepOffMps = 1.2F;
@@ -836,7 +844,7 @@ public:
     static constexpr float kPipeCatchOverTopM = 0.6F;
     // Near a deck on the riser (her shoulders within kPipeDeckNearM of its
     // rail's top), she turns to it for its rail or its edge.
-    static constexpr float kPipeDeckNearM = 1.0F;
+    static constexpr float kPipeDeckNearM = 1.3F;
     static constexpr float kPipeDownMps = 2.6F;
     static constexpr float kPipeUpMps = 0.7F;
     static constexpr float kPipeChangedDownBurstMps = 4.2F;
@@ -2818,6 +2826,7 @@ private:
     enum class PipeStep : std::uint8_t { Press, Over, Perch, StepOff, Catch, Hang, Rise, Back, Down };
     PipeStep pipe_step_ = PipeStep::Press;
     float pipe_tuck_ = 0.0F;          // her legs drawn up under her (0..1): kPipeTuck*
+    float pipe_tuck_drawn_ = 0.0F;    // that tuck as drawn, behind it (kPipeTuckDrawnTauS)
     float pipe_let_go_y_ = 0.0F;      // her middle's height where she last let go (her catch)
     float pipe_best_ = 0.0F;          // her progress along it, for the stall
     float pipe_stall_s_ = 0.0F;
