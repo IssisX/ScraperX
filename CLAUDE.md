@@ -147,11 +147,11 @@ agent, Claude included, works this way:
   test shit"*): give agents real problems in code; tests are the proof, not the job; a blocker is reported only after a real attempt;
   reports stay short.
 - Hand out the hard work (2026-10-27: *"don't give them cheap, weak shit. They are intelligent"*):
-  post it on #3 whole (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
+  post it whole on its own job issue (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
   The integrator acts on PR events and agent messages as they arrive, and checks the board hourly from a
   server-side scheduled task (it also resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
   and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
-  (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
+  (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` mail), because its
   GitHub comments each need the owner's approval (10-29).
 - **Tasking the team is the integrator's job, every hour, unasked** (11-03: *"it's concerning that I said
   that and then you're immediately sending jobs to Muse as if that wasn't your job the entire time ...
@@ -175,8 +175,17 @@ agent, Claude included, works this way:
     passed on the same hour.
   - **Prove it in the report.** The check's notes say what each agent got this hour and which questions
     were routed, so a missed hour shows.
+- **Threads stay small** (11-03: issue #3 reached 860 comments, *"super, super wasteful, and the
+  context/size built up enormously"*). Every agent reads a thread's body plus the comments since its own
+  last one, never the history. A step is one line; a status that changes is edited in place, not
+  reposted; findings go once, on the job's own issue or PR. The integrator's hourly notes replace the
+  board body's "This hour" section; they are never a new comment. On every hourly check the integrator
+  checks comment counts: the board moves to a fresh issue at 100; a job issue past 40 gets its state
+  written into its body (where it stands, what is decided, what is next) and readers start from there;
+  a PR past 40 is replaced by a fresh PR from the same branch with that summary. A retired thread is
+  closed the same hour, and no rule file points at it.
 - Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
-  board, linked once from #3.
+  board, linked once from the board.
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
   integrator decides, without asking him, and covers every Claude session, its own included.
@@ -204,8 +213,8 @@ agent, Claude included, works this way:
 
 For every agent; `AGENTS.md` points other agents here.
 - **Map first:** `REPO_MAP.md`; regenerate it with `python3 tools/repo_map/gen_repo_map.py`.
-- **One handoff form:** `03_EXECUTION/handoffs/TEMPLATE.yml`, posted on issue #3 (or the work's own
-  issue) to the agent it is for, never pasted to the owner.
+- **One handoff form:** `03_EXECUTION/handoffs/TEMPLATE.yml`, posted on the work's own issue
+  to the agent it is for, never pasted to the owner.
 - **Rule check, then a second agent tries to break it:** before landing, run
   `python3 tools/rule_check/rule_check.py <base> <head>`; a BLOCK line means the change goes only as a
   PR. A second agent then reviews with `03_EXECUTION/REVIEW_CHECKLIST.md`.
