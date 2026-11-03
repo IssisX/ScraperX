@@ -858,8 +858,8 @@ untouched, so the §1 audit stands). Three owner decisions, all 2026-11-01:
 in N·s from ALL valid physical sources accepted by the real `take_blow`
 path — player strikes, crates, drums, falling steel, machinery,
 dropped objects, anything that judges. It is accumulated in a new sim
-field that persists through a run except as the checkpoint rule below
-states. Player-only attribution is tracked separately as
+field that is live-only: it lasts while the run goes on and does not
+persist through checkpoints (rule 34; checkpoint rule below). Player-only attribution is tracked separately as
 `player_damage_ns` (see below); it never replaces or narrows the
 real meter.**
 
@@ -890,8 +890,9 @@ each source is attributed only its real respective contribution —
 never double-count the combined result, never assign the whole
 window to the player.
 
-**Kill threshold: `damage_ns ≥ 6000 N·s` (recommended default;
-tuning range 4000–8000, pinned by the kill slice's failing tests).**
+**Kill threshold: `damage_ns ≥ 6000 N·s` (owner-set; it stands as
+set. 4000–8000 is a tuning range only, not permission to retune;
+pinned by the kill slice's failing tests).**
 In landed blows, at 6000:
 
 | Strike | Per land (N·s) | Lands to kill alone |
@@ -930,15 +931,13 @@ judged blow, no accumulation. During Staggering the offer is ON, so
 blows land, judge, accumulate — and a blow ≥ `fells` during
 Staggering that downs her counts in full, including the downing blow.
 
-**Checkpoint damage semantics (authoritative).** Checkpoint commit
-stores Matron's current `damage_ns` (and `player_damage_ns`);
-checkpoint restore restores those saved values. Damage persists
-through ordinary combat, stagger, and knockdown, but rewinding the
-world to an earlier checkpoint also rewinds damage to what existed
-at that checkpoint. Dying and then restoring an earlier checkpoint
-therefore brings her back with that checkpoint's damage, exactly as
-the existing `dead_` restore semantics already do for life state
-(§9.3). S7 tests pin the commit/restore round-trip.
+**Checkpoint damage semantics (authoritative, rule 34).** Damage is
+live-only and does not persist through checkpoints: a checkpoint
+commit does not store `damage_ns` or `player_damage_ns`, and a
+checkpoint rewind or a reload brings her back undamaged and alive
+(both meters at 0). Damage persists through ordinary combat, stagger,
+and knockdown within the live run only. S7 tests pin that a restore
+or reload returns both meters to 0.
 
 ### 9.2 Visible damage stages (body first, HUD second)
 
@@ -1012,9 +1011,9 @@ Checkpoint restore keeps its existing semantics, already in code:
 "A restore puts her back as the checkpoint had her, dead or not"
 (`matron.cpp` restore path resets `dead_ = false`) — so dying and
 then restoring an earlier checkpoint brings her back, exactly as a
-lethal fall does today. Damage follows the same rule (§9.1):
-restore returns `damage_ns` / `player_damage_ns` to the checkpoint's
-stored values. No slice needs to re-litigate this.
+lethal fall does today. Damage is live-only (rule 34, §9.1): a
+restore or reload brings her back undamaged, `damage_ns` /
+`player_damage_ns` at 0. No slice needs to re-litigate this.
 **The one open design point (does NOT block any slice):** what, if
 anything, replaces her after death — a victory screen, a locker
 respawn (Dormant → Emerging reset), or nothing (the tower is simply
@@ -1148,9 +1147,10 @@ a free kill.
  S1–S3, S5 unchanged in content. S4 becomes jab + 1-2. S6 moves
  after S7 and gains stage tells. New slices S7 (damage + stages)
  and S8 (death state).
-11. **§4 risks** — ADD: (a) threshold tuning risk (6000 is a
- proposal; if playtesting shows the kill unreachable in a normal
- run, tune the meter, not the bars); (b) stage-read risk (if
+11. **§4 risks** — ADD: (a) threshold risk (6000 is owner-set
+ and stands; 4000–8000 is a tuning range only, not permission to
+ retune; if playtesting shows the kill unreachable in a normal run,
+ that goes to the owner, never to the bars); (b) stage-read risk (if
  act runs show the body tells do not read at combat distance,
  strengthen pose deltas before adding HUD weight — body first is
  the owner's rule, not a preference); (c) 1-2 feel risk (if the
@@ -1196,8 +1196,8 @@ transfer -> cross -> guard.**
  judged window attributes each source's real contribution only, no
  double-count, no whole-window-to-player); accumulation pauses
  during Down and resumes after (total unchanged through Down);
- checkpoint commit stores and restore returns `damage_ns` /
- `player_damage_ns`; stage flips at 1200/2700/4200/5400 only
+ checkpoint restore and reload return `damage_ns` /
+ `player_damage_ns` to 0 (live-only, rule 34); stage flips at 1200/2700/4200/5400 only
  (0–4) — ≥6000 is death (S8), NOT a stage; recovery scaling
  ×(1 + 0.15 × stage) on stagger/down times; offensive numbers
  unscaled at every stage.
@@ -1243,7 +1243,8 @@ transfer -> cross -> guard.**
 2. **Threshold reachability in a real run**: 6000 N·s is derived
  from verified bars, not from measured fight encounters — no data
  was found on how many player strikes a typical run contains. S7's
- tests pin the meter; playtesting pins the number.
+ tests pin the meter; the number itself is owner-set (6000) and
+ stands.
 3. **Recovery-scaling factors**: ×(1 + 0.15 × stage) is a proposal,
  not a measurement. S7's tests must pin both the scaling and the
  unscaled offensive numbers.
@@ -1275,10 +1276,11 @@ anywhere in this spec:
  4200–5399 / 5400–5999 = stages 0–4; ≥6000 = DEAD, not a stage
  transition. Replaces S7's "boundaries at .../6000 flip
  `damage_stage` 0–4" wording.
-3. Checkpoint semantics (§9.1, §9.3, S7): commit stores
- `damage_ns` / `player_damage_ns`; restore returns saved values;
- damage persists through combat / stagger / knockdown; rewind
- rewinds damage.
+3. Checkpoint semantics (§9.1, §9.3, S7), superseded by rule 34:
+ damage is live-only and does not persist through checkpoints; a
+ checkpoint rewind or a reload brings her back undamaged and alive;
+ damage persists through combat / stagger / knockdown within the
+ live run only.
 4. Death presentation (§9.3, S8): sim `State::Dead` may be
  immediate; visual removal is separate and later — readable fall
  + settled pose first, never instant vanish.
