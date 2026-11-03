@@ -180,6 +180,13 @@ Answer: **later**.
 - **Her many ways to die, the hook gun as a weapon**: parked by rule 64; nothing to decide until he
   picks from question 4.
 
+Reviews, 11-03 (Cory's orders; the integrator's calls marked): one reviewer per PR, whoever is free,
+spread around (*"I'm not asking for two agents to review the same shit"*): the Claude API at xhigh,
+Muse, ChatGPT and Codex; a reviewer who stays quiet an hour (was 3) is passed over (#178).
+Integrator's calls: Claude's own PRs keep a non-Claude reviewer (reviews stay cross-model; he can
+say "Claude too"); a Codex review that completed on the exact head with no findings counts as a
+LAND (first used on #175, 1:45 PM Central). Open money question for him: the API day cap stays $10.
+
 ## Not decisions (work for an agent; see `GAP_LIST.md`)
 
 The ladder pull, the cluck and croak still cued, the five perception leaks, a helmet lamp, the mix note
