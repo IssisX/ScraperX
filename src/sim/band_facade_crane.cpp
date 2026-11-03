@@ -641,6 +641,57 @@ void build_stones(std::vector<Part> &route) {
                          {edge + 0.34F + 0.08F, 550.05F, kPjZ + 0.08F}, Material::Yellow));
 }
 
+// The tuck wall, 550 -> 572 (J-017, rules 52 and 53), along z = -145.5 in the
+// well's north half: a pole up a pier on the 550 ring's east band to a lane at
+// 560.5 running west across the well. Across it a wall 1.95 m high and 0.4 m
+// through. Sprinted at, a jump 4.4 m short with Crouch held while rising draws
+// the legs up (the proving ground's tuck) and the body clears it, still
+// running; the same jump with the legs left down strikes it and stops. (A
+// hang over it is the slow way.) The lane runs out 4.5 m past the wall; a second
+// pole at its west end climbs 11.5 m beside a fascia girder on the 572 ring's
+// west band.
+constexpr float kTkZ = -145.5F;
+constexpr float kTkDeck = 560.5F;
+constexpr float kTkWallX = -0.5F;               // the wall's east face
+constexpr float kTkWallTop = kTkDeck + 1.95F;
+constexpr float kTkEast = 9.6F;
+constexpr float kTkWest = -9.0F;
+constexpr float kTkPierX0 = 7.6F;
+
+void build_tuck(std::vector<Part> &route) {
+    const float lo = kTkZ - 2.0F;
+    const float hi = kTkZ + 2.0F;
+    const auto rail = [&route](const float x0, const float x1, const float z0, const float z1, const float y) {
+        route.push_back(span({x0, y, z0}, {x1, y + 0.8F, z1}, Material::Yellow));
+    };
+    const float pole_x = kTkPierX0 + 1.0F;
+    // The east pier on the ring with its wing and pole, as the springboard's.
+    route.push_back(span({kTkPierX0, 550.25F, lo - 2.0F}, {kTkEast, kTkDeck, hi}, Material::Concrete));
+    route.push_back(span({pole_x - 0.08F, 550.25F, lo - 2.0F - 0.22F}, {pole_x + 0.08F, kTkDeck - 0.2F, lo - 2.0F - 0.06F},
+                         Material::Yellow));
+    rail(kTkEast - 0.08F, kTkEast, lo - 2.0F, hi, kTkDeck);
+    rail(kTkPierX0, kTkPierX0 + 0.08F, lo - 2.0F, lo, kTkDeck);
+    rail(kTkPierX0, pole_x - 0.6F, lo - 2.0F, lo - 2.0F + 0.08F, kTkDeck);
+    rail(pole_x + 0.6F, kTkEast, lo - 2.0F, lo - 2.0F + 0.08F, kTkDeck);
+    // The lane, its steel under it, and the edge rails (none across the walking
+    // line; one across its dead end).
+    route.push_back(span({kTkWest, kTkDeck - 0.3F, lo}, {kTkEast, kTkDeck, hi}, Material::Galvanised));
+    route.push_back(span({kTkWest, kTkDeck - 1.0F, lo}, {kTkEast, kTkDeck - 0.3F, lo + 0.3F}, Material::Steel));
+    route.push_back(span({kTkWest, kTkDeck - 1.0F, hi - 0.3F}, {kTkEast, kTkDeck - 0.3F, hi}, Material::Steel));
+    rail(kTkWest, kTkPierX0, lo, lo + 0.08F, kTkDeck);
+    rail(kTkWest, kTkEast, hi - 0.08F, hi, kTkDeck);
+    rail(kTkWest, kTkWest + 0.08F, lo, hi, kTkDeck);
+    // The wall, the lane's whole width.
+    route.push_back(span({kTkWallX - 0.4F, kTkDeck, lo}, {kTkWallX, kTkWallTop, hi}, Material::Rust));
+    // The second pole stands 0.14 m off a fascia girder on the 572 ring's west
+    // inner edge (1.35 m deep and flush with the ring's top), south of the
+    // ring's north band, whose inner edge is z = -145.29.
+    const float edge = -ring_inner(572.0F);
+    route.push_back(span({edge - 0.3F, 570.9F, -148.0F}, {edge + 0.2F, 572.25F, -145.4F}, Material::Steel));
+    route.push_back(span({edge + 0.34F - 0.08F, kTkDeck, -146.7F - 0.08F}, {edge + 0.34F + 0.08F, 572.05F, -146.7F + 0.08F},
+                         Material::Yellow));
+}
+
 void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     for (float h = 484.0F; h < 615.9F; h += 22.0F) {
@@ -650,6 +701,10 @@ void build_climbing_route(kit::Kit &kit) {
         }
         if (h == 528.0F) {
             build_stones(route);   // the 528 -> 550 gap
+            continue;
+        }
+        if (h == 550.0F) {
+            build_tuck(route);   // the 550 -> 572 gap
             continue;
         }
         const float s = ring_inner(h);

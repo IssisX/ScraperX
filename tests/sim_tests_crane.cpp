@@ -474,6 +474,71 @@ static bool run_stones_stage(scraperx::sim::Simulation &route) {
     return crane_pole(route, -4.84, -154.5, -1.0, 0.0, 550.4, "pole 2");
 }
 
+// The 550 -> 572 tuck wall (band_facade_crane.cpp build_tuck) on player inputs:
+// up the pole to the 560.5 lane; a sprint and a jump 4.4 m short of the 1.95 m
+// wall with the legs left down, which strikes it and stops; the same with Crouch
+// held while rising (the tuck, as run_tuck's), which clears it still running;
+// back to the pole at the lane's west end and up it onto the 572 ring.
+constexpr double kTkWallEastX = -0.5;
+
+static bool run_tuck_stage(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: tuck: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    if (!walk_to(route, 6.6, -152.0, 8.0, 0.3)) {
+        at("walk to the pier failed");
+        return false;
+    }
+    if (!(crane_pole(route, 8.6, -150.1, 0.0, 1.0, 560.6, "pole 1") && walk_to(route, 6.4, -145.5, 6.0, 0.1))) {
+        at("pole 1 or the walk to the lane failed");
+        return false;
+    }
+    // A run west down the lane, the jump 4.4 m short of the wall's east face.
+    const auto run = [&route](const bool tuck, std::uint64_t &tucks, double &end_x) {
+        (void)route.set_facing(-1.0, 0.0);
+        (void)route.set_move_input(-1.0, 0.0);
+        bool jumped = false;
+        const std::uint64_t before = route.snapshot().tuck_count;
+        for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const Snapshot n = route.snapshot();
+            (void)route.set_sprint_input(!jumped);
+            if (!jumped && n.player_position.x < kTkWallEastX + 4.4) {
+                (void)route.request_jump();
+                jumped = true;
+            }
+            (void)route.set_crouch_input(tuck && jumped && !n.player_grounded && n.player_position.x > kTkWallEastX - 0.8);
+            (void)route.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        (void)route.set_crouch_input(false);
+        (void)route.set_move_input(0.0, 0.0);
+        (void)route.set_sprint_input(false);
+        tucks = route.snapshot().tuck_count - before;
+        end_x = route.snapshot().player_position.x;
+    };
+    std::uint64_t tucks = 0;
+    double end_x = 0.0;
+    run(false, tucks, end_x);
+    std::cout << "route: tuck: legs down: " << tucks << " tucks, stopped at x " << end_x << "\n";
+    if (tucks != 0 || end_x < kTkWallEastX) {
+        at("the legs-down jump must strike the wall and stop east of it");
+        return false;
+    }
+    if (!walk_to(route, 6.4, -145.5, 8.0, 0.2)) {
+        at("walk back to the start failed");
+        return false;
+    }
+    run(true, tucks, end_x);
+    std::cout << "route: tuck: tucked: " << tucks << " tucks, ran on to x " << end_x << "\n";
+    if (tucks < 1 || end_x > kTkWallEastX - 1.0) {
+        at("the tucked jump must clear the wall");
+        return false;
+    }
+    return crane_pole(route, -3.91, -146.7, -1.0, 0.0, 572.4, "pole 2");
+}
+
 // AS-009's climbing route, on player inputs: from the 484 ring's north band to
 // the east band, one L of boards and a ladder per ring gap to 616, then the
 // ladder up through TP-640's hatch; every lift in the band where it was found.
@@ -499,8 +564,16 @@ void run_crane_route() {
             require(run_stones_stage(route), "route: the stepping stones, 528 to 550");
             // Round the 550 ring's west, north and east bands to its east band.
             require(walk_to(route, -7.6, -142.4, 14.0, 0.3) && walk_to(route, 7.6, -142.4, 20.0, 0.3) &&
-                        walk_to(route, 7.6, -149.0, 10.0, 0.3),
+                        walk_to(route, 6.6, -149.0, 10.0, 0.3),
                     "route: round the 550 ring to its east band");
+            continue;
+        }
+        if (h == 550.0) {
+            require(run_tuck_stage(route), "route: the tuck wall, 550 to 572");
+            // Round the 572 ring's west, north and east bands to its east band.
+            require(walk_to(route, -6.7, -143.3, 14.0, 0.3) && walk_to(route, 6.7, -143.3, 20.0, 0.3) &&
+                        walk_to(route, 6.7, -149.0, 10.0, 0.3),
+                    "route: round the 572 ring to its east band");
             continue;
         }
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
