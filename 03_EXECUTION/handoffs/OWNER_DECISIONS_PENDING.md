@@ -188,6 +188,10 @@ on Sonnet 5.5 at xhigh (Claude's pick, he agreed: half the price of Opus; Codex 
 open and its findings block). A Codex review that completed on the exact head with no findings counts as a
 LAND (first used on #175, 1:45 PM Central). The $10 API day cap is gone (Cory, 11-03); only the $100 month cap holds.
 
+J-017, 11-03 (integrator's call under the standing order): the Matron need not follow her whole route above
+221 m; she chases where she can and the 10-27 escape-margin rule holds. Reason: keeping her on every move
+(wall-run, slide, vault) would mean new chaser locomotion for each, with no gain in the chase. He can overturn it.
+
 ## Not decisions (work for an agent; see `GAP_LIST.md`)
 
 The ladder pull, the cluck and croak still cued, the five perception leaks, a helmet lamp, the mix note
