@@ -190,11 +190,23 @@ func _read_world(world: Node3D) -> void:
 		var steel := material != null and not material.emission_enabled \
 			and material.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED \
 			and material.normal_enabled and material.normal_texture != null \
-			and material.normal_texture != bump_concrete and material.normal_texture != bump_timber
+			and _is_steel_finish(material, bump_concrete, bump_timber)
 		var colour := material.albedo_color if material != null else Color(0.3, 0.3, 0.3)
 		_add_part(at, instance.mesh.get_aabb(), colour,
 			material.metallic if material != null else 0.0,
 			material.roughness if material != null else 0.9, steel, is_box)
+
+# A finish is steel by what the world says it is: a surfaced material
+# (_surfaced) carries its Surface in the "surface" meta, and concrete and
+# timber are the two that are not steel. A material without one is a legacy
+# bump-mapped finish, steel unless it carries the concrete or timber bump.
+func _is_steel_finish(material: StandardMaterial3D, bump_concrete: Texture2D,
+		bump_timber: Texture2D) -> bool:
+	if material.has_meta(&"surface"):
+		var surface: Object = material.get_meta(&"surface")
+		var kind = surface.get("kind") if surface != null else null
+		return kind != null and kind != "concrete" and kind != "timber"
+	return material.normal_texture != bump_concrete and material.normal_texture != bump_timber
 
 func _read_kit() -> void:
 	var native: Object = _main.get("_native")
