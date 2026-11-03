@@ -492,6 +492,11 @@ class Switch:
             self.gh.comment(number, f"Switchboard, {central(self.now)}: `needs:orchestrator` is set, but the orchestrator "
                                     f"is off in `work/budget.yml` until step C defines the hosted agent. Nothing was started.\n\n{tag}")
             return
+        if not os.environ.get("AGENT_GITHUB_TOKEN") and not self.gh.dry_run:
+            self.out(f"ORCH        #{number}: no AGENT_GITHUB_TOKEN in this job; not started")
+            self.gh.comment(number, f"Switchboard, {central(self.now)}: `needs:orchestrator` is set, but the workflow has no "
+                                    f"`AGENT_GITHUB_TOKEN` secret, so the API agent cannot push. Nothing was started.\n\n{tag}")
+            return
         key = f"orchestrator#{number}"
         v = self.gate("orchestrator", job, b.orchestrator_session_usd, self.job_cap({"issue": issue}), key)
         if not v.ok:
@@ -503,9 +508,11 @@ class Switch:
         run = uuid.uuid4().hex[:12]
         self.append(money.record(self.now, run, "reserve", "orchestrator", job, b.orchestrator_session_usd, key), f"reserve {key}")
         message = (f"Job {job}, GitHub issue #{number} in {self.gh.repo}: {issue['title']}\n\n{(issue.get('body') or '')[:30000]}\n\n"
-                   f"Start from the issue and work/CONTEXT.md on {rules.TRUNK}.")
+                   f"Read work/tasks/api-agent.md first, then the issue's newest comments, then do the job.")
         session = claude_calls.start_session(self.claude(), b.orchestrator_agent_id, b.orchestrator_environment_id,
-                                             f"{job} #{number}", message, b.orchestrator_session_usd)
+                                             f"{job} #{number}", message, b.orchestrator_session_usd,
+                                             f"https://github.com/{self.gh.repo}", os.environ.get("AGENT_GITHUB_TOKEN", ""),
+                                             rules.TRUNK, b.orchestrator_vault_id)
         self.gh.comment(number, f"Switchboard, {central(self.now)}: orchestrator session `{session}` started with a "
                                 f"${b.orchestrator_session_usd} budget.\n\n{tag}")
 

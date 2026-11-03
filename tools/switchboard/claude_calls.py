@@ -157,14 +157,25 @@ def cents(amount: Decimal) -> str:
     return str(c)
 
 
-def start_session(c, agent_id: str, environment_id: str, title: str, message: str, budget_usd: Decimal) -> str:
-    """Start one hosted orchestrator session with a hard dollar budget; returns its id."""
+def start_session(c, agent_id: str, environment_id: str, title: str, message: str, budget_usd: Decimal,
+                  repo_url: str, repo_token: str, branch: str, vault_id: str) -> str:
+    """Start one hosted API-agent session with a hard dollar budget; returns its id.
+
+    The repository is mounted at /workspace/ScraperX on `branch`; git push goes through the session's
+    repo proxy with `repo_token`, which never enters the sandbox. The vault holds GH_TOKEN for the
+    GitHub REST API (PRs, comments), substituted at egress only.
+    """
     a = _errors()
+    if not repo_token:
+        raise ClaudeCallError("no repository token for the session (AGENT_GITHUB_TOKEN)")
     try:
         s = c.beta.sessions.create(
             agent=agent_id,
             environment_id=environment_id,
             title=title[:200],
+            resources=[{"type": "github_repository", "url": repo_url, "mount_path": "/workspace/ScraperX",
+                        "authorization_token": repo_token, "checkout": {"type": "branch", "name": branch}}],
+            vault_ids=[vault_id] if vault_id else [],
             initial_events=[{"type": "user.message", "content": [{"type": "text", "text": message}]}],
             budget={"type": "limit", "max_list_cost": {"amount": cents(budget_usd), "currency": "USD"}},
         )

@@ -339,7 +339,10 @@ class RepoConfig(unittest.TestCase):
         self.assertNotIn("codex", {n for n in team.vendor_of_name})
         b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
         self.assertLessEqual(b.month, Decimal("100"))
-        self.assertFalse(b.orchestrator_enabled)
+        # The API agent is on (Cory, 11-03); its hard per-session budget must fit the job and day caps.
+        self.assertLessEqual(b.orchestrator_session_usd, b.job)
+        self.assertLessEqual(b.orchestrator_session_usd, b.day)
+        self.assertGreater(b.orchestrator_session_usd, Decimal("0"))
         looks = yaml.safe_load((root / "work/looks/sets.yml").read_text(encoding="utf-8"))
         for s in looks["sets"].values():
             self.assertTrue((root / s["rubric"]).is_file(), s["rubric"])
