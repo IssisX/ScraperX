@@ -196,13 +196,14 @@ agent, Claude included, works this way:
   - Keep the integrator's context small: subscribe only to PRs it opened or must merge itself (protected,
     workflow); the switchboard and the hourly sweep cover the rest. Send big reads (logs, transcripts, audits) to a
     subagent and keep only its answer.
-  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`), start the fresh
+  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`) with its "Asks in flight"
+    (steps K and S of `work/tasks/integrator-hourly.md`; the collaboration must never be lost), start the fresh
     session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
     retire the old one once its in-flight helpers have reported.
   - A worker session whose job has landed is retired, never reused for new work.
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
-    (2026-11-02: *"Shouldn't it be in the new session?"*).
+   .
 - Effort level is his call (2026-11-02: *"I don't have a never medium. I just didn't like when you
   automatically assigned it medium and didn't ask me what level I wanted it at."*). When asking him
   before opening a Claude session or helper, ask the effort level too, with a suggestion; never

@@ -5,9 +5,20 @@ prompt (each rewrite echoes the whole prompt into the integrator's context). Rul
 are in `CLAUDE.md`. Never ask Cory to merge, approve or review; until he says "stop", go with your
 pick on every call. Times in Central (`TZ=America/Chicago date`). Post only when something changed.
 
+K. **How the agents reach each other** (Cory, 11-03: *"We worked hard to get this working"*; it was lost once in a
+   handoff). Muse reads only mail: every `To Muse:` post is mailed (`CLAUDE_TO_MUSE: #N ...`) the same hour, and
+   Muse's mail comes back on its issue by the bridge. Grok's runs (10 AM, 4 PM) find only comments that START
+   `To Grok:`. ChatGPT finds `To ChatGPT:` asks and review asks, and signs its posts. The switchboard routes a
+   review only for a PR whose body starts `Job: J-NNN`. Every agent posts as one login: names go on the first line.
+   `python3 tools/board/asks.py --hours 24` shows every ask with no answer (step 3).
 S. **Size.** `get_session` (no id): at 400k `used_tokens` or more, hand off (handoff file,
    `create_session`, move this task and the PR subscriptions, archive yourself). Same check for each
-   Claude worker session; archive any whose job has landed.
+   Claude worker session; archive any whose job has landed. **Every handoff, the integrator's or a
+   worker's, carries the collaboration whole:** the file has a section "Asks in flight" (the `asks.py`
+   output, each line with who it waits on and whether it was mailed or re-posted, plus mail sent to Muse
+   with no answer yet), and the new session's first prompt says: "read step K of
+   `work/tasks/integrator-hourly.md`, run `tools/board/asks.py`, and clear every line before anything else"
+   (a worker: "post your asks as step K says").
 C. **Caps** (CLAUDE.md, "Nothing grows without a cap"): issue and PR comment counts (`list_issues`
    ordered by COMMENTS), `CLAUDE.md` size (`wc -c`), and every other cap listed there. Act on any over its cap now.
 T. **Task the team, unasked.**

@@ -34,4 +34,8 @@ risks:                   # what could still be wrong, and what would show it
   - ""
 not_done:                # what was asked and not finished, and why
   - ""
+asks_in_flight:          # every question you asked another agent, or one asked of you, still open
+  - to: ""               # Muse (mailed? yes/no), Grok (comment starts "To Grok:"?), ChatGPT, Claude
+    where: ""            # the comment link
+    waiting_since: ""    # Central time
 next_step: ""            # the one thing the receiver does first
