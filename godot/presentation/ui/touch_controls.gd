@@ -692,11 +692,11 @@ func _draw_button(button: TouchButton) -> void:
 	if not button.label.is_empty():
 		UiStyle.text_centered(self, UiStyle.font_label(), button.label,
 			button.center + Vector2(0.0, radius + 30.0 * _u), int(roundf(25.0 * _u)),
-			UiStyle.with_alpha(UiStyle.PAPER, dim * alpha), int(roundf(6.0 * _u)))
+			UiStyle.with_alpha(UiStyle.PAPER, dim * alpha), int(roundf(10.0 * _u)))
 	if not button.note.is_empty():
 		UiStyle.text_centered(self, UiStyle.font_label(), button.note,
 			button.center - Vector2(0.0, radius + 14.0 * _u), int(roundf(30.0 * _u)),
-			UiStyle.with_alpha(accent, alpha), int(roundf(6.0 * _u)))
+			UiStyle.with_alpha(accent, alpha), int(roundf(10.0 * _u)))
 
 
 func _draw_stick() -> void:
@@ -738,13 +738,13 @@ func _draw_hints() -> void:
 	var font := UiStyle.font_label()
 	if not _moved:
 		UiStyle.text_centered(self, font, "MOVE", _stick_home + Vector2(0.0, -STICK_THROW * _u - 34.0 * _u),
-			size, UiStyle.with_alpha(UiStyle.PAPER, 0.8 * alpha), int(roundf(6.0 * _u)))
+			size, UiStyle.with_alpha(UiStyle.PAPER, 0.8 * alpha), int(roundf(10.0 * _u)))
 	if not _looked:
 		var at := Vector2(_safe.position.x + _safe.size.x * 0.72, _safe.position.y + _safe.size.y * 0.6)
 		UiStyle.draw_icon(self, &"look", at + Vector2(0.0, -48.0 * _u), 40.0 * _u,
 			UiStyle.with_alpha(UiStyle.PAPER, 0.7 * alpha), 4.0 * _u)
 		UiStyle.text_centered(self, font, "DRAG TO LOOK", at, size,
-			UiStyle.with_alpha(UiStyle.PAPER, 0.8 * alpha), int(roundf(6.0 * _u)))
+			UiStyle.with_alpha(UiStyle.PAPER, 0.8 * alpha), int(roundf(10.0 * _u)))
 
 
 # Where the right thumb swipes: what up and down would do, when it is more

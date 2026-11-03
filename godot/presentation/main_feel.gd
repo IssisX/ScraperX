@@ -687,7 +687,7 @@ func _ink_edge(label: Label, ui_scale: float) -> void:
 	var size := label.get_theme_font_size("font_size")
 	var edge := maxi(3, int(roundf(float(size) * 0.2)))
 	label.add_theme_constant_override("outline_size", edge)
-	label.add_theme_color_override("font_outline_color", UiStyle.with_alpha(UiStyle.INK, 0.9))
+	label.add_theme_color_override("font_outline_color", UiStyle.EDGE)
 	label.add_theme_color_override("font_shadow_color", UiStyle.SHADOW)
 	label.add_theme_constant_override("shadow_offset_x", int(roundf(2.0 * ui_scale)))
 	label.add_theme_constant_override("shadow_offset_y", int(roundf(2.0 * ui_scale)))
