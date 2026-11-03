@@ -541,6 +541,9 @@ void run_matron_grab() {
             bool thrown = false;
             bool staggered = false;
             bool freed_whole = false;
+            // Peak blow_mps seen after the throw. The final reading decays to 0 once the
+            // blow goes quiet, so the peak is the blow that landed.
+            double peak_blow_mps = 0.0;
         };
         // `his`: the blow tagged as his; thrown at her once she is in `when`.
         const auto blow_mid_hold = [&](const bool his, const int when) {
@@ -566,6 +569,9 @@ void run_matron_grab() {
                     s.debug_launch_kit_body(toolbox, {m.position.x - 2.0 * fx, feet + 1.3, m.position.z - 2.0 * fz},
                                             {5.8 * fx, 0.0, 5.8 * fz});
                 }
+                if (b.thrown) {
+                    b.peak_blow_mps = std::max(b.peak_blow_mps, m.blow_mps);
+                }
                 const auto p = s.snapshot();
                 b.staggered = b.staggered || m.state == kStaggering;
                 b.freed_whole = b.freed_whole || (b.thrown && !p.held_by_matron && p.arm_tear_count == 0 &&
@@ -573,13 +579,14 @@ void run_matron_grab() {
             });
             b.staggered = b.staggered || b.r.m.staggers != staggers;
             std::cout << "  matron hold blow: " << (his ? "his" : "not his") << " in state " << when << ", thrown "
-                      << b.thrown << ", blow " << b.r.m.blow_mps << " m/s, staggered " << b.staggered
+                      << b.thrown << ", blow " << b.r.m.blow_mps << " m/s (peak " << b.peak_blow_mps
+                      << " m/s), staggered " << b.staggered
                       << ", freed whole " << b.freed_whole << ", tears " << b.r.p.arm_tear_count << " claims "
                       << b.r.m.claims << " deaths " << b.r.deaths_start << "->" << b.r.deaths_end << "\n";
             return b;
         };
         const Blown world = blow_mid_hold(false, kDangle);
-        require(world.thrown && world.r.m.blow_mps > 0.0 && !world.staggered && !world.freed_whole,
+        require(world.thrown && world.peak_blow_mps > 0.0 && !world.staggered && !world.freed_whole,
                 "matron hold blow: a blow not his, mid-hold, takes neither her feet nor him");
         require(world.r.ended && world.r.p.arm_tear_count == 1 && world.r.p.one_arm && world.r.m.claims == 0 &&
                     world.r.deaths_end == world.r.deaths_start,
