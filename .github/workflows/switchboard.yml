@@ -50,7 +50,8 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('switchboard-selftest-{0}', github.ref) || 'switchboard' }}
+  # The one-time provision dispatch gets its own group: in the shared one a newer queued run replaces it.
+  group: ${{ github.event_name == 'pull_request' && format('switchboard-selftest-{0}', github.ref) || (inputs.provision && 'switchboard-provision' || 'switchboard') }}
   cancel-in-progress: false
 
 env:
