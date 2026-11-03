@@ -55,6 +55,12 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
   integrator merge on the rules below; a reviewer that stalls is replaced by the next one, never by him. The one
   exception is a change the session's safety checker refuses to let Claude make (so far: CI's own gate, PR #160):
   say so once, plainly, as the only thing he must do.
+- **Standing order, 11-03 until he says stop:** *"please go with your recommendations for as long as i say ... Go with
+  them automatically to speed things up drastically. I want today's coding session to be as autonomous/automatic as
+  possible, without me having to do a thing."* Every call that would have been a question to him goes on Claude's
+  pick at once; record it in `OWNER_DECISIONS_PENDING.md` and tell him in one line. Still his: money above the
+  caps in `work/budget.yml`, and opening Claude sessions beyond the two worker sessions running now (a finished one
+  may be replaced by one on the same model and effort).
 - Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
   Central"), never a fixed offset; CI, GitHub and `date` report UTC, so convert (2026-10-18, 10-20,
   10-27: *"If using UTC, please switch permanently."*).
