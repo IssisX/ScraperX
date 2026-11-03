@@ -539,6 +539,107 @@ static bool run_tuck_stage(scraperx::sim::Simulation &route) {
     return crane_pole(route, -3.91, -146.7, -1.0, 0.0, 572.4, "pole 2");
 }
 
+// The 572 -> 594 slide-jump (band_facade_crane.cpp build_slide_jump) on player
+// inputs: up the pole to the 583 lane; a sprint and a slide under the beam that
+// is let run on, which goes over the pit's lip and down into it, and a mantle up
+// the pit's west wall; then the same slide with Jump at the lip (the slide jump,
+// as run_slide_jump's), over the pit onto the far deck; and the second pole.
+static bool run_slide_jump_stage(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: slide jump: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    if (!walk_to(route, -5.4, -150.6, 8.0, 0.3)) {
+        at("walk to the pier failed");
+        return false;
+    }
+    if (!(crane_pole(route, -7.2, -150.6, 0.0, 1.0, 583.1, "pole 1") && walk_to(route, -6.0, -146.0, 6.0, 0.15))) {
+        at("pole 1 or the walk to the lane failed");
+        return false;
+    }
+    // A sprint east, crouched at x > -4.6; with `jump` the Jump at the pit's lip.
+    const auto run = [&route](const bool jump, double &slide_mps, double &flew_to) {
+        (void)route.set_facing(1.0, 0.0);
+        (void)route.set_move_input(1.0, 0.0);
+        (void)route.set_sprint_input(true);
+        bool crouched = false;
+        bool jumped = false;
+        const std::uint64_t slides = route.snapshot().slide_count;
+        for (int tick = 0; tick < 4 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const Snapshot n = route.snapshot();
+            if (!crouched && n.player_position.x > -4.6) {
+                slide_mps = std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
+                (void)route.set_crouch_input(true);
+                crouched = true;
+            }
+            if (jump && crouched && !jumped && n.player_sliding && n.player_position.x > -0.6) {
+                slide_mps = std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
+                (void)route.request_jump();
+                (void)route.set_crouch_input(false);
+                jumped = true;
+            }
+            (void)route.advance_frame(Simulation::kFixedStepSeconds);
+            const Snapshot m = route.snapshot();
+            const bool slid = crouched && m.slide_count > slides;
+            if ((jump && jumped && tick > 60 && m.player_grounded && m.player_position.x > 0.5) ||
+                (!jump && slid && !m.player_sliding && m.player_grounded && m.player_position.x > 0.5)) {
+                break;
+            }
+        }
+        (void)route.set_crouch_input(false);
+        (void)route.set_move_input(0.0, 0.0);
+        (void)route.set_sprint_input(false);
+        (void)route.advance_frame(0.5);
+        flew_to = route.snapshot().player_position.x;
+    };
+    double slide_mps = 0.0;
+    double end_x = 0.0;
+    run(false, slide_mps, end_x);
+    std::cout << "route: slide jump: slide at " << slide_mps << " m/s run on: ended at x " << end_x << ", y "
+              << route.snapshot().player_position.y << "\n";
+    if (!(end_x > 0.0 && route.snapshot().player_position.y < 583.0 + 0.9 - 1.0)) {
+        at("a slide run on past the lip must go down into the pit");
+        return false;
+    }
+    // Up the pit's west wall by a mantle.
+    if (!walk_to(route, 0.9, -146.0, 6.0, 0.2)) {
+        at("walk to the pit's west wall failed");
+        return false;
+    }
+    (void)route.set_facing(-1.0, 0.0);
+    (void)route.advance_frame(0.4);
+    if (!route.snapshot().ledge_available) {
+        at("no mantle offered at the pit's wall");
+        return false;
+    }
+    (void)route.request_traversal();
+    if (!wait_for(route, 2.0, [](const Snapshot &n) { return standing_above(n, 583.0); })) {
+        at("out of the pit failed");
+        return false;
+    }
+    // Back west under the beam, crouched (a standing walk is stopped by it).
+    (void)route.set_crouch_input(true);
+    const bool under = walk_to(route, -4.5, -146.0, 20.0, 0.2);
+    (void)route.set_crouch_input(false);
+    (void)route.advance_frame(0.5);
+    if (!under || !walk_to(route, -6.0, -146.0, 8.0, 0.15)) {
+        at("back under the beam failed");
+        return false;
+    }
+    run(true, slide_mps, end_x);
+    std::cout << "route: slide jump: Jump out of a " << slide_mps << " m/s slide: landed at x " << end_x << ", y "
+              << route.snapshot().player_position.y << "\n";
+    if (!(end_x > 5.6 && route.snapshot().player_position.y > 583.5)) {
+        at("the slide jump must clear the pit onto the far deck");
+        return false;
+    }
+    // Round the pole to its east side (it stands at x = 8.14).
+    return walk_to(route, 7.2, -144.6, 8.0, 0.2) && walk_to(route, 8.7, -144.6, 6.0, 0.2) &&
+           crane_pole(route, 8.7, -146.0, -1.0, 0.0, 594.4, "pole 2");
+}
+
 // AS-009's climbing route, on player inputs: from the 484 ring's north band to
 // the east band, one L of boards and a ladder per ring gap to 616, then the
 // ladder up through TP-640's hatch; every lift in the band where it was found.
@@ -570,10 +671,12 @@ void run_crane_route() {
         }
         if (h == 550.0) {
             require(run_tuck_stage(route), "route: the tuck wall, 550 to 572");
-            // Round the 572 ring's west, north and east bands to its east band.
-            require(walk_to(route, -6.7, -143.3, 14.0, 0.3) && walk_to(route, 6.7, -143.3, 20.0, 0.3) &&
-                        walk_to(route, 6.7, -149.0, 10.0, 0.3),
-                    "route: round the 572 ring to its east band");
+            continue;
+        }
+        if (h == 572.0) {
+            // On the 572 ring's west band after the tuck wall's pole; the next gap tops out
+            // on the 594 ring's east band from outside, where the next climb starts.
+            require(run_slide_jump_stage(route), "route: the slide jump, 572 to 594");
             continue;
         }
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
