@@ -63,6 +63,9 @@ ACT_WITHIN_DAYS = 3                   # older heads get no new review or ask: J-
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"
 RUN_MARK = "<!-- switchboard:orchestrator-run id={run} -->"   # in the start comment: the ledger run its session pays
 RUN_ID = re.compile(r"<!-- switchboard:orchestrator-run id=([0-9a-f]{12}) -->")
+UNKNOWN_MARK = "<!-- switchboard:orchestrator-unknown run={run} at={at} -->"   # a start whose answer was lost
+UNKNOWN_RUN = re.compile(r"<!-- switchboard:orchestrator-unknown run=([0-9a-f]{12}) at=(\S+) -->")
+GIVE_UP_AFTER = dt.timedelta(minutes=30)   # an unknown start with no session found by then is written off
 MAX_WATCHED = 30                       # open orchestrator issues the watcher reads (one page)
 CONSOLE_SESSION = "https://platform.claude.com/workspaces/default/sessions/{session}"   # `default` workspace
 OUTCOMES = {"end_turn": "finished its turn", "budget_reached": "stopped at its session budget",
@@ -489,7 +492,7 @@ class Switch:
         if not {"job", "needs:orchestrator"} <= labels:
             return
         comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
-        if self.marked(comments, "orchestrator", number, "-"):
+        if self.start_blocked(comments, number):
             self.out(f"ORCH        #{number} already handled")
             return
         b = self.budget
@@ -522,7 +525,8 @@ class Switch:
             session = claude_calls.start_session(client, b.orchestrator_agent_id, b.orchestrator_environment_id,
                                                  f"{job} #{number}", message, b.orchestrator_session_usd,
                                                  f"https://github.com/{self.gh.repo}", os.environ.get("AGENT_GITHUB_TOKEN", ""),
-                                                 rules.TRUNK, b.orchestrator_vault_id)
+                                                 rules.TRUNK, b.orchestrator_vault_id,
+                                                 {"switchboard_key": key, "run": run})
         except claude_calls.SessionStartRejected as err:
             # A 4xx: the server refused the request, so no session exists and the reserve is released at once.
             self.out(f"FAILED orchestrator #{number}: {err}")
@@ -540,8 +544,10 @@ class Switch:
             heard = f"answered HTTP {err.status}" if err.status else "got no answer"
             self.gh.comment(number, f"Switchboard, {central(self.now)}: `beta.sessions.create` {heard} "
                                     f"({', '.join(err.classes)}), so a session may exist. The ${b.orchestrator_session_usd} "
-                                    f"reserve stays on the ledger (run `{run}`) and no second session is started. Look for "
-                                    f"it in the Console.\n\n{tag}")
+                                    f"reserve stays on the ledger (run `{run}`) and no second session is started. The next "
+                                    f"sweeps look for it by its metadata, and write the reserve off after "
+                                    f"{int(GIVE_UP_AFTER.total_seconds() // 60)} minutes if it never appears.\n\n{tag}\n"
+                                    f"{UNKNOWN_MARK.format(run=run, at=self.now.strftime('%Y-%m-%dT%H:%M:%SZ'))}")
             return
         except claude_calls.ClaudeCallError as err:
             # Refused locally before any request was sent: no session exists.
@@ -553,9 +559,61 @@ class Switch:
                                     f"{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
             return
         self.out(f"ORCH        #{number}: session {session} started on run {run}")
-        self.gh.comment(number, f"Switchboard, {central(self.now)}: orchestrator session `{session}` started with a "
-                                f"${b.orchestrator_session_usd} budget. Trace: {CONSOLE_SESSION.format(session=session)}\n\n"
-                                f"{tag}\n{RUN_MARK.format(run=run)}")
+        self.gh.comment(number, self.started_comment(number, session, run, b.orchestrator_session_usd, ""))
+
+    def started_comment(self, number: int, session: str, run: str, budget: Decimal, note: str) -> str:
+        return (f"Switchboard, {central(self.now)}: orchestrator session `{session}` started{note} with a ${budget} budget. "
+                f"Trace: {CONSOLE_SESSION.format(session=session)}\n\n"
+                f"{MARK.format(kind='orchestrator', pr=number, head='-')}\n{RUN_MARK.format(run=run)}")
+
+    def start_blocked(self, comments: list[dict], number: int) -> bool:
+        """Has the switchboard already handled this issue's start? Its own orchestrator-marked comment says so,
+        except an unknown-start comment the watcher has since written off (a later `orchestrator-cleared` for its run)."""
+        tag = MARK.format(kind="orchestrator", pr=number, head="-")
+        mine = [c.get("body") or "" for c in comments if c["user"]["login"] == rules.BOT_LOGIN]
+        for body in mine:
+            if tag not in body:
+                continue
+            m = UNKNOWN_RUN.search(body)
+            if m and any(MARK.format(kind="orchestrator-cleared", pr=number, head=m.group(1)) in b for b in mine):
+                continue
+            return True
+        return False
+
+    def reconcile_unknown(self, issue: dict, comments: list[dict]) -> None:
+        """A start whose answer was lost (a 5xx or no connection) left an unknown-start comment. Look once per
+        sweep for the session by its metadata: found, post the start comment so it is watched as usual; not
+        found 30 minutes after the attempt, write the reserve off at $0 and clear the block so a relabel can retry."""
+        import claude_calls
+        number, b = issue["number"], self.budget
+        mine = [c.get("body") or "" for c in comments if c["user"]["login"] == rules.BOT_LOGIN]
+        pending = [m.groups() for m in (UNKNOWN_RUN.search(x) for x in mine) if m]
+        if not pending:
+            return
+        run, at = pending[-1]
+        if any(MARK.format(kind="orchestrator-cleared", pr=number, head=run) in x for x in mine):
+            return
+        if self.gh.dry_run and not os.environ.get("ANTHROPIC_API_KEY"):
+            self.out(f"DRY  WATCH #{number}: would look for the session of run {run}")
+            return
+        key = f"orchestrator#{number}"
+        attempt = dt.datetime.fromisoformat(at.replace("Z", "+00:00"))
+        since = (attempt - dt.timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        session = claude_calls.find_session(self.claude(), b.orchestrator_agent_id, since, {"switchboard_key": key, "run": run})
+        if session:
+            self.out(f"WATCH       #{number} found the session of run {run}: {session}")
+            self.gh.comment(number, self.started_comment(number, session, run, b.orchestrator_session_usd, " (found after an unanswered start)"))
+            return
+        if self.now - attempt < GIVE_UP_AFTER:
+            self.out(f"WATCH       #{number} no session yet for run {run}; looking again next sweep")
+            return
+        if not any(e.run == run and e.phase == "end" for e in self.entries()):
+            self.append(money.record(self.now, run, "end", "orchestrator", rules.job_of_title(issue["title"]), Decimal(0),
+                                     f"{key} no session found after unanswered start"), f"end {key} (no session found)")
+        self.out(f"WATCH       #{number} no session for run {run} after {GIVE_UP_AFTER}: reserve released")
+        self.gh.comment(number, f"Switchboard, {central(self.now)}: no session carrying run `{run}` appeared in {int(GIVE_UP_AFTER.total_seconds() // 60)} "
+                                f"minutes after the unanswered start, so none was created. The reserve is released at $0. Re-add "
+                                f"`needs:orchestrator` to try again.\n\n{MARK.format(kind='orchestrator-cleared', pr=number, head=run)}")
 
     # ---------- the session watcher (ask) ----------
     def watch_sessions(self) -> int:
@@ -599,6 +657,7 @@ class Switch:
         comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
         found = self.start_comment(comments, number)
         if not found:
+            self.reconcile_unknown(issue, comments)
             return
         session, found_run = found
         if self.marked(comments, "session-end", number, session):

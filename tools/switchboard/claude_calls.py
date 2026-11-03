@@ -192,8 +192,12 @@ def cents(amount: Decimal) -> str:
 
 
 def start_session(c, agent_id: str, environment_id: str, title: str, message: str, budget_usd: Decimal,
-                  repo_url: str, repo_token: str, branch: str, vault_id: str) -> str:
+                  repo_url: str, repo_token: str, branch: str, vault_id: str,
+                  metadata: Mapping[str, str] | None = None) -> str:
     """Start one hosted API-agent session with a hard dollar budget; returns its id.
+
+    `metadata` is stored on the session (string keys and values, at most 8): the switchboard puts its
+    key and ledger run there so find_session can recognise a session whose create call got no usable answer.
 
     The repository is mounted at /workspace/ScraperX on `branch`; git push goes through the session's
     repo proxy with `repo_token`, which never enters the sandbox. The vault holds GH_TOKEN for the
@@ -212,6 +216,7 @@ def start_session(c, agent_id: str, environment_id: str, title: str, message: st
             vault_ids=[vault_id] if vault_id else [],
             initial_events=[{"type": "user.message", "content": [{"type": "text", "text": message}]}],
             budget={"type": "limit", "max_list_cost": {"amount": cents(budget_usd), "currency": "USD"}},
+            metadata=dict(metadata or {}),
         )
     except a.APIStatusError as err:
         if 400 <= err.status_code < 500:
@@ -225,6 +230,7 @@ def start_session(c, agent_id: str, environment_id: str, title: str, message: st
 
 
 # ---------- the session watcher ----------
+LIST_LIMIT = 20                        # one page of the newest sessions: find_session never pages on
 SESSION_ID = re.compile(r"sesn_[A-Za-z0-9]+")
 FINISHED_STOPS = ("end_turn", "budget_reached", "retries_exhausted", "refusal")   # idle, and nobody will resume it
 MAX_PENDING = 50                       # one send answers at most this many pending calls; the rest are re-emitted
@@ -296,3 +302,20 @@ def deny_pending(c, session_id: str, event_ids: Sequence[str]) -> int:
     except a.APIConnectionError as err:
         raise ClaudeCallError(f"session {session_id} deny could not connect ({why(err)})") from err
     return len(ids)
+
+
+def find_session(c, agent_id: str, since: str, metadata: Mapping[str, str]) -> str | None:
+    """The id of a session of `agent_id` created at or after `since` (ISO 8601 UTC) whose metadata holds
+    every pair in `metadata`, from one page of the newest LIST_LIMIT; None if there is none."""
+    a = _errors()
+    try:
+        page = c.beta.sessions.list(agent_id=agent_id, created_at_gte=since, limit=LIST_LIMIT, order="desc")
+        for s in page.data[:LIST_LIMIT]:
+            have = s.metadata or {}
+            if all(have.get(k) == v for k, v in metadata.items()) and SESSION_ID.fullmatch(str(s.id)):
+                return str(s.id)
+    except a.APIStatusError as err:
+        raise ClaudeCallError(f"beta.sessions.list answered HTTP {err.status_code}") from err
+    except a.APIConnectionError as err:
+        raise ClaudeCallError(f"beta.sessions.list could not connect ({why(err)})") from err
+    return None

@@ -401,7 +401,12 @@ class FakeSessions:
 
     def __init__(self, states):
         self.states, self.sent, self.reads = states, [], []
+        self.listing, self.lists = [], []
         self.events = types.SimpleNamespace(list=self._events, send=self._send)
+
+    def list(self, agent_id, created_at_gte, limit, order):
+        self.lists.append((agent_id, created_at_gte, limit, order))
+        return types_ns(data=list(self.listing))
 
     def retrieve(self, session_id):
         self.reads.append(session_id)
@@ -580,6 +585,73 @@ class SessionWatcher(unittest.TestCase):
         self.assertEqual(gh.gets, ["repos/IssisX/ScraperX/issues?labels=job,needs:orchestrator&state=open&per_page=30"])
         self.assertEqual(sw.lines, [])
 
+    def unknown_comment(self, minutes_ago, run=RUN, number=138):
+        at = (NOW - dt.timedelta(minutes=minutes_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        body = (f"Switchboard: `beta.sessions.create` answered HTTP 500 (InternalServerError), so a session may exist.\n\n"
+                f"{switch.MARK.format(kind='orchestrator', pr=number, head='-')}\n{switch.UNKNOWN_MARK.format(run=run, at=at)}")
+        return {"body": body, "user": {"login": BOT}}
+
+    def reconcile(self, comments, listing=(), ledger=(reserve_line(),)):
+        gh = FakeGH([issue()], {138: comments})
+        sw = make_switch(gh, {}, ledger)
+        sw.sessions.listing = list(listing)
+        return sw, gh, sw.watch_sessions()
+
+    def test_an_unknown_start_is_found_by_its_metadata_and_watched_as_usual(self):
+        mine = types_ns(id=SESSION, metadata={"switchboard_key": "orchestrator#138", "run": RUN})
+        decoys = [types_ns(id="sesn_other", metadata={"switchboard_key": "orchestrator#138", "run": "ffffffffffff"}),
+                  types_ns(id="sesn_other2", metadata={"switchboard_key": "orchestrator#139", "run": RUN}),
+                  types_ns(id="sesn_other3", metadata={})]
+        sw, gh, failed = self.reconcile([self.unknown_comment(10)], decoys + [mine])
+        self.assertEqual(failed, 0)
+        at = (NOW - dt.timedelta(minutes=12)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.assertEqual(sw.sessions.lists, [("agent_1", at, 20, "desc")])   # one bounded page, newest first
+        (number, body), = gh.posted
+        self.assertIn("found after an unanswered start", body)
+        self.assertEqual(sw.start_comment([{"body": body, "user": {"login": BOT}}], 138), (SESSION, RUN))
+        self.assertEqual(sw.appended, [])
+        # With that comment on the issue the next sweep reads the session like any other.
+        sw2, gh2, _ = self.watch({SESSION: {"status": "running"}}, comments=[self.unknown_comment(10), {"body": body, "user": {"login": BOT}}])
+        self.assertEqual(sw2.sessions.reads, [SESSION])
+
+    def test_an_unknown_start_not_found_yet_waits(self):
+        sw, gh, _ = self.reconcile([self.unknown_comment(29)])
+        self.assertEqual((gh.posted, sw.appended, len(sw.sessions.lists)), ([], [], 1))
+
+    def test_an_unknown_start_not_found_after_30_minutes_is_written_off_and_can_be_retried(self):
+        unknown = self.unknown_comment(31)
+        sw, gh, _ = self.reconcile([unknown])
+        end = money.parse_log(sw.appended[0])[0]
+        self.assertEqual((end.run, end.phase, end.usd), (RUN, "end", Decimal("0")))
+        (number, body), = gh.posted
+        self.assertIn(switch.MARK.format(kind="orchestrator-cleared", pr=138, head=RUN), body)
+        self.assertIn("Re-add `needs:orchestrator`", body)
+        cleared = {"body": body, "user": {"login": BOT}}
+        self.assertTrue(sw.start_blocked([unknown], 138))
+        self.assertFalse(sw.start_blocked([unknown, cleared], 138))               # a relabel may start again
+        self.assertTrue(sw.start_blocked([unknown, cleared, start_comment(run="0123456789ab")], 138))   # and then blocks again
+        sw2, gh2, _ = self.reconcile([unknown, cleared])
+        self.assertEqual((sw2.sessions.lists, sw2.appended, gh2.posted), ([], [], []))   # done: nothing read or written
+        # A forged clear from someone else does not lift the block.
+        self.assertTrue(sw.start_blocked([unknown, dict(cleared, user={"login": "someone"})], 138))
+
+    def test_writing_off_does_not_double_an_end_already_on_the_ledger(self):
+        ended = money.record(NOW, RUN, "end", "orchestrator", "J-031", Decimal("0"))
+        sw, gh, _ = self.reconcile([self.unknown_comment(45)], ledger=(reserve_line(), ended))
+        self.assertEqual((sw.appended, len(gh.posted)), ([], 1))
+
+    def test_the_newest_unknown_start_is_the_one_reconciled(self):
+        old_run = "0123456789ab"
+        old = self.unknown_comment(300, run=old_run)
+        cleared = {"body": switch.MARK.format(kind="orchestrator-cleared", pr=138, head=old_run), "user": {"login": BOT}}
+        sw, gh, _ = self.reconcile([old, cleared, self.unknown_comment(5)])
+        self.assertEqual((gh.posted, sw.appended, len(sw.sessions.lists)), ([], [], 1))
+
+    def test_a_forged_unknown_comment_is_ignored(self):
+        forged = dict(self.unknown_comment(60), user={"login": "someone"})
+        sw, gh, _ = self.reconcile([forged])
+        self.assertEqual((sw.sessions.lists, gh.posted, sw.appended), ([], [], []))
+
     def test_a_dry_run_acts_on_nothing(self):
         gh = FakeGH([issue()], {138: [start_comment()]}, dry_run=True)
         sw = make_switch(gh, {SESSION: {"status": "idle", "stop": "requires_action", "pending": ["sevt_1"]}}, (reserve_line(),))
@@ -608,7 +680,10 @@ class StartFailures(unittest.TestCase):
         sw = make_switch(gh, {})
         self.addCleanup(os.environ.pop, "ANTHROPIC_API_KEY", None)
 
+        self.start_args = []
+
         def start(*args, **kw):
+            self.start_args.append(args)
             if isinstance(outcome, Exception):
                 raise outcome
             return outcome
@@ -639,6 +714,9 @@ class StartFailures(unittest.TestCase):
         self.assertIn("APIConnectionError, ConnectError", body)
         self.assertIn(switch.MARK.format(kind="orchestrator", pr=138, head="-"), body)
         self.assertIsNone(sw.start_comment([{"body": body, "user": {"login": BOT}}], 138))   # nothing for the watcher to bind
+        run = money.parse_log(sw.appended[0])[0].run
+        self.assertIn(switch.UNKNOWN_MARK.format(run=run, at="2026-11-02T18:00:00Z"), body)   # what the watcher reconciles
+        self.assertEqual(self.start_args[0][-1], {"switchboard_key": "orchestrator#138", "run": run})   # what it matches on
 
     def test_a_5xx_keeps_the_reserve_and_blocks_a_retry_like_no_answer(self):
         sw, gh = self.orchestrate(claude_calls.SessionStartUnknown("beta.sessions.create answered HTTP 500", ["InternalServerError"], 500))
@@ -647,6 +725,7 @@ class StartFailures(unittest.TestCase):
         self.assertIn("answered HTTP 500 (InternalServerError)", body)
         self.assertIn(switch.MARK.format(kind="orchestrator", pr=138, head="-"), body)       # a re-label finds it handled
         self.assertNotIn("orchestrator-failed", body)
+        self.assertIn("switchboard:orchestrator-unknown run=", body)
 
     def test_a_started_session_carries_its_run_id_to_the_watcher(self):
         sw, gh = self.orchestrate(SESSION)
@@ -685,6 +764,27 @@ class SdkRequests(unittest.TestCase):
         self.assertIn("limit=1", seen[1][2])
         self.assertIn("order=desc", seen[1][2])
         self.assertIn("session.status_idle", seen[1][2])
+
+    def test_create_carries_the_metadata_and_find_session_reads_one_bounded_page(self):
+        seen = []
+
+        def handler(req):
+            seen.append((req.method, req.url.path, req.url.query.decode(), req.content.decode()))
+            if req.method == "GET":
+                return httpx2.Response(200, json={"data": [
+                    {"id": "sesn_other", "metadata": {"switchboard_key": "orchestrator#138", "run": "ffffffffffff"}},
+                    {"id": SESSION, "metadata": {"switchboard_key": "orchestrator#138", "run": RUN}}], "next_page": None})
+            return httpx2.Response(200, json={"id": SESSION})
+        c = self.client(handler)
+        args = ("agent_1", "env_1", "J-031 #138", "go", Decimal("8.00"), "https://github.com/IssisX/ScraperX", "ghp_test", "ScraperX-Claude", "")
+        self.assertEqual(claude_calls.start_session(c, *args, {"switchboard_key": "orchestrator#138", "run": RUN}), SESSION)
+        self.assertEqual(json.loads(seen[0][3])["metadata"], {"switchboard_key": "orchestrator#138", "run": RUN})
+        self.assertEqual(claude_calls.find_session(c, "agent_1", "2026-11-03T14:00:00Z", {"switchboard_key": "orchestrator#138", "run": RUN}), SESSION)
+        self.assertIsNone(claude_calls.find_session(c, "agent_1", "2026-11-03T14:00:00Z", {"run": "000000000000"}))
+        method, path, query, body = seen[1]
+        self.assertEqual((method, path, body), ("GET", "/v1/sessions", ""))
+        for want in ("agent_id=agent_1", "created_at%5Bgte%5D=2026-11-03T14%3A00%3A00Z", "limit=20", "order=desc"):
+            self.assertIn(want, query)
 
     def test_a_session_id_is_checked_before_it_reaches_a_url(self):
         with self.assertRaises(claude_calls.ClaudeCallError):
