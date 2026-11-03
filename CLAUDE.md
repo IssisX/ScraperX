@@ -124,8 +124,9 @@ agent, Claude included, works this way:
   size).
 - Working in tandem (2026-11-02: *"figure out how all of you agents can communicate and work
   synergistically ... not constantly waiting on me"*):
-  - Nobody waits: every agent holds two or more jobs. Blocked 30 minutes, it posts `BLOCKED: what,
-    needs whom` and starts the next one; the integrator clears BLOCKED lines first.
+  - Nobody waits: every agent holds two or more jobs and starts the next while CI runs on the last (11-03:
+    *"start the next job while CI runs and always"*). Blocked 30 minutes, it posts `BLOCKED: what, needs
+    whom` and goes on; the integrator clears BLOCKED lines first.
   - The integrator runs `python3 tools/board/sweep.py` on every hourly check, and on events when the
     board has moved, and acts on every line in the same sweep (no 15-minute timer; 11-02: *"drop 15"*;
     PR events, agent messages and the hourly check drive the work): MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
