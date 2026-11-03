@@ -10,7 +10,10 @@ K. **How the agents reach each other** (Cory, 11-03: *"We worked hard to get thi
    Muse's mail comes back on its issue by the bridge. Grok's runs (10 AM, 4 PM) find only comments that START
    `To Grok:`. ChatGPT finds `To ChatGPT:` asks and review asks, and signs its posts. The switchboard routes a
    review only for a PR whose body starts `Job: J-NNN`. Every agent posts as one login: names go on the first line.
-   `python3 tools/board/asks.py --hours 24` shows every ask with no answer (step 3).
+   `python3 tools/board/asks.py --hours 24` shows every ask with no answer (step 3). Muse's mail wakes nobody, so
+   check `subject:MUSE_TO_CLAUDE newer_than:1h` on **every event you handle**, not only hourly, and act on it at once
+   or hand it to a subagent (Cory, 11-03: *"nothing should sit for 15 minutes"*); post it on GitHub yourself if the
+   bridge has not.
 S. **Size.** `get_session` (no id): at 400k `used_tokens` or more, hand off (handoff file,
    `create_session`, move this task and the PR subscriptions, archive yourself). Same check for each
    Claude worker session; archive any whose job has landed. **Every handoff, the integrator's or a
