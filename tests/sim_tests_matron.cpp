@@ -2257,6 +2257,66 @@ void run_matron_remaining() {
         std::cout << "PASS scraperx_sim matron rage: sprint_s=" << sprint_s << " peak=" << dangerous.rage
                   << " pest_after_s=" << pest_after_s << "\n";
     }
+    // ---- her rage steps down from fully changed (the owner, 2026-10-19: both
+    //      ways, no floor, no gain with time): set fully changed and left in
+    //      quiet, her rage only ever falls, she stays changed until it is under
+    //      kRageChangedDown and is dangerous the tick it is, and keeps falling
+    //      past the mark with her exposure still growing ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        s.debug_matron_patrol();             // out of her locker and awake: her rage is stepped
+        s.debug_hold_matron_hands(1000.0);   // no catch, no blow: pain feeds her rage, and none is dealt
+        s.debug_fix_matron_pace(0);
+        require(s.advance_frame(1.0).accepted, "matron rage down: settle");
+        (void)s.set_crouch_input(true);
+        s.debug_set_matron_stage(2);
+        const auto changed = s.matron_state();
+        require(changed.stage == 2 && changed.rage > Matron::kRageChangedUp,
+                "matron rage down: set fully changed, her rage above the mark she rose past");
+        require(Matron::kRageChangedDown < Matron::kRageChangedUp && Matron::kRageChangedDown > Matron::kRageDangerousUp,
+                "matron rage down: the way down from changed is under the way up, over dangerous's own mark");
+        const double hz = static_cast<double>(Simulation::kTickRateHz);
+        const double decay_per_tick = static_cast<double>(Matron::kRageDecayPerSecond) / hz;
+        const double mark = static_cast<double>(Matron::kRageChangedDown);
+        double rage = changed.rage;
+        bool only_falls = true;
+        bool held_changed = true;
+        double down_after_s = -1.0;
+        double rage_at_down = 0.0;
+        for (int i = 0; i < 300 * static_cast<int>(Simulation::kTickRateHz) && down_after_s < 0.0; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            only_falls = only_falls && m.rage <= rage;
+            rage = m.rage;
+            if (m.stage == 2 && m.rage < mark) {
+                held_changed = false;
+            }
+            if (m.stage != 2) {
+                down_after_s = (i + 1) / hz;
+                rage_at_down = m.rage;
+            }
+        }
+        std::cout << "  matron rage down: quiet, no longer changed after " << down_after_s << " s, at rage " << rage_at_down
+                  << ", stage " << static_cast<int>(s.matron_state().stage) << "\n";
+        require(only_falls, "matron rage down: left in quiet her rage only falls (no gain with time)");
+        require(down_after_s > 0.0 && held_changed,
+                "matron rage down: she stays changed while her rage is at or over kRageChangedDown, and is not after");
+        // The step is exactly one tick past the mark, one stage down (dangerous, not a pest).
+        require(s.matron_state().stage == 1 && rage_at_down < mark && rage_at_down > mark - 2.0 * decay_per_tick,
+                "matron rage down: the tick her rage goes under kRageChangedDown she is dangerous");
+        // No floor: the fall goes on past the mark, and stays dangerous while over its own lower mark.
+        const double exposure = s.matron_state().exposure;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+        }
+        const auto lower = s.matron_state();
+        require(lower.rage < rage_at_down - 0.5 * static_cast<double>(Matron::kRageDecayPerSecond) * 20.0 &&
+                    lower.stage == 1 && lower.exposure > exposure && s.snapshot().death_count == 0,
+                "matron rage down: no floor holds her rage at the mark, and her time out gains her none");
+        std::cout << "PASS scraperx_sim matron rage down: down_after_s=" << down_after_s << " rage_at_down=" << rage_at_down
+                  << "\n";
+    }
     // ---- two levels down: a sprint on the deck two under hers carries up the
     //      shaft to her, and frail she goes to the way down toward it (the line
     //      to the deck between) and stands on it ----
