@@ -58,6 +58,7 @@ MAX_DIFF_CHARS = 400_000
 MAX_ARTIFACT_BYTES = 60_000_000
 MAX_IMAGE_BYTES = 3_750_000            # base64 of this stays under 5 MB
 MAX_PRS = 60
+MAX_FACT_LINES = 25                   # rule_check lines quoted in a review ask
 ACT_WITHIN_DAYS = 3                   # older heads get no new review or ask: J-030 claims or closes them
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"
 
@@ -118,8 +119,8 @@ class Switch:
                 out.append(v)
         return out, comments
 
-    def rule_check_block(self, number: int, head: str) -> bool | None:
-        """Run trunk's rule check over base...head (it reads the diff only). None if it cannot run."""
+    def run_rule_check(self, number: int, head: str) -> tuple[int, str] | None:
+        """Run trunk's rule check over base...head (it reads the diff only): (exit status, its output). None if it cannot run."""
         try:
             subprocess.run(["git", "fetch", "-q", "--no-tags", "origin", rules.TRUNK,
                             f"+refs/pull/{number}/head:refs/remotes/switchboard/pr-{number}"],
@@ -132,7 +133,42 @@ class Switch:
         if r.returncode not in (0, 1, 2):
             self.out(f"NOTE  #{number} rule_check exited {r.returncode}: {r.stderr.strip()[:200]}")
             return None
-        return r.returncode == 2
+        return r.returncode, r.stdout
+
+    def rule_check_block(self, number: int, head: str) -> bool | None:
+        """Does trunk's rule check BLOCK base...head? None if it cannot run."""
+        got = self.run_rule_check(number, head)
+        return None if got is None else got[0] == 2
+
+    def review_facts(self, facts: rules.PrFacts, ctx: dict) -> str:
+        """What a reviewer with no checkout keeps asking for, read here at the head: the proof's jobs and
+        trunk's rule check over base...head. Every line is bounded, and fenced so PR text cannot add markup."""
+        sha = facts.head_sha[:8]
+        lines = [f"Facts read by the switchboard at @{sha} (a reviewer needs no checkout for these):"]
+        if ctx.get("run_id"):
+            jobs = self.gh.get(f"repos/{self.gh.repo}/actions/runs/{ctx['run_id']}/jobs?per_page=50")["jobs"]
+            tally: dict[str, list[str]] = {}
+            for j in jobs:
+                tally.setdefault(j["conclusion"] or j["status"], []).append(j["name"])
+            counts = ", ".join(f"{len(v)} {k}" for k, v in sorted(tally.items()))
+            bad = [n for k, v in sorted(tally.items()) if k not in ("success", "skipped") for n in v]
+            lines.append(f"- Proof jobs ({ctx['proof_url']}): {counts or 'none'}" + (f"; not passing: {', '.join(bad)}" if bad else ""))
+        else:
+            lines.append(f"- Proof: {facts.proof}")
+        got = self.run_rule_check(facts.number, facts.head_sha)
+        if got is None:
+            lines.append("- rule_check: could not run here")
+        else:
+            out = [l.rstrip() for l in got[1].splitlines() if l.strip()]
+            summary = out[-1] if out else "rule_check: no output"
+            findings = [l for l in out[:-1] if l.startswith(("BLOCK", "REVIEW"))]
+            lines.append(f"- {summary} (origin/{rules.TRUNK}...@{sha})")
+            if findings:
+                shown = [l[:200].replace("`" * 3, "'" * 3) for l in findings[:MAX_FACT_LINES]]
+                lines += ["`" * 3] + shown + ["`" * 3]
+                if len(findings) > len(shown):
+                    lines.append(f"({len(findings) - len(shown)} more lines not shown)")
+        return "\n".join(lines)
 
     def pr_facts(self, pr: dict) -> tuple[rules.PrFacts, dict]:
         number, sha = pr["number"], pr["head"]["sha"]
@@ -302,6 +338,7 @@ class Switch:
             pick = rules.pick_reviewer(author, facts.needs, self.team)
             if pick.route == "ask":
                 self.ask_review(facts, ctx, pick.agent, "")
+            self.escalate_review(facts, ctx, author)
 
     def merge(self, facts: rules.PrFacts, ctx: dict, d: rules.MergeDecision) -> None:
         got = self.gh.write("PUT", f"repos/{self.gh.repo}/pulls/{facts.number}/merge",
@@ -321,25 +358,55 @@ class Switch:
         if ctx.get("issue"):
             self.gh.comment(ctx["issue"]["number"], line, f"merged-note on job issue #{ctx['issue']['number']}")
 
-    def ask_review(self, facts: rules.PrFacts, ctx: dict, agent: str, why: str) -> None:
+    def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
+        """Where review asks live (the job issue, else the PR) and its comments."""
         where = ctx["issue"]["number"] if ctx.get("issue") else facts.number
         comments = ctx["comments"] if where == facts.number else self.gh.paged(f"repos/{self.gh.repo}/issues/{where}/comments")
+        return where, comments
+
+    def ask_review(self, facts: rules.PrFacts, ctx: dict, agent: str, why: str) -> None:
+        where, comments = self.ask_thread(facts, ctx)
         tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
         if self.marked(comments, f"ask-{agent}", facts.number, facts.head_sha):
             self.out(f"ASKED       #{facts.number} review already asked of {agent} on #{where}")
             return
-        name = {"chatgpt": "ChatGPT", "muse": "Muse"}.get(agent, agent)
+        name = self.team.agent_name.get(agent, agent)
         job = ctx["job"] or f"PR #{facts.number}"
-        head = f"CLAUDE_TO_MUSE: {job} review #{facts.number} @ {facts.head_sha[:8]}" if agent == "muse" else \
+        head = {"muse": f"CLAUDE_TO_MUSE: {job} review #{facts.number} @ {facts.head_sha[:8]}",
+                "grok": f"To Grok: {job} review #{facts.number} @ {facts.head_sha[:8]}"}.get(agent) or \
                f"**Switchboard → {name}:** review #{facts.number} @ {facts.head_sha[:8]} ({job})"
         body = (f"{head}\n\n{why}Proof is green on the head ({ctx['proof_url']}). Review it with "
                 f"`03_EXECUTION/REVIEW_CHECKLIST.md` and post one verdict on #{facts.number} whose first line is\n"
                 f"`**{name} (review of #{facts.number} @ {facts.head_sha[:8]}): LAND**` (or FIX with command, input, "
-                f"expected, observed; a FIX without them counts as a NOTE).\n\n{tag}")
+                f"expected, observed; a FIX without them counts as a NOTE).\n\n"
+                f"{self.review_facts(facts, ctx)}\n\n{tag}")
         self.gh.comment(where, body, f"ask {name} to review #{facts.number} on #{where}")
         if agent == "muse":
             self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
                           f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+
+    def escalate_review(self, facts: rules.PrFacts, ctx: dict, author: str) -> None:
+        """An ask the switchboard made on this head that has had no verdict for review.fallback_after_hours goes
+        to the next agent in review.fallback_order, once per head (each ask has its own marker). The caller
+        only gets here while needs_review holds: any verdict on the head, from anyone, ends this."""
+        where, comments = self.ask_thread(facts, ctx)
+        asked: list[tuple[str, str]] = []   # (created_at, agent) of the bot's own asks on this head
+        for agent in self.team.agent_vendor:
+            tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
+            asked += [(c["created_at"], agent) for c in comments
+                      if tag in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN]
+        if not asked:
+            return   # the first ask is made by the caller; its clock starts when it is posted
+        last_at, last = max(asked)
+        hours = self.team.fallback_after_hours
+        if not rules.ask_is_overdue(last_at, self.now.strftime("%Y-%m-%dT%H:%M:%SZ"), hours):
+            return
+        nxt = rules.next_fallback([a for _, a in asked], author, self.team)
+        if not nxt:
+            self.out(f"NOFALLBACK  #{facts.number} {last} has not answered in {hours:g} hours and nobody is left to ask")
+            return
+        self.out(f"FALLBACK    #{facts.number} {last} asked {last_at}, no verdict in {hours:g} hours: asking {nxt}")
+        self.ask_review(facts, ctx, nxt, f"{self.team.agent_name.get(last, last)} has not answered in {hours:g} hours, so you are asked instead. ")
 
     def owner_labels(self, number: int, just_added: str) -> None:
         issue = self.gh.get(f"repos/{self.gh.repo}/issues/{number}")
