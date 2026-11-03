@@ -46,13 +46,14 @@ const BACK_RADIUS := 0.17
 # plus SKIRT_CLEAR_M). The skirt is skinned to the proxy's bones.
 const SKIRT_TURN := false
 const SKIRT_RIDE := false
+const SKIRT_LINK_PASSES := 4
 # The thigh's capsule starts this far down it: above, her hip is under the
 # cloth's pinned waist, and a capsule from the hip joint shoves the cloth
 # off her side when she crouches.
 const SKIRT_THIGH_FROM := 0.35
 const SKIRT_TURN_SPAN := 1
 const SKIRT_DAMP := 0.9
-const SKIRT_ITERATIONS := 8
+const SKIRT_ITERATIONS := 4
 const SKIRT_CLEAR_M := 0.012
 # Each row drawn toward its place hung on her hips, by this much a pass: the
 # top hugs her hips, the hem swings.
@@ -1055,7 +1056,7 @@ func step_skirt(delta: float) -> void:
 					for cap in caps:
 						q = _out_of_capsule(q, cap[0], cap[1], cap[2])
 				_sk_pts[c][r] = q
-		for _pass in 2:
+		for _pass in SKIRT_LINK_PASSES:
 			for link in _sk_links:
 				var ac: int = link[0]
 				var ar: int = link[1]
