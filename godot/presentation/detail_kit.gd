@@ -90,12 +90,15 @@ const HASH_BIG_SPAN := 24.0
 const HASH_BIG_CELL := 32.0
 
 # The kinds, each drawn per section of its own size to its own distance:
-# plates (cleats, base plates, weld beads) as far as the world's fine batches
-# (main_geometry.gd BATCH_FINE_RANGE); bolt and nut heads, and worn edges,
-# only near, where they are more than a pixel or two.
+# plates (cleats, base plates, weld beads) to 100 m, where a 9 cm cleat is
+# about one pixel on the Fold's 2160-wide view (they had 160 m, the world's
+# fine batches' range; the extra 60 m cost about 15 s of the CI approach
+# capture on its software renderer, whose step has 300 s, for pieces under a
+# pixel); bolt and nut heads, and worn edges, only near, where they are more
+# than a pixel or two.
 enum Kind { PLATE, BOLT, EDGE }
 const KIND_CELL := [96.0, 48.0, 32.0]
-const KIND_RANGE := [160.0, 60.0, 45.0]
+const KIND_RANGE := [100.0, 60.0, 45.0]
 const KIND_FADE := [20.0, 10.0, 10.0]
 # LOW (the GRAPHICS preset) keeps the plates only, nearer.
 const LOW_PLATE_RANGE := 80.0
