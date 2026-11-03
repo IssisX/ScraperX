@@ -446,6 +446,12 @@ static func _hash01(a: int, b: int) -> float:
 # One instance of `kind`: a unit mesh carried by `basis` (its columns the
 # piece's scaled axes) to `at`.
 func _add(kind: int, at: Vector3, basis: Basis, colour: Color, metallic: float, roughness: float) -> void:
+	# A MultiMesh cannot flip one instance's winding, so a mirrored basis
+	# would draw that piece inside out (a bolt's cap culled, a plate lit from
+	# its far side). Every mesh here is symmetric across its x, so turning x
+	# round keeps the shape and makes the basis right-handed.
+	if basis.determinant() < 0.0:
+		basis.x = -basis.x
 	var size: float = KIND_CELL[kind]
 	var section := _last[kind]
 	var local := at - section.origin if section != null else Vector3.INF
