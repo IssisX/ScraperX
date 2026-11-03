@@ -472,6 +472,181 @@ const WET_ROUGHNESS := 0.35
 const WET_METAL_ROUGHNESS := 0.85
 const WET_ROUGHNESS_MIN := 0.12
 
+# Contact shading (environment plan, job 8): things sit on things. Every
+# part the batcher lays is a box among the solids; each near vertex is
+# darkened by the solids within OCCLUSION_REACH of it, the more so the nearer
+# and the more they face it -- where a post meets a deck, under a ledge, in a
+# corner -- and where the solid is a floor below it, tinted toward the dirt
+# and rust bleed that gathers at feet. Baked once at start-up into the
+# vertex colours, so it holds the same under either renderer, with SSAO or
+# without. The floors are found from the solids themselves, never per place.
+# Only parts square to the world shade (a diagonal brace's bounding box is
+# mostly air); every part is shaded.
+const OCCLUSION_CELL := 2.0
+const OCCLUSION_REACH := 1.2
+# How far off its face a vertex looks from: so a flush neighbour in the same
+# plane (two deck plates edge to edge) barely shades, and a solid the face
+# runs into (a deck under a post's foot) shades fully.
+const OCCLUSION_OFFSET := 0.12
+# Full occlusion darkens by this much; the sum of the solids' shares goes to
+# full as 1 - exp(-sum).
+const OCCLUSION_DARKEN := 0.42
+# A vertex's shading is drawn across its face to the next vertex, so on a
+# face whose vertices lie further apart than this it is scaled down by the
+# ratio: a corner's contact must not dim a whole 10 m deck or beam (measured
+# at S5: the shaded deck 26.7 -> 22.0 before this).
+const OCCLUSION_SPAN := 1.5
+const OCCLUSION_DIRT := Color(0.22, 0.14, 0.09)
+const OCCLUSION_DIRT_MIX := 0.35
+# A solid bigger than this across (grade, the great slabs, the rock) is
+# hashed in coarse cells of OCCLUSION_BIG_CELL rather than thousands of fine
+# ones; a part that big is not shaded itself (its few corners cannot carry
+# it).
+const OCCLUSION_BIG := 48.0
+const OCCLUSION_BIG_CELL := 64.0
+# Rings along a standing member: one every OCCLUSION_RING metres, at most
+# OCCLUSION_RINGS, on members at least OCCLUSION_RING_MIN long that touch a
+# solid at an end.
+const OCCLUSION_RING := 0.6
+const OCCLUSION_RINGS := 4
+const OCCLUSION_RING_MIN := 1.2
+
+class Occlusion:
+	var lows := PackedVector3Array()
+	var highs := PackedVector3Array()
+	var cells := {}                  # Vector3i -> PackedInt32Array of solids
+	var big_cells := {}              # Vector3i -> PackedInt32Array of big solids
+	var ring_meshes := {}            # "size|axis|n" -> BoxMesh
+	var rings_laid := 0
+
+	# Registers a part (its world bounds and its basis); returns its number.
+	func add(bounds: AABB, basis: Basis) -> int:
+		var index := lows.size()
+		lows.append(bounds.position)
+		highs.append(bounds.end)
+		var square := true
+		for k in 3:
+			var axis := basis[k].normalized().abs()
+			if maxf(axis.x, maxf(axis.y, axis.z)) < 0.995:
+				square = false
+		if not square:
+			return index
+		var size := bounds.size
+		var is_big := maxf(size.x, maxf(size.y, size.z)) > OCCLUSION_BIG
+		var cell := OCCLUSION_BIG_CELL if is_big else OCCLUSION_CELL
+		var table: Dictionary = big_cells if is_big else cells
+		var low := Vector3i((bounds.position / cell).floor())
+		var high := Vector3i((bounds.end / cell).floor())
+		for x in range(low.x, high.x + 1):
+			for y in range(low.y, high.y + 1):
+				for z in range(low.z, high.z + 1):
+					var key := Vector3i(x, y, z)
+					if not table.has(key):
+						table[key] = PackedInt32Array()
+					var list: PackedInt32Array = table[key]
+					list.append(index)
+					table[key] = list
+		return index
+
+	# The solids that can shade a part: those within OCCLUSION_REACH of its
+	# bounds, but itself. Gathered once a part; its vertices test only these.
+	func near(bounds: AABB, self_index: int) -> PackedInt32Array:
+		var out := PackedInt32Array()
+		var size := bounds.size
+		if maxf(size.x, maxf(size.y, size.z)) > OCCLUSION_BIG:
+			return out
+		var grown := bounds.grow(OCCLUSION_REACH)
+		var found := {}
+		for pass_index in 2:
+			var cell := OCCLUSION_CELL if pass_index == 0 else OCCLUSION_BIG_CELL
+			var table: Dictionary = cells if pass_index == 0 else big_cells
+			var low := Vector3i((grown.position / cell).floor())
+			var high := Vector3i((grown.end / cell).floor())
+			for x in range(low.x, high.x + 1):
+				for y in range(low.y, high.y + 1):
+					for z in range(low.z, high.z + 1):
+						var key := Vector3i(x, y, z)
+						if table.has(key):
+							for i in (table[key] as PackedInt32Array):
+								found[i] = true
+		for i in found:
+			if i != self_index and grown.intersects(AABB(lows[i], highs[i] - lows[i])):
+				out.append(i)
+		return out
+
+	# [occlusion 0..1, share of it from below] at a vertex, from `solids`.
+	func occluded(world: Vector3, normal: Vector3, solids: PackedInt32Array) -> Vector2:
+		var eye := world + normal * OCCLUSION_OFFSET
+		var total := 0.0
+		var below := 0.0
+		for i in solids:
+			var offset := eye.clamp(lows[i], highs[i]) - eye
+			var d := offset.length()
+			if d >= OCCLUSION_REACH:
+				continue
+			if d < 0.0001:
+				# The face runs into it: full contact.
+				total += 1.0
+				if eye.y - lows[i].y > highs[i].y - eye.y:
+					below += 1.0
+				continue
+			var near_share := 1.0 - d / OCCLUSION_REACH
+			var share := near_share * near_share * clampf(0.3 + 0.7 * normal.dot(offset) / d, 0.0, 1.0)
+			total += share
+			if offset.y < -0.6 * d:
+				below += share
+		if total <= 0.0:
+			return Vector2.ZERO
+		return Vector2(1.0 - exp(-total), below / total)
+
+	# `reach`: how much of the shading this vertex may carry (OCCLUSION_SPAN).
+	func shaded(colour: Color, world: Vector3, normal: Vector3, solids: PackedInt32Array, reach: float) -> Color:
+		if solids.is_empty() or reach <= 0.0:
+			return colour
+		var o := occluded(world, normal, solids)
+		if o.x <= 0.0:
+			return colour
+		var amount := o.x * reach
+		var dark := 1.0 - OCCLUSION_DARKEN * amount
+		var dirtied := colour.lerp(OCCLUSION_DIRT, OCCLUSION_DIRT_MIX * amount * o.y)
+		return Color(dirtied.r * dark, dirtied.g * dark, dirtied.b * dark, colour.a)
+
+	# The box to lay for a part: ringed along its length if it is a long
+	# member touching a solid at an end, else as it is.
+	func ringed(box: BoxMesh, at: Transform3D, solids: PackedInt32Array) -> BoxMesh:
+		var lengths := Vector3(box.size.x * at.basis.x.length(), box.size.y * at.basis.y.length(),
+			box.size.z * at.basis.z.length())
+		var k := lengths.max_axis_index()
+		if lengths[k] < OCCLUSION_RING_MIN or solids.is_empty():
+			return box
+		var axis: Vector3 = at.basis[k].normalized()
+		# Only a standing member (a post, a column, a leg): its foot is where
+		# the eye looks for the contact. A beam keeps its corners' shading.
+		if absf(axis.y) < 0.5:
+			return box
+		var centre := at.origin
+		var half := 0.5 * lengths[k]
+		var touching := false
+		for end_sign in [-1.0, 1.0]:
+			var end: Vector3 = centre + axis * (half * end_sign)
+			# Looking from just past the end, along the member.
+			if occluded(end, axis * end_sign, solids).x > 0.25:
+				touching = true
+		if not touching:
+			return box
+		var n := clampi(int(ceilf(lengths[k] / OCCLUSION_RING)) - 1, 1, OCCLUSION_RINGS)
+		var key := "%s|%d|%d" % [str(box.size), k, n]
+		if not ring_meshes.has(key):
+			var made := BoxMesh.new()
+			made.size = box.size
+			match k:
+				0: made.subdivide_width = n
+				1: made.subdivide_height = n
+				_: made.subdivide_depth = n
+			ring_meshes[key] = made
+		rings_laid += 1
+		return ring_meshes[key]
+
 class Batcher:
 	# A batch under construction: one surface's arrays, the place it stands,
 	# and the material it is drawn with.
@@ -496,6 +671,15 @@ class Batcher:
 	var far_material: StandardMaterial3D
 	var parts := 0
 	var wet_parts := 0
+	# Contact shading (environment plan, job 8): the near parts wait here
+	# until every part is known ([group, mesh, surface, at, colour, mapping,
+	# solid index]), then are laid shaded by the solids around them.
+	var pending: Array = []
+	var shade_ms := 0
+	# The solids that shade: this batcher's parts, and any laid before it
+	# (the dressing's, for the kit's statics). Set before the first add to
+	# share one.
+	var occlusion: Occlusion
 
 	func add(mesh: Mesh, surface: int, at: Transform3D, material: Material, fine: bool) -> void:
 		var bounds := at * mesh.get_aabb()
@@ -514,7 +698,9 @@ class Batcher:
 		var standard := material as StandardMaterial3D
 		var real: Surface = standard.get_meta(&"surface") as Surface \
 			if standard != null and standard.has_meta(&"surface") else null
-		Batcher.append_arrays(group, mesh, surface, at, finish[1], real, real != null)
+		if occlusion == null:
+			occlusion = Occlusion.new()
+		pending.append([group, mesh, surface, at, finish[1], real, occlusion.add(bounds, at.basis)])
 		if not fine:
 			# A near section (BATCH_CELL_*) lies inside one far section.
 			group.far_key = "%d/%d/%d" % [floorf(centre.x / BATCH_FAR_CELL), floorf(centre.y / BATCH_FAR_CELL),
@@ -591,8 +777,11 @@ class Batcher:
 
 	# `mapping`: the real surface to lay UVs for (null keeps the mesh's own).
 	# `vary`: lay the broad variation (broad_tint) in the vertex colours.
+	# `shade`/`solids`: what shades its vertices, and the solids near it
+	# (Occlusion.near; null: unshaded).
 	static func append_arrays(group: Group, mesh: Mesh, surface: int, at: Transform3D, colour: Color,
-			mapping: Surface = null, vary: bool = false) -> void:
+			mapping: Surface = null, vary: bool = false, shade: Occlusion = null,
+			solids: PackedInt32Array = PackedInt32Array()) -> void:
 		var arrays := mesh.surface_get_arrays(surface)
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL] if arrays[Mesh.ARRAY_NORMAL] != null \
@@ -612,6 +801,12 @@ class Batcher:
 		var extents := Vector3(size.x * at.basis.x.length(), size.y * at.basis.y.length(),
 			size.z * at.basis.z.length())
 		var round_part := mesh is CylinderMesh or mesh is CapsuleMesh
+		# How far apart a box's vertices lie along each of its axes.
+		var spacing := extents
+		var box := mesh as BoxMesh
+		if box != null:
+			spacing = Vector3(extents.x / (box.subdivide_width + 1), extents.y / (box.subdivide_height + 1),
+				extents.z / (box.subdivide_depth + 1))
 		var part_seed := Batcher._part_hash(at.origin)
 		var offset := Vector2.ZERO
 		if mapping != null and mapping.own_offset:
@@ -683,11 +878,17 @@ class Batcher:
 				group.tangents.append(w)
 				group.uvs.append(uvs[i] if i < uvs.size() else Vector2.ZERO)
 			group.uv2s.append(Batcher.streak_uv(world, normal))
+			var c := colour
 			if vary:
 				var f := tint_mid + tint_slope * (world - middle).dot(axes[long_axis])
-				group.colours.append(Color(colour.r * f, colour.g * f, colour.b * f, colour.a))
-			else:
-				group.colours.append(colour)
+				c = Color(colour.r * f, colour.g * f, colour.b * f, colour.a)
+			if shade != null and not solids.is_empty():
+				# The spacing of this face's vertices: its two sides across.
+				var a := local_normal.abs()
+				var k := 0 if a.x >= a.y and a.x >= a.z else (1 if a.y >= a.z else 2)
+				var span := maxf(spacing[(k + 1) % 3], spacing[(k + 2) % 3])
+				c = shade.shaded(c, world, normal, solids, clampf(OCCLUSION_SPAN / maxf(span, 0.001), 0.0, 1.0))
+			group.colours.append(c)
 		if indices.is_empty():
 			for i in vertices.size():
 				group.indices.append(base + i)
@@ -798,8 +999,29 @@ class Batcher:
 		instance.mesh.surface_set_material(0, material)
 		return instance
 
+	# Lays the waiting near parts, each vertex shaded by the solids around it.
+	func _lay_pending() -> void:
+		for record in pending:
+			var mesh: Mesh = record[1]
+			var at: Transform3D = record[3]
+			# Boxes are shaded: the posts, decks, beams and walls, where things
+			# meet. A round part (a pipe, a rail, a drum) carries a hundred
+			# vertices for a box's 24 and is left as it is: start-up time.
+			var box := mesh as BoxMesh
+			var solids := occlusion.near(at * mesh.get_aabb(), record[6]) if box != null else PackedInt32Array()
+			# A long member touching something at an end gets rings along
+			# its length, so its foot darkens and a metre up does not.
+			if box != null:
+				mesh = occlusion.ringed(box, at, solids)
+			Batcher.append_arrays(record[0], mesh, record[2], at, record[4], record[5], record[5] != null,
+				occlusion if box != null else null, solids)
+		pending.clear()
+
 	# Adds the batches under `root`; returns how many.
 	func emit(root: Node3D) -> int:
+		var started := Time.get_ticks_usec()
+		_lay_pending()
+		shade_ms = (Time.get_ticks_usec() - started) / 1000
 		var far_instances := {}
 		for key in far:
 			var instance := Batcher.commit(far[key])
@@ -866,19 +1088,25 @@ func _batch_static_dressing(root: Node3D) -> void:
 			batcher.add(mesh, surface, local, _surface_material(instance, surface), fine)
 		merged.append(instance)
 	var made := batcher.emit(root)
+	# The kit's statics are shaded by the dressing's solids too.
+	_occlusion = batcher.occlusion
 	for instance in merged:
 		if instance.get_child_count() == 0:
 			instance.queue_free()
 		else:
 			instance.mesh = null
-	_batch_report += "dressing %d parts -> %d meshes, %d wet, %d ms; " % [merged.size(), made, batcher.wet_parts,
-		(Time.get_ticks_usec() - started) / 1000]
+	_batch_report += "dressing %d parts -> %d meshes, %d wet, %d ms (shading %d ms, %d ringed); " % [merged.size(),
+		made, batcher.wet_parts, (Time.get_ticks_usec() - started) / 1000, batcher.shade_ms,
+		batcher.occlusion.rings_laid if batcher.occlusion != null else 0]
 
 func _surface_material(instance: MeshInstance3D, surface: int) -> Material:
 	return instance.material_override if instance.material_override != null \
 		else instance.get_active_material(surface)
 
 var _batch_report := ""
+# The solids that shade the batches (Occlusion), shared from the dressing to
+# the kit's statics.
+var _occlusion: Occlusion
 
 func _add_box(node_name: String, size: Vector3, at: Vector3, material: Material,
 		roll: float = 0.0) -> MeshInstance3D:
