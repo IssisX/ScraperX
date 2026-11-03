@@ -535,11 +535,92 @@ void build_wall_stack(std::vector<Part> &route) {
     }
 }
 
+// The bar-traverse stack, 374 -> 396 (J-017, rules 52 and 53), a service
+// gantry on the 374 ring's north band: a pole up a pier (7.5 m), six monkey
+// bars across a 5 m gap, a jump-hang up a block (3.2 m), a second pole
+// (7.6 m), and, from a deck slung inside the 396 ring's inner edge, a
+// jump-hang over that edge onto the ring. The bars are the proving ground's
+// (physics_world.cpp): six rods a metre apart, 3.1 m over the deck, rails
+// 0.74 m either side, a landing block 0.5 m up past the last.
+constexpr float kGantryX0 = 15.2F;              // the piers' west face
+constexpr float kGantryX1 = 16.8F;
+constexpr float kGantryXc = 0.5F * (kGantryX0 + kGantryX1);
+constexpr float kGantryRing = 374.25F;
+constexpr float kGantryD1 = 381.75F;            // pole 1's top: 7.5 m
+constexpr float kGantryD2 = 382.25F;            // the bars' landing, 0.5 m over D1
+constexpr float kGantryD3 = 385.45F;            // a jump-hang up: 3.2 m
+constexpr float kGantryD4 = 393.05F;            // pole 2's top: 7.6 m
+constexpr float kGantryBarZ0 = -158.0F;         // six bars, a metre apart, running north
+constexpr float kPoleHalf = 0.08F;
+
+// The gantry is laid out in the frame of the 374 ring's east band (x across the
+// band from its inner edge, z along it, running north), then turned a quarter
+// turn onto the ring's north band: the welder's lane (crew.cpp, x = 13.6,
+// z -156 to -145) and the player's way past it on the east band's outer side
+// (the crew test, run_workers) must stay clear. (x, z) -> (kGantryTurn - z, x - 150).
+constexpr float kGantryTurn = -145.5F;
+
+Part gspan(const JPH::Vec3 low, const JPH::Vec3 high, const Material material) {
+    return span({kGantryTurn - high.GetZ(), low.GetY(), low.GetX() - 150.0F},
+                {kGantryTurn - low.GetZ(), high.GetY(), high.GetX() - 150.0F}, material);
+}
+
+void build_gantry(std::vector<Part> &route) {
+    // Pier 1 and pole 1 up its west face, 0.14 m off it.
+    route.push_back(gspan({kGantryX0, kGantryRing, -161.0F}, {kGantryX1, kGantryD1, -158.5F}, Material::Concrete));
+    route.push_back(gspan({kGantryX0 - 0.14F - kPoleHalf, kGantryRing, -160.0F - kPoleHalf},
+                         {kGantryX0 - 0.14F + kPoleHalf, kGantryD1 - 0.2F, -160.0F + kPoleHalf}, Material::Yellow));
+    // The bars, their rails and end posts.
+    for (int bar = 0; bar < 6; ++bar) {
+        const float z = kGantryBarZ0 + static_cast<float>(bar);
+        route.push_back(gspan({kGantryXc - 0.62F, kGantryD1 + 3.1F - 0.04F, z - 0.04F},
+                             {kGantryXc + 0.62F, kGantryD1 + 3.1F + 0.04F, z + 0.04F}, Material::Steel));
+    }
+    for (const float side : {-1.0F, 1.0F}) {
+        const float x = kGantryXc + side * 0.74F;
+        route.push_back(gspan({x - 0.12F, kGantryD1 + 3.14F, kGantryBarZ0 - 0.9F},
+                             {x + 0.12F, kGantryD1 + 3.38F, kGantryBarZ0 + 5.9F}, Material::Yellow));
+        for (const float end : {kGantryBarZ0 - 0.9F, kGantryBarZ0 + 5.9F}) {
+            route.push_back(gspan({x - 0.12F, kGantryD1, end - 0.12F}, {x + 0.12F, kGantryD1 + 3.38F, end + 0.12F},
+                                 Material::Yellow));
+        }
+    }
+    // D2, the landing block, solid from the ring, and B3 on it, 3.2 m up.
+    route.push_back(gspan({kGantryX0 - 1.0F, kGantryRing, kGantryBarZ0 + 5.9F},
+                         {kGantryX1, kGantryD2, kGantryBarZ0 + 9.9F}, Material::Concrete));
+    route.push_back(gspan({kGantryX0 - 1.0F, kGantryD2, -150.0F}, {kGantryX1, kGantryD3, -146.0F}, Material::Concrete));
+    // Pier 4 on B3's north end, pole 2 up its south face.
+    route.push_back(gspan({kGantryX0, kGantryD3, -147.4F}, {kGantryX1, kGantryD4, -146.0F}, Material::Concrete));
+    route.push_back(gspan({kGantryXc - kPoleHalf, kGantryD3, -147.4F - 0.14F - kPoleHalf},
+                         {kGantryXc + kPoleHalf, kGantryD4 - 0.2F, -147.4F - 0.14F + kPoleHalf}, Material::Yellow));
+    // The deck on its top, slung west inside the 396 ring's inner edge on two
+    // tie rods from the ring, with rails on its three open sides.
+    const float edge = ring_inner(396.0F);
+    route.push_back(gspan({edge - 1.4F, kGantryD4 - 0.3F, -147.4F}, {kGantryX1, kGantryD4, -144.0F}, Material::Galvanised));
+    // A fascia girder on the ring's inner edge, 1.35 m deep and flush with its
+    // top: a hang takes a face 1.2 m deep, not the ring slab's 0.5 m.
+    route.push_back(gspan({edge - 0.2F, 394.9F, -148.0F}, {edge + 0.3F, 396.25F, -143.0F}, Material::Steel));
+    for (const float z : {-147.3F, -144.1F}) {
+        route.push_back(gspan({edge - 0.35F, kGantryD4, z - 0.05F}, {edge - 0.25F, 394.9F, z + 0.05F}, Material::Steel));
+    }
+    const auto rail = [&route](const float x0, const float x1, const float z0, const float z1, const float y) {
+        route.push_back(gspan({x0, y, z0}, {x1, y + kStackRail, z1}, Material::Yellow));
+    };
+    rail(edge - 1.4F, kGantryX1, -144.08F, -144.0F, kGantryD4);
+    rail(edge - 1.4F, edge - 1.32F, -147.4F, -144.0F, kGantryD4);
+    rail(edge - 1.4F, kGantryX0 - 0.2F, -147.4F, -147.32F, kGantryD4);
+    // The decks' east edges, over the open side of the tower.
+    rail(kGantryX1 - 0.08F, kGantryX1, -161.0F, -158.5F, kGantryD1);
+    rail(kGantryX1 - 0.08F, kGantryX1, kGantryBarZ0 + 5.9F, -146.0F, kGantryD2);
+    rail(kGantryX1 - 0.08F, kGantryX1, -150.0F, -147.4F, kGantryD3);
+}
+
 void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     ladder(route, ring_inner(352.0F) - 0.14F, kRouteZ, false, 340.25F, 352.25F);
     build_wall_stack(route);
-    for (float h = 374.0F; h < 483.9F; h += 22.0F) {
+    build_gantry(route);
+    for (float h = 396.0F; h < 483.9F; h += 22.0F) {
         const float s = ring_inner(h);
         const float y0 = h + 0.05F;
         const float y1 = h + 0.25F;
