@@ -60,8 +60,8 @@ finished piece as its own diff email as soon as it is proven, not all at the end
    - **S6, her tells (J-004, #111), is yours too (11-03):** re-point them at S7's fields once S5 is in.
    - Neighbours: S1 is yours (#153); S7 + S8, damage and death body (J-003, #110), are ChatGPT's PR in
      review. Read its fields, never edit its functions; ask with `To ChatGPT:`.
-2b. **J-038 (#169), destructible loose things (Cory, 11-03), right after the fight:** not the tower's
-   machines. What the forklift and crane lift, barrels, boxes and shipping containers dent with the force
+2b. **J-038 (#169), destructible loose things (Cory, 11-03), right after the fight:** never the tower's
+   machines (they must stay usable so he can ascend). What the forklift and crane lift, barrels, boxes and shipping containers dent with the force
    of the hit (a forklift ramming one leaves it severely dented), crates break into pieces that become
    loose stock. Rule 51, the phone, determinism and saves hold. Propose the dent model and slices first.
 3. **J-006 (#113), the grade ladder (her pursuit up the first 11 m), moved to you from ChatGPT (11-03).**
