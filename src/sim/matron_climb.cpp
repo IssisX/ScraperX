@@ -115,8 +115,35 @@ bool Matron::take_climb(const int index, const bool down) {
     } else if (climber_->status() == traversal::Climber::Status::Running || climber_->view().holding) {
         return false;
     }
-    const traversal::MoveSpec &up = scanned_->edges()[static_cast<std::size_t>(index)].spec;
-    climber_->begin(down ? down_of(up) : up);
+    const traversal::Edge &up_edge = scanned_->edges()[static_cast<std::size_t>(index)];
+    const traversal::MoveSpec &up = up_edge.spec;
+    const traversal::MoveSpec *move = &up;
+    if (down) {
+        // The scanner independently checks each downward entry, including a
+        // safe standing spot at the head. Reversing the upward top-out target
+        // can make her walk off the lip before her hands find their first rung.
+        // Take the reverse edge of the SAME ladder, not an invented inverse.
+        const traversal::MoveKind kind =
+            up.kind == traversal::MoveKind::Mantle || up.kind == traversal::MoveKind::LedgeJump
+                ? traversal::MoveKind::HangDrop : traversal::MoveKind::RungDown;
+        for (const traversal::Edge &edge : scanned_->edges()) {
+            if (!edge.usable || edge.from != up_edge.to || edge.to != up_edge.from || edge.kind != kind) {
+                continue;
+            }
+            const traversal::MoveSpec &candidate = edge.spec;
+            if ((candidate.line - up.line).LengthSq() > 0.01F * 0.01F ||
+                std::abs(candidate.bottom_y - up.bottom_y) > 0.01F ||
+                std::abs(candidate.top_y - up.top_y) > 0.01F) {
+                continue;
+            }
+            move = &candidate;
+            break;
+        }
+        if (move == &up) {
+            return false; // No separately vetted safe downward entry.
+        }
+    }
+    climber_->begin(*move);
     climb_ = index;
     climb_hand_known_ = false;
     climb_force_n_ = 0.0F;
