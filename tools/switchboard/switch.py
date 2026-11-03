@@ -122,7 +122,8 @@ class Switch:
         reviews = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/reviews")
         out = []
         for c in comments:
-            v = rules.parse_verdict(c.get("body") or "", c["created_at"], c["user"]["login"], self.team)
+            v = rules.parse_verdict(c.get("body") or "", c["created_at"], c["user"]["login"], self.team) or \
+                rules.parse_codex_state(c.get("body") or "", c.get("updated_at") or c["created_at"], c["user"]["login"])
             if v:
                 out.append(v)
         for r in reviews:
@@ -371,6 +372,8 @@ class Switch:
         """review.pool: the rotation for this PR, the one reviewer its head gets now, and who was asked on it when."""
         rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, self.api_ok(ctx))
         _, comments = self.ask_thread(facts, ctx)
+        if comments is not ctx["comments"]:
+            comments = list(comments) + list(ctx["comments"])   # Codex is asked on the PR itself
         asked: dict[str, str] = {}
         for agent in self.team.agent_vendor:
             tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
@@ -409,7 +412,8 @@ class Switch:
                     continue
                 if max(times) >= day_ago:
                     recent[agent] = recent.get(agent, 0) + 1
-                if not any(v.kind == "review" and v.vendor == vendor and rules.names_head(v, sha) for v in verdicts):
+                if not any(v.kind == "review" and v.vendor == vendor and (v.who == "Codex") == (agent == "codex")
+                           and rules.names_head(v, sha) for v in verdicts):
                     outstanding[agent] = outstanding.get(agent, 0) + 1
             tag = MARK.format(kind="review", pr=number, head=sha)
             if any(tag in (c.get("body") or "") and c["created_at"] >= day_ago for c in bot):
@@ -443,12 +447,18 @@ class Switch:
 
     def ask_review(self, facts: rules.PrFacts, ctx: dict, agent: str, why: str) -> None:
         where, comments = self.ask_thread(facts, ctx)
+        if agent == "codex":   # the Codex app answers "@codex review" on the PR itself
+            where, comments = facts.number, ctx["comments"]
         tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
         if self.marked(comments, f"ask-{agent}", facts.number, facts.head_sha):
             self.out(f"ASKED       #{facts.number} review already asked of {agent} on #{where}")
             return
         name = self.team.agent_name.get(agent, agent)
         job = ctx["job"] or f"PR #{facts.number}"
+        if agent == "codex":
+            self.gh.comment(where, f"@codex review\n\nSwitchboard: {job}, head {facts.head_sha[:8]}. {why}\n\n{tag}",
+                            f"ask Codex to review #{facts.number}")
+            return
         head = {"muse": f"CLAUDE_TO_MUSE: {job} review #{facts.number} @ {facts.head_sha[:8]}",
                 "grok": f"To Grok: {job} review #{facts.number} @ {facts.head_sha[:8]}"}.get(agent) or \
                f"**Switchboard → {name}:** review #{facts.number} @ {facts.head_sha[:8]} ({job})"

@@ -6,6 +6,7 @@ No network, no clock: every time is given.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import json
 import os
@@ -363,7 +364,7 @@ class RepoConfig(unittest.TestCase):
             self.skipTest("PyYAML not installed")
         root = HERE.parents[1]
         team = rules.team_from_config(yaml.safe_load((root / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertNotIn("codex", {n for n in team.vendor_of_name})
+        self.assertEqual(team.agent_vendor.get("codex"), "openai")   # Codex reviews again (11-03), as the GitHub app
         b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
         self.assertLessEqual(b.month, Decimal("100"))
         # The API agent is on (Cory, 11-03); its hard per-session budget must fit the job and day caps.
@@ -952,4 +953,33 @@ class ReviewPool(unittest.TestCase):
             self.skipTest("PyYAML not installed")
         path = pathlib.Path(__file__).resolve().parents[2] / "work/agents.yml"
         team = rules.team_from_config(yaml.safe_load(path.read_text(encoding="utf-8")))
-        self.assertEqual(tuple(team.pool), (self.API, "muse", "chatgpt"))
+        self.assertEqual(tuple(team.pool), (self.API, "codex", "muse", "chatgpt"))
+
+
+class CodexState(unittest.TestCase):
+    """The Codex app's summary comment is its verdict on the commit it names (Cory, 11-03)."""
+
+    def body(self, sha="2e6a845e068fbbe39b440d9c818d5a289d5f0084", status="completed", unresolved="false"):
+        return ("<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 &#123;\"code_review\":&#123;"
+                f"\"commit_sha\":\"{sha}\",\"has_any_findings\":{unresolved},\"has_unresolved_findings\":{unresolved},"
+                f"\"status\":\"{status}\"&#125;,\"security_review\":&#123;\"commit_sha\":null,\"status\":null&#125;&#125; -->\n\n## Codex Review Summary")
+
+    def test_clean_review_is_a_land_on_its_commit(self):
+        v = rules.parse_codex_state(self.body(), T1, rules.CODEX_LOGIN)
+        self.assertEqual((v.vendor, v.who, v.kind, v.verdict, v.sha), ("openai", "Codex", "review", "LAND",
+                                                                        "2e6a845e068fbbe39b440d9c818d5a289d5f0084"))
+
+    def test_findings_hold_the_merge(self):
+        self.assertEqual(rules.parse_codex_state(self.body(unresolved="true"), T1, rules.CODEX_LOGIN).verdict, "FIX")
+
+    def test_running_unknown_or_forged_is_no_verdict(self):
+        self.assertIsNone(rules.parse_codex_state(self.body(status="running"), T1, rules.CODEX_LOGIN))
+        self.assertIsNone(rules.parse_codex_state(self.body(unresolved="null"), T1, rules.CODEX_LOGIN))
+        self.assertIsNone(rules.parse_codex_state(self.body(), T1, "IssisX"))
+        self.assertIsNone(rules.parse_codex_state(self.body(sha="not-a-sha"), T1, rules.CODEX_LOGIN))
+
+    def test_codex_land_counts_for_claude_work_not_for_chatgpt_work(self):
+        land = rules.parse_codex_state(self.body(sha=HEAD), T1, rules.CODEX_LOGIN)
+        pr = facts(verdicts=(land,), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic").action, "MERGE")
+        self.assertEqual(rules.merge_decision(dataclasses.replace(pr, head_ref="chatgpt/x"), "openai").action, "WAIT")

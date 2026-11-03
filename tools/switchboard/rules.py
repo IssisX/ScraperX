@@ -135,6 +135,35 @@ def _has_repro(body: str) -> bool:
     return all(f in found for f in REPRO_FIELDS)
 
 
+CODEX_LOGIN = "chatgpt-codex-connector[bot]"   # the Codex GitHub app: reviews every PR on open, and on "@codex review"
+_CODEX_STATE = re.compile(r"codex-review-state:v1\s+(\{.*?\})\s*-->", re.DOTALL)
+
+
+def parse_codex_state(body: str, created_at: str, author_login: str) -> Verdict | None:
+    """The Codex app's summary comment -> its verdict on the commit it reviewed (Cory, 11-03: "If Codex
+    is the one that's available, great"). Only that app's own login counts. A finished review with no
+    unresolved findings is a LAND; one with unresolved findings is a FIX (it holds the merge until they
+    are resolved or a later Codex pass is clean); a running or unknown state is no verdict."""
+    import html
+    import json
+    if author_login.strip().lower() != CODEX_LOGIN:
+        return None
+    m = _CODEX_STATE.search(html.unescape(body))   # the app writes its braces as &#123; &#125;
+    if not m:
+        return None
+    try:
+        review = json.loads(m.group(1)).get("code_review") or {}
+    except (ValueError, AttributeError):
+        return None
+    sha = str(review.get("commit_sha") or "")
+    if review.get("status") != "completed" or not re.fullmatch(r"[0-9a-f]{7,40}", sha):
+        return None
+    unresolved = review.get("has_unresolved_findings")
+    if unresolved is None:
+        return None
+    return Verdict("openai", "Codex", "review", "FIX" if unresolved else "LAND", sha, created_at, author_login, False)
+
+
 def parse_verdict(body: str, created_at: str, author_login: str, team: Team) -> Verdict | None:
     """One comment or review body -> its verdict, or None when its first line is not a verdict.
 

@@ -312,3 +312,20 @@ class PoolSteer(unittest.TestCase):
     def test_work_not_by_claude_can_go_to_the_api_and_nobody_is_asked(self):
         asks, _ = self.steer([], ({"muse": 1, "chatgpt": 1}, {}), head_ref="grok/integrate-x")
         self.assertEqual(asks, [])
+
+
+class CodexAsk(unittest.TestCase):
+    def test_codex_is_asked_on_the_pr_with_a_mention(self):
+        team = rules.team_from_config(dict(AGENTS, agents=dict(AGENTS["agents"], codex={
+            "vendor": "openai", "names": ["Codex"], "branch_prefixes": ["codex/"]}),
+            review=dict(AGENTS["review"], pool=["codex", "muse"], fallback_after_hours=1)))
+        gh = FakeGH([])
+        sw = make(gh, team=team)
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        sw.steer_pr(pr_facts(number=10), dict(ctx(), comments=[]))
+        self.assertEqual(len(gh.posted), 1)
+        where, body = gh.posted[0]
+        self.assertEqual(where, 10)
+        self.assertTrue(body.startswith("@codex review"))
+        self.assertIn("ask-codex", body)
