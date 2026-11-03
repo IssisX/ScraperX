@@ -120,7 +120,7 @@ class Recorder extends Node:
 			bones.append({"name": _skel.get_bone_name(i), "parent": _skel.get_bone_parent(i)})
 		var contacts: Dictionary = rig.get("contacts")
 		var columns := ["f", "rec", "t", "t_sim", "dt", "frozen", "paused", "vis", "state", "climbing",
-			"climb_move_active", "climb_move", "burst", "rx", "ry", "rz",
+			"climb_move_active", "climb_move", "burst", "rx", "ry", "rz", "dx", "dy", "dz",
 			"hand_held", "hand_x", "hand_y", "hand_z", "hand2_held", "hand2_x", "hand2_y", "hand2_z",
 			"ch_known", "chx", "chy", "chz", "ch2_known", "ch2x", "ch2y", "ch2z", "climb_grips",
 			"hold_state", "held", "ankle_x", "ankle_y", "ankle_z", "deaths", "on_pipe", "clinging",
@@ -199,7 +199,10 @@ class Recorder extends Node:
 	func _write_row(main: Node, view: Object, native: Object, delta: float, vis: bool, rec: int) -> void:
 		var data: Dictionary = native.get_matron_state()
 		var hold: Dictionary = native.get_matron_hold_state()
+		# The simulation's place for her (r) and where her skeleton is drawn (d),
+		# after the view's own easing (_root_off) and topple.
 		var rpos: Vector3 = data.get("render_position", data.get("position", Vector3.ZERO))
+		var drawn: Vector3 = _skel.global_transform.origin
 		var hand: Vector3 = data.get("contact_hand", Vector3.ZERO)
 		var hand2: Vector3 = data.get("contact_hand2", Vector3.ZERO)
 		var ch: Vector3 = data.get("climb_hand", Vector3.ZERO)
@@ -214,7 +217,7 @@ class Recorder extends Node:
 			int(data.get("state", 0)), int(bool(data.get("climbing", false))),
 			int(bool(data.get("climb_move_active", false))), str(data.get("climb_move", "")).replace(",", ";"),
 			"" if burst == null else str(int(bool(burst))),
-			"%.5f" % rpos.x, "%.5f" % rpos.y, "%.5f" % rpos.z,
+			"%.5f" % rpos.x, "%.5f" % rpos.y, "%.5f" % rpos.z, "%.5f" % drawn.x, "%.5f" % drawn.y, "%.5f" % drawn.z,
 			int(bool(data.get("contact_hand_held", false))), "%.5f" % hand.x, "%.5f" % hand.y, "%.5f" % hand.z,
 			int(bool(data.get("contact_hand2_held", false))), "%.5f" % hand2.x, "%.5f" % hand2.y, "%.5f" % hand2.z,
 			int(bool(data.get("climbing", false)) and data.has("climb_hand")), "%.5f" % ch.x, "%.5f" % ch.y, "%.5f" % ch.z,

@@ -16,7 +16,8 @@ save (the climber's death restores her whole: rule 34). Her body's joints are ev
 her hair (driven by the hair solver, not a joint) and her eyes (scored on
 their own line: saccades). Her fingers are joints and count. The skeleton's
 own turn in the world (her body turning, not a joint) has its own line. Frames
-where her drawn place moves more than JUMP_M in one frame are listed: a snap
+where her drawn place (her skeleton's origin as the renderer has it, after the
+view's own easing) moves more than JUMP_M in one frame are listed: a snap
 there is not a joint's rate but is not continuous either.
 
 Arms. Her drawn arm's length, shoulder to knuckles, against its own bones'
@@ -161,7 +162,8 @@ def score(path):
             qb = rec[ib, 4:].reshape(nb, 4)
             ang = angles(qa, qb)
             turn = float(angles(rec[ia, :4][None], rec[ib, :4][None])[0])
-            moved = float(np.linalg.norm(point(b, "r") - point(a, "r")))
+            where = "d" if "dx" in b else "r"   # older recordings: the simulation's place
+            moved = float(np.linalg.norm(point(b, where) - point(a, where)))
             if dt <= 0.0:
                 # A frame with no time (paused): any change is a snap.
                 if float(ang[body].max()) > 1e-4:
