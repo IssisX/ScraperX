@@ -37,6 +37,26 @@ def main() -> int:
     if not token and not args.dry_run:
         print("provision: AGENT_GITHUB_TOKEN is not set; add it as a repository secret first", file=sys.stderr)
         return 2
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not args.dry_run and not (key.startswith("sk-ant-") and "\n" not in key and " " not in key.strip()):
+        print("provision: ANTHROPIC_API_KEY does not look like an Anthropic API key (it should start with sk-ant-); "
+              "replace the repository secret", file=sys.stderr)
+        return 2
+    if not args.dry_run:
+        import urllib.error
+        import urllib.request
+        req = urllib.request.Request("https://api.github.com/repos/IssisX/ScraperX",
+                                     headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                perms = __import__("json").load(r).get("permissions", {})
+        except urllib.error.HTTPError as err:
+            print(f"provision: AGENT_GITHUB_TOKEN was refused by GitHub (HTTP {err.code}); replace the secret", file=sys.stderr)
+            return 2
+        if not perms.get("push"):
+            print("provision: AGENT_GITHUB_TOKEN cannot push to IssisX/ScraperX (needs Contents: Read and write)", file=sys.stderr)
+            return 2
+        print("provision: AGENT_GITHUB_TOKEN reaches IssisX/ScraperX with push access")
     env_cfg = {"type": "cloud", "networking": {"type": "limited", "allow_package_managers": True,
                                                "allow_mcp_servers": False, "allowed_hosts": GITHUB_HOSTS}}
     tools = [{"type": "agent_toolset_20260401",

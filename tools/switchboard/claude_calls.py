@@ -97,7 +97,10 @@ def why(err: BaseException) -> str:
     """The underlying causes of a connection error, by class and first line (no headers or keys)."""
     out, seen, e = [], 0, err.__cause__ or err.__context__
     while e is not None and seen < 4:
-        out.append(f"{type(e).__name__}: {str(e).splitlines()[0][:160] if str(e) else ''}")
+        name = type(e).__name__
+        # A protocol error quotes the offending header, which can be the key itself: class only.
+        text = "" if "Protocol" in name or "Header" in name else (str(e).splitlines()[0][:160] if str(e) else "")
+        out.append(f"{name}: {text}" if text else name)
         e, seen = e.__cause__ or e.__context__, seen + 1
     return "; ".join(out) or type(err).__name__
 
