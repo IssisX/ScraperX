@@ -34,6 +34,9 @@ T. **Task the team, unasked.**
    a. Every agent holds work matched to its strength (Muse the hardest builds, free; Grok math and stuck
       problems; ChatGPT review, research, specs; Claude sessions the kernel, CI, the game by eye; the
       API agent one bounded job). Move a job whose owner is out, stuck or mismatched now; one board line.
+   a2. **Muse first for the biggest jobs** (Cory, 11-03: *"Muse is free and very intelligent ... use what we have"*).
+      A Claude session (paid) takes what Muse can't: seeing the game (Muse's VM renders the tower under 1 fps),
+      CI, quick integrator fixes, or a big job only while Muse already holds three or more unstarted ones.
    b. Muse never runs dry: under three big unstarted jobs in `work/tasks/muse.md`, derive the next grand
       task from what Cory asked for (`03_EXECUTION/GAP_LIST.md`, her exit items, his rulings; reserve
       "G" items first): a whole system or set piece, never a small fix. Open its job issue owned by

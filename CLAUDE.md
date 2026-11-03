@@ -204,9 +204,9 @@ agent, Claude included, works this way:
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
    .
-- Effort, never medium (11-03): Opus sessions at high (strong already; xhigh burns quota faster),
-  Sonnet at xhigh (half the cost, so extra thinking is cheap). `create_session` has no effort
-  field and the repo setting did not take: `get_session` 6 min after start; if off, tell him in one line.
+- Effort, never medium (11-03): the integrator xhigh (one session; its cost is context, not effort),
+  Opus workers high, Sonnet xhigh. `create_session` has no effort field and the repo setting
+  did not take: `get_session` 6 min after start; if off, tell him in one line.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 
