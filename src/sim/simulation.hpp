@@ -303,6 +303,9 @@ struct MatronSnapshot final {
     Vector3 stock_seek_size{};
     std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
     std::uint32_t throws = 0;   // and threw at the player
+    std::uint32_t stock_shoves = 0;     // and shoved off a lip (J-016)
+    std::uint32_t stock_handled = 0;    // her throwables she counts his, a bit each
+    double stock_push_force_n = 0.0;   // her hands' push on it this tick
     // Her balance (matron.hpp): blows that took it and that took her off her
     // feet this run, the last blow (the change in her speed it made), and
     // down, the way she fell, kneeling where lying did not fit, and how long.

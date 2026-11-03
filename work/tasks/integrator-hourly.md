@@ -20,7 +20,10 @@ D. **Delegate, never sit** (Cory, 11-03: *"doesn't leave shit sitting ... knows 
    keep handling events. Never two agents on the same thing: before handing out work, check the board and the job's
    owner label; one owner per job, one reviewer per PR. No re-reading what you already read, no re-running a check
    that passed on that head, no status post that says nothing new.
-S. **Size.** `get_session` (no id): at 400k `used_tokens` or more, hand off (handoff file,
+   **Between hours** (Cory, 11-03: *"If I'm not here to prompt you ... things will pile up"*): a 20-minute self
+   check-in (`send_later`, re-armed by each run): Muse's mail, `asks.py --hours 3`, the sweep's MERGE / FIX-CI /
+   BLOCKED lines, the board's new comments, every session's size. The next integrator re-arms it on its first turn.
+S. **Size.** `get_session` (no id): at 700k `used_tokens` or more, hand off (handoff file,
    `create_session`, move this task and the PR subscriptions, archive yourself). Same check for each
    Claude worker session; archive any whose job has landed. **Every handoff, the integrator's or a
    worker's, carries the collaboration whole:** the file has a section "Asks in flight" (the `asks.py`
@@ -30,6 +33,11 @@ S. **Size.** `get_session` (no id): at 400k `used_tokens` or more, hand off (han
    (a worker: "post your asks as step K says").
 C. **Caps** (CLAUDE.md, "Nothing grows without a cap"): issue and PR comment counts (`list_issues`
    ordered by COMMENTS), `CLAUDE.md` size (`wc -c`), and every other cap listed there. Act on any over its cap now.
+   **Open PRs: nothing builds up** (Cory, 11-03: *"Nothing should be fucking building up"*). A PR whose change
+   landed elsewhere or that a newer PR replaced is closed by its owner the hour it is replaced; any open PR idle
+   24 h with no owner step is put to its owner that hour (`To <Name>: close or next step`) and retired by the
+   integrator the next hour, one at a time with its evidence. A subagent that edits code runs with
+   `isolation: "worktree"`, never in the integrator's checkout; the integrator merges from its own worktree.
 T. **Task the team, unasked.**
    a. Every agent holds work matched to its strength (Muse the hardest builds, free; Grok math and stuck
       problems; ChatGPT review, research, specs; Claude sessions the kernel, CI, the game by eye; the
@@ -48,9 +56,6 @@ T. **Task the team, unasked.**
       agent made that another's job needs.
    d. Replace the board body's "This hour" section with what each agent got and which questions you
       routed. Never a new comment.
-0. Until `gh api "repos/IssisX/ScraperX/actions/workflows/switchboard.yml/runs?event=schedule&per_page=1" -q .total_count`
-   is above 0, dispatch one live sweep: `gh api -X POST repos/IssisX/ScraperX/actions/workflows/switchboard.yml/dispatches -f ref=main -F 'inputs[dry_run]=false'`.
-   Once schedules fire, delete this step.
 1. `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`; act only where the
    switchboard can't: protected PRs (merge on green proof plus another agent's LAND), workflow PRs
    (you merge them), stuck FIX/FIX-CI owners, QUIET jobs. Never bypass CI's gate.

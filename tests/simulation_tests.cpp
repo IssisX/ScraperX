@@ -333,6 +333,10 @@ int main() {
         run_matron_mischief();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-wreck") {
+        run_matron_wreck();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit-ending") {
         run_summit_ending();
         return EXIT_SUCCESS;
