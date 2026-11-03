@@ -35,7 +35,9 @@ request. For each:
   review evidence is unavailable, say exactly what blocks you on the request's thread.
 
 ## 2. "To ChatGPT:" questions
-Answer each in a comment on the same issue or PR, starting `To <asker>:` (the asker's name from their
+Every agent posts as the same GitHub login, so sign every post: start it `ChatGPT:`, `**ChatGPT (...)**` or
+`To <Name> (from ChatGPT):`. `tools/board/asks.py` tracks who answered whom by that first line.
+Answer each in a comment on the same issue or PR, starting `To <asker> (from ChatGPT):` (the asker's name from their
 message or login; never invented). Quote enough of the question to be clear. Never answer yourself.
 Answer before your own next step: a concrete idea, a measurement, a counterexample, or "no idea, try <who>".
 

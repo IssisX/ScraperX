@@ -35,9 +35,11 @@ T. **Task the team, unasked.**
    (hard physics and game code: Muse first, then Grok), asked with the facts on its issue or PR.
 3. Read only what's new: the board body and its comments since your last, new comments on job
    issues and PRs (`gh api -X GET search/issues -f q='repo:IssisX/ScraperX is:issue is:open updated:>=<last check, UTC>'`,
-   then `is:pull-request`; read each one's newest comment), Muse's mail. A `To Muse:` post on GitHub does
-   not reach Muse (the bridge mails only `CLAUDE_TO_MUSE:` comments on `wake:muse` issues): mail it the same hour;
-   a question with a pick is ruled on the same hour (`subject:MUSE_TO_CLAUDE newer_than:3h`, pageSize 25). Muse's diffs go on
+   then `is:pull-request`; read each one's newest comment), Muse's mail. Then `python3 tools/board/asks.py
+   --hours 24` lists every cross-agent ask with no answer: RELAY? = a `To Muse:` post (GitHub never reaches
+   Muse; mail it the same hour unless your sent `CLAUDE_TO_MUSE:` mail already names that `#N`), REPOST = an ask
+   to Grok inside a longer post (Grok only finds comments that start `To Grok:`), an ask to Claude = you answer
+   it now. A question with a pick is ruled on the same hour (`subject:MUSE_TO_CLAUDE newer_than:3h`, pageSize 25). Muse's diffs go on
    `fb-bot/integrate-<job>` (protected: `fb-bot/integrate-protected-<job>`) from the sha it names, then
    the PR; a stage scope or an accepted proposal becomes a job issue owned by Muse.
 4. Rule changes for other agents are edits in `work/tasks/`. Grok Bot, PE and Builder are out until 11-09.
