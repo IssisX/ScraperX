@@ -13,11 +13,9 @@ Read `CLAUDE.md`, then steps K, D, S and C of `work/tasks/integrator-hourly.md`,
 - He judges catch-up reading at a session's start as normal, not its working pace.
 - Muse will do destructible-environment work: that is J-038 (#169), queued behind the fight.
 
-## For Cory (the one thing only he can do)
-- **Merge #187** (switchboard on `main`: idle comment/label runs get their own concurrency group). The session's safety
-  checker refuses Claude's push to `main`. Trunk's copy (#188) is merged; selftest green; Codex clean on both.
-  Until #187 lands, comment runs still displace the switchboard's review, eye and sweep runs: dispatch
-  `switchboard.yml` (main, dry_run=false) or post a `: NOTE` line on a PR to nudge one.
+## For Cory
+- Nothing. He merged #187 (switchboard idle runs on `main`) at 4:36 PM Central, so the review, eye and sweep runs
+  are no longer displaced by comment runs.
 
 ## Merged today since 2:35 PM
 #178, #181, #184, #180, #188, #176, #182.
