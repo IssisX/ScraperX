@@ -53,6 +53,7 @@ class Team:
     agent_name: Mapping[str, str] = dataclasses.field(default_factory=dict)   # agent key -> the name it signs verdicts with
     fallback_order: Sequence[str] = ()     # agent keys asked, in turn, when an ask goes unanswered
     fallback_after_hours: float = 3.0      # an ask with no verdict this long is passed to the next agent
+    other_authored_asks: Sequence[str] = ()  # agent keys asked, in order, to review work not by Claude
 
     def vendor_of_branch(self, ref: str) -> str:
         for prefix, vendor in self.vendor_of_prefix:
@@ -94,6 +95,13 @@ def team_from_config(cfg: Mapping) -> Team:
     logins = cfg.get("verdict_logins")
     if not isinstance(logins, Sequence) or isinstance(logins, str) or not logins:
         raise ValueError("agents.yml: `verdict_logins` must list the GitHub logins whose verdicts count")
+    others = list(review.get("other_authored_asks", []))
+    for o in others:
+        if o not in agents:
+            raise ValueError(f"agents.yml: review.other_authored_asks names unknown agent {o!r}")
+        if agent_vendor[o] == "anthropic":
+            raise ValueError(f"agents.yml: review.other_authored_asks names {o!r}, a Claude agent: the paid "
+                             "Claude review is the fallback when no one listed here can take it")
     fallback = list(review.get("fallback_order", []))
     for f in fallback:
         if f not in agents:
@@ -109,7 +117,7 @@ def team_from_config(cfg: Mapping) -> Team:
     signs = {key: str((a.get("names") or [key])[0]) for key, a in agents.items()}
     prefixes.sort(key=lambda pv: -len(pv[0]))  # longest prefix wins
     return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor,
-                frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours)
+                frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours, tuple(others))
 
 
 def _has_repro(body: str) -> bool:
@@ -238,13 +246,19 @@ class ReviewPick:
 
 
 def pick_reviewer(author_vendor: str, needs: frozenset[str], team: Team) -> ReviewPick:
-    """Owner's correction 4: only Claude can be woken automatically.
+    """Who reviews a PR, by its author's vendor.
 
-    A PR from any other vendor (or an unknown one) gets the automatic Claude review through the
-    API. A Claude-authored PR is asked of ChatGPT or Muse on the job issue: Muse first when the job
-    needs matron (its specialty), else the first agent in review.claude_authored_asks.
+    A PR by another vendor is asked of the first agent in review.other_authored_asks whose vendor is
+    not the author's (Cory, 11-03: Muse is always on and free, so it goes first). Only when none
+    fits, or the author is unknown, does it get the paid automatic Claude review through the API. A
+    Claude-authored PR is asked of ChatGPT or Muse on the job issue: Muse first when the job needs
+    matron (its specialty), else the first agent in review.claude_authored_asks.
     """
     if author_vendor != "anthropic":
+        if author_vendor != "unknown":
+            for agent in team.other_authored_asks:
+                if team.agent_vendor.get(agent) not in (None, "anthropic", author_vendor):
+                    return ReviewPick("ask", agent)
         return ReviewPick("claude-api", "")
     if "matron" in needs and team.matron_reviewer:
         return ReviewPick("ask", team.matron_reviewer)
