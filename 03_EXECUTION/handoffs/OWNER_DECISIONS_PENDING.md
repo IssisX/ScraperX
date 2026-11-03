@@ -85,6 +85,13 @@ real reach under the existing contact audit, with no world change and no launch 
 The alternatives were a leap (it can't go up) and rungs on the rail post (protected geometry; changes
 the corner's look). He can overturn it.
 
+**11-03, 11:55 AM Central, decided by the integrator** (J-032, #157): she picks up the toolbox in her
+act with **A**: her stoop starts earlier, so she is down when the take happens, and her hand reaches
+for the handle only once it is inside her real arm. She scoops it up at a run. Reason: the act keeps
+its beats and timing; B (she slows first) shifted the act's later beats before; C snaps the box.
+Same hour, J-001 (#108): Muse takes the fix on #102's hold line, as Muse proposed. The strain budget
+(a physics limit) is not changed.
+
 ## Questions
 
 **1. Whose story is on the radio?**
