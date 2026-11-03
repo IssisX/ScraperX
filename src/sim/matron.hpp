@@ -1681,6 +1681,9 @@ public:
         dir = swat_dir_;
         return true;
     }
+    // A swat draws from the same per-tick force/power account as her feet.
+    // The caller applies only this grant and its equal opposite reaction.
+    [[nodiscard]] JPH::Vec3 grant_swat_force(JPH::Vec3 wanted, JPH::Vec3 player_point_velocity) noexcept;
     // His body down (off his feet, lying), and his collar (the top of his
     // chest), given before pre_step.
     void set_player_down(const bool down) noexcept { player_down_ = down; }
