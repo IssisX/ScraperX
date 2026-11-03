@@ -1,6 +1,7 @@
 #include "sim/bands.hpp"
 #include "sim/simulation.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -465,16 +466,80 @@ void build_stage_i(kit::Kit &kit, PlateShop &shop, std::vector<Part> &frame) {
 }
 
 // ---- the climbing route, no lift ----------------------------------------------
-// Up the well's east band at z = -158, one climb per ring gap, each facing the
-// ring it tops out onto: a ladder on the 352 ring's face from TP-340; then on
-// each ring an L of boards out into the well to a ladder on the next ring's
-// inner face, which stands 0.91 m further in (the rings' taper).
+// Up the well's east half, one climb per ring gap, each facing the ring it
+// tops out onto. The 340 plate's ladder reaches the 352 ring; the 352 -> 374
+// gap is the wall-climb stack; then, on each ring above, an L of boards out
+// into the well to a ladder on the next ring's inner face, which stands 0.91 m
+// further in (the rings' taper).
 constexpr float kRouteZ = -158.0F;
+
+// The wall-climb stack, 352 -> 374 (J-017, rules 52 and 53): six terraces of
+// 2 m lanes side by side, each 4.4 m above the last. At one end of each lane
+// stands a block rising 4.4 m to the next lane's level. 4.4 m is out of a
+// jump-hang's reach (3.76 m of lip), so a body must sprint the lane, jump at
+// the block and run up its face (kWallClimbMinimumSpeed), take the lip and
+// pull over. Lanes alternate their heading, so the climb zigzags south across
+// the well and the last lane runs east onto the 374 ring.
+constexpr int kStackLanes = 6;
+constexpr float kStackRise = 4.4F;              // per lane: 6 lanes, 5 risers = 22 m
+constexpr float kStackX0 = 3.0F;                // the lanes' west end
+constexpr float kStackX1 = 12.5F;               // and their east end, short of the 374 ring
+constexpr float kStackBlock = 1.5F;             // a block's depth along its lane
+constexpr float kStackLaneNorthZ = -151.0F;     // lane k spans z in [-153 - 2k, -151 - 2k]
+constexpr float kStackLaneWidth = 2.0F;
+constexpr float kStackSlab = 0.3F;
+constexpr float kStackRail = 0.8F;              // under the 0.9 m the ledge probe starts at
+constexpr float kStackRailThick = 0.08F;
+
+void build_wall_stack(std::vector<Part> &route) {
+    const auto lane_north = [](const int k) { return kStackLaneNorthZ - kStackLaneWidth * static_cast<float>(k); };
+    const auto lane_top = [](const int k) { return 352.25F + kStackRise * static_cast<float>(k); };
+    // Lane k heads west when k is even, east when odd: its block stands at
+    // that end, and the lane after it starts with the block's cap.
+    const auto block_x0 = [](const int k) { return k % 2 == 0 ? kStackX0 : kStackX1 - kStackBlock; };
+    const auto rail = [&route](const float x0, const float x1, const float z0, const float z1, const float y) {
+        route.push_back(span({x0, y, z0}, {x1, y + kStackRail, z1}, Material::Yellow));
+    };
+    for (int k = 0; k < kStackLanes; ++k) {
+        const float zh = lane_north(k);
+        const float zl = zh - kStackLaneWidth;
+        const float top = lane_top(k);
+        // The first lane runs to the 352 ring, the last onto the 374 ring.
+        const float x1 = k == 0 ? ring_inner(352.0F) + 0.05F
+                                : (k == kStackLanes - 1 ? ring_inner(374.0F) + 0.05F : kStackX1);
+        route.push_back(span({kStackX0, top - kStackSlab, zl}, {x1, top, zh}, Material::Galvanised));
+
+        // Both long edges railed, the south one whole (lane k + 1 stands 4.4 m
+        // up beside it over open air), the north one open along the cap that
+        // joins it to the lane below's block.
+        rail(kStackX0, x1, zl, zl + kStackRailThick, top);
+        if (k == 0) {
+            rail(kStackX0, x1, zh - kStackRailThick, zh, top);
+        } else if (k % 2 == 1) {   // the cap is at the west end
+            rail(kStackX0 + kStackBlock, x1, zh - kStackRailThick, zh, top);
+        } else {                   // and at the east end
+            rail(kStackX0, kStackX1 - kStackBlock, zh - kStackRailThick, zh, top);
+        }
+        if (k == kStackLanes - 1) {
+            continue;
+        }
+        const float bx0 = block_x0(k);
+        const float bx1 = bx0 + kStackBlock;
+        route.push_back(span({bx0, top, zl}, {bx1, top + kStackRise, zh}, Material::Concrete));
+        // Its cap is lane k + 1's far end: railed on the north edge and across
+        // the outer end, down to lane k + 1's south edge.
+        const float cap_top = top + kStackRise;
+        rail(bx0, bx1, zh - kStackRailThick, zh, cap_top);
+        const bool west = k % 2 == 0;
+        rail(west ? bx0 : bx1 - kStackRailThick, west ? bx0 + kStackRailThick : bx1, zh - 2.0F * kStackLaneWidth, zh, cap_top);
+    }
+}
 
 void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     ladder(route, ring_inner(352.0F) - 0.14F, kRouteZ, false, 340.25F, 352.25F);
-    for (float h = 352.0F; h < 483.9F; h += 22.0F) {
+    build_wall_stack(route);
+    for (float h = 374.0F; h < 483.9F; h += 22.0F) {
         const float s = ring_inner(h);
         const float y0 = h + 0.05F;
         const float y1 = h + 0.25F;
