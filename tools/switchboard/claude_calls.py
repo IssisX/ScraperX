@@ -92,6 +92,15 @@ class Result:
     output_tokens: int
 
 
+
+def why(err: BaseException) -> str:
+    """The underlying causes of a connection error, by class and first line (no headers or keys)."""
+    out, seen, e = [], 0, err.__cause__ or err.__context__
+    while e is not None and seen < 4:
+        out.append(f"{type(e).__name__}: {str(e).splitlines()[0][:160] if str(e) else ''}")
+        e, seen = e.__cause__ or e.__context__, seen + 1
+    return "; ".join(out) or type(err).__name__
+
 def client():
     import anthropic  # imported here so the free parts of the switch run without the SDK
     return anthropic.Anthropic(timeout=REQUEST_TIMEOUT_S, max_retries=0)
@@ -109,7 +118,7 @@ def count_tokens(c, model: str, system: str, content: Sequence[Mapping]) -> int:
     except a.APIStatusError as err:
         raise ClaudeCallError(f"count_tokens({model}) answered HTTP {err.status_code}") from err
     except a.APIConnectionError as err:
-        raise ClaudeCallError(f"count_tokens({model}) could not connect") from err
+        raise ClaudeCallError(f"count_tokens({model}) could not connect ({why(err)})") from err
     return int(r.input_tokens)
 
 
@@ -129,7 +138,7 @@ def ask_json(c, model: str, max_tokens: int, effort: str, system: str, content: 
     except a.APIStatusError as err:
         raise ClaudeCallError(f"messages.create({model}) answered HTTP {err.status_code}") from err
     except a.APIConnectionError as err:
-        raise ClaudeCallError(f"messages.create({model}) could not connect") from err
+        raise ClaudeCallError(f"messages.create({model}) could not connect ({why(err)})") from err
     data = None
     if r.stop_reason == "end_turn":
         text = next((b.text for b in r.content if b.type == "text"), "")
@@ -182,5 +191,5 @@ def start_session(c, agent_id: str, environment_id: str, title: str, message: st
     except a.APIStatusError as err:
         raise ClaudeCallError(f"beta.sessions.create answered HTTP {err.status_code}") from err
     except a.APIConnectionError as err:
-        raise ClaudeCallError("beta.sessions.create could not connect") from err
+        raise ClaudeCallError(f"beta.sessions.create could not connect ({why(err)})") from err
     return str(s.id)

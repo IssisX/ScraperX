@@ -64,8 +64,10 @@ def main() -> int:
     except anthropic.APIStatusError as err:
         print(f"provision: {step} answered HTTP {err.status_code}", file=sys.stderr)
         return 2
-    except anthropic.APIConnectionError:
-        print(f"provision: {step} could not connect", file=sys.stderr)
+    except anthropic.APIConnectionError as err:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from claude_calls import why
+        print(f"provision: {step} could not connect ({why(err)})", file=sys.stderr)
         return 2
     ids = {"agent_id": agent.id, "agent_version": agent.version, "environment_id": env.id, "vault_id": vault.id,
            "model": args.model, "effort": args.effort}
