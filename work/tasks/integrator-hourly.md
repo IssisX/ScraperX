@@ -55,7 +55,7 @@ T. **Task the team, unasked.**
    the PR; a stage scope or an accepted proposal becomes a job issue owned by Muse.
 4. Rule changes for other agents are edits in `work/tasks/`. Grok Bot, PE and Builder are out until 11-09.
 5. API agent (Opus 5.5 high, $8 a session; `work/budget.yml`): label one bounded job
-   `needs:orchestrator` at a time; the day cap stays $10.
+   `needs:orchestrator` at a time; only the $100 month cap holds (no daily cap since 11-03).
 6. Subscribe only to PRs you opened or must merge. Big reads (logs, transcripts, long threads) go to
    a subagent; keep only its answer.
 

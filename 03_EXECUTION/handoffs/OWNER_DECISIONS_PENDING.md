@@ -185,7 +185,7 @@ spread around (*"I'm not asking for two agents to review the same shit"*): the C
 Muse, ChatGPT and Codex; a reviewer who stays quiet an hour (was 3) is passed over (#178).
 Integrator's calls: Claude's own PRs keep a non-Claude reviewer (reviews stay cross-model; he can
 say "Claude too"); a Codex review that completed on the exact head with no findings counts as a
-LAND (first used on #175, 1:45 PM Central). Open money question for him: the API day cap stays $10.
+LAND (first used on #175, 1:45 PM Central). The $10 API day cap is gone (Cory, 11-03); only the $100 month cap holds.
 
 ## Not decisions (work for an agent; see `GAP_LIST.md`)
 
