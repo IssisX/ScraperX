@@ -113,15 +113,17 @@ func _build_kit() -> void:
 	# Indexed by the native's Material enum: steel, rust, timber, concrete,
 	# hazard, galvanised, rubble, yellow, glass. The steel and the galvanized
 	# are smooth (a machine's frame, a tank, a rail); only the rust is pitted.
+	# The same measured values as the world's palette (main_world.gd
+	# _build_world): steel a mill-scaled dark, oxide and paint not metal.
 	var palette: Array[Material] = [
-		_material(Color("2a2723"), 0.7, 0.55, Color.BLACK, 1.0, _bump_smooth),
-		_material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_rust),
-		_material(Color("4a3420"), 0.02, 0.9, Color.BLACK, 1.0, _bump_timber),
+		_material(Color("36383b"), 0.3, 0.5, Color.BLACK, 1.0, _bump_smooth),
+		_material(Color("57382a"), 0.0, 0.9, Color.BLACK, 1.0, _bump_rust),
+		_material(Color("4a3420"), 0.0, 0.9, Color.BLACK, 1.0, _bump_timber),
 		_material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete),
-		_material(Color("a04d16"), 0.18, 0.76),
-		_material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_smooth),
+		_material(Color("9a4814"), 0.0, 0.66, Color.BLACK, 1.0, _bump_smooth),
+		_material(Color("6e7274"), 0.75, 0.6, Color.BLACK, 1.0, _bump_smooth),
 		_material(Color("5b544b"), 0.0, 0.98, Color.BLACK, 1.0, _bump_concrete),
-		_material(Color("c19a2a"), 0.2, 0.62),
+		_material(Color("8c690f"), 0.0, 0.58, Color.BLACK, 1.0, _bump_smooth),
 		_glass_material(),
 	]
 	const KIT_GLASS := 8

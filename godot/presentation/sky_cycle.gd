@@ -68,10 +68,12 @@ func setup(sun: DirectionalLight3D, fill: DirectionalLight3D, environment: Envir
 	# at full strength on the sky it washed the dome to one flat haze and hid
 	# the cloud deck (observed).
 	_environment.fog_sky_affect = 0.2
-	# Ambient yes, specular no: the rough asphalt and concrete mirrored the
-	# bright dome and read near-white (observed); the scene is lit by the sun,
-	# the fill, the sky ambient and its own lamps.
-	_environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	# Metal shows the sky. (It was off because rough asphalt and concrete
+	# read near-white: their specular level let the sky's rough-surface sheen,
+	# which this renderer adds whatever a surface's colour, swamp their dark
+	# albedo. The porous finishes now carry their cavities' occlusion instead:
+	# main_geometry.gd POROUS_SPECULAR.)
+	_environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	_air_depth_end = _environment.fog_depth_end
 	_apply()
 

@@ -48,22 +48,37 @@ func _build_world() -> void:
 	# The yard's asphalt: worn, patched, cracked and stained (yard_ground.gd).
 	var asphalt := YardGround.material()
 	var concrete := _material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete)
-	# A real value ladder: near-black iron in shadow, mid rust for the frame,
-	# brighter oxide only where light catches an edge. Bump-mapped: these
-	# cover most of the structure's surface area, so this is where per-pixel
-	# normal detail matters most -- pitted where rusted, smooth where not.
-	var mill_scale := _material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, _bump_smooth)
-	var oxidised := _material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_rust)
-	var rust_deep := _material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, _bump_rust)
-	var rust_bright := _material(Color("9a5326"), 0.34, 0.82, Color.BLACK, 1.0, _bump_rust)
-	var galvanised := _material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_smooth)
-	var faded_yellow := _material(Color("b08a22"), 0.16, 0.68)
-	var hazard := _material(Color("a04d16"), 0.18, 0.76)
-	var tar := _material(Color("0e0f11"), 0.05, 0.62)
-	var timber := _material(Color("4a3420"), 0.02, 0.9, Color.BLACK, 1.0, _bump_timber)
-	# New accents: living colour against the rust. Copper pipe under a thin
-	# patina is smooth.
-	var verdigris := _material(Color("3f6b5c"), 0.42, 0.68, Color.BLACK, 1.0, _bump_smooth)
+	# Measured values (linear albedo; physicallybased.info, CC0, which names
+	# its own sources): iron 0.53 and zinc 0.81 as bare metal, fired-clay
+	# brick -- iron oxide -- 0.26/0.10/0.06, concrete 0.51 clean. The sun and
+	# exposure here (sky_cycle.gd, main.tscn) run about 2.5 times a camera's,
+	# so a lit diffuse surface sits that far under its measured value and
+	# the ladder between them is kept: none sits under the rest by a factor of
+	# ten, as mill scale did at 0.012 (environment plan, job 2). A metal shows
+	# the sky at the sky's own exposure, so its value is not lowered for it.
+	# Oxide, paint, timber and patina are not metal (metallic 0): only bare
+	# and galvanised steel are. Mill scale is the forged skin of iron oxide
+	# on new steel, blue-black with a dull sheen: a dark dielectric over the
+	# metal (linear 0.04), a value step under the rust, never a hole. Rust
+	# runs the hematite hue at three values. Bump-mapped: these cover most of
+	# the structure's surface area, so this is where per-pixel normal detail
+	# matters most -- pitted where rusted, smooth where not.
+	var mill_scale := _material(Color("36383b"), 0.3, 0.5, Color.BLACK, 1.0, _bump_smooth)
+	var oxidised := _material(Color("57382a"), 0.0, 0.9, Color.BLACK, 1.0, _bump_rust)
+	var rust_deep := _material(Color("3a271d"), 0.0, 0.93, Color.BLACK, 1.0, _bump_rust)
+	var rust_bright := _material(Color("6e4630"), 0.0, 0.84, Color.BLACK, 1.0, _bump_rust)
+	# Weathered hot-dip zinc: the bright metal (0.81) dulled under its grey
+	# patina of zinc carbonate, part metal, part mineral.
+	var galvanised := _material(Color("6e7274"), 0.75, 0.6, Color.BLACK, 1.0, _bump_smooth)
+	# Paint is not metal: it weathers, grimes and streaks like the steel it
+	# covers (signal yellow and orange, sun-faded and dirtied).
+	var faded_yellow := _material(Color("85600c"), 0.0, 0.6, Color.BLACK, 1.0, _bump_smooth)
+	var hazard := _material(Color("9a4814"), 0.0, 0.66, Color.BLACK, 1.0, _bump_smooth)
+	var tar := _material(Color("0e0f11"), 0.0, 0.62)
+	var timber := _material(Color("4a3420"), 0.0, 0.9, Color.BLACK, 1.0, _bump_timber)
+	# New accents: living colour against the rust. Copper's patina is a
+	# mineral crust, not metal.
+	var verdigris := _material(Color("3f6b5c"), 0.0, 0.7, Color.BLACK, 1.0, _bump_smooth)
 	var lichen := _material(Color("57642e"), 0.0, 0.96)
 
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
@@ -76,7 +91,8 @@ func _build_world() -> void:
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_yard(concrete, faded_yellow, tar)
 	_build_mountains_and_waterfall()
-	_build_kellerworks_signage(timber, faded_yellow)
+	# The signs keep their own paint as it was (rule 24: no sign work).
+	_build_kellerworks_signage(timber, _material(Color("b08a22"), 0.16, 0.68))
 	_build_foliage()
 	_build_lighting()
 
