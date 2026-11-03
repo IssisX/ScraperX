@@ -671,6 +671,20 @@ void run_crane_route() {
         }
         if (h == 550.0) {
             require(run_tuck_stage(route), "route: the tuck wall, 550 to 572");
+            // Round the 572 ring's west, north and east bands to its east band (the walk
+            // the ladder route made here), and back to the west band, where the slide
+            // jump below starts.
+            require(walk_to(route, -6.7, -143.3, 14.0, 0.3) && walk_to(route, 6.7, -143.3, 20.0, 0.3) &&
+                        walk_to(route, 6.7, -149.0, 10.0, 0.3),
+                    "route: round the 572 ring to its east band");
+            const bool w1 = walk_to(route, 6.7, -143.3, 10.0, 0.3);
+            const bool w2 = w1 && walk_to(route, -5.4, -143.3, 20.0, 0.3);
+            const bool w3 = w2 && walk_to(route, -5.4, -149.5, 10.0, 0.3);
+            if (!w3) {
+                const auto p = route.snapshot().player_position;
+                std::cout << "route: back round: " << w1 << w2 << w3 << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+            }
+            require(w3, "route: and back round the 572 ring to its west band");
             continue;
         }
         if (h == 572.0) {
