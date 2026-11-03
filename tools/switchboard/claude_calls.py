@@ -89,7 +89,8 @@ class ClaudeCallError(RuntimeError):
 
 
 class SessionStartRejected(ClaudeCallError):
-    """beta.sessions.create answered an HTTP error status: the server made no session."""
+    """beta.sessions.create answered a 4xx: the server refused the request, so it made no session.
+    Only a 4xx proves that; a 5xx may follow work already done (see SessionStartUnknown)."""
 
     def __init__(self, message: str, status: int, error_class: str):
         super().__init__(message)
@@ -97,11 +98,11 @@ class SessionStartRejected(ClaudeCallError):
 
 
 class SessionStartUnknown(ClaudeCallError):
-    """beta.sessions.create got no answer (connection or timeout): the session may exist."""
+    """beta.sessions.create got no usable answer (connection, timeout, or a 5xx): the session may exist."""
 
-    def __init__(self, message: str, classes: Sequence[str]):
+    def __init__(self, message: str, classes: Sequence[str], status: int | None = None):
         super().__init__(message)
-        self.classes = tuple(classes)
+        self.classes, self.status = tuple(classes), status
 
 
 @dataclasses.dataclass(frozen=True)
@@ -213,8 +214,11 @@ def start_session(c, agent_id: str, environment_id: str, title: str, message: st
             budget={"type": "limit", "max_list_cost": {"amount": cents(budget_usd), "currency": "USD"}},
         )
     except a.APIStatusError as err:
-        raise SessionStartRejected(f"beta.sessions.create answered HTTP {err.status_code}", err.status_code,
-                                   type(err).__name__) from err
+        if 400 <= err.status_code < 500:
+            raise SessionStartRejected(f"beta.sessions.create answered HTTP {err.status_code}", err.status_code,
+                                       type(err).__name__) from err
+        raise SessionStartUnknown(f"beta.sessions.create answered HTTP {err.status_code}", [type(err).__name__],
+                                  err.status_code) from err
     except a.APIConnectionError as err:
         raise SessionStartUnknown(f"beta.sessions.create could not connect ({why(err)})", error_classes(err)) from err
     return str(s.id)

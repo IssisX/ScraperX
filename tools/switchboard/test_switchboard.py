@@ -640,6 +640,14 @@ class StartFailures(unittest.TestCase):
         self.assertIn(switch.MARK.format(kind="orchestrator", pr=138, head="-"), body)
         self.assertIsNone(sw.start_comment([{"body": body, "user": {"login": BOT}}], 138))   # nothing for the watcher to bind
 
+    def test_a_5xx_keeps_the_reserve_and_blocks_a_retry_like_no_answer(self):
+        sw, gh = self.orchestrate(claude_calls.SessionStartUnknown("beta.sessions.create answered HTTP 500", ["InternalServerError"], 500))
+        self.assertEqual([money.parse_log(l)[0].phase for l in sw.appended], ["reserve"])   # no $0 end
+        body = gh.posted[0][1]
+        self.assertIn("answered HTTP 500 (InternalServerError)", body)
+        self.assertIn(switch.MARK.format(kind="orchestrator", pr=138, head="-"), body)       # a re-label finds it handled
+        self.assertNotIn("orchestrator-failed", body)
+
     def test_a_started_session_carries_its_run_id_to_the_watcher(self):
         sw, gh = self.orchestrate(SESSION)
         run = money.parse_log(sw.appended[0])[0].run
@@ -685,19 +693,30 @@ class SdkRequests(unittest.TestCase):
     def test_start_status_error_and_connection_error_are_told_apart(self):
         import anthropic
 
-        def reject(req):
-            return httpx2.Response(400, json={"type": "error", "error": {"type": "invalid_request_error", "message": "secret-ish text"}},
-                                   headers={"x-api-key": "sk-ant-leak"})
+        def status(code):
+            def reject(req):
+                return httpx2.Response(code, json={"type": "error", "error": {"type": "api_error", "message": "secret-ish text"}},
+                                       headers={"x-api-key": "sk-ant-leak"})
+            return reject
         args = ("agent_1", "env_1", "J-031 #138", "go", Decimal("8.00"), "https://github.com/IssisX/ScraperX", "ghp_test", "ScraperX-Claude", "")
-        with self.assertRaises(claude_calls.SessionStartRejected) as rej:
-            claude_calls.start_session(self.client(reject), *args)
-        self.assertEqual((rej.exception.status, rej.exception.error_class), (400, "BadRequestError"))
+        # A 4xx proves the server refused the request: no session exists.
+        for code, name in ((400, "BadRequestError"), (401, "AuthenticationError"), (404, "NotFoundError"), (429, "RateLimitError")):
+            with self.assertRaises(claude_calls.SessionStartRejected, msg=code) as rej:
+                claude_calls.start_session(self.client(status(code)), *args)
+            self.assertEqual((rej.exception.status, rej.exception.error_class), (code, name))
+        # A 5xx proves nothing: the work may have been done before the answer failed.
+        for code in (500, 502, 529):
+            with self.assertRaises(claude_calls.SessionStartUnknown, msg=code) as unk5:
+                claude_calls.start_session(self.client(status(code)), *args)
+            self.assertEqual(unk5.exception.status, code)
+            self.assertNotIn("secret-ish", str(unk5.exception))
 
         def drop(req):
             raise httpx2.ConnectError("boom", request=req)
         with self.assertRaises(claude_calls.SessionStartUnknown) as unk:
             claude_calls.start_session(self.client(drop), *args)
         self.assertIn("APIConnectionError", unk.exception.classes)
+        self.assertIsNone(unk.exception.status)
         self.assertIsInstance(unk.exception.__cause__, anthropic.APIConnectionError)
 
 

@@ -524,7 +524,7 @@ class Switch:
                                                  f"https://github.com/{self.gh.repo}", os.environ.get("AGENT_GITHUB_TOKEN", ""),
                                                  rules.TRUNK, b.orchestrator_vault_id)
         except claude_calls.SessionStartRejected as err:
-            # An HTTP error status: the server made no session, so the reserve is released at once.
+            # A 4xx: the server refused the request, so no session exists and the reserve is released at once.
             self.out(f"FAILED orchestrator #{number}: {err}")
             self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
                                      f"{key} start rejected HTTP {err.status}"), f"end {key} (start rejected)")
@@ -534,10 +534,11 @@ class Switch:
                                     f"\n\n{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
             return
         except claude_calls.SessionStartUnknown as err:
-            # No answer: a session may exist. The reserve stands, and the issue is marked handled so a
-            # re-label cannot start a second session beside it; a person looks in the Console.
+            # No usable answer (no connection, or a 5xx): a session may exist. The reserve stands, and the issue
+            # is marked handled so a re-label cannot start a second session beside it; a person looks in the Console.
             self.out(f"FAILED orchestrator #{number}: {err}")
-            self.gh.comment(number, f"Switchboard, {central(self.now)}: `beta.sessions.create` got no answer "
+            heard = f"answered HTTP {err.status}" if err.status else "got no answer"
+            self.gh.comment(number, f"Switchboard, {central(self.now)}: `beta.sessions.create` {heard} "
                                     f"({', '.join(err.classes)}), so a session may exist. The ${b.orchestrator_session_usd} "
                                     f"reserve stays on the ledger (run `{run}`) and no second session is started. Look for "
                                     f"it in the Console.\n\n{tag}")
