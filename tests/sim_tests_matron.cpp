@@ -925,9 +925,12 @@ void run_matron_mischief() {
 void run_matron_crash() {
     // ---- a hit on her deck draws her (the owner, 2026-10-18: sound is how she
     //      hunts). She searches where she lost the player; out of her earshot
-    //      and her sight, the player shoves crate S into crate N; she hears the
-    //      hit and goes to it, not wary, finds nobody, and is the warier ----
+    //      and her sight, the player shoves loose stock off the 176.25 ring
+    //      onto her deck; she hears the hit and goes to it, not wary, finds
+    //      nobody, and is the warier ----
     {
+        constexpr double kDropFromX = 23.6;   // east of piece 246 on the ring
+        constexpr double kDropZ = -145.2;
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
@@ -971,16 +974,38 @@ void run_matron_crash() {
                     lost.lead_x == waking_lead.lead_x && lost.lead_z == waking_lead.lead_z &&
                     std::hypot(lost.position.x - waking_lead.lead_x, lost.position.z - waking_lead.lead_z) < 2.0,
                 "matron crash: she searches the waking evidence without tracking hidden movement");
-        // Up, and crate S shoved north into crate N.
+        // While she searches: round by the south and west bands to her home
+        // ladder, up it to the 176.25 ring, and along to piece 246, which sits
+        // on the ring's inner edge above her deck. He shoves it west off the
+        // edge; it lands loud on her deck below (ruling #117, 6:22 PM).
+        require(go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 60.0, 0.4) &&
+                    go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0, 0.4),
+                "matron crash: crouched round by the south and west bands");
         (void)s.set_crouch_input(false);
+        require(walk_to(s, 3.5, -128.2, 20.0) && walk_to(s, 3.5, -129.8, 4.0) && walk_to(s, 5.0, -129.6, 4.0, 0.08),
+                "matron crash: to her home ladder's foot");
+        (void)s.set_facing(0.0, 1.0);
+        require(s.request_traversal() && s.advance_frame(0.2).accepted && is_climbing(s.snapshot()),
+                "matron crash: the ladder taken");
+        bool topped = false;
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !topped; ++i) {
+            (void)s.set_move_input(0.0, 1.0);
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+            topped = standing_above(s.snapshot(), 176.5);
+        }
+        require(topped, "matron crash: up onto the 176 ring");
+        require(go(s, kDropFromX, Matron::kRingNorthZ, false, 20.0, 0.3) && go(s, kDropFromX, kDropZ, false, 20.0, 0.1),
+                "matron crash: along the ring to piece 246");
+        constexpr std::uint64_t kDropped = LooseStock::kFirstEntity + 246;
         std::uint64_t seen = s.last_impact_sequence();
         scraperx::sim::ImpactSnapshot last_tick_loudest{};
         scraperx::sim::ImpactSnapshot crash{};
         bool heard = false;
         double player_from_her = 0.0;
         for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz) && !heard; ++i) {
-            (void)s.set_move_input(0.0, 1.0);
-            (void)s.set_facing(0.0, 1.0);
+            (void)s.set_move_input(-1.0, 0.0);
+            (void)s.set_facing(-1.0, 0.0);
             tick(s);
             const auto m = s.matron_state();
             const auto p = s.snapshot();
@@ -1005,27 +1030,24 @@ void run_matron_crash() {
         const auto drawn = s.matron_state();
         const double loud = ImpactLedger::loudness(static_cast<float>(crash.energy_j));
         const double crash_d = std::hypot(crash.at.x - drawn.position.x, crash.at.z - drawn.position.z);
-        std::cout << "  matron crash: heard the hit on crate N (" << crash.energy_j << " J, loudness " << loud << ") "
+        std::cout << "  matron crash: heard the dropped piece land (" << crash.energy_j << " J, loudness " << loud << ") "
                   << crash_d << " m off; the player " << player_from_her << " m off; state=" << int(drawn.state)
                   << " wary=" << drawn.wary << " target=" << drawn.target_x << "," << drawn.target_z
                   << " lead=" << drawn.lead_x << "," << drawn.lead_z << " hit=" << crash.at.x << "," << crash.at.z << "\n";
-        require(heard && crash.entity == LooseStock::kFirstEntity + static_cast<std::uint64_t>(LooseStock::kDeckCrateNorth),
-                "matron crash: she hears crate S strike crate N");
+        require(heard && crash.entity == kDropped, "matron crash: she hears the dropped piece land");
         require(drawn.noise_heard == loud, "matron crash: what she heard is the hit, at its loudness");
         require(player_from_her > 0.30 * 55.0 && !drawn.sees_player,
                 "matron crash: the player is out of her earshot and her sight");
         require(drawn.state == kStateHunting && !drawn.wary &&
                     !drawn.lead_seen && std::hypot(drawn.lead_x - crash.at.x, drawn.lead_z - crash.at.z) < 0.01,
                 "matron crash: the hit draws her: she goes for it, not wary");
-        // Away, crouched, off the band's open line to the east rim beside the
-        // crates; she goes to the hit, searches it, finds nobody. (Her sight
-        // is her eyes, 1.69 m up: crouched in the open down the band, as this
-        // went before, she sees him over the crates.)
+        // He stays up on the ring, crouched and still, out of her sight; she
+        // goes to the hit, searches it, finds nobody.
         (void)s.set_crouch_input(true);
         double closest = 1.0e9;
         bool stood_down = false;
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !stood_down; ++i) {
-            (void)steer(s, 26.5, -151.0, false);
+            (void)s.set_move_input(0.0, 0.0);
             tick(s);
             const auto m = s.matron_state();
             closest = std::min(closest, std::hypot(m.position.x - crash.at.x, m.position.z - crash.at.z));
