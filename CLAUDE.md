@@ -153,6 +153,13 @@ agent, Claude included, works this way:
   and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
   (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
   GitHub comments each need the owner's approval (10-29).
+- **Muse never runs dry** (11-03: *"You have to keep constantly tasking it out. With grand derived
+  tasks"*; it is the strongest builder and free). On every hourly check the integrator counts Muse's big
+  jobs not yet started (`work/tasks/muse.md`); under three, it derives the next grand task from what the
+  owner asked for (`03_EXECUTION/GAP_LIST.md`, her exit items, his rulings): a whole player-facing system
+  or set piece, never a small fix. It opens the job issue owned by Muse, written whole (goal, why it is
+  hard, laws, files, finish facts), adds it to Muse's queue and mails it. Muse may propose its own grand
+  tasks by mail; the integrator rules on each within the hour.
 - Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
   board, linked once from #3.
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long

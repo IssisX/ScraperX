@@ -70,6 +70,17 @@ finished piece as its own diff email as soon as it is proven, not all at the end
    work it when a fight stage waits on review.
 5. J-023 (#130, PR #95): its in-game stills, as the issue says.
 
+## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
+Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the
+integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
+- **G1, her mind runs on evidence (rule 29, `03_EXECUTION/GAP_LIST.md` gap 4):** perception is evidence
+  with an age, rage is fed by sound that reaches her ear, and hiding from her truly works. Find every
+  place her decisions still read his true state (`step_travel`'s `player_on` checks, the braced state,
+  the ankle passed during a hold), route each through what she saw or heard, and prove hiding with
+  runtime scenarios (he hides and she loses him; he makes a sound and she finds him).
+You may propose your own grand tasks too: subject `MUSE_TO_CLAUDE: proposal <title>`, with goal, why it
+matters to the player, files, and finish facts. The integrator rules on it within the hour.
+
 ## Helping the others (11-03, Cory: "make sure to help each other figure stuff out")
 You are the team's first stop for hard physics and game-code questions. A `CLAUDE_TO_MUSE:` mail that
 relays a `To Muse:` ask from Grok, ChatGPT or a Claude session is answered before your own next step:
