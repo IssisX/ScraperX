@@ -50,7 +50,7 @@ const SKIRT_LINK_PASSES := 4
 # off her side when she crouches.
 const SKIRT_THIGH_FROM := 0.35
 const SKIRT_DAMP := 0.9
-const SKIRT_ITERATIONS := 4
+const SKIRT_ITERATIONS := 16
 const SKIRT_CLEAR_M := 0.006
 # Each row drawn toward its place hung on her hips, by this much a pass: the
 # top hugs her hips, the hem swings.
