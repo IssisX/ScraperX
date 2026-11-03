@@ -602,7 +602,10 @@ float Matron::floor_of(const float y) const {
 }
 
 bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
-    return std::abs(z - kMidZ) < 1.4F && std::abs(x) < 17.6F + margin;
+    // The bridge's own footprint (its plank kCatwalkHalfM either side of its
+    // line, out to the rails' line at kCatwalkEndM), widened by `margin` both
+    // ways: the band beside the rail's gap where it lands is the band's.
+    return std::abs(z - kMidZ) < kCatwalkHalfM + margin && std::abs(x) < kCatwalkEndM + margin;
 }
 
 bool Matron::route_toward(const float fx, const float fz, const float tx, const float tz, const bool allow_catwalk,
@@ -3367,8 +3370,23 @@ bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     if (on_ladder) {
-        // In her real arm's reach (kRealArmM), her trunk leaning to it.
-        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kRealArmM + 0.35F;
+        // His belt (his feet on the rungs are past her) within her real arm
+        // (kRealArmM) of her shoulder, her trunk bent toward him as far as it
+        // goes (bend_to_hands' poses).
+        const float feet = float(at.GetY()) - kStandCentre;
+        Vec3 fwd(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
+        fwd = fwd.LengthSq() > 1.0e-6F ? fwd.Normalized() : Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+        for (const float hip : {kHipUpM, 0.5F * (kHipUpM + kHipLowM), kHipLowM}) {
+            for (int k = 0; k <= 14; ++k) {
+                const float pitch = std::min(kTrunkPitchMaxRad, 0.1F * static_cast<float>(k));
+                const RVec3 shoulder = RVec3(at.GetX(), feet + hip, at.GetZ()) + fwd * (kTrunkM * std::sin(pitch)) +
+                                       Vec3(0.0F, kTrunkM * std::cos(pitch), 0.0F);
+                if (Vec3(player_belt_ - shoulder).Length() <= kRealArmM) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     return distance_xz(float(at.GetX()), float(at.GetZ()), float(player.GetX()), float(player.GetZ())) < kCatchM &&
            std::abs(at.GetY() - player.GetY()) < 1.4;

@@ -439,8 +439,12 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     bodies.AddForce(matron_->body(), -force);
     // S1 measurement only: report the held body's tip every tick. The
     // force above is unchanged; this call writes no force, no velocity.
+    const bool in_her_hands = grip_ != nullptr || hand2_grip_ != nullptr || matron_->regripping();
     matron_->report_held_load(bodies.GetPosition(matron_->body()), bodies.GetPosition(player_id_),
-                              grip_ != nullptr ? kPlayerMassKg : 0.0F, grip_ != nullptr);
+                              // In either hand (her two-handed beats), or between
+                              // grips with the hold going on: held as the
+                              // snapshot says (held_by_matron).
+                              in_her_hands ? kPlayerMassKg : 0.0F, in_her_hands);
     if (grip_ != nullptr) {
         // In the hang (the body within the cone of her hand's down), the
         // grip takes on its hinge: a 35 degree swing cone, +-20 twist, made
@@ -600,7 +604,7 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
     // turns, not righted in the air. (Between grips on her deck, as she
     // takes his collar, he may get up.)
     const bool fatal = matron_->fatal_holding();
-    const bool in_hand = grip_ != nullptr || (fatal && hand2_grip_ != nullptr);
+    const bool in_hand = grip_ != nullptr || (fatal && (hand2_grip_ != nullptr || matron_->bare_lip_over()));
     if (fatal && in_hand) {
         upright_s_ = 0.0F;
         upright_contact_ticks_ = 0;

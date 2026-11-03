@@ -103,6 +103,11 @@ void Simulation::PhysicsWorld::sever_arm(JPH::BodyInterface &bodies) noexcept {
     settings.mAllowSleeping = false;
     settings.mUserData = Simulation::kSeveredArmEntityId;
     settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
+    // A limb, not a rolling pin: flesh's grip on the steel and its roll
+    // damped (a thrown arm comes to rest where it lands).
+    settings.mFriction = Matron::kArmFriction;
+    settings.mRestitution = Matron::kArmRestitution;
+    settings.mAngularDamping = Matron::kArmAngularDamping;
     severed_arm_id_ = bodies.CreateAndAddBody(settings, JPH::EActivation::Activate);
     bodies.SetLinearVelocity(severed_arm_id_, bodies.GetPointVelocity(player_id_, middle));
     JPH::PointConstraintSettings held;
