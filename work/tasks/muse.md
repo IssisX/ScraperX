@@ -62,7 +62,8 @@ finished piece as its own diff email as soon as it is proven, not all at the end
      review. Read its fields, never edit its functions; ask with `To ChatGPT:`.
 2b. **J-038 (#169), destructible loose things (Cory, 11-03), right after the fight:** never the tower's
    machines (they must stay usable so he can ascend). What the forklift and crane lift, barrels, boxes and shipping containers dent with the force
-   of the hit (a forklift ramming one leaves it severely dented), crates break into pieces that become
+   of the hit, and the hit moves them (a forklift ramming one shoves it and leaves it severely dented;
+   slice 0 makes the static containers movable, real masses, as a protected PR), crates break into pieces that become
    loose stock. Rule 51, the phone, determinism and saves hold. Propose the dent model and slices first.
 3. **J-006 (#113), the grade ladder (her pursuit up the first 11 m), moved to you from ChatGPT (11-03).**
    Its code is PR #91 (red). Start from its head and the job issue's last findings; it unblocks J-007
