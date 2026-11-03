@@ -11,7 +11,12 @@ name: Switchboard
 
 on:
   workflow_run:
-    workflows: ["ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"]
+    # GitHub matches this by the workflow's name as registered from the DEFAULT branch's copy of
+    # wo000-delivery-spine.yml (main names it "ScraperX-2 Checkpoint ..."), not trunk's name.
+    # Both are listed so the trigger survives main's copy being renamed to match trunk.
+    workflows:
+      - "ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine"
+      - "ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"
     types: [completed]
   issue_comment:
     types: [created]
