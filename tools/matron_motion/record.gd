@@ -15,7 +15,8 @@ extends SceneTree
 ## Options (after --): --motion-out=<dir> (required), --motion-seconds=<s>
 ## (stop after this much game time; default: the scenario's own end).
 ##
-## Writes into <dir>: meta.json (bones, parents, hand contact points, fps),
+## Writes into <dir>: meta.json (bones, parents, hand contact points, fps,
+## each arm's reach from the shoulder to the knuckles),
 ## frames.csv (one row a frame) and rotations.bin (for each frame she is drawn:
 ## her skeleton's world rotation, then every bone's rotation in its parent's
 ## frame, as quaternions x y z w, float32).
@@ -122,11 +123,12 @@ class Recorder extends Node:
 			"climb_move_active", "climb_move", "burst", "rx", "ry", "rz",
 			"hand_held", "hand_x", "hand_y", "hand_z", "hand2_held", "hand2_x", "hand2_y", "hand2_z",
 			"ch_known", "chx", "chy", "chz", "ch2_known", "ch2x", "ch2y", "ch2z", "climb_grips",
-			"hold_state", "held", "ankle_x", "ankle_y", "ankle_z"]
+			"hold_state", "held", "ankle_x", "ankle_y", "ankle_z", "deaths"]
 		for s in SIDES:
 			var keys: Array = (contacts.get("wr_" + s, {}) as Dictionary).keys()
 			keys.sort()
 			_hand_keys[s] = keys
+			columns.append_array(["sh_%s_x" % s, "sh_%s_y" % s, "sh_%s_z" % s])
 			columns.append_array(["wr_%s_x" % s, "wr_%s_y" % s, "wr_%s_z" % s])
 			for key in keys:
 				columns.append_array(["%s_%s_x" % [key, s], "%s_%s_y" % [key, s], "%s_%s_z" % [key, s]])
@@ -139,11 +141,25 @@ class Recorder extends Node:
 			"hand_keys": _hand_keys,
 			"record_floats": 4 + 4 * bones.size(),
 			"columns": columns,
+			"arm_reach": _arm_reach(),
 		}
 		_save_meta()
 		_bin = FileAccess.open(out_dir.path_join("rotations.bin"), FileAccess.WRITE)
 		_csv = FileAccess.open(out_dir.path_join("frames.csv"), FileAccess.WRITE)
 		_csv.store_line(",".join(columns))
+
+	# Each arm's reach, shoulder to knuckles, from the bones' own lengths (the
+	# distance between their heads, whatever the pose) and the knuckles' place
+	# on the wrist.
+	func _arm_reach() -> Dictionary:
+		var out := {}
+		for s in SIDES:
+			var sh: Vector3 = _rig.bone_world("sh_" + s).origin
+			var el: Vector3 = _rig.bone_world("el_" + s).origin
+			var wr: Vector3 = _rig.bone_world("wr_" + s).origin
+			var knuckles: Vector3 = _rig.point("wr_" + s, "knuckles")
+			out[s] = sh.distance_to(el) + el.distance_to(wr) + wr.distance_to(knuckles)
+		return out
 
 	static func _fixed_fps() -> int:
 		var args := OS.get_cmdline_args()
@@ -201,16 +217,18 @@ class Recorder extends Node:
 			int(bool(data.get("climb_hand2_known", false))), "%.5f" % ch2.x, "%.5f" % ch2.y, "%.5f" % ch2.z,
 			int(data.get("climb_grips", 0)),
 			int(hold.get("state", 0)), int(bool(hold.get("held", false))), "%.5f" % ankle.x, "%.5f" % ankle.y,
-			"%.5f" % ankle.z]
+			"%.5f" % ankle.z, int(native.get_death_count())]
 		for s in SIDES:
 			if vis:
+				var shoulder: Vector3 = _rig.bone_world("sh_" + s).origin
+				row.append_array(["%.5f" % shoulder.x, "%.5f" % shoulder.y, "%.5f" % shoulder.z])
 				var wrist: Vector3 = _rig.bone_world("wr_" + s).origin
 				row.append_array(["%.5f" % wrist.x, "%.5f" % wrist.y, "%.5f" % wrist.z])
 				for key in _hand_keys[s]:
 					var p: Vector3 = _rig.point("wr_" + s, key)
 					row.append_array(["%.5f" % p.x, "%.5f" % p.y, "%.5f" % p.z])
 			else:
-				for _i in 3 * (1 + (_hand_keys[s] as Array).size()):
+				for _i in 3 * (2 + (_hand_keys[s] as Array).size()):
 					row.append("")
 		var out := PackedStringArray()
 		for v in row:
