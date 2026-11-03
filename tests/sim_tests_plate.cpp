@@ -484,7 +484,7 @@ bool wall_climb_lane(scraperx::sim::Simulation &simulation, const double dir, co
 bool gantry_pole(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
                  const double fz, const double top, const char *leg) {
     if (!walk_to(simulation, x, z, 6.0, 0.08)) {
-        std::cout << "route: " << leg << ": not at the foot\n";
+        std::cout << "route: " << leg << ": not at the foot, at (" << simulation.snapshot().player_position.x << ", " << simulation.snapshot().player_position.y << ", " << simulation.snapshot().player_position.z << ")\n";
         return false;
     }
     (void)simulation.set_facing(fx, fz);
@@ -578,11 +578,14 @@ void run_plate_route() {
             "route: the last lane onto the 374 ring");
     // The gantry, 374 -> 396 (band_plate_shop.cpp build_gantry): pole 1, the
     // bars, a jump-hang, pole 2, and a jump-hang over the 396 ring's inner edge.
-    require(gantry_pole(route, 14.6, -160.0, 1.0, 0.0, 381.8, "pole 1") && walk_to(route, 16.0, -159.0, 6.0, 0.1),
+    // It stands on the 374 ring's north band (the welder's lane on the east band
+    // and the way past it stay clear): round the east band's outer side to it.
+    require(walk_to(route, 15.8, -161.0, 8.0, 0.3) && walk_to(route, 15.8, -138.0, 16.0, 0.3) &&
+                gantry_pole(route, 14.5, -135.4, 0.0, 1.0, 381.8, "pole 1") && walk_to(route, 13.5, -134.0, 6.0, 0.1),
             "route: up the gantry's first pole onto its deck");
-    (void)route.set_facing(0.0, 1.0);
+    (void)route.set_facing(-1.0, 0.0);
     (void)route.advance_frame(0.4);
-    (void)route.set_move_input(0.0, 1.0);
+    (void)route.set_move_input(-1.0, 0.0);
     require(route.request_jump() &&
                 advance_until(route,
                               [](const scraperx::sim::Snapshot &state) {
@@ -594,20 +597,23 @@ void run_plate_route() {
             "route: held forward, hand over hand to the last bar");
     require(advance_until(route,
                           [](const scraperx::sim::Snapshot &state) {
-                              return state.player_linear_velocity.z > 2.0 && state.player_position.z > -153.05;
+                              return state.player_linear_velocity.x < -2.0 && state.player_position.x < 7.55;
                           },
                           4.0) &&
                 route.request_release() &&
                 wait_for(route, 3.0,
                          [](const scraperx::sim::Snapshot &state) {
-                             return standing_above(state, 382.3) && state.player_position.z > -152.0;
+                             return standing_above(state, 382.3) && state.player_position.x < 6.5;
                          }),
             "route: let go at the bottom of the swing onto the landing block");
-    require(walk_to(route, 15.5, -150.7, 6.0, 0.1) && gantry_hang_up(route, 0.0, 1.0, 385.6),
+    require(walk_to(route, 5.2, -134.5, 6.0, 0.1) && gantry_hang_up(route, -1.0, 0.0, 385.6),
             "route: a jump-hang up onto the block");
-    require(gantry_pole(route, 16.0, -148.0, 0.0, 1.0, 393.2, "pole 2"), "route: up the second pole onto the deck");
-    require(walk_to(route, 11.3, -145.7, 12.0, 0.15) && gantry_hang_up(route, 1.0, 0.0, 396.5),
+    require(gantry_pole(route, 2.5, -134.1, -1.0, 0.0, 393.2, "pole 2"), "route: up the second pole onto the deck");
+    require(walk_to(route, 0.2, -138.7, 12.0, 0.15) && gantry_hang_up(route, 0.0, 1.0, 396.5),
             "route: a jump-hang over the 396 ring's inner edge");
+    // Round the 396 ring's north band to its east band, where the next climb starts.
+    require(walk_to(route, 13.9, -136.0, 24.0, 0.3) && walk_to(route, 13.9, -150.0, 16.0, 0.3),
+            "route: round the 396 ring to its east band");
     for (double h = 396.0; h < 483.9; h += 22.0) {
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
         // Stopped at the boards' end before turning onto them: the walk off
