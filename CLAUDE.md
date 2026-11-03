@@ -49,6 +49,12 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
   quota, effort levels, cost. Make the call,
   record it in `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` with its reason, and tell him in
   one line after. Ask first only when something cannot be undone. He can overturn any call.
+- Never ask him to merge, approve or review anything (2026-11-03: *"I don't want to have to manually merge shit. Stop
+  asking me to manually merge or approve. I want this automatically done. If Codex can't do it, someone take over.
+  You are the manager of all of this, and the orchestrator and the coordinator."*). The switchboard and the
+  integrator merge on the rules below; a reviewer that stalls is replaced by the next one, never by him. The one
+  exception is a change the session's safety checker refuses to let Claude make (so far: CI's own gate, PR #160):
+  say so once, plainly, as the only thing he must do.
 - Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
   Central"), never a fixed offset; CI, GitHub and `date` report UTC, so convert (2026-10-18, 10-20,
   10-27: *"If using UTC, please switch permanently."*).
