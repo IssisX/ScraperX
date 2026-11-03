@@ -11,5 +11,11 @@ possible").
 - `muse.md`: Muse (FB Bot), who works by email through the bridge.
 - `grok-engineer.md`: Grok Bot's engineering task (Grok, Principal Engineer, Builder), on a schedule only.
 
+**Read for the task, never the whole game** (Cory, 11-03: the game is too big to hold at once, and
+reading whole documents is what has been wasteful). Find the place first (`REPO_MAP.md`'s line, or a
+search for the function), then read only that function or section. Long docs (`GAP_LIST.md`,
+`REPO_MAP.md`, `00_START_HERE.md`, specs) are searched by heading and read by section. Threads: the
+body plus what is new since your last read, never the history.
+
 The board is found by label, never by number: **the one open issue labeled `board`** (today #107).
 When it fills, the integrator opens the next one and moves the label; every task follows by itself.

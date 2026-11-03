@@ -168,6 +168,12 @@ agent, Claude included, works this way:
   - this file, 20 KB: a new rule replaces or shortens an old one, and dated quotes past a week move to
     `00_START_HERE_ARCHIVE.md`; the same for each `work/tasks/` file (8 KB) and the scheduled task's
     prompt (a pointer to `work/tasks/integrator-hourly.md`, never the steps themselves);
+  - reading the game (11-03: *"The game has grown past the point at which we can pay attention to the whole
+    thing at all times ... we need to be smart about what we read"*): read for the task, never the whole game
+    for context. Find the place first (`REPO_MAP.md`'s line for the area, or `grep` for the function), then read
+    only that function or section; long docs (`GAP_LIST.md`, `REPO_MAP.md`, `00_START_HERE.md`, the specs) are
+    searched by heading and read by the section the job needs; a brief names the files and functions, so the
+    receiver need not search;
   - reads: a thread's body plus what is new since your last read, never the history; long logs,
     transcripts and threads go to a subagent and only its answer comes back;
   - posts: one line per real step; a changing status is edited in place, never reposted.
