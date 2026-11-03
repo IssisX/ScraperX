@@ -613,3 +613,6 @@ to open a Claude session or helper.
 
 
 - 2026-11-02, on helpers that outlive the integrator (moved from CLAUDE.md 11-03): *"Shouldn't it be in the new session?"*
+- 2026-10-18 to 10-22, on testing only what a change reaches (moved from CLAUDE.md 11-03): *"each change does not require a full native suite run - dont be wasteful"*
+- 2026-10-22, on ending every message with his move (moved from CLAUDE.md 11-03): *"always end with a clear instruction for me and the prompt if I need to share one"*
+- 2026-10-21 and 10-22, on near misses (moved from CLAUDE.md 11-03): *"yes, you can change geometry"*

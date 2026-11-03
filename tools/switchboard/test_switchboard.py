@@ -231,6 +231,24 @@ class ReviewerPick(unittest.TestCase):
         self.assertTrue(rules.needs_eye(facts(needs=frozenset({"eyes"}))))
         self.assertFalse(rules.needs_eye(facts()))
 
+    def test_automatic_review_runs_beside_the_ask_on_every_pr(self):
+        auto = v(f"**Claude (automatic review of #9 @ {HEAD[:8]}): LAND**", login=rules.BOT_LOGIN)
+        self.assertTrue(rules.is_automatic(auto))
+        self.assertFalse(rules.is_automatic(land("ChatGPT")))
+        for ref in ("claude/integrate-x", "grok/integrate-x"):
+            # nothing yet: both the ask and the automatic review are due
+            self.assertTrue(rules.needs_review(facts(head_ref=ref, verdicts=())))
+            self.assertTrue(rules.needs_auto_review(facts(head_ref=ref, verdicts=())))
+            # the automatic review alone never ends the ask
+            self.assertTrue(rules.needs_review(facts(head_ref=ref, verdicts=(auto,))))
+            self.assertFalse(rules.needs_auto_review(facts(head_ref=ref, verdicts=(auto,))))
+            # an asked reviewer's verdict ends the ask, not the automatic review
+            self.assertFalse(rules.needs_review(facts(head_ref=ref)))
+            self.assertTrue(rules.needs_auto_review(facts(head_ref=ref)))
+        self.assertFalse(rules.needs_auto_review(facts(verdicts=(), proof="running")))
+        # on Claude's own PR the automatic LAND is not the cross-vendor LAND
+        self.assertEqual(rules.merge_decision(facts(head_ref="claude/integrate-x", verdicts=(auto,)), "anthropic").action, "WAIT")
+
     def test_config_errors_name_the_problem(self):
         bad = dict(AGENTS, review={"claude_authored_asks": ["codex"]})
         with self.assertRaisesRegex(ValueError, "codex"):

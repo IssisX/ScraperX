@@ -286,11 +286,30 @@ def ask_is_overdue(asked_at: str, now_iso: str, hours: float) -> bool:
     return (now - then).total_seconds() >= hours * 3600
 
 
+def is_automatic(v: Verdict) -> bool:
+    """The switchboard's own automatic Claude review (switch.py review), posted by the workflow token."""
+    return v.author_login == BOT_LOGIN and v.who.lower() == "claude"
+
+
+def _reviewable(pr: PrFacts) -> bool:
+    return pr.proof == "green" and not pr.draft and pr.base_ref == TRUNK
+
+
 def needs_review(pr: PrFacts) -> bool:
-    """Proof green and no LAND, FIX or NOTE yet on this head from a review."""
-    if pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
+    """Proof green and no LAND, FIX or NOTE yet on this head from an asked reviewer. The automatic Claude
+    review runs beside the ask (Cory, 11-03), so its verdict never stands in for one."""
+    if not _reviewable(pr):
         return False
-    return not any(v.kind == "review" and names_head(v, pr.head_sha) for v in pr.verdicts)
+    return not any(v.kind == "review" and names_head(v, pr.head_sha) and not is_automatic(v) for v in pr.verdicts)
+
+
+def needs_auto_review(pr: PrFacts) -> bool:
+    """Proof green and no automatic Claude review yet on this head: every PR gets one, whoever wrote it, at the
+    same time as its asked reviewer (Cory, 11-03). Its FIX holds a merge back like any FIX; on Claude's own PR its
+    LAND does not count (merge_decision wants a vendor other than the author's)."""
+    if not _reviewable(pr):
+        return False
+    return not any(v.kind == "review" and names_head(v, pr.head_sha) and is_automatic(v) for v in pr.verdicts)
 
 
 def needs_eye(pr: PrFacts) -> bool:

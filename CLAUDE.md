@@ -5,8 +5,7 @@ words are in `00_START_HERE_ARCHIVE.md`. This file spells out the ones that keep
 
 ## Test only what a change reaches
 
-Asked again and again (2026-10-18 to 10-22): *"each change does not require a full native suite run
-- dont be wasteful"*.
+Asked again and again (10-18 to 10-22; quote in the archive).
 
 1. While fixing a failure, rerun only that test, and only its failing part where it lets you pick one
    (`SCRAPERX_ONLY=<group>`, `SCRAPERX_WAY=<n>`). Never edit a test to add a picker.
@@ -29,8 +28,7 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
   so it stands out: a `---` rule, then `🟣 **YOUR MOVE:**` and the line. Colored dots (🟢 done, 🟡 in progress, 🔴 broken or blocked, ⚪ next, 🟣 his; 2026-10-29) only on a
   status report he asks for, never on every answer (11-02: *"Stop with all the color for every single thing I ask you"*); a plain question gets a plain answer. A prompt
   he must pass on goes whole in one copyable block, naming the agent; never ask him to edit, combine
-  or fill one in (2026-10-22: *"always end with a clear instruction for me and the prompt if I need
-  to share one"*).
+  or fill one in (10-22).
 - A decision is a few short lines: what it is and why it matters now, what each answer would mean
   for the game, Claude's pick and why, and the word he answers with; no block of text, no table of
   numbers or file names; the detail lives in the linked document (2026-10-27: *"you can't give me
@@ -68,8 +66,8 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
 ## Near misses: tweak the world, don't rework her
 
 A test or route failing by a few cm to about 0.2 m gets a small, unnoticeable change to the world's
-geometry rather than reworked code; say so when you use one; assertions never weaken (2026-10-21,
-10-22: *"yes, you can change geometry"*). Geometry is a protected change (below).
+geometry rather than reworked code; say so when you use one; assertions never weaken (10-21,
+10-22). Geometry is a protected change (below).
 
 ## Human sounds are real, never synthesized in code
 
@@ -135,7 +133,8 @@ agent, Claude included, works this way:
     much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
     first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
     loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+    free. Every PR also gets the automatic Claude API review (xhigh) beside its asked reviewer (11-03: *"use Muse
+    and Claude API at the same time"*); on Claude's PRs its LAND does not count. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
     "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
     roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
     that. You should ask me how many workers to open up and give suggestions from now on"*; the

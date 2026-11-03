@@ -399,7 +399,7 @@ class Switch:
     def escalate_review(self, facts: rules.PrFacts, ctx: dict, author: str) -> None:
         """An ask the switchboard made on this head that has had no verdict for review.fallback_after_hours goes
         to the next agent in review.fallback_order, once per head (each ask has its own marker). The caller
-        only gets here while needs_review holds: any verdict on the head, from anyone, ends this."""
+        only gets here while needs_review holds: any verdict on the head but the automatic review's ends this."""
         where, comments = self.ask_thread(facts, ctx)
         asked: list[tuple[str, str]] = []   # (created_at, agent) of the bot's own asks on this head
         for agent in self.team.agent_vendor:
@@ -449,7 +449,7 @@ class Switch:
         author = self.team.vendor_of_branch(facts.head_ref)
         if self.stale(facts):
             return
-        if rules.needs_review(facts) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api":
+        if rules.needs_auto_review(facts):
             if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
             else:
