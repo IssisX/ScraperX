@@ -133,9 +133,9 @@ agent, Claude included, works this way:
   - Reviews are cross-model, and Claude *session* usage is the scarce budget (2026-11-02: *"That's why
     so much of the session's usage was used up so quickly"*): reviews go to Muse, ChatGPT or Grok
     (Gemini is off the team, 11-02); a Claude session reviews only for security or when nobody else is
-    free. The Claude API review (separate credit, xhigh) shares the reviews with Muse and ChatGPT: one
-    reviewer per PR, whoever is free, spread around (11-03: *"I'm not asking for two agents to review
-    the same shit"*; `review.pool`, #178). **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+    free. The GitHub Actions Claude review (API credit, Sonnet xhigh; Claude's PRs too) shares them with
+    Codex, Muse and ChatGPT: one reviewer per PR, whoever is open (11-03: *"I'm not asking for two
+    agents to review the same shit"*; `review.pool`, #178). **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
     "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
     roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
     that. You should ask me how many workers to open up and give suggestions from now on"*; the
