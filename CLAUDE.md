@@ -205,8 +205,8 @@ agent, Claude included, works this way:
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
    .
 - Effort is his call, never medium (11-03; he sets extra high). `create_session` has no effort field and
-  the repo's `CLAUDE_CODE_EFFORT_LEVEL` did not take, so `get_session` each new session at once; below
-  xhigh, tell him in one line.
+  the repo's `CLAUDE_CODE_EFFORT_LEVEL` did not take, so `get_session` each new session once it starts
+  (4-5 min: `send_later` 6); below xhigh, tell him in one line.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 
