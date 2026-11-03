@@ -20,6 +20,9 @@ D. **Delegate, never sit** (Cory, 11-03: *"doesn't leave shit sitting ... knows 
    keep handling events. Never two agents on the same thing: before handing out work, check the board and the job's
    owner label; one owner per job, one reviewer per PR. No re-reading what you already read, no re-running a check
    that passed on that head, no status post that says nothing new.
+   **Between hours** (Cory, 11-03: *"If I'm not here to prompt you ... things will pile up"*): a 20-minute self
+   check-in (`send_later`, re-armed by each run): Muse's mail, `asks.py --hours 3`, the sweep's MERGE / FIX-CI /
+   BLOCKED lines, the board's new comments, every session's size. The next integrator re-arms it on its first turn.
 S. **Size.** `get_session` (no id): at 700k `used_tokens` or more, hand off (handoff file,
    `create_session`, move this task and the PR subscriptions, archive yourself). Same check for each
    Claude worker session; archive any whose job has landed. **Every handoff, the integrator's or a
