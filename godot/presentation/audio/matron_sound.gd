@@ -227,6 +227,9 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	_vaults_seen = vaults
 	# A blow off her feet: her body booming onto the steel and the breath
 	# knocked out of her (unless a slam on the pipe made it, heard below).
+	# One landed blow reads once: a blow that staggers or downs her already
+	# sounds on that edge, so the blow edge below stays silent this frame.
+	var hit_this_frame := false
 	var pipe_slams := int(data.get("pipe_slams", 0))
 	var slammed := _pipe_slams_seen >= 0 and pipe_slams > _pipe_slams_seen
 	_pipe_slams_seen = pipe_slams
@@ -234,6 +237,7 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	if on and _knockdowns_seen >= 0 and knockdowns > _knockdowns_seen and not slammed:
 		_cue(&"hit_heavy", center, 4.0, randf_range(0.55, 0.65))
 		_cue(&"matron_hit", head, -2.0, _pitch())
+		hit_this_frame = true
 	_knockdowns_seen = knockdowns
 	# Up off the steel: her joints.
 	if on and _state_seen == STATE_DOWN and state != STATE_DOWN:
@@ -245,12 +249,15 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 		_cue(&"matron_step", feet, 3.0, randf_range(0.6, 0.7))
 		_cue(&"scrape", feet, -4.0, randf_range(0.9, 1.1))
 		_cue(&"matron_hit", head, -8.0, _pitch())
+		hit_this_frame = true
 	_staggers_seen = staggers
 	# A landed blow that did not stagger her still reads: a grunt at her
 	# head, scaled by the judged blow (0.758 m/s is a heavy kick's blow).
 	# Edge-triggered on the blow rising from zero, so a held value grunts once.
+	# Silent on a frame the stagger or knockdown edge already sounded (above):
+	# one blow, one hit sound.
 	var blow := float(data.get("blow_mps", 0.0))
-	if on and _blow_prev >= 0.0 and blow > 0.0 and _blow_prev == 0.0:
+	if on and not hit_this_frame and _blow_prev >= 0.0 and blow > 0.0 and _blow_prev == 0.0:
 		_cue(&"matron_hit", head, lerpf(-14.0, -2.0, clampf(blow / 0.758, 0.0, 1.0)), _pitch())
 	_blow_prev = blow
 	# A shove, a throw, a leap over a gap, a ladder taken after the player:
