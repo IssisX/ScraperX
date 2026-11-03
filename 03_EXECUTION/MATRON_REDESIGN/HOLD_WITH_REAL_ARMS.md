@@ -97,17 +97,20 @@ the rail pin, and it gives him less to do.
   the rail. 3 Pin: collar and belt (two hands), his window and the arm tear; PUNCH works. 4 Over: the
   body squared to the rail, the belt pushed out while the ankle lifts. 5 Hang by one ankle; the
   ordinary hold sets him back on her deck (Spare), the fatality lets go over a drop foreseen to kill.
-- On the north band's spot (-6, -129) no edge in her reach can take the hang yet: its lethal edge
-  (its outside, z -124) is a bare lip with no rail to lay him over, and under its shaft side is a
-  deck 2 m down. She does her floor version there (in the protected checks PR). The bare-lip hang is
-  its own job: `03_EXECUTION/handoffs/BARE_LIP_HANG_HANDOFF_20261103.md`.
+- On the north band's spot (-6, -129) the lethal edge in her reach (its outside, z -124) is a bare
+  lip with no rail. She pins him across it, slides him out by his belt once his window is done, and
+  he hangs from her hand at the lip (no rail's top to lift his ankle over) and is let go into a fall
+  that kills (11-03).
 - In the fatality she leans over the rail for the let-go, decides it at the end of his swing (head
   down, she standing still), and flicks him out 0.9 to 1.0 m/s (under her 8 kN); his handback waits
   while either of her hands holds him, so he is not righted in the air.
 - Screenshots of each beat, from the Godot runtime: `hold_shots/`.
-- The fatality takes 7.5 to 13 s from her fingers closing to her letting go (the drag, the pin with
-  his window, the over, the hang); the owner's bar was 5 to 7 s. That bar is his call, in the
-  protected checks PR.
+- The fatality meets the owner's 5 to 7 s bar (11-03), his window kept whole (2.5 s): on his last arm
+  she takes his collar after her swat, not his ankle, and drags him by it to her edge
+  (`kFatalByCollar`); she hauls him up in front of her into the pin; his window goes on while her
+  grips shift for the over, and she tips him once it is done; the let-go comes at the end of his
+  swing, or from 6.5 s once his fall kills and he is head down. Measured, grip to let-go: act's rail
+  5.2 s, east band 5.6 to 6.7 s, north bare lip 6.4 s.
 
 ## Handoff
 

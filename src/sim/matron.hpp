@@ -931,6 +931,7 @@ public:
     static constexpr float kReleasePushMps = 4.0F;
     static constexpr float kReleasePoseSeconds = 1.0F;
     static constexpr float kSpareSetSeconds = 1.2F;   // the collar put straight
+    static constexpr float kSpareClearM = 1.5F;      // where she sets him down: this far off the bridge's approach and her patrol's legs
     static constexpr float kSpareCalmSeconds = 20.0F; // then she walks off, no hunt this long
     static constexpr float kSpareStepSeconds = 3.0F;  // a step walking him on, past three tries, that stops short
     // After any arm torn off, set down alive (spared, or pulled out of her

@@ -927,8 +927,19 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                 begin_pin();
             }
         }
-        pose_hand(dt, drag_pose(), kHandSpeedMps, her_v);
-        load_pull_m_ = 0.0F;
+        // S2 counter-lean (non-fatal drag only; trunk's): while the load's
+        // shift is past her upright base, her hand comes in toward her centre
+        // line by what would bring it back, at most kCarryPullCapM, never
+        // bringing his body's offset under 0.25 m.
+        RVec3 pose = drag_pose();
+        float pull_applied = 0.0F;
+        if (!fatal_hold_ && load_held_ && load_cop_shift_m_ > kUprightBaseM) {
+            const float need = (load_cop_shift_m_ - kUprightBaseM) * (kMassKg + load_mass_kg_) / load_mass_kg_;
+            pull_applied = std::min({need, std::max(0.0F, load_offset_m_ - 0.25F), kCarryPullCapM});
+            pose = RVec3(pose.GetX() - load_dir_x_ * pull_applied, pose.GetY(), pose.GetZ() - load_dir_z_ * pull_applied);
+        }
+        pose_hand(dt, pose, kHandSpeedMps, her_v);
+        load_pull_m_ = pull_applied;
         if (fatal_hold_ && state_ == State::Carry) {
             // The fatality's edge not reached in the drag's time: the floor
             // version, where she stands.
@@ -1380,9 +1391,21 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
                                        (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
             const Vec3 his_v = physics_.GetBodyInterface().GetLinearVelocity(player_);
             const bool at_rest = Vec3(his_v.GetX(), 0.0F, his_v.GetZ()).Length() < 0.4F;
-            if (pin_here_ || (in_from_rail >= 0.4F && at_rest && deck_close_below(player, feet))) {
+            const bool in = in_from_rail >= 0.4F && deck_close_below(player, feet);
+            if (pin_here_ || (in && at_rest)) {
                 begin_regrip(Grip::Collar);
                 break;   // the world opens her hand this tick
+            } else if (in) {
+                // Well in, still sliding from the drag: she stands and lets
+                // him come to rest (walking on would only take his collar
+                // farther from her).
+                walk_toward(dt, ax, az, 0.0F);
+                yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
+                pose_hand(dt, RVec3(at.GetX(), feet + kDragHandUpM, at.GetZ()) - out * 0.3F, kHandSpeedMps);
+                if (hold_s_ > 2.0F * kPinReachS) {
+                    back_in();
+                }
+                break;
             } else {
                 walk_toward(dt, rim_x_ - rim_nx_ * kBackInWalkM, rim_z_ - rim_nz_ * kBackInWalkM, 0.6F);
                 yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
@@ -2097,11 +2120,40 @@ Vec3 Matron::spare_side(const RVec3 at, const float feet, const Vec3 right, cons
     breadth.SetEmbedded();
     const auto on_deck = [&](const float y) { return y <= feet + 0.15F && y >= feet - 0.6F; };
     deck = true;
+    // Off the bridge's approach (a shove on her deck there takes him through
+    // the rail's gap onto it) and off her patrol loop's legs (her walk on
+    // would go through him): kSpareClearM.
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    const auto in_her_way = [&](const float x, const float z) {
+        if (on_catwalk_line(x, z, kSpareClearM)) {
+            return true;
+        }
+        for (const std::vector<int> &loop : level.patrols) {
+            for (std::size_t i = 0; i < loop.size(); ++i) {
+                const Node &a = level.nodes[static_cast<std::size_t>(loop[i])];
+                const Node &b = level.nodes[static_cast<std::size_t>(loop[(i + 1) % loop.size()])];
+                const float dx = b.x - a.x;
+                const float dz = b.z - a.z;
+                const float length2 = dx * dx + dz * dz;
+                const float t =
+                    length2 > 0.0F ? std::clamp(((x - a.x) * dx + (z - a.z) * dz) / length2, 0.0F, 1.0F) : 0.0F;
+                if (std::hypot(a.x + dx * t - x, a.z + dz * t - z) < kSpareClearM) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    for (int pass = 0; pass < 2; ++pass) {
     for (int k = 0; k < 8; ++k) {
         // Her right first; then round her an eighth of a turn at a time,
-        // a little farther out (clear of her).
+        // a little farther out (clear of her). First out of her way; none,
+        // anywhere on her deck.
         const Vec3 side =
             k == 0 ? first : Quat::sRotation(Vec3::sAxisY(), 0.25F * kPiF * static_cast<float>(k)) * first.Normalized() * 0.85F;
+        if (pass == 0 && in_her_way(float(at.GetX()) + side.GetX(), float(at.GetZ()) + side.GetZ())) {
+            continue;
+        }
         const RVec3 from(at.GetX() + side.GetX(), feet + 1.2F, at.GetZ() + side.GetZ());
         RayCastResult under;
         if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -2.0F, 0.0F)), under, {}, {}, skip) ||
@@ -2115,6 +2167,7 @@ Vec3 Matron::spare_side(const RVec3 at, const float feet, const Vec3 right, cons
         if (met.HadHit() && on_deck(feet + 1.2F - 2.0F * met.mHit.mFraction - kBreadthM)) {
             return side;
         }
+    }
     }
     deck = false;
     return first;
