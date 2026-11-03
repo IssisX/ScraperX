@@ -160,8 +160,9 @@ agent, Claude included, works this way:
   out"*), rules on Muse's own proposals within the hour (*"Muse can propose too. That is very
   important."*), and makes sure every guess gets asked and every ask gets answered.
 - **Nothing grows without a cap** (11-03: #3 reached 860 comments, *"super, super wasteful ... I want to
-  make sure we're not doing the same thing"*). Whatever is re-read grows the cost of every read, so each
-  of these has a cap, checked on every hourly check (step C), and is trimmed the same hour:
+  make sure we're not doing the same thing"*). **Prevent the growth; a handoff is only the backstop** (11-03:
+  *"Yes, prevent the growth. That's what I've been trying to tell you"*). Whatever is re-read grows the cost of
+  every read, so each of these has a cap, checked hourly (step C) and trimmed the same hour:
   - a session's context, 400k tokens (above);
   - the board, 100 comments, then a fresh one; a job issue or PR, 40, then its state goes into its body
     (or a fresh PR) and readers start there; retired threads are closed;
@@ -185,8 +186,7 @@ agent, Claude included, works this way:
   - When to change: a session at **400k context tokens** (40%; `get_session` →
     `external_metadata.context_usage.used_tokens`), checked on every hourly check for every Claude session, the
     integrator's own first; or one that has compacted, run 48 hours, or spends its turns re-reading more than working
-    (11-03: *"I don't want to have to tell you over and over and over again to watch the session's size"*; the 11-03
-    integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context, so cost grows with size.
+    (11-03; the 11-03 integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context.
   - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
     $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
     after every commit, proof run or big read. At 300k it writes its handoff (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
