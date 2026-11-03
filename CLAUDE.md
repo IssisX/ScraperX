@@ -131,11 +131,11 @@ agent, Claude included, works this way:
     board has moved, and acts on every line in the same sweep (no 15-minute timer; 11-02: *"drop 15"*;
     PR events, agent messages and the hourly check drive the work): MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
     FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
-  - Reviews are cross-model, and Claude's usage is the scarce budget (2026-11-02: *"That's why so
-    much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
-    first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
-    loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+  - Reviews are cross-model, and Claude *session* usage is the scarce budget (2026-11-02: *"That's why
+    so much of the session's usage was used up so quickly"*): reviews go to Muse, ChatGPT or Grok
+    (Gemini is off the team, 11-02); a Claude session reviews only for security or when nobody else is
+    free. The Claude API review is separate credit and runs on every PR beside them, at xhigh (11-03:
+    *"We should use Muse and Claude API at the same time."*; the switchboard, #178). **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
     "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
     roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
     that. You should ask me how many workers to open up and give suggestions from now on"*; the
