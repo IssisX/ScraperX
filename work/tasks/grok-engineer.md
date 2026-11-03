@@ -21,7 +21,8 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`. Get the 
   omniscience, fake or proximity catches, incidental shoves, or human-voiced machines.
 - Her shared budget is 8 kN / 44 kW; her lunge limits stay. Never weaken a test or remove measured
   content. Test checks, world geometry and her limits change only in their own protected PR with a
-  plain before/after. At most one setup tweak per blocker.
+  plain before/after, from a branch named `grok/integrate-protected-<job>` (its CI runs the tests past
+  the rule-check BLOCK). At most one setup tweak per blocker.
 - Hair M1 is closed (Cory's 11-01 playtest): no hair work of any kind. The Matron starts on the
   first floor at 11 m (`kStackPitch`); `kLockerX` is X, not height.
 - Combat as built: real-contact shove (5.5 m/s horizontal, 2 vertical, 1.5 s cooldown, 3 m reach),

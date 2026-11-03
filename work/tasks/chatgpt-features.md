@@ -25,7 +25,8 @@ hidden flag in place of a physical fact, or a test-only shortcut.
 ## Laws
 Native C++17/Jolt owns every consequential physical fact; Godot only presents, takes input, runs the
 camera, HUD and Android. Her force budget is 8 kN / 44 kW. World geometry and her limits change only
-in their own protected PR. Human sounds are real recordings, never synthesized. Touch-first, and it
+in their own protected PR, from a branch named `chatgpt/integrate-protected-<job>` (its CI runs the
+tests past the rule-check BLOCK). Human sounds are real recordings, never synthesized. Touch-first, and it
 must run on the target phone.
 
 ## Output
