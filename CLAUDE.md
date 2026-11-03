@@ -204,9 +204,10 @@ agent, Claude included, works this way:
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
    .
-- Effort level is his call, never medium by default (11-02, 11-03: *"all of the sessions are opening up at
-  medium, and that's too low"*): every session starts at high from `.claude/settings.json`
-  (`CLAUDE_CODE_EFFORT_LEVEL`); ask him before going another level.
+- Effort level is his call, never medium (11-03: *"all of the sessions are opening up at medium"*; he
+  sets extra high). `create_session` has no effort field and the repo's `CLAUDE_CODE_EFFORT_LEVEL` did
+  not take in cloud sessions, so after opening one, `get_session` it at once; if it is below xhigh, tell
+  him in one line before it works.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 
