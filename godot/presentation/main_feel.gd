@@ -263,6 +263,8 @@ const HAPTICS := {
 	&"heave": [60, 0.8],   # the chiller drop's car heaving under the feet
 	&"rumble": [20, 0.25],   # its air roaring under the floor while it runs
 	&"splash": [90, 0.9],   # the body going into a pool (water_feel.gd)
+	&"strike_sweep": [30, 0.60],   # the low sweep landing (spec section 8.1 cap)
+	&"strike_whiff": [12, 0.25],   # the low sweep missing (spec section 8.1 cap)
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -905,6 +907,10 @@ func _feel_strike(delta: float) -> void:
 		var at: Vector3 = strike.get("hit_point", _camera.global_position)
 		var impulse := float(strike.get("impulse", 0.0))
 		_audio.player_strike(edge, at if edge == &"landed" else _camera.global_position, impulse)
+		if edge == &"landed" and int(strike.get("move", 0)) == 1:
+			_haptic(&"strike_sweep", clampf(impulse / 60.0, 0.3, 1.0))
+		if edge == &"missed" and int(strike.get("move", 0)) == 1:
+			_haptic(&"strike_whiff", 0.5)
 		if edge == &"landed":
 			var normal: Vector3 = strike.get("hit_normal", Vector3.ZERO)
 			if _matron_view != null:

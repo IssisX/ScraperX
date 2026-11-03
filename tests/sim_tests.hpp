@@ -889,6 +889,7 @@ void run_matron_unstick();
 void run_matron_grab();
 void run_matron_load();
 void run_strike();
+void run_matron_sweep();
 void run_matron_traverse();
 void run_matron_pursuit();
 void run_matron_chase();

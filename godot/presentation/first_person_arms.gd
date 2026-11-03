@@ -419,6 +419,8 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		var reachable := true
 		var strike: Dictionary = state.get("strike", {})
 		var striking := traversal == 0 and int(strike.get("phase", 0)) != 0
+		# A sweep is a leg: no fist is drawn for it, both hands stay at guard.
+		var sweeping := striking and int(strike.get("move", 0)) == 1
 		# The fist the native throws it with (1 the right, 0 the left); an
 		# older native: the right, else the left with the right gone or slung.
 		var fist_side := -1.0 if lost[1] or int(state.get("broken_arm", -1)) == 1 else 1.0
@@ -427,7 +429,7 @@ func update_arms(state: Dictionary, camera: Transform3D, delta: float) -> void:
 		if int(state.get("broken_arm", -1)) == (1 if hand.side > 0.0 else 0):
 			pose = POSE_SLING
 		elif striking:
-			pose = POSE_STRIKE if hand.side == fist_side else POSE_GUARD
+			pose = POSE_GUARD if sweeping else (POSE_STRIKE if hand.side == fist_side else POSE_GUARD)
 		elif traversal == TRAVERSAL_SWINGING:
 			pose = POSE_BAR
 		elif traversal == TRAVERSAL_HANGING or traversal == TRAVERSAL_LOWERING:

@@ -399,3 +399,130 @@ void run_strike() {
     }
     std::cout << "PASS scraperx_sim strike: impulse_ns=" << close.impulse_ns << "\n";
 }
+
+namespace {
+// The low sweep (sim/physics_world_strike.cpp): Punch while crouched. Her
+// `her_ahead_m` in front of him on the Deck154 start, crouched, one sweep:
+// what it did. `stage`: her stage held for the blow. `fast`: wait until she
+// hunts toward him faster than 1 m/s before throwing (her crouch).
+// `immediate`: throw at once, no hunt wait (the whiff: she must not close
+// the distance first).
+struct Swept {
+    bool offered = false;
+    std::uint64_t strikes = 0;
+    std::uint64_t hits = 0;
+    double impulse_ns = 0.0;
+    double max_blow_mps = 0.0;
+    int state = -1;
+    std::uint64_t knockdowns = 0;
+    std::uint64_t staggers = 0;
+    std::uint8_t phase = 0;
+    std::uint8_t move = 0;
+    Vector3 point{};
+};
+
+Swept sweep_one(const double her_ahead_m, const int stage, const bool fast, const bool immediate) {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    for (int i = 0; i < 30; ++i) {
+        tick(s);
+    }
+    const Vector3 p = s.snapshot().player_position;
+    (void)s.set_facing(0.0, 1.0);
+    s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + her_ahead_m});
+    s.debug_hold_matron_hands(30.0);
+    constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
+    if (!immediate) {
+        for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && s.matron_state().state != kHunting;
+             ++i) {
+            tick(s);
+        }
+        require(s.matron_state().state == kHunting, "sweep: she hunts before the sweep (setup)");
+        s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+    }
+    (void)s.set_crouch_input(true);
+    for (int i = 0; i < 10 && !s.snapshot().player_crouched; ++i) {
+        tick(s);
+    }
+    require(s.snapshot().player_crouched, "sweep: crouched before the sweep (setup)");
+    if (fast) {
+        // Pressed at 2.05 m, she crosses the gap band during the sweep's reach.
+        bool entered = false;
+        for (int i = 0; i < 10 * static_cast<int>(Simulation::kTickRateHz) && !entered; ++i) {
+            const Vector3 me = s.snapshot().player_position;
+            const Vector3 her = s.matron_state().position;
+            (void)s.set_facing(her.x - me.x, her.z - me.z);
+            tick(s);
+            const double dx = s.matron_state().position.x - s.snapshot().player_position.x;
+            const double dz = s.matron_state().position.z - s.snapshot().player_position.z;
+            entered = s.matron_state().state == kHunting && s.matron_state().speed > 1.0 &&
+                      std::hypot(dx, dz) <= 2.05;
+        }
+        require(entered, "sweep: she hunts fast toward sweep reach (setup)");
+    } else {
+        const Vector3 me = s.snapshot().player_position;
+        const Vector3 her = s.matron_state().position;
+        (void)s.set_facing(her.x - me.x, her.z - me.z);
+        tick(s);
+    }
+    Swept out;
+    out.offered = s.snapshot().strike_offered;
+    const std::uint64_t strikes0 = s.snapshot().strike_count;
+    const std::uint64_t hits0 = s.snapshot().strike_hit_count;
+    const std::uint64_t downs0 = s.matron_state().knockdowns;
+    const std::uint64_t stags0 = s.matron_state().staggers;
+    (void)s.request_strike();
+    for (int i = 0; i < 60; ++i) {
+        tick(s);
+        out.max_blow_mps = std::max(out.max_blow_mps, s.matron_state().blow_mps);
+    }
+    const auto &snap = s.snapshot();
+    out.strikes = snap.strike_count - strikes0;
+    out.hits = snap.strike_hit_count - hits0;
+    out.impulse_ns = snap.strike_impulse_ns;
+    out.state = s.matron_state().state;
+    out.knockdowns = s.matron_state().knockdowns - downs0;
+    out.staggers = s.matron_state().staggers - stags0;
+    out.phase = snap.strike_phase;
+    out.move = snap.strike_move;
+    out.point = snap.strike_hit_point;
+    return out;
+}
+} // namespace
+
+void run_matron_sweep() {
+    constexpr int kDown = static_cast<int>(scraperx::sim::Matron::State::Down);
+    constexpr int kStaggering = static_cast<int>(scraperx::sim::Matron::State::Staggering);
+    const Swept pest = sweep_one(1.05, 0, false, false);
+    std::cout << "  sweep pest: offered=" << pest.offered << " hits=" << pest.hits << " impulse_ns=" << pest.impulse_ns
+              << " max_blow=" << pest.max_blow_mps << " state=" << pest.state << "\n";
+    require(pest.strikes == 1, "sweep: one press throws one sweep");
+    require(pest.offered && pest.hits == 1 && pest.move == 1, "sweep: a sweep in reach lands once, as move 1");
+    require(pest.impulse_ns > 59.0 && pest.impulse_ns <= 60.01, "sweep: 1350 N over 4 ticks is 60 N-s");
+    require(pest.max_blow_mps > 0.26 && pest.max_blow_mps < 0.29, "sweep: 60 N-s over her 220 kg is 0.273 m/s");
+    require(pest.state == kDown && pest.knockdowns == 1 && pest.staggers == 0, "sweep: an upright pest goes down");
+    const Swept changed = sweep_one(1.05, 2, false, false);
+    std::cout << "  sweep changed faced: hits=" << changed.hits << " state=" << changed.state << "\n";
+    require(changed.hits == 1 && changed.state == kDown && changed.knockdowns == 1,
+            "sweep: a faced changed Matron goes down, her brace bypassed low");
+    const Swept crouched = sweep_one(2.5, 1, true, false);
+    std::cout << "  sweep crouched: hits=" << crouched.hits << " state=" << crouched.state << "\n";
+    require(crouched.hits == 1 && crouched.impulse_ns > 59.0,
+            "sweep: the crouched blow lands (no whiff hiding behind no effect)");
+    require(crouched.state != kDown && crouched.state != kStaggering && crouched.knockdowns == 0 &&
+                crouched.staggers == 0,
+            "sweep: a crouched Matron takes nothing from it");
+    const Swept whiff = sweep_one(3.0, 0, false, true);
+    std::cout << "  sweep whiff: offered=" << whiff.offered << " hits=" << whiff.hits << " phase=" << int(whiff.phase)
+              << "\n";
+    require(!whiff.offered && whiff.strikes == 1 && whiff.hits == 0 && whiff.impulse_ns == 0.0 &&
+                whiff.move == 1,
+            "sweep: out of reach, none offered and none lands, but the press still threw a sweep");
+    require(whiff.phase == 0 && whiff.knockdowns == 0 && whiff.staggers == 0,
+            "sweep: after a whiff the fist is back at guard, full recovery");
+    const Swept again = sweep_one(1.05, 0, false, false);
+    require(again.hits == pest.hits && again.impulse_ns == pest.impulse_ns && again.point.x == pest.point.x &&
+                again.point.y == pest.point.y && again.point.z == pest.point.z,
+            "sweep: the same inputs give the same sweep, to the bit");
+    std::cout << "PASS scraperx_sim matron sweep: impulse_ns=" << pest.impulse_ns << "\n";
+}

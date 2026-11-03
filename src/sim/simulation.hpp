@@ -1228,6 +1228,7 @@ struct Snapshot final {
     // and the last landing's point, her surface normal there and the
     // impulse it put into her (N*s, force times time).
     std::uint8_t strike_phase = 0;
+    std::uint8_t strike_move = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep
     std::uint32_t strike_phase_ticks = 0;
     bool strike_offered = false;
     std::int8_t strike_arm = 1;   // the fist he throws with: 1 right, 0 left, -1 none usable
