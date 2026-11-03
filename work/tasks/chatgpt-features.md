@@ -25,8 +25,12 @@ hidden flag in place of a physical fact, or a test-only shortcut.
 ## Laws
 Native C++17/Jolt owns every consequential physical fact; Godot only presents, takes input, runs the
 camera, HUD and Android. Her force budget is 8 kN / 44 kW. World geometry and her limits change only
-in their own protected PR. Human sounds are real recordings, never synthesized. Touch-first, and it
+in their own protected PR, from a branch named `chatgpt/integrate-protected-<job>` (its CI runs the
+tests past the rule-check BLOCK). Human sounds are real recordings, never synthesized. Touch-first, and it
 must run on the target phone.
+Hard problems are solved together (CLAUDE.md, "Hard problems are solved together"): before locking in
+a `hard` job's approach, or after a second red run on one failure, post `To <Name>:` to another vendor
+(Muse, Grok, Claude) with what you measured and the exact question, and keep working.
 
 ## Output
 Post one comment on "Feature proposals (ChatGPT)"; if posting fails, give the same text in the run.

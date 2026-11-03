@@ -50,6 +50,9 @@ class Team:
     matron_reviewer: str             # agent key preferred when the job needs matron
     agent_vendor: Mapping[str, str]  # agent key -> vendor
     verdict_logins: frozenset[str]   # lowercased GitHub logins whose comments may carry a verdict
+    agent_name: Mapping[str, str] = dataclasses.field(default_factory=dict)   # agent key -> the name it signs verdicts with
+    fallback_order: Sequence[str] = ()     # agent keys asked, in turn, when an ask goes unanswered
+    fallback_after_hours: float = 3.0      # an ask with no verdict this long is passed to the next agent
 
     def vendor_of_branch(self, ref: str) -> str:
         for prefix, vendor in self.vendor_of_prefix:
@@ -91,9 +94,22 @@ def team_from_config(cfg: Mapping) -> Team:
     logins = cfg.get("verdict_logins")
     if not isinstance(logins, Sequence) or isinstance(logins, str) or not logins:
         raise ValueError("agents.yml: `verdict_logins` must list the GitHub logins whose verdicts count")
+    fallback = list(review.get("fallback_order", []))
+    for f in fallback:
+        if f not in agents:
+            raise ValueError(f"agents.yml: review.fallback_order names unknown agent {f!r}")
+        if agent_vendor[f] == "anthropic":
+            raise ValueError(f"agents.yml: review.fallback_order names {f!r}, a Claude agent: Claude's work is never reviewed by Claude")
+    try:
+        hours = float(review.get("fallback_after_hours", 3))
+    except (TypeError, ValueError):
+        hours = 0.0
+    if not 0 < hours < 24 * 14:
+        raise ValueError("agents.yml: review.fallback_after_hours must be a number of hours above 0 and under 336")
+    signs = {key: str((a.get("names") or [key])[0]) for key, a in agents.items()}
     prefixes.sort(key=lambda pv: -len(pv[0]))  # longest prefix wins
     return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor,
-                frozenset(str(l).strip().lower() for l in logins))
+                frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours)
 
 
 def _has_repro(body: str) -> bool:
@@ -236,6 +252,24 @@ def pick_reviewer(author_vendor: str, needs: frozenset[str], team: Team) -> Revi
         if team.agent_vendor.get(agent) != "anthropic":
             return ReviewPick("ask", agent)
     raise ValueError("agents.yml: no non-Claude agent to ask for a review of Claude's work")
+
+
+def next_fallback(asked: Sequence[str], author_vendor: str, team: Team) -> str:
+    """The next agent to ask for a review of a head: the first of review.fallback_order not yet asked on it
+    whose vendor is neither the author's (its LAND would not count) nor Anthropic's. "" when none is left."""
+    for agent in team.fallback_order:
+        vendor = team.agent_vendor.get(agent)
+        if agent not in asked and vendor not in (None, "anthropic", author_vendor):
+            return agent
+    return ""
+
+
+def ask_is_overdue(asked_at: str, now_iso: str, hours: float) -> bool:
+    """An ask posted at `asked_at` that has had no verdict for `hours` hours (ISO 8601 UTC both)."""
+    import datetime as _dt
+    then = _dt.datetime.fromisoformat(asked_at.replace("Z", "+00:00"))
+    now = _dt.datetime.fromisoformat(now_iso.replace("Z", "+00:00"))
+    return (now - then).total_seconds() >= hours * 3600
 
 
 def needs_review(pr: PrFacts) -> bool:

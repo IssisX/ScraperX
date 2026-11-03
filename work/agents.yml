@@ -39,3 +39,8 @@ review:
   claude_authored_asks: [chatgpt, muse]
   # A job that needs matron asks Muse first: the Matron is its specialty.
   matron_reviewer: muse
+  # An ask with no verdict on its head after this many hours is passed to the next agent here that has
+  # not been asked on that head, once per head (Cory, 11-03: Codex's quota ran out and nothing took over).
+  # Never a Claude agent, never the author's own vendor. Grok answers `To Grok:` comments (work/tasks/grok-answers.md).
+  fallback_after_hours: 3
+  fallback_order: [chatgpt, grok]

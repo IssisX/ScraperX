@@ -10,12 +10,16 @@ Your session has a hard dollar budget; when it is reached you stop, so work in s
 2. Post one line on the job issue claiming it: `Claude (API agent), HH:MM Central: started.`
 
 ## Do the job
+- Hard problems are solved together (CLAUDE.md, "Hard problems are solved together"): on a stuck
+  failure or a guess at physics, post `To <Name>:` on the issue with what you measured and the exact
+  question, then keep working.
 - Work on ONE branch: `claude/integrate-<job-id-lowercase>-<two-words>` (e.g.
   `claude/integrate-j028-motion-probe`), made from `ScraperX-Claude`. Commit in small verified steps
   and `git push -u origin <branch>`; pushing runs the CI proof.
 - Fix at the owner of the earliest invalid state, not the symptom. No teleports, no unlimited force,
   her shared budget is 8 kN / 44 kW, her lunge limits stay. Never weaken a test. Test checks, world
-  geometry and her limits change only in their own protected PR with a plain before/after.
+  geometry and her limits change only in their own protected PR with a plain before/after, from a
+  branch named `claude/integrate-protected-<job>` (its CI runs the tests past the rule-check BLOCK).
 - Test only what your change reaches (`SCRAPERX_ONLY=<group>`, `SCRAPERX_WAY=<n>`); the full suite,
   touch scenarios and the Android build are CI's job. Local builds use CI's flags
   (`.github/workflows/wo000-delivery-spine.yml`).

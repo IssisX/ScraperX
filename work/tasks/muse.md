@@ -37,8 +37,56 @@ there doing that. So you never touch GitHub directly; email does everything:
   ruled out and the one observation that would settle it, and mark the job BLOCKED.
 - Human sounds are real recordings, never synthesized.
 
-## Your open work now
-- **J-002 (#109), the silent second hit:** your fix is PR #153 (78ab1974); it supersedes #92 and gets
-  an automatic Claude review. Next: email the `matron-grab` check change ("a blow not his, mid-hold"
-  reading blow_mps after the quiet window) as its own diff with a before/after.
-- J-005 (#112), J-022 (#129), J-023 (#130, PR #95): as their issues say.
+## Your open work now (11-03, Cory: "Muse ... should do main, difficult and long-winded tasks")
+You lead the fight. Use your subagents: run independent stages or files in parallel, and send each
+finished piece as its own diff email as soon as it is proven, not all at the end.
+0. **J-001 (#108), her hold with real arms, is now yours (Cory, 11-03), first in line.** Its code is on
+   PR #152 (`chatgpt/integrate-j001-swat-budget`, head `50e1bf49`, on top of #102's hold), red on two checks
+   that are not the swat's: `matron load S2 over-base: a carry swing crossed the crouch base` and
+   `matron crash: she went to the hit, found nobody, and is the warier for it`. ChatGPT's diagnosis is on #152
+   (two candidate causes: synthetic held-load attribution while regripping, or the new `drag_pose()` target
+   against the old counter-lean), and a Claude session is posting the failing-tick values there. Find the cause,
+   fix it at the owner, and send the diff on top of `50e1bf49`. The integrator puts it on that branch.
+   Protected checks (#103's) go on `fb-bot/integrate-protected-j001-hold-checks`. ChatGPT reviews it.
+1. **Finish J-002 (#109):** the late require ("once the rip has begun, his blow breaks nothing") read
+   at its peak, as its own diff on top of `1620c32e` (PR #158), so #153 goes green.
+2. **The fight, S2-S5, built end to end (J-005, #112, then one job each):**
+   - Your spec is on trunk (`03_EXECUTION/FIGHT/FIGHTING_SYSTEM_SPEC.md`, with your two corrections), and
+     your scopes are job issues: S2 low sweep J-033 #164, S3 heavy kick J-034 #165, S4 jab-cross J-035
+     #166, S5 slip J-036 #167.
+   - Then build them in order of dependency, each stage its own diff (and its own PR); a new or
+     changed test check goes in its own protected diff with a before/after. Native kernel first
+     (`src/sim/`), then the Godot view where the stage shows on screen.
+   - **S6, her tells (J-004, #111), is yours too (11-03):** re-point them at S7's fields once S5 is in.
+   - Neighbours: S1 is yours (#153); S7 + S8, damage and death body (J-003, #110), are ChatGPT's PR in
+     review. Read its fields, never edit its functions; ask with `To ChatGPT:`.
+2b. **J-038 (#169), destructible loose things (Cory, 11-03), right after the fight:** never the tower's
+   machines (they must stay usable so he can ascend). What the forklift and crane lift, barrels, boxes and shipping containers dent with the force
+   of the hit, and the hit moves them (a forklift ramming one shoves it and leaves it severely dented;
+   slice 0 makes the static containers movable, real masses, as a protected PR), crates break into pieces that become
+   loose stock. Rule 51, the phone, determinism and saves hold. Propose the dent model and slices first.
+3. **J-006 (#113), the grade ladder (her pursuit up the first 11 m), moved to you from ChatGPT (11-03).**
+   Its code is PR #91 (red). Start from its head and the job issue's last findings; it unblocks J-007
+   (#114, her exit items 4, 6 and 7: arm's-length holds, the pipe, the hoists), which is yours next.
+   It touches journey and climb functions, not the fight's, so run it on a subagent alongside the fight.
+4. **J-022 (#129), environment lane D:** gusts, wind you can see, clouds, dust in the stack. Long job;
+   work it when a fight stage waits on review.
+5. J-023 (#130, PR #95): its in-game stills, as the issue says.
+
+## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
+Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the
+integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
+- **G1, her mind runs on evidence (rule 29, `03_EXECUTION/GAP_LIST.md` gap 4):** perception is evidence
+  with an age, rage is fed by sound that reaches her ear, and hiding from her truly works. Find every
+  place her decisions still read his true state (`step_travel`'s `player_on` checks, the braced state,
+  the ankle passed during a hold), route each through what she saw or heard, and prove hiding with
+  runtime scenarios (he hides and she loses him; he makes a sound and she finds him).
+You may propose your own grand tasks too: subject `MUSE_TO_CLAUDE: proposal <title>`, with goal, why it
+matters to the player, files, and finish facts. The integrator rules on it within the hour.
+
+## Helping the others (11-03, Cory: "make sure to help each other figure stuff out")
+You are the team's first stop for hard physics and game-code questions. A `CLAUDE_TO_MUSE:` mail that
+relays a `To Muse:` ask from Grok, ChatGPT or a Claude session is answered before your own next step:
+a concrete idea, a measurement, a counterexample, or "no idea, try <who>". Ask back freely too: a
+Claude session can run the game and look at it (Godot MCP) or run a CI proof for you; Grok is good for
+the math and a fresh angle; ChatGPT for research and careful review.
