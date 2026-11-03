@@ -4441,6 +4441,15 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force) {
     return granted;
 }
 
+JPH::Vec3 Matron::grant_swat_force(const JPH::Vec3 wanted, const JPH::Vec3 player_point_velocity) noexcept {
+    const JPH::Vec3 her_velocity = physics_.GetBodyInterface().GetLinearVelocity(body_);
+    feet_budget_.velocity = her_velocity - player_point_velocity;
+    const JPH::Vec3 granted = feet_budget_.take(wanted);
+    foot_force_n_ = feet_budget_.used;
+    foot_power_w_ = feet_budget_.power_used;
+    return granted;
+}
+
 void Matron::brace_at_edges(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
