@@ -13,12 +13,25 @@ Read `CLAUDE.md`, then steps K, D, S and C of `work/tasks/integrator-hourly.md`,
 - He judges catch-up reading at a session's start as normal, not its working pace.
 - Muse will do destructible-environment work: that is J-038 (#169), queued behind the fight.
 
+## PAUSED (Cory, 5:15 PM Central: "I'm gonna pause all coding")
+Paused: the hourly task `trig_01BdP4yuyP2yAqoUErjiMSyn` (disabled), the 20-minute sweep `trig_01Pp4KpCZ1ZYzw8f9XrHt13M`
+(disabled), the J-017 worker (told to stop), `needs:orchestrator` removed from #134 (the API agent), a pause notice on
+board #107 (comment 6617893982) and a pause mail to Muse. Cory cancelled the running Switchboard run; the workflow itself
+was not disabled, so its 15-minute schedule may still fire (Actions -> Switchboard -> the "..." menu at the top right
+of the run list -> "Disable workflow"; on a phone, use the browser's desktop site).
+**On "resume", in order:** (1) `update_trigger` enabled=true on the hourly task; (2) re-arm the 20-minute sweep with
+`send_later` (the disabled one-shot is spent); (3) if Cory disabled Switchboard, he re-enables it the same way
+(Actions -> Switchboard -> "Enable workflow"), or dispatch `switchboard.yml` on main with dry_run=false once it is enabled;
+(4) post "Pause over" on board #107 and mail Muse `CLAUDE_TO_MUSE: pause over`; (5) re-add `needs:orchestrator` to #134;
+(6) tell the J-017 worker to resume (#183 -> #185 re-pin, #191, #192); (7) on #193, Muse owes the Codex P1/P2 fixes and
+the red matron-slices-3 and athletic-traversal on d9d3ee5f.
+
 ## For Cory
 - Nothing. He merged #187 (switchboard idle runs on `main`) at 4:36 PM Central, so the review, eye and sweep runs
   are no longer displaced by comment runs.
 
 ## Merged today since 2:35 PM
-#178, #181, #184, #180, #188, #176, #182.
+#178, #181, #184, #180, #188, #176, #182, #187 (Cory), #186, #189, #190.
 
 ## Merge queue (integrator; merge from a scratchpad worktree, never in the main checkout)
 - **J-017 (route above 221 m), worker `session_01W3SSN2utVR8V9YiKAfLJee` (Sonnet xhigh, ~475k):** #183 (dd74a1d,
