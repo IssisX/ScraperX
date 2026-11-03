@@ -13,13 +13,16 @@ on:
 permissions:
   contents: read
 
-# Every commit is an immutable build candidate. A newer push must never cancel an
-# older commit's build, otherwise that commit can lose its APK. "Build candidate",
-# not "checkpoint": a checkpoint in ScraperX is the in-sim commit_checkpoint(), and
-# the word is not reused for CI artifacts.
+# On ScraperX-Claude every commit is an immutable build candidate: a newer push must
+# never cancel an older commit's build, otherwise that commit can lose its APK, so
+# trunk groups by commit and never cancels. On an integrate branch only the newest
+# head can land, so a newer push cancels the branch's older, superseded run (11-03:
+# four pushes on #181 ran four full proofs). "Build candidate", not "checkpoint": a
+# checkpoint in ScraperX is the in-sim commit_checkpoint(), and the word is not
+# reused for CI artifacts.
 concurrency:
-  group: scraperx-checkpoint-${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: scraperx-checkpoint-${{ github.workflow }}-${{ github.ref == 'refs/heads/ScraperX-Claude' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/ScraperX-Claude' }}
 
 env:
   GODOT_VERSION: 4.7-stable
@@ -133,7 +136,21 @@ jobs:
           echo "rule_check: trunk $TRUNK merge-base $MB head $(git rev-parse HEAD)"
           rc=0
           python3 tools/rule_check/rule_check.py "$TRUNK" HEAD || rc=$?
-          if [ "$rc" -eq 2 ]; then echo "rule_check: BLOCK found, failing"; exit 1; fi
+          # The protected-change path (Cory, 11-03: "Approve"): a branch named
+          # <agent>/integrate-protected-* declares that it holds a protected
+          # change, so its BLOCK is reported and its tests still run. Its merge
+          # stays gated: the switchboard never merges a BLOCK; the integrator
+          # merges it on green proof plus a second agent's LAND.
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if [ "$rc" -eq 2 ]; then
+            case "$BRANCH" in
+              */integrate-protected-*)
+                echo "::warning::rule_check: BLOCK on protected-change branch $BRANCH; tests run, merge needs the integrator and a second agent's LAND"
+                exit 0 ;;
+            esac
+            echo "rule_check: BLOCK found, failing (a protected change goes on a <agent>/integrate-protected-* branch)"
+            exit 1
+          fi
           echo "rule_check: no BLOCK (exit $rc)"
 
       - name: Share host native binaries with test jobs
@@ -747,6 +764,20 @@ jobs:
           ! grep -q 'MATRON_PRESENTATION FAIL' artifacts/matron-presentation.log
           grep -q '^MATRON_PRESENTATION PASS$' artifacts/matron-presentation.log
 
+      - name: Check the gore answers every tear and fatality edge
+        shell: bash
+        run: |
+          set -euo pipefail
+          # gore_shots_test.gd drives gore_view.gd and matron_view.gd in a
+          # studio deck with hold-state dictionaries shaped like the native's
+          # get_matron_hold_state() at each tear and fatality beat. Without
+          # --out it renders nothing and needs no display; it quits 1 on any
+          # failed check.
+          timeout 180s tools/godot/godot --headless --path godot \
+            --script res://tests/gore_shots_test.gd 2>&1 | tee artifacts/gore-shots.log
+          ! grep -q '^GORE FAIL' artifacts/gore-shots.log
+          grep -q '^GORE PASS (0 failed)$' artifacts/gore-shots.log
+
       - name: Check Matron hold haptics fire once per event
         shell: bash
         run: |
@@ -754,6 +785,14 @@ jobs:
           timeout 60s tools/godot/godot --headless --path godot \
             --script res://tests/matron_hold_haptics_test.gd 2>&1 | tee artifacts/matron-hold-haptics.log
           grep -q '^MATRON_HOLD_HAPTICS PASS' artifacts/matron-hold-haptics.log
+
+      - name: Check one landed blow makes one Matron hit sound
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60s tools/godot/godot --headless --path godot \
+            --script res://tests/fight_s1_sound_dedupe_test.gd 2>&1 | tee artifacts/fight-s1-sound-dedupe.log
+          grep -q '^FIGHT_S1_DEDUPE PASS$' artifacts/fight-s1-sound-dedupe.log
 
       - name: Check every presentation script loads and the native bridge answers
         shell: bash
@@ -769,6 +808,16 @@ jobs:
             --script res://tests/script_load_test.gd 2>&1 | tee artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
+
+      - name: Fight S1 act test
+        shell: bash
+        run: |
+          set -euo pipefail
+          # fight_s1_test.gd asserts a landed punch reads (flinch + grunt +
+          # haptics) and a whiff reads nothing.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/fight_s1_test.gd 2>&1 | tee artifacts/fight-s1.log
+          grep -q '^FIGHT_S1 PASS' artifacts/fight-s1.log
 
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4

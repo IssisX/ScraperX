@@ -7,6 +7,7 @@ extends "res://presentation/main_geometry.gd"
 
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
+const LampGlow := preload("res://presentation/lamp_glow.gd")
 
 # The neighboring shaft. Mirrors TwinTower in the native world.
 const TWIN_TOWER_CENTER := Vector3(-30.0, 800.0, -264.0)
@@ -47,23 +48,39 @@ func _build_world() -> void:
 	# way a real decades-old industrial site actually weathers.
 	# The yard's asphalt: worn, patched, cracked and stained (yard_ground.gd).
 	var asphalt := YardGround.material()
-	var concrete := _material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete)
-	# A real value ladder: near-black iron in shadow, mid rust for the frame,
-	# brighter oxide only where light catches an edge. Bump-mapped: these
-	# cover most of the structure's surface area, so this is where per-pixel
-	# normal detail matters most -- pitted where rusted, smooth where not.
-	var mill_scale := _material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, _bump_smooth)
-	var oxidised := _material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_rust)
-	var rust_deep := _material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, _bump_rust)
-	var rust_bright := _material(Color("9a5326"), 0.34, 0.82, Color.BLACK, 1.0, _bump_rust)
-	var galvanised := _material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_smooth)
-	var faded_yellow := _material(Color("b08a22"), 0.16, 0.68)
-	var hazard := _material(Color("a04d16"), 0.18, 0.76)
-	var tar := _material(Color("0e0f11"), 0.05, 0.62)
-	var timber := _material(Color("4a3420"), 0.02, 0.9, Color.BLACK, 1.0, _bump_timber)
-	# New accents: living colour against the rust. Copper pipe under a thin
-	# patina is smooth.
-	var verdigris := _material(Color("3f6b5c"), 0.42, 0.68, Color.BLACK, 1.0, _bump_smooth)
+	var concrete := _surfaced(Color("4e4841"), 0.0, 0.94, _surface_concrete)
+	# Measured values (linear albedo; physicallybased.info, CC0, which names
+	# its own sources): iron 0.53 and zinc 0.81 as bare metal, fired-clay
+	# brick -- iron oxide -- 0.26/0.10/0.06, concrete 0.51 clean. The sun and
+	# exposure here (sky_cycle.gd, main.tscn) run about 2.5 times a camera's,
+	# so a lit diffuse surface sits that far under its measured value and
+	# the ladder between them is kept: none sits under the rest by a factor of
+	# ten, as mill scale did at 0.012 (environment plan, job 2). A metal shows
+	# the sky at the sky's own exposure, so its value is not lowered for it.
+	# Oxide, paint, timber and patina are not metal (metallic 0): only bare
+	# and galvanised steel are. Mill scale is the forged skin of iron oxide
+	# on new steel, blue-black with a dull sheen: a dark dielectric over the
+	# metal (linear 0.04), a value step under the rust, never a hole. Rust
+	# runs the hematite hue at three values. Each is drawn in its real surface
+	# (main_geometry.gd Surface: rust, mill scale, galvanising, paint, timber,
+	# concrete): these cover most of the structure's surface area, so this is
+	# where per-pixel detail matters most.
+	var mill_scale := _surfaced(Color("36383b"), 0.3, 0.5, _surface_mill_scale)
+	var oxidised := _surfaced(Color("57382a"), 0.0, 0.9, _surface_rust)
+	var rust_deep := _surfaced(Color("3a271d"), 0.0, 0.93, _surface_rust)
+	var rust_bright := _surfaced(Color("6e4630"), 0.0, 0.84, _surface_rust)
+	# Weathered hot-dip zinc: the bright metal (0.81) dulled under its grey
+	# patina of zinc carbonate, part metal, part mineral.
+	var galvanised := _surfaced(Color("6e7274"), 0.75, 0.6, _surface_galvanised)
+	# Paint is not metal: it weathers, grimes and streaks like the steel it
+	# covers (signal yellow and orange, sun-faded and dirtied).
+	var faded_yellow := _surfaced(Color("85600c"), 0.0, 0.6, _surface_paint)
+	var hazard := _surfaced(Color("9a4814"), 0.0, 0.66, _surface_paint)
+	var tar := _material(Color("0e0f11"), 0.0, 0.62)
+	var timber := _surfaced(Color("4a3420"), 0.0, 0.9, _surface_timber)
+	# New accents: living colour against the rust. Copper's patina is a
+	# mineral crust, not metal.
+	var verdigris := _surfaced(Color("3f6b5c"), 0.0, 0.7, _surface_paint)
 	var lichen := _material(Color("57642e"), 0.0, 0.96)
 
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
@@ -76,7 +93,8 @@ func _build_world() -> void:
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_yard(concrete, faded_yellow, tar)
 	_build_mountains_and_waterfall()
-	_build_kellerworks_signage(timber, faded_yellow)
+	# The signs keep their own paint as it was (rule 24: no sign work).
+	_build_kellerworks_signage(timber, _material(Color("b08a22"), 0.16, 0.68))
 	_build_foliage()
 	_build_lighting()
 
@@ -651,6 +669,7 @@ func _build_lighting() -> void:
 		lamp.light_energy = 3.5
 		lamp.omni_range = 26.0
 		lamp.omni_attenuation = 1.6
+		lamp.set_meta(LampGlow.CONE_META, true)
 		_light_rig.add_child(lamp)
 
 	var cx := STACK_CENTER.x
@@ -666,6 +685,42 @@ func _build_lighting() -> void:
 				[corner_face + Vector3(sx * 0.15, 0.0, 0.0), Vector3(0.3, 0.4, 0.6), Vector3(sx, 0.0, 0.0)]]:
 			_add_box("FloodFitting", mount[1], mount[0], flood_fitting)
 			_tower_foot_flood(mount[0] + (mount[2] as Vector3) * 0.4)
+	# The night's glow round every lamp above, and the obstruction lights
+	# (lamp_glow.gd): cards, not parts or lights. sky_cycle.gd fades it.
+	var glow := LampGlow.new()
+	glow.name = "LampGlow"
+	_light_rig.add_child(glow)
+	glow.build(_light_rig.get_children().filter(func(n: Node) -> bool: return n is OmniLight3D),
+		_obstruction_light_points())
+
+# Where the red obstruction lights hang (lamp_glow.gd): on the neighbouring
+# shaft's four corners every OBSTRUCTION_STEP_M and at its top (TowerMass,
+# _build_world), and on the corner columns of the main frame's continuation
+# (_build_stack_continuation) at its middle tier and its top. Each sits
+# OBSTRUCTION_OUT_M proud of its corner.
+const OBSTRUCTION_STEP_M := 160.0
+const OBSTRUCTION_OUT_M := 0.6
+const TWIN_TOWER_SIZE := Vector3(92.0, 1600.0, 80.0)
+
+func _obstruction_light_points() -> PackedVector3Array:
+	var points := PackedVector3Array()
+	var half := Vector2(TWIN_TOWER_SIZE.x, TWIN_TOWER_SIZE.z) * 0.5 + Vector2.ONE * OBSTRUCTION_OUT_M
+	var y := OBSTRUCTION_STEP_M
+	while y <= TWIN_TOWER_SIZE.y + 0.1:
+		for sx in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				points.append(Vector3(TWIN_TOWER_CENTER.x + sx * half.x, y, TWIN_TOWER_CENTER.z + sz * half.y))
+		y += OBSTRUCTION_STEP_M
+	var base := STACK_LEVEL_COUNT
+	var top := STACK_LEVEL_COUNT + 24
+	for level in [base + 12, top - 1]:
+		var shrink := 1.0 - float(level - base) / float(top - base) * 0.42
+		var corner := (STACK_HALF_EXTENT + STACK_COLUMN_SIZE * 0.5) * shrink + OBSTRUCTION_OUT_M
+		for sx in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				points.append(Vector3(STACK_CENTER.x + sx * corner, float(level + 1) * STACK_LEVEL_HEIGHT,
+					STACK_CENTER.z + sz * corner))
+	return points
 
 # One of the floods at the tower's foot (TOWER_FOOT_FLOOD_Y).
 func _tower_foot_flood(at: Vector3) -> void:

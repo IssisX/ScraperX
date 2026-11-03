@@ -6,8 +6,14 @@ shader_type sky;
 // four octaves, and no loops over lights.
 
 uniform float day_factor : hint_range(0.0, 1.0) = 1.0;    // 0 night .. 1 day
-uniform float dusk_factor : hint_range(0.0, 1.0) = 0.0;   // warm band at low sun
+uniform float dusk_factor : hint_range(0.0, 1.0) = 0.0;   // warm band at low sun, and after it sets
+uniform float star_factor : hint_range(0.0, 1.0) = 0.0;   // 0 none .. 1 all (sun 12 degrees under)
 uniform bool light_is_moon = false;
+// Toward the sun, set or not: LIGHT0 is the moon while the sun is down, but
+// the twilight glow follows the sun.
+uniform vec3 sun_direction = vec3(0.0, 1.0, 0.0);
+// What the ground sends back up (sky_cycle.gd): the ambient's lower half.
+uniform vec3 ground_bounce = vec3(0.12, 0.11, 0.09);
 uniform vec3 zenith_day : source_color = vec3(0.17, 0.34, 0.66);
 uniform vec3 horizon_day : source_color = vec3(0.66, 0.73, 0.80);
 uniform vec3 zenith_night : source_color = vec3(0.022, 0.032, 0.07);
@@ -54,18 +60,29 @@ void sky() {
 	vec3 to_light = LIGHT0_ENABLED ? normalize(LIGHT0_DIRECTION) : vec3(0.0, 1.0, 0.0);
 	float facing = max(dot(dir, to_light), 0.0);
 	float band = exp(-abs(up) * 7.0);
-	if (!light_is_moon) {
-		col += dusk_glow * dusk_factor * band * (0.35 + 0.65 * pow(facing, 3.0));
-	}
-	// Below the horizon: haze over the valley, never a bare void.
-	col = mix(col, mix(horizon, ground_haze * mix(0.18, 1.0, day_factor), 0.7),
-		smoothstep(0.0, -0.08, up));
+	// Twilight: warm low on the sun's side, a rose band (the belt of Venus)
+	// above the darker earth shadow on the other, both following the sun's
+	// bearing after it has set.
+	vec2 sun_flat = normalize(sun_direction.xz + vec2(1e-4, 0.0));
+	float bearing = dot(normalize(dir.xz + vec2(1e-4, 0.0)), sun_flat) * 0.5 + 0.5;
+	float sun_side = pow(bearing, 3.0);
+	col += dusk_glow * dusk_factor * band * (0.35 + 0.65 * sun_side);
+	// Its broad upper part, which clears the basin's rim.
+	col += dusk_glow * dusk_factor * sun_side * sun_side * exp(-max(up, 0.0) * 3.5) * 0.7;
+	col += vec3(0.42, 0.30, 0.40) * dusk_factor * (1.0 - bearing) * exp(-abs(up - 0.12) * 9.0) * 0.18;
+	// Below the horizon: haze over the valley, never a bare void. The
+	// radiance map, which lights the world's ambient, takes the ground's own
+	// bounce there instead, so shade under a deck is lit from below, warm
+	// by day and dark at night.
+	vec3 below = AT_CUBEMAP_PASS ? mix(horizon, ground_bounce, 0.9)
+		: mix(horizon, ground_haze * mix(0.18, 1.0, day_factor), 0.7);
+	col = mix(col, below, smoothstep(0.0, -0.08, up));
 
 	// Stars, above the horizon only, fading in with the night.
-	if (up > 0.0 && day_factor < 0.6) {
+	if (up > 0.0 && star_factor > 0.0) {
 		vec2 star_cell = floor(dir.xz / (up + 0.35) * 420.0);
 		float star = step(0.9975, hash(star_cell));
-		col += vec3(star) * (1.0 - day_factor / 0.6) * smoothstep(0.0, 0.25, up) * 0.9;
+		col += vec3(star) * star_factor * smoothstep(0.0, 0.25, up) * 0.9;
 	}
 
 	// The light itself: a hard disc with a soft halo. The moon is smaller,
@@ -95,10 +112,23 @@ void sky() {
 		// Lit side toward the light, darker bellies, warm rims at dusk.
 		float lit = 0.55 + 0.45 * facing;
 		vec3 cloud_day = mix(vec3(0.50, 0.53, 0.58), vec3(1.0, 0.99, 0.97), lit);
-		cloud_day = mix(cloud_day, dusk_glow * 1.1, dusk_factor * 0.55 * (0.3 + 0.7 * facing));
 		vec3 cloud_night = vec3(0.045, 0.052, 0.075) + vec3(0.10, 0.11, 0.15) * facing * float(light_is_moon);
-		vec3 cloud = mix(cloud_night, cloud_day, day_factor) * (0.82 + 0.18 * (1.0 - detail));
+		vec3 cloud = mix(cloud_night, cloud_day, day_factor);
+		// Lit from under by the low or set sun: salmon on its side, not the
+		// brown of a dimmed white.
+		cloud = mix(cloud, dusk_glow * mix(0.6, 1.1, day_factor), dusk_factor * 0.55 * (0.3 + 0.7 * sun_side));
+		cloud *= 0.82 + 0.18 * (1.0 - detail);
 		col = mix(col, cloud, density * 0.92);
+	}
+
+	// Dither: Compatibility draws into 8 bits with no debanding, so the wide,
+	// soft horizon gradient bands on an AMOLED. Triangular noise of about one
+	// output step, relative to the colour so it holds at night's exposure as
+	// at noon's. Screen pixels only; the radiance map stays smooth.
+	if (!AT_CUBEMAP_PASS) {
+		vec2 pixel = floor(FRAGCOORD.xy);
+		float noise = hash(pixel) - hash(pixel + vec2(57.0, 113.0));
+		col *= 1.0 + noise * 0.012;
 	}
 
 	COLOR = col;

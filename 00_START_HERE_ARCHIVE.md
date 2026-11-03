@@ -611,3 +611,6 @@ like when you automatically assigned it medium and didn't ask me what level I wa
 every session to high. The integrator asks him the effort level, with a suggestion, whenever it asks
 to open a Claude session or helper.
 
+
+- 2026-11-02, on helpers that outlive the integrator (moved from CLAUDE.md 11-03): *"Shouldn't it be in the new session?"*
+- 2026-10-22, opening "Managing the agents" (moved from CLAUDE.md 11-03): *"I need more management help from you telling the other agents what to do"*.

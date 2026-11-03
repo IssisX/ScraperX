@@ -1,0 +1,68 @@
+# Who is on the team, for the switchboard (tools/switchboard). Read by the switch on every run.
+# A LAND counts only from a vendor other than the author's. The author's vendor comes from the PR's
+# branch prefix (every agent posts as the same GitHub account, so the login says nothing); a
+# verdict's vendor comes from the first word of its first line, e.g. **ChatGPT (review of #88 @ f9575008): LAND**.
+# Gemini is off the team (11-02). Codex reviews again (11-03): the Codex GitHub app reviews each PR when it
+# opens and on "@codex review"; its summary comment is read as its verdict (rules.parse_codex_state).
+
+# The repo is public, so anyone can comment. Only comments and reviews posted by these logins can
+# carry a verdict (LAND, FIX, NOTE); every agent posts as IssisX, the eye as the workflow bot.
+verdict_logins: [IssisX, "github-actions[bot]"]   # the Codex app's login is read only by parse_codex_state
+
+agents:
+  claude:
+    vendor: anthropic
+    names: [Claude]
+    branch_prefixes: [claude/]
+    owner_labels: [owner:claude, owner:claude-hold, owner:claude-lane-a, owner:claude-lane-b, owner:claude-switchboard]
+    wake: api            # the only vendor the switch can wake by itself (reviews, the eye, the orchestrator)
+  chatgpt:
+    vendor: openai
+    names: [ChatGPT]
+    branch_prefixes: [chatgpt/]
+    owner_labels: [owner:chatgpt]
+    wake: issue          # reads its job issue through its own app
+  grok:
+    vendor: xai
+    names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #107)
+    branch_prefixes: [grok/, pe/, builder/]
+    owner_labels: [owner:grok, owner:pe, owner:builder]
+    wake: issue
+  codex:
+    vendor: openai
+    names: [Codex]
+    branch_prefixes: [codex/]
+    owner_labels: []
+    wake: mention        # "@codex review" on the PR
+  muse:
+    vendor: meta
+    names: [Muse, FB]                # Muse is FB Bot
+    branch_prefixes: [muse/, fb-bot/]
+    owner_labels: [owner:muse]
+    wake: email          # tools/switchboard/muse_bridge.gs mails it and posts its replies back
+
+review:
+  # Claude-authored PRs are asked of these, in order, on the job issue (owner's correction 4).
+  claude_authored_asks: [chatgpt, muse]
+  # A job that needs matron asks Muse first: the Matron is its specialty.
+  matron_reviewer: muse
+  # Work by ChatGPT, Grok or Muse is asked of these, in order, skipping the author's own vendor (Cory, 11-03:
+  # Muse is always on and free, so it reviews first; Muse's own PRs go to ChatGPT). The paid Claude review
+  # through the API runs only when none of these fits.
+  other_authored_asks: [muse, chatgpt]
+  # Who shares the reviews (Cory, 11-03: "get the ones that are available and ready to do the reviews ... if we
+  # spread the work out, the merrier ... I'm not asking for two agents to review the same shit ... it should be
+  # available to take"). One reviewer per PR: the free one (fewest unanswered asks on other PRs, then fewest in the
+  # last day); the author's own vendor is skipped (Codex and ChatGPT are both OpenAI); `claude-api` (the automatic review, xhigh, work/budget.yml) is
+  # always free while the budget allows, and reviews Claude's work too (api_reviews_claude). A matron job prefers matron_reviewer
+  # on ties. When this list is set it replaces claude_authored_asks, other_authored_asks and fallback_order.
+  # Grok rejoins on 11-09.
+  pool: [claude-api, codex, muse, chatgpt]
+  # The automatic Claude review takes Claude's PRs too, and its LAND counts there (Cory, 11-03: "Yes, give it real
+  # work, the Claude on GitHub actions"). The Codex app still reviews every PR on open, and its findings block.
+  api_reviews_claude: true
+  # An ask with no verdict on its head after this many hours is passed to the next agent here that has
+  # not been asked on that head, once per head (Cory, 11-03: Codex's quota ran out and nothing took over).
+  # Never a Claude agent, never the author's own vendor. Grok answers `To Grok:` comments (work/tasks/grok-answers.md).
+  fallback_after_hours: 1   # Cory, 11-03: "3 hours seems long"
+  fallback_order: [muse, chatgpt, grok]

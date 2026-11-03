@@ -333,6 +333,10 @@ int main() {
         run_matron_mischief();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-wreck") {
+        run_matron_wreck();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit-ending") {
         run_summit_ending();
         return EXIT_SUCCESS;
@@ -424,6 +428,10 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010-o") {
         run_service_o();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "wreck-way-on") {
+        run_wreck_way_on();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -569,6 +577,7 @@ int main() {
     run_service_n();
     run_service_c5();
     run_service_o();
+    run_wreck_way_on();
     run_service_band();
     run_service_route();
     run_determinism();

@@ -33,7 +33,11 @@ func rust_deepen(source: Material) -> Material:
 	var base := source as StandardMaterial3D
 	if base == null:
 		return source
-	return _material(base.albedo_color.darkened(0.35), base.metallic, base.roughness)
+	if base.has_meta(&"surface"):
+		return _surfaced(base.albedo_color.darkened(0.35), base.metallic, base.roughness,
+			base.get_meta(&"surface") as Surface)
+	return _material(base.albedo_color.darkened(0.35), base.metallic, base.roughness, Color.BLACK, 1.0,
+		base.normal_texture as NoiseTexture2D)
 
 # Corrugated steel, as a normal map: one rib per texture repeat, across u.
 func _corrugation_texture() -> ImageTexture:
@@ -220,6 +224,58 @@ func _build_bump_textures() -> void:
 	var white := Image.create(4, 4, false, Image.FORMAT_L8)
 	white.fill(Color.WHITE)
 	_detail_mask = ImageTexture.create_from_image(white)
+	_surface_rust = Surface.open("rust", Vector2(1.0, 1.0), 1.0, false)
+	_surface_concrete = Surface.open("concrete", Vector2(1.5, 1.5), 1.0, false)
+	_surface_paint = Surface.open("paint", Vector2(1.0, 1.0), 1.0, false)
+	_surface_galvanised = Surface.open("galvanised", Vector2(1.0, 1.0), 1.0, false)
+	_surface_mill_scale = Surface.open("mill_scale", Vector2(1.0, 1.0), 1.0, false)
+	_surface_timber = Surface.open("timber", Vector2(2.0, 0.5), 1.0, true)
+
+# The structure's surfaces (environment plan, job 6): rust, concrete, paint,
+# galvanising, mill scale and timber, each a colour, roughness and relief map
+# at a known size (tools/textures/gen_surfaces.py, made in code, seeded): 512
+# texels to the metre on the steel, so they hold up at arm's length. The
+# colour map multiplies the part's own colour (carried in the batch's
+# vertices), so one set serves every colour of its kind and the batcher still
+# draws one material per finish. Batched, a part is mapped along its own axes
+# in metres (Batcher.surface_frame), so timber grain runs along each plank and a
+# brace's texture runs along the brace; broad variation over tens of metres
+# is laid in its vertex colours (Batcher.broad_tint), so the tile's repeat
+# never shows at 50 m. Unbatched (a moving body's parts, loose stock) it is
+# mapped triplanar in the object's own space, so it rides with the body.
+class Surface:
+	const DIR := "res://presentation/textures/"
+	var kind := ""
+	var albedo: Texture2D
+	var roughness: Texture2D
+	var normal: Texture2D
+	# Metres the maps cover: (along the part, across it).
+	var tile := Vector2.ONE
+	var normal_scale := 1.0
+	# Each part its own place in the map (each plank its own tree), rather
+	# than lined up with its neighbours.
+	var own_offset := false
+
+	static func open(name: String, metres: Vector2, depth: float, per_part: bool) -> Surface:
+		var surface := Surface.new()
+		surface.kind = name
+		surface.albedo = load(DIR + name + "_albedo.png") as Texture2D
+		surface.roughness = load(DIR + name + "_rough.png") as Texture2D
+		surface.normal = load(DIR + name + "_normal.png") as Texture2D
+		if surface.albedo == null or surface.roughness == null or surface.normal == null:
+			push_error("SCRAPERX_SURFACE_MISSING %s (expected %s%s_{albedo,rough,normal}.png)" % [name, DIR, name])
+			return null
+		surface.tile = metres
+		surface.normal_scale = depth
+		surface.own_offset = per_part
+		return surface
+
+var _surface_rust: Surface
+var _surface_concrete: Surface
+var _surface_paint: Surface
+var _surface_galvanised: Surface
+var _surface_mill_scale: Surface
+var _surface_timber: Surface
 
 func _make_weathering_texture() -> NoiseTexture2D:
 	var noise := FastNoiseLite.new()
@@ -240,16 +296,27 @@ func _make_weathering_texture() -> NoiseTexture2D:
 	return tex
 
 # Streaks that start somewhere and fade as they run down (texture v is down
-# the face under triplanar mapping), tiling in both directions. Seeded: the
+# a wall: the batcher lays them, STREAK_UV_SCALE), tiling in both
+# directions. Columns below STREAK_CLEAR_U carry none: every face that is not
+# a wall, and every mesh the batcher did not lay, samples there. Seeded: the
 # same streaks every run.
+const STREAK_UV_SCALE := 0.22
+const STREAK_CLEAR_U := 0.0625
+const STREAK_FLOOR_UV := Vector2(0.03125, 0.5)
+# A face whose normal leans further from level than this is a floor or a
+# ceiling: water runs down walls, not across floors (picture 12 of the
+# environment plan: streaks lying across the 340 m floor).
+const STREAK_WALL_MAX_NY := 0.5
+
 func _make_streak_texture() -> ImageTexture:
 	const SIZE := 256
 	var alpha := PackedFloat32Array()
 	alpha.resize(SIZE * SIZE)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9137
+	var clear := int(ceilf(STREAK_CLEAR_U * SIZE)) + 2
 	for streak in 110:
-		var x0 := rng.randi_range(0, SIZE - 1)
+		var x0 := rng.randi_range(clear, SIZE - 5)
 		var width := rng.randi_range(1, 4)
 		var y0 := rng.randi_range(0, SIZE - 1)
 		var length := rng.randi_range(24, 210)
@@ -290,6 +357,16 @@ func _make_bump_texture(seed_value: int, frequency: float, strength: float,
 	tex.noise = noise
 	return tex
 
+# A porous surface (rust, concrete, timber, matt paint, cloth) hides much of
+# its own face from the sky in its pits and pores. This renderer's sky
+# reflection adds a rough surface's sheen whatever its colour (its
+# environment term, env.y * clamp(50 * f0, metallic, 1)), so a dark porous
+# albedo read near-white under it (sky_cycle.gd). A specular level below
+# 0.25 (f0 below 0.02) is how a material says its cavities occlude: at
+# POROUS_SPECULAR the sheen is POROUS_SPECULAR / 0.25 of the open surface's.
+const POROUS_SPECULAR := 0.22
+const POROUS_ROUGHNESS := 0.8
+
 func _material(color: Color, metallic: float, roughness: float,
 		emission: Color = Color.BLACK, emission_energy: float = 1.0,
 		bump: NoiseTexture2D = null) -> StandardMaterial3D:
@@ -297,6 +374,8 @@ func _material(color: Color, metallic: float, roughness: float,
 	material.albedo_color = color
 	material.metallic = metallic
 	material.roughness = roughness
+	if metallic < 0.05 and roughness >= POROUS_ROUGHNESS:
+		material.metallic_specular = POROUS_SPECULAR
 	if emission != Color.BLACK:
 		material.emission_enabled = true
 		material.emission = emission
@@ -306,15 +385,48 @@ func _material(color: Color, metallic: float, roughness: float,
 		material.normal_texture = bump
 		if _weathering != null:
 			material.albedo_texture = _weathering
+			# The batcher may carry this one's colour in its vertices: the
+			# weathering is shared by every finish, never a picture of its own.
+			material.set_meta(&"weathered", true)
 		if _streaks != null and bump != _bump_timber:
+			# On UV2, which only the batcher lays: down walls, never on floors.
 			material.detail_enabled = true
 			material.detail_albedo = _streaks
 			material.detail_mask = _detail_mask
 			material.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX
-			material.detail_uv_layer = BaseMaterial3D.DETAIL_UV_1
+			material.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
 		material.uv1_triplanar = true
 		material.uv1_triplanar_sharpness = 1.0
 		material.uv1_scale = Vector3(0.22, 0.22, 0.22)
+	return material
+
+# A finish of the structure in one of its real surfaces (Surface, above):
+# colour, roughness and relief from the surface's maps, grime and streaks as
+# every weathered finish has them.
+func _surfaced(color: Color, metallic: float, roughness: float, surface: Surface) -> StandardMaterial3D:
+	var material := _material(color, metallic, roughness)
+	if surface == null:
+		return material
+	material.albedo_texture = surface.albedo
+	material.roughness_texture = surface.roughness
+	material.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
+	material.normal_enabled = true
+	material.normal_texture = surface.normal
+	material.normal_scale = surface.normal_scale
+	material.set_meta(&"weathered", true)
+	material.set_meta(&"surface", surface)
+	if _streaks != null and surface != _surface_timber:
+		material.detail_enabled = true
+		material.detail_albedo = _streaks
+		material.detail_mask = _detail_mask
+		material.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX
+		material.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
+	# Unbatched: triplanar in the object's own space (it rides with a moving
+	# body), at the surface's size across.
+	material.uv1_triplanar = true
+	material.uv1_triplanar_sharpness = 4.0
+	material.uv1_world_triplanar = false
+	material.uv1_scale = Vector3.ONE / surface.tile.x
 	return material
 
 # The static world, drawn in batches. Every box, strut and cylinder of
@@ -360,6 +472,181 @@ const WET_ROUGHNESS := 0.35
 const WET_METAL_ROUGHNESS := 0.85
 const WET_ROUGHNESS_MIN := 0.12
 
+# Contact shading (environment plan, job 8): things sit on things. Every
+# part the batcher lays is a box among the solids; each near vertex is
+# darkened by the solids within OCCLUSION_REACH of it, the more so the nearer
+# and the more they face it -- where a post meets a deck, under a ledge, in a
+# corner -- and where the solid is a floor below it, tinted toward the dirt
+# and rust bleed that gathers at feet. Baked once at start-up into the
+# vertex colours, so it holds the same under either renderer, with SSAO or
+# without. The floors are found from the solids themselves, never per place.
+# Only parts square to the world shade (a diagonal brace's bounding box is
+# mostly air); every part is shaded.
+const OCCLUSION_CELL := 2.0
+const OCCLUSION_REACH := 1.2
+# How far off its face a vertex looks from: so a flush neighbour in the same
+# plane (two deck plates edge to edge) barely shades, and a solid the face
+# runs into (a deck under a post's foot) shades fully.
+const OCCLUSION_OFFSET := 0.12
+# Full occlusion darkens by this much; the sum of the solids' shares goes to
+# full as 1 - exp(-sum).
+const OCCLUSION_DARKEN := 0.42
+# A vertex's shading is drawn across its face to the next vertex, so on a
+# face whose vertices lie further apart than this it is scaled down by the
+# ratio: a corner's contact must not dim a whole 10 m deck or beam (measured
+# at S5: the shaded deck 26.7 -> 22.0 before this).
+const OCCLUSION_SPAN := 1.5
+const OCCLUSION_DIRT := Color(0.22, 0.14, 0.09)
+const OCCLUSION_DIRT_MIX := 0.35
+# A solid bigger than this across (grade, the great slabs, the rock) is
+# hashed in coarse cells of OCCLUSION_BIG_CELL rather than thousands of fine
+# ones; a part that big is not shaded itself (its few corners cannot carry
+# it).
+const OCCLUSION_BIG := 48.0
+const OCCLUSION_BIG_CELL := 64.0
+# Rings along a standing member: one every OCCLUSION_RING metres, at most
+# OCCLUSION_RINGS, on members at least OCCLUSION_RING_MIN long that touch a
+# solid at an end.
+const OCCLUSION_RING := 0.6
+const OCCLUSION_RINGS := 4
+const OCCLUSION_RING_MIN := 1.2
+
+class Occlusion:
+	var lows := PackedVector3Array()
+	var highs := PackedVector3Array()
+	var cells := {}                  # Vector3i -> PackedInt32Array of solids
+	var big_cells := {}              # Vector3i -> PackedInt32Array of big solids
+	var ring_meshes := {}            # "size|axis|n" -> BoxMesh
+	var rings_laid := 0
+
+	# Registers a part (its world bounds and its basis); returns its number.
+	func add(bounds: AABB, basis: Basis) -> int:
+		var index := lows.size()
+		lows.append(bounds.position)
+		highs.append(bounds.end)
+		var square := true
+		for k in 3:
+			var axis := basis[k].normalized().abs()
+			if maxf(axis.x, maxf(axis.y, axis.z)) < 0.995:
+				square = false
+		if not square:
+			return index
+		var size := bounds.size
+		var is_big := maxf(size.x, maxf(size.y, size.z)) > OCCLUSION_BIG
+		var cell := OCCLUSION_BIG_CELL if is_big else OCCLUSION_CELL
+		var table: Dictionary = big_cells if is_big else cells
+		var low := Vector3i((bounds.position / cell).floor())
+		var high := Vector3i((bounds.end / cell).floor())
+		for x in range(low.x, high.x + 1):
+			for y in range(low.y, high.y + 1):
+				for z in range(low.z, high.z + 1):
+					var key := Vector3i(x, y, z)
+					if not table.has(key):
+						table[key] = PackedInt32Array()
+					var list: PackedInt32Array = table[key]
+					list.append(index)
+					table[key] = list
+		return index
+
+	# The solids that can shade a part: those within OCCLUSION_REACH of its
+	# bounds, but itself. Gathered once a part; its vertices test only these.
+	func near(bounds: AABB, self_index: int) -> PackedInt32Array:
+		var out := PackedInt32Array()
+		var size := bounds.size
+		if maxf(size.x, maxf(size.y, size.z)) > OCCLUSION_BIG:
+			return out
+		var grown := bounds.grow(OCCLUSION_REACH)
+		var found := {}
+		for pass_index in 2:
+			var cell := OCCLUSION_CELL if pass_index == 0 else OCCLUSION_BIG_CELL
+			var table: Dictionary = cells if pass_index == 0 else big_cells
+			var low := Vector3i((grown.position / cell).floor())
+			var high := Vector3i((grown.end / cell).floor())
+			for x in range(low.x, high.x + 1):
+				for y in range(low.y, high.y + 1):
+					for z in range(low.z, high.z + 1):
+						var key := Vector3i(x, y, z)
+						if table.has(key):
+							for i in (table[key] as PackedInt32Array):
+								found[i] = true
+		for i in found:
+			if i != self_index and grown.intersects(AABB(lows[i], highs[i] - lows[i])):
+				out.append(i)
+		return out
+
+	# [occlusion 0..1, share of it from below] at a vertex, from `solids`.
+	func occluded(world: Vector3, normal: Vector3, solids: PackedInt32Array) -> Vector2:
+		var eye := world + normal * OCCLUSION_OFFSET
+		var total := 0.0
+		var below := 0.0
+		for i in solids:
+			var offset := eye.clamp(lows[i], highs[i]) - eye
+			var d := offset.length()
+			if d >= OCCLUSION_REACH:
+				continue
+			if d < 0.0001:
+				# The face runs into it: full contact.
+				total += 1.0
+				if eye.y - lows[i].y > highs[i].y - eye.y:
+					below += 1.0
+				continue
+			var near_share := 1.0 - d / OCCLUSION_REACH
+			var share := near_share * near_share * clampf(0.3 + 0.7 * normal.dot(offset) / d, 0.0, 1.0)
+			total += share
+			if offset.y < -0.6 * d:
+				below += share
+		if total <= 0.0:
+			return Vector2.ZERO
+		return Vector2(1.0 - exp(-total), below / total)
+
+	# `reach`: how much of the shading this vertex may carry (OCCLUSION_SPAN).
+	func shaded(colour: Color, world: Vector3, normal: Vector3, solids: PackedInt32Array, reach: float) -> Color:
+		if solids.is_empty() or reach <= 0.0:
+			return colour
+		var o := occluded(world, normal, solids)
+		if o.x <= 0.0:
+			return colour
+		var amount := o.x * reach
+		var dark := 1.0 - OCCLUSION_DARKEN * amount
+		var dirtied := colour.lerp(OCCLUSION_DIRT, OCCLUSION_DIRT_MIX * amount * o.y)
+		return Color(dirtied.r * dark, dirtied.g * dark, dirtied.b * dark, colour.a)
+
+	# The box to lay for a part: ringed along its length if it is a long
+	# member touching a solid at an end, else as it is.
+	func ringed(box: BoxMesh, at: Transform3D, solids: PackedInt32Array) -> BoxMesh:
+		var lengths := Vector3(box.size.x * at.basis.x.length(), box.size.y * at.basis.y.length(),
+			box.size.z * at.basis.z.length())
+		var k := lengths.max_axis_index()
+		if lengths[k] < OCCLUSION_RING_MIN or solids.is_empty():
+			return box
+		var axis: Vector3 = at.basis[k].normalized()
+		# Only a standing member (a post, a column, a leg): its foot is where
+		# the eye looks for the contact. A beam keeps its corners' shading.
+		if absf(axis.y) < 0.5:
+			return box
+		var centre := at.origin
+		var half := 0.5 * lengths[k]
+		var touching := false
+		for end_sign in [-1.0, 1.0]:
+			var end: Vector3 = centre + axis * (half * end_sign)
+			# Looking from just past the end, along the member.
+			if occluded(end, axis * end_sign, solids).x > 0.25:
+				touching = true
+		if not touching:
+			return box
+		var n := clampi(int(ceilf(lengths[k] / OCCLUSION_RING)) - 1, 1, OCCLUSION_RINGS)
+		var key := "%s|%d|%d" % [str(box.size), k, n]
+		if not ring_meshes.has(key):
+			var made := BoxMesh.new()
+			made.size = box.size
+			match k:
+				0: made.subdivide_width = n
+				1: made.subdivide_height = n
+				_: made.subdivide_depth = n
+			ring_meshes[key] = made
+		rings_laid += 1
+		return ring_meshes[key]
+
 class Batcher:
 	# A batch under construction: one surface's arrays, the place it stands,
 	# and the material it is drawn with.
@@ -369,6 +656,7 @@ class Batcher:
 		var tangents := PackedFloat32Array()
 		var uvs := PackedVector2Array()
 		var colours := PackedColorArray()
+		var uv2s := PackedVector2Array()
 		var indices := PackedInt32Array()
 		var origin := Vector3.ZERO
 		var material: Material
@@ -383,6 +671,15 @@ class Batcher:
 	var far_material: StandardMaterial3D
 	var parts := 0
 	var wet_parts := 0
+	# Contact shading (environment plan, job 8): the near parts wait here
+	# until every part is known ([group, mesh, surface, at, colour, mapping,
+	# solid index]), then are laid shaded by the solids around them.
+	var pending: Array = []
+	var shade_ms := 0
+	# The solids that shade: this batcher's parts, and any laid before it
+	# (the dressing's, for the kit's statics). Set before the first add to
+	# share one.
+	var occlusion: Occlusion
 
 	func add(mesh: Mesh, surface: int, at: Transform3D, material: Material, fine: bool) -> void:
 		var bounds := at * mesh.get_aabb()
@@ -398,7 +695,12 @@ class Batcher:
 		var group := _group(near, "%d/%d/%d/%s/%d" % [cell.x, cell.y, cell.z, finish[0], int(fine)],
 			(cell + Vector3(0.5, 0.5, 0.5)) * Vector3(BATCH_CELL_XZ, BATCH_CELL_Y, BATCH_CELL_XZ), finishes[finish[0]])
 		group.fine = fine
-		Batcher.append_arrays(group, mesh, surface, at, finish[1])
+		var standard := material as StandardMaterial3D
+		var real: Surface = standard.get_meta(&"surface") as Surface \
+			if standard != null and standard.has_meta(&"surface") else null
+		if occlusion == null:
+			occlusion = Occlusion.new()
+		pending.append([group, mesh, surface, at, finish[1], real, occlusion.add(bounds, at.basis)])
 		if not fine:
 			# A near section (BATCH_CELL_*) lies inside one far section.
 			group.far_key = "%d/%d/%d" % [floorf(centre.x / BATCH_FAR_CELL), floorf(centre.y / BATCH_FAR_CELL),
@@ -412,10 +714,10 @@ class Batcher:
 				floorf(centre.z / BATCH_FAR_CELL))
 			var far_group := _group(far, "%d/%d/%d" % [far_cell.x, far_cell.y, far_cell.z],
 				(far_cell + Vector3(0.5, 0.5, 0.5)) * BATCH_FAR_CELL, far_material)
-			var standard := material as StandardMaterial3D
 			var far_colour := standard.albedo_color if standard != null else Color(0.35, 0.33, 0.3)
 			Batcher.append_arrays(far_group, mesh, surface, at,
-				Batcher._wet_colour(far_colour) if wet and finish[2] and Batcher._porous(standard) else far_colour)
+				Batcher._wet_colour(far_colour) if wet and finish[2] and Batcher._porous(standard) else far_colour,
+				null, real != null)
 		parts += 1
 
 	# A material's finish: what it looks like but for its colour, which the
@@ -424,7 +726,7 @@ class Batcher:
 	# never wet; so is glowing or see-through material (lamps, glass, water).
 	func _finish(material: Material, wet: bool = false) -> Array:
 		var standard := material as StandardMaterial3D
-		if standard == null or standard.albedo_texture != null:
+		if standard == null or (standard.albedo_texture != null and not standard.has_meta(&"weathered")):
 			var own := "id%d" % material.get_instance_id()
 			if not finishes.has(own):
 				finishes[own] = material
@@ -433,15 +735,23 @@ class Batcher:
 			and standard.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED
 		var normal := standard.normal_texture.get_instance_id() if standard.normal_enabled \
 			and standard.normal_texture != null else 0
-		var signature := "%.3f|%.3f|%s|%.2f|%d|%d|%s" % [standard.metallic, standard.roughness,
-			standard.emission.to_html() if standard.emission_enabled else "-",
+		var albedo := standard.albedo_texture.get_instance_id() if standard.albedo_texture != null else 0
+		var detail := standard.detail_albedo.get_instance_id() if standard.detail_enabled \
+			and standard.detail_albedo != null else 0
+		var signature := "%.3f|%.3f|%.3f|%s|%.2f|%d|%d|%s|%d|%d" % [standard.metallic, standard.roughness,
+			standard.metallic_specular, standard.emission.to_html() if standard.emission_enabled else "-",
 			standard.normal_scale if standard.normal_enabled else 0.0, normal, standard.cull_mode,
-			str(standard.uv1_scale)] + ("|wet" if wet else "")
+			str(standard.uv1_scale), albedo, detail] + ("|wet" if wet else "")
 		if not finishes.has(signature):
 			var shared := standard.duplicate() as StandardMaterial3D
 			shared.albedo_color = Color.WHITE
 			shared.vertex_color_use_as_albedo = true
 			shared.vertex_color_is_srgb = true
+			if standard.has_meta(&"surface"):
+				# Mapped in metres along each part (Batcher.surface_frame), not
+				# triplanar: one texture read per map, not three.
+				shared.uv1_triplanar = false
+				shared.uv1_scale = Vector3.ONE
 			if wet:
 				shared.roughness = maxf(WET_ROUGHNESS_MIN, standard.roughness *
 					(WET_ROUGHNESS if Batcher._porous(standard) else WET_METAL_ROUGHNESS))
@@ -465,7 +775,13 @@ class Batcher:
 			groups[key] = group
 		return groups[key]
 
-	static func append_arrays(group: Group, mesh: Mesh, surface: int, at: Transform3D, colour: Color) -> void:
+	# `mapping`: the real surface to lay UVs for (null keeps the mesh's own).
+	# `vary`: lay the broad variation (broad_tint) in the vertex colours.
+	# `shade`/`solids`: what shades its vertices, and the solids near it
+	# (Occlusion.near; null: unshaded).
+	static func append_arrays(group: Group, mesh: Mesh, surface: int, at: Transform3D, colour: Color,
+			mapping: Surface = null, vary: bool = false, shade: Occlusion = null,
+			solids: PackedInt32Array = PackedInt32Array()) -> void:
 		var arrays := mesh.surface_get_arrays(surface)
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL] if arrays[Mesh.ARRAY_NORMAL] != null \
@@ -479,22 +795,174 @@ class Batcher:
 		var local := Transform3D(Basis(), -group.origin) * at
 		var normal_basis := at.basis.inverse().transposed()
 		var base := group.vertices.size()
+		# The part's own frame: unit axes in the world and its size along each.
+		var axes: Array[Vector3] = [at.basis.x.normalized(), at.basis.y.normalized(), at.basis.z.normalized()]
+		var size := mesh.get_aabb().size
+		var extents := Vector3(size.x * at.basis.x.length(), size.y * at.basis.y.length(),
+			size.z * at.basis.z.length())
+		var round_part := mesh is CylinderMesh or mesh is CapsuleMesh
+		# How far apart a box's vertices lie along each of its axes.
+		var spacing := extents
+		var box := mesh as BoxMesh
+		if box != null:
+			spacing = Vector3(extents.x / (box.subdivide_width + 1), extents.y / (box.subdivide_height + 1),
+				extents.z / (box.subdivide_depth + 1))
+		var part_seed := Batcher._part_hash(at.origin)
+		var offset := Vector2.ZERO
+		if mapping != null and mapping.own_offset:
+			offset = Vector2(part_seed, Batcher._part_hash(at.origin + Vector3(17.0, 5.0, 3.0)))
+		# The broad variation, sampled three times a part (its middle and the
+		# ends of its longest side) and drawn between them: its wavelength is
+		# far longer than nearly every part.
+		var long_axis := extents.max_axis_index()
+		var half_long := maxf(0.5 * extents[long_axis], 0.001)
+		var middle := at * mesh.get_aabb().get_center()
+		var tint_mid := 1.0
+		var tint_slope := 0.0
+		if vary:
+			tint_mid = Batcher.broad_tint(middle, part_seed)
+			var tint_end := Batcher.broad_tint(middle + axes[long_axis] * half_long, part_seed)
+			var tint_start := Batcher.broad_tint(middle - axes[long_axis] * half_long, part_seed)
+			tint_slope = 0.5 * (tint_end - tint_start) / half_long
+		# A flat face's frame is the same at all its vertices (they share its
+		# normal and come together): laid once a face.
+		var frame_normal := Vector3.INF
+		var frame_u := Vector3.ZERO
+		var frame_v := Vector3.ZERO
+		var frame_tangent := Vector3.ZERO
+		var frame_sign := 1.0
+		var tile := mapping.tile if mapping != null else Vector2.ONE
 		for i in vertices.size():
+			var world := at * vertices[i]
+			var local_normal := normals[i] if i < normals.size() else Vector3.UP
+			var normal := (normal_basis * local_normal).normalized()
 			group.vertices.append(local * vertices[i])
-			group.normals.append((normal_basis * normals[i]).normalized() if i < normals.size() else Vector3.UP)
-			if 4 * i + 3 < tangents.size():
-				var t := (at.basis * Vector3(tangents[4 * i], tangents[4 * i + 1], tangents[4 * i + 2])).normalized()
-				group.tangents.append_array(PackedFloat32Array([t.x, t.y, t.z, tangents[4 * i + 3]]))
+			group.normals.append(normal)
+			if mapping != null:
+				var round_side := round_part and absf(local_normal.y) < 0.7
+				if round_side:
+					# Along the axis, around by the mesh's own u (its tangent).
+					frame_u = axes[1]
+					frame_tangent = (axes[1] - normal * normal.dot(axes[1])).normalized()
+					var around := at.basis * Vector3(tangents[4 * i], tangents[4 * i + 1], tangents[4 * i + 2]) \
+						if 4 * i + 3 < tangents.size() else normal.cross(frame_tangent)
+					frame_sign = 1.0 if normal.cross(frame_tangent).dot(around) >= 0.0 else -1.0
+					frame_normal = Vector3.INF
+				elif local_normal != frame_normal:
+					var frame := Batcher.surface_frame(normal, local_normal, Vector3.ZERO, axes, extents, false)
+					frame_u = axes[frame[0]]
+					frame_v = axes[frame[1]]
+					frame_tangent = frame[2]
+					frame_sign = frame[3]
+					frame_normal = local_normal
+				var uv: Vector2
+				if round_side:
+					var mesh_u := uvs[i].x if i < uvs.size() else 0.0
+					uv = Vector2(world.dot(frame_u) / tile.x, -(mesh_u * PI * extents.x) / tile.y)
+				else:
+					uv = Vector2(world.dot(frame_u) / tile.x, -world.dot(frame_v) / tile.y)
+				group.uvs.append(uv + offset)
+				group.tangents.append(frame_tangent.x)
+				group.tangents.append(frame_tangent.y)
+				group.tangents.append(frame_tangent.z)
+				group.tangents.append(frame_sign)
 			else:
-				group.tangents.append_array(PackedFloat32Array([1.0, 0.0, 0.0, 1.0]))
-			group.uvs.append(uvs[i] if i < uvs.size() else Vector2.ZERO)
-			group.colours.append(colour)
+				var t := Vector3.RIGHT
+				var w := 1.0
+				if 4 * i + 3 < tangents.size():
+					t = (at.basis * Vector3(tangents[4 * i], tangents[4 * i + 1], tangents[4 * i + 2])).normalized()
+					w = tangents[4 * i + 3]
+				group.tangents.append(t.x)
+				group.tangents.append(t.y)
+				group.tangents.append(t.z)
+				group.tangents.append(w)
+				group.uvs.append(uvs[i] if i < uvs.size() else Vector2.ZERO)
+			group.uv2s.append(Batcher.streak_uv(world, normal))
+			var c := colour
+			if vary:
+				var f := tint_mid + tint_slope * (world - middle).dot(axes[long_axis])
+				c = Color(colour.r * f, colour.g * f, colour.b * f, colour.a)
+			if shade != null and not solids.is_empty():
+				# The spacing of this face's vertices: its two sides across.
+				var a := local_normal.abs()
+				var k := 0 if a.x >= a.y and a.x >= a.z else (1 if a.y >= a.z else 2)
+				var span := maxf(spacing[(k + 1) % 3], spacing[(k + 2) % 3])
+				c = shade.shaded(c, world, normal, solids, clampf(OCCLUSION_SPAN / maxf(span, 0.001), 0.0, 1.0))
+			group.colours.append(c)
 		if indices.is_empty():
 			for i in vertices.size():
 				group.indices.append(base + i)
 		else:
 			for index in indices:
 				group.indices.append(base + index)
+
+	# How a face lies in a real surface's maps: [u axis, v axis (indices into
+	# the part's axes), tangent, binormal sign]. A face is mapped along the
+	# part's own axes, in metres from the world's origin (so parts lined up
+	# meet without a seam), u along the face's longer side: timber grain runs
+	# along the plank, rolled steel's along the member. A round part's side
+	# runs u along its axis (axis 1) and v around it, by the mesh's own u,
+	# which goes once around (`around` is its direction). The tangent is dP/du
+	# and the binormal -dP/dv, as Godot's own meshes have them.
+	static func surface_frame(normal: Vector3, local_normal: Vector3, around: Vector3,
+			axes: Array[Vector3], extents: Vector3, round_side: bool) -> Array:
+		var iu := 1
+		var iv := 0
+		var tangent: Vector3
+		var binormal: Vector3
+		if round_side:
+			tangent = axes[1]
+			binormal = around if around.length_squared() > 0.5 else normal.cross(tangent)
+		else:
+			var a := local_normal.abs()
+			var k := 0 if a.x >= a.y and a.x >= a.z else (1 if a.y >= a.z else 2)
+			iu = (k + 1) % 3
+			iv = (k + 2) % 3
+			if extents[iv] > extents[iu]:
+				var swap := iu
+				iu = iv
+				iv = swap
+			tangent = axes[iu]
+			binormal = axes[iv]
+		# Square to the drawn normal (a round part's normals are smooth).
+		var square := tangent - normal * normal.dot(tangent)
+		if square.length_squared() > 1e-6:
+			tangent = square.normalized()
+		return [iu, iv, tangent, 1.0 if normal.cross(tangent).dot(binormal) >= 0.0 else -1.0]
+
+	# Broad variation, laid in a real surface's vertex colours: each part a
+	# shade off its neighbours (steel from different heats, paint from
+	# different years), and a slow drift of value over tens of metres across
+	# them, so neither the maps' metre repeat nor a run of identical members
+	# reads as a pattern at 50 m. Seeded: the same every run.
+	const BROAD_PART := 0.07
+	const BROAD_VALUE := 0.14
+	const BROAD_METRES := 18.0
+	static var _broad: FastNoiseLite
+
+	static func broad_tint(world: Vector3, part_seed: float) -> float:
+		if _broad == null:
+			_broad = FastNoiseLite.new()
+			_broad.seed = 6151
+			_broad.frequency = 1.0 / BROAD_METRES
+			_broad.fractal_octaves = 2
+		return (1.0 + BROAD_PART * (2.0 * part_seed - 1.0)) * (1.0 + BROAD_VALUE * _broad.get_noise_3dv(world))
+
+	# A part's own number in 0..1 from where it stands, the same every run.
+	static func _part_hash(at: Vector3) -> float:
+		var h := int(floorf(at.x * 8.0)) * 73856093 ^ int(floorf(at.y * 8.0)) * 19349663 \
+			^ int(floorf(at.z * 8.0)) * 83492791
+		h = (h ^ (h >> 13)) * 1274126177
+		return float((h ^ (h >> 16)) & 0xFFFF) / 65535.0
+
+	# Where a vertex samples the streaks (UV2): down a wall, from its height
+	# and its run along the wall in world metres, so streaks meet across
+	# parts; a floor or a ceiling samples the streaks' clear columns.
+	static func streak_uv(world: Vector3, normal: Vector3) -> Vector2:
+		if absf(normal.y) > STREAK_WALL_MAX_NY:
+			return STREAK_FLOOR_UV
+		var along := Vector3(-normal.z, 0.0, normal.x).normalized()
+		return Vector2(world.dot(along), -world.y) * STREAK_UV_SCALE
 
 	static func commit(group: Group) -> MeshInstance3D:
 		var arrays := []
@@ -503,6 +971,7 @@ class Batcher:
 		arrays[Mesh.ARRAY_NORMAL] = group.normals
 		arrays[Mesh.ARRAY_TANGENT] = group.tangents
 		arrays[Mesh.ARRAY_TEX_UV] = group.uvs
+		arrays[Mesh.ARRAY_TEX_UV2] = group.uv2s
 		arrays[Mesh.ARRAY_COLOR] = group.colours
 		arrays[Mesh.ARRAY_INDEX] = group.indices
 		var mesh := ArrayMesh.new()
@@ -530,8 +999,29 @@ class Batcher:
 		instance.mesh.surface_set_material(0, material)
 		return instance
 
+	# Lays the waiting near parts, each vertex shaded by the solids around it.
+	func _lay_pending() -> void:
+		for record in pending:
+			var mesh: Mesh = record[1]
+			var at: Transform3D = record[3]
+			# Boxes are shaded: the posts, decks, beams and walls, where things
+			# meet. A round part (a pipe, a rail, a drum) carries a hundred
+			# vertices for a box's 24 and is left as it is: start-up time.
+			var box := mesh as BoxMesh
+			var solids := occlusion.near(at * mesh.get_aabb(), record[6]) if box != null else PackedInt32Array()
+			# A long member touching something at an end gets rings along
+			# its length, so its foot darkens and a metre up does not.
+			if box != null:
+				mesh = occlusion.ringed(box, at, solids)
+			Batcher.append_arrays(record[0], mesh, record[2], at, record[4], record[5], record[5] != null,
+				occlusion if box != null else null, solids)
+		pending.clear()
+
 	# Adds the batches under `root`; returns how many.
 	func emit(root: Node3D) -> int:
+		var started := Time.get_ticks_usec()
+		_lay_pending()
+		shade_ms = (Time.get_ticks_usec() - started) / 1000
 		var far_instances := {}
 		for key in far:
 			var instance := Batcher.commit(far[key])
@@ -568,6 +1058,7 @@ class Batcher:
 		return near.size() + far.size()
 
 func _batch_static_dressing(root: Node3D) -> void:
+	var started := Time.get_ticks_usec()
 	var batcher := Batcher.new()
 	var merged: Array[MeshInstance3D] = []
 	var to_root := root.global_transform.affine_inverse()
@@ -597,18 +1088,25 @@ func _batch_static_dressing(root: Node3D) -> void:
 			batcher.add(mesh, surface, local, _surface_material(instance, surface), fine)
 		merged.append(instance)
 	var made := batcher.emit(root)
+	# The kit's statics are shaded by the dressing's solids too.
+	_occlusion = batcher.occlusion
 	for instance in merged:
 		if instance.get_child_count() == 0:
 			instance.queue_free()
 		else:
 			instance.mesh = null
-	_batch_report += "dressing %d parts -> %d meshes, %d wet; " % [merged.size(), made, batcher.wet_parts]
+	_batch_report += "dressing %d parts -> %d meshes, %d wet, %d ms (shading %d ms, %d ringed); " % [merged.size(),
+		made, batcher.wet_parts, (Time.get_ticks_usec() - started) / 1000, batcher.shade_ms,
+		batcher.occlusion.rings_laid if batcher.occlusion != null else 0]
 
 func _surface_material(instance: MeshInstance3D, surface: int) -> Material:
 	return instance.material_override if instance.material_override != null \
 		else instance.get_active_material(surface)
 
 var _batch_report := ""
+# The solids that shade the batches (Occlusion), shared from the dressing to
+# the kit's statics.
+var _occlusion: Occlusion
 
 func _add_box(node_name: String, size: Vector3, at: Vector3, material: Material,
 		roll: float = 0.0) -> MeshInstance3D:
