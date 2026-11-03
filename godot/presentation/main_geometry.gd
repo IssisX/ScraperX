@@ -542,6 +542,11 @@ const OCCLUSION_OFFSET := 0.12
 # Full occlusion darkens by this much; the sum of the solids' shares goes to
 # full as 1 - exp(-sum).
 const OCCLUSION_DARKEN := 0.42
+# A vertex's shading is drawn across its face to the next vertex, so on a
+# face whose vertices lie further apart than this it is scaled down by the
+# ratio: a corner's contact must not dim a whole 10 m deck or beam (measured
+# at S5: the shaded deck 26.7 -> 22.0 before this).
+const OCCLUSION_SPAN := 1.5
 const OCCLUSION_DIRT := Color(0.22, 0.14, 0.09)
 const OCCLUSION_DIRT_MIX := 0.35
 # A solid bigger than this across (grade, the great slabs, the rock) is
@@ -645,14 +650,16 @@ class Occlusion:
 			return Vector2.ZERO
 		return Vector2(1.0 - exp(-total), below / total)
 
-	func shaded(colour: Color, world: Vector3, normal: Vector3, solids: PackedInt32Array) -> Color:
-		if solids.is_empty():
+	# `reach`: how much of the shading this vertex may carry (OCCLUSION_SPAN).
+	func shaded(colour: Color, world: Vector3, normal: Vector3, solids: PackedInt32Array, reach: float) -> Color:
+		if solids.is_empty() or reach <= 0.0:
 			return colour
 		var o := occluded(world, normal, solids)
 		if o.x <= 0.0:
 			return colour
-		var dark := 1.0 - OCCLUSION_DARKEN * o.x
-		var dirtied := colour.lerp(OCCLUSION_DIRT, OCCLUSION_DIRT_MIX * o.x * o.y)
+		var amount := o.x * reach
+		var dark := 1.0 - OCCLUSION_DARKEN * amount
+		var dirtied := colour.lerp(OCCLUSION_DIRT, OCCLUSION_DIRT_MIX * amount * o.y)
 		return Color(dirtied.r * dark, dirtied.g * dark, dirtied.b * dark, colour.a)
 
 	# The box to lay for a part: ringed along its length if it is a long
@@ -845,6 +852,12 @@ class Batcher:
 		var extents := Vector3(size.x * at.basis.x.length(), size.y * at.basis.y.length(),
 			size.z * at.basis.z.length())
 		var round_part := mesh is CylinderMesh or mesh is CapsuleMesh
+		# How far apart a box's vertices lie along each of its axes.
+		var spacing := extents
+		var box := mesh as BoxMesh
+		if box != null:
+			spacing = Vector3(extents.x / (box.subdivide_width + 1), extents.y / (box.subdivide_height + 1),
+				extents.z / (box.subdivide_depth + 1))
 		var part_seed := Batcher._part_hash(at.origin)
 		var offset := Vector2.ZERO
 		if mapping != null and mapping.own_offset:
@@ -920,8 +933,12 @@ class Batcher:
 			if vary:
 				var f := tint_mid + tint_slope * (world - middle).dot(axes[long_axis])
 				c = Color(colour.r * f, colour.g * f, colour.b * f, colour.a)
-			if shade != null:
-				c = shade.shaded(c, world, normal, solids)
+			if shade != null and not solids.is_empty():
+				# The spacing of this face's vertices: its two sides across.
+				var a := local_normal.abs()
+				var k := 0 if a.x >= a.y and a.x >= a.z else (1 if a.y >= a.z else 2)
+				var span := maxf(spacing[(k + 1) % 3], spacing[(k + 2) % 3])
+				c = shade.shaded(c, world, normal, solids, clampf(OCCLUSION_SPAN / maxf(span, 0.001), 0.0, 1.0))
 			group.colours.append(c)
 		if indices.is_empty():
 			for i in vertices.size():
