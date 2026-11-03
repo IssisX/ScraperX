@@ -651,6 +651,15 @@ func _layout_hud() -> void:
 		var base := 24.0 if label == _status else 15.0
 		label.add_theme_font_size_override("font_size", int(roundf(base * scale)))
 
+	# The readouts float over the world with no backing, so over bright snow or
+	# the yellow crane they washed out (the eye's FIX on the approach frame,
+	# J-037). A dark ink outline plus a soft drop shadow keeps every glyph's
+	# edge against any sky or steel without a panel that hides the world.
+	for box_path in [^"HUD/TopLeft", ^"HUD/TopRight"]:
+		for child in get_node(box_path).get_children():
+			if child is Label:
+				_ink_edge(child as Label, scale)
+
 	# Below the touch pause button, which owns the top-left corner.
 	var top_left: Control = $HUD/TopLeft
 	top_left.offset_left = gutter
@@ -672,6 +681,19 @@ func _layout_hud() -> void:
 	for child in top_right.get_children():
 		if child is Label:
 			(child as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+# Outline width follows the label's own size (about a fifth of its glyph
+# height, never under 3 px) so the ratio holds from the Fold to the desktop.
+func _ink_edge(label: Label, ui_scale: float) -> void:
+	var size := label.get_theme_font_size("font_size")
+	var edge := maxi(3, int(roundf(float(size) * 0.2)))
+	label.add_theme_constant_override("outline_size", edge)
+	label.add_theme_color_override("font_outline_color", UiStyle.EDGE)
+	label.add_theme_color_override("font_shadow_color", UiStyle.SHADOW)
+	label.add_theme_constant_override("shadow_offset_x", int(roundf(2.0 * ui_scale)))
+	label.add_theme_constant_override("shadow_offset_y", int(roundf(2.0 * ui_scale)))
+	label.add_theme_constant_override("shadow_outline_size", edge + int(roundf(2.0 * ui_scale)))
 
 # --- presentation mirror ----------------------------------------------------
 
