@@ -4443,7 +4443,8 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force) {
 
 JPH::Vec3 Matron::grant_swat_force(const JPH::Vec3 wanted, const JPH::Vec3 player_point_velocity) noexcept {
     const JPH::Vec3 her_velocity = physics_.GetBodyInterface().GetLinearVelocity(body_);
-    feet_budget_.velocity = her_velocity - player_point_velocity;
+    // wanted acts on him and -wanted on her, so the pair does work wanted . (his - hers).
+    feet_budget_.velocity = player_point_velocity - her_velocity;
     const JPH::Vec3 granted = feet_budget_.take(wanted);
     foot_force_n_ = feet_budget_.used;
     foot_power_w_ = feet_budget_.power_used;
