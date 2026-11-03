@@ -20,7 +20,9 @@ const NOON_ELEVATION_DEG := 40.0
 # Where the day begins (settings_store.gd TIME_OF_DAY_HOURS[0], CYCLE).
 const START_HOUR := 8.5
 const SUN_ENERGY := 2.4
-const MOON_ENERGY := 0.55
+# Moonlight: cool, not blue-white. At 0.55 and a bluer colour the snow and
+# the cloud layer glowed against black slopes (environment plan, job 12).
+const MOON_ENERGY := 0.42
 const FILL_DAY_ENERGY := 0.55
 const FILL_NIGHT_ENERGY := 0.2
 # AgX (main.tscn): it rolls highlights off and holds hue, where ACES pushed
@@ -37,6 +39,7 @@ var exposure_scale := 1.0
 # round a lamp stayed black and its glowing head hung in the dark).
 const LAMP_NIGHT_GAIN := 6.0
 var _lamps: Array = []   # [OmniLight3D, the day's energy]
+var _glows: Array = []   # lamp_glow.gd nodes on the rig: set_night(0..1)
 var _shadows_on := true
 
 var hour := START_HOUR
@@ -93,6 +96,8 @@ func add_lamps(rig: Node) -> void:
 	for lamp in rig.get_children():
 		if lamp is OmniLight3D:
 			_lamps.append([lamp, (lamp as OmniLight3D).light_energy])
+		elif lamp.has_method(&"set_night"):
+			_glows.append(lamp)
 	_apply()
 
 
@@ -154,7 +159,7 @@ func _apply() -> void:
 	var dusk := (1.0 - smoothstep(0.05, 0.38, sun_dir.y)) * smoothstep(-0.18, -0.01, sun_dir.y)
 	var stars := 1.0 - smoothstep(-0.21, -0.10, sun_dir.y)
 	if is_moon:
-		_sun.light_color = Color(0.62, 0.72, 0.92)
+		_sun.light_color = Color(0.66, 0.73, 0.88)
 		_sun.light_energy = MOON_ENERGY * rise
 	else:
 		var warm := Color(1.0, 0.60, 0.34)
@@ -166,6 +171,8 @@ func _apply() -> void:
 	var lamp_gain := lerpf(LAMP_NIGHT_GAIN, 1.0, day)
 	for entry in _lamps:
 		(entry[0] as OmniLight3D).light_energy = float(entry[1]) * lamp_gain
+	for glow in _glows:
+		glow.set_night(1.0 - day)
 	_fill.light_color = Color(0.30, 0.36, 0.52).lerp(Color(0.58, 0.68, 0.82), day)
 	_sky_material.set_shader_parameter(&"day_factor", sky_day)
 	_sky_material.set_shader_parameter(&"dusk_factor", dusk)

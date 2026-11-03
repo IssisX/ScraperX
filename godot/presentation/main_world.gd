@@ -7,6 +7,7 @@ extends "res://presentation/main_geometry.gd"
 
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
+const LampGlow := preload("res://presentation/lamp_glow.gd")
 
 # The neighboring shaft. Mirrors TwinTower in the native world.
 const TWIN_TOWER_CENTER := Vector3(-30.0, 800.0, -264.0)
@@ -668,6 +669,7 @@ func _build_lighting() -> void:
 		lamp.light_energy = 3.5
 		lamp.omni_range = 26.0
 		lamp.omni_attenuation = 1.6
+		lamp.set_meta(LampGlow.CONE_META, true)
 		_light_rig.add_child(lamp)
 
 	var cx := STACK_CENTER.x
@@ -683,6 +685,42 @@ func _build_lighting() -> void:
 				[corner_face + Vector3(sx * 0.15, 0.0, 0.0), Vector3(0.3, 0.4, 0.6), Vector3(sx, 0.0, 0.0)]]:
 			_add_box("FloodFitting", mount[1], mount[0], flood_fitting)
 			_tower_foot_flood(mount[0] + (mount[2] as Vector3) * 0.4)
+	# The night's glow round every lamp above, and the obstruction lights
+	# (lamp_glow.gd): cards, not parts or lights. sky_cycle.gd fades it.
+	var glow := LampGlow.new()
+	glow.name = "LampGlow"
+	_light_rig.add_child(glow)
+	glow.build(_light_rig.get_children().filter(func(n: Node) -> bool: return n is OmniLight3D),
+		_obstruction_light_points())
+
+# Where the red obstruction lights hang (lamp_glow.gd): on the neighbouring
+# shaft's four corners every OBSTRUCTION_STEP_M and at its top (TowerMass,
+# _build_world), and on the corner columns of the main frame's continuation
+# (_build_stack_continuation) at its middle tier and its top. Each sits
+# OBSTRUCTION_OUT_M proud of its corner.
+const OBSTRUCTION_STEP_M := 160.0
+const OBSTRUCTION_OUT_M := 0.6
+const TWIN_TOWER_SIZE := Vector3(92.0, 1600.0, 80.0)
+
+func _obstruction_light_points() -> PackedVector3Array:
+	var points := PackedVector3Array()
+	var half := Vector2(TWIN_TOWER_SIZE.x, TWIN_TOWER_SIZE.z) * 0.5 + Vector2.ONE * OBSTRUCTION_OUT_M
+	var y := OBSTRUCTION_STEP_M
+	while y <= TWIN_TOWER_SIZE.y + 0.1:
+		for sx in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				points.append(Vector3(TWIN_TOWER_CENTER.x + sx * half.x, y, TWIN_TOWER_CENTER.z + sz * half.y))
+		y += OBSTRUCTION_STEP_M
+	var base := STACK_LEVEL_COUNT
+	var top := STACK_LEVEL_COUNT + 24
+	for level in [base + 12, top - 1]:
+		var shrink := 1.0 - float(level - base) / float(top - base) * 0.42
+		var corner := (STACK_HALF_EXTENT + STACK_COLUMN_SIZE * 0.5) * shrink + OBSTRUCTION_OUT_M
+		for sx in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				points.append(Vector3(STACK_CENTER.x + sx * corner, float(level + 1) * STACK_LEVEL_HEIGHT,
+					STACK_CENTER.z + sz * corner))
+	return points
 
 # One of the floods at the tower's foot (TOWER_FOOT_FLOOD_Y).
 func _tower_foot_flood(at: Vector3) -> void:
