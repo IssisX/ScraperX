@@ -1043,6 +1043,9 @@ func step_skirt(delta: float) -> void:
 	# The cloth's own step (src/bridge/skirt_cloth.cpp): verlet, then each
 	# iteration out of her legs and SKIRT_LINK_PASSES passes of its lengths.
 	var flat: PackedVector3Array = _sk_cloth.step(pelvis, g, dt, ends, radii, HAIR_JUMP_M)
+	if OS.has_environment("SK_STATS"):
+		var st: PackedFloat32Array = _sk_cloth.get_stats()
+		print("SKSTAT %.3f %.3f %.4f" % [st[0], st[1], st[2]])
 	_sk_pts.resize(_sk_cols)
 	for c in _sk_cols:
 		var col_p: Array = []

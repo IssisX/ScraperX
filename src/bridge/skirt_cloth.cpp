@@ -114,6 +114,9 @@ godot::PackedVector3Array SkirtCloth::step(const godot::Transform3D &pelvis, con
             }
             pts_[i] = q;
         }
+        if (it == iterations_ - 1) {
+            stats_[0] = worst_link();
+        }
         for (int p = 0; p < passes_; ++p) {
             for (const Link &l : links_) {
                 godot::Vector3 &pa = pts_[static_cast<std::size_t>(l.a)];
@@ -129,6 +132,14 @@ godot::PackedVector3Array SkirtCloth::step(const godot::Transform3D &pelvis, con
             }
         }
     }
+    stats_[1] = worst_link();
+    float deepest = 0.0F;
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::int64_t c = 0; c < ncap; ++c) {
+            deepest = std::max(deepest, pts_[i].distance_to(out_of_capsule(pts_[i], caps[2 * c], caps[2 * c + 1], radii[c])));
+        }
+    }
+    stats_[2] = deepest;
     out.resize(static_cast<std::int64_t>(n));
     for (std::size_t i = 0; i < n; ++i) {
         out.set(static_cast<std::int64_t>(i), pts_[i]);
@@ -136,7 +147,25 @@ godot::PackedVector3Array SkirtCloth::step(const godot::Transform3D &pelvis, con
     return out;
 }
 
+float SkirtCloth::worst_link() const {
+    float worst = 0.0F;
+    for (const Link &l : links_) {
+        worst = std::max(worst, pts_[static_cast<std::size_t>(l.a)].distance_to(pts_[static_cast<std::size_t>(l.b)]) /
+                                    std::max(l.length, 1.0e-6F));
+    }
+    return worst;
+}
+
+godot::PackedFloat32Array SkirtCloth::get_stats() const {
+    godot::PackedFloat32Array out;
+    for (const float v : stats_) {
+        out.append(v);
+    }
+    return out;
+}
+
 void SkirtCloth::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("get_stats"), &SkirtCloth::get_stats);
     godot::ClassDB::bind_method(godot::D_METHOD("configure", "cols", "rows", "rest", "links", "lengths", "shape",
                                                 "iterations", "passes", "damp"),
                                 &SkirtCloth::configure);

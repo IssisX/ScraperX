@@ -34,6 +34,9 @@ public:
                                    const godot::PackedVector3Array &caps, const godot::PackedFloat32Array &radii,
                                    double jump_m);
     void reset();
+    // The last step's worst link ratio after its last capsule push, after its
+    // last link pass, and the deepest any point then sits inside a capsule (m).
+    godot::PackedFloat32Array get_stats() const;
 
 protected:
     static void _bind_methods();
@@ -58,6 +61,8 @@ private:
     std::vector<float> shape_;     // per point
     std::vector<Link> links_;
     bool fresh_ = true;
+    float stats_[3] = {0.0F, 0.0F, 0.0F};
+    float worst_link() const;
 };
 
 }  // namespace scraperx::bridge
