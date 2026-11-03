@@ -596,7 +596,7 @@ void run_matron_grab() {
                     punch.r.deaths_end == punch.r.deaths_start,
                 "matron hold blow: his own blow before the rip staggers her and frees him, whole");
         const Blown late = blow_mid_hold(true, kArmPlay);
-        require(late.thrown && late.r.m.blow_mps > 0.0 && !late.staggered && late.r.p.arm_tear_count == 1 &&
+        require(late.thrown && late.peak_blow_mps > 0.0 && !late.staggered && late.r.p.arm_tear_count == 1 &&
                     late.r.p.one_arm && late.r.deaths_end == late.r.deaths_start,
                 "matron hold blow: once the rip has begun, his blow breaks nothing; the arm comes off");
         std::cout << "PASS scraperx_sim matron hold blow: not his, held; his before the rip, freed; after, held\n";
