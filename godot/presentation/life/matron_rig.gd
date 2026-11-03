@@ -298,10 +298,23 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
-# How far the handle of a prop she walks to (the toolbox) lay past her real
-# arm this frame, out to HOLD_ARM_OUT of it (negative: within it; -1 with
-# none): the view stoops her to it (matron_view.gd _prop_lean).
+# How far the handle of a prop (the toolbox) lies past her real arm, out to
+# HOLD_ARM_OUT of it (negative: within it; -1 with none): walking to it, from
+# where her shoulder will be at the take; carried, from where it is now. The
+# view stoops her to it (matron_view.gd _prop_lean).
 var prop_short := -1.0
+# Seconds until the native takes that prop at her speed (0 once carried; INF
+# with none), so the view's stoop leads the take (matron_view.gd _prop_lean).
+var prop_take_s := INF
+# and whether that handle is above her shoulder (carried and lifted: a stoop
+# only takes her shoulder further from it), and whether she carries it
+var prop_over := false
+var prop_carried := false
+# Where the native takes a prop: her centre within this of it across the
+# ground (matron.cpp kTakeM; mirrored, the native is the authority).
+const PROP_TAKE_M := 0.85
+# Her hand goes out to a prop's handle over this long before the take.
+const PROP_HAND_LEAD_S := 0.35
 # Keep the last governed arm pose while a physical prop is being approached or
 # carried. Restarting the IK from unrelated walk/search poses each frame can
 # pull a wrist off an otherwise stationary handle before govern clips it.
@@ -529,6 +542,23 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 	_reach(s, want, 1.0, "hold_" + s)
 
 
+# Her hand toward a prop's handle `at_world` as far as `w`, onto the nearest
+# point her real arm has toward it (_in_arm): walking to it, out from
+# HOLD_ARM_OUT of the arm to its whole length as the take comes; carried, its
+# whole length (the native has it in her hand while she slides the last of
+# the way to it).
+func _prop_hand(s: String, at_world: Vector3, w: float, carried: bool) -> void:
+	hold_reach(s, _in_arm(s, at_world, 1.0 if carried else lerpf(HOLD_ARM_OUT, 1.0, w)), w)
+
+
+# The nearest point to `at_world` her real arm (its bones at rest) has from
+# its shoulder, out to `out` of its length.
+func _in_arm(s: String, at_world: Vector3, out: float) -> Vector3:
+	var sh := bone_world("sh_" + s).origin
+	var arm := _t("sh_%s_x" % s).length() + _t("el_%s_x" % s).length()
+	return sh + (at_world - sh).limit_length(out * arm)
+
+
 # Her feet on her pipe's rail's top, perched over it (the simulation's
 # contact_feet there): her soles either side of where it has them.
 func _pipe_feet(data: Dictionary, w: float) -> void:
@@ -580,9 +610,9 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 		if two_hands:
 			var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY)
 			across = (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1)
-		_finish_prop_wrist("r", handle + across, wrist_before["r"])
+		_finish_prop_wrist("r", _in_arm("r", handle + across, 1.0), wrist_before["r"])
 		if two_hands and wrist_before.has("l"):
-			_finish_prop_wrist("l", handle - across, wrist_before["l"])
+			_finish_prop_wrist("l", _in_arm("l", handle - across, 1.0), wrist_before["l"])
 	_prop_arm_pose.clear()
 	if prop_intent:
 		for bone in PROP_ARM_JOINTS:
@@ -664,6 +694,9 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 	stretch["l"] = 1.0
 	stretch["r"] = 1.0
 	prop_short = -1.0
+	prop_take_s = INF
+	prop_over = false
+	prop_carried = false
 	landed.clear()
 	claims = 0
 	_ik_frame += 1
@@ -830,16 +863,36 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		var size: Vector3 = data.get("stock_size", Vector3.ZERO) if carrying else data.get("stock_seek_size", Vector3.ZERO)
 		var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY) if carrying else data.get("stock_seek_rotation", Quaternion.IDENTITY)
 		var shoulder: Vector3 = bone_world("sh_r").origin
-		if carrying or shoulder.distance_to(handle) < 2.5:
-			var two_hands := maxf(size.x, size.z) >= 0.38
-			var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
-			# walking to it: what her real arm (its bones at rest) falls short of
-			if seeking:
-				var arm := _t("sh_r_x").length() + _t("el_r_x").length()
-				prop_short = shoulder.distance_to(handle + across) - HOLD_ARM_OUT * arm
-			hold_reach("r", handle + across, 1.0)
+		var two_hands := maxf(size.x, size.z) >= 0.38
+		var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
+		var reach := HOLD_ARM_OUT * (_t("sh_r_x").length() + _t("el_r_x").length())
+		var at_take := shoulder
+		prop_take_s = 0.0
+		if seeking:
+			# walking to it: where her shoulder will be when the native takes
+			# it (her centre PROP_TAKE_M across from it), her pose as now
+			var root: Vector3 = data.get("render_position", skel.global_position)
+			var to := Vector2(handle.x - root.x, handle.z - root.z)
+			var ahead := maxf(0.0, to.length() - PROP_TAKE_M)
+			if to.length() > 0.001:
+				var d := to.normalized() * ahead
+				at_take += Vector3(d.x, 0.0, d.y)
+			prop_take_s = ahead / maxf(float(data.get("speed", 0.0)), 0.01)
+		# what her real arm (its bones at rest) falls short of there
+		prop_short = at_take.distance_to(handle + across) - reach
+		prop_over = handle.y > shoulder.y
+		prop_carried = carrying
+		# walking to it, her hand goes out over the last PROP_HAND_LEAD_S
+		# before the take, along her real arm toward the handle and never past
+		# it, so the handle comes into her hand; carried, the native has it in
+		# her hand
+		var w := 1.0
+		if seeking:
+			w = clampf(1.0 - prop_take_s / PROP_HAND_LEAD_S, 0.0, 1.0)
+		if w > 0.001:
+			_prop_hand("r", handle + across, w, carrying)
 			if two_hands:
-				hold_reach("l", handle - across, 1.0)
+				_prop_hand("l", handle - across, w, carrying)
 	# Her hand on the climber's ankle, and in the rip her other on his arm
 	# (the view keeps the last of each while her hand comes off it).
 	if float(view._w_hold) > 0.001:
