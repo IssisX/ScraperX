@@ -369,12 +369,18 @@ class Switch:
         worst = money.worst_case(self.budget, "review", spec.max_input_tokens)
         return money.check(self.budget, self.entries(), self.now, ctx["job"], worst, self.job_cap(ctx)).ok
 
-    def pooled_reviewer(self, facts: rules.PrFacts, ctx: dict, author: str) -> tuple[list[str], str, dict[str, str]]:
-        """review.pool: the rotation for this PR, the one reviewer its head gets now, and who was asked on it when."""
-        rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, self.api_ok(ctx))
+    def pooled_reviewer(self, facts: rules.PrFacts, ctx: dict, author: str,
+                        api: bool | None = None) -> tuple[list[str], str, dict[str, str]]:
+        """review.pool: the rotation for this PR, the one reviewer its head gets now, and who was asked on it when.
+        The API is out of the rotation for a head it already failed on (its fallback ask carries an api-out mark),
+        so a quiet fallback passes on to the next unasked reviewer instead of the API being picked again."""
         _, comments = self.ask_thread(facts, ctx)
         if comments is not ctx["comments"]:
             comments = list(comments) + list(ctx["comments"])   # Codex is asked on the PR itself
+        out = MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha)
+        api_failed = any(out in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN for c in comments)
+        api_ok = (self.api_ok(ctx) if api is None else api) and not api_failed
+        rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, api_ok)
         asked: dict[str, str] = {}
         for agent in self.team.agent_vendor:
             tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
@@ -390,13 +396,13 @@ class Switch:
             outstanding, recent = self.review_load()
         return rotation, rules.choose_reviewer(rotation, asked, now, hours, outstanding, recent), asked
 
-    def api_fallback(self, facts: rules.PrFacts, author: str) -> str:
-        """Who is asked when the automatic review cannot run on a PR: the first pool member other than the
-        API whose vendor is not the author's (never the author's own vendor, whose LAND would not count)."""
+    def api_fallback(self, facts: rules.PrFacts, ctx: dict, author: str) -> str:
+        """Who is asked when the automatic review cannot run on a PR: chosen as the pool chooses, without the API,
+        so never the author's own vendor and never someone already asked and quiet on this head (Codex on #178)."""
         if self.team.pool:
-            rest = rules.review_rotation(facts.number, author, facts.needs, self.team, api_ok=False)
-            if rest:
-                return rest[0]
+            _, who, _ = self.pooled_reviewer(facts, ctx, author, api=False)
+            if who:
+                return who
         for agent in self.team.human_reviewers:
             if self.team.agent_vendor.get(agent) not in ("anthropic", author):
                 return agent
@@ -570,7 +576,9 @@ class Switch:
         self.out(f"REVIEW      #{facts.number} author={author}: automatic Claude review")
         diff = "" if self.gh.dry_run else self.gh.get_text(f"repos/{self.gh.repo}/pulls/{facts.number}", "application/vnd.github.diff")
         if len(diff) > MAX_DIFF_CHARS:
-            self.ask_review(facts, ctx, self.api_fallback(facts, author), f"The diff is {len(diff)} characters, too large for the automatic review. ")
+            self.ask_review(facts, ctx, self.api_fallback(facts, ctx, author),
+                            f"The diff is {len(diff)} characters, too large for the automatic review. "
+                            + MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha) + " ")
             return
         checklist = (self.root / "03_EXECUTION/REVIEW_CHECKLIST.md").read_text(encoding="utf-8")
         content = [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
@@ -585,7 +593,8 @@ class Switch:
             why = {"too-large": "The diff is too large for the automatic review. ",
                    "error": "The automatic review failed to run. "}.get(res) if isinstance(res, str) else \
                   f"The automatic review stopped ({res.stop_reason}). "
-            self.ask_review(facts, ctx, self.api_fallback(facts, author), why)
+            self.ask_review(facts, ctx, self.api_fallback(facts, ctx, author),
+                            why + MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha) + " ")
             return
         d = res.data
         verdict = d["verdict"]

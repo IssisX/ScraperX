@@ -337,8 +337,29 @@ class PoolFallbackAndLoad(unittest.TestCase):
 
     def test_api_fallback_never_asks_the_authors_vendor(self):
         sw = make(FakeGH([]), team=self.POOL)
-        self.assertEqual(sw.api_fallback(pr_facts(number=9, head_ref="chatgpt/x"), "openai"), "muse")
-        self.assertNotEqual(sw.api_fallback(pr_facts(number=9, head_ref="muse/x"), "meta"), "muse")
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        self.assertEqual(sw.api_fallback(pr_facts(number=9, head_ref="chatgpt/x"), ctx(comments=[]), "openai"), "muse")
+        self.assertNotEqual(sw.api_fallback(pr_facts(number=9, head_ref="muse/x"), ctx(comments=[]), "meta"), "muse")
+
+    def test_after_the_api_failed_a_quiet_fallback_passes_on(self):
+        # The API failed on this head (its fallback ask to ChatGPT carries the api-out mark) and ChatGPT
+        # has been quiet past the hour: the next pick is Muse, never the API again (Codex on #178).
+        failed = {"body": f"ask {switch.MARK.format(kind='api-out', pr=9, head=HEAD)} "
+                          f"{switch.MARK.format(kind='ask-chatgpt', pr=9, head=HEAD)}",
+                  "user": {"login": BOT}, "created_at": ago(1.5)}
+        gh = FakeGH([failed])
+        sw = make(gh, team=rules.team_from_config(dict(AGENTS, review=dict(
+            AGENTS["review"], pool=["claude-api", "chatgpt", "muse"], fallback_after_hours=1, api_reviews_claude=True))))
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        sw.gh = FakeGH([])
+        clean, _, _ = sw.pooled_reviewer(pr_facts(number=9), ctx(comments=[]), "anthropic")
+        sw.gh = gh
+        self.assertIn(rules.API_REVIEWER, clean)             # without the failure the API is in the rotation
+        rotation, who, _ = sw.pooled_reviewer(pr_facts(number=9), ctx(comments=[failed]), "anthropic")
+        self.assertNotIn(rules.API_REVIEWER, rotation)
+        self.assertEqual(who, "muse")
 
     def test_assignments_in_one_run_spread(self):
         gh = FakeGH([])
