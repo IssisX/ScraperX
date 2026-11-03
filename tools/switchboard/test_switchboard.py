@@ -201,9 +201,24 @@ class MergeRule(unittest.TestCase):
 
 
 class ReviewerPick(unittest.TestCase):
-    def test_non_claude_authors_get_the_automatic_claude_review(self):
+    def test_non_claude_authors_get_the_automatic_claude_review_when_no_one_is_listed(self):
         for vendor in ("openai", "xai", "meta", "unknown"):
             self.assertEqual(rules.pick_reviewer(vendor, frozenset(), TEAM), rules.ReviewPick("claude-api", ""))
+
+    def test_non_claude_authors_ask_muse_first_then_chatgpt_for_muses_own(self):
+        cfg = dict(AGENTS, review=dict(AGENTS["review"], other_authored_asks=["muse", "chatgpt"]))
+        team = rules.team_from_config(cfg)
+        self.assertEqual(rules.pick_reviewer("openai", frozenset(), team), rules.ReviewPick("ask", "muse"))
+        self.assertEqual(rules.pick_reviewer("xai", frozenset({"matron"}), team), rules.ReviewPick("ask", "muse"))
+        self.assertEqual(rules.pick_reviewer("meta", frozenset(), team), rules.ReviewPick("ask", "chatgpt"))
+        self.assertEqual(rules.pick_reviewer("unknown", frozenset(), team), rules.ReviewPick("claude-api", ""))
+        only_muse = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], other_authored_asks=["muse"])))
+        self.assertEqual(rules.pick_reviewer("meta", frozenset(), only_muse), rules.ReviewPick("claude-api", ""))
+
+    def test_other_authored_asks_never_names_claude(self):
+        cfg = dict(AGENTS, review=dict(AGENTS["review"], other_authored_asks=["claude"]))
+        with self.assertRaises(ValueError):
+            rules.team_from_config(cfg)
 
     def test_claude_authored_asks_chatgpt_or_muse_for_matron(self):
         self.assertEqual(rules.pick_reviewer("anthropic", frozenset(), TEAM), rules.ReviewPick("ask", "chatgpt"))
