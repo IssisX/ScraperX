@@ -278,6 +278,7 @@ if(SCRAPERX_BUILD_BRIDGE)
     add_library(scraperx_native SHARED
         src/bridge/register_types.cpp
         src/bridge/scraperx_simulation.cpp
+        src/bridge/skirt_cloth.cpp
     )
     target_link_libraries(scraperx_native PRIVATE scraperx_sim scraperx_delivery godot::cpp)
     target_include_directories(scraperx_native PRIVATE src)

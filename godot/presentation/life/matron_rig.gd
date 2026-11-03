@@ -44,14 +44,11 @@ const BACK_RADIUS := 0.17
 # with distance constraints down each column, round each ring and across each
 # cell, kept out of her thigh and shin capsules (the build's measured radii
 # plus SKIRT_CLEAR_M). The skirt is skinned to the proxy's bones.
-const SKIRT_TURN := false
-const SKIRT_RIDE := false
 const SKIRT_LINK_PASSES := 4
 # The thigh's capsule starts this far down it: above, her hip is under the
 # cloth's pinned waist, and a capsule from the hip joint shoves the cloth
 # off her side when she crouches.
 const SKIRT_THIGH_FROM := 0.35
-const SKIRT_TURN_SPAN := 1
 const SKIRT_DAMP := 0.9
 const SKIRT_ITERATIONS := 4
 const SKIRT_CLEAR_M := 0.006
@@ -77,8 +74,7 @@ var _sk_rows := 0
 var _sk_bones: Array = []       # [col][row] bone index
 var _sk_rest: Array = []        # [col][row + 1] bind position (skeleton space)
 var _sk_pts: Array = []
-var _sk_prev: Array = []
-var _sk_down: Array = []        # [col][row] rest length to the next point down
+var _sk_cloth: RefCounted = null   # SkirtCloth, native
 var _sk_links: Array = []       # [a_col, a_row, b_col, b_row, rest length]
 var _sk_capsules: Array = []    # [bone a, bone b, radius]
 var _sk_body := -1
@@ -963,10 +959,6 @@ func _setup_skirt(sk: Dictionary) -> void:
 		for pt in sk["points"][c]:
 			row_p.append(_v(pt))
 		_sk_rest.append(row_p)
-		var row_d: Array = []
-		for r in range(row_p.size() - 1):
-			row_d.append((row_p[r] as Vector3).distance_to(row_p[r + 1]))
-		_sk_down.append(row_d)
 	for c in _sk_cols:
 		var c1 := (c + 1) % _sk_cols
 		for r in _sk_rows + 1:
@@ -995,6 +987,24 @@ func _setup_skirt(sk: Dictionary) -> void:
 				var t := clampf((q - a).dot(ab) / maxf(ab.length_squared(), 1e-8), 0.0, 1.0)
 				radius = minf(radius, q.distance_to(a + ab * t) - SKIRT_CLEAR_M - 0.005)
 		_sk_capsules.append([cap[0], cap[1], maxf(radius, 0.02), from])
+	if not ClassDB.class_exists("SkirtCloth"):
+		push_warning("matron_rig: no native SkirtCloth; the skirt hangs as made")
+		return
+	var rest := PackedVector3Array()
+	for c in _sk_cols:
+		for r in _sk_rows + 1:
+			rest.append(_sk_rest[c][r])
+	var pairs := PackedInt32Array()
+	var lengths := PackedFloat32Array()
+	for link in _sk_links:
+		pairs.append(int(link[0]) * (_sk_rows + 1) + int(link[1]))
+		pairs.append(int(link[2]) * (_sk_rows + 1) + int(link[3]))
+		lengths.append(float(link[4]))
+	_sk_cloth = ClassDB.instantiate("SkirtCloth")
+	if not _sk_cloth.configure(_sk_cols, _sk_rows, rest, pairs, lengths, PackedFloat32Array(SKIRT_SHAPE),
+			SKIRT_ITERATIONS, SKIRT_LINK_PASSES, SKIRT_DAMP):
+		push_warning("matron_rig: SkirtCloth refused the skirt")
+		_sk_cloth = null
 
 
 func _sk_link(ac: int, ar: int, bc: int, br: int) -> void:
@@ -1014,108 +1024,38 @@ func step_skirt(delta: float) -> void:
 	for cap in _sk_capsules:
 		var cb := to_skel * bone_world(str(cap[1])).origin
 		caps.append([(to_skel * bone_world(str(cap[0])).origin).lerp(cb, float(cap[3])), cb, float(cap[2]) + SKIRT_CLEAR_M])
-	var fresh := _sk_pts.size() != _sk_cols or (_sk_pts[0][0] as Vector3).distance_to(pelvis * (_sk_rest[0][0] as Vector3)) > HAIR_JUMP_M
-	if fresh:
-		_sk_pts.clear()
-		_sk_prev.clear()
-		for c in _sk_cols:
-			var a: Array = []
-			var b: Array = []
-			for r in _sk_rows + 1:
-				a.append(pelvis * (_sk_rest[c][r] as Vector3))
-				b.append(pelvis * (_sk_rest[c][r] as Vector3))
-			_sk_pts.append(a)
-			_sk_prev.append(b)
+	if _sk_cloth == null:
+		return
+	var ends := PackedVector3Array()
+	var radii := PackedFloat32Array()
+	for cap in caps:
+		ends.append(cap[0])
+		ends.append(cap[1])
+		radii.append(cap[2])
+	# The cloth's own step (src/bridge/skirt_cloth.cpp): verlet, then each
+	# iteration out of her legs and SKIRT_LINK_PASSES passes of its lengths.
+	var flat: PackedVector3Array = _sk_cloth.step(pelvis, g, dt, ends, radii, HAIR_JUMP_M)
+	_sk_pts.resize(_sk_cols)
 	for c in _sk_cols:
-		var pc: Array = _sk_pts[c]
-		var vc: Array = _sk_prev[c]
+		var col_p: Array = []
 		for r in _sk_rows + 1:
-			if r == 0:
-				pc[0] = pelvis * (_sk_rest[c][0] as Vector3)
-				vc[0] = pc[0]
-				continue
-			var cur: Vector3 = pc[r]
-			var vel: Vector3 = (cur - (vc[r] as Vector3)) * SKIRT_DAMP
-			vc[r] = cur
-			pc[r] = cur + vel + g * dt * dt
-	# Out of her legs first, then the cloth's own lengths last, so it never
-	# stretches; a point the lengths pull back into a leg is pushed out again
-	# next pass (and next frame).
-	for _it in SKIRT_ITERATIONS:
-		for c in _sk_cols:
-			for r in range(1, _sk_rows + 1):
-				var q: Vector3 = _sk_pts[c][r]
-				q = q.lerp(pelvis * (_sk_rest[c][r] as Vector3), float(SKIRT_SHAPE[mini(r, SKIRT_SHAPE.size() - 1)]))
-				for cap in caps:
-					q = _out_of_capsule(q, cap[0], cap[1], cap[2])
-				if SKIRT_RIDE:
-					# Pushed out by a leg, the cloth swings up round it on its
-					# column (its length to the point above kept), not stretched.
-					var above: Vector3 = _sk_pts[c][r - 1]
-					q = above + (q - above).normalized() * float(_sk_down[c][r - 1])
-					for cap in caps:
-						q = _out_of_capsule(q, cap[0], cap[1], cap[2])
-				_sk_pts[c][r] = q
-		for _pass in SKIRT_LINK_PASSES:
-			for link in _sk_links:
-				var ac: int = link[0]
-				var ar: int = link[1]
-				var bc: int = link[2]
-				var br: int = link[3]
-				var pa: Vector3 = _sk_pts[ac][ar]
-				var pb: Vector3 = _sk_pts[bc][br]
-				var d := pb - pa
-				var l := d.length()
-				if l < 1e-6:
-					continue
-				var wa := 0.0 if ar == 0 else 1.0
-				var wb := 0.0 if br == 0 else 1.0
-				if wa + wb <= 0.0:
-					continue
-				var fix := d * ((l - float(link[4])) / l)
-				_sk_pts[ac][ar] = pa + fix * (wa / (wa + wb))
-				_sk_pts[bc][br] = pb - fix * (wb / (wa + wb))
-	# The bones from the points. Each bone sits on its point, turned as the
-	# cloth there turns (down its column, round its ring, from one neighbour
-	# each side; wider spans measured worse).
-	var pturn := pelvis.basis.orthonormalized()
+			col_p.append(flat[c * (_sk_rows + 1) + r])
+		_sk_pts[c] = col_p
+	# The bones from the points. Each bone sits on its point and turns only as
+	# her pelvis does: the skirt is skinned on its own grid, so between the
+	# points it is exactly their blend (a bone turned to its own cloth tears
+	# the blend: measured worse).
+	var turn := pelvis.basis.orthonormalized()
 	for c in _sk_cols:
 		var parent := skel.get_bone_global_pose(_sk_body)
-		var cl := (c + _sk_cols - SKIRT_TURN_SPAN) % _sk_cols
-		var cr := (c + SKIRT_TURN_SPAN) % _sk_cols
 		for r in _sk_rows + 1:
 			var bi: int = _sk_bones[c][r]
 			var rest := skel.get_bone_global_rest(bi)
-			var turn := pturn
-			if SKIRT_TURN:
-				var up := maxi(r - 1, 0)
-				var dn := mini(r + 1, _sk_rows)
-				turn = (_sk_frame(_sk_pts[c][dn] - _sk_pts[c][up], _sk_pts[cr][r] - _sk_pts[cl][r]) \
-						* _sk_frame(pturn * ((_sk_rest[c][dn] as Vector3) - _sk_rest[c][up]),
-							pturn * ((_sk_rest[cr][r] as Vector3) - _sk_rest[cl][r])).transposed()) * pturn
 			var global := Transform3D(turn * rest.basis, _sk_pts[c][r])
 			var local := parent.affine_inverse() * global
 			skel.set_bone_pose_position(bi, local.origin)
 			skel.set_bone_pose_rotation(bi, local.basis.get_rotation_quaternion())
 			parent = global
-
-
-# An orthonormal frame from the cloth's down and round-the-ring directions.
-func _sk_frame(down: Vector3, round_: Vector3) -> Basis:
-	var y := down.normalized()
-	var z := round_.cross(y).normalized()
-	return Basis(y.cross(z), y, z)
-
-
-func _out_of_capsule(q: Vector3, a: Vector3, b: Vector3, radius: float) -> Vector3:
-	var ab := b - a
-	var t := clampf((q - a).dot(ab) / maxf(ab.length_squared(), 1e-8), 0.0, 1.0)
-	var c := a + ab * t
-	var d := q - c
-	var l := d.length()
-	if l >= radius or l < 1e-6:
-		return q
-	return c + d / l * radius
 
 
 func _outside(q: Vector3, centre: Vector3, radius: float) -> Vector3:

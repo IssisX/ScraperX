@@ -1,6 +1,7 @@
 #include "bridge/register_types.hpp"
 
 #include "bridge/scraperx_simulation.hpp"
+#include "bridge/skirt_cloth.hpp"
 
 #include <godot_cpp/godot.hpp>
 
@@ -9,6 +10,7 @@ void initialize_scraperx_module(const godot::ModuleInitializationLevel level) {
         return;
     }
     godot::ClassDB::register_class<scraperx::bridge::ScraperXSimulation>();
+    godot::ClassDB::register_class<scraperx::bridge::SkirtCloth>();
 }
 
 void uninitialize_scraperx_module(const godot::ModuleInitializationLevel level) {
