@@ -114,7 +114,6 @@ agent, Claude included, works this way:
 
 ## Managing the agents
 
-2026-10-22: *"I need more management help from you telling the other agents what to do"*.
 - The live board is issue #107's **body** (2026-11-02; it replaced #87, which replaced #3's 842-comment thread; both stay the
   record). Only the integrator edits the body. Agents read the body and the comments since their own
   last one, never the history, and post one line per real step. He pastes one universal prompt ("read
@@ -125,17 +124,19 @@ agent, Claude included, works this way:
   size).
 - Working in tandem (2026-11-02: *"figure out how all of you agents can communicate and work
   synergistically ... not constantly waiting on me"*):
-  - Nobody waits: every agent holds two or more jobs. Blocked 30 minutes, it posts `BLOCKED: what,
-    needs whom` and starts the next one; the integrator clears BLOCKED lines first.
+  - Nobody waits: every agent holds two or more jobs and starts the next while CI runs on the last (11-03:
+    *"start the next job while CI runs and always"*). Blocked 30 minutes, it posts `BLOCKED: what, needs
+    whom` and goes on; the integrator clears BLOCKED lines first.
   - The integrator runs `python3 tools/board/sweep.py` on every hourly check, and on events when the
     board has moved, and acts on every line in the same sweep (no 15-minute timer; 11-02: *"drop 15"*;
     PR events, agent messages and the hourly check drive the work): MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
     FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
-  - Reviews are cross-model, and Claude's usage is the scarce budget (2026-11-02: *"That's why so
-    much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
-    first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
-    loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+  - Reviews are cross-model, and Claude *session* usage is the scarce budget (2026-11-02: *"That's why
+    so much of the session's usage was used up so quickly"*): reviews go to Muse, ChatGPT or Grok
+    (Gemini is off the team, 11-02); a Claude session reviews only for security or when nobody else is
+    free. The GitHub Actions Claude review (API credit, Sonnet xhigh; Claude's PRs too) shares them with
+    Codex, Muse and ChatGPT: one reviewer per PR, whoever is open (11-03: *"I'm not asking for two
+    agents to review the same shit"*; `review.pool`, #178). **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
     "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
     roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
     that. You should ask me how many workers to open up and give suggestions from now on"*; the
@@ -160,9 +161,10 @@ agent, Claude included, works this way:
   out"*), rules on Muse's own proposals within the hour (*"Muse can propose too. That is very
   important."*), and makes sure every guess gets asked and every ask gets answered.
 - **Nothing grows without a cap** (11-03: #3 reached 860 comments, *"super, super wasteful ... I want to
-  make sure we're not doing the same thing"*). Whatever is re-read grows the cost of every read, so each
-  of these has a cap, checked on every hourly check (step C), and is trimmed the same hour:
-  - a session's context, 400k tokens (above);
+  make sure we're not doing the same thing"*). **Prevent the growth; a handoff is only the backstop** (11-03:
+  *"Yes, prevent the growth. That's what I've been trying to tell you"*). Whatever is re-read grows the cost of
+  every read, so each of these has a cap, checked hourly (step C) and trimmed the same hour:
+  - a session's context, 700k tokens (above);
   - the board, 100 comments, then a fresh one; a job issue or PR, 40, then its state goes into its body
     (or a fresh PR) and readers start there; retired threads are closed;
   - this file, 20 KB: a new rule replaces or shortens an old one, and dated quotes past a week move to
@@ -182,25 +184,30 @@ agent, Claude included, works this way:
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
   integrator decides, without asking him, and covers every Claude session, its own included.
-  - When to change: a session at **400k context tokens** (40%; `get_session` →
+  - When to change: a session at **700k context tokens** (11-03, Cory: "go with your pick": fewer handoffs, less lost; `get_session` →
     `external_metadata.context_usage.used_tokens`), checked on every hourly check for every Claude session, the
     integrator's own first; or one that has compacted, run 48 hours, or spends its turns re-reading more than working
-    (11-03: *"I don't want to have to tell you over and over and over again to watch the session's size"*; the 11-03
-    integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context, so cost grows with size.
+    (11-03; the 11-03 integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context.
+  - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
+    $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
+    after every commit, proof run or big read. At 600k it writes its handoff (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
+    head, done, open failure with its repro, measured and ruled out, next step) and tells the integrator; at 700k
+    it stops. The integrator also checks every worker's size on each event it handles, and every brief it writes
+    carries this rule. Builds and tests write to a file and only their PASS/FAIL lines are read, never a whole log.
   - Keep the integrator's context small: subscribe only to PRs it opened or must merge itself (protected,
     workflow); the switchboard and the hourly sweep cover the rest. Send big reads (logs, transcripts, audits) to a
     subagent and keep only its answer.
-  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`), start the fresh
+  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`) with its "Asks in flight"
+    (steps K and S of `work/tasks/integrator-hourly.md`; the collaboration must never be lost), start the fresh
     session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
     retire the old one once its in-flight helpers have reported.
   - A worker session whose job has landed is retired, never reused for new work.
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
-    (2026-11-02: *"Shouldn't it be in the new session?"*).
-- Effort level is his call (2026-11-02: *"I don't have a never medium. I just didn't like when you
-  automatically assigned it medium and didn't ask me what level I wanted it at."*). When asking him
-  before opening a Claude session or helper, ask the effort level too, with a suggestion; never
-  default it silently. He set every session to high on 11-02.
+   .
+- Effort, never medium (11-03): the integrator xhigh (one session; its cost is context, not effort),
+  Opus workers high, Sonnet xhigh. `create_session` has no effort field and the repo setting
+  did not take: `get_session` 6 min after start; if off, tell him in one line.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 

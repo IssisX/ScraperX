@@ -51,17 +51,20 @@ finished piece as its own diff email as soon as it is proven, not all at the end
 1. **Finish J-002 (#109):** the late require ("once the rip has begun, his blow breaks nothing") read
    at its peak, as its own diff on top of `1620c32e` (PR #158), so #153 goes green.
 2. **The fight, S2-S5, built end to end (J-005, #112, then one job each):**
-   - Send your corrected `FIGHTING_SYSTEM_SPEC.md` as a diff adding `03_EXECUTION/FIGHT/FIGHTING_SYSTEM_SPEC.md`
-     (docs only).
-   - For each of S2, S3, S4 and S5, email `MUSE_TO_CLAUDE: J-005 scope S<n>` with four lines:
-     invariant, files, reach (which native groups and touch scenarios), finish fact. The integrator
-     opens each as its own job issue owned by you, the same hour.
+   - Your spec is on trunk (`03_EXECUTION/FIGHT/FIGHTING_SYSTEM_SPEC.md`, with your two corrections), and
+     your scopes are job issues: S2 low sweep J-033 #164, S3 heavy kick J-034 #165, S4 jab-cross J-035
+     #166, S5 slip J-036 #167.
    - Then build them in order of dependency, each stage its own diff (and its own PR); a new or
      changed test check goes in its own protected diff with a before/after. Native kernel first
      (`src/sim/`), then the Godot view where the stage shows on screen.
    - **S6, her tells (J-004, #111), is yours too (11-03):** re-point them at S7's fields once S5 is in.
    - Neighbours: S1 is yours (#153); S7 + S8, damage and death body (J-003, #110), are ChatGPT's PR in
      review. Read its fields, never edit its functions; ask with `To ChatGPT:`.
+2b. **J-038 (#169), destructible loose things (Cory, 11-03), right after the fight:** never the tower's
+   machines (they must stay usable so he can ascend). What the forklift and crane lift, barrels, boxes and shipping containers dent with the force
+   of the hit, and the hit moves them (a forklift ramming one shoves it and leaves it severely dented;
+   slice 0 makes the static containers movable, real masses, as a protected PR), crates break into pieces that become
+   loose stock. Rule 51, the phone, determinism and saves hold. Propose the dent model and slices first.
 3. **J-006 (#113), the grade ladder (her pursuit up the first 11 m), moved to you from ChatGPT (11-03).**
    Its code is PR #91 (red). Start from its head and the job issue's last findings; it unblocks J-007
    (#114, her exit items 4, 6 and 7: arm's-length holds, the pipe, the hoists), which is yours next.

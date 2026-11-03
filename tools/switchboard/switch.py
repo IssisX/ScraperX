@@ -29,6 +29,7 @@ import datetime as dt
 import io
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import time
@@ -61,6 +62,16 @@ MAX_PRS = 60
 MAX_FACT_LINES = 25                   # rule_check lines quoted in a review ask
 ACT_WITHIN_DAYS = 3                   # older heads get no new review or ask: J-030 claims or closes them
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"
+RUN_MARK = "<!-- switchboard:orchestrator-run id={run} -->"   # in the start comment: the ledger run its session pays
+RUN_ID = re.compile(r"<!-- switchboard:orchestrator-run id=([0-9a-f]{12}) -->")
+UNKNOWN_MARK = "<!-- switchboard:orchestrator-unknown run={run} at={at} -->"   # a start whose answer was lost
+UNKNOWN_RUN = re.compile(r"<!-- switchboard:orchestrator-unknown run=([0-9a-f]{12}) at=(\S+) -->")
+GIVE_UP_AFTER = dt.timedelta(minutes=30)   # an unknown start with no session found by then is written off
+MAX_WATCHED = 30                       # open orchestrator issues the watcher reads (one page)
+CONSOLE_SESSION = "https://platform.claude.com/workspaces/default/sessions/{session}"   # `default` workspace
+OUTCOMES = {"end_turn": "finished its turn", "budget_reached": "stopped at its session budget",
+            "retries_exhausted": "stopped after repeated errors", "refusal": "stopped on a refusal",
+            "terminated": "ended (terminated)"}
 
 
 def central(t: dt.datetime) -> str:
@@ -81,6 +92,7 @@ class Switch:
         self.looks = load_yaml(root / "work/looks/sets.yml")
         self._jobs: dict[str, dict] | None = None
         self._ledger: tuple[str, str | None] | None = None
+        self._load: tuple[dict[str, int], dict[str, int]] | None = None   # review_load, once per run
         self._claude = None
 
     # ---------- facts ----------
@@ -110,7 +122,8 @@ class Switch:
         reviews = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/reviews")
         out = []
         for c in comments:
-            v = rules.parse_verdict(c.get("body") or "", c["created_at"], c["user"]["login"], self.team)
+            v = rules.parse_verdict(c.get("body") or "", c["created_at"], c["user"]["login"], self.team) or \
+                rules.parse_codex_state(c.get("body") or "", c.get("updated_at") or c["created_at"], c["user"]["login"])
             if v:
                 out.append(v)
         for r in reviews:
@@ -320,25 +333,121 @@ class Switch:
     # ---------- steer ----------
     def steer_pr(self, facts: rules.PrFacts, ctx: dict) -> None:
         author = self.team.vendor_of_branch(facts.head_ref)
-        d = rules.merge_decision(facts, author)
+        d = rules.merge_decision(facts, author, self.team)
         if d.action == "WAIT" and d.reasons == ("GitHub is still computing mergeability",):
             time.sleep(3)   # the first read starts GitHub's computation; read once more
             facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
-            d = rules.merge_decision(facts, author)
+            d = rules.merge_decision(facts, author, self.team)
         if d.action in ("MERGE", "HUMAN-MERGE"):
             facts = dataclasses.replace(facts, rule_check_block=self.rule_check_block(facts.number, facts.head_sha))
-            d = rules.merge_decision(facts, author)
+            d = rules.merge_decision(facts, author, self.team)
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
         if d.action == "MERGE":
             self.merge(facts, ctx, d)
-        if rules.needs_review(facts) and self.stale(facts):
+        if rules.needs_review(facts, author, self.team) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
-        elif rules.needs_review(facts):
+        elif rules.needs_review(facts, author, self.team) and self.team.pool:
+            _, who, asked = self.pooled_reviewer(facts, ctx, author)
+            if not who:
+                self.out(f"NOFALLBACK  #{facts.number} everyone in the pool was asked and nobody answered")
+            elif who != rules.API_REVIEWER and who not in asked:
+                quiet = [self.team.agent_name.get(a, a) for a in asked]
+                why = (f"{', '.join(quiet)} did not answer in {self.team.fallback_after_hours:g} hours, "
+                       f"so you are asked instead. ") if quiet else ""
+                self.ask_review(facts, ctx, who, why)
+                self.note_assigned(who)
+        elif rules.needs_review(facts, author, self.team):
             pick = rules.pick_reviewer(author, facts.needs, self.team)
             if pick.route == "ask":
                 self.ask_review(facts, ctx, pick.agent, "")
             self.escalate_review(facts, ctx, author)
+
+    def api_ok(self, ctx: dict) -> bool:
+        """May the automatic review run today: the worst case of one call fits under every cap."""
+        spec = self.budget.calls["review"]
+        worst = money.worst_case(self.budget, "review", spec.max_input_tokens)
+        return money.check(self.budget, self.entries(), self.now, ctx["job"], worst, self.job_cap(ctx)).ok
+
+    def pooled_reviewer(self, facts: rules.PrFacts, ctx: dict, author: str,
+                        api: bool | None = None) -> tuple[list[str], str, dict[str, str]]:
+        """review.pool: the rotation for this PR, the one reviewer its head gets now, and who was asked on it when.
+        The API is out of the rotation for a head it already failed on (its fallback ask carries an api-out mark),
+        so a quiet fallback passes on to the next unasked reviewer instead of the API being picked again."""
+        _, comments = self.ask_thread(facts, ctx)
+        if comments is not ctx["comments"]:
+            comments = list(comments) + list(ctx["comments"])   # Codex is asked on the PR itself
+        out = MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha)
+        api_failed = any(out in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN for c in comments)
+        api_ok = (self.api_ok(ctx) if api is None else api) and not api_failed
+        rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, api_ok)
+        asked: dict[str, str] = {}
+        for agent in self.team.agent_vendor:
+            tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
+            times = [c["created_at"] for c in comments
+                     if tag in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN]
+            if times:
+                asked[agent] = min(times)
+        now = self.now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        hours = self.team.fallback_after_hours
+        if any(w in asked and not rules.ask_is_overdue(asked[w], now, hours) for w in rotation):
+            outstanding, recent = {}, {}   # the one asked keeps it: no need to read everyone's load
+        else:
+            outstanding, recent = self.review_load()
+        return rotation, rules.choose_reviewer(rotation, asked, now, hours, outstanding, recent), asked
+
+    def api_fallback(self, facts: rules.PrFacts, ctx: dict, author: str) -> str:
+        """Who is asked when the automatic review cannot run on a PR: chosen as the pool chooses, without the API,
+        so never the author's own vendor and never someone already asked and quiet on this head (Codex on #178)."""
+        if self.team.pool:
+            _, who, _ = self.pooled_reviewer(facts, ctx, author, api=False)
+            if who:
+                return who
+        for agent in self.team.human_reviewers:
+            if self.team.agent_vendor.get(agent) not in ("anthropic", author):
+                return agent
+        return self.team.human_reviewers[0]
+
+    def note_assigned(self, who: str) -> None:
+        """Count a review handed out in this run, so the next PR in the same sweep sees it (Codex on #178)."""
+        if self._load is None:
+            self._load = self.review_load()
+        outstanding, recent = self._load
+        if who != rules.API_REVIEWER:
+            outstanding[who] = outstanding.get(who, 0) + 1
+        recent[who] = recent.get(who, 0) + 1
+
+    def review_load(self) -> tuple[dict[str, int], dict[str, int]]:
+        """Over the open PRs, once per run: per reviewer, the asks on a PR's current head still without that
+        reviewer's verdict (busy), and the asks or automatic reviews of the last 24 hours (recent)."""
+        if self._load is not None:
+            return self._load
+        outstanding: dict[str, int] = {}
+        recent: dict[str, int] = {}
+        day_ago = (self.now - dt.timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        for pr in self.target_prs(0, ""):
+            number, sha = pr["number"], pr["head"]["sha"]
+            verdicts, comments = self.verdicts(number)
+            threads = list(comments)
+            issue = self.jobs().get(rules.job_of_pr(pr.get("body")) or "")
+            if issue:
+                threads += self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments")
+            bot = [c for c in threads if c["user"]["login"] == rules.BOT_LOGIN]
+            for agent, vendor in self.team.agent_vendor.items():
+                tag = MARK.format(kind=f"ask-{agent}", pr=number, head=sha)
+                times = [c["created_at"] for c in bot if tag in (c.get("body") or "")]
+                if not times:
+                    continue
+                if max(times) >= day_ago:
+                    recent[agent] = recent.get(agent, 0) + 1
+                if not any(v.kind == "review" and v.vendor == vendor and (v.who == "Codex") == (agent == "codex")
+                           and rules.names_head(v, sha) for v in verdicts):
+                    outstanding[agent] = outstanding.get(agent, 0) + 1
+            tag = MARK.format(kind="review", pr=number, head=sha)
+            if any(tag in (c.get("body") or "") and c["created_at"] >= day_ago for c in bot):
+                recent[rules.API_REVIEWER] = recent.get(rules.API_REVIEWER, 0) + 1
+        self._load = (outstanding, recent)
+        return self._load
 
     def merge(self, facts: rules.PrFacts, ctx: dict, d: rules.MergeDecision) -> None:
         got = self.gh.write("PUT", f"repos/{self.gh.repo}/pulls/{facts.number}/merge",
@@ -366,12 +475,18 @@ class Switch:
 
     def ask_review(self, facts: rules.PrFacts, ctx: dict, agent: str, why: str) -> None:
         where, comments = self.ask_thread(facts, ctx)
+        if agent == "codex":   # the Codex app answers "@codex review" on the PR itself
+            where, comments = facts.number, ctx["comments"]
         tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
         if self.marked(comments, f"ask-{agent}", facts.number, facts.head_sha):
             self.out(f"ASKED       #{facts.number} review already asked of {agent} on #{where}")
             return
         name = self.team.agent_name.get(agent, agent)
         job = ctx["job"] or f"PR #{facts.number}"
+        if agent == "codex":
+            self.gh.comment(where, f"@codex review\n\nSwitchboard: {job}, head {facts.head_sha[:8]}. {why}\n\n{tag}",
+                            f"ask Codex to review #{facts.number}")
+            return
         head = {"muse": f"CLAUDE_TO_MUSE: {job} review #{facts.number} @ {facts.head_sha[:8]}",
                 "grok": f"To Grok: {job} review #{facts.number} @ {facts.head_sha[:8]}"}.get(agent) or \
                f"**Switchboard → {name}:** review #{facts.number} @ {facts.head_sha[:8]} ({job})"
@@ -438,11 +553,17 @@ class Switch:
         author = self.team.vendor_of_branch(facts.head_ref)
         if self.stale(facts):
             return
-        if rules.needs_review(facts) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api":
+        if self.team.pool:
+            api_turn = rules.needs_review(facts, author, self.team) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
+        else:
+            api_turn = rules.needs_review(facts, author, self.team) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
+        if api_turn:
             if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
             else:
                 self.review(facts, ctx, author)
+                if self.team.pool:
+                    self.note_assigned(rules.API_REVIEWER)
         if rules.needs_eye(facts):
             if self.marked(ctx["comments"], "eye", facts.number, facts.head_sha):
                 self.out(f"LOOKED      #{facts.number} eye already posted for @{facts.head_sha[:8]}")
@@ -455,7 +576,9 @@ class Switch:
         self.out(f"REVIEW      #{facts.number} author={author}: automatic Claude review")
         diff = "" if self.gh.dry_run else self.gh.get_text(f"repos/{self.gh.repo}/pulls/{facts.number}", "application/vnd.github.diff")
         if len(diff) > MAX_DIFF_CHARS:
-            self.ask_review(facts, ctx, self.team.human_reviewers[0], f"The diff is {len(diff)} characters, too large for the automatic review. ")
+            self.ask_review(facts, ctx, self.api_fallback(facts, ctx, author),
+                            f"The diff is {len(diff)} characters, too large for the automatic review. "
+                            + MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha) + " ")
             return
         checklist = (self.root / "03_EXECUTION/REVIEW_CHECKLIST.md").read_text(encoding="utf-8")
         content = [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
@@ -470,7 +593,8 @@ class Switch:
             why = {"too-large": "The diff is too large for the automatic review. ",
                    "error": "The automatic review failed to run. "}.get(res) if isinstance(res, str) else \
                   f"The automatic review stopped ({res.stop_reason}). "
-            self.ask_review(facts, ctx, self.team.human_reviewers[0], why)
+            self.ask_review(facts, ctx, self.api_fallback(facts, ctx, author),
+                            why + MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha) + " ")
             return
         d = res.data
         verdict = d["verdict"]
@@ -548,7 +672,7 @@ class Switch:
         if not {"job", "needs:orchestrator"} <= labels:
             return
         comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
-        if self.marked(comments, "orchestrator", number, "-"):
+        if self.start_blocked(comments, number):
             self.out(f"ORCH        #{number} already handled")
             return
         b = self.budget
@@ -572,16 +696,206 @@ class Switch:
         if self.gh.dry_run:
             self.out(f"DRY  beta.sessions.create for #{number} with a ${b.orchestrator_session_usd} budget ({v.reason})")
             return
+        client = self.claude()   # before the reserve: no key, no reserve
         run = uuid.uuid4().hex[:12]
         self.append(money.record(self.now, run, "reserve", "orchestrator", job, b.orchestrator_session_usd, key), f"reserve {key}")
         message = (f"Job {job}, GitHub issue #{number} in {self.gh.repo}: {issue['title']}\n\n{(issue.get('body') or '')[:30000]}\n\n"
                    f"Read work/tasks/api-agent.md first, then the issue's newest comments, then do the job.")
-        session = claude_calls.start_session(self.claude(), b.orchestrator_agent_id, b.orchestrator_environment_id,
-                                             f"{job} #{number}", message, b.orchestrator_session_usd,
-                                             f"https://github.com/{self.gh.repo}", os.environ.get("AGENT_GITHUB_TOKEN", ""),
-                                             rules.TRUNK, b.orchestrator_vault_id)
-        self.gh.comment(number, f"Switchboard, {central(self.now)}: orchestrator session `{session}` started with a "
-                                f"${b.orchestrator_session_usd} budget.\n\n{tag}")
+        try:
+            session = claude_calls.start_session(client, b.orchestrator_agent_id, b.orchestrator_environment_id,
+                                                 f"{job} #{number}", message, b.orchestrator_session_usd,
+                                                 f"https://github.com/{self.gh.repo}", os.environ.get("AGENT_GITHUB_TOKEN", ""),
+                                                 rules.TRUNK, b.orchestrator_vault_id,
+                                                 {"switchboard_key": key, "run": run})
+        except claude_calls.SessionStartRejected as err:
+            # A 4xx: the server refused the request, so no session exists and the reserve is released at once.
+            self.out(f"FAILED orchestrator #{number}: {err}")
+            self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
+                                     f"{key} start rejected HTTP {err.status}"), f"end {key} (start rejected)")
+            self.gh.comment(number, f"Switchboard, {central(self.now)}: the orchestrator session was not started. "
+                                    f"`beta.sessions.create` answered HTTP {err.status} ({err.error_class}). No session "
+                                    f"exists, and the reserve is released. Fix the cause, then re-add `needs:orchestrator`."
+                                    f"\n\n{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
+            return
+        except claude_calls.SessionStartUnknown as err:
+            # No usable answer (no connection, or a 5xx): a session may exist. The reserve stands, and the issue
+            # is marked handled so a re-label cannot start a second session beside it; a person looks in the Console.
+            self.out(f"FAILED orchestrator #{number}: {err}")
+            heard = f"answered HTTP {err.status}" if err.status else "got no answer"
+            self.gh.comment(number, f"Switchboard, {central(self.now)}: `beta.sessions.create` {heard} "
+                                    f"({', '.join(err.classes)}), so a session may exist. The ${b.orchestrator_session_usd} "
+                                    f"reserve stays on the ledger (run `{run}`) and no second session is started. The next "
+                                    f"sweeps look for it by its metadata, and write the reserve off after "
+                                    f"{int(GIVE_UP_AFTER.total_seconds() // 60)} minutes if it never appears.\n\n{tag}\n"
+                                    f"{UNKNOWN_MARK.format(run=run, at=self.now.strftime('%Y-%m-%dT%H:%M:%SZ'))}")
+            return
+        except claude_calls.ClaudeCallError as err:
+            # Refused locally before any request was sent: no session exists.
+            self.out(f"FAILED orchestrator #{number}: {err}")
+            self.append(money.record(self.now, run, "end", "orchestrator", job, Decimal(0),
+                                     f"{key} start refused locally"), f"end {key} (start refused)")
+            self.gh.comment(number, f"Switchboard, {central(self.now)}: the orchestrator session was not started: {err}. "
+                                    f"No session exists, and the reserve is released.\n\n"
+                                    f"{MARK.format(kind='orchestrator-failed', pr=number, head=run)}")
+            return
+        self.out(f"ORCH        #{number}: session {session} started on run {run}")
+        self.gh.comment(number, self.started_comment(number, session, run, b.orchestrator_session_usd, ""))
+
+    def started_comment(self, number: int, session: str, run: str, budget: Decimal, note: str) -> str:
+        return (f"Switchboard, {central(self.now)}: orchestrator session `{session}` started{note} with a ${budget} budget. "
+                f"Trace: {CONSOLE_SESSION.format(session=session)}\n\n"
+                f"{MARK.format(kind='orchestrator', pr=number, head='-')}\n{RUN_MARK.format(run=run)}")
+
+    def start_blocked(self, comments: list[dict], number: int) -> bool:
+        """Has the switchboard already handled this issue's start? Its own orchestrator-marked comment says so,
+        except an unknown-start comment the watcher has since written off (a later `orchestrator-cleared` for its run)."""
+        tag = MARK.format(kind="orchestrator", pr=number, head="-")
+        mine = [c.get("body") or "" for c in comments if c["user"]["login"] == rules.BOT_LOGIN]
+        for body in mine:
+            if tag not in body:
+                continue
+            m = UNKNOWN_RUN.search(body)
+            if m and any(MARK.format(kind="orchestrator-cleared", pr=number, head=m.group(1)) in b for b in mine):
+                continue
+            return True
+        return False
+
+    def reconcile_unknown(self, issue: dict, comments: list[dict]) -> None:
+        """A start whose answer was lost (a 5xx or no connection) left an unknown-start comment. Look once per
+        sweep for the session by its metadata: found, post the start comment so it is watched as usual; not
+        found 30 minutes after the attempt, write the reserve off at $0 and clear the block so a relabel can retry."""
+        import claude_calls
+        number, b = issue["number"], self.budget
+        mine = [c.get("body") or "" for c in comments if c["user"]["login"] == rules.BOT_LOGIN]
+        pending = [m.groups() for m in (UNKNOWN_RUN.search(x) for x in mine) if m]
+        if not pending:
+            return
+        run, at = pending[-1]
+        if any(MARK.format(kind="orchestrator-cleared", pr=number, head=run) in x for x in mine):
+            return
+        if self.gh.dry_run and not os.environ.get("ANTHROPIC_API_KEY"):
+            self.out(f"DRY  WATCH #{number}: would look for the session of run {run}")
+            return
+        key = f"orchestrator#{number}"
+        attempt = dt.datetime.fromisoformat(at.replace("Z", "+00:00"))
+        since = (attempt - dt.timedelta(minutes=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        search = claude_calls.find_session(self.claude(), b.orchestrator_agent_id, since, {"switchboard_key": key, "run": run})
+        if search.session:
+            self.out(f"WATCH       #{number} found the session of run {run}: {search.session}")
+            self.gh.comment(number, self.started_comment(number, search.session, run, b.orchestrator_session_usd, " (found after an unanswered start)"))
+            return
+        if not search.exhausted:
+            # The page cap came first: "not found" proves nothing, so the reserve stays and a person is told, once.
+            self.out(f"WATCH       #{number} run {run}: {claude_calls.MAX_LIST_PAGES} pages of sessions read without a match or an end: unresolved")
+            if not any(MARK.format(kind="orchestrator-unresolved", pr=number, head=run) in x for x in mine):
+                self.gh.comment(number, f"Switchboard, {central(self.now)}: could not tell whether the session of run `{run}` exists: "
+                                        f"{claude_calls.MAX_LIST_PAGES} pages of the agent's newer sessions held no match and the listing went on. "
+                                        f"The reserve stays on the ledger and no second session is started; look for it in the Console."
+                                        f"\n\n{MARK.format(kind='orchestrator-unresolved', pr=number, head=run)}")
+            return
+        if self.now - attempt < GIVE_UP_AFTER:
+            self.out(f"WATCH       #{number} no session yet for run {run}; looking again next sweep")
+            return
+        if not any(e.run == run and e.phase == "end" for e in self.entries()):
+            self.append(money.record(self.now, run, "end", "orchestrator", rules.job_of_title(issue["title"]), Decimal(0),
+                                     f"{key} no session found after unanswered start"), f"end {key} (no session found)")
+        self.out(f"WATCH       #{number} no session for run {run} after {GIVE_UP_AFTER}: reserve released")
+        self.gh.comment(number, f"Switchboard, {central(self.now)}: no session carrying run `{run}` appeared in {int(GIVE_UP_AFTER.total_seconds() // 60)} "
+                                f"minutes after the unanswered start, so none was created. The reserve is released at $0. Re-add "
+                                f"`needs:orchestrator` to try again.\n\n{MARK.format(kind='orchestrator-cleared', pr=number, head=run)}")
+
+    # ---------- the session watcher (ask) ----------
+    def watch_sessions(self) -> int:
+        """Each open `job` + `needs:orchestrator` issue with a start comment: answer a paused call with deny
+        (nobody is watching), and when the session is over write its `end` and say so once. Returns failures."""
+        listed = self.gh.get(f"repos/{self.gh.repo}/issues?labels=job,needs:orchestrator&state=open&per_page={MAX_WATCHED}") or []
+        failed = 0
+        for it in listed[:MAX_WATCHED]:
+            if "pull_request" in it:
+                continue
+            try:   # one session's trouble never stops the others; every action is safe to repeat next run
+                self.watch_session(it)
+            except (GitHubError, RuntimeError, KeyError, ValueError) as err:
+                failed += 1
+                self.out(f"ERROR       #{it['number']}: {type(err).__name__}: {err}")
+        return failed
+
+    def start_comment(self, comments: list[dict], number: int) -> tuple[str, str] | None:
+        """(session id, run id or "") from the switchboard's own start comment; None if there is none."""
+        tag = MARK.format(kind="orchestrator", pr=number, head="-")
+        for c in comments:
+            body = c.get("body") or ""
+            if c["user"]["login"] == rules.BOT_LOGIN and tag in body:
+                sid = re.search(r"orchestrator session `(sesn_[A-Za-z0-9]+)`", body)
+                if sid:
+                    run = RUN_ID.search(body)
+                    return sid.group(1), run.group(1) if run else ""
+        return None
+
+    def run_of(self, number: int, found_run: str) -> str:
+        """The ledger run this session pays: carried in the start comment, else (sessions started before the
+        comment carried it) the newest orchestrator reserve noted `orchestrator#N`."""
+        if found_run:
+            return found_run
+        notes = [e.run for e in self.entries() if e.phase == "reserve" and e.kind == "orchestrator" and e.note == f"orchestrator#{number}"]
+        return notes[-1] if notes else ""
+
+    def watch_session(self, issue: dict) -> None:
+        import claude_calls
+        number = issue["number"]
+        comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
+        found = self.start_comment(comments, number)
+        if not found:
+            self.reconcile_unknown(issue, comments)
+            return
+        session, found_run = found
+        if self.marked(comments, "session-end", number, session):
+            return
+        if self.gh.dry_run and not os.environ.get("ANTHROPIC_API_KEY"):
+            self.out(f"DRY  WATCH #{number}: would read session {session}")
+            return
+        st = claude_calls.session_state(self.claude(), session)
+        trace = CONSOLE_SESSION.format(session=session)
+        if st.status in ("running", "rescheduling"):
+            self.out(f"WATCH       #{number} {session} is {st.status}")
+        elif st.status == "idle" and st.stop == "requires_action":
+            self.out(f"WATCH       #{number} {session} paused on {len(st.pending)} call(s): denying")
+            if self.gh.dry_run:
+                self.out(f"DRY  deny {len(st.pending)} pending call(s) of {session}")
+            else:
+                claude_calls.deny_pending(self.claude(), session, st.pending)   # deny first: a comment without it leaves the stall
+            if not self.marked(comments, "session-pause", number, st.idle_event):
+                self.gh.comment(number, f"Switchboard, {central(self.now)}: session `{session}` paused on {len(st.pending)} "
+                                        f"call(s) that needed approval and nobody is watching, so each was denied and the agent "
+                                        f"carries on without it. Trace: {trace}\n\n"
+                                        f"{MARK.format(kind='session-pause', pr=number, head=st.idle_event)}")
+        elif st.status == "terminated" or (st.status == "idle" and st.stop in claude_calls.FINISHED_STOPS):
+            self.finish_session(issue, session, found_run, "terminated" if st.status == "terminated" else st.stop,
+                                st.list_cost_cents, comments, trace)
+        else:
+            self.out(f"WATCH       #{number} {session} is {st.status} ({st.stop or 'no idle event'}): nothing to do")
+
+    def finish_session(self, issue: dict, session: str, found_run: str, outcome: str, cents: int | None,
+                       comments: list[dict], trace: str) -> None:
+        number = issue["number"]
+        if cents is None:   # the reserve keeps counting in full until a cost is reported
+            self.out(f"WATCH       #{number} {session} is over ({outcome}) but reports no cost yet: the reserve stands")
+            return
+        cost = Decimal(cents).scaleb(-2)
+        run = self.run_of(number, found_run)
+        job = rules.job_of_title(issue["title"])
+        if not run:
+            ledger = "No reserve for it was found on the ledger, so none was closed."
+        elif any(e.run == run and e.phase == "end" for e in self.entries()):
+            ledger = f"The ledger already holds the end of run `{run}`."
+        else:
+            self.append(money.record(self.now, run, "end", "orchestrator", job, cost,
+                                     f"orchestrator#{number} {session} stop={outcome} list_cost_cents={cents}"), f"end orchestrator#{number}")
+            ledger = f"Ledger run `{run}` now counts ${cost:.2f} instead of the ${self.budget.orchestrator_session_usd} reserve."
+        self.out(f"WATCH       #{number} {session} {OUTCOMES.get(outcome, outcome)}: ${cost:.2f}")
+        self.gh.comment(number, f"Switchboard, {central(self.now)}: orchestrator session `{session}` {OUTCOMES.get(outcome, outcome)}. "
+                                f"Cost at list price: ${cost:.2f}. {ledger} Trace: {trace}\n\n"
+                                f"{MARK.format(kind='session-end', pr=number, head=session)}")
 
     # ---------- the digest ----------
     def digest(self, force: bool) -> None:
@@ -619,15 +933,19 @@ class Switch:
         for pr in self.target_prs(0, ""):
             facts, ctx = self.pr_facts(pr)
             author = self.team.vendor_of_branch(facts.head_ref)
-            d = rules.merge_decision(facts, author)
+            d = rules.merge_decision(facts, author, self.team)
             if d.action == "FIX-CI":
                 red.append(f"#{facts.number} {facts.head_ref}: {facts.proof}")
             if d.action == "HUMAN-MERGE":
                 waiting.append(f"#{facts.number} is ready but changes workflow files: the integrator merges it")
-            if rules.needs_review(facts) and not self.stale(facts) and \
-                    rules.pick_reviewer(author, facts.needs, self.team).route == "ask":
-                asked.append(f"#{facts.number} waits on a review from "
-                             f"{rules.pick_reviewer(author, facts.needs, self.team).agent}")
+            if rules.needs_review(facts, author, self.team) and not self.stale(facts):
+                if self.team.pool:
+                    who = self.pooled_reviewer(facts, ctx, author)[1]
+                else:
+                    pick = rules.pick_reviewer(author, facts.needs, self.team)
+                    who = pick.agent if pick.route == "ask" else ""
+                if who and who != rules.API_REVIEWER:
+                    asked.append(f"#{facts.number} waits on a review from {who}")
         for it in self.jobs().values():
             if any(l["name"] == "state:blocked" for l in it["labels"]):
                 waiting.append(f"#{it['number']} {it['title'][:70]} is blocked")
@@ -687,6 +1005,8 @@ def main() -> int:
     if steer and not (args.pr or args.sha):
         sw.sweep_owner_labels()
     failed = 0
+    if ask:
+        failed += sw.watch_sessions()
     for pr in sw.target_prs(args.pr, args.sha):
         try:   # one PR's trouble never stops the others; every action is safe to repeat next run
             facts, ctx = sw.pr_facts(pr)

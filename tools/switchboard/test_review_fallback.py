@@ -75,7 +75,7 @@ RC_FINDINGS = (1, "REVIEW godot/a.gd:12 velocity-write: body.linear_velocity = v
 
 def make(gh, rc=RC_CLEAN, team=TEAM):
     sw = switch.Switch.__new__(switch.Switch)
-    sw.gh, sw.now, sw.team, sw.lines = gh, NOW, team, []
+    sw.gh, sw.now, sw.team, sw.lines, sw._load = gh, NOW, team, [], None
     sw.out = sw.lines.append
     sw.run_rule_check = lambda number, head: rc
     return sw
@@ -116,7 +116,8 @@ class FallbackConfig(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("chatgpt", "grok"), 3.0))
+        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("muse", "chatgpt", "grok"), 1.0))
+        self.assertEqual(team.other_authored_asks, ("muse", "chatgpt"))
 
 
 class FallbackPick(unittest.TestCase):
@@ -275,3 +276,98 @@ class AskFacts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PoolSteer(unittest.TestCase):
+    """review.pool through the switch: one ask, to the free reviewer; the one asked keeps it for an hour."""
+
+    POOL = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"],
+                                                          fallback_after_hours=1)))
+
+    def steer(self, thread, load, head_ref="claude/integrate-x"):
+        gh = FakeGH(thread)
+        sw = make(gh, team=self.POOL)
+        sw.api_ok = lambda c: True
+        calls = []
+        sw.review_load = lambda: calls.append(1) or load
+        sw.steer_pr(pr_facts(head_ref=head_ref), ctx(comments=thread))
+        asks = [b for _, b in gh.posted if "ask-" in b]
+        return asks, calls
+
+    def test_busy_muse_means_chatgpt_takes_it(self):
+        asks, _ = self.steer([], ({"muse": 1}, {}))
+        self.assertEqual(len(asks), 1)
+        self.assertIn("ask-chatgpt", asks[0])
+
+    def test_quiet_past_the_hour_passes_on_and_says_why(self):
+        asks, _ = self.steer([ask_comment("muse", 1.5)], ({}, {}))
+        self.assertEqual(len(asks), 1)
+        self.assertIn("ask-chatgpt", asks[0])
+        self.assertIn("Muse did not answer in 1 hours", asks[0])
+
+    def test_the_one_asked_keeps_it_and_no_load_is_read(self):
+        asks, calls = self.steer([ask_comment("muse", 0.5)], ({}, {}))
+        self.assertEqual((asks, calls), ([], []))
+
+    def test_work_not_by_claude_can_go_to_the_api_and_nobody_is_asked(self):
+        asks, _ = self.steer([], ({"muse": 1, "chatgpt": 1}, {}), head_ref="grok/integrate-x")
+        self.assertEqual(asks, [])
+
+
+class CodexAsk(unittest.TestCase):
+    def test_codex_is_asked_on_the_pr_with_a_mention(self):
+        team = rules.team_from_config(dict(AGENTS, agents=dict(AGENTS["agents"], codex={
+            "vendor": "openai", "names": ["Codex"], "branch_prefixes": ["codex/"]}),
+            review=dict(AGENTS["review"], pool=["codex", "muse"], fallback_after_hours=1)))
+        gh = FakeGH([])
+        sw = make(gh, team=team)
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        sw.steer_pr(pr_facts(number=10), dict(ctx(), comments=[]))
+        self.assertEqual(len(gh.posted), 1)
+        where, body = gh.posted[0]
+        self.assertEqual(where, 10)
+        self.assertTrue(body.startswith("@codex review"))
+        self.assertIn("ask-codex", body)
+
+
+class PoolFallbackAndLoad(unittest.TestCase):
+    POOL = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "chatgpt", "muse"],
+                                                          claude_authored_asks=["chatgpt", "muse"])))
+
+    def test_api_fallback_never_asks_the_authors_vendor(self):
+        sw = make(FakeGH([]), team=self.POOL)
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        self.assertEqual(sw.api_fallback(pr_facts(number=9, head_ref="chatgpt/x"), ctx(comments=[]), "openai"), "muse")
+        self.assertNotEqual(sw.api_fallback(pr_facts(number=9, head_ref="muse/x"), ctx(comments=[]), "meta"), "muse")
+
+    def test_after_the_api_failed_a_quiet_fallback_passes_on(self):
+        # The API failed on this head (its fallback ask to ChatGPT carries the api-out mark) and ChatGPT
+        # has been quiet past the hour: the next pick is Muse, never the API again (Codex on #178).
+        failed = {"body": f"ask {switch.MARK.format(kind='api-out', pr=9, head=HEAD)} "
+                          f"{switch.MARK.format(kind='ask-chatgpt', pr=9, head=HEAD)}",
+                  "user": {"login": BOT}, "created_at": ago(1.5)}
+        gh = FakeGH([failed])
+        sw = make(gh, team=rules.team_from_config(dict(AGENTS, review=dict(
+            AGENTS["review"], pool=["claude-api", "chatgpt", "muse"], fallback_after_hours=1, api_reviews_claude=True))))
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        sw.gh = FakeGH([])
+        clean, _, _ = sw.pooled_reviewer(pr_facts(number=9), ctx(comments=[]), "anthropic")
+        sw.gh = gh
+        self.assertIn(rules.API_REVIEWER, clean)             # without the failure the API is in the rotation
+        rotation, who, _ = sw.pooled_reviewer(pr_facts(number=9), ctx(comments=[failed]), "anthropic")
+        self.assertNotIn(rules.API_REVIEWER, rotation)
+        self.assertEqual(who, "muse")
+
+    def test_assignments_in_one_run_spread(self):
+        gh = FakeGH([])
+        sw = make(gh, team=self.POOL)
+        sw.api_ok = lambda c: True
+        sw._load = ({}, {})
+        sw.review_load = lambda: sw._load
+        for n in (20, 21, 22, 23):
+            sw.steer_pr(pr_facts(number=n), dict(ctx(), comments=[]))
+        asked = [b.split("ask-", 1)[1].split(" ", 1)[0] for _, b in gh.posted if "ask-" in b]
+        self.assertEqual(sorted(asked), ["chatgpt", "chatgpt", "muse", "muse"])

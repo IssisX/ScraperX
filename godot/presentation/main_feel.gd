@@ -255,6 +255,8 @@ const HAPTICS := {
 	&"release": [14, 0.30],
 	&"strain": [28, 0.40],
 	&"land": [34, 0.85],
+	&"strike_punch": [14, 0.40],
+	&"strike_land": [24, 0.50],
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
 	&"death": [150, 1.0],
@@ -267,7 +269,7 @@ const HAPTICS := {
 
 # Kinds that always get through the throttle: they mark a moment that
 # matters more than whatever buzzed a few milliseconds before.
-const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip", &"matron_grab", &"matron_tear", &"matron_hang"]
+const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip", &"matron_grab", &"matron_tear", &"matron_hang", &"strike_land"]
 const HAPTIC_GAP_MS := 50
 var haptic_counts := {}   # kind -> pulses sent (counted in CI too, never sent there)
 var _haptic_next_ms := 0
@@ -649,6 +651,15 @@ func _layout_hud() -> void:
 		var base := 24.0 if label == _status else 15.0
 		label.add_theme_font_size_override("font_size", int(roundf(base * scale)))
 
+	# The readouts float over the world with no backing, so over bright snow or
+	# the yellow crane they washed out (the eye's FIX on the approach frame,
+	# J-037). A dark ink outline plus a soft drop shadow keeps every glyph's
+	# edge against any sky or steel without a panel that hides the world.
+	for box_path in [^"HUD/TopLeft", ^"HUD/TopRight"]:
+		for child in get_node(box_path).get_children():
+			if child is Label:
+				_ink_edge(child as Label, scale)
+
 	# Below the touch pause button, which owns the top-left corner.
 	var top_left: Control = $HUD/TopLeft
 	top_left.offset_left = gutter
@@ -670,6 +681,19 @@ func _layout_hud() -> void:
 	for child in top_right.get_children():
 		if child is Label:
 			(child as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+# Outline width follows the label's own size (about a fifth of its glyph
+# height, never under 3 px) so the ratio holds from the Fold to the desktop.
+func _ink_edge(label: Label, ui_scale: float) -> void:
+	var size := label.get_theme_font_size("font_size")
+	var edge := maxi(3, int(roundf(float(size) * 0.2)))
+	label.add_theme_constant_override("outline_size", edge)
+	label.add_theme_color_override("font_outline_color", UiStyle.EDGE)
+	label.add_theme_color_override("font_shadow_color", UiStyle.SHADOW)
+	label.add_theme_constant_override("shadow_offset_x", int(roundf(2.0 * ui_scale)))
+	label.add_theme_constant_override("shadow_offset_y", int(roundf(2.0 * ui_scale)))
+	label.add_theme_constant_override("shadow_outline_size", edge + int(roundf(2.0 * ui_scale)))
 
 # --- presentation mirror ----------------------------------------------------
 
@@ -911,6 +935,10 @@ func _feel_strike(delta: float) -> void:
 				_matron_view.flinch(normal, impulse)
 			if _gore != null:
 				_gore._on_strike(at, normal, impulse)
+			# Two beats: the fist's contact, then what it earned. The second
+			# fires inside the 50 ms throttle window, so it needs priority.
+			_haptic(&"strike_punch", clampf(impulse / 50.0, 0.3, 1.0))
+			_haptic(&"strike_land", clampf(impulse / 66.7, 0.4, 1.0))
 	if _matron_view != null:
 		_matron_view.hold_frame = _strike_feel.frozen()
 	# Only while the kick is live: writing the basis re-reads the camera's

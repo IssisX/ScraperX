@@ -53,6 +53,9 @@ class Team:
     agent_name: Mapping[str, str] = dataclasses.field(default_factory=dict)   # agent key -> the name it signs verdicts with
     fallback_order: Sequence[str] = ()     # agent keys asked, in turn, when an ask goes unanswered
     fallback_after_hours: float = 3.0      # an ask with no verdict this long is passed to the next agent
+    other_authored_asks: Sequence[str] = ()  # agent keys asked, in order, to review work not by Claude
+    pool: Sequence[str] = ()               # review.pool: who shares the reviews, one per PR (API_REVIEWER for the API)
+    api_reviews_claude: bool = False       # the automatic review also takes Claude's PRs, and its LAND counts there
 
     def vendor_of_branch(self, ref: str) -> str:
         for prefix, vendor in self.vendor_of_prefix:
@@ -94,6 +97,24 @@ def team_from_config(cfg: Mapping) -> Team:
     logins = cfg.get("verdict_logins")
     if not isinstance(logins, Sequence) or isinstance(logins, str) or not logins:
         raise ValueError("agents.yml: `verdict_logins` must list the GitHub logins whose verdicts count")
+    others = list(review.get("other_authored_asks", []))
+    for o in others:
+        if o not in agents:
+            raise ValueError(f"agents.yml: review.other_authored_asks names unknown agent {o!r}")
+        if agent_vendor[o] == "anthropic":
+            raise ValueError(f"agents.yml: review.other_authored_asks names {o!r}, a Claude agent: the paid "
+                             "Claude review is the fallback when no one listed here can take it")
+    pool = list(review.get("pool", []))
+    api_claude = review.get("api_reviews_claude", False)
+    if not isinstance(api_claude, bool):
+        raise ValueError("agents.yml: review.api_reviews_claude must be true or false")
+    for p in pool:
+        if p != API_REVIEWER and p not in agents:
+            raise ValueError(f"agents.yml: review.pool names unknown agent {p!r}")
+        if p != API_REVIEWER and agent_vendor[p] == "anthropic":
+            raise ValueError(f"agents.yml: review.pool names {p!r}, a Claude agent: the Claude API reviews as {API_REVIEWER!r}")
+    if len(set(pool)) != len(pool):
+        raise ValueError("agents.yml: review.pool names an agent twice")
     fallback = list(review.get("fallback_order", []))
     for f in fallback:
         if f not in agents:
@@ -109,12 +130,42 @@ def team_from_config(cfg: Mapping) -> Team:
     signs = {key: str((a.get("names") or [key])[0]) for key, a in agents.items()}
     prefixes.sort(key=lambda pv: -len(pv[0]))  # longest prefix wins
     return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor,
-                frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours)
+                frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours, tuple(others),
+                tuple(pool), api_claude)
 
 
 def _has_repro(body: str) -> bool:
     found = {m.group(1).lower() for m in REPRO_LINE.finditer(body)}
     return all(f in found for f in REPRO_FIELDS)
+
+
+CODEX_LOGIN = "chatgpt-codex-connector[bot]"   # the Codex GitHub app: reviews every PR on open, and on "@codex review"
+_CODEX_STATE = re.compile(r"codex-review-state:v1\s+(\{.*?\})\s*-->", re.DOTALL)
+
+
+def parse_codex_state(body: str, created_at: str, author_login: str) -> Verdict | None:
+    """The Codex app's summary comment -> its verdict on the commit it reviewed (Cory, 11-03: "If Codex
+    is the one that's available, great"). Only that app's own login counts. A finished review with no
+    unresolved findings is a LAND; one with unresolved findings is a FIX (it holds the merge until they
+    are resolved or a later Codex pass is clean); a running or unknown state is no verdict."""
+    import html
+    import json
+    if author_login.strip().lower() != CODEX_LOGIN:
+        return None
+    m = _CODEX_STATE.search(html.unescape(body))   # the app writes its braces as &#123; &#125;
+    if not m:
+        return None
+    try:
+        review = json.loads(m.group(1)).get("code_review") or {}
+    except (ValueError, AttributeError):
+        return None
+    sha = str(review.get("commit_sha") or "")
+    if review.get("status") != "completed" or not re.fullmatch(r"[0-9a-f]{7,40}", sha):
+        return None
+    unresolved = review.get("has_unresolved_findings")
+    if unresolved is None:
+        return None
+    return Verdict("openai", "Codex", "review", "FIX" if unresolved else "LAND", sha, created_at, author_login, False)
 
 
 def parse_verdict(body: str, created_at: str, author_login: str, team: Team) -> Verdict | None:
@@ -183,7 +234,18 @@ def open_fixes(verdicts: Iterable[Verdict], head_sha: str, head_time: str, kind:
     return [v for v in newest.values() if v.verdict == "FIX"]
 
 
-def merge_decision(pr: PrFacts, author_vendor: str) -> MergeDecision:
+def land_counts(v: Verdict, author_vendor: str, team: Team | None = None) -> bool:
+    """May this verdict be the LAND a PR needs: a known vendor other than the author's, or the automatic
+    Claude review (posted by the workflow bot) when review.api_reviews_claude lets it review Claude's work
+    (Cory, 11-03: "give it real work, the Claude on GitHub actions"; the Codex app still reviews every PR
+    on open and its findings still block)."""
+    if v.vendor not in ("unknown", author_vendor):
+        return True
+    return bool(team and team.api_reviews_claude and v.kind == "review" and v.author_login == BOT_LOGIN
+                and v.vendor == "anthropic")
+
+
+def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None) -> MergeDecision:
     """Design v3 section 2.3 step 6 with the owner's corrections. All must hold to MERGE:
 
     proof green on the head; one LAND naming the head from a known vendor other than the author's;
@@ -207,7 +269,7 @@ def merge_decision(pr: PrFacts, author_vendor: str) -> MergeDecision:
         waits.append(f"proof {pr.proof}")
     lands = [v for v in pr.verdicts
              if v.kind == "review" and v.verdict == "LAND" and names_head(v, pr.head_sha)
-             and v.vendor not in ("unknown", author_vendor)]
+             and land_counts(v, author_vendor, team)]
     if not lands:
         waits.append(f"no LAND on @{pr.head_sha[:8]} from a vendor other than {author_vendor}")
     if "eyes" in pr.needs:
@@ -238,13 +300,19 @@ class ReviewPick:
 
 
 def pick_reviewer(author_vendor: str, needs: frozenset[str], team: Team) -> ReviewPick:
-    """Owner's correction 4: only Claude can be woken automatically.
+    """Who reviews a PR, by its author's vendor.
 
-    A PR from any other vendor (or an unknown one) gets the automatic Claude review through the
-    API. A Claude-authored PR is asked of ChatGPT or Muse on the job issue: Muse first when the job
-    needs matron (its specialty), else the first agent in review.claude_authored_asks.
+    A PR by another vendor is asked of the first agent in review.other_authored_asks whose vendor is
+    not the author's (Cory, 11-03: Muse is always on and free, so it goes first). Only when none
+    fits, or the author is unknown, does it get the paid automatic Claude review through the API. A
+    Claude-authored PR is asked of ChatGPT or Muse on the job issue: Muse first when the job needs
+    matron (its specialty), else the first agent in review.claude_authored_asks.
     """
     if author_vendor != "anthropic":
+        if author_vendor != "unknown":
+            for agent in team.other_authored_asks:
+                if team.agent_vendor.get(agent) not in (None, "anthropic", author_vendor):
+                    return ReviewPick("ask", agent)
         return ReviewPick("claude-api", "")
     if "matron" in needs and team.matron_reviewer:
         return ReviewPick("ask", team.matron_reviewer)
@@ -252,6 +320,48 @@ def pick_reviewer(author_vendor: str, needs: frozenset[str], team: Team) -> Revi
         if team.agent_vendor.get(agent) != "anthropic":
             return ReviewPick("ask", agent)
     raise ValueError("agents.yml: no non-Claude agent to ask for a review of Claude's work")
+
+
+API_REVIEWER = "claude-api"   # the automatic Claude review through the API, as a member of review.pool
+
+
+def review_rotation(number: int, author_vendor: str, needs: frozenset[str], team: Team,
+                    api_ok: bool = True) -> list[str]:
+    """Who may review PR `number`, one of them per PR (Cory, 11-03: "get the ones that are available and
+    ready to do the reviews ... if we spread the work out, the merrier ... I'm not asking for two agents
+    to review the same shit"); choose_reviewer picks the free one.
+
+    The pool members whose vendor is not the author's, the Claude API only for work not by Claude
+    (reviews stay cross-model) and only while the budget allows a call (`api_ok`). The start rotates
+    with the PR number, so consecutive PRs go to different reviewers; a job that needs matron starts
+    at review.matron_reviewer, its specialty. An unknown author gets the API alone, as before."""
+    if author_vendor == "unknown":
+        return [API_REVIEWER] if api_ok else []
+    fits = [p for p in team.pool
+            if (p == API_REVIEWER and api_ok and (author_vendor != "anthropic" or team.api_reviews_claude))
+            or (p != API_REVIEWER and team.agent_vendor.get(p) not in (None, "anthropic", author_vendor))]
+    if not fits:
+        return []
+    start = number % len(fits)
+    if "matron" in needs and team.matron_reviewer in fits:
+        start = fits.index(team.matron_reviewer)
+    return fits[start:] + fits[:start]
+
+
+def choose_reviewer(rotation: Sequence[str], asked_at: Mapping[str, str], now_iso: str, hours: float,
+                    outstanding: Mapping[str, int], recent: Mapping[str, int]) -> str:
+    """The one reviewer this head gets (Cory, 11-03: "it should be available to take. Using any agent
+    available"). Someone already asked on this head, less than `hours` ago, keeps it. Otherwise the
+    free one: fewest reviews still unanswered on other PRs (`outstanding`; the API never has any), then
+    fewest asked in the last day (`recent`, so the work spreads), then the rotation's order. Anyone asked
+    on this head who let `hours` pass is skipped. "" when nobody is left."""
+    for who in rotation:
+        if who in asked_at and who != API_REVIEWER and not ask_is_overdue(asked_at[who], now_iso, hours):
+            return who
+    free = [w for w in rotation if w == API_REVIEWER or w not in asked_at]
+    if not free:
+        return ""
+    return min(free, key=lambda w: (outstanding.get(w, 0), recent.get(w, 0), rotation.index(w)))
 
 
 def next_fallback(asked: Sequence[str], author_vendor: str, team: Team) -> str:
@@ -272,11 +382,15 @@ def ask_is_overdue(asked_at: str, now_iso: str, hours: float) -> bool:
     return (now - then).total_seconds() >= hours * 3600
 
 
-def needs_review(pr: PrFacts) -> bool:
-    """Proof green and no LAND, FIX or NOTE yet on this head from a review."""
+def needs_review(pr: PrFacts, author_vendor: str = "", team: Team | None = None) -> bool:
+    """Proof green and no LAND, FIX or NOTE yet on this head from a review that can count: a verdict by the
+    author's own vendor (say the Codex app's unasked review of a ChatGPT PR) never answers the ask, since
+    merge_decision would not count its LAND. Its FIX still holds the merge back there."""
     if pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False
-    return not any(v.kind == "review" and names_head(v, pr.head_sha) for v in pr.verdicts)
+    return not any(v.kind == "review" and names_head(v, pr.head_sha)
+                   and not (author_vendor and v.vendor == author_vendor and not land_counts(v, author_vendor, team))
+                   for v in pr.verdicts)
 
 
 def needs_eye(pr: PrFacts) -> bool:

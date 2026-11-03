@@ -13,13 +13,16 @@ on:
 permissions:
   contents: read
 
-# Every commit is an immutable build candidate. A newer push must never cancel an
-# older commit's build, otherwise that commit can lose its APK. "Build candidate",
-# not "checkpoint": a checkpoint in ScraperX is the in-sim commit_checkpoint(), and
-# the word is not reused for CI artifacts.
+# On ScraperX-Claude every commit is an immutable build candidate: a newer push must
+# never cancel an older commit's build, otherwise that commit can lose its APK, so
+# trunk groups by commit and never cancels. On an integrate branch only the newest
+# head can land, so a newer push cancels the branch's older, superseded run (11-03:
+# four pushes on #181 ran four full proofs). "Build candidate", not "checkpoint": a
+# checkpoint in ScraperX is the in-sim commit_checkpoint(), and the word is not
+# reused for CI artifacts.
 concurrency:
-  group: scraperx-checkpoint-${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: scraperx-checkpoint-${{ github.workflow }}-${{ github.ref == 'refs/heads/ScraperX-Claude' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/ScraperX-Claude' }}
 
 env:
   GODOT_VERSION: 4.7-stable
@@ -783,6 +786,14 @@ jobs:
             --script res://tests/matron_hold_haptics_test.gd 2>&1 | tee artifacts/matron-hold-haptics.log
           grep -q '^MATRON_HOLD_HAPTICS PASS' artifacts/matron-hold-haptics.log
 
+      - name: Check one landed blow makes one Matron hit sound
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60s tools/godot/godot --headless --path godot \
+            --script res://tests/fight_s1_sound_dedupe_test.gd 2>&1 | tee artifacts/fight-s1-sound-dedupe.log
+          grep -q '^FIGHT_S1_DEDUPE PASS$' artifacts/fight-s1-sound-dedupe.log
+
       - name: Check every presentation script loads and the native bridge answers
         shell: bash
         run: |
@@ -797,6 +808,16 @@ jobs:
             --script res://tests/script_load_test.gd 2>&1 | tee artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
+
+      - name: Fight S1 act test
+        shell: bash
+        run: |
+          set -euo pipefail
+          # fight_s1_test.gd asserts a landed punch reads (flinch + grunt +
+          # haptics) and a whiff reads nothing.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/fight_s1_test.gd 2>&1 | tee artifacts/fight-s1.log
+          grep -q '^FIGHT_S1 PASS' artifacts/fight-s1.log
 
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4
