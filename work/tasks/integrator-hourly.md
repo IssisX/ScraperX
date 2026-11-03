@@ -20,7 +20,7 @@ D. **Delegate, never sit** (Cory, 11-03: *"doesn't leave shit sitting ... knows 
    keep handling events. Never two agents on the same thing: before handing out work, check the board and the job's
    owner label; one owner per job, one reviewer per PR. No re-reading what you already read, no re-running a check
    that passed on that head, no status post that says nothing new.
-S. **Size.** `get_session` (no id): at 400k `used_tokens` or more, hand off (handoff file,
+S. **Size.** `get_session` (no id): at 700k `used_tokens` or more, hand off (handoff file,
    `create_session`, move this task and the PR subscriptions, archive yourself). Same check for each
    Claude worker session; archive any whose job has landed. **Every handoff, the integrator's or a
    worker's, carries the collaboration whole:** the file has a section "Asks in flight" (the `asks.py`

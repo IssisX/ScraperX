@@ -164,7 +164,7 @@ agent, Claude included, works this way:
   make sure we're not doing the same thing"*). **Prevent the growth; a handoff is only the backstop** (11-03:
   *"Yes, prevent the growth. That's what I've been trying to tell you"*). Whatever is re-read grows the cost of
   every read, so each of these has a cap, checked hourly (step C) and trimmed the same hour:
-  - a session's context, 400k tokens (above);
+  - a session's context, 700k tokens (above);
   - the board, 100 comments, then a fresh one; a job issue or PR, 40, then its state goes into its body
     (or a fresh PR) and readers start there; retired threads are closed;
   - this file, 20 KB: a new rule replaces or shortens an old one, and dated quotes past a week move to
@@ -184,14 +184,14 @@ agent, Claude included, works this way:
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
   integrator decides, without asking him, and covers every Claude session, its own included.
-  - When to change: a session at **400k context tokens** (40%; `get_session` →
+  - When to change: a session at **700k context tokens** (11-03, Cory: "go with your pick": fewer handoffs, less lost; `get_session` →
     `external_metadata.context_usage.used_tokens`), checked on every hourly check for every Claude session, the
     integrator's own first; or one that has compacted, run 48 hours, or spends its turns re-reading more than working
     (11-03; the 11-03 integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context.
   - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
     $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
-    after every commit, proof run or big read. At 300k it writes its handoff (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
-    head, done, open failure with its repro, measured and ruled out, next step) and tells the integrator; at 400k
+    after every commit, proof run or big read. At 600k it writes its handoff (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
+    head, done, open failure with its repro, measured and ruled out, next step) and tells the integrator; at 700k
     it stops. The integrator also checks every worker's size on each event it handles, and every brief it writes
     carries this rule. Builds and tests write to a file and only their PASS/FAIL lines are read, never a whole log.
   - Keep the integrator's context small: subscribe only to PRs it opened or must merge itself (protected,

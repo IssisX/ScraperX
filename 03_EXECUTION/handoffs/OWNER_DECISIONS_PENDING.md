@@ -188,6 +188,10 @@ on Sonnet 5.5 at xhigh (Claude's pick, he agreed: half the price of Opus; Codex 
 open and its findings block). A Codex review that completed on the exact head with no findings counts as a
 LAND (first used on #175, 1:45 PM Central). The $10 API day cap is gone (Cory, 11-03); only the $100 month cap holds.
 
+Session size, 11-03 3:15 PM Central (Cory: "Yes, go with your pick"): the handoff line moves from 400k to 700k
+context tokens (handoff note at 600k), for the integrator and every worker. Why: six integrators in one day lost
+know-how at each handoff and the 8-deep session chain runs out; a turn at the top costs about 1.7x, but half the handoffs.
+
 Workers, 11-03 2:45 PM Central (Cory, to the J-016 session): *"start the next job while CI runs and always"*.
 Every worker starts its next job while CI proves the last; in CLAUDE.md ("Nobody waits") and every brief.
 
