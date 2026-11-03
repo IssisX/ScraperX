@@ -7,8 +7,11 @@ No network, no clock: every time is given.
 from __future__ import annotations
 
 import datetime as dt
+import json
+import os
 import pathlib
 import sys
+import types
 import unittest
 from decimal import Decimal
 
@@ -16,7 +19,16 @@ HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import budget as money  # noqa: E402
+import claude_calls  # noqa: E402
 import rules  # noqa: E402
+import switch  # noqa: E402
+
+try:
+    import anthropic  # noqa: F401
+    import httpx2
+    HAVE_SDK = True
+except ImportError:   # the free parts of the switch run without the SDK
+    HAVE_SDK = False
 
 AGENTS = {
     "agents": {
@@ -355,6 +367,338 @@ class SessionBudget(unittest.TestCase):
         self.assertEqual(claude_calls.cents(Decimal("1.259")), "125")
         with self.assertRaises(claude_calls.ClaudeCallError):
             claude_calls.cents(Decimal("0.004"))
+
+
+class FakeGH:
+    """The GitHub calls the watcher and orchestrate() make: reads from a table, writes recorded (printed in a dry run)."""
+
+    def __init__(self, issues=None, comments=None, dry_run=False):
+        self.repo, self.dry_run = "IssisX/ScraperX", dry_run
+        self.issues, self.comments = issues or [], comments or {}
+        self.gets, self.posted, self.log = [], [], []
+
+    def get(self, path, accept=""):
+        self.gets.append(path)
+        if "/issues?" in path:
+            return self.issues
+        return next(i for i in self.issues if path.endswith(f"/issues/{i['number']}"))
+
+    def paged(self, path, key=""):
+        return list(self.comments.get(int(path.split("/issues/")[1].split("/")[0]), []))
+
+    def comment(self, number, body, what=""):
+        if self.dry_run:
+            self.log.append(f"DRY comment on #{number}")
+        else:
+            self.posted.append((number, body))
+
+    def write(self, method, path, body=None, what=""):
+        self.log.append(f"{method} {path}")
+
+
+class FakeSessions:
+    """The slice of client.beta.sessions the watcher uses; `states` maps a session id to what the API would say."""
+
+    def __init__(self, states):
+        self.states, self.sent, self.reads = states, [], []
+        self.events = types.SimpleNamespace(list=self._events, send=self._send)
+
+    def retrieve(self, session_id):
+        self.reads.append(session_id)
+        st = self.states[session_id]
+        if isinstance(st, Exception):
+            raise st
+        cost = None if st.get("cents") is None else types.SimpleNamespace(amount=st["cents"], currency=st.get("cur", "USD"))
+        return types.SimpleNamespace(status=st["status"], usage=types.SimpleNamespace(list_cost=cost))
+
+    def _events(self, session_id, limit, order, types):
+        assert (limit, order, types) == (1, "desc", ["session.status_idle"])
+        st = self.states[session_id]
+        if not st.get("stop"):
+            return types_ns(data=[])
+        reason = types_ns(type=st["stop"], event_ids=st.get("pending", []))
+        return types_ns(data=[types_ns(id=st.get("idle", "sevt_idle1"), stop_reason=reason)])
+
+    def _send(self, session_id, events):
+        self.sent.append((session_id, events))
+
+
+types_ns = types.SimpleNamespace
+
+
+def fake_client(states):
+    sessions = FakeSessions(states)
+    return types.SimpleNamespace(beta=types.SimpleNamespace(sessions=sessions)), sessions
+
+
+BOT = rules.BOT_LOGIN
+SESSION = "sesn_011CZxAbc123Def456"
+RUN = "a1b2c3d4e5f6"
+
+
+def issue(number=138, title="J-031 Switchboard v0", labels=("job", "needs:orchestrator")):
+    return {"number": number, "title": title, "labels": [{"name": n} for n in labels]}
+
+
+def start_comment(number=138, session=SESSION, run=RUN, login=BOT):
+    body = (f"Switchboard, 9:00 AM Central: orchestrator session `{session}` started with a $8.00 budget. Trace: x\n\n"
+            f"{switch.MARK.format(kind='orchestrator', pr=number, head='-')}")
+    if run:
+        body += "\n" + switch.RUN_MARK.format(run=run)
+    return {"body": body, "user": {"login": login}}
+
+
+def make_switch(gh, states, ledger_lines=(), key="sk-ant-test"):
+    sw = switch.Switch.__new__(switch.Switch)
+    sw.gh, sw.now, sw.out = gh, NOW, lambda line: sw.lines.append(line)
+    sw.lines, sw.appended = [], []
+    sw.team = TEAM
+    sw.budget = money.budget_from_config(dict(BUDGET, orchestrator={
+        "enabled": True, "agent_id": "agent_1", "environment_id": "env_1", "session_usd": "8.00"}))
+    sw.initial = list(ledger_lines)
+    sw.entries = lambda: money.parse_log("\n".join(sw.initial + sw.appended))
+    sw._claude, sw.sessions = fake_client(states)
+    if not gh.dry_run:
+        sw.append = lambda line, what: sw.appended.append(line)
+    else:
+        sw._ledger = ("", None)
+    os.environ["ANTHROPIC_API_KEY"] = key
+    return sw
+
+
+def reserve_line(run=RUN, note="orchestrator#138", usd="8.00"):
+    return money.record(NOW - dt.timedelta(hours=1), run, "reserve", "orchestrator", "J-031", Decimal(usd), note)
+
+
+@unittest.skipUnless(HAVE_SDK, "anthropic not installed: claude_calls imports it for its error classes")
+class SessionWatcher(unittest.TestCase):
+    def tearDown(self):
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+
+    def watch(self, states, comments=None, ledger=(reserve_line(),), gh=None, issues=None):
+        gh = gh or FakeGH(issues or [issue()], {138: comments if comments is not None else [start_comment()]})
+        sw = make_switch(gh, states, ledger)
+        return sw, gh, sw.watch_sessions()
+
+    def test_a_running_session_is_left_alone(self):
+        sw, gh, failed = self.watch({SESSION: {"status": "running"}})
+        self.assertEqual((failed, gh.posted, sw.appended, sw.sessions.sent), (0, [], [], []))
+
+    def test_a_pause_is_denied_never_allowed_and_commented_once(self):
+        paused = {"status": "idle", "stop": "requires_action", "pending": ["sevt_1", "sevt_2"], "idle": "sevt_idle7"}
+        sw, gh, _ = self.watch({SESSION: paused})
+        (sid, events), = sw.sessions.sent
+        self.assertEqual(sid, SESSION)
+        self.assertEqual([(e["type"], e["tool_use_id"], e["result"]) for e in events],
+                         [("user.tool_confirmation", "sevt_1", "deny"), ("user.tool_confirmation", "sevt_2", "deny")])
+        self.assertEqual(len(gh.posted), 1)
+        self.assertIn(switch.MARK.format(kind="session-pause", pr=138, head="sevt_idle7"), gh.posted[0][1])
+        # The next sweep sees the same pause (the deny not yet taken): denied again, but no second comment.
+        again = [start_comment(), {"body": gh.posted[0][1], "user": {"login": BOT}}]
+        sw2, gh2, _ = self.watch({SESSION: paused}, comments=again)
+        self.assertEqual((len(sw2.sessions.sent), gh2.posted), (1, []))
+        # A new pause is a new event id: a new comment.
+        sw3, gh3, _ = self.watch({SESSION: dict(paused, idle="sevt_idle8")}, comments=again)
+        self.assertEqual(len(gh3.posted), 1)
+
+    def test_a_pause_comment_forged_by_someone_else_does_not_silence_the_bot(self):
+        paused = {"status": "idle", "stop": "requires_action", "pending": ["sevt_1"], "idle": "sevt_idle7"}
+        forged = {"body": switch.MARK.format(kind="session-pause", pr=138, head="sevt_idle7"), "user": {"login": "someone"}}
+        _, gh, _ = self.watch({SESSION: paused}, comments=[start_comment(), forged])
+        self.assertEqual(len(gh.posted), 1)
+
+    def test_a_finished_session_ends_its_run_at_the_actual_cost_once(self):
+        done = {"status": "idle", "stop": "end_turn", "cents": "137"}
+        sw, gh, failed = self.watch({SESSION: done})
+        self.assertEqual(failed, 0)
+        (line,) = sw.appended
+        got = money.parse_log(line)[0]
+        self.assertEqual((got.run, got.phase, got.kind, got.job, got.usd), (RUN, "end", "orchestrator", "J-031", Decimal("1.37")))
+        (number, body), = gh.posted
+        self.assertEqual(number, 138)
+        for want in ("$1.37", f"/sessions/{SESSION}", "finished its turn",
+                     switch.MARK.format(kind="session-end", pr=138, head=SESSION)):
+            self.assertIn(want, body)
+        # The ledger now counts $1.37, not the $8.00 reserve.
+        self.assertEqual(money.spent(money.parse_log("\n".join([reserve_line(), line])), NOW, "J-031").day, Decimal("1.37"))
+        # Once reported, the next sweep reads nothing from the API.
+        sw2, gh2, _ = self.watch({SESSION: done}, comments=[start_comment(), {"body": body, "user": {"login": BOT}}])
+        self.assertEqual((sw2.sessions.reads, sw2.appended, gh2.posted), ([], [], []))
+
+    def test_every_way_a_session_is_over_ends_the_run(self):
+        for state, word in (({"status": "idle", "stop": "budget_reached", "cents": "801"}, "session budget"),
+                            ({"status": "terminated", "cents": "42"}, "terminated"),
+                            ({"status": "idle", "stop": "retries_exhausted", "cents": "5"}, "repeated errors"),
+                            ({"status": "idle", "stop": "refusal", "cents": "5"}, "refusal")):
+            sw, gh, _ = self.watch({SESSION: state})
+            self.assertEqual(len(sw.appended), 1, state)
+            self.assertIn(word, gh.posted[0][1])
+
+    def test_no_reported_cost_keeps_the_reserve_and_says_nothing(self):
+        sw, gh, _ = self.watch({SESSION: {"status": "idle", "stop": "end_turn", "cents": None}})
+        self.assertEqual((sw.appended, gh.posted), ([], []))
+
+    def test_an_end_already_on_the_ledger_is_not_written_twice(self):
+        ended = money.record(NOW, RUN, "end", "orchestrator", "J-031", Decimal("1.37"))
+        sw, gh, _ = self.watch({SESSION: {"status": "idle", "stop": "end_turn", "cents": "137"}}, ledger=(reserve_line(), ended))
+        self.assertEqual(sw.appended, [])
+        self.assertEqual(len(gh.posted), 1)   # the comment a failed earlier run never posted
+
+    def test_a_session_from_before_the_run_id_rode_in_the_comment_is_found_by_its_ledger_note(self):
+        old = start_comment(run="")
+        other = reserve_line(run="ffffffffffff", note="orchestrator#139")
+        sw, gh, _ = self.watch({SESSION: {"status": "idle", "stop": "end_turn", "cents": "10"}}, comments=[old],
+                               ledger=(other, reserve_line()))
+        self.assertEqual(money.parse_log(sw.appended[0])[0].run, RUN)
+        sw, gh, _ = self.watch({SESSION: {"status": "idle", "stop": "end_turn", "cents": "10"}}, comments=[old], ledger=())
+        self.assertEqual(sw.appended, [])   # no reserve to close: say so, invent nothing
+        self.assertIn("No reserve", gh.posted[0][1])
+
+    def test_only_the_bots_start_comment_binds_a_session(self):
+        unknown = {"body": "orchestrator session `sesn_x` started\n" + switch.MARK.format(kind="orchestrator", pr=138, head="-"),
+                   "user": {"login": BOT}}   # the no-answer comment names no session
+        no_id = {"body": "no answer\n" + switch.MARK.format(kind="orchestrator", pr=138, head="-"), "user": {"login": BOT}}
+        for comments in ([start_comment(login="someone")], [no_id], [{"body": "orchestrator session `" + SESSION + "`", "user": {"login": BOT}}], []):
+            sw, gh, _ = self.watch({SESSION: {"status": "terminated", "cents": "1"}}, comments=comments)
+            self.assertEqual((sw.sessions.reads, sw.appended, gh.posted), ([], [], []), comments)
+        del unknown
+
+    def test_one_sessions_trouble_never_stops_the_others(self):
+        other = "sesn_other1"
+        gh = FakeGH([issue(138), issue(140)], {138: [start_comment()], 140: [start_comment(140, other, "0123456789ab")]})
+        boom = claude_calls.ClaudeCallError("session read answered HTTP 500")
+        sw = make_switch(gh, {SESSION: boom, other: {"status": "idle", "stop": "end_turn", "cents": "7"}},
+                         (reserve_line(), reserve_line("0123456789ab", "orchestrator#140")))
+        self.assertEqual(sw.watch_sessions(), 1)
+        self.assertEqual([n for n, _ in gh.posted], [140])
+        self.assertTrue(any(l.startswith("ERROR       #138") for l in sw.lines))
+
+    def test_the_issue_list_is_one_bounded_page_of_open_job_issues_and_skips_prs(self):
+        gh = FakeGH([dict(issue(5), pull_request={})], {})
+        sw = make_switch(gh, {})
+        sw.watch_sessions()
+        self.assertEqual(gh.gets, ["repos/IssisX/ScraperX/issues?labels=job,needs:orchestrator&state=open&per_page=30"])
+        self.assertEqual(sw.lines, [])
+
+    def test_a_dry_run_acts_on_nothing(self):
+        gh = FakeGH([issue()], {138: [start_comment()]}, dry_run=True)
+        sw = make_switch(gh, {SESSION: {"status": "idle", "stop": "requires_action", "pending": ["sevt_1"]}}, (reserve_line(),))
+        sw.watch_sessions()
+        self.assertEqual((sw.sessions.sent, gh.posted, gh.log), ([], [], ["DRY comment on #138"]))
+        self.assertTrue(any(l.startswith("DRY  deny 1") for l in sw.lines))
+        gh = FakeGH([issue()], {138: [start_comment()]}, dry_run=True)
+        sw = make_switch(gh, {SESSION: {"status": "idle", "stop": "end_turn", "cents": "137"}}, (reserve_line(),))
+        sw.watch_sessions()
+        self.assertEqual((gh.posted, gh.log), ([], ["DRY comment on #138"]))
+        self.assertTrue(any(l.startswith("DRY  append") for l in sw.lines))
+        # Without a key a dry run does not touch the API at all.
+        sw = make_switch(gh, {}, (reserve_line(),), key="")
+        os.environ.pop("ANTHROPIC_API_KEY")
+        sw.watch_sessions()
+        self.assertTrue(any("would read session" in l for l in sw.lines))
+
+
+class StartFailures(unittest.TestCase):
+    def setUp(self):
+        os.environ["AGENT_GITHUB_TOKEN"] = "ghp_test"
+        self.addCleanup(os.environ.pop, "AGENT_GITHUB_TOKEN", None)
+
+    def orchestrate(self, outcome):
+        gh = FakeGH([dict(issue(138), body="do it")], {138: []})
+        sw = make_switch(gh, {})
+        self.addCleanup(os.environ.pop, "ANTHROPIC_API_KEY", None)
+
+        def start(*args, **kw):
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+        original, claude_calls.start_session = claude_calls.start_session, start
+        self.addCleanup(setattr, claude_calls, "start_session", original)
+        sw.orchestrate(138)
+        return sw, gh
+
+    def test_an_http_status_error_releases_the_reserve_and_names_class_and_status_only(self):
+        sw, gh = self.orchestrate(claude_calls.SessionStartRejected("beta.sessions.create answered HTTP 400", 400, "BadRequestError"))
+        reserve, end = (money.parse_log(l)[0] for l in sw.appended)
+        self.assertEqual((reserve.phase, reserve.usd, end.phase, end.usd, end.run), ("reserve", Decimal("8.00"), "end", Decimal("0"), reserve.run))
+        self.assertEqual(money.spent(money.parse_log("\n".join(sw.appended)), NOW, "J-031").day, Decimal("0"))
+        (number, body), = gh.posted
+        self.assertIn("HTTP 400 (BadRequestError)", body)
+        self.assertNotIn(switch.MARK.format(kind="orchestrator", pr=138, head="-"), body)   # a retry is allowed
+        self.assertIn("orchestrator-failed", body)
+
+    def test_a_local_refusal_before_any_request_also_releases_the_reserve(self):
+        sw, gh = self.orchestrate(claude_calls.ClaudeCallError("session budget 0.004 is under one cent"))
+        self.assertEqual(money.parse_log(sw.appended[1])[0].usd, Decimal("0"))
+        self.assertIn("under one cent", gh.posted[0][1])
+
+    def test_no_answer_keeps_the_reserve_and_blocks_a_second_session(self):
+        sw, gh = self.orchestrate(claude_calls.SessionStartUnknown("beta.sessions.create could not connect (x)", ["APIConnectionError", "ConnectError"]))
+        self.assertEqual([money.parse_log(l)[0].phase for l in sw.appended], ["reserve"])
+        body = gh.posted[0][1]
+        self.assertIn("APIConnectionError, ConnectError", body)
+        self.assertIn(switch.MARK.format(kind="orchestrator", pr=138, head="-"), body)
+        self.assertIsNone(sw.start_comment([{"body": body, "user": {"login": BOT}}], 138))   # nothing for the watcher to bind
+
+    def test_a_started_session_carries_its_run_id_to_the_watcher(self):
+        sw, gh = self.orchestrate(SESSION)
+        run = money.parse_log(sw.appended[0])[0].run
+        found = sw.start_comment([{"body": gh.posted[0][1], "user": {"login": BOT}}], 138)
+        self.assertEqual(found, (SESSION, run))
+
+
+@unittest.skipUnless(HAVE_SDK, "anthropic and httpx2 not installed")
+class SdkRequests(unittest.TestCase):
+    """The watcher's and the start's requests, rendered through the pinned SDK onto a mock transport."""
+
+    def client(self, handler):
+        import anthropic
+        return anthropic.Anthropic(api_key="sk-ant-test", max_retries=0,
+                                   http_client=httpx2.Client(transport=httpx2.MockTransport(handler)))
+
+    def test_read_a_paused_session_and_deny_each_pending_call(self):
+        seen = []
+
+        def handler(req):
+            seen.append((req.method, req.url.path, req.url.query.decode(), req.content.decode()))
+            if req.url.path.endswith("/events") and req.method == "GET":
+                return httpx2.Response(200, json={"data": [{"id": "sevt_idle1", "type": "session.status_idle", "processed_at": "2026-11-02T18:00:00Z",
+                                                            "stop_reason": {"type": "requires_action", "event_ids": ["sevt_1", "sevt_2"]}}], "next_page": None})
+            if req.url.path.endswith("/events"):
+                return httpx2.Response(200, json={"data": []})
+            return httpx2.Response(200, json={"id": SESSION, "status": "idle", "usage": {"list_cost": {"amount": "137", "currency": "USD"}}})
+        c = self.client(handler)
+        st = claude_calls.session_state(c, SESSION)
+        self.assertEqual(st, claude_calls.SessionState("idle", "requires_action", ("sevt_1", "sevt_2"), "sevt_idle1", 137))
+        self.assertEqual(claude_calls.deny_pending(c, SESSION, st.pending), 2)
+        sent = json.loads(seen[-1][3])["events"]
+        self.assertEqual([(e["type"], e["tool_use_id"], e["result"]) for e in sent],
+                         [("user.tool_confirmation", "sevt_1", "deny"), ("user.tool_confirmation", "sevt_2", "deny")])
+        self.assertIn("limit=1", seen[1][2])
+        self.assertIn("order=desc", seen[1][2])
+        self.assertIn("session.status_idle", seen[1][2])
+
+    def test_a_session_id_is_checked_before_it_reaches_a_url(self):
+        with self.assertRaises(claude_calls.ClaudeCallError):
+            claude_calls.session_state(self.client(lambda r: httpx2.Response(200, json={})), "sesn_x/../agents")
+
+    def test_start_status_error_and_connection_error_are_told_apart(self):
+        import anthropic
+
+        def reject(req):
+            return httpx2.Response(400, json={"type": "error", "error": {"type": "invalid_request_error", "message": "secret-ish text"}},
+                                   headers={"x-api-key": "sk-ant-leak"})
+        args = ("agent_1", "env_1", "J-031 #138", "go", Decimal("8.00"), "https://github.com/IssisX/ScraperX", "ghp_test", "ScraperX-Claude", "")
+        with self.assertRaises(claude_calls.SessionStartRejected) as rej:
+            claude_calls.start_session(self.client(reject), *args)
+        self.assertEqual((rej.exception.status, rej.exception.error_class), (400, "BadRequestError"))
+
+        def drop(req):
+            raise httpx2.ConnectError("boom", request=req)
+        with self.assertRaises(claude_calls.SessionStartUnknown) as unk:
+            claude_calls.start_session(self.client(drop), *args)
+        self.assertIn("APIConnectionError", unk.exception.classes)
+        self.assertIsInstance(unk.exception.__cause__, anthropic.APIConnectionError)
 
 
 if __name__ == "__main__":
