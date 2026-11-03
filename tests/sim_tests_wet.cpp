@@ -276,7 +276,12 @@ void run_wet_e_guard(const bool expect) {
     require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin and four summit bodies");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
-    require(world.loose_stock_count() == 325 && stock.hash == 12537791641516680014ULL,
+    // Re-pinned for J-017 (#183): the 396 ring's old boards and ladder are gone
+    // and the wall-run gorge is new solid, so stock placement near the 396 ring
+    // moved. Before 12537791641516680014, now 791125519496319058; the count
+    // (325) is as before and no piece sits inside the gorge. With #180 or #182
+    // merged the hash is a different one: recompute on the merged tree.
+    require(world.loose_stock_count() == 325 && stock.hash == 791125519496319058ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");
