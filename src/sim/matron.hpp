@@ -1090,9 +1090,6 @@ public:
     static constexpr float kHandoffS = 3.0F;
     static constexpr float kOverPushM = 0.15F;     // her belt hand out past its pin pose
     static constexpr float kOverOutPastM = 0.35F;  // his middle this far out: she lets go of his belt
-    static constexpr float kBareLipPushM = 0.50F;  // a bare lip: her belt hand out past its pin pose, sliding him off it
-    static constexpr float kBareLipTipM = 0.25F;   // his middle this far past a bare lip: her fingers open on his belt
-    static constexpr float kBareLipHangUpM = 0.30F;   // a bare lip's hang: her hand this high (her deck's height is past her bent arm)
     // Beat 5, hanging by one ankle: her hand on the rail's top, just out past
     // its line, him head down against the outside of her deck.
     static constexpr float kHangUpM = 0.08F;
@@ -1614,9 +1611,6 @@ public:
     [[nodiscard]] Grip grip_point() const noexcept { return grip_point_; }
     // Her first hand between two holds on him (the hold goes on).
     [[nodiscard]] bool regripping() const noexcept { return regrip_ && holding_state(state_); }
-    // Over a bare lip, between her belt hand opening and her hands on his
-    // ankle (step_rail): his getting up waits.
-    [[nodiscard]] bool bare_lip_over() const noexcept { return bare_lip_ && regrip_ && holding_state(state_); }
     // She opens her first hand to take him by another point (the hold goes
     // on: grip_lost ignores it). Once.
     [[nodiscard]] bool take_regrip_let_go() noexcept {
@@ -2282,8 +2276,6 @@ private:
     // her and to hang the body there (and its way over the edge); and a
     // fall from where he would really hang that kills.
     [[nodiscard]] bool hang_room(float sx, float sz, float nx, float nz, float feet) const;
-    [[nodiscard]] bool hang_room_real(float sx, float sz, float nx, float nz, float feet) const;
-    [[nodiscard]] bool lethal_from_real(float sx, float sz, float nx, float nz, float feet) const;
     [[nodiscard]] bool lethal_from(float sx, float sz, float nx, float nz, float feet) const;
     // The let-go not lethal: her stand a step along the edge toward one that
     // is (false: none within kFatalShiftMaxM).
@@ -2588,7 +2580,6 @@ private:
     bool back_lifted_ = false;             // back in: his ankle lifted clear over the rail's top
     bool relaid_ = false;
     int over_tries_ = 0;
-    bool bare_lip_ = false;   // this over at a bare lip: tipped off it, his ankle taken as it came
     float pin_rim_[4] = {0.0F, 0.0F, 0.0F, 1.0F};   // the rail she pins him on: x, z, out x, out z                   // beat 4 again: not over the first time                  // beat 4's start: him laid back across the rail again by his belt
     float rail_up_ = 0.0F;                 // the top of the steel at her rail's line, over her feet
     std::uint32_t swats_ = 0;

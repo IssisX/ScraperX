@@ -482,18 +482,11 @@ bool Matron::choose_fatal_edge(const float ax, const float az, const float feet)
     std::stable_sort(spots.begin(), spots.end(), [](const Spot &a, const Spot &b) {
         return a.across != b.across ? a.across : a.d < b.d;
     });
-    // First with room for the whole old heave; none, with room for her real
-    // arm's beats (the pin at her deck's height, the over, the hang under her
-    // hand: HOLD_WITH_REAL_ARMS.md), which an overhead beam does not block.
-    for (int pass = 0; pass < 2; ++pass) {
     for (const Spot &spot : spots) {
         const float sx = spot.lip_x - spot.nx * kRimStandM;
         const float sz = spot.lip_z - spot.nz * kRimStandM;
-        const bool room = pass == 0 ? hang_room(sx, sz, spot.nx, spot.nz, feet)
-                                    : hang_room_real(sx, sz, spot.nx, spot.nz, feet);
-        const bool lethal = pass == 0 ? lethal_from(sx, sz, spot.nx, spot.nz, feet)
-                                      : lethal_from_real(sx, sz, spot.nx, spot.nz, feet);
-        if (!straight_on_floor(ax, az, sx, sz, feet) || !room || !lethal) {
+        if (!straight_on_floor(ax, az, sx, sz, feet) || !hang_room(sx, sz, spot.nx, spot.nz, feet) ||
+            !lethal_from(sx, sz, spot.nx, spot.nz, feet)) {
             continue;
         }
         rim_x_ = sx;
@@ -504,7 +497,6 @@ bool Matron::choose_fatal_edge(const float ax, const float az, const float feet)
         aim_ledge_ = false;
         fatal_edge_ = RVec3(spot.lip_x, feet, spot.lip_z);
         return true;
-    }
     }
     return false;
 }
@@ -534,48 +526,6 @@ bool Matron::hang_room(const float sx, const float sz, const float nx, const flo
            clear(player_cast_shape_, 0.5F * (kHeaveOutM + kDangleOutM), 0.5F * (over_y + com_y)) &&
            clear(player_cast_shape_, kFatalWindowOutM, feet + kFatalWindowUpM - kPlayerHalfM) &&
            clear(player_cast_shape_, kFatalDropOutM, feet + kFatalDropUpM - kPlayerHalfM);
-}
-
-bool Matron::hang_room_real(const float sx, const float sz, const float nx, const float nz, const float feet) const {
-    if (!room_to_stand(RVec3(sx, feet + kStandCentre, sz))) {
-        return false;
-    }
-    IgnoreMultipleBodiesFilter skip;
-    skip.IgnoreBody(body_);
-    skip.IgnoreBody(player_);
-    const auto clear = [&](const Shape *shape, const float out_m, const float y) {
-        AnyHitCollisionCollector<CollideShapeCollector> touch;
-        CollideShapeSettings settings;
-        const RVec3 pose(sx + nx * out_m, y, sz + nz * out_m);
-        physics_.GetNarrowPhaseQuery().CollideShape(shape, Vec3::sReplicate(1.0F), RMat44::sTranslation(pose),
-                                                    settings, pose, touch, {}, {}, skip);
-        return !touch.HadHit();
-    };
-    // Hung head down under her hand (kHangOutM + kFatalOutM out from her
-    // middle, about her deck's height or her rail's): his body under it, clear
-    // of all but her deck's face and the strip along its lip (he may rest
-    // against those); and the air over the lip he goes over.
-    const float out = kHangOutM + kFatalOutM;
-    CapsuleShape body(0.6F, 0.25F);
-    body.SetEmbedded();
-    SphereShape over(0.35F);
-    over.SetEmbedded();
-    return clear(&body, out + 0.05F, feet - 1.2F) && clear(&over, out - 0.15F, feet + 0.6F);
-}
-
-// The fall from his real-arm hang (under her hand, kHangOutM + kFatalOutM
-// out from her middle, his middle a body's half under her deck), with her
-// least flick out (kFatalTossMps), kills; and from kFatalSwayM either side.
-bool Matron::lethal_from_real(const float sx, const float sz, const float nx, const float nz, const float feet) const {
-    const float out = kHangOutM + kFatalOutM;
-    for (const float along : {0.0F, -kFatalSwayM, kFatalSwayM}) {
-        const RVec3 hang(sx + nx * out + nz * along, feet - 0.95F, sz + nz * out - nx * along);
-        if (fall_impact_mps(hang, Quat::sIdentity(), Vec3(nx, 0.0F, nz) * kFatalTossMps[0], Vec3::sZero(),
-                            kFatalChooseMarginM) < kFatalLandMps) {
-            return false;
-        }
-    }
-    return true;
 }
 
 // The fall from where he will really hang at her let-go there (kFatalDropOutM
@@ -1236,7 +1186,6 @@ void Matron::reset_beats() noexcept {
     back_lifted_ = false;
     relaid_ = false;
     over_tries_ = 0;
-    bare_lip_ = false;
     rail_up_ = 0.0F;
 }
 
@@ -1442,16 +1391,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // Over's start: back at her spot, his middle on the rail's top in her
         // first hand; her second hand to his ankle.
         at_spot();
-        // In the fatality, a bare lip (no rail to lay him over): his ankle is out on her deck,
-        // past her arm. She slides him out by his belt till he tips head
-        // first over the lip; as his legs come over, her second hand takes his
-        // ankle.
-        const bool bare_lip = fatal_hold_ && rail_up_ < 0.2F && !pin_here_ && grip_point_ == Grip::Belt;
-        if (bare_lip && to_spot <= 0.2F) {
-            pose_hand(dt, rail_pose(at, feet, kBeltUpM, kBeltOutM + kBareLipPushM, kBeltSideM), 0.8F * kHandSpeedMps);
-        } else {
-            pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), kHandSpeedMps);
-        }
+        pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), kHandSpeedMps);
         if (to_spot > 0.2F && hold_s_ < 2.0F * kHandoffS) {
             break;
         }
@@ -1459,22 +1399,6 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         if (hand2_on_ != 1) {
             pull2_n_ = kHandReachPullN;
             pose_hand2(dt, player_ankle_, kHandReachSpeedMps);
-            if (bare_lip && to_spot <= 0.2F) {
-                // His middle out past the lip (or her arm out as far as it
-                // goes): her fingers open on his belt; he tips head first over
-                // it, his legs come up past her, and her hands take his ankle.
-                const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
-                const float past_lip = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
-                                       (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-                if (past_lip >= kBareLipTipM || hold_s_ > kHandoffS) {
-                    bare_lip_ = true;
-                    begin_regrip(Grip::Ankle);
-                    hold_phase_ = 6;
-                    hold_s_ = 0.0F;
-                    over_up_ = false;
-                    break;
-                }
-            }
             if (hold_s_ > 2.0F * kHandoffS) {
                 back_in();
             }
@@ -1524,15 +1448,9 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // top and out onto it: he tips over head first.
         at_spot();
         const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
-        const RVec3 hang = rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM), kHangOutM, kHangSideM);
+        const RVec3 hang = rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM, kHangSideM);
         if (regrip_) {
             pose_hand(dt, player_ankle_, kHandReachSpeedMps);
-            if (bare_lip_ && hand2_want_ == 1) {
-                // Over a bare lip both her hands go for his ankle as it comes;
-                // her second hand with it brings it in before her, to her first.
-                pose_hand2(dt, hand2_on_ == 1 ? rail_pose(at, feet, rail_up_ + 0.45F, kOverOutM + 0.05F, 0.0F) : player_ankle_,
-                           hand2_on_ == 1 ? 0.6F * kHandSpeedMps : kHandReachSpeedMps);
-            }
             if (hold_s_ > kHandoffS) {
                 back_in();
             }
@@ -1557,7 +1475,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
     default: {
         // Hanging by one ankle against the outside of her deck.
         at_spot();
-        const RVec3 hang = rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM), kHangOutM, kHangSideM);
+        const RVec3 hang = rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM, kHangSideM);
         if (!fatal_hold_) {
             // (The fatality's hand goes out to her let-go pose below instead.)
             pose_hand(dt, hang, kHandSpeedMps);
@@ -1583,7 +1501,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // he is, as he moves, is foreseen to kill; none by kFatalLetGoByS, she
         // hauls him back in for her floor version.
         const bool due = fatal_s_ >= kFatalLetGoFromS;
-        pose_hand(dt, rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM), kHangOutM + kFatalOutM, kHangSideM),
+        pose_hand(dt, rail_pose(at, feet, rail_up_ + kHangUpM, kHangOutM + kFatalOutM, kHangSideM),
                   kHandSpeedMps);
         // Decided at the end of his swing (slow, never in toward her deck's
         // face), she standing
