@@ -911,6 +911,7 @@ void test_matron_climb_support();
 void run_matron_state_exits();
 void run_matron_crash();
 void run_matron_mischief();
+void run_matron_wreck();
 void run_matron_collision();
 void run_matron_balance();
 void run_matron_pipe();

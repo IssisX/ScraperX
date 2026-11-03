@@ -679,8 +679,27 @@ public:
     static constexpr float kTakeM = 0.85F;
     static constexpr float kHandsUpM = 0.25F;
     // Light stock only: a toolbox (18 kg) she carries off; a drum (55 kg)
-    // she leaves where the player set it.
+    // she shoves instead (below).
     static constexpr float kTakeMaxKg = 25.0F;
+    // Her wrecking (J-016): a piece of the player's too heavy for her hands
+    // (over kTakeMaxKg, up to kStockShoveMaxKg) on her floor she shoves off
+    // the nearest open lip within kStockShoveReachM of it: a drop with no
+    // floor within kStockShoveDropM under it, and nothing standing between
+    // the piece and the lip. She walks to its far side, then pushes it with
+    // her hands at kStockShoveMps: the push is a force from her feet's own
+    // tick account (feet_push: within her 8 kN / 44 kW with her stride), the
+    // same force on the piece at the face she pushes and its opposite on
+    // her, never a velocity or a place set. Her walk's edge guard stops her
+    // at the lip; the piece goes on over it and lies, a plain body, where it
+    // lands (his to fetch back). No nearer the lip for kFetchStallSeconds,
+    // she gives it up for kFetchRetrySeconds, as a fetch.
+    static constexpr float kStockShoveMaxKg = 200.0F;
+    static constexpr float kStockShoveReachM = 6.0F;
+    static constexpr float kStockShoveDropM = 1.5F;
+    static constexpr float kStockShoveMps = 1.2F;
+    static constexpr float kStockShoveEaseS = 0.5F;    // the push closes the speed gap over this
+    static constexpr float kStockShoveLowM = 0.2F;     // over its underside: pushed higher, a drum tips
+    static constexpr float kStockShoveHandsM = 0.25F;  // her hands' gap to its face when they push
     static constexpr float kHandsOutM = 0.55F;
     static constexpr float kHandsPullMps = 3.0F;
     static constexpr float kHandsSlipM = 1.0F;
@@ -1262,6 +1281,8 @@ public:
         JPH::Vec3 stock_seek_size = JPH::Vec3::sZero();
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
+        std::uint32_t stock_shoves = 0;   // and shoved off a lip, this run
+        float stock_shove_force_n = 0.0F; // her hands' push on the piece this tick
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
@@ -2246,6 +2267,12 @@ private:
     static constexpr float kMovedStockM = 1.5F;
     bool fetch_stock(float dt, float ax, float az, bool allow_catwalk);
     bool throw_stock(float dt, JPH::RVec3 at, JPH::RVec3 player);
+    // Her shove (kStockShoveMaxKg): the piece she would shove, or -1; the
+    // way to the nearest open lip from a piece (false: none within reach);
+    // shoving it (true while she walks to it or pushes it).
+    [[nodiscard]] int stock_to_shove(float ax, float az) const;
+    bool pick_shove_edge(int index, JPH::Vec3 &dir, float &lip_m) const;
+    bool shove_stock(float dt, float ax, float az, bool allow_catwalk);
     // True when her hands took it: never a load another constraint already
     // holds (his carry), which her hands feel held fast (load_held_elsewhere).
     bool take_stock(int index);
@@ -2533,6 +2560,14 @@ private:
     float thrown_s_ = 0.0F;
     std::uint32_t takes_ = 0;
     std::uint32_t throws_ = 0;
+    int stock_shove_ = -1;                 // the piece she is shoving, or -1
+    JPH::Vec3 stock_shove_dir_ = JPH::Vec3::sZero();   // flat, toward its lip
+    float stock_shove_best_m_ = 0.0F;      // the nearest it has come to the lip
+    float stock_shove_stall_s_ = 0.0F;     // since it last came nearer
+    float stock_shove_force_n_ = 0.0F;     // this tick's push on it
+    bool stock_shove_pushing_ = false;     // her hands on it (else walking to its far side)
+    JPH::RVec3 stock_shove_from_ = JPH::RVec3::sZero();   // where it lay when she set her hands on it
+    std::uint32_t stock_shoves_ = 0;
     bool released_edge_ = false;
     // The world's checkpoint rule (freezes_checkpoint), set at the boundary
     // (Perception) and read by nothing of hers.
