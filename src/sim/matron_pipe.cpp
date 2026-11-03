@@ -637,8 +637,12 @@ void Matron::ride_pipe(const float dt) {
                 }
             }
             // Always pulling for the hand at her shoulder, so each stroke runs at
-            // her pace to the next hold rather than easing into a stop.
-            target = Vec3(kPipeLineX, float(pipe_hand_.GetY()) - 0.30F, kPipeLineZ);
+            // her pace to the next hold rather than easing into a stop. Her drawn
+            // shoulders, not upright ones: just caught, tucked, they sit under her
+            // middle, and a pull for upright shoulders at the hold would draw her
+            // down the riser till her stall ran out.
+            const float shoulder_up = shoulder_y - float(at.GetY());
+            target = Vec3(kPipeLineX, float(pipe_hand_.GetY()) - shoulder_up + (kPipeShoulderUpM - 0.30F), kPipeLineZ);
             progress = float(at.GetY());
         } else {
             // Down it at her pace, her grip sliding with her, past the deck's
