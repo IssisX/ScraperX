@@ -54,6 +54,7 @@ class Team:
     fallback_order: Sequence[str] = ()     # agent keys asked, in turn, when an ask goes unanswered
     fallback_after_hours: float = 3.0      # an ask with no verdict this long is passed to the next agent
     other_authored_asks: Sequence[str] = ()  # agent keys asked, in order, to review work not by Claude
+    api_alongside: bool = False            # the automatic Claude review runs on every PR, beside the ask
 
     def vendor_of_branch(self, ref: str) -> str:
         for prefix, vendor in self.vendor_of_prefix:
@@ -108,6 +109,9 @@ def team_from_config(cfg: Mapping) -> Team:
             raise ValueError(f"agents.yml: review.fallback_order names unknown agent {f!r}")
         if agent_vendor[f] == "anthropic":
             raise ValueError(f"agents.yml: review.fallback_order names {f!r}, a Claude agent: Claude's work is never reviewed by Claude")
+    alongside = review.get("claude_api_alongside", False)
+    if not isinstance(alongside, bool):
+        raise ValueError("agents.yml: review.claude_api_alongside must be true or false")
     try:
         hours = float(review.get("fallback_after_hours", 3))
     except (TypeError, ValueError):
@@ -117,7 +121,8 @@ def team_from_config(cfg: Mapping) -> Team:
     signs = {key: str((a.get("names") or [key])[0]) for key, a in agents.items()}
     prefixes.sort(key=lambda pv: -len(pv[0]))  # longest prefix wins
     return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor,
-                frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours, tuple(others))
+                frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours, tuple(others),
+                alongside)
 
 
 def _has_repro(body: str) -> bool:
@@ -243,10 +248,25 @@ def merge_decision(pr: PrFacts, author_vendor: str) -> MergeDecision:
 class ReviewPick:
     route: str     # "claude-api" (automatic, budgeted) or "ask" (a human-driven app)
     agent: str     # agent key asked, "" for claude-api
+    api: bool = False  # the automatic Claude review also runs, beside the ask (review.claude_api_alongside)
+
+    def wants_api(self) -> bool:
+        return self.route == "claude-api" or self.api
 
 
 def pick_reviewer(author_vendor: str, needs: frozenset[str], team: Team) -> ReviewPick:
-    """Who reviews a PR, by its author's vendor.
+    """Who reviews a PR: the ask below, plus the automatic Claude review beside it when
+    review.claude_api_alongside is on (Cory, 11-03: the API credit is free to us, so every PR gets
+    Muse and the Claude API at once). On Claude's own work the automatic review's FIX holds the merge
+    back but its LAND does not count: a LAND still has to come from another vendor (merge_decision)."""
+    pick = _pick_asked(author_vendor, needs, team)
+    if pick.route == "ask" and team.api_alongside:
+        return dataclasses.replace(pick, api=True)
+    return pick
+
+
+def _pick_asked(author_vendor: str, needs: frozenset[str], team: Team) -> ReviewPick:
+    """Who is asked to review a PR, by its author's vendor.
 
     A PR by another vendor is asked of the first agent in review.other_authored_asks whose vendor is
     not the author's (Cory, 11-03: Muse is always on and free, so it goes first). Only when none
@@ -287,10 +307,20 @@ def ask_is_overdue(asked_at: str, now_iso: str, hours: float) -> bool:
 
 
 def needs_review(pr: PrFacts) -> bool:
-    """Proof green and no LAND, FIX or NOTE yet on this head from a review."""
+    """Proof green and no LAND, FIX or NOTE yet on this head from a review by an agent (the automatic
+    Claude review, posted by the bot, does not answer the ask: both run at once)."""
     if pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False
-    return not any(v.kind == "review" and names_head(v, pr.head_sha) for v in pr.verdicts)
+    return not any(v.kind == "review" and names_head(v, pr.head_sha) and v.author_login != BOT_LOGIN
+                   for v in pr.verdicts)
+
+
+def needs_api_review(pr: PrFacts) -> bool:
+    """Proof green and no automatic Claude review yet on this head."""
+    if pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
+        return False
+    return not any(v.kind == "review" and names_head(v, pr.head_sha) and v.author_login == BOT_LOGIN
+                   for v in pr.verdicts)
 
 
 def needs_eye(pr: PrFacts) -> bool:

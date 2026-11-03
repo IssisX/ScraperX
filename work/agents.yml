@@ -43,6 +43,11 @@ review:
   # Muse is always on and free, so it reviews first; Muse's own PRs go to ChatGPT). The paid Claude review
   # through the API runs only when none of these fits.
   other_authored_asks: [muse, chatgpt]
+  # Every PR also gets the automatic Claude review through the API, at the same time as the ask (Cory, 11-03:
+  # "we can use Claude API reviews as they are free because we get $100 credits to those each month ... at extra
+  # high. We should use Muse and Claude API at the same time."). Its FIX holds any merge back; on Claude's own
+  # work its LAND does not count (another vendor's LAND is still needed). The caps in work/budget.yml still hold.
+  claude_api_alongside: true
   # An ask with no verdict on its head after this many hours is passed to the next agent here that has
   # not been asked on that head, once per head (Cory, 11-03: Codex's quota ran out and nothing took over).
   # Never a Claude agent, never the author's own vendor. Grok answers `To Grok:` comments (work/tasks/grok-answers.md).

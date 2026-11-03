@@ -449,7 +449,7 @@ class Switch:
         author = self.team.vendor_of_branch(facts.head_ref)
         if self.stale(facts):
             return
-        if rules.needs_review(facts) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api":
+        if rules.needs_api_review(facts) and rules.pick_reviewer(author, facts.needs, self.team).wants_api():
             if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
             else:
