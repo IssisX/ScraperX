@@ -38,10 +38,6 @@ from pathlib import Path
 # Godot test scripts in no workflow step for a tracked reason. Warning,
 # not failure; stale the moment the script appears in the workflow.
 KNOWN_GAPS = {
-    "gore_shots_test.gd": (
-        "studio deck, renders PNGs with a display; renders-only, not "
-        "a CI gate"
-    ),
     "hair_pose_probe.gd": (
         "studio measurement probe, writes a probe directory for the "
         "scorer; no pass/fail verdict, not a CI gate"

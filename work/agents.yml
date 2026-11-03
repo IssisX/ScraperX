@@ -1,0 +1,46 @@
+# Who is on the team, for the switchboard (tools/switchboard). Read by the switch on every run.
+# A LAND counts only from a vendor other than the author's. The author's vendor comes from the PR's
+# branch prefix (every agent posts as the same GitHub account, so the login says nothing); a
+# verdict's vendor comes from the first word of its first line, e.g. **ChatGPT (review of #88 @ f9575008): LAND**.
+# Codex is out of quota (owner, 2026-11-02) and Gemini is off the team (11-02): neither is listed.
+
+# The repo is public, so anyone can comment. Only comments and reviews posted by these logins can
+# carry a verdict (LAND, FIX, NOTE); every agent posts as IssisX, the eye as the workflow bot.
+verdict_logins: [IssisX, "github-actions[bot]"]
+
+agents:
+  claude:
+    vendor: anthropic
+    names: [Claude]
+    branch_prefixes: [claude/]
+    owner_labels: [owner:claude-hold, owner:claude-lane-a, owner:claude-lane-b, owner:claude-switchboard]
+    wake: api            # the only vendor the switch can wake by itself (reviews, the eye, the orchestrator)
+  chatgpt:
+    vendor: openai
+    names: [ChatGPT]
+    branch_prefixes: [chatgpt/]
+    owner_labels: [owner:chatgpt]
+    wake: issue          # reads its job issue through its own app
+  grok:
+    vendor: xai
+    names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #107)
+    branch_prefixes: [grok/, pe/, builder/]
+    owner_labels: [owner:grok, owner:pe, owner:builder]
+    wake: issue
+  muse:
+    vendor: meta
+    names: [Muse, FB]                # Muse is FB Bot
+    branch_prefixes: [muse/, fb-bot/]
+    owner_labels: [owner:muse]
+    wake: email          # tools/switchboard/muse_bridge.gs mails it and posts its replies back
+
+review:
+  # Claude-authored PRs are asked of these, in order, on the job issue (owner's correction 4).
+  claude_authored_asks: [chatgpt, muse]
+  # A job that needs matron asks Muse first: the Matron is its specialty.
+  matron_reviewer: muse
+  # An ask with no verdict on its head after this many hours is passed to the next agent here that has
+  # not been asked on that head, once per head (Cory, 11-03: Codex's quota ran out and nothing took over).
+  # Never a Claude agent, never the author's own vendor. Grok answers `To Grok:` comments (work/tasks/grok-answers.md).
+  fallback_after_hours: 3
+  fallback_order: [chatgpt, grok]
