@@ -66,8 +66,9 @@ first job is J-029 (small). Reason: the hosted pipeline has never run once, so i
 job, and the hard native job goes where it can't stall unseen.
 
 **11-03, Cory: "Queue it for muse"** (destructible moving things): J-038 (#169), Muse's, right after the fight
-(S2-S6). Snapping joints on the machines first, then breakable props; pre-broken pieces become loose stock; rule
-51, the phone, determinism and saves hold; her budget is unchanged.
+(S2-S6). Rescoped by Cory the same hour: not the tower's machines, but the loose things (what the forklift and
+crane lift, barrels, boxes, shipping containers): they dent with the force of the hit, crates break into loose
+stock; rule 51, the phone, determinism and saves hold; her budget is unchanged.
 
 **11-03, 10:11 AM Central, decided by the integrator** (Cory: use Muse's intelligence, free, for as many of
 the big, difficult things as is best): J-004 (#111, S6 tells) and J-006 (#113, the grade ladder, PR #91,

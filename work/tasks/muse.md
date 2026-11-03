@@ -60,10 +60,10 @@ finished piece as its own diff email as soon as it is proven, not all at the end
    - **S6, her tells (J-004, #111), is yours too (11-03):** re-point them at S7's fields once S5 is in.
    - Neighbours: S1 is yours (#153); S7 + S8, damage and death body (J-003, #110), are ChatGPT's PR in
      review. Read its fields, never edit its functions; ask with `To ChatGPT:`.
-2b. **J-038 (#169), destructible moving things (Cory, 11-03: "Queue it for muse"), right after the fight:**
-   snapping joints on the machines, then breakable props whose pieces become loose stock; rule 51 (a
-   wrecked machine leaves a way on), the phone, determinism and saves all hold. Propose your slice order
-   first; the issue has the laws, files and finish facts.
+2b. **J-038 (#169), destructible loose things (Cory, 11-03), right after the fight:** not the tower's
+   machines. What the forklift and crane lift, barrels, boxes and shipping containers dent with the force
+   of the hit (a forklift ramming one leaves it severely dented), crates break into pieces that become
+   loose stock. Rule 51, the phone, determinism and saves hold. Propose the dent model and slices first.
 3. **J-006 (#113), the grade ladder (her pursuit up the first 11 m), moved to you from ChatGPT (11-03).**
    Its code is PR #91 (red). Start from its head and the job issue's last findings; it unblocks J-007
    (#114, her exit items 4, 6 and 7: arm's-length holds, the pipe, the hoists), which is yours next.
