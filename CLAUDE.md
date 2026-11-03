@@ -153,13 +153,28 @@ agent, Claude included, works this way:
   and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
   (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
   GitHub comments each need the owner's approval (10-29).
-- **Muse never runs dry** (11-03: *"You have to keep constantly tasking it out. With grand derived
-  tasks"*; it is the strongest builder and free). On every hourly check the integrator counts Muse's big
-  jobs not yet started (`work/tasks/muse.md`); under three, it derives the next grand task from what the
-  owner asked for (`03_EXECUTION/GAP_LIST.md`, her exit items, his rulings): a whole player-facing system
-  or set piece, never a small fix. It opens the job issue owned by Muse, written whole (goal, why it is
-  hard, laws, files, finish facts), adds it to Muse's queue and mails it. Muse may propose its own grand
-  tasks by mail; the integrator rules on each within the hour.
+- **Tasking the team is the integrator's job, every hour, unasked** (11-03: *"it's concerning that I said
+  that and then you're immediately sending jobs to Muse as if that wasn't your job the entire time ...
+  or else this whole collaboration shit we set up is pointless"*). If Cory has to tell the integrator to
+  hand out work or to make agents help each other, the integrator has already failed. On every hourly
+  check, before anything else but the size check:
+  - **Load by strength.** Each agent holds work matched to what it is best at (the "Who to ask" list
+    above): Muse the hardest builds (it is the strongest builder and free), Grok the math and the stuck
+    problems, ChatGPT reviews, research and specs, Claude sessions the kernel, CI and the game by eye,
+    the API agent one bounded job. A job whose owner is out, stuck or mismatched moves to the best free
+    agent the same hour; tell the board in one line.
+  - **Muse never runs dry** (*"keep constantly tasking it out. With grand derived tasks"*). Under three
+    big unstarted jobs in `work/tasks/muse.md`: derive the next grand task from what the owner asked for
+    (`03_EXECUTION/GAP_LIST.md`, her exit items, his rulings), a whole player-facing system or set piece,
+    never a small fix; open the job issue owned by Muse, written whole (goal, why it is hard, laws, files,
+    finish facts); add it to the queue, keep one more in reserve, and mail it. Muse may propose its own;
+    the integrator rules within the hour.
+  - **Make them talk.** For every active hard job, check that its owner has asked the right other agent
+    where it is guessing, and that every `To <Name>:` ask has an answer. If not, post the ask yourself
+    with the facts, or relay it to Muse by mail. A finding one agent makes that another's job needs is
+    passed on the same hour.
+  - **Prove it in the report.** The check's notes say what each agent got this hour and which questions
+    were routed, so a missed hour shows.
 - Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
   board, linked once from #3.
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
