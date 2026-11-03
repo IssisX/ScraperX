@@ -116,7 +116,7 @@ class FallbackConfig(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("muse", "chatgpt", "grok"), 3.0))
+        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("muse", "chatgpt", "grok"), 1.0))
         self.assertEqual(team.other_authored_asks, ("muse", "chatgpt"))
 
 
@@ -276,3 +276,39 @@ class AskFacts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PoolSteer(unittest.TestCase):
+    """review.pool through the switch: one ask, to the free reviewer; the one asked keeps it for an hour."""
+
+    POOL = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"],
+                                                          fallback_after_hours=1)))
+
+    def steer(self, thread, load, head_ref="claude/integrate-x"):
+        gh = FakeGH(thread)
+        sw = make(gh, team=self.POOL)
+        sw.api_ok = lambda c: True
+        calls = []
+        sw.review_load = lambda: calls.append(1) or load
+        sw.steer_pr(pr_facts(head_ref=head_ref), ctx(comments=thread))
+        asks = [b for _, b in gh.posted if "ask-" in b]
+        return asks, calls
+
+    def test_busy_muse_means_chatgpt_takes_it(self):
+        asks, _ = self.steer([], ({"muse": 1}, {}))
+        self.assertEqual(len(asks), 1)
+        self.assertIn("ask-chatgpt", asks[0])
+
+    def test_quiet_past_the_hour_passes_on_and_says_why(self):
+        asks, _ = self.steer([ask_comment("muse", 1.5)], ({}, {}))
+        self.assertEqual(len(asks), 1)
+        self.assertIn("ask-chatgpt", asks[0])
+        self.assertIn("Muse did not answer in 1 hours", asks[0])
+
+    def test_the_one_asked_keeps_it_and_no_load_is_read(self):
+        asks, calls = self.steer([ask_comment("muse", 0.5)], ({}, {}))
+        self.assertEqual((asks, calls), ([], []))
+
+    def test_work_not_by_claude_can_go_to_the_api_and_nobody_is_asked(self):
+        asks, _ = self.steer([], ({"muse": 1, "chatgpt": 1}, {}), head_ref="grok/integrate-x")
+        self.assertEqual(asks, [])

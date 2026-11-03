@@ -909,7 +909,7 @@ class ReviewPool(unittest.TestCase):
     POOL = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"])))
     API = rules.API_REVIEWER
 
-    def test_consecutive_prs_start_at_different_reviewers(self):
+    def test_rotation_order_differs_between_prs(self):
         firsts = {rules.review_rotation(n, "xai", frozenset(), self.POOL)[0] for n in (30, 31, 32)}
         self.assertEqual(firsts, {self.API, "muse", "chatgpt"})
 
@@ -926,15 +926,19 @@ class ReviewPool(unittest.TestCase):
     def test_matron_job_starts_at_its_specialist(self):
         self.assertEqual(rules.review_rotation(30, "openai", frozenset({"matron"}), self.POOL)[0], "muse")
 
-    def test_one_reviewer_at_a_time_and_pass_on_when_quiet(self):
-        rot = ["muse", "chatgpt"]
-        now = "2026-11-02T15:00:00Z"
-        self.assertEqual(rules.current_reviewer(rot, {}, now, 3), "muse")
-        self.assertEqual(rules.current_reviewer(rot, {"muse": "2026-11-02T13:00:00Z"}, now, 3), "muse")
-        self.assertEqual(rules.current_reviewer(rot, {"muse": "2026-11-02T11:00:00Z"}, now, 3), "chatgpt")
-        self.assertEqual(rules.current_reviewer(rot, {"muse": "2026-11-02T11:00:00Z",
-                                                      "chatgpt": "2026-11-02T11:30:00Z"}, now, 3), "")
-        self.assertEqual(rules.current_reviewer([self.API, "muse"], {}, now, 3), self.API)
+    def test_the_free_reviewer_takes_it(self):
+        rot, now, ch = ["muse", "chatgpt"], "2026-11-02T15:00:00Z", rules.choose_reviewer
+        self.assertEqual(ch(rot, {}, now, 1, {}, {}), "muse")                                  # all free: rotation order
+        self.assertEqual(ch(rot, {}, now, 1, {"muse": 2}, {}), "chatgpt")                      # Muse is busy
+        self.assertEqual(ch(rot, {}, now, 1, {}, {"muse": 3, "chatgpt": 1}), "chatgpt")        # spread the day's work
+        self.assertEqual(ch([self.API, "muse"], {}, now, 1, {"muse": 1}, {self.API: 1}), self.API)  # the API is never busy
+        self.assertEqual(ch([self.API, "muse"], {}, now, 1, {}, {self.API: 2}), "muse")
+
+    def test_the_one_asked_keeps_it_until_quiet_too_long(self):
+        rot, now, ch = ["muse", "chatgpt"], "2026-11-02T15:00:00Z", rules.choose_reviewer
+        self.assertEqual(ch(rot, {"chatgpt": "2026-11-02T14:30:00Z"}, now, 1, {"chatgpt": 5}, {}), "chatgpt")
+        self.assertEqual(ch(rot, {"chatgpt": "2026-11-02T13:30:00Z"}, now, 1, {"muse": 5}, {}), "muse")
+        self.assertEqual(ch(rot, {"muse": "2026-11-02T12:00:00Z", "chatgpt": "2026-11-02T13:00:00Z"}, now, 1, {}, {}), "")
 
     def test_pool_config_is_checked(self):
         for pool, word in ((["claude"], "Claude agent"), (["nobody"], "unknown agent"), (["muse", "muse"], "twice")):

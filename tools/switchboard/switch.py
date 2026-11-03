@@ -92,6 +92,7 @@ class Switch:
         self.looks = load_yaml(root / "work/looks/sets.yml")
         self._jobs: dict[str, dict] | None = None
         self._ledger: tuple[str, str | None] | None = None
+        self._load: tuple[dict[str, int], dict[str, int]] | None = None   # review_load, once per run
         self._claude = None
 
     # ---------- facts ----------
@@ -346,13 +347,13 @@ class Switch:
         if rules.needs_review(facts) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
         elif rules.needs_review(facts) and self.team.pool:
-            rotation, who = self.pooled_reviewer(facts, ctx, author)
+            _, who, asked = self.pooled_reviewer(facts, ctx, author)
             if not who:
                 self.out(f"NOFALLBACK  #{facts.number} everyone in the pool was asked and nobody answered")
-            elif who != rules.API_REVIEWER:
-                before = rotation[:rotation.index(who)]
-                why = (f"{', '.join(self.team.agent_name.get(a, a) for a in before)} did not answer in "
-                       f"{self.team.fallback_after_hours:g} hours, so you are asked instead. ") if before else ""
+            elif who != rules.API_REVIEWER and who not in asked:
+                quiet = [self.team.agent_name.get(a, a) for a in asked]
+                why = (f"{', '.join(quiet)} did not answer in {self.team.fallback_after_hours:g} hours, "
+                       f"so you are asked instead. ") if quiet else ""
                 self.ask_review(facts, ctx, who, why)
         elif rules.needs_review(facts):
             pick = rules.pick_reviewer(author, facts.needs, self.team)
@@ -366,8 +367,8 @@ class Switch:
         worst = money.worst_case(self.budget, "review", spec.max_input_tokens)
         return money.check(self.budget, self.entries(), self.now, ctx["job"], worst, self.job_cap(ctx)).ok
 
-    def pooled_reviewer(self, facts: rules.PrFacts, ctx: dict, author: str) -> tuple[list[str], str]:
-        """review.pool: the rotation for this PR and the one reviewer its head waits on now."""
+    def pooled_reviewer(self, facts: rules.PrFacts, ctx: dict, author: str) -> tuple[list[str], str, dict[str, str]]:
+        """review.pool: the rotation for this PR, the one reviewer its head gets now, and who was asked on it when."""
         rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, self.api_ok(ctx))
         _, comments = self.ask_thread(facts, ctx)
         asked: dict[str, str] = {}
@@ -378,7 +379,43 @@ class Switch:
             if times:
                 asked[agent] = min(times)
         now = self.now.strftime("%Y-%m-%dT%H:%M:%SZ")
-        return rotation, rules.current_reviewer(rotation, asked, now, self.team.fallback_after_hours)
+        hours = self.team.fallback_after_hours
+        if any(w in asked and not rules.ask_is_overdue(asked[w], now, hours) for w in rotation):
+            outstanding, recent = {}, {}   # the one asked keeps it: no need to read everyone's load
+        else:
+            outstanding, recent = self.review_load()
+        return rotation, rules.choose_reviewer(rotation, asked, now, hours, outstanding, recent), asked
+
+    def review_load(self) -> tuple[dict[str, int], dict[str, int]]:
+        """Over the open PRs, once per run: per reviewer, the asks on a PR's current head still without that
+        reviewer's verdict (busy), and the asks or automatic reviews of the last 24 hours (recent)."""
+        if self._load is not None:
+            return self._load
+        outstanding: dict[str, int] = {}
+        recent: dict[str, int] = {}
+        day_ago = (self.now - dt.timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        for pr in self.target_prs(0, ""):
+            number, sha = pr["number"], pr["head"]["sha"]
+            verdicts, comments = self.verdicts(number)
+            threads = list(comments)
+            issue = self.jobs().get(rules.job_of_pr(pr.get("body")) or "")
+            if issue:
+                threads += self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments")
+            bot = [c for c in threads if c["user"]["login"] == rules.BOT_LOGIN]
+            for agent, vendor in self.team.agent_vendor.items():
+                tag = MARK.format(kind=f"ask-{agent}", pr=number, head=sha)
+                times = [c["created_at"] for c in bot if tag in (c.get("body") or "")]
+                if not times:
+                    continue
+                if max(times) >= day_ago:
+                    recent[agent] = recent.get(agent, 0) + 1
+                if not any(v.kind == "review" and v.vendor == vendor and rules.names_head(v, sha) for v in verdicts):
+                    outstanding[agent] = outstanding.get(agent, 0) + 1
+            tag = MARK.format(kind="review", pr=number, head=sha)
+            if any(tag in (c.get("body") or "") and c["created_at"] >= day_ago for c in bot):
+                recent[rules.API_REVIEWER] = recent.get(rules.API_REVIEWER, 0) + 1
+        self._load = (outstanding, recent)
+        return self._load
 
     def merge(self, facts: rules.PrFacts, ctx: dict, d: rules.MergeDecision) -> None:
         got = self.gh.write("PUT", f"repos/{self.gh.repo}/pulls/{facts.number}/merge",

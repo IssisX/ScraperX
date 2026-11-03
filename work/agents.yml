@@ -44,14 +44,15 @@ review:
   # through the API runs only when none of these fits.
   other_authored_asks: [muse, chatgpt]
   # Who shares the reviews (Cory, 11-03: "get the ones that are available and ready to do the reviews ... if we
-  # spread the work out, the merrier ... I'm not asking for two agents to review the same shit"). One reviewer per
-  # PR: the start rotates with the PR number, an ask unanswered for fallback_after_hours passes to the next, the
-  # author's own vendor is skipped, `claude-api` (the automatic review, xhigh, work/budget.yml) reviews only work not
-  # by Claude and only while the budget allows. A job that needs matron starts at matron_reviewer. When this list
-  # is set it replaces claude_authored_asks, other_authored_asks and fallback_order. Grok rejoins on 11-09.
+  # spread the work out, the merrier ... I'm not asking for two agents to review the same shit ... it should be
+  # available to take"). One reviewer per PR: the free one (fewest unanswered asks on other PRs, then fewest in the
+  # last day); the author's own vendor is skipped; `claude-api` (the automatic review, xhigh, work/budget.yml) is
+  # always free while the budget allows, and reviews only work not by Claude. A matron job prefers matron_reviewer
+  # on ties. When this list is set it replaces claude_authored_asks, other_authored_asks and fallback_order.
+  # Grok rejoins on 11-09.
   pool: [claude-api, muse, chatgpt]
   # An ask with no verdict on its head after this many hours is passed to the next agent here that has
   # not been asked on that head, once per head (Cory, 11-03: Codex's quota ran out and nothing took over).
   # Never a Claude agent, never the author's own vendor. Grok answers `To Grok:` comments (work/tasks/grok-answers.md).
-  fallback_after_hours: 3
+  fallback_after_hours: 1   # Cory, 11-03: "3 hours seems long"
   fallback_order: [muse, chatgpt, grok]

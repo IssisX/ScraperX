@@ -283,10 +283,9 @@ API_REVIEWER = "claude-api"   # the automatic Claude review through the API, as 
 
 def review_rotation(number: int, author_vendor: str, needs: frozenset[str], team: Team,
                     api_ok: bool = True) -> list[str]:
-    """Who may review PR `number`, in the order they are tried: one reviewer at a time, the next only
-    when the one before has not answered in review.fallback_after_hours (Cory, 11-03: "get the ones
-    that are available and ready to do the reviews ... if we spread the work out, the merrier ... I'm
-    not asking for two agents to review the same shit").
+    """Who may review PR `number`, one of them per PR (Cory, 11-03: "get the ones that are available and
+    ready to do the reviews ... if we spread the work out, the merrier ... I'm not asking for two agents
+    to review the same shit"); choose_reviewer picks the free one.
 
     The pool members whose vendor is not the author's, the Claude API only for work not by Claude
     (reviews stay cross-model) and only while the budget allows a call (`api_ok`). The start rotates
@@ -305,16 +304,20 @@ def review_rotation(number: int, author_vendor: str, needs: frozenset[str], team
     return fits[start:] + fits[:start]
 
 
-def current_reviewer(rotation: Sequence[str], asked_at: Mapping[str, str], now_iso: str, hours: float) -> str:
-    """The reviewer this head waits on: the first in the rotation not yet asked, or asked less than `hours`
-    ago. The API answers in the same run it is picked, so it is never passed over. "" when everyone has
-    been asked and nobody answered in time."""
+def choose_reviewer(rotation: Sequence[str], asked_at: Mapping[str, str], now_iso: str, hours: float,
+                    outstanding: Mapping[str, int], recent: Mapping[str, int]) -> str:
+    """The one reviewer this head gets (Cory, 11-03: "it should be available to take. Using any agent
+    available"). Someone already asked on this head, less than `hours` ago, keeps it. Otherwise the
+    free one: fewest reviews still unanswered on other PRs (`outstanding`; the API never has any), then
+    fewest asked in the last day (`recent`, so the work spreads), then the rotation's order. Anyone asked
+    on this head who let `hours` pass is skipped. "" when nobody is left."""
     for who in rotation:
-        if who == API_REVIEWER or who not in asked_at:
+        if who in asked_at and who != API_REVIEWER and not ask_is_overdue(asked_at[who], now_iso, hours):
             return who
-        if not ask_is_overdue(asked_at[who], now_iso, hours):
-            return who
-    return ""
+    free = [w for w in rotation if w == API_REVIEWER or w not in asked_at]
+    if not free:
+        return ""
+    return min(free, key=lambda w: (outstanding.get(w, 0), recent.get(w, 0), rotation.index(w)))
 
 
 def next_fallback(asked: Sequence[str], author_vendor: str, team: Team) -> str:
