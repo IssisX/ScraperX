@@ -998,3 +998,32 @@ class CodexFindingsOn178(unittest.TestCase):
         self.assertTrue(rules.needs_review(pr, "openai"))       # Codex on ChatGPT's work: still ask someone else
         self.assertFalse(rules.needs_review(pr, "anthropic"))   # Codex on Claude's work: answered
         self.assertFalse(rules.needs_review(pr))                # old callers keep the old meaning
+
+
+class ApiReviewsClaude(unittest.TestCase):
+    """Cory, 11-03: the GitHub Actions Claude review gets real work: Claude's PRs too, and its LAND counts there."""
+
+    ON = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"],
+                                                        api_reviews_claude=True)))
+
+    def api(self, verdict):
+        return v(f"**Claude (automatic review of #9 @ {HEAD[:8]}): {verdict}**" + (REPRO if verdict == "FIX" else ""),
+                 T1, rules.BOT_LOGIN)
+
+    def test_the_api_can_take_claude_prs(self):
+        self.assertIn(rules.API_REVIEWER, rules.review_rotation(4, "anthropic", frozenset(), self.ON))
+
+    def test_its_land_counts_on_claude_work_only_when_on(self):
+        pr = facts(verdicts=(self.api("LAND"),), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "MERGE")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", TEAM).action, "WAIT")
+        self.assertFalse(rules.needs_review(pr, "anthropic", self.ON))
+        self.assertTrue(rules.needs_review(pr, "anthropic", TEAM))
+
+    def test_a_claude_session_land_never_counts_on_claude_work(self):
+        pr = facts(verdicts=(land("Claude"),), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "WAIT")
+
+    def test_its_fix_still_blocks(self):
+        pr = facts(verdicts=(land("ChatGPT"), self.api("FIX")), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "FIX")

@@ -333,21 +333,21 @@ class Switch:
     # ---------- steer ----------
     def steer_pr(self, facts: rules.PrFacts, ctx: dict) -> None:
         author = self.team.vendor_of_branch(facts.head_ref)
-        d = rules.merge_decision(facts, author)
+        d = rules.merge_decision(facts, author, self.team)
         if d.action == "WAIT" and d.reasons == ("GitHub is still computing mergeability",):
             time.sleep(3)   # the first read starts GitHub's computation; read once more
             facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
-            d = rules.merge_decision(facts, author)
+            d = rules.merge_decision(facts, author, self.team)
         if d.action in ("MERGE", "HUMAN-MERGE"):
             facts = dataclasses.replace(facts, rule_check_block=self.rule_check_block(facts.number, facts.head_sha))
-            d = rules.merge_decision(facts, author)
+            d = rules.merge_decision(facts, author, self.team)
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
         if d.action == "MERGE":
             self.merge(facts, ctx, d)
-        if rules.needs_review(facts, author) and self.stale(facts):
+        if rules.needs_review(facts, author, self.team) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
-        elif rules.needs_review(facts, author) and self.team.pool:
+        elif rules.needs_review(facts, author, self.team) and self.team.pool:
             _, who, asked = self.pooled_reviewer(facts, ctx, author)
             if not who:
                 self.out(f"NOFALLBACK  #{facts.number} everyone in the pool was asked and nobody answered")
@@ -357,7 +357,7 @@ class Switch:
                        f"so you are asked instead. ") if quiet else ""
                 self.ask_review(facts, ctx, who, why)
                 self.note_assigned(who)
-        elif rules.needs_review(facts, author):
+        elif rules.needs_review(facts, author, self.team):
             pick = rules.pick_reviewer(author, facts.needs, self.team)
             if pick.route == "ask":
                 self.ask_review(facts, ctx, pick.agent, "")
@@ -548,9 +548,9 @@ class Switch:
         if self.stale(facts):
             return
         if self.team.pool:
-            api_turn = rules.needs_review(facts, author) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
+            api_turn = rules.needs_review(facts, author, self.team) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
         else:
-            api_turn = rules.needs_review(facts, author) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
+            api_turn = rules.needs_review(facts, author, self.team) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
         if api_turn:
             if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
@@ -924,12 +924,12 @@ class Switch:
         for pr in self.target_prs(0, ""):
             facts, ctx = self.pr_facts(pr)
             author = self.team.vendor_of_branch(facts.head_ref)
-            d = rules.merge_decision(facts, author)
+            d = rules.merge_decision(facts, author, self.team)
             if d.action == "FIX-CI":
                 red.append(f"#{facts.number} {facts.head_ref}: {facts.proof}")
             if d.action == "HUMAN-MERGE":
                 waiting.append(f"#{facts.number} is ready but changes workflow files: the integrator merges it")
-            if rules.needs_review(facts, author) and not self.stale(facts):
+            if rules.needs_review(facts, author, self.team) and not self.stale(facts):
                 if self.team.pool:
                     who = self.pooled_reviewer(facts, ctx, author)[1]
                 else:

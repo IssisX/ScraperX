@@ -15,8 +15,8 @@ prices_per_mtok:
 
 # Each paid call: worst case = counted input tokens x input price + max_tokens x output price.
 calls:
-  review:               # automatic review of every PR (diff + checklist), beside the ask: worst case about $0.92
-    model: claude-opus-5-5
+  review:               # the automatic review of a PR (diff + checklist): worst case about $0.46
+    model: claude-sonnet-5-5   # Cory, 11-03: Sonnet at extra high over Opus at high: half the price, and the Codex app also reviews every PR
     max_tokens: 16000   # the call does not stream; kept at the size proved in runs so far
     effort: xhigh       # Cory, 11-03: "at extra high"
     max_input_tokens: 150000

@@ -54,10 +54,13 @@ review:
   # spread the work out, the merrier ... I'm not asking for two agents to review the same shit ... it should be
   # available to take"). One reviewer per PR: the free one (fewest unanswered asks on other PRs, then fewest in the
   # last day); the author's own vendor is skipped (Codex and ChatGPT are both OpenAI); `claude-api` (the automatic review, xhigh, work/budget.yml) is
-  # always free while the budget allows, and reviews only work not by Claude. A matron job prefers matron_reviewer
+  # always free while the budget allows, and reviews Claude's work too (api_reviews_claude). A matron job prefers matron_reviewer
   # on ties. When this list is set it replaces claude_authored_asks, other_authored_asks and fallback_order.
   # Grok rejoins on 11-09.
   pool: [claude-api, codex, muse, chatgpt]
+  # The automatic Claude review takes Claude's PRs too, and its LAND counts there (Cory, 11-03: "Yes, give it real
+  # work, the Claude on GitHub actions"). The Codex app still reviews every PR on open, and its findings block.
+  api_reviews_claude: true
   # An ask with no verdict on its head after this many hours is passed to the next agent here that has
   # not been asked on that head, once per head (Cory, 11-03: Codex's quota ran out and nothing took over).
   # Never a Claude agent, never the author's own vendor. Grok answers `To Grok:` comments (work/tasks/grok-answers.md).

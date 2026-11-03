@@ -55,6 +55,7 @@ class Team:
     fallback_after_hours: float = 3.0      # an ask with no verdict this long is passed to the next agent
     other_authored_asks: Sequence[str] = ()  # agent keys asked, in order, to review work not by Claude
     pool: Sequence[str] = ()               # review.pool: who shares the reviews, one per PR (API_REVIEWER for the API)
+    api_reviews_claude: bool = False       # the automatic review also takes Claude's PRs, and its LAND counts there
 
     def vendor_of_branch(self, ref: str) -> str:
         for prefix, vendor in self.vendor_of_prefix:
@@ -104,6 +105,9 @@ def team_from_config(cfg: Mapping) -> Team:
             raise ValueError(f"agents.yml: review.other_authored_asks names {o!r}, a Claude agent: the paid "
                              "Claude review is the fallback when no one listed here can take it")
     pool = list(review.get("pool", []))
+    api_claude = review.get("api_reviews_claude", False)
+    if not isinstance(api_claude, bool):
+        raise ValueError("agents.yml: review.api_reviews_claude must be true or false")
     for p in pool:
         if p != API_REVIEWER and p not in agents:
             raise ValueError(f"agents.yml: review.pool names unknown agent {p!r}")
@@ -127,7 +131,7 @@ def team_from_config(cfg: Mapping) -> Team:
     prefixes.sort(key=lambda pv: -len(pv[0]))  # longest prefix wins
     return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor,
                 frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours, tuple(others),
-                tuple(pool))
+                tuple(pool), api_claude)
 
 
 def _has_repro(body: str) -> bool:
@@ -230,7 +234,18 @@ def open_fixes(verdicts: Iterable[Verdict], head_sha: str, head_time: str, kind:
     return [v for v in newest.values() if v.verdict == "FIX"]
 
 
-def merge_decision(pr: PrFacts, author_vendor: str) -> MergeDecision:
+def land_counts(v: Verdict, author_vendor: str, team: Team | None = None) -> bool:
+    """May this verdict be the LAND a PR needs: a known vendor other than the author's, or the automatic
+    Claude review (posted by the workflow bot) when review.api_reviews_claude lets it review Claude's work
+    (Cory, 11-03: "give it real work, the Claude on GitHub actions"; the Codex app still reviews every PR
+    on open and its findings still block)."""
+    if v.vendor not in ("unknown", author_vendor):
+        return True
+    return bool(team and team.api_reviews_claude and v.kind == "review" and v.author_login == BOT_LOGIN
+                and v.vendor == "anthropic")
+
+
+def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None) -> MergeDecision:
     """Design v3 section 2.3 step 6 with the owner's corrections. All must hold to MERGE:
 
     proof green on the head; one LAND naming the head from a known vendor other than the author's;
@@ -254,7 +269,7 @@ def merge_decision(pr: PrFacts, author_vendor: str) -> MergeDecision:
         waits.append(f"proof {pr.proof}")
     lands = [v for v in pr.verdicts
              if v.kind == "review" and v.verdict == "LAND" and names_head(v, pr.head_sha)
-             and v.vendor not in ("unknown", author_vendor)]
+             and land_counts(v, author_vendor, team)]
     if not lands:
         waits.append(f"no LAND on @{pr.head_sha[:8]} from a vendor other than {author_vendor}")
     if "eyes" in pr.needs:
@@ -323,7 +338,7 @@ def review_rotation(number: int, author_vendor: str, needs: frozenset[str], team
     if author_vendor == "unknown":
         return [API_REVIEWER] if api_ok else []
     fits = [p for p in team.pool
-            if (p == API_REVIEWER and author_vendor != "anthropic" and api_ok)
+            if (p == API_REVIEWER and api_ok and (author_vendor != "anthropic" or team.api_reviews_claude))
             or (p != API_REVIEWER and team.agent_vendor.get(p) not in (None, "anthropic", author_vendor))]
     if not fits:
         return []
@@ -367,14 +382,15 @@ def ask_is_overdue(asked_at: str, now_iso: str, hours: float) -> bool:
     return (now - then).total_seconds() >= hours * 3600
 
 
-def needs_review(pr: PrFacts, author_vendor: str = "") -> bool:
+def needs_review(pr: PrFacts, author_vendor: str = "", team: Team | None = None) -> bool:
     """Proof green and no LAND, FIX or NOTE yet on this head from a review that can count: a verdict by the
     author's own vendor (say the Codex app's unasked review of a ChatGPT PR) never answers the ask, since
     merge_decision would not count its LAND. Its FIX still holds the merge back there."""
     if pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False
     return not any(v.kind == "review" and names_head(v, pr.head_sha)
-                   and not (author_vendor and v.vendor == author_vendor) for v in pr.verdicts)
+                   and not (author_vendor and v.vendor == author_vendor and not land_counts(v, author_vendor, team))
+                   for v in pr.verdicts)
 
 
 def needs_eye(pr: PrFacts) -> bool:
