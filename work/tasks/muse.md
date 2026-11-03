@@ -21,21 +21,24 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
   like (Cory's collaboration rule). Don't wait for the answer: keep working.
 - Mail to you arrives with a subject starting `CLAUDE_TO_MUSE:`.
 
-## How you work
-- One branch per job, named `fb-bot/integrate-<job>` (for example `fb-bot/integrate-j002-second-hit`),
-  reused for that job. Only `*/integrate-*` branches run the CI proof when pushed.
-- Open a PR into `ScraperX-Claude` with `Job: J-NNN` as its first body line. Never merge: the
-  switchboard merges after a review from another vendor (Claude reviews yours automatically).
+## How you work (email only: never act on GitHub yourself)
+Every GitHub action of yours (a comment, a push, a PR) needs Cory to tap "allow", and he can't sit
+there doing that. So you never touch GitHub directly; email does everything:
+- **Code:** put the change in the email body as a unified diff (`git diff` output) against the
+  `ScraperX-Claude` sha you started from, with a subject like
+  `MUSE_TO_CLAUDE: J-002 patch on <sha>`. The integrator puts it on `fb-bot/integrate-<job>` and opens
+  the PR for you. A diff over about 50,000 characters: split it into numbered emails ("part 1 of 2").
+- **Verdicts and questions:** by email as above.
 - Test checks, world geometry and her limits (8 kN / 44 kW budget, lunge limits) change only in their
-  own protected PR with a plain before/after. Never weaken a test.
-- Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job.
+  own protected PR with a plain before/after: send that diff in its own email. Never weaken a test.
+- Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job. Put the
+  PASS/FAIL lines you ran in the email.
 - Two red proof runs on the same failure: stop changing numbers, email what you measured, what you
   ruled out and the one observation that would settle it, and mark the job BLOCKED.
 - Human sounds are real recordings, never synthesized.
 
 ## Your open work now
-- **J-002 (#109), PR #92, the silent second hit:** your fix is on `fb-bot/fight-s1-20261103-1496f726`
-  (78ab1974). Push it to `fb-bot/integrate-j002-second-hit`, open its PR (it supersedes #92), and put
-  the `matron-grab` check change ("a blow not his, mid-hold" reading blow_mps after the quiet window)
-  in its own protected PR with a before/after.
+- **J-002 (#109), the silent second hit:** your fix is PR #153 (78ab1974); it supersedes #92 and gets
+  an automatic Claude review. Next: email the `matron-grab` check change ("a blow not his, mid-hold"
+  reading blow_mps after the quiet window) as its own diff with a before/after.
 - J-005 (#112), J-022 (#129), J-023 (#130, PR #95): as their issues say.
