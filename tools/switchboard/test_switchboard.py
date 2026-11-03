@@ -903,42 +903,49 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class ApiAlongside(unittest.TestCase):
-    """Cory, 11-03: every PR gets Muse (or the next asked agent) and the Claude API review at once."""
+class ReviewPool(unittest.TestCase):
+    """Cory, 11-03: one reviewer per PR, whoever is available, the work spread around."""
 
-    TEAM_ON = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], other_authored_asks=["muse", "chatgpt"],
-                                                             claude_api_alongside=True)))
+    POOL = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"])))
+    API = rules.API_REVIEWER
 
-    def api(self, verdict: str, sha: str = HEAD) -> rules.Verdict:
-        return v(f"**Claude (automatic review of #9 @ {sha[:8]}): {verdict}**" + (REPRO if verdict == "FIX" else ""),
-                 T1, rules.BOT_LOGIN)
+    def test_consecutive_prs_start_at_different_reviewers(self):
+        firsts = {rules.review_rotation(n, "xai", frozenset(), self.POOL)[0] for n in (30, 31, 32)}
+        self.assertEqual(firsts, {self.API, "muse", "chatgpt"})
 
-    def test_every_ask_also_runs_the_api_review(self):
-        for author, needs, asked in (("openai", frozenset(), "muse"), ("meta", frozenset(), "chatgpt"),
-                                     ("anthropic", frozenset(), "chatgpt"), ("anthropic", frozenset({"matron"}), "muse")):
-            pick = rules.pick_reviewer(author, needs, self.TEAM_ON)
-            self.assertEqual((pick.route, pick.agent, pick.wants_api()), ("ask", asked, True), author)
-        self.assertTrue(rules.pick_reviewer("unknown", frozenset(), self.TEAM_ON).wants_api())
+    def test_rotation_skips_the_authors_vendor_and_keeps_claude_cross_model(self):
+        for n in range(6):
+            self.assertNotIn("muse", rules.review_rotation(n, "meta", frozenset(), self.POOL))
+            self.assertEqual(sorted(rules.review_rotation(n, "anthropic", frozenset(), self.POOL)), ["chatgpt", "muse"])
+        self.assertEqual(rules.review_rotation(5, "unknown", frozenset(), self.POOL), [self.API])
 
-    def test_off_by_default(self):
-        self.assertFalse(rules.pick_reviewer("anthropic", frozenset(), TEAM).wants_api())
-        bad = dict(AGENTS, review=dict(AGENTS["review"], claude_api_alongside="yes"))
-        with self.assertRaisesRegex(ValueError, "claude_api_alongside"):
-            rules.team_from_config(bad)
+    def test_api_out_of_budget_is_not_available(self):
+        self.assertNotIn(self.API, rules.review_rotation(30, "xai", frozenset(), self.POOL, api_ok=False))
+        self.assertEqual(rules.review_rotation(30, "unknown", frozenset(), self.POOL, api_ok=False), [])
 
-    def test_api_verdict_does_not_answer_the_ask_and_runs_once(self):
-        pr = facts(verdicts=(self.api("LAND"),))
-        self.assertTrue(rules.needs_review(pr))          # Muse is still asked
-        self.assertFalse(rules.needs_api_review(pr))     # the API review is not run twice on a head
-        pr = facts(verdicts=(land("Muse"),))
-        self.assertFalse(rules.needs_review(pr))
-        self.assertTrue(rules.needs_api_review(pr))      # Muse answering first still leaves the API review to run
-        self.assertTrue(rules.needs_api_review(facts(verdicts=(self.api("LAND", OLD),))))
+    def test_matron_job_starts_at_its_specialist(self):
+        self.assertEqual(rules.review_rotation(30, "openai", frozenset({"matron"}), self.POOL)[0], "muse")
 
-    def test_on_claude_work_api_fix_blocks_but_its_land_does_not_count(self):
-        claude_pr = dict(head_ref="claude/integrate-x")
-        self.assertEqual(rules.merge_decision(facts(verdicts=(self.api("LAND"),), **claude_pr), "anthropic").action, "WAIT")
-        self.assertEqual(rules.merge_decision(facts(verdicts=(land("ChatGPT"), self.api("FIX")), **claude_pr),
-                                              "anthropic").action, "FIX")
-        self.assertEqual(rules.merge_decision(facts(verdicts=(land("ChatGPT"), self.api("LAND")), **claude_pr),
-                                              "anthropic").action, "MERGE")
+    def test_one_reviewer_at_a_time_and_pass_on_when_quiet(self):
+        rot = ["muse", "chatgpt"]
+        now = "2026-11-02T15:00:00Z"
+        self.assertEqual(rules.current_reviewer(rot, {}, now, 3), "muse")
+        self.assertEqual(rules.current_reviewer(rot, {"muse": "2026-11-02T13:00:00Z"}, now, 3), "muse")
+        self.assertEqual(rules.current_reviewer(rot, {"muse": "2026-11-02T11:00:00Z"}, now, 3), "chatgpt")
+        self.assertEqual(rules.current_reviewer(rot, {"muse": "2026-11-02T11:00:00Z",
+                                                      "chatgpt": "2026-11-02T11:30:00Z"}, now, 3), "")
+        self.assertEqual(rules.current_reviewer([self.API, "muse"], {}, now, 3), self.API)
+
+    def test_pool_config_is_checked(self):
+        for pool, word in ((["claude"], "Claude agent"), (["nobody"], "unknown agent"), (["muse", "muse"], "twice")):
+            with self.assertRaisesRegex(ValueError, word):
+                rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=pool)))
+
+    def test_the_repo_file_sets_the_pool(self):
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        path = pathlib.Path(__file__).resolve().parents[2] / "work/agents.yml"
+        team = rules.team_from_config(yaml.safe_load(path.read_text(encoding="utf-8")))
+        self.assertEqual(tuple(team.pool), (self.API, "muse", "chatgpt"))

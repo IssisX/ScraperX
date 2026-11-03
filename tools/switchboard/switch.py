@@ -345,11 +345,40 @@ class Switch:
             self.merge(facts, ctx, d)
         if rules.needs_review(facts) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
+        elif rules.needs_review(facts) and self.team.pool:
+            rotation, who = self.pooled_reviewer(facts, ctx, author)
+            if not who:
+                self.out(f"NOFALLBACK  #{facts.number} everyone in the pool was asked and nobody answered")
+            elif who != rules.API_REVIEWER:
+                before = rotation[:rotation.index(who)]
+                why = (f"{', '.join(self.team.agent_name.get(a, a) for a in before)} did not answer in "
+                       f"{self.team.fallback_after_hours:g} hours, so you are asked instead. ") if before else ""
+                self.ask_review(facts, ctx, who, why)
         elif rules.needs_review(facts):
             pick = rules.pick_reviewer(author, facts.needs, self.team)
             if pick.route == "ask":
                 self.ask_review(facts, ctx, pick.agent, "")
             self.escalate_review(facts, ctx, author)
+
+    def api_ok(self, ctx: dict) -> bool:
+        """May the automatic review run today: the worst case of one call fits under every cap."""
+        spec = self.budget.calls["review"]
+        worst = money.worst_case(self.budget, "review", spec.max_input_tokens)
+        return money.check(self.budget, self.entries(), self.now, ctx["job"], worst, self.job_cap(ctx)).ok
+
+    def pooled_reviewer(self, facts: rules.PrFacts, ctx: dict, author: str) -> tuple[list[str], str]:
+        """review.pool: the rotation for this PR and the one reviewer its head waits on now."""
+        rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, self.api_ok(ctx))
+        _, comments = self.ask_thread(facts, ctx)
+        asked: dict[str, str] = {}
+        for agent in self.team.agent_vendor:
+            tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
+            times = [c["created_at"] for c in comments
+                     if tag in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN]
+            if times:
+                asked[agent] = min(times)
+        now = self.now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return rotation, rules.current_reviewer(rotation, asked, now, self.team.fallback_after_hours)
 
     def merge(self, facts: rules.PrFacts, ctx: dict, d: rules.MergeDecision) -> None:
         got = self.gh.write("PUT", f"repos/{self.gh.repo}/pulls/{facts.number}/merge",
@@ -449,7 +478,11 @@ class Switch:
         author = self.team.vendor_of_branch(facts.head_ref)
         if self.stale(facts):
             return
-        if rules.needs_api_review(facts) and rules.pick_reviewer(author, facts.needs, self.team).wants_api():
+        if self.team.pool:
+            api_turn = rules.needs_review(facts) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
+        else:
+            api_turn = rules.needs_review(facts) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
+        if api_turn:
             if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
             else:
@@ -825,10 +858,14 @@ class Switch:
                 red.append(f"#{facts.number} {facts.head_ref}: {facts.proof}")
             if d.action == "HUMAN-MERGE":
                 waiting.append(f"#{facts.number} is ready but changes workflow files: the integrator merges it")
-            if rules.needs_review(facts) and not self.stale(facts) and \
-                    rules.pick_reviewer(author, facts.needs, self.team).route == "ask":
-                asked.append(f"#{facts.number} waits on a review from "
-                             f"{rules.pick_reviewer(author, facts.needs, self.team).agent}")
+            if rules.needs_review(facts) and not self.stale(facts):
+                if self.team.pool:
+                    who = self.pooled_reviewer(facts, ctx, author)[1]
+                else:
+                    pick = rules.pick_reviewer(author, facts.needs, self.team)
+                    who = pick.agent if pick.route == "ask" else ""
+                if who and who != rules.API_REVIEWER:
+                    asked.append(f"#{facts.number} waits on a review from {who}")
         for it in self.jobs().values():
             if any(l["name"] == "state:blocked" for l in it["labels"]):
                 waiting.append(f"#{it['number']} {it['title'][:70]} is blocked")
