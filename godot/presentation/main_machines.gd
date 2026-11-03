@@ -116,14 +116,14 @@ func _build_kit() -> void:
 	# The same measured values as the world's palette (main_world.gd
 	# _build_world): steel a mill-scaled dark, oxide and paint not metal.
 	var palette: Array[Material] = [
-		_material(Color("36383b"), 0.3, 0.5, Color.BLACK, 1.0, _bump_smooth),
-		_material(Color("57382a"), 0.0, 0.9, Color.BLACK, 1.0, _bump_rust),
-		_material(Color("4a3420"), 0.0, 0.9, Color.BLACK, 1.0, _bump_timber),
-		_material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete),
-		_material(Color("9a4814"), 0.0, 0.66, Color.BLACK, 1.0, _bump_smooth),
-		_material(Color("6e7274"), 0.75, 0.6, Color.BLACK, 1.0, _bump_smooth),
-		_material(Color("5b544b"), 0.0, 0.98, Color.BLACK, 1.0, _bump_concrete),
-		_material(Color("8c690f"), 0.0, 0.58, Color.BLACK, 1.0, _bump_smooth),
+		_surfaced(Color("36383b"), 0.3, 0.5, _surface_mill_scale),
+		_surfaced(Color("57382a"), 0.0, 0.9, _surface_rust),
+		_surfaced(Color("4a3420"), 0.0, 0.9, _surface_timber),
+		_surfaced(Color("4e4841"), 0.0, 0.94, _surface_concrete),
+		_surfaced(Color("9a4814"), 0.0, 0.66, _surface_paint),
+		_surfaced(Color("6e7274"), 0.75, 0.6, _surface_galvanised),
+		_surfaced(Color("5b544b"), 0.0, 0.98, _surface_concrete),
+		_surfaced(Color("8c690f"), 0.0, 0.58, _surface_paint),
 		_glass_material(),
 	]
 	const KIT_GLASS := 8
@@ -134,6 +134,8 @@ func _build_kit() -> void:
 	# one mesh per material, moving with it; the static bodies' parts with
 	# the dressing's batcher.
 	var statics_batcher := Batcher.new()
+	statics_batcher.occlusion = _occlusion
+	var started := Time.get_ticks_usec()
 	for body in int(_native.get_kit_body_count()):
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
@@ -218,8 +220,12 @@ func _build_kit() -> void:
 		glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		glass.visibility_range_end = BATCH_NEAR_RANGE
 		statics.add_child(glass)
-	_batch_report += "kit statics %d parts -> %d meshes, %d wet; " % [statics_batcher.parts,
-		statics_batcher.emit(statics), statics_batcher.wet_parts]
+	var made := statics_batcher.emit(statics)
+	_batch_report += "kit statics %d parts -> %d meshes, %d wet, %d ms (shading %d ms, %d ringed); " % [
+		statics_batcher.parts, made, statics_batcher.wet_parts, (Time.get_ticks_usec() - started) / 1000,
+		statics_batcher.shade_ms, statics_batcher.occlusion.rings_laid if statics_batcher.occlusion != null else 0]
+	# Start-up's batching cost, in the log (environment plan, jobs 6 and 8).
+	print("SCRAPERX_BATCH %s" % _batch_report)
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = _material(Color("1b1916"), 0.6, 0.5)

@@ -33,7 +33,7 @@ const MSAA_NAMES := ["OFF", "2X MSAA", "4X MSAA"]
 const FPS_CAPS := [0, 30, 60, 90, 120]
 const FPS_CAP_NAMES := ["DISPLAY", "30", "60", "90", "120"]
 const TIME_OF_DAY_NAMES := ["CYCLE", "DAWN", "NOON", "DUSK", "NIGHT"]
-const TIME_OF_DAY_HOURS := [10.5, 6.4, 12.5, 18.3, 23.5]
+const TIME_OF_DAY_HOURS := [8.5, 6.4, 12.5, 18.3, 23.5]  # [0] is sky_cycle.gd START_HOUR
 # Where a (re)start puts the player: the native's InitialSpawn for each, -1
 # for its default at grade. A playtest shortcut, not a save: every start is a
 # fresh world. HER CHART (FAST) is the owner's playtest of her chart: the

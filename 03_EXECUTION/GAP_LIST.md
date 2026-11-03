@@ -19,15 +19,15 @@ The ordering is historical, not an assignment or current priority; check the iss
 
 ## 0. Coverage hole
 
-**Partial coverage; runtime status requires a revision-specific run.** The scenario loop in
-`.github/workflows/wo000-delivery-spine.yml` runs `touch_matron_act` and other Matron scenarios,
-but does not list `touch_matron_pipe`. It runs `matron_figure_test.gd` and separately captures
-`touch_summit_ending`; it does not list `gore_shots_test.gd`, `matron_presentation_test.gd` or
-`script_load_test.gd`. Check the workflow itself for the full current list.
-
-Historical: the earlier pipe staging failed at drum pickup; it is not evidence that the scenario
-has never passed anywhere. [PR #29](https://github.com/IssisX/ScraperX/pull/29) proposes a fix,
-but is unmerged. Do not infer visual approval from a headless run or screenshots merely existing.
+**Covered except one scenario, which fails on trunk.** `matron_presentation_test.gd` and
+`script_load_test.gd` run in the `godot-audits-and-mix` job; `gore_shots_test.gd` runs there too
+since J-027 (issue #134; without `--out` it renders nothing and needs no display). The scenario
+`touch_matron_pipe` is in no `godot-touch` shard because it fails on trunk: the drum staged on her
+deck is already on the ground, 154 m down, by the time she comes out of her locker, so Action is
+never PICK UP (diagnosis on #134; same failure as the trunk baseline e05d1aac). It stays a warned
+known gap in `.github/scripts/check_touch_shard_coverage.py` until a fix to the staging lands;
+[PR #29](https://github.com/IssisX/ScraperX/pull/29) proposes one, unmerged. Do not infer visual
+approval from a headless run or screenshots merely existing.
 
 ## Ranked gaps
 

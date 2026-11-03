@@ -65,8 +65,10 @@ SKIP_EXACT = {"audio_mix", "audio_fall", "perf_top", "perf_grade"}
 # not failure; stale the moment the scenario appears in a shard.
 KNOWN_GAPS = {
     "touch_matron_pipe": (
-        "encounter-owned known trunk failure (drum staging decision "
-        "pending); runs locally, in no CI touch shard yet"
+        "fails on trunk (reported on issue #134): the staged drum is "
+        "already on the ground, 154 m down, when she comes out of her "
+        "locker, so PICK UP is never offered; PR #29 proposes a fix. "
+        "Wire it into a shard together with that fix"
     ),
 }
 

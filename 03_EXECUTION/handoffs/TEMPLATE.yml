@@ -1,5 +1,5 @@
 # Handoff form: the one fixed form every agent uses to hand work to another agent or to the
-# integrator. Post it as a comment on issue #3 (or the work's own issue), addressed to the
+# integrator. Post it as a comment on the work's own job issue (never #3, closed), addressed to the
 # agent it is for, inside a ```yaml block. Fill every field; write "none" rather than leave one out.
 # The receiver needs only this form and the commits, not the history.
 
@@ -34,4 +34,8 @@ risks:                   # what could still be wrong, and what would show it
   - ""
 not_done:                # what was asked and not finished, and why
   - ""
+asks_in_flight:          # every question you asked another agent, or one asked of you, still open
+  - to: ""               # Muse (mailed? yes/no), Grok (comment starts "To Grok:"?), ChatGPT, Claude
+    where: ""            # the comment link
+    waiting_since: ""    # Central time
 next_step: ""            # the one thing the receiver does first
