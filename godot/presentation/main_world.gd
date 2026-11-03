@@ -47,7 +47,7 @@ func _build_world() -> void:
 	# way a real decades-old industrial site actually weathers.
 	# The yard's asphalt: worn, patched, cracked and stained (yard_ground.gd).
 	var asphalt := YardGround.material()
-	var concrete := _material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete)
+	var concrete := _surfaced(Color("4e4841"), 0.0, 0.94, _surface_concrete)
 	# Measured values (linear albedo; physicallybased.info, CC0, which names
 	# its own sources): iron 0.53 and zinc 0.81 as bare metal, fired-clay
 	# brick -- iron oxide -- 0.26/0.10/0.06, concrete 0.51 clean. The sun and
@@ -60,25 +60,26 @@ func _build_world() -> void:
 	# and galvanised steel are. Mill scale is the forged skin of iron oxide
 	# on new steel, blue-black with a dull sheen: a dark dielectric over the
 	# metal (linear 0.04), a value step under the rust, never a hole. Rust
-	# runs the hematite hue at three values. Bump-mapped: these cover most of
-	# the structure's surface area, so this is where per-pixel normal detail
-	# matters most -- pitted where rusted, smooth where not.
-	var mill_scale := _material(Color("36383b"), 0.3, 0.5, Color.BLACK, 1.0, _bump_smooth)
-	var oxidised := _material(Color("57382a"), 0.0, 0.9, Color.BLACK, 1.0, _bump_rust)
-	var rust_deep := _material(Color("3a271d"), 0.0, 0.93, Color.BLACK, 1.0, _bump_rust)
-	var rust_bright := _material(Color("6e4630"), 0.0, 0.84, Color.BLACK, 1.0, _bump_rust)
+	# runs the hematite hue at three values. Each is drawn in its real surface
+	# (main_geometry.gd Surface: rust, mill scale, galvanising, paint, timber,
+	# concrete): these cover most of the structure's surface area, so this is
+	# where per-pixel detail matters most.
+	var mill_scale := _surfaced(Color("36383b"), 0.3, 0.5, _surface_mill_scale)
+	var oxidised := _surfaced(Color("57382a"), 0.0, 0.9, _surface_rust)
+	var rust_deep := _surfaced(Color("3a271d"), 0.0, 0.93, _surface_rust)
+	var rust_bright := _surfaced(Color("6e4630"), 0.0, 0.84, _surface_rust)
 	# Weathered hot-dip zinc: the bright metal (0.81) dulled under its grey
 	# patina of zinc carbonate, part metal, part mineral.
-	var galvanised := _material(Color("6e7274"), 0.75, 0.6, Color.BLACK, 1.0, _bump_smooth)
+	var galvanised := _surfaced(Color("6e7274"), 0.75, 0.6, _surface_galvanised)
 	# Paint is not metal: it weathers, grimes and streaks like the steel it
 	# covers (signal yellow and orange, sun-faded and dirtied).
-	var faded_yellow := _material(Color("85600c"), 0.0, 0.6, Color.BLACK, 1.0, _bump_smooth)
-	var hazard := _material(Color("9a4814"), 0.0, 0.66, Color.BLACK, 1.0, _bump_smooth)
+	var faded_yellow := _surfaced(Color("85600c"), 0.0, 0.6, _surface_paint)
+	var hazard := _surfaced(Color("9a4814"), 0.0, 0.66, _surface_paint)
 	var tar := _material(Color("0e0f11"), 0.0, 0.62)
-	var timber := _material(Color("4a3420"), 0.0, 0.9, Color.BLACK, 1.0, _bump_timber)
+	var timber := _surfaced(Color("4a3420"), 0.0, 0.9, _surface_timber)
 	# New accents: living colour against the rust. Copper's patina is a
 	# mineral crust, not metal.
-	var verdigris := _material(Color("3f6b5c"), 0.0, 0.7, Color.BLACK, 1.0, _bump_smooth)
+	var verdigris := _surfaced(Color("3f6b5c"), 0.0, 0.7, _surface_paint)
 	var lichen := _material(Color("57642e"), 0.0, 0.96)
 
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
