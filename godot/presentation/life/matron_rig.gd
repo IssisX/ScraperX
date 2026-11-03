@@ -54,7 +54,7 @@ const SKIRT_THIGH_FROM := 0.35
 const SKIRT_TURN_SPAN := 1
 const SKIRT_DAMP := 0.9
 const SKIRT_ITERATIONS := 4
-const SKIRT_CLEAR_M := 0.012
+const SKIRT_CLEAR_M := 0.006
 # Each row drawn toward its place hung on her hips, by this much a pass: the
 # top hugs her hips, the hem swings.
 const SKIRT_SHAPE := [0.0, 0.35, 0.18, 0.08, 0.04, 0.02, 0.01]
