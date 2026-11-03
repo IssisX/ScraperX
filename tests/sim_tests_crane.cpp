@@ -396,6 +396,90 @@ static bool run_springboard_stage(scraperx::sim::Simulation &route) {
     return crane_pole(route, -5.75, -155.0, -1.0, 0.0, 528.4, "pole 2");
 }
 
+// The 528 -> 550 stepping stones (band_facade_crane.cpp build_stones) on player
+// inputs: up the pole to the 539 lane; a jump from its lip with no sighted
+// landing, which falls into the pit; out of the pit by a hang up its east wall;
+// then the look lowered onto each post's top and Jump, the precision jump (as
+// the proving ground's), across both posts onto the block; the second pole.
+constexpr double kPjStoneOneX = 1.5;
+constexpr double kPjStoneTwoX = -1.0;
+
+static bool run_stones_stage(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: stones: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    if (!walk_to(route, 7.2, -153.0, 8.0, 0.3) || !walk_to(route, 7.2, -159.1, 8.0, 0.3)) {
+        at("walk round the pier failed");
+        return false;
+    }
+    if (!(crane_pole(route, 9.0, -159.1, 0.0, 1.0, 539.1, "pole 1") && walk_to(route, 4.6, -154.5, 8.0, 0.1))) {
+        at("pole 1 or the walk to the lip failed");
+        return false;
+    }
+    // A jump with the look level has no sighted landing: it falls into the pit.
+    (void)route.set_facing(-1.0, 0.0);
+    (void)route.set_look_pitch(0.0);
+    (void)route.advance_frame(0.4);
+    const bool level_sighted = route.snapshot().precision_sighted;
+    (void)route.request_jump();
+    (void)route.set_move_input(-1.0, 0.0);
+    const bool fell = advance_until(route, [](const Snapshot &n) { return n.player_grounded && n.player_position.y < 538.0; }, 3.0);
+    (void)route.set_move_input(0.0, 0.0);
+    at("level jump");
+    if (level_sighted || !fell || route.snapshot().player_position.x > 1.0) {
+        at("a jump from the lip with no sighted landing must land in the pit short of the first post");
+        return false;
+    }
+    // Out of the pit: a hang up the lane's end face.
+    if (!walk_to(route, 3.2, -154.5, 6.0, 0.15) || !c4_hang_up(route, 1.0, 0.0, 539.1, "out of the pit")) {
+        at("out of the pit failed");
+        return false;
+    }
+    if (!walk_to(route, 4.6, -154.5, 6.0, 0.1)) {
+        at("back to the lip failed");
+        return false;
+    }
+    // Each hop: the look lowered until the sighted point lies on the target, Jump.
+    const auto hop = [&route, &at](const double target_x, const double target_y, const char *what) {
+        (void)route.set_facing(-1.0, 0.0);
+        (void)route.set_move_input(0.0, 0.0);
+        bool sighted = false;
+        for (double pitch = -0.05; pitch > -0.9 && !sighted; pitch -= 0.01) {
+            (void)route.set_look_pitch(pitch);
+            (void)route.advance_frame(Simulation::kFixedStepSeconds * 2);
+            const Snapshot n = route.snapshot();
+            sighted = n.precision_sighted && std::abs(n.precision_point.y - target_y) < 0.1 &&
+                      std::abs(n.precision_point.x - target_x) < 0.35;
+        }
+        if (!sighted) {
+            at(what);
+            std::cout << "route: stones: no sighted landing on " << what << '\n';
+            return false;
+        }
+        (void)route.request_jump();
+        if (!advance_until(route, [](const Snapshot &n) { return !n.player_grounded; }, 0.5) ||
+            !advance_until(route, [](const Snapshot &n) { return n.player_grounded; }, 3.0)) {
+            at(what);
+            return false;
+        }
+        (void)route.advance_frame(0.3);
+        const Snapshot l = route.snapshot();
+        const bool on = l.player_position.y > target_y + 0.8 && std::abs(l.player_position.x - target_x) < 0.5;
+        std::cout << "route: stones: hop to " << what << " landed at (" << l.player_position.x << ", " << l.player_position.y
+                  << "), precision landings " << l.precision_landing_count << '\n';
+        return on;
+    };
+    if (!(hop(kPjStoneOneX, 539.8, "the first post") && hop(kPjStoneTwoX, 540.6, "the second post") &&
+          hop(-5.0, 541.4, "the block"))) {
+        at("the hops failed");
+        return false;
+    }
+    return crane_pole(route, -4.84, -154.5, -1.0, 0.0, 550.4, "pole 2");
+}
+
 // AS-009's climbing route, on player inputs: from the 484 ring's north band to
 // the east band, one L of boards and a ladder per ring gap to 616, then the
 // ladder up through TP-640's hatch; every lift in the band where it was found.
@@ -415,6 +499,14 @@ void run_crane_route() {
             require(walk_to(route, -8.5, -141.5, 12.0, 0.3) && walk_to(route, 8.5, -141.5, 20.0, 0.3) &&
                         walk_to(route, 8.5, -149.0, 10.0, 0.3),
                     "route: round the 528 ring to its east band");
+            continue;
+        }
+        if (h == 528.0) {
+            require(run_stones_stage(route), "route: the stepping stones, 528 to 550");
+            // Round the 550 ring's west, north and east bands to its east band.
+            require(walk_to(route, -7.6, -142.4, 14.0, 0.3) && walk_to(route, 7.6, -142.4, 20.0, 0.3) &&
+                        walk_to(route, 7.6, -149.0, 10.0, 0.3),
+                    "route: round the 550 ring to its east band");
             continue;
         }
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
