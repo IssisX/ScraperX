@@ -133,8 +133,9 @@ agent, Claude included, works this way:
   - Reviews are cross-model, and Claude *session* usage is the scarce budget (2026-11-02: *"That's why
     so much of the session's usage was used up so quickly"*): reviews go to Muse, ChatGPT or Grok
     (Gemini is off the team, 11-02); a Claude session reviews only for security or when nobody else is
-    free. The Claude API review is separate credit and runs on every PR beside them, at xhigh (11-03:
-    *"We should use Muse and Claude API at the same time."*; the switchboard, #178). **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+    free. The Claude API review (separate credit, xhigh) shares the reviews with Muse and ChatGPT: one
+    reviewer per PR, whoever is free, spread around (11-03: *"I'm not asking for two agents to review
+    the same shit"*; `review.pool`, #178). **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
     "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
     roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
     that. You should ask me how many workers to open up and give suggestions from now on"*; the
@@ -203,10 +204,9 @@ agent, Claude included, works this way:
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
    .
-- Effort level is his call (2026-11-02: *"I don't have a never medium. I just didn't like when you
-  automatically assigned it medium and didn't ask me what level I wanted it at."*). When asking him
-  before opening a Claude session or helper, ask the effort level too, with a suggestion; never
-  default it silently. He set every session to high on 11-02.
+- Effort level is his call, never medium by default (11-02, 11-03: *"all of the sessions are opening up at
+  medium, and that's too low"*): every session starts at high from `.claude/settings.json`
+  (`CLAUDE_CODE_EFFORT_LEVEL`); ask him before going another level.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 
