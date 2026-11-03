@@ -35,6 +35,10 @@ on:
         description: Post (or print) the digest now
         type: boolean
         default: false
+      provision:
+        description: One-time setup of the hosted API agent (creates its environment, agent and vault)
+        type: boolean
+        default: false
   pull_request:
     branches: [ScraperX-Claude]
     paths:
@@ -125,6 +129,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}
@@ -147,6 +152,35 @@ jobs:
               if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi ;;
           esac
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
+
+  # One-time setup of the hosted API agent (step C): only on a dispatch with provision=true. It prints
+  # the new ids to the run summary for work/budget.yml; it never prints a secret.
+  provision:
+    if: github.event_name == 'workflow_dispatch' && inputs.provision
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out trunk
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git clone -q --filter=blob:none --branch "$TRUNK" --single-branch "https://github.com/${REPO}.git" src
+      - name: Install the hash-pinned dependencies (wheels only)
+        run: |
+          set -euo pipefail
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
+            -r src/tools/switchboard/requirements.txt
+      - name: Create the environment, agent and vault
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          .venv/bin/python src/tools/switchboard/provision_agent.py
 
   # The free part: the merge rule, review asks, one owner per issue, the digest. No API key.
   steer:
