@@ -116,7 +116,8 @@ class FallbackConfig(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("chatgpt", "grok"), 3.0))
+        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("muse", "chatgpt", "grok"), 3.0))
+        self.assertEqual(team.other_authored_asks, ("muse", "chatgpt"))
 
 
 class FallbackPick(unittest.TestCase):

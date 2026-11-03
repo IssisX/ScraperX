@@ -13,7 +13,7 @@ agents:
     vendor: anthropic
     names: [Claude]
     branch_prefixes: [claude/]
-    owner_labels: [owner:claude-hold, owner:claude-lane-a, owner:claude-lane-b, owner:claude-switchboard]
+    owner_labels: [owner:claude, owner:claude-hold, owner:claude-lane-a, owner:claude-lane-b, owner:claude-switchboard]
     wake: api            # the only vendor the switch can wake by itself (reviews, the eye, the orchestrator)
   chatgpt:
     vendor: openai
@@ -39,8 +39,12 @@ review:
   claude_authored_asks: [chatgpt, muse]
   # A job that needs matron asks Muse first: the Matron is its specialty.
   matron_reviewer: muse
+  # Work by ChatGPT, Grok or Muse is asked of these, in order, skipping the author's own vendor (Cory, 11-03:
+  # Muse is always on and free, so it reviews first; Muse's own PRs go to ChatGPT). The paid Claude review
+  # through the API runs only when none of these fits.
+  other_authored_asks: [muse, chatgpt]
   # An ask with no verdict on its head after this many hours is passed to the next agent here that has
   # not been asked on that head, once per head (Cory, 11-03: Codex's quota ran out and nothing took over).
   # Never a Claude agent, never the author's own vendor. Grok answers `To Grok:` comments (work/tasks/grok-answers.md).
   fallback_after_hours: 3
-  fallback_order: [chatgpt, grok]
+  fallback_order: [muse, chatgpt, grok]
