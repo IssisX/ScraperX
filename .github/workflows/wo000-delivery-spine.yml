@@ -783,6 +783,14 @@ jobs:
             --script res://tests/matron_hold_haptics_test.gd 2>&1 | tee artifacts/matron-hold-haptics.log
           grep -q '^MATRON_HOLD_HAPTICS PASS' artifacts/matron-hold-haptics.log
 
+      - name: Check one landed blow makes one Matron hit sound
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60s tools/godot/godot --headless --path godot \
+            --script res://tests/fight_s1_sound_dedupe_test.gd 2>&1 | tee artifacts/fight-s1-sound-dedupe.log
+          grep -q '^FIGHT_S1_DEDUPE PASS$' artifacts/fight-s1-sound-dedupe.log
+
       - name: Check every presentation script loads and the native bridge answers
         shell: bash
         run: |
@@ -797,6 +805,16 @@ jobs:
             --script res://tests/script_load_test.gd 2>&1 | tee artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
+
+      - name: Fight S1 act test
+        shell: bash
+        run: |
+          set -euo pipefail
+          # fight_s1_test.gd asserts a landed punch reads (flinch + grunt +
+          # haptics) and a whiff reads nothing.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/fight_s1_test.gd 2>&1 | tee artifacts/fight-s1.log
+          grep -q '^FIGHT_S1 PASS' artifacts/fight-s1.log
 
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4

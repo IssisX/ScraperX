@@ -173,6 +173,73 @@ void run_strike() {
     require(blow_hits == 1 && dv > 0.0 && blow_mps >= 0.8 * dv && blow_mps <= 1.5 * dv + 0.05,
             "strike: her velocity change is about the impulse over her 220 kg");
 
+    // A second punch after quiet must read again: the blow export returns
+    // to zero once the judged window closes (6 quiet ticks), so the next
+    // landing is a fresh rising edge for the grunt/haptic readers; a blow
+    // that never returns to zero leaves the second punch silent.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + 1.05});
+        constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
+        for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && s.matron_state().state != kHunting; ++i) {
+            tick(s);
+        }
+        for (int i = 0; i < 90 && !s.snapshot().strike_offered; ++i) {
+            const Vector3 me = s.snapshot().player_position;
+            const Vector3 her = s.matron_state().position;
+            (void)s.set_facing(her.x - me.x, her.z - me.z);
+            tick(s);
+        }
+        require(s.snapshot().strike_offered, "strike: second read, first punch on offer (setup)");
+        (void)s.request_strike();
+        int waited = 0;
+        while (s.snapshot().strike_hit_count == 0 && waited < 60) {
+            tick(s);
+            ++waited;
+        }
+        require(s.snapshot().strike_hit_count == 1, "strike: second read, first punch lands (setup)");
+        double peak1 = 0.0;
+        while (s.snapshot().strike_phase != 0 && waited < 120) {
+            tick(s);
+            ++waited;
+            peak1 = std::max(peak1, s.matron_state().blow_mps);
+        }
+        peak1 = std::max(peak1, s.matron_state().blow_mps);
+        for (int i = 0; i < 20; ++i) {
+            tick(s);
+        }
+        const double quiet = s.matron_state().blow_mps;
+        for (int i = 0; i < 90 && !s.snapshot().strike_offered; ++i) {
+            const Vector3 me = s.snapshot().player_position;
+            const Vector3 her = s.matron_state().position;
+            (void)s.set_facing(her.x - me.x, her.z - me.z);
+            tick(s);
+        }
+        require(s.snapshot().strike_offered, "strike: second read, second punch on offer (setup)");
+        (void)s.request_strike();
+        waited = 0;
+        while (s.snapshot().strike_hit_count < 2 && waited < 60) {
+            tick(s);
+            ++waited;
+        }
+        require(s.snapshot().strike_hit_count == 2, "strike: second read, second punch lands (setup)");
+        double peak2 = 0.0;
+        for (int i = 0; i < 10; ++i) {
+            tick(s);
+            peak2 = std::max(peak2, s.matron_state().blow_mps);
+        }
+        std::cout << "  strike second read: peak1=" << peak1 << " quiet=" << quiet << " peak2=" << peak2 << "\n";
+        require(peak1 > 0.0, "strike: second read, first punch reads a blow");
+        require(quiet == 0.0, "strike: second read, the blow export returns to zero after quiet");
+        require(peak2 > 0.0, "strike: second read, second punch after quiet reads a blow again");
+    }
+
     // Her hands on him (the owner's design): during her reach, before her
     // fingers close, the brace keeps Action, no punch; in her hand before
     // the rip the punch is offered and thrown, his escape, and lands on her

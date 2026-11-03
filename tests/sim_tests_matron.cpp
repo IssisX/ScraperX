@@ -681,8 +681,11 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
         const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
         const bool on_line = std::hypot(m.position.x - static_cast<double>(Matron::kPipeLineX),
                                         m.position.z - static_cast<double>(Matron::kPipeLineZ)) < 0.25;
-        if (drum_at_feet > 0.0 && !dropped && m.on_pipe && on_line && !m.pipe_sliding && feet < drum_at_feet) {
-            // Let go over the corner rail onto her, from a metre and a half up.
+        if (drum_at_feet > 0.0 && !dropped && m.on_pipe && on_line && !m.pipe_sliding && m.contact_hand_held &&
+            feet < drum_at_feet) {
+            // Let go over the corner rail onto her, from a metre and a half up,
+            // once she has the riser in her hands (she reaches it in a fall
+            // from the rail where it ends at 154: J-032).
             s.debug_launch_kit_body(drum, {m.position.x, m.position.y + 2.6, m.position.z}, {0.0, -2.0, 0.0});
             dropped = true;
         }

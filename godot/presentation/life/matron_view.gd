@@ -183,6 +183,29 @@ var _w_hold2 := 0.0
 var _w_hold2_v := 0.0
 var _hold_at := Vector3.ZERO
 var _hold_at2 := Vector3.ZERO
+# Her stoop to a prop (the toolbox) her real arm falls short of (0..1):
+# raised while the rig finds the handle past her arm (matron_rig.gd
+# prop_short), let down once it is in reach; her pose eased that far toward
+# the stoop (STOOP_*: trunk over her knees, hips down, knees bent).
+var _prop_lean := 0.0
+const PROP_LEAN_UP_S := 3.0
+const PROP_LEAN_DOWN_S := 1.2
+# and raised this long before the stoop would have to start to be drawn by the
+# take (matron_rig.gd prop_take_s): her speed changes on the way, and her drawn
+# shoulder trails the lean by about 0.25 s (matron_rig.gd govern)
+const PROP_LEAD_S := 1.0
+# trunk past level: the native takes a box at her centre kTakeM (0.85 m) from
+# it, and only this deep a stoop brings its handle inside her real arm there
+const STOOP_PITCH := 1.9
+const STOOP_HIP_Y := 0.45
+const STOOP_KNEES := 2.3
+const STOOP_LEGS := 1.25
+# Her tuck over a rail (pipe_tuck 1): trunk pitch, hips over her soles (in
+# standing units), knees and thighs.
+const TUCK_PITCH := 1.15
+const TUCK_HIP_Y := 0.34
+const TUCK_KNEES := 2.65
+const TUCK_LEGS := 1.35
 # What her hands hold, drawn: a jump of it (the ankle first in her hand, a
 # re-take) eased out over HOLD_BLEND_W, its motion followed as it is.
 var _hold_raw := Vector3.ZERO
@@ -1006,6 +1029,17 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	_apply_flinch(delta)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
+	var short := float(_rig.prop_short)
+	if _pose_fresh:
+		_prop_lean = 0.0
+	elif bool(_rig.prop_carried) and (short <= 0.0 or bool(_rig.prop_over)):
+		# the box in her hand and in her reach, or lifted above her shoulder:
+		# she comes up with it as the native lifts it
+		_prop_lean = maxf(0.0, _prop_lean - PROP_LEAN_UP_S * delta)
+	elif short > 0.0 and float(_rig.prop_take_s) <= (1.0 - _prop_lean) / PROP_LEAN_UP_S + PROP_LEAD_S:
+		_prop_lean = minf(1.0, _prop_lean + PROP_LEAN_UP_S * delta)
+	elif short < -0.08:
+		_prop_lean = maxf(0.0, _prop_lean - PROP_LEAN_DOWN_S * delta)
 	prop_attached = int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
 	prop_hand_error_m = INF
 	if prop_attached:
@@ -2002,6 +2036,32 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 				arms_fwd = 1.9
 				arms_bend = 0.2
 				arms_splay = 0.35
+	# Over her pipe's rail (matron_pipe.cpp pipe_tuck): tucked, her legs drawn
+	# up under her and her trunk over her knees, so her shoulders come down
+	# to the rail her hands press on (a squat vault); her soles where the
+	# simulation has them.
+	var tuck := clampf(float(data.get("pipe_tuck", 0.0)), 0.0, 1.0) if bool(data.get("on_pipe", false)) else 0.0
+	if tuck > 0.0:
+		pitch = lerpf(pitch, TUCK_PITCH, tuck)
+		hip_y = lerpf(hip_y, TUCK_HIP_Y, tuck)
+		knees = lerpf(knees, TUCK_KNEES, tuck)
+		legs_fwd = lerpf(legs_fwd, TUCK_LEGS, tuck)
+		legs_back = lerpf(legs_back, TUCK_LEGS, tuck)
+		arms_fwd = lerpf(arms_fwd, 0.9, tuck)
+		arms_bend = lerpf(arms_bend, 0.3, tuck)
+		arms_alt = lerpf(arms_alt, 0.0, tuck)
+		bend_alt = lerpf(bend_alt, 0.0, tuck)
+		head_pitch = lerpf(head_pitch, -0.7, tuck)
+	# Stooped to a prop her real arm falls short of (the toolbox on the deck,
+	# matron_rig.gd prop_short): her trunk down over it and her knees bent,
+	# so her hand takes it at her arm's own length (rule 33).
+	if _prop_lean > 0.0:
+		var w := clampf(_prop_lean, 0.0, 1.0)
+		pitch = lerpf(pitch, STOOP_PITCH, w)
+		hip_y = lerpf(hip_y, STOOP_HIP_Y, w)
+		knees = lerpf(knees, STOOP_KNEES, w)
+		legs_fwd = lerpf(legs_fwd, STOOP_LEGS, w)
+		legs_back = lerpf(legs_back, STOOP_LEGS, w)
 	body.position = Vector3(0.0, hip_y, 0.0)
 	# standing, the turn she has not made with her body: her neck round first,
 	# her chest the rest (_turn_yaw)

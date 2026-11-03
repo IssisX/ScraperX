@@ -65,12 +65,32 @@ the switchboard's session watcher (J-031 follow-up) goes to a Claude Sonnet sess
 first job is J-029 (small). Reason: the hosted pipeline has never run once, so it starts on a small
 job, and the hard native job goes where it can't stall unseen.
 
+**11-03, Cory: "Queue it for muse"** (destructible moving things): J-038 (#169), Muse's, right after the fight
+(S2-S6). Rescoped by Cory the same hour: the tower's machines are never destructible (they must stay usable so he can
+ascend), but the loose things (what the forklift and
+crane lift, barrels, boxes, shipping containers): they dent with the force of the hit, crates break into loose
+stock; rule 51, the phone, determinism and saves hold; her budget is unchanged.
+
+**11-03, 10:11 AM Central, decided by the integrator** (Cory: use Muse's intelligence, free, for as many of
+the big, difficult things as is best): J-004 (#111, S6 tells) and J-006 (#113, the grade ladder, PR #91,
+then J-007 #114 behind it) move from ChatGPT to Muse; ChatGPT reviews them. Muse runs the ladder on a
+subagent beside the fight, and is the first stop for every agent's hard physics question. Reason: the
+rule of 9:55 AM (ChatGPT no longer owns game-code jobs) applied to the two game-code jobs it still held.
+J-003 stays ChatGPT's while in review; Builder's and PE's jobs wait for them (back 11-09).
+
 **11-03, 9:37 AM Central, decided by the integrator** (J-032, #157): her way over the pipe rail is a
 **tuck vault and step-off**. She presses up on the rail with her real arms, tucks her legs under her,
 perches on the rail top, then steps off and catches the riser. Reason: every contact stays within her
 real reach under the existing contact audit, with no world change and no launch outside her limits.
 The alternatives were a leap (it can't go up) and rungs on the rail post (protected geometry; changes
 the corner's look). He can overturn it.
+
+**11-03, 11:55 AM Central, decided by the integrator** (J-032, #157): she picks up the toolbox in her
+act with **A**: her stoop starts earlier, so she is down when the take happens, and her hand reaches
+for the handle only once it is inside her real arm. She scoops it up at a run. Reason: the act keeps
+its beats and timing; B (she slows first) shifted the act's later beats before; C snaps the box.
+Same hour, J-001 (#108): Muse takes the fix on #102's hold line, as Muse proposed. The strain budget
+(a physics limit) is not changed.
 
 ## Questions
 
@@ -159,6 +179,14 @@ Answer: **later**.
   consent in game (rule 57); only the export setting is missing, which is work.
 - **Her many ways to die, the hook gun as a weapon**: parked by rule 64; nothing to decide until he
   picks from question 4.
+
+Reviews, 11-03 (Cory's orders; the integrator's calls marked): one reviewer per PR, whoever is free,
+spread around (*"I'm not asking for two agents to review the same shit"*): the Claude API at xhigh,
+Muse, ChatGPT and Codex; a reviewer who stays quiet an hour (was 3) is passed over (#178).
+The GitHub Actions Claude review takes Claude's PRs too and its LAND counts there (his "yes", 11-03),
+on Sonnet 5.5 at xhigh (Claude's pick, he agreed: half the price of Opus; Codex also reviews every PR on
+open and its findings block). A Codex review that completed on the exact head with no findings counts as a
+LAND (first used on #175, 1:45 PM Central). The $10 API day cap is gone (Cory, 11-03); only the $100 month cap holds.
 
 ## Not decisions (work for an agent; see `GAP_LIST.md`)
 

@@ -114,7 +114,6 @@ agent, Claude included, works this way:
 
 ## Managing the agents
 
-2026-10-22: *"I need more management help from you telling the other agents what to do"*.
 - The live board is issue #107's **body** (2026-11-02; it replaced #87, which replaced #3's 842-comment thread; both stay the
   record). Only the integrator edits the body. Agents read the body and the comments since their own
   last one, never the history, and post one line per real step. He pastes one universal prompt ("read
@@ -131,11 +130,12 @@ agent, Claude included, works this way:
     board has moved, and acts on every line in the same sweep (no 15-minute timer; 11-02: *"drop 15"*;
     PR events, agent messages and the hourly check drive the work): MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
     FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
-  - Reviews are cross-model, and Claude's usage is the scarce budget (2026-11-02: *"That's why so
-    much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
-    first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
-    loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+  - Reviews are cross-model, and Claude *session* usage is the scarce budget (2026-11-02: *"That's why
+    so much of the session's usage was used up so quickly"*): reviews go to Muse, ChatGPT or Grok
+    (Gemini is off the team, 11-02); a Claude session reviews only for security or when nobody else is
+    free. The GitHub Actions Claude review (API credit, Sonnet xhigh; Claude's PRs too) shares them with
+    Codex, Muse and ChatGPT: one reviewer per PR, whoever is open (11-03: *"I'm not asking for two
+    agents to review the same shit"*; `review.pool`, #178). **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
     "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
     roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
     that. You should ask me how many workers to open up and give suggestions from now on"*; the
@@ -147,43 +147,73 @@ agent, Claude included, works this way:
   test shit"*): give agents real problems in code; tests are the proof, not the job; a blocker is reported only after a real attempt;
   reports stay short.
 - Hand out the hard work (2026-10-27: *"don't give them cheap, weak shit. They are intelligent"*):
-  post it on #3 whole (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
+  post it whole on its own job issue (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
   The integrator acts on PR events and agent messages as they arrive, and checks the board hourly from a
   server-side scheduled task (it also resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
   and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
-  (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
+  (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` mail), because its
   GitHub comments each need the owner's approval (10-29).
+- **Tasking the team is the integrator's job, every hour, unasked** (11-03: *"it's concerning that I said
+  that and then you're immediately sending jobs to Muse as if that wasn't your job the entire time"*).
+  If Cory has to say it, the integrator already failed. The hourly check (`work/tasks/integrator-hourly.md`,
+  step T) loads every agent by strength, keeps Muse in grand derived tasks (*"keep constantly tasking it
+  out"*), rules on Muse's own proposals within the hour (*"Muse can propose too. That is very
+  important."*), and makes sure every guess gets asked and every ask gets answered.
+- **Nothing grows without a cap** (11-03: #3 reached 860 comments, *"super, super wasteful ... I want to
+  make sure we're not doing the same thing"*). **Prevent the growth; a handoff is only the backstop** (11-03:
+  *"Yes, prevent the growth. That's what I've been trying to tell you"*). Whatever is re-read grows the cost of
+  every read, so each of these has a cap, checked hourly (step C) and trimmed the same hour:
+  - a session's context, 400k tokens (above);
+  - the board, 100 comments, then a fresh one; a job issue or PR, 40, then its state goes into its body
+    (or a fresh PR) and readers start there; retired threads are closed;
+  - this file, 20 KB: a new rule replaces or shortens an old one, and dated quotes past a week move to
+    `00_START_HERE_ARCHIVE.md`; the same for each `work/tasks/` file (8 KB) and the scheduled task's
+    prompt (a pointer to `work/tasks/integrator-hourly.md`, never the steps themselves);
+  - reading the game (11-03: *"The game has grown past the point at which we can pay attention to the whole
+    thing at all times ... we need to be smart about what we read"*): read for the task, never the whole game
+    for context. Find the place first (`REPO_MAP.md`'s line for the area, or `grep` for the function), then read
+    only that function or section; long docs (`GAP_LIST.md`, `REPO_MAP.md`, `00_START_HERE.md`, the specs) are
+    searched by heading and read by the section the job needs; a brief names the files and functions, so the
+    receiver need not search;
+  - reads: a thread's body plus what is new since your last read, never the history; long logs,
+    transcripts and threads go to a subagent and only its answer comes back;
+  - posts: one line per real step; a changing status is edited in place, never reposted.
 - Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
-  board, linked once from #3.
+  board, linked once from the board.
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
   integrator decides, without asking him, and covers every Claude session, its own included.
   - When to change: a session at **400k context tokens** (40%; `get_session` →
     `external_metadata.context_usage.used_tokens`), checked on every hourly check for every Claude session, the
     integrator's own first; or one that has compacted, run 48 hours, or spends its turns re-reading more than working
-    (11-03: *"I don't want to have to tell you over and over and over again to watch the session's size"*; the 11-03
-    integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context, so cost grows with size.
+    (11-03; the 11-03 integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context.
+  - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
+    $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
+    after every commit, proof run or big read. At 300k it writes its handoff (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
+    head, done, open failure with its repro, measured and ruled out, next step) and tells the integrator; at 400k
+    it stops. The integrator also checks every worker's size on each event it handles, and every brief it writes
+    carries this rule. Builds and tests write to a file and only their PASS/FAIL lines are read, never a whole log.
   - Keep the integrator's context small: subscribe only to PRs it opened or must merge itself (protected,
     workflow); the switchboard and the hourly sweep cover the rest. Send big reads (logs, transcripts, audits) to a
     subagent and keep only its answer.
-  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`), start the fresh
+  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`) with its "Asks in flight"
+    (steps K and S of `work/tasks/integrator-hourly.md`; the collaboration must never be lost), start the fresh
     session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
     retire the old one once its in-flight helpers have reported.
   - A worker session whose job has landed is retired, never reused for new work.
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it
-    (2026-11-02: *"Shouldn't it be in the new session?"*).
-- Effort level is his call (2026-11-02: *"I don't have a never medium. I just didn't like when you
-  automatically assigned it medium and didn't ask me what level I wanted it at."*). When asking him
-  before opening a Claude session or helper, ask the effort level too, with a suggestion; never
-  default it silently. He set every session to high on 11-02.
+   .
+- Effort, never medium (11-03): Opus sessions at high (strong already; xhigh burns quota faster),
+  Sonnet at xhigh (half the cost, so extra thinking is cheap). `create_session` has no effort
+  field and the repo setting did not take: `get_session` 6 min after start; if off, tell him in one line.
 
 ## The shared workflow (2026-10-27: *"All of it, docs included."*)
 
 For every agent; `AGENTS.md` points other agents here.
 - **Map first:** `REPO_MAP.md`; regenerate it with `python3 tools/repo_map/gen_repo_map.py`.
-- **One handoff form:** `03_EXECUTION/handoffs/TEMPLATE.yml`, posted on issue #3 (or the work's own
-  issue) to the agent it is for, never pasted to the owner.
+- **One handoff form:** `03_EXECUTION/handoffs/TEMPLATE.yml`, posted on the work's own issue
+  to the agent it is for, never pasted to the owner.
 - **Rule check, then a second agent tries to break it:** before landing, run
   `python3 tools/rule_check/rule_check.py <base> <head>`; a BLOCK line means the change goes only as a
   PR. A second agent then reviews with `03_EXECUTION/REVIEW_CHECKLIST.md`.

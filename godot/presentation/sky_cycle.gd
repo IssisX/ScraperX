@@ -11,14 +11,25 @@ extends Node
 # sky's radiance map. At the default day length a step is 0.125 degrees.
 
 const STEP_SECONDS := 0.5
-# Noon elevation: an alpine summer sun, high but never overhead.
-const NOON_ELEVATION_DEG := 58.0
+# Noon elevation: an alpine autumn sun (snow already on the peaks). At 58
+# degrees the day began under a sun about 52 degrees high, its shadows short
+# and the tower flat; at 40 the start's sun (START_HOUR) is about 23 degrees
+# up and rakes across the steel from the east-southeast, and noon's shadows
+# are still longer than the old 10:30's (environment plan, job 3).
+const NOON_ELEVATION_DEG := 40.0
+# Where the day begins (settings_store.gd TIME_OF_DAY_HOURS[0], CYCLE).
+const START_HOUR := 8.5
 const SUN_ENERGY := 2.4
-const MOON_ENERGY := 0.55
+# Moonlight: cool, not blue-white. At 0.55 and a bluer colour the snow and
+# the cloud layer glowed against black slopes (environment plan, job 12).
+const MOON_ENERGY := 0.42
 const FILL_DAY_ENERGY := 0.55
 const FILL_NIGHT_ENERGY := 0.2
-const DAY_EXPOSURE := 1.42  # main.tscn's own tonemap_exposure
-const NIGHT_EXPOSURE := 2.3
+# AgX (main.tscn): it rolls highlights off and holds hue, where ACES pushed
+# the sky and the paints to candy; it reads darker at the same exposure, so
+# both ends were raised by the same factor (1.42 and 2.3 under ACES).
+const DAY_EXPOSURE := 1.75  # main.tscn's own tonemap_exposure
+const NIGHT_EXPOSURE := 2.85
 
 # Player settings: DISPLAY > BRIGHTNESS and GRAPHICS > SHADOWS.
 var exposure_scale := 1.0
@@ -28,9 +39,10 @@ var exposure_scale := 1.0
 # round a lamp stayed black and its glowing head hung in the dark).
 const LAMP_NIGHT_GAIN := 6.0
 var _lamps: Array = []   # [OmniLight3D, the day's energy]
+var _glows: Array = []   # lamp_glow.gd nodes on the rig: set_night(0..1)
 var _shadows_on := true
 
-var hour := 10.5
+var hour := START_HOUR
 # Real minutes per 24 in-game hours; 0 holds the current hour.
 var day_minutes := 24.0
 
@@ -84,6 +96,8 @@ func add_lamps(rig: Node) -> void:
 	for lamp in rig.get_children():
 		if lamp is OmniLight3D:
 			_lamps.append([lamp, (lamp as OmniLight3D).light_energy])
+		elif lamp.has_method(&"set_night"):
+			_glows.append(lamp)
 	_apply()
 
 
@@ -135,9 +149,17 @@ func _apply() -> void:
 	_sun.global_basis = Basis.looking_at(-body_dir, Vector3.UP)
 	var rise := smoothstep(-0.02, 0.16, body_dir.y)
 	var day := smoothstep(-0.10, 0.22, sun_dir.y)
-	var dusk := (1.0 - smoothstep(0.05, 0.38, sun_dir.y)) * smoothstep(-0.12, 0.0, sun_dir.y)
+	# Twilight: the sky stays lit after the sun is down (sky_day), its
+	# horizon glowing on the sun's side (dusk) until the sun is about 10
+	# degrees under, and the stars wait for the sky to darken: none at 6
+	# degrees under, all by 12 (stars). Before, the glow went out the moment
+	# the light became the moon and every star was out at 4 degrees under,
+	# so the DUSK setting was full night.
+	var sky_day := smoothstep(-0.21, 0.22, sun_dir.y)
+	var dusk := (1.0 - smoothstep(0.05, 0.38, sun_dir.y)) * smoothstep(-0.18, -0.01, sun_dir.y)
+	var stars := 1.0 - smoothstep(-0.21, -0.10, sun_dir.y)
 	if is_moon:
-		_sun.light_color = Color(0.62, 0.72, 0.92)
+		_sun.light_color = Color(0.66, 0.73, 0.88)
 		_sun.light_energy = MOON_ENERGY * rise
 	else:
 		var warm := Color(1.0, 0.60, 0.34)
@@ -149,11 +171,21 @@ func _apply() -> void:
 	var lamp_gain := lerpf(LAMP_NIGHT_GAIN, 1.0, day)
 	for entry in _lamps:
 		(entry[0] as OmniLight3D).light_energy = float(entry[1]) * lamp_gain
+	for glow in _glows:
+		glow.set_night(1.0 - day)
 	_fill.light_color = Color(0.30, 0.36, 0.52).lerp(Color(0.58, 0.68, 0.82), day)
-	_sky_material.set_shader_parameter(&"day_factor", day)
+	_sky_material.set_shader_parameter(&"day_factor", sky_day)
 	_sky_material.set_shader_parameter(&"dusk_factor", dusk)
 	_sky_material.set_shader_parameter(&"light_is_moon", is_moon)
-	_apply_air(day, dusk)
+	_sky_material.set_shader_parameter(&"star_factor", stars)
+	_sky_material.set_shader_parameter(&"sun_direction", sun_dir)
+	# The ground's bounce, for the ambient's lower half: the yard and slopes
+	# (asphalt, grass and concrete, albedo about 0.25, warm) under the sun's or
+	# moon's light and the sky's. Under a deck, shade is lit from below.
+	var on_ground := _sun.light_color * (_sun.light_energy * maxf(body_dir.y, 0.0)) \
+		+ Color(0.9, 0.95, 1.05) * lerpf(0.1, 0.9, sky_day)
+	_sky_material.set_shader_parameter(&"ground_bounce", Color(0.28, 0.25, 0.20) * on_ground)
+	_apply_air(sky_day, dusk)
 	# Eyes adapt: night is dark, not black -- the yard stays readable by
 	# moonlight and its own lamps.
 	_environment.tonemap_exposure = lerpf(NIGHT_EXPOSURE, DAY_EXPOSURE, day) * exposure_scale

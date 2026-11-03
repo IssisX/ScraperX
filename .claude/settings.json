@@ -5,7 +5,8 @@
     "deepwiki"
   ],
   "env": {
-    "MCP_TOOL_TIMEOUT": "300000"
+    "MCP_TOOL_TIMEOUT": "300000",
+    "CLAUDE_CODE_EFFORT_LEVEL": "high"
   },
   "permissions": {
     "allow": [

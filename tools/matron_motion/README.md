@@ -40,7 +40,7 @@ Writes `<dir>/score/summary.txt` (also printed), plus three tables:
   in a frame of no time, is listed as a snap.
 - **Holds:** a run of frames in which the simulation says a hand holds one
   point (`contact_hand`, `contact_hand2`, `climb_hand`, `climb_hand2`, and the
-  ankle in her holds), the point staying within 3 cm.
+  ankle in her holds), a new hold starting where the point jumps over 0.3 m (30 cm) in a frame (`score.py` `HOLD_JUMP_M`).
   - Reached: her nearer knuckles come within 0.10 m of it (the probe's
     `GRIP_M`).
   - Kept: from 0.3 s in, the share of drawn frames her nearer knuckles are
