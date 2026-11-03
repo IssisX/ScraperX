@@ -959,17 +959,25 @@ func _setup_skirt(sk: Dictionary) -> void:
 		for pt in sk["points"][c]:
 			row_p.append(_v(pt))
 		_sk_rest.append(row_p)
+	# Kick pleats: below slit_row nothing joins the two sides of a slit cell.
+	var slits: Array = sk.get("slits", [])
+	var slit_row := int(sk.get("slit_row", _sk_rows + 1))
 	for c in _sk_cols:
 		var c1 := (c + 1) % _sk_cols
+		var open_here := slits.has(c)
+		var open_next := slits.has(c1)
 		for r in _sk_rows + 1:
 			if r < _sk_rows:
 				_sk_link(c, r, c, r + 1)
-				_sk_link(c, r, c1, r + 1)
-				_sk_link(c1, r, c, r + 1)
+				if not (open_here and r >= slit_row):
+					_sk_link(c, r, c1, r + 1)
+					_sk_link(c1, r, c, r + 1)
 			if r > 0:
-				_sk_link(c, r, c1, r)
+				if not (open_here and r > slit_row):
+					_sk_link(c, r, c1, r)
 				# bending: two along, two round, so a row cannot fold flat
-				_sk_link(c, r, (c + 2) % _sk_cols, r)
+				if not ((open_here or open_next) and r > slit_row):
+					_sk_link(c, r, (c + 2) % _sk_cols, r)
 			if r + 2 <= _sk_rows:
 				_sk_link(c, r, c, r + 2)
 	# A capsule never reaches a point of the skirt as it hangs at rest: the

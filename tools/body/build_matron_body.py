@@ -69,6 +69,10 @@ HAIR_SEGMENT_M = 0.09
 # Her skirt's cloth proxy: columns round her, segments from waist to hem.
 SKIRT_COLS = 32
 SKIRT_ROWS = 10
+# Kick pleats: slits from the hem up to this proxy row, in these cells (between
+# column c and c + 1); column 0 faces front. matron_rig.gd reads them from the json.
+SKIRT_SLIT_ROW = 5
+SKIRT_SLITS = [31, 7, 15, 23]
 
 # Her dress: a faded institutional blue-grey, so it reads apart from her pale
 # skin and grey hair (the owner, 2026-10-20: "everything is a shade of white
@@ -1035,11 +1039,14 @@ def build():
             d_ = np.linalg.norm(np.cross(sel - A, ax_), axis=1)
             capsules.append([a_, b_, float(np.percentile(d_, 75)) if len(d_) else 0.06])
 
-    def skirt_grid_w(ii, jj):
+    def skirt_grid_w(ii, jj, side=None):
         """Weights by place on the skirt's own grid (ring ii, segment jj), so
-        every point is the exact blend of the cloth points around it."""
+        every point is the exact blend of the cloth points around it. Below a
+        slit's top (SKIRT_SLITS) a point in the slit's cell goes over to its own
+        side's column: side -1 the cell's first column, +1 its second."""
         ii = np.asarray(ii, float)
         jj = np.asarray(jj, float)
+        side = np.zeros(len(ii)) if side is None else np.asarray(side, float)
         Wk = np.zeros((len(ii), len(names)))
         fr = np.interp(ii, i_rows, np.arange(SKIRT_ROWS + 1))
         r0 = np.minimum(np.floor(fr).astype(int), SKIRT_ROWS - 1)
@@ -1047,6 +1054,10 @@ def build():
         fc = (jj % nseg) / nseg * SKIRT_COLS
         c0 = np.floor(fc).astype(int) % SKIRT_COLS
         a = fc - np.floor(fc)
+        i_top, i_open = i_rows[SKIRT_SLIT_ROW], i_rows[SKIRT_SLIT_ROW + 1]
+        f_open = np.clip((ii - i_top) / max(i_open - i_top, 1), 0.0, 1.0)
+        in_slit = np.isin(c0, SKIRT_SLITS) & (side != 0)
+        a = np.where(in_slit, a + (np.where(side > 0, 1.0, 0.0) - a) * f_open, a)
         for n_ in range(len(ii)):
             for cc, wc in ((c0[n_], 1.0 - a[n_]), ((c0[n_] + 1) % SKIRT_COLS, a[n_])):
                 Wk[n_, col[sk_names[cc][r0[n_]]]] += wc * (1.0 - fra[n_])
@@ -1086,8 +1097,40 @@ def build():
     skirt = h.Part("skirt_cloth", "cloth")
     hem_ring = rings[-1]
     inner = [hem_ring, hem_ring * np.array([0.985, 1.0, 0.985]) + np.array([cx * 0.015, 0.02, czs * 0.015])]
-    SP, ST = h.loft(skirt, to_bind(rings), skirt_w, uv_scale=8.0)
-    h.loft(skirt, to_bind(inner), skirt_w, uv_scale=8.0)
+    # Above the slits' tops one closed tube; below, one open panel between
+    # each pair of slits (a kick pleat front and back, so a striding leg
+    # opens the skirt instead of stretching it).
+    i_top = i_rows[SKIRT_SLIT_ROW]
+    slit_j = sorted(int(round((c_ + 0.5) * nseg / SKIRT_COLS)) for c_ in SKIRT_SLITS)
+    h.loft(skirt, to_bind(rings[:i_top + 1]), skirt_w, uv_scale=8.0)
+    ys_all = np.array([r_[:, 1] for r_ in rings])
+
+    def panel(rs, ii_rows):
+        for k_ in range(len(slit_j)):
+            j0, j1 = slit_j[k_], slit_j[(k_ + 1) % len(slit_j)]
+            if j1 <= j0:
+                j1 += nseg
+            js = np.arange(j0, j1 + 1)
+            sub = [r_[js % nseg] for r_ in rs]
+            nk = len(js)
+            sides = np.where(js == j0, 1.0, np.where(js == j1, -1.0, 0.0))
+            # inside the slit cells, the half beside each edge goes with it
+            cell = np.floor((js % nseg) / nseg * SKIRT_COLS).astype(int) % SKIRT_COLS
+            near0 = np.isin(cell, SKIRT_SLITS) & (js < j0 + nseg // SKIRT_COLS)
+            near1 = np.isin(cell, SKIRT_SLITS) & (js > j1 - nseg // SKIRT_COLS)
+            sides = np.where(near0, 1.0, np.where(near1, -1.0, sides))
+
+            def wfn(P, ii_rows=ii_rows, js=js, nk=nk, sides=sides):
+                ii = ii_rows(P, js) if callable(ii_rows) else np.repeat(np.asarray(ii_rows, float), nk)
+                return skirt_grid_w(ii, np.tile(js, len(P) // nk), np.tile(sides, len(P) // nk))
+            h.loft(skirt, to_bind(sub), wfn, closed=False, uv_scale=8.0)
+
+    panel(rings[i_top:], np.arange(i_top, nring))
+
+    def inner_rows(P, js):
+        jq = np.tile(js % nseg, len(P) // len(js))
+        return np.array([np.interp(-P[q, 1], -ys_all[:, jq[q]], np.arange(nring)) for q in range(len(P))])
+    panel(inner, inner_rows)
     # threads hanging from the torn hem
     thr_rng = np.random.default_rng(57)
     for _ in range(34):
@@ -1108,7 +1151,7 @@ def build():
             tri_ += [[a_, a_ + 2, a_ + 1], [a_ + 1, a_ + 2, a_ + 3]]
         bind_pts = body_bind(pts)
         nrm = np.tile(U[j], (len(pts), 1))
-        thr_w = np.tile(skirt_grid_w([nring - 1], [j]), (len(pts), 1))   # one thread moves as its root does
+        thr_w = np.tile(skirt_grid_w([nring - 1], [j], [-1.0 if any(0 <= sj - j <= nseg // SKIRT_COLS for sj in slit_j) else 1.0]), (len(pts), 1))   # one thread moves as its root does
         skirt.add(bind_pts, nrm, np.zeros((len(pts), 2)), thr_w, tri_)
         skirt.add(bind_pts, -nrm, np.zeros((len(pts), 2)), thr_w, np.array(tri_)[:, ::-1])
     P_all = np.concatenate(skirt.P)
@@ -1367,7 +1410,7 @@ def build():
     eyes_out = {s: {"bone": "eye_" + s, "centre": [float(x) for x in eye_centre[s]]} for s in "lr"}
     json.dump({"bones": rig, "stats": stats, "contacts": contacts, "hair": {"chains": chains, "skull": [float(x) for x in head_c],
                "skull_radius": 0.1}, "eyes": eyes_out,
-               "skirt": {"cols": SKIRT_COLS, "rows": SKIRT_ROWS, "bones": sk_names,
+               "skirt": {"cols": SKIRT_COLS, "rows": SKIRT_ROWS, "slits": SKIRT_SLITS, "slit_row": SKIRT_SLIT_ROW, "bones": sk_names,
                          "points": [[[float(x) for x in pt] for pt in colm] for colm in sk_pts],
                          "capsules": capsules}}, open(os.path.join(OUT, "matron_rig.json"), "w"), indent=1)
     json.dump(stats, open(os.path.join(OUT, "matron_stats.json"), "w"), indent=1)
