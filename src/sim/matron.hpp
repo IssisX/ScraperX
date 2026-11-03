@@ -1684,6 +1684,8 @@ public:
     // His body down (off his feet, lying), and his collar (the top of his
     // chest), given before pre_step.
     void set_player_down(const bool down) noexcept { player_down_ = down; }
+    // His body crouched low (beat 1 of her hold: no swat to set up).
+    void set_player_crouched(const bool crouched) noexcept { player_crouched_ = crouched; }
     void set_player_collar(const JPH::RVec3 collar) noexcept { player_collar_ = collar; }
     // Her second hand's grip in the pin: 0 none, 1 his ankle (the handoff
     // before she tips him over), 2 his belt (the haul up onto the rail).
@@ -2606,6 +2608,7 @@ private:
     bool armplay_done_ = false;   // this hold's ArmPlay is over
     State armplay_then_ = State::Dangle;   // what follows it: the dangle's end, a Spare, or the carry's drop
     bool retake_ = false;                  // her hand on them again after a grip the world tore: the arm here
+    bool torn_in_carry_ = false;           // that re-take tore out of her hand mid-drag: the rail she was dragging him to still stands
     int hold_retakes_ = 0;                 // this hold's re-takes (kMaxRetakes)
     int armplay_reposes_ = 0;              // this ArmPlay's re-poses (the way back she steps turns with each)
     bool wrist_reseat_ = false;            // re-posed: the world lets go of the wrist (take_wrist_reseat)
@@ -2628,6 +2631,7 @@ private:
     bool swat_given_ = false;
     JPH::Vec3 swat_dir_ = JPH::Vec3::sZero();
     bool player_down_ = false;
+    bool player_crouched_ = false;         // crouched low (beat 1: no swat; beat 2: no walk-in)
     bool pin_here_ = false;                // no rail: the pin against her, then set down
     bool over_up_ = false;                 // beat 4: his ankle up over the rail's top
     bool back_lifted_ = false;             // back in: his ankle lifted clear over the rail's top

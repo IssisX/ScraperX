@@ -59,6 +59,7 @@ void Matron::begin_grab(const RVec3 player) {
     grip_was_on_ = false;
     armplay_done_ = false;
     retake_ = false;
+    torn_in_carry_ = false;
     hold_retakes_ = 0;
     spare_side_set_ = false;
     spare_tries_ = 0;
@@ -711,6 +712,7 @@ void Matron::end_hold(const State next) {
     arm_throw_ = false;
     leg_toss_ = false;
     retake_ = false;
+    torn_in_carry_ = false;
     reel_ = false;
     reel_to_floor_ = false;
     spare_walk_ = false;
@@ -812,9 +814,11 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             yaw_ = turn_to(yaw_, std::atan2(float(player.GetX()) - ax, float(player.GetZ()) - az), 7.0F, dt);
             if (hold_phase_ == 0) {
                 // Beat 1, down: a man on his feet she knocks down first (her
-                // swat, the world's kSwatN at his chest); on a ladder, or
-                // down already, her hand goes for his ankle at once.
-                if (player_down_ || player_on_ladder_ || retake_) {
+                // swat, the world's kSwatN at his chest); on a ladder, down
+                // already, or crouched low, her hand goes for his ankle at
+                // once (a crouched man is already low: no knockdown to set
+                // up, and the swat would only knock him away).
+                if (player_down_ || player_on_ladder_ || player_crouched_ || retake_) {
                     hold_phase_ = 1;
                     hold_s_ = 0.0F;
                 } else {
@@ -846,8 +850,18 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                 grip_point_ = Grip::Collar;
             }
             const RVec3 take = by_collar ? player_collar_ : ankle;
+            // A crouched man: the old grab's miss, restored (her stoop
+            // cannot reach his ankle where he crouches, so no hold to
+            // walk into: she misses where she stands instead of walking
+            // into him and shoving him along).
+            if (player_crouched_ && Vec3(take - (at + shoulder_local())).Length() > kStoopReachM + 0.4F) {
+                ++grab_misses_;
+                grab_cooldown_s_ = kGrabCooldownSeconds;
+                end_hold(State::Hunting);
+                break;
+            }
             const float reach_off = xz(ax, az, float(take.GetX()), float(take.GetZ()));
-            if (reach_off > 0.6F && !player_on_ladder_) {
+            if (reach_off > 0.6F && !player_on_ladder_ && !player_crouched_) {
                 // To his ankle, stopping short of it (her body never walks
                 // into his and shoves it along).
                 const float k = (reach_off - 0.6F) / reach_off;
@@ -887,7 +901,19 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // His one arm left: the fatality. She drags him to its edge (by
             // his collar: kFatalByCollar).
             retake_ = false;
+            torn_in_carry_ = false;
             begin_fatal(ax, az, feet);
+            break;
+        }
+        if (retake_ && torn_in_carry_) {
+            // Torn out of her hand mid-drag: the rail she was dragging him
+            // to still stands, so the drag resumes to it on the re-take
+            // instead of pinning where she stands.
+            retake_ = false;
+            torn_in_carry_ = false;
+            ++carries_;
+            state_ = State::Carry;
+            hold_s_ = 0.0F;
             break;
         }
         if (retake_ || !choose_rim(ax, az)) {
@@ -2370,6 +2396,7 @@ void Matron::retake() noexcept {
     ++retakes_;
     ++hold_retakes_;
     retake_ = true;
+    torn_in_carry_ = (state_ == State::Carry);
     spare_side_set_ = false;
     state_ = State::Grab;
     hold_s_ = 0.0F;

@@ -726,6 +726,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     matron_->set_player_belt(bodies.GetPosition(player_id_));
     // Down: off his feet, lying (beat 1 of her hold).
     matron_->set_player_down(player_free_rot_ && bodies.GetRotation(player_id_).RotateAxisY().GetY() < 0.6F);
+    // Crouched: low (beat 1 of her hold: no swat to set up).
+    matron_->set_player_crouched(crouched_);
     // Where his head faces (his facing, his look's pitch): hers to read only
     // through her eyes.
     {
