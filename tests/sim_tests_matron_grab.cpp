@@ -1250,10 +1250,8 @@ void run_matron_fatality() {
         // The owner's bar (2026-10-28): her fingers closed to her letting go,
         // 5 to 7 s (the view fades a second after: 6 to 8 s from the catch).
         const double length = r.release_s - r.grip_s;
-        // With real arms (11-02, HOLD_WITH_REAL_ARMS.md: the drag, the pin with
-        // his window, over, the hang): 7.5 to 13 s.
-        require(length >= 7.5 && length <= 13.0,
-                "matron fatality length: from her fingers closing on him to her letting go, 7.5 to 13 s");
+        require(length >= 5.0 && length <= 7.0,
+                "matron fatality length: from her fingers closing on him to her letting go, 5 to 7 s");
         std::cout << "PASS scraperx_sim matron fatality hang: catch_to_release_s=" << r.release_s - r.catch_s
                   << " grip_to_release_s=" << length << " release_to_death_s="
                   << r.death_s - r.release_s << " catch_to_death_s=" << r.death_s - r.catch_s
@@ -1283,30 +1281,11 @@ void run_matron_fatality() {
             (void)std::snprintf(name.data(), name.size(), "(%.1f, %.1f)", spot[0], spot[1]);
             const std::string at(name.data());
             report_fatal(("matron fatality band " + at).c_str(), r);
-            if (spot[0] < 0.0 && r.path == static_cast<int>(Matron::FatalPath::Floor)) {
-                // With real arms (11-02): on the north band no edge in her reach
-                // she can tip him over yet (its outside a bare lip, no rail to
-                // lay him over; under its shaft side a deck 2 m down): her
-                // floor version where she stands, and the same restart.
-                const std::vector<int> floor_beats{0, 1, 8, 9};
-                require(r.beats == floor_beats && r.claimed_s > 0.0 && r.m.fatal_release_beat == r.releases_start,
-                        ("matron fatality band " + at + ": no edge to hang him from, her floor version").c_str());
-                require(r.max_step < 0.2 && r.claimed_step < 0.2,
-                        ("matron fatality band " + at + ": no teleport").c_str());
-                require(r.death_s > r.claimed_s && r.deaths_end == r.deaths_start + 1 &&
-                            dist3(r.p.player_position, r.checkpoint) < 0.05 && !r.p.left_arm_lost &&
-                            !r.p.right_arm_lost && r.p.runs_ended_by_matron == 0,
-                        ("matron fatality band " + at + ": a death, and the run restarts from the checkpoint, whole")
-                            .c_str());
-                std::cout << "PASS scraperx_sim matron fatality band " << at
-                          << ": floor version, grip_to_death_s=" << r.death_s - r.grip_s << "\n";
-                continue;
-            }
             const double length = r.release_s - r.grip_s;
             require(r.path == static_cast<int>(Matron::FatalPath::Hang) && r.release_s > 0.0,
                     ("matron fatality band " + at + ": held out over a drop that kills, and let go").c_str());
-            require(length >= 7.5 && length <= 13.0,
-                    ("matron fatality band " + at + ": her fingers closing to her letting go, 7.5 to 13 s").c_str());
+            require(length >= 5.0 && length <= 7.0,
+                    ("matron fatality band " + at + ": her fingers closing to her letting go, 5 to 7 s").c_str());
             require(lethal_first_meeting(r) && r.deaths_end == r.deaths_start + 1 && r.deaths_held == 0,
                     ("matron fatality band " + at + ": the first thing he meets kills him").c_str());
             require(r.max_step < 0.2, ("matron fatality band " + at + ": no teleport while held").c_str());

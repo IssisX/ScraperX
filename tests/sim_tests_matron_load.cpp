@@ -232,6 +232,7 @@ void run_matron_load() {
         double max_shift = 0.0;
         int first_over_tick = -1;
         bool spare_seen = false;
+        double drag_shift = 0.0;   // the most of his load's shift while she drags him (Carry)
         bool held_seen = false;
         bool resolved = false;
         int open_air_lets_go = 0;
@@ -251,6 +252,9 @@ void run_matron_load() {
             }
             if (m.state == kSpareState) {
                 spare_seen = true;
+            }
+            if (m.state == static_cast<int>(scraperx::sim::Matron::State::Carry) && m.load_held) {
+                drag_shift = std::max(drag_shift, m.load_cop_shift_m);
             }
             if (p.held_by_matron) {
                 held_seen = true;
@@ -277,7 +281,13 @@ void run_matron_load() {
                   << first_over_tick << " spare_seen=" << (spare_seen ? "yes" : "no")
                   << " tears=" << tears_before << "->" << tears_at_break << " resolved=" << (resolved ? "yes" : "no")
                   << " open_air_lets_go=" << open_air_lets_go << " deaths=" << deaths << "->" << deaths_at_break << "\n";
-        require(first_over_tick >= 0, "matron load S2 over-base: a carry swing crossed the crouch base");
+        // With real arms (11-02) the carry is a drag, him on her deck behind
+        // her and her hand brought in (the counter-lean): his load passes her
+        // upright base but stays inside her crouch base (the old upside-down
+        // heave's swing crossed it). The drag happens, its load measured.
+        std::cout << "  matron load S2 over-base: drag shift " << drag_shift << " m\n";
+        require(drag_shift > Matron::kUprightBaseM && drag_shift <= Matron::kCrouchBaseM,
+                "matron load S2 over-base: the drag's load crossed her upright base, inside her crouch base");
         require(resolved, "matron load S2 over-base: the over-base carry resolved (tear or Spare set-down)");
         require(tears_at_break > tears_before,
                 "matron load S2 over-base: the over-base carry tore an arm, as ordinary holds do");
