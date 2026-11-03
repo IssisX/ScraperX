@@ -4,7 +4,7 @@ Run from the switchboard workflow's `provision` dispatch, which holds ANTHROPIC_
 AGENT_GITHUB_TOKEN. It creates three Managed Agents objects and prints their ids for
 work/budget.yml (orchestrator.agent_id, environment_id, vault_id). Nothing secret is printed.
 
-Usage: python3 tools/switchboard/provision_agent.py [--model claude-sonnet-5-5] [--dry-run]
+Usage: python3 tools/switchboard/provision_agent.py [--model claude-opus-5-5] [--effort high] [--dry-run]
 Exit status: 0 created (or printed in a dry run), 2 a create call failed (what failed is named).
 """
 
@@ -29,7 +29,8 @@ SYSTEM = (
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--model", default="claude-sonnet-5-5")
+    ap.add_argument("--model", default="claude-opus-5-5")
+    ap.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     token = os.environ.get("AGENT_GITHUB_TOKEN", "")
@@ -42,7 +43,7 @@ def main() -> int:
               "default_config": {"enabled": True, "permission_policy": {"type": "auto"}},
               "configs": [{"name": "web_fetch", "enabled": False}, {"name": "web_search", "enabled": False}]}]
     if args.dry_run:
-        print(json.dumps({"environment": env_cfg, "agent": {"name": NAME, "model": args.model, "system": SYSTEM,
+        print(json.dumps({"environment": env_cfg, "agent": {"name": NAME, "model": {"id": args.model, "effort": args.effort}, "system": SYSTEM,
                                                              "tools": tools}}, indent=2))
         return 0
     import anthropic
@@ -51,7 +52,7 @@ def main() -> int:
     try:
         env = c.beta.environments.create(name=NAME, config=env_cfg)
         step = "agents.create"
-        agent = c.beta.agents.create(name=NAME, model=args.model, system=SYSTEM, tools=tools)
+        agent = c.beta.agents.create(name=NAME, model={"id": args.model, "effort": args.effort}, system=SYSTEM, tools=tools)
         step = "vaults.create"
         vault = c.beta.vaults.create(display_name=NAME)
         step = "vaults.credentials.create"
@@ -67,7 +68,7 @@ def main() -> int:
         print(f"provision: {step} could not connect", file=sys.stderr)
         return 2
     ids = {"agent_id": agent.id, "agent_version": agent.version, "environment_id": env.id, "vault_id": vault.id,
-           "model": args.model}
+           "model": args.model, "effort": args.effort}
     print(json.dumps(ids))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
