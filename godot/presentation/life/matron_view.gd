@@ -190,7 +190,13 @@ var _hold_at2 := Vector3.ZERO
 var _prop_lean := 0.0
 const PROP_LEAN_UP_S := 3.0
 const PROP_LEAN_DOWN_S := 1.2
-const STOOP_PITCH := 1.45
+# and raised this long before the stoop would have to start to be drawn by the
+# take (matron_rig.gd prop_take_s): her speed changes on the way, and her drawn
+# shoulder trails the lean by about 0.25 s (matron_rig.gd govern)
+const PROP_LEAD_S := 1.0
+# trunk past level: the native takes a box at her centre kTakeM (0.85 m) from
+# it, and only this deep a stoop brings its handle inside her real arm there
+const STOOP_PITCH := 1.9
 const STOOP_HIP_Y := 0.45
 const STOOP_KNEES := 2.3
 const STOOP_LEGS := 1.25
@@ -1026,7 +1032,11 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	var short := float(_rig.prop_short)
 	if _pose_fresh:
 		_prop_lean = 0.0
-	elif short > 0.02:
+	elif bool(_rig.prop_carried) and (short <= 0.0 or bool(_rig.prop_over)):
+		# the box in her hand and in her reach, or lifted above her shoulder:
+		# she comes up with it as the native lifts it
+		_prop_lean = maxf(0.0, _prop_lean - PROP_LEAN_UP_S * delta)
+	elif short > 0.0 and float(_rig.prop_take_s) <= (1.0 - _prop_lean) / PROP_LEAN_UP_S + PROP_LEAD_S:
 		_prop_lean = minf(1.0, _prop_lean + PROP_LEAN_UP_S * delta)
 	elif short < -0.08:
 		_prop_lean = maxf(0.0, _prop_lean - PROP_LEAN_DOWN_S * delta)
