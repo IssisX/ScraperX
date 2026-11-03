@@ -372,6 +372,22 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
             throwables.push_back({kit_->body_id(body), kit_->body_entity(body),
                                   LooseStock::carry_handle(loose_stock_->placed()[static_cast<std::size_t>(i)].kind)});
         }
+        // And the stock already laid on the decks she hunts (J-016): a toolbox
+        // she can take, a drum or a crate she can shove, on her home deck
+        // first, then 143, the ring and 132, to her 32. No piece is laid for
+        // it: the kit's bodies, saves and stock counts are as they were.
+        for (const float deck : {Matron::kDeckTop, 143.0F, Matron::kRingFloor, 132.0F}) {
+            for (int i = 0; i < loose_stock_->count() - LooseStock::kMatronThrowables && throwables.size() < 32; ++i) {
+                const LooseStock::Placement &p = loose_stock_->placed()[static_cast<std::size_t>(i)];
+                const bool kind = p.kind == LooseStock::Kind::Toolbox || p.kind == LooseStock::Kind::Drum ||
+                                  p.kind == LooseStock::Kind::Crate;
+                if (!kind || std::abs(p.y - deck) > 0.3F) {
+                    continue;
+                }
+                const kit::BodyIndex body = loose_stock_->body(i);
+                throwables.push_back({kit_->body_id(body), kit_->body_entity(body), LooseStock::carry_handle(p.kind)});
+            }
+        }
         matron_->set_throwables(std::move(throwables));
     }
     // The bay on the 154 m deck (bay.hpp): its kit bodies after every other's,
