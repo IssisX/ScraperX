@@ -277,6 +277,125 @@ void run_crane_band() {
               << " plate_y=" << top.player_position.y << '\n';
 }
 
+// Up a pole from (x, z) facing (fx, fz), the way C4's standpipe is climbed.
+static bool crane_pole(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
+                       const double fz, const double top, const char *leg) {
+    if (!walk_to(simulation, x, z, 8.0, 0.08)) {
+        std::cout << "route: " << leg << ": not at the foot\n";
+        return false;
+    }
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        std::cout << "route: " << leg << ": no grip offered\n";
+        return false;
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    const bool up = is_climbing(simulation.snapshot()) &&
+                    hold_stick(simulation, fx, fz, fx, fz, 40.0, [top](const scraperx::sim::Snapshot &state) {
+                        return standing_above(state, top);
+                    });
+    if (!up) {
+        std::cout << "route: " << leg << ": stuck at y=" << simulation.snapshot().player_position.y << '\n';
+    }
+    return up;
+}
+
+// The 506 -> 528 springboard (band_facade_crane.cpp build_springboard) on player
+// inputs: up the pole to the 517 lane, a sprint and a jump 3 m short of the slab
+// (a jump from the lane, which does not catch the 4.3 m bulkhead), back over the
+// slab by a mantle, then the sprint and the jump a stride short (the springboard,
+// as run_springboard does), the lip caught and pulled up onto the bulkhead, and
+// the second pole to the 528 ring.
+static bool run_springboard_stage(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: springboard: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    if (!walk_to(route, 8.3, -157.0, 8.0, 0.3) || !walk_to(route, 8.3, -160.1, 8.0, 0.3)) {
+        at("walk round the pier failed");
+        return false;
+    }
+    if (!(crane_pole(route, 10.2, -160.1, 0.0, 1.0, 517.1, "pole 1") && walk_to(route, 9.6, -155.5, 6.0, 0.1))) {
+        at("pole 1 or the walk to the lane failed");
+        return false;
+    }
+    // A run is made west down the lane, the jump at x < `jump_x`.
+    const auto run = [&route](const double jump_x, double &entry, std::uint64_t &boards, bool &hung) {
+        (void)route.set_facing(-1.0, 0.0);
+        (void)route.set_move_input(-1.0, 0.0);
+        (void)route.set_sprint_input(true);
+        const std::uint64_t before = route.snapshot().springboard_count;
+        bool jumped = false;
+        hung = false;
+        for (int tick = 0; tick < 4 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const Snapshot n = route.snapshot();
+            if (!jumped && n.player_position.x < jump_x) {
+                entry = std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
+                (void)route.request_jump();
+                jumped = true;
+            }
+            (void)route.advance_frame(Simulation::kFixedStepSeconds);
+            const Snapshot m = route.snapshot();
+            if (m.traversal_state == TraversalState::Hanging) {
+                hung = true;
+                break;
+            }
+            if (jumped && tick > 45 && m.player_grounded) {
+                break;
+            }
+        }
+        boards = route.snapshot().springboard_count - before;
+        (void)route.set_move_input(0.0, 0.0);
+        (void)route.set_sprint_input(false);
+    };
+    double entry = 0.0;
+    std::uint64_t boards = 0;
+    bool hung = false;
+    run(6.0, entry, boards, hung);
+    std::cout << "route: springboard: jump 3 m short at " << entry << " m/s: " << boards << " springboard, hung " << hung << "\n";
+    if (boards != 0 || hung) {
+        at("the jump from the lane must neither springboard nor catch the bulkhead");
+        return false;
+    }
+    // Back east over the slab by a mantle.
+    (void)route.advance_frame(0.5);
+    if (!walk_to(route, 1.4, -155.5, 8.0, 0.2)) {
+        at("walk to the slab's west face failed");
+        return false;
+    }
+    (void)route.set_facing(1.0, 0.0);
+    (void)route.advance_frame(0.4);
+    if (!route.snapshot().ledge_available) {
+        at("no mantle offered at the slab");
+        return false;
+    }
+    (void)route.request_traversal();
+    if (!wait_for(route, 2.0, [](const Snapshot &n) { return standing_above(n, 518.0); }) ||
+        !walk_to(route, 9.6, -155.5, 8.0, 0.2)) {
+        at("back over the slab failed");
+        return false;
+    }
+    // The springboard.
+    run(4.0, entry, boards, hung);
+    std::cout << "route: springboard: jump a stride short at " << entry << " m/s: " << boards << " springboard, hung " << hung << "\n";
+    if (!(boards == 1 && hung)) {
+        at("the springboard did not catch the bulkhead's lip");
+        return false;
+    }
+    (void)route.advance_frame(0.3);
+    (void)route.request_jump();
+    if (!wait_for(route, 2.5, [](const Snapshot &n) { return standing_above(n, 521.4); })) {
+        at("the pull up onto the bulkhead failed");
+        return false;
+    }
+    return crane_pole(route, -5.75, -155.0, -1.0, 0.0, 528.4, "pole 2");
+}
+
 // AS-009's climbing route, on player inputs: from the 484 ring's north band to
 // the east band, one L of boards and a ladder per ring gap to 616, then the
 // ladder up through TP-640's hatch; every lift in the band where it was found.
@@ -290,6 +409,14 @@ void run_crane_route() {
                 walk_to(route, 10.3, -149.0, 12.0),
             "route: along the 484 ring to its east band");
     for (double h = 484.0; h < 615.9; h += 22.0) {
+        if (h == 506.0) {
+            require(run_springboard_stage(route), "route: the springboard, 506 to 528");
+            // Round the 528 ring's west, north and east bands to its east band.
+            require(walk_to(route, -8.5, -141.5, 12.0, 0.3) && walk_to(route, 8.5, -141.5, 20.0, 0.3) &&
+                        walk_to(route, 8.5, -149.0, 10.0, 0.3),
+                    "route: round the 528 ring to its east band");
+            continue;
+        }
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
         // Stopped at the boards' end before turning onto them: the walk off
         // the ladder carries its speed across their line.
