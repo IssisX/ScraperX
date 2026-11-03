@@ -4,9 +4,11 @@ extends RefCounted
 ## sets the same rotations on the same pivots it always has; this copies them
 ## to the bones. Three spine bones and the pelvis share the torso pivot's
 ## rotation (powers of one quaternion, so the chest ends at the torso pivot's
-## exact orientation); two neck bones share the neck pivot's; a pivot's scale
-## (the Turn's long limbs) becomes a slide of the "_x" stretch bones, so the
-## skin lengthens instead of the limb swelling.
+## exact orientation); two neck bones share the neck pivot's; a leg pivot's
+## scale (the Turn's long limbs) becomes a slide of the "_x" stretch bones, so
+## the skin lengthens instead of the limb swelling. An arm pivot's scale
+## wrenches the shoulder out of its socket instead: her arm's bones are never
+## stretched (rule 33).
 ##
 ## Then what the pivots never had: her feet planted on the deck, palms on it on
 ## all fours, hands up to the rung on a ladder (contact); her eyes turned in
@@ -173,10 +175,20 @@ func apply() -> void:
 		var leg_s := (p["hp_" + s] as Node3D).scale.y
 		# the shoulder's rest frame hangs the arm just clear of her hips
 		var abd := Quaternion(Vector3(0.0, 0.0, 1.0), float(by_name["sh_" + s].get("abduct", 0.0)))
-		_bone("sh_" + s, _t("sh_" + s), abd * _q("sh_" + s))
-		_bone("sh_%s_x" % s, _t("sh_%s_x" % s) * arm_s, Quaternion.IDENTITY)
+		var sh_rot := abd * _q("sh_" + s)
+		# The Turn's long arms (arm_s over 1): her arm's own bones keep their
+		# length (rule 33: her real arms, never stretched); her shoulder is
+		# wrenched out of its socket along the upper arm by what the arm
+		# would have gained, so the arm still reaches that far out of her.
+		var upper := _t("sh_%s_x" % s)
+		var out := maxf(arm_s - 1.0, 0.0) * (upper.length() + _t("el_%s_x" % s).length())
+		var socket := _t("sh_" + s)
+		if out > 0.0 and upper.length() > 1.0e-4:
+			socket += sh_rot * (upper.normalized() * out)
+		_bone("sh_" + s, socket, sh_rot)
+		_bone("sh_%s_x" % s, upper, Quaternion.IDENTITY)
 		_bone("el_" + s, _t("el_" + s), _q("el_" + s))
-		_bone("el_%s_x" % s, _t("el_%s_x" % s) * arm_s, Quaternion.IDENTITY)
+		_bone("el_%s_x" % s, _t("el_%s_x" % s), Quaternion.IDENTITY)
 		_bone("wr_" + s, _t("wr_" + s), _q("wr_" + s))
 		var chains: Array = p["fingers_" + s]
 		for f in chains.size():
@@ -225,6 +237,7 @@ func bone_world(bone: String) -> Transform3D:
 # all fours, hands on the rung or cable. _pose's angles stay the intent; this
 # bends them just enough to touch what the native says is there.
 const DECK_WRIST_Y := 0.075        # a planted palm's wrist over the deck
+const ANKLE_OVER_SOLE_M := 0.09    # her ankle over her sole, a foot set down
 const HANDS_ON_RUNG_Y := 2.6       # the native's kHandsAboveCentre + kStandCentre
 const RIDE_W := 7.0               # rad/s: her body's ride onto her feet, low-passed
 # On all fours, the order her limbs go down in a cycle of her gait (hind
@@ -285,6 +298,10 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
+# How far the handle of a prop she walks to (the toolbox) lay past her real
+# arm this frame, out to HOLD_ARM_OUT of it (negative: within it; -1 with
+# none): the view stoops her to it (matron_view.gd _prop_lean).
+var prop_short := -1.0
 # Keep the last governed arm pose while a physical prop is being approached or
 # carried. Restarting the IK from unrelated walk/search poses each frame can
 # pull a wrist off an otherwise stationary handle before govern clips it.
@@ -512,6 +529,19 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 	_reach(s, want, 1.0, "hold_" + s)
 
 
+# Her feet on her pipe's rail's top, perched over it (the simulation's
+# contact_feet there): her soles either side of where it has them.
+func _pipe_feet(data: Dictionary, w: float) -> void:
+	if not bool(data.get("contact_supported", false)):
+		return
+	var inv := skel.global_transform.affine_inverse()
+	var feet: Vector3 = data["contact_feet"] + Vector3(0.0, ANKLE_OVER_SOLE_M, 0.0)
+	var along := Vector3(1.0, 0.0, 0.0)
+	_reach_chain("hp_r", "kn_r", "an_r", inv * (feet + along * 0.1), w, "perch_r")
+	_reach_chain("hp_l", "kn_l", "an_l", inv * (feet - along * 0.1), w, "perch_l")
+	claims |= CLAIM_FEET
+
+
 # `held`: her holds as the view draws them, eased onto each new one (the
 # view's _ease_hands); without it, the native's own holds.
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
@@ -633,6 +663,7 @@ func govern() -> void:
 func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void:
 	stretch["l"] = 1.0
 	stretch["r"] = 1.0
+	prop_short = -1.0
 	landed.clear()
 	claims = 0
 	_ik_frame += 1
@@ -742,6 +773,15 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 			_reach_chain("hp_r", "kn_r", "an_r", inv * (brace + side * 0.12), wp)
 			_reach_chain("hp_l", "kn_l", "an_l", inv * (brace - side * 0.12), wp)
 			claims |= CLAIM_BRACE
+		_pipe_feet(data, wp)
+		_plants.clear()
+		down_mask = 0
+		return
+	if truth and bool(data.get("on_pipe", false)) and bool(data.get("contact_supported", false)) \
+			and not bool(data.get("pipe_sliding", false)) and not bool(data.get("pipe_stunned", false)):
+		# Perched on her pipe's rail, her hands off it: her feet on its top.
+		_ride(0.0)
+		_pipe_feet(data, 1.0)
 		_plants.clear()
 		down_mask = 0
 		return
@@ -793,6 +833,10 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		if carrying or shoulder.distance_to(handle) < 2.5:
 			var two_hands := maxf(size.x, size.z) >= 0.38
 			var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
+			# walking to it: what her real arm (its bones at rest) falls short of
+			if seeking:
+				var arm := _t("sh_r_x").length() + _t("el_r_x").length()
+				prop_short = shoulder.distance_to(handle + across) - HOLD_ARM_OUT * arm
 			hold_reach("r", handle + across, 1.0)
 			if two_hands:
 				hold_reach("l", handle - across, 1.0)
