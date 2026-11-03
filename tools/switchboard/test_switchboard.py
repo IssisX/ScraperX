@@ -6,6 +6,7 @@ No network, no clock: every time is given.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import json
 import os
@@ -363,7 +364,7 @@ class RepoConfig(unittest.TestCase):
             self.skipTest("PyYAML not installed")
         root = HERE.parents[1]
         team = rules.team_from_config(yaml.safe_load((root / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertNotIn("codex", {n for n in team.vendor_of_name})
+        self.assertEqual(team.agent_vendor.get("codex"), "openai")   # Codex reviews again (11-03), as the GitHub app
         b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
         self.assertLessEqual(b.month, Decimal("100"))
         # The API agent is on (Cory, 11-03); its hard per-session budget must fit the job and day caps.
@@ -901,3 +902,128 @@ class SdkRequests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewPool(unittest.TestCase):
+    """Cory, 11-03: one reviewer per PR, whoever is available, the work spread around."""
+
+    POOL = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"])))
+    API = rules.API_REVIEWER
+
+    def test_rotation_order_differs_between_prs(self):
+        firsts = {rules.review_rotation(n, "xai", frozenset(), self.POOL)[0] for n in (30, 31, 32)}
+        self.assertEqual(firsts, {self.API, "muse", "chatgpt"})
+
+    def test_rotation_skips_the_authors_vendor_and_keeps_claude_cross_model(self):
+        for n in range(6):
+            self.assertNotIn("muse", rules.review_rotation(n, "meta", frozenset(), self.POOL))
+            self.assertEqual(sorted(rules.review_rotation(n, "anthropic", frozenset(), self.POOL)), ["chatgpt", "muse"])
+        self.assertEqual(rules.review_rotation(5, "unknown", frozenset(), self.POOL), [self.API])
+
+    def test_api_out_of_budget_is_not_available(self):
+        self.assertNotIn(self.API, rules.review_rotation(30, "xai", frozenset(), self.POOL, api_ok=False))
+        self.assertEqual(rules.review_rotation(30, "unknown", frozenset(), self.POOL, api_ok=False), [])
+
+    def test_matron_job_starts_at_its_specialist(self):
+        self.assertEqual(rules.review_rotation(30, "openai", frozenset({"matron"}), self.POOL)[0], "muse")
+
+    def test_the_free_reviewer_takes_it(self):
+        rot, now, ch = ["muse", "chatgpt"], "2026-11-02T15:00:00Z", rules.choose_reviewer
+        self.assertEqual(ch(rot, {}, now, 1, {}, {}), "muse")                                  # all free: rotation order
+        self.assertEqual(ch(rot, {}, now, 1, {"muse": 2}, {}), "chatgpt")                      # Muse is busy
+        self.assertEqual(ch(rot, {}, now, 1, {}, {"muse": 3, "chatgpt": 1}), "chatgpt")        # spread the day's work
+        self.assertEqual(ch([self.API, "muse"], {}, now, 1, {"muse": 1}, {self.API: 1}), self.API)  # the API is never busy
+        self.assertEqual(ch([self.API, "muse"], {}, now, 1, {}, {self.API: 2}), "muse")
+
+    def test_the_one_asked_keeps_it_until_quiet_too_long(self):
+        rot, now, ch = ["muse", "chatgpt"], "2026-11-02T15:00:00Z", rules.choose_reviewer
+        self.assertEqual(ch(rot, {"chatgpt": "2026-11-02T14:30:00Z"}, now, 1, {"chatgpt": 5}, {}), "chatgpt")
+        self.assertEqual(ch(rot, {"chatgpt": "2026-11-02T13:30:00Z"}, now, 1, {"muse": 5}, {}), "muse")
+        self.assertEqual(ch(rot, {"muse": "2026-11-02T12:00:00Z", "chatgpt": "2026-11-02T13:00:00Z"}, now, 1, {}, {}), "")
+
+    def test_pool_config_is_checked(self):
+        for pool, word in ((["claude"], "Claude agent"), (["nobody"], "unknown agent"), (["muse", "muse"], "twice")):
+            with self.assertRaisesRegex(ValueError, word):
+                rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=pool)))
+
+    def test_the_repo_file_sets_the_pool(self):
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        path = pathlib.Path(__file__).resolve().parents[2] / "work/agents.yml"
+        team = rules.team_from_config(yaml.safe_load(path.read_text(encoding="utf-8")))
+        self.assertEqual(tuple(team.pool), (self.API, "codex", "muse", "chatgpt"))
+
+
+class CodexState(unittest.TestCase):
+    """The Codex app's summary comment is its verdict on the commit it names (Cory, 11-03)."""
+
+    def body(self, sha="2e6a845e068fbbe39b440d9c818d5a289d5f0084", status="completed", unresolved="false"):
+        return ("<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 &#123;\"code_review\":&#123;"
+                f"\"commit_sha\":\"{sha}\",\"has_any_findings\":{unresolved},\"has_unresolved_findings\":{unresolved},"
+                f"\"status\":\"{status}\"&#125;,\"security_review\":&#123;\"commit_sha\":null,\"status\":null&#125;&#125; -->\n\n## Codex Review Summary")
+
+    def test_clean_review_is_a_land_on_its_commit(self):
+        v = rules.parse_codex_state(self.body(), T1, rules.CODEX_LOGIN)
+        self.assertEqual((v.vendor, v.who, v.kind, v.verdict, v.sha), ("openai", "Codex", "review", "LAND",
+                                                                        "2e6a845e068fbbe39b440d9c818d5a289d5f0084"))
+
+    def test_findings_hold_the_merge(self):
+        self.assertEqual(rules.parse_codex_state(self.body(unresolved="true"), T1, rules.CODEX_LOGIN).verdict, "FIX")
+
+    def test_running_unknown_or_forged_is_no_verdict(self):
+        self.assertIsNone(rules.parse_codex_state(self.body(status="running"), T1, rules.CODEX_LOGIN))
+        self.assertIsNone(rules.parse_codex_state(self.body(unresolved="null"), T1, rules.CODEX_LOGIN))
+        self.assertIsNone(rules.parse_codex_state(self.body(), T1, "IssisX"))
+        self.assertIsNone(rules.parse_codex_state(self.body(sha="not-a-sha"), T1, rules.CODEX_LOGIN))
+
+    def test_codex_land_counts_for_claude_work_not_for_chatgpt_work(self):
+        land = rules.parse_codex_state(self.body(sha=HEAD), T1, rules.CODEX_LOGIN)
+        pr = facts(verdicts=(land,), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic").action, "MERGE")
+        self.assertEqual(rules.merge_decision(dataclasses.replace(pr, head_ref="chatgpt/x"), "openai").action, "WAIT")
+
+
+class CodexFindingsOn178(unittest.TestCase):
+    """The three findings Codex made on #178's review pool."""
+
+    def codex_land(self, sha=HEAD):
+        body = ("<!-- codex-review-state:v1 &#123;\"code_review\":&#123;\"commit_sha\":\"" + sha +
+                "\",\"has_unresolved_findings\":false,\"status\":\"completed\"&#125;&#125; -->")
+        return rules.parse_codex_state(body, T1, rules.CODEX_LOGIN)
+
+    def test_a_same_vendor_land_does_not_answer_the_ask(self):
+        pr = facts(verdicts=(self.codex_land(),), head_ref="chatgpt/x")
+        self.assertTrue(rules.needs_review(pr, "openai"))       # Codex on ChatGPT's work: still ask someone else
+        self.assertFalse(rules.needs_review(pr, "anthropic"))   # Codex on Claude's work: answered
+        self.assertFalse(rules.needs_review(pr))                # old callers keep the old meaning
+
+
+class ApiReviewsClaude(unittest.TestCase):
+    """Cory, 11-03: the GitHub Actions Claude review gets real work: Claude's PRs too, and its LAND counts there."""
+
+    ON = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"],
+                                                        api_reviews_claude=True)))
+
+    def api(self, verdict):
+        return v(f"**Claude (automatic review of #9 @ {HEAD[:8]}): {verdict}**" + (REPRO if verdict == "FIX" else ""),
+                 T1, rules.BOT_LOGIN)
+
+    def test_the_api_can_take_claude_prs(self):
+        self.assertIn(rules.API_REVIEWER, rules.review_rotation(4, "anthropic", frozenset(), self.ON))
+
+    def test_its_land_counts_on_claude_work_only_when_on(self):
+        pr = facts(verdicts=(self.api("LAND"),), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "MERGE")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", TEAM).action, "WAIT")
+        self.assertFalse(rules.needs_review(pr, "anthropic", self.ON))
+        self.assertTrue(rules.needs_review(pr, "anthropic", TEAM))
+
+    def test_a_claude_session_land_never_counts_on_claude_work(self):
+        pr = facts(verdicts=(land("Claude"),), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "WAIT")
+
+    def test_its_fix_still_blocks(self):
+        pr = facts(verdicts=(land("ChatGPT"), self.api("FIX")), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "FIX")
