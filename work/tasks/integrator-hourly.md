@@ -53,9 +53,6 @@ T. **Task the team, unasked.**
       agent made that another's job needs.
    d. Replace the board body's "This hour" section with what each agent got and which questions you
       routed. Never a new comment.
-0. Until `gh api "repos/IssisX/ScraperX/actions/workflows/switchboard.yml/runs?event=schedule&per_page=1" -q .total_count`
-   is above 0, dispatch one live sweep: `gh api -X POST repos/IssisX/ScraperX/actions/workflows/switchboard.yml/dispatches -f ref=main -F 'inputs[dry_run]=false'`.
-   Once schedules fire, delete this step.
 1. `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`; act only where the
    switchboard can't: protected PRs (merge on green proof plus another agent's LAND), workflow PRs
    (you merge them), stuck FIX/FIX-CI owners, QUIET jobs. Never bypass CI's gate.
