@@ -983,3 +983,18 @@ class CodexState(unittest.TestCase):
         pr = facts(verdicts=(land,), head_ref="claude/integrate-x")
         self.assertEqual(rules.merge_decision(pr, "anthropic").action, "MERGE")
         self.assertEqual(rules.merge_decision(dataclasses.replace(pr, head_ref="chatgpt/x"), "openai").action, "WAIT")
+
+
+class CodexFindingsOn178(unittest.TestCase):
+    """The three findings Codex made on #178's review pool."""
+
+    def codex_land(self, sha=HEAD):
+        body = ("<!-- codex-review-state:v1 &#123;\"code_review\":&#123;\"commit_sha\":\"" + sha +
+                "\",\"has_unresolved_findings\":false,\"status\":\"completed\"&#125;&#125; -->")
+        return rules.parse_codex_state(body, T1, rules.CODEX_LOGIN)
+
+    def test_a_same_vendor_land_does_not_answer_the_ask(self):
+        pr = facts(verdicts=(self.codex_land(),), head_ref="chatgpt/x")
+        self.assertTrue(rules.needs_review(pr, "openai"))       # Codex on ChatGPT's work: still ask someone else
+        self.assertFalse(rules.needs_review(pr, "anthropic"))   # Codex on Claude's work: answered
+        self.assertFalse(rules.needs_review(pr))                # old callers keep the old meaning

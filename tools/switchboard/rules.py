@@ -367,11 +367,14 @@ def ask_is_overdue(asked_at: str, now_iso: str, hours: float) -> bool:
     return (now - then).total_seconds() >= hours * 3600
 
 
-def needs_review(pr: PrFacts) -> bool:
-    """Proof green and no LAND, FIX or NOTE yet on this head from a review."""
+def needs_review(pr: PrFacts, author_vendor: str = "") -> bool:
+    """Proof green and no LAND, FIX or NOTE yet on this head from a review that can count: a verdict by the
+    author's own vendor (say the Codex app's unasked review of a ChatGPT PR) never answers the ask, since
+    merge_decision would not count its LAND. Its FIX still holds the merge back there."""
     if pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False
-    return not any(v.kind == "review" and names_head(v, pr.head_sha) for v in pr.verdicts)
+    return not any(v.kind == "review" and names_head(v, pr.head_sha)
+                   and not (author_vendor and v.vendor == author_vendor) for v in pr.verdicts)
 
 
 def needs_eye(pr: PrFacts) -> bool:

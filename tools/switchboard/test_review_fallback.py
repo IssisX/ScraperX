@@ -75,7 +75,7 @@ RC_FINDINGS = (1, "REVIEW godot/a.gd:12 velocity-write: body.linear_velocity = v
 
 def make(gh, rc=RC_CLEAN, team=TEAM):
     sw = switch.Switch.__new__(switch.Switch)
-    sw.gh, sw.now, sw.team, sw.lines = gh, NOW, team, []
+    sw.gh, sw.now, sw.team, sw.lines, sw._load = gh, NOW, team, [], None
     sw.out = sw.lines.append
     sw.run_rule_check = lambda number, head: rc
     return sw
@@ -329,3 +329,24 @@ class CodexAsk(unittest.TestCase):
         self.assertEqual(where, 10)
         self.assertTrue(body.startswith("@codex review"))
         self.assertIn("ask-codex", body)
+
+
+class PoolFallbackAndLoad(unittest.TestCase):
+    POOL = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "chatgpt", "muse"],
+                                                          claude_authored_asks=["chatgpt", "muse"])))
+
+    def test_api_fallback_never_asks_the_authors_vendor(self):
+        sw = make(FakeGH([]), team=self.POOL)
+        self.assertEqual(sw.api_fallback(pr_facts(number=9, head_ref="chatgpt/x"), "openai"), "muse")
+        self.assertNotEqual(sw.api_fallback(pr_facts(number=9, head_ref="muse/x"), "meta"), "muse")
+
+    def test_assignments_in_one_run_spread(self):
+        gh = FakeGH([])
+        sw = make(gh, team=self.POOL)
+        sw.api_ok = lambda c: True
+        sw._load = ({}, {})
+        sw.review_load = lambda: sw._load
+        for n in (20, 21, 22, 23):
+            sw.steer_pr(pr_facts(number=n), dict(ctx(), comments=[]))
+        asked = [b.split("ask-", 1)[1].split(" ", 1)[0] for _, b in gh.posted if "ask-" in b]
+        self.assertEqual(sorted(asked), ["chatgpt", "chatgpt", "muse", "muse"])
