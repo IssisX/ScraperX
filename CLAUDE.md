@@ -188,19 +188,19 @@ agent, Claude included, works this way:
   integrator decides, without asking him, and covers every Claude session, its own included.
   - **Compact, don't replace** (Cory, 11-04). At **400k
     context tokens** (`get_session` → `external_metadata.context_usage.used_tokens`, checked hourly for every Claude
-    session, the integrator's own first) it brings its handoff file current and tells Cory, who runs /compact; after
-    it, it re-reads this file, the hourly file and its handoff. With him away, it compacts
+    session, the integrator's own first) it brings its notes current and tells Cory, who runs /compact; after
+    it, it re-reads this file, the hourly file and its notes (`03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`). With him away, it compacts
     itself near 784k. Each turn re-reads the whole context. A new session only when one is broken (stuck, confused).
   - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
     $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
-    after every commit, proof run or big read. At 400k it brings its handoff current (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
+    after every commit, proof run or big read. At 400k it brings its notes current (`03_EXECUTION/handoffs/<job>_NOTES.md`:
     head, done, open failure with its repro, measured and ruled out, next step) and tells the integrator, which
     asks Cory to compact it. The integrator also checks every worker's size on each event it handles, and every brief it writes
     carries this rule. Builds and tests write to a file and only their PASS/FAIL lines are read, never a whole log.
   - Keep the integrator's context small: subscribe only to PRs it opened or must merge itself (protected,
     workflow); the switchboard and the hourly sweep cover the rest. Send big reads (logs, transcripts, audits) to a
     subagent and keep only its answer.
-  - A broken session's replacement: its handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`) with "Asks in
+  - A broken session's replacement: the notes file with "Asks in
     flight" (steps K and S of `work/tasks/integrator-hourly.md`), `create_session`, move the hourly task and PR
     subscriptions, retire the old one once its helpers have reported.
   - A worker session whose job has landed is retired, never reused for new work.
