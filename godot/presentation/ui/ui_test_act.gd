@@ -1214,6 +1214,84 @@ var _pipe_drum_rest := Vector3.ZERO   # where it was set down
 var _pipe_watch := {}
 
 
+# The centre-to-centre horizontal gap to the Matron, as the sweep's own
+# offer and contact measure it.
+func _centre_gap() -> float:
+	var her: Vector3 = _matron_state()["position"]
+	var me: Vector3 = _position()
+	return Vector2(her.x - me.x, her.z - me.z).length()
+
+
+# The low sweep on touch (J-033, fight S2): crouched, the PUNCH button
+# reads SWEEP and throws a leg, not a fist. Staged with her placed, not
+# woken, so each case measures the sweep alone: her hands held the whole
+# run (a free grab eats the sweep), every press thrown from the crouch.
+# Whiff out of range, pest down, changed down as she closes in.
+func _matron_sweep_touch(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var me := _position()
+	_native().debug_hold_matron_hands(120.0)
+	if not await _crouch_on(device, true):
+		return _fail("the crouch did not take before the sweep")
+	if String(_main._touch.button_label(&"punch")) != "SWEEP":
+		return _fail("crouched, the PUNCH button read '%s', not SWEEP" % String(_main._touch.button_label(&"punch")))
+	# 1. Whiff: her 3.0 m out, the press throws, nothing lands, guard returns.
+	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - 3.0))
+	await _face(Vector2(0.0, -1.0))
+	var strikes := int(_native().get_strike_state()["strikes"])
+	_tap(1, _center(&"punch"))
+	if not await _wait_until(func() -> bool: return int(_native().get_strike_state()["strikes"]) > strikes, 2.0):
+		return _fail("the whiff press out of range threw no sweep")
+	await _frames(60)
+	if int(_native().get_strike_state()["hits"]) != 0:
+		return _fail("the whiff sweep out of range landed a hit")
+	if int(_native().get_strike_state()["phase"]) != 0:
+		return _fail("the whiff sweep never came back to guard")
+	# 2. Pest: her 1.2 m out, the sweep puts her down.
+	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - 1.2))
+	_native().debug_set_matron_stage(0)
+	await _face(Vector2(0.0, -1.0))
+	strikes = int(_native().get_strike_state()["strikes"])
+	var hits := int(_native().get_strike_state()["hits"])
+	_tap(1, _center(&"punch"))
+	if not await _wait_until(func() -> bool: return int(_native().get_strike_state()["strikes"]) > strikes, 2.0):
+		return _fail("the pest press threw no sweep")
+	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) == MATRON_STATE_DOWN, 3.0):
+		return _fail("the pest sweep did not put her down (state %d)" % int(_matron_state()["state"]))
+	if int(_native().get_strike_state()["hits"]) != hits + 1:
+		return _fail("the pest sweep did not land exactly one hit")
+	_act_snap("sweep-pest-down")
+	# 3. Changed: her 2.5 m out, pressed as she closes into 1.25 m, down again.
+	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - 2.5))
+	_native().debug_set_matron_stage(2)
+	_native().debug_hold_matron_hands(120.0)
+	await _face(Vector2(0.0, -1.0))
+	if not await _wait_until(func() -> bool: return _centre_gap() <= 1.25, 10.0):
+		return _fail("the changed Matron never closed into sweep range")
+	strikes = int(_native().get_strike_state()["strikes"])
+	hits = int(_native().get_strike_state()["hits"])
+	_tap(1, _center(&"punch"))
+	if not await _wait_until(func() -> bool: return int(_native().get_strike_state()["strikes"]) > strikes, 2.0):
+		return _fail("the changed press threw no sweep")
+	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) == MATRON_STATE_DOWN, 3.0):
+		return _fail("the changed sweep did not put her down (state %d)" % int(_matron_state()["state"]))
+	if int(_native().get_strike_state()["hits"]) != hits + 1:
+		return _fail("the changed sweep did not land exactly one hit")
+	_act_snap("sweep-changed-down")
+	# No crouched case here: it lives in the native sweep group (a fast
+	# dangerous Matron takes the hit and stays Hunting), and the view
+	# cannot stage it honestly. Her grab standoff is 1.40 m while the
+	# sweep's band ends at 1.25 m, and she brakes through the windup: a
+	# still press at 2.05 whiffs, at 1.25 she is already below 1 m/s at
+	# contact and goes down, walking toward her crosses her and breaks
+	# the cone, kiting walks him off the deck edge. Six view attempts
+	# mapped that window and it does not exist; the native group, which
+	# sets her speed directly, is the proof for this case.
+	await _frames(5)
+	_detail = "whiff ok, pest down, changed down"
+	return true
+
+
 func _matron_pipe_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _pipe_drum_to_corner(device):

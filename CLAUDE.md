@@ -22,7 +22,8 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent.
-- **Go with your pick on every call until he says stop** (11-03), and tell him in one line. Still his: Claude
+- **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; never
+  bring him a plan or a step to approve (11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
   look or story, how the game plays). No answer in 10 minutes: the pick stands.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check

@@ -192,6 +192,10 @@ int main() {
         run_strike();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-sweep") {
+        run_matron_sweep();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder-pull") {
         run_matron_ladder_pull();
         return EXIT_SUCCESS;

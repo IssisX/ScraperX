@@ -23,6 +23,8 @@ SHA_IN_HEAD = re.compile(r"@\s*`?(?P<sha>[0-9a-f]{7,40})\b")
 REPRO_FIELDS = ("command", "input", "expected", "observed")
 REPRO_LINE = re.compile(r"^[\s>*_`-]*(command|input|expected|observed)[*_`]*\s*:", re.IGNORECASE | re.MULTILINE)
 JOB_IN_PR = re.compile(r"^\s*Job:\s*(?P<job>J-\d{3,})\b", re.MULTILINE)
+# "Supersedes #43", "supersedes #43 and #44", "Supersedes #43, #44": the PRs a PR body says it replaces.
+SUPERSEDES = re.compile(r"\bsupersedes\s+(?P<list>#\d+(?:\s*(?:,|and|&)\s*#\d+)*)", re.IGNORECASE)
 JOB_TITLE = re.compile(r"^(?P<job>J-\d{3,})\b")
 BUDGET_LINE = re.compile(r"^\s*budget\s+(?P<usd>\d{1,4}(?:\.\d{1,2})?)\s*$", re.IGNORECASE | re.MULTILINE)
 
@@ -449,6 +451,16 @@ def extra_owner_labels(labels_in_order: Sequence[str]) -> list[str]:
 def job_of_pr(body: str | None) -> str:
     m = JOB_IN_PR.search(body or "")
     return m.group("job") if m else ""
+
+
+def superseded_prs(body: str | None, own: int) -> list[int]:
+    """The PR numbers a PR's body says it supersedes, in order, without repeats or itself."""
+    out: list[int] = []
+    for m in SUPERSEDES.finditer(body or ""):
+        for n in re.findall(r"#(\d+)", m.group("list")):
+            if int(n) != own and int(n) not in out:
+                out.append(int(n))
+    return out
 
 
 def job_of_title(title: str) -> str:

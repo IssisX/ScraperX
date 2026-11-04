@@ -52,6 +52,10 @@ const TRAVERSAL_VAULTING := 3
 const TRAVERSAL_CLIMBING := 4
 const TRAVERSAL_LOWERING := 5
 const TRAVERSAL_SWINGING := 6
+# The sweep's ticks (physics_world_strike.cpp): windup, reach, recoil.
+const SWEEP_WINDUP_TICKS := 16.0
+const SWEEP_REACH_TICKS := 6.0
+const SWEEP_RECOIL_TICKS := 22.0
 
 var _root: Node3D           # at the soles, turned with the view, his front ahead
 var _skel: Skeleton3D
@@ -154,6 +158,12 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 	var traversal := int(state["traversal"])
 	var on_line := bool(state.get("on_line", false))
 	var hanging := on_line or traversal in [TRAVERSAL_HANGING, TRAVERSAL_SWINGING, TRAVERSAL_LOWERING, TRAVERSAL_CLIMBING]
+	# The strike, when one is under way: a sweep's leg is driven below,
+	# phase by phase, on the sweep's own ticks. The arm proxy lives in
+	# first_person_arms.gd; this is the real foot.
+	var strike: Dictionary = state.get("strike", {})
+	var sweeping := int(strike.get("move", 0)) == 1 and int(strike.get("phase", 0)) != 0
+	var sweep_side := 1 if int(strike.get("arm", 1)) == 1 else 0
 	var soles := centre - Vector3(0.0, CROUCH_HALF_HEIGHT if crouched else STAND_HALF_HEIGHT, 0.0)
 	var eye_world: Vector3 = state.get("eye", soles + Vector3(0.0, Rig.EYE.y, 0.0))
 	# Model space: soles at the origin under the capsule, his front (+z) the view's.
@@ -282,6 +292,35 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 			else:
 				_foot[side] = Vector3((_foot[side] as Vector3).x, soles.y, (_foot[side] as Vector3).z)
 			_roll[side] = lerpf(float(_roll[side]), 0.0, 1.0 - exp(-14.0 * delta))
+		if sweeping and side == sweep_side:
+			# The sweep's leg, phase-driven: windup draws the foot back
+			# low, reach swings it low across in front, recoil steps it
+			# back to its stance spot. The other foot stays where the
+			# gait or the stance put it.
+			var x_dir := -1.0 if side == 0 else 1.0
+			var sphase := int(strike.get("phase", 0))
+			var sticks := float(strike.get("phase_ticks", 0))
+			var sweep_goal := spot
+			var sweep_roll := 0.0
+			if sphase == 1:
+				var s := smoothstep(0.0, 1.0, clampf(sticks / SWEEP_WINDUP_TICKS, 0.0, 1.0))
+				sweep_goal = Vector3(spot.x + x_dir * 0.05 * s, 0.05 * s, spot.z - 0.18 * s)
+				sweep_roll = 0.15 * s
+			elif sphase == 2:
+				var s := 1.0 - pow(1.0 - clampf((sticks + 1.0) / SWEEP_REACH_TICKS, 0.0, 1.0), 3.0)
+				var back := Vector3(spot.x + x_dir * 0.05, 0.05, spot.z - 0.18)
+				var across := Vector3(spot.x - x_dir * 0.30, 0.06, spot.z + 0.30)
+				sweep_goal = back.lerp(across, s)
+				sweep_roll = 0.25
+			elif sphase == 3:
+				var s := smoothstep(0.0, 1.0, clampf(sticks / SWEEP_RECOIL_TICKS, 0.0, 1.0))
+				var across := Vector3(spot.x - x_dir * 0.30, 0.06, spot.z + 0.30)
+				sweep_goal = across.lerp(spot, s)
+				sweep_roll = 0.25 * (1.0 - s)
+			_foot[side] = _root.global_transform * sweep_goal
+			_foot_yaw[side] = yaw
+			_roll[side] = sweep_roll
+			_planted[side] = false
 		_pose_leg(side, to_model * (_foot[side] as Vector3), float(_foot_yaw[side]) - yaw, float(_roll[side]))
 	_ready_feet = true
 	_pose_shadow(state, to_model, turn)
