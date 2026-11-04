@@ -331,6 +331,23 @@ class Switch:
         return res
 
     # ---------- steer ----------
+    def close_superseded(self, facts: rules.PrFacts, ctx: dict) -> None:
+        """A ready PR whose body says `Supersedes #N` closes #N, so replaced work can never be merged (Cory, 11-04)."""
+        if facts.draft:
+            return
+        for n in rules.superseded_prs(ctx["body"], facts.number):
+            try:
+                old = self.gh.get(f"repos/{self.gh.repo}/pulls/{n}")
+            except GitHubError:   # not a PR (an issue number, or gone): nothing to close
+                continue
+            if old.get("state") != "open":
+                continue
+            self.gh.comment(n, f"Switchboard: closing this PR. #{facts.number} supersedes it (its body says so); "
+                               f"the work continues there.", what=f"note on #{n}: superseded by #{facts.number}")
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/pulls/{n}", {"state": "closed"},
+                          what=f"close #{n}: superseded by #{facts.number}")
+            self.out(f"SUPERSEDED  #{n} closed: #{facts.number} supersedes it")
+
     def steer_pr(self, facts: rules.PrFacts, ctx: dict) -> None:
         author = self.team.vendor_of_branch(facts.head_ref)
         d = rules.merge_decision(facts, author, self.team)
@@ -1059,6 +1076,7 @@ def main() -> int:
             if ask:
                 sw.ask_pr(facts, ctx)
             if steer:
+                sw.close_superseded(facts, ctx)
                 sw.steer_pr(facts, ctx)
         except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
             failed += 1
