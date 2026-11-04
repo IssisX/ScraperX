@@ -927,6 +927,144 @@ class SdkRequests(unittest.TestCase):
         self.assertIsInstance(unk.exception.__cause__, anthropic.APIConnectionError)
 
 
+def sse(*events: dict) -> bytes:
+    return b"".join(f"event: {e['type']}\ndata: {json.dumps(e)}\n\n".encode() for e in events)
+
+
+def streamed_answer(text: str, stop: str = "end_turn", thinking: str = "") -> bytes:
+    """A Messages API stream as the server sends it: an optional thinking block, then one text block."""
+    events = [{"type": "message_start", "message": {
+        "id": "msg_1", "type": "message", "role": "assistant", "model": "claude-opus-5-5", "content": [],
+        "stop_reason": None, "stop_sequence": None, "usage": {"input_tokens": 1200, "output_tokens": 1}}}]
+    i = 0
+    if thinking:
+        events += [{"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": "", "signature": ""}},
+                   {"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": thinking}},
+                   {"type": "content_block_delta", "index": 0, "delta": {"type": "signature_delta", "signature": "sig"}},
+                   {"type": "content_block_stop", "index": 0}]
+        i = 1
+    if text:
+        events += [{"type": "content_block_start", "index": i, "content_block": {"type": "text", "text": ""}}]
+        events += [{"type": "content_block_delta", "index": i, "delta": {"type": "text_delta", "text": text[k:k + 7]}}
+                   for k in range(0, len(text), 7)]
+        events += [{"type": "content_block_stop", "index": i}]
+    events += [{"type": "message_delta", "delta": {"stop_reason": stop, "stop_sequence": None}, "usage": {"output_tokens": 4321}},
+               {"type": "message_stop"}]
+    return sse(*events)
+
+
+@unittest.skipUnless(HAVE_SDK, "anthropic and httpx2 not installed")
+class StreamedAsk(unittest.TestCase):
+    """The review and the eye stream (Cory, 11-04: Opus at max effort; a long think must not time out)."""
+
+    SCHEMA = {"type": "object", "properties": {"verdict": {"type": "string"}}, "required": ["verdict"], "additionalProperties": False}
+
+    def client(self, handler):
+        import anthropic
+        return anthropic.Anthropic(api_key="sk-ant-test", max_retries=0,
+                                   http_client=httpx2.Client(transport=httpx2.MockTransport(handler)))
+
+    def ask(self, handler):
+        return claude_calls.ask_json(self.client(handler), "claude-opus-5-5", 64000, "max", "sys",
+                                     [claude_calls.text_block("diff")], self.SCHEMA)
+
+    def test_the_request_streams_and_keeps_every_parameter(self):
+        seen = []
+
+        def handler(req):
+            seen.append(json.loads(req.content.decode()))
+            return httpx2.Response(200, headers={"content-type": "text/event-stream"},
+                                   content=streamed_answer('{"verdict": "LAND"}', thinking="long think"))
+        res = self.ask(handler)
+        self.assertEqual(res, claude_calls.Result({"verdict": "LAND"}, "end_turn", "claude-opus-5-5", 1200, 4321))
+        body = seen[0]
+        self.assertIs(body["stream"], True)
+        self.assertEqual((body["model"], body["max_tokens"], body["system"]), ("claude-opus-5-5", 64000, "sys"))
+        self.assertEqual(body["messages"], [{"role": "user", "content": [{"type": "text", "text": "diff"}]}])
+        self.assertEqual(body["output_config"], {"effort": "max", "format": {"type": "json_schema", "schema": self.SCHEMA}})
+        self.assertNotIn("thinking", body)   # adaptive is the only mode on claude-opus-5-5: left unset
+
+    def test_a_think_that_hits_max_tokens_gives_no_verdict_but_its_usage(self):
+        def handler(req):
+            return httpx2.Response(200, headers={"content-type": "text/event-stream"},
+                                   content=streamed_answer("", stop="max_tokens", thinking="x" * 50))
+        self.assertEqual(self.ask(handler), claude_calls.Result(None, "max_tokens", "claude-opus-5-5", 1200, 4321))
+
+    def test_a_status_error_before_the_stream_is_a_call_error(self):
+        for code in (400, 429, 529):
+            def reject(req, code=code):
+                return httpx2.Response(code, json={"type": "error", "error": {"type": "api_error", "message": "no"}})
+            with self.assertRaises(claude_calls.ClaudeCallError, msg=code) as err:
+                self.ask(reject)
+            self.assertIn(f"HTTP {code}" if code != 429 else "rate-limited", str(err.exception))
+
+    def test_an_error_event_mid_stream_is_a_call_error(self):
+        def handler(req):
+            body = streamed_answer('{"verdict": "LAND"}')
+            cut = body.index(b"event: message_delta")
+            return httpx2.Response(200, headers={"content-type": "text/event-stream"}, content=body[:cut] + sse(
+                {"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}}))
+        with self.assertRaises(claude_calls.ClaudeCallError) as err:
+            self.ask(handler)
+        self.assertIn("messages.stream(claude-opus-5-5) answered HTTP", str(err.exception))
+
+    def test_a_stream_cut_off_mid_answer_is_a_call_error(self):
+        def handler(req):
+            body = streamed_answer('{"verdict": "LAND"}', thinking="long think")
+
+            def chunks():
+                yield body[:200]
+                raise httpx2.ReadTimeout("timed out")
+            return httpx2.Response(200, headers={"content-type": "text/event-stream"}, content=chunks())
+        with self.assertRaises(claude_calls.ClaudeCallError) as err:
+            self.ask(handler)
+        self.assertIn("cut off mid-answer (ReadTimeout)", str(err.exception))
+
+    def test_a_connection_error_is_a_call_error(self):
+        def drop(req):
+            raise httpx2.ConnectError("boom", request=req)
+        with self.assertRaises(claude_calls.ClaudeCallError) as err:
+            self.ask(drop)
+        self.assertIn("could not connect", str(err.exception))
+
+    def test_the_client_waits_long_enough_for_a_streamed_answer(self):
+        self.assertEqual(claude_calls.REQUEST_TIMEOUT_S, 900.0)
+        self.assertLess(claude_calls.REQUEST_TIMEOUT_S, 20 * 60)   # the ask job's timeout-minutes
+
+
+class FakeStreamClient:
+    """A stand-in client whose messages.stream is a context manager, for callers that do not need the SDK."""
+
+    def __init__(self, final):
+        self.final, self.calls = final, []
+        self.messages = types.SimpleNamespace(stream=self.stream)
+
+    def stream(self, **kw):
+        self.calls.append(kw)
+        client = self
+
+        class Manager:
+            def __enter__(self):
+                return types.SimpleNamespace(get_final_message=lambda: client.final)
+
+            def __exit__(self, *exc):
+                return False
+        return Manager()
+
+
+@unittest.skipUnless(HAVE_SDK, "anthropic not installed: claude_calls imports it for its error classes")
+class StreamedAskFake(unittest.TestCase):
+    def test_ask_json_reads_the_final_message_from_the_stream(self):
+        final = types.SimpleNamespace(stop_reason="end_turn", model="claude-opus-5-5",
+                                      content=[types.SimpleNamespace(type="thinking"), types.SimpleNamespace(type="text", text='{"ok": 1}')],
+                                      usage=types.SimpleNamespace(input_tokens=10, output_tokens=20))
+        c = FakeStreamClient(final)
+        res = claude_calls.ask_json(c, "claude-opus-5-5", 8000, "medium", "sys", [], {"type": "object"})
+        self.assertEqual(res, claude_calls.Result({"ok": 1}, "end_turn", "claude-opus-5-5", 10, 20))
+        self.assertEqual(c.calls[0]["output_config"], {"effort": "medium", "format": {"type": "json_schema", "schema": {"type": "object"}}})
+        self.assertEqual(c.calls[0]["max_tokens"], 8000)
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -984,7 +1122,7 @@ class ReviewPool(unittest.TestCase):
 
 
 class RepoReviewModel(unittest.TestCase):
-    def test_the_api_review_is_opus_high(self):
+    def test_the_api_review_is_opus_max(self):
         try:
             import yaml
         except ImportError:
@@ -992,7 +1130,11 @@ class RepoReviewModel(unittest.TestCase):
         root = HERE.parents[1]
         b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
         spec = b.calls["review"]
-        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "high", 16000))   # Cory, 11-04
+        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "max", 64000))   # Cory, 11-04
+        # The 64000 reserve passes the caps: the worst case at the full input limit fits one job's cap.
+        worst = money.worst_case(b, "review", spec.max_input_tokens)
+        self.assertEqual(worst, Decimal("1.880000"))   # 150,000 x $4/MTok + 64,000 x $20/MTok
+        self.assertTrue(money.check(b, [], dt.datetime(2026, 11, 4, tzinfo=dt.timezone.utc), "J-031", worst).ok)
 
 
 class CodexState(unittest.TestCase):
