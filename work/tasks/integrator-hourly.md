@@ -74,7 +74,8 @@ T. **Task the team, unasked.**
    (`orchestrator.enabled: false`). One review per PR, never two. The $100 month cap is the limit.
 6. Re-running a proof: re-run the whole run (`.../runs/<id>/rerun`), never only its failed jobs: the test jobs
    download `host-build-<run>-<attempt>`, which a failed-jobs re-run never builds (11-03, #171).
-7. Subscribe only to PRs you opened or must merge. Big reads (logs, transcripts, long threads) go to
+7. Subscribe only to PRs you must merge yourself, and unsubscribe once one only waits on the switchboard; each PR event
+   costs about 5k tokens of context. Every helper brief says: never subscribe to a PR you open. Big reads (logs, transcripts, long threads) go to
    a subagent; keep only its answer.
 
 Messages to Cory: short and plain, ending with a `---` rule and `🟣 **YOUR MOVE:**` (usually "Nothing
