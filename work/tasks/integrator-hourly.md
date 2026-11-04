@@ -10,7 +10,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    post not yet mailed (mail it); REPOST = an ask to Grok not at the start of a comment (repost it starting
    `To Grok:`); an ask to Claude = answer it now.
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
-   the switchboard can't: protected and workflow-file PRs (merge on green plus another agent's LAND), FIX or
+   the switchboard can't: workflow-file PRs (merge on green plus a LAND), FIX or
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
    vendor (Muse first for physics and game code, then Grok), asked with the facts on its PR.
 3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 24 h with no owner step

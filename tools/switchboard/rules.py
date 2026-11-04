@@ -246,6 +246,7 @@ class PrFacts:
     needs: frozenset[str]           # needs:* names from the PR and its job issue
     rule_check_block: bool | None   # None when the rule check could not run
     touches_workflows: bool
+    never_edit: bool = False        # the rule check BLOCKs a never-edited file (protected-file): nothing lifts it
 
 
 @dataclasses.dataclass(frozen=True)
@@ -286,8 +287,10 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None) ->
     """Design v3 section 2.3 step 6 with the owner's corrections. All must hold to MERGE:
 
     proof green on the head; one LAND naming the head from a known vendor other than the author's;
-    no open FIX (a FIX without a repro is a NOTE); no rule_check BLOCK; the eye's LAND on the head
-    when the job needs eyes. A PR that changes .github/workflows is HUMAN-MERGE: the workflow token
+    no open FIX (a FIX without a repro is a NOTE); no rule_check BLOCK, unless the branch is a declared
+    protected change (`<agent>/integrate-protected-<job>`), which merges on the same green proof and LAND
+    (Cory, 11-04: merging should not need him or the integrator); the eye's LAND on the head when the job
+    needs eyes. A PR that changes .github/workflows is HUMAN-MERGE: the workflow token
     cannot merge workflow files.
     """
     if pr.base_ref != TRUNK:
@@ -316,8 +319,10 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None) ->
             waits.append("needs:eyes and no eye LAND on this head")
     if pr.rule_check_block is None:
         waits.append("rule_check did not run")
-    elif pr.rule_check_block:
-        waits.append("rule_check BLOCK: a protected change, the integrator merges it")
+    elif pr.never_edit:
+        waits.append("rule_check BLOCK protected-file: a file that is never edited is changed")
+    elif pr.rule_check_block and "/integrate-protected-" not in pr.head_ref:
+        waits.append("rule_check BLOCK on a branch not named <agent>/integrate-protected-<job>")
     if pr.mergeable is False:
         waits.append("merge conflict with the base")
     elif pr.mergeable is None:
