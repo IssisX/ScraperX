@@ -24,3 +24,4 @@
 {"job": "J-012", "kind": "review", "note": "review#43@5d44d67b in=11701", "phase": "reserve", "run": "90bd5fbaf3d7", "ts": "2026-11-04T07:00:17Z", "usd": "0.183402"}
 {"job": "J-012", "kind": "review", "note": "review#43@5d44d67b claude-sonnet-5-5 in=12134 out=7678 stop=end_turn", "phase": "end", "run": "90bd5fbaf3d7", "ts": "2026-11-04T07:00:17Z", "usd": "0.101048"}
 {"job": "J-039", "kind": "orchestrator", "note": "orchestrator#198", "phase": "reserve", "run": "8e07900d9988", "ts": "2026-11-04T17:05:08Z", "usd": "8.00"}
+{"job": "J-039", "kind": "orchestrator", "note": "orchestrator#198 sesn_01LRK2Qwp8xEChdtZNmCeQwd stop=end_turn list_cost_cents=112", "phase": "end", "run": "8e07900d9988", "ts": "2026-11-04T17:11:47Z", "usd": "1.12"}
