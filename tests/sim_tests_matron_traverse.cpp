@@ -36,8 +36,10 @@ struct Result {
     std::uint64_t releases = 0;
     // Her lowest stand height over the second on her feet. Settling only goes
     // down, so this is where she settled; if the one she chases is above her
-    // she may rightly start back up before the second ends.
+    // she may rightly start back up before the second ends. That is only a
+    // renewed climb if she holds steel again when the second ends.
     double stand_min_y = 0.0;
+    bool climbing_again = false;
 };
 
 Result take(const Leg &leg) {
@@ -76,6 +78,7 @@ Result take(const Leg &leg) {
     r.z = m.position.z;
     r.seconds = ticks / Simulation::kTickRateHz;
     r.releases = m.climb_releases - before.climb_releases;
+    r.climbing_again = m.climbing || m.on_pipe;
     return r;
 }
 
@@ -114,7 +117,9 @@ void run_matron_traverse() {
                   << ", " << r.z << "), peak " << r.peak_force << " N, worst step " << r.worst_step
                   << " m, releases " << r.releases << '\n';
         require(r.releases == 0, "matron traverse: no hold lost, no failed climb");
-        require(std::abs(r.stand_min_y - leg.end_y) < 0.08, "matron traverse: standing on the steel at its other end");
+        require(std::abs(r.stand_min_y - leg.end_y) < 0.08 &&
+                    (std::abs(r.y - leg.end_y) < 0.08 || r.climbing_again),
+                "matron traverse: standing on the steel at its other end");
         require(r.peak_force <= law::kForceN + 0.1, "matron traverse: her hands never past their cap");
         require(r.worst_step < 0.15, "matron traverse: never carried or snapped (a step a tick)");
         if (leg.end_deck != Deck::None) {
