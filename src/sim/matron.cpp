@@ -4150,6 +4150,8 @@ void Matron::restore(const Saved &saved) {
         fatal_carry_s_ = 0.0F;
         fatal_window_s_ = 0.0F;
         fatal_hang_ = false;
+        fatal_window_ = false;
+        fatal_window_paused_ = false;
         fatal_dropped_ = false;
         fatal_edge_ = RVec3::sZero();
         fatal_s_ = 0.0F;

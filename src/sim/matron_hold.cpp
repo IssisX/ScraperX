@@ -65,7 +65,8 @@ void Matron::begin_grab(const RVec3 player) {
     spare_tries_ = 0;
     hold_tears_at_ = arm_tears_;
     fatal_hold_ = false;   // known as her fingers close (grip_taken)
-    fatal_hang_paused_ = false;
+    fatal_window_ = false;
+    fatal_window_paused_ = false;
     fatal_path_ = FatalPath::None;
     fatal_carry_s_ = 0.0F;
     fatal_window_s_ = 0.0F;
@@ -94,13 +95,13 @@ void Matron::grip_taken() noexcept {
         grip_on_ = true;
         grip_was_on_ = true;
         regrip_ = false;
-        if (fatal_hang_paused_) {
-            // The window resumes only where it was paused: a Dangle fatal
+        if (fatal_window_paused_) {
+            // The pin window resumes only where it was paused: a Dangle fatal
             // pin or over. Any other state (backed in, released) drops it.
             if (fatal_hold_ && state_ == State::Dangle && hold_phase_ >= 2) {
-                fatal_hang_ = true;
+                fatal_window_ = true;
             }
-            fatal_hang_paused_ = false;
+            fatal_window_paused_ = false;
         }
         return;
     }
@@ -730,6 +731,8 @@ void Matron::end_hold(const State next) {
     fatal_hold_ = false;
     fatal_path_ = FatalPath::None;
     fatal_hang_ = false;
+    fatal_window_ = false;
+    fatal_window_paused_ = false;
     fatal_dropped_ = false;
     fatal_edge_ = RVec3::sZero();
     fatal_s_ = 0.0F;
@@ -1008,6 +1011,8 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             hold_phase_ = 0;
             hand2_want_ = 0;
             fatal_hang_ = false;
+            fatal_window_ = false;
+            fatal_window_paused_ = false;
             fatal_window_s_ = 0.0F;
             break;
         }
@@ -1355,13 +1360,13 @@ void Matron::begin_regrip(const Grip point) noexcept {
     grip_point_ = point;
     regrip_ = true;
     regrip_let_go_ = grip_on_;
-    if (fatal_hang_) {
+    if (fatal_window_) {
         // Her hand opens to take him by another point: no grip holds him by
-        // the measured point till it closes again, so the hang's window
-        // pauses rather than measuring origin-valued ticks. The window's
-        // clock freezes with it (it only runs while fatal_hang_ is true).
-        fatal_hang_ = false;
-        fatal_hang_paused_ = true;
+        // the measured point till it closes again, so the pin window
+        // pauses rather than running on. The window's clock freezes with it
+        // (it only runs while fatal_window_ is true).
+        fatal_window_ = false;
+        fatal_window_paused_ = true;
     }
 }
 
@@ -1387,7 +1392,8 @@ void Matron::begin_pin() {
     // him (step_rail, phase 0).
     fatal_window_s_ = 0.0F;
     fatal_hang_ = false;
-    fatal_hang_paused_ = false;
+    fatal_window_ = false;
+    fatal_window_paused_ = false;
     if (fatal_hold_) {
         dangle_s_ = kFatalHangWindowS;
     } else {
@@ -1411,7 +1417,8 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // Out of her plan: back in over the rail and set down.
         ++spares_;
         fatal_hang_ = false;
-        fatal_hang_paused_ = false;
+        fatal_window_ = false;
+        fatal_window_paused_ = false;
         fatal_window_s_ = 0.0F;
         hand2_want_ = 0;
         regrip_ = false;
@@ -1420,14 +1427,19 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         hold_s_ = 0.0F;
         spare_walk_ = false;
     };
-    if (fatal_hang_ && hold_phase_ >= 3) {
-        // The fatality's window goes on through her grips' shift for the
+    if (fatal_window_ && hold_phase_ >= 3) {
+        // The pin window goes on through her grips' shift for the
         // over (kFatalPinS), him still face to face on the rail's top.
         fatal_window_s_ += dt;
         if (fatal_window_s_ >= kFatalHangWindowS) {
-            fatal_hang_ = false;
+            fatal_window_ = false;
             fatal_window_s_ = 0.0F;
         }
+    }
+    if (fatal_hang_ && hold_phase_ >= 7) {
+        // Beat 5's hang clock: no expiry clear here, the hang runs till the
+        // let-go decision (gated on this clock below).
+        fatal_window_s_ += dt;
     }
     switch (hold_phase_) {
     case 0: {
@@ -1592,8 +1604,9 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             pose_hand2(dt, belt_pose(at, feet), kHandSpeedMps);
         }
         // His window, face to face (his punch reaches her face: his blow
-        // frees him); the fatality's is kFatalHangWindowS.
-        fatal_hang_ = fatal_hold_;
+        // frees him); the fatality's is kFatalHangWindowS. This is the pin
+        // window only: beat 5's hang sets fatal_hang_ when it begins.
+        fatal_window_ = fatal_hold_;
         fatal_window_s_ += dt;
         // At a rail, the fatality's grips shift for the over kFatalPinS into
         // his window, which goes on till kFatalHangWindowS (above).
@@ -1606,7 +1619,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             break;
         }
         if (fatal_window_s_ >= (fatal_hold_ ? kFatalHangWindowS : kPinWindowS)) {
-            fatal_hang_ = false;
+            fatal_window_ = false;
             fatal_window_s_ = 0.0F;
             if (pin_here_) {
                 hand2_want_ = 0;
@@ -1664,7 +1677,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // first over the lip; as his legs come over, her second hand takes his
         // ankle.
         // (Once his window is done: him face to face on her deck till then.)
-        const bool bare_lip = fatal_hold_ && rail_up_ < 0.2F && !pin_here_ && grip_point_ == Grip::Belt && !fatal_hang_;
+        const bool bare_lip = fatal_hold_ && rail_up_ < 0.2F && !pin_here_ && grip_point_ == Grip::Belt && !fatal_window_;
         if (bare_lip && to_spot <= 0.2F) {
             pose_hand(dt, rail_pose(at, feet, kBeltUpM, kBeltOutM + kBareLipPushM, kBeltSideM), 0.8F * kHandSpeedMps);
         } else {
@@ -1712,7 +1725,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
                            (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
         // (In the fatality's window her first hand holds his belt on the
         // rail's top: him face to face till it ends.)
-        pose_hand(dt, fatal_hang_ ? belt_pose(at, feet)
+        pose_hand(dt, fatal_window_ ? belt_pose(at, feet)
                                   : rail_pose(at, feet, rail_up_ + kBeltUpM + 0.1F, kBeltOutM + kOverPushM, kBeltSideM),
                   0.8F * kHandSpeedMps);
         // Square across the rail first: his ankle drawn in behind her till his
@@ -1722,7 +1735,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const bool square = std::abs(axis.Dot(along)) < 0.45F;
         const RVec3 in = rail_pose(at, feet, rail_up_ + kOverInUpM, kOverInOutM, kHangSideM);
         const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
-        if (!square && (fatal_hold_ ? (fatal_hang_ && fatal_window_s_ < kFatalHangWindowS - kFatalLiftEarlyS) || hold_s_ < kFatalSquareS : hold_s_ < 1.5F) && !over_up_) {
+        if (!square && (fatal_hold_ ? (fatal_window_ && fatal_window_s_ < kFatalHangWindowS - kFatalLiftEarlyS) || hold_s_ < kFatalSquareS : hold_s_ < 1.5F) && !over_up_) {
             pose_hand2(dt, in, 0.8F * kHandSpeedMps);
             break;
         }
@@ -1730,7 +1743,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         pose_hand2(dt, up, 0.8F * kHandSpeedMps);
         // Going over: his ankle up, his body tipping head down past the rail
         // (her first hand on his middle keeps it at the rail's top till then).
-        if (!fatal_hang_ && ((Vec3(up - hand2_target_).Length() < 0.1F && (axis.GetY() < -0.2F || past > kOverOutPastM)) ||
+        if (!fatal_window_ && ((Vec3(up - hand2_target_).Length() < 0.1F && (axis.GetY() < -0.2F || past > kOverOutPastM)) ||
             hold_s_ > 4.0F)) {
             // His middle out: her first hand from his belt to his ankle.
             begin_regrip(Grip::Ankle);
@@ -1780,6 +1793,14 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             if (Vec3(hang - hand_target_).Length() < 0.03F && down) {
                 hold_phase_ = 7;
                 hold_s_ = 0.0F;
+                if (fatal_hold_) {
+                    // Beat 5's true hang begins: the pin window is over, and
+                    // the test's hang measures from here.
+                    fatal_window_ = false;
+                    fatal_window_paused_ = false;
+                    fatal_hang_ = true;
+                    fatal_window_s_ = 0.0F;
+                }
             }
         }
         if (hold_s_ > 10.0F) {
@@ -1833,7 +1854,13 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const bool head_down = bodies.GetRotation(player_).RotateAxisY().GetY() < -0.9F;
         const bool settled = due && standing && hold_s_ >= kFatalHangSettleS;
         const bool late = due && fatal_s_ >= kFatalLetGoLateS && hold_s_ >= kFatalHangSettleS;
-        const bool decide = (settled && swinging_out && head_down) || (late && head_down);
+        // Beat 5's hang runs the full window before she lets go: the let-go
+        // decision and any step along the edge wait for the hang clock.
+        // Two ticks early, matching the test's window bar (225-2 ticks):
+        // the float clock lands a hair under 2.5 on the 7.0 s deadline tick,
+        // and the reel-back would otherwise win the race.
+        const bool hung_window = fatal_window_s_ >= kFatalHangWindowS - 2.0F * dt;
+        const bool decide = ((settled && swinging_out && head_down) || (late && head_down)) && hung_window;
         if (decide || --fatal_check_ticks_ <= 0) {
             fatal_check_ticks_ = 3;
             foresee_fall(player, out);
@@ -1845,13 +1872,15 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         if (decide && fatal_lethal_ && mid_past >= kFatalOpenAirM + 0.02F && fatal_s_ <= kFatalLetGoByS) {
             fatal_release();
         } else if (fatal_s_ >= kFatalLetGoByS) {
+            // The hang is over: hauled back in for the floor version.
+            fatal_hang_ = false;
             reel_ = true;
             reel_to_floor_ = true;
             state_ = State::Spare;
             hold_phase_ = 0;
             hold_s_ = 0.0F;
             spare_walk_ = false;
-        } else if ((decide && !fatal_lethal_) || (settled && hold_s_ >= kFatalHangSettleS + 1.0F)) {
+        } else if ((decide && !fatal_lethal_) || (hung_window && settled && hold_s_ >= kFatalHangSettleS + 1.0F)) {
             // Not to kill from here, or a second hung here without a let-go
             // (lying against her deck's face): a step along the edge, and he
             // settles again there; no spot for it, another second.
@@ -2313,6 +2342,8 @@ bool Matron::his_blow() {
         ++fatal_escapes_;
     }
     fatal_hang_ = false;
+    fatal_window_ = false;
+    fatal_window_paused_ = false;
     if ((state_ != State::Dangle || hold_phase_ <= 1) && over_her_deck(player, feet)) {
         let_go_ = true;
         let_go_push_ = Vec3::sZero();

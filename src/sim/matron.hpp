@@ -2758,9 +2758,10 @@ private:
     bool fatal_hold_ = false;              // this catch is the second: his one arm left
     FatalPath fatal_path_ = FatalPath::None;
     float fatal_carry_s_ = 0.0F;           // to the edge so far
-    float fatal_window_s_ = 0.0F;          // into the hang's window
-    bool fatal_hang_ = false;              // in the window
-    bool fatal_hang_paused_ = false;       // window paused mid regrip (no grip to measure)
+    float fatal_window_s_ = 0.0F;          // into the hang's window (pin window, then beat 5's hang)
+    bool fatal_hang_ = false;              // beat 5's true hang only: by one ankle, head down, over the drop
+    bool fatal_window_ = false;            // his punch window at the pin is open (choreography, not the hang)
+    bool fatal_window_paused_ = false;     // pin window paused mid regrip (no grip to measure)
     JPH::RVec3 fatal_edge_ = JPH::RVec3::sZero();   // the lip she holds him out over
     bool hang_ruled_out_ = false;          // tests: no edge counts (rule_out_hang_for_test)
     bool no_kill_foreseen_ = false;        // tests: no let-go foreseen to kill (foresee_no_kill_for_test)
