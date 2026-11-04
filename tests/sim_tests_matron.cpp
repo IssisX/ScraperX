@@ -7,7 +7,9 @@
 
 #include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
+#include "sim/bay.hpp"
 #include "sim/matron.hpp"
+#include "sim/matron_traversal.hpp"
 #include "sim/zipline.hpp"
 
 namespace {
@@ -681,8 +683,11 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
         const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
         const bool on_line = std::hypot(m.position.x - static_cast<double>(Matron::kPipeLineX),
                                         m.position.z - static_cast<double>(Matron::kPipeLineZ)) < 0.25;
-        if (drum_at_feet > 0.0 && !dropped && m.on_pipe && on_line && !m.pipe_sliding && feet < drum_at_feet) {
-            // Let go over the corner rail onto her, from a metre and a half up.
+        if (drum_at_feet > 0.0 && !dropped && m.on_pipe && on_line && !m.pipe_sliding && m.contact_hand_held &&
+            feet < drum_at_feet) {
+            // Let go over the corner rail onto her, from a metre and a half up,
+            // once she has the riser in her hands (she reaches it in a fall
+            // from the rail where it ends at 154: J-032).
             s.debug_launch_kit_body(drum, {m.position.x, m.position.y + 2.6, m.position.z}, {0.0, -2.0, 0.0});
             dropped = true;
         }
@@ -922,40 +927,274 @@ void run_matron_mischief() {
     }
 }
 
+// ---- her wrecking (J-016): the drum the player set by the bay's rungs,
+//      too heavy for her hands, she shoves off the lip into the bay through
+//      her own feet's push within her 8 kN / 44 kW, with no snap ----
+namespace {
+struct WreckRun {
+    std::uint32_t shoves = 0;
+    int shove_tick = -1;
+    double peak_force_n = 0.0;
+    double peak_power_w = 0.0;
+    double peak_push_n = 0.0;
+    double peak_step_m = 0.0;
+    int push_ticks = 0;
+    scraperx::sim::Vector3 rest{};
+    bool stood_his = false;
+};
+
+WreckRun matron_wreck_run(const bool trace) {
+    using scraperx::sim::Bay;
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    require(s.advance_frame(1.0).accepted, "matron wreck: settle");
+    const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const std::uint64_t drum = LooseStock::kFirstEntity + first + 2;
+    const std::uint32_t drum_body = s.kit_body_index(drum);
+    // The drum moved from its place by the north band's outer rail to stand
+    // upright 0.9 m west of the bay's rungs (east of the pallet there),
+    // where the rail along the cut is open (bay.hpp). A debug move stands in
+    // for his carry: a set-down leaves a drum lying at random, rolled and
+    // wedged against the rail's ends, which is no test of her.
+    s.debug_launch_kit_body(drum_body, {-4.85, 154.0 + 0.444 + 0.01, static_cast<double>(Bay::kRungsZ) - 0.025},
+                            {0.0, 0.0, 0.0});
+    (void)s.advance_frame(1.0);
+    const auto set_at = s.kit_body_position(drum_body);
+    std::cout << "  matron wreck: drum (entity " << drum << ") set at (" << set_at.x << ", " << set_at.y << ", " << set_at.z << ")\n";
+    require(set_at.y > 154.4, "matron wreck: the drum stands upright by the rungs");
+    // A sprint past her locker wakes her; back west, crouched, to wait in
+    // her sight on the band west of the drum, out of her hands' reach. Over
+    // the bay only on its leaf (kBandNorthZ).
+    require(go(s, -6.5, Matron::kBandNorthZ, false, 6.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 12.0, 0.2),
+            "matron wreck: east across the bay on its leaf");
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 6.0, 1.0) && s.matron_state().state == kStateStraining,
+            "matron wreck: a sprint toward her locker wakes her");
+    (void)s.set_crouch_input(true);
+    require(go(s, 0.4, Matron::kBandNorthZ, false, 20.0, 0.2) && go(s, -6.5, Matron::kBandNorthZ, false, 12.0, 0.2) &&
+                go(s, -12.0, -126.6, false, 20.0, 0.3),
+            "matron wreck: back west across the leaf, crouched");
+    (void)s.set_crouch_input(false);
+    (void)s.set_move_input(0.0, 0.0);
+    const scraperx::sim::traversal::Limits limits{};
+    WreckRun run;
+    auto last = s.kit_body_position(drum_body);
+    for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        const auto p = s.kit_body_position(drum_body);
+        const double step = std::hypot(std::hypot(p.x - last.x, p.z - last.z), p.y - last.y);
+        last = p;
+        if (m.stock_push_force_n > 0.0) {
+            ++run.push_ticks;
+            run.peak_push_n = std::max(run.peak_push_n, m.stock_push_force_n);
+            run.peak_force_n = std::max(run.peak_force_n, m.climb_force_n);
+            run.peak_power_w = std::max(run.peak_power_w, m.foot_power_w);
+            // On her floor, pushed: never a jump in its place.
+            if (p.y > 154.2) {
+                run.peak_step_m = std::max(run.peak_step_m, step);
+            }
+            require(m.climb_force_n <= static_cast<double>(limits.total_force_n) + 1.0 &&
+                        m.foot_power_w <= static_cast<double>(limits.power_w) + 1.0,
+                    "matron wreck: the shove is within her feet's 8 kN / 44 kW");
+        }
+        if (trace && i % 30 == 0) {
+            std::cout << "    t " << i << " her (" << m.position.x << ", " << m.position.z << ") state " << int(m.state)
+                      << " seeking " << m.stock_seeking << " push " << m.stock_push_force_n << " N; drum (" << p.x
+                      << ", " << p.y << ", " << p.z << ")\n";
+        }
+        if (m.stock_shoves > 0 && run.shove_tick < 0) {
+            run.shove_tick = i;
+        }
+        if (run.shove_tick >= 0 && i > run.shove_tick + 3 * static_cast<int>(Simulation::kTickRateHz)) {
+            break;
+        }
+    }
+    run.shoves = s.matron_state().stock_shoves;
+    run.rest = s.kit_body_position(drum_body);
+    // Stock he uses is his too: the toolbox east of her post (her second
+    // throwable), never moved, stood on by him in her sight.
+    {
+        const std::uint32_t toolbox = s.kit_body_index(LooseStock::kFirstEntity + first + 1);
+        const auto top = s.kit_body_position(toolbox);
+        require((s.matron_state().stock_handled & 2U) == 0U, "matron wreck: the unmoved toolbox is not his yet");
+        s.debug_launch_player({top.x, top.y + 0.2 + 0.95, top.z}, {0.0, 0.0, 0.0});
+        bool his = false;
+        for (int i = 0; i < 2 * static_cast<int>(Simulation::kTickRateHz) && !his; ++i) {
+            tick(s);
+            his = (s.matron_state().stock_handled & 2U) != 0U;
+        }
+        run.stood_his = his;
+    }
+    require(s.snapshot().death_count == 0, "matron wreck: no death");
+    // His to fetch back: a plain body, still a load his hands can lift.
+    require(s.kit_body_enabled(drum_body) && s.kit_body_carry_kind(drum_body) != 0,
+            "matron wreck: the shoved drum is still a load he can lift");
+    return run;
+}
+// The toolbox he set down east of the bay, taken and thrown at him (the
+// mischief run's legs): her throw a push of her hands within her feet's
+// account, never a speed set. The worst force and power of her feet while it
+// leaves her hands, and its largest change of speed in a tick then.
+struct ThrowRun {
+    std::uint32_t throws = 0;
+    double peak_force_n = 0.0;
+    double peak_power_w = 0.0;
+    double peak_push_n = 0.0;
+    double peak_dv_mps = 0.0;
+    double top_mps = 0.0;
+    double nearest_m = 1.0e9;
+};
+
+ThrowRun matron_throw_run() {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    require(s.advance_frame(1.0).accepted, "matron wreck throw: settle");
+    require(walk_to(s, -6.5, -125.95, 6.0, 0.08), "matron wreck throw: to the toolbox");
+    (void)s.set_facing(0.0, 1.0);
+    (void)s.advance_frame(0.4);
+    const std::uint64_t box = s.snapshot().carry_target_entity_id;
+    (void)s.request_pick_up();
+    (void)s.advance_frame(0.4);
+    require(box != 0 && s.snapshot().carrying_entity_id == box, "matron wreck throw: picked up");
+    require(go(s, -4.6, Matron::kBandNorthZ, false, 12.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 12.0, 0.2) &&
+                go(s, 2.0, -126.6, false, 12.0, 0.2),
+            "matron wreck throw: carried east across the bay on its leaf");
+    stand_still(s, 0.4);
+    (void)s.request_set_down();
+    (void)s.advance_frame(1.0);
+    const std::uint32_t box_body = s.kit_body_index(box);
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+            "matron wreck throw: a sprint toward her locker wakes her");
+    (void)s.set_crouch_input(true);
+    require(go(s, -6.0, Matron::kBandNorthZ, false, 30.0, 0.3), "matron wreck throw: back west, crouched");
+    (void)s.set_crouch_input(false);
+    stand_still(s, 0.2);
+    const scraperx::sim::traversal::Limits limits{};
+    ThrowRun run;
+    auto last_v = s.kit_body_velocity(box_body);
+    for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        const auto v = s.kit_body_velocity(box_body);
+        const double dv = std::hypot(std::hypot(v.x - last_v.x, v.z - last_v.z), v.y - last_v.y);
+        last_v = v;
+        if (m.throws > 0 && m.stock_push_force_n > 0.0) {
+            run.peak_push_n = std::max(run.peak_push_n, m.stock_push_force_n);
+            run.peak_force_n = std::max(run.peak_force_n, m.climb_force_n);
+            run.peak_power_w = std::max(run.peak_power_w, m.foot_power_w);
+            run.peak_dv_mps = std::max(run.peak_dv_mps, dv);
+            run.top_mps = std::max(run.top_mps, std::hypot(std::hypot(v.x, v.z), v.y));
+            require(m.climb_force_n <= static_cast<double>(limits.total_force_n) + 1.0 &&
+                        m.foot_power_w <= static_cast<double>(limits.power_w) + 1.0,
+                    "matron wreck throw: the throw is within her feet's 8 kN / 44 kW");
+        }
+        if (m.throws > 0) {
+            const auto b = s.kit_body_position(box_body);
+            const auto p = s.snapshot().player_position;
+            run.nearest_m = std::min(run.nearest_m, std::hypot(std::hypot(b.x - p.x, b.z - p.z), b.y - p.y));
+        }
+        run.throws = m.throws;
+        if (m.throws > 0 && m.stock_push_force_n == 0.0 && run.peak_push_n > 0.0 && v.y == 0.0) {
+            break;
+        }
+        if (m.throws > 0 && run.nearest_m < 1.2 && i % 9 == 0 && v.y == 0.0) {
+            break;
+        }
+    }
+    return run;
+}
+}  // namespace
+
+void run_matron_wreck() {
+    {
+        const ThrowRun t = matron_throw_run();
+        std::cout << "  matron wreck throw: throws " << t.throws << ", peak push " << t.peak_push_n << " N, peak feet "
+                  << t.peak_force_n << " N / " << t.peak_power_w << " W, top speed " << t.top_mps
+                  << " m/s, largest change in a tick " << t.peak_dv_mps << " m/s, nearest " << t.nearest_m << " m\n";
+        require(t.throws >= 1 && t.peak_push_n > 0.0, "matron wreck throw: she throws it with a push of her hands");
+        require(t.top_mps > 0.8 * static_cast<double>(Matron::kThrowMps),
+                "matron wreck throw: her push brings it up to the throw's speed");
+        require(t.peak_dv_mps < 2.0, "matron wreck throw: pushed up to speed, never set going (under 2 m/s a tick)");
+        std::cout << "PASS scraperx_sim matron wreck throw: peak_push_n=" << t.peak_push_n
+                  << " peak_dv_mps=" << t.peak_dv_mps << " nearest_m=" << t.nearest_m << "\n";
+    }
+    const bool trace = std::getenv("SCRAPERX_WRECK_TRACE") != nullptr;
+    const WreckRun a = matron_wreck_run(trace);
+    std::cout << "  matron wreck: shoves " << a.shoves << " at tick " << a.shove_tick << ", push ticks "
+              << a.push_ticks << ", peak push " << a.peak_push_n << " N, peak feet " << a.peak_force_n << " N / "
+              << a.peak_power_w << " W, largest step on the floor " << a.peak_step_m << " m, at rest ("
+              << a.rest.x << ", " << a.rest.y << ", " << a.rest.z << ")\n";
+    require(a.shoves == 1 && a.push_ticks > 0, "matron wreck: she shoves the drum he set down off the lip");
+    require(a.rest.y < 153.0, "matron wreck: it lies under her floor, in the bay");
+    require(a.peak_step_m < 0.1, "matron wreck: pushed, never snapped (under 0.1 m a tick on her floor)");
+    require(a.stood_his, "matron wreck: the toolbox he stands on in her sight is his to her");
+    const WreckRun b = matron_wreck_run(false);
+    require(b.shove_tick == a.shove_tick && b.rest.x == a.rest.x && b.rest.y == a.rest.y && b.rest.z == a.rest.z,
+            "matron wreck: the same run twice is the same shove");
+    std::cout << "PASS scraperx_sim matron wreck: shove_tick=" << a.shove_tick << " peak_push_n=" << a.peak_push_n
+              << " peak_feet_n=" << a.peak_force_n << " peak_power_w=" << a.peak_power_w << "\n";
+}
+
 void run_matron_crash() {
     // ---- a hit on her deck draws her (the owner, 2026-10-18: sound is how she
     //      hunts). She searches where she lost the player; out of her earshot
-    //      and her sight, the player shoves crate S into crate N; she hears the
-    //      hit and goes to it, not wary, finds nobody, and is the warier ----
+    //      and her sight, the player shoves loose stock off the 176.25 ring
+    //      onto her deck; she hears the hit and goes to it, not wary, finds
+    //      nobody, and is the warier ----
     {
+        constexpr double kDropFromX = 23.6;   // east of piece 246 on the ring
+        constexpr double kDropZ = -145.2;
+        constexpr double kTipX = 20.9;        // past the ring's inner edge, it falls
+        constexpr double kLipX = 21.9;        // he goes no further west than this
+        constexpr double kAwayZ = -150.0;     // then south along the ring to here
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
         s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
         require(s.advance_frame(1.0).accepted, "matron crash: settle");
+        // Quietly to the foot of her home ladder; the cue there wakes her, and
+        // while she strains he is up the ladder to the 176.25 ring.
         (void)s.set_crouch_input(true);
-        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 40.0, 0.3),
-                "matron crash: quietly reach the north-east waiting point");
+        require(walk_to(s, 3.5, -128.2, 30.0) && walk_to(s, 3.5, -129.8, 4.0) && walk_to(s, 5.0, -129.6, 4.0, 0.08),
+                "matron crash: quietly reach the waiting point at her ladder's foot");
         require(s.matron_state().state == kStateDormant, "matron crash: quiet approach did not wake her");
-        require(s.set_room_loudness(1.0), "matron crash: real room-noise cue at north-east");
+        require(s.set_room_loudness(1.0), "matron crash: real room-noise cue at her ladder's foot");
         tick(s);
         require(s.set_room_loudness(0.0), "matron crash: room quiet after wake cue");
         require(s.matron_state().state == kStateStraining, "matron crash: the localized cue woke her");
         (void)s.set_crouch_input(false);
-        // Straining, and then emerging, she hears nothing: to the north-east
-        // corner to be there as she bursts out, then off down the east band.
-        require(go(s, Matron::kBandX, Matron::kBandNorthZ, false, 10.0, 0.3), "matron crash: to the north-east corner");
+        (void)s.set_facing(0.0, 1.0);
+        require(s.request_traversal() && s.advance_frame(0.2).accepted && is_climbing(s.snapshot()),
+                "matron crash: the ladder taken");
+        bool topped = false;
         bool out = false;
+        auto waking_lead = s.matron_state();
+        for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !topped; ++i) {
+            (void)s.set_move_input(0.0, 1.0);
+            (void)s.set_facing(0.0, 1.0);
+            tick(s);
+            topped = standing_above(s.snapshot(), 176.5);
+            if (!out && s.matron_state().state == kStateEmerging) {
+                out = true;
+                waking_lead = s.matron_state();
+            }
+        }
+        require(topped, "matron crash: up onto the 176 ring");
+        (void)s.set_move_input(0.0, 0.0);
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !out; ++i) {
             tick(s);
             out = s.matron_state().state == kStateEmerging;
+            if (out) {
+                waking_lead = s.matron_state();
+            }
         }
         require(out, "matron crash: she bursts out");
-        const auto waking_lead = s.matron_state();
-        require(go(s, Matron::kBandX, -143.0, true, 3.0, 0.6) && s.matron_state().state == kStateEmerging,
-                "matron crash: a sprint down the east band while she is still emerging");
-        (void)s.set_crouch_input(true);
-        require(go(s, Matron::kBandX, -157.6, false, 10.0, 0.3) && go(s, 24.5, -156.2, false, 6.0, 0.15),
-                "matron crash: a creep round behind crate S");
+        // Along the ring to piece 246, out of her sight above her.
+        require(go(s, kDropFromX, Matron::kRingNorthZ, false, 20.0, 0.3) && go(s, kDropFromX, kDropZ + 1.0, false, 30.0, 0.2) &&
+                    walk_to(s, kDropFromX, kDropZ, 6.0, 0.05),
+                "matron crash: along the ring to piece 246");
+        (void)s.set_move_input(0.0, 0.0);
         bool searching = false;
         bool heard_early = false;
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !searching; ++i) {
@@ -971,16 +1210,34 @@ void run_matron_crash() {
                     lost.lead_x == waking_lead.lead_x && lost.lead_z == waking_lead.lead_z &&
                     std::hypot(lost.position.x - waking_lead.lead_x, lost.position.z - waking_lead.lead_z) < 2.0,
                 "matron crash: she searches the waking evidence without tracking hidden movement");
-        // Up, and crate S shoved north into crate N.
-        (void)s.set_crouch_input(false);
+        // While she searches, he shoves piece 246 west off the ring's inner
+        // edge; it lands loud on her deck below (ruling #117, 6:22 PM).
+        constexpr std::uint64_t kDropped = LooseStock::kFirstEntity + 246;
         std::uint64_t seen = s.last_impact_sequence();
         scraperx::sim::ImpactSnapshot last_tick_loudest{};
         scraperx::sim::ImpactSnapshot crash{};
         bool heard = false;
         double player_from_her = 0.0;
+        bool shoved = false;
         for (int i = 0; i < 8 * static_cast<int>(Simulation::kTickRateHz) && !heard; ++i) {
-            (void)s.set_move_input(0.0, 1.0);
-            (void)s.set_facing(0.0, 1.0);
+            // A shove at it till it tips over the inner edge (never himself
+            // past the edge's lip), then back and off south along the ring.
+            const auto piece = stock(s, 246);
+            const auto at = s.snapshot().player_position;
+            shoved = shoved || piece.x < kTipX || at.x < kLipX;
+            const bool back = shoved && at.x < kDropFromX;
+            const bool away = shoved && !back && at.z > kAwayZ;
+            double mx = piece.x - at.x;
+            double mz = piece.z - at.z;
+            const double ml = std::max(std::hypot(mx, mz), 1.0e-6);
+            mx /= ml;
+            mz /= ml;
+            if (shoved) {
+                mx = back ? 1.0 : 0.0;
+                mz = away ? -1.0 : 0.0;
+            }
+            (void)s.set_move_input(mx, mz);
+            (void)s.set_facing(shoved ? 0.0 : mx, shoved ? -1.0 : mz);
             tick(s);
             const auto m = s.matron_state();
             const auto p = s.snapshot();
@@ -1005,27 +1262,24 @@ void run_matron_crash() {
         const auto drawn = s.matron_state();
         const double loud = ImpactLedger::loudness(static_cast<float>(crash.energy_j));
         const double crash_d = std::hypot(crash.at.x - drawn.position.x, crash.at.z - drawn.position.z);
-        std::cout << "  matron crash: heard the hit on crate N (" << crash.energy_j << " J, loudness " << loud << ") "
+        std::cout << "  matron crash: heard the dropped piece land (" << crash.energy_j << " J, loudness " << loud << ") "
                   << crash_d << " m off; the player " << player_from_her << " m off; state=" << int(drawn.state)
                   << " wary=" << drawn.wary << " target=" << drawn.target_x << "," << drawn.target_z
                   << " lead=" << drawn.lead_x << "," << drawn.lead_z << " hit=" << crash.at.x << "," << crash.at.z << "\n";
-        require(heard && crash.entity == LooseStock::kFirstEntity + static_cast<std::uint64_t>(LooseStock::kDeckCrateNorth),
-                "matron crash: she hears crate S strike crate N");
+        require(heard && crash.entity == kDropped, "matron crash: she hears the dropped piece land");
         require(drawn.noise_heard == loud, "matron crash: what she heard is the hit, at its loudness");
         require(player_from_her > 0.30 * 55.0 && !drawn.sees_player,
                 "matron crash: the player is out of her earshot and her sight");
         require(drawn.state == kStateHunting && !drawn.wary &&
                     !drawn.lead_seen && std::hypot(drawn.lead_x - crash.at.x, drawn.lead_z - crash.at.z) < 0.01,
                 "matron crash: the hit draws her: she goes for it, not wary");
-        // Away, crouched, off the band's open line to the east rim beside the
-        // crates; she goes to the hit, searches it, finds nobody. (Her sight
-        // is her eyes, 1.69 m up: crouched in the open down the band, as this
-        // went before, she sees him over the crates.)
+        // He stays up on the ring, crouched and still, out of her sight; she
+        // goes to the hit, searches it, finds nobody.
         (void)s.set_crouch_input(true);
         double closest = 1.0e9;
         bool stood_down = false;
         for (int i = 0; i < 30 * static_cast<int>(Simulation::kTickRateHz) && !stood_down; ++i) {
-            (void)steer(s, 26.5, -151.0, false);
+            (void)s.set_move_input(0.0, 0.0);
             tick(s);
             const auto m = s.matron_state();
             closest = std::min(closest, std::hypot(m.position.x - crash.at.x, m.position.z - crash.at.z));
@@ -2181,6 +2435,7 @@ void run_matron_remaining() {
         std::cout << "PASS scraperx_sim matron hands: dangerous, two catches, one arm, the fatality\n";
     }
     run_matron_mischief();
+    run_matron_wreck();
     run_matron_collision();
     run_matron_balance();
     run_matron_pipe();
@@ -2256,6 +2511,66 @@ void run_matron_remaining() {
                 "matron rage: a quiet stretch drops her back to a pest, and not before her rage is under the lower mark");
         std::cout << "PASS scraperx_sim matron rage: sprint_s=" << sprint_s << " peak=" << dangerous.rage
                   << " pest_after_s=" << pest_after_s << "\n";
+    }
+    // ---- her rage steps down from fully changed (the owner, 2026-10-19: both
+    //      ways, no floor, no gain with time): set fully changed and left in
+    //      quiet, her rage only ever falls, she stays changed until it is under
+    //      kRageChangedDown and is dangerous the tick it is, and keeps falling
+    //      past the mark with her exposure still growing ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        s.debug_matron_patrol();             // out of her locker and awake: her rage is stepped
+        s.debug_hold_matron_hands(1000.0);   // no catch, no blow: pain feeds her rage, and none is dealt
+        s.debug_fix_matron_pace(0);
+        require(s.advance_frame(1.0).accepted, "matron rage down: settle");
+        (void)s.set_crouch_input(true);
+        s.debug_set_matron_stage(2);
+        const auto changed = s.matron_state();
+        require(changed.stage == 2 && changed.rage > Matron::kRageChangedUp,
+                "matron rage down: set fully changed, her rage above the mark she rose past");
+        require(Matron::kRageChangedDown < Matron::kRageChangedUp && Matron::kRageChangedDown > Matron::kRageDangerousUp,
+                "matron rage down: the way down from changed is under the way up, over dangerous's own mark");
+        const double hz = static_cast<double>(Simulation::kTickRateHz);
+        const double decay_per_tick = static_cast<double>(Matron::kRageDecayPerSecond) / hz;
+        const double mark = static_cast<double>(Matron::kRageChangedDown);
+        double rage = changed.rage;
+        bool only_falls = true;
+        bool held_changed = true;
+        double down_after_s = -1.0;
+        double rage_at_down = 0.0;
+        for (int i = 0; i < 300 * static_cast<int>(Simulation::kTickRateHz) && down_after_s < 0.0; ++i) {
+            tick(s);
+            const auto m = s.matron_state();
+            only_falls = only_falls && m.rage <= rage;
+            rage = m.rage;
+            if (m.stage == 2 && m.rage < mark) {
+                held_changed = false;
+            }
+            if (m.stage != 2) {
+                down_after_s = (i + 1) / hz;
+                rage_at_down = m.rage;
+            }
+        }
+        std::cout << "  matron rage down: quiet, no longer changed after " << down_after_s << " s, at rage " << rage_at_down
+                  << ", stage " << static_cast<int>(s.matron_state().stage) << "\n";
+        require(only_falls, "matron rage down: left in quiet her rage only falls (no gain with time)");
+        require(down_after_s > 0.0 && held_changed,
+                "matron rage down: she stays changed while her rage is at or over kRageChangedDown, and is not after");
+        // The step is exactly one tick past the mark, one stage down (dangerous, not a pest).
+        require(s.matron_state().stage == 1 && rage_at_down < mark && rage_at_down > mark - 2.0 * decay_per_tick,
+                "matron rage down: the tick her rage goes under kRageChangedDown she is dangerous");
+        // No floor: the fall goes on past the mark, and stays dangerous while over its own lower mark.
+        const double exposure = s.matron_state().exposure;
+        for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            tick(s);
+        }
+        const auto lower = s.matron_state();
+        require(lower.rage < rage_at_down - 0.5 * static_cast<double>(Matron::kRageDecayPerSecond) * 20.0 &&
+                    lower.stage == 1 && lower.exposure > exposure && s.snapshot().death_count == 0,
+                "matron rage down: no floor holds her rage at the mark, and her time out gains her none");
+        std::cout << "PASS scraperx_sim matron rage down: down_after_s=" << down_after_s << " rage_at_down=" << rage_at_down
+                  << "\n";
     }
     // ---- two levels down: a sprint on the deck two under hers carries up the
     //      shaft to her, and frail she goes to the way down toward it (the line

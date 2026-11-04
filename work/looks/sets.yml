@@ -1,0 +1,18 @@
+# The screenshot sets the eye judges (design 2.4). The frames are what the proof job
+# `godot-audits-and-mix` in .github/workflows/wo000-delivery-spine.yml already captures and uploads
+# as the artifact godot-audits-<run>-<attempt> (paths inside the zip). Add a set here, with its
+# rubric, when a LOOK job adds a CI capture.
+artifact_prefix: godot-audits-
+sets:
+  approach:
+    rubric: work/looks/approach.md
+    frames:
+      - screenshots/wo006-approach-and-machine.png
+  summit:
+    rubric: work/looks/summit.md
+    frames:
+      - screenshots/summit_ending_hanging_beam.png
+      - screenshots/summit_ending_seated_foreman.png
+      - screenshots/summit_ending_city.png
+      - screenshots/summit_ending_parachute.png
+      - screenshots/summit_ending_home.png

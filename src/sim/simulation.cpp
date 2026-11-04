@@ -1487,6 +1487,9 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.stock_seek_size = {view.stock_seek_size.GetX(), view.stock_seek_size.GetY(), view.stock_seek_size.GetZ()};
     result.takes = view.takes;
     result.throws = view.throws;
+    result.stock_shoves = view.stock_shoves;
+    result.stock_handled = view.stock_handled;
+    result.stock_push_force_n = view.stock_push_force_n;
     result.staggers = view.staggers;
     result.knockdowns = view.knockdowns;
     result.damage_ns = view.damage_ns;
@@ -1509,6 +1512,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.pipe_head_down = view.pipe_head_down;
     result.pipe_sliding = view.pipe_sliding;
     result.pipe_stunned = view.pipe_stunned;
+    result.pipe_tuck = view.pipe_tuck;
     result.pipe_listening = view.pipe_listening;
     result.pipe_links = view.pipe_links;
     result.pipe_holds = view.pipe_holds;

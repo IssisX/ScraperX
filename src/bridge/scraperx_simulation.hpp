@@ -225,9 +225,11 @@ public:
     // there. Nothing in play calls them; they change no rule of hers.
     void debug_place_matron(godot::Vector3 feet);
     void debug_set_matron_stage(std::int64_t stage);
+    void debug_hold_matron_hands(double seconds);
     [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down);
     void debug_matron_hear(godot::Vector3 at);
     void debug_launch_player(godot::Vector3 at, godot::Vector3 velocity);
+    void debug_launch_kit_entity(std::int64_t entity, godot::Vector3 at, godot::Vector3 velocity);
     void debug_lose_arm(std::int64_t side);
     // Sends her, by her own plan, to the region her scan reads under those feet (false: none, or no plan).
     [[nodiscard]] bool debug_matron_travel_to(godot::Vector3 feet);

@@ -14,4 +14,11 @@ namespace scraperx::sim::strike {
 constexpr float kPlayerStrikeForceN = 1500.0F;
 constexpr float kPlayerStrikePowerW = 3000.0F;
 
+// The low sweep (physics_world_strike.cpp): Punch while crouched. A leg
+// driven through the ground, not an arm: its force is the spec's 1350 N
+// flat (no closing-speed power cap), held 4 ticks for 60 N*s, which over
+// her 220 kg is 0.273 m/s. Low, so her balance zeroes its reach and no
+// brace holds against it: it downs any upright Matron at any stage.
+constexpr float kPlayerSweepForceN = 1350.0F;
+
 } // namespace scraperx::sim::strike

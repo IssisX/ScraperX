@@ -548,3 +548,69 @@ index of the tree.
 ## 2026-10-31 — Merge blockers are substantive
 
 Owner decision: PR merge gating must ignore spelling, wording, and commit-message or tag nitpicks. Those nits must not cause commit rewrites or CI reruns. A merge is blocked only by a real physics, gameplay, or test failure. This decision was issued while ordering PR #55 and the combined #62/#59/#60 work landed after their functional proof jobs passed.
+
+---
+
+## 2026-11-02 — The integrator watches the sessions
+
+Owner, to the integrator: *"Remember, you need to also monitor the sessions, and if they get too long
+and wasteful, we should create another whenever that happens, which you determine for me."* The
+integrator decides when a Claude session (its own included) is too long or wasteful, hands off to a
+fresh one and retires the old one, without asking him (rule 62; `CLAUDE.md`, Managing the agents).
+
+---
+
+## 2026-11-02 — Her damage does not persist; the integrator decides for him
+
+Owner, on the S7 damage meter: *"Damage does not persist."* A checkpoint rewind or a reload brings
+the Matron back undamaged (rule 34). This supersedes correction 3 of the fighting spec ("commit
+stores damage_ns, restore returns it").
+
+Owner, on the decisions put to him: *"Make the other decisions for me. Thanks for catching these
+things. I said answer for me. So that means the decisions did go through."* The restore of his rule
+wording went through, and Claude decided questions 1 and 6–11 of
+`03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` by their picks (`CLAUDE.md`, Talking to the owner).
+
+---
+
+## 2026-11-02 — Never medium effort
+
+Owner, to the integrator: *"Medium effort level is too little for what I need here in this complex
+game - you should have known that."* Every Claude session and helper working on ScraperX runs above
+medium reasoning effort (rule 62). The integrator sets it on every helper it starts and names it in
+every brief and handoff.
+
+---
+
+## 2026-11-02 — Her hold over the edge with real arms
+
+Owner, after a playtest: *"when the matron goes to hang me over the edge, her arms are way, way, way,
+way too long. ... it is possible in real life, so it should be possible in this game. ... maybe she
+should knock me down first and then grab my feet ... If you can help me develop an alternative thing
+that's at least as cool or even cooler"*. Claude found the cause (the sim lifts him by the ankles high
+enough to clear the rail, about 2.9 m, past her real reach of about 2.7 m, and the drawing stretches
+her arm up to 2.7 times to match) and proposed five beats with real arms; the owner chose them:
+*"5 beats"*. Rule 33; `03_EXECUTION/MATRON_REDESIGN/HOLD_WITH_REAL_ARMS.md`.
+
+---
+
+## 2026-11-02 — Ask before opening Claude workers
+
+Owner, after the integrator opened several Claude worker sessions and the five-hour quota reached
+75%: *"You have to watch how many workers you have, though, because it's going to go real fast."*
+Then: *"Let's try to be aware of the quota. It's already at 75%, dude."* And: *"Dude, you can't keep
+doing that. You should ask me how many workers to open up and give suggestions from now on."*
+`CLAUDE.md`, Managing the agents.
+
+---
+
+## 2026-11-02 — Effort is his call, not a "never medium" rule
+
+Correcting the "Never medium effort" entry above: *"No, I don't have a never medium. I just didn't
+like when you automatically assigned it medium and didn't ask me what level I wanted it at."* He set
+every session to high. The integrator asks him the effort level, with a suggestion, whenever it asks
+to open a Claude session or helper.
+
+
+- 2026-11-02, on helpers that outlive the integrator (moved from CLAUDE.md 11-03): *"Shouldn't it be in the new session?"*
+- 2026-10-22, opening "Managing the agents" (moved from CLAUDE.md 11-03): *"I need more management help from you telling the other agents what to do"*.

@@ -679,8 +679,27 @@ public:
     static constexpr float kTakeM = 0.85F;
     static constexpr float kHandsUpM = 0.25F;
     // Light stock only: a toolbox (18 kg) she carries off; a drum (55 kg)
-    // she leaves where the player set it.
+    // she shoves instead (below).
     static constexpr float kTakeMaxKg = 25.0F;
+    // Her wrecking (J-016): a piece of the player's too heavy for her hands
+    // (over kTakeMaxKg, up to kStockShoveMaxKg) on her floor she shoves off
+    // the nearest open lip within kStockShoveReachM of it: a drop with no
+    // floor within kStockShoveDropM under it, and nothing standing between
+    // the piece and the lip. She walks to its far side, then pushes it with
+    // her hands at kStockShoveMps: the push is a force from her feet's own
+    // tick account (feet_push: within her 8 kN / 44 kW with her stride), the
+    // same force on the piece at the face she pushes and its opposite on
+    // her, never a velocity or a place set. Her walk's edge guard stops her
+    // at the lip; the piece goes on over it and lies, a plain body, where it
+    // lands (his to fetch back). No nearer the lip for kFetchStallSeconds,
+    // she gives it up for kFetchRetrySeconds, as a fetch.
+    static constexpr float kStockShoveMaxKg = 200.0F;
+    static constexpr float kStockShoveReachM = 6.0F;
+    static constexpr float kStockShoveDropM = 1.5F;
+    static constexpr float kStockShoveMps = 1.2F;
+    static constexpr float kStockShoveEaseS = 0.5F;    // the push closes the speed gap over this
+    static constexpr float kStockShoveLowM = 0.2F;     // over its underside: pushed higher, a drum tips
+    static constexpr float kStockShoveHandsM = 0.25F;  // her hands' gap to its face when they push
     static constexpr float kHandsOutM = 0.55F;
     static constexpr float kHandsPullMps = 3.0F;
     static constexpr float kHandsSlipM = 1.0F;
@@ -690,6 +709,12 @@ public:
     static constexpr float kThrowWindupSeconds = 0.35F;
     static constexpr float kThrowCooldownSeconds = 6.0F;
     static constexpr float kThrowQuietSeconds = 2.5F;
+    // The throw is a push of her hands (J-016): out of her grip, the piece
+    // is driven up to the throw's speed over kThrowStrokeSeconds by a force
+    // from her feet's tick account (its work at the piece's speed against
+    // her power), its opposite on her; it leaves her hands at that speed, or
+    // when it is out of their reach (kHandsSlipM), never set going.
+    static constexpr float kThrowStrokeSeconds = 0.2F;
     // A piece she gets no nearer to (it lies where her feet cannot take her:
     // past a rail, in a cage's back) she gives up on, and leaves a while.
     static constexpr float kFetchStallSeconds = 1.5F;
@@ -782,7 +807,6 @@ public:
     static constexpr float kPipeCentreZ = -134.2F;
     static constexpr float kPipeRailZ = -133.0F;
     static constexpr float kPipeRailTopM = 1.09F;  // the north rail's top over its deck
-    static constexpr float kPipeOverRailM = 0.15F; // her feet over the rail's top, going over it
     static constexpr float kPipeSqueezeN = 4500.0F;
     static constexpr float kPipeFriction = 0.7F;
     static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
@@ -791,6 +815,60 @@ public:
     // legs' reach (her line is 0.6 m off the riser's west face).
     static constexpr float kBraceShinM = 0.45F;
     static constexpr float kBraceReachM = 1.0F;
+    // Her real arm on her pipe (rule 37: her hands reach each hold), as her
+    // body is drawn there (the J-028 motion probe, tools/matron_motion, on
+    // touch_matron_act): her shoulders kPipeShoulderUpM over her middle,
+    // kPipeShoulderAheadM ahead of it and kPipeShoulderSideM to either side;
+    // her arm 0.64 m from the shoulder to her knuckles. A point within
+    // kPipeHandReachM of a shoulder is in her hand (pipe_in_hand_reach).
+    static constexpr float kPipeShoulderUpM = 0.38F;
+    static constexpr float kPipeShoulderAheadM = 0.10F;
+    static constexpr float kPipeShoulderSideM = 0.16F;
+    static constexpr float kPipeHandReachM = 0.70F;
+    // Hand over hand up the riser: the next hold kPipeNextHoldUpM over her
+    // middle (else kPipeNextHoldLowM), taken once the one she has is down to
+    // kPipeRegripUpM over it: each stroke 0.39 m, every hold in her reach.
+    static constexpr float kPipeNextHoldUpM = 0.72F;
+    static constexpr float kPipeNextHoldLowM = 0.60F;
+    static constexpr float kPipeRegripUpM = 0.33F;
+    // Over a rail (#157, the ruling: a tuck vault and a step-off), every hold
+    // in her reach. Perched, her soles kPipePerchM over its top and within
+    // kPipeFootSpanM of her middle (her soles' span, sole_contact's). Outside
+    // it, her middle at kPipeOutZ (just clear of the rail) or kPipeHangZ
+    // (clear of the deck's edge beam under it, whose top is
+    // kPipeLipUnderDeckM under the deck, its outer edge at kPipeLipZ).
+    static constexpr float kPipePerchM = 0.03F;
+    static constexpr float kPipeFootSpanM = 0.24F;
+    static constexpr float kPipeOutZ = -133.36F;
+    static constexpr float kPipeHangZ = -133.56F;
+    static constexpr float kPipeLipUnderDeckM = 0.10F;
+    static constexpr float kPipeLipZ = -133.23F;
+    // Her tuck (her legs drawn up under her, her trunk over her knees, as her
+    // body is drawn: matron_view.gd TUCK_*): fully tucked, her shoulders
+    // kPipeTuckDropM lower and kPipeTuckAheadM further ahead. She tucks as
+    // her middle rises over a rail's top, from kPipeTuckFromM to a metre past
+    // it, at most kPipeTuckRate a second.
+    static constexpr float kPipeTuckDropM = 0.83F;
+    static constexpr float kPipeTuckAheadM = 0.25F;
+    static constexpr float kPipeTuckFromM = 0.07F;
+    static constexpr float kPipeTuckRate = 2.5F;
+    // Her tuck as drawn follows the one asked of her about kPipeTuckDrawnTauS
+    // behind (the view's eased pose), so she tucks for where she will be
+    // kPipeTuckLeadS on, and her reach is judged from her tuck as drawn.
+    static constexpr float kPipeTuckLeadS = 0.3F;
+    static constexpr float kPipeTuckDrawnTauS = 0.25F;
+    // Up on a rail's top, tucking, or down off it: at most this fast.
+    static constexpr float kPipePressMps = 0.8F;
+    // Perched, she steps off toward her line at kPipeStepOffMps; let go, she
+    // catches the riser within kPipeCatchFallM of falling, or is off it.
+    static constexpr float kPipeStepOffMps = 1.2F;
+    static constexpr float kPipeCatchFallM = 3.0F;
+    // Where the riser ends flush with a deck (154), her catch on it: her
+    // middle about this far over its top (her shins at its face).
+    static constexpr float kPipeCatchOverTopM = 0.6F;
+    // Near a deck on the riser (her shoulders within kPipeDeckNearM of its
+    // rail's top), she turns to it for its rail or its edge.
+    static constexpr float kPipeDeckNearM = 1.3F;
     static constexpr float kPipeDownMps = 2.6F;
     static constexpr float kPipeUpMps = 0.7F;
     static constexpr float kPipeChangedDownBurstMps = 4.2F;
@@ -1209,6 +1287,9 @@ public:
         JPH::Vec3 stock_seek_size = JPH::Vec3::sZero();
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
+        std::uint32_t stock_shoves = 0;   // and shoved off a lip, this run
+        std::uint32_t stock_handled = 0;  // her throwables she counts his, a bit each
+        float stock_push_force_n = 0.0F; // her hands' push on a piece this tick (a shove, a throw)
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float damage_ns = 0.0F;         // judged physical impulse, all sources
@@ -1230,6 +1311,7 @@ public:
         bool pipe_head_down = false;    // coming down it head first (fully changed)
         bool pipe_sliding = false;      // torn off it, sliding on her legs to the flange under her
         bool pipe_stunned = false;      // slammed onto a flange
+        float pipe_tuck = 0.0F;         // her legs drawn up under her over a rail (0..1)
         bool pipe_listening = false;    // just off it, still, listening
         std::uint32_t pipe_links = 0;   // stories she set out along it, this run
         std::uint32_t pipe_holds = 0;   // her hands' holds on it (each a knock)
@@ -2086,6 +2168,22 @@ private:
     // beside her, or the riser's face at height y on her side of it.
     bool pipe_rail_hold(float deck, JPH::RVec3 at);
     bool pipe_face_hold(JPH::RVec3 at, float y);
+    // A hand on the deck's edge beam under the rail over `deck` (its outer
+    // top edge), or her feet on that rail's top under her: in her reach.
+    bool pipe_lip_hold(float deck, JPH::RVec3 at);
+    bool pipe_feet_hold(float deck, JPH::RVec3 at);
+    // The top of what is under (x, top_y, z), within a few centimetres: its
+    // body, member and point.
+    bool pipe_top_under(float x, float top_y, float z, JPH::BodyID &body, JPH::SubShapeID &member,
+                        JPH::RVec3 &point) const;
+    // The riser's own top under her middle `at` (straight down its axis), if
+    // it ends below her within a catch's fall: its height. False where the
+    // riser goes on past her (the ray starts in its steel) or nothing is met.
+    bool pipe_riser_top_under(JPH::RVec3 at, float &top_y) const;
+
+    // A point within her real arm's reach of a shoulder, her middle at `at`
+    // and facing her yaw (kPipeShoulder*, kPipeHandReachM).
+    [[nodiscard]] bool pipe_in_hand_reach(JPH::RVec3 at, JPH::RVec3 point) const noexcept;
     // Down on the steel from a blow (take_blow), the way (fall_x_, fall_z_).
     void clear_interrupted_actions(bool keep_travel = false);
     void knock_down();
@@ -2188,12 +2286,19 @@ private:
     static constexpr float kMovedStockM = 1.5F;
     bool fetch_stock(float dt, float ax, float az, bool allow_catwalk);
     bool throw_stock(float dt, JPH::RVec3 at, JPH::RVec3 player);
+    // Her shove (kStockShoveMaxKg): the piece she would shove, or -1; the
+    // way to the nearest open lip from a piece (false: none within reach);
+    // shoving it (true while she walks to it or pushes it).
+    [[nodiscard]] int stock_to_shove(float ax, float az) const;
+    bool pick_shove_edge(int index, JPH::Vec3 &dir, float &lip_m) const;
+    bool shove_stock(float dt, float ax, float az, bool allow_catwalk);
     // True when her hands took it: never a load another constraint already
     // holds (his carry), which her hands feel held fast (load_held_elsewhere).
     bool take_stock(int index);
     [[nodiscard]] bool load_held_elsewhere(JPH::BodyID body) const;
     void hold_stock(float dt);
     void release_stock(JPH::Vec3 velocity, JPH::Vec3 spin, bool thrown);
+    void throw_stroke(float dt);
     [[nodiscard]] JPH::Vec3 hands_offset() const noexcept;
     void step_planks(float dt);
     void restore_planks();
@@ -2245,7 +2350,10 @@ private:
     // granted from this tick's feet_budget_, the equal and opposite force on
     // what she stands on (if it moves), and reported like her stride. Nothing
     // under her, no push. Returns what was granted.
-    JPH::Vec3 feet_push(float dt, JPH::Vec3 want_force);
+    // `work_velocity`, when given, is the velocity of the point the push
+    // does its work at (her hands on a piece she throws), for the power cap;
+    // else her own relative to the floor.
+    JPH::Vec3 feet_push(float dt, JPH::Vec3 want_force, const JPH::Vec3 *work_velocity = nullptr);
     [[nodiscard]] float step_reach() const noexcept;
     [[nodiscard]] float recover_accel() const noexcept;
     [[nodiscard]] float down_seconds() const noexcept;
@@ -2471,10 +2579,20 @@ private:
     JPH::Vec3 hold_offset_ = JPH::Vec3::sZero();   // the hand point, from her centre, drawn in
     float throw_windup_s_ = -1.0F;                 // < 0: not rearing back
     float throw_cooldown_s_ = 0.0F;
+    float throw_stroke_s_ = -1.0F;                 // < 0: no throw leaving her hands
+    JPH::Vec3 throw_v_ = JPH::Vec3::sZero();       // the speed it leaves them at
     int thrown_ = -1;
     float thrown_s_ = 0.0F;
     std::uint32_t takes_ = 0;
     std::uint32_t throws_ = 0;
+    int stock_shove_ = -1;                 // the piece she is shoving, or -1
+    JPH::Vec3 stock_shove_dir_ = JPH::Vec3::sZero();   // flat, toward its lip
+    float stock_shove_best_m_ = 0.0F;      // the nearest it has come to the lip
+    float stock_shove_stall_s_ = 0.0F;     // since it last came nearer
+    float stock_push_force_n_ = 0.0F;     // this tick's push of her hands on a piece (shove, throw)
+    bool stock_shove_pushing_ = false;     // her hands on it (else walking to its far side)
+    JPH::RVec3 stock_shove_from_ = JPH::RVec3::sZero();   // where it lay when she set her hands on it
+    std::uint32_t stock_shoves_ = 0;
     bool released_edge_ = false;
     // The world's checkpoint rule (freezes_checkpoint), set at the boundary
     // (Perception) and read by nothing of hers.
@@ -2757,8 +2875,25 @@ private:
     JPH::SubShapeID pipe_member_;
     JPH::Vec3 pipe_local_hand_ = JPH::Vec3::sZero();
     JPH::RVec3 pipe_hand_ = JPH::RVec3::sZero();
-    bool pipe_on_face_ = false;       // the hand is on the riser (friction), not a rail's top
-    bool pipe_over_ = false;          // over the rail she is crossing
+    // What has her on the pipe: a hand on a rail's top, round the riser, or
+    // on a deck's edge beam (the lip); her feet on a rail's top; her legs on
+    // a flange (stunned); or nothing, between holds (falling to her catch).
+    enum class PipeGrip : std::uint8_t { None, Rail, Face, Lip, Feet, Legs };
+    PipeGrip pipe_grip_ = PipeGrip::None;
+    bool pipe_top_hold(float top_y, float z, JPH::RVec3 at, PipeGrip grip);
+    // Her hold, taken: kept in its body's frame.
+    void pipe_take(PipeGrip grip, JPH::BodyID body, JPH::SubShapeID member, JPH::RVec3 point);
+    // Her hand (Rail, Face, Lip) or her feet (Feet) where she has them this
+    // tick, in her reach.
+    [[nodiscard]] bool pipe_grip_in_reach(JPH::RVec3 at) const;
+    // Her steps over a rail: from a deck to the riser (Mount: Press, Over,
+    // Perch, StepOff, Catch) or from the riser to a deck (Dismount: Hang,
+    // Rise, Over, Perch, Back, Down).
+    enum class PipeStep : std::uint8_t { Press, Over, Perch, StepOff, Catch, Hang, Rise, Back, Down };
+    PipeStep pipe_step_ = PipeStep::Press;
+    float pipe_tuck_ = 0.0F;          // her legs drawn up under her (0..1): kPipeTuck*
+    float pipe_tuck_drawn_ = 0.0F;    // that tuck as drawn, behind it (kPipeTuckDrawnTauS)
+    float pipe_let_go_y_ = 0.0F;      // her middle's height where she last let go (her catch)
     float pipe_best_ = 0.0F;          // her progress along it, for the stall
     float pipe_stall_s_ = 0.0F;
     float pipe_overload_s_ = 0.0F;

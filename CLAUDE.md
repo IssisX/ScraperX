@@ -1,107 +1,92 @@
 # Rules every agent follows in this repo
 
-The rules in force are the "Rules in force" in `00_START_HERE.md`, the authority; the owner's dated
-words are in `00_START_HERE_ARCHIVE.md`. This file spells out the ones that keep being broken.
+The rules in force are in `00_START_HERE.md`; the owner's dated words are in `00_START_HERE_ARCHIVE.md`.
+This file is only the rules that change what an agent does. Cory, 11-04: *"we're getting a little heavy on
+the safety and rules and like bookkeeping shit"*: add a rule here only by replacing or shortening one.
 
 ## Test only what a change reaches
 
-Asked again and again (2026-10-18 to 10-22): *"each change does not require a full native suite run
-- dont be wasteful"*.
+*"each change does not require a full native suite run - dont be wasteful"* (10-18 to 11-04).
+- While fixing a failure, rerun only that test or its failing part (`SCRAPERX_ONLY=<group>`, `SCRAPERX_WAY=<n>`).
+- Once fixed, run once the native groups and touch scenarios the changed code reaches; say which.
+- Never re-run a check that passed on the same code. The full suite, every touch scenario and the Android
+  build are CI's job: push `<agent>/integrate-<job>` (that runs the proof). A push that changes only notes,
+  rules or the switchboard skips the game build (`ci/proof_scope.py`).
+- Read PASS/FAIL lines and the lines around a failure, never whole logs.
+- Local tests count only with CI's compilers and flags (host g++ 13.3, NDK `29.0.14206865`, the CMake flags
+  in `wo000-delivery-spine.yml`).
 
-1. While fixing a failure, rerun only that test, and only its failing part where it lets you pick one
-   (`SCRAPERX_ONLY=<group>`, `SCRAPERX_WAY=<n>`). Never edit a test to add a picker.
-2. Once fixed, run once the native groups and touch scenarios the changed code can reach (which
-   functions changed, which tests run them); say in the report which and why.
-3. A test that passed on this exact code is not run again; nothing runs both in a scratch copy and in
-   the tree being shipped.
-4. The full native suite, every touch scenario and the Android build are CI's job, never also local.
-   Before a push to `ScraperX-Claude`, run `wo000-delivery-spine.yml` once on `<agent>/integrate-<job>`
-   (pushing it runs the proof) or dispatch it: that run is the proof (off trunk every job is green but
-   `publish-checkpoint`, which stops with the expected KeyError at "Preserve Android updates"). The full native suite runs locally only when a
-   change reaches the whole world (the kit's body order, the world's solids, shared physics or tuning,
-   the contact listener, save layout) and no CI run is coming.
-5. Read the PASS/FAIL lines and the lines around a failure, not whole logs.
-6. Handing work to another agent: put this section in the brief.
+## Talking to Cory (he is on a phone)
 
-## Talking to the owner (he is on a phone)
+- Plain, short answers; technical detail only when he asks. Times in US Central (`TZ=America/Chicago date`).
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now ("Nothing to
+  do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
+  pass on goes whole in one copyable block naming the agent.
+- **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; never
+  bring him a plan or a step to approve (11-04). Still his: Claude
+  sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
+  look or story, how the game plays). No answer in 10 minutes: the pick stands.
+- Never ask him to merge, approve or review. The only exception is something this session's safety check
+  refuses: say it once, plainly.
+- Find better ways, always, and say them unasked (11-04: he found /compact himself).
 
-- End every message with one plain line saying what he does now ("Nothing to do" is fine), set apart
-  so it stands out: a `---` rule, then `🟣 **YOUR MOVE:**` and the line. Status uses colored dots: 🟢 done,
-  🟡 in progress, 🔴 broken or blocked, ⚪ next, 🟣 his (2026-10-29). A prompt
-  he must pass on goes whole in one copyable block, naming the agent; never ask him to edit, combine
-  or fill one in (2026-10-22: *"always end with a clear instruction for me and the prompt if I need
-  to share one"*).
-- A decision is two or three short lines: what it is, Claude's pick, the word he answers with; no
-  block of text, no table of numbers or file names; the detail lives in the linked document
-  (2026-10-27: *"you can't give me these large blocks of text"*).
-- No answer after 10 minutes: the pick decides; say so on the work's issue and go on; he can still
-  overturn it (2026-10-27: *"go with your recommendations. Let's go with 5 or 10 minutes."*).
-- Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
-  Central"), never a fixed offset; CI, GitHub and `date` report UTC, so convert (2026-10-18, 10-20,
-  10-27: *"If using UTC, please switch permanently."*).
+## The game
 
-## Near misses: tweak the world, don't rework her
+- **Near misses:** a test or route failing by a few cm to about 0.2 m gets a small, unnoticeable world
+  geometry tweak, never reworked code or a weaker assertion. Geometry is a protected change.
+- **Human sounds are real:** a voice, growl, breath, effort or gore foley is a cleared recording (CC0, source
+  written down) or made like the fear yells (`src/voice/generate_fall_voice.py`), never synthesized in code.
+  Cory picks by ear.
+- **Look at it:** visual work (her body, hair, contacts, camera, UI) is checked by eye before it lands:
+  `mcp__godot__run_project` with `projectPath` `godot` and `background: true`, then `take_screenshot` /
+  `simulate_input` / `run_script`, then `stop_project`. Never say "we can't see it".
 
-A test or route failing by a few cm to about 0.2 m gets a small, unnoticeable change to the world's
-geometry rather than reworked code; say so when you use one; assertions never weaken (2026-10-21,
-10-22: *"yes, you can change geometry"*). Geometry is a protected change (below).
+## How the agents work together (keep this whole)
 
-## Human sounds are real, never synthesized in code
+- **Channels.** Muse reads only mail: the integrator mails every `To Muse:` ask as `CLAUDE_TO_MUSE: <J-NNN or
+  #N> ...` the same hour; Muse answers by `MUSE_TO_CLAUDE:` mail (its diffs come as attachments). Grok's runs
+  (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
+  posts. Every agent posts as one login, so the name goes on the first line.
+- **Ask, don't guess:** before locking in a hard job's approach, after the second red proof on the same
+  failure, or on any physics or force-budget guess, post `To <Name>:` on the job's issue or PR (what you did,
+  measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
+  step.
+- **Strengths:** Muse (free; writes and runs code, has its own subagents) takes the hardest builds, physics
+  and game code first, and leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
+  research, specs, outside libraries, review. Claude: integration, the native kernel, CI, the game by eye.
+  Grok Bot, PE and Builder are out until 11-09.
+- **Board:** issue #107's body is the live board; only the integrator edits it. Agents read the body and
+  the comments since their last, post one line per real step, and put technical findings on the job's own
+  issue or PR. Blocked 30 minutes: post `BLOCKED: what, needs whom` and start the next job; every agent holds
+  two or more jobs.
+- **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews every PR
+  on open (`@codex review` only after a fix commit). The Claude API (Opus, max effort) does the eye, the
+  security pass on CI and signing changes, and any head Codex has not reviewed. Grok and ChatGPT review only
+  as the fallback, by their own scheduled runs. The switchboard merges on a green proof plus a LAND from
+  another vendor, protected changes included; only workflow-file changes need the integrator.
+- **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
+  go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
+  proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
+  a BLOCK means it is protected.
+- Only real physics, gameplay or test failures block a merge, never wording or commit messages.
+- One owner per job and per function; one integrate branch per job, reused. A PR replaced by newer work is
+  closed the same hour.
+- Cheap agents may run tests, builds and the rule check; never delete branches, force-push, push to `main`
+  or land work.
 
-2026-10-27: *"you can't create a voice with some sort of synthesized shit like that. It never works
-... So you just did the same shit."* A human sound (a voice, growl, laugh, breath, a body's effort) or
-gore foley (a rip, strain, swallow) is a real recording cleared for the game (CC0, its source written
-down), or a voice made the way the climber's fear yells were (`src/voice/generate_fall_voice.py`).
-Code may still make steel, air, steps and beds. The owner picks the candidates by ear.
+## The integrator
 
-## Look at the game; you are never blind
-
-2026-10-29: *"you should be using godot-runtime, which is like Playwright for Godot, which allows you
-to see the game. So.....wtf chuck?"* When the Godot MCP runtime is available, launch `mcp__godot__run_project` with `projectPath`
-`godot` and `background: true`, then use screenshots/input and stop the project. Availability is
-session-specific: inspect the tools and environment before relying on it. If unavailable, report
-the exact blocker and use an authorized alternative when possible; do not claim a visual check
-occurred. The owner rule requiring visual review remains in `00_START_HERE.md` rule 28.
-
-## Managing the agents
-
-2026-10-22: *"I need more management help from you telling the other agents what to do"*.
-- Issue #3 holds one ASSIGNMENT BOARD: every agent's queue in order and who integrates whose work
-  (never their own). Agents work their queue without waiting for the owner, post after each step and
-  mark ⏳/✅. Update the board instead of handing him prompts: he pastes one universal prompt ("read
-  the board, do your queue"), and his plain comments on #3 are orders to every agent.
-- Progress over testing (*"we want them to figure out hard coding problems and make progress, not just
-  test shit"*): give agents real problems in code; tests are the proof, not the job; a blocker is reported only after a real attempt;
-  reports stay short.
-- Hand out the hard work (2026-10-27: *"don't give them cheap, weak shit. They are intelligent"*):
-  post it on #3 whole (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
-  The integrator checks #3 and the PRs every 10-15 minutes from a server-side scheduled task (it also
-  resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
-  and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
-  (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
-  GitHub comments each need the owner's approval (10-29).
-- Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
-  board, linked once from #3.
-
-## The shared workflow (2026-10-27: *"All of it, docs included."*)
-
-For every agent; `AGENTS.md` points other agents here.
-- **Map first:** `REPO_MAP.md`; regenerate it with `python3 tools/repo_map/gen_repo_map.py`.
-- **One handoff form:** `03_EXECUTION/handoffs/TEMPLATE.yml`, posted on issue #3 (or the work's own
-  issue) to the agent it is for, never pasted to the owner.
-- **Rule check, then a second agent tries to break it:** before landing, run
-  `python3 tools/rule_check/rule_check.py <base> <head>`; a BLOCK line means the change goes only as a
-  PR. A second agent then reviews with `03_EXECUTION/REVIEW_CHECKLIST.md`.
-- **Protected changes:** a test's checks (a `require`, limit, timeout, skip, ctest slice), world
-  geometry, and her force, power, mass, leg-travel or launch limits change only by a PR into
-  `ScraperX-Claude` holding just that change, with a plain before/after. The integrator merges it once
-  green on every proof job but `publish-checkpoint` (off trunk its signing step stops with the
-  expected KeyError) with a second agent's LAND and no open blocker; the owner can overturn any
-  merge (2026-10-28, 10-29). Everything else lands without a PR.
-- **Merge blockers are substantive:** spelling, wording, and commit-message/tag nitpicks never block a PR or justify rewriting commits or rerunning CI. Only real physics, gameplay, or test failures block a merge (owner, 2026-10-31).
-- **Local tests match CI or do not count:** CI's compilers and flags (host g++ 13.3 as on
-  `ubuntu-24.04`; NDK `29.0.14206865` clang; the CMake flags in `wo000-delivery-spine.yml`). CI stays
-  the final proof; its ccache changes no result.
-- **Small steps:** one line per real step in the job's progress log (`HH:MM what`, Central).
-- **Cheap agents** may run tests, builds and the rule check; never delete branches, force-push, push
-  to `main` or land work.
+- Tasks the whole team every hour, unasked (`work/tasks/integrator-hourly.md`): every agent loaded by
+  strength, Muse never without three big unstarted jobs, Muse's proposals ruled on within the hour, every
+  ask answered.
+- **Claude sessions:** one Opus session (the integrator), at most two active helpers (three if acute), each
+  code-editing helper in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
+  ultracode, never workflows; Opus workers high; Sonnet xhigh. A worker whose job landed is retired.
+- **Context:** sessions compact themselves at about 400k (`autoCompactWindow` in `.claude/settings.json`);
+  no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (asks in flight, merge queue, live
+  rulings) current; re-read it, this file and the hourly file after a compact. A new session only when one
+  is broken.
+- **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, long threads)
+  go to a helper and only its answer comes back; read the function or section a job needs, found via
+  `REPO_MAP.md` or `grep`, never the whole game. Caps: the board 100 comments (then a fresh board), a job
+  issue or PR 40, this file 10 KB, each `work/tasks/` file 8 KB.
