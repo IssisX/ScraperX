@@ -540,6 +540,30 @@ func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Mat
 	# keeps its original world coordinates. Native bounds: TwinTower.
 	var mass_x := TWIN_TOWER_CENTER.x
 	var face_z := TWIN_TOWER_FACE_Z
+	# Tower two's face (environment plan, job 14): poured concrete, drawn by
+	# its own shader on a copy of the same box. TowerMass stays the part the
+	# solids export reads; it is only no longer drawn, so the batcher leaves
+	# it out (batched, the shaft fell into a far section drawn as one flat
+	# colour). The copy is no part: no new solid, no hold. Not under the
+	# floating audit, which reads the tree as built.
+	var mass := $TowerPresentation.get_node("TowerMass") as MeshInstance3D
+	if get("_audit") == null and mass != null:
+		var concrete := (mass.mesh as BoxMesh).material as StandardMaterial3D
+		var face_material := ShaderMaterial.new()
+		face_material.shader = preload("res://presentation/tower_two_face.gdshader")
+		face_material.set_shader_parameter("base_colour", concrete.albedo_color)
+		face_material.set_shader_parameter("base_roughness", concrete.roughness)
+		var face := MeshInstance3D.new()
+		face.name = "TowerTwoFace"
+		face.mesh = mass.mesh
+		face.material_override = face_material
+		# Out of the lamps' light, as the far batches were; and casting no
+		# shadow, as before (its batch never cast one in the yard's view).
+		face.layers = BATCH_FAR_LAYER
+		face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(face)
+		face.global_transform = mass.global_transform
+		mass.visible = false
 	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("e0a040"), 0.9)
 	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("a86c22"), 0.5)
 	for offset in [-38.0, -19.0, 0.0, 19.0, 38.0]:
