@@ -15,3 +15,4 @@
 {"job": "J-017", "kind": "review", "note": "review#192@b4f4edf7 claude-sonnet-5-5 in=4676 out=1292 stop=end_turn", "phase": "end", "run": "ea2c0f43faf2", "ts": "2026-11-03T23:20:56Z", "usd": "0.022272"}
 {"job": "J-017", "kind": "review", "note": "review#183@36b1ca7d in=8160", "phase": "reserve", "run": "c919ba1321c1", "ts": "2026-11-03T23:24:30Z", "usd": "0.176320"}
 {"job": "J-017", "kind": "review", "note": "review#183@36b1ca7d claude-sonnet-5-5 in=8593 out=15373 stop=end_turn", "phase": "end", "run": "c919ba1321c1", "ts": "2026-11-03T23:24:30Z", "usd": "0.170916"}
+{"job": "J-025", "kind": "eye", "note": "eye#150@8e68589d in=12737", "phase": "reserve", "run": "739a406c0d32", "ts": "2026-11-04T00:39:44Z", "usd": "0.210948"}
