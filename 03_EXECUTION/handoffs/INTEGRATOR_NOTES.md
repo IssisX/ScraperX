@@ -41,20 +41,21 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   +0.3 m); if her target really is above, the test changes by a protected PR. Muse measures which.
 
 ## Asks in flight
-- Muse (mail): J-001 step 4 hold re-pose (body x <= 16.9 at ArmPlay entry) and beat 5 hang to 2.5 s, both ruled
-  1:10 PM, diffs on top of #193; step 1 running; Codex P2 last. J-038 ruled 12:55 PM (slice 0 next after the
-  fight; slice 1 waits for Grok). J-006 leg 6; J-016 drum; #95 stills.
-- Grok (4 PM run): #193 force split; #100 (a helper is fixing touch-2 meanwhile); J-038 dent formula on #169.
-- ChatGPT: #171 next step (asked 1 PM); J-030 (#137).
+- Muse (mail): J-001 #193 - beat-5 hang diff arrived 3:55 PM (a helper applies it on 9a4f8cad); step 4 hold re-pose
+  (x <= 16.9 at ArmPlay) and step 1 mischief still owed. #207 world-b red (E guard body order, matron crash
+  hearing): Muse owes the fix. A "drawn-body guard" branch (fb-bot/expand-tests-20261104-drawn-guard) arrived 3:57.
+- Grok (4 PM run): #193 force split; J-038 dent formula (#169). Relay answers to Muse by mail.
 - To Claude: none open.
 
-## Merge queue (2:20 PM)
-- #171 (J-003 S8, mine, draft): ChatGPT's two defects fixed at 68112ba2, Codex clean, Muse's FIX 2 evidence posted
-  (lethal 9095 N-s, stills, reload meters 0). Mark ready when green; its body says Supersedes #83.
-- #207 world-b red (E guard body order; matron crash hears the piece): Muse fixing (mailed 2:00 PM).
-- #193 J-001 red on 3 known requires: Muse's diffs next (step 4 re-pose, beat-5 hang, step 1 mischief).
-- #208 STOW replaces JUMP: switchboard. #95 waits on Muse's stills.
-- Merged today: #100, #150, #179, #185, #196, #197, #199-#206. Closed: #43, #103. J-030 closed.
+## Merge queue (4:05 PM)
+- #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
+  at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
+- #83 (J-003 S7+S8): #171 merged INTO #83's branch (stacked), so #83 was reopened, trunk merged in at 5f8014c2,
+  ready, proof dispatched (branch is not integrate-: dispatch after each push). Merge myself on green + Codex.
+- #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
+  on green + Codex clean.
+- Merged today: #100, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
+- Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
 
 ## Known here
 - `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone. Worktrees in use: proof-scope, merge-protected, j025.
