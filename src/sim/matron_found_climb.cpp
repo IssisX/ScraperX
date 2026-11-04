@@ -389,6 +389,21 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
 // her own lets go at its goal; ended short of it, the column is left alone a
 // while, and she goes back down the way she came, once.
 MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*budget*/) {
+    // A climb she began herself owns her motion until it finishes: while
+    // it is active, routecraft steps aside rather than walking or climbing
+    // her on its own. Its follow_found_climb fallback below would otherwise
+    // carry her up a ladder and leave the begun climb to execute stale at
+    // the top. A routecraft that HOLDS her on steel still steps: a live
+    // grip is not preempted by a status flip.
+    if (m_.climb_ >= 0) {
+        JPH::BodyID step_grip_body;
+        JPH::SubShapeID step_grip_sub;
+        JPH::Vec3 step_grip_local;
+        const bool step_holds = m_.routecraft_.grip(step_grip_body, step_grip_sub, step_grip_local);
+        if (!step_holds) {
+            return MoverStatus::Idle;
+        }
+    }
     if (status() != MoverStatus::Running) {
         if (!m_.follow_found_climb(dt, goal_.at)) {
             return MoverStatus::Idle;
@@ -438,6 +453,19 @@ void Matron::RoutecraftWay::cancel() {
 }
 
 MoverStatus Matron::RoutecraftWay::status() const {
+    // A climb she began herself (her rung way) owns her motion until it
+    // finishes: a routecraft that is planning or driving her stands aside,
+    // or the climb executes stale on the wrong deck after routecraft carries
+    // her there itself. A routecraft that HOLDS her on steel keeps running:
+    // a live grip is not preempted by a status flip.
+    if (m_.climb_ >= 0) {
+        JPH::BodyID grip_body;
+        JPH::SubShapeID grip_sub;
+        JPH::Vec3 grip_local;
+        if (!m_.routecraft_.grip(grip_body, grip_sub, grip_local)) {
+            return MoverStatus::Idle;
+        }
+    }
     if (m_.routecraft_.planning() || m_.routecraft_.owns_motion()) {
         return MoverStatus::Running;
     }
@@ -766,14 +794,6 @@ void Matron::step_journey(const float dt) {
         ++journey_at_;
         journey_legs_.clear();
         return;
-    }
-    // Temporary diagnostic: identify the exact journey edge at climb acquisition.
-    if (edge.kind == traversal::MoveKind::RungUp || edge.kind == traversal::MoveKind::RungDown) {
-        std::fprintf(stderr,
-                     "MATRON_JOURNEY_BEGIN edge=%zu kind=%d feet=(%.3f,%.3f,%.3f) start=(%.3f,%.3f,%.3f) goal=(%.3f,%.3f,%.3f)\n",
-                     journey_at_, int(edge.kind), feet.GetX(), feet.GetY(), feet.GetZ(),
-                     edge.spec.start.GetX(), edge.spec.start.GetY(), edge.spec.start.GetZ(),
-                     edge.spec.goal.GetX(), edge.spec.goal.GetY(), edge.spec.goal.GetZ());
     }
     climber_->begin(edge.spec);
     journey_moving_ = true;

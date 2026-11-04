@@ -128,6 +128,19 @@ bool Matron::take_climb(const int index, const bool down) {
             return false; // No separately vetted safe downward entry.
         }
     }
+    // A climb she begins herself owns her hands: a routecraft hold on steel
+    // would otherwise keep running her (its executor climbs her up the same
+    // ladder) and leave this climb to execute stale at the top. Standing at
+    // a foot or a head when a climb begins, letting go of that hold is safe:
+    // this climb takes her from her next tick.
+    {
+        JPH::BodyID take_grip_body;
+        JPH::SubShapeID take_grip_sub;
+        JPH::Vec3 take_grip_local;
+        if (routecraft_.grip(take_grip_body, take_grip_sub, take_grip_local)) {
+            routecraft_.cancel();
+        }
+    }
     climber_->begin(*move);
     climb_ = index;
     climb_hand_known_ = false;
@@ -184,17 +197,6 @@ void Matron::step_climb(const float dt) {
     if (status == traversal::Climber::Status::Done) {
         release_climb(false);
     } else if (status != traversal::Climber::Status::Running) {
-        // TEMPORARY #91 diagnosis: distinguish a missing rung, lost contact,
-        // blocked finish or stall before changing the mover or its test.
-        if (c.foot_y > 153.5F && c.foot_y < 154.5F && c.lip_y > 175.5F && c.lip_y < 177.0F) {
-            const RVec3 feet = bodies.GetPosition(body_) - Vec3(0.0F, kStandCentre, 0.0F);
-            std::fprintf(stderr,
-                     "MATRON_CLIMB_FAIL edge=%d failure=%s phase=%d grips=%u holding=%d topped=%d feet=(%.3f,%.3f,%.3f) goal=(%.3f,%.3f,%.3f) hand=(%.3f,%.3f,%.3f) releases_before=%llu\n",
-                     climb_, traversal::failure_name(move.last_failure), move.phase, move.grips,
-                     int(move.holding), int(move.topped), float(feet.GetX()), float(feet.GetY()), float(feet.GetZ()),
-                     c.top_x, c.lip_y, c.top_z, float(move.hand.GetX()), float(move.hand.GetY()), float(move.hand.GetZ()),
-                     static_cast<unsigned long long>(climb_releases_));
-        }
         release_climb(true);
     } else if (move.topped) {
         // Up over its head, her body over its floor: her rung way is done and

@@ -39,8 +39,6 @@ using grip::hand_rests_on;
 
 constexpr float kPi = 3.14159265F;
 constexpr float kTurnRate = 7.0F;
-// Temporary exact-head diagnostic for the first tick of the 176 m descent.
-int grade_climb_diag_ticks = 0;
 // way_clear sweeps her width this much short of her body's: a wall, a rail or
 // a post her side only brushes she slides past; one nearer her middle line
 // stops her body.
@@ -363,21 +361,6 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
     if (body_in_world_ && !pipe) {
         const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
         index = nearest_climb(float(at.GetX()), float(at.GetZ()), float(at.GetY()) - kStandCentre, down);
-        // Temporary exact-head CI diagnostic: which scanned edge did the 176 m down test select?
-        if (down && float(at.GetY()) - kStandCentre > 170.0F) {
-            Climb selected{};
-            if (index >= 0 && climb_of(index, selected)) {
-                const auto &spec = scanned_->edges()[static_cast<std::size_t>(index)].spec;
-                std::fprintf(stderr,
-                             "MATRON_CLIMB_DIAG edge=%d kind=%d at=(%.3f,%.3f,%.3f) foot=%.3f head=%.3f lip=%.3f start=(%.3f,%.3f) top=(%.3f,%.3f) spec_goal_y=%.3f\\n",
-                             index, static_cast<int>(spec.kind), float(at.GetX()), float(at.GetY()) - kStandCentre,
-                             float(at.GetZ()), selected.foot_y, selected.head_y, selected.lip_y,
-                             selected.x, selected.z, selected.top_x, selected.top_z, float(spec.goal.GetY()));
-            } else {
-                std::fprintf(stderr, "MATRON_CLIMB_DIAG no-edge at=(%.3f,%.3f,%.3f)\\n",
-                             float(at.GetX()), float(at.GetY()) - kStandCentre, float(at.GetZ()));
-            }
-        }
     }
     climb_retry_s_ = 0.0F;
     if (pipe) {
@@ -386,14 +369,6 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
         return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
     }
     const bool started = index >= 0 && take_climb(index, down);
-    if (down && body_in_world_ && float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre > 170.0F) {
-        grade_climb_diag_ticks = 2;
-        std::fprintf(stderr,
-                     "MATRON_CLIMB_OWNER begin=%d climb=%d owner_climb=%d journey=%d routecraft=%d travel=%d climber=%d\n",
-                     int(started), climb_, int(holder() == &climb_way_), int(journey_way_.status()),
-                     int(routecraft_way_.status()), int(travel_way_.status()),
-                     climber_ ? int(climber_->status()) : -1);
-    }
     return started;
 }
 
@@ -3427,15 +3402,6 @@ void Matron::post_step(const float dt) {
         }
     }
     fall_vy_ = body_in_world_ && !dead_ ? physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() : 0.0F;
-    if (grade_climb_diag_ticks > 0) {
-        --grade_climb_diag_ticks;
-        std::fprintf(stderr,
-                     "MATRON_CLIMB_OWNER after_tick climb=%d owner_climb=%d journey=%d routecraft=%d travel=%d climber=%d failure=%d\n",
-                     climb_, int(holder() == &climb_way_), int(journey_way_.status()),
-                     int(routecraft_way_.status()), int(travel_way_.status()),
-                     climber_ ? int(climber_->status()) : -1,
-                     climber_ ? int(climber_->failure()) : -1);
-    }
     refresh_view();
     // Her collision body for the stance she is in now (matron_shape.cpp).
     step_stance(dt);
