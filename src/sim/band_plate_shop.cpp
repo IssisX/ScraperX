@@ -675,12 +675,72 @@ void build_gorge(std::vector<Part> &route) {
                          {edge - 0.34F + 0.08F, 418.05F, -160.6F + 0.08F}, Material::Yellow));
 }
 
-void build_climbing_route(kit::Kit &kit) {
+// The slide-and-vault run, 418 -> 440 (J-017, rules 52 and 53), along z = -157.5:
+// a pole up a pier on the 418 ring's west band to a deck at 429.0, a 4 m lane
+// on it east across the well. Sprinted down the lane and crouched 3 m short,
+// the body slides under a beam 1.45 m up (the proving ground's crawl beam,
+// physics_world.cpp) on its own momentum, stands on the far side, sprints
+// again and speed-vaults a 0.95 m rail across the lane (the proving ground's
+// vault rail). The lane ends under the 440 ring's east band with a second pole,
+// 0.14 m off a fascia girder on that ring's inner edge. A standing walk is
+// stopped by the beam; off the lane's edge rails it is an 11 m fall.
+constexpr float kRunZ = -157.5F;
+constexpr float kRunDeck = 429.0F;              // the lane's top
+constexpr float kRunWest = -14.9F;              // its west end, on the 418 ring's west band
+constexpr float kRunEast = 11.0F;
+constexpr float kRunBeamX = -6.0F;              // the crawl beam's centre
+constexpr float kRunRailX = 4.0F;               // the vault rail's centre
+
+void build_run(std::vector<Part> &route, std::vector<Part> &frame) {
+    const float lo = kRunZ - 2.0F;
+    const float hi = kRunZ + 2.0F;
+    const auto rail = [&route](const float x0, const float x1, const float z0, const float z1) {
+        route.push_back(span({x0, kRunDeck, z0}, {x1, kRunDeck + 0.8F, z1}, Material::Yellow));
+    };
+    // The west pier on the ring, a wing south of the lane so the pole's top-out
+    // is not under anything; the pole up the wing's south face.
+    route.push_back(span({kRunWest, 418.25F, lo - 2.0F}, {-12.7F, kRunDeck, hi}, Material::Concrete));
+    route.push_back(span({-13.8F - 0.08F, 418.25F, lo - 2.0F - 0.22F}, {-13.8F + 0.08F, kRunDeck - 0.2F, lo - 2.0F - 0.06F},
+                         Material::Yellow));
+    rail(kRunWest, kRunWest + 0.08F, lo - 2.0F, hi);                     // the west edge
+    rail(-12.78F, -12.7F, lo - 2.0F, lo);                                // the wing's east edge
+    rail(kRunWest, -14.5F, lo - 2.0F, lo - 2.0F + 0.08F);                // its south edge, open at the pole
+    rail(-13.1F, -12.7F, lo - 2.0F, lo - 2.0F + 0.08F);
+    // The lane and its edge rails (none across the walking line).
+    route.push_back(span({kRunWest, kRunDeck - 0.3F, lo}, {kRunEast, kRunDeck, hi}, Material::Galvanised));
+    route.push_back(span({kRunWest, kRunDeck - 1.0F, lo}, {kRunEast, kRunDeck - 0.3F, lo + 0.3F}, Material::Steel));
+    route.push_back(span({kRunWest, kRunDeck - 1.0F, hi - 0.3F}, {kRunEast, kRunDeck - 0.3F, hi}, Material::Steel));
+    rail(-12.7F, kRunEast, lo, lo + 0.08F);
+    rail(kRunWest, kRunEast, hi - 0.08F, hi);
+    rail(kRunEast - 0.08F, kRunEast, lo, hi);
+    // The crawl beam: underside 1.45 m over the lane, on a post at each side.
+    route.push_back(span({kRunBeamX - 0.3F, kRunDeck + 1.45F, lo}, {kRunBeamX + 0.3F, kRunDeck + 1.85F, hi}, Material::Rust));
+    for (const float z0 : {lo, hi - 0.3F}) {
+        route.push_back(span({kRunBeamX - 0.3F, kRunDeck, z0}, {kRunBeamX + 0.3F, kRunDeck + 1.45F, z0 + 0.3F}, Material::Rust));
+    }
+    // The vault rail: 0.95 m high and 0.44 m through, the lane's whole width. A
+    // vault lands on another body than the obstacle's (probe_vault_landing), so
+    // the rail is part of the shop frame's body, the deck beyond it the route's.
+    frame.push_back(span({kRunRailX - 0.22F, kRunDeck, lo}, {kRunRailX + 0.22F, kRunDeck + 0.95F, hi}, Material::Yellow));
+    // The second pole stands 0.14 m off a fascia girder on the 440 ring's inner
+    // edge (1.35 m deep and flush with the ring's top: a hang takes 1.2 m), and
+    // clear of the ring's south band, whose inner edge is z = -160.17 there.
+    const float edge = ring_inner(440.0F);
+    route.push_back(span({edge - 0.2F, 438.9F, -159.9F}, {edge + 0.3F, 440.25F, -157.3F}, Material::Steel));
+    route.push_back(span({edge - 0.34F - 0.08F, kRunDeck, -158.6F - 0.08F},
+                         {edge - 0.34F + 0.08F, 440.05F, -158.6F + 0.08F}, Material::Yellow));
+}
+
+void build_climbing_route(kit::Kit &kit, std::vector<Part> &frame) {
     std::vector<Part> route;
     ladder(route, ring_inner(352.0F) - 0.14F, kRouteZ, false, 340.25F, 352.25F);
     build_wall_stack(route);
     build_gantry(route);
     for (float h = 396.0F; h < 483.9F; h += 22.0F) {
+        if (h == 418.0F) {
+            build_run(route, frame);   // the 418 -> 440 gap
+            continue;
+        }
         if (h == 396.0F) {
             build_gorge(route);   // the 396 -> 418 gap
             continue;
@@ -705,7 +765,7 @@ void build_plate_shop(kit::Kit &kit, PlateShop &shop) {
     build_stage_g(kit, shop, frame);
     build_stage_h(kit, shop, frame);
     build_stage_i(kit, shop, frame);
-    build_climbing_route(kit);
+    build_climbing_route(kit, frame);
     const kit::BodyIndex frame_body =
         kit.add_body(Sim::kShopFrameEntityId, frame, JPH::RVec3::sZero(), JPH::Quat::sIdentity(), 0.0F, 0.8F);
     // G's rope is found made fast on its cleat.

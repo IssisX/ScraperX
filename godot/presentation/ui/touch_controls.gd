@@ -255,7 +255,8 @@ func _layout() -> void:
 	# Inboard of Action, clear of the stick: the remote's switch.
 	_place(B_CRANE, jump + Vector2(-470.0, -110.0) * _u, 80.0)
 	# Inboard of Drop, clear of the stick and the crane's switch: the punch.
-	_place(B_PUNCH, jump + Vector2(-480.0, 110.0) * _u, 80.0)
+	# 35 units of glass between its ring and Drop's (and Chute's), strokes counted.
+	_place(B_PUNCH, jump + Vector2(-510.0, 110.0) * _u, 80.0)
 	_place(B_PAUSE, _safe.position + Vector2(m, m) + Vector2(52.0, 52.0) * _u, 52.0)
 	_stick_home = Vector2(_safe.position.x + m + 230.0 * _u, corner.y - m - 230.0 * _u)
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
@@ -691,7 +692,10 @@ func _draw_button(button: TouchButton) -> void:
 	UiStyle.draw_icon(self, button.icon, button.center, radius * 0.78, icon_color, 4.0 * _u)
 	if not button.label.is_empty():
 		var label_size := int(roundf(25.0 * _u))
-		var label_color := UiStyle.with_alpha(UiStyle.PAPER, dim * alpha)
+		# A greyed button's label greys in tone, not in alpha: faded, its dark
+		# outline went with it and the word was lost over a bright sky.
+		var label_color := UiStyle.with_alpha(UiStyle.PAPER, alpha) if dim == 1.0 \
+			else UiStyle.with_alpha(UiStyle.PAPER_DIM, 0.9 * alpha)
 		var lines := _label_lines(button.label, label_size, radius)
 		for i in lines.size():
 			UiStyle.text_centered(self, UiStyle.font_label(), lines[i],

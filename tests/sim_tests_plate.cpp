@@ -591,6 +591,108 @@ bool run_gorge(scraperx::sim::Simulation &route) {
     return gantry_pole(route, 10.3, -160.6, 1.0, 0.0, 418.4, "pole 2");
 }
 
+// The 418 -> 440 slide and speed vault (band_plate_shop.cpp build_run) on player
+// inputs: round the 418 ring to its west band, up the pole to the 429 lane, a
+// walk into the crawl beam that it stops, then a sprint down the lane,
+// crouched 3 m short of the beam (a slide, as run_slide does), up again,
+// sprinted at the 0.95 m rail (a speed vault, as run_speed_vault does), and
+// up the second pole onto the 440 ring.
+bool run_slide_vault(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: run: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    const auto speed = [](const Snapshot &n) {
+        return std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
+    };
+    at("start");
+    if (!walk_to(route, 13.5, -163.5, 10.0, 0.3) || !walk_to(route, -13.0, -163.5, 30.0, 0.3)) {
+        at("walk round the ring failed");
+        return false;
+    }
+    if (!(gantry_pole(route, -13.8, -162.1, 0.0, 1.0, 429.1, "pole 1") && walk_to(route, -12.4, -157.5, 6.0, 0.1))) {
+        at("pole 1 or the walk to the lane failed");
+        return false;
+    }
+    // A standing walk down the lane does not pass the beam.
+    (void)route.set_facing(1.0, 0.0);
+    (void)route.set_move_input(1.0, 0.0);
+    (void)route.advance_frame(6.0);
+    const double walked = route.snapshot().player_position.x;
+    (void)route.set_move_input(0.0, 0.0);
+    if (!(walked < -6.3)) {
+        std::cout << "route: run: a standing walk reached x=" << walked << ", past the beam\n";
+        return false;
+    }
+    if (!walk_to(route, -12.4, -157.5, 6.0, 0.1)) {
+        at("walk back to the start failed");
+        return false;
+    }
+    // Sprint, then crouch 3 m short of the beam.
+    (void)route.set_facing(1.0, 0.0);
+    (void)route.set_move_input(1.0, 0.0);
+    (void)route.set_sprint_input(true);
+    if (!advance_until(route, [](const Snapshot &n) { return n.player_position.x > -9.0; }, 4.0)) {
+        at("no run-up to the beam");
+        return false;
+    }
+    const double slide_in = speed(route.snapshot());
+    const std::uint64_t slides = route.snapshot().slide_count;
+    (void)route.set_crouch_input(true);
+    (void)route.advance_frame(Simulation::kFixedStepSeconds * 2);
+    if (!(route.snapshot().player_sliding && route.snapshot().slide_count == slides + 1)) {
+        std::cout << "route: run: crouching at " << slide_in << " m/s did not slide\n";
+        return false;
+    }
+    if (!advance_until(route, [](const Snapshot &n) { return !n.player_sliding; }, 4.0) ||
+        !(route.snapshot().player_position.x > -5.4)) {
+        at("the slide did not carry the body past the beam");
+        return false;
+    }
+    at("slid out");
+    // Up again, and sprint at the rail.
+    (void)route.set_crouch_input(false);
+    (void)route.advance_frame(Simulation::kFixedStepSeconds * 4);
+    bool requested = false;
+    bool vaulted = false;
+    double entry = 0.0;
+    double slowest = 1.0e9;
+    double exit_speed = 0.0;
+    for (int tick = 0; tick < 4 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        const Snapshot n = route.snapshot();
+        if (!requested && n.ledge_available && n.player_position.x > 2.0) {
+            entry = speed(n);
+            (void)route.request_traversal();
+            requested = true;
+        }
+        (void)route.advance_frame(Simulation::kFixedStepSeconds);
+        const Snapshot m = route.snapshot();
+        if (m.traversal_state == TraversalState::Vaulting) {
+            vaulted = true;
+            slowest = std::min(slowest, m.player_linear_velocity.x);
+        } else if (vaulted) {
+            exit_speed = speed(m);
+            break;
+        }
+    }
+    (void)route.set_move_input(0.0, 0.0);
+    (void)route.set_sprint_input(false);
+    std::cout << "route: run: slide in " << slide_in << " m/s, vault in " << entry << " slowest " << slowest
+              << " out " << exit_speed << " m/s\n";
+    if (!(requested && vaulted && entry > 6.0 && slowest > 6.0 && route.snapshot().player_position.x > 4.4)) {
+        at("the rail was not speed-vaulted");
+        return false;
+    }
+    if (!(walk_to(route, 9.0, -158.0, 8.0, 0.2) && gantry_pole(route, 9.4, -158.6, 1.0, 0.0, 440.4, "pole 2"))) {
+        at("pole 2 failed");
+        return false;
+    }
+    return true;
+}
+
 // AS-008's climbing route, on player inputs: from TP-340 by F's hole round the
 // hole and the header to the east band, the ladder to the 352 ring, the wall-climb
 // stack (six lanes, five risers of 4.4 m) onto the 374 ring, then one climb per
@@ -683,6 +785,10 @@ void run_plate_route() {
     require(walk_to(route, 13.9, -136.0, 24.0, 0.3) && walk_to(route, 13.9, -150.0, 16.0, 0.3),
             "route: round the 396 ring to its east band");
     for (double h = 396.0; h < 483.9; h += 22.0) {
+        if (h == 418.0) {
+            require(run_slide_vault(route), "route: the slide and speed vault, 418 to 440");
+            continue;
+        }
         if (h == 396.0) {
             require(run_gorge(route), "route: the wall-run gorge, 396 to 418");
             continue;
