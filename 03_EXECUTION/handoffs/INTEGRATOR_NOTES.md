@@ -41,20 +41,19 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   +0.3 m); if her target really is above, the test changes by a protected PR. Muse measures which.
 
 ## Asks in flight
-- Muse (mail): J-001 #193 - beat-5 hang diff arrived 3:55 PM (a helper applies it on 9a4f8cad); step 4 hold re-pose
-  (x <= 16.9 at ArmPlay) and step 1 mischief still owed. #207 world-b red (E guard body order, matron crash
-  hearing): Muse owes the fix. A "drawn-body guard" branch (fb-bot/expand-tests-20261104-drawn-guard) arrived 3:57.
+- Muse (mail): J-001 #193 - beat-5 hang in at 35b67484, proof red (mischief no-shove, past-rail setup, load S2
+  over-base). 4:45 PM ruled ChatGPT's stability-first force share + 4-tick plant fallback; Muse owes one diff. #207 world-b red (E guard body order, matron crash
+  hearing): Muse owes the fix. Drawn-body guard diff (378e1805) mailed 4:24: a helper opens it as J-012 `claude/integrate-j012-drawn-guard`.
 - Grok (4 PM run): #193 force split; J-038 dent formula (#169). Relay answers to Muse by mail.
 - To Claude: none open.
 
-## Merge queue (4:05 PM)
+## Merge queue (4:45 PM)
 - #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
   at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
-- #83 (J-003 S7+S8): #171 merged INTO #83's branch (stacked), so #83 was reopened, trunk merged in at 5f8014c2,
-  ready, proof dispatched (branch is not integrate-: dispatch after each push). Merge myself on green + Codex.
+- J-012 drawn-body guard (workflow file): merge myself on green + Codex clean.
 - #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
   on green + Codex clean.
-- Merged today: #100, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
+- Merged today: #83, #100, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
 
 ## Known here
