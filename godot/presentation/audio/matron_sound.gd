@@ -95,6 +95,8 @@ var _shoves_seen := -1
 var _throws_seen := -1
 var _leaps_seen := -1
 var _climbs_seen := -1
+var _blow_prev := -1.0
+var _blow_sounded := false   # this blow window has made its one hit sound
 var _catches_seen := -1
 var _takes_seen := -1
 var _unrigs_seen := -1
@@ -226,13 +228,22 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	_vaults_seen = vaults
 	# A blow off her feet: her body booming onto the steel and the breath
 	# knocked out of her (unless a slam on the pipe made it, heard below).
+	# One landed blow reads once, across every frame of its window. The native
+	# adds a blow up tick by tick and holds blow_mps above zero until six quiet
+	# ticks close the window, so its stagger or knockdown can land frames after
+	# its first contact. Whichever edge sounds first is the blow's hit; the
+	# others in the same window stay silent (their body cues still play).
+	var blow := float(data.get("blow_mps", 0.0))
+	var hit_this_frame := _blow_sounded and blow > 0.0
 	var pipe_slams := int(data.get("pipe_slams", 0))
 	var slammed := _pipe_slams_seen >= 0 and pipe_slams > _pipe_slams_seen
 	_pipe_slams_seen = pipe_slams
 	var knockdowns := int(data.get("knockdowns", 0))
 	if on and _knockdowns_seen >= 0 and knockdowns > _knockdowns_seen and not slammed:
 		_cue(&"hit_heavy", center, 4.0, randf_range(0.55, 0.65))
-		_cue(&"matron_hit", head, -2.0, _pitch())
+		if not hit_this_frame:
+			_cue(&"matron_hit", head, -2.0, _pitch())
+		hit_this_frame = true
 	_knockdowns_seen = knockdowns
 	# Up off the steel: her joints.
 	if on and _state_seen == STATE_DOWN and state != STATE_DOWN:
@@ -243,8 +254,19 @@ func update(data: Dictionary, delta: float, out_near: bool, feet: Vector3, head:
 	if on and _staggers_seen >= 0 and staggers > _staggers_seen:
 		_cue(&"matron_step", feet, 3.0, randf_range(0.6, 0.7))
 		_cue(&"scrape", feet, -4.0, randf_range(0.9, 1.1))
-		_cue(&"matron_hit", head, -8.0, _pitch())
+		if not hit_this_frame:
+			_cue(&"matron_hit", head, -8.0, _pitch())
+		hit_this_frame = true
 	_staggers_seen = staggers
+	# A landed blow that did not stagger her still reads: a grunt at her
+	# head, scaled by the judged blow (0.758 m/s is a heavy kick's blow).
+	# Edge-triggered on the blow rising from zero, so a held value grunts once.
+	# Silent once this blow's window has sounded (above): one blow, one hit sound.
+	if on and not hit_this_frame and _blow_prev >= 0.0 and blow > 0.0 and _blow_prev == 0.0:
+		_cue(&"matron_hit", head, lerpf(-14.0, -2.0, clampf(blow / 0.758, 0.0, 1.0)), _pitch())
+		hit_this_frame = true
+	_blow_prev = blow
+	_blow_sounded = hit_this_frame and blow > 0.0
 	# A shove, a throw, a leap over a gap, a ladder taken after the player:
 	# her shriek.
 	var shoves := int(data.get("shoves", 0))

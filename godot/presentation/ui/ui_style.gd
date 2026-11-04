@@ -19,6 +19,9 @@ const AMBER_DEEP := Color("9c5f1c")
 const HAZARD := Color("e0512f")
 const SAFE := Color("7fcfb4")
 const SHADOW := Color(0.0, 0.0, 0.0, 0.55)
+# The edge round drawn text: INK, dense enough that a light glyph keeps a dark
+# rim over white snow (SHADOW's 0.55 turned grey there and washed labels out).
+const EDGE := Color("0f0d0be6")
 
 # Semantic controller positions. Prompts name a position, never a letter, so
 # one table serves Xbox, PlayStation and Nintendo pads.
@@ -125,7 +128,7 @@ static func text_width(font: Font, value: String, size: int) -> float:
 # pos is the baseline anchor; align picks which end of the run sits on pos.x.
 static func text(ci: CanvasItem, font: Font, value: String, pos: Vector2, size: int, color: Color,
 		align: int = HORIZONTAL_ALIGNMENT_LEFT, outline: int = 0,
-		outline_color: Color = SHADOW) -> void:
+		outline_color: Color = EDGE) -> void:
 	if value.is_empty() or color.a <= 0.003:
 		return
 	var width := text_width(font, value, size)

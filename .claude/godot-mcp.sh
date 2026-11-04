@@ -4,9 +4,14 @@
 # this script may write to it.
 set -euo pipefail
 
+# Never resolve a command through an unverified toolchain cache.
+original_path="${PATH:-}"
+PATH="/usr/local/bin:/usr/bin:/bin"
+export PATH
+
 SERVER_PACKAGE="godot-mcp-runtime@3.8.1"
 
-repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd -- "${BASH_SOURCE[0]%/*}/.." && pwd -P)"
 
 # The server probes for Godot once at startup and caches a miss for its whole
 # lifetime, and nothing orders MCP startup after the SessionStart hook. In a
@@ -14,10 +19,60 @@ repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # before the server can look for it.
 # A failed install still starts the server: its project-config tools need no
 # Godot, and it names the missing binary itself when a tool needs one.
+# A preinstalled shared bundle is opt-in through SCRAPERX_TOOLCHAIN_DIR.
+# Never execute its binaries or MCP JavaScript before the pinned manifest and
+# entire inventory pass the same verification gate as install.sh.
+toolchain_verified=false
+if [[ -n "${SCRAPERX_TOOLCHAIN_DIR:-}" ]]; then
+  if SCRAPERX_TOOLCHAIN_CACHE_DIR="${SCRAPERX_TOOLCHAIN_DIR}" \
+      bash "${repo_root}/tools/shared-toolchain/install.sh" --verify >/dev/null 2>&1; then
+    toolchain_verified=true
+  else
+    echo "godot-mcp.sh: shared toolchain failed integrity verification; using independent tools" >&2
+  fi
+fi
+
+# Restore the caller's non-cache tools only after the integrity gate.  A
+# rejected cache must not be able to supply even dirname, bash or npx through
+# PATH aliases (including trailing slashes and directory symlinks).
+if [[ -n "${SCRAPERX_TOOLCHAIN_DIR:-}" && "$toolchain_verified" != true ]]; then
+  cache_root="$(realpath -m -- "$SCRAPERX_TOOLCHAIN_DIR")"
+  safe_path=()
+  IFS=: read -r -a path_parts <<< "$original_path"
+  for path_part in "${path_parts[@]}"; do
+    [[ -n "$path_part" ]] || continue
+    resolved_part="$(realpath -m -- "$path_part")"
+    if [[ "$resolved_part" != "$cache_root" && "$resolved_part" != "$cache_root/"* ]]; then
+      safe_path+=("$path_part")
+    fi
+  done
+  PATH="$(IFS=:; echo "${safe_path[*]}")"
+  [[ -n "$PATH" ]] || PATH="/usr/local/bin:/usr/bin:/bin"
+  if [[ -n "${GODOT_PATH:-}" ]]; then
+    resolved_godot="$(realpath -m -- "$GODOT_PATH")"
+    if [[ "$resolved_godot" == "$cache_root" || "$resolved_godot" == "$cache_root/"* ]]; then
+      unset GODOT_PATH
+    fi
+  fi
+else
+  PATH="$original_path"
+fi
+export PATH
+if [[ "$toolchain_verified" == true && -z "${GODOT_PATH:-}" &&
+      -x "${SCRAPERX_TOOLCHAIN_DIR}/bin/godot" ]]; then
+  export GODOT_PATH="${SCRAPERX_TOOLCHAIN_DIR}/bin/godot"
+fi
 if [[ "${CLAUDE_CODE_REMOTE:-}" == "true" && -z "${GODOT_PATH:-}" ]]; then
   if ! bash "${repo_root}/.claude/install-godot.sh"; then
     echo "godot-mcp.sh: install-godot.sh failed; starting with whatever Godot is already present" >&2
   fi
+fi
+
+mcp_command=(npx --yes "${SERVER_PACKAGE}")
+if [[ "$toolchain_verified" == true && -x "${SCRAPERX_TOOLCHAIN_DIR}/bin/node" &&
+      -f "${SCRAPERX_TOOLCHAIN_DIR}/mcp/node_modules/godot-mcp-runtime/dist/index.js" ]]; then
+  mcp_command=("${SCRAPERX_TOOLCHAIN_DIR}/bin/node"
+    "${SCRAPERX_TOOLCHAIN_DIR}/mcp/node_modules/godot-mcp-runtime/dist/index.js")
 fi
 
 # An explicit GODOT_PATH wins; otherwise the SHA-pinned binary that CI and
@@ -44,7 +99,7 @@ export GODOT_MCP_DISABLE_ELICITATION=1
 # xvfb-run is not used because it merges the child's stderr into stdout.
 if [[ "$(uname -s)" != Linux || -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]] ||
   ! command -v Xvfb >/dev/null 2>&1; then
-  exec npx --yes "${SERVER_PACKAGE}"
+  exec "${mcp_command[@]}"
 fi
 
 xvfb_pid=""
@@ -71,7 +126,7 @@ export DISPLAY=":${display_number}"
 
 # Background job with stdin passed through explicitly (a non-interactive shell
 # would otherwise give it /dev/null), so the trap can still stop Xvfb on exit.
-npx --yes "${SERVER_PACKAGE}" <&0 &
+"${mcp_command[@]}" <&0 &
 server_pid=$!
 trap 'kill -TERM "${server_pid}" 2>/dev/null || true' TERM INT HUP
 

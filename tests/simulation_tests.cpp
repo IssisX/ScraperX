@@ -188,8 +188,13 @@ int main() {
         run_matron_arm();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-damage") { run_matron_damage(); return EXIT_SUCCESS; }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "strike") {
         run_strike();
+        return 0;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-sweep") {
+        run_matron_sweep();
         return 0;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder-pull") {
@@ -333,6 +338,10 @@ int main() {
         run_matron_mischief();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-wreck") {
+        run_matron_wreck();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit-ending") {
         run_summit_ending();
         return EXIT_SUCCESS;
@@ -397,6 +406,11 @@ int main() {
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "route-pockets") {
+        run_route_pockets();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-009-route") {
         run_crane_route();
         return EXIT_SUCCESS;
@@ -424,6 +438,10 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-010-o") {
         run_service_o();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "wreck-way-on") {
+        run_wreck_way_on();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
@@ -563,12 +581,14 @@ int main() {
     run_facade_crane();
     run_crane_band();
     run_crane_route();
+    run_route_pockets();
     run_crane_wreckage();
     run_midstack_service();
     run_service_c4();
     run_service_n();
     run_service_c5();
     run_service_o();
+    run_wreck_way_on();
     run_service_band();
     run_service_route();
     run_determinism();

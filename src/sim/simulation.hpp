@@ -303,11 +303,17 @@ struct MatronSnapshot final {
     Vector3 stock_seek_size{};
     std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
     std::uint32_t throws = 0;   // and threw at the player
+    std::uint32_t stock_shoves = 0;     // and shoved off a lip (J-016)
+    std::uint32_t stock_handled = 0;    // her throwables she counts his, a bit each
+    double stock_push_force_n = 0.0;   // her hands' push on it this tick
     // Her balance (matron.hpp): blows that took it and that took her off her
     // feet this run, the last blow (the change in her speed it made), and
     // down, the way she fell, kneeling where lying did not fit, and how long.
     std::uint32_t staggers = 0;
     std::uint32_t knockdowns = 0;
+    double damage_ns = 0.0;
+    double player_damage_ns = 0.0;
+    std::uint8_t damage_stage = 0;
     double blow_mps = 0.0;
     double fall_x = 0.0, fall_z = 1.0;
     bool kneeling = false;
@@ -328,6 +334,7 @@ struct MatronSnapshot final {
     bool pipe_head_down = false;
     bool pipe_sliding = false;
     bool pipe_stunned = false;
+    double pipe_tuck = 0.0;
     bool pipe_listening = false;
     std::uint32_t pipe_links = 0;
     std::uint32_t pipe_holds = 0;
@@ -1228,6 +1235,7 @@ struct Snapshot final {
     // and the last landing's point, her surface normal there and the
     // impulse it put into her (N*s, force times time).
     std::uint8_t strike_phase = 0;
+    std::uint8_t strike_move = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep
     std::uint32_t strike_phase_ticks = 0;
     bool strike_offered = false;
     std::int8_t strike_arm = 1;   // the fist he throws with: 1 right, 0 left, -1 none usable
