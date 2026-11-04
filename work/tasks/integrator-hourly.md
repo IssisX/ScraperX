@@ -71,10 +71,9 @@ T. **Task the team, unasked.**
    `fb-bot/integrate-<job>` (protected: `fb-bot/integrate-protected-<job>`) from the sha it names, then
    the PR; a stage scope or an accepted proposal becomes a job issue owned by Muse.
 4. Rule changes for other agents are edits in `work/tasks/`. Grok Bot, PE and Builder are out until 11-09.
-5. API agent (Opus 5.5 high, $8 a session; `work/budget.yml`): one bounded job `needs:orchestrator` at a
-   time until #134's session logs its real cost on the ledger; then two at a time if that cost is under $4
-   (Cory, 11-04: "your 2 agent opus recommendations"). Each PR gets one review only, never two (Cory, 11-04:
-   "I don't want to be wasteful"). Only the $100 month cap holds (no daily cap since 11-03).
+5. API agent (Opus 5.5 high; `work/budget.yml`): two bounded jobs `needs:orchestrator` at a time (Cory, 11-04).
+   Each PR gets one review only, never two (Cory, 11-04: "I don't want to be wasteful"). The $100 month cap
+   is the limit; never cite the per-session reserve to Cory (11-04: "Stop referring to ... it").
 6. Re-running a proof: re-run the whole run (`.../runs/<id>/rerun`), never only its failed jobs: the test jobs
    download `host-build-<run>-<attempt>`, which a failed-jobs re-run never builds (11-03, #171).
 7. Subscribe only to PRs you opened or must merge. Big reads (logs, transcripts, long threads) go to
