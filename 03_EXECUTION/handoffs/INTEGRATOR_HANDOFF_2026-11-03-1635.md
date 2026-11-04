@@ -30,8 +30,12 @@ Read `CLAUDE.md`, then steps K, D, S and C of `work/tasks/integrator-hourly.md`,
   Cache tokens are not counted, and none are used. Integrator's pick, put to Cory: switch the API review to Opus high
   (about $0.09 a review, roughly 20 a day affordable). J-031 PR to do: close orphan reserves for closed issues, and
   raise the review max_tokens or move off Sonnet xhigh.
-- **Codex review rules:** a subagent is adding ScraperX review guidelines to AGENTS.md and a new SECURITY.md as a PR
-  (`claude/integrate-review-guidelines`).
+- **Codex review rules: PR #195** (`claude/integrate-review-guidelines`, bfc10897): `## Code Review Rules` in AGENTS.md
+  (OpenAI's current name for the section) plus a new SECURITY.md. Codex reads AGENTS.md from the PR's own code, so main
+  needs nothing for reviews (main's settings-page links stay 404 until someone puts the files on main; cosmetic). Docs:
+  https://learn.chatgpt.com/docs/third-party/github ("Codex flags only P0 and P1 issues"). SECURITY.md is documented only
+  for Codex Security scans; PR security review uses a threat-model file only if one is set in the settings. Merge #195 on
+  Codex clean (it is docs only, `[skip ci]`).
 - Resume steps done: hourly task on, 20-minute sweep re-armed, board and Muse told, #134 `needs:orchestrator` back,
   J-017 worker resumed (#183: re-check the pin after #192/#191 landed overnight, then #185). **Switchboard: Cory was asked
   to re-enable it** (Actions -> Switchboard -> ... -> Enable workflow); `gh api repos/IssisX/ScraperX/actions/workflows/switchboard.yml -q .state`.
