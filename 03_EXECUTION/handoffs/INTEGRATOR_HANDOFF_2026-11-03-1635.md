@@ -13,18 +13,23 @@ Read `CLAUDE.md`, then steps K, D, S and C of `work/tasks/integrator-hourly.md`,
 - He judges catch-up reading at a session's start as normal, not its working pace.
 - Muse will do destructible-environment work: that is J-038 (#169), queued behind the fight.
 
-## PAUSED (Cory, 5:15 PM Central: "I'm gonna pause all coding")
-Paused: the hourly task `trig_01BdP4yuyP2yAqoUErjiMSyn` (disabled), the 20-minute sweep `trig_01Pp4KpCZ1ZYzw8f9XrHt13M`
-(disabled), the J-017 worker (told to stop), `needs:orchestrator` removed from #134 (the API agent), a pause notice on
-board #107 (comment 6617893982) and a pause mail to Muse. Cory cancelled the running Switchboard run; the workflow itself
-was not disabled, so its 15-minute schedule may still fire (Actions -> Switchboard -> the "..." menu at the top right
-of the run list -> "Disable workflow"; on a phone, use the browser's desktop site).
-**On "resume", in order:** (1) `update_trigger` enabled=true on the hourly task; (2) re-arm the 20-minute sweep with
-`send_later` (the disabled one-shot is spent); (3) if Cory disabled Switchboard, he re-enables it the same way
-(Actions -> Switchboard -> "Enable workflow"), or dispatch `switchboard.yml` on main with dry_run=false once it is enabled;
-(4) post "Pause over" on board #107 and mail Muse `CLAUDE_TO_MUSE: pause over`; (5) re-add `needs:orchestrator` to #134;
-(6) tell the J-017 worker to resume (#183 -> #185 re-pin, #191, #192); (7) on #193, Muse owes the Codex P1/P2 fixes and
-the red matron-slices-3 and athletic-traversal on d9d3ee5f.
+## Resumed 11-04, 10:14 AM Central, with new orders from Cory (all in CLAUDE.md)
+- **One review mechanism per PR:** Codex Code Review reviews every PR on open; `@codex review` only after a fix commit
+  that needs a fresh pass. The Claude API takes the eye, the security pass on CI/signing changes, and any PR Codex has not
+  reviewed at its exact head. ChatGPT and Grok are no longer asked for PR reviews. The switchboard's `review.pool` still
+  assigns ChatGPT/Muse/API reviews: change it to match (Codex primary, API fallback) as a J-031 PR.
+- **Concurrency:** one Claude Opus session at a time (the integrator), at most two active subagents (three for acute work).
+- **Muse heavily:** Muse runs parallel agents of its own; it was tasked at 10:15 AM with J-001 #193 fixes, J-033 #179,
+  J-034..J-036 fight S3-S5, the J-038 design proposal (rule within the hour), and the J-016 drum follow-up. Its "agents
+  started" reply and each job's diff come as MUSE_TO_CLAUDE; push diffs via a worktree subagent and open the PRs.
+- **Cost of Claude API calls:** the switchboard's ledger (`switchboard/ledger:work/archive/runs.log`) records each call;
+  a subagent is measuring per-review cost to size the review pool and pick the model (results below when in).
+- **Codex review rules:** a subagent is adding ScraperX review guidelines to AGENTS.md and a new SECURITY.md as a PR
+  (`claude/integrate-review-guidelines`).
+- Resume steps done: hourly task on, 20-minute sweep re-armed, board and Muse told, #134 `needs:orchestrator` back,
+  J-017 worker resumed (#183: re-check the pin after #192/#191 landed overnight, then #185). **Switchboard: Cory was asked
+  to re-enable it** (Actions -> Switchboard -> ... -> Enable workflow); `gh api repos/IssisX/ScraperX/actions/workflows/switchboard.yml -q .state`.
+- Overnight the switchboard merged #192 (5:22 PM) and #191 (1:08 AM); trunk proof green on both.
 
 ## For Cory
 - Nothing. He merged #187 (switchboard idle runs on `main`) at 4:36 PM Central, so the review, eye and sweep runs
