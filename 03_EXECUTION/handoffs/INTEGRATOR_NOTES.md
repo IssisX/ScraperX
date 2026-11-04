@@ -54,9 +54,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
   at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
 - #211 J-012 drawn-body guard (workflow file): Codex clean at 67a25007; merge myself on green.
-- J-006: helper puts the fix (470b2bac) on #91 and opens the leg-6 protected PR alone off trunk
-  (`fb-bot/integrate-protected-j006-leg6`). Land the protected PR first (green + Codex), then #91 (merge trunk in,
-  mark ready, Job: J-006 body).
+- J-006: leg-6 protected change is #212 (written by hand on trunk's test, 024f19f0; switchboard lands it on
+  green + Codex). The fix diff (470b2bac) could not be decoded (tools can't save attachments; hand-copied base64
+  broke): Muse asked 5:15 PM to resend as plain text in the body, and every diff from now on. Then a helper writes
+  it onto #91 (merge trunk in, mark ready, Job: J-006 body).
 - #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
   on green + Codex clean.
 - Merged today: #83, #100, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
