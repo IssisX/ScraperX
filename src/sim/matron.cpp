@@ -3291,6 +3291,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
 
 void Matron::post_step(const float dt) {
     take_blow(dt);
+    // A killed body continues under gravity while the existing Down shape settles.
+    if (dead_ && body_in_world_) down_for_s_ += dt;
     // Her bars let go of her at once (her journey ends in her next tick).
     if (dead_ || state_ == State::Down || state_ == State::Staggering || holding_state(state_)) routecraft_way_.cancel();
     const Mover *held_by = holder();
@@ -3327,7 +3329,21 @@ void Matron::post_step(const float dt) {
         const float vy = bodies.GetLinearVelocity(body_).GetY();
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
-        if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+        if (landed_hard) {
+            dead_ = true;
+            state_ = State::Dead;
+            clear_interrupted_actions(false);
+            const Vec3 velocity = bodies.GetLinearVelocity(body_);
+            const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
+            if (flat.LengthSq() > 1.0e-6F) {
+                const Vec3 along = flat.Normalized();
+                fall_x_ = along.GetX();
+                fall_z_ = along.GetZ();
+            }
+            down_for_s_ = 0.0F;
+            lie_down(fall_x_, fall_z_);
+        } else if (bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+            // No support exists below the world: this body cannot settle.
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
@@ -4143,8 +4159,17 @@ void Matron::take_blow(const float dt) {
     if (damage_lethal_at_ns(damage_ns_)) {
         dead_ = true;
         state_ = State::Dead;
-        clear_interrupted_actions(false); // release her grip before the lethal body removal
-        remove_body();
+        clear_interrupted_actions(false);
+        // Keep the actual Jolt body in the world. Her existing Down collision
+        // settles on real steel; the rendered collapse follows the same state.
+        const Vec3 fall(impulse.GetX(), 0.0F, impulse.GetZ());
+        if (fall.LengthSq() > 1.0e-6F) {
+            const Vec3 along = fall.Normalized();
+            fall_x_ = along.GetX();
+            fall_z_ = along.GetZ();
+        }
+        down_for_s_ = 0.0F;
+        lie_down(fall_x_, fall_z_);
         return;
     }
     if (tagged && his_blow()) {
@@ -4540,7 +4565,7 @@ void Matron::step_knocked(const float dt) {
 void Matron::refresh_view() {
     view_.state = state_;
     view_.alive = !dead_;
-    view_.released = out(state_);
+    view_.released = out(state_) || (state_ == State::Dead && body_in_world_);
     view_.fooled = fooled_;
     view_.wary = wary_ || state_ == State::Peering;
     view_.vaults = vaults_;
@@ -4635,7 +4660,7 @@ void Matron::refresh_view() {
     view_.fall_x = fall_x_;
     view_.fall_z = fall_z_;
     view_.kneeling = kneeling_;
-    view_.down_s = state_ == State::Down ? down_for_s_ : 0.0F;
+    view_.down_s = state_ == State::Down || state_ == State::Dead ? down_for_s_ : 0.0F;
     view_.down_left_s = state_ == State::Down ? std::max(0.0F, down_s_) : 0.0F;
     report_pipe();
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
