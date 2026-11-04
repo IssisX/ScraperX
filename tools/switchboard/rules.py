@@ -244,6 +244,7 @@ class PrFacts:
     needs: frozenset[str]           # needs:* names from the PR and its job issue
     rule_check_block: bool | None   # None when the rule check could not run
     touches_workflows: bool
+    never_edit: bool = False        # the rule check BLOCKs a never-edited file (protected-file): nothing lifts it
 
 
 @dataclasses.dataclass(frozen=True)
@@ -316,6 +317,8 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None) ->
             waits.append("needs:eyes and no eye LAND on this head")
     if pr.rule_check_block is None:
         waits.append("rule_check did not run")
+    elif pr.never_edit:
+        waits.append("rule_check BLOCK protected-file: a file that is never edited is changed")
     elif pr.rule_check_block and "/integrate-protected-" not in pr.head_ref:
         waits.append("rule_check BLOCK on a branch not named <agent>/integrate-protected-<job>")
     if pr.mergeable is False:

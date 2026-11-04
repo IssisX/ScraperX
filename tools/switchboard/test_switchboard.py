@@ -183,6 +183,9 @@ class MergeRule(unittest.TestCase):
                          "WAIT")
         self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, proof="running"), "xai").action,
                          "WAIT")
+        # A never-edited file (MANIFEST, SHA256SUMS, the Governing Laws) blocks on every branch (Codex P1 on #203).
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, never_edit=True), "xai").action,
+                         "WAIT")
 
     def test_eyes_need_the_bots_eye_land_on_the_head(self):
         need = frozenset({"eyes"})
