@@ -32,7 +32,7 @@ calls:
 # set at provisioning, tools/switchboard/provision_agent.py). The ids come from the workflow's `provision` dispatch; until
 # they are filled in, a labeled issue gets a note, not a session.
 orchestrator:
-  enabled: true
+  enabled: false   # Cory, 11-04: "I just want the reviewer(s)": no new API agent sessions; the watcher still ends running ones
   agent_id: "agent_01N97aEHhD4VMkwztdqi4AjK"          # provision run 41659958364 (11-03), agent version 1
   environment_id: "env_01NVqATJMjSwjknrF6hXovuc"
   vault_id: "vlt_011CggCXtRkFLAxcGW7ZXbMi"    # GH_TOKEN for the GitHub REST API
