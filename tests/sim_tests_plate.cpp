@@ -523,6 +523,74 @@ bool gantry_hang_up(scraperx::sim::Simulation &simulation, const double fx, cons
     return wait_for(simulation, 2.5, [top](const Snapshot &state) { return standing_above(state, top); });
 }
 
+// The 396 -> 418 gorge (band_plate_shop.cpp build_gorge) on player inputs: round
+// the 396 ring to its west band, up the pole to the run-up deck, a sprint and
+// a jump into the passage between the two walls, kicked wall to wall (as
+// run_wall_chain does) across the chasm onto the landing deck, and up the
+// second pole onto the 418 ring.
+bool run_gorge(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: gorge: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    at("start");
+    if (!walk_to(route, 13.5, -163.5, 10.0, 0.3)) {
+        at("walk to the south band failed");
+        return false;
+    }
+    if (!walk_to(route, -13.0, -163.5, 30.0, 0.3)) {
+        at("walk west failed");
+        return false;
+    }
+    if (!(gantry_pole(route, -14.3, -162.1, 0.0, 1.0, 407.1, "pole 1") && walk_to(route, -14.9, -157.5, 6.0, 0.1))) {
+        at("pole 1 or the walk to the run-up failed");
+        return false;
+    }
+    (void)route.set_facing(1.0, 0.0);
+    (void)route.set_move_input(1.0, 0.0);
+    (void)route.set_sprint_input(true);
+    if (!advance_until(route, [](const Snapshot &n) { return n.player_position.x > -8.5; }, 4.0)) {
+        std::cout << "route: gorge: no run-up\n";
+        return false;
+    }
+    (void)route.request_jump();
+    (void)route.advance_frame(Simulation::kFixedStepSeconds * 2);
+    double toward = 0.6;   // the stick into the first wall, on +z
+    (void)route.set_move_input(1.0, toward);
+    // `kicks` counts the jumps asked for (bookkeeping); the wall kicks that landed are the
+    // simulation's own wall_kick_count, from its value on entry.
+    const std::uint64_t native_at_entry = route.snapshot().wall_kick_count;
+    std::uint64_t kicks = 0;
+    std::uint64_t steps_at_last_kick = 0;
+    for (int tick = 0; tick < 5 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        (void)route.advance_frame(Simulation::kFixedStepSeconds);
+        const Snapshot n = route.snapshot();
+        if (n.player_grounded) {
+            break;
+        }
+        if (n.player_wall_running && n.wall_kick_count - native_at_entry == kicks && n.wall_step_count > steps_at_last_kick) {
+            toward = -toward;
+            (void)route.request_jump();
+            (void)route.set_move_input(1.0, toward);
+            steps_at_last_kick = n.wall_step_count;
+            ++kicks;
+            (void)route.advance_frame(Simulation::kFixedStepSeconds);
+        }
+    }
+    (void)route.set_move_input(0.0, 0.0);
+    (void)route.set_sprint_input(false);
+    const Snapshot end = route.snapshot();
+    const std::uint64_t native_kicks = end.wall_kick_count - native_at_entry;
+    std::cout << "route: gorge chain: " << kicks << " jumps asked, " << native_kicks << " wall kicks landed, down at ("
+              << end.player_position.x << ", " << end.player_position.y << ", " << end.player_position.z << ")\n";
+    if (!(native_kicks >= 3 && end.player_position.x > 10.5 && standing_above(end, 407.1))) {
+        return false;
+    }
+    return gantry_pole(route, 10.3, -160.6, 1.0, 0.0, 418.4, "pole 2");
+}
+
 // AS-008's climbing route, on player inputs: from TP-340 by F's hole round the
 // hole and the header to the east band, the ladder to the 352 ring, the wall-climb
 // stack (six lanes, five risers of 4.4 m) onto the 374 ring, then one climb per
@@ -615,6 +683,10 @@ void run_plate_route() {
     require(walk_to(route, 13.9, -136.0, 24.0, 0.3) && walk_to(route, 13.9, -150.0, 16.0, 0.3),
             "route: round the 396 ring to its east band");
     for (double h = 396.0; h < 483.9; h += 22.0) {
+        if (h == 396.0) {
+            require(run_gorge(route), "route: the wall-run gorge, 396 to 418");
+            continue;
+        }
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
         // Stopped at the boards' end before turning onto them: the walk off
         // the ladder carries its speed across their line.
