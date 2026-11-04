@@ -816,6 +816,25 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if haul > 1.0:
 		_haul_phase += delta * 2.6
 		dip += -0.018 * clampf(haul / 700.0, 0.0, 1.0) * (0.5 + 0.5 * sin(_haul_phase))
+	# A low sweep (spec §8.2): the view dips toward the sweep side and
+	# lowers ~0.15 m through the strike's phases, easing in over the
+	# windup, full through the reach, easing out over the recoil. Zero
+	# whenever no sweep is under way, so a stationary player still reads
+	# back exactly.
+	var strike: Dictionary = _ctx.get("strike", {})
+	if int(strike.get("move", 0)) == 1:
+		var sphase := int(strike.get("phase", 0))
+		if sphase != 0:
+			var sticks := float(strike.get("phase_ticks", 0))
+			var env := 0.0
+			if sphase == 1:
+				env = smoothstep(0.0, 1.0, clampf(sticks / 16.0, 0.0, 1.0))
+			elif sphase == 2:
+				env = 1.0
+			elif sphase == 3:
+				env = 1.0 - smoothstep(0.0, 1.0, clampf(sticks / 22.0, 0.0, 1.0))
+			dip += -0.15 * env
+			lateral_bob += 0.05 * env * (1.0 if int(strike.get("arm", 1)) == 1 else -1.0)
 	# Reduced motion: what moves the view by itself is turned down.
 	var motion := 0.25 if _reduced_motion else 1.0
 	dip *= motion

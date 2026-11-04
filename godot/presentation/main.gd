@@ -486,6 +486,7 @@ func _process(delta: float) -> void:
 		"eye": _camera.global_position,
 		"view": _camera.global_transform.basis,
 		"wrists": _arms.wrist_positions(),
+		"strike": _ctx.get("strike", {}),
 	}, _yaw, delta)
 	if _canopy == null:
 		_canopy = CanopyView.new()

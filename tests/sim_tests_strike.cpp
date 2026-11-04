@@ -488,7 +488,8 @@ struct Swept {
     Vector3 point{};
 };
 
-Swept sweep_one(const double her_ahead_m, const int stage, const bool fast, const bool immediate) {
+Swept sweep_one(const double her_ahead_m, const int stage, const bool fast, const bool immediate,
+                const double lift_m = 0.0) {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
     for (int i = 0; i < 30; ++i) {
@@ -496,7 +497,12 @@ Swept sweep_one(const double her_ahead_m, const int stage, const bool fast, cons
     }
     const Vector3 p = s.snapshot().player_position;
     (void)s.set_facing(0.0, 1.0);
-    s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + her_ahead_m});
+    // Her soles sit `lift_m` above his launch height: the level launch
+    // (0.20 m under his standing centre) sits her capsule 0.35 m into
+    // the deck, which the physics resolves back to the deck, so the
+    // soles' difference is the lift less 0.35 (lift 0 is the level cases
+    // below; the raised cases below state their true differences).
+    s.launch_matron_for_test(Vector3{p.x, p.y - 0.20 + lift_m, p.z + her_ahead_m});
     s.debug_hold_matron_hands(30.0);
     constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
     if (!immediate) {
@@ -587,6 +593,23 @@ void run_matron_sweep() {
             "sweep: out of reach, none offered and none lands, but the press still threw a sweep");
     require(whiff.phase == 0 && whiff.knockdowns == 0 && whiff.staggers == 0,
             "sweep: after a whiff the fist is back at guard, full recovery");
+    // The sweep is a leg from his foot: an ankle out of its vertical reach
+    // is no landing, whatever the X/Z gap says. Crouched beside a platform
+    // with her soles 1.15 m above his, and under her while she climbs
+    // with her soles 1.65 m above his (the launch heights 1.50 / 2.00
+    // less the 0.35 the level launch sits into the deck), the sweep is
+    // not offered and lands nothing; both are thrown at once, so she is
+    // still high through the whole reach window.
+    const Swept platform = sweep_one(1.05, 0, false, true, 1.50);
+    std::cout << "  sweep platform: offered=" << platform.offered << " hits=" << platform.hits
+              << " state=" << platform.state << "\n";
+    require(!platform.offered && platform.hits == 0 && platform.knockdowns == 0,
+            "sweep: a crouched sweep at a platform ankle 1.15 m up is not offered and lands nothing");
+    const Swept climbing = sweep_one(0.50, 0, false, true, 2.00);
+    std::cout << "  sweep climbing: offered=" << climbing.offered << " hits=" << climbing.hits
+              << " state=" << climbing.state << "\n";
+    require(!climbing.offered && climbing.hits == 0 && climbing.knockdowns == 0,
+            "sweep: a sweep under a climbing Matron 1.65 m up is not offered and lands nothing");
     const Swept again = sweep_one(1.05, 0, false, false);
     require(again.hits == pest.hits && again.impulse_ns == pest.impulse_ns && again.point.x == pest.point.x &&
                 again.point.y == pest.point.y && again.point.z == pest.point.z,

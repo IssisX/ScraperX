@@ -43,6 +43,14 @@ constexpr int kSweepRecoilTicks = 22;
 constexpr int kSweepContactTicks = 4;
 constexpr float kSweepGapM = 0.60F;
 constexpr float kSweepAnkleUpM = 0.15F;
+// How far her ankle may sit off level: a sweep's foot travels at his foot
+// height, rising at most about a shin-height off the level ankle. Beyond
+// that the ankle is out of the leg's arc, whatever the X/Z gap says.
+constexpr float kSweepAnkleTolM = 0.35F;
+// How far the sweeping foot skims over the ground: the cast starts this
+// far over his soles, or its own sphere would sit in the deck he stands
+// on and every sweep would read blocked.
+constexpr float kSweepFootClearM = 0.08F;
 
 int move_windup_ticks(const std::uint8_t move) noexcept {
     return move == 1 ? kSweepWindupTicks : kStrikeWindupTicks;
@@ -117,11 +125,21 @@ bool Simulation::PhysicsWorld::strike_would_land(const JPH::RVec3 chest, const J
 }
 
 // A sweep thrown now would land on her ankle (`c` her body's middle): the
-// gap between the bodies' surfaces within its reach, and the way from his
-// edge at ankle height to her ankle clear of steel, so a low rail or bar
-// takes it first, as a post takes a punch. What the offer of a sweep asks.
-bool Simulation::PhysicsWorld::sweep_would_land(const JPH::RVec3 at, const JPH::Vec3 facing,
-                                                const JPH::RVec3 c) const noexcept {
+// gap between the bodies' surfaces within its reach, her ankle within a
+// leg's arc of his foot, and the way from his foot to her ankle clear of
+// steel, so a low rail, a platform's side or a bar takes it first, as a
+// post takes a punch. One helper for both the offer and the contact, so
+// the two can never disagree about the geometry: the offer's height check
+// alone never guarded the contact, because a press only needs can_start.
+// His foot is his body's centre less its capsule's total half-height
+// (crouched, the short capsule: the centre drops with it, so the soles
+// stay where they are). The cast
+// starts at his foot, not at her ankle height: a cast at her ankle height
+// never meets the platform he stands beside, and never starts from where
+// his foot really is.
+bool Simulation::PhysicsWorld::sweep_land_point(const JPH::RVec3 at, const JPH::Vec3 facing,
+                                                const JPH::RVec3 c, JPH::RVec3 *point,
+                                                JPH::Vec3 *normal) const noexcept {
     JPH::Vec3 to(static_cast<float>(c.GetX() - at.GetX()), 0.0F, static_cast<float>(c.GetZ() - at.GetZ()));
     const float d = to.Length();
     if (d <= 1.0e-3F || to.Dot(facing) <= kStrikeOfferCos * d) {
@@ -131,10 +149,34 @@ bool Simulation::PhysicsWorld::sweep_would_land(const JPH::RVec3 at, const JPH::
     if (d - Matron::kRadius - kPlayerRadius > kSweepGapM) {
         return false;
     }
+    // His foot: his body's centre less its capsule's total half-height
+    // (crouched, the short capsule: the centre drops with it, so the soles
+    // stay where they are).
+    const double foot_y = at.GetY() - active_half_height();
     const double ankle_y = c.GetY() - Matron::kHalfHeight - Matron::kRadius + kSweepAnkleUpM;
-    const JPH::RVec3 from(at.GetX() + dir.GetX() * kPlayerRadius, ankle_y, at.GetZ() + dir.GetZ() * kPlayerRadius);
-    const JPH::RVec3 point(c.GetX() - dir.GetX() * Matron::kRadius, ankle_y, c.GetZ() - dir.GetZ() * Matron::kRadius);
-    return fist_path_clear(from, point);
+    if (std::abs((ankle_y - foot_y) - kSweepAnkleUpM) > kSweepAnkleTolM) {
+        return false;
+    }
+    const JPH::RVec3 from(at.GetX() + dir.GetX() * kPlayerRadius, foot_y + kSweepFootClearM,
+                          at.GetZ() + dir.GetZ() * kPlayerRadius);
+    const JPH::RVec3 ankle(c.GetX() - dir.GetX() * Matron::kRadius, ankle_y,
+                           c.GetZ() - dir.GetZ() * Matron::kRadius);
+    if (!fist_path_clear(from, ankle)) {
+        return false;
+    }
+    if (point != nullptr) {
+        *point = ankle;
+    }
+    if (normal != nullptr) {
+        *normal = -dir;
+    }
+    return true;
+}
+
+// A sweep thrown now would land on her ankle: what the offer of a sweep asks.
+bool Simulation::PhysicsWorld::sweep_would_land(const JPH::RVec3 at, const JPH::Vec3 facing,
+                                                const JPH::RVec3 c) const noexcept {
+    return sweep_land_point(at, facing, c, nullptr, nullptr);
 }
 
 // His hands on a machine's controls, its seat or its line: no punch from there.
@@ -266,28 +308,18 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         if (!strike_landed_ && her_here && !matron_->down()) {
             const JPH::RVec3 c = bodies.GetPosition(her);
             if (strike_move_ == 1) {
-                // The sweep lands on her ankle: within its gap, within his
-                // facing cone, the way at ankle height clear of steel.
-                JPH::Vec3 to(static_cast<float>(c.GetX() - at.GetX()), 0.0F,
-                             static_cast<float>(c.GetZ() - at.GetZ()));
-                const float d = to.Length();
-                if (d > 1.0e-3F && to.Dot(facing) > kStrikeOfferCos * d &&
-                    d - Matron::kRadius - kPlayerRadius <= kSweepGapM) {
-                    const JPH::Vec3 dir = to / d;
-                    const double ankle_y =
-                        c.GetY() - Matron::kHalfHeight - Matron::kRadius + kSweepAnkleUpM;
-                    const JPH::RVec3 from(at.GetX() + dir.GetX() * kPlayerRadius, ankle_y,
-                                          at.GetZ() + dir.GetZ() * kPlayerRadius);
-                    const JPH::RVec3 point(c.GetX() - dir.GetX() * Matron::kRadius, ankle_y,
-                                           c.GetZ() - dir.GetZ() * Matron::kRadius);
-                    if (fist_path_clear(from, point)) {
-                        strike_landed_ = true;
-                        strike_contact_left_ = move_contact_ticks(strike_move_);
-                        strike_normal_ = -dir;
-                        strike_point_ = point;
-                        strike_impulse_ns_ = 0.0F;
-                        ++strike_hit_count_;
-                    }
+                // The sweep lands on her ankle: the same geometry the
+                // offer asked, re-checked at contact (her ankle within
+                // his foot's arc, the way from his foot clear).
+                JPH::RVec3 point;
+                JPH::Vec3 normal;
+                if (sweep_land_point(at, facing, c, &point, &normal)) {
+                    strike_landed_ = true;
+                    strike_contact_left_ = move_contact_ticks(strike_move_);
+                    strike_normal_ = normal;
+                    strike_point_ = point;
+                    strike_impulse_ns_ = 0.0F;
+                    ++strike_hit_count_;
                 }
             } else {
                 // Hung in her hand his arm swings at her (the view turns with his
