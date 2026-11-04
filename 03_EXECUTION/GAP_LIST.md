@@ -19,15 +19,20 @@ The ordering is historical, not an assignment or current priority; check the iss
 
 ## 0. Coverage hole
 
-**Partial coverage; runtime status requires a revision-specific run.** The scenario loop in
-`.github/workflows/wo000-delivery-spine.yml` runs `touch_matron_act` and other Matron scenarios,
-but does not list `touch_matron_pipe`. It runs `matron_figure_test.gd` and separately captures
-`touch_summit_ending`; it does not list `gore_shots_test.gd`, `matron_presentation_test.gd` or
-`script_load_test.gd`. Check the workflow itself for the full current list.
-
-Historical: the earlier pipe staging failed at drum pickup; it is not evidence that the scenario
-has never passed anywhere. [PR #29](https://github.com/IssisX/ScraperX/pull/29) proposes a fix,
-but is unmerged. Do not infer visual approval from a headless run or screenshots merely existing.
+**Covered except one scenario, which fails on trunk (rechecked 2026-11-04).** `matron_presentation_test.gd` and
+`script_load_test.gd` run in the `godot-audits-and-mix` job; `gore_shots_test.gd` runs there too
+since J-027 (issue #134; without `--out` it renders nothing and needs no display). The scenario
+`touch_matron_pipe` is in no `godot-touch` shard because it still fails on trunk. Rerun on
+d185ec86 (2026-11-04, J-027, headless as touch-2 runs it), first failing line:
+`SCRAPERX_UITEST FAIL touch_matron_pipe reason=Action read '' at the drum by the edge, not PICK UP
+(drum at (18.54441, 154.2741, -146.4866), me at (16.97562, 143.88, -127.9226), carry target 0, ...)`.
+The drum is set down in the corner at (17.04, 154.45, -128.72) and is no longer found 154 m down
+(the 11-03 failure, diagnosis on #134), but by the take-back it lies 17.8 m south on the deck, and
+the climber, up the riser to 156.2 m, ends the run back to it on 143 (y 143.88). Which body moves
+the drum and why he drops off the deck are not yet pinned. It stays a warned known gap in
+`.github/scripts/check_touch_shard_coverage.py` until a fix lands;
+[PR #29](https://github.com/IssisX/ScraperX/pull/29) proposes a staging fix, unmerged. Do not infer visual
+approval from a headless run or screenshots merely existing.
 
 ## Ranked gaps
 

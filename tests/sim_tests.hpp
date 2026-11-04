@@ -782,6 +782,7 @@ void run_matron_found_climb();
 void run_plate_shop();
 void run_plate_band();
 void run_plate_route();
+void run_route_pockets();
 bool climb_wreck(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
                  const double fz, const std::uint64_t entity, const double top);
 void run_plate_wreckage();
@@ -812,6 +813,7 @@ bool pull_o_handle(scraperx::sim::Simulation &simulation, double *freed_at = nul
 ORide ride_service_o(scraperx::sim::Simulation &simulation, const bool rider_aboard, const double ram_freed_at);
 bool step_off_o(scraperx::sim::Simulation &simulation);
 void run_service_o();
+void run_wreck_way_on();
 void run_slingshot();
 std::vector<std::uint64_t> world_bits(const scraperx::sim::Simulation &simulation);
 void run_swing();
@@ -910,6 +912,7 @@ void test_matron_climb_support();
 void run_matron_state_exits();
 void run_matron_crash();
 void run_matron_mischief();
+void run_matron_wreck();
 void run_matron_collision();
 void run_matron_balance();
 void run_matron_pipe();

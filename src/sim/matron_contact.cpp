@@ -66,12 +66,23 @@ void Matron::refresh_contact_view() {
         held = true;
     } else if (routecraft_.owns_motion() && routecraft_.grip(body, sub, local)) {
         held = true;
-    } else if (view_.on_pipe && pipe_phase_ != PipePhase::Stunned && !pipe_support_.IsInvalid()) {
-        // (Stunned on a flange it is her legs that hold it, not a hand.)
+    } else if (view_.on_pipe && !pipe_support_.IsInvalid() &&
+               (pipe_grip_ == PipeGrip::Rail || pipe_grip_ == PipeGrip::Face || pipe_grip_ == PipeGrip::Lip)) {
+        // (Stunned on a flange it is her legs that hold it, perched on a
+        // rail her feet: not a hand.)
         body = pipe_support_;
         sub = pipe_member_;
         local = pipe_local_hand_;
         held = true;
+    }
+    // Perched on her pipe's rail: her soles on its top (pipe_feet_hold: under
+    // her soles' span, as sole_contact's floor).
+    if (view_.on_pipe && pipe_grip_ == PipeGrip::Feet && !pipe_support_.IsInvalid() && bodies.IsAdded(pipe_support_)) {
+        view_.contact_supported = true;
+        view_.contact_feet_body = pipe_support_;
+        view_.contact_feet_sub = pipe_member_;
+        view_.contact_feet = bodies.GetCenterOfMassTransform(pipe_support_) * pipe_local_hand_;
+        view_.contact_support_velocity = Vec3::sZero();
     }
     if (held && bodies.IsAdded(body)) {
         view_.contact_hand_held = true;
@@ -99,7 +110,7 @@ void Matron::refresh_contact_view() {
     // Level from her shins toward the steel her hand holds, the first steel
     // within her legs' reach, a standing face of static steel: the face they
     // press.
-    if (view_.on_pipe && pipe_phase_ == PipePhase::Climb && pipe_on_face_ && view_.contact_hand_held) {
+    if (view_.on_pipe && pipe_phase_ == PipePhase::Climb && pipe_grip_ == PipeGrip::Face && view_.contact_hand_held) {
         const RVec3 at = bodies.GetPosition(body_);
         const RVec3 shins(at.GetX(), at.GetY() - kStandCentre + kBraceShinM, at.GetZ());
         const RVec3 grip = view_.contact_hand;
