@@ -188,7 +188,7 @@ agent, Claude included, works this way:
   integrator decides, without asking him, and covers every Claude session, its own included.
   - When to change: a session at **700k context tokens** (11-03, Cory: "go with your pick": fewer handoffs, less lost; `get_session` →
     `external_metadata.context_usage.used_tokens`), checked on every hourly check for every Claude session, the
-    integrator's own first; or one that has compacted, run 48 hours, or spends its turns re-reading more than working
+    integrator's own first; or one compacted twice (11-04: Cory compacts first), run 48 h, or spends its turns re-reading more than working
     (11-03; the 11-03 integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context.
   - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
     $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
