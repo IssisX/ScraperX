@@ -140,6 +140,11 @@ var _stick_knob := Vector2.ZERO
 var _stick_home := Vector2.ZERO
 var _stick_zone := Rect2()
 var _safe := Rect2()
+# Jump's slot and Chute's own (shared with Drop): under an open canopy STOW
+# takes Jump's slot, the way CLIMB UP and THROW take it, and Jump goes.
+var _jump_slot := Vector2.ZERO
+var _chute_slot := Vector2.ZERO
+var _stow_in_jump_slot := false
 var _look_index := -1
 var _look_accum := Vector2.ZERO
 var _look_kind := LOOK_DRAG
@@ -247,7 +252,9 @@ func _layout() -> void:
 	# Drop and Chute share one slot: hanging and free-falling never overlap,
 	# and "drop, then open the canopy" becomes the same thumb in one place.
 	_place(B_DROP, jump + Vector2(-306.0, 96.0) * _u, 86.0)
-	_place(B_CHUTE, jump + Vector2(-306.0, 96.0) * _u, 86.0)
+	_jump_slot = jump
+	_chute_slot = jump + Vector2(-306.0, 96.0) * _u
+	_place_chute()
 	# Over Action, away from the stick: the hook is aimed with the view.
 	_place(B_HOOK, jump + Vector2(-236.0, -370.0) * _u, 86.0)
 	# Over Crouch, the same thumb on up: the turn is a move of the run's.
@@ -262,6 +269,14 @@ func _layout() -> void:
 	_stick_zone = Rect2(_safe.position.x, _safe.position.y + _safe.size.y * 0.22,
 		_safe.size.x * 0.46, _safe.size.y * 0.78)
 	queue_redraw()
+
+
+# Chute in its own slot, or STOW in Jump's while the canopy is out.
+func _place_chute() -> void:
+	if _stow_in_jump_slot:
+		_place(B_CHUTE, _jump_slot, 122.0)
+	else:
+		_place(B_CHUTE, _chute_slot, 86.0)
 
 
 func _place(id: StringName, center: Vector2, radius: float) -> void:
@@ -547,8 +562,10 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var seated: bool = ctx.get("sling_seated", false) or ctx.get("sling_recovering", false) or \
 		ctx.get("swing_seated", false)
 	_gestures_live = gestures and not (driving or craning or seated)
+	var canopy: bool = ctx["chute"]
 	var jump: TouchButton = _buttons[B_JUMP]
-	jump.shown = true
+	# Under the canopy there is nothing to jump from: STOW has Jump's slot.
+	jump.shown = not canopy
 	# Pressable while airborne on purpose: main.gd buffers a press made just
 	# before touchdown and fires it on the grounded tick. Dimmed, not dead.
 	jump.enabled = true
@@ -598,7 +615,12 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	var chute: TouchButton = _buttons[B_CHUTE]
 	chute.shown = ctx["chute_ok"] and not hanging
 	chute.icon = &"chute"
-	chute.label = "STOW" if ctx["chute"] else "CHUTE"
+	chute.label = "STOW" if canopy else "CHUTE"
+	if canopy != _stow_in_jump_slot:
+		# A slot change grows the button in where it now is, as a new one.
+		_stow_in_jump_slot = canopy
+		_place_chute()
+		chute.appear = 0.0
 	if ctx["chute"]:
 		chute.tone = TONE_SAFE
 	elif ctx["danger"] >= 0.6:
