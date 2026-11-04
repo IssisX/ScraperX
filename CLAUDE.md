@@ -187,10 +187,10 @@ agent, Claude included, works this way:
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
   integrator decides, without asking him, and covers every Claude session, its own included.
   - **Compact, don't replace** (Cory, 11-04). At **400k
-    context tokens** (`get_session` → `external_metadata.context_usage.used_tokens`, checked hourly for every Claude
-    session, the integrator's own first) it brings its notes current and tells Cory, who runs /compact; after
-    it, it re-reads this file, the hourly file and its notes (`03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`). With him away, it compacts
-    itself near 784k. Each turn re-reads the whole context. A new session only when one is broken (stuck, confused).
+    context tokens** (`get_session` `used_tokens`, checked hourly for every Claude session) it compacts itself (`autoCompactWindow` 500000 in `.claude/settings.json`, 80%
+    of it; if `get_session`'s `autocompact_state` still says 784000, Cory sets `CLAUDE_CODE_AUTO_COMPACT_WINDOW`), its notes
+    (`03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`) kept current hourly; after it, it re-reads this file, the hourly file
+    and its notes. Each turn re-reads the whole context. A new session only when one is broken (stuck, confused).
   - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
     $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
     after every commit, proof run or big read. At 400k it brings its notes current (`03_EXECUTION/handoffs/<job>_NOTES.md`:

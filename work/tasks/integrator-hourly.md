@@ -23,8 +23,8 @@ D. **Delegate, never sit** (Cory, 11-03: *"doesn't leave shit sitting ... knows 
    **Between hours** (Cory, 11-03: *"If I'm not here to prompt you ... things will pile up"*): a 20-minute self
    check-in (`send_later`, re-armed by each run): Muse's mail, `asks.py --hours 3`, the sweep's MERGE / FIX-CI /
    BLOCKED lines, the board's new comments, every session's size. The next integrator re-arms it on its first turn.
-S. **Size.** `get_session` (no id): at 400k `used_tokens`, bring `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current and tell Cory to
-   /compact (a new session only if this one is broken: `create_session`, move this task and the PR
+S. **Size.** `get_session` (no id): at 400k `used_tokens`, it compacts itself (CLAUDE.md); keep
+   `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current every check (new session only if broken: `create_session`, move this task and the PR
    subscriptions, archive yourself). Same check for each
    Claude worker session; archive any whose job has landed. **Every handoff, the integrator's or a
    worker's, carries the collaboration whole:** the file has a section "Asks in flight" (the `asks.py`

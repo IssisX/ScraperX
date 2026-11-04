@@ -101,5 +101,6 @@
         ]
       }
     ]
-  }
+  },
+  "autoCompactWindow": 500000
 }
