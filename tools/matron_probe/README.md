@@ -49,8 +49,8 @@ and worst amount. It is strict both ways: more failures than 10% (at least 3) ov
 amount more than 5% over the worst, fails as a regression; an expected failure that stops failing fails the
 check too (remove it from the list); a failure with no entry fails. Arm stretch is counted under the one cause
 a frame is drawn in (a hold, her stock reach, the Turn, or none), so fixing one cause flips only its entry;
-leg stretch's one known cause is the Turn (`limb_scale` 1.3, with its 0.2 s ease-out). A held frame with no
-held ankle fails. CI runs it in the `touch-2` shard on `touch_matron_act` and the look
+leg stretch's one known cause is the Turn (`limb_scale` 1.3; her arm's share is drawn as her shoulder out of its
+socket). The Turn's frames run 0.7 s past it while she eases back. A held frame with no held ankle fails. CI runs it in the `touch-2` shard on `touch_matron_act` and the look
 scenarios (`look_matron_moves`, `look_matron_hold`, `look_matron_fatal`); about 3 minutes to record, 2 to check
 at `--stride 10`. Limb vertices inside her torso are not measured.
 

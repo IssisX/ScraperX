@@ -79,29 +79,31 @@ UNIT = {c: "%" for c in CHECKS if c.startswith("stretch")}
 COUNT_MARGIN = 0.10
 COUNT_MIN = 3
 PEAK_MARGIN = 0.05
-# Her drawn limbs come back from the Turn's limb_scale over the frames after it ends (measured: up to 10
-# frames at 60 fps); those frames are still the Turn's.
-TURN_TAIL_S = 0.2
+# Her drawn limbs come back from the Turn's limb_scale over the frames after it ends; those frames are still
+# the Turn's. Since #170 (rule 33) the Turn's long arm is her shoulder wrenched out of its socket (sh_ drawn
+# 1.86x, matron_rig.gd), and it eases back in for up to 0.58 s (35 frames at 60 fps, touch_matron_act,
+# measured 2026-11-04); her legs, within 10 frames.
+TURN_TAIL_S = 0.7
 # (check, scenario) -> (the exit-board item that fixes it, today's failing count, today's worst amount).
-# Measured on CI (godot-touch touch-2's drawn-body step); see README.md for the run.
+# Measured on CI (godot-touch touch-2's drawn-body step); see README.md for the run. touch_matron_act's rows
+# re-measured 2026-11-04 on trunk after J-032 (#170, #172, #175: her pipe tuck vault, the toolbox in her real
+# arm, the Turn's arm as her shoulder out of its socket); the look scenarios' rows are from 2026-11-02.
 HOLD_ITEM = "exit item 4, holds at a real arm's length (hold worker, PR #37)"
 REACH_ITEM = "her stock reach with real arms (Builder job 3; PROP_STRETCH_MAX 2.7, matron_rig.gd two-handed reach)"
-TURN_ITEM = "the Turn's limb_scale 1.3 (matron_view.gd), by design; the owner's call (rule 36)"
+TURN_ITEM = "the Turn's limb_scale 1.3 (matron_view.gd; her arm's as her shoulder out of its socket), by design; the owner's call (rule 36)"
 CLIMB_ITEM = "no exit item yet: her drawn hands are off the climb's grip (reported 2026-10-29)"
-PLANT_ITEM = "no exit item yet: a foot slides up to 6.8 cm while she is nearly still (reported 2026-10-29)"
+PLANT_ITEM = "no exit item yet: a foot slides up to 7.5 cm while she is nearly still (reported 2026-10-29)"
 HAIR_ITEM = "exit item 10, hair"
 SKIRT_ITEM = "exit item 10, hair and cloth (the skirt's baseline is her bind pose, an A-pose)"
-ARM_ITEM = "no exit item yet: her drawn arm stretches with no hold, reach or Turn (measured 2026-11-02)"
 EXPECTED = {
-    ("stretch_arm", "touch_matron_act"): (ARM_ITEM, 15, 16.568),
-    ("stretch_arm_hold", "touch_matron_act"): (HOLD_ITEM, 2165, 203.769),
-    ("stretch_arm_reach", "touch_matron_act"): (REACH_ITEM, 32, 221.972),
-    ("stretch_arm_turn", "touch_matron_act"): (TURN_ITEM, 625, 30.000),
-    ("stretch_leg_turn", "touch_matron_act"): (TURN_ITEM, 567, 6.000),
-    ("grip_climb", "touch_matron_act"): (CLIMB_ITEM, 1759, 1.898),
-    ("plant", "touch_matron_act"): (PLANT_ITEM, 60, 0.068),
-    ("hair", "touch_matron_act"): (HAIR_ITEM, 14525, 0.203),
-    ("skirt", "touch_matron_act"): (SKIRT_ITEM, 16167, 0.126),
+    ("stretch_arm_hold", "touch_matron_act"): (HOLD_ITEM, 2045, 204.684),
+    ("stretch_arm_reach", "touch_matron_act"): (REACH_ITEM, 15, 7.529),
+    ("stretch_arm_turn", "touch_matron_act"): (TURN_ITEM, 605, 85.653),
+    ("stretch_leg_turn", "touch_matron_act"): (TURN_ITEM, 520, 6.000),
+    ("grip_climb", "touch_matron_act"): (CLIMB_ITEM, 2056, 1.034),
+    ("plant", "touch_matron_act"): (PLANT_ITEM, 50, 0.075),
+    ("hair", "touch_matron_act"): (HAIR_ITEM, 14751, 0.193),
+    ("skirt", "touch_matron_act"): (SKIRT_ITEM, 17495, 0.156),
     ("grip_climb", "look_matron_moves"): (CLIMB_ITEM, 1494, 1.556),
     ("plant", "look_matron_moves"): (PLANT_ITEM, 4, 0.057),
     ("hair", "look_matron_moves"): (HAIR_ITEM, 1617, 0.192),
