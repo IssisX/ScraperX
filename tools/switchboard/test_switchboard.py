@@ -176,6 +176,14 @@ class MergeRule(unittest.TestCase):
         self.assertEqual(rules.merge_decision(facts(rule_check_block=True), "xai").action, "WAIT")
         self.assertEqual(rules.merge_decision(facts(rule_check_block=None), "xai").action, "WAIT")
 
+    def test_a_declared_protected_change_merges_on_green_and_land(self):
+        protected = "fb-bot/integrate-protected-j033-sweep-scenario"
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True), "xai").action, "MERGE")
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, verdicts=()), "xai").action,
+                         "WAIT")
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, proof="running"), "xai").action,
+                         "WAIT")
+
     def test_eyes_need_the_bots_eye_land_on_the_head(self):
         need = frozenset({"eyes"})
         self.assertEqual(rules.merge_decision(facts(needs=need), "xai").action, "WAIT")
