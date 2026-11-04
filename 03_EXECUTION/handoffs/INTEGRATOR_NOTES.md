@@ -28,31 +28,36 @@ Session chain: 7 of 8. Compact at 400k (Cory runs /compact); a new session only 
   PR you open.
 
 ## Cory's rulings today (all in the repo)
-Opus for API reviews, then max effort (#200); integrator effort ultracode, never workflows; reviews only, no API
-coding; one review per PR; plain answers, technical only when he asks; watch growth and cut it.
+Opus for API reviews at max effort (#200); integrator ultracode, never workflows; reviews only, no API coding; one
+review per PR; plain answers; compact, no handoffs (auto at ~384k); cut the rules (CLAUDE.md now 6.9 KB, no decision
+logging); find better ways unasked; no full game builds for small changes (#202); fewer merge steps (#203); closed
+26 dead PRs (14 open). The integrator's merge permission line landed (2b054282) but only loads on a session restart:
+retry a merge after one; until then the switchboard merges.
 
-## Rulings by the integrator today (`OWNER_DECISIONS_PENDING.md`)
-- J-001 #193 (Muse's partial fix pushed at 5041d8e4): demand-based swat share; past-rail: near-miss world tweak if
-  the 17.0 comes from world data, else re-pose; fatality pin archaeology first, fix the 17 gap ticks; Codex P2 last.
-  CI at 5041d8e4: new mischief "no shove" failure, caused by the fix (A/B mailed).
+## Rulings by the integrator today
+- J-001 #193 (Muse's partial fix at 5041d8e4): demand-based swat share; past-rail: near-miss world tweak if the
+  17.0 comes from world data, else re-pose; fatality pin archaeology first, fix the 17 gap ticks; Codex P2 last.
+  CI at 5041d8e4: new mischief "no shove" failure caused by the fix (A/B mailed to Muse).
 - J-006 leg 6: fix the re-grab in routecraft (no re-taking the just-released edge unless her goal is above it,
   +0.3 m); if her target really is above, the test changes by a protected PR. Muse measures which.
 
-## Asks in flight (update before handing off)
+## Asks in flight
 - Muse (mail): J-001 steps 1, 3, 4 (agents running); J-006 leg 6; J-038 plan (rule within the hour when it comes);
   #95 stills; three rebases; J-016 drum runaway plus the touch_matron_pipe drum moving 17.8 m (mailed 11:21 AM);
-  S3 starts when #179 lands.
+  S3 starts when #179 lands. No Muse mail since 11:21 AM as of 12:55 PM.
 - Grok (4 PM run): #193 force split (posted as `To Grok:`); #100, #169, #137 from 11-03.
-- ChatGPT: J-030 (#137), J-038 research (#169).
+- ChatGPT: J-030 (#137), J-038 research (#169). Switchboard review asks to ChatGPT on #132/#164 are fallbacks only.
 - To Claude: none open.
 
-## Merge queue
-#200 (max reviewer; Codex clean @1ee3b723, merge on green, then tell Cory it is live); #150 (J-025, green @893a1837 at 11:40 AM;
-the switchboard merges it after its review of that head); switchboard merges #179 then #196 (J-033) and #201 (J-027 gap note); #43 (protected drawn-body
-checks, sweep says MERGE, mergeable_state unstable: check, merge trunk in, re-proof). #198 (J-039 STOW/PUNCH): the
-API session finished ($1.12); check whether it opened a PR.
+## Merge queue (12:55 PM)
+- #200 (max reviewer) and #202 (proof skips game for notes-only pushes): both change workflow files, so the
+  switchboard cannot merge them (HUMAN-MERGE). Codex clean on both. Merge when green and the permission loads;
+  else ask Cory once to merge them. Tell Cory "the max reviewer is live" when #200 merges.
+- #203 (switchboard merges declared protected PRs): tools only; the switchboard merges it.
+- #150 (J-025): trunk merged in at f79c6b66 so the eye re-checks with #199's STOW fix; switchboard merges.
+- #179, #196 (J-033): switchboard merges. #43 (protected drawn-body checks): merges via #203's rule once green on a
+  fresh trunk merge. Merged today: #185, #197, #199, #201.
 
 ## Known here
-- The safety checker refuses the integrator's merge of a PR with no review at its head (#179, then #150 at 11:40
-  AM, "Merge Without Review"); let the switchboard merge it once its review is in.
-- `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone.
+- The safety checker refuses the integrator's merges ("Merge Without Review") until the permission line loads.
+- `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone. Worktrees in use: proof-scope, merge-protected, j025.
