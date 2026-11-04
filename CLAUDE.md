@@ -131,12 +131,13 @@ agent, Claude included, works this way:
     board has moved, and acts on every line in the same sweep (no 15-minute timer; 11-02: *"drop 15"*;
     PR events, agent messages and the hourly check drive the work): MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
     FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
-  - Reviews are cross-model, and Claude *session* usage is the scarce budget (2026-11-02: *"That's why
-    so much of the session's usage was used up so quickly"*): reviews go to Muse, ChatGPT or Grok
-    (Gemini is off the team, 11-02); a Claude session reviews only for security or when nobody else is
-    free. The GitHub Actions Claude review (API credit, Sonnet xhigh; Claude's PRs too) shares them with
-    Codex, Muse and ChatGPT: one reviewer per PR, whoever is open (11-03: *"I'm not asking for two
-    agents to review the same shit"*; `review.pool`, #178). **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
+  - **Reviews, one mechanism per PR** (11-04, Cory: prompting ChatGPT or Grok per review "was slow and doesn't fit
+    autonomous work"): Codex Code Review reviews every PR on open; `@codex review` re-asks only after a fix commit that
+    needs a fresh pass. The Claude API (switchboard, `work/budget.yml`) takes the eye, the security pass on CI and signing
+    changes, and any PR Codex has not reviewed at its exact head. ChatGPT and Grok keep research, specs and math.
+  - **Concurrency, hard caps (11-04):** one Claude Opus session at a time (the integrator); it runs at most two active
+    subagents, three for acute work, and queues the rest. Muse takes as much of the work as it can handle well, with
+    parallel agents of its own; Opus keeps integration, architecture, hard debugging and final verification. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
     "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
     roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
     that. You should ask me how many workers to open up and give suggestions from now on"*; the

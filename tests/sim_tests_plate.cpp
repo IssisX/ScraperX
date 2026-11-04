@@ -435,29 +435,160 @@ void run_plate_band() {
               << " ring_y=" << top.player_position.y << '\n';
 }
 
-// Up a pole from (x, z) facing (fx, fz), the way C4's standpipe is climbed.
-bool stage_pole(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
-                const double fz, const double top, const char *leg) {
-    if (!walk_to(simulation, x, z, 8.0, 0.08)) {
-        std::cout << "route: " << leg << ": not at the foot\n";
+// One lane of the 352 -> 374 wall-climb stack (band_plate_shop.cpp
+// build_wall_stack): from its far end a sprint along the lane (x heading `dir`,
+// z fixed) and a jump 1.55 m short of the block's face at `face_x`, the stick
+// held at the face; the run up it takes the lip, and a jump pulls over onto
+// the cap, standing above `top`. False as soon as it fails.
+bool wall_climb_lane(scraperx::sim::Simulation &simulation, const double dir, const double face_x,
+                     const double top) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::TraversalState;
+    bool jumped = false;
+    bool pulled = false;
+    for (int tick = 0; tick < 7 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        const auto now = simulation.snapshot();
+        if (standing_above(now, top)) {
+            return true;
+        }
+        const bool airborne = jumped && !now.player_grounded;
+        (void)simulation.set_facing(dir, 0.0);
+        (void)simulation.set_sprint_input(!airborne);
+        if (now.traversal_state == TraversalState::Hanging) {
+            (void)simulation.set_move_input(0.0, 0.0);
+            if (!pulled) {
+                (void)simulation.request_jump();
+                pulled = true;
+            }
+        } else {
+            (void)simulation.set_move_input(dir, 0.0);
+        }
+        if (!jumped && (dir < 0.0 ? now.player_position.x < face_x + 1.55 : now.player_position.x > face_x - 1.55)) {
+            if (!simulation.request_jump()) {
+                return false;
+            }
+            jumped = true;
+        }
+        if (!simulation.advance_frame(Simulation::kFixedStepSeconds).accepted) {
+            return false;
+        }
+    }
+    (void)simulation.set_move_input(0.0, 0.0);
+    (void)simulation.set_sprint_input(false);
+    return false;
+}
+
+// Up a pole from (x, z) facing (fx, fz), the way C4's standpipe is climbed:
+// the grip offered, taken, then the stick held along the face until standing
+// above `top`. False (with a line) as soon as a step fails.
+bool gantry_pole(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
+                 const double fz, const double top, const char *leg) {
+    if (!walk_to(simulation, x, z, 6.0, 0.08)) {
+        std::cout << "route: " << leg << ": not at the foot, at (" << simulation.snapshot().player_position.x << ", " << simulation.snapshot().player_position.y << ", " << simulation.snapshot().player_position.z << ")\n";
         return false;
     }
     (void)simulation.set_facing(fx, fz);
     (void)simulation.advance_frame(0.4);
     if (!simulation.snapshot().grip_available) {
-        std::cout << "route: " << leg << ": no grip offered\n";
+        std::cout << "route: " << leg << ": no grip offered at y=" << simulation.snapshot().player_position.y << '\n';
         return false;
     }
     (void)simulation.request_traversal();
     (void)simulation.advance_frame(0.2);
     const bool up = is_climbing(simulation.snapshot()) &&
-                    hold_stick(simulation, fx, fz, fx, fz, 40.0, [top](const scraperx::sim::Snapshot &state) {
+                    hold_stick(simulation, fx, fz, fx, fz, 30.0, [top](const scraperx::sim::Snapshot &state) {
                         return standing_above(state, top);
                     });
     if (!up) {
         std::cout << "route: " << leg << ": stuck at y=" << simulation.snapshot().player_position.y << '\n';
     }
     return up;
+}
+
+// A jump from where the body stands, facing (fx, fz), at a lip ahead; caught,
+// and the pull up onto it, standing above `top`.
+bool gantry_hang_up(scraperx::sim::Simulation &simulation, const double fx, const double fz, const double top) {
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    if (!hold_stick(simulation, 0.4 * fx, 0.4 * fz, fx, fz, 2.0,
+                    [](const Snapshot &state) { return state.traversal_state == TraversalState::Hanging; })) {
+        std::cout << "route: jump-hang: not hanging at y=" << simulation.snapshot().player_position.y << '\n';
+        return false;
+    }
+    (void)simulation.advance_frame(0.3);
+    (void)simulation.request_jump();
+    return wait_for(simulation, 2.5, [top](const Snapshot &state) { return standing_above(state, top); });
+}
+
+// The 396 -> 418 gorge (band_plate_shop.cpp build_gorge) on player inputs: round
+// the 396 ring to its west band, up the pole to the run-up deck, a sprint and
+// a jump into the passage between the two walls, kicked wall to wall (as
+// run_wall_chain does) across the chasm onto the landing deck, and up the
+// second pole onto the 418 ring.
+bool run_gorge(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: gorge: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    at("start");
+    if (!walk_to(route, 13.5, -163.5, 10.0, 0.3)) {
+        at("walk to the south band failed");
+        return false;
+    }
+    if (!walk_to(route, -13.0, -163.5, 30.0, 0.3)) {
+        at("walk west failed");
+        return false;
+    }
+    if (!(gantry_pole(route, -14.3, -162.1, 0.0, 1.0, 407.1, "pole 1") && walk_to(route, -14.9, -157.5, 6.0, 0.1))) {
+        at("pole 1 or the walk to the run-up failed");
+        return false;
+    }
+    (void)route.set_facing(1.0, 0.0);
+    (void)route.set_move_input(1.0, 0.0);
+    (void)route.set_sprint_input(true);
+    if (!advance_until(route, [](const Snapshot &n) { return n.player_position.x > -8.5; }, 4.0)) {
+        std::cout << "route: gorge: no run-up\n";
+        return false;
+    }
+    (void)route.request_jump();
+    (void)route.advance_frame(Simulation::kFixedStepSeconds * 2);
+    double toward = 0.6;   // the stick into the first wall, on +z
+    (void)route.set_move_input(1.0, toward);
+    // `kicks` counts the jumps asked for (bookkeeping); the wall kicks that landed are the
+    // simulation's own wall_kick_count, from its value on entry.
+    const std::uint64_t native_at_entry = route.snapshot().wall_kick_count;
+    std::uint64_t kicks = 0;
+    std::uint64_t steps_at_last_kick = 0;
+    for (int tick = 0; tick < 5 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+        (void)route.advance_frame(Simulation::kFixedStepSeconds);
+        const Snapshot n = route.snapshot();
+        if (n.player_grounded) {
+            break;
+        }
+        if (n.player_wall_running && n.wall_kick_count - native_at_entry == kicks && n.wall_step_count > steps_at_last_kick) {
+            toward = -toward;
+            (void)route.request_jump();
+            (void)route.set_move_input(1.0, toward);
+            steps_at_last_kick = n.wall_step_count;
+            ++kicks;
+            (void)route.advance_frame(Simulation::kFixedStepSeconds);
+        }
+    }
+    (void)route.set_move_input(0.0, 0.0);
+    (void)route.set_sprint_input(false);
+    const Snapshot end = route.snapshot();
+    const std::uint64_t native_kicks = end.wall_kick_count - native_at_entry;
+    std::cout << "route: gorge chain: " << kicks << " jumps asked, " << native_kicks << " wall kicks landed, down at ("
+              << end.player_position.x << ", " << end.player_position.y << ", " << end.player_position.z << ")\n";
+    if (!(native_kicks >= 3 && end.player_position.x > 10.5 && standing_above(end, 407.1))) {
+        return false;
+    }
+    return gantry_pole(route, 10.3, -160.6, 1.0, 0.0, 418.4, "pole 2");
 }
 
 // The 418 -> 440 slide and speed vault (band_plate_shop.cpp build_run) on player
@@ -482,7 +613,7 @@ bool run_slide_vault(scraperx::sim::Simulation &route) {
         at("walk round the ring failed");
         return false;
     }
-    if (!(stage_pole(route, -13.8, -162.1, 0.0, 1.0, 429.1, "pole 1") && walk_to(route, -12.4, -157.5, 6.0, 0.1))) {
+    if (!(gantry_pole(route, -13.8, -162.1, 0.0, 1.0, 429.1, "pole 1") && walk_to(route, -12.4, -157.5, 6.0, 0.1))) {
         at("pole 1 or the walk to the lane failed");
         return false;
     }
@@ -555,7 +686,7 @@ bool run_slide_vault(scraperx::sim::Simulation &route) {
         at("the rail was not speed-vaulted");
         return false;
     }
-    if (!(walk_to(route, 9.0, -158.0, 8.0, 0.2) && stage_pole(route, 9.4, -158.6, 1.0, 0.0, 440.4, "pole 2"))) {
+    if (!(walk_to(route, 9.0, -158.0, 8.0, 0.2) && gantry_pole(route, 9.4, -158.6, 1.0, 0.0, 440.4, "pole 2"))) {
         at("pole 2 failed");
         return false;
     }
@@ -563,8 +694,9 @@ bool run_slide_vault(scraperx::sim::Simulation &route) {
 }
 
 // AS-008's climbing route, on player inputs: from TP-340 by F's hole round the
-// hole and the header to the east band, then one climb per ring gap to the
-// 484 ring, every lift in the band where it was found.
+// hole and the header to the east band, the ladder to the 352 ring, the wall-climb
+// stack (six lanes, five risers of 4.4 m) onto the 374 ring, then one climb per
+// ring gap to the 484 ring, every lift in the band where it was found.
 void run_plate_route() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;
@@ -575,9 +707,90 @@ void run_plate_route() {
                 walk_to(route, 13.07, -157.0, 12.0) &&
                 climb_wet_hold(route, 13.07, -158.0, 1.0, 0.0, false, 352.5),
             "route: across TP-340 and the ladder onto the 352 ring");
-    for (double h = 352.0; h < 483.9; h += 22.0) {
+    // The stack: lane k spans z in [-153 - 2k, -151 - 2k], heads west for even
+    // k (its block's face at x = 4.5) and east for odd k (face at x = 11.0),
+    // and the last lane runs east onto the 374 ring.
+    require(walk_to(route, 14.5, -152.0, 8.0) && walk_to(route, 12.8, -152.0, 4.0, 0.1),
+            "route: from the 352 ring onto the stack's first lane");
+    // The stack is a wall-climb and nothing less: a standing jump at the first
+    // block's face, the stick held at it, neither hangs on its lip nor gets up.
+    require(walk_to(route, 5.4, -152.0, 12.0, 0.1), "route: to the first block's foot");
+    (void)route.set_facing(-1.0, 0.0);
+    (void)route.advance_frame(0.3);
+    (void)route.request_jump();
+    const bool plain_hang = hold_stick(route, -0.4, 0.0, -1.0, 0.0, 2.0, [](const scraperx::sim::Snapshot &state) {
+        return state.traversal_state == scraperx::sim::TraversalState::Hanging;
+    });
+    require(!plain_hang && route.snapshot().player_position.y < 356.0,
+            "route: a standing jump at the first block does not reach its lip");
+    require(wait_for(route, 3.0, [](const scraperx::sim::Snapshot &state) { return state.player_grounded; }) &&
+                walk_to(route, 12.8, -152.0, 12.0, 0.1),
+            "route: back to the lane's start");
+    for (int k = 0; k < 5; ++k) {
+        const double top = 352.25 + 4.4 * (k + 1);
+        const bool west = k % 2 == 0;
+        const bool leg = wall_climb_lane(route, west ? -1.0 : 1.0, west ? 4.5 : 11.0, top);
+        if (!leg) {
+            std::cout << "route: stack stuck in lane " << k << " at x=" << route.snapshot().player_position.x
+                      << " y=" << route.snapshot().player_position.y << '\n';
+        }
+        require(leg, "route: sprint, jump at the block and run up its face onto the next lane's cap");
+        if (k < 4) {
+            // Off the cap into the next lane, to its far end: the cap is that end.
+            const double zc = -152.0 - 2.0 * (k + 1);
+            require(walk_to(route, west ? 3.6 : 11.9, zc, 6.0, 0.1) && route.advance_frame(0.4).accepted,
+                    "route: off the cap into the next lane");
+        }
+    }
+    // The last lane east onto the 374 ring.
+    require(walk_to(route, 3.6, -162.0, 6.0, 0.1) && walk_to(route, 13.4, -162.0, 12.0, 0.2) &&
+                standing_above(route.snapshot(), 374.0),
+            "route: the last lane onto the 374 ring");
+    // The gantry, 374 -> 396 (band_plate_shop.cpp build_gantry): pole 1, the
+    // bars, a jump-hang, pole 2, and a jump-hang over the 396 ring's inner edge.
+    // It stands on the 374 ring's north band (the welder's lane on the east band
+    // and the way past it stay clear): round the east band's outer side to it.
+    require(walk_to(route, 15.8, -161.0, 8.0, 0.3) && walk_to(route, 15.8, -138.0, 16.0, 0.3) &&
+                gantry_pole(route, 14.5, -135.4, 0.0, 1.0, 381.8, "pole 1") && walk_to(route, 13.5, -134.0, 6.0, 0.1),
+            "route: up the gantry's first pole onto its deck");
+    (void)route.set_facing(-1.0, 0.0);
+    (void)route.advance_frame(0.4);
+    (void)route.set_move_input(-1.0, 0.0);
+    require(route.request_jump() &&
+                advance_until(route,
+                              [](const scraperx::sim::Snapshot &state) {
+                                  return state.traversal_state == scraperx::sim::TraversalState::Swinging;
+                              },
+                              1.0),
+            "route: a running jump under the bars catches the first");
+    require(advance_until(route, [](const scraperx::sim::Snapshot &state) { return state.swing_reach_count >= 5; }, 6.0),
+            "route: held forward, hand over hand to the last bar");
+    require(advance_until(route,
+                          [](const scraperx::sim::Snapshot &state) {
+                              return state.player_linear_velocity.x < -2.0 && state.player_position.x < 7.55;
+                          },
+                          4.0) &&
+                route.request_release() &&
+                wait_for(route, 3.0,
+                         [](const scraperx::sim::Snapshot &state) {
+                             return standing_above(state, 382.3) && state.player_position.x < 6.5;
+                         }),
+            "route: let go at the bottom of the swing onto the landing block");
+    require(walk_to(route, 5.2, -134.5, 6.0, 0.1) && gantry_hang_up(route, -1.0, 0.0, 385.6),
+            "route: a jump-hang up onto the block");
+    require(gantry_pole(route, 2.5, -134.1, -1.0, 0.0, 393.2, "pole 2"), "route: up the second pole onto the deck");
+    require(walk_to(route, 0.2, -138.7, 12.0, 0.15) && gantry_hang_up(route, 0.0, 1.0, 396.5),
+            "route: a jump-hang over the 396 ring's inner edge");
+    // Round the 396 ring's north band to its east band, where the next climb starts.
+    require(walk_to(route, 13.9, -136.0, 24.0, 0.3) && walk_to(route, 13.9, -150.0, 16.0, 0.3),
+            "route: round the 396 ring to its east band");
+    for (double h = 396.0; h < 483.9; h += 22.0) {
         if (h == 418.0) {
             require(run_slide_vault(route), "route: the slide and speed vault, 418 to 440");
+            continue;
+        }
+        if (h == 396.0) {
+            require(run_gorge(route), "route: the wall-run gorge, 396 to 418");
             continue;
         }
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;

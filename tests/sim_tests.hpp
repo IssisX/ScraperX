@@ -782,6 +782,7 @@ void run_matron_found_climb();
 void run_plate_shop();
 void run_plate_band();
 void run_plate_route();
+void run_route_pockets();
 bool climb_wreck(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
                  const double fz, const std::uint64_t entity, const double top);
 void run_plate_wreckage();
@@ -911,6 +912,7 @@ void test_matron_climb_support();
 void run_matron_state_exits();
 void run_matron_crash();
 void run_matron_mischief();
+void run_matron_wreck();
 void run_matron_collision();
 void run_matron_balance();
 void run_matron_pipe();
