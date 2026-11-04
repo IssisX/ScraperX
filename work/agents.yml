@@ -42,27 +42,21 @@ agents:
     wake: email          # tools/switchboard/muse_bridge.gs mails it and posts its replies back
 
 review:
-  # Claude-authored PRs are asked of these, in order, on the job issue (owner's correction 4).
-  claude_authored_asks: [chatgpt, muse]
-  # A job that needs matron asks Muse first: the Matron is its specialty.
-  matron_reviewer: muse
-  # Work by ChatGPT, Grok or Muse is asked of these, in order, skipping the author's own vendor (Cory, 11-03:
-  # Muse is always on and free, so it reviews first; Muse's own PRs go to ChatGPT). The paid Claude review
-  # through the API runs only when none of these fits.
-  other_authored_asks: [muse, chatgpt]
-  # Who shares the reviews (Cory, 11-03: "get the ones that are available and ready to do the reviews ... if we
-  # spread the work out, the merrier ... I'm not asking for two agents to review the same shit ... it should be
-  # available to take"). One reviewer per PR: the free one (fewest unanswered asks on other PRs, then fewest in the
-  # last day); the author's own vendor is skipped (Codex and ChatGPT are both OpenAI); `claude-api` (the automatic review, xhigh, work/budget.yml) is
-  # always free while the budget allows, and reviews Claude's work too (api_reviews_claude). A matron job prefers matron_reviewer
-  # on ties. When this list is set it replaces claude_authored_asks, other_authored_asks and fallback_order.
-  # Grok rejoins on 11-09.
-  pool: [claude-api, codex, muse, chatgpt]
+  # Reviews, one mechanism per PR (Cory, 11-04): the Codex app reviews every PR on open, and its summary comment
+  # is the review (rules.parse_codex_state: clean at the exact head is a LAND, unresolved findings a FIX). Only a
+  # head Codex has not reviewed gets the automatic Claude review once its proof is green. Muse is out of the
+  # review pool. The two lists below are read only when `pool` is empty.
+  claude_authored_asks: [chatgpt]
+  other_authored_asks: [chatgpt]
+  # Who shares the reviews Codex leaves: the automatic Claude review alone (`claude-api`, work/budget.yml). When
+  # this list is set it replaces claude_authored_asks, other_authored_asks and the fallback escalation.
+  pool: [claude-api]
   # The automatic Claude review takes Claude's PRs too, and its LAND counts there (Cory, 11-03: "Yes, give it real
   # work, the Claude on GitHub actions"). The Codex app still reviews every PR on open, and its findings block.
   api_reviews_claude: true
-  # An ask with no verdict on its head after this many hours is passed to the next agent here that has
-  # not been asked on that head, once per head (Cory, 11-03: Codex's quota ran out and nothing took over).
-  # Never a Claude agent, never the author's own vendor. Grok answers `To Grok:` comments (work/tasks/grok-answers.md).
+  # The last resort (Cory, 11-04): when neither Codex nor the API can review a head (a budget cap is hit, or the
+  # API call failed or gave no verdict), one ask goes to these, by their own scheduled runs (the comment starts
+  # "To Grok:" or "To ChatGPT:"); one quiet past fallback_after_hours passes it to the other. Never a Claude
+  # agent, never the author's own vendor, never in the normal path.
   fallback_after_hours: 1   # Cory, 11-03: "3 hours seems long"
-  fallback_order: [muse, chatgpt, grok]
+  fallback_order: [grok, chatgpt]

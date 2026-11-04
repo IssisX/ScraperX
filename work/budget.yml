@@ -15,11 +15,11 @@ prices_per_mtok:
 
 # Each paid call: worst case = counted input tokens x input price + max_tokens x output price.
 calls:
-  review:               # the automatic review of a PR (diff + checklist): worst case about $0.46
-    model: claude-sonnet-5-5   # Cory, 11-03: Sonnet at extra high over Opus at high: half the price, and the Codex app also reviews every PR
-    max_tokens: 16000   # the call does not stream; kept at the size proved in runs so far
-    effort: xhigh       # Cory, 11-03: "at extra high"
-    max_input_tokens: 150000
+  # The automatic review of a PR (diff + checklist) where Codex has not reviewed the head: worst case about $0.92,
+  # measured about $0.09 a review. Opus high, Cory's pick 11-04 (Sonnet xhigh cost about $0.14 and once used all
+  # 16,000 max_tokens with no verdict). To flip back, swap this line for the commented one below it.
+  review: {model: claude-opus-5-5, effort: high, max_tokens: 16000, max_input_tokens: 150000}
+  # review: {model: claude-sonnet-5-5, effort: xhigh, max_tokens: 16000, max_input_tokens: 150000}
   eye:                  # one vision call on the screenshot sets in work/looks/sets.yml: worst case about $0.40
     model: claude-opus-5-5
     max_tokens: 8000

@@ -340,12 +340,17 @@ def review_rotation(number: int, author_vendor: str, needs: frozenset[str], team
     fits = [p for p in team.pool
             if (p == API_REVIEWER and api_ok and (author_vendor != "anthropic" or team.api_reviews_claude))
             or (p != API_REVIEWER and team.agent_vendor.get(p) not in (None, "anthropic", author_vendor))]
+    # The last resort (Cory, 11-04): when the API is in the pool but cannot review this head (a cap is hit, or
+    # it failed or gave no verdict here), the agents of review.fallback_order follow, by their own scheduled runs.
+    last = [f for f in team.fallback_order
+            if not api_ok and API_REVIEWER in team.pool and f not in fits
+            and team.agent_vendor.get(f) not in (None, "anthropic", author_vendor)]
     if not fits:
-        return []
+        return last
     start = number % len(fits)
     if "matron" in needs and team.matron_reviewer in fits:
         start = fits.index(team.matron_reviewer)
-    return fits[start:] + fits[:start]
+    return fits[start:] + fits[:start] + last
 
 
 def choose_reviewer(rotation: Sequence[str], asked_at: Mapping[str, str], now_iso: str, hours: float,

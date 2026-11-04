@@ -488,7 +488,8 @@ class Switch:
                             f"ask Codex to review #{facts.number}")
             return
         head = {"muse": f"CLAUDE_TO_MUSE: {job} review #{facts.number} @ {facts.head_sha[:8]}",
-                "grok": f"To Grok: {job} review #{facts.number} @ {facts.head_sha[:8]}"}.get(agent) or \
+                "grok": f"To Grok: {job} review #{facts.number} @ {facts.head_sha[:8]}",
+                "chatgpt": f"To ChatGPT: {job} review #{facts.number} @ {facts.head_sha[:8]}"}.get(agent) or \
                f"**Switchboard → {name}:** review #{facts.number} @ {facts.head_sha[:8]} ({job})"
         body = (f"{head}\n\n{why}Proof is green on the head ({ctx['proof_url']}). Review it with "
                 f"`03_EXECUTION/REVIEW_CHECKLIST.md` and post one verdict on #{facts.number} whose first line is\n"
@@ -818,6 +819,37 @@ class Switch:
             except (GitHubError, RuntimeError, KeyError, ValueError) as err:
                 failed += 1
                 self.out(f"ERROR       #{it['number']}: {type(err).__name__}: {err}")
+        return failed + self.watch_closed_reserves({it["number"] for it in listed[:MAX_WATCHED]})
+
+    def watch_closed_reserves(self, seen: set[int]) -> int:
+        """A reserve still open on the ledger whose issue has closed is never in the open listing, so it would count
+        in full for ever (the $8.00 of #136): its issue is read once and watched like an open one, which ends the run
+        at the session's real cost, or writes off a start that made no session. Returns failures."""
+        ended = {e.run for e in self.entries() if e.phase == "end"}
+        numbers: list[int] = []
+        for e in self.entries():
+            m = re.fullmatch(r"orchestrator#(\d+)", e.note)
+            if e.phase == "reserve" and e.kind == "orchestrator" and e.run not in ended and m:
+                n = int(m.group(1))
+                if n not in seen and n not in numbers:
+                    numbers.append(n)
+        failed = 0
+        for n in numbers[:MAX_WATCHED]:
+            try:
+                try:
+                    it = self.gh.get(f"repos/{self.gh.repo}/issues/{n}")
+                except GitHubError as err:
+                    if "HTTP 404" not in err.detail:
+                        raise
+                    self.out(f"WATCH       #{n} holds a reserve but the issue is gone: left for a person")
+                    continue
+                if it.get("state") != "closed" or "pull_request" in it:
+                    continue
+                self.out(f"WATCH       #{n} is closed with a reserve still open: watching it once more")
+                self.watch_session(it)
+            except (GitHubError, RuntimeError, KeyError, ValueError) as err:
+                failed += 1
+                self.out(f"ERROR       #{n}: {type(err).__name__}: {err}")
         return failed
 
     def start_comment(self, comments: list[dict], number: int) -> tuple[str, str] | None:
