@@ -44,12 +44,12 @@ retry a merge after one; until then the switchboard merges.
 ## Asks in flight
 - Muse (mail): J-001 steps 1, 3, 4 (agents running); J-006 leg 6; J-038 plan (rule within the hour when it comes);
   #95 stills; three rebases; J-016 drum runaway plus the touch_matron_pipe drum moving 17.8 m (mailed 11:21 AM);
-  S3 starts when #179 lands. No Muse mail since 11:21 AM as of 12:55 PM.
+  S3 starts when #179 lands. No Muse mail since 11:21 AM as of 12:12 PM.
 - Grok (4 PM run): #193 force split (posted as `To Grok:`); #100, #169, #137 from 11-03.
 - ChatGPT: J-030 (#137), J-038 research (#169). Switchboard review asks to ChatGPT on #132/#164 are fallbacks only.
 - To Claude: none open.
 
-## Merge queue (12:55 PM)
+## Merge queue (12:12 PM)
 - #200 (max reviewer) and #202 (proof skips game for notes-only pushes): both change workflow files, so the
   switchboard cannot merge them (HUMAN-MERGE). Codex clean on both. Merge when green and the permission loads;
   else ask Cory once to merge them. Tell Cory "the max reviewer is live" when #200 merges.
