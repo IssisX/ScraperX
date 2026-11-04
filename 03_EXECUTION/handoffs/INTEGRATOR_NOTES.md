@@ -55,13 +55,12 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 ## Merge queue (5:20 PM)
 - #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
   at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
-- J-006: leg-6 protected change is #212 (written by hand on trunk's test; Codex P0 fixed at 5e248e10: a rise passes only as a renewed
-  climb; Codex clean; switchboard lands it on green). The fix diff (470b2bac) could not be decoded (tools can't save attachments; hand-copied base64
+- J-006: leg-6 protected change #212 MERGED 5:37 PM. The fix diff (470b2bac) could not be decoded (tools can't save attachments; hand-copied base64
   broke): Muse asked 5:15 PM to resend as plain text in the body, and every diff from now on. Then a helper writes
   it onto #91 (merge trunk in, mark ready, Job: J-006 body).
 - #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
   on green + Codex clean.
-- Merged today: #83, #100, #211, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
+- Merged today: #83, #100, #211, #212, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
 
 ## Known here
