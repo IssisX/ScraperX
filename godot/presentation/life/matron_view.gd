@@ -2246,7 +2246,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_ease_figure(centre, delta)
 	_ease_hands(data, delta)
 	_drive_body(data, delta, camera_position, falling)
-	_hear(data, delta, true, _figure.global_position, player_position, falling)
+	# A corpse is drawn but makes none of her living sounds (matron_sound.gd: out_near is "out, alive and near").
+	_hear(data, delta, alive, _figure.global_position, player_position, falling)
 
 
 # Her sounds (presentation/audio/matron_sound.gd), every frame whether she
