@@ -6,8 +6,8 @@ tooling"). Each is checked against the workflow where it can be. Times are Centr
 
 1. **A head commit with `[skip ci]` is skipped on push.** To prove such a branch, dispatch
    `wo000-delivery-spine.yml` on the `<agent>/integrate-<job>` branch instead of pushing.
-   Source: the handoff, "CI facts". Off trunk, step 20 ("Preserve Android updates") still stops
-   with the expected KeyError (`CLAUDE.md`, "Test only what a change reaches", item 4).
+   Source: the handoff, "CI facts". Off trunk, `publish-checkpoint` is skipped since 11-02 (before,
+   its step "Preserve Android updates" stopped with a KeyError).
 2. **Trunk runs publish `ScraperX-build-<sha>`** (the `artifacts/` folder: logs, evidence and the
    signed APK; kept 90 days). **`ScraperX-APK-<sha>` is no longer a trunk output:** the
    `playtest-apk` job runs only on a manual dispatch (workflow comment, owner 2026-10-28; the
@@ -38,6 +38,7 @@ falsifier PASS line; and three groups of the Matron ctest slices, the last of wh
 not named in the others), `godot-touch` (2 shards, the same scenario list as before, split at
 `touch_o`), `godot-audits-and-mix` (Fold runtime proof, the mix, solids, floating audit and the GDScript
 tests) and `android-apk`; last `publish-checkpoint` (evidence, signing, the trunk build artifact).
-Green means every job green but `publish-checkpoint`, which off trunk stops with the expected
-`sign-apks.py` KeyError. The old single job ran the full native binary twice (once under ctest, once
+Green means every job green. Since 11-02 `publish-checkpoint` runs on trunk only and is skipped
+elsewhere; on heads proved before that it stops off trunk with the `sign-apks.py` KeyError and does
+not count. The old single job ran the full native binary twice (once under ctest, once
 directly for its PASS lines); it now runs once, under `ctest -V`.

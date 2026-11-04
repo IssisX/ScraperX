@@ -330,6 +330,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
     // TEST-ONLY: the look suite's setup (see the header); nothing in play calls these.
     godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_hold_matron_hands", "seconds"), &ScraperXSimulation::debug_hold_matron_hands);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_set_matron_stage", "stage"),
                                 &ScraperXSimulation::debug_set_matron_stage);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_climb_way", "pipe", "down"),
@@ -337,6 +338,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_hear", "at"), &ScraperXSimulation::debug_matron_hear);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_launch_player", "at", "velocity"),
                                 &ScraperXSimulation::debug_launch_player);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_launch_kit_entity", "entity", "at", "velocity"),
+                                &ScraperXSimulation::debug_launch_kit_entity);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_lose_arm", "side"), &ScraperXSimulation::debug_lose_arm);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_travel_to", "feet"), &ScraperXSimulation::debug_matron_travel_to);
     godot::ClassDB::bind_method(godot::D_METHOD("request_trapeze_action"), &ScraperXSimulation::request_trapeze_action);
@@ -464,6 +467,7 @@ godot::Dictionary ScraperXSimulation::get_strike_state() const {
     const sim::Snapshot &p = simulation_->snapshot();
     godot::Dictionary out;
     out["phase"] = static_cast<std::int64_t>(p.strike_phase);
+    out["move"] = static_cast<std::int64_t>(p.strike_move);   // 0 punch, 1 sweep
     out["phase_ticks"] = static_cast<std::int64_t>(p.strike_phase_ticks);
     out["offered"] = p.strike_offered;
     out["held"] = p.held_by_matron;   // in her hand: the offer is his escape (before the rip)
@@ -1809,6 +1813,8 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["stock_rotation"] = to_godot(state.stock_rotation);
     out["stock_size"] = to_godot(state.stock_size);
     out["stock_seeking"] = static_cast<std::int64_t>(state.stock_seeking);
+    out["stock_shoves"] = static_cast<std::int64_t>(state.stock_shoves);
+    out["stock_push_force_n"] = state.stock_push_force_n;
     out["stock_seek_handle"] = to_godot(state.stock_seek_handle);
     out["stock_seek_rotation"] = to_godot(state.stock_seek_rotation);
     out["stock_seek_size"] = to_godot(state.stock_seek_size);
@@ -1829,6 +1835,7 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["pipe_head_down"] = state.pipe_head_down;
     out["pipe_sliding"] = state.pipe_sliding;
     out["pipe_stunned"] = state.pipe_stunned;
+    out["pipe_tuck"] = state.pipe_tuck;
     out["pipe_listening"] = state.pipe_listening;
     out["pipe_links"] = static_cast<std::int64_t>(state.pipe_links);
     out["pipe_holds"] = static_cast<std::int64_t>(state.pipe_holds);
@@ -2029,6 +2036,8 @@ namespace {
 
 void ScraperXSimulation::debug_place_matron(const godot::Vector3 feet) { simulation_->debug_place_matron(to_sim(feet)); }
 
+void ScraperXSimulation::debug_hold_matron_hands(const double seconds) { simulation_->debug_hold_matron_hands(seconds); }
+
 void ScraperXSimulation::debug_set_matron_stage(const std::int64_t stage) {
     simulation_->debug_set_matron_stage(static_cast<std::uint8_t>(std::clamp<std::int64_t>(stage, 0, 2)));
 }
@@ -2041,6 +2050,12 @@ void ScraperXSimulation::debug_matron_hear(const godot::Vector3 at) { simulation
 
 void ScraperXSimulation::debug_launch_player(const godot::Vector3 at, const godot::Vector3 velocity) {
     simulation_->debug_launch_player(to_sim(at), to_sim(velocity));
+}
+
+void ScraperXSimulation::debug_launch_kit_entity(const std::int64_t entity, const godot::Vector3 at,
+                                                 const godot::Vector3 velocity) {
+    simulation_->debug_launch_kit_body(simulation_->kit_body_index(static_cast<std::uint64_t>(entity)), to_sim(at),
+                                       to_sim(velocity));
 }
 
 void ScraperXSimulation::debug_lose_arm(const std::int64_t side) {
