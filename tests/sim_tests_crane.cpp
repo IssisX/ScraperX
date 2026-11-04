@@ -277,6 +277,369 @@ void run_crane_band() {
               << " plate_y=" << top.player_position.y << '\n';
 }
 
+// Up a pole from (x, z) facing (fx, fz), the way C4's standpipe is climbed.
+static bool crane_pole(scraperx::sim::Simulation &simulation, const double x, const double z, const double fx,
+                       const double fz, const double top, const char *leg) {
+    if (!walk_to(simulation, x, z, 8.0, 0.08)) {
+        std::cout << "route: " << leg << ": not at the foot\n";
+        return false;
+    }
+    (void)simulation.set_facing(fx, fz);
+    (void)simulation.advance_frame(0.4);
+    if (!simulation.snapshot().grip_available) {
+        std::cout << "route: " << leg << ": no grip offered\n";
+        return false;
+    }
+    (void)simulation.request_traversal();
+    (void)simulation.advance_frame(0.2);
+    const bool up = is_climbing(simulation.snapshot()) &&
+                    hold_stick(simulation, fx, fz, fx, fz, 40.0, [top](const scraperx::sim::Snapshot &state) {
+                        return standing_above(state, top);
+                    });
+    if (!up) {
+        std::cout << "route: " << leg << ": stuck at y=" << simulation.snapshot().player_position.y << '\n';
+    }
+    return up;
+}
+
+// The 506 -> 528 springboard (band_facade_crane.cpp build_springboard) on player
+// inputs: up the pole to the 517 lane, a sprint and a jump 3 m short of the slab
+// (a jump from the lane, which does not catch the 4.3 m bulkhead), back over the
+// slab by a mantle, then the sprint and the jump a stride short (the springboard,
+// as run_springboard does), the lip caught and pulled up onto the bulkhead, and
+// the second pole to the 528 ring.
+static bool run_springboard_stage(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    using scraperx::sim::TraversalState;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: springboard: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    if (!walk_to(route, 8.3, -157.0, 8.0, 0.3) || !walk_to(route, 8.3, -160.1, 8.0, 0.3)) {
+        at("walk round the pier failed");
+        return false;
+    }
+    if (!(crane_pole(route, 10.2, -160.1, 0.0, 1.0, 517.1, "pole 1") && walk_to(route, 9.6, -155.5, 6.0, 0.1))) {
+        at("pole 1 or the walk to the lane failed");
+        return false;
+    }
+    // A run is made west down the lane, the jump at x < `jump_x`.
+    const auto run = [&route](const double jump_x, double &entry, std::uint64_t &boards, bool &hung) {
+        (void)route.set_facing(-1.0, 0.0);
+        (void)route.set_move_input(-1.0, 0.0);
+        (void)route.set_sprint_input(true);
+        const std::uint64_t before = route.snapshot().springboard_count;
+        bool jumped = false;
+        hung = false;
+        for (int tick = 0; tick < 4 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const Snapshot n = route.snapshot();
+            if (!jumped && n.player_position.x < jump_x) {
+                entry = std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
+                (void)route.request_jump();
+                jumped = true;
+            }
+            (void)route.advance_frame(Simulation::kFixedStepSeconds);
+            const Snapshot m = route.snapshot();
+            if (m.traversal_state == TraversalState::Hanging) {
+                hung = true;
+                break;
+            }
+            if (jumped && tick > 45 && m.player_grounded) {
+                break;
+            }
+        }
+        boards = route.snapshot().springboard_count - before;
+        (void)route.set_move_input(0.0, 0.0);
+        (void)route.set_sprint_input(false);
+    };
+    double entry = 0.0;
+    std::uint64_t boards = 0;
+    bool hung = false;
+    run(6.0, entry, boards, hung);
+    std::cout << "route: springboard: jump 3 m short at " << entry << " m/s: " << boards << " springboard, hung " << hung << "\n";
+    if (boards != 0 || hung) {
+        at("the jump from the lane must neither springboard nor catch the bulkhead");
+        return false;
+    }
+    // Back east over the slab by a mantle.
+    (void)route.advance_frame(0.5);
+    if (!walk_to(route, 1.4, -155.5, 8.0, 0.2)) {
+        at("walk to the slab's west face failed");
+        return false;
+    }
+    (void)route.set_facing(1.0, 0.0);
+    (void)route.advance_frame(0.4);
+    if (!route.snapshot().ledge_available) {
+        at("no mantle offered at the slab");
+        return false;
+    }
+    (void)route.request_traversal();
+    if (!wait_for(route, 2.0, [](const Snapshot &n) { return standing_above(n, 518.0); }) ||
+        !walk_to(route, 9.6, -155.5, 8.0, 0.2)) {
+        at("back over the slab failed");
+        return false;
+    }
+    // The springboard.
+    run(4.0, entry, boards, hung);
+    std::cout << "route: springboard: jump a stride short at " << entry << " m/s: " << boards << " springboard, hung " << hung << "\n";
+    if (!(boards == 1 && hung)) {
+        at("the springboard did not catch the bulkhead's lip");
+        return false;
+    }
+    (void)route.advance_frame(0.3);
+    (void)route.request_jump();
+    if (!wait_for(route, 2.5, [](const Snapshot &n) { return standing_above(n, 521.4); })) {
+        at("the pull up onto the bulkhead failed");
+        return false;
+    }
+    return crane_pole(route, -5.75, -155.0, -1.0, 0.0, 528.4, "pole 2");
+}
+
+// The 528 -> 550 stepping stones (band_facade_crane.cpp build_stones) on player
+// inputs: up the pole to the 539 lane; a jump from its lip with no sighted
+// landing, which falls into the pit; out of the pit by a hang up its east wall;
+// then the look lowered onto each post's top and Jump, the precision jump (as
+// the proving ground's), across both posts onto the block; the second pole.
+constexpr double kPjStoneOneX = 1.5;
+constexpr double kPjStoneTwoX = -1.0;
+
+static bool run_stones_stage(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: stones: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    if (!walk_to(route, 7.2, -153.0, 8.0, 0.3) || !walk_to(route, 7.2, -159.1, 8.0, 0.3)) {
+        at("walk round the pier failed");
+        return false;
+    }
+    if (!(crane_pole(route, 9.0, -159.1, 0.0, 1.0, 539.1, "pole 1") && walk_to(route, 4.6, -154.5, 8.0, 0.1))) {
+        at("pole 1 or the walk to the lip failed");
+        return false;
+    }
+    // A standing jump with the look level has no sighted landing and is no 2.5 m
+    // hop: it comes down on the lane, short of the pit's edge. (A jump with the
+    // stick held at a walk does cross to the posts: this is an intended route,
+    // not a gate.)
+    (void)route.set_facing(-1.0, 0.0);
+    (void)route.set_look_pitch(0.0);
+    (void)route.advance_frame(0.4);
+    const bool level_sighted = route.snapshot().precision_sighted;
+    (void)route.request_jump();
+    const bool jumped = advance_until(route, [](const Snapshot &n) { return !n.player_grounded; }, 0.5) &&
+                        advance_until(route, [](const Snapshot &n) { return n.player_grounded; }, 3.0);
+    at("level standing jump");
+    if (level_sighted || !jumped || route.snapshot().player_position.x < 3.0 ||
+        route.snapshot().player_position.y < 539.5) {
+        at("a standing jump with no sighted landing must come down on the lane");
+        return false;
+    }
+    // Each hop: the look lowered until the sighted point lies on the target, Jump.
+    const auto hop = [&route, &at](const double target_x, const double target_y, const char *what) {
+        (void)route.set_facing(-1.0, 0.0);
+        (void)route.set_move_input(0.0, 0.0);
+        bool sighted = false;
+        for (double pitch = -0.05; pitch > -0.9 && !sighted; pitch -= 0.01) {
+            (void)route.set_look_pitch(pitch);
+            (void)route.advance_frame(Simulation::kFixedStepSeconds * 2);
+            const Snapshot n = route.snapshot();
+            sighted = n.precision_sighted && std::abs(n.precision_point.y - target_y) < 0.1 &&
+                      std::abs(n.precision_point.x - target_x) < 0.35;
+        }
+        if (!sighted) {
+            at(what);
+            std::cout << "route: stones: no sighted landing on " << what << '\n';
+            return false;
+        }
+        (void)route.request_jump();
+        if (!advance_until(route, [](const Snapshot &n) { return !n.player_grounded; }, 0.5) ||
+            !advance_until(route, [](const Snapshot &n) { return n.player_grounded; }, 3.0)) {
+            at(what);
+            return false;
+        }
+        (void)route.advance_frame(0.3);
+        const Snapshot l = route.snapshot();
+        const bool on = l.player_position.y > target_y + 0.8 && std::abs(l.player_position.x - target_x) < 0.5;
+        std::cout << "route: stones: hop to " << what << " landed at (" << l.player_position.x << ", " << l.player_position.y
+                  << "), precision landings " << l.precision_landing_count << '\n';
+        return on;
+    };
+    if (!(hop(kPjStoneOneX, 539.8, "the first post") && hop(kPjStoneTwoX, 540.6, "the second post") &&
+          hop(-4.6, 541.4, "the block"))) {
+        at("the hops failed");
+        return false;
+    }
+    return crane_pole(route, -4.84, -154.5, -1.0, 0.0, 550.4, "pole 2");
+}
+
+// The 550 -> 572 tuck wall (band_facade_crane.cpp build_tuck) on player inputs:
+// up the pole to the 560.5 lane; a sprint and a jump 4.4 m short of the 1.95 m
+// wall with the legs left down, which strikes it and stops; the same with Crouch
+// held while rising (the tuck, as run_tuck's), which clears it still running;
+// back to the pole at the lane's west end and up it onto the 572 ring.
+constexpr double kTkWallEastX = -0.5;
+
+static bool run_tuck_stage(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: tuck: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    if (!walk_to(route, 6.6, -152.0, 8.0, 0.3)) {
+        at("walk to the pier failed");
+        return false;
+    }
+    if (!(crane_pole(route, 8.6, -150.1, 0.0, 1.0, 560.6, "pole 1") && walk_to(route, 6.4, -145.5, 6.0, 0.1))) {
+        at("pole 1 or the walk to the lane failed");
+        return false;
+    }
+    // A run west down the lane, the jump 4.4 m short of the wall's east face.
+    const auto run = [&route](const bool tuck, std::uint64_t &tucks, double &end_x) {
+        (void)route.set_facing(-1.0, 0.0);
+        (void)route.set_move_input(-1.0, 0.0);
+        bool jumped = false;
+        const std::uint64_t before = route.snapshot().tuck_count;
+        for (int tick = 0; tick < 3 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const Snapshot n = route.snapshot();
+            (void)route.set_sprint_input(!jumped);
+            if (!jumped && n.player_position.x < kTkWallEastX + 4.4) {
+                (void)route.request_jump();
+                jumped = true;
+            }
+            (void)route.set_crouch_input(tuck && jumped && !n.player_grounded && n.player_position.x > kTkWallEastX - 0.8);
+            (void)route.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        (void)route.set_crouch_input(false);
+        (void)route.set_move_input(0.0, 0.0);
+        (void)route.set_sprint_input(false);
+        tucks = route.snapshot().tuck_count - before;
+        end_x = route.snapshot().player_position.x;
+    };
+    std::uint64_t tucks = 0;
+    double end_x = 0.0;
+    run(false, tucks, end_x);
+    std::cout << "route: tuck: legs down: " << tucks << " tucks, stopped at x " << end_x << "\n";
+    if (tucks != 0 || end_x < kTkWallEastX) {
+        at("the legs-down jump must strike the wall and stop east of it");
+        return false;
+    }
+    if (!walk_to(route, 6.4, -145.5, 8.0, 0.2)) {
+        at("walk back to the start failed");
+        return false;
+    }
+    run(true, tucks, end_x);
+    std::cout << "route: tuck: tucked: " << tucks << " tucks, ran on to x " << end_x << "\n";
+    if (tucks < 1 || end_x > kTkWallEastX - 1.0) {
+        at("the tucked jump must clear the wall");
+        return false;
+    }
+    return crane_pole(route, -3.91, -146.7, -1.0, 0.0, 572.4, "pole 2");
+}
+
+// The 572 -> 594 slide-jump (band_facade_crane.cpp build_slide_jump) on player
+// inputs: up the pole to the 583 lane; a sprint and a slide under the beam that
+// is let run on, which goes over the pit's lip and down into it, and a mantle up
+// the pit's west wall; then the same slide with Jump at the lip (the slide jump,
+// as run_slide_jump's), over the pit onto the far deck; and the second pole.
+static bool run_slide_jump_stage(scraperx::sim::Simulation &route) {
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+    const auto at = [&route](const char *what) {
+        const auto p = route.snapshot().player_position;
+        std::cout << "route: slide jump: " << what << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    };
+    if (!walk_to(route, -5.4, -150.6, 8.0, 0.3)) {
+        at("walk to the pier failed");
+        return false;
+    }
+    if (!(crane_pole(route, -7.2, -150.6, 0.0, 1.0, 583.1, "pole 1") && walk_to(route, -6.0, -146.0, 6.0, 0.15))) {
+        at("pole 1 or the walk to the lane failed");
+        return false;
+    }
+    // A sprint east, crouched at x > -4.6; with `jump` the Jump at the pit's lip.
+    const auto run = [&route](const bool jump, double &slide_mps, double &flew_to) {
+        (void)route.set_facing(1.0, 0.0);
+        (void)route.set_move_input(1.0, 0.0);
+        (void)route.set_sprint_input(true);
+        bool crouched = false;
+        bool jumped = false;
+        const std::uint64_t slides = route.snapshot().slide_count;
+        for (int tick = 0; tick < 4 * static_cast<int>(Simulation::kTickRateHz); ++tick) {
+            const Snapshot n = route.snapshot();
+            if (!crouched && n.player_position.x > -4.6) {
+                slide_mps = std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
+                (void)route.set_crouch_input(true);
+                crouched = true;
+            }
+            if (jump && crouched && !jumped && n.player_sliding && n.player_position.x > -0.6) {
+                slide_mps = std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z);
+                (void)route.request_jump();
+                (void)route.set_crouch_input(false);
+                jumped = true;
+            }
+            (void)route.advance_frame(Simulation::kFixedStepSeconds);
+            const Snapshot m = route.snapshot();
+            const bool slid = crouched && m.slide_count > slides;
+            if ((jump && jumped && tick > 60 && m.player_grounded && m.player_position.x > 0.5) ||
+                (!jump && slid && !m.player_sliding && m.player_grounded && m.player_position.x > 0.5)) {
+                break;
+            }
+        }
+        (void)route.set_crouch_input(false);
+        (void)route.set_move_input(0.0, 0.0);
+        (void)route.set_sprint_input(false);
+        (void)route.advance_frame(0.5);
+        flew_to = route.snapshot().player_position.x;
+    };
+    double slide_mps = 0.0;
+    double end_x = 0.0;
+    run(false, slide_mps, end_x);
+    std::cout << "route: slide jump: slide at " << slide_mps << " m/s run on: ended at x " << end_x << ", y "
+              << route.snapshot().player_position.y << "\n";
+    if (!(end_x > 0.0 && route.snapshot().player_position.y < 583.0 + 0.9 - 1.0)) {
+        at("a slide run on past the lip must go down into the pit");
+        return false;
+    }
+    // Up the pit's west wall by a mantle.
+    if (!walk_to(route, 0.9, -146.0, 6.0, 0.2)) {
+        at("walk to the pit's west wall failed");
+        return false;
+    }
+    (void)route.set_facing(-1.0, 0.0);
+    (void)route.advance_frame(0.4);
+    if (!route.snapshot().ledge_available) {
+        at("no mantle offered at the pit's wall");
+        return false;
+    }
+    (void)route.request_traversal();
+    if (!wait_for(route, 2.0, [](const Snapshot &n) { return standing_above(n, 583.0); })) {
+        at("out of the pit failed");
+        return false;
+    }
+    // Back west under the beam, crouched (a standing walk is stopped by it).
+    (void)route.set_crouch_input(true);
+    const bool under = walk_to(route, -4.5, -146.0, 20.0, 0.2);
+    (void)route.set_crouch_input(false);
+    (void)route.advance_frame(0.5);
+    if (!under || !walk_to(route, -6.0, -146.0, 8.0, 0.15)) {
+        at("back under the beam failed");
+        return false;
+    }
+    run(true, slide_mps, end_x);
+    std::cout << "route: slide jump: Jump out of a " << slide_mps << " m/s slide: landed at x " << end_x << ", y "
+              << route.snapshot().player_position.y << "\n";
+    if (!(end_x > 5.6 && route.snapshot().player_position.y > 583.5)) {
+        at("the slide jump must clear the pit onto the far deck");
+        return false;
+    }
+    // Round the pole to its east side (it stands at x = 8.14).
+    return walk_to(route, 7.2, -144.6, 8.0, 0.2) && walk_to(route, 8.7, -144.6, 6.0, 0.2) &&
+           crane_pole(route, 8.7, -146.0, -1.0, 0.0, 594.4, "pole 2");
+}
+
 // AS-009's climbing route, on player inputs: from the 484 ring's north band to
 // the east band, one L of boards and a ladder per ring gap to 616, then the
 // ladder up through TP-640's hatch; every lift in the band where it was found.
@@ -290,6 +653,46 @@ void run_crane_route() {
                 walk_to(route, 10.3, -149.0, 12.0),
             "route: along the 484 ring to its east band");
     for (double h = 484.0; h < 615.9; h += 22.0) {
+        if (h == 506.0) {
+            require(run_springboard_stage(route), "route: the springboard, 506 to 528");
+            // Round the 528 ring's west, north and east bands to its east band.
+            require(walk_to(route, -8.5, -141.5, 12.0, 0.3) && walk_to(route, 8.5, -141.5, 20.0, 0.3) &&
+                        walk_to(route, 8.5, -149.0, 10.0, 0.3),
+                    "route: round the 528 ring to its east band");
+            continue;
+        }
+        if (h == 528.0) {
+            require(run_stones_stage(route), "route: the stepping stones, 528 to 550");
+            // Round the 550 ring's west, north and east bands to its east band.
+            require(walk_to(route, -7.6, -142.4, 14.0, 0.3) && walk_to(route, 7.6, -142.4, 20.0, 0.3) &&
+                        walk_to(route, 6.6, -149.0, 10.0, 0.3),
+                    "route: round the 550 ring to its east band");
+            continue;
+        }
+        if (h == 550.0) {
+            require(run_tuck_stage(route), "route: the tuck wall, 550 to 572");
+            // Round the 572 ring's west, north and east bands to its east band (the walk
+            // the ladder route made here), and back to the west band, where the slide
+            // jump below starts.
+            require(walk_to(route, -6.7, -143.3, 14.0, 0.3) && walk_to(route, 6.7, -143.3, 20.0, 0.3) &&
+                        walk_to(route, 6.7, -149.0, 10.0, 0.3),
+                    "route: round the 572 ring to its east band");
+            const bool w1 = walk_to(route, 6.7, -143.3, 10.0, 0.3);
+            const bool w2 = w1 && walk_to(route, -5.4, -143.3, 20.0, 0.3);
+            const bool w3 = w2 && walk_to(route, -5.4, -149.5, 10.0, 0.3);
+            if (!w3) {
+                const auto p = route.snapshot().player_position;
+                std::cout << "route: back round: " << w1 << w2 << w3 << " at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+            }
+            require(w3, "route: and back round the 572 ring to its west band");
+            continue;
+        }
+        if (h == 572.0) {
+            // On the 572 ring's west band after the tuck wall's pole; the next gap tops out
+            // on the 594 ring's east band from outside, where the next climb starts.
+            require(run_slide_jump_stage(route), "route: the slide jump, 572 to 594");
+            continue;
+        }
         const double s = 14.72 - 0.91 * (h - 330.0) / 22.0;
         // Stopped at the boards' end before turning onto them: the walk off
         // the ladder carries its speed across their line.
