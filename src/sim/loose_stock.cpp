@@ -742,16 +742,28 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     // The four sides, each by the direction out from the shaft across it.
     const std::array<Vec3, 4> sides = {Vec3(0.0F, 0.0F, 1.0F), Vec3(1.0F, 0.0F, 0.0F), Vec3(0.0F, 0.0F, -1.0F),
                                        Vec3(-1.0F, 0.0F, 0.0F)};
-    int taken = 0;
+    // Template and variant choice is counted per side group, not globally:
+    // when the east/west bands were bare, every accepted spot was north or
+    // south, so a north/south spot's template came from the count of the
+    // north/south spots before it. Counting east/west acceptances into that
+    // number would reshuffle every later north/south spot's template for no
+    // reason but the newly dressed bands, so each group counts only itself.
+    int taken_ns = 0;
+    int taken_ew = 0;
     for (std::size_t ring = 0; ring < tops.size(); ++ring) {
         const float top = tops[ring];
         const bool crane_deck = std::find(kCraneDecks.begin(), kCraneDecks.end(), top) != kCraneDecks.end();
         const int most = crane_deck ? kSpotsPerCraneRing : ring < stack_rings ? kSpotsPerStackRing : kSpotsPerUpperRing;
         std::vector<RVec3> spots;
+        int ns_in_ring = 0;
+        int ew_in_ring = 0;
         // Each ring starts on another side and at another place along it, so
         // no two rings are dressed alike.
         for (std::size_t s = 0; s < sides.size(); ++s) {
             const Vec3 out = sides[(s + ring) % sides.size()];
+            // East/west sides run across x, north/south across z; the
+            // clearance box below uses the same split.
+            const bool sideways = std::abs(out.GetX()) > 0.5F;
             if (static_cast<int>(spots.size()) >= most) {
                 break;
             }
@@ -777,10 +789,17 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
             }
             const float start = -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
             for (float a = start; a <= edge - 2.0F && static_cast<int>(spots.size()) < most; a += 1.5F) {
-                const bool crane_spot = crane_deck && spots.size() % 2 == 0;
+                // The crane's loads alternate per side group within a ring,
+                // for the same reason as the template count below: on the
+                // crane decks the trunk's spots were all north/south, so a
+                // north/south spot's crane turn must not move when an
+                // east/west spot is accepted first in its ring.
+                const bool crane_spot =
+                    crane_deck && ((sideways ? ew_in_ring : ns_in_ring) % 2 == 0);
                 const std::vector<SpotTemplate> &kinds = crane_spot ? crane_spot_templates() : spot_templates();
+                const int taken_for_side = sideways ? taken_ew : taken_ns;
                 const SpotTemplate &spot =
-                    kinds[static_cast<std::size_t>(taken + static_cast<int>(ring)) % kinds.size()];
+                    kinds[static_cast<std::size_t>(taken_for_side + static_cast<int>(ring)) % kinds.size()];
                 const RVec3 origin(kRingCentreX + out.GetX() * edge + along.GetX() * a, top,
                                    kRingCentreZ + out.GetZ() * edge + along.GetZ() * a);
                 const auto at = [&](const float u, const float v) {
@@ -838,7 +857,7 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 // and rejected every east/west candidate — measured 2026-10-31:
                 // zero east and zero west spots on all 13 stack rings, while
                 // north/south (where width already ran along x) dressed fine.
-                const bool sideways = std::abs(out.GetX()) > 0.5F;
+                // `sideways` is set at the top of the side loop.
                 const RefConst<Shape> room =
                     new BoxShape(sideways ? Vec3(0.5F * spot.depth, 1.24F, 0.5F * spot.width)
                                           : Vec3(0.5F * spot.width, 1.24F, 0.5F * spot.depth));
@@ -866,13 +885,19 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 for (std::size_t n = 0; n < spot.pieces.size(); ++n) {
                     const SpotPiece &piece = spot.pieces[n];
                     const RVec3 p = at(piece.along, near + piece.out);
-                    const auto variant =
-                        static_cast<std::uint8_t>((piece.variant + static_cast<std::size_t>(taken) + n) % 3U);
+                    const auto variant = static_cast<std::uint8_t>(
+                        (piece.variant + static_cast<std::size_t>(taken_for_side) + n) % 3U);
                     add_piece({piece.kind, variant, static_cast<float>(p.GetX()), floor + piece.up,
                                static_cast<float>(p.GetZ()), yaw + piece.yaw});
                 }
                 spots.push_back(origin);
-                ++taken;
+                if (sideways) {
+                    ++taken_ew;
+                    ++ew_in_ring;
+                } else {
+                    ++taken_ns;
+                    ++ns_in_ring;
+                }
             }
         }
     }
