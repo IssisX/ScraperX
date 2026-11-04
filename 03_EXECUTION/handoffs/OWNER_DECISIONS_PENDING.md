@@ -71,6 +71,21 @@ ascend), but the loose things (what the forklift and
 crane lift, barrels, boxes, shipping containers): they dent with the force of the hit, crates break into loose
 stock; rule 51, the phone, determinism and saves hold; her budget is unchanged.
 
+**11-04, 11:00 AM Central, decided by the integrator** (J-006 #113, leg 6; Cory: "make the leg-6 call yourself"):
+after her clean release at the bottom of the leg-6 down climb, routecraft picks the same wall ladder back up and lifts
+her 0.46 m. If her pursuit target is at or below her, that is a game defect: fix it in routecraft by not re-taking the
+just-released climb edge while her goal is not above its top (+0.3 m), rather than a general wait after every release,
+which would move chase timing everywhere and risk the 17/20 bar. If the target really is above her, re-climbing is
+right and the test's end-height check changes by a protected PR. Muse measures which applies. He can overturn it.
+
+**11-04, 10:37 AM Central, Cory's own picks:** the API review model is Opus at high effort ($0.09 a review measured,
+against Sonnet xhigh's $0.14, and one Sonnet review hit its token limit with no verdict). The integrator runs at max
+effort ("you miss too much when I set it on extra high"). Reviews: Codex first, then the Claude API; Grok and ChatGPT
+by their scheduled runs only as the fallback.
+
+**11-04, 11:36 AM Central, Cory:** compact instead of a new session; he ran /compact himself. Then (11:45 AM, "yes"):
+compact at 400k, a new session only when one is broken; the handoff file stays current so nothing depends on the summary.
+
 **11-03, 10:11 AM Central, decided by the integrator** (Cory: use Muse's intelligence, free, for as many of
 the big, difficult things as is best): J-004 (#111, S6 tells) and J-006 (#113, the grade ladder, PR #91,
 then J-007 #114 behind it) move from ChatGPT to Muse; ChatGPT reviews them. Muse runs the ladder on a
@@ -179,6 +194,31 @@ Answer: **later**.
   consent in game (rule 57); only the export setting is missing, which is work.
 - **Her many ways to die, the hook gun as a weapon**: parked by rule 64; nothing to decide until he
   picks from question 4.
+
+Reviews, 11-03 (Cory's orders; the integrator's calls marked): one reviewer per PR, whoever is free,
+spread around (*"I'm not asking for two agents to review the same shit"*): the Claude API at xhigh,
+Muse, ChatGPT and Codex; a reviewer who stays quiet an hour (was 3) is passed over (#178).
+The GitHub Actions Claude review takes Claude's PRs too and its LAND counts there (his "yes", 11-03),
+on Sonnet 5.5 at xhigh (Claude's pick, he agreed: half the price of Opus; Codex also reviews every PR on
+open and its findings block). A Codex review that completed on the exact head with no findings counts as a
+LAND (first used on #175, 1:45 PM Central). The $10 API day cap is gone (Cory, 11-03); only the $100 month cap holds.
+
+J-017 crane band, 11-03 3:55 PM Central (integrator's call): no verb but the springboard can be a strict gate in
+static geometry (plain jump reach beats precision's range), so precision stones, a tuck beam and a slide-jump go in as
+intended routes, not gates, ladders kept as backups (rule 52), each with its own route-test leg. #182's gantry moves
+to the 374 ring's north band rather than changing the welder test or crew.cpp. Still his: making the grappling hook
+required (it changes the game's flow).
+
+Session size, 11-03 3:15 PM Central (Cory: "Yes, go with your pick"): the handoff line moves from 400k to 700k
+context tokens (handoff note at 600k), for the integrator and every worker. Why: six integrators in one day lost
+know-how at each handoff and the 8-deep session chain runs out; a turn at the top costs about 1.7x, but half the handoffs.
+
+Workers, 11-03 2:45 PM Central (Cory, to the J-016 session): *"start the next job while CI runs and always"*.
+Every worker starts its next job while CI proves the last; in CLAUDE.md ("Nobody waits") and every brief.
+
+J-017, 11-03 (integrator's call under the standing order): the Matron need not follow her whole route above
+221 m; she chases where she can and the 10-27 escape-margin rule holds. Reason: keeping her on every move
+(wall-run, slide, vault) would mean new chaser locomotion for each, with no gain in the chase. He can overturn it.
 
 ## Not decisions (work for an agent; see `GAP_LIST.md`)
 

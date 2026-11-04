@@ -265,6 +265,8 @@ const HAPTICS := {
 	&"heave": [60, 0.8],   # the chiller drop's car heaving under the feet
 	&"rumble": [20, 0.25],   # its air roaring under the floor while it runs
 	&"splash": [90, 0.9],   # the body going into a pool (water_feel.gd)
+	&"strike_sweep": [30, 0.60],   # the low sweep landing (spec section 8.1 cap)
+	&"strike_whiff": [12, 0.25],   # the low sweep missing (spec section 8.1 cap)
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -651,6 +653,15 @@ func _layout_hud() -> void:
 		var base := 24.0 if label == _status else 15.0
 		label.add_theme_font_size_override("font_size", int(roundf(base * scale)))
 
+	# The readouts float over the world with no backing, so over bright snow or
+	# the yellow crane they washed out (the eye's FIX on the approach frame,
+	# J-037). A dark ink outline plus a soft drop shadow keeps every glyph's
+	# edge against any sky or steel without a panel that hides the world.
+	for box_path in [^"HUD/TopLeft", ^"HUD/TopRight"]:
+		for child in get_node(box_path).get_children():
+			if child is Label:
+				_ink_edge(child as Label, scale)
+
 	# Below the touch pause button, which owns the top-left corner.
 	var top_left: Control = $HUD/TopLeft
 	top_left.offset_left = gutter
@@ -672,6 +683,19 @@ func _layout_hud() -> void:
 	for child in top_right.get_children():
 		if child is Label:
 			(child as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+# Outline width follows the label's own size (about a fifth of its glyph
+# height, never under 3 px) so the ratio holds from the Fold to the desktop.
+func _ink_edge(label: Label, ui_scale: float) -> void:
+	var size := label.get_theme_font_size("font_size")
+	var edge := maxi(3, int(roundf(float(size) * 0.2)))
+	label.add_theme_constant_override("outline_size", edge)
+	label.add_theme_color_override("font_outline_color", UiStyle.EDGE)
+	label.add_theme_color_override("font_shadow_color", UiStyle.SHADOW)
+	label.add_theme_constant_override("shadow_offset_x", int(roundf(2.0 * ui_scale)))
+	label.add_theme_constant_override("shadow_offset_y", int(roundf(2.0 * ui_scale)))
+	label.add_theme_constant_override("shadow_outline_size", edge + int(roundf(2.0 * ui_scale)))
 
 # --- presentation mirror ----------------------------------------------------
 
@@ -814,6 +838,25 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if haul > 1.0:
 		_haul_phase += delta * 2.6
 		dip += -0.018 * clampf(haul / 700.0, 0.0, 1.0) * (0.5 + 0.5 * sin(_haul_phase))
+	# A low sweep (spec §8.2): the view dips toward the sweep side and
+	# lowers ~0.15 m through the strike's phases, easing in over the
+	# windup, full through the reach, easing out over the recoil. Zero
+	# whenever no sweep is under way, so a stationary player still reads
+	# back exactly.
+	var strike: Dictionary = _ctx.get("strike", {})
+	if int(strike.get("move", 0)) == 1:
+		var sphase := int(strike.get("phase", 0))
+		if sphase != 0:
+			var sticks := float(strike.get("phase_ticks", 0))
+			var env := 0.0
+			if sphase == 1:
+				env = smoothstep(0.0, 1.0, clampf(sticks / 16.0, 0.0, 1.0))
+			elif sphase == 2:
+				env = 1.0
+			elif sphase == 3:
+				env = 1.0 - smoothstep(0.0, 1.0, clampf(sticks / 22.0, 0.0, 1.0))
+			dip += -0.15 * env
+			lateral_bob += 0.05 * env * (1.0 if int(strike.get("arm", 1)) == 1 else -1.0)
 	# Reduced motion: what moves the view by itself is turned down.
 	var motion := 0.25 if _reduced_motion else 1.0
 	dip *= motion
@@ -907,6 +950,10 @@ func _feel_strike(delta: float) -> void:
 		var at: Vector3 = strike.get("hit_point", _camera.global_position)
 		var impulse := float(strike.get("impulse", 0.0))
 		_audio.player_strike(edge, at if edge == &"landed" else _camera.global_position, impulse)
+		if edge == &"landed" and int(strike.get("move", 0)) == 1:
+			_haptic(&"strike_sweep", clampf(impulse / 60.0, 0.3, 1.0))
+		if edge == &"missed" and int(strike.get("move", 0)) == 1:
+			_haptic(&"strike_whiff", 0.5)
 		if edge == &"landed":
 			var normal: Vector3 = strike.get("hit_normal", Vector3.ZERO)
 			if _matron_view != null:

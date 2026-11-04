@@ -1040,7 +1040,13 @@ public:
     [[nodiscard]] int strike_arm() const noexcept;
     [[nodiscard]] bool fist_usable(int side) const noexcept;
     [[nodiscard]] bool strike_would_land(JPH::RVec3 chest, JPH::Vec3 line, JPH::RVec3 c) const noexcept;
+    [[nodiscard]] bool sweep_would_land(JPH::RVec3 at, JPH::Vec3 facing, JPH::RVec3 c) const noexcept;
+    // A sweep's landing geometry, shared by its offer and its contact: the
+    // ankle point and the blow's normal, when it lands.
+    [[nodiscard]] bool sweep_land_point(JPH::RVec3 at, JPH::Vec3 facing, JPH::RVec3 c, JPH::RVec3 *point,
+                                        JPH::Vec3 *normal) const noexcept;
     int strike_side_ = 1;           // the fist this strike is thrown with
+    std::uint8_t strike_move_ = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;
     [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;

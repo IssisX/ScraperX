@@ -66,7 +66,9 @@ func update(strike: Dictionary, camera_basis: Basis, delta: float, reduced_motio
 		_kick_t = 0.0
 		# The head goes back and a little off the striking side: about the
 		# camera's right axis (pitch up) tipped toward its forward roll.
-		_kick_axis = (camera_basis.x + camera_basis.z * 0.25).normalized()
+		# A sweep dips instead: about the negated right axis, the head down.
+		_kick_axis = -camera_basis.x if int(strike.get("move", 0)) == 1 else \
+			(camera_basis.x + camera_basis.z * 0.25).normalized()
 		_fov = 0.0 if reduced_motion else FOV_PINCH_DEG
 		edges.append(&"landed")
 	if _phase == 2 and phase == 3 and not _landed_this:

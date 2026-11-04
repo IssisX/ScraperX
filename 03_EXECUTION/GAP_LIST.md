@@ -19,14 +19,19 @@ The ordering is historical, not an assignment or current priority; check the iss
 
 ## 0. Coverage hole
 
-**Covered except one scenario, which fails on trunk.** `matron_presentation_test.gd` and
+**Covered except one scenario, which fails on trunk (rechecked 2026-11-04).** `matron_presentation_test.gd` and
 `script_load_test.gd` run in the `godot-audits-and-mix` job; `gore_shots_test.gd` runs there too
 since J-027 (issue #134; without `--out` it renders nothing and needs no display). The scenario
-`touch_matron_pipe` is in no `godot-touch` shard because it fails on trunk: the drum staged on her
-deck is already on the ground, 154 m down, by the time she comes out of her locker, so Action is
-never PICK UP (diagnosis on #134; same failure as the trunk baseline e05d1aac). It stays a warned
-known gap in `.github/scripts/check_touch_shard_coverage.py` until a fix to the staging lands;
-[PR #29](https://github.com/IssisX/ScraperX/pull/29) proposes one, unmerged. Do not infer visual
+`touch_matron_pipe` is in no `godot-touch` shard because it still fails on trunk. Rerun on
+d185ec86 (2026-11-04, J-027, headless as touch-2 runs it), first failing line:
+`SCRAPERX_UITEST FAIL touch_matron_pipe reason=Action read '' at the drum by the edge, not PICK UP
+(drum at (18.54441, 154.2741, -146.4866), me at (16.97562, 143.88, -127.9226), carry target 0, ...)`.
+The drum is set down in the corner at (17.04, 154.45, -128.72) and is no longer found 154 m down
+(the 11-03 failure, diagnosis on #134), but by the take-back it lies 17.8 m south on the deck, and
+the climber, up the riser to 156.2 m, ends the run back to it on 143 (y 143.88). Which body moves
+the drum and why he drops off the deck are not yet pinned. It stays a warned known gap in
+`.github/scripts/check_touch_shard_coverage.py` until a fix lands;
+[PR #29](https://github.com/IssisX/ScraperX/pull/29) proposes a staging fix, unmerged. Do not infer visual
 approval from a headless run or screenshots merely existing.
 
 ## Ranked gaps

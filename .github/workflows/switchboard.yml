@@ -51,7 +51,18 @@ permissions: {}
 
 concurrency:
   # The one-time provision dispatch gets its own group: in the shared one a newer queued run replaces it.
-  group: ${{ github.event_name == 'pull_request' && format('switchboard-selftest-{0}', github.ref) || (inputs.provision && 'switchboard-provision' || 'switchboard') }}
+  # A comment or label event that the jobs below will skip gets a group of its own too (11-03): GitHub keeps
+  # one pending run per group and cancels the older one, so idle comment runs, several a minute, were
+  # displacing the proof-finished and scheduled runs that do the reviews, the eye and the sweep.
+  group: >-
+    ${{ github.event_name == 'pull_request' && format('switchboard-selftest-{0}', github.ref) ||
+    (inputs.provision && 'switchboard-provision' ||
+    (((github.event_name == 'issue_comment' && !(github.event.issue.pull_request &&
+    (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
+    contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK')))) ||
+    (github.event_name == 'issues' && github.event.label.name != 'needs:orchestrator' &&
+    !startsWith(github.event.label.name, 'owner:'))) &&
+    format('switchboard-idle-{0}', github.run_id) || 'switchboard')) }}
   cancel-in-progress: false
 
 env:
@@ -107,7 +118,7 @@ jobs:
         (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
          contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK')))
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 60
     permissions:
       contents: write        # appends work/archive/runs.log on the switchboard/ledger branch
       issues: write          # verdict and note comments

@@ -6,6 +6,7 @@ No network, no clock: every time is given.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import json
 import os
@@ -249,6 +250,36 @@ class Board(unittest.TestCase):
         self.assertEqual(rules.budget_override([("budget 12", "IssisX"), ("ok", "IssisX"), ("Budget 15.50\nthanks", "IssisX")], TEAM), "15.50")
         self.assertEqual(rules.budget_override([("my budget 12 is fine", "IssisX")], TEAM), "")
 
+    def test_superseded_prs_are_read_from_the_body(self):
+        self.assertEqual(rules.superseded_prs("Drawn-body checks.\nSupersedes #43, per the spec.", 100), [43])
+        self.assertEqual(rules.superseded_prs("supersedes #43 and #44; also Supersedes #43, #45", 100), [43, 44, 45])
+        self.assertEqual(rules.superseded_prs("Supersedes #100", 100), [])
+        self.assertEqual(rules.superseded_prs("Fixes #43. Supersedes nothing.", 100), [])
+        self.assertEqual(rules.superseded_prs(None, 1), [])
+
+    def test_a_ready_pr_closes_the_open_prs_it_supersedes(self):
+        class GH:
+            repo = "IssisX/ScraperX"
+            def __init__(self):
+                self.writes, self.comments = [], []
+            def get(self, path):
+                n = int(path.rsplit("/", 1)[1])
+                if n == 9:
+                    raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+                return {"state": "closed" if n == 44 else "open"}
+            def comment(self, number, body, what=""):
+                self.comments.append(number)
+            def write(self, method, path, body=None, what=""):
+                self.writes.append((method, path, body))
+        ctx = {"body": "Supersedes #43, #44 and #9"}
+        for draft, closed in ((False, [43]), (True, [])):
+            gh, lines = GH(), []
+            me = types.SimpleNamespace(gh=gh, out=lines.append)
+            facts = types.SimpleNamespace(number=100, draft=draft)
+            switch.Switch.close_superseded(me, facts, ctx)
+            self.assertEqual(gh.comments, closed)
+            self.assertEqual(gh.writes, [("PATCH", f"repos/IssisX/ScraperX/pulls/{n}", {"state": "closed"}) for n in closed])
+
     def test_budget_override_ignores_outsiders_and_the_bot(self):
         self.assertEqual(rules.budget_override([("budget 100", "outside-team")], TEAM), "")
         self.assertEqual(rules.budget_override([("budget 9", "IssisX"), ("budget 100", "outside-team")], TEAM), "9")
@@ -363,7 +394,7 @@ class RepoConfig(unittest.TestCase):
             self.skipTest("PyYAML not installed")
         root = HERE.parents[1]
         team = rules.team_from_config(yaml.safe_load((root / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertNotIn("codex", {n for n in team.vendor_of_name})
+        self.assertEqual(team.agent_vendor.get("codex"), "openai")   # Codex reviews again (11-03), as the GitHub app
         b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
         self.assertLessEqual(b.month, Decimal("100"))
         # The API agent is on (Cory, 11-03); its hard per-session budget must fit the job and day caps.
@@ -396,7 +427,10 @@ class FakeGH:
         self.gets.append(path)
         if "/issues?" in path:
             return self.issues
-        return next(i for i in self.issues if path.endswith(f"/issues/{i['number']}"))
+        found = next((i for i in self.issues if path.endswith(f"/issues/{i['number']}")), None)
+        if found is None:
+            raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+        return found
 
     def paged(self, path, key=""):
         return list(self.comments.get(int(path.split("/issues/")[1].split("/")[0]), []))
@@ -600,6 +634,30 @@ class SessionWatcher(unittest.TestCase):
         self.assertEqual(sw.watch_sessions(), 1)
         self.assertEqual([n for n, _ in gh.posted], [140])
         self.assertTrue(any(l.startswith("ERROR       #138") for l in sw.lines))
+
+    def test_a_reserve_whose_issue_closed_is_watched_and_ended_at_its_cost(self):
+        # The $8.00 of #136 (J-031, 11-04): the open listing never shows a closed issue, so its reserve stood for ever.
+        gh = FakeGH([dict(issue(136, "J-029 x"), state="closed")], {136: [start_comment(136)]})
+        gh.get = lambda path, accept="", get=gh.get: (gh.gets.append(path), [])[1] if "/issues?" in path else get(path)
+        sw = make_switch(gh, {SESSION: {"status": "terminated", "cents": "250"}}, (reserve_line(note="orchestrator#136"),))
+        self.assertEqual(sw.watch_sessions(), 0)
+        (line,) = sw.appended
+        got = money.parse_log(line)[0]
+        self.assertEqual((got.run, got.phase, got.usd), (RUN, "end", Decimal("2.50")))
+        self.assertEqual([n for n, _ in gh.posted], [136])
+        # Ended: the next sweep does not read that issue again.
+        sw.initial, sw.appended, gh.gets = sw.initial + sw.appended, [], []
+        sw.watch_sessions()
+        self.assertEqual(gh.gets, ["repos/IssisX/ScraperX/issues?labels=job,needs:orchestrator&state=open&per_page=30"])
+
+    def test_a_reserve_whose_issue_is_open_or_gone_is_not_touched_here(self):
+        gh = FakeGH([dict(issue(140), state="open")], {140: [start_comment(140)]})
+        gh.get = lambda path, accept="", get=gh.get: (gh.gets.append(path), [])[1] if "/issues?" in path else get(path)
+        sw = make_switch(gh, {SESSION: {"status": "terminated", "cents": "250"}},
+                         (reserve_line(note="orchestrator#140"), reserve_line("0123456789ab", "orchestrator#141")))
+        self.assertEqual(sw.watch_sessions(), 0)   # #141 answers 404: a note, not a failure
+        self.assertEqual((sw.appended, gh.posted, sw.sessions.reads), ([], [], []))
+        self.assertTrue(any("#141 holds a reserve but the issue is gone" in l for l in sw.lines))
 
     def test_the_issue_list_is_one_bounded_page_of_open_job_issues_and_skips_prs(self):
         gh = FakeGH([dict(issue(5), pull_request={})], {})
@@ -899,5 +957,284 @@ class SdkRequests(unittest.TestCase):
         self.assertIsInstance(unk.exception.__cause__, anthropic.APIConnectionError)
 
 
+def sse(*events: dict) -> bytes:
+    return b"".join(f"event: {e['type']}\ndata: {json.dumps(e)}\n\n".encode() for e in events)
+
+
+def streamed_answer(text: str, stop: str = "end_turn", thinking: str = "") -> bytes:
+    """A Messages API stream as the server sends it: an optional thinking block, then one text block."""
+    events = [{"type": "message_start", "message": {
+        "id": "msg_1", "type": "message", "role": "assistant", "model": "claude-opus-5-5", "content": [],
+        "stop_reason": None, "stop_sequence": None, "usage": {"input_tokens": 1200, "output_tokens": 1}}}]
+    i = 0
+    if thinking:
+        events += [{"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": "", "signature": ""}},
+                   {"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": thinking}},
+                   {"type": "content_block_delta", "index": 0, "delta": {"type": "signature_delta", "signature": "sig"}},
+                   {"type": "content_block_stop", "index": 0}]
+        i = 1
+    if text:
+        events += [{"type": "content_block_start", "index": i, "content_block": {"type": "text", "text": ""}}]
+        events += [{"type": "content_block_delta", "index": i, "delta": {"type": "text_delta", "text": text[k:k + 7]}}
+                   for k in range(0, len(text), 7)]
+        events += [{"type": "content_block_stop", "index": i}]
+    events += [{"type": "message_delta", "delta": {"stop_reason": stop, "stop_sequence": None}, "usage": {"output_tokens": 4321}},
+               {"type": "message_stop"}]
+    return sse(*events)
+
+
+@unittest.skipUnless(HAVE_SDK, "anthropic and httpx2 not installed")
+class StreamedAsk(unittest.TestCase):
+    """The review and the eye stream (Cory, 11-04: Opus at max effort; a long think must not time out)."""
+
+    SCHEMA = {"type": "object", "properties": {"verdict": {"type": "string"}}, "required": ["verdict"], "additionalProperties": False}
+
+    def client(self, handler):
+        import anthropic
+        return anthropic.Anthropic(api_key="sk-ant-test", max_retries=0,
+                                   http_client=httpx2.Client(transport=httpx2.MockTransport(handler)))
+
+    def ask(self, handler):
+        return claude_calls.ask_json(self.client(handler), "claude-opus-5-5", 64000, "max", "sys",
+                                     [claude_calls.text_block("diff")], self.SCHEMA)
+
+    def test_the_request_streams_and_keeps_every_parameter(self):
+        seen = []
+
+        def handler(req):
+            seen.append(json.loads(req.content.decode()))
+            return httpx2.Response(200, headers={"content-type": "text/event-stream"},
+                                   content=streamed_answer('{"verdict": "LAND"}', thinking="long think"))
+        res = self.ask(handler)
+        self.assertEqual(res, claude_calls.Result({"verdict": "LAND"}, "end_turn", "claude-opus-5-5", 1200, 4321))
+        body = seen[0]
+        self.assertIs(body["stream"], True)
+        self.assertEqual((body["model"], body["max_tokens"], body["system"]), ("claude-opus-5-5", 64000, "sys"))
+        self.assertEqual(body["messages"], [{"role": "user", "content": [{"type": "text", "text": "diff"}]}])
+        self.assertEqual(body["output_config"], {"effort": "max", "format": {"type": "json_schema", "schema": self.SCHEMA}})
+        self.assertNotIn("thinking", body)   # adaptive is the only mode on claude-opus-5-5: left unset
+
+    def test_a_think_that_hits_max_tokens_gives_no_verdict_but_its_usage(self):
+        def handler(req):
+            return httpx2.Response(200, headers={"content-type": "text/event-stream"},
+                                   content=streamed_answer("", stop="max_tokens", thinking="x" * 50))
+        self.assertEqual(self.ask(handler), claude_calls.Result(None, "max_tokens", "claude-opus-5-5", 1200, 4321))
+
+    def test_a_status_error_before_the_stream_is_a_call_error(self):
+        for code in (400, 429, 529):
+            def reject(req, code=code):
+                return httpx2.Response(code, json={"type": "error", "error": {"type": "api_error", "message": "no"}})
+            with self.assertRaises(claude_calls.ClaudeCallError, msg=code) as err:
+                self.ask(reject)
+            self.assertIn(f"HTTP {code}" if code != 429 else "rate-limited", str(err.exception))
+
+    def test_an_error_event_mid_stream_is_a_call_error(self):
+        def handler(req):
+            body = streamed_answer('{"verdict": "LAND"}')
+            cut = body.index(b"event: message_delta")
+            return httpx2.Response(200, headers={"content-type": "text/event-stream"}, content=body[:cut] + sse(
+                {"type": "error", "error": {"type": "overloaded_error", "message": "Overloaded"}}))
+        with self.assertRaises(claude_calls.ClaudeCallError) as err:
+            self.ask(handler)
+        self.assertIn("messages.stream(claude-opus-5-5) answered HTTP", str(err.exception))
+
+    def test_a_stream_cut_off_mid_answer_is_a_call_error(self):
+        def handler(req):
+            body = streamed_answer('{"verdict": "LAND"}', thinking="long think")
+
+            def chunks():
+                yield body[:200]
+                raise httpx2.ReadTimeout("timed out")
+            return httpx2.Response(200, headers={"content-type": "text/event-stream"}, content=chunks())
+        with self.assertRaises(claude_calls.ClaudeCallError) as err:
+            self.ask(handler)
+        self.assertIn("cut off mid-answer (ReadTimeout)", str(err.exception))
+
+    def test_a_connection_error_is_a_call_error(self):
+        def drop(req):
+            raise httpx2.ConnectError("boom", request=req)
+        with self.assertRaises(claude_calls.ClaudeCallError) as err:
+            self.ask(drop)
+        self.assertIn("could not connect", str(err.exception))
+
+    def test_the_client_waits_long_enough_for_a_streamed_answer(self):
+        self.assertEqual(claude_calls.REQUEST_TIMEOUT_S, 900.0)
+        self.assertLess(claude_calls.REQUEST_TIMEOUT_S, 60 * 60)   # the ask job's timeout-minutes
+
+
+class FakeStreamClient:
+    """A stand-in client whose messages.stream is a context manager, for callers that do not need the SDK."""
+
+    def __init__(self, final):
+        self.final, self.calls = final, []
+        self.messages = types.SimpleNamespace(stream=self.stream)
+
+    def stream(self, **kw):
+        self.calls.append(kw)
+        client = self
+
+        class Manager:
+            def __enter__(self):
+                return types.SimpleNamespace(get_final_message=lambda: client.final)
+
+            def __exit__(self, *exc):
+                return False
+        return Manager()
+
+
+@unittest.skipUnless(HAVE_SDK, "anthropic not installed: claude_calls imports it for its error classes")
+class StreamedAskFake(unittest.TestCase):
+    def test_ask_json_reads_the_final_message_from_the_stream(self):
+        final = types.SimpleNamespace(stop_reason="end_turn", model="claude-opus-5-5",
+                                      content=[types.SimpleNamespace(type="thinking"), types.SimpleNamespace(type="text", text='{"ok": 1}')],
+                                      usage=types.SimpleNamespace(input_tokens=10, output_tokens=20))
+        c = FakeStreamClient(final)
+        res = claude_calls.ask_json(c, "claude-opus-5-5", 8000, "medium", "sys", [], {"type": "object"})
+        self.assertEqual(res, claude_calls.Result({"ok": 1}, "end_turn", "claude-opus-5-5", 10, 20))
+        self.assertEqual(c.calls[0]["output_config"], {"effort": "medium", "format": {"type": "json_schema", "schema": {"type": "object"}}})
+        self.assertEqual(c.calls[0]["max_tokens"], 8000)
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewPool(unittest.TestCase):
+    """Cory, 11-03: one reviewer per PR, whoever is available, the work spread around."""
+
+    POOL = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"])))
+    API = rules.API_REVIEWER
+
+    def test_rotation_order_differs_between_prs(self):
+        firsts = {rules.review_rotation(n, "xai", frozenset(), self.POOL)[0] for n in (30, 31, 32)}
+        self.assertEqual(firsts, {self.API, "muse", "chatgpt"})
+
+    def test_rotation_skips_the_authors_vendor_and_keeps_claude_cross_model(self):
+        for n in range(6):
+            self.assertNotIn("muse", rules.review_rotation(n, "meta", frozenset(), self.POOL))
+            self.assertEqual(sorted(rules.review_rotation(n, "anthropic", frozenset(), self.POOL)), ["chatgpt", "muse"])
+        self.assertEqual(rules.review_rotation(5, "unknown", frozenset(), self.POOL), [self.API])
+
+    def test_api_out_of_budget_is_not_available(self):
+        self.assertNotIn(self.API, rules.review_rotation(30, "xai", frozenset(), self.POOL, api_ok=False))
+        self.assertEqual(rules.review_rotation(30, "unknown", frozenset(), self.POOL, api_ok=False), [])
+
+    def test_matron_job_starts_at_its_specialist(self):
+        self.assertEqual(rules.review_rotation(30, "openai", frozenset({"matron"}), self.POOL)[0], "muse")
+
+    def test_the_free_reviewer_takes_it(self):
+        rot, now, ch = ["muse", "chatgpt"], "2026-11-02T15:00:00Z", rules.choose_reviewer
+        self.assertEqual(ch(rot, {}, now, 1, {}, {}), "muse")                                  # all free: rotation order
+        self.assertEqual(ch(rot, {}, now, 1, {"muse": 2}, {}), "chatgpt")                      # Muse is busy
+        self.assertEqual(ch(rot, {}, now, 1, {}, {"muse": 3, "chatgpt": 1}), "chatgpt")        # spread the day's work
+        self.assertEqual(ch([self.API, "muse"], {}, now, 1, {"muse": 1}, {self.API: 1}), self.API)  # the API is never busy
+        self.assertEqual(ch([self.API, "muse"], {}, now, 1, {}, {self.API: 2}), "muse")
+
+    def test_the_one_asked_keeps_it_until_quiet_too_long(self):
+        rot, now, ch = ["muse", "chatgpt"], "2026-11-02T15:00:00Z", rules.choose_reviewer
+        self.assertEqual(ch(rot, {"chatgpt": "2026-11-02T14:30:00Z"}, now, 1, {"chatgpt": 5}, {}), "chatgpt")
+        self.assertEqual(ch(rot, {"chatgpt": "2026-11-02T13:30:00Z"}, now, 1, {"muse": 5}, {}), "muse")
+        self.assertEqual(ch(rot, {"muse": "2026-11-02T12:00:00Z", "chatgpt": "2026-11-02T13:00:00Z"}, now, 1, {}, {}), "")
+
+    def test_pool_config_is_checked(self):
+        for pool, word in ((["claude"], "Claude agent"), (["nobody"], "unknown agent"), (["muse", "muse"], "twice")):
+            with self.assertRaisesRegex(ValueError, word):
+                rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=pool)))
+
+    def test_the_repo_file_sets_the_pool(self):
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        path = pathlib.Path(__file__).resolve().parents[2] / "work/agents.yml"
+        team = rules.team_from_config(yaml.safe_load(path.read_text(encoding="utf-8")))
+        self.assertEqual(tuple(team.pool), (self.API,))   # Codex reviews on open by itself; the API takes what it leaves
+
+
+class RepoReviewModel(unittest.TestCase):
+    def test_the_api_review_is_opus_max(self):
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        root = HERE.parents[1]
+        b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
+        spec = b.calls["review"]
+        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "max", 64000))   # Cory, 11-04
+        # The 64000 reserve passes the caps: the worst case at the full input limit fits one job's cap.
+        worst = money.worst_case(b, "review", spec.max_input_tokens)
+        self.assertEqual(worst, Decimal("1.880000"))   # 150,000 x $4/MTok + 64,000 x $20/MTok
+        self.assertTrue(money.check(b, [], dt.datetime(2026, 11, 4, tzinfo=dt.timezone.utc), "J-031", worst).ok)
+
+
+class CodexState(unittest.TestCase):
+    """The Codex app's summary comment is its verdict on the commit it names (Cory, 11-03)."""
+
+    def body(self, sha="2e6a845e068fbbe39b440d9c818d5a289d5f0084", status="completed", unresolved="false"):
+        return ("<!-- codex-pull-request-review-summary -->\n<!-- codex-review-state:v1 &#123;\"code_review\":&#123;"
+                f"\"commit_sha\":\"{sha}\",\"has_any_findings\":{unresolved},\"has_unresolved_findings\":{unresolved},"
+                f"\"status\":\"{status}\"&#125;,\"security_review\":&#123;\"commit_sha\":null,\"status\":null&#125;&#125; -->\n\n## Codex Review Summary")
+
+    def test_clean_review_is_a_land_on_its_commit(self):
+        v = rules.parse_codex_state(self.body(), T1, rules.CODEX_LOGIN)
+        self.assertEqual((v.vendor, v.who, v.kind, v.verdict, v.sha), ("openai", "Codex", "review", "LAND",
+                                                                        "2e6a845e068fbbe39b440d9c818d5a289d5f0084"))
+
+    def test_findings_hold_the_merge(self):
+        self.assertEqual(rules.parse_codex_state(self.body(unresolved="true"), T1, rules.CODEX_LOGIN).verdict, "FIX")
+
+    def test_running_unknown_or_forged_is_no_verdict(self):
+        self.assertIsNone(rules.parse_codex_state(self.body(status="running"), T1, rules.CODEX_LOGIN))
+        self.assertIsNone(rules.parse_codex_state(self.body(unresolved="null"), T1, rules.CODEX_LOGIN))
+        self.assertIsNone(rules.parse_codex_state(self.body(), T1, "IssisX"))
+        self.assertIsNone(rules.parse_codex_state(self.body(sha="not-a-sha"), T1, rules.CODEX_LOGIN))
+
+    def test_codex_land_counts_for_claude_work_not_for_chatgpt_work(self):
+        land = rules.parse_codex_state(self.body(sha=HEAD), T1, rules.CODEX_LOGIN)
+        pr = facts(verdicts=(land,), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic").action, "MERGE")
+        self.assertEqual(rules.merge_decision(dataclasses.replace(pr, head_ref="chatgpt/x"), "openai").action, "WAIT")
+
+
+class CodexFindingsOn178(unittest.TestCase):
+    """The three findings Codex made on #178's review pool."""
+
+    def codex_land(self, sha=HEAD):
+        body = ("<!-- codex-review-state:v1 &#123;\"code_review\":&#123;\"commit_sha\":\"" + sha +
+                "\",\"has_unresolved_findings\":false,\"status\":\"completed\"&#125;&#125; -->")
+        return rules.parse_codex_state(body, T1, rules.CODEX_LOGIN)
+
+    def test_a_same_vendor_land_does_not_answer_the_ask(self):
+        pr = facts(verdicts=(self.codex_land(),), head_ref="chatgpt/x")
+        self.assertTrue(rules.needs_review(pr, "openai"))       # Codex on ChatGPT's work: still ask someone else
+        self.assertFalse(rules.needs_review(pr, "anthropic"))   # Codex on Claude's work: answered
+        self.assertFalse(rules.needs_review(pr))                # old callers keep the old meaning
+
+
+class ApiReviewsClaude(unittest.TestCase):
+    """Cory, 11-03: the GitHub Actions Claude review gets real work: Claude's PRs too, and its LAND counts there."""
+
+    ON = rules.team_from_config(dict(AGENTS, review=dict(AGENTS["review"], pool=["claude-api", "muse", "chatgpt"],
+                                                        api_reviews_claude=True)))
+
+    def api(self, verdict):
+        return v(f"**Claude (automatic review of #9 @ {HEAD[:8]}): {verdict}**" + (REPRO if verdict == "FIX" else ""),
+                 T1, rules.BOT_LOGIN)
+
+    def test_the_api_can_take_claude_prs(self):
+        self.assertIn(rules.API_REVIEWER, rules.review_rotation(4, "anthropic", frozenset(), self.ON))
+
+    def test_its_land_counts_on_claude_work_only_when_on(self):
+        pr = facts(verdicts=(self.api("LAND"),), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "MERGE")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", TEAM).action, "WAIT")
+        self.assertFalse(rules.needs_review(pr, "anthropic", self.ON))
+        self.assertTrue(rules.needs_review(pr, "anthropic", TEAM))
+
+    def test_a_claude_session_land_never_counts_on_claude_work(self):
+        pr = facts(verdicts=(land("Claude"),), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "WAIT")
+
+    def test_its_fix_still_blocks(self):
+        pr = facts(verdicts=(land("ChatGPT"), self.api("FIX")), head_ref="claude/integrate-x")
+        self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "FIX")
