@@ -78,6 +78,8 @@ T. **Task the team, unasked.**
 7. Subscribe only to PRs you must merge yourself, and unsubscribe once one only waits on the switchboard; each PR event
    costs about 5k tokens of context. Every helper brief says: never subscribe to a PR you open. Big reads (logs, transcripts, long threads) go to
    a subagent; keep only its answer.
+U. **Better ways, unasked** (Cory, 11-04: *"I always want you figuring out better ways to do things. Always"*; he
+   found /compact himself). Each check: what costs most or is done by hand? A better way goes to him with a pick.
 
 Messages to Cory: short and plain, ending with a `---` rule and `🟣 **YOUR MOVE:**` (usually "Nothing
 to do"). Her budget is 8 kN / 44 kW.

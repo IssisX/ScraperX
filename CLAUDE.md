@@ -181,7 +181,7 @@ agent, Claude included, works this way:
   - reads: a thread's body plus what is new since your last read, never the history; long logs,
     transcripts and threads go to a subagent and only its answer comes back;
   - posts: one line per real step; a changing status is edited in place, never reposted.
-- Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
+- Find better ways, always, and say them unasked (11-04, step U). Work outside climbing gets its own issue and short
   board, linked once from the board.
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
