@@ -31,8 +31,7 @@ Session chain: 7 of 8. Compact at 400k (Cory runs /compact); a new session only 
 Opus for API reviews at max effort (#200); integrator ultracode, never workflows; reviews only, no API coding; one
 review per PR; plain answers; compact, no handoffs (auto at ~384k); cut the rules (CLAUDE.md now 6.9 KB, no decision
 logging); find better ways unasked; no full game builds for small changes (#202); fewer merge steps (#203); closed
-26 dead PRs (14 open). The integrator's merge permission line landed (2b054282) but only loads on a session restart:
-retry a merge after one; until then the switchboard merges.
+26 dead PRs (14 open). The integrator's merge permission (2b054282) works since 12:18 PM.
 
 ## Rulings by the integrator today
 - J-001 #193 (Muse's partial fix at 5041d8e4): demand-based swat share; past-rail: near-miss world tweak if the
@@ -49,15 +48,13 @@ retry a merge after one; until then the switchboard merges.
 - ChatGPT: J-030 (#137), J-038 research (#169). Switchboard review asks to ChatGPT on #132/#164 are fallbacks only.
 - To Claude: none open.
 
-## Merge queue (12:12 PM)
-- #200 (max reviewer) and #202 (proof skips game for notes-only pushes): both change workflow files, so the
-  switchboard cannot merge them (HUMAN-MERGE). Codex clean on both. Merge when green and the permission loads;
-  else ask Cory once to merge them. Tell Cory "the max reviewer is live" when #200 merges.
-- #203 (switchboard merges declared protected PRs): tools only; the switchboard merges it.
-- #150 (J-025): trunk merged in at f79c6b66 so the eye re-checks with #199's STOW fix; switchboard merges.
-- #179, #196 (J-033): switchboard merges. #43 (protected drawn-body checks): merges via #203's rule once green on a
-  fresh trunk merge. Merged today: #185, #197, #199, #201.
+## Merge queue (12:20 PM)
+- #200 MERGED 12:18 PM by the integrator: the max reviewer is live; the merge permission works now.
+- #202 (proof skips game for notes-only pushes): merge myself on green (Codex clean).
+- #203 (switchboard merges declared protected PRs): merge on green plus a review.
+- #43 (protected drawn-body checks, LAND): trunk merged at 4e15d409; merge myself on green.
+- #150 (J-025) at f79c6b66, #179, #196 (J-033): switchboard merges; if a review stalls an hour with Codex clean,
+  merge myself. Merged today: #185, #197, #199, #200, #201.
 
 ## Known here
-- The safety checker refuses the integrator's merges ("Merge Without Review") until the permission line loads.
 - `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone. Worktrees in use: proof-scope, merge-protected, j025.
