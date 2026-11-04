@@ -397,7 +397,10 @@ class FakeGH:
         self.gets.append(path)
         if "/issues?" in path:
             return self.issues
-        return next(i for i in self.issues if path.endswith(f"/issues/{i['number']}"))
+        found = next((i for i in self.issues if path.endswith(f"/issues/{i['number']}")), None)
+        if found is None:
+            raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+        return found
 
     def paged(self, path, key=""):
         return list(self.comments.get(int(path.split("/issues/")[1].split("/")[0]), []))
@@ -601,6 +604,30 @@ class SessionWatcher(unittest.TestCase):
         self.assertEqual(sw.watch_sessions(), 1)
         self.assertEqual([n for n, _ in gh.posted], [140])
         self.assertTrue(any(l.startswith("ERROR       #138") for l in sw.lines))
+
+    def test_a_reserve_whose_issue_closed_is_watched_and_ended_at_its_cost(self):
+        # The $8.00 of #136 (J-031, 11-04): the open listing never shows a closed issue, so its reserve stood for ever.
+        gh = FakeGH([dict(issue(136, "J-029 x"), state="closed")], {136: [start_comment(136)]})
+        gh.get = lambda path, accept="", get=gh.get: (gh.gets.append(path), [])[1] if "/issues?" in path else get(path)
+        sw = make_switch(gh, {SESSION: {"status": "terminated", "cents": "250"}}, (reserve_line(note="orchestrator#136"),))
+        self.assertEqual(sw.watch_sessions(), 0)
+        (line,) = sw.appended
+        got = money.parse_log(line)[0]
+        self.assertEqual((got.run, got.phase, got.usd), (RUN, "end", Decimal("2.50")))
+        self.assertEqual([n for n, _ in gh.posted], [136])
+        # Ended: the next sweep does not read that issue again.
+        sw.initial, sw.appended, gh.gets = sw.initial + sw.appended, [], []
+        sw.watch_sessions()
+        self.assertEqual(gh.gets, ["repos/IssisX/ScraperX/issues?labels=job,needs:orchestrator&state=open&per_page=30"])
+
+    def test_a_reserve_whose_issue_is_open_or_gone_is_not_touched_here(self):
+        gh = FakeGH([dict(issue(140), state="open")], {140: [start_comment(140)]})
+        gh.get = lambda path, accept="", get=gh.get: (gh.gets.append(path), [])[1] if "/issues?" in path else get(path)
+        sw = make_switch(gh, {SESSION: {"status": "terminated", "cents": "250"}},
+                         (reserve_line(note="orchestrator#140"), reserve_line("0123456789ab", "orchestrator#141")))
+        self.assertEqual(sw.watch_sessions(), 0)   # #141 answers 404: a note, not a failure
+        self.assertEqual((sw.appended, gh.posted, sw.sessions.reads), ([], [], []))
+        self.assertTrue(any("#141 holds a reserve but the issue is gone" in l for l in sw.lines))
 
     def test_the_issue_list_is_one_bounded_page_of_open_job_issues_and_skips_prs(self):
         gh = FakeGH([dict(issue(5), pull_request={})], {})
@@ -953,7 +980,19 @@ class ReviewPool(unittest.TestCase):
             self.skipTest("PyYAML not installed")
         path = pathlib.Path(__file__).resolve().parents[2] / "work/agents.yml"
         team = rules.team_from_config(yaml.safe_load(path.read_text(encoding="utf-8")))
-        self.assertEqual(tuple(team.pool), (self.API, "codex", "muse", "chatgpt"))
+        self.assertEqual(tuple(team.pool), (self.API,))   # Codex reviews on open by itself; the API takes what it leaves
+
+
+class RepoReviewModel(unittest.TestCase):
+    def test_the_api_review_is_opus_high(self):
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        root = HERE.parents[1]
+        b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
+        spec = b.calls["review"]
+        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "high", 16000))   # Cory, 11-04
 
 
 class CodexState(unittest.TestCase):

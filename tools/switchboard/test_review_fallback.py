@@ -116,8 +116,9 @@ class FallbackConfig(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("muse", "chatgpt", "grok"), 1.0))
-        self.assertEqual(team.other_authored_asks, ("muse", "chatgpt"))
+        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("grok", "chatgpt"), 1.0))
+        self.assertEqual(team.other_authored_asks, ("chatgpt",))
+        self.assertNotIn("muse", tuple(team.pool) + tuple(team.fallback_order) + tuple(team.human_reviewers))
 
 
 class FallbackPick(unittest.TestCase):
@@ -183,7 +184,7 @@ class Escalation(unittest.TestCase):
 
     def test_matron_job_asked_muse_first_falls_back_to_chatgpt_then_grok(self):
         sw, gh = self.escalate([ask_comment("muse", 4)])
-        self.assertIn("**Switchboard → ChatGPT:**", gh.posted[0][1])
+        self.assertIn("To ChatGPT:", gh.posted[0][1])
         self.assertIn("Muse has not answered", gh.posted[0][1])
 
     def test_asks_on_another_head_or_by_someone_else_do_not_count(self):
@@ -232,7 +233,7 @@ class AskFacts(unittest.TestCase):
         self.assertIn("not passing: touch-eyes", body)
         self.assertIn("rule_check: 0 BLOCK, 0 REVIEW (origin/ScraperX-Claude...@1a2b3c4d)", body)
         self.assertEqual(gh.gets, ["repos/IssisX/ScraperX/actions/runs/7/jobs?per_page=50"])
-        self.assertTrue(body.startswith("**Switchboard → ChatGPT:** review #9 @ 1a2b3c4d (J-031)"))
+        self.assertTrue(body.startswith("To ChatGPT: J-031 review #9 @ 1a2b3c4d"))
 
     def test_block_and_review_lines_are_quoted_in_a_fence(self):
         body, _ = self.ask(RC_FINDINGS)
@@ -371,3 +372,119 @@ class PoolFallbackAndLoad(unittest.TestCase):
             sw.steer_pr(pr_facts(number=n), dict(ctx(), comments=[]))
         asked = [b.split("ask-", 1)[1].split(" ", 1)[0] for _, b in gh.posted if "ask-" in b]
         self.assertEqual(sorted(asked), ["chatgpt", "chatgpt", "muse", "muse"])
+
+
+class CodexFirst(unittest.TestCase):
+    """Cory, 11-04: Codex reviews every PR; the API takes a head Codex has not reviewed; Grok and ChatGPT only
+    when neither can, by an ask that starts "To Grok:" or "To ChatGPT:"."""
+
+    TEAM = rules.team_from_config(dict(AGENTS, agents=dict(AGENTS["agents"], codex={
+        "vendor": "openai", "names": ["Codex"], "branch_prefixes": ["codex/"]}),
+        review={"claude_authored_asks": ["chatgpt"], "pool": ["claude-api"], "api_reviews_claude": True,
+                "fallback_after_hours": 1, "fallback_order": ["grok", "chatgpt"]}))
+
+    def codex(self, sha, unresolved=False):
+        body = ("<!-- codex-review-state:v1 &#123;\"code_review\":&#123;"
+                f"\"commit_sha\":\"{sha}\",\"has_unresolved_findings\":{str(unresolved).lower()},"
+                "\"status\":\"completed\"&#125;&#125; -->")
+        return rules.parse_codex_state(body, ago(1), rules.CODEX_LOGIN)
+
+    def steer(self, facts, api_ok=True, thread=()):
+        gh = FakeGH(thread)
+        sw = make(gh, team=self.TEAM)
+        sw.api_ok = lambda c: api_ok
+        sw.review_load = lambda: ({}, {})
+        sw.steer_pr(facts, ctx(comments=list(thread)))
+        who = sw.pooled_reviewer(facts, ctx(comments=list(thread)), "anthropic")[1] if rules.needs_review(facts, "anthropic", self.TEAM) else ""
+        return gh, who
+
+    def test_codex_clean_at_the_head_is_the_review(self):
+        f = pr_facts(verdicts=(self.codex(HEAD),))
+        self.assertFalse(rules.needs_review(f, "anthropic", self.TEAM))
+        self.assertEqual(rules.merge_decision(f, "anthropic", self.TEAM).action, "MERGE")
+        gh, who = self.steer(f)
+        self.assertEqual((gh.posted, who), ([], ""))
+
+    def test_codex_findings_are_a_fix_and_no_one_else_is_asked(self):
+        f = pr_facts(verdicts=(self.codex(HEAD, unresolved=True),))
+        self.assertEqual(rules.merge_decision(f, "anthropic", self.TEAM).action, "FIX")
+        gh, who = self.steer(f)
+        self.assertEqual((gh.posted, who), ([], ""))
+
+    def test_codex_on_another_head_means_one_api_review_and_no_ask(self):
+        gh, who = self.steer(pr_facts(verdicts=(self.codex(OTHER_HEAD),)))
+        self.assertEqual((gh.posted, who), ([], rules.API_REVIEWER))
+        gh, who = self.steer(pr_facts())   # no Codex state at all
+        self.assertEqual((gh.posted, who), ([], rules.API_REVIEWER))
+
+    def test_api_out_of_budget_asks_grok_once_by_a_to_grok_comment(self):
+        gh, who = self.steer(pr_facts(), api_ok=False)
+        (where, body), = gh.posted
+        self.assertEqual((where, who), (138, "grok"))
+        self.assertTrue(body.startswith("To Grok: J-031 review #9 @ 1a2b3c4d"), body[:60])
+
+    def test_grok_quiet_past_the_hour_passes_to_chatgpt(self):
+        gh, _ = self.steer(pr_facts(), api_ok=False, thread=[ask_comment("grok", 1.5)])
+        (where, body), = gh.posted
+        self.assertTrue(body.startswith("To ChatGPT: J-031 review #9 @ 1a2b3c4d"), body[:60])
+
+    def test_api_failed_on_the_head_falls_back_to_grok_never_the_api_again(self):
+        failed = {"body": f"x {switch.MARK.format(kind='api-out', pr=9, head=HEAD)}", "user": {"login": BOT}, "created_at": ago(0.2)}
+        sw = make(FakeGH([failed]), team=self.TEAM)
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        rotation, who, _ = sw.pooled_reviewer(pr_facts(), ctx(comments=[failed]), "anthropic")
+        self.assertEqual((rotation, who), (["grok", "chatgpt"], "grok"))
+        self.assertEqual(sw.api_fallback(pr_facts(), ctx(comments=[failed]), "anthropic"), "grok")
+
+    def test_the_fallbacks_never_join_the_normal_path_or_review_their_own_vendor(self):
+        self.assertEqual(rules.review_rotation(9, "anthropic", frozenset(), self.TEAM), [rules.API_REVIEWER])
+        self.assertEqual(rules.review_rotation(9, "openai", frozenset(), self.TEAM, api_ok=False), ["grok"])
+        self.assertEqual(rules.review_rotation(9, "xai", frozenset(), self.TEAM, api_ok=False), ["chatgpt"])
+
+
+class CodexRunning(unittest.TestCase):
+    """J-031: a review Codex is still running on the head is waited for, up to 30 minutes after the proof went green."""
+
+    TEAM = CodexFirst.TEAM
+    EYES = {"content": "eyes", "user": {"login": rules.CODEX_LOGIN}, "created_at": ago(0.3)}
+
+    def state(self, sha, status):
+        return {"body": ("<!-- codex-review-state:v1 &#123;\"code_review\":&#123;"
+                         f"\"commit_sha\":\"{sha}\",\"has_unresolved_findings\":null,\"status\":\"{status}\"&#125;&#125; -->"),
+                "user": {"login": rules.CODEX_LOGIN}, "created_at": ago(0.3)}
+
+    def go(self, comments=(), reactions=(), green_minutes_ago=10):
+        gh = FakeGH(comments)
+        gh.paged = lambda path, key="": list(reactions) if path.endswith("/reactions") else list(comments)
+        sw = make(gh, team=self.TEAM)
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        reviewed = []
+        sw.review = lambda facts, c, author: reviewed.append(facts.head_sha)
+        sw.marked = lambda *a: False
+        sw.stale = lambda facts: False
+        c = dict(ctx(comments=list(comments)), proof_done_at=ago(green_minutes_ago / 60))
+        sw.ask_pr(pr_facts(), c)
+        sw.steer_pr(pr_facts(), c)
+        return reviewed, gh.posted, sw.lines
+
+    def test_running_state_on_the_head_waits(self):
+        reviewed, posted, lines = self.go([self.state(HEAD, "running")])
+        self.assertEqual((reviewed, posted), ([], []))
+        self.assertTrue(any(l.startswith("WAIT-CODEX") for l in lines))
+
+    def test_eyes_without_a_completed_state_waits(self):
+        reviewed, posted, _ = self.go(reactions=[self.EYES])
+        self.assertEqual((reviewed, posted), ([], []))
+
+    def test_running_past_30_minutes_falls_back_to_the_api(self):
+        reviewed, posted, lines = self.go([self.state(HEAD, "running")], [self.EYES], green_minutes_ago=31)
+        self.assertEqual((reviewed, posted), ([HEAD], []))
+        self.assertFalse(any(l.startswith("WAIT-CODEX") for l in lines))
+
+    def test_running_on_another_head_or_nothing_running_does_not_wait(self):
+        self.assertEqual(self.go([self.state(OTHER_HEAD, "running")])[0], [HEAD])
+        self.assertEqual(self.go()[0], [HEAD])
+        # an eyes reaction next to a completed state for the head is not a running review
+        self.assertFalse(rules.codex_in_flight([self.state(HEAD, "completed")], [self.EYES], HEAD))
