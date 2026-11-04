@@ -692,6 +692,68 @@ void build_tuck(std::vector<Part> &route) {
                          Material::Yellow));
 }
 
+// The slide-jump, 572 -> 594 (J-017, rules 52 and 53), along z = -146 in the
+// well's north half: a pole up a pier on the 572 ring's west band to a lane at
+// 583.0 running east across the well. Sprinted down it and crouched, the body
+// slides under a beam 1.45 m up and on toward a pit 5.5 m wide and 1.6 m deep;
+// Jump at its lip stands and jumps in one tick at the slide's speed (the
+// proving ground's slide jump), over the pit onto the far deck. A slide run on
+// goes down into the pit (a mantle up its west wall gets out). A second pole at
+// the far deck's east end climbs 11 m outside the 594 ring's east band, beside
+// a fascia girder on its outer edge.
+constexpr float kSjZ = -146.0F;
+constexpr float kSjDeck = 583.0F;
+constexpr float kSjPit = kSjDeck - 1.6F;        // the pit's floor
+constexpr float kSjLip = 0.0F;                  // the pit's west wall
+constexpr float kSjFar = 5.5F;                  // its east wall
+constexpr float kSjBeamX = -2.0F;               // the crawl beam's centre
+constexpr float kSjWest = -8.2F;
+constexpr float kSjEast = 9.4F;
+
+void build_slide_jump(std::vector<Part> &route) {
+    const float lo = kSjZ - 2.0F;
+    const float hi = kSjZ + 2.0F;
+    const auto rail = [&route](const float x0, const float x1, const float z0, const float z1, const float y) {
+        route.push_back(span({x0, y, z0}, {x1, y + 0.8F, z1}, Material::Yellow));
+    };
+    const float pole_x = kSjWest + 1.0F;
+    // The west pier on the ring with its wing and pole.
+    route.push_back(span({kSjWest, 572.25F, lo - 2.0F}, {kSjWest + 2.0F, kSjDeck, hi}, Material::Concrete));
+    route.push_back(span({pole_x - 0.08F, 572.25F, lo - 2.0F - 0.22F}, {pole_x + 0.08F, kSjDeck - 0.2F, lo - 2.0F - 0.06F},
+                         Material::Yellow));
+    rail(kSjWest, kSjWest + 0.08F, lo - 2.0F, hi, kSjDeck);
+    rail(kSjWest + 1.92F, kSjWest + 2.0F, lo - 2.0F, lo, kSjDeck);
+    rail(kSjWest + 0.08F, pole_x - 0.6F, lo - 2.0F, lo - 2.0F + 0.08F, kSjDeck);
+    rail(pole_x + 0.6F, kSjWest + 2.0F, lo - 2.0F, lo - 2.0F + 0.08F, kSjDeck);
+    // The lane to the pit, the pit's floor and walls, the far deck, and the edge
+    // rails (none across the walking line).
+    route.push_back(span({kSjWest, kSjDeck - 0.3F, lo}, {kSjLip, kSjDeck, hi}, Material::Galvanised));
+    route.push_back(span({kSjLip - 1.0F, kSjPit, lo}, {kSjLip, kSjDeck - 0.3F, hi}, Material::Concrete));
+    route.push_back(span({kSjLip, kSjPit - 0.3F, lo}, {kSjFar, kSjPit, hi}, Material::Galvanised));
+    route.push_back(span({kSjFar, kSjPit, lo}, {kSjFar + 1.0F, kSjDeck - 0.3F, hi}, Material::Concrete));
+    route.push_back(span({kSjFar, kSjDeck - 0.3F, lo}, {kSjEast, kSjDeck, hi}, Material::Galvanised));
+    route.push_back(span({kSjWest, kSjDeck - 1.0F, lo}, {kSjLip, kSjDeck - 0.3F, lo + 0.3F}, Material::Steel));
+    route.push_back(span({kSjWest, kSjDeck - 1.0F, hi - 0.3F}, {kSjLip, kSjDeck - 0.3F, hi}, Material::Steel));
+    rail(kSjWest + 2.0F, kSjLip, lo, lo + 0.08F, kSjDeck);
+    rail(kSjWest, kSjLip, hi - 0.08F, hi, kSjDeck);
+    rail(kSjLip, kSjFar, lo, lo + 0.08F, kSjPit);
+    rail(kSjLip, kSjFar, hi - 0.08F, hi, kSjPit);
+    rail(kSjFar, kSjEast, lo, lo + 0.08F, kSjDeck);
+    rail(kSjFar, kSjEast, hi - 0.08F, hi, kSjDeck);
+    rail(kSjEast - 0.08F, kSjEast, lo, hi, kSjDeck);
+    // The crawl beam: underside 1.45 m over the lane, on a post at each side.
+    route.push_back(span({kSjBeamX - 0.3F, kSjDeck + 1.45F, lo}, {kSjBeamX + 0.3F, kSjDeck + 1.85F, hi}, Material::Rust));
+    for (const float z0 : {lo, hi - 0.3F}) {
+        route.push_back(span({kSjBeamX - 0.3F, kSjDeck, z0}, {kSjBeamX + 0.3F, kSjDeck + 1.45F, z0 + 0.3F}, Material::Rust));
+    }
+    // The second pole stands 0.14 m off a fascia girder on the 594 ring's east
+    // outer edge (1.35 m deep and flush with the ring's top), outside the tower.
+    const float edge = ring_inner(594.0F) + 4.0F;
+    route.push_back(span({edge - 0.3F, 592.9F, kSjZ - 1.3F}, {edge + 0.2F, 594.25F, kSjZ + 1.3F}, Material::Steel));
+    route.push_back(span({edge + 0.34F - 0.08F, kSjDeck, kSjZ - 0.08F}, {edge + 0.34F + 0.08F, 594.05F, kSjZ + 0.08F},
+                         Material::Yellow));
+}
+
 void build_climbing_route(kit::Kit &kit) {
     std::vector<Part> route;
     for (float h = 484.0F; h < 615.9F; h += 22.0F) {
@@ -705,6 +767,10 @@ void build_climbing_route(kit::Kit &kit) {
         }
         if (h == 550.0F) {
             build_tuck(route);   // the 550 -> 572 gap
+            continue;
+        }
+        if (h == 572.0F) {
+            build_slide_jump(route);   // the 572 -> 594 gap
             continue;
         }
         const float s = ring_inner(h);
