@@ -44,14 +44,19 @@ env:
   CCACHE_MAXSIZE: 1500M
 
 jobs:
-  # Cheap and first: the rule check, then whether the push reaches the game (ci/proof_scope.py; Cory, 11-04:
-  # full game builds for small changes are "so extremely wasteful"). When it does not, the two build jobs are
-  # skipped, every job that needs them is skipped with them, and skipped counts as passing for the switchboard.
+  # Cheap and first: the rule check, then which test groups the push reaches (ci/proof_scope.py; Cory, 11-04:
+  # full game builds for small changes are "so extremely wasteful"). native gates native-tests; godot gates
+  # godot-touch and godot-audits-and-mix; android gates android-build (and android-apk with it); game, any of
+  # them, gates host-build. A group no changed file reaches is skipped, every job that needs it is skipped
+  # with it, and skipped counts as passing for the switchboard. A dispatch or any doubt runs everything.
   scope:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
       game: ${{ steps.scope.outputs.game }}
+      native: ${{ steps.scope.outputs.native }}
+      godot: ${{ steps.scope.outputs.godot }}
+      android: ${{ steps.scope.outputs.android }}
 
     steps:
       - name: Checkout exact source
@@ -92,7 +97,7 @@ jobs:
           fi
           echo "rule_check: no BLOCK (exit $rc)"
 
-      - name: Decide whether this push reaches the game
+      - name: Decide which test groups this push reaches
         id: scope
         shell: bash
         env:
@@ -196,7 +201,8 @@ jobs:
           retention-days: 1
 
   native-tests:
-    needs: host-build
+    needs: [scope, host-build]
+    if: needs.scope.outputs.native == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
@@ -405,7 +411,8 @@ jobs:
           retention-days: 1
 
   godot-touch:
-    needs: host-build
+    needs: [scope, host-build]
+    if: needs.scope.outputs.godot == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
@@ -593,7 +600,8 @@ jobs:
           retention-days: 1
 
   godot-audits-and-mix:
-    needs: host-build
+    needs: [scope, host-build]
+    if: needs.scope.outputs.godot == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
 
@@ -856,7 +864,7 @@ jobs:
 
   android-build:
     needs: scope
-    if: needs.scope.outputs.game == 'true'
+    if: needs.scope.outputs.android == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -1058,7 +1066,14 @@ jobs:
     # Trunk only: off trunk its signing step always stopped with a KeyError,
     # so "green" had to mean "every job but this one". Skipped there, a green
     # run is simply every job green (integrator, 2026-11-02).
-    if: github.ref == 'refs/heads/ScraperX-Claude'
+    # It publishes whenever the APK was built and no job failed: a test group
+    # the push does not reach (ci/proof_scope.py) is skipped, not failed, and
+    # the evidence below names it. No APK (nothing reaches android) publishes
+    # nothing, as the APK would be the parent commit's.
+    if: >-
+      ${{ !cancelled() && github.ref == 'refs/heads/ScraperX-Claude'
+      && needs.android-apk.result == 'success'
+      && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
@@ -1090,6 +1105,10 @@ jobs:
 
       - name: Assemble unified artifacts directory and record evidence boundaries
         shell: bash
+        env:
+          NATIVE_RESULT: ${{ needs.native-tests.result }}
+          TOUCH_RESULT: ${{ needs.godot-touch.result }}
+          AUDITS_RESULT: ${{ needs.godot-audits-and-mix.result }}
         run: |
           set -euo pipefail
           mkdir -p artifacts
@@ -1106,8 +1125,17 @@ jobs:
             esac
           done
           test -n "$(find artifacts -name '*.apk' -print -quit)"
-          cat artifacts/native-tests-*.log > artifacts/native-tests.log
-          cat artifacts/godot-uitest-touch-1.log artifacts/godot-uitest-touch-2.log > artifacts/godot-uitest.log
+          not_run="not run on this commit: ci/proof_scope.py found no changed file that reaches it"
+          if [ "${NATIVE_RESULT}" = success ]; then
+            cat artifacts/native-tests-*.log > artifacts/native-tests.log
+          else
+            echo "native-tests ${not_run}" > artifacts/native-tests.log
+          fi
+          if [ "${TOUCH_RESULT}" = success ]; then
+            cat artifacts/godot-uitest-touch-1.log artifacts/godot-uitest-touch-2.log > artifacts/godot-uitest.log
+          else
+            echo "godot-touch ${not_run}" > artifacts/godot-uitest.log
+          fi
           cat > artifacts/WO-006-EVIDENCE.md <<EOF
           # WO-004..006 Evidence
 
@@ -1130,6 +1158,12 @@ jobs:
 
           Not proven here: APK installation, Android execution, Fold 6 observation on the real panel, sustained frame rate, thermals, touch ergonomics, the fall/parachute/checkpoint loop, load-bearing structural simulation, process/isolation networks, persistence, NPCs, missions, or a complete game loop.
           EOF
+          for job in "native-tests:${NATIVE_RESULT}" "godot-touch:${TOUCH_RESULT}" "godot-audits-and-mix:${AUDITS_RESULT}"; do
+            if [ "${job#*:}" != success ]; then
+              printf '\nSkipped on this commit (%s): %s %s; the lines above that it proves were not re-proven here.\n' \
+                "${job#*:}" "${job%%:*}" "${not_run}" >> artifacts/WO-006-EVIDENCE.md
+            fi
+          done
 
       - name: Preserve Android updates across download channels
         uses: IssisX/ScraperX/.github/actions/stable-apk@882517e021841deaa915c86bbb3e92bbf4fda185

@@ -1208,3 +1208,50 @@ class ApiReviewsClaude(unittest.TestCase):
     def test_its_fix_still_blocks(self):
         pr = facts(verdicts=(land("ChatGPT"), self.api("FIX")), head_ref="claude/integrate-x")
         self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "FIX")
+
+
+class ScopedProof(unittest.TestCase):
+    """ci/proof_scope.py skips the test groups a push does not reach; a skipped job (a job-level `if`, which
+    leaves one skipped record for a whole matrix) reads as passing to the switchboard and to sweep.py."""
+
+    RUNS = {"workflow_runs": [{"id": 7, "status": "completed", "created_at": "2026-11-04T10:00:00Z",
+                               "html_url": "https://x/runs/7", "updated_at": "2026-11-04T10:30:00Z"}]}
+
+    def jobs(self, touch="success"):
+        return {"jobs": [{"name": "scope", "status": "completed", "conclusion": "success"},
+                         {"name": "host-build", "status": "completed", "conclusion": "success"},
+                         {"name": "native-tests", "status": "completed", "conclusion": "skipped"},
+                         {"name": "godot-touch (touch-1)", "status": "completed", "conclusion": touch},
+                         {"name": "godot-touch (touch-2)", "status": "completed", "conclusion": "success"},
+                         {"name": "android-build", "status": "completed", "conclusion": "skipped"},
+                         {"name": "android-apk", "status": "completed", "conclusion": "skipped"},
+                         {"name": "publish-checkpoint", "status": "completed", "conclusion": "skipped"}]}
+
+    def fake_get(self, touch):
+        return lambda path, accept="": self.RUNS if "/runs?head_sha=" in path else self.jobs(touch)
+
+    def switch_proof(self, touch="success"):
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=self.fake_get(touch))
+        return sw.proof("abc")[0]
+
+    def sweep_proof(self, touch="success"):
+        sys.path.insert(0, str(HERE.parent / "board"))
+        try:
+            import sweep
+        finally:
+            sys.path.pop(0)
+        get = self.fake_get(touch)
+        real, sweep.gh = sweep.gh, lambda path: get(path)
+        try:
+            return sweep.proof_state("IssisX/ScraperX", "abc")[0]
+        finally:
+            sweep.gh = real
+
+    def test_skipped_groups_read_green(self):
+        self.assertEqual(self.switch_proof(), "green")
+        self.assertEqual(self.sweep_proof(), "green")
+
+    def test_a_failed_shard_still_reads_red(self):
+        self.assertEqual(self.switch_proof("failure"), "red: godot-touch (touch-1)")
+        self.assertEqual(self.sweep_proof("failure"), "red: godot-touch (touch-1)")
