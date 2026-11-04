@@ -10,6 +10,8 @@
 #include "sim/matron.hpp"
 #include "sim_tests_decks.hpp"
 
+#include <limits>
+
 namespace {
 using scraperx_test_decks::Deck;
 using scraperx_test_decks::deck_at;
@@ -32,6 +34,12 @@ struct Leg {
 struct Result {
     double x = 0.0, y = 0.0, z = 0.0, peak_force = 0.0, worst_step = 0.0, seconds = 0.0;
     std::uint64_t releases = 0;
+    // Her lowest stand height over the second on her feet. Settling only goes
+    // down, so this is where she settled; if the one she chases is above her
+    // she may rightly start back up before the second ends. That is only a
+    // renewed climb if she holds steel again when the second ends.
+    double stand_min_y = 0.0;
+    bool climbing_again = false;
 };
 
 Result take(const Leg &leg) {
@@ -58,15 +66,19 @@ Result take(const Leg &leg) {
         last = m.position;
     }
     // Then a second on her feet, to show she stands there.
+    double stand_min_y = std::numeric_limits<double>::max();
     for (int i = 0; i < 90; ++i) {
         tick(s);
+        stand_min_y = std::min(stand_min_y, double(s.matron_state().position.y) - Matron::kStandCentre);
     }
+    r.stand_min_y = stand_min_y;
     const auto m = s.matron_state();
     r.x = m.position.x;
     r.y = m.position.y - Matron::kStandCentre;
     r.z = m.position.z;
     r.seconds = ticks / Simulation::kTickRateHz;
     r.releases = m.climb_releases - before.climb_releases;
+    r.climbing_again = m.climbing || m.on_pipe;
     return r;
 }
 
@@ -105,7 +117,9 @@ void run_matron_traverse() {
                   << ", " << r.z << "), peak " << r.peak_force << " N, worst step " << r.worst_step
                   << " m, releases " << r.releases << '\n';
         require(r.releases == 0, "matron traverse: no hold lost, no failed climb");
-        require(std::abs(r.y - leg.end_y) < 0.08, "matron traverse: standing on the steel at its other end");
+        require(std::abs(r.stand_min_y - leg.end_y) < 0.08 &&
+                    (std::abs(r.y - leg.end_y) < 0.08 || r.climbing_again),
+                "matron traverse: standing on the steel at its other end");
         require(r.peak_force <= law::kForceN + 0.1, "matron traverse: her hands never past their cap");
         require(r.worst_step < 0.15, "matron traverse: never carried or snapped (a step a tick)");
         if (leg.end_deck != Deck::None) {
