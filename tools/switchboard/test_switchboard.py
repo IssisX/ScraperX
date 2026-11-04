@@ -1029,7 +1029,7 @@ class StreamedAsk(unittest.TestCase):
 
     def test_the_client_waits_long_enough_for_a_streamed_answer(self):
         self.assertEqual(claude_calls.REQUEST_TIMEOUT_S, 900.0)
-        self.assertLess(claude_calls.REQUEST_TIMEOUT_S, 20 * 60)   # the ask job's timeout-minutes
+        self.assertLess(claude_calls.REQUEST_TIMEOUT_S, 60 * 60)   # the ask job's timeout-minutes
 
 
 class FakeStreamClient:

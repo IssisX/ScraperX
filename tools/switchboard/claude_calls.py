@@ -23,7 +23,7 @@ from decimal import ROUND_FLOOR, Decimal
 from typing import Any, Mapping, Sequence
 
 # Per request, and between streamed chunks. A long streamed answer (Opus at max effort, 64000 max_tokens) fits;
-# it stays below the ask job's timeout-minutes (20) in .github/workflows/switchboard.yml.
+# it stays below the ask job's timeout-minutes (60) in .github/workflows/switchboard.yml.
 REQUEST_TIMEOUT_S = 900.0
 
 REVIEW_SCHEMA = {
