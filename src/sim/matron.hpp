@@ -1755,6 +1755,9 @@ public:
     }
     // Beat 1: her swat, along `dir` (once); the world puts kSwatN on his
     // chest for kSwatTicks, its reaction on her.
+    // A swat draws from the same per-tick force/power account as her feet.
+    // The caller applies only this grant and its equal opposite reaction.
+    [[nodiscard]] JPH::Vec3 grant_swat_force(JPH::Vec3 wanted, JPH::Vec3 player_point_velocity) noexcept;
     [[nodiscard]] bool take_swat(JPH::Vec3 &dir) noexcept {
         if (!swat_due_) {
             return false;
@@ -2737,6 +2740,7 @@ private:
     JPH::RVec3 player_belt_ = JPH::RVec3::sZero();
     bool swat_due_ = false;
     bool swat_given_ = false;
+    int swat_budget_ticks_ = 0;  // ticks her feet yield the budget a swat needs (kSwatTicks, set with swat_due_)
     JPH::Vec3 swat_dir_ = JPH::Vec3::sZero();
     bool player_down_ = false;
     bool player_crouched_ = false;         // crouched low (beat 1: no swat; beat 2: no walk-in)

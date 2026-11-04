@@ -1140,7 +1140,19 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         }
         (void)slope_slide;
         budget.velocity = velocity - bodies.GetPointVelocity(on_body, on_point);
-        const Vec3 granted = budget.take(want_force);
+        // During her swat, her feet leave the swat's share of the tick's
+        // account untouched (same reserve as feet_push): the swat is charged
+        // to the same budget, so the step that sets it up must not spend
+        // what the swat needs.
+        Vec3 force = want_force;
+        if (swat_budget_ticks_ > 0) {
+            const float reserve = kSwatN + kSwatSweepScale * kSwatN;
+            const float allow = std::max(0.0F, budget.left - reserve);
+            if (force.Length() > allow) {
+                force = allow > 0.0F ? force * (allow / force.Length()) : Vec3::sZero();
+            }
+        }
+        const Vec3 granted = budget.take(force);
         if (granted.LengthSq() > 0.0F) {
             bodies.AddForce(body_, granted);
             if (bodies.GetMotionType(on_body) == EMotionType::Dynamic) {
@@ -2284,6 +2296,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     const traversal::Limits law{};
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     feet_budget_lunge_ = false;
+    if (swat_budget_ticks_ > 0) {
+        --swat_budget_ticks_;
+    }
     stock_push_force_n_ = 0.0F;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
@@ -4745,7 +4760,19 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
         return Vec3::sZero();   // nothing under her to push on
     }
     feet_budget_.velocity = work_velocity != nullptr ? *work_velocity : velocity - sole.velocity;
-    const Vec3 granted = feet_budget_.take(want_force);
+    // During her swat, her feet leave the swat's share of the tick's account
+    // untouched: the swat is charged to the same budget, so the step that sets
+    // it up must not spend what the swat needs. The total stays within the
+    // one budget; only the split between feet and swat changes, for kSwatTicks.
+    Vec3 force = want_force;
+    if (swat_budget_ticks_ > 0) {
+        const float reserve = kSwatN + kSwatSweepScale * kSwatN;
+        const float allow = std::max(0.0F, feet_budget_.left - reserve);
+        if (force.Length() > allow) {
+            force = allow > 0.0F ? force * (allow / force.Length()) : Vec3::sZero();
+        }
+    }
+    const Vec3 granted = feet_budget_.take(force);
     if (granted.LengthSq() > 0.0F) {
         bodies.AddForce(body_, granted);
         if (bodies.GetMotionType(sole.body) == EMotionType::Dynamic) {
@@ -4755,6 +4782,16 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
         foot_force_n_ = feet_budget_.used;
         foot_power_w_ = feet_budget_.power_used;
     }
+    return granted;
+}
+
+Vec3 Matron::grant_swat_force(const Vec3 wanted, const Vec3 player_point_velocity) noexcept {
+    const Vec3 her_velocity = physics_.GetBodyInterface().GetLinearVelocity(body_);
+    // wanted acts on him and -wanted on her, so the pair does work wanted . (his - hers).
+    feet_budget_.velocity = player_point_velocity - her_velocity;
+    const Vec3 granted = feet_budget_.take(wanted);
+    foot_force_n_ = feet_budget_.used;
+    foot_power_w_ = feet_budget_.power_used;
     return granted;
 }
 

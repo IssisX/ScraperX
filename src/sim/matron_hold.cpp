@@ -822,13 +822,17 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     hold_phase_ = 1;
                     hold_s_ = 0.0F;
                 } else {
-                    stand();
                     if (!swat_given_) {
                         swat_given_ = true;
                         swat_due_ = true;
                         swat_dir_ = swat_direction(player);
                         ++swats_;
+                        // Her feet yield the swat's share from this tick: a
+                        // swat charged to the same budget must not arrive
+                        // starved by the step that sets it up.
+                        swat_budget_ticks_ = kSwatTicks;
                     }
+                    stand();
                     // Her hand with the swat, at his chest.
                     pose_hand(dt, player + RVec3(0.0, 0.45, 0.0), kHandReachSpeedMps);
                     if (hold_s_ > kSwatWaitS) {
