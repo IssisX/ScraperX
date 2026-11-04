@@ -43,14 +43,20 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 ## Asks in flight
 - Muse (mail): J-001 #193 - beat-5 hang in at 35b67484, proof red (mischief no-shove, past-rail setup, load S2
   over-base). 4:45 PM ruled ChatGPT's stability-first force share + 4-tick plant fallback; Muse owes one diff. #207 world-b red (E guard body order, matron crash
-  hearing): Muse owes the fix. Drawn-body guard diff (378e1805) mailed 4:24: a helper opens it as J-012 `claude/integrate-j012-drawn-guard`.
+  hearing): Muse owes the fix. Drawn-body guard is #211 (J-012).
+  5:10 PM rulings mailed: J-016 8afd23cd does NOT land (introduces stood_his red); Muse names the drum launcher
+  first. Encounter return-walk slice afa461b3 held, lands with the drum fix. #95 stills (2b03b80c) received: look
+  at them when eb32fc5f's plant fix is green.
 - Grok (4 PM run): #193 force split; J-038 dent formula (#169). Relay answers to Muse by mail.
 - To Claude: none open.
 
-## Merge queue (4:45 PM)
+## Merge queue (5:10 PM)
 - #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
   at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
-- J-012 drawn-body guard (workflow file): merge myself on green + Codex clean.
+- #211 J-012 drawn-body guard (workflow file): Codex clean at 67a25007; merge myself on green.
+- J-006: helper puts the fix (470b2bac) on #91 and opens the leg-6 protected PR alone off trunk
+  (`fb-bot/integrate-protected-j006-leg6`). Land the protected PR first (green + Codex), then #91 (merge trunk in,
+  mark ready, Job: J-006 body).
 - #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
   on green + Codex clean.
 - Merged today: #83, #100, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
