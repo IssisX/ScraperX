@@ -441,3 +441,50 @@ class CodexFirst(unittest.TestCase):
         self.assertEqual(rules.review_rotation(9, "anthropic", frozenset(), self.TEAM), [rules.API_REVIEWER])
         self.assertEqual(rules.review_rotation(9, "openai", frozenset(), self.TEAM, api_ok=False), ["grok"])
         self.assertEqual(rules.review_rotation(9, "xai", frozenset(), self.TEAM, api_ok=False), ["chatgpt"])
+
+
+class CodexRunning(unittest.TestCase):
+    """J-031: a review Codex is still running on the head is waited for, up to 30 minutes after the proof went green."""
+
+    TEAM = CodexFirst.TEAM
+    EYES = {"content": "eyes", "user": {"login": rules.CODEX_LOGIN}, "created_at": ago(0.3)}
+
+    def state(self, sha, status):
+        return {"body": ("<!-- codex-review-state:v1 &#123;\"code_review\":&#123;"
+                         f"\"commit_sha\":\"{sha}\",\"has_unresolved_findings\":null,\"status\":\"{status}\"&#125;&#125; -->"),
+                "user": {"login": rules.CODEX_LOGIN}, "created_at": ago(0.3)}
+
+    def go(self, comments=(), reactions=(), green_minutes_ago=10):
+        gh = FakeGH(comments)
+        gh.paged = lambda path, key="": list(reactions) if path.endswith("/reactions") else list(comments)
+        sw = make(gh, team=self.TEAM)
+        sw.api_ok = lambda c: True
+        sw.review_load = lambda: ({}, {})
+        reviewed = []
+        sw.review = lambda facts, c, author: reviewed.append(facts.head_sha)
+        sw.marked = lambda *a: False
+        sw.stale = lambda facts: False
+        c = dict(ctx(comments=list(comments)), proof_done_at=ago(green_minutes_ago / 60))
+        sw.ask_pr(pr_facts(), c)
+        sw.steer_pr(pr_facts(), c)
+        return reviewed, gh.posted, sw.lines
+
+    def test_running_state_on_the_head_waits(self):
+        reviewed, posted, lines = self.go([self.state(HEAD, "running")])
+        self.assertEqual((reviewed, posted), ([], []))
+        self.assertTrue(any(l.startswith("WAIT-CODEX") for l in lines))
+
+    def test_eyes_without_a_completed_state_waits(self):
+        reviewed, posted, _ = self.go(reactions=[self.EYES])
+        self.assertEqual((reviewed, posted), ([], []))
+
+    def test_running_past_30_minutes_falls_back_to_the_api(self):
+        reviewed, posted, lines = self.go([self.state(HEAD, "running")], [self.EYES], green_minutes_ago=31)
+        self.assertEqual((reviewed, posted), ([HEAD], []))
+        self.assertFalse(any(l.startswith("WAIT-CODEX") for l in lines))
+
+    def test_running_on_another_head_or_nothing_running_does_not_wait(self):
+        self.assertEqual(self.go([self.state(OTHER_HEAD, "running")])[0], [HEAD])
+        self.assertEqual(self.go()[0], [HEAD])
+        # an eyes reaction next to a completed state for the head is not a running review
+        self.assertFalse(rules.codex_in_flight([self.state(HEAD, "completed")], [self.EYES], HEAD))

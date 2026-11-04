@@ -105,17 +105,17 @@ class Switch:
                     self._jobs[rules.job_of_title(it["title"])] = it
         return self._jobs
 
-    def proof(self, sha: str) -> tuple[str, str, int]:
+    def proof(self, sha: str) -> tuple[str, str, int, str]:
         """The newest proof run on this commit: (state, url, run id)."""
         runs = self.gh.get(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?head_sha={sha}&per_page=5")["workflow_runs"]
         if not runs:
-            return "none", "", 0
+            return "none", "", 0, ""
         run = max(runs, key=lambda r: r["created_at"])
         if run["status"] != "completed":
-            return "running", run["html_url"], run["id"]
+            return "running", run["html_url"], run["id"], ""
         jobs = self.gh.get(f"repos/{self.gh.repo}/actions/runs/{run['id']}/jobs?per_page=50")["jobs"]
         failed = [j["name"] for j in jobs if j["name"] not in NOT_COUNTED and j["conclusion"] not in ("success", "skipped")]
-        return ("red: " + ", ".join(failed) if failed else "green"), run["html_url"], run["id"]
+        return ("red: " + ", ".join(failed) if failed else "green"), run["html_url"], run["id"], run.get("updated_at") or ""
 
     def verdicts(self, number: int) -> tuple[list[rules.Verdict], list[dict]]:
         comments = self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/comments")
@@ -187,7 +187,7 @@ class Switch:
         number, sha = pr["number"], pr["head"]["sha"]
         full = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
         commit = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")
-        proof, url, run_id = self.proof(sha)
+        proof, url, run_id, proof_done_at = self.proof(sha)
         verdicts, comments = self.verdicts(number)
         job = rules.job_of_pr(pr.get("body")) or \
             rules.jobs_by_pr_mention({j: it["title"] for j, it in self.jobs().items()}).get(number, "")
@@ -200,7 +200,7 @@ class Switch:
             mergeable=full.get("mergeable"), head_committed_at=commit["commit"]["committer"]["date"], proof=proof,
             verdicts=verdicts, needs=needs, rule_check_block=False,
             touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files))
-        ctx = {"job": job, "issue": issue, "proof_url": url, "run_id": run_id, "comments": comments,
+        ctx = {"job": job, "issue": issue, "proof_url": url, "run_id": run_id, "proof_done_at": proof_done_at, "comments": comments,
                "title": pr["title"], "body": pr.get("body") or "", "files": files}
         return facts, ctx
 
@@ -347,6 +347,9 @@ class Switch:
             self.merge(facts, ctx, d)
         if rules.needs_review(facts, author, self.team) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
+        elif rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
+            self.out(f"WAIT-CODEX  #{facts.number} Codex is reviewing @{facts.head_sha[:8]}: no other review for up to "
+                     f"{rules.CODEX_WAIT_MINUTES} minutes after the proof went green")
         elif rules.needs_review(facts, author, self.team) and self.team.pool:
             _, who, asked = self.pooled_reviewer(facts, ctx, author)
             if not who:
@@ -362,6 +365,14 @@ class Switch:
             if pick.route == "ask":
                 self.ask_review(facts, ctx, pick.agent, "")
             self.escalate_review(facts, ctx, author)
+
+    def codex_pending(self, facts: rules.PrFacts, ctx: dict) -> bool:
+        """Codex is still reviewing this head and the proof went green under CODEX_WAIT_MINUTES ago: wait for it
+        rather than pay for a second review (J-031). Past the wait, the review goes on as if Codex were not there."""
+        if rules.codex_wait_over(ctx.get("proof_done_at") or "", self.now.strftime("%Y-%m-%dT%H:%M:%SZ")):
+            return False
+        reactions = self.gh.paged(f"repos/{self.gh.repo}/issues/{facts.number}/reactions")
+        return rules.codex_in_flight(ctx["comments"], reactions, facts.head_sha)
 
     def api_ok(self, ctx: dict) -> bool:
         """May the automatic review run today: the worst case of one call fits under every cap."""
@@ -554,7 +565,10 @@ class Switch:
         author = self.team.vendor_of_branch(facts.head_ref)
         if self.stale(facts):
             return
-        if self.team.pool:
+        if rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
+            self.out(f"WAIT-CODEX  #{facts.number} Codex is reviewing @{facts.head_sha[:8]}: no automatic review yet")
+            api_turn = False
+        elif self.team.pool:
             api_turn = rules.needs_review(facts, author, self.team) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
         else:
             api_turn = rules.needs_review(facts, author, self.team) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"

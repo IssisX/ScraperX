@@ -135,7 +135,7 @@ agent, Claude included, works this way:
     autonomous work"): Codex Code Review reviews every PR on open; `@codex review` re-asks only after a fix commit that
     needs a fresh pass. The Claude API (switchboard) takes the eye, the security pass on CI and signing
     changes, and any PR Codex has not reviewed at its exact head. Grok and ChatGPT, by their own scheduled runs, are the
-    fallback when neither Codex nor the API can review (Cory, 11-04). ChatGPT and Grok keep research, specs and math.
+    fallback when neither Codex nor the API can review (Cory, 11-04). They keep research, specs and math.
   - **Concurrency, hard caps (11-04):** one Claude Opus session at a time (the integrator); it runs at most two active
     subagents, three for acute work, and queues the rest. Muse takes as much of the work as it can handle well, with
     parallel agents of its own; Opus keeps integration, architecture, hard debugging and final verification. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
