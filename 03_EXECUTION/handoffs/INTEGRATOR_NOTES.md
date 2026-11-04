@@ -47,20 +47,21 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   5:10 PM rulings mailed: J-016 8afd23cd does NOT land (introduces stood_his red); Muse names the drum launcher
   first. Encounter return-walk slice afa461b3 held, lands with the drum fix. #95 stills (2b03b80c) received: look
   at them when eb32fc5f's plant fix is green.
-- Grok (4 PM run): #193 force split; J-038 dent formula (#169). Relay answers to Muse by mail.
+- Grok: silent two runs; its asks rerouted 5:20 PM (#193 force split answered by ChatGPT and ruled; #169 dent
+  cross-check asked of ChatGPT; Muse starts J-038 slice 1 on its own probe bands). Route math to ChatGPT until
+  Grok answers again.
 - To Claude: none open.
 
-## Merge queue (5:10 PM)
+## Merge queue (5:20 PM)
 - #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
   at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
-- #211 J-012 drawn-body guard (workflow file): Codex clean at 67a25007; merge myself on green.
-- J-006: leg-6 protected change is #212 (written by hand on trunk's test, 024f19f0; switchboard lands it on
-  green + Codex). The fix diff (470b2bac) could not be decoded (tools can't save attachments; hand-copied base64
+- J-006: leg-6 protected change is #212 (written by hand on trunk's test; Codex P0 fixed at 5e248e10: a rise passes only as a renewed
+  climb; Codex clean; switchboard lands it on green). The fix diff (470b2bac) could not be decoded (tools can't save attachments; hand-copied base64
   broke): Muse asked 5:15 PM to resend as plain text in the body, and every diff from now on. Then a helper writes
   it onto #91 (merge trunk in, mark ready, Job: J-006 body).
 - #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
   on green + Codex clean.
-- Merged today: #83, #100, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
+- Merged today: #83, #100, #211, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
 
 ## Known here
