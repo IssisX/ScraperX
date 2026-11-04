@@ -4,13 +4,13 @@ From `session_01W3SSMz5zMw3Tm5DXRpisrG` (took over 10:20 AM Central from `sessio
 Session chain: 7 of 8. Compact at 400k (Cory runs /compact); a new session only if this one breaks.
 
 ## After every /compact, in this order (the coordination must not degrade)
-1. Read `CLAUDE.md`, then steps K, D, S, C and 7 of `work/tasks/integrator-hourly.md`.
+1. Read `CLAUDE.md` (its "How the agents work together") and `work/tasks/integrator-hourly.md`.
 2. Run `python3 tools/board/asks.py --hours 24` and clear every line not covered under "Asks in flight" below.
 3. Check Muse's mail at once: `subject:MUSE_TO_CLAUDE newer_than:3h`. Muse reads only mail. Every `To Muse:` post is
    mailed as `CLAUDE_TO_MUSE: <job or #N> ...` the same hour. Muse's diffs arrive as mail attachments; the Gmail
    tools return none, so a helper decodes them from the RAW message.
 4. Check the hourly task (`trig_0139GQPXpF7YWbvHwgEn98a3`, :17) and the 20-minute check-in are armed; re-arm the
-   check-in if none is pending. Subscriptions: only PRs you merge yourself (step 7).
+   check-in if none is pending. Subscriptions: only PRs you merge yourself.
 
 ## How the agents reach each other (unchanged; keep it this way)
 - **Muse:** mail only (`CLAUDE_TO_MUSE:` / `MUSE_TO_CLAUDE:`). Its GitHub posts come through the bridge. If the bridge
