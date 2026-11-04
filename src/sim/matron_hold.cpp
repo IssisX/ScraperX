@@ -65,6 +65,7 @@ void Matron::begin_grab(const RVec3 player) {
     spare_tries_ = 0;
     hold_tears_at_ = arm_tears_;
     fatal_hold_ = false;   // known as her fingers close (grip_taken)
+    fatal_hang_paused_ = false;
     fatal_path_ = FatalPath::None;
     fatal_carry_s_ = 0.0F;
     fatal_window_s_ = 0.0F;
@@ -93,6 +94,14 @@ void Matron::grip_taken() noexcept {
         grip_on_ = true;
         grip_was_on_ = true;
         regrip_ = false;
+        if (fatal_hang_paused_) {
+            // The window resumes only where it was paused: a Dangle fatal
+            // pin or over. Any other state (backed in, released) drops it.
+            if (fatal_hold_ && state_ == State::Dangle && hold_phase_ >= 2) {
+                fatal_hang_ = true;
+            }
+            fatal_hang_paused_ = false;
+        }
         return;
     }
     if (state_ == State::Grab && !grip_on_) {
@@ -1346,6 +1355,14 @@ void Matron::begin_regrip(const Grip point) noexcept {
     grip_point_ = point;
     regrip_ = true;
     regrip_let_go_ = grip_on_;
+    if (fatal_hang_) {
+        // Her hand opens to take him by another point: no grip holds him by
+        // the measured point till it closes again, so the hang's window
+        // pauses rather than measuring origin-valued ticks. The window's
+        // clock freezes with it (it only runs while fatal_hang_ is true).
+        fatal_hang_ = false;
+        fatal_hang_paused_ = true;
+    }
 }
 
 // Beat 3's start: at the rail (or, none, where she stands), her first hand
@@ -1370,6 +1387,7 @@ void Matron::begin_pin() {
     // him (step_rail, phase 0).
     fatal_window_s_ = 0.0F;
     fatal_hang_ = false;
+    fatal_hang_paused_ = false;
     if (fatal_hold_) {
         dangle_s_ = kFatalHangWindowS;
     } else {
@@ -1393,6 +1411,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // Out of her plan: back in over the rail and set down.
         ++spares_;
         fatal_hang_ = false;
+        fatal_hang_paused_ = false;
         fatal_window_s_ = 0.0F;
         hand2_want_ = 0;
         regrip_ = false;
