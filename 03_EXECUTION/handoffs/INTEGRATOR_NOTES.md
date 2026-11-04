@@ -48,12 +48,13 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - ChatGPT: #171 next step (asked 1 PM); J-030 (#137).
 - To Claude: none open.
 
-## Merge queue (1:10 PM)
-- Merge myself on green + Codex clean: #203 (never-edit files stay blocked), #205 (CI runs only reachable tests;
-  touches the signing job).
-- Switchboard: #204 (Supersedes #N closes #N), #206 (tests-probe), #207 (world-b; 2/2 commit coming), #150
-  (STOW-replaces-JUMP fix coming via a J-039 PR merged into it).
-- #193 proving at 9a4f8cad. Merged today: #179, #185, #196, #197, #199, #200, #201, #202. Closed: #43, #103.
+## Merge queue (2:20 PM)
+- #171 (J-003 S8, mine, draft): ChatGPT's two defects fixed at 68112ba2, Codex clean, Muse's FIX 2 evidence posted
+  (lethal 9095 N-s, stills, reload meters 0). Mark ready when green; its body says Supersedes #83.
+- #207 world-b red (E guard body order; matron crash hears the piece): Muse fixing (mailed 2:00 PM).
+- #193 J-001 red on 3 known requires: Muse's diffs next (step 4 re-pose, beat-5 hang, step 1 mischief).
+- #208 STOW replaces JUMP: switchboard. #95 waits on Muse's stills.
+- Merged today: #100, #150, #179, #185, #196, #197, #199-#206. Closed: #43, #103. J-030 closed.
 
 ## Known here
 - `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone. Worktrees in use: proof-scope, merge-protected, j025.
