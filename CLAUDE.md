@@ -27,7 +27,7 @@ Asked again and again (2026-10-18 to 10-22): *"each change does not require a fu
 
 - End every message with one plain line saying what he does now ("Nothing to do" is fine), set apart
   so it stands out: a `---` rule, then `🟣 **YOUR MOVE:**` and the line. Colored dots (🟢 done, 🟡 in progress, 🔴 broken or blocked, ⚪ next, 🟣 his; 2026-10-29) only on a
-  status report he asks for, never on every answer (11-02: *"Stop with all the color for every single thing I ask you"*); a plain question gets a plain answer. A prompt
+  status report he asks for, never on every answer (11-02); a plain question gets a plain answer, technical detail only when he asks (11-04). A prompt
   he must pass on goes whole in one copyable block, naming the agent; never ask him to edit, combine
   or fill one in (2026-10-22: *"always end with a clear instruction for me and the prompt if I need
   to share one"*).
