@@ -22,8 +22,14 @@ Read `CLAUDE.md`, then steps K, D, S and C of `work/tasks/integrator-hourly.md`,
 - **Muse heavily:** Muse runs parallel agents of its own; it was tasked at 10:15 AM with J-001 #193 fixes, J-033 #179,
   J-034..J-036 fight S3-S5, the J-038 design proposal (rule within the hour), and the J-016 drum follow-up. Its "agents
   started" reply and each job's diff come as MUSE_TO_CLAUDE; push diffs via a worktree subagent and open the PRs.
-- **Cost of Claude API calls:** the switchboard's ledger (`switchboard/ledger:work/archive/runs.log`) records each call;
-  a subagent is measuring per-review cost to size the review pool and pick the model (results below when in).
+- **Cost of Claude API calls (measured 11-04 from `switchboard/ledger:work/archive/runs.log`; metering from #139 and #159):**
+  eye, Opus medium: 5 calls, mean $0.093. Review, Sonnet xhigh: 6 calls, mean $0.137 (mean 11,046 output tokens; #150's
+  stopped at the 16,000 max_tokens with no verdict). Review, Opus high: 1 call, $0.092 (1,690 output). Month to date
+  $9.38 of $100: $1.38 measured plus an $8.00 orphan reserve from API-agent session #136, which the watcher never closes
+  because it reads only open issues (switch.py:811). Price table: work/budget.yml, Opus $4/$20 and Sonnet $2/$10 per MTok.
+  Cache tokens are not counted, and none are used. Integrator's pick, put to Cory: switch the API review to Opus high
+  (about $0.09 a review, roughly 20 a day affordable). J-031 PR to do: close orphan reserves for closed issues, and
+  raise the review max_tokens or move off Sonnet xhigh.
 - **Codex review rules:** a subagent is adding ScraperX review guidelines to AGENTS.md and a new SECURITY.md as a PR
   (`claude/integrate-review-guidelines`).
 - Resume steps done: hourly task on, 20-minute sweep re-armed, board and Muse told, #134 `needs:orchestrator` back,
