@@ -83,8 +83,8 @@ against Sonnet xhigh's $0.14, and one Sonnet review hit its token limit with no 
 effort ("you miss too much when I set it on extra high"). Reviews: Codex first, then the Claude API; Grok and ChatGPT
 by their scheduled runs only as the fallback.
 
-**11-04, 11:36 AM Central, Cory:** compact instead of a new session; he ran /compact himself. A session is
-replaced only after its second compaction; the handoff file stays current so nothing depends on the summary.
+**11-04, 11:36 AM Central, Cory:** compact instead of a new session; he ran /compact himself. Then (11:45 AM, "yes"):
+compact at 400k, a new session only when one is broken; the handoff file stays current so nothing depends on the summary.
 
 **11-03, 10:11 AM Central, decided by the integrator** (Cory: use Muse's intelligence, free, for as many of
 the big, difficult things as is best): J-004 (#111, S6 tells) and J-006 (#113, the grade ladder, PR #91,

@@ -166,7 +166,7 @@ agent, Claude included, works this way:
   make sure we're not doing the same thing"*). **Prevent the growth; a handoff is only the backstop** (11-03:
   *"Yes, prevent the growth. That's what I've been trying to tell you"*). Whatever is re-read grows the cost of
   every read, so each of these has a cap, checked hourly (step C) and trimmed the same hour:
-  - a session's context, 700k tokens (above);
+  - a session's context, 400k tokens, then a compact (above);
   - the board, 100 comments, then a fresh one; a job issue or PR, 40, then its state goes into its body
     (or a fresh PR) and readers start there; retired threads are closed;
   - this file, 20 KB: a new rule replaces or shortens an old one, and dated quotes past a week move to
@@ -186,23 +186,23 @@ agent, Claude included, works this way:
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
   integrator decides, without asking him, and covers every Claude session, its own included.
-  - When to change: a session at **700k context tokens** (11-03, Cory: "go with your pick": fewer handoffs, less lost; `get_session` →
-    `external_metadata.context_usage.used_tokens`), checked on every hourly check for every Claude session, the
-    integrator's own first; or one compacted twice (11-04: Cory compacts first), run 48 h, or spends its turns re-reading more than working
-    (11-03; the 11-03 integrator spent $20 in its first hour at 514k). Each turn re-reads the whole context.
+  - **Compact, don't replace** (11-04, Cory: *"why the hell we've been doing this new session shit"*). At **400k
+    context tokens** (`get_session` → `external_metadata.context_usage.used_tokens`, checked hourly for every Claude
+    session, the integrator's own first) it brings its handoff file current and tells Cory, who runs /compact; after
+    it, it re-reads this file, the hourly file and its handoff. With him away, it compacts
+    itself near 784k. Each turn re-reads the whole context. A new session only when one is broken (stuck, confused).
   - **Every Claude session watches its own size** (11-03: the J-032 session went from 157k to 653k in 40 minutes,
     $28, unnoticed; Cory had to tell it). An hourly check is too slow, so each worker calls `get_session` (no id)
-    after every commit, proof run or big read. At 600k it writes its handoff (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
-    head, done, open failure with its repro, measured and ruled out, next step) and tells the integrator; at 700k
-    it stops. The integrator also checks every worker's size on each event it handles, and every brief it writes
+    after every commit, proof run or big read. At 400k it brings its handoff current (`03_EXECUTION/handoffs/<job>_HANDOFF_<date>.md`:
+    head, done, open failure with its repro, measured and ruled out, next step) and tells the integrator, which
+    asks Cory to compact it. The integrator also checks every worker's size on each event it handles, and every brief it writes
     carries this rule. Builds and tests write to a file and only their PASS/FAIL lines are read, never a whole log.
   - Keep the integrator's context small: subscribe only to PRs it opened or must merge itself (protected,
     workflow); the switchboard and the hourly sweep cover the rest. Send big reads (logs, transcripts, audits) to a
     subagent and keep only its answer.
-  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`) with its "Asks in flight"
-    (steps K and S of `work/tasks/integrator-hourly.md`; the collaboration must never be lost), start the fresh
-    session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
-    retire the old one once its in-flight helpers have reported.
+  - A broken session's replacement: its handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`) with "Asks in
+    flight" (steps K and S of `work/tasks/integrator-hourly.md`), `create_session`, move the hourly task and PR
+    subscriptions, retire the old one once its helpers have reported.
   - A worker session whose job has landed is retired, never reused for new work.
   - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
     own session (`create_session`), not inside the integrator, so a handoff never waits on it

@@ -1,8 +1,7 @@
 # Integrator handoff, 11-04 (kept current while the session runs)
 
 From `session_01W3SSMz5zMw3Tm5DXRpisrG` (took over 10:20 AM Central from `session_01W3SSN2Y8JGNMvmxc394dkf`).
-Session chain: this is 7 of 8. The next integrator is the last one a session can start; after it, Cory starts one
-from his app. Tell him before that is needed.
+Session chain: 7 of 8. Compact at 400k (Cory runs /compact); a new session only if this one breaks.
 
 ## First, in this order (the coordination must not degrade)
 1. Read `CLAUDE.md`, then steps K, D, S, C and 7 of `work/tasks/integrator-hourly.md`.
