@@ -3301,6 +3301,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
 
 void Matron::post_step(const float dt) {
     take_blow(dt);
+    // A killed body continues under gravity while the existing Down shape settles.
+    if (dead_ && body_in_world_) down_for_s_ += dt;
     // Her bars let go of her at once (her journey ends in her next tick).
     if (dead_ || state_ == State::Down || state_ == State::Staggering || holding_state(state_)) routecraft_way_.cancel();
     const Mover *held_by = holder();
@@ -3337,7 +3339,21 @@ void Matron::post_step(const float dt) {
         const float vy = bodies.GetLinearVelocity(body_).GetY();
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
-        if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+        if (landed_hard) {
+            dead_ = true;
+            state_ = State::Dead;
+            clear_interrupted_actions(false);
+            const Vec3 velocity = bodies.GetLinearVelocity(body_);
+            const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
+            if (flat.LengthSq() > 1.0e-6F) {
+                const Vec3 along = flat.Normalized();
+                fall_x_ = along.GetX();
+                fall_z_ = along.GetZ();
+            }
+            down_for_s_ = 0.0F;
+            lie_down(fall_x_, fall_z_);
+        } else if (bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+            // No support exists below the world: this body cannot settle.
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
@@ -4012,6 +4028,9 @@ void Matron::restore(const Saved &saved) {
     // A restore puts her back as the checkpoint had her, dead or not: the world is put
     // back and she is part of it (her death is not kept; matron.hpp, Saved).
     dead_ = false;
+    // A checkpoint rewind or reload restores her alive and undamaged.
+    damage_ns_ = 0.0F;
+    player_damage_ns_ = 0.0F;
     {
         remove_body();
         end_hold(saved.state);
@@ -4342,6 +4361,8 @@ void Matron::take_blow(const float dt) {
     const float feet = float(at.GetY()) - kStandCentre;
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     bool struck = false;
+    float environment_ns = 0.0F;
+    float player_ns = 0.0F;
     Vec3 impulse = Vec3::sZero();
     float above_share = 0.0F;
     for (std::size_t i = 0; i < near_count_; ++i) {
@@ -4374,12 +4395,15 @@ void Matron::take_blow(const float dt) {
         struck = true;
         // What it gave up is hers: along the floor (on the pipe, every way),
         // and a weight's from above.
-        impulse -= (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * (n.mass_kg / kMassKg);
+        const Vec3 given = (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * n.mass_kg;
+        impulse -= given / kMassKg;
         const bool its_low = float(n.at.GetY()) < feet + kLowBlowM;
         const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > at.GetY();
+        const float overhead_ns = its_above ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
         if (its_above) {
-            above_share += std::max(0.0F, its_change.GetY()) * n.mass_kg / kMassKg;
+            above_share += overhead_ns / kMassKg;
         }
+        environment_ns += std::max(given.Length(), overhead_ns);
         if (blow_quiet_ >= kBlowQuietTicks) {
             // A fresh blow: what kind, from where, and whether she faces it.
             blow_low_ = false;
@@ -4403,6 +4427,7 @@ void Matron::take_blow(const float dt) {
         // The player's fist: a striker closing on her by definition, its
         // impulse along the floor hers.
         struck = true;
+        player_ns = player_blow_ns_.Length();
         impulse += Vec3(player_blow_ns_.GetX(), 0.0F, player_blow_ns_.GetZ()) / kMassKg;
         if (blow_quiet_ >= kBlowQuietTicks) {
             blow_low_ = false;
@@ -4445,6 +4470,25 @@ void Matron::take_blow(const float dt) {
     blow_by_player_ = blow_by_player_ || player_blow_tag_;
     player_blow_tag_ = false;
     blow_quiet_ = 0;
+    // Judge each real contact impulse once, not the body's response as a second source.
+    damage_ns_ += environment_ns + player_ns;
+    player_damage_ns_ += player_ns;
+    if (damage_lethal_at_ns(damage_ns_)) {
+        dead_ = true;
+        state_ = State::Dead;
+        clear_interrupted_actions(false);
+        // Keep the actual Jolt body in the world. Her existing Down collision
+        // settles on real steel; the rendered collapse follows the same state.
+        const Vec3 fall(impulse.GetX(), 0.0F, impulse.GetZ());
+        if (fall.LengthSq() > 1.0e-6F) {
+            const Vec3 along = fall.Normalized();
+            fall_x_ = along.GetX();
+            fall_z_ = along.GetZ();
+        }
+        down_for_s_ = 0.0F;
+        lie_down(fall_x_, fall_z_);
+        return;
+    }
     if (tagged && his_blow()) {
         return;
     }
@@ -4513,8 +4557,9 @@ void Matron::take_blow(const float dt) {
                         : (prev == State::Peering || prev == State::Grab || prev == State::Release) ? State::Searching
                                                                                                     : prev;
         state_ = State::Staggering;
-        stagger_s_ = kStaggerMinSeconds + (kStaggerMaxSeconds - kStaggerMinSeconds) *
-                                              std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F);
+        stagger_s_ = (kStaggerMinSeconds + (kStaggerMaxSeconds - kStaggerMinSeconds) *
+                                               std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F)) *
+                     damage_recovery_scale_for_ns(damage_ns_);
         ++staggers_;
         rage_ = std::min(1.0F, rage_ + kStaggerRage);
         blow_staggered_ = true;
@@ -4565,7 +4610,7 @@ void Matron::knock_down() {
     clear_interrupted_actions(true);
     state_ = State::Down;
     resume_state_ = State::Searching;
-    down_s_ = down_seconds();
+    down_s_ = down_seconds() * damage_recovery_scale_for_ns(damage_ns_);
     down_for_s_ = 0.0F;
     turn_cooldown_s_ = turn_cooldown_seconds();
     sight_far_s_ = 0.0F;
@@ -4837,7 +4882,7 @@ void Matron::step_knocked(const float dt) {
 void Matron::refresh_view() {
     view_.state = state_;
     view_.alive = !dead_;
-    view_.released = out(state_);
+    view_.released = out(state_) || (state_ == State::Dead && body_in_world_);
     view_.fooled = fooled_;
     view_.wary = wary_ || state_ == State::Peering;
     view_.vaults = vaults_;
@@ -4929,11 +4974,14 @@ void Matron::refresh_view() {
     view_.stock_push_force_n = stock_push_force_n_;
     view_.staggers = staggers_;
     view_.knockdowns = knockdowns_;
+    view_.damage_ns = damage_ns_;
+    view_.player_damage_ns = player_damage_ns_;
+    view_.damage_stage = damage_stage_for_ns(damage_ns_);
     view_.blow_mps = blow_mps_;
     view_.fall_x = fall_x_;
     view_.fall_z = fall_z_;
     view_.kneeling = kneeling_;
-    view_.down_s = state_ == State::Down ? down_for_s_ : 0.0F;
+    view_.down_s = state_ == State::Down || state_ == State::Dead ? down_for_s_ : 0.0F;
     view_.down_left_s = state_ == State::Down ? std::max(0.0F, down_s_) : 0.0F;
     report_pipe();
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);
