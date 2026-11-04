@@ -24,7 +24,7 @@ Session chain: 7 of 8. Compact at 400k (Cory runs /compact); a new session only 
   Grok and ChatGPT review only when neither can.
 - **API coder (Managed Agents): off** (Cory, 11-04: "I just want the reviewer(s)"; `orchestrator.enabled: false`).
   Never cite its per-session reserve to Cory.
-- **Claude helpers:** at most two active (three if acute), each in a worktree. Every brief says: never subscribe to a
+- **Claude helpers (lean, 1:30 PM, weekly limit at warning):** one at a time, Sonnet, in a worktree, until the limit resets. Every brief says: never subscribe to a
   PR you open.
 
 ## Cory's rulings today (all in the repo)
