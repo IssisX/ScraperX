@@ -125,6 +125,10 @@ const SCENARIOS := {
 	# Knock her down, then throw what you carry: a toolbox thrown at a pest
 	# coming for the climber puts her down (ui_test_act.gd).
 	"touch_matron_heave": 11,
+	# The low sweep on touch (J-033, fight S2): whiff, pest down, changed
+	# down (ui_test_act.gd; the crouched case lives in the native sweep
+	# group, see the note there).
+	"touch_matron_sweep": 11,
 	"touch_bay": 11,
 	# Her corner pipe: she comes down the shaft after the climber, heard on it
 	# 4 s and more before she is there; a drum shoved off the edge onto her as
@@ -451,6 +455,8 @@ func _run() -> void:
 			ok = await _matron_act_touch(InputRouter.Device.TOUCH)
 		"touch_matron_heave":
 			ok = await _matron_heave_touch(InputRouter.Device.TOUCH)
+		"touch_matron_sweep":
+			ok = await _matron_sweep_touch(InputRouter.Device.TOUCH)
 		"touch_matron_pipe":
 			ok = await _matron_pipe_touch(InputRouter.Device.TOUCH)
 		"touch_matron_ride":
