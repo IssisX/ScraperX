@@ -40,8 +40,7 @@ C. **Caps** (CLAUDE.md, "Nothing grows without a cap"): issue and PR comment cou
    `isolation: "worktree"`, never in the integrator's checkout; the integrator merges from its own worktree.
 T. **Task the team, unasked.**
    a. Every agent holds work matched to its strength (Muse the hardest builds, free; Grok math and stuck
-      problems; ChatGPT review, research, specs; Claude sessions the kernel, CI, the game by eye; the
-      API agent one bounded job). Move a job whose owner is out, stuck or mismatched now; one board line.
+      problems; ChatGPT review, research, specs; Claude sessions the kernel, CI, the game by eye). Move a job whose owner is out, stuck or mismatched now; one board line.
    a2. **Muse first for the biggest jobs** (Cory, 11-03: *"Muse is free and very intelligent ... use what we have"*).
       A Claude session (paid) takes what Muse can't: seeing the game (Muse's VM renders the tower under 1 fps),
       CI, quick integrator fixes, or a big job only while Muse already holds three or more unstarted ones.
@@ -71,9 +70,8 @@ T. **Task the team, unasked.**
    `fb-bot/integrate-<job>` (protected: `fb-bot/integrate-protected-<job>`) from the sha it names, then
    the PR; a stage scope or an accepted proposal becomes a job issue owned by Muse.
 4. Rule changes for other agents are edits in `work/tasks/`. Grok Bot, PE and Builder are out until 11-09.
-5. API agent (Opus 5.5 high; `work/budget.yml`): two bounded jobs `needs:orchestrator` at a time (Cory, 11-04).
-   Each PR gets one review only, never two (Cory, 11-04: "I don't want to be wasteful"). The $100 month cap
-   is the limit; never cite the per-session reserve to Cory (11-04: "Stop referring to ... it").
+5. Claude API: reviews and the eye only (Cory, 11-04: "I just want the reviewer(s)"); the API agent is off
+   (`orchestrator.enabled: false`). One review per PR, never two. The $100 month cap is the limit.
 6. Re-running a proof: re-run the whole run (`.../runs/<id>/rerun`), never only its failed jobs: the test jobs
    download `host-build-<run>-<attempt>`, which a failed-jobs re-run never builds (11-03, #171).
 7. Subscribe only to PRs you opened or must merge. Big reads (logs, transcripts, long threads) go to

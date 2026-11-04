@@ -108,7 +108,7 @@ agent, Claude included, works this way:
   bugs on 11-03), research on the internet, outside libraries and papers, specs; it reviews game-code
   jobs but no longer owns them. Grok (the app, 10 AM and 4 PM; Grok Bot/PE/Builder are back 11-09),
   math, a fresh take on a stuck problem, risk; Claude sessions, the native kernel, the running game by
-  eye (Godot MCP), CI; the API agent, one bounded job.
+  eye (Godot MCP), CI.
 - **The integrator pairs proactively:** a job at FIX-CI twice or BLOCKED gets a named second-opinion
   agent from another vendor on its hourly check, with the facts posted for it.
 
