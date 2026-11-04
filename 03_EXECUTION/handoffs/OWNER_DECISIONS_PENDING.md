@@ -71,6 +71,18 @@ ascend), but the loose things (what the forklift and
 crane lift, barrels, boxes, shipping containers): they dent with the force of the hit, crates break into loose
 stock; rule 51, the phone, determinism and saves hold; her budget is unchanged.
 
+**11-04, 11:00 AM Central, decided by the integrator** (J-006 #113, leg 6; Cory: "make the leg-6 call yourself"):
+after her clean release at the bottom of the leg-6 down climb, routecraft picks the same wall ladder back up and lifts
+her 0.46 m. If her pursuit target is at or below her, that is a game defect: fix it in routecraft by not re-taking the
+just-released climb edge while her goal is not above its top (+0.3 m), rather than a general wait after every release,
+which would move chase timing everywhere and risk the 17/20 bar. If the target really is above her, re-climbing is
+right and the test's end-height check changes by a protected PR. Muse measures which applies. He can overturn it.
+
+**11-04, 10:37 AM Central, Cory's own picks:** the API review model is Opus at high effort ($0.09 a review measured,
+against Sonnet xhigh's $0.14, and one Sonnet review hit its token limit with no verdict). The integrator runs at max
+effort ("you miss too much when I set it on extra high"). Reviews: Codex first, then the Claude API; Grok and ChatGPT
+by their scheduled runs only as the fallback.
+
 **11-03, 10:11 AM Central, decided by the integrator** (Cory: use Muse's intelligence, free, for as many of
 the big, difficult things as is best): J-004 (#111, S6 tells) and J-006 (#113, the grade ladder, PR #91,
 then J-007 #114 behind it) move from ChatGPT to Muse; ChatGPT reviews them. Muse runs the ladder on a
