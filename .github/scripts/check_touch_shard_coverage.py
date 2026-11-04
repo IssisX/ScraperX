@@ -65,10 +65,10 @@ SKIP_EXACT = {"audio_mix", "audio_fall", "perf_top", "perf_grade"}
 # not failure; stale the moment the scenario appears in a shard.
 KNOWN_GAPS = {
     "touch_matron_pipe": (
-        "fails on trunk (reported on issue #134): the staged drum is "
-        "already on the ground, 154 m down, when she comes out of her "
-        "locker, so PICK UP is never offered; PR #29 proposes a fix. "
-        "Wire it into a shard together with that fix"
+        "fails on trunk (rechecked 2026-11-04, issue #134): at the take-back "
+        "the drum lies 17.8 m south of where it was set down and the "
+        "climber is on 143, so PICK UP is never offered; PR #29 proposes "
+        "a staging fix. Wire it into a shard together with a fix"
     ),
 }
 

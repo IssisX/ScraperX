@@ -265,6 +265,8 @@ const HAPTICS := {
 	&"heave": [60, 0.8],   # the chiller drop's car heaving under the feet
 	&"rumble": [20, 0.25],   # its air roaring under the floor while it runs
 	&"splash": [90, 0.9],   # the body going into a pool (water_feel.gd)
+	&"strike_sweep": [30, 0.60],   # the low sweep landing (spec section 8.1 cap)
+	&"strike_whiff": [12, 0.25],   # the low sweep missing (spec section 8.1 cap)
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -836,6 +838,25 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if haul > 1.0:
 		_haul_phase += delta * 2.6
 		dip += -0.018 * clampf(haul / 700.0, 0.0, 1.0) * (0.5 + 0.5 * sin(_haul_phase))
+	# A low sweep (spec §8.2): the view dips toward the sweep side and
+	# lowers ~0.15 m through the strike's phases, easing in over the
+	# windup, full through the reach, easing out over the recoil. Zero
+	# whenever no sweep is under way, so a stationary player still reads
+	# back exactly.
+	var strike: Dictionary = _ctx.get("strike", {})
+	if int(strike.get("move", 0)) == 1:
+		var sphase := int(strike.get("phase", 0))
+		if sphase != 0:
+			var sticks := float(strike.get("phase_ticks", 0))
+			var env := 0.0
+			if sphase == 1:
+				env = smoothstep(0.0, 1.0, clampf(sticks / 16.0, 0.0, 1.0))
+			elif sphase == 2:
+				env = 1.0
+			elif sphase == 3:
+				env = 1.0 - smoothstep(0.0, 1.0, clampf(sticks / 22.0, 0.0, 1.0))
+			dip += -0.15 * env
+			lateral_bob += 0.05 * env * (1.0 if int(strike.get("arm", 1)) == 1 else -1.0)
 	# Reduced motion: what moves the view by itself is turned down.
 	var motion := 0.25 if _reduced_motion else 1.0
 	dip *= motion
@@ -929,6 +950,10 @@ func _feel_strike(delta: float) -> void:
 		var at: Vector3 = strike.get("hit_point", _camera.global_position)
 		var impulse := float(strike.get("impulse", 0.0))
 		_audio.player_strike(edge, at if edge == &"landed" else _camera.global_position, impulse)
+		if edge == &"landed" and int(strike.get("move", 0)) == 1:
+			_haptic(&"strike_sweep", clampf(impulse / 60.0, 0.3, 1.0))
+		if edge == &"missed" and int(strike.get("move", 0)) == 1:
+			_haptic(&"strike_whiff", 0.5)
 		if edge == &"landed":
 			var normal: Vector3 = strike.get("hit_normal", Vector3.ZERO)
 			if _matron_view != null:

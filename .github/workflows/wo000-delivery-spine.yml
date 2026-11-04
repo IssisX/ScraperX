@@ -44,7 +44,69 @@ env:
   CCACHE_MAXSIZE: 1500M
 
 jobs:
+  # Cheap and first: the rule check, then whether the push reaches the game (ci/proof_scope.py; Cory, 11-04:
+  # full game builds for small changes are "so extremely wasteful"). When it does not, the two build jobs are
+  # skipped, every job that needs them is skipped with them, and skipped counts as passing for the switchboard.
+  scope:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      game: ${{ steps.scope.outputs.game }}
+
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+
+      - name: Verify no owner-blocked change rides this branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The rule check is the pre-landing gate in AGENTS.md: a BLOCK is a
+          # protected file, a removed or loosened test check, or a budget
+          # number changed. CI green must not bless a branch carrying one,
+          # so this step fails only on BLOCK. REVIEW findings still pass
+          # and stay for the reviewer, as they do in a local run.
+          # The step must never pass vacuously, so it fails loudly when
+          # the merge-base with trunk cannot be computed.
+          git fetch --depth=1 origin ScraperX-Claude
+          TRUNK="$(git rev-parse FETCH_HEAD)"
+          git fetch --deepen=100 origin || true
+          MB="$(git merge-base "$TRUNK" HEAD)" || { echo "rule_check: cannot compute merge-base with trunk"; exit 1; }
+          echo "rule_check: trunk $TRUNK merge-base $MB head $(git rev-parse HEAD)"
+          rc=0
+          python3 tools/rule_check/rule_check.py "$TRUNK" HEAD || rc=$?
+          # The protected-change path (Cory, 11-03: "Approve"): a branch named
+          # <agent>/integrate-protected-* declares that it holds a protected
+          # change, so its BLOCK is reported and its tests still run. Its merge
+          # stays gated: the switchboard never merges a BLOCK; the integrator
+          # merges it on green proof plus a second agent's LAND.
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if [ "$rc" -eq 2 ]; then
+            case "$BRANCH" in
+              */integrate-protected-*)
+                echo "::warning::rule_check: BLOCK on protected-change branch $BRANCH; tests run, merge needs the integrator and a second agent's LAND"
+                exit 0 ;;
+            esac
+            echo "rule_check: BLOCK found, failing (a protected change goes on a <agent>/integrate-protected-* branch)"
+            exit 1
+          fi
+          echo "rule_check: no BLOCK (exit $rc)"
+
+      - name: Decide whether this push reaches the game
+        id: scope
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          (cd ci && python3 -m unittest -q test_proof_scope)
+          python3 ci/proof_scope.py
+
   host-build:
+    needs: scope
+    if: needs.scope.outputs.game == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -117,41 +179,6 @@ jobs:
           python3 .github/scripts/check_godot_test_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml \
             --test-dir godot/tests
-
-      - name: Verify no owner-blocked change rides this branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          # The rule check is the pre-landing gate in AGENTS.md: a BLOCK is a
-          # protected file, a removed or loosened test check, or a budget
-          # number changed. CI green must not bless a branch carrying one,
-          # so this step fails only on BLOCK. REVIEW findings still pass
-          # and stay for the reviewer, as they do in a local run.
-          # The step must never pass vacuously, so it fails loudly when
-          # the merge-base with trunk cannot be computed.
-          git fetch --depth=1 origin ScraperX-Claude
-          TRUNK="$(git rev-parse FETCH_HEAD)"
-          git fetch --deepen=100 origin || true
-          MB="$(git merge-base "$TRUNK" HEAD)" || { echo "rule_check: cannot compute merge-base with trunk"; exit 1; }
-          echo "rule_check: trunk $TRUNK merge-base $MB head $(git rev-parse HEAD)"
-          rc=0
-          python3 tools/rule_check/rule_check.py "$TRUNK" HEAD || rc=$?
-          # The protected-change path (Cory, 11-03: "Approve"): a branch named
-          # <agent>/integrate-protected-* declares that it holds a protected
-          # change, so its BLOCK is reported and its tests still run. Its merge
-          # stays gated: the switchboard never merges a BLOCK; the integrator
-          # merges it on green proof plus a second agent's LAND.
-          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          if [ "$rc" -eq 2 ]; then
-            case "$BRANCH" in
-              */integrate-protected-*)
-                echo "::warning::rule_check: BLOCK on protected-change branch $BRANCH; tests run, merge needs the integrator and a second agent's LAND"
-                exit 0 ;;
-            esac
-            echo "rule_check: BLOCK found, failing (a protected change goes on a <agent>/integrate-protected-* branch)"
-            exit 1
-          fi
-          echo "rule_check: no BLOCK (exit $rc)"
 
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
@@ -548,7 +575,7 @@ jobs:
         run: |
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
-          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave \
+          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep \
               touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
               touch_tram touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
@@ -828,6 +855,8 @@ jobs:
           retention-days: 1
 
   android-build:
+    needs: scope
+    if: needs.scope.outputs.game == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 

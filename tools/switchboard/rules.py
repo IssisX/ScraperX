@@ -148,6 +148,20 @@ def parse_codex_state(body: str, created_at: str, author_login: str) -> Verdict 
     is the one that's available, great"). Only that app's own login counts. A finished review with no
     unresolved findings is a LAND; one with unresolved findings is a FIX (it holds the merge until they
     are resolved or a later Codex pass is clean); a running or unknown state is no verdict."""
+    review = codex_review_state(body, author_login)
+    if review is None:
+        return None
+    sha = str(review.get("commit_sha") or "")
+    if review.get("status") != "completed" or not re.fullmatch(r"[0-9a-f]{7,40}", sha):
+        return None
+    unresolved = review.get("has_unresolved_findings")
+    if unresolved is None:
+        return None
+    return Verdict("openai", "Codex", "review", "FIX" if unresolved else "LAND", sha, created_at, author_login, False)
+
+
+def codex_review_state(body: str, author_login: str) -> dict | None:
+    """The `code_review` part of the Codex app's state comment, or None when the comment is not one."""
     import html
     import json
     if author_login.strip().lower() != CODEX_LOGIN:
@@ -159,13 +173,34 @@ def parse_codex_state(body: str, created_at: str, author_login: str) -> Verdict 
         review = json.loads(m.group(1)).get("code_review") or {}
     except (ValueError, AttributeError):
         return None
-    sha = str(review.get("commit_sha") or "")
-    if review.get("status") != "completed" or not re.fullmatch(r"[0-9a-f]{7,40}", sha):
-        return None
-    unresolved = review.get("has_unresolved_findings")
-    if unresolved is None:
-        return None
-    return Verdict("openai", "Codex", "review", "FIX" if unresolved else "LAND", sha, created_at, author_login, False)
+    return review if isinstance(review, dict) else None
+
+
+CODEX_WAIT_MINUTES = 30   # how long after the proof went green a review Codex is still running is waited for
+
+
+def codex_in_flight(comments: Iterable[Mapping], reactions: Iterable[Mapping], head_sha: str) -> bool:
+    """Is Codex reviewing this head right now: its state comment names the head with a status other than
+    completed, or it has reacted 👀 on the PR (it does so when it starts, and takes it off when done) while no
+    completed state names the head."""
+    done = False
+    for c in comments:
+        r = codex_review_state(c.get("body") or "", (c.get("user") or {}).get("login", ""))
+        sha = str((r or {}).get("commit_sha") or "")
+        if r is None or not sha or not head_sha.startswith(sha):
+            continue
+        if r.get("status") == "completed":
+            done = True
+        elif r.get("status"):
+            return True
+    eyes = any(x.get("content") == "eyes" and (x.get("user") or {}).get("login", "").lower() == CODEX_LOGIN
+               for x in reactions)
+    return eyes and not done
+
+
+def codex_wait_over(proof_done_at: str, now_iso: str, minutes: float = CODEX_WAIT_MINUTES) -> bool:
+    """The wait for a running Codex review is over: `minutes` since the proof went green, or no time to count from."""
+    return not proof_done_at or ask_is_overdue(proof_done_at, now_iso, minutes / 60)
 
 
 def parse_verdict(body: str, created_at: str, author_login: str, team: Team) -> Verdict | None:
@@ -340,12 +375,17 @@ def review_rotation(number: int, author_vendor: str, needs: frozenset[str], team
     fits = [p for p in team.pool
             if (p == API_REVIEWER and api_ok and (author_vendor != "anthropic" or team.api_reviews_claude))
             or (p != API_REVIEWER and team.agent_vendor.get(p) not in (None, "anthropic", author_vendor))]
+    # The last resort (Cory, 11-04): when the API is in the pool but cannot review this head (a cap is hit, or
+    # it failed or gave no verdict here), the agents of review.fallback_order follow, by their own scheduled runs.
+    last = [f for f in team.fallback_order
+            if not api_ok and API_REVIEWER in team.pool and f not in fits
+            and team.agent_vendor.get(f) not in (None, "anthropic", author_vendor)]
     if not fits:
-        return []
+        return last
     start = number % len(fits)
     if "matron" in needs and team.matron_reviewer in fits:
         start = fits.index(team.matron_reviewer)
-    return fits[start:] + fits[:start]
+    return fits[start:] + fits[:start] + last
 
 
 def choose_reviewer(rotation: Sequence[str], asked_at: Mapping[str, str], now_iso: str, hours: float,

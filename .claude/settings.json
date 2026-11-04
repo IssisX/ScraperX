@@ -14,6 +14,7 @@
       "mcp__godot-docs",
       "mcp__deepwiki",
       "Bash",
+      "Bash(gh api -X PUT repos/IssisX/ScraperX/pulls/*/merge *)",
       "Bash(npx --yes skills@1.7.4 find *)",
       "Edit",
       "Write",
@@ -101,5 +102,6 @@
         ]
       }
     ]
-  }
+  },
+  "autoCompactWindow": 500000
 }

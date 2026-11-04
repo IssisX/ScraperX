@@ -330,6 +330,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
     // TEST-ONLY: the look suite's setup (see the header); nothing in play calls these.
     godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_hold_matron_hands", "seconds"), &ScraperXSimulation::debug_hold_matron_hands);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_set_matron_stage", "stage"),
                                 &ScraperXSimulation::debug_set_matron_stage);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_climb_way", "pipe", "down"),
@@ -466,6 +467,7 @@ godot::Dictionary ScraperXSimulation::get_strike_state() const {
     const sim::Snapshot &p = simulation_->snapshot();
     godot::Dictionary out;
     out["phase"] = static_cast<std::int64_t>(p.strike_phase);
+    out["move"] = static_cast<std::int64_t>(p.strike_move);   // 0 punch, 1 sweep
     out["phase_ticks"] = static_cast<std::int64_t>(p.strike_phase_ticks);
     out["offered"] = p.strike_offered;
     out["held"] = p.held_by_matron;   // in her hand: the offer is his escape (before the rip)
@@ -2039,6 +2041,8 @@ namespace {
 } // namespace
 
 void ScraperXSimulation::debug_place_matron(const godot::Vector3 feet) { simulation_->debug_place_matron(to_sim(feet)); }
+
+void ScraperXSimulation::debug_hold_matron_hands(const double seconds) { simulation_->debug_hold_matron_hands(seconds); }
 
 void ScraperXSimulation::debug_set_matron_stage(const std::int64_t stage) {
     simulation_->debug_set_matron_stage(static_cast<std::uint8_t>(std::clamp<std::int64_t>(stage, 0, 2)));

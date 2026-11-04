@@ -192,6 +192,10 @@ int main() {
         run_strike();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-sweep") {
+        run_matron_sweep();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder-pull") {
         run_matron_ladder_pull();
         return EXIT_SUCCESS;
@@ -401,6 +405,11 @@ int main() {
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY");
+        only != nullptr && std::string(only) == "route-pockets") {
+        run_route_pockets();
+        return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY");
         only != nullptr && std::string(only) == "AS-009-route") {
         run_crane_route();
         return EXIT_SUCCESS;
@@ -571,6 +580,7 @@ int main() {
     run_facade_crane();
     run_crane_band();
     run_crane_route();
+    run_route_pockets();
     run_crane_wreckage();
     run_midstack_service();
     run_service_c4();
