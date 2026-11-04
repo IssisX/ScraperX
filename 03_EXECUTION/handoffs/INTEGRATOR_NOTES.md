@@ -41,20 +41,19 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   +0.3 m); if her target really is above, the test changes by a protected PR. Muse measures which.
 
 ## Asks in flight
-- Muse (mail): J-001 steps 1, 3, 4 (agents running); J-006 leg 6; J-038 plan (rule within the hour when it comes);
-  #95 stills; three rebases; J-016 drum runaway plus the touch_matron_pipe drum moving 17.8 m (mailed 11:21 AM);
-  S3 starts when #179 lands. No Muse mail since 11:21 AM as of 12:12 PM.
-- Grok (4 PM run): #193 force split (posted as `To Grok:`); #100, #169, #137 from 11-03.
-- ChatGPT: J-030 (#137), J-038 research (#169). Switchboard review asks to ChatGPT on #132/#164 are fallbacks only.
+- Muse (mail): J-001 step 4 hold re-pose (body x <= 16.9 at ArmPlay entry) and beat 5 hang to 2.5 s, both ruled
+  1:10 PM, diffs on top of #193; step 1 running; Codex P2 last. J-038 ruled 12:55 PM (slice 0 next after the
+  fight; slice 1 waits for Grok). J-006 leg 6; J-016 drum; #95 stills.
+- Grok (4 PM run): #193 force split; #100 (a helper is fixing touch-2 meanwhile); J-038 dent formula on #169.
+- ChatGPT: #171 next step (asked 1 PM); J-030 (#137).
 - To Claude: none open.
 
-## Merge queue (12:20 PM)
-- #200 MERGED 12:18 PM by the integrator: the max reviewer is live; the merge permission works now.
-- #202 (proof skips game for notes-only pushes): merge myself on green (Codex clean).
-- #203 (switchboard merges declared protected PRs): merge on green plus a review.
-- #43 (protected drawn-body checks, LAND): trunk merged at 4e15d409; merge myself on green.
-- #150 (J-025) at f79c6b66, #179, #196 (J-033): switchboard merges; if a review stalls an hour with Codex clean,
-  merge myself. Merged today: #185, #197, #199, #200, #201.
+## Merge queue (1:10 PM)
+- Merge myself on green + Codex clean: #203 (never-edit files stay blocked), #205 (CI runs only reachable tests;
+  touches the signing job).
+- Switchboard: #204 (Supersedes #N closes #N), #206 (tests-probe), #207 (world-b; 2/2 commit coming), #150
+  (STOW-replaces-JUMP fix coming via a J-039 PR merged into it).
+- #193 proving at 9a4f8cad. Merged today: #179, #185, #196, #197, #199, #200, #201, #202. Closed: #43, #103.
 
 ## Known here
 - `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone. Worktrees in use: proof-scope, merge-protected, j025.
