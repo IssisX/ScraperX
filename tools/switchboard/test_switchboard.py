@@ -250,6 +250,36 @@ class Board(unittest.TestCase):
         self.assertEqual(rules.budget_override([("budget 12", "IssisX"), ("ok", "IssisX"), ("Budget 15.50\nthanks", "IssisX")], TEAM), "15.50")
         self.assertEqual(rules.budget_override([("my budget 12 is fine", "IssisX")], TEAM), "")
 
+    def test_superseded_prs_are_read_from_the_body(self):
+        self.assertEqual(rules.superseded_prs("Drawn-body checks.\nSupersedes #43, per the spec.", 100), [43])
+        self.assertEqual(rules.superseded_prs("supersedes #43 and #44; also Supersedes #43, #45", 100), [43, 44, 45])
+        self.assertEqual(rules.superseded_prs("Supersedes #100", 100), [])
+        self.assertEqual(rules.superseded_prs("Fixes #43. Supersedes nothing.", 100), [])
+        self.assertEqual(rules.superseded_prs(None, 1), [])
+
+    def test_a_ready_pr_closes_the_open_prs_it_supersedes(self):
+        class GH:
+            repo = "IssisX/ScraperX"
+            def __init__(self):
+                self.writes, self.comments = [], []
+            def get(self, path):
+                n = int(path.rsplit("/", 1)[1])
+                if n == 9:
+                    raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+                return {"state": "closed" if n == 44 else "open"}
+            def comment(self, number, body, what=""):
+                self.comments.append(number)
+            def write(self, method, path, body=None, what=""):
+                self.writes.append((method, path, body))
+        ctx = {"body": "Supersedes #43, #44 and #9"}
+        for draft, closed in ((False, [43]), (True, [])):
+            gh, lines = GH(), []
+            me = types.SimpleNamespace(gh=gh, out=lines.append)
+            facts = types.SimpleNamespace(number=100, draft=draft)
+            switch.Switch.close_superseded(me, facts, ctx)
+            self.assertEqual(gh.comments, closed)
+            self.assertEqual(gh.writes, [("PATCH", f"repos/IssisX/ScraperX/pulls/{n}", {"state": "closed"}) for n in closed])
+
     def test_budget_override_ignores_outsiders_and_the_bot(self):
         self.assertEqual(rules.budget_override([("budget 100", "outside-team")], TEAM), "")
         self.assertEqual(rules.budget_override([("budget 9", "IssisX"), ("budget 100", "outside-team")], TEAM), "9")
