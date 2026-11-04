@@ -186,7 +186,7 @@ agent, Claude included, works this way:
 - Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
   and wasteful, we should create another whenever that happens, which you determine for me"*). The
   integrator decides, without asking him, and covers every Claude session, its own included.
-  - **Compact, don't replace** (11-04, Cory: *"why the hell we've been doing this new session shit"*). At **400k
+  - **Compact, don't replace** (Cory, 11-04). At **400k
     context tokens** (`get_session` → `external_metadata.context_usage.used_tokens`, checked hourly for every Claude
     session, the integrator's own first) it brings its handoff file current and tells Cory, who runs /compact; after
     it, it re-reads this file, the hourly file and its handoff. With him away, it compacts
