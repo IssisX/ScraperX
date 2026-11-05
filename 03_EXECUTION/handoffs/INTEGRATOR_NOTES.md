@@ -60,6 +60,9 @@ Keep this file to what changes the next action; move anything done to the log.
   - walk p50/p95/p99;
   - a gore warm-up;
   - Sentry native crash capture (Option A), its own workflow/signing PR with a security review.
+- Next helper after the draws helper: J-046 #257, the budget audit (Cory "Go" 3:10 PM). One test sums every one of
+  her force paths per tick against 8 kN / 44 kW. Known leaks go on an EXPECTED list (XPASS forces removal); it only
+  measures, with no behavior change.
 - Retired: the J-042 builder, J-042 fix and J-044m helpers.
 
 ## Muse's queue (mail only)
