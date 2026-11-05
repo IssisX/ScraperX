@@ -923,6 +923,17 @@ jobs:
             --script res://tests/fight_s1_test.gd 2>&1 | tee artifacts/fight-s1.log
           grep -q '^FIGHT_S1 PASS' artifacts/fight-s1.log
 
+      - name: Error reporter test
+        shell: bash
+        run: |
+          set -euo pipefail
+          # error_reporter_test.gd (J-031): the Sentry error reporter stays
+          # inert off the phone, and a forced-on instance builds a valid
+          # envelope within its bounds. The send is injected: no network.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/error_reporter_test.gd 2>&1 | tee artifacts/error-reporter.log
+          grep -q '^ERROR_REPORTER PASS' artifacts/error-reporter.log
+
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4
         with:
