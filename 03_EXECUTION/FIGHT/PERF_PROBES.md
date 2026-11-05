@@ -90,3 +90,66 @@ What exists today, checked in the repo on 2026-11-05:
 
 Not built: an on-screen readout of `get_step_timing()` during real play. When J-044 needs one, it is a small
 UI job: add the native step's mean and max to the SHOW FPS label.
+
+## Rendered probes (J-045, #248: phone stability)
+
+These scenarios use a per-frame recorder in `ui_test_act.gd` (`_probe_*`). For every frame it records:
+
+- the frame's wall time;
+- the native fixed steps' time inside that frame (every step counted, from `get_step_timing`'s running totals);
+- the viewport's measured render CPU and GPU time;
+- draw calls, objects and primitives;
+- video, texture and buffer memory;
+- Godot's pipeline-compilation counters.
+
+Per segment it prints p50/p95/p99/max, the frames over 50 ms and the most of each counter, then the worst
+frames in full. They draw nothing headless, so they are not in a CI touch shard (`SKIP_EXACT` in
+`check_touch_shard_coverage.py`). Run them under xvfb with the phone's renderer:
+
+```
+godot --headless --path godot --import        # once: without it the tower's surface textures are missing
+xvfb-run -a -s "-screen 0 648x557x24" godot --path godot --rendering-method gl_compatibility \
+  --fixed-fps 60 --resolution 648x557 -- --uitest=perf_view_bottom --capture=/tmp/shots/perf_view_bottom
+```
+
+| Scenario | Spawn | What |
+|---|---|---|
+| `perf_locker` | 11 (154 deck) | An eye check of the warm-up first. Then real play's `_prepare_her` (card, scan, warm-up), 1 s idle, a sprint that wakes her, her straining, and 6 s from her burst. |
+| `perf_view_bottom` | 8 (yard) | The tower's foot, four quarters at pitch 1.35 (straight up) and 0.6. |
+| `perf_view_sling` | 8 | Seated in the slingshot's pouch. The pouch's camera follows the launch rail, so every quarter reads the same. |
+| `perf_view_top` | 42 (summit) | Four quarters at pitch -1.25 (straight down) and -0.6. |
+
+On the host, software rendering (llvmpipe) makes every frame 0.4-4 s, so frame times there mean nothing.
+Draw calls, objects, primitives and memory do carry over to the phone. Two things the host cannot show:
+
+- Godot's `PIPELINE_COMPILATIONS_*` counters stay 0 under gl_compatibility, and `--verbose` names no
+  per-material compiles. Whether a shader compiled is seen only as a slow first frame on the phone.
+- Real frame times. Those come from the APK through logcat (above): the same scenarios print the same
+  `SCRAPERX_PERF` lines there.
+
+First host numbers (2026-11-05, textures imported, default settings: shadow quality 3):
+
+| View | draws | objects | primitives | video / texture / buffer MB |
+|---|---|---|---|---|
+| 154 deck by her locker, idle | 2438 | 2539 | 960k | 132 / 81 / 51 |
+| tower foot, facing it, pitch 0.6 | 2845 | 2845 | 933k | 130 / 80 / 51 |
+| tower foot, straight up | 1017-1160 | 1017-1160 | 544-563k | 130 / 80 / 51 |
+| slingshot pouch (any look) | **2890** | **3112** | **1094k** | 131 / 80 / 51 |
+| summit, straight down | 1049-1097 | 1151-1177 | 646-692k | 132 / 81 / 51 |
+
+The repo's own draw budget is 700 at LOW shadows (`PERF_DRAW_BUDGET`, ui_test_rides.gd). Every full-height
+view is over it, by up to four times. Video memory is flat at about 130 MB in every view, so Godot's own
+accounting shows no memory blow-up in the views Cory reports. The leading suspect for the force-close is
+the GPU work per frame: about 3k draws and about 1M primitives, plus the shadow pass. The phone run has to
+confirm it.
+
+The locker freeze: native is not the stall. Her tower scan (3.0 s) already runs under the LOADING card,
+and the native share of each frame stays at or under 10.6 ms from idle through the wake, her 16 s of
+straining and 6 s after the burst. On the host the burst's frames are no slower than those around them
+(wall p50 / p95 / max, ms: straining 730 / 1065 / 1726, burst 646 / 1221 / 1684; draws at most 976 and
+945k primitives at the burst). Her body is
+hidden until the burst, so the burst is the first time her materials (about 14 StandardMaterial3Ds:
+skin, cloth, hair, eyes, teeth) are drawn, and gl_compatibility compiles a shader on its first draw.
+`_prepare_her` now draws her for 3 frames under the card as a 0.002-scale speck at the screen's centre
+(`matron_view.gd` `warm_up` / `warm_down`). The eye check found 0 of 360,936 pixels changed. Whether it
+removes the phone's stall is proved only by `perf_locker` on the phone.

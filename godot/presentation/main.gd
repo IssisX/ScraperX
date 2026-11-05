@@ -318,6 +318,9 @@ func _ready() -> void:
 # Play starts: the card goes up over the frozen tower, she reads the steel,
 # the card comes down. A title closed on CONTINUE starts play here too; a NEW
 # CLIMB reloads the scene, and the new one starts it from _ready.
+# Frames her materials are drawn behind the LOADING card (_prepare_her).
+const WARM_FRAMES := 3
+
 func _prepare_her() -> void:
 	if not _her_scan_pending:
 		return
@@ -339,6 +342,14 @@ func _prepare_her() -> void:
 	var started := Time.get_ticks_msec()
 	_native.prepare_matron()
 	print("SCRAPERX_MATRON_PREPARED msec=%d" % (Time.get_ticks_msec() - started))
+	# J-045 (#248): and her materials drawn once behind the card, so the
+	# renderer compiles them now, not at the locker burst (matron_view.gd warm_up).
+	started = Time.get_ticks_msec()
+	_matron_view.warm_up(_camera)
+	for i in WARM_FRAMES:
+		await get_tree().process_frame
+	_matron_view.warm_down()
+	print("SCRAPERX_MATRON_WARMED msec=%d frames=%d" % [Time.get_ticks_msec() - started, WARM_FRAMES])
 	card.queue_free()
 	# A pause menu opened while she read (focus lost in those frames) stays paused.
 	get_tree().paused = was_paused or _paused

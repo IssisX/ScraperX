@@ -133,6 +133,13 @@ const SCENARIOS := {
 	# her deck, Godot's frame times, draw calls and the native step timer
 	# logged and summarized (ui_test_act.gd; no budget asserted yet).
 	"perf_fight": 11,
+	# J-045 (#248), rendered only (measured locally under xvfb, not in CI):
+	# the locker burst after the LOADING card's scan, and the three
+	# full-height tower views Cory's force-close comes in (ui_test_act.gd).
+	"perf_locker": 11,
+	"perf_view_bottom": 8,
+	"perf_view_sling": 8,
+	"perf_view_top": 42,
 	"touch_bay": 11,
 	# Her corner pipe: she comes down the shaft after the climber, heard on it
 	# 4 s and more before she is there; a drum shoved off the edge onto her as
@@ -467,6 +474,14 @@ func _run() -> void:
 			ok = await _matron_sweep_touch(InputRouter.Device.TOUCH)
 		"perf_fight":
 			ok = await _perf_fight()
+		"perf_locker":
+			ok = await _perf_locker(InputRouter.Device.TOUCH)
+		"perf_view_bottom":
+			ok = await _perf_view_bottom()
+		"perf_view_sling":
+			ok = await _perf_view_sling(InputRouter.Device.TOUCH)
+		"perf_view_top":
+			ok = await _perf_view_top()
 		"touch_matron_pipe":
 			ok = await _matron_pipe_touch(InputRouter.Device.TOUCH)
 		"touch_matron_ride":

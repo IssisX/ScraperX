@@ -1704,3 +1704,266 @@ func _play_summit_ending() -> bool:
 	await _pose("ending_home")
 	_detail = "beam=two_bearings sling=free final_caption=once canopy=live home=ground deaths=0"
 	return true
+
+# J-045 (#248), phone stability: a per-frame recorder for rendered runs, and
+# the scenarios that use it (the locker burst, the three full-height tower
+# views). Each frame it logs its wall time, the native fixed steps' time
+# inside it (from get_step_timing's running totals, every step counted), the
+# viewport's measured render time, draw calls, objects, primitives, video /
+# texture / buffer memory, and the pipeline (shader) compilations Godot
+# counts. Rendered only (headless draws nothing): run them under xvfb with
+# the phone's renderer (gl_compatibility), see 03_EXECUTION/FIGHT/PERF_PROBES.md.
+# They measure; they fail only when nothing was measured.
+const PROBE_COMPILE_MONITORS := [
+	Performance.PIPELINE_COMPILATIONS_CANVAS, Performance.PIPELINE_COMPILATIONS_MESH,
+	Performance.PIPELINE_COMPILATIONS_SURFACE, Performance.PIPELINE_COMPILATIONS_DRAW,
+	Performance.PIPELINE_COMPILATIONS_SPECIALIZATION]
+const PROBE_WORST := 8
+
+var _probe_rows: Array = []
+var _probe_last_usec := 0
+var _probe_native_total_us := 0.0
+var _probe_compiles := 0.0
+var _probe_tag := ""
+var _probe_on := false
+
+
+func _probe_native_total() -> float:
+	var step: Dictionary = _native().get_step_timing()["step"]
+	return float(step["mean_us"]) * float(step["samples"])
+
+
+func _probe_compile_count() -> float:
+	var total := 0.0
+	for monitor in PROBE_COMPILE_MONITORS:
+		total += float(Performance.get_monitor(monitor))
+	return total
+
+
+func _probe_start(tag: String) -> void:
+	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
+	_probe_rows = []
+	_probe_tag = tag
+	_probe_last_usec = Time.get_ticks_usec()
+	_probe_native_total_us = _probe_native_total()
+	_probe_compiles = _probe_compile_count()
+	_probe_on = true
+	_probe_loop()
+
+
+func _probe_stop() -> void:
+	_probe_on = false
+
+
+# Runs beside the scenario (called without await): one row per process frame.
+func _probe_loop() -> void:
+	while _probe_on:
+		await get_tree().process_frame
+		if not _probe_on:
+			return
+		var now := Time.get_ticks_usec()
+		var native_total := _probe_native_total()
+		var compiles := _probe_compile_count()
+		var rid := get_viewport().get_viewport_rid()
+		_probe_rows.append({
+			"f": _probe_rows.size(), "tag": _probe_tag,
+			"wall_ms": float(now - _probe_last_usec) / 1000.0,
+			"native_ms": (native_total - _probe_native_total_us) / 1000.0,
+			"render_cpu_ms": RenderingServer.viewport_get_measured_render_time_cpu(rid),
+			"render_gpu_ms": RenderingServer.viewport_get_measured_render_time_gpu(rid),
+			"compiles": compiles - _probe_compiles,
+			"draws": int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+			"objects": int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+			"prims": int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
+			"video_mb": float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+			"texture_mb": float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+			"buffer_mb": float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0,
+			"static_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0,
+			"matron": int(_matron_state()["state"]),
+		})
+		_probe_last_usec = now
+		_probe_native_total_us = native_total
+		_probe_compiles = compiles
+
+
+func _probe_row_text(row: Dictionary) -> String:
+	return "f=%d tag=%s wall_ms=%.1f native_ms=%.1f render_cpu_ms=%.1f render_gpu_ms=%.1f compiles=%d draws=%d objects=%d prims=%d video_mb=%.0f texture_mb=%.0f buffer_mb=%.0f static_mb=%.0f matron=%d" % [
+		int(row["f"]), String(row["tag"]), float(row["wall_ms"]), float(row["native_ms"]),
+		float(row["render_cpu_ms"]), float(row["render_gpu_ms"]), int(row["compiles"]), int(row["draws"]),
+		int(row["objects"]), int(row["prims"]), float(row["video_mb"]), float(row["texture_mb"]),
+		float(row["buffer_mb"]), float(row["static_mb"]), int(row["matron"])]
+
+
+# One SCRAPERX_PERF line per tag (frame-time percentiles, the most of each
+# counter and memory, compilations summed) and the worst frames whole.
+func _probe_report(scenario: String) -> Dictionary:
+	var tags := []
+	for row in _probe_rows:
+		if not tags.has(row["tag"]):
+			tags.append(row["tag"])
+	var out := {}
+	for tag in tags:
+		var walls := []
+		var most := {"draws": 0, "objects": 0, "prims": 0, "video_mb": 0.0, "texture_mb": 0.0, "buffer_mb": 0.0}
+		var compiles := 0
+		var over_50 := 0
+		for row in _probe_rows:
+			if row["tag"] != tag:
+				continue
+			walls.append(float(row["wall_ms"]))
+			compiles += int(row["compiles"])
+			over_50 += 1 if float(row["wall_ms"]) > 50.0 else 0
+			for key in most:
+				most[key] = maxf(float(most[key]), float(row[key]))
+		walls.sort()
+		var at := func(q: float) -> float: return float(walls[clampi(int(ceil(q * walls.size())) - 1, 0, walls.size() - 1)])
+		out[tag] = {"n": walls.size(), "p50": at.call(0.5), "p95": at.call(0.95), "p99": at.call(0.99),
+			"max": float(walls[walls.size() - 1]), "compiles": compiles, "over_50": over_50, "most": most}
+		print("SCRAPERX_PERF %s %s frames=%d wall_p50=%.1f p95=%.1f p99=%.1f max=%.1f over_50ms=%d compiles=%d draws_max=%d objects_max=%d prims_max=%d video_mb_max=%.0f texture_mb_max=%.0f buffer_mb_max=%.0f" % [
+			scenario, tag, walls.size(), out[tag]["p50"], out[tag]["p95"], out[tag]["p99"], out[tag]["max"], over_50,
+			compiles, int(most["draws"]), int(most["objects"]), int(most["prims"]), float(most["video_mb"]),
+			float(most["texture_mb"]), float(most["buffer_mb"])])
+	var worst := _probe_rows.duplicate()
+	worst.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["wall_ms"]) > float(b["wall_ms"]))
+	for i in mini(PROBE_WORST, worst.size()):
+		print("SCRAPERX_PERF %s worst %s" % [scenario, _probe_row_text(worst[i])])
+	for row in _probe_rows:
+		if int(row["compiles"]) > 0:
+			print("SCRAPERX_PERF %s compile %s" % [scenario, _probe_row_text(row)])
+	return out
+
+
+# The locker burst as real play has it: her tower scan first, as the LOADING
+# card does (main.gd _prepare_her), then a sprint beside her locker wakes her
+# and she bursts out. Logged from a second before the wake to 6 s after the
+# burst. Acceptance (#248): no frame over 50 ms, no compilation after the card.
+func _perf_locker(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if DisplayServer.get_name() != "headless":
+		await _warm_eye_check()
+	# Real play's path: the card, her scan, her materials warmed (main.gd).
+	var started := Time.get_ticks_msec()
+	_main._her_scan_pending = true
+	await _main._prepare_her()
+	print("SCRAPERX_PERF perf_locker prepare_her_ms=%d" % (Time.get_ticks_msec() - started))
+	await _seconds(2.0)
+	_probe_start("idle")
+	await _seconds(1.0)
+	_probe_tag = "wake"
+	if not await _wake_matron(device):
+		_probe_stop()
+		return false
+	# Straining at the door till it goes: the burst is her first state past it.
+	_probe_tag = "straining"
+	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) != MATRON_STATE_STRAINING, 30.0):
+		_probe_stop()
+		return _fail("she strained 30 s and never burst out")
+	_probe_tag = "burst"
+	await _seconds(6.0)
+	_probe_stop()
+	var out := _probe_report("perf_locker")
+	if not out.has("burst"):
+		return _fail("no frames were measured after the burst")
+	_detail = "burst_max_ms=%.1f burst_over_50ms=%d burst_compiles=%d wake_max_ms=%.1f" % [
+		float(out["burst"]["max"]), int(out["burst"]["over_50"]), int(out["burst"]["compiles"]),
+		float(out["wake"]["max"]) if out.has("wake") else 0.0]
+	return true
+
+
+# The warm-up seen (#248, CLAUDE.md "look at it"): the same paused frame
+# twice without her speck (the sky moves while paused: the noise) and once
+# with it, the pixels that differ counted, each frame saved with --capture.
+func _probe_frame_image() -> Image:
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	return get_viewport().get_texture().get_image()
+
+
+func _probe_pixels_differ(a: Image, b: Image) -> int:
+	var n := 0
+	for y in a.get_height():
+		for x in a.get_width():
+			var p := a.get_pixel(x, y)
+			var q := b.get_pixel(x, y)
+			if absf(p.r - q.r) + absf(p.g - q.g) + absf(p.b - q.b) > 0.06:
+				n += 1
+	return n
+
+
+func _warm_eye_check() -> void:
+	var was_paused := get_tree().paused
+	get_tree().paused = true
+	var before: Image = await _probe_frame_image()
+	var again: Image = await _probe_frame_image()
+	await _pose("warm_off")
+	_main._matron_view.warm_up(_main._camera)
+	var during: Image = await _probe_frame_image()
+	await _pose("warm_on")
+	_main._matron_view.warm_down()
+	get_tree().paused = was_paused
+	print("SCRAPERX_PERF perf_locker warm_eye noise_pixels=%d warm_pixels=%d of=%d" % [
+		_probe_pixels_differ(before, again), _probe_pixels_differ(again, during),
+		before.get_width() * before.get_height()])
+
+
+# Faces the tower's axis from where the climber stands.
+const PROBE_TOWER_AXIS := Vector2(0.0, -130.0)
+# Each view held this long: its counters (draws, primitives, memory) are
+# steady within a few frames, and software rendering is slow.
+const PROBE_VIEW_HOLD_S := 0.5
+
+
+func _probe_views(scenario: String, pitches: Array) -> bool:
+	var me := _position()
+	var to_tower := PROBE_TOWER_AXIS - Vector2(me.x, me.z)
+	var base_yaw := atan2(-to_tower.x, -to_tower.y)
+	await _seconds(PROBE_VIEW_HOLD_S)
+	_probe_start("settle")
+	await _seconds(PROBE_VIEW_HOLD_S)
+	for pitch in pitches:
+		for quarter in 4:
+			_main._yaw = base_yaw + float(quarter) * PI * 0.5
+			_main._pitch = float(pitch)
+			_probe_tag = "p%+d_y%d" % [int(round(float(pitch) * 100.0)), quarter * 90]
+			await _seconds(PROBE_VIEW_HOLD_S)
+	_probe_stop()
+	var out := _probe_report(scenario)
+	var worst_tag := ""
+	for tag in out:
+		if worst_tag.is_empty() or int(out[tag]["most"]["draws"]) > int(out[worst_tag]["most"]["draws"]):
+			worst_tag = tag
+	if worst_tag.is_empty():
+		return _fail("no frames were measured")
+	_detail = "worst_view=%s draws=%d prims=%d video_mb=%.0f wall_max_ms=%.1f at %s" % [worst_tag,
+		int(out[worst_tag]["most"]["draws"]), int(out[worst_tag]["most"]["prims"]),
+		float(out[worst_tag]["most"]["video_mb"]), float(out[worst_tag]["max"]), str(_position())]
+	return true
+
+
+# The three full-height views Cory's force-close comes in (#248): from the
+# yard at the tower's foot looking up, seated in the slingshot's pouch
+# looking up, and from the summit looking down.
+func _perf_view_bottom() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	return await _probe_views("perf_view_bottom", [1.35, 0.6])
+
+
+func _perf_view_sling(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not (await _go(device, Vector2(6.0, -40.0), 0.3, 25.0) and \
+			await _go(device, Vector2(6.0, -57.6), 0.2, 25.0) and \
+			await _go(device, Vector2(-3.0, -57.6), 0.15, 12.0) and \
+			await _go(device, Vector2(-3.0, -55.0), 0.1, 6.0)):
+		return _fail("the walk into the slingshot's pouch stalled at %s" % str(_position()))
+	if not await _offered(&"slingshot", "ENTER POUCH"):
+		return _fail("by the pouch, Action read '%s', not ENTER POUCH" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_sling()["seated"]), 1.0):
+		return _fail("ENTER POUCH did not harness the rider")
+	return await _probe_views("perf_view_sling", [1.35, 0.6])
+
+
+func _perf_view_top() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	return await _probe_views("perf_view_top", [-1.25, -0.6])
+
