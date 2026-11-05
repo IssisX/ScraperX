@@ -28,9 +28,10 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 6. **One better way.** What cost the most this hour, or what is still done by hand? If something simpler
    would do it, tell Cory with your pick.
 
-Between hours: a 20-minute `send_later` check-in (Muse's mail, `asks.py --hours 3`, the sweep's MERGE /
-FIX-CI / BLOCKED lines, session sizes), re-armed by each run while something is in flight (a proof running, a
-diff to apply, a merge to make); when nothing is, the hourly run alone does (saves the weekly limit, 11-04).
+Between hours: no timed check-ins (Cory 11-05, so the weekly limit lasts until the Monday 11 AM reset). The switchboard
+merges by itself, and PR events and helper reports wake the integrator. The hourly run alone reads Muse's mail. A quiet
+hourly run ends in one line. Helpers: after the two in flight (J-042, J-044m/J-045), one at a time; free Muse takes the
+builds first.
 
 Trunk merges on any PR are yours, done the hour it conflicts, and the owner is mailed the new sha. Hand a merge to
 Muse only when the conflict is in its own logic, by a mail that says "Muse: resolve". Never ask for a job and then
