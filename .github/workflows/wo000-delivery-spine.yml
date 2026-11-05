@@ -109,6 +109,13 @@ jobs:
           (cd ci && python3 -m unittest -q test_proof_scope)
           python3 ci/proof_scope.py
 
+      - name: Verify every proof job is gated on its own scope output
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_job_gate_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
       - name: Verify every APK proof step runs in the APK jobs
         shell: bash
         run: |
@@ -199,6 +206,13 @@ jobs:
           python3 .github/scripts/check_drawn_body_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml \
             --check tools/matron_probe/check.py
+
+      - name: Verify every proof job is gated on its own scope output
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_job_gate_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
 
       - name: Verify every APK proof step runs in the APK jobs
         shell: bash
