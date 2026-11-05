@@ -5045,7 +5045,7 @@ void Matron::refresh_view() {
     view_.blow_low = blow_low_;
     view_.riding = riding_;
     view_.edge_brace_n = edge_brace_n_;
-    view_.foot_force_n = foot_force_n_;
+    view_.feet_push_n = foot_force_n_;
     view_.fall_x = fall_x_;
     view_.fall_z = fall_z_;
     view_.kneeling = kneeling_;

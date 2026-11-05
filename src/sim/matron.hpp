@@ -1299,7 +1299,7 @@ public:
         bool blow_low = false;          // and it came at her shins (under kLowBlowM): no step to take it
         bool riding = false;            // her floor going up or down under her (feel_floor): she rides it
         float edge_brace_n = 0.0F;      // her feet braced back from an edge this tick (brace_at_edges)
-        float foot_force_n = 0.0F;      // all her feet pushed with this tick (read only)
+        float feet_push_n = 0.0F;       // all her feet pushed with this tick (read only)
         float fall_x = 0.0F, fall_z = 1.0F;   // down: the way she fell (her head that way)
         bool kneeling = false;          // down where lying did not fit: crumpled on her knees
         float down_s = 0.0F;            // seconds on the steel

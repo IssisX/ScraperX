@@ -1499,7 +1499,7 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.blow_low = view.blow_low;
     result.riding = view.riding;
     result.edge_brace_n = view.edge_brace_n;
-    result.foot_force_n = view.foot_force_n;
+    result.feet_push_n = view.feet_push_n;
     result.fall_x = view.fall_x;
     result.fall_z = view.fall_z;
     result.kneeling = view.kneeling;

@@ -164,7 +164,7 @@ void drive(Simulation &s, Run &run, const double throttle, const double lift, co
         run.last_y = m.position.y;
         if (m.edge_brace_n > 0.0) {
             run.brace_n = std::max(run.brace_n, m.edge_brace_n);
-            run.feet_n = std::max(run.feet_n, m.foot_force_n);
+            run.feet_n = std::max(run.feet_n, m.feet_push_n);
             ++run.braced_ticks;
             run.braced_truck_mps = f.speed_mps;
         }
@@ -187,7 +187,7 @@ void drive(Simulation &s, Run &run, const double throttle, const double lift, co
             std::cout << "    truck (" << t.x << "," << t.y << "," << t.z << ") " << f.speed_mps << " m/s, forks "
                       << f.lift_m << "; her (" << m.position.x << "," << m.position.y << "," << m.position.z
                       << ") state " << int(m.state) << " blow " << m.blow_mps << " low " << m.blow_low << " riding "
-                      << m.riding << " brace " << m.edge_brace_n << " feet " << m.foot_force_n << "\n";
+                      << m.riding << " brace " << m.edge_brace_n << " feet " << m.feet_push_n << "\n";
         }
     }
     (void)s.set_move_input(0.0, 0.0);
