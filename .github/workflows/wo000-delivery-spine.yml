@@ -1374,3 +1374,32 @@ jobs:
           path: playtest/
           if-no-files-found: error
           retention-days: 30
+
+  # Wakes the switchboard when this proof finishes (integrator, 11-05). Its workflow_run trigger has not
+  # fired since the default branch became ScraperX-Claude, not even after the workflow was turned off and
+  # on again, and GitHub runs its 15-minute schedule only every few hours. So the proof dispatches the sweep
+  # itself, the same sweep the workflow_run trigger ran. A workflow_dispatch is one of the events this
+  # run's own token may start. The switchboard and sweep.py read a run whose only unfinished job is this
+  # one as finished, and never count this job (switch.py NOT_COUNTED). A failed dispatch only warns.
+  wake-switchboard:
+    needs: [scope, host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk, publish-checkpoint]
+    if: ${{ !cancelled() && github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the switchboard sweep
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            if gh workflow run switchboard.yml --repo "$REPO" --ref ScraperX-Claude -f dry_run=false; then
+              exit 0
+            fi
+            sleep $((attempt * 10))
+          done
+          echo "::warning::switchboard dispatch failed 3 times; the integrator's check-in sweeps instead"

@@ -30,7 +30,14 @@ import sys
 
 WORKFLOW = "wo000-delivery-spine.yml"
 TRUNK = "ScraperX-Claude"
-NOT_COUNTED = {"publish-checkpoint", "playtest-apk"}
+NOT_COUNTED = {"publish-checkpoint", "playtest-apk", "wake-switchboard"}
+WAKE_JOB = "wake-switchboard"  # the proof's last job, which dispatches the switchboard
+
+
+def only_wake_left(jobs: list) -> bool:
+    """True when the proof's one unfinished job is the one waking the switchboard (as switch.py)."""
+    return any(j["name"] == WAKE_JOB for j in jobs) and all(
+        j["status"] == "completed" for j in jobs if j["name"] != WAKE_JOB)
 VERDICT = re.compile(r"^\*\*[^\n]*?:\s*\**\s*(LAND|FIX|BLOCK)\b", re.MULTILINE)
 AGENT_PREFIX = re.compile(r"^(claude|chatgpt|gemini|grok|fb-bot|copilot|codex|pe|work)/")
 MAX_PAGES = 5  # bounded pagination: at most 500 comments read per PR
@@ -54,9 +61,9 @@ def proof_state(repo: str, sha: str) -> tuple[str, str]:
     if not runs:
         return "none", ""
     run = max(runs, key=lambda r: r["created_at"])
-    if run["status"] != "completed":
-        return "running", run["html_url"]
     jobs = gh(f"repos/{repo}/actions/runs/{run['id']}/jobs?per_page=50")["jobs"]
+    if run["status"] != "completed" and not only_wake_left(jobs):
+        return "running", run["html_url"]
     failed = [
         j["name"]
         for j in jobs
