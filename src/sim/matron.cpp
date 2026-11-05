@@ -1816,14 +1816,19 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                         dir = side;
                     }
                     const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
-                    const traversal::Limits budget;
-                    // A shove is never the lunge: it stays on her 8 kN and 22 kW.
-                    const float shove_force = budget.total_force_n;
-                    const float shove_power = budget.power_w;
-                    const float force_n = std::min(shove_force, shove_power / along);
-                    Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
-                    push /= push.Length();
-                    bodies.AddForce(id, push * force_n, EActivation::Activate);
+                    // A body already travelling along the shove line is not
+                    // a crate that stopped her: shoving it again only
+                    // launches it (J-016). Leave it; the walk goes on.
+                    if (along <= 2.5F) {
+                        const traversal::Limits budget;
+                        // A shove is never the lunge: it stays on her 8 kN and 22 kW.
+                        const float shove_force = budget.total_force_n;
+                        const float shove_power = budget.power_w;
+                        const float force_n = std::min(shove_force, shove_power / along);
+                        Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
+                        push /= push.Length();
+                        bodies.AddForce(id, push * force_n, EActivation::Activate);
+                    }
                 }
             }
         }
