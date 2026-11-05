@@ -1195,7 +1195,18 @@ func _matron_heave_touch(device: int) -> bool:
 const AMMO_SET_AT := Vector2(6.0, -126.6)
 const AMMO_WAIT := Vector2(-6.0, -128.5)
 
+# Its stills are the act's (drawn only for them, the sim held the same few
+# frames headless or drawn): see _pose above.
 func _matron_ammo_touch(device: int) -> bool:
+	_act_running = true
+	_act_draw(false)
+	var played: bool = await _play_matron_ammo(device)
+	_act_draw(true)
+	_act_running = false
+	return played
+
+
+func _play_matron_ammo(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _walk_to(device, HEAVE_BOX_PICK, 0.08, 14.0):
 		return _fail("the walk to the toolbox stalled at %s" % str(_position()))
