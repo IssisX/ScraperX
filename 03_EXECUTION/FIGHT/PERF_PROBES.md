@@ -35,12 +35,31 @@ Nothing in the sim reads these numbers. They are not in `Snapshot`, a save or
   PERF lines out of CTest's `LastTest.log`.
 - **Godot, `perf_fight`** (`godot/presentation/ui/ui_test_act.gd`, touch shard 2): the player on the 154 deck
   taps PUNCH every 30 frames at her up close for 10 s. Her hands are held so a grab cannot end the fight, she
-  is changed, and she is put back 1.2 m off whenever she is carried past 3 m. Every process frame it logs
+  is changed, and she is put back 1.2 m off whenever she is carried past 3 m. It waits 1.5 s after staging
+  and then logs every process frame: the frame's own wall time (`frame_wall_ms`, from `Time.get_ticks_usec`),
   `Performance.TIME_PROCESS`, `TIME_PHYSICS_PROCESS` (ms), `RENDER_TOTAL_DRAW_CALLS_IN_FRAME`, and the native
   probes' `last_us` from each frame that ran a new fixed step. It prints one
   `SCRAPERX_PERF perf_fight <series> n= min= mean= p95= max=` line per series and a `native_running` line, and
   puts the headline numbers on its `SCRAPERX_UITEST PASS perf_fight` line. On headless CI the draw-call count
   is 0, because nothing renders there.
+
+How to read the Godot series:
+- `frame_wall_ms` is the true per-frame figure.
+- `TIME_PROCESS` is refreshed by Godot once a second with that second's slowest frame, so it reads as a
+  step function: its p95 sits at its max, and one slow frame shows for a whole second.
+- `main.gd` advances the sim inside `_process`, so `TIME_PROCESS` includes the native step and
+  `TIME_PHYSICS_PROCESS` stays near zero.
+- The native `running` max includes setup. Her one-time tower scan (`matron_affordances`, seconds on the
+  host) runs inside a step when she is first placed in a test. In real play it runs behind the LOADING
+  card instead (`main.gd` `_prepare_her`). The window series (`n=` lines) leave setup out.
+
+First host numbers (dev container, g++ 13.3, Release, 2026-11-05), fight window only:
+
+| | mean | p95 | max |
+|---|---|---|---|
+| native `perf-step`: step / physics / matron_pre / matron_post (us) | 1319 / 797 / 82 / 22 | 1702 / 1026 / 137 / 35 | 5222 / 4867 / 310 / 86 |
+| `perf_fight`: native step / physics (us) | 1511 / 838 | 1895 / 1032 | 17988 / 17320 |
+| `perf_fight`: frame wall (ms, headless, nothing drawn) | 14.7 | 19.5 | 35.0 |
 
 Host CPU numbers are not phone numbers. They show where the time goes, and they
 flag a change that makes the fight cost more than it did.

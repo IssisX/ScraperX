@@ -1294,7 +1294,7 @@ func _matron_sweep_touch(device: int) -> bool:
 
 # The fight perf probe (J-044m, #245; J-044 console-quality fighting on the
 # Fold 6 at 90 Hz): the player throws punches at her up close on her 154
-# deck while every process frame logs Godot's TIME_PROCESS and
+# deck while every process frame logs its own wall time, Godot's TIME_PROCESS and
 # TIME_PHYSICS_PROCESS, the frame's draw calls, and the native step timer
 # (get_step_timing: the whole world step, PhysicsSystem::Update, her pre
 # and post step, per fixed step). Then min, mean, p95 and max of each.
@@ -1307,6 +1307,7 @@ const PERF_FIGHT_S := 10.0
 const PERF_FIGHT_PUNCH_FRAMES := 30
 const PERF_FIGHT_GAP_M := 1.2
 const PERF_FIGHT_REPLACE_M := 3.0
+const PERF_FIGHT_SETTLE_S := 1.5
 
 
 func _perf_series_summary(values: Array) -> Dictionary:
@@ -1329,8 +1330,14 @@ func _perf_fight() -> bool:
 	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - PERF_FIGHT_GAP_M))
 	_native().debug_set_matron_stage(2)
 	await _face(Vector2(0.0, -1.0))
-	var series := {"process_ms": [], "physics_process_ms": [], "draw_calls": [],
+	# Placing her can run her one-time tower scan inside a step (seconds on
+	# the host; real play does it behind the LOADING card, main.gd
+	# _prepare_her). Godot refreshes TIME_PROCESS once a second with that
+	# second's slowest frame, so wait past it before measuring.
+	await _seconds(PERF_FIGHT_SETTLE_S)
+	var series := {"frame_wall_ms": [], "process_ms": [], "physics_process_ms": [], "draw_calls": [],
 		"native_step_us": [], "native_physics_us": [], "native_matron_pre_us": [], "native_matron_post_us": []}
+	var frame_started := Time.get_ticks_usec()
 	var strikes := int(_native().get_strike_state()["strikes"])
 	var hits := int(_native().get_strike_state()["hits"])
 	var steps_at := int(_native().get_step_timing()["step"]["samples"])
@@ -1355,6 +1362,9 @@ func _perf_fight() -> bool:
 		await get_tree().process_frame
 		waited += get_process_delta_time()
 		frame += 1
+		var now := Time.get_ticks_usec()
+		series["frame_wall_ms"].append(float(now - frame_started) / 1000.0)
+		frame_started = now
 		series["process_ms"].append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
 		series["physics_process_ms"].append(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
 		series["draw_calls"].append(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
@@ -1385,9 +1395,9 @@ func _perf_fight() -> bool:
 		return _fail("the native step timer did not run (samples %d -> %d)" % [steps_at, int(running["step"]["samples"])])
 	if thrown == 0:
 		return _fail("no punch was thrown in %.0f s of PUNCH taps" % PERF_FIGHT_S)
-	_detail = "frames=%d steps=%d punches=%d hits=%d replaced=%d process_ms_p95=%.2f physics_process_ms_p95=%.2f draws_max=%d native_step_us_mean=%.1f native_step_us_p95=%.1f native_step_us_max=%.1f" % [
+	_detail = "frames=%d steps=%d punches=%d hits=%d replaced=%d frame_wall_ms_p95=%.2f process_ms_p95=%.2f physics_process_ms_p95=%.2f draws_max=%d native_step_us_mean=%.1f native_step_us_p95=%.1f native_step_us_max=%.1f" % [
 		frame, int(running["step"]["samples"]) - steps_at, thrown, landed, replaced,
-		float(summary["process_ms"]["p95"]), float(summary["physics_process_ms"]["p95"]),
+		float(summary["frame_wall_ms"]["p95"]), float(summary["process_ms"]["p95"]), float(summary["physics_process_ms"]["p95"]),
 		int(summary["draw_calls"]["max"]), float(summary["native_step_us"]["mean"]),
 		float(summary["native_step_us"]["p95"]), float(summary["native_step_us"]["max"])]
 	return true
