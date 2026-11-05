@@ -125,6 +125,111 @@ func _walk(name: String, base: Dictionary, frames: int) -> void:
 			"pairs %d median %.4f m longest %.3f m skates %d" % [int(st["pairs"]), med, longest, int(st["skates"])])
 
 
+# A slow walk (gait under the pin's 0.15 m/s bar): after the proof pin
+# has seated a foot, the touchdown landing must start from the foot's
+# drawn height — never lift the seated foot back up to the 0.15 m
+# tracking lift and land it again (Fix 1). The old code ran the five
+# frame landing from UPLANT_TRACK_LIFT_M, so the drawn sole rose to
+# 0.036-0.040 m during landing frames; the fixed code starts from the
+# drawn height, so it stays under 0.020 m. The landing frames are read
+# off the rig's own plant state (the same object the test drives) — the
+# asserted value is the drawn sole's height, which is the behavior.
+# The pin's own first-frame drop (Fix 2) has no studio signal: in this
+# harness the pin engages when the drawn sole is already within 0.02 m
+# of the deck, so its drop is 0.017 m on the old code and 0.024 m on the
+# fixed code — govern, not the pin, sets both numbers. Fix 2 is verified
+# by the grab-settle act run, not by this test.
+const LANDING_HEIGHT_BAR_M := 0.025
+
+
+func _landing_no_relift_walk() -> void:
+	var rig: RefCounted = _view._rig
+	var data := _data({"state": 5, "speed": 0.12})
+	var pos: Vector3 = data["position"]
+	var stride := 0.0
+	var player := Vector3(0.0, 1.6, 50.0)
+	for i in SETTLE_FRAMES:
+		_view._clock += DT
+		_view._state_age += DT
+		_view._update_figure(data, DT, _cam.global_position, player)
+		await process_frame
+	var max_y := {"l": 0.0, "r": 0.0}
+	for i in 750:
+		pos += Vector3(0.0, 0.0, 0.12 * DT)
+		stride += 0.12 * DT
+		data["position"] = pos
+		data["stride"] = stride
+		_view._clock += DT
+		_view._state_age += DT
+		_view._update_figure(data, DT, _cam.global_position, player)
+		await process_frame
+		var ups: Dictionary = rig._uplants
+		for s in ["l", "r"]:
+			var st: Dictionary = ups.get(s, {})
+			if int(st.get("landing", 0)) > 0:
+				var sole := _sole(rig, s)
+				max_y[s] = maxf(float(max_y[s]), float(sole["y"]))
+	for s in ["l", "r"]:
+		_check(float(max_y[s]) <= LANDING_HEIGHT_BAR_M, "landing_no_relift_foot_" + s,
+			"max sole height during landing %.4f m" % float(max_y[s]))
+
+
+# Taking off with a foot planted: the plant must release over the release
+# blend, from where the foot is drawn — never jump to the pose in one
+# frame (Fix 3). The body rises gently (1.2 m/s, just over the airborne
+# bar) so the rise itself does not swamp the measurement. The check is
+# the foot's distance from the pose sole, in skeleton space, five frames
+# into the rise: the old code cleared the plants on the takeoff frame,
+# so the foot was already at the pose (0.003 m); the fixed code is still
+# mid-blend (0.060 m). A single-frame jump bar does NOT pin this — the
+# jump is dominated by the airborne pose/ride transition (0.082 m, both
+# feet, one frame, no plant state, present in the old code too), so the
+# old code measured 0.101 m and the fixed code 0.099 m on the same bar.
+# The distance from the pose is the blend itself, and the pose motion
+# cancels out of it.
+const TAKEOFF_POSE_DIST_BAR_M := 0.03
+
+
+func _takeoff() -> void:
+	var rig: RefCounted = _view._rig
+	var data := _data({"state": 7, "speed": 0.0})
+	var pos: Vector3 = data["position"]
+	var player := Vector3(0.0, 1.6, 50.0)
+	# Long settle: the slow walk before this ends mid-stride, and the
+	# walk-to-stand pose blend must finish (feet re-planted) before the
+	# rise starts, or the blend's own motion inflates the takeoff jump.
+	for i in 180:
+		_view._clock += DT
+		_view._state_age += DT
+		_view._update_figure(data, DT, _cam.global_position, player)
+		await process_frame
+	var dist_at_5 := {}
+	for i in 30:
+		pos += Vector3(0.0, 0.02, 0.0)
+		data["position"] = pos
+		_view._clock += DT
+		_view._state_age += DT
+		_view._update_figure(data, DT, _cam.global_position, player)
+		await process_frame
+		if i == 5:
+			var inv: Transform3D = rig.skel.global_transform.affine_inverse()
+			for s in ["l", "r"]:
+				# The true sole midpoint, not the _sole min-y: the
+				# distance is mostly vertical, and the min-y would
+				# cancel it against the pose sole's own min-y.
+				var heel: Vector3 = rig.point("an_" + s, "heel")
+				var toe: Vector3 = rig.point("an_" + s, "toe")
+				var drawn_mid := (heel + toe) * 0.5
+				var skel_sole: Vector3 = inv * drawn_mid
+				var pose_sole: Dictionary = rig._sole_skel(s)
+				var pose_mid: Vector3 = pose_sole["mid"]
+				var pose_skel := Vector3(pose_mid.x, float(pose_sole["y"]), pose_mid.z)
+				dist_at_5[s] = (skel_sole - pose_skel).length()
+	for s in ["l", "r"]:
+		_check(float(dist_at_5[s]) >= TAKEOFF_POSE_DIST_BAR_M, "takeoff_foot_" + s,
+			"distance from pose sole at frame 5 %.4f m" % float(dist_at_5[s]))
+
+
 func _run() -> void:
 	_cam = Camera3D.new()
 	root.add_child(_cam)
@@ -153,4 +258,10 @@ func _run() -> void:
 	# longer to keep the planted-pair sample meaningful (the pairs guard
 	# stays 50; the walk grows, the bar does not shrink).
 	await _walk("shuffle_fast", {"state": 5, "speed": 3.0}, 420)
+	# Slow enough for the proof pin: the touchdown landing must start
+	# from the foot's drawn height, never lift a seated foot and land
+	# it again (Fix 1). Taking off with a foot planted: the plant must
+	# release over the blend, never snap to the pose (Fix 3).
+	await _landing_no_relift_walk()
+	await _takeoff()
 	quit(1 if _failures else 0)

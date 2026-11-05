@@ -822,10 +822,13 @@ jobs:
           # Upright walking feet stay where they were put while her body
           # goes over them (matron_rig.gd upright plants); standing feet
           # are already still, and the shuffle plants at two speeds.
+          # The landing and takeoff checks pin the plant blends: a
+          # touchdown landing starts from the drawn height (no re-lift),
+          # and a takeoff releases over the blend (no snap to the pose).
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/matron_foot_plant_test.gd 2>&1 | tee artifacts/matron-foot-plant.log
           ! grep -q '^MATRON_FOOT_PLANT FAIL' artifacts/matron-foot-plant.log
-          test "$(grep -c '^MATRON_FOOT_PLANT PASS' artifacts/matron-foot-plant.log)" -eq 7
+          test "$(grep -c '^MATRON_FOOT_PLANT PASS' artifacts/matron-foot-plant.log)" -eq 11
 
       - name: Check Matron perception and physical contact presentation
         shell: bash
