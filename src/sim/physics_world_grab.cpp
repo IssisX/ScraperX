@@ -361,14 +361,19 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
             // Her hand at his chest and her foot hooking his feet the other
             // way: a couple that takes his feet from under him (his capsule
             // has no friction of its own to trip on). Each within her budget,
-            // their reaction on her.
+            // their reaction on her. The sweep is granted first: when her
+            // feet keep their stability floor (J-001 step 1), the swat's
+            // share is 4700 N, and granting the chest push first would
+            // starve the sweep to 1700 N, which measured too weak to knock
+            // a standing man down at the rim (hands check); the full 2400 N
+            // sweep with a 2300 N push keeps the couple that trips him.
             const JPH::RVec3 chest = player_collar(bodies);
             const JPH::RVec3 feet = player_ankle(bodies);
-            const JPH::Vec3 push = matron_->grant_swat_force(
-                swat_dir_ * Matron::kSwatN, bodies.GetPointVelocity(player_id_, chest));
             const JPH::Vec3 sweep = matron_->grant_swat_force(
                 -swat_dir_ * (Matron::kSwatSweepScale * Matron::kSwatN),
                 bodies.GetPointVelocity(player_id_, feet));
+            const JPH::Vec3 push = matron_->grant_swat_force(
+                swat_dir_ * Matron::kSwatN, bodies.GetPointVelocity(player_id_, chest));
             if (push.LengthSq() > 0.0F) bodies.AddForce(player_id_, push, chest);
             if (sweep.LengthSq() > 0.0F) bodies.AddForce(player_id_, sweep, feet);
             if ((push + sweep).LengthSq() > 0.0F) bodies.AddForce(matron_->body(), -(push + sweep));

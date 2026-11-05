@@ -671,6 +671,14 @@ public:
     static constexpr int kSwatTicks = 4;
     static constexpr float kSwatDownS = 1.0F;   // knocked down: his getting up starts after this
     static constexpr float kSwatSweepScale = 0.8F;   // her foot at his feet, of kSwatN, the other way
+    // J-001 step 1, stability-first swat share: the least feet force that
+    // still lets the S2 over-base carry cross the crouch base, measured
+    // on #193 @ 35b67484 (3250 N fails it, 3300 N passes it). The swat
+    // share is min(5400, 8000 - kSwatMinFeetN) = 4700 N; her feet keep
+    // the 3300 N floor as a cap during the swat ticks. (Planting her feet
+    // at 0 N for those ticks was measured and rejected: it fails the same
+    // over-base carry at 0.4477 m, no crossing.)
+    static constexpr float kSwatMinFeetN = 3300.0F;
     static constexpr float kSwatWaitS = 1.6F;
     // Her mischief as a pest (the owner, 2026-10-19: she carries things off
     // and throws them at you): light stock the player has handled is theirs
@@ -1187,9 +1195,15 @@ public:
     // at its line: his middle balanced on its top.
     static constexpr float kPinUpM = 0.30F;
     static constexpr float kPinOutM = 0.62F;
+    static constexpr float kPinOutExtraM = 0.28F;  // the regular pin's hand further out: its base (0.90) plus
+                                                   // feedback reaches her full arm's extension, delivering
+                                                   // a body dragged from the deck over the rail's line
     static constexpr float kPinSideM = 0.15F;
     static constexpr float kBeltUpM = 0.35F;
     static constexpr float kBeltOutM = 0.42F;
+    static constexpr float kBeltOutExtraM = 0.15F;  // the regular pin's belt hand further out: his middle
+                                                   // tracks his belt hand, so this sets how far over
+                                                   // the drop the pin delivers him (fatality unchanged)
     static constexpr float kBeltSideM = -0.15F;
     static constexpr float kPinBalanceM = 0.05F;
     static constexpr float kPinHereUpM = 1.25F;   // no rail: him held up against her
@@ -1219,7 +1233,7 @@ public:
     static constexpr float kBackInSideM = 0.20F;
     // Set back on her deck: the rail his pulley, her hand in and down.
     static constexpr float kBackInM = 0.30F;
-    static constexpr float kFatalOutM = 0.45F;   // the fatality's let-go: leaning over the rail, her arm out (clamped to her real arm)
+    static constexpr float kFatalOutM = 0.40F;   // the fatality's let-go: leaning over the rail, her arm out (clamped to her real arm); the settled hang holds him close enough that his shoulder stays within his punch's reach of her body, and far enough out that his middle clears the let-go bar — settled hang only; the window's first ticks still fail the reach bar on the entry swing transient
     static constexpr float kBackInLiftM = 0.45F;  // his ankle lifted clear over the rail's top first
     static constexpr float kBackInWalkM = 2.2F;
     static constexpr float kBackInSlope = 0.85F;   // tan 40 degrees
@@ -1263,7 +1277,7 @@ public:
     static constexpr float kArmAngularDamping = 3.0F;
     static constexpr float kArmPlaySeconds = 4.5F;
     static constexpr float kArmPullMoveMps = 0.5F;
-    static constexpr float kArmReachSeconds = 3.5F;
+    static constexpr float kArmReachSeconds = 2.0F;
     static constexpr float kArmPullSeconds = 4.0F;
     static constexpr float kArmReposeStepM = 1.0F;
     static constexpr int kMaxArmReposes = 4;

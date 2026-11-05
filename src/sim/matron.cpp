@@ -1140,14 +1140,18 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         }
         (void)slope_slide;
         budget.velocity = velocity - bodies.GetPointVelocity(on_body, on_point);
-        // During her swat, her feet leave the swat's share of the tick's
-        // account untouched (same reserve as feet_push): the swat is charged
-        // to the same budget, so the step that sets it up must not spend
-        // what the swat needs.
+        // During her swat, stability-first share (J-001 step 1): her feet
+        // keep at least kSwatMinFeetN of the tick's account, the swat takes
+        // the rest up to its full 5400 N. Measured on the S2 over-base
+        // carry, the feet floor is 3300 N, so the swat share is 4700 N.
+        // The total never changes: one budget, only the split moves. The
+        // account's total (left + used) is the same at every draw in the
+        // tick, so the share is the same at both feet sites.
         Vec3 force = want_force;
         if (swat_budget_ticks_ > 0) {
-            const float reserve = kSwatN + kSwatSweepScale * kSwatN;
-            const float allow = std::max(0.0F, budget.left - reserve);
+            const float swat_full = kSwatN + kSwatSweepScale * kSwatN;
+            const float share = std::min(swat_full, budget.left + budget.used - kSwatMinFeetN);
+            const float allow = std::max(0.0F, budget.left - share);
             if (force.Length() > allow) {
                 force = allow > 0.0F ? force * (allow / force.Length()) : Vec3::sZero();
             }
@@ -4762,14 +4766,16 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
         return Vec3::sZero();   // nothing under her to push on
     }
     feet_budget_.velocity = work_velocity != nullptr ? *work_velocity : velocity - sole.velocity;
-    // During her swat, her feet leave the swat's share of the tick's account
-    // untouched: the swat is charged to the same budget, so the step that sets
-    // it up must not spend what the swat needs. The total stays within the
-    // one budget; only the split between feet and swat changes, for kSwatTicks.
+    // During her swat, the same stability-first share as walk_toward's foot
+    // force above: feet keep at least kSwatMinFeetN, the swat takes the rest
+    // up to its full 5400 N. The total stays within the one budget; only
+    // the split between feet and swat changes, for kSwatTicks.
     Vec3 force = want_force;
     if (swat_budget_ticks_ > 0) {
-        const float reserve = kSwatN + kSwatSweepScale * kSwatN;
-        const float allow = std::max(0.0F, feet_budget_.left - reserve);
+        const float swat_full = kSwatN + kSwatSweepScale * kSwatN;
+        const float share =
+            std::min(swat_full, feet_budget_.left + feet_budget_.used - kSwatMinFeetN);
+        const float allow = std::max(0.0F, feet_budget_.left - share);
         if (force.Length() > allow) {
             force = allow > 0.0F ? force * (allow / force.Length()) : Vec3::sZero();
         }

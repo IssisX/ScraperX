@@ -1288,8 +1288,12 @@ RVec3 Matron::rail_pose(const RVec3 at, const float feet, const float up, const 
 }
 
 RVec3 Matron::belt_pose(const RVec3 at, const float feet) const noexcept {
+    // The regular pin's second hand further out: his middle tracks his
+    // belt hand, so the belt hand sets how far over the drop the pin
+    // delivers him; the fatality's belt hand stays where it was.
+    const float out = fatal_hold_ ? kBeltOutM : kBeltOutM + kBeltOutExtraM;
     return pin_here_ ? rail_pose(at, feet, kPinHereUpM - 0.35F, 0.40F, kBeltSideM)
-                     : rail_pose(at, feet, rail_up_ + kBeltUpM, kBeltOutM, kBeltSideM);
+                     : rail_pose(at, feet, rail_up_ + kBeltUpM, out, kBeltSideM);
 }
 
 RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
@@ -1304,8 +1308,15 @@ RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
                        (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
     const float err = past - kPinBalanceM;
     // (Firmer back toward the rail in the fatality, whose window must keep
-    // him on its top every tick.)
-    const float out = kPinOutM - std::clamp(1.2F * err, fatal_hold_ ? -0.3F : -0.15F, 0.55F);
+    // him on its top every tick; and in the regular pin too, whose window
+    // must bring a body dragged from the deck over the line: the gentler
+    // bound saturated her hand too far east, and the middle still sat
+    // east of the line when arm play began. The regular pin's hand works
+    // at her full arm's extension: its base sits further out than the
+    // fatality's, which holds him on the top rather than delivering him
+    // over it.)
+    const float base = fatal_hold_ ? kPinOutM : kPinOutM + kPinOutExtraM;
+    const float out = base - std::clamp(1.2F * err, -0.3F, 0.55F);
     const float up = rail_up_ + kPinUpM + std::clamp(0.8F * err, 0.0F, 0.35F);
     return rail_pose(at, feet, up, out, kPinSideM);
 }
@@ -1586,7 +1597,10 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
         const float mid_past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
                                (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-        if ((to_spot < 0.15F && Vec3(pin - hand_target_).Length() < 0.05F &&
+        // (The regular pin stands her on her spot before the window: the
+        // looser bound left her a step east of it, and the whole pin —
+        // hands and body — sat that step east of the drop's line.)
+        if ((to_spot < (fatal_hold_ ? 0.15F : 0.05F) && Vec3(pin - hand_target_).Length() < 0.05F &&
              Vec3(belt - hand2_target_).Length() < 0.05F && (!fatal_hold_ || mid_past > -0.1F)) ||
             hold_s_ > kPinHaulS) {
             hold_phase_ = 2;
