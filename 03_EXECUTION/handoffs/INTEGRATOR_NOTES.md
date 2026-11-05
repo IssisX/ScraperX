@@ -59,11 +59,17 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   onto #91. Ladder geometry landed alone as #213 (7:13 PM); trunk merged into #91 at 7299f8a8, `@codex review`
   posted. Codex P1 again: the traverse completion-condition change must land alone, so it is #215 (protected
   test) MERGED 8:10 PM; #91 MERGED 8:37 PM (9591703a, green, Codex clean). J-006 done.
-- Held until #193/#95/#207 land: audits-guard 94bf7aa9, scope-probe 37d34416, guard-steps 204fb795, scope-guard 7e0975c6.
+- Held until #193/#95/#216 land: audits-guard 94bf7aa9, scope-probe 37d34416, guard-steps 204fb795, scope-guard 7e0975c6.
 - J-001 10:20 PM rulings: step 4 (82ef2579, past-rail 17.009 vs 17.0) -> near-miss rail move 1-2 cm (protected geometry) else arm-play step; punch-reach -> swing damper step; kFatalOutM 0.40 keeps. Muse mails ONE diff on 35b67484 (step 1 + step 4 + kFatalOutM).
-- Muse 7:23 PM: keeps #207 (fix agent since 1:58 PM); #193 one diff and #95 plant fix in progress. Don't take #207.
-- #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
-  on green + Codex clean.
+- 11-05 4:10 AM: #207 closed -> #216 (fb-bot/integrate-protected-world-b, 35386bf5 = Muse 5ef02250 code + E-guard
+  re-pin 980885ad; can't split, the pins hash the code's world). Codex on #216: P0 yard-crane magnet tail check (last 7
+  bodies no longer tower/summit; protected test change) and P1 entity ids shift 137 (old saves refused). Both
+  confirmed, mailed to Muse (one diff on 35386bf5). I merge #216 on green + Codex clean.
+- #95 (J-023, workflow file) at 8c38be78 (slide-blend 0ce8696c + trunk): all green but touch-2 plant hold/fatal
+  0.066 vs known 0.063 (bound 0.066). Ruled 4:10 AM: fixed in #95, bound not loosened; mailed Muse. Merge myself on
+  green + Codex clean; look at stills first.
+- J-038 slice 1 (cf8d2ed5) ruled 3:20 AM: Matron-takeable = slice 2; save ext rides branch; lands after #193/#95/#216;
+  cross-check asked of ChatGPT on #169.
 - Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
 
