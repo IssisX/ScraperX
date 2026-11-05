@@ -1121,7 +1121,7 @@ func _forklift_touch(device: int) -> bool:
 # the driver, and the stick held forward, steered at her, rams her at full
 # speed: the forks' blades at her shins, a low blow, and she goes down.
 const DECK154_FORKLIFT_CHASSIS := 2997
-const DECK154_FORKLIFT_X := 21.5
+const DECK154_FORKLIFT_X := 24.5
 const DECK154_FORKLIFT_Z := -140.0
 
 
@@ -1143,15 +1143,17 @@ func _steer_at(at: Vector3) -> float:
 func _forklift_ram_touch(device: int) -> bool:
 	if not await _wake_matron(device):
 		return false
-	for target in [Vector2(14.0, -129.6), Vector2(19.9, -134.0)]:
+	for target in [Vector2(14.0, -129.6), Vector2(22.5, -134.0)]:
 		if not await _go(device, target, 0.3, 30.0):
 			return _fail("the walk to the deck-154 forklift stopped short of %s" % str(target))
 	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 40.0):
 		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
-	if not await _call_her_to(device, Vector2(19.9, -134.0), Vector2(19.9, -130.0)):
-		return _fail("the run up the band and back stalled at %s" % str(_position()))
+	# Called from beside the truck (it parks by the band's open edge, off its
+	# walked line): a run down past its wheel and back.
+	if not await _call_her_to(device, Vector2(22.5, -137.0), Vector2(22.5, -141.0)):
+		return _fail("the run down beside the truck and back stalled at %s" % str(_position()))
 	var station_z := DECK154_FORKLIFT_Z - 0.15
-	if not (await _go(device, Vector2(19.9, station_z), 0.15, 10.0) and \
+	if not (await _go(device, Vector2(DECK154_FORKLIFT_X - 1.3, station_z), 0.15, 10.0) and \
 			await _go(device, Vector2(DECK154_FORKLIFT_X, station_z), 0.12, 8.0)):
 		return _fail("up onto the deck-154 forklift's floor (at %s)" % str(_position()))
 	await _face(Vector2(0.0, 1.0))
@@ -1162,10 +1164,7 @@ func _forklift_ram_touch(device: int) -> bool:
 		return _fail("DRIVE did not take the controls")
 	print("SCRAPERX_UITEST forklift_ram: at the wheel, she is at %s (state %d)" % [
 		str(_matron_state()["position"]), int(_matron_state()["state"])])
-	# Room for a run at her: the stick back, the truck reversed 4 m down the band.
-	_move_dir(device, Vector2(0.0, -0.8))
-	await _wait_until(func() -> bool: return _deck154_truck().origin.z <= DECK154_FORKLIFT_Z - 4.0, 6.0)
-	_move_dir(device, Vector2.ZERO)
+	# She comes on down the band, ahead of its forks.
 	var coming: bool = await _wait_until(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
