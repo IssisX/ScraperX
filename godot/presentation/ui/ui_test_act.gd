@@ -1853,6 +1853,11 @@ func _perf_locker(device: int) -> bool:
 	if not await _wake_matron(device):
 		_probe_stop()
 		return false
+	# Straining at the door till it goes: the burst is her first state past it.
+	_probe_tag = "straining"
+	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) != MATRON_STATE_STRAINING, 30.0):
+		_probe_stop()
+		return _fail("she strained 30 s and never burst out")
 	_probe_tag = "burst"
 	await _seconds(6.0)
 	_probe_stop()
