@@ -50,3 +50,4 @@
 {"job": "J-006", "kind": "review", "note": "review#91@7299f8a8 claude-opus-5-5 in=19636 out=56906 stop=end_turn", "phase": "end", "run": "e089fea3e8ec", "ts": "2026-11-05T01:35:10Z", "usd": "1.216664"}
 {"job": "J-006", "kind": "review", "note": "review#91@9591703a in=18538", "phase": "reserve", "run": "7373d9804e36", "ts": "2026-11-05T02:31:58Z", "usd": "1.354152"}
 {"job": "J-006", "kind": "review", "note": "review#91@9591703a claude-opus-5-5 in=18971 out=49566 stop=end_turn", "phase": "end", "run": "7373d9804e36", "ts": "2026-11-05T02:31:58Z", "usd": "1.067204"}
+{"job": "J-016", "kind": "eye", "note": "eye#234@e3fb03c0 in=12737", "phase": "reserve", "run": "2f08a8c91503", "ts": "2026-11-05T15:22:25Z", "usd": "0.210948"}
