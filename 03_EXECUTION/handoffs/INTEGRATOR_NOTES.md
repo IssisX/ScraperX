@@ -107,7 +107,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   guard-steps not pushed yet. Merge lesson (8:30): the safety check refused a merge with only Codex's clean
   review; post my own "Claude (integrator) review: LAND" comment (what I read, what I ran) before every merge.
 - #227 J-001 also red on athletic-traversal "snaps, wind-up then lunges" (from the J-001 hold base; green on
-  trunk). Mailed Muse 8:40.
+  trunk). Mailed Muse 8:40. Codex on #227: P0 grab.cpp:584, where a re-pose breaks the snag at 1000 N instead of the 3050 N
+  threshold (fixture weakens the test). Ruled: force-based breaking only. P1 matron_hold.cpp:1533, where the second-hand
+  haul goes around feet_budget_. Ruled: both hands' haul force and work come out of her one 8 kN/44 kW account. Mailed 8:45.
+- Sentry #222 and #223 MERGED 8:45 (green, Codex clean, my landing comment). The next APK reports phone errors to Sentry.
 - Owed by Muse: #216 fix (entity ids, magnet tail [protected], crane shackle, touch_matron_act grip) pushed to
   fb-bot/integrate-protected-world-b; J-001 past-rail step (#227); J-016 stage 3; J-038 slice 1 rework.
 - Cory asks: tell him when the feature inventory reports. The Sentry plugin card did not render on his phone;
