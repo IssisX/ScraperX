@@ -76,7 +76,11 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-016 stage 2: Muse's walk-shove guard (a6f93411) cut alone onto trunk -> #217 (fb-bot/integrate-j016-launcher,
   748ae35d; test hunk whitespace rebuilt, blob differs from Muse's ed795032). Merge on green + Codex clean. Stage 3
   (drum leaves deck 154: gap = protected geometry, or never shove toward a deck edge) ruled to Muse 6:15 AM.
-- Merged 11-05: #218. Waiting: #217 (J-016 guard) touch-2.
+- Merged 11-05: #218, #217 (J-016 guard, green incl. stood_his).
+- 7:20 AM: Muse PUSHES now. Guards #219 apk-step, #220 job-gate, #221 group-content (J-027, workflow files: I merge
+  on green + Codex, one at a time, trunk merged into the rest). Hold on guards LIFTED. #95 head 551973b0 (Muse's
+  plant fix), proof run 42035080417 dispatched. J-038 rulings after ChatGPT (#169): settle exclusion replaces the
+  vertical gate; support = gravity-opposing normal held 2+ ticks; 1 mm quantize, stable merge ties.
 - Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Opus helper at a time (high or xhigh, never Sonnet).
 
