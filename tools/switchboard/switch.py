@@ -148,10 +148,13 @@ class Switch:
             return None
         return r.returncode, r.stdout
 
-    def rule_check_block(self, number: int, head: str) -> bool | None:
-        """Does trunk's rule check BLOCK base...head? None if it cannot run."""
+    def rule_check_block(self, number: int, head: str) -> tuple[bool | None, bool]:
+        """(does trunk's rule check BLOCK base...head, None if it cannot run; does a BLOCK hit a never-edited file)."""
         got = self.run_rule_check(number, head)
-        return None if got is None else got[0] == 2
+        if got is None:
+            return None, False
+        never = any(l.startswith("BLOCK") and " protected-file:" in l for l in got[1].splitlines())
+        return got[0] == 2, never
 
     def review_facts(self, facts: rules.PrFacts, ctx: dict) -> str:
         """What a reviewer with no checkout keeps asking for, read here at the head: the proof's jobs and
@@ -331,6 +334,23 @@ class Switch:
         return res
 
     # ---------- steer ----------
+    def close_superseded(self, facts: rules.PrFacts, ctx: dict) -> None:
+        """A ready PR whose body says `Supersedes #N` closes #N, so replaced work can never be merged (Cory, 11-04)."""
+        if facts.draft:
+            return
+        for n in rules.superseded_prs(ctx["body"], facts.number):
+            try:
+                old = self.gh.get(f"repos/{self.gh.repo}/pulls/{n}")
+            except GitHubError:   # not a PR (an issue number, or gone): nothing to close
+                continue
+            if old.get("state") != "open":
+                continue
+            self.gh.comment(n, f"Switchboard: closing this PR. #{facts.number} supersedes it (its body says so); "
+                               f"the work continues there.", what=f"note on #{n}: superseded by #{facts.number}")
+            self.gh.write("PATCH", f"repos/{self.gh.repo}/pulls/{n}", {"state": "closed"},
+                          what=f"close #{n}: superseded by #{facts.number}")
+            self.out(f"SUPERSEDED  #{n} closed: #{facts.number} supersedes it")
+
     def steer_pr(self, facts: rules.PrFacts, ctx: dict) -> None:
         author = self.team.vendor_of_branch(facts.head_ref)
         d = rules.merge_decision(facts, author, self.team)
@@ -339,7 +359,8 @@ class Switch:
             facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
             d = rules.merge_decision(facts, author, self.team)
         if d.action in ("MERGE", "HUMAN-MERGE"):
-            facts = dataclasses.replace(facts, rule_check_block=self.rule_check_block(facts.number, facts.head_sha))
+            block, never = self.rule_check_block(facts.number, facts.head_sha)
+            facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
             d = rules.merge_decision(facts, author, self.team)
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
@@ -1059,6 +1080,7 @@ def main() -> int:
             if ask:
                 sw.ask_pr(facts, ctx)
             if steer:
+                sw.close_superseded(facts, ctx)
                 sw.steer_pr(facts, ctx)
         except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
             failed += 1

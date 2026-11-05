@@ -124,9 +124,6 @@ bool Matron::found_floor(const float x, const float z, const float from_y, const
 bool Matron::find_climb(const RVec3 at, FoundClimb &out) const {
     const float feet = float(at.GetY()) - kStandCentre;
     const bool up = lead_floor_ > feet;
-    if (!up && stage_ == Stage::Pest && turn_ == Turn::None) {
-        return false;
-    }
     const float low = std::min(feet, lead_floor_) - 3.0F;
     const float high = std::max(feet, lead_floor_) + 4.0F;
     const RVec3 middle(at.GetX(), 0.5F * (low + high), at.GetZ());
@@ -325,7 +322,9 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
         find_wait_ticks_ = kFindEveryTicks;
         if (!find_climb(at, found_)) {
             // No bar column: a way she plans over the steel round her.
-            const bool frail = stage_ == Stage::Pest && turn_ == Turn::None;
+            float lowest = std::numeric_limits<float>::max();
+            for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
+            const bool frail = stage_ == Stage::Pest && turn_ == Turn::None && lead_floor_ >= lowest - 0.5F;
             const bool still = std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F;
             const bool started = !frail && still && journey_way_.begin(MoverGoal{at, heard_x_, heard_z_, lead_floor_, true});
             return started;
@@ -365,8 +364,9 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
         std::abs(float(at.GetY()) - kStandCentre - found_.from_y) > 0.15F) {
         return true;
     }
-    // Frail, a pest takes hold only in her Turn.
-    if (stage_ == Stage::Pest && turn_ == Turn::None) {
+    // Frail, when the climber was seen on the ladder itself, a pest takes hold
+    // only in her Turn.
+    if (stage_ == Stage::Pest && turn_ == Turn::None && guess_climb_ >= 0) {
         return true;
     }
     if (request_climb_goal(found_.goal, found_.facing)) {
@@ -389,6 +389,21 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
 // her own lets go at its goal; ended short of it, the column is left alone a
 // while, and she goes back down the way she came, once.
 MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*budget*/) {
+    // A climb she began herself owns her motion until it finishes: while
+    // it is active, routecraft steps aside rather than walking or climbing
+    // her on its own. Its follow_found_climb fallback below would otherwise
+    // carry her up a ladder and leave the begun climb to execute stale at
+    // the top. A routecraft that HOLDS her on steel still steps: a live
+    // grip is not preempted by a status flip.
+    if (m_.climb_ >= 0) {
+        JPH::BodyID step_grip_body;
+        JPH::SubShapeID step_grip_sub;
+        JPH::Vec3 step_grip_local;
+        const bool step_holds = m_.routecraft_.grip(step_grip_body, step_grip_sub, step_grip_local);
+        if (!step_holds) {
+            return MoverStatus::Idle;
+        }
+    }
     if (status() != MoverStatus::Running) {
         if (!m_.follow_found_climb(dt, goal_.at)) {
             return MoverStatus::Idle;
@@ -396,7 +411,14 @@ MoverStatus Matron::RoutecraftWay::step(const float dt, traversal::Budget & /*bu
         return status() == MoverStatus::Running ? MoverStatus::Running : MoverStatus::Walking;
     }
     BodyInterface &bodies = m_.physics_.GetBodyInterface();
+    BodyID grip_body;
+    SubShapeID grip_sub;
+    Vec3 grip_local;
+    const bool held_before = m_.routecraft_.grip(grip_body, grip_sub, grip_local);
     m_.routecraft_.step(m_.physics_, m_.body_, dt);
+    if (held_before && !m_.routecraft_.grip(grip_body, grip_sub, grip_local)) {
+        ++m_.climb_releases_;
+    }
     m_.stride_ += bodies.GetLinearVelocity(m_.body_).Length() * dt;   // each rung rings
     if (m_.routecraft_.report().force > 0) {
         m_.routecraft_release_floor_ = float(bodies.GetPosition(m_.body_).GetY()) - kStandCentre;
@@ -431,6 +453,19 @@ void Matron::RoutecraftWay::cancel() {
 }
 
 MoverStatus Matron::RoutecraftWay::status() const {
+    // A climb she began herself (her rung way) owns her motion until it
+    // finishes: a routecraft that is planning or driving her stands aside,
+    // or the climb executes stale on the wrong deck after routecraft carries
+    // her there itself. A routecraft that HOLDS her on steel keeps running:
+    // a live grip is not preempted by a status flip.
+    if (m_.climb_ >= 0) {
+        JPH::BodyID grip_body;
+        JPH::SubShapeID grip_sub;
+        JPH::Vec3 grip_local;
+        if (!m_.routecraft_.grip(grip_body, grip_sub, grip_local)) {
+            return MoverStatus::Idle;
+        }
+    }
     if (m_.routecraft_.planning() || m_.routecraft_.owns_motion()) {
         return MoverStatus::Running;
     }

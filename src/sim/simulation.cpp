@@ -1492,6 +1492,9 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.stock_push_force_n = view.stock_push_force_n;
     result.staggers = view.staggers;
     result.knockdowns = view.knockdowns;
+    result.damage_ns = view.damage_ns;
+    result.player_damage_ns = view.player_damage_ns;
+    result.damage_stage = view.damage_stage;
     result.blow_mps = view.blow_mps;
     result.fall_x = view.fall_x;
     result.fall_z = view.fall_z;

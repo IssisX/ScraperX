@@ -14,6 +14,14 @@ so it checks the workflow as written, not a copy of its patterns, and
 compares them against the test list `ctest -N` reports for a build dir.
 It exits 0 only when every test is selected by exactly one shard.
 
+When no usable build dir exists, the test list falls back to parsing
+the root CMakeLists.txt: plain add_test(NAME ...) lines plus add_test
+lines inside foreach blocks, expanded over the block's item list. The
+fallback prints a SOURCE FALLBACK banner so its output never passes
+itself off as a `ctest -N` run, and the build-dir path stays primary:
+whenever `ctest -N` succeeds, its list is used and the fallback never
+runs. A coverage hole still fails on either path.
+
 Usage:
     python3 .github/scripts/check_ctest_shard_coverage.py \
         --workflow .github/workflows/wo000-delivery-spine.yml \
@@ -59,22 +67,78 @@ def shard_patterns(workflow_text):
     return patterns
 
 
-def list_tests(test_dir):
-    """Return the test names `ctest -N` reports for a build dir."""
+ADD_TEST = re.compile(r"add_test\s*\(\s*NAME\s+(\S+)")
+FOREACH = re.compile(r"foreach\s*\(\s*(\w+)((?:\s+\S+)+)\s*\)")
+ENDFOREACH = re.compile(r"^\s*endforeach\s*\(")
+
+
+def list_tests_from_cmakelists(cmakelists):
+    """Return test names parsed from the root CMakeLists.txt.
+
+    Expands add_test lines inside foreach blocks over the block's item
+    list, so a slice added to the loop is picked up without editing
+    this script. A name containing an unexpanded variable is a parse
+    failure, never a silently skipped test.
+    """
+    tests = []
+    loop_var = None
+    loop_items = []
+    for line in Path(cmakelists).read_text().splitlines():
+        if line.strip().startswith("#"):
+            continue
+        foreach = FOREACH.search(line)
+        if foreach is not None:
+            loop_var, loop_items = foreach.group(1), foreach.group(2).split()
+            continue
+        if ENDFOREACH.search(line):
+            loop_var, loop_items = None, []
+            continue
+        match = ADD_TEST.search(line)
+        if match is None:
+            continue
+        name = match.group(1)
+        if "${" in name:
+            var = re.search(r"\$\{(\w+)\}", name).group(1)
+            if var != loop_var or not loop_items:
+                raise SystemExit(
+                    "check_ctest_shard_coverage: cannot expand "
+                    f"test name {name!r} from {cmakelists}"
+                )
+            tests.extend(name.replace("${" + var + "}", item) for item in loop_items)
+        else:
+            tests.append(name)
+    if not tests:
+        raise SystemExit(f"check_ctest_shard_coverage: no tests parsed from {cmakelists}")
+    return tests
+
+
+def list_tests(test_dir, cmakelists):
+    """Return test names, preferring `ctest -N` for a build dir.
+
+    Returns (tests, source) where source is "ctest" or "cmake". The
+    cmake source is used only when `ctest -N` fails, so a fresh
+    checkout without a build still gets a real coverage verdict
+    instead of a build error dressed up as a coverage failure.
+    """
     result = subprocess.run(
         ["ctest", "-N", "--test-dir", str(test_dir)],
         capture_output=True,
         text=True,
         check=False,
     )
-    if result.returncode != 0:
+    if result.returncode == 0:
+        tests = [m.group(1) for line in result.stdout.splitlines() for m in [TEST_LINE.match(line)] if m]
+        if tests:
+            return tests, "ctest"
+        sys.stderr.write("check_ctest_shard_coverage: ctest -N listed no tests\n")
+    else:
         sys.stderr.write(result.stdout)
         sys.stderr.write(result.stderr)
+    if not Path(cmakelists).is_file():
         raise SystemExit(f"check_ctest_shard_coverage: ctest -N failed in {test_dir}")
-    tests = [m.group(1) for line in result.stdout.splitlines() for m in [TEST_LINE.match(line)] if m]
-    if not tests:
-        raise SystemExit(f"check_ctest_shard_coverage: no tests listed in {test_dir}")
-    return tests
+    tests = list_tests_from_cmakelists(cmakelists)
+    print(f"SOURCE FALLBACK: ctest -N unusable in {test_dir}; test list parsed from {cmakelists}")
+    return tests, "cmake"
 
 
 def main():
@@ -85,7 +149,7 @@ def main():
     args = parser.parse_args()
 
     patterns = shard_patterns(Path(args.workflow).read_text())
-    tests = list_tests(args.test_dir)
+    tests, source = list_tests(args.test_dir, root / "CMakeLists.txt")
 
     selected = {}
     for test in tests:
@@ -106,7 +170,7 @@ def main():
         for test, shards in sorted(bad.items()):
             print(f"  {test}: {len(shards)} shards ({', '.join(shards) or 'none'})")
         return 1
-    print(f"PASS: {len(tests)} tests, each selected by exactly one shard")
+    print(f"PASS: {len(tests)} tests ({source} list), each selected by exactly one shard")
     return 0
 
 

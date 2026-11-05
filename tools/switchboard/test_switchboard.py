@@ -176,6 +176,17 @@ class MergeRule(unittest.TestCase):
         self.assertEqual(rules.merge_decision(facts(rule_check_block=True), "xai").action, "WAIT")
         self.assertEqual(rules.merge_decision(facts(rule_check_block=None), "xai").action, "WAIT")
 
+    def test_a_declared_protected_change_merges_on_green_and_land(self):
+        protected = "fb-bot/integrate-protected-j033-sweep-scenario"
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True), "xai").action, "MERGE")
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, verdicts=()), "xai").action,
+                         "WAIT")
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, proof="running"), "xai").action,
+                         "WAIT")
+        # A never-edited file (MANIFEST, SHA256SUMS, the Governing Laws) blocks on every branch (Codex P1 on #203).
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, never_edit=True), "xai").action,
+                         "WAIT")
+
     def test_eyes_need_the_bots_eye_land_on_the_head(self):
         need = frozenset({"eyes"})
         self.assertEqual(rules.merge_decision(facts(needs=need), "xai").action, "WAIT")
@@ -249,6 +260,36 @@ class Board(unittest.TestCase):
         self.assertEqual(rules.job_of_title("J-031 Switchboard v0"), "J-031")
         self.assertEqual(rules.budget_override([("budget 12", "IssisX"), ("ok", "IssisX"), ("Budget 15.50\nthanks", "IssisX")], TEAM), "15.50")
         self.assertEqual(rules.budget_override([("my budget 12 is fine", "IssisX")], TEAM), "")
+
+    def test_superseded_prs_are_read_from_the_body(self):
+        self.assertEqual(rules.superseded_prs("Drawn-body checks.\nSupersedes #43, per the spec.", 100), [43])
+        self.assertEqual(rules.superseded_prs("supersedes #43 and #44; also Supersedes #43, #45", 100), [43, 44, 45])
+        self.assertEqual(rules.superseded_prs("Supersedes #100", 100), [])
+        self.assertEqual(rules.superseded_prs("Fixes #43. Supersedes nothing.", 100), [])
+        self.assertEqual(rules.superseded_prs(None, 1), [])
+
+    def test_a_ready_pr_closes_the_open_prs_it_supersedes(self):
+        class GH:
+            repo = "IssisX/ScraperX"
+            def __init__(self):
+                self.writes, self.comments = [], []
+            def get(self, path):
+                n = int(path.rsplit("/", 1)[1])
+                if n == 9:
+                    raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+                return {"state": "closed" if n == 44 else "open"}
+            def comment(self, number, body, what=""):
+                self.comments.append(number)
+            def write(self, method, path, body=None, what=""):
+                self.writes.append((method, path, body))
+        ctx = {"body": "Supersedes #43, #44 and #9"}
+        for draft, closed in ((False, [43]), (True, [])):
+            gh, lines = GH(), []
+            me = types.SimpleNamespace(gh=gh, out=lines.append)
+            facts = types.SimpleNamespace(number=100, draft=draft)
+            switch.Switch.close_superseded(me, facts, ctx)
+            self.assertEqual(gh.comments, closed)
+            self.assertEqual(gh.writes, [("PATCH", f"repos/IssisX/ScraperX/pulls/{n}", {"state": "closed"}) for n in closed])
 
     def test_budget_override_ignores_outsiders_and_the_bot(self):
         self.assertEqual(rules.budget_override([("budget 100", "outside-team")], TEAM), "")
@@ -1208,3 +1249,50 @@ class ApiReviewsClaude(unittest.TestCase):
     def test_its_fix_still_blocks(self):
         pr = facts(verdicts=(land("ChatGPT"), self.api("FIX")), head_ref="claude/integrate-x")
         self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "FIX")
+
+
+class ScopedProof(unittest.TestCase):
+    """ci/proof_scope.py skips the test groups a push does not reach; a skipped job (a job-level `if`, which
+    leaves one skipped record for a whole matrix) reads as passing to the switchboard and to sweep.py."""
+
+    RUNS = {"workflow_runs": [{"id": 7, "status": "completed", "created_at": "2026-11-04T10:00:00Z",
+                               "html_url": "https://x/runs/7", "updated_at": "2026-11-04T10:30:00Z"}]}
+
+    def jobs(self, touch="success"):
+        return {"jobs": [{"name": "scope", "status": "completed", "conclusion": "success"},
+                         {"name": "host-build", "status": "completed", "conclusion": "success"},
+                         {"name": "native-tests", "status": "completed", "conclusion": "skipped"},
+                         {"name": "godot-touch (touch-1)", "status": "completed", "conclusion": touch},
+                         {"name": "godot-touch (touch-2)", "status": "completed", "conclusion": "success"},
+                         {"name": "android-build", "status": "completed", "conclusion": "skipped"},
+                         {"name": "android-apk", "status": "completed", "conclusion": "skipped"},
+                         {"name": "publish-checkpoint", "status": "completed", "conclusion": "skipped"}]}
+
+    def fake_get(self, touch):
+        return lambda path, accept="": self.RUNS if "/runs?head_sha=" in path else self.jobs(touch)
+
+    def switch_proof(self, touch="success"):
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=self.fake_get(touch))
+        return sw.proof("abc")[0]
+
+    def sweep_proof(self, touch="success"):
+        sys.path.insert(0, str(HERE.parent / "board"))
+        try:
+            import sweep
+        finally:
+            sys.path.pop(0)
+        get = self.fake_get(touch)
+        real, sweep.gh = sweep.gh, lambda path: get(path)
+        try:
+            return sweep.proof_state("IssisX/ScraperX", "abc")[0]
+        finally:
+            sweep.gh = real
+
+    def test_skipped_groups_read_green(self):
+        self.assertEqual(self.switch_proof(), "green")
+        self.assertEqual(self.sweep_proof(), "green")
+
+    def test_a_failed_shard_still_reads_red(self):
+        self.assertEqual(self.switch_proof("failure"), "red: godot-touch (touch-1)")
+        self.assertEqual(self.sweep_proof("failure"), "red: godot-touch (touch-1)")

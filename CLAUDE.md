@@ -63,7 +63,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   on open (`@codex review` only after a fix commit). The Claude API (Opus, max effort) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. Grok and ChatGPT review only
   as the fallback, by their own scheduled runs. The switchboard merges on a green proof plus a LAND from
-  another vendor; workflow-file changes and protected changes are merged by the integrator.
+  another vendor, protected changes included; only workflow-file changes need the integrator.
 - **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
   go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
