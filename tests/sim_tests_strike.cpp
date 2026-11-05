@@ -123,9 +123,9 @@ void run_strike() {
     require(close.offered, "strike: Action offers the punch with her body close in front");
     require(close.strikes == 1, "strike: one press throws one strike");
     require(close.hits == 1, "strike: a strike at her body within reach lands once");
-    // Force times time: at most the limit held over its 3 contact ticks.
-    const double most = kPlayerStrikeForceN * 3.0 * Simulation::kFixedStepSeconds + 1.0e-3;
-    require(close.impulse_ns > 0.0 && close.impulse_ns <= most,
+    // Force times time: the left jab held over its 4 contact ticks.
+    const double most = kPlayerStrikeForceN * 4.0 * Simulation::kFixedStepSeconds + 1.0e-3;
+    require(close.impulse_ns > 66.0 && close.impulse_ns <= most,
             "strike: the landing's impulse is his force held over the contact, within his limit");
     require(close.max_player_step_m <= 0.20, "strike: no tick moves the player more than 0.20 m");
 
@@ -241,7 +241,7 @@ void run_strike() {
     }
 
     // Her hands on him (the owner's design): during her reach, before her
-    // fingers close, the brace keeps Action, no punch; in her hand before
+    // fingers close, the brace keeps Action, no strike; in her hand before
     // the rip the punch is offered and thrown, his escape, and lands on her
     // within his limit; once the rip has begun, none.
     constexpr int kGrab = static_cast<int>(scraperx::sim::Matron::State::Grab);
@@ -375,7 +375,7 @@ void run_strike() {
                     s.snapshot().traversal_state != scraperx::sim::TraversalState::None;
         }
         require(!other && s.snapshot().strike_phase == 0,
-                "strike: while his punch is under way no pick-up or climb starts (his hands are the punch's)");
+                "strike: while his jab is under way no pick-up or climb starts (his hands are the jab's)");
         for (int i = 0; i < 30 && s.snapshot().carrying_entity_id == 0; ++i) {
             (void)s.request_pick_up();
             tick(s);
@@ -759,8 +759,8 @@ void run_matron_kick() {
             "kick: after a whiff the foot is back at guard, full recovery");
     const Kicked plain = kick_one(1.05, 0, false, false, false);
     std::cout << "  kick no-move: move=" << int(plain.move) << " hits=" << plain.hits << " impulse_ns=" << plain.impulse_ns << "\n";
-    require(plain.move == 0 && plain.hits == 1 && plain.impulse_ns > 49.0 && plain.impulse_ns <= 50.01,
-            "kick: standing still, the same press is the plain punch, not a kick");
+    require(plain.move == 3 && plain.hits == 1 && plain.impulse_ns > 66.6 && plain.impulse_ns <= 66.7,
+            "kick: standing still, the same press is the plain jab, not a kick");
     const Kicked low = kick_one(1.05, 0, false, false, true, true);
     std::cout << "  kick crouch-move: move=" << int(low.move) << " hits=" << low.hits << "\n";
     require(low.move == 1 && low.hits == 1,
@@ -769,4 +769,177 @@ void run_matron_kick() {
     require(again.hits == pest.hits && again.impulse_ns == pest.impulse_ns && again.point.x == pest.point.x && again.point.y == pest.point.y && again.point.z == pest.point.z,
             "kick: the same inputs give the same kick, to the bit");
     std::cout << "PASS scraperx_sim matron kick: impulse_ns=" << pest.impulse_ns << "\n";
+}
+
+void run_matron_jab() {
+    constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
+    constexpr int kGrab = static_cast<int>(scraperx::sim::Matron::State::Grab);
+    constexpr int kDown = static_cast<int>(scraperx::sim::Matron::State::Down);
+    constexpr int kStaggering = static_cast<int>(scraperx::sim::Matron::State::Staggering);
+    // A jab (and, if asked, its queued cross) from a hunted setup: she
+    // comes to him, hands held, and he presses in jab range. `second`: 0
+    // one jab, 1 press in recoil (queued cross), 2 press in the grace
+    // after recoil, 3 press in windup (ignored). `third`: 1 press in the
+    // cross's windup (queues nothing). `lost_arm`: the arm torn off (-1
+    // none; 1 is the right). `slow`: creep pace. `immediate`: throw at once.
+    struct Jabbed {
+        bool offered = false, staggered = false, downed = false, was_grab = false;
+        std::uint64_t strikes = 0, hits = 0, knockdowns = 0, staggers = 0;
+        std::uint32_t grabs = 0;
+        int break_tick = -1, regrab_tick = -1;
+        std::uint8_t move = 0, move2 = 0, phase = 0;
+        std::int8_t arm = -1, arm2 = -1;
+        double impulse_ns = 0.0, jab_impulse_ns = 0.0, jab_peak = 0.0, cross_peak = 0.0;
+        Vector3 point{};
+    };
+    const auto jab_case = [&](const double her_ahead_m, const int stage, const bool fast,
+                              const double press_gap_m, const int second, const int third = 0,
+                              const int lost_arm = -1, const bool slow = false, const bool immediate = false,
+                              const bool no_hands = false) {
+        Jabbed out;
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) tick(s);
+        if (lost_arm >= 0) s.debug_lose_arm(lost_arm);
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + her_ahead_m});
+        if (!no_hands) s.debug_hold_matron_hands(30.0);
+        if (slow) s.debug_fix_matron_pace(0);
+        if (!immediate) {
+            for (int i = 0; i < 5 * 90 && s.matron_state().state != kHunting; ++i) tick(s);
+            require(s.matron_state().state == kHunting, "jab: she hunts (setup)");
+            s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+            bool entered = false;
+            for (int i = 0; i < 10 * 90 && !entered; ++i) {
+                const Vector3 me = s.snapshot().player_position, her = s.matron_state().position;
+                (void)s.set_facing(her.x - me.x, her.z - me.z);
+                tick(s);
+                const Vector3 now = s.matron_state().position, here = s.snapshot().player_position;
+                entered = s.matron_state().state == kHunting && (!fast || s.matron_state().speed > 1.0) &&
+                          std::hypot(now.x - here.x, now.z - here.z) <= press_gap_m;
+            }
+            require(entered, "jab: she hunts into jab range (setup)");
+        }
+        out.offered = s.snapshot().strike_offered;
+        const std::uint64_t strikes0 = s.snapshot().strike_count, hits0 = s.snapshot().strike_hit_count,
+                          downs0 = s.matron_state().knockdowns, stags0 = s.matron_state().staggers;
+        const std::uint32_t grabs0 = s.matron_state().grabs;
+        (void)s.request_strike();
+        bool second_pressed = (second == 0), third_pressed = (third == 0), saw_recoil = false;
+        int guard_ticks = 0;
+        // A free Matron (no_hands) needs a long run: the jab must break her
+        // pre-grip grab and the 1.5 s cooldown must elapse with no re-grab.
+        for (int i = 0; i < (no_hands ? 400 : 120); ++i) {
+            tick(s);
+            const auto &snap = s.snapshot();
+            const auto &m = s.matron_state();
+            const std::uint64_t n = snap.strike_count - strikes0;
+            if (m.state == kGrab) out.was_grab = true;
+            if (out.break_tick < 0 && out.was_grab && snap.strike_hit_count > hits0 && m.state == kStaggering)
+                out.break_tick = i;
+            if (out.break_tick >= 0 && out.regrab_tick < 0 && m.state == kGrab) out.regrab_tick = i;
+            if (n == 1) {
+                out.jab_peak = std::max(out.jab_peak, m.blow_mps);
+                if (snap.strike_phase != 0) { out.move = snap.strike_move; out.arm = snap.strike_arm; }
+            } else if (n == 2) {
+                if (out.jab_impulse_ns == 0.0) out.jab_impulse_ns = snap.strike_impulse_ns;
+                out.cross_peak = std::max(out.cross_peak, m.blow_mps);
+                if (snap.strike_phase != 0) { out.move2 = snap.strike_move; out.arm2 = snap.strike_arm; }
+            }
+            if (m.state == kStaggering) out.staggered = true;
+            if (m.state == kDown) out.downed = true;
+            if (!second_pressed) {
+                if (second == 1 && snap.strike_phase == 3) { (void)s.request_strike(); second_pressed = true; }
+                else if (second == 2 && saw_recoil && snap.strike_phase == 0) {
+                    if (++guard_ticks >= 3) { (void)s.request_strike(); second_pressed = true; }
+                } else if (second == 3 && snap.strike_phase == 1) { (void)s.request_strike(); second_pressed = true; }
+            }
+            if (!third_pressed && third == 1 && n == 2 && snap.strike_phase == 1) {
+                (void)s.request_strike(); third_pressed = true;
+            }
+            if (snap.strike_phase == 3) saw_recoil = true;
+            // Wait for the second strike to exist before breaking: a press
+            // issued at guard (the grace) is consumed by the next tick, and
+            // breaking on this tick would drop it unread.
+            if (!no_hands && second_pressed && third_pressed && snap.strike_phase == 0 &&
+                n >= ((second == 1 || second == 2) ? 2 : 1))
+                break;
+        }
+        const auto &snap = s.snapshot();
+        out.strikes = snap.strike_count - strikes0; out.hits = snap.strike_hit_count - hits0;
+        out.impulse_ns = snap.strike_impulse_ns; out.phase = snap.strike_phase;
+        out.knockdowns = s.matron_state().knockdowns - downs0; out.staggers = s.matron_state().staggers - stags0;
+        out.grabs = s.matron_state().grabs - grabs0;
+        out.point = snap.strike_hit_point;
+        return out;
+    };
+    const Jabbed pest = jab_case(1.05, 0, false, 1.15, 0);
+    require(pest.strikes == 1, "jab: one press throws one jab");
+    require(pest.offered && pest.hits == 1 && pest.move == 3 && pest.arm == 0,
+            "jab: a jab in reach lands once, as move 3 from the left fist");
+    require(pest.impulse_ns > 66.6 && pest.impulse_ns <= 66.7, "jab: 1500 N over 4 ticks is 66.7 N-s");
+    require(pest.jab_peak > 0.245 && pest.jab_peak < 0.306,
+            "jab: 66.7 N-s over her 220 kg is 0.303 m/s, over her stagger bar, under her fall bar");
+    require(pest.staggered && pest.staggers == 1 && pest.knockdowns == 0 && !pest.downed,
+            "jab: an upright pest staggers only, never down");
+    for (const int stage : {1, 2}) {
+        const Jabbed s = jab_case(2.5, stage, false, 1.05, 0, 0, -1, true);
+        require(s.hits == 1 && s.staggered && s.staggers == 1 && s.knockdowns == 0,
+                "jab: an upright dangerous/changed Matron staggers only, her brace holds");
+    }
+    const Jabbed crouched = jab_case(2.5, 1, true, 1.2, 0);
+    // The arm's force is capped by closing speed, so a fast approach lands lighter than 66.7 N-s.
+    require(crouched.hits == 1 && crouched.impulse_ns > 0.0,
+            "jab: the crouched blow lands (no whiff hiding behind no effect)");
+    require(!crouched.staggered && !crouched.downed && crouched.knockdowns == 0 && crouched.staggers == 0,
+            "jab: a crouched Matron takes nothing from it");
+    // The 1-2: a jab then a cross, two separately judged blows, both
+    // landing, 66.7 + 83.3 = 150 N-s toward the kill threshold. The third
+    // press in the cross's windup queues nothing (strikes stays 2).
+    const Jabbed one_two = jab_case(1.05, 0, false, 1.15, 1, 1);
+    std::cout << "  jab 1-2: strikes=" << one_two.strikes << " hits=" << one_two.hits << " jab=" << one_two.jab_impulse_ns
+              << " cross=" << one_two.impulse_ns << " peaks=" << one_two.jab_peak << "," << one_two.cross_peak
+              << " moves=" << int(one_two.move) << "," << int(one_two.move2) << " arms=" << int(one_two.arm) << "," << int(one_two.arm2) << "\n";
+    require(one_two.strikes == 2 && one_two.hits == 2, "jab: a press in recoil queues the cross, two strikes land");
+    require(one_two.move == 3 && one_two.move2 == 4 && one_two.arm == 0 && one_two.arm2 == 1,
+            "jab: the 1-2 is a left jab then a right cross, alternating fists");
+    require(one_two.jab_impulse_ns > 66.6 && one_two.jab_impulse_ns <= 66.7 &&
+                one_two.impulse_ns > 83.3 && one_two.impulse_ns <= 83.4,
+            "jab: the 1-2 is 66.7 N-s then 83.3 N-s, 150 N-s toward the kill threshold");
+    require(one_two.jab_peak > 0.245 && one_two.jab_peak < 0.306,
+            "jab: the 1-2's jab peaks under her fall bar, a stagger only");
+    require(one_two.cross_peak > 0.306 && one_two.cross_peak < 1.162,
+            "jab: the 1-2's cross peaks over her fall bar, under a dangerous fall");
+    require(one_two.knockdowns == 1 && one_two.downed, "jab: the 1-2 downs an upright pest");
+    const Jabbed grace = jab_case(1.05, 0, false, 1.15, 2);
+    require(grace.strikes == 2 && grace.move2 == 4 && grace.arm2 == 1,
+            "jab: a press in the 6-tick grace after recoil still queues the cross");
+    const Jabbed windup = jab_case(1.05, 0, false, 1.15, 3);
+    require(windup.strikes == 1 && windup.hits == 1,
+            "jab: a press during windup is ignored, no cross queued");
+    const Jabbed whiff = jab_case(3.0, 0, false, 0.0, 1, 0, -1, false, true);
+    require(!whiff.offered && whiff.strikes == 2 && whiff.hits == 0 && whiff.impulse_ns == 0.0 &&
+                whiff.move == 3 && whiff.move2 == 4,
+            "jab: a whiffed jab still queues the cross, and it whiffs too");
+    require(whiff.phase == 0 && whiff.knockdowns == 0 && whiff.staggers == 0,
+            "jab: after a whiffed 1-2 both fists are back at guard, full recovery");
+    const Jabbed one_arm = jab_case(1.05, 0, false, 1.15, 1, 0, 1);
+    require(one_arm.strikes == 2 && one_arm.hits == 2 && one_arm.move == 3 && one_arm.move2 == 3 &&
+                one_arm.arm == 0 && one_arm.arm2 == 0,
+            "jab: with the right arm torn, the second press throws the left again as a jab, no cross");
+    // A jab thrown as she closes into her grab: it lands while her fingers
+    // are still reaching, and his tagged blow breaks the grab (his_blow):
+    // she leaves it for a stagger, never holding him, and takes him again
+    // only after the grab cooldown.
+    const Jabbed grab = jab_case(1.05, 0, false, 0.92, 0, 0, -1, false, false, true);
+    require(grab.was_grab && grab.hits == 1 && grab.break_tick >= 0,
+            "jab: the jab landed in her grab and broke it before it held him");
+    require(grab.grabs == 0 && (grab.regrab_tick < 0 || grab.regrab_tick - grab.break_tick >= 135),
+            "jab: the broken grab never held him, and no second grab inside the 1.5 s cooldown");
+    const Jabbed again = jab_case(1.05, 0, false, 1.15, 0);
+    require(again.hits == pest.hits && again.impulse_ns == pest.impulse_ns && again.point.x == pest.point.x &&
+                again.point.y == pest.point.y && again.point.z == pest.point.z,
+            "jab: the same inputs give the same jab, to the bit");
+    std::cout << "PASS scraperx_sim matron jab: impulse_ns=" << pest.impulse_ns << "\n";
 }

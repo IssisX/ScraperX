@@ -25,12 +25,16 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 5. **Size and caps.** `get_session` (no id) for this session and every Claude worker; archive workers whose
    job landed. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current (asks in flight, merge queue,
    rulings). Over a cap in CLAUDE.md: trim it now.
-6. **One better way.** What cost the most this hour, or what is still done by hand? If something simpler
-   would do it, tell Cory with your pick.
+6. **Look for a better way, every hour (build one only if found).** What cost the most quota this hour (context size, helpers, wake-ups),
+   what is still done by hand, and is the weekly pace on track for the Monday 11 AM reset? List every wake-up
+   that had nothing to do (a PR event, CI note, helper ping or reminder that changed no step) and stop its
+   source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
+   Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
 
-Between hours: a 20-minute `send_later` check-in (Muse's mail, `asks.py --hours 3`, the sweep's MERGE /
-FIX-CI / BLOCKED lines, session sizes), re-armed by each run while something is in flight (a proof running, a
-diff to apply, a merge to make); when nothing is, the hourly run alone does (saves the weekly limit, 11-04).
+Between hours: no timed check-ins (Cory 11-05, so the weekly limit lasts until the Monday 11 AM reset). The switchboard
+merges by itself, and PR events and helper reports wake the integrator. The hourly run alone reads Muse's mail. A quiet
+hourly run ends in one line. Helpers: after the two in flight (J-042, J-044m/J-045), one at a time; free Muse takes the
+builds first.
 
 Trunk merges on any PR are yours, done the hour it conflicts, and the owner is mailed the new sha. Hand a merge to
 Muse only when the conflict is in its own logic, by a mail that says "Muse: resolve". Never ask for a job and then
@@ -39,5 +43,7 @@ Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can m
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (a stacked PR merges into its parent's branch,
 not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe only
-to PRs you merge yourself. A helper that edits code runs in a worktree and never subscribes to a PR. The
+to PRs you merge yourself. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
+from one the switchboard merges (11-05: #250-#253 woke the integrator 14 times in 3 minutes, mostly Codex's
+running/finished edits). A helper that edits code runs in a worktree and never subscribes to a PR. The
 Claude API does reviews and the eye only (the API coder is off); one review per PR.
