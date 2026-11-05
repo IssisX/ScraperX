@@ -102,6 +102,12 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 1:50 PM STATE AT COMPACT. Merged today after 11 AM: #239, #246, #247, #249 (the switchboard merged #246, #247 and #249
+  by itself). Open PRs: #95 (Muse: plant worst 0.111 m > 0.079; workflow file, I merge after the stills); #227 J-001 (Muse's
+  past-rail agent is running). Helpers (2 = cap): J-042 (ammo, every movable object; branch claude/integrate-j042-ammo,
+  not yet pushed; reports to me, I open the PR); J-044m perf probes #245 (claude/integrate-j044m-perf), then J-045 #248
+  (stability: force-close on full-height views, locker freeze; the LOADING card warms only prepare_matron). Asks open:
+  To Grok #244 (J-044b math). J-044a is in the repo. Muse next: J-044c. Hourly at :17; check Muse's mail every event.
 - 1:25 PM: #246 MERGED by the switchboard by itself (the first one after #238). S4 jab (Muse 5104883d): its BLOCK (strike.cpp:762,
   the standing press is now a jab, a tighter window) is the spec change, so I put it on fb-bot/integrate-protected-s4-jab
   (b177d973, trunk merged, CMake list +matron-jab) = PR #249. #95 red: plant worst 0.111 m > bound 0.079 (7 slides vs 50);
