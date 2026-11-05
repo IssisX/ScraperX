@@ -53,7 +53,9 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - To Claude: none open.
 
 ## Merge queue (5:20 PM)
-- #209 MERGED by Cory 6:05 AM 11-05.
+- #209 MERGED by Cory 6:05 AM 11-05. 6:30 AM: Cory made ScraperX-Claude the DEFAULT branch. Workflow triggers,
+  `if`s and schedules now come from trunk: never route a fix through main again. #218 carries the APK publisher
+  onto trunk (protected, Codex clean); merge it on green.
 - J-006: #212 merged 5:37 PM. Muse's fix rebuilt from the mail (whitespace restored, blob hashes match 470b2bac)
   onto #91. Ladder geometry landed alone as #213 (7:13 PM); trunk merged into #91 at 7299f8a8, `@codex review`
   posted. Codex P1 again: the traverse completion-condition change must land alone, so it is #215 (protected
