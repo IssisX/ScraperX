@@ -90,3 +90,6 @@ Claude lanes later: J-044h (presentation), i (injury render), j (foley/voice: re
 ## Known here
 - `.claude/worktrees/` is in `.git/info/exclude`.
 - Stale temp worktrees in the scratchpad (`tmp.C1BZusDQkr/*`) are from guard PRs that have merged.
+- The godot MCP timed out at every session start: it waits on the SessionStart Godot install (>30 s); started by hand, it answers in 1.6 s.
+  Fixed 11-05 2:35 PM: environment variable MCP_TIMEOUT=120000, which applies from the next session start or resume. Until then,
+  helpers render with tools/godot/godot under xvfb (--capture) and view the stills.
