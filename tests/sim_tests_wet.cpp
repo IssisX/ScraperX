@@ -224,10 +224,17 @@ void run_wet_e_guard(const bool expect) {
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
                                        scraperx::sim::Forklift::kDeck154CarriageEntity};
+    // J-042: then exactly two pieces of stock laid for the Matron by her band
+    // (the extinguisher and the pallet), the kit's last two bodies.
+    constexpr std::uint32_t kMatronKinds = 2;
     const std::uint32_t forklift_at = kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
-    bool since_after = world.kit_body_count() == forklift_at + std::size(kForklift);
+    const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift));
+    bool since_after = world.kit_body_count() == kinds_at + kMatronKinds;
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
+    }
+    for (std::uint32_t i = kinds_at; since_after && i < kinds_at + kMatronKinds; ++i) {
+        since_after = scraperx::sim::kit::is_stock_entity(world.kit_body_entity(i));
     }
     for (std::uint32_t i = kBodiesBeforeE; since_after && i < kBodiesBeforeE + std::size(kSince); ++i) {
         since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
@@ -257,7 +264,10 @@ void run_wet_e_guard(const bool expect) {
             }
         }
     }
+    // The pieces built before J-042 (462), hashed alone, then every piece.
+    constexpr std::uint32_t kStockBeforeKinds = 462;
     Fnv stock;
+    Fnv stock_before;
     bool stock_clear = true;
     for (std::uint32_t i = 0; i < world.loose_stock_count(); ++i) {
         const std::uint32_t body = world.kit_body_index(Simulation::kLooseStockFirstEntity + i);
@@ -266,6 +276,12 @@ void run_wet_e_guard(const bool expect) {
         stock.add_mm(at.x);
         stock.add_mm(at.y);
         stock.add_mm(at.z);
+        if (i < kStockBeforeKinds) {
+            stock_before.add(world.loose_stock_piece(i).kind);
+            stock_before.add_mm(at.x);
+            stock_before.add_mm(at.y);
+            stock_before.add_mm(at.z);
+        }
         // Its parts' reach about where it was built, as a ball round each part.
         for (std::uint32_t p = 0; p < world.kit_body_part_count(body); ++p) {
             const auto part = world.kit_body_part(body, p);
@@ -282,6 +298,7 @@ void run_wet_e_guard(const bool expect) {
               << " since_after=" << since_after
               << " lines=" << world.zipline_count() << " line_hash=" << lines.hash
               << " stock=" << world.loose_stock_count() << " stock_hash=" << stock.hash
+              << " stock_before_hash=" << stock_before.hash
               << " lines_clear=" << lines_clear << " stock_clear=" << stock_clear << '\n';
     if (!expect) {
         return;
@@ -318,7 +335,13 @@ void run_wet_e_guard(const bool expect) {
     // over all pieces changes again; every piece stands where it was.
     // Before 9809091706962277184, now 664305694603610712; the count (462)
     // is as before.
-    require(world.loose_stock_count() == 462 && stock.hash == 664305694603610712ULL,
+    // J-042 (#240): two pieces laid for the Matron by her band (the
+    // extinguisher and the pallet) take the end of the table. The first 462
+    // still hash to 664305694603610712, so every earlier piece stands where it
+    // was; the count is 462 + 2 and the hash over all pieces is new: before
+    // 664305694603610712, now 11546176645141321879.
+    require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds &&
+                stock_before.hash == 664305694603610712ULL && stock.hash == 11546176645141321879ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");
