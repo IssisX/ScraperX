@@ -25,8 +25,9 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 5. **Size and caps.** `get_session` (no id) for this session and every Claude worker; archive workers whose
    job landed. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current (asks in flight, merge queue,
    rulings). Over a cap in CLAUDE.md: trim it now.
-6. **One better way.** What cost the most this hour, or what is still done by hand? If something simpler
-   would do it, tell Cory with your pick.
+6. **One better way, every hour.** What cost the most quota this hour (context size, helpers, wake-ups),
+   what is still done by hand, and is the weekly pace on track for the Monday 11 AM reset? Find one saving that
+   costs no quality, build it, and tell Cory in one line. Never cut quality to save quota.
 
 Between hours: no timed check-ins (Cory 11-05, so the weekly limit lasts until the Monday 11 AM reset). The switchboard
 merges by itself, and PR events and helper reports wake the integrator. The hourly run alone reads Muse's mail. A quiet
