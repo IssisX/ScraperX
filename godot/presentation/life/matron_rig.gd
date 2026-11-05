@@ -530,6 +530,11 @@ const UPLANT_M := 0.03
 const UPLANT_RELEASE_S := 0.15
 const UPLANT_LIFT_M := 0.12
 const UPLANT_TRACK_LIFT_M := 0.15
+# A release lifts before it travels: the sole must be off the deck before
+# the foot moves sideways, or the deck counts the travel as a slide. The
+# lift needs a few frames to bend a near-straight leg past govern's cap,
+# so sideways travel waits until this much of the release has passed.
+const UPLANT_TRAVEL_START := 0.4
 var _uplants := {}
 var _uprev := {}
 
@@ -585,6 +590,33 @@ func _plant_upright_feet(wf: float) -> void:
 		# the pose has the foot, not where the last plant put it.
 		var pose_ankle := _gpos("an_" + s)
 		var st: Dictionary = _uplants.get(s, {})
+		# A hold that ends this frame starts its release blend NOW, in
+		# this frame's releasing branch below — never a frame later. The
+		# old code set releasing and reached nothing that frame, so the
+		# foot snapped from its lock to the pose's foot in one frame
+		# (a 0.19 m jump at the end of a turn, where the crouch into
+		# the next pose takes the sole out of the band). A hold ends
+		# when the sole leaves the band, or when the body drags the lock
+		# past the leg's reach. The trigger frame itself blends at
+		# k = 0, so the foot stays at its lock for that frame instead
+		# of snapping — and the release then runs the old frame count
+		# exactly, so every later touchdown lands on the old beat (the
+		# plant state machine is pose-driven; shifting the release by
+		# even one frame moves later touchdowns by several, which is
+		# what broke the figure test's carry pose under the first cut
+		# of this fix).
+		if st.has("lock") and not bool(st.get("tracking", false)) and not bool(st.get("releasing", false)) and int(st.get("landing", 0)) == 0:
+			var dragged := false
+			if down:
+				var hip := _gpos("hp_" + s)
+				var leg := hip.distance_to(_gpos("kn_" + s)) + _gpos("kn_" + s).distance_to(_gpos("an_" + s))
+				var ls: Vector3 = inv * (st["lock"] as Vector3)
+				dragged = Vector2(ls.x - hip.x, ls.z - hip.z).length() > 0.92 * leg
+			if not down or dragged:
+				st["releasing"] = true
+				st["rel"] = -dt / UPLANT_RELEASE_S
+				st["frame"] = _ik_frame
+				_uplants[s] = st
 		if bool(st.get("tracking", false)):
 			# Touchdown needs three frames of sole on the deck, not one,
 			# and a foot that has nearly stopped in the world, not one
@@ -629,7 +661,16 @@ func _plant_upright_feet(wf: float) -> void:
 			if k < 1.0:
 				var lock: Vector3 = st["lock"] as Vector3
 				var plant_tgt := inv * lock - skel.get_bone_global_pose(bone_idx["an_" + s]).basis * _sole_offset(s)
-				var tgt := plant_tgt.lerp(pose_ankle, k)
+				# The foot lifts before it travels: sideways travel
+				# waits until UPLANT_TRAVEL_START of the release has
+				# passed, so the sole is off the deck (and no longer
+				# counted as planted) before it moves sideways. The
+				# old code travelled from the first frame, while the
+				# near-straight leg could not bend fast enough past
+				# govern's cap to lift the sole — so the sole dragged
+				# along the deck to its new stance.
+				var travel := clampf((k - UPLANT_TRAVEL_START) / (1.0 - UPLANT_TRAVEL_START), 0.0, 1.0)
+				var tgt := plant_tgt.lerp(pose_ankle, travel)
 				# The arc stays up: its lift eases from the arc's height
 				# into the tracking height, never back down to a low fast
 				# pose ankle at the tail, so the handoff to tracking is
@@ -670,28 +711,17 @@ func _plant_upright_feet(wf: float) -> void:
 			if st.is_empty():
 				var mid: Vector3 = sole["mid"] as Vector3
 				st = {"lock": xf * Vector3(mid.x, 0.0, mid.z)}
-			else:
-				# Dragged past its leg's reach: it must step.
-				var hip := _gpos("hp_" + s)
-				var leg := hip.distance_to(_gpos("kn_" + s)) + _gpos("kn_" + s).distance_to(_gpos("an_" + s))
-				var ls: Vector3 = inv * (st["lock"] as Vector3)
-				if Vector2(ls.x - hip.x, ls.z - hip.z).length() > 0.92 * leg:
-					st["releasing"] = true
-					st["rel"] = 0.0
-					st["frame"] = _ik_frame
-					_uplants[s] = st
-					_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
-					continue
+			# A hold dragged past its leg's reach is already releasing:
+			# the trigger above converts it before this branch runs.
 			var lock: Vector3 = st["lock"] as Vector3
 			_reach_sole("hp_" + s, "kn_" + s, "an_" + s, inv * lock, w, "uplant_" + s, s)
 			st["frame"] = _ik_frame
 			_uplants[s] = st
 		elif not st.is_empty():
-			# Lifted: the step. Ease off on an arc rather than jumping.
-			st["releasing"] = true
-			st["rel"] = 0.0
-			st["frame"] = _ik_frame
-			_uplants[s] = st
+			# Lifted, with no hold to release: the foot is already off
+			# the deck, so it follows the pose (the release trigger
+			# above handles a held foot leaving the band).
+			_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
 		_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
 
 
