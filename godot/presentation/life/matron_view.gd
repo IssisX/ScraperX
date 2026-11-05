@@ -2362,6 +2362,35 @@ func figure_shown() -> bool:
 	return _figure != null and _figure.visible
 
 
+# J-045 (#248): her body's materials are compiled by the renderer the first
+# time it draws them, and it first draws her at the locker burst, a stall of
+# seconds on the phone. Under the LOADING card (main.gd _prepare_her, the tree
+# paused, so nothing else moves her) she is drawn for a few frames as a speck
+# at the screen's centre, under the card's word, WARM_SCALE of her size
+# WARM_AT_M in front of the camera: every material and its shadow drawn,
+# nothing seen. warm_down puts her back as she was.
+const WARM_SCALE := 0.002
+const WARM_AT_M := 2.0
+var _warm_saved := {}
+
+
+func warm_up(camera: Camera3D) -> void:
+	if _figure == null or camera == null or not _warm_saved.is_empty():
+		return
+	_warm_saved = {"visible": _figure.visible, "transform": _figure.global_transform}
+	_figure.global_transform = camera.global_transform * \
+		Transform3D(Basis().scaled(Vector3.ONE * WARM_SCALE), Vector3(0.0, 0.0, -WARM_AT_M))
+	_figure.visible = true
+
+
+func warm_down() -> void:
+	if _warm_saved.is_empty():
+		return
+	_figure.global_transform = _warm_saved["transform"]
+	_figure.visible = bool(_warm_saved["visible"])
+	_warm_saved = {}
+
+
 # For the look scenes: the figure posed from made-up data, the native's own
 # frames ignored while this is on. Her look follows the exposure (the
 # native's, 0..1 over her time out, matron_look.gd); what she does follows her

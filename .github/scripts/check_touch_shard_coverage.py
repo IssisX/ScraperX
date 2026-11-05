@@ -31,6 +31,9 @@ Scenarios skipped by design, with the in-repo evidence for each:
   audio_mix, audio_fall  run in godot-audits-and-mix ("Measure the
                 mix"), not in godot-touch.
   perf_top, perf_grade   measured locally, not in CI.
+  perf_locker, perf_view_bottom, perf_view_sling, perf_view_top
+                rendered only (J-045, #248): measured locally under
+                xvfb; headless draws nothing.
 
 KNOWN_GAPS names registered touch scenarios that are in no shard for
 a tracked reason. Each prints as a WARNING and does not fail the
@@ -59,7 +62,8 @@ SHARDS = [
 
 SKIP_PREFIXES = ("look_", "pad_", "keyboard_")
 # Run in another CI job, or measured locally only -- not godot-touch.
-SKIP_EXACT = {"audio_mix", "audio_fall", "perf_top", "perf_grade"}
+SKIP_EXACT = {"audio_mix", "audio_fall", "perf_top", "perf_grade",
+              "perf_locker", "perf_view_bottom", "perf_view_sling", "perf_view_top"}
 
 # Registered touch scenarios in no shard for a tracked reason. Warning,
 # not failure; stale the moment the scenario appears in a shard.
