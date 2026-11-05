@@ -97,6 +97,14 @@ public:
     [[nodiscard]] const Snapshot &state() const noexcept {
         return state_;
     }
+    // This step's spans (microseconds, steady_clock) for Simulation's
+    // StepTiming. Written by step(), read by nothing in the sim.
+    struct StepSpans final {
+        double physics_us = 0.0;
+        double matron_pre_us = 0.0;
+        double matron_post_us = 0.0;
+    };
+    [[nodiscard]] const StepSpans &step_spans() const noexcept { return step_spans_; }
 
     [[nodiscard]] bool traversal_committed() const noexcept {
         return traversal_state_ != TraversalState::None;
@@ -1257,6 +1265,7 @@ private:
     std::uint64_t teeter_count_ = 0;
 
     Snapshot state_{};
+    StepSpans step_spans_{};
 };
 
 } // namespace scraperx::sim

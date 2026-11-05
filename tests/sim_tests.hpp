@@ -893,6 +893,7 @@ void run_matron_load();
 void run_ammo();   // J-042: her ammo, your ammo (sim_tests_ammo.cpp)
 void run_strike();
 void run_matron_damage();
+void run_perf_step();
 void run_matron_sweep();
 void run_matron_kick();
 void run_matron_jab();

@@ -1457,6 +1457,117 @@ func _matron_sweep_touch(device: int) -> bool:
 	return true
 
 
+# The fight perf probe (J-044m, #245; J-044 console-quality fighting on the
+# Fold 6 at 90 Hz): the player throws punches at her up close on her 154
+# deck while every process frame logs its own wall time, Godot's TIME_PROCESS and
+# TIME_PHYSICS_PROCESS, the frame's draw calls, and the native step timer
+# (get_step_timing: the whole world step, PhysicsSystem::Update, her pre
+# and post step, per fixed step). Then min, mean, p95 and max of each.
+# Measures only: it fails only when nothing was measured or no punch was
+# thrown, never on a number (no budget yet; 03_EXECUTION/FIGHT/PERF_PROBES.md).
+# Staged like the sweep: her hands held so a grab cannot end the fight, her
+# changed (stage 2) so a punch does not end it, put back 1.2 m off whenever
+# a blow or her own moves carry her out past 3 m.
+const PERF_FIGHT_S := 10.0
+const PERF_FIGHT_PUNCH_FRAMES := 30
+const PERF_FIGHT_GAP_M := 1.2
+const PERF_FIGHT_REPLACE_M := 3.0
+const PERF_FIGHT_SETTLE_S := 1.5
+
+
+func _perf_series_summary(values: Array) -> Dictionary:
+	if values.is_empty():
+		return {"n": 0, "min": 0.0, "mean": 0.0, "p95": 0.0, "max": 0.0}
+	var sorted := values.duplicate()
+	sorted.sort()
+	var total := 0.0
+	for v in sorted:
+		total += float(v)
+	var rank := maxi(int(ceil(0.95 * float(sorted.size()))), 1) - 1
+	return {"n": sorted.size(), "min": float(sorted[0]), "mean": total / float(sorted.size()),
+		"p95": float(sorted[rank]), "max": float(sorted[sorted.size() - 1])}
+
+
+func _perf_fight() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var me := _position()
+	_native().debug_hold_matron_hands(PERF_FIGHT_S + 30.0)
+	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - PERF_FIGHT_GAP_M))
+	_native().debug_set_matron_stage(2)
+	await _face(Vector2(0.0, -1.0))
+	# Placing her can run her one-time tower scan inside a step (seconds on
+	# the host; real play does it behind the LOADING card, main.gd
+	# _prepare_her). Godot refreshes TIME_PROCESS once a second with that
+	# second's slowest frame, so wait past it before measuring.
+	await _seconds(PERF_FIGHT_SETTLE_S)
+	var series := {"frame_wall_ms": [], "process_ms": [], "physics_process_ms": [], "draw_calls": [],
+		"native_step_us": [], "native_physics_us": [], "native_matron_pre_us": [], "native_matron_post_us": []}
+	var frame_started := Time.get_ticks_usec()
+	var strikes := int(_native().get_strike_state()["strikes"])
+	var hits := int(_native().get_strike_state()["hits"])
+	var steps_at := int(_native().get_step_timing()["step"]["samples"])
+	var last_steps := steps_at
+	var replaced := 0
+	var frame := 0
+	var waited := 0.0
+	while waited < PERF_FIGHT_S:
+		var her: Vector3 = _matron_state()["position"]
+		me = _position()
+		if Vector2(her.x - me.x, her.z - me.z).length() > PERF_FIGHT_REPLACE_M:
+			_native().debug_place_matron(Vector3(me.x, 154.0, me.z - PERF_FIGHT_GAP_M))
+			her = _matron_state()["position"]
+			replaced += 1
+		# Turn toward her as _face does, at up to 4 rad/s, a step a frame.
+		var goal := atan2(-(her.x - me.x), -(her.z - me.z))
+		var left := wrapf(goal - float(_main._yaw), -PI, PI)
+		var turn := 4.0 * get_process_delta_time()
+		_main._yaw = goal if absf(left) <= turn else float(_main._yaw) + signf(left) * turn
+		if frame % PERF_FIGHT_PUNCH_FRAMES == 0:
+			_tap(1, _center(&"punch"))
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		frame += 1
+		var now := Time.get_ticks_usec()
+		series["frame_wall_ms"].append(float(now - frame_started) / 1000.0)
+		frame_started = now
+		series["process_ms"].append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+		series["physics_process_ms"].append(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
+		series["draw_calls"].append(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+		var timing: Dictionary = _native().get_step_timing()
+		var steps := int(timing["step"]["samples"])
+		if steps > last_steps:
+			# The frame's last fixed step (a 60 fps frame runs one or two).
+			series["native_step_us"].append(float(timing["step"]["last_us"]))
+			series["native_physics_us"].append(float(timing["physics"]["last_us"]))
+			series["native_matron_pre_us"].append(float(timing["matron_pre"]["last_us"]))
+			series["native_matron_post_us"].append(float(timing["matron_post"]["last_us"]))
+			last_steps = steps
+	var thrown := int(_native().get_strike_state()["strikes"]) - strikes
+	var landed := int(_native().get_strike_state()["hits"]) - hits
+	var summary := {}
+	for key in series:
+		var s := _perf_series_summary(series[key])
+		summary[key] = s
+		print("SCRAPERX_PERF perf_fight %s n=%d min=%.3f mean=%.3f p95=%.3f max=%.3f" % [key, int(s["n"]),
+			float(s["min"]), float(s["mean"]), float(s["p95"]), float(s["max"])])
+	var running: Dictionary = _native().get_step_timing()
+	print("SCRAPERX_PERF perf_fight native_running step_mean_us=%.1f step_max_us=%.1f physics_mean_us=%.1f physics_max_us=%.1f samples=%d" % [
+		float(running["step"]["mean_us"]), float(running["step"]["max_us"]),
+		float(running["physics"]["mean_us"]), float(running["physics"]["max_us"]), int(running["step"]["samples"])])
+	if int(summary["process_ms"]["n"]) < 60:
+		return _fail("only %d frames were measured" % int(summary["process_ms"]["n"]))
+	if int(running["step"]["samples"]) <= steps_at or int(summary["native_step_us"]["n"]) == 0:
+		return _fail("the native step timer did not run (samples %d -> %d)" % [steps_at, int(running["step"]["samples"])])
+	if thrown == 0:
+		return _fail("no punch was thrown in %.0f s of PUNCH taps" % PERF_FIGHT_S)
+	_detail = "frames=%d steps=%d punches=%d hits=%d replaced=%d frame_wall_ms_p95=%.2f process_ms_p95=%.2f physics_process_ms_p95=%.2f draws_max=%d native_step_us_mean=%.1f native_step_us_p95=%.1f native_step_us_max=%.1f" % [
+		frame, int(running["step"]["samples"]) - steps_at, thrown, landed, replaced,
+		float(summary["frame_wall_ms"]["p95"]), float(summary["process_ms"]["p95"]), float(summary["physics_process_ms"]["p95"]),
+		int(summary["draw_calls"]["max"]), float(summary["native_step_us"]["mean"]),
+		float(summary["native_step_us"]["p95"]), float(summary["native_step_us"]["max"])]
+	return true
+
+
 func _matron_pipe_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _pipe_drum_to_corner(device):

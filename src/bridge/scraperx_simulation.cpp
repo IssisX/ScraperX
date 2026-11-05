@@ -324,6 +324,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("place_matron_home", "deck_top"), &ScraperXSimulation::place_matron_home);
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_hold_state"), &ScraperXSimulation::get_matron_hold_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_step_timing"), &ScraperXSimulation::get_step_timing);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
     godot::ClassDB::bind_method(godot::D_METHOD("set_summit_lower", "held"), &ScraperXSimulation::set_summit_lower);
     godot::ClassDB::bind_method(godot::D_METHOD("request_summit_unrig"), &ScraperXSimulation::request_summit_unrig);
@@ -1997,6 +1998,24 @@ godot::Dictionary ScraperXSimulation::get_bay_state() const {
     out["trips"] = static_cast<std::int64_t>(state.trips);
     out["restarts"] = static_cast<std::int64_t>(state.restarts);
     out["cover"] = state.cover;
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_step_timing() const {
+    const sim::StepTiming timing = simulation_->step_timing();
+    const auto timer = [](const sim::StepTimer &t) {
+        godot::Dictionary out;
+        out["last_us"] = t.last_us;
+        out["max_us"] = t.max_us;
+        out["mean_us"] = t.mean_us;
+        out["samples"] = static_cast<std::int64_t>(t.samples);
+        return out;
+    };
+    godot::Dictionary out;
+    out["step"] = timer(timing.step);
+    out["physics"] = timer(timing.physics);
+    out["matron_pre"] = timer(timing.matron_pre);
+    out["matron_post"] = timer(timing.matron_post);
     return out;
 }
 

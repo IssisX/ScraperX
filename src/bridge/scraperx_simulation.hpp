@@ -215,6 +215,10 @@ public:
     // one-armed body (presentation: matron_hold_camera.gd, matron_view.gd).
     [[nodiscard]] godot::Dictionary get_matron_hold_state() const;
     [[nodiscard]] godot::Dictionary get_bay_state() const;
+    // The fight perf probes (J-044m, #245): microseconds per fixed step on
+    // steady_clock, read-only (sim::StepTiming). Keys step/physics/matron_pre/
+    // matron_post, each {last_us, max_us, mean_us, samples}.
+    [[nodiscard]] godot::Dictionary get_step_timing() const;
     void light_summit();
     bool set_summit_lower(bool held);
     bool request_summit_unrig();

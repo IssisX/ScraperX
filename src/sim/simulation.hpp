@@ -890,6 +890,25 @@ enum class FallState : std::uint8_t {
     Parachuting = 2,
 };
 
+// J-044m (#245), the fight perf probes: wall time one span of the fixed step
+// took, in microseconds, on std::chrono::steady_clock (monotonic). The last
+// step's, the most since the Simulation was made, and the running mean over
+// `samples` steps. Measurement only: nothing in the sim reads it, it is not in
+// Snapshot, a save or world_bits, so the determinism hash cannot see it.
+struct StepTimer final {
+    double last_us = 0.0;
+    double max_us = 0.0;
+    double mean_us = 0.0;
+    std::uint64_t samples = 0;
+};
+
+struct StepTiming final {
+    StepTimer step;          // the whole world step (PhysicsWorld::step)
+    StepTimer physics;       // PhysicsSystem::Update inside it
+    StepTimer matron_pre;    // Matron::pre_step
+    StepTimer matron_post;   // Matron::post_step
+};
+
 // One of the yard crew (Life L2, sim/crew.hpp), as the presentation needs it.
 struct WorkerView final {
     Vector3 position{};       // the capsule's center
@@ -1605,6 +1624,8 @@ public:
 
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
+    // The fight perf probes (StepTiming): read-only, never fed back.
+    [[nodiscard]] StepTiming step_timing() const noexcept;
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;
@@ -2020,6 +2041,7 @@ private:
     bool hook_release_ = false;
     bool hook_take_ = false;
     Snapshot snapshot_{};
+    StepTiming step_timing_{};   // kept across a world rebuilt after she ends a run
     Vector3 previous_player_position_{};
     Vector3 previous_matron_position_{};
     double previous_matron_yaw_ = 0.0;
