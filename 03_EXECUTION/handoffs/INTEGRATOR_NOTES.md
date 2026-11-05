@@ -28,6 +28,8 @@ Keep this file to what changes the next action; move anything done to the log.
 - No Workflow runs. Decline the ultracode nudges silently.
 - Plugin searches use one exact keyword, or a helper runs them and returns one line (context, 11-05).
 - GitHub-UI-only steps (settings, toggles): ask Cory early, with a direct link and the exact taps.
+- A question from Cory gets an answer, not an action (11-05: he asked why the godot MCP was unused and I changed the
+  environment). Name the fix in one line; anything that needs his tap or approval waits for his go.
 - Never weaken a test; never cut quality to save quota.
 - Every bug Cory reports gets a job the same hour.
 - Hourly step 6: look every hour; build a saving only when a real one shows up; never invent work.
