@@ -89,15 +89,63 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   project "scraperx", org cory-meyers; Cory's login = his Gmail): #222 GDScript reporter (Android only, 30/session,
   no PII; workflow step => I merge) + #223 protected INTERNET permission (needs green + Codex LAND). Both Codex
   clean, proofs running. Native crashes need Gradle export + official SDK = later job. Hourly reads Sentry mail.
-- Helpers (Opus): J-037 HUD labels (claude/integrate-j037-hud, eye check) running. Inventory helper running for
-  Cory's two new features (11-05): J-040 improvised weapons (brace carried bars/pipes vs Matron) and J-041 forklift
-  combat (ram/low-fork knockdown, lift/push off deck). Rules: no scripted knockdowns/impulses/teleports/forced falls;
-  deterministic native tests of the real physics + an end-to-end touch check; full experiences, no weaker
-  stand-ins. Next: report to Cory (exists/missing/owners/acceptance), open job issues, mail Muse.
-- Muse's other 4 guards (audits 94bf7aa9, scope-probe 37d34416, guard-steps 204fb795, scope-guard 7e0975c6) come
-  as pushed branches; PR each, merge one at a time, merge trunk into the rest.
+- 8:20 AM features: inventory done. J-040 improvised weapons = issue #228, owner Muse (after J-001; owns
+  take_blow). J-041 forklift combat = issue #229, owner Claude helper (Opus, worktree,
+  claude/integrate-j041-forklift + claude/integrate-protected-j041-*; take_blow diffs go to Muse on #229).
+  To ChatGPT on #228 (bracing criteria cross-check), To Grok on #229 (traction vs her 8 kN edge brace).
+  Inventory facts: held load filtered from take_blow (matron.cpp:4372,:4560); no carryable bar/pipe; her hand
+  kHand collides with nothing; catch distance-only; shove writes velocity (physics_world.cpp:1405); her body is
+  an untippable capsule, Down = lie_down shape swap after the real-contact balance rule, timed get-up; no
+  forklift on 154; riding_ (floor rising >0.3 m/s) disables blows; brace_at_edges holds her from edges.
+  Raised to Cory: keep her balance rule (real impulse decides) vs rebuild her as a body that can tip (huge,
+  touches protected mass/force). My pick: keep it. Pending his word.
+- J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
+  stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
+  kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 9:40 AM MERGED #230, #216 and #234 by hand (a LAND note first). Steer never wakes on github-actions[bot] comments
+  (GITHUB_TOKEN events don't trigger workflows), and schedule/workflow_run are still dead, so merge by hand on MERGE lines.
+  A workflow_dispatch of switchboard.yml (dry_run=false) runs the ask job, which is the Claude API review that counts as the
+  LAND for fb-bot work, where a clean Codex review does not. Dispatched 42054261416 (it reviewed #216, #233 and #234) and
+  42057091672 (for #95 and #232).
+  #231: trunk merged in at 14917c34 (11 guards PASS), re-proving. #233 conflicts after #216; mailed Muse to merge trunk in.
+  #235 red: the truck at x 21.5 z -140 blocks the crouched walk to the catwalk's east end (touch_matron, athletic) and the
+  unrig south-band walk. Helper told to move the truck off every route (never the tests) and merge trunk (E guard).
+- 9:30 AM #216 @1a0dbd33: green, Codex clean, Claude API LAND, so the switchboard should merge it. I fixed its stale body.
+  Tell Muse in the next mail (non-blocking): each stack ring now gets its own east/west cap, so a ring can hold up to twice
+  kSpotsPerStackRing, which may collide with the per-ring gate in fb-bot/expand-world-20261031; the 137 trailing bodies are
+  checked by count, not by entity id; the `!body.valid()` skip in her deck scan is dead code. After #216 lands, #235 must
+  merge trunk in (same E guard).
+- 9:25 AM SWITCHBOARD TRIGGERS DEAD: no `schedule` run since 09:44 UTC and no `workflow_run` since 12:11 UTC (the default
+  switch was about 11:30 UTC). issue_comment still works (a ": LAND" comment wakes steer). So green PRs (#95, #232-#234)
+  sat unmerged. Dispatched the sweep by hand (run 42054261416, dry_run=false). Next: confirm a :32 or :47 schedule tick
+  fires. If not, investigate (helper); meanwhile post my LAND comments to wake steer, and dispatch the sweep each check-in.
+- 9:20 AM: #232, #233, #234 and #95 are green with Codex clean; the switchboard merges them (a clean Codex review counts as the
+  LAND for fb-bot work). #216 @1a0dbd33 (Muse's 4-part fix) is proving.
+  J-041: the helper measured all 5 cases passing locally with no game change. The ram knocks her down, the creep doesn't,
+  the forks lift her by contact, she is pushed off 154 through her full 8 kN and dies at grade, and a slow truck gets
+  the driver grabbed. Protected deck-154 forklift = PR #235 (claude/integrate-protected-j041-deck154-forklift @6e588f3, 1 BLOCK = E
+  guard message, stricter list); it conflicts with #216's re-pin of the same guard, so whoever lands second merges.
+  ChatGPT's checks (per-tick trace, which body triggers take_blow, sense_near's 32-hit cap) were sent to the helper.
+  Told Cory that the forklift push off 154 kills her (my pick: keep it, real physics).
+- 8:55 AM PRs opened from Muse's pushes (merge on green + Codex clean, my LAND comment first): #230 guard-steps,
+  #231 matrix-shard (J-027 guards: merge one at a time, merging trunk in); #232 S3 heavy kick (J-034); #233 J-038 slice 0
+  (stated container loads; struck_mass_kg rename OK); #234 J-016 return-walk (touch_matron_pipe still red at the drum,
+  which is stage 3). #95 @44521835 (EXPECTED removal): proof dispatched, run 42049004665; merge on green (workflow
+  scope, mine).
+- J-001 damper (c000b4fa, local only) measured FAIL. Ruled 8:55: wrist damping (friction or angular damping on the
+  ankle SwingTwist grip, power charged to her budget, capped by the grip tear), gates untouched; if it can't kill the
+  swing in 18 ticks, ask Grok for the bound. J-040 #228 body now includes ChatGPT's adopted acceptance additions.
+- Guards (Job: J-027): #226, #224 and #225 MERGED. #230 guard-steps (guard-of-guards): trunk merged in at 8506e0d8, all
+  steps kept, 10 guards each called once (PASS), LAND comment posted, proof running; merge, then merge trunk into
+  #231 matrix-shard (b3b5a8ae, Codex clean) and merge it. Before every merge, post my own LAND comment (the safety check
+  needs it).
+- #227 J-001 also red on athletic-traversal "snaps, wind-up then lunges" (from the J-001 hold base; green on
+  trunk). Mailed Muse 8:40. Codex on #227: P0 grab.cpp:584, where a re-pose breaks the snag at 1000 N instead of the 3050 N
+  threshold (fixture weakens the test). Ruled: force-based breaking only. P1 matron_hold.cpp:1533, where the second-hand
+  haul goes around feet_budget_. Ruled: both hands' haul force and work come out of her one 8 kN/44 kW account. Mailed 8:45.
+- Sentry #222 and #223 MERGED 8:45 (green, Codex clean, my landing comment). The next APK reports phone errors to Sentry.
 - Owed by Muse: #216 fix (entity ids, magnet tail [protected], crane shackle, touch_matron_act grip) pushed to
-  fb-bot/integrate-protected-world-b; #193 J-001 one diff; J-016 stage 3; J-038 slice 1 rework.
+  fb-bot/integrate-protected-world-b; J-001 past-rail step (#227); J-016 stage 3; J-038 slice 1 rework.
 - Cory asks: tell him when the feature inventory reports. The Sentry plugin card did not render on his phone;
   plugin skipped (reports come by Gmail). Sentry Option A (Gradle + SDK, native crashes) = later job, not ruled.
 - #95: Muse removing hold/fatal plant from EXPECTED (XPASS), then dispatch proof, merge.

@@ -365,9 +365,14 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // What the Matron takes and throws as a pest (matron.hpp): after the
     // weights, so saves made before them line up too.
     loose_stock_->lay_matron_throwables();
+    // The east/west stock dress_tower recorded: last in the table, after
+    // the throwables, so nothing already laid is renumbered and saves
+    // made before it still load (loose_stock.hpp).
+    loose_stock_->append_reserved();
     {
         std::vector<Matron::Throwable> throwables;
-        for (int i = loose_stock_->count() - LooseStock::kMatronThrowables; i < loose_stock_->count(); ++i) {
+        for (int i = loose_stock_->matron_throwables_begin();
+             i < loose_stock_->matron_throwables_begin() + LooseStock::kMatronThrowables; ++i) {
             const kit::BodyIndex body = loose_stock_->body(i);
             throwables.push_back({kit_->body_id(body), kit_->body_entity(body),
                                   LooseStock::carry_handle(loose_stock_->placed()[static_cast<std::size_t>(i)].kind)});
@@ -377,7 +382,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         // first, then 143, the ring and 132, to her 32. No piece is laid for
         // it: the kit's bodies, saves and stock counts are as they were.
         for (const float deck : {Matron::kDeckTop, 143.0F, Matron::kRingFloor, 132.0F}) {
-            for (int i = 0; i < loose_stock_->count() - LooseStock::kMatronThrowables && throwables.size() < 32; ++i) {
+            for (int i = 0; i < loose_stock_->matron_throwables_begin() && throwables.size() < 32; ++i) {
                 const LooseStock::Placement &p = loose_stock_->placed()[static_cast<std::size_t>(i)];
                 const bool kind = p.kind == LooseStock::Kind::Toolbox || p.kind == LooseStock::Kind::Drum ||
                                   p.kind == LooseStock::Kind::Crate;
@@ -385,6 +390,11 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                     continue;
                 }
                 const kit::BodyIndex body = loose_stock_->body(i);
+                // A piece with no body yet is not hers to take or shove
+                // yet; skipping it keeps her list the pre-world-b one.
+                if (!body.valid()) {
+                    continue;
+                }
                 throwables.push_back({kit_->body_id(body), kit_->body_entity(body), LooseStock::carry_handle(p.kind)});
             }
         }
@@ -404,7 +414,13 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         impacts_->track(kit_->body_id(body), kit_->body_entity(body), sound, kit_->body_mass(body));
     };
     for (int i = 0; i < loose_stock_->count(); ++i) {
-        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+        const kit::BodyIndex body = loose_stock_->body(i);
+        // Reserved east/west spots have no body yet; they are tracked
+        // below, once built.
+        if (!body.valid()) {
+            continue;
+        }
+        track(body, LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         track(truck->chassis_body(), ImpactSound::Machine);
@@ -415,8 +431,16 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     track(yard_crane_->spreader_body(), ImpactSound::HeavySteel);
 
     summit_->build_ending();
+    // The east/west spots dress_tower reserved: their bodies come last in
+    // the kit's build order, after the bay, the twin tower and the summit,
+    // so every pre-existing body keeps its place. They are heard like any
+    // other stock once built.
+    for (const int i : loose_stock_->realize_reserved()) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
+
     // The forklift on her deck, 154 (J-041): its two kit bodies after every
-    // other's, so older saves' lists line up; its hits heard like the rest.
+    // other's (the east/west pieces too), so older saves' lists line up; its hits heard like the rest.
     forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
                                                     Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity,
                                                     Forklift::kDeck154ParkX, Forklift::kDeck154ParkZ, 0.0F,

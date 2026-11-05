@@ -61,6 +61,17 @@ class ProofScope(unittest.TestCase):
         self.assertEqual(run("src/bridge/scraperx_simulation.cpp", "src/bridge/register_types.hpp"),
                          {"godot", "android"})
 
+    def test_matron_probe_runs_the_godot_touch_gate(self):
+        # The godot-touch touch-2 "Her drawn body" step records with
+        # tools/matron_probe/probe.gd and gates on tools/matron_probe/check.py,
+        # and host-build's drawn-body guard reads check.py's EXPECTED keys.
+        # A probe-only push must therefore run godot (which also runs
+        # host-build via game=true), not skip the whole proof.
+        for p in ("tools/matron_probe/check.py", "tools/matron_probe/probe.gd",
+                  "tools/matron_probe/score.py", "tools/matron_probe/shape_fit.py"):
+            self.assertEqual(groups_of(p), {"godot"}, p)
+        self.assertEqual(run("tools/matron_probe/check.py"), {"godot"})
+
     def test_native_tests_only_skip_godot_and_android(self):
         self.assertEqual(run("tests/sim_tests_matron_chase.cpp", "tests/data/matron_drawn_limbs.inc"), {"native"})
 

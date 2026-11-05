@@ -1639,6 +1639,14 @@ public:
     };
     [[nodiscard]] std::uint32_t loose_stock_count() const noexcept;
     [[nodiscard]] LooseStockPiece loose_stock_piece(std::uint32_t index) const noexcept;
+    // Where each loose-stock group begins in the table (loose_stock.hpp):
+    // the crane steel, the machine weights, the Matron's throwables, and
+    // the east/west stock, so a test can reach a group without assuming
+    // it is the last.
+    [[nodiscard]] std::uint32_t loose_stock_crane_steel_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_machine_weights_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_throwables_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_east_west_begin() const noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;
     // Writes up to capacity points of the cable as drawn (first end, sheaves,

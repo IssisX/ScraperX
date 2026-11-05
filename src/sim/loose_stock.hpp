@@ -102,23 +102,42 @@ public:
     // tested against all of them. Its pieces follow the table's.
     // Nothing is set within keep_clear_radius of a point of keep_clear (the
     // places the player is put down).
+    // The pre-world-b spots are built here; the new east/west spots are
+    // only recorded here (their places, no entities and no bodies yet), and
+    // their table places are taken by append_reserved() after the Matron's
+    // throwables, so every pre-existing entity keeps its id and every
+    // pre-existing body keeps its build order. Their bodies are built by
+    // realize_reserved once the bay, the twin tower and the summit stand.
+    // Until append_reserved() runs the east/west pieces have no table
+    // place, so east_west_begin() is count().
     void dress_tower(const std::vector<JPH::RVec3> &keep_clear, float keep_clear_radius);
+    // Takes the east/west places dress_tower recorded, at the end of the
+    // table (after the Matron's throwables), so the crane steel, the
+    // machine weights and the throwables keep the entities they had before
+    // the east/west stock existed and saves made before it still load.
+    // Their bodies stay unbuilt (invalid BodyIndex) until realize_reserved.
+    void append_reserved();
+    // Builds the bodies dress_tower reserved, last in the kit's build
+    // order, and returns their places in the table.
+    [[nodiscard]] std::vector<int> realize_reserved();
     // The steel for the yard crane's magnet (yard_crane.hpp), laid in its
     // hook's reach after the tower's stock, so saves made before it line up:
     // two slabs of plate one on the other, and two beams side by side, the
-    // last kCraneSteelPieces pieces.
+    // kCraneSteelPieces pieces starting at crane_steel_begin().
     void lay_crane_steel();
     static constexpr int kCraneSteelPieces = 4;
     // The weights machines are started with, laid after the crane's devices
     // (yard_crane.hpp), so saves made before them line up: the pig of iron
     // on deck 8 by S3's cage, for the pan on its brake's trip line
-    // (band_stack.cpp). The last kMachineWeights pieces.
+    // (band_stack.cpp). The kMachineWeights pieces starting at
+    // machine_weights_begin().
     void lay_machine_weights();
     static constexpr int kMachineWeights = 1;
     // What the Matron takes and throws as a pest (matron.hpp, her mischief):
     // two toolboxes, and an oil drum too heavy for her (the player's, to drop
     // on her), by the outer rail of her deck's north band, near the way out. Laid after the machine weights, so saves made
-    // before them line up. The last kMatronThrowables pieces.
+    // before them line up. The kMatronThrowables pieces starting at
+    // matron_throwables_begin().
     void lay_matron_throwables();
     static constexpr int kMatronThrowables = 3;
     // Where a hand takes a carried piece of this kind, in its own frame.
@@ -130,6 +149,15 @@ public:
     [[nodiscard]] kit::BodyIndex body(int index) const noexcept {
         return pieces_[static_cast<std::size_t>(index)];
     }
+    // Where each group begins in the table: static, then the tower's
+    // spots, then the crane steel, the machine weights, the Matron's
+    // throwables, and last the east/west stock, so saves made before a
+    // group line up. Until append_reserved() runs, the east/west begin
+    // is count().
+    [[nodiscard]] int crane_steel_begin() const noexcept { return crane_steel_begin_; }
+    [[nodiscard]] int machine_weights_begin() const noexcept { return machine_weights_begin_; }
+    [[nodiscard]] int matron_throwables_begin() const noexcept { return matron_throwables_begin_; }
+    [[nodiscard]] int east_west_begin() const noexcept { return east_west_begin_; }
 
     // The pieces as placed, in order (also the order of their entities).
     [[nodiscard]] static const std::vector<Placement> &placements();
@@ -145,8 +173,18 @@ private:
     kit::Kit &kit_;
     std::vector<kit::BodyIndex> pieces_;
     std::vector<Placement> placed_;
+    // The east/west places dress_tower recorded, waiting for
+    // append_reserved() to take their table places at the end.
+    std::vector<Placement> pending_east_west_;
+    // Where each group begins in the table (see the accessors above).
+    int crane_steel_begin_ = 0;
+    int machine_weights_begin_ = 0;
+    int matron_throwables_begin_ = 0;
+    int east_west_begin_ = 0;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);
+    // Builds one piece's body for an entity already chosen, as placed.
+    [[nodiscard]] kit::BodyIndex create_body(const Placement &placement, std::uint64_t entity);
 };
 
 } // namespace scraperx::sim

@@ -42,8 +42,7 @@ Hit hit(const bool punch, const bool stock, const bool test_down) {
     }
     const auto earlier = s.save_game();
     if (punch) require(s.request_strike(), "damage: physical punch starts");
-    const std::uint32_t first = s.loose_stock_count() -
-        static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const std::uint32_t first = s.loose_stock_throwables_begin();
     const std::uint32_t piece = s.kit_body_index(LooseStock::kFirstEntity + first);
     for (int i = 0; i < 65; ++i) {
         if (stock && i == (test_down ? 0 : 11)) {

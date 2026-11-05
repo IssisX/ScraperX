@@ -123,6 +123,13 @@ jobs:
           python3 .github/scripts/check_apk_step_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml
 
+      - name: Verify every scope proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_scope_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
   host-build:
     needs: scope
     if: needs.scope.outputs.game == 'true'
@@ -228,6 +235,28 @@ jobs:
           set -euo pipefail
           python3 .github/scripts/check_apk_step_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every scope proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_scope_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every audits proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_audit_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every proof guard runs in host-build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_guard_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml \
+            --scripts-dir .github/scripts
 
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
@@ -924,6 +953,17 @@ jobs:
           timeout 120s tools/godot/godot --headless --path godot \
             --script res://tests/fight_s1_test.gd 2>&1 | tee artifacts/fight-s1.log
           grep -q '^FIGHT_S1 PASS' artifacts/fight-s1.log
+
+      - name: Error reporter test
+        shell: bash
+        run: |
+          set -euo pipefail
+          # error_reporter_test.gd (J-031): the Sentry error reporter stays
+          # inert off the phone, and a forced-on instance builds a valid
+          # envelope within its bounds. The send is injected: no network.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/error_reporter_test.gd 2>&1 | tee artifacts/error-reporter.log
+          grep -q '^ERROR_REPORTER PASS' artifacts/error-reporter.log
 
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4
