@@ -488,6 +488,9 @@ jobs:
             -E "^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow|matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower|matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$" \
             -j 2 --output-on-failure | tee artifacts/native-tests-matron-3.log
           grep -F "100% tests passed" artifacts/native-tests-matron-3.log
+          # The fight perf probes (J-044m, #245): perf-step runs in this shard; its per-step
+          # numbers are in CTest's own log of passing output, printed here (logged, not asserted).
+          grep -E "^PERF perf-step|^PASS scraperx_sim perf-step" build/host/Testing/Temporary/LastTest.log
 
       - name: Upload shard native logs
         uses: actions/upload-artifact@v4
@@ -671,7 +674,7 @@ jobs:
         run: |
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
-          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep \
+          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep perf_fight \
               touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_forklift_ram touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
               touch_tram touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
