@@ -52,7 +52,7 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   Grok answers again.
 - To Claude: none open.
 
-- Effort (Cory 11-05): the integrator stays on ultracode; "it caught nothing less since". Never argue it down.
+- Effort is Cory's call, set per stretch of work; never push to lower it.
 - Context (Cory 11-05): plugin searches use one exact keyword, or a helper runs them and returns one line
   (a broad SearchPlugins dump was the big jump). Never trade quality for context: PRs stay one per job.
 
