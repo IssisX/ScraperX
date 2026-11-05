@@ -1538,6 +1538,36 @@ void run_matron() {
         require(moved > 1.0 && moved < 4.0 * 5.5 * 0.6, "matron: a crate walked into moves, and slower than a walk");
         require(s.matron_state().planks_fallen == 0, "matron: nothing has come down");
     }
+    // ---- her walk's crate shove must not launch a body (J-016): a crate
+    // in her path gets pushed aside, never driven to a runaway speed ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        s.debug_fix_matron_pace(0); // creep: her slow walk, the one whose crate shove fires
+        require(s.advance_frame(1.0).accepted, "matron: crate launch guard: settle");
+        (void)s.matron_affordances(); // her own scan, as in play
+        // The player stands far south down the east band, never touching
+        // the crate, so her mischief (fetch/shove) cannot take it: only
+        // her walk's crate shove can move it.
+        s.debug_launch_player({Matron::kBandX, Matron::kDeckTop + 0.3, -165.0}, {0.0, 0.0, 0.0});
+        s.debug_place_matron({Matron::kBandX, Matron::kDeckTop, Matron::kBandNorthZ});
+        const auto crate =
+            s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(LooseStock::kDeckCrateSouth));
+        s.debug_launch_kit_body(crate, {Matron::kBandX, Matron::kDeckTop + 0.6, -131.5}, {0.0, 0.0, 0.0});
+        double peak = 0.0;
+        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            if (i % (2 * static_cast<int>(Simulation::kTickRateHz)) == 0) {
+                s.debug_matron_hear({Matron::kBandX, Matron::kDeckTop, -165.0});
+            }
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            const auto v = s.kit_body_velocity(crate);
+            peak = std::max(peak, std::hypot(v.x, v.z));
+        }
+        std::cout << "  matron: a crate in her walk's path: peak speed " << peak << " m/s\n";
+        require(peak > 0.5, "matron: her walk's crate shove moves a crate in her path (J-016)");
+        require(peak < 5.0, "matron: her walk's crate shove does not launch a body (J-016)");
+    }
     // ---- the ingot dolly, from a fresh start: where a shoved crate ends up
     // (and whether it crashes into the next one and wakes her) is not this
     // check's business ----
