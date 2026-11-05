@@ -102,6 +102,14 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 9:40 AM MERGED #230, #216 and #234 by hand (a LAND note first). Steer never wakes on github-actions[bot] comments
+  (GITHUB_TOKEN events don't trigger workflows), and schedule/workflow_run are still dead, so merge by hand on MERGE lines.
+  A workflow_dispatch of switchboard.yml (dry_run=false) runs the ask job, which is the Claude API review that counts as the
+  LAND for fb-bot work, where a clean Codex review does not. Dispatched 42054261416 (it reviewed #216, #233 and #234) and
+  42057091672 (for #95 and #232).
+  #231: trunk merged in at 14917c34 (11 guards PASS), re-proving. #233 conflicts after #216; mailed Muse to merge trunk in.
+  #235 red: the truck at x 21.5 z -140 blocks the crouched walk to the catwalk's east end (touch_matron, athletic) and the
+  unrig south-band walk. Helper told to move the truck off every route (never the tests) and merge trunk (E guard).
 - 9:30 AM #216 @1a0dbd33: green, Codex clean, Claude API LAND, so the switchboard should merge it. I fixed its stale body.
   Tell Muse in the next mail (non-blocking): each stack ring now gets its own east/west cap, so a ring can hold up to twice
   kSpotsPerStackRing, which may collide with the per-ring gate in fb-bot/expand-world-20261031; the 137 trailing bodies are
