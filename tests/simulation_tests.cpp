@@ -193,6 +193,7 @@ int main() {
         return 0;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-damage") { run_matron_damage(); return EXIT_SUCCESS; }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "perf-step") { run_perf_step(); return EXIT_SUCCESS; }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "strike") {
         run_strike();
         return 0;

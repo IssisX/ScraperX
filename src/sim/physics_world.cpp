@@ -3,6 +3,7 @@
 
 #include "sim/physics_world.hpp"
 #include "sim/twin_tower.hpp"
+#include <chrono>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 
 namespace scraperx::sim::detail {
@@ -782,9 +783,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     matron_->set_player_on_ladder(traversal_state_ == TraversalState::Climbing);
     // His true state, which she cannot open: her perception (matron_perception.hpp)
     // makes her evidence of it.
-    matron_->pre_step(delta_seconds,
-                      Stimulus(player_at, std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
-                                                   static_cast<float>(commands.room_loudness))));
+    {
+        const Stimulus heard(player_at, std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
+                                                 static_cast<float>(commands.room_loudness)));
+        const auto started = std::chrono::steady_clock::now();
+        matron_->pre_step(delta_seconds, heard);
+        step_spans_.matron_pre_us =
+            std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - started).count();
+    }
     grab_drive(bodies, delta_seconds);
     strike_step(bodies, commands, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
@@ -807,7 +813,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // off them.
     contact_listener_.set_planted_grip(
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
-    physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
+    {
+        const auto started = std::chrono::steady_clock::now();
+        physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
+        step_spans_.physics_us =
+            std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - started).count();
+    }
     kit_->post_step(delta_seconds);
     bay_->post_step();
     impacts_->post_step(carried_entity_);
@@ -842,7 +853,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     summit_->post_step();
     grab_post_step(bodies, delta_seconds);
-    matron_->post_step(delta_seconds);
+    {
+        const auto started = std::chrono::steady_clock::now();
+        matron_->post_step(delta_seconds);
+        step_spans_.matron_post_us =
+            std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - started).count();
+    }
     if (arms_lost() == 2 && !matron_->claimed() && !matron_->claim_armless()) {
         // No body goes on armless (Cory, 2026-10-27: your second arm gone is
         // the fatality). She claims it (matron_hold.cpp); when she cannot

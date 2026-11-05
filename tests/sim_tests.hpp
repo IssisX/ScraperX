@@ -892,6 +892,7 @@ void run_matron_grab();
 void run_matron_load();
 void run_strike();
 void run_matron_damage();
+void run_perf_step();
 void run_matron_sweep();
 void run_matron_kick();
 void run_matron_traverse();
