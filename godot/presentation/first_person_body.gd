@@ -56,6 +56,10 @@ const TRAVERSAL_SWINGING := 6
 const SWEEP_WINDUP_TICKS := 16.0
 const SWEEP_REACH_TICKS := 6.0
 const SWEEP_RECOIL_TICKS := 22.0
+# The kick's ticks (physics_world_strike.cpp): windup, reach, recoil.
+const KICK_WINDUP_TICKS := 18.0
+const KICK_REACH_TICKS := 8.0
+const KICK_RECOIL_TICKS := 26.0
 
 var _root: Node3D           # at the soles, turned with the view, his front ahead
 var _skel: Skeleton3D
@@ -164,6 +168,8 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 	var strike: Dictionary = state.get("strike", {})
 	var sweeping := int(strike.get("move", 0)) == 1 and int(strike.get("phase", 0)) != 0
 	var sweep_side := 1 if int(strike.get("arm", 1)) == 1 else 0
+	var kicking := int(strike.get("move", 0)) == 2 and int(strike.get("phase", 0)) != 0
+	var kick_side := 1 if int(strike.get("arm", 1)) == 1 else 0
 	var soles := centre - Vector3(0.0, CROUCH_HALF_HEIGHT if crouched else STAND_HALF_HEIGHT, 0.0)
 	var eye_world: Vector3 = state.get("eye", soles + Vector3(0.0, Rig.EYE.y, 0.0))
 	# Model space: soles at the origin under the capsule, his front (+z) the view's.
@@ -320,6 +326,30 @@ func update_body(state: Dictionary, yaw: float, delta: float) -> void:
 			_foot[side] = _root.global_transform * sweep_goal
 			_foot_yaw[side] = yaw
 			_roll[side] = sweep_roll
+			_planted[side] = false
+		if kicking and side == kick_side:
+			# The kick's leg, phase-driven: windup chambers the foot,
+			# reach drives it forward and up, recoil steps it back.
+			var x_dir := -1.0 if side == 0 else 1.0
+			var kphase := int(strike.get("phase", 0))
+			var ksticks := float(strike.get("phase_ticks", 0))
+			var kick_goal := spot
+			var kick_roll := 0.0
+			if kphase == 1:
+				var s := smoothstep(0.0, 1.0, clampf(ksticks / KICK_WINDUP_TICKS, 0.0, 1.0))
+				kick_goal = Vector3(spot.x + x_dir * 0.05 * s, 0.20 * s, spot.z - 0.15 * s)
+				kick_roll = 0.15 * s
+			elif kphase == 2:
+				var s := 1.0 - pow(1.0 - clampf((ksticks + 1.0) / KICK_REACH_TICKS, 0.0, 1.0), 3.0)
+				kick_goal = Vector3(spot.x + x_dir * 0.05, 0.20, spot.z - 0.15).lerp(Vector3(spot.x, 0.60, spot.z + 0.45), s)
+				kick_roll = 0.25
+			elif kphase == 3:
+				var s := smoothstep(0.0, 1.0, clampf(ksticks / KICK_RECOIL_TICKS, 0.0, 1.0))
+				kick_goal = Vector3(spot.x, 0.60, spot.z + 0.45).lerp(spot, s)
+				kick_roll = 0.25 * (1.0 - s)
+			_foot[side] = _root.global_transform * kick_goal
+			_foot_yaw[side] = yaw
+			_roll[side] = kick_roll
 			_planted[side] = false
 		_pose_leg(side, to_model * (_foot[side] as Vector3), float(_foot_yaw[side]) - yaw, float(_roll[side]))
 	_ready_feet = true
