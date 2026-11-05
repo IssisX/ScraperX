@@ -1160,11 +1160,18 @@ func _forklift_ram_touch(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return bool(_native().get_forklift_state()["driving"]), 1.0):
 		return _fail("DRIVE did not take the controls")
+	print("SCRAPERX_UITEST forklift_ram: at the wheel, she is at %s (state %d)" % [
+		str(_matron_state()["position"]), int(_matron_state()["state"])])
+	# Room for a run at her: the stick back, the truck reversed 4 m down the band.
+	_move_dir(device, Vector2(0.0, -0.8))
+	await _wait_until(func() -> bool: return _deck154_truck().origin.z <= DECK154_FORKLIFT_Z - 4.0, 6.0)
+	_move_dir(device, Vector2.ZERO)
 	var coming: bool = await _wait_until(func() -> bool:
 		var m := _matron_state()
 		var at: Vector3 = m["position"]
 		var t := _deck154_truck().origin
-		return int(m["state"]) == MATRON_STATE_HUNTING and Vector2(at.x, at.z).distance_to(Vector2(t.x, t.z)) < 12.0, 30.0)
+		return int(m["state"]) == MATRON_STATE_HUNTING and at.z > t.z + 2.0 and \
+			Vector2(at.x, at.z).distance_to(Vector2(t.x, t.z)) < 12.0, 30.0)
 	if not coming:
 		return _fail("she did not come for the driver (state %d at %s)" % [int(_matron_state()["state"]), str(_matron_state()["position"])])
 	var downs := int(_matron_state()["knockdowns"])
