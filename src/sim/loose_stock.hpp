@@ -146,7 +146,7 @@ public:
     // matron_throwables_begin().
     void lay_matron_throwables();
     static constexpr int kMatronThrowables = 3;
-    // J-042: two more kinds by her deck's north band, west of the toolboxes,
+    // J-042: two more kinds by her deck's north band, west of the drum,
     // so what she takes and throws is no one kind: a 9 kg extinguisher and
     // a 22 kg pallet. Laid last of all (after the deck's forklift), so
     // every earlier piece and body keeps its place. The kMatronKinds pieces

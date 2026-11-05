@@ -339,9 +339,10 @@ void run_wet_e_guard(const bool expect) {
     // extinguisher and the pallet) take the end of the table. The first 462
     // still hash to 664305694603610712, so every earlier piece stands where it
     // was; the count is 462 + 2 and the hash over all pieces is new: before
-    // 664305694603610712, now 11546176645141321879.
+    // 664305694603610712, then 11546176645141321879 (the two in front of the
+    // deck's spawn), now 14563130985231421775 (west of the drum, clear of it).
     require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds &&
-                stock_before.hash == 664305694603610712ULL && stock.hash == 11546176645141321879ULL,
+                stock_before.hash == 664305694603610712ULL && stock.hash == 14563130985231421775ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");

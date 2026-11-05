@@ -613,11 +613,12 @@ void LooseStock::lay_matron_throwables() {
 
 void LooseStock::lay_matron_kinds() {
     matron_kinds_begin_ = count();
-    // By the north band's outer rail, west of the toolboxes and east of the
-    // drum: the extinguisher on end, the pallet flat, its long side along
-    // the rail.
-    add_piece({K::Extinguisher, 0, -8.2F, kDeck154, -125.1F, 0.0F});
-    add_piece({K::Pallet, 0, -10.2F, kDeck154, -125.45F, 0.0F});
+    // By the north band's outer rail, west of the drum toward the band's
+    // north-west corner: clear of the deck's spawn and the lane in front of
+    // it, where a climber stands and she is set before him. The extinguisher
+    // on end, the pallet flat, its long side along the rail.
+    add_piece({K::Extinguisher, 0, -17.0F, kDeck154, -125.1F, 0.0F});
+    add_piece({K::Pallet, 0, -18.8F, kDeck154, -125.45F, 0.0F});
 }
 
 void LooseStock::append_reserved() {
