@@ -14,6 +14,8 @@ on:
     # GitHub matches this by the workflow's name as registered from the DEFAULT branch's copy of
     # wo000-delivery-spine.yml (main names it "ScraperX-2 Checkpoint ..."), not trunk's name.
     # Both are listed so the trigger survives main's copy being renamed to match trunk.
+    # Since 11-05 the default branch is ScraperX-Claude, so these triggers and the schedules below are
+    # read from this file on trunk. GitHub registers them when this file changes on the default branch.
     workflows:
       - "ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine"
       - "ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"
@@ -23,7 +25,7 @@ on:
   issues:
     types: [labeled]
   schedule:
-    - cron: "2,17,32,47 * * * *"   # the sweep, every 15 minutes (Actions minutes are free on this public repo)
+    - cron: "3,18,33,48 * * * *"   # the sweep, every 15 minutes (Actions minutes are free on this public repo)
     - cron: "0 12,13 * * *"   # the digest: whichever of these is 7:00 AM Central posts it (CDT, then CST)
   workflow_dispatch:
     inputs:
@@ -59,7 +61,8 @@ concurrency:
     (inputs.provision && 'switchboard-provision' ||
     (((github.event_name == 'issue_comment' && !(github.event.issue.pull_request &&
     (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
-    contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK')))) ||
+    contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK') ||
+    contains(github.event.comment.body, 'codex-review-receipt')))) ||
     (github.event_name == 'issues' && github.event.label.name != 'needs:orchestrator' &&
     !startsWith(github.event.label.name, 'owner:'))) &&
     format('switchboard-idle-{0}', github.run_id) || 'switchboard')) }}
@@ -112,11 +115,12 @@ jobs:
     if: >-
       github.event_name == 'workflow_run' ||
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'schedule' && github.event.schedule == '2,17,32,47 * * * *') ||
+      (github.event_name == 'schedule' && github.event.schedule == '3,18,33,48 * * * *') ||
       (github.event_name == 'issues' && github.event.label.name == 'needs:orchestrator') ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
         (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
-         contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK')))
+         contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK') ||
+         contains(github.event.comment.body, 'codex-review-receipt')))
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -203,7 +207,8 @@ jobs:
       ) && (
         github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
           (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
-           contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK')))
+           contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK') ||
+           contains(github.event.comment.body, 'codex-review-receipt')))
       )
     runs-on: ubuntu-24.04
     timeout-minutes: 15

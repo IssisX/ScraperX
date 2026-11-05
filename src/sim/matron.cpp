@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 
 namespace scraperx::sim {
@@ -367,7 +368,8 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
         const float to = floor_y + (down ? -kStackPitch : kStackPitch);
         return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
     }
-    return index >= 0 && take_climb(index, down);
+    const bool started = index >= 0 && take_climb(index, down);
+    return started;
 }
 
 void Matron::remove_body() {
@@ -599,6 +601,59 @@ float Matron::floor_of(const float y) const {
         }
     }
     return best;
+}
+
+// A sound or sighting belongs to the steel below its actual position, not
+// automatically to her own deck. The levels table does not include grade;
+// her collision scan does. Use the closest local top within the player's
+// standing height, without borrowing a distant deck or knowing his state.
+float Matron::floor_at(const float x, const float y, const float z) const {
+    float lowest = std::numeric_limits<float>::max();
+    for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
+    if (y < lowest - 0.5F) {
+        if (scanned_ != nullptr) {
+            float best = std::numeric_limits<float>::max();
+            float floor = 0.0F;
+            bool found = false;
+            for (const traversal::Patch &p : scanned_->patches()) {
+                if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
+                    z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
+                    p.top > y + 0.15F || y - p.top > 2.2F) {
+                    continue;
+                }
+                const float distance = std::abs(y - 0.9F - p.top);
+                if (distance < best) {
+                    best = distance;
+                    floor = p.top;
+                    found = true;
+                }
+            }
+            if (found) return floor;
+        }
+        return y - 0.9F;
+    }
+    if (zipline_ != nullptr) {
+        for (const Zipline::Line &line : zipline_->lines()) {
+            const float sx = float(line.stand.GetX());
+            const float sz = float(line.stand.GetZ());
+            const float fx = float(line.ramp_foot.GetX());
+            const float fz = float(line.ramp_foot.GetZ());
+            const float rx = sx - fx;
+            const float rz = sz - fz;
+            const float rlen = std::hypot(rx, rz);
+            if (rlen > 0.1F) {
+                const float along = ((x - fx) * rx + (z - fz) * rz) / rlen;
+                const float across = std::abs((x - fx) * rz - (z - fz) * rx) / rlen;
+                const float stand_y = float(line.stand.GetY());
+                const float top_floor = float(line.top_floor.GetY());
+                if (along >= -0.5F && along <= rlen + 0.85F && across <= 1.2F &&
+                    y >= top_floor - 0.5F && y <= stand_y + 2.5F) {
+                    return top_floor;
+                }
+            }
+        }
+    }
+    return floor_of(y);
 }
 
 bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
@@ -1761,14 +1816,19 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                         dir = side;
                     }
                     const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
-                    const traversal::Limits budget;
-                    // A shove is never the lunge: it stays on her 8 kN and 22 kW.
-                    const float shove_force = budget.total_force_n;
-                    const float shove_power = budget.power_w;
-                    const float force_n = std::min(shove_force, shove_power / along);
-                    Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
-                    push /= push.Length();
-                    bodies.AddForce(id, push * force_n, EActivation::Activate);
+                    // A body already travelling along the shove line is not
+                    // a crate that stopped her: shoving it again only
+                    // launches it (J-016). Leave it; the walk goes on.
+                    if (along <= 2.5F) {
+                        const traversal::Limits budget;
+                        // A shove is never the lunge: it stays on her 8 kN and 22 kW.
+                        const float shove_force = budget.total_force_n;
+                        const float shove_power = budget.power_w;
+                        const float force_n = std::min(shove_force, shove_power / along);
+                        Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
+                        push /= push.Length();
+                        bodies.AddForce(id, push * force_n, EActivation::Activate);
+                    }
                 }
             }
         }
@@ -2488,11 +2548,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
         if (crash.heard) {
-            take_lead(crash.x, crash.z, floor_of(crash.y), crash.loudness, Sense::Hearing);
+            take_lead(crash.x, crash.z, floor_at(crash.x, crash.y, crash.z), crash.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
         } else if (ev.sound && ev.carry_m <= kWakeNoiseM) {
-            take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()), floor_of(float(ev.heard_at.GetY())),
+            take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
+                      floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())),
                       ev.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -2588,7 +2649,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             look_x_ = px;
             look_z_ = pz;
             look_s_ = 1.0F;
-            take_lead(px, pz, floor_of(float(ev.seen_at.GetY())), 0.0F, Sense::Peripheral);
+            take_lead(px, pz, floor_at(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
             wary_ = false;
             state_ = State::Hunting;
         } else if (crash_heard || heard) {
@@ -2600,7 +2661,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             const float sx = crash_first ? crash.x : float(ev.heard_at.GetX());
             const float sy = crash_first ? crash.y : float(ev.heard_at.GetY());
             const float sz = crash_first ? crash.z : float(ev.heard_at.GetZ());
-            const float sfloor = floor_of(sy);
+            const float sfloor = floor_at(sx, sy, sz);
             const float loud = crash_first ? crash.loudness : loudness;
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
@@ -2627,9 +2688,11 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // His way on her level, as she perceived it (matron_moves.cpp): each
         // crumb a place she saw or heard him, as old as that evidence.
         if (saw || glimpsed) {
-            drop_crumb(float(ev.seen_at.GetX()), float(ev.seen_at.GetZ()), floor_of(float(ev.seen_at.GetY())));
+            drop_crumb(float(ev.seen_at.GetX()), float(ev.seen_at.GetZ()),
+                       floor_at(float(ev.seen_at.GetX()), float(ev.seen_at.GetY()), float(ev.seen_at.GetZ())));
         } else if (selected_player_sound) {
-            drop_crumb(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()), floor_of(float(ev.heard_at.GetY())));
+            drop_crumb(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
+                       floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())));
         }
         // A guess where the player is going: seen or heard riding a line, to
         // its far end.
@@ -2646,15 +2709,18 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // checks from a vantage (wary), but one she goes after by her way there.
         if (ev.climb >= 0 && (saw || selected_player_sound)) {
             const Climb c = climb_spec(ev.climb);
-            heard_x_ = c.top_x;
-            heard_z_ = c.top_z;
-            lead_floor_ = c.head_y;
+            const float my_floor = float(at.GetY()) - kStandCentre;
+            const bool descending = std::abs(my_floor - c.head_y) < 0.6F &&
+                                    float((saw ? ev.seen_at : ev.heard_at).GetY()) < c.head_y + 0.2F;
+            heard_x_ = descending ? c.x : c.top_x;
+            heard_z_ = descending ? c.z : c.top_z;
+            lead_floor_ = descending ? c.foot_y : c.head_y;
             guess_climb_ = ev.climb;
             wary_ = false;
         }
         // Seen up a ladder in a stalk: round to its head by another way, if
         // hers is the shorter (matron_stalk.cpp).
-        if (ev.climb >= 0 && saw) {
+        if (ev.climb >= 0 && saw && lead_floor_ > float(at.GetY()) - kStandCentre + 0.6F) {
             watch_climber(ev.climb, float(ev.seen_at.GetY()), dt);
             if (state_ == State::Hunting && stalk_encounter() && turn_ == Turn::None && !ambush_.active &&
                 !held_in_hunt() && holder() == nullptr) {
@@ -2754,7 +2820,14 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         }
         if (state_ == State::Hunting) {
             // Going to look from a vantage is not losing track: she goes on to it.
-            const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+            const float feet_y = float(at.GetY()) - kStandCentre;
+            float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+            int own_region = -1;
+            if (scanned_ != nullptr) {
+                own_region = scanned_->region_at(Vec3(ax, feet_y, az));
+                if (own_region < 0) own_region = region_under();
+                if (own_region >= 0) floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
+            }
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, no longer frail: chased longer.
             const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
@@ -2767,28 +2840,17 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // lead's floor. The scan's own floor, not the hand-listed
             // levels_ table, says where she stands: a bridge, a board or a
             // duct top is a floor to her scan though it is in no levels_
-            // entry, and a lead on it is not elsewhere to her. Frail, a pest
-            // gets none of this: otherwise the stage rule below would hand
-            // her 40 s she has not earned.
-            const float feet_y = float(at.GetY()) - kStandCentre;
-            float own_floor_y = floor_y;
-            int own_region = -1;
-            if (elsewhere && scanned_ != nullptr) {
-                own_region = scanned_->region_at(Vec3(ax, feet_y, az));
-                if (own_region < 0) {
-                    own_region = region_under();
-                }
-                if (own_region >= 0) {
-                    own_floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
-                }
-            }
-            const bool elsewhere_own = std::abs(lead_floor_ - own_floor_y) > 1.0F;
+            // entry, and a lead on it is not elsewhere to her. The same
+            // scanned route is available to her initial stage: a confirmed
+            // physical way, not her anger, earns the longer pursuit window.
+            const float own_floor_y = floor_y;
+            const bool elsewhere_own = elsewhere;
             const auto toward_lead = [&](const float goal_floor) {
                 return std::abs(goal_floor - lead_floor_) < std::abs(own_floor_y - lead_floor_) ||
                        std::abs(goal_floor - lead_floor_) <= 1.0F;
             };
             bool by_own_way = false;
-            if (stage_ != Stage::Pest && elsewhere_own) {
+            if (elsewhere_own) {
                 // A way of hers that knows the floor it takes her to (a found
                 // climb she is walking to, a journey, a travel), toward her
                 // lead from the floor it sets out from; or one that has her.
@@ -3273,8 +3335,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::Claimed:
         // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand,
         // and her hands on it: a lead she has, seen, where it is.
-        take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()), floor_of(float(ev.felt_at.GetY())), noise_heard_,
-                  Sense::Touch);
+        take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()),
+                  floor_at(float(ev.felt_at.GetX()), float(ev.felt_at.GetY()), float(ev.felt_at.GetZ())),
+                  noise_heard_, Sense::Touch);
         step_hold(dt, ev.felt_at);
         break;
     case State::Staggering:
@@ -3301,6 +3364,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
 
 void Matron::post_step(const float dt) {
     take_blow(dt);
+    // A killed body continues under gravity while the existing Down shape settles.
+    if (dead_ && body_in_world_) down_for_s_ += dt;
     // Her bars let go of her at once (her journey ends in her next tick).
     if (dead_ || state_ == State::Down || state_ == State::Staggering || holding_state(state_)) routecraft_way_.cancel();
     const Mover *held_by = holder();
@@ -3337,7 +3402,21 @@ void Matron::post_step(const float dt) {
         const float vy = bodies.GetLinearVelocity(body_).GetY();
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
-        if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+        if (landed_hard) {
+            dead_ = true;
+            state_ = State::Dead;
+            clear_interrupted_actions(false);
+            const Vec3 velocity = bodies.GetLinearVelocity(body_);
+            const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
+            if (flat.LengthSq() > 1.0e-6F) {
+                const Vec3 along = flat.Normalized();
+                fall_x_ = along.GetX();
+                fall_z_ = along.GetZ();
+            }
+            down_for_s_ = 0.0F;
+            lie_down(fall_x_, fall_z_);
+        } else if (bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+            // No support exists below the world: this body cannot settle.
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
@@ -4012,6 +4091,9 @@ void Matron::restore(const Saved &saved) {
     // A restore puts her back as the checkpoint had her, dead or not: the world is put
     // back and she is part of it (her death is not kept; matron.hpp, Saved).
     dead_ = false;
+    // A checkpoint rewind or reload restores her alive and undamaged.
+    damage_ns_ = 0.0F;
+    player_damage_ns_ = 0.0F;
     {
         remove_body();
         end_hold(saved.state);
@@ -4342,6 +4424,8 @@ void Matron::take_blow(const float dt) {
     const float feet = float(at.GetY()) - kStandCentre;
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     bool struck = false;
+    float environment_ns = 0.0F;
+    float player_ns = 0.0F;
     Vec3 impulse = Vec3::sZero();
     float above_share = 0.0F;
     for (std::size_t i = 0; i < near_count_; ++i) {
@@ -4374,12 +4458,15 @@ void Matron::take_blow(const float dt) {
         struck = true;
         // What it gave up is hers: along the floor (on the pipe, every way),
         // and a weight's from above.
-        impulse -= (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * (n.mass_kg / kMassKg);
+        const Vec3 given = (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * n.mass_kg;
+        impulse -= given / kMassKg;
         const bool its_low = float(n.at.GetY()) < feet + kLowBlowM;
         const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > at.GetY();
+        const float overhead_ns = its_above ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
         if (its_above) {
-            above_share += std::max(0.0F, its_change.GetY()) * n.mass_kg / kMassKg;
+            above_share += overhead_ns / kMassKg;
         }
+        environment_ns += std::max(given.Length(), overhead_ns);
         if (blow_quiet_ >= kBlowQuietTicks) {
             // A fresh blow: what kind, from where, and whether she faces it.
             blow_low_ = false;
@@ -4403,6 +4490,7 @@ void Matron::take_blow(const float dt) {
         // The player's fist: a striker closing on her by definition, its
         // impulse along the floor hers.
         struck = true;
+        player_ns = player_blow_ns_.Length();
         impulse += Vec3(player_blow_ns_.GetX(), 0.0F, player_blow_ns_.GetZ()) / kMassKg;
         if (blow_quiet_ >= kBlowQuietTicks) {
             blow_low_ = false;
@@ -4445,6 +4533,25 @@ void Matron::take_blow(const float dt) {
     blow_by_player_ = blow_by_player_ || player_blow_tag_;
     player_blow_tag_ = false;
     blow_quiet_ = 0;
+    // Judge each real contact impulse once, not the body's response as a second source.
+    damage_ns_ += environment_ns + player_ns;
+    player_damage_ns_ += player_ns;
+    if (damage_lethal_at_ns(damage_ns_)) {
+        dead_ = true;
+        state_ = State::Dead;
+        clear_interrupted_actions(false);
+        // Keep the actual Jolt body in the world. Her existing Down collision
+        // settles on real steel; the rendered collapse follows the same state.
+        const Vec3 fall(impulse.GetX(), 0.0F, impulse.GetZ());
+        if (fall.LengthSq() > 1.0e-6F) {
+            const Vec3 along = fall.Normalized();
+            fall_x_ = along.GetX();
+            fall_z_ = along.GetZ();
+        }
+        down_for_s_ = 0.0F;
+        lie_down(fall_x_, fall_z_);
+        return;
+    }
     if (tagged && his_blow()) {
         return;
     }
@@ -4513,8 +4620,9 @@ void Matron::take_blow(const float dt) {
                         : (prev == State::Peering || prev == State::Grab || prev == State::Release) ? State::Searching
                                                                                                     : prev;
         state_ = State::Staggering;
-        stagger_s_ = kStaggerMinSeconds + (kStaggerMaxSeconds - kStaggerMinSeconds) *
-                                              std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F);
+        stagger_s_ = (kStaggerMinSeconds + (kStaggerMaxSeconds - kStaggerMinSeconds) *
+                                               std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F)) *
+                     damage_recovery_scale_for_ns(damage_ns_);
         ++staggers_;
         rage_ = std::min(1.0F, rage_ + kStaggerRage);
         blow_staggered_ = true;
@@ -4565,7 +4673,7 @@ void Matron::knock_down() {
     clear_interrupted_actions(true);
     state_ = State::Down;
     resume_state_ = State::Searching;
-    down_s_ = down_seconds();
+    down_s_ = down_seconds() * damage_recovery_scale_for_ns(damage_ns_);
     down_for_s_ = 0.0F;
     turn_cooldown_s_ = turn_cooldown_seconds();
     sight_far_s_ = 0.0F;
@@ -4837,7 +4945,7 @@ void Matron::step_knocked(const float dt) {
 void Matron::refresh_view() {
     view_.state = state_;
     view_.alive = !dead_;
-    view_.released = out(state_);
+    view_.released = out(state_) || (state_ == State::Dead && body_in_world_);
     view_.fooled = fooled_;
     view_.wary = wary_ || state_ == State::Peering;
     view_.vaults = vaults_;
@@ -4929,11 +5037,14 @@ void Matron::refresh_view() {
     view_.stock_push_force_n = stock_push_force_n_;
     view_.staggers = staggers_;
     view_.knockdowns = knockdowns_;
+    view_.damage_ns = damage_ns_;
+    view_.player_damage_ns = player_damage_ns_;
+    view_.damage_stage = damage_stage_for_ns(damage_ns_);
     view_.blow_mps = blow_mps_;
     view_.fall_x = fall_x_;
     view_.fall_z = fall_z_;
     view_.kneeling = kneeling_;
-    view_.down_s = state_ == State::Down ? down_for_s_ : 0.0F;
+    view_.down_s = state_ == State::Down || state_ == State::Dead ? down_for_s_ : 0.0F;
     view_.down_left_s = state_ == State::Down ? std::max(0.0F, down_s_) : 0.0F;
     report_pipe();
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);

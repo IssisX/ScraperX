@@ -25,8 +25,8 @@ while [[ $# -gt 0 ]]; do
 done
 case "${SHOTS}" in
   matron) SETS=(moves hold fatal) ;;
-  moves|hold|fatal) SETS=("${SHOTS}") ;;
-  *) echo "look.sh: no shot set '${SHOTS}' (matron, moves, hold, fatal)" >&2; exit 2 ;;
+  moves|hold|fatal|grade_ladder) SETS=("${SHOTS}") ;;
+  *) echo "look.sh: no shot set '${SHOTS}' (matron, moves, hold, fatal, grade_ladder)" >&2; exit 2 ;;
 esac
 
 # Godot: $GODOT, this tree's tools/godot/godot, or the main checkout's.

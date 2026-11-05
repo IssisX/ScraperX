@@ -1313,7 +1313,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		legs_fwd = sin(_clock * 27.0) * 0.8
 		legs_back = -sin(_clock * 27.0) * 0.8
 		knees = 0.5
-	elif state == STATE_DOWN and bool(data.get("kneeling", false)):
+	elif (state == STATE_DOWN or state == STATE_DEAD) and bool(data.get("kneeling", false)):
 		# No room to lie: crumpled on her knees, slumped over them, the head
 		# hung, the arms dropped.
 		pitch = 0.95
@@ -1327,7 +1327,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = 0.65
 		head_roll = 0.35
 		jaw_open = 0.35
-	elif state == STATE_DOWN:
+	elif state == STATE_DOWN or state == STATE_DEAD:
 		# Flat on the steel (the figure toppled in _topple): limbs flung loose
 		# as she landed, one knee drawn up, fingers crawling.
 		pitch = 0.0
@@ -2177,7 +2177,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 # TOPPLE_S going down, and back up over the last of her time there.
 func _topple(data: Dictionary, centre: Vector3, delta: float) -> void:
 	var want := 0.0
-	if int(data["state"]) == STATE_DOWN and not bool(data.get("kneeling", false)):
+	if (int(data["state"]) == STATE_DOWN or int(data["state"]) == STATE_DEAD) and not bool(data.get("kneeling", false)):
 		var fall_v: Vector2 = data.get("fall", Vector2(0.0, 1.0))
 		var fall_now := Vector3(fall_v.x, 0.0, fall_v.y)
 		if fall_now.length_squared() >= 1.0e-6:
@@ -2217,7 +2217,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	var state := int(data["state"])
 	var alive := bool(data["alive"])
 	var released := bool(data["released"])
-	var out := released and alive and state >= STATE_EMERGING and state != STATE_DEAD
+	# Native released remains true for a dead body only while its collision body exists.
+	var out := released and (alive or state == STATE_DEAD) and state >= STATE_EMERGING
 	# Where she is drawn: between the simulation's last two ticks, as the
 	# player is (an older native without it: the tick's own).
 	var centre: Vector3 = data["position"] if previewing else data.get("render_position", data["position"])
@@ -2305,7 +2306,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_ease_figure(centre, delta)
 	_ease_hands(data, delta)
 	_drive_body(data, delta, camera_position, falling)
-	_hear(data, delta, true, _figure.global_position, player_position, falling)
+	# A corpse is drawn but makes none of her living sounds (matron_sound.gd: out_near is "out, alive and near").
+	_hear(data, delta, alive, _figure.global_position, player_position, falling)
 
 
 # Her sounds (presentation/audio/matron_sound.gd), every frame whether she

@@ -244,6 +244,22 @@ std::uint32_t Simulation::loose_stock_count() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().placed().size());
 }
 
+std::uint32_t Simulation::loose_stock_crane_steel_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().crane_steel_begin());
+}
+
+std::uint32_t Simulation::loose_stock_machine_weights_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().machine_weights_begin());
+}
+
+std::uint32_t Simulation::loose_stock_throwables_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().matron_throwables_begin());
+}
+
+std::uint32_t Simulation::loose_stock_east_west_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().east_west_begin());
+}
+
 Simulation::LooseStockPiece Simulation::loose_stock_piece(const std::uint32_t index) const noexcept {
     const std::vector<LooseStock::Placement> &placed = physics_world_->loose_stock().placed();
     if (index >= placed.size()) {
@@ -1492,6 +1508,9 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.stock_push_force_n = view.stock_push_force_n;
     result.staggers = view.staggers;
     result.knockdowns = view.knockdowns;
+    result.damage_ns = view.damage_ns;
+    result.player_damage_ns = view.player_damage_ns;
+    result.damage_stage = view.damage_stage;
     result.blow_mps = view.blow_mps;
     result.fall_x = view.fall_x;
     result.fall_z = view.fall_z;
