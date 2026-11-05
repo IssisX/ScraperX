@@ -89,15 +89,23 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   project "scraperx", org cory-meyers; Cory's login = his Gmail): #222 GDScript reporter (Android only, 30/session,
   no PII; workflow step => I merge) + #223 protected INTERNET permission (needs green + Codex LAND). Both Codex
   clean, proofs running. Native crashes need Gradle export + official SDK = later job. Hourly reads Sentry mail.
-- Helpers (Opus): J-037 HUD labels (claude/integrate-j037-hud, eye check) running. Inventory helper running for
-  Cory's two new features (11-05): J-040 improvised weapons (brace carried bars/pipes vs Matron) and J-041 forklift
-  combat (ram/low-fork knockdown, lift/push off deck). Rules: no scripted knockdowns/impulses/teleports/forced falls;
-  deterministic native tests of the real physics + an end-to-end touch check; full experiences, no weaker
-  stand-ins. Next: report to Cory (exists/missing/owners/acceptance), open job issues, mail Muse.
-- Muse's other 4 guards (audits 94bf7aa9, scope-probe 37d34416, guard-steps 204fb795, scope-guard 7e0975c6) come
-  as pushed branches; PR each, merge one at a time, merge trunk into the rest.
+- 8:20 AM features: inventory done. J-040 improvised weapons = issue #228, owner Muse (after J-001; owns
+  take_blow). J-041 forklift combat = issue #229, owner Claude helper (Opus, worktree,
+  claude/integrate-j041-forklift + claude/integrate-protected-j041-*; take_blow diffs go to Muse on #229).
+  To ChatGPT on #228 (bracing criteria cross-check), To Grok on #229 (traction vs her 8 kN edge brace).
+  Inventory facts: held load filtered from take_blow (matron.cpp:4372,:4560); no carryable bar/pipe; her hand
+  kHand collides with nothing; catch distance-only; shove writes velocity (physics_world.cpp:1405); her body is
+  an untippable capsule, Down = lie_down shape swap after the real-contact balance rule, timed get-up; no
+  forklift on 154; riding_ (floor rising >0.3 m/s) disables blows; brace_at_edges holds her from edges.
+  Raised to Cory: keep her balance rule (real impulse decides) vs rebuild her as a body that can tip (huge,
+  touches protected mass/force). My pick: keep it. Pending his word.
+- J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
+  stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
+  kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- Guards: #224 scope-guard @20584bce, #225 audits-guard @502fc5a1, #226 scope-probe @3c131cee (Job: J-027,
+  workflow => I merge on green + Codex clean, one at a time, trunk merged into the rest). guard-steps not pushed yet.
 - Owed by Muse: #216 fix (entity ids, magnet tail [protected], crane shackle, touch_matron_act grip) pushed to
-  fb-bot/integrate-protected-world-b; #193 J-001 one diff; J-016 stage 3; J-038 slice 1 rework.
+  fb-bot/integrate-protected-world-b; J-001 past-rail step (#227); J-016 stage 3; J-038 slice 1 rework.
 - Cory asks: tell him when the feature inventory reports. The Sentry plugin card did not render on his phone;
   plugin skipped (reports come by Gmail). Sentry Option A (Gradle + SDK, native crashes) = later job, not ruled.
 - #95: Muse removing hold/fatal plant from EXPECTED (XPASS), then dispatch proof, merge.
