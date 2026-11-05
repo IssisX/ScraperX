@@ -102,6 +102,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 10:55 AM: #238 MERGED (c5e2b79b). Its own proof's wake-switchboard job started switchboard run 42068620363
+  (workflow_dispatch, actor github-actions[bot]). The switchboard now wakes after every push proof whose branch has trunk's
+  workflow, i.e. any branch that merged trunk after c5e2b79b. Older heads (#233 @685d428b, #235 @5baad0f6) still need
+  a hand merge. Stop hand-dispatching once the heads in flight have it.
 - 10:45 AM: #232 MERGED (my LAND, green at 2d7edec7). #235: GitHub never synced the PR to the 97ab893c push (the proof ran,
   the PR stayed at 0df46ac9; merging would have landed the OLD head). Fixed by merging trunk in (5baad0f6). Codex is clean
   on 5baad0f6; the proof is 42066443791. Merge on green. J-041 helper: all 4 checks restored at ac94ffff (stacked, merges
