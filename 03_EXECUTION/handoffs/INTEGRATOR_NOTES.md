@@ -44,6 +44,8 @@ Keep this file to what changes the next action; move anything done to the log.
 - Merged by hand at 2:40 PM: #252 (J-044m perf) and #250 (protected kit-tail).
 - #256 J-042 protected ammo (5ea9f03e, trunk merged in). It replaces #251, which is closed. Workflow file, so I merge it on
   green plus Codex or the API LAND. Her pallet take is marginal: asked of Muse on #240 and mailed.
+  HELD on Codex P1 (confirmed): the windup lift moves the take_stock constraint anchor and is not budgeted. The fix is
+  Muse's (mailed 2:55 PM, ahead of J-044c): pushed to fb-bot/integrate-protected-j042-windup, then I merge it in.
 - #253 J-045 part 1 (ac62663b, trunk merged in after #252): eye LAND, proof re-running. I merge it on green.
 - #254 Muse's sense_near (c7f80b35) and #255 Muse's guard self-test: the switchboard merges both.
 - #95 J-023 plants: red, plant worst 0.111 m > 0.079. Muse fixes it; no bound raise. Workflow file, I merge after the stills.
