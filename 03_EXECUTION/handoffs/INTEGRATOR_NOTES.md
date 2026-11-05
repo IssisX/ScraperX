@@ -58,11 +58,11 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-006: #212 merged 5:37 PM. Muse's fix rebuilt from the mail (whitespace restored, blob hashes match 470b2bac)
   onto #91. Ladder geometry landed alone as #213 (7:13 PM); trunk merged into #91 at 7299f8a8, `@codex review`
   posted. Codex P1 again: the traverse completion-condition change must land alone, so it is #215 (protected
-  test, d8958561). After #215: merge trunk into #91, `@codex review`, land on green. #214 merged.
+  test) MERGED 8:10 PM; trunk into #91 at 9591703a, `@codex review` posted; land on green + Codex clean.
 - Muse 7:23 PM: keeps #207 (fix agent since 1:58 PM); #193 one diff and #95 plant fix in progress. Don't take #207.
 - #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
   on green + Codex clean.
-- Merged today: #83, #100, #211, #212, #213, #214, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
+- Merged today: #83, #100, #211, #212, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
 
 ## Known here
