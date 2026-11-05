@@ -243,6 +243,13 @@ jobs:
           python3 .github/scripts/check_scope_step_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml
 
+      - name: Verify every audits proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_audit_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
         with:
