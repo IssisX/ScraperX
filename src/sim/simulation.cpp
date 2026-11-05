@@ -6,6 +6,8 @@
 #include "sim/loose_stock.hpp"
 #include "sim/physics_world.hpp"
 
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
+
 namespace scraperx::sim {
 
 namespace {
@@ -1308,6 +1310,69 @@ Simulation::MatronFixtureSample Simulation::debug_matron_fixture(const Vector3 *
     }
     sample.hang_arm_limit = world.hang_arms_ == nullptr ? 0.0 : world.hang_arms_->GetMaxDistance();
     sample.hang_overload_impulse = world.hang_over_grip_impulse_;
+    return sample;
+}
+
+Simulation::MatronStrikerSample Simulation::debug_matron_strikers() {
+    auto &world = *physics_world_;
+    auto &physics = world.physics_system_;
+    auto &bodies = physics.GetBodyInterface();
+    const Matron &her = world.matron();
+    const auto id = her.body();
+    MatronStrikerSample sample;
+    if (id.IsInvalid() || !bodies.IsAdded(id)) return sample;
+    const JPH::RVec3 at = bodies.GetPosition(id);
+    const JPH::Vec3 centre(at);
+    const float feet = float(at.GetY()) - Matron::kStandCentre;
+    const float dt = static_cast<float>(kFixedStepSeconds);
+    std::vector<JPH::BodyID> kept;
+    for (std::size_t i = 0; i < her.sensed_count(); ++i) {
+        const JPH::BodyID other = her.sensed_body(i);
+        kept.push_back(other);
+        if (!bodies.IsAdded(other)) continue;
+        MatronStrikerSample::Striker s;
+        s.entity = bodies.GetUserData(other);
+        s.kg = her.sensed_mass_kg(i);
+        const JPH::RVec3 its_at = her.sensed_at(i);
+        const JPH::Vec3 before = her.sensed_velocity(i);
+        s.centre_y = its_at.GetY();
+        s.feet_y = feet;
+        const JPH::Vec3 change = bodies.GetLinearVelocity(other) - before -
+                                 physics.GetGravity() * (bodies.GetGravityFactor(other) * dt);
+        s.change_mps = change.Length();
+        JPH::Vec3 toward(at - its_at);
+        const float apart = toward.Length();
+        if (apart > 1.0e-3F) {
+            toward /= apart;
+            s.closing_mps = before.Dot(toward);
+            s.relative_mps = (before - her.sensed_own_velocity()).Dot(toward);
+        }
+        s.contact = physics.WereBodiesInContact(id, other);
+        s.low = float(its_at.GetY()) < feet + Matron::kLowBlowM;
+        s.judged = s.change_mps >= 0.1 && s.closing_mps >= Matron::kStrikerClosingMps &&
+                   s.relative_mps >= Matron::kStrikerClosingMps && s.contact;
+        sample.kept.push_back(s);
+    }
+    JPH::AllHitCollisionCollector<JPH::CollideShapeBodyCollector> found;
+    physics.GetBroadPhaseQuery().CollideAABox(
+        JPH::AABox(centre - JPH::Vec3::sReplicate(Matron::kNearM), centre + JPH::Vec3::sReplicate(Matron::kNearM)),
+        found);
+    const JPH::ObjectLayer hers = bodies.GetObjectLayer(id);
+    for (const JPH::BodyID other : found.mHits) {
+        if (other == id || other == world.player_id_) continue;
+        ++sample.box_hits;
+        const JPH::BodyLockRead lock(physics.GetBodyLockInterface(), other);
+        if (!lock.Succeeded()) continue;
+        const JPH::Body &body = lock.GetBody();
+        if (!body.IsDynamic() || body.IsSensor() || body.GetMotionProperties()->GetInverseMass() <= 0.0F ||
+            !physics.GetObjectLayerPairFilter().ShouldCollide(hers, body.GetObjectLayer())) {
+            continue;
+        }
+        ++sample.box_moving;
+        if (physics.WereBodiesInContact(id, other) && std::find(kept.begin(), kept.end(), other) == kept.end()) {
+            sample.touching_missed.push_back(body.GetUserData());
+        }
+    }
     return sample;
 }
 

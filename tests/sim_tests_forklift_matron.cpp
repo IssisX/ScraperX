@@ -7,15 +7,18 @@
 // (take_blow), her brace at the edge (brace_at_edges) and gravity.
 #include "sim/forklift.hpp"
 #include "sim/matron.hpp"
+#include "sim/matron_traversal.hpp"
 #include "sim_tests.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <vector>
 
 using scraperx::sim::Forklift;
 using scraperx::sim::InitialSpawn;
@@ -82,9 +85,27 @@ struct Run {
     double feet_n = 0.0;         // all her feet's push on a braced tick (her 8 kN budget)
     int braced_ticks = 0;
     double braced_truck_mps = 0.0;   // the truck's speed on the last braced tick
+    double braced_front_n = 1.0e9;   // the driven (front) wheels' least normal load while she braced
+    double braced_slip = 0.0;        // and their greatest |spin r| - |speed| (m/s), a tyre spinning
     double off_z = 0.0;          // where she was when she dropped below the deck
     double died_y = 0.0;         // her height when she died
     bool dead = false;
+    // The decisive trace (#229, ChatGPT 14:51 and 14:57): which of the
+    // truck's two bodies her balance judged (take_blow's gates, read back by
+    // debug_matron_strikers), the truck's tyres while it touches her, her
+    // feet against her budget, and how near the open edge she came.
+    bool log = false;                 // a line a tick while the truck touches her
+    int touch_ticks = 0;              // either truck body touching her
+    int missed_ticks = 0;             // touching her, yet not among what her balance read
+    int carriage_judged = 0, chassis_judged = 0, carriage_low = 0, chassis_low = 0;
+    std::uint64_t first_entity = 0;   // the body of the first judged blow
+    double first_centre_y = 0.0, first_feet_y = 0.0, first_closing = 0.0, first_relative = 0.0, first_change = 0.0;
+    std::uint32_t box_moving = 0;     // the most moving bodies in her 3 m box
+    double front_load_min = 1.0e9;    // the driven (front) wheels' least normal load while touching her
+    double front_slip_max = 0.0;      // their greatest |spin r| - |speed| while touching her
+    double pitch_max_deg = 0.0;       // the chassis' greatest pitch either way while touching her
+    double foot_n_max = 0.0, foot_w_max = 0.0;   // her feet's force and power, any tick
+    double edge_min = 1.0e9;          // her middle's least distance short of the open edge
     Fnv fnv;
     // Where it started.
     bool begun = false;
@@ -167,6 +188,11 @@ void drive(Simulation &s, Run &run, const double throttle, const double lift, co
             run.feet_n = std::max(run.feet_n, m.feet_push_n);
             ++run.braced_ticks;
             run.braced_truck_mps = f.speed_mps;
+            for (int w = 0; w < 2; ++w) {
+                run.braced_front_n = std::min(run.braced_front_n, f.wheel_load_n[w]);
+                run.braced_slip = std::max(run.braced_slip, std::abs(std::abs(f.wheel_spin_rad_s[w]) * f.wheel_radius[w] -
+                                                                     std::abs(f.speed_mps)));
+            }
         }
         if (run.off_z == 0.0 && m.position.y < kDeck - 0.5) {
             run.off_z = m.position.z;
@@ -174,6 +200,68 @@ void drive(Simulation &s, Run &run, const double throttle, const double lift, co
         if (!run.dead && !m.alive) {
             run.dead = true;
             run.died_y = m.position.y;
+        }
+        const auto k = s.debug_matron_strikers();
+        run.box_moving = std::max(run.box_moving, k.box_moving);
+        bool touch = false;
+        const Simulation::MatronStrikerSample::Striker *chassis = nullptr;
+        const Simulation::MatronStrikerSample::Striker *carriage = nullptr;
+        for (const auto &st : k.kept) {
+            const bool is_carriage = st.entity == Forklift::kDeck154CarriageEntity;
+            if (!is_carriage && st.entity != Forklift::kDeck154ChassisEntity) {
+                continue;
+            }
+            (is_carriage ? carriage : chassis) = &st;
+            touch = touch || st.contact;
+            if (st.judged) {
+                ++(is_carriage ? run.carriage_judged : run.chassis_judged);
+                run.carriage_low += is_carriage && st.low ? 1 : 0;
+                run.chassis_low += !is_carriage && st.low ? 1 : 0;
+                if (run.first_entity == 0) {
+                    run.first_entity = st.entity;
+                    run.first_centre_y = st.centre_y;
+                    run.first_feet_y = st.feet_y;
+                    run.first_closing = st.closing_mps;
+                    run.first_relative = st.relative_mps;
+                    run.first_change = st.change_mps;
+                }
+            }
+        }
+        const bool missed = std::any_of(k.touching_missed.begin(), k.touching_missed.end(), [](const std::uint64_t e) {
+            return e == Forklift::kDeck154ChassisEntity || e == Forklift::kDeck154CarriageEntity;
+        });
+        touch = touch || missed;
+        run.missed_ticks += missed ? 1 : 0;
+        const double slip0 = std::abs(f.wheel_spin_rad_s[0]) * f.wheel_radius[0] - std::abs(f.speed_mps);
+        const double slip1 = std::abs(f.wheel_spin_rad_s[1]) * f.wheel_radius[1] - std::abs(f.speed_mps);
+        if (touch) {
+            ++run.touch_ticks;
+            run.front_load_min = std::min({run.front_load_min, f.wheel_load_n[0], f.wheel_load_n[1]});
+            run.front_slip_max = std::max({run.front_slip_max, std::abs(slip0), std::abs(slip1)});
+            run.pitch_max_deg = std::max(run.pitch_max_deg, std::abs(f.pitch_rad) * 180.0 / 3.14159265358979);
+        }
+        run.foot_n_max = std::max(run.foot_n_max, m.feet_push_n);
+        run.foot_w_max = std::max(run.foot_w_max, m.foot_power_w);
+        run.edge_min = std::min(run.edge_min, kOuterEdgeZ - m.position.z);
+        if ((run.log && (touch || m.edge_brace_n > 0.0)) || trace()) {
+            const auto gates = [](const char *name, const Simulation::MatronStrikerSample::Striker *st) {
+                if (st == nullptr) {
+                    std::cout << " | " << name << " -";
+                    return;
+                }
+                std::cout << " | " << name << " c" << st->contact << " close " << st->closing_mps << "/"
+                          << st->relative_mps << " dv " << st->change_mps << " y " << st->centre_y << " low " << st->low
+                          << " J " << st->judged;
+            };
+            std::cout << "    t" << i << " thr " << f.throttle << " rpm " << f.engine_rpm << " v " << f.speed_mps
+                      << " pitch " << f.pitch_rad * 180.0 / 3.14159265358979 << " load " << f.wheel_load_n[0] << "/"
+                      << f.wheel_load_n[1] << "/" << f.wheel_load_n[2] << "/" << f.wheel_load_n[3] << " slip " << slip0
+                      << "/" << slip1;
+            gates("carriage", carriage);
+            gates("chassis", chassis);
+            std::cout << " | box " << k.box_moving << " missed " << missed << " | her z " << m.position.z << " edge "
+                      << kOuterEdgeZ - m.position.z << " st " << int(m.state) << " feet " << m.feet_push_n << " N "
+                      << m.foot_power_w << " W brace " << m.edge_brace_n << " ns " << m.damage_ns - run.damage0 << "\n";
         }
         run.fnv.add(t.x);
         run.fnv.add(t.y);
@@ -183,12 +271,6 @@ void drive(Simulation &s, Run &run, const double throttle, const double lift, co
         run.fnv.add(m.position.y);
         run.fnv.add(m.position.z);
         run.fnv.add(m.state);
-        if (trace()) {
-            std::cout << "    truck (" << t.x << "," << t.y << "," << t.z << ") " << f.speed_mps << " m/s, forks "
-                      << f.lift_m << "; her (" << m.position.x << "," << m.position.y << "," << m.position.z
-                      << ") state " << int(m.state) << " blow " << m.blow_mps << " low " << m.blow_low << " riding "
-                      << m.riding << " brace " << m.edge_brace_n << " feet " << m.feet_push_n << "\n";
-        }
     }
     (void)s.set_move_input(0.0, 0.0);
     (void)s.set_forklift_lift(0.0);
@@ -199,16 +281,79 @@ void print(const char *label, const Run &r) {
               << " N s, blow " << r.blow_mps << " m/s (low " << r.low << "), staggers " << r.staggers
               << ", knockdowns " << r.knockdowns << ", riding " << r.rode << ", held him " << r.held_him << ", rise "
               << r.rise_m << " m, brace " << r.brace_n << " N (feet " << r.feet_n << " N, " << r.braced_ticks
-              << " ticks, truck " << r.braced_truck_mps << " m/s), off at z " << r.off_z << ", fall " << r.fall_mps
+              << " ticks, truck " << r.braced_truck_mps << " m/s, its front tyres at least " << (r.braced_ticks > 0 ? r.braced_front_n : 0.0) << " N, slip " << r.braced_slip << " m/s), off at z " << r.off_z << ", fall " << r.fall_mps
               << " m/s, dead " << r.dead << " (at y " << r.died_y << "), hash " << r.fnv.hash << "\n";
+    std::cout << "    judged: carriage " << r.carriage_judged << " (low " << r.carriage_low << "), chassis "
+              << r.chassis_judged << " (low " << r.chassis_low << "); first by " << r.first_entity << ", its centre at y "
+              << r.first_centre_y << ", her soles " << r.first_feet_y << " (low under +" << Matron::kLowBlowM
+              << "), closing " << r.first_closing << "/" << r.first_relative << " m/s (gate "
+              << Matron::kStrikerClosingMps << "), change " << r.first_change << " m/s a tick (gate 0.1); touching "
+              << r.touch_ticks << " ticks, missed " << r.missed_ticks << ", box " << r.box_moving
+              << " moving; front wheels' least load " << (r.touch_ticks > 0 ? r.front_load_min : 0.0) << " N, slip "
+              << r.front_slip_max << " m/s, pitch " << r.pitch_max_deg << " deg; her feet " << r.foot_n_max << " N / "
+              << r.foot_w_max << " W; edge " << r.edge_min << " m\n";
+}
+
+// Loose stock made on the deck (live fabrication, add_fabricated: real
+// bodies, made as the game makes them): 0.3 m timber crates, 16.2 kg, in a
+// block of 4 across by `count / 4` along beside where the truck meets her (east of the
+// truck's path, all within her 3 m box), so her balance has more moving
+// bodies near her than sense_near keeps (its first 32).
+int stock(Simulation &s, const int count) {
+    constexpr float kHalf = 0.15F;
+    constexpr float kTimber = 600.0F;
+    const float volume = 8.0F * kHalf * kHalf * kHalf;
+    std::vector<std::uint8_t> file;
+    const auto put = [&file](const void *value, const std::size_t size) {
+        const auto *bytes = static_cast<const std::uint8_t *>(value);
+        file.insert(file.end(), bytes, bytes + size);
+    };
+    const std::uint32_t version = 1, material = 1, hulls = 1, points = 8;
+    const float mass = kTimber * volume;
+    const std::array<float, 3> half{kHalf, kHalf, kHalf};
+    put("SXFABHUL", 8);
+    put(&version, 4);
+    put(&material, 4);
+    put(&hulls, 4);
+    put(&mass, 4);
+    put(&volume, 4);
+    put(half.data(), 12);
+    const std::array<std::uint8_t, 64> digest{};
+    put(digest.data(), digest.size());
+    put(&points, 4);
+    for (const float x : {-kHalf, kHalf}) {
+        for (const float y : {-kHalf, kHalf}) {
+            for (const float z : {-kHalf, kHalf}) {
+                const std::array<float, 3> p{x, y, z};
+                put(p.data(), 12);
+            }
+        }
+    }
+    int made = 0;
+    for (int i = 0; i < count; ++i) {
+        const Vector3 at{23.2 + 0.4 * (i % 4), kDeck, -135.3 + 0.4 * (i / 4)};
+        made += s.add_fabricated(file.data(), file.size(), at, 0.0) != 0 ? 1 : 0;
+    }
+    return made;
 }
 
 // Rammed: the truck driven at her from its park until its frame is at z -131,
-// then let go (it brakes), 3 s more.
-Run ram(const int stage, const double throttle, const double forks_up_s) {
+// then let go (it brakes), 3 s more. Logged, a line a tick while it touches
+// her. With `crates` >= 0, that many crates of loose stock are made where
+// the truck meets her, and 1 s let pass, before it starts (0: the same
+// second, no crates, the crowded case's control).
+Run ram(const int stage, const double throttle, const double forks_up_s, const bool log = false,
+        const int crates = -1) {
     auto s = start({Forklift::kDeck154ParkX, kDeck, -128.0}, stage);
     Simulation &w = *s;
     Run r;
+    r.log = log;
+    if (crates >= 0) {
+        const int made = stock(w, crates);
+        (void)w.advance_frame(1.0);
+        std::cout << "  forklift_matron: " << made << " crates made where the truck meets her\n";
+        require(made == crates, "forklift_matron crowded: the crates made");
+    }
     if (forks_up_s > 0.0) {
         drive(w, r, 0.0, 1.0, forks_up_s);
     }
@@ -224,6 +369,7 @@ Run push_off() {
     auto s = start({Forklift::kDeck154ParkX, kDeck, -126.6}, 2);
     Simulation &w = *s;
     Run r;
+    r.log = true;
     drive(w, r, 0.0, 1.0, 1.5);
     drive(w, r, 0.4, 0.0, 14.0, [&] { return truck_at(w).z >= -127.6; });
     drive(w, r, 0.3, 0.0, 10.0, [&] { return truck_at(w).z >= -125.5; });
@@ -321,7 +467,7 @@ void run_forklift_matron() {
 
     // 1. Ram. At full speed (3 m/s) she goes down; at a creep (under 1 m/s)
     // the forks' blades slide under her shins and she takes it.
-    const Run full = ram(1, 1.0, 0.0);
+    const Run full = ram(1, 1.0, 0.0, true);
     print("ram, full speed, dangerous", full);
     require(full.hit_mps > 2.5 && full.impulse_ns > 100.0 && full.knockdowns >= 1 && !full.dead,
             "forklift_matron ram: at full speed the truck's contact impulse knocks her down");
@@ -334,6 +480,32 @@ void run_forklift_matron() {
     const Run again = ram(1, 1.0, 0.0);
     std::cout << "  forklift_matron: the full-speed ram again, hash " << again.fnv.hash << "\n";
     require(again.fnv.hash == full.fnv.hash, "forklift_matron: the same inputs give the same ram, tick for tick");
+    // Which body her balance judged, past which gates (take_blow): at full
+    // speed and at a creep both closed on her past 0.5 m/s, changed past
+    // 0.1 m/s a tick and touched her; none touched her unread.
+    require(full.chassis_judged + full.carriage_judged > 0 && full.first_closing >= Matron::kStrikerClosingMps &&
+                full.first_relative >= Matron::kStrikerClosingMps && full.first_change >= 0.1 &&
+                full.missed_ticks == 0,
+            "forklift_matron gates: the full-speed ram is judged on a truck body past all three of take_blow's gates");
+    require(creep.first_entity == Forklift::kDeck154CarriageEntity && creep.carriage_low > 0 &&
+                creep.first_closing >= Matron::kStrikerClosingMps && creep.missed_ticks == 0,
+            "forklift_matron gates: at a creep the fork carriage, its centre under her knees, is the judged low blow");
+
+    // Crowded: 32 crates of loose stock (live fabrication) where the truck
+    // meets her, so 34 moving bodies in her box, more than sense_near's 32;
+    // against the same second with none. Measured, not yet required: its cut
+    // to the broad phase's first 32 can leave the truck out (#229, Muse's).
+    const Run control = ram(1, 1.0, 0.0, false, 0);
+    print("ram, full speed, dangerous, the crowded case's control", control);
+    const Run crowded = ram(1, 1.0, 0.0, std::getenv("SCRAPERX_FM_CROWD") != nullptr, 32);
+    print("ram, full speed, dangerous, 32 crates where it meets her", crowded);
+    require(control.knockdowns >= 1 && control.missed_ticks == 0,
+            "forklift_matron crowded: with no crates the same ram is read and fells her");
+    require(crowded.box_moving > 32, "forklift_matron crowded: more moving bodies in her box than sense_near keeps");
+    std::cout << "  forklift_matron crowded: the truck touched her " << crowded.touch_ticks << " ticks, "
+              << crowded.missed_ticks << " of them unread by her balance; judged " << crowded.carriage_judged
+              << " carriage + " << crowded.chassis_judged << " chassis, knockdowns " << crowded.knockdowns
+              << " (control " << control.knockdowns << "), held him " << crowded.held_him << "\n";
 
     // 2. The fork hit is low. Fully changed she braces against a blow she
     // faces and only staggers -- unless it comes at her shins, where she has
@@ -347,6 +519,11 @@ void run_forklift_matron() {
             "forklift_matron low: a hit at fork height takes the low-blow path and fells even a changed Matron");
     require(!middle.low && middle.blow_mps > shins.blow_mps * 0.5 && middle.staggers >= 1 && middle.knockdowns == 0,
             "forklift_matron low: the forks at her middle, as hard a hit only staggers her, braced");
+    // Low or not is the judged body's centre of mass against her soles + 0.5
+    // m: the fork carriage's, forks down (about 0.27 m up) or at her middle
+    // (about 0.87 m).
+    require(shins.carriage_low > 0 && middle.carriage_judged > 0 && middle.carriage_low == 0 && middle.chassis_low == 0,
+            "forklift_matron low: the fork carriage is the judged body, low forks down and not low at her middle");
 
     // 3. Lift. Parked, forks down: she comes at the driver over the blades;
     // once her feet are up on them, RAISE for 4 s. Contact alone carries her.
@@ -374,6 +551,8 @@ void run_forklift_matron() {
     print("push off, changed", off);
     require(off.braced_ticks > 10 && off.feet_n > 7900.0 && off.braced_truck_mps > 0.3,
             "forklift_matron push off: braced at the edge with her whole budget, the truck still drives her back");
+    require(off.braced_front_n > 3000.0 && off.braced_slip < 0.1,
+            "forklift_matron push off: against her brace the driven front tyres stay loaded and grip, no spin");
     require(off.off_z > kOuterEdgeZ, "forklift_matron push off: she goes over the open edge");
     require(off.dead == (off.fall_mps >= static_cast<double>(Matron::kLethalLandingMps)) && off.dead &&
                 off.died_y < 10.0,
@@ -392,6 +571,15 @@ void run_forklift_matron() {
         require(slow.knockdowns == 0 && slow.staggers == 0 && slow.held_him && !w.forklift_state(kTruck).driving,
                 "forklift_matron fight back: too slow to fell her, she holds and takes the driver off the truck");
     }
+    // Her feet never past their budget in any case: 8 kN / 44 kW, or a
+    // lunge's 9.8 kN / 65 kW; at the edge, 8 kN.
+    for (const Run *r : {&full, &creep, &shins, &middle, &off, &control, &crowded}) {
+        require(r->foot_n_max <= static_cast<double>(Matron::kTurnLungeForceN) + 1.0 &&
+                    r->foot_w_max <= static_cast<double>(Matron::kTurnLungePowerW) + 1.0,
+                "forklift_matron: her feet within their budget in every case");
+    }
+    require(off.feet_n <= static_cast<double>(scraperx::sim::traversal::Limits{}.total_force_n) + 0.5,
+            "forklift_matron push off: her brace and catch together within her 8 kN");
     std::cout << "PASS scraperx_sim forklift_matron: ram_ns=" << full.impulse_ns << " creep_blow_mps=" << creep.blow_mps
               << " push_feet_n=" << off.feet_n << " fall_mps=" << off.fall_mps << "\n";
 }
