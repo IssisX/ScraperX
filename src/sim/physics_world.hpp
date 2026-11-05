@@ -1034,6 +1034,7 @@ public:
     void strike_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
     void read_strike_state() noexcept;
     void strike_reset() noexcept;
+    void strike_begin(std::uint8_t move, int side, bool in_hand) noexcept;
     // A punch under way: no other hand action starts till its recoil ends;
     // the world taking his hands from it (her fingers, a fall) ends it.
     void strike_owns_hands(StepCommands &commands) const noexcept;
@@ -1050,7 +1051,9 @@ public:
     [[nodiscard]] bool sweep_land_point(JPH::RVec3 at, JPH::Vec3 facing, JPH::RVec3 c, JPH::RVec3 *point,
                                         JPH::Vec3 *normal) const noexcept;
     int strike_side_ = 1;           // the fist this strike is thrown with
-    std::uint8_t strike_move_ = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep
+    std::uint8_t strike_move_ = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep, 2 kick, 3 jab, 4 cross
+    std::uint8_t strike_queued_move_ = 0;  // a follow-up queued in recoil: 3 jab, 4 cross, 0 none
+    int strike_grace_ = 0;                // ticks left to press the follow-up after a jab's recoil
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;
     [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
