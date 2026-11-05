@@ -306,6 +306,8 @@ struct MatronSnapshot final {
     std::uint32_t stock_shoves = 0;     // and shoved off a lip (J-016)
     std::uint32_t stock_handled = 0;    // her throwables she counts his, a bit each
     double stock_push_force_n = 0.0;   // her hands' push on it this tick
+    double throw_windup = 0.0;         // rearing back to throw: 0 not, up to 1 as it leaves her hands
+    std::uint64_t stock_thrown = 0;    // her throw whose landing is no sound to her yet, 0 none
     // Her balance (matron.hpp): blows that took it and that took her off her
     // feet this run, the last blow (the change in her speed it made), and
     // down, the way she fell, kneeling where lying did not fit, and how long.

@@ -735,6 +735,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     summit_->pre_step();
     // What the Matron can hear besides the player (matron.hpp hear): the last
     // step's hits, hardest first, then the yard crane's drives while they run.
+    // Her own throw stays silent to her only until another touches it.
+    matron_->end_thrown_claim();
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
         // Her own throw coming down is not a sound to her (matron.hpp).

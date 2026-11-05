@@ -3542,7 +3542,14 @@ void Matron::notice_moved_stock() {
 }
 
 Vec3 Matron::hands_offset() const noexcept {
-    return Vec3(std::sin(yaw_) * kHandsOutM, kHandsUpM, std::cos(yaw_) * kHandsOutM);
+    const Vec3 ahead(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    if (throw_windup_s_ >= 0.0F || throw_stroke_s_ >= 0.0F) {
+        // Rearing back and driving the throw: up over her right shoulder
+        // (her right, facing +z with +y up, is -x).
+        const Vec3 right(-ahead.GetZ(), 0.0F, ahead.GetX());
+        return ahead * kWindupHandsOutM + right * kWindupHandsSideM + Vec3(0.0F, kWindupHandsUpM, 0.0F);
+    }
+    return ahead * kHandsOutM + Vec3(0.0F, kHandsUpM, 0.0F);
 }
 
 int Matron::stock_to_fetch(const float ax, const float az) const {
@@ -3703,22 +3710,37 @@ bool Matron::throw_stock(const float dt, const RVec3 at, const RVec3 player) {
     // kThrowMps, on the lower of the two arcs that reach them.
     const auto velocity = [&](Vec3 &v) {
         const BodyInterface &bodies = physics_.GetBodyInterface();
-        const RVec3 from = bodies.GetCenterOfMassPosition(body_) + hands_offset();
-        const Vec3 run(player + RVec3(0.0, 0.1, 0.0) - from);
-        const float across = std::hypot(run.GetX(), run.GetZ());
-        if (across < 0.1F) {
-            return false;
-        }
+        // From where the piece really is in her hands (up over her shoulder
+        // once she has reared back).
+        const RVec3 from = held_ >= 0 ? bodies.GetCenterOfMassPosition(throwables_[static_cast<std::size_t>(held_)].body)
+                                      : bodies.GetCenterOfMassPosition(body_) + hands_offset();
         const float g = physics_.GetGravity().Length();
         const float v2 = kThrowMps * kThrowMps;
-        const float disc = v2 * v2 - g * (g * across * across + 2.0F * run.GetY() * v2);
-        if (disc < 0.0F) {
-            return false;
+        // Its arc starts where it leaves her hands, not where they took it
+        // up: her stroke drives it straight, held up against its weight, up
+        // to the throw's speed over kThrowStrokeSeconds (half that speed's
+        // run on). Aimed from the hands' point it went in high (J-042: by
+        // g x the stroke's half x the flight, 0.75 m at 5 m). A few passes
+        // settle the point it leaves from.
+        RVec3 leaves = from;
+        bool found = false;
+        for (int pass = 0; pass < 3; ++pass) {
+            const Vec3 run(player + RVec3(0.0, 0.1, 0.0) - leaves);
+            const float across = std::hypot(run.GetX(), run.GetZ());
+            if (across < 0.1F) {
+                return false;
+            }
+            const float disc = v2 * v2 - g * (g * across * across + 2.0F * run.GetY() * v2);
+            if (disc < 0.0F) {
+                return false;
+            }
+            const float angle = std::atan((v2 - std::sqrt(disc)) / (g * across));
+            const Vec3 flat(run.GetX() / across, 0.0F, run.GetZ() / across);
+            v = flat * (kThrowMps * std::cos(angle)) + Vec3(0.0F, kThrowMps * std::sin(angle), 0.0F);
+            found = true;
+            leaves = from + RVec3(v * (0.5F * kThrowStrokeSeconds));
         }
-        const float angle = std::atan((v2 - std::sqrt(disc)) / (g * across));
-        const Vec3 flat(run.GetX() / across, 0.0F, run.GetZ() / across);
-        v = flat * (kThrowMps * std::cos(angle)) + Vec3(0.0F, kThrowMps * std::sin(angle), 0.0F);
-        return true;
+        return found;
     };
     const float across = distance_xz(ax, az, px, pz);
     if (throw_windup_s_ < 0.0F) {
@@ -4013,6 +4035,47 @@ void Matron::release_stock(const Vec3 velocity, const Vec3 spin, const bool thro
         thrown_s_ = kThrowQuietSeconds;
         throw_cooldown_s_ = kThrowCooldownSeconds;
         ++throws_;
+    }
+}
+
+void Matron::end_thrown_claim() {
+    if (thrown_ < 0 || thrown_s_ <= 0.0F || !body_in_world_) {
+        return;
+    }
+    const Throwable &t = throwables_[static_cast<std::size_t>(thrown_)];
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    if (!bodies.IsAdded(t.body)) {
+        return;
+    }
+    // In his hands (as of the last tick), or against his body.
+    bool touched = (push_load_ != 0 && push_load_ == t.entity) ||
+                   (!player_.IsInvalid() && bodies.IsAdded(player_) && physics_.WereBodiesInContact(player_, t.body));
+    if (!touched) {
+        // Met by another moving body (a piece thrown at it, a machine): any
+        // dynamic body but hers in contact with it over the last step.
+        AABox box;
+        {
+            const BodyLockRead lock(physics_.GetBodyLockInterface(), t.body);
+            if (!lock.Succeeded()) {
+                return;
+            }
+            box = lock.GetBody().GetWorldSpaceBounds();
+        }
+        box.ExpandBy(Vec3::sReplicate(0.1F));
+        AllHitCollisionCollector<CollideShapeBodyCollector> found;
+        physics_.GetBroadPhaseQuery().CollideAABox(box, found);
+        for (const BodyID id : found.mHits) {
+            if (id == t.body || id == body_ || bodies.GetMotionType(id) != EMotionType::Dynamic || bodies.IsSensor(id)) {
+                continue;
+            }
+            if (physics_.WereBodiesInContact(id, t.body)) {
+                touched = true;
+                break;
+            }
+        }
+    }
+    if (touched) {
+        thrown_s_ = 0.0F;
     }
 }
 
@@ -5036,6 +5099,8 @@ void Matron::refresh_view() {
     view_.stock_shoves = stock_shoves_;
     view_.stock_handled = handled_;
     view_.stock_push_force_n = stock_push_force_n_;
+    view_.throw_windup = throw_windup_s_ >= 0.0F ? std::min(1.0F, throw_windup_s_ / kThrowWindupSeconds) : 0.0F;
+    view_.stock_thrown = thrown_entity();
     view_.staggers = staggers_;
     view_.knockdowns = knockdowns_;
     view_.damage_ns = damage_ns_;

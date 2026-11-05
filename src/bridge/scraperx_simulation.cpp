@@ -1815,6 +1815,7 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["stock_seeking"] = static_cast<std::int64_t>(state.stock_seeking);
     out["stock_shoves"] = static_cast<std::int64_t>(state.stock_shoves);
     out["stock_push_force_n"] = state.stock_push_force_n;
+    out["throw_windup"] = state.throw_windup;
     out["stock_seek_handle"] = to_godot(state.stock_seek_handle);
     out["stock_seek_rotation"] = to_godot(state.stock_seek_rotation);
     out["stock_seek_size"] = to_godot(state.stock_seek_size);

@@ -678,6 +678,13 @@ public:
     static constexpr float kSeekStockM = 5.0F;
     static constexpr float kTakeM = 0.85F;
     static constexpr float kHandsUpM = 0.25F;
+    // Rearing back to throw (J-042: the player reads it), her hands draw the
+    // piece up over her right shoulder (this far over her centre, to her
+    // right and out, at kHandsPullMps), clear of her eyes' line to him, and
+    // the throw leaves from there.
+    static constexpr float kWindupHandsUpM = 0.70F;
+    static constexpr float kWindupHandsSideM = 0.45F;
+    static constexpr float kWindupHandsOutM = 0.25F;
     // Light stock only: a toolbox (18 kg) she carries off; a drum (55 kg)
     // she shoves instead (below).
     static constexpr float kTakeMaxKg = 25.0F;
@@ -1290,6 +1297,8 @@ public:
         std::uint32_t stock_shoves = 0;   // and shoved off a lip, this run
         std::uint32_t stock_handled = 0;  // her throwables she counts his, a bit each
         float stock_push_force_n = 0.0F; // her hands' push on a piece this tick (a shove, a throw)
+        float throw_windup = 0.0F;       // rearing back to throw: 0 not, up to 1 as the throw leaves
+        std::uint64_t stock_thrown = 0;  // her throw whose landing is no sound to her (thrown_entity), 0 none
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float damage_ns = 0.0F;         // judged physical impulse, all sources
@@ -1476,6 +1485,12 @@ public:
     [[nodiscard]] std::uint64_t thrown_entity() const noexcept {
         return thrown_ >= 0 && thrown_s_ > 0.0F ? throwables_[static_cast<std::size_t>(thrown_)].entity : 0;
     }
+    // Her claim on that throw ends the moment another touches it (J-042): in
+    // the player's hands, against his body, or met by any other moving body.
+    // From then on its hits are sounds to her like any other's. Its own
+    // landing on the steel stays hers. Called before the last step's hits
+    // are heard.
+    void end_thrown_claim();
     // Reports (once) the way up whose rope she has just taken off its eye
     // (0 Stage A, 1 Stage B), or -1: the world unhooks it.
     [[nodiscard]] int take_unrig() noexcept {

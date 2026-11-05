@@ -209,6 +209,10 @@ int main() {
         run_matron_ladder_pull();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ammo") {
+        run_ammo();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-load") {
         run_matron_load();
         return 0;
