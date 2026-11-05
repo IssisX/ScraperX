@@ -315,6 +315,10 @@ struct MatronSnapshot final {
     double player_damage_ns = 0.0;
     std::uint8_t damage_stage = 0;
     double blow_mps = 0.0;
+    bool blow_low = false;      // the last blow came at her shins
+    bool riding = false;        // she rides a floor going up or down under her
+    double edge_brace_n = 0.0;  // her feet braced back from an edge this tick
+    double feet_push_n = 0.0;   // all her feet pushed with this tick (read only)
     double fall_x = 0.0, fall_z = 1.0;
     bool kneeling = false;
     double down_s = 0.0;
@@ -1790,6 +1794,30 @@ public:
         double hang_overload_impulse = 0.0;
     };
     [[nodiscard]] MatronFixtureSample debug_matron_fixture(const Vector3 *place = nullptr);
+    // Tests only, never bound to the bridge; reads only. What her balance
+    // read over the last step (Matron::sense_near, take_blow): the moving
+    // bodies in her kNearM box now, each one sense_near kept with take_blow's
+    // gates worked the same way, and any moving body touching her it did not
+    // keep (a collision her balance missed).
+    struct MatronStrikerSample {
+        std::uint32_t box_hits = 0;    // the broad phase's hits in her box (not her, not the player)
+        std::uint32_t box_moving = 0;  // of them, what sense_near could keep (moving, solid, meets her)
+        struct Striker {
+            std::uint64_t entity = 0;
+            double kg = 0.0;            // its mass
+            double centre_y = 0.0;      // its centre of mass before the step
+            double feet_y = 0.0;        // her soles after it
+            double closing_mps = 0.0;   // its own speed at her before the step
+            double relative_mps = 0.0;  // the same, less hers
+            double change_mps = 0.0;    // its velocity change over the step, less gravity's
+            bool contact = false;       // in contact with her this step
+            bool low = false;           // its centre under her soles + kLowBlowM
+            bool judged = false;        // past all three gates (change, closing, contact): a blow
+        };
+        std::vector<Striker> kept;                   // the nearest kMaxNear of the first 32
+        std::vector<std::uint64_t> touching_missed;  // moving bodies touching her not kept
+    };
+    [[nodiscard]] MatronStrikerSample debug_matron_strikers();
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     [[nodiscard]] bool set_summit_lower(bool held) noexcept;

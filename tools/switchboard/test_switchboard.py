@@ -1296,3 +1296,22 @@ class ScopedProof(unittest.TestCase):
     def test_a_failed_shard_still_reads_red(self):
         self.assertEqual(self.switch_proof("failure"), "red: godot-touch (touch-1)")
         self.assertEqual(self.sweep_proof("failure"), "red: godot-touch (touch-1)")
+
+    def with_wake(self, run_status, touch_status):
+        """A run still in progress: the wake job running, touch-1 in touch_status."""
+        runs = {"workflow_runs": [dict(self.RUNS["workflow_runs"][0], status=run_status)]}
+        jobs = self.jobs()
+        jobs["jobs"][3] = dict(jobs["jobs"][3], status=touch_status,
+                               conclusion="success" if touch_status == "completed" else None)
+        jobs["jobs"].append({"name": "wake-switchboard", "status": "in_progress", "conclusion": None})
+        self.fake_get = lambda touch: (lambda path, accept="": runs if "/runs?head_sha=" in path else jobs)
+
+    def test_only_the_wake_job_left_reads_finished(self):
+        self.with_wake("in_progress", "completed")
+        self.assertEqual(self.switch_proof(), "green")
+        self.assertEqual(self.sweep_proof(), "green")
+
+    def test_a_proof_job_still_running_reads_running(self):
+        self.with_wake("in_progress", "in_progress")
+        self.assertEqual(self.switch_proof(), "running")
+        self.assertEqual(self.sweep_proof(), "running")

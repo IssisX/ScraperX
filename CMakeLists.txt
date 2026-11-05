@@ -219,6 +219,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_body_order.cpp
         tests/sim_tests_fabricated.cpp
         tests/sim_tests_forklift.cpp
+        tests/sim_tests_forklift_matron.cpp
         tests/sim_tests_yard_crane.cpp
         tests/sim_tests_zipline.cpp
         tests/sim_tests_corpse.cpp
@@ -249,7 +250,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
-    foreach(slice matron-damage matron-ladder matron-hearing matron-sight matron-honest matron-stalk matron-climb matron-climb-support matron-state-exits matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab matron-ladder-pull matron-shape matron-load matron-exam-descent matron-sweep)
+    foreach(slice matron-damage matron-ladder matron-hearing matron-sight matron-honest matron-stalk matron-climb matron-climb-support matron-state-exits matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab matron-ladder-pull matron-shape matron-load matron-exam-descent matron-sweep matron-kick forklift-matron matron-jab)
         add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)
         set_tests_properties(scraperx_sim.${slice} PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=${slice}")
     endforeach()
@@ -262,6 +263,19 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.parkour_flow COMMAND scraperx_parkour_flow_tests)
+endif()
+
+# Measurement probes (tools/probes): standalone executables that print numbers
+# for a job's design, never tests (no add_test, no ctest slice). Off by default.
+option(SCRAPERX_BUILD_PROBES "Build the measurement probes in tools/probes" OFF)
+if(SCRAPERX_BUILD_PROBES)
+    # J-038 (#169): the impulses loose things take from the forklift, a 1 m
+    # drop and her thrown stock, for the dent and break limits.
+    add_executable(scraperx_j038_impulse_probe tools/probes/j038_impulse_probe.cpp)
+    target_link_libraries(scraperx_j038_impulse_probe PRIVATE scraperx_sim)
+    target_include_directories(scraperx_j038_impulse_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    target_compile_options(scraperx_j038_impulse_probe PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Werror>)
 endif()
 
 if(SCRAPERX_BUILD_BRIDGE)

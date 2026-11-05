@@ -43,6 +43,26 @@ constexpr int kSweepRecoilTicks = 22;
 constexpr int kSweepContactTicks = 4;
 constexpr float kSweepGapM = 0.60F;
 constexpr float kSweepAnkleUpM = 0.15F;
+// The heavy kick (move 2): slowest, longest reach, one more contact
+// tick than the sweep; its foot lands on her capsule like a fist.
+constexpr int kKickWindupTicks = 18;
+constexpr int kKickReachTicks = 8;
+constexpr int kKickRecoilTicks = 26;
+constexpr int kKickContactTicks = 5;
+constexpr float kKickReachM = 1.10F;
+constexpr float kKickFootRadiusM = 0.06F;
+// The 1-2 (spec section 9.4): the jab is the quick left lead (4 contact
+// ticks); the cross the rear right (5), thrown after the jab's recoil
+// or on a press in the 6-tick grace after it.
+constexpr int kJabWindupTicks = 7;
+constexpr int kJabReachTicks = 4;
+constexpr int kJabRecoilTicks = 10;
+constexpr int kJabContactTicks = 4;
+constexpr int kCrossWindupTicks = 10;
+constexpr int kCrossReachTicks = 6;
+constexpr int kCrossRecoilTicks = 16;
+constexpr int kCrossContactTicks = 5;
+constexpr int kComboGraceTicks = 6;
 // How far her ankle may sit off level: a sweep's foot travels at his foot
 // height, rising at most about a shin-height off the level ankle. Beyond
 // that the ankle is out of the leg's arc, whatever the X/Z gap says.
@@ -53,16 +73,16 @@ constexpr float kSweepAnkleTolM = 0.35F;
 constexpr float kSweepFootClearM = 0.08F;
 
 int move_windup_ticks(const std::uint8_t move) noexcept {
-    return move == 1 ? kSweepWindupTicks : kStrikeWindupTicks;
+    return move == 1 ? kSweepWindupTicks : (move == 2 ? kKickWindupTicks : (move == 3 ? kJabWindupTicks : (move == 4 ? kCrossWindupTicks : kStrikeWindupTicks)));
 }
 int move_reach_ticks(const std::uint8_t move) noexcept {
-    return move == 1 ? kSweepReachTicks : kStrikeReachTicks;
+    return move == 1 ? kSweepReachTicks : (move == 2 ? kKickReachTicks : (move == 3 ? kJabReachTicks : (move == 4 ? kCrossReachTicks : kStrikeReachTicks)));
 }
 int move_recoil_ticks(const std::uint8_t move) noexcept {
-    return move == 1 ? kSweepRecoilTicks : kStrikeRecoilTicks;
+    return move == 1 ? kSweepRecoilTicks : (move == 2 ? kKickRecoilTicks : (move == 3 ? kJabRecoilTicks : (move == 4 ? kCrossRecoilTicks : kStrikeRecoilTicks)));
 }
 int move_contact_ticks(const std::uint8_t move) noexcept {
-    return move == 1 ? kSweepContactTicks : kStrikeContactTicks;
+    return move == 1 ? kSweepContactTicks : (move == 2 ? kKickContactTicks : (move == 3 ? kJabContactTicks : (move == 4 ? kCrossContactTicks : kStrikeContactTicks)));
 }
 
 // The nearest point on her upright capsule's axis to `p`.
@@ -179,6 +199,19 @@ bool Simulation::PhysicsWorld::sweep_would_land(const JPH::RVec3 at, const JPH::
     return sweep_land_point(at, facing, c, nullptr, nullptr);
 }
 
+// A kick thrown now would land on her: the foot's reach as strike_step
+// sweeps it, within her capsule, its way clear (the punch's path check).
+bool Simulation::PhysicsWorld::kick_would_land(const JPH::RVec3 chest, const JPH::Vec3 facing,
+                                               const JPH::RVec3 c) const noexcept {
+    for (int t = 0; t < 3; ++t) {
+        const JPH::RVec3 foot = chest + facing * (kKickReachM * static_cast<float>(t + 1) / 3.0F);
+        if (JPH::Vec3(foot - axis_point(c, Matron::kHalfHeight, foot)).Length() <= Matron::kRadius + kKickFootRadiusM) {
+            return fist_path_clear(chest, foot);
+        }
+    }
+    return false;
+}
+
 // His hands on a machine's controls, its seat or its line: no punch from there.
 bool Simulation::PhysicsWorld::hands_on_a_machine() const noexcept {
     for (const auto &truck : forklifts_) {
@@ -225,6 +258,19 @@ void Simulation::PhysicsWorld::strike_cancel() noexcept {
     strike_ticks_ = 0;
     strike_contact_left_ = 0;
     strike_in_hand_ = false;
+    strike_queued_move_ = 0;
+    strike_grace_ = 0;
+}
+
+void Simulation::PhysicsWorld::strike_begin(const std::uint8_t move, const int side, const bool in_hand) noexcept {
+    strike_move_ = move;
+    strike_phase_ = StrikePhase::Windup;
+    strike_ticks_ = 0;
+    strike_landed_ = false;
+    strike_contact_left_ = 0;
+    strike_in_hand_ = in_hand;
+    strike_side_ = side;
+    ++strike_count_;
 }
 
 void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const StepCommands &commands,
@@ -254,13 +300,33 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     // design: his own blow frees him then, Matron::State); during her reach,
     // before her fingers close, the brace has Action.
     const bool in_her_hand = her_here && grip_ != nullptr && arm >= 0 && matron_->his_blow_can_free();
-    // The move a press throws now: in her hand it is always the punch (his
-    // escape); on his feet, crouched, it is the low sweep; else the punch.
-    // Frozen at guard, so a strike keeps its move even if he stands up
-    // mid-recoil.
-    const std::uint8_t press_move = in_her_hand ? 0 : (crouched_ ? 1 : 0);
+    // The move a press throws now: in her hand the punch (his escape);
+    // crouched the low sweep; moving toward her the heavy kick; else the
+    // jab, the left lead. Frozen at guard; moving reads the held input,
+    // not velocity.
+    bool moving_toward_her = false;
+    if (her_here) {
+        const JPH::RVec3 hc = bodies.GetPosition(her);
+        const JPH::Vec3 to_her(static_cast<float>(hc.GetX() - at.GetX()), 0.0F,
+                               static_cast<float>(hc.GetZ() - at.GetZ()));
+        const float to_len = to_her.Length();
+        const double input_len = std::hypot(commands.move_input_x, commands.move_input_z);
+        if (to_len > 1.0e-3F && input_len > 1.0e-6) {
+            const float along = static_cast<float>(commands.move_input_x) * to_her.GetX() +
+                                static_cast<float>(commands.move_input_z) * to_her.GetZ();
+            moving_toward_her = along > kStrikeOfferCos * static_cast<float>(input_len) * to_len;
+        }
+    }
+    const std::uint8_t press_move = in_her_hand ? 0 : (crouched_ ? 1 : (moving_toward_her ? 2 : 3));
+    // The move and fist a press at guard would throw: in the grace, the follow-up.
+    std::uint8_t guard_move = press_move;
+    int guard_side = arm;
+    if (strike_grace_ > 0 && !in_her_hand) {
+        guard_move = (strike_side_ == 0 && fist_usable(1)) ? 4 : 3;
+        guard_side = guard_move == 4 ? 1 : strike_side_;
+    } else if (press_move == 3) guard_side = fist_usable(0) ? 0 : arm;
     if (strike_phase_ == StrikePhase::Guard) {
-        strike_move_ = press_move;
+        strike_move_ = guard_move;
     }
     // Under way, the world can take his hands from it: begun free, her
     // fingers on him, a fall or a catch; begun in her hand, out of it. It
@@ -285,17 +351,20 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         const float d = to.Length();
         strike_offered_ = d < kStrikeOfferM && d > 1.0e-3F && to.Dot(facing) > kStrikeOfferCos * d &&
                           std::abs(static_cast<float>(c.GetY() - at.GetY())) < 1.5F &&
-                          (press_move == 1 ? sweep_would_land(at, facing, c) : strike_would_land(chest, facing, c));
+                          (strike_move_ == 1 ? sweep_would_land(at, facing, c) : strike_move_ == 2 ? kick_would_land(chest, facing, c)
+                                           : strike_would_land(chest, facing, c));
     }
     if (commands.strike_requested && can_start) {
-        strike_phase_ = StrikePhase::Windup;
-        strike_ticks_ = 0;
-        strike_landed_ = false;
-        strike_contact_left_ = 0;
-        strike_in_hand_ = in_her_hand;
-        strike_side_ = arm;   // the fist it is thrown with, till its recoil ends
-        ++strike_count_;
+        strike_begin(guard_move, guard_side, in_her_hand);
     }
+    // A press in the jab's recoil queues its follow-up (spec section 9.4):
+    // the cross off a left lead, else the lead fist again as a jab.
+    if (commands.strike_requested && strike_phase_ == StrikePhase::Recoil && strike_move_ == 3 &&
+        strike_queued_move_ == 0) {
+        strike_queued_move_ = (strike_side_ == 0 && fist_usable(1)) ? 4 : 3;
+    }
+    // The grace runs out a tick at a time at guard, after the press was read.
+    if (strike_phase_ == StrikePhase::Guard && strike_grace_ > 0) --strike_grace_;
     if (strike_phase_ == StrikePhase::Guard) {
         return;
     }
@@ -318,6 +387,22 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
                     strike_contact_left_ = move_contact_ticks(strike_move_);
                     strike_normal_ = normal;
                     strike_point_ = point;
+                    strike_impulse_ns_ = 0.0F;
+                    ++strike_hit_count_;
+                }
+            } else if (strike_move_ == 2) {
+                // The kick lands on her capsule like a punch's fist, at
+                // the foot's longer reach: the offer's geometry, re-checked.
+                const float out = kKickReachM * std::min(1.0F, static_cast<float>(strike_ticks_ + 1) / 3.0F);
+                const JPH::RVec3 foot = chest + facing * out;
+                const JPH::RVec3 q = axis_point(c, Matron::kHalfHeight, foot);
+                const JPH::Vec3 off(foot - q);
+                if (off.Length() <= Matron::kRadius + kKickFootRadiusM && fist_path_clear(chest, foot)) {
+                    strike_landed_ = true;
+                    strike_contact_left_ = move_contact_ticks(strike_move_);
+                    const float ol = off.Length();
+                    strike_normal_ = ol > 1.0e-4F ? off / ol : -facing;
+                    strike_point_ = q + strike_normal_ * Matron::kRadius;
                     strike_impulse_ns_ = 0.0F;
                     ++strike_hit_count_;
                 }
@@ -352,14 +437,14 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
     if (strike_contact_left_ > 0 && her_here) {
         // Force times time: the same force on her at the fist and back on him.
         // The punch is an arm: its force against the bodies' closing speed,
-        // capped by what an arm and trunk can deliver. The sweep is a leg
-        // driven through the ground: the spec's force flat.
+        // capped by what an arm and trunk can deliver. The sweep and the
+        // kick are legs driven through the ground: the spec's force flat.
         const JPH::Vec3 dir = -strike_normal_;
         const float closing = std::max(kStrikeMinClosingMps,
                                        (bodies.GetLinearVelocity(player_id_) - bodies.GetLinearVelocity(her)).Dot(dir));
-        const float force_n = strike_move_ == 1
-                                  ? strike::kPlayerSweepForceN
-                                  : std::min(strike::kPlayerStrikeForceN, strike::kPlayerStrikePowerW / closing);
+        const float force_n = strike_move_ == 1   ? strike::kPlayerSweepForceN
+                              : strike_move_ == 2 ? strike::kPlayerKickForceN
+                                                  : std::min(strike::kPlayerStrikeForceN, strike::kPlayerStrikePowerW / closing);
         bodies.AddForce(her, dir * force_n, strike_point_, JPH::EActivation::Activate);
         bodies.AddForce(player_id_, -dir * force_n, JPH::EActivation::Activate);
         strike_impulse_ns_ += force_n * dt;
@@ -369,8 +454,14 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         --strike_contact_left_;
     }
     if (strike_phase_ == StrikePhase::Recoil && strike_ticks_ >= move_recoil_ticks(strike_move_)) {
+        const std::uint8_t queued = strike_queued_move_;
+        const bool was_jab = strike_move_ == 3;
+        strike_queued_move_ = 0;
+        strike_grace_ = 0;
         strike_phase_ = StrikePhase::Guard;
         strike_ticks_ = 0;
+        if (queued != 0) strike_begin(queued, queued == 4 ? 1 : strike_side_, false);  // the queued follow-up throws the tick after the recoil ends
+        else if (was_jab) strike_grace_ = kComboGraceTicks;
     }
 }
 
@@ -386,6 +477,8 @@ void Simulation::PhysicsWorld::strike_reset() noexcept {
     strike_point_ = JPH::RVec3::sZero();
     strike_normal_ = JPH::Vec3::sZero();
     strike_impulse_ns_ = 0.0F;
+    strike_queued_move_ = 0;
+    strike_grace_ = 0;
     matron_->clear_player_blow();
 }
 

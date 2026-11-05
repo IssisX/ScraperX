@@ -134,6 +134,9 @@ const SCENARIOS := {
 	# 4 s and more before she is there; a drum shoved off the edge onto her as
 	# she climbs back up knocks her off it, alive (ui_test_act.gd).
 	"touch_matron_pipe": 11,
+	# J-041: the forklift on her deck driven into her: woken, called, rammed
+	# at full speed, she goes down at the forks (ui_test_chase.gd).
+	"touch_forklift_ram": 11,
 	"look_matron_locker": 11,
 	"look_bay": 11,
 	"look_matron_hunt": 11,
@@ -494,6 +497,8 @@ func _run() -> void:
 			ok = await _forklift_touch(InputRouter.Device.TOUCH)
 		"touch_forklift_strain":
 			ok = await _forklift_strain_touch(InputRouter.Device.TOUCH)
+		"touch_forklift_ram":
+			ok = await _forklift_ram_touch(InputRouter.Device.TOUCH)
 		"touch_yard_crane":
 			ok = await _yard_crane_touch(InputRouter.Device.TOUCH)
 		"touch_crane_magnet":

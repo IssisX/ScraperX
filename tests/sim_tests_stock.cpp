@@ -1,6 +1,7 @@
 // Loose stock: the yard's containers, beams, plate, drums and pipes, and the
 // Matron's deck's crates, are real bodies that lie where they were put,
 // sleep there, and move when moved.
+#include "sim/forklift.hpp"
 #include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim_tests.hpp"
@@ -10,10 +11,12 @@
 #include <iostream>
 #include <vector>
 
+using scraperx::sim::Forklift;
 using scraperx::sim::ImpactLedger;
 using scraperx::sim::ImpactSound;
 using scraperx::sim::LooseStock;
 using scraperx::sim::Simulation;
+using scraperx::sim::Vector3;
 
 namespace {
 
@@ -54,6 +57,110 @@ int first_of(const LooseStock::Kind kind) {
         }
     }
     return -1;
+}
+
+// The container at (x, z) in the table, or -1. By position, not by index,
+// so a table reorder does not silently retarget the test.
+int container_at(const float x, const float z) {
+    const auto &table = LooseStock::placements();
+    for (std::size_t i = 0; i < table.size(); ++i) {
+        if (table[i].kind == LooseStock::Kind::Container && std::abs(table[i].x - x) < 0.1F &&
+            std::abs(table[i].z - z) < 0.1F) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+// A forklift ram, the probe's own pattern
+// (tools/probes/j038_impulse_probe.cpp): aboard at its park, the drums'
+// pallet moved 40 m up its lane out of the way, the target stood in the
+// lane at z 30, full stick until 0.2 s after contact, then let go.
+struct RamHit {
+    double hit_dv_mps = 0.0;    // the target's speed change over 0.2 s from contact
+    double peak_tick_ns = 0.0;  // mass x its largest per-tick speed change
+    double struck_mass_kg = 0.0;
+};
+
+bool clear_lane_and_board(Simulation &s) {
+    if (!(walk_to(s, 30.0, 10.0, 30.0) && walk_to(s, 36.4, 16.35, 20.0) &&
+          walk_to(s, Forklift::kParkX, 16.35, 8.0, 0.1))) {
+        return false;
+    }
+    (void)s.set_facing(0.0, 1.0);
+    (void)s.advance_frame(0.5);
+    if (!s.forklift_state().at_controls || !s.request_forklift_action()) {
+        return false;
+    }
+    (void)s.advance_frame(0.2);
+    if (!s.forklift_state().driving) {
+        return false;
+    }
+    // The pallet of drums ahead of the truck (3 pallets + 12 drums), moved
+    // as a group 40 m up the lane.
+    const int pallet = first_of(LooseStock::Kind::Pallet);
+    for (int i = pallet; i < pallet + 15; ++i) {
+        const auto b = s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i));
+        auto p = s.kit_body_position(b);
+        p.z += 40.0;
+        s.debug_launch_kit_body(b, p, {0.0, 0.0, 0.0});
+    }
+    return true;
+}
+
+// `pace` stick into `target` (already staged in the lane): contact is the
+// first tick its speed changes by more than 0.02 m/s; the hit is its speed
+// change over 0.2 s from contact, the peak mass x its largest per-tick
+// change — the probe's own watch, with a lower contact mark. The probe's
+// 0.05 m/s mark is calibrated for the empty container: a creep knock on a
+// loaded one moves it ~0.04 m/s in its hardest tick, under 0.05, so the
+// knock reads 0 N.s and is missed outright (measured). A body at rest has
+// exactly zero velocity, so 0.02 sits above no noise; the target is
+// required asleep before the watch starts.
+RamHit ram_target(Simulation &s, const std::uint32_t target, const double pace) {
+    RamHit out;
+    out.struck_mass_kg = s.kit_body_mass(target);
+    const double dt = Simulation::kFixedStepSeconds;
+    bool settled = false;
+    for (int i = 0; i < 3 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        const Vector3 v = s.kit_body_velocity(target);
+        if (v.x == 0.0 && v.y == 0.0 && v.z == 0.0) {
+            settled = true;
+            break;
+        }
+        (void)s.advance_frame(dt);
+    }
+    require(settled, "stock: the staged container settles before the ram");
+    const int ticks = 20 * static_cast<int>(Simulation::kTickRateHz);
+    const int hold_after = static_cast<int>(0.2 * Simulation::kTickRateHz);
+    int contact = -1;
+    Vector3 pre{};
+    for (int t = 0; t < ticks; ++t) {
+        const bool held = contact < 0 || t - contact < hold_after;
+        (void)s.set_move_input(0.0, held ? pace : 0.0);
+        const Vector3 v0 = s.kit_body_velocity(target);
+        (void)s.advance_frame(dt);
+        const Vector3 v1 = s.kit_body_velocity(target);
+        const double dv_tick =
+            std::hypot(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+        if (contact < 0 && dv_tick > 0.02) {
+            contact = t;
+            pre = v0;
+        }
+        if (contact >= 0 && t - contact < static_cast<int>(Simulation::kTickRateHz)) {
+            out.peak_tick_ns = std::max(out.peak_tick_ns, out.struck_mass_kg * dv_tick);
+            if (t - contact < hold_after) {
+                out.hit_dv_mps = std::max(
+                    out.hit_dv_mps,
+                    std::hypot(v1.x - pre.x, v1.y - pre.y, v1.z - pre.z));
+            }
+        }
+        if (contact >= 0 && t - contact >= static_cast<int>(Simulation::kTickRateHz)) {
+            break;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return out;
 }
 
 } // namespace
@@ -321,6 +428,145 @@ void run_loose_stock() {
     require(shoved < 0.01, "stock: a 3.75 t container is not shoved by hand");
     require(hits_on(s, LooseStock::kFirstEntity + static_cast<std::uint64_t>(container), before_shove).empty(),
             "stock: a container leaned on is not struck");
+
+    // ---- J-038 slice 0: the stated-load column ------------------------------
+    // Every container in the table carries its stated load on top of the
+    // 3,750 kg empty 40 ft spec. Three ground containers, set down by road
+    // where a truck could have left them, carry 10,000 kg each (13,750 kg
+    // in all); the stacked tier-1s and the crane's laydown stay empty,
+    // because the yard crane's 75 kN hoist could not have put a loaded box
+    // there. The probe's own containers ((39, 70), (1.5, 70) and the
+    // (-76, -113) laydown) stay empty, so its numbers reproduce.
+    {
+        int containers = 0, loaded = 0;
+        for (std::size_t i = 0; i < table.size(); ++i) {
+            if (table[i].kind != LooseStock::Kind::Container) {
+                continue;
+            }
+            ++containers;
+            const auto body = s.kit_body_index(LooseStock::kFirstEntity + i);
+            const double mass = s.kit_body_mass(body);
+            const double expect = 3750.0 + static_cast<double>(table[i].load_kg);
+            std::cout << "  stock: container " << i << " at (" << table[i].x << ", " << table[i].z << ") load "
+                      << table[i].load_kg << " kg, body " << mass << " kg\n";
+            require(std::abs(mass - expect) < 1.0, "stock: a container's body carries its stated load");
+            if (table[i].load_kg > 0.0F) {
+                ++loaded;
+            }
+        }
+        require(containers == 18, "stock: eighteen containers in the table");
+        require(loaded == 3, "stock: three containers carry a stated load");
+    }
+
+    // ---- J-038 slice 0: a full ram barely moves a loaded container ---------
+    // The loaded container at (14, 70), stood in the forklift's lane, rammed
+    // at creep (0.25) and at full stick, each in a fresh world, the probe's
+    // own cases. The probe's empty container takes a full ram at 1.63 m/s
+    // over 0.2 s and a creep knock at 587 N.s peak; a loaded one must take
+    // measurably less motion, while still moving — the ram is not a no-op —
+    // and both peaks are printed for the slice-1 band re-check.
+    {
+        const auto ram_loaded = [](const double pace) {
+            Simulation r(scraperx::sim::InitialSpawn::ExteriorGrade);
+            (void)r.advance_frame(1.0);
+            require(clear_lane_and_board(r), "stock: aboard the forklift for the loaded ram");
+            const int target_piece = container_at(14.0F, 70.0F);
+            require(target_piece >= 0, "stock: the loaded container at (14, 70)");
+            const auto target =
+                r.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(target_piece));
+            r.debug_launch_kit_body(target, {38.0, 1.31, 30.0}, {0.0, 0.0, 0.0});
+            (void)r.advance_frame(1.5);
+            return ram_target(r, target, pace);
+        };
+        const RamHit creep = ram_loaded(0.25);
+        const RamHit full = ram_loaded(1.0);
+        std::cout << "  stock: creep knock on the loaded container: mass " << creep.struck_mass_kg << " kg, peak "
+                  << creep.peak_tick_ns << " N.s, hit dv " << creep.hit_dv_mps << " m/s (empty peak: 587 N.s)\n";
+        std::cout << "  stock: full ram into the loaded container: mass " << full.struck_mass_kg << " kg, peak "
+                  << full.peak_tick_ns << " N.s, hit dv " << full.hit_dv_mps << " m/s (empty: 1.63 m/s)\n";
+        require(full.hit_dv_mps > 0.2, "stock: a full ram still moves a loaded container");
+        require(full.hit_dv_mps < 1.0, "stock: a full ram barely moves a loaded container");
+        // Slice-1 band pins (measured 2026-11-05: creep 308.6, full 3147.4):
+        // the creep stays in the shallow band (250-700) and the full ram in
+        // the severe band (>= 2500, below the 5000 depth cap), so the slice-1
+        // thresholds hold for a loaded container unchanged.
+        require(creep.peak_tick_ns > 250.0, "stock: a creep knock on a loaded container is no mere touch");
+        require(creep.peak_tick_ns < 700.0, "stock: a creep knock on a loaded container stays shallow");
+        require(full.peak_tick_ns >= 2500.0, "stock: a full ram into a loaded container is severe");
+        require(full.peak_tick_ns < 5000.0, "stock: a full ram into a loaded container stays under the depth cap");
+    }
+
+    // ---- J-038 slice 0: a stacked container rests and sleeps after a shove -
+    // The (-42, 8) stack, base loaded, top empty, staged in the forklift's
+    // lane and rammed at full stick in its base. After the shove and a
+    // re-settle, the top still rides its base, both sleep, and nothing
+    // else in the world moved: no drift, no settle explosion.
+    {
+        Simulation r(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)r.advance_frame(1.0);
+        require(clear_lane_and_board(r), "stock: aboard the forklift for the stack shove");
+        const int base_piece = container_at(-42.0F, 8.0F);
+        require(base_piece >= 0, "stock: the (-42, 8) stack's base");
+        const auto base = r.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(base_piece));
+        // Its top: the tier-1 container over the same (x, z).
+        int top_piece = -1;
+        for (std::size_t i = 0; i < table.size(); ++i) {
+            if (table[i].kind == LooseStock::Kind::Container && std::abs(table[i].x + 42.0F) < 0.1F &&
+                std::abs(table[i].z - 8.0F) < 0.1F && table[i].y > 1.0F) {
+                top_piece = static_cast<int>(i);
+            }
+        }
+        require(top_piece >= 0, "stock: the (-42, 8) stack's top");
+        const auto top = r.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(top_piece));
+        r.debug_launch_kit_body(base, {38.0, 1.31, 30.0}, {0.0, 0.0, 0.0});
+        r.debug_launch_kit_body(top, {38.0, 3.90, 30.0}, {0.0, 0.0, 0.0});
+        (void)r.advance_frame(1.5);
+        std::vector<scraperx::sim::Vector3> before;
+        for (int i = 0; i < static_cast<int>(r.loose_stock_count()); ++i) {
+            before.push_back(r.kit_body_position(
+                r.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i))));
+        }
+        const auto top_before = r.kit_body_position(top);
+        const RamHit hit = ram_target(r, base, 1.0);
+        std::cout << "  stock: full ram into the stack's loaded base: peak " << hit.peak_tick_ns
+                  << " N.s, hit dv " << hit.hit_dv_mps << " m/s\n";
+        // Slice-1 band note (measured 5998.3): a full ram into a loaded base
+        // carrying its top reads severe and past the 5000 depth cap, so its
+        // dent depth saturates at the cap; the band edge itself still holds.
+        require(hit.peak_tick_ns >= 2500.0, "stock: a full ram into a loaded stack base is severe");
+        // The machine backs away, as in play, so the stack is left to
+        // settle on its own and not held awake against the forks.
+        for (int i = 0; i < 2 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            (void)r.set_move_input(0.0, -0.4);
+            (void)r.advance_frame(Simulation::kFixedStepSeconds);
+        }
+        (void)r.set_move_input(0.0, 0.0);
+        (void)r.advance_frame(12.0);
+        const auto top_after = r.kit_body_position(top);
+        const double top_shift = std::hypot(top_after.x - top_before.x, top_after.z - top_before.z);
+        const auto base_v = r.kit_body_velocity(base);
+        const auto top_v = r.kit_body_velocity(top);
+        std::cout << "  stock: the stacked top shifted " << top_shift << " m, y " << top_before.y << " -> "
+                  << top_after.y << "; base v (" << base_v.x << ", " << base_v.y << ", " << base_v.z
+                  << "), top v (" << top_v.x << ", " << top_v.y << ", " << top_v.z << ")\n";
+        require(top_shift < 1.0, "stock: the stacked top rides its base, it does not slide off");
+        require(std::abs(top_after.y - top_before.y) < 0.15, "stock: the stacked top stays stacked");
+        require(asleep(r, base_piece) && asleep(r, top_piece), "stock: the shoved stack sleeps again");
+        double worst_other = 0.0;
+        for (int i = 0; i < static_cast<int>(r.loose_stock_count()); ++i) {
+            if (i == base_piece || i == top_piece) {
+                continue;
+            }
+            const auto now = r.kit_body_position(
+                r.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i)));
+            worst_other = std::max(worst_other, std::hypot(now.x - before[static_cast<std::size_t>(i)].x,
+                                                           now.y - before[static_cast<std::size_t>(i)].y,
+                                                           now.z - before[static_cast<std::size_t>(i)].z));
+        }
+        std::cout << "  stock: nothing else moved more than " << worst_other << " m in the shove\n";
+        require(worst_other < 0.05, "stock: the stack shove moves nothing else");
+    }
+
     std::cout << "PASS scraperx_sim stock: pieces=" << pieces << " settle_m=" << worst << " shoved_m=" << shoved << "\n";
 }
 

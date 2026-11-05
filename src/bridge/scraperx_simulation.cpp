@@ -467,7 +467,7 @@ godot::Dictionary ScraperXSimulation::get_strike_state() const {
     const sim::Snapshot &p = simulation_->snapshot();
     godot::Dictionary out;
     out["phase"] = static_cast<std::int64_t>(p.strike_phase);
-    out["move"] = static_cast<std::int64_t>(p.strike_move);   // 0 punch, 1 sweep
+    out["move"] = static_cast<std::int64_t>(p.strike_move);   // 0 punch, 1 sweep, 2 kick, 3 jab, 4 cross
     out["phase_ticks"] = static_cast<std::int64_t>(p.strike_phase_ticks);
     out["offered"] = p.strike_offered;
     out["held"] = p.held_by_matron;   // in her hand: the offer is his escape (before the rip)
@@ -1823,7 +1823,10 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["staggers"] = static_cast<std::int64_t>(state.staggers);
     out["knockdowns"] = static_cast<std::int64_t>(state.knockdowns);
     out["blow_mps"] = state.blow_mps;
-    out["fall"] = godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
+    out["blow_low"] = state.blow_low;
+    out["riding"] = state.riding;
+    out["damage_ns"] = state.damage_ns;
+    out["fall"] =godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
     out["kneeling"] = state.kneeling;
     out["down_s"] = state.down_s;
     out["down_left_s"] = state.down_left_s;

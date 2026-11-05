@@ -266,7 +266,9 @@ const HAPTICS := {
 	&"rumble": [20, 0.25],   # its air roaring under the floor while it runs
 	&"splash": [90, 0.9],   # the body going into a pool (water_feel.gd)
 	&"strike_sweep": [30, 0.60],   # the low sweep landing (spec section 8.1 cap)
+	&"strike_kick": [55, 0.80],   # the heavy kick landing (spec section 8.1 cap)
 	&"strike_whiff": [12, 0.25],   # the low sweep missing (spec section 8.1 cap)
+	&"strike_jab": [16, 0.45],   # the jab landing (spec section 8.1 cap)
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -952,6 +954,10 @@ func _feel_strike(delta: float) -> void:
 		_audio.player_strike(edge, at if edge == &"landed" else _camera.global_position, impulse)
 		if edge == &"landed" and int(strike.get("move", 0)) == 1:
 			_haptic(&"strike_sweep", clampf(impulse / 60.0, 0.3, 1.0))
+		if edge == &"landed" and int(strike.get("move", 0)) == 2:
+			_haptic(&"strike_kick", clampf(impulse / 166.7, 0.3, 1.0))
+		if edge == &"landed" and int(strike.get("move", 0)) == 3:
+			_haptic(&"strike_jab", clampf(impulse / 66.7, 0.3, 1.0))
 		if edge == &"missed" and int(strike.get("move", 0)) == 1:
 			_haptic(&"strike_whiff", 0.5)
 		if edge == &"landed":
