@@ -318,7 +318,7 @@ struct MatronSnapshot final {
     bool blow_low = false;      // the last blow came at her shins
     bool riding = false;        // she rides a floor going up or down under her
     double edge_brace_n = 0.0;  // her feet braced back from an edge this tick
-    double foot_force_n = 0.0;  // all her feet pushed with this tick (her budget: 8 kN)
+    double foot_force_n = 0.0;  // all her feet pushed with this tick (read only)
     double fall_x = 0.0, fall_z = 1.0;
     bool kneeling = false;
     double down_s = 0.0;
