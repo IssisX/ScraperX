@@ -1967,3 +1967,119 @@ func _perf_view_top() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	return await _probe_views("perf_view_top", [-1.25, -0.6])
 
+
+# J-045 draw attribution (perf_attrib): which top-level group costs how many draws, and a
+# census of GeometryInstance3D surfaces in view and casting shadows. Pitch from ATTR_PITCH.
+func _attr_draws() -> int:
+	await _frames(3)
+	return int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+
+func _attr_census(tag: String) -> void:
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	var planes := cam.get_frustum()
+	var cpos := cam.global_position
+	var groups := {}
+	var stack: Array[Node] = [_main]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		stack.append_array(node.get_children())
+		var gi := node as GeometryInstance3D
+		if gi == null or not gi.is_visible_in_tree():
+			continue
+		var aabb := gi.global_transform * gi.get_aabb()
+		var inside := true
+		for p in planes:
+			var c := aabb.get_center()
+			var e := aabb.size * 0.5
+			var r := absf(p.normal.x) * e.x + absf(p.normal.y) * e.y + absf(p.normal.z) * e.z
+			if p.distance_to(c) > r:
+				inside = false
+				break
+		var d := cpos.distance_to(aabb.get_center())
+		if gi.visibility_range_end > 0.0 and d > gi.visibility_range_end + gi.visibility_range_end_margin:
+			inside = false
+		if gi.visibility_range_begin > 0.0 and d < gi.visibility_range_begin - gi.visibility_range_begin_margin:
+			inside = false
+		var surfaces := 1
+		var mi := gi as MeshInstance3D
+		if mi != null:
+			surfaces = mi.mesh.get_surface_count() if mi.mesh != null else 0
+		var path := str(_main.get_path_to(gi)).split("/")
+		var key := "%s/%s %s" % [path[0], path[1] if path.size() > 2 else "", gi.get_class()]
+		if not groups.has(key):
+			groups[key] = [0, 0, 0, 0, 0]
+		var g: Array = groups[key]
+		g[0] += 1
+		if inside:
+			g[1] += 1
+			g[2] += surfaces
+			if gi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+				g[3] += surfaces
+		if gi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+			g[4] += surfaces
+	var keys := groups.keys()
+	keys.sort_custom(func(a, b): return int(groups[a][2]) > int(groups[b][2]))
+	for k in keys:
+		var g: Array = groups[k]
+		print("ATTR %s census %s nodes=%d in_view=%d view_surfaces=%d view_casting=%d all_casting=%d" % [tag, k, g[0], g[1], g[2], g[3], g[4]])
+	var lights := 0
+	stack = [_main]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		stack.append_array(node.get_children())
+		if node is OmniLight3D or node is SpotLight3D:
+			var l := node as Light3D
+			if l.is_visible_in_tree():
+				var reach := (l as OmniLight3D).omni_range if l is OmniLight3D else (l as SpotLight3D).spot_range
+				var dist := cpos.distance_to(l.global_position)
+				if dist < 120.0:
+					print("ATTR %s light %s dist=%.0f range=%.0f shadow=%s energy=%.2f" % [tag, _main.get_path_to(l), dist, reach, l.shadow_enabled, l.light_energy])
+				lights += 1
+	print("ATTR %s lights_visible=%d" % [tag, lights])
+
+func _attr_view(tag: String) -> void:
+	var total := await _attr_draws()
+	await _pose("attr_" + tag)
+	print("ATTR %s total=%d objects=%d prims=%d" % [tag, total, int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))])
+	_main._sky_cycle.set_shadow_level(0)
+	var no_shadow := await _attr_draws()
+	print("ATTR %s shadows_off=%d (shadow pass %d)" % [tag, no_shadow, total - no_shadow])
+	var hidden := []
+	var stack: Array[Node] = [_main]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		stack.append_array(node.get_children())
+		if (node is OmniLight3D or node is SpotLight3D) and (node as Node3D).visible:
+			(node as Node3D).visible = false
+			hidden.append(node)
+	var no_lights := await _attr_draws()
+	print("ATTR %s shadows_off_lamps_off=%d (lamp passes %d, lamps %d)" % [tag, no_lights, no_shadow - no_lights, hidden.size()])
+	for n in hidden:
+		(n as Node3D).visible = true
+	var parents: Array[Node] = [_main, _main.get_node("TowerPresentation")]
+	for parent in parents:
+		for child in parent.get_children():
+			var n3 := child as Node3D
+			if n3 == null or not n3.visible or n3 is Camera3D or n3 is Light3D:
+				continue
+			if parent == _main and child.name == "TowerPresentation":
+				continue
+			n3.visible = false
+			var without := await _attr_draws()
+			n3.visible = true
+			if no_shadow - without != 0:
+				print("ATTR %s group %s/%s delta=%d" % [tag, parent.name, child.name, no_shadow - without])
+	_main._sky_cycle.set_shadow_level(_main._settings.shadow_quality)
+	_attr_census(tag)
+
+func _perf_attrib() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var me := _position()
+	var to_tower := PROBE_TOWER_AXIS - Vector2(me.x, me.z)
+	var base_yaw := atan2(-to_tower.x, -to_tower.y)
+	var pitch := float(OS.get_environment("ATTR_PITCH")) if OS.get_environment("ATTR_PITCH") != "" else 0.6
+	_main._yaw = base_yaw
+	_main._pitch = pitch
+	await _seconds(1.0)
+	await _attr_view("p%d" % int(round(pitch * 100.0)))
+	return true
