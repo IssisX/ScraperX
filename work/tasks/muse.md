@@ -36,6 +36,9 @@ there doing that. So you never touch GitHub directly; email does everything:
 - Two red proof runs on the same failure: stop changing numbers, email what you measured, what you
   ruled out and the one observation that would settle it, and mark the job BLOCKED.
 - Human sounds are real recordings, never synthesized.
+- **Trunk merges are the integrator's (11-05).** When one of your PRs conflicts with trunk, the integrator merges
+  trunk in and mails you the new sha; pull it before your next push. Never start an agent for a trunk merge. The
+  one exception: a mail that says "Muse: resolve" (the conflict is in your own logic).
 
 ## Your open work now (11-03, Cory: "Muse ... should do main, difficult and long-winded tasks")
 You lead the fight. Use your subagents: run independent stages or files in parallel, and send each
