@@ -102,6 +102,12 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 11:40 AM NEW FEATURES (Cory, Muse Batch 5): J-042 #240, Her Ammo, Your Ammo (toolbox throw, dodge, race, throw back):
+  a Claude helper (Opus, worktree, claude/integrate-j042-ammo, test group `ammo`). It holds throw/fetch/take_stock while Builder
+  is out; take_blow, damage, the shove and sense_near stay Muse's (diffs go by `To Muse:` on #240, which I mail).
+  J-043 #241, Belly of the Deck (underside girders, she walks overhead): Muse, inventory now in parallel. Muse's queue:
+  J-001, #95, sense_near, J-043, J-016 s3, J-040, J-038 s1. Rules for both: no exemptions, scripted misses or blindness;
+  real inputs; protected geometry alone. Helpers running: 1.
 - 11:35 AM: #239 MERGED (abb0b8af) by hand. The switchboard said HUMAN-MERGE: it touches .github/workflows (touch shard 2 list),
   which the workflow token cannot merge. So any PR touching the workflow is still mine. J-041 DONE (#235 + #239); the helper
   is retired, worktree removed. Claude helpers running: 0. Cory 11:25: no expensive workflows, at most 2 helpers. Trunk
