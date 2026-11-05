@@ -102,6 +102,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 12:35 PM J-045 #248 (Cory, reported "a few times", never logged until now: a MISS). Force-close looking the full tower
+  height (bottom up, slingshot up, top down); a few-second freeze at the locker burst; slight walking choppiness. Owner: the
+  J-044m helper, next after #245. Includes Sentry native crash capture (Option A), since #222 sees GDScript errors only.
+  Lesson: every bug Cory reports gets a job the same hour.
 - 12:25 PM: Cory OK'd both picks (dead stays dead on a post-death checkpoint; a daze from head impulse replaces the timer).
   Muse pushes, trunk merged in by me (all clean): #246 J-016 stage 3 (53e3536d, the walk shove guard reads whole speed);
   #247 guard pin of 11 scripts (5f135706); #95 at d1fea79d, proof 42083200743 dispatched (workflow file: I merge by hand
