@@ -32,6 +32,7 @@ Opus for API reviews at max effort (#200); integrator ultracode, never workflows
 review per PR; plain answers; compact, no handoffs (auto at ~384k); cut the rules (CLAUDE.md now 6.9 KB, no decision
 logging); find better ways unasked; no full game builds for small changes (#202); fewer merge steps (#203); closed
 26 dead PRs (14 open). The integrator's merge permission (2b054282) works since 12:18 PM.
+11-05: hourly step 6 builds a saving only when a real one shows up; a quiet hour builds nothing (never invent work).
 
 ## Rulings by the integrator today
 - J-001 #193 (Muse's partial fix at 5041d8e4): demand-based swat share; past-rail: near-miss world tweak if the
