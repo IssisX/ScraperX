@@ -551,8 +551,7 @@ void run_matron_grab() {
             Simulation s(InitialSpawn::Deck154);
             at_the_rail(s, -159.5);
             s.debug_matron_hold(0, 3.0);
-            const std::uint32_t first =
-                s.loose_stock_count() - static_cast<std::uint32_t>(scraperx::sim::LooseStock::kMatronThrowables);
+            const std::uint32_t first = s.loose_stock_throwables_begin();
             const std::uint32_t toolbox = s.kit_body_index(scraperx::sim::LooseStock::kFirstEntity + first);
             const auto staggers = s.matron_state().staggers;
             b.r = hold_run(s, 60.0, [&](int, const scraperx::sim::MatronSnapshot &m) {
