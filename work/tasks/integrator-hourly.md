@@ -25,7 +25,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 5. **Size and caps.** `get_session` (no id) for this session and every Claude worker; archive workers whose
    job landed. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current (asks in flight, merge queue,
    rulings). Over a cap in CLAUDE.md: trim it now.
-6. **One better way, every hour.** What cost the most quota this hour (context size, helpers, wake-ups),
+6. **Look for a better way, every hour (build one only if found).** What cost the most quota this hour (context size, helpers, wake-ups),
    what is still done by hand, and is the weekly pace on track for the Monday 11 AM reset? List every wake-up
    that had nothing to do (a PR event, CI note, helper ping or reminder that changed no step) and stop its
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
