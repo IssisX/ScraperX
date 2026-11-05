@@ -1345,7 +1345,16 @@ func _pipe_drum_to_corner(device: int) -> bool:
 	print("SCRAPERX_PIPE drum set down at (%.2f, %.2f, %.2f), her state %d" % [drum.x, drum.y, drum.z,
 		int(_matron_state()["state"])])
 	# (The turn to set it down swings it: where it lies is near enough, in the
-	# corner and off her way along the edge.)
+	# corner. KNOWN BLOCKER, not a staging claim: this spot sits on her
+	# band line (z -128.5) and she shoves it south into the shaft during
+	# go-below (proven, runs 4/5/7/9). Six rest spots were tried in total —
+	# band line, hunting curve, mount-cone south, search-stop south,
+	# far-south (18, -140), corner pocket (17.5, -132) — every corner spot
+	# is shoved (her 4.0 m ray + variable headings cover the corner) and
+	# the far-south spot breaks the throw timing (she climbs past y 151.0
+	# before the throw). No in-test staging satisfies both; the fix needs
+	# a sim-side shove decision or a scenario redesign, not a seventh
+	# spot. The return walk below is proven and kept anyway.)
 	if drum.y < MATRON_DECK_Y or Vector2(drum.x, drum.z).distance_to(PIPE_DRUM_SET_FROM + Vector2(0.0, -0.6)) > 0.8:
 		return _fail("the drum did not come to rest in the corner by the shaft (at %s)" % str(drum))
 	_pipe_drum_rest = drum
@@ -1419,7 +1428,21 @@ func _pipe_heard_coming() -> bool:
 # off, she slams onto the flange below her, alive.
 func _pipe_drum_onto_her(device: int) -> bool:
 	var take_from := Vector2(_pipe_drum_rest.x, _pipe_drum_rest.z + 0.75)
-	if not (await _sprint_to(device, Vector2(take_from.x, -127.2), 1.0, 10.0) and \
+	# Back across the bay cut on its leaf, at a walk, not a sprint. The
+	# straight sprint from the riser head crosses the cut (x -3.9..-0.4)
+	# at z -129.9..-129.3, south of the leaf (z -129.3..-127.7) and over the
+	# open cut, and the climber falls through it onto 143. A sprint
+	# waypointed via (-5.0, -128.5) fails worse: the first sprint leaves
+	# 7.7 m/s of NNE momentum that carries the climber past the waypoint
+	# into the bay's north rail, where the second sprint's due-east push
+	# pins him (x -4.34, the rail face plus his radius) for the whole
+	# budget. The walk drives toward the target every frame and slows into
+	# each waypoint, so it threads the leaf gap on the leaf's line
+	# (z -128.0) instead. Proven by three return-arrived runs (12, 13, 14);
+	# the drum staging itself is still blocked (see the set-down note
+	# below).
+	if not (await _walk_to(device, Vector2(-6.0, -128.0), 0.3, 10.0) and \
+			await _walk_to(device, Vector2(take_from.x, -128.0), 0.3, 30.0) and \
 			await _walk_to(device, take_from, 0.08, 4.0)):
 		return _fail("the run back round to the drum stalled at %s" % str(_position()))
 	await _face(Vector2(0.0, -1.0))
