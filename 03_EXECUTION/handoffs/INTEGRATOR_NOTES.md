@@ -102,6 +102,13 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 10:05 AM: #236 (switchboard comment) MERGED 9:43, but there is still no schedule or workflow_run run by 10:02. A helper
+  (Opus, read-only) is investigating the cause: who last touched the cron, the workflow_run name match, filtered runs.
+  #95: the API review gave a NOTE with 3 foot jumps (touchdown re-landing from 0.15 m after the proof pin, the pin's
+  first-frame drop, no release blend at takeoff). HOLD; Muse is mailed to fix them and look by eye, then I dispatch the
+  proof. #233 is still dirty (Muse to merge trunk in). #232 has no API review yet; dispatched the switchboard again.
+  #235 @0df46ac9 (helper moved the truck and merged trunk) is proving. #231 @14917c34 is proving.
+  Cory 10:00: keep saying "no" out loud to the ultracode workflow nudges (deliberate, so I never run one by accident).
 - 9:40 AM MERGED #230, #216 and #234 by hand (a LAND note first). Steer never wakes on github-actions[bot] comments
   (GITHUB_TOKEN events don't trigger workflows), and schedule/workflow_run are still dead, so merge by hand on MERGE lines.
   A workflow_dispatch of switchboard.yml (dry_run=false) runs the ask job, which is the Claude API review that counts as the
