@@ -797,7 +797,7 @@ namespace {
 
 struct KindRun {
     const char *kind = "";
-    double mass_kg = 0.0;
+    double kg = 0.0;
     Throw her;
     double loudest = 0.0;
     double heard_mass_kg = 0.0;
@@ -841,7 +841,7 @@ KindRun kind_throw(const char *name, const LooseStock::Kind kind, const double m
     log.start(s, name, piece);
     KindRun r;
     r.kind = name;
-    r.mass_kg = mass_kg;
+    r.kg = mass_kg;
     const std::uint32_t takes = s.matron_state().takes;
     r.her = her_throw(s, log, false);
     const Throw &t = r.her;
@@ -874,7 +874,7 @@ void run_ammo_kinds() {
                             kind_throw("ammo kinds pallet", LooseStock::Kind::Pallet, 22.0)};
     std::cout << "PASS scraperx_sim ammo kinds:";
     for (const KindRun &r : runs) {
-        std::cout << " " << r.mass_kg << "kg(top " << r.her.top_speed << " m/s, hit " << r.her.hit_mps
+        std::cout << " " << r.kg << "kg(top " << r.her.top_speed << " m/s, hit " << r.her.hit_mps
                   << " m/s, loudest " << r.loudest << ")";
     }
     std::cout << "\n";
