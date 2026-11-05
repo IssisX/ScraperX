@@ -94,6 +94,12 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   combat (ram/low-fork knockdown, lift/push off deck). Rules: no scripted knockdowns/impulses/teleports/forced falls;
   deterministic native tests of the real physics + an end-to-end touch check; full experiences, no weaker
   stand-ins. Next: report to Cory (exists/missing/owners/acceptance), open job issues, mail Muse.
+- Muse's other 4 guards (audits 94bf7aa9, scope-probe 37d34416, guard-steps 204fb795, scope-guard 7e0975c6) come
+  as pushed branches; PR each, merge one at a time, merge trunk into the rest.
+- Owed by Muse: #216 fix (entity ids, magnet tail [protected], crane shackle, touch_matron_act grip) pushed to
+  fb-bot/integrate-protected-world-b; #193 J-001 one diff; J-016 stage 3; J-038 slice 1 rework.
+- Cory asks: tell him when the feature inventory reports. The Sentry plugin card did not render on his phone;
+  plugin skipped (reports come by Gmail). Sentry Option A (Gradle + SDK, native crashes) = later job, not ruled.
 - #95: Muse removing hold/fatal plant from EXPECTED (XPASS), then dispatch proof, merge.
 - Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Opus helper at a time (high or xhigh, never Sonnet).
