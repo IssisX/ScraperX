@@ -102,6 +102,11 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 11:35 AM: #239 MERGED (abb0b8af) by hand. The switchboard said HUMAN-MERGE: it touches .github/workflows (touch shard 2 list),
+  which the workflow token cannot merge. So any PR touching the workflow is still mine. J-041 DONE (#235 + #239); the helper
+  is retired, worktree removed. Claude helpers running: 0. Cory 11:25: no expensive workflows, at most 2 helpers. Trunk
+  merges are the integrator's (muse.md + hourly file, mailed to Muse); Muse confirmed it stopped its merge agent and started
+  the sense_near fix.
 - 11:05 AM: MERGED #235 (72d7d484, protected, Codex clean + my LAND) and #233 (c9fcec2b). Opened #239 (J-041 stacked,
   claude/integrate-j041-forklift @786a019b: trunk merged in, slice renamed forklift-matron for the group-content guard).
   It has the wake job, so the switchboard should merge it itself on green + Codex: a test of #238. Helper told to fix #239
