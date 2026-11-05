@@ -1296,6 +1296,10 @@ public:
         float player_damage_ns = 0.0F;  // the player's share only
         std::uint8_t damage_stage = 0;  // 0..4; death is State::Dead
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
+        bool blow_low = false;          // and it came at her shins (under kLowBlowM): no step to take it
+        bool riding = false;            // her floor going up or down under her (feel_floor): she rides it
+        float edge_brace_n = 0.0F;      // her feet braced back from an edge this tick (brace_at_edges)
+        float feet_push_n = 0.0F;       // all her feet pushed with this tick (read only)
         float fall_x = 0.0F, fall_z = 1.0F;   // down: the way she fell (her head that way)
         bool kneeling = false;          // down where lying did not fit: crumpled on her knees
         float down_s = 0.0F;            // seconds on the steel
@@ -1420,6 +1424,15 @@ public:
     // The force her feet drive put on her body this tick (walk_toward), when no climb has it.
     float foot_force_n() const noexcept { return foot_force_n_; }
     float foot_power_w() const noexcept { return foot_power_w_; }
+    // What her last take_blow read (sense_near's pick; read only, for tests):
+    // how many, and each one's body, motion and middle before the step, and
+    // hers as her own drive would leave it.
+    [[nodiscard]] std::size_t sensed_count() const noexcept { return near_count_; }
+    [[nodiscard]] JPH::BodyID sensed_body(const std::size_t i) const noexcept { return near_[i].body; }
+    [[nodiscard]] JPH::Vec3 sensed_velocity(const std::size_t i) const noexcept { return near_[i].velocity; }
+    [[nodiscard]] JPH::RVec3 sensed_at(const std::size_t i) const noexcept { return near_[i].at; }
+    [[nodiscard]] float sensed_mass_kg(const std::size_t i) const noexcept { return near_[i].mass_kg; }
+    [[nodiscard]] JPH::Vec3 sensed_own_velocity() const noexcept { return set_velocity_; }
     // The bay's district (bay.hpp), its lifetime the world's: detach before
     // destroying it. Her hands' support goes through it (her trap).
     void set_shared_survival(SharedSurvival *encounter) noexcept;
@@ -2921,6 +2934,7 @@ private:
     int foot_ticks_ = 0;
     float foot_force_n_ = 0.0F;
     float foot_power_w_ = 0.0F;
+    float edge_brace_n_ = 0.0F;   // brace_at_edges' push this tick, as her budget granted it
     bool foot_lunge_ = false;
     JPH::Vec3 foot_drive_dv_ = JPH::Vec3::sZero();
     // Her feet's one account for the tick (reset in pre_step): her stride,

@@ -602,7 +602,9 @@ jobs:
           # driven in under a pallet of drums, raised, carried off, set down
           # (touch_forklift); in under the 5 t stillage, RAISE tips its back
           # end up, heard and felt, LOWER slams it back down
-          # (touch_forklift_strain). The yard crane's remote taken from its
+          # (touch_forklift_strain). The forklift on her deck, 154, driven
+          # into her at full speed puts her down at the forks (touch_forklift_ram).
+          # The yard crane's remote taken from its
           # cabinet, CRANE: the stick sends the hook, RAISE and LOWER hoist,
           # WALK lets go (touch_yard_crane). Its lifting magnet
           # (CRANE by the button): HOOKed on, MAGNET ON, let
@@ -670,7 +672,7 @@ jobs:
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
           for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep \
-              touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
+              touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_forklift_ram touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
               touch_tram touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest-touch-2.log

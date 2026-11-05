@@ -2334,6 +2334,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     acoustic_queries_ = 0;
     foot_force_n_ = 0.0F;
     foot_power_w_ = 0.0F;
+    edge_brace_n_ = 0.0F;
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
     leg_jump_vy_ = 0.0F;
@@ -4886,7 +4887,7 @@ void Matron::brace_at_edges(const float dt) {
         }
     }
     if (stop.LengthSq() > 0.0F) {
-        (void)feet_push(dt, stop * (kMassKg / dt));
+        edge_brace_n_ = std::max(edge_brace_n_, feet_push(dt, stop * (kMassKg / dt)).Length());
     }
 }
 
@@ -5041,6 +5042,10 @@ void Matron::refresh_view() {
     view_.player_damage_ns = player_damage_ns_;
     view_.damage_stage = damage_stage_for_ns(damage_ns_);
     view_.blow_mps = blow_mps_;
+    view_.blow_low = blow_low_;
+    view_.riding = riding_;
+    view_.edge_brace_n = edge_brace_n_;
+    view_.feet_push_n = foot_force_n_;
     view_.fall_x = fall_x_;
     view_.fall_z = fall_z_;
     view_.kneeling = kneeling_;

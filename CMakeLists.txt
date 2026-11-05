@@ -219,6 +219,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_body_order.cpp
         tests/sim_tests_fabricated.cpp
         tests/sim_tests_forklift.cpp
+        tests/sim_tests_forklift_matron.cpp
         tests/sim_tests_yard_crane.cpp
         tests/sim_tests_zipline.cpp
         tests/sim_tests_corpse.cpp
@@ -249,7 +250,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
-    foreach(slice matron-damage matron-ladder matron-hearing matron-sight matron-honest matron-stalk matron-climb matron-climb-support matron-state-exits matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab matron-ladder-pull matron-shape matron-load matron-exam-descent matron-sweep matron-kick)
+    foreach(slice matron-damage matron-ladder matron-hearing matron-sight matron-honest matron-stalk matron-climb matron-climb-support matron-state-exits matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab matron-ladder-pull matron-shape matron-load matron-exam-descent matron-sweep matron-kick forklift-matron)
         add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)
         set_tests_properties(scraperx_sim.${slice} PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=${slice}")
     endforeach()
