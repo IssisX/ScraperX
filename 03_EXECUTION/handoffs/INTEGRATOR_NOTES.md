@@ -102,6 +102,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 10:15 AM: Cory toggled Switchboard and the APK Dashboard Publisher (off, then on). #237 (cron 3,18,33,48) MERGED. Check a
+  schedule run at :18 or :33 and a workflow_run after the next proof. Cory (10:15): "if there's anything I can do to get
+  you past a stuck point, let me know." So ask him early for GitHub-UI-only steps (settings, toggles), always with a
+  direct link and the exact taps.
 - 10:10 AM SWITCHBOARD CAUSE (helper, read-only API): since the default-branch switch, GitHub has registered NO schedule
   or workflow_run trigger anywhere in the repo (the APK publisher went silent too). Names match, nothing is hidden, the
   state is active. The fix is to disable then enable the workflow (Switchboard and APK Dashboard Publisher), or a commit
