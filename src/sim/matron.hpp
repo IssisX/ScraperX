@@ -1296,6 +1296,10 @@ public:
         float player_damage_ns = 0.0F;  // the player's share only
         std::uint8_t damage_stage = 0;  // 0..4; death is State::Dead
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
+        bool blow_low = false;          // and it came at her shins (under kLowBlowM): no step to take it
+        bool riding = false;            // her floor going up or down under her (feel_floor): she rides it
+        float edge_brace_n = 0.0F;      // her feet braced back from an edge this tick (brace_at_edges)
+        float foot_force_n = 0.0F;      // all her feet pushed with this tick, from their Budget (to 8 kN)
         float fall_x = 0.0F, fall_z = 1.0F;   // down: the way she fell (her head that way)
         bool kneeling = false;          // down where lying did not fit: crumpled on her knees
         float down_s = 0.0F;            // seconds on the steel
@@ -2921,6 +2925,7 @@ private:
     int foot_ticks_ = 0;
     float foot_force_n_ = 0.0F;
     float foot_power_w_ = 0.0F;
+    float edge_brace_n_ = 0.0F;   // brace_at_edges' push this tick, as her budget granted it
     bool foot_lunge_ = false;
     JPH::Vec3 foot_drive_dv_ = JPH::Vec3::sZero();
     // Her feet's one account for the tick (reset in pre_step): her stride,

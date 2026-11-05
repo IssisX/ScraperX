@@ -755,6 +755,7 @@ void run_body_order();
 void run_fabricated();
 void run_forklift();
 void run_forklift_strain();
+void run_forklift_matron();
 void run_yard_crane();
 void run_yard_crane_magnet();
 void run_yard_crane_spreader();
