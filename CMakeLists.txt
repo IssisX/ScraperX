@@ -264,6 +264,19 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
     add_test(NAME scraperx_sim.parkour_flow COMMAND scraperx_parkour_flow_tests)
 endif()
 
+# Measurement probes (tools/probes): standalone executables that print numbers
+# for a job's design, never tests (no add_test, no ctest slice). Off by default.
+option(SCRAPERX_BUILD_PROBES "Build the measurement probes in tools/probes" OFF)
+if(SCRAPERX_BUILD_PROBES)
+    # J-038 (#169): the impulses loose things take from the forklift, a 1 m
+    # drop and her thrown stock, for the dent and break limits.
+    add_executable(scraperx_j038_impulse_probe tools/probes/j038_impulse_probe.cpp)
+    target_link_libraries(scraperx_j038_impulse_probe PRIVATE scraperx_sim)
+    target_include_directories(scraperx_j038_impulse_probe PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    target_compile_options(scraperx_j038_impulse_probe PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Werror>)
+endif()
+
 if(SCRAPERX_BUILD_BRIDGE)
     set(GODOTCPP_API_VERSION "4.7" CACHE STRING "" FORCE)
     set(GODOTCPP_TARGET "template_release" CACHE STRING "" FORCE)
