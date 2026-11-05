@@ -569,8 +569,10 @@ bool Simulation::PhysicsWorld::holding_throwable() const noexcept {
         return carried_load_mass() > 0.0F;
     }
     const auto count = static_cast<std::uint64_t>(loose_stock_->count());
-    const std::uint64_t weights_end = count - static_cast<std::uint64_t>(LooseStock::kMatronThrowables);
-    const std::uint64_t weights_begin = weights_end - static_cast<std::uint64_t>(LooseStock::kMachineWeights);
+    const std::uint64_t weights_end =
+        static_cast<std::uint64_t>(loose_stock_->matron_throwables_begin());
+    const std::uint64_t weights_begin =
+        static_cast<std::uint64_t>(loose_stock_->machine_weights_begin());
     if (carried_load_mass() <= 0.0F || carried_entity_ < LooseStock::kFirstEntity ||
         carried_entity_ >= LooseStock::kFirstEntity + count) {
         return false;

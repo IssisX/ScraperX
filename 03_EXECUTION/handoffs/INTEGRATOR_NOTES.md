@@ -102,10 +102,35 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
-- Guards (Job: J-027): #226 scope-probe MERGED 8:35. #224 scope-guard: trunk merged in (b4be3749, all steps
-  kept, yaml + 3 guards PASS), proof re-running, then merge. #225 audits-guard next: merge trunk in after #224.
-  guard-steps not pushed yet. Merge lesson (8:30): the safety check refused a merge with only Codex's clean
-  review; post my own "Claude (integrator) review: LAND" comment (what I read, what I ran) before every merge.
+- 9:30 AM #216 @1a0dbd33: green, Codex clean, Claude API LAND, so the switchboard should merge it. I fixed its stale body.
+  Tell Muse in the next mail (non-blocking): each stack ring now gets its own east/west cap, so a ring can hold up to twice
+  kSpotsPerStackRing, which may collide with the per-ring gate in fb-bot/expand-world-20261031; the 137 trailing bodies are
+  checked by count, not by entity id; the `!body.valid()` skip in her deck scan is dead code. After #216 lands, #235 must
+  merge trunk in (same E guard).
+- 9:25 AM SWITCHBOARD TRIGGERS DEAD: no `schedule` run since 09:44 UTC and no `workflow_run` since 12:11 UTC (the default
+  switch was about 11:30 UTC). issue_comment still works (a ": LAND" comment wakes steer). So green PRs (#95, #232-#234)
+  sat unmerged. Dispatched the sweep by hand (run 42054261416, dry_run=false). Next: confirm a :32 or :47 schedule tick
+  fires. If not, investigate (helper); meanwhile post my LAND comments to wake steer, and dispatch the sweep each check-in.
+- 9:20 AM: #232, #233, #234 and #95 are green with Codex clean; the switchboard merges them (a clean Codex review counts as the
+  LAND for fb-bot work). #216 @1a0dbd33 (Muse's 4-part fix) is proving.
+  J-041: the helper measured all 5 cases passing locally with no game change. The ram knocks her down, the creep doesn't,
+  the forks lift her by contact, she is pushed off 154 through her full 8 kN and dies at grade, and a slow truck gets
+  the driver grabbed. Protected deck-154 forklift = PR #235 (claude/integrate-protected-j041-deck154-forklift @6e588f3, 1 BLOCK = E
+  guard message, stricter list); it conflicts with #216's re-pin of the same guard, so whoever lands second merges.
+  ChatGPT's checks (per-tick trace, which body triggers take_blow, sense_near's 32-hit cap) were sent to the helper.
+  Told Cory that the forklift push off 154 kills her (my pick: keep it, real physics).
+- 8:55 AM PRs opened from Muse's pushes (merge on green + Codex clean, my LAND comment first): #230 guard-steps,
+  #231 matrix-shard (J-027 guards: merge one at a time, merging trunk in); #232 S3 heavy kick (J-034); #233 J-038 slice 0
+  (stated container loads; struck_mass_kg rename OK); #234 J-016 return-walk (touch_matron_pipe still red at the drum,
+  which is stage 3). #95 @44521835 (EXPECTED removal): proof dispatched, run 42049004665; merge on green (workflow
+  scope, mine).
+- J-001 damper (c000b4fa, local only) measured FAIL. Ruled 8:55: wrist damping (friction or angular damping on the
+  ankle SwingTwist grip, power charged to her budget, capped by the grip tear), gates untouched; if it can't kill the
+  swing in 18 ticks, ask Grok for the bound. J-040 #228 body now includes ChatGPT's adopted acceptance additions.
+- Guards (Job: J-027): #226, #224 and #225 MERGED. #230 guard-steps (guard-of-guards): trunk merged in at 8506e0d8, all
+  steps kept, 10 guards each called once (PASS), LAND comment posted, proof running; merge, then merge trunk into
+  #231 matrix-shard (b3b5a8ae, Codex clean) and merge it. Before every merge, post my own LAND comment (the safety check
+  needs it).
 - #227 J-001 also red on athletic-traversal "snaps, wind-up then lunges" (from the J-001 hold base; green on
   trunk). Mailed Muse 8:40. Codex on #227: P0 grab.cpp:584, where a re-pose breaks the snag at 1000 N instead of the 3050 N
   threshold (fixture weakens the test). Ruled: force-based breaking only. P1 matron_hold.cpp:1533, where the second-hand

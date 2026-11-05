@@ -1,5 +1,6 @@
 // The incline, the stone wheel, the teeter, the trapeze, landings, saves, the tram, determinism.
 
+#include "sim/loose_stock.hpp"
 #include "sim_tests.hpp"
 
 // The owner's slab incline, from the game's start: across the yard, up the
@@ -834,6 +835,86 @@ void run_save() {
     const auto pa = a.snapshot().player_position, pb = b.snapshot().player_position;
     worst = std::max(worst, std::hypot(pa.x - pb.x, pa.y - pb.y, pa.z - pb.z));
     require(worst < 1e-3, "save: the original, restored from its own save, plays on with the fresh ones");
+    // A save made before the 137 east/west pieces loads after them: rebuild
+    // that trunk save (607 bodies) from this world's own save (744, the 137
+    // built last) by dropping them off its end and un-shifting the moved entities.
+    {
+        using scraperx::sim::kit::is_stock_entity;
+        using scraperx::sim::LooseStock;
+        Simulation s(InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(1.0);
+        const std::vector<std::uint8_t> now = s.save_game();
+        const std::uint32_t built = s.kit_body_count();
+        // Trunk held 595 + 12 bodies (see run_wet_e_guard); the rest are east/west, built last.
+        constexpr std::uint32_t kTrunkBodies = 595 + 12;
+        require(built > kTrunkBodies,
+                "save: the world holds the east/west pieces this round trip is about");
+        const std::uint32_t east_west = built - kTrunkBodies;
+        // First reserved table index: the smallest among the last-built east/west bodies.
+        std::uint64_t first_reserved = 0;
+        for (std::uint32_t j = kTrunkBodies; j < built; ++j) {
+            const std::uint64_t e = s.kit_body_entity(j);
+            if (is_stock_entity(e)) {
+                const std::uint64_t index = e - LooseStock::kFirstEntity;
+                first_reserved = first_reserved == 0 ? index : std::min(first_reserved, index);
+            }
+        }
+        require(first_reserved > 0, "save: the east/west pieces sit in the stock table");
+        std::vector<std::uint64_t> trunk_entities;
+        trunk_entities.reserve(kTrunkBodies);
+        for (std::uint32_t i = 0; i < kTrunkBodies; ++i) {
+            std::uint64_t e = s.kit_body_entity(i);
+            if (is_stock_entity(e) && e - LooseStock::kFirstEntity >= first_reserved) {
+                e -= east_west;
+            }
+            trunk_entities.push_back(e);
+        }
+        // Locate the saved entity list: the first two kit entities adjacent in the
+        // bytes; the count sits 4 bytes before it, the bodies count after the entities.
+        const std::uint64_t first = s.kit_body_entity(0);
+        const std::uint64_t second = s.kit_body_entity(1);
+        std::size_t at = 0;
+        bool found = false;
+        for (; at + 16 <= now.size(); ++at) {
+            std::uint64_t one = 0, two = 0;
+            std::memcpy(&one, now.data() + at, 8);
+            std::memcpy(&two, now.data() + at + 8, 8);
+            if (one == first && two == second) {
+                found = true;
+                break;
+            }
+        }
+        require(found, "save: the saved entity list is found in the bytes");
+        std::uint32_t entity_count = 0, body_count = 0;
+        std::memcpy(&entity_count, now.data() + at - 4, 4);
+        std::memcpy(&body_count, now.data() + at + 8 * built, 4);
+        require(entity_count == built && body_count == built,
+                "save: the saved lists hold every body of this world");
+        const std::size_t body_state = sizeof(scraperx::sim::kit::Kit::BodyState);
+        const std::size_t bodies_at = at + 8 * built + 4;
+        std::vector<std::uint8_t> before;
+        before.insert(before.end(), now.begin(), now.begin() + static_cast<std::ptrdiff_t>(at - 4));
+        const std::uint32_t trunk_count = kTrunkBodies;
+        before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&trunk_count),
+                      reinterpret_cast<const std::uint8_t *>(&trunk_count) + 4);
+        for (const std::uint64_t e : trunk_entities) {
+            before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&e),
+                          reinterpret_cast<const std::uint8_t *>(&e) + 8);
+        }
+        before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&trunk_count),
+                      reinterpret_cast<const std::uint8_t *>(&trunk_count) + 4);
+        before.insert(before.end(), now.begin() + static_cast<std::ptrdiff_t>(bodies_at),
+                      now.begin() + static_cast<std::ptrdiff_t>(bodies_at + kTrunkBodies * body_state));
+        before.insert(before.end(),
+                      now.begin() + static_cast<std::ptrdiff_t>(bodies_at + built * body_state), now.end());
+        Simulation t(InitialSpawn::ExteriorGrade);
+        (void)t.advance_frame(1.0);
+        require(t.load_game(before.data(), before.size()),
+                "save: a save made before the 137 east/west pieces loads after them");
+        require(t.kit_body_count() == built && t.loose_stock_count() == s.loose_stock_count(),
+                "save: the loaded world still holds the east/west pieces");
+        std::cout << "  save: a pre-137 save (" << kTrunkBodies << " bodies) loads onto " << built << '\n';
+    }
     std::cout << "PASS scraperx_sim save: bytes=" << bytes.size() << " saved_y=" << saved_at.y << " original_drift_m=" << worst
               << " deck4_y=" << b.snapshot().player_position.y << '\n';
 }
