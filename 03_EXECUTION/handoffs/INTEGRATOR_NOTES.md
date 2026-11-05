@@ -53,8 +53,7 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - To Claude: none open.
 
 ## Merge queue (5:20 PM)
-- #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
-  at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
+- #209 MERGED by Cory 6:05 AM 11-05.
 - J-006: #212 merged 5:37 PM. Muse's fix rebuilt from the mail (whitespace restored, blob hashes match 470b2bac)
   onto #91. Ladder geometry landed alone as #213 (7:13 PM); trunk merged into #91 at 7299f8a8, `@codex review`
   posted. Codex P1 again: the traverse completion-condition change must land alone, so it is #215 (protected
@@ -70,6 +69,9 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   green + Codex clean; look at stills first.
 - J-038 slice 1 (cf8d2ed5) ruled 3:20 AM: Matron-takeable = slice 2; save ext rides branch; lands after #193/#95/#216;
   cross-check asked of ChatGPT on #169.
+- J-016 stage 2: Muse's walk-shove guard (a6f93411) cut alone onto trunk -> #217 (fb-bot/integrate-j016-launcher,
+  748ae35d; test hunk whitespace rebuilt, blob differs from Muse's ed795032). Merge on green + Codex clean. Stage 3
+  (drum leaves deck 154: gap = protected geometry, or never shove toward a deck edge) ruled to Muse 6:15 AM.
 - Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
 
