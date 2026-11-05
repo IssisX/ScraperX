@@ -40,18 +40,16 @@ Keep this file to what changes the next action; move anything done to the log.
 - J-042: one path for every loose object; she throws up to 25 kg and shoves anything heavier.
 - Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
 
-## Open PRs (2:50 PM)
-- Merged by hand at 2:40 PM: #252 (J-044m perf) and #250 (protected kit-tail).
+## Open PRs (3:20 PM)
+- Merged: #252 and #250 (by hand, 2:40 PM), #253 (by hand, 3:00 PM); #254 and #255 (switchboard).
 - #256 J-042 protected ammo (5ea9f03e, trunk merged in). It replaces #251, which is closed. Workflow file, so I merge it on
   green plus Codex or the API LAND. Her pallet take is marginal: asked of Muse on #240 and mailed.
   HELD on Codex P1 (confirmed): the windup lift moves the take_stock constraint anchor and is not budgeted. The fix is
   Muse's (mailed 2:55 PM, ahead of J-044c): pushed to fb-bot/integrate-protected-j042-windup, then I merge it in.
-- #253 J-045 part 1 (ac62663b, trunk merged in after #252): eye LAND, proof re-running. I merge it on green.
-- #254 Muse's sense_near (c7f80b35) and #255 Muse's guard self-test: the switchboard merges both.
 - #95 J-023 plants: red, plant worst 0.111 m > 0.079. Muse fixes it; no bound raise. Workflow file, I merge after the stills.
 - #227 J-001 HOLD: Muse's past-rail agent. Rulings: force-based snag break only; both hands' haul comes out of her one
   8 kN/44 kW account.
-- Subscribed: #253, #256.
+- Subscribed: #256.
 
 ## Helpers
 - Running: the J-045 draws helper (af30b5d), in `.claude/worktrees/agent-a64754fb0b3815142`, branch
