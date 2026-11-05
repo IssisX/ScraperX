@@ -1,0 +1,408 @@
+name: ScraperX APK Dashboard Publisher
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+  workflow_run:
+    workflows:
+      # GitHub registers this shared workflow under its default-branch name,
+      # even when a model branch gives that same file a different display name.
+      - "ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine"
+      - "ScraperX — full proof path (kernel + ascent)"
+      - "ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"
+      - "ScraperX — ground screw ascent"
+      - "ScraperX Consolidated — Kernel + Ascent"
+      - "ScraperX KI-008 - Full Causal Chain"
+    types: [completed]
+    branches:
+      - ChatGPT
+      - ScraperX-Claude
+      - ScraperX-Grok
+  push:
+    branches: [main, ScraperX-Claude]
+    paths:
+      - ".github/workflows/apk-dashboard.yml"
+      - "apk-dashboard/**"
+      - ".github/actions/stable-apk/**"
+
+permissions:
+  actions: read
+  contents: write
+
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+concurrency:
+  group: scraperx-apk-dashboard-publisher
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check signing and publication regression guards
+        shell: bash
+        run: |
+          python3 apk-dashboard/test-signing-setup.py
+          python3 apk-dashboard/test-publisher.py
+          python3 apk-dashboard/test-apk-version.py
+      - name: Publish newest successful APK from every model branch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCRAPERX_APK_KEYSTORE_B64: ${{ secrets.SCRAPERX_APK_KEYSTORE_B64 }}
+          SCRAPERX_APK_KEYSTORE_PASSWORD: ${{ secrets.SCRAPERX_APK_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          REPO="${GITHUB_REPOSITORY}"
+          TAG="apk-latest"
+          SIGNING_ALIAS="scraperx-dashboard"
+
+          # Never publish another ephemeral Godot debug signature. If the
+          # stable private key has not been provisioned yet, preserve the
+          # current release instead of creating another uninstall-required APK.
+          if [[ -z "${SCRAPERX_APK_KEYSTORE_B64:-}" || -z "${SCRAPERX_APK_KEYSTORE_PASSWORD:-}" ]]; then
+            echo "::error title=Stable APK signing not configured::Signing secrets are missing; existing release assets are left untouched. Restore the original signing backup."
+            exit 1
+          fi
+
+          mkdir -p out work previous
+          KEYSTORE="${RUNNER_TEMP}/scraperx-dashboard.p12"
+          printf '%s' "${SCRAPERX_APK_KEYSTORE_B64}" | base64 --decode > "${KEYSTORE}"
+          chmod 600 "${KEYSTORE}"
+
+          APKSIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "${ANDROID_HOME}/build-tools" -type f -name zipalign | sort -V | tail -n 1)"
+          AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "${APKSIGNER}"
+          test -x "${ZIPALIGN}"
+          test -x "${AAPT}"
+
+          previous_cert=""
+          if gh release view "${TAG}" --repo "${REPO}" >/dev/null 2>&1; then
+            gh api "/repos/${REPO}/releases/tags/${TAG}" > previous/release.json
+            gh release download "${TAG}" --repo "${REPO}" --pattern manifest.json --dir previous
+            previous_cert="$(jq -er '.signing_certificate_sha256 | select(test("^[0-9a-f]{64}$"))' previous/manifest.json)"
+          fi
+
+          # Reject changed secrets before downloading or signing four APKs.
+          # Do not make a failed provenance download disable signer protection.
+          keytool -exportcert -rfc \
+            -keystore "${KEYSTORE}" -alias "${SIGNING_ALIAS}" \
+            -storepass:env SCRAPERX_APK_KEYSTORE_PASSWORD > work/signing-certificate.pem
+          configured_cert="$(openssl x509 -in work/signing-certificate.pem -noout -fingerprint -sha256 | \
+            cut -d= -f2 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          if [[ -n "${previous_cert}" && "${previous_cert}" != "${configured_cert}" ]]; then
+            echo "::error title=Signing key changed::Published signer ${previous_cert}; configured signer ${configured_cert}. Restore the original .p12 and password using apk-dashboard/setup-stable-signing-termux.sh --restore. No release assets changed."
+            exit 1
+          fi
+
+          SIGNING_CERT="${configured_cert}"
+          generated_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          if [[ -s previous/manifest.json ]]; then
+            cp previous/manifest.json out/manifest.json
+          else
+            jq -n --arg generated_at "$generated_at" --arg repo "$REPO" \
+              '{schema:1, generated_at:$generated_at, repo:$repo, builds:{}}' \
+              > out/manifest.json
+          fi
+
+          # Carry forward provenance for APKs that remain published unchanged.
+          # Refresh generated_at only when at least one APK actually changes.
+          retain_published() {
+            local label="$1"
+            jq -e --arg label "$label" '.builds[$label].status == "ok"' \
+              out/manifest.json >/dev/null
+          }
+
+          update_manifest() {
+            local label="$1"
+            local payload="$2"
+            jq --arg label "$label" --argjson payload "$payload" \
+              '.builds[$label] = $payload' out/manifest.json > out/manifest.next.json
+            mv out/manifest.next.json out/manifest.json
+          }
+
+          publish_branch() {
+            local label="$1"
+            local branch="$2"
+            local expected_package="$3"
+            local expected_label="$4"
+            local target="out/ScraperX-${label}.apk"
+            local branch_q
+            branch_q="$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$branch")"
+
+            echo "::group::${label} / ${branch}"
+            local runs
+            runs="$(gh api "/repos/${REPO}/actions/runs?branch=${branch_q}&status=success&per_page=20")"
+
+            local selected_run=""
+            local selected_artifact=""
+            local row run_id artifacts artifact
+
+            while IFS= read -r row; do
+              test -n "$row" || continue
+              run_id="$(jq -r '.id' <<<"$row")"
+              artifacts="$(gh api "/repos/${REPO}/actions/runs/${run_id}/artifacts?per_page=100")"
+              artifact="$(jq -c '
+                ([.artifacts[] | select(.expired == false) | select(.name | startswith("ScraperX-APK-"))][0])
+                //
+                ([.artifacts[] | select(.expired == false) | select(.name | startswith("ScraperX-build-"))][0])
+                // empty
+              ' <<<"$artifacts")"
+              if test -n "$artifact"; then
+                selected_run="$row"
+                selected_artifact="$artifact"
+                break
+              fi
+            done < <(jq -c '.workflow_runs[]' <<<"$runs")
+
+            if test -z "$selected_run" || test -z "$selected_artifact"; then
+              echo "::warning title=${label} APK unavailable::No non-expired APK/build artifact found in the 20 newest successful runs."
+              if ! retain_published "$label"; then
+                update_manifest "$label" "$(jq -n --arg branch "$branch" \
+                '{status:"unavailable", branch:$branch, message:"No non-expired APK artifact found"}')"
+              fi
+              echo "::endgroup::"
+              return 0
+            fi
+
+            run_id="$(jq -r '.id' <<<"$selected_run")"
+            local artifact_name artifact_id source_sha run_url built_at
+            artifact_name="$(jq -r '.name' <<<"$selected_artifact")"
+            artifact_id="$(jq -r '.id' <<<"$selected_artifact")"
+            source_sha="$(jq -r '.head_sha' <<<"$selected_run")"
+            run_url="$(jq -r '.html_url' <<<"$selected_run")"
+            built_at="$(jq -r '.updated_at' <<<"$selected_run")"
+
+            # The source artifact and published release bytes must both match.
+            # Branch HEAD movement alone is not a reason to replace an APK.
+            if [[ -s previous/manifest.json && -s previous/release.json ]] && \
+              jq -e -n \
+                --slurpfile manifest previous/manifest.json \
+                --slurpfile release previous/release.json \
+                --arg repo "$REPO" --arg label "$label" --arg branch "$branch" \
+                --arg sha "$source_sha" --argjson artifact_id "$artifact_id" \
+                --arg cert "$configured_cert" --arg file "ScraperX-${label}.apk" \
+                --arg package "$expected_package" --arg app_label "$expected_label" '
+                  $manifest[0] as $m | $m.builds[$label] as $b |
+                  $m.repo == $repo and $b.status == "ok" and
+                  $b.branch == $branch and $b.source_sha == $sha and
+                  $b.source_artifact_id == $artifact_id and
+                  $b.signing_certificate_sha256 == $cert and
+                  $b.version_policy == "monotonic-v1" and
+                  ($label != "ChatGPT" or $b.signing_lineage == [
+                    "9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4", $cert
+                  ]) and
+                  $b.package_id == $package and $b.app_label == $app_label and
+                  $b.file == $file and
+                  ([$release[0].assets[] | select(
+                    .name == $file and .state == "uploaded" and
+                    .size == $b.bytes and .digest == ("sha256:" + $b.apk_sha256)
+                  )] | length == 1)
+                ' >/dev/null; then
+              echo "${label}: unchanged source artifact and release digest; no APK download, signing, or upload."
+              echo "::endgroup::"
+              return 0
+            fi
+
+            local tmp="work/${label}"
+            rm -rf "$tmp"
+            mkdir -p "$tmp"
+            gh run download "$run_id" --repo "$REPO" --name "$artifact_name" --dir "$tmp"
+
+            mapfile -t apks < <(find "$tmp" -type f -name '*.apk' -size +1M -print | sort)
+            local apk=""
+            if test "${#apks[@]}" -eq 1; then
+              apk="${apks[0]}"
+            else
+              mapfile -t named < <(find "$tmp" -type f -iname "*${label}*.apk" -size +1M -print | sort)
+              if test "${#named[@]}" -eq 1; then
+                apk="${named[0]}"
+              fi
+            fi
+
+            if test -z "$apk"; then
+              echo "::warning title=${label} APK ambiguous::Artifact ${artifact_name} contains ${#apks[@]} APK candidates; leaving previous stable release asset untouched."
+              if ! retain_published "$label"; then
+                update_manifest "$label" "$(jq -n \
+                --arg branch "$branch" --arg sha "$source_sha" --arg run_url "$run_url" \
+                --arg artifact "$artifact_name" \
+                '{status:"ambiguous", branch:$branch, source_sha:$sha, run_url:$run_url, artifact:$artifact, message:"Artifact did not contain exactly one selectable APK"}')"
+              fi
+              echo "::endgroup::"
+              return 0
+            fi
+
+            # Remove the runner-local Godot debug JAR signature, realign the
+            # APK, and sign it with the one stable dashboard development key.
+            local unsigned="${tmp}/unsigned.apk"
+            local aligned="${tmp}/aligned.apk"
+            local previous_code
+            previous_code="$(jq -r --arg label "$label" '.builds[$label].version_code // "0"' out/manifest.json)"
+            python3 "${GITHUB_WORKSPACE:-.}/.github/actions/stable-apk/prepare-apk.py" "$apk" "$unsigned" \
+              --previous-code "$previous_code" > "${tmp}/version.json"
+            "${ZIPALIGN}" -p -f 4 "$unsigned" "$aligned"
+            local legacy_signer=() lineage_options=() verify_options=()
+            local signing_lineage
+            signing_lineage="$(jq -cn --arg cert "$configured_cert" '[$cert]')"
+            if [[ "$label" == "ChatGPT" ]]; then
+              local legacy_key="${GITHUB_WORKSPACE:-.}/.github/actions/stable-apk/legacy-chatgpt-debug.keystore"
+              python3 "${GITHUB_WORKSPACE:-.}/.github/actions/stable-apk/create-lineage.py" \
+                "$APKSIGNER" "$KEYSTORE" "${tmp}/chatgpt.lineage"
+              legacy_signer=(--ks "$legacy_key" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --next-signer)
+              lineage_options=(--lineage "${tmp}/chatgpt.lineage" --rotation-min-sdk-version 28)
+              verify_options=(--min-sdk-version 28)
+              signing_lineage="$(jq -cn --arg cert "$configured_cert" '["9a06889e7614d140f6cd1fc45634bb1e2391968a9fcc60f1608c9e50e15a1ba4",$cert]')"
+            fi
+            "${APKSIGNER}" sign "${legacy_signer[@]}" \
+              --ks "${KEYSTORE}" \
+              --ks-key-alias "${SIGNING_ALIAS}" \
+              --ks-pass env:SCRAPERX_APK_KEYSTORE_PASSWORD \
+              --key-pass env:SCRAPERX_APK_KEYSTORE_PASSWORD \
+              "${lineage_options[@]}" --out "$target" "$aligned"
+
+            local verify_log="${tmp}/apksigner.txt"
+            "${APKSIGNER}" verify --verbose --print-certs "${verify_options[@]}" "$target" | tee "$verify_log"
+            local cert_sha
+            cert_sha="$(sed -n 's/^.*certificate SHA-256 digest:[[:space:]]*//p' "$verify_log" | head -n 1 | tr '[:upper:]' '[:lower:]')"
+            test -n "$cert_sha"
+            if [[ -z "${SIGNING_CERT}" ]]; then
+              SIGNING_CERT="$cert_sha"
+            elif [[ "${SIGNING_CERT}" != "$cert_sha" ]]; then
+              echo "::error title=Signer split::${label} was signed by ${cert_sha}, expected ${SIGNING_CERT}"
+              exit 1
+            fi
+
+            local badging="${tmp}/badging.txt"
+            "${AAPT}" dump badging "$target" | tee "$badging"
+            grep -F "package: name='${expected_package}'" "$badging"
+            grep -F "application-label:'${expected_label}'" "$badging"
+
+            local apk_sha apk_bytes current_sha version_code
+            apk_sha="$(sha256sum "$target" | awk '{print $1}')"
+            apk_bytes="$(stat -c '%s' "$target")"
+            version_code="$(sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" "$badging" | head -n 1)"
+            test "$version_code" = "$(jq -r '.version_code' "${tmp}/version.json")"
+            test "$version_code" -gt "$previous_code"
+            # A deleted branch must not stop the other models' APKs: Gemini's
+            # branch was removed on 11-02 and every refresh died here with a 404.
+            current_sha="$(gh api "/repos/${REPO}/branches/${branch_q}" --jq '.commit.sha' 2>/dev/null)" || current_sha=""
+
+            update_manifest "$label" "$(jq -n \
+              --arg branch "$branch" \
+              --arg sha "$source_sha" \
+              --arg current_sha "$current_sha" \
+              --arg run_url "$run_url" \
+              --arg built_at "$built_at" \
+              --arg artifact "$artifact_name" \
+              --argjson artifact_id "$artifact_id" \
+              --arg file "ScraperX-${label}.apk" \
+              --arg apk_sha256 "$apk_sha" \
+              --arg signing_certificate_sha256 "$cert_sha" \
+              --arg package_id "$expected_package" \
+              --arg app_label "$expected_label" \
+              --arg version_code "$version_code" \
+              --argjson signing_lineage "$signing_lineage" \
+              --argjson bytes "$apk_bytes" \
+              --argjson current "$(test "$source_sha" = "$current_sha" && echo true || echo false)" \
+              '{
+                status:"ok",
+                branch:$branch,
+                source_sha:$sha,
+                current_branch_sha:$current_sha,
+                source_is_current_head:$current,
+                run_url:$run_url,
+                built_at:$built_at,
+                source_artifact:$artifact,
+                source_artifact_id:$artifact_id,
+                file:$file,
+                apk_sha256:$apk_sha256,
+                signing_certificate_sha256:$signing_certificate_sha256,
+                package_id:$package_id,
+                app_label:$app_label,
+                version_code:$version_code,
+                version_policy:"monotonic-v1",
+                signing_lineage:$signing_lineage,
+                bytes:$bytes
+              }')"
+
+            echo "${label}: ${source_sha} -> ${target} signer=${cert_sha}"
+            echo "::endgroup::"
+          }
+
+          publish_branch "ChatGPT" "ChatGPT" "com.cory.scraperx.chatgpt" "ScraperX-ChatGPT"
+          publish_branch "Claude" "ScraperX-Claude" "com.cory.scraperx.claude" "ScraperX-Claude"
+          publish_branch "Grok" "ScraperX-Grok" "com.cory.scraperx.grok" "ScraperX-Grok"
+
+          mapfile -t publish_files < <(find out -maxdepth 1 -type f -name 'ScraperX-*.apk' -print | sort)
+          if test "${#publish_files[@]}" -eq 0; then
+            echo "No APK changes to publish; release assets, manifest, notes, and timestamps left untouched."
+            exit 0
+          fi
+
+          test -n "${SIGNING_CERT}"
+          if [[ -n "${previous_cert}" && "${previous_cert}" != "${SIGNING_CERT}" ]]; then
+            echo "::error title=Signing key changed::Refusing to break Android in-place updates. Previous stable signer ${previous_cert}; current secret resolves to ${SIGNING_CERT}."
+            exit 1
+          fi
+          jq --arg cert "${SIGNING_CERT}" --arg generated_at "$generated_at" \
+            '.stable_signing = true | .signing_certificate_sha256 = $cert | .generated_at = $generated_at' \
+            out/manifest.json > out/manifest.next.json
+          mv out/manifest.next.json out/manifest.json
+
+          {
+            echo "# ScraperX — latest successful model APKs"
+            echo
+            echo "This release is maintained automatically. Each filename is stable; its bytes are replaced only after a successful branch build publishes an APK artifact."
+            echo
+            echo "All four dashboard APKs are re-signed with one stable development certificate so same-model installs update in place. Signer SHA-256: \`${SIGNING_CERT}\`"
+            echo
+            echo "Generated: \\\`${generated_at}\\\`"
+            echo
+            echo "| Model | Branch | Source | Current head? | Download |"
+            echo "|---|---|---|---:|---|"
+            for label in ChatGPT Claude Grok; do
+              status="$(jq -r --arg label "$label" '.builds[$label].status // "missing"' out/manifest.json)"
+              if test "$status" = "ok"; then
+                branch="$(jq -r --arg label "$label" '.builds[$label].branch' out/manifest.json)"
+                sha="$(jq -r --arg label "$label" '.builds[$label].source_sha' out/manifest.json)"
+                current="$(jq -r --arg label "$label" '.builds[$label].source_is_current_head' out/manifest.json)"
+                echo "| ${label} | \\\`${branch}\\\` | \\\`${sha:0:12}\\\` | ${current} | [ScraperX-${label}.apk](https://github.com/${REPO}/releases/download/${TAG}/ScraperX-${label}.apk) |"
+              else
+                echo "| ${label} | — | — | — | unavailable in this refresh |"
+              fi
+            done
+            echo
+            echo "<!-- scraperx-manifest"
+            jq -c . out/manifest.json
+            echo "-->"
+            echo
+            echo "Machine-readable provenance: [manifest.json](https://github.com/${REPO}/releases/download/${TAG}/manifest.json)"
+          } > out/release-notes.md
+
+          if ! gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --repo "$REPO" \
+              --target main \
+              --title "ScraperX — Latest Model APKs" \
+              --notes-file out/release-notes.md \
+              --prerelease
+          fi
+
+          gh release upload "$TAG" --repo "$REPO" --clobber "${publish_files[@]}"
+          gh release upload "$TAG" --repo "$REPO" --clobber out/manifest.json
+          # Update visible provenance only after the APK uploads succeed.
+          gh release edit "$TAG" --repo "$REPO" \
+            --title "ScraperX — Latest Model APKs" \
+            --notes-file out/release-notes.md --prerelease
+
+          echo "Published stable release assets:"
+          gh release view "$TAG" --repo "$REPO" --json assets \
+            --jq '.assets[] | [.name, .size, .updatedAt] | @tsv'
