@@ -1816,10 +1816,13 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                         dir = side;
                     }
                     const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
-                    // A body already travelling along the shove line is not
-                    // a crate that stopped her: shoving it again only
-                    // launches it (J-016). Leave it; the walk goes on.
-                    if (along <= 2.5F) {
+                    // A body already travelling is not a crate that stopped
+                    // her: shoving it again only launches it (J-016). The
+                    // speed along the shove line is not the test — a body
+                    // crossing the line fast still got shoved, and the pipe
+                    // drum walked off deck 154's north edge on it. Leave
+                    // it; the walk goes on.
+                    if (bodies.GetLinearVelocity(id).Length() <= 2.5F) {
                         const traversal::Limits budget;
                         // A shove is never the lunge: it stays on her 8 kN and 22 kW.
                         const float shove_force = budget.total_force_n;
