@@ -20,5 +20,11 @@ constexpr float kPlayerStrikePowerW = 3000.0F;
 // her 220 kg is 0.273 m/s. Low, so her balance zeroes its reach and no
 // brace holds against it: it downs any upright Matron at any stage.
 constexpr float kPlayerSweepForceN = 1350.0F;
+// The heavy kick (physics_world_strike.cpp): Punch while moving toward
+// her. A leg, not an arm: the spec's 3000 N flat, 5 ticks, 166.7 N*s,
+// 0.758 m/s over her 220 kg. Slowest, longest reach, biggest blow: it
+// downs an upright Pest, staggers an upright Dangerous or faced
+// Changed, nothing vs a crouched Matron (her bar is 1.90 m/s).
+constexpr float kPlayerKickForceN = 3000.0F;
 
 } // namespace scraperx::sim::strike

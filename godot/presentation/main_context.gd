@@ -119,7 +119,7 @@ static func punch_button(strike: Dictionary, hold: Dictionary) -> Dictionary:
 	if hang and hold.has("fatal_window_s") and hold.has("fatal_window_total_s"):
 		count = "%.1f S" % maxf(0.0, float(hold["fatal_window_total_s"]) - float(hold["fatal_window_s"]))
 	return {"ready": ready, "break_free": break_free,
-		"label": "BREAK FREE" if break_free else ("SWEEP" if int(strike.get("move", 0)) == 1 else "PUNCH"),
+		"label": "BREAK FREE" if break_free else ("SWEEP" if int(strike.get("move", 0)) == 1 else ("KICK" if int(strike.get("move", 0)) == 2 else "PUNCH")),
 		"count": count, "lands": bool(strike.get("offered", false))}
 
 func _read_context() -> Dictionary:

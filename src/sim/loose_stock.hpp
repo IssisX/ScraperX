@@ -93,6 +93,10 @@ public:
         std::uint8_t variant;  // its paint, for the presentation (no physics)
         float x, y, z;         // where its underside sits, its centre over (x, z)
         float yaw;             // about +y
+        // J-038 slice 0: its stated load in kg, carried on top of the kind's
+        // own mass. Only containers state one today: a 40 ft box's load,
+        // centred, so its body is 3,750 kg plus this. Default: empty.
+        float load_kg = 0.0F;
     };
 
     LooseStock(JPH::PhysicsSystem &physics, kit::Kit &kit);
