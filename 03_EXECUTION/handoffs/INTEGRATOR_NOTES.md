@@ -102,6 +102,11 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 1:25 PM: #246 MERGED by the switchboard by itself (the first one after #238). S4 jab (Muse 5104883d): its BLOCK (strike.cpp:762,
+  the standing press is now a jab, a tighter window) is the spec change, so I put it on fb-bot/integrate-protected-s4-jab
+  (b177d973, trunk merged, CMake list +matron-jab) = PR #249. #95 red: plant worst 0.111 m > bound 0.079 (7 slides vs 50);
+  mailed Muse, no bound raise. ChatGPT delivered J-044a; it is in the repo as 03_EXECUTION/FIGHT/J044A_SPEC.md and accepted
+  (220 kg split). Muse's next is J-044c, then S5 after J-044d. J-042 wider: every movable object up to 25 kg (Cory), one path.
 - 12:35 PM J-045 #248 (Cory, reported "a few times", never logged until now: a MISS). Force-close looking the full tower
   height (bottom up, slingshot up, top down); a few-second freeze at the locker burst; slight walking choppiness. Owner: the
   J-044m helper, next after #245. Includes Sentry native crash capture (Option A), since #222 sees GDScript errors only.
