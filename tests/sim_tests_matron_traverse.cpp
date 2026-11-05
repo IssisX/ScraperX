@@ -55,16 +55,22 @@ Result take(const Leg &leg) {
     Result r;
     auto last = s.matron_state().position;
     int ticks = 0;
-    // (Her view of herself, climbing or not, is refreshed in the step.)
+    bool climb_started = false;
+    // Routecraft can spend several ticks planning while its hands are still off
+    // the steel. A false presentation "climbing" flag then means waiting, not
+    // completion. The same 90 s deadline includes planning and physical motion.
     for (bool climbing = true; ticks < 90 * static_cast<int>(Simulation::kTickRateHz) && climbing; ++ticks) {
         tick(s);
-        climbing = s.matron_state().climbing || s.matron_state().on_pipe;
+        const bool hands_on_steel = s.matron_state().climbing || s.matron_state().on_pipe;
+        climb_started = climb_started || hands_on_steel;
+        climbing = !climb_started || hands_on_steel;
         const auto m = s.matron_state();
         r.peak_force = std::max(r.peak_force, m.climb_force_n);
         r.worst_step = std::max(r.worst_step, std::hypot(m.position.x - last.x, m.position.y - last.y,
                                                          m.position.z - last.z));
         last = m.position;
     }
+    require(climb_started, "matron traverse: the climb begins within the 90 s deadline");
     // Then a second on her feet, to show she stands there.
     double stand_min_y = std::numeric_limits<double>::max();
     for (int i = 0; i < 90; ++i) {
