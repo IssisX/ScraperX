@@ -52,6 +52,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   Grok answers again.
 - To Claude: none open.
 
+- Effort is Cory's call, set per stretch of work; never push to lower it.
+- Context (Cory 11-05): plugin searches use one exact keyword, or a helper runs them and returns one line
+  (a broad SearchPlugins dump was the big jump). Never trade quality for context: PRs stay one per job.
+
 ## Merge queue (5:20 PM)
 - #209 MERGED by Cory 6:05 AM 11-05. 6:30 AM: Cory made ScraperX-Claude the DEFAULT branch. Workflow triggers,
   `if`s and schedules now come from trunk: never route a fix through main again. #218 carries the APK publisher
@@ -76,7 +80,35 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-016 stage 2: Muse's walk-shove guard (a6f93411) cut alone onto trunk -> #217 (fb-bot/integrate-j016-launcher,
   748ae35d; test hunk whitespace rebuilt, blob differs from Muse's ed795032). Merge on green + Codex clean. Stage 3
   (drum leaves deck 154: gap = protected geometry, or never shove toward a deck edge) ruled to Muse 6:15 AM.
-- Merged 11-05: #218. Waiting: #217 (J-016 guard) touch-2.
+- Merged 11-05: #218, #217 (J-016 guard, green incl. stood_his).
+- 7:20 AM: Muse PUSHES now. Guards #219 apk-step, #220 job-gate, #221 group-content (J-027, workflow files: I merge
+  on green + Codex, one at a time, trunk merged into the rest). Hold on guards LIFTED. #95 head 551973b0 (Muse's
+  plant fix), proof run 42035080417 dispatched. J-038 rulings after ChatGPT (#169): settle exclusion replaces the
+  vertical gate; support = gravity-opposing normal held 2+ ticks; 1 mm quantize, stable merge ties.
+- 8:15 AM: merged guards #219 #220 #221 (trunk merged into each, all three steps kept). Sentry (DSN in
+  project "scraperx", org cory-meyers; Cory's login = his Gmail): #222 GDScript reporter (Android only, 30/session,
+  no PII; workflow step => I merge) + #223 protected INTERNET permission (needs green + Codex LAND). Both Codex
+  clean, proofs running. Native crashes need Gradle export + official SDK = later job. Hourly reads Sentry mail.
+- 8:20 AM features: inventory done. J-040 improvised weapons = issue #228, owner Muse (after J-001; owns
+  take_blow). J-041 forklift combat = issue #229, owner Claude helper (Opus, worktree,
+  claude/integrate-j041-forklift + claude/integrate-protected-j041-*; take_blow diffs go to Muse on #229).
+  To ChatGPT on #228 (bracing criteria cross-check), To Grok on #229 (traction vs her 8 kN edge brace).
+  Inventory facts: held load filtered from take_blow (matron.cpp:4372,:4560); no carryable bar/pipe; her hand
+  kHand collides with nothing; catch distance-only; shove writes velocity (physics_world.cpp:1405); her body is
+  an untippable capsule, Down = lie_down shape swap after the real-contact balance rule, timed get-up; no
+  forklift on 154; riding_ (floor rising >0.3 m/s) disables blows; brace_at_edges holds her from edges.
+  Raised to Cory: keep her balance rule (real impulse decides) vs rebuild her as a body that can tip (huge,
+  touches protected mass/force). My pick: keep it. Pending his word.
+- J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
+  stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
+  kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- Guards: #224 scope-guard @20584bce, #225 audits-guard @502fc5a1, #226 scope-probe @3c131cee (Job: J-027,
+  workflow => I merge on green + Codex clean, one at a time, trunk merged into the rest). guard-steps not pushed yet.
+- Owed by Muse: #216 fix (entity ids, magnet tail [protected], crane shackle, touch_matron_act grip) pushed to
+  fb-bot/integrate-protected-world-b; J-001 past-rail step (#227); J-016 stage 3; J-038 slice 1 rework.
+- Cory asks: tell him when the feature inventory reports. The Sentry plugin card did not render on his phone;
+  plugin skipped (reports come by Gmail). Sentry Option A (Gradle + SDK, native crashes) = later job, not ruled.
+- #95: Muse removing hold/fatal plant from EXPECTED (XPASS), then dispatch proof, merge.
 - Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Opus helper at a time (high or xhigh, never Sonnet).
 

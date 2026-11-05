@@ -109,6 +109,20 @@ jobs:
           (cd ci && python3 -m unittest -q test_proof_scope)
           python3 ci/proof_scope.py
 
+      - name: Verify every proof job is gated on its own scope output
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_job_gate_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every APK proof step runs in the APK jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_apk_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
       - name: Verify every scope proof step runs in CI
         shell: bash
         run: |
@@ -199,6 +213,28 @@ jobs:
           python3 .github/scripts/check_drawn_body_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml \
             --check tools/matron_probe/check.py
+
+      - name: Verify every test group's content runs in CI or is a known gap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_group_content_coverage.py \
+            --dispatch tests/simulation_tests.cpp \
+            --test-dir tests --cmake CMakeLists.txt
+
+      - name: Verify every proof job is gated on its own scope output
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_job_gate_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every APK proof step runs in the APK jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_apk_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
 
       - name: Verify every scope proof step runs in CI
         shell: bash
