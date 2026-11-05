@@ -109,6 +109,34 @@ jobs:
           (cd ci && python3 -m unittest -q test_proof_scope)
           python3 ci/proof_scope.py
 
+      - name: Verify every proof job is gated on its own scope output
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_job_gate_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every APK proof step runs in the APK jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_apk_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every scope proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_scope_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every matrix shard runs its proof step
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_matrix_shard_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
   host-build:
     needs: scope
     if: needs.scope.outputs.game == 'true'
@@ -192,6 +220,57 @@ jobs:
           python3 .github/scripts/check_drawn_body_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml \
             --check tools/matron_probe/check.py
+
+      - name: Verify every test group's content runs in CI or is a known gap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_group_content_coverage.py \
+            --dispatch tests/simulation_tests.cpp \
+            --test-dir tests --cmake CMakeLists.txt
+
+      - name: Verify every proof job is gated on its own scope output
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_job_gate_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every APK proof step runs in the APK jobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_apk_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every scope proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_scope_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every audits proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_audit_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every proof guard runs in host-build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_guard_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml \
+            --scripts-dir .github/scripts
+
+      - name: Verify every matrix shard runs its proof step
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_matrix_shard_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
 
       - name: Share host native binaries with test jobs
         uses: actions/upload-artifact@v4
@@ -523,7 +602,9 @@ jobs:
           # driven in under a pallet of drums, raised, carried off, set down
           # (touch_forklift); in under the 5 t stillage, RAISE tips its back
           # end up, heard and felt, LOWER slams it back down
-          # (touch_forklift_strain). The yard crane's remote taken from its
+          # (touch_forklift_strain). The forklift on her deck, 154, driven
+          # into her at full speed puts her down at the forks (touch_forklift_ram).
+          # The yard crane's remote taken from its
           # cabinet, CRANE: the stick sends the hook, RAISE and LOWER hoist,
           # WALK lets go (touch_yard_crane). Its lifting magnet
           # (CRANE by the button): HOOKed on, MAGNET ON, let
@@ -591,7 +672,7 @@ jobs:
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
           for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep \
-              touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
+              touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_forklift_ram touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
               touch_tram touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest-touch-2.log
@@ -901,6 +982,17 @@ jobs:
           timeout 120s tools/godot/godot --headless --path godot \
             --script res://tests/fight_s1_test.gd 2>&1 | tee artifacts/fight-s1.log
           grep -q '^FIGHT_S1 PASS' artifacts/fight-s1.log
+
+      - name: Error reporter test
+        shell: bash
+        run: |
+          set -euo pipefail
+          # error_reporter_test.gd (J-031): the Sentry error reporter stays
+          # inert off the phone, and a forced-on instance builds a valid
+          # envelope within its bounds. The send is injected: no network.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/error_reporter_test.gd 2>&1 | tee artifacts/error-reporter.log
+          grep -q '^ERROR_REPORTER PASS' artifacts/error-reporter.log
 
       - name: Upload Godot audit and mix artifacts
         uses: actions/upload-artifact@v4
@@ -1299,3 +1391,32 @@ jobs:
           path: playtest/
           if-no-files-found: error
           retention-days: 30
+
+  # Wakes the switchboard when this proof finishes (integrator, 11-05). Its workflow_run trigger has not
+  # fired since the default branch became ScraperX-Claude, not even after the workflow was turned off and
+  # on again, and GitHub runs its 15-minute schedule only every few hours. So the proof dispatches the sweep
+  # itself, the same sweep the workflow_run trigger ran. A workflow_dispatch is one of the events this
+  # run's own token may start. The switchboard and sweep.py read a run whose only unfinished job is this
+  # one as finished, and never count this job (switch.py NOT_COUNTED). A failed dispatch only warns.
+  wake-switchboard:
+    needs: [scope, host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk, publish-checkpoint]
+    if: ${{ !cancelled() && github.event_name == 'push' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the switchboard sweep
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            if gh workflow run switchboard.yml --repo "$REPO" --ref ScraperX-Claude -f dry_run=false; then
+              exit 0
+            fi
+            sleep $((attempt * 10))
+          done
+          echo "::warning::switchboard dispatch failed 3 times; the integrator's check-in sweeps instead"
