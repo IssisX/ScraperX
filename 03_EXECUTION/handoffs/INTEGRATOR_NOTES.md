@@ -102,6 +102,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 11:05 AM: MERGED #235 (72d7d484, protected, Codex clean + my LAND) and #233 (c9fcec2b). Opened #239 (J-041 stacked,
+  claude/integrate-j041-forklift @786a019b: trunk merged in, slice renamed forklift-matron for the group-content guard).
+  It has the wake job, so the switchboard should merge it itself on green + Codex: a test of #238. Helper told to fix #239
+  if red; otherwise its job is done (retire it after #239 lands).
 - 10:55 AM: #238 MERGED (c5e2b79b). Its own proof's wake-switchboard job started switchboard run 42068620363
   (workflow_dispatch, actor github-actions[bot]). The switchboard now wakes after every push proof whose branch has trunk's
   workflow, i.e. any branch that merged trunk after c5e2b79b. Older heads (#233 @685d428b, #235 @5baad0f6) still need
