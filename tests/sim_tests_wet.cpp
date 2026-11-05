@@ -213,8 +213,8 @@ void run_wet_e_guard(const bool expect) {
                                     scraperx::sim::Summit::kEndingFrameEntity,
                                     scraperx::sim::Summit::kLastBeamEntity};
     // Re-pinned for world-b (J-014, #207): 137 new east/west pieces on the
-    // stack rings, their entities reserved after the pre-world-b dress and
-    // their bodies built last, after the summit. The bay, twin and summit
+    // stack rings, their table places taken after the Matron's throwables
+    // and their bodies built last, after the summit. The bay, twin and summit
     // bodies still follow the original 595 in order; only the total grows
     // by 137, so the sequence check covers exactly those twelve bodies.
     constexpr std::uint32_t kNewEastWest = 137;
@@ -276,12 +276,16 @@ void run_wet_e_guard(const bool expect) {
     if (!expect) {
         return;
     }
-    // As recorded on the tree before E's rebuild (its parent, 4118862),
-    // re-pinned for world-b: the first 595 bodies are the same bodies in
-    // the same order, but the crane steel, machine weights and throwables
-    // carry entities 137 higher (the reserved east/west places sit before
-    // them in the table), so the hash over their entities changes.
-    require(bodies.hash == 4824050261233220131ULL,
+    // As recorded on the tree before E's rebuild (its parent, 4118862).
+    // Re-pinned for world-b (J-014, #207): the first 595 bodies are the
+    // same bodies in the same order, but the crane steel, machine weights
+    // and throwables carried entities 137 higher (the reserved east/west
+    // places sat before them in the table), so the hash over their
+    // entities changed. Re-pinned again for world-b's save fix (J-014,
+    // #216): the east/west places take the end of the table, after the
+    // throwables, so those entities are their trunk ones again. Before
+    // 4824050261233220131, now 3514033760028014323.
+    require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
     require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin and four summit bodies");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
@@ -299,7 +303,12 @@ void run_wet_e_guard(const bool expect) {
     // stack rings, after the pre-world-b dress in the table, so the count
     // is 325 + 137 and the hash over all pieces changes; every pre-world-b
     // piece stands where it was.
-    require(world.loose_stock_count() == 462 && stock.hash == 9809091706962277184ULL,
+    // Re-pinned again for world-b's save fix (J-014, #216): the east/west
+    // pieces take the end of the table, after the throwables, so the hash
+    // over all pieces changes again; every piece stands where it was.
+    // Before 9809091706962277184, now 664305694603610712; the count (462)
+    // is as before.
+    require(world.loose_stock_count() == 462 && stock.hash == 664305694603610712ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");
