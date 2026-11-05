@@ -563,6 +563,7 @@ LooseStock::LooseStock(PhysicsSystem &physics, kit::Kit &kit) : physics_(physics
 }
 
 void LooseStock::lay_crane_steel() {
+    crane_steel_begin_ = count();
     // North of the laydown, 13 m out from the mast; the beams west of it,
     // lying along z clear of the containers.
     add_piece({K::PlateSlab, 0, -64.0F, 0.0F, -124.0F, 0.0F});
@@ -572,16 +573,27 @@ void LooseStock::lay_crane_steel() {
 }
 
 void LooseStock::lay_machine_weights() {
+    machine_weights_begin_ = count();
     // On deck 8's gangway to S3's cage, beside the way in, along it.
     add_piece({K::Pig, 0, -8.9F, 88.0F, -161.8F, 0.5F * JPH_PI});
 }
 
 void LooseStock::lay_matron_throwables() {
+    matron_throwables_begin_ = count();
     // By the north band's outer rail, east and west of the way out and of
     // where a climber arrives up the high riser.
     add_piece({K::Toolbox, 0, -6.5F, kDeck154, -125.0F, 0.2F});
     add_piece({K::Toolbox, 0, -4.4F, kDeck154, -125.1F, -0.3F});
     add_piece({K::Drum, 1, -15.0F, kDeck154, -125.2F, 0.0F});
+}
+
+void LooseStock::append_reserved() {
+    east_west_begin_ = count();
+    for (const Placement &p : pending_east_west_) {
+        pieces_.push_back(kit::BodyIndex{});
+        placed_.push_back(p);
+    }
+    pending_east_west_.clear();
 }
 
 Vec3 LooseStock::carry_handle(const Kind kind) noexcept {
@@ -771,10 +783,11 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     // pass's spots for the spacing check, so a corner conflict resolves
     // in favour of the pre-existing spot and no pre-existing piece moves
     // or renumbers.
-    // The new spots follow the old ones in the table, before the crane
-    // steel, so the stock test's dress range stays contiguous; but their
-    // bodies are only reserved here and built last (realize_reserved),
-    // so no pre-existing body moves in the kit's build order.
+    // The new spots are recorded here and take their table places last
+    // (append_reserved, after the Matron's throwables), so no
+    // pre-existing piece moves or renumbers; their bodies are built last
+    // (realize_reserved), so no pre-existing body moves in the kit's
+    // build order.
     const auto dress_pass = [&](const bool legacy, const std::vector<std::vector<RVec3>> &seed,
                                 std::vector<Placement> *collected) {
         std::vector<std::vector<RVec3>> accepted;
@@ -957,10 +970,11 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     const std::vector<std::vector<RVec3>> parent_spots = dress_pass(true, {}, nullptr);
     std::vector<Placement> east_west;
     (void)dress_pass(false, parent_spots, &east_west);
-    for (const Placement &p : east_west) {
-        pieces_.push_back(kit::BodyIndex{});
-        placed_.push_back(p);
-    }
+    // Only recorded here: their table places are taken by
+    // append_reserved() after the Matron's throwables, so nothing already
+    // laid is renumbered (see the header). Their bodies are built last by
+    // realize_reserved, as before.
+    pending_east_west_ = east_west;
 }
 
 } // namespace scraperx::sim

@@ -66,10 +66,17 @@ void run_loose_stock() {
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
     const int pieces = static_cast<int>(s.loose_stock_count());
     const int tabled = static_cast<int>(LooseStock::placements().size());
+    // The tower's spots are two ranges (loose_stock.hpp): the pre-world-b
+    // dress, which ends where the yard crane's steel begins, and the
+    // east/west stock, which takes the end of the table after the Matron's
+    // throwables. The crane steel, the machines' weights and the
+    // throwables sit between them and are not tower spots; as one run the
+    // tower range would end at dress_end plus the east/west count.
+    const int dress_end = static_cast<int>(s.loose_stock_crane_steel_begin());
+    const int east_west_begin = static_cast<int>(s.loose_stock_east_west_begin());
     // The tower's spots end where the yard crane's steel begins (and the
     // machines' weights after it, and the Matron's throwables after them).
-    const int towered =
-        pieces - LooseStock::kCraneSteelPieces - LooseStock::kMachineWeights - LooseStock::kMatronThrowables;
+    const int towered = dress_end + (pieces - east_west_begin);
     std::cout << "  stock: " << tabled << " pieces in the table, " << towered - tabled << " in the tower's spots\n";
     require(towered > tabled + 60, "stock: the tower's rings are dressed");
     // The owner's rules for what is up there (2026-10-17): every heavy piece
@@ -80,7 +87,10 @@ void run_loose_stock() {
         const std::array<double, 3> crane_decks{11.0, 22.0, 44.0};
         std::array<int, 3> crane_pieces{};
         int heavy = 0;
-        for (int i = tabled; i < towered; ++i) {
+        for (int i = tabled; i < pieces; ++i) {
+            if (i >= dress_end && i < east_west_begin) {
+                continue;
+            }
             const auto kind = static_cast<LooseStock::Kind>(s.loose_stock_piece(static_cast<std::uint32_t>(i)).kind);
             if (!LooseStock::heavy(kind)) {
                 continue;
@@ -132,7 +142,10 @@ void run_loose_stock() {
         }
         std::vector<int> per_ring(rings.size(), 0);
         int unassigned = 0;
-        for (int i = tabled; i < towered; ++i) {
+        for (int i = tabled; i < pieces; ++i) {
+            if (i >= dress_end && i < east_west_begin) {
+                continue;
+            }
             const double y = placed[static_cast<std::size_t>(i)].y;
             bool hit = false;
             for (std::size_t r = 0; r < rings.size(); ++r) {
@@ -191,7 +204,10 @@ void run_loose_stock() {
         for (int k = 0; k <= 10; ++k) rings.push_back(176.25 + 22.0 * static_cast<double>(k));
         std::vector<std::array<int, 4>> per_side(rings.size(), {0, 0, 0, 0});
         int unassigned = 0;
-        for (int i = tabled; i < towered; ++i) {
+        for (int i = tabled; i < pieces; ++i) {
+            if (i >= dress_end && i < east_west_begin) {
+                continue;
+            }
             const auto p = piece_at(s, i);
             int ring = -1;
             for (std::size_t r = 0; r < rings.size(); ++r) {
@@ -322,8 +338,10 @@ void run_look_target() {
     const double eye_x = me.x;
     const double eye_y = me.y + 0.62;
     const double eye_z = me.z;
-    // The Matron's throwables are the last pieces laid, the drum the last.
-    const std::uint64_t drum = LooseStock::kFirstEntity + static_cast<std::uint64_t>(s.loose_stock_count()) - 1;
+    // The Matron's throwables are laid before the east/west stock, the
+    // drum the last of them.
+    const std::uint64_t drum =
+        LooseStock::kFirstEntity + static_cast<std::uint64_t>(s.loose_stock_throwables_begin()) + 2;
     const auto at = s.kit_body_position(s.kit_body_index(drum));
     Simulation::LookHit hit;
     require(s.look_target(eye_x, eye_y, eye_z, at.x - eye_x, at.y - eye_y, at.z - eye_z, 30.0, hit),
