@@ -750,16 +750,23 @@ void run_yard_crane_magnet() {
     const auto last = s.kit_body_count();
     // The 137 east/west stock bodies are built after the summit (world-b;
     // run_wet_e_guard pins the same count as kNewEastWest), then the deck-154
-    // forklift's frame and forks (J-041), the kit's last two; so the
-    // tower/summit tail sits 137 + 2 bodies before the end of the kit, and
-    // the 137 after it are stock entities.
+    // forklift's frame and forks (J-041), then J-042's two kinds by her
+    // band (an extinguisher and a pallet), the kit's last; so the
+    // tower/summit tail sits 137 + 2 + 2 bodies before the end of the kit,
+    // and the 137 after it are stock entities.
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
     constexpr std::uint32_t kForkliftBodies = 2;
-    require(last >= kForkliftBodies && s.kit_body_entity(last - 2) == kForklift[0] &&
-                s.kit_body_entity(last - 1) == kForklift[1],
-            "magnet: the deck-154 forklift's frame and forks are the kit's last two bodies");
-    const auto tail = last - kForkliftBodies - kNewEastWest;
+    constexpr auto kKindsBodies = static_cast<std::uint32_t>(LooseStock::kMatronKinds);
+    require(last >= kForkliftBodies + kKindsBodies && s.kit_body_entity(last - kKindsBodies - 2) == kForklift[0] &&
+                s.kit_body_entity(last - kKindsBodies - 1) == kForklift[1],
+            "magnet: the deck-154 forklift's frame and forks follow every earlier body");
+    bool kinds = true;
+    for (std::uint32_t i = last - kKindsBodies; i < last; ++i) {
+        kinds = kinds && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
+    }
+    require(kinds, "magnet: J-042's two kinds by her band, stock, are the kit's last bodies");
+    const auto tail = last - kKindsBodies - kForkliftBodies - kNewEastWest;
     bool east_west = true;
     for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {
         east_west = east_west && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));

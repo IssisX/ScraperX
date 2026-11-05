@@ -78,8 +78,10 @@ public:
         BottleCage = 21,      // a crane's lifting cage of nine gas bottles on runners, 690 kg
         // A machine's weight (lay_machine_weights):
         Pig = 22,             // a pig of iron with a lifting lug, 50 kg: carried
+        // J-042 (Cory, 11-05: everything loose she can lift is hers to throw):
+        Extinguisher = 23,    // a fire extinguisher stood on end, 9 kg: carried
     };
-    static constexpr int kKinds = 23;
+    static constexpr int kKinds = 24;
     // Heavier than the hands carry (the carry's grip holds about 70 kg): a
     // forklift's or a crane's to move, set where one of them could have put it.
     [[nodiscard]] static bool heavy(Kind kind) noexcept;
@@ -144,6 +146,13 @@ public:
     // matron_throwables_begin().
     void lay_matron_throwables();
     static constexpr int kMatronThrowables = 3;
+    // J-042: two more kinds by her deck's north band, west of the toolboxes,
+    // so what she takes and throws is no one kind: a 9 kg extinguisher and
+    // a 22 kg pallet. Laid last of all (after the deck's forklift), so
+    // every earlier piece and body keeps its place. The kMatronKinds pieces
+    // starting at matron_kinds_begin().
+    void lay_matron_kinds();
+    static constexpr int kMatronKinds = 2;
     // Where a hand takes a carried piece of this kind, in its own frame.
     [[nodiscard]] static JPH::Vec3 carry_handle(Kind kind) noexcept;
 
@@ -162,6 +171,7 @@ public:
     [[nodiscard]] int machine_weights_begin() const noexcept { return machine_weights_begin_; }
     [[nodiscard]] int matron_throwables_begin() const noexcept { return matron_throwables_begin_; }
     [[nodiscard]] int east_west_begin() const noexcept { return east_west_begin_; }
+    [[nodiscard]] int matron_kinds_begin() const noexcept { return matron_kinds_begin_; }
 
     // The pieces as placed, in order (also the order of their entities).
     [[nodiscard]] static const std::vector<Placement> &placements();
@@ -185,6 +195,7 @@ private:
     int machine_weights_begin_ = 0;
     int matron_throwables_begin_ = 0;
     int east_west_begin_ = 0;
+    int matron_kinds_begin_ = 0;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);
     // Builds one piece's body for an entity already chosen, as placed.

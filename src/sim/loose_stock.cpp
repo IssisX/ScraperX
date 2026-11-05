@@ -226,6 +226,18 @@ Spec make_spec(const K kind) {
         s.carried = true;
         s.handle = Vec3(0.0F, 0.17F, 0.0F);
         break;
+    case K::Extinguisher:
+        // A dry-powder fire extinguisher on end: its red steel bottle, the
+        // valve head on its neck, the carrying handle over it. Lifted by
+        // the handle.
+        s.parts = {cylinder(0.085F, 0.25F, Vec3::sZero(), Quat::sIdentity(), Material::Hazard, 8.3F),
+                   cylinder(0.03F, 0.04F, Vec3(0.0F, 0.29F, 0.0F), Quat::sIdentity(), Material::Steel, 0.5F),
+                   box(Vec3(0.07F, 0.008F, 0.015F), Vec3(0.02F, 0.345F, 0.0F), Material::Steel, 0.2F)};
+        s.half_height = 0.25F;
+        s.friction = 0.5F;
+        s.carried = true;
+        s.handle = Vec3(0.0F, 0.345F, 0.0F);
+        break;
     case K::Pig:
         // A pig of cast iron: a bar 0.56 m long, its lifting lug cast on its
         // top; carried by the lug.
@@ -521,6 +533,7 @@ ImpactSound LooseStock::sound(const Kind kind) noexcept {
     case K::GasBottle:
     case K::Toolbox:
     case K::BottleCage:
+    case K::Extinguisher:
         return ImpactSound::Hollow;
     case K::Container:
         return ImpactSound::Container;
@@ -596,6 +609,15 @@ void LooseStock::lay_matron_throwables() {
     add_piece({K::Toolbox, 0, -6.5F, kDeck154, -125.0F, 0.2F});
     add_piece({K::Toolbox, 0, -4.4F, kDeck154, -125.1F, -0.3F});
     add_piece({K::Drum, 1, -15.0F, kDeck154, -125.2F, 0.0F});
+}
+
+void LooseStock::lay_matron_kinds() {
+    matron_kinds_begin_ = count();
+    // By the north band's outer rail, west of the toolboxes and east of the
+    // drum: the extinguisher on end, the pallet flat, its long side along
+    // the rail.
+    add_piece({K::Extinguisher, 0, -8.2F, kDeck154, -125.1F, 0.0F});
+    add_piece({K::Pallet, 0, -10.2F, kDeck154, -125.45F, 0.0F});
 }
 
 void LooseStock::append_reserved() {

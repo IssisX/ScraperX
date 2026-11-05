@@ -580,6 +580,8 @@ func _stock_name(entity: int) -> String:
 			return "PALLET"
 		22:
 			return "IRON PIG"
+		23:
+			return "EXTINGUISHER"
 	return ""
 
 func _is_kit(entity: int) -> bool:

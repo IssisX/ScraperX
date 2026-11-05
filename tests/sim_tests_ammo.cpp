@@ -10,6 +10,7 @@
 
 #include "sim_tests.hpp"
 
+#include "sim/bay.hpp"
 #include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/matron.hpp"
@@ -94,6 +95,8 @@ struct Ledger {
     std::uint32_t box_hits = 0;
     std::uint32_t box_hits_silent = 0;   // while her claim on her throw stood
     double loudest = 0.0;
+    double last_mass_kg = 0.0;   // the last contact's, as heard
+    int last_sound = -1;
 
     void start(Simulation &s, const char *case_name, const std::uint64_t entity) {
         name = case_name;
@@ -131,12 +134,15 @@ struct Ledger {
             }
             const double loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
             ++box_hits;
+            last_mass_kg = hit.mass_kg;
+            last_sound = static_cast<int>(hit.sound);
             if (m.stock_thrown == box) {
                 ++box_hits_silent;
             }
             loudest = std::max(loudest, loud);
             std::cout << "    " << name << " contact t=" << ticks / kHz << " at (" << hit.at.x << ", " << hit.at.y << ", "
-                      << hit.at.z << ") dv " << hit.speed_mps << " m/s, " << hit.energy_j << " J, loudness " << loud
+                      << hit.at.z << ") dv " << hit.speed_mps << " m/s, " << hit.energy_j << " J of its "
+                      << hit.mass_kg << " kg, sound " << static_cast<int>(hit.sound) << ", loudness " << loud
                       << (m.stock_thrown == box ? " (her own throw: no sound to her)" : " (a sound to her)") << "\n";
         }
         if (p.hit_count != hits) {
@@ -168,22 +174,46 @@ struct Ledger {
     }
 };
 
-// The prelude (as her mischief, sim_tests_matron.cpp): the first toolbox
-// by the north rail picked up, carried east across the bay and set down on
-// the band (his, to her); a sprint toward her locker wakes her, and he goes
-// back west to wait on the band. Returns the toolbox's entity.
-std::uint64_t handled_toolbox(Simulation &s, const char *name) {
+// The prelude (as her mischief, sim_tests_matron.cpp): a piece by the
+// north rail picked up (the first toolbox, or any other: walked to, then
+// stepped in to at a gentle stick, looking down at it, until it is offered),
+// carried east across the bay and set down on the band (his, to her); a
+// sprint toward her locker wakes her, and he goes back west to wait on the
+// band. Returns the piece's entity.
+std::uint64_t handled_piece(Simulation &s, const char *name, const std::uint64_t piece, const double ax,
+                            const double az) {
     s.place_matron_home(154.0F);
     s.debug_fix_matron_pace(3);   // her old one speed, as her mischief's own run
     require(s.advance_frame(1.0).accepted, "ammo: settle");
-    require(walk_to(s, -6.5, -125.95, 6.0, 0.08), "ammo: to the toolbox");
+    require(walk_to(s, ax, az, 6.0, 0.08), "ammo: to the piece");
     (void)s.set_facing(0.0, 1.0);
     (void)s.advance_frame(0.4);
-    const std::uint64_t box = s.snapshot().carry_target_entity_id;
-    require(box == LooseStock::kFirstEntity + s.loose_stock_throwables_begin(), "ammo: the toolbox is in the hands' reach");
+    const std::uint32_t body = s.kit_body_index(piece);
+    bool stepped = false;
+    for (int i = 0; i < static_cast<int>(3.0 * kHz) && s.snapshot().carry_target_entity_id != piece; ++i) {
+        const auto b = s.kit_body_position(body);
+        const auto p = s.snapshot().player_position;
+        const double d = std::max(flat(b, p), 1.0e-3);
+        (void)s.set_facing((b.x - p.x) / d, (b.z - p.z) / d);
+        (void)s.set_look_pitch(-0.5);
+        (void)s.set_move_input(d > 0.7 ? 0.3 * (b.x - p.x) / d : 0.0, d > 0.7 ? 0.3 * (b.z - p.z) / d : 0.0);
+        tick(s);
+        stepped = true;
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    if (s.snapshot().carry_target_entity_id != piece) {
+        const auto b = s.kit_body_position(body);
+        const auto p = s.snapshot().player_position;
+        std::cout << "  " << name << ": offered " << s.snapshot().carry_target_entity_id << ", not " << piece << "; it at ("
+                  << b.x << ", " << b.y << ", " << b.z << "), him at (" << p.x << ", " << p.y << ", " << p.z << ")\n";
+    }
+    require(s.snapshot().carry_target_entity_id == piece, "ammo: the piece is in the hands' reach");
     (void)s.request_pick_up();
     (void)s.advance_frame(0.4);
-    require(s.snapshot().carrying_entity_id == box, "ammo: picked up");
+    if (stepped) {
+        (void)s.set_look_pitch(0.0);
+    }
+    require(s.snapshot().carrying_entity_id == piece, "ammo: picked up");
     require(go(s, -4.6, Matron::kBandNorthZ, false, 12.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 12.0, 0.2) &&
                 go(s, 2.0, -126.6, false, 12.0, 0.2),
             "ammo: carried east along the band, across the bay on its leaf");
@@ -197,8 +227,12 @@ std::uint64_t handled_toolbox(Simulation &s, const char *name) {
     require(go(s, -6.0, Matron::kBandNorthZ, false, 30.0, 0.3), "ammo: back west, crouched");
     (void)s.set_crouch_input(false);
     stand_still(s, 0.2);
-    std::cout << "  " << name << ": the toolbox (entity " << box << ") set down, she is out\n";
-    return box;
+    std::cout << "  " << name << ": the piece (entity " << piece << ") set down, she is out\n";
+    return piece;
+}
+
+std::uint64_t handled_toolbox(Simulation &s, const char *name) {
+    return handled_piece(s, name, LooseStock::kFirstEntity + s.loose_stock_throwables_begin(), -6.5, -125.95);
 }
 
 // Her throw at him, read and met, until it has left her hands and come to
@@ -754,10 +788,157 @@ void run_ammo_distract() {
               << "\n";
 }
 
+// Every piece she can lift the same way (Cory, 11-05, #240): three kinds of
+// three masses and shapes -- a 9 kg extinguisher on end, the 18 kg toolbox, a
+// 22 kg pallet flat -- each handled by him, taken by her and thrown at him
+// standing, by the one code path. Each flies, strikes him, and is heard
+// landing as its own mass and its kind's sound.
+namespace {
+
+struct KindRun {
+    const char *kind = "";
+    double mass_kg = 0.0;
+    Throw her;
+    double loudest = 0.0;
+    double heard_mass_kg = 0.0;
+    int sound = -1;
+    std::uint32_t contacts = 0;
+};
+
+std::uint64_t piece_of_kind(Simulation &s, const LooseStock::Kind kind, const int nth) {
+    int seen = 0;
+    for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+        if (s.loose_stock_piece(i).kind == static_cast<std::uint8_t>(kind) && seen++ == nth) {
+            return LooseStock::kFirstEntity + i;
+        }
+    }
+    return 0;
+}
+
+KindRun kind_throw(const char *name, const LooseStock::Kind kind, const double mass_kg) {
+    Simulation s(InitialSpawn::Deck154);
+    std::uint64_t piece = 0;
+    double ax = 0.0;
+    double az = 0.0;
+    if (kind == LooseStock::Kind::Toolbox) {
+        piece = LooseStock::kFirstEntity + s.loose_stock_throwables_begin();
+        ax = -6.5;
+        az = -125.95;
+    } else {
+        // J-042's two by the rail (loose_stock.hpp): the extinguisher, then
+        // the pallet laid after it.
+        const std::uint64_t ext = piece_of_kind(s, LooseStock::Kind::Extinguisher, 0);
+        piece = kind == LooseStock::Kind::Extinguisher ? ext : ext + 1;
+        require(s.loose_stock_piece(static_cast<std::uint32_t>(piece - LooseStock::kFirstEntity)).kind ==
+                    static_cast<std::uint8_t>(kind),
+                "ammo kinds: the piece by the rail is of its kind");
+        const auto at = s.kit_body_position(s.kit_body_index(piece));
+        ax = at.x;
+        az = at.z - (kind == LooseStock::Kind::Pallet ? 1.1 : 0.85);
+    }
+    (void)handled_piece(s, name, piece, ax, az);
+    Ledger log;
+    log.start(s, name, piece);
+    KindRun r;
+    r.kind = name;
+    r.mass_kg = mass_kg;
+    const std::uint32_t takes = s.matron_state().takes;
+    r.her = her_throw(s, log, false);
+    const Throw &t = r.her;
+    r.loudest = log.loudest;
+    r.heard_mass_kg = log.last_mass_kg;
+    r.sound = log.last_sound;
+    r.contacts = log.box_hits;
+    const auto p = s.snapshot();
+    std::cout << "  " << name << ": " << mass_kg << " kg, windup seen " << t.windup_seen_s << " s, released "
+              << t.released_s << " s at " << t.release_gap_m << " m, top speed " << t.top_speed << " m/s, nearest "
+              << t.nearest_m << " m, hit " << t.hit << " at " << t.hit_mps << " m/s; contacts " << r.contacts
+              << ", heard as " << r.heard_mass_kg << " kg, sound " << r.sound << ", loudest " << r.loudest
+              << "; arm broken " << p.arm_broken << ", deaths " << p.death_count << "\n";
+    require(s.matron_state().takes > takes && t.thrown && t.windup_seen_s > 0.0 && t.windup_seen_s < t.released_s,
+            "ammo kinds: she takes it, rears back (seen), and throws it");
+    require(t.top_speed > 4.0, "ammo kinds: it flies");
+    require(t.hit, "ammo kinds: stood still, it strikes him");
+    require(r.contacts > 0 && r.loudest > 0.0 && std::abs(r.heard_mass_kg - mass_kg) < 0.05 &&
+                r.sound == static_cast<int>(LooseStock::sound(kind)),
+            "ammo kinds: its landing heard, as its own mass and its kind's sound");
+    require(p.death_count == 0, "ammo kinds: a pest's throw is no death");
+    return r;
+}
+
+}   // namespace
+
+void run_ammo_kinds() {
+    const KindRun runs[] = {kind_throw("ammo kinds extinguisher", LooseStock::Kind::Extinguisher, 9.0),
+                            kind_throw("ammo kinds toolbox", LooseStock::Kind::Toolbox, 18.0),
+                            kind_throw("ammo kinds pallet", LooseStock::Kind::Pallet, 22.0)};
+    std::cout << "PASS scraperx_sim ammo kinds:";
+    for (const KindRun &r : runs) {
+        std::cout << " " << r.mass_kg << "kg(top " << r.her.top_speed << " m/s, hit " << r.her.hit_mps
+                  << " m/s, loudest " << r.loudest << ")";
+    }
+    std::cout << "\n";
+}
+
+// Over her limit: the 55 kg drum his (moved by the bay's rungs, as her
+// wreck's run stands it: sim_tests_matron.cpp), she shoves it, by the same
+// path that would take a lighter one, and never takes or throws it.
+void run_ammo_heavy() {
+    using scraperx::sim::Bay;
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);
+    require(s.advance_frame(1.0).accepted, "ammo heavy: settle");
+    const std::uint64_t drum = LooseStock::kFirstEntity + s.loose_stock_throwables_begin() + 2;
+    const std::uint32_t drum_body = s.kit_body_index(drum);
+    s.debug_launch_kit_body(drum_body, {-4.85, 154.0 + 0.444 + 0.01, static_cast<double>(Bay::kRungsZ) - 0.025},
+                            {0.0, 0.0, 0.0});
+    (void)s.advance_frame(1.0);
+    require(go(s, -6.5, Matron::kBandNorthZ, false, 6.0, 0.2) && go(s, 0.4, Matron::kBandNorthZ, false, 12.0, 0.2),
+            "ammo heavy: east across the bay on its leaf");
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 6.0, 1.0) && s.matron_state().state == kStateStraining,
+            "ammo heavy: a sprint toward her locker wakes her");
+    (void)s.set_crouch_input(true);
+    require(go(s, 0.4, Matron::kBandNorthZ, false, 20.0, 0.2) && go(s, -6.5, Matron::kBandNorthZ, false, 12.0, 0.2) &&
+                go(s, -12.0, -126.6, false, 20.0, 0.3),
+            "ammo heavy: back west across the leaf, crouched");
+    (void)s.set_crouch_input(false);
+    (void)s.set_move_input(0.0, 0.0);
+    Ledger log;
+    log.start(s, "ammo heavy", drum);
+    const auto m0 = s.matron_state();
+    bool held = false;
+    double shove_s = -1.0;
+    for (int i = 0; i < static_cast<int>(90.0 * kHz); ++i) {
+        tick(s);
+        log.step(s, false);
+        const auto m = s.matron_state();
+        held = held || m.carrying == drum;
+        if (shove_s < 0.0 && m.stock_shoves > m0.stock_shoves) {
+            shove_s = log.ticks / kHz;
+        }
+        if (shove_s > 0.0 && log.ticks / kHz > shove_s + 3.0) {
+            break;
+        }
+    }
+    const auto m = s.matron_state();
+    const auto at = s.kit_body_position(drum_body);
+    std::cout << "  ammo heavy: 55 kg drum shoved at t=" << shove_s << " (shoves " << m.stock_shoves - m0.stock_shoves
+              << "), now at (" << at.x << ", " << at.y << ", " << at.z << "); takes " << m.takes - m0.takes
+              << ", throws " << m.throws - m0.throws << ", ever in her hands " << held << "; contacts " << log.box_hits
+              << ", loudest " << log.loudest << "\n";
+    require(shove_s > 0.0, "ammo heavy: over her limit, his drum she shoves");
+    require(!held && m.takes == m0.takes && m.throws == m0.throws, "ammo heavy: and never takes or throws it");
+    require(s.snapshot().death_count == 0, "ammo heavy: nobody dead");
+    std::cout << "PASS scraperx_sim ammo heavy: shove_s=" << shove_s << " throws=" << m.throws - m0.throws << "\n";
+}
+
 void run_ammo() {
     run_ammo_stand();
     run_ammo_hands();
     run_ammo_dodge();
     run_ammo_race();
     run_ammo_distract();
+    run_ammo_kinds();
+    run_ammo_heavy();
 }
