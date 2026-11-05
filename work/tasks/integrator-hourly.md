@@ -43,5 +43,7 @@ Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can m
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (a stacked PR merges into its parent's branch,
 not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe only
-to PRs you merge yourself. A helper that edits code runs in a worktree and never subscribes to a PR. The
+to PRs you merge yourself. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
+from one the switchboard merges (11-05: #250-#253 woke the integrator 14 times in 3 minutes, mostly Codex's
+running/finished edits). A helper that edits code runs in a worktree and never subscribes to a PR. The
 Claude API does reviews and the eye only (the API coder is off); one review per PR.
