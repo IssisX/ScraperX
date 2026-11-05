@@ -944,18 +944,25 @@ func _strike_target(side: float, strike: Dictionary, camera: Transform3D) -> Arr
 	var back := cam.z
 	var phase := int(strike.get("phase", 0))
 	var ticks := float(strike.get("phase_ticks", 0))
+	# The jab is quicker with a shorter draw, the cross reaches farther:
+	# the native's per-move ticks and the spec's cocked and reach (8.2, 9.4).
+	var move := int(strike.get("move", 0))
+	var windup_ticks := 7.0 if move == 3 else (10.0 if move == 4 else STRIKE_WINDUP_TICKS)
+	var recoil_ticks := 10.0 if move == 3 else STRIKE_RECOIL_TICKS
+	var cocked_side := 0.20 if move == 3 else 0.24
+	var reach_m := 0.70 if move == 4 else STRIKE_REACH_M
 	var guard := camera.origin + right * (0.17 * side) + up * -0.19 - back * 0.28
-	var cocked := camera.origin + right * (0.24 * side) + up * -0.24 + back * 0.02
-	var out := camera.origin + right * (0.05 * side) + up * -0.08 - back * STRIKE_REACH_M
+	var cocked := camera.origin + right * (cocked_side * side) + up * -0.24 + back * 0.02
+	var out := camera.origin + right * (0.05 * side) + up * -0.08 - back * reach_m
 	if bool(strike.get("landed", false)):
 		var landed: Vector3 = strike.get("hit_point", out)
 		var normal: Vector3 = strike.get("hit_normal", Vector3.ZERO)
-		if landed.distance_to(camera.origin) < STRIKE_REACH_M + 0.25:
+		if landed.distance_to(camera.origin) < reach_m + 0.25:
 			out = landed + normal * 0.05
 	var knuckles_fwd := _hand_basis(-back, right * side)
 	match phase:
 		STRIKE_WINDUP:
-			var t := clampf(ticks / STRIKE_WINDUP_TICKS, 0.0, 1.0)
+			var t := clampf(ticks / windup_ticks, 0.0, 1.0)
 			var s := t * t * (3.0 - 2.0 * t)
 			return [guard.lerp(cocked, s), _hand_basis(-back * 0.6 - right * side * 0.4, up), false, 40.0, 1.0, 1.0]
 		STRIKE_REACH:
@@ -963,7 +970,7 @@ func _strike_target(side: float, strike: Dictionary, camera: Transform3D) -> Arr
 			var e := 1.0 - pow(1.0 - t, 3.0)
 			return [cocked.lerp(out, e), knuckles_fwd, false, 90.0, 1.0, 1.0]
 		STRIKE_RECOIL:
-			var t := clampf(ticks / STRIKE_RECOIL_TICKS, 0.0, 1.0)
+			var t := clampf(ticks / recoil_ticks, 0.0, 1.0)
 			var kick := clampf(float(strike.get("impulse", 0.0)) / 50.0, 0.0, 1.5)
 			var spring := 1.0 - exp(-6.0 * t) * cos(9.0 * t) * (1.0 + 0.25 * kick)
 			return [out.lerp(guard, clampf(spring, 0.0, 1.1)), knuckles_fwd, false, 45.0, 0.95, 0.95]

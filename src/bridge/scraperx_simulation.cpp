@@ -467,7 +467,7 @@ godot::Dictionary ScraperXSimulation::get_strike_state() const {
     const sim::Snapshot &p = simulation_->snapshot();
     godot::Dictionary out;
     out["phase"] = static_cast<std::int64_t>(p.strike_phase);
-    out["move"] = static_cast<std::int64_t>(p.strike_move);   // 0 punch, 1 sweep
+    out["move"] = static_cast<std::int64_t>(p.strike_move);   // 0 punch, 1 sweep, 2 kick, 3 jab, 4 cross
     out["phase_ticks"] = static_cast<std::int64_t>(p.strike_phase_ticks);
     out["offered"] = p.strike_offered;
     out["held"] = p.held_by_matron;   // in her hand: the offer is his escape (before the rip)

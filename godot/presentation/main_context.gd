@@ -112,14 +112,16 @@ var _trapeze_was_hanging := false
 # `ready`): BREAK FREE greyed is a press that would do nothing. Action stays
 # the world's (PICK UP, CLIMB, HAUL and the rest).
 static func punch_button(strike: Dictionary, hold: Dictionary) -> Dictionary:
-	var ready := bool(strike.get("ready", false)) and int(strike.get("arm", 1)) >= 0
+	# Lit through a jab's recoil: that press queues the cross (spec 9.4).
+	var queue := int(strike.get("phase", 0)) == 3 and int(strike.get("move", 0)) == 3
+	var ready := (bool(strike.get("ready", false)) or queue) and int(strike.get("arm", 1)) >= 0
 	var hang := bool(strike.get("held", false)) and bool(hold.get("fatal_hang", false))
 	var break_free := bool(strike.get("held", false)) and (ready or hang)
 	var count := ""
 	if hang and hold.has("fatal_window_s") and hold.has("fatal_window_total_s"):
 		count = "%.1f S" % maxf(0.0, float(hold["fatal_window_total_s"]) - float(hold["fatal_window_s"]))
 	return {"ready": ready, "break_free": break_free,
-		"label": "BREAK FREE" if break_free else ("SWEEP" if int(strike.get("move", 0)) == 1 else ("KICK" if int(strike.get("move", 0)) == 2 else "PUNCH")),
+		"label": "BREAK FREE" if break_free else ("SWEEP" if int(strike.get("move", 0)) == 1 else ("KICK" if int(strike.get("move", 0)) == 2 else ("JAB" if int(strike.get("move", 0)) == 3 else ("CROSS" if int(strike.get("move", 0)) == 4 else "PUNCH")))),
 		"count": count, "lands": bool(strike.get("offered", false))}
 
 func _read_context() -> Dictionary:
