@@ -66,10 +66,17 @@ void run_loose_stock() {
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
     const int pieces = static_cast<int>(s.loose_stock_count());
     const int tabled = static_cast<int>(LooseStock::placements().size());
+    // The tower's spots are two ranges (loose_stock.hpp): the pre-world-b
+    // dress, which ends where the yard crane's steel begins, and the
+    // east/west stock, which takes the end of the table after the Matron's
+    // throwables. The crane steel, the machines' weights and the
+    // throwables sit between them and are not tower spots; as one run the
+    // tower range would end at dress_end plus the east/west count.
+    const int dress_end = static_cast<int>(s.loose_stock_crane_steel_begin());
+    const int east_west_begin = static_cast<int>(s.loose_stock_east_west_begin());
     // The tower's spots end where the yard crane's steel begins (and the
     // machines' weights after it, and the Matron's throwables after them).
-    const int towered =
-        pieces - LooseStock::kCraneSteelPieces - LooseStock::kMachineWeights - LooseStock::kMatronThrowables;
+    const int towered = dress_end + (pieces - east_west_begin);
     std::cout << "  stock: " << tabled << " pieces in the table, " << towered - tabled << " in the tower's spots\n";
     require(towered > tabled + 60, "stock: the tower's rings are dressed");
     // The owner's rules for what is up there (2026-10-17): every heavy piece
@@ -80,7 +87,10 @@ void run_loose_stock() {
         const std::array<double, 3> crane_decks{11.0, 22.0, 44.0};
         std::array<int, 3> crane_pieces{};
         int heavy = 0;
-        for (int i = tabled; i < towered; ++i) {
+        for (int i = tabled; i < pieces; ++i) {
+            if (i >= dress_end && i < east_west_begin) {
+                continue;
+            }
             const auto kind = static_cast<LooseStock::Kind>(s.loose_stock_piece(static_cast<std::uint32_t>(i)).kind);
             if (!LooseStock::heavy(kind)) {
                 continue;
@@ -132,7 +142,10 @@ void run_loose_stock() {
         }
         std::vector<int> per_ring(rings.size(), 0);
         int unassigned = 0;
-        for (int i = tabled; i < towered; ++i) {
+        for (int i = tabled; i < pieces; ++i) {
+            if (i >= dress_end && i < east_west_begin) {
+                continue;
+            }
             const double y = placed[static_cast<std::size_t>(i)].y;
             bool hit = false;
             for (std::size_t r = 0; r < rings.size(); ++r) {
@@ -176,6 +189,62 @@ void run_loose_stock() {
     // Settling is not a hit: nothing is heard from stock left alone.
     std::cout << "  stock: " << s.impacts().size() << " hits heard while settling\n";
     require(s.impacts().empty(), "stock: left alone, nothing is struck");
+    // Dress_tower side coverage after settling, where the pieces actually
+    // lie in play. Rings as in LooseStock::dress_tower (stack 11..143 m,
+    // upper 176.25..396.25 m); side by dominant axis from the ring centre
+    // (0, -150), matching dress_tower's four out directions. The gate is
+    // per band, not per ring: a ring holds at most 3 stack spots, so one
+    // ring cannot cover four sides, but each band must dress every side.
+    // Measured before the room-box fix: stack east/west were zero on all
+    // 13 rings. The per-ring count gate is a separate, pending package
+    // (fb-bot/expand-world-20261031, unlanded); this gate does not redo it.
+    {
+        std::vector<double> rings;
+        for (int level = 1; level <= 13; ++level) rings.push_back(11.0 * static_cast<double>(level));
+        for (int k = 0; k <= 10; ++k) rings.push_back(176.25 + 22.0 * static_cast<double>(k));
+        std::vector<std::array<int, 4>> per_side(rings.size(), {0, 0, 0, 0});
+        int unassigned = 0;
+        for (int i = tabled; i < pieces; ++i) {
+            if (i >= dress_end && i < east_west_begin) {
+                continue;
+            }
+            const auto p = piece_at(s, i);
+            int ring = -1;
+            for (std::size_t r = 0; r < rings.size(); ++r) {
+                if (p.y >= rings[r] - 0.1 && p.y < rings[r] + 3.0) { ring = static_cast<int>(r); break; }
+            }
+            if (ring < 0) { ++unassigned; continue; }
+            const double dx = p.x, dz = p.z + 150.0;
+            int side = 0;
+            if (std::abs(dx) >= std::abs(dz)) side = dx > 0 ? 1 : 3;
+            else side = dz > 0 ? 0 : 2;
+            ++per_side[static_cast<std::size_t>(ring)][static_cast<std::size_t>(side)];
+        }
+        std::cout << "  stock probe: settled tower pieces per ring sides N/E/S/W (unassigned " << unassigned
+                  << "):\n";
+        for (std::size_t r = 0; r < rings.size(); ++r) {
+            std::cout << "    " << rings[r] << ": " << per_side[r][0] << "/" << per_side[r][1] << "/"
+                      << per_side[r][2] << "/" << per_side[r][3] << "\n";
+        }
+        for (const char *band : {"stack", "upper"}) {
+            const bool is_stack = band[0] == 's';
+            const std::size_t lo = is_stack ? 0 : 13, hi = is_stack ? 13 : rings.size();
+            std::array<int, 4> tot{0, 0, 0, 0}, hit{0, 0, 0, 0};
+            for (std::size_t r = lo; r < hi; ++r)
+                for (int s = 0; s < 4; ++s) {
+                    tot[static_cast<std::size_t>(s)] += per_side[r][static_cast<std::size_t>(s)];
+                    if (per_side[r][static_cast<std::size_t>(s)] > 0) ++hit[static_cast<std::size_t>(s)];
+                }
+            std::cout << "  stock probe: " << band << " side totals N/E/S/W " << tot[0] << "/" << tot[1] << "/"
+                      << tot[2] << "/" << tot[3] << ", rings hit " << hit[0] << "/" << hit[1] << "/" << hit[2]
+                      << "/" << hit[3] << " of " << (hi - lo) << "\n";
+            for (int s = 0; s < 4; ++s) {
+                require(tot[static_cast<std::size_t>(s)] > 0,
+                        is_stack ? "stock: every side of the stack band is dressed"
+                                 : "stock: every side of the upper band is dressed");
+            }
+        }
+    }
     // How loud a hit is to the Matron, by its energy.
     require(ImpactLedger::loudness(ImpactLedger::kSilentJ) == 0.0F &&
                 ImpactLedger::loudness(ImpactLedger::kFullJ) == 1.0F &&
@@ -269,8 +338,10 @@ void run_look_target() {
     const double eye_x = me.x;
     const double eye_y = me.y + 0.62;
     const double eye_z = me.z;
-    // The Matron's throwables are the last pieces laid, the drum the last.
-    const std::uint64_t drum = LooseStock::kFirstEntity + static_cast<std::uint64_t>(s.loose_stock_count()) - 1;
+    // The Matron's throwables are laid before the east/west stock, the
+    // drum the last of them.
+    const std::uint64_t drum =
+        LooseStock::kFirstEntity + static_cast<std::uint64_t>(s.loose_stock_throwables_begin()) + 2;
     const auto at = s.kit_body_position(s.kit_body_index(drum));
     Simulation::LookHit hit;
     require(s.look_target(eye_x, eye_y, eye_z, at.x - eye_x, at.y - eye_y, at.z - eye_z, 30.0, hit),
