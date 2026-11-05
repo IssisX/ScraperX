@@ -750,24 +750,16 @@ void run_yard_crane_magnet() {
     const auto last = s.kit_body_count();
     // The 137 east/west stock bodies are built after the summit (world-b;
     // run_wet_e_guard pins the same count as kNewEastWest), then the deck-154
-    // forklift's frame and forks (J-041); after them only stock laid later
-    // (J-042: two kinds by her band), each new body appended at the end; so
-    // the tower/summit tail sits 137 bodies before the forklift, and the 137
-    // after it are stock entities.
+    // forklift's frame and forks (J-041), the kit's last two; so the
+    // tower/summit tail sits 137 + 2 bodies before the end of the kit, and
+    // the 137 after it are stock entities.
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
-    std::uint32_t fork = last;
-    for (std::uint32_t i = 0; i + 1 < last && fork == last; ++i) {
-        fork = s.kit_body_entity(i) == kForklift[0] ? i : last;
-    }
-    require(fork + 1 < last && s.kit_body_entity(fork + 1) == kForklift[1],
-            "magnet: the deck-154 forklift's frame and forks, side by side");
-    bool later_stock = true;
-    for (std::uint32_t i = fork + 2; i < last; ++i) {
-        later_stock = later_stock && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
-    }
-    require(later_stock, "magnet: after the deck-154 forklift, only stock laid later: the kit's last bodies");
-    const auto tail = fork - kNewEastWest;
+    constexpr std::uint32_t kForkliftBodies = 2;
+    require(last >= kForkliftBodies && s.kit_body_entity(last - 2) == kForklift[0] &&
+                s.kit_body_entity(last - 1) == kForklift[1],
+            "magnet: the deck-154 forklift's frame and forks are the kit's last two bodies");
+    const auto tail = last - kForkliftBodies - kNewEastWest;
     bool east_west = true;
     for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {
         east_west = east_west && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
