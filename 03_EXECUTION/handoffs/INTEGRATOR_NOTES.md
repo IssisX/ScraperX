@@ -102,6 +102,14 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 12:35 PM J-045 #248 (Cory, reported "a few times", never logged until now: a MISS). Force-close looking the full tower
+  height (bottom up, slingshot up, top down); a few-second freeze at the locker burst; slight walking choppiness. Owner: the
+  J-044m helper, next after #245. Includes Sentry native crash capture (Option A), since #222 sees GDScript errors only.
+  Lesson: every bug Cory reports gets a job the same hour.
+- 12:25 PM: Cory OK'd both picks (dead stays dead on a post-death checkpoint; a daze from head impulse replaces the timer).
+  Muse pushes, trunk merged in by me (all clean): #246 J-016 stage 3 (53e3536d, the walk shove guard reads whole speed);
+  #247 guard pin of 11 scripts (5f135706); #95 at d1fea79d, proof 42083200743 dispatched (workflow file: I merge by hand
+  after the stills). Asked Muse for J-001 #227 status (red, quiet 4 h).
 - 12:15 PM J-044 PLAN ruled (#242, comment 6665543520). Audit at 6665481435. Opened: J-044a #243 (ChatGPT spec), J-044b #244
   (Grok math), J-044m #245 (Claude helper, perf probes, claude/integrate-j044m-perf). Muse mailed: J-044c (upper body) right after
   J-001/#95/sense_near, then d, e, f, g, k, l; J-040 after J-044d. Claude lanes later: h (presentation), i (injury render),
