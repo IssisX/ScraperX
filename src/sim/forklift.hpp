@@ -61,6 +61,14 @@ public:
     static constexpr std::uint64_t kDeck11CarriageEntity = 2992;
     static constexpr std::uint64_t kDeck44ChassisEntity = 2993;
     static constexpr std::uint64_t kDeck44CarriageEntity = 2994;
+    // And one on her own deck, 154 (J-041: the player drives it into her):
+    // on the east band near its north end, nose toward the north band's
+    // open outer edge (z -124), a dozen metres from her locker.
+    static constexpr std::uint64_t kDeck154ChassisEntity = 2997;
+    static constexpr std::uint64_t kDeck154CarriageEntity = 2998;
+    static constexpr float kDeck154ParkX = 21.5F;
+    static constexpr float kDeck154ParkZ = -140.0F;
+    static constexpr float kDeck154ParkY = 154.0F;
     // Its lifting eye, on the overhead guard's roof over the centre of mass,
     // where a crane's sling hooks on: in the truck's frame.
     static constexpr float kEyeY = 2.42F;

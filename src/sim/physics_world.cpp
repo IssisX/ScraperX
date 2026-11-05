@@ -415,6 +415,14 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     track(yard_crane_->spreader_body(), ImpactSound::HeavySteel);
 
     summit_->build_ending();
+    // The forklift on her deck, 154 (J-041): its two kit bodies after every
+    // other's, so older saves' lists line up; its hits heard like the rest.
+    forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
+                                                    Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity,
+                                                    Forklift::kDeck154ParkX, Forklift::kDeck154ParkZ, 0.0F,
+                                                    Forklift::kDeck154ParkY));
+    track(forklifts_.back()->chassis_body(), ImpactSound::Machine);
+    track(forklifts_.back()->carriage_body(), ImpactSound::Machine);
 
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
