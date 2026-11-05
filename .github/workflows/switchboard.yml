@@ -14,6 +14,8 @@ on:
     # GitHub matches this by the workflow's name as registered from the DEFAULT branch's copy of
     # wo000-delivery-spine.yml (main names it "ScraperX-2 Checkpoint ..."), not trunk's name.
     # Both are listed so the trigger survives main's copy being renamed to match trunk.
+    # Since 11-05 the default branch is ScraperX-Claude, so these triggers and the schedules below are
+    # read from this file on trunk. GitHub registers them when this file changes on the default branch.
     workflows:
       - "ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine"
       - "ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"
