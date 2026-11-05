@@ -18,9 +18,12 @@ host-build runs when any group does (it builds what all three need and checks th
 What reaches what (first match wins; see groups_of):
   nothing          the switchboard, the board tools, the agents' notes and rules (NO_GAME); the design and
                    execution docs (01_*/, 02_*/, 03_EXECUTION/) and any .md outside godot/; tools/ other than
-                   tools/fab/ (tools/rule_check runs in the scope job on every push anyway); src/voice/ (the
-                   offline voice generators: what they make is committed under godot/); the root's
-                   MANIFEST.txt, SHA256SUMS.txt, .gitignore, .mcp.json
+                   tools/fab/ and tools/matron_probe/ (tools/rule_check runs in the scope job on every push
+                   anyway); src/voice/ (the offline voice generators: what they make is committed under
+                   godot/); the root's MANIFEST.txt, SHA256SUMS.txt, .gitignore, .mcp.json
+  godot            tools/matron_probe/ (the godot-touch drawn-body gate records with probe.gd and gates on
+                   check.py, and host-build's drawn-body guard reads check.py's EXPECTED keys; the probe
+                   files are host-side tools, not packaged in the APK, so android does not run)
   every group      .github/ and ci/ (the proof itself), CMakeLists.txt, third_party/, tools/fab/, src/ other
                    than below, godot/tests/fabricated/, and any path not named here
   native           tests/ (built only into the native test binaries)
@@ -50,6 +53,7 @@ EVERY = frozenset(GROUPS)
 NONE: frozenset[str] = frozenset()
 GODOT = frozenset({"godot", "android"})
 NATIVE = frozenset({"native"})
+PROBE = frozenset({"godot"})
 
 # Read by no build, test or audit of the proof (checked 11-04: no code under ci/, godot/, src/, tests/ or the
 # proof workflow reads them; the mentions there are comments). The switchboard's own code is tested by
@@ -101,6 +105,10 @@ def groups_of(path: str) -> frozenset[str]:
         return NONE
     if path.endswith(".md") and not path.startswith("godot/"):
         return NONE
+    # The drawn-body gate is a godot-touch step, not a local-only tool: a probe-only push
+    # that skipped godot would leave check.py unexercised while CI stayed green.
+    if path.startswith("tools/matron_probe/"):
+        return PROBE
     if path.startswith("tools/"):
         return EVERY if path.startswith("tools/fab/") else NONE
     if path in BRIDGE_GODOT_ONLY:
