@@ -102,8 +102,12 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
-- Guards: #224 scope-guard @20584bce, #225 audits-guard @502fc5a1, #226 scope-probe @3c131cee (Job: J-027,
-  workflow => I merge on green + Codex clean, one at a time, trunk merged into the rest). guard-steps not pushed yet.
+- Guards (Job: J-027): #226 scope-probe MERGED 8:35. #224 scope-guard: trunk merged in (b4be3749, all steps
+  kept, yaml + 3 guards PASS), proof re-running, then merge. #225 audits-guard next: merge trunk in after #224.
+  guard-steps not pushed yet. Merge lesson (8:30): the safety check refused a merge with only Codex's clean
+  review; post my own "Claude (integrator) review: LAND" comment (what I read, what I ran) before every merge.
+- #227 J-001 also red on athletic-traversal "snaps, wind-up then lunges" (from the J-001 hold base; green on
+  trunk). Mailed Muse 8:40.
 - Owed by Muse: #216 fix (entity ids, magnet tail [protected], crane shackle, touch_matron_act grip) pushed to
   fb-bot/integrate-protected-world-b; J-001 past-rail step (#227); J-016 stage 3; J-038 slice 1 rework.
 - Cory asks: tell him when the feature inventory reports. The Sentry plugin card did not render on his phone;
