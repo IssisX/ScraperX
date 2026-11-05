@@ -102,6 +102,34 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 10:30 AM SWITCHBOARD, REAL FIX: the toggle did NOT revive workflow_run (2 proofs finished at 16:14 and 16:21, no run).
+  The schedule was never a real wake: GitHub has run the 15-min cron only every 4-7 h for days. #238
+  (claude/integrate-j031-wake-switchboard) adds the proof's last job `wake-switchboard`, which dispatches switchboard.yml
+  (dry_run=false, GITHUB_TOKEN, continue-on-error). switch.py and sweep.py read "only the wake job left" as finished.
+  162 tests OK, 11 guards PASS. I merge it on green + Codex (workflow file); subscribed. Its own proof shows the dispatch.
+  Dispatch 42061103319 failed: a runs.log write error (unexpected end of JSON) after reviewing only #231. 42063871420 is OK:
+  #232 and #233 WAIT on conflicts, #95 has no LAND. I merged trunk into #232 (2d7edec7, CMake slice list: kept
+  matron-damage + matron-kick) and #233 (685d428b, create_body: trunk entity + slice-0 load mass), and mailed Muse.
+  J-041 helper report: #235 @97ab893c (truck moved to x 24.5; forklift bodies after the 137; magnet tail check
+  stricter), proving. The stacked branch 64b47114 had LOOSENED 4 forklift_matron checks (creep stays up, push-off brace,
+  2.5 m/s, ground landing). RULED: restore all 4 and fix the setup (test drift); find why a still pest now falls at
+  about 1 m/s. Sent back to the helper. sense_near "first 32, not nearest" diff mailed to Muse (ruled: take it).
+- 10:15 AM: Cory toggled Switchboard and the APK Dashboard Publisher (off, then on). #237 (cron 3,18,33,48) MERGED. Check a
+  schedule run at :18 or :33 and a workflow_run after the next proof. Cory (10:15): "if there's anything I can do to get
+  you past a stuck point, let me know." So ask him early for GitHub-UI-only steps (settings, toggles), always with a
+  direct link and the exact taps.
+- 10:10 AM SWITCHBOARD CAUSE (helper, read-only API): since the default-branch switch, GitHub has registered NO schedule
+  or workflow_run trigger anywhere in the repo (the APK publisher went silent too). Names match, nothing is hidden, the
+  state is active. The fix is to disable then enable the workflow (Switchboard and APK Dashboard Publisher), or a commit
+  that changes the cron. My API disable/enable was REFUSED by the safety check ("CI Bypass"), so I told Cory once with
+  the phone steps. Opened #237 (sweep cron 2,17,32,47 -> 3,18,33,48, in the trigger and the ask-job check). #231 MERGED 10:06.
+- 10:05 AM: #236 (switchboard comment) MERGED 9:43, but there is still no schedule or workflow_run run by 10:02. A helper
+  (Opus, read-only) is investigating the cause: who last touched the cron, the workflow_run name match, filtered runs.
+  #95: the API review gave a NOTE with 3 foot jumps (touchdown re-landing from 0.15 m after the proof pin, the pin's
+  first-frame drop, no release blend at takeoff). HOLD; Muse is mailed to fix them and look by eye, then I dispatch the
+  proof. #233 is still dirty (Muse to merge trunk in). #232 has no API review yet; dispatched the switchboard again.
+  #235 @0df46ac9 (helper moved the truck and merged trunk) is proving. #231 @14917c34 is proving.
+  Cory 10:00: keep saying "no" out loud to the ultracode workflow nudges (deliberate, so I never run one by accident).
 - 9:40 AM MERGED #230, #216 and #234 by hand (a LAND note first). Steer never wakes on github-actions[bot] comments
   (GITHUB_TOKEN events don't trigger workflows), and schedule/workflow_run are still dead, so merge by hand on MERGE lines.
   A workflow_dispatch of switchboard.yml (dry_run=false) runs the ask job, which is the Claude API review that counts as the
