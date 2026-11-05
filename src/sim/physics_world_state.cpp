@@ -358,8 +358,7 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     // what each grip holds and its rating.
     w.list(k.grip_load);
     w.list(k.grip_rating);
-    // After them, the fabricated objects, when there are any (a save with
-    // none ends here, as it always has).
+    // Fabricated objects follow the grips with the original save layout.
     write_fabricated(w);
 }
 

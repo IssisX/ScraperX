@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 #include <memory>
 
@@ -26,21 +27,6 @@ float distance_xz(const float ax, const float az, const float bx, const float bz
     return std::hypot(ax - bx, az - bz);
 }
 
-// The way down a climb her scan read going up, as her scan pairs the two
-// (AffordanceMap::build_edges): the same steel, from the floor at its head
-// she would have topped out onto to the floor at its foot she would have
-// set out from. Down a ladder's rungs; off a lip, hanging from it and then
-// her feet down onto the floor under it (as low as that floor lets her hang).
-traversal::MoveSpec down_of(const traversal::MoveSpec &up) {
-    traversal::MoveSpec down = up;
-    down.kind = up.kind == traversal::MoveKind::Mantle || up.kind == traversal::MoveKind::LedgeJump
-                    ? traversal::MoveKind::HangDrop
-                    : traversal::MoveKind::RungDown;
-    down.start = up.goal;
-    down.goal = up.start;
-    down.goal_top = up.start.GetY();
-    return down;
-}
 } // namespace
 
 bool Matron::follow_climb(const float dt, const RVec3 at) {
@@ -114,8 +100,48 @@ bool Matron::take_climb(const int index, const bool down) {
     } else if (climber_->status() == traversal::Climber::Status::Running || climber_->view().holding) {
         return false;
     }
-    const traversal::MoveSpec &up = scanned_->edges()[static_cast<std::size_t>(index)].spec;
-    climber_->begin(down ? down_of(up) : up);
+    const traversal::Edge &up_edge = scanned_->edges()[static_cast<std::size_t>(index)];
+    const traversal::MoveSpec &up = up_edge.spec;
+    const traversal::MoveSpec *move = &up;
+    if (down) {
+        // The scanner independently checks each downward entry, including a
+        // safe standing spot at the head. Reversing the upward top-out target
+        // can make her walk off the lip before her hands find their first rung.
+        // Take the reverse edge of the SAME ladder, not an invented inverse.
+        const traversal::MoveKind kind =
+            up.kind == traversal::MoveKind::Mantle || up.kind == traversal::MoveKind::LedgeJump
+                ? traversal::MoveKind::HangDrop : traversal::MoveKind::RungDown;
+        for (const traversal::Edge &edge : scanned_->edges()) {
+            if (!edge.usable || edge.from != up_edge.to || edge.to != up_edge.from || edge.kind != kind) {
+                continue;
+            }
+            const traversal::MoveSpec &candidate = edge.spec;
+            if ((candidate.line - up.line).LengthSq() > 0.01F * 0.01F ||
+                std::abs(candidate.bottom_y - up.bottom_y) > 0.01F ||
+                std::abs(candidate.top_y - up.top_y) > 0.01F) {
+                continue;
+            }
+            move = &candidate;
+            break;
+        }
+        if (move == &up) {
+            return false; // No separately vetted safe downward entry.
+        }
+    }
+    // A climb she begins herself owns her hands: a routecraft hold on steel
+    // would otherwise keep running her (its executor climbs her up the same
+    // ladder) and leave this climb to execute stale at the top. Standing at
+    // a foot or a head when a climb begins, letting go of that hold is safe:
+    // this climb takes her from her next tick.
+    {
+        JPH::BodyID take_grip_body;
+        JPH::SubShapeID take_grip_sub;
+        JPH::Vec3 take_grip_local;
+        if (routecraft_.grip(take_grip_body, take_grip_sub, take_grip_local)) {
+            routecraft_.cancel();
+        }
+    }
+    climber_->begin(*move);
     climb_ = index;
     climb_hand_known_ = false;
     climb_force_n_ = 0.0F;

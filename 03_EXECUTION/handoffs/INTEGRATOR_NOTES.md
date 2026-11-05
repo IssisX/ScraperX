@@ -41,20 +41,31 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   +0.3 m); if her target really is above, the test changes by a protected PR. Muse measures which.
 
 ## Asks in flight
-- Muse (mail): J-001 step 4 hold re-pose (body x <= 16.9 at ArmPlay entry) and beat 5 hang to 2.5 s, both ruled
-  1:10 PM, diffs on top of #193; step 1 running; Codex P2 last. J-038 ruled 12:55 PM (slice 0 next after the
-  fight; slice 1 waits for Grok). J-006 leg 6; J-016 drum; #95 stills.
-- Grok (4 PM run): #193 force split; #100 (a helper is fixing touch-2 meanwhile); J-038 dent formula on #169.
-- ChatGPT: #171 next step (asked 1 PM); J-030 (#137).
+- Muse (mail): J-001 #193 - beat-5 hang in at 35b67484, proof red (mischief no-shove, past-rail setup, load S2
+  over-base). 4:45 PM ruled ChatGPT's stability-first force share + 4-tick plant fallback; Muse owes one diff. #207 world-b red (E guard body order, matron crash
+  hearing): Muse owes the fix. Drawn-body guard is #211 (J-012).
+  5:10 PM rulings mailed: J-016 8afd23cd does NOT land (introduces stood_his red); Muse names the drum launcher
+  first. Encounter return-walk slice afa461b3 held, lands with the drum fix. #95 stills (2b03b80c) received: look
+  at them when eb32fc5f's plant fix is green.
+- Grok: silent two runs; its asks rerouted 5:20 PM (#193 force split answered by ChatGPT and ruled; #169 dent
+  cross-check asked of ChatGPT; Muse starts J-038 slice 1 on its own probe bands). Route math to ChatGPT until
+  Grok answers again.
 - To Claude: none open.
 
-## Merge queue (2:20 PM)
-- #171 (J-003 S8, mine, draft): ChatGPT's two defects fixed at 68112ba2, Codex clean, Muse's FIX 2 evidence posted
-  (lethal 9095 N-s, stills, reload meters 0). Mark ready when green; its body says Supersedes #83.
-- #207 world-b red (E guard body order; matron crash hears the piece): Muse fixing (mailed 2:00 PM).
-- #193 J-001 red on 3 known requires: Muse's diffs next (step 4 re-pose, beat-5 hang, step 1 mischief).
-- #208 STOW replaces JUMP: switchboard. #95 waits on Muse's stills.
-- Merged today: #100, #150, #179, #185, #196, #197, #199-#206. Closed: #43, #103. J-030 closed.
+## Merge queue (5:20 PM)
+- #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
+  at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
+- J-006: #212 merged 5:37 PM. Muse's fix rebuilt from the mail (whitespace restored, blob hashes match 470b2bac)
+  onto #91. Ladder geometry landed alone as #213 (7:13 PM); trunk merged into #91 at 7299f8a8, `@codex review`
+  posted. Codex P1 again: the traverse completion-condition change must land alone, so it is #215 (protected
+  test) MERGED 8:10 PM; #91 MERGED 8:37 PM (9591703a, green, Codex clean). J-006 done.
+- Held until #193/#95/#207 land: audits-guard 94bf7aa9, scope-probe 37d34416, guard-steps 204fb795, scope-guard 7e0975c6.
+- J-001 10:20 PM rulings: step 4 (82ef2579, past-rail 17.009 vs 17.0) -> near-miss rail move 1-2 cm (protected geometry) else arm-play step; punch-reach -> swing damper step; kFatalOutM 0.40 keeps. Muse mails ONE diff on 35b67484 (step 1 + step 4 + kFatalOutM).
+- Muse 7:23 PM: keeps #207 (fix agent since 1:58 PM); #193 one diff and #95 plant fix in progress. Don't take #207.
+- #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
+  on green + Codex clean.
+- Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
+- Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
 
 ## Known here
 - `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone. Worktrees in use: proof-scope, merge-protected, j025.

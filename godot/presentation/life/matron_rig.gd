@@ -914,7 +914,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 	var state := int(data.get("state", 0))
 	# Laid out on the steel, or turned over head first down her pipe: the figure
 	# itself is turned, and the deck is not under her soles.
-	if (state == 11 and not bool(data.get("kneeling", false))) or bool(data.get("pipe_head_down", false)):
+	if ((state == 11 or state == 6) and not bool(data.get("kneeling", false))) or bool(data.get("pipe_head_down", false)):
 		_plants.clear()
 		down_mask = 0
 		return

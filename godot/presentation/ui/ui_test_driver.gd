@@ -146,6 +146,7 @@ const SCENARIOS := {
 	"look_matron_moves": 11,
 	"look_matron_hold": 11,
 	"look_matron_fatal": 11,
+	"look_matron_grade_ladder": 11,
 	# Loose stock in the yard: a drum carried and set down (look_stock_yard:
 	# renders only, not in CI).
 	"touch_stock": 8,
@@ -485,6 +486,8 @@ func _run() -> void:
 			ok = await _look_set("hold")
 		"look_matron_fatal":
 			ok = await _look_set("fatal")
+		"look_matron_grade_ladder":
+			ok = await _look_set("grade_ladder")
 		"touch_stock":
 			ok = await _stock_touch(InputRouter.Device.TOUCH)
 		"touch_forklift":
