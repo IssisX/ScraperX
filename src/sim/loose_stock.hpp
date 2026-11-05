@@ -102,7 +102,15 @@ public:
     // tested against all of them. Its pieces follow the table's.
     // Nothing is set within keep_clear_radius of a point of keep_clear (the
     // places the player is put down).
+    // The pre-world-b spots are built here; the new east/west spots are
+    // only reserved here (their entities and table places, no bodies yet),
+    // and their bodies are built by realize_reserved once the bay, the
+    // twin tower and the summit stand, so every pre-existing body keeps
+    // its build order. Until then body() of a reserved piece is invalid.
     void dress_tower(const std::vector<JPH::RVec3> &keep_clear, float keep_clear_radius);
+    // Builds the bodies dress_tower reserved, last in the kit's build
+    // order, and returns their places in the table.
+    [[nodiscard]] std::vector<int> realize_reserved();
     // The steel for the yard crane's magnet (yard_crane.hpp), laid in its
     // hook's reach after the tower's stock, so saves made before it line up:
     // two slabs of plate one on the other, and two beams side by side, the
@@ -147,6 +155,8 @@ private:
     std::vector<Placement> placed_;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);
+    // Builds one piece's body for an entity already chosen, as placed.
+    [[nodiscard]] kit::BodyIndex create_body(const Placement &placement, std::uint64_t entity);
 };
 
 } // namespace scraperx::sim

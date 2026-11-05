@@ -588,7 +588,7 @@ Vec3 LooseStock::carry_handle(const Kind kind) noexcept {
     return make_spec(kind).handle;
 }
 
-void LooseStock::add_piece(const Placement &p) {
+kit::BodyIndex LooseStock::create_body(const Placement &p, const std::uint64_t entity) {
     static const std::array<Spec, kKinds> specs = [] {
         std::array<Spec, kKinds> all;
         for (int k = 0; k < kKinds; ++k) {
@@ -599,7 +599,7 @@ void LooseStock::add_piece(const Placement &p) {
     const Spec &spec = specs[static_cast<std::size_t>(p.kind)];
     // 4 mm clear of what it lies on, so nothing starts in contact.
     const kit::BodyIndex body =
-        kit_.add_body(kFirstEntity + pieces_.size(), spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
+        kit_.add_body(entity, spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
                       Quat::sRotation(Vec3::sAxisY(), p.yaw), spec.mass_kg, spec.friction);
     if (spec.carried) {
         kit_.set_carry(body, kit::CarryKind::Load, spec.handle);
@@ -611,8 +611,24 @@ void LooseStock::add_piece(const Placement &p) {
         kit_.set_hollow(body);
     }
     kit_.allow_sleeping(body);
-    pieces_.push_back(body);
+    return body;
+}
+
+void LooseStock::add_piece(const Placement &p) {
+    pieces_.push_back(create_body(p, kFirstEntity + pieces_.size()));
     placed_.push_back(p);
+}
+
+std::vector<int> LooseStock::realize_reserved() {
+    std::vector<int> realized;
+    for (std::size_t i = 0; i < pieces_.size(); ++i) {
+        if (pieces_[i].valid()) {
+            continue;
+        }
+        pieces_[i] = create_body(placed_[i], kFirstEntity + i);
+        realized.push_back(static_cast<int>(i));
+    }
+    return realized;
 }
 
 namespace {
@@ -742,20 +758,46 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     // The four sides, each by the direction out from the shaft across it.
     const std::array<Vec3, 4> sides = {Vec3(0.0F, 0.0F, 1.0F), Vec3(1.0F, 0.0F, 0.0F), Vec3(0.0F, 0.0F, -1.0F),
                                        Vec3(-1.0F, 0.0F, 0.0F)};
-    // Template and variant choice is counted per side group, not globally:
-    // when the east/west bands were bare, every accepted spot was north or
-    // south, so a north/south spot's template came from the count of the
-    // north/south spots before it. Counting east/west acceptances into that
-    // number would reshuffle every later north/south spot's template for no
-    // reason but the newly dressed bands, so each group counts only itself.
-    int taken_ns = 0;
-    int taken_ew = 0;
-    for (std::size_t ring = 0; ring < tops.size(); ++ring) {
+    // Two passes. The first is the pre-world-b dress verbatim: one mixed
+    // loop, the world-axis clearance box, one global template count, the
+    // shared per-ring cap. That matters because the old box did accept
+    // east/west spots on the upper rings (the matron-crash piece 246 is
+    // one, on the 176 ring's east band); only the stack bands were bare.
+    // A north/south-first pass would move those upper-ring pieces and
+    // renumber every piece after them. The second pass adds only what
+    // the old box rejected on the stack rings: east/west sides only, the
+    // clearance box following the spot's frame (world-b's fix), its own
+    // template count and a fresh per-ring cap, seeded with the first
+    // pass's spots for the spacing check, so a corner conflict resolves
+    // in favour of the pre-existing spot and no pre-existing piece moves
+    // or renumbers.
+    // The new spots follow the old ones in the table, before the crane
+    // steel, so the stock test's dress range stays contiguous; but their
+    // bodies are only reserved here and built last (realize_reserved),
+    // so no pre-existing body moves in the kit's build order.
+    const auto dress_pass = [&](const bool legacy, const std::vector<std::vector<RVec3>> &seed,
+                                std::vector<Placement> *collected) {
+        std::vector<std::vector<RVec3>> accepted;
+        int taken = 0;
+        int taken_ew = 0;
+        for (std::size_t ring = 0; ring < tops.size(); ++ring) {
+        // The new pass dresses the stack rings only: those are the bands
+        // the old box left bare, measured zero east and zero west spots on
+        // all 13. The upper rings already carry east/west spots (their
+        // band totals are all above zero), so they keep their legacy
+        // dress untouched.
+        if (!legacy && ring >= stack_rings) {
+            accepted.push_back({});
+            continue;
+        }
         const float top = tops[ring];
         const bool crane_deck = std::find(kCraneDecks.begin(), kCraneDecks.end(), top) != kCraneDecks.end();
         const int most = crane_deck ? kSpotsPerCraneRing : ring < stack_rings ? kSpotsPerStackRing : kSpotsPerUpperRing;
         std::vector<RVec3> spots;
-        int ns_in_ring = 0;
+        if (!seed.empty()) {
+            spots = seed[ring];
+        }
+        std::vector<RVec3> mine;
         int ew_in_ring = 0;
         // Each ring starts on another side and at another place along it, so
         // no two rings are dressed alike.
@@ -764,7 +806,10 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
             // East/west sides run across x, north/south across z; the
             // clearance box below uses the same split.
             const bool sideways = std::abs(out.GetX()) > 0.5F;
-            if (static_cast<int>(spots.size()) >= most) {
+            if (!legacy && !sideways) {
+                continue;
+            }
+            if ((legacy ? static_cast<int>(spots.size()) : ew_in_ring) >= most) {
                 break;
             }
             const Vec3 along(out.GetZ(), 0.0F, -out.GetX());
@@ -788,16 +833,12 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 continue;
             }
             const float start = -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
-            for (float a = start; a <= edge - 2.0F && static_cast<int>(spots.size()) < most; a += 1.5F) {
-                // The crane's loads alternate per side group within a ring,
-                // for the same reason as the template count below: on the
-                // crane decks the trunk's spots were all north/south, so a
-                // north/south spot's crane turn must not move when an
-                // east/west spot is accepted first in its ring.
+            for (float a = start; a <= edge - 2.0F && (legacy ? static_cast<int>(spots.size()) : ew_in_ring) < most;
+                 a += 1.5F) {
                 const bool crane_spot =
-                    crane_deck && ((sideways ? ew_in_ring : ns_in_ring) % 2 == 0);
+                    crane_deck && ((legacy ? spots.size() : static_cast<std::size_t>(ew_in_ring)) % 2 == 0);
                 const std::vector<SpotTemplate> &kinds = crane_spot ? crane_spot_templates() : spot_templates();
-                const int taken_for_side = sideways ? taken_ew : taken_ns;
+                const int taken_for_side = legacy ? taken : taken_ew;
                 const SpotTemplate &spot =
                     kinds[static_cast<std::size_t>(taken_for_side + static_cast<int>(ring)) % kinds.size()];
                 const RVec3 origin(kRingCentreX + out.GetX() * edge + along.GetX() * a, top,
@@ -851,16 +892,18 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 // (a toe plate or a bolted plate lower than a hand's width is
                 // in the way too).
                 // The clearance box follows the spot's frame, not the world
-                // axes: width runs along the band, depth out from the shaft.
-                // On the east/west sides the old world-axis box put width
-                // radially, so it crossed the shaft-edge structure at 17 m
-                // and rejected every east/west candidate — measured 2026-10-31:
-                // zero east and zero west spots on all 13 stack rings, while
-                // north/south (where width already ran along x) dressed fine.
-                // `sideways` is set at the top of the side loop.
-                const RefConst<Shape> room =
-                    new BoxShape(sideways ? Vec3(0.5F * spot.depth, 1.24F, 0.5F * spot.width)
-                                          : Vec3(0.5F * spot.width, 1.24F, 0.5F * spot.depth));
+                // axes, on the new pass only: width runs along the band,
+                // depth out from the shaft. On the east/west sides the old
+                // world-axis box put width radially, so it crossed the
+                // shaft-edge structure at 17 m and rejected every
+                // east/west candidate on the stack rings — measured
+                // 2026-10-31: zero east and zero west spots on all 13
+                // stack rings, while north/south (where width already ran
+                // along x) dressed fine. The legacy pass keeps the old
+                // box, so its upper-ring east/west spots stand as they were.
+                const RefConst<Shape> room = new BoxShape(
+                    !legacy && sideways ? Vec3(0.5F * spot.depth, 1.24F, 0.5F * spot.width)
+                                        : Vec3(0.5F * spot.width, 1.24F, 0.5F * spot.depth));
                 const RVec3 room_middle = middle - Vec3(0.0F, 1.3F - 1.26F, 0.0F);
                 AnyHitCollisionCollector<CollideShapeCollector> in_the_way;
                 query.CollideShape(room, Vec3::sReplicate(1.0F),
@@ -887,19 +930,36 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                     const RVec3 p = at(piece.along, near + piece.out);
                     const auto variant = static_cast<std::uint8_t>(
                         (piece.variant + static_cast<std::size_t>(taken_for_side) + n) % 3U);
-                    add_piece({piece.kind, variant, static_cast<float>(p.GetX()), floor + piece.up,
-                               static_cast<float>(p.GetZ()), yaw + piece.yaw});
+                    const Placement placed{piece.kind, variant, static_cast<float>(p.GetX()), floor + piece.up,
+                                           static_cast<float>(p.GetZ()), yaw + piece.yaw};
+                    if (collected != nullptr) {
+                        collected->push_back(placed);
+                    } else {
+                        add_piece(placed);
+                    }
                 }
                 spots.push_back(origin);
+                mine.push_back(origin);
                 if (sideways) {
-                    ++taken_ew;
                     ++ew_in_ring;
+                }
+                if (legacy) {
+                    ++taken;
                 } else {
-                    ++taken_ns;
-                    ++ns_in_ring;
+                    ++taken_ew;
                 }
             }
         }
+        accepted.push_back(std::move(mine));
+        }
+        return accepted;
+    };
+    const std::vector<std::vector<RVec3>> parent_spots = dress_pass(true, {}, nullptr);
+    std::vector<Placement> east_west;
+    (void)dress_pass(false, parent_spots, &east_west);
+    for (const Placement &p : east_west) {
+        pieces_.push_back(kit::BodyIndex{});
+        placed_.push_back(p);
     }
 }
 

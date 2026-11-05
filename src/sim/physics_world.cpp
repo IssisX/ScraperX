@@ -385,6 +385,12 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                     continue;
                 }
                 const kit::BodyIndex body = loose_stock_->body(i);
+                // Reserved east/west spots have no body until after the
+                // summit stands, so they are not hers to take or shove yet;
+                // skipping them keeps her list the pre-world-b one.
+                if (!body.valid()) {
+                    continue;
+                }
                 throwables.push_back({kit_->body_id(body), kit_->body_entity(body), LooseStock::carry_handle(p.kind)});
             }
         }
@@ -404,7 +410,13 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         impacts_->track(kit_->body_id(body), kit_->body_entity(body), sound, kit_->body_mass(body));
     };
     for (int i = 0; i < loose_stock_->count(); ++i) {
-        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+        const kit::BodyIndex body = loose_stock_->body(i);
+        // Reserved east/west spots have no body yet; they are tracked
+        // below, once built.
+        if (!body.valid()) {
+            continue;
+        }
+        track(body, LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         track(truck->chassis_body(), ImpactSound::Machine);
@@ -415,6 +427,14 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     track(yard_crane_->spreader_body(), ImpactSound::HeavySteel);
 
     summit_->build_ending();
+
+    // The east/west spots dress_tower reserved: their bodies come last in
+    // the kit's build order, after the bay, the twin tower and the summit,
+    // so every pre-existing body keeps its place. They are heard like any
+    // other stock once built.
+    for (const int i : loose_stock_->realize_reserved()) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
 
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
