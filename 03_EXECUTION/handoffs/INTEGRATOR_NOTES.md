@@ -102,6 +102,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 9:25 AM SWITCHBOARD TRIGGERS DEAD: no `schedule` run since 09:44 UTC and no `workflow_run` since 12:11 UTC (the default
+  switch was about 11:30 UTC). issue_comment still works (a ": LAND" comment wakes steer). So green PRs (#95, #232-#234)
+  sat unmerged. Dispatched the sweep by hand (run 42054261416, dry_run=false). Next: confirm a :32 or :47 schedule tick
+  fires. If not, investigate (helper); meanwhile post my LAND comments to wake steer, and dispatch the sweep each check-in.
 - 9:20 AM: #232, #233, #234 and #95 are green with Codex clean; the switchboard merges them (a clean Codex review counts as the
   LAND for fb-bot work). #216 @1a0dbd33 (Muse's 4-part fix) is proving.
   J-041: the helper measured all 5 cases passing locally with no game change. The ram knocks her down, the creep doesn't,
