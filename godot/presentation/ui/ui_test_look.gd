@@ -54,6 +54,8 @@ func _look_set(set_name: String) -> bool:
 			ok = await _look_hold(false)
 		"fatal":
 			ok = await _look_hold(true)
+		"grade_ladder":
+			ok = await _look_grade_ladder()
 	_look_render(true)
 	return ok
 
@@ -112,6 +114,62 @@ func _look_moves() -> bool:
 	await _look_shot("pipe_side", "the same moment from her open side, the riser's face edge on: her hands and feet against it",
 		[90.0, -90.0, 115.0, -115.0], 4.0)
 	return true
+
+
+# --- grade ladder (x=12.0, z=-123.6): descending 11 m to grade, ascending to 11 m ---
+
+func _look_grade_ladder() -> bool:
+	var n: Object = _native()
+	if not bool(n.place_matron_home(11.0)):
+		return _fail("grade_ladder: 11 m home deck missing")
+	# Stage 1: Matron on the 11 m first floor, descending the grade ladder (x=12.0, z=-123.6) to 0 m.
+	n.debug_place_matron(Vector3(12.0, 11.0, -124.25))
+	n.debug_set_matron_stage(0)
+	await _look_sim(0.35)
+	if not bool(n.debug_matron_travel_to(Vector3(12.0, 0.0, -122.8))):
+		return _fail("grade_ladder: no scanned travel_to plan from 11 m to grade")
+	var down_mid := func() -> bool:
+		var m := _matron_state()
+		return bool(m["climbing"]) and Vector3(m["position"]).y - LOOK_STAND_CENTRE < 7.5
+	if not await _look_until(down_mid, 25.0, 0.0):
+		return _fail("grade_ladder: never mid-descent on grade ladder (climbing %s, at %s)" % [
+			str(_matron_state()["climbing"]), str(_matron_state()["position"])])
+	await _look_shot("grade_ladder_down",
+		"on the grade ladder (x=12.0, z=-123.6) descending from 11 m to 0 m, hands and feet on GradeLadderRung",
+		[160.0, -160.0, 120.0, -120.0], 6.0)
+	await _look_shot("grade_ladder_down_side",
+		"side profile descending the grade ladder: hands and feet gripping GradeLadderRung bars",
+		[90.0, -90.0, 115.0, -115.0], 4.0)
+	var at_grade := func() -> bool:
+		var m := _matron_state()
+		return not bool(m["climbing"]) and Vector3(m["position"]).y - LOOK_STAND_CENTRE < 0.45
+	if not await _look_until(at_grade, 30.0, 0.2):
+		return _fail("grade_ladder: never reached grade at 0 m (climbing %s, at %s)" % [
+			str(_matron_state()["climbing"]), str(_matron_state()["position"])])
+
+	# Stage 2: Climbing back up from grade (0 m) to the 11 m first floor on the same ladder.
+	if not bool(n.debug_matron_travel_to(Vector3(12.0, 11.0, -124.5))):
+		return _fail("grade_ladder: no scanned travel_to plan from grade back to 11 m")
+	var up_mid := func() -> bool:
+		var m := _matron_state()
+		return bool(m["climbing"]) and Vector3(m["position"]).y - LOOK_STAND_CENTRE > 3.5
+	if not await _look_until(up_mid, 25.0, 0.0):
+		return _fail("grade_ladder: never mid-ascent on grade ladder (climbing %s, at %s)" % [
+			str(_matron_state()["climbing"]), str(_matron_state()["position"])])
+	await _look_shot("grade_ladder_up",
+		"on the grade ladder (x=12.0, z=-123.6) climbing from 0 m back to 11 m, hands and feet on GradeLadderRung",
+		[160.0, -160.0, 120.0, -120.0], 6.0)
+	await _look_shot("grade_ladder_up_side",
+		"side profile ascending the grade ladder toward 11 m: hands and feet on GradeLadderRung bars",
+		[90.0, -90.0, 115.0, -115.0], 4.0)
+	var at_deck1 := func() -> bool:
+		var m := _matron_state()
+		return not bool(m["climbing"]) and Vector3(m["position"]).y - LOOK_STAND_CENTRE > 10.55
+	if not await _look_until(at_deck1, 35.0, 0.2):
+		return _fail("grade_ladder: never arrived back on the 11 m deck (climbing %s, at %s)" % [
+			str(_matron_state()["climbing"]), str(_matron_state()["position"])])
+	return true
+
 
 
 # --- her hands on him: the grab, upside down, the rip; the fatality ----------
