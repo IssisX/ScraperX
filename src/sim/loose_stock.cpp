@@ -376,19 +376,30 @@ constexpr float kDeck154 = 154.0F;
 void add_stock_yard(std::vector<LooseStock::Placement> &t) {
     // South of the start, clear of the ground's fixtures (x -20..20, z -12..25
     // is kept empty) and of the yard crew's routes (north of z -12).
-    // Containers: [x, z, tier, along x, paint].
+    // Containers: [x, z, tier, along x, paint, stated load kg]. Three ground
+    // containers, set down by road where a truck could have left them, carry
+    // 10,000 kg each (a 40 ft box's mid load; its max payload is ~26.7 t).
+    // The stacked tier-1s and the crane's laydown stay empty: the yard
+    // crane's 75 kN hoist could not have put a loaded box there. The
+    // probe's own containers ((39, 70), (1.5, 70), (-76, -113)) stay empty,
+    // so its numbers reproduce.
     struct Box {
         float x, z;
         int tier;
         bool along_x;
         std::uint8_t paint;
+        float load_kg = 0.0F;
     };
-    std::vector<Box> containers{{-42.0F, 8.0F, 0, true, 0}, {-42.0F, 10.6F, 0, true, 1}, {-42.0F, 8.0F, 1, true, 2},
-                                {-40.0F, 20.0F, 0, true, 3}, {-40.0F, 20.0F, 1, true, 4},
+    std::vector<Box> containers{{-42.0F, 8.0F, 0, true, 0, 10000.0F},
+                                {-42.0F, 10.6F, 0, true, 1},
+                                {-42.0F, 8.0F, 1, true, 2},
+                                {-40.0F, 20.0F, 0, true, 3, 10000.0F},
+                                {-40.0F, 20.0F, 1, true, 4},
                                 {-54.5F, 14.3F, 0, false, 1}};
     for (int i = 0; i < 7; ++i) {
         const float x = -36.0F + 12.5F * static_cast<float>(i);
-        containers.push_back({x, 70.0F, 0, true, static_cast<std::uint8_t>((i * 3 + 1) % 5)});
+        containers.push_back({x, 70.0F, 0, true, static_cast<std::uint8_t>((i * 3 + 1) % 5),
+                              i == 4 ? 10000.0F : 0.0F});
         if (i == 1 || i == 4 || i == 5) {
             containers.push_back({x, 70.0F, 1, true, static_cast<std::uint8_t>((i * 3 + 3) % 5)});
         }
@@ -396,7 +407,7 @@ void add_stock_yard(std::vector<LooseStock::Placement> &t) {
     constexpr float kContainerHeight = 2.59F;
     for (const Box &c : containers) {
         t.push_back({K::Container, c.paint, c.x, kContainerHeight * static_cast<float>(c.tier), c.z,
-                     c.along_x ? 0.0F : 0.5F * JPH_PI});
+                     c.along_x ? 0.0F : 0.5F * JPH_PI, c.load_kg});
     }
     // Steel beams on sleepers, three layers (paint 0 mill scale, 1 rust).
     for (int layer = 0; layer < 3; ++layer) {
@@ -597,10 +608,11 @@ void LooseStock::add_piece(const Placement &p) {
         return all;
     }();
     const Spec &spec = specs[static_cast<std::size_t>(p.kind)];
-    // 4 mm clear of what it lies on, so nothing starts in contact.
-    const kit::BodyIndex body =
-        kit_.add_body(kFirstEntity + pieces_.size(), spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
-                      Quat::sRotation(Vec3::sAxisY(), p.yaw), spec.mass_kg, spec.friction);
+    // 4 mm clear of what it lies on, so nothing starts in contact. The
+    // body's mass is the kind's own plus its stated load, centred.
+    const kit::BodyIndex body = kit_.add_body(
+        kFirstEntity + pieces_.size(), spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
+        Quat::sRotation(Vec3::sAxisY(), p.yaw), spec.mass_kg + p.load_kg, spec.friction);
     if (spec.carried) {
         kit_.set_carry(body, kit::CarryKind::Load, spec.handle);
     }
