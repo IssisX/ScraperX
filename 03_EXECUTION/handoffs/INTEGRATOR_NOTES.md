@@ -102,6 +102,11 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 11:55 AM J-044 #242 (Cory): console-quality fighting, the umbrella over S1-S8 (#109 #164-#167 #111 #110 #112). A read-only audit
+  helper (Opus, no worktree) is auditing and designing; it posts on #242 and reports to me. Then: design asks To Muse/Grok/ChatGPT,
+  dependency-ordered jobs, the first end-to-end slice (right cross to the left cheek). Flagged to Cory: it likely overturns the
+  8:20 "keep the capsule" ruling (needs a jointed upper body: protected mass/force); voice must be real recordings; blood/gore
+  cost on the Fold 6 must be measured; multi-week. Helpers running: 2 (J-042, J-044 audit) = cap.
 - 11:40 AM NEW FEATURES (Cory, Muse Batch 5): J-042 #240, Her Ammo, Your Ammo (toolbox throw, dodge, race, throw back):
   a Claude helper (Opus, worktree, claude/integrate-j042-ammo, test group `ammo`). It holds throw/fetch/take_stock while Builder
   is out; take_blow, damage, the shove and sense_near stay Muse's (diffs go by `To Muse:` on #240, which I mail).
