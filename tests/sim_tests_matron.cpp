@@ -394,7 +394,7 @@ void run_matron_balance() {
                 go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0, 1.0) && go(s, -16.0, -132.6, false, 20.0, 0.3),
             "matron balance: crouched round to 143's north edge of the shaft");
     require(until_guarding(s, 120.0) && s.snapshot().death_count == 0, "matron balance: she stands guard at her post");
-    const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const std::uint32_t first = s.loose_stock_throwables_begin();
     const std::uint32_t toolbox = s.kit_body_index(LooseStock::kFirstEntity + first);
     const std::uint32_t drum = s.kit_body_index(LooseStock::kFirstEntity + first + 2);
     const auto deaths = s.snapshot().death_count;
@@ -529,7 +529,7 @@ void run_matron_balance() {
         require(h.advance_frame(1.0).accepted, "matron heave: settle");
         require(go(h, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && h.matron_state().state == kStateStraining,
                 "matron heave: a sprint toward her locker wakes her");
-        const std::uint32_t box_piece = h.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables) + 1;
+        const std::uint32_t box_piece = h.loose_stock_throwables_begin() + 1;
         const std::uint64_t box = LooseStock::kFirstEntity + box_piece;
         // Back across the bay on its leaf (bay.hpp), then to the toolbox.
         require(walk_to(h, 0.4, Matron::kBandNorthZ, 20.0, 0.2) && walk_to(h, -4.6, Matron::kBandNorthZ, 20.0, 0.2) &&
@@ -664,7 +664,7 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
     require(go(s, -2.0, -132.6, true, 8.0, 0.4), "matron pipe: a sprint along 143's north edge");
     (void)s.set_move_input(0.0, 0.0);
     (void)s.set_sprint_input(false);
-    const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const std::uint32_t first = s.loose_stock_throwables_begin();
     const std::uint32_t drum = s.kit_body_index(LooseStock::kFirstEntity + first + piece);
     const double hz = static_cast<double>(Simulation::kTickRateHz);
     int first_hold = -1;
@@ -949,7 +949,7 @@ WreckRun matron_wreck_run(const bool trace) {
     s.place_matron_home(154.0F);
     s.debug_fix_matron_pace(3);   // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
     require(s.advance_frame(1.0).accepted, "matron wreck: settle");
-    const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const std::uint32_t first = s.loose_stock_throwables_begin();
     const std::uint64_t drum = LooseStock::kFirstEntity + first + 2;
     const std::uint32_t drum_body = s.kit_body_index(drum);
     // The drum moved from its place by the north band's outer rail to stand
@@ -1537,6 +1537,104 @@ void run_matron() {
         std::cout << "  matron: a crate shoved 4 s by walking into it moved " << moved << " m\n";
         require(moved > 1.0 && moved < 4.0 * 5.5 * 0.6, "matron: a crate walked into moves, and slower than a walk");
         require(s.matron_state().planks_fallen == 0, "matron: nothing has come down");
+    }
+    // ---- her walk's crate shove must not launch a body (J-016): a crate
+    // in her path gets pushed aside, never driven to a runaway speed ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        s.debug_fix_matron_pace(0); // creep: her slow walk, the one whose crate shove fires
+        require(s.advance_frame(1.0).accepted, "matron: crate launch guard: settle");
+        (void)s.matron_affordances(); // her own scan, as in play
+        // The player stands far south down the east band, never touching
+        // the crate, so her mischief (fetch/shove) cannot take it: only
+        // her walk's crate shove can move it.
+        s.debug_launch_player({Matron::kBandX, Matron::kDeckTop + 0.3, -165.0}, {0.0, 0.0, 0.0});
+        s.debug_place_matron({Matron::kBandX, Matron::kDeckTop, Matron::kBandNorthZ});
+        const auto crate =
+            s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(LooseStock::kDeckCrateSouth));
+        s.debug_launch_kit_body(crate, {Matron::kBandX, Matron::kDeckTop + 0.6, -131.5}, {0.0, 0.0, 0.0});
+        double peak = 0.0;
+        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            if (i % (2 * static_cast<int>(Simulation::kTickRateHz)) == 0) {
+                s.debug_matron_hear({Matron::kBandX, Matron::kDeckTop, -165.0});
+            }
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            const auto v = s.kit_body_velocity(crate);
+            peak = std::max(peak, std::hypot(v.x, v.z));
+        }
+        std::cout << "  matron: a crate in her walk's path: peak speed " << peak << " m/s\n";
+        require(peak > 0.5, "matron: her walk's crate shove moves a crate in her path (J-016)");
+        require(peak < 5.0, "matron: her walk's crate shove does not launch a body (J-016)");
+    }
+    // ---- her walk's crate shove must not re-shove a body already
+    // travelling fast (J-016 stage 3): the guard measured the speed along
+    // the shove line, so a body crossing it fast still got shoved again,
+    // and the pipe drum walked off deck 154's north edge on it ----
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        s.debug_fix_matron_pace(0);   // creep: her slow walk, the one whose crate shove fires
+        require(s.advance_frame(1.0).accepted, "matron: fast-body guard: settle");
+        (void)s.matron_affordances();   // her own scan, as in play
+        s.debug_launch_player({Matron::kBandX, Matron::kDeckTop + 0.3, -165.0}, {0.0, 0.0, 0.0});
+        s.debug_place_matron({Matron::kBandX, Matron::kDeckTop, Matron::kBandNorthZ});
+        // The pipe drum itself: the drum nearest (-15, 154, -125.2), the
+        // only drum on deck 154. Put it in her path on the east band,
+        // already travelling north at 10.0 m/s across her shove line,
+        // which points west here. One metre east of her walking line, so
+        // her capsule never touches it (only the shove can push it
+        // west). Launched at 10.0, not 5.0 or 6.0: the standing drum
+        // tips on launch (the tip alone costs ~1.3 m/s) and then rolls,
+        // so at 5.0–6.0 it has decayed to 2.5 m/s while she is still
+        // near it — she turns to fetch it, and the guard then rightly
+        // shoves the now-slow body in her path. At 10.0 it stays over
+        // 2.5 m/s through the encounter and leaves her 4 m fan before
+        // she can close on it, so the only thing that can push it west
+        // is the shove itself.
+        std::uint32_t drum = Simulation::kKitNone;
+        double nearest = 1.0e30;
+        for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+            if (s.loose_stock_piece(i).kind != static_cast<std::uint8_t>(LooseStock::Kind::Drum)) {
+                continue;
+            }
+            const std::uint32_t body = s.kit_body_index(LooseStock::kFirstEntity + i);
+            if (body == Simulation::kKitNone) {
+                continue;
+            }
+            const auto p = s.kit_body_position(body);
+            if (p.y <= 100.0F) {
+                continue;
+            }
+            const double d = std::hypot(p.x + 15.0, p.z + 125.2);
+            if (d < nearest) {
+                nearest = d;
+                drum = body;
+            }
+        }
+        require(drum != Simulation::kKitNone, "matron: fast-body guard: the pipe drum is above grade");
+        s.debug_launch_kit_body(drum, {Matron::kBandX + 1.0, Matron::kDeckTop + 0.6, -130.0}, {0.0, 0.0, 10.0});
+        double peak = 0.0;
+        double peak_west = 0.0;
+        for (int i = 0; i < 12 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+            if (i % (2 * static_cast<int>(Simulation::kTickRateHz)) == 0) {
+                s.debug_matron_hear({Matron::kBandX, Matron::kDeckTop, -165.0});
+            }
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            const auto v = s.kit_body_velocity(drum);
+            peak = std::max(peak, std::hypot(v.x, v.z));
+            peak_west = std::max(peak_west, -v.x);
+        }
+        std::cout << "  matron: a fast drum in her walk's path: peak speed " << peak << " m/s, peak west "
+                  << peak_west << " m/s\n";
+        // Only the westward component is the shove's signature: the shove
+        // pushes west here, one tick adding exactly 1.62 m/s. The drum
+        // rolls off the north edge during the 12 s window and its total
+        // horizontal speed after the fall is bounce physics, not her —
+        // bounding that would fail the test on the fall, not on her.
+        require(peak_west < 0.5, "matron: her walk's crate shove does not re-shove a body already travelling (J-016)");
     }
     // ---- the ingot dolly, from a fresh start: where a shoved crate ends up
     // (and whether it crashes into the next one and wakes her) is not this

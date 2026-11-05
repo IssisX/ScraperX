@@ -241,9 +241,22 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 						Vector3(cx + face * STACK_HALF_EXTENT, mid_y, cz + mid_along), oxidised)
 					brace_z.rotation = Vector3(-pitch, 0.0, 0.0)
 
+	_build_first_floor_ladder(galvanised)
 	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
 	_build_stack_megastructure(mill_scale, oxidised, rust_deep, rust_bright, galvanised,
 		faded, timber)
+
+# The grade-to-first-deck inspection ladder is a real static collision path.
+# Rungs and stiles are exported as physical solids, not just visible dressing.
+func _build_first_floor_ladder(metal: Material) -> void:
+	var line_x := 12.0
+	var line_z := STACK_CENTER.z + STACK_HALF_EXTENT + 0.4
+	for side in [-1.0, 1.0]:
+		_add_box("StairStringer", Vector3(0.08, STACK_LEVEL_HEIGHT, 0.08),
+			Vector3(line_x + side * 0.60, STACK_LEVEL_HEIGHT * 0.5, line_z), metal)
+	for rung in range(27):
+		_add_box("GradeLadderRung", Vector3(1.2, 0.08, 0.08),
+			Vector3(line_x, 1.45 + float(rung) * 0.36, line_z), metal)
 
 # Everything that makes the frame read as one vast building rather than a
 # repeated scaffold: splayed footings, clad machine halls with lit windows,
@@ -540,6 +553,30 @@ func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Mat
 	# keeps its original world coordinates. Native bounds: TwinTower.
 	var mass_x := TWIN_TOWER_CENTER.x
 	var face_z := TWIN_TOWER_FACE_Z
+	# Tower two's face (environment plan, job 14): poured concrete, drawn by
+	# its own shader on a copy of the same box. TowerMass stays the part the
+	# solids export reads; it is only no longer drawn, so the batcher leaves
+	# it out (batched, the shaft fell into a far section drawn as one flat
+	# colour). The copy is no part: no new solid, no hold. Not under the
+	# floating audit, which reads the tree as built.
+	var mass := $TowerPresentation.get_node("TowerMass") as MeshInstance3D
+	if get("_audit") == null and mass != null:
+		var concrete := (mass.mesh as BoxMesh).material as StandardMaterial3D
+		var face_material := ShaderMaterial.new()
+		face_material.shader = preload("res://presentation/tower_two_face.gdshader")
+		face_material.set_shader_parameter("base_colour", concrete.albedo_color)
+		face_material.set_shader_parameter("base_roughness", concrete.roughness)
+		var face := MeshInstance3D.new()
+		face.name = "TowerTwoFace"
+		face.mesh = mass.mesh
+		face.material_override = face_material
+		# Out of the lamps' light, as the far batches were; and casting no
+		# shadow, as before (its batch never cast one in the yard's view).
+		face.layers = BATCH_FAR_LAYER
+		face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(face)
+		face.global_transform = mass.global_transform
+		mass.visible = false
 	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("e0a040"), 0.9)
 	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("a86c22"), 0.5)
 	for offset in [-38.0, -19.0, 0.0, 19.0, 38.0]:

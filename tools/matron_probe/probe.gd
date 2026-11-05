@@ -293,6 +293,30 @@ class Recorder extends Node:
 				"%.5f" % sb.x, "%.5f" % sb.y, "%.5f" % sb.z, "%.4f" % float(data["shape_r"])])
 		else:
 			row.append_array(["", "", "", "", "", "", "", ""])
+		# Her other hand's grip on a climb or pipe (contact_hand, beside contact_hand2 above), and the held
+		# ankle: where her fingers hold him in a hold, from his body and the grip (physics_world_state.cpp;
+		# zero while they do not), the point her drawn hand closes on (matron_view.gd _hold_gate), not "hand"
+		# above, her hand's commanded target. Blank from a native without it.
+		var contact_hand: Vector3 = data.get("contact_hand", Vector3.ZERO)
+		row.append_array([int(bool(data.get("contact_hand_held", false))),
+			"%.5f" % contact_hand.x, "%.5f" % contact_hand.y, "%.5f" % contact_hand.z])
+		# Which stock reach of hers is active (matron_rig.gd: 1 carrying, 2 seeking a handle), and whether it is
+		# her two-handed one: a reach draws her arms to the handle, as a hold does.
+		var carrying_stock := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
+		var seeking_stock := not carrying_stock and int(data.get("stock_seeking", 0)) != 0 and data.has("stock_seek_handle")
+		var stock_size: Vector3 = data.get("stock_size", Vector3.ZERO) if carrying_stock else data.get("stock_seek_size", Vector3.ZERO)
+		row.append_array([1 if carrying_stock else (2 if seeking_stock else 0),
+			int((carrying_stock or seeking_stock) and maxf(stock_size.x, stock_size.z) >= 0.38)])
+		# Her hold's reach weight (matron_view.gd _w_hold, _w_hold2): the rig draws her hand to the hold while
+		# it fades after the hold state ends, as her hand comes off him.
+		var w_hold := maxf(float(view.get("_w_hold") if view.get("_w_hold") != null else 0.0),
+			float(view.get("_w_hold2") if view.get("_w_hold2") != null else 0.0))
+		row.append("%.4f" % w_hold)
+		if hold.has("held_ankle"):
+			var ankle: Vector3 = hold["held_ankle"]
+			row.append_array(["%.5f" % ankle.x, "%.5f" % ankle.y, "%.5f" % ankle.z])
+		else:
+			row.append_array(["", "", ""])
 		var out := PackedStringArray()
 		for v in row:
 			out.append(str(v))
@@ -363,4 +387,6 @@ class Recorder extends Node:
 		"hx", "hy", "hz", "h2x", "h2y", "h2z", "ch_known", "chx", "chy", "chz", "ch2_known", "ch2x", "ch2y", "ch2z",
 		"plx", "ply", "plz", "surf_foot_l", "surf_foot_r", "surf_palm_l", "surf_palm_r", "burst",
 		"contact_hand2_held", "contact_hand2x", "contact_hand2y", "contact_hand2z",
-		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r"]
+		"stance", "shape_ax", "shape_ay", "shape_az", "shape_bx", "shape_by", "shape_bz", "shape_r",
+		"contact_hand_held", "contact_handx", "contact_handy", "contact_handz",
+		"stock_reach", "stock_two_hands", "hold_weight", "held_anklex", "held_ankley", "held_anklez"]

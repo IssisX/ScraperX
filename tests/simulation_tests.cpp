@@ -164,6 +164,10 @@ int main() {
         run_forklift_strain();
         return EXIT_SUCCESS;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "forklift-matron") {
+        run_forklift_matron();
+        return EXIT_SUCCESS;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "crane") {
         run_yard_crane();
         return EXIT_SUCCESS;
@@ -188,6 +192,7 @@ int main() {
         run_matron_arm();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-damage") { run_matron_damage(); return EXIT_SUCCESS; }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "strike") {
         run_strike();
         return 0;
