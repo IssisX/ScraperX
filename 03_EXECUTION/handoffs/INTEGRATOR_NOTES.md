@@ -59,7 +59,8 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   onto #91. Ladder geometry landed alone as #213 (7:13 PM); trunk merged into #91 at 7299f8a8, `@codex review`
   posted. Codex P1 again: the traverse completion-condition change must land alone, so it is #215 (protected
   test) MERGED 8:10 PM; #91 MERGED 8:37 PM (9591703a, green, Codex clean). J-006 done.
-- Held until #193/#95/#207 land: audits-guard 94bf7aa9, tests scope-probe 37d34416 (Muse 8:05 PM).
+- Held until #193/#95/#207 land: audits-guard 94bf7aa9, scope-probe 37d34416, guard-steps 204fb795.
+- J-001 10:20 PM rulings: step 4 (82ef2579, past-rail 17.009 vs 17.0) -> near-miss rail move 1-2 cm (protected geometry) else arm-play step; punch-reach -> swing damper step; kFatalOutM 0.40 keeps. Muse mails ONE diff on 35b67484 (step 1 + step 4 + kFatalOutM).
 - Muse 7:23 PM: keeps #207 (fix agent since 1:58 PM); #193 one diff and #95 plant fix in progress. Don't take #207.
 - #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
   on green + Codex clean.
