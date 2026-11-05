@@ -24,7 +24,7 @@ Session chain: 7 of 8. Compact at 400k (Cory runs /compact); a new session only 
   Grok and ChatGPT review only when neither can.
 - **API coder (Managed Agents): off** (Cory, 11-04: "I just want the reviewer(s)"; `orchestrator.enabled: false`).
   Never cite its per-session reserve to Cory.
-- **Claude helpers (lean, 1:30 PM, weekly limit at warning):** one at a time, Sonnet, in a worktree, until the limit resets. Every brief says: never subscribe to a
+- **Claude helpers (lean, 1:30 PM, weekly limit at warning):** one at a time, Opus high or xhigh (never Sonnet: Cory 11-05), in a worktree. Every brief says: never subscribe to a
   PR you open.
 
 ## Cory's rulings today (all in the repo)
@@ -75,7 +75,7 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   748ae35d; test hunk whitespace rebuilt, blob differs from Muse's ed795032). Merge on green + Codex clean. Stage 3
   (drum leaves deck 154: gap = protected geometry, or never shove toward a deck edge) ruled to Muse 6:15 AM.
 - Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
-- Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
+- Lean mode (weekly limit at warning, Cory silent = pick): one Opus helper at a time (high or xhigh, never Sonnet).
 
 ## Known here
 - `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone. Worktrees in use: proof-scope, merge-protected, j025.
