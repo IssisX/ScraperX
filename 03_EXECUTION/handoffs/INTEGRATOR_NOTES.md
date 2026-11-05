@@ -85,6 +85,16 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   on green + Codex, one at a time, trunk merged into the rest). Hold on guards LIFTED. #95 head 551973b0 (Muse's
   plant fix), proof run 42035080417 dispatched. J-038 rulings after ChatGPT (#169): settle exclusion replaces the
   vertical gate; support = gravity-opposing normal held 2+ ticks; 1 mm quantize, stable merge ties.
+- 8:15 AM: merged guards #219 #220 #221 (trunk merged into each, all three steps kept). Sentry (DSN in
+  project "scraperx", org cory-meyers; Cory's login = his Gmail): #222 GDScript reporter (Android only, 30/session,
+  no PII; workflow step => I merge) + #223 protected INTERNET permission (needs green + Codex LAND). Both Codex
+  clean, proofs running. Native crashes need Gradle export + official SDK = later job. Hourly reads Sentry mail.
+- Helpers (Opus): J-037 HUD labels (claude/integrate-j037-hud, eye check) running. Inventory helper running for
+  Cory's two new features (11-05): J-040 improvised weapons (brace carried bars/pipes vs Matron) and J-041 forklift
+  combat (ram/low-fork knockdown, lift/push off deck). Rules: no scripted knockdowns/impulses/teleports/forced falls;
+  deterministic native tests of the real physics + an end-to-end touch check; full experiences, no weaker
+  stand-ins. Next: report to Cory (exists/missing/owners/acceptance), open job issues, mail Muse.
+- #95: Muse removing hold/fatal plant from EXPECTED (XPASS), then dispatch proof, merge.
 - Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
 - Lean mode (weekly limit at warning, Cory silent = pick): one Opus helper at a time (high or xhigh, never Sonnet).
 
