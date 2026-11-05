@@ -535,6 +535,13 @@ const UPLANT_TRACK_LIFT_M := 0.15
 # lift needs a few frames to bend a near-straight leg past govern's cap,
 # so sideways travel waits until this much of the release has passed.
 const UPLANT_TRAVEL_START := 0.4
+# ... and the travel only advances while the sole is actually up: the
+# lift alone does not hold it there while the leg reaches forward (the
+# leg stretches and the sole drops back to the deck, act 0.111 m at the
+# unrig), so the travel waits on the drawn sole's height above its lock,
+# not on the clock. A frame old it lags the drop by a frame, so the bar
+# sits above the plant band by that drop.
+const UPLANT_TRAVEL_H_M := 0.10
 # The proof pin only holds a foot while the body is nearly still — the
 # check's own plant bar (STILL_MPS). A stepping body must be free to step:
 # pinning a foot mid-stride holds it off the deck (figure carry) and starves
@@ -801,7 +808,24 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				# near-straight leg could not bend fast enough past
 				# govern's cap to lift the sole — so the sole dragged
 				# along the deck to its new stance.
-				var travel := clampf((k - UPLANT_TRAVEL_START) / (1.0 - UPLANT_TRAVEL_START), 0.0, 1.0)
+				var travel_tgt := clampf((k - UPLANT_TRAVEL_START) / (1.0 - UPLANT_TRAVEL_START), 0.0, 1.0)
+				# ... and the travel only advances while the sole is
+				# actually up: the lift alone does not hold it there
+				# while the leg reaches forward (the leg stretches and
+				# the sole drops back to the deck, act 0.111 m at the
+				# unrig), so the travel waits on the drawn sole's height
+				# above its lock. A low foot holds the travel (the target
+				# stays, the lift bends the knee) until it rises; the
+				# release still ends on its clock, and the tracking after
+				# it carries any travel left over.
+				var travel := float(st.get("travel", 0.0))
+				var drawn_h := 1.0
+				var drawn_r: Dictionary = _udrawn.get(s, {})
+				if not drawn_r.is_empty() and int(drawn_r.get("frame", -1)) == _ik_frame - 1 and st.has("lock"):
+					drawn_h = float((drawn_r["at"] as Vector3).y - (st["lock"] as Vector3).y)
+				if drawn_h >= UPLANT_TRAVEL_H_M:
+					travel = minf(travel_tgt, travel + dt / UPLANT_RELEASE_S / (1.0 - UPLANT_TRAVEL_START))
+				st["travel"] = travel
 				var tgt := plant_tgt.lerp(pose_ankle, travel)
 				# The arc stays up: its lift eases from the arc's height
 				# into the tracking height, never back down to a low fast
