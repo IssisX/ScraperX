@@ -58,7 +58,7 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   (a broad SearchPlugins dump was the big jump). Never trade quality for context: PRs stay one per job.
 
 ## Merge queue (5:20 PM)
-- 11-05 ~2:30 PM: J-042 built (helper a3a061 retired). #250 protected magnet kit-tail (9829699d, alone, switchboard on
+- 11-05 2:03 PM: J-042 built (helper a3a061 retired). #250 protected magnet kit-tail (9829699d, alone, switchboard on
   green + LAND) lands FIRST; then #251 ammo (8fb4de68, touches the workflow: I merge, subscribed). matron-chase
   one seed fails 9/10 on trunk too (not J-042). Game calls told to Cory with my picks: keep the edge-first pallet
   arm break; the extinguisher is placeholder. Next helper: only one at a time (J-045 helper ae10b4 still on).
