@@ -35,6 +35,10 @@ constexpr double kOuterEdgeZ = -124.0; // the north band's open outer edge
 constexpr double kCallX = 22.5;        // the player's line up the band, west of the truck
 constexpr double kMiddle = 21.5;       // the east band's middle line (Matron::kBandX)
 constexpr int kHz = static_cast<int>(Simulation::kTickRateHz);
+// Its engine as still as it was parked, before she is called: under 60 rpm
+// (taken from parked, it turned 46 at her first tick).
+constexpr double kRestRpm = 60.0;
+constexpr double kRunUpM = 4.0;        // the full-speed ram's run, beyond its park
 
 Vector3 truck_at(const Simulation &s) {
     return s.kit_body_position(s.kit_body_index(Forklift::kDeck154ChassisEntity));
@@ -136,9 +140,10 @@ double steer_toward(const Simulation &s, const Vector3 at) {
 
 // Out from its park by the band's open edge to the band's middle, by its
 // controls alone: forward steered at the band's middle line ahead, then
-// straightened along it, then backed straight down it to where it parked.
+// straightened along it, then backed straight down it to where it parked
+// (or to `back_to`, further down it, for a longer run at her).
 // Returns the truck's distance off the middle line and its yaw (rad).
-std::pair<double, double> centre(Simulation &s) {
+std::pair<double, double> centre(Simulation &s, const double back_to) {
     const auto yaw = [&s] {
         const auto q = s.kit_body_rotation(s.kit_body_index(Forklift::kDeck154ChassisEntity));
         return 2.0 * std::atan2(q.y, q.w);
@@ -163,15 +168,20 @@ std::pair<double, double> centre(Simulation &s) {
                       << s.forklift_state(kTruck).steer << "\n";
         }
     }
-    stick(0.0, -0.5, 10.0, [&s] { return truck_at(s).z <= static_cast<double>(Forklift::kDeck154ParkZ); });
-    stick(0.0, 0.0, 1.0, [] { return false; });
+    stick(0.0, -0.5, 10.0, [&s, back_to] { return truck_at(s).z <= back_to; });
+    // Stopped there, its engine let run down to the stillness it had parked
+    // (it turns only while driven): out of gear it spins down by itself,
+    // halving about every 3.5 s.
+    stick(0.0, 0.0, 25.0, [&s] { return s.forklift_state(kTruck).engine_rpm < kRestRpm; });
+    require(s.forklift_state(kTruck).engine_rpm < kRestRpm, "forklift_matron: the truck's engine run down at the park");
     return {truck_at(s).x - middle, yaw()};
 }
 
 // A fresh world: the player at the wheel of the deck-154 truck with the
 // controls taken and the truck driven out to the band's middle; she out of
 // her locker, hunting from `her` (feet), at `stage`.
-std::unique_ptr<Simulation> start(const Vector3 her, const int stage) {
+std::unique_ptr<Simulation> start(const Vector3 her, const int stage,
+                                  const double back_to = static_cast<double>(Forklift::kDeck154ParkZ)) {
     auto s = std::make_unique<Simulation>(InitialSpawn::Deck154);
     s->place_matron_home(static_cast<float>(kDeck));
     for (int i = 0; i < 30; ++i) {
@@ -181,7 +191,7 @@ std::unique_ptr<Simulation> start(const Vector3 her, const int stage) {
     require(s->request_forklift_action(), "forklift_matron: the controls taken");
     (void)s->advance_frame(0.3);
     require(s->forklift_state(kTruck).driving, "forklift_matron: driving the deck-154 truck");
-    const auto [off, yaw] = centre(*s);
+    const auto [off, yaw] = centre(*s, back_to);
     require(std::abs(off) < 0.4 && std::abs(yaw) < 0.05,
             "forklift_matron: driven out to the band's middle, square down it");
     s->launch_matron_for_test({her.x, her.y + static_cast<double>(Matron::kStandCentre), her.z});
@@ -383,14 +393,14 @@ int stock(Simulation &s, const int count) {
     return made;
 }
 
-// Rammed: the truck driven at her from its park until its frame is at z -131,
-// then let go (it brakes), 3 s more. Logged, a line a tick while it touches
-// her. With `crates` >= 0, that many crates of loose stock are made where
+// Rammed: the truck driven at her from its park (or from `back_to`) until
+// its frame is at z -131, then let go (it brakes), 3 s more. Logged, a line
+// a tick while it touches her. With `crates` >= 0, that many crates of loose stock are made where
 // the truck meets her, and 1 s let pass, before it starts (0: the same
 // second, no crates, the crowded case's control).
 Run ram(const int stage, const double throttle, const double forks_up_s, const bool log = false,
-        const int crates = -1) {
-    auto s = start({kMiddle, kDeck, -128.0}, stage);
+        const int crates = -1, const double back_to = static_cast<double>(Forklift::kDeck154ParkZ)) {
+    auto s = start({kMiddle, kDeck, -128.0}, stage, back_to);
     Simulation &w = *s;
     Run r;
     r.log = log;
@@ -514,21 +524,22 @@ void run_forklift_matron() {
                 "forklift_matron: parked on her deck, the truck stands on its wheels and stays put");
     }
 
-    // 1. Ram. At full speed (3 m/s) she goes down; at a creep (about 1 m/s)
-    // the blades meet her shins with less: whether she takes it is her own
-    // motion's (walking into it she has; standing, a 5 t truck's blow is its
-    // own speed, past what her balance takes), so only the meeting is required.
-    const Run full = ram(1, 1.0, 0.0, true);
+    // 1. Ram. At full speed (3 m/s) she goes down; at a creep (under 1 m/s)
+    // the forks' blades slide under her shins and she takes it.
+    // Full speed wants its run: backed kRunUpM further down the band's
+    // middle than it parks, it is at speed by the time it meets her.
+    const double run_from = static_cast<double>(Forklift::kDeck154ParkZ) - kRunUpM;
+    const Run full = ram(1, 1.0, 0.0, true, -1, run_from);
     print("ram, full speed, dangerous", full);
-    require(full.hit_mps > 2.0 && full.impulse_ns > 100.0 && full.knockdowns >= 1 && !full.dead,
+    require(full.hit_mps > 2.5 && full.impulse_ns > 100.0 && full.knockdowns >= 1 && !full.dead,
             "forklift_matron ram: at full speed the truck's contact impulse knocks her down");
     const Run creep = ram(0, 0.3, 0.0);
     print("ram, creep, pest", creep);
     require(creep.hit_mps > 0.4 && creep.hit_mps < 1.2 && creep.impulse_ns > 10.0 &&
-                creep.impulse_ns < full.impulse_ns && creep.low,
-            "forklift_matron ram: at a creep the truck meets her low, with less impulse than at full speed");
+                creep.blow_mps < takes_upright() && creep.staggers == 0 && creep.knockdowns == 0,
+            "forklift_matron ram: at a creep the truck meets her, its impulse under what her balance takes");
     // Run twice, the same.
-    const Run again = ram(1, 1.0, 0.0);
+    const Run again = ram(1, 1.0, 0.0, false, -1, run_from);
     std::cout << "  forklift_matron: the full-speed ram again, hash " << again.fnv.hash << "\n";
     require(again.fnv.hash == full.fnv.hash, "forklift_matron: the same inputs give the same ram, tick for tick");
     // Which body her balance judged, past which gates (take_blow): at full
@@ -538,13 +549,9 @@ void run_forklift_matron() {
                 full.first_relative >= Matron::kStrikerClosingMps && full.first_change >= 0.1 &&
                 full.missed_ticks == 0,
             "forklift_matron gates: the full-speed ram is judged on a truck body past all three of take_blow's gates");
-    // Low is a centre of mass under her soles + 0.5 m: the carriage's (0.27 m
-    // up) always, the chassis' (0.57 m up) once her feet are up on the blades.
-    require((creep.first_entity == Forklift::kDeck154CarriageEntity ||
-             creep.first_entity == Forklift::kDeck154ChassisEntity) &&
-                creep.carriage_low + creep.chassis_low > 0 && creep.first_closing >= Matron::kStrikerClosingMps &&
-                creep.missed_ticks == 0,
-            "forklift_matron gates: at a creep a truck body under her knees is the judged low blow, past the gates");
+    require(creep.first_entity == Forklift::kDeck154CarriageEntity && creep.carriage_low > 0 &&
+                creep.first_closing >= Matron::kStrikerClosingMps && creep.missed_ticks == 0,
+            "forklift_matron gates: at a creep the fork carriage, its centre under her knees, is the judged low blow");
 
     // Crowded: 32 crates of loose stock (live fabrication) where the truck
     // meets her, so 34 moving bodies in her box, more than sense_near's 32;
@@ -606,11 +613,13 @@ void run_forklift_matron() {
     // grip and drive her back.
     const Run off = push_off();
     print("push off, changed", off);
-    require(off.braced_ticks == 0 || (off.feet_n > 7900.0 && off.braced_truck_mps > 0.3 &&
-                                      off.braced_front_n > 3000.0 && off.braced_slip < 0.1),
-            "forklift_matron push off: braced at the edge with her whole budget, the truck's tyres grip and drive her back");
+    require(off.braced_ticks > 10 && off.feet_n > 7900.0 && off.braced_truck_mps > 0.3,
+            "forklift_matron push off: braced at the edge with her whole budget, the truck still drives her back");
+    require(off.braced_front_n > 3000.0 && off.braced_slip < 0.1,
+            "forklift_matron push off: against her brace the driven front tyres stay loaded and grip, no spin");
     require(off.off_z > kOuterEdgeZ, "forklift_matron push off: she goes over the open edge");
-    require(off.dead == (off.fall_mps >= static_cast<double>(Matron::kLethalLandingMps)) && off.dead,
+    require(off.dead == (off.fall_mps >= static_cast<double>(Matron::kLethalLandingMps)) && off.dead &&
+                off.died_y < 10.0,
             "forklift_matron push off: she falls from 154 m and the landing at that speed kills her");
 
     // 5. Fight back. Too slow (0.6 m/s), the truck neither fells nor stops
