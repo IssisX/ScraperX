@@ -32,6 +32,11 @@ Between hours: a 20-minute `send_later` check-in (Muse's mail, `asks.py --hours 
 FIX-CI / BLOCKED lines, session sizes), re-armed by each run while something is in flight (a proof running, a
 diff to apply, a merge to make); when nothing is, the hourly run alone does (saves the weekly limit, 11-04).
 
+Trunk merges on any PR are yours, done the hour it conflicts, and the owner is mailed the new sha. Hand a merge to
+Muse only when the conflict is in its own logic, by a mail that says "Muse: resolve". Never ask for a job and then
+do it yourself: if you take a job back, mail that first (11-05: Muse's merge agent was wasted on #232/#233).
+Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can miss a push, #235).
+
 Notes: before merging, check the PR's base is `ScraperX-Claude` (a stacked PR merges into its parent's branch,
 not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe only
 to PRs you merge yourself. A helper that edits code runs in a worktree and never subscribes to a PR. The

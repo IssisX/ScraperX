@@ -102,6 +102,33 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 12:15 PM J-044 PLAN ruled (#242, comment 6665543520). Audit at 6665481435. Opened: J-044a #243 (ChatGPT spec), J-044b #244
+  (Grok math), J-044m #245 (Claude helper, perf probes, claude/integrate-j044m-perf). Muse mailed: J-044c (upper body) right after
+  J-001/#95/sense_near, then d, e, f, g, k, l; J-040 after J-044d. Claude lanes later: h (presentation), i (injury render),
+  j (foley/voice), n (demo). Audit helper retired. Helpers running: 2 (J-042, J-044m). Open calls put to Cory: is a
+  checkpoint after her death restored dead (pick: yes)? Does a daze from head hits replace the fixed stage timer (pick: yes)?
+  Two budget leaks (the grab hand's 2600 N spring, the shove's velocity write) close in J-044l/J-040.
+- 11:55 AM J-044 #242 (Cory): console-quality fighting, the umbrella over S1-S8 (#109 #164-#167 #111 #110 #112). A read-only audit
+  helper (Opus, no worktree) is auditing and designing; it posts on #242 and reports to me. Then: design asks To Muse/Grok/ChatGPT,
+  dependency-ordered jobs, the first end-to-end slice (right cross to the left cheek). Flagged to Cory: it likely overturns the
+  8:20 "keep the capsule" ruling (needs a jointed upper body: protected mass/force); voice must be real recordings; blood/gore
+  cost on the Fold 6 must be measured; multi-week. Helpers running: 2 (J-042, J-044 audit) = cap.
+  Cory 12:00 "Go": jointed upper body (head/neck/spine/shoulders, motorized, her budget); legs + capsule locomotion kept.
+- 11:40 AM NEW FEATURES (Cory, Muse Batch 5): J-042 #240, Her Ammo, Your Ammo (toolbox throw, dodge, race, throw back):
+  a Claude helper (Opus, worktree, claude/integrate-j042-ammo, test group `ammo`). It holds throw/fetch/take_stock while Builder
+  is out; take_blow, damage, the shove and sense_near stay Muse's (diffs go by `To Muse:` on #240, which I mail).
+  J-043 #241, Belly of the Deck (underside girders, she walks overhead): Muse, inventory now in parallel. Muse's queue:
+  J-001, #95, sense_near, J-043, J-016 s3, J-040, J-038 s1. Rules for both: no exemptions, scripted misses or blindness;
+  real inputs; protected geometry alone. Helpers running: 1.
+- 11:35 AM: #239 MERGED (abb0b8af) by hand. The switchboard said HUMAN-MERGE: it touches .github/workflows (touch shard 2 list),
+  which the workflow token cannot merge. So any PR touching the workflow is still mine. J-041 DONE (#235 + #239); the helper
+  is retired, worktree removed. Claude helpers running: 0. Cory 11:25: no expensive workflows, at most 2 helpers. Trunk
+  merges are the integrator's (muse.md + hourly file, mailed to Muse); Muse confirmed it stopped its merge agent and started
+  the sense_near fix.
+- 11:05 AM: MERGED #235 (72d7d484, protected, Codex clean + my LAND) and #233 (c9fcec2b). Opened #239 (J-041 stacked,
+  claude/integrate-j041-forklift @786a019b: trunk merged in, slice renamed forklift-matron for the group-content guard).
+  It has the wake job, so the switchboard should merge it itself on green + Codex: a test of #238. Helper told to fix #239
+  if red; otherwise its job is done (retire it after #239 lands).
 - 10:55 AM: #238 MERGED (c5e2b79b). Its own proof's wake-switchboard job started switchboard run 42068620363
   (workflow_dispatch, actor github-actions[bot]). The switchboard now wakes after every push proof whose branch has trunk's
   workflow, i.e. any branch that merged trunk after c5e2b79b. Older heads (#233 @685d428b, #235 @5baad0f6) still need
@@ -140,7 +167,7 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   first-frame drop, no release blend at takeoff). HOLD; Muse is mailed to fix them and look by eye, then I dispatch the
   proof. #233 is still dirty (Muse to merge trunk in). #232 has no API review yet; dispatched the switchboard again.
   #235 @0df46ac9 (helper moved the truck and merged trunk) is proving. #231 @14917c34 is proving.
-  Cory 10:00: keep saying "no" out loud to the ultracode workflow nudges (deliberate, so I never run one by accident).
+  Cory 10:00 + 11:15: decline the ultracode workflow nudges deliberately, in my own reasoning only; never mention it to Cory.
 - 9:40 AM MERGED #230, #216 and #234 by hand (a LAND note first). Steer never wakes on github-actions[bot] comments
   (GITHUB_TOKEN events don't trigger workflows), and schedule/workflow_run are still dead, so merge by hand on MERGE lines.
   A workflow_dispatch of switchboard.yml (dry_run=false) runs the ask job, which is the Claude API review that counts as the

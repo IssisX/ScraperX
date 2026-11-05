@@ -749,11 +749,22 @@ void run_yard_crane_magnet() {
     // Earlier save-game body indices must still line up.
     const auto last = s.kit_body_count();
     // The 137 east/west stock bodies are built after the summit (world-b;
-    // run_wet_e_guard pins the same count as kNewEastWest), so the
-    // tower/summit tail sits 137 bodies before the end of the kit, and
+    // run_wet_e_guard pins the same count as kNewEastWest), then the deck-154
+    // forklift's frame and forks (J-041), the kit's last two; so the
+    // tower/summit tail sits 137 + 2 bodies before the end of the kit, and
     // the 137 after it are stock entities.
     constexpr std::uint32_t kNewEastWest = 137;
-    const auto tail = last - kNewEastWest;
+    const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
+    constexpr std::uint32_t kForkliftBodies = 2;
+    require(last >= kForkliftBodies && s.kit_body_entity(last - 2) == kForklift[0] &&
+                s.kit_body_entity(last - 1) == kForklift[1],
+            "magnet: the deck-154 forklift's frame and forks are the kit's last two bodies");
+    const auto tail = last - kForkliftBodies - kNewEastWest;
+    bool east_west = true;
+    for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {
+        east_west = east_west && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
+    }
+    require(east_west, "magnet: the 137 east/west pieces, all stock, sit between the summit and the forklift");
     require(tail >= 7 &&
                 s.kit_body_entity(tail - 7) == scraperx::sim::TwinTower::kFrameEntity &&
                 s.kit_body_entity(tail - 6) == scraperx::sim::TwinTower::kLeafEntity &&

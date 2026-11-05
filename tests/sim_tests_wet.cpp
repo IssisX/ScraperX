@@ -3,6 +3,7 @@
 #include "sim_tests.hpp"
 
 #include "sim/bay.hpp"
+#include "sim/forklift.hpp"
 #include "sim/summit.hpp"
 #include "sim/twin_tower.hpp"
 
@@ -199,7 +200,8 @@ void run_wet_e_guard(const bool expect) {
     using scraperx::sim::Simulation;
     Simulation world(InitialSpawn::WetFPlatform);
     // The bodies there were before E's rebuild, in order; and those built
-    // since, after them: the bay, the second shaft's access, then summit rigging.
+    // since, after them: the bay, the second shaft's access, then summit
+    // rigging; last, after world-b's pieces, the forklift on deck 154 (J-041).
     constexpr std::uint32_t kBodiesBeforeE = 595;
     Fnv bodies;
     for (std::uint32_t i = 0; i < std::min(world.kit_body_count(), kBodiesBeforeE); ++i) {
@@ -217,8 +219,16 @@ void run_wet_e_guard(const bool expect) {
     // and their bodies built last, after the summit. The bay, twin and summit
     // bodies still follow the original 595 in order; only the total grows
     // by 137, so the sequence check covers exactly those twelve bodies.
+    // J-041: then the deck-154 forklift's two bodies, after the east/west
+    // pieces (its frame, then its forks).
     constexpr std::uint32_t kNewEastWest = 137;
-    bool since_after = world.kit_body_count() == kBodiesBeforeE + std::size(kSince) + kNewEastWest;
+    const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
+                                       scraperx::sim::Forklift::kDeck154CarriageEntity};
+    const std::uint32_t forklift_at = kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
+    bool since_after = world.kit_body_count() == forklift_at + std::size(kForklift);
+    for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
+        since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
+    }
     for (std::uint32_t i = kBodiesBeforeE; since_after && i < kBodiesBeforeE + std::size(kSince); ++i) {
         since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
     }
@@ -287,7 +297,7 @@ void run_wet_e_guard(const bool expect) {
     // 4824050261233220131, now 3514033760028014323.
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin and four summit bodies");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is
