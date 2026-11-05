@@ -102,6 +102,14 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 8:55 AM PRs opened from Muse's pushes (merge on green + Codex clean, my LAND comment first): #230 guard-steps,
+  #231 matrix-shard (J-027 guards: merge one at a time, merging trunk in); #232 S3 heavy kick (J-034); #233 J-038 slice 0
+  (stated container loads; struck_mass_kg rename OK); #234 J-016 return-walk (touch_matron_pipe still red at the drum,
+  which is stage 3). #95 @44521835 (EXPECTED removal): proof dispatched, run 42049004665; merge on green (workflow
+  scope, mine).
+- J-001 damper (c000b4fa, local only) measured FAIL. Ruled 8:55: wrist damping (friction or angular damping on the
+  ankle SwingTwist grip, power charged to her budget, capped by the grip tear), gates untouched; if it can't kill the
+  swing in 18 ticks, ask Grok for the bound. J-040 #228 body now includes ChatGPT's adopted acceptance additions.
 - Guards (Job: J-027): #226 and #224 MERGED. #225 audits-guard: trunk merged in at 6c2c5f94 (all steps kept,
   yaml OK, 4 guards PASS), proof re-running, then merge. guard-steps not pushed yet. Merge lesson (8:30): the
   safety check refused a merge that had only Codex's clean review, so post my own "Claude (integrator) review: LAND" comment
