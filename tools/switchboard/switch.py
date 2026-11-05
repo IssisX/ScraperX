@@ -46,7 +46,14 @@ from ghapi import GitHub, GitHubError  # noqa: E402
 
 REPO = "IssisX/ScraperX"
 PROOF_WORKFLOW = "wo000-delivery-spine.yml"
-NOT_COUNTED = {"publish-checkpoint", "playtest-apk"}   # as sweep.py: skipped or signing-only off trunk
+NOT_COUNTED = {"publish-checkpoint", "playtest-apk", "wake-switchboard"}   # as sweep.py: skipped or signing-only off trunk
+WAKE_JOB = "wake-switchboard"   # the proof's last job, which dispatches this sweep (wo000-delivery-spine.yml)
+
+
+def only_wake_left(jobs: list[dict]) -> bool:
+    """True when the proof's one unfinished job is the one waking this sweep: every proof job is done."""
+    return any(j["name"] == WAKE_JOB for j in jobs) and all(
+        j["status"] == "completed" for j in jobs if j["name"] != WAKE_JOB)
 LEDGER_BRANCH = "switchboard/ledger"
 LEDGER_PATH = "work/archive/runs.log"
 DIGEST_TITLE = "Digest"
@@ -111,9 +118,9 @@ class Switch:
         if not runs:
             return "none", "", 0, ""
         run = max(runs, key=lambda r: r["created_at"])
-        if run["status"] != "completed":
-            return "running", run["html_url"], run["id"], ""
         jobs = self.gh.get(f"repos/{self.gh.repo}/actions/runs/{run['id']}/jobs?per_page=50")["jobs"]
+        if run["status"] != "completed" and not only_wake_left(jobs):
+            return "running", run["html_url"], run["id"], ""
         failed = [j["name"] for j in jobs if j["name"] not in NOT_COUNTED and j["conclusion"] not in ("success", "skipped")]
         return ("red: " + ", ".join(failed) if failed else "green"), run["html_url"], run["id"], run.get("updated_at") or ""
 
