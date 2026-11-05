@@ -102,6 +102,11 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
+- 9:30 AM #216 @1a0dbd33: green, Codex clean, Claude API LAND, so the switchboard should merge it. I fixed its stale body.
+  Tell Muse in the next mail (non-blocking): each stack ring now gets its own east/west cap, so a ring can hold up to twice
+  kSpotsPerStackRing, which may collide with the per-ring gate in fb-bot/expand-world-20261031; the 137 trailing bodies are
+  checked by count, not by entity id; the `!body.valid()` skip in her deck scan is dead code. After #216 lands, #235 must
+  merge trunk in (same E guard).
 - 9:25 AM SWITCHBOARD TRIGGERS DEAD: no `schedule` run since 09:44 UTC and no `workflow_run` since 12:11 UTC (the default
   switch was about 11:30 UTC). issue_comment still works (a ": LAND" comment wakes steer). So green PRs (#95, #232-#234)
   sat unmerged. Dispatched the sweep by hand (run 42054261416, dry_run=false). Next: confirm a :32 or :47 schedule tick
