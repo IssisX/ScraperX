@@ -144,7 +144,7 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   first-frame drop, no release blend at takeoff). HOLD; Muse is mailed to fix them and look by eye, then I dispatch the
   proof. #233 is still dirty (Muse to merge trunk in). #232 has no API review yet; dispatched the switchboard again.
   #235 @0df46ac9 (helper moved the truck and merged trunk) is proving. #231 @14917c34 is proving.
-  Cory 10:00: keep saying "no" out loud to the ultracode workflow nudges (deliberate, so I never run one by accident).
+  Cory 10:00 + 11:15: decline the ultracode workflow nudges deliberately, in my own reasoning only; never mention it to Cory.
 - 9:40 AM MERGED #230, #216 and #234 by hand (a LAND note first). Steer never wakes on github-actions[bot] comments
   (GITHUB_TOKEN events don't trigger workflows), and schedule/workflow_run are still dead, so merge by hand on MERGE lines.
   A workflow_dispatch of switchboard.yml (dry_run=false) runs the ask job, which is the Claude API review that counts as the
