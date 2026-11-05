@@ -123,6 +123,13 @@ jobs:
           python3 .github/scripts/check_apk_step_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml
 
+      - name: Verify every scope proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_scope_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
   host-build:
     needs: scope
     if: needs.scope.outputs.game == 'true'
@@ -227,6 +234,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/scripts/check_apk_step_coverage.py \
+            --workflow .github/workflows/wo000-delivery-spine.yml
+
+      - name: Verify every scope proof step runs in CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/check_scope_step_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml
 
       - name: Share host native binaries with test jobs
