@@ -56,7 +56,9 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - #209 (main copy of the Codex-receipt wake fix): the safety check refuses merges into main; Cory asked once
   at 3:13 PM. Don't re-ask. Trunk twin #210 merged.
 - J-006: #212 merged 5:37 PM. Muse's fix rebuilt from the mail (whitespace restored, blob hashes match 470b2bac)
-  onto #91 at aafe397f with trunk merged; #91 ready, body `Job: J-006`; switchboard lands on green + Codex.
+  onto #91 at aafe397f with trunk merged; #91 green. Codex P1: the ladder geometry must land alone, so it is
+  #213 (3460db2f, protected geometry). After #213 lands: merge trunk into #91, `@codex review`, land on green.
+  (rule_check does not flag world geometry: a gap to fix.)
 - #95 (J-023 foot plant, workflow file): trunk merged at eb32fc5f, stills posted, proof dispatched. Merge myself
   on green + Codex clean.
 - Merged today: #83, #100, #211, #212, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
