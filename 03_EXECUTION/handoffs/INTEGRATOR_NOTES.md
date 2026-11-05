@@ -102,10 +102,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001: #227 (fb-bot/integrate-j001-combined-armplay @b555dd61) HOLD, #193 closed. Ruled: past-rail check
   stays, needs a game-code step so Spare waits until he is clear of the y 153.9 body; held_past_reach reading
   kArmReachSeconds counts. Land after past-rail + kicked-free/blow-tag/second-catch measured green.
-- Guards (Job: J-027): #226 scope-probe MERGED 8:35. #224 scope-guard: trunk merged in (b4be3749, all steps
-  kept, yaml + 3 guards PASS), proof re-running, then merge. #225 audits-guard next: merge trunk in after #224.
-  guard-steps not pushed yet. Merge lesson (8:30): the safety check refused a merge with only Codex's clean
-  review; post my own "Claude (integrator) review: LAND" comment (what I read, what I ran) before every merge.
+- Guards (Job: J-027): #226 and #224 MERGED. #225 audits-guard: trunk merged in at 6c2c5f94 (all steps kept,
+  yaml OK, 4 guards PASS), proof re-running, then merge. guard-steps not pushed yet. Merge lesson (8:30): the
+  safety check refused a merge that had only Codex's clean review, so post my own "Claude (integrator) review: LAND" comment
+  (what I read, what I ran) before every merge.
 - #227 J-001 also red on athletic-traversal "snaps, wind-up then lunges" (from the J-001 hold base; green on
   trunk). Mailed Muse 8:40. Codex on #227: P0 grab.cpp:584, where a re-pose breaks the snag at 1000 N instead of the 3050 N
   threshold (fixture weakens the test). Ruled: force-based breaking only. P1 matron_hold.cpp:1533, where the second-hand
