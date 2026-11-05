@@ -40,34 +40,25 @@ Keep this file to what changes the next action; move anything done to the log.
 - J-042: one path for every loose object; she throws up to 25 kg and shoves anything heavier.
 - Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
 
-## Open PRs (2:25 PM)
-- #250 protected magnet kit-tail (9829699d), green and Codex clean. The switchboard merges it; it lands BEFORE the ammo PR.
-- J-042 ammo: moving from #251 to `claude/integrate-protected-j042-ammo`, since it carries the E guard re-pin (Codex P1, scope
-  red). It can't split: the pin hashes the new world (precedent #216).
-  - Fix helper a84d8f9 is moving the pallet and extinguisher off the deck-154 test lane (matron-sweep was red).
-  - Then open the new PR (Job: J-042, protected, before/after in the body), close #251, and reply on its Codex threads.
-  - Workflow file, so I merge it.
-- #252 J-044m (ac62fa18, trunk merged in, CMake list = trunk + perf-step). Claude API LAND and Codex clean. I merge on green.
-- #253 J-045 part 1 (f61f728c, stacked on #252). After #252, merge trunk in, then merge.
-- #254 Muse's sense_near (c7f80b35, trunk merged in) and #255 Muse's guard self-test: the switchboard merges both (unsubscribed).
+## Open PRs (2:50 PM)
+- Merged by hand at 2:40 PM: #252 (J-044m perf) and #250 (protected kit-tail).
+- #256 J-042 protected ammo (5ea9f03e, trunk merged in). It replaces #251, which is closed. Workflow file, so I merge it on
+  green plus Codex or the API LAND. Her pallet take is marginal: asked of Muse on #240 and mailed.
+- #253 J-045 part 1 (ac62663b, trunk merged in after #252): eye LAND, proof re-running. I merge it on green.
+- #254 Muse's sense_near (c7f80b35) and #255 Muse's guard self-test: the switchboard merges both.
 - #95 J-023 plants: red, plant worst 0.111 m > 0.079. Muse fixes it; no bound raise. Workflow file, I merge after the stills.
-- #227 J-001 HOLD: Muse's past-rail agent (Spare waits until he is clear of the y 153.9 body). Rulings: force-based snag
-  break only (Codex P0, grab.cpp:584); both hands' haul comes out of her one 8 kN/44 kW account (P1).
-- Subscribed: #251, #252, #253.
+- #227 J-001 HOLD: Muse's past-rail agent. Rulings: force-based snag break only; both hands' haul comes out of her one
+  8 kN/44 kW account.
+- Subscribed: #253, #256.
 
 ## Helpers
-- Running: the J-042 fix helper (a84d8f9, in the J-042 worktree).
-- Next, once it is done (one at a time): re-create the J-045 draws helper. The 2:17 PM container restart lost it.
-  - Its partial edits are uncommitted in `.claude/worktrees/agent-a64754fb0b3815142` (ui_test_act.gd,
-    ui_test_driver.gd); branch `claude/integrate-j045-draws` from #253.
-  - Job: cut the full-height views (2890 draws at the slingshot, 2845 at the tower foot) to the 700 budget, rendering
-    only, checked by eye.
+- Running: the J-045 draws helper (af30b5d), in `.claude/worktrees/agent-a64754fb0b3815142`, branch
+  `claude/integrate-j045-draws`. It cuts the full-height views to the 700 budget.
 - J-045 after that:
   - walk p50/p95/p99;
   - a gore warm-up;
-  - Sentry native crash capture (Option A): its own workflow/signing PR with a security review. It needs a Gradle
-    export, a sentry-android plugin or addon, and the DSN from a CI secret.
-- Retired: the J-042 builder and J-044m helpers.
+  - Sentry native crash capture (Option A), its own workflow/signing PR with a security review.
+- Retired: the J-042 builder, J-042 fix and J-044m helpers.
 
 ## Muse's queue (mail only)
 1. J-001 #227
