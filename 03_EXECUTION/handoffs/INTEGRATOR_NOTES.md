@@ -110,10 +110,10 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-001 damper (c000b4fa, local only) measured FAIL. Ruled 8:55: wrist damping (friction or angular damping on the
   ankle SwingTwist grip, power charged to her budget, capped by the grip tear), gates untouched; if it can't kill the
   swing in 18 ticks, ask Grok for the bound. J-040 #228 body now includes ChatGPT's adopted acceptance additions.
-- Guards (Job: J-027): #226 and #224 MERGED. #225 audits-guard: trunk merged in at 6c2c5f94 (all steps kept,
-  yaml OK, 4 guards PASS), proof re-running, then merge. guard-steps not pushed yet. Merge lesson (8:30): the
-  safety check refused a merge that had only Codex's clean review, so post my own "Claude (integrator) review: LAND" comment
-  (what I read, what I ran) before every merge.
+- Guards (Job: J-027): #226, #224 and #225 MERGED. #230 guard-steps (guard-of-guards): trunk merged in at 8506e0d8, all
+  steps kept, 10 guards each called once (PASS), LAND comment posted, proof running; merge, then merge trunk into
+  #231 matrix-shard (b3b5a8ae, Codex clean) and merge it. Before every merge, post my own LAND comment (the safety check
+  needs it).
 - #227 J-001 also red on athletic-traversal "snaps, wind-up then lunges" (from the J-001 hold base; green on
   trunk). Mailed Muse 8:40. Codex on #227: P0 grab.cpp:584, where a re-pose breaks the snag at 1000 N instead of the 3050 N
   threshold (fixture weakens the test). Ruled: force-based breaking only. P1 matron_hold.cpp:1533, where the second-hand
