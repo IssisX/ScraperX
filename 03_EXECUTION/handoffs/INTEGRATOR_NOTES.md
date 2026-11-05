@@ -40,7 +40,7 @@ Keep this file to what changes the next action; move anything done to the log.
 - J-042: one path for every loose object; she throws up to 25 kg and shoves anything heavier.
 - Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
 
-## Open PRs (3:20 PM)
+## Open PRs (5:40 PM)
 - Merged: #252 and #250 (by hand, 2:40 PM), #253 (by hand, 3:00 PM); #254 and #255 (switchboard).
 - #256 J-042 protected ammo (5ea9f03e, trunk merged in). It replaces #251, which is closed. Workflow file, so I merge it on
   green plus Codex or the API LAND. Her pallet take is marginal: asked of Muse on #240 and mailed.
@@ -52,16 +52,13 @@ Keep this file to what changes the next action; move anything done to the log.
 - Subscribed: #256.
 
 ## Helpers
-- Running: the J-045 draws helper (af30b5d), in `.claude/worktrees/agent-a64754fb0b3815142`, branch
-  `claude/integrate-j045-draws`. It cuts the full-height views to the 700 budget.
-- J-045 after that:
-  - walk p50/p95/p99;
-  - a gore warm-up;
-  - Sentry native crash capture (Option A), its own workflow/signing PR with a security review.
-- Next helper after the draws helper: J-046 #257, the budget audit (Cory "Go" 3:10 PM). One test sums every one of
-  her force paths per tick against 8 kN / 44 kW. Known leaks go on an EXPECTED list (XPASS forces removal); it only
-  measures, with no behavior change.
-- Retired: the J-042 builder, J-042 fix and J-044m helpers.
+- Running: the J-046 #257 budget-audit helper, branch `claude/integrate-j046-budget-audit` (worktree). It covers the trunk
+  groups now; matron-ammo after #256 lands. I open its PR.
+- J-045 #258 (draws, c9bb7b2a) opened 5:40 PM; switchboard merges it (no workflow file); unsubscribed. Foot at HIGH shadows
+  is still ~990 draws: look call put to Cory (LOW shadows by default on the phone, or fewer splits at HIGH). Waits on him.
+- J-045 after that: walk p50/p95/p99; a gore warm-up; Sentry native crash capture (Option A), its own workflow/signing PR
+  with a security review.
+- Retired: the J-042 builder, J-042 fix, J-044m and J-045 draws helpers.
 
 ## Muse's queue (mail only)
 1. J-001 #227
@@ -87,5 +84,6 @@ Claude lanes later: J-044h (presentation), i (injury render), j (foley/voice: re
 - `.claude/worktrees/` is in `.git/info/exclude`.
 - Stale temp worktrees in the scratchpad (`tmp.C1BZusDQkr/*`) are from guard PRs that have merged.
 - The godot MCP timed out at every session start: it waits on the SessionStart Godot install (>30 s); started by hand, it answers in 1.6 s.
-  Fixed 11-05 2:35 PM: environment variable MCP_TIMEOUT=120000, which applies from the next session start or resume. Until then,
+  Fixed 11-05 2:35 PM: MCP_TIMEOUT=120000 on the environment. It did NOT take after the 5:40 PM compact (still 30 s);
+  it should apply from the next session start or resume. Until then,
   helpers render with tools/godot/godot under xvfb (--capture) and view the stills.
