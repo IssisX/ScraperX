@@ -616,3 +616,157 @@ void run_matron_sweep() {
             "sweep: the same inputs give the same sweep, to the bit");
     std::cout << "PASS scraperx_sim matron sweep: impulse_ns=" << pest.impulse_ns << "\n";
 }
+
+namespace {
+// The heavy kick: Punch while moving toward her, one kick on the
+// Deck154 start. `stage`: her stage held. `fast`: wait until she hunts
+// faster than 1 m/s (her crouch). `immediate`: throw at once (whiff).
+// `move_toward`: hold move toward her (false: a punch). `crouch`:
+// hold Crouch too (a sweep). `slow`: creep pace (upright Dangerous).
+struct Kicked {
+    bool offered = false;
+    std::uint64_t strikes = 0;
+    std::uint64_t hits = 0;
+    double impulse_ns = 0.0;
+    double max_blow_mps = 0.0;
+    int state = -1;
+    std::uint64_t knockdowns = 0;
+    std::uint64_t staggers = 0;
+    std::uint8_t phase = 0;
+    std::uint8_t move = 0;
+    bool staggered = false;
+    Vector3 point{};
+};
+
+Kicked kick_one(const double her_ahead_m, const int stage, const bool fast, const bool immediate,
+                const bool move_toward = true, const bool crouch = false, const bool slow = false) {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    for (int i = 0; i < 30; ++i) {
+        tick(s);
+    }
+    const Vector3 p = s.snapshot().player_position;
+    (void)s.set_facing(0.0, 1.0);
+    s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + her_ahead_m});
+    s.debug_hold_matron_hands(30.0);
+    constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
+    if (slow) s.debug_fix_matron_pace(0);  // creep: upright Dangerous.
+    if (!immediate) {
+        for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && s.matron_state().state != kHunting;
+             ++i)
+            tick(s);
+        require(s.matron_state().state == kHunting, "kick: she hunts before the kick (setup)");
+        s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+    }
+    if (crouch) {
+        (void)s.set_crouch_input(true);
+        for (int i = 0; i < 10 && !s.snapshot().player_crouched; ++i) tick(s);
+        require(s.snapshot().player_crouched, "kick: crouched before the press (setup)");
+    }
+    if (fast) {
+        // Pressed at 2.05 m, she crosses the kick's reach band during
+        // windup and reach, still running fast at contact.
+        bool entered = false;
+        for (int i = 0; i < 10 * static_cast<int>(Simulation::kTickRateHz) && !entered; ++i) {
+            const Vector3 me = s.snapshot().player_position;
+            const Vector3 her = s.matron_state().position;
+            (void)s.set_facing(her.x - me.x, her.z - me.z);
+            tick(s);
+            const double dx = s.matron_state().position.x - s.snapshot().player_position.x;
+            const double dz = s.matron_state().position.z - s.snapshot().player_position.z;
+            entered = s.matron_state().state == kHunting && s.matron_state().speed > 1.0 &&
+                      std::hypot(dx, dz) <= 2.05;
+        }
+        require(entered, "kick: she hunts fast toward kick reach (setup)");
+    } else {
+        const Vector3 me = s.snapshot().player_position;
+        const Vector3 her = s.matron_state().position;
+        (void)s.set_facing(her.x - me.x, her.z - me.z);
+        tick(s);
+    }
+    if (move_toward) {
+        const Vector3 me = s.snapshot().player_position;
+        const Vector3 her = s.matron_state().position;
+        const double dx = her.x - me.x, dz = her.z - me.z, l = std::hypot(dx, dz);
+        (void)s.set_facing(dx / l, dz / l);
+        (void)s.set_move_input(dx / l, dz / l);
+        tick(s);
+    }
+    Kicked out;
+    out.offered = s.snapshot().strike_offered;
+    const std::uint64_t strikes0 = s.snapshot().strike_count, hits0 = s.snapshot().strike_hit_count,
+                      downs0 = s.matron_state().knockdowns, stags0 = s.matron_state().staggers;
+    (void)s.request_strike();
+    for (int i = 0; i < 60; ++i) {
+        tick(s);
+        // The strike started, so its move is frozen: release move now.
+        if (i == 0) (void)s.set_move_input(0.0, 0.0);
+        out.max_blow_mps = std::max(out.max_blow_mps, s.matron_state().blow_mps);
+        // A stagger is short here (0.45 s): assert she staggered at all,
+        // never that she is still staggering at one fixed tick.
+        if (s.matron_state().state == static_cast<int>(scraperx::sim::Matron::State::Staggering)) out.staggered = true;
+        // The move is frozen while the strike is under way, but Guard
+        // recomputes it from the CURRENT input each tick: after the kick
+        // he has walked past her, so reading it after the strike ends
+        // would report the punch. Sample it while a strike is running.
+        if (s.snapshot().strike_phase != 0) {
+            out.move = s.snapshot().strike_move;
+        }
+    }
+    const auto &snap = s.snapshot();
+    out.strikes = snap.strike_count - strikes0;
+    out.hits = snap.strike_hit_count - hits0;
+    out.impulse_ns = snap.strike_impulse_ns;
+    out.state = s.matron_state().state;
+    out.knockdowns = s.matron_state().knockdowns - downs0;
+    out.staggers = s.matron_state().staggers - stags0;
+    out.phase = snap.strike_phase;
+    out.point = snap.strike_hit_point;
+    return out;
+}
+} // namespace
+
+void run_matron_kick() {
+    constexpr int kDown = static_cast<int>(scraperx::sim::Matron::State::Down);
+    constexpr int kStaggering = static_cast<int>(scraperx::sim::Matron::State::Staggering);
+    const Kicked pest = kick_one(1.05, 0, false, false);
+    std::cout << "  kick pest: offered=" << pest.offered << " hits=" << pest.hits << " impulse_ns=" << pest.impulse_ns << " max_blow=" << pest.max_blow_mps << " state=" << pest.state << "\n";
+    require(pest.strikes == 1, "kick: one press throws one kick");
+    require(pest.offered && pest.hits == 1 && pest.move == 2, "kick: a kick in reach lands once, as move 2");
+    require(pest.impulse_ns > 166.6 && pest.impulse_ns <= 166.7, "kick: 3000 N over 5 ticks is 166.7 N-s");
+    // Down on the 3rd contact tick (100 N-s over Pest's 0.306 bar);
+    // take_blow ignores blows during Down, so the peak stops at 0.4545.
+    require(pest.max_blow_mps > 0.45 && pest.max_blow_mps < 0.46, "kick: judged peak stops at Down, 100 N-s over 220 kg");
+    require(pest.state == kDown && pest.knockdowns == 1 && pest.staggers == 0, "kick: an upright pest goes down");
+    const Kicked dangerous = kick_one(1.05, 1, false, false, true, false, true);
+    std::cout << "  kick dangerous: hits=" << dangerous.hits << " state=" << dangerous.state << "\n";
+    require(dangerous.hits == 1 && dangerous.staggered && dangerous.staggers == 1 && dangerous.knockdowns == 0,
+            "kick: an upright dangerous Matron staggers only, never down");
+    const Kicked changed = kick_one(1.05, 2, false, false);
+    std::cout << "  kick changed faced: hits=" << changed.hits << " state=" << changed.state << "\n";
+    require(changed.hits == 1 && changed.staggered && changed.staggers == 1 && changed.knockdowns == 0,
+            "kick: a faced changed Matron staggers only, her brace holds");
+    const Kicked crouched = kick_one(2.5, 1, true, false);
+    std::cout << "  kick crouched: hits=" << crouched.hits << " state=" << crouched.state << "\n";
+    require(crouched.hits == 1 && crouched.impulse_ns > 166.6 && crouched.state != kDown &&
+                crouched.state != kStaggering && crouched.knockdowns == 0 && crouched.staggers == 0,
+            "kick: the crouched blow lands but takes nothing from it");
+    const Kicked whiff = kick_one(3.0, 0, false, true);
+    std::cout << "  kick whiff: offered=" << whiff.offered << " hits=" << whiff.hits << " phase=" << int(whiff.phase) << "\n";
+    require(!whiff.offered && whiff.strikes == 1 && whiff.hits == 0 && whiff.impulse_ns == 0.0 && whiff.move == 2,
+            "kick: out of reach, none offered and none lands, but the press still threw a kick");
+    require(whiff.phase == 0 && whiff.knockdowns == 0 && whiff.staggers == 0,
+            "kick: after a whiff the foot is back at guard, full recovery");
+    const Kicked plain = kick_one(1.05, 0, false, false, false);
+    std::cout << "  kick no-move: move=" << int(plain.move) << " hits=" << plain.hits << " impulse_ns=" << plain.impulse_ns << "\n";
+    require(plain.move == 0 && plain.hits == 1 && plain.impulse_ns > 49.0 && plain.impulse_ns <= 50.01,
+            "kick: standing still, the same press is the plain punch, not a kick");
+    const Kicked low = kick_one(1.05, 0, false, false, true, true);
+    std::cout << "  kick crouch-move: move=" << int(low.move) << " hits=" << low.hits << "\n";
+    require(low.move == 1 && low.hits == 1,
+            "kick: crouched and moving, the same press is the low sweep, not a kick");
+    const Kicked again = kick_one(1.05, 0, false, false);
+    require(again.hits == pest.hits && again.impulse_ns == pest.impulse_ns && again.point.x == pest.point.x && again.point.y == pest.point.y && again.point.z == pest.point.z,
+            "kick: the same inputs give the same kick, to the bit");
+    std::cout << "PASS scraperx_sim matron kick: impulse_ns=" << pest.impulse_ns << "\n";
+}
