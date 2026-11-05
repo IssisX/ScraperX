@@ -24,7 +24,7 @@ Session chain: 7 of 8. Compact at 400k (Cory runs /compact); a new session only 
   Grok and ChatGPT review only when neither can.
 - **API coder (Managed Agents): off** (Cory, 11-04: "I just want the reviewer(s)"; `orchestrator.enabled: false`).
   Never cite its per-session reserve to Cory.
-- **Claude helpers (lean, 1:30 PM, weekly limit at warning):** one at a time, Sonnet, in a worktree, until the limit resets. Every brief says: never subscribe to a
+- **Claude helpers (lean, 1:30 PM, weekly limit at warning):** one at a time, Opus high or xhigh (never Sonnet: Cory 11-05), in a worktree. Every brief says: never subscribe to a
   PR you open.
 
 ## Cory's rulings today (all in the repo)
@@ -55,7 +55,9 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 ## Merge queue (5:20 PM)
 - #209 MERGED by Cory 6:05 AM 11-05. 6:30 AM: Cory made ScraperX-Claude the DEFAULT branch. Workflow triggers,
   `if`s and schedules now come from trunk: never route a fix through main again. #218 carries the APK publisher
-  onto trunk (protected, Codex clean); merge it on green.
+  onto trunk: MERGED 6:38 AM, the publisher ran from trunk at once.
+- Muse may push its own fb-bot/integrate-[protected-]<job> branches (ruled 6:40 AM, mailed); mails branch+sha;
+  I open/merge the PR. If its push is refused, it says why and diffs stay by mail.
 - J-006: #212 merged 5:37 PM. Muse's fix rebuilt from the mail (whitespace restored, blob hashes match 470b2bac)
   onto #91. Ladder geometry landed alone as #213 (7:13 PM); trunk merged into #91 at 7299f8a8, `@codex review`
   posted. Codex P1 again: the traverse completion-condition change must land alone, so it is #215 (protected
@@ -74,8 +76,13 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - J-016 stage 2: Muse's walk-shove guard (a6f93411) cut alone onto trunk -> #217 (fb-bot/integrate-j016-launcher,
   748ae35d; test hunk whitespace rebuilt, blob differs from Muse's ed795032). Merge on green + Codex clean. Stage 3
   (drum leaves deck 154: gap = protected geometry, or never shove toward a deck edge) ruled to Muse 6:15 AM.
+- Merged 11-05: #218, #217 (J-016 guard, green incl. stood_his).
+- 7:20 AM: Muse PUSHES now. Guards #219 apk-step, #220 job-gate, #221 group-content (J-027, workflow files: I merge
+  on green + Codex, one at a time, trunk merged into the rest). Hold on guards LIFTED. #95 head 551973b0 (Muse's
+  plant fix), proof run 42035080417 dispatched. J-038 rulings after ChatGPT (#169): settle exclusion replaces the
+  vertical gate; support = gravity-opposing normal held 2+ ticks; 1 mm quantize, stable merge ties.
 - Merged today: #83, #100, #211, #212, #91, #213, #214, #215, #150, #171 (into #83), #179, #185, #196, #197, #199-#206, #208, #210. Closed #43, #103.
-- Lean mode (weekly limit at warning, Cory silent = pick): one Sonnet helper at a time.
+- Lean mode (weekly limit at warning, Cory silent = pick): one Opus helper at a time (high or xhigh, never Sonnet).
 
 ## Known here
 - `.claude/worktrees/` goes in `.git/info/exclude` in a fresh clone. Worktrees in use: proof-scope, merge-protected, j025.
