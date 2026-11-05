@@ -27,7 +27,8 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    would do it, tell Cory with your pick.
 
 Between hours: a 20-minute `send_later` check-in (Muse's mail, `asks.py --hours 3`, the sweep's MERGE /
-FIX-CI / BLOCKED lines, session sizes), re-armed by each run.
+FIX-CI / BLOCKED lines, session sizes), re-armed by each run while something is in flight (a proof running, a
+diff to apply, a merge to make); when nothing is, the hourly run alone does (saves the weekly limit, 11-04).
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (a stacked PR merges into its parent's branch,
 not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe only
