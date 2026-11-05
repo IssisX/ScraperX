@@ -52,6 +52,9 @@ logging); find better ways unasked; no full game builds for small changes (#202)
   Grok answers again.
 - To Claude: none open.
 
+- Context (Cory 11-05): plugin searches use one exact keyword, or a helper runs them and returns one line
+  (a broad SearchPlugins dump was the big jump). Never trade quality for context: PRs stay one per job.
+
 ## Merge queue (5:20 PM)
 - #209 MERGED by Cory 6:05 AM 11-05. 6:30 AM: Cory made ScraperX-Claude the DEFAULT branch. Workflow triggers,
   `if`s and schedules now come from trunk: never route a fix through main again. #218 carries the APK publisher
