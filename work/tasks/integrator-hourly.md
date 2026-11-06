@@ -3,6 +3,11 @@
 It runs every 3 hours, 8:17 AM to 11:17 PM Central, none overnight (Cory 11-06: the weekly limit must last to Sunday night).
 At the 11:17 AM, 5:17 PM and 11:17 PM runs, ask Cory for the usage meter (total %), log it in the notes and redo the
 pace: (100 - used) / hours left to Sunday bedtime, against the rate since the last reading.
+Throttle (Cory 11-06, 72% at 9:16 AM; 28% must last about 44 daytime hours): at most 0.6% an hour of the day. Budget:
+82% by Fri 11 PM, 91% by Sat 11 PM, under 100% Sun night. A block over budget makes the next run quiet (answers, merges).
+How: a helper does a run's legwork (steps 1-3: mail, asks, sweep, open PRs) and reports in 10 lines; the integrator
+decides, mails and edits the board only when an owner or a hold changes. No coding inline; long reads go to a helper.
+Fewer, batched tool calls; no re-reads; short messages to Cory.
 Helpers (sub-agents): up to 2 at once (Cory 11-05, 11-06). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 9 AM), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
 
