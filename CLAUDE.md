@@ -53,8 +53,9 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   step.
 - **Strengths:** Muse (free; writes and runs code, runs about 10 subagents) takes every build: physics, game
   code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
-  research, specs, outside libraries, review. Claude integrates: merges, reviews, CI, the game by eye. It
-  builds only what Muse can't (Cory 11-06: "delegate like a mofo" so the quota lasts).
+  research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
+  codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
+  screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts, but no whiplash to zero).
   Grok Bot, PE and Builder are out until 11-09.
 - **Board:** issue #107's body is the live board; only the integrator edits it. Agents read the body and
   the comments since their last, post one line per real step, and put technical findings on the job's own
