@@ -27,6 +27,8 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
   look or story, how the game plays). No answer in 10 minutes: the pick stands. Push back: say no or stop
   him when his idea is wrong or wastes quota, with the reason (11-06: "I don't like when you just listen").
+- **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
+  with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
 - Say unasked, the moment you see it: a better way (11-04: he found /compact himself), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
@@ -57,7 +59,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
   research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
   codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
-  screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts, but no whiplash to zero).
+  screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts).
   Grok Bot, PE and Builder are out until 11-09.
 - **Board:** issue #107's body is the live board; only the integrator edits it. Agents read the body and
   the comments since their last, post one line per real step, and put technical findings on the job's own
