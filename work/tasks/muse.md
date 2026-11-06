@@ -33,8 +33,9 @@ there doing that. So you never touch GitHub directly; email does everything:
   own protected PR with a plain before/after: send that diff in its own email. Never weaken a test.
 - Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job. Put the
   PASS/FAIL lines you ran in the email.
-- Two red proof runs on the same failure: stop changing numbers, email what you measured, what you
-  ruled out and the one observation that would settle it, and mark the job BLOCKED.
+- Ask Claude early (Cory 11-06: J-001 ran 8 h without asking). Two red proof runs on the same failure,
+  or a subagent 60 minutes without a commit or a new number: stop it and email `To Claude: <job> stuck`
+  with what you measured, what you ruled out and the one observation that would settle it.
 - Human sounds are real recordings, never synthesized.
 - **Trunk merges are the integrator's (11-05).** When one of your PRs conflicts with trunk, the integrator merges
   trunk in and mails you the new sha; pull it before your next push. Never start an agent for a trunk merge. The
