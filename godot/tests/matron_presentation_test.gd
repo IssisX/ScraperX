@@ -45,6 +45,14 @@ var _cam: Camera3D
 var _failures := 0
 
 
+# A stand-in native for _apply: only its non-nullness is read on the
+# visibility path (get_matron_state backs locker_front_position).
+class _StubNative:
+	extends RefCounted
+	func get_matron_state() -> Dictionary:
+		return {"state": 3, "position": Vector3(0.0, 155.05, 0.0)}
+
+
 func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
@@ -316,6 +324,26 @@ func _run() -> void:
 	ride_one.erase("climb_hand")
 	await _settle(ride_one, 30)
 	_check(rig._ride_y > 0.2, "ride_kept_single_grip", "ride %.3f m with one grip held" % rig._ride_y)
+	# Teleport deadlock (matron_view._apply): a fresh view whose _last_pos
+	# is still the origin must show her when the camera and she are together
+	# on deck 154, far from both her locker and the origin. _apply's
+	# near-gate read only the locker and the stale _last_pos, so after such
+	# a teleport she stayed invisible forever — _update_figure, the only
+	# place _last_pos is seeded, never ran.
+	var tele_view := MatronView.new()
+	root.add_child(tele_view)
+	tele_view.setup(_StubNative.new())
+	var tele_cam := Vector3(0.0, 155.5, 3.2)
+	var tele_data := _data({"position": Vector3(0.0, 154.0 + MatronView.STAND_CENTRE, 0.0),
+		"floor_y": 154.0, "strain": 0.0, "bolts": 0, "planks": PackedFloat32Array()})
+	for i in 12:
+		tele_view._apply(tele_data, DT, tele_cam, tele_cam)
+		await process_frame
+	_check(tele_view.visible, "teleport_visible_deck154",
+		"view visible, camera %.0f m from locker and %.0f m from origin" % [
+			tele_cam.distance_to(Vector3(11.0, 12.1, -126.2)), tele_cam.distance_to(Vector3.ZERO)])
+	_check(tele_view._figure.visible, "teleport_figure_visible_deck154",
+		"figure visible with camera %.1f m from her" % tele_cam.distance_to(Vector3(0.0, 155.05, 0.0)))
 	var out_dir := _out if _out != "" else "artifacts"
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var f := FileAccess.open(out_dir.path_join("matron_presentation_frames.json"), FileAccess.WRITE)

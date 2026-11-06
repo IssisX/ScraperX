@@ -2466,11 +2466,15 @@ func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_pos
 		_state_age = 0.0
 	_state_age += delta
 	_sync_locker_home(data)
-	var near := camera_position.distance_to(_locker_centre) < DRAW_RANGE_M or camera_position.distance_to(_last_pos) < DRAW_RANGE_M
+	# Her live position too: _last_pos is only seeded inside _update_figure,
+	# which this gate skips, so a teleport far from both the locker and the
+	# stale _last_pos deadlocked her invisible forever. The cull still holds:
+	# past 140 m from her live position she is still skipped.
+	var centre: Vector3 = data.get("render_position", data["position"])
+	var near := camera_position.distance_to(_locker_centre) < DRAW_RANGE_M or camera_position.distance_to(_last_pos) < DRAW_RANGE_M or camera_position.distance_to(centre) < DRAW_RANGE_M
 	visible = near
 	if not near:
 		_last_state = state
-		var centre: Vector3 = data.get("render_position", data["position"])
 		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, false)
 		return
 	_update_planks(data)
