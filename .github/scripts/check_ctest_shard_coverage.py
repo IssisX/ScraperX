@@ -22,6 +22,16 @@ itself off as a `ctest -N` run, and the build-dir path stays primary:
 whenever `ctest -N` succeeds, its list is used and the fallback never
 runs. A coverage hole still fails on either path.
 
+The shard-selection rule itself had no regression checks: a logic
+regression in it passes the real workflow while a test goes
+unselected or double-selected, and no other guard reads the -R/-E
+selection. Proven 2026-11-05: on a fixture workflow whose slice-3
+-E list excludes a test no -R list selects, the real guard fails
+(exit 1, "0 shards"), while a copy with the zero-shard detection
+removed passes it (exit 0, "PASS: 5 tests"). The parser regression
+checks in _self_test() run on every invocation, so that class of
+regression trips the guard itself before CI trusts it.
+
 Usage:
     python3 .github/scripts/check_ctest_shard_coverage.py \
         --workflow .github/workflows/wo000-delivery-spine.yml \
@@ -32,6 +42,7 @@ import argparse
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 # Step names in wo000-delivery-spine.yml, in shard order. The athletic
@@ -141,16 +152,8 @@ def list_tests(test_dir, cmakelists):
     return tests, "cmake"
 
 
-def main():
-    root = Path(__file__).resolve().parents[2]
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workflow", default=root / ".github/workflows/wo000-delivery-spine.yml")
-    parser.add_argument("--test-dir", default=root / "build/host")
-    args = parser.parse_args()
-
-    patterns = shard_patterns(Path(args.workflow).read_text())
-    tests, source = list_tests(args.test_dir, root / "CMakeLists.txt")
-
+def select_shards(patterns, tests):
+    """Return {test: [shards selecting it]} for the given patterns."""
     selected = {}
     for test in tests:
         shards = []
@@ -159,6 +162,192 @@ def main():
             if (flag == "-R" and matched) or (flag == "-E" and not matched):
                 shards.append(shard)
         selected[test] = shards
+    return selected
+
+
+def check_tests(patterns, tests):
+    """Return {test: [shards]} for tests not selected by exactly one shard."""
+    selected = select_shards(patterns, tests)
+    return {t: s for t, s in selected.items() if len(s) != 1}
+
+
+def _self_test():
+    """Regression checks for the shard parser and selector, run on every invocation."""
+    athletic = r"^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow)$"
+    group1 = r"^scraperx_sim\.(matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower)$"
+    group2 = r"^scraperx_sim\.(matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$"
+    exclude = (
+        r"^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow|"
+        r"matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower|"
+        r"matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$"
+    )
+    good = (
+        "name: test\njobs:\n  native-tests:\n    steps:\n"
+        "      - name: Run athletic_traversal, shared_survival, parkour_flow\n"
+        "        run: |\n"
+        f"          ctest -R \"{athletic}\" -V\n"
+        "      - name: Run CTest Matron slice group 1 (ladder, hearing)\n"
+        "        run: |\n"
+        f"          ctest -R \"{group1}\" -j 2\n"
+        "      - name: Run CTest Matron slice group 2 (chain, towers)\n"
+        "        run: |\n"
+        f"          ctest -R \"{group2}\" -j 2\n"
+        "      - name: Run CTest Matron slice group 3 (remaining, chase, grab)\n"
+        "        run: |\n"
+        f"          ctest -E \"{exclude}\" -j 2\n"
+    )
+    patterns = shard_patterns(good)
+    tests = [
+        "scraperx_sim.athletic_traversal",
+        "scraperx_sim.matron-ladder",
+        "scraperx_sim.matron-chain",
+        "scraperx_sim.matron-remaining",
+        "scraperx_sim.matron-budget",
+    ]
+    cases = []
+
+    def case(name, fn):
+        fn()
+        cases.append(name)
+
+    def valid():
+        if check_tests(patterns, tests):
+            raise AssertionError(f"valid: expected clean, got {check_tests(patterns, tests)}")
+        selected = select_shards(patterns, tests)
+        if selected["scraperx_sim.matron-budget"] != ["matron-slices-3"]:
+            raise AssertionError("valid: brand-new test must land in slice 3 only, "
+                                 f"got {selected['scraperx_sim.matron-budget']}")
+
+    def zero_shard():
+        # Slice 3's -E list excludes matron-foo while no -R list
+        # selects it: zero shards, the exact drift the hole proof
+        # caught.
+        text = good.replace(exclude, exclude[:-2] + "|matron-foo)$", 1)
+        bad = check_tests(shard_patterns(text), ["scraperx_sim.matron-foo"])
+        if bad != {"scraperx_sim.matron-foo": []}:
+            raise AssertionError(f"zero-shard: expected matron-foo with no shards, got {bad}")
+
+    def double_selected():
+        # Group 2's -R retargeted at group 1's list: matron-ladder is
+        # selected by both slice groups.
+        text = good.replace(f'ctest -R "{group2}"', f'ctest -R "{group1}"', 1)
+        bad = check_tests(shard_patterns(text), ["scraperx_sim.matron-ladder"])
+        if bad.get("scraperx_sim.matron-ladder") != ["matron-slices-1", "matron-slices-2"]:
+            raise AssertionError(f"double-selected: expected both slice groups, got {bad}")
+
+    def excluded_not_double():
+        # A test in a -R list AND in the -E list is selected by its -R
+        # shard only, not also by slice 3.
+        selected = select_shards(patterns, ["scraperx_sim.matron-ladder"])
+        if selected["scraperx_sim.matron-ladder"] != ["matron-slices-1"]:
+            raise AssertionError("excluded-not-double: expected slice 1 only, "
+                                 f"got {selected['scraperx_sim.matron-ladder']}")
+
+    def missing_step():
+        text = good.replace(
+            "      - name: Run CTest Matron slice group 2 (chain, towers)\n", "", 1)
+        try:
+            shard_patterns(text)
+        except SystemExit as exc:
+            if "Run CTest Matron slice group 2" not in str(exc):
+                raise AssertionError(f"missing-step: wrong message {exc}")
+            return
+        raise AssertionError("missing-step: expected SystemExit")
+
+    def missing_pattern():
+        text = good.replace(
+            f'          ctest -R "{group2}" -j 2\n',
+            "          ctest -j 2\n", 1)
+        try:
+            shard_patterns(text)
+        except SystemExit as exc:
+            if "-R pattern" not in str(exc):
+                raise AssertionError(f"missing-pattern: wrong message {exc}")
+            return
+        raise AssertionError("missing-pattern: expected SystemExit")
+
+    def cmake_foreach():
+        text = (
+            "add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)\n"
+            "foreach(slice matron-ladder matron-chain matron-remaining)\n"
+            "    add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)\n"
+            "endforeach()\n"
+        )
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as tmp:
+            tmp.write(text)
+            tmp_path = tmp.name
+        got = list_tests_from_cmakelists(tmp_path)
+        if got != ["scraperx_sim.athletic_traversal", "scraperx_sim.matron-ladder",
+                   "scraperx_sim.matron-chain", "scraperx_sim.matron-remaining"]:
+            raise AssertionError(f"cmake-foreach: got {got}")
+
+    def cmake_unexpanded_var():
+        text = "add_test(NAME scraperx_sim.${other} COMMAND scraperx_sim_tests)\n"
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as tmp:
+            tmp.write(text)
+            tmp_path = tmp.name
+        try:
+            list_tests_from_cmakelists(tmp_path)
+        except SystemExit as exc:
+            if "cannot expand" not in str(exc):
+                raise AssertionError(f"cmake-unexpanded-var: wrong message {exc}")
+            return
+        raise AssertionError("cmake-unexpanded-var: expected SystemExit")
+
+    def cmake_comment_skipped():
+        text = (
+            "# add_test(NAME scraperx_sim.matron-ghost COMMAND scraperx_sim_tests)\n"
+            "add_test(NAME scraperx_sim.matron-ladder COMMAND scraperx_sim_tests)\n"
+        )
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as tmp:
+            tmp.write(text)
+            tmp_path = tmp.name
+        if list_tests_from_cmakelists(tmp_path) != ["scraperx_sim.matron-ladder"]:
+            raise AssertionError("cmake-comment-skipped: commented test was listed")
+
+    def cmake_empty():
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as tmp:
+            tmp.write("# no tests here\n")
+            tmp_path = tmp.name
+        try:
+            list_tests_from_cmakelists(tmp_path)
+        except SystemExit as exc:
+            if "no tests parsed" not in str(exc):
+                raise AssertionError(f"cmake-empty: wrong message {exc}")
+            return
+        raise AssertionError("cmake-empty: expected SystemExit")
+
+    case("valid", valid)
+    case("zero-shard", zero_shard)
+    case("double-selected", double_selected)
+    case("excluded-not-double", excluded_not_double)
+    case("missing-step", missing_step)
+    case("missing-pattern", missing_pattern)
+    case("cmake-foreach", cmake_foreach)
+    case("cmake-unexpanded-var", cmake_unexpanded_var)
+    case("cmake-comment-skipped", cmake_comment_skipped)
+    case("cmake-empty", cmake_empty)
+    return len(cases)
+
+
+def main():
+    root = Path(__file__).resolve().parents[2]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workflow", default=root / ".github/workflows/wo000-delivery-spine.yml")
+    parser.add_argument("--test-dir", default=root / "build/host")
+    parser.add_argument("--self-test", action="store_true",
+                        help="run parser regressions only")
+    args = parser.parse_args()
+
+    fixture_count = _self_test()
+    if args.self_test:
+        print(f"PASS: {fixture_count} ctest shard coverage parser regression checks")
+        return 0
+
+    patterns = shard_patterns(Path(args.workflow).read_text())
+    tests, source = list_tests(args.test_dir, root / "CMakeLists.txt")
+
+    selected = select_shards(patterns, tests)
 
     for shard, _step, _flag in SHARDS:
         names = [t for t, s in selected.items() if shard in s]
