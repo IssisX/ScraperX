@@ -25,7 +25,7 @@ Keep this file to what changes the next action; move anything done to the log.
 
 ## Cory's standing rulings (11-04/11-05)
 - Helpers: Opus high or xhigh, never Sonnet. None until the Mon 11 AM reset (Cory 11-06: the pace ran out Sat night; last
-  to Sunday night). Builds go to Muse. Target (Cory 11-06): the weekly limit lasts to Sunday bedtime; check the meter with him each night. Meter log (ask Cory at the 11:17 AM, 5:17 PM and 11:17 PM runs): Fri 8:45 AM 70%. Needed pace 0.5%/h:
+  to Sunday night). Builds go to Muse. Target (Cory 11-06): the weekly limit lasts to Sunday bedtime; check the meter with him each night. Meter log (ask Cory at the 11:17 AM, 5:17 PM and 11:17 PM runs): Fri ~7:10 AM 70%. Needed pace 0.5%/h:
   about 77% by 11 PM Fri, 89% by 11 PM Sat.
 - No Workflow runs. Decline the ultracode nudges silently.
 - Plugin searches use one exact keyword, or a helper runs them and returns one line (context, 11-05).
@@ -44,13 +44,13 @@ Keep this file to what changes the next action; move anything done to the log.
   Muse builds it in tools/switchboard (mailed 8:10 AM). Slingshot pouch native panels stay drawn (KEEP). Shadows LOW (#263).
 - Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
 
-## Pending with Cory (8:55 AM 11-06)
-- GO (route J-044b fight math #244 to ChatGPT now, my pick) or FABLE (one Fable run today). Act only on his word.
+## Pending with Cory (7:20 AM 11-06; stamps from 6 AM today ran about 1.5 h fast, clock-checked 7:21 AM CST)
+- Fable: not needed (Cory 11-06: use it only when a real problem needs it; never invent work for it). #244: ChatGPT answered 7:16 AM; my To Grok ask (nominal shares vs max capacities) went 7:22 AM, for his 10 AM run.
 - He pasted my "no artificial blockers" prompt to Muse (8:40 AM). Muse should now: windup first (#256), then J-001.
 - He looks at LOW shadows on his phone once #263 lands; SPLITS if it looks bad.
 - Next meter ask: 11:17 AM run.
 
-## Open PRs (8:55 AM 11-06)
+## Open PRs (7:20 AM 11-06)
 - Merged: #252 and #250 (by hand, 2:40 PM), #253 (by hand, 3:00 PM); #254 and #255 (switchboard).
 - #256 J-042 protected ammo (5ea9f03e, trunk merged in). It replaces #251, which is closed. Workflow file, so I merge it on
   green plus Codex or the API LAND. Her pallet take is marginal: asked of Muse on #240 and mailed.
