@@ -4,12 +4,12 @@ It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every 2 hours 
 overnight (Cory 11-06: the weekly limit must last to Sunday night). The full check (every step below) runs at 8:17 AM,
 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light: `git pull`, step 1
 only, and end in one line, with no board edit and no message
-to Cory unless he must act (11-06: mail and GitHub asks wake nothing; Muse's green windup sat unseen 35 min).
+to Cory unless he must act (11-06: mail and GitHub asks wake nothing).
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06 9:35 AM).
 At the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun 1:17 PM and 9:17 PM), ask Cory for the usage meter (total %), log it in the notes and redo the
 pace: (100 - used) / hours left to Sunday bedtime, against the rate since the last reading.
-Throttle (Cory 11-06, 72% at 9:16 AM; 28% must last about 44 daytime hours): at most 0.6% an hour of the day. Budget:
+Throttle (Cory 11-06): at most 0.6% an hour of the day. Budget:
 82% by Fri 11 PM, 91% by Sat 11 PM, under 100% Sun night. A block over budget makes the next run quiet (answers, merges).
 Specs, the math of a ruling and research go to ChatGPT or Grok first (`To ChatGPT:` / `To Grok:`); the integrator
 checks them, never drafts them (Cory 11-06 9:35 AM).
@@ -20,7 +20,7 @@ Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut revie
 eye, or checking a claim before stating it. A slip at high effort (a wrong claim, a missed bug, a redo) is told to Cory
 the same hour, with a pick to step the integrator back to xhigh.
 Helpers (sub-agents): up to 2 at once (Cory 11-05, 11-06). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 11:20 AM; helpers keep their own effort, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
+Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 11:20 AM; helpers keep their own effort, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (11-03 to 11-06 it sat at high 45 h, unseen).
 
 The scheduled task only says "do this file"; change the check here. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
@@ -36,6 +36,8 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    ask to Claude still open (a miss); its other lines were handled when first listed.
    Sentry (phone errors from the APK): each new issue goes to its owner's job (Muse for game code) with the error,
    file and line. A failed Switchboard run: read its failing job's error lines; fix it or hand it to a helper.
+   Before ruling on or reporting a branch, read its live head (`git ls-remote`) and proof: mail can be an hour old
+   (11-06: a "budget red" ruling went out after the branch was green). A mail that changes a ruling needs one.
    Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06: 18 h went unreported).
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
    the switchboard can't: workflow-file PRs (merge on green plus a LAND), FIX or
