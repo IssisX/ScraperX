@@ -4,7 +4,8 @@ It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every 2 hours 
 overnight (Cory 11-06: the weekly limit must last to Sunday night). The full check (every step below) runs at 8:17 AM,
 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light:
 `git pull`, one mail search `newer_than:2h (subject:MUSE_TO_CLAUDE OR from:sentry.io OR subject:"Run failed: Switchboard")`
-and `python3 tools/board/asks.py --hours 2`; act on what is new, then end in one line, with no board edit and no message
+and `python3 tools/board/asks.py --hours 2`; act only on mail after the notes' `Mail read through` line, then move that
+line to the newest mail handled; end in one line, with no board edit and no message
 to Cory unless he must act (11-06: mail and GitHub asks wake nothing; Muse's green windup sat unseen 35 min).
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06 9:35 AM).
