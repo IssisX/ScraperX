@@ -144,3 +144,4 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
   draft PR #282 (never merge; the integrator stays subscribed). Only full sweeps post (a --pr run never does, so no loop).
   Green, waiting on Codex plus a LAND; the first post should list about 8 items (FIX on #256, red #227 and #95, five red branches).
 - J-051 #284 merged 12:17 PM (11-06): the inbox is live. Keep #282 OPEN and subscribed (the old switchboard closed it once, 12:15, on a quoted supersede line; reopened). Each inbox comment = act on its items now.
+- Inbox first post (12:19 PM, 8 items) triaged: #256 waits on the windup; #227, #95, 95-plant-fix, j044c and RungDown have Muse agents; `claude/integrate-j042-ammo` is dead (all of it is inside #256's protected branch); `fb-bot/integrate-s4-jab` is dead (0 commits past trunk). Neither needs action.
