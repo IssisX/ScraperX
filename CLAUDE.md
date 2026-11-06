@@ -28,7 +28,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   look or story, how the game plays). No answer in 10 minutes: the pick stands.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
-- Find better ways, always, and say them unasked (11-04: he found /compact himself).
+- Say unasked, the moment you see it: a better way (11-04: he found /compact himself), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
 
 ## The game
 
