@@ -137,6 +137,18 @@ jobs:
           python3 .github/scripts/check_matrix_shard_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml
 
+      - name: Verify no step check is an inverted command
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Under set -e a failing `! cmd` never stops the step (bash exempts
+          # inverted pipelines), so `! grep -q FAIL log` checks nothing unless
+          # it is the step's last line. Write: if grep -q ...; then exit 1; fi
+          if grep -nE '^[[:space:]]+! ' .github/workflows/*.yml; then
+            echo "inverted command in a run block: it can never fail the step"
+            exit 1
+          fi
+
   host-build:
     needs: scope
     if: needs.scope.outputs.game == 'true'
@@ -896,7 +908,7 @@ jobs:
           # swings when she turns.
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/matron_figure_test.gd 2>&1 | tee artifacts/matron-figure.log
-          ! grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log
+          if grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log; then exit 1; fi
           test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 21
 
       - name: Check Matron perception and physical contact presentation
@@ -913,7 +925,7 @@ jobs:
           set -euo pipefail
           timeout 300s tools/godot/godot --headless --path godot \
             --script res://tests/matron_presentation_test.gd 2>&1 | tee artifacts/matron-presentation.log
-          ! grep -q 'MATRON_PRESENTATION FAIL' artifacts/matron-presentation.log
+          if grep -q 'MATRON_PRESENTATION FAIL' artifacts/matron-presentation.log; then exit 1; fi
           grep -q '^MATRON_PRESENTATION PASS$' artifacts/matron-presentation.log
 
       - name: Check the gore answers every tear and fatality edge
@@ -927,7 +939,7 @@ jobs:
           # failed check.
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/gore_shots_test.gd 2>&1 | tee artifacts/gore-shots.log
-          ! grep -q '^GORE FAIL' artifacts/gore-shots.log
+          if grep -q '^GORE FAIL' artifacts/gore-shots.log; then exit 1; fi
           grep -q '^GORE PASS (0 failed)$' artifacts/gore-shots.log
 
       - name: Check Matron hold haptics fire once per event
