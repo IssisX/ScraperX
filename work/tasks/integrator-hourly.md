@@ -32,8 +32,8 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Cory's asks, a whole system or set piece, written whole on its own job issue, and mail it. Rule on Muse's
    proposals within the hour. Every hard job's owner has asked the right other agent where it is guessing.
    Replace the "This hour" section of board #107's body with who got what; never a new comment.
-5. **Size and caps.** `get_session` (no id) for this session and every Claude worker; archive workers whose
-   job landed. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current (asks in flight, merge queue,
+5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
+   their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current (asks in flight, merge queue,
    rulings). Over a cap in CLAUDE.md: trim it now.
 6. **Look for a better way, every hour (build one only if found).** What cost the most quota this hour (context size, helpers, wake-ups),
    what is still done by hand, and is the weekly pace on track for the Monday 11 AM reset? List every wake-up
