@@ -2,6 +2,7 @@
 // Members of Simulation::PhysicsWorld (physics_world.hpp).
 
 #include "sim/physics_world.hpp"
+#include "sim/matron_effort.hpp"
 #include "sim/twin_tower.hpp"
 #include <chrono>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
@@ -552,6 +553,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
     StepCommands commands = requested;
+    effort::begin_tick();   // J-046 measurement only
+    effort_dt_ = delta_seconds;
     // A punch under way owns his hands (physics_world_strike.cpp).
     strike_owns_hands(commands);
     // WO-008: captured before anything this tick can change grounded_, so
@@ -815,9 +818,11 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
     {
         const auto started = std::chrono::steady_clock::now();
+        effort_before_update();   // J-046 measurement only: reads, writes nothing
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
         step_spans_.physics_us =
             std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - started).count();
+        effort_after_update(delta_seconds);   // J-046 measurement only: reads, writes nothing
     }
     kit_->post_step(delta_seconds);
     bay_->post_step();
@@ -999,6 +1004,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     update_precision_sight(bodies);
     update_up_move(bodies);
     read_state();
+    effort::end_tick(delta_seconds);   // J-046 measurement only
 }
 
 // The first surface straight below a point within reach, the player's
@@ -1452,7 +1458,9 @@ void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JP
 // side she came from.
 void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JPH::Vec3 direction) noexcept {
     const JPH::Vec3 velocity = direction * Matron::kShoveMps + JPH::Vec3(0.0F, Matron::kShoveUpMps, 0.0F);
+    const JPH::Vec3 before = bodies.GetLinearVelocity(player_id_);   // J-046, read only
     bodies.SetLinearVelocity(player_id_, velocity);
+    effort::add_velocity_write(effort::Path::Shove, effort_mass(player_id_), before, velocity, effort_dt_);
     ++stumble_count_;
     landing_response_ = LandingResponse::Stumble;
     landing_loss_ = 0.6 * kLandingMaxLoss;

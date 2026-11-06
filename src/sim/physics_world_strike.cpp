@@ -4,6 +4,7 @@
 // strike limits (player_strike_limits.hpp), with the equal force back on
 // him. Nothing here writes a velocity or a position.
 #include "physics_world.hpp"
+#include "matron_effort.hpp"
 #include "player_strike_limits.hpp"
 
 #include "forklift.hpp"
@@ -447,6 +448,9 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
                                                   : std::min(strike::kPlayerStrikeForceN, strike::kPlayerStrikePowerW / closing);
         bodies.AddForce(her, dir * force_n, strike_point_, JPH::EActivation::Activate);
         bodies.AddForce(player_id_, -dir * force_n, JPH::EActivation::Activate);
+        // J-046 measurement only: his blow, received (not her budget's).
+        effort::add_force(effort::Path::Blow, dir * force_n,
+                          bodies.GetLinearVelocity(her) - bodies.GetLinearVelocity(player_id_), 0.0F, dir * force_n);
         strike_impulse_ns_ += force_n * dt;
         // Read by her balance as a blow (matron.cpp take_blow).
         const bool low = static_cast<float>(strike_point_.GetY() - c_feet(bodies, her)) < 0.5F;
