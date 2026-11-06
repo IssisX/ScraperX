@@ -43,9 +43,22 @@ passing. A script deleted together with both of its steps passes by
 design -- a deliberate retirement, visible as a file deletion, not a
 silent drop.
 
+This script's own logic has the same silent-drop shape one layer
+further up: if its step parser or marker check regresses, no other
+guard reads the APK jobs, so a broken apk-step guard passes the real
+workflow while an APK proof step goes unverified -- proven 2026-11-05
+by neutering its step-level `if:` detector and watching it PASS a
+workflow with a conditional identity step. So its parser regressions
+live in `_self_test()` below and run on every invocation,
+`--self-test` or not, the same pattern as the matrix and guard-step
+guards: a logic regression fails its own run before it can pass a
+real workflow.
+
 Usage:
     python3 .github/scripts/check_apk_step_coverage.py \
         --workflow .github/workflows/wo000-delivery-spine.yml
+
+    python3 .github/scripts/check_apk_step_coverage.py --self-test
 """
 
 import argparse
@@ -110,13 +123,14 @@ def step_blocks(block):
     return [(name, "\n".join(text)) for name, text in steps]
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workflow",
-                        default=".github/workflows/wo000-delivery-spine.yml")
-    args = parser.parse_args()
+def check_text(workflow_text):
+    """Check workflow text against EXPECTED.
 
-    workflow_text = Path(args.workflow).read_text()
+    Returns (problems, checked): problems is the list of failure
+    strings (empty when the workflow is clean), checked is the count
+    of proof steps found exactly once. The caller prints them; this
+    function does no I/O, so the self-test can run it on fixture text.
+    """
     problems = []
     checked = 0
     for job, name, marker, what in EXPECTED:
@@ -139,7 +153,88 @@ def main():
             problems.append(f"{job}: step {name!r} has a step-level if: ({what})")
         if marker not in text:
             problems.append(f"{job}: step {name!r} lacks {marker!r} ({what})")
+    return problems, checked
 
+
+def _self_test():
+    """Regression checks for the apk-step guard parser, run on every invocation."""
+    so_grep = 'grep -F "lib/arm64-v8a/libscraperx_native.so"'
+    identity = ".github/scripts/check_apk_identity.sh"
+    radio = "ci/verify_story_radio_package.py"
+
+    def step(name, body):
+        return (f"      - name: {name}\n"
+                "        shell: bash\n"
+                f"{body}")
+
+    def run_block(*lines):
+        return "        run: |\n" + "".join(f"          {line}\n" for line in lines)
+
+    export = step("Export checkpoint Android arm64 APK", run_block(so_grep))
+    apk_identity = step("Verify checkpoint Android APK identity", run_block(identity))
+    story_radio = step("Verify exported story-radio package", run_block(radio))
+    stage = step("Stage playtest APK", run_block(so_grep))
+    playtest_identity = step("Verify playtest Android APK identity", run_block(identity))
+
+    valid = ("name: test\njobs:\n"
+             "  android-apk:\n    steps:\n"
+             + export + apk_identity + story_radio
+             + "  playtest-apk:\n    steps:\n"
+             + stage + playtest_identity)
+    cases = []
+
+    def case(name, text, want):
+        problems, _checked = check_text(text)
+        joined = "\n".join(problems)
+        if want is None:
+            if problems:
+                raise AssertionError(f"{name}: expected clean, got {problems}")
+        elif want not in joined:
+            raise AssertionError(f"{name}: expected {want!r} in {problems}")
+        cases.append(name)
+
+    case("valid", valid, None)
+    case("dropped-step",
+         valid.replace(apk_identity, "", 1),
+         "android-apk: no step named 'Verify checkpoint Android APK identity'")
+    case("duplicated-step",
+         valid.replace(export, export + export, 1),
+         "android-apk: step 'Export checkpoint Android arm64 APK' appears 2 times")
+    case("conditional-step",
+         valid.replace("      - name: Verify checkpoint Android APK identity\n",
+                       "      - name: Verify checkpoint Android APK identity\n"
+                       "        if: github.event_name == 'push'\n", 1),
+         "android-apk: step 'Verify checkpoint Android APK identity' has a step-level if:")
+    case("missing-marker",
+         valid.replace(so_grep, "echo apk", 1),
+         f"android-apk: step 'Export checkpoint Android arm64 APK' lacks {so_grep!r}")
+    case("missing-marker-playtest",
+         valid.replace(stage, step("Stage playtest APK", run_block("echo apk")), 1),
+         f"playtest-apk: step 'Stage playtest APK' lacks {so_grep!r}")
+    case("no-run-block",
+         valid.replace(run_block(identity), "        env:\n          APK: app.apk\n", 1),
+         "android-apk: step 'Verify checkpoint Android APK identity' has no run: block")
+    case("missing-job",
+         valid.replace("  playtest-apk:\n    steps:\n" + stage + playtest_identity, "", 1),
+         "no job 'playtest-apk' in workflow")
+    return len(cases)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workflow",
+                        default=".github/workflows/wo000-delivery-spine.yml")
+    parser.add_argument("--self-test", action="store_true",
+                        help="run parser regressions only")
+    args = parser.parse_args()
+
+    fixture_count = _self_test()
+    if args.self_test:
+        print(f"PASS: {fixture_count} apk-step coverage parser regression checks")
+        return 0
+
+    workflow_text = Path(args.workflow).read_text()
+    problems, checked = check_text(workflow_text)
     if problems:
         print("FAIL: APK proof step gaps:")
         for problem in problems:
