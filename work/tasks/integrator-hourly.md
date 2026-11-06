@@ -1,5 +1,8 @@
 # Integrator: the hourly check
 
+It runs every 2 hours, 7:17 AM to 11:17 PM Central, none overnight (Cory 11-06: the weekly limit must last to Sunday night).
+Until the Monday 11 AM reset: no Claude helpers; builds go to Muse, and only a red PR of mine that Muse can't take gets one.
+
 The scheduled task only says "do this file"; change the check here. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 

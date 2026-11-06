@@ -9,7 +9,7 @@ Keep this file to what changes the next action; move anything done to the log.
 2. `python3 tools/board/asks.py --hours 24`; clear every line not under "Asks in flight".
 3. Muse's mail: `subject:MUSE_TO_CLAUDE newer_than:3h`. Its diffs come as attachments, which the Gmail tools do not
    return, so a helper decodes them from the RAW message.
-4. Hourly task `trig_0139GQPXpF7YWbvHwgEn98a3` at :17 is the only timed wake (no check-ins, Cory 11-05).
+4. The check task `trig_0139GQPXpF7YWbvHwgEn98a3` runs every 2 hours, 7:17 AM-11:17 PM Central; it is the only timed wake.
 
 ## How merges work
 - The switchboard merges PRs whose body starts `Job: J-NNN` on a green proof plus a LAND, protected changes included.
@@ -24,7 +24,8 @@ Keep this file to what changes the next action; move anything done to the log.
 - Muse pushes its own `fb-bot/integrate-[protected-]<job>` branches and mails branch and sha; I open the PR.
 
 ## Cory's standing rulings (11-04/11-05)
-- Helpers: Opus high or xhigh, never Sonnet; at most 2. Now one at a time, so the weekly limit lasts to Mon 11 AM.
+- Helpers: Opus high or xhigh, never Sonnet. None until the Mon 11 AM reset (Cory 11-06: the pace ran out Sat night; last
+  to Sunday night). Builds go to Muse.
 - No Workflow runs. Decline the ultracode nudges silently.
 - Plugin searches use one exact keyword, or a helper runs them and returns one line (context, 11-05).
 - GitHub-UI-only steps (settings, toggles): ask Cory early, with a direct link and the exact taps.
@@ -52,14 +53,13 @@ Keep this file to what changes the next action; move anything done to the log.
 - Subscribed: #256.
 
 ## Helpers
-- J-046 #259 merged 7:50 PM (switchboard). Mine next: add matron-ammo to kScenarios after #256 lands. New leaks mailed
+- J-046 #259 merged 7:50 PM (switchboard). matron-ammo to kScenarios after #256: Muse's now. New leaks mailed
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
 - J-045: #258 (draws) and #260 (perf_walk) merged. perf_grade worst_draws_low is 700, exactly the budget, so no headroom.
   Foot at HIGH shadows ~930 draws: look call put to Cory (LOW / SPLITS / KEEP), waits on him.
 - #261 J-045 part 4 merged 1:42 AM 11-06 (perf_walk p50 6.6 -> 5.7 ms). The slingshot pouch's native panels: main.gd hides
   them but they are drawn today; kept drawn. Hiding them is a look question, not yet put to Cory.
-- #262 J-045 part 5 (her state via one native getter, canopy built at setup; perf_walk p50 6.0 -> 5.6 ms, p95 8.0-8.4 ->
-  7.5-7.7) opened 4:05 AM 11-06; the switchboard merges it. The gore view is already built at load (no first-frame cost).
+- #262 J-045 part 5 merged 4:23 AM 11-06 (perf_walk p50 6.0 -> 5.6 ms, p95 8.0-8.4 -> 7.5-7.7).
 - No helper running. J-045 left: HIGH shadow draws (Cory's call), the Fold p95 (needs his phone); the sim's first step
   varies 4-19 ms (sim side).
 - J-045 after that: Sentry native crash capture (Option A), its own workflow/signing PR with a security review.
@@ -81,7 +81,8 @@ matron-slices-2. Wait for its mail.
 Two budget leaks are closed in J-044l/J-040: the grab hand's separate 2600 N spring, and the shove that writes
 velocity (physics_world.cpp:1437).
 
-Claude lanes later: J-044h (presentation), i (injury render), j (foley/voice: real recordings only), n (demo).
+Moved to Muse 11-06 (mailed): J-044h (presentation), J-044i (injury render), matron-ammo in kScenarios after #256.
+Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
 
 ## Asks in flight
 - To Grok on #244 (J-044b math). If Grok stays silent, route math to ChatGPT.
