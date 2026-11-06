@@ -9,7 +9,8 @@ Parts (a workflow job runs one; `all` runs both, for a dry run):
   ask    the paid calls, the only part that holds ANTHROPIC_API_KEY: the automatic Claude review of
          a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
   steer  everything free: the merge rule, review asks to ChatGPT or Muse, one owner:* label per
-         issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest
+         issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest, and
+         after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051)
 
 Usage:
   python3 tools/switchboard/switch.py --dry-run                     # every action printed, none taken
@@ -68,6 +69,22 @@ MAX_IMAGE_BYTES = 3_750_000            # base64 of this stays under 5 MB
 MAX_PRS = 60
 MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047)
 AUTO_PR_PREFIX = "fb-bot/integrate-"   # fb-bot/integrate-protected-* matches too; claude/* never does
+# The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
+INBOX_PR = 282
+INBOX_BRANCH = "claude/integrator-inbox"
+INBOX_HEADER = "Switchboard (inbox):"
+INBOX_MARK = "<!-- switchboard:inbox keys={keys} -->"
+INBOX_KEYS = re.compile(r"^<!-- switchboard:inbox keys=([0-9a-f,]*) -->$", re.MULTILINE)
+INBOX_BRANCH_PREFIXES = ("fb-bot/integrate-", "claude/integrate-")
+INBOX_READY_AFTER = dt.timedelta(minutes=15)   # one sweep apart: green with a LAND this long was so at the sweep before
+INBOX_RED_STUCK = dt.timedelta(hours=3)        # FIX-CI with no new head this long
+INBOX_BRANCH_RED = dt.timedelta(hours=1)       # a red integrate branch with no PR this long
+INBOX_RUNS_WINDOW = dt.timedelta(hours=24)     # proof runs read per sweep, as tools/board/sweep.py's branch window
+QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-hours
+MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
+MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
+MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
+INBOX_ORDER = ("MERGE-BY-HAND", "NOT-MERGED", "FIX", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
 MAX_FACT_LINES = 25                   # rule_check lines quoted in a review ask
 ACT_WITHIN_DAYS = 3                   # older heads get no new review or ask: J-030 claims or closes them
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"
@@ -91,6 +108,71 @@ def load_yaml(path: pathlib.Path):
     import yaml
     with path.open(encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def parse_time(stamp: str) -> dt.datetime | None:
+    return dt.datetime.fromisoformat(stamp.replace("Z", "+00:00")) if stamp else None
+
+
+def is_inbox(pr: dict) -> bool:
+    """The integrator's inbox PR, which the switch never routes, reviews, merges or closes (J-051)."""
+    return pr.get("number") == INBOX_PR or (pr.get("head") or {}).get("ref") == INBOX_BRANCH
+
+
+def untrusted(text: str, limit: int = 80) -> str:
+    """PR or branch text in one code span: no backtick, @, angle bracket or control character, bounded."""
+    clean = "".join(ch for ch in text.replace("`", "'") if ch.isprintable() and ch not in "@<>")[:limit]
+    return f"`{clean or '-'}`"
+
+
+def plain(text: str) -> str:
+    """The switch's own words in an inbox line: no @, and <...> shown rather than read as HTML."""
+    return text.replace("@", "").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def hours(span: dt.timedelta) -> str:
+    return f"{span.total_seconds() / 3600:.1f} h"
+
+
+def red_jobs(proof: str) -> list[str]:
+    return proof[len("red: "):].split(", ") if proof.startswith("red: ") else []
+
+
+def inbox_key(kind: str, target: str, head: str) -> str:
+    """One item's key: its kind, its PR (#N) or branch, and the head sha. A hash, so branch text never reaches the marker."""
+    import hashlib
+    return hashlib.sha256(f"{kind}|{target}|{head}".encode("utf-8")).hexdigest()[:16]
+
+
+@dataclasses.dataclass
+class Steered:
+    """One PR as the steer sweep left it, read by the inbox (J-051)."""
+    facts: rules.PrFacts
+    ctx: dict
+    decision: rules.MergeDecision
+    merge_note: str = ""   # why a MERGE did not happen; "" once merged, or in a dry run
+
+
+@dataclasses.dataclass(frozen=True)
+class InboxItem:
+    kind: str     # one of INBOX_ORDER
+    target: str   # "#277", or the branch name
+    head: str     # the head sha
+    line: str     # the inbox line, without the leading "- "
+
+    @property
+    def key(self) -> str:
+        return inbox_key(self.kind, self.target, self.head)
+
+
+def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) -> str:
+    """The inbox comment: the header line first, one line per item, the keys in a hidden marker last."""
+    lines = [INBOX_HEADER, "", f"{len(items)} new for the integrator at {when} (each is listed once per head):", ""]
+    lines += [f"- {it.line}" for it in items]
+    if held:
+        lines.append(f"- ({held} more next sweep)")
+    body = "\n".join(lines).replace("@", "")   # nothing in an inbox comment can mention anyone
+    return f"{body}\n\n{INBOX_MARK.format(keys=','.join(keys))}"
 
 
 class Switch:
@@ -119,7 +201,10 @@ class Switch:
         runs = self.gh.get(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?head_sha={sha}&per_page=5")["workflow_runs"]
         if not runs:
             return "none", "", 0, ""
-        run = max(runs, key=lambda r: r["created_at"])
+        return self.run_state(max(runs, key=lambda r: r["created_at"]))
+
+    def run_state(self, run: dict) -> tuple[str, str, int, str]:
+        """One proof run, judged by its jobs: (state, url, run id, finished at)."""
         jobs = self.gh.get(f"repos/{self.gh.repo}/actions/runs/{run['id']}/jobs?per_page=50")["jobs"]
         if run["status"] != "completed" and not only_wake_left(jobs):
             return "running", run["html_url"], run["id"], ""
@@ -213,11 +298,12 @@ class Switch:
             verdicts=verdicts, needs=needs, rule_check_block=False,
             touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files))
         ctx = {"job": job, "issue": issue, "proof_url": url, "run_id": run_id, "proof_done_at": proof_done_at, "comments": comments,
-               "title": pr["title"], "body": pr.get("body") or "", "files": files}
+               "title": pr["title"], "body": pr.get("body") or "", "files": files, "updated_at": pr.get("updated_at") or ""}
         return facts, ctx
 
     def target_prs(self, only_pr: int, only_sha: str) -> list[dict]:
-        prs = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open")[:MAX_PRS]
+        """The open PRs the switch acts on: never the integrator's inbox PR (J-051)."""
+        prs = [p for p in self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open") if not is_inbox(p)][:MAX_PRS]
         if only_pr:
             prs = [p for p in prs if p["number"] == only_pr]
         if only_sha:
@@ -348,6 +434,8 @@ class Switch:
         if facts.draft:
             return
         for n in rules.superseded_prs(ctx["body"], facts.number):
+            if n == INBOX_PR:   # the integrator's inbox is never closed (J-051)
+                continue
             try:
                 old = self.gh.get(f"repos/{self.gh.repo}/pulls/{n}")
             except GitHubError:   # not a PR (an issue number, or gone): nothing to close
@@ -360,7 +448,8 @@ class Switch:
                           what=f"close #{n}: superseded by #{facts.number}")
             self.out(f"SUPERSEDED  #{n} closed: #{facts.number} supersedes it")
 
-    def steer_pr(self, facts: rules.PrFacts, ctx: dict) -> None:
+    def steer_pr(self, facts: rules.PrFacts, ctx: dict, record: list | None = None) -> None:
+        """The merge rule and the review asks for one PR; `record` (the sweep's list) gets what was decided."""
         author = self.team.vendor_of_branch(facts.head_ref)
         d = rules.merge_decision(facts, author, self.team)
         if d.action == "WAIT" and d.reasons == ("GitHub is still computing mergeability",):
@@ -373,8 +462,12 @@ class Switch:
             d = rules.merge_decision(facts, author, self.team)
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
+        seen = Steered(facts, ctx, d)
+        if record is not None:
+            record.append(seen)
         if d.action == "MERGE":
-            self.merge(facts, ctx, d)
+            seen.merge_note = "the merge step raised an error (see the switchboard log)"   # kept if it raises
+            seen.merge_note = self.merge(facts, ctx, d)
         if rules.needs_review(facts, author, self.team) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
         elif rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
@@ -490,14 +583,15 @@ class Switch:
         self._load = (outstanding, recent)
         return self._load
 
-    def merge(self, facts: rules.PrFacts, ctx: dict, d: rules.MergeDecision) -> None:
+    def merge(self, facts: rules.PrFacts, ctx: dict, d: rules.MergeDecision) -> str:
+        """Merge at the head. Returns "" when merged (or in a dry run), else why not."""
         got = self.gh.write("PUT", f"repos/{self.gh.repo}/pulls/{facts.number}/merge",
                             {"sha": facts.head_sha, "merge_method": "merge",
                              "commit_title": f"Merge pull request #{facts.number} from {facts.head_ref} (switchboard)"},
                             f"merge #{facts.number} at @{facts.head_sha[:8]}")
         if not self.gh.dry_run and not (got or {}).get("merged"):
             self.out(f"NOTE  #{facts.number} merge not done: {(got or {}).get('message', '')[:200]}")
-            return
+            return f"merge not done: {(got or {}).get('message', '')[:200]}"
         # A merge by the workflow token starts no push workflow, so the trunk proof is dispatched.
         self.gh.write("POST", f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/dispatches",
                       {"ref": rules.TRUNK}, f"dispatch the proof on {rules.TRUNK}")
@@ -507,6 +601,7 @@ class Switch:
         self.gh.comment(facts.number, line, f"merged-note on #{facts.number}")
         if ctx.get("issue"):
             self.gh.comment(ctx["issue"]["number"], line, f"merged-note on job issue #{ctx['issue']['number']}")
+        return ""
 
     # ---------- auto-open (J-047) ----------
     def prior_pr(self, branch: str) -> bool:
@@ -572,6 +667,148 @@ class Switch:
             except (RuntimeError, KeyError, ValueError) as err:
                 self.out(f"ERROR       auto-open {branch}: {type(err).__name__}: {err}")
         return opened
+
+    # ---------- the integrator inbox (J-051) ----------
+    def inbox(self, steered: list[Steered]) -> int:
+        """After a full steer sweep, one comment on the inbox PR listing what needs the integrator and was not
+        listed before. Each item's key (kind, PR or branch, head sha) goes in the comment's hidden marker, which
+        carries the earlier keys forward too: a key is listed once, a new head is a new key. Nothing new, no
+        comment. Returns how many items were posted (or printed, in a dry run)."""
+        reported = self.inbox_reported()
+        seen = set(reported)
+        new: list[InboxItem] = []
+        for it in self.inbox_items(steered, frozenset(reported)):
+            if it.key not in seen:
+                seen.add(it.key)
+                new.append(it)
+        if not new:
+            self.out("INBOX       nothing new")
+            return 0
+        shown = new[:MAX_INBOX_LINES]
+        keys = (reported + [it.key for it in shown])[-MAX_INBOX_KEYS:]
+        body = inbox_body(shown, len(new) - len(shown), keys, central(self.now))
+        self.out(body)
+        self.gh.comment(INBOX_PR, body, f"inbox: {len(shown)} new item(s) on #{INBOX_PR}")
+        return len(shown)
+
+    def inbox_reported(self) -> list[str]:
+        """The keys in the switch's own inbox markers, oldest first. Only the inbox PR's newest 200 comments are
+        read: the newest marker carries every earlier key forward. A marker by any other login never counts."""
+        count = int((self.gh.get(f"repos/{self.gh.repo}/issues/{INBOX_PR}") or {}).get("comments") or 0)
+        last = max(1, -(-count // 100))
+        keys: list[str] = []
+        for page in range(max(1, last - 1), last + 1):
+            for c in self.gh.get(f"repos/{self.gh.repo}/issues/{INBOX_PR}/comments?per_page=100&page={page}") or []:
+                if c["user"]["login"] == rules.BOT_LOGIN:
+                    for m in INBOX_KEYS.finditer(c.get("body") or ""):
+                        keys += [k for k in m.group(1).split(",") if k]
+        return list(dict.fromkeys(keys))
+
+    def inbox_items(self, steered: list[Steered], reported: frozenset[str]) -> list[InboxItem]:
+        """Every item that needs the integrator now, listed before or not, in INBOX_ORDER."""
+        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
+        runs = self.gh.paged(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{since}",
+                             "workflow_runs")
+        items: list[InboxItem] = []
+        for s in steered:
+            items += self.pr_inbox_items(s, runs, reported)
+        items += self.branch_inbox_items(runs, reported)
+        return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
+
+    def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str]) -> list[InboxItem]:
+        """One PR's items: (a) MERGE-BY-HAND, (b) NOT-MERGED, (c) RED-TWICE and RED-STUCK, (d) FIX on a claude/*
+        PR, and (f) QUIET when nothing else is."""
+        f, ctx, d, now = s.facts, s.ctx, s.decision, self.now
+        if f.number == INBOX_PR or f.head_ref == INBOX_BRANCH:
+            return []
+        target = f"#{f.number}"
+        where = (f"[#{f.number}](https://github.com/{self.gh.repo}/pull/{f.number}) {untrusted(f.head_ref)} "
+                 f"head {f.head_sha[:8]}" + (f", {ctx['job']}" if ctx.get("job") else ""))
+        proof_link = f"[proof]({ctx['proof_url']})" if ctx.get("proof_url") else "proof"
+
+        def item(kind: str, text: str) -> InboxItem:
+            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}")
+
+        out: list[InboxItem] = []
+        author = self.team.vendor_of_branch(f.head_ref)
+        lands = sorted((v for v in f.verdicts if v.kind == "review" and v.verdict == "LAND"
+                        and rules.names_head(v, f.head_sha) and rules.land_counts(v, author, self.team)),
+                       key=lambda v: v.created_at)
+        ready = f.proof == "green" and bool(lands) and d.action in ("HUMAN-MERGE", "WAIT", "MERGE")
+        never = f.never_edit or (bool(f.rule_check_block) and "/integrate-protected-" not in f.head_ref)
+        if ready and (d.action == "HUMAN-MERGE" or (d.action == "WAIT" and never)):
+            out.append(item("MERGE-BY-HAND", f"green, LAND by {lands[-1].who}, but the switchboard will not merge it: "
+                                             f"{plain('; '.join(d.reasons))}"))
+        elif ready and (d.action == "WAIT" or s.merge_note):   # a MERGE that merged (or a dry run's) is no item
+            times = [t for t in (parse_time(ctx.get("proof_done_at") or ""), parse_time(lands[0].created_at)) if t]
+            if not times or now - max(times) >= INBOX_READY_AFTER:
+                why = s.merge_note or "; ".join(d.reasons)
+                out.append(item("NOT-MERGED", f"green, LAND by {lands[-1].who}, still open a sweep later: {plain(why)}"))
+        if d.action == "FIX" and f.head_ref.startswith("claude/"):
+            out.append(item("FIX", plain("; ".join(d.reasons))))
+        if d.action == "FIX-CI":
+            jobs = red_jobs(f.proof)
+            mine = sorted((r for r in runs if r.get("head_branch") == f.head_ref), key=lambda r: r["created_at"], reverse=True)
+            ids = [r["id"] for r in mine]
+            if inbox_key("RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
+                out.append(InboxItem("RED-TWICE", target, f.head_sha, ""))
+            elif ctx.get("run_id") in ids and ids.index(ctx["run_id"]) + 1 < len(mine):
+                before = self.run_state(mine[ids.index(ctx["run_id"]) + 1])[0]
+                both = [j for j in jobs if j in red_jobs(before)]
+                if both:
+                    out.append(item("RED-TWICE", f"{plain(', '.join(both))} failed on two proofs in a row ({proof_link})"))
+            on_head = [parse_time(r["created_at"]) for r in mine if r.get("head_sha") == f.head_sha]
+            head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
+            if head_since and now - head_since >= INBOX_RED_STUCK:
+                out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
+                                             f"{hours(now - head_since)} ({proof_link})"))
+        if not out:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
+            action = ("FIX-CI" if f.proof.startswith("red") else
+                      "FIX" if d.action == "FIX" or rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review") else
+                      "DISPATCH" if f.proof == "none" else "")
+            idle = parse_time(ctx.get("updated_at") or "")
+            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600:
+                out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}"))
+        return out
+
+    def branch_inbox_items(self, runs: list[dict], reported: frozenset[str]) -> list[InboxItem]:
+        """(e) RED-BRANCH: an fb-bot/ or claude/integrate-* branch with no open PR whose head's proof went red an
+        hour ago or more. Only heads proved in the run window are looked at, and only up to MAX_INBOX_BRANCHES."""
+        from urllib.parse import quote
+        open_refs = {p["head"]["ref"] for p in self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open")}
+        newest: dict[str, dict] = {}
+        for r in runs:
+            name = r.get("head_branch") or ""
+            if name.startswith(INBOX_BRANCH_PREFIXES) and name != INBOX_BRANCH and name not in open_refs:
+                if name not in newest or r["created_at"] > newest[name]["created_at"]:
+                    newest[name] = r
+        out: list[InboxItem] = []
+        read = 0
+        for name in sorted(newest):
+            run = newest[name]
+            head, done = run.get("head_sha") or "", parse_time(run.get("updated_at") or "")
+            if (run.get("status") == "completed" and run.get("conclusion") == "success") or not done \
+                    or (self.now - done) < INBOX_BRANCH_RED or inbox_key("RED-BRANCH", name, head) in reported:
+                continue
+            if read >= MAX_INBOX_BRANCHES:
+                self.out(f"INBOX       {MAX_INBOX_BRANCHES} branches read; the rest wait for the next sweep")
+                break
+            read += 1
+            try:
+                now_head = self.gh.get(f"repos/{self.gh.repo}/branches/{quote(name, safe='/')}")["commit"]["sha"]
+            except GitHubError as err:
+                if "HTTP 404" in err.detail:   # deleted since its proof ran
+                    continue
+                raise
+            if now_head != head:   # a newer head: its own proof decides, next sweep
+                continue
+            proof, url, _, done_at = self.run_state(run)
+            done = parse_time(done_at) or done
+            if proof.startswith("red") and (self.now - done) >= INBOX_BRANCH_RED:
+                out.append(InboxItem("RED-BRANCH", name, head,
+                                     f"RED-BRANCH {untrusted(name)} head {head[:8]}: proof red on "
+                                     f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))"))
+        return out
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
         """Where review asks live (the job issue, else the PR) and its comments."""
@@ -1148,6 +1385,7 @@ def main() -> int:
     failed = 0
     if ask:
         failed += sw.watch_sessions()
+    steered: list[Steered] = []
     for pr in sw.target_prs(args.pr, args.sha):
         try:   # one PR's trouble never stops the others; every action is safe to repeat next run
             facts, ctx = sw.pr_facts(pr)
@@ -1155,7 +1393,7 @@ def main() -> int:
                 sw.ask_pr(facts, ctx)
             if steer:
                 sw.close_superseded(facts, ctx)
-                sw.steer_pr(facts, ctx)
+                sw.steer_pr(facts, ctx, steered)
         except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
             failed += 1
             sw.out(f"ERROR       #{pr['number']}: {type(err).__name__}: {err}")
@@ -1165,6 +1403,12 @@ def main() -> int:
         except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
             failed += 1
             sw.out(f"ERROR       auto-open: {type(err).__name__}: {err}")
+    if steer and not (args.pr or args.sha):   # the inbox reads a whole sweep, so a run for one PR posts none
+        try:
+            sw.inbox(steered)
+        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
+            failed += 1
+            sw.out(f"ERROR       inbox: {type(err).__name__}: {err}")
     return 2 if failed else 0
 
 
