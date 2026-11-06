@@ -4,7 +4,7 @@ It runs every 3 hours, 8:17 AM to 11:17 PM Central, none overnight (Cory 11-06: 
 At the 11:17 AM, 5:17 PM and 11:17 PM runs, ask Cory for the usage meter (total %), log it in the notes and redo the
 pace: (100 - used) / hours left to Sunday bedtime, against the rate since the last reading.
 Until the Monday 11 AM reset: no Claude helpers; builds go to Muse, and only a red PR of mine that Muse can't take gets one.
-Every run, first: `get_session` (no id). If `effort_level` is not max, or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
+Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 9 AM), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
 
 The scheduled task only says "do this file"; change the check here. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.

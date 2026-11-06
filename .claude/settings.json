@@ -6,7 +6,7 @@
   ],
   "env": {
     "MCP_TOOL_TIMEOUT": "300000",
-    "CLAUDE_CODE_EFFORT_LEVEL": "max"
+    "CLAUDE_CODE_EFFORT_LEVEL": "xhigh"
   },
   "permissions": {
     "allow": [
