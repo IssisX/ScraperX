@@ -7,10 +7,11 @@ only, and end in one line, with no board edit and no message
 to Cory unless he must act (11-06: mail and GitHub asks wake nothing).
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06 9:35 AM).
-At the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun 1:17 PM and 9:17 PM), ask Cory for the usage meter (total %), log it in the notes and redo the
-pace: (100 - used) / hours left to Sunday bedtime, against the rate since the last reading.
-Throttle (Cory 11-06): at most 0.6% an hour of the day. Budget:
-82% by Fri 11 PM, 91% by Sat 11 PM, under 100% Sun night. A block over budget makes the next run quiet (answers, merges).
+Pace (Cory 11-06: the limit lasts to Sunday night): every run reads `cost_usd` (get_session); about $14 is 1% of the meter.
+Ask Cory for the meter at the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun 1:17 and 9:17 PM); each reading recalibrates $ per 1%
+and the pace: (98 - used) / daytime hours left to Sun 11 PM, against the burn since the last run. Budget (75% at 1:30 PM 11-06):
+0.6%/h (about $8.50); 81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM. Over pace: no new helper, the next full run is quiet
+(answers, merges), and Cory gets the numbers and the cut in one line.
 Specs, the math of a ruling and research go to ChatGPT or Grok first (`To ChatGPT:` / `To Grok:`); the integrator
 checks them, never drafts them (Cory 11-06 9:35 AM).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
@@ -19,7 +20,7 @@ Fewer, batched tool calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip at high effort (a wrong claim, a missed bug, a redo) is told to Cory
 the same hour, with a pick to step the integrator back to xhigh.
-Helpers (sub-agents): up to 2 at once (Cory 11-05, 11-06). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
+Helpers (sub-agents): one at a time (11-06 pace; Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 11:20 AM; helpers keep their own effort, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (11-03 to 11-06 it sat at high 45 h).
 
 The scheduled task only says "do this file"; change the check here. Post only when something changed.
@@ -70,12 +71,10 @@ Muse only when the conflict is in its own logic, by a mail that says "Muse: reso
 do it yourself: if you take a job back, mail that first (11-05: Muse's merge agent was wasted on #232/#233).
 Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can miss a push, #235).
 
-Notes: before merging, check the PR's base is `ScraperX-Claude` (a stacked PR merges into its parent's branch,
-not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe to PRs you merge yourself
+Notes: before merging, check the PR's base is `ScraperX-Claude` (#171 merged into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe to PRs you merge yourself
 and to Claude's own PRs (11-06: #277 sat 2 h on a Codex P1 nobody was woken for). Before `@codex review` or
 calling a PR clean, read its open review threads (`get_review_comments`), not only the newest review. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
-from one the switchboard merges (11-05: #250-#253 woke the integrator 14 times in 3 minutes, mostly Codex's
-running/finished edits). A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
+from one the switchboard merges (11-05: #250-#253 woke it 14 times in 3 min). A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
 lines or fewer (branch, sha, PASS/FAIL, what is left); put the numbers and details on the job's issue. Run tests in the foreground; never end a turn waiting on a
-background job." (11-05: one helper's background waits woke the integrator about 10 times.) The
+background job." (11-05: they woke it 10 times.) The
 Claude API does reviews and the eye only (the API coder is off); one review per PR.
