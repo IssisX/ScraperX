@@ -38,6 +38,8 @@ var _body: Node3D
 var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
+# The moving bodies' indices, the only ones _render_kit poses each frame.
+var _kit_dynamic_bodies := PackedInt32Array()
 # The kit's machines, for the audio: every moving body of MACHINE_MIN_KG or
 # more, with the point of it farthest from its origin, whose speed is how fast
 # the machine moves.
@@ -212,6 +214,8 @@ func _build_kit() -> void:
 		_kit_root.add_child(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
+		if _kit_dynamic[body]:
+			_kit_dynamic_bodies.append(body)
 		var entity := int(_native.get_kit_body_entity_id(body))
 		var stock := (entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT) or \
 			(entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT)
@@ -547,18 +551,28 @@ func _render_kit() -> void:
 	var look_again := eye.distance_squared_to(_kit_instance_eye) > KIT_INSTANCE_LOOK_M * KIT_INSTANCE_LOOK_M
 	if look_again:
 		_kit_instance_eye = eye
-	for body in _kit_bodies.size():
-		if not _kit_dynamic[body]:
-			continue
+	# Every moving body, every frame (J-045 perf_walk: about 640 of them, most
+	# at rest, the largest GDScript cost of a walk), so the loop is kept lean:
+	# a transform is set only when it changed (setting a Node3D's transform,
+	# even to the same value, sends every mesh under it a transform change),
+	# and a body's instances are visited only when it moved, the eye moved on
+	# or it was shown or hidden.
+	var instanced := _kit_instances.size()
+	for body in _kit_dynamic_bodies:
 		var node: Node3D = _kit_bodies[body]
-		node.visible = bool(_native.is_kit_body_enabled(body))
+		var shown := bool(_native.is_kit_body_enabled(body))
+		node.visible = shown
 		var moved := false
-		if node.visible:
+		if shown:
 			var at: Transform3D = _native.get_kit_body_transform(body)
 			moved = at != node.transform
-			node.transform = at
-		if body < _kit_instances.size() and _kit_instances[body] != null:
-			_place_kit_instances(body, node, moved, look_again, eye)
+			if moved:
+				node.transform = at
+		if body < instanced and _kit_instances[body] != null and \
+				(moved or look_again or shown != _kit_instanced_shown[body]):
+			_kit_instanced_shown[body] = shown
+			for entry in _kit_instances[body]:
+				_place_kit_instance(entry, eye, moved)
 	var cables := _kit_cable_set.multimesh if _kit_cable_set != null else null
 	for index in _kit_cables.size():
 		var points: PackedVector3Array = _native.get_kit_cable_points(index)
@@ -1197,6 +1211,8 @@ const KIT_INSTANCE_RANGE_MAX := 300.0
 const KIT_INSTANCE_LOOK_M := 2.0
 # Per kit body: null, or its instances (see _place_kit_instance).
 var _kit_instances: Array = []
+# Per kit body: whether it was shown when its instances were last placed.
+var _kit_instanced_shown: Array[bool] = []
 # The instance packs; an entry names its pack by index here, so no pack and
 # entry hold each other (a cycle of arrays is never freed, and a restart
 # reloads the scene).
@@ -1230,6 +1246,8 @@ func _instance_kit_bodies() -> void:
 				groups[key] = []
 			groups[key].append([body, piece])
 	_kit_instances.resize(_kit_bodies.size())
+	_kit_instanced_shown.resize(_kit_bodies.size())
+	_kit_instanced_shown.fill(true)
 	var made := 0
 	var pieces := 0
 	var eye := _kit_eye()
@@ -1278,13 +1296,6 @@ func _instance_kit_bodies() -> void:
 		pieces += members.size()
 	_batch_report += "kit instances %d pieces -> %d multimeshes; " % [pieces, made]
 	print("SCRAPERX_BATCH kit instances %d pieces -> %d multimeshes" % [pieces, made])
-
-func _place_kit_instances(body: int, node: Node3D, moved: bool, look_again: bool, eye: Vector3) -> void:
-	if not (moved or look_again) and node.visible == bool(node.get_meta(&"instanced_shown", true)):
-		return
-	node.set_meta(&"instanced_shown", node.visible)
-	for entry in _kit_instances[body]:
-		_place_kit_instance(entry, eye, moved)
 
 # entry: [pack index in _kit_packs, slot, local transform, reach, local centre, drawn, body node].
 # A drawn instance lies in a slot below its pack's count, one out of reach or
