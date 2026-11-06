@@ -43,17 +43,19 @@ there doing that. So you never touch GitHub directly; email does everything:
 ## Your queue (11-06)
 The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-1. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
-2. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
-3. J-008 #115: her "258 down" leg; a strict total order for the ladder-bar sort.
-4. J-011 #118: her skirt as cloth, bone-driven panels (from `edad91a3`).
-5. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
-6. J-021 #128: the far world and water (from `b532042b` and `95587901`).
-7. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed.
+1. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
+2. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
+3. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
+4. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
+5. J-008 #115: her "258 down" leg; a strict total order for the ladder-bar sort.
+6. J-011 #118: her skirt as cloth, bone-driven panels (from `edad91a3`).
+7. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
+8. J-021 #128: the far world and water (from `b532042b` and `95587901`).
+9. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed.
 
 Live lanes: J-042 windup #291, J-001 #227, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122,
-J-052 #292. Waiting: J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
+J-052 #292. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
 Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the
