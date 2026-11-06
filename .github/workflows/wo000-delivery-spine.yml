@@ -930,6 +930,20 @@ jobs:
           ! grep -q '^GORE FAIL' artifacts/gore-shots.log
           grep -q '^GORE PASS (0 failed)$' artifacts/gore-shots.log
 
+      - name: Check the injury render marks, bruises and swells per region
+        shell: bash
+        run: |
+          set -euo pipefail
+          # injury_shots_test.gd drives matron_view.gd in a studio deck
+          # with injury dictionaries shaped like the J-044a input
+          # contract (region -> {j_region, j_event}) at each severity
+          # beat. Without --out it saves no PNGs and needs no display;
+          # it quits 1 on any failed check.
+          timeout 180s tools/godot/godot --headless --path godot \
+            --script res://tests/injury_shots_test.gd 2>&1 | tee artifacts/injury-shots.log
+          ! grep -q '^INJURY FAIL' artifacts/injury-shots.log
+          grep -q '^INJURY PASS (0 failed)$' artifacts/injury-shots.log
+
       - name: Check Matron hold haptics fire once per event
         shell: bash
         run: |
