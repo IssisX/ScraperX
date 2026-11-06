@@ -327,9 +327,12 @@ private:
         const JPH::Body &other = player_first ? second : first;
         const std::uint64_t entity = other.GetUserData();
         // Her body is not a blow: what her hands do decides (matron.hpp, her
-        // hands): her hold, or while it cannot be, a shove.
-        if (other.IsSensor() || (entity >= kCorpseEntityBase && entity < kCorpseEntityBase + 0x10000) ||
-            entity == Matron::kEntity) {
+        // hands): her hold, or while it cannot be, a shove. A corpse's parts
+        // are known by their layer (corpse.hpp): their entities run on from
+        // 3300 with every death, and a range wide enough for that also
+        // took in all the loose stock (5000 on), so a toolbox thrown into
+        // him was never a hit (J-042).
+        if (other.IsSensor() || other.GetObjectLayer() == object_layers::kCorpse || entity == Matron::kEntity) {
             return;
         }
         // The normal points from body 1 to body 2: here from the player to
@@ -472,8 +475,6 @@ private:
     float struck_closing_ = 0.0F;
     float hit_closing_ = 0.0F;
     JPH::Vec3 hit_toward_ = JPH::Vec3::sZero();
-    // Corpses' bodies (Corpses: kUserDataBase on).
-    static constexpr std::uint64_t kCorpseEntityBase = 3300;
     std::atomic<std::uint64_t> carried_entity_{0};
     // A contact flatter than this (about 2.6 degrees) is level ground to the
     // planted grip.

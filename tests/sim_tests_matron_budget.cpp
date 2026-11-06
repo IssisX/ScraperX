@@ -24,6 +24,7 @@
 // Measurement only: no budget is raised, no behaviour changes.
 //
 // The matron-ammo group (J-042, PR #256) joins kScenarios once it lands.
+// J-042: it landed — the ammo group runs here from now on.
 
 #include "sim_tests.hpp"
 #include "sim/matron_effort.hpp"
@@ -55,6 +56,7 @@ const Scenario kScenarios[] = {
     {"matron-load", run_matron_load},     {"forklift-matron", run_forklift_matron},
     {"matron-mischief", run_matron_mischief}, {"matron-damage", run_matron_damage}, {"strike", run_strike},
     {"matron-sweep", run_matron_sweep},   {"matron-kick", run_matron_kick},     {"matron-jab", run_matron_jab},
+    {"matron-ammo", run_ammo},
 };
 
 // A known leak: the scenario, the path, what is wrong with it (over her
@@ -76,7 +78,6 @@ const Expected kExpected[] = {
     // scenario, path, over, uncharged, peak N, peak W
     {"matron-grab", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
     {"matron-grab", Path::CrateShove, false, true, 8000.0, 1429.0},
-    {"matron-grab", Path::StockHold, false, true, 1084.0, 3.0},
     {"matron-grab", Path::GrabSpring, false, true, 2600.0, 11424.0},
     {"matron-grab", Path::GrabArm, false, true, 1452.0, 545.0},
     {"matron-grab", Path::Hand2Spring, false, true, 2600.0, 5675.0},
@@ -103,7 +104,6 @@ const Expected kExpected[] = {
     {"forklift-matron", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
     {"forklift-matron", Path::GrabSpring, false, true, 1340.0, 1517.0},
     {"forklift-matron", Path::GrabArm, false, true, 380.0, 368.0},
-    {"matron-mischief", Path::StockHold, true, true, 17219.0, 932.0},
     {"matron-mischief", Path::GrabSpring, false, true, 1617.0, 4469.0},
     {"matron-mischief", Path::GrabArm, false, true, 252.0, 292.0},
     {"matron-damage", Path::GrabSpring, false, true, 1339.0, 2012.0},
@@ -114,6 +114,15 @@ const Expected kExpected[] = {
     {"matron-jab", Path::GrabSpring, false, true, 900.0, 2005.0},
     {"matron-jab", Path::GrabArm, false, true, 406.0, 389.0},
     {"matron-jab", Path::Shove, true, true, 44770.0, 131006.0},
+    // J-042: the ammo group joins the audit; its grab hand is the grab
+    // scenario's known leak in a briefer hold (she takes him while he races
+    // her for the piece), measured 11-06 on the rebased base, the old rigid
+    // hold. Re-measured after the hold was budgeted (same day, rebased
+    // trunk 2d2ae7d7): the grab's force fell 1578 to 1424 N, its power
+    // rose 3950 to 4465 W — the piece's new motion puts the grab at a
+    // higher relative speed. The hold itself is NOT listed: J-042 budgets it.
+    {"matron-ammo", Path::GrabSpring, false, true, 1424.0, 4465.0},
+    {"matron-ammo", Path::GrabArm, false, true, 779.0, 1291.0},
 };
 
 constexpr double kGrowth = 1.10;          // a listed leak may not grow past its measured peak by more than this

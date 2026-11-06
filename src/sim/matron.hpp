@@ -678,9 +678,27 @@ public:
     static constexpr float kSeekStockM = 5.0F;
     static constexpr float kTakeM = 0.85F;
     static constexpr float kHandsUpM = 0.25F;
+    // Rearing back to throw (J-042: the player reads it), her hands draw the
+    // piece up over her right shoulder (this far over her centre, to her
+    // right and out, at kHandsPullMps), clear of her eyes' line to him, and
+    // the throw leaves from there.
+    static constexpr float kWindupHandsUpM = 0.70F;
+    static constexpr float kWindupHandsSideM = 0.45F;
+    static constexpr float kWindupHandsOutM = 0.25F;
+    // A piece too wide to clear her eyes beside her head that way (a pallet)
+    // is reared back over it instead, its underside this far over her eyes:
+    // whatever its kind, what she throws never blinds her to him.
+    static constexpr float kWindupEyeClearM = 0.10F;
+    // Rearing back, him out of her sight this long (a wide piece raised
+    // through her eyes' line on its way over them) and her windup is given
+    // up; shorter, she holds it, and throws only once she sees him again.
+    static constexpr float kWindupBlindSeconds = 0.15F;
     // Light stock only: a toolbox (18 kg) she carries off; a drum (55 kg)
     // she shoves instead (below).
     static constexpr float kTakeMaxKg = 25.0F;
+    // The most loose pieces she knows (a bit each in her masks): J-042 gives
+    // her every piece light enough on the decks she hunts, 58 today.
+    static constexpr std::size_t kMaxThrowables = 64;
     // Her wrecking (J-016): a piece of the player's too heavy for her hands
     // (over kTakeMaxKg, up to kStockShoveMaxKg) on her floor she shoves off
     // the nearest open lip within kStockShoveReachM of it: a drop with no
@@ -703,6 +721,12 @@ public:
     static constexpr float kHandsOutM = 0.55F;
     static constexpr float kHandsPullMps = 3.0F;
     static constexpr float kHandsSlipM = 1.0F;
+    // The hold is a spring-damper to its anchor (J-042): the spring per
+    // second squared, the damping per second (near critical), both on the
+    // piece's mass, its weight borne. The anchor moves at kHandsPullMps; the
+    // grant caps the drive at her one budget, hands first.
+    static constexpr float kHoldSpring = 150.0F;
+    static constexpr float kHoldDamp = 25.0F;
     static constexpr float kThrowMps = 7.5F;
     static constexpr float kThrowMinM = 2.5F;
     static constexpr float kThrowMaxM = 6.0F;
@@ -1142,6 +1166,11 @@ public:
         JPH::Vec3 handle = JPH::Vec3::sZero();   // where a hand takes it, in its own frame
         float mass_kg = 0.0F;   // read from its body by set_throwables (infinite: not a moving body)
         JPH::Vec3 laid = JPH::Vec3::sZero();   // where it lay when given (set_throwables): her deck as she knows it
+        // Its size as her hands hold it (set_throwables, from its shape): how
+        // far it reaches out flat from its middle, and how far it hangs under
+        // its handle.
+        float reach_m = 0.0F;
+        float below_handle_m = 0.0F;
     };
 
     struct PlankView {
@@ -1288,8 +1317,10 @@ public:
         std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
         std::uint32_t throws = 0;   // and threw at the player, this run
         std::uint32_t stock_shoves = 0;   // and shoved off a lip, this run
-        std::uint32_t stock_handled = 0;  // her throwables she counts his, a bit each
+        std::uint64_t stock_handled = 0;  // her throwables she counts his, a bit each
         float stock_push_force_n = 0.0F; // her hands' push on a piece this tick (a shove, a throw)
+        float throw_windup = 0.0F;       // rearing back to throw: 0 not, up to 1 as the throw leaves
+        std::uint64_t stock_thrown = 0;  // her throw whose landing is no sound to her (thrown_entity), 0 none
         std::uint32_t staggers = 0;     // blows that took her balance, this run
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float damage_ns = 0.0F;         // judged physical impulse, all sources
@@ -1394,7 +1425,7 @@ public:
         float rage = 0.0F;
         Stage stage = Stage::Pest;
         float exposure_s = 0.0F;
-        std::uint32_t handled = 0;   // the throwables the player has handled, a bit each
+        std::uint64_t handled = 0;   // the throwables the player has handled, a bit each
     };
 
     static constexpr float kKillDamageNs = 6000.0F;
@@ -1424,8 +1455,6 @@ public:
     // The force her feet drive put on her body this tick (walk_toward), when no climb has it.
     float foot_force_n() const noexcept { return foot_force_n_; }
     float foot_power_w() const noexcept { return foot_power_w_; }
-    // J-046 measurement only: her hands' hold on a piece, if any (its lambda is read, never written).
-    const JPH::PointConstraint *stock_hold() const noexcept { return hold_.GetPtr(); }
     // What her last take_blow read (sense_near's pick; read only, for tests):
     // how many, and each one's body, motion and middle before the step, and
     // hers as her own drive would leave it.
@@ -1457,7 +1486,7 @@ public:
     void set_rigged(const bool a_rigged, const bool b_rigged) noexcept { rigged_ = {a_rigged, b_rigged}; }
     // The lines (and whether the player rides one): given once they are built.
     void set_zipline(Zipline *zipline) noexcept { zipline_ = zipline; }
-    // The stock she may take and throw (at most 32 pieces): given once it is laid.
+    // The stock she may take and throw (at most kMaxThrowables pieces): given once it is laid.
     void set_throwables(std::vector<Throwable> throwables);
     // The entity in the player's hands this tick, 0 for none: given before
     // pre_step. Hers only as she sees it (Evidence::seen_holding: a throwable
@@ -1478,6 +1507,12 @@ public:
     [[nodiscard]] std::uint64_t thrown_entity() const noexcept {
         return thrown_ >= 0 && thrown_s_ > 0.0F ? throwables_[static_cast<std::size_t>(thrown_)].entity : 0;
     }
+    // Her claim on that throw ends the moment another touches it (J-042): in
+    // the player's hands, against his body, or met by any other moving body.
+    // From then on its hits are sounds to her like any other's. Its own
+    // landing on the steel stays hers. Called before the last step's hits
+    // are heard.
+    void end_thrown_claim();
     // Reports (once) the way up whose rope she has just taken off its eye
     // (0 Stage A, 1 Stage B), or -1: the world unhooks it.
     [[nodiscard]] int take_unrig() noexcept {
@@ -2584,17 +2619,19 @@ private:
     float shove_cooldown_s_ = 0.0F;
     std::uint32_t shoves_ = 0;
     std::vector<Throwable> throwables_;
-    std::uint32_t handled_ = 0;
+    std::uint64_t handled_ = 0;
     std::uint64_t push_load_ = 0;   // the load in his hands: a contact filter only (sense_near)
     int fetch_ = -1;
     float fetch_best_m_ = 0.0F;        // the nearest she has come to it on this fetch
     float fetch_stall_s_ = 0.0F;       // since she last came nearer
-    std::uint32_t fetch_refused_ = 0;  // the pieces she gave up on, a bit each
+    std::uint64_t fetch_refused_ = 0;  // the pieces she gave up on, a bit each
     float fetch_refused_s_ = 0.0F;     // till she tries them again
     int held_ = -1;
-    JPH::Ref<JPH::PointConstraint> hold_;
     JPH::Vec3 hold_offset_ = JPH::Vec3::sZero();   // the hand point, from her centre, drawn in
     float throw_windup_s_ = -1.0F;                 // < 0: not rearing back
+    // How long, rearing back, her own raised piece has hidden him from her
+    // (kWindupBlindSeconds).
+    float windup_blind_s_ = 0.0F;
     float throw_cooldown_s_ = 0.0F;
     float throw_stroke_s_ = -1.0F;                 // < 0: no throw leaving her hands
     JPH::Vec3 throw_v_ = JPH::Vec3::sZero();       // the speed it leaves them at

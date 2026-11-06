@@ -1908,6 +1908,8 @@ void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::Ma
     out[keys("pipe_slam_mps")] = state.pipe_slam_mps;
     out[keys("catches")] = static_cast<std::int64_t>(state.catches);
     out[keys("planks_fallen")] = static_cast<std::int64_t>(state.planks_fallen);
+    out[keys("throw_windup")] = state.throw_windup;
+
     godot::PackedFloat32Array planks;
     planks.resize(static_cast<std::int64_t>(state.planks.size()));
     for (std::size_t i = 0; i < state.planks.size(); ++i) {

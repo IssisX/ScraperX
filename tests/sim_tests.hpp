@@ -891,6 +891,7 @@ void run_matron_unstick();
 void run_matron_grab();
 void run_matron_load();
 void run_matron_budget();   // J-046: her one budget, every path, audited (sim_tests_matron_budget.cpp)
+void run_ammo();   // J-042: her ammo, your ammo (sim_tests_ammo.cpp)
 void run_strike();
 void run_matron_damage();
 void run_perf_step();
