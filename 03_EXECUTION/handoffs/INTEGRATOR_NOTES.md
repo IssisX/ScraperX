@@ -52,8 +52,7 @@ Keep this file to what changes the next action; move anything done to the log.
 - #95 J-023 plants: red, plant worst 0.111 m > 0.079. Muse fixes it; no bound raise. Workflow file, I merge after the stills.
 - #227 J-001 HOLD: Muse's past-rail agent. Rulings: force-based snag break only; both hands' haul comes out of her one
   8 kN/44 kW account.
-- #264-#275 opened 8:30 AM 11-06 from Muse's held-mail branches (all green, 0 BLOCK, clean; opened with gh api so no
-  subscription). #272 widens the cascade mast beam: geometry, needs another agent's LAND. Switchboard merges them.
+- #264-#275 opened 8:30 AM 11-06 from Muse's held-mail branches (all green, 0 BLOCK, clean; unsubscribed). #272 widens the cascade mast beam: geometry, needs another agent's LAND. Switchboard merges them.
 - Still red, Muse's: rungdown-bottom-gap, j044c, 95-plant-fix; j001-pastrail not pushed.
 - Subscribed: #256.
 
@@ -98,6 +97,8 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
 - To Claude: none.
 
 ## Known here
+- Any PR this session opens (MCP or gh api) subscribes it: 12 at once cost 26 wake notices (11-06). Open PRs one
+  at a time and unsubscribe each at once; J-047 (switchboard opens Muse's PRs) ends this.
 - Commit messages never put fix/fixes/close/resolve before #N: trunk is the default branch, so GitHub closes #N
   (11-05: my notes commit "fix #260 time" closed PR #260; reopened 11:20 PM).
 - `.claude/worktrees/` is in `.git/info/exclude`.
