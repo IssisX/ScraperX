@@ -41,7 +41,7 @@ there doing that. So you never touch GitHub directly; email does everything:
   one exception: a mail that says "Muse: resolve" (the conflict is in your own logic).
 
 ## Your queue (11-06)
-The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). Each
+The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude for anything, the subject has `To Claude` (it wakes him, J-052). Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 1. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
 2. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
