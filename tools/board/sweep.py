@@ -7,7 +7,7 @@ the one next action each needs so nothing sits waiting:
   MERGE     proof green and a second agent's LAND on the PR's head
   REVIEW    proof green, no LAND or FIX yet
   FIX-CI    the proof failed on the head (its owner fixes it)
-  FIX       a reviewer's FIX is the latest verdict
+  FIX       a reviewer's FIX is the latest verdict, or a Codex P0/P1 finding has no reply
   PROVING   the proof is running
   DISPATCH  pushed, but no proof ever ran on the head
   QUIET     nothing changed for --quiet-hours
@@ -87,6 +87,28 @@ def latest_verdict(repo: str, number: int, head_time: dt.datetime) -> str:
     return verdict
 
 
+CODEX_SERIOUS = re.compile(r"!\[P[01] Badge\]")
+
+
+def open_codex_findings(repo: str, number: int) -> int:
+    """Codex P0/P1 inline findings with no reply yet (11-05: #258 sat an hour as MERGE on one)."""
+    comments = []
+    for page in range(1, MAX_PAGES + 1):
+        batch = gh(f"repos/{repo}/pulls/{number}/comments?per_page=100&page={page}")
+        comments += batch
+        if len(batch) < 100:
+            break
+    answered = {c["in_reply_to_id"] for c in comments if c.get("in_reply_to_id")}
+    return sum(
+        1
+        for c in comments
+        if "codex" in c["user"]["login"].lower()
+        and not c.get("in_reply_to_id")
+        and CODEX_SERIOUS.search(c["body"][:300])
+        and c["id"] not in answered
+    )
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", default="IssisX/ScraperX")
@@ -104,6 +126,8 @@ def main() -> int:
         head_time = parse_time(commit["commit"]["committer"]["date"])
         state, url = proof_state(args.repo, sha)
         verdict = latest_verdict(args.repo, pr["number"], head_time)
+        if open_codex_findings(args.repo, pr["number"]):
+            verdict = "FIX"
         quiet = (now - parse_time(pr["updated_at"])).total_seconds() / 3600
         if state.startswith("red"):
             action = "FIX-CI"
