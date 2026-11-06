@@ -118,6 +118,12 @@ xvfb-run -a -s "-screen 0 648x557x24" godot --path godot --rendering-method gl_c
 | `perf_view_bottom` | 8 (yard) | The tower's foot, four quarters at pitch 1.35 (straight up) and 0.6. |
 | `perf_view_sling` | 8 | Seated in the slingshot's pouch. The pouch's camera follows the launch rail, so every quarter reads the same. |
 | `perf_view_top` | 42 (summit) | Four quarters at pitch -1.25 (straight down) and -0.6. |
+| `perf_walk` | 8 | Walking choppiness: a fixed walk-and-look route (the stick walks to the tower's foot with the view swaying, a full turn and a look up and down, on to the incline's foot, the same look). Prints p50/p95/p99 per part and over the route, each part's mean share (native, script, render), and the worst frames with the share that took most of each (`cause=`). `PERF_WALK_LONG=1` walks on across the yard (for a phone run; the short route already takes ~10 min on the host). |
+
+Each row also carries `script_ms`: every node's process callbacks, timed by two stamp nodes at process
+priority -1e6 and +1e6, less the native advance inside main.gd's `_process`. Godot's own `TIME_PROCESS`
+takes in the frame's rendering, so it cannot split them. Run `perf_walk` headless too: then the wall
+time is the CPU work alone (script, native, the scene's transform updates), with nothing drawn.
 
 On the host, software rendering (llvmpipe) makes every frame 0.4-4 s, so frame times there mean nothing.
 Draw calls, objects, primitives and memory do carry over to the phone. Two things the host cannot show:

@@ -1726,6 +1726,26 @@ var _probe_native_total_us := 0.0
 var _probe_compiles := 0.0
 var _probe_tag := ""
 var _probe_on := false
+# Two stamps about every node's process callback (main.gd _process, the
+# native advance inside it, the views' own): the first node to process and
+# the last. Godot's TIME_PROCESS also takes in the frame's rendering.
+var _probe_first: ProbeStamp = null
+var _probe_last: ProbeStamp = null
+
+
+class ProbeStamp extends Node:
+	var usec := 0
+
+	func _process(_delta: float) -> void:
+		usec = Time.get_ticks_usec()
+
+
+func _probe_stamp(priority: int) -> ProbeStamp:
+	var stamp := ProbeStamp.new()
+	stamp.process_priority = priority
+	stamp.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().root.add_child(stamp)
+	return stamp
 
 
 func _probe_native_total() -> float:
@@ -1747,6 +1767,9 @@ func _probe_start(tag: String) -> void:
 	_probe_last_usec = Time.get_ticks_usec()
 	_probe_native_total_us = _probe_native_total()
 	_probe_compiles = _probe_compile_count()
+	if _probe_first == null:
+		_probe_first = _probe_stamp(-1000000)
+		_probe_last = _probe_stamp(1000000)
 	_probe_on = true
 	_probe_loop()
 
@@ -1780,6 +1803,15 @@ func _probe_loop() -> void:
 			"buffer_mb": float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0,
 			"static_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0,
 			"matron": int(_matron_state()["state"]),
+			# The previous frame's node process callbacks (main.gd _process
+			# with the native advance inside it, and the views' own), between
+			# the two stamps, and its physics step, read at the start of this
+			# frame: the same frame wall_ms spans.
+			"process_ms": maxf(float(_probe_last.usec - _probe_first.usec), 0.0) / 1000.0 \
+				if _probe_first.usec > 0 else 0.0,
+			"physics_ms": float(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)) * 1000.0,
+			"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+			"at": _position(),
 		})
 		_probe_last_usec = now
 		_probe_native_total_us = native_total
@@ -1787,11 +1819,37 @@ func _probe_loop() -> void:
 
 
 func _probe_row_text(row: Dictionary) -> String:
-	return "f=%d tag=%s wall_ms=%.1f native_ms=%.1f render_cpu_ms=%.1f render_gpu_ms=%.1f compiles=%d draws=%d objects=%d prims=%d video_mb=%.0f texture_mb=%.0f buffer_mb=%.0f static_mb=%.0f matron=%d" % [
+	var at: Vector3 = row["at"]
+	return "f=%d tag=%s wall_ms=%.1f native_ms=%.1f script_ms=%.1f physics_ms=%.1f render_cpu_ms=%.1f render_gpu_ms=%.1f compiles=%d draws=%d objects=%d prims=%d video_mb=%.0f texture_mb=%.0f buffer_mb=%.0f static_mb=%.0f nodes=%d matron=%d at=(%.1f,%.1f,%.1f) cause=%s" % [
 		int(row["f"]), String(row["tag"]), float(row["wall_ms"]), float(row["native_ms"]),
+		_probe_script_ms(row), float(row["physics_ms"]),
 		float(row["render_cpu_ms"]), float(row["render_gpu_ms"]), int(row["compiles"]), int(row["draws"]),
 		int(row["objects"]), int(row["prims"]), float(row["video_mb"]), float(row["texture_mb"]),
-		float(row["buffer_mb"]), float(row["static_mb"]), int(row["matron"])]
+		float(row["buffer_mb"]), float(row["static_mb"]), int(row["nodes"]), int(row["matron"]),
+		at.x, at.y, at.z, _probe_cause(row)]
+
+
+# The GDScript share of a frame: the node process callbacks less the native
+# advance inside them (main.gd _process calls advance_frame).
+func _probe_script_ms(row: Dictionary) -> float:
+	return maxf(float(row["process_ms"]) - float(row["native_ms"]), 0.0)
+
+
+# Which part of a frame took most of it: native (the fixed steps), script
+# (GDScript in the process callbacks), physics (Godot's physics step) or
+# render (the rest of the wall time: culling, draw submission, the swap). A
+# compilation counted in the frame is named first.
+func _probe_cause(row: Dictionary) -> String:
+	if int(row["compiles"]) > 0:
+		return "compile"
+	var parts := {"native": float(row["native_ms"]), "script": _probe_script_ms(row),
+		"physics": float(row["physics_ms"])}
+	parts["render"] = maxf(float(row["wall_ms"]) - float(row["process_ms"]) - float(row["physics_ms"]), 0.0)
+	var top := "native"
+	for key in parts:
+		if float(parts[key]) > float(parts[top]):
+			top = key
+	return top
 
 
 # One SCRAPERX_PERF line per tag (frame-time percentiles, the most of each
@@ -1977,6 +2035,111 @@ func _perf_view_sling(device: int) -> bool:
 func _perf_view_top() -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	return await _probe_views("perf_view_top", [-1.25, -0.6])
+
+
+# J-045 (#248) walking choppiness: frame-time percentiles on a fixed
+# walk-and-look route across the yard, the way Cory plays it. From the
+# spawn the stick walks the route's legs (each one another touch scenario
+# already walks), the view swaying side to side as a thumb looks about;
+# at each stop a full turn round, then a look up and down. Every frame is
+# logged; the report is p50/p95/p99 and the worst frames per part ("walk",
+# "look") and over the whole route, each worst frame with the share that
+# took most of it (_probe_cause). Measures only: it fails only when the
+# route stalls or nothing was measured (no budget asserted; #248's target is
+# p95 <= 11.1 ms on the phone, where real frame times come from).
+const PERF_WALK_LEGS := [Vector2(6.0, -70.0), "look", Vector2(-13.4, -86.0), "look"]
+# PERF_WALK_LONG=1 walks on back across the yard to its east side (a phone
+# run; on the host's software renderer the short route already takes ~10 min).
+const PERF_WALK_LONG_LEGS := [Vector2(6.0, -70.0), "home", Vector2(30.0, -10.0), Vector2(43.5, 6.0), "look"]
+const PERF_WALK_SWAY_RAD := 0.5
+const PERF_WALK_SWAY_RATE := 1.2
+const PERF_WALK_TURN_RATE := 1.6
+
+var _walk_sway_on := false
+
+
+func _perf_walk(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var home := Vector2(_position().x, _position().z)
+	await _seconds(1.0)
+	_probe_start("settle")
+	await _seconds(0.5)
+	var stop := 0
+	var legs := PERF_WALK_LEGS + (PERF_WALK_LONG_LEGS if OS.get_environment("PERF_WALK_LONG") == "1" else [])
+	for leg in legs:
+		if leg is String and leg == "look":
+			stop += 1
+			_probe_tag = "look"
+			await _tilt(0.3)
+			var turned := 0.0
+			while turned < TAU:
+				var step := PERF_WALK_TURN_RATE * get_process_delta_time()
+				_main._yaw = float(_main._yaw) + step
+				turned += step
+				await get_tree().process_frame
+			await _tilt(1.0)
+			await _tilt(-0.5)
+			await _tilt(0.0)
+			continue
+		var target: Vector2 = home if leg is String else leg
+		_probe_tag = "walk"
+		var me := _position()
+		await _face(target - Vector2(me.x, me.z))
+		_walk_sway(float(_main._yaw))
+		var walked := await _walk_to(device, target, 0.4, 40.0)
+		_walk_sway_on = false
+		if not walked:
+			_probe_stop()
+			return _fail("the walk to %s stalled at %s" % [str(target), str(_position())])
+	_probe_stop()
+	var out := _probe_report("perf_walk")
+	var route := []
+	for row in _probe_rows:
+		if row["tag"] != "settle":
+			route.append(row)
+	if route.is_empty():
+		return _fail("no frames were measured")
+	var walls := []
+	for row in route:
+		walls.append(float(row["wall_ms"]))
+	walls.sort()
+	var at := func(q: float) -> float: return float(walls[clampi(int(ceil(q * walls.size())) - 1, 0, walls.size() - 1)])
+	route.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["wall_ms"]) > float(b["wall_ms"]))
+	var causes := {}
+	var over_p95 := 0
+	var shares := {"native": [], "script": [], "render": []}
+	for row in route:
+		shares["native"].append(float(row["native_ms"]))
+		shares["script"].append(_probe_script_ms(row))
+		shares["render"].append(maxf(float(row["wall_ms"]) - float(row["process_ms"]) - float(row["physics_ms"]), 0.0))
+	for key in shares:
+		var s := _perf_series_summary(shares[key])
+		print("SCRAPERX_PERF perf_walk share %s mean=%.2f p95=%.2f max=%.2f" % [key, float(s["mean"]),
+			float(s["p95"]), float(s["max"])])
+	for row in route:
+		if float(row["wall_ms"]) > at.call(0.95):
+			over_p95 += 1
+			var cause := _probe_cause(row)
+			causes[cause] = int(causes.get(cause, 0)) + 1
+	print("SCRAPERX_PERF perf_walk route frames=%d wall_p50=%.1f p95=%.1f p99=%.1f max=%.1f over_11ms=%d over_50ms=%d causes_over_p95=%s" % [
+		walls.size(), at.call(0.5), at.call(0.95), at.call(0.99), float(walls[walls.size() - 1]),
+		walls.filter(func(w: float) -> bool: return w > 11.1).size(),
+		walls.filter(func(w: float) -> bool: return w > 50.0).size(), str(causes)])
+	_detail = "frames=%d p50=%.1f p95=%.1f p99=%.1f max=%.1f stops=%d worst=%s draws_max=%d" % [walls.size(),
+		at.call(0.5), at.call(0.95), at.call(0.99), float(walls[walls.size() - 1]), stop,
+		_probe_cause(route[0]), int(out["walk"]["most"]["draws"]) if out.has("walk") else 0]
+	return true
+
+
+# Sways the view about `base` while the walk's stick (relative to the view)
+# keeps the walker on its line; runs beside the walk until it is let go.
+func _walk_sway(base: float) -> void:
+	_walk_sway_on = true
+	var t := 0.0
+	while _walk_sway_on:
+		_main._yaw = base + PERF_WALK_SWAY_RAD * sin(PERF_WALK_SWAY_RATE * t)
+		await get_tree().process_frame
+		t += get_process_delta_time()
 
 
 # J-045 draw attribution (perf_attrib): what each top-level group costs in draws, in the main pass
