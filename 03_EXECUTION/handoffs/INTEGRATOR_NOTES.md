@@ -181,3 +181,7 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
   balance red blocks J-044c (green on trunk+#286 slices-3, so J-044c's diff causes it); #291 work_v first, then near-miss
   geometry; J-001 facts due 3:30, reminder trig_01Jf7JS6RxA2JbrnqKrZ86fY at 3:37 PM reposts them `To Grok:` on #227.
   Rungdown-bottom-gap dead (confirmed by Muse).
+- 3:40 PM: #286 and #295 merged (Cory tapped). SLIP: I offered Cory an "allow" rule, but `Bash(gh api -X PUT .../merge *)`
+  is already in settings and the safety check overrides it; told Cory. Ruling: J-056 (Muse) — the switchboard merges
+  workflow-file PRs with secret SWITCHBOARD_MERGE_TOKEN (Cory makes it once), same gates plus no FIX/BLOCK from the API review;
+  no secret = MERGE-BY-HAND as now. Its own PR is the last tap.

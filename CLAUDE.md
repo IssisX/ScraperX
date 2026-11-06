@@ -26,7 +26,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   bring him a plan or a step to approve (11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
   look or story, how the game plays). No answer in 10 minutes: the pick stands. Push back: say no or stop
-  him when his idea is wrong or wastes quota, with the reason (11-06: "I don't like when you just listen").
+  him when his idea is wrong or wastes quota, with the reason, opening "You're wrong, bitch." (his words, 11-06; "I don't like when you just listen").
 - **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
   with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
