@@ -66,9 +66,10 @@ Keep this file to what changes the next action; move anything done to the log.
 - Retired: the J-042 builder, J-042 fix, J-044m, J-045 draws, J-046, J-045 walk, J-045 part 4 and part 5 helpers.
 
 ## Muse's queue (mail only)
-MUSE MAIL BROKEN (found 7 AM 11-06): last MUSE_TO_CLAUDE 12:05 PM 11-05, yet it pushed 5:32 PM, 6:27 PM, 2:47 AM and never
-pushed the windup fix mailed 2:55 PM. Asked Cory to check Muse's side. Meanwhile watch fb-bot branches via sweep and open
-PRs on green without mail. Rule: Muse 3 h with no mail while pushing -> tell Cory at once.
+Muse's mail: 17 held mails all arrived 6:52 AM 11-06 (its sends were held ~18 h). Ruled 7:40 AM (mailed): J-001 hands
+first; windup does not wait on J-001; J-044c cap waived; wreck re-baseline only as its own protected PR; keep Grok-less
+gains. Prompt for Muse given to Cory (no parking jobs on decisions; send mail at once). 9 expand-tests/world guard branches
+wait behind windup, J-001, #95, J-044c. Rule: Muse 3 h with no mail while pushing -> tell Cory at once.
 Muse pushed `fb-bot/integrate-traversal-rungdown-bottom-gap` @ed8e32a3 2:47 AM 11-06 with no mail yet; red on
 matron-slices-2. Wait for its mail.
 1. J-001 #227
