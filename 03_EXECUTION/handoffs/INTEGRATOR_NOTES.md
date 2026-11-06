@@ -73,7 +73,7 @@ Keep this file to what changes the next action; move anything done to the log.
 
 ## Helpers
 - Effort tally (Cory 11-06 8:50 AM): one line, no per-helper logs. A failure = a job redone on helper-max (red proof it
-  could not fix, or a real review finding), not a flake or a bad brief. Tally since the split (11:30 AM): high helper jobs 0,
+  could not fix, or a real review finding), not a flake or a bad brief. Tally since the split (11:30 AM): high helper jobs 1 (J-051),
   redone 0; physics helper jobs 1 (J-048 hook, b81f059a), redone 0. 2+ redos in the first 10 high jobs -> tell Cory, pick: non-physics back to xhigh.
 - J-046 #259 merged 7:50 PM (switchboard). matron-ammo to kScenarios after #256: Muse's now. New leaks mailed
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
@@ -140,3 +140,6 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
   #227 have agents on them; J-044c Grab-notice fix running. Grok #244 H.4 is unanswered at 10 AM; next run 4 PM.
 - GitHub "Automatically delete head branches" is ON (Cory 11-06 11:35 AM): a merged PR's branch is removed by GitHub. Reusing a job's integrate branch still works: the next push creates it again from the pusher's copy.
 - J-048 #277 merged 11:35 AM (11-06; switchboard): his own run is never a blow, and the hook's line swinging him is not his run. #276 closed. Follow-up: the wind leak (above).
+- J-051 #284 (inbox, helper on high): after each full steer sweep the switchboard posts NEW needs-the-integrator items on
+  draft PR #282 (never merge; the integrator stays subscribed). Only full sweeps post (a --pr run never does, so no loop).
+  Green, waiting on Codex plus a LAND; the first post should list about 8 items (FIX on #256, red #227 and #95, five red branches).
