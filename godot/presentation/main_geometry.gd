@@ -448,6 +448,12 @@ func _surfaced(color: Color, metallic: float, roughness: float, surface: Surface
 # labels, particles and anything with a script stay as they are.
 const BATCH_CELL_XZ := 96.0
 const BATCH_CELL_Y := 48.0
+# A near section of the parts that are not fine is the far section's size
+# (J-045, #248: a quarter of the draws up a full-height view). It is drawn
+# exactly while its far section is not, as before, so nothing is drawn nearer
+# or farther than it was; the fine parts keep BATCH_CELL_*, their draw
+# distance being measured to their section's middle.
+const BATCH_CELL_COARSE := 192.0
 const BATCH_FAR_CELL := 192.0
 const BATCH_NEAR_RANGE := 260.0
 const BATCH_FINE_SIZE := 1.5
@@ -688,12 +694,13 @@ class Batcher:
 		var finish := _finish(material, wet)
 		if wet and finish[2]:
 			wet_parts += 1
-		var cell := Vector3(floorf(centre.x / BATCH_CELL_XZ), floorf(centre.y / BATCH_CELL_Y),
-			floorf(centre.z / BATCH_CELL_XZ))
+		var cell_size := Vector3(BATCH_CELL_XZ, BATCH_CELL_Y, BATCH_CELL_XZ) if fine \
+			else Vector3(BATCH_CELL_COARSE, BATCH_CELL_COARSE, BATCH_CELL_COARSE)
+		var cell := (centre / cell_size).floor()
 		# Each batch stands at its section's middle (its vertices relative to
 		# that), so its draw distance is measured to the section.
 		var group := _group(near, "%d/%d/%d/%s/%d" % [cell.x, cell.y, cell.z, finish[0], int(fine)],
-			(cell + Vector3(0.5, 0.5, 0.5)) * Vector3(BATCH_CELL_XZ, BATCH_CELL_Y, BATCH_CELL_XZ), finishes[finish[0]])
+			(cell + Vector3(0.5, 0.5, 0.5)) * cell_size, finishes[finish[0]])
 		group.fine = fine
 		var standard := material as StandardMaterial3D
 		var real: Surface = standard.get_meta(&"surface") as Surface \

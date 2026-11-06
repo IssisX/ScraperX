@@ -229,6 +229,9 @@ func _ready() -> void:
 		add_child(view)
 		view.setup(self, _native, index)
 		_forklift_views.append(view)
+	ForkliftView.build(self)
+	for index in _forklift_views.size():
+		_forklift_views[index].update_view(_native.get_forklift_state_at(index))
 	_forklift_view = _forklift_views[0]
 	_crane_view = CraneView.new()
 	add_child(_crane_view)
@@ -292,6 +295,8 @@ func _ready() -> void:
 			pending.append_array(node.get_children())
 			if node is GeometryInstance3D:
 				(node as GeometryInstance3D).visibility_range_end = VIEW_PROP_RANGE
+	# Last, once every view has painted and dressed its kit bodies.
+	_instance_kit_bodies()
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
