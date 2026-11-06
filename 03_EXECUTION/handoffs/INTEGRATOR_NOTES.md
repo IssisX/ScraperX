@@ -58,10 +58,12 @@ Keep this file to what changes the next action; move anything done to the log.
   Foot at HIGH shadows ~930 draws: look call put to Cory (LOW / SPLITS / KEEP), waits on him.
 - #261 J-045 part 4 merged 1:42 AM 11-06 (perf_walk p50 6.6 -> 5.7 ms). The slingshot pouch's native panels: main.gd hides
   them but they are drawn today; kept drawn. Hiding them is a look question, not yet put to Cory.
-- Running: J-045 part 5 helper (her state via one native getter; gore build moved to the LOADING card), branch
-  `claude/integrate-j045-state`, started 3:20 AM 11-06. I open its PR.
+- #262 J-045 part 5 (her state via one native getter, canopy built at setup; perf_walk p50 6.0 -> 5.6 ms, p95 8.0-8.4 ->
+  7.5-7.7) opened 4:05 AM 11-06; the switchboard merges it. The gore view is already built at load (no first-frame cost).
+- No helper running. J-045 left: HIGH shadow draws (Cory's call), the Fold p95 (needs his phone); the sim's first step
+  varies 4-19 ms (sim side).
 - J-045 after that: Sentry native crash capture (Option A), its own workflow/signing PR with a security review.
-- Retired: the J-042 builder, J-042 fix, J-044m, J-045 draws, J-046, J-045 walk and J-045 part 4 helpers.
+- Retired: the J-042 builder, J-042 fix, J-044m, J-045 draws, J-046, J-045 walk, J-045 part 4 and part 5 helpers.
 
 ## Muse's queue (mail only)
 Muse pushed `fb-bot/integrate-traversal-rungdown-bottom-gap` @ed8e32a3 2:47 AM 11-06 with no mail yet; red on
