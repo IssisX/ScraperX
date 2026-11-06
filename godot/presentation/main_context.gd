@@ -124,6 +124,18 @@ static func punch_button(strike: Dictionary, hold: Dictionary) -> Dictionary:
 		"label": "BREAK FREE" if break_free else ("SWEEP" if int(strike.get("move", 0)) == 1 else ("KICK" if int(strike.get("move", 0)) == 2 else ("JAB" if int(strike.get("move", 0)) == 3 else ("CROSS" if int(strike.get("move", 0)) == 4 else "PUNCH")))),
 		"count": count, "lands": bool(strike.get("offered", false))}
 
+# Her state and her hold, read once a frame after the sim's advance, in one
+# native call (get_matron_frame, J-045): every view of her this frame (her
+# body, her hold, the gore, the radio, her chart) reads these two, as each
+# read its own copy of the same tick before.
+var _her_now: Dictionary = {}
+var _hold_now: Dictionary = {}
+
+func _read_her() -> void:
+	var both: Array = _native.get_matron_frame()
+	_her_now = both[0]
+	_hold_now = both[1]
+
 func _read_context() -> Dictionary:
 	var landing_state: Dictionary = _native.get_landing_state()
 	var position: Vector3 = _native.get_player_position()
@@ -207,7 +219,7 @@ func _read_context() -> Dictionary:
 	var strike: Dictionary = _native.get_strike_state()
 	var her_hold: Dictionary = {}
 	if bool(strike.get("held", false)) and _native.has_method("get_matron_hold_state"):
-		her_hold = _native.get_matron_hold_state()
+		her_hold = _hold_now
 	var punch := punch_button(strike, her_hold)
 	var action := {"id": &"", "label": "", "icon": &"climb", "detail": ""}
 	var summit: Dictionary = _native.get_summit_state()

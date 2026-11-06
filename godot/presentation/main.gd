@@ -292,6 +292,10 @@ func _ready() -> void:
 		"" if _uitest_scenario.is_empty() and not _ci_mode and _audit == null else UITEST_UNCANNY_STORAGE)
 	_uncanny.microphone_denied.connect(_on_microphone_denied)
 	_uncanny.set_microphone(_settings.microphone)
+	# The chute's canopy (hidden until a chute is out) is built here with the
+	# other views, not on the first frame of play (J-045: 8.6 ms there).
+	_canopy = CanopyView.new()
+	add_child(_canopy)
 	# Both views are a few metres of rope and leather: not drawn from afar.
 	for view: Node in [_slingshot_view, _swing_view]:
 		var pending: Array[Node] = [view]
@@ -523,7 +527,7 @@ func _process(delta: float) -> void:
 	# The foreman's radio, from the native's state; his lines show whatever
 	# the captions setting, having no voice yet.
 	var climber: Vector3 = _native.get_player_position()
-	var her: Dictionary = _native.get_matron_state()
+	var her: Dictionary = _her_now
 	_radio.update(delta, {
 		"y": climber.y,
 		"support": int(_native.get_support_entity_id()),
@@ -548,7 +552,7 @@ func _process(delta: float) -> void:
 	_hud.route_points = _native.get_route_ahead() if _settings.route_hint else PackedVector3Array()
 	# Her chart: what the eyes rest on, her pages, the voice heard back.
 	if _uncanny != null:
-		_uncanny.update(delta, _ctx, _camera, _death_cam_left <= 0.0)
+		_uncanny.update(delta, _ctx, _camera, _death_cam_left <= 0.0, _her_now)
 	_hud.update_hud(_ctx, delta)
 	if _audit != null and _audit.frame(self):
 		get_tree().quit(_audit.exit_code)

@@ -1019,7 +1019,7 @@ func _feel_hold_events(hold: Dictionary) -> void:
 func _feel_hold(delta: float) -> void:
 	if _matron_view == null or not _native.has_method("get_matron_hold_state"):
 		return
-	var hold: Dictionary = _native.get_matron_hold_state()
+	var hold: Dictionary = _hold_now
 	_feel_hold_events(hold)
 	var ended := int(hold.get("runs_ended_by_matron", 0))
 	if _runs_she_ended >= 0 and ended > _runs_she_ended:
@@ -1077,6 +1077,7 @@ func _feel_gore(her_state: Dictionary, delta: float, hold: Dictionary) -> void:
 	_matron_view.hear_hold(hold)
 
 func _render_snapshot(delta: float = 0.0) -> void:
+	_read_her()
 	var position: Vector3 = _native.get_player_position()
 	var render_position: Vector3 = _native.get_player_render_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
@@ -1118,10 +1119,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _summit_view != null:
 		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	if _matron_view != null:
-		var her_state: Dictionary = _native.get_matron_state()
+		var her_state: Dictionary = _her_now
 		# Her hold, read once: her hand drawn on the ankle it has, her gore and
 		# her sounds of it.
-		var her_hold: Dictionary = _native.get_matron_hold_state() if _native.has_method("get_matron_hold_state") else {}
+		var her_hold: Dictionary = _hold_now
 		_matron_view.set_hold(her_hold)
 		_matron_view.update_view(her_state, delta, _his_eye(), position)
 		_feel_her(her_state, position)
