@@ -2344,6 +2344,32 @@ void run_matron_tower_proof() {
     decks.erase(std::remove_if(decks.begin(), decks.end(), [&](const int d) {
         return d != home && (map.plan(home, d).empty() || map.plan(d, home).empty());
     }), decks.end());
+    // The tower's spine is pinned, not just counted: the filter above
+    // silently drops a deck that loses its connection, so a world change
+    // that disconnects a ring deck would shrink this proof without failing
+    // it. Ring decks are the big decks (area >= 500 m2; the machine decks
+    // joined to home are <= 45, the outboard strips 180). Measured
+    // 2026-11-06 on trunk 9b9b4113: 13 spine decks joined to home, tops
+    // 132.138..352.248; the next ring up (374.248) is not joined — her
+    // no-lift route ends at the 352 ring by design (J-017: the way up past
+    // it is the player's wall-climb stack, not her route), so it is not
+    // in the list. Trip-proven 2026-11-06: listing 374.248 fails the test
+    // naming that top, before any leg travels.
+    static constexpr float kSpineTops[] = {132.138F, 142.978F, 153.999F, 176.247F, 198.247F, 220.246F,
+                                           242.247F, 264.248F, 286.247F, 308.247F, 330.247F, 340.266F, 352.248F};
+    int spine_found = 0;
+    for (const float top : kSpineTops) {
+        bool found = false;
+        for (const int d : decks) {
+            if (std::abs(regions[static_cast<std::size_t>(d)].top - top) <= 0.5F) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) std::cout << "  matron tower proof: spine deck missing at top " << top << "\n";
+        else ++spine_found;
+    }
+    require(spine_found == 13, "matron tower proof: all spine decks joined to home");
     const auto is_deck = [&](const int id) { return std::find(decks.begin(), decks.end(), id) != decks.end(); };
     struct Pair { int lo, hi; };
     std::vector<Pair> pairs;
