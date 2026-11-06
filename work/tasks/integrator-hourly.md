@@ -12,6 +12,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    names, then a PR starting `Job: J-NNN`. Then `python3 tools/board/asks.py --hours 24`: RELAY? = a `To Muse:`
    post not yet mailed (mail it); REPOST = an ask to Grok not at the start of a comment (repost it starting
    `To Grok:`); an ask to Claude = answer it now.
+   Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06: 18 h went unreported).
    Sentry: `from:sentry.io newer_than:2h` (phone errors from the APK): each new issue goes to its owner's job
    (Muse for game code) with the error, file and line.
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
