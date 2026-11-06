@@ -1,7 +1,12 @@
 # Integrator: the hourly check
 
-It runs every 3 hours, 8:17 AM to 11:17 PM Central on weekdays; Sat-Sun 4 runs, 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM; none
-overnight (Cory 11-06: the weekly limit must last to Sunday night). The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
+It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every 2 hours Sat-Sun, 9:17 AM to 9:17 PM; none
+overnight (Cory 11-06: the weekly limit must last to Sunday night). The full check (every step below) runs at 8:17 AM,
+11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light:
+`git pull`, one mail search `newer_than:2h (subject:MUSE_TO_CLAUDE OR from:sentry.io OR subject:"Run failed: Switchboard")`
+and `python3 tools/board/asks.py --hours 2`; act on what is new, then end in one line, with no board edit and no message
+to Cory unless he must act (11-06: mail and GitHub asks wake nothing; Muse's green windup sat unseen 35 min).
+The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06 9:35 AM).
 At the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun 1:17 PM and 9:17 PM), ask Cory for the usage meter (total %), log it in the notes and redo the
 pace: (100 - used) / hours left to Sunday bedtime, against the rate since the last reading.
@@ -53,9 +58,8 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
 
-Between hours: no timed check-ins (Cory 11-05, so the weekly limit lasts until the Monday 11 AM reset). The switchboard
-merges by itself, and PR events and helper reports wake the integrator. The hourly run alone reads Muse's mail. A quiet
-hourly run ends in one line. Free Muse takes the builds first.
+Between runs: the switchboard merges by itself; the inbox (#282), PR events on Claude's own PRs and helper reports wake
+the integrator. Mail wakes nothing: only the runs read it. Free Muse takes the builds first.
 
 Trunk merges on any PR are yours, done the hour it conflicts, and the owner is mailed the new sha. Hand a merge to
 Muse only when the conflict is in its own logic, by a mail that says "Muse: resolve". Never ask for a job and then
