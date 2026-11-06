@@ -14,6 +14,7 @@
 #include "sim/impacts.hpp"
 #include "sim/loose_stock.hpp"
 #include "sim/matron.hpp"
+#include "sim/matron_effort.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -980,6 +981,62 @@ void run_ammo_carry() {
               << " max_step_flying=" << log.max_step_flying_m << "\n";
 }
 
+// J-042 windup (Codex P1 on #291): the hold's lift must be charged as work.
+// While she rears back, the anchor rises to kWindupHandsUpM and the piece
+// tracks it, so rel (handle minus anchor velocity) is near 0 — but the piece
+// really rises, gaining m g dh. The StockHold ledger must record that work:
+// charged with rel it reads ~0 J over the windup; charged with the pair's
+// relative velocity (handle minus her centre) it reads the lift.
+void run_ammo_hold_lift() {
+    Simulation s(InitialSpawn::Deck154);
+    const std::uint64_t box = handled_toolbox(s, "ammo hold lift");
+    Ledger log;
+    log.start(s, "ammo hold lift", box);
+    // The effort ledger is read-only here: no reset (the matron-budget
+    // scenario runs this group with it on and its own reset), just the
+    // StockHold work before the windup and at the release.
+    scraperx::sim::effort::Ledger &l = scraperx::sim::effort::ledger();
+    const bool was_enabled = l.enabled;
+    l.enabled = true;
+    const std::size_t stock = static_cast<std::size_t>(scraperx::sim::effort::Path::StockHold);
+    const std::uint32_t throws = s.matron_state().throws;
+    bool windup = false;
+    double h0 = 0.0;
+    double max_h = 0.0;
+    double work0 = 0.0;
+    for (int i = 0; i < static_cast<int>(60.0 * kHz); ++i) {
+        const auto m = s.matron_state();
+        (void)s.set_move_input(0.0, 0.0);
+        if (!windup && m.throw_windup > 0.0 && m.carrying == box) {
+            windup = true;
+            h0 = s.kit_body_position(log.body).y;
+            max_h = h0;
+            work0 = l.run[stock].work_j;
+            std::cout << "  ammo hold lift: windup starts t=" << i / kHz << ", box y " << h0 << "\n";
+        }
+        if (windup) {
+            max_h = std::max(max_h, s.kit_body_position(log.body).y);
+        }
+        tick(s);
+        log.step(s, false);
+        if (windup && s.matron_state().throws > throws) {
+            break;
+        }
+    }
+    const double work1 = l.run[stock].work_j;
+    l.enabled = was_enabled;
+    require(windup, "ammo hold lift: she rears back with the toolbox in her hands");
+    require(s.matron_state().throws > throws, "ammo hold lift: the windup ends in a throw");
+    const double dh = max_h - h0;
+    const double work = work1 - work0;
+    std::cout << "  ammo hold lift: box rose " << dh << " m in the windup, stock-hold work " << work << " J\n";
+    require(dh > 0.2, "ammo hold lift: the piece really rises with the anchor in the windup");
+    // The lift's work is at least its potential gain (plus what it keeps as
+    // speed); half of m g dh leaves room for the spring's share of the rise.
+    require(work > 0.5 * 18.0 * 9.81 * dh, "ammo hold lift: the hold charges the lift it does");
+    std::cout << "PASS scraperx_sim ammo hold lift: rose_m=" << dh << " work_j=" << work << "\n";
+}
+
 void run_ammo() {
     run_ammo_stand();
     run_ammo_hands();
@@ -989,4 +1046,5 @@ void run_ammo() {
     run_ammo_kinds();
     run_ammo_carry();
     run_ammo_heavy();
+    run_ammo_hold_lift();
 }
