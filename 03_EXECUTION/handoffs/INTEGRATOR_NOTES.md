@@ -48,7 +48,7 @@ Keep this file to what changes the next action; move anything done to the log.
 - Effort set to max at 7:39 AM (Cory 11-06: the old ultracode; the new ultracode switch means workflows, stays off). Repo default is max too (.claude/settings.json). At the 11:17 AM meter read, compare the pace before and after this change.
 - Found 7:45 AM in the app's own text: CLAUDE_CODE_EFFORT_LEVEL in .claude/settings.json overrides the effort picked in the online interface (it pinned HIGH before). Picking any level turns ultracode off. Ultracode changes no thinking; it adds a standing order to use workflows on every task, plus "token cost is not a constraint". Change effort only by editing that file, on Cory's word.
 - get_session 7:50 AM: effort_level max, ultracode false (set 7:43 AM). Before that, the repo file pinned HIGH from Tue 11-03 1:00 PM (xhigh only 2:04-2:08 PM: session ...N1FPwfgHU4 put Cory's xhigh back to high, calling it Claude's pick). So this session (from Wed 11-04 10:19 AM) ran at HIGH for about 45 h. Lesson: never change effort without Cory's word.
-- Helper effort (Cory 11-06, 7:55 AM: "xhigh+MAX"): .claude/agents/helper.md at xhigh for every helper job; a job it fails (red proof it can't fix, or a real review finding) is redone on helper-max.md at max, handed the first helper's branch and the failure lines. No standing helper; helper-max counts toward the two-helper cap. No per-job logging (Cory 11-06: wasted usage). Check both types are listed before the first Monday helper.
+- Helper effort (Cory 11-06 11:30 AM, "split"): `helper` at high for non-physics jobs; `helper-physics` at xhigh for physics, contacts, forces, her limits, geometry, protected tests; a job either fails (red proof it can't fix, or a real review finding) is redone on `helper-max` at max, handed the first branch and the failure lines. helper-max counts toward the two-helper cap. Why physics stays xhigh: a miss there can pass every test (J-048's hook bug passed; only Codex caught it), and a miss nobody catches never gets the max redo.
 - J-048 #276 (Cory 7:30 AM bug: running into things hurts the player). Ruling: his own run never hurts him; real blows
   still do. (9:00 AM Cory caught me calling the player "her" in every J-048 text: fixed in 2a79cfa8, the PR and #276.
   The player is him; the Matron is her.) Claude took it 8:20 AM (Cory "Go"; Muse mailed to drop it). PR #277 (protected, claude/integrate-protected-j048-no-run-hurt, 8:45 AM): his legs' part (speed over his frame, up to 9 m/s) is taken off a contact while his own drive moves him; a throw turns it off until he is on his feet within 9 m/s. Head 2a79cfa8 (comments only); @codex review asked. run_arm_break and touch_arm_break now break the arm with a 9.2 m/s throw. Local PASS: corpse, zipline, matron-arm, matron-mischief, matron-player-independence, AS-007-E, touch_arm_break, touch_zipline_slam. Lands on a green proof plus another vendor's LAND (switchboard); not watched.
@@ -72,11 +72,9 @@ Keep this file to what changes the next action; move anything done to the log.
 - Subscribed: #256.
 
 ## Helpers
-- Effort tally (Cory 11-06 8:50 AM): one line only, no per-helper logs. A failure = a job
-  redone on helper-max (a red proof it could not fix, or a real review finding), not a flake or a bad brief.
-  Tally: helper jobs 0, redone on helper-max 0. After 10 jobs: 0 redos -> try high on the next 5 non-physics jobs, and
-  any redo there means xhigh for good; 2+ redos in the first 10 -> xhigh stays. Weak evidence (no control, tiny
-  sample); his call to switch.
+- Effort tally (Cory 11-06 8:50 AM): one line, no per-helper logs. A failure = a job redone on helper-max (red proof it
+  could not fix, or a real review finding), not a flake or a bad brief. Tally since the split (11:30 AM): high helper jobs 0,
+  redone 0; physics helper jobs 0, redone 0. 2+ redos in the first 10 high jobs -> tell Cory, pick: non-physics back to xhigh.
 - J-046 #259 merged 7:50 PM (switchboard). matron-ammo to kScenarios after #256: Muse's now. New leaks mailed
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
 - J-045: #258 (draws) and #260 (perf_walk) merged. perf_grade worst_draws_low is 700, exactly the budget, so no headroom.
