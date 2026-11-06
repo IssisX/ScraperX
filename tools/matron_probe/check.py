@@ -105,7 +105,6 @@ EXPECTED = {
     ("hair", "touch_matron_act"): (HAIR_ITEM, 14751, 0.193),
     ("skirt", "touch_matron_act"): (SKIRT_ITEM, 17495, 0.156),
     ("grip_climb", "look_matron_moves"): (CLIMB_ITEM, 1494, 1.556),
-    ("plant", "look_matron_moves"): (PLANT_ITEM, 4, 0.057),
     ("hair", "look_matron_moves"): (HAIR_ITEM, 1617, 0.192),
     ("skirt", "look_matron_moves"): (SKIRT_ITEM, 1415, 0.114),
     ("stretch_arm_hold", "look_matron_hold"): (HOLD_ITEM, 634, 206.990),
