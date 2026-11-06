@@ -231,6 +231,25 @@ void run_loose_stock() {
                 "stock: every piece is a kit body");
         placed.push_back(piece_at(s, i));
     }
+    // The east/west stock takes its table places last (append_reserved, after
+    // the Matron's throwables) and its bodies are built last, in table order
+    // (realize_reserved walks the table in one loop). So the trailing bodies'
+    // entity ids run in build order: each later east/west piece has a later
+    // body index.
+    {
+        bool first = true;
+        std::uint32_t prev = 0;
+        for (int i = east_west_begin; i < pieces; ++i) {
+            const std::uint32_t body =
+                s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i));
+            require(body != Simulation::kKitNone && (first || body > prev),
+                    "stock: the east/west stock's bodies are built in table order");
+            first = false;
+            prev = body;
+        }
+        std::cout << "  stock: " << (pieces - east_west_begin) << " east/west pieces, entity ids "
+                  << east_west_begin << ".." << (pieces - 1) << ", built in table order\n";
+    }
     // Tower pieces per dress_tower ring, before settling. Rings are the stack
     // rings 11..143 m and the upper rings 176.25..396.25 m, as in
     // LooseStock::dress_tower. The old total-only check (tower pieces > 60)
@@ -275,6 +294,18 @@ void run_loose_stock() {
         for (std::size_t r = 0; r < rings.size(); ++r) {
             require(per_ring[r] > 0, "stock: every dress_tower ring is dressed");
         }
+        // Per-ring count gate: a ring's dress is bounded, not just non-empty.
+        // Spots per ring are capped in dress_tower (stack 3 legacy + 3
+        // east/west, crane-deck 5 + 5, upper 2), and each spot holds a few
+        // pieces, so the piece count per ring is capped here as a proxy.
+        // Designed caps: stack rings at most 30 pieces, crane-deck rings at
+        // most 50, upper rings at most 10. Measured on trunk 94afd6e1: stack
+        // max 28, crane-deck max 28, upper max 8.
+        for (std::size_t r = 0; r < rings.size(); ++r) {
+            const bool crane_deck = rings[r] == 11.0 || rings[r] == 22.0 || rings[r] == 44.0;
+            const int cap = r >= 13 ? 10 : (crane_deck ? 50 : 30);
+            require(per_ring[r] <= cap, "stock: a dress_tower ring holds at most its capped pieces");
+        }
     }
     require(s.advance_frame(12.0).accepted, "stock: the settling interval is accepted");
     double worst = 0.0;
@@ -300,11 +331,12 @@ void run_loose_stock() {
     // lie in play. Rings as in LooseStock::dress_tower (stack 11..143 m,
     // upper 176.25..396.25 m); side by dominant axis from the ring centre
     // (0, -150), matching dress_tower's four out directions. The gate is
-    // per band, not per ring: a ring holds at most 3 stack spots, so one
-    // ring cannot cover four sides, but each band must dress every side.
-    // Measured before the room-box fix: stack east/west were zero on all
-    // 13 rings. The per-ring count gate is a separate, pending package
-    // (fb-bot/expand-world-20261031, unlanded); this gate does not redo it.
+    // per band, not per ring: a stack ring holds at most 3 legacy spots plus
+    // 3 east/west spots (6 total), so one ring can cover four sides, but each
+    // band must dress every side. Measured before the room-box fix: stack
+    // east/west were zero on all 13 rings. The per-ring count gate above caps
+    // pieces per ring (stack 30, crane-deck 50, upper 10); this gate does
+    // not redo it.
     {
         std::vector<double> rings;
         for (int level = 1; level <= 13; ++level) rings.push_back(11.0 * static_cast<double>(level));
