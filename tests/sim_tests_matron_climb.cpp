@@ -1410,6 +1410,45 @@ void test_pole_head_clearance() {
     std::cout << "PASS scraperx_sim matron pole head clearance\n";
 }
 
+// A pole whose head ends under the floor over it: the way up is a mantle
+// off its head, but the way down starts with her hands sliding to that
+// head, and revalidate refuses a hold more than reach_low + 0.6 = 1.40 m
+// under her centre — standing on the floor over it, her centre is 1.05 m
+// over her feet, so a gap over 0.35 m puts the head out of her reach and
+// the down move fails LostHold on its first grip tick, at phase 1, which
+// the journey never avoids: it replans the same dead edge until its 6
+// replans are spent. The scan must not offer the way down past 0.35 m,
+// while the way up (a different transition) keeps its 0.40 m limit.
+void test_pole_head_down_gap() {
+    for (const float gap : {0.30F, 0.38F}) {
+        ClimbWorld w;
+        const float top = 6.0F - gap;
+        w.box(Vec3(2.5F, 3.0F, 2.0F), RVec3(0, 3.0F, 2.4F));            // the deck: top 6.0, face at z 0.4
+        w.box(Vec3(0.05F, 0.5F * top, 0.05F), RVec3(0, 0.5F * top, 0));  // the pole: head 6.0 - gap
+        w.spawn(RVec3(0, 0, -2.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-5, -1, -5), Vec3(5, 9, 5)), ignore);
+        const traversal::Edge *up = nullptr;
+        const traversal::Edge *down = nullptr;
+        for (const auto &e : map.edges()) {
+            if (e.kind == MoveKind::PoleUp) up = &e;
+            if (e.kind == MoveKind::PoleDown) down = &e;
+        }
+        require(up != nullptr && down != nullptr, "matron pole head down: the pole is found, up and down");
+        std::cout << "  matron pole head down, gap " << gap << " m: up usable " << up->usable << " down usable " << down->usable
+                  << " (" << down->reason << ")\n";
+        require(up->usable, "matron pole head down: the way up stays offered at this gap");
+        if (gap > 0.35F) {
+            require(!down->usable, "matron pole head down: no way down off a head more than 0.35 m under the floor");
+        } else {
+            require(down->usable, "matron pole head down: the way down stays offered inside her reach");
+        }
+    }
+    std::cout << "PASS scraperx_sim matron pole head down gap\n";
+}
+
 // Narrow ledges she has never seen (seeded): a board 0.20 to 0.40 m wide
 // over a 6 m drop, from one deck to another a step higher or lower, open
 // both sides or along a wall. Her scan joins the decks across it; her walk
@@ -1904,6 +1943,7 @@ void run_matron_climb() {
     test_wall_across_step();
     test_rung_gaps();
     test_pole_head_clearance();
+    test_pole_head_down_gap();
     run_matron_narrow();
 }
 

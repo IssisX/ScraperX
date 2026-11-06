@@ -3176,6 +3176,18 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     d.usable = false;
                     d.reason += "; blocked: too far out from the lip to step onto";
                 }
+                // Down, her first grip slides to the pole's head, and
+                // revalidate refuses a hold more than reach_low + 0.6 m
+                // under her centre: standing on the floor over it, her
+                // centre is 1.05 m over her feet, so a head more than
+                // 0.35 m under that floor is out of her reach and the move
+                // fails LostHold on its first grip tick, at phase 1, which
+                // the journey never avoids. Up keeps its 0.40 m: the
+                // mantle reaches back across a wider gap.
+                if (pole.top < hp.top - 0.35F) {
+                    d.usable = false;
+                    d.reason += "; blocked: its head ends too far under the floor for the way down";
+                }
                 add_edge(d);
             }
         }
