@@ -827,6 +827,78 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     kit_->post_step(delta_seconds);
     bay_->post_step();
     impacts_->post_step(carried_entity_);
+    // J-038 slice 1: stock dents and breaks, from this tick's measured
+    // velocity changes and pre-solve contact hints (stock_damage.hpp).
+    // Only containers, drums and crates are in scope; tower and
+    // structure machines are never stock, so never observed.
+    {
+        const std::vector<stock_damage::ContactHint> hints = contact_listener_.stock_hints();
+        const std::vector<LooseStock::Placement> &placed = loose_stock_->placed();
+        for (int i = 0; i < loose_stock_->count(); ++i) {
+            const LooseStock::Kind kind = placed[static_cast<std::size_t>(i)].kind;
+            if (kind != LooseStock::Kind::Container && kind != LooseStock::Kind::Drum &&
+                kind != LooseStock::Kind::Crate && kind != LooseStock::Kind::SkidCrate) {
+                continue;
+            }
+            const kit::BodyIndex body = loose_stock_->body(i);
+            if (!kit_->body_enabled(body)) {
+                continue;  // parked: already broken, nothing to measure
+            }
+            const JPH::BodyID id = kit_->body_id(body);
+            const JPH::Vec3 vel = bodies.GetLinearVelocity(id);
+            const JPH::RVec3 pos = bodies.GetPosition(id);
+            const JPH::Quat rot = bodies.GetRotation(id);
+            stock_damage_.observe(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i), kind,
+                                  kit_->body_mass(body), vel.GetX(), vel.GetY(), vel.GetZ(),
+                                  static_cast<float>(pos.GetX()), static_cast<float>(pos.GetY()),
+                                  static_cast<float>(pos.GetZ()), rot.GetX(), rot.GetY(), rot.GetZ(), rot.GetW(),
+                                  hints);
+        }
+        // A break decided this tick executes after all observations,
+        // so spawning pieces cannot disturb the tick's measurements.
+        // The pieces are newborn bodies, not a per-tick drive: their
+        // velocities are creation state, and their scatter sums to
+        // zero, so the break conserves the intact body's momentum.
+        // They are deliberately NOT added to Matron's throwables:
+        // that list is build-time, and appending pieces would change
+        // her mischief selection without a ruling.
+        for (const stock_damage::BreakAction &action : stock_damage_.take_actions()) {
+            const kit::BodyIndex body = loose_stock_->body(static_cast<int>(action.stock_index));
+            if (!kit_->body_enabled(body)) {
+                continue;  // already parked: a body breaks once
+            }
+            const JPH::BodyID id = kit_->body_id(body);
+            const JPH::RVec3 pos = bodies.GetPosition(id);
+            const JPH::Quat rot = bodies.GetRotation(id);
+            const JPH::Vec3 vel = bodies.GetLinearVelocity(id);
+            const JPH::Vec3 ang = bodies.GetAngularVelocity(id);
+            const float mass = kit_->body_mass(body);
+            const stock_damage::BreakGeometry geometry = stock_damage::break_geometry(action.kind);
+            const float piece_mass = mass / static_cast<float>(geometry.count);
+            kit_->park(body);
+            for (std::uint8_t k = 0; k < geometry.count; ++k) {
+                const stock_damage::BreakPiece &piece = geometry.pieces[k];
+                const JPH::Vec3 offset =
+                    rot * JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z);
+                const JPH::Vec3 scatter =
+                    rot * JPH::Vec3(piece.scatter_x, piece.scatter_y, piece.scatter_z);
+                const kit::BodyIndex piece_body = kit_->add_body(
+                    stock_damage::piece_entity_for(action.entity, k),
+                    {kit::Part{JPH::Vec3(piece.half_x, piece.half_y, piece.half_z), JPH::Vec3::sZero(),
+                               JPH::Quat::sIdentity(), kit::Material::Timber, kit::Part::Shape::Box,
+                               piece_mass}},
+                    JPH::RVec3(pos.GetX() + offset.GetX(), pos.GetY() + offset.GetY(),
+                               pos.GetZ() + offset.GetZ()),
+                    rot, piece_mass, 0.9F);
+                const JPH::BodyID piece_id = kit_->body_id(piece_body);
+                bodies.SetLinearVelocity(piece_id, vel + scatter);
+                bodies.SetAngularVelocity(piece_id, ang);
+                kit_->set_carry(piece_body, kit::CarryKind::Handle,
+                                JPH::Vec3(0.0F, piece.half_y, 0.0F));
+                kit_->allow_sleeping(piece_body);
+            }
+        }
+    }
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         truck->post_step(delta_seconds);
     }
@@ -1068,6 +1140,17 @@ void Simulation::PhysicsWorld::launch_kit_body_for_test(const std::uint32_t body
     bodies.SetPositionAndRotation(id, at, bodies.GetRotation(id), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(id, velocity, JPH::Vec3::sZero());
     impacts_->resync_body(kit_->body_entity(kit::BodyIndex{body}));
+    // J-038 slice 1 rework: a zero-velocity launch is a placement,
+    // not a throw — the body is put down at rest, and its settle is
+    // excluded, so being put down never dents it. A launch with
+    // velocity is a throw: its landing is a real hit and dents by
+    // the bands.
+    if (velocity == JPH::Vec3::sZero()) {
+        const std::uint64_t entity = kit_->body_entity(kit::BodyIndex{body});
+        if (kit::is_stock_entity(entity)) {
+            stock_damage_.note_placed(entity);
+        }
+    }
 }
 
 void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const JPH::Vec3 velocity) {

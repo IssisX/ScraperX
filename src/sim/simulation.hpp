@@ -6,6 +6,9 @@
 #include <memory>
 
 namespace scraperx::sim {
+namespace stock_damage {
+struct DamageState;
+} // namespace stock_damage
 namespace traversal {
 class AffordanceMap;
 enum class MoveKind : std::uint8_t;
@@ -1668,6 +1671,8 @@ public:
     [[nodiscard]] std::uint32_t loose_stock_machine_weights_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_throwables_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_east_west_begin() const noexcept;
+    // J-038 slice 1: a stock body's dent record, empty when undamaged.
+    [[nodiscard]] stock_damage::DamageState stock_damage(std::uint64_t entity) const noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;
     // Writes up to capacity points of the cable as drawn (first end, sheaves,

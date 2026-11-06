@@ -1,0 +1,475 @@
+// J-038 slice 1: unit tests pin every tier boundary, the radius
+// formula and the 8-cap merge; integration tests mirror the probe's
+// forklift-ram and throw cases and assert the dent state they must give.
+#include "sim/forklift.hpp"
+#include "sim/loose_stock.hpp"
+#include "sim/stock_damage.hpp"
+#include "sim_tests.hpp"
+
+#include <cmath>
+#include <iostream>
+
+using scraperx::sim::Forklift;
+using scraperx::sim::LooseStock;
+using scraperx::sim::Simulation;
+using scraperx::sim::Vector3;
+using namespace scraperx::sim::stock_damage;
+
+namespace {
+
+std::uint32_t piece(const Simulation &s, const std::uint32_t i) {
+    return s.kit_body_index(LooseStock::kFirstEntity + i);
+}
+
+void put(Simulation &s, const std::uint32_t body, const Vector3 at) {
+    s.debug_launch_kit_body(body, at, {0.0, 0.0, 0.0});
+}
+
+// The forklift test's board path, copied: round the beam stack's west
+// end, onto the truck's floor from its west side, to the wheel.
+bool board(Simulation &s) {
+    if (!(walk_to(s, 30.0, 10.0, 30.0) && walk_to(s, 36.4, 16.35, 20.0) &&
+          walk_to(s, Forklift::kParkX, 16.35, 8.0, 0.1))) {
+        return false;
+    }
+    (void)s.set_facing(0.0, 1.0);
+    (void)s.advance_frame(0.5);
+    return s.forklift_state().at_controls;
+}
+
+std::uint32_t first_of_kind(const Simulation &s, const LooseStock::Kind kind) {
+    for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+        if (s.loose_stock_piece(i).kind == static_cast<std::uint8_t>(kind)) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+// The forklift lane's container at (39, 70): clear above it, so a
+// launch straight up and a set-down both have somewhere to go.
+std::uint32_t lane_container(const Simulation &s) {
+    for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+        const auto p = s.kit_body_position(piece(s, i));
+        if (s.loose_stock_piece(i).kind == static_cast<std::uint8_t>(LooseStock::Kind::Container) &&
+            std::abs(p.x - 39.0) < 0.1 && std::abs(p.z - 70.0) < 0.1) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+enum class Target { Container, Drum, Crate };
+
+// The probe's forklift case: the drums' pallet moved 40 m up the lane,
+// the target stood in the lane at z = 30, then `pace` until 0.2 s after contact.
+std::uint64_t forklift_into(Simulation &s, const Target what, const double pace) {
+    (void)s.advance_frame(1.0);
+    require(board(s) && s.request_forklift_action(), "stock damage: aboard, at the wheel, the controls taken");
+    (void)s.advance_frame(0.2);
+    const std::uint32_t pallet = first_of_kind(s, LooseStock::Kind::Pallet);
+    for (std::uint32_t i = pallet; i < pallet + 15; ++i) {
+        const auto b = piece(s, i);
+        auto p = s.kit_body_position(b);
+        p.z += 40.0;
+        put(s, b, p);
+    }
+    std::uint32_t target = 0;
+    std::uint64_t entity = 0;
+    if (what == Target::Container) {
+        for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+            const auto p = s.kit_body_position(piece(s, i));
+            if (s.loose_stock_piece(i).kind == static_cast<std::uint8_t>(LooseStock::Kind::Container) &&
+                std::abs(p.x - 39.0) < 0.1 && std::abs(p.z - 70.0) < 0.1) {
+                target = piece(s, i);
+                entity = LooseStock::kFirstEntity + i;
+            }
+        }
+        put(s, target, {38.0, 1.31, 30.0});
+    } else if (what == Target::Drum) {
+        target = piece(s, pallet + 1);
+        entity = LooseStock::kFirstEntity + pallet + 1;
+        put(s, target, {38.0, 0.47, 30.0});
+    } else {
+        // Skid crate north of the catwalk's east end: origin on the ground, rests at y ~ 0; 0.46 would drop and break it pre-ram.
+        target = piece(s, LooseStock::kDeckCrateNorth);
+        entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+        put(s, target, {38.0, 0.01, 30.0});
+    }
+    (void)s.advance_frame(1.5);
+    (void)s.set_facing(0.0, 1.0);
+    const auto start = s.kit_body_position(target);
+    bool contact = false;
+    int hold = 0;
+    for (int t = 0; t < 30 * static_cast<int>(Simulation::kTickRateHz); ++t) {
+        (void)s.set_move_input(0.0, pace);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto now = s.kit_body_position(target);
+        if (!contact && std::hypot(now.x - start.x, now.z - start.z) > 0.05) {
+            contact = true;
+        }
+        if (contact && ++hold >= static_cast<int>(0.2 * Simulation::kTickRateHz)) {
+            break;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.advance_frame(1.0);  // the hit window closes after 6 quiet ticks
+    require(contact, "stock damage: the truck reached its target");
+    return entity;
+}
+
+// The probe's throw case: the toolbox sent level at 7.5 m/s from 1 m short.
+std::uint64_t throw_at(Simulation &s, const Target what) {
+    (void)s.advance_frame(1.0);
+    const std::uint32_t n = s.loose_stock_count();
+    // The first of her throwables, by the table's own begin: the
+    // throwables are no longer last (the east/west stock takes its
+    // table places after them, J-014 #216), so `n - kMatronThrowables`
+    // now names an east/west drum, not the toolbox. The begin
+    // accessor is the table's own answer to which piece is first.
+    const std::uint32_t toolbox = piece(s, s.loose_stock_throwables_begin());
+    std::uint32_t target = 0;
+    std::uint64_t entity = 0;
+    double rest_y = 0.0, half = 0.0, tz = 64.0, launch_y = 0.0;
+    if (what == Target::Drum) {
+        target = piece(s, n - 1);
+        entity = LooseStock::kFirstEntity + n - 1;
+        rest_y = 0.47;
+        launch_y = 0.47;
+        half = 0.30;
+    } else if (what == Target::Crate) {
+        // The same skid crate, put at y ~ 0 (its box still spans
+        // y 0.13..1.01, so the throw at y 0.46 meets it).
+        target = piece(s, LooseStock::kDeckCrateNorth);
+        entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+        rest_y = 0.01;
+        launch_y = 0.46;
+        half = 0.48;
+    } else {
+        for (std::uint32_t i = 0; i < n; ++i) {
+            const auto p = s.kit_body_position(piece(s, i));
+            if (s.loose_stock_piece(i).kind == static_cast<std::uint8_t>(LooseStock::Kind::Container) &&
+                std::abs(p.x - 1.5) < 0.1 && std::abs(p.z - 70.0) < 0.1) {
+                target = piece(s, i);
+                entity = LooseStock::kFirstEntity + i;
+            }
+        }
+        tz = 70.0;
+        half = 1.22;
+    }
+    if (what != Target::Container) {
+        put(s, target, {1.5, rest_y, tz});
+    }
+    (void)s.advance_frame(1.5);
+    launch_y = what == Target::Container ? 1.3 : launch_y;
+    s.debug_launch_kit_body(toolbox, {1.5, launch_y, tz - half - 1.0}, {0.0, 0.0, 7.5});
+    (void)s.advance_frame(2.0);
+    return entity;
+}
+
+void check_dent(const DamageState &state, const Tier tier, const float lo, const float hi, const char *what) {
+    require(state.dent_count >= 1 && !state.broken, what);
+    const Dent &dent = state.dents[0];
+    std::cout << "  stock damage: first dent tier " << static_cast<int>(dent.tier) << " depth " << dent.depth_m
+              << " radius " << dent.radius_m << "\n";
+    require(dent.tier == tier && dent.depth_m >= lo && dent.depth_m <= hi, what);
+}
+
+} // namespace
+
+void run_stock_damage() {
+    // ---- the decision, at every tier boundary -------------------------
+    using K = LooseStock::Kind;
+    struct Case {
+        K kind;
+        float peak;
+        Tier tier;
+        bool breaks;
+    };
+    static constexpr Case cases[] = {
+        {K::Container, 249.0F, Tier::None, false}, {K::Container, 250.0F, Tier::Shallow, false},
+        {K::Container, 699.0F, Tier::Shallow, false}, {K::Container, 700.0F, Tier::Medium, false},
+        {K::Container, 2499.0F, Tier::Medium, false}, {K::Container, 2500.0F, Tier::Severe, false},
+        {K::Drum, 11.0F, Tier::None, false}, {K::Drum, 12.0F, Tier::Shallow, false},
+        {K::Drum, 29.0F, Tier::Shallow, false}, {K::Drum, 30.0F, Tier::Medium, false},
+        {K::Drum, 49.0F, Tier::Medium, false}, {K::Drum, 50.0F, Tier::Severe, false},
+        {K::Crate, 64.0F, Tier::None, false}, {K::Crate, 65.0F, Tier::Damage, false},
+        {K::Crate, 179.0F, Tier::Damage, false}, {K::Crate, 180.0F, Tier::Break, true},
+        {K::SkidCrate, 180.0F, Tier::Break, true},
+    };
+    for (const Case &c : cases) {
+        const Decision d = decide(c.kind, c.peak);
+        require(d.tier == c.tier && d.breaks == c.breaks, "stock damage: the tier boundary holds");
+    }
+    require(decide(K::Container, 12000.0F).depth_m == 0.22F, "stock damage: container depth caps at 0.22");
+    require(decide(K::Drum, 200.0F).depth_m == 0.10F, "stock damage: drum depth caps at 0.10");
+    // ---- (a) 1 mm quantization, pinned ------------------------------------
+    // 300 N.s on a container interpolates to 0.00556 m: the recorded depth
+    // is the 1 mm grid, 0.006 m, not the raw interpolation.
+    require(decide(K::Container, 300.0F).depth_m == 0.006F, "stock damage: depth quantizes to 1 mm");
+    require(radius_for(0.0F) == 0.12F, "stock damage: radius at zero depth is 0.12");
+    require(std::abs(radius_for(0.22F) - 0.67F) < 0.001F, "stock damage: radius at 0.22 depth is 0.67");
+    require(radius_for(0.30F) == 0.75F, "stock damage: radius caps at 0.75");
+    // ---- the 8-cap merge ------------------------------------------------
+    {
+        DamageState state;
+        for (int i = 0; i < 8; ++i) {
+            merge_dent(state, Dent{static_cast<float>(i), 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.02F, 0.17F, Tier::Shallow},
+                       0.22F);
+        }
+        require(state.dent_count == 8, "stock damage: 8 dents recorded");
+        merge_dent(state, Dent{0.1F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.04F, 0.22F, Tier::Medium}, 0.22F);
+        require(state.dent_count == 8 && state.dents[0].depth_m > 0.02F,
+                "stock damage: the 9th dent merges into the nearest, deepening it");
+    }
+    // ---- (a) the 9th dent merges into the NEAREST, ties to the lower index
+    {
+        DamageState state;
+        for (int i = 0; i < 8; ++i) {
+            merge_dent(state, Dent{static_cast<float>(i), 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.02F, 0.17F, Tier::Shallow},
+                       0.22F);
+        }
+        // Halfway between dents 3 and 4: a tie, so the lower index deepens.
+        merge_dent(state, Dent{3.5F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.04F, 0.22F, Tier::Medium}, 0.22F);
+        require(state.dent_count == 8 && state.dents[3].depth_m == 0.03F && state.dents[4].depth_m == 0.02F,
+                "stock damage: a merge tie goes to the lower index");
+        // The deepening itself quantizes to 1 mm: 0.03 + 0.25 * 0.0333 = 0.038.
+        merge_dent(state, Dent{3.5F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0333F, 0.22F, Tier::Medium}, 0.22F);
+        require(std::abs(state.dents[3].depth_m - 0.038F) < 0.001F,
+                "stock damage: a merge deepening quantizes to 1 mm");
+    }
+    // ---- (b) the settle exclusion, and (c) the support classifier --------
+    // These drive observe() directly: the classifier is the gravity
+    // adjustment, so the sequences are written in velocities and hints,
+    // not physics. One tick per call, one entity, a 3,750 kg container.
+    {
+        const std::uint64_t entity = LooseStock::kFirstEntity;
+        const ContactHint up{entity, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F};
+        const ContactHint side{entity, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F};
+        auto tick = [&](StockDamage &dmg, const float vx, const float vy,
+                        const std::vector<ContactHint> &hints) {
+            dmg.observe(entity, K::Container, 3750.0F, vx, vy, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F,
+                        1.0F, hints);
+        };
+        auto quiet = [&](StockDamage &dmg, const int n, const std::vector<ContactHint> &hints) {
+            for (int i = 0; i < n; ++i) {
+                tick(dmg, 0.0F, 0.0F, hints);
+            }
+        };
+        // (b) A fresh spawn's settle never dents, even a severe one, and
+        // the exclusion is bounded: past it, the same hit dents.
+        {
+            StockDamage dmg;
+            tick(dmg, 0.0F, 0.0F, {});  // baseline: the spawn, exclusion starts
+            tick(dmg, 0.0F, -0.77F, {});  // falling, 0.77 m/s of settle drop
+            tick(dmg, 0.0F, 0.0F, {up});  // the hard stop: 3,296 N.s, severe
+            quiet(dmg, 6, {up});
+            require(dmg.state(entity).dent_count == 0,
+                    "stock damage: a fresh spawn's settle never dents, even a severe one");
+            quiet(dmg, 20, {up});  // the exclusion runs out
+            // A real fall, one gravity step a tick: quiet in flight,
+            // and the impact reads with gravity's share.
+            tick(dmg, 0.0F, -0.109F, {});
+            tick(dmg, 0.0F, -0.218F, {});
+            tick(dmg, 0.0F, -0.327F, {});
+            tick(dmg, 0.0F, -0.436F, {});
+            tick(dmg, 0.0F, -0.545F, {});
+            tick(dmg, 0.0F, 0.0F, {up});  // a real vertical hit: medium band
+            quiet(dmg, 6, {up});
+            const auto &st = dmg.state(entity);
+            require(st.dent_count == 1 && st.dents[0].tier == Tier::Medium,
+                    "stock damage: past the settle exclusion, a real vertical hit dents");
+        }
+        // (c) An airborne side-scrape then impact counts as in flight:
+        // the scrape's lateral normal is not support, so the impact
+        // still carries gravity's share: 2,659 N.s, severe. Under the
+        // old "a hint existed last tick" rule it read 2,250, medium.
+        {
+            StockDamage dmg;
+            tick(dmg, 0.0F, 0.0F, {});  // baseline
+            quiet(dmg, 20, {});  // the spawn exclusion runs out
+            tick(dmg, 0.0F, -0.6F, {});  // falling, no contact
+            tick(dmg, 0.0F, -0.6F, {side});  // side-scrape: lateral, not support
+            tick(dmg, 0.0F, -0.6F, {side});  // still scraping, still in flight
+            tick(dmg, 0.0F, 0.0F, {up});  // the impact
+            quiet(dmg, 6, {up});
+            const auto &st = dmg.state(entity);
+            require(st.dent_count == 1 && st.dents[0].tier == Tier::Severe,
+                    "stock damage: an airborne side-scrape then impact counts as in flight");
+        }
+        // (c) The first landing tick counts as in flight, and two ticks
+        // of opposing contact make the body supported: the same raw hit
+        // then reads without gravity's share: 2,250 N.s, medium.
+        {
+            StockDamage dmg;
+            tick(dmg, 0.0F, 0.0F, {});  // baseline
+            quiet(dmg, 20, {});  // the spawn exclusion runs out
+            tick(dmg, 0.0F, -0.6F, {});  // falling
+            tick(dmg, 0.0F, 0.0F, {up});  // first landing tick: still in flight
+            quiet(dmg, 6, {up});  // the window closes
+            const auto &first = dmg.state(entity);
+            require(first.dent_count == 1 && first.dents[0].tier == Tier::Severe,
+                    "stock damage: the first landing tick counts as in flight");
+            // A second hit, now supported: shoved sideways while the
+            // ground still holds it. A downward hit cannot be staged
+            // here — stopping the body again would be a second event
+            // of its own. The same raw 0.6 m/s reads without
+            // gravity's share: 2,250 N.s, medium. The body slides on
+            // at 0.6 m/s, so the window closes on quiet ticks.
+            tick(dmg, 0.6F, 0.0F, {up});
+            for (int i = 0; i < 6; ++i) {
+                tick(dmg, 0.6F, 0.0F, {up});
+            }
+            const auto &second = dmg.state(entity);
+            require(second.dent_count == 2 && second.dents[1].tier == Tier::Medium &&
+                        std::abs(second.dents[1].depth_m - 0.136F) < 0.001F,
+                    "stock damage: two ticks of opposing contact make the body supported");
+        }
+    }
+    // ---- at rest, nothing dents -----------------------------------------
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(2.0);
+        bool any = false;
+        for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+            const auto state = s.stock_damage(LooseStock::kFirstEntity + i);
+            any = any || state.dent_count > 0 || state.broken;
+        }
+        require(!any, "stock damage: at rest, no dents and no breaks");
+    }
+    // ---- the forklift's ram, by the probe's numbers ----------------------
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint64_t entity = forklift_into(s, Target::Container, 1.0);
+        check_dent(s.stock_damage(entity), Tier::Severe, 0.15F, 0.22F, "stock damage: full ram dents a container severe");
+    }
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint64_t entity = forklift_into(s, Target::Container, 0.25);
+        check_dent(s.stock_damage(entity), Tier::Shallow, 0.0F, 0.05F, "stock damage: creep dents a container shallow");
+    }
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint64_t entity = forklift_into(s, Target::Drum, 1.0);
+        check_dent(s.stock_damage(entity), Tier::Severe, 0.05F, 0.10F, "stock damage: full ram dents a drum severe");
+    }
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint64_t entity = forklift_into(s, Target::Drum, 0.25);
+        check_dent(s.stock_damage(entity), Tier::Shallow, 0.0F, 0.02F, "stock damage: creep dents a drum shallow");
+    }
+    // ---- her throw, by the probe's numbers -------------------------------
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint64_t entity = throw_at(s, Target::Drum);
+        check_dent(s.stock_damage(entity), Tier::Severe, 0.05F, 0.10F, "stock damage: her throw dents a drum severe");
+    }
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint64_t entity = throw_at(s, Target::Crate);
+        const auto state = s.stock_damage(entity);
+        require(state.dent_count >= 1 && !state.broken && state.dents[0].tier == Tier::Damage,
+                "stock damage: her throw damages a crate, it does not break");
+    }
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint64_t entity = throw_at(s, Target::Container);
+        const auto state = s.stock_damage(entity);
+        require(state.dent_count == 0 && !state.broken, "stock damage: her throw leaves a container undented");
+    }
+    // ---- (b) a placed body's own settle never dents ----------------------
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(2.0);  // the spawn exclusion is long past
+        const std::uint32_t i = lane_container(s);
+        const std::uint32_t body = piece(s, i);
+        const std::uint64_t entity = LooseStock::kFirstEntity + i;
+        const auto p = s.kit_body_position(body);
+        put(s, body, {p.x, p.y + 0.03, p.z});  // a 3 cm set-down: a severe settle
+        (void)s.advance_frame(2.0);
+        const auto state = s.stock_damage(entity);
+        require(state.dent_count == 0 && !state.broken,
+                "stock damage: a 3 cm set-down after placement never dents");
+    }
+    // ---- (b) a real vertical hit dents by the same bands ------------------
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(2.0);
+        const std::uint32_t i = lane_container(s);
+        const std::uint32_t body = piece(s, i);
+        const std::uint64_t entity = LooseStock::kFirstEntity + i;
+        const auto p = s.kit_body_position(body);
+        // Up, not placed: a launch, so the settle exclusion does not
+        // apply. The recorded dent is the landing, not the launch:
+        // the launch window closes hintless (0 dents at t = 0.10 s)
+        // and the dent appears by t = 0.15 s, when the landing
+        // window closes. Measured landing: 898 N.s, medium, depth
+        // 0.061 m. The earlier 1,721 N.s / 0.107 m prediction assumed
+        // a free-fall landing the 6 mm hop does not produce; it only
+        // looked right before because the launch tick itself was
+        // phantom-inflated to 1,721. The window pins the measured
+        // landing and sits below the launch tick's own 0.084 m.
+        s.debug_launch_kit_body(body, {p.x, p.y, p.z}, {0.0, 0.35, 0.0});
+        (void)s.advance_frame(2.0);
+        const auto state = s.stock_damage(entity);
+        require(state.dent_count >= 1 && !state.broken && state.dents[0].tier == Tier::Medium &&
+                    state.dents[0].depth_m >= 0.05F && state.dents[0].depth_m <= 0.08F,
+                "stock damage: a dropped container dents by the medium band");
+    }
+    // ---- dents ride a save into a fresh world ------------------------------
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint64_t entity = throw_at(s, Target::Drum);
+        const auto before = s.stock_damage(entity);
+        require(before.dent_count >= 1, "stock damage save: the dent is recorded before the save");
+        const std::vector<std::uint8_t> bytes = s.save_game();
+        Simulation t(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(t.load_game(bytes.data(), bytes.size()), "stock damage save: a fresh world loads the save");
+        const auto after = t.stock_damage(entity);
+        require(after.dent_count == before.dent_count && after.dents[0].tier == before.dents[0].tier &&
+                    std::abs(after.dents[0].depth_m - before.dents[0].depth_m) < 0.001F,
+                "stock damage save: the dent rides the save, tier and depth kept");
+    }
+    // ---- the full ram breaks a crate into 8 carryable pieces ------------
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+        const double mass = s.kit_body_mass(crate);
+        const std::uint64_t entity = forklift_into(s, Target::Crate, 1.0);
+        const auto state = s.stock_damage(entity);
+        require(state.broken, "stock damage break: the full ram breaks the crate");
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = s.kit_body_index(piece_entity_for(entity, k));
+            require(body != 0xFFFFFFFFU, "stock damage break: every piece exists");
+            require(std::abs(s.kit_body_mass(body) - mass / 8.0) < 0.01,
+                    "stock damage break: each piece carries a eighth of the mass");
+        }
+        (void)s.advance_frame(3.0);
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const auto v = s.kit_body_velocity(s.kit_body_index(piece_entity_for(entity, k)));
+            require(std::hypot(v.x, v.y, v.z) < 0.5, "stock damage break: the pieces settle");
+        }
+        // Back the truck off the debris, get out, and carry the first
+        // piece: the walk to it must not thread the truck's corner
+        // through the pieces it just made (the capsule pinches there).
+        // The truck is still driving when the ram returns, so reverse
+        // on the stick as-is; asking first would only let go of it.
+        // The pick-up reaches 1.20 m from the player's centre, so a
+        // standoff 0.9 m south of the piece, faced at it, is enough.
+        (void)s.set_move_input(0.0, -1.0);
+        (void)s.advance_frame(2.0);
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.request_forklift_action();
+        (void)s.advance_frame(0.5);
+        require(!s.forklift_state().driving, "stock damage break: the truck lets go");
+        const std::uint32_t first = s.kit_body_index(piece_entity_for(entity, 0));
+        const auto pp = s.kit_body_position(first);
+        require(walk_to(s, pp.x, pp.z - 0.9, 30.0, 0.3), "stock damage break: to the first piece");
+        const auto me = s.snapshot().player_position;
+        (void)s.set_facing(pp.x - me.x, pp.z - me.z);
+        (void)s.advance_frame(0.3);
+        require(s.request_pick_up() && s.advance_frame(0.5).accepted &&
+                    s.snapshot().carrying_entity_id == piece_entity_for(entity, 0),
+                "stock damage break: the first piece is carried");
+    }
+}

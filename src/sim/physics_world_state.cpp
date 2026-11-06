@@ -320,6 +320,13 @@ std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
 }
 
 // The committed checkpoint as bytes (see SaveWriter).
+namespace {
+// J-038 stock damage section's mark ("DAMG"), written only when the
+// world holds damage, so the reader can tell it from the optional
+// fabricated section.
+constexpr std::uint32_t kDamageSaveMark = 0x44414D47U;
+} // namespace
+
 void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.pod(checkpoint_position_);
     w.pod(static_cast<std::uint8_t>(checkpoint_crouched_ ? 1 : 0));
@@ -360,6 +367,15 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.list(k.grip_rating);
     // Fabricated objects follow the grips with the original save layout.
     write_fabricated(w);
+    // Last: J-038 stock damage, written only when the world holds
+    // some, as fabricated objects are: a save of an undamaged world
+    // is byte for byte what it was before, so a save with fabricated
+    // objects stays the save without them, and then theirs.
+    const std::vector<stock_damage::StockDamage::SavedDamage> damage = stock_damage_.serialize();
+    if (!damage.empty()) {
+        w.pod(kDamageSaveMark);
+        w.list(damage);
+    }
 }
 
 // Reads a saved checkpoint, then restores the world from it as a death
@@ -415,9 +431,26 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     }
     // After the grips, the fabricated objects: a save of a world with none
     // (every save made before them) ends before.
+    // After the grips, the fabricated objects (if any), then the
+    // stock damage (if any). A save missing either still loads; one
+    // made before the damage ends before it.
     std::vector<SavedFabricated> saved;
     if (ok && !r.done()) {
-        ok = read_fabricated(r, saved);
+        std::uint32_t mark = 0;
+        if (!r.peek(mark)) {
+            ok = false;
+        } else if (mark != kDamageSaveMark) {
+            // Not damage: the fabricated section, if any
+            // (read_fabricated validates its own mark).
+            ok = read_fabricated(r, saved);
+        }
+        // The damage mark: fabricated is absent.
+    }
+    std::vector<stock_damage::StockDamage::SavedDamage> saved_damage;
+    if (ok && !r.done()) {
+        std::uint32_t mark = 0;
+        ok = r.pod(mark) && mark == kDamageSaveMark &&
+             r.list_up_to(saved_damage, loose_stock_->placed().size());
     }
     ok = ok && r.done();
     // A grip holds a body the save has: one built with its world, or one of
@@ -457,6 +490,12 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     }
     if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
         !std::isfinite(position.GetZ())) {
+        return false;
+    }
+    // Stock damage validates (and applies) here, after every other
+    // check and before the first world mutation below, so a bad
+    // record refuses the save with nothing changed.
+    if (!stock_damage_.restore(saved_damage, loose_stock_->placed().size())) {
         return false;
     }
     // Taken: the save's fabricated objects the world lacks are made, where
