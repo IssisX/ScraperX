@@ -55,13 +55,15 @@ Keep this file to what changes the next action; move anything done to the log.
 - J-046 #259 merged 7:50 PM (switchboard). Mine next: add matron-ammo to kScenarios after #256 lands. New leaks mailed
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
 - #258 merged 9 PM (switchboard).
-- Running: the J-045 walk helper (frame-time p50/p95/p99), branch `claude/integrate-j045-walk`, started 9:20 PM. I open its PR.
+- J-045 #260 (perf_walk + kit pose loop, fd0638a6) opened 11:25 PM; switchboard merges; unsubscribed (the hourly sweep
+  shows a Codex P0/P1). Helper retired. No helper running. J-045 left: native kit-pose batch getter, idle skips for her
+  view/gore/canopy, the shadow call (Cory), perf_walk on the Fold; then Sentry native crash capture (its own PR).
 - J-045 #258 (draws) opened 5:40 PM; switchboard merges it (no workflow file); unsubscribed. Red on the floating audit
   (LOAD label vs merged ticks); fixed by me at d63e8ab9 (audit off_board 0; perf_grade worst_draws_low 700 = budget, no
   headroom left). Foot at HIGH shadows still ~930 draws: look call put to Cory (LOW / SPLITS / KEEP). Waits on him.
 - J-045 after that: walk p50/p95/p99; a gore warm-up; Sentry native crash capture (Option A), its own workflow/signing PR
   with a security review.
-- Retired: the J-042 builder, J-042 fix, J-044m, J-045 draws and J-046 helpers.
+- Retired: the J-042 builder, J-042 fix, J-044m, J-045 draws, J-046 and J-045 walk helpers.
 
 ## Muse's queue (mail only)
 1. J-001 #227
