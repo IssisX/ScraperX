@@ -39,6 +39,8 @@ Keep this file to what changes the next action; move anything done to the log.
   - Injuries are saved with the checkpoint; a checkpoint taken after her death restores her dead.
   - A daze from head impulse replaces the fixed knockdown timer.
 - J-042: one path for every loose object; she throws up to 25 kg and shoves anything heavier.
+- Cory 11-06: Turn lunge FITS 8 kN (no exemption; Muse, J-044l protected). Switchboard opens Muse's PRs itself: J-047,
+  Muse builds it in tools/switchboard (mailed 8:10 AM). Slingshot pouch native panels stay drawn (KEEP). Shadows LOW (#263).
 - Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
 
 ## Open PRs (5:40 PM)
