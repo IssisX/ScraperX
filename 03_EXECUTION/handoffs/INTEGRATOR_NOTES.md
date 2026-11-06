@@ -86,6 +86,8 @@ Claude lanes later: J-044h (presentation), i (injury render), j (foley/voice: re
 - To Claude: none.
 
 ## Known here
+- Commit messages never put fix/fixes/close/resolve before #N: trunk is the default branch, so GitHub closes #N
+  (11-05: my notes commit "fix #260 time" closed PR #260; reopened 11:20 PM).
 - `.claude/worktrees/` is in `.git/info/exclude`.
 - Stale temp worktrees in the scratchpad (`tmp.C1BZusDQkr/*`) are from guard PRs that have merged.
 - The godot MCP connects since the 6 PM container restart (MCP_TIMEOUT=120000 on the environment took). Use it for eye checks.
