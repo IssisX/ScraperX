@@ -1197,6 +1197,10 @@ const KIT_INSTANCE_RANGE_MAX := 300.0
 const KIT_INSTANCE_LOOK_M := 2.0
 # Per kit body: null, or its instances (see _place_kit_instance).
 var _kit_instances: Array = []
+# The instance packs; an entry names its pack by index here, so no pack and
+# entry hold each other (a cycle of arrays is never freed, and a restart
+# reloads the scene).
+var _kit_packs: Array = []
 var _kit_instance_eye := Vector3.INF
 
 func _kit_eye() -> Vector3:
@@ -1255,6 +1259,8 @@ func _instance_kit_bodies() -> void:
 		var centre := first.mesh.get_aabb().get_center()
 		# [MultiMesh, the entry in each slot, how many are drawn].
 		var pack := [multimesh, [], 0]
+		_kit_packs.append(pack)
+		var pack_id := _kit_packs.size() - 1
 		for index in members.size():
 			var body: int = members[index][0]
 			var piece: MeshInstance3D = members[index][1]
@@ -1262,7 +1268,7 @@ func _instance_kit_bodies() -> void:
 			piece.visible = false
 			if _kit_instances[body] == null:
 				_kit_instances[body] = []
-			var entry := [pack, index, piece.transform, reach, piece.transform * centre, false, node]
+			var entry := [pack_id, index, piece.transform, reach, piece.transform * centre, false, node]
 			(pack[1] as Array).append(entry)
 			(_kit_instances[body] as Array).append(entry)
 			multimesh.set_instance_transform(index, node.transform * piece.transform)
@@ -1280,7 +1286,7 @@ func _place_kit_instances(body: int, node: Node3D, moved: bool, look_again: bool
 	for entry in _kit_instances[body]:
 		_place_kit_instance(entry, eye, moved)
 
-# entry: [pack, slot, local transform, reach, local centre, drawn, body node].
+# entry: [pack index in _kit_packs, slot, local transform, reach, local centre, drawn, body node].
 # A drawn instance lies in a slot below its pack's count, one out of reach or
 # hidden in one above it; a change swaps it with the slot at the boundary.
 func _place_kit_instance(entry: Array, eye: Vector3, moved: bool) -> void:
@@ -1288,7 +1294,7 @@ func _place_kit_instance(entry: Array, eye: Vector3, moved: bool) -> void:
 	var reach: float = entry[3]
 	var shown := node.is_visible_in_tree() and (reach <= 0.0 or \
 		eye.distance_to(node.transform * (entry[4] as Vector3)) <= reach)
-	var pack: Array = entry[0]
+	var pack: Array = _kit_packs[int(entry[0])]
 	var multimesh: MultiMesh = pack[0]
 	if shown != bool(entry[5]):
 		entry[5] = shown
