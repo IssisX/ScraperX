@@ -903,6 +903,7 @@ void run_matron_chase();
 void run_matron_stand();
 void run_matron_shape();
 void start_matron_shape_audit();
+void check_matron_shape_audit();
 void run_matron_ring_descent();
 void run_matron_ways();
 void run_matron_arm();

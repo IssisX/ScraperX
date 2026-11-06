@@ -164,6 +164,9 @@ pid_t start(const Scenario &sc, int &read_fd) {
         }
         effort::reset_run();
         sc.run();
+        // _exit below skips the at-exit shape audit, so run it here: on a
+        // failure it leaves the child with EXIT_FAILURE and no result.
+        check_matron_shape_audit();
         Result r;
         r.ok = 1;
         r.run = l.run;
