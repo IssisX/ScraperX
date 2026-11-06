@@ -1,15 +1,19 @@
 # Integrator: the hourly check
 
-It runs every 3 hours, 8:17 AM to 11:17 PM Central, none overnight (Cory 11-06: the weekly limit must last to Sunday night).
-At the 11:17 AM, 5:17 PM and 11:17 PM runs, ask Cory for the usage meter (total %), log it in the notes and redo the
+It runs every 3 hours, 8:17 AM to 11:17 PM Central on weekdays; Sat-Sun 4 runs, 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM; none
+overnight (Cory 11-06: the weekly limit must last to Sunday night). The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
+it answers asks and lands merges, no new jobs, no board edits (Cory 11-06 9:35 AM).
+At the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun 1:17 PM and 9:17 PM), ask Cory for the usage meter (total %), log it in the notes and redo the
 pace: (100 - used) / hours left to Sunday bedtime, against the rate since the last reading.
 Throttle (Cory 11-06, 72% at 9:16 AM; 28% must last about 44 daytime hours): at most 0.6% an hour of the day. Budget:
 82% by Fri 11 PM, 91% by Sat 11 PM, under 100% Sun night. A block over budget makes the next run quiet (answers, merges).
-How: helpers get the important work (Claude's 1-2 key jobs, spec rulings, long reads), never chores (Cory 11-06
+Specs, the math of a ruling and research go to ChatGPT or Grok first (`To ChatGPT:` / `To Grok:`); the integrator
+checks them, never drafts them (Cory 11-06 9:35 AM).
+How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched tool calls; no re-reads; short messages to Cory.
 Helpers (sub-agents): up to 2 at once (Cory 11-05, 11-06). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 9 AM), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
+Every run, first: `get_session` (no id). If `effort_level` is not high (his pick, 11-06 9:35 AM; helpers keep their own xhigh, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
 
 The scheduled task only says "do this file"; change the check here. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.

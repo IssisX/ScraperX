@@ -80,13 +80,13 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 
 ## The integrator
 
-- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
+- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session: at most two at once (three if acute), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  xhigh (Cory 11-06 9 AM, to last to Sunday night; `CLAUDE_CODE_EFFORT_LEVEL` in `.claude/settings.json` matches him); ultracode is workflows at any effort level, not more thinking, so it stays off; helpers are Opus, never Sonnet (11-05): the `helper` agent at xhigh, and a job it fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06). A worker whose job landed is retired.
+  high (Cory 11-06 9:35 AM, to last to Sunday night; `CLAUDE_CODE_EFFORT_LEVEL` in `.claude/settings.json` matches him); ultracode is workflows at any effort level, not more thinking, so it stays off; helpers are Opus, never Sonnet (11-05): the `helper` agent at xhigh, and a job it fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06). A worker whose job landed is retired.
 - **Context:** sessions compact themselves at about 400k (`autoCompactWindow` in `.claude/settings.json`);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (asks in flight, merge queue, live
   rulings) current; re-read it, this file and the hourly file after a compact. A new session only when one
