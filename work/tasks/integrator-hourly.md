@@ -47,16 +47,15 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current (asks in flight, merge queue,
    rulings). Over a cap in CLAUDE.md: trim it now.
-6. **Look for a better way, every hour (build one only if found).** What cost the most quota this hour (context size, helpers, wake-ups),
-   what is still done by hand, and is the weekly pace on track for the Monday 11 AM reset? List every wake-up
+6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM: the setup is tuned, and the
+   search costs more thinking than it saves). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
    that had nothing to do (a PR event, CI note, helper ping or reminder that changed no step) and stop its
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
 
 Between hours: no timed check-ins (Cory 11-05, so the weekly limit lasts until the Monday 11 AM reset). The switchboard
 merges by itself, and PR events and helper reports wake the integrator. The hourly run alone reads Muse's mail. A quiet
-hourly run ends in one line. Helpers: after the two in flight (J-042, J-044m/J-045), one at a time; free Muse takes the
-builds first.
+hourly run ends in one line. Free Muse takes the builds first.
 
 Trunk merges on any PR are yours, done the hour it conflicts, and the owner is mailed the new sha. Hand a merge to
 Muse only when the conflict is in its own logic, by a mail that says "Muse: resolve". Never ask for a job and then
