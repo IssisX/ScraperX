@@ -4,9 +4,9 @@ It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every 2 hours 
 overnight (Cory 11-06: the weekly limit must last to Sunday night). The full check (every step below) runs at 8:17 AM,
 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light: `git pull`, step 1
 only, and end in one line, with no board edit and no message
-to Cory unless he must act (11-06: mail and GitHub asks wake nothing).
+to Cory unless he must act (11-06).
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
-it answers asks and lands merges, no new jobs, no board edits (Cory 11-06 9:35 AM).
+it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
 Pace (Cory 11-06: track AND predict, so the limit lasts to Sunday night): every run reads `cost_usd` (get_session); $ per 1%
 comes from the last two meter readings (about $14). Ask Cory for the meter at the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun
 1:17 and 9:17 PM). Predict: % now + the burn of the last 3 h x daytime hours left (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM), at
@@ -14,10 +14,10 @@ each checkpoint (81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM), and the hour it h
 throttles now, before it is crossed: no new helper, the next full run quiet (answers, merges), Cory gets the prediction and the
 cut in one line. Loosen a step only when two runs predict under.
 Specs, the math of a ruling and research go to ChatGPT or Grok first (`To ChatGPT:` / `To Grok:`); the integrator
-checks them, never drafts them (Cory 11-06 9:35 AM).
+checks them, never drafts them (Cory 11-06).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
-Fewer, batched tool calls; no re-reads; short messages to Cory.
+Fewer, batched calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): one at a time (11-06 pace; Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
@@ -29,7 +29,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 1. **Mail and asks first, every run and every event you handle.** The mark is the notes' `Read through:` Unix time.
    Note `date +%s`, then mail `after:<mark> (subject:MUSE_TO_CLAUDE OR from:sentry.io OR subject:"Run failed: Switchboard")`
    and `python3 tools/board/asks.py --since <mark>`: both list only what came after the mark, so empty means nothing
-   new. Act on each, then set the mark to the time you noted and push it (never before acting; nothing new: leave it). Muse's mail: act now or hand it
+   new. Act on each, then set the mark to the time you noted less 120 s (mail indexes late; a repeat is in the notes) and push it (never before acting; nothing new: leave it). Muse's mail: act now or hand it
    to a helper; post its verdicts on GitHub if the bridge has not. Muse's diffs go on `fb-bot/integrate-<job>`
    (protected: `fb-bot/integrate-protected-<job>`) from the sha it names, then a PR starting `Job: J-NNN`.
    Asks: RELAY? = a `To Muse:` post (mail it); REPOST = an ask to Grok not at the start of a comment (repost it
