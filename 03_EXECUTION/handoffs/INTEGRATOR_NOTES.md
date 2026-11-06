@@ -45,6 +45,7 @@ Keep this file to what changes the next action; move anything done to the log.
 - Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
 
 ## Pending with Cory (7:20 AM 11-06; stamps from 6 AM today ran about 1.5 h fast, clock-checked 7:21 AM CST)
+- Effort set to max at 7:39 AM (Cory 11-06: the old ultracode; the new ultracode switch means workflows, stays off). Repo default is max too (.claude/settings.json). At the 11:17 AM meter read, compare the pace before and after this change.
 - J-048 #276 (Cory 7:30 AM bug: running into things hurts her). Cause kHitFeltSpeed 6 m/s < 8 m/s sprint. Ruling: her own run never hurts; real blows still do. Mailed Muse 7:35 AM, after the windup and ahead of J-001. Protected branch fb-bot/integrate-protected-j048-no-run-hurt. Add it to board #107 at the 8:17 run.
 - Fable: not needed (Cory 11-06: use it only when a real problem needs it; never invent work for it). #244: ChatGPT answered 7:16 AM; my To Grok ask (nominal shares vs max capacities) went 7:22 AM, for his 10 AM run.
 - He pasted my "no artificial blockers" prompt to Muse (8:40 AM). Muse should now: windup first (#256), then J-001.
