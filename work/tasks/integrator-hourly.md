@@ -1,6 +1,8 @@
 # Integrator: the hourly check
 
 It runs every 3 hours, 8:17 AM to 11:17 PM Central, none overnight (Cory 11-06: the weekly limit must last to Sunday night).
+At the 11:17 AM, 5:17 PM and 11:17 PM runs, ask Cory for the usage meter (total %), log it in the notes and redo the
+pace: (100 - used) / hours left to Sunday bedtime, against the rate since the last reading.
 Until the Monday 11 AM reset: no Claude helpers; builds go to Muse, and only a red PR of mine that Muse can't take gets one.
 
 The scheduled task only says "do this file"; change the check here. Post only when something changed.

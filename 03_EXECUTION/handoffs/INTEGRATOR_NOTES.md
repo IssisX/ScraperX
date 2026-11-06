@@ -25,7 +25,8 @@ Keep this file to what changes the next action; move anything done to the log.
 
 ## Cory's standing rulings (11-04/11-05)
 - Helpers: Opus high or xhigh, never Sonnet. None until the Mon 11 AM reset (Cory 11-06: the pace ran out Sat night; last
-  to Sunday night). Builds go to Muse. Target (Cory 11-06): the weekly limit lasts to Sunday bedtime; check the meter with him each night. 70% used at 8:45 AM Fri; pace 0.5%/h: about 77% by 11 PM Fri, 89% by 11 PM Sat.
+  to Sunday night). Builds go to Muse. Target (Cory 11-06): the weekly limit lasts to Sunday bedtime; check the meter with him each night. Meter log (ask Cory at the 11:17 AM, 5:17 PM and 11:17 PM runs): Fri 8:45 AM 70%. Needed pace 0.5%/h:
+  about 77% by 11 PM Fri, 89% by 11 PM Sat.
 - No Workflow runs. Decline the ultracode nudges silently.
 - Plugin searches use one exact keyword, or a helper runs them and returns one line (context, 11-05).
 - GitHub-UI-only steps (settings, toggles): ask Cory early, with a direct link and the exact taps.
