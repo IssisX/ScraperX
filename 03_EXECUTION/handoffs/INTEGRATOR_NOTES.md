@@ -55,7 +55,7 @@ Keep this file to what changes the next action; move anything done to the log.
 - J-046 #259 merged 7:50 PM (switchboard). Mine next: add matron-ammo to kScenarios after #256 lands. New leaks mailed
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
 - #258 merged 9 PM (switchboard).
-- J-045 #260 (perf_walk + kit pose loop, fd0638a6) opened 11:25 PM; switchboard merges; unsubscribed (the hourly sweep
+- J-045 #260 (perf_walk + kit pose loop, fd0638a6) opened 10:23 PM; switchboard merges; unsubscribed (the hourly sweep
   shows a Codex P0/P1). Helper retired. No helper running. J-045 left: native kit-pose batch getter, idle skips for her
   view/gore/canopy, the shadow call (Cory), perf_walk on the Fold; then Sentry native crash capture (its own PR).
 - J-045 #258 (draws) opened 5:40 PM; switchboard merges it (no workflow file); unsubscribed. Red on the floating audit
