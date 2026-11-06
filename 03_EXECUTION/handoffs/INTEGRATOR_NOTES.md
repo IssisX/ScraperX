@@ -74,7 +74,7 @@ Keep this file to what changes the next action; move anything done to the log.
 ## Helpers
 - Effort tally (Cory 11-06 8:50 AM): one line, no per-helper logs. A failure = a job redone on helper-max (red proof it
   could not fix, or a real review finding), not a flake or a bad brief. Tally since the split (11:30 AM): high helper jobs 0,
-  redone 0; physics helper jobs 0, redone 0. 2+ redos in the first 10 high jobs -> tell Cory, pick: non-physics back to xhigh.
+  redone 0; physics helper jobs 1 (J-048 hook, b81f059a), redone 0. 2+ redos in the first 10 high jobs -> tell Cory, pick: non-physics back to xhigh.
 - J-046 #259 merged 7:50 PM (switchboard). matron-ammo to kScenarios after #256: Muse's now. New leaks mailed
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
 - J-045: #258 (draws) and #260 (perf_walk) merged. perf_grade worst_draws_low is 700, exactly the budget, so no headroom.
@@ -131,3 +131,5 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
 - The godot MCP connects since the 6 PM container restart (MCP_TIMEOUT=120000 on the environment took). Use it for eye checks.
 
 - Branch cleanup (11-06 11:15 AM): 367 branches older than 3 days (no open PR; trunk, main, ScraperX-Grok, ChatGPT, switchboard/* kept) archived in `archive/branches-20261106` @ 8f2c6a82 (one commit, their tips as parents; BRANCHES.txt lists name and sha; restore: `git push origin <sha>:refs/heads/<name>`). Deleting them was refused by the safety check (Git Destructive): waits on Cory allowing it. The list: BRANCHES.txt in that commit.
+- J-048 follow-up (helper, 11-06): wind on him in the air still counts as his own run on a later wall hit (about 2.7 m/s off
+  after a 2 s fall in a gust). Small; a later helper-physics job, not a hold on #277.
