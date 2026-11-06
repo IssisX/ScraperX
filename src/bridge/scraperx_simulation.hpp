@@ -3,6 +3,7 @@
 #include "sim/simulation.hpp"
 
 #include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
@@ -13,6 +14,7 @@
 #include <godot_cpp/variant/vector3.hpp>
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace scraperx::bridge {
@@ -226,6 +228,9 @@ public:
     // Her hands on the player: the hold, the arms, the fatality and the
     // one-armed body (presentation: matron_hold_camera.gd, matron_view.gd).
     [[nodiscard]] godot::Dictionary get_matron_hold_state() const;
+    // Both of the above in one call, [state, hold], from one read of her
+    // snapshot: what the presentation reads of her once a frame (J-045).
+    [[nodiscard]] godot::Array get_matron_frame() const;
     [[nodiscard]] godot::Dictionary get_bay_state() const;
     // The fight perf probes (J-044m, #245): microseconds per fixed step on
     // steady_clock, read-only (sim::StepTiming). Keys step/physics/matron_pre/
@@ -331,6 +336,31 @@ private:
         bool reported = false;
     };
     std::vector<KitPoseSeen> kit_poses_seen_;
+    // Dictionary keys made once (J-045): a builder asks for its keys in the
+    // same order every call, so the n-th key is the String made the first
+    // time for the literal at that place (checked by the literal's address;
+    // any other is made again, so a reordered builder stays correct).
+    class MatronKeys {
+    public:
+        void begin() noexcept { at_ = 0; }
+        const godot::String &operator()(const char *name) {
+            if (at_ < keys_.size() && keys_[at_].first != name) {
+                keys_[at_] = {name, godot::String(name)};
+            } else if (at_ == keys_.size()) {
+                keys_.emplace_back(name, godot::String(name));
+            }
+            return keys_[at_++].second;
+        }
+
+    private:
+        std::vector<std::pair<const char *, godot::String>> keys_;
+        std::size_t at_ = 0;
+    };
+    mutable MatronKeys state_keys_;
+    mutable MatronKeys hold_keys_;
+    mutable MatronKeys leg_keys_;
+    void fill_matron_state(godot::Dictionary &out, const sim::MatronSnapshot &state) const;
+    void fill_matron_hold(godot::Dictionary &out, const sim::Snapshot &p, const sim::MatronSnapshot &m) const;
 };
 
 } // namespace scraperx::bridge
