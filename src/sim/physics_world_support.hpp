@@ -263,14 +263,14 @@ public:
         return result;
     }
 
-    // Her own run is never a blow (J-048; Cory, 11-06: "I can run fast into
-    // something and it hurts me. Thats dumb"). Set before each step: the
-    // velocity of the frame her legs run on (her support's, kept through a
-    // flight), and how much of her own horizontal speed over it is her legs'
-    // (kFlowSpeedMps while her own drive moves her, 0 when anything else
-    // does: a throw, a machine, her hands). hit_closing takes that part off
-    // each contact's closing; what the other body brings, and a fall's speed,
-    // stay a blow.
+    // The player's own run is never a blow (J-048; Cory, 11-06: "I can run
+    // fast into something and it hurts me. Thats dumb"). Set before each
+    // step: the velocity of the frame his legs run on (his support's, kept
+    // through a flight), and how much of his own horizontal speed over it is
+    // his legs' (kFlowSpeedMps while his own drive moves him, 0 when anything
+    // else does: a throw, a machine, the Matron's hands). hit_closing takes
+    // that part off each contact's closing; what the other body brings, and a
+    // fall's speed, stay a blow.
     void set_own_drive(const JPH::Vec3 frame_velocity, const float allowance_mps) noexcept {
         lock();
         own_frame_velocity_ = JPH::Vec3(frame_velocity.GetX(), 0.0F, frame_velocity.GetZ());
@@ -359,7 +359,7 @@ private:
         const JPH::Vec3 velocity = player.GetLinearVelocity();
         const float closing = (velocity - other.GetPointVelocity(at)).Dot(toward);
         lock();
-        // Her legs' part (set_own_drive): her horizontal speed over her frame
+        // His legs' part (set_own_drive): his horizontal speed over his frame
         // toward the other, up to the allowance.
         const JPH::Vec3 own = JPH::Vec3(velocity.GetX(), 0.0F, velocity.GetZ()) - own_frame_velocity_;
         const float blow = closing - std::clamp(own.Dot(toward), 0.0F, own_allowance_mps_);

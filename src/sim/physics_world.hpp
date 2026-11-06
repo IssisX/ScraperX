@@ -795,13 +795,14 @@ public:
     // Thrown off the slingshot's bands and not yet down: the stick steers by
     // a bounded force instead of air control.
     bool slingshot_flight_ = false;
-    // Her own drive moves her (J-048, the listener's set_own_drive): true on
-    // her feet with nothing else holding her (no traversal, slingshot, swing,
-    // trapeze, zipline or her hands), and on through the free flight that
-    // starts there (a jump, a run off an edge); false from anything else, or
-    // a shove or a test's launch, until she stands again within her own
-    // run's reach of her frame (kFlowSpeedMps: a throw's slide past it is
-    // still the throw's). While it holds, her run's own speed is no blow.
+    // The player's own drive moves him (J-048, the listener's set_own_drive):
+    // true on his feet with nothing else holding him (no traversal, slingshot,
+    // swing, trapeze, zipline or the Matron's hands), and on through the free
+    // flight that starts there (a jump, a run off an edge); false from
+    // anything else, or a shove or a test's launch, until he stands again
+    // within his own run's reach of his frame (kFlowSpeedMps: a throw's slide
+    // past it is still the throw's). While it holds, his run's own speed is
+    // no blow.
     bool own_drive_ = true;
     scraperx::sim::bands::CounterweightWell well_{};
     scraperx::sim::bands::WetIsolation wet_{};

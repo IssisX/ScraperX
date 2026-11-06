@@ -78,7 +78,7 @@ void run_corpse() {
 }
 
 // The broken arm (kArmBreakHitSpeed): thrown into a wall a little past a
-// sprint's speed, the arm that took the blow is broken; her own run into it,
+// sprint's speed, the arm that took the blow is broken; his own run into it,
 // flat out or in a jump, is no blow at all (J-048); a ride down the 154 m
 // deck's line into the end's buffer too fast tears the hands off and wrenches
 // the right arm, and the riser ladder back up from 143 m is the player's
@@ -88,9 +88,9 @@ void run_arm_break() {
     using scraperx::sim::TraversalState;
     using scraperx::sim::Vector3;
     const auto hz = static_cast<int>(Simulation::kTickRateHz);
-    // Sprints along (dx, dz) until a wall stops her (6 s at most), jumping
+    // Sprints along (dx, dz) until a wall stops him (6 s at most), jumping
     // `jump_short` metres short of `wall` (where a sprint stopped) when one
-    // is given: the fastest she ran, and whether she was stopped in the air.
+    // is given: the fastest he ran, and whether he was stopped in the air.
     struct RunIn {
         double fastest = 0.0;
         bool stopped = false;
@@ -120,8 +120,8 @@ void run_arm_break() {
         return out;
     };
     // Thrown along (dx, dz) into the wall a sprint stopped at (`wall`, where
-    // she stood), from 1.5 m out at 9.2 m/s, a little past a sprint, and
-    // clear of the floor until she meets it (0.5 m up, past the step-down's
+    // he stood), from 1.5 m out at 9.2 m/s, a little past a sprint, and
+    // clear of the floor until he meets it (0.5 m up, past the step-down's
     // reach: thrown, not stepping off): until the blow or a death (1 s).
     const auto throw_in = [](Simulation &s, const Vector3 &wall, const double dx, const double dz) {
         s.debug_launch_player(Vector3{wall.x - 1.5 * dx, wall.y + 0.5, wall.z - 1.5 * dz},
@@ -130,7 +130,7 @@ void run_arm_break() {
     };
     {
         // Head-on into the proving ground's wall-run wall from 27 m back:
-        // flat out, then in a jump at that speed, her own run is no blow.
+        // flat out, then in a jump at that speed, his own run is no blow.
         Simulation s(InitialSpawn::WallRunApproach);
         require(s.advance_frame(0.5).accepted, "arm: settle");
         require(walk_to(s, 2.0, 0.0, 12.0, 0.1), "arm: 27 m back from the wall");
@@ -140,7 +140,7 @@ void run_arm_break() {
                   << met.arm_break_count << ", deaths " << met.death_count << "\n";
         require(ran.stopped && ran.fastest >= 8.5, "arm: flat out into the wall (setup)");
         require(met.hit_count == 0 && met.arm_break_count == 0 && met.death_count == 0,
-                "arm: her own run flat out into the wall is no blow");
+                "arm: his own run flat out into the wall is no blow");
         const Vector3 wall = met.player_position;
         require(walk_to(s, 2.0, 0.0, 12.0, 0.1), "arm: 27 m back again");
         const RunIn leapt = run_in(s, 0.0, -1.0, &wall, 2.2);
@@ -150,7 +150,7 @@ void run_arm_break() {
                   << leap.death_count << "\n";
         require(leapt.stopped && leapt.in_air && leapt.fastest >= 8.5, "arm: a jump at that speed into the wall (setup)");
         require(leap.hit_count == 0 && leap.arm_break_count == 0 && leap.death_count == 0,
-                "arm: her own jump into the wall is no blow");
+                "arm: his own jump into the wall is no blow");
         // Thrown into it a little faster: a blow lived, the arm that took it
         // broken.
         require(throw_in(s, wall, 0.0, -1.0), "arm: thrown into the wall");
@@ -215,7 +215,7 @@ void run_arm_break() {
         const Snapshot met = s.snapshot();
         require(ran.stopped && ran.fastest >= 8.5, "arm: flat out into the locker (setup)");
         require(met.hit_count == 0 && !met.arm_broken && met.death_count == 0,
-                "arm: her own run flat out into the locker is no blow");
+                "arm: his own run flat out into the locker is no blow");
         const bool struck = throw_in(s, met.player_position, -1.0, 0.0);
         const Snapshot hit = s.snapshot();
         std::cout << "  arm: ran into her locker at " << ran.fastest << " m/s, felt hits " << met.hit_count
@@ -334,6 +334,6 @@ void run_arm_break() {
                   << (hung.traversal_state == scraperx::sim::TraversalState::Swinging) << "\n";
         require(hung.swing_reach_count == 0 && hung.arm_broken, "arm: one-armed, no bar reached hand over hand");
     }
-    std::cout << "PASS scraperx_sim arm break: her own run is no blow, flat out or jumped; a throw and a wrench break an"
+    std::cout << "PASS scraperx_sim arm break: his own run is no blow, flat out or jumped; a throw and a wrench break an"
                  " arm; one arm climbs at half rate, holds half the grip, reaches no bar\n";
 }

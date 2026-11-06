@@ -1420,8 +1420,8 @@ func _touch_chute() -> bool:
 	return true
 
 # touch_arm_break: on the 154 m deck, flat out on the stick along the north
-# band into the Matron's steel locker is no blow (J-048: her own run never
-# hurts her); thrown into it a little faster, the arm that took it breaks
+# band into the Matron's steel locker is no blow (J-048: his own run never
+# hurts him); thrown into it a little faster, the arm that took it breaks
 # (named, cried, felt, held to the body), and the ladder to the 176 ring is
 # the player's one-armed haul at half the climb's rate.
 func _touch_arm_break() -> bool:
@@ -1442,9 +1442,9 @@ func _touch_arm_break() -> bool:
 	_move(device, 0.0)
 	var ran_mps := float(peak[0])
 	if not stopped:
-		return _fail("flat out, the locker never stopped her (fastest %.1f m/s, at %s)" % [ran_mps, str(_position())])
+		return _fail("flat out, the locker never stopped him (fastest %.1f m/s, at %s)" % [ran_mps, str(_position())])
 	if int(_native().get_death_state()["hits"]) != 0 or int(_native().get_landing_state()["arm_breaks"]) != 0:
-		return _fail("her own run into the locker at %.1f m/s was a blow (hits %d)" % [ran_mps,
+		return _fail("his own run into the locker at %.1f m/s was a blow (hits %d)" % [ran_mps,
 			int(_native().get_death_state()["hits"])])
 	# Thrown into it from 1.5 m out at 9.2 m/s, 0.5 m up: clear of the floor
 	# (past the step-down's reach), thrown, not stepping off.
