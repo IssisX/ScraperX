@@ -254,6 +254,11 @@ func _ready() -> void:
 	var pouch_node := _kit_root.get_node_or_null("KitBody%d" % SlingshotView.POUCH_ENTITY)
 	if pouch_node != null:
 		pouch_node.visible = false
+	# The pose pass has always shown every enabled moving body again each
+	# frame, these panels included, so they are drawn. It now sets only what
+	# changed, so it is asked for every body again on its next pass: the
+	# look stays as it was (J-045; hiding them is a look call of its own).
+	_kit_poses_primed = false
 	_swing_view = SwingView.new()
 	add_child(_swing_view)
 	_swing_view.setup()

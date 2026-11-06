@@ -13,6 +13,7 @@
 #include <godot_cpp/variant/vector3.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace scraperx::bridge {
 
@@ -137,6 +138,17 @@ public:
     [[nodiscard]] double get_kit_body_mass(std::int64_t body) const;
     [[nodiscard]] godot::PackedFloat32Array get_kit_body_parts(std::int64_t body) const;
     [[nodiscard]] godot::Transform3D get_kit_body_transform(std::int64_t body) const;
+    // The listed kit bodies' poses in one call, for the presentation's per
+    // frame pose pass (J-045 perf_walk: ~640 moving bodies, two calls each,
+    // were the largest GDScript cost of a walk). Only a body whose enabled
+    // flag, or whose pose while enabled, differs from what this call last
+    // reported for it is reported, unless `everything` (then every listed body
+    // is). Each as 14 floats: its index, enabled (1 or 0), its basis columns
+    // x, y, z and its origin, exactly the get_kit_body_transform values. A
+    // disabled body's pose is not tracked, as the presentation does not move
+    // a hidden body. Reads only: the simulation is not touched.
+    [[nodiscard]] godot::PackedFloat32Array get_kit_body_poses(
+        const godot::PackedInt32Array &bodies, bool everything);
     [[nodiscard]] std::int64_t get_kit_body_index(std::int64_t entity_id) const;
     // Cables: the kit's ropes, then its trip lines, each as the points it is
     // drawn through. Empty for a parted rope.
@@ -312,6 +324,13 @@ protected:
 private:
     std::unique_ptr<sim::Simulation> simulation_;
     godot::String fabricated_refusal_ = "none";
+    // Per kit body: what get_kit_body_poses last reported for it.
+    struct KitPoseSeen {
+        godot::Transform3D pose;
+        bool enabled = false;
+        bool reported = false;
+    };
+    std::vector<KitPoseSeen> kit_poses_seen_;
 };
 
 } // namespace scraperx::bridge
