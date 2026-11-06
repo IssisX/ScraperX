@@ -44,7 +44,13 @@ Keep this file to what changes the next action; move anything done to the log.
   Muse builds it in tools/switchboard (mailed 8:10 AM). Slingshot pouch native panels stay drawn (KEEP). Shadows LOW (#263).
 - Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
 
-## Open PRs (5:40 PM)
+## Pending with Cory (8:55 AM 11-06)
+- GO (route J-044b fight math #244 to ChatGPT now, my pick) or FABLE (one Fable run today). Act only on his word.
+- He pasted my "no artificial blockers" prompt to Muse (8:40 AM). Muse should now: windup first (#256), then J-001.
+- He looks at LOW shadows on his phone once #263 lands; SPLITS if it looks bad.
+- Next meter ask: 11:17 AM run.
+
+## Open PRs (8:55 AM 11-06)
 - Merged: #252 and #250 (by hand, 2:40 PM), #253 (by hand, 3:00 PM); #254 and #255 (switchboard).
 - #256 J-042 protected ammo (5ea9f03e, trunk merged in). It replaces #251, which is closed. Workflow file, so I merge it on
   green plus Codex or the API LAND. Her pallet take is marginal: asked of Muse on #240 and mailed.
