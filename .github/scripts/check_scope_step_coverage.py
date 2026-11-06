@@ -42,9 +42,15 @@ exactly once in host-build. A script deleted together with both of
 its steps passes by design -- that is a deliberate retirement,
 visible as a file deletion in the diff, not a silent drop.
 
+Parser regressions live in `_self_test()` below and run on every
+invocation, `--self-test` or not, the same pattern as the other
+coverage guards: a regression in the step parsing must fail the
+self-test, not pass a broken workflow.
+
 Usage:
     python3 .github/scripts/check_scope_step_coverage.py \
         --workflow .github/workflows/wo000-delivery-spine.yml
+    python3 .github/scripts/check_scope_step_coverage.py --self-test
 """
 
 import argparse
@@ -100,17 +106,16 @@ def step_blocks(job_block):
     return steps
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--workflow",
-                        default=".github/workflows/wo000-delivery-spine.yml")
-    args = parser.parse_args()
+def check_scope_steps(workflow_text):
+    """Check workflow text for scope-step problems.
 
-    workflow_text = Path(args.workflow).read_text()
+    Returns the list of failure strings (empty when the workflow
+    is clean). The caller prints them; this function does no I/O,
+    so the self-test can run it on fixture text.
+    """
     job_block = scope_job_block(workflow_text)
     if job_block is None:
-        print("FAIL: no scope job in workflow")
-        return 1
+        return ["no scope job in workflow"]
 
     problems = []
 
@@ -142,6 +147,138 @@ def main():
                 problems.append(
                     f"conditional: {what} ({marker}) is in step {name!r}, which has a step-level if:")
 
+    return problems
+
+
+def _self_test():
+    """Regression checks for the scope-step parser, run on every invocation."""
+    def scope(job_if=None, steps_text=None):
+        if steps_text is None:
+            steps_text = (
+                "      - name: Check rule\n"
+                "        run: |\n"
+                "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
+                "      - name: Decide\n"
+                "        run: |\n"
+                "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+                "          python3 ci/proof_scope.py\n")
+        text = "  scope:\n    runs-on: ubuntu-24.04\n"
+        if job_if is not None:
+            text += f"    if: {job_if}\n"
+        return text + "    steps:\n" + steps_text
+
+    valid = "name: test\njobs:\n" + scope()
+    cases = []
+
+    def case(name, text, want):
+        problems = check_scope_steps(text)
+        joined = "\n".join(problems)
+        if want is None:
+            if problems:
+                raise AssertionError(f"{name}: expected clean, got {problems}")
+        elif want not in joined:
+            raise AssertionError(f"{name}: expected {want!r} in {problems}")
+        cases.append(name)
+
+    case("valid", valid, None)
+    case("no-scope-job", "name: test\njobs:\n",
+         "no scope job in workflow")
+    case("job-level-if",
+         "name: test\njobs:\n" + scope(job_if="github.ref == 'refs/heads/ScraperX-Claude'"),
+         "job-level if: scope job is conditionally skipped")
+    case("missing-rule-check",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Decide\n"
+             "        run: |\n"
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+             "          python3 ci/proof_scope.py\n")),
+         "missing: no scope-job step invokes rule check (tools/rule_check/rule_check.py)")
+    case("missing-unit-tests",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Check rule\n"
+             "        run: |\n"
+             "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
+             "      - name: Decide\n"
+             "        run: |\n"
+             "          python3 ci/proof_scope.py\n")),
+         "missing: no scope-job step invokes proof-scope unit tests (test_proof_scope)")
+    case("missing-decision",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Check rule\n"
+             "        run: |\n"
+             "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
+             "      - name: Decide\n"
+             "        run: |\n"
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n")),
+         "missing: no scope-job step invokes proof-scope decision (ci/proof_scope.py)")
+    case("duplicated-decision",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Decide\n"
+             "        run: |\n"
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+             "          python3 ci/proof_scope.py\n"
+             "      - name: Decide again\n"
+             "        run: |\n"
+             "          python3 ci/proof_scope.py\n")),
+         "duplicated: proof-scope decision (ci/proof_scope.py) invoked in 2 scope-job steps")
+    case("conditional-decision",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Check rule\n"
+             "        run: |\n"
+             "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
+             "      - name: Decide\n"
+             "        if: github.event_name == 'push'\n"
+             "        run: |\n"
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+             "          python3 ci/proof_scope.py\n")),
+         "conditional: proof-scope decision (ci/proof_scope.py) is in step 'Decide', which has a step-level if:")
+    case("not-a-run-step",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Check\n"
+             "        uses: some/action\n"
+             "        with:\n"
+             "          script: tools/rule_check/rule_check.py\n"
+             "      - name: Decide\n"
+             "        run: |\n"
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+             "          python3 ci/proof_scope.py\n")),
+         "not-a-run-step: rule check (tools/rule_check/rule_check.py) is in step 'Check', which has no run: block")
+    case("no-steps",
+         "name: test\njobs:\n  scope:\n    runs-on: ubuntu-24.04\n    steps:\n",
+         "no steps in scope job")
+    case("marker-elsewhere",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Check rule\n"
+             "        run: |\n"
+             "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
+             "      - name: Decide\n"
+             "        run: |\n"
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"))
+         + "  host-build:\n"
+           "    runs-on: ubuntu-24.04\n"
+           "    steps:\n"
+           "      - name: Decide elsewhere\n"
+           "        run: |\n"
+           "          python3 ci/proof_scope.py\n",
+         "missing: no scope-job step invokes proof-scope decision (ci/proof_scope.py)")
+    return len(cases)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--workflow",
+                        default=".github/workflows/wo000-delivery-spine.yml")
+    parser.add_argument("--self-test", action="store_true",
+                        help="run parser regressions only")
+    args = parser.parse_args()
+
+    fixture_count = _self_test()
+    if args.self_test:
+        print(f"PASS: {fixture_count} scope-step coverage parser regression checks")
+        return 0
+
+    workflow_text = Path(args.workflow).read_text()
+    problems = check_scope_steps(workflow_text)
     if problems:
         for problem in problems:
             print(f"FAIL: {problem}")

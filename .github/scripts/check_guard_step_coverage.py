@@ -31,15 +31,34 @@ Rules, all read from the repo as written:
 The required set is derived from the scripts directory, so a new
 guard lands together with its step and keeps passing, and deleting
 a guard's step without deleting its script fails, whichever order
-the guards land in. A script deleted together with its step passes
-by design -- that is a deliberate retirement, visible as a file
-deletion in the diff, not a silent drop -- and the scope job maps
-`.github/` to every group, so the change still runs the full proof.
+the guards land in. A script deleted together with its step would
+otherwise pass by the same logic -- the set would just shrink --
+so the guards that must exist are also pinned in EXPECTED_GUARDS
+below: a pinned guard missing from the directory fails, and a
+guard retires only by removing its name from that set in the same
+diff, which is a deliberate, visible edit, not a silent drop.
+A new guard is NOT required to be in the pin to pass (it is still
+covered by the exactly-once rule), so a guard landing on another
+branch keeps passing while the pin catches up; add its name to
+the pin when it lands.
+
+This script's own logic has the same silent-drop shape one layer
+further up: if its step parser or exactly-once counting regresses,
+no other guard reads host-build, so a broken guard-of-guards
+passes the real workflow while a guard step goes unverified --
+proven 2026-11-05 by neutering its step-level `if:` detector and
+watching it PASS a workflow with a conditional guard step. So its
+parser regressions live in `_self_test()` below and run on every
+invocation, `--self-test` or not, the same pattern as the matrix
+guard: a logic regression fails its own run before it can pass a
+real workflow.
 
 Usage:
     python3 .github/scripts/check_guard_step_coverage.py \
         --workflow .github/workflows/wo000-delivery-spine.yml \
         --scripts-dir .github/scripts
+
+    python3 .github/scripts/check_guard_step_coverage.py --self-test
 """
 
 import argparse
@@ -51,6 +70,27 @@ JOB_HEADER = re.compile(r"^  ([A-Za-z0-9_-]+):\s*$")
 STEP_HEADER = re.compile(r"^      - name: ")
 FIELD_RUN = re.compile(r"^        run:", re.MULTILINE)
 FIELD_IF = re.compile(r"^        if:", re.MULTILINE)
+
+# Guards that must exist. A pinned guard missing from the scripts
+# directory fails this check: retiring a guard means removing its
+# name here in the same diff, a deliberate edit, not a silent drop.
+# A guard not yet in this set still passes (it is covered by the
+# exactly-once rule below), so a guard landing on another branch
+# keeps passing while the pin catches up; add its name here when
+# it lands.
+EXPECTED_GUARDS = frozenset({
+    "check_apk_step_coverage.py",
+    "check_audit_step_coverage.py",
+    "check_ctest_shard_coverage.py",
+    "check_drawn_body_coverage.py",
+    "check_godot_test_coverage.py",
+    "check_group_content_coverage.py",
+    "check_guard_step_coverage.py",
+    "check_job_gate_coverage.py",
+    "check_matrix_shard_coverage.py",
+    "check_scope_step_coverage.py",
+    "check_touch_shard_coverage.py",
+})
 
 
 def host_build_block(workflow_text):
@@ -85,26 +125,30 @@ def step_blocks(job_block):
     return steps
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--workflow", default=".github/workflows/wo000-delivery-spine.yml")
-    parser.add_argument("--scripts-dir", default=".github/scripts")
-    args = parser.parse_args()
+def check_text(workflow_text, scripts, expected=EXPECTED_GUARDS):
+    """Check workflow text against a scripts list.
 
-    workflow_text = Path(args.workflow).read_text()
+    Returns (problems, oks): problems is the list of failure strings
+    (empty when the workflow is clean), oks is one "OK: ..." line per
+    script that passed. The caller prints them; this function does
+    no I/O, so the self-test can run it on fixture text.
+    """
     job_block = host_build_block(workflow_text)
     if job_block is None:
-        print("FAIL: no host-build job in workflow")
-        return 1
+        return ["no host-build job in workflow"], []
+    if not scripts:
+        return ["no check_*.py scripts in scripts dir"], []
     job_text = "\n".join(job_block)
     steps = step_blocks(job_block)
 
-    scripts = sorted(p.name for p in Path(args.scripts_dir).glob("check_*.py"))
-    if not scripts:
-        print("FAIL: no check_*.py scripts in scripts dir")
-        return 1
-
     problems = []
+    oks = []
+    for missing in sorted(expected - set(scripts)):
+        problems.append(
+            f"retired: {missing} is pinned in EXPECTED_GUARDS but missing "
+            "from the scripts dir -- retire it by removing its name from "
+            "EXPECTED_GUARDS in the same diff"
+        )
     for script in scripts:
         invocation = f".github/scripts/{script}"
         count = job_text.count(invocation)
@@ -127,8 +171,97 @@ def main():
         if script_problems:
             problems.extend(script_problems)
         else:
-            print(f"OK: {script} invoked exactly once in host-build")
+            oks.append(f"OK: {script} invoked exactly once in host-build")
+    return problems, oks
 
+
+def _self_test():
+    """Regression checks for the guard-of-guards parser, run on every invocation."""
+    alpha = "check_alpha_coverage.py"
+    beta = "check_beta_coverage.py"
+    new = "check_new_coverage.py"
+    pinned = frozenset({alpha, beta})
+
+    def step(name, script):
+        return (f"      - name: {name}\n"
+                "        shell: bash\n"
+                "        run: |\n"
+                f"          python3 .github/scripts/{script}\n")
+
+    valid = ("name: test\njobs:\n  host-build:\n    steps:\n"
+             + step("Verify alpha", alpha)
+             + step("Verify beta", beta))
+    with_new = valid + step("Verify new guard", new)
+    cases = []
+
+    def case(name, text, scripts, want, expected=pinned):
+        problems, _oks = check_text(text, scripts, expected)
+        joined = "\n".join(problems)
+        if want is None:
+            if problems:
+                raise AssertionError(f"{name}: expected clean, got {problems}")
+        elif want not in joined:
+            raise AssertionError(f"{name}: expected {want!r} in {problems}")
+        cases.append(name)
+
+    case("valid", valid, [alpha, beta], None)
+    case("unpinned-new-guard", with_new, [alpha, beta, new], None)
+    case("dropped-step",
+         valid.replace(step("Verify beta", beta), "", 1),
+         [alpha, beta],
+         f"missing: {beta} is never invoked in host-build")
+    case("duplicated-step",
+         valid + step("Verify alpha again", alpha),
+         [alpha, beta],
+         f"duplicated: {alpha} invoked 2 times in host-build")
+    case("conditional-step",
+         valid.replace("      - name: Verify alpha\n",
+                       "      - name: Verify alpha\n        if: github.event_name == 'push'\n", 1),
+         [alpha, beta],
+         f"conditional: {alpha} invoked by step 'Verify alpha' with a step-level if:")
+    case("uses-step",
+         valid.replace("        run: |\n          python3 .github/scripts/" + alpha + "\n",
+                       "        env:\n          GUARD: .github/scripts/" + alpha + "\n"
+                       "        uses: actions/checkout@v4\n", 1),
+         [alpha, beta],
+         f"not-a-run-step: {alpha} invoked by step 'Verify alpha' with no run: block")
+    case("mentioned-not-a-step",
+         valid.replace(step("Verify alpha", alpha),
+                       "      - name: Verify .github/scripts/" + alpha + "\n        shell: bash\n", 1),
+         [alpha, beta],
+         f"not-a-step: {alpha} mentioned in host-build but in no step")
+    case("retired-pinned-guard",
+         valid, [alpha],
+         f"retired: {beta} is pinned in EXPECTED_GUARDS but missing from the scripts dir")
+    case("legitimate-retirement",
+         valid.replace(step("Verify beta", beta), "", 1),
+         [alpha], None, frozenset({alpha}))
+    case("missing-job",
+         "name: test\njobs:\n  other-job:\n    steps:\n",
+         [alpha, beta],
+         "no host-build job in workflow")
+    case("empty-scripts-dir", valid, [], "no check_*.py scripts in scripts dir")
+    return len(cases)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--workflow", default=".github/workflows/wo000-delivery-spine.yml")
+    parser.add_argument("--scripts-dir", default=".github/scripts")
+    parser.add_argument("--self-test", action="store_true",
+                        help="run parser regressions only")
+    args = parser.parse_args()
+
+    fixture_count = _self_test()
+    if args.self_test:
+        print(f"PASS: {fixture_count} guard-step coverage parser regression checks")
+        return 0
+
+    workflow_text = Path(args.workflow).read_text()
+    scripts = sorted(p.name for p in Path(args.scripts_dir).glob("check_*.py"))
+    problems, oks = check_text(workflow_text, scripts)
+    for ok in oks:
+        print(ok)
     if problems:
         for problem in problems:
             print(f"FAIL: {problem}")

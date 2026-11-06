@@ -229,6 +229,9 @@ func _ready() -> void:
 		add_child(view)
 		view.setup(self, _native, index)
 		_forklift_views.append(view)
+	ForkliftView.build(self)
+	for index in _forklift_views.size():
+		_forklift_views[index].update_view(_native.get_forklift_state_at(index))
 	_forklift_view = _forklift_views[0]
 	_crane_view = CraneView.new()
 	add_child(_crane_view)
@@ -251,6 +254,11 @@ func _ready() -> void:
 	var pouch_node := _kit_root.get_node_or_null("KitBody%d" % SlingshotView.POUCH_ENTITY)
 	if pouch_node != null:
 		pouch_node.visible = false
+	# The pose pass has always shown every enabled moving body again each
+	# frame, these panels included, so they are drawn. It now sets only what
+	# changed, so it is asked for every body again on its next pass: the
+	# look stays as it was (J-045; hiding them is a look call of its own).
+	_kit_poses_primed = false
 	_swing_view = SwingView.new()
 	add_child(_swing_view)
 	_swing_view.setup()
@@ -284,6 +292,10 @@ func _ready() -> void:
 		"" if _uitest_scenario.is_empty() and not _ci_mode and _audit == null else UITEST_UNCANNY_STORAGE)
 	_uncanny.microphone_denied.connect(_on_microphone_denied)
 	_uncanny.set_microphone(_settings.microphone)
+	# The chute's canopy (hidden until a chute is out) is built here with the
+	# other views, not on the first frame of play (J-045: 8.6 ms there).
+	_canopy = CanopyView.new()
+	add_child(_canopy)
 	# Both views are a few metres of rope and leather: not drawn from afar.
 	for view: Node in [_slingshot_view, _swing_view]:
 		var pending: Array[Node] = [view]
@@ -292,6 +304,8 @@ func _ready() -> void:
 			pending.append_array(node.get_children())
 			if node is GeometryInstance3D:
 				(node as GeometryInstance3D).visibility_range_end = VIEW_PROP_RANGE
+	# Last, once every view has painted and dressed its kit bodies.
+	_instance_kit_bodies()
 
 	print("SCRAPERX_EXTENSION_LOADED api=4.7 authority=scraperx_sim work_order=WO-006")
 	print("SCRAPERX_VIEWPORT size=%dx%d aspect=%.3f fov=%.1f far=%.0f" % [
@@ -318,6 +332,9 @@ func _ready() -> void:
 # Play starts: the card goes up over the frozen tower, she reads the steel,
 # the card comes down. A title closed on CONTINUE starts play here too; a NEW
 # CLIMB reloads the scene, and the new one starts it from _ready.
+# Frames her materials are drawn behind the LOADING card (_prepare_her).
+const WARM_FRAMES := 3
+
 func _prepare_her() -> void:
 	if not _her_scan_pending:
 		return
@@ -339,6 +356,14 @@ func _prepare_her() -> void:
 	var started := Time.get_ticks_msec()
 	_native.prepare_matron()
 	print("SCRAPERX_MATRON_PREPARED msec=%d" % (Time.get_ticks_msec() - started))
+	# J-045 (#248): and her materials drawn once behind the card, so the
+	# renderer compiles them now, not at the locker burst (matron_view.gd warm_up).
+	started = Time.get_ticks_msec()
+	_matron_view.warm_up(_camera)
+	for i in WARM_FRAMES:
+		await get_tree().process_frame
+	_matron_view.warm_down()
+	print("SCRAPERX_MATRON_WARMED msec=%d frames=%d" % [Time.get_ticks_msec() - started, WARM_FRAMES])
 	card.queue_free()
 	# A pause menu opened while she read (focus lost in those frames) stays paused.
 	get_tree().paused = was_paused or _paused
@@ -502,7 +527,7 @@ func _process(delta: float) -> void:
 	# The foreman's radio, from the native's state; his lines show whatever
 	# the captions setting, having no voice yet.
 	var climber: Vector3 = _native.get_player_position()
-	var her: Dictionary = _native.get_matron_state()
+	var her: Dictionary = _her_now
 	_radio.update(delta, {
 		"y": climber.y,
 		"support": int(_native.get_support_entity_id()),
@@ -527,7 +552,7 @@ func _process(delta: float) -> void:
 	_hud.route_points = _native.get_route_ahead() if _settings.route_hint else PackedVector3Array()
 	# Her chart: what the eyes rest on, her pages, the voice heard back.
 	if _uncanny != null:
-		_uncanny.update(delta, _ctx, _camera, _death_cam_left <= 0.0)
+		_uncanny.update(delta, _ctx, _camera, _death_cam_left <= 0.0, _her_now)
 	_hud.update_hud(_ctx, delta)
 	if _audit != null and _audit.frame(self):
 		get_tree().quit(_audit.exit_code)

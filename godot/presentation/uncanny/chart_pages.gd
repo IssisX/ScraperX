@@ -203,10 +203,10 @@ static func _paper_texture() -> ImageTexture:
 
 # Same rule as matron_view.gd: sealed, position is the step-out centre
 # (home floor + 1.05). Clipboard sits where it did relative to the cabinet.
-func _sync_locker_home() -> void:
+func _sync_locker_home(her: Dictionary = {}) -> void:
 	if _native == null or not _native.has_method("get_matron_state"):
 		return
-	var data: Dictionary = _native.get_matron_state()
+	var data: Dictionary = her if not her.is_empty() else _native.get_matron_state()
 	var state := int(data.get("state", -1))
 	if state != 0 and state != 1:
 		return

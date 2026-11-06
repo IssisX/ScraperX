@@ -53,9 +53,15 @@ wiring on game pushes and keeps the guard-of-guards passing. A
 script deleted together with both of its steps passes by design --
 a deliberate retirement, visible as a file deletion, not a drop.
 
+Parser regressions live in `_self_test()` below and run on every
+invocation, `--self-test` or not, the same pattern as the other
+coverage guards: a regression in the gate parsing must fail the
+self-test, not pass a broken workflow.
+
 Usage:
     python3 .github/scripts/check_job_gate_coverage.py \
         --workflow .github/workflows/wo000-delivery-spine.yml
+    python3 .github/scripts/check_job_gate_coverage.py --self-test
 """
 
 import argparse
@@ -161,19 +167,18 @@ def parse_scope_outputs(header_lines):
     return None, []
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--workflow",
-                        default=".github/workflows/wo000-delivery-spine.yml")
-    args = parser.parse_args()
+def check_job_gates(workflow_text):
+    """Check workflow text for job-gate problems.
 
-    workflow_text = Path(args.workflow).read_text()
+    Returns the list of failure strings (empty when the workflow
+    is clean). The caller prints them; this function does no I/O,
+    so the self-test can run it on fixture text.
+    """
     jobs = job_blocks(workflow_text)
     problems = []
 
     if "scope" not in jobs:
-        print("FAIL: no scope job in workflow")
-        return 1
+        return ["no scope job in workflow"]
     declared, duplicates = parse_scope_outputs(jobs["scope"])
     if declared is None:
         problems.append("missing: scope job declares no outputs:")
@@ -271,6 +276,152 @@ def main():
                     problems.append(
                         f"wrong-gate: playtest-apk gate is missing {marker!r}")
 
+    return problems
+
+
+def _self_test():
+    """Regression checks for the job-gate parser, run on every invocation."""
+    def scope(outputs=None):
+        if outputs is None:
+            outputs = OUTPUTS
+        lines = ("  scope:\n"
+                 "    runs-on: ubuntu-24.04\n"
+                 "    outputs:\n")
+        for name in outputs:
+            lines += f"      {name}: ${{{{ steps.scope.outputs.{name} }}}}\n"
+        return lines + ("    steps:\n"
+                        "      - name: Decide\n"
+                        "        run: echo ok\n")
+
+    def gated(name, group, needs="[scope, host-build]"):
+        return (f"  {name}:\n"
+                f"    needs: {needs}\n"
+                f"    if: needs.scope.outputs.{group} == 'true'\n"
+                "    runs-on: ubuntu-24.04\n"
+                "    steps:\n"
+                "      - name: Run\n"
+                "        run: echo ok\n")
+
+    def transitive(name, gate=None, needs="[host-build, native-tests, godot-touch, godot-audits-and-mix, android-build, android-apk]"):
+        text = (f"  {name}:\n"
+                f"    needs: {needs}\n")
+        if gate is not None:
+            text += f"    if: {gate}\n"
+        return text + ("    runs-on: ubuntu-24.04\n"
+                       "    steps:\n"
+                       "      - name: Run\n"
+                       "        run: echo ok\n")
+
+    valid = ("name: test\njobs:\n"
+             + scope()
+             + gated("host-build", "game", "scope")
+             + gated("native-tests", "native")
+             + gated("godot-touch", "godot")
+             + gated("godot-audits-and-mix", "godot")
+             + gated("android-build", "android", "scope")
+             + transitive("android-apk", None, "[host-build, android-build]")
+             + transitive("publish-checkpoint",
+                          "github.ref == 'refs/heads/ScraperX-Claude' && needs.android-apk.result == 'success'")
+             + transitive("playtest-apk",
+                          "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/ScraperX-Claude'"))
+    cases = []
+
+    def case(name, text, want):
+        problems = check_job_gates(text)
+        joined = "\n".join(problems)
+        if want is None:
+            if problems:
+                raise AssertionError(f"{name}: expected clean, got {problems}")
+        elif want not in joined:
+            raise AssertionError(f"{name}: expected {want!r} in {problems}")
+        cases.append(name)
+
+    case("valid", valid, None)
+    case("folded-gate",
+         valid.replace("    if: needs.scope.outputs.game == 'true'\n",
+                       "    if: >-\n      needs.scope.outputs.game == 'true'\n", 1),
+         None)
+    case("no-scope-job", valid.replace(scope(), "", 1),
+         "no scope job in workflow")
+    case("missing-outputs",
+         valid.replace("    outputs:\n"
+                       "      game: ${{ steps.scope.outputs.game }}\n"
+                       "      native: ${{ steps.scope.outputs.native }}\n"
+                       "      godot: ${{ steps.scope.outputs.godot }}\n"
+                       "      android: ${{ steps.scope.outputs.android }}\n", "", 1),
+         "missing: scope job declares no outputs:")
+    case("wrong-outputs",
+         valid.replace("      android: ${{ steps.scope.outputs.android }}\n", "", 1),
+         "wrong-outputs: scope job declares ['game', 'godot', 'native'], "
+         "expected ['android', 'game', 'godot', 'native']")
+    case("duplicated-output",
+         valid.replace("      game: ${{ steps.scope.outputs.game }}\n",
+                       "      game: ${{ steps.scope.outputs.game }}\n"
+                       "      game: ${{ steps.scope.outputs.game }}\n", 1),
+         "duplicated: scope output game declared twice")
+    case("wrong-source",
+         valid.replace("      game: ${{ steps.scope.outputs.game }}\n",
+                       "      game: ${{ steps.other.outputs.game }}\n", 1),
+         "wrong-source: scope output game is wired to '${{ steps.other.outputs.game }}', "
+         "expected '${{ steps.scope.outputs.game }}'")
+    case("wrong-group-gate",
+         valid.replace("    if: needs.scope.outputs.native == 'true'\n",
+                       "    if: needs.scope.outputs.godot == 'true'\n", 1),
+         "wrong-gate: native-tests gates on \"needs.scope.outputs.godot == 'true'\", "
+         "expected \"needs.scope.outputs.native == 'true'\"")
+    case("missing-gate",
+         valid.replace("    if: needs.scope.outputs.game == 'true'\n", "", 1),
+         "missing-gate: host-build has no job-level if:")
+    case("wrong-needs",
+         valid.replace("  native-tests:\n    needs: [scope, host-build]\n",
+                       "  native-tests:\n    needs: [scope]\n", 1),
+         "wrong-needs: native-tests needs ['scope'], expected ['host-build', 'scope']")
+    case("unknown-output-ref",
+         valid.replace("needs.android-apk.result == 'success'",
+                       "needs.android-apk.result == 'success' && needs.scope.outputs.nativ == 'true'", 1),
+         "unknown-output: publish-checkpoint gate references needs.scope.outputs.nativ, "
+         "which the scope job does not declare")
+    case("duplicated-needs",
+         valid.replace("  host-build:\n    needs: scope\n",
+                       "  host-build:\n    needs: scope\n    needs: scope\n", 1),
+         "duplicated: host-build declares needs: twice")
+    case("transitive-wrong-needs",
+         valid.replace("  android-apk:\n    needs: [host-build, android-build]\n",
+                       "  android-apk:\n    needs: [android-build]\n", 1),
+         "wrong-needs: android-apk needs ['android-build'], expected ['android-build', 'host-build']")
+    case("apk-has-gate",
+         valid.replace("  android-apk:\n    needs: [host-build, android-build]\n",
+                       "  android-apk:\n    needs: [host-build, android-build]\n"
+                       "    if: needs.scope.outputs.android == 'true'\n", 1),
+         "unexpected-gate: android-apk has a job-level if:; it is gated only by needing android-build")
+    case("publish-missing-marker",
+         valid.replace("github.ref == 'refs/heads/ScraperX-Claude' && needs.android-apk.result == 'success'",
+                       "github.ref == 'refs/heads/ScraperX-Claude'", 1),
+         "wrong-gate: publish-checkpoint gate is missing 'needs.android-apk.result'")
+    case("playtest-missing-marker",
+         valid.replace("github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/ScraperX-Claude'",
+                       "github.ref == 'refs/heads/ScraperX-Claude'", 1),
+         "wrong-gate: playtest-apk gate is missing 'workflow_dispatch'")
+    case("missing-job", valid.replace(gated("godot-touch", "godot"), "", 1),
+         "missing: no godot-touch job in workflow")
+    return len(cases)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--workflow",
+                        default=".github/workflows/wo000-delivery-spine.yml")
+    parser.add_argument("--self-test", action="store_true",
+                        help="run parser regressions only")
+    args = parser.parse_args()
+
+    fixture_count = _self_test()
+    if args.self_test:
+        print(f"PASS: {fixture_count} job-gate coverage parser regression checks")
+        return 0
+
+    workflow_text = Path(args.workflow).read_text()
+    problems = check_job_gates(workflow_text)
     if problems:
         for problem in problems:
             print(f"FAIL: {problem}")

@@ -157,11 +157,13 @@ func room_loudness() -> float:
 
 
 # Once a frame while playing. `attending` is false while the view rides a
-# death.
-func update(delta: float, ctx: Dictionary, camera: Camera3D, attending: bool) -> void:
+# death. `her`, when given, is this frame's get_matron_state (main reads it
+# once a frame for every view of her).
+func update(delta: float, ctx: Dictionary, camera: Camera3D, attending: bool, her: Dictionary = {}) -> void:
 	if _native == null or camera == null:
 		return
-	pages._sync_locker_home()
+	_her_now = her
+	pages._sync_locker_home(her)
 	clock += delta
 	var eye := camera.global_position
 	var forward := -camera.global_transform.basis.z
@@ -277,7 +279,7 @@ func _quiet(ctx: Dictionary, position: Vector3, grounded: bool, traversal: int, 
 		return false
 	if _audio != null and String(_audio.caption) != "":
 		return false
-	var her: Dictionary = _native.get_matron_state()
+	var her: Dictionary = _her_now if not _her_now.is_empty() else _native.get_matron_state()
 	if int(her["state"]) in MATRON_LOUD_STATES and ((her["position"] as Vector3) - position).length() < MATRON_NEAR_M:
 		return false
 	return true
@@ -285,6 +287,10 @@ func _quiet(ctx: Dictionary, position: Vector3, grounded: bool, traversal: int, 
 
 func locker_shut() -> bool:
 	return int(_native.get_matron_state()["state"]) in MATRON_LOCKER_SHUT
+
+
+# This frame's get_matron_state, from update() (empty: read it of the native).
+var _her_now: Dictionary = {}
 
 
 # Her next page, if one is due and has something old enough to say, at the

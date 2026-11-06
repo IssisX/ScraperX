@@ -16,6 +16,7 @@
 // (fatality_death_).
 
 #include "sim/physics_world.hpp"
+#include "sim/matron_effort.hpp"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
@@ -219,6 +220,9 @@ void Simulation::PhysicsWorld::fatality_drive(JPH::BodyInterface &bodies, const 
         }
         bodies.AddForce(knee_id_, force);
         bodies.AddForce(matron_->body(), -force);
+        // J-046 measurement only.
+        effort::add_force(effort::Path::Knee, force,
+                          bodies.GetLinearVelocity(knee_id_) - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
     }
 
     // ---- her fist: legs, collar ------------------------------------------

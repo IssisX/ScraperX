@@ -239,6 +239,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     // tick, not yet grounded, would catch it and hang the body there.
     regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
     slingshot_flight_ = false;
+    own_drive_ = true;   // back on his feet (J-048)
     // The capsule the checkpoint was committed in: a crouched commit's
     // centre is a crouched centre, and may sit under a low ceiling.
     crouched_ = checkpoint_crouched_;

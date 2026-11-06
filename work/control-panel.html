@@ -1,0 +1,252 @@
+<title>ScraperX Control Panel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a spec sheet. One column of setting plates grouped by what they control; each plate reads name, current value, then options, pick and how to change. */
+:root {
+  --bg: #eceef1;
+  --plate: #ffffff;
+  --ink: #18212b;
+  --muted: #56616d;
+  --line: #d3d8de;
+  --accent: #a85f00;
+  --accent-soft: #fbe9cf;
+  --new: #0d6e64;
+  --new-soft: #d5f0ec;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161b; --plate: #1a2129; --ink: #e5e9ee; --muted: #9ba7b3; --line: #2d3742;
+    --accent: #f0a63a; --accent-soft: #3a2a12; --new: #5fd3c4; --new-soft: #12332f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161b; --plate: #1a2129; --ink: #e5e9ee; --muted: #9ba7b3; --line: #2d3742;
+  --accent: #f0a63a; --accent-soft: #3a2a12; --new: #5fd3c4; --new-soft: #12332f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-direction: column; gap: 6px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: 34px; line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+.lede { margin: 0; color: var(--muted); max-width: 62ch; }
+.changed { background: var(--new-soft); border: 1px solid var(--new); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.changed h2 { margin: 0; font-family: var(--display); font-size: 19px; letter-spacing: .03em; text-transform: uppercase; color: var(--new); }
+.changed ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+section { display: flex; flex-direction: column; gap: 10px; }
+section > h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: .04em; text-transform: uppercase; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+.item { background: var(--plate); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+.top h3 { margin: 0; font-size: 16px; font-weight: 600; min-width: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.now { font-family: var(--mono); font-size: 12.5px; background: var(--accent-soft); color: var(--ink); border: 1px solid var(--accent); border-radius: 4px; padding: 1px 7px; white-space: nowrap; }
+.tag { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; border-radius: 4px; padding: 2px 6px; white-space: nowrap; }
+.tag.new { background: var(--new-soft); color: var(--new); border: 1px solid var(--new); }
+.tag.yours { color: var(--muted); border: 1px dashed var(--muted); }
+.what { margin: 0; color: var(--muted); }
+dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; font-size: 14px; }
+dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding-top: 2px; }
+dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+code { font-family: var(--mono); font-size: 13px; }
+.say { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+footer { color: var(--muted); font-size: 13px; }
+@media (max-width: 420px) { h1 { font-size: 30px; } dl { grid-template-columns: 1fr; gap: 0; } dt { padding-top: 6px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Fri 11-06 · 8:10 AM Central</span>
+    <h1>ScraperX Control Panel</h1>
+    <p class="lede">Every setting Claude can change for the team. Each shows what it is now, the choices, my pick, and the words that change it. Reply in chat with the words; I do the rest.</p>
+  </header>
+
+  <div class="changed">
+    <h2>Changed today</h2>
+    <ul>
+      <li>My thinking level: high to <strong>max</strong> (it sat at high for 45 hours).</li>
+      <li>Ultracode: <strong>off</strong>. It meant workflows, not more thinking.</li>
+      <li>Helpers: <strong>xhigh</strong>, and a failed job is redone at <strong>max</strong>.</li>
+      <li>Muse: from one job at a time to <strong>12 at once</strong> on its subagents.</li>
+    </ul>
+  </div>
+
+  <section>
+    <h2>How hard each AI thinks</h2>
+
+    <div class="item">
+      <div class="top"><h3>Claude, the integrator (me)</h3><div class="chips"><span class="now">MAX</span><span class="tag new">new today</span></div></div>
+      <p class="what">How hard I think on every turn. Higher is smarter and uses more of your weekly limit.</p>
+      <dl><dt>Options</dt><dd>low · medium · high · xhigh · max</dd><dt>Note</dt><dd>The repo's settings file wins over the online picker, so I change it there.</dd><dt>Change it</dt><dd><span class="say">"Set your effort to ___"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Claude helpers</h3><div class="chips"><span class="now">XHIGH · redo at MAX</span><span class="tag new">new today</span></div></div>
+      <p class="what">Each helper job runs at xhigh. A job that fails is retried by a fresh helper at max that picks up where the first one stopped.</p>
+      <dl><dt>Options</dt><dd>Any level for each of the two helper types</dd><dt>Change it</dt><dd><span class="say">"Helpers at ___, redo at ___"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Ultracode</h3><div class="chips"><span class="now">OFF</span></div></div>
+      <p class="what">Not more thinking. It tells Claude to run workflows on every task and to ignore token cost.</p>
+      <dl><dt>My pick</dt><dd>Off. You said no workflows.</dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>API reviewer</h3><div class="chips"><span class="now">Opus 5.5 · MAX</span></div></div>
+      <p class="what">Reviews any PR that Codex has not reviewed. Paid from the $100/month API credit, not your weekly limit.</p>
+      <dl><dt>Options</dt><dd>Any level; it was Sonnet at xhigh before 11-04</dd><dt>My pick</dt><dd>Keep</dd><dt>Change it</dt><dd><span class="say">"Reviewer at ___"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>API eye</h3><div class="chips"><span class="now">Opus 5.5 · MEDIUM</span></div></div>
+      <p class="what">Judges screenshots of visual work. Paid from the API credit.</p>
+      <dl><dt>Options</dt><dd>Any level</dd><dt>My pick</dt><dd>Keep. Anthropic's docs say this model reads images accurately even at low.</dd><dt>Change it</dt><dd><span class="say">"Eye at ___"</span></dd></dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>Who works, and how many</h2>
+
+    <div class="item">
+      <div class="top"><h3>Muse: jobs at once</h3><div class="chips"><span class="now">12 lanes · about 10 subagents</span><span class="tag new">new today</span></div></div>
+      <p class="what">Muse is free. Until 7:59 AM today it worked its queue one job at a time, which is why things felt slow. Now it runs them side by side, in the priority order I mailed.</p>
+      <dl><dt>Options</dt><dd>How many at once, and the order</dd><dt>Change it</dt><dd><span class="say">"Muse: put ___ first"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Claude's own coding</h3><div class="chips"><span class="now">1 to 2 key jobs</span><span class="tag new">new today</span></div></div>
+      <p class="what">I code the most important job Muse is not already deep into, anything that needs the game on screen, and anything Muse fails twice. Muse builds the rest.</p>
+      <dl><dt>Options</dt><dd>More coding by me (uses your limit faster), or less</dd><dt>Change it</dt><dd><span class="say">"You take ___"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Claude sessions</h3><div class="chips"><span class="now">1 + up to 2 helpers</span></div></div>
+      <p class="what">Me plus at most two helpers, or three when something is urgent. Helpers are paused until the Monday 11 AM reset.</p>
+      <dl><dt>Change it</dt><dd><span class="say">"Allow ___ helpers"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Model</h3><div class="chips"><span class="now">Opus 5.5</span><span class="tag yours">your rule</span></div></div>
+      <p class="what">If it is unavailable, the backups are Opus 5, then Opus 4.8. Helpers use my model.</p>
+      <dl><dt>Options</dt><dd>Opus · Sonnet · Haiku · Fable</dd><dt>Your rule</dt><dd>Opus only, never Sonnet</dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Fast mode</h3><div class="chips"><span class="now">off unless you turn it on</span></div></div>
+      <p class="what">The same model, answering faster. It costs more usage per reply.</p>
+      <dl><dt>My pick</dt><dd>Off until Sunday night</dd><dt>Change it</dt><dd>Type <code>/fast</code></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Hosted API agent</h3><div class="chips"><span class="now">OFF</span><span class="tag yours">your call 11-04</span></div></div>
+      <p class="what">A Claude that does a job from a labeled issue and opens a PR. It is paid from the API credit, not your weekly limit, with an $8 cap per session. It runs Opus 5.5 at high.</p>
+      <dl><dt>My pick</dt><dd>Off. Muse is free and has spare subagents.</dd><dt>Change it</dt><dd><span class="say">"Turn on the API agent"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Workflows</h3><div class="chips"><span class="now">never</span><span class="tag yours">your rule</span></div></div>
+      <p class="what">Claude's many-agent runs. If you ever turn them on, their size cap is "medium", under 10 agents (in <code>/config</code>).</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Schedules</h2>
+
+    <div class="item">
+      <div class="top"><h3>My check-ins</h3><div class="chips"><span class="now">every 3 h · 8:17 AM to 11:17 PM</span></div></div>
+      <p class="what">I task the whole team unasked. Each check-in costs some usage.</p>
+      <dl><dt>Change it</dt><dd><span class="say">"Check in every ___ hours"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Usage meter asks</h3><div class="chips"><span class="now">11:17 AM · 5:17 PM · 11:17 PM</span></div></div>
+      <p class="what">I ask you for the total %, then redo the pace to Sunday bedtime.</p>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Muse mail</h3><div class="chips"><span class="now">1 per pushed branch · status every 3 h</span><span class="tag new">new today</span></div></div>
+      <p class="what">If Muse goes 3 hours without mail while it is pushing, I tell you at once.</p>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Switchboard</h3><div class="chips"><span class="now">every 15 min · digest 7:00 AM</span></div></div>
+      <p class="what">It routes reviews and merges PRs. GitHub minutes are free on this public repo. It costs money only when it calls the API reviewer or eye.</p>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Grok and ChatGPT</h3><div class="chips"><span class="now">Grok 10 AM · 4 PM</span><span class="tag yours">set in their apps</span></div></div>
+      <p class="what">Grok reads only comments that start "To Grok:". ChatGPT answers "To ChatGPT:" asks. Grok Bot, PE and Builder are out until 11-09.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>How I save your usage</h2>
+
+    <div class="item">
+      <div class="top"><h3>Auto-compact</h3><div class="chips"><span class="now">at about 384k tokens</span></div></div>
+      <p class="what">Every turn re-reads the whole conversation. A smaller limit makes each turn lighter, but I compact more often and keep less detail.</p>
+      <dl><dt>My pick</dt><dd>Keep. You asked that nothing be lost from the notes.</dd><dt>Change it</dt><dd><span class="say">"Compact at ___k"</span></dd></dl>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>PR watching</h3><div class="chips"><span class="now">only PRs I merge myself</span></div></div>
+      <p class="what">Each watched PR wakes me up, and each wake-up costs usage. Twelve watched PRs once cost 26 wake-ups.</p>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Big reads</h3><div class="chips"><span class="now">go to Muse</span></div></div>
+      <p class="what">I read only the function a job needs. Logs, transcripts and long threads go to Muse, and only its answer comes back.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Merging and money</h2>
+
+    <div class="item">
+      <div class="top"><h3>What it takes to merge</h3><div class="chips"><span class="now">green CI + another AI's LAND</span></div></div>
+      <p class="what">Protected changes go alone in their own PR: test checks, world geometry, and her force, power, mass, leg-travel and launch limits. They need another agent's LAND. Workflow files are the only thing I merge by hand.</p>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Switchboard opens Muse's PRs</h3><div class="chips"><span class="now">YES · being built (J-047)</span><span class="tag yours">your call 11-06</span></div></div>
+      <p class="what">At most 3 new PRs per sweep, and never for Claude's branches. It gets a security review before it lands.</p>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>API money caps</h3><div class="chips"><span class="now">$100 a month · $8 a job</span></div></div>
+      <p class="what">The switchboard checks spend before every paid call and refuses past a cap.</p>
+      <dl><dt>Change it</dt><dd>Comment <code>budget 12</code> on a job's issue to raise that job to $12.</dd></dl>
+    </div>
+  </section>
+
+  <section>
+    <h2>Only you can set these</h2>
+
+    <div class="item">
+      <div class="top"><h3>Usage meter and weekly reset</h3><div class="chips"><span class="now">reset Mon 11 AM</span><span class="tag yours">you</span></div></div>
+      <p class="what">Only you can see the meter. That is why I ask you for it.</p>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>GitHub: let Actions create PRs</h3><div class="chips"><span class="now">may be needed for J-047</span><span class="tag yours">you</span></div></div>
+      <p class="what">Settings → Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests". I will tell you if J-047 hits it.</p>
+    </div>
+
+    <div class="item">
+      <div class="top"><h3>Console spend limit</h3><div class="chips"><span class="now">set it to $100</span><span class="tag yours">you</span></div></div>
+      <p class="what">The backstop in case anything in the repo's caps is wrong.</p>
+    </div>
+  </section>
+
+  <footer>Sources: .claude/settings.json, .claude/agents/, work/budget.yml, .github/workflows/switchboard.yml, the live session status, and Anthropic's docs for Opus 5.5.</footer>
+</div>
