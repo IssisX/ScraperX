@@ -52,7 +52,9 @@ Keep this file to what changes the next action; move anything done to the log.
 - Subscribed: #256.
 
 ## Helpers
-- J-046 #259 (budget audit, ba99a853) opened 6:45 PM; switchboard merges it; unsubscribed. Helper retired. Follow-up:
+- J-046 #259 (budget audit) opened 6:45 PM; switchboard merges it; unsubscribed. Helper retired. Codex P0 (children skipped
+  the shape audit) fixed by me at bb1bfa53; `@codex review` posted 7:35 PM. #258 likewise re-review asked (d63e8ab9).
+  Lesson: after any fix push, post `@codex review` the same step, or the switchboard WAITs for a LAND. Follow-up:
   add matron-ammo to kScenarios after #256 lands (mine). New leaks mailed to Muse for J-044l: crate shove in
   walk_toward 8 kN (charged nowhere), knee 5 kN, let-go 6.9 kN. Asked whether the Turn lunge (9.8 kN) stays exempt.
 - No helper running. Next: J-045 walk p50/p95/p99 after #258 lands.
