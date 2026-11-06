@@ -9,7 +9,7 @@ Keep this file to what changes the next action; move anything done to the log.
 2. `python3 tools/board/asks.py --hours 24`; clear every line not under "Asks in flight".
 3. Muse's mail: `subject:MUSE_TO_CLAUDE newer_than:3h`. Its diffs come as attachments, which the Gmail tools do not
    return, so a helper decodes them from the RAW message.
-4. The check task `trig_0139GQPXpF7YWbvHwgEn98a3` runs every 2 hours, 7:17 AM-11:17 PM Central; it is the only timed wake.
+4. The check task `trig_0139GQPXpF7YWbvHwgEn98a3` runs every 3 hours, 8:17 AM-11:17 PM Central; it is the only timed wake.
 
 ## How merges work
 - The switchboard merges PRs whose body starts `Job: J-NNN` on a green proof plus a LAND, protected changes included.
@@ -25,7 +25,7 @@ Keep this file to what changes the next action; move anything done to the log.
 
 ## Cory's standing rulings (11-04/11-05)
 - Helpers: Opus high or xhigh, never Sonnet. None until the Mon 11 AM reset (Cory 11-06: the pace ran out Sat night; last
-  to Sunday night). Builds go to Muse. Target (Cory 11-06): the weekly limit lasts to Sunday bedtime; check the meter with him each night.
+  to Sunday night). Builds go to Muse. Target (Cory 11-06): the weekly limit lasts to Sunday bedtime; check the meter with him each night. 70% used at 8:45 AM Fri; pace 0.5%/h: about 77% by 11 PM Fri, 89% by 11 PM Sat.
 - No Workflow runs. Decline the ultracode nudges silently.
 - Plugin searches use one exact keyword, or a helper runs them and returns one line (context, 11-05).
 - GitHub-UI-only steps (settings, toggles): ask Cory early, with a direct link and the exact taps.

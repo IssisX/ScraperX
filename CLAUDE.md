@@ -76,7 +76,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 
 ## The integrator
 
-- Tasks the whole team every 2 hours, 7:17 AM-11:17 PM Central, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
+- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
   strength, Muse never without three big unstarted jobs, Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator), at most two active helpers (three if acute), each
