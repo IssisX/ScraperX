@@ -103,10 +103,30 @@ var microphone_asked := false
 # play").
 var her_hearing := true
 var start_at := 0
+# Phones start with LOW shadows (2 splits, 120 m): HIGH costs about 930 draws a
+# frame at the tower's foot against the 700 budget (#248; Cory 11-06: "Low
+# should be ok, if not we will change to splits later"). Set once, so a phone
+# player who then picks HIGH keeps it.
+const PHONE_SHADOW_QUALITY := 1
+var phone_shadows_set := false
 var persistent := true
 # Where they are kept. A scripted run proving the round trip keeps its own
 # file, never the player's.
 var path := PATH
+
+
+func _init() -> void:
+	if OS.has_feature("mobile"):
+		_apply_phone_shadows()
+
+
+# A phone's first LOW: on a fresh install, and once on an install saved before
+# it whose shadows were still the old default HIGH.
+func _apply_phone_shadows() -> void:
+	if quality == 2 and shadow_quality == 3:
+		quality = QUALITY_CUSTOM
+		shadow_quality = PHONE_SHADOW_QUALITY
+	phone_shadows_set = true
 
 
 # Writes a preset's values; CUSTOM leaves them as they are.
@@ -164,6 +184,9 @@ func load_from_disk() -> void:
 	microphone_asked = _read_bool(file, "microphone_asked", microphone_asked)
 	her_hearing = _read_bool(file, "her_hearing", her_hearing)
 	start_at = _read_index(file, "start_at", start_at, START_NAMES.size())
+	phone_shadows_set = _read_bool(file, "phone_shadows_set", false)
+	if OS.has_feature("mobile") and not phone_shadows_set:
+		_apply_phone_shadows()
 
 
 func save_to_disk() -> void:
@@ -182,7 +205,7 @@ func save_to_disk() -> void:
 	for key in ["quality", "render_scale", "shadow_quality", "msaa", "bloom", "fps_cap", "vsync", "show_fps",
 			"fov", "brightness", "head_bob", "route_hint", "speed_fov", "reduced_motion", "time_of_day", "day_minutes",
 			"master_volume", "effects_volume", "ambience_volume", "interface_volume", "voice_volume",
-			"captions", "microphone", "microphone_asked", "her_hearing", "start_at"]:
+			"captions", "microphone", "microphone_asked", "her_hearing", "start_at", "phone_shadows_set"]:
 		file.set_value(SECTION, key, get(key))
 	var error := file.save(path)
 	if error != OK:
