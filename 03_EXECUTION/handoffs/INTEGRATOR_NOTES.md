@@ -54,8 +54,9 @@ Keep this file to what changes the next action; move anything done to the log.
 ## Helpers
 - Running: the J-046 #257 budget-audit helper, branch `claude/integrate-j046-budget-audit` (worktree). It covers the trunk
   groups now; matron-ammo after #256 lands. I open its PR.
-- J-045 #258 (draws, c9bb7b2a) opened 5:40 PM; switchboard merges it (no workflow file); unsubscribed. Foot at HIGH shadows
-  is still ~990 draws: look call put to Cory (LOW shadows by default on the phone, or fewer splits at HIGH). Waits on him.
+- J-045 #258 (draws) opened 5:40 PM; switchboard merges it (no workflow file); unsubscribed. Red on the floating audit
+  (LOAD label vs merged ticks); fixed by me at d63e8ab9 (audit off_board 0; perf_grade worst_draws_low 700 = budget, no
+  headroom left). Foot at HIGH shadows still ~930 draws: look call put to Cory (LOW / SPLITS / KEEP). Waits on him.
 - J-045 after that: walk p50/p95/p99; a gore warm-up; Sentry native crash capture (Option A), its own workflow/signing PR
   with a security review.
 - Retired: the J-042 builder, J-042 fix, J-044m and J-045 draws helpers.
