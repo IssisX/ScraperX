@@ -73,7 +73,7 @@ Keep this file to what changes the next action; move anything done to the log.
 
 ## Helpers
 - Effort tally (Cory 11-06 8:50 AM): one line, no per-helper logs. A failure = a job redone on helper-max (red proof it
-  could not fix, or a real review finding), not a flake or a bad brief. Tally since the split (11:30 AM): high helper jobs 1 (J-051),
+  could not fix, or a real review finding), not a flake or a bad brief. Tally since the split (11:30 AM): high helper jobs 2 (J-051, J-051b),
   redone 0; physics helper jobs 1 (J-048 hook, b81f059a), redone 0. 2+ redos in the first 10 high jobs -> tell Cory, pick: non-physics back to xhigh.
 - J-046 #259 merged 7:50 PM (switchboard). matron-ammo to kScenarios after #256: Muse's now. New leaks mailed
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
@@ -145,5 +145,5 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
   Green, waiting on Codex plus a LAND; the first post should list about 8 items (FIX on #256, red #227 and #95, five red branches).
 - J-051 #284 merged 12:17 PM (11-06): the inbox is live. Keep #282 OPEN and subscribed (the old switchboard closed it once, 12:15, on a quoted supersede line; reopened). Each inbox comment = act on its items now.
 - Inbox first post (12:19 PM, 8 items) triaged: #256 waits on the windup; #227, #95, 95-plant-fix, j044c and RungDown have Muse agents; `claude/integrate-j042-ammo` is dead (all of it is inside #256's protected branch); `fb-bot/integrate-s4-jab` is dead (0 commits past trunk). Neither needs action.
-- Auto-PR (J-047) is refused by GitHub: 403 "GitHub Actions is not permitted to create or approve pull requests" (found 12:35 PM in the steer log; the code matched a different string, so it failed silently). Until Cory flips Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull requests", I open Muse's PRs by hand: #285 J-041 sense_near (12:38 PM). Helper J-051b (high) on `claude/integrate-j051b-autopr-errors`: match the real text, and post every auto-open failure to the inbox as AUTO-PR-FAILED.
+- Auto-PR (J-047) is refused by GitHub: 403 "GitHub Actions is not permitted to create or approve pull requests" (found 12:35 PM in the steer log; the code matched a different string, so it failed silently). Until Cory flips Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull requests", I open Muse's PRs by hand: #285 J-041 sense_near (12:38 PM). Helper J-051b (high) built it: PR #287 @ 7426de75 (matches the real text; every auto-open failure becomes an AUTO-PR-FAILED inbox item; 206 switchboard tests pass; rule check 0 BLOCK). I reviewed the diff: clean. Subscribed; the switchboard merges it on green plus a LAND.
 - J-038 slice 1 @ 07903f2b red on native-tests (athletic-traversal), run 42261922659: mailed to Muse 12:41 PM.
