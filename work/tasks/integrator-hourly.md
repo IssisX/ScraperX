@@ -2,10 +2,8 @@
 
 It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every 2 hours Sat-Sun, 9:17 AM to 9:17 PM; none
 overnight (Cory 11-06: the weekly limit must last to Sunday night). The full check (every step below) runs at 8:17 AM,
-11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light:
-`git pull`, one mail search `newer_than:2h (subject:MUSE_TO_CLAUDE OR from:sentry.io OR subject:"Run failed: Switchboard")`
-and `python3 tools/board/asks.py --hours 2`; act only on mail after the notes' `Mail read through` line, then move that
-line to the newest mail handled; end in one line, with no board edit and no message
+11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light: `git pull`, step 1
+only, and end in one line, with no board edit and no message
 to Cory unless he must act (11-06: mail and GitHub asks wake nothing; Muse's green windup sat unseen 35 min).
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06 9:35 AM).
@@ -27,15 +25,18 @@ Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pic
 The scheduled task only says "do this file"; change the check here. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 
-1. **Mail and asks first.** Muse's mail (`subject:MUSE_TO_CLAUDE newer_than:1h`, on every event you handle,
-   not only hourly): act on it now or hand it to a helper; post its verdicts on GitHub if the bridge has not.
-   Muse's diffs go on `fb-bot/integrate-<job>` (protected: `fb-bot/integrate-protected-<job>`) from the sha it
-   names, then a PR starting `Job: J-NNN`. Then `python3 tools/board/asks.py --hours 24`: RELAY? = a `To Muse:`
-   post not yet mailed (mail it); REPOST = an ask to Grok not at the start of a comment (repost it starting
-   `To Grok:`); an ask to Claude = answer it now.
+1. **Mail and asks first, every run and every event you handle.** The mark is the notes' `Read through:` Unix time.
+   Note `date +%s`, then mail `after:<mark> (subject:MUSE_TO_CLAUDE OR from:sentry.io OR subject:"Run failed: Switchboard")`
+   and `python3 tools/board/asks.py --since <mark>`: both list only what came after the mark, so empty means nothing
+   new. Act on each, then set the mark to the time you noted and push it (never before acting; nothing new: leave it). Muse's mail: act now or hand it
+   to a helper; post its verdicts on GitHub if the bridge has not. Muse's diffs go on `fb-bot/integrate-<job>`
+   (protected: `fb-bot/integrate-protected-<job>`) from the sha it names, then a PR starting `Job: J-NNN`.
+   Asks: RELAY? = a `To Muse:` post (mail it); REPOST = an ask to Grok not at the start of a comment (repost it
+   starting `To Grok:`); an ask to Claude = answer it now. Full runs also run `asks.py --hours 24` and answer any
+   ask to Claude still open (a miss); its other lines were handled when first listed.
+   Sentry (phone errors from the APK): each new issue goes to its owner's job (Muse for game code) with the error,
+   file and line. A failed Switchboard run: read its failing job's error lines; fix it or hand it to a helper.
    Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06: 18 h went unreported).
-   Sentry: `from:sentry.io newer_than:2h` (phone errors from the APK): each new issue goes to its owner's job
-   (Muse for game code) with the error, file and line.
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
    the switchboard can't: workflow-file PRs (merge on green plus a LAND), FIX or
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
