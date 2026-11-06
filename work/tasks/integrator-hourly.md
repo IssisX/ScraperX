@@ -7,19 +7,19 @@ only, and end in one line, with no board edit and no message
 to Cory unless he must act (11-06: mail and GitHub asks wake nothing).
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06 9:35 AM).
-Pace (Cory 11-06: the limit lasts to Sunday night): every run reads `cost_usd` (get_session); about $14 is 1% of the meter.
-Ask Cory for the meter at the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun 1:17 and 9:17 PM); each reading recalibrates $ per 1%
-and the pace: (98 - used) / daytime hours left to Sun 11 PM, against the burn since the last run. Budget (75% at 1:30 PM 11-06):
-0.6%/h (about $8.50); 81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM. Over pace: no new helper, the next full run is quiet
-(answers, merges), and Cory gets the numbers and the cut in one line.
+Pace (Cory 11-06: track AND predict, so the limit lasts to Sunday night): every run reads `cost_usd` (get_session); $ per 1%
+comes from the last two meter readings (about $14). Ask Cory for the meter at the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun
+1:17 and 9:17 PM). Predict: % now + the burn of the last 3 h x daytime hours left (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM), at
+each checkpoint (81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM), and the hour it hits 100%. A prediction over a checkpoint
+throttles now, before it is crossed: no new helper, the next full run quiet (answers, merges), Cory gets the prediction and the
+cut in one line. Loosen a step only when two runs predict under.
 Specs, the math of a ruling and research go to ChatGPT or Grok first (`To ChatGPT:` / `To Grok:`); the integrator
 checks them, never drafts them (Cory 11-06 9:35 AM).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched tool calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
-eye, or checking a claim before stating it. A slip at high effort (a wrong claim, a missed bug, a redo) is told to Cory
-the same hour, with a pick to step the integrator back to xhigh.
+eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): one at a time (11-06 pace; Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 11:20 AM; helpers keep their own effort, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (11-03 to 11-06 it sat at high 45 h).
 
