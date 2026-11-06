@@ -12,6 +12,9 @@ checks them, never drafts them (Cory 11-06 9:35 AM).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched tool calls; no re-reads; short messages to Cory.
+Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
+eye, or checking a claim before stating it. A slip at high effort (a wrong claim, a missed bug, a redo) is told to Cory
+the same hour, with a pick to step the integrator back to xhigh.
 Helpers (sub-agents): up to 2 at once (Cory 11-05, 11-06). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). If `effort_level` is not high (his pick, 11-06 9:35 AM; helpers keep their own xhigh, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
 
