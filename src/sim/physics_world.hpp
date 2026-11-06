@@ -443,6 +443,12 @@ private:
 
     void hook_post_step(JPH::BodyInterface &bodies, const float dt) noexcept;
 
+    // The hook's line has him (J-048): bitten, with the reel turning or the
+    // line taking a load, its winch and rope move him, not his legs.
+    [[nodiscard]] bool hook_hauls(const bool reel) const noexcept {
+        return hook_state_ == HookState::Bitten && (reel || hook_tension_n_ > 0.0F);
+    }
+
     void attach_hook_line(JPH::BodyInterface &bodies, JPH::BodyID anchor, JPH::RVec3 at, float max_length) noexcept;
 
     [[nodiscard]] JPH::RVec3 hook_bend_point(const JPH::BodyInterface &bodies, std::uint32_t bend) const noexcept;
@@ -797,8 +803,8 @@ public:
     bool slingshot_flight_ = false;
     // The player's own drive moves him (J-048, the listener's set_own_drive):
     // true on his feet with nothing else holding him (no traversal, slingshot,
-    // swing, trapeze, zipline or the Matron's hands), and on through the free
-    // flight that starts there (a jump, a run off an edge); false from
+    // swing, trapeze, zipline, the hook's line or the Matron's hands), and on
+    // through the free flight that starts there (a jump, a run off an edge); false from
     // anything else, or a shove or a test's launch, until he stands again
     // within his own run's reach of his frame (kFlowSpeedMps: a throw's slide
     // past it is still the throw's). While it holds, his run's own speed is

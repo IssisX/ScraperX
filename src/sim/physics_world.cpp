@@ -820,7 +820,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // while his own drive moves him (own_drive_) and nothing has taken him
     // since the last step.
     const bool own_drive = own_drive_ && traversal_state_ == TraversalState::None && !sling_controlling &&
-                           !zip_riding_ && grip_ == nullptr;
+                           !zip_riding_ && grip_ == nullptr && !hook_hauls(commands.hook_reel);
     contact_listener_.set_own_drive(airborne_inherited_velocity_, own_drive ? kFlowSpeedMps : 0.0F);
     {
         const auto started = std::chrono::steady_clock::now();
@@ -903,7 +903,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // throw's); a free flight keeps what started it. (A shove after this,
     // below, takes it again.)
     if (traversal_state_ != TraversalState::None || slingshot_->controls_player() || swing_->controls_player() ||
-        trapeze_->controls_player() || zip_riding_ || grip_ != nullptr || matron_->claimed()) {
+        trapeze_->controls_player() || zip_riding_ || grip_ != nullptr || hook_hauls(commands.hook_reel) ||
+        matron_->claimed()) {
         own_drive_ = false;
     } else if (grounded_ && !own_drive_) {
         const JPH::Vec3 over = bodies.GetLinearVelocity(player_id_) - airborne_inherited_velocity_;

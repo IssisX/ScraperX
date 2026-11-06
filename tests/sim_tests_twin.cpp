@@ -148,6 +148,34 @@ void run_twin() {
         }, 6.0), "twin: a walk off the near tip falls into the gap");
         std::cout << "PASS scraperx_sim twin gap: a walk off the near tip falls\n";
     }
+    // The line's swing is no run of his (J-048): bitten on the arm's bar from
+    // the deck at the near tip (1.2 m under the step, so the arc meets the
+    // far tip's face, not its edge) and run off it, what the line's swing
+    // brings him into the far face with is a blow felt (kHitFeltSpeed, 6 m/s).
+    {
+        Simulation swinger(scraperx::sim::InitialSpawn::Ring220North);
+        require(swinger.load_game(near_tip_deck.data(), near_tip_deck.size()), "twin: reload at the near tip's deck");
+        stand(swinger);
+        require(fire_and_bite(swinger, near_step_x, TwinTower::kArmY - 0.06, TwinTower::kArmTipZ - 0.06),
+                "twin: the hook bites the arm's bar from the near tip's deck");
+        const auto hits = swinger.snapshot().hit_count;
+        (void)advance_until(swinger, [&](const Snapshot &n) {
+            (void)swinger.set_move_input(0.0, -1.0);
+            (void)swinger.set_sprint_input(true);
+            return n.hit_count != hits || n.death_count > 0;
+        }, 6.0);
+        (void)swinger.set_move_input(0.0, 0.0);
+        (void)swinger.set_sprint_input(false);
+        const Snapshot n = swinger.snapshot();
+        std::cout << "  twin swing hit: at " << n.player_position.x << ',' << n.player_position.y << ','
+                  << n.player_position.z << " hits " << n.hit_count - hits << " at " << n.hit_speed_mps
+                  << " m/s, hook " << int(n.hook_state) << ", deaths " << n.death_count << '\n';
+        require(n.hit_count == hits + 1 && n.hit_speed_mps >= 6.0 && n.death_count == 0 && n.hook_state == 2 &&
+                    n.player_position.z < TwinTower::kFarTipZ + 0.5,
+                "twin: the line's swing into the far tip's face is a blow felt, not his own run");
+        std::cout << "PASS scraperx_sim twin swing hit: the line's swing into the far face is felt at "
+                  << n.hit_speed_mps << " m/s\n";
+    }
     // The flag cannot be reached from tower one's side: a shot from the
     // near tip at it meets the raised leaf or the hood's back.
     {
