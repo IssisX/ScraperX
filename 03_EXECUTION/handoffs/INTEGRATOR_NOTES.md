@@ -82,6 +82,7 @@ Keep this file to what changes the next action; move anything done to the log.
 - Retired: the J-042 builder, J-042 fix, J-044m, J-045 draws, J-046, J-045 walk, J-045 part 4 and part 5 helpers.
 
 ## Muse's queue (mail only)
+Cory 11-06 8 AM: Muse takes every build; Claude integrates; Muse's ~10 subagents never idle. Mailed 7:59 AM: run the queue in parallel (12 lanes in priority order: windup, J-001, J-048, three reds, J-044l and wreck, J-044d then e f g k, J-047, sense_near, J-044h and i, J-043, J-038, NEW J-045 sim first-step 4-19 ms), dependents after (S5 and J-040 after J-044d, matron-ammo after #256, 9 guard branches after windup, J-001, #95 and J-044c, NEW Sentry Option A later). Mail rules: one mail per pushed branch, and a status mail at least every 3 h.
 Muse's mail: 17 held mails all arrived 6:52 AM 11-06 (its sends were held ~18 h). Ruled 7:40 AM (mailed): J-001 hands
 first; windup does not wait on J-001; J-044c cap waived; wreck re-baseline only as its own protected PR; keep Grok-less
 gains. Prompt for Muse given to Cory (no parking jobs on decisions; send mail at once). 9 expand-tests/world guard branches

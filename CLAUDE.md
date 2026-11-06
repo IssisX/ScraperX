@@ -51,9 +51,10 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   failure, or on any physics or force-budget guess, post `To <Name>:` on the job's issue or PR (what you did,
   measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
   step.
-- **Strengths:** Muse (free; writes and runs code, has its own subagents) takes the hardest builds, physics
-  and game code first, and leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
-  research, specs, outside libraries, review. Claude: integration, the native kernel, CI, the game by eye.
+- **Strengths:** Muse (free; writes and runs code, runs about 10 subagents) takes every build: physics, game
+  code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
+  research, specs, outside libraries, review. Claude integrates: merges, reviews, CI, the game by eye. It
+  builds only what Muse can't (Cory 11-06: "delegate like a mofo" so the quota lasts).
   Grok Bot, PE and Builder are out until 11-09.
 - **Board:** issue #107's body is the live board; only the integrator edits it. Agents read the body and
   the comments since their last, post one line per real step, and put technical findings on the job's own
@@ -77,7 +78,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 ## The integrator
 
 - Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
-  strength, Muse never without three big unstarted jobs, Muse's proposals ruled on within the hour, every
+  strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator), at most two active helpers (three if acute), each
   code-editing helper in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
