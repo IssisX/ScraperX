@@ -80,6 +80,7 @@ const FLOOR_BLACK_BEAT := 9     # Matron::Fatal Black (her floor version)
 const FLOOR_FADE_S := 0.35      # her floor version's fade: full inside its 0.5 s Black beat
 # The arm rip, seen. Matron::State::ArmPlay is 15. No slow motion here: the
 # pull's length belongs to the sim, and a timer on the camera must not change it.
+const SWAT_BEAT := 1           # Matron hold_beat: her swat, before her hand is on him
 const ARM_PLAY_STATE := 15
 const RIP_PITCH := 0.70         # up, looking down on her hand and the arm
 const RIP_DIST := 6.6           # out from the pair; the close frame is what played as jank
@@ -255,7 +256,10 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 	var tear_hold := _since_tear >= 0.0 and _since_tear < RIP_HOLD_S
 	var falling := _since_release >= 0.0 and not held
 	var rip_keeps := (arm_play or tear_hold or _rip > 0.001 or _rip_return_leg != 0) and not falling and not claimed
-	var want := (held or claimed or _awaiting_death or _landed_pending or rip_keeps) and _black_after < 0.0
+	# From her grab: her swat that takes him down is its first beat (the
+	# owner, 11-02), her hand on his ankle the next.
+	var grabbing := int(hold.get("hold_beat", 0)) == SWAT_BEAT
+	var want := (held or grabbing or claimed or _awaiting_death or _landed_pending or rip_keeps) and _black_after < 0.0
 	# The fade.
 	if _awaiting_death or _landed_pending:
 		if _since_release >= 0.0:

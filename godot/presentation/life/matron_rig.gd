@@ -249,13 +249,20 @@ const PLANT_LIFT_M := 0.12
 const RELEASE_TAU := 0.05
 # How fast a limb's pole turns to the side its pose bends to (rad/s).
 const POLE_RAD_S := 6.0
-# Her gripping arm drawn out to the held ankle, at most this many times its length.
-const HOLD_STRETCH_MAX := 2.7
+# Her gripping arm drawn out to what it holds, at most this many times its
+# length: her real arm (the owner, 2026-11-02: never stretched; the native puts
+# every hold within it, matron.hpp kRealArmM, and bends her trunk to it).
+const HOLD_STRETCH_MAX := 1.05
+# A prop in her hands (the toolbox, the stock) keeps the old reach's limits: its
+# own work, not the hold's (HOLD_WITH_REAL_ARMS.md is the hold's); _prop_hand
+# already puts its point within her real arm (_in_arm).
+const PROP_STRETCH_MAX := 2.7
+const PROP_SHOULDER_M := 0.4
 # Her look laid on her neck to this far (matron_view.gd NECK_TWIST_MAX), the
 # rest on her chest.
 const LOOK_NECK_MAX := 1.92
-# and past that, her shoulder pulled out toward it at most this far
-const HOLD_SHOULDER_M := 0.4
+# and past that, her shoulder blade drawn out toward it at most this far
+const HOLD_SHOULDER_M := 0.08
 # drawn out so the arm is this far out to its length at the ankle (bent a
 # little: never locked straight)
 const HOLD_ARM_OUT := 0.93
@@ -298,6 +305,9 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
+# How far each hold's point was past her arm's reach this frame (hold_reach):
+# the view leans her into it (matron_view.gd _hold_lean).
+var hold_short := {"l": 0.0, "r": 0.0}
 # How far the handle of a prop (the toolbox) lies past her real arm, out to
 # HOLD_ARM_OUT of it (negative: within it; -1 with none): walking to it, from
 # where her shoulder will be at the take; carried, from where it is now. The
@@ -518,22 +528,24 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 # the wrist from where her pose has it toward `at_world` as far as `w`, the
 # arm drawn out (upper arm and forearm both, their "_x" bones slid) as long as
 # that reach needs, never past HOLD_STRETCH_MAX its own length.
-func hold_reach(s: String, at_world: Vector3, w: float) -> void:
+func hold_reach(s: String, at_world: Vector3, w: float, stretch_max := HOLD_STRETCH_MAX,
+		shoulder_m := HOLD_SHOULDER_M) -> void:
 	var target := skel.global_transform.affine_inverse() * at_world
 	var sh := _gpos("sh_" + s)
 	var el := _gpos("el_" + s)
 	var wr := _gpos("wr_" + s)
 	var arm := sh.distance_to(el) + el.distance_to(wr)
 	var base_s := (p["sh_" + s] as Node3D).scale.y if p.has("sh_" + s) else 1.0
-	var k_max := HOLD_STRETCH_MAX / maxf(base_s, 0.01)
+	var k_max := stretch_max / maxf(base_s, 0.01)
 	var want := wr.lerp(target, w)
 	var need := sh.distance_to(want)
 	var k := clampf(need / maxf(HOLD_ARM_OUT * arm, 0.01), 1.0, k_max)
 	var beyond := need - HOLD_ARM_OUT * arm * k_max
+	hold_short[s] = maxf(beyond, 0.0) * w
 	if beyond > 0.0:
 		# the arm out as far as it goes: her shoulder pulled up out of her
 		# toward it
-		_shift_bone_global("sh_" + s, (want - sh).normalized() * minf(beyond, HOLD_SHOULDER_M))
+		_shift_bone_global("sh_" + s, (want - sh).normalized() * minf(beyond, shoulder_m))
 	if k > 1.0001:
 		for bn in ["sh_%s_x" % s, "el_%s_x" % s]:
 			var i: int = bone_idx[bn]
@@ -548,7 +560,8 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 # whole length (the native has it in her hand while she slides the last of
 # the way to it).
 func _prop_hand(s: String, at_world: Vector3, w: float, carried: bool) -> void:
-	hold_reach(s, _in_arm(s, at_world, 1.0 if carried else lerpf(HOLD_ARM_OUT, 1.0, w)), w)
+	hold_reach(s, _in_arm(s, at_world, 1.0 if carried else lerpf(HOLD_ARM_OUT, 1.0, w)), w,
+			PROP_STRETCH_MAX, PROP_SHOULDER_M)
 
 
 # The nearest point to `at_world` her real arm (its bones at rest) has from
@@ -691,6 +704,8 @@ func govern() -> void:
 
 
 func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void:
+	hold_short["l"] = 0.0
+	hold_short["r"] = 0.0
 	stretch["l"] = 1.0
 	stretch["r"] = 1.0
 	prop_short = -1.0

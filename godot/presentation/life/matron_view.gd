@@ -182,6 +182,9 @@ var _w_hold_v := 0.0
 var _w_hold2 := 0.0
 var _w_hold2_v := 0.0
 var _hold_at := Vector3.ZERO
+# Her lean into a hold her drawn arm falls short of (matron_rig.gd hold_short),
+# on top of the native's trunk (hip_up, trunk_pitch), eased.
+var _hold_lean := 0.0
 var _hold_at2 := Vector3.ZERO
 # Her stoop to a prop (the toolbox) her real arm falls short of (0..1):
 # raised while the rig finds the handle past her arm (matron_rig.gd
@@ -869,7 +872,7 @@ func _hold_gate(data: Dictionary, delta: float) -> void:
 	var state := int(data["state"])
 	var holding := state >= STATE_GRAB and state <= STATE_SPARE and _hold.has("hand")
 	var want := 1.0 if holding else 0.0
-	var want2 := 1.0 if holding and state == STATE_ARMPLAY and _hold.has("hand2") \
+	var want2 := 1.0 if holding and (state == STATE_ARMPLAY or bool(_hold.get("hand2_active", false))) and _hold.has("hand2") \
 		and (_hold["hand2"] as Vector3).length_squared() > 1.0e-6 else 0.0
 	# what her hands are on, kept as they come off it; a jump in it eased
 	if holding:
@@ -899,6 +902,15 @@ func _hold_gate(data: Dictionary, delta: float) -> void:
 	_hold_off2_v = o[1]
 	_hold_at = _hold_raw + _hold_off
 	_hold_at2 = _hold_raw2 + _hold_off2
+	# Her lean into a hold her drawn arm fell short of last frame (eased in,
+	# eased out: a joint at a finite rate).
+	var short := 0.0
+	if _rig != null:
+		short = maxf(float(_rig.hold_short["r"]), float(_rig.hold_short["l"]))
+	if holding:
+		_hold_lean = clampf(_hold_lean + (0.8 if short > 0.03 else -1.0) * delta, 0.0, 0.35)
+	else:
+		_hold_lean = maxf(0.0, _hold_lean - delta)
 	if _pose_fresh:
 		_w_hold = want
 		_w_hold_v = 0.0
@@ -1932,6 +1944,18 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		knees = 0.2 + 0.25 * (1.0 - up)
 		legs_fwd = 0.25 * (1.0 - up) + 0.18 * sin(step) * clampf(speed, 0.0, 1.0)
 		legs_back = -0.3 * (1.0 - up) - 0.18 * sin(step) * clampf(speed, 0.0, 1.0)
+		if _hold.has("trunk_pitch"):
+			# Her real arm (the owner, 2026-11-02): the native bends her to
+			# what she holds (matron.hpp Trunk: her hips over her feet, her
+			# trunk's pitch), and her lean makes up what her drawn arm still
+			# falls short of. Her knees bend under hips brought down.
+			var hip_k := clampf(float(_hold["hip_up"]), 0.5, 0.99)
+			hip_y = hip_k
+			var bend := acos(clampf(hip_k / 0.99, 0.5, 1.0))
+			pitch = float(_hold["trunk_pitch"]) + _hold_lean
+			knees = 2.0 * bend + 0.1
+			legs_fwd = bend + 0.15 * sin(step) * clampf(speed, 0.0, 1.0)
+			legs_back = bend - 0.15 * sin(step) * clampf(speed, 0.0, 1.0)
 		# the arms hang till her hands go to him (below: _hold_arm)
 		arms_fwd = 0.55
 		arms_alt = 0.0
