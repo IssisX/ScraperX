@@ -1,9 +1,0 @@
-/build/
-/artifacts/
-/tools/godot/
-/.cache/
-/godot/.godot/
-/godot/addons/scraperx_native/bin/**/*.so
-!/godot/addons/scraperx_native/bin/**/.gitkeep
-
-__pycache__/

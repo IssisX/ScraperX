@@ -1,7 +1,0 @@
-Code/test revision: 65c826bfd5d0ca507957fb5f8dca38b447bacb67
-Release configure: exit 0
-Release build: exit 0
-SCRAPERX_ONLY=matron-routecraft: exit 0 (23 fixture/world runs, 22 groups)
-Pre-scalability baseline d5898b3 full native suite: exit 0, 177 PASS records
-Current targeted regressions and final full native suite: RUNNING
-Not yet a verified full-suite delivery.

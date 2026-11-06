@@ -1,6 +1,0 @@
-she 1 deck under you, same band spot           carried   39.4 m  round by the shaft emitter at (17.0, 155.6, -150.0)  level at ear 0.28 (of a 55 m sound)
-she 1 deck under you, across the shaft         carried   87.7 m  round by the shaft emitter at (17.0, 155.6, -150.0)  level at ear 0.00 (of a 55 m sound)
-she 2 decks under you (stack pitch 11 m)       carried   68.3 m  round by the shaft emitter at (17.0, 155.6, -133.0)  level at ear 0.00 (of a 55 m sound)
-she on 154, you on the 176 ring above          carried   71.1 m  round by the shaft emitter at (17.0, 177.8, -167.0)  level at ear 0.00 (of a 55 m sound)
-she on 154, you on 220 (3 decks up)            carried  151.4 m  round by the shaft emitter at (17.0, 221.8, -150.0)  level at ear 0.00 (of a 55 m sound)
-she at the locker grille, you 2 m off it       carried    2.0 m  straight           emitter at (11.0, 155.6, -126.7)  level at ear 0.96 (of a 55 m sound)
