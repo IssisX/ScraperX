@@ -52,11 +52,10 @@ Keep this file to what changes the next action; move anything done to the log.
 - Subscribed: #256.
 
 ## Helpers
-- J-046 #259 (budget audit) opened 6:45 PM; switchboard merges it; unsubscribed. Helper retired. Codex P0 (children skipped
-  the shape audit) fixed by me at bb1bfa53; `@codex review` posted 7:35 PM. #258 likewise re-review asked (d63e8ab9).
-  Lesson: after any fix push, post `@codex review` the same step, or the switchboard WAITs for a LAND. Follow-up:
-  add matron-ammo to kScenarios after #256 lands (mine). New leaks mailed to Muse for J-044l: crate shove in
-  walk_toward 8 kN (charged nowhere), knee 5 kN, let-go 6.9 kN. Asked whether the Turn lunge (9.8 kN) stays exempt.
+- J-046 #259 merged 7:50 PM (switchboard). Mine next: add matron-ammo to kScenarios after #256 lands. New leaks mailed
+  to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
+- #258: second Codex P0 (instance-pack array cycle leaked MultiMeshes on every restart) fixed at c1f71bdf, 0 leaks at exit;
+  `@codex review` posted 8:25 PM. sweep.py now shows an unanswered Codex P0/P1 as FIX (a5c07404).
 - No helper running. Next: J-045 walk p50/p95/p99 after #258 lands.
 - J-045 #258 (draws) opened 5:40 PM; switchboard merges it (no workflow file); unsubscribed. Red on the floating audit
   (LOAD label vs merged ticks); fixed by me at d63e8ab9 (audit off_board 0; perf_grade worst_draws_low 700 = budget, no
