@@ -63,8 +63,9 @@ do it yourself: if you take a job back, mail that first (11-05: Muse's merge age
 Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can miss a push, #235).
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (a stacked PR merges into its parent's branch,
-not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe only
-to PRs you merge yourself. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
+not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe to PRs you merge yourself
+and to Claude's own PRs (11-06: #277 sat 2 h on a Codex P1 nobody was woken for). Before `@codex review` or
+calling a PR clean, read its open review threads (`get_review_comments`), not only the newest review. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
 from one the switchboard merges (11-05: #250-#253 woke the integrator 14 times in 3 minutes, mostly Codex's
 running/finished edits). A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
 lines or fewer (branch, sha, PASS/FAIL, what is left); put the numbers and details on the job's issue. Run tests in the foreground; never end a turn waiting on a
