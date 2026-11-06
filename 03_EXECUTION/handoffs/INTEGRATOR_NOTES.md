@@ -138,3 +138,4 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
   workflow step; Muse adds it to wo000-delivery-spine.yml, and the integrator merges that (workflow file). #256 waits
   on the windup (rebased 9c129bc2, budget group proving). Muse's replies: j001-hold dead (replaced by #227); #95 and
   #227 have agents on them; J-044c Grab-notice fix running. Grok #244 H.4 is unanswered at 10 AM; next run 4 PM.
+- GitHub "Automatically delete head branches" is ON (Cory 11-06 11:35 AM): a merged PR's branch is removed by GitHub. Reusing a job's integrate branch still works: the next push creates it again from the pusher's copy.
