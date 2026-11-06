@@ -63,7 +63,7 @@ Keep this file to what changes the next action; move anything done to the log.
   green plus Codex or the API LAND. Her pallet take is marginal: asked of Muse on #240 and mailed.
   HELD on Codex P1 (confirmed): the windup lift moves the take_stock constraint anchor and is not budgeted. The fix is
   Muse's (mailed 2:55 PM, ahead of J-044c): pushed to fb-bot/integrate-protected-j042-windup, then I merge it in.
-- #95 J-023 plants: red, plant worst 0.111 m > 0.079. Muse fixes it; no bound raise. Workflow file, I merge after the stills.
+- J-023 plants: #95 closed 12:41 PM, replaced by #286 (protected, from `fb-bot/integrate-protected-95-plant-expected` @ a742a87b; Muse: touch-2 red was a stale EXPECTED entry, not the game). The switchboard merges it on green plus a LAND.
 - #227 J-001 HOLD: Muse's past-rail agent. Rulings: force-based snag break only; both hands' haul comes out of her one
   8 kN/44 kW account.
 - #264-#275 all landed by 8:05 AM 11-06 (#272's mast beam with Codex's LAND).
@@ -145,3 +145,5 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
   Green, waiting on Codex plus a LAND; the first post should list about 8 items (FIX on #256, red #227 and #95, five red branches).
 - J-051 #284 merged 12:17 PM (11-06): the inbox is live. Keep #282 OPEN and subscribed (the old switchboard closed it once, 12:15, on a quoted supersede line; reopened). Each inbox comment = act on its items now.
 - Inbox first post (12:19 PM, 8 items) triaged: #256 waits on the windup; #227, #95, 95-plant-fix, j044c and RungDown have Muse agents; `claude/integrate-j042-ammo` is dead (all of it is inside #256's protected branch); `fb-bot/integrate-s4-jab` is dead (0 commits past trunk). Neither needs action.
+- Auto-PR (J-047) is refused by GitHub: 403 "GitHub Actions is not permitted to create or approve pull requests" (found 12:35 PM in the steer log; the code matched a different string, so it failed silently). Until Cory flips Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull requests", I open Muse's PRs by hand: #285 J-041 sense_near (12:38 PM). Helper J-051b (high) on `claude/integrate-j051b-autopr-errors`: match the real text, and post every auto-open failure to the inbox as AUTO-PR-FAILED.
+- J-038 slice 1 @ 07903f2b red on native-tests (athletic-traversal), run 42261922659: mailed to Muse 12:41 PM.
