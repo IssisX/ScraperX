@@ -56,14 +56,16 @@ Keep this file to what changes the next action; move anything done to the log.
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
 - J-045: #258 (draws) and #260 (perf_walk) merged. perf_grade worst_draws_low is 700, exactly the budget, so no headroom.
   Foot at HIGH shadows ~930 draws: look call put to Cory (LOW / SPLITS / KEEP), waits on him.
-- #261 J-045 part 4 (kit-pose batch getter, idle gore skip; perf_walk p50 6.6 -> 5.7 ms) opened 1:25 AM 11-06; the
-  switchboard merges it. The slingshot pouch's native panels: main.gd hides them but they are drawn today; kept drawn
-  (look unchanged). Hiding them is a look question, not yet put to Cory.
-- No helper running.
-- J-045 next: her state via a native getter (0.11 ms a frame); a gore warm-up on the LOADING card (~95 ms once); Sentry native crash capture (Option A), its own workflow/signing PR with a security review.
+- #261 J-045 part 4 merged 1:42 AM 11-06 (perf_walk p50 6.6 -> 5.7 ms). The slingshot pouch's native panels: main.gd hides
+  them but they are drawn today; kept drawn. Hiding them is a look question, not yet put to Cory.
+- Running: J-045 part 5 helper (her state via one native getter; gore build moved to the LOADING card), branch
+  `claude/integrate-j045-state`, started 3:20 AM 11-06. I open its PR.
+- J-045 after that: Sentry native crash capture (Option A), its own workflow/signing PR with a security review.
 - Retired: the J-042 builder, J-042 fix, J-044m, J-045 draws, J-046, J-045 walk and J-045 part 4 helpers.
 
 ## Muse's queue (mail only)
+Muse pushed `fb-bot/integrate-traversal-rungdown-bottom-gap` @ed8e32a3 2:47 AM 11-06 with no mail yet; red on
+matron-slices-2. Wait for its mail.
 1. J-001 #227
 2. #95 plant fix
 3. sense_near nearest-32
