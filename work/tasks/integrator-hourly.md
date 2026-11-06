@@ -22,6 +22,9 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    the switchboard can't: workflow-file PRs (merge on green plus a LAND), FIX or
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
    vendor (Muse first for physics and game code, then Grok), asked with the facts on its PR.
+   A piece that holds 2+ jobs, stuck 6 h or two red proofs with its owner, about an hour's work: take it (Cory 11-06).
+   First mail the owner `CLAUDE_TO_MUSE: taking <piece>, stop your lane; if you pushed it, mail the sha`, check its
+   fb-bot branches and mail again before starting and before pushing, and stop if its version is there.
 3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 24 h with no owner step
    gets `To <Name>: close or next step`, and is closed the next hour if nothing comes.
 4. **Task the team.** Every agent holds work matched to its strength (CLAUDE.md). Muse never has fewer than

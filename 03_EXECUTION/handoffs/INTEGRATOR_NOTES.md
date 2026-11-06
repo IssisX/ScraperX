@@ -70,6 +70,11 @@ Keep this file to what changes the next action; move anything done to the log.
 - Subscribed: #256.
 
 ## Helpers
+- Effort tally (Cory 11-06 8:50 AM; helpers resume 11-09): one line only, no per-helper logs. A failure = a job
+  redone on helper-max (a red proof it could not fix, or a real review finding), not a flake or a bad brief.
+  Tally: helper jobs 0, redone on helper-max 0. After 10 jobs: 0 redos -> try high on the next 5 non-physics jobs, and
+  any redo there means xhigh for good; 2+ redos in the first 10 -> xhigh stays. Weak evidence (no control, tiny
+  sample); his call to switch.
 - J-046 #259 merged 7:50 PM (switchboard). matron-ammo to kScenarios after #256: Muse's now. New leaks mailed
   to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
 - J-045: #258 (draws) and #260 (perf_walk) merged. perf_grade worst_draws_low is 700, exactly the budget, so no headroom.
@@ -90,7 +95,7 @@ gains. Prompt for Muse given to Cory (no parking jobs on decisions; send mail at
 wait behind windup, J-001, #95, J-044c. Rule: Muse 3 h with no mail while pushing -> tell Cory at once.
 Muse 8:05 AM status: #264-#275 landed; 12 lanes running: windup #256, J-001 #227 hands first, RungDown diagnosis,
 J-044c wreck re-baseline, J-044l, J-044d, J-047, sense_near, J-044h, J-044i, J-043 #241, and J-048 (dropped 8:20 AM,
-Claude's). Mailed 9:00 AM: J-038 slice 1 takes J-048's lane; queued J-045, J-022 #129, J-049 #278 (new: her mind runs on
+Claude's). Mailed 8:52 AM: J-038 slice 1 takes J-048's lane; queued J-045, J-022 #129, J-049 #278 (new: her mind runs on
 evidence, leak list first). Also mailed 8:55 AM: ChatGPT's two J-001 failure leads (#108) and spec H and I.
 Waiting on dependencies: S5 and J-040 #228 after J-044d; matron-ammo after #256; f guard-steps.
 J-038 rulings: settle exclusion replaces the vertical gate; support is a gravity-opposing normal held 2+ ticks; 1 mm
@@ -104,7 +109,13 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
 
 ## Asks in flight
 - To Grok on #244: the capacity test (spec H.4), at his 10 AM run. If he stays silent, route it to ChatGPT.
-- To Claude: none. ChatGPT's #244 (torque and power) and #243 (daze) accepted 8:55 AM as spec H and I of
+- Cory, 8:55 AM: says at this pace the weekly limit runs out tomorrow (Sat). Asked him for the meter % and LEAN or KEEP.
+  LEAN (my pick): compact at about 250k, not about 400k (autoCompactWindow); check-ins 4 a day (9:17, 1:17, 5:17, 9:17);
+  no Claude coding until Monday except what needs the game on screen. His alone: my effort (max), the biggest lever.
+  One helper changes nothing this week (zero until Monday already).
+- Blocked chains are mine to take (Cory 11-06, rule in the hourly file): mail Muse first. Qualifies now: the windup
+  (#256, matron-ammo, guard branches). Muse has it in lane 1; not pushed by the 11:17 run -> I take it.
+- To Claude: none. ChatGPT's #244 (torque and power) and #243 (daze) accepted 8:50 AM as spec H and I of
   `03_EXECUTION/FIGHT/J044A_SPEC.md`. My pick (11-06): a checkpoint keeps the exact daze; J-044g versions the save.
 - Sweep noise: `claude/integrate-j042-ammo` (red scope) is inside #256; `fb-bot/integrate-s4-jab` is merged.
 

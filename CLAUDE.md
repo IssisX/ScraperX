@@ -25,7 +25,8 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 - **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; never
   bring him a plan or a step to approve (11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
-  look or story, how the game plays). No answer in 10 minutes: the pick stands.
+  look or story, how the game plays). No answer in 10 minutes: the pick stands. Push back: say no or stop
+  him when his idea is wrong or wastes quota, with the reason (11-06: "I don't like when you just listen").
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
 - Say unasked, the moment you see it: a better way (11-04: he found /compact himself), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
