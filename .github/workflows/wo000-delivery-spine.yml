@@ -911,7 +911,7 @@ jobs:
           # and a takeoff releases over the blend (no snap to the pose).
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/matron_foot_plant_test.gd 2>&1 | tee artifacts/matron-foot-plant.log
-          ! grep -q '^MATRON_FOOT_PLANT FAIL' artifacts/matron-foot-plant.log
+          if grep -q '^MATRON_FOOT_PLANT FAIL' artifacts/matron-foot-plant.log; then exit 1; fi
           test "$(grep -c '^MATRON_FOOT_PLANT PASS' artifacts/matron-foot-plant.log)" -eq 11
 
       - name: Check Matron perception and physical contact presentation
