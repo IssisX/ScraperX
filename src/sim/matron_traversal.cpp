@@ -3026,14 +3026,19 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     d.spec.goal = stand_foot;
                     d.spec.goal_top = fp.top;
                     const float hang_feet = l.bottom - limits.hang_below_hold - limits.center_above_feet();
-                    const bool foot_reached = hang_feet - fp.top <= 0.4F;
-                    const bool drop_ok = (l.bottom - fp.top) <= limits.drop_max_m;
+                    // Her feet at full hang are bottom - 2.35; the executor
+                    // finishes a descent only when the floor is within its
+                    // support probe (kSoleSupportProbeM) under her feet, and
+                    // it has no drop off the bottom rung — so the scan must
+                    // not offer a descent her feet cannot reach the floor
+                    // from, whatever the drop allowance.
+                    const bool foot_reached = hang_feet - fp.top <= kSoleSupportProbeM;
                     const Vec3 hang_c = line + out * 0.42F + Vec3(0, l.top - limits.hang_below_hold + 0.4F, 0);
                     const bool hang_ok = capsule_free(physics, ignore, limits, hang_c - Vec3(0, limits.center_above_feet() + 0.04F, 0));
-                    d.usable = over_ok && hang_ok && foot_ok && corridor_ok && (foot_reached || drop_ok);
+                    d.usable = over_ok && hang_ok && foot_ok && corridor_ok && foot_reached;
                     d.cost = (l.top - l.bottom) / limits.climb_mps + 2.0F + align_pen;
                     d.reason = facts;
-                    if (!foot_reached) d.reason += drop_ok ? "; ends in a drop off the bottom rung" : "; blocked: drop off the bottom rung too far";
+                    if (!foot_reached) d.reason += "; blocked: her feet do not reach the floor from a hang off the bottom rung";
                     if (!hang_ok) d.reason += "; blocked: capsule does not fit going over the head";
                     if (!over_ok) d.reason += "; blocked: capsule does not fit at the lip";
                     if (!foot_ok) d.reason += "; blocked: no room to stand at the foot";

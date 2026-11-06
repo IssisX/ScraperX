@@ -1410,6 +1410,58 @@ void test_pole_head_clearance() {
     std::cout << "PASS scraperx_sim matron pole head clearance\n";
 }
 
+// A ladder down whose bottom rung hangs over the floor: the scan offers the
+// descent when her feet reach the floor from a full hang off the bottom
+// rung, or when the rung is within a drop of it — but the executor has no
+// drop off the bottom rung (it stalls and fails MissingRung with her feet
+// in the air). The scan must only offer a descent the executor can finish.
+// Her feet at full hang are bottom - hang_below_hold (1.30) - centre above
+// feet (1.05) = bottom - 2.35; the executor finishes only when the floor is
+// within the support probe (0.10 m) under her feet, so the descent is real
+// for a bottom rung up to 2.45 m over the floor.
+void test_rung_down_bottom_gap() {
+    for (const float bottom : {2.30F, 2.95F}) {
+        ClimbWorld w;
+        w.deck(6.0F);
+        w.rungs(bottom, 5.9F);
+        w.spawn(RVec3(0, 6.0F, -2.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-5, -1, -5), Vec3(5, 7, 5)), ignore);
+        const traversal::Edge *up = nullptr;
+        const traversal::Edge *down = nullptr;
+        for (const auto &e : map.edges()) {
+            if (std::abs(e.spec.line.GetZ() - (-0.95F)) > 0.05F) continue;
+            if (e.kind == MoveKind::RungDown) down = &e;
+            if (e.kind == MoveKind::RungUp || e.kind == MoveKind::JumpCatch) up = &e;
+        }
+        require(up != nullptr && down != nullptr, "matron rung down bottom gap: the ladder is found, up and down");
+        std::cout << "  matron rung down bottom gap, bottom rung " << bottom << " m over the floor: down usable " << down->usable
+                  << " (" << down->reason << ")\n";
+        if (bottom > 2.45F) {
+            require(!down->usable,
+                    "matron rung down bottom gap: no descent off a bottom rung her feet cannot reach the floor from");
+            continue;
+        }
+        require(down->usable, "matron rung down bottom gap: a bottom rung within her feet's reach is a real descent");
+        Climber climber(w.physics, w.her, ignore);
+        MoveSpec spec = ladder_up(6.0F, bottom, 5.9F);
+        spec.kind = MoveKind::RungDown;
+        spec.start = Vec3(0, 6.0F, -1.35F);
+        spec.goal = Vec3(0, 0, -0.5F);
+        spec.goal_top = 0.0F;
+        climber.begin(spec);
+        const auto st = w.run(climber, 60.0F);
+        const float below = w.settle(1.0F);
+        std::cout << "  matron rung down bottom gap, control: down " << int(st) << " (" << traversal::failure_name(climber.failure())
+                  << ") feet " << below << "\n";
+        require(st == Climber::Status::Done && std::abs(below) < 0.05F,
+                "matron rung down bottom gap: the reachable descent completes to the floor");
+    }
+    std::cout << "PASS scraperx_sim matron rung down bottom gap\n";
+}
+
 // Narrow ledges she has never seen (seeded): a board 0.20 to 0.40 m wide
 // over a 6 m drop, from one deck to another a step higher or lower, open
 // both sides or along a wall. Her scan joins the decks across it; her walk
@@ -1904,6 +1956,7 @@ void run_matron_climb() {
     test_wall_across_step();
     test_rung_gaps();
     test_pole_head_clearance();
+    test_rung_down_bottom_gap();
     run_matron_narrow();
 }
 
