@@ -187,3 +187,4 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
   no secret = MERGE-BY-HAND as now. Its own PR is the last tap.
 - 3:38 PM: J-001 facts posted `To Grok:` on #227 (6696336344) for the 4 PM run. Muse's J-001 agent: 8 h, no commit since 11:24 AM = stuck; told Muse to stop it and restart from Grok's answer.
 - 4:17 PM light run: the trunk proofs after #286 and #295 are green. #296 (Muse's expand-tests pin of the inverted-command check) opened by hand: no Job line. ChatGPT's #227 answer matches Grok's; the 4:15 PM rulings hold. ChatGPT's #244 capacity test accepted as spec H.4 and mailed to Muse, queued behind #291 and J-056. Muse restarts J-001 from the three values about 4:30 PM.
+- 4:31 PM: Cory asked why J-056 went to Muse (it is small). Ruling with his OK: Muse keeps it. If there is no J-056 branch or PR by 5:30 PM, I take it and stop Muse's agent (reminder set for 5:31 PM).
