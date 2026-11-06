@@ -44,6 +44,8 @@ RED_JOBS = [{"name": "native-tests", "status": "completed", "conclusion": "failu
             {"name": "publish-checkpoint", "status": "completed", "conclusion": "failure"}]
 GREEN_OFF_TRUNK = [{"name": "native-tests", "status": "completed", "conclusion": "success"},
                    {"name": "publish-checkpoint", "status": "completed", "conclusion": "failure"}]
+# GitHub's words in steer job 128075717626 (run 42271059947), as gh prints them.
+REFUSED = "gh: GitHub Actions is not permitted to create or approve pull requests. (HTTP 403)"
 
 
 def ago(hours: float) -> str:
@@ -379,12 +381,120 @@ class Kinds(unittest.TestCase):
                  steered(number=4, ref=ref, proof="red: native-tests", run_id=7),
                  steered(number=5, ref="fb-bot/integrate-j042", verdicts=[fix()], updated_at=ago(4)),
                  steered(number=6, draft=True, proof="red: native-tests", updated_at=ago(5))]
-        self.assertEqual(make(gh).inbox(every), 8)
+        sw = make(gh)
+        sw.auto_pr_failure("fb-bot/integrate-sense-near-followup", HEAD, "J-047", REFUSED, refused=True)
+        self.assertEqual(sw.inbox(every), 9)
         body = gh.posts[0][1]
         for kind in switch.INBOX_ORDER:
             self.assertIn(f"- {kind} ", body)
         for word in ("LAND", "FIX", "NOTE", "BLOCK"):
             self.assertNotIn(f": {word}", body)
+
+
+class AutoPrFailed(unittest.TestCase):
+    """An auto-open failure reaches the inbox (J-051, issue #283), not only the steer log."""
+    NAME, LATER = "fb-bot/integrate-sense-near-followup", "fb-bot/integrate-windup-j042"
+
+    def finished(self, fail_write=""):
+        """Two finished branches (green, a Job line, no PR); the auto-open reaches NAME first."""
+        gh, head = test_auto_pr.green_setup(name=self.NAME, job="J-047")
+        later = test_auto_pr.sha(2)
+        gh.branches.append(test_auto_pr.branch(self.LATER, 2))
+        gh.commits[later] = "Budget the windup lift\n\nJob: J-042"
+        gh.runs[later] = [test_auto_pr.green_run(later)]
+        gh.fail_write = fail_write
+        return gh, head, later
+
+    def sweep(self, auto, box) -> switch.Switch:
+        """A steer sweep's tail: the auto-open, then the inbox. Each fake answers its own part's calls."""
+        sw = test_auto_pr.make(auto)
+        sw.auto_open_prs()
+        sw.gh = box
+        sw.inbox([])
+        return sw
+
+    def test_githubs_real_refusal_is_one_item_and_stops_the_auto_open(self):
+        auto, head, _ = self.finished(REFUSED)
+        box = FakeGH()
+        sw = self.sweep(auto, box)
+        self.assertEqual(len(auto.writes), 1)   # the later branch was never tried
+        self.assertTrue(any("NOTE  GitHub refused" in l and "not permitted to create or approve pull requests" in l
+                            and "repo setting" in l for l in sw.lines))
+        self.assertFalse(any(l.startswith("ERROR") for l in sw.lines))
+        (number, body), = box.posts
+        self.assertEqual(number, switch.INBOX_PR)
+        self.assertIn(f"- AUTO-PR-FAILED `{self.NAME}` head {head[:8]}, J-047: GitHub refused to open the PR "
+                      f"(`{REFUSED}`). Cory turns on Settings → Actions → General → \"Allow GitHub Actions to create "
+                      f"and approve pull requests\"; until then the integrator opens the PR by hand. "
+                      f"This sweep's auto-open stopped here.", body)
+        self.assertEqual(body.count("- AUTO-PR-FAILED "), 1)
+        self.assertEqual(marker_keys(body), [switch.inbox_key("AUTO-PR-FAILED", self.NAME, head)])
+
+    def test_the_same_head_is_not_listed_again_and_a_new_head_is(self):
+        auto, head, _ = self.finished(REFUSED)
+        box = FakeGH()
+        self.sweep(auto, box)
+        again = self.sweep(auto, box)   # the next sweep is refused on the same head
+        self.assertEqual(len(auto.writes), 2)
+        self.assertEqual(len(box.posts), 1)
+        self.assertIn("INBOX       nothing new", again.lines)
+        new = test_auto_pr.sha(3)
+        auto.branches[0] = test_auto_pr.branch(self.NAME, 3)
+        auto.commits[new], auto.runs[new] = auto.commits[head], [test_auto_pr.green_run(new)]
+        self.sweep(auto, box)
+        self.assertEqual(len(box.posts), 2)
+        self.assertIn(f"`{self.NAME}` head {new[:8]}, J-047: GitHub refused", box.posts[1][1])
+        self.assertEqual(marker_keys(box.posts[1][1]), [switch.inbox_key("AUTO-PR-FAILED", self.NAME, head),
+                                                        switch.inbox_key("AUTO-PR-FAILED", self.NAME, new)])
+
+    def test_the_old_refusal_wording_still_stops_the_auto_open(self):
+        auto, head, _ = self.finished("gh: Resource not accessible by integration (HTTP 403): "
+                                      "not permitted to create pull requests")
+        sw = test_auto_pr.make(auto)
+        self.assertEqual(sw.auto_open_prs(), 0)
+        self.assertEqual(len(auto.writes), 1)
+        (it,) = sw.auto_pr_failed
+        self.assertEqual((it.kind, it.target, it.head), ("AUTO-PR-FAILED", self.NAME, head))
+        self.assertIn("Allow GitHub Actions to create and approve pull requests", it.line)
+
+    def test_any_other_error_is_an_item_and_the_sweep_goes_on(self):
+        auto, head, later = self.finished("gh: Validation Failed (HTTP 422)")
+        sw = test_auto_pr.make(auto)
+        self.assertEqual(sw.auto_open_prs(), 0)
+        self.assertEqual(len(auto.writes), 2)   # not a refusal: the later branch is still tried
+        self.assertEqual([(it.target, it.head) for it in sw.auto_pr_failed], [(self.NAME, head), (self.LATER, later)])
+        self.assertEqual(sw.auto_pr_failed[0].line,
+                         f"AUTO-PR-FAILED `{self.NAME}` head {head[:8]}, J-047: the auto-open failed "
+                         f"(`gh: Validation Failed (HTTP 422)`); the next sweep tries again.")
+        auto, head, _ = self.finished()
+        del auto.commits[head]   # the commit read fails: a KeyError, before the Job line is known
+        sw = test_auto_pr.make(auto)
+        self.assertEqual(sw.auto_open_prs(), 1)
+        sw.gh = FakeGH()
+        (it,) = sw.inbox_items([], frozenset())
+        self.assertEqual((it.kind, it.target), ("AUTO-PR-FAILED", self.NAME))
+        self.assertTrue(it.line.startswith(f"AUTO-PR-FAILED `{self.NAME}` head {head[:8]}: the auto-open failed "
+                                           f"(`KeyError: "))
+
+    def test_a_reply_with_no_pr_number_is_an_item_and_not_counted(self):
+        auto, head, _ = self.finished()
+        auto.write = lambda method, path, body=None, what="": {"message": "Something odd"}
+        sw = test_auto_pr.make(auto)
+        self.assertEqual(sw.auto_open_prs(), 0)
+        self.assertEqual(len(sw.auto_pr_failed), 2)
+        self.assertIn("the auto-open failed (`PR not opened: Something odd`)", sw.auto_pr_failed[0].line)
+
+    def test_outside_text_cannot_mention_anyone_or_read_as_a_verdict(self):
+        auto, head, _ = self.finished("gh: @IssisX said: LAND it; note: Fix `x` <b>: block (HTTP 500)")
+        auto.branches[0] = test_auto_pr.branch("fb-bot/integrate-@cory`x", 1)
+        box = FakeGH()
+        self.sweep(auto, box)
+        body = box.posts[0][1]
+        self.assertNotIn("@", body)
+        self.assertIn("`fb-bot/integrate-cory'x`", body)
+        for word in ("land", "fix", "note", "block"):
+            self.assertNotIn(f": {word}", body.lower())
+        self.assertIn("`gh: IssisX said - LAND it; note - Fix 'x' b - block (HTTP 500)`", body)
 
 
 class InboxPrExcluded(unittest.TestCase):

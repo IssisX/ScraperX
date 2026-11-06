@@ -69,6 +69,8 @@ MAX_IMAGE_BYTES = 3_750_000            # base64 of this stays under 5 MB
 MAX_PRS = 60
 MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047)
 AUTO_PR_PREFIX = "fb-bot/integrate-"   # fb-bot/integrate-protected-* matches too; claude/* never does
+# GitHub's refusal reads "not permitted to create or approve pull requests" (it was "create pull requests").
+AUTO_PR_REFUSED = "not permitted to create"
 # The integrator's inbox (J-051): the integrator is subscribed to this draft PR, and each comment on it wakes it.
 INBOX_PR = 282
 INBOX_BRANCH = "claude/integrator-inbox"
@@ -84,7 +86,9 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "NOT-MERGED", "FIX", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+INBOX_ORDER = ("MERGE-BY-HAND", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+# The switchboard workflow wakes on `: LAND`, `: FIX`, `: NOTE` or `: BLOCK` anywhere in a comment, in any case.
+VERDICT_TRIGGER = re.compile(r":(?= ?(?:land|fix|note|block))", re.IGNORECASE)
 MAX_FACT_LINES = 25                   # rule_check lines quoted in a review ask
 ACT_WITHIN_DAYS = 3                   # older heads get no new review or ask: J-030 claims or closes them
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"
@@ -128,6 +132,11 @@ def untrusted(text: str, limit: int = 80) -> str:
 def plain(text: str) -> str:
     """The switch's own words in an inbox line: no @, and <...> shown rather than read as HTML."""
     return text.replace("@", "").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def no_verdict(text: str) -> str:
+    """Outside text in an inbox line that cannot wake the switchboard: a colon before a verdict word becomes ' -'."""
+    return VERDICT_TRIGGER.sub(" -", text)
 
 
 def hours(span: dt.timedelta) -> str:
@@ -176,6 +185,8 @@ def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) ->
 
 
 class Switch:
+    auto_pr_failed: tuple[InboxItem, ...] = ()   # this sweep's AUTO-PR-FAILED items, for the inbox (J-051)
+
     def __init__(self, gh: GitHub, root: pathlib.Path, now: dt.datetime, out=print):
         self.gh, self.root, self.now, self.out = gh, root, now, out
         self.team = rules.team_from_config(load_yaml(root / "work/agents.yml"))
@@ -609,8 +620,9 @@ class Switch:
         owner = self.gh.repo.split("/")[0]
         return bool(self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}"))
 
-    def open_pr(self, branch: str, sha: str, job: str, message: str) -> None:
-        """Open the PR for a finished branch: title is the commit subject, body starts with the Job line."""
+    def open_pr(self, branch: str, sha: str, job: str, message: str) -> str:
+        """Open the PR for a finished branch: title is the commit subject, body starts with the Job line.
+        Returns "" when opened (or in a dry run), else why not."""
         subject, _, rest = message.partition("\n")
         body = f"Job: {job}\n\nOpened by the switchboard from {branch} @ {sha}"
         if rest.strip():
@@ -620,18 +632,36 @@ class Switch:
                             f"open PR for {branch} @{sha[:8]} (job {job})")
         if self.gh.dry_run:
             self.out(f"DRY  open PR for {branch} @{sha[:8]} (job {job})")
-        elif got and got.get("number"):
+            return ""
+        if got and got.get("number"):
             self.out(f"OPENED  #{got['number']} {branch} @{sha[:8]} (job {job})")
+            return ""
+        why = f"PR not opened: {(got or {}).get('message', '')[:200]}"
+        self.out(f"NOTE  {why} ({branch} @{sha[:8]})")
+        return why
+
+    def auto_pr_failure(self, branch: str, sha: str, job: str, reason: str, refused: bool = False) -> None:
+        """One AUTO-PR-FAILED inbox item (J-051), keyed by branch and head: a head is listed once, however many
+        sweeps fail on it. The branch and GitHub's words are outside text: in code spans, no verdict string."""
+        where = f"{untrusted(branch)} head {sha[:8]}" + (f", {job}" if job else "")
+        why = no_verdict(untrusted(" ".join(reason.split()), 160))
+        if refused:
+            text = (f"GitHub refused to open the PR ({why}). Cory turns on Settings → Actions → General → "
+                    f"\"Allow GitHub Actions to create and approve pull requests\"; until then the integrator opens "
+                    f"the PR by hand. This sweep's auto-open stopped here.")
         else:
-            self.out(f"NOTE  PR for {branch} @{sha[:8]} not opened: {(got or {}).get('message', '')[:200]}")
+            text = f"the auto-open failed ({why}); the next sweep tries again."
+        self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
     def auto_open_prs(self) -> int:
         """Open PRs for finished fb-bot/integrate-* branches with no PR yet (J-047).
 
         A branch qualifies when its head commit message carries a `Job: J-NNN` line and the proof on
         that exact head is green. At most MAX_AUTO_PRS per sweep, in branch-name order. A branch
-        whose head already had a PR (open, closed or merged) is never opened again. Returns how many
-        PRs were opened (or would be, in a dry run)."""
+        whose head already had a PR (open, closed or merged) is never opened again. Every failure on a
+        branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops this
+        sweep's auto-open. Returns how many PRs were opened (or would be, in a dry run)."""
+        self.auto_pr_failed = ()
         branches = [b for b in self.gh.paged(f"repos/{self.gh.repo}/branches")
                     if b["name"].startswith(AUTO_PR_PREFIX)]
         if not branches:
@@ -641,7 +671,7 @@ class Switch:
         for b in sorted(branches, key=lambda x: x["name"]):
             if opened >= MAX_AUTO_PRS:
                 break
-            branch, sha = b["name"], b["commit"]["sha"]
+            branch, sha, job = b["name"], b["commit"]["sha"], ""
             if branch in open_refs:
                 continue
             try:
@@ -656,16 +686,22 @@ class Switch:
                 if proof != "green":
                     self.out(f"SKIP       {branch} @{sha[:8]} ({job}): proof is {proof}")
                     continue
-                self.open_pr(branch, sha, job, message)
+                why = self.open_pr(branch, sha, job, message)
+                if why:
+                    self.auto_pr_failure(branch, sha, job, why)
+                    continue
                 opened += 1
             except GitHubError as err:
-                if "not permitted to create pull requests" in err.detail:
-                    self.out("NOTE  GitHub refused: 'not permitted to create pull requests' — a repo setting "
+                if AUTO_PR_REFUSED in err.detail:
+                    self.out(f"NOTE  GitHub refused to open {branch} @{sha[:8]}: {err.detail[:200]} — a repo setting "
                              "Cory flips; stopping this sweep's auto-open, nothing worked around")
+                    self.auto_pr_failure(branch, sha, job, err.detail, refused=True)
                     return opened
                 self.out(f"ERROR       auto-open {branch}: {type(err).__name__}: {err}")
+                self.auto_pr_failure(branch, sha, job, err.detail)
             except (RuntimeError, KeyError, ValueError) as err:
                 self.out(f"ERROR       auto-open {branch}: {type(err).__name__}: {err}")
+                self.auto_pr_failure(branch, sha, job, f"{type(err).__name__}: {err}")
         return opened
 
     # ---------- the integrator inbox (J-051) ----------
@@ -713,6 +749,7 @@ class Switch:
         for s in steered:
             items += self.pr_inbox_items(s, runs, reported)
         items += self.branch_inbox_items(runs, reported)
+        items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
         return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
 
     def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str]) -> list[InboxItem]:
