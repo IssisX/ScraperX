@@ -131,3 +131,5 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
 - `.claude/worktrees/` is in `.git/info/exclude`.
 - Stale temp worktrees in the scratchpad (`tmp.C1BZusDQkr/*`) are from guard PRs that have merged.
 - The godot MCP connects since the 6 PM container restart (MCP_TIMEOUT=120000 on the environment took). Use it for eye checks.
+
+- Branch cleanup (11-06 11:15 AM): 367 branches older than 3 days (no open PR; trunk, main, ScraperX-Grok, ChatGPT, switchboard/* kept) archived in `archive/branches-20261106` @ 8f2c6a82 (one commit, their tips as parents; BRANCHES.txt lists name and sha; restore: `git push origin <sha>:refs/heads/<name>`). Deleting them was refused by the safety check (Git Destructive): waits on Cory allowing it. The list: BRANCHES.txt in that commit.
