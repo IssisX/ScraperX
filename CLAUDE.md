@@ -81,7 +81,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   ask answered.
 - **Claude sessions:** one Opus session (the integrator), at most two active helpers (three if acute), each
   code-editing helper in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  ultracode, never workflows; helpers are Opus, high or xhigh, never Sonnet (it spends more tokens; 11-05). A worker whose job landed is retired.
+  high (`CLAUDE_CODE_EFFORT_LEVEL` in `.claude/settings.json`); ultracode is now a separate switch meaning workflows, so it stays off; helpers are Opus, high or xhigh, never Sonnet (it spends more tokens; 11-05). A worker whose job landed is retired.
 - **Context:** sessions compact themselves at about 400k (`autoCompactWindow` in `.claude/settings.json`);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (asks in flight, merge queue, live
   rulings) current; re-read it, this file and the hourly file after a compact. A new session only when one
