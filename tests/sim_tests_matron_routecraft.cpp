@@ -63,7 +63,7 @@ struct Fixture {
     Fixture(RVec3 start) {
         physics.Init(8192, 0, 16384, 8192, broad, vs, pair);
         physics.SetGravity(Vec3(0,-9.81F,0));
-        matron=std::make_unique<Matron>(physics,object_layers::kStatic,object_layers::kMoving,object_layers::kOnSteel,BodyID());
+        matron=std::make_unique<Matron>(physics,object_layers::kStatic,object_layers::kMoving,object_layers::kOnSteel,object_layers::kHand,BodyID());
         Matron::Saved saved; saved.state=Matron::State::Hunting;
         matron->restore(saved);
         physics.GetBodyInterface().SetPosition(matron->body(),start,EActivation::Activate); // fixture initial condition only

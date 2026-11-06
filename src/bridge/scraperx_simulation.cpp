@@ -331,6 +331,8 @@ void ScraperXSimulation::_bind_methods() {
     // TEST-ONLY: the look suite's setup (see the header); nothing in play calls these.
     godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_hold_matron_hands", "seconds"), &ScraperXSimulation::debug_hold_matron_hands);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_upper_impulse", "segment", "impulse_ns", "at"),
+                                &ScraperXSimulation::debug_upper_impulse);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_set_matron_stage", "stage"),
                                 &ScraperXSimulation::debug_set_matron_stage);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_climb_way", "pipe", "down"),
@@ -1824,6 +1826,22 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     out["knockdowns"] = static_cast<std::int64_t>(state.knockdowns);
     out["blow_mps"] = state.blow_mps;
     out["blow_low"] = state.blow_low;
+    // J-044c: the jointed upper body (head, neck, chest, arm L, arm R).
+    {
+        godot::Array angles;
+        godot::Array masses;
+        godot::Array quats;
+        for (int i = 0; i < 5; ++i) {
+            angles.push_back(state.upper_angle_deg[i]);
+            masses.push_back(state.upper_mass_kg[i]);
+            quats.push_back(to_godot(state.upper_q[i]));
+        }
+        out["upper_angle_deg"] = angles;
+        out["upper_mass_kg"] = masses;
+        out["upper_q"] = quats;
+    }
+    out["upper_root_mass_kg"] = state.upper_root_mass_kg;
+    out["upper_motor_power_w"] = state.upper_motor_power_w;
     out["riding"] = state.riding;
     out["damage_ns"] = state.damage_ns;
     out["fall"] =godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
@@ -2040,6 +2058,11 @@ namespace {
 void ScraperXSimulation::debug_place_matron(const godot::Vector3 feet) { simulation_->debug_place_matron(to_sim(feet)); }
 
 void ScraperXSimulation::debug_hold_matron_hands(const double seconds) { simulation_->debug_hold_matron_hands(seconds); }
+
+void ScraperXSimulation::debug_upper_impulse(const std::int64_t segment, const godot::Vector3 impulse_ns,
+                                            const godot::Vector3 at) {
+    simulation_->debug_upper_impulse(static_cast<int>(segment), to_sim(impulse_ns), to_sim(at));
+}
 
 void ScraperXSimulation::debug_set_matron_stage(const std::int64_t stage) {
     simulation_->debug_set_matron_stage(static_cast<std::uint8_t>(std::clamp<std::int64_t>(stage, 0, 2)));

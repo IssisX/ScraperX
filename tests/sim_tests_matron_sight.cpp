@@ -68,7 +68,7 @@ struct Probe {
 Probe probe(const float yaw, const float bearing, const float distance, const float loudness, const bool wall) {
     SightWorld world;
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     matron.place_for_test(RVec3(0, SightWorld::kFloor, -150));
     for (int i = 0; i < 45; ++i) {
         matron.face_for_test(yaw);
@@ -137,7 +137,7 @@ void test_matron_sight() {
     {
         SightWorld world;
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         matron.place_for_test(RVec3(0, SightWorld::kFloor, -150));
         for (int i = 0; i < 45; ++i) {
             matron.face_for_test(0.0F);
@@ -172,7 +172,7 @@ void test_matron_sight() {
     {
         SightWorld world;
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         matron.place_for_test(RVec3(0, SightWorld::kFloor, -150));
         for (int i = 0; i < 45; ++i) {
             matron.face_for_test(0.0F);
@@ -250,7 +250,7 @@ void test_matron_stalk() {
     {
         SightWorld world;
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         matron.place_for_test(RVec3(0, g, -150));
         for (int i = 0; i < 45; ++i) {
             matron.face_for_test(0.0F);
@@ -341,7 +341,7 @@ void test_matron_stalk() {
     {
         SightWorld world;
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         matron.place_for_test(RVec3(0, g, -150));
         for (int i = 0; i < 45; ++i) {
             matron.face_for_test(0.0F);
@@ -370,7 +370,7 @@ void test_matron_stalk() {
     {
         SightWorld world;
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         matron.place_for_test(RVec3(0, g, -150));
         for (int i = 0; i < 45; ++i) {
             matron.face_for_test(0.0F);
@@ -403,7 +403,7 @@ void test_matron_ladder_head() {
         world.box(Vec3(0.28F, 0.02F, 0.02F), RVec3(8, g + 0.3F * float(k), -137.65));
     }
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     matron.place_for_test(RVec3(8, g, -150));
     for (int i = 0; i < 90 && matron.scanned_routes() == nullptr; ++i) {
         matron.face_for_test(0.0F);

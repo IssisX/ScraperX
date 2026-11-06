@@ -317,7 +317,7 @@ void matron_transition() {
     w.box({4,0.2F,4},{x,Matron::kDeckTop-0.2F,z},0);
     auto player=w.box({0.1F,0.1F,0.1F},{x+3,Matron::kDeckTop+1,z},80);
     Matron matron(w.physics,detail::object_layers::kStatic,detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel,player);
+                  detail::object_layers::kOnSteel,detail::object_layers::kHand,player);
     Matron::Saved saved; saved.state=Matron::State::Hunting;
     matron.restore(saved);
     for(int i=0;i<300;++i) {

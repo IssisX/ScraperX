@@ -24,6 +24,7 @@
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
 
 #include <algorithm>
 #include <array>
@@ -71,9 +72,9 @@ void project(const float ax, const float az, const float bx, const float bz, con
 } // namespace
 
 Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const std::uint32_t moving_layer,
-               const std::uint32_t steel_layer, const BodyID player)
+               const std::uint32_t steel_layer, const std::uint32_t hand_layer, const BodyID player)
     : physics_(physics), static_layer_(static_layer), moving_layer_(moving_layer), steel_layer_(steel_layer),
-      player_(player) {
+      hand_layer_(hand_layer), player_(player) {
     shape_ = new CapsuleShape(kHalfHeight, kRadius);
     hips_ = new SphereShape(kRadius - kWaySkinM);
     build_stance_shapes();
@@ -203,7 +204,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
     settings.mLinearDamping = 0.0F;
     settings.mUserData = kEntity;
     settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
-    settings.mMassPropertiesOverride.mMass = kMassKg;
+    settings.mMassPropertiesOverride.mMass = kRootMassKg;  // J-044c: the upper 72.116 kg are their own bodies now
     Body *body = bodies.CreateBody(settings);
     body_ = body->GetID();
 
@@ -239,6 +240,7 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
 }
 
 Matron::~Matron() {
+    destroy_upper_body();
     if (hold_ != nullptr) {
         physics_.RemoveConstraint(hold_);
         hold_ = nullptr;
@@ -271,6 +273,7 @@ void Matron::spawn_body() {
     bodies.SetLinearAndAngularVelocity(body_, Vec3::sZero(), Vec3::sZero());
     bodies.AddBody(body_, EActivation::Activate);
     body_in_world_ = true;
+    create_upper_body();
     fall_vy_ = 0.0F;
     foot_driving_ = false;
     foot_prep_ = false;
@@ -334,6 +337,311 @@ void Matron::place_for_test(const RVec3 feet) {
             level_ = static_cast<int>(i);
         }
     }
+    seat_upper_body();
+}
+
+// J-044c: the jointed upper body. The rest pose comes from the rig joints
+// (matron_rig.json, feet-relative): head sphere, neck capsule, chest
+// capsule, arm capsules shoulder->wrist. The bodies live on the hand layer
+// (meet nothing): only the joints and applied impulses move them, and the
+// root stays the only body that collides, so the walk/climb/hold paths
+// that reason about her body are unchanged.
+void Matron::upper_rest_transform(const int i, RVec3 &pos, Quat &rot) const {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 feet = bodies.GetPosition(body_) - Vec3(0.0F, kStandCentre, 0.0F);
+    const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), yaw_);
+    const auto at = [&](const Vec3 local) { return feet + yaw_q * local; };
+    switch (i) {
+    case 0:  // head: sphere, centre just above the head joint
+        pos = at(Vec3(0.0F, 1.66F, 0.075F));
+        rot = Quat::sIdentity();
+        break;
+    case 1:  // neck: short capsule, centre between the two neck joints
+        pos = at(Vec3(0.0F, 1.565F, 0.05F));
+        rot = Quat::sIdentity();
+        break;
+    case 2:  // chest: capsule, centre at the chest joint
+        pos = at(Vec3(0.0F, 1.38F, 0.02F));
+        rot = Quat::sIdentity();
+        break;
+    case 3:  // arm L: capsule shoulder->wrist, hanging
+    case 4:  // arm R
+    {
+        const float side = i == 3 ? -1.0F : 1.0F;
+        const Vec3 shoulder(side * 0.157F, 1.446F, 0.058F);
+        const Vec3 wrist(side * 0.47F, 1.132F, 0.245F);
+        const Vec3 along = (wrist - shoulder).Normalized();
+        pos = at(0.5F * (shoulder + wrist));
+        rot = Quat::sFromTo(Vec3::sAxisY(), yaw_q * along);
+        break;
+    }
+    default:
+        pos = RVec3::sZero();
+        rot = Quat::sIdentity();
+        break;
+    }
+}
+
+void Matron::create_upper_body() {
+    if (upper_in_world_) {
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    // Shapes are proxies sized from the rig: the exact inertia tensors
+    // come from the real collider geometry in J-044d. Masses are set
+    // exactly; inertia is what the collider shape gives.
+    for (int i = 0; i < kUpperCount; ++i) {
+        Ref<Shape> shape;
+        if (i == 0) {
+            shape = new SphereShape(0.13F);
+        } else if (i == 1) {
+            shape = new CapsuleShape(0.02F, 0.055F);
+        } else if (i == 2) {
+            shape = new CapsuleShape(0.10F, 0.20F);
+        } else {
+            shape = new CapsuleShape(0.17F, 0.07F);
+        }
+        RVec3 pos;
+        Quat rot;
+        upper_rest_transform(i, pos, rot);
+        BodyCreationSettings settings(shape, pos, rot, EMotionType::Dynamic, hand_layer_);
+        settings.mAllowSleeping = false;
+        settings.mMotionQuality = EMotionQuality::LinearCast;
+        settings.mFriction = 0.0F;
+        settings.mLinearDamping = 0.0F;
+        settings.mUserData = kUpperEntityBase + static_cast<std::uint64_t>(i);
+        settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+        settings.mMassPropertiesOverride.mMass = kUpperMassKg[i];
+        Body *body = bodies.CreateBody(settings);
+        upper_body_[static_cast<std::size_t>(i)] = body->GetID();
+        bodies.AddBody(upper_body_[static_cast<std::size_t>(i)], EActivation::Activate);
+    }
+    // Joints, in the kUpperCount order; parents: head<-neck, neck<-chest,
+    // chest<-root, arms<-chest. Anchors are the rig joints. Twist is up
+    // (the arm's own direction for shoulders), plane is her facing; the
+    // target is the rest pose, so the motors hold her upright and return
+    // her after a blow. Gains are prototype: Grok's #244 pins them.
+    const RVec3 feet = bodies.GetPosition(body_) - Vec3(0.0F, kStandCentre, 0.0F);
+    const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), yaw_);
+    const Vec3 fwd(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    const auto at = [&](const Vec3 local) { return feet + yaw_q * local; };
+    const Vec3 anchors[kUpperCount] = {
+        Vec3(0.0F, 1.644F, 0.075F),  Vec3(0.0F, 1.541F, 0.04F),  Vec3(0.0F, 1.38F, 0.023F),
+        Vec3(-0.157F, 1.446F, 0.058F), Vec3(0.157F, 1.446F, 0.058F),
+    };
+    for (int i = 0; i < kUpperCount; ++i) {
+        const BodyID parent =
+            i == 0 ? upper_body_[1] : (i == 1 || i == 3 || i == 4) ? upper_body_[2] : body_;
+        Vec3 twist = Vec3::sAxisY();
+        if (i >= 3) {
+            const float side = i == 3 ? -1.0F : 1.0F;
+            const Vec3 along = (Vec3(side * 0.47F, 1.132F, 0.245F) - Vec3(side * 0.157F, 1.446F, 0.058F)).Normalized();
+            twist = yaw_q * along;
+        }
+        SwingTwistConstraintSettings joint;
+        joint.mSpace = EConstraintSpace::WorldSpace;
+        joint.mPosition1 = at(anchors[i]);
+        joint.mPosition2 = at(anchors[i]);
+        joint.mTwistAxis1 = twist;
+        joint.mTwistAxis2 = twist;
+        // The plane axis must be perpendicular to the twist axis, or Jolt
+        // orthogonalizes the frame and the joint's zero lands away from the
+        // pose the bodies were created in (an arm's twist is diagonal, so
+        // her facing is not perpendicular to it).
+        Vec3 plane = fwd - twist * fwd.Dot(twist);
+        if (plane.LengthSq() < 1.0e-6F) {
+            plane = Vec3::sAxisX() - twist * Vec3::sAxisX().Dot(twist);
+        }
+        joint.mPlaneAxis1 = plane.Normalized();
+        joint.mPlaneAxis2 = plane.Normalized();
+        joint.mNormalHalfConeAngle = kUpperLimits[i][0];
+        joint.mPlaneHalfConeAngle = kUpperLimits[i][1];
+        joint.mTwistMinAngle = -kUpperLimits[i][2];
+        joint.mTwistMaxAngle = kUpperLimits[i][2];
+        MotorSettings motor(kUpperMotorHz[i], kUpperMotorDamping);
+        motor.SetTorqueLimit(kUpperMotorTorqueNm[i]);
+        joint.mSwingMotorSettings = motor;
+        joint.mTwistMotorSettings = motor;
+        // The upper chain's inertia ratios are extreme (neck I ~0.008 vs
+        // root I ~31), and the default 10 velocity / 2 position steps
+        // cannot converge it: the neck flails +-25 deg per tick. The
+        // slingshot uses 40/8 for the same reason; the gains stay
+        // placeholders until Grok's #244 math arrives.
+        joint.mNumVelocityStepsOverride = 40;
+        joint.mNumPositionStepsOverride = 8;
+        const BodyID ids[2] = {parent, upper_body_[static_cast<std::size_t>(i)]};
+        BodyLockMultiWrite lock(physics_.GetBodyLockInterface(), ids, 2);
+        TwoBodyConstraint *made = joint.Create(*lock.GetBody(0), *lock.GetBody(1));
+        if (made == nullptr) {
+            continue;
+        }
+        physics_.AddConstraint(made);
+        upper_joint_[static_cast<std::size_t>(i)] = made;
+        auto *swing_twist = static_cast<SwingTwistConstraint *>(made);
+        swing_twist->SetSwingMotorState(EMotorState::Position);
+        swing_twist->SetTwistMotorState(EMotorState::Position);
+        swing_twist->SetTargetOrientationCS(Quat::sIdentity());
+        upper_rest_[static_cast<std::size_t>(i)] =
+            lock.GetBody(0)->GetRotation().Conjugated() * lock.GetBody(1)->GetRotation();
+    }
+    upper_in_world_ = true;
+}
+
+void Matron::seat_upper_body() {
+    if (!upper_in_world_) {
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    for (int i = 0; i < kUpperCount; ++i) {
+        RVec3 pos;
+        Quat rot;
+        upper_rest_transform(i, pos, rot);
+        bodies.SetPositionAndRotation(upper_body_[static_cast<std::size_t>(i)], pos, rot, EActivation::Activate);
+        bodies.SetLinearAndAngularVelocity(upper_body_[static_cast<std::size_t>(i)], Vec3::sZero(), Vec3::sZero());
+    }
+}
+
+void Matron::step_upper_body(const float dt) {
+    if (!upper_in_world_ || dt <= 0.0F) {
+        return;
+    }
+    // Last tick's motor spend, upper bound: |torque| x |relative spin|,
+    // charged to the one budget; no power left switches the motors off.
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    float power = 0.0F;
+    for (int i = 0; i < kUpperCount; ++i) {
+        auto *joint = static_cast<SwingTwistConstraint *>(upper_joint_[static_cast<std::size_t>(i)].GetPtr());
+        if (joint == nullptr) {
+            continue;
+        }
+        const BodyID parent =
+            i == 0 ? upper_body_[1] : (i == 1 || i == 3 || i == 4) ? upper_body_[2] : body_;
+        const Vec3 rel = bodies.GetAngularVelocity(upper_body_[static_cast<std::size_t>(i)]) -
+                         bodies.GetAngularVelocity(parent);
+        power += joint->GetTotalLambdaMotor().Length() / dt * rel.Length();
+    }
+    upper_motor_power_w_ = power;
+    feet_budget_.power_left = std::max(0.0F, feet_budget_.power_left - power);
+    const bool on = feet_budget_.power_left > 0.0F;
+    for (int i = 0; i < kUpperCount; ++i) {
+        auto *joint = static_cast<SwingTwistConstraint *>(upper_joint_[static_cast<std::size_t>(i)].GetPtr());
+        if (joint == nullptr) {
+            continue;
+        }
+        joint->SetSwingMotorState(on ? EMotorState::Position : EMotorState::Off);
+        joint->SetTwistMotorState(on ? EMotorState::Position : EMotorState::Off);
+    }
+}
+
+void Matron::destroy_upper_body() {
+    if (!upper_in_world_) {
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    for (int i = 0; i < kUpperCount; ++i) {
+        if (upper_joint_[static_cast<std::size_t>(i)] != nullptr) {
+            physics_.RemoveConstraint(upper_joint_[static_cast<std::size_t>(i)].GetPtr());
+            upper_joint_[static_cast<std::size_t>(i)] = nullptr;
+        }
+    }
+    for (int i = 0; i < kUpperCount; ++i) {
+        if (!upper_body_[static_cast<std::size_t>(i)].IsInvalid()) {
+            bodies.RemoveBody(upper_body_[static_cast<std::size_t>(i)]);
+            bodies.DestroyBody(upper_body_[static_cast<std::size_t>(i)]);
+            upper_body_[static_cast<std::size_t>(i)] = BodyID();
+        }
+    }
+    upper_in_world_ = false;
+    upper_motor_power_w_ = 0.0F;
+}
+
+void Matron::apply_upper_impulse_for_test(const int segment, const Vec3 impulse_ns, const RVec3 at) noexcept {
+    if (!upper_in_world_ || segment < 0 || segment >= kUpperCount) {
+        return;
+    }
+    physics_.GetBodyInterface().AddImpulse(upper_body_[static_cast<std::size_t>(segment)], impulse_ns, at);
+}
+
+JPH::BodyID Matron::strike_body_for_point(const RVec3 at, const float feet_y) const noexcept {
+    if (!upper_in_world_) {
+        return body_;
+    }
+    // The strike pipeline aims at the capsule surface, so the segment is
+    // picked by height and by how far wide of her axis the hit lands; the
+    // force still lands at the strike point, so a head hit torques the
+    // neck the way a real punch would.
+    const float h = float(at.GetY()) - feet_y;
+    if (h >= 1.60F) {
+        return upper_body_[0];  // head
+    }
+    if (h >= 1.50F) {
+        return upper_body_[1];  // neck
+    }
+    if (h >= 1.30F) {
+        return upper_body_[2];  // chest
+    }
+    if (h >= 1.00F) {
+        const RVec3 centre = physics_.GetBodyInterface().GetPosition(body_);
+        const float across = float(at.GetX() - centre.GetX()) * std::cos(yaw_) -
+                             float(at.GetZ() - centre.GetZ()) * std::sin(yaw_);
+        if (std::abs(across) > 0.25F) {
+            return upper_body_[across < 0.0F ? 3 : 4];  // arm L / arm R
+        }
+    }
+    return body_;
+}
+
+int Matron::strike_segment_for_test(const RVec3 at) const noexcept {
+    if (!upper_in_world_) {
+        return -1;
+    }
+    const float feet_y = float(physics_.GetBodyInterface().GetPosition(body_).GetY()) - kStandCentre;
+    const BodyID hit = strike_body_for_point(at, feet_y);
+    for (int i = 0; i < kUpperCount; ++i) {
+        if (hit == upper_body_[static_cast<std::size_t>(i)]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int Matron::upper_constraints_in_system_for_test() const noexcept {
+    if (!upper_in_world_) {
+        return -1;
+    }
+    const auto &constraints = physics_.GetConstraints();
+    int found = 0;
+    for (int i = 0; i < kUpperCount; ++i) {
+        const auto *joint = upper_joint_[static_cast<std::size_t>(i)].GetPtr();
+        if (joint == nullptr) {
+            continue;
+        }
+        for (const auto &c : constraints) {
+            if (c.GetPtr() == joint) {
+                ++found;
+                break;
+            }
+        }
+    }
+    return found;
+}
+
+void Matron::upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept {
+    normal = -1.0F;
+    plane = -1.0F;
+    twist_min = -1.0F;
+    twist_max = -1.0F;
+    if (!upper_in_world_) {
+        return;
+    }
+    const auto *joint = static_cast<const SwingTwistConstraint *>(upper_joint_[1].GetPtr());
+    if (joint == nullptr) {
+        return;
+    }
+    normal = joint->GetNormalHalfConeAngle();
+    plane = joint->GetPlaneHalfConeAngle();
+    twist_min = joint->GetTwistMinAngle();
+    twist_max = joint->GetTwistMaxAngle();
 }
 
 void Matron::hear_for_test(const RVec3 at) {
@@ -378,6 +686,7 @@ void Matron::remove_body() {
         return;
     }
     physics_.GetBodyInterface().RemoveBody(body_);
+    destroy_upper_body();
     body_in_world_ = false;
 }
 
@@ -387,7 +696,17 @@ bool Matron::sees(const RVec3 from, const RVec3 to) const {
     if (length < 0.5F) {
         return true;
     }
-    const IgnoreSingleBodyFilter self(body_);
+    // J-044c: her own upper bodies must not blind her — the sight ray
+    // from her eyes down to a low target clips her own chest.
+    IgnoreMultipleBodiesFilter self;
+    self.Reserve(6);
+    self.IgnoreBody(body_);
+    for (int i = 0; i < kUpperCount; ++i) {
+        const BodyID seg = upper_body_[static_cast<std::size_t>(i)];
+        if (!seg.IsInvalid()) {
+            self.IgnoreBody(seg);
+        }
+    }
     // Two lines a head's width apart: a post narrower than that (a lever's,
     // a gantry's) hides nobody from her.
     const Vec3 flat(run.GetX(), 0.0F, run.GetZ());
@@ -2345,6 +2664,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     const traversal::Limits law{};
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     feet_budget_lunge_ = false;
+    step_upper_body(dt);  // J-044c: meter last tick's motor work, then enforce the budget
     stock_push_force_n_ = 0.0F;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
@@ -5046,6 +5366,24 @@ void Matron::refresh_view() {
     view_.damage_stage = damage_stage_for_ns(damage_ns_);
     view_.blow_mps = blow_mps_;
     view_.blow_low = blow_low_;
+    // J-044c: the jointed upper body, as the rig poses it (relative
+    // rotations, so the mesh's yaw still applies on top).
+    view_.upper_root_mass_kg = kRootMassKg;
+    view_.upper_motor_power_w = upper_motor_power_w_;
+    if (upper_in_world_) {
+        BodyInterface &bodies = physics_.GetBodyInterface();
+        view_.upper_head_angvel = bodies.GetAngularVelocity(upper_body_[0]);
+        for (int i = 0; i < kUpperCount; ++i) {
+            view_.upper_mass_kg[i] = kUpperMassKg[i];
+            const BodyID parent =
+                i == 0 ? upper_body_[1] : (i == 1 || i == 3 || i == 4) ? upper_body_[2] : body_;
+            const Quat rel = bodies.GetRotation(parent).Conjugated() * bodies.GetRotation(upper_body_[i]);
+            const Quat dev = upper_rest_[static_cast<std::size_t>(i)].Conjugated() * rel;
+            const float w = std::clamp(std::abs(dev.GetW()), 0.0F, 1.0F);
+            view_.upper_angle_deg[i] = 2.0F * std::acos(w) * 180.0F / kPi;
+            view_.upper_q[i] = rel;
+        }
+    }
     view_.riding = riding_;
     view_.edge_brace_n = edge_brace_n_;
     view_.feet_push_n = foot_force_n_;

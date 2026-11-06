@@ -285,7 +285,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // The Matron, on deck 1 (11 m): last, like the crew (not in the kit, not saved).
     // The 154 m deck stays where it is. Tests that need her there call place_matron_home(154).
     matron_ = std::make_unique<Matron>(physics_system_, object_layers::kStatic, object_layers::kMoving,
-                                       object_layers::kOnSteel, player_id_);
+                                       object_layers::kOnSteel, object_layers::kHand, player_id_);
     matron_->set_home(Matron::kStackPitch);   // deck 1, 11 m. Same place on the band, lower deck.
     // The ziplines (zipline.hpp): after everything they must keep clear of
     // (each line is swept against the world as built so far), before the
@@ -1455,6 +1455,9 @@ void Simulation::PhysicsWorld::launch_matron_for_test(JPH::RVec3 at) {
     Matron::Saved saved; saved.state = Matron::State::Hunting;
     matron_->restore(saved);
     physics_system_.GetBodyInterface().SetPosition(matron_->body(), at, JPH::EActivation::Activate);
+    // J-044c: the root moved; the upper bodies must follow it, or the
+    // joints span metres to stale segments and fling her.
+    matron_->reseat_upper_body();
 }
 
 const traversal::AffordanceMap &Simulation::PhysicsWorld::matron_affordances() {

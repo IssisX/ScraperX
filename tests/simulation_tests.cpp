@@ -197,6 +197,10 @@ int main() {
         run_strike();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-upper-body") {
+        run_matron_upper_body();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-sweep") {
         run_matron_sweep();
         return 0;
@@ -662,6 +666,7 @@ int main() {
     // runs took the whole suite's run past its timeout. They still run on
     // every ctest.
     run_strike();
+    run_matron_upper_body();
     run_one_arm_route();
     run_bay();
     run_loose_stock();

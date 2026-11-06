@@ -98,11 +98,19 @@ bool Simulation::PhysicsWorld::fist_path_clear(const JPH::RVec3 from, const JPH:
     JPH::ShapeCastSettings settings;
     JPH::AnyHitCollisionCollector<JPH::CastShapeCollector> hit;
     JPH::IgnoreMultipleBodiesFilter ignore;
-    ignore.Reserve(3);
+    ignore.Reserve(8);
     ignore.IgnoreBody(player_id_);
     ignore.IgnoreBody(matron_->body());
     if (!hand_id_.IsInvalid()) {
         ignore.IgnoreBody(hand_id_);
+    }
+    // J-044c: the upper bodies are her body too — the fist is thrown at
+    // them, so they must not block its path the way steel does.
+    for (int i = 0; i < Matron::kUpperCount; ++i) {
+        const JPH::BodyID seg = matron_->upper_body(i);
+        if (!seg.IsInvalid()) {
+            ignore.IgnoreBody(seg);
+        }
     }
     physics_system_.GetNarrowPhaseQuery().CastShape(cast, settings, from, hit, {}, {}, ignore);
     return !hit.HadHit();
@@ -410,11 +418,16 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         const float force_n = strike_move_ == 1   ? strike::kPlayerSweepForceN
                               : strike_move_ == 2 ? strike::kPlayerKickForceN
                                                   : std::min(strike::kPlayerStrikeForceN, strike::kPlayerStrikePowerW / closing);
-        bodies.AddForce(her, dir * force_n, strike_point_, JPH::EActivation::Activate);
+        // J-044c: the hit lands on the upper segment it falls on (head,
+        // neck, chest, arm), so the joint it hangs from takes the torque;
+        // take_blow still reads the root, so stagger/knockdown is unchanged.
+        const float feet_y = c_feet(bodies, her);
+        bodies.AddForce(matron_->strike_body_for_point(strike_point_, feet_y), dir * force_n, strike_point_,
+                        JPH::EActivation::Activate);
         bodies.AddForce(player_id_, -dir * force_n, JPH::EActivation::Activate);
         strike_impulse_ns_ += force_n * dt;
         // Read by her balance as a blow (matron.cpp take_blow).
-        const bool low = static_cast<float>(strike_point_.GetY() - c_feet(bodies, her)) < 0.5F;
+        const bool low = static_cast<float>(strike_point_.GetY() - feet_y) < 0.5F;
         matron_->struck_by_player(dir * (force_n * dt), strike_point_, low);
         --strike_contact_left_;
     }
