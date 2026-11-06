@@ -50,7 +50,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 24 h with no owner step
    gets `To <Name>: close or next step`, and is closed the next hour if nothing comes.
 4. **Task the team.** Every agent holds work matched to its strength (CLAUDE.md). Muse never has fewer than
-   three big unstarted jobs in `work/tasks/muse.md`: derive the next from `03_EXECUTION/GAP_LIST.md` and
+   six big unstarted jobs in `work/tasks/muse.md`: derive the next from `03_EXECUTION/GAP_LIST.md` and
    Cory's asks, a whole system or set piece, written whole on its own job issue, and mail it. Rule on Muse's
    proposals within the hour. Every hard job's owner has asked the right other agent where it is guessing.
    Replace the "This hour" section of board #107's body with who got what; never a new comment.
