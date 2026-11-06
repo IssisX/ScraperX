@@ -9,7 +9,7 @@ Parts (a workflow job runs one; `all` runs both, for a dry run):
   ask    the paid calls, the only part that holds ANTHROPIC_API_KEY: the automatic Claude review of
          a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
   steer  everything free: the merge rule, review asks to ChatGPT or Muse, one owner:* label per
-         issue, the 7:00 AM Central digest
+         issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest
 
 Usage:
   python3 tools/switchboard/switch.py --dry-run                     # every action printed, none taken
@@ -66,6 +66,8 @@ MAX_DIFF_CHARS = 400_000
 MAX_ARTIFACT_BYTES = 60_000_000
 MAX_IMAGE_BYTES = 3_750_000            # base64 of this stays under 5 MB
 MAX_PRS = 60
+MAX_AUTO_PRS = 3                   # PRs the auto-open opens in one sweep (J-047)
+AUTO_PR_PREFIX = "fb-bot/integrate-"   # fb-bot/integrate-protected-* matches too; claude/* never does
 MAX_FACT_LINES = 25                   # rule_check lines quoted in a review ask
 ACT_WITHIN_DAYS = 3                   # older heads get no new review or ask: J-030 claims or closes them
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"
@@ -505,6 +507,71 @@ class Switch:
         self.gh.comment(facts.number, line, f"merged-note on #{facts.number}")
         if ctx.get("issue"):
             self.gh.comment(ctx["issue"]["number"], line, f"merged-note on job issue #{ctx['issue']['number']}")
+
+    # ---------- auto-open (J-047) ----------
+    def prior_pr(self, branch: str) -> bool:
+        """Has this branch ever had a PR (open, closed or merged)? The head filter names the branch."""
+        owner = self.gh.repo.split("/")[0]
+        return bool(self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}"))
+
+    def open_pr(self, branch: str, sha: str, job: str, message: str) -> None:
+        """Open the PR for a finished branch: title is the commit subject, body starts with the Job line."""
+        subject, _, rest = message.partition("\n")
+        body = f"Job: {job}\n\nOpened by the switchboard from {branch} @ {sha}"
+        if rest.strip():
+            body += f"\n\n{rest.strip()}"
+        got = self.gh.write("POST", f"repos/{self.gh.repo}/pulls",
+                            {"title": subject, "head": branch, "base": rules.TRUNK, "body": body},
+                            f"open PR for {branch} @{sha[:8]} (job {job})")
+        if self.gh.dry_run:
+            self.out(f"DRY  open PR for {branch} @{sha[:8]} (job {job})")
+        elif got and got.get("number"):
+            self.out(f"OPENED  #{got['number']} {branch} @{sha[:8]} (job {job})")
+        else:
+            self.out(f"NOTE  PR for {branch} @{sha[:8]} not opened: {(got or {}).get('message', '')[:200]}")
+
+    def auto_open_prs(self) -> int:
+        """Open PRs for finished fb-bot/integrate-* branches with no PR yet (J-047).
+
+        A branch qualifies when its head commit message carries a `Job: J-NNN` line and the proof on
+        that exact head is green. At most MAX_AUTO_PRS per sweep, in branch-name order. A branch
+        whose head already had a PR (open, closed or merged) is never opened again. Returns how many
+        PRs were opened (or would be, in a dry run)."""
+        branches = [b for b in self.gh.paged(f"repos/{self.gh.repo}/branches")
+                    if b["name"].startswith(AUTO_PR_PREFIX)]
+        if not branches:
+            return 0
+        open_refs = {p["head"]["ref"] for p in self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open")}
+        opened = 0
+        for b in sorted(branches, key=lambda x: x["name"]):
+            if opened >= MAX_AUTO_PRS:
+                break
+            branch, sha = b["name"], b["commit"]["sha"]
+            if branch in open_refs:
+                continue
+            try:
+                if self.prior_pr(branch):
+                    self.out(f"SKIP       {branch} @{sha[:8]}: head already had a PR")
+                    continue
+                message = self.gh.get(f"repos/{self.gh.repo}/commits/{sha}")["commit"]["message"]
+                job = rules.job_of_pr(message)   # the Job: line, read from the commit message, not a PR body
+                if not job:
+                    continue
+                proof, url, _, _ = self.proof(sha)
+                if proof != "green":
+                    self.out(f"SKIP       {branch} @{sha[:8]} ({job}): proof is {proof}")
+                    continue
+                self.open_pr(branch, sha, job, message)
+                opened += 1
+            except GitHubError as err:
+                if "not permitted to create pull requests" in err.detail:
+                    self.out("NOTE  GitHub refused: 'not permitted to create pull requests' — a repo setting "
+                             "Cory flips; stopping this sweep's auto-open, nothing worked around")
+                    return opened
+                self.out(f"ERROR       auto-open {branch}: {type(err).__name__}: {err}")
+            except (RuntimeError, KeyError, ValueError) as err:
+                self.out(f"ERROR       auto-open {branch}: {type(err).__name__}: {err}")
+        return opened
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
         """Where review asks live (the job issue, else the PR) and its comments."""
@@ -1092,6 +1159,12 @@ def main() -> int:
         except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
             failed += 1
             sw.out(f"ERROR       #{pr['number']}: {type(err).__name__}: {err}")
+    if steer:
+        try:
+            sw.auto_open_prs()
+        except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
+            failed += 1
+            sw.out(f"ERROR       auto-open: {type(err).__name__}: {err}")
     return 2 if failed else 0
 
 
