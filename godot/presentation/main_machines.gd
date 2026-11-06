@@ -40,6 +40,11 @@ var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
 # The moving bodies' indices, the only ones _render_kit poses each frame.
 var _kit_dynamic_bodies := PackedInt32Array()
+# get_kit_body_poses' row: body, enabled, basis x, y, z, origin.
+const KIT_POSE_FLOATS := 14
+# Whether get_kit_body_poses has reported every moving body once; until then
+# it is asked for all of them, not only those changed since its last call.
+var _kit_poses_primed := false
 # The kit's machines, for the audio: every moving body of MACHINE_MIN_KG or
 # more, with the point of it farthest from its origin, whose speed is how fast
 # the machine moves.
@@ -551,28 +556,44 @@ func _render_kit() -> void:
 	var look_again := eye.distance_squared_to(_kit_instance_eye) > KIT_INSTANCE_LOOK_M * KIT_INSTANCE_LOOK_M
 	if look_again:
 		_kit_instance_eye = eye
-	# Every moving body, every frame (J-045 perf_walk: about 640 of them, most
-	# at rest, the largest GDScript cost of a walk), so the loop is kept lean:
-	# a transform is set only when it changed (setting a Node3D's transform,
-	# even to the same value, sends every mesh under it a transform change),
-	# and a body's instances are visited only when it moved, the eye moved on
-	# or it was shown or hidden.
+	# Every moving body (J-045 perf_walk: about 640 of them, most at rest, the
+	# largest GDScript cost of a walk), so the pass is kept lean: one native
+	# call names only the bodies shown, hidden or moved since its last call,
+	# with their poses (get_kit_body_poses, 14 floats each); a transform is
+	# set only when it changed (setting a Node3D's transform, even to the same
+	# value, sends every mesh under it a transform change); and a body's
+	# instances are visited only when it moved or was shown or hidden, or,
+	# every body's, when the eye moved on.
 	var instanced := _kit_instances.size()
-	for body in _kit_dynamic_bodies:
+	var poses: PackedFloat32Array = _native.get_kit_body_poses(_kit_dynamic_bodies, not _kit_poses_primed)
+	_kit_poses_primed = true
+	for row in range(0, poses.size(), KIT_POSE_FLOATS):
+		var body := int(poses[row])
 		var node: Node3D = _kit_bodies[body]
-		var shown := bool(_native.is_kit_body_enabled(body))
+		var shown := poses[row + 1] > 0.5
 		node.visible = shown
 		var moved := false
 		if shown:
-			var at: Transform3D = _native.get_kit_body_transform(body)
+			var at := Transform3D(Vector3(poses[row + 2], poses[row + 3], poses[row + 4]),
+				Vector3(poses[row + 5], poses[row + 6], poses[row + 7]),
+				Vector3(poses[row + 8], poses[row + 9], poses[row + 10]),
+				Vector3(poses[row + 11], poses[row + 12], poses[row + 13]))
 			moved = at != node.transform
 			if moved:
 				node.transform = at
 		if body < instanced and _kit_instances[body] != null and \
-				(moved or look_again or shown != _kit_instanced_shown[body]):
+				(moved or shown != _kit_instanced_shown[body]):
 			_kit_instanced_shown[body] = shown
 			for entry in _kit_instances[body]:
 				_place_kit_instance(entry, eye, moved)
+	if look_again:
+		# The bodies that moved are placed above; this measures every drawn
+		# instance's distance again, as each body's own range would.
+		for body in _kit_dynamic_bodies:
+			if body < instanced and _kit_instances[body] != null:
+				_kit_instanced_shown[body] = _kit_bodies[body].visible
+				for entry in _kit_instances[body]:
+					_place_kit_instance(entry, eye, false)
 	var cables := _kit_cable_set.multimesh if _kit_cable_set != null else null
 	for index in _kit_cables.size():
 		var points: PackedVector3Array = _native.get_kit_cable_points(index)

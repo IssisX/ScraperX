@@ -236,6 +236,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_kit_body_parts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
                                 &ScraperXSimulation::get_kit_body_transform);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_poses", "bodies", "everything"),
+                                &ScraperXSimulation::get_kit_body_poses);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_index", "entity_id"),
                                 &ScraperXSimulation::get_kit_body_index);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_count"),
@@ -846,6 +848,57 @@ godot::Transform3D ScraperXSimulation::get_kit_body_transform(const std::int64_t
     const std::uint32_t index = kit_index(body);
     return {godot::Basis(to_godot(simulation_->kit_body_rotation(index))),
             to_godot(simulation_->kit_body_position(index))};
+}
+
+godot::PackedFloat32Array ScraperXSimulation::get_kit_body_poses(const godot::PackedInt32Array &bodies,
+                                                                const bool everything) {
+    constexpr std::int64_t kFloats = 14;
+    const std::uint32_t count = simulation_->kit_body_count();
+    if (kit_poses_seen_.size() != count) {
+        kit_poses_seen_.assign(count, KitPoseSeen{});
+    }
+    const std::int64_t listed = bodies.size();
+    godot::PackedFloat32Array out;
+    out.resize(listed * kFloats);
+    float *write = out.ptrw();
+    std::int64_t written = 0;
+    for (std::int64_t at = 0; at < listed; ++at) {
+        const std::int32_t body = bodies[at];
+        if (body < 0 || static_cast<std::uint32_t>(body) >= count) {
+            continue;
+        }
+        const auto index = static_cast<std::uint32_t>(body);
+        KitPoseSeen &seen = kit_poses_seen_[index];
+        const bool enabled = simulation_->kit_body_enabled(index);
+        bool report = everything || !seen.reported || enabled != seen.enabled;
+        if (enabled) {
+            const godot::Transform3D pose(godot::Basis(to_godot(simulation_->kit_body_rotation(index))),
+                                          to_godot(simulation_->kit_body_position(index)));
+            report = report || pose != seen.pose;
+            seen.pose = pose;
+        }
+        seen.enabled = enabled;
+        seen.reported = true;
+        if (!report) {
+            continue;
+        }
+        float *row = write + written * kFloats;
+        const godot::Basis &basis = seen.pose.basis;
+        row[0] = static_cast<float>(body);
+        row[1] = enabled ? 1.0F : 0.0F;
+        for (int column = 0; column < 3; ++column) {
+            const godot::Vector3 axis = basis.get_column(column);
+            row[2 + column * 3] = static_cast<float>(axis.x);
+            row[3 + column * 3] = static_cast<float>(axis.y);
+            row[4 + column * 3] = static_cast<float>(axis.z);
+        }
+        row[11] = static_cast<float>(seen.pose.origin.x);
+        row[12] = static_cast<float>(seen.pose.origin.y);
+        row[13] = static_cast<float>(seen.pose.origin.z);
+        ++written;
+    }
+    out.resize(written * kFloats);
+    return out;
 }
 
 std::int64_t ScraperXSimulation::get_kit_body_index(const std::int64_t entity_id) const {
