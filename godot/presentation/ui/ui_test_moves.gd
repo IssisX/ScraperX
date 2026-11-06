@@ -1420,9 +1420,10 @@ func _touch_chute() -> bool:
 	return true
 
 # touch_arm_break: on the 154 m deck, flat out on the stick along the north
-# band into the Matron's steel locker: the arm that took it breaks (named,
-# cried, felt, held to the body), and the ladder to the 176 ring is the
-# player's one-armed haul at half the climb's rate.
+# band into the Matron's steel locker is no blow (J-048: her own run never
+# hurts her); thrown into it a little faster, the arm that took it breaks
+# (named, cried, felt, held to the body), and the ladder to the 176 ring is
+# the player's one-armed haul at half the climb's rate.
 func _touch_arm_break() -> bool:
 	var device := InputRouter.Device.TOUCH
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
@@ -1432,10 +1433,26 @@ func _touch_arm_break() -> bool:
 	await _face(Vector2(1.0, 0.0))
 	if not _stick_sprint():
 		return _fail("the stick pushed past its ring did not latch sprint")
-	var broke: bool = await _wait_until(func() -> bool: return int(_native().get_landing_state()["arm_breaks"]) > 0, 6.0)
+	var peak := [0.0]
+	var stopped: bool = await _wait_until(func() -> bool:
+		var v := _velocity()
+		var speed := Vector2(v.x, v.z).length()
+		peak[0] = maxf(float(peak[0]), speed)
+		return float(peak[0]) > 7.0 and speed < 1.0, 6.0)
 	_move(device, 0.0)
+	var ran_mps := float(peak[0])
+	if not stopped:
+		return _fail("flat out, the locker never stopped her (fastest %.1f m/s, at %s)" % [ran_mps, str(_position())])
+	if int(_native().get_death_state()["hits"]) != 0 or int(_native().get_landing_state()["arm_breaks"]) != 0:
+		return _fail("her own run into the locker at %.1f m/s was a blow (hits %d)" % [ran_mps,
+			int(_native().get_death_state()["hits"])])
+	# Thrown into it from 1.5 m out at 9.2 m/s, 0.5 m up: clear of the floor
+	# (past the step-down's reach), thrown, not stepping off.
+	var wall := _position()
+	_native().debug_launch_player(Vector3(wall.x - 1.5, wall.y + 0.5, wall.z), Vector3(9.2, 0.5, 0.0))
+	var broke: bool = await _wait_until(func() -> bool: return int(_native().get_landing_state()["arm_breaks"]) > 0, 2.0)
 	if not broke:
-		return _fail("flat out into the locker broke no arm (hits %d, at %s)" % [
+		return _fail("thrown into the locker broke no arm (hits %d, at %s)" % [
 			int(_native().get_death_state()["hits"]), str(_position())])
 	await _frames(4)
 	var hit_mps := float(_native().get_death_state()["hit_speed_mps"])
@@ -1479,8 +1496,8 @@ func _touch_arm_break() -> bool:
 		return _fail("the arm healed too soon")
 	if rate < 0.35 or rate > 0.55:
 		return _fail("one-armed, the ladder climbed at %.2f m/s, not half the climb's 0.9" % rate)
-	_detail = "hit_mps=%.1f side=%d one_armed_mps=%.2f cry=%d" % [hit_mps, int(_native().get_landing_state()["arm_side"]),
-		rate, int(_main._audio.voice_lines.get(&"break_arm", 0))]
+	_detail = "ran_mps=%.1f hit_mps=%.1f side=%d one_armed_mps=%.2f cry=%d" % [ran_mps, hit_mps,
+		int(_native().get_landing_state()["arm_side"]), rate, int(_main._audio.voice_lines.get(&"break_arm", 0))]
 	return true
 
 

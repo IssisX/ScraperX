@@ -123,20 +123,26 @@ constexpr float kAnkleBreakSpeed = 12.0F;
 constexpr float kAnkleBreakPreparedSpeed = 14.0F;
 constexpr float kAnkleBreakRolledSpeed = 16.0F;
 constexpr double kLimpSeconds = 30.0;
-// Injuries: hits. Running into anything (or being run into) that is not the
-// floor under the body: the blow is the closing speed along the contact. Met
-// side-on or head-on there are no legs to spring it, the head and chest take
-// it on steel: kHitLethalSpeed kills (a fall of 5 m onto the face; CHOSEN,
-// half the feet-first kLethalImpactSpeedMps), leaving the body as a fall
-// does. From kHitFeltSpeed (a sprint into a wall) it is a hit the body
-// feels, counted for the presentation (the crack, the cry, the jolt).
+// Injuries: hits. Thrown into anything (or run into) that is not the floor
+// under the body: the blow is the closing speed along the contact, less her
+// own run's part. Her own run is never a blow (J-048; Cory, 11-06: "I can run
+// fast into something and it hurts me. Thats dumb"): on her feet, and in the
+// flight that starts there, her legs' speed over her frame up to
+// kFlowSpeedMps is taken off (physics_world_support.hpp set_own_drive). What
+// the other body brings, a fall's speed, and a throw (the slingshot, a swing,
+// a zipline torn off, a shove) stay a blow. Met side-on or head-on there are
+// no legs to spring it, the head and chest take it on steel: kHitLethalSpeed
+// kills (a fall of 5 m onto the face; CHOSEN, half the feet-first
+// kLethalImpactSpeedMps), leaving the body as a fall does. From
+// kHitFeltSpeed it is a hit the body feels, counted for the presentation (the
+// crack, the cry, the jolt).
 constexpr float kHitLethalSpeed = 10.0F;
 constexpr float kHitFeltSpeed = 6.0F;
 constexpr float kLimpSpeedScale = 0.45F;
 constexpr float kLimpJumpScale = 0.6F;
 // Injuries: the broken arm. An arm breaks when it takes more than its bones
-// do: a blow side-on from kArmBreakHitSpeed (CHOSEN, past a sprint into a
-// wall: the forearm thrown up before the face takes it), the arm on the side
+// do: a blow side-on from kArmBreakHitSpeed (CHOSEN, a throw into a wall a
+// little past a sprint's speed: the forearm thrown up before the face takes it), the arm on the side
 // it came from; or a catch torn out of the hands by its spike (a grip torn
 // by the impulse over it, not a slow slip: the shoulder takes the wrench),
 // the right arm. The lethal rule is decided first. For kArmBrokenSeconds the

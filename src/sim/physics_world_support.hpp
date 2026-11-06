@@ -7,6 +7,7 @@
 
 #include "sim/simulation.hpp"
 
+#include <algorithm>
 #include <cstring>
 #include <type_traits>
 
@@ -227,8 +228,9 @@ public:
     // the contacts new this tick that are not the floor under it (the normal
     // to the other within 60 degrees of horizontal, or above), how fast the
     // two closed along the normal, the body's velocity less the other's at
-    // the contact, as the step began (before the solver took it). m/s, 0 for
-    // none. A body's own corpses are not counted.
+    // the contact, as the step began (before the solver took it), less the
+    // part that is the body's own run (set_own_drive). m/s, 0 for none. A
+    // body's own corpses are not counted.
     [[nodiscard]] float hit_closing() const noexcept {
         lock();
         const float result = hit_closing_;
@@ -259,6 +261,21 @@ public:
         const SupportSample result = sample_;
         unlock();
         return result;
+    }
+
+    // Her own run is never a blow (J-048; Cory, 11-06: "I can run fast into
+    // something and it hurts me. Thats dumb"). Set before each step: the
+    // velocity of the frame her legs run on (her support's, kept through a
+    // flight), and how much of her own horizontal speed over it is her legs'
+    // (kFlowSpeedMps while her own drive moves her, 0 when anything else
+    // does: a throw, a machine, her hands). hit_closing takes that part off
+    // each contact's closing; what the other body brings, and a fall's speed,
+    // stay a blow.
+    void set_own_drive(const JPH::Vec3 frame_velocity, const float allowance_mps) noexcept {
+        lock();
+        own_frame_velocity_ = JPH::Vec3(frame_velocity.GetX(), 0.0F, frame_velocity.GetZ());
+        own_allowance_mps_ = std::max(0.0F, allowance_mps);
+        unlock();
     }
 
     // AS-003: the entity on the player's carry point, 0 for none. The player
@@ -339,15 +356,18 @@ private:
             return;
         }
         const JPH::RVec3 at = manifold.GetWorldSpaceContactPointOn1(0);
-        const float closing = (player.GetLinearVelocity() - other.GetPointVelocity(at)).Dot(toward);
-        if (closing > 0.0F) {
-            lock();
-            if (closing > hit_closing_) {
-                hit_closing_ = closing;
-                hit_toward_ = toward;
-            }
-            unlock();
+        const JPH::Vec3 velocity = player.GetLinearVelocity();
+        const float closing = (velocity - other.GetPointVelocity(at)).Dot(toward);
+        lock();
+        // Her legs' part (set_own_drive): her horizontal speed over her frame
+        // toward the other, up to the allowance.
+        const JPH::Vec3 own = JPH::Vec3(velocity.GetX(), 0.0F, velocity.GetZ()) - own_frame_velocity_;
+        const float blow = closing - std::clamp(own.Dot(toward), 0.0F, own_allowance_mps_);
+        if (blow > hit_closing_) {
+            hit_closing_ = blow;
+            hit_toward_ = toward;
         }
+        unlock();
     }
 
     [[nodiscard]] static int support_rank(const std::uint64_t entity_id) noexcept {
@@ -472,6 +492,8 @@ private:
     float struck_closing_ = 0.0F;
     float hit_closing_ = 0.0F;
     JPH::Vec3 hit_toward_ = JPH::Vec3::sZero();
+    JPH::Vec3 own_frame_velocity_ = JPH::Vec3::sZero();   // set_own_drive
+    float own_allowance_mps_ = 0.0F;
     // Corpses' bodies (Corpses: kUserDataBase on).
     static constexpr std::uint64_t kCorpseEntityBase = 3300;
     std::atomic<std::uint64_t> carried_entity_{0};

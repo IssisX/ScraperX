@@ -816,6 +816,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // off them.
     contact_listener_.set_planted_grip(
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
+    // Her own run is no blow (J-048): up to the flow's speed over her frame,
+    // while her own drive moves her (own_drive_) and nothing has taken her
+    // since the last step.
+    const bool own_drive = own_drive_ && traversal_state_ == TraversalState::None && !sling_controlling &&
+                           !zip_riding_ && grip_ == nullptr;
+    contact_listener_.set_own_drive(airborne_inherited_velocity_, own_drive ? kFlowSpeedMps : 0.0F);
     {
         const auto started = std::chrono::steady_clock::now();
         effort_before_update();   // J-046 measurement only: reads, writes nothing
@@ -891,6 +897,18 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     support_sample_ = support;
     grounded_ = support.grounded;
     support_entity_id_ = support.entity_id;
+    // Her own drive (own_drive_): a traversal, a machine or her hands take it;
+    // on her feet, free of them and within her own run's reach of her frame,
+    // it is hers again (a throw's slide past that is still the throw's); a
+    // free flight keeps what started it. (A shove after this, below, takes
+    // it again.)
+    if (traversal_state_ != TraversalState::None || slingshot_->controls_player() || swing_->controls_player() ||
+        trapeze_->controls_player() || zip_riding_ || grip_ != nullptr || matron_->claimed()) {
+        own_drive_ = false;
+    } else if (grounded_ && !own_drive_) {
+        const JPH::Vec3 over = bodies.GetLinearVelocity(player_id_) - airborne_inherited_velocity_;
+        own_drive_ = JPH::Vec3(over.GetX(), 0.0F, over.GetZ()).Length() <= kFlowSpeedMps;
+    }
 
     // WO-008: a genuine (non-traversal, non-jump) landing is the one
     // moment fall consequence is resolved. Traversal-completion landings
@@ -953,8 +971,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
             shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
         }
     }
-    // Run into something (or run into) hard enough (kHitLethalSpeed): a
-    // death side-on. Softer, a hit the body feels.
+    // A blow (the listener's hit_closing: her own run taken off) hard enough
+    // (kHitLethalSpeed): a death side-on. Softer, a hit the body feels.
     if (!died_this_tick && !hers && hit_closing_mps_ >= kHitLethalSpeed) {
         leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), hit_closing_mps_, true);
         restore_from_checkpoint(bodies);
@@ -1080,6 +1098,7 @@ void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const
     bodies.SetPositionAndRotation(player_id_, at, bodies.GetRotation(player_id_), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(player_id_, velocity, JPH::Vec3::sZero());
     grounded_ = false;
+    own_drive_ = false;   // thrown: what she meets on this flight is a blow
 }
 
 void Simulation::PhysicsWorld::remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {
@@ -1468,6 +1487,7 @@ void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JP
     ++hit_count_;
     hit_speed_mps_ = Matron::kShoveMps;
     hit_toward_ = -direction;
+    own_drive_ = false;   // her hands threw her: not her own run until she stands
 }
 
 } // namespace scraperx::sim
