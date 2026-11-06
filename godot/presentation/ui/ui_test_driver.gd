@@ -143,6 +143,9 @@ const SCENARIOS := {
 	"perf_attrib": 8,
 	"perf_attrib_top": 42,
 	"perf_attrib_locker": 11,
+	# Walking choppiness: frame-time percentiles on a fixed walk-and-look
+	# route across the yard (rendered only, like the probes above).
+	"perf_walk": 8,
 	"touch_bay": 11,
 	# Her corner pipe: she comes down the shaft after the climber, heard on it
 	# 4 s and more before she is there; a drum shoved off the edge onto her as
@@ -485,6 +488,8 @@ func _run() -> void:
 			ok = await _perf_view_sling(InputRouter.Device.TOUCH)
 		"perf_view_top":
 			ok = await _perf_view_top()
+		"perf_walk":
+			ok = await _perf_walk(InputRouter.Device.TOUCH)
 		"perf_attrib", "perf_attrib_top", "perf_attrib_locker":
 			ok = await _perf_attrib()
 		"touch_matron_pipe":

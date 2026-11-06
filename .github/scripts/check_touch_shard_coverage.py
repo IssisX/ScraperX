@@ -32,7 +32,7 @@ Scenarios skipped by design, with the in-repo evidence for each:
                 mix"), not in godot-touch.
   perf_top, perf_grade   measured locally, not in CI.
   perf_locker, perf_view_bottom, perf_view_sling, perf_view_top,
-  perf_attrib, perf_attrib_top, perf_attrib_locker
+  perf_attrib, perf_attrib_top, perf_attrib_locker, perf_walk
                 rendered only (J-045, #248): measured locally under
                 xvfb; headless draws nothing.
 
@@ -65,7 +65,7 @@ SKIP_PREFIXES = ("look_", "pad_", "keyboard_")
 # Run in another CI job, or measured locally only -- not godot-touch.
 SKIP_EXACT = {"audio_mix", "audio_fall", "perf_top", "perf_grade",
               "perf_locker", "perf_view_bottom", "perf_view_sling", "perf_view_top",
-              "perf_attrib", "perf_attrib_top", "perf_attrib_locker"}
+              "perf_attrib", "perf_attrib_top", "perf_attrib_locker", "perf_walk"}
 
 # Registered touch scenarios in no shard for a tracked reason. Warning,
 # not failure; stale the moment the scenario appears in a shard.
