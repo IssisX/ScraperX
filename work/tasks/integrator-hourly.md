@@ -12,8 +12,11 @@ checks them, never drafts them (Cory 11-06 9:35 AM).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched tool calls; no re-reads; short messages to Cory.
+Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
+eye, or checking a claim before stating it. A slip at high effort (a wrong claim, a missed bug, a redo) is told to Cory
+the same hour, with a pick to step the integrator back to xhigh.
 Helpers (sub-agents): up to 2 at once (Cory 11-05, 11-06). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). If `effort_level` is not high (his pick, 11-06 9:35 AM; helpers keep their own xhigh, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
+Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 11:20 AM; helpers keep their own effort, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (it sat at high for 45 h, 11-03 to 11-06, after a Claude session put his xhigh back to high).
 
 The scheduled task only says "do this file"; change the check here. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
@@ -44,16 +47,15 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current (asks in flight, merge queue,
    rulings). Over a cap in CLAUDE.md: trim it now.
-6. **Look for a better way, every hour (build one only if found).** What cost the most quota this hour (context size, helpers, wake-ups),
-   what is still done by hand, and is the weekly pace on track for the Monday 11 AM reset? List every wake-up
+6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM: the setup is tuned, and the
+   search costs more thinking than it saves). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
    that had nothing to do (a PR event, CI note, helper ping or reminder that changed no step) and stop its
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
 
 Between hours: no timed check-ins (Cory 11-05, so the weekly limit lasts until the Monday 11 AM reset). The switchboard
 merges by itself, and PR events and helper reports wake the integrator. The hourly run alone reads Muse's mail. A quiet
-hourly run ends in one line. Helpers: after the two in flight (J-042, J-044m/J-045), one at a time; free Muse takes the
-builds first.
+hourly run ends in one line. Free Muse takes the builds first.
 
 Trunk merges on any PR are yours, done the hour it conflicts, and the owner is mailed the new sha. Hand a merge to
 Muse only when the conflict is in its own logic, by a mail that says "Muse: resolve". Never ask for a job and then
@@ -61,8 +63,9 @@ do it yourself: if you take a job back, mail that first (11-05: Muse's merge age
 Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can miss a push, #235).
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (a stacked PR merges into its parent's branch,
-not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe only
-to PRs you merge yourself. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
+not trunk: #171 into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe to PRs you merge yourself
+and to Claude's own PRs (11-06: #277 sat 2 h on a Codex P1 nobody was woken for). Before `@codex review` or
+calling a PR clean, read its open review threads (`get_review_comments`), not only the newest review. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
 from one the switchboard merges (11-05: #250-#253 woke the integrator 14 times in 3 minutes, mostly Codex's
 running/finished edits). A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
 lines or fewer (branch, sha, PASS/FAIL, what is left); put the numbers and details on the job's issue. Run tests in the foreground; never end a turn waiting on a
