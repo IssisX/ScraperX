@@ -658,7 +658,10 @@ float Matron::floor_at(const float x, const float y, const float z) const {
 }
 
 bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
-    return std::abs(z - kMidZ) < 1.4F && std::abs(x) < 17.6F + margin;
+    // The bridge's own footprint (its plank kCatwalkHalfM either side of its
+    // line, out to the rails' line at kCatwalkEndM), widened by `margin` both
+    // ways: the band beside the rail's gap where it lands is the band's.
+    return std::abs(z - kMidZ) < kCatwalkHalfM + margin && std::abs(x) < kCatwalkEndM + margin;
 }
 
 bool Matron::route_toward(const float fx, const float fz, const float tx, const float tz, const bool allow_catwalk,
@@ -1192,8 +1195,42 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             return Vec3::sZero();
         }
         (void)slope_slide;
+        if (holding_state(state_)) {
+            // Hands first (J-001): while she holds, her feet's push waits
+            // for the hands to draw first from the tick's one account.
+            // grab_drive applies it after both hands, with these same
+            // inputs; the walk's tail waits for it too (below).
+            deferred_feet_ = true;
+            deferred_feet_want_ = want_force;
+            deferred_feet_body_ = on_body;
+            deferred_feet_point_ = on_point;
+            deferred_feet_rel_v_ = velocity - bodies.GetPointVelocity(on_body, on_point);
+            deferred_feet_swat_ticks_ = swat_budget_ticks_;
+            deferred_feet_lunge_ = lunge_draw;
+            deferred_start_v_ = start_v;
+            deferred_dv_before_ = dv_before;
+            deferred_velocity_ = velocity;
+            deferred_floor_ = floor;
+            return Vec3::sZero();
+        }
         budget.velocity = velocity - bodies.GetPointVelocity(on_body, on_point);
-        const Vec3 granted = budget.take(want_force);
+        // During her swat, stability-first share (J-001 step 1): her feet
+        // keep at least kSwatMinFeetN of the tick's account, the swat takes
+        // the rest up to its full 5400 N. Measured on the S2 over-base
+        // carry, the feet floor is 3300 N, so the swat share is 4700 N.
+        // The total never changes: one budget, only the split moves. The
+        // account's total (left + used) is the same at every draw in the
+        // tick, so the share is the same at both feet sites.
+        Vec3 force = want_force;
+        if (swat_budget_ticks_ > 0) {
+            const float swat_full = kSwatN + kSwatSweepScale * kSwatN;
+            const float share = std::min(swat_full, budget.left + budget.used - kSwatMinFeetN);
+            const float allow = std::max(0.0F, budget.left - share);
+            if (force.Length() > allow) {
+                force = allow > 0.0F ? force * (allow / force.Length()) : Vec3::sZero();
+            }
+        }
+        const Vec3 granted = budget.take(force);
         if (granted.LengthSq() > 0.0F) {
             bodies.AddForce(body_, granted);
             if (bodies.GetMotionType(on_body) == EMotionType::Dynamic) {
@@ -1518,9 +1555,15 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     if (step_planted_foot()) {
         clamber_now_ = false;
         watch_stall(dt, at, 0.0F, 0.0F, false);
-        const Vec3 after_v = start_v + (foot_drive_dv_ - dv_before);
-        speed_ = std::hypot(after_v.GetX(), after_v.GetZ());
-        stride_ += speed_ * dt;
+        if (deferred_feet_) {
+            // The feet's push waits for the hands (above): the walk's tail
+            // waits with it, and the deferred apply runs it.
+            deferred_boarding_ = floor_boarding;
+        } else {
+            const Vec3 after_v = start_v + (foot_drive_dv_ - dv_before);
+            speed_ = std::hypot(after_v.GetX(), after_v.GetZ());
+            stride_ += speed_ * dt;
+        }
         return;
     }
         bool leapt = false;
@@ -1900,13 +1943,18 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         // here would put every stall after a remedy back on rung one.
         watch_stall(dt, at, 0.0F, 0.0F, false, 0.0F, 0.0F, true);
     }
-    if (floor && !floor_boarding) {
+    if (deferred_feet_) {
+        // The feet's push waits for the hands (above): the walk's tail waits
+        // with it, and the deferred apply runs it.
+        deferred_boarding_ = floor_boarding;
+    } else if (floor && !floor_boarding) {
         const Vec3 after_v = start_v + (foot_drive_dv_ - dv_before);
         speed_ = std::hypot(after_v.GetX(), after_v.GetZ());
+        stride_ += speed_ * dt;
     } else {
         speed_ = std::hypot(velocity.GetX(), velocity.GetZ());
+        stride_ += speed_ * dt;
     }
-    stride_ += speed_ * dt;
 }
 
 // The Turn's clock and its two triggers (see matron.hpp). Only simulation
@@ -2349,6 +2397,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     const traversal::Limits law{};
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     feet_budget_lunge_ = false;
+    if (swat_budget_ticks_ > 0) {
+        --swat_budget_ticks_;
+    }
     stock_push_force_n_ = 0.0F;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
@@ -3464,7 +3515,23 @@ bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     if (on_ladder) {
-        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kStoopReachM;
+        // His belt (his feet on the rungs are past her) within her real arm
+        // (kRealArmM) of her shoulder, her trunk bent toward him as far as it
+        // goes (bend_to_hands' poses).
+        const float feet = float(at.GetY()) - kStandCentre;
+        Vec3 fwd(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
+        fwd = fwd.LengthSq() > 1.0e-6F ? fwd.Normalized() : Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+        for (const float hip : {kHipUpM, 0.5F * (kHipUpM + kHipLowM), kHipLowM}) {
+            for (int k = 0; k <= 14; ++k) {
+                const float pitch = std::min(kTrunkPitchMaxRad, 0.1F * static_cast<float>(k));
+                const RVec3 shoulder = RVec3(at.GetX(), feet + hip, at.GetZ()) + fwd * (kTrunkM * std::sin(pitch)) +
+                                       Vec3(0.0F, kTrunkM * std::cos(pitch), 0.0F);
+                if (Vec3(player_belt_ - shoulder).Length() <= kRealArmM) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
     return distance_xz(float(at.GetX()), float(at.GetZ()), float(player.GetX()), float(player.GetZ())) < kCatchM &&
            std::abs(at.GetY() - player.GetY()) < 1.4;
@@ -4211,6 +4278,8 @@ void Matron::restore(const Saved &saved) {
         fatal_carry_s_ = 0.0F;
         fatal_window_s_ = 0.0F;
         fatal_hang_ = false;
+        fatal_window_ = false;
+        fatal_window_paused_ = false;
         fatal_dropped_ = false;
         fatal_edge_ = RVec3::sZero();
         fatal_s_ = 0.0F;
@@ -4857,7 +4926,21 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
         return Vec3::sZero();   // nothing under her to push on
     }
     feet_budget_.velocity = work_velocity != nullptr ? *work_velocity : velocity - sole.velocity;
-    const Vec3 granted = feet_budget_.take(want_force);
+    // During her swat, the same stability-first share as walk_toward's foot
+    // force above: feet keep at least kSwatMinFeetN, the swat takes the rest
+    // up to its full 5400 N. The total stays within the one budget; only
+    // the split between feet and swat changes, for kSwatTicks.
+    Vec3 force = want_force;
+    if (swat_budget_ticks_ > 0) {
+        const float swat_full = kSwatN + kSwatSweepScale * kSwatN;
+        const float share =
+            std::min(swat_full, feet_budget_.left + feet_budget_.used - kSwatMinFeetN);
+        const float allow = std::max(0.0F, feet_budget_.left - share);
+        if (force.Length() > allow) {
+            force = allow > 0.0F ? force * (allow / force.Length()) : Vec3::sZero();
+        }
+    }
+    const Vec3 granted = feet_budget_.take(force);
     if (granted.LengthSq() > 0.0F) {
         bodies.AddForce(body_, granted);
         if (bodies.GetMotionType(sole.body) == EMotionType::Dynamic) {
@@ -4867,6 +4950,82 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
         foot_force_n_ = feet_budget_.used;
         foot_power_w_ = feet_budget_.power_used;
     }
+    return granted;
+}
+
+Vec3 Matron::grant_swat_force(const Vec3 wanted, const Vec3 player_point_velocity) noexcept {
+    const Vec3 her_velocity = physics_.GetBodyInterface().GetLinearVelocity(body_);
+    // wanted acts on him and -wanted on her, so the pair does work wanted . (his - hers).
+    feet_budget_.velocity = player_point_velocity - her_velocity;
+    const Vec3 granted = feet_budget_.take(wanted);
+    foot_force_n_ = feet_budget_.used;
+    foot_power_w_ = feet_budget_.power_used;
+    return granted;
+}
+
+Vec3 Matron::grant_hand_force(const Vec3 wanted, const Vec3 hand_velocity) noexcept {
+    const Vec3 her_velocity = physics_.GetBodyInterface().GetLinearVelocity(body_);
+    // wanted acts on the hand and -wanted on her, so the pair does work wanted . (hand - hers).
+    feet_budget_.velocity = hand_velocity - her_velocity;
+    const Vec3 granted = feet_budget_.take(wanted);
+    foot_force_n_ = feet_budget_.used;
+    foot_power_w_ = feet_budget_.power_used;
+    return granted;
+}
+
+Vec3 Matron::apply_deferred_feet_force(BodyInterface &bodies, const float dt, const bool ladder_pull) noexcept {
+    if (!deferred_feet_) {
+        return Vec3::sZero();
+    }
+    deferred_feet_ = false;
+    // The push walk_toward stashed, applied now that both hands have drawn:
+    // the same swat share, the same ladder remainder, the same budget take,
+    // the same equal and opposite forces, and the walk's tail with the
+    // stashed inputs. Only the order moved: hands first, feet get the rest.
+    Vec3 force = deferred_feet_want_;
+    feet_budget_.velocity = deferred_feet_rel_v_;
+    if (deferred_feet_swat_ticks_ > 0) {
+        const float swat_full = kSwatN + kSwatSweepScale * kSwatN;
+        const float share = std::min(swat_full, feet_budget_.left + feet_budget_.used - kSwatMinFeetN);
+        const float allow = std::max(0.0F, feet_budget_.left - share);
+        if (force.Length() > allow) {
+            force = allow > 0.0F ? force * (allow / force.Length()) : Vec3::sZero();
+        }
+    }
+    if (ladder_pull) {
+        // The ladder pull's remainder after the hands: hand + feet stay
+        // within the ladder's force and power, as the first hand's cap keeps
+        // hand + feet within them the other way round.
+        const float force_left = std::max(0.0F, kLadderPullMaxForceN - foot_force_n_);
+        if (force.Length() > force_left) {
+            force = force_left > 0.0F ? force * (force_left / force.Length()) : Vec3::sZero();
+        }
+        const float power = force.Dot(feet_budget_.velocity);
+        const float power_left = std::max(0.0F, kLadderPullMaxPowerW - foot_power_w_);
+        if (power > power_left) {
+            force *= power_left / power;
+        }
+    }
+    const Vec3 granted = feet_budget_.take(force);
+    if (granted.LengthSq() > 0.0F) {
+        bodies.AddForce(body_, granted);
+        if (bodies.GetMotionType(deferred_feet_body_) == EMotionType::Dynamic) {
+            bodies.AddForce(deferred_feet_body_, -granted, deferred_feet_point_);
+        }
+        foot_drive_dv_ += (granted / kMassKg) * dt;
+        foot_force_n_ = feet_budget_.used;
+        foot_power_w_ = feet_budget_.power_used;
+        foot_lunge_ = deferred_feet_lunge_;
+    }
+    // The walk's tail, with the stashed inputs: the speed and stride the
+    // feet's push earns, now that the push has acted.
+    if (deferred_floor_ && !deferred_boarding_) {
+        const Vec3 after_v = deferred_start_v_ + (foot_drive_dv_ - deferred_dv_before_);
+        speed_ = std::hypot(after_v.GetX(), after_v.GetZ());
+    } else {
+        speed_ = std::hypot(deferred_velocity_.GetX(), deferred_velocity_.GetZ());
+    }
+    stride_ += speed_ * dt;
     return granted;
 }
 
@@ -5165,6 +5324,13 @@ void Matron::refresh_view() {
     view_.hand_x = float(hand_target_.GetX());
     view_.hand_y = float(hand_target_.GetY());
     view_.hand_z = float(hand_target_.GetZ());
+    view_.hold_beat = static_cast<std::uint8_t>(hold_beat());
+    view_.grip_point = static_cast<std::uint8_t>(grip_point_);
+    view_.hip_up = trunk_.hip_up;
+    view_.trunk_pitch = trunk_.pitch;
+    view_.swats = swats_;
+    view_.hand2_active = hand2_active();
+    view_.hold_phase = static_cast<std::uint8_t>(hold_phase_);
     if (shown.bar_traverse) {
         view_.hand_x = float(shown.hand.GetX()); view_.hand_y = float(shown.hand.GetY()); view_.hand_z = float(shown.hand.GetZ());
         view_.support_n = shown.force_n;

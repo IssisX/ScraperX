@@ -59,11 +59,14 @@ void Matron::begin_grab(const RVec3 player) {
     grip_was_on_ = false;
     armplay_done_ = false;
     retake_ = false;
+    torn_in_carry_ = false;
     hold_retakes_ = 0;
     spare_side_set_ = false;
     spare_tries_ = 0;
     hold_tears_at_ = arm_tears_;
     fatal_hold_ = false;   // known as her fingers close (grip_taken)
+    fatal_window_ = false;
+    fatal_window_paused_ = false;
     fatal_path_ = FatalPath::None;
     fatal_carry_s_ = 0.0F;
     fatal_window_s_ = 0.0F;
@@ -77,7 +80,8 @@ void Matron::begin_grab(const RVec3 player) {
     reel_to_floor_ = false;
     spare_walk_ = false;
     pull_n_ = kHandReachPullN;
-    arm_reach_m_ = kStoopReachM;
+    arm_reach_m_ = kHoldArmLimitM;
+    reset_beats();
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     hand_target_ = at + shoulder_local();
     hand_target_v_ = Vec3::sZero();
@@ -85,7 +89,24 @@ void Matron::begin_grab(const RVec3 player) {
 }
 
 void Matron::grip_taken() noexcept {
+    if (regrip_ && !grip_on_ && state_ != State::Grab) {
+        // Her first hand on the next point she takes him by (his collar at
+        // the pin, his ankle from her other hand): the hold goes on.
+        grip_on_ = true;
+        grip_was_on_ = true;
+        regrip_ = false;
+        if (fatal_window_paused_) {
+            // The pin window resumes only where it was paused: a Dangle fatal
+            // pin or over. Any other state (backed in, released) drops it.
+            if (fatal_hold_ && state_ == State::Dangle && hold_phase_ >= 2) {
+                fatal_window_ = true;
+            }
+            fatal_window_paused_ = false;
+        }
+        return;
+    }
     if (state_ == State::Grab && !grip_on_) {
+        regrip_ = false;
         grip_on_ = true;
         grip_was_on_ = true;
         ++grabs_;
@@ -140,6 +161,10 @@ void Matron::report_held_load(const JPH::RVec3 her_pos, const JPH::RVec3 player_
 void Matron::grip_lost(const bool torn, const bool fought) noexcept {
     const bool had = grip_on_;
     grip_on_ = false;
+    if (!torn && regrip_ && holding_state(state_)) {
+        // Her own hand opened to take him by another point: the hold goes on.
+        return;
+    }
     if (torn && had) {
         ++grips_torn_;
     }
@@ -152,7 +177,7 @@ void Matron::grip_lost(const bool torn, const bool fought) noexcept {
         return;
     }
     if (had && holding_state(state_)) {
-        if (fatal_hold_ && state_ == State::Dangle) {
+        if (fatal_hold_ && state_ == State::Dangle && hold_phase_ >= 5) {
             // Out of her fist with him out past the edge, over the drop (his
             // thrashing, the world), into a fall foreseen to kill: he goes
             // down it all the same (the release beat). Short of it (hooked on
@@ -163,7 +188,7 @@ void Matron::grip_lost(const bool torn, const bool fought) noexcept {
             const float past = (float(player_ankle_.GetX()) - lip_x) * rim_nx_ +
                                (float(player_ankle_.GetZ()) - lip_z) * rim_nz_;
             const BodyInterface &bodies = physics_.GetBodyInterface();
-            if ((fatal_hang_ || past > 0.3F) && !no_kill_foreseen_ &&
+            if ((hold_phase_ >= 7 || past > 0.3F) && !no_kill_foreseen_ &&
                 fall_impact_mps(bodies.GetPosition(player_), bodies.GetRotation(player_),
                                 bodies.GetLinearVelocity(player_), bodies.GetAngularVelocity(player_),
                                 kFatalLetGoMarginM) >= kFatalLandMps) {
@@ -468,11 +493,18 @@ bool Matron::choose_fatal_edge(const float ax, const float az, const float feet)
     std::stable_sort(spots.begin(), spots.end(), [](const Spot &a, const Spot &b) {
         return a.across != b.across ? a.across : a.d < b.d;
     });
+    // First with room for the whole old heave; none, with room for her real
+    // arm's beats (the pin at her deck's height, the over, the hang under her
+    // hand: HOLD_WITH_REAL_ARMS.md), which an overhead beam does not block.
+    for (int pass = 0; pass < 2; ++pass) {
     for (const Spot &spot : spots) {
         const float sx = spot.lip_x - spot.nx * kRimStandM;
         const float sz = spot.lip_z - spot.nz * kRimStandM;
-        if (!straight_on_floor(ax, az, sx, sz, feet) || !hang_room(sx, sz, spot.nx, spot.nz, feet) ||
-            !lethal_from(sx, sz, spot.nx, spot.nz, feet)) {
+        const bool room = pass == 0 ? hang_room(sx, sz, spot.nx, spot.nz, feet)
+                                    : hang_room_real(sx, sz, spot.nx, spot.nz, feet);
+        const bool lethal = pass == 0 ? lethal_from(sx, sz, spot.nx, spot.nz, feet)
+                                      : lethal_from_real(sx, sz, spot.nx, spot.nz, feet);
+        if (!straight_on_floor(ax, az, sx, sz, feet) || !room || !lethal) {
             continue;
         }
         rim_x_ = sx;
@@ -483,6 +515,7 @@ bool Matron::choose_fatal_edge(const float ax, const float az, const float feet)
         aim_ledge_ = false;
         fatal_edge_ = RVec3(spot.lip_x, feet, spot.lip_z);
         return true;
+    }
     }
     return false;
 }
@@ -512,6 +545,48 @@ bool Matron::hang_room(const float sx, const float sz, const float nx, const flo
            clear(player_cast_shape_, 0.5F * (kHeaveOutM + kDangleOutM), 0.5F * (over_y + com_y)) &&
            clear(player_cast_shape_, kFatalWindowOutM, feet + kFatalWindowUpM - kPlayerHalfM) &&
            clear(player_cast_shape_, kFatalDropOutM, feet + kFatalDropUpM - kPlayerHalfM);
+}
+
+bool Matron::hang_room_real(const float sx, const float sz, const float nx, const float nz, const float feet) const {
+    if (!room_to_stand(RVec3(sx, feet + kStandCentre, sz))) {
+        return false;
+    }
+    IgnoreMultipleBodiesFilter skip;
+    skip.IgnoreBody(body_);
+    skip.IgnoreBody(player_);
+    const auto clear = [&](const Shape *shape, const float out_m, const float y) {
+        AnyHitCollisionCollector<CollideShapeCollector> touch;
+        CollideShapeSettings settings;
+        const RVec3 pose(sx + nx * out_m, y, sz + nz * out_m);
+        physics_.GetNarrowPhaseQuery().CollideShape(shape, Vec3::sReplicate(1.0F), RMat44::sTranslation(pose),
+                                                    settings, pose, touch, {}, {}, skip);
+        return !touch.HadHit();
+    };
+    // Hung head down under her hand (kHangOutM + kFatalOutM out from her
+    // middle, about her deck's height or her rail's): his body under it, clear
+    // of all but her deck's face and the strip along its lip (he may rest
+    // against those); and the air over the lip he goes over.
+    const float out = kHangOutM + kFatalOutM;
+    CapsuleShape body(0.6F, 0.25F);
+    body.SetEmbedded();
+    SphereShape over(0.35F);
+    over.SetEmbedded();
+    return clear(&body, out + 0.05F, feet - 1.2F) && clear(&over, out - 0.15F, feet + 0.6F);
+}
+
+// The fall from his real-arm hang (under her hand, kHangOutM + kFatalOutM
+// out from her middle, his middle a body's half under her deck), with her
+// least flick out (kFatalTossMps), kills; and from kFatalSwayM either side.
+bool Matron::lethal_from_real(const float sx, const float sz, const float nx, const float nz, const float feet) const {
+    const float out = kHangOutM + kFatalOutM;
+    for (const float along : {0.0F, -kFatalSwayM, kFatalSwayM}) {
+        const RVec3 hang(sx + nx * out + nz * along, feet - 0.95F, sz + nz * out - nx * along);
+        if (fall_impact_mps(hang, Quat::sIdentity(), Vec3(nx, 0.0F, nz) * kFatalTossMps[0], Vec3::sZero(),
+                            kFatalChooseMarginM) < kFatalLandMps) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // The fall from where he will really hang at her let-go there (kFatalDropOutM
@@ -647,6 +722,7 @@ void Matron::end_hold(const State next) {
     arm_throw_ = false;
     leg_toss_ = false;
     retake_ = false;
+    torn_in_carry_ = false;
     reel_ = false;
     reel_to_floor_ = false;
     spare_walk_ = false;
@@ -655,6 +731,8 @@ void Matron::end_hold(const State next) {
     fatal_hold_ = false;
     fatal_path_ = FatalPath::None;
     fatal_hang_ = false;
+    fatal_window_ = false;
+    fatal_window_paused_ = false;
     fatal_dropped_ = false;
     fatal_edge_ = RVec3::sZero();
     fatal_s_ = 0.0F;
@@ -670,6 +748,7 @@ void Matron::end_hold(const State next) {
     pull_n_ = kHandReachPullN;
     pull2_n_ = kHandReachPullN;
     arm_reach_m_ = kArmReachM;
+    reset_beats();
     fatal_work_reset();
     if (next == State::Searching) {
         search_s_ = 0.0F;
@@ -699,7 +778,6 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
     const float feet = float(at.GetY()) - kStandCentre;
-    const RVec3 shoulder = at + shoulder_local();
     const Vec3 fwd(std::sin(yaw_), 0.0F, std::cos(yaw_));
     const Vec3 right(fwd.GetZ(), 0.0F, -fwd.GetX());
     hold_s_ += dt;
@@ -711,15 +789,24 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     // carry is faster than her hand's own pace); any other hold as it was.
     const Vec3 moving = bodies.GetLinearVelocity(body_);
     const Vec3 her_v = fatal_hold_ ? Vec3(moving.GetX(), 0.0F, moving.GetZ()) : Vec3::sZero();
-    // A braced player (their hands on a rail): her pull grows, finite.
+    // A braced player (their hands on a rail): her pull grows, finite. So
+    // does a re-pose haul in arm play (J-001 P0): her weight in the drag
+    // against a caught body, the wrist not yet hers — her hand alone
+    // (kHandPullN) sits under a snag's max, so the haul's cap is the rip cap
+    // and the snag breaks on real force, not on the re-pose count.
+    const bool rip_haul = player_braced_ ||
+                          (state_ == State::ArmPlay && arm_reposes_ > 0 && !wrist_on_);
     if (grip_on_) {
-        pull_n_ = player_braced_ ? std::min(kRipMaxN, pull_n_ + kRipRampNps * dt) : kHandPullN;
+        pull_n_ = rip_haul ? std::min(kRipMaxN, pull_n_ + kRipRampNps * dt) : kHandPullN;
         // A shortening spring limit would be a second, unbudgeted actuator.
         // On a ladder only the charged hand/feet forces supply her pull.
-        if (!player_on_ladder_) arm_reach_m_ = std::max(kArmReachM, arm_reach_m_ - kArmRetractMps * dt);
+        // Her hand's physical limit in a hold: her real arm's envelope
+        // (kHoldArmLimitM); its poses are within her real arm (bend_to_hands).
+        arm_reach_m_ = kHoldArmLimitM;
     }
-    const auto carry_pose = [&] {
-        return RVec3(at.GetX(), feet + kCarryHandUpM, at.GetZ()) + right * kCarrySideM;
+    // Beat 2's pose: his ankle at her side, low, a little behind her.
+    const auto drag_pose = [&] {
+        return RVec3(at.GetX(), feet + kDragHandUpM, at.GetZ()) + right * kDragHandSideM - fwd * kDragHandBackM;
     };
     const auto stand = [&] { walk_toward(dt, ax, az, 0.0F); };
     // S2 extreme valve, REMOVED (2026-10-31, proven wrong, not tuned):
@@ -741,18 +828,79 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     switch (state_) {
     case State::Grab: {
         if (!grip_on_) {
-            // The reach: down to the ankle (the feet end of the body, however
-            // it lies), stooping for it.
             const RVec3 ankle = player_ankle_;
-            Vec3 to = Vec3(ankle - shoulder);
-            const float length = to.Length();
-            if (length > kStoopReachM) {
-                to *= kStoopReachM / length;
-            }
-            stand();
             yaw_ = turn_to(yaw_, std::atan2(float(player.GetX()) - ax, float(player.GetZ()) - az), 7.0F, dt);
-            pose_hand(dt, shoulder + to, kHandReachSpeedMps);
-            if (hold_s_ > kGrabReachSeconds || length > kStoopReachM + 0.4F) {
+            if (hold_phase_ == 0) {
+                // Beat 1, down: a man on his feet she knocks down first (her
+                // swat, the world's kSwatN at his chest); on a ladder, down
+                // already, or crouched low, her hand goes for his ankle at
+                // once (a crouched man is already low: no knockdown to set
+                // up, and the swat would only knock him away).
+                if (player_down_ || player_on_ladder_ || player_crouched_ || retake_) {
+                    hold_phase_ = 1;
+                    hold_s_ = 0.0F;
+                } else {
+                    if (!swat_given_) {
+                        swat_given_ = true;
+                        swat_due_ = true;
+                        swat_dir_ = swat_direction(player);
+                        ++swats_;
+                        // Her feet yield the swat's share from this tick: a
+                        // swat charged to the same budget must not arrive
+                        // starved by the step that sets it up.
+                        swat_budget_ticks_ = kSwatTicks;
+                    }
+                    stand();
+                    // Her hand with the swat, at his chest.
+                    pose_hand(dt, player + RVec3(0.0, 0.45, 0.0), kHandReachSpeedMps);
+                    if (hold_s_ > kSwatWaitS) {
+                        // Still on his feet: no hold.
+                        ++grab_misses_;
+                        grab_cooldown_s_ = kGrabCooldownSeconds;
+                        end_hold(State::Hunting);
+                    }
+                    break;
+                }
+            }
+            // Beat 2's start: down to his ankle, her feet taking her to it
+            // (a man knocked down lies a step or two off), bent for it. His
+            // last arm (the fatality): his collar instead, to haul him up face
+            // to face and drive him back to her edge (kFatalByCollar).
+            const bool by_collar = kFatalByCollar && player_arms_left_ == 1 && arm_tears_ == hold_tears_at_ &&
+                                   !player_on_ladder_;
+            if (by_collar) {
+                grip_point_ = Grip::Collar;
+            }
+            const RVec3 take = by_collar ? player_collar_ : ankle;
+            // A crouched man: the old grab's miss, restored (her stoop
+            // cannot reach his ankle where he crouches, so no hold to
+            // walk into: she misses where she stands instead of walking
+            // into him and shoving him along).
+            if (player_crouched_ && Vec3(take - (at + shoulder_local())).Length() > kStoopReachM + 0.4F) {
+                ++grab_misses_;
+                grab_cooldown_s_ = kGrabCooldownSeconds;
+                end_hold(State::Hunting);
+                break;
+            }
+            const float reach_off = xz(ax, az, float(take.GetX()), float(take.GetZ()));
+            if (reach_off > 0.6F && !player_on_ladder_ && !player_crouched_) {
+                // To his ankle, stopping short of it (her body never walks
+                // into his and shoves it along).
+                const float k = (reach_off - 0.6F) / reach_off;
+                walk_toward(dt, ax + (float(take.GetX()) - ax) * k, az + (float(take.GetZ()) - az) * k,
+                            std::min(kHuntMps, 0.5F + 2.0F * (reach_off - 0.6F)));
+            } else {
+                stand();
+            }
+            if (player_on_ladder_) {
+                // On a ladder his feet are on its rungs, past her real arm:
+                // she takes him by the belt (his hands on the rungs decide).
+                grip_point_ = Grip::Belt;
+                pose_hand(dt, player_belt_, kHandReachSpeedMps);
+            } else {
+                pose_hand(dt, take, kHandReachSpeedMps);
+            }
+            if (hold_s_ > kGrabReachSeconds + 1.3F || reach_off > 3.5F) {
                 ++grab_misses_;
                 retake_ = false;
                 grab_cooldown_s_ = kGrabCooldownSeconds;
@@ -765,62 +913,54 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             // ankle through her finite hand; his ordinary grip decides when
             // it can no longer hold. Only then does the normal hold proceed.
             walk_toward(dt, ax - fwd.GetX(), az - fwd.GetZ(), kHuntMps * kCarryPaceScale);
-            pose_hand(dt, RVec3(ax, player_ankle_.GetY(), az) + fwd * kCatchM, kHandSpeedMps);
+            const RVec3 held = grip_point_ == Grip::Belt ? player_belt_ : player_ankle_;
+            pose_hand(dt, RVec3(ax, held.GetY(), az) + fwd * kCatchM, kHandSpeedMps);
             break;
         }
-        if (fatal_hold_) {
-            // His one arm left: the fatality (taken again where the world tore
-            // him out of her hand, the same). She is on her way to its edge as
-            // her fingers close, the body coming up in her fist as she goes
-            // (Carry's pose): no time to savor it.
-            retake_ = false;
-            begin_fatal(ax, az, feet);
-            if (state_ == State::Carry) {
-                pose_hand(dt, carry_pose(), kHandSpeedMps, her_v);
-            }
-            break;
-        }
-        // Closed on it: up, the body coming off its feet head down.
         stand();
-        // A slow first heave: the body coming off its feet and over.
-        pose_hand(dt, carry_pose(), 0.6F * kHandSpeedMps);
-        if (hold_s_ >= kGrabLiftSeconds && Vec3(carry_pose() - hand_target_).Length() < 0.05F) {
-            if (retake_) {
-                // Taken again where the world tore them out of her hand: no
-                // second heave. The arm here (her spot and the way to the
-                // body stand in for the rail's), then back on the deck.
-                retake_ = false;
-                aim_ledge_ = false;
-                stand_in_for_rim(at, player, fwd);
-                if (!begin_armplay(State::Spare)) {
-                    spare_here();
-                }
-                break;
-            }
-            if (!choose_rim(ax, az)) {
-                // No rail to take them to: the arm where she stands (her spot
-                // and the way to the body stand in for the rail's), then back
-                // on the deck.
-                aim_ledge_ = false;
-                stand_in_for_rim(at, player, fwd);
-                if (!begin_armplay(State::Spare)) {
-                    spare_here();
-                }
-                break;
-            }
+        pose_hand(dt, drag_pose(), 0.6F * kHandSpeedMps);
+        if (fatal_hold_) {
+            // His one arm left: the fatality. She drags him to its edge (by
+            // his collar: kFatalByCollar).
+            retake_ = false;
+            torn_in_carry_ = false;
+            begin_fatal(ax, az, feet);
+            break;
+        }
+        if (retake_ && torn_in_carry_) {
+            // Torn out of her hand mid-drag: the rail she was dragging him
+            // to still stands, so the drag resumes to it on the re-take
+            // instead of pinning where she stands.
+            retake_ = false;
+            torn_in_carry_ = false;
             ++carries_;
             state_ = State::Carry;
             hold_s_ = 0.0F;
+            break;
         }
+        if (retake_ || !choose_rim(ax, az)) {
+            // Taken again where the world tore him out of her hand, or no
+            // rail to drag him to: the pin against her where she stands (her
+            // spot standing in for the rail's), the arm there, then set down.
+            retake_ = false;
+            aim_ledge_ = false;
+            stand_in_for_rim(at, player, fwd);
+            pin_here_ = true;
+            begin_pin();
+            break;
+        }
+        ++carries_;
+        state_ = State::Carry;
+        hold_s_ = 0.0F;
         break;
     }
     case State::Carry: {
+        // Beat 2, the drag: his ankle at her side, low, him on his back on the
+        // deck behind her; her pull capped against his grip (pull_n_).
         const float off = xz(ax, az, rim_x_, rim_z_);
         if (off > kRimArriveM) {
             float wx = rim_x_;
             float wz = rim_z_;
-            // The last of it straight across the band to the rail (the rail's
-            // spot is off her walking lines); farther, along them.
             if (off > 6.0F) {
                 route_toward(ax, az, rim_x_, rim_z_, on_catwalk, wx, wz);
             }
@@ -831,229 +971,71 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             yaw_ = turn_to(yaw_, want, kHoldTurnRate, dt);
             if (std::abs(std::remainder(want - yaw_, 2.0F * kPiF)) < 0.3F && braced_at_rim(ax, az)) {
                 ++dangles_;
-                state_ = State::Dangle;
-                hold_s_ = 0.0F;
-                hold_phase_ = 0;
-                if (fatal_hold_) {
-                    // The fatality's hang: its window, not a dangle's roll.
-                    dangle_s_ = kFatalHangWindowS;
-                    fatal_window_s_ = 0.0F;
-                } else {
-                    dangle_s_ = dangle_for_test_s_ >= 0.0F ? dangle_for_test_s_
-                                                          : kDangleMinSeconds + kDangleSpanSeconds * roll();
-                }
+                pin_here_ = false;
+                begin_pin();
             }
         }
-        // S2 counter-lean. Step actuator, named: walk_toward above, her
-        // feet, already driving this case. The pull itself is the hand
-        // target: while the load's shift exceeds the upright base, move
-        // the hand toward her centreline by the amount that would bring
-        // the shift back to the base, never pulling the body's offset
-        // below 0.25 m. A carried load moves with her, so a sideways
-        // step cannot close its relative shift — only bringing the load
-        // in can, and the cap below is what bounds the remainder: the
-        // ankle-held body hangs diagonally, so even a hand at her
-        // centreline leaves its centre well outboard.
-        // Non-fatal Carry only: fatal holds keep their choreography,
-        // and Dangle/Spare keep their poses.
-        RVec3 pose = carry_pose();
+        // S2 counter-lean (non-fatal drag only; trunk's): while the load's
+        // shift is past her upright base, her hand comes in toward her centre
+        // line by what would bring it back, at most kCarryPullCapM, never
+        // bringing his body's offset under 0.25 m.
+        RVec3 pose = drag_pose();
         float pull_applied = 0.0F;
         if (!fatal_hold_ && load_held_ && load_cop_shift_m_ > kUprightBaseM) {
             const float need = (load_cop_shift_m_ - kUprightBaseM) * (kMassKg + load_mass_kg_) / load_mass_kg_;
-            // Capped (2026-10-31): the uncapped pull ran to ~0.74 m of
-            // hand travel in late Carry and broke the dangerous hold
-            // (extra grip + shove where trunk tears cleanly). The cap
-            // keeps a real pull in late Carry (the S2 stance test
-            // requires med_pull > 0) while leaving ordinary Carry
-            // geometry close enough to trunk that holds still tear.
             pull_applied = std::min({need, std::max(0.0F, load_offset_m_ - 0.25F), kCarryPullCapM});
             pose = RVec3(pose.GetX() - load_dir_x_ * pull_applied, pose.GetY(), pose.GetZ() - load_dir_z_ * pull_applied);
         }
         pose_hand(dt, pose, kHandSpeedMps, her_v);
         load_pull_m_ = pull_applied;
         if (fatal_hold_ && state_ == State::Carry) {
-            // The fatality's edge not reached in the carry's time: the floor
+            // The fatality's edge not reached in the drag's time: the floor
             // version, where she stands.
             fatal_carry_s_ += dt;
             if (fatal_carry_s_ > kFatalCarryS) {
                 fatal_floor();
             }
         } else if (hold_s_ > kCarryMaxSeconds && state_ == State::Carry) {
-            // Too long with them: the arm where she stands, then set down
-            // beside her on her deck (never dropped where she is: she may be
-            // at an edge).
+            // Too long with him: the pin where she stands, the arm there, set down.
             stand_in_for_rim(at, player, fwd);
-            if (!begin_armplay(State::Spare)) {
-                spare_here();
-            }
+            pin_here_ = true;
+            begin_pin();
         }
         break;
     }
     case State::Dangle: {
-        // Her feet keep her at her spot against the rail (the fatality's: her
-        // front to it, kFatalStandM in, him close for his window).
-        const float stand_in = fatal_hold_ ? kFatalStandM : kRimStandM;
-        const float spot_x = rim_x_ + rim_nx_ * (kRimStandM - stand_in);
-        const float spot_z = rim_z_ + rim_nz_ * (kRimStandM - stand_in);
-        walk_toward(dt, spot_x, spot_z, std::min(0.8F, 3.0F * xz(ax, az, spot_x, spot_z)));
-        yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
-        if (!braced_at_rim(ax, az)) {
-            // Pulled off her brace: back from the rail, the body back in (the
-            // fatality's carry keeps its time: fatal_carry_s_).
+        if (xz(ax, az, rim_x_, rim_z_) > kRimBraceLostM) {
+            // Pulled off her spot (far past her own steps to his collar):
+            // back from the rail, the body back in; the third time she gives
+            // it up (the fatality's carry keeps its time: fatal_carry_s_).
             ++brace_losses_;
             state_ = State::Carry;
-            hold_s_ = brace_losses_ % 3 == 0 ? kCarryMaxSeconds : 0.0F;   // the third time, she gives it up
+            hold_s_ = brace_losses_ % 3 == 0 ? kCarryMaxSeconds : 0.0F;
             if (brace_losses_ % 3 == 0 && fatal_hold_) {
                 fatal_carry_s_ = kFatalCarryS;
             }
             hold_phase_ = 0;
+            hand2_want_ = 0;
             fatal_hang_ = false;
+            fatal_window_ = false;
+            fatal_window_paused_ = false;
+            fatal_window_s_ = 0.0F;
             break;
         }
-        const Vec3 out(rim_nx_, 0.0F, rim_nz_);
-        if (hold_phase_ == 0) {
-            // The heave: up over her head and out over the rail.
-            const RVec3 over = RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()) + out * kHeaveOutM;
-            pose_hand(dt, over, kHandSpeedMps, her_v);
-            if (Vec3(over - hand_target_).Length() < 0.02F) {
-                hold_phase_ = 1;
-            }
-        } else if (hold_phase_ == 1) {
-            // Down: the arm over the rail, the body below the deck's edge.
-            const RVec3 low = RVec3(at.GetX(), feet + kDangleHandUpM, at.GetZ()) + out * kDangleOutM;
-            if (fatal_hold_) {
-                // The fatality's: out over the edge to his window's pose, close
-                // (kFatalWindowOutM out, kFatalWindowUpM up: his fist's reach
-                // of her), held there kFatalHangWindowS from when he hangs
-                // still within it (kFatalReachM, kFatalWindowPastM; her grip's
-                // friction stills his swing); then out and down to her
-                // let-go's pose (kFatalDropOutM out, kFatalDropUpM up), past the
-                // rail's height only while his swing cannot bring his middle
-                // back within kFatalClearM of the lip (he would lie across
-                // the rail); swung in over it, up again till he is out.
-                const RVec3 win = RVec3(at.GetX(), feet + kFatalWindowUpM, at.GetZ()) + out * kFatalWindowOutM;
-                const RVec3 drop = RVec3(at.GetX(), feet + kFatalDropUpM, at.GetZ()) + out * kFatalDropOutM;
-                const float held_past = float(player_ankle_.GetX() - fatal_edge_.GetX()) * rim_nx_ +
-                                        float(player_ankle_.GetZ() - fatal_edge_.GetZ()) * rim_nz_;
-                const float off = float(player.GetX() - player_ankle_.GetX()) * rim_nx_ +
-                                  float(player.GetZ() - player_ankle_.GetZ()) * rim_nz_;
-                const float swing_v = (bodies.GetLinearVelocity(player_) - her_v).Dot(out);
-                const float omega = std::sqrt(kGravity / kPlayerHalfM);   // his swing under her hand
-                const float inmost = held_past - std::sqrt(off * off + (swing_v / omega) * (swing_v / omega));
-                const bool clear = held_past + off >= kFatalClearM;
-                if (!fatal_hang_ && Vec3(win - hand_target_).Length() < 0.15F && held_past + off >= kFatalWindowPastM &&
-                    fist_reach_m(at, player, swing_v) <= kFatalReachM) {
-                    // Her arm out, him head down by the ankle out past the
-                    // lip, his fist within reach of her however he swings:
-                    // his window opens.
-                    fatal_hang_ = true;
-                }
-                if (fatal_hang_) {
-                    fatal_window_s_ += dt;
-                }
-                const bool window_over = fatal_window_s_ >= kFatalHangWindowS;
-                RVec3 aim = win;
-                float pace = kFatalLowerScale * kHandSpeedMps;
-                if (window_over) {
-                    // Out first; down past the rail's height once he is clear.
-                    const RVec3 here(drop.GetX(), hand_target_.GetY(), drop.GetZ());
-                    const RVec3 up_out(drop.GetX(), win.GetY(), drop.GetZ());
-                    aim = inmost >= kFatalClearM ? drop : clear ? here : up_out;
-                } else {
-                    // Into his window's pose easing off as she gets there (at
-                    // kFatalEaseRate of what is left, a second): his body comes
-                    // to it with little swing.
-                    pace = std::min(pace, kFatalEaseRate * Vec3(aim - hand_target_).Length() + 0.05F);
-                }
-                pose_hand(dt, aim, pace, her_v);
-                if (window_over && fatal_s_ >= kFatalLetGoFromS && fatal_s_ <= kFatalLetGoByS &&
-                    held_past + off >= kFatalOpenAirM && --fatal_check_ticks_ <= 0) {
-                    // On her way out, his middle out over open air: she lets
-                    // go as soon as his fall from there, as he moves, kills.
-                    fatal_check_ticks_ = 3;
-                    foresee_fall(player, out);
-                    if (fatal_lethal_) {
-                        fatal_release();
-                    }
-                }
-                if (state_ != State::Dangle) {
-                    // Let go.
-                } else if (window_over && Vec3(drop - hand_target_).Length() < 0.02F) {
-                    hold_phase_ = 2;
-                    hold_s_ = 0.0F;
-                } else if (fatal_s_ >= kFatalLetGoByS) {
-                    // Not out at her let-go in time: back in over the edge,
-                    // set down on her deck, and her floor version there.
-                    reel_ = true;
-                    reel_to_floor_ = true;
-                    fatal_hang_ = false;
-                    state_ = State::Spare;
-                    hold_phase_ = 0;
-                    hold_s_ = 0.0F;
-                    spare_walk_ = false;
-                }
-            } else {
-                pose_hand(dt, low, 0.6F * kHandSpeedMps, her_v);
-                if (Vec3(low - hand_target_).Length() < 0.02F) {
-                    hold_phase_ = 2;
-                    hold_s_ = 0.0F;
-                    fatal_window_s_ = 0.0F;
-                }
-            }
-        } else if (fatal_hold_) {
-            // The fatality's let-go: his window over (phase 1), him upside
-            // down by the ankle out over the drop at her arm's length. No
-            // sooner than kFatalLetGoFromS after her fingers closed, she lets
-            // go once his fall from where he is, as he moves, is foreseen to
-            // kill; till then a step along the edge at a time toward one that
-            // does; none by kFatalLetGoByS, she hauls him back in for her
-            // floor version.
-            const RVec3 drop = RVec3(at.GetX(), feet + kFatalDropUpM, at.GetZ()) + out * kFatalDropOutM;
-            pose_hand(dt, drop, kHandSpeedMps, her_v);
-            fatal_hang_ = true;
-            fatal_window_s_ += dt;
-            const bool due = fatal_window_s_ >= kFatalHangWindowS && fatal_s_ >= kFatalLetGoFromS;
-            if (due || --fatal_check_ticks_ <= 0) {
-                fatal_check_ticks_ = 3;
-                foresee_fall(player, out);
-                if (!fatal_lethal_ && xz(ax, az, rim_x_, rim_z_) < 0.1F) {
-                    (void)fatal_shift(feet);
-                }
-            }
-            if (due && fatal_lethal_ && fatal_s_ <= kFatalLetGoByS) {
-                fatal_release();
-            } else if (fatal_s_ >= kFatalLetGoByS) {
-                // No let-go that kills, in time: back in over the edge, set
-                // down on her deck, and her floor version there.
-                reel_ = true;
-                reel_to_floor_ = true;
-                fatal_hang_ = false;
-                state_ = State::Spare;
-                hold_phase_ = 0;
-                hold_s_ = 0.0F;
-                spare_walk_ = false;
-            }
-        } else {
-            pose_hand(dt, hand_target_, kHandSpeedMps);
-            if (hold_s_ >= dangle_s_) {
-                // Every hold, at every stage: while they have an arm, her
-                // other hand goes for it (no roll); with none left, the run
-                // is hers.
-                if (player_arms_left_ <= 0) {
-                    claim();
-                } else if (!begin_armplay(State::Dangle)) {
-                    finish_dangle();
-                }
-            }
-        }
+        step_rail(dt, player, at, feet);
         break;
     }
     case State::ArmPlay: {
+        // The pin held (her first hand on his belt, or his collar with no
+        // rail), his arm to her other.
         walk_toward(dt, rim_x_, rim_z_, std::min(0.8F, 3.0F * xz(ax, az, rim_x_, rim_z_)));
         yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
-        // The body hauled up in her fist, its arms to her other hand.
-        pose_hand(dt, RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()) + Vec3(rim_nx_, 0.0F, rim_nz_) * kHeaveOutM,
-                  0.6F * kHandSpeedMps);
+        // Her first hand's pace: a reach (0.6) while she is still reaching
+        // for the wrist, a haul at full pace once she has re-posed and is
+        // dragging a caught body (J-001 P0) — the haul must stretch the drag
+        // to the snag's max by real force, and a reach pace never gets there.
+        const float hand_pace = (arm_reposes_ > 0 && !wrist_on_) ? kHandSpeedMps : 0.6F * kHandSpeedMps;
+        pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), hand_pace);
         step_armplay(dt, player, at, feet);
         break;
     }
@@ -1069,49 +1051,65 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             walk_toward(dt, spare_to_x_, spare_to_z_, 0.8F);
             yaw_ = turn_to(facing_edge, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
             spare_walk_ = xz(ax, az, spare_to_x_, spare_to_z_) > 0.1F;
-        } else if (reel_) {
-            // Reeling from his blow (or hauling him back in): her feet catch
-            // her kReelBackM back from the edge, her face still to it, him
-            // still in her fist.
+        } else if (reel_ || (hold_phase_ == 0 && grip_point_ == Grip::Ankle && !pin_here_ && back_lifted_)) {
+            // Reeling from his blow, or hauling him back in by the ankle over
+            // the rail (her one hand cannot haul hand over hand: her feet do
+            // it, walking back, the rail his pulley): her face still to it,
+            // him still in her fist.
             const float facing_edge = yaw_;
-            walk_toward(dt, rim_x_ - rim_nx_ * kReelBackM, rim_z_ - rim_nz_ * kReelBackM, 1.2F);
+            // (In the fatality, by his collar or belt from her short arm, she
+            // walks back as far as by the ankle: his middle well in.)
+            const float back = reel_ && grip_point_ != Grip::Ankle && !fatal_hold_ ? kReelBackM : kBackInWalkM;
+            walk_toward(dt, rim_x_ - rim_nx_ * back, rim_z_ - rim_nz_ * back, reel_ ? 1.2F : 0.6F);
             yaw_ = turn_to(facing_edge, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
         } else {
             stand();
         }
-        // Reeling, her arm comes in at its full pace.
-        const float in_pace = reel_ ? 1.0F : 0.35F;
-        const float down_pace = reel_ ? 1.0F : 0.5F;
+        const float in_pace = reel_ ? 1.0F : 0.5F;
+        // How far in from the rail's line his middle is.
+        const float rail_in = (rim_x_ + rim_nx_ * kRimStandM - float(player.GetX())) * rim_nx_ +
+                              (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
         if (hold_phase_ == 0) {
-            // Back up over the rail.
-            const RVec3 over = RVec3(at.GetX(), feet + kCarryHandUpM + 0.35F, at.GetZ()) + out * 0.3F;
-            pose_hand(dt, over, in_pace * kHandSpeedMps);
-            if (Vec3(over - hand_target_).Length() < 0.02F) {
+            // Back in over the rail: her hand in and down, the rail his
+            // pulley (by the ankle), or his collar drawn in off it.
+            // By the ankle, her hand rides just over the rail's top (his leg
+            // over it, not wedged under it) till his middle is in.
+            // By the ankle, his body slides in across the rail's top along its
+            // own length, tilted (a rigid body does not bend over it): her hand
+            // at her side rising as she walks back (kBackInSlope a metre in from
+            // the rail, at most kBackInTopM over her feet).
+            const float her_in = (rim_x_ + rim_nx_ * kRimStandM - ax) * rim_nx_ +
+                                 (rim_z_ + rim_nz_ * kRimStandM - az) * rim_nz_;
+            const float up = grip_point_ != Grip::Ankle
+                                 ? std::max(kPinHereUpM - 0.25F, rail_up_)
+                                 : std::min(kBackInTopM, rail_up_ + 0.15F + kBackInSlope * std::max(0.0F, her_in - kRimStandM));
+            RVec3 in = RVec3(at.GetX(), feet + up, at.GetZ()) -
+                       out * (grip_point_ != Grip::Ankle ? kBackInM : 0.0F) + right * kBackInSideM;
+            if (grip_point_ == Grip::Ankle && !pin_here_ && rail_in < 0.0F && !back_lifted_) {
+                // His ankle not over the rail's top yet: up clear of it first
+                // (not hauled into its side).
+                in = RVec3(at.GetX(), feet + rail_up_ + kBackInLiftM, at.GetZ()) + out * kHangOutM + right * kHangSideM;
+            }
+            pose_hand(dt, in, in_pace * kHandSpeedMps);
+            back_lifted_ = back_lifted_ || float(player_ankle_.GetY()) >= feet + rail_up_ + 0.3F || rail_in >= 0.0F;
+            if (rail_in > 0.45F || (pin_here_ && Vec3(in - hand_target_).Length() < 0.05F)) {
                 hold_phase_ = 1;
+                hold_s_ = 0.0F;
+            } else if (hold_s_ > 8.0F) {
+                // Not coming in: out and up a little, and in again.
+                hold_s_ = 0.0F;
+                ++spare_tries_;
             }
             spare_side_set_ = false;
         } else if (hold_phase_ == 1) {
-            // Down beside her till their head is on the deck: on the side of
-            // her with her deck under it (spare_side), chosen as she starts.
+            // Down beside her onto her deck, and let go once her deck is close
+            // under his body; not, she walks him on (spare_walk_).
             if (!spare_side_set_) {
                 spare_side_ = spare_side(at, feet, right, out, spare_deck_);
                 spare_side_set_ = true;
             }
-            const RVec3 down = RVec3(at.GetX(), feet + 2.0F * kPlayerHalfM + 0.1F, at.GetZ()) + spare_side_;
-            pose_hand(dt, down, down_pace * kHandSpeedMps);
-            // Over the deck (her deck under the spot, or in from the rail),
-            // the head on it: let go. Never over the drop: past the time, back
-            // up and over again; tried once already, her deck under them, she
-            // lets go once her hand is there (a body hung against her short
-            // of it). Whichever: only with her deck found close under his
-            // body; not, she keeps hold and walks him on (spare_walk_).
-            const float rail_in = (rim_x_ + rim_nx_ * kRimStandM - float(player.GetX())) * rim_nx_ +
-                                  (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
-            const bool ready = !spare_walk_ && Vec3(down - hand_target_).Length() < 0.02F &&
-                               (spare_deck_ || rail_in > 0.5F) &&
-                               (player.GetY() < feet + 1.2 || (spare_tries_ > 0 && spare_deck_));
-            // Let go: her hand opens, and the hold goes on to the collar put straight. True when
-            // the hold ended instead (hauled back in, or set down after his blow).
+            const RVec3 down = RVec3(at.GetX(), feet + 0.55F, at.GetZ()) + spare_side_;
+            pose_hand(dt, down, in_pace * kHandSpeedMps);
             const auto set_down = [&]() {
                 let_go_ = true;
                 let_go_push_ = Vec3::sZero();
@@ -1119,31 +1117,23 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                 hold_phase_ = 2;
                 hold_s_ = 0.0F;
                 if (reel_to_floor_) {
-                    // Hauled back in, no lethal let-go in time: her floor
-                    // version, where he lies.
                     reel_ = false;
                     reel_to_floor_ = false;
                     fatal_floor();
                     return true;
                 }
                 if (reel_) {
-                    // Set down after his blow: her stagger, then after him.
                     end_reel(player);
                     return true;
                 }
                 return false;
             };
-            const auto walk_on = [&]() {
-                spare_walk_ = true;
-                spare_to_x_ = ax - rim_nx_ * 0.5F;
-                spare_to_z_ = az - rim_nz_ * 0.5F;
-            };
+            const bool there = Vec3(down - hand_target_).Length() < 0.05F || hold_s_ > 2.5F;
             if (spare_tries_ > 2) {
-                // Tried three times and not set down: no more back up and over. Her deck close
-                // under his body, she sets him down; not, she keeps hold and walks him on toward
-                // her deck, a step at a time (spare_walk_), never letting go over the drop. A step
-                // that stops short of its spot is looked at again from where she is (hold_s_ times
-                // it), so each look moves her at least a little inward.
+                // Tried three times and not set down: no more back up and
+                // over. Her deck close under his body, she sets him down;
+                // not, she keeps hold and walks him on toward her deck a step
+                // at a time, never letting go over the drop.
                 if (deck_close_below(player, feet)) {
                     spare_walk_ = false;
                     if (set_down()) {
@@ -1154,34 +1144,39 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                         spare_walk_ = false;
                     }
                 } else {
-                    walk_on();
+                    spare_walk_ = true;
+                    spare_to_x_ = ax - rim_nx_ * 0.5F;
+                    spare_to_z_ = az - rim_nz_ * 0.5F;
                     hold_s_ = 0.0F;
                 }
-            } else if (ready && !deck_close_below(player, feet)) {
-                walk_on();
-            } else if (ready) {
-                if (set_down()) {
-                    break;
-                }
-            } else if (hold_s_ > 8.0F && spare_tries_ <= 2) {
+            } else if (hold_s_ > 8.0F) {
+                // Not set down in all that time: back up and over, and again.
                 spare_walk_ = false;
                 ++spare_tries_;
                 hold_phase_ = 0;
                 hold_s_ = 0.0F;
+            } else if (there && deck_close_below(player, feet)) {
+                spare_walk_ = false;
+                if (set_down()) {
+                    break;
+                }
+            } else if (there && !spare_walk_ && hold_s_ > kSpareStepSeconds) {
+                spare_walk_ = true;
+                spare_to_x_ = ax - rim_nx_ * 0.5F;
+                spare_to_z_ = az - rim_nz_ * 0.5F;
+                hold_s_ = 2.5F;
+                ++spare_tries_;
             }
         } else {
             // The collar put straight; then she walks off.
-            const RVec3 collar = player + RVec3(0.0, 0.5, 0.0);
-            Vec3 to = Vec3(collar - shoulder);
-            if (to.Length() > kArmReachM) {
-                to *= kArmReachM / to.Length();
-            }
-            pose_hand(dt, shoulder + to, 0.5F * kHandSpeedMps);
+            pose_hand(dt, player + RVec3(0.0, 0.5, 0.0), 0.5F * kHandSpeedMps);
             if (hold_s_ >= kSpareSetSeconds) {
-                // She walks off; an arm torn this hold, her hands stay off
-                // him kRegrabAfterTearS.
-                calm_s_ = kSpareCalmSeconds;
+                // She walks off for as long as her hands stay off him (rule
+                // 35: 30 s after a tear she lets him run), not hunting him
+                // meanwhile with no way to take hold (her body would only
+                // shove him along, off an edge).
                 grab_cooldown_s_ = std::max(kSpareCalmSeconds, hands_off_after_hold());
+                calm_s_ = grab_cooldown_s_;
                 end_hold(State::Shuffling);
             }
         }
@@ -1208,6 +1203,733 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     }
     default:
         break;
+    }
+    // Every pose of her hands within her real arm (kRealArmM), her trunk
+    // bent to it; not in the floor fatality's beats (Claimed), its own.
+    if (holding_state(state_) && state_ != State::Claimed) {
+        bend_to_hands(dt, at, feet);
+    } else {
+        trunk_ = Trunk{};
+    }
+}
+
+// ---- The five beats' helpers (HOLD_WITH_REAL_ARMS.md) ----------------------
+
+RVec3 Matron::shoulder_of(const RVec3 at, const float side) const noexcept {
+    // Her shoulder on `side` (+1 her right, -1 her left) where her trunk puts
+    // it: her hips trunk_.hip_up over her feet, her trunk pitched forward.
+    const float feet = float(at.GetY()) - kStandCentre;
+    const Vec3 fwd(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    const Vec3 right(fwd.GetZ(), 0.0F, -fwd.GetX());
+    const Vec3 trunk = fwd * (kTrunkM * std::sin(trunk_.pitch)) + Vec3(0.0F, kTrunkM * std::cos(trunk_.pitch), 0.0F);
+    return RVec3(at.GetX(), feet + trunk_.hip_up, at.GetZ()) + trunk + right * (side * kShoulderSideM);
+}
+
+void Matron::bend_to_hands(const float dt, const RVec3 at, const float feet) {
+    // The least bend (pitch, then knees) that puts her right shoulder within
+    // her real arm of her hand's pose; none does: the one that comes nearest.
+    const Vec3 fwd(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    const Vec3 right(fwd.GetZ(), 0.0F, -fwd.GetX());
+    const RVec3 want = hand_target_;
+    const bool two = hand2_active();
+    Trunk best = trunk_;
+    float best_effort = 1.0e9F;
+    float best_miss = 1.0e9F;
+    for (const float hip : {kHipUpM, 0.5F * (kHipUpM + kHipLowM), kHipLowM}) {
+        for (int k = 0; k <= 14; ++k) {
+            const float pitch = std::min(kTrunkPitchMaxRad, 0.1F * static_cast<float>(k));
+            const RVec3 shoulder = RVec3(at.GetX(), feet + hip, at.GetZ()) +
+                                   fwd * (kTrunkM * std::sin(pitch)) +
+                                   Vec3(0.0F, kTrunkM * std::cos(pitch), 0.0F) + right * kShoulderSideM;
+            float miss = std::max(0.0F, Vec3(want - shoulder).Length() - (kRealArmM - 0.03F));
+            if (two) {
+                const RVec3 left = shoulder - right * (2.0F * kShoulderSideM);
+                miss = std::max(miss, Vec3(hand2_target_ - left).Length() - (kRealArmM - 0.03F));
+            }
+            const float effort = pitch + 2.0F * (kHipUpM - hip);
+            if (miss < best_miss - 1.0e-4F || (miss <= best_miss + 1.0e-4F && effort < best_effort)) {
+                best_miss = miss;
+                best_effort = effort;
+                best = Trunk{hip, pitch};
+            }
+        }
+    }
+    // Eased (her joints at a finite rate: rule 37).
+    const float pitch_step = 2.5F * dt;
+    const float hip_step = 0.8F * dt;
+    trunk_.pitch += std::clamp(best.pitch - trunk_.pitch, -pitch_step, pitch_step);
+    trunk_.hip_up += std::clamp(best.hip_up - trunk_.hip_up, -hip_step, hip_step);
+    // Each hand's pose within her real arm of its shoulder.
+    const auto within = [&](RVec3 &hand, const float side) {
+        const RVec3 shoulder = shoulder_of(at, side);
+        const Vec3 to = Vec3(hand - shoulder);
+        const float length = to.Length();
+        if (length > kRealArmM) {
+            hand = shoulder + to * (kRealArmM / length);
+        }
+    };
+    within(hand_target_, 1.0F);
+    if (hand2_active()) {
+        within(hand2_target_, -1.0F);
+    }
+}
+
+void Matron::find_rail_top(const RVec3 at, const float feet) {
+    // The first steel under her rail's line (the rail's top, or a bare lip's
+    // deck), from her hand's height down.
+    rail_up_ = 0.0F;
+    if (pin_here_) {
+        return;
+    }
+    IgnoreMultipleBodiesFilter skip;
+    skip.IgnoreBody(body_);
+    skip.IgnoreBody(player_);
+    const RVec3 from(rim_x_ + rim_nx_ * kRimStandM, feet + 1.7F, rim_z_ + rim_nz_ * kRimStandM);
+    RayCastResult hit;
+    if (physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -2.0F, 0.0F)), hit, {}, {}, skip)) {
+        rail_up_ = std::max(0.0F, 1.7F - 2.0F * hit.mFraction);
+    }
+    (void)at;
+}
+
+RVec3 Matron::rail_pose(const RVec3 at, const float feet, const float up, const float out, const float side) const noexcept {
+    const Vec3 o(rim_nx_, 0.0F, rim_nz_);
+    const Vec3 right(o.GetZ(), 0.0F, -o.GetX());
+    return RVec3(at.GetX(), feet + up, at.GetZ()) + o * out + right * side;
+}
+
+RVec3 Matron::belt_pose(const RVec3 at, const float feet) const noexcept {
+    // The regular pin's second hand further out: his middle tracks his
+    // belt hand, so the belt hand sets how far over the drop the pin
+    // delivers him; the fatality's belt hand stays where it was.
+    const float out = fatal_hold_ ? kBeltOutM : kBeltOutM + kBeltOutExtraM;
+    return pin_here_ ? rail_pose(at, feet, kPinHereUpM - 0.35F, 0.40F, kBeltSideM)
+                     : rail_pose(at, feet, rail_up_ + kBeltUpM, out, kBeltSideM);
+}
+
+RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
+    if (pin_here_) {
+        return rail_pose(at, feet, kPinHereUpM, 0.50F, kPinSideM);
+    }
+    // His middle kept balanced on the rail's top (kPinBalanceM past its
+    // line): slipping out, her hand on his collar comes in and up; in, out.
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 middle = bodies.GetPosition(player_);
+    const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                       (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+    const float err = past - kPinBalanceM;
+    // (Firmer back toward the rail in the fatality, whose window must keep
+    // him on its top every tick; and in the regular pin too, whose window
+    // must bring a body dragged from the deck over the line: the gentler
+    // bound saturated her hand too far east, and the middle still sat
+    // east of the line when arm play began. The regular pin's hand works
+    // at her full arm's extension: its base sits further out than the
+    // fatality's, which holds him on the top rather than delivering him
+    // over it.)
+    const float base = fatal_hold_ ? kPinOutM : kPinOutM + kPinOutExtraM;
+    const float out = base - std::clamp(1.2F * err, -0.3F, 0.55F);
+    const float up = rail_up_ + kPinUpM + std::clamp(0.8F * err, 0.0F, 0.35F);
+    return rail_pose(at, feet, up, out, kPinSideM);
+}
+
+// Beat 1's swat: away from her, else the other way, else to either side:
+// the first with her deck under where he falls (a body length on), never off
+// an edge (no kill on touch).
+Vec3 Matron::swat_direction(const RVec3 player) const {
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    Vec3 away(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
+    away = away.LengthSq() > 1.0e-4F ? away.Normalized() : Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    const Vec3 side(away.GetZ(), 0.0F, -away.GetX());
+    const float feet = float(at.GetY()) - kStandCentre;
+    IgnoreMultipleBodiesFilter skip;
+    skip.IgnoreBody(body_);
+    skip.IgnoreBody(player_);
+    for (const Vec3 dir : {away, side, -side, -away}) {
+        bool deck = true;
+        for (const float on : {0.9F, 1.8F}) {
+            const RVec3 from(player.GetX() + dir.GetX() * on, feet + 1.0F, player.GetZ() + dir.GetZ() * on);
+            RayCastResult under;
+            deck = deck && physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -1.6F, 0.0F)), under, {}, {},
+                                                                skip) &&
+                   std::abs(1.0F - 1.6F * under.mFraction) < 0.4F;
+        }
+        if (deck) {
+            return dir;
+        }
+    }
+    return -away;
+}
+
+void Matron::reset_beats() noexcept {
+    grip_point_ = Grip::Ankle;
+    regrip_ = false;
+    regrip_let_go_ = false;
+    hand2_want_ = 0;
+    hand2_on_ = 0;
+    swat_due_ = false;
+    swat_given_ = false;
+    pin_here_ = false;
+    over_up_ = false;
+    back_lifted_ = false;
+    relaid_ = false;
+    over_tries_ = 0;
+    bare_lip_ = false;
+    fatal_drive_at_s_ = 0.0F;
+    rail_up_ = 0.0F;
+}
+
+void Matron::begin_regrip(const Grip point) noexcept {
+    grip_point_ = point;
+    regrip_ = true;
+    regrip_let_go_ = grip_on_;
+    if (fatal_window_) {
+        // Her hand opens to take him by another point: no grip holds him by
+        // the measured point till it closes again, so the pin window
+        // pauses rather than running on. The window's clock freezes with it
+        // (it only runs while fatal_window_ is true).
+        fatal_window_ = false;
+        fatal_window_paused_ = true;
+    }
+}
+
+// Beat 3's start: at the rail (or, none, where she stands), her first hand
+// lets go of his ankle (him on her deck) and takes his collar.
+void Matron::begin_pin() {
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    const float feet = float(at.GetY()) - kStandCentre;
+    state_ = State::Dangle;
+    hold_s_ = 0.0F;
+    hold_phase_ = 0;
+    over_up_ = false;
+    find_rail_top(at, feet);
+    // The fatality at a bare lip (no rail to lay him over): its own over.
+    bare_lip_ = fatal_hold_ && !pin_here_ && rail_up_ < 0.2F;
+    // The rail she pins him on (her re-poses in the rip step back from it:
+    // over is at this one).
+    pin_rim_[0] = rim_x_;
+    pin_rim_[1] = rim_z_;
+    pin_rim_[2] = rim_nx_;
+    pin_rim_[3] = rim_nz_;
+    // Her hand opens on his ankle for his collar only with her deck under
+    // him (step_rail, phase 0).
+    fatal_window_s_ = 0.0F;
+    fatal_hang_ = false;
+    fatal_window_ = false;
+    fatal_window_paused_ = false;
+    if (fatal_hold_) {
+        dangle_s_ = kFatalHangWindowS;
+    } else {
+        dangle_s_ = dangle_for_test_s_ >= 0.0F ? dangle_for_test_s_ : kDangleMinSeconds + kDangleSpanSeconds * roll();
+    }
+}
+
+void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const float feet) {
+    const float ax = float(at.GetX());
+    const float az = float(at.GetZ());
+    const Vec3 out(rim_nx_, 0.0F, rim_nz_);
+    const float to_spot = xz(ax, az, rim_x_, rim_z_);
+    // The fatality's beats at her full pace (kFatalPaceScale): the owner's
+    // 5 to 7 s from her fingers closing to her letting go.
+    const float pace = fatal_hold_ ? kFatalPaceScale : 1.0F;
+    const auto at_spot = [&] {
+        walk_toward(dt, rim_x_, rim_z_, std::min(0.8F * pace, 3.0F * pace * to_spot));
+        yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
+    };
+    const auto back_in = [&] {
+        // Out of her plan: back in over the rail and set down.
+        ++spares_;
+        fatal_hang_ = false;
+        fatal_window_ = false;
+        fatal_window_paused_ = false;
+        fatal_window_s_ = 0.0F;
+        hand2_want_ = 0;
+        regrip_ = false;
+        state_ = State::Spare;
+        hold_phase_ = 0;
+        hold_s_ = 0.0F;
+        spare_walk_ = false;
+    };
+    if (fatal_window_ && hold_phase_ >= 3) {
+        // The pin window goes on through her grips' shift for the
+        // over (kFatalPinS), him still face to face on the rail's top.
+        fatal_window_s_ += dt;
+        if (fatal_window_s_ >= kFatalHangWindowS) {
+            fatal_window_ = false;
+            fatal_window_s_ = 0.0F;
+        }
+    }
+    if (fatal_hang_ && hold_phase_ >= 7) {
+        // Beat 5's hang clock: no expiry clear here, the hang runs till the
+        // let-go decision (gated on this clock below).
+        fatal_window_s_ += dt;
+    }
+    switch (hold_phase_) {
+    case 0: {
+        // By his ankle (or his belt, taken off a ladder): his collar first.
+        if (grip_point_ != Grip::Collar && !regrip_) {
+            // Her deck under the whole of him first (a drag's slide can take
+            // his body on past her toward the edge): she keeps his ankle and
+            // steps back in, hauling him after her.
+            const float in_from_rail = (rim_x_ + rim_nx_ * kRimStandM - float(player.GetX())) * rim_nx_ +
+                                       (rim_z_ + rim_nz_ * kRimStandM - float(player.GetZ())) * rim_nz_;
+            const Vec3 his_v = physics_.GetBodyInterface().GetLinearVelocity(player_);
+            const bool at_rest = Vec3(his_v.GetX(), 0.0F, his_v.GetZ()).Length() < 0.4F;
+            const bool in = in_from_rail >= 0.4F && deck_close_below(player, feet);
+            if (pin_here_ || (in && at_rest)) {
+                begin_regrip(Grip::Collar);
+                break;   // the world opens her hand this tick
+            } else if (in) {
+                // Well in, still sliding from the drag: she stands and lets
+                // him come to rest (walking on would only take his collar
+                // farther from her).
+                walk_toward(dt, ax, az, 0.0F);
+                yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
+                pose_hand(dt, RVec3(at.GetX(), feet + kDragHandUpM, at.GetZ()) - out * 0.3F, kHandSpeedMps);
+                if (hold_s_ > 2.0F * kPinReachS) {
+                    back_in();
+                }
+                break;
+            } else {
+                walk_toward(dt, rim_x_ - rim_nx_ * kBackInWalkM, rim_z_ - rim_nz_ * kBackInWalkM, 0.6F);
+                yaw_ = turn_to(yaw_, std::atan2(rim_nx_, rim_nz_), kHoldTurnRate, dt);
+                pose_hand(dt, RVec3(at.GetX(), feet + kDragHandUpM, at.GetZ()) - out * 0.3F, kHandSpeedMps);
+                if (hold_s_ > 2.0F * kPinReachS) {
+                    back_in();
+                }
+                break;
+            }
+        }
+        // His collar: she steps in to his chest and takes it.
+        const RVec3 c = player_collar_;
+        if (fatal_hold_) {
+            // In the fatality she comes to his chest from his side (not
+            // along his legs, shoving him on ahead of her): a stand
+            // kCollarSideM off his body's line, on her side of it.
+            const Vec3 axis = physics_.GetBodyInterface().GetRotation(player_).RotateAxisY();
+            Vec3 across(-axis.GetZ(), 0.0F, axis.GetX());
+            const float across_len = across.Length();
+            across = across_len > 0.2F ? across / across_len : Vec3(rim_nz_, 0.0F, -rim_nx_);
+            if (across.Dot(Vec3(ax - float(c.GetX()), 0.0F, az - float(c.GetZ()))) < 0.0F) {
+                across = -across;
+            }
+            const float sx = float(c.GetX()) + across.GetX() * kCollarSideM;
+            const float sz = float(c.GetZ()) + across.GetZ() * kCollarSideM;
+            const float to_stand = xz(ax, az, sx, sz);
+            walk_toward(dt, sx, sz, to_stand > 0.05F ? std::min(0.9F * pace, 0.4F + 1.5F * pace * to_stand) : 0.0F);
+        } else {
+            const float off = xz(ax, az, float(c.GetX()), float(c.GetZ()));
+            walk_toward(dt, float(c.GetX()), float(c.GetZ()), off > 0.55F ? std::min(0.9F, 0.4F + 1.5F * off) : 0.0F);
+        }
+        yaw_ = turn_to(yaw_, std::atan2(float(c.GetX()) - ax, float(c.GetZ()) - az), kHoldTurnRate, dt);
+        pose_hand(dt, c, kHandReachSpeedMps);
+        if (grip_on_) {
+            hold_phase_ = 1;
+            hold_s_ = 0.0F;
+        } else if (hold_s_ > kPinReachS) {
+            // Up and away from her before her hand closed: the hold over.
+            regrip_ = false;
+            ++grab_misses_;
+            state_ = State::Release;
+            hold_s_ = 0.0F;
+            hold_phase_ = 0;
+            grab_cooldown_s_ = kGrabCooldownSeconds;
+        }
+        break;
+    }
+    case 1: {
+        // The haul: back to her spot, her second hand on his belt; his collar
+        // out past the rail and his belt up on its top: his middle balanced
+        // on it, his back to it, his head and shoulders out over the drop.
+        hand2_want_ = 2;
+        pull2_n_ = hand2_on_ == 2 ? kHandPullN : kHandReachPullN;
+        if (hand2_on_ != 2) {
+            // She steps in to his middle (his collar in her first hand), her
+            // second hand for his belt.
+            const RVec3 b = player_belt_;
+            const float off = xz(ax, az, float(b.GetX()), float(b.GetZ()));
+            walk_toward(dt, float(b.GetX()), float(b.GetZ()), off > 0.5F ? std::min(0.8F * pace, 1.5F * pace * (off - 0.5F)) : 0.0F);
+            yaw_ = turn_to(yaw_, std::atan2(float(b.GetX()) - ax, float(b.GetZ()) - az), kHoldTurnRate, dt);
+            pose_hand(dt, hand_target_, kHandSpeedMps);
+            pose_hand2(dt, b, kHandReachSpeedMps);
+            if (hold_s_ > kPinReachS) {
+                // His belt out of her other hand's reach (steel in the way):
+                // the pin by his collar alone.
+                hand2_want_ = 0;
+                hold_phase_ = 2;
+                hold_s_ = 0.0F;
+                fatal_window_s_ = 0.0F;
+            }
+            break;
+        }
+        if (fatal_hold_ && !pin_here_) {
+            // In the fatality, from his side: him up in front of her (she
+            // faces him), and she turns to the rail as she walks him to it,
+            // him kept in front (not hauled round her from behind).
+            const float want = std::atan2(rim_nx_, rim_nz_);
+            const bool facing = std::abs(std::remainder(want - yaw_, 2.0F * kPiF)) < kFatalHaulFaceRad;
+            // (At her spot and not yet turned to the rail, she gives her turn
+            // kFatalDriveSettleS: him held hard against the steel can stop it.)
+            fatal_drive_at_s_ = to_spot <= 0.25F ? fatal_drive_at_s_ + dt : 0.0F;
+            if (to_spot > 0.25F || (!facing && fatal_drive_at_s_ < kFatalDriveSettleS)) {
+                walk_toward(dt, rim_x_, rim_z_, std::min(kFatalDriveMps, 3.0F * pace * to_spot));
+                yaw_ = turn_to(yaw_, want, kHoldTurnRate, dt);
+                const Vec3 f(std::sin(yaw_), 0.0F, std::cos(yaw_));
+                const Vec3 r(f.GetZ(), 0.0F, -f.GetX());
+                pose_hand(dt, RVec3(at.GetX(), feet + kFatalHaulCollarUpM, at.GetZ()) + f * kFatalHaulOutM + r * kPinSideM,
+                          pace * kHandSpeedMps);
+                pose_hand2(dt, RVec3(at.GetX(), feet + kFatalHaulBeltUpM, at.GetZ()) + f * kFatalHaulOutM + r * kBeltSideM,
+                           pace * kHandSpeedMps);
+                // Her hands lead his collar and belt by kFatalLeashM at most: she
+                // hauls him, never yanks him after her.
+                const auto leash = [](RVec3 &hand, const RVec3 grip) {
+                    const Vec3 lead = Vec3(hand - grip);
+                    const float length = lead.Length();
+                    if (length > kFatalLeashM) {
+                        hand = grip + lead * (kFatalLeashM / length);
+                    }
+                };
+                leash(hand_target_, player_collar_);
+                leash(hand2_target_, player_belt_);
+                if (hold_s_ > kPinHaulS) {
+                    back_in();
+                }
+                break;
+            }
+        }
+        at_spot();
+        const RVec3 pin = pin_pose(at, feet);
+        const RVec3 belt = belt_pose(at, feet);
+        // (The fatality's haul at her hand's full pace: no time to savor it.)
+        const float haul = (fatal_hold_ ? pace : 0.6F) * kHandSpeedMps;
+        pose_hand(dt, pin, haul);
+        pose_hand2(dt, belt, haul);
+        // (In the fatality his middle there too, on the rail's top: her hands
+        // at her full pace come to their poses before him.)
+        const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
+        const float mid_past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                               (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+        // (The regular pin stands her on her spot before the window: the
+        // looser bound left her a step east of it, and the whole pin —
+        // hands and body — sat that step east of the drop's line.)
+        if ((to_spot < (fatal_hold_ ? 0.15F : 0.05F) && Vec3(pin - hand_target_).Length() < 0.05F &&
+             Vec3(belt - hand2_target_).Length() < 0.05F && (!fatal_hold_ || mid_past > -0.1F)) ||
+            hold_s_ > kPinHaulS) {
+            hold_phase_ = 2;
+            hold_s_ = 0.0F;
+            fatal_window_s_ = 0.0F;
+        }
+        break;
+    }
+    case 2: {
+        // The pin: face to face, her forearm on his chest; his window (his
+        // blow frees him: his_blow).
+        at_spot();
+        pose_hand(dt, pin_pose(at, feet), kHandSpeedMps);
+        if (hand2_on_ == 2) {
+            pose_hand2(dt, belt_pose(at, feet), kHandSpeedMps);
+        }
+        // His window, face to face (his punch reaches her face: his blow
+        // frees him); the fatality's is kFatalHangWindowS. This is the pin
+        // window only: beat 5's hang sets fatal_hang_ when it begins.
+        fatal_window_ = fatal_hold_;
+        fatal_window_s_ += dt;
+        // At a rail, the fatality's grips shift for the over kFatalPinS into
+        // his window, which goes on till kFatalHangWindowS (above).
+        if (fatal_hold_ && !pin_here_ && fatal_window_s_ >= kFatalPinS) {
+            if (hand2_on_ == 2) {
+                begin_regrip(Grip::Belt);
+            }
+            hold_phase_ = 3;
+            hold_s_ = 0.0F;
+            break;
+        }
+        if (fatal_window_s_ >= (fatal_hold_ ? kFatalHangWindowS : kPinWindowS)) {
+            fatal_window_ = false;
+            fatal_window_s_ = 0.0F;
+            if (pin_here_) {
+                hand2_want_ = 0;
+                if (player_arms_left_ <= 0) {
+                    claim();
+                } else if (fatal_hold_ || !begin_armplay(State::Dangle)) {
+                    ++spares_;
+                    spare_here();
+                }
+                break;
+            }
+            // Her first hand from his collar to his belt beside her second
+            // (his middle held on the rail's top: he cannot slide off it);
+            // her second not on it, her first keeps his collar.
+            if (hand2_on_ == 2) {
+                begin_regrip(Grip::Belt);
+            }
+            hold_phase_ = 3;
+            hold_s_ = 0.0F;
+        }
+        break;
+    }
+    case 3: {
+        at_spot();
+        pose_hand2(dt, belt_pose(at, feet), kHandSpeedMps);
+        if (regrip_) {
+            pose_hand(dt, player_belt_, kHandReachSpeedMps);
+            if (hold_s_ > kHandoffS) {
+                back_in();
+            }
+            break;
+        }
+        pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), kHandSpeedMps);
+        if (fatal_hold_) {
+            hold_phase_ = 4;
+            hold_s_ = 0.0F;
+        } else if (player_arms_left_ <= 0) {
+            claim();
+        } else {
+            // Her second hand off his belt for his arm.
+            hand2_want_ = 0;
+            if (!begin_armplay(State::Dangle)) {
+                hold_phase_ = 4;
+                hold_s_ = 0.0F;
+            }
+        }
+        break;
+    }
+    case 4: {
+        // Over's start: back at her spot, his middle on the rail's top in her
+        // first hand; her second hand to his ankle.
+        at_spot();
+        // In the fatality, a bare lip (no rail to lay him over): his ankle is out on her deck,
+        // past her arm. She slides him out by his belt till he tips head
+        // first over the lip; as his legs come over, her second hand takes his
+        // ankle.
+        // (Once his window is done: him face to face on her deck till then.)
+        const bool bare_lip = fatal_hold_ && rail_up_ < 0.2F && !pin_here_ && grip_point_ == Grip::Belt && !fatal_window_;
+        if (bare_lip && to_spot <= 0.2F) {
+            pose_hand(dt, rail_pose(at, feet, kBeltUpM, kBeltOutM + kBareLipPushM, kBeltSideM), 0.8F * kHandSpeedMps);
+        } else {
+            pose_hand(dt, grip_point_ == Grip::Belt ? belt_pose(at, feet) : pin_pose(at, feet), kHandSpeedMps);
+        }
+        if (to_spot > 0.2F && hold_s_ < 2.0F * kHandoffS) {
+            break;
+        }
+        hand2_want_ = 1;
+        if (hand2_on_ != 1) {
+            pull2_n_ = kHandReachPullN;
+            pose_hand2(dt, player_ankle_, kHandReachSpeedMps);
+            if (bare_lip && to_spot <= 0.2F) {
+                // His middle out past the lip (or her arm out as far as it
+                // goes): her fingers open on his belt; he tips head first over
+                // it, his legs come up past her, and her hands take his ankle.
+                const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
+                const float past_lip = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                                       (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+                if (past_lip >= kBareLipTipM || hold_s_ > kHandoffS) {
+                    bare_lip_ = true;
+                    begin_regrip(Grip::Ankle);
+                    hold_phase_ = 6;
+                    hold_s_ = 0.0F;
+                    over_up_ = false;
+                    break;
+                }
+            }
+            if (hold_s_ > 2.0F * kHandoffS) {
+                back_in();
+            }
+        } else {
+            pull2_n_ = kHandPullN;
+            hold_phase_ = 5;
+            hold_s_ = 0.0F;
+        }
+        break;
+    }
+    case 5: {
+        // Over: her first hand pushes his middle out over the rail, her
+        // second lifts his ankle up over its top.
+        at_spot();
+        const RVec3 middle = physics_.GetBodyInterface().GetPosition(player_);
+        const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                           (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+        // (In the fatality's window her first hand holds his belt on the
+        // rail's top: him face to face till it ends.)
+        pose_hand(dt, fatal_window_ ? belt_pose(at, feet)
+                                  : rail_pose(at, feet, rail_up_ + kBeltUpM + 0.1F, kBeltOutM + kOverPushM, kBeltSideM),
+                  0.8F * kHandSpeedMps);
+        // Square across the rail first: his ankle drawn in behind her till his
+        // body points out over it (not along it); then up.
+        const Vec3 axis = physics_.GetBodyInterface().GetRotation(player_).RotateAxisY();
+        const Vec3 along(rim_nz_, 0.0F, -rim_nx_);
+        const bool square = std::abs(axis.Dot(along)) < 0.45F;
+        const RVec3 in = rail_pose(at, feet, rail_up_ + kOverInUpM, kOverInOutM, kHangSideM);
+        const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
+        if (!square && (fatal_hold_ ? (fatal_window_ && fatal_window_s_ < kFatalHangWindowS - kFatalLiftEarlyS) || hold_s_ < kFatalSquareS : hold_s_ < 1.5F) && !over_up_) {
+            pose_hand2(dt, in, 0.8F * kHandSpeedMps);
+            break;
+        }
+        over_up_ = true;   // squared (or as square as he comes): up from here
+        pose_hand2(dt, up, 0.8F * kHandSpeedMps);
+        // Going over: his ankle up, his body tipping head down past the rail
+        // (her first hand on his middle keeps it at the rail's top till then).
+        if (!fatal_window_ && ((Vec3(up - hand2_target_).Length() < 0.1F && (axis.GetY() < -0.2F || past > kOverOutPastM)) ||
+            hold_s_ > 4.0F)) {
+            // His middle out: her first hand from his belt to his ankle.
+            begin_regrip(Grip::Ankle);
+            hold_phase_ = 6;
+            hold_s_ = 0.0F;
+            over_up_ = false;
+        }
+        break;
+    }
+    case 6: {
+        // Her first hand takes his ankle from her second, up over the rail's
+        // top and out onto it: he tips over head first.
+        at_spot();
+        const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
+        const RVec3 hang = rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM), kHangOutM, kHangSideM);
+        if (regrip_) {
+            pose_hand(dt, player_ankle_, kHandReachSpeedMps);
+            if (fatal_hold_ && hand2_want_ == 1) {
+                // In the fatality her second hand with his ankle brings it in
+                // before her, low, to her first (the over's top is at the end
+                // of her first arm). Over a bare lip both her hands go for his
+                // ankle as it comes.
+                pose_hand2(dt, hand2_on_ == 1 ? rail_pose(at, feet, rail_up_ + 0.45F, kOverOutM + 0.05F, 0.0F) : player_ankle_,
+                           hand2_on_ == 1 ? 0.6F * kHandSpeedMps : kHandReachSpeedMps);
+            }
+            if (hold_s_ > kHandoffS) {
+                back_in();
+            }
+            break;
+        }
+        hand2_want_ = 0;
+        if (!over_up_ && bare_lip_) {
+            // A bare lip: no rail's top to lift his ankle over (her deck's
+            // height, under her bent arm): on to the hang.
+            over_up_ = true;
+        }
+        if (!over_up_) {
+            pose_hand(dt, up, 0.8F * pace * kHandSpeedMps);
+            over_up_ = Vec3(up - hand_target_).Length() < 0.05F;
+        } else {
+            pose_hand(dt, hang, (fatal_hold_ ? 1.0F : 0.6F) * pace * kHandSpeedMps);
+            // (In the fatality at a rail, hanging once he is head down: her
+            // hand gets there before him at her full pace. At a bare lip he
+            // rests on its strip till her arm goes out for the let-go.)
+            const bool down = !fatal_hold_ || bare_lip_ ||
+                              physics_.GetBodyInterface().GetRotation(player_).RotateAxisY().GetY() < -kFatalHangDownY;
+            if (Vec3(hang - hand_target_).Length() < 0.03F && down) {
+                hold_phase_ = 7;
+                hold_s_ = 0.0F;
+                if (fatal_hold_) {
+                    // Beat 5's true hang begins: the pin window is over, and
+                    // the test's hang measures from here.
+                    fatal_window_ = false;
+                    fatal_window_paused_ = false;
+                    fatal_hang_ = true;
+                    fatal_window_s_ = 0.0F;
+                }
+            }
+        }
+        if (hold_s_ > 10.0F) {
+            back_in();
+        }
+        break;
+    }
+    default: {
+        // Hanging by one ankle against the outside of her deck.
+        at_spot();
+        const RVec3 hang = rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM), kHangOutM, kHangSideM);
+        if (!fatal_hold_) {
+            // (The fatality's hand goes out to her let-go pose below instead.)
+            pose_hand(dt, hang, kHandSpeedMps);
+        }
+        if (hold_s_ > 1.5F && physics_.GetBodyInterface().GetRotation(player_).RotateAxisY().GetY() > -0.5F &&
+            over_tries_ < 2) {
+            // Not over (lying on the rail's top): up again, and over.
+            ++over_tries_;
+            hold_phase_ = 6;
+            hold_s_ = 0.0F;
+            over_up_ = false;
+            break;
+        }
+        if (!fatal_hold_) {
+            if (hold_s_ >= dangle_s_) {
+                finish_dangle();
+            }
+            break;
+        }
+        // The fatality's let-go (his window was at the pin): out as far as her
+        // arm goes, him clear of the deck's face; no sooner than
+        // kFatalLetGoFromS after her fingers closed, once his fall from where
+        // he is, as he moves, is foreseen to kill; none by kFatalLetGoByS, she
+        // hauls him back in for her floor version.
+        const bool due = fatal_s_ >= kFatalLetGoFromS;
+        pose_hand(dt, rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM), kHangOutM + kFatalOutM, kHangSideM),
+                  kHandSpeedMps);
+        // Decided at the end of his swing (slow, never in toward her deck's
+        // face), she standing
+        // at her spot, him head down (his feet end clear of her lip) and
+        // hanging settled a moment (not still swinging in
+        // from the over): his fall foreseen from there kills, she lets go;
+        // it does not, she steps along the edge (fatal_shift) and decides
+        // again once he settles there.
+        const BodyInterface &bodies = physics_.GetBodyInterface();
+        const Vec3 his_v = bodies.GetLinearVelocity(player_);
+        const bool swinging_out = his_v.Dot(out) >= -kFatalInSwingMps && std::hypot(his_v.GetX(), his_v.GetZ()) < kFatalSwingMps;
+        const Vec3 her_v = bodies.GetLinearVelocity(body_);
+        const bool standing = std::hypot(her_v.GetX(), her_v.GetZ()) < 0.2F && xz(ax, az, rim_x_, rim_z_) < 0.2F;
+        const bool head_down = bodies.GetRotation(player_).RotateAxisY().GetY() < -0.9F;
+        const bool settled = due && standing && hold_s_ >= kFatalHangSettleS;
+        const bool late = due && fatal_s_ >= kFatalLetGoLateS && hold_s_ >= kFatalHangSettleS;
+        // Beat 5's hang runs the full window before she lets go: the let-go
+        // decision and any step along the edge wait for the hang clock.
+        // Two ticks early, matching the test's window bar (225-2 ticks):
+        // the float clock lands a hair under 2.5 on the 7.0 s deadline tick,
+        // and the reel-back would otherwise win the race.
+        const bool hung_window = fatal_window_s_ >= kFatalHangWindowS - 2.0F * dt;
+        const bool decide = ((settled && swinging_out && head_down) || (late && head_down)) && hung_window;
+        if (decide || --fatal_check_ticks_ <= 0) {
+            fatal_check_ticks_ = 3;
+            foresee_fall(player, out);
+        }
+        // His middle out over open air (kFatalOpenAirM past the edge).
+        const RVec3 mid = bodies.GetPosition(player_);
+        const float mid_past = (float(mid.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                               (float(mid.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+        if (decide && fatal_lethal_ && mid_past >= kFatalOpenAirM + 0.02F && fatal_s_ <= kFatalLetGoByS) {
+            fatal_release();
+        } else if (fatal_s_ >= kFatalLetGoByS) {
+            // The hang is over: hauled back in for the floor version.
+            fatal_hang_ = false;
+            reel_ = true;
+            reel_to_floor_ = true;
+            state_ = State::Spare;
+            hold_phase_ = 0;
+            hold_s_ = 0.0F;
+            spare_walk_ = false;
+        } else if ((decide && !fatal_lethal_) || (hung_window && settled && hold_s_ >= kFatalHangSettleS + 1.0F)) {
+            // Not to kill from here, or a second hung here without a let-go
+            // (lying against her deck's face): a step along the edge, and he
+            // settles again there; no spot for it, another second.
+            hold_s_ = fatal_shift(feet) ? 0.0F : kFatalHangSettleS;
+        }
+        break;
+    }
+    }
+}
+
+int Matron::hold_beat() const noexcept {
+    switch (state_) {
+    case State::Grab:
+        return !grip_on_ && hold_phase_ == 0 ? 1 : 2;
+    case State::Carry:
+        return 2;
+    case State::Dangle:
+        return hold_phase_ <= 3 ? 3 : (hold_phase_ <= 6 ? 4 : 5);
+    case State::ArmPlay:
+        return 3;
+    case State::Spare:
+        return 6;
+    default:
+        return 0;
     }
 }
 
@@ -1287,7 +2009,14 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         // out between her two hands, whichever side the arm is on.
         Vec3 away = Vec3(player_wrist_ - hand_target_);
         away = away.Length() > 1.0e-3F ? away.Normalized() : Vec3(0.0F, -1.0F, 0.0F);
-        pose_hand2(dt, player_wrist_ + away * 0.8F, 8.0F * kArmPullMoveMps);
+        // With her real arm (kRealArmM) the pull is hers, not her arm's
+        // reach: she wrenches the wrist in past her shoulder while her first
+        // hand holds his body out (the pin), her pull capped (pull2_n_) over
+        // the stretch to it (physics_world_arm.cpp kWrenchSpringScale).
+        const RVec3 chest = shoulder_of(at, -1.0F) - fwd * 0.2F;
+        const RVec3 wrench = Vec3(chest - player_wrist_).Dot(away) < -0.3F ? chest : player_wrist_ + away * 0.8F;
+        // Her wrench builds at half the pace of her reach, not all at once.
+        pose_hand2(dt, wrench, 4.0F * kArmPullMoveMps);
         // No give-up: the shoulder not torn kArmPullSeconds into the pull
         // (her pull spent on her own arm's reach, not on it), she re-poses
         // with the wrist in her hand, her weight put into it.
@@ -1318,8 +2047,46 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         if (hold_s_ > 3.5F && !arm_throw_ && arm_throws_ < arm_tears_) {
             ++arm_throws_;
             arm_throw_ = true;
-            // Along the band beside her, low: it lands on her deck.
-            arm_throw_v_ = (right * 0.95F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() * kArmThrowMps;
+            // Along the band beside her and a little in off the rail, low,
+            // her real arm's short lever (kArmThrowRealScale): it lands on her
+            // deck, not down the shaft or off the band's far side.
+            // Whichever way her turn leaves her, the throw she picks lands on
+            // her deck: that way first, then along the band the other way,
+            // then straight in off the rail.
+            const Vec3 inboard(-rim_nx_, 0.0F, -rim_nz_);
+            const float speed = kArmThrowRealScale * kArmThrowMps;
+            const RVec3 from = hand2_target_;
+            IgnoreMultipleBodiesFilter skip;
+            skip.IgnoreBody(body_);
+            skip.IgnoreBody(player_);
+            const auto lands_on_deck = [&](const Vec3 v) {
+                // Its fall to her deck's height, and her deck under it there
+                // and kArmLandRollM on.
+                const float g = 9.81F;
+                const float drop = float(from.GetY()) - (feet + 0.1F);
+                const float t = (v.GetY() + std::sqrt(std::max(0.0F, v.GetY() * v.GetY() + 2.0F * g * drop))) / g;
+                const Vec3 flat(v.GetX(), 0.0F, v.GetZ());
+                const Vec3 ahead = flat.LengthSq() > 1.0e-6F ? flat.Normalized() : Vec3::sZero();
+                for (const float on : {0.0F, kArmLandRollM}) {
+                    const RVec3 land = from + flat * t + ahead * on;
+                    RayCastResult under;
+                    const RVec3 top(land.GetX(), feet + 1.0F, land.GetZ());
+                    if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(top, Vec3(0.0F, -1.5F, 0.0F)), under, {}, {},
+                                                                 skip) ||
+                        std::abs(1.0F - 1.5F * under.mFraction) > 0.25F) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            arm_throw_v_ = (inboard + Vec3(0.0F, 0.3F, 0.0F)).Normalized() * speed;
+            for (const Vec3 way : {right, -right}) {
+                const Vec3 v = (way * 0.95F + inboard * 0.3F + Vec3(0.0F, 0.3F, 0.0F)).Normalized() * speed;
+                if (lands_on_deck(v)) {
+                    arm_throw_v_ = v;
+                    break;
+                }
+            }
         }
         if (hold_s_ >= kArmPlaySeconds) {
             hold_phase_ = 5;
@@ -1343,12 +2110,15 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
             hold_s_ = 0.0F;
             hold_phase_ = 0;
             grab_cooldown_s_ = hands_off_after_hold();
-        } else if (armplay_then_ == State::Dangle) {
-            // Back down over the drop, then the dangle's end.
+        } else if (armplay_then_ == State::Dangle && !pin_here_) {
+            // Back to the rail she pinned him on, then over it (beat 4).
+            rim_x_ = pin_rim_[0];
+            rim_z_ = pin_rim_[1];
+            rim_nx_ = pin_rim_[2];
+            rim_nz_ = pin_rim_[3];
             state_ = State::Dangle;
-            hold_phase_ = 1;
+            hold_phase_ = 4;
             hold_s_ = 0.0F;
-            dangle_s_ = 0.8F;
         } else {
             // No rail (or carried too long): set back on the deck beside her.
             spare_here();
@@ -1453,11 +2223,40 @@ Vec3 Matron::spare_side(const RVec3 at, const float feet, const Vec3 right, cons
     breadth.SetEmbedded();
     const auto on_deck = [&](const float y) { return y <= feet + 0.15F && y >= feet - 0.6F; };
     deck = true;
+    // Off the bridge's approach (a shove on her deck there takes him through
+    // the rail's gap onto it) and off her patrol loop's legs (her walk on
+    // would go through him): kSpareClearM.
+    const Level &level = levels_[static_cast<std::size_t>(level_)];
+    const auto in_her_way = [&](const float x, const float z) {
+        if (on_catwalk_line(x, z, kSpareClearM)) {
+            return true;
+        }
+        for (const std::vector<int> &loop : level.patrols) {
+            for (std::size_t i = 0; i < loop.size(); ++i) {
+                const Node &a = level.nodes[static_cast<std::size_t>(loop[i])];
+                const Node &b = level.nodes[static_cast<std::size_t>(loop[(i + 1) % loop.size()])];
+                const float dx = b.x - a.x;
+                const float dz = b.z - a.z;
+                const float length2 = dx * dx + dz * dz;
+                const float t =
+                    length2 > 0.0F ? std::clamp(((x - a.x) * dx + (z - a.z) * dz) / length2, 0.0F, 1.0F) : 0.0F;
+                if (std::hypot(a.x + dx * t - x, a.z + dz * t - z) < kSpareClearM) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    for (int pass = 0; pass < 2; ++pass) {
     for (int k = 0; k < 8; ++k) {
         // Her right first; then round her an eighth of a turn at a time,
-        // a little farther out (clear of her).
+        // a little farther out (clear of her). First out of her way; none,
+        // anywhere on her deck.
         const Vec3 side =
             k == 0 ? first : Quat::sRotation(Vec3::sAxisY(), 0.25F * kPiF * static_cast<float>(k)) * first.Normalized() * 0.85F;
+        if (pass == 0 && in_her_way(float(at.GetX()) + side.GetX(), float(at.GetZ()) + side.GetZ())) {
+            continue;
+        }
         const RVec3 from(at.GetX() + side.GetX(), feet + 1.2F, at.GetZ() + side.GetZ());
         RayCastResult under;
         if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -2.0F, 0.0F)), under, {}, {}, skip) ||
@@ -1471,6 +2270,7 @@ Vec3 Matron::spare_side(const RVec3 at, const float feet, const Vec3 right, cons
         if (met.HadHit() && on_deck(feet + 1.2F - 2.0F * met.mHit.mFraction - kBreadthM)) {
             return side;
         }
+    }
     }
     deck = false;
     return first;
@@ -1567,7 +2367,9 @@ bool Matron::his_blow() {
         ++fatal_escapes_;
     }
     fatal_hang_ = false;
-    if (state_ != State::Dangle && over_her_deck(player, feet)) {
+    fatal_window_ = false;
+    fatal_window_paused_ = false;
+    if ((state_ != State::Dangle || hold_phase_ <= 1) && over_her_deck(player, feet)) {
         let_go_ = true;
         let_go_push_ = Vec3::sZero();
         grip_on_ = false;
@@ -1639,8 +2441,16 @@ void Matron::end_reel(const RVec3 player) {
     // its drop).
     fatal_path_ = FatalPath::None;
     fatal_edge_ = RVec3::sZero();
+    const bool fatal = fatal_hold_;
     end_hold(State::Searching);
     grab_cooldown_s_ = kRegrabAfterTearS;
+    if (fatal) {
+        // His escape from her fatality: she lets him run while her hands
+        // stay off him (rule 35, as after a tear), not after him with no way
+        // to take hold (her body would only shove him along, off the edge).
+        calm_s_ = grab_cooldown_s_;
+        shove_cooldown_s_ = grab_cooldown_s_;   // nor shoves him at the rim
+    }
     resume_state_ = State::Searching;
     state_ = State::Staggering;
     stagger_s_ = kStaggerMinSeconds;
@@ -1665,12 +2475,17 @@ void Matron::retake() noexcept {
     ++retakes_;
     ++hold_retakes_;
     retake_ = true;
+    torn_in_carry_ = (state_ == State::Carry);
     spare_side_set_ = false;
     state_ = State::Grab;
     hold_s_ = 0.0F;
     hold_phase_ = 0;
     pull_n_ = kHandReachPullN;
-    arm_reach_m_ = kStoopReachM;
+    arm_reach_m_ = kHoldArmLimitM;
+    regrip_ = false;
+    regrip_let_go_ = false;
+    grip_point_ = Grip::Ankle;
+    hand2_want_ = 0;
 }
 
 bool Matron::claim_armless() noexcept {

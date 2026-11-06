@@ -24,6 +24,7 @@
 namespace scraperx::sim {
 namespace {
 constexpr float kHandSpringNpm = 3500.0F;
+constexpr float kWrenchSpringScale = 1.3F;
 constexpr float kHandDampNspm = 500.0F;
 constexpr float kWristCloseM = 0.14F;
 // The arm, in the body's frame: the shoulder and the wrist hanging past the
@@ -54,6 +55,7 @@ void Simulation::PhysicsWorld::despawn_severed_arm(JPH::BodyInterface &bodies) n
 
 void Simulation::PhysicsWorld::arm_reset(JPH::BodyInterface &bodies) noexcept {
     destroy_grab_constraint(wrist_);
+    destroy_grab_constraint(hand2_grip_);
     destroy_grab_constraint(hand2_arm_);
     if (!hand2_id_.IsInvalid()) {
         destroy_grab_constraint(arm_in_hand_);
@@ -102,6 +104,11 @@ void Simulation::PhysicsWorld::sever_arm(JPH::BodyInterface &bodies) noexcept {
     settings.mAllowSleeping = false;
     settings.mUserData = Simulation::kSeveredArmEntityId;
     settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
+    // A limb, not a rolling pin: flesh's grip on the steel and its roll
+    // damped (a thrown arm comes to rest where it lands).
+    settings.mFriction = Matron::kArmFriction;
+    settings.mRestitution = Matron::kArmRestitution;
+    settings.mAngularDamping = Matron::kArmAngularDamping;
     severed_arm_id_ = bodies.CreateAndAddBody(settings, JPH::EActivation::Activate);
     bodies.SetLinearVelocity(severed_arm_id_, bodies.GetPointVelocity(player_id_, middle));
     JPH::PointConstraintSettings held;
@@ -154,9 +161,14 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     // Her second hand works while her first has the body, in the fatality,
     // and while it holds an arm the body pulled away from (tear_grip).
     const bool active =
-        matron_->hand2_active() && (grip_ != nullptr || matron_->claimed() || arm_in_hand_ != nullptr);
+        matron_->hand2_active() &&
+        (grip_ != nullptr || hand2_grip_ != nullptr || matron_->claimed() || arm_in_hand_ != nullptr);
     if (!active && !hand2_id_.IsInvalid()) {
         destroy_grab_constraint(wrist_);
+        if (hand2_grip_ != nullptr) {
+            destroy_grab_constraint(hand2_grip_);
+            matron_->hand2_lost();
+        }
         destroy_grab_constraint(hand2_arm_);
         if (arm_in_hand_ != nullptr) {
             // Still in her hand at the end: dropped where it is.
@@ -195,7 +207,12 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
         return;
     }
     const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);
-    if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 &&
+    // While the body is caught on steel, her second hand does not take the
+    // wrist: the catch is what keeps it out of her reach, and taking it
+    // before she frees the body would tear the arm before her re-pose.
+    // She re-poses first (step back, weight in it); the snag gives; then
+    // the wrist comes to her and she takes it.
+    if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 && snag_ == nullptr &&
         JPH::Vec3(wrist - hand).Length() <= kWristCloseM) {
         JPH::PointConstraintSettings grip;
         grip.mSpace = JPH::EConstraintSpace::WorldSpace;
@@ -207,8 +224,38 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
             matron_->wrist_taken();
         }
     }
-    JPH::Vec3 force = kHandSpringNpm * JPH::Vec3(matron_->hand2_target() - hand) +
-                      kHandDampNspm * (matron_->hand2_target_velocity() - bodies.GetLinearVelocity(hand2_id_));
+    // Her second hand on his belt (the haul up onto the rail) or his ankle
+    // (the handoff before she tips him over).
+    const int want2 = matron_->hand2_wants();
+    if (hand2_grip_ != nullptr && want2 != hand2_grip_point_) {
+        destroy_grab_constraint(hand2_grip_);
+        matron_->hand2_lost();
+    }
+    if (want2 != 0) {
+        const JPH::RVec3 ankle = want2 == 1 ? player_ankle(bodies) : bodies.GetPosition(player_id_);
+        if (hand2_grip_ == nullptr && JPH::Vec3(ankle - hand).Length() <= Matron::kGripCloseM) {
+            JPH::PointConstraintSettings grip;
+            grip.mSpace = JPH::EConstraintSpace::WorldSpace;
+            grip.mPoint1 = hand;
+            grip.mPoint2 = hand;
+            hand2_grip_ = create_constraint(grip, hand2_id_, player_id_, false);
+            if (hand2_grip_ != nullptr) {
+                hand2_grip_point_ = want2;
+                matron_->hand2_taken();
+            }
+        }
+    }
+    // Wrenching his wrist (her real arm: its pose never far past the wrist),
+    // her pull reaches her muscle's cap (hand2_pull_n) over a short stretch.
+    // The wrench (1.3x) is for a still arm she tears by pulling alone (a
+    // rail heave, a snag, a pest): once he fights the grip (a kick, a
+    // thrash, a brace), his own fight loads the wrist, so the plain spring
+    // tears it at the trunk's rate and the arm and the grip tear together.
+    const JPH::Vec3 hand2_v = bodies.GetLinearVelocity(hand2_id_);
+    const float spring =
+        matron_->pulling_wrist() && !grip_fought_ ? kWrenchSpringScale * kHandSpringNpm : kHandSpringNpm;
+    JPH::Vec3 force = spring * JPH::Vec3(matron_->hand2_target() - hand) +
+                      kHandDampNspm * (matron_->hand2_target_velocity() - hand2_v);
     if (arm_in_hand_ != nullptr) {
         force += JPH::Vec3(0.0F, Matron::kArmMassKg * 9.81F, 0.0F);
     }
@@ -216,11 +263,15 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     if (force.Length() > cap) {
         force *= cap / force.Length();
     }
-    bodies.AddForce(hand2_id_, force);
-    bodies.AddForce(matron_->body(), -force);
-    // J-046 measurement only.
-    effort::add_force(effort::Path::Hand2Spring, force,
-                      bodies.GetLinearVelocity(hand2_id_) - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
+    // Her second hand's haul comes out of the same per-tick account as her
+    // feet (J-001 Codex P1), as the first hand's does.
+    const JPH::Vec3 granted = matron_->grant_hand_force(force, hand2_v);
+    bodies.AddForce(hand2_id_, granted);
+    bodies.AddForce(matron_->body(), -granted);
+    // J-046 measurement only: the ledger records what was actually applied.
+    // The take itself is already ledgered once under Path::Budget.
+    effort::add_force(effort::Path::Hand2Spring, granted,
+                      hand2_v - bodies.GetLinearVelocity(matron_->body()), 0.0F, -granted);
     JPH::Vec3 throw_v;
     if (matron_->take_arm_throw(throw_v) && arm_in_hand_ != nullptr) {
         destroy_grab_constraint(arm_in_hand_);

@@ -1953,6 +1953,12 @@ void ScraperXSimulation::fill_matron_hold(godot::Dictionary &out, const sim::Sna
     out[keys("grip_on")] = m.grip_on;
     out[keys("hold_s")] = m.hold_s;
     out[keys("hand")] = to_godot(m.hand);
+    out[keys("hold_beat")] = static_cast<std::int64_t>(m.hold_beat);
+    out[keys("grip_point")] = static_cast<std::int64_t>(m.grip_point);
+    out[keys("hip_up")] = m.hip_up;
+    out[keys("trunk_pitch")] = m.trunk_pitch;
+    out[keys("swats")] = static_cast<std::int64_t>(m.swats);
+    out[keys("hand2_active")] = m.hand2_active;
     out[keys("hand2")] = to_godot(m.hand2);
     out[keys("armplay_beat")] = static_cast<std::int64_t>(m.armplay_beat);
     out[keys("fatal_beat_view")] = static_cast<std::int64_t>(m.fatal_beat);
