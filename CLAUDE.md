@@ -19,7 +19,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 ## Talking to Cory (he is on a phone)
 
 - Plain, short answers; technical detail only when he asks. Times in US Central (`TZ=America/Chicago date`).
-- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now ("Nothing to
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link to the exact page (11-06) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent.
 - **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; never
