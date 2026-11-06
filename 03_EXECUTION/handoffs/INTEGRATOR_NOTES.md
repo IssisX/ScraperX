@@ -24,9 +24,16 @@ Keep this file to what changes the next action; move anything done to the log.
 - Muse pushes its own `fb-bot/integrate-[protected-]<job>` branches and mails branch and sha; I open the PR.
 
 ## Cory's standing rulings (11-04/11-05)
-- Helpers: Opus high or xhigh, never Sonnet. None until the Mon 11 AM reset (Cory 11-06: the pace ran out Sat night; last
-  to Sunday night). Builds go to Muse. Target (Cory 11-06): the weekly limit lasts to Sunday bedtime; check the meter with him each night. Meter log (ask Cory at the 11:17 AM, 5:17 PM and 11:17 PM runs): Fri ~7:10 AM 70%; Fri 9:16 AM 72% (about 1%/h, during J-048 coding inline: too fast, out by Sat night); Fri 11:15 AM 73% (0.5%/h since 9:16, under the 0.6%/h budget; on pace for about 80% by 11 PM); Fri 12:28 PM 74% (two helpers, J-048 hook and J-051 inbox, in this block). Fri 1:30 PM 75% (1%/h this hour: the max-effort audit turn and the J-042 physics helper; 0.7%/h since 9:16 AM). Pace redone to Sunday night (Cory: use each reading to throttle): cost_usd vs meter, $345 @70% (7:10), $356 @72% (9:16), $380 @73% (11:15), about $389 @74% (12:28), $406 @75% (1:32 PM): about $14 = 1%. Burn 11:18 to 1:32 = $26.3 in 2.2 h = 0.84%/h. Allowed: (98-75)/37 daytime h = 0.6%/h (about $8.50/h), 2% kept for nights and slips. Checkpoints: Fri 11 PM 81% (about $490), Sat 11 PM 89% (about $600), Sun 11 PM 98% (about $725). Cuts 1:35 PM: compaction at about 225k, not 384k (the context was 352k, and every call rereads it); one helper at a time; over pace means no new helper and a quiet next full run. Needed pace 0.5%/h:
-  about 77% by 11 PM Fri, 89% by 11 PM Sat.
+- Helpers: Opus, never Sonnet; one at a time while over pace (Cory allowed 2). Builds go to Muse.
+- Meter log (Cory reads it at the 11:17 AM, 5:17 PM and 11:17 PM runs; Sat-Sun 1:17 and 9:17 PM): Fri 7:10 AM 70% ($345);
+  9:16 AM 72% (~$356); 11:15 AM 73% ($380); 12:28 PM 74% (~$389); 1:30 PM 75% ($406.06). About $14 = 1%.
+- Budget (98% by Sun 11 PM, 2% kept): 0.6%/h (~$8.40) over 38 daytime h (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM).
+  Checkpoints: 81% Fri 11 PM (~$490), 89% Sat 11 PM (~$600), 98% Sun 11 PM (~$725).
+- Prediction 1:38 PM Fri (burn 11:18-1:32 = $26.3 / 2.2 h = 0.84%/h): Fri 11 PM 83% (over 81), Sat 11 PM 95% (over 89),
+  100% about Sun 2:45 PM. THROTTLED: one helper, no new helper this block, the 2:17 PM full run lean (asks, merges, the
+  board only if an owner changes). Why the burn was high: the context sat at 250-376k and every call rereads it; it
+  compacted 1:36 PM and compacts at about 225k after the next restart, so the burn should fall. Re-predict at 2:17 PM
+  from cost_usd; loosen a step only when two runs predict under.
 - No Workflow runs. Decline the ultracode nudges silently.
 - Plugin searches use one exact keyword, or a helper runs them and returns one line (context, 11-05).
 - GitHub-UI-only steps (settings, toggles): ask Cory early, with a direct link and the exact taps.
@@ -45,7 +52,7 @@ Keep this file to what changes the next action; move anything done to the log.
 - Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
 
 ## Pending with Cory (7:20 AM 11-06; stamps from 6 AM today ran about 1.5 h fast, clock-checked 7:21 AM CST)
-- Effort set to max at 7:39 AM (Cory 11-06: the old ultracode; the new ultracode switch means workflows, stays off). Repo default is max too (.claude/settings.json). At the 11:17 AM meter read, compare the pace before and after this change.
+- (Old, 7:39 AM; now xhigh since 11:20 AM, get_session 1:35 PM: xhigh.) Effort set to max at 7:39 AM (Cory 11-06: the old ultracode; the new ultracode switch means workflows, stays off). Repo default is max too (.claude/settings.json). At the 11:17 AM meter read, compare the pace before and after this change.
 - Found 7:45 AM in the app's own text: CLAUDE_CODE_EFFORT_LEVEL in .claude/settings.json overrides the effort picked in the online interface (it pinned HIGH before). Picking any level turns ultracode off. Ultracode changes no thinking; it adds a standing order to use workflows on every task, plus "token cost is not a constraint". Change effort only by editing that file, on Cory's word.
 - get_session 7:50 AM: effort_level max, ultracode false (set 7:43 AM). Before that, the repo file pinned HIGH from Tue 11-03 1:00 PM (xhigh only 2:04-2:08 PM: session ...N1FPwfgHU4 put Cory's xhigh back to high, calling it Claude's pick). So this session (from Wed 11-04 10:19 AM) ran at HIGH for about 45 h. Lesson: never change effort without Cory's word.
 - Helper effort (Cory 11-06 11:30 AM, "split"): `helper` at high for non-physics jobs; `helper-physics` at xhigh for physics, contacts, forces, her limits, geometry, protected tests; a job either fails (red proof it can't fix, or a real review finding) is redone on `helper-max` at max, handed the first branch and the failure lines. helper-max counts toward the two-helper cap. Why physics stays xhigh: a miss there can pass every test (J-048's hook bug passed; only Codex caught it), and a miss nobody catches never gets the max redo.
@@ -55,7 +62,7 @@ Keep this file to what changes the next action; move anything done to the log.
 - Fable: not needed (Cory 11-06: use it only when a real problem needs it; never invent work for it). #244: ChatGPT answered 7:16 AM; my To Grok ask (nominal shares vs max capacities) went 7:22 AM, for his 10 AM run.
 - He pasted my "no artificial blockers" prompt to Muse (8:40 AM). Muse should now: windup first (#256), then J-001.
 - He looks at LOW shadows on his phone once #263 lands; SPLITS if it looks bad.
-- Next meter ask: 11:17 AM run.
+- Next meter ask: 5:17 PM run.
 
 ## Open PRs (7:20 AM 11-06)
 - Merged: #252 and #250 (by hand, 2:40 PM), #253 (by hand, 3:00 PM); #254 and #255 (switchboard).
