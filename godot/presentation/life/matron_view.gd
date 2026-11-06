@@ -501,13 +501,17 @@ func _build_locker() -> void:
 	_box(Vector3(0.5, 0.5, 0.05), worn, gauge)
 	var face := _cyl(0.2, 0.2, 0.03, _material(Color("cfc9b6"), 0.7), gauge, Vector3(0.0, 0.0, -0.035), 20)
 	face.rotation.x = PI * 0.5
+	# The left-hand ticks merge apart from the right-hand ones, so no merged
+	# tick box spans the dial under the LOAD label (the label's board stays the face).
+	var left_ticks := _pivot(gauge)
 	for k in 7:
 		var a := lerpf(-2.2, 2.2, float(k) / 6.0)
-		var tick := _box(Vector3(0.012, 0.045, 0.01), _material(Color("2a2623"), 0.8), gauge, Vector3(sin(a) * 0.16, cos(a) * 0.16, -0.055))
+		var tick := _box(Vector3(0.012, 0.045, 0.01), _material(Color("2a2623"), 0.8), left_ticks if k < 3 else gauge, Vector3(sin(a) * 0.16, cos(a) * 0.16, -0.055))
 		tick.rotation.z = -a
 		if k >= 5:
 			tick.scale = Vector3(1.8, 1.0, 1.0)
 			tick.material_override = _material(Color("b01a12"), 0.6, 0.0, Color("ff2418"), 0.4)
+	_merge_leaves(left_ticks)
 	_merge_leaves(gauge)
 	_needle = _pivot(gauge, Vector3(0.0, 0.0, -0.06))
 	_box(Vector3(0.012, 0.17, 0.008), _material(Color("a31610"), 0.5, 0.0, Color("ff2418"), 0.5), _needle, Vector3(0.0, 0.07, 0.0))
