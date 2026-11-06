@@ -3723,12 +3723,18 @@ void Matron::hold_stock(const float dt) {
     const Vec3 rel = handle_v - anchor_v;
     const Vec3 want_force = t.mass_kg * (kHoldSpring * Vec3(anchor - handle) - kHoldDamp * rel) -
                             physics_.GetGravity() * t.mass_kg;
-    const Vec3 granted = feet_push(dt, want_force, &rel);
+    // J-042 (Codex P1 on #291): charge and measure the lift with the pair's
+    // relative velocity — the handle against her own centre — not rel. The
+    // reaction -granted acts at her centre of mass, so that is the power the
+    // hand and body pair does. A piece tracking a rising anchor has rel near
+    // 0, so charging with rel read the lift as ~0 W; rel stays for the damper.
+    const Vec3 work_v = handle_v - bodies.GetLinearVelocity(body_);
+    const Vec3 granted = feet_push(dt, want_force, &work_v);
     if (granted.LengthSq() > 0.0F) {
         bodies.AddForce(t.body, granted, handle);
         bodies.AddForce(body_, -granted);
         // J-046 measurement only: the feet's take above, on through her hands.
-        effort::add_force(effort::Path::StockHold, granted, rel, granted.Length(), -granted);
+        effort::add_force(effort::Path::StockHold, granted, work_v, granted.Length(), -granted);
         foot_drive_dv_ -= (granted / kMassKg) * dt;
     }
     // Wedged and dragged off the hands: it slips out of them.
