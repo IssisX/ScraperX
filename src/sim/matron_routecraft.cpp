@@ -1,5 +1,6 @@
 #include "sim/matron_routecraft.hpp"
 #include "sim/physics_world_support.hpp"
+#include "sim/matron_effort.hpp"
 #include <algorithm>
 #include <tuple>
 #include <map>
@@ -527,6 +528,7 @@ void MatronRoutecraft::hold(PhysicsSystem &p, BodyID self) {
         const float power = std::abs(force.Dot(velocity));
         if (power > kPower) force *= kPower / power;
         bodies.AddForce(self, force);
+        effort::add(effort::Path::Routecraft, force.Length(), force.Dot(velocity), 0.0F, force);   // J-046, measurement only
         report_.force = force.Length(); report_.reaction = -force;
         report_.peak_force = std::max(report_.peak_force, report_.force);
         report_.peak_power = std::max(report_.peak_power, std::abs(force.Dot(velocity)));
@@ -554,6 +556,7 @@ void MatronRoutecraft::drive(PhysicsSystem &p, BodyID self, const Node &target) 
     const float power=std::abs(force.Dot(velocity));
     if (power>kPower) force*=kPower/power;
     bodies.AddForce(self,force);
+    effort::add(effort::Path::Routecraft, force.Length(), force.Dot(velocity), 0.0F, force);   // J-046, measurement only
     report_.force=force.Length(); report_.peak_force=std::max(report_.peak_force,report_.force);
     report_.peak_power=std::max(report_.peak_power,std::abs(force.Dot(velocity)));
     report_.hand=target.grip.point; report_.reaction=-force;

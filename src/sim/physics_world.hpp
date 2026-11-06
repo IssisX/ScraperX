@@ -1034,6 +1034,13 @@ public:
     [[nodiscard]] JPH::RVec3 player_ankle(const JPH::BodyInterface &bodies) const noexcept;
     void grab_drive(JPH::BodyInterface &bodies, float dt) noexcept;
     void grab_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    // J-046 (#257) measurement only (physics_world_grab.cpp): the effort
+    // ledger's reads of her body and her constraints, around the step. They
+    // read, and write nothing the simulation reads back.
+    void effort_before_update() const noexcept;
+    void effort_after_update(float dt) const noexcept;
+    float effort_mass(JPH::BodyID id) const noexcept;
+    float effort_dt_ = 0.0F;
     // The player's strike (physics_world_strike.cpp).
     enum class StrikePhase : std::uint8_t { Guard = 0, Windup = 1, Reach = 2, Recoil = 3 };
     void strike_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;

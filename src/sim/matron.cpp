@@ -2,6 +2,7 @@
 // deck (see matron.hpp).
 #include "sim/matron.hpp"
 #include "sim/matron_grip.hpp"
+#include "sim/matron_effort.hpp"
 #include "sim/mechanism_kit.hpp"
 #include <cstdlib>
 
@@ -1831,6 +1832,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                         Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                         push /= push.Length();
                         bodies.AddForce(id, push * force_n, EActivation::Activate);
+                        // J-046 measurement only: charged to no Budget, no reaction on her.
+                        effort::add_force(effort::Path::CrateShove, push * force_n,
+                                          bodies.GetLinearVelocity(id) - velocity, 0.0F, Vec3::sZero());
                     }
                 }
             }
@@ -3986,6 +3990,8 @@ bool Matron::shove_stock(const float dt, const float ax, const float az, const b
         const RVec3 face = p - RVec3(d * r) + RVec3(0.0, low, 0.0);
         bodies.AddForce(t.body, granted, face);
         bodies.AddForce(body_, -granted);
+        // J-046 measurement only: the feet's take above, on through her hands.
+        effort::add_force(effort::Path::HandsPush, granted, pv - her_v, granted.Length(), -granted);
         foot_drive_dv_ -= (granted / kMassKg) * dt;
         stock_push_force_n_ = granted.Length();
     }
@@ -4046,6 +4052,9 @@ void Matron::throw_stroke(const float dt) {
     if (granted.LengthSq() > 0.0F) {
         bodies.AddForce(t.body, granted);
         bodies.AddForce(body_, -granted);
+        // J-046 measurement only: the feet's take above, on through her hands.
+        effort::add_force(effort::Path::HandsPush, granted, pv - bodies.GetLinearVelocity(body_), granted.Length(),
+                          -granted);
         foot_drive_dv_ -= (granted / kMassKg) * dt;
         stock_push_force_n_ = granted.Length();
     }

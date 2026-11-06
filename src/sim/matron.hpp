@@ -1424,6 +1424,8 @@ public:
     // The force her feet drive put on her body this tick (walk_toward), when no climb has it.
     float foot_force_n() const noexcept { return foot_force_n_; }
     float foot_power_w() const noexcept { return foot_power_w_; }
+    // J-046 measurement only: her hands' hold on a piece, if any (its lambda is read, never written).
+    const JPH::PointConstraint *stock_hold() const noexcept { return hold_.GetPtr(); }
     // What her last take_blow read (sense_near's pick; read only, for tests):
     // how many, and each one's body, motion and middle before the step, and
     // hers as her own drive would leave it.

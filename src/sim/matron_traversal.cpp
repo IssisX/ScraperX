@@ -1,4 +1,5 @@
 #include "sim/matron_traversal.hpp"
+#include "sim/matron_effort.hpp"
 
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
@@ -285,6 +286,8 @@ Vec3 Budget::take(const Vec3 want) noexcept {
     const float g = granted.Length();
     left -= g;
     used += g;
+    // J-046 measurement only: what this take grants, as charged.
+    effort::add(effort::Path::Budget, g, granted.Dot(velocity), g, granted);
     return granted;
 }
 
@@ -1732,6 +1735,10 @@ Climber::Status Climber::step_pole(const float dt, Budget &budget, const bool up
     const Vec3 side = flat(aim - c) * (limits_.mass_kg * 20.0F) - flat(rel) * (limits_.mass_kg * 6.0F);
     const Vec3 force = Vec3(0.0F, fy, 0.0F) + budget.take(side);
     bodies.AddForce(body_, force);
+    // J-046 measurement only: her squeeze (charged above, outside take) and
+    // the friction it buys on top of the take, with that friction's work.
+    effort::add(effort::Path::PoleGrip, std::max(squeeze, std::abs(fy)), fy * rel.GetY(), squeeze,
+                Vec3(0.0F, fy, 0.0F));
     push_reaction(force, hold_world_);
     float support = 0.0F;
     if (!up && supported(&support) && std::abs(support - spec_.goal_top) < 0.35F) {
