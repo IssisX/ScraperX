@@ -64,7 +64,8 @@ Keep this file to what changes the next action; move anything done to the log.
 - #95 J-023 plants: red, plant worst 0.111 m > 0.079. Muse fixes it; no bound raise. Workflow file, I merge after the stills.
 - #227 J-001 HOLD: Muse's past-rail agent. Rulings: force-based snag break only; both hands' haul comes out of her one
   8 kN/44 kW account.
-- #264-#275 opened 8:30 AM 11-06 from Muse's held-mail branches (all green, 0 BLOCK, clean; unsubscribed). #272 widens the cascade mast beam: geometry, needs another agent's LAND. Switchboard merges them.
+- #264-#275 all landed by 8:05 AM 11-06 (#272's mast beam with Codex's LAND).
+- #277 J-048 (protected), opened 8:45 AM; the switchboard lands it on green plus another vendor's LAND; not watched.
 - Still red, Muse's: rungdown-bottom-gap, j044c, 95-plant-fix; j001-pastrail not pushed.
 - Subscribed: #256.
 
@@ -87,17 +88,13 @@ Muse's mail: 17 held mails all arrived 6:52 AM 11-06 (its sends were held ~18 h)
 first; windup does not wait on J-001; J-044c cap waived; wreck re-baseline only as its own protected PR; keep Grok-less
 gains. Prompt for Muse given to Cory (no parking jobs on decisions; send mail at once). 9 expand-tests/world guard branches
 wait behind windup, J-001, #95, J-044c. Rule: Muse 3 h with no mail while pushing -> tell Cory at once.
-Muse pushed `fb-bot/integrate-traversal-rungdown-bottom-gap` @ed8e32a3 2:47 AM 11-06 with no mail yet; red on
-matron-slices-2. Wait for its mail.
-1. J-001 #227
-2. #95 plant fix
-3. sense_near nearest-32
-4. J-044c, then d, e, f, g, k, l
-5. J-043 #241 (Belly of the Deck)
-6. S5 after J-044d
-7. J-040 #228 after J-044d
-8. J-038 slice 1. Rulings: settle exclusion replaces the vertical gate; support is a gravity-opposing normal held
-   2+ ticks; 1 mm quantize; stable merge ties.
+Muse 8:05 AM status: #264-#275 landed; 12 lanes running: windup #256, J-001 #227 hands first, RungDown diagnosis,
+J-044c wreck re-baseline, J-044l, J-044d, J-047, sense_near, J-044h, J-044i, J-043 #241, and J-048 (dropped 8:20 AM,
+Claude's). Mailed 9:00 AM: J-038 slice 1 takes J-048's lane; queued J-045, J-022 #129, J-049 #278 (new: her mind runs on
+evidence, leak list first). Also mailed 8:55 AM: ChatGPT's two J-001 failure leads (#108) and spec H and I.
+Waiting on dependencies: S5 and J-040 #228 after J-044d; matron-ammo after #256; f guard-steps.
+J-038 rulings: settle exclusion replaces the vertical gate; support is a gravity-opposing normal held 2+ ticks; 1 mm
+quantize; stable merge ties.
 
 Two budget leaks are closed in J-044l/J-040: the grab hand's separate 2600 N spring, and the shove that writes
 velocity (physics_world.cpp:1437).
@@ -106,8 +103,10 @@ Moved to Muse 11-06 (mailed): J-044h (presentation), J-044i (injury render), mat
 Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
 
 ## Asks in flight
-- To Grok on #244 (J-044b math). If Grok stays silent, route math to ChatGPT.
-- To Claude: none.
+- To Grok on #244: the capacity test (spec H.4), at his 10 AM run. If he stays silent, route it to ChatGPT.
+- To Claude: none. ChatGPT's #244 (torque and power) and #243 (daze) accepted 8:55 AM as spec H and I of
+  `03_EXECUTION/FIGHT/J044A_SPEC.md`. My pick (11-06): a checkpoint keeps the exact daze; J-044g versions the save.
+- Sweep noise: `claude/integrate-j042-ammo` (red scope) is inside #256; `fb-bot/integrate-s4-jab` is merged.
 
 ## Known here
 - Any PR this session opens (MCP or gh api) subscribes it: 12 at once cost 26 wake notices (11-06). Open PRs one
