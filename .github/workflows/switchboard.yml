@@ -233,6 +233,11 @@ jobs:
       - name: Run the switch
         env:
           GH_TOKEN: ${{ github.token }}
+          # J-056: a fine-grained PAT (Contents, Pull requests, Workflows: read/write) that merges a PR changing
+          # .github/workflows, which github.token cannot. This step and no other: it runs trunk's switch.py only,
+          # never PR-head code (the rule check reads the PR's diff; nothing checks it out). switch.py takes it out
+          # of the environment at start, so no child process inherits it.
+          SWITCHBOARD_MERGE_TOKEN: ${{ secrets.SWITCHBOARD_MERGE_TOKEN }}
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}
