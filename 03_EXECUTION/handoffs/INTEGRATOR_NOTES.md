@@ -143,3 +143,4 @@ Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
 - J-051 #284 (inbox, helper on high): after each full steer sweep the switchboard posts NEW needs-the-integrator items on
   draft PR #282 (never merge; the integrator stays subscribed). Only full sweeps post (a --pr run never does, so no loop).
   Green, waiting on Codex plus a LAND; the first post should list about 8 items (FIX on #256, red #227 and #95, five red branches).
+- J-051 #284 merged 12:17 PM (11-06): the inbox is live. Keep #282 OPEN and subscribed (the old switchboard closed it once, 12:15, on a quoted supersede line; reopened). Each inbox comment = act on its items now.
