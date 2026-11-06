@@ -13,14 +13,14 @@ comes from the last two meter readings (about $14). Ask Cory for the meter at th
 each checkpoint (81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM), and the hour it hits 100%. A prediction over a checkpoint
 throttles now, before it is crossed: no new helper, the next full run quiet (answers, merges), Cory gets the prediction and the
 cut in one line. Loosen a step only when two runs predict under.
-Specs, the math of a ruling and research go to ChatGPT or Grok first (`To ChatGPT:` / `To Grok:`); the integrator
+Specs, the math of a ruling and research go to ChatGPT or Grok first; the integrator
 checks them, never drafts them (Cory 11-06).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
-Helpers (sub-agents): one at a time (11-06 pace; Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
+Helpers (sub-agents): one at a time while over pace (Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 11:20 AM; helpers keep their own effort, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (11-03 to 11-06 it sat at high 45 h).
 
 The scheduled task only says "do this file"; change the check here. Post only when something changed.
@@ -28,7 +28,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 
 1. **Mail and asks first, every run and every event you handle.** The mark is the notes' `Read through:` Unix time.
    Note `date +%s`, then mail `after:<mark> (subject:MUSE_TO_CLAUDE OR from:sentry.io OR subject:"Run failed: Switchboard")`
-   and `python3 tools/board/asks.py --since <mark>`: both list only what came after the mark, so empty means nothing
+   and `python3 tools/board/asks.py --since <mark + 120>` (no overlap): both list only what came after the mark, so empty means nothing
    new. Act on each, then set the mark to the time you noted less 120 s (mail indexes late; a repeat is in the notes) and push it (never before acting; nothing new: leave it). Muse's mail: act now or hand it
    to a helper; post its verdicts on GitHub if the bridge has not. Muse's diffs go on `fb-bot/integrate-<job>`
    (protected: `fb-bot/integrate-protected-<job>`) from the sha it names, then a PR starting `Job: J-NNN`.
@@ -38,7 +38,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Sentry (phone errors from the APK): each new issue goes to its owner's job (Muse for game code) with the error,
    file and line. A failed Switchboard run: read its failing job's error lines; fix it or hand it to a helper.
    Before ruling on or reporting a branch, read its live head (`git ls-remote`) and proof: mail can be an hour old
-   (Muse 11-06). A mail that changes a ruling needs one.
+   (Muse 11-06). So does a mail that changes a ruling.
    Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06: 18 h went unreported).
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
    the switchboard can't: workflow-file PRs (merge on green plus a LAND), FIX or
