@@ -188,7 +188,7 @@ var _hold_at2 := Vector3.ZERO
 # prop_short), let down once it is in reach; her pose eased that far toward
 # the stoop (STOOP_*: trunk over her knees, hips down, knees bent).
 var _prop_lean := 0.0
-const PROP_LEAN_UP_S := 3.0
+const PROP_LEAN_UP_S := 4.0
 const PROP_LEAN_DOWN_S := 1.2
 # and raised this long before the stoop would have to start to be drawn by the
 # take (matron_rig.gd prop_take_s): her speed changes on the way, and her drawn
