@@ -36,7 +36,7 @@ Read through: 1794066268 (2026-11-07 15:44:28Z, 9:44 AM Central). Every run sets
   other arm, head, neck, chest in that order; one account per tick, the Climber by reference. Written into spec H.
 - Fight (J-044): her jointed upper body inside 8 kN / 44 kW; an injury costs function in proportion and her healthy
   limbs take over, the budget never rises; a daze from head impulse replaces the fixed knockdown. Checkpoints keep the
-  exact daze (J-044g versions the save). Whether injuries persist across a checkpoint is asked of Cory (/learn, 11-07).
+  exact daze and her injuries, dead included (J-044g versions the save; rule 34, Cory 11-05 and 11-07).
 - J-042: one path for every loose object; she throws up to 25 kg and shoves anything heavier.
 - J-049: her breath within 2 m gives a lead (Cory "breath", 11-07 6:22 AM, final).
 - J-053: first balcony 640 m, chain to 728 m, a running jump; protected geometry PR, then my eye check.
@@ -69,8 +69,6 @@ beside #301, one subagent each. Owed: which buttons ignore the bridge click.
 - Mine: the next mail to Muse points to muse.md's new never-guess line and the refusal reason (11-07 10:25 AM);
   check the J-059 and hair stills when they come; #306 follow-up, not a blocker: angle the cheek quads 25-30
   degrees along the cheek normal (straight on, the left one overhangs the face edge).
-- Cory (/learn, 11-07 10:3x AM): injuries across checkpoints; `work/budget.yml`'s $8 caps; whether "last to Sunday
-  night" is every week.
 - PAT `ScraperX` expires Mon Nov 23: find what holds it, remind Cory by Nov 20.
 - 367 old branches archived in `archive/branches-20261106` @ 8f2c6a82; deleting them waits on Cory allowing it.
 - J-048 follow-up: wind on him in the air counts as his own run on a later wall hit (about 2.7 m/s); a later

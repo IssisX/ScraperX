@@ -86,7 +86,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 
 ## The integrator
 
-- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 hours; 11-06), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
+- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 hours; 11-06), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06, 11-07: the limit lasts to Sunday night, every week): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
