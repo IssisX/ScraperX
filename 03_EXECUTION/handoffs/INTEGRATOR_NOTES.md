@@ -79,7 +79,10 @@ beside #301, one subagent each. Owed: which buttons ignore the bridge click.
 - J-017 #124 is done but open: close it at a full run.
 
 ## Meter and pace
-84% at 9:40 AM Sat. Checkpoints 89% Sat 11 PM, 98% Sun 11 PM; about $14-18 per 1%. Next meter ask: the 1:17 PM run.
+83% at 8:20 AM Sat ($491); 85% at 10:28 AM ($550): about $30 per 1%, 0.94%/h (the /learn run in it). That predicts
+96.7% at Sat 11 PM, over the 89% checkpoint: THROTTLED 10:30 AM: no helpers, the 1:17 PM run quiet (answers and
+merges), light runs mail and asks only, no eye checks of mine. Next meter ask: the 1:17 PM run. No $8 per-job cap:
+only the month cap (Cory 11-04, 11-07; never bring it up).
 
 ## Known here
 - Commit messages never put fix/fixes/close/resolve before #N: trunk is the default branch, so GitHub closes #N.

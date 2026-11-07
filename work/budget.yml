@@ -5,7 +5,7 @@
 caps:
   month_usd: "100.00"   # may not exceed 100: the switch refuses to load a higher number
   day_usd: "100.00"    # no daily limit beyond the month (Cory, 11-03: "A $10 daily cap. That's so little. I don't want that there.")
-  job_usd: "8.00"       # per job, over its life; one comment `budget 12` on the job issue raises it (never above month_usd)
+  job_usd: "100.00"     # no per-job cap beyond the month (Cory 11-04: "the 8 was artificially unknowingly placed"; 11-07: canceled)
 
 # List prices per million tokens. VOLATILE: from the claude-api skill's model table (cached 2026-10-06);
 # check https://platform.claude.com/docs/en/about-claude/pricing when changing a model.
