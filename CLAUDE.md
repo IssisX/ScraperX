@@ -62,9 +62,9 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts).
   Grok Bot, PE and Builder are out until 11-09.
 - **Board:** issue #107's body is the live board; only the integrator edits it. Agents read the body and
-  the comments since their last, post one line per real step, and put technical findings on the job's own
-  issue or PR. Blocked 30 minutes: post `BLOCKED: what, needs whom` and start the next job; every agent holds
-  two or more jobs.
+  new comments, post one line per real step, and put technical findings on the job's own issue or PR.
+  Nobody waits on Claude's go, protected work included (11-07). Blocked 30 minutes: post `BLOCKED: what,
+  needs whom` and start the next job; every agent holds two or more jobs.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews every PR
   on open (`@codex review` only after a fix commit). The Claude API (Opus, max effort) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. Grok and ChatGPT review only
