@@ -241,7 +241,7 @@ void Matron::watch_stall(const float dt, const RVec3 at, const float heading_x, 
         // the real floor with her body free on it (traversal grid_walk): the
         // first of them a stride or more off is where she steps.
         {
-            const traversal::Ignore ignore{body_, player_, static_cast<int>(moving_layer_)};
+            const traversal::Ignore ignore = walk_ignore();
             const std::vector<Vec3> steps = traversal::grid_walk(physics_, ignore, traversal::Limits{},
                                                                  Vec3(ax, feet_y_, az), Vec3(to_x, feet_y_, to_z), 4.0F);
             for (const Vec3 &step : steps) {

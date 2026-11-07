@@ -688,7 +688,7 @@ void Matron::step_journey(const float dt) {
     const Vec3 feet(float(at.GetX()), float(at.GetY()) - kStandCentre, float(at.GetZ()));
     const Vec3 to = edge.kind == traversal::MoveKind::Walk ? edge.spec.goal : edge.spec.start;
     if (journey_legs_.empty()) {
-        const traversal::Ignore ignore{body_, player_, static_cast<int>(moving_layer_)};
+        const traversal::Ignore ignore = walk_ignore();
         journey_legs_ = traversal::grid_walk(physics_, ignore, climber_->limits(), feet, to);
         journey_legs_.push_back(to);
         journey_leg_ = 0;

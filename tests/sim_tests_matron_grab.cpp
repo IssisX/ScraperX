@@ -185,6 +185,19 @@ void caught_at(Simulation &s, const double x, const double z, const double her_x
 
 // By the east band's rail at `z` (x 18), her 1.6 m along the band.
 void at_the_rail(Simulation &s, const double z) { caught_at(s, 18.0, z, 18.3, z + 1.6); }
+
+// J-049: the same meeting as caught_at, but she faces away from him, out of
+// her sight and silent. He is 0.75 m from her centre: inside her catch
+// (kCatchM 0.85 m) but outside her body's touch (0.30 m plus his 0.35 m).
+void hidden_at(Simulation &s, const double x, const double z, const double her_x, const double her_z) {
+    s.place_matron_home(154.0F);
+    require(s.advance_frame(1.0).accepted, "matron hide: settle");
+    (void)s.matron_affordances();
+    s.debug_launch_player(scraperx::sim::Vector3{x, 154.95, z}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+    s.debug_place_matron(scraperx::sim::Vector3{her_x, 154.0, her_z});
+    // Facing away from him: his direction plus half a turn.
+    s.debug_face_matron(std::atan2(x - her_x, z - her_z) + 3.141592653589793);
+}
 } // namespace
 
 void run_matron_grab() {
@@ -753,6 +766,73 @@ void run_matron_grab() {
                 "matron regrab: then they take him again");
         std::cout << "PASS scraperx_sim matron regrab: blocked " << Matron::kRegrabAfterTearS << " s, grabbed at "
                   << grabbed_at << " s\n";
+    }
+
+    // ---- J-049: hiding must truly work ----
+    // A still, silent player she has never sensed is not hers to take. He stands on the
+    // crate, his body near her eye level; she stands 0.75 m south of it, facing south.
+    // BLOCKED: his breath within 2 m gives her a Hunting lead. Needs a ruling.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        require(s.advance_frame(1.0).accepted, "matron hide: settle");
+        (void)s.matron_affordances();
+        std::uint32_t crate = Simulation::kKitNone;
+        for (std::uint32_t i = 0; i < s.loose_stock_count() && crate == Simulation::kKitNone; ++i) {
+            const std::uint32_t body = s.kit_body_index(scraperx::sim::LooseStock::kFirstEntity + i);
+            const auto p = s.kit_body_position(body);
+            if (s.loose_stock_piece(i).kind == static_cast<std::uint8_t>(scraperx::sim::LooseStock::Kind::SkidCrate) &&
+                std::abs(p.x - 24.6) < 0.5 && std::abs(p.z + 145.5) < 0.5) {
+                crate = body;
+            }
+        }
+        require(crate != Simulation::kKitNone, "matron hide: the east crate is there");
+        const auto top = s.kit_body_position(crate);
+        // The height comes from the deck, not the body: kit_body_position is the
+        // crate's centre of mass, ~0.5 m over its ground origin; the crate top
+        // is 1.00 m over the deck; his centre 1.05 above it (0.15 clear).
+        (void)s.debug_launch_player(scraperx::sim::Vector3{top.x, 154.0 + 1.0 + 1.05, top.z},
+                                    scraperx::sim::Vector3{0.0, 0.0, 0.0});
+        (void)s.debug_place_matron(scraperx::sim::Vector3{top.x, 154.0, top.z - 0.75});
+        s.debug_face_matron(3.141592653589793);
+        const auto catches = s.matron_state().catches;
+        const auto grabs = s.matron_state().grabs;
+        for (int i = 0; i < 90; ++i) {
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+        }
+        require(s.matron_state().catches == catches && s.matron_state().grabs == grabs &&
+                    !s.snapshot().held_by_matron,
+                "matron hide: still and silent within her catch, unseen and unheard, she does not take him");
+        std::cout << "PASS scraperx_sim matron hide silent: no catch in 1 s at 0.75 m\n";
+    }
+    // He makes a sound and she finds him.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        hidden_at(s, 0.75, -130.0, 0.0, -130.0);
+        require(s.set_room_loudness(1.0), "matron hide: a noise from the spot");
+        bool grabbed = false;
+        for (int i = 0; i < 10 * 90 && !grabbed; ++i) {
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            grabbed = s.snapshot().held_by_matron;
+        }
+        require(grabbed, "matron hide: he makes a sound and she finds him");
+        std::cout << "PASS scraperx_sim matron hide sound: grabbed on the noise\n";
+    }
+    // He walks into her and she catches him: a slow, silent walk, so the catch comes from the touch, not from a sound.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        hidden_at(s, 0.75, -130.0, 0.0, -130.0);
+        (void)s.set_facing(-1.0, 0.0);
+        bool grabbed = false;
+        for (int i = 0; i < 10 * 90 && !grabbed; ++i) {
+            (void)s.set_move_input(0.0, 0.3);
+            tick(s);
+            grabbed = s.snapshot().held_by_matron;
+        }
+        require(grabbed, "matron hide: he walks into her and she catches him");
+        std::cout << "PASS scraperx_sim matron hide touch: grabbed on the walk-in\n";
     }
 }
 

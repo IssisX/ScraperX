@@ -44,7 +44,7 @@ constexpr float kPlayerHalfM = 0.9F;
 
 Vec3 Matron::shoulder_local() const noexcept { return Vec3(0.0F, kShoulderUpM - kStandCentre, 0.0F); }
 
-void Matron::begin_grab(const RVec3 player) {
+void Matron::begin_grab() {
     routecraft_.cancel();
     if (!body_in_world_ || dead_ || holding()) {
         return;
@@ -81,7 +81,11 @@ void Matron::begin_grab(const RVec3 player) {
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
     hand_target_ = at + shoulder_local();
     hand_target_v_ = Vec3::sZero();
-    take_lead(float(player.GetX()), float(player.GetZ()), floor_of(float(player.GetY())), noise_heard_, Sense::Touch);
+    RVec3 sensed;
+    const Sense sense = catch_sense(sensed);
+    if (sense != Sense::None) {
+        take_lead(float(sensed.GetX()), float(sensed.GetZ()), floor_of(float(sensed.GetY())), noise_heard_, sense);
+    }
 }
 
 void Matron::grip_taken() noexcept {
