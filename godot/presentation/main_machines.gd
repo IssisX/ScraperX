@@ -37,6 +37,12 @@ var _body: Node3D
 
 var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []
+# The next kit body without a node, in index order: the build gives
+# every body one, and _render_kit gives the bodies added since one.
+var _kit_next_body := 0
+# The kit's materials, by the native's Material enum (built with the kit):
+# a body added later — a break piece — needs them for its own mesh.
+var _kit_palette: Array[Material] = []
 var _kit_dynamic: Array[bool] = []
 # The moving bodies' indices, the only ones _render_kit poses each frame.
 var _kit_dynamic_bodies := PackedInt32Array()
@@ -134,6 +140,7 @@ func _build_kit() -> void:
 		_surfaced(Color("8c690f"), 0.0, 0.58, _surface_paint),
 		_glass_material(),
 	]
+	_kit_palette = palette
 	const KIT_GLASS := 8
 	# The static glass (AS-007 E's shaft) under its own key: one transparent
 	# draw for all of it, never in the opaque batches.
@@ -371,6 +378,7 @@ func _build_kit() -> void:
 		_kit_root.add_child(spout)
 		_kit_spouts.append(spout)
 	_build_wet_e()
+	_kit_next_body = int(_native.get_kit_body_count())
 	_render_kit()
 
 # Where a machine's beacon sits, in its own frame: on the highest corner of
@@ -546,12 +554,101 @@ func _render_hook() -> void:
 			_lay_segment(_hook_bend_lines[i - 1], points[i], points[i + 1])
 	_hook_head.global_position = hook["position"] if out else at
 
+# One kit body's node, its meshes and its bookkeeping, for a body added
+# after the build: a break piece. The build-time loop in _build_kit does
+# the same for the bodies the world starts with, but it ran once at
+# startup; a piece made later needs its node here, or it has no mesh
+# and is invisible. Pieces are always dynamic Timber boxes, so the mesh
+# path is the dynamic one; a fabricated body gets an empty node instead
+# (fabricated_view.gd draws it), and a static body likewise — either way
+# exactly one entry is appended, so _kit_bodies and _kit_dynamic stay
+# indexed by body, which the poses pass relies on. The audio entry is
+# the loop's own condition: a piece is loose stock under MACHINE_MIN_KG,
+# so it gets none.
+func _add_kit_body(body: int) -> void:
+	var entity := int(_native.get_kit_body_entity_id(body))
+	var fabricated := entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT
+	if fabricated or not bool(_native.is_kit_body_dynamic(body)):
+		if not fabricated:
+			push_warning("KitBody%d is not dynamic, no mesh built" % body)
+		var empty := Node3D.new()
+		empty.name = "KitBody%d" % entity
+		_kit_bodies.append(empty)
+		_kit_dynamic.append(false)
+		return
+	var node := Node3D.new()
+	node.name = "KitBody%d" % entity
+	node.transform = _native.get_kit_body_transform(body)
+	var parts: PackedFloat32Array = _native.get_kit_body_parts(body)
+	var body_groups := {}
+	for p in range(0, parts.size() - KIT_PART_FLOATS + 1, KIT_PART_FLOATS):
+		var mesh: PrimitiveMesh
+		match int(parts[p + 11]):
+			KIT_SHAPE_CYLINDER:
+				var cylinder := CylinderMesh.new()
+				cylinder.top_radius = parts[p]
+				cylinder.bottom_radius = parts[p]
+				cylinder.height = parts[p + 1] * 2.0
+				cylinder.radial_segments = 16
+				mesh = cylinder
+			KIT_SHAPE_CAPSULE:
+				# A capsule's half.y runs between its sphere centres.
+				var capsule := CapsuleMesh.new()
+				capsule.radius = parts[p]
+				capsule.height = parts[p + 1] * 2.0 + parts[p] * 2.0
+				capsule.radial_segments = 16
+				capsule.rings = 4
+				mesh = capsule
+			_:
+				var box := BoxMesh.new()
+				box.size = Vector3(parts[p], parts[p + 1], parts[p + 2]) * 2.0
+				mesh = box
+		var material: Material = _kit_palette[clampi(int(parts[p + 10]), 0, _kit_palette.size() - 1)]
+		var part := Transform3D(Basis(Quaternion(parts[p + 6], parts[p + 7], parts[p + 8], parts[p + 9])),
+			Vector3(parts[p + 3], parts[p + 4], parts[p + 5]))
+		var key := str(material.get_instance_id())
+		Batcher.append(body_groups, key, mesh, 0, part, "", false)
+		body_groups[key][1] = material
+	for key in body_groups:
+		var piece: MeshInstance3D = Batcher.instance(body_groups[key][0], body_groups[key][1])
+		# A moving part is drawn as far as its size carries: a 1 m part to
+		# about 120 m, the 26 m wheel across the whole tower.
+		var extent := piece.get_aabb().size
+		piece.visibility_range_end = clampf(40.0 * maxf(extent.x, maxf(extent.y, extent.z)), 120.0, 1200.0)
+		piece.visibility_range_end_margin = BATCH_FADE
+		piece.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		node.add_child(piece)
+	_kit_root.add_child(node)
+	_kit_bodies.append(node)
+	_kit_dynamic.append(true)
+	_kit_dynamic_bodies.append(body)
+	var stock := (entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT) or \
+		(entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT)
+	if not stock and float(_native.get_kit_body_mass(body)) >= MACHINE_MIN_KG:
+		_machines.append({"heard": not (entity in OWN_SOUND_ENTITIES), "body": body,
+			"tip": _farthest_corner(parts), "last_tip": Vector3.INF,
+			"last_at": Vector3.INF, "speed": 0.0, "turning": false, "at": Vector3.ZERO,
+			"tip_at": Vector3.ZERO, "mass": float(_native.get_kit_body_mass(body)),
+			"top": _beacon_seat(parts)})
+
 # Poses every moving kit body and lays every cable through its points, from
 # this frame's native state. A body the native has taken out of the world (a
 # shackle hooked onto an anchor) is hidden, not moved.
 func _render_kit() -> void:
 	if _kit_root == null:
 		return
+	# A break adds bodies after the build: give each its node and mesh,
+	# or the pieces are invisible. The count only grows (bodies are
+	# never removed), so a larger count is always new bodies at the end,
+	# taken in index order; _add_kit_body keeps the arrays indexed by
+	# body, fabricated ones included. Poses are re-primed after growing,
+	# so the next pass asks for every moving body, pieces included.
+	var count := int(_native.get_kit_body_count())
+	if count > _kit_next_body:
+		while _kit_next_body < count:
+			_add_kit_body(_kit_next_body)
+			_kit_next_body += 1
+		_kit_poses_primed = false
 	var eye := _kit_eye()
 	var look_again := eye.distance_squared_to(_kit_instance_eye) > KIT_INSTANCE_LOOK_M * KIT_INSTANCE_LOOK_M
 	if look_again:
