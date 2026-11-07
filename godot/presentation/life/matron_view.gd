@@ -760,10 +760,12 @@ func _update_planks(data: Dictionary) -> void:
 
 const MatronRig := preload("res://presentation/life/matron_rig.gd")
 const MatronLook := preload("res://presentation/life/matron_look.gd")
+const MatronInjury := preload("res://presentation/life/matron/matron_injury.gd")
 const BODY_FILE := "res://presentation/life/matron/matron.glb"
 const RIG_FILE := "res://presentation/life/matron/matron_rig.json"
 var _rig: RefCounted     # matron_rig.gd: pivots to bones, contact, eyes, hair
 var _look: RefCounted    # matron_look.gd: her materials and the exposure on them
+var _injury: Node3D = null  # matron_injury.gd: per-region bruise, swelling, mark
 
 
 func _build_figure() -> void:
@@ -919,6 +921,8 @@ func _load_body() -> void:
 	_look.dress(root)
 	_rig = MatronRig.new()
 	_rig.setup(skeletons[0] as Skeleton3D, rig_data, self)
+	_injury = MatronInjury.new()
+	add_child(_injury)
 
 
 # Blood on her (gore_view.gd decides how much; matron_look.gd lays it on).
@@ -2409,6 +2413,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		_figure.visible = false
 		if _rig != null:
 			_rig.down_mask = 0
+		if _injury != null:
+			_injury.set_shown(false)
 		_pose_fresh = true
 		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, falling)
 		return
@@ -2437,6 +2443,9 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_ease_figure(centre, delta)
 	_ease_hands(data, delta)
 	_drive_body(data, delta, camera_position, falling)
+	# J-044i: her injuries, from the per-region dictionary J-044g fills.
+	if _injury != null:
+		_injury.update(data.get("injury", {}), _rig)
 	# A corpse is drawn but makes none of her living sounds (matron_sound.gd: out_near is "out, alive and near").
 	_hear(data, delta, alive, _figure.global_position, player_position, falling)
 

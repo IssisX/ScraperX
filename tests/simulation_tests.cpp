@@ -223,6 +223,10 @@ int main() {
         run_matron_budget();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-capacity") {
+        run_matron_capacity();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-load") {
         run_matron_load();
         return 0;
