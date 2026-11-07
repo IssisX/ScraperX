@@ -118,8 +118,8 @@ func _run() -> void:
 	# Solid right punch on the left cheek: 150 N·s in the region bruises it, and only it.
 	_set_injury({"face_l": {"j_region": 150.0, "j_event": 60.0}})
 	await _step(2)
-	_check(layer.bruise_visible("face_l") and not layer.bruise_visible("face_r"), "left_cheek",
-		"l %s r %s" % [layer.bruise_visible("face_l"), layer.bruise_visible("face_r")])
+	_check(layer.bruise_visible("face_l") and not layer.bruise_visible("face_r") and layer.patch_visible("face_l"), "left_cheek",
+		"l %s r %s patch %s" % [layer.bruise_visible("face_l"), layer.bruise_visible("face_r"), layer.patch_visible("face_l")])
 	# Heavy: 250 N·s swells the same cheek.
 	_set_injury({"face_l": {"j_region": 250.0, "j_event": 60.0}})
 	await _step(2)
@@ -135,9 +135,19 @@ func _run() -> void:
 	await _step(2)
 	_check(layer.bruise_visible("face_l") and layer.swelling_visible("face_l"), "no_heal",
 		"sev %.0f" % layer.severity("face_l"))
+	# Skull: 150 N·s bruises the back of the head, and the patch must face
+	# OUT of the skull (the old quad faced into it and culling hid it).
+	_set_injury({"skull": {"j_region": 150.0, "j_event": 60.0}})
+	await _step(2)
+	var head_bone: Transform3D = _her._rig.bone_world("head")
+	var skull_out: float = layer.patch_outward("skull", head_bone.origin)
+	var face_out: float = layer.patch_outward("face_l", head_bone.origin)
+	_check(layer.bruise_visible("skull") and layer.patch_visible("skull") and skull_out > 0.0 and face_out > 0.0,
+		"skull", "bruise %s patch %s outward %.3f face %.3f" % [layer.bruise_visible("skull"), layer.patch_visible("skull"), skull_out, face_out])
 	# Stills: the bruised left cheek, then the face straight on.
 	var head: Vector3 = _her.head_world_position()
 	await _shot("injury_left_cheek", head + Vector3(-0.45, 0.08, 0.55), head, 40.0)
 	await _shot("injury_face_front", head + Vector3(0.0, 0.05, 0.7), head, 45.0)
+	await _shot("injury_skull_back", head + Vector3(0.0, 0.15, -0.7), head, 45.0)
 	print("INJURY %s (%d failed)" % ["PASS" if _fails == 0 else "FAIL", _fails])
 	quit(1 if _fails > 0 else 0)

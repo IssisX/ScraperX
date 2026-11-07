@@ -13,18 +13,23 @@ extends Node3D
 ## Presentation only: nothing here decides anything, it shows what the sim did.
 ##
 ## The mark is a flat quad with a soft-edged radial texture, 4 mm off the skin
-## at the region's anchor, facing out along the bone. (Decals were tried first
+## at the region's anchor, facing out along the anchor's outward normal (the
+## skull's is the back of the head). (Decals were tried first
 ## and render nothing here: two rotations, plain wall, verified texture, zero pixels.)
 
 const J_REF := 50.0
 const MARK_EVENT := 25.0
 const BRUISE_REGION := 100.0
 const SWELL_REGION := 200.0
-# First slice: chest, neck and head only (J-044 plan). [bone, local offset].
+# First slice: chest, neck and head only (J-044 plan). [bone, local offset,
+# faces_back]: the skull anchor sits on the back of the head, so its quad
+# faces the bone's -Z; the rest face +Z. The skull -0.106 is measured: the
+# scalp there is ~0.10 from the bone origin, so -0.08 buried the quad
+# inside the head and no skull injury could show.
 const ANCHORS := {
-	"face_l": ["head", Vector3(-0.055, -0.015, 0.085)], "face_r": ["head", Vector3(0.055, -0.015, 0.085)],
-	"jaw": ["jaw", Vector3(0.0, -0.02, 0.08)], "skull": ["head", Vector3(0.0, 0.06, -0.08)],
-	"neck": ["neck_hi", Vector3(0.0, 0.0, 0.09)], "chest": ["chest", Vector3(0.0, 0.05, 0.16)],
+	"face_l": ["head", Vector3(-0.055, -0.015, 0.085), false], "face_r": ["head", Vector3(0.055, -0.015, 0.085), false],
+	"jaw": ["jaw", Vector3(0.0, -0.02, 0.08), false], "skull": ["head", Vector3(0.0, 0.06, -0.106), true],
+	"neck": ["neck_hi", Vector3(0.0, 0.0, 0.09), false], "chest": ["chest", Vector3(0.0, 0.05, 0.16), false],
 }
 const MARK_COLOR := Color(0.55, 0.12, 0.10)
 const BRUISE_COLOR := Color(0.23, 0.08, 0.20)
@@ -95,6 +100,20 @@ func visible_regions() -> Array:
 	return out
 
 
+func patch_visible(region: String) -> bool:
+	var p := _patches.get(region) as MeshInstance3D
+	return p != null and p.visible
+
+
+func patch_outward(region: String, center: Vector3) -> float:
+	# How far the patch faces away from center: positive means the quad's
+	# +Z points out of the body (Claude's #280 probe). -2.0 when no patch.
+	var p := _patches.get(region) as MeshInstance3D
+	if p == null:
+		return -2.0
+	return (p.global_position - center).dot(p.global_transform.basis.z.normalized())
+
+
 func _patch_for(region: String) -> MeshInstance3D:
 	if _patches.has(region):
 		return _patches[region]
@@ -138,10 +157,22 @@ func update(injury: Dictionary, rig: Variant) -> void:
 		else:
 			p.visible = false
 			continue
-		# Flat quad 2 mm off the skin: the texture's soft edge hides the float.
-		# Basis() takes column vectors; scaled() scales rows and shears it.
-		var at: Vector3 = (anchor[1] as Vector3) + Vector3(0.0, 0.0, 0.004)
+		# Flat quad 4 mm off the skin, facing out along the anchor's outward
+		# normal: the skull anchor sits on the back of the head, so its quad
+		# flips (negating X and Z keeps the basis right-handed) and the
+		# nudge goes the other way, or it faces into the skull and back-face
+		# culling hides it. Basis() takes column vectors; scaled() scales
+		# rows and shears it.
+		var faces_back := bool(anchor[2])
+		var bx := bone.basis.x * rad
+		var bz := bone.basis.z
+		var nudge := 0.004
+		if faces_back:
+			bx = -bx
+			bz = -bz
+			nudge = -nudge
+		var at: Vector3 = (anchor[1] as Vector3) + Vector3(0.0, 0.0, nudge)
 		p.global_transform = Transform3D(
-			Basis(bone.basis.x * rad, bone.basis.y * rad, bone.basis.z),
+			Basis(bx, bone.basis.y * rad, bz),
 			bone.origin + bone.basis * at)
 		p.visible = _shown

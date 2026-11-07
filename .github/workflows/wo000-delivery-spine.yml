@@ -941,7 +941,9 @@ jobs:
           # it quits 1 on any failed check.
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/injury_shots_test.gd 2>&1 | tee artifacts/injury-shots.log
-          ! grep -q '^INJURY FAIL' artifacts/injury-shots.log
+          # Under set -e bash exempts an inverted pipeline, so `! grep -q`
+          # can never fail the step: write it as an explicit if instead.
+          if grep -q '^INJURY FAIL' artifacts/injury-shots.log; then exit 1; fi
           grep -q '^INJURY PASS (0 failed)$' artifacts/injury-shots.log
 
       - name: Check Matron hold haptics fire once per event
