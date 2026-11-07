@@ -26,7 +26,7 @@ import re
 import subprocess
 import sys
 
-AGENTS = ("Muse", "ChatGPT", "Grok", "Codex", "Builder", "PE", "Claude", "Switchboard", "Cory")
+AGENTS = ("Muse", "ChatGPT", "Grok", "Gemini", "Codex", "Builder", "PE", "Claude", "Switchboard", "Cory")
 TARGETS = "Muse|ChatGPT|Grok|Builder|PE|Claude"
 ASK = re.compile(r"(?:^|[\s*>(])(?:To|→|cc)\s+(?:the\s+)?(" + TARGETS + r")\b", re.MULTILINE)
 VERDICT = re.compile(r"^\*\*(" + TARGETS + r")\b[^\n]*?review of #(\d+)", re.MULTILINE)
