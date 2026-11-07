@@ -11,14 +11,14 @@ Read through: 1794079926 (2026-11-07 19:32:06Z, 1:32 PM Central)
 merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12:26 PM, integrator at xhigh); needs 0.39%/h around the clock, or about 0.6%/h over the 23 active run hours left; fits with about 2% to spare. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
 
 ## Waiting on me
-- From Muse: J-059 and hair stills, the J-058 cheek-angle PR, the J-049 PR 1 fix (mailed 11:20 AM).
-- To put on their own issues at the 1:17 PM run, then drop here: J-048 wind on him in the air counts as his own run (about 2.7 m/s); J-045 HIGH shadows, Fold p95,
-  sim first step 4-19 ms; J-057 identity federation (#304 comment 6707308021); close J-017 #124.
+- From Muse: #298 ruling-B fix and the motor-gain test; #299 P1 fix; the J-049 PR 1 fix (mailed 11:20 AM);
+  J-061 #312 wind leak (mailed 1:45 PM). Cory said 1:37 PM Muse had #298 done; nothing pushed yet (head 03ad884b).
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
+- Gmail is Cory's own main inbox (read-only connector): search only the agent subjects; never read or touch his other mail (11-07).
 - Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue.
 - Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf`
   are refused.
