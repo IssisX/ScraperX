@@ -48,7 +48,9 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 ## How the agents work together (keep this whole)
 
 - **Channels.** Muse reads only mail: the integrator mails every `To Muse:` ask as `CLAUDE_TO_MUSE: <J-NNN or
-  #N> ...` the same hour; Muse answers by `MUSE_TO_CLAUDE:` mail (its diffs come as attachments). Grok's runs
+  #N> ...` the same hour: the goal and the result wanted, never a script to run, a change to its own tools
+  or "this replaces" (its injection check refused that, 11-07); long orders go in `work/tasks/muse.md`. Muse
+  answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
 - **Ask, don't guess:** before locking in a hard job's approach, after the second red proof on the same
