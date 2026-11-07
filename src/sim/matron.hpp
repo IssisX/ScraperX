@@ -613,10 +613,11 @@ public:
     static constexpr float kTurnBurstMps = 9.0F;
     static constexpr float kTurnPauseMps = 3.5F;
     static constexpr float kTurnFootAccel = 70.0F;
-    // Lunge push only. Extra force past 9.8 kN did not raise the measured
-    // peak (8.08 m/s at 9.8 kN, 8.10 at 11 kN): the burst's power limit is
-    // the wall. 65 kW on that 0.2 s burst is the stronger push. Walk, climb,
-    // and shove stay on 8 kN and 44 kW.
+    // The Turn lunge draws from her one 8 kN / 44 kW account (J-044l, Cory
+    // 2026-11-06: the lunge fits, no exemption). It used to raise the feet's
+    // account to its own caps; the burst's measured peak did not need them
+    // (8.08 m/s at 9.8 kN, 8.10 at 11 kN: the burst's power limit is the
+    // wall). The constants stay as the upper pins the climb tests assert.
     static constexpr float kTurnLungeForceN = 9800.0F;
     static constexpr float kTurnLungePowerW = 65000.0F;
     // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
@@ -1655,6 +1656,14 @@ public:
         push = let_go_push_;
         return true;
     }
+    // A force she puts on another body through a hold (her knee's spring, a
+    // let-go): the force she wants on that body, granted from this tick's
+    // feet_budget_. Returns the force to apply to the other body (capped by
+    // what is left of the account); the equal and opposite reaction is the
+    // return's negative, on her body, for the caller to apply. `relative` is
+    // her velocity less the other body's, for the power cap. Nothing granted,
+    // nothing applied.
+    JPH::Vec3 take_hold_force(JPH::Vec3 want_on_other, JPH::Vec3 relative);
 
     // Her second hand (ArmPlay).
     [[nodiscard]] bool hand2_active() const noexcept {
@@ -2943,7 +2952,6 @@ private:
     // her leg drives, her boarding push, her stagger's catch, her brace and
     // her crawl all draw from it, so together they stay within her Budget.
     traversal::Budget feet_budget_{};
-    bool feet_budget_lunge_ = false;   // the Turn's lunge has raised it to its own caps this tick
     // A standing jump asked of her legs (follow_line): the take-off speed it
     // wants, driven through her planted foot by walk_toward, 0 for none.
     float leg_jump_vy_ = 0.0F;

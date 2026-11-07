@@ -218,11 +218,14 @@ void Simulation::PhysicsWorld::fatality_drive(JPH::BodyInterface &bodies, const 
         if (force.Length() > Matron::kKneePinN) {
             force *= Matron::kKneePinN / force.Length();
         }
-        bodies.AddForce(knee_id_, force);
-        bodies.AddForce(matron_->body(), -force);
-        // J-046 measurement only.
-        effort::add_force(effort::Path::Knee, force,
-                          bodies.GetLinearVelocity(knee_id_) - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
+        // The knee's spring draws from her one budget (J-044l): the granted
+        // force is what reaches the knee, the equal and opposite reaction is
+        // on her. The arm that leashes the knee to her is a solver force and
+        // stays a listed leak, like the grab arm.
+        const JPH::Vec3 applied = matron_->take_hold_force(
+            force, bodies.GetLinearVelocity(matron_->body()) - bodies.GetLinearVelocity(knee_id_));
+        bodies.AddForce(knee_id_, applied);
+        bodies.AddForce(matron_->body(), -applied);
     }
 
     // ---- her fist: legs, collar ------------------------------------------

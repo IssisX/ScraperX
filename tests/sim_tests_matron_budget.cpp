@@ -71,36 +71,37 @@ struct Expected {
 
 const Expected kExpected[] = {
     // Measured 11-05 on trunk 1ebebdb9 (host g++ 13.3, Release). over: some tick past 8 kN or 44 kW;
-    // uncharged: force no Budget is charged for. The budget path's overs are the Turn lunge's own
-    // caps (law::kLungeForceN, kLungePowerW), the one designed exception to her one budget.
+    // uncharged: force no Budget is charged for. J-044l (Cory, 2026-11-06): the Turn lunge fits
+    // her one budget, so the Budget path's old lunge overs are off the list; the crate shove and
+    // the let-go draw from the budget now, so theirs are off too. The knee's spring is charged
+    // as well; its arm (a solver force) stays listed, like the grab arm. The knee peaks below
+    // are re-measured arm-only on the fix build (J-044l): the spring's force is on the Budget
+    // path now, so only the arm's solver force is listed here.
+    // Before (J-046, 11-05): Budget 9800 N / 65000 W (grab, arm, forklift-matron); CrateShove
+    // 8000 N (grab 1429 W, fatality 18913 W); LetGo 6885 N / 6355 W (fatality). After: those
+    // paths are honest (charged, within budget) or never active; the list only ever shrinks.
     // scenario, path, over, uncharged, peak N, peak W
-    {"matron-grab", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
-    {"matron-grab", Path::CrateShove, false, true, 8000.0, 1429.0},
     {"matron-grab", Path::StockHold, false, true, 1084.0, 3.0},
     {"matron-grab", Path::GrabSpring, false, true, 2600.0, 11424.0},
     {"matron-grab", Path::GrabArm, false, true, 1452.0, 545.0},
     {"matron-grab", Path::Hand2Spring, false, true, 2600.0, 5675.0},
     {"matron-grab", Path::Hand2Arm, false, true, 2498.0, 935.0},
     {"matron-grab", Path::Shove, true, true, 44771.0, 131006.0},
-    {"matron-arm", Path::Budget, true, false, law::kLungeForceN, 61324.0},
     {"matron-arm", Path::GrabSpring, false, true, 2600.0, 5141.0},
     {"matron-arm", Path::GrabArm, false, true, 974.0, 401.0},
     {"matron-arm", Path::Hand2Spring, false, true, 2600.0, 2025.0},
     {"matron-arm", Path::Hand2Arm, false, true, 1477.0, 400.0},
-    {"matron-arm", Path::Knee, false, true, 5005.0, 9263.0},
+    {"matron-arm", Path::Knee, false, true, 1505.0, 5442.0},
     {"matron-arm", Path::Shove, true, true, 44770.0, 131006.0},
-    {"matron-fatality", Path::CrateShove, false, true, 8000.0, 18913.0},
     {"matron-fatality", Path::GrabSpring, false, true, 2600.0, 6963.0},
     {"matron-fatality", Path::GrabArm, false, true, 1144.0, 336.0},
-    {"matron-fatality", Path::Knee, false, true, 4864.0, 8029.0},
+    {"matron-fatality", Path::Knee, false, true, 1364.0, 5328.0},
     {"matron-fatality", Path::Shove, true, true, 52285.0, 131006.0},
-    {"matron-fatality", Path::LetGo, false, true, 6885.0, 6355.0},
     {"matron-load", Path::GrabSpring, false, true, 2600.0, 5141.0},
     {"matron-load", Path::GrabArm, false, true, 2824.0, 2064.0},
     {"matron-load", Path::Hand2Spring, false, true, 2600.0, 2025.0},
     {"matron-load", Path::Hand2Arm, false, true, 1477.0, 400.0},
-    {"matron-load", Path::Knee, false, true, 4989.0, 7222.0},
-    {"forklift-matron", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
+    {"matron-load", Path::Knee, false, true, 1489.0, 5437.0},
     {"forklift-matron", Path::GrabSpring, false, true, 1340.0, 1517.0},
     {"forklift-matron", Path::GrabArm, false, true, 380.0, 368.0},
     {"matron-mischief", Path::StockHold, true, true, 17219.0, 932.0},

@@ -1175,15 +1175,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const Vec3 support_normal = sole.normal;
     const traversal::Limits limits{};
     const bool lunge_push = turn_ == Turn::Lunge && !foot_driving_;
-    const float power_cap = lunge_push ? kTurnLungePowerW : limits.power_w;
-    const float force_cap = lunge_push ? kTurnLungeForceN : limits.total_force_n;
-    // The tick's one account for her feet: the lunge raises it to its own
-    // caps (once a tick), never adds a second account beside it.
-    if (lunge_push && !feet_budget_lunge_) {
-        feet_budget_.left += force_cap - limits.total_force_n;
-        feet_budget_.power_left += power_cap - limits.power_w;
-        feet_budget_lunge_ = true;
-    }
+    // The Turn lunge draws from the tick's one account for her feet (J-044l):
+    // it raises nothing; the lunge is a drive of her feet, and the account
+    // caps it like any other.
     traversal::Budget &budget = feet_budget_;
     bool lunge_draw = lunge_push;   // this tick's drive is the lunge's (see the step up below)
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
@@ -1824,17 +1818,20 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     // drum walked off deck 154's north edge on it. Leave
                     // it; the walk goes on.
                     if (bodies.GetLinearVelocity(id).Length() <= 2.5F) {
-                        const traversal::Limits budget;
-                        // A shove is never the lunge: it stays on her 8 kN and 22 kW.
-                        const float shove_force = budget.total_force_n;
-                        const float shove_power = budget.power_w;
+                        // A shove is never the lunge: it stays on her 8 kN and 44 kW,
+                        // drawn from the tick's one account (J-044l), with its
+                        // reaction on her.
+                        const float shove_force = limits.total_force_n;
+                        const float shove_power = limits.power_w;
                         const float force_n = std::min(shove_force, shove_power / along);
                         Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                         push /= push.Length();
-                        bodies.AddForce(id, push * force_n, EActivation::Activate);
-                        // J-046 measurement only: charged to no Budget, no reaction on her.
-                        effort::add_force(effort::Path::CrateShove, push * force_n,
-                                          bodies.GetLinearVelocity(id) - velocity, 0.0F, Vec3::sZero());
+                        const Vec3 applied =
+                            take_hold_force(push * force_n, velocity - bodies.GetLinearVelocity(id));
+                        if (applied.LengthSq() > 0.0F) {
+                            bodies.AddForce(id, applied, EActivation::Activate);
+                            bodies.AddForce(body_, -applied);
+                        }
                     }
                 }
             }
@@ -2348,7 +2345,6 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     // Her tick's one account, handed to the way that has her (matron_mover.hpp).
     const traversal::Limits law{};
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
-    feet_budget_lunge_ = false;
     stock_push_force_n_ = 0.0F;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
@@ -4870,6 +4866,17 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
     return granted;
 }
 
+Vec3 Matron::take_hold_force(const Vec3 want_on_other, const Vec3 relative) {
+    if (!body_in_world_ || want_on_other.LengthSq() <= 1.0e-8F) {
+        return Vec3::sZero();
+    }
+    feet_budget_.velocity = relative;
+    // The budget accounts the force on her body: the reaction, the equal and
+    // opposite of what she puts on the other body.
+    const Vec3 granted_reaction = feet_budget_.take(-want_on_other);
+    return -granted_reaction;
+}
+
 void Matron::brace_at_edges(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
@@ -4993,8 +5000,8 @@ void Matron::refresh_view() {
     // (no way showing a hand: the last rung she held).
     view_.climb_hand = shown.hand_shown ? shown.hand : climb_way_.view().hand;
     view_.climb_force_n = shown.force_shown ? shown.force_n : foot_force_n_;
-    // The Turn lunge is its own move with its own cap (kTurnLungeForceN,
-    // kTurnLungePowerW); the report says when the force shown is that drive.
+    // The Turn lunge is a drive of her feet on the one account; the report
+    // says when the force shown is that drive.
     view_.climb_lunge_drive = !shown.force_shown && foot_lunge_;
     view_.foot_power_w = foot_power_w_;
     view_.load_held = load_held_;
