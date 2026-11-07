@@ -166,11 +166,23 @@ func update(injury: Dictionary, rig: Variant) -> void:
 		# normal: the skull anchor sits on the back of the head, so its quad
 		# flips (negating X and Z keeps the basis right-handed) and the
 		# nudge goes the other way, or it faces into the skull and back-face
-		# culling hides it. Basis() takes column vectors; scaled() scales
-		# rows and shears it.
+		# culling hides it. Cheek quads tilt about the bone Y axis so the
+		# normal follows the anchor's radial direction, atan2(|x|, z) off
+		# +Z (~33 deg for the cheek anchors), toward her left for face_l
+		# and her right for face_r: flat +Z left the outer edge floating
+		# past the face edge straight on (Claude #306 eye-check follow-up).
+		# Basis() takes column vectors; scaled() scales rows and shears it.
 		var faces_back := bool(anchor[2])
-		var bx := bone.basis.x * rad
-		var bz := bone.basis.z
+		var tilt := 0.0
+		if region == "face_l" or region == "face_r":
+			var aoff: Vector3 = anchor[1]
+			tilt = atan2(absf(aoff.x), aoff.z)
+			if aoff.x < 0.0:
+				tilt = -tilt
+		var tc := cos(tilt)
+		var ts := sin(tilt)
+		var bx := (bone.basis.x * tc - bone.basis.z * ts) * rad
+		var bz := bone.basis.x * ts + bone.basis.z * tc
 		var nudge := 0.004
 		if faces_back:
 			bx = -bx
