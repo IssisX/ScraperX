@@ -141,6 +141,18 @@ func _run() -> void:
 	var fr_lat: float = ((layer._patches["face_r"] as MeshInstance3D).global_position - head_bone_side.origin).dot(left_dir)
 	_check(fl_lat > 0.02 and fr_lat < -0.02, "cheek_sides",
 		"face_l lateral %.3f face_r lateral %.3f" % [fl_lat, fr_lat])
+	# Cheek quads must wrap the cheek, not float past the face edge: the
+	# quad's outward normal tilts laterally off the face normal, toward
+	# her left for face_l and her right for face_r, by 20-40 degrees
+	# (the cheek surface normal at the anchor is ~33 degrees off +Z).
+	# A flat +Z normal reads 0.000 here and overhangs the face edge
+	# straight on (Claude #306 eye-check follow-up).
+	var fl_n: Vector3 = (layer._patches["face_l"] as MeshInstance3D).global_transform.basis.z.normalized()
+	var fr_n: Vector3 = (layer._patches["face_r"] as MeshInstance3D).global_transform.basis.z.normalized()
+	var fl_tilt: float = fl_n.dot(left_dir)
+	var fr_tilt: float = fr_n.dot(left_dir)
+	_check(fl_tilt > 0.34 and fl_tilt < 0.64 and fr_tilt < -0.34 and fr_tilt > -0.64, "cheek_angle",
+		"face_l tilt %.3f face_r tilt %.3f" % [fl_tilt, fr_tilt])
 	# No healing: a smaller later value never lowers a region.
 	_set_injury({"face_l": {"j_region": 30.0, "j_event": 30.0}, "face_r": {"j_region": 150.0, "j_event": 60.0}})
 	await _step(2)
