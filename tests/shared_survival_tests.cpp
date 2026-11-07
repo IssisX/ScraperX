@@ -343,7 +343,7 @@ void matron_transition() {
     }
     std::cout << "  Matron bracing ticks=" << braced << " of 120, out of her trap\n";
     check(braced==0,"Matron braced a structure out of her trap");
-    check(matron.caught(w.physics.GetBodyInterface().GetPosition(matron.body())),"Matron not hostile beside the beam");
+    check(matron.caught(),"Matron not hostile beside the beam");
     matron.set_shared_survival(nullptr);
     std::cout << "PASS shared survival actual Matron: hands up only in her trap, hostile beside a falling beam\n";
 }

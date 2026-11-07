@@ -305,6 +305,7 @@ public:
     static constexpr float kFootAccel = 9.0F;
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
+    static constexpr float kCatchMemoryS = 0.5F;   // a catch sense stays fresh this long
     static constexpr float kSightM = 9.0F;       // her paces' "close sight" (choose_pace), not her eyes' reach
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
 
@@ -1504,7 +1505,10 @@ public:
     void post_step(float dt);
 
     // True once her hands are on the player.
-    [[nodiscard]] bool caught(JPH::RVec3 player, bool on_ladder = false) const noexcept;
+    [[nodiscard]] bool caught(bool on_ladder = false) const noexcept;
+    [[nodiscard]] Sense catch_sense(JPH::RVec3 &at) const noexcept;
+    // Her walk's ignore: her body and his, for the probes — and the place she saw or felt him, while fresh (J-049).
+    [[nodiscard]] traversal::Ignore walk_ignore() const noexcept;
     // While true the checkpoint is not renewed (see above): she is out and
     // alive and the player is on her deck, up a climb from it, or on a deck
     // her corner pipe is taking her to or (no longer frail) joins to hers. A
@@ -1535,7 +1539,7 @@ public:
         ++shoves_;
         shove_cooldown_s_ = kShoveCooldownSeconds;
     }
-    [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
+    [[nodiscard]] JPH::Vec3 shove_direction() const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
     // Tests only: her pace held at `pace` (0..3) with no hush, or (-1) free:
     // the tests that meet the Turn and the vault at one speed, as written.
@@ -1615,7 +1619,7 @@ public:
 
     // The hold's interface to the physics (physics_world_grab.cpp).
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_; }
-    void begin_grab(JPH::RVec3 player);
+    void begin_grab();
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
     // Knocked off her feet: her body's capsule stands over where she lies.

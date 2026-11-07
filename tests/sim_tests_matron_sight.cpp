@@ -264,7 +264,7 @@ void test_matron_stalk() {
             matron.set_player_look(look_to_her(matron, him, to_her));
             world.tick(matron, him, 0.0F);
             law_watch.check(world, matron, g, true);
-            grabbed = grabbed || matron.caught(him);
+            grabbed = grabbed || matron.caught();
         };
         // He looks at her: she has seen his face; she freezes.
         float worst_frozen = 0.0F;
@@ -333,7 +333,7 @@ void test_matron_stalk() {
         for (int i = 0; i < 90 * 10 && !caught; ++i) {
             matron.set_player_look(look_to_her(matron, him, false));
             world.tick(matron, him, 0.0F);
-            caught = matron.caught(him);
+            caught = matron.caught();
         }
         require(caught && !matron.view().stalking, "matron stalk: her patience out, she attacks and her hands reach him");
     }
@@ -360,7 +360,7 @@ void test_matron_stalk() {
             if (flat_gap(matron, him) > 1.2F) him = him + RVec3(0.0, 0.0, -1.0 / 90.0);
             matron.set_player_look(look_to_her(matron, him, true));
             world.tick(matron, him, 0.0F);
-            caught = matron.caught(him);
+            caught = matron.caught();
             if (caught && matron.view().stalk_attacks == 0) early = true;
         }
         require(caught && !early && matron.view().stalk_attacks == 1,
@@ -382,7 +382,7 @@ void test_matron_stalk() {
         for (int i = 0; i < 90 * 15 && !caught; ++i) {
             matron.set_player_look(look_to_her(matron, him, false));
             world.tick(matron, him, 0.0F);
-            caught = matron.caught(him);
+            caught = matron.caught();
             stalked = stalked || matron.view().stalking || matron.view().noticed;
         }
         require(caught && !stalked, "matron stalk: unaware of her, he is not stalked; she comes and takes him");
@@ -478,7 +478,7 @@ void test_matron_ladder_head() {
         else him = head;
         matron.set_player_look(Vec3(face.GetX(), 0.0F, face.GetZ()));
         world.tick(matron, him, 0.0F);
-        caught = matron.caught(him);
+        caught = matron.caught();
     }
     require(caught, "matron ladder head: he tops out where she waits, and her hands have him");
     std::cout << "PASS matron ladder head: seen up a ladder, round to its head by her own travel, waiting there, "

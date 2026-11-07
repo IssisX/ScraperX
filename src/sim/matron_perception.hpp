@@ -89,8 +89,14 @@ struct Evidence {
     // Memory: the last of each, and how old it is.
     JPH::RVec3 last_seen_at = JPH::RVec3::sZero();
     float seen_age_s = kNever;
+    // A real sighting only (J-049): a glimpse is a lead, not a place.
+    JPH::RVec3 last_sight_at = JPH::RVec3::sZero();
+    float sight_age_s = kNever;
     JPH::RVec3 last_heard_at = JPH::RVec3::sZero();
     float heard_age_s = kNever;
+    // A sound is a place and keeps its own age; breath is a nearness, not a place.
+    JPH::RVec3 last_sound_at = JPH::RVec3::sZero();
+    float sound_age_s = kNever;
 
     [[nodiscard]] bool heard() const noexcept { return sound || breath; }
     [[nodiscard]] bool seen() const noexcept { return saw || glimpsed || sees_far; }
