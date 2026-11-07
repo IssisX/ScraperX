@@ -4,17 +4,15 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794066268 (2026-11-07 15:44:28Z, 9:44 AM Central)
+Read through: 1794071713 (2026-11-07 17:15:13Z, 11:15 AM Central)
 
 ## Meter
 83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56). Throttled since 10:30 AM: no helpers, the 1:17 PM run answers and
 merges only. Fit $13.6 per 1%; 0.39%/h since the throttle. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
 
 ## Waiting on me
-- The next mail to Muse points to muse.md's never-guess line and asks the reason for any refused mail.
-- J-059 and hair stills from Muse: check them when they come.
-- To put on their own issues at the 1:17 PM run, then drop here: #306 angle the cheek quads 25-30 degrees along the
-  cheek normal; J-048 wind on him in the air counts as his own run (about 2.7 m/s); J-045 HIGH shadows, Fold p95,
+- From Muse: J-059 and hair stills, the J-058 cheek-angle PR, the J-049 PR 1 fix (mailed 11:20 AM).
+- To put on their own issues at the 1:17 PM run, then drop here: J-048 wind on him in the air counts as his own run (about 2.7 m/s); J-045 HIGH shadows, Fold p95,
   sim first step 4-19 ms; J-057 identity federation (#304 comment 6707308021); close J-017 #124.
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
