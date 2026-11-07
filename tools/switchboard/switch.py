@@ -89,7 +89,11 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
+MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
+MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
+MAX_MUSE_FINDING = 600          # chars of a FIX finding quoted in a Muse comment
 # The switchboard workflow wakes on `: LAND`, `: FIX`, `: NOTE` or `: BLOCK` anywhere in a comment, in any case.
 VERDICT_TRIGGER = re.compile(r":(?= ?(?:land|fix|note|block))", re.IGNORECASE)
 # J-056: the merge of a PR that changes .github/workflows uses this secret (a fine-grained PAT), held only by the
@@ -213,16 +217,27 @@ class Steered:
     merge_note: str = ""   # why a MERGE did not happen; "" once merged, or in a dry run
 
 
+def owner_of(ref: str) -> str:
+    """Whose work a branch is: Muse's (fb-bot/), Claude's (claude/), or "" when neither routes it (J-052)."""
+    return "muse" if ref.startswith("fb-bot/") else "claude" if ref.startswith("claude/") else ""
+
+
 @dataclasses.dataclass(frozen=True)
 class InboxItem:
     kind: str     # one of INBOX_ORDER
     target: str   # "#277", or the branch name
     head: str     # the head sha
     line: str     # the inbox line, without the leading "- "
+    dest: str = "claude"   # who it goes to: "muse", "claude", or "both" (J-052)
+    finding: str = ""      # for a FIX: the finding's first 600 chars and its link, for Muse's comment
 
     @property
     def key(self) -> str:
         return inbox_key(self.kind, self.target, self.head)
+
+    @property
+    def muse_key(self) -> str:
+        return inbox_key("muse-" + self.kind, self.target, self.head)
 
 
 def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) -> str:
@@ -816,6 +831,65 @@ class Switch:
         self.gh.comment(INBOX_PR, body, f"inbox: {len(shown)} new item(s) on #{INBOX_PR}")
         return len(shown)
 
+    def muse_keys(self, comments: list[dict]) -> list[str]:
+        """The muse-<KIND> keys in the switch's own muse markers on these comments, oldest first."""
+        keys: list[str] = []
+        for c in comments:
+            if (c.get("user") or {}).get("login") == rules.BOT_LOGIN:
+                for m in MUSE_KEYS.finditer(c.get("body") or ""):
+                    keys += [k for k in m.group(1).split(",") if k]
+        return list(dict.fromkeys(keys))
+
+    def muse(self, steered: list[Steered]) -> int:
+        """Muse's items (J-052): one comment per fb-bot/ PR or branch with new items, labeled wake:muse so
+        the bridge mails it. A muse-<KIND> key is sent once; a new head is a new key. At most
+        MAX_MUSE_COMMENTS per sweep; the rest come next sweep. Returns how many comments were posted.
+        A key counts as delivered only when its label write succeeded: the marker is edited into the
+        comment after the label lands, so a failed label leaves no marker and the next sweep retries."""
+        reported: set[str] = set()
+        for s in steered:
+            reported |= set(self.muse_keys(s.ctx.get("comments") or []))
+        items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
+        if any(not it.target.startswith("#") for it in items):
+            reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")))
+        seen, new = set(reported), []
+        for it in items:
+            if it.muse_key not in seen:
+                seen.add(it.muse_key)
+                new.append(it)
+        if not new:
+            self.out("MUSE        nothing new")
+            return 0
+        jobs = {f"#{s.facts.number}": s.ctx.get("job") or s.facts.head_ref for s in steered}
+        by_target: dict[str, list[InboxItem]] = {}
+        for it in new:
+            by_target.setdefault(it.target, []).append(it)
+        posted = 0
+        for target, group in sorted(by_target.items()):
+            if posted >= MAX_MUSE_COMMENTS:
+                break
+            where = BOARD_ISSUE if not target.startswith("#") else int(target[1:])
+            name = jobs.get(target) or target
+            kinds = " ".join(sorted({it.kind for it in group}, key=INBOX_ORDER.index))
+            lines = [f"CLAUDE_TO_MUSE: {name} {kinds} on #{where} @ {group[0].head[:8]}", ""]
+            for it in group:
+                lines.append(f"- {it.line}")
+                lines += [f"  {line}" for line in it.finding.split("\n")] if it.finding else []
+            body = re.sub(r"@(?=\w)", "", "\n".join(lines))   # mentions would ping; "@ <sha>" is not one
+            marked = f"{body}\n\n{MUSE_MARK.format(keys=','.join(it.muse_key for it in group))}"
+            self.out(marked)
+            # The marker goes in AFTER the label lands: a failed label leaves no marker, so the next
+            # sweep retries. (Label first is not enough: the bridge could take it before the comment exists.)
+            resp = self.gh.comment(where, body, f"muse: {len(group)} new item(s) on #{where}")
+            self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
+                          f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+            cid = (resp if isinstance(resp, dict) else {}).get("id")
+            if cid is not None:
+                self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{cid}", {"body": marked},
+                              f"muse: mark #{where} delivered")
+            posted += 1
+        return posted
+
     def inbox_reported(self) -> list[str]:
         """The keys in the switch's own inbox markers, oldest first. Only the inbox PR's newest 200 comments are
         read: the newest marker carries every earlier key forward. A marker by any other login never counts."""
@@ -831,29 +905,85 @@ class Switch:
 
     def inbox_items(self, steered: list[Steered], reported: frozenset[str]) -> list[InboxItem]:
         """Every item that needs the integrator now, listed before or not, in INBOX_ORDER."""
+        return self._items(steered, reported, "")
+
+    def muse_items(self, steered: list[Steered], reported: frozenset[str]) -> list[InboxItem]:
+        """Muse's items (J-052): the fb-bot/ items, keyed muse-<KIND>, in INBOX_ORDER."""
+        return self._items(steered, reported, "muse-")
+
+    def _items(self, steered: list[Steered], reported: frozenset[str], prefix: str) -> list[InboxItem]:
+        """Both audiences' items from one read: prefix "" is the integrator's, "muse-" is Muse's (J-052)."""
         since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
         runs = self.gh.paged(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{since}",
                              "workflow_runs")
         items: list[InboxItem] = []
         for s in steered:
-            items += self.pr_inbox_items(s, runs, reported)
-        items += self.branch_inbox_items(runs, reported)
-        items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
+            items += self.pr_inbox_items(s, runs, reported, prefix)
+        items += self.branch_inbox_items(runs, reported, prefix)
+        if not prefix:
+            items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
+            items += self.ask_inbox_items(reported)
         return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
 
-    def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str]) -> list[InboxItem]:
-        """One PR's items: (a) MERGE-BY-HAND, (b) NOT-MERGED, (c) RED-TWICE and RED-STUCK, (d) FIX on a claude/*
-        PR, and (f) QUIET when nothing else is."""
+    def ask_inbox_items(self, reported: frozenset[str]) -> list[InboxItem]:
+        """TO-CLAUDE (J-052): an ask to the integrator in a comment on an open thread, once per comment id.
+        The first line holds `To Claude` or `proposal`; the bridge's `**Muse (via email bridge): <subject>**`
+        first line counts, since the subject is in it. Every agent posts as IssisX, so the author is read
+        from the body: Claude's posts end with its footer, the switchboard's own are its login, Codex's
+        start with `<!-- codex`."""
+        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
+        open_threads = {int(i["number"]) for i in
+                        self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")}
+        out: list[InboxItem] = []
+        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/comments?since={since}"):
+            body = c.get("body") or ""
+            if body.lstrip().startswith("<!-- codex"):
+                continue
+            if (c.get("user") or {}).get("login") == rules.BOT_LOGIN:
+                continue
+            if "Generated by [Claude Code]" in body:
+                continue
+            cid = c.get("id")
+            if cid is None:
+                continue
+            try:
+                number = int((c.get("issue_url") or "").rsplit("/", 1)[1])
+            except (ValueError, IndexError):
+                continue
+            if number not in open_threads:
+                continue
+            first = (body.split("\n", 1)[0] or "").strip()
+            low = first.lower()
+            if "to claude" not in low and "proposal" not in low:
+                continue
+            key = inbox_key("TO-CLAUDE", f"#{number}", str(cid))
+            if key in reported:
+                continue
+            out.append(InboxItem("TO-CLAUDE", f"#{number}", str(cid),
+                                 f"TO-CLAUDE #{number} {no_verdict(plain(first[:100]))} "
+                                 f"{c.get('html_url') or ''}"))
+        return out
+
+    def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
+        """One PR's items, for one audience (J-052): prefix "" is the integrator's, "muse-" is Muse's.
+        (a) MERGE-BY-HAND, (b) NOT-MERGED, (c) RED, RED-TWICE and RED-STUCK, (d) FIX, (f) QUIET when nothing
+        else is. Each item goes to its owner: MERGE-BY-HAND and AUTO-PR-FAILED to the integrator;
+        NOT-MERGED and RED-TWICE to both on an fb-bot/ PR; the rest to the branch's owner."""
         f, ctx, d, now = s.facts, s.ctx, s.decision, self.now
         if f.number == INBOX_PR or f.head_ref == INBOX_BRANCH:
             return []
+        mine = prefix == "muse-"          # this call is for Muse (fb-bot/ items), not the integrator
+        owner = owner_of(f.head_ref)
         target = f"#{f.number}"
         where = (f"[#{f.number}](https://github.com/{self.gh.repo}/pull/{f.number}) {untrusted(f.head_ref)} "
                  f"head {f.head_sha[:8]}" + (f", {ctx['job']}" if ctx.get("job") else ""))
         proof_link = f"[proof]({ctx['proof_url']})" if ctx.get("proof_url") else "proof"
 
-        def item(kind: str, text: str) -> InboxItem:
-            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}")
+        def item(kind: str, text: str, dest: str = "claude", finding: str = "") -> InboxItem:
+            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}", dest, finding)
+
+        def kept(it: InboxItem) -> bool:
+            return it.dest in ("muse", "both") if mine else it.dest in ("claude", "both")
 
         out: list[InboxItem] = []
         author = self.team.vendor_of_branch(f.head_ref)
@@ -869,38 +999,57 @@ class Switch:
             times = [t for t in (parse_time(ctx.get("proof_done_at") or ""), parse_time(lands[0].created_at)) if t]
             if not times or now - max(times) >= INBOX_READY_AFTER:
                 why = s.merge_note or "; ".join(d.reasons)
-                out.append(item("NOT-MERGED", f"green, LAND by {lands[-1].who}, still open a sweep later: {plain(why)}"))
-        if d.action == "FIX" and f.head_ref.startswith("claude/"):
-            out.append(item("FIX", plain("; ".join(d.reasons))))
+                out.append(item("NOT-MERGED", f"green, LAND by {lands[-1].who}, still open a sweep later: {plain(why)}",
+                                "both" if owner == "muse" else "claude"))
+        if d.action == "FIX" and owner:
+            out.append(item("FIX", plain("; ".join(d.reasons)), owner, self.fix_finding(f, ctx)))
         if d.action == "FIX-CI":
             jobs = red_jobs(f.proof)
-            mine = sorted((r for r in runs if r.get("head_branch") == f.head_ref), key=lambda r: r["created_at"], reverse=True)
-            ids = [r["id"] for r in mine]
-            if inbox_key("RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
-                out.append(InboxItem("RED-TWICE", target, f.head_sha, ""))
-            elif ctx.get("run_id") in ids and ids.index(ctx["run_id"]) + 1 < len(mine):
-                before = self.run_state(mine[ids.index(ctx["run_id"]) + 1])[0]
-                both = [j for j in jobs if j in red_jobs(before)]
-                if both:
-                    out.append(item("RED-TWICE", f"{plain(', '.join(both))} failed on two proofs in a row ({proof_link})"))
-            on_head = [parse_time(r["created_at"]) for r in mine if r.get("head_sha") == f.head_sha]
+            both = "both" if owner == "muse" else "claude"
+            runs_here = sorted((r for r in runs if r.get("head_branch") == f.head_ref), key=lambda r: r["created_at"], reverse=True)
+            ids = [r["id"] for r in runs_here]
+            if inbox_key(prefix + "RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
+                out.append(InboxItem("RED-TWICE", target, f.head_sha, "", both))
+            elif ctx.get("run_id") in ids and ids.index(ctx["run_id"]) + 1 < len(runs_here):
+                before = self.run_state(runs_here[ids.index(ctx["run_id"]) + 1])[0]
+                failed = [j for j in jobs if j in red_jobs(before)]
+                if failed:
+                    out.append(item("RED-TWICE", f"{plain(', '.join(failed))} failed on two proofs in a row ({proof_link})", both))
+            if owner == "muse":
+                out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", "muse"))
+            on_head = [parse_time(r["created_at"]) for r in runs_here if r.get("head_sha") == f.head_sha]
             head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
-            if head_since and now - head_since >= INBOX_RED_STUCK:
+            if head_since and now - head_since >= INBOX_RED_STUCK and owner:
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
-                                             f"{hours(now - head_since)} ({proof_link})"))
-        if not out:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
+                                             f"{hours(now - head_since)} ({proof_link})", owner))
+        if not [it for it in out if kept(it)]:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
             action = ("FIX-CI" if f.proof.startswith("red") else
                       "FIX" if d.action == "FIX" or rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review") else
                       "DISPATCH" if f.proof == "none" else "")
             idle = parse_time(ctx.get("updated_at") or "")
-            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600:
-                out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}"))
-        return out
+            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600 and owner:
+                out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}", owner))
+        return [it for it in out if kept(it)]
 
-    def branch_inbox_items(self, runs: list[dict], reported: frozenset[str]) -> list[InboxItem]:
+    def fix_finding(self, f: rules.PrFacts, ctx: dict) -> str:
+        """The newest open FIX verdict's first 600 chars and its link, for Muse's comment (J-052)."""
+        fixes = rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review")
+        if not fixes:
+            return ""
+        v = max(fixes, key=lambda x: x.created_at)
+        for c in ctx.get("comments") or []:
+            if c.get("created_at") == v.created_at and (c.get("user") or {}).get("login") == v.author_login:
+                text = no_verdict(plain((c.get("body") or "").strip()[:MAX_MUSE_FINDING]))
+                link = c.get("html_url") or ""
+                return f"{text}\n{link}" if link else text
+        return ""
+
+    def branch_inbox_items(self, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
         """(e) RED-BRANCH: an fb-bot/ or claude/integrate-* branch with no open PR whose head's proof went red an
-        hour ago or more. Only heads proved in the run window are looked at, and only up to MAX_INBOX_BRANCHES."""
+        hour ago or more. Only heads proved in the run window are looked at, and only up to MAX_INBOX_BRANCHES.
+        Each item goes to the branch's owner (J-052)."""
         from urllib.parse import quote
+        mine = prefix == "muse-"
         open_refs = {p["head"]["ref"] for p in self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open")}
         newest: dict[str, dict] = {}
         for r in runs:
@@ -914,7 +1063,7 @@ class Switch:
             run = newest[name]
             head, done = run.get("head_sha") or "", parse_time(run.get("updated_at") or "")
             if (run.get("status") == "completed" and run.get("conclusion") == "success") or not done \
-                    or (self.now - done) < INBOX_BRANCH_RED or inbox_key("RED-BRANCH", name, head) in reported:
+                    or (self.now - done) < INBOX_BRANCH_RED or inbox_key(prefix + "RED-BRANCH", name, head) in reported:
                 continue
             if read >= MAX_INBOX_BRANCHES:
                 self.out(f"INBOX       {MAX_INBOX_BRANCHES} branches read; the rest wait for the next sweep")
@@ -933,8 +1082,9 @@ class Switch:
             if proof.startswith("red") and (self.now - done) >= INBOX_BRANCH_RED:
                 out.append(InboxItem("RED-BRANCH", name, head,
                                      f"RED-BRANCH {untrusted(name)} head {head[:8]}: proof red on "
-                                     f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))"))
-        return out
+                                     f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))",
+                                     owner_of(name)))
+        return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
         """Where review asks live (the job issue, else the PR) and its comments."""
@@ -1575,6 +1725,11 @@ def main() -> int:
         except (GitHubError, RuntimeError, KeyError, ValueError) as err:
             failed += 1
             sw.out(f"ERROR       inbox: {type(err).__name__}: {err}")
+        try:   # J-052: Muse's items go to Muse by comment + wake:muse, not only to the integrator's inbox
+            sw.muse(steered)
+        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
+            failed += 1
+            sw.out(f"ERROR       muse: {type(err).__name__}: {err}")
     return 2 if failed else 0
 
 

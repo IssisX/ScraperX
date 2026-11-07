@@ -66,14 +66,21 @@ def run(rid: int, branch: str, head: str, hours: float, conclusion: str = "failu
             "html_url": f"https://github.com/IssisX/ScraperX/actions/runs/{rid}"}
 
 
+def comment(cid: int, number: int, body: str, hours: float = 1.0, login: str = "IssisX") -> dict:
+    """One issue comment, as repos/{repo}/issues/comments returns it."""
+    return {"id": cid, "issue_url": f"https://api.github.com/repos/IssisX/ScraperX/issues/{number}",
+            "html_url": f"https://github.com/IssisX/ScraperX/issues/{number}#issuecomment-{cid}",
+            "body": body, "user": {"login": login}, "created_at": ago(hours), "updated_at": ago(hours)}
+
+
 def steered(number=256, ref="fb-bot/integrate-j042-windup", head=HEAD, proof="green", verdicts=(), workflows=False,
             draft=False, mergeable=True, block=False, never=False, committed=None, job="J-042", proof_done_at=None,
-            updated_at=None, run_id=7, merge_note="") -> switch.Steered:
+            updated_at=None, run_id=7, merge_note="", comments=()) -> switch.Steered:
     """One PR as steer_pr leaves it: the facts, the context and the switch's own decision on them."""
     facts = rules.PrFacts(number, head, ref, rules.TRUNK, draft, mergeable, committed or ago(5), proof,
                           tuple(verdicts), frozenset(), block, workflows, never)
     ctx = {"job": job, "proof_url": RUN_URL, "run_id": run_id, "proof_done_at": proof_done_at or ago(1),
-           "updated_at": updated_at or ago(0.1)}
+           "updated_at": updated_at or ago(0.1), "comments": list(comments)}
     return switch.Steered(facts, ctx, rules.merge_decision(facts, TEAM.vendor_of_branch(ref), TEAM), merge_note)
 
 
@@ -86,12 +93,17 @@ class FakeGH:
 
     repo = "IssisX/ScraperX"
 
-    def __init__(self, runs=(), jobs=None, open_prs=(), heads=None, inbox=(), dry_run=False):
+    def __init__(self, runs=(), jobs=None, open_prs=(), heads=None, inbox=(), dry_run=False,
+                 comments=(), open_issues=()):
         self.runs, self.jobs, self.open_prs = list(runs), dict(jobs or {}), list(open_prs)
         self.heads = dict(heads or {})
         self.inbox = list(inbox)
+        self.comments, self.open_issues = list(comments), list(open_issues)
+        self.by_issue: dict[int, list] = {}
         self.dry_run = dry_run
-        self.gets, self.posts, self.log = [], [], []
+        self.gets, self.posts, self.writes, self.log = [], [], [], []
+        self._comment_id = 0   # ids the real API returns on a comment POST
+        self.fail_labels = 0   # label POSTs to fail (transient 403/5xx) before succeeding
 
     def route(self, path):
         self.gets.append(path)
@@ -101,6 +113,20 @@ class FakeGH:
         if base == INBOX_COMMENTS:
             page = int(re.search(r"[?&]page=(\d+)", path).group(1))
             return self.inbox[(page - 1) * 100: page * 100]
+        if base == f"repos/{self.repo}/issues/comments":
+            since = re.search(r"[?&]since=([^&]+)", path)
+            since = since.group(1) if since else ""
+            page = re.search(r"[?&]page=(\d+)", path)
+            page = int(page.group(1)) if page else 1
+            fresh = [c for c in self.comments if (c.get("updated_at") or c.get("created_at") or "") >= since]
+            return fresh[(page - 1) * 100: page * 100]
+        if base == f"repos/{self.repo}/issues":
+            page = re.search(r"[?&]page=(\d+)", path)
+            page = int(page.group(1)) if page else 1
+            return [{"number": n} for n in self.open_issues[(page - 1) * 100: page * 100]]
+        m = re.fullmatch(r"repos/[^/]+/[^/]+/issues/(\d+)/comments", base)
+        if m:
+            return list(self.by_issue.get(int(m.group(1)), []))
         if "/actions/workflows/" in base and base.endswith("/runs"):
             return {"workflow_runs": list(self.runs)}
         if "/actions/runs/" in base and base.endswith("/jobs"):
@@ -125,9 +151,29 @@ class FakeGH:
         if self.dry_run:
             self.log.append(f"DRY  POST repos/{self.repo}/issues/{number}/comments  {what}")
             return None
+        self._comment_id += 1
         self.posts.append((number, body))
+        entry = {"id": self._comment_id, "body": body, "user": {"login": BOT}, "created_at": NOW.isoformat()}
         if number == switch.INBOX_PR:
-            self.inbox.append({"body": body, "user": {"login": BOT}, "created_at": NOW.isoformat()})
+            self.inbox.append(entry)
+        else:
+            self.by_issue.setdefault(number, []).append(entry)
+        return {"id": self._comment_id}
+
+    def write(self, method, path, body=None, what=""):
+        if method == "POST" and path.endswith("/labels") and self.fail_labels > 0:
+            self.fail_labels -= 1
+            raise switch.GitHubError("POST", path, "gh: Label write failed (HTTP 403)")
+        if method == "PATCH" and "/issues/comments/" in path:
+            cid = int(path.rsplit("/", 1)[1])
+            for entries in list(self.by_issue.values()) + [self.inbox]:
+                for entry in entries:
+                    if entry.get("id") == cid:
+                        entry["body"] = body["body"]
+                        self.writes.append((method, path, body))
+                        return {}
+            raise switch.GitHubError("PATCH", path, "gh: Not Found (HTTP 404)")
+        self.writes.append((method, path, body))
         return {}
 
 
@@ -322,11 +368,13 @@ class Kinds(unittest.TestCase):
         ref = "fb-bot/integrate-j044l"
         s = steered(ref=ref, proof="red: native-tests", committed=ago(9), run_id=7)
         old = FakeGH(runs=[run(7, ref, HEAD, hours=3.2)])
-        (it,) = items_of(old, s)
-        self.assertEqual(it.kind, "RED-STUCK")
-        self.assertIn("proof red on native-tests, no new head for 3.7 h", it.line)
+        got = muse_of(old, s)
+        self.assertEqual([(i.kind, i.target) for i in got], [("RED", "#256"), ("RED-STUCK", "#256")])
+        self.assertIn("proof red on native-tests, no new head for 3.7 h", got[1].line)
+        self.assertEqual(items_of(old, s), [])   # a stuck red on her own branch is Muse's, not the integrator's
         self.assertEqual(self.kinds(FakeGH(runs=[run(7, ref, HEAD, hours=1)]), s), [])   # pushed 1.5 h ago
-        self.assertEqual(self.kinds(FakeGH(), s), [("RED-STUCK", "#256")])   # no run in the window: the commit's date
+        self.assertEqual([(i.kind, i.target) for i in muse_of(FakeGH(), s)],
+                         [("RED", "#256"), ("RED-STUCK", "#256")])   # no run in the window: the commit's date
 
     def test_an_open_finding_on_a_claude_pr(self):
         mine = steered(ref="claude/integrate-j048-no-run-hurt", verdicts=[fix()])
@@ -338,15 +386,17 @@ class Kinds(unittest.TestCase):
     def test_a_red_integrate_branch_with_no_pr_for_an_hour(self):
         name = "fb-bot/integrate-j044c-wreck"
         gh = FakeGH(runs=[run(40, name, HEAD, hours=2)], jobs={40: RED_JOBS}, heads={name: HEAD})
-        (it,) = items_of(gh)
+        (it,) = muse_of(gh)
         self.assertEqual((it.kind, it.target), ("RED-BRANCH", name))
         self.assertIn("RED-BRANCH `fb-bot/integrate-j044c-wreck` head 1a2b3c4d: proof red on native-tests, "
                       "no PR for 2.0 h ([proof](https://github.com/IssisX/ScraperX/actions/runs/40))", it.line)
+        self.assertEqual(items_of(gh), [])
         mine = "claude/integrate-j051-x"
         self.assertEqual(self.kinds(FakeGH(runs=[run(41, mine, HEAD, 2)], jobs={41: RED_JOBS}, heads={mine: HEAD})),
                          [("RED-BRANCH", mine)])
         with_pr = FakeGH(runs=gh.runs, jobs=gh.jobs, heads=gh.heads, open_prs=[{"number": 9, "head": {"ref": name}}])
         self.assertEqual(self.kinds(with_pr), [])
+        self.assertEqual(muse_of(with_pr), [])
         recent = FakeGH(runs=[run(40, name, HEAD, hours=0.5)], jobs={40: RED_JOBS}, heads={name: HEAD})
         self.assertEqual(self.kinds(recent), [])
         self.assertFalse(any("/jobs" in g or "/branches/" in g for g in recent.gets))
@@ -357,25 +407,27 @@ class Kinds(unittest.TestCase):
         self.assertEqual(self.kinds(FakeGH(runs=[run(42, other, HEAD, 2)], jobs={42: RED_JOBS}, heads={other: HEAD})), [])
 
     def test_quiet_as_the_sweep_defines_it(self):
-        quiet = steered(ref="fb-bot/integrate-j042", verdicts=[fix()], updated_at=ago(4))
-        (it,) = items_of(FakeGH(), quiet)
-        self.assertEqual(it.kind, "QUIET")
-        self.assertIn(": no activity on the PR for 4.0 h while it is FIX", it.line)
+        quiet = steered(proof="none", updated_at=ago(5), proof_done_at="", run_id=0)
+        (it,) = muse_of(FakeGH(), quiet)
+        self.assertEqual((it.kind, it.target), ("QUIET", "#256"))
+        self.assertIn(": no activity on the PR for 5.0 h while it is DISPATCH", it.line)
+        self.assertEqual(items_of(FakeGH(), quiet), [])
         self.assertEqual(self.kinds(FakeGH(), steered(ref="fb-bot/integrate-j042", verdicts=[fix()], updated_at=ago(1))), [])
         draft = steered(draft=True, proof="red: native-tests", updated_at=ago(5))
         self.assertEqual(draft.decision.action, "SKIP")
-        self.assertEqual(self.kinds(FakeGH(), draft), [("QUIET", "#256")])
-        none = steered(proof="none", updated_at=ago(5), proof_done_at="", run_id=0)
-        self.assertIn("while it is DISPATCH", items_of(FakeGH(), none)[0].line)
+        self.assertEqual([(i.kind, i.target) for i in muse_of(FakeGH(), draft)], [("QUIET", "#256")])
         stuck = steered(proof="red: native-tests", committed=ago(6), updated_at=ago(5))
-        self.assertEqual(self.kinds(FakeGH(), stuck), [("RED-STUCK", "#256")])   # QUIET only when nothing else is
+        self.assertEqual([(i.kind, i.target) for i in muse_of(FakeGH(), stuck)],
+                         [("RED", "#256"), ("RED-STUCK", "#256")])   # QUIET only when nothing else is
 
 
     def test_no_inbox_line_reads_as_a_verdict(self):
         """The switchboard workflow runs on a PR comment holding `: LAND`, `: FIX`, `: NOTE` or `: BLOCK`."""
         ref, name = "fb-bot/integrate-j044l", "fb-bot/integrate-j044c-wreck"
         gh = FakeGH(runs=[run(7, ref, HEAD, hours=3.2), run(6, ref, OLD_HEAD, hours=4), run(40, name, HEAD, 2)],
-                    jobs={6: RED_JOBS, 40: RED_JOBS}, heads={name: HEAD})
+                    jobs={6: RED_JOBS, 40: RED_JOBS}, heads={name: HEAD},
+                    comments=[comment(42424243, 291, "To Claude: review of #291 @ da8e64c6: LAND\n\nPlease rule.")],
+                    open_issues=[291])
         every = [human_merge(number=1), steered(number=2, verdicts=[land()], mergeable=False),
                  steered(number=3, ref="claude/integrate-j9", verdicts=[fix()]),
                  steered(number=4, ref=ref, proof="red: native-tests", run_id=7),
@@ -383,12 +435,16 @@ class Kinds(unittest.TestCase):
                  steered(number=6, draft=True, proof="red: native-tests", updated_at=ago(5))]
         sw = make(gh)
         sw.auto_pr_failure("fb-bot/integrate-sense-near-followup", HEAD, "J-047", REFUSED, refused=True)
-        self.assertEqual(sw.inbox(every), 9)
-        body = gh.posts[0][1]
-        for kind in switch.INBOX_ORDER:
-            self.assertIn(f"- {kind} ", body)
-        for word in ("LAND", "FIX", "NOTE", "BLOCK"):
-            self.assertNotIn(f": {word}", body)
+        self.assertEqual(sw.inbox(every), 6)
+        self.assertEqual(sw.muse(every), 5)
+        for _, body in gh.posts:
+            for word in ("LAND", "FIX", "NOTE", "BLOCK"):
+                self.assertNotIn(f": {word}", body)
+        inbox_body = gh.posts[0][1]
+        for kind in ("MERGE-BY-HAND", "TO-CLAUDE", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED-TWICE"):
+            self.assertIn(f"- {kind} ", inbox_body)
+        for kind in ("RED", "RED-STUCK", "RED-BRANCH", "QUIET"):
+            self.assertNotIn(f"- {kind} ", inbox_body)
 
 
 class AutoPrFailed(unittest.TestCase):
@@ -526,6 +582,177 @@ class InboxPrExcluded(unittest.TestCase):
         self.assertEqual(gh.writes, [])
         red = FakeGH(runs=[run(50, switch.INBOX_BRANCH, HEAD, 3)], jobs={50: RED_JOBS}, heads={switch.INBOX_BRANCH: HEAD})
         self.assertEqual(items_of(red), [])
+
+
+def muse_of(gh, *s) -> list[switch.InboxItem]:
+    return make(gh).muse_items(list(s), frozenset())
+
+
+class AskToClaude(unittest.TestCase):
+    """An ask to the integrator in a comment wakes it (J-052): one TO-CLAUDE item per comment id."""
+    ASK = "**Muse (via email bridge): MUSE_TO_CLAUDE: J-001 To Claude: hands first?**\n\nHands draw first."
+    CID = 42424242
+
+    def gh_with(self, body=ASK, hours=1.0, login="IssisX", number=292, cid=CID):
+        return FakeGH(comments=[comment(cid, number, body, hours, login)], open_issues=[number])
+
+    def test_a_bridge_post_with_to_claude_gives_one_item(self):
+        (it,) = items_of(self.gh_with())
+        self.assertEqual((it.kind, it.target, it.head), ("TO-CLAUDE", "#292", str(self.CID)))
+        self.assertEqual(it.key, switch.inbox_key("TO-CLAUDE", "#292", str(self.CID)))
+
+    def test_the_same_comment_in_the_next_sweep_gives_none(self):
+        gh = self.gh_with()
+        self.assertEqual(make(gh).inbox([]), 1)
+        self.assertEqual(make(gh).inbox([]), 0)
+        self.assertEqual(len(gh.posts), 1)
+
+    def test_posts_that_are_not_asks_give_none(self):
+        cases = [
+            ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-049 leak list**\n\nThe list.", 1.0, "IssisX", 292),
+            ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-042 windup pushed**\n\nBranch pushed.", 1.0, "IssisX", 292),
+            (self.ASK, 25.0, "IssisX", 292),
+            ("A long ruling\n\nTo Claude: what about this?", 1.0, "IssisX", 292),
+            ("<!-- codex review -->\nTo Claude: ...", 1.0, "IssisX", 292),
+            (self.ASK, 1.0, rules.BOT_LOGIN, 292),
+            (self.ASK + "\n\nGenerated by [Claude Code]", 1.0, "IssisX", 292),
+        ]
+        for body, hours, login, number in cases:
+            self.assertEqual(items_of(self.gh_with(body, hours, login, number)), [], body.split("\n")[0][:60])
+
+    def test_a_proposal_first_line_gives_one_item(self):
+        (it,) = items_of(self.gh_with(body="Proposal: let the switchboard wake Claude on asks\n\nDetails."))
+        self.assertEqual(it.kind, "TO-CLAUDE")
+
+    def test_a_closed_thread_gives_none(self):
+        gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[107])
+        self.assertEqual(items_of(gh), [])
+
+
+class MuseRouted(unittest.TestCase):
+    """Every item goes to its owner (J-052): fb-bot/ items reach Muse by comment + wake:muse."""
+    FINDING = "The hold spring is uncharged. " + "x" * 700
+
+    def fix_pr(self, number=256, ref="fb-bot/integrate-j042", head=HEAD, comments=None, **kw):
+        c = comment(99, number, "**Codex (review of #%d @ %s): FIX**\n\n%s" % (number, head[:8], self.FINDING),
+                    1.0, rules.CODEX_LOGIN)
+        return steered(number=number, ref=ref, head=head, verdicts=[fix(head)],
+                       comments=[c] if comments is None else comments, **kw)
+
+    def test_a_fix_on_an_fb_bot_pr_reaches_muse_not_the_inbox(self):
+        s = self.fix_pr()
+        gh = FakeGH()
+        self.assertEqual(make(gh).muse([s]), 1)
+        (number, posted), = gh.posts
+        self.assertEqual(number, 256)
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: J-042 FIX on #256 @ 1a2b3c4d"))
+        self.assertIn("The hold spring is uncharged. " + "x" * 500, posted)
+        self.assertNotIn("x" * 650, posted)
+        self.assertIn("https://github.com/IssisX/ScraperX/issues/256#issuecomment-99", posted)
+        key = switch.inbox_key("muse-FIX", "#256", HEAD)
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/256/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[1][0], "PATCH")
+        self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
+        self.assertIn(key, gh.writes[1][2]["body"])
+        self.assertNotIn("switchboard:muse keys=", posted)   # posted without its marker; the label comes first
+        self.assertIn(key, gh.by_issue[256][0]["body"])       # the marker is edited in after the label lands
+        self.assertEqual(make(gh).inbox([s]), 0)
+        self.assertEqual(make(gh).muse([self.fix_pr(comments=gh.by_issue[256])]), 0)
+        self.assertEqual(len(gh.posts), 1)
+        self.assertEqual(make(gh).muse([self.fix_pr(head=OTHER_HEAD, comments=gh.by_issue[256])]), 1)
+
+    def test_a_failed_label_write_is_retried_and_not_mailed_twice(self):
+        """A label POST that fails after the comment lands must not lose the notification:
+        sweep 1 posts the comment but no marker, sweep 2 retries the label, sweep 3 sends nothing."""
+        s = self.fix_pr()
+        gh = FakeGH()
+        gh.fail_labels = 1
+        with self.assertRaises(switch.GitHubError):
+            make(gh).muse([s])
+        (number, posted), = gh.posts
+        self.assertEqual(number, 256)
+        self.assertNotIn("switchboard:muse keys=", posted)   # no marker: the key is not delivered
+        self.assertEqual(gh.writes, [])
+        again = self.fix_pr(comments=gh.by_issue[256])
+        self.assertEqual(make(gh).muse([again]), 1)
+        self.assertEqual(len(gh.posts), 2)   # the notification is sent again
+        labels = [w for w in gh.writes if w[0] == "POST" and w[1].endswith("/labels")]
+        self.assertEqual(len(labels), 1)     # one successful label: one mail
+        key = switch.inbox_key("muse-FIX", "#256", HEAD)
+        self.assertIn(key, gh.by_issue[256][-1]["body"])   # the retry marks the key delivered
+        third = self.fix_pr(comments=gh.by_issue[256])
+        self.assertEqual(make(gh).muse([third]), 0)
+        self.assertEqual(len(gh.posts), 2)
+        self.assertEqual(len([w for w in gh.writes if w[0] == "POST" and w[1].endswith("/labels")]), 1)
+
+    def test_a_first_red_goes_to_muse_not_to_claude(self):
+        ref = "fb-bot/integrate-j044l"
+        s = steered(ref=ref, proof="red: native-tests", committed=ago(1), run_id=7)
+        gh = FakeGH(runs=[run(7, ref, HEAD, hours=0.2)], jobs={7: RED_JOBS})
+        self.assertEqual([i.kind for i in muse_of(gh, s)], ["RED"])
+        self.assertEqual(make(gh).muse([s]), 1)
+        self.assertTrue(gh.posts[0][1].startswith("CLAUDE_TO_MUSE: J-042 RED on #256 @ 1a2b3c4d"))
+        self.assertEqual(make(gh).inbox([s]), 0)
+
+    def test_red_twice_goes_to_both(self):
+        ref = "fb-bot/integrate-j044l"
+        runs = [run(7, ref, HEAD, hours=0.2), run(6, ref, OLD_HEAD, hours=1)]
+        s = steered(ref=ref, proof="red: native-tests", committed=ago(1), run_id=7)
+        gh = FakeGH(runs=runs, jobs={6: RED_JOBS})
+        self.assertEqual([i.kind for i in muse_of(gh, s)], ["RED", "RED-TWICE"])
+        self.assertEqual([i.kind for i in items_of(gh, s)], ["RED-TWICE"])
+        self.assertEqual(make(gh).muse([s]), 1)
+        self.assertEqual(make(gh).inbox([s]), 1)
+
+    def test_a_fix_on_a_claude_pr_goes_only_to_claude(self):
+        s = steered(ref="claude/integrate-j048-no-run-hurt", verdicts=[fix()])
+        gh = FakeGH()
+        self.assertEqual(make(gh).muse([s]), 0)
+        self.assertEqual([i.kind for i in items_of(gh, s)], ["FIX"])
+        self.assertEqual(make(gh).inbox([s]), 1)
+
+    def test_a_codex_p1_with_a_reply_gives_nothing(self):
+        s = steered(ref="fb-bot/integrate-j042", verdicts=[fix(hours=1.0), land(hours=0.5)])
+        gh = FakeGH()
+        self.assertEqual(make(gh).muse([s]), 0)
+        self.assertEqual(make(gh).inbox([s]), 0)
+
+    def test_not_merged_on_an_fb_bot_pr_goes_to_both(self):
+        s = steered(verdicts=[land(hours=1)], mergeable=False, proof_done_at=ago(1))
+        gh = FakeGH()
+        self.assertEqual([i.kind for i in muse_of(gh, s)], ["NOT-MERGED"])
+        self.assertEqual([i.kind for i in items_of(gh, s)], ["NOT-MERGED"])
+        self.assertEqual(make(gh).muse([s]), 1)
+        self.assertEqual(make(gh).inbox([s]), 1)
+
+    def test_a_red_branch_with_no_pr_goes_to_muse_on_107(self):
+        name = "fb-bot/integrate-j044c-wreck"
+        gh = FakeGH(runs=[run(40, name, HEAD, hours=2)], jobs={40: RED_JOBS}, heads={name: HEAD})
+        self.assertEqual([(i.kind, i.target) for i in muse_of(gh)], [("RED-BRANCH", name)])
+        self.assertEqual(items_of(gh), [])
+        self.assertEqual(make(gh).muse([]), 1)
+        (number, posted), = gh.posts
+        self.assertEqual(number, switch.BOARD_ISSUE)
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #107 @ 1a2b3c4d"))
+        key = switch.inbox_key("muse-RED-BRANCH", name, HEAD)
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/107/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[1][0], "PATCH")
+        self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
+        self.assertIn(key, gh.writes[1][2]["body"])
+        self.assertNotIn("switchboard:muse keys=", posted)
+        self.assertIn(key, gh.by_issue[switch.BOARD_ISSUE][0]["body"])
+        self.assertEqual(make(gh).inbox([]), 0)
+
+    def test_twelve_prs_give_ten_comments_then_two(self):
+        many = [self.fix_pr(number=300 + n) for n in range(12)]
+        gh = FakeGH()
+        self.assertEqual(make(gh).muse(many), switch.MAX_MUSE_COMMENTS)
+        self.assertEqual(len(gh.posts), 10)
+        self.assertEqual(len(gh.writes), 20)   # a label and a marker edit per comment
+        again = [self.fix_pr(number=300 + n, comments=gh.by_issue.get(300 + n, [])) for n in range(12)]
+        self.assertEqual(make(gh).muse(again), 2)
+        self.assertEqual(len(gh.posts), 12)
+        self.assertEqual(len(gh.writes), 24)
 
 
 if __name__ == "__main__":
