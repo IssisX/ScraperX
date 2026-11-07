@@ -482,10 +482,13 @@ void run_stock_damage() {
         const double mass = s.kit_body_mass(crate);
         const std::uint32_t bodies_before = s.kit_body_count();
         const auto at = s.kit_body_position(crate);
-        // Down onto the ground at 15 m/s: a 2,400 N.s hit, far past the
-        // 300 N.s break line, so the break executes on the next ticks.
-        s.debug_launch_kit_body(crate, at, {0.0, -15.0, 0.0});
-        (void)s.advance_frame(2.0);  // the hit window closes, the break executes, a checkpoint commits
+        // Dropped from 3 m: it lands at ~7.7 m/s, a 1,230 N.s hit, far
+        // past the 300 N.s break line, so the break executes on landing.
+        // A downward launch from the ground cannot break it: the ground
+        // eats the velocity inside one tick, so the observer, which
+        // reads post-step velocities, never sees a change.
+        put(s, crate, {at.x, at.y + 3.0, at.z});
+        (void)s.advance_frame(2.0);  // the fall, the landing, the break, a checkpoint commits
         require(s.stock_damage(entity).broken, "stock damage break save: the launch breaks the crate");
         require(s.kit_body_count() == bodies_before + 8,
                 "stock damage break save: the break adds eight bodies");
@@ -523,9 +526,11 @@ void run_stock_damage() {
         const Vector3 moved{home.x, home.y, home.z + 2.0};
         put(s, crate, moved);
         (void)s.advance_frame(0.5);  // the placement settle expires; the fall is on, no commit
+        // Dropped from 3 m above the moved spot: it lands at ~7.7 m/s,
+        // a 1,230 N.s hit, far past the 300 N.s break line.
         const auto at = s.kit_body_position(crate);
-        s.debug_launch_kit_body(crate, at, {0.0, -15.0, 0.0});
-        (void)s.advance_frame(1.0);  // the hit window closes, the break executes
+        put(s, crate, {at.x, at.y + 3.0, at.z});
+        (void)s.advance_frame(1.0);  // the fall, the landing, the break executes
         require(s.stock_damage(entity).broken, "stock damage break death: the launch breaks the crate");
         require(s.kit_body_count() == bodies_before + 8,
                 "stock damage break death: the break adds eight bodies");
