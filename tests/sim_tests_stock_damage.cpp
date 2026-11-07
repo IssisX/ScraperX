@@ -12,6 +12,7 @@
 using scraperx::sim::Forklift;
 using scraperx::sim::LooseStock;
 using scraperx::sim::Simulation;
+using scraperx::sim::Snapshot;
 using scraperx::sim::Vector3;
 using namespace scraperx::sim::stock_damage;
 
@@ -471,5 +472,83 @@ void run_stock_damage() {
         require(s.request_pick_up() && s.advance_frame(0.5).accepted &&
                     s.snapshot().carrying_entity_id == piece_entity_for(entity, 0),
                 "stock damage break: the first piece is carried");
+    }
+    // ---- (a) a save after a break loads into a fresh world, pieces and all ----
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(2.0);
+        const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+        const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+        const double mass = s.kit_body_mass(crate);
+        const std::uint32_t bodies_before = s.kit_body_count();
+        const auto at = s.kit_body_position(crate);
+        // Down onto the ground at 15 m/s: a 2,400 N.s hit, far past the
+        // 300 N.s break line, so the break executes on the next ticks.
+        s.debug_launch_kit_body(crate, at, {0.0, -15.0, 0.0});
+        (void)s.advance_frame(2.0);  // the hit window closes, the break executes, a checkpoint commits
+        require(s.stock_damage(entity).broken, "stock damage break save: the launch breaks the crate");
+        require(s.kit_body_count() == bodies_before + 8,
+                "stock damage break save: the break adds eight bodies");
+        const std::vector<std::uint8_t> bytes = s.save_game();
+        Simulation t(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(t.load_game(bytes.data(), bytes.size()),
+                "stock damage break save: a fresh world loads the save");
+        require(t.stock_damage(entity).broken, "stock damage break save: the break rides the save");
+        require(!t.kit_body_enabled(crate), "stock damage break save: the loaded crate stays parked");
+        require(t.kit_body_count() == bodies_before + 8,
+                "stock damage break save: the loaded world holds the eight pieces");
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = t.kit_body_index(piece_entity_for(entity, k));
+            require(body != 0xFFFFFFFFU,
+                    "stock damage break save: every piece exists in the loaded world");
+            require(std::abs(t.kit_body_mass(body) - mass / 8.0) < 0.01,
+                    "stock damage break save: each loaded piece carries an eighth of the mass");
+        }
+    }
+    // ---- (b) a death after a break still rewinds the kit --------------------
+    // The seeded checkpoint predates the break: the crate is broken
+    // mid-fall, while no checkpoint can commit, so the death restores
+    // from a checkpoint that never held the pieces. The rewind must
+    // still run for every other body, and the break itself must
+    // persist: a crate breaks once, its pieces are not made twice.
+    {
+        Simulation s(scraperx::sim::InitialSpawn::HighDrop);
+        const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+        const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+        const double mass = s.kit_body_mass(crate);
+        const std::uint32_t bodies_before = s.kit_body_count();
+        const auto home = s.kit_body_position(crate);
+        // Two metres north, onto open ground: far enough to tell the
+        // checkpoint's place from the break's, close enough to be clear.
+        const Vector3 moved{home.x, home.y, home.z + 2.0};
+        put(s, crate, moved);
+        (void)s.advance_frame(0.5);  // the placement settle expires; the fall is on, no commit
+        const auto at = s.kit_body_position(crate);
+        s.debug_launch_kit_body(crate, at, {0.0, -15.0, 0.0});
+        (void)s.advance_frame(1.0);  // the hit window closes, the break executes
+        require(s.stock_damage(entity).broken, "stock damage break death: the launch breaks the crate");
+        require(s.kit_body_count() == bodies_before + 8,
+                "stock damage break death: the break adds eight bodies");
+        const std::uint64_t deaths = s.snapshot().death_count;
+        require(advance_until(s, [deaths](const Snapshot &n) { return n.death_count > deaths; }, 6.0),
+                "stock damage break death: the fall kills");
+        const auto after = s.snapshot();
+        require(std::abs(after.player_position.x - after.checkpoint_position.x) < 0.05 &&
+                    std::abs(after.player_position.y - after.checkpoint_position.y) < 0.05 &&
+                    std::abs(after.player_position.z - after.checkpoint_position.z) < 0.05,
+                "stock damage break death: the death restores the player to the checkpoint");
+        const auto back = s.kit_body_position(crate);
+        require(std::hypot(back.x - home.x, back.y - home.y, back.z - home.z) < 0.5,
+                "stock damage break death: the death rewinds the crate to its checkpoint place");
+        require(!s.kit_body_enabled(crate), "stock damage break death: the rewound crate stays parked");
+        require(s.stock_damage(entity).broken, "stock damage break death: the break survives the death");
+        require(s.kit_body_count() == bodies_before + 8,
+                "stock damage break death: the death makes no second set of pieces");
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = s.kit_body_index(piece_entity_for(entity, k));
+            require(body != 0xFFFFFFFFU, "stock damage break death: every piece survives the death");
+            require(std::abs(s.kit_body_mass(body) - mass / 8.0) < 0.01,
+                    "stock damage break death: each surviving piece keeps an eighth of the mass");
+        }
     }
 }
