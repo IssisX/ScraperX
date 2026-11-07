@@ -1249,6 +1249,10 @@ struct Snapshot final {
     double wind_mps = 0.0;
     double wind_force_n = 0.0;
     double wind_peak_force_n = 0.0;   // the most it has pushed, N
+    // The gust front's leading edge above 396 m (J-022): its x, west of the
+    // tower's west face, on the simulation's clock; the mist streak sits
+    // ahead of it and the push follows behind it.
+    double wind_front_x_m = 0.0;
     // Blows from something moving that reached the body's balance
     // (kShoveClosingMps); whether one became a stumble is in stumble_count.
     std::uint64_t shove_count = 0;

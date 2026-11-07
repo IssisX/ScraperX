@@ -330,6 +330,18 @@ constexpr float kSummitWindSouthZ = -178.0F;
 constexpr float kWindBaseMps = 4.0F;
 constexpr float kWindGustMps = 16.0F;
 constexpr float kWindDragHalfRhoCdA = 0.5F * 1.2F * 0.7F;
+// J-022, gust fronts above 396 m: the upper tower's pressure, where nothing
+// lived-in reaches. A front is a leading edge sweeping west off the tower's
+// west face, kGustFrontSweepM every kGustFrontPeriodS (CHOSEN: a front every
+// 8 s at 5 m/s, so a body out over the drop meets one within a jump); behind
+// it the gust fills in over kGustFrontRampM to kWindGustMps, the same 107 N
+// peak as the west face's gust. Ahead of it, calm. Deterministic in the
+// simulation's clock, like the west face's swell.
+constexpr float kUpperWindLowY = 396.0F;
+constexpr float kUpperWindHighY = 788.0F;
+constexpr float kGustFrontSweepM = 40.0F;
+constexpr float kGustFrontPeriodS = 8.0F;
+constexpr float kGustFrontRampM = 4.0F;
 constexpr float kShoveClosingMps = 0.5F;
 constexpr float kShoveMinimumMps = 0.1F;
 

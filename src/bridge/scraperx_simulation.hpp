@@ -203,6 +203,7 @@ public:
     [[nodiscard]] godot::Dictionary get_water_state() const;
     [[nodiscard]] godot::Dictionary get_hand_state() const;
     [[nodiscard]] double get_wind_mps() const;
+    [[nodiscard]] double get_wind_front_x_m() const;
     [[nodiscard]] godot::Dictionary get_wet_state() const;
     [[nodiscard]] godot::Dictionary get_shop_state() const;
     [[nodiscard]] godot::Dictionary get_crane_state() const;

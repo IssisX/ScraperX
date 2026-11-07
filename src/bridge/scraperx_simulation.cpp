@@ -302,6 +302,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_water_state"), &ScraperXSimulation::get_water_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hand_state"), &ScraperXSimulation::get_hand_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wind_mps"), &ScraperXSimulation::get_wind_mps);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_wind_front_x_m"), &ScraperXSimulation::get_wind_front_x_m);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_shop_state"), &ScraperXSimulation::get_shop_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_crane_state"), &ScraperXSimulation::get_crane_state);
@@ -1168,6 +1169,12 @@ godot::Dictionary ScraperXSimulation::get_hand_state() const {
 // The wind off the west face at the body (m/s), 0 outside its zone.
 double ScraperXSimulation::get_wind_mps() const {
     return simulation_->snapshot().wind_mps;
+}
+
+// The gust front's leading edge above 396 m (J-022): its x, so the view can
+// draw the mist streak ahead of the push.
+double ScraperXSimulation::get_wind_front_x_m() const {
+    return simulation_->snapshot().wind_front_x_m;
 }
 
 godot::Dictionary ScraperXSimulation::get_wet_state() const {
