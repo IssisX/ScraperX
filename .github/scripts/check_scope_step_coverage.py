@@ -2,9 +2,9 @@
 """Check that every scope proof step runs in the scope job.
 
 The scope job is the proof's front door: it runs the rule check, the
-proof-scope unit tests, and the proof-scope decision itself, and its
-outputs gate every later job. Each of those three steps is a silent
-drop if deleted:
+proof-scope unit tests, the proof-scope decision, and the
+inverted-command check, and its outputs gate every later job. Each
+of those four steps is a silent drop if deleted:
 
   - without the rule check, a protected change (a removed or loosened
     test check, a budget number changed) sails through a green proof;
@@ -13,7 +13,11 @@ drop if deleted:
   - without the proof-scope decision, the scope outputs are unset,
     every downstream job's scope gate reads false, every proof job is
     skipped, and skipped counts as passing for the switchboard --
-    a green run with zero proof.
+    a green run with zero proof;
+  - without the inverted-command check, a `! grep -q FAIL` line can
+    come back into a workflow step, and under set -e it can never
+    fail the step -- the FAIL check it was meant to enforce checks
+    nothing, while CI stays green.
 
 No other guard reads the scope job: the shard guards read their own
 jobs, the audits guard reads the audits job, and the guard-of-guards
@@ -29,7 +33,9 @@ it, and requires, in the scope job:
   - exactly one `run:` step with no step-level `if:` invoking the
     proof-scope unit tests (test_proof_scope);
   - exactly one `run:` step with no step-level `if:` invoking
-    ci/proof_scope.py.
+    ci/proof_scope.py;
+  - exactly one `run:` step with no step-level `if:` running the
+    inverted-command check (the grep for `! ` run lines).
 
 The guard is wired in the scope job itself, so it runs on every
 push, including pushes where the proof-scope decision would skip
@@ -71,6 +77,7 @@ MARKERS = [
     ("tools/rule_check/rule_check.py", "rule check"),
     ("test_proof_scope", "proof-scope unit tests"),
     ("ci/proof_scope.py", "proof-scope decision"),
+    ("grep -nE '^[[:space:]]+! '", "inverted-command check"),
 ]
 
 
@@ -152,6 +159,13 @@ def check_scope_steps(workflow_text):
 
 def _self_test():
     """Regression checks for the scope-step parser, run on every invocation."""
+    inverted = (
+        "      - name: Check inverted commands\n"
+        "        run: |\n"
+        "          if grep -nE '^[[:space:]]+! ' .github/workflows/*.yml; then\n"
+        "            exit 1\n"
+        "          fi\n")
+
     def scope(job_if=None, steps_text=None):
         if steps_text is None:
             steps_text = (
@@ -161,7 +175,8 @@ def _self_test():
                 "      - name: Decide\n"
                 "        run: |\n"
                 "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
-                "          python3 ci/proof_scope.py\n")
+                "          python3 ci/proof_scope.py\n"
+                + inverted)
         text = "  scope:\n    runs-on: ubuntu-24.04\n"
         if job_if is not None:
             text += f"    if: {job_if}\n"
@@ -191,7 +206,8 @@ def _self_test():
              "      - name: Decide\n"
              "        run: |\n"
              "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
-             "          python3 ci/proof_scope.py\n")),
+             "          python3 ci/proof_scope.py\n"
+             + inverted)),
          "missing: no scope-job step invokes rule check (tools/rule_check/rule_check.py)")
     case("missing-unit-tests",
          "name: test\njobs:\n" + scope(steps_text=(
@@ -200,7 +216,8 @@ def _self_test():
              "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
              "      - name: Decide\n"
              "        run: |\n"
-             "          python3 ci/proof_scope.py\n")),
+             "          python3 ci/proof_scope.py\n"
+             + inverted)),
          "missing: no scope-job step invokes proof-scope unit tests (test_proof_scope)")
     case("missing-decision",
          "name: test\njobs:\n" + scope(steps_text=(
@@ -209,8 +226,19 @@ def _self_test():
              "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
              "      - name: Decide\n"
              "        run: |\n"
-             "          (cd ci && python3 -m unittest -q test_proof_scope)\n")),
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+             + inverted)),
          "missing: no scope-job step invokes proof-scope decision (ci/proof_scope.py)")
+    case("missing-inverted-command",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Check rule\n"
+             "        run: |\n"
+             "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
+             "      - name: Decide\n"
+             "        run: |\n"
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+             "          python3 ci/proof_scope.py\n")),
+         "missing: no scope-job step invokes inverted-command check (grep -nE '^[[:space:]]+! ')")
     case("duplicated-decision",
          "name: test\njobs:\n" + scope(steps_text=(
              "      - name: Decide\n"
@@ -219,7 +247,8 @@ def _self_test():
              "          python3 ci/proof_scope.py\n"
              "      - name: Decide again\n"
              "        run: |\n"
-             "          python3 ci/proof_scope.py\n")),
+             "          python3 ci/proof_scope.py\n"
+             + inverted)),
          "duplicated: proof-scope decision (ci/proof_scope.py) invoked in 2 scope-job steps")
     case("conditional-decision",
          "name: test\njobs:\n" + scope(steps_text=(
@@ -230,8 +259,25 @@ def _self_test():
              "        if: github.event_name == 'push'\n"
              "        run: |\n"
              "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
-             "          python3 ci/proof_scope.py\n")),
+             "          python3 ci/proof_scope.py\n"
+             + inverted)),
          "conditional: proof-scope decision (ci/proof_scope.py) is in step 'Decide', which has a step-level if:")
+    case("conditional-inverted-command",
+         "name: test\njobs:\n" + scope(steps_text=(
+             "      - name: Check rule\n"
+             "        run: |\n"
+             "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
+             "      - name: Decide\n"
+             "        run: |\n"
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+             "          python3 ci/proof_scope.py\n"
+             "      - name: Check inverted commands\n"
+             "        if: github.event_name == 'push'\n"
+             "        run: |\n"
+             "          if grep -nE '^[[:space:]]+! ' .github/workflows/*.yml; then\n"
+             "            exit 1\n"
+             "          fi\n")),
+         "conditional: inverted-command check (grep -nE '^[[:space:]]+! ') is in step 'Check inverted commands', which has a step-level if:")
     case("not-a-run-step",
          "name: test\njobs:\n" + scope(steps_text=(
              "      - name: Check\n"
@@ -241,7 +287,8 @@ def _self_test():
              "      - name: Decide\n"
              "        run: |\n"
              "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
-             "          python3 ci/proof_scope.py\n")),
+             "          python3 ci/proof_scope.py\n"
+             + inverted)),
          "not-a-run-step: rule check (tools/rule_check/rule_check.py) is in step 'Check', which has no run: block")
     case("no-steps",
          "name: test\njobs:\n  scope:\n    runs-on: ubuntu-24.04\n    steps:\n",
@@ -253,7 +300,8 @@ def _self_test():
              "          python3 tools/rule_check/rule_check.py \"$TRUNK\" HEAD\n"
              "      - name: Decide\n"
              "        run: |\n"
-             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"))
+             "          (cd ci && python3 -m unittest -q test_proof_scope)\n"
+             + inverted))
          + "  host-build:\n"
            "    runs-on: ubuntu-24.04\n"
            "    steps:\n"
@@ -284,7 +332,8 @@ def main():
             print(f"FAIL: {problem}")
         return 1
     print("PASS: scope job runs the rule check, the proof-scope unit tests, "
-          "and the proof-scope decision, each exactly once, unconditionally")
+          "the proof-scope decision, and the inverted-command check, "
+          "each exactly once, unconditionally")
     return 0
 
 

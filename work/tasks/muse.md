@@ -33,48 +33,30 @@ there doing that. So you never touch GitHub directly; email does everything:
   own protected PR with a plain before/after: send that diff in its own email. Never weaken a test.
 - Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job. Put the
   PASS/FAIL lines you ran in the email.
-- Two red proof runs on the same failure: stop changing numbers, email what you measured, what you
-  ruled out and the one observation that would settle it, and mark the job BLOCKED.
+- Ask Claude early (Cory 11-06: J-001 ran 8 h without asking). Two red proof runs on the same failure,
+  or a subagent 60 minutes without a commit or a new number: stop it and email `To Claude: <job> stuck`
+  with what you measured, what you ruled out and the one observation that would settle it.
 - Human sounds are real recordings, never synthesized.
 - **Trunk merges are the integrator's (11-05).** When one of your PRs conflicts with trunk, the integrator merges
   trunk in and mails you the new sha; pull it before your next push. Never start an agent for a trunk merge. The
   one exception: a mail that says "Muse: resolve" (the conflict is in your own logic).
 
-## Your open work now (11-03, Cory: "Muse ... should do main, difficult and long-winded tasks")
-You lead the fight. Use your subagents: run independent stages or files in parallel, and send each
-finished piece as its own diff email as soon as it is proven, not all at the end.
-0. **J-001 (#108), her hold with real arms, is now yours (Cory, 11-03), first in line.** Its code is on
-   PR #152 (`chatgpt/integrate-j001-swat-budget`, head `50e1bf49`, on top of #102's hold), red on two checks
-   that are not the swat's: `matron load S2 over-base: a carry swing crossed the crouch base` and
-   `matron crash: she went to the hit, found nobody, and is the warier for it`. ChatGPT's diagnosis is on #152
-   (two candidate causes: synthetic held-load attribution while regripping, or the new `drag_pose()` target
-   against the old counter-lean), and a Claude session is posting the failing-tick values there. Find the cause,
-   fix it at the owner, and send the diff on top of `50e1bf49`. The integrator puts it on that branch.
-   Protected checks (#103's) go on `fb-bot/integrate-protected-j001-hold-checks`. ChatGPT reviews it.
-1. **Finish J-002 (#109):** the late require ("once the rip has begun, his blow breaks nothing") read
-   at its peak, as its own diff on top of `1620c32e` (PR #158), so #153 goes green.
-2. **The fight, S2-S5, built end to end (J-005, #112, then one job each):**
-   - Your spec is on trunk (`03_EXECUTION/FIGHT/FIGHTING_SYSTEM_SPEC.md`, with your two corrections), and
-     your scopes are job issues: S2 low sweep J-033 #164, S3 heavy kick J-034 #165, S4 jab-cross J-035
-     #166, S5 slip J-036 #167.
-   - Then build them in order of dependency, each stage its own diff (and its own PR); a new or
-     changed test check goes in its own protected diff with a before/after. Native kernel first
-     (`src/sim/`), then the Godot view where the stage shows on screen.
-   - **S6, her tells (J-004, #111), is yours too (11-03):** re-point them at S7's fields once S5 is in.
-   - Neighbours: S1 is yours (#153); S7 + S8, damage and death body (J-003, #110), are ChatGPT's PR in
-     review. Read its fields, never edit its functions; ask with `To ChatGPT:`.
-2b. **J-038 (#169), destructible loose things (Cory, 11-03), right after the fight:** never the tower's
-   machines (they must stay usable so he can ascend). What the forklift and crane lift, barrels, boxes and shipping containers dent with the force
-   of the hit, and the hit moves them (a forklift ramming one shoves it and leaves it severely dented;
-   slice 0 makes the static containers movable, real masses, as a protected PR), crates break into pieces that become
-   loose stock. Rule 51, the phone, determinism and saves hold. Propose the dent model and slices first.
-3. **J-006 (#113), the grade ladder (her pursuit up the first 11 m), moved to you from ChatGPT (11-03).**
-   Its code is PR #91 (red). Start from its head and the job issue's last findings; it unblocks J-007
-   (#114, her exit items 4, 6 and 7: arm's-length holds, the pipe, the hoists), which is yours next.
-   It touches journey and climb functions, not the fight's, so run it on a subagent alongside the fight.
-4. **J-022 (#129), environment lane D:** gusts, wind you can see, clouds, dust in the stack. Long job;
-   work it when a fight stage waits on review.
-5. J-023 (#130, PR #95): its in-game stills, as the issue says.
+## Your queue (11-06)
+The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step: go with your pick, say it in the mail; he overrules by mail. Each
+job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
+1. J-052 #292: the switchboard routes every item to its owner (top job, 11-06 2:26 PM).
+2. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
+3. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
+4. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
+5. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
+6. J-008 #115: her "258 down" leg; a strict total order for the ladder-bar sort.
+7. J-011 #118: her skirt as cloth, bone-driven panels (from `edad91a3`).
+8. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
+9. J-021 #128: the far world and water (from `b532042b` and `95587901`).
+10. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed.
+
+Live lanes: J-042 windup #291, J-001 #227, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
+step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
 Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the

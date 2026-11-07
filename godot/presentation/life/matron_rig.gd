@@ -514,6 +514,386 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 		_reach_chain(root_b, mid_b, bone, target, w, "plant_" + bone)
 
 
+# Upright feet, world-locked while they stand (M6 foot-drag fix): the plants
+# above only run on all fours, so upright a stance foot rode the body and
+# the probe measured it travelling ~0.037 m/frame median. A foot down on the
+# deck stays where it was put while her body goes over it, and steps when it
+# must. The pose's swing still decides when a foot comes down (its sole
+# within UPLANT_M of the deck) and when it steps (lifted, or dragged past
+# its leg's reach); this holds only the stance foot's place, never her
+# gait's timing or step length. A stepping foot is never handed back to the
+# pose mid-swing at deck height, where it would count as planted while it
+# travels: it eases off on a low arc like the fours' swing (PLANT_LIFT_M),
+# then tracks the pose's ankle held above the deck until the pose's foot
+# comes down again, and plants there. Silent: no claim, no sound.
+const UPLANT_M := 0.03
+const UPLANT_RELEASE_S := 0.15
+const UPLANT_LIFT_M := 0.12
+const UPLANT_TRACK_LIFT_M := 0.15
+# A release lifts before it travels: the sole must be off the deck before
+# the foot moves sideways, or the deck counts the travel as a slide. The
+# lift needs a few frames to bend a near-straight leg past govern's cap,
+# so sideways travel waits until this much of the release has passed.
+const UPLANT_TRAVEL_START := 0.4
+# ... and the travel only advances while the sole is actually up: the
+# lift alone does not hold it there while the leg reaches forward (the
+# leg stretches and the sole drops back to the deck, act 0.111 m at the
+# unrig), so the travel waits on the drawn sole's height above its lock,
+# not on the clock. A frame old it lags the drop by a frame, so the bar
+# sits above the plant band by that drop.
+const UPLANT_TRAVEL_H_M := 0.10
+# The proof pin only holds a foot while the body is nearly still — the
+# check's own plant bar (STILL_MPS). A stepping body must be free to step:
+# pinning a foot mid-stride holds it off the deck (figure carry) and starves
+# the planted-pair count (studio shuffle).
+const UPLANT_STILL_MPS := 0.15
+# ... and while the foot itself is nearly still in the world (its pose-sole
+# travel this frame, body-corrected — the same dev the slow test measures).
+# A foot travelling fast is mid-step or mid-transition, not settling: the
+# pin's anchor is the drawn sole a frame old, and a foot moving 0.10+ m in
+# that frame strands the anchor — and the lock after it — far behind the
+# stance (figure carry: the lock landed 0.63 m behind the foot, the leg
+# could not reach the deck, lowest sole 0.048 m). A settling foot in the
+# grab travels 0.024–0.034 m/frame; a pose transition travels 0.10+; the
+# bar sits between them, at the slow test's own floor allowance.
+const UPLANT_PIN_DEV_M := 0.05
+var _uplants := {}
+var _uprev := {}
+# The soles as drawn last frame (after govern), world points: the upright
+# plant's proof anchors to where the foot actually is, not where the pose
+# has it — the two differ by ~0.18 m in a grab settle, and a pose anchor
+# yanks the foot across the deck (v2: 0.090 m at frame 33).
+var _udrawn := {}
+
+
+func _sole_offset(s: String) -> Vector3:
+	# The sole's midpoint, in the ankle bone's own space: the probe and the
+	# test measure the sole, not the ankle, and the foot's pitch moves the
+	# sole even when the ankle is held. Holding the sole itself removes
+	# that pitch travel from the measured slide.
+	return (_v(contacts["an_" + s]["heel"]) + _v(contacts["an_" + s]["toe"])) * 0.5
+
+
+func _reach_sole(hip: String, knee: String, ankle: String, sole_target: Vector3, w: float, key: String, s: String) -> void:
+	# Reach the ankle so the SOLE lands on sole_target. One pass: the
+	# ankle's rotation moves the sole as it pitches, so a second pass
+	# does not converge it (govern clips the extra change instead, and
+	# the hold degrades at speed), and the landing below spreads the
+	# descent so the single pass lands cleanly.
+	var basis := skel.get_bone_global_pose(bone_idx[ankle]).basis
+	_reach_chain(hip, knee, ankle, sole_target - basis * _sole_offset(s), w, key)
+
+
+func _sole_skel(s: String) -> Dictionary:
+	var i: int = bone_idx["an_" + s]
+	var heel: Vector3 = skel.get_bone_global_pose(i) * _v(contacts["an_" + s]["heel"])
+	var toe: Vector3 = skel.get_bone_global_pose(i) * _v(contacts["an_" + s]["toe"])
+	return {"y": minf(heel.y, toe.y),
+		"mid": Vector3((heel.x + toe.x) * 0.5, 0.0, (heel.z + toe.z) * 0.5)}
+
+
+func _plant_upright_feet(wf: float, release_only := false) -> void:
+	var w := 1.0 - wf
+	if w <= 0.001 or view == null:
+		return
+	var dt: float = float(view._dt)
+	var xf := skel.global_transform
+	var inv := xf.affine_inverse()
+	if bool(view.fresh_frame):
+		_uplants.clear()
+		_uprev.clear()
+		_udrawn.clear()
+	# A plant the fallthrough skipped a frame for (a climb, a leap) is
+	# stale: the foot has gone elsewhere since, so it is dropped, never
+	# dragged back.
+	for s in ["l", "r"]:
+		var old: Dictionary = _uplants.get(s, {})
+		if not old.is_empty() and _ik_frame - int(old.get("frame", 0)) > 1:
+			_uplants.erase(s)
+	for s in ["l", "r"]:
+		var sole := _sole_skel(s)
+		var down := float(sole["y"]) > -UPLANT_M and float(sole["y"]) < UPLANT_M
+		# The pose's own ankle, before this foot is reached for: apply()
+		# reset the bones to the pose's intent this frame, so this is where
+		# the pose has the foot, not where the last plant put it.
+		var pose_ankle := _gpos("an_" + s)
+		var st: Dictionary = _uplants.get(s, {})
+		if release_only and not st.is_empty() and not bool(st.get("releasing", false)):
+			# Taking off with a plant held (or a foot mid-landing, or
+			# tracking): ease it back to the pose over the release,
+			# from where the foot is drawn — never snap it to the pose.
+			# The release branch below runs this same frame (the trigger
+			# frame blends at k = 0, so the foot stays where it is). The
+			# lock is held in skeleton space (body-relative): the world
+			# point it was planted on is behind her now, and chasing it
+			# as the body falls yanks the foot up.
+			var at: Vector3
+			var drawn_r: Dictionary = _udrawn.get(s, {})
+			if not drawn_r.is_empty() and int(drawn_r.get("frame", -1)) == _ik_frame - 1:
+				at = drawn_r["at"] as Vector3
+			elif st.has("lock"):
+				at = st["lock"] as Vector3
+			else:
+				var mid_r: Vector3 = sole["mid"] as Vector3
+				at = xf * Vector3(mid_r.x, 0.0, mid_r.z)
+			st = {"lock": at, "lock_skel": inv * at, "releasing": true, "rel": -dt / UPLANT_RELEASE_S, "frame": _ik_frame}
+			_uplants[s] = st
+		# A hold that ends this frame starts its release blend NOW, in
+		# this frame's releasing branch below — never a frame later. The
+		# old code set releasing and reached nothing that frame, so the
+		# foot snapped from its lock to the pose's foot in one frame
+		# (a 0.19 m jump at the end of a turn, where the crouch into
+		# the next pose takes the sole out of the band). A hold ends
+		# when the sole leaves the band, or when the body drags the lock
+		# past the leg's reach. The trigger frame itself blends at
+		# k = 0, so the foot stays at its lock for that frame instead
+		# of snapping — and the release then runs the old frame count
+		# exactly, so every later touchdown lands on the old beat (the
+		# plant state machine is pose-driven; shifting the release by
+		# even one frame moves later touchdowns by several, which is
+		# what broke the figure test's carry pose under the first cut
+		# of this fix).
+		if st.has("lock") and not bool(st.get("tracking", false)) and not bool(st.get("releasing", false)) and int(st.get("landing", 0)) == 0:
+			var dragged := false
+			if down:
+				var hip := _gpos("hp_" + s)
+				var leg := hip.distance_to(_gpos("kn_" + s)) + _gpos("kn_" + s).distance_to(_gpos("an_" + s))
+				var ls: Vector3 = inv * (st["lock"] as Vector3)
+				dragged = Vector2(ls.x - hip.x, ls.z - hip.z).length() > 0.92 * leg
+			if not down or dragged:
+				st["releasing"] = true
+				st["rel"] = -dt / UPLANT_RELEASE_S
+				st["frame"] = _ik_frame
+				st.erase("proof")
+				_uplants[s] = st
+		if bool(st.get("tracking", false)):
+			# Touchdown needs three frames of sole on the deck, not one,
+			# and a foot that has nearly stopped in the world, not one
+			# sweeping low through the band: a sole grazing the deck
+			# mid-swing must not plant, or the hold fights the swing and
+			# the foot oscillates. While waiting, the foot keeps
+			# hovering, so no counted frame travels. The pose's sole is
+			# the signal, not its ankle: a dragging toe touches down
+			# while its ankle is still high.
+			var df := int(st.get("down_frames", 0)) + 1 if down else 0
+			st["down_frames"] = df
+			# The foot's world speed this frame, from its skeleton-space
+			# travel plus the body's own advance (skeleton forward is
+			# +Z, so stance travel is -body_step in Z and the deviation
+			# from that is the world travel).
+			var slow := false
+			var dev := -1.0
+			if _uprev.has(s):
+				var pv: Vector2 = _uprev[s] as Vector2
+				var mv: Vector3 = sole["mid"] as Vector3
+				var body_step := float(view._gait_mps) * dt
+				dev = Vector2(mv.x - pv.x, mv.z - pv.y + body_step).length()
+				var allow := maxf(2.5 * float(view._gait_mps) * dt, 0.05)
+				slow = dev < 0.5 * allow
+			if down and df >= 3 and slow:
+				var mid: Vector3 = sole["mid"] as Vector3
+				# The lock is where the foot was HELD. When the proof pin
+				# held it, the foot IS at the proof anchor — as drawn, the
+				# two agree within millimetres — so the lock is the anchor
+				# and the landing is vertical (v3: the grab plants, peak
+				# 0.046 m). When the pin never held it, the foot is where
+				# the pose has it now, and the lock is the pose sole this
+				# frame (the base lock): the drawn sole a frame old is
+				# already stale at speed — 0.05 m at 3 m/s — and a stale
+				# lock starves the planted-pair count and drifts the
+				# landing (drawn-sole lock: shuffle_fast pairs 25/37,
+				# median 0.020 m; proof-anchor-always: pairs 5, and the
+				# release then slides, act 0.103 m).
+				var lock_at: Vector3 = xf * Vector3(mid.x, 0.0, mid.z)
+				if st.has("proof"):
+					lock_at = st["proof"] as Vector3
+				# The landing starts from where the foot is drawn, not
+				# from the tracking height: a foot the proof pin already
+				# seated is at the deck, and lifting it to 0.15 m to land
+				# it again is a visible jump. The drawn sole a frame old
+				# is the foot's height; without a fresh one the old
+				# tracking height stands.
+				var land_from := UPLANT_TRACK_LIFT_M
+				var drawn0: Dictionary = _udrawn.get(s, {})
+				if not drawn0.is_empty() and int(drawn0.get("frame", -1)) == _ik_frame - 1:
+					land_from = clampf((inv * (drawn0["at"] as Vector3)).y, 0.0, UPLANT_TRACK_LIFT_M)
+				st = {"lock": lock_at, "frame": _ik_frame, "landing": 5, "land_from": land_from}
+				_uplants[s] = st
+				# Fall through to the landing branch below, not to the
+				# hold: the foot comes down over five frames, it does
+				# not drop the hover height in one.
+			else:
+				# Still swinging, or still proving the touchdown. From the
+				# first down frame, hold the sole where it went down — but
+				# only while the body is nearly still (UPLANT_STILL_MPS)
+				# and the foot itself is nearly still in the world
+				# (dev < UPLANT_PIN_DEV_M): a travelling foot is
+				# mid-step or mid-transition, and the pin's anchor — the
+				# drawn sole a frame old — is already far behind it.
+				# The check already counts it planted, and the pose's settle
+				# would drag it across the deck for the whole proof (0.066 m
+				# in the grab). The anchor is the sole as DRAWN last frame,
+				# not the pose's sole: in a grab settle the pose's sole sits
+				# ~0.18 m from the drawn one, so a pose anchor yanks the
+				# foot across the deck instead of holding it. The first frame
+				# anchors the XZ and starts down at the landing's rate
+				# (0.03 m a frame); from the second frame the hold resists
+				# the pose, so a one-frame graze is never fought. The anchor
+				# is a world point, so a moving body does not drag it. A drawn
+				# sole from any frame but the last is stale (a climb, a leap)
+				# and is never used.
+				var drawn: Dictionary = _udrawn.get(s, {})
+				var pin_gates := down and not drawn.is_empty() and int(drawn.get("frame", -1)) == _ik_frame - 1 and float(view._gait_mps) <= UPLANT_STILL_MPS and dev >= 0.0 and dev < UPLANT_PIN_DEV_M
+				if pin_gates:
+					if not st.has("proof"):
+						# The pin eases in from where the foot is drawn:
+						# the blend weight starts at the drawn height, so
+						# the first frame only anchors (the sole is already
+						# there) and the descent to the deck takes five
+						# frames at the landing's own rate.
+						var sk: Vector3 = inv * (drawn["at"] as Vector3)
+						st["proof"] = xf * Vector3(sk.x, 0.0, sk.z)
+						st["pin_k"] = clampf(1.0 - sk.y / UPLANT_TRACK_LIFT_M, 0.0, 1.0)
+					var k_in: float = minf(float(st.get("pin_k", 1.0)) + 0.2, 1.0)
+					st["pin_k"] = k_in
+					var tgt: Vector3 = inv * (st["proof"] as Vector3)
+					tgt.y = UPLANT_TRACK_LIFT_M * (1.0 - k_in)
+					_reach_sole("hp_" + s, "kn_" + s, "an_" + s, tgt, w, "uplant_" + s, s)
+				elif st.has("proof"):
+					# The pin eases out the way it came in: five frames
+					# from the deck back to the tracking height, at the
+					# anchor, before the foot is handed back to the pose
+					# — never a one-frame snap either way. A flicker
+					# re-engages from the faded weight, so the blend
+					# never restarts from the top.
+					var k_out: float = maxf(float(st.get("pin_k", 1.0)) - 0.2, 0.0)
+					st["pin_k"] = k_out
+					if k_out <= 0.0:
+						st.erase("proof")
+						st.erase("pin_k")
+						_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), w, "uplant_" + s)
+					else:
+						var tgt2: Vector3 = inv * (st["proof"] as Vector3)
+						tgt2.y = UPLANT_TRACK_LIFT_M * (1.0 - k_out)
+						_reach_sole("hp_" + s, "kn_" + s, "an_" + s, tgt2, w, "uplant_" + s, s)
+				else:
+					# Still swinging, or still proving the touchdown: track
+					# the pose's ankle held above the deck, never handed back
+					# low and fast.
+					st.erase("proof")
+					_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), w, "uplant_" + s)
+				st["frame"] = _ik_frame
+				_uplants[s] = st
+				_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+				continue
+		elif bool(st.get("releasing", false)):
+			var k := clampf(float(st.get("rel", 0.0)) + dt / UPLANT_RELEASE_S, 0.0, 1.0)
+			if k < 1.0:
+				# A takeoff release holds its lock in skeleton space
+				# (body-relative): the world point it was planted on is
+				# behind her now, and chasing it as the body falls yanks
+				# the foot up. A normal release holds its lock in the
+				# world — the foot was planted there.
+				var plant_tgt: Vector3
+				if st.has("lock_skel"):
+					plant_tgt = (st["lock_skel"] as Vector3) - skel.get_bone_global_pose(bone_idx["an_" + s]).basis * _sole_offset(s)
+				else:
+					var lock: Vector3 = st["lock"] as Vector3
+					plant_tgt = inv * lock - skel.get_bone_global_pose(bone_idx["an_" + s]).basis * _sole_offset(s)
+				# The foot lifts before it travels: sideways travel
+				# waits until UPLANT_TRAVEL_START of the release has
+				# passed, so the sole is off the deck (and no longer
+				# counted as planted) before it moves sideways. The
+				# old code travelled from the first frame, while the
+				# near-straight leg could not bend fast enough past
+				# govern's cap to lift the sole — so the sole dragged
+				# along the deck to its new stance.
+				var travel_tgt := clampf((k - UPLANT_TRAVEL_START) / (1.0 - UPLANT_TRAVEL_START), 0.0, 1.0)
+				# ... and the travel only advances while the sole is
+				# actually up: the lift alone does not hold it there
+				# while the leg reaches forward (the leg stretches and
+				# the sole drops back to the deck, act 0.111 m at the
+				# unrig), so the travel waits on the drawn sole's height
+				# above its lock. A low foot holds the travel (the target
+				# stays, the lift bends the knee) until it rises; the
+				# release still ends on its clock, and the tracking after
+				# it carries any travel left over.
+				var travel := float(st.get("travel", 0.0))
+				var drawn_h := 1.0
+				var drawn_r: Dictionary = _udrawn.get(s, {})
+				if not drawn_r.is_empty() and int(drawn_r.get("frame", -1)) == _ik_frame - 1 and st.has("lock"):
+					drawn_h = float((drawn_r["at"] as Vector3).y - (st["lock"] as Vector3).y)
+				if drawn_h >= UPLANT_TRAVEL_H_M:
+					travel = minf(travel_tgt, travel + dt / UPLANT_RELEASE_S / (1.0 - UPLANT_TRAVEL_START))
+				st["travel"] = travel
+				var tgt := plant_tgt.lerp(pose_ankle, travel)
+				# The arc stays up: its lift eases from the arc's height
+				# into the tracking height, never back down to a low fast
+				# pose ankle at the tail, so the handoff to tracking is
+				# smooth and the foot never snaps forward to a plant. On
+				# a takeoff release the tail eases to the pose instead:
+				# she is airborne, and the foot dangles with her body.
+				if k < 0.7:
+					tgt.y += UPLANT_LIFT_M * sin(PI * k)
+				else:
+					var tail_h := 0.0 if release_only else UPLANT_TRACK_LIFT_M
+					tgt.y += lerpf(UPLANT_LIFT_M * sin(PI * 0.7), tail_h, (k - 0.7) / 0.3)
+				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, tgt, w, "uplant_" + s)
+				st["rel"] = k
+				st["frame"] = _ik_frame
+				_uplants[s] = st
+				_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+				continue
+			if release_only:
+				# The takeoff release ends at the pose, not at the
+				# tracking height: the plant is gone, and the foot
+				# follows the pose from here.
+				_uplants.erase(s)
+				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle, w, "uplant_" + s)
+			else:
+				st["tracking"] = true
+				st["frame"] = _ik_frame
+				_uplants[s] = st
+				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), w, "uplant_" + s)
+			_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+			continue
+		if int(st.get("landing", 0)) > 0:
+			# Touchdown from the hover: the sole comes down over five
+			# frames at the lock's XZ, so the descent is vertical only
+			# and no counted frame travels. A fast drop needs a joint
+			# change at govern's cap, which clips and swings the foot
+			# sideways; five frames keep each step well under it. The
+			# descent starts from where the foot is drawn (land_from),
+			# never from the tracking height when the pin seated it.
+			var n := int(st["landing"])
+			var lock: Vector3 = st["lock"] as Vector3
+			var sole_tgt := inv * lock
+			sole_tgt.y = float(st.get("land_from", UPLANT_TRACK_LIFT_M)) * n / 5.0
+			_reach_sole("hp_" + s, "kn_" + s, "an_" + s, sole_tgt, w, "uplant_" + s, s)
+			st["landing"] = n - 1
+			st["frame"] = _ik_frame
+			_uplants[s] = st
+			_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+			continue
+		if down and not release_only:
+			if st.is_empty():
+				var mid: Vector3 = sole["mid"] as Vector3
+				st = {"lock": xf * Vector3(mid.x, 0.0, mid.z)}
+			# A hold dragged past its leg's reach is already releasing:
+			# the trigger above converts it before this branch runs.
+			var lock: Vector3 = st["lock"] as Vector3
+			_reach_sole("hp_" + s, "kn_" + s, "an_" + s, inv * lock, w, "uplant_" + s, s)
+			st["frame"] = _ik_frame
+			_uplants[s] = st
+		# No final elif: a lifted foot with a state is always a hold,
+		# and the trigger above turns every held foot whose sole left
+		# the band into a release before this point — so there is no
+		# lifted, held, unreleased foot left to handle here. (And the
+		# old branch only updated _uprev, which the line below does
+		# unconditionally anyway.)
+		_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+
+
 # Her hand on what she holds (the hold: his ankle, and in the rip his arm):
 # the wrist from where her pose has it toward `at_world` as far as `w`, the
 # arm drawn out (upper arm and forearm both, their "_x" bones slid) as long as
@@ -618,6 +998,12 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 		for bone in PROP_ARM_JOINTS:
 			var i: int = bone_idx[bone]
 			_prop_arm_pose[bone] = [skel.get_bone_pose_rotation(i), skel.get_bone_pose_position(i)]
+	# The soles as drawn this frame (after govern), for the upright plant's
+	# proof anchor next frame: where the foot actually is, not the pose.
+	for s in ["l", "r"]:
+		var heel: Vector3 = point("an_" + s, "heel")
+		var toe: Vector3 = point("an_" + s, "toe")
+		_udrawn[s] = {"at": (heel + toe) * 0.5, "frame": _ik_frame}
 
 
 # An actual grasp's terminal wrist contact, corrected only within the
@@ -847,6 +1233,17 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		claims |= CLAIM_RIDE
 	if view == null:
 		return
+	# Upright feet plant with the weight the fours do not take: at wf = 0
+	# they hold alone; as she goes down, the fours' plants take over.
+	if not airborne and not feet_free:
+		_plant_upright_feet(wf)
+	elif not _uplants.is_empty():
+		# Taking off, or with nothing under her feet: the plants do not
+		# vanish — they release over the release blend, from where the
+		# feet are drawn, so a foot never jumps to the pose in one frame
+		# at takeoff. The call repeats while a release is still running;
+		# each finished release erases its own plant.
+		_plant_upright_feet(wf, true)
 	if wf > 0.001:
 		_plant_limbs(data, wf, feet_free)
 	if down_mask != 0:

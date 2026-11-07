@@ -1478,6 +1478,27 @@ Climber::Status Climber::step_dyno(const float dt, Budget &budget) {
 Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
     const RVec3 c = center();
     const float feet = float(c.GetY()) - limits_.center_above_feet();
+    if (phase_ == 3) {
+        // Dropped off the bottom rung: fall to the goal floor and finish on
+        // it, the same landing the drop moves use. Never fall forever.
+        float support = 0.0F;
+        const bool on = supported(&support);
+        if (on && std::abs(velocity().GetY()) < 0.3F && phase_s_ > 0.1F) {
+            if (std::abs(support - spec_.goal_top) < 0.35F) {
+                finish();
+                return status_;
+            }
+            if (support < spec_.goal_top - 0.35F) {
+                fail(Failure::NotSupported);   // she went past it
+                return status_;
+            }
+        }
+        if (phase_s_ > 8.0F) {
+            fail(Failure::NotSupported);
+            return status_;
+        }
+        return status_;
+    }
     if (phase_ == 0) {
         // To the head: the start, then on over the floor until the line is
         // in arm's reach (a head bridge can carry the floor on past the start).
@@ -1568,6 +1589,7 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
         }
     }
     const float hold_y = float(hold_world_.GetY());
+    bool took_lower = false;
     if (hold_y - float(c.GetY()) > limits_.hand_above_center - 0.2F) {
         Hold next;
         RVec3 next_world;
@@ -1575,6 +1597,7 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
             hold_ = next;
             hold_world_ = next_world;
             ++view_.grips;
+            took_lower = true;
         } else if (hold_y - float(c.GetY()) > limits_.hang_below_hold - 0.1F &&
                    find_rung(hold_y - 0.65F, float(c.GetY()) - 0.2F, false, next, next_world)) {
             // A gap in the rungs under her: from a full hang her other hand
@@ -1582,6 +1605,27 @@ Climber::Status Climber::step_rung_down(const float dt, Budget &budget) {
             hold_ = next;
             hold_world_ = next_world;
             ++view_.grips;
+            took_lower = true;
+        }
+    }
+    if (!took_lower) {
+        // No rung under her hands: at a full hang off the bottom rung, a
+        // floor in drop range under her feet is a drop, not a stall — let
+        // go and fall to it, and finish on the goal floor (phase 3).
+        const float hang_centre = hold_y - limits_.hang_below_hold;
+        const float drop = feet - spec_.goal_top;
+        if (float(c.GetY()) <= hang_centre + 0.05F && drop > 0.0F && drop <= limits_.drop_max_m) {
+            if (hold_.valid()) {
+                ++view_.releases;
+                hold_ = Hold{};
+            }
+            hold2_ = Hold{};
+            hold2_world_ = RVec3::sZero();
+            view_.holding2 = false;
+            view_.hand2 = RVec3::sZero();
+            phase_ = 3;
+            phase_s_ = 0.0F;
+            return status_;
         }
     }
     const float floor = float(hold_world_.GetY()) - limits_.hang_below_hold;
@@ -3026,6 +3070,12 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     d.spec.goal = stand_foot;
                     d.spec.goal_top = fp.top;
                     const float hang_feet = l.bottom - limits.hang_below_hold - limits.center_above_feet();
+                    // Her feet at full hang are bottom - 2.35. The executor
+                    // finishes a descent her feet cannot reach the floor from
+                    // by dropping off the bottom rung (step_rung_down lets go
+                    // when the floor is in drop range under her feet), so the
+                    // scan offers the descent when her feet reach the floor
+                    // from a hang or the rung is within a drop of it.
                     const bool foot_reached = hang_feet - fp.top <= 0.4F;
                     const bool drop_ok = (l.bottom - fp.top) <= limits.drop_max_m;
                     const Vec3 hang_c = line + out * 0.42F + Vec3(0, l.top - limits.hang_below_hold + 0.4F, 0);

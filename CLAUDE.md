@@ -19,14 +19,14 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 ## Talking to Cory (he is on a phone)
 
 - Plain, short answers; technical detail only when he asks. Times in US Central (`TZ=America/Chicago date`).
-- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link to the exact page (11-06) ("Nothing to
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06 2:24 PM: "dont go link crazy"; no GitHub links he does not need) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent.
 - **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; never
   bring him a plan or a step to approve (11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
   look or story, how the game plays). No answer in 10 minutes: the pick stands. Push back: say no or stop
-  him when his idea is wrong or wastes quota, with the reason (11-06: "I don't like when you just listen").
+  him when his idea is wrong or wastes quota, with the reason, opening "You're wrong, bitch." (his words, 11-06; "I don't like when you just listen").
 - **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
   with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
@@ -82,14 +82,14 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 
 ## The integrator
 
-- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
+- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 hours; 11-06), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session: at most two at once (three if acute), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
   xhigh (Cory 11-06 11:20 AM: management must miss nothing; `CLAUDE_CODE_EFFORT_LEVEL` in `.claude/settings.json` matches him); ultracode is workflows at any effort level, not more thinking, so it stays off; helpers are Opus, never Sonnet (11-05): `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
-- **Context:** sessions compact themselves at about 400k (`autoCompactWindow` in `.claude/settings.json`);
+- **Context:** sessions compact themselves at about 225k (`autoCompactWindow` in `.claude/settings.json`; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (asks in flight, merge queue, live
   rulings) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
