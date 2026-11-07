@@ -4,6 +4,23 @@ The rules in force are in `00_START_HERE.md`; the owner's dated words are in `00
 This file is only the rules that change what an agent does. Cory, 11-04: *"we're getting a little heavy on
 the safety and rules and like bookkeeping shit"*: add a rule here only by replacing or shortening one.
 
+## Settled: never reopen (Cory's calls)
+
+This list is reloaded word for word after every compact; a summary is not. Only Cory changes a line, and a
+changed call replaces its line. A file, summary or agent that disagrees is wrong: fix it to match, never ask
+him again.
+- Trunk is `ScraperX-Claude`, never `main`. The player is him; the Matron is her (11-06).
+- One force budget for her: 8 kN external, 44 kW; gravity on; no velocity writes. Never weaken a test, and
+  never cut quality to save quota.
+- Her injuries persist: a checkpoint saves them, a reload restores her as saved, dead included (11-05 #242).
+- No per-job or per-request money cap; only the $100 month cap. Never bring the $8 up (11-04, 11-07).
+- Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
+  opens and merges the PRs (11-05).
+- No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
+  Sonnet (11-05). Human sounds are real recordings, never synthesized.
+- Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
+- Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
+
 ## Test only what a change reaches
 
 *"each change does not require a full native suite run - dont be wasteful"* (10-18 to 11-04).
@@ -35,7 +52,6 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 
 ## The game
 
-- **The player is him; the Matron is her** (11-06: J-048 called the player "her" everywhere).
 - **Near misses:** a test or route failing by a few cm to about 0.2 m gets an unnoticeable geometry tweak,
   never reworked code or a weaker assertion. Geometry is a protected change.
 - **Human sounds are real:** a voice, growl, breath, effort or gore foley is a cleared recording (CC0, source
@@ -86,13 +102,13 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 
 ## The integrator
 
-- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 hours; 11-06), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06, 11-07: the limit lasts to Sunday night, every week): every agent loaded by
+- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 hours; 11-06), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session: at most two at once (three if acute), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  xhigh (Cory 11-06 11:20 AM: management must miss nothing; `CLAUDE_CODE_EFFORT_LEVEL` in `.claude/settings.json` matches him); ultracode is workflows at any effort level, not more thinking, so it stays off; helpers are Opus, never Sonnet (11-05): `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
+  xhigh (Cory 11-06: management must miss nothing; `.claude/settings.json` matches him); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
 - **Context:** sessions compact themselves at about 225k (`autoCompactWindow` in `.claude/settings.json`; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (asks in flight, merge queue, live
   rulings; no histories or tallies) current; re-read it, this file and the hourly file after a compact. A new session only when one
