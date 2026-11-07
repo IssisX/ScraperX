@@ -163,7 +163,7 @@ class Escalation(unittest.TestCase):
         self.assertEqual(number, 138)
         self.assertTrue(body.startswith("To Grok: J-031 review #9 @ 1a2b3c4d"), body[:80])   # what the Grok app answers
         self.assertIn("ChatGPT has not answered in 3 hours", body)
-        self.assertIn("`**Grok (review of #9 @ 1a2b3c4d): LAND**`", body)
+        self.assertIn(f"`**Grok (review of #9 @ {HEAD}): LAND**`", body)   # the whole head (J-056)
         self.assertIn(switch.MARK.format(kind="ask-grok", pr=9, head=HEAD), body)
         self.assertTrue(any(l.startswith("FALLBACK    #9") for l in sw.lines))
         # The next sweep sees both asks: grok's clock has just started, so nothing more is posted.
@@ -461,8 +461,8 @@ class CodexRunning(unittest.TestCase):
         sw.api_ok = lambda c: True
         sw.review_load = lambda: ({}, {})
         reviewed = []
-        sw.review = lambda facts, c, author: reviewed.append(facts.head_sha)
-        sw.marked = lambda *a: False
+        sw.review = lambda facts, c, author, security=False: reviewed.append(facts.head_sha)
+        sw.marked = lambda *a, **kw: False
         sw.stale = lambda facts: False
         c = dict(ctx(comments=list(comments)), proof_done_at=ago(green_minutes_ago / 60))
         sw.ask_pr(pr_facts(), c)
