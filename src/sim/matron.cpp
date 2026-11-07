@@ -573,37 +573,66 @@ Vec3 Matron::body_velocity() const {
 void Matron::new_climber(const traversal::Ignore ignore) {
     climber_ = std::make_unique<traversal::Climber>(physics_, body_, ignore);
     climber_->set_velocity_source([this] { return body_velocity(); });
+    climber_->share_budget(&feet_budget_);  // her one account, not a second one of its own
+}
+
+float Matron::upper_spin(const int i) const {
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    const auto at = static_cast<std::size_t>(i);
+    const BodyID parent = i == 0 ? upper_body_[1] : (i == 1 || i == 3 || i == 4) ? upper_body_[2] : body_;
+    return (bodies.GetAngularVelocity(upper_body_[at]) - bodies.GetAngularVelocity(parent)).Length();
 }
 
 void Matron::step_upper_body(const float dt) {
     if (!upper_in_world_ || dt <= 0.0F) {
         return;
     }
-    // Last tick's motor spend, upper bound: |torque| x |relative spin|,
-    // charged to the one budget; no power left switches the motors off.
-    BodyInterface &bodies = physics_.GetBodyInterface();
+    // Her upper body's motors take, last before the solve, what the tick's
+    // other draws on her one account (feet_budget_) left. Each joint asks for
+    // its caps (kUpperMotorTorqueNm) on its three motor axes, charged at their
+    // bound: as force over the joint's reach (kUpperReachM) and as power
+    // times the joint's spin. A short account scales every joint down alike,
+    // and the motors' torque limits this solve are what was granted, so they
+    // cannot spend more than was charged; nothing left switches them off.
+    float force = 0.0F;
     float power = 0.0F;
+    float measured = 0.0F;
     for (int i = 0; i < kUpperCount; ++i) {
         auto *joint = static_cast<SwingTwistConstraint *>(upper_joint_[static_cast<std::size_t>(i)].GetPtr());
         if (joint == nullptr) {
             continue;
         }
-        const BodyID parent =
-            i == 0 ? upper_body_[1] : (i == 1 || i == 3 || i == 4) ? upper_body_[2] : body_;
-        const Vec3 rel = bodies.GetAngularVelocity(upper_body_[static_cast<std::size_t>(i)]) -
-                         bodies.GetAngularVelocity(parent);
-        power += joint->GetTotalLambdaMotor().Length() / dt * rel.Length();
+        const float spin = upper_spin(i);
+        // Last solve's motor work, upper bound: |torque| x |relative spin|.
+        measured += joint->GetTotalLambdaMotor().Length() / dt * spin;
+        // The most its three axes put out together, each at the cap.
+        const float bound = std::sqrt(3.0F) * kUpperMotorTorqueNm[i];
+        force += bound / kUpperReachM[i];
+        power += bound * spin;
     }
-    upper_motor_power_w_ = power;
-    feet_budget_.power_left = std::max(0.0F, feet_budget_.power_left - power);
-    const bool on = feet_budget_.power_left > 0.0F;
+    upper_motor_power_w_ = measured;
+    float share = 1.0F;
+    if (force > feet_budget_.left) {
+        share = std::min(share, feet_budget_.left / force);
+    }
+    if (power > feet_budget_.power_left) {
+        share = std::min(share, feet_budget_.power_left / power);
+    }
+    share = std::max(0.0F, share);
+    feet_budget_.left = std::max(0.0F, feet_budget_.left - share * force);
+    feet_budget_.used += share * force;
+    feet_budget_.power_left = std::max(0.0F, feet_budget_.power_left - share * power);
+    feet_budget_.power_used += share * power;
     for (int i = 0; i < kUpperCount; ++i) {
         auto *joint = static_cast<SwingTwistConstraint *>(upper_joint_[static_cast<std::size_t>(i)].GetPtr());
         if (joint == nullptr) {
             continue;
         }
-        joint->SetSwingMotorState(on ? EMotorState::Position : EMotorState::Off);
-        joint->SetTwistMotorState(on ? EMotorState::Position : EMotorState::Off);
+        const float torque = share * kUpperMotorTorqueNm[i];
+        joint->GetTwistMotorSettings().SetTorqueLimit(torque);
+        joint->GetSwingMotorSettings().SetTorqueLimit(torque);
+        joint->SetTwistMotorState(torque > 0.0F ? EMotorState::Position : EMotorState::Off);
+        joint->SetSwingMotorState(torque > 0.0F ? EMotorState::Position : EMotorState::Off);
     }
 }
 
@@ -2744,9 +2773,15 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     feet_budget_lunge_ = false;
     keep_upper_on_root();  // a root placed since the last solve takes its chain with it
-    step_upper_body(dt);  // J-044c: meter last tick's motor work, then enforce the budget
+    // J-044c: her upper body's motors take what the rest of her tick left of
+    // it, on every way out of this pre_step, before the solve.
+    struct UpperLast {
+        Matron &matron;
+        float dt;
+        ~UpperLast() { matron.step_upper_body(dt); }
+    } const upper_last{*this, dt};
     stock_push_force_n_ = 0.0F;
-    traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
+    traversal::Budget &account = feet_budget_;  // the same one, handed to whichever way has her
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
                                      state_ == State::Staggering || (way != nullptr && way->view().drives)) {
         foot_driving_ = false;
@@ -2788,6 +2823,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         fetch_refused_ = 0;
     }
     thrown_s_ = std::max(0.0F, thrown_s_ - dt);
+    settle_let_go(dt);
     look_s_ = std::max(0.0F, look_s_ - dt);
     climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
     // A way she took herself (her journey, her bars) has her body until it
@@ -3892,6 +3928,7 @@ Vec3 Matron::shove_direction(const RVec3 player) const noexcept {
 
 void Matron::set_throwables(std::vector<Throwable> throwables) {
     throwables_ = std::move(throwables);
+    settling_ = -1;
     if (throwables_.size() > 32) {
         throwables_.resize(32);
     }
@@ -4410,6 +4447,8 @@ void Matron::release_stock(const Vec3 velocity, const Vec3 spin, const bool thro
     const Throwable &t = throwables_[static_cast<std::size_t>(index)];
     BodyInterface &bodies = physics_.GetBodyInterface();
     bodies.ActivateBody(t.body);
+    settling_ = index;
+    settling_still_s_ = 0.0F;
     if (thrown) {
         (void)spin;
         throw_v_ = velocity;
@@ -4453,6 +4492,28 @@ void Matron::throw_stroke(const float dt) {
                           -granted);
         foot_drive_dv_ -= (granted / kMassKg) * dt;
         stock_push_force_n_ = granted.Length();
+    }
+}
+
+void Matron::settle_let_go(const float dt) {
+    if (settling_ < 0) {
+        return;
+    }
+    if (settling_ == held_) {
+        settling_ = -1;
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const JPH::BodyID body = throwables_[static_cast<std::size_t>(settling_)].body;
+    if (!bodies.IsAdded(body)) {
+        settling_ = -1;
+        return;
+    }
+    const bool still = bodies.GetLinearVelocity(body).LengthSq() < kRestMps * kRestMps &&
+                       bodies.GetAngularVelocity(body).LengthSq() < kRestRadps * kRestRadps;
+    settling_still_s_ = still ? settling_still_s_ + dt : 0.0F;
+    if (settling_still_s_ >= kRestSeconds) {
+        settling_ = -1;
     }
 }
 
@@ -4542,6 +4603,8 @@ void Matron::restore(const Saved &saved) {
         fetch_refused_s_ = 0.0F;
         thrown_ = -1;
         thrown_s_ = 0.0F;
+        settling_ = -1;
+        settling_still_s_ = 0.0F;
         takes_ = 0;
         throws_ = 0;
         stock_shoves_ = 0;
@@ -5461,22 +5524,30 @@ void Matron::refresh_view() {
     view_.damage_stage = damage_stage_for_ns(damage_ns_);
     view_.blow_mps = blow_mps_;
     view_.blow_low = blow_low_;
-    // J-044c: the jointed upper body, as the rig poses it (relative
-    // rotations, so the mesh's yaw still applies on top).
+    // J-044c: the jointed upper body, as the rig poses it: each segment's
+    // swing off its rest pose, in its parent's frame turned into her body's
+    // (the rig's) frame, so the mesh's yaw and pose still apply under it.
+    // Its rotation off its parent alone would draw the rest pose twice (an
+    // arm's rest is 131 degrees off its chest's).
     view_.upper_root_mass_kg = kRootMassKg;
     view_.upper_motor_power_w = upper_motor_power_w_;
     if (upper_in_world_) {
         BodyInterface &bodies = physics_.GetBodyInterface();
+        const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), upper_yaw_);
         view_.upper_head_angvel = bodies.GetAngularVelocity(upper_body_[0]);
         for (int i = 0; i < kUpperCount; ++i) {
             view_.upper_mass_kg[i] = kUpperMassKg[i];
             const BodyID parent =
                 i == 0 ? upper_body_[1] : (i == 1 || i == 3 || i == 4) ? upper_body_[2] : body_;
             const Quat rel = bodies.GetRotation(parent).Conjugated() * bodies.GetRotation(upper_body_[i]);
-            const Quat dev = upper_rest_[static_cast<std::size_t>(i)].Conjugated() * rel;
+            const Quat rest = upper_rest_[static_cast<std::size_t>(i)];
+            const Quat dev = rest.Conjugated() * rel;
             const float w = std::clamp(std::abs(dev.GetW()), 0.0F, 1.0F);
             view_.upper_angle_deg[i] = 2.0F * std::acos(w) * 180.0F / kPi;
-            view_.upper_q[i] = rel;
+            // rel = swing * rest, the swing in the parent's frame (world-aligned
+            // at rest: the root turns only by translation), then out of her yaw.
+            const Quat swing = (rel * rest.Conjugated()).Normalized();
+            view_.upper_q[i] = (yaw_q.Conjugated() * swing * yaw_q).Normalized();
         }
     }
     view_.riding = riding_;

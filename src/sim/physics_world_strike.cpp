@@ -458,12 +458,15 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         // neck, chest, arm), so the joint it hangs from takes the torque;
         // take_blow still reads the root, so stagger/knockdown is unchanged.
         const float feet_y = c_feet(bodies, her);
-        bodies.AddForce(matron_->strike_body_for_point(strike_point_, feet_y), dir * force_n, strike_point_,
-                        JPH::EActivation::Activate);
+        const JPH::BodyID struck = matron_->strike_body_for_point(strike_point_, feet_y);
+        bodies.AddForce(struck, dir * force_n, strike_point_, JPH::EActivation::Activate);
         bodies.AddForce(player_id_, -dir * force_n, JPH::EActivation::Activate);
-        // J-046 measurement only: his blow, received (not her budget's).
+        // J-046 measurement only: his blow, received (not her budget's). It
+        // is a force on her root (the body the ledger holds against Jolt's)
+        // only when it lands there; on a segment, the joint carries it on.
         effort::add_force(effort::Path::Blow, dir * force_n,
-                          bodies.GetLinearVelocity(her) - bodies.GetLinearVelocity(player_id_), 0.0F, dir * force_n);
+                          bodies.GetLinearVelocity(her) - bodies.GetLinearVelocity(player_id_), 0.0F,
+                          struck == her ? dir * force_n : JPH::Vec3::sZero());
         strike_impulse_ns_ += force_n * dt;
         // Read by her balance as a blow (matron.cpp take_blow).
         const bool low = static_cast<float>(strike_point_.GetY() - feet_y) < 0.5F;

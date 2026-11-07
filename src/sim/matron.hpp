@@ -245,6 +245,14 @@ public:
     static constexpr float kUpperMotorHz[kUpperCount] = {20.0F, 20.0F, 20.0F, 20.0F, 20.0F};  // J-044c prototype: 20 Hz holds the diagonal arms against gravity at <0.5 deg; pinned when Grok #244 lands
     static constexpr float kUpperMotorDamping = 1.0F;  // J-044c prototype: critical damping; pinned when Grok #244 lands
     static constexpr float kUpperMotorTorqueNm[kUpperCount] = {120.0F, 120.0F, 400.0F, 150.0F, 150.0F};
+    // J-044c: her upper body's motors draw on her tick's one account
+    // (feet_budget_, 8 kN / 44 kW), last before the solve that uses them,
+    // and may use only what it granted (step_upper_body). A joint's torque is
+    // charged as force over its reach: the push it could make at the far end
+    // of what the joint turns, metres. The head, neck and chest joints each
+    // turn the head above them, so theirs is joint to crown (the head
+    // sphere's top, 1.79 m over her feet); a shoulder's is shoulder to wrist.
+    static constexpr float kUpperReachM[kUpperCount] = {0.146F, 0.251F, 0.413F, 0.481F, 0.481F};
     static constexpr float kRadius = 0.30F;
     static constexpr float kHalfHeight = 0.75F;
     static constexpr float kStandCentre = kHalfHeight + kRadius;
@@ -735,6 +743,10 @@ public:
     static constexpr float kThrowWindupSeconds = 0.35F;
     static constexpr float kThrowCooldownSeconds = 6.0F;
     static constexpr float kThrowQuietSeconds = 2.5F;
+    // Stock she let go of is at rest once it moves under these for kRestSeconds.
+    static constexpr float kRestMps = 0.1F;
+    static constexpr float kRestRadps = 0.5F;
+    static constexpr float kRestSeconds = 0.25F;
     // The throw is a push of her hands (J-016): out of her grip, the piece
     // is driven up to the throw's speed over kThrowStrokeSeconds by a force
     // from her feet's tick account (its work at the piece's speed against
@@ -1332,7 +1344,7 @@ public:
         float upper_root_mass_kg = 0.0F;
         float upper_motor_power_w = 0.0F;  // this tick's motor work, watts (upper bound)
         JPH::Vec3 upper_head_angvel = JPH::Vec3::sZero();
-        JPH::Quat upper_q[5] = {};  // relative rotations, child to parent, in kUpperCount order
+        JPH::Quat upper_q[5] = {};  // each segment's swing off rest, in its parent's frame, out of her yaw (kUpperCount order)
         bool riding = false;            // her floor going up or down under her (feel_floor): she rides it
         float edge_brace_n = 0.0F;      // her feet braced back from an edge this tick (brace_at_edges)
         float feet_push_n = 0.0F;       // all her feet pushed with this tick (read only)
@@ -1513,6 +1525,12 @@ public:
     // Her last throw's entity while it is still in the air and landing, else 0.
     [[nodiscard]] std::uint64_t thrown_entity() const noexcept {
         return thrown_ >= 0 && thrown_s_ > 0.0F ? throwables_[static_cast<std::size_t>(thrown_)].entity : 0;
+    }
+    // The stock she last let go of (dropped or thrown) until it comes to rest,
+    // else 0: its hits are her own sound, decided by the body and not by how
+    // far from her it lands (J-044c: a dropped box bouncing 1.6 m away).
+    [[nodiscard]] std::uint64_t settling_entity() const noexcept {
+        return settling_ >= 0 ? throwables_[static_cast<std::size_t>(settling_)].entity : 0;
     }
     // Reports (once) the way up whose rope she has just taken off its eye
     // (0 Stage A, 1 Stage B), or -1: the world unhooks it.
@@ -2377,6 +2395,7 @@ private:
     [[nodiscard]] bool load_held_elsewhere(JPH::BodyID body) const;
     void hold_stock(float dt);
     void release_stock(JPH::Vec3 velocity, JPH::Vec3 spin, bool thrown);
+    void settle_let_go(float dt);   // ends settling_entity once the stock rests
     void throw_stroke(float dt);
     [[nodiscard]] JPH::Vec3 hands_offset() const noexcept;
     void step_planks(float dt);
@@ -2544,6 +2563,7 @@ private:
     // Her Climber on her root, reading her body's velocity (body_velocity):
     // every Climber of hers is made here.
     void new_climber(traversal::Ignore ignore);
+    [[nodiscard]] float upper_spin(int i) const;  // joint i's spin against its parent, rad/s
     void step_upper_body(const float dt);
     void destroy_upper_body();
     void upper_rest_transform(const int i, JPH::RVec3 &pos, JPH::Quat &rot) const;
@@ -2702,6 +2722,8 @@ private:
     JPH::Vec3 throw_v_ = JPH::Vec3::sZero();       // the speed it leaves them at
     int thrown_ = -1;
     float thrown_s_ = 0.0F;
+    int settling_ = -1;              // the stock she let go of, until it rests (settling_entity)
+    float settling_still_s_ = 0.0F;  // how long it has been still
     std::uint32_t takes_ = 0;
     std::uint32_t throws_ = 0;
     int stock_shove_ = -1;                 // the piece she is shoving, or -1
