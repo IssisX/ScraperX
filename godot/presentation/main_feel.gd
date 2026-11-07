@@ -268,6 +268,7 @@ const HAPTICS := {
 	&"strike_sweep": [30, 0.60],   # the low sweep landing (spec section 8.1 cap)
 	&"strike_kick": [55, 0.80],   # the heavy kick landing (spec section 8.1 cap)
 	&"strike_whiff": [12, 0.25],   # the low sweep missing (spec section 8.1 cap)
+	&"strike_jab": [16, 0.45],   # the jab landing (spec section 8.1 cap)
 }
 
 # Kinds that always get through the throttle: they mark a moment that
@@ -955,6 +956,8 @@ func _feel_strike(delta: float) -> void:
 			_haptic(&"strike_sweep", clampf(impulse / 60.0, 0.3, 1.0))
 		if edge == &"landed" and int(strike.get("move", 0)) == 2:
 			_haptic(&"strike_kick", clampf(impulse / 166.7, 0.3, 1.0))
+		if edge == &"landed" and int(strike.get("move", 0)) == 3:
+			_haptic(&"strike_jab", clampf(impulse / 66.7, 0.3, 1.0))
 		if edge == &"missed" and int(strike.get("move", 0)) == 1:
 			_haptic(&"strike_whiff", 0.5)
 		if edge == &"landed":
@@ -1016,7 +1019,7 @@ func _feel_hold_events(hold: Dictionary) -> void:
 func _feel_hold(delta: float) -> void:
 	if _matron_view == null or not _native.has_method("get_matron_hold_state"):
 		return
-	var hold: Dictionary = _native.get_matron_hold_state()
+	var hold: Dictionary = _hold_now
 	_feel_hold_events(hold)
 	var ended := int(hold.get("runs_ended_by_matron", 0))
 	if _runs_she_ended >= 0 and ended > _runs_she_ended:
@@ -1074,6 +1077,7 @@ func _feel_gore(her_state: Dictionary, delta: float, hold: Dictionary) -> void:
 	_matron_view.hear_hold(hold)
 
 func _render_snapshot(delta: float = 0.0) -> void:
+	_read_her()
 	var position: Vector3 = _native.get_player_position()
 	var render_position: Vector3 = _native.get_player_render_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
@@ -1115,10 +1119,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _summit_view != null:
 		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	if _matron_view != null:
-		var her_state: Dictionary = _native.get_matron_state()
+		var her_state: Dictionary = _her_now
 		# Her hold, read once: her hand drawn on the ankle it has, her gore and
 		# her sounds of it.
-		var her_hold: Dictionary = _native.get_matron_hold_state() if _native.has_method("get_matron_hold_state") else {}
+		var her_hold: Dictionary = _hold_now
 		_matron_view.set_hold(her_hold)
 		_matron_view.update_view(her_state, delta, _his_eye(), position)
 		_feel_her(her_state, position)

@@ -12,6 +12,7 @@
 // happens is a fall, judged by the fall rules).
 
 #include "sim/physics_world.hpp"
+#include "sim/matron_effort.hpp"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
@@ -300,7 +301,9 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         const bool let_go = matron_->take_let_go(push);
         tear_grip(false);
         if (let_go) {
+            const JPH::Vec3 before = bodies.GetLinearVelocity(player_id_);   // J-046, read only
             bodies.AddImpulse(player_id_, push * kPlayerMassKg);
+            effort::add_velocity_write(effort::Path::LetGo, kPlayerMassKg, before, before + push, effort_dt_);
         }
         destroy_grab_constraint(hand_arm_);
         remove_and_destroy(bodies, hand_id_);
@@ -398,6 +401,8 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     }
     bodies.AddForce(hand_id_, force);
     bodies.AddForce(matron_->body(), -force);
+    // J-046 measurement only.
+    effort::add_force(effort::Path::GrabSpring, force, hand_v - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
     // S1 measurement only: report the held body's tip every tick. The
     // force above is unchanged; this call writes no force, no velocity.
     matron_->report_held_load(bodies.GetPosition(matron_->body()), bodies.GetPosition(player_id_),
@@ -463,7 +468,9 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     if (matron_->take_let_go(push)) {
         // She lets go: the push is her arm's, at most kReleasePushMps.
         tear_grip(false);
+        const JPH::Vec3 before = bodies.GetLinearVelocity(player_id_);   // J-046, read only
         bodies.AddImpulse(player_id_, push * kPlayerMassKg);
+        effort::add_velocity_write(effort::Path::LetGo, kPlayerMassKg, before, before + push, effort_dt_);
     }
 }
 
@@ -575,4 +582,76 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
     }
 }
 
+} // namespace scraperx::sim
+
+namespace scraperx::sim {
+// J-046 (#257), measurement only: the effort ledger's reads (matron_effort.hpp).
+float Simulation::PhysicsWorld::effort_mass(const JPH::BodyID id) const noexcept {
+    const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), id);
+    if (!lock.Succeeded() || !lock.GetBody().IsDynamic()) return 0.0F;
+    const float inverse = lock.GetBody().GetMotionProperties()->GetInverseMass();
+    return inverse > 0.0F ? 1.0F / inverse : 0.0F;
+}
+
+void Simulation::PhysicsWorld::effort_before_update() const noexcept {
+    if (!effort::ledger().enabled) return;
+    const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), matron_->body());
+    if (lock.Succeeded() && lock.GetBody().IsDynamic() && lock.GetBody().IsInBroadPhase()) {
+        effort::her_force_at_step(lock.GetBody().GetAccumulatedForce());
+    }
+}
+
+namespace {
+// A constraint's force on its second body over the tick just stepped
+// (lambda / dt), and that body's velocity relative to the first's at the
+// constraint's points.
+bool effort_constraint(const JPH::TwoBodyConstraint *c, const float dt, JPH::Vec3 &force, JPH::Vec3 &relative) {
+    if (c == nullptr || dt <= 0.0F || !c->IsActive()) return false;
+    switch (c->GetSubType()) {
+    case JPH::EConstraintSubType::Point:
+        force = static_cast<const JPH::PointConstraint *>(c)->GetTotalLambdaPosition() / dt;
+        break;
+    case JPH::EConstraintSubType::SwingTwist:
+        force = static_cast<const JPH::SwingTwistConstraint *>(c)->GetTotalLambdaPosition() / dt;
+        break;
+    case JPH::EConstraintSubType::Distance: {
+        const JPH::Body *b1 = c->GetBody1();
+        const JPH::Body *b2 = c->GetBody2();
+        const JPH::RVec3 p1 = b1->GetCenterOfMassTransform() * c->GetConstraintToBody1Matrix().GetTranslation();
+        const JPH::RVec3 p2 = b2->GetCenterOfMassTransform() * c->GetConstraintToBody2Matrix().GetTranslation();
+        const JPH::Vec3 d(p2 - p1);
+        const JPH::Vec3 axis = d.Length() > 1.0e-5F ? d.Normalized() : JPH::Vec3::sAxisY();
+        force = axis * (static_cast<const JPH::DistanceConstraint *>(c)->GetTotalLambdaPosition() / dt);
+        break;
+    }
+    default:
+        return false;
+    }
+    const JPH::Body *b1 = c->GetBody1();
+    const JPH::Body *b2 = c->GetBody2();
+    const JPH::RVec3 at = b2->GetCenterOfMassTransform() * c->GetConstraintToBody2Matrix().GetTranslation();
+    relative = b2->GetPointVelocity(at) - b1->GetPointVelocity(at);
+    return true;
+}
+
+void effort_record(const effort::Path p, const JPH::TwoBodyConstraint *c, const float dt) {
+    JPH::Vec3 force;
+    JPH::Vec3 relative;
+    if (effort_constraint(c, dt, force, relative)) {
+        effort::add_force(p, force, relative, 0.0F, JPH::Vec3::sZero());
+    }
+}
+} // namespace
+
+void Simulation::PhysicsWorld::effort_after_update(const float dt) const noexcept {
+    if (!effort::ledger().enabled) return;
+    effort_record(effort::Path::StockHold, matron_->stock_hold(), dt);
+    effort_record(effort::Path::GrabArm, hand_arm_.GetPtr(), dt);
+    effort_record(effort::Path::Hand2Arm, hand2_arm_.GetPtr(), dt);
+    effort_record(effort::Path::Knee, knee_arm_.GetPtr(), dt);
+    for (const JPH::TwoBodyConstraint *grip :
+         {grip_.GetPtr(), wrist_.GetPtr(), knee_pin_.GetPtr(), fist_.GetPtr(), knot_.GetPtr(), handle_fist_.GetPtr()}) {
+        effort_record(effort::Path::PlayerGrip, grip, dt);
+    }
+}
 } // namespace scraperx::sim

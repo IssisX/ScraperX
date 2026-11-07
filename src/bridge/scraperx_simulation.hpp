@@ -3,6 +3,7 @@
 #include "sim/simulation.hpp"
 
 #include <godot_cpp/classes/ref_counted.hpp>
+#include <godot_cpp/variant/array.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_byte_array.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
@@ -13,6 +14,8 @@
 #include <godot_cpp/variant/vector3.hpp>
 
 #include <memory>
+#include <utility>
+#include <vector>
 
 namespace scraperx::bridge {
 
@@ -137,6 +140,17 @@ public:
     [[nodiscard]] double get_kit_body_mass(std::int64_t body) const;
     [[nodiscard]] godot::PackedFloat32Array get_kit_body_parts(std::int64_t body) const;
     [[nodiscard]] godot::Transform3D get_kit_body_transform(std::int64_t body) const;
+    // The listed kit bodies' poses in one call, for the presentation's per
+    // frame pose pass (J-045 perf_walk: ~640 moving bodies, two calls each,
+    // were the largest GDScript cost of a walk). Only a body whose enabled
+    // flag, or whose pose while enabled, differs from what this call last
+    // reported for it is reported, unless `everything` (then every listed body
+    // is). Each as 14 floats: its index, enabled (1 or 0), its basis columns
+    // x, y, z and its origin, exactly the get_kit_body_transform values. A
+    // disabled body's pose is not tracked, as the presentation does not move
+    // a hidden body. Reads only: the simulation is not touched.
+    [[nodiscard]] godot::PackedFloat32Array get_kit_body_poses(
+        const godot::PackedInt32Array &bodies, bool everything);
     [[nodiscard]] std::int64_t get_kit_body_index(std::int64_t entity_id) const;
     // Cables: the kit's ropes, then its trip lines, each as the points it is
     // drawn through. Empty for a parted rope.
@@ -189,6 +203,7 @@ public:
     [[nodiscard]] godot::Dictionary get_water_state() const;
     [[nodiscard]] godot::Dictionary get_hand_state() const;
     [[nodiscard]] double get_wind_mps() const;
+    [[nodiscard]] double get_wind_front_x_m() const;
     [[nodiscard]] godot::Dictionary get_wet_state() const;
     [[nodiscard]] godot::Dictionary get_shop_state() const;
     [[nodiscard]] godot::Dictionary get_crane_state() const;
@@ -214,7 +229,14 @@ public:
     // Her hands on the player: the hold, the arms, the fatality and the
     // one-armed body (presentation: matron_hold_camera.gd, matron_view.gd).
     [[nodiscard]] godot::Dictionary get_matron_hold_state() const;
+    // Both of the above in one call, [state, hold], from one read of her
+    // snapshot: what the presentation reads of her once a frame (J-045).
+    [[nodiscard]] godot::Array get_matron_frame() const;
     [[nodiscard]] godot::Dictionary get_bay_state() const;
+    // The fight perf probes (J-044m, #245): microseconds per fixed step on
+    // steady_clock, read-only (sim::StepTiming). Keys step/physics/matron_pre/
+    // matron_post, each {last_us, max_us, mean_us, samples}.
+    [[nodiscard]] godot::Dictionary get_step_timing() const;
     void light_summit();
     bool set_summit_lower(bool held);
     bool request_summit_unrig();
@@ -311,6 +333,38 @@ protected:
 private:
     std::unique_ptr<sim::Simulation> simulation_;
     godot::String fabricated_refusal_ = "none";
+    // Per kit body: what get_kit_body_poses last reported for it.
+    struct KitPoseSeen {
+        godot::Transform3D pose;
+        bool enabled = false;
+        bool reported = false;
+    };
+    std::vector<KitPoseSeen> kit_poses_seen_;
+    // Dictionary keys made once (J-045): a builder asks for its keys in the
+    // same order every call, so the n-th key is the String made the first
+    // time for the literal at that place (checked by the literal's address;
+    // any other is made again, so a reordered builder stays correct).
+    class MatronKeys {
+    public:
+        void begin() noexcept { at_ = 0; }
+        const godot::String &operator()(const char *name) {
+            if (at_ < keys_.size() && keys_[at_].first != name) {
+                keys_[at_] = {name, godot::String(name)};
+            } else if (at_ == keys_.size()) {
+                keys_.emplace_back(name, godot::String(name));
+            }
+            return keys_[at_++].second;
+        }
+
+    private:
+        std::vector<std::pair<const char *, godot::String>> keys_;
+        std::size_t at_ = 0;
+    };
+    mutable MatronKeys state_keys_;
+    mutable MatronKeys hold_keys_;
+    mutable MatronKeys leg_keys_;
+    void fill_matron_state(godot::Dictionary &out, const sim::MatronSnapshot &state) const;
+    void fill_matron_hold(godot::Dictionary &out, const sim::Snapshot &p, const sim::MatronSnapshot &m) const;
 };
 
 } // namespace scraperx::bridge

@@ -1292,6 +1292,117 @@ func _matron_sweep_touch(device: int) -> bool:
 	return true
 
 
+# The fight perf probe (J-044m, #245; J-044 console-quality fighting on the
+# Fold 6 at 90 Hz): the player throws punches at her up close on her 154
+# deck while every process frame logs its own wall time, Godot's TIME_PROCESS and
+# TIME_PHYSICS_PROCESS, the frame's draw calls, and the native step timer
+# (get_step_timing: the whole world step, PhysicsSystem::Update, her pre
+# and post step, per fixed step). Then min, mean, p95 and max of each.
+# Measures only: it fails only when nothing was measured or no punch was
+# thrown, never on a number (no budget yet; 03_EXECUTION/FIGHT/PERF_PROBES.md).
+# Staged like the sweep: her hands held so a grab cannot end the fight, her
+# changed (stage 2) so a punch does not end it, put back 1.2 m off whenever
+# a blow or her own moves carry her out past 3 m.
+const PERF_FIGHT_S := 10.0
+const PERF_FIGHT_PUNCH_FRAMES := 30
+const PERF_FIGHT_GAP_M := 1.2
+const PERF_FIGHT_REPLACE_M := 3.0
+const PERF_FIGHT_SETTLE_S := 1.5
+
+
+func _perf_series_summary(values: Array) -> Dictionary:
+	if values.is_empty():
+		return {"n": 0, "min": 0.0, "mean": 0.0, "p95": 0.0, "max": 0.0}
+	var sorted := values.duplicate()
+	sorted.sort()
+	var total := 0.0
+	for v in sorted:
+		total += float(v)
+	var rank := maxi(int(ceil(0.95 * float(sorted.size()))), 1) - 1
+	return {"n": sorted.size(), "min": float(sorted[0]), "mean": total / float(sorted.size()),
+		"p95": float(sorted[rank]), "max": float(sorted[sorted.size() - 1])}
+
+
+func _perf_fight() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var me := _position()
+	_native().debug_hold_matron_hands(PERF_FIGHT_S + 30.0)
+	_native().debug_place_matron(Vector3(me.x, 154.0, me.z - PERF_FIGHT_GAP_M))
+	_native().debug_set_matron_stage(2)
+	await _face(Vector2(0.0, -1.0))
+	# Placing her can run her one-time tower scan inside a step (seconds on
+	# the host; real play does it behind the LOADING card, main.gd
+	# _prepare_her). Godot refreshes TIME_PROCESS once a second with that
+	# second's slowest frame, so wait past it before measuring.
+	await _seconds(PERF_FIGHT_SETTLE_S)
+	var series := {"frame_wall_ms": [], "process_ms": [], "physics_process_ms": [], "draw_calls": [],
+		"native_step_us": [], "native_physics_us": [], "native_matron_pre_us": [], "native_matron_post_us": []}
+	var frame_started := Time.get_ticks_usec()
+	var strikes := int(_native().get_strike_state()["strikes"])
+	var hits := int(_native().get_strike_state()["hits"])
+	var steps_at := int(_native().get_step_timing()["step"]["samples"])
+	var last_steps := steps_at
+	var replaced := 0
+	var frame := 0
+	var waited := 0.0
+	while waited < PERF_FIGHT_S:
+		var her: Vector3 = _matron_state()["position"]
+		me = _position()
+		if Vector2(her.x - me.x, her.z - me.z).length() > PERF_FIGHT_REPLACE_M:
+			_native().debug_place_matron(Vector3(me.x, 154.0, me.z - PERF_FIGHT_GAP_M))
+			her = _matron_state()["position"]
+			replaced += 1
+		# Turn toward her as _face does, at up to 4 rad/s, a step a frame.
+		var goal := atan2(-(her.x - me.x), -(her.z - me.z))
+		var left := wrapf(goal - float(_main._yaw), -PI, PI)
+		var turn := 4.0 * get_process_delta_time()
+		_main._yaw = goal if absf(left) <= turn else float(_main._yaw) + signf(left) * turn
+		if frame % PERF_FIGHT_PUNCH_FRAMES == 0:
+			_tap(1, _center(&"punch"))
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+		frame += 1
+		var now := Time.get_ticks_usec()
+		series["frame_wall_ms"].append(float(now - frame_started) / 1000.0)
+		frame_started = now
+		series["process_ms"].append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+		series["physics_process_ms"].append(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
+		series["draw_calls"].append(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+		var timing: Dictionary = _native().get_step_timing()
+		var steps := int(timing["step"]["samples"])
+		if steps > last_steps:
+			# The frame's last fixed step (a 60 fps frame runs one or two).
+			series["native_step_us"].append(float(timing["step"]["last_us"]))
+			series["native_physics_us"].append(float(timing["physics"]["last_us"]))
+			series["native_matron_pre_us"].append(float(timing["matron_pre"]["last_us"]))
+			series["native_matron_post_us"].append(float(timing["matron_post"]["last_us"]))
+			last_steps = steps
+	var thrown := int(_native().get_strike_state()["strikes"]) - strikes
+	var landed := int(_native().get_strike_state()["hits"]) - hits
+	var summary := {}
+	for key in series:
+		var s := _perf_series_summary(series[key])
+		summary[key] = s
+		print("SCRAPERX_PERF perf_fight %s n=%d min=%.3f mean=%.3f p95=%.3f max=%.3f" % [key, int(s["n"]),
+			float(s["min"]), float(s["mean"]), float(s["p95"]), float(s["max"])])
+	var running: Dictionary = _native().get_step_timing()
+	print("SCRAPERX_PERF perf_fight native_running step_mean_us=%.1f step_max_us=%.1f physics_mean_us=%.1f physics_max_us=%.1f samples=%d" % [
+		float(running["step"]["mean_us"]), float(running["step"]["max_us"]),
+		float(running["physics"]["mean_us"]), float(running["physics"]["max_us"]), int(running["step"]["samples"])])
+	if int(summary["process_ms"]["n"]) < 60:
+		return _fail("only %d frames were measured" % int(summary["process_ms"]["n"]))
+	if int(running["step"]["samples"]) <= steps_at or int(summary["native_step_us"]["n"]) == 0:
+		return _fail("the native step timer did not run (samples %d -> %d)" % [steps_at, int(running["step"]["samples"])])
+	if thrown == 0:
+		return _fail("no punch was thrown in %.0f s of PUNCH taps" % PERF_FIGHT_S)
+	_detail = "frames=%d steps=%d punches=%d hits=%d replaced=%d frame_wall_ms_p95=%.2f process_ms_p95=%.2f physics_process_ms_p95=%.2f draws_max=%d native_step_us_mean=%.1f native_step_us_p95=%.1f native_step_us_max=%.1f" % [
+		frame, int(running["step"]["samples"]) - steps_at, thrown, landed, replaced,
+		float(summary["frame_wall_ms"]["p95"]), float(summary["process_ms"]["p95"]), float(summary["physics_process_ms"]["p95"]),
+		int(summary["draw_calls"]["max"]), float(summary["native_step_us"]["mean"]),
+		float(summary["native_step_us"]["p95"]), float(summary["native_step_us"]["max"])]
+	return true
+
+
 func _matron_pipe_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _pipe_drum_to_corner(device):
@@ -1592,4 +1703,583 @@ func _play_summit_ending() -> bool:
 		return _fail("ending: the final radio line repeated during the descent")
 	await _pose("ending_home")
 	_detail = "beam=two_bearings sling=free final_caption=once canopy=live home=ground deaths=0"
+	return true
+
+# J-045 (#248), phone stability: a per-frame recorder for rendered runs, and
+# the scenarios that use it (the locker burst, the three full-height tower
+# views). Each frame it logs its wall time, the native fixed steps' time
+# inside it (from get_step_timing's running totals, every step counted), the
+# viewport's measured render time, draw calls, objects, primitives, video /
+# texture / buffer memory, and the pipeline (shader) compilations Godot
+# counts. Rendered only (headless draws nothing): run them under xvfb with
+# the phone's renderer (gl_compatibility), see 03_EXECUTION/FIGHT/PERF_PROBES.md.
+# They measure; they fail only when nothing was measured.
+const PROBE_COMPILE_MONITORS := [
+	Performance.PIPELINE_COMPILATIONS_CANVAS, Performance.PIPELINE_COMPILATIONS_MESH,
+	Performance.PIPELINE_COMPILATIONS_SURFACE, Performance.PIPELINE_COMPILATIONS_DRAW,
+	Performance.PIPELINE_COMPILATIONS_SPECIALIZATION]
+const PROBE_WORST := 8
+
+var _probe_rows: Array = []
+var _probe_last_usec := 0
+var _probe_native_total_us := 0.0
+var _probe_compiles := 0.0
+var _probe_tag := ""
+var _probe_on := false
+# Two stamps about every node's process callback (main.gd _process, the
+# native advance inside it, the views' own): the first node to process and
+# the last. Godot's TIME_PROCESS also takes in the frame's rendering.
+var _probe_first: ProbeStamp = null
+var _probe_last: ProbeStamp = null
+
+
+class ProbeStamp extends Node:
+	var usec := 0
+
+	func _process(_delta: float) -> void:
+		usec = Time.get_ticks_usec()
+
+
+func _probe_stamp(priority: int) -> ProbeStamp:
+	var stamp := ProbeStamp.new()
+	stamp.process_priority = priority
+	stamp.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().root.add_child(stamp)
+	return stamp
+
+
+func _probe_native_total() -> float:
+	var step: Dictionary = _native().get_step_timing()["step"]
+	return float(step["mean_us"]) * float(step["samples"])
+
+
+func _probe_compile_count() -> float:
+	var total := 0.0
+	for monitor in PROBE_COMPILE_MONITORS:
+		total += float(Performance.get_monitor(monitor))
+	return total
+
+
+func _probe_start(tag: String) -> void:
+	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
+	_probe_rows = []
+	_probe_tag = tag
+	_probe_last_usec = Time.get_ticks_usec()
+	_probe_native_total_us = _probe_native_total()
+	_probe_compiles = _probe_compile_count()
+	if _probe_first == null:
+		_probe_first = _probe_stamp(-1000000)
+		_probe_last = _probe_stamp(1000000)
+	_probe_on = true
+	_probe_loop()
+
+
+func _probe_stop() -> void:
+	_probe_on = false
+
+
+# Runs beside the scenario (called without await): one row per process frame.
+func _probe_loop() -> void:
+	while _probe_on:
+		await get_tree().process_frame
+		if not _probe_on:
+			return
+		var now := Time.get_ticks_usec()
+		var native_total := _probe_native_total()
+		var compiles := _probe_compile_count()
+		var rid := get_viewport().get_viewport_rid()
+		_probe_rows.append({
+			"f": _probe_rows.size(), "tag": _probe_tag,
+			"wall_ms": float(now - _probe_last_usec) / 1000.0,
+			"native_ms": (native_total - _probe_native_total_us) / 1000.0,
+			"render_cpu_ms": RenderingServer.viewport_get_measured_render_time_cpu(rid),
+			"render_gpu_ms": RenderingServer.viewport_get_measured_render_time_gpu(rid),
+			"compiles": compiles - _probe_compiles,
+			"draws": int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+			"objects": int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)),
+			"prims": int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)),
+			"video_mb": float(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)) / 1048576.0,
+			"texture_mb": float(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)) / 1048576.0,
+			"buffer_mb": float(Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)) / 1048576.0,
+			"static_mb": float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0,
+			"matron": int(_matron_state()["state"]),
+			# The previous frame's node process callbacks (main.gd _process
+			# with the native advance inside it, and the views' own), between
+			# the two stamps, and its physics step, read at the start of this
+			# frame: the same frame wall_ms spans.
+			"process_ms": maxf(float(_probe_last.usec - _probe_first.usec), 0.0) / 1000.0 \
+				if _probe_first.usec > 0 else 0.0,
+			"physics_ms": float(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)) * 1000.0,
+			"nodes": int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)),
+			"at": _position(),
+		})
+		_probe_last_usec = now
+		_probe_native_total_us = native_total
+		_probe_compiles = compiles
+
+
+func _probe_row_text(row: Dictionary) -> String:
+	var at: Vector3 = row["at"]
+	return "f=%d tag=%s wall_ms=%.1f native_ms=%.1f script_ms=%.1f physics_ms=%.1f render_cpu_ms=%.1f render_gpu_ms=%.1f compiles=%d draws=%d objects=%d prims=%d video_mb=%.0f texture_mb=%.0f buffer_mb=%.0f static_mb=%.0f nodes=%d matron=%d at=(%.1f,%.1f,%.1f) cause=%s" % [
+		int(row["f"]), String(row["tag"]), float(row["wall_ms"]), float(row["native_ms"]),
+		_probe_script_ms(row), float(row["physics_ms"]),
+		float(row["render_cpu_ms"]), float(row["render_gpu_ms"]), int(row["compiles"]), int(row["draws"]),
+		int(row["objects"]), int(row["prims"]), float(row["video_mb"]), float(row["texture_mb"]),
+		float(row["buffer_mb"]), float(row["static_mb"]), int(row["nodes"]), int(row["matron"]),
+		at.x, at.y, at.z, _probe_cause(row)]
+
+
+# The GDScript share of a frame: the node process callbacks less the native
+# advance inside them (main.gd _process calls advance_frame).
+func _probe_script_ms(row: Dictionary) -> float:
+	return maxf(float(row["process_ms"]) - float(row["native_ms"]), 0.0)
+
+
+# Which part of a frame took most of it: native (the fixed steps), script
+# (GDScript in the process callbacks), physics (Godot's physics step) or
+# render (the rest of the wall time: culling, draw submission, the swap). A
+# compilation counted in the frame is named first.
+func _probe_cause(row: Dictionary) -> String:
+	if int(row["compiles"]) > 0:
+		return "compile"
+	var parts := {"native": float(row["native_ms"]), "script": _probe_script_ms(row),
+		"physics": float(row["physics_ms"])}
+	parts["render"] = maxf(float(row["wall_ms"]) - float(row["process_ms"]) - float(row["physics_ms"]), 0.0)
+	var top := "native"
+	for key in parts:
+		if float(parts[key]) > float(parts[top]):
+			top = key
+	return top
+
+
+# One SCRAPERX_PERF line per tag (frame-time percentiles, the most of each
+# counter and memory, compilations summed) and the worst frames whole.
+func _probe_report(scenario: String) -> Dictionary:
+	var tags := []
+	for row in _probe_rows:
+		if not tags.has(row["tag"]):
+			tags.append(row["tag"])
+	var out := {}
+	for tag in tags:
+		var walls := []
+		var most := {"draws": 0, "objects": 0, "prims": 0, "video_mb": 0.0, "texture_mb": 0.0, "buffer_mb": 0.0}
+		var compiles := 0
+		var over_50 := 0
+		for row in _probe_rows:
+			if row["tag"] != tag:
+				continue
+			walls.append(float(row["wall_ms"]))
+			compiles += int(row["compiles"])
+			over_50 += 1 if float(row["wall_ms"]) > 50.0 else 0
+			for key in most:
+				most[key] = maxf(float(most[key]), float(row[key]))
+		walls.sort()
+		var at := func(q: float) -> float: return float(walls[clampi(int(ceil(q * walls.size())) - 1, 0, walls.size() - 1)])
+		out[tag] = {"n": walls.size(), "p50": at.call(0.5), "p95": at.call(0.95), "p99": at.call(0.99),
+			"max": float(walls[walls.size() - 1]), "compiles": compiles, "over_50": over_50, "most": most}
+		print("SCRAPERX_PERF %s %s frames=%d wall_p50=%.1f p95=%.1f p99=%.1f max=%.1f over_50ms=%d compiles=%d draws_max=%d objects_max=%d prims_max=%d video_mb_max=%.0f texture_mb_max=%.0f buffer_mb_max=%.0f" % [
+			scenario, tag, walls.size(), out[tag]["p50"], out[tag]["p95"], out[tag]["p99"], out[tag]["max"], over_50,
+			compiles, int(most["draws"]), int(most["objects"]), int(most["prims"]), float(most["video_mb"]),
+			float(most["texture_mb"]), float(most["buffer_mb"])])
+	var worst := _probe_rows.duplicate()
+	worst.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["wall_ms"]) > float(b["wall_ms"]))
+	for i in mini(PROBE_WORST, worst.size()):
+		print("SCRAPERX_PERF %s worst %s" % [scenario, _probe_row_text(worst[i])])
+	for row in _probe_rows:
+		if int(row["compiles"]) > 0:
+			print("SCRAPERX_PERF %s compile %s" % [scenario, _probe_row_text(row)])
+	return out
+
+
+# The locker burst as real play has it: her tower scan first, as the LOADING
+# card does (main.gd _prepare_her), then a sprint beside her locker wakes her
+# and she bursts out. Logged from a second before the wake to 6 s after the
+# burst. Acceptance (#248): no frame over 50 ms, no compilation after the card.
+func _perf_locker(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if DisplayServer.get_name() != "headless":
+		await _warm_eye_check()
+	# Real play's path: the card, her scan, her materials warmed (main.gd).
+	var started := Time.get_ticks_msec()
+	_main._her_scan_pending = true
+	await _main._prepare_her()
+	print("SCRAPERX_PERF perf_locker prepare_her_ms=%d" % (Time.get_ticks_msec() - started))
+	await _seconds(2.0)
+	_probe_start("idle")
+	await _seconds(1.0)
+	_probe_tag = "wake"
+	if not await _wake_matron(device):
+		_probe_stop()
+		return false
+	# Straining at the door till it goes: the burst is her first state past it.
+	_probe_tag = "straining"
+	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) != MATRON_STATE_STRAINING, 30.0):
+		_probe_stop()
+		return _fail("she strained 30 s and never burst out")
+	_probe_tag = "burst"
+	await _seconds(6.0)
+	_probe_stop()
+	var out := _probe_report("perf_locker")
+	if not out.has("burst"):
+		return _fail("no frames were measured after the burst")
+	_detail = "burst_max_ms=%.1f burst_over_50ms=%d burst_compiles=%d wake_max_ms=%.1f" % [
+		float(out["burst"]["max"]), int(out["burst"]["over_50"]), int(out["burst"]["compiles"]),
+		float(out["wake"]["max"]) if out.has("wake") else 0.0]
+	return true
+
+
+# The warm-up seen (#248, CLAUDE.md "look at it"): the same paused frame
+# twice without her speck (the sky moves while paused: the noise) and once
+# with it, the pixels that differ counted, each frame saved with --capture.
+func _probe_frame_image() -> Image:
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	return get_viewport().get_texture().get_image()
+
+
+func _probe_pixels_differ(a: Image, b: Image) -> int:
+	var n := 0
+	for y in a.get_height():
+		for x in a.get_width():
+			var p := a.get_pixel(x, y)
+			var q := b.get_pixel(x, y)
+			if absf(p.r - q.r) + absf(p.g - q.g) + absf(p.b - q.b) > 0.06:
+				n += 1
+	return n
+
+
+func _warm_eye_check() -> void:
+	var was_paused := get_tree().paused
+	get_tree().paused = true
+	var before: Image = await _probe_frame_image()
+	var again: Image = await _probe_frame_image()
+	await _pose("warm_off")
+	_main._matron_view.warm_up(_main._camera)
+	var during: Image = await _probe_frame_image()
+	await _pose("warm_on")
+	_main._matron_view.warm_down()
+	get_tree().paused = was_paused
+	print("SCRAPERX_PERF perf_locker warm_eye noise_pixels=%d warm_pixels=%d of=%d" % [
+		_probe_pixels_differ(before, again), _probe_pixels_differ(again, during),
+		before.get_width() * before.get_height()])
+
+
+# Faces the tower's axis from where the climber stands.
+const PROBE_TOWER_AXIS := Vector2(0.0, -130.0)
+# Each view held this long: its counters (draws, primitives, memory) are
+# steady within a few frames, and software rendering is slow.
+const PROBE_VIEW_HOLD_S := 0.5
+
+
+func _probe_views(scenario: String, pitches: Array) -> bool:
+	var me := _position()
+	var to_tower := PROBE_TOWER_AXIS - Vector2(me.x, me.z)
+	var base_yaw := atan2(-to_tower.x, -to_tower.y)
+	await _seconds(PROBE_VIEW_HOLD_S)
+	_probe_start("settle")
+	await _seconds(PROBE_VIEW_HOLD_S)
+	for pitch in pitches:
+		for quarter in 4:
+			_main._yaw = base_yaw + float(quarter) * PI * 0.5
+			_main._pitch = float(pitch)
+			_probe_tag = "p%+d_y%d" % [int(round(float(pitch) * 100.0)), quarter * 90]
+			await _seconds(PROBE_VIEW_HOLD_S)
+			# PERF_STILLS=1: a still of every view, to compare a change by eye.
+			if OS.get_environment("PERF_STILLS") == "1":
+				await _pose("%s_%s" % [scenario, _probe_tag])
+	_probe_stop()
+	var out := _probe_report(scenario)
+	var worst_tag := ""
+	for tag in out:
+		if worst_tag.is_empty() or int(out[tag]["most"]["draws"]) > int(out[worst_tag]["most"]["draws"]):
+			worst_tag = tag
+	if worst_tag.is_empty():
+		return _fail("no frames were measured")
+	_detail = "worst_view=%s draws=%d prims=%d video_mb=%.0f wall_max_ms=%.1f at %s" % [worst_tag,
+		int(out[worst_tag]["most"]["draws"]), int(out[worst_tag]["most"]["prims"]),
+		float(out[worst_tag]["most"]["video_mb"]), float(out[worst_tag]["max"]), str(_position())]
+	return true
+
+
+# The three full-height views Cory's force-close comes in (#248): from the
+# yard at the tower's foot looking up, seated in the slingshot's pouch
+# looking up, and from the summit looking down.
+func _perf_view_bottom() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	return await _probe_views("perf_view_bottom", [1.35, 0.6])
+
+
+func _perf_view_sling(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	# PERF_FAST_WALK=1: the walk to the pouch rendered at a quarter scale (the
+	# host's software renderer draws it in minutes otherwise); the views are
+	# measured at the settings' own scale.
+	var scale := get_viewport().scaling_3d_scale
+	if OS.get_environment("PERF_FAST_WALK") == "1":
+		get_viewport().scaling_3d_scale = 0.25
+	var walked := await _go(device, Vector2(6.0, -40.0), 0.3, 25.0) and \
+			await _go(device, Vector2(6.0, -57.6), 0.2, 25.0) and \
+			await _go(device, Vector2(-3.0, -57.6), 0.15, 12.0) and \
+			await _go(device, Vector2(-3.0, -55.0), 0.1, 6.0)
+	get_viewport().scaling_3d_scale = scale
+	if not walked:
+		return _fail("the walk into the slingshot's pouch stalled at %s" % str(_position()))
+	if not await _offered(&"slingshot", "ENTER POUCH"):
+		return _fail("by the pouch, Action read '%s', not ENTER POUCH" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_sling()["seated"]), 1.0):
+		return _fail("ENTER POUCH did not harness the rider")
+	return await _probe_views("perf_view_sling", [1.35, 0.6])
+
+
+func _perf_view_top() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	return await _probe_views("perf_view_top", [-1.25, -0.6])
+
+
+# J-045 (#248) walking choppiness: frame-time percentiles on a fixed
+# walk-and-look route across the yard, the way Cory plays it. From the
+# spawn the stick walks the route's legs (each one another touch scenario
+# already walks), the view swaying side to side as a thumb looks about;
+# at each stop a full turn round, then a look up and down. Every frame is
+# logged; the report is p50/p95/p99 and the worst frames per part ("walk",
+# "look") and over the whole route, each worst frame with the share that
+# took most of it (_probe_cause). Measures only: it fails only when the
+# route stalls or nothing was measured (no budget asserted; #248's target is
+# p95 <= 11.1 ms on the phone, where real frame times come from).
+const PERF_WALK_LEGS := [Vector2(6.0, -70.0), "look", Vector2(-13.4, -86.0), "look"]
+# PERF_WALK_LONG=1 walks on back across the yard to its east side (a phone
+# run; on the host's software renderer the short route already takes ~10 min).
+const PERF_WALK_LONG_LEGS := [Vector2(6.0, -70.0), "home", Vector2(30.0, -10.0), Vector2(43.5, 6.0), "look"]
+const PERF_WALK_SWAY_RAD := 0.5
+const PERF_WALK_SWAY_RATE := 1.2
+const PERF_WALK_TURN_RATE := 1.6
+
+var _walk_sway_on := false
+
+
+func _perf_walk(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var home := Vector2(_position().x, _position().z)
+	await _seconds(1.0)
+	_probe_start("settle")
+	await _seconds(0.5)
+	var stop := 0
+	var legs := PERF_WALK_LEGS + (PERF_WALK_LONG_LEGS if OS.get_environment("PERF_WALK_LONG") == "1" else [])
+	for leg in legs:
+		if leg is String and leg == "look":
+			stop += 1
+			_probe_tag = "look"
+			await _tilt(0.3)
+			var turned := 0.0
+			while turned < TAU:
+				var step := PERF_WALK_TURN_RATE * get_process_delta_time()
+				_main._yaw = float(_main._yaw) + step
+				turned += step
+				await get_tree().process_frame
+			await _tilt(1.0)
+			await _tilt(-0.5)
+			await _tilt(0.0)
+			continue
+		var target: Vector2 = home if leg is String else leg
+		_probe_tag = "walk"
+		var me := _position()
+		await _face(target - Vector2(me.x, me.z))
+		_walk_sway(float(_main._yaw))
+		var walked := await _walk_to(device, target, 0.4, 40.0)
+		_walk_sway_on = false
+		if not walked:
+			_probe_stop()
+			return _fail("the walk to %s stalled at %s" % [str(target), str(_position())])
+	_probe_stop()
+	var out := _probe_report("perf_walk")
+	var route := []
+	for row in _probe_rows:
+		if row["tag"] != "settle":
+			route.append(row)
+	if route.is_empty():
+		return _fail("no frames were measured")
+	var walls := []
+	for row in route:
+		walls.append(float(row["wall_ms"]))
+	walls.sort()
+	var at := func(q: float) -> float: return float(walls[clampi(int(ceil(q * walls.size())) - 1, 0, walls.size() - 1)])
+	route.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["wall_ms"]) > float(b["wall_ms"]))
+	var causes := {}
+	var over_p95 := 0
+	var shares := {"native": [], "script": [], "render": []}
+	for row in route:
+		shares["native"].append(float(row["native_ms"]))
+		shares["script"].append(_probe_script_ms(row))
+		shares["render"].append(maxf(float(row["wall_ms"]) - float(row["process_ms"]) - float(row["physics_ms"]), 0.0))
+	for key in shares:
+		var s := _perf_series_summary(shares[key])
+		print("SCRAPERX_PERF perf_walk share %s mean=%.2f p95=%.2f max=%.2f" % [key, float(s["mean"]),
+			float(s["p95"]), float(s["max"])])
+	for row in route:
+		if float(row["wall_ms"]) > at.call(0.95):
+			over_p95 += 1
+			var cause := _probe_cause(row)
+			causes[cause] = int(causes.get(cause, 0)) + 1
+	print("SCRAPERX_PERF perf_walk route frames=%d wall_p50=%.1f p95=%.1f p99=%.1f max=%.1f over_11ms=%d over_50ms=%d causes_over_p95=%s" % [
+		walls.size(), at.call(0.5), at.call(0.95), at.call(0.99), float(walls[walls.size() - 1]),
+		walls.filter(func(w: float) -> bool: return w > 11.1).size(),
+		walls.filter(func(w: float) -> bool: return w > 50.0).size(), str(causes)])
+	_detail = "frames=%d p50=%.1f p95=%.1f p99=%.1f max=%.1f stops=%d worst=%s draws_max=%d" % [walls.size(),
+		at.call(0.5), at.call(0.95), at.call(0.99), float(walls[walls.size() - 1]), stop,
+		_probe_cause(route[0]), int(out["walk"]["most"]["draws"]) if out.has("walk") else 0]
+	return true
+
+
+# Sways the view about `base` while the walk's stick (relative to the view)
+# keeps the walker on its line; runs beside the walk until it is let go.
+func _walk_sway(base: float) -> void:
+	_walk_sway_on = true
+	var t := 0.0
+	while _walk_sway_on:
+		_main._yaw = base + PERF_WALK_SWAY_RAD * sin(PERF_WALK_SWAY_RATE * t)
+		await get_tree().process_frame
+		t += get_process_delta_time()
+
+
+# J-045 draw attribution (perf_attrib): what each top-level group costs in draws, in the main pass
+# and the shadow pass, and a census of the GeometryInstance3D surfaces in view. Pitch from
+# ATTR_PITCH, spawn from the scenario. Only measures.
+func _attr_draws() -> int:
+	await _frames(3)
+	return int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+
+static func _attr_key(path: String) -> String:
+	var parts := path.split("/")
+	var out := PackedStringArray()
+	for k in mini(parts.size() - 1, 3):
+		var piece := parts[k]
+		if piece.begins_with("KitBody") and piece.length() > 9:
+			out.append(piece if OS.get_environment("ATTR_FULL") == "1" else "KitBody%s" % piece.substr(7, piece.length() - 9))
+			continue
+		var cut := piece.length()
+		while cut > 0 and "0123456789_@".contains(piece[cut - 1]):
+			cut -= 1
+		out.append(piece.substr(0, cut) if cut > 0 else "#")
+	return "/".join(out)
+
+func _attr_census(tag: String) -> void:
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	var planes := cam.get_frustum()
+	var cpos := cam.global_position
+	var groups := {}
+	var stack: Array[Node] = [_main]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		stack.append_array(node.get_children())
+		var gi := node as GeometryInstance3D
+		if gi == null or not gi.is_visible_in_tree():
+			continue
+		var aabb := gi.global_transform * gi.get_aabb()
+		var inside := true
+		for p in planes:
+			var e := aabb.size * 0.5
+			var r := absf(p.normal.x) * e.x + absf(p.normal.y) * e.y + absf(p.normal.z) * e.z
+			if p.distance_to(aabb.get_center()) > r:
+				inside = false
+				break
+		var d := cpos.distance_to(aabb.get_center())
+		if gi.visibility_range_end > 0.0 and d > gi.visibility_range_end + gi.visibility_range_end_margin:
+			inside = false
+		var surfaces := 1
+		var prims := 0
+		var mi := gi as MeshInstance3D
+		if mi != null:
+			surfaces = mi.mesh.get_surface_count() if mi.mesh != null else 0
+			if mi.mesh is ArrayMesh:
+				for sidx in surfaces:
+					prims += (mi.mesh as ArrayMesh).surface_get_array_len(sidx) / 3
+		var key := "%s %s" % [_attr_key(str(_main.get_path_to(gi))), gi.get_class()]
+		if not groups.has(key):
+			groups[key] = [0, 0, 0, 0, 0]
+		var g: Array = groups[key]
+		g[0] += 1
+		if inside:
+			g[1] += 1
+			g[2] += surfaces
+			g[4] += prims
+			if gi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+				g[3] += surfaces
+	var keys := groups.keys()
+	keys.sort_custom(func(a, b): return int(groups[a][2]) > int(groups[b][2]))
+	for k in keys:
+		var g: Array = groups[k]
+		if int(g[2]) > 0:
+			print("ATTR %s census %s nodes=%d in_view=%d view_surfaces=%d view_casting=%d view_verts3=%d" % [
+				tag, k, g[0], g[1], g[2], g[3], g[4]])
+
+func _attr_view(tag: String) -> void:
+	var total := await _attr_draws()
+	var prims := int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
+	await _pose("attr_" + tag)
+	print("ATTR %s total=%d objects=%d prims=%d" % [tag, total, int(Performance.get_monitor(
+		Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))])
+	_main._sky_cycle.set_shadow_level(0)
+	var no_shadow := await _attr_draws()
+	print("ATTR %s shadows_off=%d (shadow pass %d)" % [tag, no_shadow, total - no_shadow])
+	_main._sky_cycle.set_shadow_level(1)
+	print("ATTR %s shadows_low=%d" % [tag, await _attr_draws()])
+	_main._sky_cycle.set_shadow_level(_main._settings.shadow_quality)
+	if OS.get_environment("ATTR_GROUPS") != "0":
+		# A group is taken out of every pass by its geometry's render layers
+		# (scripts that set their own visible each frame leave layers alone).
+		for child in _main.get_children():
+			var held := {}
+			var stack: Array[Node] = [child]
+			while not stack.is_empty():
+				var node: Node = stack.pop_back()
+				stack.append_array(node.get_children())
+				var gi := node as GeometryInstance3D
+				if gi != null and gi.layers != 0:
+					held[gi] = gi.layers
+					gi.layers = 0
+			if held.is_empty():
+				continue
+			var without := await _attr_draws()
+			var prims_without := int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
+			_main._sky_cycle.set_shadow_level(0)
+			var without_main := await _attr_draws()
+			_main._sky_cycle.set_shadow_level(_main._settings.shadow_quality)
+			for gi in held:
+				(gi as GeometryInstance3D).layers = int(held[gi])
+			if total - without != 0:
+				print("ATTR %s group %s all=%d main=%d shadow=%d prims=%d" % [tag, child.name, total - without,
+					no_shadow - without_main, (total - without) - (no_shadow - without_main), prims - prims_without])
+	_attr_census(tag)
+
+func _perf_attrib() -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var me := _position()
+	var to_tower := PROBE_TOWER_AXIS - Vector2(me.x, me.z)
+	var base_yaw := atan2(-to_tower.x, -to_tower.y)
+	var pitch := float(OS.get_environment("ATTR_PITCH")) if OS.get_environment("ATTR_PITCH") != "" else 0.6
+	_main._yaw = base_yaw + float(OS.get_environment("ATTR_YAW")) if OS.get_environment("ATTR_YAW") != "" else base_yaw
+	if OS.get_environment("ATTR_FORKLIFT") != "":
+		# Facing the yard's forklift, its wheels in view.
+		var wheel: Vector3 = (_native().get_forklift_state_at(0)["wheels"][0] as Transform3D).origin
+		var scale := get_viewport().scaling_3d_scale
+		get_viewport().scaling_3d_scale = 0.25
+		var near := Vector2(wheel.x, wheel.z) + (Vector2(me.x, me.z) - Vector2(wheel.x, wheel.z)).normalized() * 4.0
+		await _go(InputRouter.Device.TOUCH, near, 0.5, 30.0)
+		_move_dir(InputRouter.Device.TOUCH, Vector2.ZERO)
+		get_viewport().scaling_3d_scale = scale
+		me = _position()
+		var to_truck := Vector2(wheel.x - me.x, wheel.z - me.z)
+		_main._yaw = atan2(-to_truck.x, -to_truck.y)
+		pitch = atan2(wheel.y - me.y - 1.6, to_truck.length())
+		print("ATTR forklift at %s, %.1f m off" % [str(wheel), to_truck.length()])
+	if OS.get_environment("ATTR_SHADOW") != "":
+		_main._settings.shadow_quality = int(OS.get_environment("ATTR_SHADOW"))
+		_main._sky_cycle.set_shadow_level(_main._settings.shadow_quality)
+	if OS.get_environment("ATTR_HOUR") != "":
+		_main._sky_cycle.day_minutes = 0.0
+		_main._sky_cycle.set_hour(float(OS.get_environment("ATTR_HOUR")))
+	_main._pitch = pitch
+	await _seconds(1.0)
+	await _attr_view("p%d" % int(round(pitch * 100.0)))
 	return true

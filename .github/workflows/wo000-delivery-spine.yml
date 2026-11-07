@@ -137,6 +137,18 @@ jobs:
           python3 .github/scripts/check_matrix_shard_coverage.py \
             --workflow .github/workflows/wo000-delivery-spine.yml
 
+      - name: Verify no step check is an inverted command
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Under set -e a failing `! cmd` never stops the step (bash exempts
+          # inverted pipelines), so `! grep -q FAIL log` checks nothing unless
+          # it is the step's last line. Write: if grep -q ...; then exit 1; fi
+          if grep -nE '^[[:space:]]+! ' .github/workflows/*.yml; then
+            echo "inverted command in a run block: it can never fail the step"
+            exit 1
+          fi
+
   host-build:
     needs: scope
     if: needs.scope.outputs.game == 'true'
@@ -488,6 +500,9 @@ jobs:
             -E "^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow|matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower|matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$" \
             -j 2 --output-on-failure | tee artifacts/native-tests-matron-3.log
           grep -F "100% tests passed" artifacts/native-tests-matron-3.log
+          # The fight perf probes (J-044m, #245): perf-step runs in this shard; its per-step
+          # numbers are in CTest's own log of passing output, printed here (logged, not asserted).
+          grep -E "^PERF perf-step|^PASS scraperx_sim perf-step" build/host/Testing/Temporary/LastTest.log
 
       - name: Upload shard native logs
         uses: actions/upload-artifact@v4
@@ -671,7 +686,7 @@ jobs:
         run: |
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
-          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep \
+          for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep perf_fight \
               touch_bay touch_radio touch_stock touch_forklift touch_forklift_strain touch_forklift_ram touch_yard_crane touch_crane_magnet touch_crane_spreader touch_machines touch_high touch_incline touch_wheel \
               touch_tram touch_her_chart touch_her_chart_fast touch_mic_consent touch_voice_echo touch_room_hearing fall_voice touch_twin; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
@@ -893,8 +908,23 @@ jobs:
           # swings when she turns.
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/matron_figure_test.gd 2>&1 | tee artifacts/matron-figure.log
-          ! grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log
+          if grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log; then exit 1; fi
           test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 21
+
+      - name: The Matron's feet plant when she walks
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Upright walking feet stay where they were put while her body
+          # goes over them (matron_rig.gd upright plants); standing feet
+          # are already still, and the shuffle plants at two speeds.
+          # The landing and takeoff checks pin the plant blends: a
+          # touchdown landing starts from the drawn height (no re-lift),
+          # and a takeoff releases over the blend (no snap to the pose).
+          timeout 180s tools/godot/godot --headless --path godot \
+            --script res://tests/matron_foot_plant_test.gd 2>&1 | tee artifacts/matron-foot-plant.log
+          if grep -q '^MATRON_FOOT_PLANT FAIL' artifacts/matron-foot-plant.log; then exit 1; fi
+          test "$(grep -c '^MATRON_FOOT_PLANT PASS' artifacts/matron-foot-plant.log)" -eq 11
 
       - name: Check Matron perception and physical contact presentation
         shell: bash
@@ -910,7 +940,7 @@ jobs:
           set -euo pipefail
           timeout 300s tools/godot/godot --headless --path godot \
             --script res://tests/matron_presentation_test.gd 2>&1 | tee artifacts/matron-presentation.log
-          ! grep -q 'MATRON_PRESENTATION FAIL' artifacts/matron-presentation.log
+          if grep -q 'MATRON_PRESENTATION FAIL' artifacts/matron-presentation.log; then exit 1; fi
           grep -q '^MATRON_PRESENTATION PASS$' artifacts/matron-presentation.log
 
       - name: Check the gore answers every tear and fatality edge
@@ -924,7 +954,7 @@ jobs:
           # failed check.
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/gore_shots_test.gd 2>&1 | tee artifacts/gore-shots.log
-          ! grep -q '^GORE FAIL' artifacts/gore-shots.log
+          if grep -q '^GORE FAIL' artifacts/gore-shots.log; then exit 1; fi
           grep -q '^GORE PASS (0 failed)$' artifacts/gore-shots.log
 
       - name: Check Matron hold haptics fire once per event

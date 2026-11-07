@@ -2,6 +2,7 @@
 // deck (see matron.hpp).
 #include "sim/matron.hpp"
 #include "sim/matron_grip.hpp"
+#include "sim/matron_effort.hpp"
 #include "sim/mechanism_kit.hpp"
 #include <cstdlib>
 
@@ -2225,6 +2226,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                         Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                         push /= push.Length();
                         bodies.AddForce(id, push * force_n, EActivation::Activate);
+                        // J-046 measurement only: charged to no Budget, no reaction on her.
+                        effort::add_force(effort::Path::CrateShove, push * force_n,
+                                          bodies.GetLinearVelocity(id) - velocity, 0.0F, Vec3::sZero());
                     }
                 }
             }
@@ -4382,6 +4386,8 @@ bool Matron::shove_stock(const float dt, const float ax, const float az, const b
         const RVec3 face = p - RVec3(d * r) + RVec3(0.0, low, 0.0);
         bodies.AddForce(t.body, granted, face);
         bodies.AddForce(body_, -granted);
+        // J-046 measurement only: the feet's take above, on through her hands.
+        effort::add_force(effort::Path::HandsPush, granted, pv - her_v, granted.Length(), -granted);
         foot_drive_dv_ -= (granted / kMassKg) * dt;
         stock_push_force_n_ = granted.Length();
     }
@@ -4442,6 +4448,9 @@ void Matron::throw_stroke(const float dt) {
     if (granted.LengthSq() > 0.0F) {
         bodies.AddForce(t.body, granted);
         bodies.AddForce(body_, -granted);
+        // J-046 measurement only: the feet's take above, on through her hands.
+        effort::add_force(effort::Path::HandsPush, granted, pv - bodies.GetLinearVelocity(body_), granted.Length(),
+                          -granted);
         foot_drive_dv_ -= (granted / kMassKg) * dt;
         stock_push_force_n_ = granted.Length();
     }
@@ -4755,8 +4764,12 @@ void Matron::sense_near() {
     };
     std::array<Candidate, 32> candidates{};
     std::size_t count = 0;
+    // The nearest; among equals, by id (the broad phase's order is its own).
+    const auto nearer = [](const Candidate &a, const Candidate &b) {
+        return a.distance != b.distance ? a.distance < b.distance : a.id < b.id;
+    };
     for (const BodyID id : found.mHits) {
-        if (id == body_ || id == player_ || id == held || count == candidates.size()) {
+        if (id == body_ || id == player_ || id == held) {
             continue;
         }
         const BodyLockRead lock(physics_.GetBodyLockInterface(), id);
@@ -4777,7 +4790,7 @@ void Matron::sense_near() {
         if (inverse_mass <= 0.0F) {
             continue;
         }
-        Candidate &c = candidates[count++];
+        Candidate c;
         c.near.body = id;
         c.near.velocity = body.GetLinearVelocity();
         c.near.at = body.GetCenterOfMassPosition();
@@ -4785,12 +4798,18 @@ void Matron::sense_near() {
         c.near.radius = body.GetWorldSpaceBounds().GetExtent().Length();
         c.distance = Vec3(c.near.at - at).Length();
         c.id = id.GetIndexAndSequenceNumber();
+        // Past 32 in her box (a stocked floor), the 32 nearest are kept, not
+        // the broad phase's first 32: what touches her is never crowded out.
+        if (count < candidates.size()) {
+            candidates[count++] = c;
+        } else {
+            Candidate &farthest = *std::max_element(candidates.begin(), candidates.end(), nearer);
+            if (nearer(c, farthest)) {
+                farthest = c;
+            }
+        }
     }
-    // The nearest; among equals, by id (the broad phase's order is its own).
-    std::sort(candidates.begin(), candidates.begin() + static_cast<std::ptrdiff_t>(count),
-              [](const Candidate &a, const Candidate &b) {
-                  return a.distance != b.distance ? a.distance < b.distance : a.id < b.id;
-              });
+    std::sort(candidates.begin(), candidates.begin() + static_cast<std::ptrdiff_t>(count), nearer);
     near_count_ = std::min(count, kMaxNear);
     for (std::size_t i = 0; i < near_count_; ++i) {
         near_[i] = candidates[i].near;

@@ -105,6 +105,7 @@ int main() {
         run_hook();
         run_workers();
         run_c7();
+        run_gust_front_upper();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "handling") {
@@ -193,6 +194,7 @@ int main() {
         return 0;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-damage") { run_matron_damage(); return EXIT_SUCCESS; }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "perf-step") { run_perf_step(); return EXIT_SUCCESS; }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "strike") {
         run_strike();
         return 0;
@@ -209,9 +211,17 @@ int main() {
         run_matron_kick();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-jab") {
+        run_matron_jab();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder-pull") {
         run_matron_ladder_pull();
         return EXIT_SUCCESS;
+    }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-budget") {
+        run_matron_budget();
+        return 0;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-load") {
         run_matron_load();
@@ -642,6 +652,7 @@ int main() {
     run_hook();
     run_workers();
     run_c7();
+    run_gust_front_upper();
     run_summit();
     run_summit_arm();
     run_summit_ending();

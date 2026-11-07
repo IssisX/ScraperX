@@ -24,9 +24,22 @@ Rules, all read from the repo as written:
 A step renamed here must be renamed in REQUIRED in the same change,
 never on its own, or the next run fails the step as missing.
 
+This script's own logic has the same silent-drop shape one layer
+further up: if its step parser or proof-line check regresses, no other
+guard reads the godot-audits-and-mix non-script steps, so a broken
+audits guard passes the real workflow while an audit proof step goes
+unverified -- proven 2026-11-05 by neutering its step-level `if:`
+detector and watching it PASS a workflow with a conditional proof
+step. So its parser regressions live in `_self_test()` below and run
+on every invocation, `--self-test` or not, the same pattern as the
+matrix, guard-step and apk-step guards: a logic regression fails its
+own run before it can pass a real workflow.
+
 Usage:
     python3 .github/scripts/check_audit_step_coverage.py \
         --workflow .github/workflows/wo000-delivery-spine.yml
+
+    python3 .github/scripts/check_audit_step_coverage.py --self-test
 """
 
 import argparse
@@ -100,19 +113,21 @@ def _is_proof_line(line):
     return False
 
 
-def main():
-    root = Path(__file__).resolve().parents[2]
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workflow", default=root / ".github/workflows/wo000-delivery-spine.yml")
-    args = parser.parse_args()
+def check_text(workflow_text):
+    """Check workflow text against REQUIRED.
 
-    found = job_steps(Path(args.workflow).read_text())
+    Returns (problems, checked): problems is the list of failure
+    strings (empty when the workflow is clean), checked is the count
+    of proof steps found exactly once. The caller prints them; this
+    function does no I/O, so the self-test can run it on fixture text.
+    """
+    found = job_steps(workflow_text)
     if found is None:
-        print(f"FAIL: no job {JOB} in workflow")
-        return 1
+        return [f"no job {JOB} in workflow"], 0
     counts, steps = found
 
     failures = []
+    checked = 0
     for name in REQUIRED:
         if counts.get(name, 0) == 0:
             failures.append(f"missing audit proof step: {name}")
@@ -120,6 +135,7 @@ def main():
         if counts[name] > 1:
             failures.append(f"duplicate audit proof step: {name}")
             continue
+        checked += 1
         block = steps[name]
         if any(IF_RE.match(line) for line in block):
             failures.append(f"conditional audit proof step, must run unconditionally: {name}")
@@ -130,13 +146,92 @@ def main():
         if not any(_is_proof_line(line) for line in block):
             failures.append(f"audit proof step has no grep/diff/test assertion: {name}")
 
-    if failures:
+    return failures, checked
+
+
+def _self_test():
+    """Regression checks for the audit-step guard parser, run on every invocation."""
+    def step(name, body):
+        return (f"      - name: {name}\n"
+                "        run: |\n"
+                f"          {body}\n")
+
+    fold = step("Run Godot at Fold aspect through native machine authority and capture proof",
+                'grep -q "proof" fold.txt')
+    summit = step("Render the complete summit ending through touch",
+                  'grep -q "summit" summit.txt')
+    mix = step("Measure the mix a player hears", "test -f mix.wav")
+    solids = step("World solids table matches the Godot builders",
+                  "diff solids.txt expected.txt")
+    floats = step("Nothing floats", 'grep -q "float" audit.txt')
+
+    valid = ("name: test\njobs:\n"
+             "  godot-audits-and-mix:\n    steps:\n"
+             + fold + summit + mix + solids + floats)
+    cases = []
+
+    def case(name, text, want):
+        problems, _checked = check_text(text)
+        joined = "\n".join(problems)
+        if want is None:
+            if problems:
+                raise AssertionError(f"{name}: expected clean, got {problems}")
+        elif want not in joined:
+            raise AssertionError(f"{name}: expected {want!r} in {problems}")
+        cases.append(name)
+
+    case("valid", valid, None)
+    case("dropped-step",
+         valid.replace(floats, "", 1),
+         "missing audit proof step: Nothing floats")
+    case("duplicated-step",
+         valid.replace(floats, floats + floats, 1),
+         "duplicate audit proof step: Nothing floats")
+    case("conditional-step",
+         valid.replace("      - name: Nothing floats\n",
+                       "      - name: Nothing floats\n"
+                       "        if: github.event_name == 'push'\n", 1),
+         "conditional audit proof step, must run unconditionally: Nothing floats")
+    case("no-run-block",
+         valid.replace('        run: |\n          grep -q "float" audit.txt\n',
+                       "        uses: actions/checkout@v4\n", 1),
+         "audit proof step is not a run step: Nothing floats")
+    case("gutted-step",
+         valid.replace('grep -q "float" audit.txt', "echo hi", 1),
+         "audit proof step has no grep/diff/test assertion: Nothing floats")
+    case("comment-only-assertion",
+         valid.replace('grep -q "float" audit.txt', '# grep -q "float" audit.txt', 1),
+         "audit proof step has no grep/diff/test assertion: Nothing floats")
+    case("bang-grep-counts",
+         valid.replace('grep -q "float" audit.txt', '! grep -q "float" audit.txt', 1),
+         None)
+    case("missing-job",
+         valid.replace("  godot-audits-and-mix:\n    steps:\n", "  other-job:\n    steps:\n", 1),
+         "no job godot-audits-and-mix in workflow")
+    return len(cases)
+
+
+def main():
+    root = Path(__file__).resolve().parents[2]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--workflow", default=root / ".github/workflows/wo000-delivery-spine.yml")
+    parser.add_argument("--self-test", action="store_true",
+                        help="run parser regressions only")
+    args = parser.parse_args()
+
+    fixture_count = _self_test()
+    if args.self_test:
+        print(f"PASS: {fixture_count} audit-step coverage parser regression checks")
+        return 0
+
+    problems, checked = check_text(Path(args.workflow).read_text())
+    if problems:
         print("FAIL: audit proof step coverage gaps:")
-        for failure in failures:
-            print(f"  {failure}")
+        for problem in problems:
+            print(f"  {problem}")
         return 1
     print(
-        f"PASS: {len(REQUIRED)} audit proof steps present in {JOB}, "
+        f"PASS: {checked} audit proof steps present in {JOB}, "
         "each with a proof assertion"
     )
     return 0

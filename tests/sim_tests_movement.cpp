@@ -860,6 +860,57 @@ void run_c7() {
               << " top_y=" << top.player_position.y << " wind_peak_n=" << top.wind_peak_force_n << "\n";
 }
 
+// Gust fronts above 396 m (J-022): a front sweeps west off the tower's west
+// face on the simulation's clock; behind it the gust pushes a body that is
+// off its feet. Below 396 m no front ever acts, at any phase.
+void run_gust_front_upper() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+
+    // Above 396 m: wait for a front to reach the 484 ring's west edge, then
+    // jump west off it into the drop while the front passes.
+    Simulation s(InitialSpawn::Ring484North);
+    require(s.advance_frame(1.0).accepted, "gust front: settle");
+    require(walk_to(s, -11.0, -139.6, 6.0, 0.1), "gust front: to the ring's west band");
+    // The front's leading edge is in the snapshot: wait until it is past the
+    // zone's east edge, so the jump lands behind it.
+    require(advance_until(s,
+                          [](const Snapshot &n) { return n.wind_front_x_m < -27.0; },
+                          12.0),
+            "gust front: a front must reach the upper tower within two periods");
+    require(s.set_facing(-1.0, 0.0), "gust front: face west");
+    require(s.set_sprint_input(true), "gust front: sprint");
+    require(s.request_jump(), "gust front: jump");
+    require(hold_stick(s, -1.0, 0.0, -1.0, 0.0, 6.0,
+                       [](const Snapshot &n) { return n.wind_peak_force_n > 20.0; }),
+            "gust front: off the 484 ring the front must push the climber");
+    require(s.snapshot().player_position.y > 396.0, "gust front: the push must happen above 396 m");
+    std::cout << "PASS scraperx_sim gust front: peak_n=" << s.snapshot().wind_peak_force_n
+              << " y=" << s.snapshot().player_position.y << "\n";
+
+    // Below 396 m: the same jump off the 374 ring, after a full front period
+    // has passed, is never pushed.
+    Simulation low(InitialSpawn::Ring374West);
+    require(low.advance_frame(1.0).accepted, "gust front below: settle");
+    require(low.advance_frame(9.0).accepted, "gust front below: a full front period passes");
+    require(low.snapshot().wind_mps == 0.0, "gust front below: no wind below 396 m at any phase");
+    require(low.set_facing(-1.0, 0.0), "gust front below: face west");
+    require(low.set_sprint_input(true), "gust front below: sprint");
+    require(low.request_jump(), "gust front below: jump");
+    require(hold_stick(low, -1.0, 0.0, -1.0, 0.0, 4.0,
+                       [](const Snapshot &n) {
+                           return !n.player_grounded && n.player_position.x < -27.0;
+                       }),
+            "gust front below: the jump must carry the body into the front's footprint");
+    (void)low.advance_frame(1.0);
+    require(low.snapshot().wind_peak_force_n == 0.0,
+            "gust front below: no front may push below 396 m");
+    require(low.snapshot().player_position.y < 396.0, "gust front below: the check must stay below 396 m");
+    std::cout << "PASS scraperx_sim gust front below 396: peak_n=" << low.snapshot().wind_peak_force_n
+              << " y=" << low.snapshot().player_position.y << "\n";
+}
+
 // Jump pressed in the air just before the feet land is kept and spent on the
 // first tick they stand; pressed too early it is gone; it never jumps in the
 // air.

@@ -8,6 +8,9 @@
 
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
 
+#include <algorithm>
+#include <chrono>
+
 namespace scraperx::sim {
 
 namespace {
@@ -24,6 +27,15 @@ std::uint64_t save_format_key() noexcept {
         key = key * 1099511628211ULL ^ static_cast<std::uint64_t>(size);
     }
     return key;
+}
+
+// One step's span into a StepTimer (StepTiming, simulation.hpp): last, max,
+// running mean. Measurement only; nothing in the sim reads it.
+void record_span(StepTimer &timer, const double us) noexcept {
+    timer.last_us = us;
+    timer.max_us = std::max(timer.max_us, us);
+    ++timer.samples;
+    timer.mean_us += (us - timer.mean_us) / static_cast<double>(timer.samples);
 }
 
 } // namespace
@@ -585,7 +597,16 @@ void Simulation::step_fixed() noexcept {
     commands.hook_release = hook_release_;
     commands.hook_take = hook_take_;
 
+    const auto step_started = std::chrono::steady_clock::now();
     physics_world_->step(commands, static_cast<float>(kFixedStepSeconds), next_time_seconds);
+    record_span(step_timing_.step,
+                std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - step_started).count());
+    {
+        const PhysicsWorld::StepSpans &spans = physics_world_->step_spans();
+        record_span(step_timing_.physics, spans.physics_us);
+        record_span(step_timing_.matron_pre, spans.matron_pre_us);
+        record_span(step_timing_.matron_post, spans.matron_post_us);
+    }
     if (physics_world_->take_run_ended_by_matron()) {
         // She won: the run ends and starts again, the body whole.
         physics_world_.reset();
@@ -1432,6 +1453,8 @@ double Simulation::debug_matron_gravity_factor() const noexcept {
     const Matron &matron = physics_world_->matron();
     return physics_world_->physics_system().GetBodyInterfaceNoLock().GetGravityFactor(matron.body());
 }
+
+StepTiming Simulation::step_timing() const noexcept { return step_timing_; }
 
 MatronSnapshot Simulation::matron_state() const noexcept {
     const Matron &matron = physics_world_->matron();

@@ -236,6 +236,8 @@ void ScraperXSimulation::_bind_methods() {
                                 &ScraperXSimulation::get_kit_body_parts);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_transform", "body"),
                                 &ScraperXSimulation::get_kit_body_transform);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_poses", "bodies", "everything"),
+                                &ScraperXSimulation::get_kit_body_poses);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_body_index", "entity_id"),
                                 &ScraperXSimulation::get_kit_body_index);
     godot::ClassDB::bind_method(godot::D_METHOD("get_kit_cable_count"),
@@ -300,6 +302,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_water_state"), &ScraperXSimulation::get_water_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hand_state"), &ScraperXSimulation::get_hand_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wind_mps"), &ScraperXSimulation::get_wind_mps);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_wind_front_x_m"), &ScraperXSimulation::get_wind_front_x_m);
     godot::ClassDB::bind_method(godot::D_METHOD("get_wet_state"), &ScraperXSimulation::get_wet_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_shop_state"), &ScraperXSimulation::get_shop_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_crane_state"), &ScraperXSimulation::get_crane_state);
@@ -323,7 +326,9 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_state"), &ScraperXSimulation::get_matron_state);
     godot::ClassDB::bind_method(godot::D_METHOD("place_matron_home", "deck_top"), &ScraperXSimulation::place_matron_home);
     godot::ClassDB::bind_method(godot::D_METHOD("get_matron_hold_state"), &ScraperXSimulation::get_matron_hold_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_matron_frame"), &ScraperXSimulation::get_matron_frame);
     godot::ClassDB::bind_method(godot::D_METHOD("get_bay_state"), &ScraperXSimulation::get_bay_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_step_timing"), &ScraperXSimulation::get_step_timing);
     godot::ClassDB::bind_method(godot::D_METHOD("light_summit"), &ScraperXSimulation::light_summit);
     godot::ClassDB::bind_method(godot::D_METHOD("set_summit_lower", "held"), &ScraperXSimulation::set_summit_lower);
     godot::ClassDB::bind_method(godot::D_METHOD("request_summit_unrig"), &ScraperXSimulation::request_summit_unrig);
@@ -469,7 +474,7 @@ godot::Dictionary ScraperXSimulation::get_strike_state() const {
     const sim::Snapshot &p = simulation_->snapshot();
     godot::Dictionary out;
     out["phase"] = static_cast<std::int64_t>(p.strike_phase);
-    out["move"] = static_cast<std::int64_t>(p.strike_move);   // 0 punch, 1 sweep
+    out["move"] = static_cast<std::int64_t>(p.strike_move);   // 0 punch, 1 sweep, 2 kick, 3 jab, 4 cross
     out["phase_ticks"] = static_cast<std::int64_t>(p.strike_phase_ticks);
     out["offered"] = p.strike_offered;
     out["held"] = p.held_by_matron;   // in her hand: the offer is his escape (before the rip)
@@ -849,6 +854,57 @@ godot::Transform3D ScraperXSimulation::get_kit_body_transform(const std::int64_t
             to_godot(simulation_->kit_body_position(index))};
 }
 
+godot::PackedFloat32Array ScraperXSimulation::get_kit_body_poses(const godot::PackedInt32Array &bodies,
+                                                                const bool everything) {
+    constexpr std::int64_t kFloats = 14;
+    const std::uint32_t count = simulation_->kit_body_count();
+    if (kit_poses_seen_.size() != count) {
+        kit_poses_seen_.assign(count, KitPoseSeen{});
+    }
+    const std::int64_t listed = bodies.size();
+    godot::PackedFloat32Array out;
+    out.resize(listed * kFloats);
+    float *write = out.ptrw();
+    std::int64_t written = 0;
+    for (std::int64_t at = 0; at < listed; ++at) {
+        const std::int32_t body = bodies[at];
+        if (body < 0 || static_cast<std::uint32_t>(body) >= count) {
+            continue;
+        }
+        const auto index = static_cast<std::uint32_t>(body);
+        KitPoseSeen &seen = kit_poses_seen_[index];
+        const bool enabled = simulation_->kit_body_enabled(index);
+        bool report = everything || !seen.reported || enabled != seen.enabled;
+        if (enabled) {
+            const godot::Transform3D pose(godot::Basis(to_godot(simulation_->kit_body_rotation(index))),
+                                          to_godot(simulation_->kit_body_position(index)));
+            report = report || pose != seen.pose;
+            seen.pose = pose;
+        }
+        seen.enabled = enabled;
+        seen.reported = true;
+        if (!report) {
+            continue;
+        }
+        float *row = write + written * kFloats;
+        const godot::Basis &basis = seen.pose.basis;
+        row[0] = static_cast<float>(body);
+        row[1] = enabled ? 1.0F : 0.0F;
+        for (int column = 0; column < 3; ++column) {
+            const godot::Vector3 axis = basis.get_column(column);
+            row[2 + column * 3] = static_cast<float>(axis.x);
+            row[3 + column * 3] = static_cast<float>(axis.y);
+            row[4 + column * 3] = static_cast<float>(axis.z);
+        }
+        row[11] = static_cast<float>(seen.pose.origin.x);
+        row[12] = static_cast<float>(seen.pose.origin.y);
+        row[13] = static_cast<float>(seen.pose.origin.z);
+        ++written;
+    }
+    out.resize(written * kFloats);
+    return out;
+}
+
 std::int64_t ScraperXSimulation::get_kit_body_index(const std::int64_t entity_id) const {
     if (entity_id < 0) {
         return -1;
@@ -1115,6 +1171,12 @@ godot::Dictionary ScraperXSimulation::get_hand_state() const {
 // The wind off the west face at the body (m/s), 0 outside its zone.
 double ScraperXSimulation::get_wind_mps() const {
     return simulation_->snapshot().wind_mps;
+}
+
+// The gust front's leading edge above 396 m (J-022): its x, so the view can
+// draw the mist streak ahead of the push.
+double ScraperXSimulation::get_wind_front_x_m() const {
+    return simulation_->snapshot().wind_front_x_m;
 }
 
 godot::Dictionary ScraperXSimulation::get_wet_state() const {
@@ -1696,42 +1758,48 @@ godot::Dictionary ScraperXSimulation::get_death_state() const {
 }
 
 godot::Dictionary ScraperXSimulation::get_matron_state() const {
-    const sim::MatronSnapshot state = simulation_->matron_state();
     godot::Dictionary out;
-    out["state"] = static_cast<std::int64_t>(state.state);
-    out["alive"] = state.alive;
-    out["released"] = state.released;
-    out["sees_player"] = state.sees_player;
-    out["position"] = godot::Vector3(static_cast<real_t>(state.position.x), static_cast<real_t>(state.position.y),
+    fill_matron_state(out, simulation_->matron_state());
+    return out;
+}
+
+void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::MatronSnapshot &state) const {
+    MatronKeys &keys = state_keys_;
+    keys.begin();
+    out[keys("state")] = static_cast<std::int64_t>(state.state);
+    out[keys("alive")] = state.alive;
+    out[keys("released")] = state.released;
+    out[keys("sees_player")] = state.sees_player;
+    out[keys("position")] = godot::Vector3(static_cast<real_t>(state.position.x), static_cast<real_t>(state.position.y),
                                      static_cast<real_t>(state.position.z));
-    out["yaw"] = state.yaw;
+    out[keys("yaw")] = state.yaw;
     // Where she is drawn between two ticks, as the player is (render_*).
-    out["render_position"] = to_godot(simulation_->render_matron_position());
-    out["render_yaw"] = simulation_->render_matron_yaw();
-    out["speed"] = state.speed;
-    out["stride"] = state.stride;
-    out["strain"] = state.strain;
-    out["bolts"] = state.bolts_popped;
-    out["noise"] = state.noise_heard;
-    out["turn"] = static_cast<std::int64_t>(state.turn);
-    out["turn_s"] = state.turn_s;
-    out["fooled"] = static_cast<std::int64_t>(state.fooled);
-    out["wary"] = state.wary;
-    out["vaults"] = static_cast<std::int64_t>(state.vaults);
-    out["leaps"] = static_cast<std::int64_t>(state.leaps);
-    out["unrigs"] = static_cast<std::int64_t>(state.unrigs);
-    out["on_line"] = state.on_line;
-    out["cable_slides"] = static_cast<std::int64_t>(state.cable_slides);
-    out["climbing"] = state.climbing;
-    out["climb_move"] = godot::String(sim::traversal::move_name(state.climb_move));
-    out["climb_move_active"] = state.climb_move_active;
-    out["climb_phase"] = static_cast<std::int64_t>(state.climb_phase);
-    out["climb_airborne"] = state.climb_airborne;
+    out[keys("render_position")] = to_godot(simulation_->render_matron_position());
+    out[keys("render_yaw")] = simulation_->render_matron_yaw();
+    out[keys("speed")] = state.speed;
+    out[keys("stride")] = state.stride;
+    out[keys("strain")] = state.strain;
+    out[keys("bolts")] = state.bolts_popped;
+    out[keys("noise")] = state.noise_heard;
+    out[keys("turn")] = static_cast<std::int64_t>(state.turn);
+    out[keys("turn_s")] = state.turn_s;
+    out[keys("fooled")] = static_cast<std::int64_t>(state.fooled);
+    out[keys("wary")] = state.wary;
+    out[keys("vaults")] = static_cast<std::int64_t>(state.vaults);
+    out[keys("leaps")] = static_cast<std::int64_t>(state.leaps);
+    out[keys("unrigs")] = static_cast<std::int64_t>(state.unrigs);
+    out[keys("on_line")] = state.on_line;
+    out[keys("cable_slides")] = static_cast<std::int64_t>(state.cable_slides);
+    out[keys("climbing")] = state.climbing;
+    out[keys("climb_move")] = godot::String(sim::traversal::move_name(state.climb_move));
+    out[keys("climb_move_active")] = state.climb_move_active;
+    out[keys("climb_phase")] = static_cast<std::int64_t>(state.climb_phase);
+    out[keys("climb_airborne")] = state.climb_airborne;
     // Aliases under the names the presentation prep originally read, so a
     // view written against climb_move_phase / climb_move_airborne gets the
     // same values. These are aliases, not new sim data.
-    out["climb_move_phase"] = static_cast<std::int64_t>(state.climb_phase);
-    out["climb_move_airborne"] = state.climb_airborne;
+    out[keys("climb_move_phase")] = static_cast<std::int64_t>(state.climb_phase);
+    out[keys("climb_move_airborne")] = state.climb_airborne;
     // Feet support for the pose, under climb_ names: the floor under her
     // current level and the force on that support. Both are already
     // exported as floor_y / support_n; these aliases keep the climb pose
@@ -1739,93 +1807,93 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
     // below are real MatronSnapshot fields (see Matron::refresh_view),
     // not view-script derivations: when climb_hand2_known is false the
     // rig keeps the single-hold pose.
-    out["climb_feet_floor_y"] = state.floor_y;
-    out["climb_support_n"] = state.support_n;
-    out["climb_hand2"] = godot::Vector3(state.climb_hand2.x, state.climb_hand2.y, state.climb_hand2.z);
-    out["climb_hand2_known"] = state.climb_hand2_known;
-    out["climb_feet_support"] =
+    out[keys("climb_feet_floor_y")] = state.floor_y;
+    out[keys("climb_support_n")] = state.support_n;
+    out[keys("climb_hand2")] = godot::Vector3(state.climb_hand2.x, state.climb_hand2.y, state.climb_hand2.z);
+    out[keys("climb_hand2_known")] = state.climb_hand2_known;
+    out[keys("climb_feet_support")] =
         godot::Vector3(state.climb_feet_support.x, state.climb_feet_support.y, state.climb_feet_support.z);
-    out["climb_feet_support_known"] = state.climb_feet_support_known;
+    out[keys("climb_feet_support_known")] = state.climb_feet_support_known;
     // Her contacts as the simulation has them: the presentation plants a limb
     // only on these, and lets every plant go when she is not supported.
-    out["contact_supported"] = state.contact_supported;
-    out["contact_feet"] = godot::Vector3(static_cast<real_t>(state.contact_feet.x),
+    out[keys("contact_supported")] = state.contact_supported;
+    out[keys("contact_feet")] = godot::Vector3(static_cast<real_t>(state.contact_feet.x),
                                          static_cast<real_t>(state.contact_feet.y),
                                          static_cast<real_t>(state.contact_feet.z));
-    out["contact_feet_body"] = static_cast<std::int64_t>(state.contact_feet_body);
-    out["contact_feet_sub"] = static_cast<std::int64_t>(state.contact_feet_sub);
-    out["contact_support_velocity"] = godot::Vector3(static_cast<real_t>(state.contact_support_velocity.x),
+    out[keys("contact_feet_body")] = static_cast<std::int64_t>(state.contact_feet_body);
+    out[keys("contact_feet_sub")] = static_cast<std::int64_t>(state.contact_feet_sub);
+    out[keys("contact_support_velocity")] = godot::Vector3(static_cast<real_t>(state.contact_support_velocity.x),
                                                      static_cast<real_t>(state.contact_support_velocity.y),
                                                      static_cast<real_t>(state.contact_support_velocity.z));
-    out["contact_hand_held"] = state.contact_hand_held;
-    out["contact_hand"] = godot::Vector3(static_cast<real_t>(state.contact_hand.x),
+    out[keys("contact_hand_held")] = state.contact_hand_held;
+    out[keys("contact_hand")] = godot::Vector3(static_cast<real_t>(state.contact_hand.x),
                                          static_cast<real_t>(state.contact_hand.y),
                                          static_cast<real_t>(state.contact_hand.z));
-    out["contact_hand_body"] = static_cast<std::int64_t>(state.contact_hand_body);
-    out["contact_hand_sub"] = static_cast<std::int64_t>(state.contact_hand_sub);
-    out["contact_hand2_held"] = state.contact_hand2_held;
-    out["contact_hand2"] = godot::Vector3(static_cast<real_t>(state.contact_hand2.x),
+    out[keys("contact_hand_body")] = static_cast<std::int64_t>(state.contact_hand_body);
+    out[keys("contact_hand_sub")] = static_cast<std::int64_t>(state.contact_hand_sub);
+    out[keys("contact_hand2_held")] = state.contact_hand2_held;
+    out[keys("contact_hand2")] = godot::Vector3(static_cast<real_t>(state.contact_hand2.x),
                                           static_cast<real_t>(state.contact_hand2.y),
                                           static_cast<real_t>(state.contact_hand2.z));
-    out["contact_hand2_body"] = static_cast<std::int64_t>(state.contact_hand2_body);
-    out["contact_hand2_sub"] = static_cast<std::int64_t>(state.contact_hand2_sub);
-    out["contact_line"] = state.contact_line;
-    out["contact_braced"] = state.contact_braced;
-    out["contact_brace"] = godot::Vector3(static_cast<real_t>(state.contact_brace.x),
+    out[keys("contact_hand2_body")] = static_cast<std::int64_t>(state.contact_hand2_body);
+    out[keys("contact_hand2_sub")] = static_cast<std::int64_t>(state.contact_hand2_sub);
+    out[keys("contact_line")] = state.contact_line;
+    out[keys("contact_braced")] = state.contact_braced;
+    out[keys("contact_brace")] = godot::Vector3(static_cast<real_t>(state.contact_brace.x),
                                           static_cast<real_t>(state.contact_brace.y),
                                           static_cast<real_t>(state.contact_brace.z));
-    out["climb_sliding"] = state.climb_sliding;
-    out["climb_leg_driving"] = state.climb_leg_driving;
-    out["climb_bar_traverse"] = state.climb_bar_traverse;
-    out["climbs"] = static_cast<std::int64_t>(state.climbs);
-    out["clinging"] = state.clinging;
-    out["floor_y"] = state.floor_y;
-    out["lead_floor_y"] = state.lead_floor_y;
-    out["climb_hand"] = godot::Vector3(state.climb_hand.x, state.climb_hand.y, state.climb_hand.z);
-    out["climb_force_n"] = state.climb_force_n;
-    out["climb_grips"] = static_cast<std::int64_t>(state.climb_grips);
-    out["climb_releases"] = static_cast<std::int64_t>(state.climb_releases);
-    out["mantling"] = state.mantling;
-    out["lead_x"] = state.lead_x;
-    out["lead_z"] = state.lead_z;
-    out["lead_age_s"] = state.lead_age_s;
-    out["lead_seen"] = state.lead_seen;
+    out[keys("climb_sliding")] = state.climb_sliding;
+    out[keys("climb_leg_driving")] = state.climb_leg_driving;
+    out[keys("climb_bar_traverse")] = state.climb_bar_traverse;
+    out[keys("climbs")] = static_cast<std::int64_t>(state.climbs);
+    out[keys("clinging")] = state.clinging;
+    out[keys("floor_y")] = state.floor_y;
+    out[keys("lead_floor_y")] = state.lead_floor_y;
+    out[keys("climb_hand")] = godot::Vector3(state.climb_hand.x, state.climb_hand.y, state.climb_hand.z);
+    out[keys("climb_force_n")] = state.climb_force_n;
+    out[keys("climb_grips")] = static_cast<std::int64_t>(state.climb_grips);
+    out[keys("climb_releases")] = static_cast<std::int64_t>(state.climb_releases);
+    out[keys("mantling")] = state.mantling;
+    out[keys("lead_x")] = state.lead_x;
+    out[keys("lead_z")] = state.lead_z;
+    out[keys("lead_age_s")] = state.lead_age_s;
+    out[keys("lead_seen")] = state.lead_seen;
     {
         static constexpr const char *kSenses[] = {"none", "sight", "peripheral", "hearing", "touch"};
-        out["lead_sense"] = kSenses[state.lead_sense < 5 ? state.lead_sense : 0];
+        out[keys("lead_sense")] = kSenses[state.lead_sense < 5 ? state.lead_sense : 0];
     }
-    out["glimpsed"] = state.glimpsed;
-    out["eye"] = godot::Vector3(static_cast<real_t>(state.eye.x), static_cast<real_t>(state.eye.y),
+    out[keys("glimpsed")] = state.glimpsed;
+    out[keys("eye")] = godot::Vector3(static_cast<real_t>(state.eye.x), static_cast<real_t>(state.eye.y),
                                 static_cast<real_t>(state.eye.z));
-    out["eye_yaw"] = state.eye_yaw;
-    out["watched"] = state.watched;
-    out["stalking"] = state.stalking;
-    out["stalk_s"] = state.stalk_s;
-    out["ambush"] = state.ambush;
-    out["ambush_waiting"] = state.ambush_waiting;
-    out["lead_valid"] = state.lead_valid;
-    out["acoustic_queries"] = static_cast<std::int64_t>(state.acoustic_queries);
-    out["rage"] = state.rage;
-    out["stage"] = static_cast<std::int64_t>(state.stage);
-    out["exposure"] = state.exposure;
-    out["shoves"] = static_cast<std::int64_t>(state.shoves);
-    out["carrying"] = static_cast<std::int64_t>(state.carrying);
-    out["stock_handle"] = to_godot(state.stock_handle);
-    out["stock_constraint"] = to_godot(state.stock_constraint);
-    out["stock_rotation"] = to_godot(state.stock_rotation);
-    out["stock_size"] = to_godot(state.stock_size);
-    out["stock_seeking"] = static_cast<std::int64_t>(state.stock_seeking);
-    out["stock_shoves"] = static_cast<std::int64_t>(state.stock_shoves);
-    out["stock_push_force_n"] = state.stock_push_force_n;
-    out["stock_seek_handle"] = to_godot(state.stock_seek_handle);
-    out["stock_seek_rotation"] = to_godot(state.stock_seek_rotation);
-    out["stock_seek_size"] = to_godot(state.stock_seek_size);
-    out["takes"] = static_cast<std::int64_t>(state.takes);
-    out["throws"] = static_cast<std::int64_t>(state.throws);
-    out["staggers"] = static_cast<std::int64_t>(state.staggers);
-    out["knockdowns"] = static_cast<std::int64_t>(state.knockdowns);
-    out["blow_mps"] = state.blow_mps;
-    out["blow_low"] = state.blow_low;
+    out[keys("eye_yaw")] = state.eye_yaw;
+    out[keys("watched")] = state.watched;
+    out[keys("stalking")] = state.stalking;
+    out[keys("stalk_s")] = state.stalk_s;
+    out[keys("ambush")] = state.ambush;
+    out[keys("ambush_waiting")] = state.ambush_waiting;
+    out[keys("lead_valid")] = state.lead_valid;
+    out[keys("acoustic_queries")] = static_cast<std::int64_t>(state.acoustic_queries);
+    out[keys("rage")] = state.rage;
+    out[keys("stage")] = static_cast<std::int64_t>(state.stage);
+    out[keys("exposure")] = state.exposure;
+    out[keys("shoves")] = static_cast<std::int64_t>(state.shoves);
+    out[keys("carrying")] = static_cast<std::int64_t>(state.carrying);
+    out[keys("stock_handle")] = to_godot(state.stock_handle);
+    out[keys("stock_constraint")] = to_godot(state.stock_constraint);
+    out[keys("stock_rotation")] = to_godot(state.stock_rotation);
+    out[keys("stock_size")] = to_godot(state.stock_size);
+    out[keys("stock_seeking")] = static_cast<std::int64_t>(state.stock_seeking);
+    out[keys("stock_shoves")] = static_cast<std::int64_t>(state.stock_shoves);
+    out[keys("stock_push_force_n")] = state.stock_push_force_n;
+    out[keys("stock_seek_handle")] = to_godot(state.stock_seek_handle);
+    out[keys("stock_seek_rotation")] = to_godot(state.stock_seek_rotation);
+    out[keys("stock_seek_size")] = to_godot(state.stock_seek_size);
+    out[keys("takes")] = static_cast<std::int64_t>(state.takes);
+    out[keys("throws")] = static_cast<std::int64_t>(state.throws);
+    out[keys("staggers")] = static_cast<std::int64_t>(state.staggers);
+    out[keys("knockdowns")] = static_cast<std::int64_t>(state.knockdowns);
+    out[keys("blow_mps")] = state.blow_mps;
+    out[keys("blow_low")] = state.blow_low;
     // J-044c: the jointed upper body (head, neck, chest, arm L, arm R).
     {
         godot::Array angles;
@@ -1836,46 +1904,45 @@ godot::Dictionary ScraperXSimulation::get_matron_state() const {
             masses.push_back(state.upper_mass_kg[i]);
             quats.push_back(to_godot(state.upper_q[i]));
         }
-        out["upper_angle_deg"] = angles;
-        out["upper_mass_kg"] = masses;
-        out["upper_q"] = quats;
+        out[keys("upper_angle_deg")] = angles;
+        out[keys("upper_mass_kg")] = masses;
+        out[keys("upper_q")] = quats;
     }
-    out["upper_root_mass_kg"] = state.upper_root_mass_kg;
-    out["upper_motor_power_w"] = state.upper_motor_power_w;
-    out["riding"] = state.riding;
-    out["damage_ns"] = state.damage_ns;
-    out["fall"] =godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
-    out["kneeling"] = state.kneeling;
-    out["down_s"] = state.down_s;
-    out["down_left_s"] = state.down_left_s;
-    out["on_pipe"] = state.on_pipe;
-    out["stance"] = static_cast<int>(state.stance);
-    out["shape_a"] = godot::Vector3(state.shape_a.x, state.shape_a.y, state.shape_a.z);
-    out["shape_b"] = godot::Vector3(state.shape_b.x, state.shape_b.y, state.shape_b.z);
-    out["shape_r"] = state.shape_r;
-    out["pipe_head_down"] = state.pipe_head_down;
-    out["pipe_sliding"] = state.pipe_sliding;
-    out["pipe_stunned"] = state.pipe_stunned;
-    out["pipe_tuck"] = state.pipe_tuck;
-    out["pipe_listening"] = state.pipe_listening;
-    out["pipe_links"] = static_cast<std::int64_t>(state.pipe_links);
-    out["pipe_holds"] = static_cast<std::int64_t>(state.pipe_holds);
-    out["pipe_flanges"] = static_cast<std::int64_t>(state.pipe_flanges);
-    out["pipe_slams"] = static_cast<std::int64_t>(state.pipe_slams);
-    out["pipe_slam_mps"] = state.pipe_slam_mps;
-    out["catches"] = static_cast<std::int64_t>(state.catches);
-    out["planks_fallen"] = static_cast<std::int64_t>(state.planks_fallen);
+    out[keys("upper_root_mass_kg")] = state.upper_root_mass_kg;
+    out[keys("upper_motor_power_w")] = state.upper_motor_power_w;
+    out[keys("riding")] = state.riding;
+    out[keys("damage_ns")] = state.damage_ns;
+    out[keys("fall")] =godot::Vector2(static_cast<real_t>(state.fall_x), static_cast<real_t>(state.fall_z));
+    out[keys("kneeling")] = state.kneeling;
+    out[keys("down_s")] = state.down_s;
+    out[keys("down_left_s")] = state.down_left_s;
+    out[keys("on_pipe")] = state.on_pipe;
+    out[keys("stance")] = static_cast<int>(state.stance);
+    out[keys("shape_a")] = godot::Vector3(state.shape_a.x, state.shape_a.y, state.shape_a.z);
+    out[keys("shape_b")] = godot::Vector3(state.shape_b.x, state.shape_b.y, state.shape_b.z);
+    out[keys("shape_r")] = state.shape_r;
+    out[keys("pipe_head_down")] = state.pipe_head_down;
+    out[keys("pipe_sliding")] = state.pipe_sliding;
+    out[keys("pipe_stunned")] = state.pipe_stunned;
+    out[keys("pipe_tuck")] = state.pipe_tuck;
+    out[keys("pipe_listening")] = state.pipe_listening;
+    out[keys("pipe_links")] = static_cast<std::int64_t>(state.pipe_links);
+    out[keys("pipe_holds")] = static_cast<std::int64_t>(state.pipe_holds);
+    out[keys("pipe_flanges")] = static_cast<std::int64_t>(state.pipe_flanges);
+    out[keys("pipe_slams")] = static_cast<std::int64_t>(state.pipe_slams);
+    out[keys("pipe_slam_mps")] = state.pipe_slam_mps;
+    out[keys("catches")] = static_cast<std::int64_t>(state.catches);
+    out[keys("planks_fallen")] = static_cast<std::int64_t>(state.planks_fallen);
     godot::PackedFloat32Array planks;
     planks.resize(static_cast<std::int64_t>(state.planks.size()));
     for (std::size_t i = 0; i < state.planks.size(); ++i) {
         planks[static_cast<std::int64_t>(i)] = static_cast<float>(state.planks[i]);
     }
-    out["planks"] = planks;
-    out["bracing"] = state.bracing;
-    out["support_n"] = state.support_n;
-    out["trap"] = static_cast<std::int64_t>(state.trap);
-    out["traps"] = static_cast<std::int64_t>(state.traps);
-    return out;
+    out[keys("planks")] = planks;
+    out[keys("bracing")] = state.bracing;
+    out[keys("support_n")] = state.support_n;
+    out[keys("trap")] = static_cast<std::int64_t>(state.trap);
+    out[keys("traps")] = static_cast<std::int64_t>(state.traps);
 }
 
 namespace {
@@ -1885,115 +1952,134 @@ namespace {
 } // namespace
 
 godot::Dictionary ScraperXSimulation::get_matron_hold_state() const {
-    const sim::Snapshot &p = simulation_->snapshot();
-    const sim::MatronSnapshot m = simulation_->matron_state();
     godot::Dictionary out;
+    fill_matron_hold(out, simulation_->snapshot(), simulation_->matron_state());
+    return out;
+}
+
+godot::Array ScraperXSimulation::get_matron_frame() const {
+    const sim::MatronSnapshot m = simulation_->matron_state();
+    godot::Dictionary state;
+    fill_matron_state(state, m);
+    godot::Dictionary hold;
+    fill_matron_hold(hold, simulation_->snapshot(), m);
+    godot::Array out;
+    out.append(state);
+    out.append(hold);
+    return out;
+}
+
+void ScraperXSimulation::fill_matron_hold(godot::Dictionary &out, const sim::Snapshot &p,
+                                          const sim::MatronSnapshot &m) const {
+    MatronKeys &keys = hold_keys_;
+    keys.begin();
     // Her side.
-    out["state"] = static_cast<std::int64_t>(m.state);
-    out["grip_on"] = m.grip_on;
-    out["hold_s"] = m.hold_s;
-    out["hand"] = to_godot(m.hand);
-    out["hand2"] = to_godot(m.hand2);
-    out["armplay_beat"] = static_cast<std::int64_t>(m.armplay_beat);
-    out["fatal_beat_view"] = static_cast<std::int64_t>(m.fatal_beat);
-    out["grabs"] = static_cast<std::int64_t>(m.grabs);
-    out["carries"] = static_cast<std::int64_t>(m.carries);
-    out["dangles"] = static_cast<std::int64_t>(m.dangles);
-    out["armplays"] = static_cast<std::int64_t>(m.armplays);
-    out["releases"] = static_cast<std::int64_t>(m.releases);
-    out["spares"] = static_cast<std::int64_t>(m.spares);
-    out["arm_tears"] = static_cast<std::int64_t>(m.arm_tears);
-    out["claims"] = static_cast<std::int64_t>(m.claims);
-    out["waste_not"] = static_cast<std::int64_t>(m.waste_not);
+    out[keys("state")] = static_cast<std::int64_t>(m.state);
+    out[keys("grip_on")] = m.grip_on;
+    out[keys("hold_s")] = m.hold_s;
+    out[keys("hand")] = to_godot(m.hand);
+    out[keys("hand2")] = to_godot(m.hand2);
+    out[keys("armplay_beat")] = static_cast<std::int64_t>(m.armplay_beat);
+    out[keys("fatal_beat_view")] = static_cast<std::int64_t>(m.fatal_beat);
+    out[keys("grabs")] = static_cast<std::int64_t>(m.grabs);
+    out[keys("carries")] = static_cast<std::int64_t>(m.carries);
+    out[keys("dangles")] = static_cast<std::int64_t>(m.dangles);
+    out[keys("armplays")] = static_cast<std::int64_t>(m.armplays);
+    out[keys("releases")] = static_cast<std::int64_t>(m.releases);
+    out[keys("spares")] = static_cast<std::int64_t>(m.spares);
+    out[keys("arm_tears")] = static_cast<std::int64_t>(m.arm_tears);
+    out[keys("claims")] = static_cast<std::int64_t>(m.claims);
+    out[keys("waste_not")] = static_cast<std::int64_t>(m.waste_not);
     // The fatality (sim/matron.hpp kFatalTargetS): its path (0 none, 1 the
     // hang over the drop, 2 the floor), the hang's window, the edge and the
     // way out over the drop, and the release beat: a count that rises by one
     // as she lets go of him over the drop (slow motion, the pull-out down the
     // drop, the fade).
-    out["fatal_path"] = static_cast<std::int64_t>(m.fatal_path);
-    out["fatal_hang"] = m.fatal_hang;
-    out["fatal_window_s"] = m.fatal_window_s;
-    out["fatal_window_total_s"] = static_cast<double>(sim::Matron::kFatalHangWindowS);
-    out["fatal_edge"] = to_godot(m.fatal_edge);
-    out["fatal_out"] = godot::Vector2(static_cast<real_t>(m.fatal_out_x), static_cast<real_t>(m.fatal_out_z));
-    out["fatal_release_beat"] = static_cast<std::int64_t>(m.fatal_release_beat);
-    out["fatal_escapes"] = static_cast<std::int64_t>(m.fatal_escapes);
-    out["reels"] = static_cast<std::int64_t>(m.reels);
+    out[keys("fatal_path")] = static_cast<std::int64_t>(m.fatal_path);
+    out[keys("fatal_hang")] = m.fatal_hang;
+    out[keys("fatal_window_s")] = m.fatal_window_s;
+    out[keys("fatal_window_total_s")] = static_cast<double>(sim::Matron::kFatalHangWindowS);
+    out[keys("fatal_edge")] = to_godot(m.fatal_edge);
+    out[keys("fatal_out")] = godot::Vector2(static_cast<real_t>(m.fatal_out_x), static_cast<real_t>(m.fatal_out_z));
+    out[keys("fatal_release_beat")] = static_cast<std::int64_t>(m.fatal_release_beat);
+    out[keys("fatal_escapes")] = static_cast<std::int64_t>(m.fatal_escapes);
+    out[keys("reels")] = static_cast<std::int64_t>(m.reels);
     // The body in her hand: her hand (the body her muscle drives, while it is
     // out) and the held ankle point (where her fingers hold him, while they do).
-    out["matron_hand_present"] = p.matron_hand_present;
-    out["held_ankle"] = to_godot(p.held_ankle);
-    out["held"] = p.held_by_matron;
-    out["free_rotation"] = p.player_free_rotation;
-    out["body_rotation"] = to_godot_quat(p.player_rot_x, p.player_rot_y, p.player_rot_z, p.player_rot_w);
-    out["body_angular_velocity"] = to_godot(p.player_angular_velocity);
-    out["grip_load_n"] = p.grip_load_n;
-    out["grip_strain_ns"] = p.grip_strain_ns;
-    out["thrash"] = p.thrash;
-    out["braced"] = p.braced_on_rail;
+    out[keys("matron_hand_present")] = p.matron_hand_present;
+    out[keys("held_ankle")] = to_godot(p.held_ankle);
+    out[keys("held")] = p.held_by_matron;
+    out[keys("free_rotation")] = p.player_free_rotation;
+    out[keys("body_rotation")] = to_godot_quat(p.player_rot_x, p.player_rot_y, p.player_rot_z, p.player_rot_w);
+    out[keys("body_angular_velocity")] = to_godot(p.player_angular_velocity);
+    out[keys("grip_load_n")] = p.grip_load_n;
+    out[keys("grip_strain_ns")] = p.grip_strain_ns;
+    out[keys("thrash")] = p.thrash;
+    out[keys("braced")] = p.braced_on_rail;
     // Arms.
-    out["left_arm_lost"] = p.left_arm_lost;
-    out["right_arm_lost"] = p.right_arm_lost;
-    out["one_arm"] = p.one_arm;
-    out["arm_tear_count"] = static_cast<std::int64_t>(p.arm_tear_count);
-    out["arm_throw_count"] = static_cast<std::int64_t>(p.arm_throw_count);
-    out["severed_arm_present"] = p.severed_arm_present;
-    out["severed_arm_position"] = to_godot(p.severed_arm_position);
-    out["severed_arm_rotation"] =
+    out[keys("left_arm_lost")] = p.left_arm_lost;
+    out[keys("right_arm_lost")] = p.right_arm_lost;
+    out[keys("one_arm")] = p.one_arm;
+    out[keys("arm_tear_count")] = static_cast<std::int64_t>(p.arm_tear_count);
+    out[keys("arm_throw_count")] = static_cast<std::int64_t>(p.arm_throw_count);
+    out[keys("severed_arm_present")] = p.severed_arm_present;
+    out[keys("severed_arm_position")] = to_godot(p.severed_arm_position);
+    out[keys("severed_arm_rotation")] =
         to_godot_quat(p.severed_arm_rot_x, p.severed_arm_rot_y, p.severed_arm_rot_z, p.severed_arm_rot_w);
-    out["wrist_load_n"] = p.wrist_load_n;
-    out["wrist_strain_ns"] = p.wrist_strain_ns;
-    out["wrist_side"] = static_cast<std::int64_t>(p.wrist_side);
-    out["wrist_tear_ns"] = static_cast<double>(sim::Matron::kArmTearNs);
-    out["last_severed_side"] = static_cast<std::int64_t>(p.last_severed_side);
-    out["hang_hand_side"] = static_cast<std::int64_t>(p.hang_hand_side);
-    out["dyno_in_flight"] = p.dyno_in_flight;
-    out["dyno_catch_count"] = static_cast<std::int64_t>(p.dyno_catch_count);
-    out["dyno_miss_count"] = static_cast<std::int64_t>(p.dyno_miss_count);
-    out["heel_hook_count"] = static_cast<std::int64_t>(p.heel_hook_count);
+    out[keys("wrist_load_n")] = p.wrist_load_n;
+    out[keys("wrist_strain_ns")] = p.wrist_strain_ns;
+    out[keys("wrist_side")] = static_cast<std::int64_t>(p.wrist_side);
+    out[keys("wrist_tear_ns")] = static_cast<double>(sim::Matron::kArmTearNs);
+    out[keys("last_severed_side")] = static_cast<std::int64_t>(p.last_severed_side);
+    out[keys("hang_hand_side")] = static_cast<std::int64_t>(p.hang_hand_side);
+    out[keys("dyno_in_flight")] = p.dyno_in_flight;
+    out[keys("dyno_catch_count")] = static_cast<std::int64_t>(p.dyno_catch_count);
+    out[keys("dyno_miss_count")] = static_cast<std::int64_t>(p.dyno_miss_count);
+    out[keys("heel_hook_count")] = static_cast<std::int64_t>(p.heel_hook_count);
     // The fatality.
-    out["claimed"] = p.claimed_by_matron;
-    out["fatality_beat"] = static_cast<std::int64_t>(p.fatality_beat);
+    out[keys("claimed")] = p.claimed_by_matron;
+    out[keys("fatality_beat")] = static_cast<std::int64_t>(p.fatality_beat);
     godot::PackedInt64Array edges;
     edges.resize(static_cast<std::int64_t>(p.fatality_beat_edges.size()));
     for (std::size_t i = 0; i < p.fatality_beat_edges.size(); ++i) {
         edges[static_cast<std::int64_t>(i)] = static_cast<std::int64_t>(p.fatality_beat_edges[i]);
     }
-    out["fatality_beat_edges"] = edges;
-    out["left_leg_lost"] = p.left_leg_lost;
-    out["right_leg_lost"] = p.right_leg_lost;
-    out["leg_tear_count"] = static_cast<std::int64_t>(p.leg_tear_count);
-    out["leg_load_n"] = p.leg_load_n;
-    out["leg_strain_ns"] = godot::Vector2(static_cast<real_t>(p.leg_strain_ns[0]), static_cast<real_t>(p.leg_strain_ns[1]));
-    out["leg_tear_ns"] = static_cast<double>(sim::Matron::kLegTearNs);
-    out["knee_pin_count"] = static_cast<std::int64_t>(p.knee_pin_count);
-    out["matron_hand"] = to_godot(p.matron_hand);
-    out["matron_hand2"] = to_godot(p.matron_hand2);
-    out["player_position"] = to_godot(p.player_position);
+    out[keys("fatality_beat_edges")] = edges;
+    out[keys("left_leg_lost")] = p.left_leg_lost;
+    out[keys("right_leg_lost")] = p.right_leg_lost;
+    out[keys("leg_tear_count")] = static_cast<std::int64_t>(p.leg_tear_count);
+    out[keys("leg_load_n")] = p.leg_load_n;
+    out[keys("leg_strain_ns")] = godot::Vector2(static_cast<real_t>(p.leg_strain_ns[0]), static_cast<real_t>(p.leg_strain_ns[1]));
+    out[keys("leg_tear_ns")] = static_cast<double>(sim::Matron::kLegTearNs);
+    out[keys("knee_pin_count")] = static_cast<std::int64_t>(p.knee_pin_count);
+    out[keys("matron_hand")] = to_godot(p.matron_hand);
+    out[keys("matron_hand2")] = to_godot(p.matron_hand2);
+    out[keys("player_position")] = to_godot(p.player_position);
     godot::Array legs;
+    MatronKeys &leg_keys = leg_keys_;
     for (std::size_t k = 0; k < 2; ++k) {
+        leg_keys.begin();
         godot::Dictionary leg;
-        leg["present"] = p.severed_leg_present[k];
-        leg["position"] = to_godot(p.severed_leg_position[k]);
+        leg[leg_keys("present")] = p.severed_leg_present[k];
+        leg[leg_keys("position")] = to_godot(p.severed_leg_position[k]);
         const sim::Quaternion &q = p.severed_leg_rotation[k];
-        leg["rotation"] = to_godot_quat(q.x, q.y, q.z, q.w);
+        leg[leg_keys("rotation")] = to_godot_quat(q.x, q.y, q.z, q.w);
         legs.append(leg);
     }
-    out["severed_legs"] = legs;
-    out["knee_down"] = p.matron_knee_down;
-    out["knee"] = to_godot(p.matron_knee);
-    out["knot_count"] = static_cast<std::int64_t>(p.knot_count);
-    out["knot_load_n"] = p.knot_load_n;
-    out["brake_kick_count"] = static_cast<std::int64_t>(p.brake_kick_count);
-    out["haul_count"] = static_cast<std::int64_t>(p.haul_count);
-    out["haul_peak_y"] = p.haul_peak_y;
-    out["knot_part_count"] = static_cast<std::int64_t>(p.knot_part_count);
-    out["fall_landing_count"] = static_cast<std::int64_t>(p.fall_landing_count);
-    out["fall_landing_speed_mps"] = p.fall_landing_speed_mps;
-    out["waste_not_count"] = static_cast<std::int64_t>(p.waste_not_count);
-    out["wipe_s"] = p.wipe_s;
-    out["runs_ended_by_matron"] = static_cast<std::int64_t>(p.runs_ended_by_matron);
-    return out;
+    out[keys("severed_legs")] = legs;
+    out[keys("knee_down")] = p.matron_knee_down;
+    out[keys("knee")] = to_godot(p.matron_knee);
+    out[keys("knot_count")] = static_cast<std::int64_t>(p.knot_count);
+    out[keys("knot_load_n")] = p.knot_load_n;
+    out[keys("brake_kick_count")] = static_cast<std::int64_t>(p.brake_kick_count);
+    out[keys("haul_count")] = static_cast<std::int64_t>(p.haul_count);
+    out[keys("haul_peak_y")] = p.haul_peak_y;
+    out[keys("knot_part_count")] = static_cast<std::int64_t>(p.knot_part_count);
+    out[keys("fall_landing_count")] = static_cast<std::int64_t>(p.fall_landing_count);
+    out[keys("fall_landing_speed_mps")] = p.fall_landing_speed_mps;
+    out[keys("waste_not_count")] = static_cast<std::int64_t>(p.waste_not_count);
+    out[keys("wipe_s")] = p.wipe_s;
+    out[keys("runs_ended_by_matron")] = static_cast<std::int64_t>(p.runs_ended_by_matron);
 }
 
 godot::Dictionary ScraperXSimulation::get_bay_state() const {
@@ -2014,6 +2100,24 @@ godot::Dictionary ScraperXSimulation::get_bay_state() const {
     out["trips"] = static_cast<std::int64_t>(state.trips);
     out["restarts"] = static_cast<std::int64_t>(state.restarts);
     out["cover"] = state.cover;
+    return out;
+}
+
+godot::Dictionary ScraperXSimulation::get_step_timing() const {
+    const sim::StepTiming timing = simulation_->step_timing();
+    const auto timer = [](const sim::StepTimer &t) {
+        godot::Dictionary out;
+        out["last_us"] = t.last_us;
+        out["max_us"] = t.max_us;
+        out["mean_us"] = t.mean_us;
+        out["samples"] = static_cast<std::int64_t>(t.samples);
+        return out;
+    };
+    godot::Dictionary out;
+    out["step"] = timer(timing.step);
+    out["physics"] = timer(timing.physics);
+    out["matron_pre"] = timer(timing.matron_pre);
+    out["matron_post"] = timer(timing.matron_post);
     return out;
 }
 

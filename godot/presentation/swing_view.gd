@@ -18,11 +18,14 @@ var _rust: StandardMaterial3D
 var _rubber: StandardMaterial3D
 var _steel: StandardMaterial3D
 var _wire: StandardMaterial3D
-var _links: Array[MeshInstance3D] = []
-var _brackets: Array[MeshInstance3D] = []
-var _discs: Array[MeshInstance3D] = []
-var _plates: Array[MeshInstance3D] = []
-var _wire_runs: Array[MeshInstance3D] = []
+# Each part an instance, [MultiMesh, index]: one MultiMesh a mesh (J-045,
+# #248: five draws, not twenty-six).
+var _links: Array = []
+var _brackets: Array = []
+var _discs: Array = []
+var _plates: Array = []
+var _wire_runs: Array = []
+var _sets := {}
 
 
 func setup() -> void:
@@ -71,6 +74,19 @@ func setup() -> void:
 	wire.rings = 1
 	for index in 3:
 		_wire_runs.append(_mesh(wire, _wire))
+	for mesh in _sets:
+		var parts: Array = _sets[mesh]
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.mesh = mesh
+		multimesh.instance_count = parts.size()
+		var drawn := MultiMeshInstance3D.new()
+		drawn.multimesh = multimesh
+		drawn.material_override = parts[0][2]
+		add_child(drawn)
+		for part in parts:
+			part[0] = multimesh
+	_sets = {}
 
 
 func update_view(state: Dictionary) -> void:
@@ -94,11 +110,11 @@ func update_view(state: Dictionary) -> void:
 	var length := maxf(BUFFER_FREE_LENGTH - float(state["buffer_compression_m"]), 0.2)
 	var pitch := length / float(BUFFER_DISCS)
 	for index in BUFFER_DISCS + 1:
-		_plates[index].transform = Transform3D(Basis(Vector3.RIGHT, PI * 0.5), face + Vector3(0.0, 0.0, -pitch * index))
+		_place(_plates[index], Transform3D(Basis(Vector3.RIGHT, PI * 0.5), face + Vector3(0.0, 0.0, -pitch * index)))
 	for index in BUFFER_DISCS:
 		var z := -pitch * (float(index) + 0.5)
-		_discs[index].transform = Transform3D(Basis(Vector3.RIGHT, PI * 0.5).scaled(Vector3(1.0, maxf(pitch - 0.05, 0.02), 1.0)),
-			face + Vector3(0.0, 0.0, z))
+		_place(_discs[index], Transform3D(Basis(Vector3.RIGHT, PI * 0.5).scaled(Vector3(1.0, maxf(pitch - 0.05, 0.02), 1.0)),
+			face + Vector3(0.0, 0.0, z)))
 	# The trip wire: kick bar, up the seat's yoke, up the arm, over to the hook.
 	var bar := seat_pin + Vector3(0.0, -SEAT_PIN_ABOVE_FLOOR + 0.38, -0.68)
 	_segment(_wire_runs[0], bar, seat_pin + Vector3(0.0, 0.0, -0.1))
@@ -120,25 +136,29 @@ func _material(color: Color, roughness: float, metal: float) -> StandardMaterial
 	return material
 
 
-func _mesh(geometry: Mesh, material: Material) -> MeshInstance3D:
-	var instance := MeshInstance3D.new()
-	instance.mesh = geometry
-	instance.material_override = material
-	add_child(instance)
-	return instance
+# A part: an instance of its mesh's MultiMesh, made once all are counted.
+func _mesh(geometry: Mesh, material: Material) -> Array:
+	if not _sets.has(geometry):
+		_sets[geometry] = []
+	var part := [null, (_sets[geometry] as Array).size(), material]
+	(_sets[geometry] as Array).append(part)
+	return part
 
 
-# A unit cylinder along y stretched from a to b.
-func _segment(instance: MeshInstance3D, a: Vector3, b: Vector3) -> void:
+func _place(part: Array, at: Transform3D) -> void:
+	(part[0] as MultiMesh).set_instance_transform(int(part[1]), at)
+
+
+# A unit cylinder along y stretched from a to b (none when they meet).
+func _segment(part: Array, a: Vector3, b: Vector3) -> void:
 	var span := b - a
-	if span.length_squared() < 0.000001:
-		instance.visible = false
-		return
-	instance.visible = true
-	var y := span.normalized()
-	var x := y.cross(Vector3.FORWARD)
-	if x.length_squared() < 0.001:
-		x = y.cross(Vector3.RIGHT)
-	x = x.normalized()
-	var z := x.cross(y).normalized()
-	instance.transform = Transform3D(Basis(x, y * span.length(), z), (a + b) * 0.5)
+	var at := Transform3D(Basis().scaled(Vector3.ZERO), a)
+	if span.length_squared() >= 0.000001:
+		var y := span.normalized()
+		var x := y.cross(Vector3.FORWARD)
+		if x.length_squared() < 0.001:
+			x = y.cross(Vector3.RIGHT)
+		x = x.normalized()
+		var z := x.cross(y).normalized()
+		at = Transform3D(Basis(x, y * span.length(), z), (a + b) * 0.5)
+	_place(part, at)

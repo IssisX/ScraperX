@@ -101,6 +101,69 @@ Region-local injuries affect later motor capacity only by a single explicit nati
 6. Different physical step clearances and ground traction: real success/failure, no decorative recovery when the supported COM cannot be caught.
 7. Exact-head deterministic two-run digests; plus device 90 Hz *timed* native and rendered evidence (J-044m owns performance proof). These checks have NOT run for this spec.
 
+## H. J-044b: torque and power in the one 8 kN / 44 kW budget (ChatGPT, #244 comment 6686033864; accepted 11-06)
+
+For J-044d/e (body motors) and every later drive path. No numbers here are gains: `r_min` and each axis's load point come
+from the measured colliders, and the builder posts them on #244 before any numeric gain.
+
+1. **Moment arm.** Motor axis `k` at pivot `q`, unit world axis `e_k`, load point `p_k`: the segment's distal grip or
+   contact, else its collider mass centre as a declared free-limb proxy. `a_k = p_k - q`, `r_k = |a_k x e_k|` (m).
+   Charge `F_eq,k = |tau_k| / r_k` only when `r_k >= r_min` (a geometry-proven minimum lever, not a tolerance); below it
+   the axis gets zero torque that tick. Never `|tau| / max(r, r_min)` with the torque left whole.
+   Allowed: `|tau_k| <= min(|tau_requested|, r_k * F_remaining)`. Several axes on one SwingTwist: charge `sum_k F_eq,k`
+   per independently driven axis, or one justified resultant lever, never both. The reaction on the parent body is the
+   same actuator: no second charge.
+2. **Power never cancels.** Per driven axis `P = max(0, tau_k * omega_rel,k)`, `omega_rel = omega_child - omega_parent`
+   in one world frame; linear channels `P = max(0, F . v_rel)`. `sum <= 44,000 W`. A motor taking power on one axis never
+   credits another. Cap the motor before Jolt solves (with a bounded predicted `omega`); post-step readback only verifies.
+3. **One ledger.** Per tick `F_used = sum_i |F_i| + sum_k F_eq,k <= 8000 N` across feet, hands and grip, the stock carry,
+   body motors and bracing. Action and reaction count once; nothing already charged through `Budget::take` is charged
+   again. At 90 Hz: `|J_motor,k| / dt <= r_k * F_granted,k` and `|J_linear,i| / dt <= F_granted,i`. A path that cannot be
+   capped before the solve is replaced or blocked, never logged as an overage.
+4. **Capacity (waits on Grok's answer on #244).** A limb's nominal share `a_i` and physical maximum `m_i` are separate.
+   With `cap_i = m_i * h_i`, for every single disabled limb `i`, `sum_{j != i} m_j >= 8000 N` is necessary, not
+   sufficient. Run all-healthy, one-limb-off and two-limbs-off; where geometry removes the load points, no healthy-side
+   effort is made up.
+
+Falsifiers:
+- **F1:** 120 N·m at `r = 0.06 m` charges 2000 N; at 0.015 m it charges 8000 N and gets only what remains; a nonzero
+  solved torque at `r < r_min` FAILS; at `r = 0.06` with 1000 N left the limit is 60 N·m.
+- **P1:** motor A 40 N·m at +10 rad/s = 400 W; motor B -20 N·m at +10 rad/s = 0 W; total 400 W, never 200. 300 N·m
+  asked at 200 rad/s with 44 kW free gets at most 220 N·m.
+- **L1:** 90 Hz, `r = 0.10 m`, 1000 N left: 100 N·m and at most 1.111 N·m·s of motor impulse per tick; readback above
+  that FAILS even if a later tick makes it up.
+- **L2:** a 6000 N foot grant and a 3000 N-equivalent neck motor in one tick: one or both are capped; a logged 9000 N
+  FAILS, whatever the reactions.
+- **L3:** identical inputs give identical motor impulses and budget traces across two replays.
+
+## I. Daze replaces the fixed knockdown timer (Cory, #242 comment 6665643822; ChatGPT addendum, #243 comment 6686101707; accepted 11-06)
+
+Cory: "A daze from head hits replaces the fixed knockdown timer. How long she stays down comes from the impulse to her
+head, and the get-up still needs room and a slow CoM." New work for J-044d/f/g: today `Matron::step_knocked` still counts
+`down_s_` down (matron.cpp, about line 4935).
+
+1. **One source.** J-044d's solved head contact emits a head-region event with the measured contact impulse `J_head` and
+   the angular impulse about the head's CoM, `L_head = (p - COM_head) x J_head`. A "head hit" is never read from an
+   animation or from the total `damage_ns`. Glancing and guarded hits use their resolved impulses, not the punch's nominal.
+2. **Two states.** Injury persists and never heals during a fight. Daze is transient impairment from those head events,
+   recovering at a deterministic, game-calibrated rate, e.g.
+   `daze_next = max(0, daze - recovery(dt, injury, head_state)) + head_dose(J_head, L_head)`. A fall still comes from real
+   body dynamics and support; no canned animation or countdown decides how long she stays down.
+3. **Get-up gate.** Daze below an explicit threshold AND a low measured CoM speed AND acceptable support and stance AND
+   `room_to_stand` AND healthy-limb motor capacity left; then a finite powered stand, never a pose or position snap. Clear
+   daze alone never stands her through a rail, into air or with an arm pinned.
+4. **Hits while she is down.** `Matron::take_blow` returns early in `State::Down` today (matron.cpp, about line 4435).
+   J-044d/f adds one explicit head-impact path that adds daze while she is down, without crediting the same impulse to
+   `damage_ns` twice or turning every Down contact into new S7 damage. No bypass force, no second damage authority.
+5. **Checkpoint (the integrator's pick, 11-06).** A checkpoint taken while she is dazed keeps the exact daze (deterministic
+   replay); J-044g versions it with the protected save change.
+
+Falsifiers: (a) the same impulse to torso and to head: only the head adds daze; (b) a second resolved head hit while she
+is down extends it, a miss or a guarded punch does not; (c) the same head impulse at two lever arms gives two angular
+impulses and may give two dazes; (d) decaying daze with no floor support never gives a get-up; (e) two same-state 90 Hz
+replays give identical daze, CoM and get-up digests; (f) total impulse accounting and the 6,000 N·s death threshold are
+unchanged, and daze decay never repairs an injury.
+
 ## Source key and provenance
 
 - [S1] de Leva (1996), *J Biomech*: https://pubmed.ncbi.nlm.nih.gov/8872282/

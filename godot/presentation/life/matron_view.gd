@@ -188,7 +188,7 @@ var _hold_at2 := Vector3.ZERO
 # prop_short), let down once it is in reach; her pose eased that far toward
 # the stoop (STOOP_*: trunk over her knees, hips down, knees bent).
 var _prop_lean := 0.0
-const PROP_LEAN_UP_S := 3.0
+const PROP_LEAN_UP_S := 4.0
 const PROP_LEAN_DOWN_S := 1.2
 # and raised this long before the stoop would have to start to be drawn by the
 # take (matron_rig.gd prop_take_s): her speed changes on the way, and her drawn
@@ -255,7 +255,8 @@ var prop_hand_error_m := INF
 var prop_attached := false
 # Going down a line's bare cable: the sparks off her forearms.
 var _sparks: CPUParticles3D
-var _planks: Array[MeshInstance3D] = []
+var _planks: Array[Node3D] = []
+var _plank_parts: Array = []
 var _plank_bolted: Array[bool] = []
 # The locker.
 var _locker: Node3D
@@ -380,6 +381,67 @@ func _ball(radius: float, material: Material, parent: Node3D, at := Vector3.ZERO
 	return node
 
 
+# The door's bolts and dents, each set one MultiMesh (J-045, #248): each part
+# stays a node (hidden as a bolt pops, scaled as a dent swells) that draws
+# nothing itself, its instance following it (_follow_door_parts).
+var _door_sets: Array = []
+
+func _instance_door_parts() -> void:
+	for parts: Array in [_bolts, _dents]:
+		var first := parts[0] as MeshInstance3D
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.mesh = first.mesh
+		multimesh.instance_count = parts.size()
+		var drawn := MultiMeshInstance3D.new()
+		drawn.multimesh = multimesh
+		drawn.material_override = first.material_override
+		_door.add_child(drawn)
+		_door_sets.append([multimesh, parts])
+		for part: MeshInstance3D in parts:
+			part.layers = 0
+	_follow_door_parts()
+
+func _follow_door_parts() -> void:
+	for entry in _door_sets:
+		var parts: Array = entry[1]
+		for k in parts.size():
+			var part := parts[k] as MeshInstance3D
+			(entry[0] as MultiMesh).set_instance_transform(k, part.transform if part.visible \
+				else Transform3D(Basis().scaled(Vector3.ZERO), part.position))
+
+
+# A parent's fixed parts as one mesh per material (J-045, #248: the locker and
+# the catwalk's planks were some 200 draws, seen from the yard). Only leaves
+# nothing else holds: their places and paints are unchanged.
+func _merge_leaves(parent: Node3D, keep: Array = []) -> void:
+	var tools := {}
+	var materials := {}
+	for child in parent.get_children():
+		var part := child as MeshInstance3D
+		if part != null and part.material_override != null and not part.material_override is StandardMaterial3D:
+			continue
+		if part == null or part in keep or part.get_child_count() > 0 or not part.visible or part.mesh == null:
+			continue
+		# Paints made alike (each tick its own) are one paint.
+		var paint := part.material_override as StandardMaterial3D
+		var key: Variant = 0 if paint == null else [paint.albedo_color, paint.roughness, paint.metallic,
+			paint.emission_enabled, paint.emission, paint.emission_energy_multiplier]
+		if not tools.has(key):
+			var tool := SurfaceTool.new()
+			tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+			tools[key] = tool
+			materials[key] = part.material_override
+		(tools[key] as SurfaceTool).append_from(part.mesh, 0, part.transform)
+		parent.remove_child(part)
+		part.queue_free()
+	for key in tools:
+		var merged := MeshInstance3D.new()
+		merged.mesh = (tools[key] as SurfaceTool).commit()
+		merged.material_override = materials[key]
+		parent.add_child(merged)
+
+
 func _pivot(parent: Node3D, at := Vector3.ZERO) -> Node3D:
 	var node := Node3D.new()
 	node.position = at
@@ -439,13 +501,18 @@ func _build_locker() -> void:
 	_box(Vector3(0.5, 0.5, 0.05), worn, gauge)
 	var face := _cyl(0.2, 0.2, 0.03, _material(Color("cfc9b6"), 0.7), gauge, Vector3(0.0, 0.0, -0.035), 20)
 	face.rotation.x = PI * 0.5
+	# The left-hand ticks merge apart from the right-hand ones, so no merged
+	# tick box spans the dial under the LOAD label (the label's board stays the face).
+	var left_ticks := _pivot(gauge)
 	for k in 7:
 		var a := lerpf(-2.2, 2.2, float(k) / 6.0)
-		var tick := _box(Vector3(0.012, 0.045, 0.01), _material(Color("2a2623"), 0.8), gauge, Vector3(sin(a) * 0.16, cos(a) * 0.16, -0.055))
+		var tick := _box(Vector3(0.012, 0.045, 0.01), _material(Color("2a2623"), 0.8), left_ticks if k < 3 else gauge, Vector3(sin(a) * 0.16, cos(a) * 0.16, -0.055))
 		tick.rotation.z = -a
 		if k >= 5:
 			tick.scale = Vector3(1.8, 1.0, 1.0)
 			tick.material_override = _material(Color("b01a12"), 0.6, 0.0, Color("ff2418"), 0.4)
+	_merge_leaves(left_ticks)
+	_merge_leaves(gauge)
 	_needle = _pivot(gauge, Vector3(0.0, 0.0, -0.06))
 	_box(Vector3(0.012, 0.17, 0.008), _material(Color("a31610"), 0.5, 0.0, Color("ff2418"), 0.5), _needle, Vector3(0.0, 0.07, 0.0))
 	_needle.rotation.z = 2.2
@@ -478,6 +545,9 @@ func _build_locker() -> void:
 	_lamp_light.omni_range = 12.0
 	_lamp_light.position = Vector3(0.4, s.y * 0.5 + 0.2, -0.5)
 	_locker.add_child(_lamp_light)
+	_merge_leaves(_door, _bolts + _dents)
+	_instance_door_parts()
+	_merge_leaves(_locker, [_lamp_glass])
 
 
 # Sealed, the native reports the centre she would step out at: home floor
@@ -513,6 +583,7 @@ func _update_locker(data: Dictionary, delta: float) -> void:
 			var push := clampf(strain * 1.4 - 0.15 * float(k), 0.0, 1.0)
 			_dents[k].scale = Vector3(1.0, 1.4, 0.18 + 0.9 * push)
 			_dents[k].position.z = -0.03 - 0.05 * push
+		_follow_door_parts()
 		# The lamp: faster as it climbs.
 		var pulse := 0.5 + 0.5 * sin(_clock * TAU * (1.2 + 7.0 * strain))
 		_lamp_light.light_energy = 0.4 + 4.0 * pulse
@@ -536,6 +607,7 @@ func _update_locker(data: Dictionary, delta: float) -> void:
 	# Bolts pop one by one.
 	while _bolts_seen < popped and _bolts_seen < BOLT_COUNT:
 		_bolts[_bolts_seen].visible = false
+		_follow_door_parts()
 		_bolts_seen += 1
 		bolts_shown_popped = _bolts_seen
 		if _audio != null:
@@ -583,6 +655,7 @@ func _seal_locker() -> void:
 	_work_glass_material.emission_energy_multiplier = 1.4
 	for bolt in _bolts:
 		bolt.visible = true
+	_follow_door_parts()
 	bolts_shown_popped = 0
 
 
@@ -590,19 +663,54 @@ func _seal_locker() -> void:
 
 
 func _build_planks() -> void:
+	# Every plank's plate, rivets and seam are instances (J-045, #248: four
+	# draws for the catwalk, not thirty-three); each plank is a bare node
+	# where the native puts it, and _update_planks poses its instances.
+	var plate_mesh := BoxMesh.new()
+	plate_mesh.size = PLANK_SIZE
+	var rivets := SurfaceTool.new()
+	rivets.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rivet := CylinderMesh.new()
+	rivet.top_radius = 0.035
+	rivet.bottom_radius = 0.035
+	rivet.height = 0.02
+	rivet.radial_segments = 8
+	rivet.rings = 1
+	# Rivets along both edges and a rusted seam: the plate reads as old plate.
+	for k in 6:
+		for side in [-1.0, 1.0]:
+			rivets.append_from(rivet, 0, Transform3D(Basis(), Vector3(-1.3 + 0.52 * float(k), 0.05, side * 0.72)))
+	var seam := BoxMesh.new()
+	seam.size = Vector3(PLANK_SIZE.x, 0.01, 0.06)
+	var sets := [
+		_plank_set(plate_mesh, _material(Color("5e4b3a"), 0.92, 0.35), (PLANKS + 1) / 2, Transform3D()),
+		_plank_set(plate_mesh, _material(Color("4f4235"), 0.92, 0.35), PLANKS / 2, Transform3D()),
+		_plank_set(rivets.commit(), _material(Color("3a3028"), 0.8, 0.6), PLANKS, Transform3D()),
+		_plank_set(seam, _material(Color("2b2018"), 1.0), PLANKS, Transform3D(Basis(), Vector3(0.0, 0.045, 0.0)))]
 	for i in PLANKS:
-		var tone := Color("5e4b3a") if i % 2 == 0 else Color("4f4235")
-		var plate := _box(PLANK_SIZE, _material(tone, 0.92, 0.35), self)
-		# Rivets along both edges and a rusted seam: the plate reads as old plate.
-		var rivet_material := _material(Color("3a3028"), 0.8, 0.6)
-		for k in 6:
-			for side in [-1.0, 1.0]:
-				var rivet := _cyl(0.035, 0.035, 0.02, rivet_material, plate, Vector3(-1.3 + 0.52 * float(k), 0.05, side * 0.72), 8)
-				rivet.scale = Vector3(1.0, 1.0, 1.0)
-		_box(Vector3(PLANK_SIZE.x, 0.01, 0.06), _material(Color("2b2018"), 1.0), plate, Vector3(0.0, 0.045, 0.0))
+		var plate := Node3D.new()
 		plate.visible = false
+		add_child(plate)
 		_planks.append(plate)
 		_plank_bolted.append(true)
+		# Its tone alternates plank by plank, as each plate was painted.
+		_plank_parts.append([[sets[i % 2], i / 2], [sets[2], i], [sets[3], i]])
+
+
+# [MultiMesh, the part's place on its plank]: `count` instances, hidden.
+func _plank_set(mesh: Mesh, material: Material, count: int, local: Transform3D) -> Array:
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.mesh = mesh
+	multimesh.instance_count = count
+	for index in count:
+		multimesh.set_instance_transform(index, Transform3D(Basis().scaled(Vector3.ZERO), Vector3.ZERO))
+	var drawn := MultiMeshInstance3D.new()
+	drawn.name = "Planks"
+	drawn.multimesh = multimesh
+	drawn.material_override = material
+	add_child(drawn)
+	return [multimesh, local]
 
 
 func _build_stencils() -> void:
@@ -634,9 +742,14 @@ func _update_planks(data: Dictionary) -> void:
 		var plate := _planks[i]
 		plate.visible = not gone
 		if gone:
+			for part in _plank_parts[i]:
+				(part[0][0] as MultiMesh).set_instance_transform(int(part[1]),
+					Transform3D(Basis().scaled(Vector3.ZERO), plate.position))
 			continue
 		plate.global_position = Vector3(planks[b], planks[b + 1], planks[b + 2])
 		plate.global_basis = Basis(Quaternion(planks[b + 3], planks[b + 4], planks[b + 5], planks[b + 6]))
+		for part in _plank_parts[i]:
+			(part[0][0] as MultiMesh).set_instance_transform(int(part[1]), plate.transform * (part[0][1] as Transform3D))
 		if _plank_bolted[i] and not bolted and _audio != null:
 			_audio.matron_cue(&"plank_crack", plate.global_position, 3.0, randf_range(0.85, 1.1))
 		_plank_bolted[i] = bolted
@@ -2378,6 +2491,35 @@ func figure_shown() -> bool:
 	return _figure != null and _figure.visible
 
 
+# J-045 (#248): her body's materials are compiled by the renderer the first
+# time it draws them, and it first draws her at the locker burst, a stall of
+# seconds on the phone. Under the LOADING card (main.gd _prepare_her, the tree
+# paused, so nothing else moves her) she is drawn for a few frames as a speck
+# at the screen's centre, under the card's word, WARM_SCALE of her size
+# WARM_AT_M in front of the camera: every material and its shadow drawn,
+# nothing seen. warm_down puts her back as she was.
+const WARM_SCALE := 0.002
+const WARM_AT_M := 2.0
+var _warm_saved := {}
+
+
+func warm_up(camera: Camera3D) -> void:
+	if _figure == null or camera == null or not _warm_saved.is_empty():
+		return
+	_warm_saved = {"visible": _figure.visible, "transform": _figure.global_transform}
+	_figure.global_transform = camera.global_transform * \
+		Transform3D(Basis().scaled(Vector3.ONE * WARM_SCALE), Vector3(0.0, 0.0, -WARM_AT_M))
+	_figure.visible = true
+
+
+func warm_down() -> void:
+	if _warm_saved.is_empty():
+		return
+	_figure.global_transform = _warm_saved["transform"]
+	_figure.visible = bool(_warm_saved["visible"])
+	_warm_saved = {}
+
+
 # For the look scenes: the figure posed from made-up data, the native's own
 # frames ignored while this is on. Her look follows the exposure (the
 # native's, 0..1 over her time out, matron_look.gd); what she does follows her
@@ -2453,11 +2595,15 @@ func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_pos
 		_state_age = 0.0
 	_state_age += delta
 	_sync_locker_home(data)
-	var near := camera_position.distance_to(_locker_centre) < DRAW_RANGE_M or camera_position.distance_to(_last_pos) < DRAW_RANGE_M
+	# Her live position too: _last_pos is only seeded inside _update_figure,
+	# which this gate skips, so a teleport far from both the locker and the
+	# stale _last_pos deadlocked her invisible forever. The cull still holds:
+	# past 140 m from her live position she is still skipped.
+	var centre: Vector3 = data.get("render_position", data["position"])
+	var near := camera_position.distance_to(_locker_centre) < DRAW_RANGE_M or camera_position.distance_to(_last_pos) < DRAW_RANGE_M or camera_position.distance_to(centre) < DRAW_RANGE_M
 	visible = near
 	if not near:
 		_last_state = state
-		var centre: Vector3 = data.get("render_position", data["position"])
 		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, false)
 		return
 	_update_planks(data)

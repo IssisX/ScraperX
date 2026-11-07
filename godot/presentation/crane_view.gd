@@ -21,7 +21,7 @@ const LAMP_TIP := Vector3(38.45, 3.85, 0.0)
 
 var _native: Object
 var _jib_body := -1
-var _falls: Array[MeshInstance3D] = []
+var _falls: MultiMeshInstance3D
 var _lamps: Array[MeshInstance3D] = []
 
 
@@ -38,12 +38,15 @@ func setup(main: Node, native: Object) -> void:
 	rope_mesh.radial_segments = 6
 	rope_mesh.rings = 1
 	rope_mesh.material = rope_material
-	for i in FALLS:
-		var fall := MeshInstance3D.new()
-		fall.name = "CraneFall%d" % i
-		fall.mesh = rope_mesh
-		add_child(fall)
-		_falls.append(fall)
+	# The falls, instances of one MultiMesh (J-045, #248): one draw, not four.
+	var falls := MultiMesh.new()
+	falls.transform_format = MultiMesh.TRANSFORM_3D
+	falls.mesh = rope_mesh
+	falls.instance_count = FALLS
+	_falls = MultiMeshInstance3D.new()
+	_falls.name = "CraneFalls"
+	_falls.multimesh = falls
+	add_child(_falls)
 	var lamp_material := StandardMaterial3D.new()
 	lamp_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	lamp_material.albedo_color = Color(1.0, 0.12, 0.08)
@@ -90,19 +93,18 @@ func update_view(state: Dictionary) -> void:
 	var along := jib.basis.x.normalized()
 	for i in FALLS:
 		var share := (float(i) - 1.5) / 1.5
-		_place_fall(_falls[i], top + along * (FALL_SPREAD_TOP * share), bottom + along * (FALL_SPREAD_BOTTOM * share))
+		_place_fall(i, top + along * (FALL_SPREAD_TOP * share), bottom + along * (FALL_SPREAD_BOTTOM * share))
 	_lamps[0].global_position = jib * LAMP_APEX
 	_lamps[1].global_position = jib * LAMP_TIP
 
 
-func _place_fall(fall: MeshInstance3D, from: Vector3, to: Vector3) -> void:
+func _place_fall(fall: int, from: Vector3, to: Vector3) -> void:
 	var run := to - from
 	var length := run.length()
-	if length < 0.01:
-		fall.visible = false
-		return
-	fall.visible = true
-	var y := run / length
-	var x := y.cross(Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT).normalized()
-	var z := x.cross(y)
-	fall.global_transform = Transform3D(Basis(x, y * length, z), from + 0.5 * run)
+	var at := Transform3D(Basis().scaled(Vector3.ZERO), from)
+	if length >= 0.01:
+		var y := run / length
+		var x := y.cross(Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT).normalized()
+		var z := x.cross(y)
+		at = Transform3D(Basis(x, y * length, z), from + 0.5 * run)
+	_falls.multimesh.set_instance_transform(fall, global_transform.affine_inverse() * at)

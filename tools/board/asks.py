@@ -14,7 +14,7 @@ Grok's runs only find comments that START with `To Grok:`; an ask to Grok
 buried inside a longer post is listed with REPOST.
 
 Reads GitHub through `gh api`; changes nothing.
-Usage: python3 tools/board/asks.py [--repo IssisX/ScraperX] [--hours 48]
+Usage: python3 tools/board/asks.py [--repo IssisX/ScraperX] [--hours 48 | --since UNIX_TIME]
 """
 
 from __future__ import annotations
@@ -68,9 +68,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--repo", default="IssisX/ScraperX")
     ap.add_argument("--hours", type=float, default=48.0)
+    ap.add_argument("--since", type=int, default=None,
+                    help="list only asks posted after this Unix time (the integrator's read-through mark); overrides --hours")
     args = ap.parse_args()
     now = dt.datetime.now(dt.timezone.utc)
-    since = (now - dt.timedelta(hours=args.hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    start = (dt.datetime.fromtimestamp(args.since, dt.timezone.utc) if args.since is not None
+             else now - dt.timedelta(hours=args.hours))
+    since = start.strftime("%Y-%m-%dT%H:%M:%SZ")
 
     open_threads: set[int] = set()
     for page in range(1, MAX_PAGES + 1):
@@ -98,8 +102,8 @@ def main() -> int:
 
     open_asks = []
     for i, c in enumerate(comments):
-        if c["n"] not in open_threads or c["a"] == "noise":
-            continue
+        if c["n"] not in open_threads or c["a"] == "noise" or c["t"] <= start:
+            continue   # the API's since is by update time: an older post edited later is not a new ask
         targets = {m.group(1) for m in ASK.finditer(c["body"][:4000])} - {c["a"]}
         refs = {int(r) for r in PR_REF.findall(c["body"][:600])} | {c["n"]}
         for target in sorted(targets):
@@ -122,7 +126,7 @@ def main() -> int:
 
     for _, _, text in sorted(open_asks, key=lambda x: (x[0], -x[1])):
         print(text)
-    print(f"OPEN ASKS: {len(open_asks)} (last {args.hours:g} h, open threads only)")
+    print(f"OPEN ASKS: {len(open_asks)} (posted after {since}, open threads only)")
     return 0
 
 

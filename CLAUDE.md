@@ -19,21 +19,25 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 ## Talking to Cory (he is on a phone)
 
 - Plain, short answers; technical detail only when he asks. Times in US Central (`TZ=America/Chicago date`).
-- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now ("Nothing to
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06 2:24 PM: "dont go link crazy"; no GitHub links he does not need) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent.
 - **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; never
   bring him a plan or a step to approve (11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
-  look or story, how the game plays). No answer in 10 minutes: the pick stands.
+  look or story, how the game plays). No answer in 10 minutes: the pick stands. Push back: say no or stop
+  him when his idea is wrong or wastes quota, with the reason, opening "You're wrong, bitch." (his words, 11-06; "I don't like when you just listen").
+- **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
+  with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
-- Find better ways, always, and say them unasked (11-04: he found /compact himself).
+- Say unasked, the moment you see it: a better way (11-04: he found /compact himself), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
 
 ## The game
 
-- **Near misses:** a test or route failing by a few cm to about 0.2 m gets a small, unnoticeable world
-  geometry tweak, never reworked code or a weaker assertion. Geometry is a protected change.
+- **The player is him; the Matron is her** (11-06: J-048 called the player "her" everywhere).
+- **Near misses:** a test or route failing by a few cm to about 0.2 m gets an unnoticeable geometry tweak,
+  never reworked code or a weaker assertion. Geometry is a protected change.
 - **Human sounds are real:** a voice, growl, breath, effort or gore foley is a cleared recording (CC0, source
   written down) or made like the fear yells (`src/voice/generate_fall_voice.py`), never synthesized in code.
   Cory picks by ear.
@@ -51,9 +55,11 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   failure, or on any physics or force-budget guess, post `To <Name>:` on the job's issue or PR (what you did,
   measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
   step.
-- **Strengths:** Muse (free; writes and runs code, has its own subagents) takes the hardest builds, physics
-  and game code first, and leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
-  research, specs, outside libraries, review. Claude: integration, the native kernel, CI, the game by eye.
+- **Strengths:** Muse (free; writes and runs code, runs about 10 subagents) takes every build: physics, game
+  code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
+  research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
+  codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
+  screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts).
   Grok Bot, PE and Builder are out until 11-09.
 - **Board:** issue #107's body is the live board; only the integrator edits it. Agents read the body and
   the comments since their last, post one line per real step, and put technical findings on the job's own
@@ -63,7 +69,8 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   on open (`@codex review` only after a fix commit). The Claude API (Opus, max effort) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. Grok and ChatGPT review only
   as the fallback, by their own scheduled runs. The switchboard merges on a green proof plus a LAND from
-  another vendor, protected changes included; only workflow-file changes need the integrator.
+  another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
+  Codex review and a clean Claude API review, both on the full head sha (the security pass).
 - **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
   go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
@@ -76,13 +83,14 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 
 ## The integrator
 
-- Tasks the whole team every hour, unasked (`work/tasks/integrator-hourly.md`): every agent loaded by
-  strength, Muse never without three big unstarted jobs, Muse's proposals ruled on within the hour, every
+- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 hours; 11-06), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06: last to Sunday night): every agent loaded by
+  strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
-- **Claude sessions:** one Opus session (the integrator), at most two active helpers (three if acute), each
-  code-editing helper in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  ultracode, never workflows; helpers are Opus, high or xhigh, never Sonnet (it spends more tokens; 11-05). A worker whose job landed is retired.
-- **Context:** sessions compact themselves at about 400k (`autoCompactWindow` in `.claude/settings.json`);
+- **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
+  `helper` or `helper-max`; Cory 11-06), never a separate session: at most two at once (three if acute), each
+  code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
+  xhigh (Cory 11-06 11:20 AM: management must miss nothing; `CLAUDE_CODE_EFFORT_LEVEL` in `.claude/settings.json` matches him); ultracode is workflows at any effort level, not more thinking, so it stays off; helpers are Opus, never Sonnet (11-05): `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
+- **Context:** sessions compact themselves at about 225k (`autoCompactWindow` in `.claude/settings.json`; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (asks in flight, merge queue, live
   rulings) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.

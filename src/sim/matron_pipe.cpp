@@ -12,6 +12,7 @@
 
 #include "sim/matron.hpp"
 #include "sim/matron_grip.hpp"
+#include "sim/matron_effort.hpp"
 
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Collision/CastResult.h>
@@ -895,6 +896,9 @@ void Matron::ride_pipe(const float dt) {
         }
         bodies.AddForce(n.body, push, EActivation::Activate);
         bodies.AddForce(body_, -push);
+        // J-046 measurement only: the take above put +push on her in the
+        // ledger; on her body it is -push (no new force, charged above).
+        effort::add(effort::Path::HandsPush, 0.0F, 0.0F, 0.0F, -2.0F * push);
         report(-push, budget.velocity);
         pipe_swat_body_ = n.body;
         swatting = true;

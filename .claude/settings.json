@@ -6,7 +6,7 @@
   ],
   "env": {
     "MCP_TOOL_TIMEOUT": "300000",
-    "CLAUDE_CODE_EFFORT_LEVEL": "high"
+    "CLAUDE_CODE_EFFORT_LEVEL": "xhigh"
   },
   "permissions": {
     "allow": [
@@ -103,5 +103,5 @@
       }
     ]
   },
-  "autoCompactWindow": 500000
+  "autoCompactWindow": 300000
 }
