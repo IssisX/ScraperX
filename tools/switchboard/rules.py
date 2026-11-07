@@ -39,6 +39,7 @@ class Verdict:
     created_at: str      # ISO 8601 UTC, as GitHub reports it
     author_login: str    # the GitHub login that posted it
     downgraded: bool     # a FIX or BLOCK without a deterministic repro
+    signed: bool = False  # the switch found this automatic review's MAC under SWITCHBOARD_REVIEW_KEY (J-056)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -286,9 +287,10 @@ def is_api_review(v: Verdict) -> bool:
 
 
 def api_review_on(verdicts: Iterable[Verdict], head_sha: str) -> Verdict | None:
-    """The newest automatic Claude review naming this whole head, or None when it has none (a workflow-file
-    PR's security pass, J-056: an old 8-character mark is not one)."""
-    on_head = [v for v in verdicts if is_api_review(v) and names_whole_head(v, head_sha)]
+    """The newest signed automatic Claude review naming this whole head, or None when it has none (a
+    workflow-file PR's security pass, J-056: an old 8-character mark is not one). Signed: any branch's push
+    workflow posts as the workflow bot too, so only the MAC under SWITCHBOARD_REVIEW_KEY tells the real one."""
+    on_head = [v for v in verdicts if is_api_review(v) and v.signed and names_whole_head(v, head_sha)]
     return max(on_head, key=lambda v: v.created_at) if on_head else None
 
 
@@ -316,7 +318,7 @@ def land_counts(v: Verdict, author_vendor: str, team: Team | None = None) -> boo
 
 
 def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
-                   merge_token: bool = False) -> MergeDecision:
+                   merge_token: bool = False, review_key: bool = False) -> MergeDecision:
     """Design v3 section 2.3 step 6 with the owner's corrections. All must hold to MERGE:
 
     proof green on the head; one LAND naming the head from a known vendor other than the author's;
@@ -326,10 +328,11 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
     needs eyes.
 
     A PR that changes .github/workflows (J-056): the workflow token cannot merge it, so it is HUMAN-MERGE
-    unless `merge_token` (the caller holds SWITCHBOARD_MERGE_TOKEN) and, on top of every gate above, the
-    security pass is clean: the automatic Claude review naming all 40 characters of this head exists and is
-    not FIX or BLOCK (a FIX or BLOCK without a repro counts here too). Its cross-vendor LAND must come from a
-    login no agent shares: the Codex app's clean review of the whole head, from a vendor other than the
+    unless `merge_token` (the caller holds SWITCHBOARD_MERGE_TOKEN), `review_key` (it holds
+    SWITCHBOARD_REVIEW_KEY, so it can tell a signed review) and, on top of every gate above, the security pass
+    is clean: the signed automatic Claude review naming all 40 characters of this head exists and is not FIX
+    or BLOCK (a FIX or BLOCK without a repro counts here too). Its cross-vendor LAND must come from a login
+    no agent shares: the Codex app's clean review of the whole head, from a vendor other than the
     author's. A LAND typed by name (every agent posts as one login) or the API's own LAND does not count.
     """
     if pr.base_ref != TRUNK:
@@ -370,17 +373,22 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
         return MergeDecision("WAIT", tuple(waits))
     land_by = lands[-1].who
     if pr.touches_workflows:
-        return workflow_merge(pr, author_vendor, lands, merge_token)
+        return workflow_merge(pr, author_vendor, lands, merge_token, review_key)
     return MergeDecision("MERGE", (f"proof green, LAND by {land_by} on @{pr.head_sha[:8]}",), land_by)
 
 
-def workflow_merge(pr: PrFacts, author_vendor: str, lands: Sequence[Verdict], merge_token: bool) -> MergeDecision:
+def workflow_merge(pr: PrFacts, author_vendor: str, lands: Sequence[Verdict], merge_token: bool,
+                   review_key: bool = False) -> MergeDecision:
     """The end of merge_decision for a ready PR that changes .github/workflows (J-056): MERGE with the merge
-    token only after a clean security pass on the head and the Codex app's clean review of it, both naming the
-    whole head sha, else HUMAN-MERGE as before the token, saying why."""
+    token only after a clean, signed security pass on the head and the Codex app's clean review of it, both
+    naming the whole head sha, else HUMAN-MERGE as before the token, saying why."""
     sha, land_by = pr.head_sha[:8], lands[-1].who
     if not merge_token:
         return MergeDecision("HUMAN-MERGE", ("ready, but it changes .github/workflows; the workflow token cannot merge it",), land_by)
+    if not review_key:
+        return MergeDecision("HUMAN-MERGE", ("ready, but it changes .github/workflows: SWITCHBOARD_REVIEW_KEY is not set, "
+                                             "so no automatic review is signed and the security pass cannot be told "
+                                             "from a forged one",), land_by)
     api = api_review_on(pr.verdicts, pr.head_sha)
     codex = codex_review_on(pr.verdicts, pr.head_sha)
     cross = codex is not None and codex.verdict == "LAND" and codex.vendor not in ("unknown", author_vendor)
@@ -508,9 +516,9 @@ def needs_eye(pr: PrFacts) -> bool:
 
 
 def needs_security_pass(pr: PrFacts) -> bool:
-    """A green PR that changes .github/workflows, with no open FIX and no automatic Claude review on its head
-    (J-056): the switch merges it only after that review, so the ask part runs it even when Codex already
-    reviewed the head and no other review is needed."""
+    """A green PR that changes .github/workflows, with no open FIX and no signed automatic Claude review on its
+    head (J-056): the switch merges it only after that review, so the ask part runs it even when Codex already
+    reviewed the head and no other review is needed. An unsigned bot review never stands in for it."""
     if not pr.touches_workflows or pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False
     if open_fixes(pr.verdicts, pr.head_sha, pr.head_committed_at, "review"):

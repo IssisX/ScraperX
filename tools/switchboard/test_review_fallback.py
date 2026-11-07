@@ -461,8 +461,8 @@ class CodexRunning(unittest.TestCase):
         sw.api_ok = lambda c: True
         sw.review_load = lambda: ({}, {})
         reviewed = []
-        sw.review = lambda facts, c, author: reviewed.append(facts.head_sha)
-        sw.marked = lambda *a: False
+        sw.review = lambda facts, c, author, security=False: reviewed.append(facts.head_sha)
+        sw.marked = lambda *a, **kw: False
         sw.stale = lambda facts: False
         c = dict(ctx(comments=list(comments)), proof_done_at=ago(green_minutes_ago / 60))
         sw.ask_pr(pr_facts(), c)

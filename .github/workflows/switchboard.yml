@@ -112,6 +112,9 @@ jobs:
   # The paid part: the automatic Claude review, the eye, the orchestrator (off in v0). The only job
   # holding ANTHROPIC_API_KEY. Its code never merges; contents: write is for the ledger branch.
   ask:
+    # J-056: it signs the automatic reviews with SWITCHBOARD_REVIEW_KEY, which lives only in this environment
+    # (deploys only from ScraperX-Claude), so no branch's copy of any workflow can sign a forged security pass.
+    environment: switchboard-merge
     if: >-
       github.event_name == 'workflow_run' ||
       github.event_name == 'workflow_dispatch' ||
@@ -146,6 +149,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
+          # J-056: signs each automatic review (an HMAC); switch.py takes it out of the environment at start.
+          SWITCHBOARD_REVIEW_KEY: ${{ secrets.SWITCHBOARD_REVIEW_KEY }}
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}
@@ -241,6 +246,8 @@ jobs:
           # never PR-head code (the rule check reads the PR's diff; nothing checks it out). switch.py takes it out
           # of the environment at start, so no child process inherits it.
           SWITCHBOARD_MERGE_TOKEN: ${{ secrets.SWITCHBOARD_MERGE_TOKEN }}
+          # J-056: checks the MAC of the security pass before the merge token is used; taken out the same way.
+          SWITCHBOARD_REVIEW_KEY: ${{ secrets.SWITCHBOARD_REVIEW_KEY }}
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}

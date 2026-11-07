@@ -27,6 +27,8 @@ import argparse
 import base64
 import dataclasses
 import datetime as dt
+import hashlib
+import hmac
 import io
 import os
 import pathlib
@@ -95,6 +97,13 @@ VERDICT_TRIGGER = re.compile(r":(?= ?(?:land|fix|note|block))", re.IGNORECASE)
 MERGE_TOKEN_ENV = "SWITCHBOARD_MERGE_TOKEN"
 MERGE_TOKEN_REFUSED = {401, 403, 404, 405}   # GitHub's answers to a token that cannot merge here
 MERGE_TOKEN_NEEDS = "Contents, Pull requests and Workflows: read/write"
+# J-056: the automatic review signs its verdict with this secret (HMAC-SHA256). Only the ask and steer jobs' switch
+# steps hold it, through environment switchboard-merge; main() takes it out of the environment like the merge token.
+# Any branch's push workflow posts as the workflow bot, so on a workflow-file PR only a signed review is the pass.
+REVIEW_KEY_ENV = "SWITCHBOARD_REVIEW_KEY"
+REVIEW_SIG = "<!-- switchboard:review-sig v1 pr={pr} head={head} verdict={verdict} mac={mac} -->"
+REVIEW_SIG_LINE = re.compile(r"<!-- switchboard:review-sig v1 pr=(?P<pr>\d{1,9}) head=(?P<head>[0-9a-f]{40}) "
+                             r"verdict=(?P<verdict>LAND|FIX|NOTE|NONE) mac=(?P<mac>[0-9a-f]{64}) -->")
 MAX_FACT_LINES = 25                   # rule_check lines quoted in a review ask
 ACT_WITHIN_DAYS = 3                   # older heads get no new review or ask: J-030 claims or closes them
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"
@@ -163,6 +172,32 @@ class MergeTokenRefused(RuntimeError):
     """GitHub refused the merge token on a workflow-file PR (J-056): the PR becomes merge-by-hand, with why."""
 
 
+def review_mac(key: str, repo: str, pr: int, head: str, verdict: str) -> str:
+    """HMAC-SHA256 under the review key of one automatic review's canonical message (J-056): the version, the repo,
+    the PR, the whole head sha and the verdict ("NONE" for a security pass that gave none), one per line."""
+    msg = "\n".join(("switchboard-review-sig", "v1", repo, str(pr), head, verdict))
+    return hmac.new(key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def review_sig(key: str, repo: str, pr: int, head: str, verdict: str) -> str:
+    """The last line of an automatic review's comment: its MAC, never the key."""
+    return REVIEW_SIG.format(pr=pr, head=head, verdict=verdict, mac=review_mac(key, repo, pr, head, verdict))
+
+
+def signed_for(body: str, key: str, repo: str, pr: int, head: str, verdict: str = "") -> bool:
+    """The comment's last line is a review-sig line for this PR, this whole head and (when given) this verdict, and
+    its MAC checks under `key`. Never without a key."""
+    m = REVIEW_SIG_LINE.fullmatch(body.rstrip().rsplit("\n", 1)[-1].strip()) if key else None
+    if not m or int(m["pr"]) != pr or m["head"] != head or (verdict and m["verdict"] != verdict):
+        return False
+    return hmac.compare_digest(m["mac"], review_mac(key, repo, pr, head, m["verdict"]))
+
+
+def signed_verdict(v: rules.Verdict) -> str:
+    """The verdict review() signed for this parsed one: as posted, before a FIX without a repro reads as NOTE."""
+    return "FIX" if v.downgraded else v.verdict
+
+
 def inbox_key(kind: str, target: str, head: str) -> str:
     """One item's key: its kind, its PR (#N) or branch, and the head sha. A hash, so branch text never reaches the marker."""
     import hashlib
@@ -203,6 +238,7 @@ def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) ->
 class Switch:
     auto_pr_failed: tuple[InboxItem, ...] = ()   # this sweep's AUTO-PR-FAILED items, for the inbox (J-051)
     merge_token: str = ""                        # SWITCHBOARD_MERGE_TOKEN, set by main() in the steer job only (J-056)
+    review_key: str = ""                         # SWITCHBOARD_REVIEW_KEY, set by main() in the ask and steer jobs (J-056)
 
     def __init__(self, gh: GitHub, root: pathlib.Path, now: dt.datetime, out=print):
         self.gh, self.root, self.now, self.out = gh, root, now, out
@@ -244,8 +280,13 @@ class Switch:
         reviews = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/reviews")
         out = []
         for c in comments:
-            v = rules.parse_verdict(c.get("body") or "", c["created_at"], c["user"]["login"], self.team) or \
-                rules.parse_codex_state(c.get("body") or "", c.get("updated_at") or c["created_at"], c["user"]["login"])
+            body = c.get("body") or ""
+            v = rules.parse_verdict(body, c["created_at"], c["user"]["login"], self.team) or \
+                rules.parse_codex_state(body, c.get("updated_at") or c["created_at"], c["user"]["login"])
+            # J-056: an automatic review whose MAC checks for this PR, the whole head it names and its verdict.
+            if v and rules.is_api_review(v) and signed_for(body, self.review_key, self.gh.repo, number, v.sha,
+                                                           signed_verdict(v)):
+                v = dataclasses.replace(v, signed=True)
             if v:
                 out.append(v)
         for r in reviews:
@@ -341,9 +382,17 @@ class Switch:
     def stale(self, facts: rules.PrFacts) -> bool:
         return rules.is_stale(facts.head_committed_at, self.now.strftime("%Y-%m-%dT%H:%M:%SZ"), ACT_WITHIN_DAYS)
 
-    def marked(self, comments: list[dict], kind: str, pr: int, head: str) -> bool:
+    def marked(self, comments: list[dict], kind: str, pr: int, head: str, signed: bool = False) -> bool:
+        """A bot comment carries this mark. `signed` (the security pass, with the review key; J-056): only on a comment
+        the switch signed for this head, so a forged mark cannot stop the real review."""
         tag = MARK.format(kind=kind, pr=pr, head=head)
-        return any(tag in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN for c in comments)
+        return any(tag in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN and
+                   (not signed or self.signed_mark(c.get("body") or "", pr, head)) for c in comments)
+
+    def signed_mark(self, body: str, pr: int, head: str) -> bool:
+        """Its MAC covers this head and the comment's own verdict: a review, or the security pass's note ("NONE")."""
+        v = rules.parse_verdict(body, "", rules.BOT_LOGIN, self.team)
+        return signed_for(body, self.review_key, self.gh.repo, pr, head, signed_verdict(v) if v else "NONE")
 
     # ---------- the ledger (append-only, on its own branch so trunk is never written per call) ----------
     def ledger(self) -> tuple[str, str | None]:
@@ -479,16 +528,16 @@ class Switch:
     def steer_pr(self, facts: rules.PrFacts, ctx: dict, record: list | None = None) -> None:
         """The merge rule and the review asks for one PR; `record` (the sweep's list) gets what was decided."""
         author = self.team.vendor_of_branch(facts.head_ref)
-        token = bool(self.merge_token)
-        d = rules.merge_decision(facts, author, self.team, token)
+        token, key = bool(self.merge_token), bool(self.review_key)
+        d = rules.merge_decision(facts, author, self.team, token, key)
         if d.action == "WAIT" and d.reasons == ("GitHub is still computing mergeability",):
             time.sleep(3)   # the first read starts GitHub's computation; read once more
             facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
-            d = rules.merge_decision(facts, author, self.team, token)
+            d = rules.merge_decision(facts, author, self.team, token, key)
         if d.action in ("MERGE", "HUMAN-MERGE"):
             block, never = self.rule_check_block(facts.number, facts.head_sha)
             facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
-            d = rules.merge_decision(facts, author, self.team, token)
+            d = rules.merge_decision(facts, author, self.team, token, key)
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
         seen = Steered(facts, ctx, d)
@@ -981,17 +1030,19 @@ class Switch:
             api_turn = rules.needs_review(facts, author, self.team) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
         else:
             api_turn = rules.needs_review(facts, author, self.team) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
-        # J-056: a workflow-file PR merges only on a clean automatic review of its head, so it gets one even when
-        # Codex already reviewed that head and no other review is asked.
-        security = not api_turn and rules.needs_security_pass(facts)
-        if api_turn or security:
-            if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
+        # J-056: a workflow-file PR merges only on a clean, signed automatic review of its head, so it gets one even
+        # when Codex already reviewed that head and no other review is asked. Every automatic review of such a head is
+        # its security pass, whichever route asked for it (Codex on #297: the API's own turn ran the gameplay prompt).
+        security = facts.touches_workflows
+        signed = security and bool(self.review_key)   # only a mark the switch signed stops a second security pass
+        if api_turn or rules.needs_security_pass(facts):
+            if self.marked(ctx["comments"], "review", facts.number, facts.head_sha, signed=signed):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
-            elif security:
+            elif not api_turn:
                 self.out(f"SECURITY    #{facts.number} changes .github/workflows: the automatic review is its security pass")
                 self.review(facts, ctx, author, security=True)
             else:
-                self.review(facts, ctx, author)
+                self.review(facts, ctx, author, security=security)
                 if self.team.pool:
                     self.note_assigned(rules.API_REVIEWER)
         if rules.needs_eye(facts):
@@ -1046,6 +1097,8 @@ class Switch:
             lines += ["", "Notes (never blocking):"] + [f"- {n}" for n in d["notes"][:12]]
         lines += ["", f"_{res.model} through the API; {central(self.now)}._",
                   MARK.format(kind="review", pr=facts.number, head=facts.head_sha)]
+        if self.review_key:   # the MAC that tells this review from a forged one (J-056); without the key, unsigned
+            lines.append(review_sig(self.review_key, self.gh.repo, facts.number, facts.head_sha, verdict))
         self.gh.comment(facts.number, "\n".join(lines), f"post automatic review {verdict} on #{facts.number}")
 
     def review_failed(self, facts: rules.PrFacts, ctx: dict, author: str, security: bool, why: str) -> None:
@@ -1056,7 +1109,9 @@ class Switch:
             self.gh.comment(facts.number, f"Switchboard, {central(self.now)}: the security pass (the automatic Claude "
                                           f"review of a .github/workflows change) gave no verdict on {facts.head_sha[:8]}. "
                                           f"{why}The switchboard will not merge this head; it is listed to merge by hand.\n\n"
-                                          + MARK.format(kind="review", pr=facts.number, head=facts.head_sha),
+                                          + MARK.format(kind="review", pr=facts.number, head=facts.head_sha)
+                                          + ("\n" + review_sig(self.review_key, self.gh.repo, facts.number, facts.head_sha, "NONE")
+                                             if self.review_key else ""),
                             f"security pass failed on #{facts.number}")
             return
         self.ask_review(facts, ctx, self.api_fallback(facts, ctx, author),
@@ -1419,7 +1474,7 @@ class Switch:
         for pr in self.target_prs(0, ""):
             facts, ctx = self.pr_facts(pr)
             author = self.team.vendor_of_branch(facts.head_ref)
-            d = rules.merge_decision(facts, author, self.team, bool(self.merge_token))
+            d = rules.merge_decision(facts, author, self.team, bool(self.merge_token), bool(self.review_key))
             if d.action == "FIX-CI":
                 red.append(f"#{facts.number} {facts.head_ref}: {facts.proof}")
             if d.action == "HUMAN-MERGE":
@@ -1476,8 +1531,9 @@ def main() -> int:
         ap.error("--sha must be hex")
     now = dt.datetime.now(dt.timezone.utc)
     sw = Switch(GitHub(args.repo, args.dry_run), pathlib.Path(args.root), now)
-    # J-056: out of the environment at once, so git, the rule check and every other gh call never inherit it.
+    # J-056: out of the environment at once, so git, the rule check and every other gh call never inherit them.
     sw.merge_token = os.environ.pop(MERGE_TOKEN_ENV, "").strip()
+    sw.review_key = os.environ.pop(REVIEW_KEY_ENV, "").strip()
     sw.out(f"switchboard {args.part}{' DRY RUN' if args.dry_run else ''} at {central(now)} on {args.repo}")
     steer, ask = args.part in ("steer", "all"), args.part in ("ask", "all")
     if args.issue:
