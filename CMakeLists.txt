@@ -38,6 +38,7 @@ add_library(scraperx_sim STATIC
     src/sim/physics_world_traversal.cpp
     src/sim/physics_world_climb.cpp
     src/sim/physics_world_state.cpp
+    src/sim/stock_damage.cpp
     src/sim/mechanism_kit.cpp
     src/sim/rope_constraint.cpp
     src/sim/slingshot.cpp
@@ -216,6 +217,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_twin.cpp
         tests/sim_tests_bay.cpp
         tests/sim_tests_stock.cpp
+        tests/sim_tests_stock_damage.cpp
         tests/sim_tests_body_order.cpp
         tests/sim_tests_fabricated.cpp
         tests/sim_tests_forklift.cpp

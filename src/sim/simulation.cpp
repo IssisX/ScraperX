@@ -5,6 +5,7 @@
 
 #include "sim/loose_stock.hpp"
 #include "sim/physics_world.hpp"
+#include "sim/stock_damage.hpp"
 
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
 
@@ -280,6 +281,10 @@ Simulation::LooseStockPiece Simulation::loose_stock_piece(const std::uint32_t in
         return {};
     }
     return {static_cast<std::uint8_t>(placed[index].kind), placed[index].variant};
+}
+
+stock_damage::DamageState Simulation::stock_damage(const std::uint64_t entity) const noexcept {
+    return physics_world_->stock_damage_state(entity);
 }
 
 std::uint32_t Simulation::kit_cable_count() const noexcept {

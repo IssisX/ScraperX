@@ -159,6 +159,10 @@ public:
     [[nodiscard]] const Corpses &corpses() const noexcept { return *corpses_; }
     [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
     [[nodiscard]] const ImpactLedger &impacts() const noexcept { return *impacts_; }
+    // J-038 slice 1: a stock body's dent record, empty when undamaged.
+    [[nodiscard]] const stock_damage::DamageState &stock_damage_state(const std::uint64_t entity) const noexcept {
+        return stock_damage_.state(entity);
+    }
     // On a forklift's floor within reach of its wheel (that forklift's, or
     // any's).
     [[nodiscard]] bool at_forklift_controls(int index) const noexcept;
@@ -702,6 +706,16 @@ private:
 
     void commit_checkpoint(const JPH::BodyInterface &bodies) noexcept;
 
+    // Spawn the carryable pieces of a broken stock, at the break
+    // geometry around (pos, rot), carrying the stock's (vel, ang) plus
+    // the geometry's scatter. The stock itself is parked first: a body
+    // breaks once, and the pieces are the stock now. Shared by the
+    // live break and by a load whose save holds pieces this world
+    // lacks, so the two never drift apart.
+    void spawn_break_pieces(kit::BodyIndex body, std::uint64_t entity, LooseStock::Kind kind,
+                            const JPH::RVec3 pos, const JPH::Quat rot, const JPH::Vec3 vel,
+                            const JPH::Vec3 ang, float mass) noexcept;
+
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept;
 
 public:
@@ -773,6 +787,7 @@ public:
     std::unique_ptr<Bay> bay_;
     std::unique_ptr<LooseStock> loose_stock_;
     std::unique_ptr<ImpactLedger> impacts_;
+    stock_damage::StockDamage stock_damage_;
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;
     std::unique_ptr<Zipline> zipline_;
