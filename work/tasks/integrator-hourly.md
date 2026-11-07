@@ -9,8 +9,8 @@ The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
 Pace (Cory 11-06: track AND predict, so the limit lasts to Sunday night): every run works out % now itself: the
 last meter reading + (`cost_usd` now - `cost_usd` then) / $ per 1%, the least-squares fit of every reading this week (two
-whole-% readings 2 h apart can't give it: 11-07 they said $30, the fit $13); it is said only when it changes a step. Cory's reading (asked at the 11:17 AM,
-5:17 PM and 11:17 PM runs; Sat-Sun 1:17 and 9:17 PM) only refits it. Predict: % now + the burn of the last 3 h x daytime hours left (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM), at
+whole-% readings 2 h apart can't give it: 11-07 they said $30, the fit $13); it is said only when it changes a step. Ask Cory for the meter only at the day's last run or
+within 2% of a checkpoint (11-07): it refits and catches his Claude use outside this session. Predict: % now + the burn of the last 3 h x daytime hours left (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM), at
 each checkpoint (81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM), and the hour it hits 100%. A prediction over a checkpoint
 throttles now, before it is crossed: no new helper, the next full run quiet (answers, merges), Cory gets the prediction and the
 cut in one line. Loosen a step only when two runs predict under.
