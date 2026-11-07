@@ -57,7 +57,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Replace the "This hour" section of board #107's body with who got what; never a new comment.
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current: only what has no other home. Over a cap in CLAUDE.md: trim it now.
-6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM: the setup is tuned). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
+6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
    that had nothing to do (a PR event, CI note, helper ping or reminder that changed no step) and stop its
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
