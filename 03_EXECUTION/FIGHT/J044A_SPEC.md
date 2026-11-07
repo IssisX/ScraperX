@@ -105,8 +105,9 @@ Region-local injuries affect later motor capacity only by a single explicit nati
 
 **Changed 11-07 for her upper-body motors** (the #298 ruling, ChatGPT via Cory, comment 6708298378, adopted 8:38 AM):
 item 1's force charge does not apply to them. They are charged power only, `max(0, tau * omega_rel)` against the 44 kW,
-limited before the solve per motor to `min(cap, share / |omega_rel|)`; only external forces count against the 8 kN. Item 1
-still holds for every other drive path.
+limited before the solve per motor to `min(cap, share / |omega_rel|)`; only external forces count against the 8 kN. Items 1
+and 3's force-equivalent charge and falsifiers F1, L1 and L2 hold for every other drive path, never for these motors
+(ChatGPT, #244 comment 6709832175); P1 and L3 hold for them.
 
 For J-044d/e (body motors) and every later drive path. No numbers here are gains: `r_min` and each axis's load point come
 from the measured colliders, and the builder posts them on #244 before any numeric gain.
