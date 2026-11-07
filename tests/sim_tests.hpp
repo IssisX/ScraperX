@@ -757,6 +757,7 @@ void run_forklift();
 void run_forklift_strain();
 void run_forklift_matron();
 void run_yard_crane();
+void run_machine_hearing();
 void run_yard_crane_magnet();
 void run_yard_crane_spreader();
 void run_wet_isolation();
