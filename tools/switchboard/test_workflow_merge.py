@@ -302,10 +302,30 @@ class TheToken(unittest.TestCase):
             holders += [(name, step["name"]) for step in job["steps"] if switch.REVIEW_KEY_ENV in str(step.get("env"))]
         self.assertEqual(sorted(holders), [("ask", "Run the switch"), ("steer", "Run the switch")])
         self.assertEqual(text.count("secrets." + switch.REVIEW_KEY_ENV), 2)
-        # Both jobs deploy to the environment whose branch limit is trunk; no other job does.
-        self.assertEqual([n for n, j in flow["jobs"].items() if j.get("environment")], ["ask", "steer"])
-        for name in ("ask", "steer"):
+        # The jobs that hold a secret deploy to the environment whose branch limit is trunk; no other job does.
+        self.assertEqual(sorted(n for n, j in flow["jobs"].items() if j.get("environment")), ["ask", "provision", "steer"])
+        for name in ("ask", "steer", "provision"):
             self.assertEqual(flow["jobs"][name]["environment"], "switchboard-merge", name)
+
+    def test_the_api_key_and_agent_token_reach_only_steps_in_the_environment(self):
+        # J-057: they are environment secrets, so a step outside switchboard-merge would get them empty; pin the
+        # holders so a new job cannot ask for them without joining the environment (branch limit: trunk).
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        text = (HERE.parents[1] / ".github/workflows/switchboard.yml").read_text(encoding="utf-8")
+        flow = yaml.safe_load(text)
+        for secret in ("ANTHROPIC_API_KEY", "AGENT_GITHUB_TOKEN"):
+            self.assertNotIn("secrets." + secret, str(flow.get("env")), secret)
+            holders = []
+            for name, job in flow["jobs"].items():
+                self.assertNotIn("secrets." + secret, str(job.get("env")), (secret, name))
+                holders += [(name, step["name"]) for step in job["steps"] if "secrets." + secret in str(step.get("env"))]
+            self.assertEqual(sorted(holders), [("ask", "Run the switch"), ("provision", "Create the environment, agent and vault")], secret)
+            self.assertEqual(text.count("secrets." + secret), 2, secret)
+            for name, _ in holders:
+                self.assertEqual(flow["jobs"][name].get("environment"), "switchboard-merge", (secret, name))
 
     def test_only_the_steer_jobs_switch_step_holds_the_secret(self):
         try:
