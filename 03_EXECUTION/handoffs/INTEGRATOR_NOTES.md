@@ -4,7 +4,7 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794079926 (2026-11-07 19:32:06Z, 1:32 PM Central)
+Read through: 1794085999 (2026-11-07 21:13:19Z, 3:13 PM Central)
 
 ## Meter
 83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56); 86% 12:26 PM; 86% 1:36 PM. Throttled since 10:30 AM; from 12:40 PM one helper allowed, only for a job stuck twice (Cory: reset Sun afternoon); the 1:17 PM run answers and
@@ -12,7 +12,7 @@ merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12
 
 ## Waiting on me
 - From Muse: #298 ruling-B fix and the motor-gain test; #299 P1 fix; the J-049 PR 1 fix (mailed 11:20 AM);
-  J-061 #312 wind leak (mailed 1:45 PM). Cory said 1:37 PM Muse had #298 done; nothing pushed yet (head 03ad884b).
+  J-061 #312 wind leak (mailed 1:45 PM; ChatGPT cause verified, approach mailed 3:14 PM); #309 black eye rotated 180° (FIX posted 3:14 PM, flip tested). Cory said 1:37 PM Muse had #298 done; nothing pushed yet (head 03ad884b).
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
 
