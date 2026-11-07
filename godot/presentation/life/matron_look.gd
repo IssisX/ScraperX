@@ -16,6 +16,10 @@ const WRINKLE_DEPTH := 3.0
 # porous level; skin keeps its own (f0 about 0.028, specular 0.35).
 const POROUS_SPECULAR := 0.22
 const SKIN_SPECULAR := 0.35
+# Her skin's own tone over skin_a.jpg: the bare texture read chalky next to
+# the world; Cory picked this, the darkest of three, by eye (11-07). The
+# exposure's tints multiply on top of it.
+const SKIN_TONE := Color(0.8, 0.68, 0.6)
 
 var _skin: StandardMaterial3D
 var _cloth: StandardMaterial3D
@@ -173,6 +177,7 @@ func build() -> void:
 		"penlight": steel, "pins": steel, "shoes": shoe, "eyes": _eye, "cornea": cornea, "mouth": mouth, "teeth": teeth,
 		"brows": brow, "lashes": lash, "hair": _hair}
 	_skin.metallic_specular = SKIN_SPECULAR
+	_skin.albedo_color = SKIN_TONE
 	for porous: StandardMaterial3D in [_cloth, stocking, shoe, mouth, _hair, brow, lash]:
 		porous.metallic_specular = POROUS_SPECULAR
 
@@ -249,7 +254,7 @@ func apply_exposure(exposure: float) -> void:
 		return
 	_applied_exposure = e
 	var tints := exposure_tints(e)
-	_skin.albedo_color = tints["skin"]
+	_skin.albedo_color = SKIN_TONE * (tints["skin"] as Color)
 	_skin.roughness = lerpf(0.6, 0.42, e)   # clammy, a waxy sheen
 	_cloth.albedo_color = tints["cloth"]
 	_eye.albedo_color = Color.WHITE.lerp(Color(1.0, 0.84, 0.8), e)
