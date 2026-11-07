@@ -106,6 +106,7 @@
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/Constraints/PointConstraint.h>
+#include <Jolt/Physics/Constraints/TwoBodyConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include "sim/matron_mover.hpp"
@@ -219,6 +220,39 @@ public:
     // middle, matron_traversal, routecraft, found climbs, room_to_stand); the
     // body that collides is her stance's own capsule (matron_shape.cpp).
     static constexpr float kMassKg = 220.0F;
+    // J-044c: her jointed upper body (J044A_SPEC.md). The root keeps the
+    // capsule shape (her locomotion/planning shape); only its mass drops to
+    // the residual, and the five upper segments carry the rest. The total
+    // stays kMassKg: 147.884 + 12.188 + 3.080 + 35.112 + 10.868 + 10.868.
+    // Segments, in joint order: 0 head, 1 neck, 2 chest, 3 arm L, 4 arm R.
+    static constexpr int kUpperCount = 5;
+    static constexpr float kRootMassKg = 147.884F;
+    static constexpr float kUpperMassKg[kUpperCount] = {12.188F, 3.080F, 35.112F, 10.868F, 10.868F};
+    static constexpr std::uint64_t kUpperEntityBase = 3202;  // head..arm R (3200 root, 3201 locker)
+    // Joint hard stops (J044A_SPEC.md C), radians: {normal cone, plane cone,
+    // twist half-angle}. Shoulder cones are the symmetric envelope of the
+    // spec's asymmetric forward/back range; Grok's #244 pins the rest.
+    static constexpr float kUpperLimits[kUpperCount][3] = {
+        {0.611F, 0.436F, 0.960F},  // neck->head: flex 35, lateral 25, twist 55
+        {0.262F, 0.175F, 0.262F},  // chest->neck: 15, 10, 15
+        {0.244F, 0.314F, 0.393F},  // root->chest: 14, 18, 22.5
+        {2.618F, 2.269F, 1.571F},  // chest->arm L: forward 150, abduct 130, twist 90
+        {2.618F, 2.269F, 1.571F},  // chest->arm R
+    };
+    // Motor spring and torque caps (N m), per upper joint. Prototype values
+    // (Grok #244 pins gains): stiff enough to hold the rest pose against
+    // gravity and return after a jab, soft enough that a punch snaps the head.
+    static constexpr float kUpperMotorHz[kUpperCount] = {20.0F, 20.0F, 20.0F, 20.0F, 20.0F};  // J-044c prototype: 20 Hz holds the diagonal arms against gravity at <0.5 deg; pinned when Grok #244 lands
+    static constexpr float kUpperMotorDamping = 1.0F;  // J-044c prototype: critical damping; pinned when Grok #244 lands
+    static constexpr float kUpperMotorTorqueNm[kUpperCount] = {120.0F, 120.0F, 400.0F, 150.0F, 150.0F};
+    // J-044c: her upper body's motors draw on her tick's one account
+    // (feet_budget_, 8 kN / 44 kW), last before the solve that uses them,
+    // and may use only what it granted (step_upper_body). A joint's torque is
+    // charged as force over its reach: the push it could make at the far end
+    // of what the joint turns, metres. The head, neck and chest joints each
+    // turn the head above them, so theirs is joint to crown (the head
+    // sphere's top, 1.79 m over her feet); a shoulder's is shoulder to wrist.
+    static constexpr float kUpperReachM[kUpperCount] = {0.146F, 0.251F, 0.413F, 0.481F, 0.481F};
     static constexpr float kRadius = 0.30F;
     static constexpr float kHalfHeight = 0.75F;
     static constexpr float kStandCentre = kHalfHeight + kRadius;
@@ -709,6 +743,10 @@ public:
     static constexpr float kThrowWindupSeconds = 0.35F;
     static constexpr float kThrowCooldownSeconds = 6.0F;
     static constexpr float kThrowQuietSeconds = 2.5F;
+    // Stock she let go of is at rest once it moves under these for kRestSeconds.
+    static constexpr float kRestMps = 0.1F;
+    static constexpr float kRestRadps = 0.5F;
+    static constexpr float kRestSeconds = 0.25F;
     // The throw is a push of her hands (J-016): out of her grip, the piece
     // is driven up to the throw's speed over kThrowStrokeSeconds by a force
     // from her feet's tick account (its work at the piece's speed against
@@ -1297,6 +1335,16 @@ public:
         std::uint8_t damage_stage = 0;  // 0..4; death is State::Dead
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
         bool blow_low = false;          // and it came at her shins (under kLowBlowM): no step to take it
+        // J-044c: her jointed upper body, per segment (head, neck, chest,
+        // arm L, arm R): the joint's angle from rest (degrees), the
+        // segment's mass (kg), and the head/chest relative rotations the
+        // rig poses (child relative to parent).
+        float upper_angle_deg[5] = {};
+        float upper_mass_kg[5] = {};
+        float upper_root_mass_kg = 0.0F;
+        float upper_motor_power_w = 0.0F;  // this tick's motor work, watts (upper bound)
+        JPH::Vec3 upper_head_angvel = JPH::Vec3::sZero();
+        JPH::Quat upper_q[5] = {};  // each segment's swing off rest, in its parent's frame, out of her yaw (kUpperCount order)
         bool riding = false;            // her floor going up or down under her (feel_floor): she rides it
         float edge_brace_n = 0.0F;      // her feet braced back from an edge this tick (brace_at_edges)
         float feet_push_n = 0.0F;       // all her feet pushed with this tick (read only)
@@ -1407,7 +1455,7 @@ public:
     }
 
     Matron(JPH::PhysicsSystem &physics, std::uint32_t static_layer, std::uint32_t moving_layer,
-           std::uint32_t steel_layer, JPH::BodyID player);
+           std::uint32_t steel_layer, std::uint32_t hand_layer, JPH::BodyID player);
     ~Matron();
     Matron(const Matron &) = delete;
     Matron &operator=(const Matron &) = delete;
@@ -1477,6 +1525,12 @@ public:
     // Her last throw's entity while it is still in the air and landing, else 0.
     [[nodiscard]] std::uint64_t thrown_entity() const noexcept {
         return thrown_ >= 0 && thrown_s_ > 0.0F ? throwables_[static_cast<std::size_t>(thrown_)].entity : 0;
+    }
+    // The stock she last let go of (dropped or thrown) until it comes to rest,
+    // else 0: its hits are her own sound, decided by the body and not by how
+    // far from her it lands (J-044c: a dropped box bouncing 1.6 m away).
+    [[nodiscard]] std::uint64_t settling_entity() const noexcept {
+        return settling_ >= 0 ? throwables_[static_cast<std::size_t>(settling_)].entity : 0;
     }
     // Reports (once) the way up whose rope she has just taken off its eye
     // (0 Stage A, 1 Stage B), or -1: the world unhooks it.
@@ -1803,6 +1857,12 @@ public:
     void set_spare_for_test(const int spare) noexcept { spare_for_test_ = spare; }
     void set_dangle_seconds_for_test(const float seconds) noexcept { dangle_for_test_s_ = seconds; }
     void set_stage_for_test(Stage stage) noexcept;
+    // Tests only: put her in a state (0 Dormant: sealed, listening, feet
+    // still) so a test can measure a genuine standing rest.
+    void set_state_for_test(const State state) noexcept { state_ = state; }
+    // J-044c: after the root is teleported, the upper bodies must follow
+    // it — a joint spanning metres to a stale segment flings the root.
+    void reseat_upper_body() noexcept { seat_upper_body(); }
     // Tests only: her hands held off the player for `seconds` (no grab, no
     // shove), so a test can meet her body alone.
     void hold_hands_for_test(const float seconds) noexcept {
@@ -2070,6 +2130,26 @@ public:
         player_blow_ns_ = JPH::Vec3::sZero();
         player_blow_low_ = false;
     }
+    // J-044c test hooks: apply an impulse to one upper segment (0 head, 1
+    // neck, 2 chest, 3 arm L, 4 arm R) at a world point. The view carries
+    // the masses, joint angles and motor power.
+    void apply_upper_impulse_for_test(int segment, const JPH::Vec3 impulse_ns, const JPH::RVec3 at) noexcept;
+    // Which segment a strike at `at` lands on (0 head, 1 neck, 2 chest,
+    // 3 arm L, 4 arm R; -1 the root). Tests only.
+    [[nodiscard]] int strike_segment_for_test(const JPH::RVec3 at) const noexcept;
+    // How many of the 5 upper joints are in the physics system's
+    // constraint list (0-5). Tests only.
+    [[nodiscard]] int upper_constraints_in_system_for_test() const noexcept;
+    // The neck joint's stored limits (normal cone, plane cone, twist min,
+    // twist max, all radians). Tests only: they say whether the settings
+    // the constraint was built with are the ones in the spec.
+    void upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept;
+    [[nodiscard]] JPH::BodyID upper_body(const int segment) const noexcept {
+        return segment >= 0 && segment < kUpperCount ? upper_body_[static_cast<std::size_t>(segment)] : JPH::BodyID();
+    }
+    // The strike pipeline's body for a hit at `at` (feet at `feet_y`): the
+    // upper segment the point falls on, else the root.
+    [[nodiscard]] JPH::BodyID strike_body_for_point(const JPH::RVec3 at, const float feet_y) const noexcept;
 private:
     JPH::Vec3 player_blow_ns_ = JPH::Vec3::sZero();
     JPH::RVec3 player_blow_at_ = JPH::RVec3::sZero();
@@ -2315,6 +2395,7 @@ private:
     [[nodiscard]] bool load_held_elsewhere(JPH::BodyID body) const;
     void hold_stock(float dt);
     void release_stock(JPH::Vec3 velocity, JPH::Vec3 spin, bool thrown);
+    void settle_let_go(float dt);   // ends settling_entity once the stock rests
     void throw_stroke(float dt);
     [[nodiscard]] JPH::Vec3 hands_offset() const noexcept;
     void step_planks(float dt);
@@ -2440,11 +2521,52 @@ private:
     std::uint32_t static_layer_;
     std::uint32_t moving_layer_;
     std::uint32_t steel_layer_;
+    std::uint32_t hand_layer_;  // J-044c: the upper bodies' layer (meets nothing)
     JPH::BodyID player_;
     JPH::Ref<JPH::Shape> shape_;
     JPH::Ref<JPH::Shape> hips_;   // way_clear's sweep: her width at her hips
     SharedSurvival *shared_survival_ = nullptr;
     JPH::BodyID body_;
+    // J-044c: the five upper segments and their motorized joints, in the
+    // kUpperCount order (head, neck, chest, arm L, arm R). They live on the
+    // hand layer (meet nothing): only the joints and applied impulses move
+    // them. Their rest frames are baked at placement; turning after that
+    // leaves them facing the placement yaw until J-044d adds facing targets.
+    std::array<JPH::BodyID, kUpperCount> upper_body_{};
+    std::array<JPH::Ref<JPH::TwoBodyConstraint>, kUpperCount> upper_joint_{};
+    std::array<JPH::Quat, kUpperCount> upper_rest_{};  // rest relative rotation, per segment
+    bool upper_in_world_ = false;
+    float upper_motor_power_w_ = 0.0F;  // last tick's motor work (upper bound), watts
+    // The yaw the joints were baked at (create_upper_body): their anchors sit
+    // at it in each parent's frame, so a reseat poses the chain at it too.
+    float upper_yaw_ = 0.0F;
+    // The chain hangs on the root's chest joint. A root moved by more than
+    // this off that joint at the start of a tick was placed, not moved by
+    // the solver (a solved joint is off by millimetres): the chain is seated
+    // back on the root before anything is solved (keep_upper_on_root).
+    static constexpr float kUpperSeatM = 0.05F;
+    void create_upper_body();
+    void seat_upper_body();
+    void keep_upper_on_root();
+    // Every shape the root takes goes through here: Jolt keeps a joint's
+    // anchor relative to the body's centre of mass, so a shape with another
+    // centre of mass (lying, kneeling) moves the chest joint's anchor on the
+    // root unless the joint is told (Constraint::NotifyShapeChanged).
+    void set_root_shape(const JPH::Shape *shape, JPH::EActivation activation);
+    // Her velocity: her whole body's momentum over her one mass (kMassKg,
+    // the mass every drive and gauge of hers is written for). The chain's
+    // joints push the root and the segments both ways, so its sway and its
+    // lag move the root alone while she stands or is struck: read as hers,
+    // the root's velocity made a sway at rest a step her feet braked and
+    // a blow her balance took. With no chain it is the root's.
+    [[nodiscard]] JPH::Vec3 body_velocity() const;
+    // Her Climber on her root, reading her body's velocity (body_velocity):
+    // every Climber of hers is made here.
+    void new_climber(traversal::Ignore ignore);
+    [[nodiscard]] float upper_spin(int i) const;  // joint i's spin against its parent, rad/s
+    void step_upper_body(const float dt);
+    void destroy_upper_body();
+    void upper_rest_transform(const int i, JPH::RVec3 &pos, JPH::Quat &rot) const;
     JPH::BodyID locker_body_;
     bool body_in_world_ = false;
     std::array<Plank, kPlanks> planks_{};
@@ -2600,6 +2722,8 @@ private:
     JPH::Vec3 throw_v_ = JPH::Vec3::sZero();       // the speed it leaves them at
     int thrown_ = -1;
     float thrown_s_ = 0.0F;
+    int settling_ = -1;              // the stock she let go of, until it rests (settling_entity)
+    float settling_still_s_ = 0.0F;  // how long it has been still
     std::uint32_t takes_ = 0;
     std::uint32_t throws_ = 0;
     int stock_shove_ = -1;                 // the piece she is shoving, or -1

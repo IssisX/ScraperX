@@ -316,6 +316,16 @@ struct MatronSnapshot final {
     std::uint8_t damage_stage = 0;
     double blow_mps = 0.0;
     bool blow_low = false;      // the last blow came at her shins
+    // J-044c: her jointed upper body (head, neck, chest, arm L, arm R):
+    // each joint's angle from rest (degrees), each segment's mass (kg),
+    // the root's mass, this tick's motor work, and the head/chest
+    // relative rotations the rig poses (child relative to parent).
+    double upper_angle_deg[5] = {};
+    double upper_mass_kg[5] = {};
+    double upper_root_mass_kg = 0.0;
+    double upper_motor_power_w = 0.0;
+    Vector3 upper_head_angvel{};
+    Quaternion upper_q[5] = {};  // each segment's swing off rest, in its parent's frame, out of her yaw (kUpperCount order)
     bool riding = false;        // she rides a floor going up or down under her
     double edge_brace_n = 0.0;  // her feet braced back from an edge this tick
     double feet_push_n = 0.0;   // all her feet pushed with this tick (read only)
@@ -1718,6 +1728,7 @@ public:
     // Tests only (never bound to the bridge): the Matron's stage, with the
     // rage it takes, so a test can meet what each stage does to the player.
     void debug_set_matron_stage(std::uint8_t stage) noexcept;
+    void debug_set_matron_state_for_test(std::uint8_t state) noexcept;
     // Tests only (never bound to the bridge): her hands held off the player
     // for `seconds` (no grab, no shove), so a test can meet her body alone.
     void debug_hold_matron_hands(double seconds) noexcept;
@@ -1783,6 +1794,15 @@ public:
     // hold alone); an arm already lost.
     void debug_matron_armplay(int armplay) noexcept;
     void debug_lose_arm(int side) noexcept;
+    // J-044c tests only: an impulse on one upper segment (0 head, 1 neck,
+    // 2 chest, 3 arm L, 4 arm R) at a world point, and which segment a
+    // strike at a world point lands on (-1: the root).
+    void debug_upper_impulse(int segment, Vector3 impulse_ns, Vector3 at) noexcept;
+    [[nodiscard]] int strike_segment_for_test(Vector3 at) const noexcept;
+    // J-044c tests only: how many of the 5 upper joints are in the system's constraint list.
+    [[nodiscard]] int upper_constraints_in_system_for_test() const noexcept;
+    // J-044c tests only: the neck joint's stored limits (radians).
+    void upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept;
     // Tests only (never bound to the bridge): an arm broken as a hard hit
     // breaks it (0 the left, 1 the right), out of use a while.
     void debug_break_arm(int side) noexcept;

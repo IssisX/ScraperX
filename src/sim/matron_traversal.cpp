@@ -292,7 +292,9 @@ Vec3 Budget::take(const Vec3 want) noexcept {
 }
 
 RVec3 Climber::center() const { return physics_.GetBodyInterface().GetCenterOfMassPosition(body_); }
-Vec3 Climber::velocity() const { return physics_.GetBodyInterface().GetLinearVelocity(body_); }
+Vec3 Climber::velocity() const {
+    return velocity_source_ ? velocity_source_() : physics_.GetBodyInterface().GetLinearVelocity(body_);
+}
 
 // Her velocity against what she pushes on: the hold's point velocity at the
 // anchor when holding, else the floor's under her feet. Power is spent only
@@ -315,6 +317,23 @@ Vec3 Climber::relative_velocity() const {
         }
     }
     return velocity() - support;
+}
+
+Budget &Climber::account(Budget &own) {
+    if (shared_ != nullptr) {
+        shared_->velocity = relative_velocity();
+        return *shared_;
+    }
+    own = Budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
+    return own;
+}
+
+void Climber::note_spend(const Budget &budget, const Budget &before) {
+    view_.force_n = budget.used - before.used;
+    view_.power_w = budget.power_used - before.power_used;
+    view_.peak_power_w = std::max(view_.peak_power_w, view_.power_w);
+    view_.peak_brake_w = std::max(view_.peak_brake_w, budget.brake_used - before.brake_used);
+    view_.peak_force_n = std::max(view_.peak_force_n, view_.force_n);
 }
 
 bool Climber::supported(float *top, BodyID *by, RVec3 *point) const {
@@ -734,7 +753,9 @@ bool Climber::narrow_floor_lean(const RVec3 c, Vec3 &to_floor) const {
 // hard enough shove still puts her off). On wide floor it does nothing.
 float Climber::stand(const float dt) {
     (void)dt;
-    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
+    Budget own;
+    Budget &budget = account(own);
+    const Budget before = budget;
     const RVec3 c = center();
     Vec3 to_floor;
     bool narrow = narrow_floor_lean(c, to_floor);
@@ -772,9 +793,9 @@ float Climber::stand(const float dt) {
         if (want.Length() > limits_.foot_force_n) want = want.Normalized() * limits_.foot_force_n;
         physics_.GetBodyInterface().AddForce(body_, budget.take(want));
     }
-    view_.force_n = budget.used;
-    view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
-    return budget.used;
+    view_.force_n = budget.used - before.used;
+    view_.peak_force_n = std::max(view_.peak_force_n, view_.force_n);
+    return view_.force_n;
 }
 
 void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budget &budget, const float may_drop) {
@@ -883,14 +904,12 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
 }
 
 float Climber::walk_between(const float dt, const Vec3 feet_goal, const float speed, const float may_drop) {
-    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
+    Budget own;
+    Budget &budget = account(own);
+    const Budget before = budget;
     walk(dt, feet_goal, speed, budget, may_drop);
-    view_.force_n = budget.used;
-    view_.power_w = budget.power_used;
-    view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
-    view_.peak_brake_w = std::max(view_.peak_brake_w, budget.brake_used);
-    view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
-    return budget.used;
+    note_spend(budget, before);
+    return view_.force_n;
 }
 
 void Climber::begin(const MoveSpec &spec) {
@@ -1029,7 +1048,9 @@ Climber::Status Climber::step(const float dt) {
         if (status_ == Status::Done || status_ == Status::Idle) (void)stand(dt);
         return status_;
     }
-    Budget budget{limits_.total_force_n, 0.0F, limits_.power_w, 0.0F, relative_velocity()};
+    Budget own;
+    Budget &budget = account(own);
+    const Budget before = budget;
     phase_s_ += dt;
     switch (spec_.kind) {
     case MoveKind::Walk: step_walk(dt, budget); break;
@@ -1051,11 +1072,7 @@ Climber::Status Climber::step(const float dt) {
     if (status_ == Status::Running && (spec_.kind == MoveKind::RungUp || spec_.kind == MoveKind::RungDown)) {
         maintain_second_hold();
     }
-    view_.force_n = budget.used;
-    view_.power_w = budget.power_used;
-    view_.peak_power_w = std::max(view_.peak_power_w, budget.power_used);
-    view_.peak_brake_w = std::max(view_.peak_brake_w, budget.brake_used);
-    view_.peak_force_n = std::max(view_.peak_force_n, budget.used);
+    note_spend(budget, before);
     view_.phase = phase_;
     view_.sliding = sliding_;
     view_.holding = hold_.valid();

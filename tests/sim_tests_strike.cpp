@@ -467,6 +467,163 @@ void run_strike() {
     std::cout << "PASS scraperx_sim strike: impulse_ns=" << close.impulse_ns << "\n";
 }
 
+void run_matron_upper_body() {
+    // J-044c: the jointed upper body — head, neck, chest, shoulders on
+    // motorized joints, 220 kg total, one 8 kN / 44 kW budget. The reference
+    // punch is J_ref = 1500 N x 3/90 s = 50 N-s (J044A_SPEC.md).
+    // Her upper bodies exist once she is in the world: home puts her in the
+    // locker, the launch puts her on the deck (as the strike tests do).
+    auto place = [](Simulation &s) {
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + 1.05});
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+    };
+    {
+        // Rest pose: place her on the deck (spawns the upper bodies), hold
+        // her Dormant (sealed, listening, feet still), and let the motors
+        // settle. A hunting Matron's gait would lean the joints; the rest
+        // bound is about the motors holding still, so she must stand still.
+        Simulation s(InitialSpawn::Deck154);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.debug_place_matron(Vector3{p.x, p.y - 0.20, p.z + 3.0});
+        s.debug_set_matron_state_for_test(0);  // Dormant
+        const auto at_launch = s.matron_state();
+        std::cout << "  upper body at launch: angles_deg head=" << at_launch.upper_angle_deg[0]
+                  << " neck=" << at_launch.upper_angle_deg[1] << " chest=" << at_launch.upper_angle_deg[2]
+                  << " arm_l=" << at_launch.upper_angle_deg[3] << " arm_r=" << at_launch.upper_angle_deg[4]
+                  << " yaw=" << at_launch.yaw << "\n";
+        // Settle to the motors' steady hold, then measure twice: the rest
+        // pose is a steady hold within the spec joint limits, not exactly
+        // 0 deg. The head's centre sits forward of the neck joint, so its
+        // weight leans the neck ~3.4 deg at equilibrium (the 20 Hz spring
+        // balancing ~4 N-m); the proper gains (Grok #244) will tighten it.
+        // What the motors must prove is a steady hold inside the limits.
+        for (int i = 0; i < 150; ++i) {
+            tick(s);
+        }
+        const auto m1 = s.matron_state();
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const auto m = s.matron_state();
+        double total = m.upper_root_mass_kg;
+        double max_drift = 0.0;
+        for (int i = 0; i < 5; ++i) {
+            total += m.upper_mass_kg[i];
+            max_drift = std::max(max_drift, std::abs(m.upper_angle_deg[i] - m1.upper_angle_deg[i]));
+        }
+        float neck_normal = -1.0F, neck_plane = -1.0F, neck_twist_min = -1.0F, neck_twist_max = -1.0F;
+        s.upper_neck_limits_for_test(neck_normal, neck_plane, neck_twist_min, neck_twist_max);
+        std::cout << "  upper body masses: root=" << m.upper_root_mass_kg << " head=" << m.upper_mass_kg[0]
+                  << " neck=" << m.upper_mass_kg[1] << " chest=" << m.upper_mass_kg[2]
+                  << " arm_l=" << m.upper_mass_kg[3] << " arm_r=" << m.upper_mass_kg[4] << " total=" << total
+                  << " angles_deg head=" << m.upper_angle_deg[0] << " neck=" << m.upper_angle_deg[1]
+                  << " chest=" << m.upper_angle_deg[2] << " arm_l=" << m.upper_angle_deg[3]
+                  << " arm_r=" << m.upper_angle_deg[4] << " drift_deg=" << max_drift
+                  << " constraints_in_system=" << s.upper_constraints_in_system_for_test()
+                  << " neck_limits_rad normal=" << neck_normal << " plane=" << neck_plane
+                  << " twist_min=" << neck_twist_min << " twist_max=" << neck_twist_max
+                  << " motor_w=" << m.upper_motor_power_w << "\n";
+        require(std::abs(total - 220.0) < 1.0e-3, "upper body: the masses add to 220 kg");
+        require(std::abs(m.upper_mass_kg[0] - 12.188) < 1.0e-3 && std::abs(m.upper_mass_kg[1] - 3.080) < 1.0e-3 &&
+                    std::abs(m.upper_mass_kg[2] - 35.112) < 1.0e-3 &&
+                    std::abs(m.upper_mass_kg[3] - 10.868) < 1.0e-3 &&
+                    std::abs(m.upper_mass_kg[4] - 10.868) < 1.0e-3,
+                "upper body: head 12.188, neck 3.080, chest 35.112, arms 10.868 each");
+        require(std::abs(m.upper_root_mass_kg - 147.884) < 1.0e-3,
+                "upper body: the root carries the 147.884 kg rest");
+        // Steady hold inside the spec joint limits (head 35/25, neck
+        // 15/10/15, chest 14/18/22.5, arms 150/130/90 deg): the neck's
+        // ~3.4 deg is the head-weight equilibrium, well inside its 10 deg
+        // plane cone. Drift < 0.5 deg over 30 ticks proves it is a hold,
+        // not a transient passing through.
+        require(m.upper_angle_deg[0] < 10.0 && m.upper_angle_deg[1] < 10.0 && m.upper_angle_deg[2] < 10.0 &&
+                    m.upper_angle_deg[3] < 10.0 && m.upper_angle_deg[4] < 10.0,
+                "upper body: the motors hold the rest pose standing, inside the joint limits");
+        require(max_drift < 0.5, "upper body: the rest pose is steady, not drifting");
+        require(m.upper_motor_power_w < 50.0, "upper body: the motors draw ~nothing at rest");
+    }
+    {
+        Simulation s(InitialSpawn::Deck154);
+        place(s);
+        // J_ref, 50 N-s, forward at 8 cm over the head's centre: it snaps
+        // the head back on its neck, never the root.
+        const auto m0 = s.matron_state();
+        s.debug_upper_impulse(0, Vector3{0.0, 0.0, 50.0},
+                              Vector3{m0.position.x, m0.position.y + 0.69, m0.position.z});
+        double peak_head = 0.0, peak_power = 0.0;
+        for (int i = 0; i < 10; ++i) {
+            tick(s);
+            peak_head = std::max(peak_head, s.matron_state().upper_angle_deg[0]);
+            peak_power = std::max(peak_power, s.matron_state().upper_motor_power_w);
+        }
+        for (int i = 0; i < 90; ++i) {
+            tick(s);
+        }
+        const auto m1 = s.matron_state();
+        std::cout << "  upper body head impulse: peak_head_deg=" << peak_head << " peak_motor_w=" << peak_power
+                  << " head_deg_after_1s=" << m1.upper_angle_deg[0] << "\n";
+        require(peak_head > 5.0, "upper body: a 50 N-s impulse to the head snaps it off rest");
+        require(m1.upper_angle_deg[0] < 2.0, "upper body: the head returns to rest after the impulse");
+        require(peak_power > 0.0 && peak_power < 44000.0,
+                "upper body: the motors worked, inside the 44 kW budget");
+    }
+    {
+        // The same impulse twice gives the same head angle, to the bit.
+        auto head_after = [&]() {
+            Simulation s(InitialSpawn::Deck154);
+            place(s);
+            const auto m0 = s.matron_state();
+            s.debug_upper_impulse(0, Vector3{0.0, 0.0, 50.0},
+                                  Vector3{m0.position.x, m0.position.y + 0.69, m0.position.z});
+            for (int i = 0; i < 100; ++i) {
+                tick(s);
+            }
+            return s.matron_state().upper_angle_deg[0];
+        };
+        const double a = head_after();
+        const double b = head_after();
+        std::cout << "  upper body determinism: head_deg_a=" << a << " head_deg_b=" << b << "\n";
+        require(a == b, "upper body: the same impulse gives the same head angle, to the bit");
+    }
+    {
+        Simulation s(InitialSpawn::Deck154);
+        place(s);
+        const auto m = s.matron_state();
+        // Her frame: forward from her yaw, right across it; heights above her feet.
+        const double yaw = m.yaw;
+        const double fx = std::sin(yaw), fz = std::cos(yaw);
+        const double rx = std::cos(yaw), rz = -std::sin(yaw);
+        const double feet = m.position.y - 1.05;
+        const auto pt = [&](const double h, const double across, const double forward) {
+            return Vector3{m.position.x + across * rx + forward * fx, feet + h,
+                           m.position.z + across * rz + forward * fz};
+        };
+        const int head = s.strike_segment_for_test(pt(1.66, 0.0, 0.075));
+        const int neck = s.strike_segment_for_test(pt(1.56, 0.0, 0.05));
+        const int chest = s.strike_segment_for_test(pt(1.40, 0.0, 0.02));
+        const int arm_l = s.strike_segment_for_test(pt(1.20, -0.30, 0.15));
+        const int arm_r = s.strike_segment_for_test(pt(1.20, 0.30, 0.15));
+        const int leg = s.strike_segment_for_test(pt(0.50, 0.0, 0.0));
+        std::cout << "  upper body routing: head=" << head << " neck=" << neck << " chest=" << chest
+                  << " arm_l=" << arm_l << " arm_r=" << arm_r << " leg=" << leg << "\n";
+        require(head == 0 && neck == 1 && chest == 2 && arm_l == 3 && arm_r == 4 && leg == -1,
+                "upper body: a strike lands on the segment it falls on, the root below the chest");
+    }
+    std::cout << "PASS scraperx_sim matron-upper-body\n";
+}
+
 namespace {
 // The low sweep (sim/physics_world_strike.cpp): Punch while crouched. Her
 // `her_ahead_m` in front of him on the Deck154 start, crouched, one sweep:

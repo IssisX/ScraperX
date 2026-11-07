@@ -287,7 +287,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // The Matron, on deck 1 (11 m): last, like the crew (not in the kit, not saved).
     // The 154 m deck stays where it is. Tests that need her there call place_matron_home(154).
     matron_ = std::make_unique<Matron>(physics_system_, object_layers::kStatic, object_layers::kMoving,
-                                       object_layers::kOnSteel, player_id_);
+                                       object_layers::kOnSteel, object_layers::kHand, player_id_);
     matron_->set_home(Matron::kStackPitch);   // deck 1, 11 m. Same place on the band, lower deck.
     // The ziplines (zipline.hpp): after everything they must keep clear of
     // (each line is swept against the world as built so far), before the
@@ -741,8 +741,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // step's hits, hardest first, then the yard crane's drives while they run.
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
-        // Her own throw coming down is not a sound to her (matron.hpp).
-        if (loud > 0.0F && hit.entity != matron_->thrown_entity()) {
+        // Her own throw coming down, or stock she let go of until it rests,
+        // is not a sound to her (matron.hpp).
+        if (loud > 0.0F && hit.entity != matron_->thrown_entity() && hit.entity != matron_->settling_entity()) {
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
     }
@@ -1096,7 +1097,10 @@ void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const
     JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
     release_carry();
     clear_traversal();
-    bodies.SetPositionAndRotation(player_id_, at, bodies.GetRotation(player_id_), JPH::EActivation::Activate);
+    // A placement puts him standing: a tilt carried out of her hold would
+    // otherwise right itself by rolling, which walks him off whatever he
+    // was placed on (matron wreck: off the toolbox before she looks at it).
+    bodies.SetPositionAndRotation(player_id_, at, JPH::Quat::sIdentity(), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(player_id_, velocity, JPH::Vec3::sZero());
     grounded_ = false;
     own_drive_ = false;   // thrown: what he meets on this flight is a blow
@@ -1500,6 +1504,9 @@ void Simulation::PhysicsWorld::launch_matron_for_test(JPH::RVec3 at) {
     Matron::Saved saved; saved.state = Matron::State::Hunting;
     matron_->restore(saved);
     physics_system_.GetBodyInterface().SetPosition(matron_->body(), at, JPH::EActivation::Activate);
+    // J-044c: the root moved; the upper bodies must follow it, or the
+    // joints span metres to stale segments and fling her.
+    matron_->reseat_upper_body();
 }
 
 const traversal::AffordanceMap &Simulation::PhysicsWorld::matron_affordances() {

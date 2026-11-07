@@ -1152,6 +1152,10 @@ void Simulation::debug_set_matron_stage(const std::uint8_t stage) noexcept {
     physics_world_->matron().set_stage_for_test(static_cast<Matron::Stage>(std::min<std::uint8_t>(stage, 2)));
 }
 
+void Simulation::debug_set_matron_state_for_test(const std::uint8_t state) noexcept {
+    physics_world_->matron().set_state_for_test(static_cast<Matron::State>(std::min<std::uint8_t>(state, 11)));
+}
+
 void Simulation::debug_fix_matron_pace(const int pace) noexcept {
     physics_world_->matron().fix_pace_for_test(pace);
 }
@@ -1260,6 +1264,25 @@ void Simulation::debug_matron_armplay(const int armplay) noexcept {
 
 void Simulation::debug_lose_arm(const int side) noexcept {
     physics_world_->lose_arm_for_test(side);
+}
+
+// J-044c: an impulse on one of her upper segments, and which segment a
+// strike at a point lands on. Both go straight to the Matron.
+void Simulation::debug_upper_impulse(const int segment, const Vector3 impulse_ns, const Vector3 at) noexcept {
+    physics_world_->matron().apply_upper_impulse_for_test(
+        segment, JPH::Vec3(impulse_ns.x, impulse_ns.y, impulse_ns.z), JPH::RVec3(at.x, at.y, at.z));
+}
+
+int Simulation::strike_segment_for_test(const Vector3 at) const noexcept {
+    return physics_world_->matron().strike_segment_for_test(JPH::RVec3(at.x, at.y, at.z));
+}
+
+int Simulation::upper_constraints_in_system_for_test() const noexcept {
+    return physics_world_->matron().upper_constraints_in_system_for_test();
+}
+
+void Simulation::upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept {
+    physics_world_->matron().upper_neck_limits_for_test(normal, plane, twist_min, twist_max);
 }
 
 void Simulation::debug_break_arm(const int side) noexcept {
@@ -1601,6 +1624,17 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.damage_stage = view.damage_stage;
     result.blow_mps = view.blow_mps;
     result.blow_low = view.blow_low;
+    // J-044c: the jointed upper body.
+    for (int i = 0; i < 5; ++i) {
+        result.upper_angle_deg[i] = view.upper_angle_deg[i];
+        result.upper_mass_kg[i] = view.upper_mass_kg[i];
+        result.upper_q[i] = Quaternion{view.upper_q[i].GetX(), view.upper_q[i].GetY(), view.upper_q[i].GetZ(),
+                                       view.upper_q[i].GetW()};
+    }
+    result.upper_root_mass_kg = view.upper_root_mass_kg;
+    result.upper_motor_power_w = view.upper_motor_power_w;
+    result.upper_head_angvel =
+        Vector3{view.upper_head_angvel.GetX(), view.upper_head_angvel.GetY(), view.upper_head_angvel.GetZ()};
     result.riding = view.riding;
     result.edge_brace_n = view.edge_brace_n;
     result.feet_push_n = view.feet_push_n;

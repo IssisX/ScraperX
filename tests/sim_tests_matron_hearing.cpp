@@ -58,7 +58,7 @@ Matron::View wake_probe(const float loudness, const int walls) {
         world.box(Vec3(0.08F, 2, 2), ear + RVec3(1.0 + i, 0, 0));
     }
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     matron.hear(float(ear.GetX()) + 20, float(ear.GetY()), float(ear.GetZ()), loudness);
     world.tick(matron);
     return matron.view();
@@ -81,7 +81,7 @@ Matron::View aperture_probe(const int kind) {
         world.shape(made.Get(), ear + RVec3(10, 0, 0));
     }
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     matron.hear(float(ear.GetX()) + 20, float(ear.GetY()), float(ear.GetZ()), 1);
     world.tick(matron);
     return matron.view();
@@ -95,7 +95,7 @@ Matron::View shaft_probe(const bool blocked) {
     world.box(Vec3(17, 0.45F, 0.25F), RVec3(0, 153.45, -133));
     if (blocked) world.box(Vec3(26, 0.1F, 2), RVec3(0, 149, -133.5));
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     world.awake(matron);
     const auto at = matron.view();
     matron.hear(at.x, 143.9F, -132.6F, 0.6F);
@@ -107,7 +107,7 @@ std::array<float, 6> evidence_replay() {
     HearingWorld world;
     world.box(Vec3(40, 0.2F, 40), RVec3(0, Matron::kDeckTop - 0.2F, -150));
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     world.awake(matron);
     const auto start = matron.view();
     const float sx = start.x - 8.0F, sz = start.z;
@@ -169,7 +169,7 @@ void test_matron_hearing() {
         HearingWorld world;
         world.box(Vec3(40, 0.2F, 40), RVec3(0, Matron::kDeckTop - 0.2F, -150));
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         const float sx = Matron::kLockerX - 5;
         matron.hear(sx, Matron::kDeckTop + 1, Matron::kLockerZ, 1);
         world.tick(matron);

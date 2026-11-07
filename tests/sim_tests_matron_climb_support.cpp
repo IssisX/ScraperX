@@ -79,7 +79,7 @@ void test_board_ends_at_wall() {
     // B's own way up from the floor: a 0.10 m standpipe 0.45 m off its west face.
     world.box(Vec3(0.05F, 0.5F * 3.15F, 0.05F), RVec3(-1.95, g + 0.5F * 3.15F, -146.5));
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     world.awake(matron);
     world.physics.GetBodyInterface().SetPosition(matron.body(), RVec3(0, g + Matron::kStandCentre, -131.5), EActivation::Activate);
     const auto tick = [&] {
@@ -158,7 +158,7 @@ BoardWallRun board_wall_run(const unsigned seed, const bool up) {
     world.box(Vec3(1.5F, 0.5F * b_top, 1.5F), RVec3(0, g + 0.5F * b_top, b0 - 1.5));
     world.box(Vec3(0.05F, 0.5F * (b_top - 0.05F), 0.05F), RVec3(side * 1.95F, g + 0.5F * (b_top - 0.05F), b0 - 1.5));
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     world.awake(matron);
     const RVec3 start = up ? RVec3(0, g + Matron::kStandCentre, a_z + 1.5 + 0.3 * steps + 3.0)
                            : RVec3(0, g + h + Matron::kStandCentre, a_z);   // down: from atop A
@@ -238,7 +238,7 @@ void test_matron_climb_support() {
         if (scenario == 4) world.box(Vec3(0.3F, 0.5F, 0.02F), RVec3(5, 156.2, -129.2));
         if (scenario == 3) world.box(Vec3(1, 0.1F, 1), RVec3(5, 157, -129.55));
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         world.awake(matron);
         bool attached = false, removed = false, released = false, falling = false, landed = false;
         float peak_force = 0.0F;
@@ -303,7 +303,7 @@ namespace scraperx::sim {
 struct MatronStateExitAccess {
     static bool check_end_hold_cleans_all(ClimbWorld &world) {
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, BodyID());
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         world.awake(m);
         m.state_ = Matron::State::Claimed;
         m.grip_on_ = true;
@@ -359,7 +359,7 @@ struct MatronStateExitAccess {
 
     static bool check_save_and_restore_clean_all(ClimbWorld &world) {
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, BodyID());
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         world.awake(m);
         m.state_ = Matron::State::Staggering;
         const auto saved_stagger = m.save();
@@ -404,7 +404,7 @@ struct MatronStateExitAccess {
 
     static bool check_grab_reach_interruptions(ClimbWorld &world) {
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, BodyID());
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         world.awake(m);
         // (a) His blow landing while she is reaching in State::Grab (!grip_on_)
         m.state_ = Matron::State::Grab;
@@ -434,7 +434,7 @@ struct MatronStateExitAccess {
 
     static bool check_release_and_unrig_stagger_exits(ClimbWorld &world) {
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, BodyID());
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         world.awake(m);
         // Knockdown from State::Release or State::Grab (!grip_on_) must clean hold fields
         m.state_ = Matron::State::Release;
@@ -453,7 +453,7 @@ struct MatronStateExitAccess {
         const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), RVec3(5.0, Matron::kDeckTop + 1.0F, -129.0));
         world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, player);
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, player);
         world.awake(m);
         // (a) Claimed beat give-up (> kFatalGiveUpSeconds) must signal let_go_
         m.state_ = Matron::State::Claimed;
@@ -486,7 +486,7 @@ struct MatronStateExitAccess {
         const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), him);
         world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, player);
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, player);
         world.awake(m);
         world.physics.GetBodyInterface().SetPosition(
             m.body(), RVec3(-20.0, Matron::kDeckTop + Matron::kStandCentre, -129.55), EActivation::Activate);
@@ -515,7 +515,7 @@ struct MatronStateExitAccess {
         const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), RVec3(0.0, Matron::kDeckTop + 40.0F, -100.0));
         world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, player);
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, player);
         world.awake(m);
         // Her deck ends at z -110; she stands 1 m in from the edge, facing out, him held 1.6 m out of her.
         const double edge_z = -110.0;
@@ -559,7 +559,7 @@ struct MatronStateExitAccess {
         const BodyID player = world.box(Vec3(0.3F, 0.9F, 0.3F), RVec3(5.0, Matron::kDeckTop + 1.0F, -128.0));
         world.physics.GetBodyInterface().SetMotionType(player, EMotionType::Dynamic, EActivation::Activate);
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, player);
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, player);
         world.awake(m);
         // (a) grip_lost during reel_ must end_reel with 30 s back-off, not retake()
         m.state_ = Matron::State::Carry;
@@ -586,7 +586,7 @@ struct MatronStateExitAccess {
 
     static bool check_cooldowns_tick_during_mover(ClimbWorld &world) {
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, BodyID());
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         world.awake(m);
         m.state_ = Matron::State::Hunting;
         m.journey_active_ = true;
@@ -607,7 +607,7 @@ struct MatronStateExitAccess {
 
     static bool check_subphase_interruptions_and_stalls(ClimbWorld &world) {
         Matron m(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                 detail::object_layers::kOnSteel, BodyID());
+                 detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         world.awake(m);
         // (a) PipePhase::Slide stall exits pipe after kPipeStallS
         m.pipe_phase_ = Matron::PipePhase::Slide;
