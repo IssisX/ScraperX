@@ -20,6 +20,8 @@ him again.
   Sonnet (11-05). Human sounds are real recordings, never synthesized.
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
+- Every stated time is read from the clock first (`TZ=America/Chicago date`, Central); a hook refuses
+  a post or mail whose stamp is off (11-07).
 
 ## Test only what a change reaches
 
@@ -35,8 +37,8 @@ him again.
 
 ## Talking to Cory (he is on a phone)
 
-- Plain, short answers; technical detail only when he asks. Times in US Central (`TZ=America/Chicago date`).
-- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06 2:24 PM: "dont go link crazy"); every manual step he is told to do online carries its own page's link, in the steps too (11-07) ("Nothing to
+- Plain, short answers; technical detail only when he asks.
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06 2:24 PM: "dont go link crazy"); each online step he must do carries its page's link (11-07) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent.
 - **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; never
