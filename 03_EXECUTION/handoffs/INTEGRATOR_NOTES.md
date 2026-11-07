@@ -7,8 +7,8 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794071713 (2026-11-07 17:15:13Z, 11:15 AM Central)
 
 ## Meter
-83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56). Throttled since 10:30 AM: no helpers, the 1:17 PM run answers and
-merges only. Fit $13.6 per 1%; 0.39%/h since the throttle. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
+83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56); 86% 12:26 PM. Throttled since 10:30 AM: no helpers, the 1:17 PM run answers and
+merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12:26 PM); needs 0.39%/h around the clock, or about 0.6%/h over the 23 active run hours left; fits with about 2% to spare. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
 
 ## Waiting on me
 - From Muse: J-059 and hair stills, the J-058 cheek-angle PR, the J-049 PR 1 fix (mailed 11:20 AM).
