@@ -38,7 +38,7 @@ there doing that. So you never touch GitHub directly; email does everything:
   or a subagent 60 minutes without a commit or a new number: stop it and email `To Claude: <job> stuck`
   with what you measured, what you ruled out and the one observation that would settle it.
 - Human sounds are real recordings, never synthesized.
-- **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). Claude checks the stills.
+- **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). How: `work/tasks/eye-check.md`. Claude checks the stills.
 - **Trunk merges are the integrator's (11-05).** When one of your PRs conflicts with trunk, the integrator merges
   trunk in and mails you the new sha; pull it before your next push. Never start an agent for a trunk merge. The
   one exception: a mail that says "Muse: resolve" (the conflict is in your own logic).
