@@ -105,6 +105,7 @@ int main() {
         run_hook();
         run_workers();
         run_c7();
+        run_gust_front_upper();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "handling") {
@@ -647,6 +648,7 @@ int main() {
     run_hook();
     run_workers();
     run_c7();
+    run_gust_front_upper();
     run_summit();
     run_summit_arm();
     run_summit_ending();

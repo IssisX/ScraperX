@@ -658,6 +658,13 @@ void Simulation::PhysicsWorld::apply_wind(JPH::BodyInterface &bodies, const doub
     const float z = static_cast<float>(at.GetZ());
     wind_mps_ = 0.0F;
     wind_force_n_ = 0.0F;
+    // The gust front above 396 m rides the simulation's clock: a leading edge
+    // sweeping west off the tower's west face, returning every
+    // kGustFrontPeriodS. It is placed here, ahead of any zone, so the view
+    // can read it from the snapshot whatever the body is doing.
+    const double front_phase =
+        std::fmod(t, static_cast<double>(kGustFrontPeriodS)) / static_cast<double>(kGustFrontPeriodS);
+    wind_front_x_m_ = kWindZoneX - kGustFrontSweepM * static_cast<float>(front_phase);
     // The west face's zone, and the summit's: out along the runway arm, west
     // of the deck's end, the same wind takes hold (outward, -x).
     float exposure = 0.0F;
@@ -668,15 +675,24 @@ void Simulation::PhysicsWorld::apply_wind(JPH::BodyInterface &bodies, const doub
                z <= kSummitWindSouthZ) {
         exposure = std::clamp((kSummitWindX - x) / kSummitWindRampM, 0.0F, 1.0F);
     }
-    if (exposure <= 0.0F) {
+    if (exposure > 0.0F) {
+        // Two swells of incommensurate periods: never long calm, now and
+        // then both at once, the full gust.
+        constexpr double kTau = 2.0 * 3.141592653589793;
+        const float gust = static_cast<float>(std::clamp(
+            0.35 + 0.35 * std::sin(kTau * t / 7.3) + 0.3 * std::sin(kTau * t / 2.9 + 1.0), 0.0, 1.0));
+        wind_mps_ = exposure * (kWindBaseMps + (kWindGustMps - kWindBaseMps) * gust);
+    } else if (x <= kWindZoneX && y >= kUpperWindLowY && y < kUpperWindHighY && z >= kWindZoneNorthZ &&
+               z <= kWindZoneSouthZ) {
+        // J-022: above 396 m the gust arrives as the front, not the swell:
+        // calm ahead of it, the full gust filling in behind it over
+        // kGustFrontRampM. The mist streak sits on the front; the push
+        // follows it.
+        const float behind = std::clamp((x - wind_front_x_m_) / kGustFrontRampM, 0.0F, 1.0F);
+        wind_mps_ = behind * kWindGustMps;
+    } else {
         return;
     }
-    // Two swells of incommensurate periods: never long calm, now and
-    // then both at once, the full gust.
-    constexpr double kTau = 2.0 * 3.141592653589793;
-    const float gust = static_cast<float>(std::clamp(
-        0.35 + 0.35 * std::sin(kTau * t / 7.3) + 0.3 * std::sin(kTau * t / 2.9 + 1.0), 0.0, 1.0));
-    wind_mps_ = exposure * (kWindBaseMps + (kWindGustMps - kWindBaseMps) * gust);
     if (grounded_) {
         return;   // standing, the soles' traction takes it
     }

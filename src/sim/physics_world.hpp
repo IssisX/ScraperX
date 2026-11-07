@@ -933,6 +933,7 @@ public:
     float wind_mps_ = 0.0F;
     float wind_force_n_ = 0.0F;
     float wind_peak_force_n_ = 0.0F;
+    float wind_front_x_m_ = 0.0F;
     // Phase 4 shoves (take_shove): the last velocity the feet set, whether
     // it was set on the ground, the fastest closing at a side contact this
     // tick, and the blows counted.

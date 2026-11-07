@@ -686,6 +686,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.wind_mps = wind_mps_;
     state_.wind_force_n = wind_force_n_;
     state_.wind_peak_force_n = wind_peak_force_n_;
+    state_.wind_front_x_m = wind_front_x_m_;
     state_.shove_count = shove_count_;
     read_strike_state();
     state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};

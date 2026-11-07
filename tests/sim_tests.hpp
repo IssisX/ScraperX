@@ -871,6 +871,7 @@ void run_arm_break();
 void run_hook();
 void run_workers();
 void run_c7();
+void run_gust_front_upper();
 void run_summit();
 void run_summit_arm();
 void run_summit_ending();
