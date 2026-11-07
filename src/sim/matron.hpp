@@ -2908,6 +2908,13 @@ private:
     float down_for_s_ = 0.0F;      // seconds on the steel
     float set_s_ = 0.0F;           // just risen: her step doubled
     float fall_x_ = 0.0F, fall_z_ = 1.0F;
+    // Crawling out to room after a knockdown: the way she is pushing, where
+    // she started pushing that way, and how many leading ways have jammed
+    // (a push that grants force but moves her nowhere is a dead end).
+    JPH::RVec3 crawl_from_ = JPH::RVec3::sZero();
+    int crawl_dir_ = -1;
+    int crawl_ticks_ = 0;
+    int crawl_skip_ = 0;
     bool lying_ = false;           // her shape is a lying (or kneeling) one
     bool kneeling_ = false;
     JPH::Ref<JPH::Shape> down_shape_;

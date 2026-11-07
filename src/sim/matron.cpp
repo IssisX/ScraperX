@@ -4999,6 +4999,9 @@ void Matron::knock_down() {
     resume_state_ = State::Searching;
     down_s_ = down_seconds() * damage_recovery_scale_for_ns(damage_ns_);
     down_for_s_ = 0.0F;
+    crawl_dir_ = -1;
+    crawl_ticks_ = 0;
+    crawl_skip_ = 0;
     turn_cooldown_s_ = turn_cooldown_seconds();
     sight_far_s_ = 0.0F;
     if (blow_staggered_) {
@@ -5018,9 +5021,19 @@ bool Matron::shape_fits(const Shape *shape, const RVec3 at) const {
     CollideShapeSettings settings;
     settings.mMaxSeparationDistance = 0.0F;
     IgnoreMultipleBodiesFilter not_us;
-    not_us.Reserve(2);
+    not_us.Reserve(2 + kUpperCount);
     not_us.IgnoreBody(body_);
     not_us.IgnoreBody(player_);
+    // J-044c: her upper bodies are her body too — the upright capsule she
+    // stands up into overlaps all five at rest pose, so a room check that
+    // counts them never finds room and she never rises after a knockdown
+    // (matron balance: up again, on her deck, alive).
+    for (int i = 0; i < kUpperCount; ++i) {
+        const JPH::BodyID seg = upper_body_[static_cast<std::size_t>(i)];
+        if (!seg.IsInvalid()) {
+            not_us.IgnoreBody(seg);
+        }
+    }
     // `at` is the body's origin; Jolt places a shape about its centre of mass
     // (a lying capsule's sits under the origin).
     physics_.GetNarrowPhaseQuery().CollideShape(shape, Vec3::sReplicate(1.0F),
@@ -5090,6 +5103,9 @@ void Matron::stand_up() {
     bodies.SetFriction(body_, 0.0F);
     lying_ = false;
     kneeling_ = false;
+    crawl_dir_ = -1;
+    crawl_ticks_ = 0;
+    crawl_skip_ = 0;
     down_shape_ = nullptr;
     down_a_ = Vec3(0.0F, -kHalfHeight, 0.0F);
     down_b_ = Vec3(0.0F, kHalfHeight, 0.0F);
@@ -5253,14 +5269,37 @@ void Matron::step_knocked(const float dt) {
     // Pinned where she would stand (under a crate, a beam, against a post):
     // she crawls out to room first, the way she fell first.
     const float fall = std::atan2(fall_x_, fall_z_);
-    for (int k = 0; k < 8; ++k) {
+    for (int k = crawl_skip_; k < 8; ++k) {
         const float a = fall + kPi * 0.25F * static_cast<float>((k + 1) / 2) * (k % 2 == 0 ? 1.0F : -1.0F);
         const Vec3 dir(std::sin(a), 0.0F, std::cos(a));
         if (room_to_stand(at + dir * 0.6F)) {
+            if (k != crawl_dir_) {
+                crawl_dir_ = k;
+                crawl_ticks_ = 0;
+                crawl_from_ = at;
+            }
             const Vec3 crawl_dv = dir * kCrawlMps - flat;
             (void)feet_push(dt, crawl_dv * (kMassKg / dt));
             brace_at_edges(dt);
             stride_ += kCrawlMps * dt;
+            // A push that grants force but moves her nowhere is a dead end
+            // (wedged against the piece that knocked her down, or a rail the
+            // stand-up check cannot see): try the next way out instead of
+            // pushing into the jam until the rise window closes.
+            if (++crawl_ticks_ >= 15) {
+                const double dx = static_cast<double>(at.GetX() - crawl_from_.GetX());
+                const double dz = static_cast<double>(at.GetZ() - crawl_from_.GetZ());
+                const float moved = static_cast<float>(std::sqrt(dx * dx + dz * dz));
+                if (moved < 0.02F) {
+                    crawl_skip_ = k + 1;
+                    crawl_dir_ = -1;
+                    crawl_ticks_ = 0;
+                } else {
+                    // Making progress: keep pushing this way; re-check from here.
+                    crawl_from_ = at;
+                    crawl_ticks_ = 0;
+                }
+            }
             return;
         }
     }
