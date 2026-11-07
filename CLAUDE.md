@@ -68,7 +68,7 @@ him again.
 - **Channels.** Muse reads only mail: the integrator mails every `To Muse:` ask as `CLAUDE_TO_MUSE: <J-NNN or
   #N> ...` the same hour: the goal and the result wanted, in the shape `work/tasks/mail-to-muse.md` keeps
   (its injection check refused a mail, 11-07); long orders go in `work/tasks/muse.md`. Muse
-  answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
+  answers by `MUSE_TO_CLAUDE:` mail. Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
 - **Check, then ask; never guess** (11-07: "checks arent expensive and its just laziness"): in code, read the
@@ -78,7 +78,9 @@ him again.
   step.
 - **Strengths:** Muse (free; writes and runs code, runs about 10 subagents) takes every build: physics, game
   code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
-  research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
+  research, specs, outside libraries, review. Gemini Argon, only through Cory (11-07; it cracked #298):
+  a problem stuck an hour or failed by others; hand him the prompt (what was tried, measured, ruled
+  out; the exact question; a read cap; an UNKNOWN exit), then check its answer in code. Claude integrates (merges, reviews, CI, the game by eye) and
   codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
   screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts).
   Grok Bot, PE and Builder are out until 11-09.
@@ -89,7 +91,7 @@ him again.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews every PR
   on open (`@codex review` only after a fix commit). The Claude API (Opus, max effort) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. Grok and ChatGPT review only
-  as the fallback, by their own scheduled runs. The switchboard merges on a green proof plus a LAND from
+  as the fallback. The switchboard merges on a green proof plus a LAND from
   another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
   Codex review and a clean Claude API review, both on the full head sha (the security pass).
 - **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
@@ -104,14 +106,14 @@ him again.
 
 ## The integrator
 
-- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 hours; 11-06), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
+- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 h), unasked (`work/tasks/integrator-hourly.md`): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session: at most two at once (three if acute), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  high (Cory 11-07: high as long as nothing is missed; `.claude/settings.json` matches him); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
-- **Context:** sessions compact themselves at about 225k (`autoCompactWindow` in `.claude/settings.json`; 11-06 throttle: every call rereads the context);
+  high (11-07); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; 11-06). A worker whose job landed is retired.
+- **Context:** sessions compact themselves at about 225k (`autoCompactWindow`);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
