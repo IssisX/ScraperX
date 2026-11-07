@@ -1,7 +1,7 @@
 # Integrator: the hourly check
 
 It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every 2 hours Sat-Sun, 9:17 AM to 9:17 PM; none
-overnight (Cory 11-06, 11-07: every week, the limit lasts to Sunday night). The full check (every step below) runs at 8:17 AM,
+overnight (Cory 11-06, 11-07). The full check (every step below) runs at 8:17 AM,
 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light: `git pull`, step 1
 only, and end in one line, with no board edit and no message
 to Cory unless he must act (11-06).
