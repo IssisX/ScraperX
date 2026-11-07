@@ -8,7 +8,7 @@ Read through: 1794066268 (2026-11-07 15:44:28Z, 9:44 AM Central)
 
 ## Meter
 83% 8:20 AM Sat ($491); 85% 10:28 AM ($550). Throttled since 10:30 AM: no helpers, the 1:17 PM run answers and
-merges only. Next meter ask: 1:17 PM.
+merges only. 11:00 AM worked out: 85.2% ($552.68, $13.1 per 1%), 0.39%/h since 10:28. Next meter ask: 1:17 PM.
 
 ## Waiting on me
 - The next mail to Muse points to muse.md's never-guess line and asks the reason for any refused mail.
