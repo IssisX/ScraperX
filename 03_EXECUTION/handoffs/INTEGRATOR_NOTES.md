@@ -7,8 +7,8 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794066268 (2026-11-07 15:44:28Z, 9:44 AM Central)
 
 ## Meter
-83% 8:20 AM Sat ($491); 85% 10:28 AM ($550). Throttled since 10:30 AM: no helpers, the 1:17 PM run answers and
-merges only. 11:00 AM worked out: 85.2% ($552.68, $13.1 per 1%), 0.39%/h since 10:28. Next meter ask: 1:17 PM.
+83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56). Throttled since 10:30 AM: no helpers, the 1:17 PM run answers and
+merges only. Fit $13.6 per 1%; 0.39%/h since the throttle. Next meter ask: 1:17 PM.
 
 ## Waiting on me
 - The next mail to Muse points to muse.md's never-guess line and asks the reason for any refused mail.
