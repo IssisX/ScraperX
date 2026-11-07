@@ -201,6 +201,9 @@ jobs:
   # The free part: the merge rule, review asks, one owner per issue, the digest. No API key.
   steer:
     needs: ask
+    # J-056 security pass: SWITCHBOARD_MERGE_TOKEN lives only in this environment, which deploys only from
+    # ScraperX-Claude, so a branch's copy of this file (pull_request, or a dispatch on another ref) cannot read it.
+    environment: switchboard-merge
     if: >-
       always() && github.event_name != 'pull_request' && needs.ask.result != 'cancelled' && (
         github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:')
