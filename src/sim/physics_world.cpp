@@ -371,37 +371,8 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // the throwables, so nothing already laid is renumbered and saves
     // made before it still load (loose_stock.hpp).
     loose_stock_->append_reserved();
-    {
-        std::vector<Matron::Throwable> throwables;
-        for (int i = loose_stock_->matron_throwables_begin();
-             i < loose_stock_->matron_throwables_begin() + LooseStock::kMatronThrowables; ++i) {
-            const kit::BodyIndex body = loose_stock_->body(i);
-            throwables.push_back({kit_->body_id(body), kit_->body_entity(body),
-                                  LooseStock::carry_handle(loose_stock_->placed()[static_cast<std::size_t>(i)].kind)});
-        }
-        // And the stock already laid on the decks she hunts (J-016): a toolbox
-        // she can take, a drum or a crate she can shove, on her home deck
-        // first, then 143, the ring and 132, to her 32. No piece is laid for
-        // it: the kit's bodies, saves and stock counts are as they were.
-        for (const float deck : {Matron::kDeckTop, 143.0F, Matron::kRingFloor, 132.0F}) {
-            for (int i = 0; i < loose_stock_->matron_throwables_begin() && throwables.size() < 32; ++i) {
-                const LooseStock::Placement &p = loose_stock_->placed()[static_cast<std::size_t>(i)];
-                const bool kind = p.kind == LooseStock::Kind::Toolbox || p.kind == LooseStock::Kind::Drum ||
-                                  p.kind == LooseStock::Kind::Crate;
-                if (!kind || std::abs(p.y - deck) > 0.3F) {
-                    continue;
-                }
-                const kit::BodyIndex body = loose_stock_->body(i);
-                // A piece with no body yet is not hers to take or shove
-                // yet; skipping it keeps her list the pre-world-b one.
-                if (!body.valid()) {
-                    continue;
-                }
-                throwables.push_back({kit_->body_id(body), kit_->body_entity(body), LooseStock::carry_handle(p.kind)});
-            }
-        }
-        matron_->set_throwables(std::move(throwables));
-    }
+    // Her throwables are given at the end of the build (give_matron_stock),
+    // once every piece has its body.
     // The bay on the 154 m deck (bay.hpp): its kit bodies after every other's,
     // so older saves' lists line up.
     bay_ = std::make_unique<Bay>(physics_system_, *kit_);
@@ -450,6 +421,14 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     track(forklifts_.back()->chassis_body(), ImpactSound::Machine);
     track(forklifts_.back()->carriage_body(), ImpactSound::Machine);
 
+    // J-042: two more kinds by her deck's north band (loose_stock.hpp), their
+    // bodies after every other's; heard like the rest.
+    loose_stock_->lay_matron_kinds();
+    for (int i = loose_stock_->matron_kinds_begin(); i < loose_stock_->count(); ++i) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
+    give_matron_stock();
+
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
 
@@ -459,6 +438,43 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     commit_machine_checkpoint();
 
     read_state();
+}
+
+// What the Matron takes and throws as a pest, or shoves (matron.hpp, her
+// mischief): the pieces laid for her first (two toolboxes and a drum, their
+// bits as ever), then every loose piece on the decks she hunts, whatever its
+// kind, that his hands can carry (a load: what is his to her) and hers can
+// move: one she can lift (to Matron::kTakeMaxKg) she takes and throws, a
+// heavier one (to kStockShoveMaxKg) she shoves (J-042, Cory 11-05: every
+// movable object the same way). Stock too big to carry (a skid crate) is no
+// one's: in her way, it is the deck's. Her home deck first, then 143, the
+// ring and 132 (Matron::kMaxThrowables).
+void Simulation::PhysicsWorld::give_matron_stock() {
+    std::vector<Matron::Throwable> throwables;
+    const int first = loose_stock_->matron_throwables_begin();
+    const auto give = [&](const int i) {
+        const kit::BodyIndex body = loose_stock_->body(i);
+        throwables.push_back({kit_->body_id(body), kit_->body_entity(body),
+                              LooseStock::carry_handle(loose_stock_->placed()[static_cast<std::size_t>(i)].kind)});
+    };
+    for (int i = first; i < first + LooseStock::kMatronThrowables; ++i) {
+        give(i);
+    }
+    for (const float deck : {Matron::kDeckTop, 143.0F, Matron::kRingFloor, 132.0F}) {
+        for (int i = 0; i < loose_stock_->count() && throwables.size() < Matron::kMaxThrowables; ++i) {
+            if (i >= first && i < first + LooseStock::kMatronThrowables) {
+                continue;
+            }
+            const kit::BodyIndex body = loose_stock_->body(i);
+            if (!body.valid() || std::abs(loose_stock_->placed()[static_cast<std::size_t>(i)].y - deck) > 0.3F ||
+                kit_->carry_kind(kit_->body_entity(body)) != kit::CarryKind::Load ||
+                kit_->body_mass(body) > Matron::kStockShoveMaxKg) {
+                continue;
+            }
+            give(i);
+        }
+    }
+    matron_->set_throwables(std::move(throwables));
 }
 
 Simulation::PhysicsWorld::~PhysicsWorld() {
@@ -739,6 +755,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     summit_->pre_step();
     // What the Matron can hear besides the player (matron.hpp hear): the last
     // step's hits, hardest first, then the yard crane's drives while they run.
+    // Her own throw stays silent to her only until another touches it.
+    matron_->end_thrown_claim();
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
         // Her own throw coming down is not a sound to her (matron.hpp).

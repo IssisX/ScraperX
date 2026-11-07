@@ -1184,6 +1184,171 @@ func _matron_heave_touch(device: int) -> bool:
 	return true
 
 
+# Her ammo, your ammo (J-042, #240): the toolbox by the north rail taken up,
+# carried east over the bay's leaf and let go on the band (his, to her); a
+# sprint by her locker wakes her, and he goes back west, crouched, his view
+# off along the band. A pest takes the toolbox and comes with it; as she rears
+# back over her shoulder (her windup) the view goes on her, and as it leaves
+# her hands the stick steps him toward the rail: it misses. Taken up again where
+# it lies, the view kept on her, a swipe up throws it back into her: a blow
+# she takes through her own body. Nobody dead.
+const AMMO_SET_AT := Vector2(6.0, -126.6)
+const AMMO_WAIT := Vector2(-6.0, -128.5)
+
+# Its stills are the act's (drawn only for them, the sim held the same few
+# frames headless or drawn): see _pose above.
+func _matron_ammo_touch(device: int) -> bool:
+	_act_running = true
+	_act_draw(false)
+	var played: bool = await _play_matron_ammo(device)
+	_act_draw(true)
+	_act_running = false
+	return played
+
+
+func _play_matron_ammo(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _walk_to(device, HEAVE_BOX_PICK, 0.08, 14.0):
+		return _fail("the walk to the toolbox stalled at %s" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"pick_up", "PICK UP"):
+		return _fail("Action read '%s' at the toolbox, not PICK UP" % _action_label())
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) != 0, 1.0):
+		return _fail("PICK UP did not put the toolbox in the hands")
+	var box := int(_native().get_carrying_entity_id())
+	for leg in [ACT_BAY_WEST, ACT_BAY_EAST, AMMO_SET_AT]:
+		if not await _walk_to(device, leg, 0.2, 14.0):
+			return _fail("the carry east over the bay stalled at %s" % str(_position()))
+	_move(device, 0.0)
+	await _seconds(0.4)
+	if not await _let_go_if_held(device):
+		return _fail("LET GO did not set the toolbox down")
+	if not await _sprint_to(device, Vector2(8.0, -128.5), 1.0, 6.0):
+		return _fail("the sprint toward her locker stalled at %s" % str(_position()))
+	if not await _wait_until(func() -> bool: return int(_matron_state()["state"]) == MATRON_STATE_STRAINING, 3.0):
+		return _fail("the sprint by her locker did not wake her (state %d)" % int(_matron_state()["state"]))
+	# Back west over the leaf, crouched, unheard: she stops at his sprint's
+	# end to listen, his toolbox in her reach, and takes it.
+	if not await _crouch_on(device, true):
+		return _fail("CROUCH did not crouch")
+	for leg in [ACT_BAY_EAST, ACT_BAY_WEST, AMMO_WAIT]:
+		if not await _walk_to(device, leg, 0.3, 30.0):
+			return _fail("the crouched walk back west stalled at %s" % str(_position()))
+	_move(device, 0.0)
+	if not await _crouch_on(device, false):
+		return _fail("CROUCH did not stand him up")
+	# Waiting, the view off along the band, until she rears back with it.
+	var hits := int(_native().get_death_state()["hits"])
+	var deaths := int(_native().get_death_count())
+	var throws := int(_matron_state()["throws"])
+	if not await _wait_until(func() -> bool: return float(_matron_state()["throw_windup"]) > 0.0 or \
+			int(_matron_state()["throws"]) > throws, 60.0):
+		return _fail("she never reared back with the toolbox (state %d, carrying %d)" % [
+			int(_matron_state()["state"]), int(_matron_state()["carrying"])])
+	if int(_matron_state()["throws"]) > throws:
+		return _fail("her throw left her hands before her windup was seen")
+	var her: Vector3 = _matron_state()["position"]
+	_main._yaw = atan2(-(her.x - _position().x), -(her.z - _position().z))
+	_main._pitch = 0.0
+	await _pose("matron_ammo_windup")
+	# Its release seen: the stick across her line, toward the rail, 0.3 s.
+	if not await _wait_until(func() -> bool: return int(_matron_state()["throws"]) > throws, 1.5):
+		return _fail("her windup never became a throw (windup %.2f)" % float(_matron_state()["throw_windup"]))
+	her = _matron_state()["position"]
+	var line := Vector2(_position().x - her.x, _position().z - her.z).normalized()
+	var across := Vector2(-line.y, line.x)
+	if across.y < 0.0:
+		across = -across
+	_move_world(device, across)
+	await _seconds(0.3)
+	_move(device, 0.0)
+	await _pose("matron_ammo_dodged")
+	var nearest := 1.0e9
+	var flying := 0.0
+	var was := _kit_origin(box)
+	while flying < 2.0:
+		await get_tree().process_frame
+		var dt := maxf(get_process_delta_time(), 1.0e-4)
+		flying += dt
+		var at := _kit_origin(box)
+		nearest = minf(nearest, (at - _position()).length())
+		var speed := (at - was).length() / dt
+		was = at
+		her = _matron_state()["position"]
+		_main._yaw = atan2(-(her.x - _position().x), -(her.z - _position().z))
+		if flying > 0.3 and speed < 1.0 and at.y < _position().y:
+			break
+	if int(_native().get_death_state()["hits"]) != hits:
+		return _fail("stepped aside as it left her hands, it still struck him (nearest %.2f m)" % nearest)
+	# Taken up where it lies: to it, the view on it, PICK UP.
+	var picked := false
+	var looking := 0.0
+	while looking < 6.0 and not picked:
+		var at := _kit_origin(box)
+		var to := Vector2(at.x - _position().x, at.z - _position().z)
+		if to.length() > 0.9:
+			if not await _walk_to(device, Vector2(at.x, at.z) - to.normalized() * 0.8, 0.15, 3.0):
+				return _fail("the walk to the toolbox where it lies stalled at %s" % str(_position()))
+		await _face(Vector2(at.x - _position().x, at.z - _position().z))
+		_main._pitch = -0.6
+		looking += 0.5
+		if await _offered(&"pick_up", "PICK UP"):
+			_act(device)
+			picked = await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == box, 1.0)
+	_main._pitch = 0.0
+	if not picked:
+		return _fail("the toolbox where it lay was never taken up again (Action '%s')" % _action_label())
+	# Thrown back: the view on her, stepped in to her band, the box come round
+	# in front and settled, the swipe up held, then lifted.
+	var box_was := _kit_origin(box)
+	var settled := 0.0
+	var ready := false
+	var waited := 0.0
+	while waited < 10.0 and not ready:
+		await get_tree().process_frame
+		var dt := maxf(get_process_delta_time(), 1.0e-4)
+		waited += dt
+		her = _matron_state()["position"]
+		var d := Vector2(her.x - _position().x, her.z - _position().z).length()
+		_main._yaw = atan2(-(her.x - _position().x), -(her.z - _position().z))
+		_main._pitch = _heave_pitch(d)
+		if d > 3.0:
+			_move(device, 0.6)
+			settled = 0.0
+			continue
+		_move(device, 0.0)
+		var b := _kit_origin(box)
+		var to_her := Vector2(her.x - _position().x, her.z - _position().z)
+		var in_front := Vector2(b.x - _position().x, b.z - _position().z).dot(to_her) / maxf(d, 0.01) > 0.3
+		var swing := Vector2(b.x - box_was.x, b.z - box_was.z).length() / dt
+		box_was = b
+		settled = settled + dt if in_front and swing < 0.5 else 0.0
+		ready = settled >= 0.25
+	if not ready:
+		return _fail("never squared up to throw it back (carrying %d)" % int(_native().get_carrying_entity_id()))
+	if _main._touch.gesture_hint(&"up") != "THROW":
+		return _fail("with the toolbox in the hands, up read '%s', not THROW" % _main._touch.gesture_hint(&"up"))
+	var thrown := int(_native().get_throw_count())
+	var damage := float(_matron_state()["damage_ns"])
+	var index := _swipe(-1.0, true)
+	await _frames(2)
+	var drawn: bool = _main._throw_arc.visible and _main._throw_path.size() >= 3
+	_lift(index)
+	if not drawn:
+		return _fail("the throw's path was not drawn while the thumb swiped")
+	if not await _wait_until(func() -> bool: return int(_native().get_throw_count()) == thrown + 1, 0.5):
+		return _fail("the swipe up, lifted, did not throw the toolbox back")
+	if not await _wait_until(func() -> bool: return float(_matron_state()["damage_ns"]) > damage, 1.5):
+		return _fail("thrown back, it never struck her (blow %.3f m/s)" % float(_matron_state()["blow_mps"]))
+	await _pose("matron_ammo_back")
+	if int(_native().get_death_count()) != deaths or not bool(_matron_state()["alive"]):
+		return _fail("a death in her ammo (deaths %d)" % int(_native().get_death_count()))
+	_detail = "nearest_m=%.2f blow_ns=%.1f blow_mps=%.3f" % [nearest,
+		float(_matron_state()["damage_ns"]) - damage, float(_matron_state()["blow_mps"])]
+	return true
+
+
 
 # Her corner pipe (the owner's goal, 2026-10-19: she comes down the shaft
 # after you; one shaft pipe is hers to climb; you hear her at least 4 s before
