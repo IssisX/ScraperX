@@ -508,6 +508,46 @@ void run_stock_damage() {
                     "stock damage break save: each loaded piece carries an eighth of the mass");
         }
     }
+    // ---- (a2) a save whose checkpoint predates the break loads too ----
+    // The seeded checkpoint never held the pieces: the save names eight
+    // bodies more than its checkpoint's states. The loader makes the
+    // pieces at the break geometry around the crate's checkpoint place.
+    {
+        Simulation s(scraperx::sim::InitialSpawn::HighDrop);
+        const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+        const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+        const double mass = s.kit_body_mass(crate);
+        const std::uint32_t bodies_before = s.kit_body_count();
+        const auto home = s.kit_body_position(crate);
+        // Dropped from 3 m while the fall is on: no checkpoint can
+        // commit before the break, so the seeded checkpoint predates it.
+        put(s, crate, {home.x, home.y + 3.0, home.z});
+        (void)s.advance_frame(1.0);  // the fall, the landing, the break executes
+        require(s.stock_damage(entity).broken, "stock damage break save early: the drop breaks the crate");
+        require(s.kit_body_count() == bodies_before + 8,
+                "stock damage break save early: the break adds eight bodies");
+        const std::vector<std::uint8_t> bytes = s.save_game();
+        Simulation t(scraperx::sim::InitialSpawn::HighDrop);
+        require(t.load_game(bytes.data(), bytes.size()),
+                "stock damage break save early: a fresh world loads the save");
+        require(t.stock_damage(entity).broken, "stock damage break save early: the break rides the save");
+        require(!t.kit_body_enabled(crate), "stock damage break save early: the loaded crate stays parked");
+        require(t.kit_body_count() == bodies_before + 8,
+                "stock damage break save early: the loaded world holds the eight pieces");
+        const auto back = t.kit_body_position(crate);
+        require(std::hypot(back.x - home.x, back.y - home.y, back.z - home.z) < 0.5,
+                "stock damage break save early: the loaded crate sits at its checkpoint place");
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = t.kit_body_index(piece_entity_for(entity, k));
+            require(body != 0xFFFFFFFFU,
+                    "stock damage break save early: every piece exists in the loaded world");
+            require(std::abs(t.kit_body_mass(body) - mass / 8.0) < 0.01,
+                    "stock damage break save early: each loaded piece carries an eighth of the mass");
+            const auto pp = t.kit_body_position(body);
+            require(std::hypot(pp.x - home.x, pp.y - home.y, pp.z - home.z) < 2.0,
+                    "stock damage break save early: each loaded piece sits by the break");
+        }
+    }
     // ---- (b) a death after a break still rewinds the kit --------------------
     // The seeded checkpoint predates the break: the crate is broken
     // mid-fall, while no checkpoint can commit, so the death restores
