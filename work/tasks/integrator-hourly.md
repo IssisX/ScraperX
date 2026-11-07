@@ -41,7 +41,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    (Muse 11-06). So does a mail that changes a ruling.
    Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06: 18 h went unreported).
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
-   the switchboard can't: workflow-file PRs (merge on green plus a LAND), FIX or
+   the switchboard can't (J-056: it merges workflow PRs too): FIX or
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
    vendor (Muse first for physics and game code, then Grok), asked with the facts on its PR.
    A piece that holds 2+ jobs, stuck 6 h or two red proofs with its owner, about an hour's work: take it (Cory 11-06).
