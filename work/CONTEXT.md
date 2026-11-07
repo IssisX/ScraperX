@@ -64,8 +64,10 @@ It merges a PR into trunk (as the workflow token, a merge commit naming the head
 4. `tools/rule_check/rule_check.py` finds no `BLOCK` (a protected change: the integrator merges it);
 5. when the job or PR needs `eyes`, the eye's `LAND` on that head;
 6. no merge conflict. A PR that changes `.github/workflows/` also needs a clean automatic Claude review on
-   that head (the security pass, J-056) and merges with the `SWITCHBOARD_MERGE_TOKEN` secret, since the
-   workflow token cannot push workflow files; without the secret or that review it is listed for a person.
+   that head (the security pass, J-056), and its LAND must be the Codex app's clean review (a typed LAND or
+   the API's own does not count), both naming the whole 40-character head sha; it merges with the
+   `SWITCHBOARD_MERGE_TOKEN` secret, since the workflow token cannot push workflow files; without the
+   secret or those reviews it is listed for a person.
 After a merge it dispatches the proof on trunk (a workflow-token merge starts no push workflow; a merge-token
 merge's push starts it) and posts one line on the PR and the job issue. The owner can overturn any merge.
 

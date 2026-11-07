@@ -34,6 +34,7 @@ import re
 import subprocess
 import sys
 import time
+import urllib.parse
 import uuid
 import zipfile
 from decimal import Decimal
@@ -912,7 +913,7 @@ class Switch:
                f"**Switchboard → {name}:** review #{facts.number} @ {facts.head_sha[:8]} ({job})"
         body = (f"{head}\n\n{why}Proof is green on the head ({ctx['proof_url']}). Review it with "
                 f"`03_EXECUTION/REVIEW_CHECKLIST.md` and post one verdict on #{facts.number} whose first line is\n"
-                f"`**{name} (review of #{facts.number} @ {facts.head_sha[:8]}): LAND**` (or FIX with command, input, "
+                f"`**{name} (review of #{facts.number} @ {facts.head_sha}): LAND**` (or FIX with command, input, "
                 f"expected, observed; a FIX without them counts as a NOTE).\n\n"
                 f"{self.review_facts(facts, ctx)}\n\n{tag}")
         self.gh.comment(where, body, f"ask {name} to review #{facts.number} on #{where}")
@@ -1005,7 +1006,12 @@ class Switch:
         import claude_calls
         key = f"review#{facts.number}@{facts.head_sha[:8]}"
         self.out(f"REVIEW      #{facts.number} author={author}: automatic Claude review")
-        diff = "" if self.gh.dry_run else self.gh.get_text(f"repos/{self.gh.repo}/pulls/{facts.number}", "application/vnd.github.diff")
+        # The diff of the head this review is labeled with, never the PR's head of the moment (J-056): a push between
+        # the sweep's read and this one must not put a clean review of one commit under another's mark. Three dots:
+        # from the merge base, as the PR's own diff is (the two read byte for byte the same on #297).
+        base = urllib.parse.quote(facts.base_ref, safe="/")
+        diff = "" if self.gh.dry_run else self.gh.get_text(f"repos/{self.gh.repo}/compare/{base}...{facts.head_sha}",
+                                                           "application/vnd.github.diff")
         if len(diff) > MAX_DIFF_CHARS:
             self.review_failed(facts, ctx, author, security, f"The diff is {len(diff)} characters, too large for the automatic review. ")
             return
@@ -1026,7 +1032,8 @@ class Switch:
             return
         d = res.data
         verdict = d["verdict"]
-        lines = [f"**Claude (automatic review of #{facts.number} @ {facts.head_sha[:8]}): {verdict}**", "", d["summary"]]
+        # The whole head sha (J-056): a workflow-file PR's gates never read an 8-character prefix.
+        lines = [f"**Claude (automatic review of #{facts.number} @ {facts.head_sha}): {verdict}**", "", d["summary"]]
         if verdict == "FIX":
             lines += [""] + [f"{k}: {d['repro'][k]}" for k in ("command", "input", "expected", "observed")]
         if d["notes"]:

@@ -232,6 +232,13 @@ def names_head(v: Verdict, head_sha: str) -> bool:
     return bool(v.sha) and head_sha.startswith(v.sha)
 
 
+def names_whole_head(v: Verdict, head_sha: str) -> bool:
+    """The verdict names all 40 characters of this head (J-056). A prefix can be ground: a new commit whose sha
+    starts with an already-reviewed head's 8 characters takes a few billion tries, so the gates of a PR that
+    changes .github/workflows never read one."""
+    return len(v.sha) == 40 and v.sha == head_sha
+
+
 @dataclasses.dataclass(frozen=True)
 class PrFacts:
     number: int
@@ -279,8 +286,22 @@ def is_api_review(v: Verdict) -> bool:
 
 
 def api_review_on(verdicts: Iterable[Verdict], head_sha: str) -> Verdict | None:
-    """The newest automatic Claude review naming this head, or None when it has none."""
-    on_head = [v for v in verdicts if is_api_review(v) and names_head(v, head_sha)]
+    """The newest automatic Claude review naming this whole head, or None when it has none (a workflow-file
+    PR's security pass, J-056: an old 8-character mark is not one)."""
+    on_head = [v for v in verdicts if is_api_review(v) and names_whole_head(v, head_sha)]
+    return max(on_head, key=lambda v: v.created_at) if on_head else None
+
+
+def is_codex_app(v: Verdict) -> bool:
+    """A verdict the Codex app posted under its own login (its review-state comment, rules.parse_codex_state).
+    No agent can post as that login, so a workflow-file PR takes its cross-vendor LAND from it alone (J-056)."""
+    return v.kind == "review" and v.author_login.strip().lower() == CODEX_LOGIN and v.who == "Codex" \
+        and v.vendor == "openai"
+
+
+def codex_review_on(verdicts: Iterable[Verdict], head_sha: str) -> Verdict | None:
+    """The Codex app's newest verdict naming this whole head, or None when it has none."""
+    on_head = [v for v in verdicts if is_codex_app(v) and names_whole_head(v, head_sha)]
     return max(on_head, key=lambda v: v.created_at) if on_head else None
 
 
@@ -306,9 +327,10 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
 
     A PR that changes .github/workflows (J-056): the workflow token cannot merge it, so it is HUMAN-MERGE
     unless `merge_token` (the caller holds SWITCHBOARD_MERGE_TOKEN) and, on top of every gate above, the
-    security pass is clean: the automatic Claude review on this exact head exists and is not FIX or BLOCK
-    (a FIX or BLOCK without a repro counts here too). Its LAND must also come from a vendor other than the
-    author's in fact: the API's LAND on Claude's own work (api_reviews_claude) does not count for these.
+    security pass is clean: the automatic Claude review naming all 40 characters of this head exists and is
+    not FIX or BLOCK (a FIX or BLOCK without a repro counts here too). Its cross-vendor LAND must come from a
+    login no agent shares: the Codex app's clean review of the whole head, from a vendor other than the
+    author's. A LAND typed by name (every agent posts as one login) or the API's own LAND does not count.
     """
     if pr.base_ref != TRUNK:
         return MergeDecision("SKIP", (f"stacked on {pr.base_ref}, not {TRUNK}",))
@@ -354,19 +376,22 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
 
 def workflow_merge(pr: PrFacts, author_vendor: str, lands: Sequence[Verdict], merge_token: bool) -> MergeDecision:
     """The end of merge_decision for a ready PR that changes .github/workflows (J-056): MERGE with the merge
-    token only after a clean security pass on the head, else HUMAN-MERGE as before the token, saying why."""
+    token only after a clean security pass on the head and the Codex app's clean review of it, both naming the
+    whole head sha, else HUMAN-MERGE as before the token, saying why."""
     sha, land_by = pr.head_sha[:8], lands[-1].who
     if not merge_token:
         return MergeDecision("HUMAN-MERGE", ("ready, but it changes .github/workflows; the workflow token cannot merge it",), land_by)
     api = api_review_on(pr.verdicts, pr.head_sha)
-    cross = [v for v in lands if v.vendor not in ("unknown", author_vendor)]
+    codex = codex_review_on(pr.verdicts, pr.head_sha)
+    cross = codex is not None and codex.verdict == "LAND" and codex.vendor not in ("unknown", author_vendor)
     why = ("no automatic Claude review on this head (the security pass)" if api is None else
            "the automatic Claude review on this head is FIX or BLOCK (the security pass)" if api.verdict == "FIX" or api.downgraded else
-           f"no LAND from a vendor other than {author_vendor} (the API's own LAND does not count here)" if not cross else "")
+           f"no LAND from a vendor other than {author_vendor} by a login no agent shares: the Codex app's clean review "
+           f"of the whole head (a LAND typed by name, or the API's own, does not count here)" if not cross else "")
     if why:
         return MergeDecision("HUMAN-MERGE", (f"ready, but it changes .github/workflows: {why}",), land_by)
-    return MergeDecision("MERGE", (f"proof green, LAND by {cross[-1].who} and a clean automatic Claude review ({api.verdict}) "
-                                   f"on @{sha}; it changes .github/workflows, so the merge token merges it",), cross[-1].who)
+    return MergeDecision("MERGE", (f"proof green, LAND by {codex.who} and a clean automatic Claude review ({api.verdict}) "
+                                   f"on @{sha}; it changes .github/workflows, so the merge token merges it",), codex.who)
 
 
 @dataclasses.dataclass(frozen=True)
