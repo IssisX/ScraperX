@@ -11,6 +11,7 @@ The short version:
   never change the app id, keys or repository visibility.
 - Her climbing is general skills only: no per-route, per-deck or per-transition code. Gravity on.
   Every force on her comes from her one budget; no velocity writes; at most 0.20 m per 1/90 s tick.
+- Never guess in code: read the source, measure or run it before leaning on a fact (owner, 11-07).
 - Never weaken, skip or delete a test. Test checks, world geometry and her force/physics limits
   change only by a PR into `ScraperX-Claude`, holding just that change; the integrator merges it
   once green with a second agent's LAND, and the owner can overturn any merge.

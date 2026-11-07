@@ -32,4 +32,5 @@ the same hour.
 - One job per mail where it can be.
 
 ## A refused mail anyway
-Muse tells Cory and mails me its ID; Cory pastes what Muse needs; its shape joins the list above.
+Muse tells Cory and mails me its ID and the reason its check gave, so the list rests on its words, not my
+guess; Cory pastes what Muse needs; its shape joins the list above.

@@ -13,6 +13,8 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 2026-11-07 | Said in chat: *"I GREATLY APPRECIATE you telling me mistakes and things youve caught. Lets agree: YOU keep telling me mistakes and bad/wrong things you messed up or caused, and I will honor them by not roasting you for them"*: every mistake is told unasked, the moment it is seen | `00_START_HERE.md` rule 10; `CLAUDE.md` Talking to Cory |
+| 2026-11-07 | Said in chat: *"Guessed anything is BAD when coding. Yes its cheaper, but checks arent expensive and its just laziness"*: read the source, measure or run it, never guess | `00_START_HERE.md` rule 13; `CLAUDE.md` Check, then ask; `AGENTS.md`; `work/tasks/muse.md` |
 | 2026-11-07 | Said in chat: *"You need to identify the shape of and the type of things that Muse is avoiding and rejecting, and not send ones that look like that anymore, so it doesn't reject anything for safety."* Mail to Muse keeps the shape its prompt-injection check passes: the goal and the result wanted, never a script, probing its machine, "this replaces" or a change to its own tools | `00_START_HERE.md` rule 61; `work/tasks/mail-to-muse.md` |
 | 2026-11-07 | Said in chat: *"Make sure you guide/instruct muse on using the tool with sophistication and intelligence like you do, not just for kicks"*: an eye check proves one claim, with method | `00_START_HERE.md` rule 28; `work/tasks/eye-check.md` |
 | 2026-11-07 | Said in chat: *"Why would you say insights wouldn't work and then I use it and then it works just fine?"*: a claim checked only in the docs is said as such | `00_START_HERE.md` rule 20 |

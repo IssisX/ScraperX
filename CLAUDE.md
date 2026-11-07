@@ -31,7 +31,7 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
-- Say unasked, the moment you see it: a better way (11-04: he found /compact himself), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
+- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way (11-04: he found /compact himself), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
 
 ## The game
 
@@ -53,9 +53,10 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
-- **Ask, don't guess:** before locking in a hard job's approach, after the second red proof on the same
-  failure, or on any physics or force-budget guess, post `To <Name>:` on the job's issue or PR (what you did,
-  measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
+- **Check, then ask; never guess** (11-07: "checks arent expensive and its just laziness"): in code, read the
+  source, measure or run it before leaning on a fact. Before locking in a hard job's approach, after the second
+  red proof on the same failure, or on a physics or force-budget question no check settles, post `To <Name>:`
+  on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
   step.
 - **Strengths:** Muse (free; writes and runs code, runs about 10 subagents) takes every build: physics, game
   code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:

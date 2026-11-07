@@ -66,7 +66,8 @@ protected PR; J-001; J-044b grant test (protected, after #298); J-015 S2/S3; #29
 beside #301, one subagent each. Owed: which buttons ignore the bridge click.
 
 ## Asks in flight
-- Mine: check the J-059 and hair stills when they come; #306 follow-up, not a blocker: angle the cheek quads 25-30
+- Mine: the next mail to Muse points to muse.md's new never-guess line and the refusal reason (11-07 10:25 AM);
+  check the J-059 and hair stills when they come; #306 follow-up, not a blocker: angle the cheek quads 25-30
   degrees along the cheek normal (straight on, the left one overhangs the face edge).
 - Cory (/learn, 11-07 10:3x AM): injuries across checkpoints; `work/budget.yml`'s $8 caps; whether "last to Sunday
   night" is every week.
