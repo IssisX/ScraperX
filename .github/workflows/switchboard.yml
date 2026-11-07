@@ -177,6 +177,9 @@ jobs:
   # One-time setup of the hosted API agent (step C): only on a dispatch with provision=true. It prints
   # the new ids to the run summary for work/budget.yml; it never prints a secret.
   provision:
+    # J-057: ANTHROPIC_API_KEY and AGENT_GITHUB_TOKEN live only in this environment (deploys only from ScraperX-Claude),
+    # like the merge token, so no branch's copy of any workflow can read them.
+    environment: switchboard-merge
     if: github.event_name == 'workflow_dispatch' && inputs.provision
     runs-on: ubuntu-24.04
     timeout-minutes: 10
