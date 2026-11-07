@@ -155,6 +155,76 @@ func _run() -> void:
 	var face_out: float = layer.patch_outward("face_l", head_bone.origin)
 	_check(layer.bruise_visible("skull") and layer.patch_visible("skull") and skull_out > 0.0 and face_out > 0.0,
 		"skull", "bruise %s patch %s outward %.3f face %.3f" % [layer.bruise_visible("skull"), layer.patch_visible("skull"), skull_out, face_out])
+	# J-059 black eye: a 75+ N·s punch to her left eye bruises it dark and
+	# swells the lid. eye_l/eye_r (J-044a §D, 14 regions): a fist contact
+	# on the front of the head within 0.035 m of a socket centre goes to
+	# that eye instead of face_l/face_r, split by the head-local sagittal
+	# plane, never world X. The socket centres are the eye bones' rest
+	# offsets — but the rig's eye bone NAMES sit on the opposite sides
+	# (the bone called eye_l is at head-local -X), so the anchors follow
+	# anatomy (+X is her left), not the bone names. The classification is
+	# a pure function of a head-local point; the live feed is J-044g's.
+	var socket_l := Vector3(0.0315, 0.0505, 0.0847)
+	var socket_r := Vector3(-0.0315, 0.0505, 0.0847)
+	_check(layer.classify_head_hit(socket_l) == "eye_l", "eye_class_l", "at left socket -> %s" % layer.classify_head_hit(socket_l))
+	_check(layer.classify_head_hit(socket_r) == "eye_r", "eye_class_r", "at right socket -> %s" % layer.classify_head_hit(socket_r))
+	_check(layer.classify_head_hit(Vector3(0.02, 0.05, 0.085)) == "eye_l", "eye_class_near_l", "0.012 from left socket")
+	_check(layer.classify_head_hit(Vector3(-0.02, 0.05, 0.085)) == "eye_r", "eye_class_near_r", "0.012 from right socket")
+	_check(layer.classify_head_hit(Vector3(0.055, -0.015, 0.085)) == "face_l", "eye_class_cheek", "cheek point stays face_l")
+	_check(layer.classify_head_hit(Vector3(0.08, 0.05, 0.085)) == "face_l", "eye_class_far", "0.05 from socket stays face_l")
+	# Below 75: nothing on the eye — no red mark, no ring, no lid.
+	_set_injury({"eye_l": {"j_region": 30.0, "j_event": 30.0}})
+	await _step(2)
+	_check(not layer.black_eye_visible("eye_l") and not layer.patch_visible("eye_l") and not layer.lid_visible("eye_l") and "eye_l" not in layer.visible_regions(), "eye_below", "regions %s" % [layer.visible_regions()])
+	_set_injury({"eye_l": {"j_region": 74.0, "j_event": 80.0}})
+	await _step(2)
+	_check(not layer.black_eye_visible("eye_l") and not layer.patch_visible("eye_l"),
+		"eye_below74", "74 N·s still nothing")
+	# At 75: the ring shows, faint at first (blood pools over ~15 s).
+	_set_injury({"eye_l": {"j_region": 75.0, "j_event": 80.0}})
+	await _step(2)
+	_check(layer.black_eye_visible("eye_l") and layer.patch_visible("eye_l") and layer.black_eye_darkness("eye_l") < 0.5,
+		"eye_ring", "ring %s dark %.2f" % [layer.patch_visible("eye_l"), layer.black_eye_darkness("eye_l")])
+	# 15 s later the ring is at full darkness and holds.
+	layer._clock += 15.0
+	await _step(2)
+	_check(layer.black_eye_darkness("eye_l") >= 0.99, "eye_dark", "dark %.2f" % layer.black_eye_darkness("eye_l"))
+	# Stills: the black left eye at full darkness, front and three-quarters
+	# from her left. No swell or slit yet: this is the 75-dose black eye.
+	var head_eye: Vector3 = _her.head_world_position()
+	await _shot("injury_black_eye_front", head_eye + Vector3(0.0, 0.05, 0.7), head_eye, 45.0)
+	await _shot("injury_black_eye_three_quarter", head_eye + Vector3(0.45, 0.08, 0.55), head_eye, 40.0)
+	# Close-up on the left eye alone (head frame, so the camera is square to
+	# her face despite the pose's head turn): the ring's darkest arc must
+	# read on the lower lid and the inner corner.
+	var eye_l_pos: Vector3 = (layer._patches["eye_l"] as MeshInstance3D).global_position
+	var head_bone_close: Transform3D = _her._rig.bone_world("head")
+	var eye_cam: Vector3 = eye_l_pos + head_bone_close.basis.z * 0.28 + head_bone_close.basis.x * 0.06 + head_bone_close.basis.y * 0.02
+	await _shot("injury_black_eye_close", eye_cam, eye_l_pos, 30.0)
+	# Side view for depth: the ring must sit on the skin, not float or sink.
+	var eye_side: Vector3 = eye_l_pos + head_bone_close.basis.x * 0.45 + head_bone_close.basis.z * 0.12 + head_bone_close.basis.y * 0.02
+	await _shot("injury_black_eye_side", eye_side, eye_l_pos, 35.0)
+	# At 150: the lid swells. At 250: the eye is narrowed to a slit.
+	_set_injury({"eye_l": {"j_region": 150.0, "j_event": 80.0}})
+	await _step(2)
+	_check(layer.lid_visible("eye_l") and not layer.eye_slit_visible("eye_l"), "eye_swell", "lid %s slit %s" % [layer.lid_visible("eye_l"), layer.eye_slit_visible("eye_l")])
+	_set_injury({"eye_l": {"j_region": 250.0, "j_event": 80.0}})
+	await _step(2)
+	_check(layer.lid_visible("eye_l") and layer.eye_slit_visible("eye_l"), "eye_slit", "lid %s slit %s droop %.2f" % [layer.lid_visible("eye_l"), layer.eye_slit_visible("eye_l"), layer.lid_droop("eye_l")])
+	# Side check: eye_l on her left, eye_r on her right — same guard as
+	# cheek_sides, against the same sign-flip bug (#306).
+	_set_injury({"eye_l": {"j_region": 150.0, "j_event": 80.0}, "eye_r": {"j_region": 150.0, "j_event": 80.0}})
+	await _step(2)
+	var head_bone_eye: Transform3D = _her._rig.bone_world("head")
+	var el_lat: float = ((layer._patches["eye_l"] as MeshInstance3D).global_position - head_bone_eye.origin).dot(head_bone_eye.basis.x)
+	var er_lat: float = ((layer._patches["eye_r"] as MeshInstance3D).global_position - head_bone_eye.origin).dot(head_bone_eye.basis.x)
+	_check(el_lat > 0.02 and er_lat < -0.02, "eye_sides",
+		"eye_l lateral %.3f eye_r lateral %.3f" % [el_lat, er_lat])
+	# No healing: a smaller later value never lowers the eye.
+	_set_injury({"eye_l": {"j_region": 30.0, "j_event": 30.0}, "eye_r": {"j_region": 150.0, "j_event": 80.0}})
+	await _step(2)
+	_check(layer.black_eye_visible("eye_l") and layer.lid_visible("eye_l"), "eye_no_heal",
+		"sev %.0f" % layer.severity("eye_l"))
 	# Stills: the bruised left cheek, then the face straight on. The left
 	# cheek camera stands on her left (+X): -X would photograph her right
 	# cheek under the same name.
