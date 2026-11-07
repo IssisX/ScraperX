@@ -63,12 +63,21 @@ Decision decide(const LooseStock::Kind kind, const float peak_ns) noexcept {
         break;
     case LooseStock::Kind::Crate:
     case LooseStock::Kind::SkidCrate:
+        // The break line is 300 N.s, not 180: measured 2026-11-06, the
+        // walking shove that must not break a crate peaks at 198 N.s
+        // (the player, first contact) and 267 N.s (Matron's contact on
+        // the south crate), while the full forklift ram that must break
+        // it peaks at 320 N.s. 180 sat below an ordinary shove, so the
+        // shove broke the crate 0.2 s in and the traversal test read
+        // the parked body (0.388 m, not the 1 m a shove gives). 300
+        // clears the highest measured walking contact and stays below
+        // the measured ram. The throw (80 N.s) stays Damage.
         if (peak_ns < 65.0F) {
             break;
         }
-        if (peak_ns < 180.0F) {
+        if (peak_ns < 300.0F) {
             d.tier = Tier::Damage;
-            d.depth_m = within(peak_ns, 65.0F, 180.0F, 0.0F, 0.06F);
+            d.depth_m = within(peak_ns, 65.0F, 300.0F, 0.0F, 0.06F);
         } else {
             d.tier = Tier::Break;
             d.depth_m = 0.06F;

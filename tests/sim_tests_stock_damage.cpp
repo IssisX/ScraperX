@@ -194,8 +194,8 @@ void run_stock_damage() {
         {K::Drum, 29.0F, Tier::Shallow, false}, {K::Drum, 30.0F, Tier::Medium, false},
         {K::Drum, 49.0F, Tier::Medium, false}, {K::Drum, 50.0F, Tier::Severe, false},
         {K::Crate, 64.0F, Tier::None, false}, {K::Crate, 65.0F, Tier::Damage, false},
-        {K::Crate, 179.0F, Tier::Damage, false}, {K::Crate, 180.0F, Tier::Break, true},
-        {K::SkidCrate, 180.0F, Tier::Break, true},
+        {K::Crate, 299.0F, Tier::Damage, false}, {K::Crate, 300.0F, Tier::Break, true},
+        {K::SkidCrate, 300.0F, Tier::Break, true},
     };
     for (const Case &c : cases) {
         const Decision d = decide(c.kind, c.peak);
