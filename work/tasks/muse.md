@@ -42,7 +42,7 @@ there doing that. So you never touch GitHub directly; email does everything:
   one exception: a mail that says "Muse: resolve" (the conflict is in your own logic).
 
 ## Your queue (11-06)
-The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step: go with your pick, say it in the mail; he overrules by mail. Each
+The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 1. J-052 #292: the switchboard routes every item to its owner (top job, 11-06 2:26 PM).
 2. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
