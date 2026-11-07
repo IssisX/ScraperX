@@ -1311,7 +1311,10 @@ func _play_matron_ammo(device: int) -> bool:
 		waited += dt
 		her = _matron_state()["position"]
 		var d := Vector2(her.x - _position().x, her.z - _position().z).length()
-		_main._yaw = atan2(-(her.x - _position().x), -(her.z - _position().z))
+		var to_her := Vector2(her.x - _position().x, her.z - _position().z)
+		# Turn at 4 rad/s the way a thumb does, never in one frame: the snap
+		# dragged the toolbox out of his hands (his hands turn at 3 rad/s).
+		await _face(to_her)
 		_main._pitch = _heave_pitch(d)
 		if d > 3.0:
 			_move(device, 0.6)
@@ -1319,12 +1322,14 @@ func _play_matron_ammo(device: int) -> bool:
 			continue
 		_move(device, 0.0)
 		var b := _kit_origin(box)
-		var to_her := Vector2(her.x - _position().x, her.z - _position().z)
 		var in_front := Vector2(b.x - _position().x, b.z - _position().z).dot(to_her) / maxf(d, 0.01) > 0.3
 		var swing := Vector2(b.x - box_was.x, b.z - box_was.z).length() / dt
 		box_was = b
 		settled = settled + dt if in_front and swing < 0.5 else 0.0
-		ready = settled >= 0.25
+		# Ready only while the toolbox is still in his hands: the check below
+		# reads the live carry constraint, and a dropped box at his feet
+		# passes every other condition here.
+		ready = settled >= 0.25 and int(_native().get_carrying_entity_id()) == box
 	if not ready:
 		return _fail("never squared up to throw it back (carrying %d)" % int(_native().get_carrying_entity_id()))
 	if _main._touch.gesture_hint(&"up") != "THROW":
