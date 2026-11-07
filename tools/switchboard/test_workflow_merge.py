@@ -124,7 +124,10 @@ class TheRule(unittest.TestCase):
         d = decide(facts())
         self.assertEqual((d.action, d.land_by), ("MERGE", "Codex"))   # the Codex app's LAND is the one that counts
         self.assertIn("clean automatic Claude review (LAND) on @1a2b3c4d", d.reasons[0])
-        self.assertEqual(decide(facts(verdicts=(codex(), api("NOTE")))).action, "MERGE")   # a NOTE is no FIX or BLOCK
+        # The security pass's NOTE is a hole it suspects but cannot show (SECURITY_REVIEW_SYSTEM): a person merges.
+        d = decide(facts(verdicts=(codex(), api("NOTE"))))
+        self.assertEqual(d.action, "HUMAN-MERGE")
+        self.assertIn("automatic Claude review on this head is NOTE, not LAND", d.reasons[0])
         # The Claude API's own LAND is never the other vendor's LAND on a workflow PR, on any branch.
         d = decide(facts(verdicts=(api(),)))
         self.assertEqual(d.action, "HUMAN-MERGE")
@@ -142,7 +145,7 @@ class TheRule(unittest.TestCase):
         for raw in ("FIX", "BLOCK"):
             d = decide(facts(verdicts=(codex(), api(raw))))
             self.assertEqual(d.action, "HUMAN-MERGE", raw)
-            self.assertIn("automatic Claude review on this head is FIX or BLOCK", d.reasons[0])
+            self.assertIn("automatic Claude review on this head is FIX or BLOCK, not LAND", d.reasons[0])
             self.assertEqual(decide(facts(verdicts=(codex(), api(raw, extra=REPRO)))).action, "FIX", raw)
         # A hand-posted Claude LAND after the API's FIX clears open_fixes, never the security pass.
         later = v("**Claude (review of #9 @ 1a2b3c4d): LAND**", T2)
@@ -400,6 +403,25 @@ class TheSecurityFindings(unittest.TestCase):
         sw.root, sw.paid = HERE.parents[1], paid
         sw.review(facts(base_ref="muse/stack#1"), ctx(), "meta")
         self.assertEqual(gh.reads[0][0], f"repos/{repo}/compare/muse/stack%231...{HEAD}")
+
+    def test_4_the_security_pass_judges_against_security_md(self):
+        # Codex on #297: the gameplay prompt answers LAND unless physics, gameplay or a test breaks, so a secret
+        # leak passed it. The security pass sends SECURITY.md and its own prompt; the ordinary review does not.
+        sent = []
+
+        def paid(kind, job, call, system, content, schema, cap, key):
+            sent.append((system, "".join(b["text"] for b in content)))
+            return claude_calls.Result({"verdict": "LAND", "summary": "ok", "notes": []}, "end_turn", "m", 1, 1)
+        for security in (True, False):
+            sw = make(DiffGH({}))
+            sw.root, sw.paid = HERE.parents[1], paid
+            sw.review(facts(), ctx(), "meta", security=security)
+        ((sec_system, sec_text), (plain_system, plain_text)) = sent
+        self.assertIs(sec_system, claude_calls.SECURITY_REVIEW_SYSTEM)
+        self.assertIn("<security_guidelines>", sec_text)
+        self.assertIn("pull_request_target", sec_text)           # a SECURITY.md rule reached the reviewer
+        self.assertIs(plain_system, claude_calls.REVIEW_SYSTEM)
+        self.assertNotIn("<security_guidelines>", plain_text)
 
     def test_3_a_typed_name_land_is_refused_on_a_workflow_pr(self):
         typed = v(f"**ChatGPT (review of #9 @ {HEAD}): LAND**")          # any agent can type it: one login

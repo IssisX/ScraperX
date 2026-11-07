@@ -385,7 +385,8 @@ def workflow_merge(pr: PrFacts, author_vendor: str, lands: Sequence[Verdict], me
     codex = codex_review_on(pr.verdicts, pr.head_sha)
     cross = codex is not None and codex.verdict == "LAND" and codex.vendor not in ("unknown", author_vendor)
     why = ("no automatic Claude review on this head (the security pass)" if api is None else
-           "the automatic Claude review on this head is FIX or BLOCK (the security pass)" if api.verdict == "FIX" or api.downgraded else
+           f"the automatic Claude review on this head is {api.verdict if not api.downgraded else 'FIX or BLOCK'}, "
+           f"not LAND (the security pass)" if api.verdict != "LAND" or api.downgraded else
            f"no LAND from a vendor other than {author_vendor} by a login no agent shares: the Codex app's clean review "
            f"of the whole head (a LAND typed by name, or the API's own, does not count here)" if not cross else "")
     if why:

@@ -1016,11 +1016,17 @@ class Switch:
             self.review_failed(facts, ctx, author, security, f"The diff is {len(diff)} characters, too large for the automatic review. ")
             return
         checklist = (self.root / "03_EXECUTION/REVIEW_CHECKLIST.md").read_text(encoding="utf-8")
-        content = [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
+        # The security pass judges against SECURITY.md with its own prompt (Codex on #297): the gameplay prompt's
+        # LAND would let a secret leak through, since it blocks only physics, gameplay, correctness and tests.
+        guidelines = [claude_calls.text_block("<security_guidelines>\n"
+                                              + (self.root / "SECURITY.md").read_text(encoding="utf-8")
+                                              + "\n</security_guidelines>")] if security else []
+        system = claude_calls.SECURITY_REVIEW_SYSTEM if security else claude_calls.REVIEW_SYSTEM
+        content = guidelines + [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
                    claude_calls.text_block(f"<pr number=\"{facts.number}\" head=\"{facts.head_sha}\" branch=\"{facts.head_ref}\">\n"
                                            f"<title>{ctx['title']}</title>\n<body>\n{ctx['body'][:20000]}\n</body>\n</pr>"),
                    claude_calls.text_block(f"<diff>\n{diff}\n</diff>")]
-        res = self.paid("review", ctx["job"], "review", claude_calls.REVIEW_SYSTEM, content, claude_calls.REVIEW_SCHEMA,
+        res = self.paid("review", ctx["job"], "review", system, content, claude_calls.REVIEW_SCHEMA,
                         self.job_cap(ctx), key)
         if res is None:   # refused by the budget, or a dry run: the next run tries again
             return
