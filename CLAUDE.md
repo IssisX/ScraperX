@@ -48,8 +48,8 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
 ## How the agents work together (keep this whole)
 
 - **Channels.** Muse reads only mail: the integrator mails every `To Muse:` ask as `CLAUDE_TO_MUSE: <J-NNN or
-  #N> ...` the same hour: the goal and the result wanted, never a script to run, a change to its own tools
-  or "this replaces" (its injection check refused that, 11-07); long orders go in `work/tasks/muse.md`. Muse
+  #N> ...` the same hour: the goal and the result wanted, in the shape `work/tasks/mail-to-muse.md` keeps
+  (its injection check refused a mail, 11-07); long orders go in `work/tasks/muse.md`. Muse
   answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
@@ -94,9 +94,9 @@ the safety and rules and like bookkeeping shit"*: add a rule here only by replac
   xhigh (Cory 11-06 11:20 AM: management must miss nothing; `CLAUDE_CODE_EFFORT_LEVEL` in `.claude/settings.json` matches him); ultracode is workflows at any effort level, not more thinking, so it stays off; helpers are Opus, never Sonnet (11-05): `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
 - **Context:** sessions compact themselves at about 225k (`autoCompactWindow` in `.claude/settings.json`; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (asks in flight, merge queue, live
-  rulings) current; re-read it, this file and the hourly file after a compact. A new session only when one
+  rulings; no histories or tallies) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, long threads)
   go to a helper and only its answer comes back; read the function or section a job needs, found via
   `REPO_MAP.md` or `grep`, never the whole game. Caps: the board 100 comments (then a fresh board), a job
-  issue or PR 40, this file 10 KB, each `work/tasks/` file 8 KB.
+  issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.

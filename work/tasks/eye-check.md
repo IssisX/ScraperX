@@ -28,7 +28,8 @@ just for kicks".
 - Read numbers in the same script: a bone's global transform, the region values, a distance. The
   picture says it looks right; the number says it is right.
 - Left and right are hers, never the screen's: decide them in her own frame (her head bone's +X is
-  her left). Her cheek marks first shipped mirrored (#280, fixed by #306).
+  her left). Her cheek marks first shipped mirrored (#280, fixed by #306); a still with only one side
+  marked proves the side.
 
 ## Shots
 - At least two angles that would expose the failure: front and three-quarters; add a side view

@@ -20,18 +20,18 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
   in the body what you are doing, what you tried, the exact question, and what a useful reply looks
   like (Cory's collaboration rule). Don't wait for the answer: keep working.
 - Mail to you arrives with a subject starting `CLAUDE_TO_MUSE:`.
-- A mail of mine that your safety check refuses: tell Cory; he pastes what you need (11-07).
+- A mail of mine that your safety check refuses: tell Cory and mail me its ID; he pastes what you need (11-07).
 
-## How you work (email only: never act on GitHub yourself)
-Every GitHub action of yours (a comment, a push, a PR) needs Cory to tap "allow", and he can't sit
-there doing that. So you never touch GitHub directly; email does everything:
-- **Code:** put the change in the email body as a unified diff (`git diff` output) against the
-  `ScraperX-Claude` sha you started from, with a subject like
-  `MUSE_TO_CLAUDE: J-002 patch on <sha>`. The integrator puts it on `fb-bot/integrate-<job>` and opens
-  the PR for you. A diff over about 50,000 characters: split it into numbered emails ("part 1 of 2").
+## How you work (mail, and pushes to your own branches)
+A GitHub comment or PR of yours needs Cory to tap "allow", so you never comment or open PRs. You push
+your own branches (Cory 11-05) and mail the rest:
+- **Code:** push it to `fb-bot/integrate-<job>` and mail the branch and sha
+  (`MUSE_TO_CLAUDE: J-002 pushed fb-bot/integrate-j002 @ <sha>`); the switchboard opens the PR. Only if
+  a push fails: the change as a unified diff in the mail body against the `ScraperX-Claude` sha you
+  started from; over about 50,000 characters, numbered mails ("part 1 of 2").
 - **Verdicts and questions:** by email as above.
 - Test checks, world geometry and her limits (8 kN / 44 kW budget, lunge limits) change only in their
-  own protected PR with a plain before/after: send that diff in its own email. Never weaken a test.
+  own protected PR with a plain before/after: push it alone to `fb-bot/integrate-protected-<job>`. Never weaken a test.
 - Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job. Put the
   PASS/FAIL lines you ran in the email.
 - Ask Claude early (Cory 11-06: J-001 ran 8 h without asking). Two red proof runs on the same failure,

@@ -1,237 +1,94 @@
-# Integrator notes (live state only; re-read after every /compact)
+# Integrator notes (live state only; re-read after every compact)
 
-Session `session_01W3SSMz5zMw3Tm5DXRpisrG`, chain 7 of 8; compacts itself at about 400k; a new session only if broken.
-History, done jobs and old rulings: `INTEGRATOR_NOTES_LOG_2026-11-05.md` (the full notes up to 2:15 PM 11-05, verbatim).
-Keep this file to what changes the next action; move anything done to the log.
+Session `session_01W3SSMz5zMw3Tm5DXRpisrG`; compacts itself at about 225k; a new session only if broken.
+Cap 10 KB: asks in flight, merge queue, live rulings, the meter readings the pace uses. No histories, tallies or
+per-helper logs (Cory 11-05, 11-06: *"That's wasting usage"*). Older notes, verbatim:
+`INTEGRATOR_NOTES_LOG_2026-11-05.md` (to 2:15 PM 11-05), `INTEGRATOR_NOTES_LOG_2026-11-07.md` (to 10:11 AM 11-07).
+
+Read through: 1794066268 (2026-11-07 15:44:28Z, 9:44 AM Central). Every run sets it after acting.
 
 ## After every compact
 1. Re-read `CLAUDE.md`, `work/tasks/integrator-hourly.md` and this file.
 2. `python3 tools/board/asks.py --hours 24`; clear every line not under "Asks in flight".
-3. Muse's mail: `subject:MUSE_TO_CLAUDE newer_than:3h`. Its diffs come as attachments, which the Gmail tools do not
-   return, so a helper decodes them from the RAW message.
-4. The check task `trig_0139GQPXpF7YWbvHwgEn98a3` runs every 3 hours, 8:17 AM-11:17 PM Central; it is the only timed wake.
+3. Muse's mail: `subject:MUSE_TO_CLAUDE newer_than:3h`. Its diffs come as attachments the Gmail tools do not return;
+   a helper decodes them from the RAW message.
+4. Before any mail to Muse: `work/tasks/mail-to-muse.md`. Stamp times only from `TZ=America/Chicago date`.
 
 ## How merges work
-- The switchboard merges PRs whose body starts `Job: J-NNN` on a green proof plus a LAND, protected changes included.
-  Codex clean counts as the LAND. On Muse's fb-bot work my own LAND comment counts too.
-- Any PR touching `.github/workflows` is HUMAN-MERGE, so it is mine. Steps:
-  1. Post a LAND comment first.
-  2. Check the PR head sha equals `git ls-remote` (#235).
-  3. Check the base is `ScraperX-Claude`.
-  4. Merge with `gh api -X PUT repos/IssisX/ScraperX/pulls/N/merge -f merge_method=merge -f sha=<40>`.
-- Trunk merges into conflicting PRs are mine the same hour; mail the owner the new sha. CMake slice lists: keep
-  trunk's list and append the branch's new slices. Slice names must be dashed (`[a-z0-9-]+`).
-- Muse pushes its own `fb-bot/integrate-[protected-]<job>` branches and mails branch and sha; I open the PR.
+- The switchboard merges `Job: J-NNN` PRs on a green proof plus another vendor's LAND, protected ones too; workflow-file
+  PRs with SWITCHBOARD_MERGE_TOKEN after clean Codex and Claude API reviews on the full head sha (J-056, J-057).
+- My own hand merges are refused by the safety check ([Auto-Mode Bypass], [Merge Without Review]), and so are branch
+  deletes (Git Destructive). Never work around either.
+- Muse pushes its own `fb-bot/integrate-[protected-]<job>` branches; the switchboard opens the PR (J-047). A PR this
+  session opens subscribes it: unsubscribe at once unless I merge it myself.
+- Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's; slice names dashed.
+- sweep.py takes the latest verdict and misses an earlier unfixed P1 from another vendor (seen on #301).
 
-## Cory's standing rulings (11-04/11-05)
-- Helpers: Opus, never Sonnet; one at a time while over pace (Cory allowed 2). Builds go to Muse.
-- Meter log (Cory reads it at the 11:17 AM, 5:17 PM and 11:17 PM runs; Sat-Sun 1:17 and 9:17 PM): Fri 7:10 AM 70% ($345);
-  9:16 AM 72% (~$356); 11:15 AM 73% ($380); 12:28 PM 74% (~$389); 1:30 PM 75% ($406.06). About $14 = 1%.
-- Budget (98% by Sun 11 PM, 2% kept): 0.6%/h (~$8.40) over 38 daytime h (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM).
-  Checkpoints: 81% Fri 11 PM (~$490), 89% Sat 11 PM (~$600), 98% Sun 11 PM (~$725).
-- Prediction 1:38 PM Fri (burn 11:18-1:32 = $26.3 / 2.2 h = 0.84%/h): Fri 11 PM 83% (over 81), Sat 11 PM 95% (over 89),
-  100% about Sun 2:45 PM. THROTTLED: one helper, no new helper this block, the 2:17 PM full run lean (asks, merges, the
-  board only if an owner changes). Why the burn was high: the context sat at 250-376k and every call rereads it; it
-  compacted 1:36 PM and compacts at about 225k after the next restart, so the burn should fall. Re-predict at 2:17 PM
-  from cost_usd; loosen a step only when two runs predict under.
-- No Workflow runs. Decline the ultracode nudges silently.
-- Plugin searches use one exact keyword, or a helper runs them and returns one line (context, 11-05).
-- GitHub-UI-only steps (settings, toggles): ask Cory early, with a direct link and the exact taps.
-- A question from Cory gets an answer, not an action (11-05: he asked why the godot MCP was unused and I changed the
-  environment). Name the fix in one line; anything that needs his tap or approval waits for his go.
-- Never weaken a test; never cut quality to save quota.
-- Every bug Cory reports gets a job the same hour.
-- Hourly step 6: look every hour; build a saving only when a real one shows up; never invent work.
-- Fight (J-044): jointed upper body inside her 8 kN / 44 kW budget; legs and capsule locomotion kept.
-  - Injuries cost function in proportion to damage, and her healthy limbs take over; her total budget never rises.
-  - Injuries are saved with the checkpoint; a checkpoint taken after her death restores her dead.
-  - A daze from head impulse replaces the fixed knockdown timer.
+## Live rulings
+- Nobody waits on my go, protected work included (Cory 11-07 9:32 AM).
+- Builds go to Muse; Claude integrates and codes 1-2 key jobs. Helpers: Opus, at most 2; none new today unless acute.
+- Every hard diagnosis or ruling gets a `To ChatGPT:` ask at the start, beside my first pass. Grok only on work no other
+  agent holds (Cory 11-07 8:39 AM); its open asks: #108 J-001 rows, #227, #244 Turn burst, the #301 review.
+- #298 (8:38 AM, ChatGPT's, comment 6708298378): the snag is momentum; replay the first-tick snag lambda from an
+  identical state first: within about 5%, a protected geometry PR, else fix the chain. External forces at most 8 kN;
+  all positive work incl. joint motors at most 44 kW; upper motors power-only `max(0, tau * omega_rel)`, limited
+  pre-solve to `min(cap, share / |omega_rel|)`; external first, the upper body takes what is left, starving free arm,
+  other arm, head, neck, chest in that order; one account per tick, the Climber by reference. Written into spec H.
+- Fight (J-044): her jointed upper body inside 8 kN / 44 kW; an injury costs function in proportion and her healthy
+  limbs take over, the budget never rises; a daze from head impulse replaces the fixed knockdown. Checkpoints keep the
+  exact daze (J-044g versions the save). Whether injuries persist across a checkpoint is asked of Cory (/learn, 11-07).
 - J-042: one path for every loose object; she throws up to 25 kg and shoves anything heavier.
-- Cory 11-06: Turn lunge FITS 8 kN (no exemption; Muse, J-044l protected). Switchboard opens Muse's PRs itself: J-047,
-  Muse builds it in tools/switchboard (mailed 8:10 AM). Slingshot pouch native panels stay drawn (KEEP). Shadows LOW (#263).
-- Picks told to Cory (stand unless he says otherwise): the edge-first pallet arm break stays; the extinguisher is placeholder.
+- J-049: her breath within 2 m gives a lead (Cory "breath", 11-07 6:22 AM, final).
+- J-053: first balcony 640 m, chain to 728 m, a running jump; protected geometry PR, then my eye check.
+- J-059 #307 her black eye (Cory 11-07): eye_l/eye_r regions; dark at 75 N·s, lid swelling at 150, a slit at 250; on
+  the skin; J-044g drives it in play.
+- J-015: water ballast per S1; S2 cart under 430 kg, S3 car under 450 kg drained (asked of ChatGPT on #122).
+- Picks told to Cory: the edge-first pallet arm break stays; the extinguisher is a placeholder; the slingshot pouch's
+  native panels stay drawn; shadows LOW (#263; SPLITS if it looks bad on his phone).
+- Godot MCP on Muse's box works (9:47 AM): pause the CPU jobs, look, resume. Bridge clicks do not fire the game's
+  buttons (NOT NOW confirmed): emit `pressed`. Method: `work/tasks/eye-check.md`.
 
-## Pending with Cory (7:20 AM 11-06; stamps from 6 AM today ran about 1.5 h fast, clock-checked 7:21 AM CST)
-- J-048 #276 (Cory 7:30 AM bug: running into things hurts the player). Ruling: his own run never hurts him; real blows
-  still do. (9:00 AM Cory caught me calling the player "her" in every J-048 text: fixed in 2a79cfa8, the PR and #276.
-  The player is him; the Matron is her.) Claude took it 8:20 AM (Cory "Go"; Muse mailed to drop it). PR #277 (protected, claude/integrate-protected-j048-no-run-hurt, 8:45 AM): his legs' part (speed over his frame, up to 9 m/s) is taken off a contact while his own drive moves him; a throw turns it off until he is on his feet within 9 m/s. Head 2a79cfa8 (comments only); @codex review asked. run_arm_break and touch_arm_break now break the arm with a 9.2 m/s throw. Local PASS: corpse, zipline, matron-arm, matron-mischief, matron-player-independence, AS-007-E, touch_arm_break, touch_zipline_slam. Lands on a green proof plus another vendor's LAND (switchboard); not watched.
-- Fable: not needed (Cory 11-06: use it only when a real problem needs it; never invent work for it). #244: ChatGPT answered 7:16 AM; my To Grok ask (nominal shares vs max capacities) went 7:22 AM, for his 10 AM run.
-- He pasted my "no artificial blockers" prompt to Muse (8:40 AM). Muse should now: windup first (#256), then J-001.
-- He looks at LOW shadows on his phone once #263 lands; SPLITS if it looks bad.
-- Next meter ask: 5:17 PM run.
+## Open PRs (10:15 AM 11-07)
+- #301 J-052 @ e0c7d5a7 (each item to its owner): ChatGPT's P1 (6706881549: the label write after the comment loses the
+  mail; Grok reproduced it) is unfixed; Muse's top job; the inbox flagged it QUIET for 3 h.
+- #299 J-038 protected @ d48ca768: three Codex P1s (break pieces not saved, checkpoint topology, no Godot mesh), Muse's;
+  my eye check once the mesh lands.
+- #298 J-044c @ 03ad884b: Muse's whole job since 8:35 AM, under the 8:38 ruling.
+- #291 J-042 windup protected @ 824bc8e0: touch-2 touch_matron_ammo (up read JUMP, not THROW, toolbox in hands); Muse's.
+- #282 the inbox (draft, never merge; stay subscribed).
+- #227 J-001 HOLD @ b555dd61: Muse measures the three snag-frame numbers; Grok's rows on #108.
+- Landed 11-07: #280, #297, #300, #302, #303, #304, #305, #306.
 
-## Open PRs (7:20 AM 11-06)
-- Merged: #252 and #250 (by hand, 2:40 PM), #253 (by hand, 3:00 PM); #254 and #255 (switchboard).
-- #256 J-042 protected ammo (5ea9f03e, trunk merged in). It replaces #251, which is closed. Workflow file, so I merge it on
-  green plus Codex or the API LAND. Her pallet take is marginal: asked of Muse on #240 and mailed.
-  HELD on Codex P1 (confirmed): the windup lift moves the take_stock constraint anchor and is not budgeted. The fix is
-  Muse's (mailed 2:55 PM, ahead of J-044c): pushed to fb-bot/integrate-protected-j042-windup, then I merge it in.
-- J-023 plants: #95 closed 12:41 PM, replaced by #286 (protected, from `fb-bot/integrate-protected-95-plant-expected` @ a742a87b; Muse: touch-2 red was a stale EXPECTED entry, not the game). The switchboard merges it on green plus a LAND.
-- #227 J-001 HOLD: Muse's past-rail agent. Rulings: force-based snag break only; both hands' haul comes out of her one
-  8 kN/44 kW account.
-- #264-#275 all landed by 8:05 AM 11-06 (#272's mast beam with Codex's LAND).
-- #277 J-048 (protected), opened 8:45 AM; the switchboard lands it on green plus another vendor's LAND; not watched.
-- Still red, Muse's: rungdown-bottom-gap, j044c, 95-plant-fix; j001-pastrail not pushed.
-- Subscribed: #256.
-
-## Helpers
-- Effort tally (Cory 11-06 8:50 AM): one line, no per-helper logs. A failure = a job redone on helper-max (red proof it
-  could not fix, or a real review finding), not a flake or a bad brief. Tally since the split (11:30 AM): high helper jobs 3 (J-051, J-051b, board sweep),
-  redone 0; physics helper jobs 2 (J-048 hook, b81f059a; J-042 windup merge, done #291), redone 0. 2+ redos in the first 10 high jobs -> tell Cory, pick: non-physics back to xhigh.
-- J-046 #259 merged 7:50 PM (switchboard). matron-ammo to kScenarios after #256: Muse's now. New leaks mailed
-  to Muse for J-044l (crate shove in walk_toward 8 kN, knee 5 kN, let-go 6.9 kN); asked whether the Turn lunge stays exempt.
-- J-045: #258 (draws) and #260 (perf_walk) merged. perf_grade worst_draws_low is 700, exactly the budget, so no headroom.
-  Shadows: Cory picked LOW 11-06 (SPLITS later if LOW looks bad); phone default LOW PR is #263 (switchboard merges).
-- #261 J-045 part 4 merged 1:42 AM 11-06 (perf_walk p50 6.6 -> 5.7 ms). The slingshot pouch's native panels: main.gd hides
-  them but they are drawn today; kept drawn. Hiding them is a look question, not yet put to Cory.
-- #262 J-045 part 5 merged 4:23 AM 11-06 (perf_walk p50 6.0 -> 5.6 ms, p95 8.0-8.4 -> 7.5-7.7).
-- No helper running. J-045 left: HIGH shadow draws (Cory's call), the Fold p95 (needs his phone); the sim's first step
-  varies 4-19 ms (sim side).
-- J-045 after that: Sentry native crash capture (Option A), its own workflow/signing PR with a security review.
-- Retired: the J-042 builder, J-042 fix, J-044m, J-045 draws, J-046, J-045 walk, J-045 part 4 and part 5 helpers.
-
-## Muse's queue (mail only)
-Cory 11-06 8 AM: Muse takes every build; Claude integrates; Muse's ~10 subagents never idle. Mailed 7:59 AM: run the queue in parallel (12 lanes in priority order: windup, J-001, J-048, three reds, J-044l and wreck, J-044d then e f g k, J-047, sense_near, J-044h and i, J-043, J-038, NEW J-045 sim first-step 4-19 ms), dependents after (S5 and J-040 after J-044d, matron-ammo after #256, 9 guard branches after windup, J-001, #95 and J-044c, NEW Sentry Option A later). Mail rules: one mail per pushed branch, and a status mail at least every 3 h.
-Muse's mail: 17 held mails all arrived 6:52 AM 11-06 (its sends were held ~18 h). Ruled 7:40 AM (mailed): J-001 hands
-first; windup does not wait on J-001; J-044c cap waived; wreck re-baseline only as its own protected PR; keep Grok-less
-gains. Prompt for Muse given to Cory (no parking jobs on decisions; send mail at once). 9 expand-tests/world guard branches
-wait behind windup, J-001, #95, J-044c. Rule: Muse 3 h with no mail while pushing -> tell Cory at once.
-Muse 8:05 AM status: #264-#275 landed; 12 lanes running: windup #256, J-001 #227 hands first, RungDown diagnosis,
-J-044c wreck re-baseline, J-044l, J-044d, J-047, sense_near, J-044h, J-044i, J-043 #241, and J-048 (dropped 8:20 AM,
-Claude's). Mailed 8:52 AM: J-038 slice 1 takes J-048's lane; queued J-045, J-022 #129, J-049 #278 (new: her mind runs on
-evidence, leak list first). Also mailed 8:55 AM: ChatGPT's two J-001 failure leads (#108) and spec H and I.
-Waiting on dependencies: S5 and J-040 #228 after J-044d; matron-ammo after #256; f guard-steps.
-J-038 rulings: settle exclusion replaces the vertical gate; support is a gravity-opposing normal held 2+ ticks; 1 mm
-quantize; stable merge ties.
-
-Two budget leaks are closed in J-044l/J-040: the grab hand's separate 2600 N spring, and the shove that writes
-velocity (physics_world.cpp:1437).
-
-Moved to Muse 11-06 (mailed): J-044h (presentation), J-044i (injury render), matron-ammo in kScenarios after #256.
-Claude lanes later: J-044j (foley/voice: real recordings only), n (demo).
+## Muse's lanes (mailed 9:20, 9:47, 10:05, 10:08 AM)
+#301 P1 fix; J-059 black eye with stills; her hair in the studio deck (renders as shattered planes) with stills; first
+looks at #306's cheeks and #302's gusts; #298 snag replay; #291; J-044l kinematics with the #242 migration in one
+protected PR; J-001; J-044b grant test (protected, after #298); J-015 S2/S3; #299's P1s; J-049 PR1. The eye checks run
+beside #301, one subagent each. Owed: which buttons ignore the bridge click.
 
 ## Asks in flight
-- To Grok on #244: the capacity test (spec H.4), at his 10 AM run. If he stays silent, route it to ChatGPT.
-- Cory, 8:55 AM: says at this pace the weekly limit runs out tomorrow (Sat). Asked him for the meter % and LEAN or KEEP.
-  LEAN (my pick): compact at about 250k, not about 400k (autoCompactWindow); check-ins 4 a day (9:17, 1:17, 5:17, 9:17);
-  no Claude coding until Monday except what needs the game on screen.
-  which would have overridden him on a restart). No answer yet on the meter % or LEAN/KEEP.
-  "No helpers until Monday" was my own invention (hourly file, 6:47 AM 11-06), never Cory's: he allows up to 2
-  now (9:15 AM). Removed. My pick for LEAN item 3: Claude's coding goes to one helper, not inline in my context.
-- Blocked chains are mine to take (Cory 11-06, rule in the hourly file): mail Muse first. Qualifies now: the windup
-  (#256, matron-ammo, guard branches). Muse has it in lane 1; not pushed by the 11:17 run -> I take it.
-- To Claude: none. ChatGPT's #244 (torque and power) and #243 (daze) accepted 8:50 AM as spec H and I of
-  `03_EXECUTION/FIGHT/J044A_SPEC.md`. My pick (11-06): a checkpoint keeps the exact daze; J-044g versions the save.
-- Sweep noise: `claude/integrate-j042-ammo` (red scope) is inside #256; `fb-bot/integrate-s4-jab` is merged.
+- Mine: check the J-059 and hair stills when they come; #306 follow-up, not a blocker: angle the cheek quads 25-30
+  degrees along the cheek normal (straight on, the left one overhangs the face edge).
+- Cory (/learn, 11-07 10:3x AM): injuries across checkpoints; `work/budget.yml`'s $8 caps; whether "last to Sunday
+  night" is every week.
+- PAT `ScraperX` expires Mon Nov 23: find what holds it, remind Cory by Nov 20.
+- 367 old branches archived in `archive/branches-20261106` @ 8f2c6a82; deleting them waits on Cory allowing it.
+- J-048 follow-up: wind on him in the air counts as his own run on a later wall hit (about 2.7 m/s); a later
+  helper-physics job.
+- J-045 left: HIGH shadow draws (Cory's call), the Fold p95 (his phone), the sim's first step 4-19 ms; Sentry Option A
+  later, its own workflow PR with a security review.
+- J-057 follow-up: identity federation instead of an API key (ChatGPT researching, #304 comment 6707308021).
+- J-017 #124 is done but open: close it at a full run.
+
+## Meter and pace
+84% at 9:40 AM Sat. Checkpoints 89% Sat 11 PM, 98% Sun 11 PM; about $14-18 per 1%. Next meter ask: the 1:17 PM run.
 
 ## Known here
-- Any PR this session opens (MCP or gh api) subscribes it: 12 at once cost 26 wake notices (11-06). Open PRs one
-  at a time and unsubscribe each at once; J-047 (switchboard opens Muse's PRs) ends this.
-- Commit messages never put fix/fixes/close/resolve before #N: trunk is the default branch, so GitHub closes #N
-  (11-05: my notes commit "fix #260 time" closed PR #260; reopened 11:20 PM).
-- `.claude/worktrees/` is in `.git/info/exclude`.
-- Stale temp worktrees in the scratchpad (`tmp.C1BZusDQkr/*`) are from guard PRs that have merged.
-- The godot MCP connects since the 6 PM container restart (MCP_TIMEOUT=120000 on the environment took). Use it for eye checks.
-
-- Branch cleanup (11-06 11:15 AM): 367 branches older than 3 days (no open PR; trunk, main, ScraperX-Grok, ChatGPT, switchboard/* kept) archived in `archive/branches-20261106` @ 8f2c6a82 (one commit, their tips as parents; BRANCHES.txt lists name and sha; restore: `git push origin <sha>:refs/heads/<name>`). Deleting them was refused by the safety check (Git Destructive): waits on Cory allowing it. The list: BRANCHES.txt in that commit.
-- J-048 follow-up (helper, 11-06): wind on him in the air still counts as his own run on a later wall hit (about 2.7 m/s off
-  after a 2 s fall in a gust). Small; a later helper-physics job, not a hold on #277.
-- 11:17 AM run (11-06): #279 J-047 landed (auto-PR reads `Job: J-NNN` from the HEAD commit
-  message). New J-050 #281 RungDown (Muse; game fix + test rework). #280 J-044i red: injury_shots_test.gd in no
-  workflow step; Muse adds it to wo000-delivery-spine.yml, and the integrator merges that (workflow file). #256 waits
-  on the windup (rebased 9c129bc2, budget group proving). Muse's replies: j001-hold dead (replaced by #227); #95 and
-  #227 have agents on them; J-044c Grab-notice fix running. Grok #244 H.4 is unanswered at 10 AM; next run 4 PM.
-- GitHub "Automatically delete head branches" is ON (Cory 11-06 11:35 AM): a merged PR's branch is removed by GitHub. Reusing a job's integrate branch still works: the next push creates it again from the pusher's copy.
-- J-048 #277 merged 11:35 AM (11-06; switchboard): his own run is never a blow, and the hook's line swinging him is not his run. #276 closed. Follow-up: the wind leak (above).
-- J-051 #284 (inbox, helper on high): after each full steer sweep the switchboard posts NEW needs-the-integrator items on
-  draft PR #282 (never merge; the integrator stays subscribed). Only full sweeps post (a --pr run never does, so no loop).
-  Green, waiting on Codex plus a LAND; the first post should list about 8 items (FIX on #256, red #227 and #95, five red branches).
-- J-051 #284 merged 12:17 PM (11-06): the inbox is live. Keep #282 OPEN and subscribed (the old switchboard closed it once, 12:15, on a quoted supersede line; reopened). Each inbox comment = act on its items now.
-- Inbox first post (12:19 PM, 8 items) triaged: #256 waits on the windup; #227, #95, 95-plant-fix, j044c and RungDown have Muse agents; `claude/integrate-j042-ammo` is dead (all of it is inside #256's protected branch); `fb-bot/integrate-s4-jab` is dead (0 commits past trunk). Neither needs action.
-- Auto-PR (J-047) is refused by GitHub: 403 "GitHub Actions is not permitted to create or approve pull requests" (found 12:35 PM in the steer log; the code matched a different string, so it failed silently). Until Cory flips Settings -> Actions -> General -> "Allow GitHub Actions to create and approve pull requests", I open Muse's PRs by hand: #285 J-041 sense_near (12:38 PM). Helper J-051b (high) built it: PR #287 @ 7426de75 (matches the real text; every auto-open failure becomes an AUTO-PR-FAILED inbox item; 206 switchboard tests pass; rule check 0 BLOCK). I reviewed the diff: clean. Codex: no findings. Merged by the switchboard 12:48 PM; helper retired. Cory turned the setting on 12:52 PM: auto-PR should now work; an AUTO-PR-FAILED inbox item means it still does not.
-- J-038 slice 1 @ 07903f2b red on native-tests (athletic-traversal), run 42261922659: mailed to Muse 12:41 PM.
-- Read through: 1794064550 (2026-11-07 15:15:50Z, 9:15 AM). Every run sets it after acting (hourly file, step 1).
-- Muse's strain report (1:30 PM, via Cory): (a) mail lag about 1 h, fixed by hourly reads plus reading a branch's live head before ruling (#289, which also adds `asks.py --since`); (b) the wreck diagnosis (10:42 AM) sat 3 h with no ruling. Ruled 1:40 PM: fix in code, `notice_moved_stock()` from the hold branch too; my 7:40 AM "wreck goes protected" re-baseline ruling is withdrawn. (c) J-001 has been 5.6 h on two new failures: asked Muse for the facts. Then a `To Grok:` on #227 for the 4 PM run, and a physics helper takes one failure if it splits off cleanly (mail "taking" first).
-- Wake audit 1:05 PM (Cory, max effort): verified working = the check-ins (11:17 fired), the inbox (its 12:19 post woke me within a minute), PR events on Claude's PRs, helpers. Gap = mail (Muse) and GitHub `To Claude:` asks wake nothing: 4 Muse mails 12:55-1:00 PM sat unseen until 1:05. Fix 1:07 PM: light run every hour between full ones (Sat-Sun every 2 h), triggers updated; the next light run 1:17 PM. Measure its cost: `get_session` cost_usd before and after (19:01 UTC: $396.09). Switchboard failures email Cory's Gmail ("Run failed: Switchboard"), so the light run's mail search catches a dead switchboard.
-- J-042 windup (top lane): Muse green @ c78a8211 (12:53), budget 12/12, 0 over. Ruled 1:30 PM: the grab-spring re-list at 1424 N / 4465 W stands (force -154 N, power +515 W from the new hold; StockHold's 16,011 N now charged); `To Grok:` risk check on #240 for 4 PM; follow-up for Muse: charge grab-spring (add to muse.md at 2:17). It is 34 commits behind trunk, with one conflict (physics_world_support.hpp: keep J-048's two own-drive fields, drop kCorpseEntityBase). Helper-physics (xhigh) merged trunk in: PR #291 @ da8e64c6 (Supersedes #256), 15 groups PASS, rule_check only the 462-to-464 BLOCK; Muse mailed the sha 1:50 PM. Codex P1 (1:29 PM, checked: real): the hold charges power with `rel` against the anchor, so a lift is charged about 0 W. Fix: charge with handle_v minus her velocity, keep `rel` for the damper. Answered on the thread; Muse is fixing it on the branch and re-measuring (mailed 1:55 PM). Then CI, eye/security, and my hand merge (it touches wo000). Size cap waived. Helper kept until it lands (its build is in its worktree).
-- #291 da8e64c6 touch-2 RED 1:33 PM: touch_matron_act, her wrist misses the toolbox handle, worst 0.082 m (limit 0.05) at n=25, both arms at full stretch; trunk passes it. Mailed Muse 1:42 PM to fix it with the Codex P1 pass; a few cm left after that means a separate protected geometry tweak, never a looser limit. Commented on #291.
-- Muse 1:40 PM (via Cory): queue empty; J-001 not split; J-044l and J-049 quiet; the integrator runs about 1 h behind. Answered 1:58 PM by mail (stamped 2:05 by mistake): never park on my go (J-049 sat on "when you say so"); J-049 GO in 3 PRs (HIGH L1-L4 first, ruling on #278); queue J-013 #120 (pe/integrate-machine-hearing @ 384d8b43), J-014 #121 (pe/integrate-stock-above-396 @ 565c8f91), J-015 #122 (wreck-way-on group on trunk), J-052 #292 (new: "To Claude"/"proposal" comments become TO-CLAUDE inbox items on #282, so asks wake the integrator in about 20 min; the bridge is live, 8 posts today). J-001 facts due 3:30 PM, then `To Grok:` on #227 before 4 PM. J-044l: one-line status asked. J-017 #124 is done (all stage PRs landed 11-04) but still open: close it at a full run.
-- Cory ~2:00 PM: the empty queue is the pile; PE has been gone for days. About 20 open jobs sat with agents who are out (PE, Builder, Grok Bot) or with dead Claude lanes. One helper (`helper`, the only one running; an exception to this block's no-new-helper cut, as it is cheaper than reading inline) is sweeping the board: close done jobs, move orphans to Muse, fix labels, mail Muse a ready queue of 6 or more that it takes without asking (it mails when 3 are left), and rewrite muse.md's stale queue. Rule: Muse's queue is 6 deep (hourly step 4, #289).
-- Sweep DONE 2:15 PM (helper retired, worktree removed; 257k tokens, 146 calls): 19 closed (18 done with landing PRs named, J-004 superseded by J-044i/k), 15 moved to Muse with Owner lines, labels fixed (10 owner:muse + state:ready by search). Ready queue mailed (1a1b275f5e651ecf), in order: J-007 #114, J-032 #157, J-008 #115, J-011 #118, J-024 #131, J-021 #128, then J-009 #116 after J-008's sort; muse.md queue c82b572d. Fight: only Muse's live J-044 lanes; J-036 and J-040 wait on J-044d. Claude's eye queue: J-044 h/i/n, J-045 phone, J-023 stills, then J-011, J-024, J-021, J-032 when pushed. Cory's calls waiting: #82 Void Crossing (new feature), #194 ChatGPT feature proposals (unread), J-011 hem only if bone-driven panels fail. Queue check every run: gh search owner:muse state:ready, 6 or more.
-- Features DONE 2:17 PM: Cory said **all** (2:15 PM). J-053 = #82 (renamed, owner:muse ready; step 1 = measure the Deck750 glide, post on #82), J-054 = #293 Counterweight (ready), J-055 = #294 Blast Door (state:blocked until #291 and J-049 #278 land; then set ready and mail Muse). Mail 1a1b281f955e05ff; muse.md queue J-053, J-054 on top; #82 and #194 commented. Claude's eye: J-053 flight and landing, J-054, J-055.
-- Comms check 2:22 PM (Cory asked): bridge live (Muse's 1:41 PM mail on #278), switchboard dispatch runs green, weekday trigger fired 2:17 PM, queue 12 ready. Muse's mail watch is now 5 min (Muse, 11-06). Gap: a Muse mail waiting on me waits for my hourly run until J-052 lands; J-052 catches only subjects with `To Claude`, so Muse was told to put it in every waiting mail (mail 2:22 PM; muse.md line).
-- 2:17 PM full run (quiet: throttled). cost $419.81 at 2:19 PM (~76%); burn last 3 h $13.0/h = 0.93%/h (incl. the sweep helper). Predict 84.5% Fri 11 PM (>81), 97.5% Sat 11 PM (>89), 100% about Sun 11:40 AM. THROTTLED stays: no new helper, 5:17 PM run quiet; context now 127k after compaction, so re-predict at 5:17 PM with Cory's meter. Mail and asks: nothing new (mark unchanged).
-- Meter 2:33 PM: 76% at $423.33 ($13.1 per 1% from 70% at $345). Burn since 11:15 AM 1.0%/h (sweep helper and a busy Cory hour in it); budget allows 0.6%/h to Sun 11 PM. At 1.0%/h: 85% Fri 11 PM, 100% about Sun 10 AM. Light runs are a small share (~$0.5-1 each, estimate; measure the 3:17 PM one). Cuts: no helper to Sunday unless Cory says, lean turns, 5:17 PM run quiet. Next meter ask 5:17 PM.
-- MISS 2:22 PM: #280 J-044i Claude FIX (1:03 PM: skull quad faces inward and is culled; the test cannot fail; `! grep` in the workflow can never fail, same in the gore step) and #286 J-023 Codex P1 (12:41 PM: split the protected EXPECTED edits from the planting code) never reached Muse. Mailed both 2:22 PM (1a1b28737e20e8fa), heads checked (9c015c1e, a742a87b). Structural fix: J-052 part 2 on #292 (the switchboard posts CLAUDE_TO_MUSE + wake:muse on a FIX for fb-bot PRs); mailed 2:23 PM (mail stamps of 2:27 and 2:30 were wrong: stamp only from `date`). #280 is my hand merge (workflow) on green plus a LAND, after an eye check including a still from behind her head.
-- ROOT FIX 2:26 PM (stamped 2:40 in the mail and on #292 by mistake; Cory: stop tweaking, find the real fix): switch.py routes nothing to Muse (FIX on fb-bot PRs reaches nobody; reds, stuck, quiet go only to my inbox), so I was the hand relay for every machine event. J-052 #292 rewritten as one rule, each item goes to its owner (Muse by CLAUDE_TO_MUSE + wake:muse, me by #282 incl. TO-CLAUDE); Muse's top job, mailed 1a1b28adb21d2925. Muse never waits on my go. After it lands and Muse confirms: in-between checks STAY HOURLY (Cory 2:35 PM: "keep hourly"; the 2-hour idea is dropped).
-- J-050: Muse pushed `fb-bot/integrate-j050-traversal-rungdown-ci-red-fix` @ a8aa1a27 and `fb-bot/integrate-protected-j050-traversal-rungdown-bottom-gap-test` @ 6678fe64 (12:55). Auto-PR works: #288 opened by the switchboard 1:14 PM for the game fix (Cory's setting, 12:52). The protected test branch waits on its proof.
-- 2:45 PM Cory (dog walk): "take care of things ... real solutions. You may proceed to fix. Determine!" Did:
-  - #286 J-023 plant is MINE now. Codex's "split" P1 is self-defeating: check.py fails a cleared EXPECTED entry as XPASS, so
-    either half alone is red, and the removal makes the check stricter (rule_check 0 BLOCK). Replied on the thread; AGENTS.md rule
-    869b67dc. Trunk merged 1cf1d635; foot-plant `! grep` fixed 362cdcfb; eye check PASS (look.sh moves, walk still); LAND posted.
-    Merge by hand on green (workflow file); subscribed. `fb-bot/integrate-95-plant-fix` is dead (inside #286).
-    SLIP: my 2:22 PM relay told Muse to split; corrected by mail 2:48 PM (1a1b29f2acc358a8). Tell Cory.
-  - #295 (claude/integrate-ci-inverted-grep @ 1e9d0edd): under set -e `! grep -q FAIL log` never fails a step; trunk had 3
-    (figure, presentation, gore), #280 and #286 copied it. Fixed, plus a scope-job guard failing any run line starting `! `.
-    Workflow file: my hand merge on green plus Codex's LAND. If it goes red, a test was hiding FAIL lines: route to its owner.
-  - Mailed Muse 2:48 PM: lane order (#291, #280, J-052, J-038 crate red), dead rungdown-bottom-gap, and by 3:45 PM one line each
-    for j044c (20 h red) and #227 J-001 (30 h red): alive with ETA, stuck = `To Grok:` facts before 4 PM, or dead.
-- 3:17 PM light: #295 and #286 green; my hand merge is refused by this session's safety check (switchboard can't merge
-  workflow files either), so Cory taps Merge on both (told 3:13/3:16 PM). Muse: J-044c wreck fix 8657f4f4 is a root fix, but
-  balance red blocks J-044c (green on trunk+#286 slices-3, so J-044c's diff causes it); #291 work_v first, then near-miss
-  geometry; J-001 facts due 3:30, reminder trig_01Jf7JS6RxA2JbrnqKrZ86fY at 3:37 PM reposts them `To Grok:` on #227.
-  Rungdown-bottom-gap dead (confirmed by Muse).
-- 3:40 PM: #286 and #295 merged (Cory tapped). SLIP: I offered Cory an "allow" rule, but `Bash(gh api -X PUT .../merge *)`
-  is already in settings and the safety check overrides it; told Cory. Ruling: J-056 (Muse) — the switchboard merges
-  workflow-file PRs with secret SWITCHBOARD_MERGE_TOKEN (Cory makes it once), same gates plus no FIX/BLOCK from the API review;
-  no secret = MERGE-BY-HAND as now. Its own PR is the last tap.
-- 3:38 PM: J-001 facts posted `To Grok:` on #227 (6696336344) for the 4 PM run. Muse's J-001 agent: 8 h, no commit since 11:24 AM = stuck; told Muse to stop it and restart from Grok's answer.
-- 4:17 PM light run: the trunk proofs after #286 and #295 are green. #296 (Muse's expand-tests pin of the inverted-command check) opened by hand: no Job line. ChatGPT's #227 answer matches Grok's; the 4:15 PM rulings hold. ChatGPT's #244 capacity test accepted as spec H.4 and mailed to Muse, queued behind #291 and J-056. Muse restarts J-001 from the three values about 4:30 PM.
-- 4:31 PM: Cory asked why J-056 went to Muse (it is small). Ruling with his OK: Muse keeps it. If there is no J-056 branch or PR by 5:30 PM, I take it and stop Muse's agent (reminder set for 5:31 PM).
-- Latest meter: 83% at 8:20 AM Sat (Cory; 82% at 7:06 and 7:53, 81% at 6:24). About 1%/h since 6 AM, mostly the #298 helper-max (2 h+, ~158k context per call); told it to wrap up, hard stop 9 AM. No new helpers today unless acute. Revised: ~90% Sat 11 PM, ~97-99% Sun 11 PM if the helper ends by 9. cost_usd $491.39 (6:08: 80%, $484.57; +$6.8 in 16 min, mostly the #298 helper-max). $14-18 per 1% (meter is whole %; plan on $14). Prediction holds: about 88% Sat 11 PM (89%), about 96-97% Sun 11 PM (98%), no 100% before the Mon 11 AM reset. Hold: no second helper until #298 lands; if 83% before 9 AM, stay at 1. Next meter ask Sat 1:17 PM.
-- 5:17 PM full run: #291 stuck report answered (push 327be160f + 380008f80, measure touch-2; 0.2 m or less is a near miss, more is mine). Stuck reports owed: J-044c, J-038 slice 1. Board #107 This hour refreshed. J-056 has no branch yet; the 5:31 PM reminder decides.
-- 5:35 PM: J-056 taken (no Muse branch at 5:32 PM; Muse told to stop its agent and send any sha within 15 min). A helper builds it on claude/integrate-j056-workflow-merge and opens the PR (Job: J-056). Its PR changes a workflow, so it needs one hand merge (try once with Cory's Allow on record; if refused, Cory taps). J-038 stuck report answered: restart from athletic-traversal on 07903f2b; first suspect is the dent code firing on a resting contact.
-- 6:02 PM: #297 security pass = FIX (8-char sha match, review diff not pinned to the labeled sha, a LAND is only a typed name, the repo-wide token reachable from a branch's copy of switchboard.yml). helper-max fixes 1-3 on the same branch and adds `environment: switchboard-merge` to the steer job; Cory asked once to create that Environment (branch ScraperX-Claude only) and move SWITCHBOARD_MERGE_TOKEN into it. No merge until both are done.
-- 6:19 PM light: J-038 correction (fabricated unconfirmed on base) answered: trunk's full proof is green, so it counts as base-PASS. #297 now at 591b9249: Codex P1 (the security pass used the gameplay prompt) fixed by me (SECURITY.md plus SECURITY_REVIEW_SYSTEM; a NOTE holds the merge); the fixes re-reviewed LAND; waiting on Codex and on Cory's environment.
-- 6:24 PM: Codex on 591b9249, two real P1s: (A) the normal API route reviews a workflow PR with security=False; (B) any branch's push workflow can post a fake github-actions[bot] API LAND. helper-max fixes both (A: always security=True; B: HMAC under SWITCHBOARD_REVIEW_KEY, env-only, on ask and steer). Cory asked to add that second secret. Follow-up after #297 lands (J-057): ANTHROPIC_API_KEY and AGENT_GITHUB_TOKEN are repo-wide, so a branch's workflow can read them; move them behind an environment too.
-- 6:37 PM: #297 at 3ae182a3: green, Codex clean, both P1s fixed (always security=True; HMAC-signed API review). Ruled: a failed security pass goes to a person, no fallback reviewer. My one hand merge was refused by the safety check ([Merge Without Review]); Cory asked once to tap merge. After it lands: unsubscribe #297, update hourly line 44, automatic review stopped at max_tokens twice on #297; only 2 PRs ever (#150, #297), and it fails safe (a person merges), so no budget change unless it recurs.
-- 7:19 PM light: no mail; the two To Grok asks on #297 are the switchboard's automatic fallback (moot once Cory merges). #297 still open, waiting on Cory's tap and environment.
-- 8:17 PM full run: no mail or asks. Muse quiet since 5:35 PM, branches unmoved; status mail 8:20 PM (#291, J-001, J-044c, J-038 by 9:15 PM). Board This hour refreshed. #297 still open at 3ae182a3, waiting on Cory.
-- 9:17 PM light run: Muse's 8:26 PM status answered 9:20 PM. #291 touch-2 gap 0.082 m = near miss: geometry tweak alone on fb-bot/integrate-protected-j042-touch2-geometry (0.082 to 0.038 m; push only if touch-2 passes). J-001: value 1 clears the budget; tear blocks values 2-3 (torn 11.87 s vs 10 s); Muse measures the step-back rows; `To Grok:` on #227 (6701561584) for 10 AM. J-038 @ 94a53394: keep whole (either half red), push to fb-bot/integrate-protected-j038-slice1 (break line 180 to 300 N.s). J-044c taken: helper-physics bisects from 8657f4f4 to claude/integrate-j044c-upper-body; Muse told to stop its balance agent. J-052 rebase/re-proof go.
-- 10:17 PM light run: Muse pushed #291 tweak (protected-j042-touch2-geometry @ c6b87e78, PROP_LEAN_UP_S 3 to 4, 0.082 to 0.038 m of 0.05) and J-038 protected @ fee46d6e (intended break 320 N.s vs line 300); both accepted. Muse's stopped J-044c agent left a6a3f482 (shape_fits counted her own upper bodies; crawl jam drop): Muse asked to push it, helper told to test it and not duplicate. cost_usd $472.34 (+$12 this hour, helper).
-- 10:35 PM: container restart stopped the J-044c helper mid-run; resumed it (same context). Its worktree holds 404e30d4 (four causes: placement reseat, set_root_shape, EmptyShape segments, whole-body velocity), unpushed. Muse pushed a6a3f482 as fb-bot/integrate-j044c-upper-body @ 88ce46d7.
-- 10:55 PM: J-044c helper done: #298 (claude/integrate-j044c-upper-body @ 404e30d4). Local slices-1 5/5, slices-2 5/5, slices-3 15/16 (matron-grab arm snagged 4634 vs 3050 N: he catches the rail 0.2 m east; helper calls it test drift, fix is protected), touch-2 touch_matron_act now fails at the toolbox handle 0.748 m (pest_unseen re-takes the toolbox). Athletic shard left to CI. Muse's 88ce46d7 not needed. Plan: CI proof + Codex on #298, then helper-max on both reds at Sat 9:17 AM (pace thin: $480.21 at 10:55 PM, 0.58%/h, Sat 11 PM about 88.5% vs 89). Muse diagnoses the carry stall overnight, no fix.
-- 11:00 PM: Codex on #298 @ 404e30d4, two P1s, both in Muse's 93720b8e and both for the 9:17 AM helper-max: (1) upper-body motors outside the shared 8 kN/44 kW budget (matron.cpp 598; Climber::step makes its own 44 kW), (2) upper_q exports rel not dev (matron.cpp 5460, confirmed by reading): drawn arms about 131 deg off, a likely cause of touch-2's 0.748 m wrist miss; needs the eye check. Lead mailed to Muse for its diagnosis.
-- 11:01 PM: #298 matron-slices-3 red as expected; status comment 6702546727. Unsubscribed from #298 overnight (each failing check woke me for nothing); resubscribe at the Sat 9:17 AM run when helper-max starts.
-- 11:17 PM quiet run: Muse mail: J-038 margin answered (yes, a slower ram breaks; line to 260 N.s in a follow-up slice2 after #299); J-044c ask answered on #107 (6702748728). Opened the two green protected PRs that sat 2 h unopened (my miss): #299 J-038 @ fee46d6e, #300 J-042 touch-2 tweak @ c6b87e78, both mergeable; the harness subscribed me even on REST-opened PRs, so I unsubscribed at once (Codex clean on #300); the switchboard lands them. #291 rebases after #300. J-038 asks closed on #169 (6702746487).
-- 2:28 AM (inbox wake): #300 landed (7942fa3f), Muse mailed to rebase #291. New reds: fb-bot/integrate-j049-pr1 @ ed151a6c on scope (run 42347448777); fb-bot/integrate-protected-j044l @ 95d4120d on the same three as #298 (run 42347461441). Muse asked for per-test numbers; the 9:17 AM helper-max brief checks for a shared cause with #298.
-- 2:40 AM (inbox wake): #291 @ 824bc8e0 has the 4.0 tweak (single-parent "merge"); touch-2 now fails touch_matron_ammo (up read JUMP, not THROW, toolbox in hands): Muse to find the cause by 9 AM, else To Grok. #299 has three Codex P1s (break pieces not saved, checkpoint topology, no Godot mesh): mailed to Muse to verify and fix on slice1; eye check when the mesh lands.
-- 6:08 AM Sat (Cory woke, 80%): #297 J-056 merged by Cory (50eef9bb); #302 J-022 landed. 11 Muse mails answered in one mail. Rulings: J-044c taken by helper-max (budget, wrist/upper_q, stall = own dropped body by identity, grab snag; #298 conflicts with trunk, helper merges); J-044l keeps 8 kN/44 kW and both tests, Turn burst lengthened inside J-044l (To Grok #244 6706796289); J-049 breath within 2 m gives a lead (hide test at about 3 m; Cory has the last word), PR1 to protected branch, scope red to Muse; J-001 rows to Grok on #108 (6706795314), split via J-044b allocate(); J-015 water ballast per S1 (To ChatGPT #122 6706797346: S2 cart under 430 kg, S3 car under 450 kg drained); J-053 first balcony 640 m, chain to 728, running jump, protected geometry PR then my eye check. #303 J-044b opened (green; unsubscribed). Open with Muse: #291 touch_matron_ammo cause, #299 three Codex P1s.
-- 6:17 AM Sat: #303 J-044b landed by the switchboard (3e2fe80d, 6:16 AM). Cory "Merged": the switchboard-merge environment is live, BUT the 6:15 run log shows SWITCHBOARD_MERGE_TOKEN *** and SWITCHBOARD_REVIEW_KEY empty in ask and steer (my 6:17 "it works" was wrong; told Cory 6:35). Cory adds the key, and deletes a repo-level SWITCHBOARD_MERGE_TOKEN if one is listed; I recheck the next run log. J-049: Cory said **breath** 6:22 AM (final; mailed Muse 1a1b5f5f3112a131, also merge trunk for J-044l and J-001).
-- 6:38 AM: Cory's secrets screenshot: SWITCHBOARD_REVIEW_KEY in switchboard-merge (good) and in a stray environment named SWITCHBOARD_REVIEW_KEY (0 deployments ever, so never read: delete, no rotation). Repo secrets: AGENT_GITHUB_TOKEN, ANTHROPIC_API_KEY, two APK keystore; no SWITCHBOARD_MERGE_TOKEN anywhere (it was repo-level at 6:25, deleted in step 6, never in the environment). Asked Cory for a new fine-grained PAT (ScraperX only; Contents, Pull requests, Workflows RW) as env secret SWITCHBOARD_MERGE_TOKEN. Until then only workflow-file PRs wait. Verify by the next run log (both ***). Run 42373299662 (6:38): REVIEW_KEY *** in ask and steer, MERGE_TOKEN empty (confirmed gone).
-- 6:50 AM: Cory already has a fine-grained PAT `switchboard-merge` (never used, expires Dec 6); its value went with the deleted repo secret, so he regenerates it (same settings) and pastes into the env secret. His PAT `ScraperX` expires Mon Nov 23 2026 (last used this week): find what holds it and remind him by Nov 20. Cory 6:55: to confirm a settings change, ask him for a screenshot of a linked page rather than wait for a run.
-- 7:00 AM: switchboard-merge DONE (Cory's screenshot): SWITCHBOARD_MERGE_TOKEN (regenerated) and SWITCHBOARD_REVIEW_KEY in switchboard-merge only; stray environment gone; repo secrets AGENT_GITHUB_TOKEN, ANTHROPIC_API_KEY, two APK keystore. J-057: Cory 7:05 "hurry up and fix this; you do it, not Muse". Claude built PR #304 @ 763f7ce6 (provision joins switchboard-merge; new test pins both secrets to ask+provision in the environment; rule_check 0 BLOCK; unsubscribed, the switchboard merges it with the merge token). Cory asked: new Anthropic key as env secret, delete repo ANTHROPIC_API_KEY and AGENT_GITHUB_TOKEN (orchestrator off, not re-added), screenshot of the switchboard-merge branch rule. The token's permissions show on the first workflow-file PR merge (MergeTokenRefused would be an inbox item).
-- 7:04 AM: Cory hit the console's "identity federation" offer while making the key. Ruling: continue with an API key now (J-057 is built for it); federation needs switch.py + workflow changes, so it is a follow-up. ChatGPT asked to research it (#304 comment 6707308021).
-- 7:08 AM: Cory made Anthropic key `switchboard` and added it to switchboard-merge as ANTHROPIC_API_KEY. Only switchboard.yml reads ANTHROPIC_API_KEY/AGENT_GITHUB_TOKEN (ask l.150, provision l.200), so deleting the repo copies breaks only provision until #304 lands (manual-only, orchestrator off). Left: delete both repo secrets, screenshot the environment; then the next ask log should show ANTHROPIC_API_KEY ***, AGENT_GITHUB_TOKEN empty.
-- 7:09 AM: Cory's secrets screenshot: switchboard-merge holds ANTHROPIC_API_KEY, SWITCHBOARD_MERGE_TOKEN, SWITCHBOARD_REVIEW_KEY; repo secrets only the 2 APK keystore ones (ANTHROPIC_API_KEY, AGENT_GITHUB_TOKEN deleted). All 23 switchboard-merge deployments are ref ScraperX-Claude; the branch rule itself still needs his environment-page screenshot (API 403). Background poll waits for the next ask job's secret lines.
-- 7:11 AM: SLIP: Cory's environment screenshot shows Deployment branches = "No restriction"; my "deploys only from ScraperX-Claude" (here, #304 comment) was assumed, never checked. All 23 past deployments are ScraperX-Claude, so no branch has used the secrets; no rotation. Fix: Cory sets Selected branches = ScraperX-Claude. Then rerun the dry-run dispatch on claude/integrate-j057-secrets-env: ask must be refused at the gate (also proves the ticked admin-bypass box doesn't let runs through).
-- 7:14 AM: Cory set switchboard-merge to Selected branches = ScraperX-Claude. Proof: run 42375999995 (dispatch provision+dry_run on claude/integrate-j057-secrets-env): ask and provision refused at the gate, 0 steps, "Branch ... is not allowed to deploy to switchboard-merge" (admin-bypass box ticked doesn't let runs through). Left: a trunk ask/steer log showing ANTHROPIC_API_KEY *** (background poll). Cory: no more settings asks this weekend (promised 7:13).
-- 7:20 AM: trunk run 42376367882 ask passed the gate: ANTHROPIC_API_KEY ***, SWITCHBOARD_REVIEW_KEY ***, AGENT_GITHUB_TOKEN empty. No API call that run; the new key's first real use is the next Claude API review (a 401 there = bad key). J-057 settings done. 7:2x: the switchboard merged #304 (fc3d99a5) and #280 (dfd1cbbd) with the merge token: first real workflow-file merges, J-057 and J-044i closed out.
-- 8:20 AM: Muse (via Cory): 11 lanes running, floor 8 in its memory. Godot MCP: bridge has all 39 tools but run_project timed out 4x (30 s constant BRIDGE_WAIT_SPAWNED_TIMEOUT_MS, load 14). Mailed 1a1b661b990586a9: launch only via .claude/godot-mcp.sh (SCRAPERX_PREVIEW=1 + Xvfb), warm with godot --headless --path godot --import, builds under nice -n 15, then run+screenshot; no node_modules patch; a second timeout comes to Claude with the Actual reason + debug tail. Goal: Muse eye-checks its own visual work.
-- 8:24 AM: #298: asked Grok (#298 comment 6708145807) for a fresh take: is the 4634 N snag drift from his 0.2 m catch shift or added arm-segment load, and how to fold the 5 upper motors into her one 8 kN / 44 kW budget. After the helper's 9 AM report, the rest of #298 goes to Muse (free), not another paid helper.
-- 8:35 AM: #298 helper-max (ace2ee479cd1d132f) retired, still red at 03ad884b. Done: upper motors charged last to her 8 kN/44 kW (Climber shares it), drawn wrist reaches toolbox, carry stall by body identity, routecraft PASS, strike ledger 0.00 N. Local reds: matron-grab snag, forklift-matron, matron-budget, matron-tower 46/48 (new), Turn lunge 8.10 m/s (new), touch_matron_line (new), touch_matron_act stage 1, touch_forklift_ram; hair 0.098/0.093. Grok asked twice (6708145807 mine, 6708228489 helper's). Handed whole job to Muse (mail), owner Muse; protected snag tweak waits on Grok's drift ruling.
-- 8:38 AM: RULING #298 (from ChatGPT's answer via Cory; posted 6708298378, mailed Muse 1a1b671e411b93fb): snag = momentum (85 kg x v x 90 Hz matches both builds); identical-state replay of first-tick snag lambda first, within ~5% -> protected geometry tweak PR, else fix the chain. Budget: external AddForce <= 8 kN; all positive work incl. joint motors <= 44 kW; upper motors power-only max(0, tau.omega_rel), no tau/reach force charge; enforce pre-solve via per-motor torque limit = min(cap, share/|omega_rel|); external first, upper takes leftovers, starve free arm > other arm > head > neck > chest; one account per tick, Climber by reference. Grok's answer is a check; revisit only on a substantive disagreement.
-- 8:41 AM: Cory stopped Grok on #298: Grok gets only work no other agent is on (11-07). Both #298 To Grok asks (6708145807, 6708228489) now open "Answered by ChatGPT", so the 10 AM run skips them. Each physics question goes to one agent; ChatGPT first. Open Grok asks stay only where nobody else works: #108 J-001 rows, #227, #244 Turn burst, the #301 review. #291 cause (due 9 AM) goes to Muse or ChatGPT, not Grok.
-- 8:45 AM: #305 J-013 (protected, green, LAND by ChatGPT at 96290683) had a CMake conflict with trunk (both added a test slice). I merged trunk in at 8522138f and kept both matron-capacity and machine-hearing. No local run; CI's proof runs on the new head, then the switchboard merges it.
-- 8:58 AM: Muse's Godot MCP still times out (5th time, after preview + import + nice; load 13.8). Source: the bridge only answers pings in _process, so no game frame ran within the hard 30 s. Suspects: a saturated box and a cold shader cache on the first windowed run. Mailed Muse (1a1b6842b31d3699): time one windowed --quit-after 3 run outside MCP with builds paused, send time, nproc and the renderer line; under 25 s retry run_project, else attach_project launched in parallel (45 s). New rule for Muse: no eye check while a build runs.
-- 9:00 AM: Godot MCP, top Muse job after the #298 plan (Cory: radically helpful). Baseline here, Xvfb + llvmpipe, 4 idle cores: 7.1 s cold, 5.1 s warm to frame 3. Second suspect: Muse's server sees DISPLAY=:0, so the launcher skips its private Xvfb, and background:true moves the window off screen, where the swap may block. Mailed (1a1b6861b89a4ed3): timed run, then background:false, then restart the server without DISPLAY, then say what :0 is. If the private Xvfb fixes it, I change the launcher to always use its own Xvfb.
-- 9:15 AM: Godot MCP plan adopted from ChatGPT (via Cory), mailed Muse 1a1b694924c9ca16. Builds paused for every step: 1 watch bridge LISTEN (ss poll) on one failing run; 2 background:false; 3 background:true; 4 private Xvfb + background, 3 runs. Private Xvfb green 3x -> launcher defaults to private Xvfb on Linux (host display opt-in). Red only under load -> starvation, push a configurable 60 s timeout upstream. Red with prompt LISTEN -> add logging to the ping/token path first; no timeout or rendering change.
-- 9:16 AM: SLIP, told Cory: twice today (the #298 budget, the Godot MCP test order) ChatGPT added what I missed, because I skipped the existing rule to ask before locking a hard job's approach. From now on every hard diagnosis or ruling gets a To ChatGPT ask at the start, alongside my own first pass.
-- 6:55 AM: steer run 42374051089: SWITCHBOARD_MERGE_TOKEN *** and SWITCHBOARD_REVIEW_KEY *** (confirmed). #280 J-044i MERGE-BY-HAND (wo000 +16, the injury test step; Codex last reviewed ec4c6628): asked `@codex review` on head 74c476c0 (6707210229); the switchboard merges it with the token once Codex is clean.
-- 9:17 AM full run: Muse rulings mailed 9:20 (1a1b699e95cbe1a8): Godot timed run with every CPU job stopped (kill -STOP/-CONT, load under 1.5); #291 test go (wait for the box, normal _face turn); #298 plan + 8:38 ruling, snag replay now; J-044l kinematics + #242 migration in the same protected PR; J-001 measure 3 snag-frame numbers; J-044b grant test (protected, queued after #298); J-015 S2/S3 queued; #306 J-058 opened for the cheek fix (eye check before landing). #301 J-052: sweep said MERGE (latest verdict Grok LAND) but ChatGPT's P1 (6706881549, label write after comment loses the mail; Grok reproduced) is unfixed: mailed Muse 9:25 (1a1b69cecf5573a6); not mergeable until fixed. sweep.py flaw noted: it takes the latest verdict and misses an earlier unfixed P1 from another vendor. Board rule 5 now matches Cory 11-07 (ChatGPT first, Grok only unclaimed work). SLIP told Cory: #291 cause waited 3 h for my go.
-- 9:28 AM: #306 J-058 eye check LAND (6708998708): face_l-only and face_r-only front stills put each mark on the correct side; from her left at three-quarters the mark sits on the skin. Follow-up (not a blocker): the cheek quads face the bone's +Z, so straight on, the left one overhangs the face edge; angle them 25-30 degrees along the cheek normal. In the studio deck her hair renders as shattered flat planes: check whether the studio just skips the hair simulation before the next hair eye pass.
-- 9:35 AM: Godot MCP measured here (Xvfb 1296x1114, preview, quit-after 3, load 0.1): both caches warm 5.4-6.7 s; Mesa cold 10.6 s; Godot cold 7.0 s; both cold 18.4 s, then 6.0 s. Half window 5.48 vs 5.57 s (size is not it); about 0.15 s per frame after startup. So Muse's 29 s 'warm' run means its shader caches do not persist (or another HOME/XDG, or a full disk) plus load. Mailed Muse 1a1b6a362c510e80: check both cache dirs grow, Mesa disable vars, the server env against the shell env, df; warm once, then run_project. If green, I add a warm-up step to .claude/godot-mcp.sh. Muse's safety-check mail never arrived (last Muse mail 9:15 AM); asked it to resend, or give it to Cory if mail is what is refused.
-- 9:36 AM (stamped 9:48 first, wrong): Cory, angry about #291 waiting 3 h on my go. Fix: nothing waits on my go, protected work included (it goes straight to its protected branch; review is the gate). Mailed Muse 1a1b6a654cfe1f22; muse.md line and board rule 1 updated (5c7a8a72). Muse's order: #301 P1 fix (the pipe that wakes me within 20 min), Godot tests A/B on its box (here: --quit 5.3 s, no render loop 4.1 s, small window + no vsync 5.5 s, baseline 5.9 s; so size and vsync are not it), then J-059 #307 her black eye (Cory 11-07: eye_l/eye_r regions, black eye at 75 N.s, lid swelling at 150, a slit at 250, on the skin, J-044g drives it in play). Muse's safety refusal: its mail was refused before sending; Cory relays the text. Usage 84% at 9:40 AM (checkpoint 89% at Sat 11 PM: on pace).
-- 9:47 AM: Godot MCP GREEN on Muse's box: run_project 8 s, bridge on port 43439, timed run 11 s (was 29); caches warm (Mesa 105 hits, 0 misses), 88G free; cause was the busy box. Lane closed, no launcher change; Muse's eye routine: pause CPU jobs, look, resume. Muse's first frame was the microphone screen. Visual work now comes with Muse's stills; I check stills, run the game only if one looks off. Muse's "safety" refusal: its prompt-injection check flagged its read of my 9:15 mail (1a1b694924c9ca16); flagged mails go via Cory. Mailed 1a1b6b0558f3d31f (order #301, J-059 with stills, #298). Cory asked about slash commands: answered from code.claude.com/docs/en/commands (/btw, /usage, /context, /recap).
-- 10:05 AM: Muse drives the game through the MCP (start, look, list UI, keys, walk, shots, debug, stop); bridge clicks don't fire the game's buttons, Muse emits the signal instead (asked which buttons). Mailed 1a1b6c00994472cc: after #301, J-059 stills, hair in the studio deck (shattered planes), first looks at #306 cheeks and #302 gusts, stills with each. /learn running (helper reading 333 owner messages).
-- 10:08 AM: SLIP (mine, told Cory): my "after #301" read as a dependency; Muse held the eye checks. Mailed 1a1b6c424a483ce9: run #301, J-059, the hair look side by side now. Eye-check method in work/tasks/eye-check.md (mail 1a1b6c3ac7579bfa). (Corrected 10:11: only the 9:15 mail was flagged; Muse's "one line on the flag" was about that one. I misread it as a second.) Shape of the flagged mail vs the unflagged 9:35 one: a runnable shell loop (ss port scan to /tmp), "replaces my last list", restart your MCP server with env unset. Rule in CLAUDE.md Channels. NOT NOW ignores the bridge click.
+- Commit messages never put fix/fixes/close/resolve before #N: trunk is the default branch, so GitHub closes #N.
+- `.claude/worktrees/` is in `.git/info/exclude`. Remove a worktree with plain `git worktree remove <path>` after `rm`
+  of its untracked files; `--force`, `branch -D` and `rm -rf` are refused.
+- GitHub deletes a merged PR's head branch; pushing the job's integrate branch again recreates it.
+- Switchboard failures email Cory's Gmail ("Run failed: Switchboard"), so the light run's mail search catches a dead one.
+- Secrets: the `switchboard-merge` environment (Selected branches: ScraperX-Claude) holds ANTHROPIC_API_KEY,
+  SWITCHBOARD_MERGE_TOKEN, SWITCHBOARD_REVIEW_KEY; repo secrets are only the two APK keystore ones. The proxy refuses
+  the secrets API (403). To confirm a settings change, ask Cory for a screenshot of the linked page. No more settings
+  asks this weekend (promised 7:13 AM).
