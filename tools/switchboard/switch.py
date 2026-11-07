@@ -754,7 +754,9 @@ class Switch:
     def muse(self, steered: list[Steered]) -> int:
         """Muse's items (J-052): one comment per fb-bot/ PR or branch with new items, labeled wake:muse so
         the bridge mails it. A muse-<KIND> key is sent once; a new head is a new key. At most
-        MAX_MUSE_COMMENTS per sweep; the rest come next sweep. Returns how many comments were posted."""
+        MAX_MUSE_COMMENTS per sweep; the rest come next sweep. Returns how many comments were posted.
+        A key counts as delivered only when its label write succeeded: the marker is edited into the
+        comment after the label lands, so a failed label leaves no marker and the next sweep retries."""
         reported: set[str] = set()
         for s in steered:
             reported |= set(self.muse_keys(s.ctx.get("comments") or []))
@@ -785,11 +787,17 @@ class Switch:
                 lines.append(f"- {it.line}")
                 lines += [f"  {line}" for line in it.finding.split("\n")] if it.finding else []
             body = re.sub(r"@(?=\w)", "", "\n".join(lines))   # mentions would ping; "@ <sha>" is not one
-            body = f"{body}\n\n{MUSE_MARK.format(keys=','.join(it.muse_key for it in group))}"
-            self.out(body)
-            self.gh.comment(where, body, f"muse: {len(group)} new item(s) on #{where}")
+            marked = f"{body}\n\n{MUSE_MARK.format(keys=','.join(it.muse_key for it in group))}"
+            self.out(marked)
+            # The marker goes in AFTER the label lands: a failed label leaves no marker, so the next
+            # sweep retries. (Label first is not enough: the bridge could take it before the comment exists.)
+            resp = self.gh.comment(where, body, f"muse: {len(group)} new item(s) on #{where}")
             self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
                           f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+            cid = (resp if isinstance(resp, dict) else {}).get("id")
+            if cid is not None:
+                self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{cid}", {"body": marked},
+                              f"muse: mark #{where} delivered")
             posted += 1
         return posted
 

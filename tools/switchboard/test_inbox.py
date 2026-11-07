@@ -102,6 +102,8 @@ class FakeGH:
         self.by_issue: dict[int, list] = {}
         self.dry_run = dry_run
         self.gets, self.posts, self.writes, self.log = [], [], [], []
+        self._comment_id = 0   # ids the real API returns on a comment POST
+        self.fail_labels = 0   # label POSTs to fail (transient 403/5xx) before succeeding
 
     def route(self, path):
         self.gets.append(path)
@@ -149,15 +151,28 @@ class FakeGH:
         if self.dry_run:
             self.log.append(f"DRY  POST repos/{self.repo}/issues/{number}/comments  {what}")
             return None
+        self._comment_id += 1
         self.posts.append((number, body))
-        entry = {"body": body, "user": {"login": BOT}, "created_at": NOW.isoformat()}
+        entry = {"id": self._comment_id, "body": body, "user": {"login": BOT}, "created_at": NOW.isoformat()}
         if number == switch.INBOX_PR:
             self.inbox.append(entry)
         else:
             self.by_issue.setdefault(number, []).append(entry)
-        return {}
+        return {"id": self._comment_id}
 
     def write(self, method, path, body=None, what=""):
+        if method == "POST" and path.endswith("/labels") and self.fail_labels > 0:
+            self.fail_labels -= 1
+            raise switch.GitHubError("POST", path, "gh: Label write failed (HTTP 403)")
+        if method == "PATCH" and "/issues/comments/" in path:
+            cid = int(path.rsplit("/", 1)[1])
+            for entries in list(self.by_issue.values()) + [self.inbox]:
+                for entry in entries:
+                    if entry.get("id") == cid:
+                        entry["body"] = body["body"]
+                        self.writes.append((method, path, body))
+                        return {}
+            raise switch.GitHubError("PATCH", path, "gh: Not Found (HTTP 404)")
         self.writes.append((method, path, body))
         return {}
 
@@ -634,11 +649,41 @@ class MuseRouted(unittest.TestCase):
         self.assertIn("The hold spring is uncharged. " + "x" * 500, posted)
         self.assertNotIn("x" * 650, posted)
         self.assertIn("https://github.com/IssisX/ScraperX/issues/256#issuecomment-99", posted)
-        self.assertEqual(gh.writes, [("POST", "repos/IssisX/ScraperX/issues/256/labels", {"labels": ["wake:muse"]})])
+        key = switch.inbox_key("muse-FIX", "#256", HEAD)
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/256/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[1][0], "PATCH")
+        self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
+        self.assertIn(key, gh.writes[1][2]["body"])
+        self.assertNotIn("switchboard:muse keys=", posted)   # posted without its marker; the label comes first
+        self.assertIn(key, gh.by_issue[256][0]["body"])       # the marker is edited in after the label lands
         self.assertEqual(make(gh).inbox([s]), 0)
         self.assertEqual(make(gh).muse([self.fix_pr(comments=gh.by_issue[256])]), 0)
         self.assertEqual(len(gh.posts), 1)
         self.assertEqual(make(gh).muse([self.fix_pr(head=OTHER_HEAD, comments=gh.by_issue[256])]), 1)
+
+    def test_a_failed_label_write_is_retried_and_not_mailed_twice(self):
+        """A label POST that fails after the comment lands must not lose the notification:
+        sweep 1 posts the comment but no marker, sweep 2 retries the label, sweep 3 sends nothing."""
+        s = self.fix_pr()
+        gh = FakeGH()
+        gh.fail_labels = 1
+        with self.assertRaises(switch.GitHubError):
+            make(gh).muse([s])
+        (number, posted), = gh.posts
+        self.assertEqual(number, 256)
+        self.assertNotIn("switchboard:muse keys=", posted)   # no marker: the key is not delivered
+        self.assertEqual(gh.writes, [])
+        again = self.fix_pr(comments=gh.by_issue[256])
+        self.assertEqual(make(gh).muse([again]), 1)
+        self.assertEqual(len(gh.posts), 2)   # the notification is sent again
+        labels = [w for w in gh.writes if w[0] == "POST" and w[1].endswith("/labels")]
+        self.assertEqual(len(labels), 1)     # one successful label: one mail
+        key = switch.inbox_key("muse-FIX", "#256", HEAD)
+        self.assertIn(key, gh.by_issue[256][-1]["body"])   # the retry marks the key delivered
+        third = self.fix_pr(comments=gh.by_issue[256])
+        self.assertEqual(make(gh).muse([third]), 0)
+        self.assertEqual(len(gh.posts), 2)
+        self.assertEqual(len([w for w in gh.writes if w[0] == "POST" and w[1].endswith("/labels")]), 1)
 
     def test_a_first_red_goes_to_muse_not_to_claude(self):
         ref = "fb-bot/integrate-j044l"
@@ -689,7 +734,13 @@ class MuseRouted(unittest.TestCase):
         (number, posted), = gh.posts
         self.assertEqual(number, switch.BOARD_ISSUE)
         self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #107 @ 1a2b3c4d"))
-        self.assertEqual(gh.writes, [("POST", "repos/IssisX/ScraperX/issues/107/labels", {"labels": ["wake:muse"]})])
+        key = switch.inbox_key("muse-RED-BRANCH", name, HEAD)
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/107/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[1][0], "PATCH")
+        self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
+        self.assertIn(key, gh.writes[1][2]["body"])
+        self.assertNotIn("switchboard:muse keys=", posted)
+        self.assertIn(key, gh.by_issue[switch.BOARD_ISSUE][0]["body"])
         self.assertEqual(make(gh).inbox([]), 0)
 
     def test_twelve_prs_give_ten_comments_then_two(self):
@@ -697,10 +748,11 @@ class MuseRouted(unittest.TestCase):
         gh = FakeGH()
         self.assertEqual(make(gh).muse(many), switch.MAX_MUSE_COMMENTS)
         self.assertEqual(len(gh.posts), 10)
-        self.assertEqual(len(gh.writes), 10)
+        self.assertEqual(len(gh.writes), 20)   # a label and a marker edit per comment
         again = [self.fix_pr(number=300 + n, comments=gh.by_issue.get(300 + n, [])) for n in range(12)]
         self.assertEqual(make(gh).muse(again), 2)
         self.assertEqual(len(gh.posts), 12)
+        self.assertEqual(len(gh.writes), 24)
 
 
 if __name__ == "__main__":
