@@ -194,6 +194,15 @@ void StockDamage::observe(const std::uint64_t entity, const LooseStock::Kind kin
                           const float vel_x, const float vel_y, const float vel_z, const float pos_x,
                           const float pos_y, const float pos_z, const float rot_x, const float rot_y,
                           const float rot_z, const float rot_w, const std::vector<ContactHint> &hints) noexcept {
+    // A body breaks once: a broken body is parked and never observed
+    // again, but if one ever is — a restore that left it enabled, a
+    // save that says broken — measuring it again would decide a
+    // second break and spawn a second set of pieces with the same
+    // entities. Find, not operator[]: looking must not insert.
+    const auto state_it = states_.find(entity);
+    if (state_it != states_.end() && state_it->second.broken) {
+        return;
+    }
     // No previous velocity (first tick, or just after a load): take
     // this tick as the baseline, so a body restored mid-flight does
     // not read its own motion as a hit. First sight is a placement:

@@ -254,6 +254,17 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
         release_carry();
     }
     kit_->restore(checkpoint_.kit);
+    // A crate broken after the checkpoint: the restore above puts it
+    // back where the checkpoint had it, intact, while the damage
+    // still says broken. Park it again: a body breaks once, and the
+    // pieces the break made are the crate now. Without this the
+    // crate would stand whole beside its own pieces.
+    for (int i = 0; i < loose_stock_->count(); ++i) {
+        const std::uint64_t entity = LooseStock::kFirstEntity + static_cast<std::uint64_t>(i);
+        if (stock_damage_.state(entity).broken) {
+            kit_->park(loose_stock_->body(i));
+        }
+    }
     slingshot_->restore(checkpoint_.slingshot);
     swing_->restore(checkpoint_.swing);
     trapeze_->restore();
@@ -394,14 +405,23 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // The saved world's bodies, by entity, must be this world's first
     // ones in the same order: then every saved state is its body's. A
     // world grown since (bodies built last) starts the new ones as built;
-    // one with a body removed or moved is refused.
+    // one with a body removed or moved is refused. A save made after a
+    // break holds eight bodies more per broken stock — the pieces,
+    // appended last — so the entity list may run past this world's,
+    // and its body states may too; a save made before the break names
+    // the pieces but holds only the built bodies' states.
     std::vector<std::uint64_t> entities;
     const std::vector<std::uint64_t> here = body_entities();
     const std::size_t built = here.size();
     bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
-              r.pod(loaded.carrying_entity) && r.list_up_to(entities, here.size()) &&
-              std::equal(entities.begin(), entities.end(), here.begin()) &&
-              r.list_up_to(k.bodies, built) && k.bodies.size() == entities.size() &&
+              r.pod(loaded.carrying_entity) &&
+              r.list_up_to(entities, here.size() + 8 * loose_stock_->placed().size()) &&
+              (entities.size() >= built
+                   ? std::equal(entities.begin(),
+                                entities.begin() + static_cast<std::ptrdiff_t>(built), here.begin())
+                   : std::equal(entities.begin(), entities.end(), here.begin())) &&
+              r.list_up_to(k.bodies, entities.size()) &&
+              (k.bodies.size() == entities.size() || k.bodies.size() == built) &&
               r.list(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
               r.list_up_to(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
               r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
@@ -453,6 +473,37 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
              r.list_up_to(saved_damage, loose_stock_->placed().size());
     }
     ok = ok && r.done();
+    // The save's bodies past this world's: exactly the pieces of the
+    // stocks its damage says broke, eight each, in the damage's
+    // order. A save with anything else past them is one this world
+    // cannot rebuild, and is refused with nothing changed. The
+    // damage records themselves are validated by the restore below;
+    // anything unshapely here simply fails this equality.
+    std::vector<std::uint64_t> expected_pieces;
+    for (const stock_damage::StockDamage::SavedDamage &record : saved_damage) {
+        if (record.broken == 0) {
+            continue;
+        }
+        const std::size_t stock_index =
+            record.entity >= LooseStock::kFirstEntity
+                ? static_cast<std::size_t>(record.entity - LooseStock::kFirstEntity)
+                : loose_stock_->placed().size();
+        if (stock_index >= loose_stock_->placed().size()) {
+            continue;
+        }
+        const stock_damage::BreakGeometry geometry =
+            stock_damage::break_geometry(loose_stock_->placed()[stock_index].kind);
+        for (std::uint8_t k = 0; k < geometry.count; ++k) {
+            expected_pieces.push_back(stock_damage::piece_entity_for(record.entity, k));
+        }
+    }
+    const std::size_t extra_bodies = entities.size() > built ? entities.size() - built : 0;
+    const std::size_t pieces_to_make = expected_pieces.size();
+    ok = ok && extra_bodies == expected_pieces.size();
+    if (ok && extra_bodies > 0) {
+        ok = std::equal(entities.begin() + static_cast<std::ptrdiff_t>(built), entities.end(),
+                        expected_pieces.begin());
+    }
     // A grip holds a body the save has: one built with its world, or one of
     // its fabricated objects (the kit's last).
     const std::size_t saved_built = entities.size();
@@ -467,24 +518,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         ok = fabricated_[i].entity == saved[i].object.entity && fabricated_[i].data == saved[i].object.data;
     }
     const std::size_t to_make = saved.size() > fabricated_.size() ? saved.size() - fabricated_.size() : 0;
-    ok = ok && physics_system_.GetNumBodies() + to_make <= physics_system_.GetMaxBodies();
-    // Bodies added to the world since the save was written (always built
-    // last, after every body before them) start as built.
-    for (std::size_t index = k.bodies.size(); ok && index < built; ++index) {
-        k.bodies.push_back(c.bodies[index]);
-    }
-    // Then the fabricated objects: the save's as it has them, the world's
-    // further ones as they are.
-    for (std::size_t i = 0; ok && i < std::max(fabricated_.size(), saved.size()); ++i) {
-        k.bodies.push_back(i < saved.size() ? saved[i].state : c.bodies[built + i]);
-    }
-    // A grip on a fabricated object holds it where this world's kit has it,
-    // after any bodies built since the save.
-    for (std::uint32_t &load : k.grip_load) {
-        if (ok && load != kit::kNone && load >= saved_built) {
-            load = static_cast<std::uint32_t>(load - saved_built + built);
-        }
-    }
+    ok = ok && physics_system_.GetNumBodies() + to_make + pieces_to_make <= physics_system_.GetMaxBodies();
     for (std::size_t index = k.bin_contents.size(); ok && index < c.bin_contents.size(); ++index) {
         k.bin_contents.push_back(c.bin_contents[index]);
     }
@@ -497,6 +531,59 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // record refuses the save with nothing changed.
     if (!stock_damage_.restore(saved_damage, loose_stock_->placed().size())) {
         return false;
+    }
+    // The save's pieces, made now: the restore above says which
+    // stocks broke, and the loader has already refused any save
+    // whose pieces do not match that. A set this world already has
+    // (a load into the world that broke it) is left as it is. They
+    // spawn at the break geometry around the crate's checkpoint
+    // place, at rest; the restore below then sets them moving as
+    // saved, where the save holds their states.
+    for (int i = 0; i < loose_stock_->count(); ++i) {
+        const std::uint64_t entity = LooseStock::kFirstEntity + static_cast<std::uint64_t>(i);
+        if (!stock_damage_.state(entity).broken) {
+            continue;
+        }
+        const LooseStock::Kind kind = loose_stock_->placed()[static_cast<std::size_t>(i)].kind;
+        const stock_damage::BreakGeometry geometry = stock_damage::break_geometry(kind);
+        bool missing = false;
+        for (std::uint8_t p = 0; p < geometry.count; ++p) {
+            if (!kit_->body_for_entity(stock_damage::piece_entity_for(entity, p)).valid()) {
+                missing = true;
+                break;
+            }
+        }
+        if (!missing) {
+            continue;
+        }
+        const kit::BodyIndex body = loose_stock_->body(i);
+        const auto &crate_state = k.bodies[static_cast<std::size_t>(body.value)];
+        spawn_break_pieces(body, entity, kind, crate_state.position, crate_state.rotation,
+                           JPH::Vec3::sZero(), JPH::Vec3::sZero(), kit_->body_mass(body));
+    }
+    // The kit's bodies, in the order the restore expects: the save's
+    // states, then the pieces' as just made where the save predates
+    // the break, then the fabricated objects. Bodies added to the
+    // world since the save was written (always built last, after
+    // every body before them) start as built.
+    const std::size_t built_now = kit_built_count();
+    kit::Kit::Checkpoint fresh;
+    kit_->capture(fresh);
+    for (std::size_t index = k.bodies.size(); ok && index < built_now; ++index) {
+        k.bodies.push_back(fresh.bodies[index]);
+    }
+    // Then the fabricated objects: the save's as it has them, the world's
+    // further ones as they are.
+    for (std::size_t i = 0; ok && i < std::max(fabricated_.size(), saved.size()); ++i) {
+        k.bodies.push_back(i < saved.size() ? saved[i].state : c.bodies[built + i]);
+    }
+    // A grip on a fabricated object holds it where this world's kit has it,
+    // after any bodies built since the save — and after the pieces, which
+    // sit between the built bodies and the fabricated ones.
+    for (std::uint32_t &load : k.grip_load) {
+        if (ok && load != kit::kNone && load >= saved_built) {
+            load = static_cast<std::uint32_t>(load - saved_built + built_now);
+        }
     }
     // Taken: the save's fabricated objects the world lacks are made, where
     // its checkpoint has them (the restore below sets them moving as saved).
