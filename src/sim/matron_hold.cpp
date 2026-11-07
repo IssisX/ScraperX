@@ -709,7 +709,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
     const bool on_catwalk = on_catwalk_line(ax, az, 0.0F);
     // The fatality's hold: her hand's pose carried along as she walks (her
     // carry is faster than her hand's own pace); any other hold as it was.
-    const Vec3 moving = bodies.GetLinearVelocity(body_);
+    const Vec3 moving = body_velocity();
     const Vec3 her_v = fatal_hold_ ? Vec3(moving.GetX(), 0.0F, moving.GetZ()) : Vec3::sZero();
     // A braced player (their hands on a rail): her pull grows, finite.
     if (grip_on_) {

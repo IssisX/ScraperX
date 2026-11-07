@@ -46,7 +46,7 @@ void Matron::refresh_contact_view() {
     // not a sensor, its normal at least half up, she not rising off it faster
     // than it rises). Not a second test of it.
     Sole sole;
-    if (sole_contact(bodies.GetPosition(body_), bodies.GetLinearVelocity(body_), yaw_, sole)) {
+    if (sole_contact(bodies.GetPosition(body_), body_velocity(), yaw_, sole)) {
         view_.contact_supported = true;
         view_.contact_feet_body = sole.body;
         view_.contact_feet_sub = sole.sub;

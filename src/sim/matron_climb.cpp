@@ -95,8 +95,7 @@ bool Matron::take_climb(const int index, const bool down) {
         return false;
     }
     if (climber_ == nullptr) {
-        climber_ = std::make_unique<traversal::Climber>(physics_, body_,
-                                                        traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
+        new_climber(traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
     } else if (climber_->status() == traversal::Climber::Status::Running || climber_->view().holding) {
         return false;
     }
@@ -177,7 +176,6 @@ void Matron::release_climb(const bool failed) {
 // no rung in reach, a stall, no room over its head), her hands open and she
 // falls.
 void Matron::step_climb(const float dt) {
-    BodyInterface &bodies = physics_.GetBodyInterface();
     const Climb c = climb_spec(climb_);
     const std::uint32_t grips = climber_->view().grips;
     const traversal::Climber::Status status = climber_->step(dt);
@@ -193,7 +191,7 @@ void Matron::step_climb(const float dt) {
     }
     yaw_ = turn_toward(yaw_, std::atan2(c.out_x, c.out_z), kTurnRate, dt);
     speed_ = 0.0F;
-    stride_ += bodies.GetLinearVelocity(body_).Length() * dt;
+    stride_ += body_velocity().Length() * dt;
     if (status == traversal::Climber::Status::Done) {
         release_climb(false);
     } else if (status != traversal::Climber::Status::Running) {

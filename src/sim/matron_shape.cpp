@@ -176,7 +176,7 @@ void Matron::step_stance(const float dt) {
         if (!on_planning_shape()) {
             const RVec3 at = bodies.GetPosition(body_);
             if (stance_fits(shape_.GetPtr(), at)) {
-                bodies.SetShape(body_, shape_, false, EActivation::Activate);
+                set_root_shape(shape_, EActivation::Activate);
             }
         }
     } else if (want != Stance::Down) {
@@ -195,7 +195,7 @@ void Matron::step_stance(const float dt) {
             // her body would throw him off her hand).
             const float have_top = on_planning_shape() ? kHalfHeight : stance_capsule(stance_).by;
             if (stance_capsule(want).by <= have_top + 1.0e-4F || stance_fits(target, at)) {
-                bodies.SetShape(body_, target, false, EActivation::Activate);
+                set_root_shape(target, EActivation::Activate);
                 if (family_change) {
                     stance_ = want;
                     ++stance_switches_;
