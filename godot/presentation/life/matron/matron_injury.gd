@@ -25,9 +25,14 @@ const SWELL_REGION := 200.0
 # faces_back]: the skull anchor sits on the back of the head, so its quad
 # faces the bone's -Z; the rest face +Z. The skull -0.106 is measured: the
 # scalp there is ~0.10 from the bone origin, so -0.08 buried the quad
-# inside the head and no skull injury could show.
+# inside the head and no skull injury could show. Lateral sign: the head
+# bone's local +X is her left (right-handed basis, local +Z out of the
+# face), so face_l takes +0.055 and face_r -0.055; the signs were swapped
+# before 2026-11-07 and a left-cheek punch bruised her right cheek.
+# Verified by rendered stills: a face_l-only dose must mark the cheek on
+# the image-right side of a front shot (her left, facing the camera).
 const ANCHORS := {
-	"face_l": ["head", Vector3(-0.055, -0.015, 0.085), false], "face_r": ["head", Vector3(0.055, -0.015, 0.085), false],
+	"face_l": ["head", Vector3(0.055, -0.015, 0.085), false], "face_r": ["head", Vector3(-0.055, -0.015, 0.085), false],
 	"jaw": ["jaw", Vector3(0.0, -0.02, 0.08), false], "skull": ["head", Vector3(0.0, 0.06, -0.106), true],
 	"neck": ["neck_hi", Vector3(0.0, 0.0, 0.09), false], "chest": ["chest", Vector3(0.0, 0.05, 0.16), false],
 }

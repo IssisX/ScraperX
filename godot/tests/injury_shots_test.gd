@@ -130,6 +130,17 @@ func _run() -> void:
 	await _step(2)
 	_check(layer.bruise_visible("face_r") and layer.swelling_visible("face_l"), "right_cheek",
 		"r %s l_swell %s" % [layer.bruise_visible("face_r"), layer.swelling_visible("face_l")])
+	# Cheeks must land on the correct side: face_l on her left, face_r on
+	# her right. The head bone's local +X is her left (right-handed basis,
+	# local +Z out of the face), so the lateral dot is +0.055 for face_l
+	# and -0.055 for face_r; a sign flip here means the bruise shows on
+	# the wrong cheek, which the visibility flags above cannot catch.
+	var head_bone_side: Transform3D = _her._rig.bone_world("head")
+	var left_dir: Vector3 = head_bone_side.basis.x
+	var fl_lat: float = ((layer._patches["face_l"] as MeshInstance3D).global_position - head_bone_side.origin).dot(left_dir)
+	var fr_lat: float = ((layer._patches["face_r"] as MeshInstance3D).global_position - head_bone_side.origin).dot(left_dir)
+	_check(fl_lat > 0.02 and fr_lat < -0.02, "cheek_sides",
+		"face_l lateral %.3f face_r lateral %.3f" % [fl_lat, fr_lat])
 	# No healing: a smaller later value never lowers a region.
 	_set_injury({"face_l": {"j_region": 30.0, "j_event": 30.0}, "face_r": {"j_region": 150.0, "j_event": 60.0}})
 	await _step(2)
@@ -144,9 +155,11 @@ func _run() -> void:
 	var face_out: float = layer.patch_outward("face_l", head_bone.origin)
 	_check(layer.bruise_visible("skull") and layer.patch_visible("skull") and skull_out > 0.0 and face_out > 0.0,
 		"skull", "bruise %s patch %s outward %.3f face %.3f" % [layer.bruise_visible("skull"), layer.patch_visible("skull"), skull_out, face_out])
-	# Stills: the bruised left cheek, then the face straight on.
+	# Stills: the bruised left cheek, then the face straight on. The left
+	# cheek camera stands on her left (+X): -X would photograph her right
+	# cheek under the same name.
 	var head: Vector3 = _her.head_world_position()
-	await _shot("injury_left_cheek", head + Vector3(-0.45, 0.08, 0.55), head, 40.0)
+	await _shot("injury_left_cheek", head + Vector3(0.45, 0.08, 0.55), head, 40.0)
 	await _shot("injury_face_front", head + Vector3(0.0, 0.05, 0.7), head, 45.0)
 	await _shot("injury_skull_back", head + Vector3(0.0, 0.15, -0.7), head, 45.0)
 	print("INJURY %s (%d failed)" % ["PASS" if _fails == 0 else "FAIL", _fails])
