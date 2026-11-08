@@ -7,7 +7,7 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794151022 (2026-11-08 15:17:02Z, 9:17 AM Central)
 
 ## Meter
-90% Sun 7:46 AM (Cory): +2% in 43 min (two helpers). Helpers: none until the Mon 11 AM reset; light runs only; measuring leftovers go to Muse (free).
+90% Sun 7:46 AM and still 90% Sun 9:44 AM (Cory): flat with no helpers. Helpers: none until the Mon 11 AM reset; light runs only; measuring leftovers go to Muse (free).
 
 ## Waiting on me
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt; it cracked #298. Use it for a problem stuck an hour or failed by others; the prompt goes whole in one block for Cory (11-07, 11-08).
