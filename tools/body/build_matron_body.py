@@ -468,15 +468,44 @@ def ribbon_normals(P, T, head_c):
     return out / np.maximum(np.linalg.norm(out, axis=1, keepdims=True), 1e-9)
 
 
+HAIR_MAP_STRANDS = 7
+
+
 def hair_map(out):
-    """A lock's cross-section: opaque in the middle, soft at its edges (the
-    color is each strand's own, in its vertex colors)."""
-    n = 64
-    u = (np.arange(n) + 0.5) / n
-    alpha = 1.0 - smoothstep(0.22, 0.5, np.abs(u - 0.5))
-    a = np.tile(alpha[None, :], (n, 1))
-    Image.fromarray((np.concatenate([np.ones((n, n, 3)), a[..., None]], -1) * 255).astype(np.uint8), "RGBA").save(
-        os.path.join(out, "hair_a.png"))
+    """A lock seen across (u) and down its length (v, 0 at the root): a few
+    fine hairs, each a soft round falloff a couple of texels wide with a
+    slight wander, its own shade and its own length, tapering to its tip, the
+    gaps between them clear. Not one solid card: a lock that reads as hairs
+    up close and as a wisp far off. The color is each lock's own (its vertex
+    colors). R: the hair's shade; G: the order hairs drop out in as the
+    exposure thins her (hair_strands.gdshader); A: coverage."""
+    w, hgt = 64, 256
+    rng = np.random.default_rng(1951)
+    u = np.arange(w)[None, :] + 0.5
+    v = (np.arange(hgt)[:, None] + 0.5) / hgt
+    cover = np.ones((hgt, w))          # 1 - alpha, multiplied over the hairs
+    shade = np.zeros((hgt, w))
+    rank = np.zeros((hgt, w))
+    best = np.zeros((hgt, w))
+    slots = (np.arange(HAIR_MAP_STRANDS) + 0.5) / HAIR_MAP_STRANDS
+    ranks = rng.permutation(HAIR_MAP_STRANDS) / (HAIR_MAP_STRANDS - 1.0)
+    for k in range(HAIR_MAP_STRANDS):
+        centre = (slots[k] + rng.uniform(-0.25, 0.25) / HAIR_MAP_STRANDS) * w
+        centre = np.clip(centre, 3.0, w - 3.0)
+        wander = rng.uniform(0.6, 1.6) * np.sin(v * rng.uniform(5.0, 11.0) + rng.uniform(0, 2 * math.pi))
+        end = 1.04 if k % 3 == 0 else rng.uniform(0.8, 1.04)   # a few run the lock's whole length
+        taper = smoothstep(end, end - 0.14, v)            # 1 down the hair, 0 past its tip
+        sigma = rng.uniform(1.5, 2.3) * (0.55 + 0.45 * taper)
+        a = np.exp(-0.5 * ((u - centre - wander) / sigma) ** 2) * taper * rng.uniform(0.85, 1.0)
+        tone = rng.uniform(0.72, 1.05) * (1.0 + 0.06 * np.sin(v * rng.uniform(30, 60)))   # a little uneven along it
+        cover *= 1.0 - a
+        take = a > best
+        best = np.where(take, a, best)
+        shade = np.where(take, tone, shade)
+        rank = np.where(take, ranks[k], rank)
+    alpha = 1.0 - cover
+    rgba = np.stack([np.clip(shade, 0, 1), rank, np.zeros_like(rank), alpha], -1)
+    Image.fromarray((rgba * 255).round().astype(np.uint8), "RGBA").save(os.path.join(out, "hair_a.png"))
 
 
 def _unused_long_hair_map(out):

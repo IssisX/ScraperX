@@ -3,15 +3,16 @@ extends RefCounted
 ## wrote next to matron.glb, read at runtime (kept as they are by their
 ## .import files, so a run that never imports has them too), and a material
 ## for each of the body's parts. The exposure's work on her, one way: the skin
-## drains to a bloodless grey (never red), the uniform goes from dingy to
-## filthy, her eyes go bloodshot, and her thin hair thins further.
+## drains to a bloodless gray (never red), the uniform goes from dingy to
+## filthy, her eyes go bloodshot, and her thin hair thins further (whole
+## hairs drop out; what is left stays fine hairs, never strips).
 
 const DIR := "res://presentation/life/matron/"
 # How strongly the skin's wrinkle height becomes its normal map.
 const WRINKLE_DEPTH := 3.0
 # The world's rule for a porous surface (main_geometry.gd POROUS_SPECULAR):
 # this renderer's sky reflection adds a rough surface's sheen whatever its
-# colour, so at the default specular (0.5) her cloth, stockings and hair read
+# color, so at the default specular (0.5) her cloth, stockings and hair read
 # milky and washed out next to the world. Cloth and hair take the world's
 # porous level; skin keeps its own (f0 about 0.028, specular 0.35).
 const POROUS_SPECULAR := 0.22
@@ -20,10 +21,14 @@ const SKIN_SPECULAR := 0.35
 # the world; Cory picked this, the darkest of three, by eye (11-07). The
 # exposure's tints multiply on top of it.
 const SKIN_TONE := Color(0.8, 0.68, 0.6)
+# Her hair: fine hairs, soft-edged and lit along their length.
+const HAIR_SHADER := preload("res://presentation/life/matron/hair_strands.gdshader")
+# At full exposure this share of her hairs is gone (about 3 of each lock's 7).
+const HAIR_THIN_MAX := 0.45
 
 var _skin: StandardMaterial3D
 var _cloth: StandardMaterial3D
-var _hair: StandardMaterial3D
+var _hair: ShaderMaterial
 var _eye: StandardMaterial3D
 var _parts := {}   # part name -> its material
 var _applied_exposure := -1.0
@@ -154,17 +159,11 @@ func build() -> void:
 	var teeth := StandardMaterial3D.new()
 	teeth.albedo_texture = _texture("teeth_a.jpg")
 	teeth.roughness = 0.45
-	# Each lock's color is its own (vertex colors); the texture is its edges.
-	_hair = StandardMaterial3D.new()
-	_hair.vertex_color_use_as_albedo = true
-	_hair.albedo_texture = _texture("hair_a.png")
-	_hair.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	_hair.alpha_scissor_threshold = 0.45
-	_hair.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_hair.roughness = 0.6
-	_hair.rim_enabled = true
-	_hair.rim = 0.12
-	_hair.rim_tint = 0.6
+	# Each lock's color is its own (vertex colors); the texture is its hairs.
+	_hair = ShaderMaterial.new()
+	_hair.shader = HAIR_SHADER
+	_hair.set_shader_parameter("strands", _texture("hair_a.png"))
+	_hair.set_shader_parameter("porous_specular", POROUS_SPECULAR)
 	var brow := StandardMaterial3D.new()
 	brow.albedo_texture = _texture("brow_a.png")
 	brow.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
@@ -178,7 +177,7 @@ func build() -> void:
 		"brows": brow, "lashes": lash, "hair": _hair}
 	_skin.metallic_specular = SKIN_SPECULAR
 	_skin.albedo_color = SKIN_TONE
-	for porous: StandardMaterial3D in [_cloth, stocking, shoe, mouth, _hair, brow, lash]:
+	for porous: StandardMaterial3D in [_cloth, stocking, shoe, mouth, brow, lash]:
 		porous.metallic_specular = POROUS_SPECULAR
 
 
@@ -258,4 +257,4 @@ func apply_exposure(exposure: float) -> void:
 	_skin.roughness = lerpf(0.6, 0.42, e)   # clammy, a waxy sheen
 	_cloth.albedo_color = tints["cloth"]
 	_eye.albedo_color = Color.WHITE.lerp(Color(1.0, 0.84, 0.8), e)
-	_hair.alpha_scissor_threshold = lerpf(0.45, 0.78, e)
+	_hair.set_shader_parameter("thin", e * HAIR_THIN_MAX)
