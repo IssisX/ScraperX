@@ -1299,6 +1299,28 @@ func _play_matron_ammo(device: int) -> bool:
 	_main._pitch = 0.0
 	if not picked:
 		return _fail("the toolbox where it lay was never taken up again (Action '%s')" % _action_label())
+	# Out of her reach before the ready loop starts: she closes on him at up
+	# to 6.8 m/s once the throw leaves her hands, and the ready loop used to
+	# start with her already in Grab under a metre off (the box dropped 0.33 s
+	# in, while she held him). Get away from her until 4 m off -- past her
+	# 3.0 m stalk-near and her 2.1 m stoop reach -- then the ready loop steps
+	# back in to her band on his own terms. (No sprint while carrying: the
+	# native caps a laden run at the carry speed, so _sprint_to here just
+	# runs him at the fastest the load allows, steered away from her.)
+	var her_now: Vector3 = _matron_state()["position"]
+	var away := Vector2(_position().x - her_now.x, _position().z - her_now.z)
+	if away.length() < 4.0:
+		if away.length() < 0.01:
+			away = Vector2(-1.0, 0.0)
+		var target := Vector2(_position().x, _position().z) + away.normalized() * 4.0
+		await _sprint_to(device, target, 0.5, 3.0)
+	# The ready loop's entry check: she must not be in Grab, and the toolbox
+	# must be in his hands. Either one failing here used to hide for the
+	# ready loop's whole 10 s and fail as "never squared up" with no cause.
+	her_now = _matron_state()["position"]
+	var d0 := Vector2(her_now.x - _position().x, her_now.z - _position().z).length()
+	if int(_matron_state()["state"]) == MATRON_STATE_GRAB or int(_native().get_carrying_entity_id()) != box:
+		return _fail("the ready loop started with her in Grab (state %d, %.2f m off) or the toolbox not in hand (carrying %d)" % [int(_matron_state()["state"]), d0, int(_native().get_carrying_entity_id())])
 	# Thrown back: the view on her, stepped in to her band, the box come round
 	# in front and settled, the swipe up held, then lifted.
 	var box_was := _kit_origin(box)
