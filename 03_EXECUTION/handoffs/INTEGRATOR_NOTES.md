@@ -15,7 +15,7 @@ merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12
   stay, 258 down is a traversal fix on the J-008 line; #298 gains PR waits on matron-sweep; #298 budget fix alone (loop kept
   on one line), no speed gate, StockHold made budget-bound, snag chain fix; J-021 job 4 cap waived; J-043 new hang rail
   (protected); J-011 rigid threads then wider blend. Pushed, PRs/CI pending: J-049 PR1, J-044b grant, J-044d, J-015 slice 1,
-  #299 P1, J-045. #318 (J-053) eye OK. #309 and J-022 merged; ring eye OK on trunk. #316 eye OK, waits on Codex (workflow).
+  #299 P1, J-045. #318 (J-053) eye OK. #309 and J-022 merged; the ring vanishes in side view (Cory: monocle), redo on a helper → claude/integrate-j059-side. #316 eye OK, waits on Codex (workflow).
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
 
