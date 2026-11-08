@@ -368,13 +368,12 @@ func _run() -> void:
 	#    the copy as the shader blends it, _posed_copy).
 	# 2. cheek_side_facing: bruise surface with alpha >= 0.3 that faces
 	#    the side camera (N.V > 0.25) covers at least 6 cm² (measured
-	#    28.4 / 10.6 cm² on 2026-11-08).
+	#    36.8 / 13.2 cm² on 2026-11-08).
 	# 3. cheek_side_pixels (rendered runs only): pixels round the cheek in
 	#    the side view are darker with the bruise than with it hidden,
 	#    same pose: at least 1500 px darker by > 0.04 in a 140 px box and
-	#    a mean darkening >= 0.012 (measured 12397 px, 0.065 / 5792 px,
-	#    0.051 at 960x720; the flat quads 4080 / 3730 px).
-	var cheek_tex: Image = (layer._texture as Texture2D).get_image()
+	#    a mean darkening >= 0.012 (measured 12944 px, 0.071 / 6156 px,
+	#    0.055 at 960x720; the flat quads 4080 / 3730 px).
 	var anchors: Dictionary = (layer.get_script() as Script).get_script_constant_map()["ANCHORS"]
 	for cheek: String in ["face_l", "face_r"]:
 		var cheek_mi := layer._patches[cheek] as MeshInstance3D
@@ -387,6 +386,9 @@ func _run() -> void:
 		var cheek_off_skin := _max_off_skin(cheek_drawn, cheek_pos, 0.10)
 		_check(cheek_off_skin >= 0.0 and cheek_off_skin < 0.0015, "cheek_on_skin_" + cheek.right(1),
 			"%s vertex farthest off her skin %.4f m" % [cheek, cheek_off_skin])
+		# The bruise alpha as drawn: the cheek's own texture on its material.
+		var cheek_mat := cheek_mi.material_override as ShaderMaterial
+		var cheek_tex: Image = (cheek_mat.get_shader_parameter("albedo_texture") as Texture2D).get_image() if cheek_mat != null else (layer._texture as Texture2D).get_image()
 		var cheek_area := _bruise_area_facing(cheek_drawn, cheek_tex, cheek_side, 0.3, 0.25)
 		if cheek_drawn != cheek_mi:
 			cheek_drawn.free()

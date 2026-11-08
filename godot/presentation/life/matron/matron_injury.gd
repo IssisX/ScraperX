@@ -88,6 +88,9 @@ const MARK_COLOR := Color(0.55, 0.12, 0.10)
 const BRUISE_COLOR := Color(0.23, 0.08, 0.20)
 const SWELL_COLOR := Color(0.35, 0.10, 0.14)
 const RING_BASE := Color(0.18, 0.05, 0.13)
+# The faint yellow-brown edge a cheek bruise takes at the bruise and swelling
+# stages (the blood breaking down at the rim of a contusion).
+const CHEEK_RIM := Color(0.50, 0.40, 0.17)
 const RING_DARK := Color(0.05, 0.01, 0.05)
 # J-059: the eye ring and lid are projected onto a copy of her skin round
 # the socket (matron_injury_ring.gdshader), so they lie on the face.
@@ -114,6 +117,7 @@ var _seen := {}  # region -> {"j_region": float, "j_event": float, "t_hit": floa
 var _patches := {}  # region -> MeshInstance3D
 var _lids := {}  # eye region -> MeshInstance3D (swollen upper lid)
 var _texture: Texture2D = null
+var _cheek_textures := {}  # "mark" / "bruise" / "swell" -> Texture2D, made on first use
 var _ring_textures := {}  # false/true (mirrored) -> Texture2D
 var _lid_texture: Texture2D = null
 var _mesh: QuadMesh = null
@@ -152,6 +156,47 @@ func _bruise_texture() -> Texture2D:
 			var a := clampf(1.0 - smoothstep(0.45, 0.95, r * (1.0 + wobble)), 0.0, 1.0)
 			img.set_pixel(x, y, Color(1, 1, 1, a * 0.92))
 	return ImageTexture.create_from_image(img)
+
+
+func _cheek_texture(stage: String) -> Texture2D:
+	# The cheek's own bruise (the shared _bruise_texture stays for the skull,
+	# jaw, neck and chest quads): its per-cell hash wobble stepped the edge
+	# into a painted rectangle on the cheek (Claude's eye check 2026-11-08).
+	# Smooth sine wobble on the outline, as #309's ring; soft falloff to clear
+	# skin over the outer 30% of the radius (0.56-0.86 of the half size, zero
+	# before the texture's edge even where the wobble pulls the outline in).
+	# Colour is baked in from the stage's colour: a darker purple-red core
+	# mottled at low frequency, fading out to the stage colour and, at the
+	# bruise and swelling stages, a faint yellow-brown rim. The material's
+	# albedo alpha keeps the old severity scale (texture alpha up to 0.92,
+	# as the shared texture). The red mark keeps its red, no rim.
+	if _cheek_textures.has(stage):
+		return _cheek_textures[stage]
+	var core: Color = MARK_COLOR
+	var rim := 0.0
+	if stage == "bruise":
+		core = BRUISE_COLOR.lerp(SWELL_COLOR, 0.35)
+		rim = 0.35
+	elif stage == "swell":
+		core = SWELL_COLOR
+		rim = 0.6
+	var size := 128
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	for y in size:
+		for x in size:
+			var u := (float(x) / float(size - 1)) * 2.0 - 1.0
+			var v := (float(y) / float(size - 1)) * 2.0 - 1.0
+			var wobble := 0.05 * sin(u * 2.3 + 0.9) * sin(v * 2.9 + 1.4) + 0.03 * sin(u * 4.1 + 2.1) * sin(v * 3.3 + 0.3) + 0.03 * sin(atan2(v, u) * 3.0 + 0.7)
+			var r := Vector2(u, v).length() + wobble
+			var shape := 1.0 - clampf(smoothstep(0.56, 0.86, r), 0.0, 1.0)
+			var mottle := 0.5 * sin(u * 3.7 + 0.4) * sin(v * 3.1 + 1.9) + 0.25 * sin(u * 6.3 + 2.6) * sin(v * 5.2 + 0.8)
+			var k := 0.7 + 0.12 * mottle
+			var col := Color(core.r * k, core.g * k, core.b * k).lerp(core, clampf(smoothstep(0.1, 0.75, r), 0.0, 1.0))
+			col = col.lerp(CHEEK_RIM, rim * clampf(smoothstep(0.45, 0.8, r), 0.0, 1.0))
+			img.set_pixel(x, y, Color(col.r, col.g, col.b, shape * minf(0.86 + 0.08 * mottle, 0.92)))
+	var tex := ImageTexture.create_from_image(img)
+	_cheek_textures[stage] = tex
+	return tex
 
 
 func _ring_texture(mirror: bool) -> Texture2D:
@@ -622,9 +667,9 @@ func _update_eye(region: String, anchor: Array, bone: Transform3D, rig: Variant)
 
 
 func _update_cheek(region: String, bone: Transform3D, rig: Variant) -> void:
-	# The cheek bruise on her skin: the bruise texture projected onto the
-	# copy of her cheek skin, sized and coloured as the old quad was (half
-	# size rad; mark, bruise and swelling colours). The copy sits in its
+	# The cheek bruise on her skin: the cheek's bruise texture projected onto
+	# the copy of her cheek skin, sized as the old quad was (half size rad)
+	# with the old alpha scale and the mark, bruise and swelling colours. The copy sits in its
 	# frame on the head bone and the shader blends each vertex toward the
 	# jaw and neck by her own weights: bone_a..bone_d are those bones'
 	# current poses against the head's, in the copy's frame
@@ -634,11 +679,16 @@ func _update_cheek(region: String, bone: Transform3D, rig: Variant) -> void:
 	var sev := clampf((severity(region) - BRUISE_REGION) / BRUISE_REGION, 0.0, 1.0)
 	var swelling := swelling_visible(region)
 	var rad := (0.04 + 0.025 * sev + (0.02 if swelling else 0.0)) * 0.5
-	var col: Color
+	# Colour is in the stage's texture (_cheek_texture); the alpha is the
+	# old scale.
+	var alpha := 0.0
+	var stage := ""
 	if bruise_visible(region):
-		col = Color(BRUISE_COLOR, 0.5 + 0.25 * sev) if not swelling else Color(SWELL_COLOR, 0.7)
+		alpha = 0.5 + 0.25 * sev if not swelling else 0.7
+		stage = "swell" if swelling else "bruise"
 	elif mark_visible(region):
-		col = Color(MARK_COLOR, 0.3)
+		alpha = 0.3
+		stage = "mark"
 		rad *= 0.7
 	else:
 		if p != null:
@@ -647,9 +697,11 @@ func _update_cheek(region: String, bone: Transform3D, rig: Variant) -> void:
 	var mesh := _skin_mesh_for(region, rig)
 	if mesh == null:
 		return
-	p = _skin_patch_for(region, mesh, _texture, CHEEK_PUSH_M)
+	var tex := _cheek_texture(stage)
+	p = _skin_patch_for(region, mesh, tex, CHEEK_PUSH_M)
 	var mat := p.material_override as ShaderMaterial
-	mat.set_shader_parameter("albedo_color", col)
+	mat.set_shader_parameter("albedo_texture", tex)
+	mat.set_shader_parameter("albedo_color", Color(1, 1, 1, alpha))
 	mat.set_shader_parameter("uv_center", Vector2.ZERO)
 	mat.set_shader_parameter("uv_half", Vector2(rad, rad))
 	mat.set_shader_parameter("blend", true)
