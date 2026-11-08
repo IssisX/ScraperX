@@ -57,6 +57,7 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin") {
         run_twin();
+        run_twin_balconies();
         return EXIT_SUCCESS;
     }
     // SCRAPERX_EXTRA_SOLID_Y=<meters>: every world this run builds gets one
@@ -592,6 +593,7 @@ int main() {
     run_world_solids();
     run_twin_geometry();
     run_twin();
+    run_twin_balconies();
     run_well_stage_a();
     run_well_stage_b();
     run_well_stage_c();
