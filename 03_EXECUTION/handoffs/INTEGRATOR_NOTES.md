@@ -13,7 +13,7 @@ merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12
 ## Waiting on me
 - From Muse (ruled 7:19 PM, one mail): #291 start out of reach + not-in-Grab check; #298 test-side budget, cap waived;
   J-049 fix timing (ChatGPT asked on #278); J-001 reserved feet share then hold release; J-021 split; J-059 side-rim + flip push;
-  J-044d pushed (red host-build); J-043 inventory; hair; button real-tap check. 9:20 PM: #298 gains separate PR + attribute 4 grab peaks; J-015 S2 stall 1 m short (Muse eye-checking); J-011 panels parked (ChatGPT asked #118); J-007 #315 cap waived. #299 P1 fix; J-061 running. J-008 pushed @ 45e16da2.
+  J-044d pushed (red host-build); J-043 inventory; hair; button real-tap check. 9:20 PM: #298 gains separate PR + attribute 4 grab peaks; J-015 S2 stall 1 m short (Muse eye-checking); J-011 panels parked (ChatGPT asked #118); J-007 #315 cap waived. #316 (J-021 job 4) touches a workflow: waits on the Codex review (opened 11:49 PM); check at 9:17 AM. #299 P1 fix; J-061 running. J-008 pushed @ 45e16da2.
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
 
