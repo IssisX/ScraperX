@@ -21,7 +21,7 @@ him again.
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Every stated time is read from the clock first (`TZ=America/Chicago date`, Central); hooks refuse
-  a stamp off the clock, and any time written with no clock read this turn (11-07, 11-08).
+  a stamp off the clock, and any time in a reply, post or mail with no clock read this turn (11-07, 11-08).
 
 ## Test only what a change reaches
 
