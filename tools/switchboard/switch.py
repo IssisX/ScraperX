@@ -1294,10 +1294,13 @@ class Switch:
         sets = res.data["sets"]
         expected = set(self.looks["sets"])
         judged = {s["set"] for s in sets}
-        overall = "LAND" if judged == expected and all(s["verdict"] == "LAND" for s in sets) else "FIX"
+        # A set's known defect, owned by a still-open job, blocks only that job's PR (J-068).
+        overall, waived = rules.eye_overall(sets, self.looks["sets"], ctx.get("job") or "", self.jobs())
         lines = [f"**Claude eye (look of #{facts.number} @ {facts.head_sha[:8]}): {overall}**", ""]
         for s in sets:
-            lines.append(f"- {s['set']}: {s['verdict']}; rubric: \"{s['rubric_line']}\"; frame `{s['frame']}`. {s['reason']}")
+            known = f" (known defect of {', '.join(waived[s['set']])}: shown, not blocking this PR)" \
+                if s["verdict"] != "LAND" and s["set"] in waived else ""
+            lines.append(f"- {s['set']}: {s['verdict']}{known}; rubric: \"{s['rubric_line']}\"; frame `{s['frame']}`. {s['reason']}")
         if judged != expected:
             lines.append(f"- sets not judged: {', '.join(sorted(expected - judged)) or '-'}")
         if overall == "FIX":

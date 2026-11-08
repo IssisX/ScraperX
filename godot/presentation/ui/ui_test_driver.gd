@@ -167,6 +167,9 @@ const SCENARIOS := {
 	"look_matron_hold": 11,
 	"look_matron_fatal": 11,
 	"look_matron_grade_ladder": 11,
+	# His punch landing on her, through his eye (ui_test_look.gd; CI renders it
+	# for the eye set fight_contact, work/looks/sets.yml).
+	"look_matron_fight": 11,
 	# Loose stock in the yard: a drum carried and set down (look_stock_yard:
 	# renders only, not in CI).
 	"touch_stock": 8,
@@ -525,6 +528,8 @@ func _run() -> void:
 			ok = await _look_set("fatal")
 		"look_matron_grade_ladder":
 			ok = await _look_set("grade_ladder")
+		"look_matron_fight":
+			ok = await _look_set("fight")
 		"touch_stock":
 			ok = await _stock_touch(InputRouter.Device.TOUCH)
 		"touch_forklift":
