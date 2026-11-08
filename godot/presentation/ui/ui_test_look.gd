@@ -421,3 +421,98 @@ func _look_notes(shot: String, m: Dictionary) -> String:
 		s += " held=%d his_up_y=%.2f arm_tears=%d fatal_hang=%d window_s=%.2f" % [int(bool(h["held"])), up.y,
 			int(h["arm_tear_count"]), int(bool(h["fatal_hang"])), float(h["fatal_window_s"])]
 	return s
+
+
+# --- the gust front's mist streak (J-022 slice 2) ---------------------------
+# Renders only, not in CI. From I's cage at 419 m, on the front's band: the
+# camera stands in open air north-west of the front, looking north-east at
+# the curtain with the tower's west face behind it, and takes the same frame
+# twice — once with the front well clear of the face, once 18 m further
+# west — so the stills show the streak standing on the front and moving
+# with it. Each still's line carries the native's front x at the shot.
+
+const LOOK_MIST_CAM_Y := 450.0   # in the front's band (396-788), over the cage
+const LOOK_MIST_CAM_Z := -95.0   # north of the band, clear of the tower
+const LOOK_MIST_CAM_WEST_M := 25.0
+const LOOK_MIST_NEAR_X := -40.0  # front clear of the face (at -26.6) by 13 m
+const LOOK_MIST_FAR_X := -58.0   # the same frame 18 m further west
+
+
+func _look_mist_streak() -> bool:
+	var streak: Node3D = _main._mist_streak
+	if streak == null:
+		return _fail("no mist streak node")
+	_look_wall_ms = 0
+	# By day, so the mist is lit.
+	_main._sky_cycle.set_hour(15.0)
+	_look_render(false)
+	# The front sweeps west 40 m every 8 s; wait for it clear of the face.
+	if not await _look_until(func() -> bool: return float(_native().get_wind_front_x_m()) <= LOOK_MIST_NEAR_X, 10.0, 0.0):
+		return _fail("front never cleared the face (x %.2f)" % float(_native().get_wind_front_x_m()))
+	var front := float(_native().get_wind_front_x_m())
+	if absf(float(streak.front_x()) - front) > 0.5:
+		return _fail("streak %.2f does not stand on the front %.2f" % [float(streak.front_x()), front])
+	await _look_mist_shot("near", "the mist streak on the front, clear of the face", true)
+	# The same frame with the front further west: the streak must have moved.
+	if not await _look_until(func() -> bool: return float(_native().get_wind_front_x_m()) <= LOOK_MIST_FAR_X, 10.0, 0.0):
+		return _fail("front never ran further west (x %.2f)" % float(_native().get_wind_front_x_m()))
+	front = float(_native().get_wind_front_x_m())
+	if absf(float(streak.front_x()) - front) > 0.5:
+		return _fail("streak %.2f does not stand on the front %.2f" % [float(streak.front_x()), front])
+	await _look_mist_shot("far", "the same frame, the front 18 m further west", false)
+	_look_render(true)
+	return true
+
+
+# One still of the streak from the fixed camera: placed on the first shot
+# (25 m west of the front, north of the band, looking at the band's middle),
+# kept for the second, so the two stills are the same frame.
+func _look_mist_shot(shot: String, what: String, place_camera: bool) -> void:
+	var wall0 := _look_wall_ms
+	_main.freeze_sim = true
+	if _look_cam == null:
+		_look_cam = Camera3D.new()
+		_look_cam.name = "LookCamera"
+		_look_cam.fov = LOOK_FOV
+		_look_cam.near = 0.05
+		_look_cam.far = 2000.0
+		_main.add_child(_look_cam)
+	await _frames(1)
+	var front := float(_native().get_wind_front_x_m())
+	if place_camera:
+		_look_cam.look_at_from_position(
+			Vector3(front - LOOK_MIST_CAM_WEST_M, LOOK_MIST_CAM_Y, LOOK_MIST_CAM_Z),
+			Vector3(front, LOOK_MIST_CAM_Y, -147.0), Vector3.UP)
+	_look_cam.current = true
+	_look_hidden.clear()
+	for child in _main.get_children():
+		if child is CanvasLayer and (child as CanvasLayer).visible:
+			(child as CanvasLayer).visible = false
+			_look_hidden.append(child)
+	_look_render(true)
+	var path := "%s_%s.png" % [_capture_prefix, shot]
+	var saved := false
+	if not _capture_prefix.is_empty() and DisplayServer.get_name() != "headless":
+		for i in LOOK_HOLD_FRAMES:
+			await RenderingServer.frame_post_draw
+		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+		saved = get_viewport().get_texture().get_image().save_png(path) == OK
+	_look_render(false)
+	for layer in _look_hidden:
+		(layer as CanvasLayer).visible = true
+	_main._camera.current = true
+	_main.freeze_sim = false
+	_look_wall_ms = Time.get_ticks_msec()
+	var wall_s := float(_look_wall_ms - wall0) / 1000.0
+	var line := "%s\t%.2f\t%s\t%.1f\t%s\tfront_x=%.2f streak_x=%.2f cam=%s" % [shot, _sim_s(), what, wall_s,
+		path.get_file() if saved else "(not drawn)", front, float(_main._mist_streak.front_x()),
+		str(_look_cam.global_position)]
+	print("SCRAPERX_LOOK_SHOT %s" % line)
+	if not _capture_prefix.is_empty():
+		var index_path := "%s_index.tsv" % _capture_prefix
+		DirAccess.make_dir_recursive_absolute(index_path.get_base_dir())
+		var f := FileAccess.open(index_path, FileAccess.READ_WRITE if FileAccess.file_exists(index_path) else FileAccess.WRITE)
+		if f != null:
+			f.seek_end()
+			f.store_line(line)
+			f.close()
