@@ -225,9 +225,22 @@ public:
     [[nodiscard]] std::uint32_t bodies_with_entity_in(std::uint64_t first, std::uint64_t limit) const;
 
 private:
-    // The kit's bodies built with the world: every one before the first
-    // fabricated object (those are always the kit's last).
+    // The kit's bodies built with the world, break pieces included: the
+    // count of bodies that are not a fabricated object's. Not a prefix
+    // length — a fabricated object may sit before the break pieces, so
+    // the built bodies are not the kit's first bodies (see body_entities).
     [[nodiscard]] std::size_t kit_built_count() const noexcept { return kit_->body_count() - fabricated_.size(); }
+    // Whether a kit body is a fabricated object's: the built bodies are
+    // every other one, wherever each fabricated body sits in the kit.
+    // A linear scan: at most fabricated::kMaxObjects of them.
+    [[nodiscard]] bool is_fabricated_body(const kit::BodyIndex body) const noexcept {
+        for (const Fabricated &object : fabricated_) {
+            if (object.body == body) {
+                return true;
+            }
+        }
+        return false;
+    }
     // The body of a fabricated object, at `origin` turned `rotation`, as
     // loose stock: carried by the top of its box over its center of mass,
     // swept so a throw never passes through a rail, asleep once at rest,

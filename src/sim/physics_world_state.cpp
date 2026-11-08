@@ -320,12 +320,20 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     ++death_count_;
 }
 
-// The kit's bodies built with the world, by entity: not the fabricated
-// objects after them, which a save carries on their own (write_fabricated).
+// The kit's bodies built with the world, by entity, in kit index order:
+// not the fabricated objects, which a save carries on their own
+// (write_fabricated). A fabricated object may sit before the break
+// pieces, so the built bodies are not a prefix: skip each fabricated
+// body by its own index, and the pieces follow the built bodies.
 std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
-    std::vector<std::uint64_t> out(kit_built_count());
-    for (std::uint32_t index = 0; index < out.size(); ++index) {
-        out[index] = kit_->body_entity(kit::BodyIndex{index});
+    std::vector<std::uint64_t> out;
+    out.reserve(kit_built_count());
+    for (std::uint32_t index = 0; index < kit_->body_count(); ++index) {
+        const kit::BodyIndex body{index};
+        if (is_fabricated_body(body)) {
+            continue;
+        }
+        out.push_back(kit_->body_entity(body));
     }
     return out;
 }
@@ -348,9 +356,23 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     // only when this world begins with the same bodies. The fabricated
     // objects' come last, on their own (write_fabricated).
     w.list(body_entities());
+    // The states of those bodies, in the same kit-index order: the
+    // checkpoint's where it holds the body, the live state where the
+    // body was built since the commit (a break's pieces, before any
+    // commit takes them). The list is always full, so a load pairs
+    // each entity with its state.
+    kit::Kit::Checkpoint now;
+    kit_->capture(now);
     const auto &k = checkpoint_.kit;
-    const std::size_t built = std::min(kit_built_count(), k.bodies.size());
-    w.list(std::vector<kit::Kit::BodyState>(k.bodies.begin(), k.bodies.begin() + static_cast<std::ptrdiff_t>(built)));
+    std::vector<kit::Kit::BodyState> states;
+    states.reserve(kit_built_count());
+    for (std::uint32_t index = 0; index < kit_->body_count(); ++index) {
+        if (is_fabricated_body(kit::BodyIndex{index})) {
+            continue;
+        }
+        states.push_back(index < k.bodies.size() ? k.bodies[index] : now.bodies[index]);
+    }
+    w.list(states);
     w.list(k.rope_anchor);
     w.list(k.dog_floor);
     w.list(k.bin_contents);
@@ -573,9 +595,11 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         k.bodies.push_back(fresh.bodies[index]);
     }
     // Then the fabricated objects: the save's as it has them, the world's
-    // further ones as they are.
+    // further ones as they are. Each of the world's sits at its own kit
+    // index, not at built + i: a fabricated body may sit before the
+    // break pieces, so built + i would read a piece's state.
     for (std::size_t i = 0; ok && i < std::max(fabricated_.size(), saved.size()); ++i) {
-        k.bodies.push_back(i < saved.size() ? saved[i].state : c.bodies[built + i]);
+        k.bodies.push_back(i < saved.size() ? saved[i].state : c.bodies[fabricated_[i].body.value]);
     }
     // A grip on a fabricated object holds it where this world's kit has it,
     // after any bodies built since the save — and after the pieces, which

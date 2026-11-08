@@ -7,7 +7,12 @@
 #include "sim_tests.hpp"
 
 #include <cmath>
+#include <fstream>
 #include <iostream>
+
+#ifndef SCRAPERX_SOURCE_DIR
+#error "SCRAPERX_SOURCE_DIR must name the repository (CMakeLists.txt sets it)"
+#endif
 
 using scraperx::sim::Forklift;
 using scraperx::sim::LooseStock;
@@ -174,6 +179,144 @@ void check_dent(const DamageState &state, const Tier tier, const float lo, const
     std::cout << "  stock damage: first dent tier " << static_cast<int>(dent.tier) << " depth " << dent.depth_m
               << " radius " << dent.radius_m << "\n";
     require(dent.tier == tier && dent.depth_m >= lo && dent.depth_m <= hi, what);
+}
+
+// The fabricated test's crowbar hull, the smallest signed object.
+std::vector<std::uint8_t> crowbar_hull_bytes() {
+    const std::string path = std::string(SCRAPERX_SOURCE_DIR) + "/godot/tests/fabricated/crowbar.hull";
+    std::ifstream in(path, std::ios::binary);
+    require(in.good(), "stock damage fabricated break: the crowbar hull file is readable");
+    return std::vector<std::uint8_t>(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
+std::uint64_t fabricate_crowbar(Simulation &s) {
+    const std::vector<std::uint8_t> hull = crowbar_hull_bytes();
+    scraperx::sim::FabricatedRefusal why = scraperx::sim::FabricatedRefusal::None;
+    const std::uint64_t entity = s.add_fabricated(hull.data(), hull.size(), {9.0, 0.0, -25.0}, 0.0, &why);
+    require(entity != 0 && why == scraperx::sim::FabricatedRefusal::None,
+            "stock damage fabricated break: the crowbar is fabricated");
+    return entity;
+}
+
+bool quat_near(const scraperx::sim::Quaternion a, const scraperx::sim::Quaternion b, const double tol) {
+    const bool same = std::abs(a.x - b.x) < tol && std::abs(a.y - b.y) < tol && std::abs(a.z - b.z) < tol &&
+                      std::abs(a.w - b.w) < tol;
+    const bool flipped = std::abs(a.x + b.x) < tol && std::abs(a.y + b.y) < tol && std::abs(a.z + b.z) < tol &&
+                         std::abs(a.w + b.w) < tol;
+    return same || flipped;  // q and -q are the same rotation
+}
+
+// One fabricate-and-break save/load case: fabricate one crowbar and break
+// the deck crate north, in the given order, and save/load at the timing the
+// spawn gives. HighDrop falls, so no checkpoint can commit before the break
+// and the save predates it. ExteriorGrade stands, so the break tick itself
+// commits and the save follows it. The fourth P1 on #299 (comment
+// 6708123804): kit_built_count() assumes every fabricated body sits at the
+// end of the Kit, but spawn_break_pieces appends eight bodies after any
+// fabricated ones, so the base checkpoint list takes a prefix that includes
+// the fabricated object and drops the last piece, and write_fabricated reads
+// past the checkpoint vector (or a piece's state). The fix is at the Kit
+// order and save mapping: true Kit index order with explicit fabricated
+// indices. This test pins the save/load path that carries both.
+void fabricated_break_case(const scraperx::sim::InitialSpawn spawn, const bool fabricate_first,
+                           const char *what) {
+    const std::string prefix = std::string("stock damage fabricated break (") + what + "): ";
+    Simulation s(spawn);
+    if (spawn == scraperx::sim::InitialSpawn::ExteriorGrade) {
+        (void)s.advance_frame(2.0);  // settle; commits happen
+    }
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const double mass = s.kit_body_mass(crate);
+    const std::uint64_t commits_before = s.snapshot().checkpoint_commit_count;
+    const std::uint32_t bodies_before = s.kit_body_count();
+    std::uint64_t fabricated_entity = 0;
+    if (fabricate_first) {
+        fabricated_entity = fabricate_crowbar(s);
+    }
+    // The drop breaks the crate on landing, far past the 300 N.s line.
+    const auto at = s.kit_body_position(crate);
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    (void)s.advance_frame(spawn == scraperx::sim::InitialSpawn::HighDrop ? 1.0 : 2.0);
+    require(s.stock_damage(entity).broken, (prefix + "the crate breaks").c_str());
+    require(s.kit_body_count() == bodies_before + (fabricate_first ? 1 : 0) + 8,
+            (prefix + "the break adds eight pieces").c_str());
+    if (spawn == scraperx::sim::InitialSpawn::HighDrop) {
+        require(s.snapshot().checkpoint_commit_count == commits_before,
+                (prefix + "no checkpoint commits while falling").c_str());
+    } else {
+        require(s.snapshot().checkpoint_commit_count > commits_before,
+                (prefix + "a checkpoint commits after the break").c_str());
+    }
+    if (!fabricate_first) {
+        fabricated_entity = fabricate_crowbar(s);
+        if (spawn == scraperx::sim::InitialSpawn::ExteriorGrade) {
+            (void)s.advance_frame(2.0);  // the crowbar settles; a commit takes it
+        }
+    }
+    // The source's fabricated body and pieces, as the save must carry them.
+    const std::uint32_t fabricated_body = s.fabricated_object(0).body;
+    const auto fabricated_at = s.kit_body_position(fabricated_body);
+    const auto fabricated_rot = s.kit_body_rotation(fabricated_body);
+    const auto fabricated_vel = s.kit_body_velocity(fabricated_body);
+    const double fabricated_mass = s.kit_body_mass(fabricated_body);
+    const std::vector<std::uint8_t> fabricated_bytes = s.fabricated_data(0);
+    std::array<Vector3, 8> piece_at{};
+    std::array<Vector3, 8> piece_vel{};
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = s.kit_body_index(piece_entity_for(entity, k));
+        piece_at[k] = s.kit_body_position(body);
+        piece_vel[k] = s.kit_body_velocity(body);
+    }
+    const std::uint32_t bodies_after = s.kit_body_count();
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    Simulation t(spawn);
+    require(t.load_game(bytes.data(), bytes.size()), (prefix + "the fresh world loads the save").c_str());
+    // The fabricated object: the same entity, hull, transform and state.
+    require(t.fabricated_count() == 1, (prefix + "one fabricated object loads").c_str());
+    require(t.fabricated_object(0).entity == fabricated_entity,
+            (prefix + "the fabricated entity matches").c_str());
+    require(t.fabricated_data(0) == fabricated_bytes, (prefix + "the fabricated hull matches").c_str());
+    const std::uint32_t loaded_body = t.fabricated_object(0).body;
+    const auto loaded_at = t.kit_body_position(loaded_body);
+    require(std::hypot(loaded_at.x - fabricated_at.x, loaded_at.y - fabricated_at.y,
+                       loaded_at.z - fabricated_at.z) < 0.05,
+            (prefix + "the fabricated position matches").c_str());
+    require(quat_near(t.kit_body_rotation(loaded_body), fabricated_rot, 0.01),
+            (prefix + "the fabricated rotation matches").c_str());
+    const auto loaded_vel = t.kit_body_velocity(loaded_body);
+    require(std::hypot(loaded_vel.x - fabricated_vel.x, loaded_vel.y - fabricated_vel.y,
+                       loaded_vel.z - fabricated_vel.z) < 0.05,
+            (prefix + "the fabricated velocity matches").c_str());
+    require(std::abs(t.kit_body_mass(loaded_body) - fabricated_mass) < 0.01,
+            (prefix + "the fabricated mass matches").c_str());
+    // The pieces: all eight, once, with their state.
+    require(t.kit_body_count() == bodies_after, (prefix + "the piece count matches").c_str());
+    require(!t.kit_body_enabled(crate), (prefix + "the crate stays parked").c_str());
+    require(t.stock_damage(entity).broken, (prefix + "the crate stays broken").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = t.kit_body_index(piece_entity_for(entity, k));
+        require(body != 0xFFFFFFFFU, (prefix + "every piece exists").c_str());
+        require(std::abs(t.kit_body_mass(body) - mass / 8.0) < 0.01,
+                (prefix + "every piece keeps its mass share").c_str());
+        const auto pp = t.kit_body_position(body);
+        require(std::hypot(pp.x - piece_at[k].x, pp.y - piece_at[k].y, pp.z - piece_at[k].z) < 0.05,
+                (prefix + "every piece keeps its position").c_str());
+        const auto pv = t.kit_body_velocity(body);
+        require(std::hypot(pv.x - piece_vel[k].x, pv.y - piece_vel[k].y, pv.z - piece_vel[k].z) < 0.05,
+                (prefix + "every piece keeps its velocity").c_str());
+    }
+    // A later round trip holds.
+    const std::vector<std::uint8_t> bytes2 = t.save_game();
+    Simulation u(spawn);
+    require(u.load_game(bytes2.data(), bytes2.size()), (prefix + "the round trip loads").c_str());
+    require(u.fabricated_count() == 1 && u.fabricated_object(0).entity == fabricated_entity,
+            (prefix + "the round trip keeps the fabricated object").c_str());
+    require(u.kit_body_count() == bodies_after, (prefix + "the round trip keeps the piece count").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        require(u.kit_body_index(piece_entity_for(entity, k)) != 0xFFFFFFFFU,
+                (prefix + "the round trip keeps every piece").c_str());
+    }
 }
 
 } // namespace
@@ -596,4 +739,9 @@ void run_stock_damage() {
                     "stock damage break death: each surviving piece keeps an eighth of the mass");
         }
     }
+    // ---- (c) fabricate-and-break save/load, both orders, both timings -----
+    fabricated_break_case(scraperx::sim::InitialSpawn::HighDrop, true, "fabricate first, before commit");
+    fabricated_break_case(scraperx::sim::InitialSpawn::ExteriorGrade, true, "fabricate first, after commit");
+    fabricated_break_case(scraperx::sim::InitialSpawn::HighDrop, false, "break first, before commit");
+    fabricated_break_case(scraperx::sim::InitialSpawn::ExteriorGrade, false, "break first, after commit");
 }
