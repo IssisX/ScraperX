@@ -112,6 +112,25 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "mcp__github__add_issue_comment|mcp__github__update_issue_comment|mcp__github__create_pull_request|mcp__github__update_pull_request|mcp__github__issue_write|mcp__github__add_reply_to_pull_request_comment|mcp__Gmail__send_message|mcp__Gmail__create_draft|mcp__Gmail__reply|SendMessage|mcp__claude-code-remote__send_message|Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_clock_read.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_clock_read.py"
+          }
+        ]
       }
     ]
   },
