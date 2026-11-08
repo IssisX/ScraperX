@@ -242,9 +242,14 @@ public:
     // Motor spring and torque caps (N m), per upper joint. Prototype values
     // (Grok #244 pins gains): stiff enough to hold the rest pose against
     // gravity and return after a jab, soft enough that a punch snaps the head.
-    static constexpr float kUpperMotorHz[kUpperCount] = {20.0F, 20.0F, 20.0F, 20.0F, 20.0F};  // J-044c prototype: 20 Hz holds the diagonal arms against gravity at <0.5 deg; pinned when Grok #244 lands
-    static constexpr float kUpperMotorDamping = 1.0F;  // J-044c prototype: critical damping; pinned when Grok #244 lands
+    static constexpr float kUpperMotorHz[kUpperCount] = {20.0F, 20.0F, 20.0F, 20.0F, 20.0F};  // J-044c: 20 Hz holds the diagonal arms against gravity at <0.5 deg; the springs are sized from each joint's distal subtree inertia (#298), so the nominal rate is what the joint does
+    static constexpr float kUpperMotorDamping = 1.0F;  // J-044c: critical damping, sized from the same subtree inertia (#298)
     static constexpr float kUpperMotorTorqueNm[kUpperCount] = {120.0F, 120.0F, 400.0F, 150.0F, 150.0F};
+    // Each upper joint's distal subtree (the segments it carries), in joint
+    // order: head alone, neck + head, chest + neck + head + arms, one arm each.
+    static constexpr int kUpperDistal[kUpperCount][kUpperCount] = {
+        {0, -1, -1, -1, -1}, {1, 0, -1, -1, -1}, {2, 1, 0, 3, 4}, {3, -1, -1, -1, -1}, {4, -1, -1, -1, -1},
+    };
     // J-044c: her upper body's motors draw on her tick's one account
     // (feet_budget_, 8 kN / 44 kW), last before the solve that uses them,
     // and may use only what it granted (step_upper_body). A joint's torque is
@@ -2144,6 +2149,19 @@ public:
     // twist max, all radians). Tests only: they say whether the settings
     // the constraint was built with are the ones in the spec.
     void upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept;
+    // J-044c gains test (#298, Claude 12:17): hold the root and the chest
+    // still, so a release test measures one joint's spring alone, and pitch
+    // a joint's whole distal subtree by `degrees` about the joint anchor.
+    // Tests only.
+    void debug_hold_upper_root_chest_for_test(bool hold) noexcept;
+    void debug_pitch_upper_for_test(int joint, float degrees) noexcept;
+    // The distal subtree inertia (kg m^2) the joint's spring is sized for,
+    // read from the shapes at startup. Tests only.
+    [[nodiscard]] float upper_subtree_inertia_for_test(int joint) const noexcept;
+    // A joint's signed pitch (degrees), read live from the bodies' current
+    // rotations — no tick needed, so a posed angle reads true before the
+    // springs move it. Tests only.
+    double debug_upper_pitch_for_test(int joint) noexcept;
     [[nodiscard]] JPH::BodyID upper_body(const int segment) const noexcept {
         return segment >= 0 && segment < kUpperCount ? upper_body_[static_cast<std::size_t>(segment)] : JPH::BodyID();
     }
@@ -2535,6 +2553,7 @@ private:
     std::array<JPH::BodyID, kUpperCount> upper_body_{};
     std::array<JPH::Ref<JPH::TwoBodyConstraint>, kUpperCount> upper_joint_{};
     std::array<JPH::Quat, kUpperCount> upper_rest_{};  // rest relative rotation, per segment
+    std::array<float, kUpperCount> upper_subtree_inertia_{};  // distal subtree inertia about each joint anchor, read from the shapes at startup (#298)
     bool upper_in_world_ = false;
     float upper_motor_power_w_ = 0.0F;  // last tick's motor work (upper bound), watts
     // The yaw the joints were baked at (create_upper_body): their anchors sit

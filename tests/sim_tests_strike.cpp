@@ -624,6 +624,104 @@ void run_matron_upper_body() {
     std::cout << "PASS scraperx_sim matron-upper-body\n";
 }
 
+void run_matron_upper_gains() {
+    // J-044c motor gains (#298, the 12:17 ruling): FrequencyAndDamping
+    // sizes each joint's spring for the two joined bodies only, ignoring
+    // the distal subtree, so the chest-neck joint (neck + head, ~0.28 kg
+    // m^2) got a spring for the neck alone (~0.006 kg m^2) and behaves like
+    // ~3 Hz / zeta 0.15 instead of 20 Hz / zeta 1.0. Falsifier: hold the
+    // root and the chest, pitch the neck and head 15 deg about the
+    // chest-neck joint, release, run 90 ticks. A real overshoot confirms
+    // the claim; a monotone return kills it.
+    const auto pitch_deg = [](const Simulation &s) {
+        // Signed pitch of the neck joint, degrees: twice the x of its swing
+        // quaternion in her frame (a pure pitch is a rotation about her
+        // right, so the x component carries the whole angle).
+        const auto q = s.matron_state().upper_q[1];
+        return 2.0 * std::atan2(q.x, q.w) * 180.0 / 3.14159265358979323846;
+    };
+    const auto place = [](Simulation &s) {
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.debug_place_matron(Vector3{p.x, p.y - 0.20, p.z + 3.0});
+        s.debug_set_matron_state_for_test(0);  // Dormant
+        for (int i = 0; i < 150; ++i) {
+            tick(s);
+        }
+    };
+    Simulation s(InitialSpawn::Deck154);
+    place(s);
+    // The settled pitch, read live from the bodies (the view is fresh after
+    // the settle, but the live read is the same number either way).
+    const double eq0 = s.debug_upper_pitch_for_test(1);
+    const double mag0 = s.matron_state().upper_angle_deg[1];
+    const double head0 = s.debug_upper_pitch_for_test(0);
+    std::cout << "  upper gains: subtree inertia kg m^2 head=" << s.upper_subtree_inertia_for_test(0)
+              << " neck=" << s.upper_subtree_inertia_for_test(1) << " chest=" << s.upper_subtree_inertia_for_test(2)
+              << " arm_l=" << s.upper_subtree_inertia_for_test(3) << " arm_r=" << s.upper_subtree_inertia_for_test(4)
+              << " settled neck pitch deg=" << eq0 << " mag deg=" << mag0 << " head pitch deg=" << head0 << "\n";
+    s.debug_hold_upper_root_chest_for_test(true);
+    s.debug_pitch_upper_for_test(1, 15.0F);
+    // Read live, before any tick: the view is refreshed only when the sim
+    // steps, and one tick of spring action already moves the soft joint
+    // several degrees, so a post-tick read is not the posed angle.
+    const double start = s.debug_upper_pitch_for_test(1);
+    const double head_after = s.debug_upper_pitch_for_test(0);
+    std::cout << "  upper gains: pitched neck to start deg=" << start << " head pitch deg=" << head_after << "\n";
+    require(std::abs(start - (eq0 + 15.0)) < 1.0, "upper gains: the pitch sets the neck 15 deg off its rest");
+    require(std::abs(head_after - head0) < 1.0, "upper gains: the pitch carries the head with the neck, rigidly");
+    double trace[90] = {};
+    for (int i = 0; i < 90; ++i) {
+        tick(s);
+        trace[i] = pitch_deg(s);
+    }
+    // Equilibrium: the mean of the last 10 ticks.
+    double eq = 0.0;
+    for (int i = 80; i < 90; ++i) {
+        eq += trace[i];
+    }
+    eq /= 10.0;
+    // Overshoot: how far past equilibrium it swings on the far side, after
+    // first crossing below it. No crossing, no overshoot.
+    double overshoot = 0.0;
+    bool crossed = false;
+    double min_after = 0.0;
+    for (int i = 0; i < 90; ++i) {
+        if (!crossed && trace[i] < eq) {
+            crossed = true;
+            min_after = trace[i];
+        } else if (crossed) {
+            min_after = std::min(min_after, trace[i]);
+        }
+    }
+    if (crossed) {
+        overshoot = eq - min_after;
+    }
+    // Settling: first tick after which it stays within 1 deg of eq.
+    int settle_tick = -1;
+    for (int i = 0; i < 90; ++i) {
+        bool ok = true;
+        for (int j = i; j < 90; ++j) {
+            if (std::abs(trace[j] - eq) >= 1.0) {
+                ok = false;
+                break;
+            }
+        }
+        if (ok) {
+            settle_tick = i;
+            break;
+        }
+    }
+    std::cout << "  upper gains: eq deg=" << eq << " overshoot deg=" << overshoot << " settle tick=" << settle_tick
+              << " (90 ticks = 1 s)\n";
+    require(overshoot < 1.0, "upper gains: the neck returns without real overshoot");
+    require(settle_tick >= 0 && settle_tick <= 45, "upper gains: the neck settles within half a second");
+    std::cout << "PASS scraperx_sim matron-upper-gains\n";
+}
+
 namespace {
 // The low sweep (sim/physics_world_strike.cpp): Punch while crouched. Her
 // `her_ahead_m` in front of him on the Deck154 start, crouched, one sweep:

@@ -201,6 +201,7 @@ int main() {
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-upper-body") {
         run_matron_upper_body();
+        run_matron_upper_gains();
         return 0;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-sweep") {
@@ -682,6 +683,7 @@ int main() {
     // every ctest.
     run_strike();
     run_matron_upper_body();
+    run_matron_upper_gains();
     run_one_arm_route();
     run_bay();
     run_loose_stock();
