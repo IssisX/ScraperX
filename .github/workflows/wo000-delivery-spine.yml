@@ -1036,6 +1036,19 @@ jobs:
           grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
 
+      - name: Check the far world reads as a valley (J-021 job 4)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # far_world_test.gd (J-021, job 4): the far world builds the
+          # valley floor's drawn top and the tower's long shadow, the rim
+          # is 12 variants turned by where each stands, and the sky carries
+          # the horizon past the far plane — while the floor's boxes stay
+          # solids. The job-11 water checks run on the job-11 branch.
+          timeout 180s tools/godot/godot --headless --path godot \
+            --script res://tests/far_world_test.gd 2>&1 | tee artifacts/far-world.log
+          grep -q '^FAR_WORLD PASS' artifacts/far-world.log
+
       - name: Fight S1 act test
         shell: bash
         run: |
