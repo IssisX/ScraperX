@@ -33,6 +33,7 @@ add_library(scraperx_sim STATIC
     src/sim/matron_moves.cpp
     src/sim/matron_travel.cpp
     src/sim/matron_pipe.cpp
+    src/sim/matron_hoist.cpp
     src/sim/matron_line.cpp
     src/sim/matron_climb.cpp
     src/sim/physics_world_traversal.cpp
@@ -227,6 +228,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         tests/sim_tests_water.cpp
         tests/sim_tests_matron_moves.cpp
         tests/sim_tests_matron_grab.cpp
+        tests/sim_tests_matron_hoist.cpp
         tests/sim_tests_matron_ladder_pull.cpp
         tests/sim_tests_matron_load.cpp
         tests/sim_tests_matron_budget.cpp
@@ -254,7 +256,7 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
     add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
-    foreach(slice matron-damage matron-ladder matron-hearing matron-sight matron-honest matron-stalk matron-climb matron-climb-support matron-state-exits matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab matron-ladder-pull matron-shape matron-load matron-exam-descent matron-sweep matron-kick forklift-matron matron-jab perf-step matron-budget matron-capacity machine-hearing)
+    foreach(slice matron-damage matron-ladder matron-hearing matron-sight matron-honest matron-stalk matron-climb matron-climb-support matron-state-exits matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab matron-ladder-pull matron-shape matron-load matron-exam-descent matron-sweep matron-kick forklift-matron matron-jab perf-step matron-budget matron-capacity machine-hearing matron-hoist)
         add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)
         set_tests_properties(scraperx_sim.${slice} PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=${slice}")
     endforeach()

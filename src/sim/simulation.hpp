@@ -1777,6 +1777,14 @@ public:
         double gravity_factor = 1.0;
     };
     [[nodiscard]] MatronJourney matron_journey() const noexcept;
+    // Her hoist leg (matron.hpp hoist_view): its phase (0 none .. 5 stepping
+    // off), the rides she finished, her hands' push this tick (N).
+    struct MatronHoist {
+        int phase = 0;
+        std::uint32_t rides = 0;
+        float hand_n = 0.0F;
+    };
+    [[nodiscard]] MatronHoist matron_hoist() const noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
     // Tests: ArmPlay in a hold (-1 or 1 her rule: every hold while an arm is left; 0 never, the

@@ -1269,6 +1269,11 @@ Simulation::MatronJourney Simulation::matron_journey() const noexcept {
     return out;
 }
 
+Simulation::MatronHoist Simulation::matron_hoist() const noexcept {
+    const Matron::HoistView v = physics_world_->matron().hoist_view();
+    return {v.phase, v.rides, v.hand_n};
+}
+
 void Simulation::debug_matron_patrol() noexcept {
     physics_world_->matron().patrol_for_test();
 }
