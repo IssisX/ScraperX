@@ -7,7 +7,7 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794139747 (2026-11-08 12:09:07Z, 6:09 AM Central)
 
 ## Meter
-83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56); 86% 12:26 PM; 86% 1:36 PM; est. 86.9% 5:18 PM ($578.80); 87% 8:16 PM ($581.11, Cory; fit holds). Burn 5:18-8:16 PM $2.3 (quiet); predicted 87.5% at 11 PM, under 89%. 87% Sun 6:11 AM (Cory): flat overnight, second reading under; throttle off, helpers per CLAUDE.md again. 98% by Sun 11 PM leaves 11% for 17 h. Throttled since 10:30 AM; from 12:40 PM one helper allowed, only for a job stuck twice (Cory: reset Sun afternoon); the 1:17 PM run answers and
+83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56); 86% 12:26 PM; 86% 1:36 PM; est. 86.9% 5:18 PM ($578.80); 87% 8:16 PM ($581.11, Cory; fit holds). Burn 5:18-8:16 PM $2.3 (quiet); predicted 87.5% at 11 PM, under 89%. 87% Sun 6:11 AM (Cory): flat overnight, second reading under; throttle off, helpers per CLAUDE.md again. 98% by Sun 11 PM leaves 11% for 17 h. 88% Sun 7:03 AM (Cory): the #319 helper cost about 1%; 10% left for 16 h. Throttled since 10:30 AM; from 12:40 PM one helper allowed, only for a job stuck twice (Cory: reset Sun afternoon); the 1:17 PM run answers and
 merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12:26 PM, integrator at xhigh); needs 0.39%/h around the clock, or about 0.6%/h over the 23 active run hours left; fits with about 2% to spare. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
 
 ## Waiting on me
