@@ -4,15 +4,16 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794093360 (2026-11-07 23:16:00Z, 5:16 PM Central)
+Read through: 1794100618 (2026-11-08 01:16:58Z, 7:16 PM Central)
 
 ## Meter
 83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56); 86% 12:26 PM; 86% 1:36 PM; est. 86.9% 5:18 PM ($578.80), predicts about 89.3% at 11 PM, over the 89% checkpoint: throttled (no helper, quiet runs), meter asked 5:18 PM. Throttled since 10:30 AM; from 12:40 PM one helper allowed, only for a job stuck twice (Cory: reset Sun afternoon); the 1:17 PM run answers and
 merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12:26 PM, integrator at xhigh); needs 0.39%/h around the clock, or about 0.6%/h over the 23 active run hours left; fits with about 2% to spare. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
 
 ## Waiting on me
-- From Muse: #298 ruling-B fix and the motor-gain test; #299 P1 fix; the J-049 PR 1 fix (mailed 11:20 AM);
-  J-061 #312 wind leak (mailed 1:45 PM; ChatGPT cause verified, approach mailed 3:14 PM); #309 black eye rotated 180° (FIX posted 3:14 PM, flip tested). Cory said 1:37 PM Muse had #298 done; nothing pushed yet (head 03ad884b).
+- From Muse (ruled 7:19 PM, one mail): #291 start out of reach + not-in-Grab check; #298 test-side budget, cap waived;
+  J-049 fix timing (ChatGPT asked on #278); J-001 reserved feet share then hold release; J-021 split; J-059 side-rim + flip push;
+  J-044d push d, I as a follow-up; J-043 inventory; hair; button real-tap check. #299 P1 fix; J-061 running. J-008 pushed @ 45e16da2.
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
 
