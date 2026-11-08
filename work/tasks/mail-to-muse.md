@@ -32,5 +32,6 @@ the same hour.
 - One job per mail where it can be.
 
 ## A refused mail anyway
-Muse tells Cory and mails me its ID and the reason its check gave (11-07: the check names no reason, only
-"did not pass a prompt-injection safety check", so the list stays a guess); Cory pastes what Muse needs; its shape joins the list above.
+Muse mails me (not Cory) its ID and the reason its check gave; I resend it reworded the same hour, and Cory
+hears only if the resend is refused too (Cory 11-08) (11-07: the check names no reason, only
+"did not pass a prompt-injection safety check", so the list stays a guess); its shape joins the list above.
