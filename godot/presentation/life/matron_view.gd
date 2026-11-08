@@ -2426,8 +2426,9 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_ease_hands(data, delta)
 	_drive_body(data, delta, camera_position, falling)
 	# J-044i: her injuries, from the per-region dictionary J-044g fills.
+	# delta drives the J-059 black-eye pool (the ring darkens over 15 s).
 	if _injury != null:
-		_injury.update(data.get("injury", {}), _rig)
+		_injury.update(data.get("injury", {}), _rig, delta)
 	# A corpse is drawn but makes none of her living sounds (matron_sound.gd: out_near is "out, alive and near").
 	_hear(data, delta, alive, _figure.global_position, player_position, falling)
 
