@@ -895,6 +895,7 @@ void run_matron_upper_body();  // J-044c: the jointed upper body
 void run_matron_damage();
 void run_matron_sweep();
 void run_matron_kick();
+void run_matron_fist_contact();  // J-044d: real fist contact, region, glancing share
 void run_matron_traverse();
 void run_matron_pursuit();
 void run_matron_chase();

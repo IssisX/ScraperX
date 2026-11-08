@@ -209,6 +209,10 @@ int main() {
         run_matron_kick();
         return 0;
     }
+    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-fist-contact") {
+        run_matron_fist_contact();
+        return 0;
+    }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder-pull") {
         run_matron_ladder_pull();
         return EXIT_SUCCESS;

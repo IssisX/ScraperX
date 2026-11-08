@@ -1776,6 +1776,24 @@ public:
     [[nodiscard]] int strike_segment_for_test(Vector3 at) const noexcept;
     // J-044c tests only: how many of the 5 upper joints are in the system's constraint list.
     [[nodiscard]] int upper_constraints_in_system_for_test() const noexcept;
+    // J-044d tests only: what a fist sphere cast from `from` to `to` meets
+    // (the same contact the punch uses), and the last hit contact's region
+    // and glancing share: the region and the impulse credited to it, the
+    // unclassified bucket, and how many contacts were recorded. Regions are
+    // Matron::HitRegion values, as ints (the header does not see Matron).
+    struct FistContactProbe {
+        bool hit = false;  // the fist met one of her bodies
+        int region = -1;   // the Matron::HitRegion it falls in, as an int
+        Vector3 point{};   // the point on her skin
+        Vector3 normal{};  // the outward normal there
+        float solid_share = 0.0F;  // how head-on the travel was (1 dead-on)
+    };
+    [[nodiscard]] FistContactProbe fist_contact_for_test(Vector3 from, Vector3 to) const noexcept;
+    [[nodiscard]] int last_hit_region_for_test() const noexcept;
+    [[nodiscard]] float last_hit_solid_for_test() const noexcept;
+    [[nodiscard]] float region_impulse_for_test(int region) const noexcept;
+    [[nodiscard]] float unclassified_impulse_for_test() const noexcept;
+    [[nodiscard]] std::uint64_t hit_contact_count_for_test() const noexcept;
     // J-044c tests only: the neck joint's stored limits (radians).
     void upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept;
     // Tests only (never bound to the bridge): an arm broken as a hard hit

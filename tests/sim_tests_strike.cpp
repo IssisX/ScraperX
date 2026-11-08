@@ -927,3 +927,212 @@ void run_matron_kick() {
             "kick: the same inputs give the same kick, to the bit");
     std::cout << "PASS scraperx_sim matron kick: impulse_ns=" << pest.impulse_ns << "\n";
 }
+
+void run_matron_fist_contact() {
+    // J-044d: the fist lands on the body it actually meets, in the region
+    // it falls on, with the glancing share of the dose. The reference punch
+    // is J_ref = 1500 N x 3/90 s = 50 N-s (J044A_SPEC.md). A level punch
+    // reaches her chest only (his fist 1.50 m, her head centre 1.66 m), so
+    // the cheek and the graze are proved by the same cast at head height.
+    // Her centre is 1.05 m over her feet; her head centre 0.61 and her
+    // chest centre 0.33 over that. A chest-edge graze is shielded by her
+    // arm, so the graze is on her head, where nothing stands in the way.
+    using Region = scraperx::sim::Matron::HitRegion;
+    // A fist cast at her: from 1.5 m out along her facing, through the point
+    // `lateral_m` across her right at `height_m` over her centre, to 0.5 m
+    // past. Her live yaw, so the path is exact for this tick.
+    auto probe = [](Simulation &s, const double lateral_m, const double height_m) {
+        const auto m = s.matron_state();
+        const double fx = std::sin(m.yaw), fz = std::cos(m.yaw);
+        const double rx = std::cos(m.yaw), rz = -std::sin(m.yaw);
+        const double cx = m.position.x + rx * lateral_m;
+        const double cz = m.position.z + rz * lateral_m;
+        const double cy = m.position.y + height_m;
+        return s.fist_contact_for_test(Vector3{cx + fx * 1.5, cy, cz + fz * 1.5},
+                                       Vector3{cx - fx * 0.5, cy, cz - fz * 0.5});
+    };
+    // Her on the deck, standing still (Dormant), motors settled.
+    auto place_still = [](Simulation &s) {
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.debug_place_matron(Vector3{p.x, p.y - 0.20, p.z + 3.0});
+        s.debug_set_matron_state_for_test(0);  // Dormant
+        for (int i = 0; i < 150; ++i) {
+            tick(s);
+        }
+    };
+    {
+        // The cheek, left and right: the same cast at head height, mirrored.
+        // A punch on her left cheek turns her head one way, on her right
+        // cheek the other way, just as far. The impulse is J_ref, at the
+        // cast's contact point, on the head (segment 0).
+        double turn_l = 0.0, turn_r = 0.0;
+        for (int side = 0; side < 2; ++side) {
+            Simulation s(InitialSpawn::Deck154);
+            place_still(s);
+            const double lateral = side == 0 ? -0.10 : 0.10;
+            const auto hit = probe(s, lateral, 0.61);
+            std::cout << "  fist contact cheek side=" << side << " hit=" << hit.hit
+                      << " region=" << hit.region << " solid=" << hit.solid_share << "\n";
+            require(hit.hit, "fist contact: the cheek cast meets her head");
+            require(hit.region == static_cast<int>(side == 0 ? Region::FaceL : Region::FaceR),
+                    "fist contact: the cast lands on the cheek it is aimed at");
+            const auto m = s.matron_state();
+            s.debug_upper_impulse(0, Vector3{-std::sin(m.yaw) * 50.0, 0.0, -std::cos(m.yaw) * 50.0}, hit.point);
+            tick(s);
+            const double signed_turn = s.matron_state().upper_head_angvel.y;
+            double peak = std::abs(signed_turn);
+            for (int i = 0; i < 4; ++i) {
+                tick(s);
+                peak = std::max(peak, std::abs(s.matron_state().upper_head_angvel.y));
+            }
+            std::cout << "  fist contact cheek side=" << side << " turn=" << signed_turn << " peak=" << peak
+                      << "\n";
+            require(peak > 0.1, "fist contact: the cheek hit turns her head");
+            if (side == 0) {
+                turn_l = signed_turn;
+            } else {
+                turn_r = signed_turn;
+            }
+        }
+        require((turn_l > 0.0) != (turn_r > 0.0),
+                "fist contact: the left and right cheeks turn her head opposite ways");
+        require(std::abs(std::abs(turn_l) - std::abs(turn_r)) <
+                    0.2 * std::max(std::abs(turn_l), std::abs(turn_r)),
+                "fist contact: the mirrored cheeks turn her head equally far");
+    }
+    {
+        // Glancing vs solid, on her head: dead-on the share is 1, a graze
+        // at the edge is near 0. The dead-on hit is her face; the graze
+        // catches the side of her skull.
+        Simulation s(InitialSpawn::Deck154);
+        place_still(s);
+        const auto solid = probe(s, 0.0, 0.61);
+        const auto graze = probe(s, 0.18, 0.61);
+        std::cout << "  fist contact glancing: solid=" << solid.solid_share << " region="
+                  << static_cast<int>(solid.region) << " graze=" << graze.solid_share << " region="
+                  << static_cast<int>(graze.region) << "\n";
+        // Dead-on there is no side, so which cheek is floating-point noise;
+        // the contract is that the hit is on her face, left or right.
+        require(solid.hit &&
+                    (solid.region == static_cast<int>(Region::FaceL) ||
+                     solid.region == static_cast<int>(Region::FaceR)),
+                "fist contact: the dead-on head cast is her face");
+        require(solid.solid_share > 0.9, "fist contact: the dead-on head cast is solid");
+        require(graze.hit && graze.region == static_cast<int>(Region::Skull),
+                "fist contact: the head graze catches her skull");
+        require(graze.solid_share < 0.5 * solid.solid_share,
+                "fist contact: the graze delivers less than half the solid share");
+    }
+    {
+        // The arm intercepts: a punch line across her right arm meets the
+        // arm first, not her chest; the mirror meets her left arm.
+        Simulation s(InitialSpawn::Deck154);
+        place_still(s);
+        const auto right = probe(s, 0.20, 0.33);
+        const auto left = probe(s, -0.20, 0.33);
+        std::cout << "  fist contact arm: right region=" << static_cast<int>(right.region)
+                  << " solid=" << right.solid_share << " left region=" << static_cast<int>(left.region)
+                  << " solid=" << left.solid_share << "\n";
+        require(right.hit && right.region == static_cast<int>(Region::ArmR),
+                "fist contact: the right line meets her right arm");
+        require(left.hit && left.region == static_cast<int>(Region::ArmL),
+                "fist contact: the left line meets her left arm");
+        require(right.solid_share > 0.5 && left.solid_share > 0.5,
+                "fist contact: the arm hits are solid, not grazes");
+    }
+    {
+        // A miss: a cast a metre to her side, and one over her head, meet
+        // nothing; a punch pressed with her out of reach is not offered and
+        // credits nothing.
+        Simulation s(InitialSpawn::Deck154);
+        place_still(s);
+        require(!probe(s, 1.0, 0.33).hit, "fist contact: a cast a metre to her side meets nothing");
+        require(!probe(s, 0.0, 2.5).hit, "fist contact: a cast over her head meets nothing");
+        Simulation t(InitialSpawn::Deck154);
+        t.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(t);
+        }
+        const Vector3 p = t.snapshot().player_position;
+        (void)t.set_facing(0.0, 1.0);
+        t.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + 3.0});
+        tick(t);
+        const double damage_before = t.matron_state().damage_ns;
+        require(!t.snapshot().strike_offered, "fist contact: the punch is not offered out of reach");
+        require(t.matron_state().damage_ns == damage_before, "fist contact: the unoffered punch credits nothing");
+        require(t.hit_contact_count_for_test() == 0, "fist contact: the unoffered punch records nothing");
+    }
+    {
+        // A level punch, dead-on, end to end: the fist meets her chest, the
+        // dose is J_ref, and the region credit plus the unclassified bucket
+        // add up to the damage. The contact is recorded, with its region
+        // and share.
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        // Her on the deck 0.80 m in front, Dormant. The punch's reach is
+        // 0.75 m from his chest and her chest's front is 0.10 m behind her
+        // centre, so at 1.05 m the fist can only meet her root (belly); at
+        // 0.80 m it meets her chest's front face dead-on.
+        s.debug_place_matron(Vector3{p.x, p.y - 1.25, p.z + 0.80});
+        // Dormant: she stands still, so the punch meets her chest dead-on
+        // instead of catching her mid-stride (take_blow still credits a
+        // blow while Dormant; only Down and Emerging discard one).
+        s.debug_set_matron_state_for_test(0);  // Dormant
+        // debug_place_matron leaves her facing +z, away from him; turn her
+        // to face him (yaw pi, toward -z), so the punch meets her chest,
+        // not her back.
+        s.debug_face_matron(3.141592653589793);
+        s.debug_hold_matron_hands(30.0);
+        const double damage_before = s.matron_state().damage_ns;
+        const double chest_before = s.region_impulse_for_test(static_cast<int>(Region::Chest));
+        const double unclass_before = s.unclassified_impulse_for_test();
+        const std::uint64_t contacts_before = s.hit_contact_count_for_test();
+        tick(s);
+        require(s.snapshot().strike_offered, "fist contact: the level punch is offered");
+        (void)s.request_strike();
+        // Windup 11 + reach 6 + the 3 contact ticks: 25 ticks clears the
+        // landing, while the strike is still in recoil and its impulse
+        // stands in the snapshot.
+        for (int i = 0; i < 25; ++i) {
+            tick(s);
+        }
+        require(s.snapshot().strike_hit_count == 1, "fist contact: the level punch lands");
+        const double impulse = s.snapshot().strike_impulse_ns;
+        const double damage = s.matron_state().damage_ns - damage_before;
+        const double chest = s.region_impulse_for_test(static_cast<int>(Region::Chest)) - chest_before;
+        const double unclass = s.unclassified_impulse_for_test() - unclass_before;
+        const int contact_region = s.last_hit_region_for_test();
+        const float contact_solid = s.last_hit_solid_for_test();
+        std::cout << "  fist contact punch: impulse_ns=" << impulse << " damage_ns=" << damage
+                  << " chest_ns=" << chest << " unclassified_ns=" << unclass << " region=" << contact_region
+                  << " solid=" << contact_solid
+                  << " contacts=" << (s.hit_contact_count_for_test() - contacts_before) << "\n";
+        require(contact_region == static_cast<int>(Region::Chest),
+                "fist contact: the level punch lands on her chest");
+        // The dose is J_ref scaled by the glancing share: her chest sits
+        // high, so the fist catches its lower edge (measured solid ~0.59,
+        // a real hit, not a graze); the scaling, not a fixed 50, is the
+        // mechanism under test.
+        require(contact_solid > 0.5, "fist contact: the level punch is a real hit, not a graze");
+        require(std::abs(impulse - 50.0 * static_cast<double>(contact_solid)) < 5.0,
+                "fist contact: the level punch delivers J_ref times its share");
+        require(std::abs(chest + unclass - damage) < 1.0e-3,
+                "fist contact: the region credit plus the unclassified bucket is the damage");
+        require(std::abs(unclass) < 1.0e-3, "fist contact: a clean punch leaves nothing unclassified");
+        // One contact per tick the force is held (kStrikeContactTicks = 3),
+        // each a third of J_ref; the region credit is the sum.
+        require(s.hit_contact_count_for_test() - contacts_before == 3,
+                "fist contact: one contact is recorded per tick the punch is held");
+    }
+    std::cout << "PASS scraperx_sim matron fist contact\n";
+}

@@ -1260,6 +1260,45 @@ int Simulation::upper_constraints_in_system_for_test() const noexcept {
     return physics_world_->matron().upper_constraints_in_system_for_test();
 }
 
+// J-044d: the fist contact for a test path (the same cast the punch uses),
+// and the hit-contact record. Both go straight to the Matron / world.
+Simulation::FistContactProbe Simulation::fist_contact_for_test(const Vector3 from, const Vector3 to) const noexcept {
+    JPH::BodyID met;
+    JPH::RVec3 point;
+    JPH::Vec3 normal;
+    FistContactProbe out;
+    const JPH::RVec3 f(from.x, from.y, from.z);
+    const JPH::RVec3 t(to.x, to.y, to.z);
+    out.hit = physics_world_->fist_contact(f, t, &met, &point, &normal, nullptr, &out.solid_share);
+    if (!out.hit) {
+        return out;
+    }
+    out.region = static_cast<int>(physics_world_->matron().resolve_hit_region(met, point));
+    out.point = Vector3{point.GetX(), point.GetY(), point.GetZ()};
+    out.normal = Vector3{normal.GetX(), normal.GetY(), normal.GetZ()};
+    return out;
+}
+
+int Simulation::last_hit_region_for_test() const noexcept {
+    return static_cast<int>(physics_world_->matron().last_hit_contact_for_test().region);
+}
+
+float Simulation::last_hit_solid_for_test() const noexcept {
+    return physics_world_->matron().last_hit_contact_for_test().solid_share;
+}
+
+float Simulation::region_impulse_for_test(const int region) const noexcept {
+    return physics_world_->matron().region_impulse_for_test(region);
+}
+
+float Simulation::unclassified_impulse_for_test() const noexcept {
+    return physics_world_->matron().unclassified_impulse_for_test();
+}
+
+std::uint64_t Simulation::hit_contact_count_for_test() const noexcept {
+    return physics_world_->matron().hit_contact_count_for_test();
+}
+
 void Simulation::upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept {
     physics_world_->matron().upper_neck_limits_for_test(normal, plane, twist_min, twist_max);
 }

@@ -626,6 +626,71 @@ int Matron::upper_constraints_in_system_for_test() const noexcept {
     return found;
 }
 
+// J-044d: the region a hit on `body` at world point `at` falls in. The
+// direction from the body's centre to the hit, read against her anatomical
+// axes in that body's live frame (her facing, right and up, turned into the
+// body by its live rotation — the head's local axes carry its creation yaw,
+// so the live rotation is the only honest frame). The head splits by its
+// sagittal plane; the root splits at the hip and by front/back/side.
+Matron::HitRegion Matron::resolve_hit_region(const JPH::BodyID body, const JPH::RVec3 at) const noexcept {
+    if (body.IsInvalid() || !physics_.GetBodyInterface().IsAdded(body)) {
+        return HitRegion::Unclassified;
+    }
+    const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    const Vec3 right(std::cos(yaw_), 0.0F, -std::sin(yaw_));
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    // (front, side, up) of the hit direction, in her anatomical axes.
+    const auto anatomical = [&](const RVec3 centre, const Quat rot) {
+        const Vec3 local = rot.Conjugated() * Vec3(at - centre);
+        const float len = local.Length();
+        const Vec3 d = len > 1.0e-6F ? local / len : Vec3::sZero();
+        const Vec3 f = rot.Conjugated() * facing;
+        const Vec3 r = rot.Conjugated() * right;
+        const Vec3 u = rot.Conjugated() * Vec3::sAxisY();
+        return Vec3(d.Dot(f), d.Dot(r), d.Dot(u));
+    };
+    if (upper_in_world_) {
+        for (int i = 0; i < kUpperCount; ++i) {
+            if (body != upper_body_[static_cast<std::size_t>(i)]) {
+                continue;
+            }
+            const RVec3 centre = bodies.GetPosition(body);
+            const Quat rot = bodies.GetRotation(body);
+            if (i == 0) {
+                const Vec3 dir = anatomical(centre, rot);
+                if (dir.GetX() > 0.45F && dir.GetZ() < -0.25F) {
+                    return HitRegion::Jaw;  // low front of the head
+                }
+                if (dir.GetX() > 0.45F) {
+                    return dir.GetY() >= 0.0F ? HitRegion::FaceR : HitRegion::FaceL;
+                }
+                return HitRegion::Skull;  // crown, back and top of the head
+            }
+            if (i == 1) {
+                return HitRegion::Neck;
+            }
+            if (i == 2) {
+                return anatomical(centre, rot).GetX() >= 0.0F ? HitRegion::Chest : HitRegion::Back;
+            }
+            return i == 3 ? HitRegion::ArmL : HitRegion::ArmR;
+        }
+    }
+    if (body == body_) {
+        const RVec3 centre = bodies.GetPosition(body_);
+        const Quat rot = bodies.GetRotation(body_);
+        const float h = float(at.GetY()) - (float(centre.GetY()) - kStandCentre);
+        const Vec3 dir = anatomical(centre, rot);
+        // The root is one capsule: legs are the low part, the side the
+        // contact falls on (a proxy — the capsule has no separate leg
+        // bodies); above the hip, belly in front, back behind.
+        if (h < 0.85F) {
+            return dir.GetY() >= 0.0F ? HitRegion::LegR : HitRegion::LegL;
+        }
+        return dir.GetX() >= 0.0F ? HitRegion::Belly : HitRegion::Back;
+    }
+    return HitRegion::Unclassified;
+}
+
 void Matron::upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept {
     normal = -1.0F;
     plane = -1.0F;
@@ -3687,6 +3752,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
 }
 
 void Matron::post_step(const float dt) {
+    ++tick_;
     take_blow(dt);
     // A killed body continues under gravity while the existing Down shape settles.
     if (dead_ && body_in_world_) down_for_s_ += dt;
@@ -4860,6 +4926,26 @@ void Matron::take_blow(const float dt) {
     // Judge each real contact impulse once, not the body's response as a second source.
     damage_ns_ += environment_ns + player_ns;
     player_damage_ns_ += player_ns;
+    // J-044d: the regions and the unclassified bucket reconcile with the
+    // total, this tick: his blow is credited to the region the fist actually
+    // met (struck_by_player carries it); every other striker's share, and
+    // any blow with no region, is unclassified. The last hit contact is the
+    // record the view and the next jobs read.
+    if (player_ns > 0.0F) {
+        const std::size_t region = static_cast<std::size_t>(player_blow_region_);
+        region_impulse_ns_[region] += player_ns;
+        last_hit_contact_.region = player_blow_region_;
+        last_hit_contact_.body = player_blow_body_;
+        last_hit_contact_.point = player_blow_at_;
+        last_hit_contact_.normal = player_blow_normal_;
+        last_hit_contact_.impulse_ns = player_ns;
+        last_hit_contact_.solid_share = player_blow_solid_;
+        last_hit_contact_.tick = tick_;
+        ++hit_contact_count_;
+    }
+    if (environment_ns > 0.0F) {
+        unclassified_impulse_ns_ += environment_ns;
+    }
     if (damage_lethal_at_ns(damage_ns_)) {
         dead_ = true;
         state_ = State::Dead;

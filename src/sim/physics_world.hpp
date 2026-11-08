@@ -1051,6 +1051,20 @@ public:
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;
     [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
+    // J-044d: the fist (a sphere of the strike radius) swept from `from` to
+    // `to`: the first thing it meets. Her body → true, with the body, the
+    // point on her skin, the outward normal there, the fraction along the
+    // cast, and how head-on the hit was (1 dead-on, 0 a graze); steel or
+    // stock first, or nothing in the way → false. A punch lands on what the
+    // fist actually meets, never on a distance to her capsule.
+    [[nodiscard]] bool fist_contact(JPH::RVec3 from, JPH::RVec3 to, JPH::BodyID *body, JPH::RVec3 *point,
+                                    JPH::Vec3 *normal, float *fraction = nullptr,
+                                    float *solid_share = nullptr) const noexcept;
+    // Fills a fist contact's out-params from the cast result the caller
+    // picked (see physics_world_strike.cpp).
+    [[nodiscard]] bool fill_fist_contact(const JPH::ShapeCastResult *found, JPH::BodyID met, JPH::RVec3 from,
+                                         JPH::Vec3 span, JPH::BodyID *body, JPH::RVec3 *point, JPH::Vec3 *normal,
+                                         float *fraction, float *solid_share) const noexcept;
     bool strike_in_hand_ = false;   // this strike began with him in her hand
     StrikePhase strike_phase_ = StrikePhase::Guard;
     int strike_ticks_ = 0;
@@ -1062,6 +1076,9 @@ public:
     JPH::RVec3 strike_point_ = JPH::RVec3::sZero();
     JPH::Vec3 strike_normal_ = JPH::Vec3::sZero();
     float strike_impulse_ns_ = 0.0F;
+    JPH::BodyID strike_body_{};  // J-044d: the body the fist actually met, else invalid
+    float strike_solid_share_ = 1.0F;  // J-044d: how head-on the hit was (1 dead-on, 0 sliding)
+    Matron::HitRegion strike_region_ = Matron::HitRegion::Unclassified;  // J-044d: the region it met
     void grab_reset(JPH::BodyInterface &bodies) noexcept;
     void set_player_free_rotation(JPH::BodyInterface &bodies, bool free) noexcept;
     void destroy_grab_constraint(JPH::Ref<JPH::TwoBodyConstraint> &constraint) noexcept;

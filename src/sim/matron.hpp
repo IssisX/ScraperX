@@ -245,6 +245,25 @@ public:
     static constexpr float kUpperMotorHz[kUpperCount] = {20.0F, 20.0F, 20.0F, 20.0F, 20.0F};  // J-044c prototype: 20 Hz holds the diagonal arms against gravity at <0.5 deg; pinned when Grok #244 lands
     static constexpr float kUpperMotorDamping = 1.0F;  // J-044c prototype: critical damping; pinned when Grok #244 lands
     static constexpr float kUpperMotorTorqueNm[kUpperCount] = {120.0F, 120.0F, 400.0F, 150.0F, 150.0F};
+    // J-044d: the 12 hit regions (J044A_SPEC.md D), plus the bucket for a
+    // contact the geometry cannot place. A region is where the fist actually
+    // met her body, never a guess from a cast ray.
+    enum class HitRegion : std::uint8_t {
+        FaceL, FaceR, Jaw, Skull, Neck, Chest, Belly, Back, ArmL, ArmR, LegL, LegR, Unclassified, Count
+    };
+    static constexpr int kHitRegionCount = static_cast<int>(HitRegion::Count);
+    // One accepted impulse: the body the fist actually met, the point and
+    // outward normal on her skin, the judged impulse credited to its region,
+    // how head-on the hit was (1 dead-on, 0 sliding along the skin), the tick.
+    struct HitContact {
+        HitRegion region = HitRegion::Unclassified;
+        JPH::BodyID body{};
+        JPH::RVec3 point{};
+        JPH::Vec3 normal{};
+        float impulse_ns = 0.0F;
+        float solid_share = 0.0F;
+        std::uint64_t tick = 0;
+    };
     static constexpr float kRadius = 0.30F;
     static constexpr float kHalfHeight = 0.75F;
     static constexpr float kStandCentre = kHalfHeight + kRadius;
@@ -2098,11 +2117,23 @@ private:
 public:
     // The player's fist on her (physics_world_strike.cpp): the impulse it
     // gave her body, read as a blow in take_blow against her balance like
-    // any striker's (the force itself is already on her body).
-    void struck_by_player(const JPH::Vec3 impulse_ns, const JPH::RVec3 fist, const bool low) noexcept {
+    // any striker's (the force itself is already on her body). `region` is
+    // the region the fist actually met (resolve_hit_region), `body` the body
+    // it met, `normal` the outward surface normal there; the blow is
+    // credited to its region, so the regions and the unclassified bucket
+    // reconcile with damage_ns. `solid` is the glancing share: 1 dead-on,
+    // 0 sliding along the skin.
+    void struck_by_player(const JPH::Vec3 impulse_ns, const JPH::RVec3 fist, const bool low,
+                          const HitRegion region = HitRegion::Unclassified, const float solid = 1.0F,
+                          const JPH::BodyID body = JPH::BodyID(),
+                          const JPH::Vec3 normal = JPH::Vec3::sZero()) noexcept {
         player_blow_ns_ += impulse_ns;
         player_blow_at_ = fist;
         player_blow_low_ = player_blow_low_ || low;
+        player_blow_region_ = region;
+        player_blow_solid_ = solid;
+        player_blow_body_ = body;
+        player_blow_normal_ = normal;
         // Tagged as his own: before the rip begins it frees him (take_blow).
         player_blow_landed();
     }
@@ -2110,6 +2141,23 @@ public:
         player_blow_ns_ = JPH::Vec3::sZero();
         player_blow_low_ = false;
     }
+    // The region a hit on `body` at world point `at` falls in (J044A_SPEC.md
+    // D): the head by its local sagittal plane (face L/R, jaw low front,
+    // skull the rest), neck and chest by body, arms by body, the root by
+    // height (legs under the hip) and front/back/side. Unclassified when the
+    // body is none of hers or the point cannot be placed.
+    [[nodiscard]] HitRegion resolve_hit_region(const JPH::BodyID body, const JPH::RVec3 at) const noexcept;
+    // J-044d test hooks: the last accepted hit contact, the impulse credited
+    // to a region so far, the unclassified bucket, and how many hit contacts
+    // were recorded. The region index is HitRegion's (0..12); -1 is not a region.
+    [[nodiscard]] HitContact last_hit_contact_for_test() const noexcept { return last_hit_contact_; }
+    [[nodiscard]] float region_impulse_for_test(const int region) const noexcept {
+        return region >= 0 && region < kHitRegionCount
+                   ? region_impulse_ns_[static_cast<std::size_t>(region)]
+                   : 0.0F;
+    }
+    [[nodiscard]] float unclassified_impulse_for_test() const noexcept { return unclassified_impulse_ns_; }
+    [[nodiscard]] std::uint64_t hit_contact_count_for_test() const noexcept { return hit_contact_count_; }
     // J-044c test hooks: apply an impulse to one upper segment (0 head, 1
     // neck, 2 chest, 3 arm L, 4 arm R) at a world point. The view carries
     // the masses, joint angles and motor power.
@@ -2127,13 +2175,27 @@ public:
     [[nodiscard]] JPH::BodyID upper_body(const int segment) const noexcept {
         return segment >= 0 && segment < kUpperCount ? upper_body_[static_cast<std::size_t>(segment)] : JPH::BodyID();
     }
-    // The strike pipeline's body for a hit at `at` (feet at `feet_y`): the
-    // upper segment the point falls on, else the root.
+    // Which segment a strike at `at` lands on by height (J-044c): the
+    // pipeline now uses the body the fist actually met (fist_contact), and
+    // this stays for the segment tests. Tests only.
     [[nodiscard]] JPH::BodyID strike_body_for_point(const JPH::RVec3 at, const float feet_y) const noexcept;
 private:
     JPH::Vec3 player_blow_ns_ = JPH::Vec3::sZero();
     JPH::RVec3 player_blow_at_ = JPH::RVec3::sZero();
     bool player_blow_low_ = false;
+    HitRegion player_blow_region_ = HitRegion::Unclassified;  // the region this tick's player blow met
+    float player_blow_solid_ = 1.0F;                          // its glancing share (1 dead-on)
+    JPH::BodyID player_blow_body_{};                          // the body the fist actually met
+    JPH::Vec3 player_blow_normal_ = JPH::Vec3::sZero();       // the outward normal there
+    std::uint64_t tick_ = 0;                                  // her ticks, counted in post_step
+    // J-044d: the last accepted hit contact, and the per-region credited
+    // impulse plus the unclassified bucket. Their sum is damage_ns_: the
+    // regions and the bucket reconcile with the authoritative total, per
+    // tick and cumulatively. J-044g owns the injury thresholds on top.
+    HitContact last_hit_contact_{};
+    std::array<float, kHitRegionCount> region_impulse_ns_{};
+    float unclassified_impulse_ns_ = 0.0F;
+    std::uint64_t hit_contact_count_ = 0;
     // Her report of the pipe and of her cables (refresh_view), and both set
     // back for a restore (matron_pipe.cpp, matron_line.cpp).
     void report_pipe();
