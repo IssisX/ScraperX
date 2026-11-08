@@ -7,13 +7,13 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794151022 (2026-11-08 15:17:02Z, 9:17 AM Central)
 
 ## Meter
-90% Sun 7:46 AM and still 90% Sun 9:44 AM (Cory): flat with no helpers. Helpers: one at high (Cory 11-08), on J-068 the eye sets; measuring leftovers go to Muse (free).
+90% Sun 7:46 AM and still 90% Sun 9:44 AM (Cory): flat with no helpers. Helpers: one at high (Cory 11-08), free (J-068 done); measuring leftovers go to Muse (free).
 
 ## Waiting on me
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt; it cracked #298. Use it for a problem stuck an hour or failed by others; the prompt goes whole in one block for Cory (11-07, 11-08).
 - Cory 7:12 AM Sun prompt (fight, damage, ladder): repro posted on #320/#321/#322/#307 and mailed (J-060, J-063, J-059 feed). Mine: drawn limbs, eye-check of visible damage, two silent recordings, audio/haptic timing. Kick/sweep and ladder per-tick numbers: Muse measures before and after. Hair done: J-067 #328, PR #329 (eye OK); neck ring mailed to Muse; back-hair split traced to Muse bffb8b38 (one bone per vertex, pushed off cloth), mailed as J-067; #329 red (hair check count over bound) folded into J-067 on fb-bot/integrate-j067, close #329 when its PR opens. Argon answered (on #321, verified): its section 4 is the J-063 design; warp fixes mailed as J-064; tick 14 is test-only.
 - Cory 11-08: American spelling in chat only (#325 closed). Job numbers: read the highest J-NNN on all job issues first.
-- API: reviews split (J-066 PR #327). Cory said go (11-08) on the automatic eye for fight and ladder frames: a helper builds it as J-068 (claude/integrate-j068-eye-sets). $48.74 of $100 by Nov 8.
+- API: reviews split (J-066 PR #327). Cory said go (11-08) on the automatic eye for fight and ladder frames: built as J-068 PR #331 @ 580d5c5c (fight_contact, ladder_descent; known_defect J-063 waives the ladder set on other PRs while #321 is open); waits on Codex + Claude API review. $48.74 of $100 by Nov 8.
 - From Muse (ruled Sun morning, six mails; rulings on each job's issue): J-044l (b) the Turn fires from 3-5 m (told Cory). Pushed,
   PRs/CI pending: J-049 PR1, J-044b grant, J-044d, J-015 slice 1, #299 P1, J-045. #316 eye OK, waits on Codex (workflow).
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
