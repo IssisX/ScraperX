@@ -4,16 +4,18 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794107831 (2026-11-08 03:17:11Z, 9:17 PM Central)
+Read through: 1794139747 (2026-11-08 12:09:07Z, 6:09 AM Central)
 
 ## Meter
 83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56); 86% 12:26 PM; 86% 1:36 PM; est. 86.9% 5:18 PM ($578.80); 87% 8:16 PM ($581.11, Cory; fit holds). Burn 5:18-8:16 PM $2.3 (quiet); predicts about 87.5% at 11 PM, under 89%: first run under (throttle loosens after two). Throttled since 10:30 AM; from 12:40 PM one helper allowed, only for a job stuck twice (Cory: reset Sun afternoon); the 1:17 PM run answers and
 merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12:26 PM, integrator at xhigh); needs 0.39%/h around the clock, or about 0.6%/h over the 23 active run hours left; fits with about 2% to spare. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
 
 ## Waiting on me
-- From Muse (ruled 7:19 PM, one mail): #291 start out of reach + not-in-Grab check; #298 test-side budget, cap waived;
-  J-049 fix timing (ChatGPT asked on #278); J-001 reserved feet share then hold release; J-021 split; J-059 side-rim + flip push;
-  J-044d pushed (red host-build); J-043 inventory; hair; button real-tap check. 9:20 PM: #298 gains separate PR + attribute 4 grab peaks; J-015 S2 stall 1 m short (Muse eye-checking); J-011 panels parked (ChatGPT asked #118); J-007 #315 cap waived. #316 (J-021 job 4) touches a workflow: waits on the Codex review (opened 11:49 PM); check at 9:17 AM. #299 P1 fix; J-061 running. J-008 pushed @ 45e16da2.
+- From Muse (ruled 6:05 AM Sun, six mails): J-044l (b) the Turn fires from 3-5 m (told Cory; he may stop it); J-009 flags
+  stay, 258 down is a traversal fix on the J-008 line; #298 gains PR waits on matron-sweep; #298 budget fix alone (loop kept
+  on one line), no speed gate, StockHold made budget-bound, snag chain fix; J-021 job 4 cap waived; J-043 new hang rail
+  (protected); J-011 rigid threads then wider blend. Pushed, PRs/CI pending: J-049 PR1, J-044b grant, J-044d, J-015 slice 1,
+  #299 P1, J-045. #318 (J-053) eye OK. #309 and J-022 merged; ring eye OK on trunk. #316 eye OK, waits on Codex (workflow).
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
 
