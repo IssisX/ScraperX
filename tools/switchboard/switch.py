@@ -1227,7 +1227,9 @@ class Switch:
                    claude_calls.text_block(f"<pr number=\"{facts.number}\" head=\"{facts.head_sha}\" branch=\"{facts.head_ref}\">\n"
                                            f"<title>{ctx['title']}</title>\n<body>\n{ctx['body'][:20000]}\n</body>\n</pr>"),
                    claude_calls.text_block(f"<diff>\n{diff}\n</diff>")]
-        res = self.paid("review", ctx["job"], "review", system, content, claude_calls.REVIEW_SCHEMA,
+        # The security pass has its own budget line (max effort); ordinary reviews run at high (Cory, 11-08).
+        call = "security_review" if security else "review"
+        res = self.paid("review", ctx["job"], call, system, content, claude_calls.REVIEW_SCHEMA,
                         self.job_cap(ctx), key)
         if res is None:   # refused by the budget, or a dry run: the next run tries again
             return
