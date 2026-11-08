@@ -29,7 +29,7 @@ struct TwinTower final {
     static constexpr float kDeckTop = 220.25F;
     static constexpr float kInclineTop = 224.25F;
     static constexpr float kLandingTop = 225.65F;
-    // The two halves' tips and the open gap between them (z, metres).
+    // The two halves' tips and the open gap between them (z, meters).
     static constexpr float kNearTipZ = -190.0F;
     static constexpr float kFarTipZ = -208.0F;
     // Both halves' decks, two lanes wide: the west lane carries the leaf,

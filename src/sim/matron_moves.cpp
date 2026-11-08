@@ -188,7 +188,7 @@ void Matron::watch_stall(const float dt, const RVec3 at, const float heading_x, 
     // Not wanting, and not mid-sidestep: she arrived at a waypoint,
     // or she is idle for a tick, and the stall timing ends — but the
     // rung does not. Arriving at a waypoint is not leaving a wedge:
-    // waypoints are a metre or two apart inside the same stuck spot,
+    // waypoints are a meter or two apart inside the same stuck spot,
     // so clearing the rung on every arrival keeps the reroute rung
     // forever out of reach (two stalls per sidestep, reroutes zero).
     // Only walking clear of the wedge (below, 4 m) resets the rung.

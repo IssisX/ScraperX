@@ -1,7 +1,7 @@
 extends SceneTree
 ## A planted foot stays planted: walking her through the studio, a foot on
 ## the deck must not travel with the body. The M6 S0 probe measured walking
-## planted feet travelling ~0.037 m/frame median with slides to 54.7 m: the
+## planted feet traveling ~0.037 m/frame median with slides to 54.7 m: the
 ## rig's contact pass rode the body onto the lowest foot but never held a
 ## foot's place on the deck while upright (its world-locked plants only ran
 ## on all fours). This test drives the same walk in the studio and fails

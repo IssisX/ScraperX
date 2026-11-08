@@ -46,13 +46,13 @@ bool step_off_gantry(Simulation &s, const double z, const double speed) {
 }
 
 // From the spawn to the arm's root along the deck's south side (the plate
-// stands a metre proud in the middle of the deck, so the way is round it).
+// stands a meter proud in the middle of the deck, so the way is round it).
 bool walk_to_arm(Simulation &s) {
     return walk_to(s, 8.0, -185.0, 6.0, 0.2) && walk_to(s, -10.5, -185.0, 14.0, 0.2) &&
            walk_to(s, -11.0, Summit::kArmCentreZ, 4.0, 0.15);
 }
 
-// A metre to mantle, from the south, onto the plate's middle.
+// A meter to mantle, from the south, onto the plate's middle.
 bool climb_onto_plate(Simulation &s) {
     return walk_to(s, 9.0, Summit::kStrikerSouthZ + 0.35, 6.0, 0.2) &&
            walk_to(s, 5.1, Summit::kStrikerSouthZ + 0.35, 6.0, 0.08) &&

@@ -165,7 +165,7 @@ measurement, falsifiers; Godot twins; persist v4; CI proof lines.
 
 ## Completion
 
-- the yard jib cannot reach the `48 m` racks, and a falsifier says so in metres
+- the yard jib cannot reach the `48 m` racks, and a falsifier says so in meters
 - with no block rigged, a raise command moves no needle
 - with the block rigged, one needle rises and seats
 - two needles rigged at once sags the drum; neither arrives
@@ -251,9 +251,9 @@ structure is the tower's north face at `z = -124`, `11 m` from the pocket line.
 Whatever carries them is climbable and needs the reach audit `AS-003`'s cage
 needed.
 
-**5. §8.3 stowed-needle datum.** A centre of `48.36` with half-height `0.25` sat
+**5. §8.3 stowed-needle datum.** A center of `48.36` with half-height `0.25` sat
 `0.25 m` inside a rack whose top is `48.36`; §8.7 already had `48.61`. Corrected
-to centre `48.61`, top `48.86`, with falsifier 2.
+to center `48.61`, top `48.86`, with falsifier 2.
 
 **6. Persist.** There is no serialized save and no v3 to bump. "Persist v4" in
 §8.10 means extending `MachineCheckpoint` and its restore topology the way
@@ -291,7 +291,7 @@ held, or set down anywhere — including at grade, in which case the slice canno
 start until it is fetched, which is a cost, not a lock.
 
 Machine poses, all legal: pack anywhere in the jib's circle; bascule at either
-stop; cage door travelled; bar wherever it was dropped. None is read here.
+stop; cage door traveled; bar wherever it was dropped. None is read here.
 
 Persist: inherit v3.
 
@@ -311,7 +311,7 @@ Persist: inherit v3.
 | `MOD-NEEDLE-A/B` stowed | `(0.0, 48.61, -112.8 / -108.2)` | as above | yes | on the rack, top `48.86` |
 | `MOD-GUIDE-RACK` rails ×2 | `(0.0, 80.0, -112.0 / -109.0)` | `(0.10, 40.0, 0.10)` | no | `y ∈ [40, 120]` |
 
-**Clearances, in metres:**
+**Clearances, in meters:**
 
 - cage `z ∈ [-111.7, -109.3]`; needle A `z ∈ [-113.25, -112.35]` → **`0.65`**;
   needle B `z ∈ [-108.65, -107.75]` → **`0.65`**. The cage rises **between** the

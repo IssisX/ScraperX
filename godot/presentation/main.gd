@@ -302,7 +302,7 @@ func _ready() -> void:
 	# other views, not on the first frame of play (J-045: 8.6 ms there).
 	_canopy = CanopyView.new()
 	add_child(_canopy)
-	# Both views are a few metres of rope and leather: not drawn from afar.
+	# Both views are a few meters of rope and leather: not drawn from afar.
 	for view: Node in [_slingshot_view, _swing_view]:
 		var pending: Array[Node] = [view]
 		while not pending.is_empty():
@@ -974,7 +974,7 @@ func _dispatch(verbs: Array, delta: float) -> void:
 				_crouch_toggled = false
 				_perform_action()
 			&"punch":
-				# Its own button: the native throws it, or ignores it greyed.
+				# Its own button: the native throws it, or ignores it grayed.
 				_native.request_strike()
 			&"turn":
 				if _quickturn_left <= 0.0:

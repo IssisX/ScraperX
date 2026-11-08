@@ -147,7 +147,7 @@ func _set_local(n: String, global_basis: Basis, parent: String) -> void:
 	_skel.set_bone_pose_rotation(int(_bone[n]), (parent_basis.inverse() * global_basis.orthonormalized()).get_rotation_quaternion())
 
 
-# One frame: `state` holds the native body's position (its capsule's centre),
+# One frame: `state` holds the native body's position (its capsule's center),
 # velocity, grounded, crouched, sliding, traversal, whether it rides a line,
 # and the eye (the camera); `yaw` the view's.
 func update_body(state: Dictionary, yaw: float, delta: float) -> void:

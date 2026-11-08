@@ -31,7 +31,7 @@ class Perception;
 class Stimulus {
 public:
     Stimulus() = default;
-    // `at`: his body's centre; `loudness`: 0..1, the noise his movement makes
+    // `at`: his body's center; `loudness`: 0..1, the noise his movement makes
     // at its source (physics_world_movement.cpp matron_loudness).
     Stimulus(const JPH::RVec3 at, const float loudness) noexcept : at_(at), loudness_(loudness) {}
 
@@ -67,7 +67,7 @@ struct Evidence {
     bool sees_far = false;     // the long look across the shaft (kCommitSightM)
     bool watched = false;      // his face turned to her, seen
     bool close_look = false;   // in sight within kSightM wherever he is (her trap, a line he rides)
-    JPH::RVec3 seen_at = JPH::RVec3::sZero();   // his body's centre where she saw it (any of the above)
+    JPH::RVec3 seen_at = JPH::RVec3::sZero();   // his body's center where she saw it (any of the above)
     std::uint64_t seen_holding = 0;              // the entity she saw in his hands (saw only)
 
     // Her ears, this tick.

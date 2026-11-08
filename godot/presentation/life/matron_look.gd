@@ -3,7 +3,7 @@ extends RefCounted
 ## wrote next to matron.glb, read at runtime (kept as they are by their
 ## .import files, so a run that never imports has them too), and a material
 ## for each of the body's parts. The exposure's work on her, one way: the skin
-## drains to a bloodless grey (never red), the uniform goes from dingy to
+## drains to a bloodless gray (never red), the uniform goes from dingy to
 ## filthy, her eyes go bloodshot, and her thin hair thins further.
 
 const DIR := "res://presentation/life/matron/"
@@ -11,7 +11,7 @@ const DIR := "res://presentation/life/matron/"
 const WRINKLE_DEPTH := 3.0
 # The world's rule for a porous surface (main_geometry.gd POROUS_SPECULAR):
 # this renderer's sky reflection adds a rough surface's sheen whatever its
-# colour, so at the default specular (0.5) her cloth, stockings and hair read
+# color, so at the default specular (0.5) her cloth, stockings and hair read
 # milky and washed out next to the world. Cloth and hair take the world's
 # porous level; skin keeps its own (f0 about 0.028, specular 0.35).
 const POROUS_SPECULAR := 0.22

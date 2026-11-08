@@ -195,7 +195,7 @@ Hit forklift_into(const Target what, const double pace) {
 
 // ---- drops (the crane's load let go 1 m up) ---------------------------------
 
-// `load` raised 1 m above `rest` (where its centre lies at rest on what it
+// `load` raised 1 m above `rest` (where its center lies at rest on what it
 // falls onto) and let go from still.
 Hit drop(const std::uint32_t load_piece, const bool onto_container) {
     Simulation s(InitialSpawn::ExteriorGrade);

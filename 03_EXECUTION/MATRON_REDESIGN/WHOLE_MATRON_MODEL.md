@@ -44,7 +44,7 @@ Problem: hair through face, neck, shoulders, lower torso; worst in
 close/hold shots.
 Verified cause (d28d3486, re-check on d131b68c before landing):
 avoidance is exactly two spheres on chain points only in
-`matron_rig.gd:step_hair()` — skull centre [0.0, 1.7285, 0.0852] radius
+`matron_rig.gd:step_hair()` — skull center [0.0, 1.7285, 0.0852] radius
 0.10 m, back sphere radius 0.17 m. Skull sphere misses lower face/ears
 (eyes ~0.086 m inside, nose/mouth/chin ~0.125-0.135 m outside); front
 130-degree chain gap, front strands clamped to side chains; endpoint-only
@@ -142,7 +142,7 @@ apply the all-fours world-lock idea to upright stance feet.
   state exists. Assignee via integrator/PE, not here.
 - Candidate, unproven rendered: skirt vs legs in wide poses; Turn
   contortion self-penetration (shipped code, ambiguous by design —
-  interpenetration vs intentional horror is an owner judgement);
+  interpenetration vs intentional horror is an owner judgment);
   toppled / pipe-head-down figure placed by formula, not surface;
   holding landing takes neither her feet nor him (unrepresented weight
   transfer, held-body mass unverified).

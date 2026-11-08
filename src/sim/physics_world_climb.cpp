@@ -19,7 +19,7 @@ void Simulation::PhysicsWorld::load_hold(JPH::BodyInterface &bodies) noexcept {
     bodies.AddForce(traversal_body_, -climb_grip_force_, at);
 }
 
-// The hold nearest `aim` that a hand in front of `centre` can close
+// The hold nearest `aim` that a hand in front of `center` can close
 // round: a box whose two thinner dimensions are at most kGripMaxSection
 // and whose length is at least kGripMinLength, on a static body or one of
 // at least kGripMinBodyMassKg, searched in a kGripSearchHalf box round
@@ -82,7 +82,7 @@ Grip Simulation::PhysicsWorld::find_grip(const JPH::RVec3 centre, const JPH::RVe
     return best;
 }
 
-// Where a hand in front of `centre` aims: `height` over the centre,
+// Where a hand in front of `center` aims: `height` over the center,
 // kClimbHandReach toward the structure, `across` to its right.
 JPH::RVec3 Simulation::PhysicsWorld::hand_aim(const JPH::RVec3 centre, const float height,
                                               const float across) const noexcept {
@@ -456,7 +456,7 @@ void Simulation::PhysicsWorld::move_hands(const JPH::BodyInterface &bodies, cons
     }
 }
 
-// Soles within kClimbFootReach of walkable ground under a body at `centre`.
+// Soles within kClimbFootReach of walkable ground under a body at `center`.
 bool Simulation::PhysicsWorld::feet_on_ground(const JPH::RVec3 centre) const noexcept {
     JPH::RayCastResult hit;
     const JPH::Vec3 down(0.0F, -(kPlayerHalfHeight + kClimbFootReach), 0.0F);
@@ -714,7 +714,7 @@ Simulation::PhysicsWorld::Beam Simulation::PhysicsWorld::beam_underfoot(const JP
     JPH::RVec3 probe = centre;
     float reach = half_height + kCheckpointFootingSlack;
     if (!cast_ray(probe, JPH::Vec3(0.0F, -reach, 0.0F), hit)) {
-        // The centre already past the beam's side, the capsule's rim
+        // The center already past the beam's side, the capsule's rim
         // still on it: the beam is where the contact is.
         if (!support_sample_.grounded) {
             return beam;

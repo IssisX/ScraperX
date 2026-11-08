@@ -69,7 +69,7 @@ def target(rel):
 
 # ------------------------------------------------------- the macro blend ---
 # Our own weighting: each macro slider is split piecewise-linearly between the
-# two neighbouring categories MakeHuman ships targets for, and a combined
+# two neighboring categories MakeHuman ships targets for, and a combined
 # target's weight is the product of its categories' weights.
 
 

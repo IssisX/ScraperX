@@ -5,7 +5,7 @@
 // a landing stand (top 5.0 m), out of reach of the swing a running catch gives.
 //
 // Catching: in the air with the bar in the hands' reach, GRAB closes them on
-// it. The hands join the body's centre of mass to the bar with a constraint:
+// it. The hands join the body's center of mass to the bar with a constraint:
 // fixed across the arm and out of the swing plane; along the arm the arms are
 // a stiff spring at their straight stop (they give under a hard catch, then
 // hold), and a motor of at most kPumpForceN that can only pull the body up
@@ -50,13 +50,13 @@ public:
     static constexpr float kAxleFrictionNm = 8.0F;
 
     // The hands' reach for a catch: the bar between kCatchLowM and
-    // kCatchHighM above the body's centre, within kCatchAcrossM of it along
+    // kCatchHighM above the body's center, within kCatchAcrossM of it along
     // the swing and kCatchSideM out of the plane.
     static constexpr double kCatchLowM = 0.2;
     static constexpr double kCatchHighM = 1.2;
     static constexpr double kCatchAcrossM = 0.6;
     static constexpr double kCatchSideM = 0.5;
-    // The arms: straight, the body's centre hangs kHangLengthM below the bar;
+    // The arms: straight, the body's center hangs kHangLengthM below the bar;
     // pulled up, kPullTravelM nearer, by at most kPumpForceN (CHOSEN: 1.8
     // body weights). The straight stop gives as a spring (kArmSpringHz,
     // kArmDamping: a catch is taken over about a tenth of a second).
@@ -117,7 +117,7 @@ public:
 private:
     [[nodiscard]] bool bar_in_reach() const;
     [[nodiscard]] double player_radius() const;
-    // The harness's coordinate up the arm: the body's centre in the bar's
+    // The harness's coordinate up the arm: the body's center in the bar's
     // frame along the constraint's y axis.
     [[nodiscard]] double arm_coordinate() const;
     // The body's speed up the arm relative to the bar.

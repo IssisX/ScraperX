@@ -12,7 +12,7 @@ constexpr double kODeckTop = 728.3;         // the cab's floor at rest
 constexpr double kO750Top = 750.1;
 constexpr double kOStopTravel = 22.9;       // the guide's top, a dog's tooth
 constexpr double kOLatchRelease = 0.15;     // the latch's angle at which the gate lets go
-constexpr double kODrumRadius = 1.0;        // the wheel turns a radian for each metre the cab rises
+constexpr double kODrumRadius = 1.0;        // the wheel turns a radian for each meter the cab rises
 
 // From the 728 deck into O's cab, to beside the handle hanging in it: face it
 // and take hold. True once the handle is in the hands.

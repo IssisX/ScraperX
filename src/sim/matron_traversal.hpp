@@ -45,9 +45,9 @@ namespace scraperx::sim::traversal {
 
 // Her body and her limits. All CHOSEN for a 2.1 m, 220 kg body.
 // The player's jump-and-hang reach over his feet, about 4.14 m: capsule
-// centre over the feet (kPlayerHalfHeight 0.9 + kPlayerRadius 0.35), a
+// center over the feet (kPlayerHalfHeight 0.9 + kPlayerRadius 0.35), a
 // standing jump's rise (kJumpSpeed 5.5 under 9.81 m/s^2: 1.54) and the hang
-// band's top over the centre (kHangMaximumRiseAboveCentre 1.35). Written out:
+// band's top over the center (kHangMaximumRiseAboveCentre 1.35). Written out:
 // Limits is used in constant expressions, and physics_world_tuning.hpp
 // cannot be included here (it includes this header). The test
 // matron-climb's escape-margin check recomputes it from those constants.
@@ -274,7 +274,7 @@ public:
     // What she stands on now (a ray under her), or an invalid id.
     // The actual sole contact can lie to one side of her middle on a narrow
     // floor. Callers planning from support must use that point, not invent a
-    // floor under the body's centre.
+    // floor under the body's center.
     [[nodiscard]] bool supported(float *top = nullptr, JPH::BodyID *by = nullptr, JPH::RVec3 *point = nullptr) const;
     // Tests and the planner: does her capsule fit, standing, feet at `feet`?
     [[nodiscard]] bool capsule_free(JPH::RVec3 center) const;
@@ -376,7 +376,7 @@ struct Patch {   // a walkable top (one leaf of a body)
     int split = -1, split_of = -1;   // a piece of a top split by what stands on it: its floor, and the top
 };
 struct Bar {   // one rung-like member the scanner reads (a thin long box)
-    JPH::Vec3 c = JPH::Vec3::sZero();   // centre
+    JPH::Vec3 c = JPH::Vec3::sZero();   // center
     bool along_x = true;   // the bar's long axis
     float half = 0.0F;    // half its long side
     std::uint64_t entity = 0;

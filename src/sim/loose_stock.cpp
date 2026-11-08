@@ -28,7 +28,7 @@ struct Spec {
     float half_height = 0.0F;   // from its origin to its underside
     bool carried = false;
     Vec3 handle = Vec3::sZero();
-    // A lifting eye over its centre of mass, for a crane's sling (the yard
+    // A lifting eye over its center of mass, for a crane's sling (the yard
     // crane's): where, and how near the shackle must come to hook on.
     bool eye = false;
     Vec3 eye_at = Vec3::sZero();
@@ -471,7 +471,7 @@ void add_crane_laydown(std::vector<LooseStock::Placement> &t) {
 
 // On the decks the crane serves, before each deck's forklift (forklift.hpp),
 // the load it last brought in off the dock: a skid crate on the 44 m deck,
-// a reel on its pallet on the 11 m deck, each a metre and a quarter past its
+// a reel on its pallet on the 11 m deck, each a meter and a quarter past its
 // fork tips.
 void add_deck_loads(std::vector<LooseStock::Placement> &t) {
     t.push_back({K::SkidCrate, 1, -21.5F, 44.0F, -151.6F, 0.0F});
@@ -621,7 +621,7 @@ kit::BodyIndex LooseStock::create_body(const Placement &p, const std::uint64_t e
     }();
     const Spec &spec = specs[static_cast<std::size_t>(p.kind)];
     // 4 mm clear of what it lies on, so nothing starts in contact. The
-    // body's mass is the kind's own plus its stated load, centred.
+    // body's mass is the kind's own plus its stated load, centered.
     const kit::BodyIndex body =
         kit_.add_body(entity, spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
                       Quat::sRotation(Vec3::sAxisY(), p.yaw), spec.mass_kg + p.load_kg, spec.friction);
@@ -732,7 +732,7 @@ public:
 
 // Where the spots may be: the stack's deck rings (11 m to 143 m: the 154 m
 // deck has its own seven, set for the Matron) and the upper rings (176 m to
-// 396 m), each a square ring round the shaft centred on (0, -150).
+// 396 m), each a square ring round the shaft centered on (0, -150).
 constexpr float kRingCentreX = 0.0F;
 constexpr float kRingCentreZ = -150.0F;
 // Every spot this far along its ring from the last, at most this many a ring.
@@ -793,7 +793,7 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     // clearance box following the spot's frame (world-b's fix), its own
     // template count and a fresh per-ring cap, seeded with the first
     // pass's spots for the spacing check, so a corner conflict resolves
-    // in favour of the pre-existing spot and no pre-existing piece moves
+    // in favor of the pre-existing spot and no pre-existing piece moves
     // or renumbers.
     // The new spots are recorded here and take their table places last
     // (append_reserved, after the Matron's throwables), so no
@@ -901,7 +901,7 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                     continue;
                 }
                 // A level floor under all of it, and a walkway past it, felt
-                // for every metre.
+                // for every meter.
                 bool level = true;
                 float floor = top;
                 for (float u = -0.5F * spot.width; u <= 0.5F * spot.width + 0.5F && level; u += 1.0F) {
@@ -938,7 +938,7 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                     continue;
                 }
                 // And under the pieces themselves, felt for every 0.4 m: a
-                // seam or a gap the metre's grid stepped over would leave a
+                // seam or a gap the meter's grid stepped over would leave a
                 // piece on an edge, never at rest.
                 for (float u = -0.5F * spot.width; u <= 0.5F * spot.width + 0.2F && level; u += 0.4F) {
                     for (float v = near; v <= near + spot.depth + 0.2F && level; v += 0.4F) {

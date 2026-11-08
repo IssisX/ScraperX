@@ -175,7 +175,7 @@ static func _box_points(xform: Transform3D, size: Vector3) -> Array:
 	return points
 
 
-# CylinderMesh is centred on its origin along local Y; a cone is a cylinder
+# CylinderMesh is centered on its origin along local Y; a cone is a cylinder
 # with a zero top radius.
 static func _cylinder_points(xform: Transform3D, top: float, bottom: float, height: float) -> Array:
 	var points := []

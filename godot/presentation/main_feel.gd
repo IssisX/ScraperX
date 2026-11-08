@@ -675,7 +675,7 @@ func _layout_hud() -> void:
 	top_left.offset_bottom = top_left.offset_top + roundf(24.0 * scale) + 9.0 \
 		+ line_height * float(readouts.size())
 
-	# Top-centre: the top-right corner belongs to the altimeter.
+	# Top-center: the top-right corner belongs to the altimeter.
 	var top_right: Control = $HUD/TopRight
 	top_right.anchor_left = 0.5
 	top_right.anchor_right = 0.5
@@ -899,7 +899,7 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	else:
 		_teeter_phase = 0.0
 	# On a beam: the view banks toward the side the native's XCoM is on, in
-	# proportion to how much of the centre of pressure's reach it has used
+	# proportion to how much of the center of pressure's reach it has used
 	# (1 at the edge of recovery), so the lean reads before it is lost.
 	var lean: Vector3 = landing.get("beam_lean", Vector3.ZERO)
 	_beam_bank = lerpf(_beam_bank, clampf(lean.dot(right_vector), -1.5, 1.5), 1.0 - exp(-12.0 * delta))
@@ -1256,7 +1256,7 @@ func _ride_death() -> void:
 # The ziplines (sim/zipline.hpp): every trolley and brake block drawn where
 # the native has them, the ride heard (the sheaves on the cable, the brake
 # block's drag) and felt in the hands: the bar taken, the block run into,
-# and the sheaves' buzz, a pulse every few metres of cable.
+# and the sheaves' buzz, a pulse every few meters of cable.
 const ZIP_BUZZ_M := 3.0
 var _zip_was_riding := false
 var _zip_was_braking := false

@@ -310,7 +310,7 @@ var prop_take_s := INF
 # only takes her shoulder further from it), and whether she carries it
 var prop_over := false
 var prop_carried := false
-# Where the native takes a prop: her centre within this of it across the
+# Where the native takes a prop: her center within this of it across the
 # ground (matron.cpp kTakeM; mirrored, the native is the authority).
 const PROP_TAKE_M := 0.85
 # Her hand goes out to a prop's handle over this long before the take.
@@ -516,7 +516,7 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 
 # Upright feet, world-locked while they stand (M6 foot-drag fix): the plants
 # above only run on all fours, so upright a stance foot rode the body and
-# the probe measured it travelling ~0.037 m/frame median. A foot down on the
+# the probe measured it traveling ~0.037 m/frame median. A foot down on the
 # deck stays where it was put while her body goes over it, and steps when it
 # must. The pose's swing still decides when a foot comes down (its sole
 # within UPLANT_M of the deck) and when it steps (lifted, or dragged past
@@ -549,7 +549,7 @@ const UPLANT_TRAVEL_H_M := 0.10
 const UPLANT_STILL_MPS := 0.15
 # ... and while the foot itself is nearly still in the world (its pose-sole
 # travel this frame, body-corrected — the same dev the slow test measures).
-# A foot travelling fast is mid-step or mid-transition, not settling: the
+# A foot traveling fast is mid-step or mid-transition, not settling: the
 # pin's anchor is the drawn sole a frame old, and a foot moving 0.10+ m in
 # that frame strands the anchor — and the lock after it — far behind the
 # stance (figure carry: the lock landed 0.63 m behind the foot, the leg
@@ -694,7 +694,7 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				var mid: Vector3 = sole["mid"] as Vector3
 				# The lock is where the foot was HELD. When the proof pin
 				# held it, the foot IS at the proof anchor — as drawn, the
-				# two agree within millimetres — so the lock is the anchor
+				# two agree within millimeters — so the lock is the anchor
 				# and the landing is vertical (v3: the grab plants, peak
 				# 0.046 m). When the pin never held it, the foot is where
 				# the pose has it now, and the lock is the pose sole this
@@ -727,7 +727,7 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				# first down frame, hold the sole where it went down — but
 				# only while the body is nearly still (UPLANT_STILL_MPS)
 				# and the foot itself is nearly still in the world
-				# (dev < UPLANT_PIN_DEV_M): a travelling foot is
+				# (dev < UPLANT_PIN_DEV_M): a traveling foot is
 				# mid-step or mid-transition, and the pin's anchor — the
 				# drawn sole a frame old — is already far behind it.
 				# The check already counts it planted, and the pose's settle
@@ -804,7 +804,7 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				# waits until UPLANT_TRAVEL_START of the release has
 				# passed, so the sole is off the deck (and no longer
 				# counted as planted) before it moves sideways. The
-				# old code travelled from the first frame, while the
+				# old code traveled from the first frame, while the
 				# near-straight leg could not bend fast enough past
 				# govern's cap to lift the sole — so the sole dragged
 				# along the deck to its new stance.
@@ -1120,7 +1120,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		# Rung moves are not two-handed for their feet: their feet
 		# are never lifted, but their left wrist now reaches a held
 		# second grip (M5e); without one they keep exactly the old
-		# contact behaviour.
+		# contact behavior.
 		var two_handed := bool(data.get("climb_move_active", false)) and String(data.get("climb_move", "")) in ["mantle", "jump_catch", "pole_up", "pole_down", "hang_drop"]
 		# Feet first, so the hand reach is solved from where the body
 		# ends up: on a two-handed move, when the simulation has her
@@ -1153,7 +1153,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		# simulation has her hand on one (contact_hand2_held under
 		# truth, climb_hand2_known otherwise): on a two-handed move
 		# it falls back to the one hold, on a rung move to nothing
-		# at all (the old rung behaviour), never to a point the
+		# at all (the old rung behavior), never to a point the
 		# view invented. Climb-branch movers hold two on rung
 		# climbs now (M5b/M5d); the guard is unchanged, the hold is
 		# made valid by gripping.
@@ -1267,7 +1267,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		prop_take_s = 0.0
 		if seeking:
 			# walking to it: where her shoulder will be when the native takes
-			# it (her centre PROP_TAKE_M across from it), her pose as now
+			# it (her center PROP_TAKE_M across from it), her pose as now
 			var root: Vector3 = data.get("render_position", skel.global_position)
 			var to := Vector2(handle.x - root.x, handle.z - root.z)
 			var ahead := maxf(0.0, to.length() - PROP_TAKE_M)

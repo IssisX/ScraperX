@@ -83,7 +83,7 @@ const BARE_ZINC := Color(0.75, 0.76, 0.76)
 const WEAR_METALLIC := 0.85
 const WEAR_ROUGHNESS := 0.36
 
-# Where the parts are looked up: HASH_CELL metres; a part longer than
+# Where the parts are looked up: HASH_CELL meters; a part longer than
 # HASH_BIG_SPAN any way in cells of HASH_BIG_CELL.
 const HASH_CELL := 4.0
 const HASH_BIG_SPAN := 24.0
@@ -104,7 +104,7 @@ const KIND_FADE := [20.0, 10.0, 10.0]
 const LOW_PLATE_RANGE := 80.0
 const QUALITY_LOW := 0
 const QUALITY_POLL_S := 0.5
-# Floats per instance in a MultiMesh buffer: a 3x4 transform, a colour and
+# Floats per instance in a MultiMesh buffer: a 3x4 transform, a color and
 # custom data (metallic, roughness).
 const FLOATS := 20
 
@@ -131,7 +131,7 @@ void fragment() {
 
 var _main: Node3D
 # The parts, one entry per index: middle, unit axes, half extents along them,
-# sRGB colour, metallic, roughness, steel, and a member's or plate's class.
+# sRGB color, metallic, roughness, steel, and a member's or plate's class.
 var _centres := PackedVector3Array()
 var _axes: Array[Basis] = []
 var _halves := PackedVector3Array()

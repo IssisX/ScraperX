@@ -49,7 +49,7 @@ struct SightWorld {
     }
 };
 
-// The player's centre (his capsule's middle, 0.9 m over his soles) at a
+// The player's center (his capsule's middle, 0.9 m over his soles) at a
 // bearing off `facing` (where her head was turned) and a level distance from
 // her eyes.
 RVec3 player_at(const Matron::View &v, const float facing, const float bearing, const float distance) {

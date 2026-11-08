@@ -65,13 +65,13 @@ public:
     // on the east band near its north end, off to its outer side (its
     // wheels 0.8 m in from the open edge at x 26) so the band's walked line
     // (x 21.5) stays clear; nose toward the north band's open outer edge
-    // (z -124), a dozen metres from her locker.
+    // (z -124), a dozen meters from her locker.
     static constexpr std::uint64_t kDeck154ChassisEntity = 2997;
     static constexpr std::uint64_t kDeck154CarriageEntity = 2998;
     static constexpr float kDeck154ParkX = 24.5F;
     static constexpr float kDeck154ParkZ = -140.0F;
     static constexpr float kDeck154ParkY = 154.0F;
-    // Its lifting eye, on the overhead guard's roof over the centre of mass,
+    // Its lifting eye, on the overhead guard's roof over the center of mass,
     // where a crane's sling hooks on: in the truck's frame.
     static constexpr float kEyeY = 2.42F;
     static constexpr float kEyeZ = -0.5F;
@@ -160,13 +160,13 @@ public:
     [[nodiscard]] const State &state() const noexcept { return state_; }
     // Where the driver stands, in the world.
     [[nodiscard]] JPH::RVec3 station() const;
-    // Wheel i's centre and its axle (a unit vector), and its size.
+    // Wheel i's center and its axle (a unit vector), and its size.
     [[nodiscard]] JPH::RMat44 wheel_transform(int wheel) const;
     [[nodiscard]] float wheel_radius(int wheel) const noexcept;
     [[nodiscard]] float wheel_width(int wheel) const noexcept;
 
     // After the kit's restore: the controls let go, the wheels and the
-    // engine still, the steering centred, the forks held where they are.
+    // engine still, the steering centered, the forks held where they are.
     void restore();
 
 private:

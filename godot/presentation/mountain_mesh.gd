@@ -11,7 +11,7 @@ extends RefCounted
 ## stepped into the faces. The lowest FOOT_TRUE of it, which a climber can
 ## reach, is the cone itself, so the rock seen there is the rock that stops
 ## them. Rock shade and how far into a gully a point lies ride in the vertex
-## colour (r, g). VARIANTS peaks are built once; each mountain takes one,
+## color (r, g). VARIANTS peaks are built once; each mountain takes one,
 ## turned and scaled to its cone, and all mountains of a variant are one
 ## MultiMesh draw, their rock tint and snowline in the instance's custom data.
 ## The scale is uniform, so the normals stay true without an inverse
@@ -61,7 +61,7 @@ static func draw(parent: Node3D, peaks: Array) -> void:
 			var size := minf(float(spec["height"]), float(spec["radius"]) / ASPECT)
 			var basis := Basis(Vector3.UP, float(spec["variant"]) * 2.39996).scaled(Vector3.ONE * size)
 			mm.set_instance_transform(i, Transform3D(basis, spec["foot"]))
-			# Custom data is not colour-converted: the tint goes in linear.
+			# Custom data is not color-converted: the tint goes in linear.
 			var rock: Color = (spec["rock"] as Color).srgb_to_linear()
 			mm.set_instance_custom_data(i, Color(rock.r, rock.g, rock.b, float(spec["snowline"])))
 		var drawn := MultiMeshInstance3D.new()

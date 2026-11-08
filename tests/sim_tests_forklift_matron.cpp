@@ -98,13 +98,13 @@ struct Run {
     int braced_ticks = 0;
     double braced_truck_mps = 0.0;   // the truck's speed on the last braced tick
     double braced_front_n = 1.0e9;   // the driven (front) wheels' least normal load while she braced
-    double braced_slip = 0.0;        // and their greatest |spin r| - |speed| (m/s), a tyre spinning
+    double braced_slip = 0.0;        // and their greatest |spin r| - |speed| (m/s), a tire spinning
     double off_z = 0.0;          // where she was when she dropped below the deck
     double died_y = 0.0;         // her height when she died
     bool dead = false;
     // The decisive trace (#229, ChatGPT 14:51 and 14:57): which of the
     // truck's two bodies her balance judged (take_blow's gates, read back by
-    // debug_matron_strikers), the truck's tyres while it touches her, her
+    // debug_matron_strikers), the truck's tires while it touches her, her
     // feet against her budget, and how near the open edge she came.
     bool log = false;                 // a line a tick while the truck touches her
     int touch_ticks = 0;              // either truck body touching her
@@ -420,7 +420,7 @@ Run ram(const int stage, const double throttle, const double forks_up_s, const b
 
 // Pushed off: forks up to her middle, she 2.6 m from the open edge; driven
 // at her, then on at a walk until the truck's frame is 2 m short of the
-// edge (its front wheels under a metre short), let go, 10 s more.
+// edge (its front wheels under a meter short), let go, 10 s more.
 Run push_off() {
     auto s = start({kMiddle, kDeck, -126.6}, 2);
     Simulation &w = *s;
@@ -584,7 +584,7 @@ void run_forklift_matron() {
             "forklift_matron low: a hit at fork height takes the low-blow path and fells even a changed Matron");
     require(!middle.low && middle.blow_mps > shins.blow_mps * 0.5 && middle.staggers >= 1 && middle.knockdowns == 0,
             "forklift_matron low: the forks at her middle, as hard a hit only staggers her, braced");
-    // Low or not is the judged body's centre of mass against her soles + 0.5
+    // Low or not is the judged body's center of mass against her soles + 0.5
     // m: the fork carriage's, forks down (about 0.27 m up) or at her middle
     // (about 0.87 m).
     require(shins.carriage_low > 0 && middle.carriage_judged > 0 && middle.carriage_low == 0 && middle.chassis_low == 0,
@@ -612,7 +612,7 @@ void run_forklift_matron() {
     // 4. Push off. Driven back to the open edge she goes over, falls by
     // gravity, and the landing at her fall's speed decides it. Where her feet
     // brace back from the edge (brace_at_edges: not while a blow staggers
-    // her), they do it with all her 8 kN, and the truck's driven tyres still
+    // her), they do it with all her 8 kN, and the truck's driven tires still
     // grip and drive her back.
     const Run off = push_off();
     print("push off, changed", off);

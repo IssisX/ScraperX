@@ -287,7 +287,7 @@ void run_well_stage_b() {
         const auto state = b_well.snapshot();
         const double rise = kit_y(b_well, Simulation::kWellBCageEntityId) - b_ride_cage_y0;
         // While the line hauls: once it runs, the cage drops the last few
-        // centimetres onto its dogs under the rider.
+        // centimeters onto its dogs under the rider.
         if (rise > 0.05 && !state.well_b_rope_let_go) {
             b_rode_on_cage = b_rode_on_cage && state.player_grounded &&
                              state.support_entity_id == Simulation::kWellBCageEntityId;

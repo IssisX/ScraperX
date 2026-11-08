@@ -227,7 +227,7 @@ constexpr double kWellASkipMassKg = 800.0;
 constexpr double kWellACageFloorTop = 154.25;
 constexpr double kWellATravel = 22.0;
 // The energy rule is checked from body states every tick. A standing capsule
-// settles by millimetres on whatever floor it is on; 1 cm of that for the
+// settles by millimeters on whatever floor it is on; 1 cm of that for the
 // 85 kg rider is the tolerance, so stance noise is never read as a motor.
 constexpr double kStanceJitterJ = kRiderMassKg * kGravity * 0.01;
 

@@ -169,7 +169,7 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
     const float sz = float(line.stand.GetZ());
     const float stand_y = float(line.stand.GetY());
     const float feet = float(at.GetY()) - kStandCentre;
-    // Not on her level at all: a full metre below its floor, she fell off
+    // Not on her level at all: a full meter below its floor, she fell off
     // it (a level her settle has not caught up with yet, as after letting
     // go of a cable onto the floor below). Walking to this line's stand
     // from there drives her across the floor she actually landed on and

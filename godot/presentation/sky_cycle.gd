@@ -20,7 +20,7 @@ const NOON_ELEVATION_DEG := 40.0
 # Where the day begins (settings_store.gd TIME_OF_DAY_HOURS[0], CYCLE).
 const START_HOUR := 8.5
 const SUN_ENERGY := 2.4
-# Moonlight: cool, not blue-white. At 0.55 and a bluer colour the snow and
+# Moonlight: cool, not blue-white. At 0.55 and a bluer color the snow and
 # the cloud layer glowed against black slopes (environment plan, job 12).
 const MOON_ENERGY := 0.42
 const FILL_DAY_ENERGY := 0.55
@@ -73,7 +73,7 @@ func setup(sun: DirectionalLight3D, fill: DirectionalLight3D, environment: Envir
 	_environment.fog_sky_affect = 0.2
 	# Metal shows the sky. (It was off because rough asphalt and concrete
 	# read near-white: their specular level let the sky's rough-surface sheen,
-	# which this renderer adds whatever a surface's colour, swamp their dark
+	# which this renderer adds whatever a surface's color, swamp their dark
 	# albedo. The porous finishes now carry their cavities' occlusion instead:
 	# main_geometry.gd POROUS_SPECULAR.)
 	_environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
@@ -81,7 +81,7 @@ func setup(sun: DirectionalLight3D, fill: DirectionalLight3D, environment: Envir
 	_apply()
 
 
-# [atlas px, soft filter (RenderingServer.ShadowQuality), metres, cascades]
+# [atlas px, soft filter (RenderingServer.ShadowQuality), meters, cascades]
 # for LOW..ULTRA; 0 is off. HIGH is the project default (project.godot).
 const SHADOW_LEVELS := [
 	[],
@@ -195,7 +195,7 @@ func _apply() -> void:
 # fog from 100 m to 3 km, curve 0.7, at most 80%, aerial perspective
 # 0.6, no height term). It is lit at the sky's own brightness, so distance
 # lightens toward the horizon instead of greying toward the rock; the aerial
-# perspective takes the dome's colour in each direction, so the haze warms
+# perspective takes the dome's color in each direction, so the haze warms
 # on the sun's side and goes dark with the night sky, never glowing above it.
 # The height term is off: Godot's is the same at every distance, so it laid a
 # flat veil over the yard and turned the valley floor into one sheet.
@@ -226,7 +226,7 @@ func _thin_air() -> void:
 func _apply_air(day: float, dusk: float) -> void:
 	if _environment.has_meta(AIR_HELD_META):
 		return
-	# The horizon colours are sky.gdshader's horizon_day and horizon_night.
+	# The horizon colors are sky.gdshader's horizon_day and horizon_night.
 	var horizon_day := Color(0.60, 0.66, 0.73)
 	var horizon_night := Color(0.08, 0.10, 0.155)
 	var fog := horizon_night.lerp(horizon_day, day).lerp(Color(0.78, 0.55, 0.40), dusk * 0.4)

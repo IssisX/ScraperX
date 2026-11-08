@@ -1214,7 +1214,7 @@ var _pipe_drum_rest := Vector3.ZERO   # where it was set down
 var _pipe_watch := {}
 
 
-# The centre-to-centre horizontal gap to the Matron, as the sweep's own
+# The center-to-center horizontal gap to the Matron, as the sweep's own
 # offer and contact measure it.
 func _centre_gap() -> float:
 	var her: Vector3 = _matron_state()["position"]
@@ -1534,7 +1534,7 @@ func _pipe_heard_coming() -> bool:
 
 # Back along the band to the drum by the shaft's edge while she comes up the
 # pipe after the climber: taken up, held out under the rail over her, the eyes
-# down the pipe. With her a few metres below the deck and climbing, a swipe up
+# down the pipe. With her a few meters below the deck and climbing, a swipe up
 # throws it down onto her (knock her down, then throw what you carry): torn
 # off, she slams onto the flange below her, alive.
 func _pipe_drum_onto_her(device: int) -> bool:

@@ -15,7 +15,7 @@ The second band of the mechanism ascent: from the 220 ring to the top of Transfe
 top of Atlas band B03, *Wet Isolation*. Every lift in it runs on water or air: a float that rises
 on a flooding tube, a chiller that falls through a sealed duct and drives a cab up on the air it
 pushes, and a weight-loaded hydraulic accumulator. Each is found unlinked; the player links it and
-sets it off; what each leaves behind feeds its neighbours; a header on TP-340 re-arms the band in one
+sets it off; what each leaves behind feeds its neighbors; a header on TP-340 re-arms the band in one
 cascade. A climbing route needs no lift.
 
 ## Existing truth (`573dd84`, `world_solids.inc`)
@@ -72,7 +72,7 @@ Plan view, north up. Column x ranges are the shafts' outer faces.
   ends at the gap are self-sealing couplings, shut until a spool's flange seats against them.
 - **Link and set off, one act (2026-10-19; rule 11):** pick the spool up, carry it through the gap
   onto the platform, turn, and set it down in the gap behind you. A cradle of two rails across the
-  gap takes its flanges: set down anywhere over them within a quarter metre, it rolls to the middle
+  gap takes its flanges: set down anywhere over them within a quarter meter, it rolls to the middle
   and lies in line with the pipe (seated within 0.28 m and 0.35 rad). Seated, it opens both couplings:
   water runs tank → tube, and within a second the float rises and pushes the platform, rider aboard,
   36 m to its stop. An overflow at 219.0 keeps the tube below its lid. (Until 2026-10-19 the spool was
@@ -130,7 +130,7 @@ pulled and nothing is taken in the hands: the rider walks in, drops and rides.
   lower, `f` the valve's opening; a spout pours into the first bin or pool below it. Water above a
   pool's overflow, and water spilled from a bin, drains away.
 - **Buoyancy.** `ρ g A d` on a float, `d` its submerged depth clamped to its height, applied at its
-  centre of mass, with water drag on its vertical speed.
+  center of mass, with water drag on its vertical speed.
 - **Air.** Each cell is an isothermal ideal gas. A piston feels `(P − P_atm) A`. A throttle passes
   `0.6 A √(2 ρ ΔP)` (linear under 50 Pa). An open door leaks its area times its opening (a door
   pressed onto its frame past its shut stop is shut). A vacuum breaker admits air below

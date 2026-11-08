@@ -362,7 +362,7 @@ void Slingshot::create_guide(double held_draw) {
     if (pouch == nullptr) return;
     SliderConstraintSettings settings;
     settings.mSpace = EConstraintSpace::WorldSpace;
-    // The reference is the undrawn centre of mass, retaining the shape's
+    // The reference is the undrawn center of mass, retaining the shape's
     // true COM offset rather than treating the visible floor as its COM.
     const auto com_offset = pouch->GetCenterOfMassPosition() - pouch->GetPosition();
     settings.mPoint1 = state_.guide_origin + com_offset;
@@ -405,7 +405,7 @@ bool Slingshot::player_in_pouch() const {
 bool Slingshot::unloaded_pouch_ready() const {
     if (state_.harness_rest_local.GetY() <= 0) return true;
     // Real resting contact establishes the unloaded support at THIS bowl
-    // location. A former higher side must not block boarding at the centre.
+    // location. A former higher side must not block boarding at the center.
     return rider_supported_ || system_.WereBodiesInContact(player_, kit_.body_id(pouch_));
 }
 

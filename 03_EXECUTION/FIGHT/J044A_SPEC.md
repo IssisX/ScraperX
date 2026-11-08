@@ -55,7 +55,7 @@ Proposed stable enum / export schema **for review, not an already-landed API**:
 | Region keys | Native body | Classification from actual contact |
 |---|---|---|
 | `face_l`, `face_r` | head | frontal/lateral skin zones, split by *head-local* sagittal plane, never world X |
-| `eye_l`, `eye_r` | head | a fist contact on the front of the head within 0.035 m of an eye socket's centre; split by the *head-local* sagittal plane, never world X |
+| `eye_l`, `eye_r` | head | a fist contact on the front of the head within 0.035 m of an eye socket's center; split by the *head-local* sagittal plane, never world X |
 | `jaw` | head | subface mandibular zone, front/underside |
 | `skull` | head | crown/occipital/back-of-head contact |
 | `neck` | neck | neck collider, excluding lower jaw |
@@ -67,7 +67,7 @@ Proposed stable enum / export schema **for review, not an already-landed API**:
 
 Every **accepted** impulse generates one `HitContact` carrying body/entity id, local hit point and normal, `impulse_Ns`, origin/ownership, surface-feature geometry, tick and resolved region. Preserve `damage_ns` as THE authoritative total. Per-region credited increments must satisfy `sum(region_new_impulses) + unclassified_new_impulse == damage_ns_delta` **in each tick**. Unknown legacy or composite contact goes into an explicit `unclassified` reconciliation bucket and creates **no fabricated facial injury** until source geometry disambiguates it. Multiple simultaneous contacts apportion only the already-judged impulse, never a second addition. Keep `player_damage_ns` attribution unchanged. A glancing hit and guard contact cannot be mapped to the cheek solely because a cast ray crosses it. The fist must actually meet the appropriate body shape first.
 
-Eye socket centres are the eye bones' rest offsets in head-local space (±0.0315 m lateral; J-059 measured). Note the rig's eye bone names sit on the opposite sides from this convention (the bone called `eye_l` is at head-local −X) — the map follows anatomy, not the bone names, and the `eye_sides` check in `injury_shots_test.gd` guards the signs.
+Eye socket centers are the eye bones' rest offsets in head-local space (±0.0315 m lateral; J-059 measured). Note the rig's eye bone names sit on the opposite sides from this convention (the bone called `eye_l` is at head-local −X) — the map follows anatomy, not the bone names, and the `eye_sides` check in `injury_shots_test.gd` guards the signs.
 
 ## E. Progressive injury: game-calibrated thresholds, not fake forensic certainty
 
@@ -117,7 +117,7 @@ For J-044d/e (body motors) and every later drive path. No numbers here are gains
 from the measured colliders, and the builder posts them on #244 before any numeric gain.
 
 1. **Moment arm.** Motor axis `k` at pivot `q`, unit world axis `e_k`, load point `p_k`: the segment's distal grip or
-   contact, else its collider mass centre as a declared free-limb proxy. `a_k = p_k - q`, `r_k = |a_k x e_k|` (m).
+   contact, else its collider mass center as a declared free-limb proxy. `a_k = p_k - q`, `r_k = |a_k x e_k|` (m).
    Charge `F_eq,k = |tau_k| / r_k` only when `r_k >= r_min` (a geometry-proven minimum lever, not a tolerance); below it
    the axis gets zero torque that tick. Never `|tau| / max(r, r_min)` with the torque left whole.
    Allowed: `|tau_k| <= min(|tau_requested|, r_k * F_remaining)`. Several axes on one SwingTwist: charge `sum_k F_eq,k`

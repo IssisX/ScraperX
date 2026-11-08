@@ -28,7 +28,7 @@ const LOCKER_SIZE := Vector3(1.2, 2.2, 0.9)
 const PLANKS := 11
 const PLANK_FLOATS := 9
 const PLANK_SIZE := Vector3(3.06, 0.08, 1.6)
-const STAND_CENTRE := 1.05      # the native capsule's centre above her soles
+const STAND_CENTRE := 1.05      # the native capsule's center above her soles
 const DRAW_RANGE_M := 140.0
 const STATE_STRAINING := 1
 const STATE_EMERGING := 2
@@ -194,7 +194,7 @@ const PROP_LEAN_DOWN_S := 1.2
 # take (matron_rig.gd prop_take_s): her speed changes on the way, and her drawn
 # shoulder trails the lean by about 0.25 s (matron_rig.gd govern)
 const PROP_LEAD_S := 1.0
-# trunk past level: the native takes a box at her centre kTakeM (0.85 m) from
+# trunk past level: the native takes a box at her center kTakeM (0.85 m) from
 # it, and only this deep a stoop brings its handle inside her real arm there
 const STOOP_PITCH := 1.9
 const STOOP_HIP_Y := 0.45
@@ -550,8 +550,8 @@ func _build_locker() -> void:
 	_merge_leaves(_locker, [_lamp_glass])
 
 
-# Sealed, the native reports the centre she would step out at: home floor
-# plus the stand centre. The cabinet's centre is half its height over that
+# Sealed, the native reports the center she would step out at: home floor
+# plus the stand center. The cabinet's center is half its height over that
 # floor, the same spot set_home moves the solid to. Once she is out, her
 # position is her body and the cabinet stays.
 func _sync_locker_home(data: Dictionary) -> void:
@@ -772,7 +772,7 @@ func _build_figure() -> void:
 	# The site's first-aid attendant (the story, 2026-10-19), redesigned from
 	# scratch (the owner, 2026-10-20): a real old woman, heavy in the old way,
 	# pale and wrinkled, big knuckled hands, her uniform torn and foul, long
-	# thin grey hair that swings, eyes that find you. _pose() turns the pivots
+	# thin gray hair that swings, eyes that find you. _pose() turns the pivots
 	# below; matron_rig.gd copies them to her skeleton's bones.
 	_figure = _pivot(self)
 	_figure.visible = false
@@ -2489,7 +2489,7 @@ func figure_shown() -> bool:
 # time it draws them, and it first draws her at the locker burst, a stall of
 # seconds on the phone. Under the LOADING card (main.gd _prepare_her, the tree
 # paused, so nothing else moves her) she is drawn for a few frames as a speck
-# at the screen's centre, under the card's word, WARM_SCALE of her size
+# at the screen's center, under the card's word, WARM_SCALE of her size
 # WARM_AT_M in front of the camera: every material and its shadow drawn,
 # nothing seen. warm_down puts her back as she was.
 const WARM_SCALE := 0.002

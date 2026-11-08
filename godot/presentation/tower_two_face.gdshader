@@ -1,11 +1,11 @@
 shader_type spatial;
 
-// Tower two's face (environment plan, job 14): the 1.6 km neighbouring shaft
+// Tower two's face (environment plan, job 14): the 1.6 km neighboring shaft
 // as poured concrete, on the same box (main_world.gd _build_tower_skin). Look
 // only: no relief, nothing proud of the face, and nothing that runs on from
 // one lift to the next, so nothing reads as a way up (rule 64).
-// - Lift joints every LIFT metres (a jump-form pour), each lift a shade off
-//   its neighbours; the form's panel joints, faint, every PANEL metres.
+// - Lift joints every LIFT meters (a jump-form pour), each lift a shade off
+//   its neighbors; the form's panel joints, faint, every PANEL meters.
 // - Form-tie plugs on a TIE_X by TIE_Y grid; a few bleed rust down the face.
 // - Cold joints: some lifts carry a wavy seam where a pour stopped and went
 //   on later.
@@ -73,7 +73,7 @@ float line_cover(float d, float w, float fw) {
 	return max(high - low, 0.0) / max(fw, 1e-5);
 }
 
-// An sRGB colour as StandardMaterial3D's albedo takes it under this renderer.
+// An sRGB color as StandardMaterial3D's albedo takes it under this renderer.
 vec3 output_colour(vec3 srgb) {
 	if (OUTPUT_IS_SRGB) {
 		return srgb;
@@ -95,7 +95,7 @@ void fragment() {
 	float fs = max(fwidth(s), 1e-5);
 	float fy = max(fwidth(y), 1e-5);
 	float fw = max(fs, fy);
-	// The weathering of decades, tens of metres across.
+	// The weathering of decades, tens of meters across.
 	float value = 0.8 + 0.24 * noise2(vec2(s / 41.0, y / 67.0));
 	vec3 tint = vec3(1.0);
 	float dark = 0.0;

@@ -19,7 +19,7 @@ constexpr std::uint64_t kInclineTrip = kInclineDeck + 1;
 constexpr std::uint64_t kInclineBrake = kInclineDeck + 2;
 constexpr double kOffBrakeM = 1.0;
 // Within the last kNearHeadM of the incline the rider keeps a foot by the
-// treadle, half a metre off: a full metre's walk back onto it is half a
+// treadle, half a meter off: a full meter's walk back onto it is half a
 // second unbraked on the slope, a trolley at the head at over 2 m/s.
 constexpr double kNearHeadM = 4.0;
 constexpr double kOffBrakeNearM = 0.5;
@@ -89,7 +89,7 @@ void run_incline() {
         peak = std::max(peak, lift.incline_speed_mps);
         if (lift.travels[5] > 0.995 && lift.incline_speed_mps < 0.05) break;
         arrival = lift.incline_speed_mps;
-        // Off the brake: a metre west of the treadle, clear of it on the deck.
+        // Off the brake: a meter west of the treadle, clear of it on the deck.
         hold_on(s, kInclineBrake, 1,
                 lift.incline_speed_mps > allowed ? 0.0 : remaining < kNearHeadM ? kOffBrakeNearM : kOffBrakeM);
     }
@@ -310,7 +310,7 @@ void run_teeter() {
         double slowest_teeter_mps;   // lowest horizontal speed seen while teetering
         bool restore_clears = false;  // a load taken mid-teeter publishes no teeter
     };
-    // Back 5.5 m from the edge, run at it, and at `release` metres short of
+    // Back 5.5 m from the edge, run at it, and at `release` meters short of
     // the edge set the stick to `stick_z`. The run-up is short: the sprint
     // arrives at its own 8 m/s, not yet gathered on into flow (run_flow).
     const auto attempt = [&](const double release, const double stick_z, const bool sprint,
@@ -378,7 +378,7 @@ void run_teeter() {
     // Entered at a sprint, the teeter lasts below its entry speed: the
     // ground's 22 m/s/s does not come back halfway. (The margin was 0.2 m/s
     // before the step-down: the feet now stay on an edge until the body's
-    // centre passes it, the measured edge sits that much further out, and
+    // center passes it, the measured edge sits that much further out, and
     // the pulled-back teeter goes over at 5.89 m/s, still under its 6.)
     require(sprint_pull.slowest_teeter_mps < kTeeterEntryMps - 0.05,
             "a teeter entered at a sprint must persist below the entry speed");

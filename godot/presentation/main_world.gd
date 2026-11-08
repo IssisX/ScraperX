@@ -35,7 +35,7 @@ var _vent_tops := PackedVector3Array()
 #
 # Industrial palette: mill scale, oxidised steel, poured concrete, wet asphalt,
 # galvanised mesh, faded warning yellow, chipped hazard orange. Nothing here
-# emits light except a sodium fitting, a fire box, or a vent -- colour is a
+# emits light except a sodium fitting, a fire box, or a vent -- color is a
 # consequence of material and weather, not a shader preset.
 
 func _build_world() -> void:
@@ -69,7 +69,7 @@ func _build_world() -> void:
 	var oxidised := _surfaced(Color("57382a"), 0.0, 0.9, _surface_rust)
 	var rust_deep := _surfaced(Color("3a271d"), 0.0, 0.93, _surface_rust)
 	var rust_bright := _surfaced(Color("6e4630"), 0.0, 0.84, _surface_rust)
-	# Weathered hot-dip zinc: the bright metal (0.81) dulled under its grey
+	# Weathered hot-dip zinc: the bright metal (0.81) dulled under its gray
 	# patina of zinc carbonate, part metal, part mineral.
 	var galvanised := _surfaced(Color("6e7274"), 0.75, 0.6, _surface_galvanised)
 	# Paint is not metal: it weathers, grimes and streaks like the steel it
@@ -78,14 +78,14 @@ func _build_world() -> void:
 	var hazard := _surfaced(Color("9a4814"), 0.0, 0.66, _surface_paint)
 	var tar := _material(Color("0e0f11"), 0.0, 0.62)
 	var timber := _surfaced(Color("4a3420"), 0.0, 0.9, _surface_timber)
-	# New accents: living colour against the rust. Copper's patina is a
+	# New accents: living color against the rust. Copper's patina is a
 	# mineral crust, not metal.
 	var verdigris := _surfaced(Color("3f6b5c"), 0.0, 0.7, _surface_paint)
 	var lichen := _material(Color("57642e"), 0.0, 0.96)
 
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
 	_add_box("Grade", Vector3(480.0, 1.0, 480.0), Vector3(0.0, -0.5, -60.0), asphalt)
-	# The neighbouring shaft stands on the ground: 1.6 km from grade up.
+	# The neighboring shaft stands on the ground: 1.6 km from grade up.
 	_add_box("TowerMass", Vector3(92.0, 1600.0, 80.0), TWIN_TOWER_CENTER, concrete)
 
 	_build_stack(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded_yellow, timber)
@@ -453,8 +453,8 @@ func _build_stack_bridges(galvanised: Material, faded: Material, rust_deep: Mate
 			_add_box("BridgePylonFoot", Vector3(3.0, pylon_bottom + 0.5, 3.0),
 				Vector3(to.x + sx * 2.0, (pylon_bottom - 0.5) * 0.5, to.z), rust_deep)
 
-# Colour that isn't rust: verdigris copper pipe runs and lichen staining low on the columns where damp and shade let something
-# green actually take hold. A decades-old working plant is never one colour.
+# Color that isn't rust: verdigris copper pipe runs and lichen staining low on the columns where damp and shade let something
+# green actually take hold. A decades-old working plant is never one color.
 func _build_stack_accents(verdigris: Material, lichen: Material) -> void:
 	var cx := STACK_CENTER.x
 	var cz := STACK_CENTER.z
@@ -462,7 +462,7 @@ func _build_stack_accents(verdigris: Material, lichen: Material) -> void:
 
 	# A verdigris pipe run climbing the front face, distinct from the oxidised
 	# risers in the shaft -- copper service lines age to blue-green, not rust.
-	# West of the centre: the east half of the face carries S1 and C1.
+	# West of the center: the east half of the face carries S1 and C1.
 	for sx in [-1.0]:
 		_add_cylinder("VerdigrisPipe", 0.4, STACK_LEVEL_HEIGHT * float(STACK_LEVEL_COUNT),
 			Vector3(cx + sx * (STACK_HALF_EXTENT - 4.5),
@@ -557,7 +557,7 @@ func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Mat
 	# its own shader on a copy of the same box. TowerMass stays the part the
 	# solids export reads; it is only no longer drawn, so the batcher leaves
 	# it out (batched, the shaft fell into a far section drawn as one flat
-	# colour). The copy is no part: no new solid, no hold. Not under the
+	# color). The copy is no part: no new solid, no hold. Not under the
 	# floating audit, which reads the tree as built.
 	var mass := $TowerPresentation.get_node("TowerMass") as MeshInstance3D
 	if get("_audit") == null and mass != null:
@@ -602,7 +602,7 @@ func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Mat
 	_build_stack_continuation(oxidised, rust_deepen(oxidised), mill_scale, galvanised, faded)
 
 # The frame does not stop where the player's reach does. Above the climbable
-# stack the same columns, decks and bracing carry on for a few hundred metres,
+# stack the same columns, decks and bracing carry on for a few hundred meters,
 # thinning out as they go, and the environment fog takes them the rest of the
 # way. This is what makes the structure read as a skyscraper rather than a
 # gantry: there is always more of it above you.
@@ -693,7 +693,7 @@ const LAMP_MAST_COLOR := Color("3a3835")
 const TOWER_FOOT_FLOOD_Y := 15.0
 
 func _build_lighting() -> void:
-	# Sodium vapour: warm, low, and sourced from actual fittings on masts.
+	# Sodium vapor: warm, low, and sourced from actual fittings on masts.
 	for mast: Vector3 in LAMP_MASTS:
 		_add_box("LampMast", LAMP_MAST_SIZE, mast + Vector3(0.0, 5.5, 0.0),
 			_material(LAMP_MAST_COLOR, 0.7, 0.62))
@@ -715,7 +715,7 @@ func _build_lighting() -> void:
 	var column_face := STACK_HALF_EXTENT + STACK_COLUMN_SIZE * 0.5
 	var flood_fitting := _material(Color("5a4b2c"), 0.4, 0.7, Color("b06a1c"), 1.4)
 	for sx in [-1.0, 1.0]:
-		# [fitting centre, its size, the way its glass faces]
+		# [fitting center, its size, the way its glass faces]
 		var riser_face := Vector3(cx + sx * riser_offset, TOWER_FOOT_FLOOD_Y, cz + riser_offset + 0.35)
 		var corner_face := Vector3(cx + sx * column_face, TOWER_FOOT_FLOOD_Y, cz + STACK_HALF_EXTENT)
 		for mount in [[riser_face + Vector3(0.0, 0.0, 0.15), Vector3(0.6, 0.4, 0.3), Vector3.BACK],
@@ -730,7 +730,7 @@ func _build_lighting() -> void:
 	glow.build(_light_rig.get_children().filter(func(n: Node) -> bool: return n is OmniLight3D),
 		_obstruction_light_points())
 
-# Where the red obstruction lights hang (lamp_glow.gd): on the neighbouring
+# Where the red obstruction lights hang (lamp_glow.gd): on the neighboring
 # shaft's four corners every OBSTRUCTION_STEP_M and at its top (TowerMass,
 # _build_world), and on the corner columns of the main frame's continuation
 # (_build_stack_continuation) at its middle tier and its top. Each sits
@@ -774,7 +774,7 @@ func _build_mountains_and_waterfall() -> void:
 	# Non-collidable alpine backdrop (identity doc item 2). Peaks are cheap
 	# cones -- a CylinderMesh with top_radius 0 -- with a lighter snow-cap cone
 	# nested at the tip. Distance fade comes from the environment's aerial
-	# perspective fog, not from manual colour tuning per peak.
+	# perspective fog, not from manual color tuning per peak.
 	# Kept dark and desaturated: these are distant backdrop mass, and at the
 	# old values they read as bright white blobs competing with the tower.
 	var rock := _material(Color("2f353d"), 0.04, 0.92)
@@ -859,7 +859,7 @@ func _build_basin() -> void:
 	# Beyond the rim a higher range, out of reach: from the yard it stands over
 	# the rim's saddles, so the skyline is layered rather than a row of teeth.
 	# Drawn only (no solid: nothing can get there), each keeping its foot
-	# outside the rim's own (BACK_RANGE_CLEAR_M from the centre).
+	# outside the rim's own (BACK_RANGE_CLEAR_M from the center).
 	var back := RandomNumberGenerator.new()
 	back.seed = 2207
 	for index in BACK_RANGE_PEAKS:

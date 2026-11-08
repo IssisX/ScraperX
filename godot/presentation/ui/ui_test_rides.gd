@@ -702,7 +702,7 @@ const INCLINE_BRAKE_ENTITY := INCLINE_DECK_ENTITY + 2
 # speed the trolley gains in the time a step back onto it takes.
 const INCLINE_OFF_BRAKE_M := 0.8
 const INCLINE_STEP_GAIN_MPS := 1.4
-# Within the last few metres a foot stays by the treadle: a step back from
+# Within the last few meters a foot stays by the treadle: a step back from
 # 0.8 m off is half a second unbraked on the slope at the head.
 const INCLINE_NEAR_HEAD_M := 4.0
 const INCLINE_OFF_BRAKE_NEAR_M := 0.6

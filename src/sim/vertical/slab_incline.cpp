@@ -30,7 +30,7 @@ std::unique_ptr<Machine> slab_incline(BuildContext c) {
     constexpr float kDeckHalfX = 1.4f, kDeckHalfZ = 1.6f, kDeckY = 3.05f;
     constexpr float kGroundY = -.1f;
     constexpr float kTowerZ = 4.5f;
-    // The rail's centre line passes this far under the deck's centre, so the
+    // The rail's center line passes this far under the deck's center, so the
     // deck's uphill underside corner clears it.
     const float drop = .25f + std::tan(kAngle) * kDeckHalfX + .15f + .1f;
     const Vec3 deck_start(0, kDeckY, 0);

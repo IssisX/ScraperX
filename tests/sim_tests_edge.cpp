@@ -6,7 +6,7 @@ namespace {
 using scraperx::sim::Simulation;
 using scraperx::sim::Vector3;
 
-// What a body let go of may move, over the 3 s watched: a millimetre.
+// What a body let go of may move, over the 3 s watched: a millimeter.
 constexpr double kStillDriftM = 0.001;
 constexpr double kPlayerRadiusM = 0.35;
 
@@ -38,7 +38,7 @@ bool creep_to(Simulation &sim, const double x, const double z, Frame frame, cons
 }
 
 // From where the body stands, creeps along (dir_x, dir_z) until the support's
-// contact point stays behind the centre: the centre has passed the edge and
+// contact point stays behind the center: the center has passed the edge and
 // the capsule's rim rests on it. That contact's coordinate along the creep.
 double find_edge(Simulation &sim, const double dir_x, const double dir_z) {
     for (int i = 0; i < 90 * 20; ++i) {
@@ -89,7 +89,7 @@ Stand let_go(Simulation &sim, const double dir_x, const double dir_z, const doub
 
 // The owner, playtesting: standing anywhere close to an edge, the body slid
 // off toward it as if on ice. The capsule's rounded foot rests on the edge
-// once the centre is past it; that contact's normal tilts out over the drop,
+// once the center is past it; that contact's normal tilts out over the drop,
 // and the frictionless body was pushed along it by the solve every tick, the
 // feet holding it only through the velocity locomotion sets before the solve.
 // Let go at a set distance in from an edge (or past it, on the rim), the body

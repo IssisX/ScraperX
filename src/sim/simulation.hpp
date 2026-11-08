@@ -261,7 +261,7 @@ struct MatronSnapshot final {
     double climb_force_n = 0.0;
     bool climb_lunge_drive = false;
     double foot_power_w = 0.0;
-    // Held-load tip, from Matron::View (S1 measurement, no behaviour).
+    // Held-load tip, from Matron::View (S1 measurement, no behavior).
     bool load_held = false;
     double load_mass_kg = 0.0;
     double load_offset_m = 0.0;
@@ -1266,7 +1266,7 @@ struct Snapshot final {
     std::uint32_t strike_phase_ticks = 0;
     bool strike_offered = false;
     std::int8_t strike_arm = 1;   // the fist he throws with: 1 right, 0 left, -1 none usable
-    bool strike_ready = false;    // a punch can be thrown now: the PUNCH button lit, else greyed
+    bool strike_ready = false;    // a punch can be thrown now: the PUNCH button lit, else grayed
 
     bool strike_landed = false;   // this strike has landed on her
     std::uint64_t strike_count = 0;
@@ -1830,13 +1830,13 @@ public:
         struct Striker {
             std::uint64_t entity = 0;
             double kg = 0.0;            // its mass
-            double centre_y = 0.0;      // its centre of mass before the step
+            double centre_y = 0.0;      // its center of mass before the step
             double feet_y = 0.0;        // her soles after it
             double closing_mps = 0.0;   // its own speed at her before the step
             double relative_mps = 0.0;  // the same, less hers
             double change_mps = 0.0;    // its velocity change over the step, less gravity's
             bool contact = false;       // in contact with her this step
-            bool low = false;           // its centre under her soles + kLowBlowM
+            bool low = false;           // its center under her soles + kLowBlowM
             bool judged = false;        // past all three gates (change, closing, contact): a blow
         };
         std::vector<Striker> kept;                   // the nearest kMaxNear of the first 32

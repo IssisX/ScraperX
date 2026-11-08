@@ -90,7 +90,7 @@ func _ring_band(img: Image, vertical: bool, first: bool) -> float:
 	# side: vertical+first = bottom (v > 0.5), vertical+!first = top
 	# (v < -0.5), !vertical+first = inner (u < -0.5), !vertical+!first =
 	# outer (u > 0.5). eye_l's texture (mirror=false); eye_r mirrors u.
-	# The baked colour is RING_BASE.lerp(RING_DARK, w), so a side whose
+	# The baked color is RING_BASE.lerp(RING_DARK, w), so a side whose
 	# weight is high reads darker.
 	var size := img.get_width()
 	var sum := 0.0
@@ -128,7 +128,7 @@ func _grab(at: Vector3, look: Vector3, fov: float) -> Image:
 
 
 func _darkened(lit: Image, bare: Image, centre: Vector2, half: int, step_lum: float) -> Vector2:
-	# In a (2 half)² box round centre: how many pixels are darker in lit
+	# In a (2 half)² box round center: how many pixels are darker in lit
 	# than in bare by more than step_lum (luminance 0..1), and the box's
 	# mean darkening (bare - lit). Same pose and camera, only the ring
 	# differs, so the difference is the bruise.
@@ -148,7 +148,7 @@ func _darkened(lit: Image, bare: Image, centre: Vector2, half: int, step_lum: fl
 
 
 func _skinned_skin_near(centre: Vector3, radius: float) -> PackedVector3Array:
-	# Her skin mesh's vertices within radius of centre, skinned on the CPU
+	# Her skin mesh's vertices within radius of center, skinned on the CPU
 	# at the current pose: world = skeleton * bone pose * bind * vertex,
 	# weighted. What the renderer draws as her skin there.
 	var out := PackedVector3Array()
@@ -201,7 +201,7 @@ func _max_off_skin(mi: MeshInstance3D, centre: Vector3, radius: float) -> float:
 
 func _bruise_area_facing(mi: MeshInstance3D, img: Image, cam: Vector3, min_alpha: float, min_facing: float) -> float:
 	# World area (m²) of mi's triangles whose bruise alpha (the ring texture
-	# as matron_injury_ring.gdshader projects it, at the triangle centre)
+	# as matron_injury_ring.gdshader projects it, at the triangle center)
 	# is at least min_alpha and whose surface faces cam by more than
 	# min_facing (N.V).
 	if mi == null or mi.mesh == null or mi.mesh.get_surface_count() < 1:
@@ -323,9 +323,9 @@ func _run() -> void:
 		"skull", "bruise %s patch %s outward %.3f face %.3f" % [layer.bruise_visible("skull"), layer.patch_visible("skull"), skull_out, face_out])
 	# J-059 black eye: a 75+ N·s punch to her left eye bruises it dark and
 	# swells the lid. eye_l/eye_r (J-044a §D, 14 regions): a fist contact
-	# on the front of the head within 0.035 m of a socket centre goes to
+	# on the front of the head within 0.035 m of a socket center goes to
 	# that eye instead of face_l/face_r, split by the head-local sagittal
-	# plane, never world X. The socket centres are the eye bones' rest
+	# plane, never world X. The socket centers are the eye bones' rest
 	# offsets — but the rig's eye bone NAMES sit on the opposite sides
 	# (the bone called eye_l is at head-local -X), so the anchors follow
 	# anatomy (+X is her left), not the bone names. The classification is

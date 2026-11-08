@@ -375,7 +375,7 @@ func _follow_arm(hold: Dictionary, delta: float) -> void:
 		return
 	var p: Vector3 = hold.get("severed_arm_position", Vector3.ZERO)
 	var q: Quaternion = hold.get("severed_arm_rotation", Quaternion.IDENTITY)
-	# The sim's arm body is centred: its root half a length up its axis.
+	# The sim's arm body is centered: its root half a length up its axis.
 	arm_piece.place(p, Basis(q))
 	if _arm_last != Vector3.INF and delta > 0.0:
 		var v := (p - _arm_last) / delta

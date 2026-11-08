@@ -82,9 +82,9 @@ enum class Material : std::uint8_t {
 // One part of a body, in the body's own frame. A body is the union of its
 // parts: the collision shape and the drawn shape are the same list. A box's
 // half is its half extents; a cylinder or a capsule runs along its local y,
-// half.y its half length (a capsule's between its two sphere centres) and
+// half.y its half length (a capsule's between its two sphere centers) and
 // half.x its radius. mass_kg > 0 gives the part its own share of the body's
-// mass, so a heavy block on a light beam moves the centre of mass; with no
+// mass, so a heavy block on a light beam moves the center of mass; with no
 // part massed, the body's mass is spread by volume.
 struct Part final {
     enum class Shape : std::uint8_t { Box = 0, Cylinder = 1, Capsule = 2 };
@@ -321,16 +321,16 @@ public:
     // leaves it and drains away.
     PoolIndex add_pool(JPH::Vec3 min_corner, JPH::Vec3 max_corner, float water_kg);
     // A cable reel (declared model, AS-010): its drum turns in the body's
-    // yoke, the cable's end made fast at `anchor` above it. Every metre the
-    // body sinks below where it was built pays out a metre of cable, whose
+    // yoke, the cable's end made fast at `anchor` above it. Every meter the
+    // body sinks below where it was built pays out a meter of cable, whose
     // weight leaves the reel for the anchor, so the reel weighs its own mass
-    // and the cable still wound on it, linear_density kg a metre of
+    // and the cable still wound on it, linear_density kg a meter of
     // coil_length. Paid out stays paid out: a reel drawn back up slackens
     // its cable. The drum's spin is not simulated. Drawn as a cable from
     // the anchor to the drum's rim at rim_local.
     ReelIndex add_reel(BodyIndex body, JPH::RVec3 anchor, JPH::Vec3 rim_local, float linear_density,
                        float coil_length);
-    // A hanging chain (declared model, AS-010 N): linear_density kg a metre,
+    // A hanging chain (declared model, AS-010 N): linear_density kg a meter,
     // `length` long, from point_local on the body straight down to a floor at
     // floor_y, where the rest of it lies piled. The body carries the part that
     // hangs, linear_density times the point's height over the floor up to the
@@ -349,7 +349,7 @@ public:
     WheelIndex add_wheel(BodyIndex body, JPH::RVec3 pivot, JPH::Vec3 axis, JPH::Vec3 normal, GuideIndex guide,
                          float radius);
     // A float: the body's box of half_x by half_z, from bottom_local (body
-    // y) up height, feels rho g A d up at its centre of mass, d its depth
+    // y) up height, feels rho g A d up at its center of mass, d its depth
     // under the pool's level, and water drag on its vertical speed.
     void add_float(PoolIndex pool, BodyIndex body, float half_x, float half_z,
                    float bottom_local, float height);
@@ -360,7 +360,7 @@ public:
     // and open angles (no valve: open).
     PipeIndex add_pipe(PoolIndex from, float from_y, PoolIndex to, float to_y, JPH::RVec3 spout,
                        float area, LeverIndex valve, float shut_angle, float open_angle);
-    // The pipe is whole only while spool's centre sits within tolerance of
+    // The pipe is whole only while spool's center sits within tolerance of
     // seat and its local x axis within angle_tolerance of axis (either way).
     void set_pipe_spool(PipeIndex pipe, BodyIndex spool, JPH::RVec3 seat, JPH::Vec3 axis,
                         float tolerance, float angle_tolerance);
@@ -373,7 +373,7 @@ public:
     // ---- air (declared model, AS-007) ------------------------------------
     // A sealed cell of air at atmospheric pressure as built, isothermal.
     CellIndex add_cell(float volume_m3);
-    // A piston with the cell under it: the cell grows by area for each metre
+    // A piston with the cell under it: the cell grows by area for each meter
     // the body rises, and the body feels (P - P_atm) area up.
     void add_piston(CellIndex cell, BodyIndex body, float area);
     // A throttle between two cells: 0.6 area sqrt(2 rho dP), linear under
@@ -515,7 +515,7 @@ public:
     // Empty for an index the kit does not hold.
     [[nodiscard]] const std::vector<Part> &body_parts(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::RVec3 body_position(BodyIndex body) const noexcept;
-    // Where the body's mass is centred now, contents included (a bin's
+    // Where the body's mass is centered now, contents included (a bin's
     // rubble is spread like the body).
     [[nodiscard]] JPH::RVec3 body_center_of_mass(BodyIndex body) const noexcept;
     [[nodiscard]] JPH::Quat body_rotation(BodyIndex body) const noexcept;
@@ -718,7 +718,7 @@ private:
         BodyIndex body;
         JPH::RVec3 anchor = JPH::RVec3::sZero();
         JPH::Vec3 rim = JPH::Vec3::sZero();
-        float density = 0.0F;   // kg per metre
+        float density = 0.0F;   // kg per meter
         float coil = 0.0F;      // m wound as built
         double start_y = 0.0;   // the body's height as built
         float paid = 0.0F;      // m paid out
@@ -727,7 +727,7 @@ private:
         BodyIndex body;
         JPH::Vec3 point = JPH::Vec3::sZero();
         float floor = 0.0F;     // the pile's floor, world y
-        float density = 0.0F;   // kg per metre
+        float density = 0.0F;   // kg per meter
         float length = 0.0F;    // m
         float hanging = 0.0F;   // m hanging from the body, as of the last step
     };
@@ -782,7 +782,7 @@ private:
     struct Piston final {
         BodyIndex body;
         float area = 0.0F;
-        float rest_y = 0.0F;   // centre-of-mass height as built
+        float rest_y = 0.0F;   // center-of-mass height as built
     };
     struct Door final {
         LeverIndex lever;

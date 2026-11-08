@@ -169,7 +169,7 @@ func _free(pool: Array[Spray]) -> Spray:
 
 
 ## Lay a splat at `at` on a surface with `normal`. smear > 0 stretches it
-## along `along` (a drag); size in metres.
+## along `along` (a drag); size in meters.
 func splat(at: Vector3, normal: Vector3, size: float, smear: float = 0.0, along: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var m := _splats[_splat_next]
 	_splat_age[_splat_next] = 0.0

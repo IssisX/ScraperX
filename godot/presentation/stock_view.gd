@@ -2,8 +2,8 @@ extends Node3D
 ## Loose stock as the player sees it (src/sim/loose_stock.hpp): every piece is
 ## a kit body, drawn and moved by the kit's own drawing (main_machines.gd);
 ## this gives the pieces that are painted their paint -- the containers'
-## corrugated colours and the locking bars on their doors, the drums'
-## colours, rusted beams among the mill-scaled -- in place of the kit's
+## corrugated colors and the locking bars on their doors, the drums'
+## colors, rusted beams among the mill-scaled -- in place of the kit's
 ## palette. Nothing here moves anything.
 
 # LooseStock::Kind (loose_stock.hpp).
@@ -30,7 +30,7 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	name = "StockView"
 	var ribbed: Texture2D = main._corrugation_texture()
 	var container_paint: Array[Material] = []
-	# Paint, not metal (metallic 0), its colours sun-faded and dirtied the way
+	# Paint, not metal (metallic 0), its colors sun-faded and dirtied the way
 	# a container's are after years in the weather: no candy.
 	for colour in [Color("6a3527"), Color("33465a"), Color("3e5440"), Color("7d7f79"), Color("8a5530")]:
 		var material: StandardMaterial3D = main._material(colour, 0.0, 0.74)
@@ -52,7 +52,7 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	var beam_paint: Array[Material] = [
 		main._surfaced(Color("36383b"), 0.3, 0.5, main._surface_mill_scale),
 		main._surfaced(Color("3a271d"), 0.0, 0.93, main._surface_rust)]
-	# Gas bottles in their gases' colours (oxygen black, acetylene maroon,
+	# Gas bottles in their gases' colors (oxygen black, acetylene maroon,
 	# argon blue), their caps left steel; the reels' wound cable black
 	# rubber; the toolboxes red, blue or yellow enamel.
 	var bottle_paint: Array[Material] = []

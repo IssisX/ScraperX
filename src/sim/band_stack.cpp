@@ -2,7 +2,7 @@
 // machine at a time with designed climbs between them. The chain and each
 // stage's contract are in 03_EXECUTION/PLANNING/MECHANISM_ASCENT_PLAN.md.
 //
-// Positions are world metres against the stack as built: decks every 11 m
+// Positions are world meters against the stack as built: decks every 11 m
 // (deck 2's top at 22.00), the south face's outer edge on z = -124 with its
 // edge beams 0.3 m proud of it (their tops 0.15 m under each deck's), a
 // column at x = 0 and x = +-26, a two-storey diagrid of braces in the face's
@@ -23,7 +23,7 @@ using kit::Part;
 
 // ---- S1, the water-balance hoist (archetype 01, counter-mass) ---------------
 //
-// A headframe stands against the south face east of the centre column, a
+// A headframe stands against the south face east of the center column, a
 // header tank on its head. In it a cage rests at grade, open south to the
 // yard and north to the tower, and west of the cage an empty bucket hangs at
 // the top of its own guide, held by a catch. One rope runs from the bucket's
@@ -58,7 +58,7 @@ constexpr float kCageLevelAccel = 2.00F;       // m/s^2 into each stop
 // cage's west face at knee height, under its head sheave.
 const JPH::Vec3 kCageEyeLocal(-kCageHalfX - 0.12F, 0.80F, 0.0F);
 
-// The bucket, about its floor's centre: open-topped, a bail across its top.
+// The bucket, about its floor's center: open-topped, a bail across its top.
 constexpr float kBucketX = 6.70F;
 constexpr float kBucketZ = kCageZ;
 constexpr float kBucketHalfX = 0.80F;
@@ -152,7 +152,7 @@ constexpr float kGangwaySouthZ = -122.30F;
             JPH::Quat::sFromTo(JPH::Vec3::sAxisZ(), along / length), material};
 }
 
-// The cage about its floor's centre: a galvanised floor, four yellow posts, a
+// The cage about its floor's center: a galvanised floor, four yellow posts, a
 // top frame, waist rails east and west, open north and south. The eye's
 // bracket is on the west face.
 [[nodiscard]] std::vector<Part> cage_parts() {
@@ -182,7 +182,7 @@ constexpr float kGangwaySouthZ = -122.30F;
     return cage;
 }
 
-// The bucket about its floor's centre: the floor first (a bin's water lies
+// The bucket about its floor's center: the floor first (a bin's water lies
 // on its first part), four walls, and the bail along z across the top.
 [[nodiscard]] std::vector<Part> bucket_parts() {
     const float wall_y = kBucketFloorHalfY + 0.5F * kBucketWall;
@@ -204,7 +204,7 @@ constexpr float kGangwaySouthZ = -122.30F;
 }
 
 
-// The scale plate about its centre: a yellow tread with an eye at its
+// The scale plate about its center: a yellow tread with an eye at its
 // north-east corner where the line is made fast.
 [[nodiscard]] std::vector<Part> plate_parts() {
     return {
@@ -1351,7 +1351,7 @@ constexpr float kS3BrakeTravel = 0.60F;
 constexpr float kS3BrakeRelease = 0.15F;
 // The pan: 0.6 m square, its floor's top 0.75 m over the cage's floor (its
 // rim's at 0.87: a load held at the hands' 1.25 m clears it by a fifth of a
-// metre and drops in), hung by an arm from its far rim to over its middle,
+// meter and drops in), hung by an arm from its far rim to over its middle,
 // so it hangs level and the near half is open from above. 8.9 kg: the
 // brake's lever does not lift for it, and does for the pig in it.
 constexpr float kS3PanHalf = 0.30F;

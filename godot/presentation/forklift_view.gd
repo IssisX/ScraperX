@@ -9,7 +9,7 @@ extends Node3D
 ## and the two leaf chains over them from the barrel to the carriage, so the
 ## forks rise twice as far as the rod. Nothing here moves anything.
 
-# Lugs round each tyre's face, so a rolling wheel is seen to roll.
+# Lugs round each tire's face, so a rolling wheel is seen to roll.
 const LUGS := 8
 # In the truck's frame (forklift.cpp): the ram's barrel stands at z 0.97, its
 # top 1.45 m up; the carriage's origin rises from 0.06 m at the forks' lowest.
@@ -27,9 +27,9 @@ const SHEAVE_RADIUS := 0.07
 var _native: Object
 var _chassis_body := -1
 # Drawn as instances (J-045, #248): one MultiMesh a part for every truck,
-# where every tyre, hub, lug, rod, sheave and chain run was its own draw (cut
+# where every tire, hub, lug, rod, sheave and chain run was its own draw (cut
 # by sections of the yard, the trucks drew three times as often). A part is
-# [MultiMesh, index]; a wheel is its tyre, hub and lugs. The trucks' parts are
+# [MultiMesh, index]; a wheel is its tire, hub and lugs. The trucks' parts are
 # gathered as each is set up and drawn once all are (build).
 var _wheels: Array = []
 var _rod: Array
@@ -63,7 +63,7 @@ func setup(main: Node, native: Object, index: int = 0) -> void:
 	if not _parts.has(cell):
 		_parts[cell] = {}
 	var parts: Dictionary = _parts[cell]
-	# One tyre and one hub for every size: the first wheel's, each other's
+	# One tire and one hub for every size: the first wheel's, each other's
 	# drawn scaled to its own radius and width (a straight cylinder scaled
 	# across its axle and along it is that cylinder, its normals unchanged).
 	# The lugs, set a fixed 12 mm in from the tread, are made per size.

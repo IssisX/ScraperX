@@ -2,7 +2,7 @@ extends Node3D
 # The night's lamps as the eye sees them in damp mountain air: a halo round
 # every lamp of the light rig, a soft cone of lit air under each yard flood,
 # and the red obstruction lights a 1.6 km structure must carry (the
-# neighbouring shaft's corners, and the main frame's continuation), flashing
+# neighboring shaft's corners, and the main frame's continuation), flashing
 # together. Presentation only.
 #
 # Drawn outside the part system: two MultiMeshes of camera-facing cards, so
@@ -19,7 +19,7 @@ extends Node3D
 # sky_cycle.gd finds this node among the rig's children (set_night) and fades
 # it with the day: nothing shows by day.
 
-# Halo radius per metre of the lamp's reach, and its floor and ceiling.
+# Halo radius per meter of the lamp's reach, and its floor and ceiling.
 const HALO_PER_REACH := 0.085
 const HALO_MIN_M := 0.9
 const HALO_MAX_M := 3.2
@@ -43,8 +43,8 @@ var _cone_material: ShaderMaterial
 # in the rig's space (main_world.gd _build_lighting). Call once the rig is
 # built.
 func build(lamps: Array, beacons: PackedVector3Array) -> void:
-	var halos: Array = []   # [position, radius, colour, flashes]
-	var cones: Array = []   # [head position, length, colour]
+	var halos: Array = []   # [position, radius, color, flashes]
+	var cones: Array = []   # [head position, length, color]
 	for node in lamps:
 		var lamp := node as OmniLight3D
 		var radius := clampf(lamp.omni_range * HALO_PER_REACH, HALO_MIN_M, HALO_MAX_M)
@@ -109,9 +109,9 @@ static func _shader(code: String) -> Shader:
 
 
 # A halo: a disc square to the eye, pulled toward it by its radius. Far away
-# it keeps a few pixels' size (a lamp a kilometre off is still a point of
+# it keeps a few pixels' size (a lamp a kilometer off is still a point of
 # light), its energy spread over the larger card. Fog is left off and the
-# air's loss done here, so the additive card never paints the haze's colour.
+# air's loss done here, so the additive card never paints the haze's color.
 const HALO_SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled, skip_vertex_transform;

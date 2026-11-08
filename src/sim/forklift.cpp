@@ -26,11 +26,11 @@ Part box(const Vec3 half, const Vec3 offset, const Material material, const floa
 // The truck, in its own frame: +z forward, +y up, its origin on the ground
 // under the middle of its frame. Masses CHOSEN for a 3.5 t-class
 // counterbalance truck (about 5.1 t empty: the counterweight, the engine and
-// transmission in the frame, the drive axle, the mast); the centre of mass
+// transmission in the frame, the drive axle, the mast); the center of mass
 // falls between the axles about 1.05 m behind the front ones, near
 // three-quarters of the empty weight on the rear wheels, as an empty one's
 // does: the front wheels carry enough to drive it, and it balances about
-// 5.5 t m about them, 3.5 t half a metre out in front of the forks' face.
+// 5.5 t m about them, 3.5 t half a meter out in front of the forks' face.
 std::vector<Part> chassis_parts() {
     std::vector<Part> parts;
     // The frame, its top the driver's floor (0.32 m: a step up from the
@@ -236,7 +236,7 @@ Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer movi
         wheel->mSuspensionSpring = SpringSettings(ESpringMode::FrequencyAndDamping, 3.0F, 0.8F);
         wheel->mMaxSteerAngle = spec.driven ? 0.0F : kSteerMaxRad;
         // Grip from no slip at all: Jolt's default curves start at none,
-        // which let a parked truck wander sideways a few millimetres a second.
+        // which let a parked truck wander sideways a few millimeters a second.
         wheel->mLongitudinalFriction.Clear();
         wheel->mLongitudinalFriction.AddPoint(0.0F, 1.0F);
         wheel->mLongitudinalFriction.AddPoint(0.06F, 1.2F);
@@ -291,7 +291,7 @@ Forklift::Forklift(PhysicsSystem &physics, kit::Kit &kit, const ObjectLayer movi
     slide.SetSliderAxis(Vec3::sAxisY());
     slide.mLimitsMin = 0.0F;
     slide.mLimitsMax = kLiftStrokeM;
-    // Held, the ram is stiff: a 2 t load sags it about a centimetre.
+    // Held, the ram is stiff: a 2 t load sags it about a centimeter.
     slide.mMotorSettings = MotorSettings(20.0F, 1.0F, kHoldForceN, 0.0F);
     slide.mMotorSettings.SetForceLimits(0.0F, kHoldForceN);
     lift_ = static_cast<SliderConstraint *>(slide.Create(chassis_body, carriage_body));

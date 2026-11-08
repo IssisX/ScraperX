@@ -757,7 +757,7 @@ void run_world_solids() {
     // collision, not decoration. The buttress footings at the stack's corners
     // are the case a player walked straight through: a 6 x 2.6 x 6 m block
     // under a 2.4 m splayed leg. Walked into from the yard, the capsule must
-    // stop at its face -- centre never nearer than half-width (3.0 m) plus
+    // stop at its face -- center never nearer than half-width (3.0 m) plus
     // most of the capsule radius (0.35 m) on the dominant axis.
     Simulation solid(InitialSpawn::ExteriorGrade);
     require(solid.advance_frame(0.5).accepted, "world-solids settling interval must be accepted");

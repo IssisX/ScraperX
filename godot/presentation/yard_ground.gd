@@ -6,7 +6,7 @@ extends RefCounted
 ##
 ## Everything is sampled from a few noise textures, made once, at the
 ## fragment's world position (the grade is a plane), so it costs a handful of
-## texture reads per pixel and nothing per frame. Its average colour is the
+## texture reads per pixel and nothing per frame. Its average color is the
 ## old flat asphalt's (17150f), so the lighting balance is unchanged.
 
 static var _material: ShaderMaterial

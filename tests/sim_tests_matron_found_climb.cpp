@@ -158,7 +158,7 @@ void run_first_floor_descent() {
             const auto route = map.plan(from.id, to.id);
             if (route.empty() || route.size() >= best_edges) continue;
             // The grade region spans the yard and beyond. Pursue the grounded
-            // endpoint of her real directed route, not a distant patch centre.
+            // endpoint of her real directed route, not a distant patch center.
             const auto &last_edge = map.edges()[static_cast<std::size_t>(route.back())];
             if (!last_edge.usable || last_edge.to != to.id) continue;
             const Vector3 landing{last_edge.spec.goal.GetX(), last_edge.spec.goal.GetY(),

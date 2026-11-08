@@ -38,7 +38,7 @@ FAMILIES = ["upright", "low", "climb", "pipe", "down", "hold", "lift"]   # Matro
 # the radius of her drawn flesh about it measured each frame (the 90th
 # percentile of the distances of the vertices those bones move most), and
 # its region: 0 trunk and head, 1 forearm and hand (her reach), 2 upper arm,
-# 3 leg. "skull" is her head's centre (the hair's skull, meta.json).
+# 3 leg. "skull" is her head's center (the hair's skull, meta.json).
 SEGMENTS = [
     ("body", "spine_mid", 0, ("body", "spine_lo", "skirt")),
     ("spine_mid", "neck_lo", 0, ("spine_mid", "chest", "hump")),

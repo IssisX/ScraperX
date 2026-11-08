@@ -1459,7 +1459,7 @@ func _her_free(first: int, count: int, rank: int) -> int:
 	return low if _her_shot_rank[low] <= rank else -1
 
 
-# Her waking dread (sound_bank _matron_wake) from `at`, `distance` metres from
+# Her waking dread (sound_bank _matron_wake) from `at`, `distance` meters from
 # the player. The ambience drops away first, so the world goes quiet around
 # it; nearer is louder and the duck is deeper; her own loops are held under
 # it. A fresh variant and pitch every time, so it never repeats identically.

@@ -683,7 +683,7 @@ func _look_matron(stage: String) -> bool:
 		await _look_at_point(Vector3(0.0, MATRON_DECK_Y, MATRON_MID_Z))
 		await _pose("matron_catwalk")
 		return true
-	# Wake her from a few metres off, then look at the locker.
+	# Wake her from a few meters off, then look at the locker.
 	await _go(device, Vector2(8.0, -131.0), 0.4, 20.0)
 	await _face(Vector2(10.5, -126.2) - Vector2(_position().x, _position().z))
 	if not _stick_sprint():
@@ -717,7 +717,7 @@ func _look_matron(stage: String) -> bool:
 	return true
 
 
-# Renders only: her figure in each of its poses, a few metres in front of the
+# Renders only: her figure in each of its poses, a few meters in front of the
 # player, from made-up data (the native's frames are ignored meanwhile).
 func _look_matron_gallery() -> bool:
 	_main._sky_cycle.set_hour(20.2)
@@ -747,7 +747,7 @@ func _look_matron_gallery() -> bool:
 		# Rising (0.15 m a frame): the vault.
 		["turn_vault", {"state": 3, "speed": 4.0, "stride": 0.3, "turn": 2}, 0.15],
 		# The exposure's work on her look, one way: the attendant in her white
-		# tunic; blistered and stained; grey and filthy.
+		# tunic; blistered and stained; gray and filthy.
 		["tunic", {"state": 7, "speed": 0.0, "stride": 0.0, "turn": 0, "exposure": 0.0}],
 		["blistered", {"state": 3, "speed": 0.0, "stride": 0.0, "turn": 0, "sees_player": true, "exposure": 0.5}],
 		["grey", {"state": 3, "speed": 0.0, "stride": 0.0, "turn": 0, "sees_player": true, "exposure": 1.0}],

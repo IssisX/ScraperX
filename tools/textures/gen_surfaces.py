@@ -315,7 +315,7 @@ def timber(seed=606, w=1024, h=256, tile=(2.0, 0.5)):
         vs = (v0 + drift) % h
         checks[vs, us] = np.maximum(checks[vs, us], depth)
         checks[(vs + 1) % h, us] = np.maximum(checks[(vs + 1) % h, us], 0.5 * depth)
-    # Weathering: the sun greys the wood in long streaks along the grain.
+    # Weathering: the sun grays the wood in long streaks along the grain.
     grey = 0.35 + 0.65 * smoothstep(-0.6, 1.2, streak)
     height = 0.00055 * latewood + 0.0001 * fibre - 0.0015 * checks
     lum = 0.86 - 0.30 * latewood + 0.08 * fibre + 0.06 * streak - 0.5 * checks

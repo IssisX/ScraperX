@@ -37,7 +37,7 @@ constexpr float kKneeReachM = 1.1F;      // her hip to her knee
 constexpr float kKneeCloseM = 0.35F;
 constexpr float kFistCloseM = 0.16F;
 constexpr float kKnotCloseM = 0.45F;   // the collar to the shackle: a short lashing (the torso is 0.35 thick)
-// The legs, in the body's frame (the capsule's centre at the hips' height
+// The legs, in the body's frame (the capsule's center at the hips' height
 // less 0.41): the hip joint and the ankle.
 constexpr float kLegSideM = 0.12F;
 constexpr float kHipUp = 0.0F;
@@ -63,11 +63,11 @@ void Simulation::PhysicsWorld::set_player_mass_for_losses(JPH::BodyInterface & /
     }
 }
 
-// A shape whose centre of mass sits elsewhere (the torso's is 0.45 m up the
-// body): Jolt keeps each joint's anchor relative to the centre of mass, and
+// A shape whose center of mass sits elsewhere (the torso's is 0.45 m up the
+// body): Jolt keeps each joint's anchor relative to the center of mass, and
 // leaves telling them to us. Untold, a joint still on the body would pull
-// it the 0.45 m in one tick. Its velocity is the old centre's too: the steel
-// at the new centre was moving at v + w x r, and still is.
+// it the 0.45 m in one tick. Its velocity is the old center's too: the steel
+// at the new center was moving at v + w x r, and still is.
 void Simulation::PhysicsWorld::set_player_shape(JPH::BodyInterface &bodies, const JPH::Shape *shape) noexcept {
     const JPH::Vec3 before = bodies.GetShape(player_id_)->GetCenterOfMass();
     const JPH::Quat rotation = bodies.GetRotation(player_id_);
@@ -367,7 +367,7 @@ void Simulation::PhysicsWorld::fatality_post_step(JPH::BodyInterface &bodies, co
                 // Both legs gone, the body is its torso: from the hips (the
                 // body's middle) to the crown, half the height. The legless
                 // capsule was the full 1.8 m (the owner's playtest). The
-                // shape's origin stays put, the centre of mass moves up into
+                // shape's origin stays put, the center of mass moves up into
                 // what is left.
                 set_player_shape(bodies, player_torso_shape_.GetPtr());
             }

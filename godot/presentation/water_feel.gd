@@ -8,7 +8,7 @@ extends Node
 #   - under the surface: the view tinted and fogged murky green-brown, and
 #     the effects and ambience low-passed (audio_director.set_underwater).
 # UNTESTED in Godot on this branch (no editor binary was available); the
-# GDScript follows the file's neighbours.
+# GDScript follows the file's neighbors.
 
 const TINT := Color(0.09, 0.16, 0.13, 0.0)
 const TINT_ALPHA := 0.62
@@ -89,7 +89,7 @@ func update_view(water: Dictionary, camera: Camera3D, audio: Node, delta: float)
 	if _strokes >= 0 and strokes > _strokes and audio != null and audio.has_method(&"swim_stroke"):
 		audio.swim_stroke(water.get("position", Vector3.ZERO))
 	_strokes = strokes
-	# The eye, not the body's centre, decides under: the camera's height
+	# The eye, not the body's center, decides under: the camera's height
 	# against the surface (the native says whether the head is under).
 	var eye_under := bool(water.get("in_water", false)) and camera != null and \
 		camera.global_position.y < float(water.get("surface_y", -1.0e9))

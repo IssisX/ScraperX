@@ -1,6 +1,6 @@
 extends Node3D
 ## A severed limb, placed from the sim's severed body (position = its
-## capsule's centre, rotation: the capsule along local y). The climber's own
+## capsule's center, rotation: the capsule along local y). The climber's own
 ## figure with everything but that limb collapsed away (gore_body.gd), soaked
 ## from the torn end, the torn end itself (gore_wound.gd) at its root.
 
@@ -45,7 +45,7 @@ func build_limb(k: int, seed: int) -> void:
 	wound.tear()
 
 
-## Place from the sim: `centre` the capsule centre, `basis` its frame (the
+## Place from the sim: `center` the capsule center, `basis` its frame (the
 ## capsule along y; the root end up +y).
 func place(centre: Vector3, basis: Basis) -> void:
 	# The limb's own axis (rest, model space): root -> tip. Align it with -y of

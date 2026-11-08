@@ -583,7 +583,7 @@ func _shop_h(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == 2084, 0.5):
 		return _fail("PICK UP did not lift the girder's tail pin")
-	# Back a metre with it, out of its socket, and down.
+	# Back a meter with it, out of its socket, and down.
 	if not await _walk_to(device, Vector2(-2.6, -134.0), 0.15, 4.0):
 		return _fail("stepping back with the tail pin stalled at %s" % str(_position()))
 	if not await _let_go_if_held(device):
@@ -612,7 +612,7 @@ func _shop_h(device: int) -> bool:
 	return true
 
 func _shop_i(device: int) -> bool:
-	# Across onto I's cage; the rope's shackle hangs a metre west of the eye.
+	# Across onto I's cage; the rope's shackle hangs a meter west of the eye.
 	if not await _walk_to(device, Vector2(-7.3, -145.6), 0.08, 6.0):
 		return _fail("the step across onto I's cage stalled at %s" % str(_position()))
 	await _face(Vector2(1.0, 0.0))

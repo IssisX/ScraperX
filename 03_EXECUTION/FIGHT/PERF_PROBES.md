@@ -156,6 +156,6 @@ straining and 6 s after the burst. On the host the burst's frames are no slower 
 945k primitives at the burst). Her body is
 hidden until the burst, so the burst is the first time her materials (about 14 StandardMaterial3Ds:
 skin, cloth, hair, eyes, teeth) are drawn, and gl_compatibility compiles a shader on its first draw.
-`_prepare_her` now draws her for 3 frames under the card as a 0.002-scale speck at the screen's centre
+`_prepare_her` now draws her for 3 frames under the card as a 0.002-scale speck at the screen's center
 (`matron_view.gd` `warm_up` / `warm_down`). The eye check found 0 of 360,936 pixels changed. Whether it
 removes the phone's stall is proved only by `perf_locker` on the phone.

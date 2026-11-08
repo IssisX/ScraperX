@@ -113,7 +113,7 @@ bool hook_over(Simulation &s, const double x, const double z, const double budge
 }
 
 // The hoist worked until the hook's throat is at y: at full speed, slower for
-// the last metre (never into the lever's dead zone); false if the winch stops
+// the last meter (never into the lever's dead zone); false if the winch stops
 // short (slack, stalled, at its limit) or the budget runs out.
 bool hoist_to(Simulation &s, const double y, const double budget) {
     const auto ticks = static_cast<int>(budget * static_cast<double>(Simulation::kTickRateHz));
@@ -420,12 +420,12 @@ void run_yard_crane() {
         (void)s.advance_frame(1.0);
         require(take_remote(s), "crane: the remote taken");
         const auto truck = body_at(s, Forklift::kCraneChassisEntity);
-        // Facing east, its eye half a metre behind the frame's middle.
+        // Facing east, its eye half a meter behind the frame's middle.
         const double eye_x = truck.x + Forklift::kEyeZ;
         const double eye_z = truck.z;
         // The hook just clear of the truck's north side, its shackle hanging
         // at knee height there: the sling then reaches the hands at the wheel
-        // with half a metre to spare, so the sway of the walk aboard never
+        // with half a meter to spare, so the sway of the walk aboard never
         // pulls it taut out of them.
         require(work(s, true) && hook_over(s, eye_x, eye_z - 1.1, 90.0), "crane: the hook by the forklift");
         require(hoist_to(s, 0.6 + YardCrane::kSlingM, 60.0), "crane: the hook let down by the forklift");

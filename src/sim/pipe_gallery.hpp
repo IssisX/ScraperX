@@ -1,7 +1,7 @@
 #pragma once
 
 // Parkour step 2's place in the yard: the pipe gallery, south of the trapeze.
-// A ramp up to a 1.5 m start stand; from its east edge, ten pipes a metre
+// A ramp up to a 1.5 m start stand; from its east edge, ten pipes a meter
 // apart 4.6 m up, hung between two beams on posts; past the last, a platform
 // 4.7 m up whose lip the hand takes from the front of a swing; a ramp back
 // down to the yard. A toy, like the trapeze beside it: run, jump, swing hand

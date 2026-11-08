@@ -853,7 +853,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
         // step cannot close its relative shift — only bringing the load
         // in can, and the cap below is what bounds the remainder: the
         // ankle-held body hangs diagonally, so even a hand at her
-        // centreline leaves its centre well outboard.
+        // centreline leaves its center well outboard.
         // Non-fatal Carry only: fatal holds keep their choreography,
         // and Dangle/Spare keep their poses.
         RVec3 pose = carry_pose();

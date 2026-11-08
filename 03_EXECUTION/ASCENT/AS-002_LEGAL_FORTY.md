@@ -225,7 +225,7 @@ constant explaining why:
   `AS-001`-owned) `4000` kg pack sets the loaded side.
 - **`MOD-CW-CRADLE` car half-height `0.90`, not the plan's `1.20`; top face
   unchanged at `5.200 m`.** §8.4's clearance list never checks the `B00`
-  belt. At the plan's deployed centre (`2.380`) the car's underside is at
+  belt. At the plan's deployed center (`2.380`) the car's underside is at
   `1.18 m`, under the belt's `1.38 m` top, and the belt's `18 m` stroke
   carries its south end to `z = -111`, across the car's `x ∈ [7.108, 8.0]`.
   Once per stroke (`15.7 s`) the belt rammed the loaded car, knocked the
@@ -239,12 +239,12 @@ constant explaining why:
   full belt strokes (`INFO AS-002 deployed hold`).
 - **`MOD-SKIN-LADDER-S` rungs 17–20 step `0.8 m` west of the column.**
   Directly over the deployed flight's foot, rung 17 on the column line left
-  `1.4 m` of headroom over the flight's first metre. The walkway's west end
+  `1.4 m` of headroom over the flight's first meter. The walkway's west end
   follows rung 20 to `x = -5.8`.
 - **The retract falsifier's own failure was not a mass problem at all**, though
   it looked exactly like one and cost the most iteration: unloaded and
   re-slung, the flight sat frozen at its exact deployed limit for `20+ s`
-  with a real, non-zero pulley tension favouring departure the whole time.
+  with a real, non-zero pulley tension favoring departure the whole time.
   Direct diagnostic tracing (logging the real world-space contact point of
   every contact touching the flight, not just entity IDs) found the flight in
   continuous, ordinary rigid-body contact with its **own hinge anchor** —
@@ -396,12 +396,12 @@ SKIN rung 25 top          40.1872 m     = 24.1872 + 10 * 1.6   -- exactly flush
 
 The hall surface is `40.1872 m`, not a round `40.0`, precisely so the SKIN line
 lands on it without a step: ten more 1.6 m rungs off the 24.1872 m deck arrive
-at it to the millimetre. Atlas's `z ≥ 40 m` is satisfied with 0.19 m to spare.
+at it to the millimeter. Atlas's `z ≥ 40 m` is satisfied with 0.19 m to spare.
 
 | ID / member | atlas (x, y, z) | source (x, y, z) | extents (half) | climbable | rating |
 |---|---|---|---|---|---|
 | `MOD-STAIR-A-SWING` hinge | `(7.856, -112.5, 32.1872)` | `(7.856, 32.1872, -112.5)` | — | — | Z-axis hinge |
-| `MOD-STAIR-A-SWING` slab | body-local | centre driven by hinge | `(8.00, 0.18, 0.90)` | **yes, deployed only** | player + 365 kg |
+| `MOD-STAIR-A-SWING` slab | body-local | center driven by hinge | `(8.00, 0.18, 0.90)` | **yes, deployed only** | player + 365 kg |
 | `MOD-STAIR-A` upper flight | `(2.422, -117.0, 36.1872)` | `(2.422, 36.1872, -117.0)` | `(8.00, 0.18, 0.90)` | yes | player + pack |
 | mid-landing | `(9.350, -114.80, 32.0072)` | `(9.350, 32.0072, -114.80)` | `(1.05, 0.18, 3.20)` | yes | spans both lanes |
 | `MOD-HALL-DECK` lower landing | `(0.0, -115.1, 39.9872)` | `(0.0, 39.9872, -115.1)` | `(10.00, 0.20, 7.40)` | yes | B01's floor |
@@ -424,7 +424,7 @@ hinge travel = 60° - 8° = 52° = 0.9076 rad
 Built **at the stowed pose**, so the hinge's as-built angle is `0` and its
 limits are `[0.0, 0.9076]` — the same convention `MOD-DOG-A` already uses.
 
-**Clearances, stated in metres, not as "enough room":**
+**Clearances, stated in meters, not as "enough room":**
 
 - swing flight lane `z ∈ [-113.4, -111.6]`; `AS-001`'s nearest stair lane face
   is `-114.2` → **0.800 m**
@@ -436,7 +436,7 @@ limits are `[0.0, 0.9076]` — the same convention `MOD-DOG-A` already uses.
 - **haul rope vs the mid-landing:** the rope runs from the flight's bracket up
   to sheave A and crosses the landing's plane at `x = 7.413` when stowed and
   `x = 3.338` when deployed — west of the landing's `8.300` edge in both poses,
-  worst case **0.887 m**. The rope stays in the flight's own centre plane, so
+  worst case **0.887 m**. The rope stays in the flight's own center plane, so
   the hinge carries no out-of-plane couple. Siting the foot at `x = -6.000`
   rather than `-5.000` is what buys this; at `-5.000` the rope crossed the deck
 - cradle `z ∈ [-109.760, -107.360]`; bay front wall face `-110.200` → **0.440 m**
@@ -572,7 +572,7 @@ slice, since nothing the player can carry approaches it.
 #### 8.4.2 The rope — one `JPH::PulleyConstraint`
 
 `add_pulley` already builds exactly this for the Kellerworks lift. It must be
-generalised to take its four points, mass ratio and length rather than hardcoding
+generalized to take its four points, mass ratio and length rather than hardcoding
 them. Jolt's constraint is `|p₁ − f₁| + ratio·|p₂ − f₂| = length`, which is a
 real inextensible rope over two sheaves:
 
@@ -587,7 +587,7 @@ maxLength   ℓ(8°) + (36.1872 − 5.200) = 18.969 + 30.987 = 49.956 m
 ```
 
 At full deploy the cradle side becomes `49.956 − 17.349 = 32.607 m`, putting the
-cradle's top at `3.580 m` and its centre at `2.380 m` — the `1.620 m` stroke.
+cradle's top at `3.580 m` and its center at `2.380 m` — the `1.620 m` stroke.
 The cradle rides a free vertical `SliderConstraint` (no motor) with limits
 `y_centre ∈ [1.80, 4.60]`, deliberately **wider** than the working stroke so the
 guide never becomes the stop. The hinge limits are the only stops.
@@ -692,7 +692,7 @@ work-order one.
 
 | Envelope | Effect |
 |---|---|
-| pack centre inside the cradle seat tolerance, settled, Release held | sling removed; cradle gross `→ 5800 kg` |
+| pack center inside the cradle seat tolerance, settled, Release held | sling removed; cradle gross `→ 5800 kg` |
 | cradle gross `≥ 4805.5 kg` | flight travels off the stowed stop |
 | cradle gross `< 4395.2 kg` while deployed | flight sags back toward stowed |
 | player anywhere in the flight's `52°` sweep | struck by a real body; no scripted exception |

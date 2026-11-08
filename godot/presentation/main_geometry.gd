@@ -172,7 +172,7 @@ func _add_sign_text(text: String, at: Vector3, yaw: float, height_meters: float,
 
 # Paint on a structure's face (the owner, 2026-10-21, of the yard's slogans:
 # "just put that on existing shit"): the text as large as fits inside `face`
-# (width, height) less PAINT_MARGIN_M a side, centred at `at` on the face,
+# (width, height) less PAINT_MARGIN_M a side, centered at `at` on the face,
 # PAINT_LIFT_M off it. No outline: paint has none.
 const PAINT_MARGIN_M := 0.3
 const PAINT_LIFT_M := 0.01
@@ -206,7 +206,7 @@ var _bump_timber: NoiseTexture2D
 var _bump_concrete: NoiseTexture2D
 var _bump_smooth: NoiseTexture2D
 # Weathering (task 93, the look pass): every bumped surface also takes a shared
-# grime map, blotches a metre or so across that darken the base colour by up
+# grime map, blotches a meter or so across that darken the base color by up
 # to a third, and steel and concrete take rust and water streaks running down
 # their faces (a detail layer, triplanar like the bumps: on a wall the streaks
 # hang straight down). Three shared textures for the whole world.
@@ -232,15 +232,15 @@ func _build_bump_textures() -> void:
 	_surface_timber = Surface.open("timber", Vector2(2.0, 0.5), 1.0, true)
 
 # The structure's surfaces (environment plan, job 6): rust, concrete, paint,
-# galvanising, mill scale and timber, each a colour, roughness and relief map
+# galvanising, mill scale and timber, each a color, roughness and relief map
 # at a known size (tools/textures/gen_surfaces.py, made in code, seeded): 512
-# texels to the metre on the steel, so they hold up at arm's length. The
-# colour map multiplies the part's own colour (carried in the batch's
-# vertices), so one set serves every colour of its kind and the batcher still
+# texels to the meter on the steel, so they hold up at arm's length. The
+# color map multiplies the part's own color (carried in the batch's
+# vertices), so one set serves every color of its kind and the batcher still
 # draws one material per finish. Batched, a part is mapped along its own axes
-# in metres (Batcher.surface_frame), so timber grain runs along each plank and a
-# brace's texture runs along the brace; broad variation over tens of metres
-# is laid in its vertex colours (Batcher.broad_tint), so the tile's repeat
+# in meters (Batcher.surface_frame), so timber grain runs along each plank and a
+# brace's texture runs along the brace; broad variation over tens of meters
+# is laid in its vertex colors (Batcher.broad_tint), so the tile's repeat
 # never shows at 50 m. Unbatched (a moving body's parts, loose stock) it is
 # mapped triplanar in the object's own space, so it rides with the body.
 class Surface:
@@ -249,11 +249,11 @@ class Surface:
 	var albedo: Texture2D
 	var roughness: Texture2D
 	var normal: Texture2D
-	# Metres the maps cover: (along the part, across it).
+	# Meters the maps cover: (along the part, across it).
 	var tile := Vector2.ONE
 	var normal_scale := 1.0
 	# Each part its own place in the map (each plank its own tree), rather
-	# than lined up with its neighbours.
+	# than lined up with its neighbors.
 	var own_offset := false
 
 	static func open(name: String, metres: Vector2, depth: float, per_part: bool) -> Surface:
@@ -359,7 +359,7 @@ func _make_bump_texture(seed_value: int, frequency: float, strength: float,
 
 # A porous surface (rust, concrete, timber, matt paint, cloth) hides much of
 # its own face from the sky in its pits and pores. This renderer's sky
-# reflection adds a rough surface's sheen whatever its colour (its
+# reflection adds a rough surface's sheen whatever its color (its
 # environment term, env.y * clamp(50 * f0, metallic, 1)), so a dark porous
 # albedo read near-white under it (sky_cycle.gd). A specular level below
 # 0.25 (f0 below 0.02) is how a material says its cavities occlude: at
@@ -385,7 +385,7 @@ func _material(color: Color, metallic: float, roughness: float,
 		material.normal_texture = bump
 		if _weathering != null:
 			material.albedo_texture = _weathering
-			# The batcher may carry this one's colour in its vertices: the
+			# The batcher may carry this one's color in its vertices: the
 			# weathering is shared by every finish, never a picture of its own.
 			material.set_meta(&"weathered", true)
 		if _streaks != null and bump != _bump_timber:
@@ -401,7 +401,7 @@ func _material(color: Color, metallic: float, roughness: float,
 	return material
 
 # A finish of the structure in one of its real surfaces (Surface, above):
-# colour, roughness and relief from the surface's maps, grime and streaks as
+# color, roughness and relief from the surface's maps, grime and streaks as
 # every weathered finish has them.
 func _surfaced(color: Color, metallic: float, roughness: float, surface: Surface) -> StandardMaterial3D:
 	var material := _material(color, metallic, roughness)
@@ -435,14 +435,14 @@ func _surfaced(color: Color, metallic: float, roughness: float, surface: Surface
 # drawn that way the tower was ~9,700 draw calls looking down from the 750
 # deck (measured, perf_top). After the build, everything that never moves is
 # merged twice:
-# - near: one mesh per material per section (BATCH_CELL_* metres), drawn to
+# - near: one mesh per material per section (BATCH_CELL_* meters), drawn to
 #   BATCH_NEAR_RANGE; a lamp lights only the sections in its reach. Parts no
 #   bigger than BATCH_FINE_SIZE get their own batches, drawn only to
 #   BATCH_FINE_RANGE and casting no shadow;
-# - far: one mesh per large section (BATCH_FAR_CELL metres) without those
-#   small parts, each part's colour carried in its vertices under one plain
+# - far: one mesh per large section (BATCH_FAR_CELL meters) without those
+#   small parts, each part's color carried in its vertices under one plain
 #   material, drawn from BATCH_NEAR_RANGE out.
-# Parts that differ only in colour are drawn as one, their colours carried in
+# Parts that differ only in color are drawn as one, their colors carried in
 # their vertices. A moving kit body's parts
 # become one mesh per material that moves with it. Transparent parts,
 # labels, particles and anything with a script stay as they are.
@@ -484,13 +484,13 @@ const WET_ROUGHNESS_MIN := 0.12
 # and the more they face it -- where a post meets a deck, under a ledge, in a
 # corner -- and where the solid is a floor below it, tinted toward the dirt
 # and rust bleed that gathers at feet. Baked once at start-up into the
-# vertex colours, so it holds the same under either renderer, with SSAO or
+# vertex colors, so it holds the same under either renderer, with SSAO or
 # without. The floors are found from the solids themselves, never per place.
 # Only parts square to the world shade (a diagonal brace's bounding box is
 # mostly air); every part is shaded.
 const OCCLUSION_CELL := 2.0
 const OCCLUSION_REACH := 1.2
-# How far off its face a vertex looks from: so a flush neighbour in the same
+# How far off its face a vertex looks from: so a flush neighbor in the same
 # plane (two deck plates edge to edge) barely shades, and a solid the face
 # runs into (a deck under a post's foot) shades fully.
 const OCCLUSION_OFFSET := 0.12
@@ -510,7 +510,7 @@ const OCCLUSION_DIRT_MIX := 0.35
 # it).
 const OCCLUSION_BIG := 48.0
 const OCCLUSION_BIG_CELL := 64.0
-# Rings along a standing member: one every OCCLUSION_RING metres, at most
+# Rings along a standing member: one every OCCLUSION_RING meters, at most
 # OCCLUSION_RINGS, on members at least OCCLUSION_RING_MIN long that touch a
 # solid at an end.
 const OCCLUSION_RING := 0.6
@@ -678,7 +678,7 @@ class Batcher:
 	var parts := 0
 	var wet_parts := 0
 	# Contact shading (environment plan, job 8): the near parts wait here
-	# until every part is known ([group, mesh, surface, at, colour, mapping,
+	# until every part is known ([group, mesh, surface, at, color, mapping,
 	# solid index]), then are laid shaded by the solids around them.
 	var pending: Array = []
 	var shade_ms := 0
@@ -727,9 +727,9 @@ class Batcher:
 				null, real != null)
 		parts += 1
 
-	# A material's finish: what it looks like but for its colour, which the
-	# batch carries in its vertices. [signature, vertex colour, wet]. A
-	# material with a colour texture or a shader of its own is drawn as it is,
+	# A material's finish: what it looks like but for its color, which the
+	# batch carries in its vertices. [signature, vertex color, wet]. A
+	# material with a color texture or a shader of its own is drawn as it is,
 	# never wet; so is glowing or see-through material (lamps, glass, water).
 	func _finish(material: Material, wet: bool = false) -> Array:
 		var standard := material as StandardMaterial3D
@@ -755,7 +755,7 @@ class Batcher:
 			shared.vertex_color_use_as_albedo = true
 			shared.vertex_color_is_srgb = true
 			if standard.has_meta(&"surface"):
-				# Mapped in metres along each part (Batcher.surface_frame), not
+				# Mapped in meters along each part (Batcher.surface_frame), not
 				# triplanar: one texture read per map, not three.
 				shared.uv1_triplanar = false
 				shared.uv1_scale = Vector3.ONE
@@ -783,7 +783,7 @@ class Batcher:
 		return groups[key]
 
 	# `mapping`: the real surface to lay UVs for (null keeps the mesh's own).
-	# `vary`: lay the broad variation (broad_tint) in the vertex colours.
+	# `vary`: lay the broad variation (broad_tint) in the vertex colors.
 	# `shade`/`solids`: what shades its vertices, and the solids near it
 	# (Occlusion.near; null: unshaded).
 	static func append_arrays(group: Group, mesh: Mesh, surface: int, at: Transform3D, colour: Color,
@@ -905,7 +905,7 @@ class Batcher:
 
 	# How a face lies in a real surface's maps: [u axis, v axis (indices into
 	# the part's axes), tangent, binormal sign]. A face is mapped along the
-	# part's own axes, in metres from the world's origin (so parts lined up
+	# part's own axes, in meters from the world's origin (so parts lined up
 	# meet without a seam), u along the face's longer side: timber grain runs
 	# along the plank, rolled steel's along the member. A round part's side
 	# runs u along its axis (axis 1) and v around it, by the mesh's own u,
@@ -937,10 +937,10 @@ class Batcher:
 			tangent = square.normalized()
 		return [iu, iv, tangent, 1.0 if normal.cross(tangent).dot(binormal) >= 0.0 else -1.0]
 
-	# Broad variation, laid in a real surface's vertex colours: each part a
-	# shade off its neighbours (steel from different heats, paint from
-	# different years), and a slow drift of value over tens of metres across
-	# them, so neither the maps' metre repeat nor a run of identical members
+	# Broad variation, laid in a real surface's vertex colors: each part a
+	# shade off its neighbors (steel from different heats, paint from
+	# different years), and a slow drift of value over tens of meters across
+	# them, so neither the maps' meter repeat nor a run of identical members
 	# reads as a pattern at 50 m. Seeded: the same every run.
 	const BROAD_PART := 0.07
 	const BROAD_VALUE := 0.14
@@ -963,7 +963,7 @@ class Batcher:
 		return float((h ^ (h >> 16)) & 0xFFFF) / 65535.0
 
 	# Where a vertex samples the streaks (UV2): down a wall, from its height
-	# and its run along the wall in world metres, so streaks meet across
+	# and its run along the wall in world meters, so streaks meet across
 	# parts; a floor or a ceiling samples the streaks' clear columns.
 	static func streak_uv(world: Vector3, normal: Vector3) -> Vector2:
 		if absf(normal.y) > STREAK_WALL_MAX_NY:
@@ -1017,7 +1017,7 @@ class Batcher:
 			var box := mesh as BoxMesh
 			var solids := occlusion.near(at * mesh.get_aabb(), record[6]) if box != null else PackedInt32Array()
 			# A long member touching something at an end gets rings along
-			# its length, so its foot darkens and a metre up does not.
+			# its length, so its foot darkens and a meter up does not.
 			if box != null:
 				mesh = occlusion.ringed(box, at, solids)
 			Batcher.append_arrays(record[0], mesh, record[2], at, record[4], record[5], record[5] != null,

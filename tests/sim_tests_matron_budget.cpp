@@ -21,7 +21,7 @@
 //  - the per-tick sum of the honest paths stays within her budget;
 //  - every force on her body as Jolt steps is one a path recorded
 //    (the residual), so no new path goes unseen.
-// Measurement only: no budget is raised, no behaviour changes.
+// Measurement only: no budget is raised, no behavior changes.
 //
 // The matron-ammo group (J-042, PR #256) joins kScenarios once it lands.
 

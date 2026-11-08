@@ -443,7 +443,7 @@ void run_strike() {
     require(none.arm == -1 && !none.offered && none.strikes == 0,
             "strike: one arm torn off and the other broken, no fist: no punch offered or thrown");
     require(left.arm == 0 && left.offered && left.hits == 1, "strike: the right torn off, the left throws it and it lands");
-    // In the air no punch: the PUNCH button greyed and a press ignored, so a
+    // In the air no punch: the PUNCH button grayed and a press ignored, so a
     // lunge's catch and a wall run's kick are never eaten by one.
     {
         Simulation s(InitialSpawn::Deck154);
@@ -498,7 +498,7 @@ Swept sweep_one(const double her_ahead_m, const int stage, const bool fast, cons
     const Vector3 p = s.snapshot().player_position;
     (void)s.set_facing(0.0, 1.0);
     // Her soles sit `lift_m` above his launch height: the level launch
-    // (0.20 m under his standing centre) sits her capsule 0.35 m into
+    // (0.20 m under his standing center) sits her capsule 0.35 m into
     // the deck, which the physics resolves back to the deck, so the
     // soles' difference is the lift less 0.35 (lift 0 is the level cases
     // below; the raised cases below state their true differences).

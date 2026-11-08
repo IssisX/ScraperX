@@ -106,10 +106,10 @@ var _trapeze_was_hanging := false
 # His punch has its own button, always there (the owner, 2026-10-28: "an
 # appearing and disappearing punch button ... is going to be frustrating"):
 # lit when the native says one can be thrown (on his feet, not in a lunge, a
-# fist to throw), greyed otherwise; in her hand before the rip it reads BREAK
+# fist to throw), grayed otherwise; in her hand before the rip it reads BREAK
 # FREE, and in the fatality's hang window too, with the window's seconds left
 # over it. Lit only when the native says a press would act (its strike
-# `ready`): BREAK FREE greyed is a press that would do nothing. Action stays
+# `ready`): BREAK FREE grayed is a press that would do nothing. Action stays
 # the world's (PICK UP, CLIMB, HAUL and the rest).
 static func punch_button(strike: Dictionary, hold: Dictionary) -> Dictionary:
 	# Lit through a jab's recoil: that press queues the cross (spec 9.4).

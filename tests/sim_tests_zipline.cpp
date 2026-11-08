@@ -46,7 +46,7 @@ bool catch_the_yard_line(Simulation &s) {
 }
 
 // Rides the caught line to its end: the stick held back (the hand brake)
-// from `brake_from_end` metres out while faster than `brake_to`, never when
+// from `brake_from_end` meters out while faster than `brake_to`, never when
 // brake_from_end is 0. Ends when the trolley stops near the end or the
 // hands leave the bar; the fastest speed down the line.
 double ride_to_the_end(Simulation &s, const double length, const double brake_from_end, const double brake_to) {

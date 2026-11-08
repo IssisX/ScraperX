@@ -476,7 +476,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
 
 bool Simulation::PhysicsWorld::body_down_on_ground(JPH::BodyInterface &bodies) const noexcept {
     // A body lying down (not on its feet: grounded_ is the feet's): steel
-    // within a hand's breadth under its centre line.
+    // within a hand's breadth under its center line.
     JPH::RayCastResult hit;
     return cast_ray(bodies.GetPosition(player_id_), JPH::Vec3(0.0F, -(kPlayerRadius + 0.15F), 0.0F), hit);
 }

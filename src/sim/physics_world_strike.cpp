@@ -36,7 +36,7 @@ constexpr float kStrikeOfferM = 1.6F;     // she is close enough for Action to s
 constexpr float kStrikeOfferCos = 0.5F;   // within 60 degrees of his facing
 constexpr float kStrikeMinClosingMps = 0.5F;
 // The low sweep (move 1): slower to draw back and to recover, the same
-// reach out, one more contact tick. Its gap is centre to centre minus
+// reach out, one more contact tick. Its gap is center to center minus
 // both bodies' radii; its point is her ankle, 0.15 m over her feet.
 constexpr int kSweepWindupTicks = 16;
 constexpr int kSweepReachTicks = 6;
@@ -152,8 +152,8 @@ bool Simulation::PhysicsWorld::strike_would_land(const JPH::RVec3 chest, const J
 // post takes a punch. One helper for both the offer and the contact, so
 // the two can never disagree about the geometry: the offer's height check
 // alone never guarded the contact, because a press only needs can_start.
-// His foot is his body's centre less its capsule's total half-height
-// (crouched, the short capsule: the centre drops with it, so the soles
+// His foot is his body's center less its capsule's total half-height
+// (crouched, the short capsule: the center drops with it, so the soles
 // stay where they are). The cast
 // starts at his foot, not at her ankle height: a cast at her ankle height
 // never meets the platform he stands beside, and never starts from where
@@ -170,8 +170,8 @@ bool Simulation::PhysicsWorld::sweep_land_point(const JPH::RVec3 at, const JPH::
     if (d - Matron::kRadius - kPlayerRadius > kSweepGapM) {
         return false;
     }
-    // His foot: his body's centre less its capsule's total half-height
-    // (crouched, the short capsule: the centre drops with it, so the soles
+    // His foot: his body's center less its capsule's total half-height
+    // (crouched, the short capsule: the center drops with it, so the soles
     // stay where they are).
     const double foot_y = at.GetY() - active_half_height();
     const double ankle_y = c.GetY() - Matron::kHalfHeight - Matron::kRadius + kSweepAnkleUpM;

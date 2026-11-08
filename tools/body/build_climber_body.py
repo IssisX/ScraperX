@@ -37,7 +37,7 @@ DL = sys.argv[1] if len(sys.argv) > 1 else os.path.join("build", "makehuman")
 OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join("godot", "presentation", "life", "climber")
 
 # The camera's height over the soles, standing (main_feel.gd EYE_OFFSET over
-# the native capsule's centre): his eyes.
+# the native capsule's center): his eyes.
 EYE_Y = 1.52
 # The boots' rubber under the bare foot.
 SOLE_M = 0.028
@@ -52,7 +52,7 @@ def linear(hex_srgb):
 
 
 # The game dresses these in main_feel.gd's own materials (the arms' sleeves'
-# jacket and band among them); these are the same colours, for anything that
+# jacket and band among them); these are the same colors, for anything that
 # draws the file as it is.
 MATERIALS = {
     "trousers": {"color": linear("23262b"), "rough": 0.9},
@@ -122,7 +122,7 @@ def main():
     body_v = np.unique(T_body.ravel())
     is_body = np.zeros(len(V), bool)
     is_body[body_v] = True
-    # decimetres -> metres, the bare soles on y = 0
+    # decimetres -> meters, the bare soles on y = 0
     V = V * 0.1
     V[:, 1] -= V[body_v, 1].min()
     J0 = {jn: V[vs].mean(0) for jn, vs in skel["joints"].items()}

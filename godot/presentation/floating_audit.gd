@@ -60,7 +60,7 @@ var exit_code := 0
 var report_path := ""
 var _frames := 0
 # Every part as an oriented box: {name, kind, where, c, u, e, rule, held_by}
-# (its centre, unit axes and half extents). Kinds: "kit" and "world" are
+# (its center, unit axes and half extents). Kinds: "kit" and "world" are
 # structure; "lamp", "sign", "paint", "beacon" and "dressing" are dressing.
 var _parts: Array = []
 var _lights: Array = []

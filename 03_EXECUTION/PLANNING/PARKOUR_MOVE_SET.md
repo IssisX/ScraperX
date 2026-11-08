@@ -138,7 +138,7 @@ under the feet (every move resolves against the support's contact-point velocity
 
 ### M6 Ledge catch and cat leap (built; rising catch and hands-reach fix, this pass)
 - Trigger: airborne, the stick held toward the wall (intent ≥ 0.3, as built), a lip 0.45–1.35 m
-  above the body's centre within reach ahead, or a hold at hand height.
+  above the body's center within reach ahead, or a hold at hand height.
   Fix for G2: the catch is taken while rising up to 2.5 m/s (CHOSEN: hands close near the
   apex; above that the lip is going past too fast to close on), in flight from a jump only: a
   step's lift pops the body up at the same 2 m/s, and a walk over a kerb beside a rail must

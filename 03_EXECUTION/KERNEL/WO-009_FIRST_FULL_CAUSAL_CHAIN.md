@@ -16,7 +16,7 @@ and close the two links nothing had yet exercised: that a structural/process con
 - WO-003 athletic traversal: mantle/vault/hang are gated purely by a live geometry probe (`probe_ledge`) against whatever real Jolt geometry is actually there — not a hand-authored ledge whitelist. Anything with a climbable top surface within reach is a valid target, by construction.
 - WO-006 first coupled machine: a player standing on the tipper opens the same valve that drives the whole plant (already-proven player intervention on this exact mechanism, at source commit `92f12f6`); the same valve/orifice/cylinder/piston chain lifts the platform, with peak lift height already asserted `> 6.0 m` within one 26 s cycle (`first_cycle.peak_lift_height`).
 - WO-008 fall/parachute/checkpoint: checkpoint commit and restore are fully position- and entity-agnostic. `capture_body`/`restore_body`/`BodyCheckpoint` operate on whatever `JPH::BodyID` and transform they are given, with no per-location special case.
-- An unused spawn stub, `InitialSpawn::LiftPlatform` (`{16.4, 2.0, -100.0}`, the platform's own centre), and a built-but-never-tested static catwalk (`kCatwalkEntityId`, galvanised mesh plus handrails already dressed in `main.gd` since WO-006/WO-007) were placed in the world but never exercised by any falsifier or reached by any scripted path.
+- An unused spawn stub, `InitialSpawn::LiftPlatform` (`{16.4, 2.0, -100.0}`, the platform's own center), and a built-but-never-tested static catwalk (`kCatwalkEntityId`, galvanised mesh plus handrails already dressed in `main.gd` since WO-006/WO-007) were placed in the world but never exercised by any falsifier or reached by any scripted path.
 
 ## Governing authority
 

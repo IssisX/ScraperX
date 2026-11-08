@@ -90,7 +90,7 @@ public:
     static constexpr float kHandForward = 0.65F;
 
     // The chain: from a hanger under the pipe bridge straight down to the
-    // leaf's eye, 0.8 m from its hinge, and a centimetre longer than that.
+    // leaf's eye, 0.8 m from its hinge, and a centimeter longer than that.
     static constexpr float kEyeX = kLeafEastX - 0.8F;
     static constexpr float kEyeZ = kLeafZ + 0.4F;
     static constexpr float kBridgeY = kDeckTop + 2.75F;

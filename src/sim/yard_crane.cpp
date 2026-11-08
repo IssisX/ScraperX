@@ -46,7 +46,7 @@ const Quat kAcross = Quat::sRotation(Vec3::sAxisX(), 0.5F * JPH_PI);
 
 // ---- the mast, in its own frame: its origin on the ground at its axis -----
 constexpr float kPlinthTop = 0.5F;
-constexpr float kChord = 1.0F;          // the chords' centres, either side of the axis
+constexpr float kChord = 1.0F;          // the chords' centers, either side of the axis
 constexpr float kMastTop = YardCrane::kSlewY - 0.4F;
 constexpr int kMastPanels = 23;
 

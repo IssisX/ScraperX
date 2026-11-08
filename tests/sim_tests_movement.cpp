@@ -3,7 +3,7 @@
 #include "sim_tests.hpp"
 
 // Parkour step 2: brachiation on the proving ground's monkey bars (six bars a
-// metre apart, 3.1 m up, x = 0..5 at z = -20; a landing block past the last).
+// meter apart, 3.1 m up, x = 0..5 at z = -20; a landing block past the last).
 // A running jump catches the first; held forward, the body swings hand over
 // hand to the last, one bar at a time and never moved faster than it swings;
 // let go at the bottom of a swing, it flies on to the block. From a still
@@ -186,7 +186,7 @@ void run_slide() {
     const double dt = Simulation::kFixedStepSeconds;
     Simulation s(InitialSpawn::StaticDeck);
     require(s.advance_frame(0.4).accepted, "slide settle");
-    // Onto the lane's centre line, stopped, then down it at a sprint.
+    // Onto the lane's center line, stopped, then down it at a sprint.
     require(s.set_facing(-1.0, 0.0) && s.set_move_input(-0.5, 0.0), "slide line-up");
     require(advance_until(s, [](const Snapshot &n) { return n.player_position.x < -1.95; }, 4.0), "slide line-up walk");
     require(s.set_move_input(0.0, 0.0) && s.advance_frame(0.5).accepted, "slide line-up stop");
@@ -1085,7 +1085,7 @@ void run_parkour_seams() {
             Simulation j(InitialSpawn::VaultApproach);
             require(j.advance_frame(0.5).accepted, "precision settle");
             // Walk west to 2.4 m short of the rail's top (its west face at
-            // x = 4.78; its top centre line at x = 5.0).
+            // x = 4.78; its top center line at x = 5.0).
             require(walk_to(j, 2.0, -6.0, 4.0, 0.1), "precision: to the mark");
             require(j.set_facing(1.0, 0.0) && j.set_move_input(0.0, 0.0), "precision facing");
             // The eyes find the rail's top: the look is lowered until the
@@ -1525,7 +1525,7 @@ void run_climb_moves() {
 // first with the stick into it steps on it; a kick with the stick turned to
 // the other crosses to it; steps there, a kick back, and on: at least three
 // kicks, steps on both walls, and the body no lower at its last kick than a
-// metre under its first.
+// meter under its first.
 void run_wall_chain() {
     using scraperx::sim::InitialSpawn;
     using scraperx::sim::Simulation;

@@ -79,7 +79,7 @@ The stages climb the well's west half; the route its east band.
 - **Found:** on the 418 ring's north band, east of the cage, a 20 t monolith leans 30° over the well
   on the edge of its foot, held by the pawl of a trip lever. East of it a 5 m domino stands pinned, leaning toward the
   lever's arm. The purchase runs from the monolith's head over a gallows sheave at 441.5 m and a head
-  sheave over the cage; its shackle hangs at the rope's end a metre from the cage's eye.
+  sheave over the cage; its shackle hangs at the rope's end a meter from the cage's eye.
 - **Link:** hook the shackle on the cage's eye.
 - **Set off:** from the cage, pull the domino's pin out by its lanyard. The domino falls onto the
   lever's arm; the pawl lets the monolith go; it falls toward the well and hauls the cage 44 m up its
@@ -137,7 +137,7 @@ Changed on the way:
   the girder could not turn.
 - **H's pivot stands 5.25 m above the ring:** at 2.75 m the tipping girder's underside met the ring's
   inner edge at 0.86 rad, 5 m short of the ride.
-- **The domino and the monolith hinge on their feet's leading edges:** hinged at their centres, a
+- **The domino and the monolith hinge on their feet's leading edges:** hinged at their centers, a
   corner drove into the ring as they fell.
 - **The trip lever's counterweight hangs north of the domino's fall;** the domino had come to rest on
   it with the arm short of its release.

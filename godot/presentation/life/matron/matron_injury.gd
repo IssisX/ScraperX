@@ -23,7 +23,7 @@ extends Node3D
 ## skull's is the back of the head). (Decals were tried first
 ## and render nothing here: two rotations, plain wall, verified texture, zero pixels.)
 ## The black eye is a ring-textured quad, not a solid one: the annulus has a
-## transparent centre so the eyeball shows through, and it is centred on the
+## transparent center so the eyeball shows through, and it is centered on the
 ## measured eye socket, so it hugs the socket instead of overhanging the face
 ## edge the way the flat cheek quad did (#306). The lid is a second layer, a
 ## soft band over the upper eye that droops with dose. Both are drawn ON her
@@ -35,7 +35,7 @@ extends Node3D
 ## along the head's forward axis, so the bruise follows the face's curve from
 ## the front, three-quarters and the side. gl_compatibility has no decals.
 ##
-## The eye socket centres are the eye bones' rest offsets in head-local space,
+## The eye socket centers are the eye bones' rest offsets in head-local space,
 ## measured 2026-11-07: the bone called eye_l sits at head-local -X and the
 ## bone called eye_r at +X — the rig's eye bone NAMES are mirrored against
 ## the face-anchor convention (head-local +X is her left, verified by the
@@ -48,7 +48,7 @@ const BRUISE_REGION := 100.0
 const SWELL_REGION := 200.0
 # J-059 black eye: ring at 75, lid swells at 150, slit at 250; the ring
 # darkens over 15 s after the hit. A fist contact within 0.035 m of a
-# socket centre goes to that eye instead of face_l/face_r.
+# socket center goes to that eye instead of face_l/face_r.
 const BLACK_EYE_REGION := 75.0
 const LID_SWELL_REGION := 150.0
 const EYE_SLIT_REGION := 250.0
@@ -64,7 +64,7 @@ const EYE_CLASSIFY_M := 0.035
 # before 2026-11-07 and a left-cheek punch bruised her right cheek.
 # Verified by rendered stills: a face_l-only dose must mark the cheek on
 # the image-right side of a front shot (her left, facing the camera).
-# The eye anchors are the measured socket centres (probe 2026-11-07): eye_l
+# The eye anchors are the measured socket centers (probe 2026-11-07): eye_l
 # +0.0315 (her left), eye_r -0.0315 (her right).
 const ANCHORS := {
 	"face_l": ["head", Vector3(0.055, -0.015, 0.085), false], "face_r": ["head", Vector3(-0.055, -0.015, 0.085), false],
@@ -81,10 +81,10 @@ const RING_DARK := Color(0.05, 0.01, 0.05)
 # the socket (matron_injury_ring.gdshader), so they lie on the face.
 const RING_SHADER := preload("res://presentation/life/matron/matron_injury_ring.gdshader")
 # The skin copied round each socket: triangles with a vertex within this
-# distance of the socket centre. Wider than the largest ring (0.030 m half
+# distance of the socket center. Wider than the largest ring (0.030 m half
 # size) and the lid band, so the copy's edge never shows.
 const EYE_SKIN_M := 0.045
-# ...and no deeper than this behind the eyeball centre (head-local z): the
+# ...and no deeper than this behind the eyeball center (head-local z): the
 # inside of the head (mouth, throat) falls within range and takes no bruise.
 const EYE_SKIN_BACK_M := -0.03
 # Lift off the skin (shader `push`): the lid sits a hair over the ring.
@@ -134,13 +134,13 @@ func _bruise_texture() -> Texture2D:
 
 
 func _ring_texture(mirror: bool) -> Texture2D:
-	# Soft annulus with a light centre (30%, on the lids), baked dark
+	# Soft annulus with a light center (30%, on the lids), baked dark
 	# red-purple, darkest on the lower lid and the inner corner. As the
 	# shader projects it onto her skin (head-local x right, y up, as the
 	# old quad was placed), image-top is her upper lid and image-right is
 	# her outer corner for eye_l: the dark lower-lid weight sits at image-bottom
 	# (v = +1) and the dark inner weight at image-left (u = -1); eye_r
-	# mirrors u, so it stays symmetric. Colour is baked in; the material's
+	# mirrors u, so it stays symmetric. Color is baked in; the material's
 	# albedo alpha ramps the darkness over the 15 s pool.
 	# 256 px, and a smooth low-frequency wobble: the old per-cell hash
 	# wobble stepped the annulus edge (a stair-stepped lower edge in the
@@ -159,7 +159,7 @@ func _ring_texture(mirror: bool) -> Texture2D:
 			# On her skin the ring's edges must not read as a painted rim:
 			# the outer edge fades over the cheek and brow (0.80-0.94, zero
 			# before the texture's edge even where the wobble pulls it in),
-			# and the centre keeps 30% so the lids take some bruise (the
+			# and the center keeps 30% so the lids take some bruise (the
 			# eyeball is not skin, so it never darkens).
 			var shape := (0.3 + 0.7 * clampf(smoothstep(0.40, 0.58, r), 0.0, 1.0)) * (1.0 - clampf(smoothstep(0.80, 0.94, r), 0.0, 1.0))
 			var bottom := clampf((v - 0.2) / 0.6, 0.0, 1.0)
@@ -171,7 +171,7 @@ func _ring_texture(mirror: bool) -> Texture2D:
 
 
 func _lid_band_texture() -> Texture2D:
-	# Soft horizontal band: the swollen upper lid. Colour is baked in;
+	# Soft horizontal band: the swollen upper lid. Color is baked in;
 	# the material's albedo alpha follows the droop.
 	var size := 128
 	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
@@ -199,7 +199,7 @@ func is_eye_region(region: String) -> bool:
 
 func classify_head_hit(local: Vector3) -> String:
 	# Head-local contact on the front of the head -> region. Within
-	# EYE_CLASSIFY_M of a socket centre it goes to that eye instead of the
+	# EYE_CLASSIFY_M of a socket center it goes to that eye instead of the
 	# cheek; otherwise the cheek by the head-local sagittal plane. The
 	# caller routes only front-of-head contacts here (J-044g's feed).
 	var sl: Vector3 = ANCHORS["eye_l"][1]
@@ -301,8 +301,8 @@ func _skin_material(texture: Texture2D, push: float) -> ShaderMaterial:
 
 
 func _eye_mesh_for(region: String, rig: Variant) -> ArrayMesh:
-	# Her skin triangles round the socket, in head-local metres relative
-	# to the socket centre, taken once from the skinned body mesh at its
+	# Her skin triangles round the socket, in head-local meters relative
+	# to the socket center, taken once from the skinned body mesh at its
 	# bind pose. Rigid on the head bone: head-local = bind(head) * vertex,
 	# and the drawn skin is bone_world(head) * that wherever the weight is
 	# all head, which it is round the eyes. null when her skin is missing.
@@ -501,8 +501,8 @@ func update(injury: Dictionary, rig: Variant, dt: float = 0.0) -> void:
 
 func _update_eye(region: String, anchor: Array, bone: Transform3D, rig: Variant) -> void:
 	# The ring lies on her skin round the socket: the skin copy is rigid on
-	# the head bone with its origin at the socket centre, and the shader
-	# projects the ring texture onto it (transparent centre, so the eyeball
+	# the head bone with its origin at the socket center, and the shader
+	# projects the ring texture onto it (transparent center, so the eyeball
 	# shows). The lid band goes on the same skin over the upper eye and
 	# droops with dose until the eye is a slit. The texture placement is
 	# the old quads' (ring half size erad, lid band 0.018 x lh/2 at ly), so

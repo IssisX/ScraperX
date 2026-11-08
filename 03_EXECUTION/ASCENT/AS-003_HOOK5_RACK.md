@@ -172,7 +172,7 @@ persist v3 for the carry topology; CI proof lines.
 
 The nine falsifiers in §8.11. Two Godot screenshots at Fold aspect: the deck
 alongside the cage mid-window, and the player at grade holding the block with the
-door travelled. Android arm64 APK. Kernel, `AS-001` and `AS-002` green.
+door traveled. Android arm64 APK. Kernel, `AS-001` and `AS-002` green.
 
 ## Completion
 
@@ -206,7 +206,7 @@ the AS-003 section before `EXIT_SUCCESS`) and one UI scenario:
   `MOD-SKIN-LADDER-S`'s foot, the first rung is neither offered nor climbed
   while held; set down on the spot, the same rung is offered at once and the
   same instance climbs to `+24 m` in 15 mantles. Falsifier 7 is asserted by
-  that behaviour -- the refusal and the offer bracket a set-down with nothing
+  that behavior -- the refusal and the offer bracket a set-down with nothing
   else changing -- not by reading rung bodies, which no API exposes; the carry
   code has no path that touches them.
 - **2, 8** and persist are `AS-003 Hook5 Rack`, one instance from the pendant:
@@ -265,7 +265,7 @@ each explained at its own constant in `simulation.cpp`:
   the carried block's top sat at the eye and filled the view (seen in the
   Fold capture). In a `2.3 m` room the `2.05 m` bar needs a clear place to be
   set down; with the rack mid-wall every such place put one end on it.
-- **The carry point: `0.60 m` ahead, `0.35 m` above the body's centre**
+- **The carry point: `0.60 m` ahead, `0.35 m` above the body's center**
   (`1.25 m` over the soles), not `+0.30`; it swings round to the facing at
   `3 rad/s` rather than with it -- an instant half-turn threw the hand point
   `1.2 m` in one tick and the block out of it. A held body slips only when it
@@ -287,9 +287,9 @@ each explained at its own constant in `simulation.cpp`:
 Defects found on the way and fixed at their source, not routed around:
 
 - `DEFECT src/sim/simulation.cpp commit_checkpoint -> committed on any grounded
-  tick, including a capsule held by its rim with its centre 0.3 m past an
+  tick, including a capsule held by its rim with its center 0.3 m past an
   edge.` A lethal fall off that edge restored into the same slide, every time.
-  Commits now need firm footing: a ray straight down from the body's centre
+  Commits now need firm footing: a ray straight down from the body's center
   meets walkable ground within its half-height plus `0.15 m`, which still
   commits on the deployed 30-degree flight.
 - `DEFECT tests/simulation_tests.cpp AS-002 ascent -> its (-9, -108) waypoint,
@@ -365,7 +365,7 @@ plainly: the buttress occupies `x ∈ [8.00, 9.40]` and the roof `x ∈ [9.40,
 12.00]`, and the **hatch is cut in the roof** at `x ∈ [10.20, 11.40]`,
 `z ∈ [-104.80, -103.20]`, a `1.20 × 1.60 m` opening.
 
-**Clearances, in metres:**
+**Clearances, in meters:**
 
 - **the lock is the height.** Buttress top `2.90 m` above the apron.
   `kMantleMaximumRise = 1.85`. Deficit `1.05 m`. No command closes it
@@ -391,7 +391,7 @@ plainly: the buttress occupies `x ∈ [8.00, 9.40]` and the roof `x ∈ [9.40,
   sweeps a `0.12 m` circle about the hinge. The hinge is therefore set back to
   `x = 10.200`, `0.20 m` clear of the jamb at `x = 10.000` — `0.08 m` more than
   the corner needs. `AS-001`'s `MOD-DOG-A` bound at `0.31 rad` and never
-  travelled because its hinge sat flush with its jamb; that is pre-resolved here
+  traveled because its hinge sat flush with its jamb; that is pre-resolved here
   and must not be rediscovered
 - cage `z ∈ [-106.0, -102.0]` vs `AS-002`'s cradle `z ∈ [-109.76, -107.36]` →
   **`1.36 m`**
@@ -440,7 +440,7 @@ in two keepers at `z = -105.55`, `0.30 m` north of the door plane — squarely i
 its swing. The drive stalls against the bar. Lift the bar out and set it down
 anywhere clear, and the door travels on its own.
 
-An inward leaf with the bar inside is also the whole soft-lock defence: whoever
+An inward leaf with the bar inside is also the whole soft-lock defense: whoever
 is in the cage can always move the bar and walk out, and no arrangement of
 bodies outside can shut them in.
 
@@ -574,7 +574,7 @@ See the Required causal path section above. The next file begins on
 | 2 | cage west buttress | `2.90` | static | no — the mantle exits a moving support onto a static one |
 | 3 | cage roof | `2.90` | static | no |
 | 4 | cage floor (via the hatch) | `0.00` | static | no |
-| 5 | apron, through the travelled door | `0.00` | static | no |
+| 5 | apron, through the traveled door | `0.00` | static | no |
 | 6 | `MOD-STAIR-A` → `MOD-HALL-DECK` | `→ 40.1872` | static | no |
 
 Step 2 is the one with teeth: a mantle **off a moving support onto a static
@@ -599,7 +599,7 @@ the belt's `v` for one tick and land the player slightly along the buttress; the
 | block dropped off `MOD-HALL-DECK` | falls 40 m, rests on the apron | walk down and fetch it | the block being consumed or duplicated |
 
 The cage is one-way inbound and free outbound **by construction**: the door's
-drive is permanent and the bar is inside. That is the whole soft-lock defence,
+drive is permanent and the bar is inside. That is the whole soft-lock defense,
 and it is structural rather than a special case.
 
 ### 8.9 Recovery
@@ -665,7 +665,7 @@ seated, door shut.
 ### 8.12 Exit state
 
 - `CAP-HOOK5` is held, or set down somewhere the player chose; either is legal
-- the cage door has travelled and stays travelled; the cage is open at grade
+- the cage door has traveled and stays traveled; the cage is open at grade
 - the bar lies wherever it was dropped
 - the player **can** stand on `MOD-HALL-DECK` at `40.1872 m` holding the block
 - `MOD-NEEDLE-A/B`, their `48 m` racks, `MOD-NEEDLE-POCKETS` at `96 m`,

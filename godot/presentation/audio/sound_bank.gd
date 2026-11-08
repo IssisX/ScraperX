@@ -1236,7 +1236,7 @@ func _band_noise_buffer(count: int, low_hz: float, high_hz: float) -> PackedFloa
 	return out
 
 
-# Noise through a narrow resonance whose centre drifts by +/- `wander` of
+# Noise through a narrow resonance whose center drifts by +/- `wander` of
 # itself at `drift_hz` cycles over the buffer's own length.
 func _resonant_noise_buffer(count: int, center_hz: float, wander: float,
 		drift_cycles: float) -> PackedFloat32Array:
@@ -1281,7 +1281,7 @@ func _add_tone(out: PackedFloat32Array, freq: float, start: float, length: float
 
 # A struck mode: white noise through a band-pass resonance at `freq` of
 # quality `q` (bandwidth freq / q), under an exponential decay `tau`. A low q
-# and a short tau give a knock with a pitch colour, not a ringing tone.
+# and a short tau give a knock with a pitch color, not a ringing tone.
 func _add_mode(out: PackedFloat32Array, freq: float, start: float, length: float, gain: float,
 		tau: float, q: float) -> void:
 	var first := int(start * MIX_RATE)

@@ -826,8 +826,8 @@ bool pull_service_chock(scraperx::sim::Simulation &simulation) {
                        [&](const scraperx::sim::Snapshot &) { return !simulation.service_state().m_reel_latched; });
 }
 
-// What the reel released falling `drop` metres: its drum and yoke all the
-// way, the cable still wound all the way, each paid-out metre as far as it
+// What the reel released falling `drop` meters: its drum and yoke all the
+// way, the cable still wound all the way, each paid-out meter as far as it
 // fell before it paid out.
 double reel_released(const double drop) {
     const double paid = std::min(drop, kCableCoil);

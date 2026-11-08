@@ -115,7 +115,7 @@ JPH::Vec3 Simulation::PhysicsWorld::surface_normal(const JPH::BodyID body_id,
 }
 
 // Firm footing, for a checkpoint (kCheckpointFootingSlack): a ray straight
-// down from the body's centre meets a walkable surface within reach. The
+// down from the body's center meets a walkable surface within reach. The
 // carried body is not footing, whatever it hangs over.
 bool Simulation::PhysicsWorld::footing_is_firm(const JPH::BodyInterface &bodies) const noexcept {
     const float reach =
@@ -168,7 +168,7 @@ LedgeProbe Simulation::PhysicsWorld::probe_ledge(const JPH::RVec3 origin,
     const float feet_y = origin.GetY() - kPlayerHalfHeight;
     JPH::RayCastResult wall_hit;
     JPH::RVec3 wall_point;
-    // At the body's centre first; a wall lower than that (a bucket's rim,
+    // At the body's center first; a wall lower than that (a bucket's rim,
     // a crate, a knee-high kerb: a rise of 0.35 to 0.9 m) is felt for
     // just above the lowest rise this probe takes.
     const double low_y = static_cast<double>(feet_y) + minimum_rise + kLowWallProbeAbove;
@@ -331,7 +331,7 @@ JPH::Vec3 Simulation::PhysicsWorld::carry_hand_bearing(const JPH::BodyInterface 
 }
 
 // What a pick-up would take now: the nearest carryable within reach of the
-// body's centre, at rest, not behind it, and for a shackle, on a rope that
+// body's center, at rest, not behind it, and for a shackle, on a rope that
 // lets it come to the hands -- and only for a grounded body outside a
 // traversal with its hands free.
 JPH::BodyID Simulation::PhysicsWorld::carry_candidate(const JPH::BodyInterface &bodies,
@@ -537,7 +537,7 @@ void Simulation::PhysicsWorld::update_carry(JPH::BodyInterface &bodies, const St
         // of its gap. Its motion relative to the hand point (the pendulum's,
         // and its turning) is taken down at kCarrySwingRate, as velocity and
         // not force: a torque on it went through the hold and shoved the
-        // carrier a metre sideways. Not while a load just taken is still
+        // carrier a meter sideways. Not while a load just taken is still
         // being drawn in to the hands: that is the hold's own motion, and
         // taking it down each tick read as a pull past the grip, which let go.
         if (carried_load_mass() > 0.0F && carry_entry_offset_.IsNearZero()) {
@@ -761,7 +761,7 @@ void Simulation::PhysicsWorld::update_rig(JPH::BodyInterface &bodies, const Step
 }
 
 // Crouch and stand (GDD 7.2, Governing Law 4). The body swaps capsules
-// with its soles fixed: the centre moves by kCrouchDrop, nothing under
+// with its soles fixed: the center moves by kCrouchDrop, nothing under
 // the feet does. It crouches only from the ground and never inside a
 // traversal (every traversal pose is a standing pose), and it stands
 // only where the full standing capsule is clear, so a gap entered

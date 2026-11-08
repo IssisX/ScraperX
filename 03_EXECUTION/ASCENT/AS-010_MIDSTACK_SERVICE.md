@@ -27,7 +27,7 @@ the rest of B06 is an option.
 |---|---|
 | TP-640 | 24 m square about (0, −150), top 640.25; L's cab hole at (−3.0, −160.1); the route's hatch at x 4.1–5.7, z −152.4 to −150.25 |
 | AS-009's exit | the rider off L's cab at (−3.0, 641.15, −156.5) |
-| Above 640 m | nothing but the neighbouring shaft's mass (`TowerMass`), 140 m north. This slice builds corner columns and the 662 deck over TP-640's footprint |
+| Above 640 m | nothing but the neighboring shaft's mass (`TowerMass`), 140 m north. This slice builds corner columns and the 662 deck over TP-640's footprint |
 
 ## Stage M — the service lift on the cable reel (640.45 → 662.15)
 
@@ -39,7 +39,7 @@ the rest of B06 is an option.
   cage, down to a shackle hanging free over the cage's middle.
 - **Link:** hook the shackle on the cage's eye.
 - **Set off:** from the cage, pull the chock's lanyard over the north rail. The reel drops down its
-  shaft; every metre it falls pays out a metre of cable whose weight leaves it for the head beam, so
+  shaft; every meter it falls pays out a meter of cable whose weight leaves it for the head beam, so
   the drive fades as it goes and turns before the top. The cage rises, slows, tops out a little past
   the deck and settles back onto its dogs; the rider steps off onto the 662 deck.
 - **No link:** the reel falls its shaft paying out its cable and lies over its crib; the cage stays.
@@ -48,7 +48,7 @@ the rest of B06 is an option.
 ## Declared models
 
 - **Cable reel** (`Kit::add_reel`). The reel weighs its drum and yoke and the cable still wound on
-  it; a metre paid out leaves it for the anchor and stays paid out (a reel drawn back up slackens its
+  it; a meter paid out leaves it for the anchor and stays paid out (a reel drawn back up slackens its
   cable). The drum's spin is drawn, not simulated.
 - **No air drag** on the cage and the reel: at 3 m/s it is some 15 N on the cage, under the friction
   band's resolution. Jolt's default damping (0.05 s⁻¹, some 400 N here) is set to zero on both.
@@ -56,7 +56,7 @@ the rest of B06 is an option.
 
 ## Evaluator (stage1dof.py, INTEGRATED)
 
-h = 1 ms, every case rerun at h/4. The friction band is centred on the resistance the engine
+h = 1 ms, every case rerun at h/4. The friction band is centered on the resistance the engine
 shows: at 100 N of shoe friction the engine's cage tops out 0.3 m below the evaluator's, an
 unmodelled 1.5 kJ (0.45 % of the reel's release); 135 N in the evaluator reproduces it.
 
@@ -128,7 +128,7 @@ pulls up onto it; and a jump from the duct clears the beam's gap to the pump dec
 ## Stage N — the granular discharge hoist (684.3 → 706.4)
 
 After C4, a machine again: the owner's archetype 09 (*"a continuous flow of high-density material
-into a suspended bucket to gradually out-mass the payload"*), the catalogue's one entry the kit's
+into a suspended bucket to gradually out-mass the payload"*), the catalog's one entry the kit's
 bins already model. No catch and no governor: the gravel starts it, a chain stops it.
 
 - **Found:** on the 684 deck, 3 m west of where C4's climber steps off, a 2 t service cage railed
@@ -146,7 +146,7 @@ bins already model. No catch and no governor: the gravel starts it, a chain stop
   the arm past its dead point (0.13 rad); the flap falls open onto its other stop and stays there.
   The bin pours 400 kg/s into the hopper (a chute 0.5 m square: Beverloo gives some 400 kg/s of
   10 mm gravel). About 930 kg in, the hopper outweighs the cage and its rider and sinks, the last
-  of the gravel falling in with it. Every metre it sinks sets 33 kg of its chain down on the deck,
+  of the gravel falling in with it. Every meter it sinks sets 33 kg of its chain down on the deck,
   so the drive fades through the stroke and turns halfway; the cage rises past the 706 deck, slows,
   and settles back onto its dogs. The rider steps off east onto the 706 deck.
 - **No pull, or a tug short of the dead point:** the flap falls shut again, no gravel moves, and the
@@ -164,7 +164,7 @@ the ladder comes up through its hatch.
 - **Gravel** as the kit's bins (AS-006 Stage C): a bin's contents add to its body's mass; the stream
   falls straight down from the mouth to the hopper at a declared rate and carries no momentum into it.
 - **The hanging chain** (`Kit::add_chain`, new here): the hopper carries the chain's hanging part,
-  33 kg for every metre of its floor over the deck up to 23 m, both ways; what lies on the deck is
+  33 kg for every meter of its floor over the deck up to 23 m, both ways; what lies on the deck is
   off it. The pile's own motion is not simulated. It is the evaluator's `chain_hang0` exactly.
 - **Safety dogs** as the kit's, the top of the guide a tooth; **no air drag** on the cage and the
   hopper (Jolt's default linear damping set to zero, as M's).
@@ -274,7 +274,7 @@ swinging weight starts it, the gravel drives it, a chain stops it.
   its pin, past 0.5 rad, and the ram is free: it swings west into the latch within a second and
   knocks it past 0.15 rad; the gate lets go, falls open onto its stop, and the bin pours 400 kg/s
   into the bucket (as N's). About half a second into the pour the bucket outweighs the cab and its
-  rider, at two to one, and sinks, turning the wheel; the rope hauls the cab up. Every metre the
+  rider, at two to one, and sinks, turning the wheel; the rope hauls the cab up. Every meter the
   bucket sinks sets 16 kg of its chain down on the plant floor, so the drive fades through the stroke
   and turns before the top: the cab rises 22 m, slows, and settles onto its dogs with its floor
   0.3 m over the 750 deck. The rider steps off east onto the deck.
@@ -296,7 +296,7 @@ deck is railed round the well.
 
 - **Gravel** and **the hanging chain** as N's (the kit's bins and `Kit::add_chain`): the bucket's
   contents add to its body's mass, the stream falls straight down from the mouth at a declared rate
-  and carries no momentum into it; the bucket carries the chain's hanging part, 16 kg for every metre
+  and carries no momentum into it; the bucket carries the chain's hanging part, 16 kg for every meter
   of its floor over the plant floor up to 45 m, both ways.
 - **The wheel** (`Kit::add_wheel`, new here): a hinge on the axle, free, and a rack-and-pinion tying
   its angle to the bucket's travel down its guide (1 rad for 2.0 m of the bucket, 1.0 m of the cab),
@@ -390,7 +390,7 @@ it fall back and nothing pours; pulled, the causes come in order, the ram free, 
 the gate open, the gravel pouring, the cab rising, and the bin pours its whole charge into the
 bucket; the cab is held on its dogs a step from the 750 deck either way, clear of its stop, never
 past 3.5 m/s, its rider aboard all the way and never moved over 0.15 m a tick; the wheel turns a
-radian for each metre the cab rises, within 0.1 rad; the rope stays over 5 kN all the way up and
+radian for each meter the cab rises, within 0.1 rad; the rope stays over 5 kN all the way up and
 at rest carries the weight of the bucket, its gravel and its hanging chain; the gain is within
 what the bucket, its gravel and its chain released, tick by tick; held with its rider aboard and
 after it steps off; sent up empty, held on a tooth, the rider left on the 728 deck; walked into the
@@ -437,7 +437,7 @@ against a lethal 20.0, and died in 2 of 9 probes; stepped off the first platform
 landed on the 706 deck's parapet beside the hatch and slid into the hatch, 22 m to the 684 deck,
 dead in 8 of 8; and the first and second platforms' east edges ran out under the next platform up
 (0.05 m and 3.1 m over a standing body's head) over the void. The closures above came from that, and `AS-010 C5`
-checks each. And the input path's view watch compared the eye with the body's centre, which a
+checks each. And the input path's view watch compared the eye with the body's center, which a
 crouch moves 0.3 m in one tick while the soles stay put and the eye glides from them (`main.gd`):
 the first crouch it saw, in `touch_c5`, read as a 0.283 m jump of the view. The watch measures the
 body at its soles now, as the eye does, and the crouch's glide reads 0.090 m in a frame, under the

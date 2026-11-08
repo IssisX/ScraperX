@@ -74,7 +74,7 @@ kit::BodyIndex add_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::
     return handle;
 }
 
-// A platform about its deck's top centre, railed along its north and south
+// A platform about its deck's top center, railed along its north and south
 // sides: in from the east or the west.
 // A cage: its platform, corner posts and north and south top rails. With
 // lanyard_gap, the north rail leaves a gap kLanyardGapHalf either side of
@@ -108,8 +108,8 @@ std::vector<Part> cage_parts(const bool lanyard_gap = false) {
 // A lever standing up from its pivot on a post, its weight a little west of
 // the pivot holding it on its stop until its lanyard draws the top east
 // (positive about -Z), as AS-009's chocks. Drawn past its release it tips
-// over centre onto a stop kChockThrowStop out (CHOSEN: just past the
-// release, so the throw pays out only a few centimetres of its lanyard: the
+// over center onto a stop kChockThrowStop out (CHOSEN: just past the
+// release, so the throw pays out only a few centimeters of its lanyard: the
 // handle let go swings back out on a taut line instead of dropping slack
 // into the cage under the rider's hands).
 constexpr float kChockThrowStop = 0.6F;
@@ -230,7 +230,7 @@ constexpr float kMMassKg = 1500.0F;
 const JPH::Vec3 kMEyeLocal(1.0F, 1.1F, 0.0F);
 constexpr float kReelMassKg = 1339.5F;      // drum and yoke
 constexpr float kCableKgPerM = 22.0F;
-constexpr float kCableCoil = 23.0F;         // m wound, a metre past the stroke
+constexpr float kCableCoil = 23.0F;         // m wound, a meter past the stroke
 constexpr float kReelRadius = 0.9F;
 constexpr float kReelTop = 664.4F;          // the drum's hub, held at the top
 constexpr float kSheaveY = 668.0F;
@@ -431,13 +431,13 @@ void build_c4(kit::Kit &kit) {
 // cage. Taken hold of there, the chain draws the arm past its dead point and
 // the flap falls open: the bin pours into the hopper, which outweighs the
 // cage and its rider two-thirds of the way through the pour and sinks, the
-// last of the gravel falling in with it. Every metre it sinks sets a metre of
+// last of the gravel falling in with it. Every meter it sinks sets a meter of
 // its chain down on the deck, so its drive fades through the stroke and
 // turns; the cage rises past the 706 deck and settles back onto its safety
 // dogs. No catch and no governor: the gravel starts it, the chain stops it.
 // Numbers from the evaluator (stage1dof.py, the contract's spec): INTEGRATED
 // over the guide friction band, every case caught on its fall-back.
-constexpr float kNX = -6.5F;                    // the cage, about its deck's top centre
+constexpr float kNX = -6.5F;                    // the cage, about its deck's top center
 constexpr float kNZ = -155.0F;
 constexpr float kNDeck = kUpperTop + 0.2F;      // on the 684 deck
 constexpr float kNStop = 22.9F;                 // the guide's top, a dog's tooth
@@ -445,7 +445,7 @@ constexpr float kNDogPitch = 0.1F;
 constexpr float kNFriction = 100.0F;            // N, the cage's guide shoes
 constexpr float kNCageMassKg = 2000.0F;
 const JPH::Vec3 kNEyeLocal(-1.0F, 1.1F, 0.25F);
-// The hopper, about its floor's centre: 1.2 m square inside, 1.4 m deep, a
+// The hopper, about its floor's center: 1.2 m square inside, 1.4 m deep, a
 // bail across its top north of the pour.
 constexpr float kNHopperX = -10.0F;
 constexpr float kNHopperHalf = 0.6F;
@@ -455,10 +455,10 @@ constexpr float kNHopperWall = 0.03F;
 constexpr float kNHopperMassKg = 500.0F;
 constexpr float kNHopperCapacityKg = 1600.0F;   // more than the bin holds
 const JPH::Vec3 kNBailLocal(0.0F, kNHopperDepth + 0.2F, 0.25F);
-// Its chain, from the middle of its underside to the 684 deck: each metre the
+// Its chain, from the middle of its underside to the 684 deck: each meter the
 // hopper sinks sets 33 kg of it down.
 constexpr float kNChainKgPerM = 33.0F;
-constexpr float kNChainLength = 23.0F;          // a metre past the stroke
+constexpr float kNChainLength = 23.0F;          // a meter past the stroke
 constexpr float kNHopperY = kUpperTop + kNChainLength + kNHopperFloorHalf;
 // The bin: the charge, through a chute 0.5 m square (Beverloo: some 400 kg/s
 // of 10 mm gravel).
@@ -715,14 +715,14 @@ constexpr float kC5TopSouth = kD728North + 0.2F;
 // the latch over, the gate falls open, and the bin pours into the bucket.
 // Some 140 kg in, the bucket outweighs half the cab and its rider -- the
 // wheel is twice the drum -- and sinks, the rest of the gravel falling in with
-// it; every two metres it sinks winds a metre of cable onto the drum and sets
+// it; every two meters it sinks winds a meter of cable onto the drum and sets
 // 32 kg of its chain down, so its drive fades through the stroke and turns
 // halfway. The cab rises past the 750 deck and settles back onto its safety
 // dogs. No catch and no governor: the gravel starts it, the chain stops it.
 // Numbers from the evaluator (stage1dof.py, the contract's spec): INTEGRATED
 // over the guide friction band and the wheel's inertia, every case caught on
 // its fall-back.
-constexpr float kOX = 3.0F;                     // the cab, about its floor's top centre
+constexpr float kOX = 3.0F;                     // the cab, about its floor's top center
 constexpr float kOZ = -150.9F;
 constexpr float kODeck = kD728Top + 0.2F;       // on the 728 deck
 constexpr float kOStop = 22.9F;                 // the guide's top, a dog's tooth
@@ -742,7 +742,7 @@ constexpr float kOWheelX = 6.0F;
 constexpr float kOWheelMassKg = 2200.0F;        // wheel, drum and axle
 constexpr float kOAxleWest = 1.25F;             // the axle's ends, clear of its bearings
 constexpr float kOAxleEast = 6.55F;
-// The bucket, about its floor's centre, hanging from the wheel's north rim
+// The bucket, about its floor's center, hanging from the wheel's north rim
 // at the top of its well: 1.2 m square inside, 1.4 m deep, its bail across
 // its top over the middle.
 constexpr float kOBucketX = kOWheelX;
@@ -755,7 +755,7 @@ constexpr float kOBucketMassKg = 400.0F;
 constexpr float kOBucketCapacityKg = 900.0F;    // more than the bin holds
 const JPH::Vec3 kOBailLocal(0.0F, kOBucketDepth + 0.2F, 0.0F);
 // Its chain, from the middle of its underside down the well to C5's plant
-// floor: each metre the bucket sinks sets 16 kg of it down.
+// floor: each meter the bucket sinks sets 16 kg of it down.
 constexpr float kOChainKgPerM = 16.0F;
 constexpr float kOChainLength = 45.0F;          // 0.8 m past the stroke
 constexpr float kOBucketY = kC5Floor + kOChainLength + kOBucketFloorHalf;

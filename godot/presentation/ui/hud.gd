@@ -284,7 +284,7 @@ func _draw_reticle(c: Vector2) -> void:
 			draw_polyline(PackedVector2Array([
 				corner + Vector2(-side * arm, 0.0), corner, corner + Vector2(0.0, arm)]),
 				color, width, true)
-	# Holding: the corners close onto the aim line in the engaged colour.
+	# Holding: the corners close onto the aim line in the engaged color.
 	if _hang_cue > 0.01:
 		var color := UiStyle.with_alpha(UiStyle.SAFE, _hang_cue)
 		for side in [-1.0, 1.0]:
@@ -314,7 +314,7 @@ func _draw_gauge(c: Vector2) -> void:
 		color = UiStyle.AMBER
 	draw_arc(c, radius, start, start + sweep, 48, UiStyle.with_alpha(UiStyle.PAPER, 0.16 * alpha),
 		5.0 * u, true)
-	# Danger in words and weight as well as colour: the arc thickens and the
+	# Danger in words and weight as well as color: the arc thickens and the
 	# label names what the landing would be.
 	var word := gauge_word()
 	if fraction > 0.002:
@@ -336,7 +336,7 @@ func _draw_gauge(c: Vector2) -> void:
 
 
 # The fall gauge's label: what landing now would be, at the same thresholds
-# as its colours (0.55 and 0.8 of the native lethal speed).
+# as its colors (0.55 and 0.8 of the native lethal speed).
 func gauge_word() -> String:
 	if _ctx.is_empty():
 		return "M/S FALL"
@@ -466,7 +466,7 @@ func _draw_toasts() -> void:
 		y += 128.0 * u
 
 
-# Low and centred, above the touch controls, on a plate for any background.
+# Low and centered, above the touch controls, on a plate for any background.
 func _draw_caption() -> void:
 	var u := _u
 	var font_size := int(roundf(32.0 * u))

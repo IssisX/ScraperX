@@ -1,6 +1,6 @@
 // Matron load tip (M4): S1 measurement, then S2 stance.
-// S1 measures, every tick, the grip-held load's offset from her centre,
-// the moment it makes about her feet, and how far the combined centre
+// S1 measures, every tick, the grip-held load's offset from her center,
+// the moment it makes about her feet, and how far the combined center
 // moves toward the load — and nothing else. S2 answers it, in order:
 // widen her stance, counter-lean by pulling the load in, then step,
 // then stagger, then set down over her deck.
@@ -114,7 +114,7 @@ void run_matron_load() {
             }
             held_seen = true;
             // The reported shift must be the real geometry: recompute it
-            // from the two bodies' centres and the two masses, every tick.
+            // from the two bodies' centers and the two masses, every tick.
             const double d = std::hypot(p.player_position.x - m.position.x, p.player_position.z - m.position.z);
             const double recomputed = 85.0 * d / (220.0 + 85.0);
             worst_recompute_err = std::max(worst_recompute_err, std::abs(m.load_cop_shift_m - recomputed));
@@ -138,7 +138,7 @@ void run_matron_load() {
               << " m crosses_upright_base=" << (med_shift > 0.08 ? "yes" : "no")
               << " crosses_crouch_base=" << (med_shift > 0.45 ? "yes" : "no") << "\n";
     // S1's acceptance is the measurement itself: a held load offsets the
-    // combined centre by a real, positive amount, recomputed from geometry.
+    // combined center by a real, positive amount, recomputed from geometry.
     require(med_shift > 0.0, "matron load: a held load really moves the combined centre");
 
     // ---- S2: stance thresholds + counter-lean — late Carry shift below the valve threshold ----
@@ -147,9 +147,9 @@ void run_matron_load() {
     // Bar correction, measured, not fitted: the first version of this test
     // demanded the late shift back inside the upright base (0.08 m) by
     // pull-in alone. A diagnostic run showed the pull applies (0.53-0.86 m,
-    // hand target side 0.70 down to 0.06-0.40 m) yet the body centre stays
+    // hand target side 0.70 down to 0.06-0.40 m) yet the body center stays
     // 0.82-1.15 m out: the ankle-held body hangs diagonally, not straight
-    // down, so even a hand at her centreline leaves its centre well
+    // down, so even a hand at her centreline leaves its center well
     // outboard of 0.08 m. The brief's S2 order is widen FIRST — but in sim
     // "widen" is threshold-only, stated plainly: no sim code reads the
     // reported stance base (the extreme valve that once did is removed,

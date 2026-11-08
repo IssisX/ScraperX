@@ -132,7 +132,7 @@ bool Simulation::PhysicsWorld::try_begin_ground_traversal(JPH::BodyInterface &bo
     return true;
 }
 
-// Real support under the capsule's axis at `centre`: walkable ground no
+// Real support under the capsule's axis at `center`: walkable ground no
 // deeper than the step's own lift plus the landing tolerance.
 bool Simulation::PhysicsWorld::step_is_supported(const JPH::RVec3 centre) const noexcept {
     const JPH::RVec3 origin(centre.GetX(),

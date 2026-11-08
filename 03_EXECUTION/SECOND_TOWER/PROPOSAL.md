@@ -33,7 +33,7 @@ refuters.** The panel's script is kept and can be run again.
 | Checkpoint | any firm floor commits one, every tick | `physics_world.cpp:824-840` |
 
 **What the map found that nobody knew.** The parachute's glide is about 0.66 off a walk, 1.06 off
-a sprint and 1.25 at flow speed (forward distance per metre of drop). These are computed, not run.
+a sprint and 1.25 at flow speed (forward distance per meter of drop). These are computed, not run.
 So tower two can probably already be reached **by air, and only from high on tower one**, onto
 dead-end pier and duct tops at 460 and 390 m. Today that crossing just ends on a ledge with
 nowhere to go.
@@ -88,7 +88,7 @@ down onto tower one's summit deck, where it stays as a permanent walkway.
 
 | Lens | My attack |
 |---|---|
-| Physics and rules | Gliding gates the first visit with no flag: tower two's decks begin at 640 m, and a glide loses a metre of height for every 0.66-1.25 m across. The leaf is a balanced bascule held by its bearing friction, so a climber's weight far enough out tips it, and a damper governs its fall (numbers in section 4). **Rule 9 risk**: a leaf that goes down under weight is kin to the bay's leaf and the derrick's load-luffing. |
+| Physics and rules | Gliding gates the first visit with no flag: tower two's decks begin at 640 m, and a glide loses a meter of height for every 0.66-1.25 m across. The leaf is a balanced bascule held by its bearing friction, so a climber's weight far enough out tips it, and a damper governs its fall (numbers in section 4). **Rule 9 risk**: a leaf that goes down under weight is kin to the bay's leaf and the derrick's load-luffing. |
 | Touch and gameplay | Every step is an existing verb: run, CHUTE, steer, HOOK and hold to reel, CLIMB UP, walk. Each failure has a way back (section 4). Aiming the hook 22 m straight up at three rails gives a ~2.9° window, workable by thumb. The glide is skill with a forgiving catch. |
 | Code and phone | The move, then new static decks, a hinged leaf with a counterweight and a damper, appended after the bay so old saves still load. Kept as world solids, the decks draw far, in batches. |
 | Scores (1-10) | wow 8 · physics 8 · touch 7 · rules 7 · buildable 6 |
@@ -120,7 +120,7 @@ the first time, and after that a bridge the player built themselves.
 | 1 | Tower one, the 750 deck's -z edge (750.1 m) or the 728 deck | Run at the edge, vault the 0.8 m parapet, CHUTE | Take-off speed sets the glide: from 750.1 m across 66 m, a walk-off arrives at 650 m, a sprint at 688 m, flow speed at 697 m (height − 66 / glide) | Short: the 640 deck catches arrivals down to 640 m. Lower still: the canopy lands you at the foot (alive, 9 m/s) and the climb starts again; the slingshot takes you to the 220 ring |
 | 2 | Tower two's face, decks 662-684 | Steer onto a deck, or into the face just above one | Sink 7.1-8.2 m/s (under the 12 m/s ankle break). Into the face at 5.4-7.9 m/s horizontal: felt, under the 10 m/s that kills | Over 8.5 m/s, a flow-speed glide straight in breaks an arm (half grip for 30 s), so steer across, not straight in. The canopy stays open against the face, and you settle onto the deck below |
 | 3 | Up the face, 662 → 794 m | Stand at a deck's back, aim up at the next deck's rails 22 m above, HOOK, hold to reel, CLIMB UP | Reel 3 m/s with 1.2 kN against your 0.82 kN weight: 22 m in 7.3 s. The hands catch the rail lip (they still catch while on the hook), and CLIMB UP mantles | A miss: the hook comes back within 2.5 s, so fire again. A fall: the canopy, and you glide back toward tower one (from 780 m, across 66 m, you arrive at 680-727 m and can settle on its 640-684 decks), or die and wake on the last deck |
-| 4 | The bridge house, 803 m | Walk out and up the half-raised leaf (39 m long, raised 35°, a walkable deck: 35° is under the 56° walkable limit) | Your weight's lever on the pivot is 84 × 9.81 × s × cos 35° = 675 N per metre out. Against a 15 kNm bearing friction, it begins to sink when you are 22 m out. A damper caps it at 0.1 rad/s: 6.1 s down, with the tip moving at most 3.9 m/s | Turn back before 22 m and nothing moves. Fall off: CHUTE. From 20 m out on the leaf (about 814 m), tower one's decks are about 50 m across and 64-86 m down, so even a walking-speed glide (0.66) reaches the 728 deck |
+| 4 | The bridge house, 803 m | Walk out and up the half-raised leaf (39 m long, raised 35°, a walkable deck: 35° is under the 56° walkable limit) | Your weight's lever on the pivot is 84 × 9.81 × s × cos 35° = 675 N per meter out. Against a 15 kNm bearing friction, it begins to sink when you are 22 m out. A damper caps it at 0.1 rad/s: 6.1 s down, with the tip moving at most 3.9 m/s | Turn back before 22 m and nothing moves. Fall off: CHUTE. From 20 m out on the leaf (about 814 m), tower one's decks are about 50 m across and 64-86 m down, so even a walking-speed glide (0.66) reaches the 728 deck |
 | 5 | The leaf, now level | Walk its 39 m to tower one's summit deck (802.64 m; the tip seats 2.5 m onto the deck) | A balanced leaf with nobody on it stays where it is; a catch at the summit seat latches it (an existing saved catch) | None needed. You are at the summit, by a second route |
 
 **Why it is earned, by architecture alone.** Tower two has no openings and no holds below 640 m,

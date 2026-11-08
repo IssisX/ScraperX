@@ -335,7 +335,7 @@ func _move_dir(device: int, v: Vector2) -> void:
 # held until the walker could no longer stop short of the point (a frame
 # late, at KEY_BRAKE_MPS2), then let go, and pressed again if it stops
 # short; on the keys the walk ends only once the walker has stopped there.
-# `steer` turns the view toward a point more than a metre off, as a mouse
+# `steer` turns the view toward a point more than a meter off, as a mouse
 # holds a keyboard walk to its line.
 func _walk_to(device: int, target: Vector2, tolerance: float, budget: float = 6.0, steer := false) -> bool:
 	var keys := device == InputRouter.Device.KEYBOARD_MOUSE
@@ -448,7 +448,7 @@ func _sample_body(watch: Dictionary) -> void:
 		last_steps = steps
 
 # The rendered body's soles, which the eye hangs from (main.gd): a crouch
-# swaps the native's capsule round them in one tick, its centre moving 0.3 m
+# swaps the native's capsule round them in one tick, its center moving 0.3 m
 # while the soles stay put and the eye glides.
 func _render_soles_y() -> float:
 	return (_native().get_player_render_position() as Vector3).y - \

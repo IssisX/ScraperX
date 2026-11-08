@@ -71,7 +71,7 @@ func setup(kit_root: Node3D) -> void:
 		_chains.append(link)
 
 
-# What a kit body's parts are drawn to is its size's worth of metres; the dead
+# What a kit body's parts are drawn to is its size's worth of meters; the dead
 # lamp is the thing to see from the ground, so it is drawn at any distance.
 func _far_visible(root: Node) -> void:
 	for node in root.get_children():

@@ -1009,7 +1009,7 @@ void test_dynamic_support() {
 // sideways force are not, and force never exceeds what is left.
 // Cory, 2026-10-27 15:50 CT: the player keeps at least 0.5 m of escape over
 // her planned jump-catch. His reach is worked out here from his own constants
-// (centre over feet, a standing jump's rise, the hang band's top), not read
+// (center over feet, a standing jump's rise, the hang band's top), not read
 // back from the limit under test.
 void test_jump_catch_escape_margin() {
     namespace d = scraperx::sim::detail;
@@ -1413,7 +1413,7 @@ void test_pole_head_clearance() {
 // A pole whose head ends under the floor over it: the way up is a mantle
 // off its head, but the way down starts with her hands sliding to that
 // head, and revalidate refuses a hold more than reach_low + 0.6 = 1.40 m
-// under her centre — standing on the floor over it, her centre is 1.05 m
+// under her center — standing on the floor over it, her center is 1.05 m
 // over her feet, so a gap over 0.35 m puts the head out of her reach and
 // the down move fails LostHold on its first grip tick, at phase 1, which
 // the journey never avoids: it replans the same dead edge until its 6
@@ -1455,7 +1455,7 @@ void test_pole_head_down_gap() {
 // bottom rung when the floor is in drop range under her feet (step_rung_down
 // lets go at a full hang and finishes on the goal floor), so the scan offers
 // the descent in both cases and the descent must complete to the floor.
-// Her feet at full hang are bottom - hang_below_hold (1.30) - centre above
+// Her feet at full hang are bottom - hang_below_hold (1.30) - center above
 // feet (1.05) = bottom - 2.35. A bottom rung past the foot-patch window
 // offers no descent at all.
 void test_rung_down_bottom_gap() {
@@ -2304,7 +2304,7 @@ void test_player_unchanged() {
             "player climbing is the same with her travelling nearby");
 }
 
-// A travelling Matron's walk to her next move's start goes round a player
+// A traveling Matron's walk to her next move's start goes round a player
 // standing on it, not through him. Her feet's search reads the real world,
 // and his body is in it: on the old code her walk went straight through his
 // spot (the probes excepted his body, like they except hers) and her 220 kg

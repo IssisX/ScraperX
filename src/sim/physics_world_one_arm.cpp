@@ -24,7 +24,7 @@
 
 namespace scraperx::sim {
 namespace {
-constexpr float kOneArmShoulderSideM = 0.2F;   // the good shoulder off the body's centre line
+constexpr float kOneArmShoulderSideM = 0.2F;   // the good shoulder off the body's center line
 constexpr float kHeelHookMaxSwingMps = 1.2F;
 constexpr double kOneArmMantleScale = 2.2;
 constexpr float kDynoMaxMps = 4.4F;            // one arm's throw: about 1 m of rise
@@ -44,7 +44,7 @@ int Simulation::PhysicsWorld::good_arm_side() const noexcept {
     if (arm_broken()) {
         return 1 - (broken_arm_side_ & 1);
     }
-    return -1;   // both: the hang is centred
+    return -1;   // both: the hang is centered
 }
 
 JPH::Vec3 Simulation::PhysicsWorld::one_arm_shoulder_lean() const noexcept {
@@ -81,7 +81,7 @@ bool Simulation::PhysicsWorld::one_arm_hang_command(JPH::BodyInterface &bodies, 
             ++dyno_refused_count_;
             return true;
         }
-        // To bring the hang's centre to the new lip's hang height at the top.
+        // To bring the hang's center to the new lip's hang height at the top.
         const float rise = static_cast<float>(above.ledge_point.GetY() - kHangDropBelowLedge - origin.GetY());
         const float needed = std::sqrt(2.0F * kGravity * std::max(0.05F, rise + 0.05F));
         const float v = std::min(kDynoMaxMps, needed);

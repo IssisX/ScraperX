@@ -21,7 +21,7 @@ extends SceneTree
 ## bone's posed transform, the hair solver's points before and after).
 
 const FORMAT := 1
-const STAND_CENTRE := 1.05        # her capsule's centre over her soles (matron.hpp kStandCentre)
+const STAND_CENTRE := 1.05        # her capsule's center over her soles (matron.hpp kStandCentre)
 const CAPSULE_RADIUS := 0.30      # matron.hpp kRadius
 const SURFACE_REACH := 4.0
 const SURFACE_LIFT := 0.15        # a limb sunk into the steel up to this deep still finds its top

@@ -75,7 +75,7 @@ kit::BodyIndex add_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::
     return handle;
 }
 
-// A platform about its deck's top centre, railed along two sides: along
+// A platform about its deck's top center, railed along two sides: along
 // its east and west sides (in from the north or the south) or, with
 // `rails_ns`, its north and south sides (in from the east or the west).
 std::vector<Part> platform_parts(const bool rails_ns) {
@@ -133,7 +133,7 @@ kit::BodyIndex add_standing_lever(kit::Kit &kit, std::vector<Part> &frame, const
 
 // An inclined track of two rails on sleepers, in the frame of `turn` (local
 // +X or +Z down the slope, as `along_x`), from travel `from` to `to` past
-// `head`, `below` under the rolling body's centre.
+// `head`, `below` under the rolling body's center.
 void incline_track(std::vector<Part> &frame, const JPH::RVec3 head, const JPH::Quat turn, const bool along_x,
                    const float from, const float to, const float below) {
     const JPH::Vec3 down = turn * (along_x ? JPH::Vec3::sAxisX() : JPH::Vec3::sAxisZ());
@@ -270,7 +270,7 @@ void build_stage_j(kit::Kit &kit, FacadeCrane &crane, std::vector<Part> &frame) 
                                  kJJointFound, JPH::Quat::sIdentity(), 30.0F, 0.8F);
     kit.set_carry(crane.j_joint, kit::CarryKind::Load, JPH::Vec3(0.0F, 0.06F, 0.0F));
     // Any way up, the block in its tray closes the gap. Resting anywhere in
-    // the tray on any face, its centre lies within 0.28 m of the seat; the
+    // the tray on any face, its center lies within 0.28 m of the seat; the
     // nearest rest outside it, on a cheek's top, is 0.31 m off. (0.25 m read
     // a block on its side at the tray's east end as out.)
     kit.set_rail_gap(crane.j_traveler_guide, 0.02F, crane.j_joint, kJJointSeat, JPH::Vec3::sAxisX(), 0.30F, 3.2F);
@@ -589,7 +589,7 @@ constexpr float kPjZ = -154.5F;
 constexpr float kPjDeck = 539.0F;
 constexpr float kPjPit = kPjDeck - 3.5F;        // the pit's floor
 constexpr float kPjLip = 4.0F;                  // the lane's west end
-constexpr float kPjStoneOne = 1.5F;             // the posts' centres
+constexpr float kPjStoneOne = 1.5F;             // the posts' centers
 constexpr float kPjStoneTwo = -1.0F;
 constexpr float kPjStep = 0.8F;                 // each post's rise over the last
 constexpr float kPjBlockEast = -4.0F;           // the landing block's east face
@@ -706,7 +706,7 @@ constexpr float kSjDeck = 583.0F;
 constexpr float kSjPit = kSjDeck - 1.6F;        // the pit's floor
 constexpr float kSjLip = 0.0F;                  // the pit's west wall
 constexpr float kSjFar = 5.5F;                  // its east wall
-constexpr float kSjBeamX = -2.0F;               // the crawl beam's centre
+constexpr float kSjBeamX = -2.0F;               // the crawl beam's center
 constexpr float kSjWest = -8.2F;
 constexpr float kSjEast = 9.4F;
 

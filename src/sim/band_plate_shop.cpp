@@ -99,7 +99,7 @@ kit::BodyIndex add_handle(kit::Kit &kit, const std::uint64_t entity, const JPH::
     return handle;
 }
 
-// A platform about its deck's top centre, railed along its north and south
+// A platform about its deck's top center, railed along its north and south
 // sides: in from the east or west, out the same way.
 std::vector<Part> platform_parts() {
     std::vector<Part> parts{
@@ -278,7 +278,7 @@ void build_stage_h(kit::Kit &kit, PlateShop &shop, std::vector<Part> &frame) {
     // The girder, built level about its pivot: inboard north, outboard
     // south, a track on top falling outboard, an end stop at the tip.
     const float length = kGirderInboard + kGirderOutboard;
-    const float mid = 0.5F * (kGirderInboard - kGirderOutboard);   // centre, from the pivot, along +z
+    const float mid = 0.5F * (kGirderInboard - kGirderOutboard);   // center, from the pivot, along +z
     std::vector<Part> girder{
         box(JPH::Vec3(kGirderHalfW, kGirderHalfH, 0.5F * length), JPH::Vec3(0.0F, 0.0F, mid), Material::Rust)};
     const float slope = std::atan2(kRampRise, length);
@@ -540,7 +540,7 @@ void build_wall_stack(std::vector<Part> &route) {
 // bars across a 5 m gap, a jump-hang up a block (3.2 m), a second pole
 // (7.6 m), and, from a deck slung inside the 396 ring's inner edge, a
 // jump-hang over that edge onto the ring. The bars are the proving ground's
-// (physics_world.cpp): six rods a metre apart, 3.1 m over the deck, rails
+// (physics_world.cpp): six rods a meter apart, 3.1 m over the deck, rails
 // 0.74 m either side, a landing block 0.5 m up past the last.
 constexpr float kGantryX0 = 15.2F;              // the piers' west face
 constexpr float kGantryX1 = 16.8F;
@@ -550,7 +550,7 @@ constexpr float kGantryD1 = 381.75F;            // pole 1's top: 7.5 m
 constexpr float kGantryD2 = 382.25F;            // the bars' landing, 0.5 m over D1
 constexpr float kGantryD3 = 385.45F;            // a jump-hang up: 3.2 m
 constexpr float kGantryD4 = 393.05F;            // pole 2's top: 7.6 m
-constexpr float kGantryBarZ0 = -158.0F;         // six bars, a metre apart, running north
+constexpr float kGantryBarZ0 = -158.0F;         // six bars, a meter apart, running north
 constexpr float kPoleHalf = 0.08F;
 
 // The gantry is laid out in the frame of the 374 ring's east band (x across the
@@ -688,8 +688,8 @@ constexpr float kRunZ = -157.5F;
 constexpr float kRunDeck = 429.0F;              // the lane's top
 constexpr float kRunWest = -14.9F;              // its west end, on the 418 ring's west band
 constexpr float kRunEast = 11.0F;
-constexpr float kRunBeamX = -6.0F;              // the crawl beam's centre
-constexpr float kRunRailX = 4.0F;               // the vault rail's centre
+constexpr float kRunBeamX = -6.0F;              // the crawl beam's center
+constexpr float kRunRailX = 4.0F;               // the vault rail's center
 
 void build_run(std::vector<Part> &route, std::vector<Part> &frame) {
     const float lo = kRunZ - 2.0F;

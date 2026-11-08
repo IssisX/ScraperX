@@ -41,7 +41,7 @@ const B_TURN := &"turn"
 # The yard crane's remote, once taken: its switch puts the stick and the two
 # held buttons on the crane, and takes them back.
 const B_CRANE := &"crane"
-# The punch, its own button, always on screen: greyed when none can be thrown.
+# The punch, its own button, always on screen: grayed when none can be thrown.
 const B_PUNCH := &"punch"
 
 const TONE_NORMAL := 0
@@ -592,7 +592,7 @@ func update_context(ctx: Dictionary, delta: float) -> void:
 	action.label = act["label"]
 	action.tone = TONE_PRIMARY if action.enabled else TONE_GHOST
 
-	# The punch: never moves, never goes. Greyed when none can be thrown (in
+	# The punch: never moves, never goes. Grayed when none can be thrown (in
 	# the air, a lunge, no fist: a press then is ignored); in her hand before
 	# the rip it reads BREAK FREE, its fill pulsing; in the fatality's hang
 	# window the seconds left are over it.
@@ -714,7 +714,7 @@ func _draw_button(button: TouchButton) -> void:
 	UiStyle.draw_icon(self, button.icon, button.center, radius * 0.78, icon_color, 4.0 * _u)
 	if not button.label.is_empty():
 		var label_size := int(roundf(25.0 * _u))
-		# A greyed button's label greys in tone, not in alpha: faded, its dark
+		# A grayed button's label grays in tone, not in alpha: faded, its dark
 		# outline went with it and the word was lost over a bright sky.
 		var label_color := UiStyle.with_alpha(UiStyle.PAPER, alpha) if dim == 1.0 \
 			else UiStyle.with_alpha(UiStyle.PAPER_DIM, 0.9 * alpha)
@@ -731,7 +731,7 @@ func _draw_button(button: TouchButton) -> void:
 
 # A label wider than its button's own column would run into the next button
 # (LOWER LAST BEAM into JUMP on the summit's hanging beam): it breaks at the
-# space nearest its middle into two lines, each centred under the button.
+# space nearest its middle into two lines, each centered under the button.
 func _label_lines(label: String, size: int, radius: float) -> PackedStringArray:
 	var font := UiStyle.font_label()
 	var room := 2.4 * radius

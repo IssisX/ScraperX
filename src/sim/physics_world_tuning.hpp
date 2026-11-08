@@ -46,15 +46,15 @@ constexpr JPH::uint kCount = 2;
 constexpr double kPi = 3.14159265358979323846;
 
 constexpr float kSupportNormalThreshold = 0.55F;
-// Footing firm enough to commit a checkpoint on: the body's centre is over
+// Footing firm enough to commit a checkpoint on: the body's center is over
 // what it stands on, so a ray straight down from it meets a walkable surface
 // within the capsule's half-height plus this slack. Grounded alone (above)
-// includes a capsule held up by its rim with its centre past an edge -- a
+// includes a capsule held up by its rim with its center past an edge -- a
 // stance it cannot keep. Committed there, a lethal fall off that edge
 // restored the body into the same slide, every time (observed carrying a
 // load off a deck: committed 0.31 m past the edge, and with a 32-degree
 // normal limit instead, 0.16 m past it, still creeping off). The slack
-// covers a 30-degree slope, where the surface under the centre is 0.95 m
+// covers a 30-degree slope, where the surface under the center is 0.95 m
 // down.
 constexpr float kCheckpointFootingSlack = 0.15F;
 constexpr float kPlayerMaximumRelativeSpeed = 5.5F;
@@ -79,7 +79,7 @@ constexpr float kJumpSpeed = 5.5F;
 
 // Phase 4: landing recovery, a reduced-order body. The capsule is rigid, so
 // Jolt stops its fall in one contact; what the legs and trunk did with that
-// energy is modelled here, explicitly, as a balance debt the feet pay back
+// energy is modeled here, explicitly, as a balance debt the feet pay back
 // through reduced traction (finite ground force), never as a lockout.
 // - Absorbed for free: the legs take a landing up to kLandingFreeSpeed (a
 //   1.8 m drop) with no lasting cost. Crouch held at contact (prepared) bends
@@ -181,7 +181,7 @@ constexpr float kOneArmGripScale = 0.5F;
 // speeds up to a sprint's (it capped them at a walk's). At a run it is offered
 // and taken from kSpeedVaultLookaheadSeconds of travel ahead (up to
 // kSpeedVaultMaximumReach): from arm's length a 0.95 m rail at 8 m/s would need
-// the body lifted a metre in a tenth of a second.
+// the body lifted a meter in a tenth of a second.
 constexpr double kSpeedVaultMinimumSpeed = 6.0;
 constexpr double kSpeedVaultMinimumSeconds = 0.22;
 constexpr float kSpeedVaultLookaheadSeconds = 0.25F;
@@ -223,7 +223,7 @@ constexpr std::uint32_t kWallKicksMax = 4;
 // kWallClimbMaximumAngle of square, the stick held at it, a foot plants on it:
 // the leg takes the speed into the wall and the sole's friction on the wall,
 // at most kWallFriction of that, turns it upward -- capped at
-// kWallClimbMaxRiseMps up, a fast jump's (CHOSEN: about a metre of reach over
+// kWallClimbMaxRiseMps up, a fast jump's (CHOSEN: about a meter of reach over
 // a standing jump, 2.5 m of rise). Only a wall standing above the highest
 // the jump's own arc brings the hands (probed there and at the chest) is run
 // up; a lower one is caught, vaulted or mantled. Once a flight.
@@ -345,7 +345,7 @@ constexpr float kGustFrontRampM = 4.0F;
 constexpr float kShoveClosingMps = 0.5F;
 constexpr float kShoveMinimumMps = 0.1F;
 
-// Phase 4: balance at an edge, by the reduced-order extrapolated centre of
+// Phase 4: balance at an edge, by the reduced-order extrapolated center of
 // mass, XCoM = COM + v / sqrt(g / h), with v the horizontal velocity relative
 // to the support and h the COM's height over the soles (CHOSEN 1.0 m
 // standing, 0.7 m crouched). While the XCoM is past the edge of what the feet
@@ -381,7 +381,7 @@ constexpr double kMovingLedgeCenterZ = 12.5;
 constexpr float kPlayerRadius = 0.35F;
 constexpr float kPlayerHalfHeight = 0.9F;
 // Crouched (GDD 7.2): a 1.2 m capsule, same radius. The soles stay where they
-// are, so the centre drops by the difference in half-heights.
+// are, so the center drops by the difference in half-heights.
 constexpr float kPlayerCrouchHalfHeight = 0.6F;
 constexpr float kCrouchDrop = kPlayerHalfHeight - kPlayerCrouchHalfHeight;
 // Mirror's Edge's tuck: Crouch while rising in a jump (or no faster than
@@ -506,7 +506,7 @@ constexpr float kPrecisionPushMps = 3.0F;
 constexpr float kPrecisionLandingSlack = 0.15F;
 constexpr float kPrecisionLookMaxM = 9.0F;   // the look's cast, to the ground
 
-// Hang band expressed against the capsule centre: hands reach a ledge between
+// Hang band expressed against the capsule center: hands reach a ledge between
 // chest height and just above the head.
 constexpr float kHangMinimumRiseAboveCentre = 0.45F;
 constexpr float kHangMaximumRiseAboveCentre = 1.35F;
@@ -537,7 +537,7 @@ constexpr float kHangPullInSpeed = 3.0F;
 // Phase 3: the hang is held by arms, not placed. The hands close on the lip
 // and the shoulders hang from them on a tension-only line (a distance
 // constraint from the hands to a point kHangShoulderAboveCentre over the
-// body's centre, at the wall's face): taut at the reach the catch was made
+// body's center, at the wall's face): taut at the reach the catch was made
 // at, drawn in at kHangPullInSpeed to kHangArmLength, a spring at that stop
 // (the trapeze's arms: Trapeze::kArmSpringHz, kArmDamping) that takes a
 // falling catch over a tenth of a second or so. Gravity stays on: the body
@@ -547,8 +547,8 @@ constexpr float kHangPullInSpeed = 3.0F;
 // edge and the feet on the wall) for Trapeze::kSlipTicks, or when the impulse
 // over it in one run passes kLedgeGripTearImpulseNs (CHOSEN): a catch is a
 // spike, not a hold. MEASURED on the proving ledge: a catch from a fall of a
-// metre peaks at ~10.5 kN with ~170 N*s over the grip and holds; one from
-// six metres (10.9 m/s) peaks at ~18 kN with ~700 N*s over and tears.
+// meter peaks at ~10.5 kN with ~170 N*s over the grip and holds; one from
+// six meters (10.9 m/s) peaks at ~18 kN with ~700 N*s over and tears.
 constexpr float kHangShoulderAboveCentre = 0.45F;
 constexpr float kLedgeGripMaxForceN = 4500.0F;
 constexpr float kLedgeGripTearImpulseNs = 350.0F;
@@ -569,7 +569,7 @@ constexpr float kHangArmLength = kHangDropBelowLedge - kHangShoulderAboveCentre;
 // body's own weight, g / (2 pi kArmSpringHz)^2 (DERIVED, ~0.062 m, the same for
 // any mass): hanging still, the body rests at its hold, not below it.
 // Parkour step 2, brachiation. A bar or pipe (a hold, see find_grip) caught in
-// the air over the head -- at least kSwingMinHandRise over the body's centre,
+// the air over the head -- at least kSwingMinHandRise over the body's center,
 // above any climb hold -- is hung from by the same arms as a ledge, from the
 // shoulders straight up. Pressing along the swing kips: at most
 // kSwingKipForceN (CHOSEN, 0.2 body weights: hips and legs thrown forward),
@@ -579,7 +579,7 @@ constexpr float kHangArmLength = kHangDropBelowLedge - kHangShoulderAboveCentre;
 // reaches for the next hold ahead: one within kSwingReachM of the shoulders
 // (CHOSEN: an arm and the shoulder girdle at full stretch), at least
 // kSwingMinAdvanceM further on, no sooner than kSwingRegripTicks after the
-// last. Monkey bars a metre apart are out of reach from a dead hang (1.14 m)
+// last. Monkey bars a meter apart are out of reach from a dead hang (1.14 m)
 // and in reach at the front of a swing: the swing is what carries the body.
 constexpr float kSwingMinHandRise = 0.75F;
 constexpr float kSwingCatchAimRise = 1.10F;
@@ -669,7 +669,7 @@ constexpr float kGripMinBodyMassKg = 400.0F;
 // facing) round the point it aims at.
 const JPH::Vec3 kGripSearchHalf(0.30F, 0.30F, 0.35F);
 // Climbing: the body moves at these rates. Its hands aim this high over its
-// centre, this far in front of it and this far to either side; one hand
+// center, this far in front of it and this far to either side; one hand
 // moves at a time.
 constexpr float kClimbUpSpeed = 0.9F;
 constexpr float kClimbDownSpeed = 1.2F;
@@ -719,13 +719,13 @@ constexpr double kBalanceSpeedScale = 2.0 / 5.5;
 constexpr double kBalanceStepOffInput = 0.8;
 // Phase 4: across a beam the body is the inverted pendulum of the teeter
 // (omega = sqrt(g / h)): x'' = omega^2 (x - p), x the COM's offset from the
-// beam's line and p the centre of pressure, which the soles can put only on
+// beam's line and p the center of pressure, which the soles can put only on
 // the beam: |p| <= half its width plus kBalanceHipMargin (CHOSEN: what the
 // hips and arms add by swinging). p is set to bring the XCoM (x + v/omega)
 // back to the line, or to the lean the stick asks for (up to
 // kBalanceLeanFraction of that reach); gain kBalanceCaptureGain (CHOSEN,
 // critically damped near the line). An XCoM past the reach cannot be brought
-// back: the body goes off the beam. No force but the clamped centre of
+// back: the body goes off the beam. No force but the clamped center of
 // pressure acts across it.
 constexpr float kBalanceHipMargin = 0.12F;
 constexpr float kBalanceCaptureGain = 1.0F;
@@ -762,7 +762,7 @@ constexpr float kStackDeckBandDepth = 9.0F;    // walkable perimeter band; leave
 constexpr float kStackColumnHalf = 0.8F;
 
 // The carry (AS-003 §8.4.3). A carryable is picked up within kCarryReach of
-// the body's centre, at rest, in front of it; it hangs by the middle of its
+// the body's center, at rest, in front of it; it hangs by the middle of its
 // top face from a point at the hands that follows the facing, so it swings.
 // The hands are at belly height, 1.25 m over the soles, and must be above the
 // handle of anything picked up -- off a rack, a bracket or the floor -- so the
@@ -798,7 +798,7 @@ constexpr float kGripSeconds = 0.10F;
 // overhead to hook it on, and reach as high to take a hooked end off: a
 // 1.8 m body's standing reach is about 2.25 m over the soles, 1 m over the
 // hands. Measured from the belly alone, an eye on a forklift's guard roof
-// (2.42 m up) was out of reach from the ground beside it by centimetres on
+// (2.42 m up) was out of reach from the ground beside it by centimeters on
 // one side and 0.25 m on the other (the owner's playtest, 2026-10-21).
 constexpr float kRigReachUp = 1.0F;
 // The least a load in the hands leaves the carrier to start and stop with.

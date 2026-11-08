@@ -1453,7 +1453,7 @@ std::vector<JPH::AABox> Kit::travel_envelopes() const {
     constexpr float kSwingSlackM = 0.1F;
     constexpr int kMaxSwingSamples = 1024;
     const JPH::Vec3 unit_scale = JPH::Vec3::sReplicate(1.0F);
-    // Each part's bounds with the body's centre of mass at `com`, one by
+    // Each part's bounds with the body's center of mass at `com`, one by
     // one: a beam and the rods hung off its ends are not one box.
     const auto parts_at = [&](const JPH::Shape &shape, const JPH::RMat44 &com, const float grow,
                               std::vector<JPH::AABox> &out) {
@@ -1616,7 +1616,7 @@ void Kit::latch(Catch &catch_record) {
     // The pin's taper draws the body onto its seat: the pin holds the seat,
     // not wherever the body is when the pin drops in -- its place and its
     // turn (a door latched a few degrees open is drawn shut). A relatch
-    // within seat_tolerance lifts the body those last centimetres, which
+    // within seat_tolerance lifts the body those last centimeters, which
     // takes the load off a rope that had caught it. Declared: the catch's
     // spring does at most m g seat_tolerance of work.
     const JPH::Body &body = jolt_body(catch_record.body);

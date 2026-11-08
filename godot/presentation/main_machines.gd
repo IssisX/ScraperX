@@ -20,7 +20,7 @@ const KIT_PILE_FLOATS := 4
 const KIT_MAX_PILES := 16
 const RUBBLE_DENSITY := 1600.0
 const RUBBLE_PILE_HEIGHT := 0.05
-# Stones: a course on a bin's fill every RUBBLE_STONE_PITCH metres, a pile's
+# Stones: a course on a bin's fill every RUBBLE_STONE_PITCH meters, a pile's
 # spread of RUBBLE_PILE_STONES_PER_M2 out to its radius, and RUBBLE_FALL_STONES
 # tumbling down a stream at RUBBLE_FALL_SPEED.
 const RUBBLE_STONE_PITCH := 0.24
@@ -75,7 +75,7 @@ const HOOK_BENDS_MAX := 8
 var _hook_bend_lines: Array[MeshInstance3D] = []
 var _hook_head: MeshInstance3D
 # The hook's gun, in the right fist once the hook is taken: a compact
-# launcher, drawn at HOOK_GUN_SCALE of its modelled size (a pistol-sized
+# launcher, drawn at HOOK_GUN_SCALE of its modeled size (a pistol-sized
 # tool so near the lens reads as a large one).
 var _hook_gun: Node3D
 const HOOK_GUN_SCALE := 0.62
@@ -170,7 +170,7 @@ func _build_kit() -> void:
 					cylinder.radial_segments = 16
 					mesh = cylinder
 				KIT_SHAPE_CAPSULE:
-					# A capsule's half.y runs between its sphere centres.
+					# A capsule's half.y runs between its sphere centers.
 					var capsule := CapsuleMesh.new()
 					capsule.radius = parts[p]
 					capsule.height = parts[p + 1] * 2.0 + parts[p] * 2.0
@@ -387,7 +387,7 @@ func _beacon_seat(parts: PackedFloat32Array) -> Vector3:
 			var flip := Vector3(1.0 if corner & 1 else -1.0, 1.0 if corner & 2 else -1.0,
 				1.0 if corner & 4 else -1.0)
 			var at := centre + basis * (flip * Vector3(parts[p], parts[p + 1], parts[p + 2]))
-			# The first corner within a centimetre of the top wins: the same
+			# The first corner within a centimeter of the top wins: the same
 			# seat every run.
 			if not found or at.y > best.y + 0.01:
 				best = at
@@ -599,7 +599,7 @@ func _render_kit() -> void:
 		var points: PackedVector3Array = _native.get_kit_cable_points(index)
 		var segments: Array = _kit_cables[index]
 		for segment in segments.size():
-			# A rope a few centimetres thick: not drawn from afar (to its
+			# A rope a few centimeters thick: not drawn from afar (to its
 			# middle, KIT_CABLE_RANGE), as each segment's own range did.
 			var at := Transform3D(Basis().scaled(Vector3.ZERO), Vector3.ZERO)
 			if segment + 1 < points.size():
@@ -757,7 +757,7 @@ static func _stone_multimesh(rock: ArrayMesh, count: int) -> MultiMeshInstance3D
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return instance
 
-# A stone's tint: the rubble's grey-brown, each a little different.
+# A stone's tint: the rubble's gray-brown, each a little different.
 static func _stone_tint(i: int, j: int) -> Color:
 	var k := _hash01(i, j + 31)
 	return Color(0.42, 0.39, 0.35).lerp(Color(0.58, 0.54, 0.47), k).darkened(0.25 * _hash01(i, j + 57))
@@ -785,7 +785,7 @@ func _stone_course(rock: ArrayMesh, floor_box: PackedFloat32Array, key: int) -> 
 		instance.multimesh.set_instance_color(k, _stone_tint(key * 131 + k, 0))
 	return instance
 
-# A pile's spread: stones scattered out from its centre, nearest first, so
+# A pile's spread: stones scattered out from its center, nearest first, so
 # showing the first n fills a disc that grows with the pile.
 func _stone_spread(rock: ArrayMesh, key: int) -> MultiMeshInstance3D:
 	var instance := _stone_multimesh(rock, RUBBLE_PILE_STONES)
@@ -800,7 +800,7 @@ func _stone_spread(rock: ArrayMesh, key: int) -> MultiMeshInstance3D:
 	return instance
 
 # Stones tumbling down a pouring stream, spread along it and turning as they fall.
-# Dust where poured stone lands: soft brown-grey puffs kicked up and out,
+# Dust where poured stone lands: soft brown-gray puffs kicked up and out,
 # settling as they fade.
 func _stone_dust() -> CPUParticles3D:
 	var dust := CPUParticles3D.new()
@@ -890,7 +890,7 @@ var vent_bursts := 0
 var vent_burst_eye_m := INF
 
 func _glass_material() -> StandardMaterial3D:
-	# Clear glass with a green-grey cast; a steel mullion every 3 m, drawn by
+	# Clear glass with a green-gray cast; a steel mullion every 3 m, drawn by
 	# the material's own texture (triplanar, one tile a 3 m square), not by
 	# parts. Drawn after the opaque world, both faces.
 	const SIZE := 64
@@ -1318,7 +1318,7 @@ func _instance_kit_bodies() -> void:
 	_batch_report += "kit instances %d pieces -> %d multimeshes; " % [pieces, made]
 	print("SCRAPERX_BATCH kit instances %d pieces -> %d multimeshes" % [pieces, made])
 
-# entry: [pack index in _kit_packs, slot, local transform, reach, local centre, drawn, body node].
+# entry: [pack index in _kit_packs, slot, local transform, reach, local center, drawn, body node].
 # A drawn instance lies in a slot below its pack's count, one out of reach or
 # hidden in one above it; a change swaps it with the slot at the boundary.
 func _place_kit_instance(entry: Array, eye: Vector3, moved: bool) -> void:

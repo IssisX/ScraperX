@@ -136,7 +136,7 @@ HoldEnd through_her_hold(Simulation &s, const double seconds, const int stage) {
     return end;
 }
 
-// Waits (quietly, still) until she is hunting within `within` metres.
+// Waits (quietly, still) until she is hunting within `within` meters.
 // Her pace is her own (Matron::Pace: she creeps, stalks, strides, runs, and
 // stands listening when the player is quiet), so she is given twice the time
 // a single run would have taken.
@@ -685,7 +685,7 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
                                         m.position.z - static_cast<double>(Matron::kPipeLineZ)) < 0.25;
         if (drum_at_feet > 0.0 && !dropped && m.on_pipe && on_line && !m.pipe_sliding && m.contact_hand_held &&
             feet < drum_at_feet) {
-            // Let go over the corner rail onto her, from a metre and a half up,
+            // Let go over the corner rail onto her, from a meter and a half up,
             // once she has the riser in her hands (she reaches it in a fall
             // from the rail where it ends at 154: J-032).
             s.debug_launch_kit_body(drum, {m.position.x, m.position.y + 2.6, m.position.z}, {0.0, -2.0, 0.0});
@@ -1569,7 +1569,7 @@ void run_matron() {
         require(peak < 5.0, "matron: her walk's crate shove does not launch a body (J-016)");
     }
     // ---- her walk's crate shove must not re-shove a body already
-    // travelling fast (J-016 stage 3): the guard measured the speed along
+    // traveling fast (J-016 stage 3): the guard measured the speed along
     // the shove line, so a body crossing it fast still got shoved again,
     // and the pipe drum walked off deck 154's north edge on it ----
     {
@@ -1582,8 +1582,8 @@ void run_matron() {
         s.debug_place_matron({Matron::kBandX, Matron::kDeckTop, Matron::kBandNorthZ});
         // The pipe drum itself: the drum nearest (-15, 154, -125.2), the
         // only drum on deck 154. Put it in her path on the east band,
-        // already travelling north at 10.0 m/s across her shove line,
-        // which points west here. One metre east of her walking line, so
+        // already traveling north at 10.0 m/s across her shove line,
+        // which points west here. One meter east of her walking line, so
         // her capsule never touches it (only the shove can push it
         // west). Launched at 10.0, not 5.0 or 6.0: the standing drum
         // tips on launch (the tip alone costs ~1.3 m/s) and then rolls,
@@ -1986,7 +1986,7 @@ void run_matron() {
         double support_rate_gap_max = 0.0;
         double support_rate_max = 0.0;
         // Moving-support carriage truth: the horizontal channel of the
-        // exported support velocity, and her centre against the cage
+        // exported support velocity, and her center against the cage
         // floor's own rectangle, over the same rising window.
         double support_svh_max = 0.0;
         double ride_dx_max = 0.0;
@@ -2044,9 +2044,9 @@ void run_matron() {
         // direction bound above stays untouched.)
         require(support_svh_max < 0.15,
                 "matron ride: supported on the rising cage, her support velocity matches the cage's zero horizontal rate");
-        // Carriage truth: while aboard, her centre stays within the cage
+        // Carriage truth: while aboard, her center stays within the cage
         // floor's own rectangle grown by her capsule radius — the floor
-        // is 1.50 m by 1.40 m half-extents about its centre
+        // is 1.50 m by 1.40 m half-extents about its center
         // (band_counterweight_well.cpp kCageHalfX/kCageHalfZ). Past
         // floor-half plus radius, no part of her upright capsule can
         // still be over the floor: she has left the cage.

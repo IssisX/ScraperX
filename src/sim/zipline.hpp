@@ -63,7 +63,7 @@ public:
     // jump from it reaches, high or low; over a band's rail the hanging
     // body's feet pass clear); the bottom anchor over its floor (CHOSEN: a
     // hanging body's feet clear the band's rail on the way in, and drop a
-    // metre to the floor let go of).
+    // meter to the floor let go of).
     static constexpr float kTopPostM = 4.8F;
     static constexpr float kStandM = 1.2F;
     static constexpr float kRampRunM = 2.4F;
@@ -85,8 +85,8 @@ public:
     // degree swing-up on the arms), its clamp drag worked out per line from
     // its slope; the fastest arrival the buffer stops short of the stop
     // (DERIVED: sqrt(2 * 4.9 * 3); what is left of a faster one meets the
-    // sprung stop, whose damping jolt runs about 4 kN a metre a second, and a
-    // few metres a second over tears the hands off: MEASURED, torn from 6.5
+    // sprung stop, whose damping jolt runs about 4 kN a meter a second, and a
+    // few meters a second over tears the hands off: MEASURED, torn from 6.5
     // to 9 m/s in at the buffer on the yard line); the rider's mass the
     // buffer is sized for.
     static constexpr float kTrolleyDragN = 12.0F;
@@ -96,7 +96,7 @@ public:
     static constexpr float kSafeArrivalMps = 5.4F;
     static constexpr float kRiderMassKg = 84.0F;
     // The hanging body's room under the cable, swept along the line when it
-    // is built: half a metre either side, from just over the cable to
+    // is built: half a meter either side, from just over the cable to
     // kRoomBelowM under it.
     static constexpr float kRoomBelowM = 2.6F;
     // The room around a machine, or anything the hands take hold of, that a
@@ -145,7 +145,7 @@ public:
     // caller holds the bar over the head: kSwingMinHandRise): its index and
     // the bar, or -1.
     [[nodiscard]] int at_hand(JPH::RVec3 hands, float reach, JPH::RVec3 &bar) const;
-    // The hands, at `hands_offset` from the rider's centre, take `line`'s
+    // The hands, at `hands_offset` from the rider's center, take `line`'s
     // parked trolley off its hook: the line's body, which the hands hold
     // through the trolley. The bar is at bar() from then on.
     JPH::BodyID clip(int line, JPH::Vec3 hands_offset);
@@ -154,7 +154,7 @@ public:
     void unclip();
     // The hand brake squeezed 0..1 (the stick held back).
     void set_hand_brake(float squeeze) noexcept;
-    // The other rider: `body`'s hands, at `hands_offset` from its centre,
+    // The other rider: `body`'s hands, at `hands_offset` from its center,
     // take `line`'s parked trolley (or, on_cable, the cable itself at the
     // park); let go; the brake it squeezes.
     void clip_other(int line, JPH::BodyID body, JPH::Vec3 hands_offset, bool on_cable);

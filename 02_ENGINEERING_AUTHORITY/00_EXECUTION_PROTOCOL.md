@@ -106,7 +106,7 @@ once, in the `00_START_HERE.md` ledgers, and the ticket points at it. A ticket t
 evidence goes stale silently, which is the failure mode this rule exists to prevent.
 
 `IMPLEMENTED` is a statement about source, never about proof. A green falsifier is the only thing
-that speaks for behaviour, and §11 governs what it is allowed to say.
+that speaks for behavior, and §11 governs what it is allowed to say.
 
 `Provenance: imported, NOT re-derived` is a **hard gate**: the ticket's constants describe another
 branch's world. It must be re-authored against this tree before any of it is coded.

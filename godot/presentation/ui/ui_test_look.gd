@@ -27,7 +27,7 @@ const LOOK_MIN_M := 1.6     # pulled in for room, never nearer than this
 const LOOK_RISER_MIN := Vector2(15.45, -134.55)
 const LOOK_RISER_MAX := Vector2(16.15, -133.85)
 const LOOK_DECK := 154.0
-const LOOK_STAND_CENTRE := 1.05   # her capsule's centre over her soles (Matron::kStandCentre)
+const LOOK_STAND_CENTRE := 1.05   # her capsule's center over her soles (Matron::kStandCentre)
 const LOOK_STATE_GRAB := 12
 const LOOK_STATE_DANGLE := 14
 const LOOK_STATE_ARMPLAY := 15
@@ -275,7 +275,7 @@ func _look_points(with_him: bool) -> PackedVector3Array:
 	return pts
 
 
-# The camera for a still: about the frame's centre, `az` degrees round from
+# The camera for a still: about the frame's center, `az` degrees round from
 # her facing (0 in front of her, 90 at her left), `el` up, as far as all of
 # it fits the view; of the azimuths offered, the first with the room behind
 # it (the native's look rays), else the one with the most.

@@ -89,7 +89,7 @@ void run_arm_break() {
     using scraperx::sim::Vector3;
     const auto hz = static_cast<int>(Simulation::kTickRateHz);
     // Sprints along (dx, dz) until a wall stops him (6 s at most), jumping
-    // `jump_short` metres short of `wall` (where a sprint stopped) when one
+    // `jump_short` meters short of `wall` (where a sprint stopped) when one
     // is given: the fastest he ran, and whether he was stopped in the air.
     struct RunIn {
         double fastest = 0.0;

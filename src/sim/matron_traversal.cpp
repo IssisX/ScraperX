@@ -802,7 +802,7 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
         };
         // Do not look past a close goal: floor_ahead defaults to a
         // radius-plus stride ahead, which overshoots a leg a quarter
-        // metre away on a small step and reports no floor, planting
+        // meter away on a small step and reports no floor, planting
         // her feet even though the leg itself is on floor. Check
         // floor at the goal when the goal is closer than a stride.
         const float ahead_goal = std::min(limits_.radius + 0.1F, d);
@@ -2042,7 +2042,7 @@ Climber::Status Climber::step_ledge_jump(const float dt, Budget &budget) {
         }
         return status_;
     }
-    // In the air: no thrust, gravity only. Her hands are her centre plus
+    // In the air: no thrust, gravity only. Her hands are her center plus
     // her reach over it; a lip is caught when her hands are at its height
     // and within her hand reach of it, while she is not still rising fast.
     // The steel she takes must be inside the reach that keeps a hold
@@ -2659,7 +2659,7 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
 // touch each other. A curb within a step leaves it whole.
 void AffordanceMap::split_patches(const PhysicsSystem &physics, const Ignore &ignore, const Limits &limits) {
     // Half the thinnest wall or board she must see (0.2 m): any such feature
-    // covers at least one cell centre, wherever it stands on the grid.
+    // covers at least one cell center, wherever it stands on the grid.
     constexpr float kCell = 0.10F;
     constexpr float kTall = 3.0F;   // what stands on it rises within this of its top
     const FixedFilter filter(ignore);
@@ -3000,7 +3000,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     // The climb itself: her body on the rungs, foot to head,
                     // every half meter (a deck's edge over the ladder stops her).
                     // The rise runs the full way to mantle clearance: standing
-                    // centre on the head (its top plus her centre height), not
+                    // center on the head (its top plus her center height), not
                     // just to the top rung. A deck over the column stops her
                     // head before she can mantle, so a sample that ends below
                     // it passes a climb she cannot finish. Only the climb
@@ -3230,8 +3230,8 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                 }
                 // Down, her first grip slides to the pole's head, and
                 // revalidate refuses a hold more than reach_low + 0.6 m
-                // under her centre: standing on the floor over it, her
-                // centre is 1.05 m over her feet, so a head more than
+                // under her center: standing on the floor over it, her
+                // center is 1.05 m over her feet, so a head more than
                 // 0.35 m under that floor is out of her reach and the move
                 // fails LostHold on its first grip tick, at phase 1, which
                 // the journey never avoids. Up keeps its 0.40 m: the
@@ -3504,7 +3504,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                             // her planted leg puts her hands on it, she
                             // catches it and mantles over it. The take-off
                             // must sit close enough to the lip that her
-                            // centre, walking to it, still lands inside her
+                            // center, walking to it, still lands inside her
                             // hand reach of the lip in the air.
                             Edge jump = up;
                             jump.kind = MoveKind::LedgeJump;
@@ -3611,8 +3611,8 @@ std::vector<int> AffordanceMap::plan(const int from, const int to, const std::ve
         // edges_ is sorted by from: the run for r.
         // A ladder's own route between two regions beats a cheaper shortcut
         // that leaves the ladder's line (a pole beside it, a lip drop off a
-        // neighbouring strip): she climbs the ladder she means to climb, on
-        // its line, instead of sliding down something a metre to one side
+        // neighboring strip): she climbs the ladder she means to climb, on
+        // its line, instead of sliding down something a meter to one side
         // and drifting off the line the whole way down. Only a usable rung
         // edge this plan may still take blocks the shortcuts: an avoided
         // or unusable rung edge leaves them open, so a failed rung climb
@@ -3631,7 +3631,7 @@ std::vector<int> AffordanceMap::plan(const int from, const int to, const std::ve
             return kind == MoveKind::RungUp || kind == MoveKind::RungDown;
         };
         std::vector<int> rung_to;
-        std::vector<std::pair<int, float>> cheapest_to;   // per neighbour region: the cheapest usable way there
+        std::vector<std::pair<int, float>> cheapest_to;   // per neighbor region: the cheapest usable way there
         for (auto jt = std::lower_bound(edges_.begin(), edges_.end(), r, [](const Edge &e, const int v) { return e.from < v; });
              jt != edges_.end() && jt->from == r; ++jt) {
             if (!jt->usable) continue;

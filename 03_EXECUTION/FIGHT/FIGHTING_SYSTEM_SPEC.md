@@ -683,7 +683,7 @@ never in the bottom button cluster, sized in `u` units:
 
 | Marker | Trigger | Draw | Hold |
 |---|---|---|---|
-| Whiff | `missed` edge, no state change | Small hollow grey X | 0.25 s fade |
+| Whiff | `missed` edge, no state change | Small hollow gray X | 0.25 s fade |
 | Landed | `landed` edge, no count change | Small white X | 0.25 s fade |
 | Stagger | `staggers` count edge | Larger yellow X + `STAGGER` + remaining seconds | 0.6 s, then fade (countdown continues in the cue below while she staggers) |
 | Knockdown | `knockdowns` count edge | Large orange X + `DOWN` + remaining seconds | 1.0 s, then fade (countdown continues below while she is down) |
@@ -703,8 +703,8 @@ verified `turn_s` view field (seconds into the Turn): while `turn_s`
 is in windup, the HUD shows her windup tell (lean marker + audio cue
 — audio per §8.6) before the burst.
 The rule made legible: while she is Down, the punch button
-(`main_context.gd::punch_button`, which already supports a greyed
-`BREAK FREE` state) shows greyed with label `SHE'S DOWN — MOVE`.
+(`main_context.gd::punch_button`, which already supports a grayed
+`BREAK FREE` state) shows grayed with label `SHE'S DOWN — MOVE`.
 The button stays present (owner rule 2026-10-28 — never removed), but
 a press does nothing, matching the sim (offer off, blows ignored while
 Down). The player learns in one fight that the Down window is for
@@ -753,7 +753,7 @@ the single required addition is marked.
  on threshold confirmation); shove (5.5 m/s + stumble) and grab
  punish whiffs and recoveries. No new counter is added.
 6. **World consequence** — the player spends the window: the Down
- countdown (§8.4) ticks on `down_left_s`; the punch button greys;
+ countdown (§8.4) ticks on `down_left_s`; the punch button grays;
  dust marks the fall point; on standing, the recovery-rise cue
  (§8.2) warns him. Then the loop restarts one stage harder.
 REQUIRED ADDITION (S6, one view field, same pattern as `down_left_s`):

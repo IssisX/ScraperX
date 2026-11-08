@@ -369,7 +369,7 @@ struct MastRide final {
     scraperx::sim::Snapshot end{};
 };
 
-constexpr double kMastX = -10.65;      // the deck's centre
+constexpr double kMastX = -10.65;      // the deck's center
 constexpr double kMastEntryX = -16.0;  // on the lower and upper receivers
 constexpr double kMastZ = -150.0;
 
@@ -730,7 +730,7 @@ scraperx::sim::Vector3 derrick_body(const scraperx::sim::Simulation &s, std::uin
     return s.kit_body_position(s.kit_body_index(entity));
 }
 
-// Steer to a point `dx`, `dz` from the cradle's centre, following it.
+// Steer to a point `dx`, `dz` from the cradle's center, following it.
 bool stand_on_cradle(scraperx::sim::Simulation &s, double dx, double dz, double seconds) {
     const int ticks = static_cast<int>(seconds * 90.0);
     for (int i = 0; i < ticks; ++i) {
@@ -755,7 +755,7 @@ bool dump_iron(scraperx::sim::Simulation &s, std::uint64_t entity) {
     if (!stand_on_cradle(s, pig.x - c.x, pig.z - c.z + 0.6, 2.5)) return false;
     // Then step in until the hands are offered it, as a player would: the
     // cradle's floor slopes, and planted feet no longer let the body drift
-    // the last few centimetres down to it (the owner's playtest fix, the
+    // the last few centimeters down to it (the owner's playtest fix, the
     // planted grip).
     for (int i = 0; i < 180 && s.snapshot().carry_target_entity_id != entity; ++i) {
         const auto at = derrick_body(s, entity);

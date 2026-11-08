@@ -281,7 +281,7 @@ void run_step2_movement() {
     // Balance: on the scaffold boards (0.3 m wide) the body walks at 2 m/s
     // along them and a sideways push under 0.8 keeps it on their line; a full
     // push steps it off. On the ring's deck it is not balancing, nor on the
-    // boards' first metre, which lies over the deck: a step off them there
+    // boards' first meter, which lies over the deck: a step off them there
     // lands on it. Out over the well (z < -129.0) the boards are a beam, and
     // by -129.4 (the run walked off over the first 0.4 m of beam) the walk
     // has settled to the balance pace.
@@ -323,9 +323,9 @@ void run_step2_movement() {
 
     // Phase 4: across the boards only the pendulum acts (kBalanceHipMargin).
     // A sideways shove (the stick full across for a few ticks, then let go)
-    // that leaves the XCoM inside the centre of pressure's reach (0.15 m
+    // that leaves the XCoM inside the center of pressure's reach (0.15 m
     // half-width + 0.12) is caught; one that carries it past cannot be, and
-    // the body goes off. The old centring (22 m/s/s toward the line) caught
+    // the body goes off. The old centering (22 m/s/s toward the line) caught
     // both: a 1.2 m/s shove stopped in 3 cm.
     const auto shove = [](const int ticks) {
         Simulation sim(InitialSpawn::Ring176East);

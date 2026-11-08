@@ -15,7 +15,7 @@ Before this work order the native world was a 32 x 32 m interior test deck and t
 - Governing Law 2 — one skyscraper, one persistent world, approximately 1.6 km tall.
 - Governing Law 6 — height and falling are real gameplay; height retains emotional weight.
 - GDD §3 — exterior traversal is a major share of ordinary play, not a rare set piece.
-- GDD §7.1 — the perspective exists to maximise height and machine scale.
+- GDD §7.1 — the perspective exists to maximize height and machine scale.
 - TDD §6.2 — ordinary 32-bit positions are sufficient at this scale; no floating origin.
 
 ## Owner
@@ -51,5 +51,5 @@ Complete when all proof steps pass from one source commit.
 - **Built:** host `scraperx_sim` + tests and the Linux GDExtension, Release, `-Werror`.
 - **Executed:** host suite and the Godot runtime under Xvfb.
 - **Observed:** `SCRAPERX_WO005_APPROACH_PROOF spawn_grade=1 position=(-3.47,0.89,-66.97) tower_face_distance=78.0 tower_height=1600`, with the captured frame showing the tower rising out of frame into sodium haze.
-- **Unverified boundary:** interior routes into the tower, streaming, region sleep, and anything above the first few metres of the facade. The tower is currently one static mass with a non-collidable skin; it is not yet a traversable building.
+- **Unverified boundary:** interior routes into the tower, streaming, region sleep, and anything above the first few meters of the facade. The tower is currently one static mass with a non-collidable skin; it is not yet a traversable building.
 - **Regressions:** none. Every WO-001..003 assertion still passes against the enlarged world.

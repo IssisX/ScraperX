@@ -1,7 +1,7 @@
 // AS-006, the Counterweight Well (Atlas band B02, 154 -> 220 m). Every lift in
 // this band runs on a counterweight; see 03_EXECUTION/ASCENT/AS-006_CW_PIN.md.
 //
-// Positions are world metres against the frame measured at 77a4364: the
+// Positions are world meters against the frame measured at 77a4364: the
 // stair's top deck at 154.00 (north band z in [-133, -124]), the well's guard
 // rail on z = -133 (top rail 155.01-155.09), and the rings above at 176.25,
 // 198.25 and 220.25.
@@ -96,7 +96,7 @@ constexpr float kBollardZ = -132.30F;
 constexpr float kBollardHalfXZ = 0.12F;
 constexpr float kBollardSlack = 0.03F;
 
-// A lift cage about its floor's centre: a galvanised floor, four yellow
+// A lift cage about its floor's center: a galvanised floor, four yellow
 // posts, a top frame of four rails, and waist rails on the well side (south)
 // and, with side_rail, on the eye's side; open on top, so a load can be
 // dropped into it, and open on the north. eye_side is -1 for an eye on the
@@ -291,7 +291,7 @@ void build_stage_a(kit::Kit &kit, CounterweightWell &well) {
 
     // ---- the catch, its lever and the trip line ----------------------------
     // Built about its pivot: the arm west, the counterweight east. Uniform
-    // density puts the centre of mass 0.19 m east of the pivot.
+    // density puts the center of mass 0.19 m east of the pivot.
     well.a_lever_body = kit.add_body(
         Sim::kWellALeverEntityId,
         {{JPH::Vec3(0.5F * kLeverArm, 0.05F, 0.05F), JPH::Vec3(-0.5F * kLeverArm, 0.0F, 0.0F),
@@ -347,7 +347,7 @@ const JPH::Vec3 kBCageEyeLocal(kCageHalfX + 0.12F, kCageEyeLocal.GetY(), 0.0F);
 
 constexpr float kBoomX = 0.00F;
 constexpr float kBoomLength = 22.0F;
-constexpr float kBoomHalfSection = 0.34F;   // chord centres from the boom's axis
+constexpr float kBoomHalfSection = 0.34F;   // chord centers from the boom's axis
 constexpr float kBoomMassKg = 2500.0F;
 const JPH::RVec3 kBoomPivot(kBoomX, 222.00, -131.30);
 // The two-part block, just under the tip.
@@ -657,10 +657,10 @@ constexpr float kRebarOpen = 0.45F;
 constexpr float kRebarFarStop = 2.20F;   // rad, lying back west of its pin
 const JPH::RVec3 kRebarSheave(kRebarPivot.GetX() - 0.80, kRebarPivot.GetY() + 2.50, kDumpsterZ);
 // The gantry in front of C's platform, on the 198 ring: a beam at 201.2 with
-// the rebar's and the latch's lower sheaves hung a metre under it on drop
-// bars, half a metre over a rider's hands. A rider stepping back from a
+// the rebar's and the latch's lower sheaves hung a meter under it on drop
+// bars, half a meter over a rider's hands. A rider stepping back from a
 // handle draws its line out nearly level, not up a line hanging straight
-// down, where the first metre of a step pays out almost none.
+// down, where the first meter of a step pays out almost none.
 constexpr float kCGantryBeamY = 201.20F;
 const JPH::RVec3 kCTripSheaveWest(-4.40, 200.10, -130.75);
 constexpr float kCTripHandleDrop = 0.55F;   // the handle's top at a rider's hands
@@ -670,7 +670,7 @@ constexpr float kCGantryPostZ = -129.60F;   // on the 198 ring
 // The keeper latch: a counterweighted lever over the gantry's east end, its
 // arm's tip straight above the gantry sheave its own handle hangs from, 1.4 m
 // east of the rebar's. Pull the handle down and away: the tip comes down and
-// the latch's pin leaves the platform, at 0.25 rad, a quarter metre of pull.
+// the latch's pin leaves the platform, at 0.25 rad, a quarter meter of pull.
 // The lever's stop (0.55 rad) is well short of where the line would come
 // square to the arm (about 1.07 rad).
 const JPH::RVec3 kCLatchPivot(-2.10, 201.75, -130.75);
@@ -827,7 +827,7 @@ void build_stage_c(kit::Kit &kit, CounterweightWell &well) {
 
     // ---- the gate striker over A's cage, and A's tip-out lever ------------------------
     // The striker rests level on its stop, its arm south under the dumpster's
-    // floor and its weight north of its pin (uniform density puts the centre
+    // floor and its weight north of its pin (uniform density puts the center
     // of mass 0.09 m north); the dumpster's last 0.18 m of travel presses it
     // down, about 0.47 rad at the floor's north edge.
     well.c_striker_body = kit.add_body(

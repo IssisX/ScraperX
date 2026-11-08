@@ -36,7 +36,7 @@ native suite stops there.
    counts her there only within 0.25 m of `kBollardStandX/Z`. Dragging the
    torso by its collar, she stops 0.252 m off it and walks no closer, so she
    never turns to the shackle: her hand stays at the torso. A threshold this
-   tight decides the scene by millimetres (a different compiler or one
+   tight decides the scene by millimeters (a different compiler or one
    changed contact can flip it), which may be why it passed where it was
    written.
 2. **Past that, the torso does not reach the shackle.** Letting her work from

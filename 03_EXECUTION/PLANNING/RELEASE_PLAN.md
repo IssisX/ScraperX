@@ -30,7 +30,7 @@ Items marked **OWNER** wait on a decision in §3.
   - Machines are drawn unsmoothed while the camera is smoothed, so every ride judders.
   - The rider's camera bobs as if walking.
   - Height stops being heard at 150 m.
-- **The look reads as greybox.** Surfaces are flat colour with no texture, wear or grime. Sky
+- **The look reads as greybox.** Surfaces are flat color with no texture, wear or grime. Sky
   reflections are off, so metal reads dark. Ropes are 3.5 cm lines, and machines have no lamps
   or markings to show cause and effect.
 - **Already clean.** No third-party art, fonts or sounds ship (everything except the voice is
@@ -124,7 +124,7 @@ Each item is one complete, verifiable unit, proven through the touch path on the
     - Captions that print the line actually spoken, uncensored.
     - A voice volume slider.
     - Reduced motion.
-    - Danger shown by more than colour.
+    - Danger shown by more than color.
 14. **Shortcuts (#89)** (L). Every bypass the physics allows is probed natively and timed against
     the canonical route; none is blocked with a fake wall. Known bypasses: AS-007's ladders,
     slingshot overdraw, walking the helix flight and the tram track. The signature shortcut is

@@ -259,7 +259,7 @@ kit::BodyIndex add_throw_bar(kit::Kit &kit, const std::uint64_t entity, const JP
     return body;
 }
 
-// A platform about its deck's top centre: deck, side rails, and the rail
+// A platform about its deck's top center: deck, side rails, and the rail
 // on `closed_side` (+1 south, -1 north, 0 none) across one end.
 std::vector<Part> platform_parts(const float closed_side) {
     std::vector<Part> parts{

@@ -31,7 +31,7 @@ void run_stack() {
 
     // A knee-to-waist edge is climbed. The owner, on the device: stuck where
     // "I wasn't able to reach up and climb - buckets and shit". The wall ray
-    // ran only at the body's centre (0.9 m), so a rim from 0.35 to 0.9 m
+    // ran only at the body's center (0.9 m), so a rim from 0.35 to 0.9 m
     // offered nothing: too high to step, invisible to the climb. The
     // slingshot's 0.7 m timber block in the yard is one.
     {
@@ -102,7 +102,7 @@ void run_stack() {
     // onto its plate. Water runs into the bucket until it outweighs the cage
     // and the rider (235 kg); the bucket falls 21.8 m, knocking the pawl out as
     // it leaves the head, and the cage carries the rider 21.8 m under a
-    // governor that can only brake. The valve shuts within the first metre. At
+    // governor that can only brake. The valve shuts within the first meter. At
     // no tick has the payload gained more energy than the bucket and its water
     // released.
     Simulation ride(InitialSpawn::ExteriorGrade);

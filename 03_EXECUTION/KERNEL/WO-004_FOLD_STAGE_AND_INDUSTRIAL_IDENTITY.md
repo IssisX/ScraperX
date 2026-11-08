@@ -16,9 +16,9 @@ At source commit `f06ef520e95202eb70449de8b80325378accb609` the project was conf
 
 - Governing Law 28 — Galaxy Fold 6-class Android is the shipping truth; interface design targets sustained real-device play.
 - Governing Law 26 — no physics theater; emissive candy on inert edges misrepresents which surfaces are doing work.
-- GDD §7.1 — first-person perspective exists to maximise embodiment, height, machine scale and physical readability.
+- GDD §7.1 — first-person perspective exists to maximize embodiment, height, machine scale and physical readability.
 - GDD §7.3 — traversal readability comes from world geometry and material context.
-- GDD §15 — motion comfort is solved through camera behaviour and presentation, not by flattening height.
+- GDD §15 — motion comfort is solved through camera behavior and presentation, not by flattening height.
 - TDD §1.1 — Godot 4.7.x Mobile/GL-compatibility renderer is the host.
 
 ## Device truth
@@ -55,9 +55,9 @@ Complete when all proof steps pass from one source commit. This proves compositi
 
 ## Result record
 
-- **Changed:** `godot/project.godot` (Fold design viewport, expand stretch, sensor-landscape orientation, clear colour), `godot/main.tscn` (industrial environment, sodium-weighted fog and tonemap, anchored HUD, 82 degree / 2600 m camera), `godot/presentation/main.gd` (industrial material set, sourced light rig, viewport-derived HUD layout).
+- **Changed:** `godot/project.godot` (Fold design viewport, expand stretch, sensor-landscape orientation, clear color), `godot/main.tscn` (industrial environment, sodium-weighted fog and tonemap, anchored HUD, 82 degree / 2600 m camera), `godot/presentation/main.gd` (industrial material set, sourced light rig, viewport-derived HUD layout).
 - **Built:** Linux `scraperx_native` GDExtension, Release, GCC 13.3, `-Werror`.
 - **Executed:** `tools/godot/godot --path godot --rendering-method gl_compatibility` under Xvfb at 1728x1485 (Fold inner-panel aspect).
 - **Observed:** `SCRAPERX_WO004_VIEWPORT_PROOF width=2160 height=1856 aspect=1.164 fov=82.0 far=2600 stretch=expand`.
-- **Unverified boundary:** the real Fold 6 panel, folded/cover composition, touch ergonomics, sustained frame rate, thermals, HDR and colour management on device.
+- **Unverified boundary:** the real Fold 6 panel, folded/cover composition, touch ergonomics, sustained frame rate, thermals, HDR and color management on device.
 - **Regressions:** none observed.

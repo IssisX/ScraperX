@@ -59,7 +59,7 @@ var _yaw := PackedFloat32Array()
 var _timer := PackedFloat32Array()
 var _target := PackedVector3Array()
 var _active := PackedByteArray()
-# Per flock: its centre (where it stands or will), whether placed, its size.
+# Per flock: its center (where it stands or will), whether placed, its size.
 var _flock_centre := PackedVector3Array()
 var _flock_live := PackedByteArray()
 var _gull_centre := Vector3.ZERO
@@ -128,7 +128,7 @@ func flying_count() -> int:
 	return count
 
 
-# The nearest standing flock's centre to `from`, or null.
+# The nearest standing flock's center to `from`, or null.
 func nearest_perched_flock(from: Vector3) -> Variant:
 	var best: Variant = null
 	var best_d := INF
@@ -142,7 +142,7 @@ func nearest_perched_flock(from: Vector3) -> Variant:
 	return best
 
 
-# Highest a bird of a flock that was standing at `centre` is above it now.
+# Highest a bird of a flock that was standing at `center` is above it now.
 func highest_above(centre: Vector3) -> float:
 	var best := -INF
 	for i in FLOCKS * FLOCK_MAX:
@@ -317,7 +317,7 @@ func _choose_landing(i: int, player: Vector3) -> void:
 	_state[i] = RETURNING
 
 
-# A flock's centre is still where it stood until its first bird finds a new
+# A flock's center is still where it stood until its first bird finds a new
 # place (live 2 means it has one).
 func _flock_centre_is_old(f: int) -> bool:
 	return _flock_live[f] == 1

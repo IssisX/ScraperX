@@ -2,7 +2,7 @@ extends Node3D
 ## The yard crew, drawn: what the native's workers (sim/crew.hpp) are doing,
 ## nothing they are not. Each worker is a figure of simple parts -- boots,
 ## trousers, a hi-vis vest, sleeves, hands, a head and a hard hat -- posed
-## every frame from its native state: legs and arms swing with the metres it
+## every frame from its native state: legs and arms swing with the meters it
 ## has walked; at a station it works (a hammering arm, head down); stepping
 ## aside it watches the player; startled, its arms come up and it leans back;
 ## shoved, its arms fly out.
@@ -30,7 +30,7 @@ const YIELDING := 2
 const STARTLED := 3
 const STUMBLING := 4
 
-# Heights above the soles, metres.
+# Heights above the soles, meters.
 const HIP_Y := 0.92
 const SHOULDER_Y := 1.44
 const SHOULDER_HALF := 0.2
@@ -57,7 +57,7 @@ var _welds := {}
 var _torch := {}         # worker index -> the electrode's tip, world
 # For a test: frames a welder's arc burned within drawing range.
 var welding_frames := 0
-# The native's capsule centre is its stand height above the soles.
+# The native's capsule center is its stand height above the soles.
 const CENTRE_Y := 0.9
 
 func setup(native: Object, audio: Object = null) -> void:
@@ -361,7 +361,7 @@ func _make_weld() -> Dictionary:
 	return {"sparks": sparks, "light": light, "arc": arc}
 
 
-# Hot metal: drawn additively from the particle's colour, bright enough to
+# Hot metal: drawn additively from the particle's color, bright enough to
 # bloom.
 func _glow_material(gain: float) -> ShaderMaterial:
 	var shader := Shader.new()

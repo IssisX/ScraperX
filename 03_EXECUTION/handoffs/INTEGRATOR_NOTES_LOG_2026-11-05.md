@@ -160,7 +160,7 @@ logging); find better ways unasked; no full game builds for small changes (#202)
 - 10:45 AM: #232 MERGED (my LAND, green at 2d7edec7). #235: GitHub never synced the PR to the 97ab893c push (the proof ran,
   the PR stayed at 0df46ac9; merging would have landed the OLD head). Fixed by merging trunk in (5baad0f6). Codex is clean
   on 5baad0f6; the proof is 42066443791. Merge on green. J-041 helper: all 4 checks restored at ac94ffff (stacked, merges
-  5baad0f6). The cause was the engine still at 718 rpm after centring, so its noise crossed kStalkRunLoudness 0.35 and
+  5baad0f6). The cause was the engine still at 718 rpm after centering, so its noise crossed kStalkRunLoudness 0.35 and
   she charged. The test now waits for the spin-down. Scope red on the stacked branch is expected until #235 lands. Then
   open its PR against trunk (Job: J-041) and merge on green + Codex.
   Lesson: before a hand merge, check that the PR head sha equals the branch head (`git ls-remote`).

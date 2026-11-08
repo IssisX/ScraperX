@@ -38,7 +38,7 @@ public:
     static constexpr float kDeckEastX = 11.5F;
     static constexpr float kDeckNorthZ = -191.5F;
     static constexpr float kDeckSouthZ = -183.5F;
-    // The arm: its centre line, its width, and where it stops.
+    // The arm: its center line, its width, and where it stops.
     static constexpr float kArmCentreZ = -187.5F;
     static constexpr float kArmHalfWidth = 1.5F;
     static constexpr float kArmEndX = -50.0F;
@@ -50,7 +50,7 @@ public:
     static constexpr float kBlockOneTop = kDeckTop + 1.6F;
     static constexpr float kBlockTwoTop = kDeckTop + 4.4F;
 
-    // The striker plate: a pad 3.2 m by 3.0 m on four guides, its top a metre
+    // The striker plate: a pad 3.2 m by 3.0 m on four guides, its top a meter
     // over the deck at rest. Gas struts under it hold it against its upper stop
     // with the struts' preload kStrutPreloadN over the plate's weight.
     static constexpr float kStrikerWestX = 3.0F;

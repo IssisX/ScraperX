@@ -15,7 +15,7 @@ exist here. The file name is kept so `MANIFEST.txt` stays true.
 The first band of the mechanism ascent: from the tower stair's 154 m top deck to the 220 m ring,
 the top of Atlas band B02, *Counterweight Well*. Every lift in it runs on a counterweight: a skip,
 a derrick boom's own weight, a dumpster filled with rubble. Each is found unlinked, the player
-supplies the link and sets it off, and what each leaves behind feeds its neighbours. The band also
+supplies the link and sets it off, and what each leaves behind feeds its neighbors. The band also
 has a climbing route that needs no lift.
 
 ## Existing truth
@@ -52,7 +52,7 @@ where the stair's top deck is 9 m deep and the rings above step in by 0.9 m per 
 | Stage | Archetype | Travel | Payload | Source of energy | Kind |
 |---|---|---|---|---|---|
 | **A — skip lift** | 01 counter-mass | 154.25 → 176.25 | cage 350 kg + rider | 800 kg skip, 22 m | re-armable |
-| **B — derrick boom** | 13, the boom as a swinging counterweight | 176.25 → 198.25 | cage 350 kg + rider | 2 500 kg lattice boom, centre of mass falls 11 m | one-shot |
+| **B — derrick boom** | 13, the boom as a swinging counterweight | 176.25 → 198.25 | cage 350 kg + rider | 2 500 kg lattice boom, center of mass falls 11 m | one-shot |
 | **C — debris chute** (finale) | 12 debris-chute counterweight, cascading into A | 198.25 → 220.25 | platform 700 kg + rider | 900 kg of rubble in a 400 kg dumpster, 22 m on a 1:1 rope (as built; sketched 44 m on 2:1) | one-shot source; its leftover re-arms A |
 
 ### Links between stages (what each leaves behind)
@@ -108,7 +108,7 @@ seated and slow), and the player tips the rubble out of the cage bed at 154 m.
 
 Where the build departs from the sketch above, and why:
 
-- **The eye is at knee height**, 0.80 m over the floor's centre, not hand height. The rope is
+- **The eye is at knee height**, 0.80 m over the floor's center, not hand height. The rope is
   exactly long enough to reach the eye with the skip in its catch, so it is taut the moment it is
   hooked; with the eye below the hands, a carried shackle is always on slack rope and can be walked
   to the eye from anywhere within 2.4 m of the sheave. At hand height the rope was 5 cm short of
@@ -155,7 +155,7 @@ past its rating and it parts. The boom swings on to hang vertically against the 
 the line are both gone, so nothing puts the boom back. B's cage stays at 198 on its safety dogs
 (a spring catch on the guide). The hanging boom is the climbable wreckage (above).
 
-**Energy:** the boom's centre of mass falls 11 m: `2 500 × 9.81 × 11 = 269.8 kJ`; the cage and rider
+**Energy:** the boom's center of mass falls 11 m: `2 500 × 9.81 × 11 = 269.8 kJ`; the cage and rider
 gain 93.9 kJ.
 
 ### As built (Stage B)
@@ -232,8 +232,8 @@ cage onto a grate over its top.
   lug 0.5 m along it over a sheave 0.8 m west of the pin, so a full pull (0.7 m of line) takes it
   past upright and its own weight throws it onto a far stop. Short of upright it drops back into
   the mouth. A hard pull tears the line out of the hands only after the bar is past upright.
-- **The gantry's sheaves hang a metre under its beam**, half a metre over the hands, so stepping back
-  draws a line out nearly level. From a sheave 1.55 m over the hands the first metre of a step paid
+- **The gantry's sheaves hang a meter under its beam**, half a meter over the hands, so stepping back
+  draws a line out nearly level. From a sheave 1.55 m over the hands the first meter of a step paid
   out almost no line, and the throw needed the rider backed against the platform's rail (probe: the
   grip tore at 0.6 of full stick before the bar was upright).
 - **The cascade's striker** is a counterweighted lever lying north–south in A's column over A's
@@ -280,7 +280,7 @@ Sprint and controlled drops are exercised between stages on the band's decks and
 
 As built, beyond the list below: safety **dogs** on guides (a ratchet whose pawl rests on the highest
 tooth passed), **slip hooks** on a rope's dead end opened by a lever, **bins, streams and piles**
-(the granular model above), per-body **damping**, and a centre-of-mass readback for the energy
+(the granular model above), per-body **damping**, and a center-of-mass readback for the energy
 rule. Breakables (rated ropes) are in the kit; no AS-006 stage uses one.
 
 Native, in a mechanism module owned by the physics world (plan §4):
@@ -326,7 +326,7 @@ gates:
    line, and the end comes off the cleat onto the cage.
 4. **B ride** — hook, pull, ride: the rider stands on the cage while the line hauls; the slip hook
    lets go at the top; the boom hangs past 1.45 rad; the cage stands on its dogs within one tooth
-   under 198.25; speed ≤ 3.1 m/s; the payload never out-earns the boom's centre of mass; a death on
+   under 198.25; speed ≤ 3.1 m/s; the payload never out-earns the boom's center of mass; a death on
    the 198 ring restores the spent stage as committed.
 5. **C no link, no lift** — the latch held open a second or more with the dumpster empty, then the
    rebar thrown and the dumpster filled with the latch shut: neither the platform nor the dumpster
@@ -399,7 +399,7 @@ Found and fixed on the way (each by the probe named):
 - **A stopped 0.21 m short** once C was built: the dumpster's guide rails reached down into the top
   of A's column (the band probe: `A 21.79`). They now stop 0.1 m under the dumpster's lowest floor.
 - **A striker bracket had a negative half extent**, a box Jolt builds with a negative convex radius.
-- **A bin's gate reach was measured from the gate lever's centre of mass**, which swings as the lever
+- **A bin's gate reach was measured from the gate lever's center of mass**, which swings as the lever
   turns, not from its pivot as documented: the thrown rebar would have closed its own gate. Levers
   now keep their pivot.
 - **The checkpoint did not keep spilled rubble.** A restore put the cage's rubble back and left the

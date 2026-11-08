@@ -106,7 +106,7 @@ bool pull_shop_chock(scraperx::sim::Simulation &simulation) {
                        });
 }
 
-// On I's cage: the rope's shackle, hanging a metre west of the eye, onto it.
+// On I's cage: the rope's shackle, hanging a meter west of the eye, onto it.
 bool rig_shop_i(scraperx::sim::Simulation &simulation) {
     using scraperx::sim::Simulation;
     if (!walk_to(simulation, -7.3, -145.6, 6.0, 0.08)) {

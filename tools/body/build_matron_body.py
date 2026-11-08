@@ -37,7 +37,7 @@ import human as h  # noqa: E402
 DL = sys.argv[1] if len(sys.argv) > 1 else os.path.join("build", "makehuman")
 OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join("godot", "presentation", "life", "matron")
 ASSETS = os.path.join(DL, "assets")
-SOLE = 0.012   # her shoes' sole under the bare foot, metres
+SOLE = 0.012   # her shoes' sole under the bare foot, meters
 
 # Seventy-seven, heavy in the old way: a soft low belly, a heavy low bust,
 # thick waist and upper arms, but not fat. Little muscle; 1.80 m standing.
@@ -67,8 +67,8 @@ HAIR_CHAINS = 20
 HAIR_SEGMENTS = 5
 HAIR_SEGMENT_M = 0.09
 
-# Her dress: a faded institutional blue-grey, so it reads apart from her pale
-# skin and grey hair (the owner, 2026-10-20: "everything is a shade of white
+# Her dress: a faded institutional blue-gray, so it reads apart from her pale
+# skin and gray hair (the owner, 2026-10-20: "everything is a shade of white
 # and blends into each other"); the collar, pocket and turned edges stay
 # off-white.
 DRESS = "7d8a8c"
@@ -87,7 +87,7 @@ def srgb_to_linear(c):
 
 
 # ------------------------------------------------------------- noise ----------
-# Deterministic value noise over 3-D points (bind pose, metres): where the
+# Deterministic value noise over 3-D points (bind pose, meters): where the
 # stains, the wear and the tears fall. Same input, same output.
 
 def _hash3(ix, iy, iz, seed):
@@ -273,7 +273,7 @@ def skin_maps(out, UV, T, regions):
     N = src.size[0]
     a = np.asarray(src, float) / 255.0
     lum = a @ np.array([0.299, 0.587, 0.114])
-    # pale and sallow: most of the pink gone, a cold yellow-grey in its place
+    # pale and sallow: most of the pink gone, a cold yellow-gray in its place
     tint = np.array([1.0, 0.965, 0.90])
     pale = (0.5 * a + 0.5 * lum[..., None] * tint) * 0.84
     rng = np.random.default_rng(77)
@@ -281,7 +281,7 @@ def skin_maps(out, UV, T, regions):
     def region(name, grow=0.0):
         m = uv_mask(N, UV, T, regions[name])
         return blur(m, grow) if grow > 0 else m
-    # the scalp: pale skin with a few grey hairs' roots, no painted dark hair
+    # the scalp: pale skin with a few gray hairs' roots, no painted dark hair
     scalp = region("scalp", 6.0)
     forehead = region("forehead") > 0.5
     if not forehead.any():
@@ -289,7 +289,7 @@ def skin_maps(out, UV, T, regions):
     skin_tone = pale[forehead].mean(0)
     mott = tiling_noise(N, 3, 12, seed=21)
     bald = skin_tone[None, None, :] * (1.0 + 0.03 * mott[..., None])
-    bald = bald * 0.97 + 0.03 * np.array([0.6, 0.59, 0.57])   # a grey cast from the hair over it
+    bald = bald * 0.97 + 0.03 * np.array([0.6, 0.59, 0.57])   # a gray cast from the hair over it
     col = pale * (1.0 - scalp[..., None]) + bald * scalp[..., None]
     # age spots on the backs of the hands, the face and the forearms
     spotted = np.clip(region("hands", 3.0) + region("face", 3.0) + region("forearms", 3.0), 0, 1)
@@ -487,7 +487,7 @@ def _unused_long_hair_map(out):
     lum = a[..., :3] @ np.array([0.299, 0.587, 0.114])
     l = np.clip((lum - lum[a[..., 3] > 0.5].min()) / (np.percentile(lum[a[..., 3] > 0.5], 99) + 1e-6), 0, 1)
     dark = np.array([0.2, 0.19, 0.18])
-    light = np.array([0.66, 0.64, 0.59])   # grey gone yellow at the ends
+    light = np.array([0.66, 0.64, 0.59])   # gray gone yellow at the ends
     rgb = dark + (light - dark) * (l[..., None] ** 0.8)
     n = 1024
     rng = np.random.default_rng(9)
@@ -584,7 +584,7 @@ def build():
     body_v = np.unique(np.array([t[0] for t in body_tris]).ravel())
     is_body = np.zeros(len(V), bool)
     is_body[body_v] = True
-    # decimetres -> metres, soles on y = 0, scaled to her standing height, on her shoes' soles
+    # decimetres -> meters, soles on y = 0, scaled to her standing height, on her shoes' soles
     V = V * 0.1
     V[:, 1] -= V[body_v, 1].min()
     natural = float(V[body_v, 1].max())
@@ -1195,7 +1195,7 @@ def build():
         parts.append(part)
         mat(mat_name, linear("8c8780"), 0.7, double=True)
 
-    # ---- her hair: lank grey strands grown from her scalp, in greasy clumps,
+    # ---- her hair: lank gray strands grown from her scalp, in greasy clumps,
     # lying over her skull and hanging from it, hung on the chains ----
     hP, hT, hUV, hC, n_strands = grow_hair(V, N, T_body, in_hair, is_body, Wfull, col, head_c, byname)
     Whr = np.zeros((len(hP), len(names)))

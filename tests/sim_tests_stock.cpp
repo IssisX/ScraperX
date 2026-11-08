@@ -329,7 +329,7 @@ void run_loose_stock() {
     require(s.impacts().empty(), "stock: left alone, nothing is struck");
     // Dress_tower side coverage after settling, where the pieces actually
     // lie in play. Rings as in LooseStock::dress_tower (stack 11..143 m,
-    // upper 176.25..396.25 m); side by dominant axis from the ring centre
+    // upper 176.25..396.25 m); side by dominant axis from the ring center
     // (0, -150), matching dress_tower's four out directions. The gate is
     // per band, not per ring: a stack ring holds at most 3 legacy spots plus
     // 3 east/west spots (6 total), so one ring can cover four sides, but each

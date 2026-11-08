@@ -232,7 +232,7 @@ void Crew::pre_step(const float dt, const RVec3 player, const Vec3 player_veloci
                     worker.next = (worker.next + 1) % worker.route.size();
                 }
             } else {
-                // Slowing into a station over the last metre.
+                // Slowing into a station over the last meter.
                 want = to / left * worker.walk_mps * std::min(1.0F, 0.4F + left);
                 face = yaw_of(to);
             }

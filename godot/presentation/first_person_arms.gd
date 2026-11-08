@@ -22,7 +22,7 @@ const FOREARM := 0.33
 # they hold. Anatomical shoulders sit beside the head, and a forearm 0.25 m
 # from the lens fills the screen edge as a slab.
 const SHOULDER_LOCAL := Vector3(0.17, -0.30, 0.18)
-# Arms raised to a grip rise from lower and nearer the centre, so the
+# Arms raised to a grip rise from lower and nearer the center, so the
 # forearms climb out of the bottom corners instead of crossing the frame.
 const SHOULDER_LOCAL_RAISED := Vector3(0.14, -0.46, 0.12)
 # Hanging from a lip or a bar overhead, the hands are above the eye: a
@@ -105,7 +105,7 @@ const FINGER_LENGTHS := [
 	[0.042, 0.026, 0.020],
 	[0.033, 0.020, 0.018],
 ]
-# Gloved fingers: thick enough that neighbours touch, as they do in a glove.
+# Gloved fingers: thick enough that neighbors touch, as they do in a glove.
 # Radius at each phalanx's base; the last entry is the fingertip's.
 const FINGER_RADII := [0.0118, 0.0108, 0.0098, 0.0088]
 const THUMB_RADII := [0.0128, 0.0112, 0.0100]
@@ -305,7 +305,7 @@ func _hand_part(parent: Node3D, mesh: Mesh, material: Material, at: Vector3,
 
 # A handheld radio crane remote: the native pendant stations accept input
 # anywhere inside their radius, which a fixed panel within arm's reach could
-# not honour -- a belly-box remote can.
+# not honor -- a belly-box remote can.
 func _build_remote(body: Material, face: Material, button: Material, stop_red: Material,
 		led: Material) -> void:
 	_remote = Node3D.new()
@@ -849,7 +849,7 @@ func _update_risers(show: bool) -> void:
 
 
 # An offset from a target after one frame of closing on it: `blend` of it
-# taken off, but never more than `limit` metres.
+# taken off, but never more than `limit` meters.
 func _close(offset: Vector3, blend: float, limit: float) -> Vector3:
 	return offset - (offset * blend).limit_length(limit)
 

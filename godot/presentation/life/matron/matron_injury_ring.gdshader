@@ -4,7 +4,7 @@ shader_type spatial;
 // #309 grazing fade hid it there instead of curving it round the face).
 // The mesh is a copy of her own skin triangles round the eye socket
 // (matron_injury.gd _eye_mesh_for), rigid on the head bone, with vertices
-// in head-local metres relative to the socket centre. The ring texture is
+// in head-local meters relative to the socket center. The ring texture is
 // projected onto that skin along the head's forward axis, so the bruise
 // lies on the lids, the cheek top and the side of the face and follows
 // their curve from every angle; nothing stands off the skin.
@@ -14,12 +14,12 @@ render_mode blend_mix, depth_draw_never, cull_back;
 
 uniform sampler2D albedo_texture : source_color, filter_linear, repeat_disable;
 uniform vec4 albedo_color : source_color = vec4(1.0);
-// Where the texture lands, in head-local metres off the socket centre:
-// its centre and half size (x right = her left, y up).
+// Where the texture lands, in head-local meters off the socket center:
+// its center and half size (x right = her left, y up).
 uniform vec2 uv_center = vec2(0.0, 0.0);
 uniform vec2 uv_half = vec2(0.024, 0.024);
 // Lift off the skin along its normal, against z-fighting with the skin it
-// copies: under a millimetre, too small to see from any side.
+// copies: under a millimeter, too small to see from any side.
 uniform float push = 0.0004;
 
 varying vec3 local;

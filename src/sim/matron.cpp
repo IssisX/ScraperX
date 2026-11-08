@@ -551,7 +551,7 @@ float Matron::carry_m(const RVec3 from, const RVec3 to) const {
                      std::clamp(float(p.GetZ()), kMidZ - half, kMidZ + half));
     };
     // The floor edge is not an open ray: its supporting beam projects 25 cm
-    // into the shaft. Half a metre clears that beam plus the 15 cm aperture
+    // into the shaft. Half a meter clears that beam plus the 15 cm aperture
     // radius. Every displaced leg still gets its ordinary geometry query.
     const RVec3 out = in_shaft(from, 0.5F);
     const RVec3 in = in_shaft(to, 0.5F);
@@ -1049,7 +1049,7 @@ void Matron::settle_level() {
     const RVec3 here = bodies.GetPosition(body_);
     // Her middle can sit past a lip while her soles still bear. The floor is
     // the highest walkable hit within a step of her feet, not only the ray
-    // through her centre (that one misses a board she is standing on).
+    // through her center (that one misses a board she is standing on).
     const float reach = kStandCentre + 0.3F;
     const float kinematic = float(here.GetY()) - kStandCentre;
     const IgnoreSingleBodyFilter self(body_);
@@ -1151,7 +1151,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     // middle past its edge), and then she can neither drive nor trip the
     // stall watchdog, so she stands forever where the hunt's ways left
     // her. Her feet span either side of her middle (kFootSpanM): rays
-    // there count too, in a cross (sideways and fore-aft), centre first so
+    // there count too, in a cross (sideways and fore-aft), center first so
     // nothing changes where her middle is over the floor.
     const IgnoreSingleBodyFilter self(body_);
     const auto supported = [&](const RVec3 &from) {
@@ -1279,7 +1279,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 dx = wx - float(at.GetX());
                 dz = wz - float(at.GetZ());
                 // The push starts when the lip is a step away, not from
-                // across the deck: a force from six metres off throws her.
+                // across the deck: a force from six meters off throws her.
                 if (lip < 1.8F) {
                     boarding = true;
                     board_top = lip_top;
@@ -1298,7 +1298,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         // Speeding up along her heading is slow (foot_accel); planting a foot to
         // Speeding up along her heading is slow (foot_accel); planting a foot to
         // brake or cut sideways is quick (kCutAccel): without that she cannot
-        // turn inside a five-metre circle at a run and orbits a corner she is
+        // turn inside a five-meter circle at a run and orbits a corner she is
         // heading for.
         const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
         Vec3 delta = want - flat;
@@ -1346,11 +1346,11 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
         // An edge `ahead_m` along `dir`: no floor within kEdgeDropM below her
         // feet there, nor for kStepOverM on (a crack between plates, or the
         // step between two cages, her foot bridges: not an edge).
-        // Centre only, not the full footprint: walking parallel to an edge
+        // Center only, not the full footprint: walking parallel to an edge
         // (or diagonally past its corner) puts a side ray past the edge
-        // while her centre path stays on deck, and the full-width test
+        // while her center path stays on deck, and the full-width test
         // then cancels the whole velocity and traps her at the edge.
-        // Falling off is about her centre leaving floor, so that is what
+        // Falling off is about her center leaving floor, so that is what
         // this test checks; floor_at (full width) still judges landings
         // and steps elsewhere.
         float top = 0.0F;
@@ -1817,7 +1817,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                         dir = side;
                     }
                     const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
-                    // A body already travelling is not a crate that stopped
+                    // A body already traveling is not a crate that stopped
                     // her: shoving it again only launches it (J-016). The
                     // speed along the shove line is not the test — a body
                     // crossing the line fast still got shoved, and the pipe
@@ -3071,7 +3071,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                             const std::vector<Vec3> path = scanned_->walk_path(feet, goal);
                             // Her patches are joined fewest-first, not
                             // shortest: a way round the shaft to a place a
-                            // few metres off her own line is no way to it.
+                            // few meters off her own line is no way to it.
                             // Far longer than the straight line, her lines
                             // take her nearer first.
                             float along = 0.0F;
@@ -3453,9 +3453,9 @@ bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
     const Mover *way = holder();
     // A travel way owns her body (travel_to: she is about nothing else, and
     // its tick runs before the hunt): a contact on the way must not turn
-    // into a catch or a shove. Without this, a travelling Matron grabs a
+    // into a catch or a shove. Without this, a traveling Matron grabs a
     // player she merely walks past, cancelling the travel and breaking
-    // his climb (matron-climb-board, player climb with her travelling).
+    // his climb (matron-climb-board, player climb with her traveling).
     if (bracing_structure() || !body_in_world_ || dead_ || riding_ || (way != nullptr && way->view().held) ||
         (way != nullptr && way->view().tick == MoverTick::Travel) ||
         (state_ != State::Hunting && state_ != State::Searching && state_ != State::Shuffling &&
@@ -3562,7 +3562,7 @@ int Matron::stock_to_fetch(const float ax, const float az) const {
             continue;
         }
         const RVec3 p = bodies.GetPosition(t.body);
-        // At rest on her floor (a piece's centre stands well under a metre over it).
+        // At rest on her floor (a piece's center stands well under a meter over it).
         if (std::abs(float(p.GetY()) - feet_y_) > 1.0F || bodies.GetLinearVelocity(t.body).Length() > 0.3F) {
             continue;
         }
@@ -4720,7 +4720,7 @@ bool Matron::shape_fits(const Shape *shape, const RVec3 at) const {
     not_us.Reserve(2);
     not_us.IgnoreBody(body_);
     not_us.IgnoreBody(player_);
-    // `at` is the body's origin; Jolt places a shape about its centre of mass
+    // `at` is the body's origin; Jolt places a shape about its center of mass
     // (a lying capsule's sits under the origin).
     physics_.GetNarrowPhaseQuery().CollideShape(shape, Vec3::sReplicate(1.0F),
                                                 RMat44::sTranslation(at + RVec3(shape->GetCenterOfMass())), settings,
@@ -4761,7 +4761,7 @@ void Matron::lie_down(const float fall_x, const float fall_z) {
     if (shape_fits(lying, at)) {
         down_shape_ = lying;
         // Segment ends relative to her middle. The quarter-turn about `across`
-        // lays the capsule's axis along the fall; its centre sits
+        // lays the capsule's axis along the fall; its center sits
         // kStandCentre - kRadius under her middle, on the steel.
         const float drop = -(kStandCentre - kRadius);
         down_a_ = Vec3(-fall.GetX() * kHalfHeight, drop, -fall.GetZ() * kHalfHeight);
@@ -5231,8 +5231,8 @@ void Matron::refresh_view() {
         }
     }
     if (body_in_world_) {
-        // Feet: the surface straight under her body centre, probed from
-        // her centre down past her soles.
+        // Feet: the surface straight under her body center, probed from
+        // her center down past her soles.
         const RVec3 at(view_.x, view_.y, view_.z);
         const ClimbBodyFilter filter(body_, player_);
         RayCastResult floor_hit;

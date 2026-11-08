@@ -55,7 +55,7 @@ UNBUCKLE and step down north onto the ring.
 | The seat floor's apex · held on tooth 24 | 242.78 m · 242.62 m (the ring's top 242.25 m: a 0.37 m step down) |
 | Lost in the buffer | 5.0 kJ of 73.9 kJ the seat side gained |
 | Ledger residual (from the hook's release) | −1.67 kJ (−2.3 %): the buffer's loss is counted; the rest is the rack's catch (≈ 0.4 kJ) and Jolt's projection of each pendulum onto its arc at 90 Hz (≈ 1.5 %) |
-| On the 242 ring | body centre 243.13 m, alive |
+| On the 242 ring | body center 243.13 m, alive |
 
 ## Falsifiers (`scraperx_sim_tests`, `swing`; `touch_swing`)
 

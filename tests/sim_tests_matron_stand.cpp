@@ -17,7 +17,7 @@ using scraperx::sim::Vector3;
 // The 154 m line's stand under its parked trolley (sim/zipline.cpp, line.stand).
 constexpr double kStandX = 5.6;
 constexpr double kStandZ = -131.9;
-constexpr double kOnStandY = 155.9;   // her centre on the stand (155.05 on the deck)
+constexpr double kOnStandY = 155.9;   // her center on the stand (155.05 on the deck)
 
 void lead_below(const char *name, const Vector3 lead) {
     Simulation s(InitialSpawn::Deck154);

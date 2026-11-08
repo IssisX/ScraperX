@@ -10,7 +10,7 @@ const Kit := preload("res://presentation/life/gore/gore_kit.gd")
 const Wound := preload("res://presentation/life/gore/gore_wound.gd")
 const Body := preload("res://presentation/life/gore/gore_body.gd")
 
-# The sim's position is the capsule centre; the figure's soles are 0.9 under.
+# The sim's position is the capsule center; the figure's soles are 0.9 under.
 const CENTRE_ABOVE_SOLES := 0.9
 
 var body: Body
@@ -226,7 +226,7 @@ func apply(lost: Array, strain: Array, crush_amount: float, soak: float) -> void
 			_wound_r[k] = 0.0
 			if worst < 0 or _strain[k] > _strain[worst]:
 				worst = k
-		# Pulled: the limb drawn out of its socket a few centimetres, the
+		# Pulled: the limb drawn out of its socket a few centimeters, the
 		# skin stretched over the gap by the skinning.
 		if not _lost[k]:
 			var root: String = Body.LIMB_ROOT[k]

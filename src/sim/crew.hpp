@@ -79,7 +79,7 @@ public:
         float yaw = 0.0F;          // radians; 0 faces +z
         State state = State::Walking;
         float speed = 0.0F;        // horizontal, m/s
-        float stride = 0.0F;       // metres walked, for the legs' phase
+        float stride = 0.0F;       // meters walked, for the legs' phase
         bool grounded = true;
     };
 
@@ -98,7 +98,7 @@ public:
     [[nodiscard]] std::uint32_t stumbles() const noexcept { return stumbles_; }
     [[nodiscard]] std::uint32_t steps() const noexcept { return steps_; }
     [[nodiscard]] bool is_worker(JPH::BodyID body) const noexcept;
-    // Where the crew walk: points every `step` metres along each worker's
+    // Where the crew walk: points every `step` meters along each worker's
     // route, on its floor (kept clear of the tower's loose stock).
     [[nodiscard]] std::vector<JPH::RVec3> walked(float step) const;
 
@@ -124,7 +124,7 @@ private:
 
     void add(std::vector<Station> route, float walk_mps, float floor_y = 0.0F);
     [[nodiscard]] bool grounded(const Worker &worker, const JPH::BodyInterface &bodies) const;
-    // Floor within kEdgeDropM below a standing worker's soles at `centre`.
+    // Floor within kEdgeDropM below a standing worker's soles at `center`.
     [[nodiscard]] bool floor_under(const Worker &worker, JPH::RVec3 centre) const;
 
     JPH::PhysicsSystem &physics_;

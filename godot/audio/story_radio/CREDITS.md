@@ -27,7 +27,7 @@ Each is mono Ogg Vorbis at 24 kHz. "Whisper heard" is the shipped file read back
 
 | File | Speaker | Line | Whisper heard |
 |---|---|---|---|
-| `receiving_iona_freight_one.ogg` | Iona | Freight One is eleven metres up. Find firm footing there. The crane yard is ahead. | Freight one is 11 meters up. Find firm footing there. The crane yard is ahead. |
+| `receiving_iona_freight_one.ogg` | Iona | Freight One is eleven meters up. Find firm footing there. The crane yard is ahead. | Freight one is 11 meters up. Find firm footing there. The crane yard is ahead. |
 | `receiving_iona_keep_the_height.ogg` | Iona | You’ve found your way up. Keep the height. The Crown is still above you. | You found your way up. Keep the height. The crown is still above you. |
 | `receiving_iona_recovery.ogg` | Iona | Find your footing. You can try another way up. | Find your footing. You can try another way up. |
 | `double_ari_name.ogg` | Ari | Ari Ward. | Ari Ward |

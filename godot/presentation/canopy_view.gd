@@ -8,7 +8,7 @@ extends Node3D
 const SPAN := 7.2              # tip to tip, m
 const CHORD := 2.7             # leading to trailing edge, m
 const CELLS := 11
-const ABOVE := 4.4             # its underside's centre over the eye, m
+const ABOVE := 4.4             # its underside's center over the eye, m
 const OPEN_SECONDS := 0.7
 const LINE_POINTS := 5         # attachment points along each side's line set
 
@@ -92,8 +92,8 @@ static func _tip_drop(u: float) -> float:
 
 
 # An arched wing: top skin cambered over a flat bottom skin, closed at the
-# trailing edge, open cell mouths at the leading edge. Vertex colour carries
-# each cell's colour, the shader the air working the trailing edge.
+# trailing edge, open cell mouths at the leading edge. Vertex color carries
+# each cell's color, the shader the air working the trailing edge.
 func _build_canopy() -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)

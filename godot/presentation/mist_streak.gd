@@ -11,7 +11,7 @@ extends Node3D
 ##
 ## Presentation only. Its x comes from the native every frame
 ## (get_wind_front_x_m); the band it spans is the sim's own (the upper wind's
-## y and z bounds in src/sim/physics_world_tuning.hpp). No sim behaviour
+## y and z bounds in src/sim/physics_world_tuning.hpp). No sim behavior
 ## changes: nothing here pushes, grips or decides anything.
 
 # The front's band, as the sim has it (physics_world_tuning.hpp):
@@ -37,7 +37,7 @@ func front_x() -> float:
 	return _front_x
 
 
-# The curtain's centre, for a look test to frame.
+# The curtain's center, for a look test to frame.
 func centre() -> Vector3:
 	return Vector3(_front_x, (LOW_Y + HIGH_Y) * 0.5, (NORTH_Z + SOUTH_Z) * 0.5)
 

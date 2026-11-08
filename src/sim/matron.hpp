@@ -312,14 +312,14 @@ public:
     // sight of the player is had any other way: not round her, not from her
     // knees. CHOSEN, each a human's:
     // - where: 1.69 m over her soles standing (the rig's authored eye height,
-    //   her centre at kStandCentre 1.05 m), a face's depth forward of her
+    //   her center at kStandCentre 1.05 m), a face's depth forward of her
     //   middle, turned with her head;
     // - her head: her body's facing (yaw_), turned up to kHeadTurnRad (a neck's
     //   70 degrees) toward a place she is looking at (look_s_);
     // - sight: within kSightHalfFovRad either side of where her head faces
     //   (60: the binocular field a person picks out a figure in, 120 wide),
     //   out to kEyeRangeM. 16 m over 120 degrees covers about the floor her old 9 m
-    //   all-round sight did (268 against 254 square metres), now only where
+    //   all-round sight did (268 against 254 square meters), now only where
     //   her eyes point. The tower has no light model: range is her only dark.
     //   Up or down her head tips as far as kHeadPitchRad (70) and the cone
     //   goes with it: a climber straight over her head is seen.
@@ -522,10 +522,10 @@ public:
     static constexpr float kFootSpanM = 0.24F;   // floor she stands on runs this far either side of her middle
     // A gap no wider than this (the 0.3 m between two cages) she steps over.
     static constexpr float kStepOverM = 0.45F;
-    // The cable: her hands over her head (her centre to them), how near the
+    // The cable: her hands over her head (her center to them), how near the
     // cable they take it, her jump for it off a line's stand, and her
     // forearms' friction on it going down (cloth and skin on steel, on her
-    // weight across the cable): about half a metre a second gained each
+    // weight across the cable): about half a meter a second gained each
     // second down the steepest line, where a trolley gains three.
     static constexpr float kHandsAboveCentre = 1.55F;
     static constexpr float kCableReachM = 0.6F;
@@ -534,7 +534,7 @@ public:
     // Letting go of a cable at its end, she swings on this fast over the band.
     static constexpr float kLetGoSwingMps = 1.6F;
     // Her hands on the corner pipe: steady pull (the player climbs at 0.9),
-    // finite hand reach from the body centre and combined grip rating, and
+    // finite hand reach from the body center and combined grip rating, and
     // her push over a rail. (Her ladders are her Climber's moves, with its
     // own reach and pace, traversal::Limits, inside the same reach.)
     static constexpr float kClimbMps = 0.6F;
@@ -846,7 +846,7 @@ public:
     // Her tuck (her legs drawn up under her, her trunk over her knees, as her
     // body is drawn: matron_view.gd TUCK_*): fully tucked, her shoulders
     // kPipeTuckDropM lower and kPipeTuckAheadM further ahead. She tucks as
-    // her middle rises over a rail's top, from kPipeTuckFromM to a metre past
+    // her middle rises over a rail's top, from kPipeTuckFromM to a meter past
     // it, at most kPipeTuckRate a second.
     static constexpr float kPipeTuckDropM = 0.83F;
     static constexpr float kPipeTuckAheadM = 0.25F;
@@ -1156,7 +1156,7 @@ public:
         float x = 0.0F, y = 0.0F, z = 0.0F;
         float yaw = 0.0F;
         float speed = 0.0F;
-        float stride = 0.0F;        // metres walked: the gait's phase
+        float stride = 0.0F;        // meters walked: the gait's phase
         float strain = 0.0F;        // 0..1, the gauge
         float bolts_popped = 0.0F;  // how many of the locker's bolts are gone, 0..4
         float noise_heard = 0.0F;   // 0..1, her last tick's loudest sound, for sound and look
@@ -1184,7 +1184,7 @@ public:
         JPH::RVec3 climb_hand2 = JPH::RVec3::sZero();
         bool climb_hand2_known = false;
         // Her feet's real support point, not a floor level: the surface
-        // probed straight under her body centre, or the climb's top deck
+        // probed straight under her body center, or the climb's top deck
         // when no surface is under her (mid-mantle, feet in the air).
         // known is false when it is only her level's floor point.
         JPH::RVec3 climb_feet_support = JPH::RVec3::sZero();
@@ -1228,9 +1228,9 @@ public:
         bool climb_lunge_drive = false;
         float foot_power_w = 0.0F;   // her feet's positive power this tick (lunge or walk), from their Budget
         // Her held load's tip, measured every tick (S1, matron_load): the
-        // grip-held player's mass, its horizontal offset from her centre,
+        // grip-held player's mass, its horizontal offset from her center,
         // the moment that offset makes about her feet, and how far the
-        // combined centre moves toward the load. S2 reads the shift back
+        // combined center moves toward the load. S2 reads the shift back
         // into a decision: the stance base she stands on, and the pull
         // applied to the load this tick.
         bool load_held = false;
@@ -1243,7 +1243,7 @@ public:
         std::uint32_t climb_grips = 0;
         std::uint32_t climb_releases = 0;
         bool mantling = false;
-        bool climbing = false;      // on a ladder, going up it (stride: metres climbed)
+        bool climbing = false;      // on a ladder, going up it (stride: meters climbed)
         std::uint32_t climbs = 0;   // ladders she went up after the player, this run
         bool bracing_structure = false;   // her hands holding the bay's leaf
         float support_n = 0.0F;           // and what they hold up, N
@@ -1412,7 +1412,7 @@ public:
     Matron(const Matron &) = delete;
     Matron &operator=(const Matron &) = delete;
 
-    // `him`: the player's true state this tick (his body's centre, the noise
+    // `him`: the player's true state this tick (his body's center, the noise
     // his movement makes), which she cannot open: Perception turns it into her
     // evidence (matron_perception.hpp) before anything of hers decides.
     void pre_step(float dt, const Stimulus &him);
@@ -1629,10 +1629,10 @@ public:
     void set_player_on_ladder(const bool climbing) noexcept { player_on_ladder_ = climbing; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
     void grip_taken() noexcept;
-    // S1 measurement: the grab world reports both centres and the held
+    // S1 measurement: the grab world reports both centers and the held
     // mass every tick, so refresh_view can publish the load's tip.
     // Matron does only the arithmetic; the mass stays the grab world's
-    // own constant. No behaviour.
+    // own constant. No behavior.
     void report_held_load(JPH::RVec3 her_pos, JPH::RVec3 player_pos, float player_mass_kg,
                           bool held) noexcept;
     // Her grip gone: `torn` out of her hand (else let go); `fought` when the
@@ -2189,7 +2189,7 @@ private:
     // top edge), or her feet on that rail's top under her: in her reach.
     bool pipe_lip_hold(float deck, JPH::RVec3 at);
     bool pipe_feet_hold(float deck, JPH::RVec3 at);
-    // The top of what is under (x, top_y, z), within a few centimetres: its
+    // The top of what is under (x, top_y, z), within a few centimeters: its
     // body, member and point.
     bool pipe_top_under(float x, float top_y, float z, JPH::BodyID &body, JPH::SubShapeID &member,
                         JPH::RVec3 &point) const;
@@ -2492,7 +2492,7 @@ private:
     float load_cop_shift_m_ = 0.0F;
     float load_stance_base_m_ = 0.0F;   // S2: the base she stands on this tick
     float load_pull_m_ = 0.0F;          // S2: pull applied to the load this tick
-    float load_dir_x_ = 0.0F;   // unit XZ from her centre toward the load, else 0
+    float load_dir_x_ = 0.0F;   // unit XZ from her center toward the load, else 0
     float load_dir_z_ = 0.0F;
     float rim_x_ = 0.0F, rim_z_ = 0.0F;     // where she stands at the rail
     float rim_nx_ = 0.0F, rim_nz_ = 1.0F;   // out over the shaft from there
@@ -2593,7 +2593,7 @@ private:
     float fetch_refused_s_ = 0.0F;     // till she tries them again
     int held_ = -1;
     JPH::Ref<JPH::PointConstraint> hold_;
-    JPH::Vec3 hold_offset_ = JPH::Vec3::sZero();   // the hand point, from her centre, drawn in
+    JPH::Vec3 hold_offset_ = JPH::Vec3::sZero();   // the hand point, from her center, drawn in
     float throw_windup_s_ = -1.0F;                 // < 0: not rearing back
     float throw_cooldown_s_ = 0.0F;
     float throw_stroke_s_ = -1.0F;                 // < 0: no throw leaving her hands

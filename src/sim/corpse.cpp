@@ -41,7 +41,7 @@ constexpr float kLandingKneeBendRad = 0.6F;
 // A body is not rigid: what it came down into the ground with is spent
 // crushing it, and the corpse is laid down carrying at most this much of it
 // downward (CHOSEN; the speed along the ground it keeps). Rigid parts given
-// the whole 30 m/s threw the body a metre back up off the floor.
+// the whole 30 m/s threw the body a meter back up off the floor.
 constexpr float kCrushCarriedMps = 4.0F;
 
 // The axis in the plane of `along` and `forward` square to `along`.
@@ -132,7 +132,7 @@ void Corpses::spawn(const RVec3 soles, const Vec3 facing, const Vec3 velocity) {
     Ref<RagdollSettings> settings = new RagdollSettings;
     settings->mSkeleton = skeleton;
     settings->mParts.resize(kParts);
-    // Each part: its capsule at its centre, along `along` (up for every
+    // Each part: its capsule at its center, along `along` (up for every
     // limb hanging, right for the pelvis across the hips).
     const auto place = [&](const int index, const RVec3 centre, const Vec3 along) {
         RagdollSettings::Part &part = settings->mParts[static_cast<std::size_t>(index)];

@@ -355,8 +355,8 @@ void run_wet_isolation() {
     require(d_arrived, "D's float must carry the platform to its stop at 256.25");
     require(on_support(d_top, Simulation::kWetDPlatformEntityId),
             "the rider must ride D's platform all the way");
-    // Released: the water's fall, tank to tube, from each pool's centre of
-    // mass (the float's displacement moves the tube's by centimetres).
+    // Released: the water's fall, tank to tube, from each pool's center of
+    // mass (the float's displacement moves the tube's by centimeters).
     const auto pool_pe = [&](const double kg, const double floor, const double level) {
         return kg * kG * 0.5 * (floor + level);
     };

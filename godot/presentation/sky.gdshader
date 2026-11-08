@@ -1,5 +1,5 @@
 shader_type sky;
-// Alpine sky over the yard: a height-graded dome coloured by the sun's
+// Alpine sky over the yard: a height-graded dome colored by the sun's
 // elevation, the sun (or, at night, the moon) drawn from the one shadowed
 // DirectionalLight3D (LIGHT0), a drifting cloud deck lit from that light, and
 // stars that come out as the day fades. Cheap enough for a phone: value noise,
@@ -123,7 +123,7 @@ void sky() {
 
 	// Dither: Compatibility draws into 8 bits with no debanding, so the wide,
 	// soft horizon gradient bands on an AMOLED. Triangular noise of about one
-	// output step, relative to the colour so it holds at night's exposure as
+	// output step, relative to the color so it holds at night's exposure as
 	// at noon's. Screen pixels only; the radiance map stays smooth.
 	if (!AT_CUBEMAP_PASS) {
 		vec2 pixel = floor(FRAGCOORD.xy);

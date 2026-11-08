@@ -236,7 +236,7 @@ void Route::build_late() {
     const Vec3 deck_attach(-2.8F, .3F, 0.0F);       // in the deck's frame
     const RVec3 deck_rope_at = deck_at + kit_.body_rotation(p.deck) * deck_attach;
     const float head_y = p.exit_y + 6.0F;
-    // In the machine's frame: the deck's centre is x 0; the block at x -5.6.
+    // In the machine's frame: the deck's center is x 0; the block at x -5.6.
     const RVec3 block_at = m.point(Vec3(-5.6F, 0.0F, .6F)) +
                            Vec3(0.0F, static_cast<float>(deck_at.GetY()) + travel - static_cast<float>(m.point(Vec3::sZero()).GetY()), 0.0F);
     Part block = box(Vec3(.55F, .75F, .45F), Material::Concrete);

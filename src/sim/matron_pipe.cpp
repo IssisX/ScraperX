@@ -51,7 +51,7 @@ Vec3 into_riser(const RVec3 from) {
     return in.LengthSq() > 1.0e-6F ? in.Normalized() : Vec3::sAxisX();
 }
 // What a hand on a face holds: the face met reaching in toward the riser
-// from just off the hand, within a few centimetres.
+// from just off the hand, within a few centimeters.
 bool hand_on_face(const NarrowPhaseQuery &query, const RVec3 point, const BodyFilter &filter, BodyID &body,
                   SubShapeID &member) {
     const Vec3 in = into_riser(point);
@@ -644,7 +644,7 @@ void Matron::ride_pipe(const float dt) {
         }
         if (!down) {
             // Hand over hand: with this hold down at her chest (pulled up to
-            // within a few centimetres of it, not crawling the last of the
+            // within a few centimeters of it, not crawling the last of the
             // way), the next over it, in her reach.
             // (Just caught, still tucked, her shoulders low: the face over
             // them, else level with them, if that is higher than her hold.)
@@ -669,7 +669,7 @@ void Matron::ride_pipe(const float dt) {
             // Down it at her pace, her grip sliding with her, past the deck's
             // rail till it is in her reach.
             (void)pipe_face_hold(at, float(at.GetY()) + 0.3F);
-            // (no more than a metre under her at a time, so her pull in to
+            // (no more than a meter under her at a time, so her pull in to
             // her line is not lost in her way down)
             target = Vec3(kPipeLineX, std::max(rail - 0.6F, float(at.GetY()) - (off_line ? 0.2F : 1.0F)), kPipeLineZ);
             progress = -float(at.GetY());

@@ -13,7 +13,7 @@ extends RefCounted
 ## camera is kept clear of steel: a sphere cast (a cone of rays through the
 ## native, her body and the severed pieces seen through) from the pivot pulls
 ## it in, at once, and it eases back out. The pivot itself is cast to from
-## his centre (always in open air: his body is a capsule in the world).
+## his center (always in open air: his body is a capsule in the world).
 ##
 ## His death in her hand (fatal_release_beat rising at the let-go, the hang
 ## over the drop): RELEASE_SLOW_S of slow motion (the sim stepped fewer ticks
@@ -132,7 +132,7 @@ var _since_tear := -1.0
 var _rip := 0.0                 # 0 the ordinary hold frame, 1 the rip shot
 var _rip_return_leg := 0        # blocked exit: 1 inward, 2 outward, 3 finish the aim
 var rip_active := false
-var rip_dist := 0.0             # metres from the camera to the arm it is framing
+var rip_dist := 0.0             # meters from the camera to the arm it is framing
 var rip_holds := 0              # times the arm leaving locked this shot
 
 
@@ -499,7 +499,7 @@ func frame(hold: Dictionary, her_head: Vector3, eye: Transform3D, look: Vector2,
 		basis = Basis.looking_at(to_look, up)
 	if returning_rip:
 		# Near the pivot the look direction can reverse in one frame even
-		# though the camera itself only moved a few centimetres. Finish the
+		# though the camera itself only moved a few centimeters. Finish the
 		# turn before returning ownership to the ordinary/eye transition.
 		var previous := _last_view.basis.get_rotation_quaternion()
 		var desired := basis.get_rotation_quaternion()
@@ -584,10 +584,10 @@ func _step_beats(hold: Dictionary, _delta: float) -> void:
 
 
 ## The cast the camera uses, through the native's look ray: a cone of five
-## rays from `from`, the outer four `radius` off the centre one at `to`. Her
+## rays from `from`, the outer four `radius` off the center one at `to`. Her
 ## body, the severed pieces and corpses are seen through (the ray goes on
 ## past them), and her hand's own body near `skip_near`. The free run along
-## the centre line, `to`'s distance if nothing is met.
+## the center line, `to`'s distance if nothing is met.
 static func cone_cast(native: Object, from: Vector3, to: Vector3, radius: float, skip_near: Vector3) -> float:
 	var run := to - from
 	var length := run.length()
@@ -606,7 +606,7 @@ static func cone_cast(native: Object, from: Vector3, to: Vector3, radius: float,
 		var ray := end - from
 		var ray_length := ray.length()
 		var free := _ray_free(native, from, ray / ray_length, ray_length, skip_near)
-		# along the centre line
+		# along the center line
 		best = minf(best, free * (ray / ray_length).dot(dir))
 	return best
 

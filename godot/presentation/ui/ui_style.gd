@@ -20,7 +20,7 @@ const HAZARD := Color("e0512f")
 const SAFE := Color("7fcfb4")
 const SHADOW := Color(0.0, 0.0, 0.0, 0.55)
 # The edge round drawn text: INK, dense enough that a light glyph keeps a dark
-# rim over white snow (SHADOW's 0.55 turned grey there and washed labels out).
+# rim over white snow (SHADOW's 0.55 turned gray there and washed labels out).
 const EDGE := Color("0f0d0be6")
 
 # Semantic controller positions. Prompts name a position, never a letter, so
@@ -368,7 +368,7 @@ static func binding_width(family: int, verb: StringName, h: float) -> float:
 	return glyph_width(family, binding[0], binding[1], h)
 
 
-# A verb's glyph in the active device's own language: a coloured face button,
+# A verb's glyph in the active device's own language: a colored face button,
 # a PlayStation symbol, a keycap -- or, on touch, the icon on the button.
 static func draw_binding(ci: CanvasItem, family: int, verb: StringName, left_center: Vector2,
 		h: float, alpha: float = 1.0) -> float:
@@ -383,7 +383,7 @@ static func draw_binding(ci: CanvasItem, family: int, verb: StringName, left_cen
 
 
 # Draws one prompt glyph with its left edge at left_center.x, vertically
-# centred on left_center.y; returns the width it used.
+# centered on left_center.y; returns the width it used.
 static func draw_glyph(ci: CanvasItem, family: int, glyph: StringName, key_label: String,
 		left_center: Vector2, h: float, alpha: float = 1.0) -> float:
 	var width := glyph_width(family, glyph, key_label, h)
@@ -476,7 +476,7 @@ static func draw_glyph(ci: CanvasItem, family: int, glyph: StringName, key_label
 			disc(ci, c + Vector2(0.0, -r * 0.3), r * 0.42, with_alpha(PAPER, 0.9 * alpha))
 			triangle(ci, c + Vector2(0.0, -r * 0.3), r * 0.2, Vector2.UP, with_alpha(INK, alpha))
 		G_RSTICK_CLICK:
-			# The right stick pressed in: a centred cap with a ring pushed around it.
+			# The right stick pressed in: a centered cap with a ring pushed around it.
 			ring(ci, c, r * 0.92, with_alpha(PAPER, 0.8 * alpha), line)
 			disc(ci, c, r * 0.5, with_alpha(PAPER, 0.9 * alpha))
 			var click := "R3" if family == Family.PLAYSTATION else ("R" if family == Family.NINTENDO else "RS")

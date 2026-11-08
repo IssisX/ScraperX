@@ -764,7 +764,7 @@ void Matron::step_journey(const float dt) {
             // The leg clock is a no-progress clock, not a total-time clock:
             // a leg she is walking at speed must not time out for being
             // long (a collapsed straight run over open floor is tens of
-            // metres). Every 2 m of progress restarts the 20 s clock; a
+            // meters). Every 2 m of progress restarts the 20 s clock; a
             // leg that gains less than 2 m in 20 s still times out
             // exactly as before, pinned or crawling.
             if (dist < journey_leg_progress_ - 2.0F) {

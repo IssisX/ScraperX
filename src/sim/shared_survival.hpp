@@ -9,7 +9,7 @@ namespace scraperx::sim {
 
 // Opt-in, single-threaded pre-physics controller. Owns NO bodies, constraints,
 // transforms or velocities. The world owns all borrowed handles and must detach
-// this controller before destroying them. All distances are metres, forces N.
+// this controller before destroying them. All distances are meters, forces N.
 class SharedSurvival final {
 public:
     struct Support final {

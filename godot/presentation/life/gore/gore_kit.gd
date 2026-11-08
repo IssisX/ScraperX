@@ -69,8 +69,8 @@ void fragment() {
 }
 """
 
-## Wet tissue: muscle fibres, fat, blood. Vertex colour r = blood wetness,
-## g = fibre/fat mix; UV.y runs along the fibres.
+## Wet tissue: muscle fibers, fat, blood. Vertex color r = blood wetness,
+## g = fiber/fat mix; UV.y runs along the fibers.
 const FLESH_SHADER := """
 shader_type spatial;
 render_mode cull_disabled;
@@ -488,7 +488,7 @@ static func _drop_texture() -> Texture2D:
 ## torn from). radius is the limb's; bone_out how far the broken bone stands
 ## proud; flap_len how far the skin rim curls. Three surfaces: 0 the skin rim
 ## (skin outside, raw inside), 1 the meat (muscle mass, fat layer, hanging
-## fibre strands), 2 the bone (one shaft, a jagged break, the marrow).
+## fiber strands), 2 the bone (one shaft, a jagged break, the marrow).
 static func torn_end(radius: float, seed: int, bone_out: float, flap_len: float) -> ArrayMesh:
 	var key := "torn2_%.3f_%d_%.3f_%.3f" % [radius, seed, bone_out, flap_len]
 	if _cache.has(key):
@@ -545,8 +545,8 @@ static func _skin_rim(mesh: ArrayMesh, rng: RandomNumberGenerator, noise: FastNo
 
 
 # The meat: a lumpy mass of torn muscle bellies swelling out of the wound,
-# ringed by the yellow fat under the skin, fibre bundles hanging off it.
-# Vertex colour r = blood (pooled in the folds), g = fat.
+# ringed by the yellow fat under the skin, fiber bundles hanging off it.
+# Vertex color r = blood (pooled in the folds), g = fat.
 static func _meat(mesh: ArrayMesh, rng: RandomNumberGenerator, noise: FastNoiseLite, r: float) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -589,7 +589,7 @@ static func _meat(mesh: ArrayMesh, rng: RandomNumberGenerator, noise: FastNoiseL
 				st.set_color(cols[ij[0]][ij[1]])
 				st.set_uv(Vector2(float(ij[1]) / lon, float(ij[0]) / lat))
 				st.add_vertex(pts[ij[0]][ij[1]])
-	# Fibre bundles torn long: flat tapering ribbons sagging out and down
+	# Fiber bundles torn long: flat tapering ribbons sagging out and down
 	# over the rim, a few layered on each other.
 	for f in 7:
 		var a := rng.randf() * TAU
@@ -622,7 +622,7 @@ static func _meat(mesh: ArrayMesh, rng: RandomNumberGenerator, noise: FastNoiseL
 
 # The bone: one shaft out of the meat, snapped across at a slant with a
 # jagged lip, the marrow cavity dark inside; blood up it from the meat.
-# Vertex colour r = blood, g = marrow.
+# Vertex color r = blood, g = marrow.
 static func _bone(mesh: ArrayMesh, rng: RandomNumberGenerator, noise: FastNoiseLite, r: float, out: float) -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)

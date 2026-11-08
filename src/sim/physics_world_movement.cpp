@@ -416,7 +416,7 @@ bool Simulation::PhysicsWorld::feet_supported_at(const JPH::RVec3 at, const floa
     return cast_ray(JPH::RVec3(at.GetX(), soles + 0.3F, at.GetZ()), JPH::Vec3(0.0F, -0.6F, 0.0F), hit);
 }
 
-// The ground runs on from the feet to `centre + offset`: walked in steps
+// The ground runs on from the feet to `center + offset`: walked in steps
 // of at most 0.4 m, each finding a surface no more than 0.3 m above the
 // last and no further below it than 0.3 m plus the step (a 45 degree
 // descent). A slope, a stair run or a curb is ground; an edge is not.
@@ -454,7 +454,7 @@ void Simulation::PhysicsWorld::clear_recovery() noexcept {
 }
 
 // A clear, supported lane for the crouched capsule from the landing
-// centre along `direction` for `length`: swept, and stood on every 0.5 m.
+// center along `direction` for `length`: swept, and stood on every 0.5 m.
 bool Simulation::PhysicsWorld::roll_lane_is_clear(const JPH::RVec3 standing_centre, const JPH::Vec3 direction,
                                                   const float length) const noexcept {
     const JPH::RVec3 crouched = standing_centre - JPH::Vec3(0.0F, kCrouchDrop - kStandClearanceSkin, 0.0F);
@@ -1182,7 +1182,7 @@ void Simulation::PhysicsWorld::try_step_up(JPH::BodyInterface &bodies, const JPH
 }
 
 // Stepping down. The feet just off the ground (the coyote window) with
-// ground under the body's centre within the maximum step (a ray: a corner
+// ground under the body's center within the maximum step (a ray: a corner
 // the capsule's side still grazes as it goes over an edge is not ground to
 // stand on, and the body must leave an edge cleanly) are swept down onto
 // it: the body put at the touch and its upward speed, the crest's launch,

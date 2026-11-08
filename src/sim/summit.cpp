@@ -202,7 +202,7 @@ std::vector<Part> frame_parts() {
     return parts;
 }
 
-// The plate about its centre at rest: a cast pad with a ribbed underside.
+// The plate about its center at rest: a cast pad with a ribbed underside.
 std::vector<Part> striker_parts() {
     const float half_x = 0.5F * (Summit::kStrikerEastX - Summit::kStrikerWestX);
     const float half_z = 0.5F * (Summit::kStrikerSouthZ - Summit::kStrikerNorthZ);

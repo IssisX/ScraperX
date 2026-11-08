@@ -43,12 +43,12 @@ struct Seed {
     double spot_top = 0.0;
     int floors = 0;
     int plan_edges = 0;
-    bool patch_start = false;  // region centre unstandable: a patch centre used instead
+    bool patch_start = false;  // region center unstandable: a patch center used instead
     bool patch_spot = false;
 };
 
-// A standable spot in a region: its centre when the centre lies on one of
-// the region's own walkable patches, else the centre of the region's largest
+// A standable spot in a region: its center when the center lies on one of
+// the region's own walkable patches, else the center of the region's largest
 // walkable patch (a patch is a walkable top by construction).
 bool spot_in_region(const AffordanceMap &map, const int region, Vector3 &out, bool &patch_used) {
     const auto &regions = map.regions();

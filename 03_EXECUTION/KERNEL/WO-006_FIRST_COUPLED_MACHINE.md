@@ -13,7 +13,7 @@ Build the first length of the tower's Rube Goldberg spine as one causally comple
 - Governing Law 14 — emergence must remain legible through inspectable mechanisms.
 - Governing Law 15 — randomness may not replace mechanism.
 - **Governing Law 24 — machinery cannot create capability from nothing.** Finite mass, force, power, stored energy.
-- **Governing Law 25 — reduced-order physics can be real physics** when it is the authoritative representation, preserves the quantities gameplay needs, and is validated for the behaviours claimed.
+- **Governing Law 25 — reduced-order physics can be real physics** when it is the authoritative representation, preserves the quantities gameplay needs, and is validated for the behaviors claimed.
 - Governing Law 26 — no physics theater; no scripted collapse presented as emergent, no fake telemetry, no presentation acting as a second authority.
 - TDD §4.2 — authoritative tick ordering: commands, actuators, process state, apply to Jolt, advance Jolt, read back, publish snapshot.
 - TDD §9 — machinery is explicit mechanisms with finite limits; actuator logic requests forces, it does not write a successful transform.
@@ -26,9 +26,9 @@ Godot owns input and presentation. The steam plume is a one-way consumer of the 
 
 ## Reduced-order model and its bounds
 
-The plant is a fired vessel venting through a thin orifice into an actuator cylinder. Pressure is ideal-gas, `P = mRT/V`, at fixed 450 K with water-vapour `R` and `γ = 1.30`. Orifice flow is standard compressible flow, choked above the critical pressure ratio and subcritical below it, and identically zero when area or pressure difference vanishes. The boiler feed is pressure-regulated and rate-limited. The cylinder has a permanent bleed port, which is why the platform sinks again.
+The plant is a fired vessel venting through a thin orifice into an actuator cylinder. Pressure is ideal-gas, `P = mRT/V`, at fixed 450 K with water-vapor `R` and `γ = 1.30`. Orifice flow is standard compressible flow, choked above the critical pressure ratio and subcritical below it, and identically zero when area or pressure difference vanishes. The boiler feed is pressure-regulated and rate-limited. The cylinder has a permanent bleed port, which is why the platform sinks again.
 
-Explicitly **not** modelled, and stated rather than implied: condensation, heat transfer, temperature change on expansion, backflow, and cylinder volume change under piston travel. The blowdown time constant is ≈1.7 s against an 11.1 ms fixed step (ratio ≈0.006), so explicit integration with a transported-mass clamp is stable here; that clamp is what keeps both reservoirs monotone.
+Explicitly **not** modeled, and stated rather than implied: condensation, heat transfer, temperature change on expansion, backflow, and cylinder volume change under piston travel. The blowdown time constant is ≈1.7 s against an 11.1 ms fixed step (ratio ≈0.006), so explicit integration with a transported-mass clamp is stable here; that clamp is what keeps both reservoirs monotone.
 
 ## Forbidden shortcuts
 

@@ -901,7 +901,7 @@ func _touch_hang(climb: bool) -> bool:
 	_detail = "vy_after_release=%.2f" % rose[0]
 	return fell and rose[0] <= 0.1
 
-# Parkour step 2 on the proving ground's monkey bars (six bars a metre apart,
+# Parkour step 2 on the proving ground's monkey bars (six bars a meter apart,
 # 3.1 m up, x = 0..5; a landing block past the last): run and JUMP catches the
 # first, the stick held forward swings hand over hand to the last, DROP at the
 # bottom of a forward swing flies on to the block.
@@ -1512,7 +1512,7 @@ func _touch_lethal_feedback() -> bool:
 		return float(_ctx()["danger"]) >= 0.8, 5.0)
 	if not reached:
 		return _fail("fall danger never reached 0.8 of the native lethal speed")
-	# Danger is named, not only coloured.
+	# Danger is named, not only colored.
 	if _main._hud.gauge_word() != "LETHAL":
 		return _fail("at 0.8 of the lethal speed the fall gauge reads '%s', not LETHAL" % _main._hud.gauge_word())
 	await _pose("fall_danger")
@@ -1594,7 +1594,7 @@ func _fall_voice() -> bool:
 		return _fail("no yelp on a %.1f m/s drop" % impact)
 	if int(said.get(&"pain", 0)) + int(said.get(&"break_leg", 0)) < 1:
 		return _fail("a %.1f m/s landing lived through said nothing" % impact)
-	# Twelve metres onto steel, planted: an ankle broken (sim kAnkleBreakSpeed),
+	# Twelve meters onto steel, planted: an ankle broken (sim kAnkleBreakSpeed),
 	# cried once (its own line, not the landing's), named, felt, and walked on
 	# as a hobble.
 	if int(said.get(&"break_leg", 0)) != 1 or int(said.get(&"pain", 0)) != 0:
