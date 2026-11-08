@@ -85,6 +85,39 @@ func _layer() -> Variant:
 	return _her.get("_injury") if _her != null else null
 
 
+func _ring_band(img: Image, vertical: bool, first: bool) -> float:
+	# Mean (R+G+B)/3 of the ring texture's annulus (r 0.55..0.90) on one
+	# side: vertical+first = bottom (v > 0.5), vertical+!first = top
+	# (v < -0.5), !vertical+first = inner (u < -0.5), !vertical+!first =
+	# outer (u > 0.5). eye_l's texture (mirror=false); eye_r mirrors u.
+	# The baked colour is RING_BASE.lerp(RING_DARK, w), so a side whose
+	# weight is high reads darker.
+	var size := img.get_width()
+	var sum := 0.0
+	var n := 0
+	for y in size:
+		for x in size:
+			var u := (float(x) / float(size - 1)) * 2.0 - 1.0
+			var v := (float(y) / float(size - 1)) * 2.0 - 1.0
+			var r := Vector2(u, v).length()
+			if r < 0.55 or r > 0.90:
+				continue
+			if vertical:
+				if first and v < 0.5:
+					continue
+				if not first and v > -0.5:
+					continue
+			else:
+				if first and u > -0.5:
+					continue
+				if not first and u < 0.5:
+					continue
+			var c: Color = img.get_pixel(x, y)
+			sum += (c.r + c.g + c.b) / 3.0
+			n += 1
+	return sum / float(maxi(n, 1))
+
+
 func _set_injury(injury: Dictionary) -> void:
 	_pose["injury"] = injury
 
@@ -189,6 +222,30 @@ func _run() -> void:
 	layer._clock += 15.0
 	await _step(2)
 	_check(layer.black_eye_darkness("eye_l") >= 0.99, "eye_dark", "dark %.2f" % layer.black_eye_darkness("eye_l"))
+	# #309 side fix: the ring fades out at grazing angles (N.V) so no rim
+	# stands off the eye from the side. Guard: the ring's material is the
+	# fade shader, not a flat StandardMaterial3D.
+	var ring_mat: Variant = (layer._patches["eye_l"] as MeshInstance3D).material_override
+	_check(ring_mat is ShaderMaterial, "eye_fade",
+		"ring material is %s" % (ring_mat.get_class() if ring_mat != null else "null"))
+	# #309 rotation: the ring's dark weight must sit on the lower lid and
+	# the inner corner, not the upper lid / outer corner (a 180° flip).
+	# A rendered-pixel check was measured and does not fit: the close
+	# still's below/above luminance gap flips sign with band placement
+	# (eyeball and lower-lid brightness swamp the arc), so it would be a
+	# flaky CI check. This reads the baked texture instead: the bottom
+	# annulus must be darker than the top, and the inner darker than the
+	# outer, for eye_l. A sign flip in _ring_texture reverses both and
+	# fails here instead of passing. The mapping (image-bottom = lower
+	# lid, image-left = inner corner for eye_l) is verified by the marker
+	# stills in the #309 eye check, not by this check alone.
+	var ring_img: Image = (layer._ring_textures[false] as Texture2D).get_image()
+	var ring_bot := _ring_band(ring_img, true, true)
+	var ring_top := _ring_band(ring_img, true, false)
+	var ring_in := _ring_band(ring_img, false, true)
+	var ring_out := _ring_band(ring_img, false, false)
+	_check(ring_bot + 0.02 < ring_top and ring_in + 0.02 < ring_out, "eye_ring_sides",
+		"bottom %.3f top %.3f inner %.3f outer %.3f" % [ring_bot, ring_top, ring_in, ring_out])
 	# Stills: the black left eye at full darkness, front and three-quarters
 	# from her left. No swell or slit yet: this is the 75-dose black eye.
 	var head_eye: Vector3 = _her.head_world_position()
@@ -201,7 +258,8 @@ func _run() -> void:
 	var head_bone_close: Transform3D = _her._rig.bone_world("head")
 	var eye_cam: Vector3 = eye_l_pos + head_bone_close.basis.z * 0.28 + head_bone_close.basis.x * 0.06 + head_bone_close.basis.y * 0.02
 	await _shot("injury_black_eye_close", eye_cam, eye_l_pos, 30.0)
-	# Side view for depth: the ring must sit on the skin, not float or sink.
+	# Side view for depth: the ring fades out at grazing angles (#309), so
+	# no rim stands off the eye; it must not float or sink.
 	var eye_side: Vector3 = eye_l_pos + head_bone_close.basis.x * 0.45 + head_bone_close.basis.z * 0.12 + head_bone_close.basis.y * 0.02
 	await _shot("injury_black_eye_side", eye_side, eye_l_pos, 35.0)
 	# At 150: the lid swells. At 250: the eye is narrowed to a slit.

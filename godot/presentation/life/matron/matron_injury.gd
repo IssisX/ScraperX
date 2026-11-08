@@ -26,7 +26,10 @@ extends Node3D
 ## transparent centre so the eyeball shows through, and it is centred on the
 ## measured eye socket, so it hugs the socket instead of overhanging the face
 ## edge the way the flat cheek quad did (#306). The lid is a second quad, a
-## soft band over the upper eye that droops with dose.
+## soft band over the upper eye that droops with dose. The ring and lid fade
+## out at grazing angles (N.V, matron_injury_ring.gdshader, #309): a flat quad
+## reads as a thin rim standing off the eye from the side, so at the side
+## view it is gone and the black eye only shows where it can sit on skin.
 ##
 ## The eye socket centres are the eye bones' rest offsets in head-local space,
 ## measured 2026-11-07: the bone called eye_l sits at head-local -X and the
@@ -70,6 +73,10 @@ const BRUISE_COLOR := Color(0.23, 0.08, 0.20)
 const SWELL_COLOR := Color(0.35, 0.10, 0.14)
 const RING_BASE := Color(0.18, 0.05, 0.13)
 const RING_DARK := Color(0.05, 0.01, 0.05)
+# J-059 side fix (#309): the eye ring and lid fade out at grazing angles
+# (N.V, matron_injury_ring.gdshader) so no rim stands off the eye from
+# the side. The front, three-quarter and close-up stills are unchanged.
+const RING_SHADER := preload("res://presentation/life/matron/matron_injury_ring.gdshader")
 
 var _seen := {}  # region -> {"j_region": float, "j_event": float, "t_hit": float}, maxima only
 var _patches := {}  # region -> MeshInstance3D
@@ -114,11 +121,17 @@ func _bruise_texture() -> Texture2D:
 func _ring_texture(mirror: bool) -> Texture2D:
 	# Annulus with a transparent centre (the eyeball shows through), baked
 	# dark red-purple, darkest on the lower lid and the inner corner. The
-	# quad samples the texture with u mirrored and v as-is (verified by
-	# stills): the dark lower-lid weight sits at image-top, the dark inner
-	# weight at image-right for eye_l; eye_r mirrors u. Colour is baked in;
-	# the material's albedo alpha ramps the darkness over the 15 s pool.
-	var size := 128
+	# quad samples the texture with u mirrored and v as-is. In the QuadMesh
+	# as placed, image-top is her upper lid and image-right is her outer
+	# corner for eye_l: the dark lower-lid weight sits at image-bottom
+	# (v = +1) and the dark inner weight at image-left (u = -1); eye_r
+	# mirrors u, so it stays symmetric. Colour is baked in; the material's
+	# albedo alpha ramps the darkness over the 15 s pool.
+	# 256 px, and a smooth low-frequency wobble: the old per-cell hash
+	# wobble stepped the annulus edge (a stair-stepped lower edge in the
+	# close-up, #309). A sine wobble keeps the organic edge but is
+	# continuous, so no steps.
+	var size := 256
 	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
 	for y in size:
 		for x in size:
@@ -126,11 +139,11 @@ func _ring_texture(mirror: bool) -> Texture2D:
 			var v := (float(y) / float(size - 1)) * 2.0 - 1.0
 			if mirror:
 				u = -u
-			var wobble := 0.10 * (_hash(int(u * 7.0) + 11, int(v * 7.0) - 7) - 0.5)
+			var wobble := 0.035 * sin(u * 5.0 + 1.7) * sin(v * 4.0 + 0.6) + 0.02 * sin(u * 9.0 + 0.4) * sin(v * 7.0 + 2.3)
 			var r := Vector2(u, v).length() * (1.0 + wobble)
 			var shape := clampf(smoothstep(0.50, 0.62, r), 0.0, 1.0) * (1.0 - clampf(smoothstep(0.88, 0.96, r), 0.0, 1.0))
-			var bottom := clampf((-v - 0.2) / 0.6, 0.0, 1.0)
-			var inner := clampf((u - 0.2) / 0.6, 0.0, 1.0)
+			var bottom := clampf((v - 0.2) / 0.6, 0.0, 1.0)
+			var inner := clampf((-u - 0.2) / 0.6, 0.0, 1.0)
 			var w := clampf(0.55 * bottom + 0.45 * inner, 0.0, 1.0)
 			var col := RING_BASE.lerp(RING_DARK, w)
 			img.set_pixel(x, y, Color(col.r, col.g, col.b, shape * (0.75 + 0.25 * w)))
@@ -257,16 +270,28 @@ func patch_outward(region: String, center: Vector3) -> float:
 	return (p.global_position - center).dot(p.global_transform.basis.z.normalized())
 
 
-func _patch_for(region: String, texture: Texture2D) -> MeshInstance3D:
+func _fade_material(texture: Texture2D) -> ShaderMaterial:
+	# The eye ring/lid material: the ring texture (or lid band) with an
+	# N.V fade so it vanishes at grazing angles instead of rimming (#309).
+	var smat := ShaderMaterial.new()
+	smat.shader = RING_SHADER
+	smat.set_shader_parameter("albedo_texture", texture)
+	return smat
+
+
+func _patch_for(region: String, texture: Texture2D, faded: bool = false) -> MeshInstance3D:
 	if _patches.has(region):
 		return _patches[region]
-	var mat := StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_texture = texture
-	mat.roughness = 0.6
 	var p := MeshInstance3D.new()
 	p.mesh = _mesh
-	p.material_override = mat
+	if faded:
+		p.material_override = _fade_material(texture)
+	else:
+		var mat := StandardMaterial3D.new()
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.albedo_texture = texture
+		mat.roughness = 0.6
+		p.material_override = mat
 	p.visible = false
 	add_child(p)
 	_patches[region] = p
@@ -276,13 +301,9 @@ func _patch_for(region: String, texture: Texture2D) -> MeshInstance3D:
 func _lid_for(region: String) -> MeshInstance3D:
 	if _lids.has(region):
 		return _lids[region]
-	var mat := StandardMaterial3D.new()
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_texture = _lid_texture
-	mat.roughness = 0.6
 	var p := MeshInstance3D.new()
 	p.mesh = _mesh
-	p.material_override = mat
+	p.material_override = _fade_material(_lid_texture)
 	p.visible = false
 	add_child(p)
 	_lids[region] = p
@@ -351,7 +372,7 @@ func _update_eye(region: String, anchor: Array, bone: Transform3D) -> void:
 	# over the upper eye that droops with dose until the eye is a slit; it
 	# sits 2 mm in front of the ring so it never z-fights it.
 	var tex: Texture2D = _ring_textures[region == "eye_r"]
-	var p := _patch_for(region, tex)
+	var p := _patch_for(region, tex, true)
 	var lid := _lid_for(region)
 	if not black_eye_visible(region):
 		p.visible = false
@@ -360,8 +381,8 @@ func _update_eye(region: String, anchor: Array, bone: Transform3D) -> void:
 	var dark := black_eye_darkness(region)
 	var eye_sev := clampf((severity(region) - BLACK_EYE_REGION) / (EYE_SLIT_REGION - BLACK_EYE_REGION), 0.0, 1.0)
 	var erad := 0.024 + 0.006 * eye_sev
-	var mat := p.material_override as StandardMaterial3D
-	mat.albedo_color = Color(1, 1, 1, 0.25 + 0.70 * dark)
+	var mat := p.material_override as ShaderMaterial
+	mat.set_shader_parameter("albedo_color", Color(1, 1, 1, 0.25 + 0.70 * dark))
 	# The socket anchor is the eyeball CENTRE, not the skin: the lids sit
 	# ~10 mm in front of it, so the ring needs a 12 mm nudge to sit 4 mm
 	# off the lid skin the way the cheek quads sit 4 mm off the cheek.
@@ -377,8 +398,8 @@ func _update_eye(region: String, anchor: Array, bone: Transform3D) -> void:
 		var droop := lid_droop(region)
 		var ly := 0.014 - 0.010 * droop
 		var lh := 0.016 + 0.006 * droop
-		var lmat := lid.material_override as StandardMaterial3D
-		lmat.albedo_color = Color(1, 1, 1, 0.65 + 0.25 * droop)
+		var lmat := lid.material_override as ShaderMaterial
+		lmat.set_shader_parameter("albedo_color", Color(1, 1, 1, 0.65 + 0.25 * droop))
 		var lat: Vector3 = (anchor[1] as Vector3) + Vector3(0.0, ly, 0.014)
 		lid.global_transform = Transform3D(
 			Basis(bone.basis.x * 0.018, bone.basis.y * (lh * 0.5), bone.basis.z),
