@@ -375,6 +375,21 @@ struct Patch {   // a walkable top (one leaf of a body)
     bool narrow = false;   // under her diameter across (a board: her axis over it)
     int split = -1, split_of = -1;   // a piece of a top split by what stands on it: its floor, and the top
 };
+struct Bar {   // one rung-like member the scanner reads (a thin long box)
+    JPH::Vec3 c = JPH::Vec3::sZero();   // centre
+    bool along_x = true;   // the bar's long axis
+    float half = 0.0F;    // half its long side
+    std::uint64_t entity = 0;
+};
+// The ladder-bar order, one authority for the sort in AffordanceMap::scan.
+// A tolerance here is NOT a strict weak ordering: sub-mm cross offsets with
+// reversed heights cycle (A<C, C<B, B<A), and std::sort over it is undefined
+// — the order then differs by stdlib, host vs arm64. The order must be a
+// strict total order on (along_x, cross, along, y, half, entity), exact
+// comparisons, no tolerance. Cross is the primary key after along_x: the
+// chain loop in scan() breaks when the cross gap passes 0.06 m, so cross
+// must be monotonic in this order or the break skips a matching bar.
+[[nodiscard]] bool bar_before(const Bar &a, const Bar &b) noexcept;
 struct Ladder {   // three or more bars stacked on one line
     float x = 0.0F, z = 0.0F;
     bool along_x = true;   // the rungs' long axis
