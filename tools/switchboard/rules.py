@@ -508,6 +508,32 @@ def needs_review(pr: PrFacts, author_vendor: str = "", team: Team | None = None)
                    for v in pr.verdicts)
 
 
+def known_defect_jobs(spec: Mapping) -> tuple[str, ...]:
+    """The open jobs a look set names as owning its known defect (`known_defect: J-063`, or a list)."""
+    kd = spec.get("known_defect") or ()
+    return (kd,) if isinstance(kd, str) else tuple(kd)
+
+
+def eye_overall(judged: Sequence[Mapping], spec_sets: Mapping[str, Mapping], pr_job: str,
+                open_jobs: Iterable[str]) -> tuple[str, dict[str, tuple[str, ...]]]:
+    """The eye's overall verdict, and the sets whose FIX does not count on this PR (J-068).
+
+    A set whose `known_defect` names a job still open (its issue labeled `job`, open) is waived on every PR
+    but that job's own: a FIX there is shown, marked as that job's defect, and does not make the verdict FIX.
+    On the owner job's PR, and once every named job's issue is closed, the set counts like any other.
+    A set without the field always counts. Every set must still be judged."""
+    open_now = set(open_jobs)
+    waived: dict[str, tuple[str, ...]] = {}
+    for name, spec in spec_sets.items():
+        owners = known_defect_jobs(spec)
+        still_open = tuple(j for j in owners if j in open_now)
+        if still_open and pr_job not in owners:
+            waived[name] = still_open
+    ok = {s["set"] for s in judged} == set(spec_sets) and \
+        all(s["verdict"] == "LAND" or s["set"] in waived for s in judged)
+    return ("LAND" if ok else "FIX"), waived
+
+
 def needs_eye(pr: PrFacts) -> bool:
     if "eyes" not in pr.needs or pr.proof != "green" or pr.draft or pr.base_ref != TRUNK:
         return False

@@ -2,6 +2,9 @@
 # `godot-audits-and-mix` in .github/workflows/wo000-delivery-spine.yml already captures and uploads
 # as the artifact godot-audits-<run>-<attempt> (paths inside the zip). Add a set here, with its
 # rubric, when a LOOK job adds a CI capture.
+# `known_defect: J-NNN` (or a list) on a set: while that job's issue is open, the set's FIX is shown on
+# every PR but blocks only the PR whose job it is (`Job: J-NNN`); once the issue closes, it blocks every PR
+# again (rules.eye_overall, J-068). Never use it to excuse a defect no open job owns.
 artifact_prefix: godot-audits-
 sets:
   approach:
@@ -25,6 +28,8 @@ sets:
       - screenshots/injury/injury_cheek_front.png
   ladder_descent:
     rubric: work/looks/ladder_descent.md
+    # Her hands open and her body beside the rungs (seen 2026-11-08) are J-063's to fix.
+    known_defect: J-063
     frames:
       - screenshots/ladder_grade_ladder_down.png
       - screenshots/ladder_grade_ladder_down_side.png
