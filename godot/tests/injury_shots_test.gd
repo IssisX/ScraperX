@@ -239,6 +239,54 @@ func _bruise_area_facing(mi: MeshInstance3D, img: Image, cam: Vector3, min_alpha
 	return area
 
 
+func _posed_copy(mi: MeshInstance3D) -> MeshInstance3D:
+	# The cheek bruise's skin copy follows the jaw and neck as her skin does
+	# (matron_injury_ring.gdshader `blend`: per-vertex CUSTOM0 weights on
+	# bone_a..bone_d, the rest on the head). This bakes that blend on the
+	# CPU into a hidden twin at the same place with the same material, so
+	# _max_off_skin and _bruise_area_facing measure what is drawn. Returns
+	# mi itself when it does not blend; free the twin after use.
+	if mi == null or mi.mesh == null or mi.mesh.get_surface_count() < 1:
+		return mi
+	var mat := mi.material_override as ShaderMaterial
+	if mat == null or not bool(mat.get_shader_parameter("blend")):
+		return mi
+	var arr: Array = mi.mesh.surface_get_arrays(0)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var nrm: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	var cw: PackedFloat32Array = arr[Mesh.ARRAY_CUSTOM0]
+	var bones: Array[Transform3D] = []
+	for k in ["bone_a", "bone_b", "bone_c", "bone_d"]:
+		bones.append(mat.get_shader_parameter(k) as Transform3D)
+	var out_v := PackedVector3Array()
+	var out_n := PackedVector3Array()
+	for i in v.size():
+		var wh := 1.0
+		var p := Vector3.ZERO
+		var n := Vector3.ZERO
+		for k in 4:
+			var w := cw[i * 4 + k]
+			wh -= w
+			p += (bones[k] * v[i]) * w
+			n += (bones[k].basis * nrm[i]) * w
+		out_v.append(p + v[i] * wh)
+		out_n.append((n + nrm[i] * wh).normalized())
+	var surf := []
+	surf.resize(Mesh.ARRAY_MAX)
+	surf[Mesh.ARRAY_VERTEX] = out_v
+	surf[Mesh.ARRAY_NORMAL] = out_n
+	surf[Mesh.ARRAY_INDEX] = arr[Mesh.ARRAY_INDEX]
+	var am := ArrayMesh.new()
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surf)
+	var twin := MeshInstance3D.new()
+	twin.mesh = am
+	twin.material_override = mat
+	twin.visible = false
+	root.add_child(twin)
+	twin.global_transform = mi.global_transform
+	return twin
+
+
 func _set_injury(injury: Dictionary) -> void:
 	_pose["injury"] = injury
 
@@ -307,6 +355,63 @@ func _run() -> void:
 	var fr_tilt: float = fr_n.dot(left_dir)
 	_check(fl_tilt > 0.34 and fl_tilt < 0.64 and fr_tilt < -0.34 and fr_tilt > -0.64, "cheek_angle",
 		"face_l tilt %.3f face_r tilt %.3f" % [fl_tilt, fr_tilt])
+	# J-059 cheeks on her skin, the eye's three guards for each cheek
+	# (face_l swollen at 250, face_r bruised at 150 here). From the side
+	# a flat cheek quad stands off the face like the old eye "monocle";
+	# the bruise must lie on her skin and curve around the cheek with it.
+	# The side camera stands on the bruised cheek's side (head +X for
+	# face_l, -X for face_r), placed as the eye's side camera is.
+	# 1. cheek_on_skin: every vertex the bruise is drawn on lies within
+	#    1.5 mm of a CPU-skinned skin vertex as posed now (the flat quads
+	#    measured 43.6 mm / 28.7 mm off on 2026-11-08, overhanging the jaw
+	#    line; the cheek skin also follows the jaw, so this is measured on
+	#    the copy as the shader blends it, _posed_copy).
+	# 2. cheek_side_facing: bruise surface with alpha >= 0.3 that faces
+	#    the side camera (N.V > 0.25) covers at least 6 cm² (measured
+	#    36.8 / 13.2 cm² on 2026-11-08).
+	# 3. cheek_side_pixels (rendered runs only): pixels around the cheek in
+	#    the side view are darker with the bruise than with it hidden,
+	#    same pose: at least 1500 px darker by > 0.04 in a 140 px box and
+	#    a mean darkening >= 0.012 (measured 12944 px, 0.071 / 6156 px,
+	#    0.055 at 960x720; the flat quads 4080 / 3730 px).
+	var anchors: Dictionary = (layer.get_script() as Script).get_script_constant_map()["ANCHORS"]
+	for cheek: String in ["face_l", "face_r"]:
+		var cheek_mi := layer._patches[cheek] as MeshInstance3D
+		var head_cheek: Transform3D = _her._rig.bone_world("head")
+		var cheek_off: Vector3 = anchors[cheek][1]
+		var cheek_pos: Vector3 = head_cheek.origin + head_cheek.basis * cheek_off
+		var cheek_dir := 1.0 if cheek_off.x > 0.0 else -1.0
+		var cheek_side: Vector3 = cheek_pos + head_cheek.basis.x * (0.45 * cheek_dir) + head_cheek.basis.z * 0.12 + head_cheek.basis.y * 0.02
+		var cheek_drawn := _posed_copy(cheek_mi)
+		var cheek_off_skin := _max_off_skin(cheek_drawn, cheek_pos, 0.10)
+		_check(cheek_off_skin >= 0.0 and cheek_off_skin < 0.0015, "cheek_on_skin_" + cheek.right(1),
+			"%s vertex farthest off her skin %.4f m" % [cheek, cheek_off_skin])
+		# The bruise alpha as drawn: the cheek's own texture on its material.
+		var cheek_mat := cheek_mi.material_override as ShaderMaterial
+		var cheek_tex: Image = (cheek_mat.get_shader_parameter("albedo_texture") as Texture2D).get_image() if cheek_mat != null else (layer._texture as Texture2D).get_image()
+		var cheek_area := _bruise_area_facing(cheek_drawn, cheek_tex, cheek_side, 0.3, 0.25)
+		if cheek_drawn != cheek_mi:
+			cheek_drawn.free()
+		_check(cheek_area >= 6.0e-4, "cheek_side_facing_" + cheek.right(1),
+			"%s bruise area facing the side camera %.2f cm²" % [cheek, cheek_area * 1e4])
+		if DisplayServer.get_name() == "headless":
+			print("INJURY SKIP cheek_side_pixels_%s headless: no render to measure" % cheek.right(1))
+		else:
+			await _shot("injury_cheek_side_" + cheek.right(1), cheek_side, cheek_pos, 35.0)
+			var with_bruise := await _grab(cheek_side, cheek_pos, 35.0)
+			cheek_mi.visible = false
+			var cheek_bare := await _grab(cheek_side, cheek_pos, 35.0)
+			cheek_mi.visible = true
+			var cheek_px: Vector2 = _cam.unproject_position(cheek_pos) * Vector2(with_bruise.get_size()) / root.get_visible_rect().size
+			var cheek_dark := _darkened(with_bruise, cheek_bare, cheek_px, 70, 0.04)
+			_check(cheek_dark.x >= 1500.0 and cheek_dark.y >= 0.012, "cheek_side_pixels_" + cheek.right(1),
+				"%s side view: %d px darker by >0.04 around the cheek, mean darkening %.3f" % [cheek, int(cheek_dark.x), cheek_dark.y])
+	# Stills of both bruised cheeks: straight on, and close on the left
+	# cheek square to her face (head frame).
+	var head_cheeks: Transform3D = _her._rig.bone_world("head")
+	var cheek_l_pos: Vector3 = head_cheeks.origin + head_cheeks.basis * (anchors["face_l"][1] as Vector3)
+	await _shot("injury_cheek_front", head_cheeks.origin + head_cheeks.basis.z * 0.7 + head_cheeks.basis.y * 0.05, head_cheeks.origin, 45.0)
+	await _shot("injury_cheek_close", cheek_l_pos + head_cheeks.basis.z * 0.28 + head_cheeks.basis.x * 0.06 + head_cheeks.basis.y * 0.02, cheek_l_pos, 30.0)
 	# No healing: a smaller later value never lowers a region.
 	_set_injury({"face_l": {"j_region": 30.0, "j_event": 30.0}, "face_r": {"j_region": 150.0, "j_event": 60.0}})
 	await _step(2)
