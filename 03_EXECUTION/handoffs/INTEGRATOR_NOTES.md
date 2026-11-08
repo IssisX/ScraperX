@@ -11,6 +11,7 @@ Read through: 1794139747 (2026-11-08 12:09:07Z, 6:09 AM Central)
 merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12:26 PM, integrator at xhigh); needs 0.39%/h around the clock, or about 0.6%/h over the 23 active run hours left; fits with about 2% to spare. Next meter ask: 9:17 PM, or sooner within 2% of a checkpoint.
 
 ## Waiting on me
+- Cory 7:12 AM Sun prompt (fight, damage, ladder): J-060 #320 and J-061 #321 opened, mailed to Muse (top two). Mine: the measured repro (helper), drawn limbs, visible damage (J-059), two silent recordings as proof, audio/haptic timing. #319 merged; cheek bruises on a helper (claude/integrate-j059-cheek).
 - From Muse (ruled 6:05 AM Sun, six mails): J-044l (b) the Turn fires from 3-5 m (told Cory; he may stop it); J-009 flags
   stay, 258 down is a traversal fix on the J-008 line; #298 gains PR waits on matron-sweep; #298 budget fix alone (loop kept
   on one line), no speed gate, StockHold made budget-bound, snag chain fix; J-021 job 4 cap waived; J-043 new hang rail
