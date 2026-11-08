@@ -1,28 +1,43 @@
 shader_type spatial;
-// J-059 black eye ring (and lid): a flat quad hugging the eye socket.
-// At grazing angles a flat quad reads as a thin rim standing off the skin
-// (a monocle rim, #309 eye check). Fade its alpha by the facing angle
-// (N.V) so the ring is only visible where it can sit on the skin: full on
-// at the front and three-quarters, gone at the side. The fade is per-pixel
-// at render time, so it is right for every camera with no per-frame script
-// work and no dependence on when the injury layer last updated.
-// ALBEDO/ALPHA replicate StandardMaterial3D's albedo texture x albedo
-// colour; only the fade is added, so the front, three-quarter and close-up
-// stills are unchanged (facing ~1 there). fade_end 0.65 keeps the
-// three-quarter view (39 deg off the face normal, facing ~0.78) at full
-// alpha; fade_start 0.3 drops the side view (75 deg, facing ~0.26) to ~0.
-render_mode blend_mix, depth_draw_opaque, cull_back;
+// J-059 black eye ring (and swollen lid), drawn ON her face (Cory 11-08:
+// the flat quad stood off the eye like a monocle from the side, and the
+// #309 grazing fade hid it there instead of curving it round the face).
+// The mesh is a copy of her own skin triangles round the eye socket
+// (matron_injury.gd _eye_mesh_for), rigid on the head bone, with vertices
+// in head-local metres relative to the socket centre. The ring texture is
+// projected onto that skin along the head's forward axis, so the bruise
+// lies on the lids, the cheek top and the side of the face and follows
+// their curve from every angle; nothing stands off the skin.
+// gl_compatibility has no Decal nodes, hence the skin copy.
+// Cost: a few hundred triangles, drawn only while the eye is injured.
+render_mode blend_mix, depth_draw_never, cull_back;
 
-uniform sampler2D albedo_texture : source_color;
+uniform sampler2D albedo_texture : source_color, filter_linear, repeat_disable;
 uniform vec4 albedo_color : source_color = vec4(1.0);
-uniform float fade_start = 0.3;
-uniform float fade_end = 0.65;
+// Where the texture lands, in head-local metres off the socket centre:
+// its centre and half size (x right = her left, y up).
+uniform vec2 uv_center = vec2(0.0, 0.0);
+uniform vec2 uv_half = vec2(0.024, 0.024);
+// Lift off the skin along its normal, against z-fighting with the skin it
+// copies: under a millimetre, too small to see from any side.
+uniform float push = 0.0004;
+
+varying vec3 local;
+varying float facing_out;
+
+void vertex() {
+	local = VERTEX;
+	// The skin copy holds the inside of the lid folds too; a surface that
+	// faces back into the head takes no bruise.
+	facing_out = smoothstep(-0.35, 0.05, NORMAL.z);
+	VERTEX += NORMAL * push;
+}
 
 void fragment() {
-	vec4 tex = texture(albedo_texture, UV);
-	float facing = clamp(dot(NORMAL, VIEW), 0.0, 1.0);
-	float fade = smoothstep(fade_start, fade_end, facing);
+	vec2 uv = vec2((local.x - uv_center.x) / uv_half.x, (uv_center.y - local.y) / uv_half.y) * 0.5 + 0.5;
+	float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
+	vec4 tex = texture(albedo_texture, clamp(uv, vec2(0.0), vec2(1.0)));
 	ALBEDO = tex.rgb * albedo_color.rgb;
-	ALPHA = tex.a * albedo_color.a * fade;
+	ALPHA = tex.a * albedo_color.a * inside * facing_out;
 	ROUGHNESS = 0.6;
 }
