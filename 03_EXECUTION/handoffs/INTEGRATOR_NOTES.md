@@ -7,7 +7,7 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794151022 (2026-11-08 15:17:02Z, 9:17 AM Central)
 
 ## Meter
-90% Sun 7:46 AM and still 90% Sun 9:44 AM and after J-068 (Cory): one helper at high fits. Helpers: one at high (Cory 11-08), free (J-068 done); read packs (Cory pick A 11-08): #320 fight now by a helper; what comes next Cory decides after it (reminder off) (functions, their history, what not to undo, what passing looks like), Argon only for stuck jobs; measuring leftovers go to Muse (free).
+90% Sun 7:46 AM, still 90% after J-068, 91% at 11:21 AM with the fight read running (Cory). Helpers: one at high (Cory 11-08), free (J-068 done); read packs (Cory pick A 11-08): #320 fight now by a helper; what comes next Cory decides after it (reminder off) (functions, their history, what not to undo, what passing looks like), Argon only for stuck jobs; measuring leftovers go to Muse (free).
 
 ## Waiting on me
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt; it cracked #298. Use it for a problem stuck an hour or failed by others; the prompt goes whole in one block for Cory (11-07, 11-08).
