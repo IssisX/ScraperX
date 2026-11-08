@@ -120,6 +120,9 @@ var _ci_phase := PHASE_APPROACH
 var _ci_facing := CI_APPROACH_FACING
 var _ci_proof_tick := -1
 var _ci_proof_printed := false
+# J-045: the first advance after the scene build is capped to one fixed
+# tick (the load gap is not play time). Set once the clamp first binds.
+var _first_advance_done := false
 var _sky_cycle: Node
 
 var _export_solids_path := ""
@@ -487,7 +490,17 @@ func _process(delta: float) -> void:
 	var time_scale := minf(_launch_shot.time_scale(), float(_hold_cam.time_scale()))
 	AudioServer.playback_speed_scale = time_scale
 	var sim_rate := time_scale * float(_hold_cam.fast_forward())
-	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(minf(delta * sim_rate, MAX_SIM_FRAME_DELTA)))
+	# J-045: the first advance after the scene build starts from a fresh
+	# accumulator — the load gap is not play time, so the first frame runs
+	# at most one fixed tick instead of up to nine (MAX_SIM_FRAME_DELTA).
+	var _advance_cap := MAX_SIM_FRAME_DELTA
+	if not _first_advance_done and not freeze_sim:
+		var _one_tick: float = _native.get_fixed_step_seconds()
+		if delta * sim_rate > _one_tick:
+			_advance_cap = _one_tick
+			_first_advance_done = true
+	var eff_delta := minf(delta * sim_rate, _advance_cap)
+	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(eff_delta))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
