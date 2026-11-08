@@ -4,7 +4,7 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794100618 (2026-11-08 01:16:58Z, 7:16 PM Central)
+Read through: 1794107831 (2026-11-08 03:17:11Z, 9:17 PM Central)
 
 ## Meter
 83% 8:20 AM Sat ($491); 85% 10:28 AM ($550); 85% 11:02 AM ($553.56); 86% 12:26 PM; 86% 1:36 PM; est. 86.9% 5:18 PM ($578.80); 87% 8:16 PM ($581.11, Cory; fit holds). Burn 5:18-8:16 PM $2.3 (quiet); predicts about 87.5% at 11 PM, under 89%: first run under (throttle loosens after two). Throttled since 10:30 AM; from 12:40 PM one helper allowed, only for a job stuck twice (Cory: reset Sun afternoon); the 1:17 PM run answers and
@@ -13,7 +13,7 @@ merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12
 ## Waiting on me
 - From Muse (ruled 7:19 PM, one mail): #291 start out of reach + not-in-Grab check; #298 test-side budget, cap waived;
   J-049 fix timing (ChatGPT asked on #278); J-001 reserved feet share then hold release; J-021 split; J-059 side-rim + flip push;
-  J-044d push d, I as a follow-up; J-043 inventory; hair; button real-tap check. #299 P1 fix; J-061 running. J-008 pushed @ 45e16da2.
+  J-044d pushed (red host-build); J-043 inventory; hair; button real-tap check. 9:20 PM: #298 gains separate PR + attribute 4 grab peaks; J-015 S2 stall 1 m short (Muse eye-checking); J-011 panels parked (ChatGPT asked #118); J-007 #315 cap waived. #299 P1 fix; J-061 running. J-008 pushed @ 45e16da2.
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
 
