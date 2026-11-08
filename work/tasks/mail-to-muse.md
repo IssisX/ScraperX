@@ -33,5 +33,5 @@ the same hour.
 
 ## A refused mail anyway
 Muse mails me (not Cory) its ID and the reason its check gave; I resend it reworded the same hour, and Cory
-hears only if the resend is refused too (Cory 11-08) (11-07: the check names no reason, only
-"did not pass a prompt-injection safety check", so the list stays a guess); its shape joins the list above.
+hears only if the resend is refused too (Cory 11-08). Its shape joins the list above. (11-07: the check names
+no reason, only "did not pass a prompt-injection safety check", so the list stays a guess.)
