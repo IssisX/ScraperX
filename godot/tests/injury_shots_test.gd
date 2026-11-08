@@ -118,6 +118,127 @@ func _ring_band(img: Image, vertical: bool, first: bool) -> float:
 	return sum / float(maxi(n, 1))
 
 
+func _grab(at: Vector3, look: Vector3, fov: float) -> Image:
+	# One rendered frame from this camera, for a pixel measurement.
+	_cam.fov = fov
+	_cam.look_at_from_position(at, look)
+	await process_frame
+	await RenderingServer.frame_post_draw
+	return root.get_texture().get_image()
+
+
+func _darkened(lit: Image, bare: Image, centre: Vector2, half: int, step_lum: float) -> Vector2:
+	# In a (2 half)² box round centre: how many pixels are darker in lit
+	# than in bare by more than step_lum (luminance 0..1), and the box's
+	# mean darkening (bare - lit). Same pose and camera, only the ring
+	# differs, so the difference is the bruise.
+	var n := 0
+	var sum := 0.0
+	var px := 0
+	for y in range(int(centre.y) - half, int(centre.y) + half):
+		for x in range(int(centre.x) - half, int(centre.x) + half):
+			if x < 0 or y < 0 or x >= lit.get_width() or y >= lit.get_height():
+				continue
+			var d := bare.get_pixel(x, y).get_luminance() - lit.get_pixel(x, y).get_luminance()
+			sum += d
+			px += 1
+			if d > step_lum:
+				n += 1
+	return Vector2(float(n), sum / float(maxi(px, 1)))
+
+
+func _skinned_skin_near(centre: Vector3, radius: float) -> PackedVector3Array:
+	# Her skin mesh's vertices within radius of centre, skinned on the CPU
+	# at the current pose: world = skeleton * bone pose * bind * vertex,
+	# weighted. What the renderer draws as her skin there.
+	var out := PackedVector3Array()
+	var skel: Skeleton3D = _her._rig.skel
+	var found := skel.find_children("skin", "MeshInstance3D", false, false)
+	if found.is_empty():
+		return out
+	var mi := found[0] as MeshInstance3D
+	var sk: Skin = mi.skin
+	var mats: Array[Transform3D] = []
+	for k in sk.get_bind_count():
+		var bi := sk.get_bind_bone(k)
+		if bi < 0:
+			bi = skel.find_bone(sk.get_bind_name(k))
+		mats.append(skel.global_transform * skel.get_bone_global_pose(bi) * sk.get_bind_pose(k))
+	var arr: Array = mi.mesh.surface_get_arrays(0)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var b: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+	var w: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+	var bpv := int(b.size() / v.size())
+	for i in v.size():
+		var p := Vector3.ZERO
+		for j in bpv:
+			var wt := w[i * bpv + j]
+			if wt > 0.0:
+				p += (mats[b[i * bpv + j]] * v[i]) * wt
+		if p.distance_to(centre) < radius:
+			out.append(p)
+	return out
+
+
+func _max_off_skin(mi: MeshInstance3D, centre: Vector3, radius: float) -> float:
+	# The farthest any vertex of mi's mesh (as placed) lies from her skin's
+	# nearest vertex. -1 when there is nothing to measure.
+	if mi == null or mi.mesh == null or mi.mesh.get_surface_count() < 1:
+		return -1.0
+	var skin := _skinned_skin_near(centre, radius)
+	if skin.is_empty():
+		return -1.0
+	var verts: PackedVector3Array = mi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	var worst := 0.0
+	for lv in verts:
+		var p := mi.global_transform * lv
+		var best := INF
+		for s in skin:
+			best = minf(best, p.distance_squared_to(s))
+		worst = maxf(worst, sqrt(best))
+	return worst
+
+
+func _bruise_area_facing(mi: MeshInstance3D, img: Image, cam: Vector3, min_alpha: float, min_facing: float) -> float:
+	# World area (m²) of mi's triangles whose bruise alpha (the ring texture
+	# as matron_injury_ring.gdshader projects it, at the triangle centre)
+	# is at least min_alpha and whose surface faces cam by more than
+	# min_facing (N.V).
+	if mi == null or mi.mesh == null or mi.mesh.get_surface_count() < 1:
+		return 0.0
+	var mat := mi.material_override as ShaderMaterial
+	if mat == null or mat.get_shader_parameter("uv_half") == null:
+		return 0.0
+	var c: Vector2 = mat.get_shader_parameter("uv_center")
+	var h: Vector2 = mat.get_shader_parameter("uv_half")
+	var col: Color = mat.get_shader_parameter("albedo_color")
+	var arr: Array = mi.mesh.surface_get_arrays(0)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var nrm: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	var xf := mi.global_transform
+	var size := img.get_width()
+	var area := 0.0
+	for t in range(0, idx.size(), 3):
+		var a := idx[t]
+		var bb := idx[t + 1]
+		var cc := idx[t + 2]
+		var p := (v[a] + v[bb] + v[cc]) / 3.0
+		var uv := Vector2((p.x - c.x) / h.x, (c.y - p.y) / h.y) * 0.5 + Vector2(0.5, 0.5)
+		if uv.x < 0.0 or uv.x > 1.0 or uv.y < 0.0 or uv.y > 1.0:
+			continue
+		var ln := (nrm[a] + nrm[bb] + nrm[cc]).normalized()
+		var alpha := img.get_pixel(int(uv.x * (size - 1)), int(uv.y * (size - 1))).a * col.a * smoothstep(-0.35, 0.05, ln.z)
+		if alpha < min_alpha:
+			continue
+		var wp := xf * p
+		var wn := (xf.basis * ln).normalized()
+		if wn.dot((cam - wp).normalized()) <= min_facing:
+			continue
+		area += 0.5 * ((xf * v[bb]) - (xf * v[a])).cross((xf * v[cc]) - (xf * v[a])).length()
+	return area
+
+
 func _set_injury(injury: Dictionary) -> void:
 	_pose["injury"] = injury
 
@@ -234,9 +355,9 @@ func _run() -> void:
 	layer._clock += 15.0
 	await _step(2)
 	_check(layer.black_eye_darkness("eye_l") >= 0.99, "eye_dark", "dark %.2f" % layer.black_eye_darkness("eye_l"))
-	# #309 side fix: the ring fades out at grazing angles (N.V) so no rim
-	# stands off the eye from the side. Guard: the ring's material is the
-	# fade shader, not a flat StandardMaterial3D.
+	# #309 side fix, kept: the ring's material is a shader (since 11-08 the
+	# one that projects the ring onto her skin, matron_injury_ring.gdshader),
+	# not a flat StandardMaterial3D.
 	var ring_mat: Variant = (layer._patches["eye_l"] as MeshInstance3D).material_override
 	_check(ring_mat is ShaderMaterial, "eye_fade",
 		"ring material is %s" % (ring_mat.get_class() if ring_mat != null else "null"))
@@ -270,10 +391,48 @@ func _run() -> void:
 	var head_bone_close: Transform3D = _her._rig.bone_world("head")
 	var eye_cam: Vector3 = eye_l_pos + head_bone_close.basis.z * 0.28 + head_bone_close.basis.x * 0.06 + head_bone_close.basis.y * 0.02
 	await _shot("injury_black_eye_close", eye_cam, eye_l_pos, 30.0)
-	# Side view for depth: the ring fades out at grazing angles (#309), so
-	# no rim stands off the eye; it must not float or sink.
+	# Side view for depth: the ring lies on her skin and curves round the
+	# face with it; it must not float or sink.
 	var eye_side: Vector3 = eye_l_pos + head_bone_close.basis.x * 0.45 + head_bone_close.basis.z * 0.12 + head_bone_close.basis.y * 0.02
 	await _shot("injury_black_eye_side", eye_side, eye_l_pos, 35.0)
+	# Cory 11-08: from the side the bruise must show, lying on her skin and
+	# curving round the face (the flat ring stood off the eye like a
+	# monocle; the #309 fade then hid it, leaving a white eyeball). The
+	# camera is on her left (head +X), the side of the bruised eye_l.
+	# Three guards, the first two need no display (CI runs headless):
+	# 1. eye_on_skin: every vertex the ring is drawn on lies on her skin as
+	#    posed now (within 1.5 mm of a CPU-skinned skin vertex), so no card
+	#    stands off the face.
+	# 2. eye_side_facing: ring surface with bruise alpha >= 0.3 that faces
+	#    the side camera (N.V > 0.25) covers at least 6 cm² (measured
+	#    23.7 cm² on 2026-11-08).
+	# 3. eye_side_pixels (rendered runs only): pixels round the eye in the
+	#    side view are darker with the ring than with it hidden, same pose:
+	#    at least 1500 px darker by > 0.04 in a 140 px box and a mean
+	#    darkening >= 0.012 (measured 5678 px, 0.038 at 960x720; the #309
+	#    faded quad measures 0 px).
+	var ring_mi := layer._patches["eye_l"] as MeshInstance3D
+	_check(head_bone_close.basis.x.dot(eye_l_pos - head_bone_close.origin) > 0.02 and head_bone_close.basis.x.dot(eye_side - eye_l_pos) > 0.3,
+		"eye_side_cam", "side camera on the bruised (left) eye")
+	var off_skin := _max_off_skin(ring_mi, eye_l_pos, 0.09)
+	_check(off_skin >= 0.0 and off_skin < 0.0015, "eye_on_skin", "ring vertex farthest off her skin %.4f m" % off_skin)
+	var side_area := _bruise_area_facing(ring_mi, ring_img, eye_side, 0.3, 0.25)
+	_check(side_area >= 6.0e-4, "eye_side_facing", "bruise area facing the side camera %.2f cm²" % (side_area * 1e4))
+	if DisplayServer.get_name() == "headless":
+		print("INJURY SKIP eye_side_pixels headless: no render to measure")
+	else:
+		var with_ring := await _grab(eye_side, eye_l_pos, 35.0)
+		ring_mi.visible = false
+		if layer._lids.has("eye_l"):
+			(layer._lids["eye_l"] as MeshInstance3D).visible = false
+		var bare := await _grab(eye_side, eye_l_pos, 35.0)
+		ring_mi.visible = true
+		# unproject_position is in the stretched canvas's units, not the
+		# captured image's pixels: scale across.
+		var centre_px: Vector2 = _cam.unproject_position(eye_l_pos) * Vector2(with_ring.get_size()) / root.get_visible_rect().size
+		var dark := _darkened(with_ring, bare, centre_px, 70, 0.04)
+		_check(dark.x >= 1500.0 and dark.y >= 0.012, "eye_side_pixels",
+			"side view: %d px darker by >0.04 round the eye, mean darkening %.3f" % [int(dark.x), dark.y])
 	# At 150: the lid swells. At 250: the eye is narrowed to a slit.
 	_set_injury({"eye_l": {"j_region": 150.0, "j_event": 80.0}})
 	await _step(2)
@@ -281,6 +440,12 @@ func _run() -> void:
 	_set_injury({"eye_l": {"j_region": 250.0, "j_event": 80.0}})
 	await _step(2)
 	_check(layer.lid_visible("eye_l") and layer.eye_slit_visible("eye_l"), "eye_slit", "lid %s slit %s droop %.2f" % [layer.lid_visible("eye_l"), layer.eye_slit_visible("eye_l"), layer.lid_droop("eye_l")])
+	# Stills of the swollen lid on her skin, close and from the side (the
+	# lid band lies on the same skin copy as the ring).
+	var head_bone_lid: Transform3D = _her._rig.bone_world("head")
+	var eye_l_lid: Vector3 = (layer._patches["eye_l"] as MeshInstance3D).global_position
+	await _shot("injury_black_eye_swollen_close", eye_l_lid + head_bone_lid.basis.z * 0.28 + head_bone_lid.basis.x * 0.06 + head_bone_lid.basis.y * 0.02, eye_l_lid, 30.0)
+	await _shot("injury_black_eye_swollen_side", eye_l_lid + head_bone_lid.basis.x * 0.45 + head_bone_lid.basis.z * 0.12 + head_bone_lid.basis.y * 0.02, eye_l_lid, 35.0)
 	# Side check: eye_l on her left, eye_r on her right — same guard as
 	# cheek_sides, against the same sign-flip bug (#306).
 	_set_injury({"eye_l": {"j_region": 150.0, "j_event": 80.0}, "eye_r": {"j_region": 150.0, "j_event": 80.0}})

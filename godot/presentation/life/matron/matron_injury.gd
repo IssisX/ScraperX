@@ -25,11 +25,15 @@ extends Node3D
 ## The black eye is a ring-textured quad, not a solid one: the annulus has a
 ## transparent centre so the eyeball shows through, and it is centred on the
 ## measured eye socket, so it hugs the socket instead of overhanging the face
-## edge the way the flat cheek quad did (#306). The lid is a second quad, a
-## soft band over the upper eye that droops with dose. The ring and lid fade
-## out at grazing angles (N.V, matron_injury_ring.gdshader, #309): a flat quad
-## reads as a thin rim standing off the eye from the side, so at the side
-## view it is gone and the black eye only shows where it can sit on skin.
+## edge the way the flat cheek quad did (#306). The lid is a second layer, a
+## soft band over the upper eye that droops with dose. Both are drawn ON her
+## skin, not on a quad (Cory 11-08: from the side the flat quad stood off the
+## eye like a monocle, and the #309 grazing fade only hid it there): the mesh
+## is a copy of her own skin triangles round the socket, rigid on the head
+## bone (every skin vertex there is 100% head-weighted, measured 2026-11-08),
+## and matron_injury_ring.gdshader projects the ring and lid textures onto it
+## along the head's forward axis, so the bruise follows the face's curve from
+## the front, three-quarters and the side. gl_compatibility has no decals.
 ##
 ## The eye socket centres are the eye bones' rest offsets in head-local space,
 ## measured 2026-11-07: the bone called eye_l sits at head-local -X and the
@@ -73,10 +77,20 @@ const BRUISE_COLOR := Color(0.23, 0.08, 0.20)
 const SWELL_COLOR := Color(0.35, 0.10, 0.14)
 const RING_BASE := Color(0.18, 0.05, 0.13)
 const RING_DARK := Color(0.05, 0.01, 0.05)
-# J-059 side fix (#309): the eye ring and lid fade out at grazing angles
-# (N.V, matron_injury_ring.gdshader) so no rim stands off the eye from
-# the side. The front, three-quarter and close-up stills are unchanged.
+# J-059: the eye ring and lid are projected onto a copy of her skin round
+# the socket (matron_injury_ring.gdshader), so they lie on the face.
 const RING_SHADER := preload("res://presentation/life/matron/matron_injury_ring.gdshader")
+# The skin copied round each socket: triangles with a vertex within this
+# distance of the socket centre. Wider than the largest ring (0.030 m half
+# size) and the lid band, so the copy's edge never shows.
+const EYE_SKIN_M := 0.045
+# ...and no deeper than this behind the eyeball centre (head-local z): the
+# inside of the head (mouth, throat) falls within range and takes no bruise.
+const EYE_SKIN_BACK_M := -0.03
+# Lift off the skin (shader `push`): the lid sits a hair over the ring.
+const RING_WIDEN := 1.15  # ring half width / height on her skin (see _update_eye)
+const RING_PUSH_M := 0.0004
+const LID_PUSH_M := 0.0007
 
 var _seen := {}  # region -> {"j_region": float, "j_event": float, "t_hit": float}, maxima only
 var _patches := {}  # region -> MeshInstance3D
@@ -85,6 +99,7 @@ var _texture: Texture2D = null
 var _ring_textures := {}  # false/true (mirrored) -> Texture2D
 var _lid_texture: Texture2D = null
 var _mesh: QuadMesh = null
+var _eye_meshes := {}  # eye region -> ArrayMesh, her skin round that socket
 var _shown := true
 var _clock := 0.0  # view seconds; the black eye darkens over 15 s after the hit
 
@@ -119,11 +134,11 @@ func _bruise_texture() -> Texture2D:
 
 
 func _ring_texture(mirror: bool) -> Texture2D:
-	# Annulus with a transparent centre (the eyeball shows through), baked
-	# dark red-purple, darkest on the lower lid and the inner corner. The
-	# quad samples the texture with u mirrored and v as-is. In the QuadMesh
-	# as placed, image-top is her upper lid and image-right is her outer
-	# corner for eye_l: the dark lower-lid weight sits at image-bottom
+	# Soft annulus with a light centre (30%, on the lids), baked dark
+	# red-purple, darkest on the lower lid and the inner corner. As the
+	# shader projects it onto her skin (head-local x right, y up, as the
+	# old quad was placed), image-top is her upper lid and image-right is
+	# her outer corner for eye_l: the dark lower-lid weight sits at image-bottom
 	# (v = +1) and the dark inner weight at image-left (u = -1); eye_r
 	# mirrors u, so it stays symmetric. Colour is baked in; the material's
 	# albedo alpha ramps the darkness over the 15 s pool.
@@ -141,7 +156,12 @@ func _ring_texture(mirror: bool) -> Texture2D:
 				u = -u
 			var wobble := 0.035 * sin(u * 5.0 + 1.7) * sin(v * 4.0 + 0.6) + 0.02 * sin(u * 9.0 + 0.4) * sin(v * 7.0 + 2.3)
 			var r := Vector2(u, v).length() * (1.0 + wobble)
-			var shape := clampf(smoothstep(0.50, 0.62, r), 0.0, 1.0) * (1.0 - clampf(smoothstep(0.88, 0.96, r), 0.0, 1.0))
+			# On her skin the ring's edges must not read as a painted rim:
+			# the outer edge fades over the cheek and brow (0.80-0.94, zero
+			# before the texture's edge even where the wobble pulls it in),
+			# and the centre keeps 30% so the lids take some bruise (the
+			# eyeball is not skin, so it never darkens).
+			var shape := (0.3 + 0.7 * clampf(smoothstep(0.40, 0.58, r), 0.0, 1.0)) * (1.0 - clampf(smoothstep(0.80, 0.94, r), 0.0, 1.0))
 			var bottom := clampf((v - 0.2) / 0.6, 0.0, 1.0)
 			var inner := clampf((-u - 0.2) / 0.6, 0.0, 1.0)
 			var w := clampf(0.55 * bottom + 0.45 * inner, 0.0, 1.0)
@@ -270,40 +290,141 @@ func patch_outward(region: String, center: Vector3) -> float:
 	return (p.global_position - center).dot(p.global_transform.basis.z.normalized())
 
 
-func _fade_material(texture: Texture2D) -> ShaderMaterial:
-	# The eye ring/lid material: the ring texture (or lid band) with an
-	# N.V fade so it vanishes at grazing angles instead of rimming (#309).
+func _skin_material(texture: Texture2D, push: float) -> ShaderMaterial:
+	# The eye ring/lid material: the ring texture (or lid band) projected
+	# onto the skin copy round the socket (matron_injury_ring.gdshader).
 	var smat := ShaderMaterial.new()
 	smat.shader = RING_SHADER
 	smat.set_shader_parameter("albedo_texture", texture)
+	smat.set_shader_parameter("push", push)
 	return smat
 
 
-func _patch_for(region: String, texture: Texture2D, faded: bool = false) -> MeshInstance3D:
+func _eye_mesh_for(region: String, rig: Variant) -> ArrayMesh:
+	# Her skin triangles round the socket, in head-local metres relative
+	# to the socket centre, taken once from the skinned body mesh at its
+	# bind pose. Rigid on the head bone: head-local = bind(head) * vertex,
+	# and the drawn skin is bone_world(head) * that wherever the weight is
+	# all head, which it is round the eyes. null when her skin is missing.
+	if _eye_meshes.has(region):
+		return _eye_meshes[region]
+	var skel: Skeleton3D = null
+	if rig != null:
+		skel = rig.get("skel") as Skeleton3D
+	var skin_mi: MeshInstance3D = null
+	var head_bone := -1
+	if skel != null:
+		head_bone = skel.find_bone("head")
+		for node in skel.find_children("skin", "MeshInstance3D", false, false):
+			skin_mi = node as MeshInstance3D
+			break
+	var bind := Transform3D.IDENTITY
+	var head_bind := -1
+	if skin_mi != null and skin_mi.mesh != null and skin_mi.skin != null and head_bone >= 0:
+		for k in skin_mi.skin.get_bind_count():
+			if skin_mi.skin.get_bind_bone(k) == head_bone or skin_mi.skin.get_bind_name(k) == &"head":
+				bind = skin_mi.skin.get_bind_pose(k)
+				head_bind = k
+				break
+	if head_bind < 0:
+		push_warning("matron injury: no head-bound skin mesh to draw the black eye on")
+		_eye_meshes[region] = null
+		return null
+	var anchor: Vector3 = ANCHORS[region][1]
+	var arrays: Array = skin_mi.mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var norms: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var bpv := int(bones.size() / maxi(verts.size(), 1))
+	var nb := bind.basis.inverse().transposed()
+	# near: 1 within EYE_SKIN_M of the socket and in front of
+	# EYE_SKIN_BACK_M; rigid: 1 when the vertex follows the head bone alone.
+	# Everywhere the ring can land it does (measured); a vertex that also
+	# follows the jaw (low on the cheek, past the ring) is left out, or the
+	# rigid copy would part from her skin when the jaw moves.
+	var near := PackedByteArray()
+	var rigid := PackedByteArray()
+	near.resize(verts.size())
+	rigid.resize(verts.size())
+	for i in verts.size():
+		var rel := bind * verts[i] - anchor
+		near[i] = 1 if rel.length() < EYE_SKIN_M and rel.z > EYE_SKIN_BACK_M else 0
+		var hw := 0.0
+		for j in bpv:
+			if bones[i * bpv + j] == head_bind:
+				hw += weights[i * bpv + j]
+		rigid[i] = 1 if hw >= 0.999 else 0
+	var remap := {}
+	var out_v := PackedVector3Array()
+	var out_n := PackedVector3Array()
+	var out_i := PackedInt32Array()
+	for t in range(0, index.size(), 3):
+		var tri := [index[t], index[t + 1], index[t + 2]]
+		if near[tri[0]] == 0 and near[tri[1]] == 0 and near[tri[2]] == 0:
+			continue
+		if rigid[tri[0]] == 0 or rigid[tri[1]] == 0 or rigid[tri[2]] == 0:
+			continue
+		for vi: int in tri:
+			if not remap.has(vi):
+				remap[vi] = out_v.size()
+				out_v.append(bind * verts[vi] - anchor)
+				out_n.append((nb * norms[vi]).normalized())
+			out_i.append(int(remap[vi]))
+	var mesh := ArrayMesh.new()
+	if out_i.is_empty():
+		push_warning("matron injury: no skin round %s" % region)
+	else:
+		var surf := []
+		surf.resize(Mesh.ARRAY_MAX)
+		surf[Mesh.ARRAY_VERTEX] = out_v
+		surf[Mesh.ARRAY_NORMAL] = out_n
+		surf[Mesh.ARRAY_INDEX] = out_i
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surf)
+	_eye_meshes[region] = mesh
+	return mesh
+
+
+func _patch_for(region: String, texture: Texture2D) -> MeshInstance3D:
 	if _patches.has(region):
 		return _patches[region]
 	var p := MeshInstance3D.new()
 	p.mesh = _mesh
-	if faded:
-		p.material_override = _fade_material(texture)
-	else:
-		var mat := StandardMaterial3D.new()
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.albedo_texture = texture
-		mat.roughness = 0.6
-		p.material_override = mat
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_texture = texture
+	mat.roughness = 0.6
+	p.material_override = mat
 	p.visible = false
 	add_child(p)
 	_patches[region] = p
 	return p
 
 
-func _lid_for(region: String) -> MeshInstance3D:
+func _eye_patch_for(region: String, mesh: ArrayMesh) -> MeshInstance3D:
+	# The ring: her skin copy round the socket, ring texture projected on.
+	if _patches.has(region):
+		return _patches[region]
+	var p := MeshInstance3D.new()
+	p.mesh = mesh
+	p.material_override = _skin_material(_ring_textures[region == "eye_r"], RING_PUSH_M)
+	p.visible = false
+	add_child(p)
+	_patches[region] = p
+	return p
+
+
+func _lid_for(region: String, mesh: ArrayMesh) -> MeshInstance3D:
+	# The swollen lid: the same skin copy, lid band projected on, drawn
+	# after the ring (render_priority) a hair further off the skin.
 	if _lids.has(region):
 		return _lids[region]
 	var p := MeshInstance3D.new()
-	p.mesh = _mesh
-	p.material_override = _fade_material(_lid_texture)
+	p.mesh = mesh
+	var lmat := _skin_material(_lid_texture, LID_PUSH_M)
+	lmat.render_priority = 1
+	p.material_override = lmat
 	p.visible = false
 	add_child(p)
 	_lids[region] = p
@@ -330,7 +451,7 @@ func update(injury: Dictionary, rig: Variant, dt: float = 0.0) -> void:
 		var anchor: Array = ANCHORS[region]
 		var bone: Transform3D = rig.bone_world(String(anchor[0]))
 		if is_eye_region(region):
-			_update_eye(region, anchor, bone)
+			_update_eye(region, anchor, bone, rig)
 			continue
 		var p := _patch_for(region, _texture)
 		var sev := clampf((severity(region) - BRUISE_REGION) / BRUISE_REGION, 0.0, 1.0)
@@ -378,33 +499,39 @@ func update(injury: Dictionary, rig: Variant, dt: float = 0.0) -> void:
 		p.visible = _shown
 
 
-func _update_eye(region: String, anchor: Array, bone: Transform3D) -> void:
-	# The ring hugs the socket: baked-colour annulus, transparent centre
-	# so the eyeball shows through. The lid is a second quad, a soft band
-	# over the upper eye that droops with dose until the eye is a slit; it
-	# sits 2 mm in front of the ring so it never z-fights it.
-	var tex: Texture2D = _ring_textures[region == "eye_r"]
-	var p := _patch_for(region, tex, true)
-	var lid := _lid_for(region)
+func _update_eye(region: String, anchor: Array, bone: Transform3D, rig: Variant) -> void:
+	# The ring lies on her skin round the socket: the skin copy is rigid on
+	# the head bone with its origin at the socket centre, and the shader
+	# projects the ring texture onto it (transparent centre, so the eyeball
+	# shows). The lid band goes on the same skin over the upper eye and
+	# droops with dose until the eye is a slit. The texture placement is
+	# the old quads' (ring half size erad, lid band 0.018 x lh/2 at ly), so
+	# straight on it reads as before; it now wraps round the face.
 	if not black_eye_visible(region):
-		p.visible = false
-		lid.visible = false
+		if _patches.has(region):
+			(_patches[region] as MeshInstance3D).visible = false
+		if _lids.has(region):
+			(_lids[region] as MeshInstance3D).visible = false
 		return
+	var mesh := _eye_mesh_for(region, rig)
+	if mesh == null:
+		return
+	var p := _eye_patch_for(region, mesh)
+	var lid := _lid_for(region, mesh)
 	var dark := black_eye_darkness(region)
 	var eye_sev := clampf((severity(region) - BLACK_EYE_REGION) / (EYE_SLIT_REGION - BLACK_EYE_REGION), 0.0, 1.0)
 	var erad := 0.024 + 0.006 * eye_sev
 	var mat := p.material_override as ShaderMaterial
 	mat.set_shader_parameter("albedo_color", Color(1, 1, 1, 0.25 + 0.70 * dark))
-	# The socket anchor is the eyeball CENTRE, not the skin: the lids sit
-	# ~10 mm in front of it, so the ring needs a 12 mm nudge to sit 4 mm
-	# off the lid skin the way the cheek quads sit 4 mm off the cheek.
-	# A 4 mm nudge buried the ring just under the lids (the dark arc never
-	# moved when the texture was flipped — it was a hair shadow, the ring
-	# itself showed only as a faint halo).
-	var at: Vector3 = (anchor[1] as Vector3) + Vector3(0.0, 0.0, 0.012)
-	p.global_transform = Transform3D(
-		Basis(bone.basis.x * erad, bone.basis.y * erad, bone.basis.z),
-		bone.origin + bone.basis * at)
+	# Stretched toward the outer corner only: on her skin the bruise reaches
+	# round the outer corner toward the temple, which is what the side view
+	# sees; the inner edge stays where the round quad had it, short of the
+	# nose bridge. Her outer corner is head-local +X for eye_l, -X for eye_r.
+	var outer := 1.0 if (anchor[1] as Vector3).x > 0.0 else -1.0
+	mat.set_shader_parameter("uv_center", Vector2(outer * erad * (RING_WIDEN - 1.0), 0.0))
+	mat.set_shader_parameter("uv_half", Vector2(erad * RING_WIDEN, erad))
+	var xf := Transform3D(bone.basis, bone.origin + bone.basis * (anchor[1] as Vector3))
+	p.global_transform = xf
 	p.visible = _shown
 	if lid_visible(region):
 		var droop := lid_droop(region)
@@ -412,10 +539,9 @@ func _update_eye(region: String, anchor: Array, bone: Transform3D) -> void:
 		var lh := 0.016 + 0.006 * droop
 		var lmat := lid.material_override as ShaderMaterial
 		lmat.set_shader_parameter("albedo_color", Color(1, 1, 1, 0.65 + 0.25 * droop))
-		var lat: Vector3 = (anchor[1] as Vector3) + Vector3(0.0, ly, 0.014)
-		lid.global_transform = Transform3D(
-			Basis(bone.basis.x * 0.018, bone.basis.y * (lh * 0.5), bone.basis.z),
-			bone.origin + bone.basis * lat)
+		lmat.set_shader_parameter("uv_center", Vector2(0.0, ly))
+		lmat.set_shader_parameter("uv_half", Vector2(0.018, lh * 0.5))
+		lid.global_transform = xf
 		lid.visible = _shown
 	else:
 		lid.visible = false
