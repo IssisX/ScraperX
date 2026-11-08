@@ -836,7 +836,7 @@ void run_save() {
     worst = std::max(worst, std::hypot(pa.x - pb.x, pa.y - pb.y, pa.z - pb.z));
     require(worst < 1e-3, "save: the original, restored from its own save, plays on with the fresh ones");
     // A save made before the 137 east/west pieces loads after them: rebuild
-    // that trunk save (607 bodies) from this world's own save (744, the 137
+    // that trunk save (608 bodies) from this world's own save (745, the 137
     // built last) by dropping them off its end and un-shifting the moved entities.
     {
         using scraperx::sim::kit::is_stock_entity;
@@ -845,8 +845,8 @@ void run_save() {
         (void)s.advance_frame(1.0);
         const std::vector<std::uint8_t> now = s.save_game();
         const std::uint32_t built = s.kit_body_count();
-        // Trunk held 595 + 12 bodies (see run_wet_e_guard); the rest are east/west, built last.
-        constexpr std::uint32_t kTrunkBodies = 595 + 12;
+        // Trunk held 596 + 12 bodies (see run_wet_e_guard); the rest are east/west, built last.
+        constexpr std::uint32_t kTrunkBodies = 596 + 12;
         require(built > kTrunkBodies,
                 "save: the world holds the east/west pieces this round trip is about");
         const std::uint32_t east_west = built - kTrunkBodies;

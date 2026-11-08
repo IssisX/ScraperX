@@ -824,15 +824,15 @@ void build_c1(std::vector<Part> &route) {
     build_c1_traversal_enhancements(route);
 }
 
-// ---- S2, the walking beam hoist with fixed ballast cart (archetype 18 mutated)
+// ---- S2, the walking beam hoist with water-ballast tank (archetype 18 mutated)
 //
 // Bridges Deck 4 (44.0 m) to Deck 6 (66.0 m) across the southern edge of the
 // 34 m central shaft. A 24 m steel walking beam is balanced on a central
 // trunnion fulcrum at +55 m (kS2Pivot).
 // At rest, the walking beam is held tilted by a safety chock catch: its west
-// arm (carrying a 1500 kg pig-iron ballast cart, 2400 kg total beam assembly)
-// sits high at deck 6 elevation (Y = 66.05), while its east arm sits low at
-// deck 4 (Y = 44.05).
+// arm (carrying a closed water tank bolted to it, 1500 kg wet; 2400 kg total
+// wet beam assembly) sits high at deck 6 elevation (Y = 66.05), while its
+// east arm sits low at deck 4 (Y = 44.05).
 // A tow cable runs from the west arm over headframe sheaves to a passenger cage
 // at the east arm.
 // Beam and cage are held by one shoot bolt: a 140 kg steel bolt on a slide on
@@ -841,7 +841,7 @@ void build_c1(std::vector<Part> &route) {
 // 11) and nothing the route has asked of the body before: the rider walks
 // into the plate and shoves the bolt out along its slide (its shoes hold it
 // with 900 N, so it goes only while shoved), and once its nose is clear of the cage the beam and the cage
-// are free: the 1500 kg ballast cart drives the walking beam down, tilting the
+// are free: the 1500 kg full tank drives the walking beam down, tilting the
 // massive girder across the atrium. As the west arm sinks 22 m, the tow rope hoists
 // the cage 22 m up to deck 6 under its 2.5 m/s brake governor. At deck 6,
 // safety dogs engage, and the rider walks off across the upper gangway onto
@@ -866,7 +866,13 @@ const JPH::Vec3 kS2CageEyeLocal(-kS2CageHalfX - 0.12F, 0.80F, 0.0F);
 
 // The walking beam pivot (fulcrum):
 const JPH::RVec3 kS2Pivot(0.0, kDeck5Top, -141.0);
-constexpr float kS2BeamMassKg = 2400.0F; // 1500 kg ballast cart + 900 kg steel frame
+constexpr float kS2BeamMassKg = 900.0F; // steel frame only; the tank is its own body
+// The cart's water tank (J-015 slice 1): a closed tank bolted to the west arm,
+// 250 kg dry shell holding 1250 kg of water (1.25 m^3) when full, so the wet
+// cart is 1500 kg and the wet beam assembly is 2400 kg as before.
+constexpr float kS2CartDryMassKg = 250.0F;
+constexpr float kS2CartWaterKg = 1250.0F;
+constexpr float kS2CartWaterCapacityKg = 1250.0F;
 const JPH::Vec3 kS2BeamWestEye(-10.0F, 11.05F, 0.0F); // local to beam at angle 0
 
 // The shoot bolt: on a slide on the gangway's west side, along z, its nose
@@ -940,18 +946,34 @@ constexpr float kS2GangwayHalfX = 1.40F;
         beam.push_back(strut(pt - normal * 0.35F, pt + normal * 0.35F, 0.05F, Material::Steel));
     }
 
-    // West Arm Ballast Cart (pig-iron trolley, 1500 kg):
-    // Mounted directly on the outer west arm (centered at t = 0.15, R ~ 12 m from fulcrum)
-    const JPH::Vec3 cart_center = west_pt * 0.85F + east_pt * 0.15F;
-    beam.push_back(box(JPH::Vec3(1.10F, 0.60F, 0.22F), cart_center + normal * 0.50F, Material::Concrete));
-    beam.push_back(box(JPH::Vec3(1.20F, 0.12F, 0.24F), cart_center + normal * 0.10F, Material::Rust));
-
     // Eye plate on west tip
     beam.push_back(box(JPH::Vec3(0.15F, 0.15F, 0.15F), west_pt, Material::Hazard));
 
     // East Arm tip & eye plate
     beam.push_back(box(JPH::Vec3(0.15F, 0.15F, 0.15F), east_pt, Material::Hazard));
     return beam;
+}
+
+// The cart's water tank (J-015 slice 1): a closed rectangular tank bolted to
+// the west arm, its floor resting on the upper chord. Interior 2.80 x 0.62 x
+// 0.72 m = 1.25 m^3, holding 1250 kg of water when full; dry shell 250 kg.
+// The body is built with its axes on the beam (x along the arm, y across
+// it), its origin at the cart's centre on the arm, so these parts are
+// axis-aligned in its own frame. Heights are out from the beam's axis: the
+// floor's underside at 0.44 m sits on the upper chord's top face, the walls
+// run 0.50 to 1.22 m, the lid 1.22 to 1.28 m.
+[[nodiscard]] std::vector<Part> s2_cart_parts() {
+    std::vector<Part> tank;
+    // Floor first: the bin's water lies on it, and its underside is the bin's mouth.
+    tank.push_back(box(JPH::Vec3(1.45F, 0.03F, 0.36F), JPH::Vec3(0.0F, 0.47F, 0.0F), Material::Rust));
+    // Walls: 0.05 m plate, floor top (0.50) to lid underside (1.22).
+    for (const float side : {-1.0F, 1.0F}) {
+        tank.push_back(box(JPH::Vec3(0.025F, 0.36F, 0.31F), JPH::Vec3(side * 1.425F, 0.86F, 0.0F), Material::Rust));
+        tank.push_back(box(JPH::Vec3(1.45F, 0.36F, 0.025F), JPH::Vec3(0.0F, 0.86F, side * 0.335F), Material::Rust));
+    }
+    // Lid: closed, so the water stays in while the beam tilts.
+    tank.push_back(box(JPH::Vec3(1.45F, 0.03F, 0.36F), JPH::Vec3(0.0F, 1.25F, 0.0F), Material::Rust));
+    return tank;
 }
 
 [[maybe_unused]] void build_crossover_gangway(std::vector<Part> &frame, const float deck_top) {
@@ -1108,6 +1130,32 @@ void build_s2(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     // Hinge around +Z axis: at rest angle = 0, can rotate up to 1.75 rad
     stack.s2_beam_hinge = kit.add_lever(stack.s2_beam, kS2Pivot, JPH::Vec3::sAxisZ(),
                                         JPH::Vec3::sAxisX(), 0.0F, 1.75F);
+
+    // ---- The water tank, bolted to the west arm (J-015 slice 1) --------------
+    // Its own body, so the water's mass can leave it: dry shell 250 kg, a
+    // 1250 kg bin of water when full, 1500 kg wet at the cart's old place on
+    // the arm (t = 0.15, its centre 10.43 m from the fulcrum). The body is
+    // built on the beam's axes, and a grip welds it to the beam, rating 0:
+    // bolted, it never lets go. Sealed for now: its bin has no gate until
+    // the drain valve of slice 2, so it stays full through the ride.
+    {
+        const JPH::Vec3 west_pt(-10.0F, 11.05F, 0.0F);
+        const JPH::Vec3 east_pt(10.0F, -11.05F, 0.0F);
+        const JPH::Vec3 cart_centre = west_pt * 0.85F + east_pt * 0.15F;
+        const JPH::Vec3 along = (east_pt - west_pt).Normalized();
+        const JPH::Vec3 normal(-along.GetY(), along.GetX(), 0.0F);
+        const JPH::Quat cart_rotation = JPH::Quat::sFromTo(JPH::Vec3::sAxisX(), along);
+        stack.s2_cart = kit.add_body(Sim::kStackS2CartEntityId, s2_cart_parts(),
+                                     kS2Pivot + JPH::RVec3(cart_centre), cart_rotation,
+                                     kS2CartDryMassKg, 0.5F);
+        stack.s2_cart_bin = kit.add_bin(stack.s2_cart, kS2CartWaterKg, kS2CartWaterCapacityKg,
+                                        JPH::Vec3(0.0F, 0.44F, 0.0F), kit::LeverIndex{}, 0.0F, 0.0F,
+                                        0.0F);
+        kit.set_bin_water(stack.s2_cart_bin);
+        const JPH::Vec3 to_cart = cart_centre + normal * 0.86F;
+        stack.s2_cart_grip = kit.add_grip(stack.s2_beam, 0.0F, to_cart.Normalized());
+        (void)kit.grip(stack.s2_cart_grip, stack.s2_cart);
+    }
 
     // ---- The tow rope: connects west arm to east cage -------------------------
     const JPH::RVec3 eye_cage =

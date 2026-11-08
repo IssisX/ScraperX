@@ -819,10 +819,11 @@ struct StackState final {
     double s1_plate_travel = 0.0;   // the scale plate, from where it hangs proud of the floor
     double s1_rope_tension = 0.0;
 
-    // S2, the walking beam hoist with fixed ballast cart.
+    // S2, the walking beam hoist with water-ballast tank.
     double s2_cage_travel = 0.0;
     double s2_cage_peak_speed = 0.0;
     double s2_cart_travel = 0.0;
+    double s2_cart_water_kg = 0.0;  // the tank's water, 1250 kg when full
     double s2_beam_angle = 0.0;
     double s2_bolt_travel = 0.0;    // how far the shoot bolt is shoved out
     bool s2_bolt_shot = false;      // the bolt holds the beam

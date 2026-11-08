@@ -305,14 +305,16 @@ struct Stack final {
     kit::PoolIndex s1_tank;
     kit::PipeIndex s1_fill;
 
-    // S2, the walking beam hoist with fixed ballast cart: deck 4 -> deck 6.
+    // S2, the walking beam hoist with water-ballast tank: deck 4 -> deck 6.
     kit::BodyIndex s2_cage;
     kit::BodyIndex s2_beam;
     kit::BodyIndex s2_cart;
     kit::BodyIndex s2_bolt;           // the shoot bolt the rider shoves out
     kit::GuideIndex s2_bolt_guide;
     kit::GuideIndex s2_cage_guide;
-    kit::GuideIndex s2_cart_guide;
+    kit::GuideIndex s2_cart_guide;    // unused: the cart rides the beam on its weld, not a guide
+    kit::BinIndex s2_cart_bin;        // the tank's water, 1250 kg when full
+    kit::GripIndex s2_cart_grip;      // the bolts holding the tank to the beam
     kit::RopeIndex s2_rope;
     kit::LeverIndex s2_beam_hinge;
     kit::CatchIndex s2_catch;

@@ -527,6 +527,7 @@ StackState Simulation::stack_state() const noexcept {
     out.s2_cage_travel = kit.guide_travel(stack.s2_cage_guide);
     out.s2_cage_peak_speed = kit.guide_peak_speed(stack.s2_cage_guide);
     out.s2_cart_travel = kit.guide_travel(stack.s2_cart_guide);
+    out.s2_cart_water_kg = kit.bin_contents(stack.s2_cart_bin);
     out.s2_beam_angle = kit.lever_angle(stack.s2_beam_hinge);
     out.s2_bolt_travel = kit.guide_travel(stack.s2_bolt_guide);
     out.s2_bolt_shot = kit.catch_latched(stack.s2_catch);
