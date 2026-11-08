@@ -371,6 +371,10 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // the throwables, so nothing already laid is renumbered and saves
     // made before it still load (loose_stock.hpp).
     loose_stock_->append_reserved();
+    // The bands' rings above 396.25 m and the top decks dress_tower
+    // recorded: last in the table, after the east/west stock, so nothing
+    // already laid is renumbered and saves made before them still load.
+    loose_stock_->append_upper();
     {
         std::vector<Matron::Throwable> throwables;
         for (int i = loose_stock_->matron_throwables_begin();
