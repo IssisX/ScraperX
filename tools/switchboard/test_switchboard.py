@@ -1163,7 +1163,7 @@ class ReviewPool(unittest.TestCase):
 
 
 class RepoReviewModel(unittest.TestCase):
-    def test_the_api_review_is_opus_max(self):
+    def test_the_api_review_is_opus_high_and_the_security_pass_max(self):
         try:
             import yaml
         except ImportError:
@@ -1171,7 +1171,10 @@ class RepoReviewModel(unittest.TestCase):
         root = HERE.parents[1]
         b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
         spec = b.calls["review"]
-        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "max", 64000))   # Cory, 11-04
+        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "high", 64000))   # Cory, 11-08
+        sec = b.calls["security_review"]   # the workflow-file PR's security pass keeps max (Cory, 11-08: "split")
+        self.assertEqual((sec.model, sec.effort, sec.max_tokens), ("claude-opus-5-5", "max", 64000))
+        self.assertTrue(money.check(b, [], NOW, "J-1", money.worst_case(b, "security_review", sec.max_input_tokens)).ok)
         # The 64000 reserve passes the caps: the worst case at the full input limit fits one job's cap.
         worst = money.worst_case(b, "review", spec.max_input_tokens)
         self.assertEqual(worst, Decimal("1.880000"))   # 150,000 x $4/MTok + 64,000 x $20/MTok
