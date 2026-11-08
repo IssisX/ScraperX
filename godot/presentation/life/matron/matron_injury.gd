@@ -41,6 +41,18 @@ extends Node3D
 ## the face-anchor convention (head-local +X is her left, verified by the
 ## #306 stills). The anchors below follow anatomy, not the bone names; the
 ## eye_sides check in injury_shots_test.gd guards the signs.
+##
+## The cheek bruises (face_l/face_r) are drawn on her skin the same way
+## (the flat cheek quad stood up to 44 mm off her face, overhanging the jaw
+## line, measured 2026-11-08). Unlike the eye, the cheek skin is not all
+## head: 242 of the 265 skin vertices under a swollen cheek bruise also
+## follow the jaw (a few the neck), so a head-rigid copy stood 3 mm off the
+## cheek even in the test pose and would part further when the jaw opens.
+## The cheek copy keeps her skin weights instead: the shader blends each
+## vertex between the head and those bones (`blend`), so it follows her
+## cheek as the skin does. Its frame is turned about the head's up axis to
+## face out of the cheek (the old quad's tilt), and the bruise is projected
+## along that.
 
 const J_REF := 50.0
 const MARK_EVENT := 25.0
@@ -91,6 +103,12 @@ const EYE_SKIN_BACK_M := -0.03
 const RING_WIDEN := 1.15  # ring half width / height on her skin (see _update_eye)
 const RING_PUSH_M := 0.0004
 const LID_PUSH_M := 0.0007
+# The cheek skin copy: wider than the largest cheek bruise (0.0425 m half
+# size, swollen), the same depth limit as the eye, and a hair under the eye
+# ring where the two meet.
+const CHEEK_SKIN_M := 0.05
+const CHEEK_PUSH_M := 0.0003
+const BLEND_SLOTS := ["bone_a", "bone_b", "bone_c", "bone_d"]
 
 var _seen := {}  # region -> {"j_region": float, "j_event": float, "t_hit": float}, maxima only
 var _patches := {}  # region -> MeshInstance3D
@@ -99,7 +117,10 @@ var _texture: Texture2D = null
 var _ring_textures := {}  # false/true (mirrored) -> Texture2D
 var _lid_texture: Texture2D = null
 var _mesh: QuadMesh = null
-var _eye_meshes := {}  # eye region -> ArrayMesh, her skin round that socket
+var _skin_meshes := {}  # eye/cheek region -> ArrayMesh, her skin round it
+var _skin_bones := {}  # cheek region -> skin bind indices on bone_a..bone_d
+var _skin: Skin = null  # her body's skin, for the cheek blend
+var _head_bind := -1
 var _shown := true
 var _clock := 0.0  # view seconds; the black eye darkens over 15 s after the hit
 
@@ -197,6 +218,10 @@ func is_eye_region(region: String) -> bool:
 	return region == "eye_l" or region == "eye_r"
 
 
+func is_cheek_region(region: String) -> bool:
+	return region == "face_l" or region == "face_r"
+
+
 func classify_head_hit(local: Vector3) -> String:
 	# Head-local contact on the front of the head -> region. Within
 	# EYE_CLASSIFY_M of a socket centre it goes to that eye instead of the
@@ -291,8 +316,8 @@ func patch_outward(region: String, center: Vector3) -> float:
 
 
 func _skin_material(texture: Texture2D, push: float) -> ShaderMaterial:
-	# The eye ring/lid material: the ring texture (or lid band) projected
-	# onto the skin copy round the socket (matron_injury_ring.gdshader).
+	# The eye ring/lid and cheek material: the texture projected onto the
+	# skin copy round the region (matron_injury_ring.gdshader).
 	var smat := ShaderMaterial.new()
 	smat.shader = RING_SHADER
 	smat.set_shader_parameter("albedo_texture", texture)
@@ -300,14 +325,37 @@ func _skin_material(texture: Texture2D, push: float) -> ShaderMaterial:
 	return smat
 
 
-func _eye_mesh_for(region: String, rig: Variant) -> ArrayMesh:
-	# Her skin triangles round the socket, in head-local metres relative
-	# to the socket centre, taken once from the skinned body mesh at its
-	# bind pose. Rigid on the head bone: head-local = bind(head) * vertex,
-	# and the drawn skin is bone_world(head) * that wherever the weight is
-	# all head, which it is round the eyes. null when her skin is missing.
-	if _eye_meshes.has(region):
-		return _eye_meshes[region]
+func _skin_frame(region: String) -> Transform3D:
+	# The skin copy's frame in head-local space: at the region's anchor, the
+	# head's axes for the eye; for a cheek, turned about the head's up axis
+	# by atan2(|x|, z) of its anchor (~33 deg) toward her left for face_l
+	# and her right for face_r, so its +Z faces out of the cheek and the
+	# bruise is projected along the cheek's own outward direction.
+	var aoff: Vector3 = ANCHORS[region][1]
+	var basis := Basis.IDENTITY
+	if is_cheek_region(region):
+		var tilt := atan2(absf(aoff.x), aoff.z)
+		basis = Basis(Vector3.UP, tilt if aoff.x >= 0.0 else -tilt)
+	return Transform3D(basis, aoff)
+
+
+func _bind_bone(skel: Skeleton3D, k: int) -> int:
+	var bi := _skin.get_bind_bone(k)
+	return bi if bi >= 0 else skel.find_bone(_skin.get_bind_name(k))
+
+
+func _skin_mesh_for(region: String, rig: Variant) -> ArrayMesh:
+	# Her skin triangles round the region, in the copy's frame
+	# (_skin_frame), taken once from the skinned body mesh at its bind
+	# pose: frame_inv * bind(head) * vertex. The eye takes only skin that
+	# follows the head bone alone, so it is rigid on the head: the drawn
+	# skin is bone_world(head) * that wherever the weight is all head,
+	# which it is round the eyes. A cheek takes its skin whatever the
+	# weights and keeps up to four other bones' weights per vertex in
+	# CUSTOM0 (bones in _skin_bones), for the shader's blend. null when her
+	# skin is missing.
+	if _skin_meshes.has(region):
+		return _skin_meshes[region]
 	var skel: Skeleton3D = null
 	if rig != null:
 		skel = rig.get("skel") as Skeleton3D
@@ -327,10 +375,14 @@ func _eye_mesh_for(region: String, rig: Variant) -> ArrayMesh:
 				head_bind = k
 				break
 	if head_bind < 0:
-		push_warning("matron injury: no head-bound skin mesh to draw the black eye on")
-		_eye_meshes[region] = null
+		push_warning("matron injury: no head-bound skin mesh to draw %s on" % region)
+		_skin_meshes[region] = null
 		return null
-	var anchor: Vector3 = ANCHORS[region][1]
+	_skin = skin_mi.skin
+	_head_bind = head_bind
+	var cheek := is_cheek_region(region)
+	var radius := CHEEK_SKIN_M if cheek else EYE_SKIN_M
+	var to_frame := _skin_frame(region).affine_inverse()
 	var arrays: Array = skin_mi.mesh.surface_get_arrays(0)
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var norms: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
@@ -338,28 +390,31 @@ func _eye_mesh_for(region: String, rig: Variant) -> ArrayMesh:
 	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
 	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
 	var bpv := int(bones.size() / maxi(verts.size(), 1))
-	var nb := bind.basis.inverse().transposed()
-	# near: 1 within EYE_SKIN_M of the socket and in front of
-	# EYE_SKIN_BACK_M; rigid: 1 when the vertex follows the head bone alone.
-	# Everywhere the ring can land it does (measured); a vertex that also
-	# follows the jaw (low on the cheek, past the ring) is left out, or the
-	# rigid copy would part from her skin when the jaw moves.
+	var nb := to_frame.basis * bind.basis.inverse().transposed()
+	# near: 1 within the radius of the anchor and in front of
+	# EYE_SKIN_BACK_M (frame z): the inside of the head (mouth, throat)
+	# falls within range and takes no bruise. rigid: 1 when the vertex
+	# follows the head bone alone (or for a cheek, always). Round the eye
+	# every vertex the ring can land on does (measured); a vertex that also
+	# follows the jaw (low on the cheek, past the ring) is left out of the
+	# eye, or the rigid copy would part from her skin when the jaw moves.
 	var near := PackedByteArray()
 	var rigid := PackedByteArray()
 	near.resize(verts.size())
 	rigid.resize(verts.size())
 	for i in verts.size():
-		var rel := bind * verts[i] - anchor
-		near[i] = 1 if rel.length() < EYE_SKIN_M and rel.z > EYE_SKIN_BACK_M else 0
+		var rel := to_frame * (bind * verts[i])
+		near[i] = 1 if rel.length() < radius and rel.z > EYE_SKIN_BACK_M else 0
 		var hw := 0.0
 		for j in bpv:
 			if bones[i * bpv + j] == head_bind:
 				hw += weights[i * bpv + j]
-		rigid[i] = 1 if hw >= 0.999 else 0
+		rigid[i] = 1 if cheek or hw >= 0.999 else 0
 	var remap := {}
 	var out_v := PackedVector3Array()
 	var out_n := PackedVector3Array()
 	var out_i := PackedInt32Array()
+	var src := PackedInt32Array()
 	for t in range(0, index.size(), 3):
 		var tri := [index[t], index[t + 1], index[t + 2]]
 		if near[tri[0]] == 0 and near[tri[1]] == 0 and near[tri[2]] == 0:
@@ -369,20 +424,47 @@ func _eye_mesh_for(region: String, rig: Variant) -> ArrayMesh:
 		for vi: int in tri:
 			if not remap.has(vi):
 				remap[vi] = out_v.size()
-				out_v.append(bind * verts[vi] - anchor)
+				out_v.append(to_frame * (bind * verts[vi]))
 				out_n.append((nb * norms[vi]).normalized())
+				src.append(vi)
 			out_i.append(int(remap[vi]))
 	var mesh := ArrayMesh.new()
 	if out_i.is_empty():
 		push_warning("matron injury: no skin round %s" % region)
-	else:
-		var surf := []
-		surf.resize(Mesh.ARRAY_MAX)
-		surf[Mesh.ARRAY_VERTEX] = out_v
-		surf[Mesh.ARRAY_NORMAL] = out_n
-		surf[Mesh.ARRAY_INDEX] = out_i
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surf)
-	_eye_meshes[region] = mesh
+		_skin_meshes[region] = mesh
+		return mesh
+	var surf := []
+	surf.resize(Mesh.ARRAY_MAX)
+	surf[Mesh.ARRAY_VERTEX] = out_v
+	surf[Mesh.ARRAY_NORMAL] = out_n
+	surf[Mesh.ARRAY_INDEX] = out_i
+	var flags := 0
+	if cheek:
+		# The other bones this skin follows, in bind order, onto the four
+		# blend slots; the head keeps the rest. (Measured: jaw, neck_hi and
+		# neck_lo under the cheek.) A fifth would fold onto the head.
+		var slots := PackedInt32Array()
+		for vi: int in src:
+			for j in bpv:
+				var k := bones[vi * bpv + j]
+				if k != head_bind and weights[vi * bpv + j] > 0.0 and not slots.has(k):
+					slots.append(k)
+		slots.sort()
+		if slots.size() > BLEND_SLOTS.size():
+			push_warning("matron injury: %s skin follows %d bones, blending 4" % [region, slots.size()])
+			slots.resize(BLEND_SLOTS.size())
+		var cw := PackedFloat32Array()
+		cw.resize(src.size() * 4)
+		for n in src.size():
+			for j in bpv:
+				var slot := slots.find(bones[src[n] * bpv + j])
+				if slot >= 0:
+					cw[n * 4 + slot] += weights[src[n] * bpv + j]
+		surf[Mesh.ARRAY_CUSTOM0] = cw
+		flags = Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT
+		_skin_bones[region] = slots
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surf, [], {}, flags)
+	_skin_meshes[region] = mesh
 	return mesh
 
 
@@ -402,13 +484,14 @@ func _patch_for(region: String, texture: Texture2D) -> MeshInstance3D:
 	return p
 
 
-func _eye_patch_for(region: String, mesh: ArrayMesh) -> MeshInstance3D:
-	# The ring: her skin copy round the socket, ring texture projected on.
+func _skin_patch_for(region: String, mesh: ArrayMesh, texture: Texture2D, push: float) -> MeshInstance3D:
+	# The eye ring or cheek bruise: her skin copy round the region, the
+	# texture projected on.
 	if _patches.has(region):
 		return _patches[region]
 	var p := MeshInstance3D.new()
 	p.mesh = mesh
-	p.material_override = _skin_material(_ring_textures[region == "eye_r"], RING_PUSH_M)
+	p.material_override = _skin_material(texture, push)
 	p.visible = false
 	add_child(p)
 	_patches[region] = p
@@ -453,6 +536,9 @@ func update(injury: Dictionary, rig: Variant, dt: float = 0.0) -> void:
 		if is_eye_region(region):
 			_update_eye(region, anchor, bone, rig)
 			continue
+		if is_cheek_region(region):
+			_update_cheek(region, bone, rig)
+			continue
 		var p := _patch_for(region, _texture)
 		var sev := clampf((severity(region) - BRUISE_REGION) / BRUISE_REGION, 0.0, 1.0)
 		var swelling := swelling_visible(region)
@@ -470,23 +556,11 @@ func update(injury: Dictionary, rig: Variant, dt: float = 0.0) -> void:
 		# normal: the skull anchor sits on the back of the head, so its quad
 		# flips (negating X and Z keeps the basis right-handed) and the
 		# nudge goes the other way, or it faces into the skull and back-face
-		# culling hides it. Cheek quads tilt about the bone Y axis so the
-		# normal follows the anchor's radial direction, atan2(|x|, z) off
-		# +Z (~33 deg for the cheek anchors), toward her left for face_l
-		# and her right for face_r: flat +Z left the outer edge floating
-		# past the face edge straight on (Claude #306 eye-check follow-up).
+		# culling hides it. (The cheeks are on her skin: _update_cheek.)
 		# Basis() takes column vectors; scaled() scales rows and shears it.
 		var faces_back := bool(anchor[2])
-		var tilt := 0.0
-		if region == "face_l" or region == "face_r":
-			var aoff: Vector3 = anchor[1]
-			tilt = atan2(absf(aoff.x), aoff.z)
-			if aoff.x < 0.0:
-				tilt = -tilt
-		var tc := cos(tilt)
-		var ts := sin(tilt)
-		var bx := (bone.basis.x * tc - bone.basis.z * ts) * rad
-		var bz := bone.basis.x * ts + bone.basis.z * tc
+		var bx := bone.basis.x * rad
+		var bz := bone.basis.z
 		var nudge := 0.004
 		if faces_back:
 			bx = -bx
@@ -513,10 +587,10 @@ func _update_eye(region: String, anchor: Array, bone: Transform3D, rig: Variant)
 		if _lids.has(region):
 			(_lids[region] as MeshInstance3D).visible = false
 		return
-	var mesh := _eye_mesh_for(region, rig)
+	var mesh := _skin_mesh_for(region, rig)
 	if mesh == null:
 		return
-	var p := _eye_patch_for(region, mesh)
+	var p := _skin_patch_for(region, mesh, _ring_textures[region == "eye_r"], RING_PUSH_M)
 	var lid := _lid_for(region, mesh)
 	var dark := black_eye_darkness(region)
 	var eye_sev := clampf((severity(region) - BLACK_EYE_REGION) / (EYE_SLIT_REGION - BLACK_EYE_REGION), 0.0, 1.0)
@@ -545,3 +619,50 @@ func _update_eye(region: String, anchor: Array, bone: Transform3D, rig: Variant)
 		lid.visible = _shown
 	else:
 		lid.visible = false
+
+
+func _update_cheek(region: String, bone: Transform3D, rig: Variant) -> void:
+	# The cheek bruise on her skin: the bruise texture projected onto the
+	# copy of her cheek skin, sized and coloured as the old quad was (half
+	# size rad; mark, bruise and swelling colours). The copy sits in its
+	# frame on the head bone and the shader blends each vertex toward the
+	# jaw and neck by her own weights: bone_a..bone_d are those bones'
+	# current poses against the head's, in the copy's frame
+	# (frame_inv * head_pose_inv * bone_pose * bind * bind_head_inv * frame;
+	# the head's own is the identity).
+	var p := _patches.get(region) as MeshInstance3D
+	var sev := clampf((severity(region) - BRUISE_REGION) / BRUISE_REGION, 0.0, 1.0)
+	var swelling := swelling_visible(region)
+	var rad := (0.04 + 0.025 * sev + (0.02 if swelling else 0.0)) * 0.5
+	var col: Color
+	if bruise_visible(region):
+		col = Color(BRUISE_COLOR, 0.5 + 0.25 * sev) if not swelling else Color(SWELL_COLOR, 0.7)
+	elif mark_visible(region):
+		col = Color(MARK_COLOR, 0.3)
+		rad *= 0.7
+	else:
+		if p != null:
+			p.visible = false
+		return
+	var mesh := _skin_mesh_for(region, rig)
+	if mesh == null:
+		return
+	p = _skin_patch_for(region, mesh, _texture, CHEEK_PUSH_M)
+	var mat := p.material_override as ShaderMaterial
+	mat.set_shader_parameter("albedo_color", col)
+	mat.set_shader_parameter("uv_center", Vector2.ZERO)
+	mat.set_shader_parameter("uv_half", Vector2(rad, rad))
+	mat.set_shader_parameter("blend", true)
+	var frame := _skin_frame(region)
+	var skel := rig.get("skel") as Skeleton3D
+	var slots: PackedInt32Array = _skin_bones.get(region, PackedInt32Array())
+	var to_frame := (skel.get_bone_global_pose(_bind_bone(skel, _head_bind)) * frame).affine_inverse()
+	var from_frame := _skin.get_bind_pose(_head_bind).affine_inverse() * frame
+	for slot in BLEND_SLOTS.size():
+		var d := Transform3D.IDENTITY
+		if slot < slots.size():
+			var k := slots[slot]
+			d = to_frame * skel.get_bone_global_pose(_bind_bone(skel, k)) * _skin.get_bind_pose(k) * from_frame
+		mat.set_shader_parameter(BLEND_SLOTS[slot], d)
+	p.global_transform = bone * frame
+	p.visible = _shown
