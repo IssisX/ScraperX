@@ -3495,7 +3495,10 @@ bool Matron::caught(const bool on_ladder) const noexcept {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    RVec3 sensed;
+    // Zeroed: catch_sense leaves it unwritten on Sense::None, and the
+    // geometry below must read a defined place (the origin, far outside
+    // the catch range) rather than uninitialised memory.
+    RVec3 sensed = RVec3::sZero();
     const Sense sense = catch_sense(sensed);
     const bool touching = physics_.WereBodiesInContact(body_, player_);
     if (sense == Sense::None && !touching) {
@@ -3506,9 +3509,9 @@ bool Matron::caught(const bool on_ladder) const noexcept {
         const RVec3 ankle = sense != Sense::None ? sensed - RVec3(0.0, 0.82F, 0.0) : player_ankle_;
         return Vec3(ankle - (at + shoulder_local())).Length() <= kStoopReachM;
     }
-    if (touching) {
-        return true;
-    }
+    // A catch needs the geometry on the sensed position: contact alone
+    // must not catch her (J-049 — a touch with no fresh sense caught at
+    // 1.174 m, outside the 0.85 m catch range, and shoved 59692 N).
     return distance_xz(float(at.GetX()), float(at.GetZ()), float(sensed.GetX()), float(sensed.GetZ())) < kCatchM &&
            std::abs(at.GetY() - sensed.GetY()) < 1.4;
 }
