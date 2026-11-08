@@ -121,7 +121,7 @@ var _cheek_textures := {}  # "mark" / "bruise" / "swell" -> Texture2D, made on f
 var _ring_textures := {}  # false/true (mirrored) -> Texture2D
 var _lid_texture: Texture2D = null
 var _mesh: QuadMesh = null
-var _skin_meshes := {}  # eye/cheek region -> ArrayMesh, her skin round it
+var _skin_meshes := {}  # eye/cheek region -> ArrayMesh, her skin around it
 var _skin_bones := {}  # cheek region -> skin bind indices on bone_a..bone_d
 var _skin: Skin = null  # her body's skin, for the cheek blend
 var _head_bind := -1
@@ -165,8 +165,8 @@ func _cheek_texture(stage: String) -> Texture2D:
 	# Smooth sine wobble on the outline, as #309's ring; soft falloff to clear
 	# skin over the outer 30% of the radius (0.56-0.86 of the half size, zero
 	# before the texture's edge even where the wobble pulls the outline in).
-	# Colour is baked in from the stage's colour: a darker purple-red core
-	# mottled at low frequency, fading out to the stage colour and, at the
+	# Color is baked in from the stage's color: a darker purple-red core
+	# mottled at low frequency, fading out to the stage color and, at the
 	# bruise and swelling stages, a faint yellow-brown rim. The material's
 	# albedo alpha keeps the old severity scale (texture alpha up to 0.92,
 	# as the shared texture). The red mark keeps its red, no rim.
@@ -362,7 +362,7 @@ func patch_outward(region: String, center: Vector3) -> float:
 
 func _skin_material(texture: Texture2D, push: float) -> ShaderMaterial:
 	# The eye ring/lid and cheek material: the texture projected onto the
-	# skin copy round the region (matron_injury_ring.gdshader).
+	# skin copy around the region (matron_injury_ring.gdshader).
 	var smat := ShaderMaterial.new()
 	smat.shader = RING_SHADER
 	smat.set_shader_parameter("albedo_texture", texture)
@@ -390,12 +390,12 @@ func _bind_bone(skel: Skeleton3D, k: int) -> int:
 
 
 func _skin_mesh_for(region: String, rig: Variant) -> ArrayMesh:
-	# Her skin triangles round the region, in the copy's frame
+	# Her skin triangles around the region, in the copy's frame
 	# (_skin_frame), taken once from the skinned body mesh at its bind
 	# pose: frame_inv * bind(head) * vertex. The eye takes only skin that
 	# follows the head bone alone, so it is rigid on the head: the drawn
 	# skin is bone_world(head) * that wherever the weight is all head,
-	# which it is round the eyes. A cheek takes its skin whatever the
+	# which it is around the eyes. A cheek takes its skin whatever the
 	# weights and keeps up to four other bones' weights per vertex in
 	# CUSTOM0 (bones in _skin_bones), for the shader's blend. null when her
 	# skin is missing.
@@ -439,7 +439,7 @@ func _skin_mesh_for(region: String, rig: Variant) -> ArrayMesh:
 	# near: 1 within the radius of the anchor and in front of
 	# EYE_SKIN_BACK_M (frame z): the inside of the head (mouth, throat)
 	# falls within range and takes no bruise. rigid: 1 when the vertex
-	# follows the head bone alone (or for a cheek, always). Round the eye
+	# follows the head bone alone (or for a cheek, always). Around the eye
 	# every vertex the ring can land on does (measured); a vertex that also
 	# follows the jaw (low on the cheek, past the ring) is left out of the
 	# eye, or the rigid copy would part from her skin when the jaw moves.
@@ -530,7 +530,7 @@ func _patch_for(region: String, texture: Texture2D) -> MeshInstance3D:
 
 
 func _skin_patch_for(region: String, mesh: ArrayMesh, texture: Texture2D, push: float) -> MeshInstance3D:
-	# The eye ring or cheek bruise: her skin copy round the region, the
+	# The eye ring or cheek bruise: her skin copy around the region, the
 	# texture projected on.
 	if _patches.has(region):
 		return _patches[region]
@@ -669,7 +669,7 @@ func _update_eye(region: String, anchor: Array, bone: Transform3D, rig: Variant)
 func _update_cheek(region: String, bone: Transform3D, rig: Variant) -> void:
 	# The cheek bruise on her skin: the cheek's bruise texture projected onto
 	# the copy of her cheek skin, sized as the old quad was (half size rad)
-	# with the old alpha scale and the mark, bruise and swelling colours. The copy sits in its
+	# with the old alpha scale and the mark, bruise and swelling colors. The copy sits in its
 	# frame on the head bone and the shader blends each vertex toward the
 	# jaw and neck by her own weights: bone_a..bone_d are those bones'
 	# current poses against the head's, in the copy's frame
@@ -679,7 +679,7 @@ func _update_cheek(region: String, bone: Transform3D, rig: Variant) -> void:
 	var sev := clampf((severity(region) - BRUISE_REGION) / BRUISE_REGION, 0.0, 1.0)
 	var swelling := swelling_visible(region)
 	var rad := (0.04 + 0.025 * sev + (0.02 if swelling else 0.0)) * 0.5
-	# Colour is in the stage's texture (_cheek_texture); the alpha is the
+	# Color is in the stage's texture (_cheek_texture); the alpha is the
 	# old scale.
 	var alpha := 0.0
 	var stage := ""

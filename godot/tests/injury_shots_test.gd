@@ -358,7 +358,7 @@ func _run() -> void:
 	# J-059 cheeks on her skin, the eye's three guards for each cheek
 	# (face_l swollen at 250, face_r bruised at 150 here). From the side
 	# a flat cheek quad stands off the face like the old eye "monocle";
-	# the bruise must lie on her skin and curve round the cheek with it.
+	# the bruise must lie on her skin and curve around the cheek with it.
 	# The side camera stands on the bruised cheek's side (head +X for
 	# face_l, -X for face_r), placed as the eye's side camera is.
 	# 1. cheek_on_skin: every vertex the bruise is drawn on lies within
@@ -369,7 +369,7 @@ func _run() -> void:
 	# 2. cheek_side_facing: bruise surface with alpha >= 0.3 that faces
 	#    the side camera (N.V > 0.25) covers at least 6 cm² (measured
 	#    36.8 / 13.2 cm² on 2026-11-08).
-	# 3. cheek_side_pixels (rendered runs only): pixels round the cheek in
+	# 3. cheek_side_pixels (rendered runs only): pixels around the cheek in
 	#    the side view are darker with the bruise than with it hidden,
 	#    same pose: at least 1500 px darker by > 0.04 in a 140 px box and
 	#    a mean darkening >= 0.012 (measured 12944 px, 0.071 / 6156 px,
@@ -405,7 +405,7 @@ func _run() -> void:
 			var cheek_px: Vector2 = _cam.unproject_position(cheek_pos) * Vector2(with_bruise.get_size()) / root.get_visible_rect().size
 			var cheek_dark := _darkened(with_bruise, cheek_bare, cheek_px, 70, 0.04)
 			_check(cheek_dark.x >= 1500.0 and cheek_dark.y >= 0.012, "cheek_side_pixels_" + cheek.right(1),
-				"%s side view: %d px darker by >0.04 round the cheek, mean darkening %.3f" % [cheek, int(cheek_dark.x), cheek_dark.y])
+				"%s side view: %d px darker by >0.04 around the cheek, mean darkening %.3f" % [cheek, int(cheek_dark.x), cheek_dark.y])
 	# Stills of both bruised cheeks: straight on, and close on the left
 	# cheek square to her face (head frame).
 	var head_cheeks: Transform3D = _her._rig.bone_world("head")
