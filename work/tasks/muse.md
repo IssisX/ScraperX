@@ -50,7 +50,7 @@ your own branches (Cory 11-05) and mail the rest:
 The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 1. J-060 #320: fight contact truth (Cory 11-08 7:12 AM, top job): real limb contacts, both bodies react, real reach.
-2. J-061 #321: her climbing on real support, every ladder (Cory 11-08).
+2. J-063 #321: her climbing on real support, every ladder (Cory 11-08).
 3. J-052 #292: the switchboard routes every item to its owner (11-06 2:26 PM).
 4. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
 5. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.

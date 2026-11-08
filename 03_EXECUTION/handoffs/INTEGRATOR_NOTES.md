@@ -12,7 +12,8 @@ merges only. Fit $13.6 per 1%; about 0.5%/h while runs are going (10:28 AM to 12
 
 ## Waiting on me
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt; it cracked #298. Use it for a problem stuck an hour or failed by others; the prompt goes whole in one block for Cory (11-07, 11-08).
-- Cory 7:12 AM Sun prompt (fight, damage, ladder): J-060 #320 and J-061 #321 opened, mailed to Muse (top two); J-062 #322 her warps (audit) To Grok for 10 AM; To ChatGPT research asks on #320/#321. Mine: the measured repro (helper), drawn limbs, visible damage (J-059), two silent recordings as proof, audio/haptic timing. #319 merged; cheek PR #323 open. Hair helper on claude/integrate-hair. Argon prompt: J-061 climb on real support plus the warps, answer on #321.
+- Cory 7:12 AM Sun prompt (fight, damage, ladder): J-060 #320 and J-063 #321 opened, mailed to Muse (top two); J-064 #322 her warps (audit) To Grok for 10 AM; To ChatGPT research asks on #320/#321. Mine: the measured repro (helper), drawn limbs, visible damage (J-059), two silent recordings as proof, audio/haptic timing. #319 merged; cheek PR #323 open. Hair helper on claude/integrate-hair. Argon prompt: J-063 climb on real support plus the warps, answer on #321.
+- Cory 11-08: American spelling in every word I write (PR #325 fixed docs and comments). One helper only now (89% Sun). Job numbers: read the highest J-NNN on all job issues first (J-061/J-062 were reused by mistake; now J-063/J-064).
 - From Muse (ruled 6:05 AM Sun, six mails): J-044l (b) the Turn fires from 3-5 m (told Cory; he may stop it); J-009 flags
   stay, 258 down is a traversal fix on the J-008 line; #298 gains PR waits on matron-sweep; #298 budget fix alone (loop kept
   on one line), no speed gate, StockHold made budget-bound, snag chain fix; J-021 job 4 cap waived; J-043 new hang rail
