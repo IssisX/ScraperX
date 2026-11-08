@@ -4,6 +4,9 @@ extends "res://presentation/ui/ui_test_identity_radio.gd"
 # of her (and the climber, in her hands), never the player's eye. Renders
 # only, not in CI, and no check: look_matron_moves, look_matron_hold and
 # look_matron_fatal.
+# Two sets render in CI for the eye (work/looks/sets.yml, J-068):
+# look_matron_grade_ladder for ladder_descent, and look_matron_fight (his
+# punch landing, seen through his own eye) for fight_contact.
 #
 # Each set puts her where a moment starts with the native tests' own setup
 # hooks (the bridge's TEST-ONLY debug_*: placed on her deck, her stage, her
@@ -31,6 +34,9 @@ const LOOK_STAND_CENTRE := 1.05   # her capsule's centre over her soles (Matron:
 const LOOK_STATE_GRAB := 12
 const LOOK_STATE_DANGLE := 14
 const LOOK_STATE_ARMPLAY := 15
+# Where the grade ladder set puts the climber: on the yard at grade, 24 m
+# from her ladder (x 12, z -123.6), within her figure's draw range.
+const LOOK_GRADE_PLAYER := Vector3(12.0, 0.95, -100.0)
 
 var _look_cam: Camera3D = null
 var _look_wall_ms := 0
@@ -56,6 +62,8 @@ func _look_set(set_name: String) -> bool:
 			ok = await _look_hold(true)
 		"grade_ladder":
 			ok = await _look_grade_ladder()
+		"fight":
+			ok = await _look_fight()
 	_look_render(true)
 	return ok
 
@@ -122,6 +130,11 @@ func _look_grade_ladder() -> bool:
 	var n: Object = _native()
 	if not bool(n.place_matron_home(11.0)):
 		return _fail("grade_ladder: 11 m home deck missing")
+	# Her figure is drawn only within DRAW_RANGE_M (140 m) of the player's
+	# eye (matron_view.gd), and the climber starts on the 154 deck: set him
+	# down at grade out in the yard, in range, or every still is empty.
+	n.debug_launch_player(LOOK_GRADE_PLAYER, Vector3.ZERO)
+	await _look_sim(1.0)
 	# Stage 1: Matron on the 11 m first floor, descending the grade ladder (x=12.0, z=-123.6) to 0 m.
 	n.debug_place_matron(Vector3(12.0, 11.0, -124.25))
 	n.debug_set_matron_stage(0)
@@ -140,6 +153,18 @@ func _look_grade_ladder() -> bool:
 	await _look_shot("grade_ladder_down_side",
 		"side profile descending the grade ladder: hands and feet gripping GradeLadderRung bars",
 		[90.0, -90.0, 115.0, -115.0], 4.0)
+	# A second moment of the same descent, lower down: from the same side as
+	# the first still, so the two frames show her moving down the rungs
+	# without a jump.
+	var down_low := func() -> bool:
+		var m := _matron_state()
+		return bool(m["climbing"]) and Vector3(m["position"]).y - LOOK_STAND_CENTRE < 4.0
+	if not await _look_until(down_low, 25.0, 0.0):
+		return _fail("grade_ladder: never low on the grade ladder (climbing %s, at %s)" % [
+			str(_matron_state()["climbing"]), str(_matron_state()["position"])])
+	await _look_shot("grade_ladder_down_low",
+		"lower on the same descent of the grade ladder, about 4 m off grade: hands and feet on GradeLadderRung",
+		[160.0, -160.0, 120.0, -120.0], 6.0)
 	var at_grade := func() -> bool:
 		var m := _matron_state()
 		return not bool(m["climbing"]) and Vector3(m["position"]).y - LOOK_STAND_CENTRE < 0.45
@@ -170,6 +195,94 @@ func _look_grade_ladder() -> bool:
 			str(_matron_state()["climbing"]), str(_matron_state()["position"])])
 	return true
 
+
+# --- his punch landing on her, through his own eye ---------------------------
+
+# Staged as perf_fight stages it (ui_test_act.gd): her hands held so a grab
+# cannot end it, changed (stage 2) so one punch does not, 1.2 m in front of
+# him on her 154 deck. The punch is a real PUNCH tap on the touch button; the
+# native judges the reach and the landing. His body is first person only, so
+# the stills are his eye: the tick the blow lands, and a moment after.
+const LOOK_FIGHT_GAP_M := 1.2
+const LOOK_FIGHT_REACT_S := 0.12
+const LOOK_FIGHT_TRIES := 6
+
+
+func _look_fight() -> bool:
+	var n: Object = _native()
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var me := _position()
+	n.debug_hold_matron_hands(60.0)
+	n.debug_place_matron(Vector3(me.x, LOOK_DECK, me.z - LOOK_FIGHT_GAP_M))
+	n.debug_set_matron_stage(2)
+	await _face(Vector2(0.0, -1.0))
+	# Placing her can run her one-time tower scan; let it pass first.
+	await _look_sim(1.5)
+	var hits := int(n.get_strike_state()["hits"])
+	for i in LOOK_FIGHT_TRIES:
+		me = _position()
+		var her: Vector3 = _matron_state()["position"]
+		if Vector2(her.x - me.x, her.z - me.z).length() > 2.0:
+			n.debug_place_matron(Vector3(me.x, LOOK_DECK, me.z - LOOK_FIGHT_GAP_M))
+			await _look_sim(0.3)
+		await _face(Vector2(0.0, -1.0))
+		# Changed, she is low (on all fours): look down at her head the way
+		# a thumb on the view would before throwing.
+		var eye: Vector3 = _main._camera.global_position
+		var head: Vector3 = _main._matron_view.head_world_position()
+		var flat := Vector2(head.x - eye.x, head.z - eye.z).length()
+		await _tilt(clampf(atan2(head.y - eye.y, maxf(flat, 0.1)), -1.2, 0.5))
+		_tap(1, _center(&"punch"))
+		if await _look_until(func() -> bool: return int(n.get_strike_state()["hits"]) > hits, 1.5, 0.0):
+			break
+		await _look_sim(0.5)
+	if int(n.get_strike_state()["hits"]) <= hits:
+		return _fail("fight: no punch landed in %d PUNCH taps (strikes %d)" % [LOOK_FIGHT_TRIES,
+			int(n.get_strike_state()["strikes"])])
+	var s: Dictionary = n.get_strike_state()
+	await _look_eye_shot("punch_contact", "his punch the tick it lands on her: his fist at the hit point on her body",
+		"hit_point=%s impulse_ns=%.1f move=%d" % [str(s["hit_point"]), float(s["impulse"]), int(s["move"])])
+	await _look_sim(LOOK_FIGHT_REACT_S)
+	await _look_eye_shot("punch_reaction", "%.2f s after the punch landed: her body's reaction" % LOOK_FIGHT_REACT_S,
+		"blow_mps=%.3f state=%d" % [float(_matron_state()["blow_mps"]), int(_matron_state()["state"])])
+	return true
+
+
+# A still through the game's own camera (his eye), the simulation held for it,
+# the HUD hidden: <capture prefix>_<shot>.png and its index line.
+func _look_eye_shot(shot: String, what: String, notes: String) -> void:
+	_main.freeze_sim = true
+	_main._camera.current = true
+	await _frames(1)
+	var hidden: Array = []
+	for child in _main.get_children():
+		if child is CanvasLayer and (child as CanvasLayer).visible:
+			(child as CanvasLayer).visible = false
+			hidden.append(child)
+	_look_render(true)
+	var path := "%s_%s.png" % [_capture_prefix, shot]
+	var saved := false
+	if not _capture_prefix.is_empty() and DisplayServer.get_name() != "headless":
+		for i in LOOK_HOLD_FRAMES:
+			await RenderingServer.frame_post_draw
+		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+		saved = get_viewport().get_texture().get_image().save_png(path) == OK
+	_look_render(false)
+	for layer in hidden:
+		(layer as CanvasLayer).visible = true
+	_main.freeze_sim = false
+	var m := _matron_state()
+	var line := "%s\t%.2f\t%d\t%d\t%s\t-\t%s\teye %s" % [shot, _sim_s(), int(m["state"]), int(m["stage"]), what,
+		path.get_file() if saved else "(not drawn)", notes]
+	print("SCRAPERX_LOOK_SHOT %s" % line)
+	if not _capture_prefix.is_empty():
+		var index_path := "%s_index.tsv" % _capture_prefix
+		DirAccess.make_dir_recursive_absolute(index_path.get_base_dir())
+		var f := FileAccess.open(index_path, FileAccess.READ_WRITE if FileAccess.file_exists(index_path) else FileAccess.WRITE)
+		if f != null:
+			f.seek_end()
+			f.store_line(line)
+			f.close()
 
 
 # --- her hands on him: the grab, upside down, the rip; the fatality ----------

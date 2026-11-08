@@ -415,6 +415,63 @@ class RepoConfig(unittest.TestCase):
         looks = yaml.safe_load((root / "work/looks/sets.yml").read_text(encoding="utf-8"))
         for s in looks["sets"].values():
             self.assertTrue((root / s["rubric"]).is_file(), s["rubric"])
+            for job in rules.known_defect_jobs(s):   # J-068: a known defect names a job, J-NNN
+                self.assertRegex(job, rules.JOB_TITLE.pattern + "$")
+
+
+class EyeKnownDefect(unittest.TestCase):
+    """J-068: a set's known defect, owned by an open job, blocks only that job's PR; other sets are unchanged."""
+
+    LOOKS = {"artifact_prefix": "godot-audits-", "sets": {
+        "approach": {"rubric": "approach.md", "frames": ["a.png"]},
+        "ladder": {"rubric": "ladder.md", "known_defect": "J-063", "frames": ["l.png"]}}}
+
+    def run_eye(self, verdicts: dict, pr_job: str, open_jobs=("J-063",)) -> tuple[str, str]:
+        import tempfile
+        tmp = pathlib.Path(tempfile.mkdtemp())
+        for name in ("approach.md", "ladder.md"):
+            (tmp / name).write_text("1. a rubric line\n", encoding="utf-8")
+        gh = FakeGH()
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh, sw.now, sw.root, sw.looks, sw.lines = gh, NOW, tmp, self.LOOKS, []
+        sw.out = sw.lines.append
+        sw._jobs = {j: {"number": 1, "title": f"{j} a job", "labels": []} for j in open_jobs}
+        sw.frames = lambda run_id: {"a.png": b"\x89PNG", "l.png": b"\x89PNG"}
+        sw.job_cap = lambda ctx: Decimal("1")
+        answer = {"sets": [{"set": k, "verdict": v, "rubric_line": "1. a rubric line", "frame": "f.png",
+                            "reason": "seen"} for k, v in verdicts.items()]}
+        sw.paid = lambda *a, **k: claude_calls.Result(answer, "end_turn", "claude-opus-5-5", 1, 1)
+        sw.eye(facts(number=9), {"job": pr_job, "run_id": 7, "proof_url": "https://example.invalid/run/7"})
+        self.assertEqual(len(gh.posted), 1)
+        body = gh.posted[0][1]
+        return body.splitlines()[0], body
+
+    def test_owner_jobs_pr_is_blocked_by_its_sets_fix(self):
+        head, body = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-063")
+        self.assertTrue(head.endswith(": FIX**"), head)
+        self.assertNotIn("known defect", body)
+
+    def test_other_pr_is_shown_the_fix_but_not_blocked(self):
+        head, body = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-067")
+        self.assertTrue(head.endswith(": LAND**"), head)
+        self.assertIn("- ladder: FIX (known defect of J-063: shown, not blocking this PR)", body)
+        got = v(body, T1, rules.BOT_LOGIN)   # the merge rule reads the posted comment as an eye LAND
+        self.assertEqual((got.kind, got.verdict), ("eye", "LAND"))
+
+    def test_closed_owner_job_makes_the_set_count_again(self):
+        head, _ = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-067", open_jobs=())
+        self.assertTrue(head.endswith(": FIX**"), head)
+
+    def test_set_without_the_field_is_unchanged(self):
+        head, body = self.run_eye({"approach": "FIX", "ladder": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": FIX**"), head)
+        self.assertNotIn("known defect", body)
+        head, _ = self.run_eye({"approach": "LAND", "ladder": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": LAND**"), head)
+
+    def test_an_unjudged_set_still_blocks(self):
+        head, _ = self.run_eye({"approach": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": FIX**"), head)
 
 
 class SessionBudget(unittest.TestCase):
