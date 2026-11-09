@@ -26,8 +26,9 @@ Every REVIEW line gets a one-line verdict from the reviewer.
    time. No velocity is set or added outside it, not even a small one, and a push-off is
    force times time, never a speed change. Check each REVIEW velocity line: is it a read, or does
    the change in speed come from a budgeted force?
-2. **The lunge is its own move**, checked against its own limits (9,800 N, 65 kW), never folded
-   into the general budget or used to cover another move.
+2. **The Turn lunge shares the one budget**: its external drive stays inside 8,000 N and
+   the shared 44 kW, with no separate 9,800 N / 65 kW allowance. Internal upper-body motors
+   charge positive work to the same 44 kW, not equivalent external force to the 8,000 N.
 3. **No per-route code.** Nothing keyed on which deck, ladder, route, region or transition she is
    on, by id, name or a world coordinate. Climbing is general skills over the steel she scans. A
    number that only makes sense at one place in the tower is a per-route case.
@@ -43,11 +44,12 @@ Every REVIEW line gets a one-line verdict from the reviewer.
 7. **Tests run were the right ones.** The groups named in the handoff reach the changed functions
    (look them up in `REPO_MAP.md`), and nothing was run twice.
 8. **No duplicate work.** The change does not redo or undo another agent's in-flight work (check
-   the assignment board on issue #3).
+   the live assignment board on issue #340).
 9. **Repo text.** American spelling; no AI model names in repo files; docs-only commits end with
    `[skip ci]`, and nothing else does.
 
 ## Step 3: the verdict
 
-Post on issue #3, addressed to the writer: the script's last line, then each item above as
+Post on the PR being reviewed (or its job issue if there is no PR), addressed to the writer:
+the script's last line, then each item above as
 `n PASS` / `n FAIL file:line why` / `n N/A`, then `LAND` or `DO NOT LAND`.
