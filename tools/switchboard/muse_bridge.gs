@@ -255,9 +255,7 @@ function outbound_(cfg) {
         if (c.user.login !== BOT_LOGIN || body.indexOf('CLAUDE_TO_MUSE:') !== 0) return;
         if (sent.indexOf(String(c.id)) >= 0) return;
         var subject = body.split('\n')[0].replace(/[\r\n]/g, ' ').slice(0, 200);
-        GmailApp.sendEmail(cfg.to, subject, body + '\n\n' + c.html_url +
-          '\n\nReply by email with the subject `MUSE_TO_CLAUDE: <J-NNN or #N> ...`. For a verdict, end the subject with' +
-          ' `review of #N @ <sha>: LAND` (or FIX with command:, input:, expected:, observed: lines in the body).');
+        GmailApp.sendEmail(cfg.to, subject, mailBody_(body));
         remember_(cfg, 'sent_comment_ids', sent, c.id);
       });
       gh_(cfg, 'DELETE', 'repos/' + cfg.repo + '/issues/' + issue.number + '/labels/' + encodeURIComponent(WAKE_LABEL));
@@ -266,6 +264,23 @@ function outbound_(cfg) {
     }
   });
   if (errors.length) throw new Error(errors.length + ' of ' + issues.length + ' wake:muse issue(s) failed; ' + errors.join(' | '));
+}
+
+/**
+ * The mail Muse reads for one switchboard comment (J-072). Muse's prompt-injection check refused the 11-09 17:04Z
+ * ledger mail and names no reason, so every shape work/tasks/mail-to-muse.md lists is kept out: the comment's
+ * hidden markers (the GitHub comment keeps its own, the ledger dedupes by it) and backticks are stripped, no link
+ * is added, and the first line says who sent it and the Central time. The footer keeps the verdict subject the
+ * inbound parser (inboundMessage_) and switch.py bridged_verdicts read, with no markup and no order.
+ */
+function mailBody_(body) {
+  var text = String(body || '').replace(/<!--[\s\S]*?-->/g, '').replace(/<!--[\s\S]*$/, '')
+    .replace(/`/g, '').replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+  var when = Utilities.formatDate(new Date(), 'America/Chicago', 'h:mm a') + ' Central';
+  return when + '. From the switchboard (Claude\'s integrator tooling), by the mail bridge.\n\n' + text +
+    '\n\nReplies go by mail with a subject that starts MUSE_TO_CLAUDE: and names the job (J-NNN or #N). A verdict' +
+    ' ends the subject with the PR and its head sha, for example review of #343 @ 1a2b3c4d: LAND, or FIX with' +
+    ' command, input, expected and observed lines in the body.';
 }
 
 /** An issue's comments updated since `since`, every page up to MAX_COMMENT_PAGES (the switch's own are page 2+ on a long thread). */

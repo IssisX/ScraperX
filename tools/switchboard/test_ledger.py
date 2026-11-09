@@ -294,6 +294,23 @@ class Escalation(unittest.TestCase):
         self.sweep(gh, f, NOW + 9 * H, body)
         self.assertEqual(gh.comments, [])                   # every stage told once
 
+    def test_muse_mail_has_no_markup_links_or_orders(self):
+        # J-072: Muse's injection check refused the 11-09 17:04Z ledger mail (backticked branches, "act, or say").
+        f = self.red_branch()
+        texts = []
+        body = BOARD
+        for at in (NOW + 2.5 * H, NOW + 4.5 * H):           # stage 1, then stage 2
+            gh = FakeGH()
+            body = self.sweep(gh, f, at, body)
+            self.assertEqual(len(gh.comments), 1)
+            texts.append(gh.comments[0][1])
+        for text in texts:                                  # (no link: test_once_per_stage_then_escalated)
+            self.assertIn("- fb-bot/integrate-j044b-x", text)  # the branch, plain
+            self.assertNotIn("`", text)
+            for phrase in ("act, or say", "You hold"):
+                self.assertNotIn(phrase, text)
+            self.assertIn("The next step for each is a PR, a fix, or one line on its issue saying why it waits.", text)
+
     def test_keys_in_comments_count_as_sent(self):
         f = self.red_branch()
         it = L.classify(f, NOW + 2.5 * H, ROSTER).items[0]
