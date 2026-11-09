@@ -3,6 +3,7 @@
  "blocked": null,
  "branches": {
   "claude/integrate-j072-chatgpt-wake": "6c21ea5757c4c5040612dac0718b4d5272adbd22",
+  "claude/integrate-j072-grokbot-watch": "3d7458470b20e808764a024a46a6f5c2c979408b",
   "claude/integrate-j072-mail-shape": "8c25d13a1d29462c42c762640b70140eb800e3ed",
   "claude/integrate-j072-pipe-holes": "9435daec64a7ca5f107a397cfcce1325e721a7d5",
   "claude/integrate-j072-reconciler": "a3e78417ff861e6f124d78888361ff1f6acc2de9",
@@ -12,8 +13,8 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T20:47:00Z",
- "head": "a1a67229a4123adcd6630f755bc5d4d700ead855",
+ "deadline": "2026-11-09T20:35:48Z",
+ "head": "fb9f51412e0ab100cb2c9c859c2d95779cb98c5e",
  "issue": 350,
  "job": "J-072",
  "landed": {
@@ -21,6 +22,11 @@
    "6c21ea5757c4c5040612dac0718b4d5272adbd22",
    "merged #361",
    "2026-11-09T19:05:16Z"
+  ],
+  "claude/integrate-j072-grokbot-watch": [
+   "3d7458470b20e808764a024a46a6f5c2c979408b",
+   "merged #362",
+   "2026-11-09T19:35:48Z"
   ],
   "claude/integrate-j072-mail-shape": [
    "8c25d13a1d29462c42c762640b70140eb800e3ed",
@@ -49,7 +55,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T16:51:16Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T19:35:48Z",
+    "why": "reassigned to grok_bot"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead_lettered": null,
    "due": "2026-11-09T23:00:00Z",
@@ -71,7 +80,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T16:55:36Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T19:35:48Z",
+    "why": "reassigned to grok_bot"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead_lettered": null,
    "due": "2026-11-09T23:00:00Z",
@@ -174,7 +186,10 @@
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T19:35:48Z",
+    "why": "new head fb9f5141"
+   },
    "created": "2026-11-09T19:16:15Z",
    "dead": "2026-11-09T22:47:00Z",
    "dead_lettered": null,
@@ -192,6 +207,78 @@
    "version": "a1a67229a4123adcd6630f755bc5d4d700ead855",
    "via": "relay",
    "what": "review #360 @ a1a67229"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T19:35:48Z",
+   "dead": "2026-11-09T23:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:47:00Z",
+   "id": "O-506966e5",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-09T19:35:48Z",
+   "missing": 0,
+   "ref": "PR|#360",
+   "sends": 1,
+   "thread": 360,
+   "to": "codex",
+   "unseen": null,
+   "version": "fb9f51412e0ab100cb2c9c859c2d95779cb98c5e",
+   "via": "relay",
+   "what": "review #360 @ fb9f5141"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T16:51:16Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T19:35:48Z",
+   "dead": "2026-11-09T21:35:48Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T20:35:48Z",
+   "id": "O-a34f6e29",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-09T19:35:48Z",
+   "missing": 0,
+   "ref": "ASK|ask on #350",
+   "sends": 1,
+   "thread": 350,
+   "to": "grok_bot",
+   "unseen": null,
+   "version": "6745908975",
+   "via": "watch",
+   "what": "ask from Claude on #350"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T16:55:36Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T19:35:48Z",
+   "dead": "2026-11-09T21:35:48Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T20:35:48Z",
+   "id": "O-1ac5a17e",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-09T19:35:48Z",
+   "missing": 0,
+   "ref": "ASK|ask on #350",
+   "sends": 1,
+   "thread": 350,
+   "to": "grok_bot",
+   "unseen": null,
+   "version": "6746020480",
+   "via": "watch",
+   "what": "ask from Claude on #350"
   }
  ],
  "outcome": null,
@@ -206,6 +293,6 @@
   362
  ],
  "review": "waiting",
- "state": "landable",
- "updated": "2026-11-09T19:16:15Z"
+ "state": "review",
+ "updated": "2026-11-09T19:35:48Z"
 }

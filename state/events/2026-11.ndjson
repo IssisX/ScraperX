@@ -324,3 +324,27 @@
 {"ev": "ledger_sent", "job": "", "key": "6145d7f8b56df488", "ref": "ASK|ask on #340", "stage": 1, "t": "2026-11-09T19:16:15Z", "to": "grok"}
 {"attempt": 1, "ev": "would_send", "id": "O-61dc50bf", "job": "J-072", "ref": "PR|#360", "send": 1, "t": "2026-11-09T19:16:15Z", "to": "codex", "via": "relay"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T19:16:15Z", "tries": 1}
+{"ev": "reassigned", "frm": "grok", "job": "J-071", "t": "2026-11-09T19:35:48Z", "to": "grok_bot"}
+{"branch": "claude/integrate-j072-grokbot-watch", "ev": "landed", "how": "merged #362", "job": "J-072", "sha": "3d7458470b20e808764a024a46a6f5c2c979408b", "t": "2026-11-09T19:35:48Z"}
+{"due": "2026-11-09T21:47:00Z", "ev": "obligation", "id": "O-506966e5", "job": "J-072", "kind": "review", "ref": "PR|#360", "t": "2026-11-09T19:35:48Z", "to": "codex", "via": "relay"}
+{"due": "2026-11-09T20:35:48Z", "ev": "obligation", "id": "O-a34f6e29", "job": "J-072", "kind": "ask", "ref": "ASK|ask on #350", "t": "2026-11-09T19:35:48Z", "to": "grok_bot", "via": "watch"}
+{"due": "2026-11-09T20:35:48Z", "ev": "obligation", "id": "O-1ac5a17e", "job": "J-072", "kind": "ask", "ref": "ASK|ask on #350", "t": "2026-11-09T19:35:48Z", "to": "grok_bot", "via": "watch"}
+{"ev": "closed", "id": "O-97ddacad", "job": "J-072", "t": "2026-11-09T19:35:48Z", "why": "reassigned to grok_bot"}
+{"ev": "closed", "id": "O-0f1f9498", "job": "J-072", "t": "2026-11-09T19:35:48Z", "why": "reassigned to grok_bot"}
+{"ev": "closed", "id": "O-61dc50bf", "job": "J-072", "t": "2026-11-09T19:35:48Z", "why": "new head fb9f5141"}
+{"ev": "state", "frm": "merged", "job": "J-071", "t": "2026-11-09T19:35:48Z", "to": "proof"}
+{"ev": "state", "frm": "landable", "job": "J-072", "t": "2026-11-09T19:35:48Z", "to": "review"}
+{"ev": "matched", "ident": "PR|#363", "job": "", "t": "2026-11-09T19:35:48Z"}
+{"ev": "ledger_sent", "job": "", "key": "3a177f90e0e6b7ff", "ref": "ASK|ask on #278", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "9ce5ca921972f20d", "ref": "ASK|ask on #114", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "a8541db0688c860c", "ref": "ASK|ask on #118", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "79f06a15a45bca96", "ref": "ASK|ask on #128", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "543c639999448ae3", "ref": "ASK|ask on #116", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "b50b6afc5baa95ff", "ref": "ASK|ask on #278", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "919ebd219b115036", "ref": "ASK|ask on #116", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "6f360b046574f663", "ref": "ASK|ask on #312", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "40ce619e865861d2", "ref": "ASK|ask on #240", "stage": 1, "t": "2026-11-09T19:35:48Z", "to": "claude"}
+{"attempt": 1, "ev": "would_send", "id": "O-506966e5", "job": "J-072", "ref": "PR|#360", "send": 1, "t": "2026-11-09T19:35:48Z", "to": "codex", "via": "relay"}
+{"attempt": 1, "ev": "would_send", "id": "O-a34f6e29", "job": "J-072", "ref": "ASK|ask on #350", "send": 1, "t": "2026-11-09T19:35:48Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 1, "ev": "would_send", "id": "O-1ac5a17e", "job": "J-072", "ref": "ASK|ask on #350", "send": 1, "t": "2026-11-09T19:35:48Z", "to": "grok_bot", "via": "watch"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T19:35:48Z", "tries": 1}
