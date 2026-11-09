@@ -1548,3 +1548,104 @@ class PipeHealth(unittest.TestCase):
         gh = PipeGH(comments=[pipe_comment(BRIDGE, 30 * 60, login="IssisX")])
         self.assertEqual(pipe_switch(gh).pipe_health(), [])
         self.assertEqual(gh.posted, [])
+
+
+class FactsGH:
+    """The reads pr_facts makes for PR #256 (job J-042, issue #300): a table by path."""
+
+    repo = "IssisX/ScraperX"
+
+    def __init__(self, pr_comments=(), issue_comments=(), board=(), with_issue=True):
+        self.table = {
+            "repos/IssisX/ScraperX/pulls/256": {"mergeable": True},
+            f"repos/IssisX/ScraperX/commits/{HEAD}": {"commit": {"committer": {"date": T0}}},
+            "repos/IssisX/ScraperX/issues/256/comments": list(pr_comments),
+            "repos/IssisX/ScraperX/pulls/256/reviews": [],
+            "repos/IssisX/ScraperX/pulls/256/files": [],
+            "repos/IssisX/ScraperX/issues/300/comments": list(issue_comments),
+            f"repos/IssisX/ScraperX/issues/{switch.BOARD_ISSUE}/comments": list(board),
+            "repos/IssisX/ScraperX/issues?labels=job&state=open":
+                [{"number": 300, "title": "J-042 windup", "labels": []}] if with_issue else [],
+        }
+
+    def get(self, path, accept=""):
+        if "/actions/workflows/" in path:
+            return {"workflow_runs": []}
+        return self.table[path]
+
+    def paged(self, path, key=""):
+        return list(self.table[path])
+
+
+def bridged(first: str, login: str = "IssisX", at: str = T1) -> dict:
+    return {"body": f"**Muse (via email bridge): {first}**\n\nLooks right.\n\n_Mailed 9:00 AM Central._",
+            "user": {"login": login}, "created_at": at}
+
+
+class BridgedVerdicts(unittest.TestCase):
+    """The bridge's Issues-only token cannot comment on a PR (11-09), so Muse's mailed verdict on #256 lands on the
+    job issue or the board. The switch must still count it for #256, and only for #256."""
+
+    PR = {"number": 256, "head": {"sha": HEAD, "ref": "fb-bot/integrate-j042"}, "base": {"ref": rules.TRUNK},
+          "draft": False, "labels": [], "title": "J-042", "body": "Job: J-042\n"}
+
+    def facts(self, gh):
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh, sw.team, sw.review_key, sw._jobs, sw._board = gh, TEAM, "", None, None
+        return sw.pr_facts(self.PR)
+
+    def test_a_verdict_on_the_job_issue_counts_for_its_pr(self):
+        facts, ctx = self.facts(FactsGH(issue_comments=[bridged("J-042 review of #256 @ 1a2b3c4d: LAND")]))
+        (v,) = facts.verdicts
+        self.assertEqual((v.who, v.verdict, v.sha, v.kind), ("Muse", "LAND", "1a2b3c4d", "review"))
+        self.assertTrue(rules.names_head(v, HEAD))
+        self.assertEqual(ctx["comments"], [])   # the PR's own thread is unchanged: markers are read there as before
+
+    def test_a_verdict_on_the_board_counts_when_there_is_no_job_issue(self):
+        gh = FactsGH(board=[bridged("review of #256 @ 1a2b3c4d: FIX")], with_issue=False)
+        gh.table["repos/IssisX/ScraperX/issues/256/comments"] = []
+        facts, _ = self.facts(gh)
+        (v,) = facts.verdicts
+        self.assertEqual((v.who, v.verdict), ("Muse", "NOTE"))   # a FIX with no repro lines reads as a NOTE, as on the PR
+
+    def test_only_bridge_posts_naming_this_pr_count(self):
+        facts, _ = self.facts(FactsGH(
+            issue_comments=[bridged("review of #2560 @ 1a2b3c4d: LAND"),                     # another PR
+                            bridged("J-042 done, see #256: LAND"),                           # not a review of #256
+                            {"body": "**Muse (review of #256 @ 1a2b3c4d): LAND**", "user": {"login": "IssisX"},
+                             "created_at": T1},                                              # not the bridge's
+                            bridged("review of #256 @ 1a2b3c4d: LAND", login="someone")],    # not a verdict login
+            board=[bridged("review of #256 @ 1a2b3c4d: LAND", login="someone")]))
+        self.assertEqual(list(facts.verdicts), [])
+
+    def test_a_verdict_on_the_pr_still_counts_once(self):
+        facts, _ = self.facts(FactsGH(pr_comments=[bridged("review of #256 @ 1a2b3c4d: LAND")]))
+        self.assertEqual(len(facts.verdicts), 1)
+
+
+class MuseAskNeverOnAPr(unittest.TestCase):
+    """A review ask to Muse goes on the job issue, else the board, never on the PR (its wake:muse label stuck the
+    bridge from 11-07 to 11-09: the Issues-only token cannot remove a PR's label)."""
+
+    def test_no_job_issue_asks_on_the_board(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        ((number, body),) = gh.posted
+        self.assertEqual(number, switch.BOARD_ISSUE)
+        self.assertTrue(body.startswith("CLAUDE_TO_MUSE: J-031 review #9 @ 1a2b3c4d"))
+        self.assertEqual(gh.writes, [("POST", f"repos/IssisX/ScraperX/issues/{switch.BOARD_ISSUE}/labels")])
+
+    def test_an_ask_on_the_board_is_found_next_sweep(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        gh2 = rf.FakeGH([dict(rf.ask_comment("muse", 0.5))])   # the board (and the PR) now hold the ask's marker
+        rf.make(gh2).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        self.assertEqual(gh2.posted, [])
+
+    def test_other_agents_still_ask_on_the_pr(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "chatgpt", "")
+        self.assertEqual(gh.posted[0][0], 9)

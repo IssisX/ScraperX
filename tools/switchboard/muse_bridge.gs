@@ -4,12 +4,14 @@
  * Both directions, every five minutes:
  *   OUT  The switchboard asks Muse by posting a comment that starts `CLAUDE_TO_MUSE:` on an issue and
  *        labeling the issue `wake:muse`. This script mails each such comment it has not sent yet to
- *        Muse, then removes the label.
+ *        Muse, then removes the label. A labeled PR is skipped untouched (the token cannot clear it).
  *   IN   Mail whose subject starts `MUSE_TO_CLAUDE:` (from an allowed sender, proven by more than the
  *        forgeable From line: see authentic_) is posted as a comment:
- *        on #N when the subject names `#N`, else on the job issue `J-NNN` the subject names, else on
- *        the board #340. Its first line is `**Muse (via email bridge): <subject>**`, so a subject like
- *        `MUSE_TO_CLAUDE: review of #100 @ 1a2b3c4d: LAND` is a verdict the switch reads.
+ *        on #N when the subject names `#N` and #N is an issue, else on the job issue `J-NNN` the subject
+ *        names (or, for a PR #N, the job issue whose title names #N), else on the board #340. Never on a
+ *        PR: this token cannot comment there. Its first line is `**Muse (via email bridge): <subject>**`,
+ *        so a subject like `MUSE_TO_CLAUDE: J-042 review of #100 @ 1a2b3c4d: LAND` is a verdict the
+ *        switch reads for #100 wherever it lands (switch.py bridged_verdicts).
  *
  * Setup (once): Editor > Services (+) > add "Gmail API" (identifier Gmail); Project Settings > Script
  * properties > add GITHUB_TOKEN; then run `setup` and allow. Keep the project unshared: anyone with
@@ -193,6 +195,9 @@ function outbound_(cfg) {
   var since = new Date(Date.now() - COMMENT_DAYS * 86400000).toISOString();
   var errors = [];
   issues.forEach(function (issue) {
+    // A PR is never touched: this Issues-only token can neither remove a PR's label nor comment there, and the
+    // 403 on PR #343's label stopped the whole bridge (11-07 to 11-09). The switch never labels a PR now.
+    if (issue.pull_request) return;
     try {  // one issue's failure never stops the others; its label stays on, so the next tick retries it
       issueComments_(cfg, issue.number, since).forEach(function (c) {
         var body = c.body || '';
@@ -259,12 +264,24 @@ function inboundThread_(cfg, thread, done, doneLabel, jobList) {
     var target = 0;
     var num = rest.match(/#(\d{1,6})\b/);
     var job = rest.match(/\bJ-\d{3,}[a-z]?\b/);  // J-044b is its own job, like the switchboard reads it
-    if (num) {
+    var pr = num ? pullOf_(cfg, Number(num[1])) : null;
+    var byJob = function (id) {
+      jobList().forEach(function (it) { if (!target && it.title.indexOf(id + ' ') === 0) target = it.number; });
+    };
+    if (num && !pr) {
       target = Number(num[1]);
+    } else if (pr) {
+      // A PR: its job issue, found the way the switch finds it (the PR's `Job:` line, then a job title naming
+      // #N), so the switch reads the verdict there; then the subject's J-NNN.
+      var line = String(pr.body || '').match(/^\s*Job:\s*(J-\d{3,}[a-z]?)\b/m);
+      if (line) byJob(line[1]);
+      var named = new RegExp('#' + num[1] + '\\b');
+      jobList().forEach(function (it) { if (!target && named.test(it.title)) target = it.number; });
+      if (!target && job) byJob(job[0]);
     } else if (job) {
-      jobList().forEach(function (it) { if (!target && it.title.indexOf(job[0] + ' ') === 0) target = it.number; });
+      byJob(job[0]);
     }
-    if (!target) target = BOARD_ISSUE;
+    if (!target) target = BOARD_ISSUE;  // the first line keeps `#N` and `review of #N @ sha`, so the switch still reads it
     var when = Utilities.formatDate(m.getDate(), 'America/Chicago', 'h:mm a') + ' Central';
     var text = stripQuoted_(m.getPlainBody() || '').slice(0, MAX_BODY);
     gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + target + '/comments',
@@ -272,6 +289,22 @@ function inboundThread_(cfg, thread, done, doneLabel, jobList) {
     remember_(cfg, 'posted_message_ids', done, m.getId());
   });
   thread.addLabel(doneLabel);
+}
+
+/**
+ * #number as a pull request (its issue record, body included), or null when it is an issue. This token cannot
+ * comment on a PR, so mail about one goes on its job issue or the board. A 403 or 404 on the read counts as a
+ * PR (the token may not see it), with no body; any other error throws,
+ * so the thread is retried next tick rather than posted in the wrong place.
+ */
+function pullOf_(cfg, number) {
+  try {
+    var it = gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues/' + number);
+    return it && it.pull_request ? it : null;
+  } catch (e) {
+    if (/HTTP (403|404)\b/.test(String((e && e.message) || e))) return {};
+    throw e;
+  }
 }
 
 /**

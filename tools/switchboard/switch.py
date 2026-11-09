@@ -277,6 +277,7 @@ class Switch:
         self._ledger: tuple[str, str | None] | None = None
         self._load: tuple[dict[str, int], dict[str, int]] | None = None   # review_load, once per run
         self._claude = None
+        self._board: list[dict] | None = None   # the board's comments, once per run (board_comments)
 
     # ---------- facts ----------
     def jobs(self) -> dict[str, dict]:
@@ -386,6 +387,10 @@ class Switch:
         job = rules.job_of_pr(pr.get("body")) or \
             rules.jobs_by_pr_mention({j: it["title"] for j, it in self.jobs().items()}).get(number, "")
         issue = self.jobs().get(job)
+        # Muse's mailed verdicts land on the job issue or the board (the bridge cannot comment on a PR).
+        off_pr = self.board_comments() + (self.gh.paged(f"repos/{self.gh.repo}/issues/{issue['number']}/comments")
+                                          if issue else [])
+        verdicts += self.bridged_verdicts(number, off_pr)
         labels = [l["name"] for l in pr.get("labels", [])] + ([l["name"] for l in issue["labels"]] if issue else [])
         needs = frozenset(l.split(":", 1)[1] for l in labels if l.startswith("needs:"))
         files = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/files")
@@ -854,7 +859,8 @@ class Switch:
         return list(dict.fromkeys(keys))
 
     def muse(self, steered: list[Steered]) -> int:
-        """Muse's items (J-052): one comment per fb-bot/ PR or branch with new items, labeled wake:muse so
+        """Muse's items (J-052): one comment per fb-bot/ PR or branch with new items, on the PR's job issue or the board
+        (never the PR: the bridge's Issues-only token cannot clear a PR's label), labeled wake:muse so
         the bridge mails it. A muse-<KIND> key is sent once; a new head is a new key. At most
         MAX_MUSE_COMMENTS per sweep; the rest come next sweep. Returns how many comments were posted.
         A key counts as delivered only when its label write succeeded: the marker is edited into the
@@ -863,7 +869,11 @@ class Switch:
         for s in steered:
             reported |= set(self.muse_keys(s.ctx.get("comments") or []))
         items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
-        if any(not it.target.startswith("#") for it in items):
+        homes = {f"#{s.facts.number}": self.muse_home(s.ctx) for s in steered}
+        wheres = {homes.get(it.target, BOARD_ISSUE) for it in items}
+        for where in sorted(wheres - {BOARD_ISSUE}):   # a job issue: where this sweep's notices on its PRs go
+            reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{where}/comments")))
+        if BOARD_ISSUE in wheres:
             reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")))
             for old in OLD_BOARDS:   # a key sent while an older board was live is still sent (#107 -> #340 re-sent them)
                 reported |= set(self.muse_keys(self.bounded_comments(old, MAX_OLD_BOARD_PAGES)))
@@ -883,10 +893,13 @@ class Switch:
         for target, group in sorted(by_target.items()):
             if posted >= MAX_MUSE_COMMENTS:
                 break
-            where = BOARD_ISSUE if not target.startswith("#") else int(target[1:])
+            # Never on the PR itself: the bridge's token is Issues-only, so it can neither remove wake:muse from a
+            # PR nor comment there (a PR's label stuck the bridge from 11-07 to 11-09). The PR stays in the subject.
+            where = homes.get(target, BOARD_ISSUE)
             name = jobs.get(target) or target
             kinds = " ".join(sorted({it.kind for it in group}, key=INBOX_ORDER.index))
-            lines = [f"CLAUDE_TO_MUSE: {name} {kinds} on #{where} @ {group[0].head[:8]}", ""]
+            about = target if target.startswith("#") else f"#{where}"
+            lines = [f"CLAUDE_TO_MUSE: {name} {kinds} on {about} @ {group[0].head[:8]}", ""]
             for it in group:
                 lines.append(f"- {it.line}")
                 lines += [f"  {line}" for line in it.finding.split("\n")] if it.finding else []
@@ -904,6 +917,32 @@ class Switch:
                               f"muse: mark #{where} delivered")
             posted += 1
         return posted
+
+    @staticmethod
+    def muse_home(ctx: dict) -> int:
+        """Where a Muse notice about a PR goes: its open job issue, else the board. Never the PR (see muse())."""
+        return int((ctx.get("issue") or {}).get("number") or BOARD_ISSUE)
+
+    def board_comments(self) -> list[dict]:
+        """The board's comments, read once per run (the review asks and off-PR verdicts of PRs with no job issue)."""
+        if getattr(self, "_board", None) is None:
+            self._board = self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")
+        return self._board
+
+    def bridged_verdicts(self, number: int, comments: list[dict]) -> list[rules.Verdict]:
+        """Muse's verdicts on PR #number that the mail bridge posted off the PR (on the job issue or the board,
+        since its Issues-only token cannot comment on a PR): a bridge post whose first line names
+        `review of #number`. The verdict itself is read as on the PR (parse_verdict: first line, logins)."""
+        out = []
+        names = re.compile(rf"\breview of #{number}\b", re.IGNORECASE)
+        for c in comments:
+            body = (c.get("body") or "").lstrip()
+            if not body.startswith(BRIDGE_POST) or not names.search(body.split("\n", 1)[0]):
+                continue
+            v = rules.parse_verdict(body, c["created_at"], c["user"]["login"], self.team)
+            if v:
+                out.append(v)
+        return out
 
     def bounded_comments(self, number: int, pages: int) -> list[dict]:
         """An issue's comments, oldest first, at most `pages` pages of 100."""
@@ -1206,15 +1245,19 @@ class Switch:
         return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
-        """Where review asks live (the job issue, else the PR) and its comments."""
+        """Where review asks live (the job issue, else the PR) and its comments. With no job issue, the board's
+        comments are read too: Muse's ask goes there, never on the PR (see muse())."""
         where = ctx["issue"]["number"] if ctx.get("issue") else facts.number
-        comments = ctx["comments"] if where == facts.number else self.gh.paged(f"repos/{self.gh.repo}/issues/{where}/comments")
-        return where, comments
+        if where != facts.number:
+            return where, self.gh.paged(f"repos/{self.gh.repo}/issues/{where}/comments")
+        return where, list(ctx["comments"]) + self.board_comments()
 
     def ask_review(self, facts: rules.PrFacts, ctx: dict, agent: str, why: str) -> None:
         where, comments = self.ask_thread(facts, ctx)
         if agent == "codex":   # the Codex app answers "@codex review" on the PR itself
             where, comments = facts.number, ctx["comments"]
+        if agent == "muse" and where == facts.number:   # wake:muse never goes on a PR (the bridge's token cannot clear it)
+            where = BOARD_ISSUE
         tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
         if self.marked(comments, f"ask-{agent}", facts.number, facts.head_sha):
             self.out(f"ASKED       #{facts.number} review already asked of {agent} on #{where}")
@@ -1235,6 +1278,9 @@ class Switch:
                 f"expected, observed; a FIX without them counts as a NOTE).\n\n"
                 f"{self.review_facts(facts, ctx)}\n\n{tag}")
         self.gh.comment(where, body, f"ask {name} to review #{facts.number} on #{where}")
+        if where == BOARD_ISSUE and getattr(self, "_board", None) is not None:   # this run's later reads see the ask
+            self._board.append({"body": body, "user": {"login": rules.BOT_LOGIN},
+                                "created_at": self.now.strftime("%Y-%m-%dT%H:%M:%SZ")})
         if agent == "muse":
             self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
                           f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
