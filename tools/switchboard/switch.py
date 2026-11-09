@@ -466,12 +466,21 @@ class Switch:
 
     def target_prs(self, only_pr: int, only_sha: str) -> list[dict]:
         """The open PRs the switch acts on: never the integrator's inbox PR (J-051)."""
-        prs = [p for p in self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open") if not is_inbox(p)][:MAX_PRS]
+        prs = [p for p in self.listing(f"repos/{self.gh.repo}/pulls?state=open") if not is_inbox(p)][:MAX_PRS]
         if only_pr:
             prs = [p for p in prs if p["number"] == only_pr]
         if only_sha:
             prs = [p for p in prs if p["head"]["sha"] == only_sha]
         return prs
+
+    def listing(self, path: str, key: str = "") -> list:
+        """A whole-repo listing read once per run (J-072): the open PRs and the proof runs of the inbox window were
+        each read two or three times a sweep. Only read-only listings go through here, and the auto-open's PR is
+        never one they need (a green branch is never a RED-BRANCH)."""
+        memo = self.__dict__.setdefault("_listings", {})
+        if (path, key) not in memo:
+            memo[(path, key)] = self.gh.paged(path, key)
+        return list(memo[(path, key)])
 
     def stale(self, facts: rules.PrFacts) -> bool:
         return rules.is_stale(facts.head_committed_at, self.now.strftime("%Y-%m-%dT%H:%M:%SZ"), ACT_WITHIN_DAYS)
@@ -838,20 +847,21 @@ class Switch:
             text = f"the auto-open failed ({why}); the next sweep tries again."
         self.auto_pr_failed += (InboxItem("AUTO-PR-FAILED", branch, sha, f"AUTO-PR-FAILED {where}: {text}"),)
 
-    def auto_open_prs(self) -> int:
+    def auto_open_prs(self, only: set[str] | None = None) -> int:
         """Open PRs for finished fb-bot/integrate-* branches with no PR yet (J-047).
 
         A branch qualifies when its head commit message carries a `Job: J-NNN` line and the proof on
         that exact head is green. At most MAX_AUTO_PRS per sweep, in branch-name order. A branch
         whose head already had a PR (open, closed or merged) is never opened again. Every failure on a
         branch is an AUTO-PR-FAILED item for this sweep's inbox (J-051); GitHub's refusal also stops this
-        sweep's auto-open. Returns how many PRs were opened (or would be, in a dry run)."""
+        sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
+        Returns how many PRs were opened (or would be, in a dry run)."""
         self.auto_pr_failed = ()
         branches = [b for b in self.gh.paged(f"repos/{self.gh.repo}/branches")
-                    if b["name"].startswith(AUTO_PR_PREFIX)]
+                    if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
-        open_refs = {p["head"]["ref"] for p in self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open")}
+        open_refs = {p["head"]["ref"] for p in self.listing(f"repos/{self.gh.repo}/pulls?state=open")}
         opened = 0
         for b in sorted(branches, key=lambda x: x["name"]):
             if opened >= MAX_AUTO_PRS:
@@ -1179,8 +1189,8 @@ class Switch:
     def _items(self, steered: list[Steered], reported: frozenset[str], prefix: str) -> list[InboxItem]:
         """Both audiences' items from one read: prefix "" is the integrator's, "muse-" is Muse's (J-052)."""
         since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
-        runs = self.gh.paged(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{since}",
-                             "workflow_runs")
+        runs = self.listing(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{since}",
+                            "workflow_runs")
         items: list[InboxItem] = []
         for s in steered:
             items += self.pr_inbox_items(s, runs, reported, prefix)
@@ -1323,7 +1333,7 @@ class Switch:
         Each item goes to the branch's owner (J-052)."""
         from urllib.parse import quote
         mine = prefix == "muse-"
-        open_refs = {p["head"]["ref"] for p in self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open")}
+        open_refs = {p["head"]["ref"] for p in self.listing(f"repos/{self.gh.repo}/pulls?state=open")}
         newest: dict[str, dict] = {}
         for r in runs:
             name = r.get("head_branch") or ""
@@ -2035,6 +2045,82 @@ def rate_probe(sw: "Switch") -> None:
             sw.out(f"RATE        {AGENT_TOKEN_ENV}: its rate could not be read ({http_status(err.detail) or 'no status'})")
 
 
+FULL_EVERY = dt.timedelta(minutes=30)     # a full pass at least this often: the ledger, pipe health, reconciler
+SWEEP_OVERLAP = dt.timedelta(minutes=3)   # each delta read starts this long before the last sweep's stamp
+PROOF_SPAN = dt.timedelta(hours=6)        # proof runs created this long before the stamp can finish after it
+COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP")  # waiting on the author's next head: nothing changes them by the clock
+
+
+def iso_z(t: dt.datetime) -> str:
+    return t.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def sweep_state_ok(state) -> bool:
+    return (isinstance(state, dict) and isinstance(state.get("prs"), dict) and
+            parse_time(str(state.get("stamp") or "")) is not None and parse_time(str(state.get("full_at") or "")) is not None)
+
+
+@dataclasses.dataclass
+class SweepDelta:
+    prs: set[int]                 # the open PRs to read this sweep
+    comments: int                 # comments posted since the last sweep
+    finished: set[str]            # branches whose proof run finished since the last sweep
+    finished_auto: set[str]       # of those, the auto-open's (fb-bot/integrate-*)
+
+
+def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
+    """What changed since the last sweep, in two reads (J-072): the proof runs and the comments since its stamp.
+    A PR is read when it is new, its head or updated_at moved (a push, label, review or PR comment), a proof run
+    on its branch finished, a comment landed on it, on its job issue or names it, or its last decision was not
+    COLD (a clock-driven wait: Codex, the review fallback, a merge). The PR listing is the sweep's own."""
+    since = parse_time(state["stamp"]) - SWEEP_OVERLAP
+    repo = sw.gh.repo
+    got = sw.gh.get(f"repos/{repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{iso_z(since - PROOF_SPAN)}"
+                    "&per_page=100") or {}
+    runs = got.get("workflow_runs") or []
+    finished = {r.get("head_branch") or "" for r in runs if r.get("status") == "completed"
+                and (parse_time(r.get("updated_at") or "") or since) >= since}
+    comments = sw.gh.get(f"repos/{repo}/issues/comments?since={iso_z(since)}&per_page=100") or []
+    nums = {p["number"] for p in prs}
+    recs = state.get("prs") or {}
+    if len(runs) >= 100 or len(comments) >= 100:   # more than one page: read everything rather than guess
+        return SweepDelta(set(nums), len(comments), finished, {b for b in finished if b.startswith(AUTO_PR_PREFIX)})
+    changed: set[int] = set()
+    for p in prs:
+        rec = recs.get(str(p["number"]))
+        if (not isinstance(rec, dict) or rec.get("head") != (p.get("head") or {}).get("sha")
+                or rec.get("updated") != p.get("updated_at") or not rec.get("cold")
+                or (p.get("head") or {}).get("ref") in finished):
+            changed.add(p["number"])
+    by_issue: dict[int, set[int]] = {}
+    for k, rec in recs.items():
+        if isinstance(rec, dict) and rec.get("job_issue"):
+            by_issue.setdefault(int(rec["job_issue"]), set()).add(int(k))
+    for c in comments:
+        try:
+            thread = int((c.get("issue_url") or "").rsplit("/", 1)[1])
+        except (ValueError, IndexError):
+            continue
+        hit = {thread} | by_issue.get(thread, set()) | {int(r) for r in re.findall(r"#(\d{1,6})\b", (c.get("body") or "")[:600])}
+        changed |= hit & nums
+    return SweepDelta(changed, len(comments), finished, {b for b in finished if b.startswith(AUTO_PR_PREFIX)})
+
+
+def pr_record(sw, pr: dict, facts, ctx: dict, seen, ask: bool) -> dict:
+    """What the next sweep compares (sweep_delta): the head, updated_at, the job issue, and whether only a new
+    head or comment can change this PR (cold)."""
+    cold = seen is None or seen.decision.action in COLD_ACTIONS
+    if ask and not sw.stale(facts):   # the ask part is done with a head once its review and eye are posted
+        author = sw.team.vendor_of_branch(facts.head_ref)
+        comments = ctx.get("comments") or []
+        review = rules.needs_review(facts, author, sw.team) or rules.needs_security_pass(facts)
+        cold = (cold and (not review or sw.marked(comments, "review", facts.number, facts.head_sha))
+                and (not rules.needs_eye(facts) or sw.marked(comments, "eye", facts.number, facts.head_sha)))
+    issue = (ctx.get("issue") or {}).get("number") if isinstance(ctx, dict) else None
+    return {"head": (pr.get("head") or {}).get("sha"), "updated": pr.get("updated_at"), "job_issue": issue,
+            "cold": bool(cold)}
+
+
 def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | None = None) -> int:
     """One run's parts (main). Exit status: 2 only when the sweep itself could not finish: a part failed, or
     every PR read failed. One PR's error is that PR's line and a step-summary line, not an outage (J-072: run
@@ -2078,7 +2164,16 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             write_summary(summary, "Rate floor", rate_lines())
             return 0
     sw.merge_only = low("review asks, owner labels, superseded closes")
-    if steer and not (args.pr or args.sha) and not sw.merge_only:
+    if sw.merge_only:
+        sw.out(f"::warning::RATE FLOOR  {sw.gh.remaining} of {sw.gh.limit} calls left (floor {floor()}): the merge path "
+               "only this run. The call cut was not enough.")
+    targeted = bool(args.pr or args.sha)
+    # J-072: read only what changed. A full pass every FULL_EVERY (and on a cold cache); between, only the PRs that
+    # changed since the last sweep are read, and the whole-sweep parts run only when something changed.
+    part_key = "ask" if ask and not steer else "steer" if not ask else "all"
+    state = sw.gh.state.get(part_key) if isinstance(sw.gh.state, dict) else None
+    full = targeted or not sweep_state_ok(state) or now - parse_time(state["full_at"]) >= FULL_EVERY
+    if steer and not targeted and not sw.merge_only and full:
         sw.sweep_owner_labels()
     failed = 0
     if ask:
@@ -2087,7 +2182,17 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     item_errors: list[str] = []
     deferred: list[str] = []
     prs = sw.target_prs(args.pr, args.sha)
+    delta: SweepDelta | None = None if full else sweep_delta(sw, prs, state)
+    if delta is not None:
+        sw.out(f"FAST SWEEP  {len(delta.prs)} of {len(prs)} PR(s) changed since {central(parse_time(state['stamp']))}; "
+               f"the full pass (ledger, pipe health, reconciler, owner labels) is every {hours(FULL_EVERY)}")
+    records: dict[str, dict] = dict((state or {}).get("prs") or {}) if delta is not None else {}
+    read = 0
     for pr in prs:
+        if delta is not None and pr["number"] not in delta.prs:
+            continue
+        read += 1
+        before = len(steered)
         try:   # one PR's trouble never stops the others; every action is safe to repeat next run
             facts, ctx = sw.pr_facts(pr)
             if ask:
@@ -2096,15 +2201,19 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                 if not sw.merge_only:
                     sw.close_superseded(facts, ctx)
                 sw.steer_pr(facts, ctx, steered)
+            records[str(pr["number"])] = pr_record(sw, pr, facts, ctx, steered[-1] if len(steered) > before else None, ask)
         except RateLimited as err:
             deferred.append(f"#{pr['number']}")
+            records.pop(str(pr["number"]), None)   # read again next sweep
             sw.out(f"RATE LIMIT  #{pr['number']}: left for the next sweep ({err.detail[:120]})")
         except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
             item_errors.append(f"#{pr['number']}: {type(err).__name__}: {err}")
+            records.pop(str(pr["number"]), None)
             sw.out(f"ERROR       #{pr['number']}: {type(err).__name__}: {err}")
-    if len(prs) >= 2 and len(item_errors) == len(prs):
+    if read >= 2 and len(item_errors) == read:
         failed += 1   # no PR could be read: the sweep did not finish
-        sw.out(f"ERROR       every one of the {len(prs)} PRs failed: the sweep did not finish")
+        sw.out(f"ERROR       every one of the {read} PRs read failed: the sweep did not finish")
+    quiet = delta is not None and not delta.prs and not delta.comments and not delta.finished
 
     def part(name: str, fn, *extra) -> object:
         nonlocal failed
@@ -2120,11 +2229,12 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             sw.out(f"ERROR       {name}: {type(err).__name__}: {err}")
         return None
 
-    if steer:
-        part("auto-open", sw.auto_open_prs)
-    if steer and not (args.pr or args.sha):   # the inbox reads a whole sweep, so a run for one PR posts none
+    if steer and (delta is None or delta.finished_auto):   # a fast sweep: only branches whose proof just finished
+        part("auto-open", lambda: sw.auto_open_prs(None if delta is None else delta.finished_auto))
+    if steer and not targeted and not quiet:   # the inbox reads a whole sweep, so a run for one PR posts none
         part("inbox", lambda: sw.inbox(steered))
         part("muse", lambda: sw.muse(steered))   # J-052: Muse's items go to Muse by comment + wake:muse
+    if steer and not targeted and delta is None:   # the full pass: everything below reads the whole repo
         alarms = part("pipe health", sw.pipe_health)   # bridge-health: once per incident on the board
         write_summary(summary, "PIPE ALARM", [plain(a) for a in alarms or []])
 
@@ -2141,8 +2251,13 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                 reconciler.sweep(sw, steered, BOARD_ISSUE, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH}, {INBOX_PR})
             except Exception as err:   # noqa: BLE001
                 sw.out(f"ERROR       reconciler (shadow, the sweep goes on): {type(err).__name__}: {err}")
+    if steer and not (args.pr or args.sha):
         if not args.dry_run:   # J-072: the end of a full non-dry sweep (a run for one PR or sha is not one)
             sweep_heartbeat(hc_sweep, failed, sw.out)
+    if not targeted and isinstance(sw.gh.state, dict) and not sw.merge_only:
+        open_now = {str(p["number"]) for p in prs}
+        sw.gh.state[part_key] = {"stamp": iso_z(now), "full_at": iso_z(now) if delta is None else state["full_at"],
+                                 "prs": {k: v for k, v in records.items() if k in open_now}}
     write_summary(summary, "Item errors (the sweep finished; each is retried next sweep)",
                   [plain(e[:200]) for e in item_errors])
     write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]

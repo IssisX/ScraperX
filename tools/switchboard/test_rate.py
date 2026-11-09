@@ -76,7 +76,7 @@ class Conditional(unittest.TestCase):
             self.assertEqual(second.get(PATH), [1])
             second.save_etags(path)
             with open(path, encoding="utf-8") as f:
-                self.assertEqual(list(json.load(f)), [f"{PATH}|"])   # the comments path was not read: dropped
+                self.assertEqual(list(json.load(f)["etags"]), [f"{PATH}|"])   # the comments path was not read: dropped
 
     def test_a_broken_cache_file_is_ignored(self):
         with tempfile.TemporaryDirectory() as d:

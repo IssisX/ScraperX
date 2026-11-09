@@ -83,6 +83,7 @@ class GitHub:
         self.limit: int | None = None       # x-ratelimit-limit: 1,000 an hour for GITHUB_TOKEN, 5,000+ for an App
         self.etags: dict[str, dict] = {}    # path (and Accept) -> {"etag", "body"}
         self.used: set[str] = set()         # cache keys read or written this run (only these are saved)
+        self.state: dict = {}               # the switch's sweep state (switch.py run_sweep), saved with the cache
         self.calls = self.not_modified = 0
 
     # the ETag cache carried between runs
@@ -92,9 +93,13 @@ class GitHub:
                 got = json.load(f)
         except (OSError, ValueError):
             return
-        if isinstance(got, dict):
-            self.etags = {k: v for k, v in got.items()
-                          if isinstance(v, dict) and isinstance(v.get("etag"), str) and isinstance(v.get("body"), str)}
+        if not isinstance(got, dict):
+            return
+        if got.get("v") == 2:   # {"v": 2, "etags": {...}, "state": {...}}: the switch's sweep state rides along
+            self.state = got.get("state") if isinstance(got.get("state"), dict) else {}
+            got = got.get("etags") if isinstance(got.get("etags"), dict) else {}
+        self.etags = {k: v for k, v in got.items()
+                      if isinstance(v, dict) and isinstance(v.get("etag"), str) and isinstance(v.get("body"), str)}
 
     def save_etags(self, path: str) -> None:
         keep: dict[str, dict] = {}
@@ -107,7 +112,7 @@ class GitHub:
             total += len(entry["body"])
         try:
             with open(path, "w", encoding="utf-8") as f:
-                json.dump(keep, f)
+                json.dump({"v": 2, "etags": keep, "state": self.state}, f)
         except OSError as err:
             self.log(f"NOTE        the ETag cache was not saved: {err}")
 
@@ -180,7 +185,10 @@ class GitHub:
                     rate_tries += 1
                     if rate_tries >= RATE_TRIES:
                         detail = detail.replace(token, "[token]") if token else detail
+                        self.log(f"::warning::RATE LIMIT  {method} {path}: GitHub's rate limit answered "
+                                 f"{RATE_TRIES} times; left for the next sweep (the call cut was not enough)")
                         raise RateLimited(method, path, detail, status)
+                    self.log(f"::warning::RATE LIMIT  {method} {path}: HTTP {status or '?'}, backing off once")
                     self._backoff(rate_tries, headers)
                     continue
                 if "HTTP 4" in detail or 400 <= status < 500:  # a client error will not get better on retry
