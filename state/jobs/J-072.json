@@ -14,7 +14,7 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T20:35:48Z",
- "head": "fb9f51412e0ab100cb2c9c859c2d95779cb98c5e",
+ "head": "4a5b81df9458b3242dab2f029d0bd26fa95f0eff",
  "issue": 350,
  "job": "J-072",
  "landed": {
@@ -213,7 +213,10 @@
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T19:54:17Z",
+    "why": "new head 4a5b81df"
+   },
    "created": "2026-11-09T19:35:48Z",
    "dead": "2026-11-09T23:47:00Z",
    "dead_lettered": null,
@@ -279,6 +282,30 @@
    "version": "6746020480",
    "via": "watch",
    "what": "ask from Claude on #350"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T19:54:17Z",
+   "dead": "2026-11-09T23:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:47:00Z",
+   "id": "O-fffc7a1d",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-09T19:54:17Z",
+   "missing": 0,
+   "ref": "PR|#360",
+   "sends": 1,
+   "thread": 360,
+   "to": "codex",
+   "unseen": null,
+   "version": "4a5b81df9458b3242dab2f029d0bd26fa95f0eff",
+   "via": "relay",
+   "what": "review #360 @ 4a5b81df"
   }
  ],
  "outcome": null,
@@ -294,5 +321,5 @@
  ],
  "review": "waiting",
  "state": "review",
- "updated": "2026-11-09T19:35:48Z"
+ "updated": "2026-11-09T19:54:17Z"
 }

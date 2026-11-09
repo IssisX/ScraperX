@@ -6,7 +6,7 @@
   "claude/integrate-j071-ci-timeout": "1db855d65f497782c8d66fe1e108749ddef7c601"
  },
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T23:00:00Z",
@@ -123,7 +123,7 @@
  "prs": [
   363
  ],
- "review": "",
- "state": "proof",
- "updated": "2026-11-09T19:35:48Z"
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-09T19:54:17Z"
 }
