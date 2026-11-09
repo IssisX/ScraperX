@@ -365,6 +365,100 @@ class Escalation(unittest.TestCase):
         self.assertEqual(len(gh.comments), 15 - L.MAX_NOTICES)   # the rest next sweep, none twice
 
 
+def branch(name, sha, hours, closed=(), vs_trunk="ahead", ahead=(), ahead_by=None):
+    """A branch with no open PR, with the facts the reader adds for one: its closed PRs (newest first) and its
+    trunk compare (`ahead` are SHA keys, oldest first)."""
+    b = L.BranchIn(name, SHA[sha], ago(hours))
+    b.closed, b.vs_trunk = tuple(closed), vs_trunk
+    b.ahead = tuple(SHA[k] for k in ahead)
+    b.ahead_by = len(ahead) if ahead_by is None else ahead_by
+    return b
+
+
+class Resolved(unittest.TestCase):
+    """A branch with no open PR whose work already landed, or whose PR was closed at its head, is counted with its
+    reason, never listed as needing a PR (the ledger's first live sweep escalated six such branches)."""
+
+    def green(self, *branches):
+        key = {v: k for k, v in SHA.items()}
+        return feed(branches=list(branches),
+                    runs=[run(10 + i, b.name, key[b.sha], 1, "success") for i, b in enumerate(branches)])
+
+    def test_landed(self):
+        f = self.green(branch("claude/integrate-ledger", "a", 5, vs_trunk="behind"),
+                       branch("fb-bot/integrate-sense-near-followup", "b", 6, vs_trunk="identical"),
+                       branch("claude/integrate-j090-live", "c", 2, vs_trunk="ahead", ahead=("c",)))
+        f.runs.append(run(20, "claude/integrate-ledger", "a", 0.5))   # a red run on a landed head
+        led = L.classify(f, NOW, ROSTER)
+        refs = {it.ref for it in led.items}
+        self.assertNotIn("claude/integrate-ledger", refs)
+        self.assertNotIn("fb-bot/integrate-sense-near-followup", refs)
+        self.assertEqual(led.accounted["branch:claude/integrate-ledger"], "landed")
+        self.assertEqual(led.counts["branch landed"], 2)
+        self.assertIn("landed", led.accounted["run:20"])
+        self.assertEqual(by_ref(led, "claude/integrate-j090-live").state, "green, no PR: open one")
+        self.assertEqual(led.dropped(f), [])
+        self.assertIn("2 branch landed", L.section(led, NOW, "noon", [], []))
+
+    def test_merged_at_head(self):
+        f = self.green(branch("claude/integrate-j051b-autopr-errors", "a", 30, vs_trunk="",
+                              closed=[L.ClosedPr(287, SHA["a"], True)]))
+        led = L.classify(f, NOW, ROSTER)
+        self.assertEqual([it.ref for it in led.items if it.kind in ("BRANCH", "SUPERSEDED")], [])
+        self.assertEqual(led.accounted["branch:claude/integrate-j051b-autopr-errors"],
+                         "its PR #287 was merged at this head")
+        self.assertEqual(led.counts["branch at its merged PR's head"], 1)
+        self.assertEqual(led.dropped(f), [])
+
+    def test_closed_unmerged_at_head(self):
+        f = self.green(branch("claude/integrate-american-spelling", "b", 30, vs_trunk="diverged", ahead=("b",),
+                              closed=[L.ClosedPr(325, SHA["b"], False), L.ClosedPr(300, SHA["c"], True)]))
+        led = L.classify(f, NOW, ROSTER)
+        self.assertEqual([it.ref for it in led.items if it.kind in ("BRANCH", "SUPERSEDED")], [])
+        self.assertEqual(led.accounted["branch:claude/integrate-american-spelling"],
+                         "its PR #325 was closed at this head")
+        self.assertEqual(led.counts["branch at its closed PR's head"], 1)
+        self.assertEqual(led.dropped(f), [])
+
+    def test_commits_after_a_closed_pr_are_live_again(self):
+        f = self.green(
+            # merged with a merge commit: the PR's head is in trunk, the one commit on the branch came after it
+            branch("claude/integrate-j051-asks-since", "a", 3, vs_trunk="diverged", ahead=("a",),
+                   closed=[L.ClosedPr(289, SHA["0"], True)]),
+            # closed unmerged at c, then two commits on top
+            branch("fb-bot/integrate-j052-x", "e", 3, vs_trunk="diverged", ahead=("c", "d", "e"),
+                   closed=[L.ClosedPr(330, SHA["c"], False)]),
+            # the trunk compare failed: still listed, and says it could not count
+            branch("grok/integrate-j053-y", "1", 3, vs_trunk="", closed=[L.ClosedPr(331, SHA["2"], False)]))
+        led = L.classify(f, NOW, ROSTER)
+        self.assertEqual(by_ref(led, "claude/integrate-j051-asks-since").state,
+                         "1 commit after closed PR #289; green, no PR: open one")
+        self.assertEqual(by_ref(led, "fb-bot/integrate-j052-x").state,
+                         "2 commits after closed PR #330; green, no PR: open one")
+        self.assertTrue(by_ref(led, "grok/integrate-j053-y").state.startswith(
+            "commits after closed PR #331 (not counted"))
+        self.assertEqual(led.counts, {})
+        self.assertEqual(led.dropped(f), [])
+
+    def test_resolved_branches_are_neither_superseded_nor_current(self):
+        f = self.green(branch("claude/integrate-j060-old", "a", 20, vs_trunk="behind"),    # landed: not superseded
+                       branch("claude/integrate-j060-mid", "b", 10, vs_trunk="ahead", ahead=("b",)),
+                       branch("claude/integrate-j060-new", "c", 1, vs_trunk="",            # closed at head: not current
+                              closed=[L.ClosedPr(340, SHA["c"], False)]))
+        led = L.classify(f, NOW, ROSTER)
+        self.assertFalse([it for it in led.items if it.kind == "SUPERSEDED"])
+        self.assertEqual(by_ref(led, "claude/integrate-j060-mid").kind, "BRANCH")
+        self.assertEqual(led.accounted["branch:claude/integrate-j060-old"], "landed")
+        self.assertEqual(led.dropped(f), [])
+
+    def test_a_branch_whose_open_pr_was_not_read_is_that_prs(self):
+        f = feed(branches=[branch("claude/integrate-j061", "a", 2)], open_prs=[299],
+                 open_heads={"claude/integrate-j061": 299})
+        led = L.classify(f, NOW, ROSTER)
+        self.assertEqual(led.accounted["branch:claude/integrate-j061"], "PR|#299")
+        self.assertEqual([it.ref for it in led.items], ["#299"])
+
+
 class Superseded(unittest.TestCase):
     def test_older_branch_of_a_job_is_superseded(self):
         f = feed(branches=[L.BranchIn("fb-bot/integrate-j059-cheek", SHA["a"], ago(10)),
