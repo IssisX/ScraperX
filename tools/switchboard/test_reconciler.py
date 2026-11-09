@@ -655,17 +655,19 @@ class RedTeam(unittest.TestCase):
         self.assertTrue(mails[0][0].startswith("To Cory: Needs you (1)"))
 
     def test_d_a_clock_that_stopped_is_a_line_for_cory(self):
+        # The reconciler runs on the hourly full pass (11-09 audit: a 25-minute bar read every quiet hour as a dead
+        # clock), so an hour between passes is normal and only a gap past PASS_GAP (90 min) is a line for Cory.
         h = Harness()
         h.run(feed(), NOW)
-        h.run(feed(), NOW + 10 * M)
-        self.assertEqual(h.state().cory["batches"], [])
-        h.run(feed(), NOW + 50 * M)   # 40 minutes with no pass
+        h.run(feed(), NOW + 60 * M)
+        self.assertEqual(h.state().cory["batches"], [], "an hourly pass is not a gap")
+        h.run(feed(), NOW + 160 * M)   # 100 minutes with no pass
         batches = h.state().cory["batches"]
         self.assertEqual(len(batches), 1)
-        self.assertIn(f"PIPE: no switchboard pass from {R.central(NOW + 10 * M)} to {R.central(NOW + 50 * M)} "
-                      "Central (40 min", batches[0]["text"])
-        h.run(feed(), NOW + 60 * M)
-        h.run(feed(), NOW + 3 * H)   # a later gap is its own line, once
+        self.assertIn(f"PIPE: no switchboard pass from {R.central(NOW + 60 * M)} to {R.central(NOW + 160 * M)} "
+                      "Central (100 min", batches[0]["text"])
+        h.run(feed(), NOW + 220 * M)
+        h.run(feed(), NOW + 340 * M)   # a later gap is its own line, once
         texts = [b["text"] for b in h.state().cory["batches"]]
         self.assertEqual(len(texts), 2)
         self.assertIn("(120 min", texts[1])
@@ -1200,6 +1202,21 @@ class ReplayFindings(unittest.TestCase):
             self.assertFalse(any(ob["id"] in b for b in bodies if not b.startswith("To Cory")), job)
             self.assertIsNone(ob["dead_lettered"], job)
         self.assertEqual(sum(1 for b in bodies if "from before the reconciler went live" in b), 1, "once")
+
+    def test_an_item_sent_before_the_cutover_is_never_re_sent_after_it(self):
+        # 11-09 audit: 5 "again: no ack yet" re-sends after the cutover, of items the pre-guard live pass had sent
+        # (their markers set sent_by, so the cutover did not backlog them). Opened before the cutover means backlog.
+        h = Harness(roster=MROSTER)
+        h.run(feed(prs=[pr(431, "fb-bot/integrate-j531-x", job="J-531", action="FIX-CI", proof="red: x")]), NOW)
+        st = h.state(NOW)
+        ob = h.obs("J-531", NOW)[0]
+        cut = R.iso(NOW + H)
+        st.cory.update(mode="live", backlog={"at": cut, "by": {}})
+        self.assertTrue(R.before_cutover(st, dict(ob, sent_by="live", sends=1)))
+        self.assertFalse(R.before_cutover(st, dict(ob, reopened=R.iso(NOW + 2 * H))), "reopened after: owed afresh")
+        self.assertFalse(R.before_cutover(st, dict(ob, created=R.iso(NOW + 2 * H))), "opened after: a new item")
+        st.cory["mode"] = "shadow"
+        self.assertFalse(R.before_cutover(st, ob), "only once live")
 
 
 if __name__ == "__main__":

@@ -97,7 +97,9 @@ CORY_EVERY = dt.timedelta(hours=3)   # the "Needs you" batch goes to Cory at mos
 CORY_SLOTS = {False: ((8, 17), (11, 17), (14, 17), (17, 17), (20, 17), (23, 17)),
               True: ((9, 17), (13, 17), (17, 17), (21, 17))}
 PIPE_KEYS = ("gap:", "token:", "down:")   # a new pipe item may go at once, inside hours
-PASS_GAP = dt.timedelta(minutes=25)  # no pass this long (the clock dispatches every 10 min): a PIPE line for Cory
+PASS_GAP = dt.timedelta(minutes=90)  # no reconciler pass this long: a PIPE line for Cory. It runs on the hourly
+# full pass (switch.py FULL_EVERY), so 25 min read every quiet hour as a dead clock (11-09 audit); the 10-minute
+# sweeps have their own watchdog in muse_bridge.gs and pipe health.
 TOKEN_WARN = dt.timedelta(days=7)    # a token expiring this soon: a line for Cory
 MAX_BATCHES = 48                     # Cory batches kept in state/cory.json
 COMPUTING = "GitHub is still computing mergeability"
@@ -1199,6 +1201,15 @@ def cutover(state: State, live: bool, roster: L.Roster, now: dt.datetime, events
     events("cutover", "", obligations=n, unreported=len(dropped))
 
 
+def before_cutover(state: State, ob: dict) -> bool:
+    """Opened before the reconciler went live (11-09 audit): even one a shadow-era or pre-guard pass already sent
+    (its marker sets sent_by) is backlog, never re-sent one by one. It comes back only by ripening afresh."""
+    cut = (state.cory.get("backlog") or {}).get("at")
+    if not cut or state.cory.get("mode") != "live" or at(ob["created"]) >= at(cut):
+        return False
+    return not (ob.get("reopened") and at(ob["reopened"]) >= at(cut))   # reopened after the cutover: owed afresh
+
+
 def deliver(state: State, p: Pass, outbox, now: dt.datetime, events: Events, memo: dict, out) -> str:
     """Send what is owed: the first send, one re-send at the due time, a dead-letter at twice the due span.
     Returns "" or "backoff" when GitHub rate-limited a send (the rest wait for the next pass)."""
@@ -1218,7 +1229,7 @@ def deliver(state: State, p: Pass, outbox, now: dt.datetime, events: Events, mem
                            via=ob["via"], ref=ob["ref"], send=src[0], attempt=src[1])
                 else:
                     events("delivery_found", rec["job"], id=ob["id"], send=src[0])
-            if ob.get("backlog") or old_claude_ask(ob, now):
+            if ob.get("backlog") or old_claude_ask(ob, now) or before_cutover(state, ob):
                 continue   # never nagged or dead-lettered one by one: one line to Cory (needs_you)
             if ob["via"] == "cory":
                 if not ob["sends"]:
@@ -1499,8 +1510,8 @@ def pipe_alarms(state: State, p: Pass, now: dt.datetime) -> list[tuple[str, str]
     if last and now - last >= PASS_GAP:
         mins = round((now - last).total_seconds() / 60)
         out.append((f"gap:{iso(last)}", f"- Needs you: PIPE: no switchboard pass from {central(last)} to "
-                    f"{central(now)} Central ({mins} min; the clock dispatches every 10 min). The 10-minute trigger "
-                    "(muse_bridge.gs) or its health check is not running; since " + central(last) + " Central."))
+                    f"{central(now)} Central ({mins} min; the full pass runs hourly). The switchboard's full pass is not "
+                    "running; since " + central(last) + " Central."))
     for name, exp in sorted((p.tokens or {}).items()):
         if exp and exp - now <= TOKEN_WARN:
             gone = " (it has expired)" if exp <= now else ""
