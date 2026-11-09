@@ -31,7 +31,7 @@ him again.
 - Never re-run a check that passed on the same code. The full suite, every touch scenario and the Android
   build are CI's job: push `<agent>/integrate-<job>` (that runs the proof). A push that changes only notes,
   rules or the switchboard skips the game build (`ci/proof_scope.py`).
-- Read PASS/FAIL lines and the lines around a failure, never whole logs.
+- Read PASS/FAIL lines and the lines near a failure, not whole logs.
 - Local tests count only with CI's compilers and flags (host g++ 13.3, NDK `29.0.14206865`, the CMake flags
   in `wo000-delivery-spine.yml`).
 
@@ -50,7 +50,7 @@ him again.
   with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
-- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way (11-04: he found /compact himself), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
+- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way (11-04: he found /compact), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
 
 ## The game
 
@@ -108,7 +108,7 @@ him again.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session: more than two when the work needs it (11-09), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  max until the system works (Cory 11-09); remind him of it only when he is saving quota; `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
+  max till the system works (11-09); raise it only when he saves quota; `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
 - **Context:** the window is 833k (Cory 11-09: compacts near 650k; `/autocompact` sets it live; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
