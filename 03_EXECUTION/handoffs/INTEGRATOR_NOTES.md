@@ -4,7 +4,7 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794183050 (2026-11-09 00:10:50Z, 6:10 PM Central)
+Read through: 1794232703 (2026-11-09 13:58:23Z, 7:58 AM Central)
 
 ## Meter
 90% Sun 7:46 AM, still 90% after J-068, 91% at 11:21 AM with the fight read running (Cory). Helpers: one at high (Cory 11-08), free (J-068 done); read packs (Cory pick A 11-08): #320 fight done (comment 6724648307, checked; mailed Muse 11:27 AM); next pack Cory decides (reminder off) (functions, their history, what not to undo, what passing looks like), Argon only for stuck jobs; measuring leftovers go to Muse (free).
@@ -17,6 +17,7 @@ Read through: 1794183050 (2026-11-09 00:10:50Z, 6:10 PM Central)
 - From Muse (ruled Sun morning, six mails; rulings on each job's issue): J-044l (b) the Turn fires from 3-5 m (told Cory). Pushed,
   PRs/CI pending: J-049 PR1, J-044b grant, J-044d, J-015 slice 1, #299 P1, J-045. #316 eye OK, waits on Codex (workflow).
 - 6:20 PM rulings mailed: J-044c keep whole-body body_velocity, fix the test's snag phase (protected, To ChatGPT on #298);
+- 7:50-7:57 AM Mon rulings mailed: J-044l situational Turn trigger (13 m when a loose body is on her line, else 4.5 m); J-007 item 4 instrument the Dangle first; J-007 item 6 stage 1 landed #336, rest split in 3, risers ordinary edges; J-009 split fix and flags (combined CI red on 5 scenarios); J-044c gains CI red (lunges, cable Turn, tower, grab-arm leak). #335 J-014 and #334 hair landed (hair eye: stills sent to Cory). J-071 #338: trunk b01aab15 red, default sequence hit the 1500 s CTest timeout; PR #339 (mine, 1950 s, switchboard merges); step 2 shard split mailed to Muse. Helper on J-064 view snaps (`claude/integrate-j064-view-snaps`).
   J-044l vault fixed in-job, grab-spring re-list to final measured (#291 precedent); J-063 one protected PR, cap waived,
   keep 90 s limits and speed gait to >=0.3 m/s, floor counts as support; J-070 #333 look-suite placement (Muse).
 - Remind Cory by Nov 20: PAT `ScraperX` expires Mon Nov 23.
