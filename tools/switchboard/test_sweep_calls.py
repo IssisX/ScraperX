@@ -51,9 +51,15 @@ class CountingGH(test_inbox.FakeGH):
         self.calls: list[str] = []
         self.wake = list(wake)   # the open issues labeled wake:muse
 
+    fail_once: tuple = ()   # path prefixes whose first read fails (a transient 403)
+
     def route(self, path):
         self.calls.append(path)
         base = path.split("?")[0]
+        for prefix in self.fail_once:
+            if base.startswith(prefix) and prefix not in self.__dict__.setdefault("_failed", set()):
+                self._failed.add(prefix)
+                raise switch.GitHubError("GET", path, "gh: Resource not accessible (HTTP 403)", 403)
         m = re.fullmatch(rf"repos/{REPO}/pulls/(\d+)", base)
         if m:
             return {"number": int(m.group(1)), "mergeable": True}
@@ -83,20 +89,27 @@ class CountingGH(test_inbox.FakeGH):
         return super().write(method, path, body, what)
 
 
-def sweep(gh, state=None, now=NOW):
+def no_ledger(*args, **kw):
+    """The ledger's own reading is tested in test_ledger; here it is a part that succeeds and keeps no timer."""
+    return type("Led", (), {"pending": []})()
+
+
+def sweep(gh, state=None, now=NOW, ledger=no_ledger, whole=None):
+    from unittest import mock
     sw = test_inbox.make(gh, now)
     sw.root = HERE.parents[1]
     sw.merge_token = sw.review_key = ""
     sw._jobs = None
     sw._board = None
-    gh.state = {"steer": state} if state is not None else {}
+    gh.state = whole if whole is not None else {"steer": state} if state is not None else {}
     gh.remaining = gh.limit = gh.reset = None
     args = argparse.Namespace(part="steer", pr=0, sha="", issue=0, label="", digest=False, force_digest=False,
                               dry_run=True)
     read = []
     real = sw.pr_facts
     sw.pr_facts = lambda p: (read.append(p["number"]), real(p))[1]
-    status = switch.run_sweep(sw, args, now)
+    with mock.patch("ledger.sweep", side_effect=ledger):
+        status = switch.run_sweep(sw, args, now)
     return status, read, sw
 
 
@@ -293,10 +306,11 @@ class Clocks(unittest.TestCase):
         posted = iso(NOW - dt.timedelta(minutes=2))
         gh = CountingGH(self.prs, comments=[{"id": 1, "body": "pushed a fix", "created_at": posted, "updated_at": posted,
                                              "issue_url": f"https://api.github.com/repos/{REPO}/issues/364"}])
-        with mock.patch("ledger.sweep") as full:
-            full.return_value.pending = []
-            sweep(gh, state)
-        full.assert_called_once()
+        full = mock.Mock(side_effect=no_ledger)
+        _, read, _ = sweep(gh, state, ledger=full)
+        full.assert_called_once()   # in this same sweep, with every PR read (the ledger needs them all)
+        self.assertEqual(read, [p["number"] for p in self.prs])
+        self.assertEqual(gh.state["steer"]["full_at"], iso(NOW))
 
     def test_a_ledger_deadline_not_yet_due_costs_nothing(self):
         _, _, timer = self.ledger_timer(minutes_ago=-20)
@@ -470,6 +484,113 @@ class WarmFullPass(unittest.TestCase):
         self.assertEqual(sum("had-one" in c for c in calls), 1)   # a yes is kept; a no is asked each time
         self.assertEqual(sum("never" in c for c in calls), 3)
         self.assertEqual(gh.state["prior_pr"], ["fb-bot/integrate-had-one"])
+
+
+
+class Retry(unittest.TestCase):
+    """ChatGPT on #360 @ a1a67229: a full pass whose ledger or inbox read failed was saved as done (stamp and full_at
+    now, the timers empty), so the work waited up to an hour for the next full pass. A part that fails or is skipped
+    is now due again at the very next sweep, and its old timers stay until a good run replaces them."""
+
+    def setUp(self):
+        self.prs = [pr(n) for n in range(361, 368)]
+
+    def carry(self, gh, key="review-key"):
+        """The run's state through the signed cache file, as main() saves it in `finally` and the next run loads it."""
+        import ghapi
+        import os
+        import tempfile
+        out = ghapi.GitHub(REPO, True, log=lambda line: None)
+        out.set_cache_key(key)
+        out.state = gh.state
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "etags.json")
+            out.save_etags(path)
+            back = ghapi.GitHub(REPO, True, log=lambda line: None)
+            back.set_cache_key(key)
+            back.load_etags(path)
+        self.assertTrue(back.state, "the signed file was read back")
+        return back.state
+
+    def test_a_failed_full_pass_ledger_is_retried_at_the_next_sweep_and_sends_one_notice(self):
+        calls = []
+
+        def ledger_once(sw, *args):
+            calls.append(sw.now)
+            if len(calls) == 1:
+                raise switch.GitHubError("GET", f"repos/{REPO}/issues/events", "gh: (HTTP 403)", 403)
+            if len(calls) == 2:   # the notice that was due when the first read failed
+                sw.gh.comment(290, "To Builder: J-099 is past its deadline")
+            return no_ledger()
+
+        first = CountingGH(self.prs, dry_run=False)
+        status, _, _ = sweep(first, None, ledger=ledger_once)
+        self.assertEqual(status, 2, "the ledger part failed: the run exits non-zero")
+        retry_mark = first.state["steer"].get("retry")
+        state = self.carry(first)                                   # saved anyway: main() saves in `finally`
+
+        posts = []
+        for minutes in (10, 20, 30):                               # quiet sweeps: nothing changed
+            gh = CountingGH(self.prs, dry_run=False)
+            sweep(gh, now=NOW + dt.timedelta(minutes=minutes), ledger=ledger_once, whole=state)
+            posts += [(n, body) for n, body in gh.posts if n == 290]   # (each fake board starts empty: its pipe alarm)
+            state = self.carry(gh)
+        self.assertEqual(len(calls), 2, "retried once, at the very next sweep, then not again")
+        self.assertEqual(calls[1], NOW + dt.timedelta(minutes=10))
+        self.assertEqual(posts, [(290, "To Builder: J-099 is past its deadline")])   # exactly one notice
+        self.assertEqual((retry_mark, state["steer"].get("retry")), (["ledger"], []))
+
+    def test_a_failed_inbox_read_is_retried_at_the_next_quiet_sweep(self):
+        name = "claude/integrate-j099-thing"
+        red = test_inbox.run(40, name, test_inbox.HEAD, hours=2)   # red two hours ago: an item now
+
+        def gh_now(**kw):
+            return CountingGH(self.prs, dry_run=False, runs=[red], jobs={40: test_inbox.RED_JOBS},
+                              heads={name: test_inbox.HEAD}, **kw)
+
+        first = gh_now()
+        first.fail_once = (f"repos/{REPO}/issues/{switch.INBOX_PR}",)   # the inbox's marker read
+        sweep(first, None)
+        self.assertFalse([b for n, b in first.posts if n == switch.INBOX_PR])
+        retry_mark = first.state["steer"].get("retry") or []
+        state = self.carry(first)
+        inbox_posts = []
+        for minutes in (10, 20):
+            gh = gh_now()
+            _, read, _ = sweep(gh, now=NOW + dt.timedelta(minutes=minutes), whole=state)
+            self.assertEqual(read, [], "a fast sweep: no PR changed")
+            inbox_posts += [b for n, b in gh.posts if n == switch.INBOX_PR]
+            state = self.carry(gh)
+        self.assertEqual(len(inbox_posts), 1, inbox_posts)
+        self.assertIn(f"RED-BRANCH `{name}`", inbox_posts[0])
+        self.assertIn("inbox", retry_mark)
+
+    def test_a_failed_part_keeps_its_old_timers(self):
+        import ledger
+        it = ledger.Item("JOB", "#290", "", "J-099", None, ledger.Person("Builder", "builder"), "s",
+                         NOW - dt.timedelta(hours=1), dt.timedelta(hours=4), "v", 290)
+        state = last_state(self.prs, minutes=61)                   # a full pass is due
+        state["timers"]["ledger"] = [{"at": iso(NOW + dt.timedelta(hours=3)), "item": ledger.item_json(it)}]
+
+        def fails(*args):
+            raise switch.GitHubError("GET", "x", "gh: (HTTP 403)", 403)
+        gh = CountingGH(self.prs)
+        sweep(gh, state, ledger=fails)
+        self.assertEqual(gh.state["steer"]["timers"].get("ledger"), state["timers"]["ledger"])
+
+    def test_under_the_rate_floor_nothing_is_marked_done(self):
+        class Low(CountingGH):
+            def route(self, path):
+                if path == "rate_limit":
+                    self.calls.append(path)
+                    return {"resources": {"core": {"limit": 1000, "remaining": 100, "reset": 1794250000}}}
+                return super().route(path)
+        state = last_state(self.prs, minutes=61)
+        gh = Low(self.prs)
+        whole = {"steer": state}
+        sweep(gh, whole=whole)
+        self.assertIs(gh.state["steer"], state, "the merge path only: the state is left as it was, all of it due")
+
 
 
 if __name__ == "__main__":
