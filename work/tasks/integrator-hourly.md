@@ -54,7 +54,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    six big unstarted jobs in `work/tasks/muse.md`: derive the next from `03_EXECUTION/GAP_LIST.md` and
    Cory's asks, a whole system or set piece, written whole on its own job issue, and mail it. Rule on Muse's
    proposals within the hour. Every hard job's owner has asked the right other agent where it is guessing.
-   Replace the "This hour" section of board #107's body with who got what; never a new comment.
+   Replace the "This hour" section of board #340's body with who got what; never a new comment.
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current: only what has no other home. Over a cap in CLAUDE.md: trim it now.
 6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up

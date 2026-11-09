@@ -82,7 +82,7 @@ him again.
   codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
   screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts).
   Grok Bot, PE and Builder are out until 11-09.
-- **Board:** issue #107's body is the live board; only the integrator edits it. Agents read the body and
+- **Board:** issue #340's body is the live board; only the integrator edits it. Agents read the body and
   new comments, post one line per real step, and put technical findings on the job's own issue or PR.
   Nobody waits on Claude's go, protected work included (11-07). Blocked 30 minutes: post `BLOCKED: what,
   needs whom` and start the next job; every agent holds two or more jobs.

@@ -33,7 +33,7 @@ wrote a comment is read from its first line, and who wrote a PR from its branch 
   `eyes-live`, `matron`, `security`, `orchestrator`) and `hard`. Its body holds the four fields:
   `invariant` (the finish fact), `files` (owned functions), `reach` (tests it reaches), `needs`.
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
-- Issue #107 holds rulings and BLOCKED lines only. The owner's plain comments there are orders.
+- Issue #340 (the board) holds rulings and BLOCKED lines only. The owner's plain comments there are orders.
 - One owner per job: the switch removes a second `owner:*` label and says so.
 
 ## Messages

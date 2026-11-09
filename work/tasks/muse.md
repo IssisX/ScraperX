@@ -4,7 +4,7 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 
 ## Where things are
 - **Issues #3 and #87 are retired.** Stop watching them; never post there.
-- **The board** is the one open issue labeled `board` (today #107): rulings and "To X:" questions.
+- **The board** is the one open issue labeled `board` (today #340): rulings and "To X:" questions.
   Find it by label each time.
 - **Your jobs** each have their own issue (label `job` and `owner:muse`). Read only those and the
   board's newest comments, never old history.
