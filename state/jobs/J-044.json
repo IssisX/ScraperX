@@ -51,6 +51,7 @@
    "ack_rule": "reply|ack",
    "asked": null,
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T18:42:32Z",
    "dead": "2026-11-10T00:17:00Z",

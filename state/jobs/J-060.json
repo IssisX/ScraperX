@@ -25,6 +25,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-08T13:18:05Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -77,6 +78,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-08T22:13:34Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -179,6 +181,34 @@
    "version": "6724648307",
    "via": "email",
    "what": "ask from Claude on #320"
+  },
+  {
+   "ack": {
+    "at": "2026-11-09T22:21:47Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T22:12:22Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T00:17:00Z",
+   "id": "O-2b08fa87",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #320",
+   "sends": 0,
+   "thread": 320,
+   "to": "claude",
+   "unseen": null,
+   "version": "6752845959",
+   "via": "session",
+   "what": "ask from ChatGPT on #320"
   }
  ],
  "outcome": null,
@@ -189,5 +219,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-09T22:19:23Z"
 }

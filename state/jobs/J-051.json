@@ -36,6 +36,7 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -45,7 +46,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 2,
    "ref": "BRANCH|claude/integrate-j051-asks-since",
    "sends": 0,
    "thread": 0,
@@ -63,5 +64,5 @@
  "prs": [],
  "review": "",
  "state": "blocked",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-09T22:19:23Z"
 }

@@ -7,8 +7,10 @@
   "claude/integrate-j072-mail-shape": "8c25d13a1d29462c42c762640b70140eb800e3ed",
   "claude/integrate-j072-pipe-holes": "9435daec64a7ca5f107a397cfcce1325e721a7d5",
   "claude/integrate-j072-reconciler": "a3e78417ff861e6f124d78888361ff1f6acc2de9",
+  "claude/integrate-j072-reconciler-golive": "1684160ac43c572e6a7f4a30b7435c39ab88d327",
   "claude/integrate-j072-reconciler-holes": "abc7358c354fbdaba6d39af15ea4e4bec588a639",
-  "claude/integrate-j072-reconciler-live": "56617dc53771e4946d1808895cba0f5ff6198ac9"
+  "claude/integrate-j072-reconciler-live": "56617dc53771e4946d1808895cba0f5ff6198ac9",
+  "claude/integrate-j072-review-all-findings": "8bebcd7a313132fd83bef76fbff544a6400681e0"
  },
  "cancelled": null,
  "ci": "green",
@@ -44,6 +46,11 @@
    "merged #358",
    "2026-11-09T17:35:20Z"
   ],
+  "claude/integrate-j072-reconciler-golive": [
+   "1684160ac43c572e6a7f4a30b7435c39ab88d327",
+   "merged #365",
+   "2026-11-09T22:19:23Z"
+  ],
   "claude/integrate-j072-reconciler-holes": [
    "abc7358c354fbdaba6d39af15ea4e4bec588a639",
    "merged #359",
@@ -53,6 +60,11 @@
    "56617dc53771e4946d1808895cba0f5ff6198ac9",
    "",
    "2026-11-09T20:56:16Z"
+  ],
+  "claude/integrate-j072-review-all-findings": [
+   "8bebcd7a313132fd83bef76fbff544a6400681e0",
+   "merged #366",
+   "2026-11-09T22:19:23Z"
   ]
  },
  "obligations": [
@@ -246,6 +258,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T16:51:16Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T19:35:48Z",
    "dead": "2026-11-09T22:56:16Z",
@@ -270,6 +283,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T16:55:36Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T19:35:48Z",
    "dead": "2026-11-09T22:56:16Z",
@@ -348,6 +362,7 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:56:16Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -357,7 +372,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 0,
    "ref": "BRANCH|claude/integrate-j072-reconciler-live",
    "sends": 0,
    "thread": 350,
@@ -366,6 +381,143 @@
    "version": "open-pr:56617dc53771e4946d1808895cba0f5ff6198ac9",
    "via": "session",
    "what": "`claude/integrate-j072-reconciler-live` is green with no PR: open one"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T22:02:22Z",
+   "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T01:27:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T23:27:00Z",
+   "id": "O-4c110438",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #350",
+   "sends": 0,
+   "thread": 350,
+   "to": "chatgpt",
+   "unseen": null,
+   "version": "6752639130",
+   "via": "issue",
+   "what": "ask from Claude on #350"
+  },
+  {
+   "ack": {
+    "at": "2026-11-09T21:39:57Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T21:34:13Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T00:17:00Z",
+   "id": "O-2825364b",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #350",
+   "sends": 0,
+   "thread": 350,
+   "to": "claude",
+   "unseen": null,
+   "version": "6752048443",
+   "via": "session",
+   "what": "ask from ChatGPT on #350"
+  },
+  {
+   "ack": {
+    "at": "2026-11-09T21:59:11Z",
+    "by": "chatgpt",
+    "how": "reply to the asker"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T21:39:57Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T01:27:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T23:27:00Z",
+   "id": "O-56525e98",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #350",
+   "sends": 0,
+   "thread": 350,
+   "to": "chatgpt",
+   "unseen": null,
+   "version": "6752169743",
+   "via": "issue",
+   "what": "ask from Claude on #350"
+  },
+  {
+   "ack": {
+    "at": "2026-11-09T22:02:22Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T21:59:11Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T00:17:00Z",
+   "id": "O-4e200086",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #350",
+   "sends": 0,
+   "thread": 350,
+   "to": "claude",
+   "unseen": null,
+   "version": "6752574323",
+   "via": "session",
+   "what": "ask from ChatGPT on #350"
+  },
+  {
+   "ack": {
+    "at": "2026-11-09T22:02:22Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T22:00:48Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T00:17:00Z",
+   "id": "O-2050c159",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #350",
+   "sends": 0,
+   "thread": 350,
+   "to": "claude",
+   "unseen": null,
+   "version": "6752607408",
+   "via": "session",
+   "what": "ask from ChatGPT on #350"
   }
  ],
  "outcome": null,
@@ -381,6 +533,6 @@
   364
  ],
  "review": "waiting",
- "state": "merged",
- "updated": "2026-11-09T21:19:08Z"
+ "state": "proof",
+ "updated": "2026-11-09T22:19:23Z"
 }

@@ -7,6 +7,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:03:25Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T17:00:00Z",
@@ -30,6 +31,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:27:11Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T17:00:00Z",
@@ -53,6 +55,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:15:01Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T17:00:00Z",
@@ -76,6 +79,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T19:08:28Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T19:05:16Z",
    "dead": "2026-11-10T17:00:00Z",
@@ -156,6 +160,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T20:34:05Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:36:25Z",
    "dead": "2026-11-10T04:56:16Z",
@@ -204,7 +209,11 @@
    "what": "ask from Claude on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:11Z",
    "attempts": 0,
@@ -228,7 +237,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:12Z",
    "attempts": 0,
@@ -252,7 +265,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:16Z",
    "attempts": 0,
@@ -276,7 +293,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:18Z",
    "attempts": 0,
@@ -300,7 +321,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:26Z",
    "attempts": 0,
@@ -324,7 +349,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:27Z",
    "attempts": 0,
@@ -348,7 +377,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:30Z",
    "attempts": 0,
@@ -372,7 +405,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:32Z",
    "attempts": 0,
@@ -396,7 +433,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:14:13Z",
    "attempts": 0,
@@ -420,7 +461,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:29:37Z",
    "attempts": 0,
@@ -444,7 +489,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:29:39Z",
    "attempts": 0,
@@ -468,7 +517,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:29:57Z",
    "attempts": 0,
@@ -492,7 +545,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:30:13Z",
    "attempts": 0,
@@ -516,7 +573,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:30:19Z",
    "attempts": 0,
@@ -540,7 +601,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:35:09Z",
    "attempts": 0,
@@ -564,7 +629,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:35:12Z",
    "attempts": 0,
@@ -614,6 +683,34 @@
    "version": "6751202541",
    "via": "session",
    "what": "ask from ChatGPT on #340"
+  },
+  {
+   "ack": {
+    "at": "2026-11-09T22:10:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T22:02:45Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T00:17:00Z",
+   "id": "O-8696732c",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #340",
+   "sends": 0,
+   "thread": 340,
+   "to": "claude",
+   "unseen": null,
+   "version": "6752647175",
+   "via": "session",
+   "what": "ask from Muse on #340"
   }
  ]
 }

@@ -73,6 +73,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-06T21:09:14Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -82,7 +83,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 2,
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
@@ -97,6 +98,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-06T21:29:11Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -106,7 +108,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
@@ -149,6 +151,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-07T06:14:13Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -207,5 +210,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-09T22:19:23Z"
 }

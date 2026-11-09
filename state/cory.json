@@ -1,4 +1,14 @@
 {
+ "backlog": {
+  "at": "2026-11-09T22:19:23Z",
+  "by": {
+   "chatgpt": 3,
+   "claude": 16,
+   "grok": 7,
+   "grok_bot": 2,
+   "muse": 27
+  }
+ },
  "batches": [
   {
    "at": "2026-11-09T18:42:32Z",
@@ -25,13 +35,24 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (1), from the switchboard at 11-09 2:56 PM Central.\n\n- Needs you: 13 ask(s) to Claude from before today have no reply on their threads (answered by mail?): O-051ff95f O-21f8221d O-7d30bc0c O-29e5fd19 O-9dc80bbb O-d5d4a683 O-4cf87876 O-503915c8 O-b856a33d O-596e21e7 O-fad020db O-47ddd352 O-3b1b27ce. The integrator posts each answer on its thread or /acks it; none of these is nagged one by one."
+  },
+  {
+   "at": "2026-11-09T22:19:23Z",
+   "keys": [
+    "backlog:2026-11-09T22:19:23Z",
+    "gap:2026-11-09T21:19:08Z"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (2), from the switchboard at 11-09 4:19 PM Central.\n\n- Needs you: 55 item(s) from before the reconciler went live (Muse 27, Claude 16, Grok 7, ChatGPT 3, PE 2). None is sent one by one; each leaves the list when it is answered, acked or settled, and the day's state file lists them.\n- Needs you: PIPE: no switchboard pass from 11-09 3:19 PM to 11-09 4:19 PM Central (60 min; the clock dispatches every 10 min). The 10-minute trigger (muse_bridge.gs) or its health check is not running; since 11-09 3:19 PM Central."
   }
  ],
- "last_batch": "2026-11-09T20:56:16Z",
+ "last_batch": "2026-11-09T22:19:23Z",
  "last_error": "",
- "mode": "shadow",
+ "mode": "live",
  "pending": {},
  "reported": {
-  "claude-asks:2026-11-09": "2026-11-09T20:56:16Z"
+  "backlog:2026-11-09T22:19:23Z": "2026-11-09T22:19:23Z",
+  "claude-asks:2026-11-09": "2026-11-09T20:56:16Z",
+  "gap:2026-11-09T21:19:08Z": "2026-11-09T22:19:23Z"
  }
 }

@@ -1,16 +1,16 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j049-pr1": "ed151a6c1f763dc1ab8ed77db53912790b50c397",
   "fb-bot/integrate-protected-j049-pr1": "9b0a12ea9099fcf76ef1444cc3201c2f9187f6b1"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:17:00Z",
- "head": "9b0a12ea9099fcf76ef1444cc3201c2f9187f6b1",
+ "head": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
  "issue": 278,
  "job": "J-049",
  "landed": {
@@ -31,6 +31,7 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
@@ -54,7 +55,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T22:19:23Z",
+    "why": "PR #367 took it over"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
    "dead_lettered": null,
@@ -73,7 +77,11 @@
    "what": "`fb-bot/integrate-protected-j049-pr1` proof red: native-tests (athletic-traversal), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T21:50:04Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:29:43Z",
    "attempts": 0,
@@ -91,12 +99,17 @@
    "sends": 0,
    "thread": 278,
    "to": "claude",
+   "unseen": null,
    "version": "6746833280",
    "via": "session",
    "what": "ask from Muse on #278"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T21:50:04Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:30:12Z",
    "attempts": 0,
@@ -114,12 +127,17 @@
    "sends": 0,
    "thread": 278,
    "to": "claude",
+   "unseen": null,
    "version": "6746844115",
    "via": "session",
    "what": "ask from Muse on #278"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T21:50:04Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-07T06:34:12Z",
    "attempts": 0,
@@ -147,6 +165,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-08T01:25:11Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -193,15 +212,95 @@
    "version": "6715546039",
    "via": "issue",
    "what": "ask from Claude on #278"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T06:19:23Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T02:19:23Z",
+   "id": "O-1f193c6b",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "PR|#367",
+   "sends": 0,
+   "thread": 367,
+   "to": "muse",
+   "unseen": null,
+   "version": "conflict:2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
+   "via": "email",
+   "what": "#367 has a merge conflict with the base"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T21:50:04Z",
+   "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T06:19:23Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T02:19:23Z",
+   "id": "O-e348151a",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #278",
+   "sends": 0,
+   "thread": 278,
+   "to": "muse",
+   "unseen": null,
+   "version": "6752387581",
+   "via": "email",
+   "what": "ask from Claude on #278"
+  },
+  {
+   "ack": {
+    "at": "2026-11-09T21:50:04Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T21:42:45Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T00:17:00Z",
+   "id": "O-13b37ff1",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #278",
+   "sends": 0,
+   "thread": 278,
+   "to": "claude",
+   "unseen": null,
+   "version": "6752232762",
+   "via": "session",
+   "what": "ask from Muse on #278"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 367,
  "pr_done": "",
- "prs": [],
- "review": "",
+ "prs": [
+  367
+ ],
+ "review": "waiting",
  "state": "working",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-09T22:19:23Z"
 }

@@ -6,14 +6,18 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T22:17:00Z",
+ "deadline": "2026-11-10T02:19:23Z",
  "head": "",
  "issue": 128,
  "job": "J-021",
  "landed": {},
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T21:50:10Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:30:05Z",
    "attempts": 1,
@@ -32,9 +36,35 @@
    "sent_by": "shadow",
    "thread": 128,
    "to": "claude",
+   "unseen": null,
    "version": "6746841613",
    "via": "session",
    "what": "ask from Muse on #128"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T21:50:10Z",
+   "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
+   "closed": null,
+   "created": "2026-11-09T22:19:23Z",
+   "dead": "2026-11-10T06:19:23Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T02:19:23Z",
+   "id": "O-61233cfe",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #128",
+   "sends": 0,
+   "thread": 128,
+   "to": "muse",
+   "unseen": null,
+   "version": "6752389416",
+   "via": "email",
+   "what": "ask from Claude on #128"
   }
  ],
  "outcome": null,
@@ -45,5 +75,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-09T22:19:23Z"
 }

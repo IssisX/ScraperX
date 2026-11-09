@@ -17,6 +17,7 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-08T13:18:03Z",
    "attempts": 0,
+   "backlog": "2026-11-09T22:19:23Z",
    "closed": null,
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-10T00:17:00Z",
@@ -37,7 +38,11 @@
    "what": "ask from ChatGPT on #321"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T21:50:12Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T14:44:29Z",
    "attempts": 0,
@@ -125,5 +130,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-09T22:19:23Z"
 }
