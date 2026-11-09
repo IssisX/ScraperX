@@ -17,7 +17,8 @@
  *        INBOUND_OVERLAP_MIN, never from a fixed `newer_than`, so an outage of any length up to
  *        INBOUND_FIRST_DAYS loses no mail (J-072: `newer_than:2d` and a 20-thread cap dropped every
  *        MUSE_TO_CLAUDE mail of 11-07 19:20Z to 11-09 14:44Z). A message is posted only when its id is not
- *        in `posted_message_ids` and its date is inside the window, so a message is posted once.
+ *        in `posted_message_ids` and its date is inside the window, so a message is posted once. The first
+ *        run reads the last INBOUND_SEED_HOURS; to replay further back, set `inbound_mark` (ms since 1970).
  *   CLOCK (J-072) Every CLOCK_MIN minutes it dispatches switchboard.yml on trunk with dry_run=false: the
  *        reliable clock GitHub's own `schedule` is not (it ran 26 times in 4 days).
  *   WATCH (J-072) When no full non-dry sweep (run-name SWEEP_TITLE) has succeeded for DOWN_MIN minutes,
@@ -61,7 +62,8 @@ var MAX_REMEMBERED = 500;
 var MAX_SEARCH = 100;            // threads one inbound search returns; a full answer halves the window instead
 var MAX_NARROW = 6;              // halvings of the window before inbound gives up loudly (14 days / 64 = 5 h)
 var MAX_POSTS = 25;              // messages inbound handles per tick; the rest wait for the next tick (the mark stops there)
-var INBOUND_FIRST_DAYS = 14;     // the furthest back inbound ever reads (the first run, or a mark this old)
+var INBOUND_FIRST_DAYS = 14;     // the furthest back inbound ever reads (a mark this old, or one set by hand to replay)
+var INBOUND_SEED_HOURS = 48;     // the first run (no mark yet) reads what the old `newer_than:2d` read, so it floods nothing
 var INBOUND_EPOCH = Date.UTC(2026, 10, 3);  // the bridge went live 11-03 (J-031); older mail was read by hand
 var INBOUND_OVERLAP_MIN = 60;    // each search starts this long before the mark, for mail Gmail indexed late
 var MAX_COMMENT_PAGES = 10;     // pages of 100 comments read per wake:muse issue
@@ -405,7 +407,7 @@ function inbound_(cfg) {
   var floor = Math.max(now - INBOUND_FIRST_DAYS * 86400000, INBOUND_EPOCH);
   var mark = Number(cfg.store.getProperty('inbound_mark')) || 0;
   if (mark && mark < floor) console.warn('Muse bridge: the inbound mark is older than ' + INBOUND_FIRST_DAYS + ' days; older mail is not read');
-  var from = Math.max(mark ? mark - INBOUND_OVERLAP_MIN * 60000 : floor, floor);
+  var from = Math.max(mark ? mark - INBOUND_OVERLAP_MIN * 60000 : now - INBOUND_SEED_HOURS * 3600000, floor);
   var to = now;
   var threads = inboundSearch_(from, to);
   for (var n = 0; threads.length >= MAX_SEARCH; n++) {
