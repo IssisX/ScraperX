@@ -1,7 +1,9 @@
 # Switches for tools/switchboard, read by switch.py on each run. (The workflow is .github/workflows/switchboard.yml.)
 
-# J-072 Design B stage 1 (#350): after each non-dry full sweep, the reconciler (tools/switchboard/reconciler.py)
-# writes job records, obligations and a daily shadow diff to the switchboard/state branch. It posts nothing.
-# `shadow` turns it on; absent or any other value is off. Stage 2 adds `notices: v2` here, in the PR that
-# turns the ledger's notices off.
-reconciler: shadow
+# J-072 Design B (#350): after each non-dry full sweep, the reconciler (tools/switchboard/reconciler.py) writes job
+# records, obligations and a daily diff to the switchboard/state branch. `shadow` posts nothing; `live` (with
+# reconciler.STAGE2_READY) posts its notices and Cory's hourly "Needs you" batch. Absent or any other value is off.
+# Live since J-072's replay of 48 h of real history came back clean (tools/switchboard/replay_reconciler.py,
+# Cory 11-09: live as soon as a test proves it). The ledger's notices keep running alongside for 24 h as the backup;
+# stage 2 adds `notices: v2` here, in the PR that turns them off.
+reconciler: live
