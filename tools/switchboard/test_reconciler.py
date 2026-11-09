@@ -846,6 +846,18 @@ class Rules(unittest.TestCase):
         self.assertEqual(R.due_at(ROSTER, "chatgpt", NOW), ("issue", ct(2026, 11, 9, 13, 27)))
         self.assertEqual(R.due_at(MROSTER, "chatgpt", NOW), ("cory", NOW + 15 * M), "manual goes to Cory")
 
+    def test_grok_bot_reads_all_the_time_grok_runs_on_its_schedule(self):
+        # Cory 11-09: Grok Bot (Builder, PE) reads always; Grok runs at 10 AM and 4 PM. The repo file says so.
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        repo = L.Roster(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
+        self.assertEqual(repo.wake("grok_bot"), "watch")
+        self.assertEqual(R.due_at(repo, "grok_bot", NOW), ("watch", NOW + H), "Builder and PE: one hour")
+        self.assertEqual(R.due_at(repo, "grok", NOW), ("issue", dt.datetime(2026, 11, 9, 23, 0, tzinfo=dt.timezone.utc)))
+        self.assertEqual(R.due_at(repo, "chatgpt", NOW), ("issue", ct(2026, 11, 9, 13, 27)))
+
     def test_manual_agent_goes_straight_to_cory_never_resent(self):
         h = Harness(roster=MROSTER)
         f = feed(prs=[pr(412, "chatgpt/integrate-j530-x", job="J-530", action="FIX-CI", proof="red: x")])

@@ -79,6 +79,7 @@ WAKEABLE = dt.timedelta(minutes=30)  # the Claude API (reviews); Codex once the 
 EMAIL = dt.timedelta(hours=4)        # Muse, by the mail bridge
 POLL_GRACE = dt.timedelta(hours=1)   # a polled agent: its next run plus this
 CORY = dt.timedelta(minutes=15)      # manual: straight to Cory
+WATCH = dt.timedelta(hours=1)        # an agent that reads the repo all the time (Grok Bot, Cory 11-09)
 # Central (hour, minute) of each polled agent's runs: Grok 10 AM and 4 PM; ChatGPT's review task hourly at :27 (11-09).
 POLL_RUNS = {"grok": ((10, 0), (16, 0)), "chatgpt": tuple((h, 27) for h in range(24))}
 # The integrator's hourly runs (work/tasks/integrator-hourly.md, Cory 11-06 and 11-08): weekdays 8:17 AM-11:17 PM
@@ -160,7 +161,7 @@ def channel(roster: L.Roster, agent: str, kind: str = "") -> str:
     wake = roster.wake(agent)
     if wake == "mention":
         return "relay"   # the bot's own mentions do not wake Codex (#350 hole 5): the integrator posts the mention
-    if wake in ("api", "email"):
+    if wake in ("api", "email", "watch"):
         return wake
     if wake == "issue" and agent in POLL_RUNS:
         return "issue"
@@ -201,6 +202,8 @@ def due_at(roster: L.Roster, agent: str, created: dt.datetime, kind: str = "") -
         return via, session_due(created) + WAKEABLE
     if via == "email":
         return via, created + EMAIL
+    if via == "watch":
+        return via, created + WATCH
     if via == "issue":
         return via, next_run(created, POLL_RUNS[agent]) + POLL_GRACE
     return "cory", created + CORY

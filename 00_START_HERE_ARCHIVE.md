@@ -13,6 +13,8 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-09 | *"If it's not complete, we're not using it. Stop fucking saying that."*; *"When I talk about this system, the whole thing, okay, don't say it's working if we're using a part of it."* | Rule 13 |
+| 11-09 | *"this was the whole goal the entire time, so of course I want you to do that part too"*; *"I don't have to tell you to do what I want you to do already"*: a step of a goal he set is not a decision to bring him | Rule 11 |
 | 11-09 | *"Your fixes can't keep extending the pipeline or loop. I mean, making it take longer and longer ... a fix for rate limit cant be, just wait longer"*; *"every PR and everything was being read instead of just what was being changed"*: a fix cuts work and reads only what changed | Rule 13 |
 | 11-09 | *"You don't have to work within the little scope you're in to find fixes"*; *"think about other setups and systems ... you may need to create it ... from scratch"*; *"solutions that wont cost me more if possible"*: look past the current setup when a system keeps failing | Rule 13 |
 | 11-09 | *"I need you to stop guessing ... You can't guess the fucking time"*; *"I'm so goddamn fucking sick and tired of you not working in the evidence-based, deterministic way i approve you work within."*; on "I don't know": *"No, not when you haven't checked it ... If you can't check it, if there's no solution,"*: check every claim, not only code; "I don't know" only after a check can't answer | Rule 13; CLAUDE.md Check, then ask |
