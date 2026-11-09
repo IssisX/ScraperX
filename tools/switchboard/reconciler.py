@@ -91,7 +91,12 @@ POLL_RUNS = {"grok": ((10, 0), (16, 0)), "chatgpt": tuple((h, 27) for h in range
 # Central, Sat-Sun 9:17 AM-9:17 PM, none overnight. Keyed by "is a weekend": (first hour, last hour, minute).
 INTEGRATOR_RUNS = {False: (8, 23, 17), True: (9, 21, 17)}
 UNSEEN_AFTER = 3                     # passes in a row an obligation's want is missing before it reads `unseen`
-CORY_EVERY = dt.timedelta(hours=1)   # the "Needs you" batch goes to Cory at most this often, never per item
+CORY_EVERY = dt.timedelta(hours=3)   # the "Needs you" batch goes to Cory at most this often, never per item
+# ... and only at the integrator's full-run times, inside its hours (the coordinator, 11-09: 28 batches in 48 h,
+# some at night, was too many). Keyed by "is a weekend": Central (hour, minute) of each slot.
+CORY_SLOTS = {False: ((8, 17), (11, 17), (14, 17), (17, 17), (20, 17), (23, 17)),
+              True: ((9, 17), (13, 17), (17, 17), (21, 17))}
+PIPE_KEYS = ("gap:", "token:", "down:")   # a new pipe item may go at once, inside hours
 PASS_GAP = dt.timedelta(minutes=25)  # no pass this long (the clock dispatches every 10 min): a PIPE line for Cory
 TOKEN_WARN = dt.timedelta(days=7)    # a token expiring this soon: a line for Cory
 MAX_BATCHES = 48                     # Cory batches kept in state/cory.json
@@ -1006,7 +1011,18 @@ def elsewhere(body: str, ob: dict, ask_text: str, replies: Replies) -> bool:
     return len(jobs) == 1 and bool(asked) and not jobs & asked   # one job named: a post about that job alone
 
 
-def acks_by_reply(rec: dict, replies: Replies, events: Events, roster: L.Roster, board: int = 0) -> None:
+def owed_asks(state: State) -> dict[tuple[int, str], int]:
+    """(thread, addressee) -> how many open asks it owes there, read before this pass's acks by reply."""
+    out: dict[tuple[int, str], int] = {}
+    for rec in state.records():
+        for ob in rec["obligations"]:
+            if ob["kind"] == "ask" and is_live(ob):
+                out[(ob["thread"], ob["to"])] = out.get((ob["thread"], ob["to"]), 0) + 1
+    return out
+
+
+def acks_by_reply(rec: dict, replies: Replies, events: Events, roster: L.Roster, board: int = 0,
+                  owes: dict | None = None) -> None:
     """A reply acks only from the addressee and after the obligation (an ask: after the ask), by #360's rule
     (tools/board/asks.py): a post anywhere that names it (its O-id; an ask's comment id, URL or a quote of it); for an
     ask also a reply addressed back to the asker (`To <Asker>`, `→`, `cc`; a CLAUDE_TO_MUSE post is to Muse, a bridge
@@ -1019,7 +1035,10 @@ def acks_by_reply(rec: dict, replies: Replies, events: Events, roster: L.Roster,
     the #360 case comes back (Muse's "please resend" dropped by "both To Grok asks above are done", which is to Grok).
     Anything else is not an ack: a post to someone else, and every other kind of obligation, which only its O-id or
     a proven action acks (the replay found 10 false acks by "a reply on the thread": a status post, a reply to
-    someone else)."""
+    someone else). And when the addressee owes more than one ask on the thread (`owes`), the step short of #360 acks
+    none of them: only a reply that names one (id, URL, quote), or #360's own reply addressed back to the asker,
+    does ("Answering Muse's J-044c ask" on #107 acked her expand-tests ask too). Applied to #360's addressed-back
+    rule as well, the replay found 4 answered asks nagged and dead-lettered (ChatGPT's "To Claude" replies on #169)."""
     for ob in rec["obligations"]:
         if not is_live(ob) or "reply" not in ob["ack_rule"]:
             continue
@@ -1045,6 +1064,8 @@ def acks_by_reply(rec: dict, replies: Replies, events: Events, roster: L.Roster,
             elif asker and asker in addressees(body) and (n == ob["thread"] or
                                                           re.search(rf"#{ob['thread']}\b", body[:2000])):
                 how = "reply to the asker"
+            elif ob["kind"] == "ask" and (owes or {}).get((ob["thread"], ob["to"]), 0) > 1:
+                continue   # it owes more than one ask on this thread: no step-short ack, only a named one
             elif ob["kind"] == "ask" and n == ob["thread"] and asker and not (addressees(body) - {asker}):
                 first = body.lstrip().split("\n", 1)[0][:200]   # addressed to no one else, on the ask's thread:
                 if rec["job"] and n not in (0, board):            # a job's own thread: its next post answers
@@ -1425,8 +1446,9 @@ def reconcile(state: State, p: Pass, roster: L.Roster, lookups: Lookups, now: dt
                           a.thread, f"ask from {L.clean(a.author, 20)} on #{a.thread}", "reply|ack", a.created_at))
     sync(state.threads, wants, now, roster, events, lambda ob: evidence(ob, None, seen, state.threads, now))
 
+    owes = owed_asks(state)
     for rec in state.records():
-        acks_by_reply(rec, replies, events, roster, p.feed.board)
+        acks_by_reply(rec, replies, events, roster, p.feed.board, owes)
     for job, rec in sorted(state.jobs.items()):
         before = befores[job]
         due = [at(ob["due"]) for ob in rec["obligations"] if is_open(ob)]
@@ -1527,6 +1549,23 @@ def old_claude_ask(ob: dict, now: dt.datetime) -> bool:
     return asked < today
 
 
+def cory_due(last: dt.datetime | None, now: dt.datetime, pipe: bool = False) -> bool:
+    """May a "Needs you" batch go now? Only inside the integrator's hours (INTEGRATOR_RUNS: weekdays 8 AM-11 PM,
+    Sat-Sun 9 AM-9 PM Central), and only once per full-run slot (CORY_SLOTS: weekdays 8:17, 11:17, 2:17, 5:17, 8:17,
+    11:17; Sat-Sun 9:17, 1:17, 5:17, 9:17), so at most every 3 hours and a night item waits for the morning batch.
+    A new pipe item (`pipe`: SWITCHBOARD DOWN, a pass gap, a token) may go at once, inside hours."""
+    local = now.astimezone(CENTRAL)
+    weekend = local.weekday() >= 5
+    first, last_h, _ = INTEGRATOR_RUNS[weekend]
+    if not first <= local.hour <= last_h:
+        return False
+    if pipe:
+        return True
+    slots = [local.replace(hour=h, minute=m, second=0, microsecond=0) for h, m in CORY_SLOTS[weekend]]
+    slot = max((s for s in slots if s <= local), default=None)
+    return slot is not None and (last is None or last < slot)
+
+
 def notify_cory(state: State, p: Pass, cory, roster: L.Roster, now: dt.datetime, events: Events, memo: dict,
                 out) -> None:
     """The "Needs you" batch (#350 hole 2): every item not yet reported, in one message, at most once an hour.
@@ -1552,8 +1591,7 @@ def notify_cory(state: State, p: Pass, cory, roster: L.Roster, now: dt.datetime,
         batch, keys, text, warn = memo["cory"]
     else:
         new = [(k, line) for k, line in items if k not in cs["reported"]]
-        last = at(cs["last_batch"])
-        if not new or (last and now - last < CORY_EVERY):
+        if not new or not cory_due(at(cs["last_batch"]), now, any(k.startswith(PIPE_KEYS) for k, _ in new)):
             return
         batch, keys = iso(now), [k for k, _ in new]
         more = len(standing) - len(new)

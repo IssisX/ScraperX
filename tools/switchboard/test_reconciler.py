@@ -487,7 +487,7 @@ class Strengthened(unittest.TestCase):
         self.assertNotIn("To Codex", body)
         self.assertEqual(re.findall(r"@[\w-]+", body), ["@codex"], "the one mention is in a code span: no ping")
 
-    def test_03_a_dead_letter_reaches_cory_once_in_an_hourly_batch(self):
+    def test_03_a_dead_letter_reaches_cory_once_in_a_slot_batch(self):
         gh = FakeGH()
         h = Harness(roster=MROSTER, cory=R.CoryNotifier(gh, 340))
         a, b, c = (pr(450 + i, f"chatgpt/integrate-j57{i}-x", job=f"J-57{i}", action="FIX-CI", proof="red: x")
@@ -499,10 +499,14 @@ class Strengthened(unittest.TestCase):
         self.assertTrue(body.startswith("To Cory: Needs you (1), from the switchboard at"), body)
         self.assertIn("ChatGPT runs only when you start it", body)
         self.assertRegex(body, r"<!-- reconciler:cory batch=\S+ keys=O-[0-9a-f]{8} -->")
-        for k in range(1, 6):   # a pass every 10 min; the new items wait for the hour
+        for k in range(1, 6):   # a pass every 10 min; the new items wait for the next slot (Monday 2:17 PM)
             h.run(feed(prs=[a, b] if k == 1 else [a, b, c]), NOW + k * 10 * M, comments=gh.bot_comments(NOW))
         self.assertEqual(len(gh.comments), 1, "never one message per item")
         h.run(feed(prs=[a, b, c]), NOW + H, comments=gh.bot_comments(NOW))
+        for k in range(1, 8):   # passes every 10 min up to 2:07 PM: still nothing
+            h.run(feed(prs=[a, b, c]), NOW + H + k * 10 * M, comments=gh.bot_comments(NOW))
+        self.assertEqual(len(gh.comments), 1, "an hour on is not a slot: at most every 3 hours (11-09)")
+        h.run(feed(prs=[a, b, c]), ct(2026, 11, 9, 14, 17), comments=gh.bot_comments(NOW))
         self.assertEqual(len(gh.comments), 2)
         second = gh.comments[1][1]
         self.assertTrue(second.startswith("To Cory: Needs you (2)"), second)
@@ -510,8 +514,8 @@ class Strengthened(unittest.TestCase):
         self.assertIn("J-572", second)
         self.assertNotIn("J-570", second.split("<!--")[0].split("Still standing")[0])
         self.assertIn("Still standing from earlier batches: 1", second)
-        for k in range(7, 14):
-            h.run(feed(prs=[a, b, c]), NOW + k * 10 * M, comments=gh.bot_comments(NOW))
+        for k in range(1, 8):
+            h.run(feed(prs=[a, b, c]), ct(2026, 11, 9, 14, 17) + k * 10 * M, comments=gh.bot_comments(NOW))
         self.assertEqual(len(gh.comments), 2, "each item once")
         self.assertTrue(all(e.get("ev") != "would_notify_cory" for e in h.events()), "live: sent, not would-send")
 
@@ -1122,6 +1126,42 @@ class ReplayFindings(unittest.TestCase):
         self.assertEqual(len(lines), 1, "one line, once")
         self.assertIn(obs["7601"]["id"], lines[0])
         self.assertIn(obs["7602"]["id"], lines[0])
+
+    def test_two_open_asks_on_a_thread_a_reply_naming_neither_acks_neither(self):
+        # O-f8e65587: two of Muse's asks to Claude open on #107; "Answering Muse's J-044c ask" named neither
+        # specifically and acked her expand-tests ask too. With two or more owed there, only a named reply acks.
+        h = Harness()
+        a1 = L.AskIn("7701", 340, "u", "Claude", "Muse", NOW - 9 * M)
+        a2 = L.AskIn("7702", 340, "u", "Claude", "Muse", NOW - 8 * M)
+        t1 = cmt(7701, 340, NOW - 9 * M, "**Muse (via email bridge): To Claude: expand-tests scope-step pin ready**")
+        t2 = cmt(7702, 340, NOW - 8 * M, "**Muse (via email bridge): To Claude: J-044c wreck fix pushed @ 8657f4f4, "
+                                         "balance red, not from this fix**")
+        f = feed(asks=[a1, a2])
+        h.run(f, NOW, comments=[t1, t2])
+        vague = cmt(7703, 340, NOW + M, "Claude (integrator): Muse, answering your ask: #298 covers it.")
+        h.run(f, NOW + 10 * M, comments=[t1, t2, vague])
+        self.assertEqual([o["ack"] for o in h.state().threads["obligations"]], [None, None])
+        quoted = cmt(7704, 340, NOW + 11 * M, "Claude (integrator): Muse,\n> J-044c wreck fix pushed @ 8657f4f4\n"
+                                               "parked: #298 covers it.")
+        h.run(f, NOW + 20 * M, comments=[t1, t2, vague, quoted])
+        acks = {o["version"]: o["ack"] for o in h.state().threads["obligations"]}
+        self.assertIsNone(acks["7701"])
+        self.assertEqual(acks["7702"]["how"], "reply naming it")
+
+    def test_cory_batches_follow_the_integrators_hours_at_most_every_3_hours(self):
+        # 28 batches in 48 h, some at night, was too many (the coordinator, 11-09)
+        mon = ct(2026, 11, 9, 0, 0)
+        self.assertFalse(R.cory_due(None, mon + 60 * M), "1 AM: none outside the integrator's hours")
+        self.assertFalse(R.cory_due(None, mon + 8 * H + 5 * M), "8:05 AM: the morning batch is at 8:17")
+        self.assertTrue(R.cory_due(None, mon + 8 * H + 17 * M))
+        self.assertFalse(R.cory_due(mon + 8 * H + 17 * M, mon + 10 * H), "one per slot")
+        self.assertTrue(R.cory_due(mon + 8 * H + 17 * M, mon + 11 * H + 17 * M))
+        self.assertTrue(R.cory_due(mon + 8 * H + 17 * M, mon + 10 * H, pipe=True), "a pipe item goes at once")
+        self.assertFalse(R.cory_due(None, mon + 2 * H, pipe=True), "but not at night")
+        sat = ct(2026, 11, 7, 0, 0)
+        self.assertFalse(R.cory_due(sat + 9 * H + 17 * M, sat + 12 * H), "Sat-Sun slots: 9:17, 1:17, 5:17, 9:17")
+        self.assertTrue(R.cory_due(sat + 9 * H + 17 * M, sat + 13 * H + 17 * M))
+        self.assertFalse(R.cory_due(None, sat + 22 * H), "Sat-Sun hours end at 9 PM")
 
     def test_the_first_live_pass_sends_what_shadow_only_recorded(self):
         # shadow counts its would-be sends: left alone, the first live notice would be the re-send at the due

@@ -978,9 +978,28 @@ def check(h: History, passes: list[dict], state_dir: pathlib.Path, cfg: dict) ->
         if ts[-1] - ts[0] >= L.ACT:
             misses.append(f"MISS red branch {name}: red {L.age_text(ts[-1] - ts[0])} with no PR, no obligation")
     batches = [b for b in cory.get("batches") or [] if T(b["at"]) >= h.start]
-    gaps = [T(b["at"]) - T(a["at"]) for a, b in zip(batches, batches[1:])]
-    if any(g < R.CORY_EVERY for g in gaps):
-        misses.append("CORY: two batches less than an hour apart")
+    # Cory's batches (the coordinator, 11-09): inside the integrator's hours (weekdays 8 AM-11 PM, Sat-Sun 9 AM-9 PM
+    # Central), one per full-run slot (weekdays 8:17, 11:17, 2:17, 5:17, 8:17, 11:17; Sat-Sun 9:17, 1:17, 5:17,
+    # 9:17); a batch with a new pipe item may go at once inside hours
+    seen_slots = set()
+    for b in batches:
+        local = T(b["at"]).astimezone(R.CENTRAL)
+        weekend = local.weekday() >= 5
+        hours = range(9, 22) if weekend else range(8, 24)
+        if local.hour not in hours:
+            misses.append(f"CORY: a batch at night, {R.central(T(b['at']))}")
+            continue
+        if any(k.startswith(("gap:", "token:", "down:")) for k in b["keys"]):
+            continue
+        slots = [(9, 17), (13, 17), (17, 17), (21, 17)] if weekend else [(h_, 17) for h_ in (8, 11, 14, 17, 20, 23)]
+        mine = [s for s in slots if (local.hour, local.minute) >= s]
+        if not mine:
+            misses.append(f"CORY: a batch before the first slot, {R.central(T(b['at']))}")
+            continue
+        key = (local.date(), mine[-1])
+        if key in seen_slots:
+            misses.append(f"CORY: two batches in one slot, {R.central(T(b['at']))}")
+        seen_slots.add(key)
     return {"rows": rows, "misses": misses, "batches": batches, "passes": passes}
 
 
