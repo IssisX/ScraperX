@@ -55,13 +55,13 @@
    "what": "ask from Muse on #292"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
- "owner": "muse",
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j052-board-340: merged #341; fb-bot/integrate-j052: merged #301",
+ "owner": "claude",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-09T20:15:38Z"
+ "updated": "2026-11-09T20:21:48Z"
 }
