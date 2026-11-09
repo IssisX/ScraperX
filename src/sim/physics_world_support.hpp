@@ -265,15 +265,15 @@ public:
 
     // The player's own run is never a blow (J-048; Cory, 11-06: "I can run
     // fast into something and it hurts me. Thats dumb"). Set before each
-    // step: the velocity of the frame his legs run on (his support's, kept
-    // through a flight), and how much of his own horizontal speed over it is
-    // his legs' (kFlowSpeedMps while his own drive moves him, 0 when anything
-    // else does: a throw, a machine, the Matron's hands). hit_closing takes
-    // that part off each contact's closing; what the other body brings, and a
-    // fall's speed, stay a blow.
-    void set_own_drive(const JPH::Vec3 frame_velocity, const float allowance_mps) noexcept {
+    // step: his self-driven velocity (J-061) — the horizontal speed his
+    // legs, arms and hook give him, never wind or another outside push —
+    // and how much of it is his (kFlowSpeedMps while his own drive moves
+    // him, 0 when anything else does: a throw, a machine, the Matron's
+    // hands). hit_closing takes that part off each contact's closing; what
+    // the other body brings, a fall's speed, and a gust's push stay a blow.
+    void set_own_drive(const JPH::Vec3 self_velocity, const float allowance_mps) noexcept {
         lock();
-        own_frame_velocity_ = JPH::Vec3(frame_velocity.GetX(), 0.0F, frame_velocity.GetZ());
+        own_velocity_ = JPH::Vec3(self_velocity.GetX(), 0.0F, self_velocity.GetZ());
         own_allowance_mps_ = std::max(0.0F, allowance_mps);
         unlock();
     }
@@ -359,9 +359,10 @@ private:
         const JPH::Vec3 velocity = player.GetLinearVelocity();
         const float closing = (velocity - other.GetPointVelocity(at)).Dot(toward);
         lock();
-        // His legs' part (set_own_drive): his horizontal speed over his frame
-        // toward the other, up to the allowance.
-        const JPH::Vec3 own = JPH::Vec3(velocity.GetX(), 0.0F, velocity.GetZ()) - own_frame_velocity_;
+        // His own drive's part (set_own_drive): his self-driven velocity
+        // toward the other, up to the allowance. Wind and any outside push
+        // are not in it, so they stay in the blow.
+        const JPH::Vec3 own = own_velocity_;
         const float blow = closing - std::clamp(own.Dot(toward), 0.0F, own_allowance_mps_);
         if (blow > hit_closing_) {
             hit_closing_ = blow;
@@ -492,7 +493,7 @@ private:
     float struck_closing_ = 0.0F;
     float hit_closing_ = 0.0F;
     JPH::Vec3 hit_toward_ = JPH::Vec3::sZero();
-    JPH::Vec3 own_frame_velocity_ = JPH::Vec3::sZero();   // set_own_drive
+    JPH::Vec3 own_velocity_ = JPH::Vec3::sZero();   // set_own_drive: his self-driven velocity
     float own_allowance_mps_ = 0.0F;
     // Corpses' bodies (Corpses: kUserDataBase on).
     static constexpr std::uint64_t kCorpseEntityBase = 3300;

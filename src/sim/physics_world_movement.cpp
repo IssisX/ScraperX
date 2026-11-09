@@ -767,6 +767,7 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
                                                 const StepCommands &commands,
                                                 const float delta_seconds) noexcept {
     JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
+    const JPH::Vec3 entered_velocity = player_velocity;
     JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
     // Crouched, the legs walk short; tucked in the air, they do not walk at all.
     const double speed_scale = crouched_ && !tucked_ ? kCrouchSpeedScale : 1.0;
@@ -1111,6 +1112,19 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         jump_takeoff_feet_y_ =
             static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
         jump_vault_ticks_left_ = kJumpVaultWindowTicks;
+    }
+    // J-061: the self-driven velocity for the listener's own-drive
+    // allowance. Grounded, it is his speed over his frame (the same
+    // quantity the listener used to derive from the frame velocity); in the
+    // air it keeps what takeoff gave it and only his own inputs move it —
+    // air control and a wall kick change it here, wind and any outside
+    // push never do.
+    if (grounded_) {
+        const JPH::Vec3 relative = player_velocity - reference_velocity;
+        self_drive_velocity_ = JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ());
+    } else {
+        const JPH::Vec3 change = player_velocity - entered_velocity;
+        self_drive_velocity_ += JPH::Vec3(change.GetX(), 0.0F, change.GetZ());
     }
     bodies.SetLinearVelocity(player_id_, player_velocity);
     last_set_velocity_ = player_velocity;

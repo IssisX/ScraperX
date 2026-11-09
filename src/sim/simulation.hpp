@@ -959,6 +959,10 @@ struct Snapshot final {
     // closing speed.
     std::uint64_t hit_count = 0;
     double hit_speed_mps = 0.0;
+    // The hardest blow this tick, his own drive taken off (the listener's
+    // hit_closing, before the felt threshold): what a wall hit charges,
+    // whether or not it was felt.
+    double hit_closing_mps = 0.0;
     // Riding a zipline's trolley (sim/zipline.hpp): the swing's hands on
     // its bar.
     bool zipline_riding = false;

@@ -37,6 +37,118 @@ bool to_the_run_up(Simulation &s) {
     return there;
 }
 
+// J-061: wind is not his own run. A gust's push into a wall is a blow; his
+// own drive's speed is not. The run-off helper below drives him west off a
+// test platform into a test wall 12 m on and measures the blow.
+struct WindOffRun {
+    double takeoff_mps = 0.0;    // his westward speed on the last grounded tick
+    double closing_mps = 0.0;    // his westward speed going into the wall-hit tick
+    double blow_mps = 0.0;       // the listener's hit_closing_mps on the hit tick
+    double wind_share_mps = 0.0; // closing less takeoff: what the gust added
+    double max_wind_mps = 0.0;
+    double max_wind_force_n = 0.0;
+    std::uint64_t hits = 0;
+    bool stopped = false;
+};
+
+// The pace he goes west off the edge: a sprint, a walk, or a drift —
+// launched just past the edge with no velocity, the gust alone moving him.
+enum class WindPace { Sprint, Walk, Drift };
+
+WindOffRun wind_off_run(Simulation &s, const double platform_top_y, const WindPace pace, const bool wait_for_gust) {
+    WindOffRun out;
+    const double lane_z = -147.0;
+    const double start_x = -32.0;
+    // Launch him just above the platform near its east end; he lands and settles.
+    (void)s.debug_launch_player({start_x, platform_top_y + 1.5, lane_z}, {0.0, 0.0, 0.0});
+    require(advance_until(s, [](const Snapshot &n) { return n.player_grounded; }, 2.0),
+            "wind: he lands on the platform");
+    (void)s.advance_frame(0.5);
+    require(s.snapshot().player_grounded, "wind: he settles on the platform");
+    // A strong gust, for the wind contrasts (the gust cycles; a peak comes in seconds).
+    if (wait_for_gust) {
+        require(advance_until(s, [](const Snapshot &n) { return n.wind_mps >= 13.0; }, 15.0),
+                "wind: a strong gust comes");
+    }
+    // West, to the edge.
+    (void)s.set_facing(-1.0, 0.0);
+    if (pace == WindPace::Sprint) {
+        (void)s.set_move_input(-1.0, 0.0);
+        (void)s.set_sprint_input(true);
+    } else if (pace == WindPace::Walk) {
+        (void)s.set_move_input(-1.0, 0.0);
+    } else {
+        // Drift: no run. Place him 3 m from the wall, in the air with no
+        // velocity, and let the gust do all the work. (A slow creep cannot
+        // leave the edge: the capsule balances on the corner and the weak
+        // drive never tips it over, so the creep stalls there, grounded, at
+        // the edge. And the full 12 m from the edge is too far to drift: the
+        // gust only acts while he is in the zone (y 262-300), about 2 s of
+        // fall, and after that he coasts — he falls below the wall before
+        // he reaches it. Three metres is inside what one gust peak gives.)
+        (void)s.debug_launch_player({-61.0, platform_top_y + 1.0, lane_z}, {0.0, 0.0, 0.0});
+    }
+    // Tick by tick, west, to the wall. Neutral air input once airborne, so
+    // only the gust moves him in the air.
+    const std::uint64_t hits_before = s.snapshot().hit_count;
+    const double budget = pace == WindPace::Drift ? 12.0 : 8.0;
+    const std::uint32_t budget_ticks = static_cast<std::uint32_t>(budget * 90.0);
+    bool airborne = false;
+    bool hit_seen = false;
+    // The blow lives only on the tick its contact is NEW (the listener
+    // charges it in OnContactAdded, and begin_tick zeroes it): a gentle
+    // touch takes a tick or two for the solver to stop him, so by the
+    // tick his speed collapses the blow is already gone. Keep the
+    // hardest charge seen anywhere in the flight; the wall is the only
+    // side contact out there, so it is the wall hit's blow.
+    double max_blow_mps = 0.0;
+    for (std::uint32_t tick = 0; tick < budget_ticks; ++tick) {
+        const Snapshot before = s.snapshot();
+        const double west_into_tick = -before.player_linear_velocity.x;
+        if (before.player_grounded) out.takeoff_mps = west_into_tick;
+        out.max_wind_mps = std::max(out.max_wind_mps, before.wind_mps);
+        if (!s.advance_frame(Simulation::kFixedStepSeconds).accepted) break;
+        const Snapshot after = s.snapshot();
+        out.max_wind_force_n = std::max(out.max_wind_force_n, after.wind_force_n);
+        max_blow_mps = std::max(max_blow_mps, after.hit_closing_mps);
+        if (!after.player_grounded && !airborne) {
+            airborne = true;
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.set_sprint_input(false);
+        }
+        // The wall contact is the tick his westward speed collapses, not the
+        // tick the blow signal fires: on his own run the blow is ~0 by design
+        // (the fix excuses it), so hit_closing_mps never fires there. The
+        // blow is read on the collapse tick, where the listener has just
+        // charged it. He is a meter from the wall's east face (x=-64) when
+        // it collapses; nothing else out there can stop him in one tick.
+        // The collapse is RELATIVE, not absolute: the drift approaches under
+        // 1 m/s (one gust peak gives ~0.99 m/s), so an absolute "under 1.0"
+        // after-speed is true on every drift tick and the detector fires
+        // before he touches anything, reading a 0 blow. Halving in one tick
+        // is the impact signature at any speed: on a free tick his speed
+        // barely changes, on the wall tick the wall zeroes it.
+        if (!hit_seen && airborne && west_into_tick > 0.5 &&
+            -after.player_linear_velocity.x < 0.5 * west_into_tick &&
+            after.player_position.x <= -63.0) {
+            hit_seen = true;
+            out.closing_mps = west_into_tick;
+            out.blow_mps = max_blow_mps;
+            out.wind_share_mps = out.closing_mps - out.takeoff_mps;
+        }
+        if (hit_seen && horizontal_speed(after) < 1.0) {
+            out.stopped = true;
+            break;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    out.hits = s.snapshot().hit_count - hits_before;
+    require(hit_seen, "wind: he hits the wall");
+    require(out.stopped, "wind: he stops at the wall");
+    return out;
+}
+
 } // namespace
 
 void run_corpse() {
@@ -336,4 +448,93 @@ void run_arm_break() {
     }
     std::cout << "PASS scraperx_sim arm break: his own run is no blow, flat out or jumped; a throw and a wrench break an"
                  " arm; one arm climbs at half rate, holds half the grip, reaches no bar\n";
+}
+
+void run_wind_own_drive() {
+    using scraperx::sim::InitialSpawn;
+    // Two extra-solid pairs (a platform and a wall, test-only): a wind pair
+    // high in the west-face gust zone (platform top 280.5; the zone is
+    // y 262-300) and a calm pair below every gust zone (platform top 200.5).
+    // The wall's east face is x=-64, 12 m west of the platform's west edge.
+    const std::vector<Simulation::TestExtraSolid> wind_solids = {
+        Simulation::TestExtraSolid{-40.0, 280.0, -147.0, 12.0F, 0.5F, 5.0F, false},
+        Simulation::TestExtraSolid{-65.0, 227.5, -147.0, 1.0F, 77.5F, 5.0F, false},
+    };
+    const std::vector<Simulation::TestExtraSolid> calm_solids = {
+        Simulation::TestExtraSolid{-40.0, 200.0, -147.0, 12.0F, 0.5F, 5.0F, false},
+        Simulation::TestExtraSolid{-65.0, 147.5, -147.0, 1.0F, 77.5F, 5.0F, false},
+    };
+
+    // (1) The same run, no wind: nothing charged.
+    {
+        Simulation s(InitialSpawn::ExteriorGrade, calm_solids);
+        const WindOffRun run = wind_off_run(s, 200.5, WindPace::Sprint, false);
+        std::cout << "  wind: calm sprint takeoff=" << run.takeoff_mps << " closing=" << run.closing_mps
+                  << " blow=" << run.blow_mps << " wind=" << run.max_wind_mps << "\n";
+        require(run.takeoff_mps >= 7.0 && run.takeoff_mps <= 9.1, "wind: (1) he sprints off the edge");
+        require(run.max_wind_mps == 0.0, "wind: (1) no wind below the gust zone");
+        require(run.blow_mps <= 0.4, "wind: (1) his own run into the wall is no blow");
+        require(run.hits == 0, "wind: (1) no hit felt");
+        require(s.snapshot().death_count == 0, "wind: (1) he lives");
+    }
+
+    // (2) Wind only, no run: the full closing charged.
+    {
+        Simulation s(InitialSpawn::ExteriorGrade, wind_solids);
+        const WindOffRun run = wind_off_run(s, 280.5, WindPace::Drift, true);
+        std::cout << "  wind: wind-only drift takeoff=" << run.takeoff_mps << " closing=" << run.closing_mps
+                  << " blow=" << run.blow_mps << " share=" << run.wind_share_mps << " wind=" << run.max_wind_mps
+                  << " force=" << run.max_wind_force_n << "\n";
+        require(run.takeoff_mps <= 1.2, "wind: (2) he only drifts off the edge");
+        require(run.max_wind_mps >= 13.0, "wind: (2) a strong gust blows");
+        require(run.wind_share_mps >= 0.8, "wind: (2) the gust adds a real share");
+        require(std::abs(run.blow_mps - run.wind_share_mps) <= 0.4,
+                "wind: (2) the wind's share of the closing is charged as a blow");
+        require(run.blow_mps >= run.closing_mps - 0.6, "wind: (2) nearly the full closing is charged");
+        require(run.hits == 0, "wind: (2) no hit felt (below the felt speed)");
+        require(s.snapshot().death_count == 0, "wind: (2) he lives");
+    }
+
+    // (3) Run plus wind: only the run excused. A walk, not a sprint, so the
+    // closing stays under the 9 m/s allowance: on the old code the whole
+    // closing was excused (blow 0) because the frame velocity is the
+    // platform's (zero) and the listener took his whole speed off; on the
+    // fixed code only his own drive is excused and the wind's share is charged.
+    {
+        Simulation s(InitialSpawn::ExteriorGrade, wind_solids);
+        const WindOffRun run = wind_off_run(s, 280.5, WindPace::Walk, true);
+        std::cout << "  wind: run plus wind takeoff=" << run.takeoff_mps << " closing=" << run.closing_mps
+                  << " blow=" << run.blow_mps << " share=" << run.wind_share_mps << " wind=" << run.max_wind_mps
+                  << " force=" << run.max_wind_force_n << "\n";
+        require(run.takeoff_mps >= 4.0 && run.takeoff_mps <= 6.5, "wind: (3) he walks off the edge");
+        require(run.max_wind_mps >= 13.0, "wind: (3) a strong gust blows");
+        // The bar is 0.4 here, not 0.8 as in (2): the walk is fast, so the
+        // gust has only ~2 s on him before he reaches the wall, and the
+        // measured share is 0.53. That is still a real wind contribution
+        // (the blow matches it exactly, below), and 0.4 keeps the guard
+        // against a vacuous share while the |blow - share| check does the
+        // discrimination: on the old code the blow is 0 and it fails.
+        require(run.wind_share_mps >= 0.4, "wind: (3) the gust adds a real share");
+        require(run.closing_mps < 9.0, "wind: (3) the closing stays under the allowance");
+        require(std::abs(run.blow_mps - run.wind_share_mps) <= 0.4,
+                "wind: (3) only his run is excused; the wind's share is charged");
+        require(run.hits == 0, "wind: (3) no hit felt (below the felt speed)");
+        require(s.snapshot().death_count == 0, "wind: (3) he lives");
+    }
+
+    // (4) Thrown: no allowance.
+    {
+        Simulation s(InitialSpawn::ExteriorGrade, calm_solids);
+        // 1.5 m east of the wall's east face, at the platform's height, thrown west at 7 m/s.
+        (void)s.debug_launch_player({-62.5, 201.0, -147.0}, {-7.0, 0.5, 0.0});
+        const bool struck = advance_until(s, [](const Snapshot &n) { return n.hit_count > 0; }, 2.0);
+        const Snapshot after = s.snapshot();
+        std::cout << "  wind: thrown hit_speed=" << after.hit_speed_mps << " hits=" << after.hit_count << "\n";
+        require(struck, "wind: (4) the throw hits the wall");
+        require(after.hit_count == 1, "wind: (4) the throw is a blow felt");
+        require(std::abs(after.hit_speed_mps - 7.0) <= 0.7, "wind: (4) the throw is charged its full closing");
+        require(s.snapshot().death_count == 0, "wind: (4) he lives (below lethal)");
+    }
+
+    std::cout << "PASS scraperx_sim wind own drive: a gust's push into a wall is a blow; his own run is not\n";
 }

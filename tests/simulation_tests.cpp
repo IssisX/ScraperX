@@ -151,6 +151,7 @@ int main() {
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "corpse") {
         run_corpse();
         run_arm_break();
+        run_wind_own_drive();
         return EXIT_SUCCESS;
     }
     if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "well") {
@@ -653,6 +654,7 @@ int main() {
     run_zipline();
     run_corpse();
     run_arm_break();
+    run_wind_own_drive();
     run_hook();
     run_workers();
     run_c7();
