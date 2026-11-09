@@ -655,18 +655,19 @@ class Switch:
             time.sleep(3)   # the first read starts GitHub's computation; read once more
             facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
             d = rules.merge_decision(facts, author, self.team, token, key)
-        if d.action == "MERGE" and not ctx.get("fresh"):
-            # J-072, the security pass on #360: the sweep's reads may be answered from the ETag cache, which a job
-            # outside switchboard-merge could have saved. A merge is decided only on GitHub's own answers: the PR,
-            # its head, proof runs and jobs, comments, reviews, job issue and board, all read again uncached.
+        if d.action in ("MERGE", "HUMAN-MERGE") and not ctx.get("fresh"):
+            # J-072, the security pass on #360: the sweep's reads may be answered from the ETag cache, whose file
+            # an older run saved. A merge, and a MERGE-BY-HAND line in the inbox, is decided only on GitHub's own
+            # answers: the PR, its head, proof runs and jobs, comments, reviews, job issue and board, read again uncached.
             facts, ctx = self.fresh_facts(facts.number)
             author = self.team.vendor_of_branch(facts.head_ref)
             d = rules.merge_decision(facts, author, self.team, token, key)
             self.out(f"FRESH       #{facts.number} merge facts read again from GitHub, uncached: {d.action}")
         if d.action in ("MERGE", "HUMAN-MERGE"):
-            block, never = self.rule_check_block(facts.number, facts.head_sha)
-            facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
-            d = rules.merge_decision(facts, author, self.team, token, key)
+            with self.gh.fresh():   # the rule check and the decision on it: no answer from the cache either
+                block, never = self.rule_check_block(facts.number, facts.head_sha)
+                facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
+                d = rules.merge_decision(facts, author, self.team, token, key)
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
         seen = Steered(facts, ctx, d)

@@ -6,6 +6,7 @@ No network, no clock, no files: GitHub, the rule check and the time are given.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import pathlib
 import sys
@@ -49,6 +50,10 @@ class FakeGH:
 
     def __init__(self, thread=()):
         self.thread, self.posted, self.writes, self.gets = list(thread), [], [], []
+
+    @contextlib.contextmanager
+    def fresh(self):   # ghapi.GitHub.fresh: this stub has no cache, so every read is already GitHub's own
+        yield self
 
     def paged(self, path, key=""):
         return list(self.thread)

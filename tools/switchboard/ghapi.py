@@ -11,7 +11,9 @@ event sweeps at about 420-480 calls each being over 5,000 an hour):
     the newest x-ratelimit-remaining and x-ratelimit-reset seen.
   - A GET whose answer carried an ETag is kept in `etags` (path -> etag and body), and the next read of that
     path sends If-None-Match: a 304 is answered from the cache and does not count against the primary limit.
-    `load_etags`/`save_etags` carry the cache between runs (switchboard.yml keeps the file in the Actions cache).
+    `load_etags`/`save_etags` carry the cache between runs: switchboard.yml keeps the file in the Actions cache, but
+    only its secret-free cache-in and cache-out jobs touch that cache; the switch gets the one file as this run's
+    artifact in $RUNNER_TEMP and reads it only once its MAC checks (J-072, the security pass on #360).
   - A rate-limit answer (429, or 403 with x-ratelimit-remaining 0 or GitHub's "rate limit" words) is tried at
     most RATE_TRIES times with full-jitter backoff, then raises RateLimited, which the switch reads as "leave it
     for the next sweep", never as an error.
@@ -115,33 +117,56 @@ class GitHub:
         return hmac.new(self.cache_key, payload.encode("utf-8"), hashlib.sha256).hexdigest()
 
     def load_etags(self, path: str) -> None:
+        """Read the cache file, or read a cold cache: this never raises (J-072, the security pass on #360: a non-ASCII
+        mac made compare_digest raise TypeError, and a lone surrogate in the payload made _mac raise, both before
+        main's try, so the bad file stayed on disk and was saved again as the newest entry). A file that is read as
+        cold for any reason but its absence is removed at once, so even a run that dies before save_etags hands
+        nothing on (switchboard.yml uploads the file only if it exists)."""
+        if not os.path.exists(path):
+            return
+        why = self._read_etags(path)
+        if why:
+            self.etags, self.state = {}, {}
+            self.log(f"::warning::ETAG CACHE  the cache file {why}: read as a cold cache" if self.cache_key
+                     else f"NOTE        the ETag cache file {why}: read as a cold cache")
+            with contextlib.suppress(OSError):
+                os.remove(path)
+
+    def _read_etags(self, path: str) -> str:
+        """Load the file into etags and state; "" when read, else why it was not."""
         try:
             with open(path, encoding="utf-8") as f:
                 got = json.load(f)
-        except (OSError, ValueError):
-            return
+        except (OSError, ValueError) as err:   # UnicodeDecodeError is a ValueError
+            return f"could not be read ({type(err).__name__})"
         if not isinstance(got, dict):
-            return
+            return "is not a JSON object"
         if got.get("v") == 3:   # {"v": 3, "mac": ..., "payload": "<the v2 file as text>"}
-            payload = got.get("payload") if isinstance(got.get("payload"), str) else ""
-            if self.cache_key and not hmac.compare_digest(self._mac(payload), str(got.get("mac") or "")):
-                self.log("::warning::ETAG CACHE  the cache file's MAC does not verify: read as a cold cache")
-                return
+            payload, mac = got.get("payload"), got.get("mac")
+            if not isinstance(payload, str) or not isinstance(mac, str):
+                return "has no payload or mac"
+            if self.cache_key:
+                try:   # as bytes: compare_digest raises on a str with a non-ASCII character
+                    want, seen = self._mac(payload).encode("ascii"), mac.encode("ascii")
+                except UnicodeError:   # a lone surrogate in the payload, a non-ASCII mac
+                    return "has a payload or mac that is not plain text"
+                if not hmac.compare_digest(want, seen):
+                    return "has a MAC that does not verify"
             try:
                 got = json.loads(payload)
             except ValueError:
-                return
+                return "has a payload that is not JSON"
             if not isinstance(got, dict):
-                return
+                return "has a payload that is not a JSON object"
         elif self.cache_key:   # an unsigned file is never read by a run that holds the key
-            self.log("NOTE        the ETag cache file is not signed: read as a cold cache")
-            return
+            return "is not signed"
         if got.get("v") == 2:   # {"v": 2, "etags": {...}, "state": {...}}: the switch's sweep state rides along
             self.state = got.get("state") if isinstance(got.get("state"), dict) else {}
             got = got.get("etags") if isinstance(got.get("etags"), dict) else {}
         self.etags = {k: v for k, v in got.items()
                       if isinstance(v, dict) and isinstance(v.get("etag"), str) and isinstance(v.get("body"), str)
                       and isinstance(v.get("t", 0), (int, float))}
+        return ""
 
     def save_etags(self, path: str, now: float | None = None) -> None:
         """Every entry, the most recently used first, within the caps (J-072, Codex on #360: a fast sweep reads no
@@ -164,6 +189,8 @@ class GitHub:
             total += len(entry["body"])
         payload = json.dumps({"v": 2, "etags": keep, "state": self.state})
         try:
+            # a cold start has no folder yet: cache-in handed nothing on, so $RUNNER_TEMP/etags was never made
+            os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
                 if self.cache_key:
                     json.dump({"v": 3, "mac": self._mac(payload), "payload": payload}, f)

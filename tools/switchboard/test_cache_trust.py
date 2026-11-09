@@ -90,6 +90,12 @@ def sweep_one(real: dict, planted: dict) -> tuple[list, list[str], object]:
     sw.merge_token = sw.review_key = ""
     sw.api_ok = lambda c: True
     sw.review_load = lambda: ({}, {})
+    sw.rc_fresh = []   # gh.fresh_only at each rule check: the check and the decision on it read nothing cached
+
+    def rule_check(number, head):
+        sw.rc_fresh.append(gh.fresh_only)
+        return fb.RC_CLEAN
+    sw.run_rule_check = rule_check
     pr = gh.get(f"repos/{REPO}/pulls/9")
     facts, ctx = sw.pr_facts(pr)
     steered: list = []
@@ -124,6 +130,26 @@ class FreshMerge(unittest.TestCase):
         uncached = sw.gh.runner.uncached
         for path in (COMMENTS, RUNS, JOBS, f"repos/{REPO}/pulls/9"):   # read again from GitHub, uncached
             self.assertIn(path, uncached)
+
+
+    def test_a_human_merge_is_decided_on_fresh_reads_too(self):
+        # the security pass's note on #360: a HUMAN-MERGE (a MERGE-BY-HAND line in the inbox) and the rule check
+        # behind it are read under gh.fresh() as a MERGE is, never from the cache file
+        real = github([codex_clean()], "success")
+        real[f"repos/{REPO}/pulls/9/files?per_page=100&page=1"] = [{"filename": ".github/workflows/x.yml"}]
+        steered, writes, (_, sw) = sweep_one(real, {p: b for p, b in real.items()})   # every read cached
+        self.assertEqual(steered[-1].decision.action, "HUMAN-MERGE")   # no merge token in this run
+        self.assertTrue(any(l.startswith("FRESH       #9") for l in sw.lines), sw.lines)
+        for path in (COMMENTS, RUNS, JOBS, f"repos/{REPO}/pulls/9"):
+            self.assertIn(path, sw.gh.runner.uncached)
+        self.assertTrue(sw.rc_fresh and all(sw.rc_fresh), sw.rc_fresh)
+        self.assertFalse(any(path.endswith("/merge") for _, path in writes), writes)
+
+    def test_the_rule_check_of_a_merge_runs_under_fresh(self):
+        real = github([codex_clean()], "success")
+        steered, _, (_, sw) = sweep_one(real, {p: b for p, b in real.items()})
+        self.assertEqual(steered[-1].decision.action, "MERGE")
+        self.assertTrue(sw.rc_fresh and all(sw.rc_fresh), sw.rc_fresh)
 
 
 class SignedFile(unittest.TestCase):
@@ -165,6 +191,9 @@ class SignedFile(unittest.TestCase):
             gh = self.client("review-key")
             gh.load_etags(path)
             self.assertEqual((gh.etags, gh.state), ({}, {}))
+            self.assertFalse(os.path.exists(path))   # read as cold, so removed: it is never handed on (BadFile)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"v": 2, "etags": {"a|": {"etag": '"e"', "body": "[9]"}}, "state": {"steer": {}}}, f)
             local = self.client("")   # a local run with no key reads it (the dry measurements)
             local.load_etags(path)
             self.assertEqual(list(local.etags), ["a|"])
@@ -175,6 +204,79 @@ class SignedFile(unittest.TestCase):
             part = wf.split(f"\n  {job}\n", 1)[1].split("\n  provision:\n" if job == "ask:" else "\n\n\n", 1)[0]
             self.assertIn("SWITCHBOARD_REVIEW_KEY: ${{ secrets.SWITCHBOARD_REVIEW_KEY }}", part, job)
             self.assertIn("environment: switchboard-merge", part, job)
+
+
+class BadFile(unittest.TestCase):
+    """The security pass's note on #360: a restored file whose mac is not ASCII made compare_digest raise TypeError,
+    and a lone surrogate in its payload made _mac raise UnicodeEncodeError, both before main's try, so the switch
+    died with the bad file still on disk and the save step handed it on as the newest entry. Each is a cold cache now,
+    the file is removed at once, and main goes on and saves a fresh signed file."""
+
+    KEY = "review-key"
+
+    def signed(self, d: str) -> tuple[str, dict]:
+        path = os.path.join(d, "etags.json")
+        gh = ghapi.GitHub(REPO, True, log=lambda line: None)
+        gh.set_cache_key(self.KEY)
+        gh.etags, gh.state, gh.used = {"a|": {"etag": '"e"', "body": "[1]", "t": 1.0}}, {"steer": {"stamp": "x"}}, {"a|"}
+        gh.save_etags(path, now=2.0)
+        with open(path, encoding="utf-8") as f:
+            return path, json.load(f)
+
+    @staticmethod
+    def cases(good: dict) -> list[tuple[str, str]]:
+        """(what, the file's text): each must read as a cold cache. json.dumps writes ASCII, so a lone surrogate goes
+        in as its escape, which json.load turns back into the lone surrogate."""
+        return [
+            ("a non-ASCII mac", json.dumps(dict(good, mac="é" * 64))),
+            ("a lone surrogate in the mac", json.dumps(dict(good, mac="\ud800" + good["mac"][1:]))),
+            ("a lone surrogate in the payload", json.dumps(dict(good, payload=good["payload"][:-1] + "\ud800}"))),
+            ("a mac that is a number", json.dumps(dict(good, mac=7))),
+            ("a payload that is a list", json.dumps(dict(good, payload=["x"]))),
+            ("a list, not an object", json.dumps([good])),
+            ("bytes that are not UTF-8", "\udcff"),   # written with surrogateescape: the byte 0xff
+            ("not JSON", "{"),
+        ]
+
+    @staticmethod
+    def write(path: str, text: str) -> None:
+        with open(path, "w", encoding="utf-8", errors="surrogateescape") as f:
+            f.write(text)
+
+    def test_each_bad_file_is_a_cold_cache_never_an_exception_and_is_removed(self):
+        with tempfile.TemporaryDirectory() as d:
+            path, good = self.signed(d)
+            for what, text in self.cases(good):
+                self.write(path, text)
+                lines: list[str] = []
+                gh = ghapi.GitHub(REPO, True, log=lines.append)
+                gh.set_cache_key(self.KEY)
+                gh.load_etags(path)   # raises nothing
+                self.assertEqual((gh.etags, gh.state), ({}, {}), what)
+                self.assertFalse(os.path.exists(path), what)   # a run that dies after this hands nothing on
+                self.assertTrue(any("read as a cold cache" in l for l in lines), (what, lines))
+
+    def test_main_goes_on_and_saves_a_fresh_signed_file_not_the_bad_one(self):
+        def stub(gh, root, now):
+            return types.SimpleNamespace(gh=gh, out=lambda line: None, merge_token="", review_key="")
+        with tempfile.TemporaryDirectory() as d:
+            path, good = self.signed(d)
+            for what, text in self.cases(good):
+                self.write(path, text)
+                with mock.patch.dict(os.environ, {switch.ETAG_CACHE_ENV: path, switch.REVIEW_KEY_ENV: self.KEY}), \
+                        mock.patch.object(sys, "argv", ["switch.py", "--part", "steer"]), \
+                        mock.patch.object(switch, "Switch", side_effect=stub), \
+                        mock.patch.object(switch, "run_sweep", return_value=0):
+                    self.assertEqual(switch.main(), 0, what)   # never an exception before main's try
+                with open(path, encoding="utf-8") as f:
+                    saved = json.load(f)
+                self.assertEqual(saved.get("v"), 3, what)
+                self.assertNotIn(saved["mac"], text, what)   # never the bad file handed on
+                again = ghapi.GitHub(REPO, True, log=lambda line: None)
+                again.set_cache_key(self.KEY)
+                again.load_etags(path)
+                self.assertTrue(os.path.exists(path), what)   # it verifies: a fresh signed file, read and kept
+                self.assertEqual((again.etags, again.state), ({}, {}), what)
 
 
 class DryRun(unittest.TestCase):
