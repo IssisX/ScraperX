@@ -1,5 +1,5 @@
 {
- "attempt": 2,
+ "attempt": 3,
  "blocked": null,
  "branches": {
   "claude/integrate-j072-mail-shape": "8c25d13a1d29462c42c762640b70140eb800e3ed",
@@ -11,8 +11,8 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T20:47:00Z",
- "head": "0aa97209cfeda56ca9fab6f217acb76878e66e08",
+ "deadline": "2026-11-09T20:17:00Z",
+ "head": "c8277dc2aeb252b38ec8442ee0b6b2d6955b4c70",
  "issue": 350,
  "job": "J-072",
  "landed": {
@@ -113,7 +113,10 @@
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 0,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T18:59:00Z",
+    "why": "new head c8277dc2"
+   },
    "created": "2026-11-09T18:42:32Z",
    "dead": "2026-11-09T22:47:00Z",
    "dead_lettered": null,
@@ -131,6 +134,30 @@
    "version": "0aa97209cfeda56ca9fab6f217acb76878e66e08",
    "via": "relay",
    "what": "review #360 @ 0aa97209"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T18:59:00Z",
+   "dead": "2026-11-09T22:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T20:17:00Z",
+   "id": "O-08cd9c4b",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-09T18:59:00Z",
+   "missing": 0,
+   "ref": "PR|#360",
+   "sends": 1,
+   "thread": 360,
+   "to": "claude",
+   "unseen": null,
+   "version": "fix:c8277dc2aeb252b38ec8442ee0b6b2d6955b4c70",
+   "via": "session",
+   "what": "#360: open FIX from Claude (review)"
   }
  ],
  "outcome": null,
@@ -140,9 +167,10 @@
  "pr_done": "",
  "prs": [
   359,
-  360
+  360,
+  361
  ],
- "review": "waiting",
- "state": "review",
- "updated": "2026-11-09T18:42:32Z"
+ "review": "FIX",
+ "state": "landable",
+ "updated": "2026-11-09T18:59:00Z"
 }
