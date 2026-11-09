@@ -192,7 +192,7 @@ void run_matron_pace() {
               << " worst_step=" << worst_speed_step << " hushes=" << hushes << "\n";
 }
 SCRAPERX_GROUP("matron_pace", 880, run_matron_pace);
-SCRAPERX_SELECT("matron-moves", run_matron_pace, run_matron_unstick);
+SCRAPERX_SLICE("matron-moves", run_matron_pace, run_matron_unstick);
 
 void run_matron_unstick() {
     // Her patrol round the 154 m deck's loop, the player away up the tower
