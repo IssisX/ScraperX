@@ -307,3 +307,8 @@
 {"attempt": 1, "ev": "would_send", "id": "O-8f0d32cf", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-09T18:59:00Z", "to": "grok", "via": "issue"}
 {"attempt": 1, "ev": "would_send", "id": "O-6d2a7767", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-09T18:59:00Z", "to": "grok", "via": "issue"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T18:59:00Z", "tries": 1}
+{"branch": "claude/integrate-j072-chatgpt-wake", "ev": "landed", "how": "merged #361", "job": "J-072", "sha": "6c21ea5757c4c5040612dac0718b4d5272adbd22", "t": "2026-11-09T19:05:16Z"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-a015d822", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-09T19:05:16Z", "to": "grok", "via": "issue"}
+{"ev": "state", "frm": "landable", "job": "J-072", "t": "2026-11-09T19:05:16Z", "to": "working"}
+{"attempt": 1, "ev": "would_send", "id": "O-a015d822", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-09T19:05:16Z", "to": "grok", "via": "issue"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T19:05:16Z", "tries": 1}

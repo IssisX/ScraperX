@@ -2,6 +2,7 @@
  "attempt": 3,
  "blocked": null,
  "branches": {
+  "claude/integrate-j072-chatgpt-wake": "6c21ea5757c4c5040612dac0718b4d5272adbd22",
   "claude/integrate-j072-mail-shape": "8c25d13a1d29462c42c762640b70140eb800e3ed",
   "claude/integrate-j072-pipe-holes": "9435daec64a7ca5f107a397cfcce1325e721a7d5",
   "claude/integrate-j072-reconciler": "a3e78417ff861e6f124d78888361ff1f6acc2de9",
@@ -16,6 +17,11 @@
  "issue": 350,
  "job": "J-072",
  "landed": {
+  "claude/integrate-j072-chatgpt-wake": [
+   "6c21ea5757c4c5040612dac0718b4d5272adbd22",
+   "merged #361",
+   "2026-11-09T19:05:16Z"
+  ],
   "claude/integrate-j072-mail-shape": [
    "8c25d13a1d29462c42c762640b70140eb800e3ed",
    "merged #357",
@@ -171,6 +177,6 @@
   361
  ],
  "review": "FIX",
- "state": "landable",
- "updated": "2026-11-09T18:59:00Z"
+ "state": "working",
+ "updated": "2026-11-09T19:05:16Z"
 }
