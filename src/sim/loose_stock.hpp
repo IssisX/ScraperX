@@ -124,15 +124,21 @@ public:
     // the east/west stock existed and saves made before it still load.
     // Their bodies stay unbuilt (invalid BodyIndex) until realize_reserved.
     void append_reserved();
-    // Builds the bodies dress_tower reserved, last in the kit's build
-    // order, and returns their places in the table.
+    // Builds the bodies dress_tower reserved for the east/west pieces,
+    // next in the kit's build order, and returns their places in the
+    // table. The upper pieces are built separately (realize_upper),
+    // after the deck-154 forklift, so the forklift keeps its place right
+    // after the east/west pieces.
     [[nodiscard]] std::vector<int> realize_reserved();
+    // Builds the bodies dress_tower reserved for the upper pieces, after
+    // the deck-154 forklift, and returns their places in the table.
+    [[nodiscard]] std::vector<int> realize_upper();
     // Takes the upper places dress_tower recorded, at the end of the
     // table (after the east/west pieces), so the crane steel, the
     // machine weights, the throwables and the east/west pieces keep the
     // entities they had before the upper stock existed and saves made
     // before it still load. Their bodies stay unbuilt (invalid
-    // BodyIndex) until realize_reserved.
+    // BodyIndex) until realize_upper.
     void append_upper();
     // The steel for the yard crane's magnet (yard_crane.hpp), laid in its
     // hook's reach after the tower's stock, so saves made before it line up:
@@ -206,6 +212,9 @@ private:
     void add_piece(const Placement &placement);
     // Builds one piece's body for an entity already chosen, as placed.
     [[nodiscard]] kit::BodyIndex create_body(const Placement &placement, std::uint64_t entity);
+    // Builds the bodies of the table places in [begin, end) that have
+    // none yet, in table order, and returns their places.
+    [[nodiscard]] std::vector<int> realize_range(int begin, int end);
 };
 
 } // namespace scraperx::sim

@@ -653,13 +653,28 @@ void LooseStock::add_piece(const Placement &p) {
 }
 
 std::vector<int> LooseStock::realize_reserved() {
+    // The east/west pieces only, up to where the upper pieces begin: the
+    // upper pieces are realized separately (realize_upper), after the
+    // deck-154 forklift, so the forklift keeps its place right after the
+    // east/west pieces and the magnet's pinned append order still holds.
+    // Until append_upper() runs there is no upper split, so realize them all.
+    const int end = upper_begin_ == 0 ? count() : upper_begin_;
+    return realize_range(0, end);
+}
+
+std::vector<int> LooseStock::realize_upper() {
+    return realize_range(upper_begin_, count());
+}
+
+std::vector<int> LooseStock::realize_range(const int begin, const int end) {
     std::vector<int> realized;
-    for (std::size_t i = 0; i < pieces_.size(); ++i) {
-        if (pieces_[i].valid()) {
+    for (int i = begin; i < end; ++i) {
+        const std::size_t at = static_cast<std::size_t>(i);
+        if (pieces_[at].valid()) {
             continue;
         }
-        pieces_[i] = create_body(placed_[i], kFirstEntity + i);
-        realized.push_back(static_cast<int>(i));
+        pieces_[at] = create_body(placed_[at], kFirstEntity + at);
+        realized.push_back(i);
     }
     return realized;
 }
@@ -814,16 +829,19 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     // or renumbers.
     // The new spots are recorded here and take their table places last
     // (append_reserved, after the Matron's throwables), so no
-    // pre-existing piece moves or renumbers; their bodies are built last
-    // (realize_reserved), so no pre-existing body moves in the kit's
-    // build order. The third pass dresses only the rings and decks in
-    // its own list, records them the same way (append_upper, after the
-    // east/west pieces), and never touches the first two passes' rings:
-    // above 396.25 m the ring slabs are the bands' own kit bodies, so the
+    // pre-existing piece moves or renumbers; their bodies are built next
+    // (realize_reserved, once the bay, the twin tower and the summit
+    // stand), so no pre-existing body moves in the kit's build order.
+    // The third pass dresses only the rings and decks in its own list,
+    // records them the same way (append_upper, after the east/west
+    // pieces), and never touches the first two passes' rings: above
+    // 396.25 m the ring slabs are the bands' own kit bodies, so the
     // machine-clear box starts 5 cm over the floor there, the edge
     // search starts at 2 m (the rings taper under the 10 m start), and
     // the solid top decks are felt for on a 1.5 m grid instead of from
-    // an edge.
+    // an edge. Their bodies are built after the deck-154 forklift
+    // (realize_upper), so the forklift keeps its place right after the
+    // east/west pieces and no pre-existing body moves either.
     // `ring_tops` is the rings this pass dresses, `stack_count` how many
     // of them are stack rings, `deck_first` the first top-deck entry
     // (ring_tops.size() when the pass has none).
@@ -1058,14 +1076,14 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     (void)dress_pass(false, parent_spots, &east_west, tops, stack_rings, tops.size());
     // Only recorded here: their table places are taken by
     // append_reserved() after the Matron's throwables, so nothing already
-    // laid is renumbered (see the header). Their bodies are built last by
+    // laid is renumbered (see the header). Their bodies are built by
     // realize_reserved, as before.
     pending_east_west_ = east_west;
     // The bands' rings above 396.25 m and the top decks: only recorded
     // here as well, in their own list. Their table places are taken by
     // append_upper() after the east/west pieces, so nothing already laid
-    // is renumbered either. Their bodies are built last by
-    // realize_reserved, as before.
+    // is renumbered either. Their bodies are built after the deck-154
+    // forklift by realize_upper, so the forklift keeps its place.
     std::vector<float> upper_tops;
     for (int k = 0; k <= 9; ++k) {
         upper_tops.push_back(418.25F + 22.0F * static_cast<float>(k));
