@@ -1,0 +1,77 @@
+{
+ "attempt": 1,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-protected-j007-item6": "d4c5fbd761b19a6cdbc9f4b79c1a3e508a6a4704"
+ },
+ "cancelled": null,
+ "ci": "green",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T18:05:20Z",
+ "head": "7608a48044263189f60d4c1f655887d53d79618e",
+ "issue": 114,
+ "job": "J-007",
+ "landed": {
+  "fb-bot/integrate-protected-j007-item6": [
+   "d4c5fbd761b19a6cdbc9f4b79c1a3e508a6a4704",
+   "merged #336",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-019806f1",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "PR|#315",
+   "sends": 0,
+   "thread": 315,
+   "to": "muse",
+   "version": "fix:7608a48044263189f60d4c1f655887d53d79618e",
+   "via": "email",
+   "what": "#315: open FIX from Codex (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T17:29:51Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T18:05:20Z",
+   "id": "O-b7eeb2d8",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "ASK|ask on #114",
+   "sends": 0,
+   "thread": 114,
+   "to": "claude",
+   "version": "6746836200",
+   "via": "api",
+   "what": "ask from Muse on #114"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 315,
+ "pr_done": "",
+ "prs": [
+  315
+ ],
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-09T17:35:20Z"
+}

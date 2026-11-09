@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j066-review-split": "3053c610fd7b3380e4707f3ecf90aa0512fedebd"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 0,
+ "job": "J-066",
+ "landed": {
+  "claude/integrate-j066-review-split": [
+   "3053c610fd7b3380e4707f3ecf90aa0512fedebd",
+   "merged #327",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j066-review-split: merged #327",
+ "owner": "claude",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

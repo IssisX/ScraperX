@@ -1,0 +1,226 @@
+{"ev": "job", "job": "J-074", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-072", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-071", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-070", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-069", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-067", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-064", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-063", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-060", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-061", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-059", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-055", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-054", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-052", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-050", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-049", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-045", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-044", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-043", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-042", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-040", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-038", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-036", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-027", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-023", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-022", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-021", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-018", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-016", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-015", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-014", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-011", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-009", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-008", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-007", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-001", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-053", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-044c", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-047", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-051", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-051b", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-066", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-024", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-044b", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-044d", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-058", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-013", "t": "2026-11-09T17:35:20Z"}
+{"ev": "job", "job": "J-044l", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-3dd4b25c", "job": "J-001", "kind": "fix", "ref": "PR|#227", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-194f9ab3", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #108", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"ev": "state", "frm": "accepted", "job": "J-001", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"branch": "fb-bot/integrate-protected-j007-item6", "ev": "landed", "how": "merged #336", "job": "J-007", "sha": "d4c5fbd761b19a6cdbc9f4b79c1a3e508a6a4704", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-019806f1", "job": "J-007", "kind": "fix", "ref": "PR|#315", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-b7eeb2d8", "job": "J-007", "kind": "ask", "ref": "ASK|ask on #114", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-007", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"branch": "fb-bot/integrate-protected-j008-ladder-bar-sort", "ev": "landed", "how": "merged #314", "job": "J-008", "sha": "45e16da201b2a1b6f8302a752b6c2a4b7741b212", "t": "2026-11-09T17:35:20Z"}
+{"ev": "state", "frm": "accepted", "job": "J-008", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-08afc48d", "job": "J-009", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j009-258-down-traversal-flags", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-51240df7", "job": "J-009", "kind": "ask", "ref": "ASK|ask on #116", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-da6b6426", "job": "J-009", "kind": "ask", "ref": "ASK|ask on #116", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-009", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-45b11271", "job": "J-011", "kind": "ask", "ref": "ASK|ask on #118", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-011", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "fb-bot/integrate-protected-j013-machine-hearing", "ev": "landed", "how": "merged #305", "job": "J-013", "sha": "8522138f46db39e5cf522ca86ab7cf6a516c2ac9", "t": "2026-11-09T17:35:20Z"}
+{"ev": "outcome", "job": "J-013", "outcome": "merged", "t": "2026-11-09T17:35:20Z", "why": "fb-bot/integrate-protected-j013-machine-hearing: merged #305"}
+{"ev": "state", "frm": "accepted", "job": "J-013", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"branch": "fb-bot/integrate-protected-j014-stock-above-396", "ev": "landed", "how": "merged #335", "job": "J-014", "sha": "b481cb51c73aac61d990e9db46b8cee0e7fa98aa", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-073d0de5", "job": "J-014", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j014-stock-above-396", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-014", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-25fb6789", "job": "J-015", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-0569d1c6", "job": "J-015", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-015", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-188cbb45", "job": "J-016", "kind": "start-agent", "ref": "JOB|#123", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-016", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-1954c91b", "job": "J-018", "kind": "start-agent", "ref": "JOB|#125", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-018", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-14a329f7", "job": "J-021", "kind": "ask", "ref": "ASK|ask on #128", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-021", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "fb-bot/integrate-j022-env-d-gusts", "ev": "landed", "how": "merged #302", "job": "J-022", "sha": "464b9cdbc786ba921f3e90f2e8d3a9d0f27a9683", "t": "2026-11-09T17:35:20Z"}
+{"branch": "fb-bot/integrate-j022-mist-streak", "ev": "landed", "how": "merged #317", "job": "J-022", "sha": "0c92212b98b1f38bbd43bb1f7f526063aed17d9c", "t": "2026-11-09T17:35:20Z"}
+{"ev": "state", "frm": "accepted", "job": "J-022", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"ev": "state", "frm": "accepted", "job": "J-023", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "fb-bot/integrate-j024-plants", "ev": "landed", "how": "merged #311", "job": "J-024", "sha": "a4065438997a454565177c225519236de52b9985", "t": "2026-11-09T17:35:20Z"}
+{"ev": "outcome", "job": "J-024", "outcome": "merged", "t": "2026-11-09T17:35:20Z", "why": "fb-bot/integrate-j024-plants: merged #311"}
+{"ev": "state", "frm": "accepted", "job": "J-024", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-cf78351b", "job": "J-027", "kind": "start-agent", "ref": "JOB|#134", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-027", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-763c3967", "job": "J-036", "kind": "start-agent", "ref": "JOB|#167", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-036", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-61750a48", "job": "J-038", "kind": "fix", "ref": "PR|#299", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-6f1d026e", "job": "J-038", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j038-slice1", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-038", "t": "2026-11-09T17:35:20Z", "to": "proof"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-676e6b21", "job": "J-040", "kind": "start-agent", "ref": "JOB|#228", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-040", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "fb-bot/integrate-protected-j042-touch2-geometry", "ev": "landed", "how": "merged #300", "job": "J-042", "sha": "c6b87e787df3b43014b7aeb1e1c57918e8811b3b", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-4c0d613d", "job": "J-042", "kind": "fix", "ref": "PR|#291", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-2359c606", "job": "J-042", "kind": "ask", "ref": "ASK|ask on #240", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-042", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-b90cc5ec", "job": "J-043", "kind": "ask", "ref": "ASK|ask on #241", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-043", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "chatgpt/integrate-j044-review-gate-20261109", "ev": "landed", "how": "closed #347", "job": "J-044", "sha": "55b8b3e22548aa0154f5af13d5978d7d171c304d", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-66ad732a", "job": "J-044", "kind": "start-agent", "ref": "JOB|#242", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-044", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "fb-bot/integrate-j044b-capacity", "ev": "landed", "how": "merged #303", "job": "J-044b", "sha": "0317fa7907995d59596c02337a192d0761105264", "t": "2026-11-09T17:35:20Z"}
+{"branch": "fb-bot/integrate-protected-j044b-grant", "ev": "landed", "how": "merged #345", "job": "J-044b", "sha": "e0bcfa9f0ea85498dec87bfabbdc2836676a061c", "t": "2026-11-09T17:35:20Z"}
+{"ev": "outcome", "job": "J-044b", "outcome": "merged", "t": "2026-11-09T17:35:20Z", "why": "fb-bot/integrate-j044b-capacity: merged #303; fb-bot/integrate-protected-j044b-grant: merged #345"}
+{"ev": "state", "frm": "accepted", "job": "J-044b", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"branch": "claude/integrate-j044c-upper-body", "ev": "landed", "how": "closed #298", "job": "J-044c", "sha": "03ad884b158583568062f454817f5683e2d6be72", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-ea2aff94", "job": "J-044c", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j044c-gains", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-e505dc8d", "job": "J-044c", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j044c-gains-peaks", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-044c", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-359455b3", "job": "J-044d", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j044d", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-044d", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-52effe01", "job": "J-044l", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j044l", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-044l", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-13bce0e4", "job": "J-045", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j045-first-advance", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-675f1e7e", "job": "J-045", "kind": "ask", "ref": "ASK|ask on #248", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-045", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"branch": "claude/integrate-j047-ledger-merged", "ev": "landed", "how": "merged #356", "job": "J-047", "sha": "a95abfd0490c87d227dfbfc71a22377971d9bad7", "t": "2026-11-09T17:35:20Z"}
+{"branch": "claude/integrate-j047-lettered-jobs", "ev": "landed", "how": "merged #344", "job": "J-047", "sha": "7aec7d8a94ab4da05a835afc60eb95e3b50c9a43", "t": "2026-11-09T17:35:20Z"}
+{"branch": "claude/integrate-j047-rulecheck-throw", "ev": "landed", "how": "merged #354", "job": "J-047", "sha": "03ad13eb140ab2b926de33f1266bd137d94c89b8", "t": "2026-11-09T17:35:20Z"}
+{"ev": "outcome", "job": "J-047", "outcome": "merged", "t": "2026-11-09T17:35:20Z", "why": "claude/integrate-j047-ledger-merged: merged #356; claude/integrate-j047-lettered-jobs: merged #344; claude/integrate-j047-rulecheck-throw: merged #354"}
+{"ev": "state", "frm": "accepted", "job": "J-047", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-21733090", "job": "J-049", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j049-pr1", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-217407c3", "job": "J-049", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j049-pr1", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-444b981c", "job": "J-049", "kind": "ask", "ref": "ASK|ask on #278", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-9b7db767", "job": "J-049", "kind": "ask", "ref": "ASK|ask on #278", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-049", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"branch": "fb-bot/integrate-j050-traversal-rungdown-ci-red-fix", "ev": "landed", "how": "merged #288", "job": "J-050", "sha": "a8aa1a27b3ccdc35f2f061187a998b023e3b809d", "t": "2026-11-09T17:35:20Z"}
+{"branch": "fb-bot/integrate-protected-j050-traversal-rungdown-bottom-gap-test", "ev": "landed", "how": "merged #290", "job": "J-050", "sha": "6678fe6456fddb5f740f5e50b583e4a92c9e74cc", "t": "2026-11-09T17:35:20Z"}
+{"ev": "state", "frm": "accepted", "job": "J-050", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"branch": "claude/integrate-j051-integrator-inbox", "ev": "landed", "how": "merged #284", "job": "J-051", "sha": "ae63874c30bd697f08a5b8521fb911d125cfcf1f", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-6fe8c9ad", "job": "J-051", "kind": "fix", "ref": "BRANCH|claude/integrate-j051-asks-since", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-051", "t": "2026-11-09T17:35:20Z", "to": "proof"}
+{"branch": "claude/integrate-j051b-autopr-errors", "ev": "landed", "how": "merged #287", "job": "J-051b", "sha": "7426de75e0e365dc20afbc591ba2f403335d699f", "t": "2026-11-09T17:35:20Z"}
+{"ev": "outcome", "job": "J-051b", "outcome": "merged", "t": "2026-11-09T17:35:20Z", "why": "claude/integrate-j051b-autopr-errors: merged #287"}
+{"ev": "state", "frm": "accepted", "job": "J-051b", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"branch": "claude/integrate-j052-board-340", "ev": "landed", "how": "merged #341", "job": "J-052", "sha": "5a4c16a79b9b40683198009996ea64bcf4f5ddac", "t": "2026-11-09T17:35:20Z"}
+{"branch": "fb-bot/integrate-j052", "ev": "landed", "how": "merged #301", "job": "J-052", "sha": "407cac74fb1810234585c44e587f692042c73c35", "t": "2026-11-09T17:35:20Z"}
+{"ev": "state", "frm": "accepted", "job": "J-052", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"branch": "fb-bot/integrate-protected-j053-balconies", "ev": "landed", "how": "merged #318", "job": "J-053", "sha": "38600ce50dddca71fa76d840f6d15c7b26fc834b", "t": "2026-11-09T17:35:20Z"}
+{"ev": "state", "frm": "accepted", "job": "J-053", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-eb60e63f", "job": "J-054", "kind": "start-agent", "ref": "JOB|#293", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-054", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-0cd67ef4", "job": "J-055", "kind": "start-agent", "ref": "JOB|#294", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-055", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "fb-bot/integrate-j058", "ev": "landed", "how": "merged #308", "job": "J-058", "sha": "de94baa3e45aa3713ca8fac6885a7faab356f282", "t": "2026-11-09T17:35:20Z"}
+{"branch": "fb-bot/integrate-j058-cheek-sides", "ev": "landed", "how": "merged #306", "job": "J-058", "sha": "238362e92a8cf85d65a2c9e96d46aa68d012f67c", "t": "2026-11-09T17:35:20Z"}
+{"ev": "outcome", "job": "J-058", "outcome": "merged", "t": "2026-11-09T17:35:20Z", "why": "fb-bot/integrate-j058-cheek-sides: merged #306; fb-bot/integrate-j058: merged #308"}
+{"ev": "state", "frm": "accepted", "job": "J-058", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"branch": "claude/integrate-j059-cheek", "ev": "landed", "how": "merged #323", "job": "J-059", "sha": "9e43ebf0f12366e13e74e2c11b9b18f74d63fc8c", "t": "2026-11-09T17:35:20Z"}
+{"branch": "claude/integrate-j059-side", "ev": "landed", "how": "merged #319", "job": "J-059", "sha": "1e801c90be4d92d9006e7d055941d93044611f6c", "t": "2026-11-09T17:35:20Z"}
+{"branch": "fb-bot/integrate-j059-black-eye", "ev": "landed", "how": "merged #309", "job": "J-059", "sha": "e34ac5096b438be2f4a8567d4bf52f371857652e", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-32b09e36", "job": "J-059", "kind": "fix", "ref": "PR|#343", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-059", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"branch": "claude/integrate-j060-matron-sheen", "ev": "landed", "how": "merged #310", "job": "J-060", "sha": "71eb04caf76687fe2c250a73bd6211c63222ad7f", "t": "2026-11-09T17:35:20Z"}
+{"ev": "state", "frm": "accepted", "job": "J-060", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-6de27451", "job": "J-061", "kind": "fix", "ref": "PR|#337", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"due": "2026-11-09T18:05:20Z", "ev": "obligation", "id": "O-ebe5bf50", "job": "J-061", "kind": "ask", "ref": "ASK|ask on #312", "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"ev": "state", "frm": "accepted", "job": "J-061", "t": "2026-11-09T17:35:20Z", "to": "working"}
+{"ev": "state", "frm": "accepted", "job": "J-063", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "claude/integrate-j064-view-snaps", "ev": "landed", "how": "merged #346", "job": "J-064", "sha": "2358f2fd76cfc2be176a7228146e9ea8532574e5", "t": "2026-11-09T17:35:20Z"}
+{"ev": "state", "frm": "accepted", "job": "J-064", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"branch": "claude/integrate-j066-review-split", "ev": "landed", "how": "merged #327", "job": "J-066", "sha": "3053c610fd7b3380e4707f3ecf90aa0512fedebd", "t": "2026-11-09T17:35:20Z"}
+{"ev": "outcome", "job": "J-066", "outcome": "merged", "t": "2026-11-09T17:35:20Z", "why": "claude/integrate-j066-review-split: merged #327"}
+{"ev": "state", "frm": "accepted", "job": "J-066", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"ev": "state", "frm": "accepted", "job": "J-067", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"due": "2026-11-09T21:35:20Z", "ev": "obligation", "id": "O-f065bc7a", "job": "J-069", "kind": "start-agent", "ref": "JOB|#332", "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "accepted", "job": "J-069", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-070", "t": "2026-11-09T17:35:20Z", "to": "assigned"}
+{"branch": "claude/integrate-j071-ci-timeout", "ev": "landed", "how": "merged #339", "job": "J-071", "sha": "1db855d65f497782c8d66fe1e108749ddef7c601", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-1bc5b3fe", "job": "J-071", "kind": "ask", "ref": "ASK|ask on #338", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-f3429996", "job": "J-071", "kind": "ask", "ref": "ASK|ask on #338", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-92da9235", "job": "J-071", "kind": "ask", "ref": "ASK|ask on #338", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"ev": "state", "frm": "accepted", "job": "J-071", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"branch": "claude/integrate-j072-mail-shape", "ev": "landed", "how": "merged #357", "job": "J-072", "sha": "8c25d13a1d29462c42c762640b70140eb800e3ed", "t": "2026-11-09T17:35:20Z"}
+{"branch": "claude/integrate-j072-reconciler", "ev": "landed", "how": "merged #358", "job": "J-072", "sha": "a3e78417ff861e6f124d78888361ff1f6acc2de9", "t": "2026-11-09T17:35:20Z"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-97ddacad", "job": "J-072", "kind": "ask", "ref": "ASK|ask on #350", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-0f1f9498", "job": "J-072", "kind": "ask", "ref": "ASK|ask on #350", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"ev": "state", "frm": "accepted", "job": "J-072", "t": "2026-11-09T17:35:20Z", "to": "merged"}
+{"ev": "state", "frm": "accepted", "job": "J-074", "t": "2026-11-09T17:35:20Z", "to": "proof"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-f4e5518c", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-8f0d32cf", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-6d2a7767", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"ev": "unmatched", "ident": "BRANCH|fb-bot/expand-presentation-20261107-cheek-angle", "job": "", "t": "2026-11-09T17:35:20Z", "why": "no job id (branch name or head commit `Job:` line) (no proof run on its head (not an integrate branch))"}
+{"ev": "ledger_sent", "job": "J-042", "key": "93c6486c80a75fff", "ref": "PR|#291", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-001", "key": "acf05464c431c77b", "ref": "PR|#227", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-051", "key": "2f98622538afb93e", "ref": "BRANCH|claude/integrate-j051-asks-since", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "d363c9675c166d56", "ref": "BRANCH|fb-bot/expand-presentation-20261107-cheek-angle", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-009", "key": "5d88ff81a80f833f", "ref": "BRANCH|fb-bot/integrate-j009-258-down-traversal-flags", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-014", "key": "1c61a46845551aac", "ref": "BRANCH|fb-bot/integrate-j014-stock-above-396", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-015", "key": "fe06448b3d954536", "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-038", "key": "6afaa0035f420e6e", "ref": "BRANCH|fb-bot/integrate-j038-slice1", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-044c", "key": "98888697f74aee5e", "ref": "BRANCH|fb-bot/integrate-j044c-gains", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-044d", "key": "6ce7663dc348227a", "ref": "BRANCH|fb-bot/integrate-j044d", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-045", "key": "e071a47931c65e8e", "ref": "BRANCH|fb-bot/integrate-j045-first-advance", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-049", "key": "b4fa78fe079367e8", "ref": "BRANCH|fb-bot/integrate-j049-pr1", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-015", "key": "38d00d2457b014b1", "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-044c", "key": "32679bcb071845ab", "ref": "BRANCH|fb-bot/integrate-protected-j044c-gains-peaks", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-044l", "key": "8656d98d40643c08", "ref": "BRANCH|fb-bot/integrate-protected-j044l", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-049", "key": "a05129b23dd05d91", "ref": "BRANCH|fb-bot/integrate-protected-j049-pr1", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-001", "key": "89ede8933e67b703", "ref": "BRANCH|fb-bot/j001-pastrail", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-069", "key": "9c8865671ed2a99e", "ref": "JOB|#332", "stage": 1, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-055", "key": "ed1659815d49e82b", "ref": "JOB|#294", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-054", "key": "458e5aa881a7fb6a", "ref": "JOB|#293", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-050", "key": "1ea4bfd68da454da", "ref": "JOB|#281", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-040", "key": "9bfeae0de342ab74", "ref": "JOB|#228", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-036", "key": "dedbb6aa8b87bbba", "ref": "JOB|#167", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-027", "key": "c84666c528405b31", "ref": "JOB|#134", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-018", "key": "a1a2886487f830e7", "ref": "JOB|#125", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-016", "key": "66ba5104b98548a6", "ref": "JOB|#123", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "", "key": "d1ac6ad587105ad0", "ref": "ASK|ask on #108", "stage": 2, "t": "2026-11-09T17:35:20Z", "to": "grok"}
+{"ev": "ledger_sent", "job": "", "key": "6e6fed464e5eb68e", "ref": "ASK|ask on #338", "stage": 1, "t": "2026-11-09T17:35:20Z", "to": "grok"}
+{"ev": "ledger_sent", "job": "", "key": "d50fbc2eb81842d3", "ref": "ASK|ask on #340", "stage": 1, "t": "2026-11-09T17:35:20Z", "to": "grok"}
+{"ev": "ledger_sent", "job": "", "key": "293738452f1516b1", "ref": "ASK|ask on #340", "stage": 1, "t": "2026-11-09T17:35:20Z", "to": "grok"}
+{"attempt": 1, "ev": "would_send", "id": "O-97ddacad", "job": "J-072", "ref": "ASK|ask on #350", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"attempt": 1, "ev": "would_send", "id": "O-0f1f9498", "job": "J-072", "ref": "ASK|ask on #350", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"attempt": 1, "ev": "would_send", "id": "O-1bc5b3fe", "job": "J-071", "ref": "ASK|ask on #338", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"attempt": 1, "ev": "would_send", "id": "O-f3429996", "job": "J-071", "ref": "ASK|ask on #338", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"attempt": 1, "ev": "would_send", "id": "O-92da9235", "job": "J-071", "ref": "ASK|ask on #338", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "grok", "via": "issue"}
+{"attempt": 1, "ev": "would_send", "id": "O-f065bc7a", "job": "J-069", "ref": "JOB|#332", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "would_send", "id": "O-6de27451", "job": "J-061", "ref": "PR|#337", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "would_send", "id": "O-ebe5bf50", "job": "J-061", "ref": "ASK|ask on #312", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "claude", "via": "api"}
+{"attempt": 1, "ev": "would_send", "id": "O-32b09e36", "job": "J-059", "ref": "PR|#343", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "would_send", "id": "O-0cd67ef4", "job": "J-055", "ref": "JOB|#294", "send": 1, "t": "2026-11-09T17:35:20Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T17:35:20Z", "tries": 1}

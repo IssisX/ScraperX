@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-protected-j013-machine-hearing": "8522138f46db39e5cf522ca86ab7cf6a516c2ac9"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 0,
+ "job": "J-013",
+ "landed": {
+  "fb-bot/integrate-protected-j013-machine-hearing": [
+   "8522138f46db39e5cf522ca86ab7cf6a516c2ac9",
+   "merged #305",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-protected-j013-machine-hearing: merged #305",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

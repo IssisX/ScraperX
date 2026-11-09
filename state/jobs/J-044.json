@@ -1,0 +1,54 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "chatgpt/integrate-j044-review-gate-20261109": "55b8b3e22548aa0154f5af13d5978d7d171c304d"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T18:05:20Z",
+ "head": "",
+ "issue": 242,
+ "job": "J-044",
+ "landed": {
+  "chatgpt/integrate-j044-review-gate-20261109": [
+   "55b8b3e22548aa0154f5af13d5978d7d171c304d",
+   "closed #347",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "work|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T18:05:20Z",
+   "id": "O-66ad732a",
+   "kind": "start-agent",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "JOB|#242",
+   "sends": 0,
+   "thread": 242,
+   "to": "claude",
+   "version": "start:242",
+   "via": "api",
+   "what": "start J-044"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "claude",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "assigned",
+ "updated": "2026-11-09T17:35:20Z"
+}

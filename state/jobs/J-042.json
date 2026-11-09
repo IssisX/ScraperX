@@ -1,0 +1,77 @@
+{
+ "attempt": 1,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-protected-j042-touch2-geometry": "c6b87e787df3b43014b7aeb1e1c57918e8811b3b"
+ },
+ "cancelled": null,
+ "ci": "red: godot-touch (touch-2)",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T18:05:20Z",
+ "head": "8c74524cf4fec539b53d37844b61692179a511d7",
+ "issue": 240,
+ "job": "J-042",
+ "landed": {
+  "fb-bot/integrate-protected-j042-touch2-geometry": [
+   "c6b87e787df3b43014b7aeb1e1c57918e8811b3b",
+   "merged #300",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-4c0d613d",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "PR|#291",
+   "sends": 0,
+   "thread": 291,
+   "to": "muse",
+   "version": "red:8c74524cf4fec539b53d37844b61692179a511d7",
+   "via": "email",
+   "what": "#291 proof red: godot-touch (touch-2)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T17:35:23Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T18:05:20Z",
+   "id": "O-2359c606",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "ASK|ask on #240",
+   "sends": 0,
+   "thread": 240,
+   "to": "claude",
+   "version": "6746964788",
+   "via": "api",
+   "what": "ask from Muse on #240"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 291,
+ "pr_done": "",
+ "prs": [
+  291
+ ],
+ "review": "",
+ "state": "working",
+ "updated": "2026-11-09T17:35:20Z"
+}

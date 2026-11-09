@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j060-matron-sheen": "71eb04caf76687fe2c250a73bd6211c63222ad7f"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 320,
+ "job": "J-060",
+ "landed": {
+  "claude/integrate-j060-matron-sheen": [
+   "71eb04caf76687fe2c250a73bd6211c63222ad7f",
+   "merged #310",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

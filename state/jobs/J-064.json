@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j064-view-snaps": "2358f2fd76cfc2be176a7228146e9ea8532574e5"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 322,
+ "job": "J-064",
+ "landed": {
+  "claude/integrate-j064-view-snaps": [
+   "2358f2fd76cfc2be176a7228146e9ea8532574e5",
+   "merged #346",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "grok",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

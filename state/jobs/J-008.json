@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-protected-j008-ladder-bar-sort": "45e16da201b2a1b6f8302a752b6c2a4b7741b212"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 115,
+ "job": "J-008",
+ "landed": {
+  "fb-bot/integrate-protected-j008-ladder-bar-sort": [
+   "45e16da201b2a1b6f8302a752b6c2a4b7741b212",
+   "merged #314",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

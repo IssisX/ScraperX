@@ -1,0 +1,68 @@
+{
+ "attempt": 1,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j059-cheek": "9e43ebf0f12366e13e74e2c11b9b18f74d63fc8c",
+  "claude/integrate-j059-side": "1e801c90be4d92d9006e7d055941d93044611f6c",
+  "fb-bot/integrate-j059-black-eye": "e34ac5096b438be2f4a8567d4bf52f371857652e"
+ },
+ "cancelled": null,
+ "ci": "green",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T21:35:20Z",
+ "head": "6ba64b584a364304a63369f66f9d2644bc53fcde",
+ "issue": 307,
+ "job": "J-059",
+ "landed": {
+  "claude/integrate-j059-cheek": [
+   "9e43ebf0f12366e13e74e2c11b9b18f74d63fc8c",
+   "merged #323",
+   "2026-11-09T17:35:20Z"
+  ],
+  "claude/integrate-j059-side": [
+   "1e801c90be4d92d9006e7d055941d93044611f6c",
+   "merged #319",
+   "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-j059-black-eye": [
+   "e34ac5096b438be2f4a8567d4bf52f371857652e",
+   "merged #309",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-32b09e36",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-09T17:35:20Z",
+   "ref": "PR|#343",
+   "sends": 1,
+   "thread": 343,
+   "to": "muse",
+   "version": "fix:6ba64b584a364304a63369f66f9d2644bc53fcde",
+   "via": "email",
+   "what": "#343: open FIX from Claude (eye)"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 343,
+ "pr_done": "",
+ "prs": [
+  343
+ ],
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-09T17:35:20Z"
+}

@@ -1,0 +1,77 @@
+{
+ "attempt": 1,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-j038-slice1": "94a53394cc5caa83250bc64225f423590935dd48"
+ },
+ "cancelled": null,
+ "ci": "green",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T21:35:20Z",
+ "head": "4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
+ "issue": 169,
+ "job": "J-038",
+ "landed": {
+  "fb-bot/integrate-j038-slice1": [
+   "94a53394cc5caa83250bc64225f423590935dd48",
+   "",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-61750a48",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "PR|#299",
+   "sends": 0,
+   "thread": 299,
+   "to": "muse",
+   "version": "fix:4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
+   "via": "email",
+   "what": "#299: open FIX from Codex (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-6f1d026e",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "BRANCH|fb-bot/integrate-j038-slice1",
+   "sends": 0,
+   "thread": 169,
+   "to": "muse",
+   "version": "open-pr:94a53394cc5caa83250bc64225f423590935dd48",
+   "via": "email",
+   "what": "`fb-bot/integrate-j038-slice1` is green with no PR: open one"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 299,
+ "pr_done": "",
+ "prs": [
+  299
+ ],
+ "review": "FIX",
+ "state": "proof",
+ "updated": "2026-11-09T17:35:20Z"
+}

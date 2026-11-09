@@ -1,0 +1,81 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-j015-wreck-way-on": "a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
+  "fb-bot/integrate-protected-j015-wreck-way-on": "aee6d79d91249016e5788e205e16b0958f4bd427"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T21:35:20Z",
+ "head": "aee6d79d91249016e5788e205e16b0958f4bd427",
+ "issue": 122,
+ "job": "J-015",
+ "landed": {
+  "fb-bot/integrate-j015-wreck-way-on": [
+   "a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
+   "",
+   "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-protected-j015-wreck-way-on": [
+   "aee6d79d91249016e5788e205e16b0958f4bd427",
+   "",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-25fb6789",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
+   "sends": 0,
+   "thread": 122,
+   "to": "muse",
+   "version": "red:a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
+   "via": "email",
+   "what": "`fb-bot/integrate-j015-wreck-way-on` proof red: native-tests (athletic-traversal), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-0569d1c6",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
+   "sends": 0,
+   "thread": 122,
+   "to": "muse",
+   "version": "red:aee6d79d91249016e5788e205e16b0958f4bd427",
+   "via": "email",
+   "what": "`fb-bot/integrate-protected-j015-wreck-way-on` proof red: native-tests (athletic-traversal), no PR"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "working",
+ "updated": "2026-11-09T17:35:20Z"
+}

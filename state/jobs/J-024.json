@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-j024-plants": "a4065438997a454565177c225519236de52b9985"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 0,
+ "job": "J-024",
+ "landed": {
+  "fb-bot/integrate-j024-plants": [
+   "a4065438997a454565177c225519236de52b9985",
+   "merged #311",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j024-plants: merged #311",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

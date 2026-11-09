@@ -1,0 +1,38 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j052-board-340": "5a4c16a79b9b40683198009996ea64bcf4f5ddac",
+  "fb-bot/integrate-j052": "407cac74fb1810234585c44e587f692042c73c35"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 292,
+ "job": "J-052",
+ "landed": {
+  "claude/integrate-j052-board-340": [
+   "5a4c16a79b9b40683198009996ea64bcf4f5ddac",
+   "merged #341",
+   "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-j052": [
+   "407cac74fb1810234585c44e587f692042c73c35",
+   "merged #301",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

@@ -1,0 +1,54 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-protected-j044l": "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T21:35:20Z",
+ "head": "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54",
+ "issue": 0,
+ "job": "J-044l",
+ "landed": {
+  "fb-bot/integrate-protected-j044l": [
+   "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54",
+   "",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-52effe01",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "BRANCH|fb-bot/integrate-protected-j044l",
+   "sends": 0,
+   "thread": 0,
+   "to": "muse",
+   "version": "red:95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54",
+   "via": "email",
+   "what": "`fb-bot/integrate-protected-j044l` proof red: native-tests (matron-slices-3), native-tests (athletic-traversal), godot-touch (touch-2), no PR"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "working",
+ "updated": "2026-11-09T17:35:20Z"
+}

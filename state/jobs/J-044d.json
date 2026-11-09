@@ -1,0 +1,54 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-j044d": "c816ba4ff54bd3c012c21a24266c018f7bc930ae"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T21:35:20Z",
+ "head": "c816ba4ff54bd3c012c21a24266c018f7bc930ae",
+ "issue": 0,
+ "job": "J-044d",
+ "landed": {
+  "fb-bot/integrate-j044d": [
+   "c816ba4ff54bd3c012c21a24266c018f7bc930ae",
+   "",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:35:20Z",
+   "id": "O-359455b3",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "BRANCH|fb-bot/integrate-j044d",
+   "sends": 0,
+   "thread": 0,
+   "to": "muse",
+   "version": "red:c816ba4ff54bd3c012c21a24266c018f7bc930ae",
+   "via": "email",
+   "what": "`fb-bot/integrate-j044d` proof red: native-tests (matron-slices-3), native-tests (matron-slices-1), godot-touch (touch-2), native-tests (athletic-traversal), native-tests (matron-slices-2), no PR"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "working",
+ "updated": "2026-11-09T17:35:20Z"
+}

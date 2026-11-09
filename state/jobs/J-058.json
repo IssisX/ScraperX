@@ -1,0 +1,38 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-j058": "de94baa3e45aa3713ca8fac6885a7faab356f282",
+  "fb-bot/integrate-j058-cheek-sides": "238362e92a8cf85d65a2c9e96d46aa68d012f67c"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 0,
+ "job": "J-058",
+ "landed": {
+  "fb-bot/integrate-j058": [
+   "de94baa3e45aa3713ca8fac6885a7faab356f282",
+   "merged #308",
+   "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-j058-cheek-sides": [
+   "238362e92a8cf85d65a2c9e96d46aa68d012f67c",
+   "merged #306",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j058-cheek-sides: merged #306; fb-bot/integrate-j058: merged #308",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

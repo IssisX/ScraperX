@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j051b-autopr-errors": "7426de75e0e365dc20afbc591ba2f403335d699f"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 0,
+ "job": "J-051b",
+ "landed": {
+  "claude/integrate-j051b-autopr-errors": [
+   "7426de75e0e365dc20afbc591ba2f403335d699f",
+   "merged #287",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j051b-autopr-errors: merged #287",
+ "owner": "claude",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

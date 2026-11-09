@@ -1,0 +1,38 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-j044b-capacity": "0317fa7907995d59596c02337a192d0761105264",
+  "fb-bot/integrate-protected-j044b-grant": "e0bcfa9f0ea85498dec87bfabbdc2836676a061c"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 0,
+ "job": "J-044b",
+ "landed": {
+  "fb-bot/integrate-j044b-capacity": [
+   "0317fa7907995d59596c02337a192d0761105264",
+   "merged #303",
+   "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-protected-j044b-grant": [
+   "e0bcfa9f0ea85498dec87bfabbdc2836676a061c",
+   "merged #345",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j044b-capacity: merged #303; fb-bot/integrate-protected-j044b-grant: merged #345",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

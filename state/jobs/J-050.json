@@ -1,0 +1,38 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-j050-traversal-rungdown-ci-red-fix": "a8aa1a27b3ccdc35f2f061187a998b023e3b809d",
+  "fb-bot/integrate-protected-j050-traversal-rungdown-bottom-gap-test": "6678fe6456fddb5f740f5e50b583e4a92c9e74cc"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 281,
+ "job": "J-050",
+ "landed": {
+  "fb-bot/integrate-j050-traversal-rungdown-ci-red-fix": [
+   "a8aa1a27b3ccdc35f2f061187a998b023e3b809d",
+   "merged #288",
+   "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-protected-j050-traversal-rungdown-bottom-gap-test": [
+   "6678fe6456fddb5f740f5e50b583e4a92c9e74cc",
+   "merged #290",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

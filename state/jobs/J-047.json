@@ -1,0 +1,44 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j047-ledger-merged": "a95abfd0490c87d227dfbfc71a22377971d9bad7",
+  "claude/integrate-j047-lettered-jobs": "7aec7d8a94ab4da05a835afc60eb95e3b50c9a43",
+  "claude/integrate-j047-rulecheck-throw": "03ad13eb140ab2b926de33f1266bd137d94c89b8"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": null,
+ "head": "",
+ "issue": 0,
+ "job": "J-047",
+ "landed": {
+  "claude/integrate-j047-ledger-merged": [
+   "a95abfd0490c87d227dfbfc71a22377971d9bad7",
+   "merged #356",
+   "2026-11-09T17:35:20Z"
+  ],
+  "claude/integrate-j047-lettered-jobs": [
+   "7aec7d8a94ab4da05a835afc60eb95e3b50c9a43",
+   "merged #344",
+   "2026-11-09T17:35:20Z"
+  ],
+  "claude/integrate-j047-rulecheck-throw": [
+   "03ad13eb140ab2b926de33f1266bd137d94c89b8",
+   "merged #354",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j047-ledger-merged: merged #356; claude/integrate-j047-lettered-jobs: merged #344; claude/integrate-j047-rulecheck-throw: merged #354",
+ "owner": "claude",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}

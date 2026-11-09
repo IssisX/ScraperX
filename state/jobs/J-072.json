@@ -1,0 +1,81 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j072-mail-shape": "8c25d13a1d29462c42c762640b70140eb800e3ed",
+  "claude/integrate-j072-reconciler": "a3e78417ff861e6f124d78888361ff1f6acc2de9"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-09T17:35:20Z",
+ "deadline": "2026-11-09T23:00:00Z",
+ "head": "",
+ "issue": 350,
+ "job": "J-072",
+ "landed": {
+  "claude/integrate-j072-mail-shape": [
+   "8c25d13a1d29462c42c762640b70140eb800e3ed",
+   "merged #357",
+   "2026-11-09T17:35:20Z"
+  ],
+  "claude/integrate-j072-reconciler": [
+   "a3e78417ff861e6f124d78888361ff1f6acc2de9",
+   "merged #358",
+   "2026-11-09T17:35:20Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T16:51:16Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T23:00:00Z",
+   "id": "O-97ddacad",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-09T17:35:20Z",
+   "ref": "ASK|ask on #350",
+   "sends": 1,
+   "thread": 350,
+   "to": "grok",
+   "version": "6745908975",
+   "via": "issue",
+   "what": "ask from Claude on #350"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-09T16:55:36Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T17:35:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T23:00:00Z",
+   "id": "O-0f1f9498",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-09T17:35:20Z",
+   "ref": "ASK|ask on #350",
+   "sends": 1,
+   "thread": 350,
+   "to": "grok",
+   "version": "6746020480",
+   "via": "issue",
+   "what": "ask from Claude on #350"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "claude",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "merged",
+ "updated": "2026-11-09T17:35:20Z"
+}
