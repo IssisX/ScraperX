@@ -785,6 +785,15 @@ public:
     static constexpr float kUprightBaseM = 0.08F;     // frail on her feet: an old woman's narrow, shuffling base
     static constexpr float kCrouchHeightM = 0.55F;
     static constexpr float kCrouchBaseM = 0.45F;
+    // A low blow meets her feet, not her braced stance: she reads crouched
+    // against it only at a full run. Her closing walk peaks at 2.24 m/s and
+    // her full run at 5.11 m/s (matron-sweep, measured gains on/off), so 3.0
+    // sits between them. At 1.0 the read tripped on any closing walk, and
+    // the stiffer upper springs (#298) made her close fast enough that a
+    // low sweep could never fell a faced changed Matron. A blow at body
+    // height keeps the old 1.0 read (kLowHuntMps), so the punch/stock
+    // calibrations (matron-damage) do not move.
+    static constexpr float kCrouchRunMps = 3.0F;
     static constexpr float kCarryPullCapM = 0.10F;  // M4 S2 counter-lean cap: an uncapped pull (~0.74 m) broke tear holds; 0.10 m keeps a real pull without it
     static constexpr float kPestStepM = 0.02F;
     static constexpr float kDangerousStepM = 0.30F;

@@ -5172,8 +5172,9 @@ void Matron::take_blow(const float dt) {
     // Her balance: her stance, her base, and the step she can take.
     const bool lunge_burst = turn_ == Turn::Lunge &&
                              std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds;
+    const float crouch_mps = blow_low_ ? kCrouchRunMps : kLowHuntMps;
     const bool crouched =
-        (state_ == State::Hunting && speed_ > 1.0F && stage_ != Stage::Pest) || turn_ == Turn::Lunge;
+        (state_ == State::Hunting && speed_ > crouch_mps && stage_ != Stage::Pest) || turn_ == Turn::Lunge;
     const float height = crouched ? kCrouchHeightM : kUprightHeightM;
     const float base = crouched ? kCrouchBaseM : kUprightBaseM;
     const float w = std::sqrt(-physics_.GetGravity().GetY() / height);
