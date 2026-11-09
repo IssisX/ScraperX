@@ -25,10 +25,16 @@ agents:
                          # issues and PRs; it posts replies and LAND/FIX verdicts (ChatGPT on #340, 11-09, comment 6748415623)
   grok:
     vendor: xai
-    names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #340)
-    branch_prefixes: [grok/, pe/, builder/]
-    owner_labels: [owner:grok, owner:pe, owner:builder]
-    wake: issue
+    names: [Grok]
+    branch_prefixes: [grok/]
+    owner_labels: [owner:grok]
+    wake: issue          # scheduled: 10 AM and 4 PM Central, comments that start "To Grok:"
+  grok_bot:
+    vendor: xai
+    names: [PE, Builder]             # PE and ScraperX Builder are Grok Bot (board #340)
+    branch_prefixes: [pe/, builder/]
+    owner_labels: [owner:pe, owner:builder]
+    wake: watch          # reads the repo all the time, not on a schedule (Cory 11-09)
   codex:
     vendor: openai
     names: [Codex]
