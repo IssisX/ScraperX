@@ -69,7 +69,7 @@ him again.
   #N> ...` the same hour: the goal and the result wanted, in the shape `work/tasks/mail-to-muse.md` keeps
   (its injection check refused a mail, 11-07); long orders go in `work/tasks/muse.md`. Muse
   answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
-  (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
+  (10 AM and 4 PM) find only comments that START `To Grok:`; Grok Bot (Builder, PE) reads all the time (11-09). ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
 - **Check, then ask; never guess** (11-07: "checks arent expensive and its just laziness"): in code or any
   claim, read the source, file, docs or clock, measure or run it before stating it. Before locking in a hard job's approach, after the second
