@@ -106,7 +106,7 @@ him again.
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
-  `helper` or `helper-max`; Cory 11-06), never a separate session: more than two when the work needs it (11-09), each
+  `helper` or `helper-max`; Cory 11-06), never a separate session: at most two while Claude codes (11-09 night), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
   his call, seen in `get_session`; raise it only when he throttles; `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
 - **Context:** the window is 833k (compacts near 650k; `/autocompact` sets it live; each call rereads it);
