@@ -897,6 +897,7 @@ void run_matron_budget();   // J-046: her one budget, every path, audited (sim_t
 void run_matron_capacity(); // J-044b H.4: the capacity test, five falsifiers, no motor code (sim_tests_matron_capacity.cpp)
 void run_strike();
 void run_matron_damage();
+void run_matron_injury();  // J-059 #307: per-region injury feed (sim_tests_matron_injury.cpp)
 void run_perf_step();
 void run_matron_sweep();
 void run_matron_kick();

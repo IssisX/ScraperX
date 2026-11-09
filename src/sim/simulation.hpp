@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 
+#include "sim/matron_injury.hpp"
+
 namespace scraperx::sim {
 namespace traversal {
 class AffordanceMap;
@@ -313,6 +315,13 @@ struct MatronSnapshot final {
     std::uint32_t knockdowns = 0;
     double damage_ns = 0.0;
     double player_damage_ns = 0.0;
+    // J-059 #307: the same impulse, split by where it landed (J-044a §D).
+    // Indexed by injury::Region; unclassified is the share no region owns.
+    std::array<double, injury::kRegions> injury_j_region{};
+    std::array<double, injury::kRegions> injury_j_event{};
+    double injury_j_region_unclassified = 0.0;
+    // What each limb has left: arm_l, arm_r, leg_l, leg_r (1 = whole).
+    std::array<double, 4> limb_health{1.0, 1.0, 1.0, 1.0};
     std::uint8_t damage_stage = 0;
     double blow_mps = 0.0;
     bool blow_low = false;      // the last blow came at her shins
@@ -1794,6 +1803,10 @@ public:
     // Tests only (never bound to the bridge): the blow she takes next tagged
     // as the player's own (his punch's tag, Matron::player_blow_landed).
     void debug_matron_player_blow() noexcept;
+    // Tests only (never bound to the bridge): a player blow of `impulse_ns`
+    // at `at` (the strike's contact point on her capsule surface), so the
+    // region it hits is what the test measures, not the fist in the air.
+    void debug_matron_player_blow_at(Vector3 impulse_ns, Vector3 at, bool low) noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;

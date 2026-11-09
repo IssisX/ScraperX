@@ -108,6 +108,7 @@
 #include <Jolt/Physics/Constraints/PointConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
+#include "sim/matron_injury.hpp"
 #include "sim/matron_mover.hpp"
 #include "sim/matron_perception.hpp"
 #include "sim/matron_routecraft.hpp"
@@ -1294,6 +1295,14 @@ public:
         std::uint32_t knockdowns = 0;   // and that took her off her feet
         float damage_ns = 0.0F;         // judged physical impulse, all sources
         float player_damage_ns = 0.0F;  // the player's share only
+        // J-059 #307: the same impulse, split by where it landed (J-044a §D):
+        // per-region doses, the share no region owns, and what each limb has
+        // left (1 = whole, 0 = spent; arms from the chest dose, legs whole
+        // in slice 1). The bridge exports these as `injury`.
+        std::array<float, injury::kRegions> injury_j_region{};
+        std::array<float, injury::kRegions> injury_j_event{};
+        float injury_j_region_unclassified = 0.0F;
+        std::array<float, 4> limb_health{1.0F, 1.0F, 1.0F, 1.0F};
         std::uint8_t damage_stage = 0;  // 0..4; death is State::Dead
         float blow_mps = 0.0F;          // the last blow: the change in her speed it made
         bool blow_low = false;          // and it came at her shins (under kLowBlowM): no step to take it
@@ -2814,6 +2823,10 @@ private:
     // tick a striker was against her; what kind of blow it is.
     float damage_ns_ = 0.0F;
     float player_damage_ns_ = 0.0F;
+    // J-059 #307: per-region injury from where each blow lands (J-044a §D).
+    // Monotonic: no heal. Branch A keeps the checkpoint zeroing (restore()
+    // still clears damage); the protected save-contract branch persists it.
+    injury::State injury_{};
     JPH::Vec3 blow_change_ = JPH::Vec3::sZero();
     JPH::Vec3 blow_impulse_ = JPH::Vec3::sZero();
     float blow_above_ = 0.0F;
