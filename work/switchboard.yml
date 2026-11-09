@@ -1,0 +1,7 @@
+# Switches for tools/switchboard, read by switch.py on each run. (The workflow is .github/workflows/switchboard.yml.)
+
+# J-072 Design B stage 1 (#350): after each non-dry full sweep, the reconciler (tools/switchboard/reconciler.py)
+# writes job records, obligations and a daily shadow diff to the switchboard/state branch. It posts nothing.
+# `shadow` turns it on; absent or any other value is off. Stage 2 adds `notices: v2` here, in the PR that
+# turns the ledger's notices off.
+reconciler: shadow
