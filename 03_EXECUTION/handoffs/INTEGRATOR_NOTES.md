@@ -4,7 +4,7 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794262819 (2026-11-09 22:20:19Z, 4:20 PM Central)
+Read through: 1794266612 (2026-11-09 23:23:32Z, ~5:23 PM Central)
 
 ## Now: J-072 release gate (ChatGPT #350 6752607408, adopted; Cory: gate over clever bugs, no game code till done)
 Gate: (1) bridge 907e45b8 live on every clock sweep: PASS. (2) reconciler first live pass quiet (one backlog line to Cory, no per-item notices); hourly full pass, first at 4:19 PM; check trig_01A7fpFZYm2v6mWtLiGp1qdL. (3) one real round trip through the system: the reconciler's own bot mail to Muse (e.g. #242 J-044, mailed 4:47 PM), Muse's MUSE_TO_CLAUDE reply posted back, the reconciler acks it. The bridge mails only bot-posted CLAUDE_TO_MUSE comments (muse_bridge.gs unsent_), never mine: my asks to Muse stay direct Gmail. Live audit of 13 parts by a helper (report pending); fix FAILs in ONE batched PR, drafts first.
