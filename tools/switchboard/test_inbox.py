@@ -625,7 +625,7 @@ class AskToClaude(unittest.TestCase):
         self.assertEqual(it.kind, "TO-CLAUDE")
 
     def test_a_closed_thread_gives_none(self):
-        gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[107])
+        gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[switch.BOARD_ISSUE])
         self.assertEqual(items_of(gh), [])
 
 
@@ -725,7 +725,7 @@ class MuseRouted(unittest.TestCase):
         self.assertEqual(make(gh).muse([s]), 1)
         self.assertEqual(make(gh).inbox([s]), 1)
 
-    def test_a_red_branch_with_no_pr_goes_to_muse_on_107(self):
+    def test_a_red_branch_with_no_pr_goes_to_muse_on_the_board(self):
         name = "fb-bot/integrate-j044c-wreck"
         gh = FakeGH(runs=[run(40, name, HEAD, hours=2)], jobs={40: RED_JOBS}, heads={name: HEAD})
         self.assertEqual([(i.kind, i.target) for i in muse_of(gh)], [("RED-BRANCH", name)])
@@ -733,9 +733,9 @@ class MuseRouted(unittest.TestCase):
         self.assertEqual(make(gh).muse([]), 1)
         (number, posted), = gh.posts
         self.assertEqual(number, switch.BOARD_ISSUE)
-        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #107 @ 1a2b3c4d"))
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #340 @ 1a2b3c4d"))
         key = switch.inbox_key("muse-RED-BRANCH", name, HEAD)
-        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/107/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/340/labels", {"labels": ["wake:muse"]}))
         self.assertEqual(gh.writes[1][0], "PATCH")
         self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
         self.assertIn(key, gh.writes[1][2]["body"])
