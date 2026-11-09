@@ -631,3 +631,8 @@
 {"ev": "ledger_sent", "job": "", "key": "621b8934e3719b7a", "ref": "ASK|ask on #340", "stage": 1, "t": "2026-11-09T22:39:05Z", "to": "muse"}
 {"attempt": 1, "ev": "sent", "id": "O-319779d9", "job": "J-044", "ref": "ASK|ask on #242", "send": 1, "t": "2026-11-09T22:39:05Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T22:39:05Z", "tries": 1}
+{"ev": "unseen", "id": "O-21f8221d", "job": "J-001", "passes": 3, "t": "2026-11-09T23:08:50Z"}
+{"due": "2026-11-10T00:17:00Z", "ev": "obligation", "id": "O-2f90a0e5", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-09T23:08:50Z", "to": "claude", "via": "session"}
+{"ev": "ledger_sent", "job": "", "key": "2f9c4040dc1c4565", "ref": "ASK|ask on #340", "stage": 2, "t": "2026-11-09T23:08:50Z", "to": "grok"}
+{"attempt": 1, "ev": "sent", "id": "O-2f90a0e5", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-09T23:08:50Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T23:08:50Z", "tries": 1}

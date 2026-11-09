@@ -110,12 +110,12 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": null,
-     "missing": 2,
+     "missing": 3,
      "ref": "ASK|ask on #108",
      "sends": 0,
      "thread": 108,
      "to": "claude",
-     "unseen": null,
+     "unseen": "2026-11-09T23:08:50Z",
      "version": "6696106838",
      "via": "session",
      "what": "ask from Muse on #108"
@@ -212,7 +212,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T22:39:05Z"
+   "updated": "2026-11-09T23:08:50Z"
   },
   "J-007": {
    "attempt": 1,
