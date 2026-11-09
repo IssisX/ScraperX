@@ -22,10 +22,13 @@ VERDICT_HEAD = re.compile(
 SHA_IN_HEAD = re.compile(r"@\s*`?(?P<sha>[0-9a-f]{7,40})\b")
 REPRO_FIELDS = ("command", "input", "expected", "observed")
 REPRO_LINE = re.compile(r"^[\s>*_`-]*(command|input|expected|observed)[*_`]*\s*:", re.IGNORECASE | re.MULTILINE)
-JOB_IN_PR = re.compile(r"^\s*Job:\s*(?P<job>J-\d{3,})\b", re.MULTILINE)
+# A job is J-NNN, or J-NNN plus one letter for a sub-job (J-044b): "J-\d{3,}\b" alone never matched J-044b,
+# so a lettered job's green branch got no auto-PR and its issue was missing from jobs() (11-09).
+JOB_ID = r"J-\d{3,}[a-z]?"
+JOB_IN_PR = re.compile(r"^\s*Job:\s*(?P<job>" + JOB_ID + r")\b", re.MULTILINE)
 # "Supersedes #43", "supersedes #43 and #44", "Supersedes #43, #44": the PRs a PR body says it replaces.
 SUPERSEDES = re.compile(r"\bsupersedes\s+(?P<list>#\d+(?:\s*(?:,|and|&)\s*#\d+)*)", re.IGNORECASE)
-JOB_TITLE = re.compile(r"^(?P<job>J-\d{3,})\b")
+JOB_TITLE = re.compile(r"^(?P<job>" + JOB_ID + r")\b")
 BUDGET_LINE = re.compile(r"^\s*budget\s+(?P<usd>\d{1,4}(?:\.\d{1,2})?)\s*$", re.IGNORECASE | re.MULTILINE)
 
 

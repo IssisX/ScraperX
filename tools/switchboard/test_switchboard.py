@@ -258,6 +258,11 @@ class Board(unittest.TestCase):
         self.assertEqual(rules.job_of_pr("Fixes it.\nJob: J-012\n"), "J-012")
         self.assertEqual(rules.job_of_pr(None), "")
         self.assertEqual(rules.job_of_title("J-031 Switchboard v0"), "J-031")
+        # a lettered sub-job is its own job, in a PR body, a commit message and an issue title
+        self.assertEqual(rules.job_of_pr("Job: J-044b: the grant is capped at real speed"), "J-044b")
+        self.assertEqual(rules.job_of_title("J-044b Fight math and risk"), "J-044b")
+        self.assertEqual(rules.job_of_pr("Job: J-044bc"), "")
+        self.assertEqual(rules.job_of_title("J-044B upper case is not a job"), "")
         self.assertEqual(rules.budget_override([("budget 12", "IssisX"), ("ok", "IssisX"), ("Budget 15.50\nthanks", "IssisX")], TEAM), "15.50")
         self.assertEqual(rules.budget_override([("my budget 12 is fine", "IssisX")], TEAM), "")
 
