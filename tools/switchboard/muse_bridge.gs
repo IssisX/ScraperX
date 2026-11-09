@@ -147,7 +147,7 @@ function inbound_() {
       var rest = subject.slice(at + 'MUSE_TO_CLAUDE:'.length).replace(/[*\r\n`]/g, ' ').replace(/\s+/g, ' ').trim();
       var target = 0;
       var num = rest.match(/#(\d{1,6})\b/);
-      var job = rest.match(/\bJ-\d{3,}\b/);
+      var job = rest.match(/\bJ-\d{3,}[a-z]?\b/);  // J-044b is its own job, like the switchboard reads it
       if (num) {
         target = Number(num[1]);
       } else if (job) {
