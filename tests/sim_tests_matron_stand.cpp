@@ -57,3 +57,4 @@ void run_matron_stand() {
     lead_below("lead at 132", Vector3{2.5, 132.9, -127.2});
     lead_below("lead at 121", Vector3{-12.0, 121.9, -128.0});
 }
+SCRAPERX_SLICE("matron-stand", run_matron_stand);

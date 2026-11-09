@@ -205,3 +205,5 @@ void run_edge_stand() {
               << " worst_drift_m=" << worst << " pulled_back_m=" << deck_edge - pulled
               << " walk_off_tick=" << off_tick << '\n';
 }
+SCRAPERX_GROUP("edge_stand", 530, run_edge_stand);
+SCRAPERX_SELECT("edge-stand", run_edge_stand);

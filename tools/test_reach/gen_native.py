@@ -47,7 +47,8 @@ def fmt(tl,per=4):
 cutf={g:sfiles(cutres[g]) for g in G}
 allf={g:sfiles(res[g][1]) for g in G}
 dirf={g:{defs[u][2] for u in direct[g]} for g in G}
-ctest=re.search(r'foreach\(slice ([^)]*)\)',open(R+'/CMakeLists.txt').read()).group(1).split()
+import glob  # the CTest slices: SCRAPERX_SLICE lines in tests/sim_tests_*.cpp (J-074)
+ctest=sorted({n for f in glob.glob(R+'/tests/sim_tests_*.cpp') for n in re.findall(r'SCRAPERX_SLICE\("([^"]+)"',open(f).read())})
 out=[]
 # ---- group table
 out.append('| Group (`SCRAPERX_ONLY=`) | ctest name | Runs | Src functions reached without the per-tick step | Files only this kind of group reaches |')

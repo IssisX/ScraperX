@@ -186,6 +186,8 @@ void run_swing() {
               << " residual_kJ=" << ride.residual / 1000.0 << " gained_kJ=" << gained / 1000.0
               << " on_242_y=" << end.player_position.y << '\n';
 }
+SCRAPERX_GROUP("swing", 400, run_swing);
+SCRAPERX_SELECT("swing", run_swing);
 
 // C6, the west band: from the 242 ring to the 264 ring on player inputs, no
 // ladder and no standpipe. What the climb saw, for its falsifiers.
@@ -353,6 +355,8 @@ void run_c6() {
               << " balanced_out=" << seen.balanced_out
               << " balanced_up=" << seen.balanced_up << '\n';
 }
+SCRAPERX_GROUP("c6", 410, run_c6);
+SCRAPERX_SELECT("C6", run_c6);
 
 // The owner's vertical machines (MECHANISM_ASCENT_PLAN.md rule 12), from the
 // 264 ring: the cascade mast. Its 110 kN slider raises the outer stage 9 m;
@@ -483,6 +487,8 @@ void run_mast() {
     std::cout << "PASS scraperx_sim mast: ride_s=" << ride.ride_s << " peak_mps=" << ride.peak_speed
               << " deck_y=" << ride.deck_y << " exit_y=" << ride.end.player_position.y << '\n';
 }
+SCRAPERX_GROUP("mast", 420, run_mast);
+SCRAPERX_SELECT("mast", run_mast);
 
 // The second of the owner's vertical machines: the pitman lift outside the
 // west face. Its 24 m crank turns through 160 degrees as the deck rises 23.6 m
@@ -634,6 +640,8 @@ void run_pitman() {
     std::cout << "PASS scraperx_sim pitman: ride_s=" << ride_s << " exit_y=" << end.player_position.y
               << " call_fastest_mps=" << fastest_call << " freed_fastest_mps=" << fastest_free << '\n';
 }
+SCRAPERX_GROUP("pitman", 430, run_pitman);
+SCRAPERX_SELECT("pitman", run_pitman);
 
 // The third: the barrel helix west of the pitman. A 100 kNm motor turns a
 // 12 m barrel whose spiral flight, 24 m to the turn, pushes a free roller on
@@ -684,6 +692,8 @@ void run_helix() {
     std::cout << "PASS scraperx_sim helix: ride_s=" << ride_s << " tp340_y=" << end.player_position.y
               << " support=" << end.support_entity_id << '\n';
 }
+SCRAPERX_GROUP("helix", 440, run_helix);
+SCRAPERX_SELECT("helix", run_helix);
 
 // From the 750 deck to about 800 m: the crown gondola and the luffing derrick.
 // The crown: a 400 kNm motor turns a 28 m, 7 t crown through 178 degrees,
@@ -944,6 +954,8 @@ void run_derrick() {
     std::cout << "PASS scraperx_sim derrick: gone_empty_travel=" << gone << " top_lean_deg=" << worst_lean
               << " top_y=" << s.snapshot().player_position.y << '\n';
 }
+SCRAPERX_GROUP("derrick", 560, run_derrick);
+SCRAPERX_SELECT("derrick", run_derrick);
 
 void run_high() {
     using scraperx::sim::InitialSpawn;
@@ -976,3 +988,5 @@ void run_high() {
               << " top_y=" << e.player_position.y << " jolt_peak_m=" << e.support_jolt_peak_m
               << " jolt_stumbles=" << e.support_stumble_count << '\n';
 }
+SCRAPERX_GROUP("high", 450, run_high);
+SCRAPERX_SELECT("high", run_high);

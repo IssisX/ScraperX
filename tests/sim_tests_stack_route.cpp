@@ -112,6 +112,8 @@ void run_ascent() {
               << " at_220=" << at_220 << " at_340=" << at_340 << " at_484=" << at_484
               << " plate_y=" << top.player_position.y << '\n';
 }
+SCRAPERX_GROUP("ascent", 1080, run_ascent);
+SCRAPERX_SELECT("ascent", run_ascent);
 constexpr double kDeck4Top = 44.0;
 
 // S1's scale plate, in the middle of the cage's floor.

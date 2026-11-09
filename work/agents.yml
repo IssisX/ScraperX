@@ -21,7 +21,7 @@ agents:
     names: [ChatGPT]
     branch_prefixes: [chatgpt/]
     owner_labels: [owner:chatgpt]
-    wake: manual         # runs only when Cory starts it (J-072): the switch never routes a review to it
+    wake: manual         # runs when Cory starts it, plus a few scheduled tasks of its own (Cory 11-09); the switch never routes a review to it
   grok:
     vendor: xai
     names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #340)
@@ -40,6 +40,7 @@ agents:
     branch_prefixes: [muse/, fb-bot/]
     owner_labels: [owner:muse]
     wake: email          # tools/switchboard/muse_bridge.gs mails it and posts its replies back
+    opens_prs: false     # Muse pushes its branches; the switchboard (else the integrator) opens the PRs (11-05)
 
 review:
   # Reviews, one mechanism per PR (Cory, 11-04): the Codex app reviews every PR on open, and its summary comment
