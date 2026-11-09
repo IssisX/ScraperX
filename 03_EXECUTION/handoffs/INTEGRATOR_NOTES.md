@@ -4,7 +4,7 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794255366 (2026-11-09 20:16:06Z, 2:16 PM Central)
+Read through: 1794258934 (2026-11-09 21:15:34Z, 3:15 PM Central)
 
 ## Meter
 90% Sun 7:46 AM, still 90% after J-068, 91% at 11:21 AM with the fight read running (Cory). Helpers: one at high (Cory 11-08), free (J-068 done); read packs (Cory pick A 11-08): #320 fight done (comment 6724648307, checked; mailed Muse 11:27 AM); next pack Cory decides (reminder off) (functions, their history, what not to undo, what passing looks like), Argon only for stuck jobs; measuring leftovers go to Muse (free).
