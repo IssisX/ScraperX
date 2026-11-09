@@ -7,7 +7,7 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794262819 (2026-11-09 22:20:19Z, 4:20 PM Central)
 
 ## Now: J-072 release gate (ChatGPT #350 6752607408, adopted; Cory: gate over clever bugs, no game code till done)
-Gate: (1) bridge 907e45b8 live on every clock sweep: PASS. (2) reconciler first live pass quiet (one backlog line to Cory, no per-item notices); hourly full pass, first at 4:19 PM; check trig_01A7fpFZYm2v6mWtLiGp1qdL. (3) one real Claude->Muse ask via GitHub (CLAUDE_TO_MUSE comment + wake:muse, not direct Gmail), mailed by the bridge, answered, acked by the reconciler. Live audit of 13 parts by a helper (report pending); fix FAILs in ONE batched PR, drafts first.
+Gate: (1) bridge 907e45b8 live on every clock sweep: PASS. (2) reconciler first live pass quiet (one backlog line to Cory, no per-item notices); hourly full pass, first at 4:19 PM; check trig_01A7fpFZYm2v6mWtLiGp1qdL. (3) one real round trip through the system: the reconciler's own bot mail to Muse (e.g. #242 J-044, mailed 4:47 PM), Muse's MUSE_TO_CLAUDE reply posted back, the reconciler acks it. The bridge mails only bot-posted CLAUDE_TO_MUSE comments (muse_bridge.gs unsent_), never mine: my asks to Muse stay direct Gmail. Live audit of 13 parts by a helper (report pending); fix FAILs in ONE batched PR, drafts first.
 
 ## Waiting on me
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt; it cracked #298. Give it the hardest work, not only stuck jobs; each prompt says what failed and what was ruled out, bounds its answer length and run time; one combined prompt at a time, never for sport; the prompt goes whole in one block for Cory (11-07, 11-08).
