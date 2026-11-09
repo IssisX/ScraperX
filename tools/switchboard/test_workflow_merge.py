@@ -542,6 +542,24 @@ class TheSecurityFindings(unittest.TestCase):
         self.assertEqual((got.sha, rules.api_review_on([got], HEAD)), (HEAD, got))
         self.assertIsNone(rules.api_review_on([got], COLLIDE))
 
+    def test_every_blocking_finding_is_posted_apart_from_the_notes(self):
+        # 11-09: the security pass found one hole per round on #360; every blocking finding goes in one review.
+        gh = DiffGH({})
+        sw = make(gh)
+        sw.root = HERE.parents[1]
+        repro = {k: k + " x" for k in ("command", "input", "expected", "observed")}
+        notes = ["Also blocking: the cache restore runs in a job that holds the merge token.", "A typo in a comment."]
+        sw.paid = lambda *a: claude_calls.Result({"verdict": "FIX", "summary": "s", "repro": repro, "notes": notes},
+                                                 "end_turn", "m", 1, 1)
+        sw.review(facts(), ctx(), "meta", security=True)
+        ((_, body),) = gh.posted
+        also, rest = body.index("Also blocking (fix with the one above"), body.index("Notes (never blocking):")
+        self.assertLess(also, rest)
+        self.assertLess(body.index("the merge token"), rest)
+        self.assertGreater(body.index("A typo"), rest)
+        for system in (claude_calls.REVIEW_SYSTEM, claude_calls.SECURITY_REVIEW_SYSTEM):
+            self.assertIn("never only the first", system)
+
     def test_2_the_review_reads_the_diff_of_the_sha_it_labels(self):
         repo = RecordingGH.repo
         pinned = f"repos/{repo}/compare/{rules.TRUNK}...{HEAD}"

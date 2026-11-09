@@ -1631,8 +1631,14 @@ class Switch:
         lines = [f"**Claude (automatic review of #{facts.number} @ {facts.head_sha}): {verdict}**", "", d["summary"]]
         if verdict == "FIX":
             lines += [""] + [f"{k}: {d['repro'][k]}" for k in ("command", "input", "expected", "observed")]
-        if d["notes"]:
-            lines += ["", "Notes (never blocking):"] + [f"- {n}" for n in d["notes"][:12]]
+        # Every blocking finding in one review (11-09: one per round cost an hour each): the most severe is the repro,
+        # the rest are notes starting "Also blocking:", listed apart so the author fixes them all in one push.
+        also = [n for n in d["notes"] if verdict == "FIX" and n.lstrip().lower().startswith("also blocking")]
+        rest = [n for n in d["notes"] if n not in also]
+        if also:
+            lines += ["", "Also blocking (fix with the one above, in the same push):"] + [f"- {n}" for n in also[:12]]
+        if rest:
+            lines += ["", "Notes (never blocking):"] + [f"- {n}" for n in rest[:12]]
         lines += ["", f"_{res.model} through the API; {central(self.now)}._",
                   MARK.format(kind="review", pr=facts.number, head=facts.head_sha)]
         if self.review_key:   # the MAC that tells this review from a forged one (J-056); without the key, unsigned
