@@ -2531,11 +2531,11 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "working",
-   "updated": "2026-11-09T19:10:34Z"
+   "state": "merged",
+   "updated": "2026-11-09T19:16:15Z"
   },
   "J-072": {
-   "attempt": 3,
+   "attempt": 4,
    "blocked": null,
    "branches": {
     "claude/integrate-j072-chatgpt-wake": "6c21ea5757c4c5040612dac0718b4d5272adbd22",
@@ -2548,8 +2548,8 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T20:17:00Z",
-   "head": "c8277dc2aeb252b38ec8442ee0b6b2d6955b4c70",
+   "deadline": "2026-11-09T20:47:00Z",
+   "head": "a1a67229a4123adcd6630f755bc5d4d700ead855",
    "issue": 350,
    "job": "J-072",
    "landed": {
@@ -2678,7 +2678,11 @@
      "what": "review #360 @ 0aa97209"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-09T19:16:15Z",
+      "by": "claude",
+      "how": "new head"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -2700,6 +2704,30 @@
      "version": "fix:c8277dc2aeb252b38ec8442ee0b6b2d6955b4c70",
      "via": "session",
      "what": "#360: open FIX from Claude (review)"
+    },
+    {
+     "ack": null,
+     "ack_rule": "verdict|ack",
+     "asked": null,
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-09T19:16:15Z",
+     "dead": "2026-11-09T22:47:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-09T20:47:00Z",
+     "id": "O-61dc50bf",
+     "kind": "review",
+     "last_error": "",
+     "last_sent": "2026-11-09T19:16:15Z",
+     "missing": 0,
+     "ref": "PR|#360",
+     "sends": 1,
+     "thread": 360,
+     "to": "codex",
+     "unseen": null,
+     "version": "a1a67229a4123adcd6630f755bc5d4d700ead855",
+     "via": "relay",
+     "what": "review #360 @ a1a67229"
     }
    ],
    "outcome": null,
@@ -2710,11 +2738,12 @@
    "prs": [
     359,
     360,
-    361
+    361,
+    362
    ],
-   "review": "FIX",
-   "state": "working",
-   "updated": "2026-11-09T19:05:16Z"
+   "review": "waiting",
+   "state": "landable",
+   "updated": "2026-11-09T19:16:15Z"
   },
   "J-074": {
    "attempt": 1,

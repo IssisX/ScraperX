@@ -315,3 +315,12 @@
 {"ev": "state", "frm": "merged", "job": "J-071", "t": "2026-11-09T19:10:34Z", "to": "working"}
 {"ev": "unmatched", "ident": "PR|#362", "job": "", "t": "2026-11-09T19:10:34Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T19:10:34Z", "tries": 1}
+{"due": "2026-11-09T20:47:00Z", "ev": "obligation", "id": "O-61dc50bf", "job": "J-072", "kind": "review", "ref": "PR|#360", "t": "2026-11-09T19:16:15Z", "to": "codex", "via": "relay"}
+{"ev": "acked", "how": "new head", "id": "O-08cd9c4b", "job": "J-072", "t": "2026-11-09T19:16:15Z"}
+{"ev": "state", "frm": "working", "job": "J-071", "t": "2026-11-09T19:16:15Z", "to": "merged"}
+{"ev": "state", "frm": "working", "job": "J-072", "t": "2026-11-09T19:16:15Z", "to": "landable"}
+{"ev": "unmatched", "ident": "PR|#363", "job": "", "t": "2026-11-09T19:16:15Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "matched", "ident": "PR|#362", "job": "", "t": "2026-11-09T19:16:15Z"}
+{"ev": "ledger_sent", "job": "", "key": "6145d7f8b56df488", "ref": "ASK|ask on #340", "stage": 1, "t": "2026-11-09T19:16:15Z", "to": "grok"}
+{"attempt": 1, "ev": "would_send", "id": "O-61dc50bf", "job": "J-072", "ref": "PR|#360", "send": 1, "t": "2026-11-09T19:16:15Z", "to": "codex", "via": "relay"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T19:16:15Z", "tries": 1}
