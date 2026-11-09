@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Check that every CTest test runs in exactly one CI shard.
 
-The native-tests job splits scraperx_sim tests across four shards:
-athletic-traversal (an -R list), matron-slices-1 (an -R list),
-matron-slices-2 (an -R list), and matron-slices-3 (an -E exclusion list:
-every test not excluded runs there). A test selected by zero shards never
+The native-tests job splits scraperx_sim tests across five shards:
+athletic-traversal-1 and athletic-traversal-2 (each an -R list; J-071),
+matron-slices-1 (an -R list), matron-slices-2 (an -R list), and
+matron-slices-3 (an -E exclusion list: every test not excluded runs there). A test selected by zero shards never
 runs in CI; a test selected by two shards runs twice, doubling its CI
 time and its failure surface. Either case is a proof gap: CI green would
 no longer mean every registered test passed exactly once.
@@ -49,7 +49,8 @@ from pathlib import Path
 # step and the slice-1/2 steps select with -R; the slice-3 step selects
 # with -E (everything not excluded).
 SHARDS = [
-    ("athletic-traversal", "Run athletic_traversal", "-R"),
+    ("athletic-traversal-1", "Run athletic-traversal-1", "-R"),
+    ("athletic-traversal-2", "Run athletic-traversal-2", "-R"),
     ("matron-slices-1", "Run CTest Matron slice group 1", "-R"),
     ("matron-slices-2", "Run CTest Matron slice group 2", "-R"),
     ("matron-slices-3", "Run CTest Matron slice group 3", "-E"),
@@ -192,19 +193,23 @@ def check_tests(patterns, tests):
 
 def _self_test():
     """Regression checks for the shard parser and selector, run on every invocation."""
-    athletic = r"^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow)$"
+    athletic1 = r"^scraperx_sim\.(shared_survival|athletic-traversal-1|parkour_flow)$"
+    athletic2 = r"^scraperx_sim\.athletic-traversal-2$"
     group1 = r"^scraperx_sim\.(matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower)$"
     group2 = r"^scraperx_sim\.(matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$"
     exclude = (
-        r"^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow|"
+        r"^scraperx_sim\.(shared_survival|athletic-traversal-1|athletic-traversal-2|parkour_flow|"
         r"matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower|"
         r"matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$"
     )
     good = (
         "name: test\njobs:\n  native-tests:\n    steps:\n"
-        "      - name: Run athletic_traversal, shared_survival, parkour_flow\n"
+        "      - name: Run athletic-traversal-1, shared_survival, parkour_flow\n"
         "        run: |\n"
-        f"          ctest -R \"{athletic}\" -V\n"
+        f"          ctest -R \"{athletic1}\" -V\n"
+        "      - name: Run athletic-traversal-2\n"
+        "        run: |\n"
+        f"          ctest -R \"{athletic2}\" -V\n"
         "      - name: Run CTest Matron slice group 1 (ladder, hearing)\n"
         "        run: |\n"
         f"          ctest -R \"{group1}\" -j 2\n"
@@ -217,7 +222,8 @@ def _self_test():
     )
     patterns = shard_patterns(good)
     tests = [
-        "scraperx_sim.athletic_traversal",
+        "scraperx_sim.athletic-traversal-1",
+        "scraperx_sim.athletic-traversal-2",
         "scraperx_sim.matron-ladder",
         "scraperx_sim.matron-chain",
         "scraperx_sim.matron-remaining",
@@ -287,7 +293,7 @@ def _self_test():
 
     def cmake_foreach():
         text = (
-            "add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)\n"
+            "add_test(NAME scraperx_sim.shared_survival COMMAND scraperx_sim_tests)\n"
             "foreach(slice matron-ladder matron-chain matron-remaining)\n"
             "    add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)\n"
             "endforeach()\n"
@@ -296,7 +302,7 @@ def _self_test():
             tmp.write(text)
             tmp_path = tmp.name
         got = list_tests_from_cmakelists(tmp_path)
-        if got != ["scraperx_sim.athletic_traversal", "scraperx_sim.matron-ladder",
+        if got != ["scraperx_sim.shared_survival", "scraperx_sim.matron-ladder",
                    "scraperx_sim.matron-chain", "scraperx_sim.matron-remaining"]:
             raise AssertionError(f"cmake-foreach: got {got}")
 

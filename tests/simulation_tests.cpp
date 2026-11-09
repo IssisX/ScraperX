@@ -180,8 +180,7 @@ int main() {
 
     // Wall seconds per group, printed as TIME lines, so the next shard split
     // is measured, not guessed. Print-only. A SCRAPERX_ONLY run returns above,
-    // so TIME lines appear only in the bare-binary run (the athletic_traversal
-    // CTest test), never in a slice log.
+    // so TIME lines appear only in the bare-binary run, never in a slice log.
     for (const Group &g : r.groups) {
         const auto start = std::chrono::steady_clock::now();
         g.fn();
