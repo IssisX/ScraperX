@@ -17,6 +17,7 @@ import json
 import re
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 
 FRESH_MIN = 10
 TIME = re.compile(r"\b(1[0-2]|0?[1-9])(:[0-5]\d)?\s*[AaPp]\.?\s*[Mm]\b")
@@ -90,8 +91,16 @@ def call_text(tool_input):
 def main():
     data = json.load(sys.stdin)
     event = data.get("hook_event_name", "")
+    path = data.get("transcript_path", "")
+    # A sub-agent's calls live in its own transcript, beside the session's: read that one, or its
+    # clock reads are never seen (11-09: a helper's post was blocked after two fresh reads).
+    agent = data.get("agent_transcript_path") or (
+        str(Path(path).with_suffix("") / "subagents" / f"agent-{data['agent_id']}.jsonl")
+        if data.get("agent_id") and path else "")
+    if agent and Path(agent).is_file():
+        path = agent
     try:
-        with open(data["transcript_path"], encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             rows = [json.loads(line) for line in f if line.strip()]
     except (KeyError, OSError, ValueError) as e:
         rows, err = None, f"transcript unreadable ({type(e).__name__})"
