@@ -83,12 +83,12 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
    "to": "claude",
-   "unseen": null,
+   "unseen": "2026-11-09T22:39:05Z",
    "version": "6695638361",
    "via": "session",
    "what": "ask from Muse on #108"
@@ -108,7 +108,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 2,
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
@@ -210,5 +210,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T22:19:23Z"
+ "updated": "2026-11-09T22:39:05Z"
 }

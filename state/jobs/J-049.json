@@ -9,7 +9,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T22:17:00Z",
+ "deadline": "2026-11-10T00:56:16Z",
  "head": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
  "issue": 278,
  "job": "J-049",
@@ -161,7 +161,11 @@
    "what": "ask from Muse on #278"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T14:27:21Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-08T01:25:11Z",
    "attempts": 0,
@@ -302,5 +306,5 @@
  ],
  "review": "waiting",
  "state": "working",
- "updated": "2026-11-09T22:19:23Z"
+ "updated": "2026-11-09T22:39:05Z"
 }

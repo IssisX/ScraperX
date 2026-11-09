@@ -14,7 +14,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T22:17:00Z",
+ "deadline": null,
  "head": "512c76ea5d72481823547a436e86bf6b156ed565",
  "issue": 0,
  "job": "J-051",
@@ -46,11 +46,12 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "BRANCH|claude/integrate-j051-asks-since",
    "sends": 0,
    "thread": 0,
    "to": "claude",
+   "unseen": "2026-11-09T22:39:05Z",
    "version": "open-pr:512c76ea5d72481823547a436e86bf6b156ed565",
    "via": "session",
    "what": "`claude/integrate-j051-asks-since` is green with no PR: open one"
@@ -64,5 +65,5 @@
  "prs": [],
  "review": "",
  "state": "blocked",
- "updated": "2026-11-09T22:19:23Z"
+ "updated": "2026-11-09T22:39:05Z"
 }

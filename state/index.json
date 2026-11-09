@@ -85,12 +85,12 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": null,
-     "missing": 2,
+     "missing": 3,
      "ref": "ASK|ask on #108",
      "sends": 0,
      "thread": 108,
      "to": "claude",
-     "unseen": null,
+     "unseen": "2026-11-09T22:39:05Z",
      "version": "6695638361",
      "via": "session",
      "what": "ask from Muse on #108"
@@ -110,7 +110,7 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": null,
-     "missing": 1,
+     "missing": 2,
      "ref": "ASK|ask on #108",
      "sends": 0,
      "thread": 108,
@@ -212,7 +212,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T22:19:23Z"
+   "updated": "2026-11-09T22:39:05Z"
   },
   "J-007": {
    "attempt": 1,
@@ -520,7 +520,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T22:17:00Z",
+   "deadline": "2026-11-10T02:19:23Z",
    "head": "",
    "issue": 118,
    "job": "J-011",
@@ -556,7 +556,11 @@
      "what": "ask from Muse on #118"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-09T14:27:24Z",
+      "by": "claude",
+      "how": "reply on its thread"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-08T04:46:21Z",
      "attempts": 0,
@@ -642,7 +646,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T22:19:23Z"
+   "updated": "2026-11-09T22:39:05Z"
   },
   "J-013": {
    "attempt": 0,
@@ -1840,6 +1844,31 @@
      "version": "6706894755",
      "via": "session",
      "what": "ask from ChatGPT on #242"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-09T22:37:40Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-09T22:39:05Z",
+     "dead": "2026-11-10T06:39:05Z",
+     "dead_lettered": null,
+     "due": "2026-11-10T02:39:05Z",
+     "id": "O-319779d9",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-09T22:39:05Z",
+     "missing": 0,
+     "ref": "ASK|ask on #242",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 242,
+     "to": "muse",
+     "unseen": null,
+     "version": "6753350917",
+     "via": "email",
+     "what": "ask from ChatGPT on #242"
     }
    ],
    "outcome": null,
@@ -1850,7 +1879,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T21:19:08Z"
+   "updated": "2026-11-09T22:39:05Z"
   },
   "J-044b": {
    "attempt": 0,
@@ -2260,7 +2289,7 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T22:17:00Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
    "issue": 278,
    "job": "J-049",
@@ -2412,7 +2441,11 @@
      "what": "ask from Muse on #278"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-09T14:27:21Z",
+      "by": "claude",
+      "how": "reply on its thread"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-08T01:25:11Z",
      "attempts": 0,
@@ -2553,7 +2586,7 @@
    ],
    "review": "waiting",
    "state": "working",
-   "updated": "2026-11-09T22:19:23Z"
+   "updated": "2026-11-09T22:39:05Z"
   },
   "J-050": {
    "attempt": 0,
@@ -2609,7 +2642,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T22:17:00Z",
+   "deadline": null,
    "head": "512c76ea5d72481823547a436e86bf6b156ed565",
    "issue": 0,
    "job": "J-051",
@@ -2641,11 +2674,12 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 2,
+     "missing": 3,
      "ref": "BRANCH|claude/integrate-j051-asks-since",
      "sends": 0,
      "thread": 0,
      "to": "claude",
+     "unseen": "2026-11-09T22:39:05Z",
      "version": "open-pr:512c76ea5d72481823547a436e86bf6b156ed565",
      "via": "session",
      "what": "`claude/integrate-j051-asks-since` is green with no PR: open one"
@@ -2659,7 +2693,7 @@
    "prs": [],
    "review": "",
    "state": "blocked",
-   "updated": "2026-11-09T22:19:23Z"
+   "updated": "2026-11-09T22:39:05Z"
   },
   "J-051b": {
    "attempt": 0,
@@ -3524,14 +3558,18 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T22:17:00Z",
+   "deadline": null,
    "head": "",
    "issue": 321,
    "job": "J-063",
    "landed": {},
    "obligations": [
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-08T13:58:07Z",
+      "by": "claude",
+      "how": "reply on its thread"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-08T13:18:03Z",
      "attempts": 0,
@@ -3648,7 +3686,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T22:19:23Z"
+   "updated": "2026-11-09T22:39:05Z"
   },
   "J-064": {
    "attempt": 0,
@@ -4763,8 +4801,8 @@
     368
    ],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-09T22:19:23Z"
+   "state": "merged",
+   "updated": "2026-11-09T22:39:05Z"
   }
  }
 }
