@@ -95,7 +95,7 @@ him again.
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
   a BLOCK means it is protected.
 - Only real physics, gameplay or test failures block a merge, never wording or commit messages.
-- One owner per job and per function; one integrate branch per job, reused. A PR replaced by newer work is
+- One owner per job and per function; one integrate branch per job, reused; small fixes ride one batched PR, never one each (11-09). A PR replaced by newer work is
   closed the same hour.
 - Cheap agents may run tests, builds and the rule check; never delete branches, force-push, push to `main`
   or land work.
