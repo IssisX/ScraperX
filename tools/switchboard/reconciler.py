@@ -827,6 +827,7 @@ def sync(rec: dict, wants: list[Want], now: dt.datetime, roster: L.Roster, event
             if ob.get("ack") is None and (ob.get("unseen") or ob.get("closed")):
                 was = "unseen" if ob.get("unseen") else ob["closed"]["why"]
                 ob["unseen"], ob["closed"], ob["reopened"] = None, None, iso(now)
+                ob["backlog"] = None   # ripened after the cutover: owed afresh, sent like a new one
                 if not ob.get("dead_lettered"):   # a fresh clock: its dormant time is not the addressee's delay
                     via, due = due_at(roster, ob["to"], now, ob["kind"])
                     ob["due"], ob["dead"] = iso(due), iso(dead_time(ob["to"], via, now, due))
@@ -1166,26 +1167,28 @@ class CoryNotifier:
 
 
 def cutover(state: State, live: bool, roster: L.Roster, now: dt.datetime, events: Events) -> None:
-    """The first live pass after shadow ones (J-072 stage 2). A shadow "send" went nowhere, but it counts in `sends`:
-    left as it was, an obligation shadow had sent once would get its first real notice only as the re-send, one it
-    had re-sent would go straight to Cory with no notice at all, and a dead-letter shadow had batched would never
-    reach him (its key reads as reported). So every live obligation shadow sent or dead-lettered starts again from
-    now with a fresh due time, and only batches that really went count as reported. Runs once (state/cory.json
-    `mode`); a send records `sent_by`, so going back to shadow and live again resets only shadow's own sends."""
+    """The first live pass after shadow ones (J-072 stage 2). Shadow's sends and dead-letters went nowhere, and the
+    backlog it holds (the replay: 100 dead-letters in 48 h) must not flood Cory or the agents on the first live
+    pass (the coordinator, 11-09). So every obligation live at the cutover becomes `backlog`: never sent one by
+    one, never dead-lettered, and summed in one line for Cory, counts by holder (needs_you). It leaves the backlog
+    only by ripening after the cutover: its want coming back (a reopen) gives it a fresh clock like any new one.
+    Agents get notices only for obligations created or ripened after the cutover. Only batches that really went
+    count as reported. Runs once (state/cory.json `mode`); a send records `sent_by`."""
     if not live:
         state.cory["mode"] = "shadow"
         return
     if state.cory.get("mode") == "live":
         return
     n = 0
+    holders: dict[str, int] = {}
     for rec in state.records():
         for ob in rec["obligations"]:
-            if not is_live(ob) or ob.get("sent_by") == "live" or not (ob["sends"] or ob.get("dead_lettered")):
-                continue
-            via, due = due_at(roster, ob["to"], now, ob["kind"])
-            ob.update(sends=0, attempts=0, last_sent=None, last_error="", dead_lettered=None, via=via, due=iso(due),
-                      dead=iso(dead_time(ob["to"], via, now, due)))
+            if not is_live(ob) or ob.get("sent_by") == "live" or at(ob["created"]) >= now:
+                continue   # one this very pass opened is new work, not backlog
+            ob.update(backlog=iso(now), dead_lettered=None)
+            holders[ob["to"]] = holders.get(ob["to"], 0) + 1
             n += 1
+    state.cory["backlog"] = {"at": iso(now), "by": holders}
     went = {b["at"] for b in state.cory["batches"] if b.get("live")}
     dropped = [k for k, v in state.cory["reported"].items() if v not in went]
     for k in dropped:
@@ -1215,8 +1218,8 @@ def deliver(state: State, p: Pass, outbox, now: dt.datetime, events: Events, mem
                            via=ob["via"], ref=ob["ref"], send=src[0], attempt=src[1])
                 else:
                     events("delivery_found", rec["job"], id=ob["id"], send=src[0])
-            if old_claude_ask(ob, now):
-                continue   # never nagged or dead-lettered one by one: one daily line to Cory (needs_you)
+            if ob.get("backlog") or old_claude_ask(ob, now):
+                continue   # never nagged or dead-lettered one by one: one line to Cory (needs_you)
             if ob["via"] == "cory":
                 if not ob["sends"]:
                     ob["sends"], ob["attempts"], ob["last_sent"] = 1, 1, iso(now)
@@ -1511,8 +1514,12 @@ def needs_you(state: State, roster: L.Roster, now: dt.datetime | None = None) ->
     held by Claude from before today with no reply on its thread (old_claude_ask)."""
     out = []
     old = []
+    backlog: dict[str, int] = {}
     for rec in state.records():
         for ob in rec["obligations"]:
+            if is_open(ob) and ob.get("backlog"):
+                backlog[ob["to"]] = backlog.get(ob["to"], 0) + 1
+                continue
             if now is not None and is_open(ob) and old_claude_ask(ob, now):
                 old.append(ob)
                 continue
@@ -1528,6 +1535,13 @@ def needs_you(state: State, roster: L.Roster, now: dt.datetime | None = None) ->
             out.append((ob["id"], f"- Needs you: {rec['job'] or 'thread'} {ob['kind']}{where}: "
                                   f"{L.clean(ob['what'], 120)}. {failed}; since {central(at(since))} Central. "
                                   f"Done: /ack {ob['id']}"))
+    if backlog:   # one line, once per cutover: counts by holder, never the items one by one
+        since = (state.cory.get("backlog") or {}).get("at") or ""
+        who = ", ".join(f"{roster.address(k) if k in roster.agents else k.capitalize()} {n}"
+                        for k, n in sorted(backlog.items(), key=lambda kv: (-kv[1], kv[0])))
+        out.append((f"backlog:{since}", f"- Needs you: {sum(backlog.values())} item(s) from before the reconciler "
+                    f"went live ({who}). None is sent one by one; each leaves the list when it is answered, acked "
+                    "or settled, and the day's state file lists them."))
     if old:
         day = now.astimezone(CENTRAL).strftime("%Y-%m-%d")
         ids = " ".join(ob["id"] for ob in sorted(old, key=lambda o: o["created"])[:20])
