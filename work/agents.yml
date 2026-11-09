@@ -40,6 +40,7 @@ agents:
     branch_prefixes: [muse/, fb-bot/]
     owner_labels: [owner:muse]
     wake: email          # tools/switchboard/muse_bridge.gs mails it and posts its replies back
+    opens_prs: false     # Muse pushes its branches; the switchboard (else the integrator) opens the PRs (11-05)
 
 review:
   # Reviews, one mechanism per PR (Cory, 11-04): the Codex app reviews every PR on open, and its summary comment
