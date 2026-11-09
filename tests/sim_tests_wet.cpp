@@ -222,15 +222,32 @@ void run_wet_e_guard(const bool expect) {
     // J-041: then the deck-154 forklift's two bodies, after the east/west
     // pieces (its frame, then its forks).
     constexpr std::uint32_t kNewEastWest = 137;
+    // J-014 (#121): 78 new upper pieces on the rings above 396.25 m and
+    // the top decks, their table places taken after the east/west pieces
+    // and their bodies built last, after the deck-154 forklift, so the
+    // forklift keeps its place right after the east/west pieces and the
+    // bay, twin and summit bodies still follow the original 595 in
+    // order; only the total grows by 78. Re-pinned for the magnet fix:
+    // the upper bodies were built before the forklift, so the forklift
+    // sat 78 places later and the magnet's pinned append order failed.
+    // Before forklift_at 822, now 744; the total is still 824.
+    constexpr std::uint32_t kNewUpper = 78;
     const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
                                        scraperx::sim::Forklift::kDeck154CarriageEntity};
-    const std::uint32_t forklift_at = kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
-    bool since_after = world.kit_body_count() == forklift_at + std::size(kForklift);
+    const std::uint32_t forklift_at =
+        kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
+    bool since_after = world.kit_body_count() == forklift_at + std::size(kForklift) + kNewUpper;
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
     }
     for (std::uint32_t i = kBodiesBeforeE; since_after && i < kBodiesBeforeE + std::size(kSince); ++i) {
         since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
+    }
+    // The 78 upper pieces follow the forklift, in table order.
+    const std::uint32_t upper_first = world.loose_stock_count() - kNewUpper;
+    for (std::uint32_t i = 0; since_after && i < kNewUpper; ++i) {
+        since_after = world.kit_body_entity(forklift_at + std::size(kForklift) + i) ==
+                      Simulation::kLooseStockFirstEntity + upper_first + i;
     }
     Fnv lines;
     bool lines_clear = true;
@@ -318,7 +335,13 @@ void run_wet_e_guard(const bool expect) {
     // over all pieces changes again; every piece stands where it was.
     // Before 9809091706962277184, now 664305694603610712; the count (462)
     // is as before.
-    require(world.loose_stock_count() == 462 && stock.hash == 664305694603610712ULL,
+    // Re-pinned for J-014 (#121): 78 new upper pieces on the rings above
+    // 396.25 m and the top decks, after the east/west pieces in the
+    // table, so the count is 462 + 78 and the hash over all pieces
+    // changes; every pre-existing piece stands where it was.
+    // Before 664305694603610712, now 16882536141644003327; the count
+    // (540) is 462 + 78.
+    require(world.loose_stock_count() == 540 && stock.hash == 16882536141644003327ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");
