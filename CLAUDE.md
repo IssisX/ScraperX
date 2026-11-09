@@ -109,7 +109,7 @@ him again.
   `helper` or `helper-max`; Cory 11-06), never a separate session: more than two when the work needs it (11-09), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
   max (Cory 11-09: never ask him again); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
-- **Context:** the window is 750k (Cory's `/autocompact`, 11-09; the file's key did not take; 11-06 throttle: every call rereads the context);
+- **Context:** the window is 833k (Cory 11-09: compacts near 650k; `/autocompact` sets it live; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
