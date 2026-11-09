@@ -1,6 +1,6 @@
 # Integrator: the hourly check
 
-It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every hour Sat-Sun, 9:17 AM to 9:17 PM (Cory 11-08: "a little more often"); none
+It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every hour Sat-Sun, 9:17 AM to 9:17 PM (Cory 11-08); none
 overnight (Cory 11-06, 11-07). The full check (every step below) runs at 8:17 AM,
 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light: `git pull`, step 1
 only, and end in one line, with no board edit and no message
@@ -14,8 +14,7 @@ within 2% of a checkpoint (11-07): it refits and catches his Claude use outside 
 each checkpoint (81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM), and the hour it hits 100%. A prediction over a checkpoint
 throttles now, before it is crossed: no new helper, the next full run quiet (answers, merges), Cory gets the prediction and the
 cut in one line. Loosen a step only when two runs predict under.
-Specs, the math of a ruling and research go to ChatGPT or Grok first; the integrator
-checks them, never drafts them (Cory 11-06).
+Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched calls; no re-reads; short messages to Cory.
@@ -24,7 +23,7 @@ eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug,
 Helpers (sub-agents): one at a time while over pace (Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). If `effort_level` is not high (his pick, 11-07; helpers keep their own effort, set in `.claude/agents/`), or ultracode is on, tell Cory at once.
 
-The scheduled task only says "do this file"; change the check here. Post only when something changed.
+Change the check here, never in the task's prompt. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 
 1. **Mail and asks first, every run and every event you handle.** The mark is the notes' `Read through:` Unix time.
@@ -57,7 +56,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Replace the "This hour" section of board #340's body with who got what; never a new comment.
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current: only what has no other home. Over a cap in CLAUDE.md: trim it now.
-6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
+6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM) unless a system keeps failing (11-09). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
    that had nothing to do (a PR event, CI note, helper ping or reminder that changed no step) and stop its
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).

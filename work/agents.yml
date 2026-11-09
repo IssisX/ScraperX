@@ -21,7 +21,7 @@ agents:
     names: [ChatGPT]
     branch_prefixes: [chatgpt/]
     owner_labels: [owner:chatgpt]
-    wake: manual         # runs only when Cory starts it (J-072): the switch never routes a review to it
+    wake: manual         # runs when Cory starts it, plus a few scheduled tasks of its own (Cory 11-09); the switch never routes a review to it
   grok:
     vendor: xai
     names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #340)

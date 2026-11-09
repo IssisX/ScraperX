@@ -71,8 +71,8 @@ him again.
   answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
-- **Check, then ask; never guess** (11-07: "checks arent expensive and its just laziness"): in code, read the
-  source, measure or run it before leaning on a fact. Before locking in a hard job's approach, after the second
+- **Check, then ask; never guess** (11-07: "checks arent expensive and its just laziness"): in code or any
+  claim, read the source, file, docs or clock, measure or run it before stating it. Before locking in a hard job's approach, after the second
   red proof on the same failure, or on a physics or force-budget question no check settles, post `To <Name>:`
   on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
   step.
@@ -81,13 +81,11 @@ him again.
   research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
   codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
   screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts).
-  Grok Bot, PE and Builder are out until 11-09.
 - **Board:** issue #340's body is the live board; only the integrator edits it. Agents read the body and
-  new comments, post one line per real step, and put technical findings on the job's own issue or PR.
-  Nobody waits on Claude's go, protected work included (11-07). Blocked 30 minutes: post `BLOCKED: what,
+  new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
   needs whom` and start the next job; every agent holds two or more jobs.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews every PR
-  on open (`@codex review` only after a fix commit). The Claude API (Opus, max effort) does the eye, the
+  on open (`@codex review` only after a fix commit). The Claude API (Opus; high, the security pass max) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. Grok and ChatGPT review only
   as the fallback, by their own scheduled runs. The switchboard merges on a green proof plus a LAND from
   another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
