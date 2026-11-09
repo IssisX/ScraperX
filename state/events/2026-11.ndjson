@@ -450,3 +450,17 @@
 {"attempt": 1, "ev": "would_send", "id": "O-6177b42b", "job": "J-064", "ref": "ASK|ask on #322", "send": 1, "t": "2026-11-09T20:21:48Z", "to": "grok", "via": "issue"}
 {"attempt": 1, "ev": "would_send", "id": "O-b9661c8c", "job": "J-064", "ref": "ASK|ask on #322", "send": 1, "t": "2026-11-09T20:21:48Z", "to": "grok", "via": "issue"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T20:21:48Z", "tries": 1}
+{"due": "2026-11-09T22:47:00Z", "ev": "obligation", "id": "O-0f9ad2e8", "job": "J-072", "kind": "review", "ref": "PR|#364", "t": "2026-11-09T20:36:25Z", "to": "codex", "via": "relay"}
+{"due": "2026-11-10T00:36:25Z", "ev": "obligation", "id": "O-deae7ee4", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-09T20:36:25Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "reply on the thread", "id": "O-d853ce7b", "job": "J-059", "t": "2026-11-09T20:36:25Z"}
+{"ev": "state", "frm": "merged", "job": "J-072", "t": "2026-11-09T20:36:25Z", "to": "review"}
+{"ev": "ledger_sent", "job": "", "key": "6ef860be23412a91", "ref": "ASK|ask on #338", "stage": 2, "t": "2026-11-09T20:36:25Z", "to": "grok_bot"}
+{"attempt": 1, "ev": "would_send", "id": "O-e75d3d77", "job": "J-071", "ref": "ASK|ask on #338", "send": 1, "t": "2026-11-09T20:36:25Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 1, "ev": "would_send", "id": "O-786976a9", "job": "J-071", "ref": "ASK|ask on #338", "send": 1, "t": "2026-11-09T20:36:25Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 1, "ev": "would_send", "id": "O-fd91413c", "job": "J-071", "ref": "ASK|ask on #338", "send": 1, "t": "2026-11-09T20:36:25Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 1, "ev": "would_send", "id": "O-de419833", "job": "J-071", "ref": "ASK|ask on #338", "send": 1, "t": "2026-11-09T20:36:25Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 2, "ev": "would_send", "id": "O-a34f6e29", "job": "J-072", "ref": "ASK|ask on #350", "send": 2, "t": "2026-11-09T20:36:25Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 2, "ev": "would_send", "id": "O-1ac5a17e", "job": "J-072", "ref": "ASK|ask on #350", "send": 2, "t": "2026-11-09T20:36:25Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 1, "ev": "would_send", "id": "O-0f9ad2e8", "job": "J-072", "ref": "PR|#364", "send": 1, "t": "2026-11-09T20:36:25Z", "to": "codex", "via": "relay"}
+{"attempt": 1, "ev": "would_send", "id": "O-deae7ee4", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-09T20:36:25Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T20:36:25Z", "tries": 1}
