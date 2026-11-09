@@ -255,6 +255,10 @@ class Feed:
     problems: tuple[str, ...] = ()   # listings cut short or not read: each is an UNMATCHED item
     board: int = 340
     repo: str = "IssisX/ScraperX"
+    # (older head, newer head) of two live branches in one job's lane -> why the newer one holds the older one's
+    # work ("" when it does not; absent when not read). Only a held one is SUPERSEDED (J-072: #315 was marked
+    # superseded by #336 for sharing J-007 alone, while it was different, live work).
+    overlap: dict[tuple[str, str], str] = dataclasses.field(default_factory=dict)
 
 
 # ---------- items ----------
@@ -447,14 +451,16 @@ def classify(feed: Feed, now: dt.datetime, roster: Roster) -> Ledger:
         group.sort(key=lambda b: (b.pushed_at, b.name), reverse=True)
         current = group[0]
         for old in group[1:]:
-            if old.name in feed.keeps:
+            held = feed.overlap.get((old.sha, current.sha))
+            if old.name in feed.keeps or not held:   # a shared job number alone is not superseded work (J-072)
                 continue
             owner = roster.of_branch(old.name)
             pr = pr_refs.get(old.name)
             where = f" (#{pr.number})" if pr else ""
             items[:] = [x for x in items if not (x.kind == "BRANCH" and x.ref == old.name)]
             add(Item("SUPERSEDED", old.name, f"{gh}/tree/{urllib.parse.quote(old.name, safe='/')}", job, owner,
-                     owner or claude, f"SUPERSEDED by {clean(current.name, 80)}{where}: close it or say keep",
+                     owner or claude, f"SUPERSEDED by {clean(current.name, 80)}{where} ({clean(held, 60)}): close it "
+                     "or say keep",
                      current.pushed_at, STALE, old.sha + "|" + current.name,
                      pr.number if pr else issue_of.get(job, 0), old.pushed_at), f"branch:{old.name}")
 
@@ -658,6 +664,7 @@ class Notice:
     thread: int
     agent: str
     items: list[tuple[Item, int]]
+    name: str = ""   # the name its `To <Name>:` line uses: the holder's own (Builder, not Grok); "" is the agent's first
 
     @property
     def keys(self) -> list[str]:
@@ -668,54 +675,57 @@ def due_notices(items: list[Item], now: dt.datetime, sent: set[str], roster: Ros
     """The notices owed this sweep, the most urgent first: each item past its deadline whose key for its stage was
     never sent, one comment per (thread, holder). Muse reads mail, not threads: hers go in one mail per sweep, on
     her most urgent item's thread (at most MAX_MAIL_ITEMS; the rest next sweep). The switchboard itself is never
-    notified; an item past twice its deadline that was never told at all gets the one (stage 2) notice."""
-    groups: dict[tuple[int, str], Notice] = {}
+    notified; an item past twice its deadline that was never told at all gets the one (stage 2) notice.
+    A holder is addressed by its own name from work/agents.yml (J-072: Builder's notice went out as `To Grok: for
+    Builder`, and Grok's runs read only `To Grok:`). A Codex-held item goes to the integrator (`wake: mention`):
+    the switchboard's own `@codex review` never woke Codex (2 of 2, #191 and #150), so Claude posts it."""
+    groups: dict[tuple[int, str, str], Notice] = {}
     due = [(it, it.stage(now)) for it in items]
     due = sorted(((it, st) for it, st in due if st and it.holder.agent and it.key(st) not in sent),
                  key=lambda x: (-x[1], x[0].clock))
     mail: Notice | None = None
     for it, st in due:
-        if roster.wake(it.holder.agent) == "email":
+        wake = roster.wake(it.holder.agent)
+        if wake == "email":
             if mail is None:
-                mail = groups.setdefault((it.thread or board, it.holder.agent),
+                mail = groups.setdefault((it.thread or board, it.holder.agent, ""),
                                          Notice(it.thread or board, it.holder.agent, []))
             if len(mail.items) < MAX_MAIL_ITEMS:
                 mail.items.append((it, st))
             continue
         where = it.thread or board
-        groups.setdefault((where, it.holder.agent), Notice(where, it.holder.agent, [])).items.append((it, st))
+        agent, name = ("claude", roster.address("claude")) if wake == "mention" else (it.holder.agent, it.holder.name)
+        groups.setdefault((where, agent, name), Notice(where, agent, [], name)).items.append((it, st))
     return sorted(groups.values(), key=lambda n: (-max(st for _, st in n.items),
-                                                 min(it.clock for it, _ in n.items), n.thread, n.agent))
+                                                 min(it.clock for it, _ in n.items), n.thread, n.agent, n.name))
 
 
 def notice_body(n: Notice, roster: Roster, now: dt.datetime, board: int) -> tuple[str, str]:
     """(the first line's channel, the comment without its marker)."""
     wake = roster.wake(n.agent)
     ref = ref_plain if wake == "email" else ref_md
+    address = n.name or roster.address(n.agent)
     lines = []
     for it, st in n.items:
         what = ("twice past" if wake == "email" else "ESCALATED, past twice") if st == 2 else "past"
+        codex = roster.wake(it.holder.agent) == "mention" and wake != "mention"
+        step = (f". Codex holds it: post `codex review` with an at-sign in front on #{it.thread or board} as IssisX "
+                f"(Codex does not answer the switchboard's own mention).") if codex else ""
         lines.append(f"- {ref(it)}{(' ' + it.job) if it.job and it.job not in it.ref else ''}: {clean(it.state, 160)}; "
-                     f"{age_text(it.age(now))} old, {what} its {age_text(it.deadline)} deadline")
+                     f"{age_text(it.age(now))} old, {what} its {age_text(it.deadline)} deadline{step}")
     if wake == "email":   # plain wording for Muse's check: no order, no pressure (work/tasks/mail-to-muse.md 6-7)
         tail = (f"From the switchboard's ledger (the section in #{board}'s body). The next step for each is a PR, a "
                 f"fix, or one line on its issue saying why it waits. Each is sent once per stage.")
     else:
         tail = (f"From the switchboard's ledger (the section in #{board}'s body). You hold these: act, or say on the "
                 f"thread why they wait. Each is sent once per stage.")
-    persona = sorted({it.holder.name for it, _ in n.items} - {roster.address(n.agent)})
+    persona = sorted({it.holder.name for it, _ in n.items} - {address})
     who = f" for {', '.join(persona)}," if persona else ""
     if wake == "email":
         first = f"CLAUDE_TO_MUSE: ledger,{who} {len(n.items)} item(s) of yours past deadline"
-    elif wake == "mention" and all(it.kind == "PR" for it, _ in n.items):
-        first = "@codex review"
-    else:
-        first = f"To {roster.address(n.agent)}:{who} {len(n.items)} item(s) past deadline"
-    body = "\n".join([first, ""] + lines + ["", tail])
-    if first != "@codex review":
-        body = body.replace("@", "")
-    else:
-        body = first + body[len(first):].replace("@", "")
+    else:   # never `@codex review` from this login: it does not wake Codex, so a Codex item is Claude's (due_notices)
+        first = f"To {address}:{who} {len(n.items)} item(s) past deadline"
+    body = "\n".join([first, ""] + lines + ["", tail]).replace("@", "")
     return wake, body
 
 
@@ -962,6 +972,27 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
         b.vs_trunk, b.ahead_by = got.get("status") or "", int(got.get("ahead_by") or 0)
         b.ahead = tuple(c.get("sha") or "" for c in got.get("commits") or [])
 
+    # superseded (J-072): two live branches in one job's lane are compared by their work, not their job number:
+    # the older is held by the newer when its head is an ancestor of the newer's, or the newer changes every file
+    # it changes. One compare per pair, and the trunk compares above (or one more per head) for the files.
+    def trunk_compare(sha: str) -> dict:
+        if sha not in compared:
+            compared[sha] = gh.get(f"repos/{repo}/compare/{rules.TRUNK}...{sha}") or {}
+        return compared[sha] or {}
+
+    overlap: dict[tuple[str, str], str] = {}
+    refs = set(open_heads) | {p.head_ref for p in prs}
+    for group in lane_groups(branches, refs, system_branches).values():
+        current = group[0]
+        for old in group[1:]:
+            try:
+                overlap[(old.sha, current.sha)] = held_by(gh.get(f"repos/{repo}/compare/{old.sha}...{current.sha}") or {},
+                                                          trunk_compare(old.sha), trunk_compare(current.sha),
+                                                          current.name)
+            except Exception as err:   # noqa: BLE001  not read: not marked superseded, and the read is listed
+                problems.append(f"superseded compare of {clean(old.name, 50)} and {clean(current.name, 50)}: "
+                                f"{type(err).__name__}")
+
     # proof runs in the window; the newest on a live head (or trunk) is judged by its jobs when it is not green
     raw = gh.paged(f"repos/{repo}/actions/workflows/{proof_workflow}/runs?created=%3E%3D{iso(since_live)}", "workflow_runs")
     if len(raw) >= 500:
@@ -1002,8 +1033,35 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
              for a in asks.unanswered(stream, open_threads, since_live) if a["login"] != rules.BOT_LOGIN]
 
     feed = Feed(prs, open_prs, branches, issues, found, runs, rules.TRUNK, frozenset(system_branches),
-                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo)
+                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo, overlap)
     return feed, sent
+
+
+def lane_groups(branches: list[BranchIn], refs: set[str], system_branches: Iterable[str]) -> dict:
+    """The live branches classify groups for SUPERSEDED, by (job, protected lane), each newest push first: not a
+    system branch, and not settled (landed, or at a closed PR's head) unless an open PR is on it."""
+    system = set(system_branches)
+    groups: dict[tuple[str, bool], list[BranchIn]] = {}
+    for b in branches:
+        if b.name == rules.TRUNK or b.name in system or b.name.startswith(SYSTEM_PREFIXES):
+            continue
+        if b.name not in refs and branch_fate(b)[0]:
+            continue
+        job = job_of_branch(b.name) or rules.job_of_pr(b.job_line)
+        if job:
+            groups.setdefault((job, "/integrate-protected-" in b.name), []).append(b)
+    return {k: sorted(g, key=lambda b: (b.pushed_at, b.name), reverse=True) for k, g in groups.items() if len(g) > 1}
+
+
+def held_by(between: dict, old_vs_trunk: dict, new_vs_trunk: dict, newer: str) -> str:
+    """Why the newer branch holds the older one's work ("" when it does not): `between` is compare old...new."""
+    if (between.get("status") or "") in ("ahead", "identical"):
+        return f"its head is in {newer}"
+    old_files = {f.get("filename") for f in old_vs_trunk.get("files") or []} - {None}
+    new_files = {f.get("filename") for f in new_vs_trunk.get("files") or []} - {None}
+    if old_files and old_files <= new_files:
+        return f"{newer} changes every file it changes"
+    return ""
 
 
 def sweep(sw, steered: list, board: int, muse_label: str, proof_workflow: str, system_branches: Iterable[str],

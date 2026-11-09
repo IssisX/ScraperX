@@ -93,7 +93,7 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
 MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
@@ -109,6 +109,16 @@ PIPE_WAKE_STUCK = dt.timedelta(minutes=20)    # a wake:muse label this old: the 
 PIPE_INBOUND_QUIET = dt.timedelta(hours=24)   # no bridge post this long while asks went to Muse: its inbound is stuck
 PIPE_LOOKBACK = dt.timedelta(days=7)          # how far back an open inbound incident is read; older, it alarms again
 BRIDGE_POST = "**Muse (via email bridge)"     # the first line of every inbound bridge post
+LEDGER_NOTICE = "<!-- switchboard:ledger keys="   # the hidden marker of a ledger notice (ledger.py NOTICE_MARK)
+# J-072: the live bridge's version. muse_bridge.gs's BRIDGE_VERSION is bridge_version() of its own text; its clock
+# sends it, and switchboard.yml names the run with it. A live bridge that is not trunk's, or names none, alarms once.
+BRIDGE_FILE = "tools/switchboard/muse_bridge.gs"
+SWITCHBOARD_WORKFLOW = "switchboard.yml"
+BRIDGE_VERSION_LINE = re.compile(r"^var BRIDGE_VERSION = '([0-9a-f]*)';", re.MULTILINE)
+BRIDGE_RUN = re.compile(r"^Switchboard sweep \(bridge ([0-9a-f]{12})\)$")
+BRIDGE_SEEN = dt.timedelta(minutes=25)    # the clock dispatches every 10 min: two missed in a row is no clock
+BRIDGE_TOLD_MARK = "<!-- switchboard:bridge-version live={live} trunk={trunk} -->"
+BRIDGE_TOLD = re.compile(r"<!-- switchboard:bridge-version live=([0-9a-f]{12}|none) trunk=([0-9a-f]{12}) -->")
 MAX_WAKE_ISSUES = 30                          # wake:muse issues read per sweep (one page)
 # The switchboard workflow wakes on `: LAND`, `: FIX`, `: NOTE` or `: BLOCK` anywhere in a comment, in any case.
 VERDICT_TRIGGER = re.compile(r":(?= ?(?:land|fix|note|block))", re.IGNORECASE)
@@ -171,6 +181,13 @@ def sweep_heartbeat(url: str, failed: int, out=print, opener=urllib.request.urlo
         return False
     out(f"HEARTBEAT   sent ({'fail' if failed else 'ok'})")
     return True
+
+
+def bridge_version(text: str) -> str:
+    """The version of a muse_bridge.gs text: sha256 of it with its BRIDGE_VERSION value blanked, 12 hex. So the
+    constant changes with every edit of the script (test_bridge checks the file's constant is its own hash)."""
+    blank = BRIDGE_VERSION_LINE.sub("var BRIDGE_VERSION = '';", text.replace("\r\n", "\n"), count=1)
+    return hashlib.sha256(blank.encode("utf-8")).hexdigest()[:12]
 
 
 def note_dry_run(summary_path: str | None) -> None:
@@ -1010,6 +1027,7 @@ class Switch:
         outbound alarm; an inbound one, when a bridge post came after the last inbound alarm (or that alarm is
         older than PIPE_LOOKBACK). Returns the finding lines."""
         last: dict[str, dt.datetime] = {}
+        told: set[tuple[str, str]] = set()   # (live, trunk) bridge versions already alarmed
         for c in self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments"):
             at = parse_time(c.get("created_at") or "")
             if (c.get("user") or {}).get("login") != rules.BOT_LOGIN or at is None:
@@ -1017,8 +1035,17 @@ class Switch:
             for m in PIPE_KINDS.finditer(c.get("body") or ""):
                 for kind in filter(None, m.group(1).split(",")):
                     last[kind] = max(at, last.get(kind, at))
+            told |= set(BRIDGE_TOLD.findall(c.get("body") or ""))
         found: list[str] = []
         new: list[str] = []
+        marks: list[str] = []
+        version = self.bridge_version_health()
+        if version:
+            line, pair = version
+            found.append(line)
+            if pair not in told:
+                new.append("version")
+                marks.append(BRIDGE_TOLD_MARK.format(live=pair[0], trunk=pair[1]))
         stuck = self.wake_stuck()
         if stuck:
             found.append("OUTBOUND STUCK: `wake:muse` has sat on " + ", ".join(
@@ -1045,9 +1072,43 @@ class Switch:
                              [f"- {plain(line)}" for line in found] +
                              ["", "The cause is in the bridge's Apps Script Executions log, which only Cory can open. "
                               "One alarm per incident; the switch prints the state every sweep.", "",
-                              PIPE_MARK.format(kinds=",".join(new))])
+                              PIPE_MARK.format(kinds=",".join(new))] + marks)
             self.gh.comment(BOARD_ISSUE, body, f"pipe alarm ({', '.join(new)}) on #{BOARD_ISSUE}")
         return found
+
+    def bridge_version_health(self) -> tuple[str, tuple[str, str]] | None:
+        """J-072: is the live bridge trunk's? Its clock names each sweep it dispatches "Switchboard sweep (bridge <v>)"
+        (switchboard.yml run-name), <v> being the .gs's BRIDGE_VERSION, the hash bridge_version() gives of its own
+        text. None when the newest such run in BRIDGE_SEEN carries trunk's version; else (the finding, the (live,
+        trunk) pair), live being "none" when no run in the window carries one (a bridge pasted before
+        BRIDGE_VERSION existed, or its clock is off). One read: the newest dispatched runs."""
+        root = getattr(self, "root", None)
+        try:
+            want = bridge_version((root / BRIDGE_FILE).read_text(encoding="utf-8")) if root else ""
+        except OSError:
+            want = ""
+        if not want:
+            return None
+        runs = (self.gh.get(f"repos/{self.gh.repo}/actions/workflows/{SWITCHBOARD_WORKFLOW}/runs?event=workflow_dispatch"
+                            f"&branch={rules.TRUNK}&per_page=20&exclude_pull_requests=true") or {}).get("workflow_runs") or []
+        live = ""
+        for r in sorted(runs, key=lambda r: r.get("created_at") or "", reverse=True):
+            at = parse_time(r.get("created_at") or "")
+            m = BRIDGE_RUN.match(r.get("display_title") or "")
+            if m and at and self.now - at <= BRIDGE_SEEN:
+                live = m.group(1)
+                break
+        if live == want:
+            self.out(f"PIPE        the live bridge is trunk's ({want})")
+            return None
+        fix = (f"Cory pastes trunk's {BRIDGE_FILE} into the bridge's Apps Script project (replace all, save; the "
+               "triggers stay).")
+        if not live:
+            return (f"BRIDGE VERSION: no sweep in the last {hours(BRIDGE_SEEN)} was dispatched by a bridge that names "
+                    f"its version; trunk's is {want}. The live bridge predates it, or its clock is off. {fix}",
+                    ("none", want))
+        return (f"BRIDGE VERSION: the live bridge is {live}, trunk's is {want}: the deployed script is stale. {fix}",
+                (live, want))
 
     def wake_stuck(self) -> list[tuple[int, dt.datetime]]:
         """Open issues and PRs whose wake:muse label has been on longer than PIPE_WAKE_STUCK: (number, labeled at).
@@ -1143,7 +1204,10 @@ class Switch:
             body = c.get("body") or ""
             if body.lstrip().startswith("<!-- codex"):
                 continue
-            if (c.get("user") or {}).get("login") == rules.BOT_LOGIN:
+            # The switch's own comments are never asks, except the ledger's "To Claude:" notices (J-072: notice
+            # 6746048774 on #340, 7 Claude items, never reached this inbox).
+            if (c.get("user") or {}).get("login") == rules.BOT_LOGIN and not (
+                    LEDGER_NOTICE in body and body.lstrip().lower().startswith("to claude")):
                 continue
             if "Generated by [Claude Code]" in body:
                 continue
@@ -1207,6 +1271,11 @@ class Switch:
                                 "both" if owner == "muse" else "claude"))
         if d.action == "FIX" and owner:
             out.append(item("FIX", plain("; ".join(d.reasons)), owner, self.fix_finding(f, ctx)))
+        codex_tag = MARK.format(kind="ask-codex", pr=f.number, head=f.head_sha)
+        if any(codex_tag in (c.get("body") or "") and (c.get("user") or {}).get("login") == rules.BOT_LOGIN
+               for c in ctx.get("comments") or []) and rules.needs_review(f, author, self.team):
+            out.append(item("CODEX-ASK", f"post codex review with an at-sign in front on #{f.number} as IssisX: the "
+                                         "switchboard's own mention does not wake Codex (J-072)"))
         if d.action == "FIX-CI":
             jobs = red_jobs(f.proof)
             both = "both" if owner == "muse" else "claude"
@@ -1310,9 +1379,12 @@ class Switch:
             return
         name = self.team.agent_name.get(agent, agent)
         job = ctx["job"] or f"PR #{facts.number}"
-        if agent == "codex":
-            self.gh.comment(where, f"@codex review\n\nSwitchboard: {job}, head {facts.head_sha[:8]}. {why}\n\n{tag}",
-                            f"ask Codex to review #{facts.number}")
+        if agent == "codex":   # J-072: this login's "@codex review" never woke Codex (2 of 2, #191 and #150), so the
+            # mark only records the ask; the integrator's inbox gets a CODEX-ASK item and posts the mention itself
+            self.gh.comment(where, f"Switchboard: {job}, head {facts.head_sha[:8]}: a Codex review of this head is due. "
+                                   f"{why}The integrator posts the Codex review command: the switchboard's own does "
+                                   f"not wake Codex.\n\n{tag}".replace("@", ""),
+                            f"record the Codex ask on #{facts.number} (the integrator posts it)")
             return
         head = {"muse": f"CLAUDE_TO_MUSE: {job} review #{facts.number} @ {facts.head_sha[:8]}",
                 "grok": f"To Grok: {job} review #{facts.number} @ {facts.head_sha[:8]}",

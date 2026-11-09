@@ -3,10 +3,15 @@
 
 An ask is a comment naming another agent as its addressee: `To <Name>:`,
 `To <Name> (...)`, `<Author> → <Name>` or `cc <Name>`, on an open issue or PR.
-It counts as answered once that agent posts later on the same thread, or on another
-thread naming this one (`#N`), or posts a verdict (`**<Name> (review of #N @ ...)**`) on a PR the ask names. Muse
-answers by mail; the bridge posts those as `**Muse (via email bridge)...`, which
-counts as Muse.
+It counts as answered only by a later post from that agent that addresses it (J-072: Muse's "please
+resend" 6746462436 on #340 dropped out when Claude posted about Grok's asks there a minute later):
+  - a post anywhere that names the ask itself (its comment id or URL) or quotes it (a `> ` line of its text),
+  - a reply on the same thread addressed back to the asker (`To <Asker>`, `→ <Asker>`, `cc <Asker>`; a
+    `CLAUDE_TO_MUSE:` post is addressed to Muse, and a bridge post, Muse's mail, to Claude),
+  - a reply on another thread naming this one (`#N`) and addressed back to the asker,
+  - or a verdict (`**<Name> (review of #N @ ...)**`) on a PR the ask names.
+Any other later post by that agent, on the thread or not, is not an answer. Muse answers by mail; the bridge
+posts those as `**Muse (via email bridge)...`, which counts as Muse.
 
 Muse never reads GitHub: an ask to Muse is listed with RELAY until the
 integrator mails it (`CLAUDE_TO_MUSE:`), then stays listed until Muse answers.
@@ -34,6 +39,9 @@ PR_REF = re.compile(r"#(\d+)")
 MAX_PAGES = 10  # bounded: at most 1000 comments read
 NOISE = ("<!-- linear-linkback", "You have reached your Codex")
 LEDGER_MARK = "<!-- switchboard:ledger "   # in the switchboard ledger's notices (tools/switchboard/ledger.py)
+BRIDGE_POST = "**Muse (via email bridge)"   # the first line of every inbound bridge post: Muse writing to Claude
+QUOTE = re.compile(r"^>\s?(.+)$", re.MULTILINE)
+MIN_QUOTE = 12   # characters of quoted text that must appear in the ask for a quote to name it
 
 
 def gh(path: str) -> object:
@@ -51,6 +59,8 @@ def author(body: str) -> str:
         return "noise"
     if text.startswith("<!-- codex"):
         return "Codex"
+    if text.startswith("CLAUDE_TO_MUSE:"):   # the integrator's relay to Muse, posted by it or by the switchboard
+        return "Claude"
     head = re.split(r"→|\bTo\b|\bcc\b", text.split("\n", 1)[0][:160])[0]
     best, pos = "", len(head) + 1
     for name in AGENTS + ("Principal Engineer", "FB Bot"):
@@ -65,10 +75,53 @@ def author(body: str) -> str:
     return best
 
 
+def addressees(body: str) -> set[str]:
+    """Who a post is addressed to: its `To <Name>` / `→ <Name>` / `cc <Name>` lines, Muse for a `CLAUDE_TO_MUSE:`
+    post and Claude for a bridge post (Muse's mail is always to Claude)."""
+    text = body.lstrip()
+    out = {m.group(1) for m in ASK.finditer(body[:4000])}
+    if text.startswith("CLAUDE_TO_MUSE:"):
+        out.add("Muse")
+    if text.startswith(BRIDGE_POST) or "MUSE_TO_CLAUDE:" in text.split("\n", 1)[0]:
+        out.add("Claude")
+    return out
+
+
+def names_ask(reply: dict, ask: dict) -> bool:
+    """Does `reply` name the ask itself: its comment id, its URL, or a quote (a `> ` line) of its text?"""
+    body = reply["body"][:4000]
+    cid = str(ask.get("id") or "")
+    if cid and cid != "None" and re.search(rf"(?<!\d){re.escape(cid)}(?!\d)", body):
+        return True
+    if ask.get("url") and ask["url"] in body:
+        return True
+    flat = " ".join(ask["body"].split())
+    for m in QUOTE.finditer(body):
+        q = " ".join(m.group(1).split())
+        if len(q) >= MIN_QUOTE and q in flat:
+            return True
+    return False
+
+
+def answers(reply: dict, ask: dict, target: str, refs: set[int]) -> bool:
+    """Is `reply` (posted after `ask`) the target's answer to it? The rules are in the module docstring."""
+    if any(v == (target, r) for v in reply["verdicts"] for r in refs):
+        return True
+    if reply["a"] != target:
+        return False
+    if names_ask(reply, ask):
+        return True
+    back = ask["a"] in addressees(reply["body"])
+    if reply["n"] == ask["n"]:
+        return back
+    return back and bool(re.search(rf"#{ask['n']}\b", reply["body"][:2000]))
+
+
 def unanswered(comments: list[dict], open_threads: set[int], start: dt.datetime) -> list[dict]:
     """The asks with no answer yet, one dict per (comment, target): the comment plus `target`, `a` (its author)
-    and `verdicts`. Each comment needs `n` (its thread), `t` (created, aware), `url` and `body`. Pure: the
-    caller reads GitHub (main here; tools/switchboard/ledger.py). The ledger's own notices are never asks."""
+    and `verdicts`. Each comment needs `n` (its thread), `t` (created, aware), `url` and `body`, and may carry
+    `id` (its comment id, which a reply can name). Pure: the caller reads GitHub (main here;
+    tools/switchboard/ledger.py). The ledger's own notices are never asks."""
     comments = sorted(comments, key=lambda c: c["t"])
     for c in comments:
         c["a"] = author(c["body"])
@@ -80,13 +133,7 @@ def unanswered(comments: list[dict], open_threads: set[int], start: dt.datetime)
         targets = {m.group(1) for m in ASK.finditer(c["body"][:4000])} - {c["a"]}
         refs = {int(r) for r in PR_REF.findall(c["body"][:600])} | {c["n"]}
         for target in sorted(targets):
-            later = comments[i + 1:]
-            answered = any(
-                (d["a"] == target and (d["n"] == c["n"] or re.search(rf"#{c['n']}\b", d["body"][:2000])))
-                or any(v == (target, r) for v in d["verdicts"] for r in refs)
-                for d in later
-            )
-            if not answered:
+            if not any(answers(d, c, target, refs) for d in comments[i + 1:]):
                 out.append(dict(c, target=target))
     return out
 
@@ -115,6 +162,7 @@ def main() -> int:
         batch = gh(f"repos/{args.repo}/issues/comments?since={since}&per_page=100&page={page}")
         for c in batch:
             comments.append({
+                "id": str(c.get("id")),
                 "n": int(c["issue_url"].rsplit("/", 1)[1]),
                 "t": dt.datetime.fromisoformat(c["created_at"].replace("Z", "+00:00")),
                 "url": c["html_url"],

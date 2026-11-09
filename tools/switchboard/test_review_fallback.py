@@ -348,7 +348,9 @@ class PoolSteer(unittest.TestCase):
 
 
 class CodexAsk(unittest.TestCase):
-    def test_codex_is_asked_on_the_pr_with_a_mention(self):
+    def test_codex_is_asked_on_the_pr_without_the_bots_mention(self):
+        # J-072: the switchboard's own "@codex review" never woke Codex (2 of 2, #191 and #150): the ask is recorded
+        # on the PR with its mark, and the integrator's inbox gets a CODEX-ASK item to post the mention itself
         team = rules.team_from_config(dict(AGENTS, agents=dict(AGENTS["agents"], codex={
             "vendor": "openai", "names": ["Codex"], "branch_prefixes": ["codex/"]}),
             review=dict(AGENTS["review"], pool=["codex", "muse"], fallback_after_hours=1)))
@@ -360,8 +362,9 @@ class CodexAsk(unittest.TestCase):
         self.assertEqual(len(gh.posted), 1)
         where, body = gh.posted[0]
         self.assertEqual(where, 10)
-        self.assertTrue(body.startswith("@codex review"))
+        self.assertNotIn("@", body)
         self.assertIn("ask-codex", body)
+        self.assertIn("The integrator posts the Codex review command", body)
 
 
 class PoolFallbackAndLoad(unittest.TestCase):
