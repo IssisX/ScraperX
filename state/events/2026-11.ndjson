@@ -312,3 +312,6 @@
 {"ev": "state", "frm": "landable", "job": "J-072", "t": "2026-11-09T19:05:16Z", "to": "working"}
 {"attempt": 1, "ev": "would_send", "id": "O-a015d822", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-09T19:05:16Z", "to": "grok", "via": "issue"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T19:05:16Z", "tries": 1}
+{"ev": "state", "frm": "merged", "job": "J-071", "t": "2026-11-09T19:10:34Z", "to": "working"}
+{"ev": "unmatched", "ident": "PR|#362", "job": "", "t": "2026-11-09T19:10:34Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T19:10:34Z", "tries": 1}
