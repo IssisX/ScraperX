@@ -11,6 +11,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import re
 import sys
 import types
 import unittest
@@ -1380,3 +1381,271 @@ class ScopedProof(unittest.TestCase):
         self.with_wake("in_progress", "in_progress")
         self.assertEqual(self.switch_proof(), "running")
         self.assertEqual(self.sweep_proof(), "running")
+
+
+class OldBoardsKeepMuseKeys(unittest.TestCase):
+    """bridge-health: a muse key sent while #107 was the board is still sent after the board moved to #340."""
+
+    NAME = "fb-bot/integrate-j044c-wreck"
+
+    def red_branch(self):
+        import test_inbox as ti
+        gh = ti.FakeGH(runs=[ti.run(40, self.NAME, ti.HEAD, hours=2)], jobs={40: ti.RED_JOBS},
+                       heads={self.NAME: ti.HEAD})
+        return ti, gh, switch.inbox_key("muse-RED-BRANCH", self.NAME, ti.HEAD)
+
+    def test_a_key_marked_on_a_closed_board_is_not_sent_again(self):
+        ti, gh, key = self.red_branch()
+        gh.by_issue[107] = [{"id": 9, "body": "CLAUDE_TO_MUSE: x RED-BRANCH on #107\n\n" +
+                             switch.MUSE_MARK.format(keys=key), "user": {"login": ti.BOT}}]
+        self.assertEqual(ti.make(gh).muse([]), 0)
+        self.assertEqual(gh.posts, [])
+        for old in switch.OLD_BOARDS:
+            self.assertIn(f"repos/IssisX/ScraperX/issues/{old}/comments?per_page=100&page=1", gh.gets)
+
+    def test_a_marker_by_another_login_on_a_closed_board_never_counts(self):
+        ti, gh, key = self.red_branch()
+        gh.by_issue[3] = [{"id": 9, "body": switch.MUSE_MARK.format(keys=key), "user": {"login": "IssisX"}}]
+        self.assertEqual(ti.make(gh).muse([]), 1)
+
+    def test_a_closed_board_read_is_bounded(self):
+        sw = switch.Switch.__new__(switch.Switch)
+        pages = []
+
+        def get(path, accept=""):
+            pages.append(path)
+            return [{"id": i} for i in range(100)]   # every page full: only the bound stops it
+        sw.gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=get)
+        self.assertEqual(len(sw.bounded_comments(107, switch.MAX_OLD_BOARD_PAGES)), 100 * switch.MAX_OLD_BOARD_PAGES)
+        self.assertEqual(len(pages), switch.MAX_OLD_BOARD_PAGES)
+
+
+PIPE_NOW = dt.datetime(2026, 11, 9, 15, 0, tzinfo=dt.timezone.utc)
+
+
+def pipe_at(minutes_ago: float) -> str:
+    return (PIPE_NOW - dt.timedelta(minutes=minutes_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def label_event(event: str, minutes_ago: float, name: str = "wake:muse") -> dict:
+    return {"event": event, "label": {"name": name}, "created_at": pipe_at(minutes_ago)}
+
+
+def pipe_comment(body: str, minutes_ago: float, login: str = rules.BOT_LOGIN) -> dict:
+    return {"body": body, "user": {"login": login}, "created_at": pipe_at(minutes_ago)}
+
+
+class PipeGH:
+    """The reads pipe_health makes: wake:muse issues, their events, the board, repo comments since a time."""
+
+    repo = "IssisX/ScraperX"
+
+    def __init__(self, wake=None, board=(), comments=()):
+        self.wake = dict(wake or {})          # issue number -> its events
+        self.board, self.comments = list(board), list(comments)
+        self.gets, self.posted = [], []
+
+    def get(self, path, accept=""):
+        self.gets.append(path)
+        if path.startswith(f"repos/{self.repo}/issues?") and "labels=wake%3Amuse" in path:
+            return [{"number": n} for n in self.wake]
+        raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+
+    def paged(self, path, key=""):
+        self.gets.append(path)
+        base = path.split("?")[0]
+        if base == f"repos/{self.repo}/issues/{switch.BOARD_ISSUE}/comments":
+            return list(self.board)
+        if base == f"repos/{self.repo}/issues/comments":
+            since = re.search(r"[?&]since=([^&]+)", path).group(1)
+            return [c for c in self.comments if c["created_at"] >= since]
+        m = re.fullmatch(rf"repos/{self.repo}/issues/(\d+)/events", base)
+        if m:
+            return list(self.wake[int(m.group(1))])
+        raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+
+    def comment(self, number, body, what=""):
+        self.posted.append((number, body))
+        self.board.append(pipe_comment(body, 0))
+
+
+def pipe_switch(gh, now=PIPE_NOW):
+    sw = switch.Switch.__new__(switch.Switch)
+    sw.gh, sw.now, sw.lines = gh, now, []
+    sw.out = sw.lines.append
+    return sw
+
+
+BRIDGE = "**Muse (via email bridge): J-047 done**\n\nok"
+ASK = "CLAUDE_TO_MUSE: J-047 RED on #344 @ 1a2b3c4d\n\n- red"
+
+
+class PipeHealth(unittest.TestCase):
+    """bridge-health: a stuck Muse mail pipe is loud, once per incident (11-07: #107 sat labeled for 42 h)."""
+
+    def test_a_healthy_pipe_posts_nothing(self):
+        gh = PipeGH(wake={343: [label_event("labeled", 4)]},
+                    comments=[pipe_comment(ASK, 60), pipe_comment(BRIDGE, 30, login="IssisX")])
+        sw = pipe_switch(gh)
+        self.assertEqual(sw.pipe_health(), [])
+        self.assertEqual(gh.posted, [])
+        self.assertIn("PIPE        healthy", sw.lines)
+
+    def test_a_wake_label_older_than_20_min_alarms_once(self):
+        gh = PipeGH(wake={343: [label_event("labeled", 300), label_event("unlabeled", 290), label_event("labeled", 45)],
+                          337: [label_event("labeled", 10)]},
+                    comments=[pipe_comment(BRIDGE, 30, login="IssisX")])
+        (line,) = pipe_switch(gh).pipe_health()
+        self.assertTrue(line.startswith("OUTBOUND STUCK:"))
+        self.assertIn("#343 since 8:15 AM Central (0.8 h)", line)   # the label's latest stint, not its first
+        self.assertNotIn("#337", line)
+        (number, body), = gh.posted
+        self.assertEqual(number, switch.BOARD_ISSUE)
+        self.assertTrue(body.startswith("Claude (integrator): PIPE ALARM:"))
+        self.assertTrue(body.endswith(switch.PIPE_MARK.format(kinds="outbound")))
+        self.assertIsNone(switch.VERDICT_TRIGGER.search(body))   # the alarm cannot wake the switchboard
+        sw = pipe_switch(gh, PIPE_NOW + dt.timedelta(minutes=15))   # next sweep, same incident: printed, not posted
+        self.assertEqual(len(sw.pipe_health()), 1)
+        self.assertEqual(len(gh.posted), 1)
+        self.assertTrue(any(l.startswith("PIPE ALARM  OUTBOUND STUCK") for l in sw.lines))
+
+    def test_a_new_outbound_incident_alarms_again(self):
+        mark = "x\n\n" + switch.PIPE_MARK.format(kinds="outbound")
+        gh = PipeGH(wake={343: [label_event("labeled", 30)]}, board=[pipe_comment(mark, 600)])
+        pipe_switch(gh).pipe_health()   # every label now stuck went on after the last alarm: a new incident
+        self.assertEqual(len(gh.posted), 1)
+        gh = PipeGH(wake={343: [label_event("labeled", 700)], 299: [label_event("labeled", 30)]},
+                    board=[pipe_comment(mark, 600)])
+        pipe_switch(gh).pipe_health()   # #343 was stuck at the last alarm: the same incident
+        self.assertEqual(gh.posted, [])
+
+    def test_an_alarm_marker_by_another_login_never_counts(self):
+        gh = PipeGH(wake={343: [label_event("labeled", 30)]},
+                    board=[pipe_comment("x\n\n" + switch.PIPE_MARK.format(kinds="outbound"), 10, login="IssisX")])
+        pipe_switch(gh).pipe_health()
+        self.assertEqual(len(gh.posted), 1)
+
+    def test_asks_with_no_bridge_post_in_24_h_alarm_once(self):
+        gh = PipeGH(comments=[pipe_comment(BRIDGE, 26 * 60, login="IssisX"), pipe_comment(ASK, 120)])
+        (line,) = pipe_switch(gh).pipe_health()
+        self.assertTrue(line.startswith("INBOUND STUCK: 1 CLAUDE_TO_MUSE ask(s) in the last 24.0 h"))
+        (number, body), = gh.posted
+        self.assertEqual(number, switch.BOARD_ISSUE)
+        self.assertTrue(body.endswith(switch.PIPE_MARK.format(kinds="inbound")))
+        self.assertIsNone(switch.VERDICT_TRIGGER.search(body))
+        gh.comments.append(pipe_comment(ASK, -29 * 60))   # 30 h on, still quiet: the same incident, no repeat
+        self.assertEqual(len(pipe_switch(gh, PIPE_NOW + dt.timedelta(hours=30)).pipe_health()), 1)
+        self.assertEqual(len(gh.posted), 1)
+
+    def test_inbound_recovered_then_stuck_again_is_a_new_incident(self):
+        gh = PipeGH(board=[pipe_comment("x\n\n" + switch.PIPE_MARK.format(kinds="inbound"), 40 * 60)],
+                    comments=[pipe_comment(BRIDGE, 30 * 60, login="IssisX"), pipe_comment(ASK, 60)])
+        pipe_switch(gh).pipe_health()
+        (_, body), = gh.posted
+        self.assertIn("INBOUND STUCK", body)
+
+    def test_no_asks_means_no_inbound_alarm(self):
+        gh = PipeGH(comments=[pipe_comment(BRIDGE, 30 * 60, login="IssisX")])
+        self.assertEqual(pipe_switch(gh).pipe_health(), [])
+        self.assertEqual(gh.posted, [])
+
+
+class FactsGH:
+    """The reads pr_facts makes for PR #256 (job J-042, issue #300): a table by path."""
+
+    repo = "IssisX/ScraperX"
+
+    def __init__(self, pr_comments=(), issue_comments=(), board=(), with_issue=True):
+        self.table = {
+            "repos/IssisX/ScraperX/pulls/256": {"mergeable": True},
+            f"repos/IssisX/ScraperX/commits/{HEAD}": {"commit": {"committer": {"date": T0}}},
+            "repos/IssisX/ScraperX/issues/256/comments": list(pr_comments),
+            "repos/IssisX/ScraperX/pulls/256/reviews": [],
+            "repos/IssisX/ScraperX/pulls/256/files": [],
+            "repos/IssisX/ScraperX/issues/300/comments": list(issue_comments),
+            f"repos/IssisX/ScraperX/issues/{switch.BOARD_ISSUE}/comments": list(board),
+            "repos/IssisX/ScraperX/issues?labels=job&state=open":
+                [{"number": 300, "title": "J-042 windup", "labels": []}] if with_issue else [],
+        }
+
+    def get(self, path, accept=""):
+        if "/actions/workflows/" in path:
+            return {"workflow_runs": []}
+        return self.table[path]
+
+    def paged(self, path, key=""):
+        return list(self.table[path])
+
+
+def bridged(first: str, login: str = "IssisX", at: str = T1) -> dict:
+    return {"body": f"**Muse (via email bridge): {first}**\n\nLooks right.\n\n_Mailed 9:00 AM Central._",
+            "user": {"login": login}, "created_at": at}
+
+
+class BridgedVerdicts(unittest.TestCase):
+    """The bridge's Issues-only token cannot comment on a PR (11-09), so Muse's mailed verdict on #256 lands on the
+    job issue or the board. The switch must still count it for #256, and only for #256."""
+
+    PR = {"number": 256, "head": {"sha": HEAD, "ref": "fb-bot/integrate-j042"}, "base": {"ref": rules.TRUNK},
+          "draft": False, "labels": [], "title": "J-042", "body": "Job: J-042\n"}
+
+    def facts(self, gh):
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh, sw.team, sw.review_key, sw._jobs, sw._board = gh, TEAM, "", None, None
+        return sw.pr_facts(self.PR)
+
+    def test_a_verdict_on_the_job_issue_counts_for_its_pr(self):
+        facts, ctx = self.facts(FactsGH(issue_comments=[bridged("J-042 review of #256 @ 1a2b3c4d: LAND")]))
+        (v,) = facts.verdicts
+        self.assertEqual((v.who, v.verdict, v.sha, v.kind), ("Muse", "LAND", "1a2b3c4d", "review"))
+        self.assertTrue(rules.names_head(v, HEAD))
+        self.assertEqual(ctx["comments"], [])   # the PR's own thread is unchanged: markers are read there as before
+
+    def test_a_verdict_on_the_board_counts_when_there_is_no_job_issue(self):
+        gh = FactsGH(board=[bridged("review of #256 @ 1a2b3c4d: FIX")], with_issue=False)
+        gh.table["repos/IssisX/ScraperX/issues/256/comments"] = []
+        facts, _ = self.facts(gh)
+        (v,) = facts.verdicts
+        self.assertEqual((v.who, v.verdict), ("Muse", "NOTE"))   # a FIX with no repro lines reads as a NOTE, as on the PR
+
+    def test_only_bridge_posts_naming_this_pr_count(self):
+        facts, _ = self.facts(FactsGH(
+            issue_comments=[bridged("review of #2560 @ 1a2b3c4d: LAND"),                     # another PR
+                            bridged("J-042 done, see #256: LAND"),                           # not a review of #256
+                            {"body": "**Muse (review of #256 @ 1a2b3c4d): LAND**", "user": {"login": "IssisX"},
+                             "created_at": T1},                                              # not the bridge's
+                            bridged("review of #256 @ 1a2b3c4d: LAND", login="someone")],    # not a verdict login
+            board=[bridged("review of #256 @ 1a2b3c4d: LAND", login="someone")]))
+        self.assertEqual(list(facts.verdicts), [])
+
+    def test_a_verdict_on_the_pr_still_counts_once(self):
+        facts, _ = self.facts(FactsGH(pr_comments=[bridged("review of #256 @ 1a2b3c4d: LAND")]))
+        self.assertEqual(len(facts.verdicts), 1)
+
+
+class MuseAskNeverOnAPr(unittest.TestCase):
+    """A review ask to Muse goes on the job issue, else the board, never on the PR (its wake:muse label stuck the
+    bridge from 11-07 to 11-09: the Issues-only token cannot remove a PR's label)."""
+
+    def test_no_job_issue_asks_on_the_board(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        ((number, body),) = gh.posted
+        self.assertEqual(number, switch.BOARD_ISSUE)
+        self.assertTrue(body.startswith("CLAUDE_TO_MUSE: J-031 review #9 @ 1a2b3c4d"))
+        self.assertEqual(gh.writes, [("POST", f"repos/IssisX/ScraperX/issues/{switch.BOARD_ISSUE}/labels")])
+
+    def test_an_ask_on_the_board_is_found_next_sweep(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        gh2 = rf.FakeGH([dict(rf.ask_comment("muse", 0.5))])   # the board (and the PR) now hold the ask's marker
+        rf.make(gh2).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        self.assertEqual(gh2.posted, [])
+
+    def test_other_agents_still_ask_on_the_pr(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "chatgpt", "")
+        self.assertEqual(gh.posted[0][0], 9)
