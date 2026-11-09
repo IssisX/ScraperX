@@ -1,9 +1,12 @@
 name: Switchboard
 # J-072: the run says what it is, so a dry run never passes for a sweep. The bridge's watchdog
 # (tools/switchboard/muse_bridge.gs, SWEEP_TITLE) counts only a successful "Switchboard sweep" as alive.
+# A sweep the bridge's clock dispatches is named "Switchboard sweep (bridge <BRIDGE_VERSION>)", so the switch can
+# tell a stale or missing live bridge from the repo's (switch.py bridge_version_health).
 run-name: >-
   ${{ github.event_name == 'workflow_dispatch' && (inputs.provision && 'Switchboard provision' ||
   inputs.dry_run && 'Switchboard DRY run (takes no action)' || inputs.digest && 'Switchboard digest' ||
+  inputs.bridge_version && format('Switchboard sweep (bridge {0})', inputs.bridge_version) ||
   'Switchboard sweep') || github.event_name == 'schedule' && (github.event.schedule == '0 12,13 * * *' &&
   'Switchboard digest' || 'Switchboard sweep') || format('Switchboard ({0})', github.event_name) }}
 
@@ -13,7 +16,8 @@ run-name: >-
 # Every event except pull_request runs this file from the DEFAULT branch (`main`), so the switch is
 # live only once this file is on `main` too. Each run checks out trunk (ScraperX-Claude) for the code
 # and config. No third-party action is used: the checkout is plain git over the public URL, so no
-# credential is written to disk. Event text (titles, bodies, labels) reaches the scripts only through
+# credential is written to disk. The one action is GitHub's own actions/cache (J-072, the switch's ETag
+# cache): its file holds GitHub answers the run could read anyway, never a token. Event text (titles, bodies, labels) reaches the scripts only through
 # env, quoted, never through an expression inside `run:`.
 
 # No workflow_run trigger (J-072). It last fired 11-05 12:11Z: `workflows:` entries are glob patterns, and
@@ -47,6 +51,11 @@ on:
         description: One-time setup of the hosted API agent (creates its environment, agent and vault)
         type: boolean
         default: false
+      # J-072: sent by the Muse bridge's clock (muse_bridge.gs BRIDGE_VERSION); it only names the run.
+      bridge_version:
+        description: The live Muse bridge's version (set by the bridge's clock; leave empty)
+        type: string
+        default: ""
   pull_request:
     branches: [ScraperX-Claude]
     paths:
@@ -76,6 +85,10 @@ concurrency:
 
 env:
   TRUNK: ScraperX-Claude
+  PYTHONUNBUFFERED: "1"   # J-072: each log line is stamped when printed, so a slow or timed-out step shows where
+  # J-072: the switch's ETag cache (ghapi.py): restored before and saved after the switch step of ask and steer;
+  # a 304 answer does not count against the 5,000-an-hour limit (run 42667757904 hit it).
+  SWITCHBOARD_ETAG_CACHE: etags.json
 
 jobs:
   # A PR that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
@@ -149,6 +162,12 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
             -r src/tools/switchboard/requirements.txt
+      - name: Restore the ETag cache (J-072)
+        uses: actions/cache/restore@v4
+        with:
+          path: etags.json
+          key: switchboard-etags-ask-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: switchboard-etags-ask-
       - name: Run the switch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -176,6 +195,12 @@ jobs:
               if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi ;;
           esac
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
+      - name: Save the ETag cache (J-072)
+        if: always() && hashFiles('etags.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: etags.json
+          key: switchboard-etags-ask-${{ github.run_id }}-${{ github.run_attempt }}
 
   # One-time setup of the hosted API agent (step C): only on a dispatch with provision=true. It prints
   # the new ids to the run summary for work/budget.yml; it never prints a secret.
@@ -244,6 +269,12 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
             -r src/tools/switchboard/requirements.txt
+      - name: Restore the ETag cache (J-072)
+        uses: actions/cache/restore@v4
+        with:
+          path: etags.json
+          key: switchboard-etags-steer-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: switchboard-etags-steer-
       - name: Run the switch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -277,4 +308,10 @@ jobs:
               if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi ;;
           esac
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
+      - name: Save the ETag cache (J-072)
+        if: always() && hashFiles('etags.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: etags.json
+          key: switchboard-etags-steer-${{ github.run_id }}-${{ github.run_attempt }}
 

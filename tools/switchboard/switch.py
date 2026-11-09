@@ -49,7 +49,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import budget as money  # noqa: E402
 import rules  # noqa: E402
-from ghapi import GitHub, GitHubError  # noqa: E402
+from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
 PROOF_WORKFLOW = "wo000-delivery-spine.yml"
@@ -125,6 +125,14 @@ REVIEW_KEY_ENV = "SWITCHBOARD_REVIEW_KEY"
 # of the environment at start like the tokens. A full non-dry sweep pings it once at its end: the URL on success,
 # URL/fail when any part errored. Healthchecks alerts on a missed ping, so a sweep that stops running is loud too.
 HC_SWEEP_ENV = "HC_SWEEP_URL"
+# J-072: the ETag cache file (ghapi.GitHub.load_etags), carried between runs by the Actions cache in switchboard.yml.
+ETAG_CACHE_ENV = "SWITCHBOARD_ETAG_CACHE"
+# J-072: under this share of the hour's limit (x-ratelimit-limit, read at run time) only the merge path runs
+# (run_sweep); the rest waits. 16% is 160 of GITHUB_TOKEN's 1,000 (the merge path reads about 6 calls a PR) and 800
+# of an App's 5,000.
+RATE_FLOOR_SHARE = 0.16
+RATE_FLOOR_MIN = 150
+AGENT_TOKEN_ENV = "AGENT_GITHUB_TOKEN"   # the hosted agent's token: its rate is logged once, never used by the switch
 HC_TIMEOUT_S = 10
 DRY_SUMMARY = ("### DRY RUN: no action taken\n\nEvery action this run printed was printed only, none was taken "
                "(`dry_run=true` or `--dry-run`). This run does not count as a sweep.\n")
@@ -619,6 +627,8 @@ class Switch:
             except MergeTokenRefused as err:   # the inbox lists it as MERGE-BY-HAND, with GitHub's status (J-056)
                 seen.decision, seen.merge_note = rules.MergeDecision("HUMAN-MERGE", (str(err),), d.land_by), ""
                 self.out(f"HUMAN-MERGE #{facts.number}: {err}")
+        if getattr(self, "merge_only", False):   # J-072 rate floor: the merge path only, no review asks
+            return
         if rules.needs_review(facts, author, self.team) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
         elif rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
@@ -1891,10 +1901,94 @@ def main() -> int:
     sw.merge_token = os.environ.pop(MERGE_TOKEN_ENV, "").strip()
     sw.review_key = os.environ.pop(REVIEW_KEY_ENV, "").strip()
     hc_sweep = os.environ.pop(HC_SWEEP_ENV, "").strip()
+    cache = os.environ.get(ETAG_CACHE_ENV, "").strip()
+    if cache:
+        sw.gh.load_etags(cache)
     sw.out(f"switchboard {args.part}{' DRY RUN' if args.dry_run else ''} at {central(now)} on {args.repo}")
     if args.dry_run:
         note_dry_run(os.environ.get("GITHUB_STEP_SUMMARY"))
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    try:
+        return run_sweep(sw, args, now, hc_sweep, summary)
+    except RateLimited as err:   # J-072: never an error; whatever was not reached waits for the next sweep
+        sw.out(f"RATE LIMIT  {err}: the rest of this run waits for the next sweep")
+        write_summary(summary, "Rate floor", [f"GitHub's rate limit answered ({plain(err.detail[:160])}); "
+                                              "the rest of this run waits for the next sweep."])
+        return 0
+    finally:
+        if cache:
+            sw.gh.save_etags(cache)
+        sw.out(f"GITHUB      {sw.gh.calls} call(s), {sw.gh.not_modified} answered 304 from the ETag cache"
+               + (f", {sw.gh.remaining} left this hour" if sw.gh.remaining is not None else ""))
+
+
+def write_summary(path: str | None, title: str, lines: list[str]) -> None:
+    if path and lines:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"### {title}\n\n" + "".join(f"- {line}\n" for line in lines) + "\n")
+
+
+def rate_floor(limit: int | None) -> int:
+    """The calls kept for the merge path: a share of the hour's limit read at run time (GITHUB_TOKEN has 1,000 an
+    hour per repository, an App installation 5,000 or more), never under RATE_FLOOR_MIN."""
+    return max(RATE_FLOOR_MIN, round(RATE_FLOOR_SHARE * limit)) if isinstance(limit, int) and limit > 0 else RATE_FLOOR_MIN
+
+
+def core_rate(gh, token: str = "") -> dict:
+    """GET rate_limit's core numbers (limit, remaining, reset): that call does not count against the limit."""
+    got = gh._run("GET", "rate_limit", token=token) if token else gh.get("rate_limit")
+    core = ((got or {}).get("resources") or {}).get("core") or {}
+    return core if isinstance(core, dict) else {}
+
+
+def rate_probe(sw: "Switch") -> None:
+    """The rate left and the limit, before the first counted call. The hosted agent's token (AGENT_GITHUB_TOKEN, ask
+    job only) is read once and logged, never used here: is moving reads to it a real gain? (J-072)"""
+    try:
+        core = core_rate(sw.gh)
+    except GitHubError:
+        return
+    if isinstance(core.get("remaining"), int):
+        sw.gh.remaining, sw.gh.reset = core["remaining"], core.get("reset")
+    if isinstance(core.get("limit"), int):
+        sw.gh.limit = core["limit"]
+    sw.out(f"RATE        this run's token: {core.get('remaining')} of {core.get('limit')} left this hour; "
+           f"the merge path keeps {rate_floor(sw.gh.limit if isinstance(sw.gh.limit, int) else None)}")
+    agent = os.environ.get(AGENT_TOKEN_ENV, "").strip()
+    if agent:
+        try:
+            other = core_rate(sw.gh, agent)
+            sw.out(f"RATE        {AGENT_TOKEN_ENV}: {other.get('remaining')} of {other.get('limit')} left this hour (logged only)")
+        except GitHubError as err:
+            sw.out(f"RATE        {AGENT_TOKEN_ENV}: its rate could not be read ({http_status(err.detail) or 'no status'})")
+
+
+def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | None = None) -> int:
+    """One run's parts (main). Exit status: 2 only when the sweep itself could not finish: a part failed, or
+    every PR read failed. One PR's error is that PR's line and a step-summary line, not an outage (J-072: run
+    42663592988 failed for one write to #357, so the watchdog read the switchboard as down). Under rate_floor()
+    calls left only the merge path runs; a rate-limited item waits for the next sweep."""
     steer, ask = args.part in ("steer", "all"), args.part in ("ask", "all")
+    rate_probe(sw)
+    skipped: list[str] = []
+
+    def floor() -> int:
+        return rate_floor(sw.gh.limit if isinstance(sw.gh.limit, int) else None)
+
+    def low(part: str) -> bool:
+        if isinstance(sw.gh.remaining, int) and sw.gh.remaining < floor():
+            skipped.append(part)
+            return True
+        return False
+
+    def rate_lines() -> list[str]:
+        if not skipped:
+            return []
+        reset = (f", the hour resets at {central(dt.datetime.fromtimestamp(sw.gh.reset, dt.timezone.utc))}"
+                 if sw.gh.reset else "")
+        return [f"rate floor: {sw.gh.remaining} GitHub call(s) left (floor {floor()} of {sw.gh.limit}){reset}. Skipped this run: "
+                f"{', '.join(dict.fromkeys(skipped))}. The merge path ran; the rest waits for the next sweep."]
+
     if args.issue:
         if steer and args.label.startswith("owner:"):
             sw.owner_labels(args.issue, args.label)
@@ -1905,71 +1999,91 @@ def main() -> int:
         if steer:
             sw.digest(args.force_digest)
         return 0
-    if steer and not (args.pr or args.sha):
+    if ask and low("the ask part (reviews, the eye, the sessions)"):
+        ask = False
+        if not steer:
+            sw.out(f"RATE FLOOR  {sw.gh.remaining} calls left: the ask part waits for the next sweep")
+            write_summary(summary, "Rate floor", rate_lines())
+            return 0
+    sw.merge_only = low("review asks, owner labels, superseded closes")
+    if steer and not (args.pr or args.sha) and not sw.merge_only:
         sw.sweep_owner_labels()
     failed = 0
     if ask:
         failed += sw.watch_sessions()
     steered: list[Steered] = []
-    for pr in sw.target_prs(args.pr, args.sha):
+    item_errors: list[str] = []
+    deferred: list[str] = []
+    prs = sw.target_prs(args.pr, args.sha)
+    for pr in prs:
         try:   # one PR's trouble never stops the others; every action is safe to repeat next run
             facts, ctx = sw.pr_facts(pr)
             if ask:
                 sw.ask_pr(facts, ctx)
             if steer:
-                sw.close_superseded(facts, ctx)
+                if not sw.merge_only:
+                    sw.close_superseded(facts, ctx)
                 sw.steer_pr(facts, ctx, steered)
+        except RateLimited as err:
+            deferred.append(f"#{pr['number']}")
+            sw.out(f"RATE LIMIT  #{pr['number']}: left for the next sweep ({err.detail[:120]})")
         except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
-            failed += 1
+            item_errors.append(f"#{pr['number']}: {type(err).__name__}: {err}")
             sw.out(f"ERROR       #{pr['number']}: {type(err).__name__}: {err}")
+    if len(prs) >= 2 and len(item_errors) == len(prs):
+        failed += 1   # no PR could be read: the sweep did not finish
+        sw.out(f"ERROR       every one of the {len(prs)} PRs failed: the sweep did not finish")
+
+    def part(name: str, fn, *extra) -> object:
+        nonlocal failed
+        if low(name):
+            return None
+        try:
+            return fn()
+        except RateLimited as err:
+            skipped.append(name)
+            sw.out(f"RATE LIMIT  {name}: left for the next sweep ({err.detail[:120]})")
+        except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile, *extra) as err:
+            failed += 1
+            sw.out(f"ERROR       {name}: {type(err).__name__}: {err}")
+        return None
+
     if steer:
-        try:
-            sw.auto_open_prs()
-        except (GitHubError, RuntimeError, KeyError, ValueError, zipfile.BadZipFile) as err:
-            failed += 1
-            sw.out(f"ERROR       auto-open: {type(err).__name__}: {err}")
+        part("auto-open", sw.auto_open_prs)
     if steer and not (args.pr or args.sha):   # the inbox reads a whole sweep, so a run for one PR posts none
-        try:
-            sw.inbox(steered)
-        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
-            failed += 1
-            sw.out(f"ERROR       inbox: {type(err).__name__}: {err}")
-        try:   # J-052: Muse's items go to Muse by comment + wake:muse, not only to the integrator's inbox
-            sw.muse(steered)
-        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
-            failed += 1
-            sw.out(f"ERROR       muse: {type(err).__name__}: {err}")
-        try:   # bridge-health: a stuck Muse mail pipe is loud, once per incident on the board, every run here
-            alarms = sw.pipe_health()
-        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
-            failed += 1
-            sw.out(f"ERROR       pipe health: {type(err).__name__}: {err}")
-        else:
-            summary = os.environ.get("GITHUB_STEP_SUMMARY")
-            if alarms and summary:
-                with open(summary, "a", encoding="utf-8") as f:
-                    f.write("### PIPE ALARM\n\n" + "".join(f"- {plain(a)}\n" for a in alarms))
-        try:   # the ledger (tools/switchboard/ledger.py): every open item, its holder and deadline, in #340's body
+        part("inbox", lambda: sw.inbox(steered))
+        part("muse", lambda: sw.muse(steered))   # J-052: Muse's items go to Muse by comment + wake:muse
+        alarms = part("pipe health", sw.pipe_health)   # bridge-health: once per incident on the board
+        write_summary(summary, "PIPE ALARM", [plain(a) for a in alarms or []])
+
+        def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, in #340
             import ledger as board_ledger
             board_ledger.sweep(sw, steered, BOARD_ISSUE, MUSE_LABEL, PROOF_WORKFLOW,
                                {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now))
-        except (GitHubError, RuntimeError, KeyError, ValueError, subprocess.SubprocessError) as err:
-            failed += 1
-            sw.out(f"ERROR       ledger: {type(err).__name__}: {err}")
-        if not args.dry_run:   # J-072 stage 1: the shadow reconciler writes only switchboard/state, posts nothing,
-            try:               # and never fails the sweep (work/switchboard.yml `reconciler: shadow`; absent is off)
+        part("ledger", ledger_part, subprocess.SubprocessError)
+        # J-072 stage 1: the shadow reconciler writes only switchboard/state, posts nothing, and never fails the
+        # sweep (work/switchboard.yml `reconciler: shadow`; absent is off). Its own reads (about 58) wait under the floor.
+        if not args.dry_run and not low("the reconciler"):
+            try:
                 import reconciler
                 reconciler.sweep(sw, steered, BOARD_ISSUE, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH}, {INBOX_PR})
             except Exception as err:   # noqa: BLE001
                 sw.out(f"ERROR       reconciler (shadow, the sweep goes on): {type(err).__name__}: {err}")
         if not args.dry_run:   # J-072: the end of a full non-dry sweep (a run for one PR or sha is not one)
             sweep_heartbeat(hc_sweep, failed, sw.out)
+    write_summary(summary, "Item errors (the sweep finished; each is retried next sweep)",
+                  [plain(e[:200]) for e in item_errors])
+    write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]
+                                                         if deferred else []))
     return 2 if failed else 0
 
 
 if __name__ == "__main__":
     try:
         sys.exit(main())
+    except RateLimited as err:   # J-072: GitHub's rate limit is never an outage; the next sweep goes on
+        print(f"switchboard: rate limited, left for the next sweep: {err}", file=sys.stderr)
+        sys.exit(0)
     except (GitHubError, money.BudgetConfigError, ValueError, KeyError, RuntimeError, subprocess.SubprocessError) as err:
         print(f"switchboard: {type(err).__name__}: {err}", file=sys.stderr)
         sys.exit(2)
