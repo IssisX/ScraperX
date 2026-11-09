@@ -6,14 +6,18 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T18:05:20Z",
+ "deadline": null,
  "head": "",
  "issue": 241,
  "job": "J-043",
  "landed": {},
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T17:39:57Z",
+    "by": "claude",
+    "how": "answered on the thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:30:07Z",
    "attempts": 0,
@@ -42,5 +46,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T17:39:57Z"
 }

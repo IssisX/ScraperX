@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T21:35:20Z",
+ "deadline": null,
  "head": "",
  "issue": 332,
  "job": "J-069",
@@ -17,7 +17,10 @@
    "ack_rule": "work|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T17:39:57Z",
+    "why": "job closed"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead_lettered": null,
    "due": "2026-11-09T21:35:20Z",
@@ -42,5 +45,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T17:39:57Z"
 }

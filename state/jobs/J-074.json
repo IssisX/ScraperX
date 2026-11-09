@@ -3,7 +3,7 @@
  "blocked": null,
  "branches": {},
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
@@ -20,7 +20,7 @@
  "prs": [
   353
  ],
- "review": "",
- "state": "proof",
- "updated": "2026-11-09T17:35:20Z"
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-09T17:39:57Z"
 }
