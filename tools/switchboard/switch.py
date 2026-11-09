@@ -63,6 +63,7 @@ def only_wake_left(jobs: list[dict]) -> bool:
         j["status"] == "completed" for j in jobs if j["name"] != WAKE_JOB)
 LEDGER_BRANCH = "switchboard/ledger"
 LEDGER_PATH = "work/archive/runs.log"
+STATE_BRANCH = "switchboard/state"   # the reconciler's own branch (tools/switchboard/reconciler.py, J-072)
 DIGEST_TITLE = "Digest"
 DIGEST_LABEL = "digest"
 MUSE_LABEL = "wake:muse"
@@ -1950,11 +1951,17 @@ def main() -> int:
                     f.write("### PIPE ALARM\n\n" + "".join(f"- {plain(a)}\n" for a in alarms))
         try:   # the ledger (tools/switchboard/ledger.py): every open item, its holder and deadline, in #340's body
             import ledger as board_ledger
-            board_ledger.sweep(sw, steered, BOARD_ISSUE, MUSE_LABEL, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH},
-                               {INBOX_PR}, central(now))
+            board_ledger.sweep(sw, steered, BOARD_ISSUE, MUSE_LABEL, PROOF_WORKFLOW,
+                               {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now))
         except (GitHubError, RuntimeError, KeyError, ValueError, subprocess.SubprocessError) as err:
             failed += 1
             sw.out(f"ERROR       ledger: {type(err).__name__}: {err}")
+        if not args.dry_run:   # J-072 stage 1: the shadow reconciler writes only switchboard/state, posts nothing,
+            try:               # and never fails the sweep (work/switchboard.yml `reconciler: shadow`; absent is off)
+                import reconciler
+                reconciler.sweep(sw, steered, BOARD_ISSUE, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH}, {INBOX_PR})
+            except Exception as err:   # noqa: BLE001
+                sw.out(f"ERROR       reconciler (shadow, the sweep goes on): {type(err).__name__}: {err}")
         if not args.dry_run:   # J-072: the end of a full non-dry sweep (a run for one PR or sha is not one)
             sweep_heartbeat(hc_sweep, failed, sw.out)
     return 2 if failed else 0
