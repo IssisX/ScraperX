@@ -438,6 +438,73 @@ void reverse_break_save_case() {
     }
 }
 
+// A fabricated object built before the break, loaded back into the
+// same world: the crowbar sits at a kit index before the break
+// pieces, so the save's states must land on the right bodies.
+// read_save lists the non-fabricated bodies in kit order with the
+// fabricated states appended at the end, and a restore by kit
+// position gives piece 0's state to the crowbar and shifts every
+// piece by one. (Claude review of #299 @ 730177b9, comment
+// 6734603519: the kit is built bodies, then the crowbar, then the
+// eight pieces, and the load must put each state back where it was.)
+void fabricated_same_world_load_case() {
+    const std::string prefix = "stock damage fabricated same-world load: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(2.0);  // settle; commits happen
+    const std::uint64_t fabricated_entity = fabricate_crowbar(s);
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const double mass = s.kit_body_mass(crate);
+    // The drop breaks the crate on landing, far past the 300 N.s line.
+    const auto at = s.kit_body_position(crate);
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    (void)s.advance_frame(2.0);
+    require(s.stock_damage(entity).broken, (prefix + "the crate breaks").c_str());
+    // The kit is now built bodies, then the crowbar, then eight pieces.
+    const std::uint32_t fabricated_body = s.fabricated_object(0).body;
+    require(fabricated_body < s.kit_body_index(piece_entity_for(entity, 0)),
+            (prefix + "the crowbar sits before the pieces").c_str());
+    const auto fabricated_at = s.kit_body_position(fabricated_body);
+    const auto fabricated_vel = s.kit_body_velocity(fabricated_body);
+    std::array<Vector3, 8> piece_at{};
+    std::array<Vector3, 8> piece_vel{};
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = s.kit_body_index(piece_entity_for(entity, k));
+        require(body != 0xFFFFFFFFU, (prefix + "every piece exists").c_str());
+        piece_at[k] = s.kit_body_position(body);
+        piece_vel[k] = s.kit_body_velocity(body);
+        require(std::abs(s.kit_body_mass(body) - mass / 8.0) < 0.01,
+                (prefix + "every piece keeps its mass share").c_str());
+    }
+    const std::uint32_t bodies_after = s.kit_body_count();
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    // Back into the same world: the crowbar and every piece keep their place.
+    require(s.load_game(bytes.data(), bytes.size()), (prefix + "the same world loads the save").c_str());
+    require(s.kit_body_count() == bodies_after,
+            (prefix + "the same world makes no second set of pieces").c_str());
+    require(s.fabricated_count() == 1 && s.fabricated_object(0).entity == fabricated_entity,
+            (prefix + "the fabricated object stays").c_str());
+    const std::uint32_t loaded_body = s.fabricated_object(0).body;
+    const auto loaded_at = s.kit_body_position(loaded_body);
+    require(std::hypot(loaded_at.x - fabricated_at.x, loaded_at.y - fabricated_at.y,
+                       loaded_at.z - fabricated_at.z) < 0.05,
+            (prefix + "the crowbar keeps its position").c_str());
+    const auto loaded_vel = s.kit_body_velocity(loaded_body);
+    require(std::hypot(loaded_vel.x - fabricated_vel.x, loaded_vel.y - fabricated_vel.y,
+                       loaded_vel.z - fabricated_vel.z) < 0.05,
+            (prefix + "the crowbar keeps its velocity").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = s.kit_body_index(piece_entity_for(entity, k));
+        require(body != 0xFFFFFFFFU, (prefix + "every piece stays").c_str());
+        const auto pp = s.kit_body_position(body);
+        require(std::hypot(pp.x - piece_at[k].x, pp.y - piece_at[k].y, pp.z - piece_at[k].z) < 0.05,
+                (prefix + "every piece keeps its position").c_str());
+        const auto pv = s.kit_body_velocity(body);
+        require(std::hypot(pv.x - piece_vel[k].x, pv.y - piece_vel[k].y, pv.z - piece_vel[k].z) < 0.05,
+                (prefix + "every piece keeps its velocity").c_str());
+    }
+}
+
 } // namespace
 
 void run_stock_damage() {
@@ -865,4 +932,6 @@ void run_stock_damage() {
     fabricated_break_case(scraperx::sim::InitialSpawn::ExteriorGrade, false, "break first, after commit");
     // ---- (d) two crates break in reverse entity order: the save loads ----
     reverse_break_save_case();
+    // ---- (d) a fabricated object built before the break, loaded back ----
+    fabricated_same_world_load_case();
 }

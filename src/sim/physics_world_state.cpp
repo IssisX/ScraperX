@@ -624,24 +624,10 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         spawn_break_pieces(body, entity, kind, crate_state.position, crate_state.rotation,
                            JPH::Vec3::sZero(), JPH::Vec3::sZero(), kit_->body_mass(body));
     }
-    // The kit's bodies, in the order the restore expects: the save's
-    // states, then the pieces' as just made where the save predates
-    // the break, then the fabricated objects. Bodies added to the
-    // world since the save was written (always built last, after
-    // every body before them) start as built.
+    // The non-fabricated bodies this world holds now, for the grip
+    // remap below: bodies added since the save was written (always
+    // built last, after every body before them).
     const std::size_t built_now = kit_built_count();
-    kit::Kit::Checkpoint fresh;
-    kit_->capture(fresh);
-    for (std::size_t index = k.bodies.size(); ok && index < built_now; ++index) {
-        k.bodies.push_back(fresh.bodies[index]);
-    }
-    // Then the fabricated objects: the save's as it has them, the world's
-    // further ones as they are. Each of the world's sits at its own kit
-    // index, not at built + i: a fabricated body may sit before the
-    // break pieces, so built + i would read a piece's state.
-    for (std::size_t i = 0; ok && i < std::max(fabricated_.size(), saved.size()); ++i) {
-        k.bodies.push_back(i < saved.size() ? saved[i].state : c.bodies[fabricated_[i].body.value]);
-    }
     // A grip on a fabricated object holds it where this world's kit has it,
     // after any bodies built since the save — and after the pieces, which
     // sit between the built bodies and the fabricated ones.
@@ -668,6 +654,29 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         }
         fabricated_.push_back(std::move(object));
     }
+    // The body states in true kit-index order, as the restore reads
+    // them: the save lists the non-fabricated bodies in kit order
+    // with the fabricated ones skipped, and the fabricated states on
+    // their own — so appending the fabricated states at the end puts
+    // a fabricated body sitting before the break pieces one slot
+    // late, gives piece 0's state to it, and shifts every piece by
+    // one. Each saved state goes to the kit index of the body whose
+    // entity it belongs to; a fabricated state goes to its object's
+    // own kit index; a body the save does not name — a piece the
+    // save predates, or one built since — keeps its fresh state.
+    kit::Kit::Checkpoint fresh;
+    kit_->capture(fresh);
+    std::vector<kit::Kit::BodyState> ordered = fresh.bodies;
+    for (std::size_t j = 0; j < entities.size() && j < k.bodies.size(); ++j) {
+        const kit::BodyIndex body = kit_->body_for_entity(entities[j]);
+        if (body.valid()) {
+            ordered[body.value] = k.bodies[j];
+        }
+    }
+    for (std::size_t i = 0; i < saved.size() && i < fabricated_.size(); ++i) {
+        ordered[fabricated_[i].body.value] = saved[i].state;
+    }
+    k.bodies = std::move(ordered);
     checkpoint_position_ = position;
     checkpoint_crouched_ = crouched == 1;
     checkpoint_ = std::move(loaded);
