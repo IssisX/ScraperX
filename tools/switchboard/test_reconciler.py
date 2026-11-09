@@ -31,6 +31,11 @@ TMP = tempfile.TemporaryDirectory()
 # test_ledger's roster as work/agents.yml has it for the reconciler: Muse cannot open PRs (checked below)
 RROSTER = L.Roster({"agents": {k: dict(v, **({"opens_prs": False} if k == "muse" else {}))
                                for k, v in AGENTS["agents"].items()}})
+# A roster whose ChatGPT runs only when Cory starts it: the fixture for the manual-agent path (Cory's channel).
+# The repo's ChatGPT is polled hourly since 11-09; these tests keep the manual path covered.
+MROSTER = L.Roster({"agents": {k: dict(v, **({"opens_prs": False} if k == "muse" else {}),
+                                       **({"wake": "manual"} if k == "chatgpt" else {}))
+                               for k, v in AGENTS["agents"].items()}})
 CENTRAL = R.CENTRAL
 UTC = dt.timezone.utc
 
@@ -483,7 +488,7 @@ class Strengthened(unittest.TestCase):
 
     def test_03_a_dead_letter_reaches_cory_once_in_an_hourly_batch(self):
         gh = FakeGH()
-        h = Harness(cory=R.CoryNotifier(gh, 340))
+        h = Harness(roster=MROSTER, cory=R.CoryNotifier(gh, 340))
         a, b, c = (pr(450 + i, f"chatgpt/integrate-j57{i}-x", job=f"J-57{i}", action="FIX-CI", proof="red: x")
                    for i in range(3))
         h.run(feed(prs=[a]), NOW)
@@ -512,9 +517,9 @@ class Strengthened(unittest.TestCase):
     def test_08_a_retried_commit_posts_nothing_twice(self):
         gh = FakeGH()
         store = R.GitStore(gh)
-        h = Harness(store=store, outbox=R.CommentOutbox(gh, RROSTER, 340), cory=R.CoryNotifier(gh, 340))
+        h = Harness(roster=MROSTER, store=store, outbox=R.CommentOutbox(gh, RROSTER, 340), cory=R.CoryNotifier(gh, 340))
         h.run(feed(issues=[issue(900, job="J-900")]), NOW)
-        other = Harness(store=store)
+        other = Harness(roster=MROSTER, store=store)
         gh.before_ref_update = lambda: other.run(feed(issues=[issue(900, job="J-900")]), NOW + 9 * M)
         f = feed(issues=[issue(900, job="J-900")],
                  prs=[pr(460, "claude/integrate-j902-x", job="J-902", action="FIX-CI", proof="red: x"),
@@ -532,7 +537,7 @@ class Strengthened(unittest.TestCase):
         self.assertEqual(sum(1 for e in evs if e["ev"] == "sent" and e.get("id") == fix["id"]), 1)
         self.assertEqual(sum(1 for e in evs if e["ev"] == "needs_you"), 1)
         # a crash after the post and before any commit: the marker on #340 is the receipt
-        h2 = Harness(cory=R.CoryNotifier(gh, 340))
+        h2 = Harness(roster=MROSTER, cory=R.CoryNotifier(gh, 340))
         h2.run(f, NOW + 3 * H, comments=gh.bot_comments(NOW + 10 * M))
         self.assertEqual(sum(1 for _, b, _ in gh.comments if b.startswith("To Cory:")), 1)
 
@@ -607,7 +612,7 @@ class RedTeam(unittest.TestCase):
     def test_c_the_dead_letter_path_failing_is_retried_and_reported(self):
         f = feed(prs=[pr(412, "chatgpt/integrate-j530-x", job="J-530", action="FIX-CI", proof="red: x")])
         gh = FakeGH()
-        h = Harness(cory=R.CoryNotifier(gh, 340))
+        h = Harness(roster=MROSTER, cory=R.CoryNotifier(gh, 340))
         gh.comment_errors.append(GitHubError("POST", "comments", "HTTP 401: Bad credentials"))
         res = h.run(f, NOW)
         self.assertEqual(gh.comments, [])
@@ -626,7 +631,7 @@ class RedTeam(unittest.TestCase):
 
         def down(subject, text):
             raise OSError("mail relay down")
-        h2 = Harness(cory=R.CoryNotifier(gh2, 340, mailer=down))
+        h2 = Harness(roster=MROSTER, cory=R.CoryNotifier(gh2, 340, mailer=down))
         h2.run(f, NOW)
         self.assertEqual(len(gh2.comments), 1)
         self.assertIn("the mail failed", h2.state().cory["last_error"])
@@ -634,7 +639,7 @@ class RedTeam(unittest.TestCase):
             h2.run(f, NOW + k * 10 * M, comments=gh2.bot_comments(NOW))
         self.assertEqual(len(gh2.comments), 1)
         mails = []
-        h3 = Harness(cory=R.CoryNotifier(FakeGH(), 340, mailer=lambda s, t: mails.append((s, t))))
+        h3 = Harness(roster=MROSTER, cory=R.CoryNotifier(FakeGH(), 340, mailer=lambda s, t: mails.append((s, t))))
         h3.run(f, NOW)
         self.assertEqual(len(mails), 1)
         self.assertTrue(mails[0][0].startswith("To Cory: Needs you (1)"))
@@ -837,10 +842,12 @@ class Rules(unittest.TestCase):
         self.assertEqual(R.due_at(ROSTER, "muse", NOW), ("email", NOW + 4 * H))
         # NOW is 12:00 PM Central: Grok's next run is 4 PM Central (22:00 UTC), plus 1 h
         self.assertEqual(R.due_at(ROSTER, "grok", NOW), ("issue", dt.datetime(2026, 11, 9, 23, 0, tzinfo=dt.timezone.utc)))
-        self.assertEqual(R.due_at(ROSTER, "chatgpt", NOW), ("cory", NOW + 15 * M), "manual goes to Cory")
+        # ChatGPT's review task runs hourly at :27 Central: its next run after 12:00 PM is 12:27 PM, plus 1 h
+        self.assertEqual(R.due_at(ROSTER, "chatgpt", NOW), ("issue", ct(2026, 11, 9, 13, 27)))
+        self.assertEqual(R.due_at(MROSTER, "chatgpt", NOW), ("cory", NOW + 15 * M), "manual goes to Cory")
 
     def test_manual_agent_goes_straight_to_cory_never_resent(self):
-        h = Harness()
+        h = Harness(roster=MROSTER)
         f = feed(prs=[pr(412, "chatgpt/integrate-j530-x", job="J-530", action="FIX-CI", proof="red: x")])
         h.run(f, NOW)
         h.run(f, NOW + 3 * H)
