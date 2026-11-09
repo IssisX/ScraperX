@@ -8,7 +8,7 @@ head it acts on, or idempotent at GitHub (a merge names the head sha it merges).
 Parts (a workflow job runs one; `all` runs both, for a dry run):
   ask    the paid calls, the only part that holds ANTHROPIC_API_KEY: the automatic Claude review of
          a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
-  steer  everything free: the merge rule, review asks to ChatGPT or Muse, one owner:* label per
+  steer  everything free: the merge rule, review asks (never to a `wake: manual` agent), one owner:* label per
          issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest, and
          after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051),
          and the Muse mail pipe's health check (a PIPE ALARM on the board, once per incident)
@@ -37,7 +37,9 @@ import re
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 import uuid
 import zipfile
 from decimal import Decimal
@@ -118,6 +120,13 @@ MERGE_TOKEN_NEEDS = "Contents, Pull requests and Workflows: read/write"
 # steps hold it, through environment switchboard-merge; main() takes it out of the environment like the merge token.
 # Any branch's push workflow posts as the workflow bot, so on a workflow-file PR only a signed review is the pass.
 REVIEW_KEY_ENV = "SWITCHBOARD_REVIEW_KEY"
+# J-072: an optional Healthchecks.io ping URL (repo secret), held only by the steer job's switch step and taken out
+# of the environment at start like the tokens. A full non-dry sweep pings it once at its end: the URL on success,
+# URL/fail when any part errored. Healthchecks alerts on a missed ping, so a sweep that stops running is loud too.
+HC_SWEEP_ENV = "HC_SWEEP_URL"
+HC_TIMEOUT_S = 10
+DRY_SUMMARY = ("### DRY RUN: no action taken\n\nEvery action this run printed was printed only, none was taken "
+               "(`dry_run=true` or `--dry-run`). This run does not count as a sweep.\n")
 REVIEW_SIG = "<!-- switchboard:review-sig v1 pr={pr} head={head} verdict={verdict} mac={mac} -->"
 REVIEW_SIG_LINE = re.compile(r"<!-- switchboard:review-sig v1 pr=(?P<pr>\d{1,9}) head=(?P<head>[0-9a-f]{40}) "
                              r"verdict=(?P<verdict>LAND|FIX|NOTE|NONE) mac=(?P<mac>[0-9a-f]{64}) -->")
@@ -134,6 +143,32 @@ CONSOLE_SESSION = "https://platform.claude.com/workspaces/default/sessions/{sess
 OUTCOMES = {"end_turn": "finished its turn", "budget_reached": "stopped at its session budget",
             "retries_exhausted": "stopped after repeated errors", "refusal": "stopped on a refusal",
             "terminated": "ended (terminated)"}
+
+
+def sweep_heartbeat(url: str, failed: int, out=print, opener=urllib.request.urlopen) -> bool:
+    """J-072: ping Healthchecks.io at the end of a full non-dry sweep: `url` when nothing failed, `url/fail` when
+    something did. Never raises, never prints the URL (anyone holding it can ping the check). True if sent."""
+    if not url:
+        return False
+    if not url.startswith("https://"):
+        out(f"NOTE        {HC_SWEEP_ENV} is not an https URL; no heartbeat sent")
+        return False
+    target = url.rstrip("/") + ("/fail" if failed else "")
+    req = urllib.request.Request(target, data=f"switchboard sweep: {failed} part(s) failed\n".encode(), method="POST")
+    try:
+        opener(req, timeout=HC_TIMEOUT_S).close()
+    except (urllib.error.URLError, OSError, ValueError) as err:
+        out(f"NOTE        heartbeat not sent ({type(err).__name__})")
+        return False
+    out(f"HEARTBEAT   sent ({'fail' if failed else 'ok'})")
+    return True
+
+
+def note_dry_run(summary_path: str | None) -> None:
+    """J-072: a dry run says so at the top of its job summary, so a green dry run never reads as a sweep."""
+    if summary_path:
+        with open(summary_path, "a", encoding="utf-8") as f:
+            f.write(DRY_SUMMARY)
 
 
 def central(t: dt.datetime) -> str:
@@ -1854,7 +1889,10 @@ def main() -> int:
     # J-056: out of the environment at once, so git, the rule check and every other gh call never inherit them.
     sw.merge_token = os.environ.pop(MERGE_TOKEN_ENV, "").strip()
     sw.review_key = os.environ.pop(REVIEW_KEY_ENV, "").strip()
+    hc_sweep = os.environ.pop(HC_SWEEP_ENV, "").strip()
     sw.out(f"switchboard {args.part}{' DRY RUN' if args.dry_run else ''} at {central(now)} on {args.repo}")
+    if args.dry_run:
+        note_dry_run(os.environ.get("GITHUB_STEP_SUMMARY"))
     steer, ask = args.part in ("steer", "all"), args.part in ("ask", "all")
     if args.issue:
         if steer and args.label.startswith("owner:"):
@@ -1917,6 +1955,8 @@ def main() -> int:
         except (GitHubError, RuntimeError, KeyError, ValueError, subprocess.SubprocessError) as err:
             failed += 1
             sw.out(f"ERROR       ledger: {type(err).__name__}: {err}")
+        if not args.dry_run:   # J-072: the end of a full non-dry sweep (a run for one PR or sha is not one)
+            sweep_heartbeat(hc_sweep, failed, sw.out)
     return 2 if failed else 0
 
 

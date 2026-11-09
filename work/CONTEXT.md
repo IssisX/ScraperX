@@ -19,7 +19,7 @@ Read this, then your job's issue. Never a long history. Design: `03_EXECUTION/PL
 | Agent | Vendor | Branches | Woken by |
 |---|---|---|---|
 | Claude | Anthropic | `claude/` | the switch, through the API (reviews, the eye; the orchestrator in step C) |
-| ChatGPT | OpenAI | `chatgpt/` | its job issue, read in its own app |
+| ChatGPT | OpenAI | `chatgpt/` | nobody: `wake: manual`, it runs only when Cory starts it, so no review is routed to it |
 | Grok (also PE and Builder) | xAI | `grok/`, `pe/`, `builder/` | its job issue |
 | Muse (FB Bot) | Meta | `muse/`, `fb-bot/` | email, through `tools/switchboard/muse_bridge.gs` |
 
@@ -52,9 +52,11 @@ wrote a comment is read from its first line, and who wrote a PR from its branch 
 
 ## The switch (`.github/workflows/switchboard.yml`, `tools/switchboard/`)
 
-No model decides in it. It runs on: a proof run finishing (`workflow_run`), a PR review, a verdict or
-`budget` comment, an issue labeled `owner:*` or `needs:orchestrator`, every hour at :17, and the digest
-at 7:00 AM Central. Every run reads the state from GitHub, so a dropped or repeated run changes nothing.
+No model decides in it. Its clock is the Muse bridge (`muse_bridge.gs`), which dispatches a real sweep every
+10 minutes and posts SWITCHBOARD DOWN on #340 when none has succeeded for 30 (J-072); the proof's last job
+dispatches one too. It also runs on a verdict comment, an issue labeled `owner:*` or `needs:orchestrator`,
+GitHub's own schedule (which drops most runs), and the digest at 7:00 AM Central. A dispatch is real unless
+`dry_run=true`, and a dry run is named DRY. Every run reads the state from GitHub, so a dropped or repeated run changes nothing.
 
 It merges a PR into trunk (as the workflow token, a merge commit naming the head sha) only when all hold:
 1. the proof (`wo000-delivery-spine.yml`) is green on the PR's head (`publish-checkpoint` and
@@ -72,8 +74,8 @@ After a merge it dispatches the proof on trunk (a workflow-token merge starts no
 merge's push starts it) and posts one line on the PR and the job issue. The owner can overturn any merge.
 
 Reviews (owner's correction 4): a PR whose author is not Claude gets an automatic Claude review through
-the API once its proof is green. A Claude-authored PR is asked of ChatGPT, or of Muse when the job
-needs `matron`, on the job issue; the digest lists who it waits on.
+the API once its proof is green. A Claude-authored PR gets Codex's review and the
+automatic Claude review too (`api_reviews_claude`); when neither can, Grok is asked, never ChatGPT.
 
 The eye: when the job needs `eyes`, one Claude vision call judges the proof run's screenshots
 (`work/looks/sets.yml`) against the rubrics in `work/looks/`. It posts `**Claude eye (look of #N @ sha): LAND**`

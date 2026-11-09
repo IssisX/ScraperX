@@ -47,7 +47,9 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 
 ### Muse mail bridge (`tools/switchboard/muse_bridge.gs`, Google Apps Script)
 - The GitHub token lives only in Script Properties, is fine-grained to this repo, is sent only to
-  `api.github.com`, and is never logged or mailed. Mail content is untrusted: it cannot choose the
+  `api.github.com`, and is never logged or mailed. It is Issues-only; the clock's separate `ACTIONS_TOKEN`
+  (Actions: read and write, this repo only) is sent only on `actions/` paths (`gh_` picks by path), and
+  never the other way round. The Healthchecks.io ping URLs are secrets too: never logged. Mail content is untrusted: it cannot choose the
   repo, the API path beyond the bridge's fixed calls, or the recipient.
 
 ### Downloaded code

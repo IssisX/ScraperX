@@ -1649,3 +1649,83 @@ class MuseAskNeverOnAPr(unittest.TestCase):
         gh = rf.FakeGH()
         rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "chatgpt", "")
         self.assertEqual(gh.posted[0][0], 9)
+
+
+class SweepHeartbeat(unittest.TestCase):
+    """J-072: a full non-dry sweep pings Healthchecks.io once at its end; the URL is a secret and never printed."""
+
+    URL = "https://hc-ping.com/0f0e0d0c-aaaa-bbbb-cccc-123456789abc"
+
+    def ping(self, url, failed, fail_with=None):
+        sent, out = [], []
+
+        def opener(req, timeout):
+            sent.append((req.full_url, req.get_method(), timeout))
+            if fail_with:
+                raise fail_with
+            return types.SimpleNamespace(close=lambda: None)
+        return switch.sweep_heartbeat(url, failed, out.append, opener), sent, out
+
+    def test_unset_is_a_no_op(self):
+        self.assertEqual(self.ping("", 0), (False, [], []))
+
+    def test_success_pings_the_url_and_failure_pings_fail(self):
+        ok, sent, out = self.ping(self.URL, 0)
+        self.assertTrue(ok)
+        self.assertEqual(sent, [(self.URL, "POST", switch.HC_TIMEOUT_S)])
+        ok, sent, out2 = self.ping(self.URL + "/", 2)
+        self.assertEqual(sent[0][0], self.URL + "/fail")
+        self.assertFalse(any("hc-ping" in line for line in out + out2))
+
+    def test_only_https_and_a_broken_ping_never_raises_or_leaks(self):
+        self.assertEqual(self.ping("http://hc-ping.com/x", 0)[1], [])
+        import urllib.error
+        ok, _, out = self.ping(self.URL, 0, urllib.error.URLError(f"refused {self.URL}"))
+        self.assertFalse(ok)
+        self.assertFalse(any("0f0e0d0c" in line for line in out), out)
+
+    def test_main_wires_it_to_the_end_of_a_full_non_dry_steer_sweep_only(self):
+        src = (HERE / "switch.py").read_text(encoding="utf-8")
+        main = src[src.index("def main() -> int:"):]
+        self.assertIn('hc_sweep = os.environ.pop(HC_SWEEP_ENV, "").strip()', main)
+        call = main.index("sweep_heartbeat(hc_sweep, failed, sw.out)")
+        guard = main.rindex("if steer and not (args.pr or args.sha):", 0, call)
+        self.assertIn("if not args.dry_run:", main[guard:call])
+        self.assertLess(main.index("if args.digest or args.force_digest:"), guard)   # a digest returns first
+
+
+class DryRunVisible(unittest.TestCase):
+    """J-072: a dry run names itself, in its job summary and its run-name; only a real sweep is "Switchboard sweep"."""
+
+    def test_a_dry_run_writes_dry_at_the_top_of_the_summary(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "summary.md")
+            switch.note_dry_run(path)
+            self.assertTrue(pathlib.Path(path).read_text(encoding="utf-8").startswith("### DRY RUN"))
+        switch.note_dry_run(None)   # no summary file outside Actions: nothing to write
+
+    @staticmethod
+    def workflow(name="switchboard.yml"):
+        import yaml
+        return yaml.safe_load((HERE.parents[1] / ".github/workflows" / name).read_text(encoding="utf-8"))
+
+    def test_run_name_and_the_bridge_agree_on_the_sweep_title(self):
+        title = re.search(r"var SWEEP_TITLE = '([^']+)'", (HERE / "muse_bridge.gs").read_text(encoding="utf-8")).group(1)
+        run_name = self.workflow()["run-name"]
+        self.assertEqual(title, "Switchboard sweep")
+        self.assertIn(f"'{title}'", run_name)
+        # the dry test comes before the sweep fallback, so a dry dispatch is never named a sweep
+        self.assertLess(run_name.index("inputs.dry_run && 'Switchboard DRY run"), run_name.index(f"'{title}'"))
+
+    def test_a_dispatch_is_real_unless_asked_dry(self):
+        self.assertIs(self.workflow()[True]["workflow_dispatch"]["inputs"]["dry_run"]["default"], False)
+
+    def test_every_workflow_run_name_matches_a_workflow_literally(self):
+        # `workflows:` entries are glob patterns: an unescaped + * ? [ ] ! is not literal, so the proof's
+        # "013 + ascent" never matched its own name (the trigger last fired 11-05). Escaped, `\+` is literal.
+        names = {str(self.workflow(p.name).get("name") or "") for p in (HERE.parents[1] / ".github/workflows").glob("*.yml")}
+        for entry in (self.workflow()[True].get("workflow_run") or {}).get("workflows", []):
+            tokens = re.findall(r"\\.|.", entry, re.DOTALL)
+            self.assertFalse([t for t in tokens if t in "+*?[]!"], f"unescaped glob character in {entry!r}")
+            self.assertIn("".join(t[-1] for t in tokens), names, entry)
