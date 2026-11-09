@@ -571,7 +571,8 @@ class InboxPrExcluded(unittest.TestCase):
         gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=lambda path: {"state": "open"},
                                    comment=lambda number, body, what="": None,
                                    write=lambda method, path, body=None, what="": closed.append(path))
-        me = types.SimpleNamespace(gh=gh, out=lambda line: None)
+        me = types.SimpleNamespace(gh=gh, out=lambda line: None,   # J-072: both open, in the open-PR listing
+                                   listing=lambda path: [{"number": 282}, {"number": 43}, {"number": 300}])
         switch.Switch.close_superseded(me, types.SimpleNamespace(number=300, draft=False),
                                        {"body": "Supersedes #282 and #43"})
         self.assertEqual(closed, ["repos/IssisX/ScraperX/pulls/43"])

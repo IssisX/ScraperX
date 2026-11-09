@@ -19,6 +19,9 @@ event sweeps at about 420-480 calls each being over 5,000 an hour):
 
 from __future__ import annotations
 
+import contextlib
+import hashlib
+import hmac
 import json
 import os
 import random
@@ -34,8 +37,10 @@ RATE_TRIES = 2         # a rate-limited call is tried this often in all, then le
 RATE_BACKOFF_S = 8.0   # the full-jitter ceiling of a rate-limit retry; a Retry-After up to RATE_WAIT_MAX_S wins
 RATE_WAIT_MAX_S = 30.0
 CACHE_MAX_BODY = 1_000_000   # bytes of one answer kept for its ETag; larger ones are read in full each time
-CACHE_MAX_ENTRIES = 4000
-CACHE_MAX_TOTAL = 20_000_000   # bytes of bodies saved in all: each run's cache entry stays small in the Actions cache
+CACHE_MAX_ENTRIES = 8000
+# bytes of bodies saved in all. J-072: at 20 MB a warm full pass found the cap full, so 51 of its prior-PR reads had
+# lost their entries and came back counted 200s; actions/cache compresses the file about 7 to 1 (20.9 MB to 2.9 MB).
+CACHE_MAX_TOTAL = 80_000_000
 CACHE_MAX_AGE_S = 7 * 86400    # an entry no run has read for this long is dropped
 STATUS = re.compile(r"^HTTP/\S+ (\d{3})")
 
@@ -86,8 +91,29 @@ class GitHub:
         self.used: set[str] = set()         # cache keys read or written this run (saved first)
         self.state: dict = {}               # the switch's sweep state (switch.py run_sweep), saved with the cache
         self.calls = self.not_modified = 0
+        self.fresh_only = False             # fresh(): no answer comes from the cache (the merge facts, J-072)
+        self.cache_key = b""                # the cache file's HMAC key (load_etags/save_etags), b"" for none
+
+    @contextlib.contextmanager
+    def fresh(self):
+        """Every read inside is GitHub's own answer: no If-None-Match, so no body comes from the cache file (J-072,
+        the security pass on #360: a cache entry any trunk job can save must never decide a merge)."""
+        was, self.fresh_only = self.fresh_only, True
+        try:
+            yield self
+        finally:
+            self.fresh_only = was
 
     # the ETag cache carried between runs
+    def set_cache_key(self, secret: str) -> None:
+        """Sign the cache file with a key derived from `secret` (the review key, which only the switchboard-merge
+        environment holds): with a key set, a file whose MAC does not verify is read as a cold cache."""
+        self.cache_key = hmac.new(secret.encode("utf-8"), b"switchboard etag cache v3", hashlib.sha256).digest() \
+            if secret else b""
+
+    def _mac(self, payload: str) -> str:
+        return hmac.new(self.cache_key, payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
     def load_etags(self, path: str) -> None:
         try:
             with open(path, encoding="utf-8") as f:
@@ -95,6 +121,20 @@ class GitHub:
         except (OSError, ValueError):
             return
         if not isinstance(got, dict):
+            return
+        if got.get("v") == 3:   # {"v": 3, "mac": ..., "payload": "<the v2 file as text>"}
+            payload = got.get("payload") if isinstance(got.get("payload"), str) else ""
+            if self.cache_key and not hmac.compare_digest(self._mac(payload), str(got.get("mac") or "")):
+                self.log("::warning::ETAG CACHE  the cache file's MAC does not verify: read as a cold cache")
+                return
+            try:
+                got = json.loads(payload)
+            except ValueError:
+                return
+            if not isinstance(got, dict):
+                return
+        elif self.cache_key:   # an unsigned file is never read by a run that holds the key
+            self.log("NOTE        the ETag cache file is not signed: read as a cold cache")
             return
         if got.get("v") == 2:   # {"v": 2, "etags": {...}, "state": {...}}: the switch's sweep state rides along
             self.state = got.get("state") if isinstance(got.get("state"), dict) else {}
@@ -122,9 +162,13 @@ class GitHub:
                 continue
             keep[k] = entry
             total += len(entry["body"])
+        payload = json.dumps({"v": 2, "etags": keep, "state": self.state})
         try:
             with open(path, "w", encoding="utf-8") as f:
-                json.dump({"v": 2, "etags": keep, "state": self.state}, f)
+                if self.cache_key:
+                    json.dump({"v": 3, "mac": self._mac(payload), "payload": payload}, f)
+                else:
+                    f.write(payload)
         except OSError as err:
             self.log(f"NOTE        the ETag cache was not saved: {err}")
 
@@ -154,7 +198,7 @@ class GitHub:
             args += ["-H", f"Accept: {accept}"]
         key = f"{path}|{accept}"
         cacheable = method == "GET" and not binary and not token   # another token's answers are never cached
-        cached = self.etags.get(key) if cacheable else None
+        cached = self.etags.get(key) if cacheable and not self.fresh_only else None
         if cached:
             args += ["-H", f"If-None-Match: {cached['etag']}"]
         if body is not None:

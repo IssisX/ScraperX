@@ -429,7 +429,7 @@ class CodexFirst(unittest.TestCase):
         sw = make(gh, team=self.TEAM)
         sw.api_ok = lambda c: api_ok
         sw.review_load = lambda: ({}, {})
-        sw.steer_pr(facts, ctx(comments=list(thread)))
+        sw.steer_pr(facts, dict(ctx(comments=list(thread)), fresh=True))   # GitHub's own facts (J-072: no re-read)
         who = sw.pooled_reviewer(facts, ctx(comments=list(thread)), "anthropic")[1] if rules.needs_review(facts, "anthropic", self.TEAM) else ""
         return gh, who
 

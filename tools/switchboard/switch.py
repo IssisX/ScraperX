@@ -343,6 +343,19 @@ class Switch:
         self._board: list[dict] | None = None   # the board's comments, once per run (board_comments)
 
     # ---------- facts ----------
+    def fresh_facts(self, number: int) -> tuple[rules.PrFacts, dict]:
+        """pr_facts for one PR with every read GitHub's own answer (no ETag cache, no per-run memo)."""
+        saved = (self._jobs, getattr(self, "_board", None))
+        self._jobs, self._board = None, None
+        try:
+            with self.gh.fresh():
+                pr = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
+                facts, ctx = self.pr_facts(pr)
+        finally:
+            self._jobs, self._board = saved
+        ctx["fresh"] = True
+        return facts, ctx
+
     def jobs(self) -> dict[str, dict]:
         """Open issues labeled `job`, by J-NNN."""
         if self._jobs is None:
@@ -484,6 +497,12 @@ class Switch:
             memo[(path, key)] = self.gh.paged(path, key)
         return list(memo[(path, key)])
 
+    def comments_since(self, since: dt.datetime) -> list:
+        """Every comment updated since `since`, floored to COMMENT_FLOOR (J-072): the URL then repeats for hours, and
+        as the listing is oldest first, every page but the newest answers 304. Callers filter to their exact window."""
+        floor = comment_floor(since)
+        return self.listing(f"repos/{self.gh.repo}/issues/comments?since={iso_z(floor)}")
+
     def stale(self, facts: rules.PrFacts) -> bool:
         return rules.is_stale(facts.head_committed_at, self.now.strftime("%Y-%m-%dT%H:%M:%SZ"), ACT_WITHIN_DAYS)
 
@@ -615,14 +634,11 @@ class Switch:
         """A ready PR whose body says `Supersedes #N` closes #N, so replaced work can never be merged (Cory, 11-04)."""
         if facts.draft:
             return
+        open_now = {p["number"] for p in self.listing(f"repos/{self.gh.repo}/pulls?state=open")}
         for n in rules.superseded_prs(ctx["body"], facts.number):
             if n == INBOX_PR:   # the integrator's inbox is never closed (J-051)
                 continue
-            try:
-                old = self.gh.get(f"repos/{self.gh.repo}/pulls/{n}")
-            except GitHubError:   # not a PR (an issue number, or gone): nothing to close
-                continue
-            if old.get("state") != "open":
+            if n not in open_now:   # J-072: closed, merged, an issue or gone: nothing to close, and no read to know it
                 continue
             self.gh.comment(n, f"Switchboard: closing this PR. #{facts.number} supersedes it (its body says so); "
                                f"the work continues there.", what=f"note on #{n}: superseded by #{facts.number}")
@@ -639,6 +655,14 @@ class Switch:
             time.sleep(3)   # the first read starts GitHub's computation; read once more
             facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
             d = rules.merge_decision(facts, author, self.team, token, key)
+        if d.action == "MERGE" and not ctx.get("fresh"):
+            # J-072, the security pass on #360: the sweep's reads may be answered from the ETag cache, which a job
+            # outside switchboard-merge could have saved. A merge is decided only on GitHub's own answers: the PR,
+            # its head, proof runs and jobs, comments, reviews, job issue and board, all read again uncached.
+            facts, ctx = self.fresh_facts(facts.number)
+            author = self.team.vendor_of_branch(facts.head_ref)
+            d = rules.merge_decision(facts, author, self.team, token, key)
+            self.out(f"FRESH       #{facts.number} merge facts read again from GitHub, uncached: {d.action}")
         if d.action in ("MERGE", "HUMAN-MERGE"):
             block, never = self.rule_check_block(facts.number, facts.head_sha)
             facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
@@ -812,9 +836,18 @@ class Switch:
 
     # ---------- auto-open (J-047) ----------
     def prior_pr(self, branch: str) -> bool:
-        """Has this branch ever had a PR (open, closed or merged)? The head filter names the branch."""
+        """Has this branch ever had a PR (open, closed or merged)? The head filter names the branch. A yes never turns
+        into a no, so it is kept in the sweep state (J-072: a PR listing answers 200 even with its ETag, so the warm
+        full pass spent 45 of its 72 counted calls asking again about branches that had a PR long ago)."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+        known = state.setdefault("prior_pr", [])
+        if branch in known:
+            return True
         owner = self.gh.repo.split("/")[0]
-        return bool(self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}"))
+        had = bool(self.gh.paged(f"repos/{self.gh.repo}/pulls?state=all&head={owner}:{branch}"))
+        if had:
+            known.append(branch)
+        return had
 
     def open_pr(self, branch: str, sha: str, job: str, message: str) -> str:
         """Open the PR for a finished branch: title is the commit subject, body starts with the Job line.
@@ -859,8 +892,11 @@ class Switch:
         sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
         Returns how many PRs were opened (or would be, in a dry run)."""
         self.auto_pr_failed = ()
-        branches = [b for b in self.gh.paged(f"repos/{self.gh.repo}/branches")
-                    if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
+        listed = self.gh.paged(f"repos/{self.gh.repo}/branches")
+        if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
+            alive = {b["name"] for b in listed}
+            self.gh.state["prior_pr"] = [n for n in self.gh.state.get("prior_pr") or [] if n in alive]
+        branches = [b for b in listed if b["name"].startswith(AUTO_PR_PREFIX) and (only is None or b["name"] in only)]
         if not branches:
             return 0
         open_refs = {p["head"]["ref"] for p in self.listing(f"repos/{self.gh.repo}/pulls?state=open")}
@@ -1170,7 +1206,11 @@ class Switch:
         since = start if prev is None else max(min(start, prev), self.now - PIPE_LOOKBACK)
         stamp = since.strftime("%Y-%m-%dT%H:%M:%SZ")
         asks, posts, newest_ask = 0, [], None
-        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/comments?since={stamp}&sort=created&direction=desc"):
+        # J-072: the day's window is the inbox's own read (on the hour, oldest first: its pages answer 304); only an
+        # open incident's longer window is read newest first, so a bounded read keeps the part that decides
+        listed = (self.comments_since(since) if since >= start else
+                  self.gh.paged(f"repos/{self.gh.repo}/issues/comments?since={stamp}&sort=created&direction=desc"))
+        for c in listed:
             at = parse_time(c.get("created_at") or "")
             if at is None:
                 continue
@@ -1235,9 +1275,11 @@ class Switch:
         start with `<!-- codex`."""
         since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
         open_threads = {int(i["number"]) for i in
-                        self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")}
+                        self.listing(f"repos/{self.gh.repo}/issues?state=open")}
         out: list[InboxItem] = []
-        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/comments?since={since}"):
+        for c in self.comments_since(self.now - INBOX_RUNS_WINDOW):
+            if (c.get("updated_at") or c.get("created_at") or "") < since:   # the hour's floor read a little more
+                continue
             body = c.get("body") or ""
             if body.lstrip().startswith("<!-- codex"):
                 continue
@@ -2024,6 +2066,7 @@ def main() -> int:
     ap.add_argument("--label", default="")
     ap.add_argument("--digest", action="store_true")
     ap.add_argument("--force-digest", action="store_true")
+    ap.add_argument("--save-dry-cache", action="store_true", help=argparse.SUPPRESS)   # a local measurement only
     args = ap.parse_args()
     if args.sha and not all(c in "0123456789abcdef" for c in args.sha):
         ap.error("--sha must be hex")
@@ -2034,7 +2077,11 @@ def main() -> int:
     sw.review_key = os.environ.pop(REVIEW_KEY_ENV, "").strip()
     hc_sweep = os.environ.pop(HC_SWEEP_ENV, "").strip()
     cache = os.environ.get(ETAG_CACHE_ENV, "").strip()
+    # J-072: a dry run (a dispatch with dry_run) reads the cache but never saves it, so it cannot consume the sweep
+    # state, the PR records or a ripe timer (the security pass on #360). --save-dry-cache is for a local measurement.
+    save_cache = bool(cache) and (not args.dry_run or args.save_dry_cache)
     if cache:
+        sw.gh.set_cache_key(sw.review_key)   # signed with a key only switchboard-merge holds: see ghapi.load_etags
         sw.gh.load_etags(cache)
     sw.out(f"switchboard {args.part}{' DRY RUN' if args.dry_run else ''} at {central(now)} on {args.repo}")
     if args.dry_run:
@@ -2048,7 +2095,7 @@ def main() -> int:
                                               "the rest of this run waits for the next sweep."])
         return 0
     finally:
-        if cache:
+        if save_cache:
             sw.gh.save_etags(cache)
         sw.out(f"GITHUB      {sw.gh.calls} call(s), {sw.gh.not_modified} answered 304 from the ETag cache"
                + (f", {sw.gh.remaining} left this hour" if sw.gh.remaining is not None else ""))
@@ -2095,10 +2142,22 @@ def rate_probe(sw: "Switch") -> None:
             sw.out(f"RATE        {AGENT_TOKEN_ENV}: its rate could not be read ({http_status(err.detail) or 'no status'})")
 
 
-FULL_EVERY = dt.timedelta(minutes=30)     # a full pass at least this often: the ledger, pipe health, reconciler
+# A full pass at least this often: the ledger's reading, the reconciler, owner labels. Every clock is checked each
+# sweep (the timers), so this only bounds how late the ledger finds a new input: its shortest deadline is ACT, 2 h,
+# counted from the input's own time, so a find within the hour still sends on time. (J-072: was 30 minutes.)
+FULL_EVERY = dt.timedelta(minutes=60)
 SWEEP_OVERLAP = dt.timedelta(minutes=3)   # each delta read starts this long before the last sweep's stamp
 PROOF_SPAN = dt.timedelta(hours=6)        # proof runs created this long before the stamp can finish after it
 COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP")  # waiting on the author's next head: nothing changes them by the clock
+
+
+COMMENT_FLOOR_HOURS = 6   # a comment listing's since: 00, 06, 12 or 18 UTC. An hour's floor changed at every hourly
+                          # full pass, so none of its pages was ever a 304 (the warm pass: 9 counted reads)
+
+
+def comment_floor(since: dt.datetime) -> dt.datetime:
+    t = since.astimezone(dt.timezone.utc)
+    return t.replace(hour=t.hour - t.hour % COMMENT_FLOOR_HOURS, minute=0, second=0, microsecond=0)
 
 
 def iso_z(t: dt.datetime) -> str:
@@ -2250,7 +2309,7 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
     delta: SweepDelta | None = None if full else sweep_delta(sw, prs, state)
     if delta is not None:
         sw.out(f"FAST SWEEP  {len(delta.prs)} of {len(prs)} PR(s) changed since {central(parse_time(state['stamp']))}; "
-               f"the full pass (ledger, pipe health, reconciler, owner labels) is every {hours(FULL_EVERY)}")
+               f"the full pass (the ledger's reading, the reconciler, owner labels) is every {hours(FULL_EVERY)}; every clock is checked now")
     records: dict[str, dict] = dict((state or {}).get("prs") or {}) if delta is not None else {}
     read = 0
     for pr in prs:

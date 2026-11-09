@@ -174,19 +174,25 @@ class SweepCalls(unittest.TestCase):
         _, read, _ = sweep(gh, last_state(self.prs, cold=False))
         self.assertEqual(read, [p["number"] for p in self.prs])
 
-    def test_a_full_pass_every_30_minutes_and_on_a_cold_cache(self):
-        for state in (None, last_state(self.prs, minutes=31)):
+    def test_a_full_pass_every_hour_and_on_a_cold_cache(self):
+        # J-072: every clock is checked each sweep, so the full pass only bounds how late the ledger finds a new
+        # input; its shortest deadline is 2 hours from the input's own time
+        self.assertEqual(switch.FULL_EVERY, dt.timedelta(minutes=60))
+        for state in (None, last_state(self.prs, minutes=61)):
             gh = CountingGH(self.prs)
             _, read, sw = sweep(gh, state)
             self.assertEqual(read, [p["number"] for p in self.prs])
             self.assertTrue(switch.sweep_state_ok(gh.state["steer"]))
             self.assertEqual(gh.state["steer"]["full_at"], iso(NOW))
-        stale = last_state(self.prs, minutes=31)
-        stale["full_at"] = iso(NOW - dt.timedelta(minutes=31))
+        stale = last_state(self.prs, minutes=61)
         stale["stamp"] = iso(NOW - dt.timedelta(minutes=5))
         gh = CountingGH(self.prs)
         _, read, _ = sweep(gh, stale)
         self.assertEqual(len(read), len(self.prs))
+        within = last_state(self.prs, minutes=59)
+        gh = CountingGH(self.prs)
+        _, read, _ = sweep(gh, within)
+        self.assertEqual(read, [])
 
     def test_a_fast_sweep_keeps_the_full_pass_stamp_and_every_record(self):
         state = last_state(self.prs)
@@ -211,9 +217,6 @@ class SweepCalls(unittest.TestCase):
         _, read, _ = sweep(gh, last_state(self.prs))
         self.assertEqual(len(read), len(self.prs))
 
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 RED_ITEM_MAX = 6     # a ripe RED-BRANCH: its branch head, its proof's jobs, the inbox's two marker reads, the post
@@ -369,3 +372,105 @@ class LedgerTimers(unittest.TestCase):
                                "#3": iso(NOW)})   # #3: owed now (past MAX_NOTICES or a failed post)
         back = ledger.item_of(ledger.item_json(due_later))
         self.assertEqual(back, due_later)
+
+
+class WarmFullPass(unittest.TestCase):
+    """J-072: a warm full pass answered only 270 of 405 reads with 304; these are the reads that came back 200."""
+
+    def test_the_comment_window_repeats_for_hours(self):
+        # an hour's floor changed at every hourly full pass, so it never answered 304; 6 hours repeats
+        paths = []
+        for minutes in (2, 50, 110, 230):
+            gh = CountingGH([])
+            sw = test_inbox.make(gh, NOW + dt.timedelta(minutes=minutes))
+            sw.ask_inbox_items(frozenset())
+            paths.append([c for c in gh.calls if "issues/comments" in c])
+        self.assertEqual(paths.count(paths[0]), 4, paths)
+        self.assertIn("since=2026-11-05T18:00:00Z", paths[0][0])
+
+    def test_the_hours_floor_reads_no_extra_ask(self):
+        early = {"id": 1, "body": "To Claude: an old ask", "created_at": "2026-11-05T20:10:00Z",
+                 "updated_at": "2026-11-05T20:10:00Z", "html_url": "u1", "user": {"login": "IssisX"},
+                 "issue_url": f"https://api.github.com/repos/{REPO}/issues/290"}
+        gh = CountingGH([], comments=[early], open_issues=[290])
+        sw = test_inbox.make(gh, NOW + dt.timedelta(minutes=30))   # the window starts 20:30; the read starts 20:00
+        self.assertEqual(sw.ask_inbox_items(frozenset()), [])
+
+    def test_inbound_quiet_shares_the_inboxs_read(self):
+        gh = CountingGH([])
+        sw = test_inbox.make(gh)
+        sw.ask_inbox_items(frozenset())
+        sw.inbound_quiet(None)
+        self.assertEqual(sum("issues/comments" in c for c in gh.calls), 1, gh.calls)
+
+    def test_a_superseded_line_needs_no_read_per_pr(self):
+        gh = CountingGH([pr(43), pr(100)], dry_run=False)
+        sw = test_inbox.make(gh)
+        facts = type("F", (), {"number": 100, "draft": False})()
+        sw.close_superseded(facts, {"body": "Supersedes #43, #44 and #9"})
+        self.assertEqual(gh.calls, [f"repos/{REPO}/pulls?state=open", "POST issues/43/comments",
+                                    f"PATCH repos/{REPO}/pulls/43"])
+
+    def test_a_newest_first_listing_is_read_only_back_to_what_was_kept(self):
+        import ledger
+        events = [{"id": i, "event": "labeled", "created_at": iso(NOW - dt.timedelta(minutes=i)),
+                   "actor": {"login": "x"}, "issue": {"number": 7, "title": "big"}} for i in range(1, 251)]
+
+        class Pages:
+            repo = REPO
+
+            def __init__(self, items, state=None):
+                self.items, self.calls, self.state = items, 0, state if state is not None else {}
+
+            def get(self, path):
+                self.calls += 1
+                page = int(re.search(r"[?&]page=(\d+)", path).group(1))
+                return self.items[(page - 1) * 100: page * 100]
+
+        when = lambda e: ledger.parse(e.get("created_at"))   # noqa: E731
+        sw = type("S", (), {})()
+        sw.gh = Pages(events)
+        got, _ = ledger.newest_first(sw, "events", f"repos/{REPO}/issues/events", NOW - dt.timedelta(days=2), when,
+                                     ledger.EVENT_KEYS)
+        self.assertEqual((sw.gh.calls, len(got)), (3, 250))
+        self.assertEqual(got[0]["issue"], {"number": 7})   # trimmed to what the ledger reads
+        new = [{"id": 1000 + i, "event": "closed", "created_at": iso(NOW + dt.timedelta(minutes=i)),
+                "actor": {"login": "y"}, "issue": {"number": 8}} for i in range(3)]
+        sw.gh = Pages(list(reversed(new)) + events, {"ledger_events": got})
+        got2, _ = ledger.newest_first(sw, "events", f"repos/{REPO}/issues/events", NOW - dt.timedelta(days=2), when,
+                                      ledger.EVENT_KEYS)
+        self.assertEqual(sw.gh.calls, 1)                    # one page: it reached what was kept
+        self.assertEqual(len(got2), 253)
+        self.assertEqual([e["id"] for e in got2[:3]], [1002, 1001, 1000])
+        late, _ = ledger.newest_first(sw, "events", f"repos/{REPO}/issues/events", NOW + dt.timedelta(minutes=1),
+                                      when, ledger.EVENT_KEYS)
+        self.assertEqual([e["id"] for e in late], [1002, 1001])   # trimmed to the window
+
+    def test_the_cache_holds_a_warm_full_passs_reads(self):
+        import ghapi
+        import os
+        import tempfile
+        gh = ghapi.GitHub(REPO, True)
+        gh.etags = {f"k{i}|": {"etag": '"e"', "body": "x" * 50_000, "t": 1.0} for i in range(500)}   # 25 MB
+        with tempfile.TemporaryDirectory() as d:
+            gh.save_etags(os.path.join(d, "e.json"), now=2.0)
+            back = ghapi.GitHub(REPO, True)
+            back.load_etags(os.path.join(d, "e.json"))
+        self.assertEqual(len(back.etags), 500)   # at the old 20 MB cap, 51 prior-PR entries were lost
+
+    def test_a_branch_that_had_a_pr_is_not_asked_again(self):
+        gh = CountingGH([])
+        gh.state = {}
+        calls = []
+        gh.paged = lambda path, key="": (calls.append(path), [{"number": 5}] if "had-one" in path else [])[1]
+        sw = test_inbox.make(gh)
+        for _ in range(3):
+            self.assertTrue(sw.prior_pr("fb-bot/integrate-had-one"))
+            self.assertFalse(sw.prior_pr("fb-bot/integrate-never"))
+        self.assertEqual(sum("had-one" in c for c in calls), 1)   # a yes is kept; a no is asked each time
+        self.assertEqual(sum("never" in c for c in calls), 3)
+        self.assertEqual(gh.state["prior_pr"], ["fb-bot/integrate-had-one"])
+
+
+if __name__ == "__main__":
+    unittest.main()

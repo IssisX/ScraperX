@@ -880,6 +880,36 @@ def cursor_pages(repo: str, path: str, stop: Callable[[dict], bool] | None = Non
     return items, True
 
 
+EVENT_KEYS = ("id", "event", "created_at", "actor", "issue")
+ACTIVITY_KEYS = ("id", "ref", "timestamp", "activity_type", "after", "before")
+
+
+def newest_first(sw, name: str, path: str, since: dt.datetime, when: Callable[[dict], dt.datetime | None],
+                 keys: tuple[str, ...], cursor: bool = False) -> tuple[list, bool]:
+    """A newest-first listing (issue events, repo activity) read only back to what the last full pass kept (J-072:
+    its first page changes with every new event, so it was 4-5 counted reads each pass). The items kept, trimmed to
+    `keys` and to the window, ride in the sweep state; a read stops at the first item already kept. (items, cut)."""
+    state = sw.gh.state if isinstance(getattr(sw.gh, "state", None), dict) else {}
+    kept = [k for k in (state.get("ledger_" + name) or []) if isinstance(k, dict)]
+    seen = {k.get("id") for k in kept}
+    newest = max((when(k) for k in kept if when(k)), default=None)
+
+    def stop(item: dict) -> bool:
+        t = when(item)
+        return item.get("id") in seen or (t is not None and t < since) or (newest is not None and t is not None and t < newest)
+    got, cut = (cursor_pages(sw.gh.repo, path, stop=stop) if cursor else page_list(sw.gh, path, stop=stop))
+    fresh = [{k: it.get(k) for k in keys} for it in got if it.get("id") not in seen]
+    if name == "events":   # an event's issue: only its number is read
+        for it in fresh:
+            it["issue"] = {"number": (it.get("issue") or {}).get("number")}
+            it["actor"] = {"login": (it.get("actor") or {}).get("login")}
+    items = [it for it in fresh + kept if (when(it) or since) >= since]
+    items.sort(key=lambda it: when(it) or since, reverse=True)
+    if isinstance(getattr(sw.gh, "state", None), dict):
+        sw.gh.state["ledger_" + name] = items
+    return items, cut and not kept
+
+
 def page_list(gh, path: str, stop: Callable[[dict], bool] | None = None) -> tuple[list, bool]:
     """A page-numbered listing, past ghapi's 5 pages, stopping early once `stop` holds for an item."""
     sep = "&" if "?" in path else "?"
@@ -938,11 +968,14 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
     problems: list[str] = []
     since_live, since_touch = now - LIVE, now - TOUCH_WINDOW
 
-    comments, cut = page_list(gh, f"repos/{repo}/issues/comments?since={iso(since_live)}")
+    floor = since_live.astimezone(dt.timezone.utc)   # J-072: on a 6-hour floor the URL repeats, and its pages 304
+    floor = floor.replace(hour=floor.hour - floor.hour % 6, minute=0, second=0, microsecond=0)
+    comments, cut = page_list(gh, f"repos/{repo}/issues/comments?since={iso(floor)}")
+    comments = [c for c in comments if (parse(c.get("updated_at") or c.get("created_at")) or now) >= since_live]
     if cut:
         problems.append(f"comments since {iso(since_live)}: more than {MAX_PAGES * 100}, the rest not read")
-    events, cut = page_list(gh, f"repos/{repo}/issues/events",
-                            stop=lambda e: (parse(e.get("created_at")) or now) < since_touch)
+    events, cut = newest_first(sw, "events", f"repos/{repo}/issues/events", since_touch,
+                               lambda e: parse(e.get("created_at")), EVENT_KEYS)
     if cut:
         problems.append(f"issue events: more than {MAX_PAGES * 100} since {iso(since_touch)}, the rest not read")
     touches = touch_times(comments, events, rules.BOT_LOGIN)
@@ -965,7 +998,8 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             keeps |= {m.group("branch") for m in KEEP.finditer(c.get("body") or "")}
 
     # PRs: the sweep's own reading
-    open_list = gh.paged(f"repos/{repo}/pulls?state=open")
+    open_list = sw.listing(f"repos/{repo}/pulls?state=open") if hasattr(sw, "listing") else \
+        gh.paged(f"repos/{repo}/pulls?state=open")
     open_prs = [p["number"] for p in open_list]
     open_heads = {(p.get("head") or {}).get("ref") or "": p["number"] for p in open_list
                   if (((p.get("head") or {}).get("repo") or {}).get("full_name") or "") == repo}
@@ -991,8 +1025,8 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
                         f.head_committed_at, rules.needs_review(f, author, sw.team), reviewer, touched))
 
     # live branches: the repo's push activity, newest first (a deletion after the last push means gone)
-    acts, cut = cursor_pages(repo, f"repos/{repo}/activity?time_period=week&per_page=100",
-                             stop=lambda a: (parse(a.get("timestamp")) or now) < since_live)
+    acts, cut = newest_first(sw, "activity", f"repos/{repo}/activity?time_period=week&per_page=100", since_live,
+                             lambda a: parse(a.get("timestamp")), ACTIVITY_KEYS, cursor=True)
     acts = [a for a in acts if (parse(a.get("timestamp")) or now) >= since_live]
     if cut:
         problems.append(f"repo activity: more than {MAX_PAGES * 100} entries this week, the rest not read")

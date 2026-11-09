@@ -86,8 +86,10 @@ def decide(f: rules.PrFacts, token: bool = True, key: bool = True) -> rules.Merg
 
 
 def ctx(comments=()):
+    # fresh: these facts stand for GitHub's own uncached answers, so steer_pr merges on them without the re-read
+    # (J-072; test_sweep_calls.FreshMerge tests the re-read itself)
     return {"job": "J-056", "issue": None, "proof_url": "https://x/runs/7", "run_id": 7, "proof_done_at": T1,
-            "comments": list(comments), "title": "t", "body": "", "files": [], "updated_at": T2}
+            "comments": list(comments), "title": "t", "body": "", "files": [], "updated_at": T2, "fresh": True}
 
 
 class RecordingGH:

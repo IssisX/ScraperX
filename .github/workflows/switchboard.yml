@@ -200,7 +200,8 @@ jobs:
           esac
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
       - name: Save the ETag cache (J-072)
-        if: always() && hashFiles('etags.json') != ''
+        # never from a dry run: it must not consume or advance the sweep state (switch.py saves no file then either)
+        if: always() && hashFiles('etags.json') != '' && inputs.dry_run != true
         uses: actions/cache/save@v4
         with:
           path: etags.json
@@ -313,9 +314,26 @@ jobs:
           esac
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
       - name: Save the ETag cache (J-072)
-        if: always() && hashFiles('etags.json') != ''
+        # never from a dry run: it must not consume or advance the sweep state (switch.py saves no file then either)
+        if: always() && hashFiles('etags.json') != '' && inputs.dry_run != true
         uses: actions/cache/save@v4
         with:
           path: etags.json
           key: switchboard-etags-steer-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Prune the older ETag caches (J-072)
+        # One entry a run per job (about 300 a day, each up to ~11 MB compressed) would fill the repo's 10 GB
+        # Actions cache and evict other workflows' caches. Keep each job's 3 newest; delete the rest. This job
+        # already holds actions: write; the ask job's token stays read-only.
+        if: always() && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for part in ask steer; do
+            gh api "repos/$REPO/actions/caches?key=switchboard-etags-$part-&sort=created_at&direction=desc&per_page=100" \
+              --jq '.actions_caches[3:][].id' | while read -r id; do
+                gh api -X DELETE "repos/$REPO/actions/caches/$id" > /dev/null || echo "::warning::cache $id not deleted"
+              done
+          done
 
