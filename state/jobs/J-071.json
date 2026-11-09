@@ -9,15 +9,15 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T21:15:38Z",
+ "deadline": null,
  "head": "5f3cf5b8f1f9724dc997e6130b4bc07cc18a07a1",
  "issue": 338,
  "job": "J-071",
  "landed": {
   "builder/j071-s2": [
    "5f3cf5b8f1f9724dc997e6130b4bc07cc18a07a1",
-   "",
-   "2026-11-09T19:10:34Z"
+   "in trunk",
+   "2026-11-09T20:56:16Z"
   ],
   "claude/integrate-j071-ci-timeout": [
    "1db855d65f497782c8d66fe1e108749ddef7c601",
@@ -131,7 +131,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T13:59:46Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T20:56:16Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-09T22:15:38Z",
    "dead_lettered": null,
@@ -155,7 +158,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T16:30:01Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T20:56:16Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-09T22:15:38Z",
    "dead_lettered": null,
@@ -179,7 +185,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:15:04Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T20:56:16Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-09T22:15:38Z",
    "dead_lettered": null,
@@ -203,7 +212,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:40:40Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T20:56:16Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-09T20:15:38Z",
    "dead": "2026-11-09T22:15:38Z",
    "dead_lettered": null,
@@ -223,8 +235,8 @@
    "what": "ask from Claude on #338"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339",
  "owner": "grok_bot",
  "pr": 363,
  "pr_done": "merged",
@@ -232,6 +244,6 @@
   363
  ],
  "review": "LAND",
- "state": "working",
- "updated": "2026-11-09T20:15:38Z"
+ "state": "merged",
+ "updated": "2026-11-09T20:56:16Z"
 }

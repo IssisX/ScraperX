@@ -38,8 +38,9 @@
    "attempts": 0,
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
-   "dead_lettered": "2026-11-09T18:42:32Z",
-   "due": "2026-11-09T18:05:20Z",
+   "dead": "2026-11-10T00:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T22:17:00Z",
    "id": "O-6fe8c9ad",
    "kind": "fix",
    "last_error": "",
@@ -50,7 +51,7 @@
    "thread": 0,
    "to": "claude",
    "version": "open-pr:512c76ea5d72481823547a436e86bf6b156ed565",
-   "via": "api",
+   "via": "session",
    "what": "`claude/integrate-j051-asks-since` is green with no PR: open one"
   }
  ],

@@ -29,6 +29,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
+   "missing": 0,
    "ref": "ASK|ask on #241",
    "sends": 0,
    "thread": 241,
@@ -46,5 +47,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T17:39:57Z"
+ "updated": "2026-11-09T20:56:16Z"
 }
