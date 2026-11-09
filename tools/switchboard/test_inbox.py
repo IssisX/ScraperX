@@ -571,7 +571,8 @@ class InboxPrExcluded(unittest.TestCase):
         gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=lambda path: {"state": "open"},
                                    comment=lambda number, body, what="": None,
                                    write=lambda method, path, body=None, what="": closed.append(path))
-        me = types.SimpleNamespace(gh=gh, out=lambda line: None)
+        me = types.SimpleNamespace(gh=gh, out=lambda line: None,   # J-072: both open, in the open-PR listing
+                                   listing=lambda path: [{"number": 282}, {"number": 43}, {"number": 300}])
         switch.Switch.close_superseded(me, types.SimpleNamespace(number=300, draft=False),
                                        {"body": "Supersedes #282 and #43"})
         self.assertEqual(closed, ["repos/IssisX/ScraperX/pulls/43"])
@@ -627,6 +628,30 @@ class AskToClaude(unittest.TestCase):
     def test_a_closed_thread_gives_none(self):
         gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[switch.BOARD_ISSUE])
         self.assertEqual(items_of(gh), [])
+
+    def test_the_ledgers_notice_to_claude_gives_one_item(self):
+        # J-072: notice 6746048774 on #340 (7 Claude items) never reached the inbox: bot comments were all skipped
+        notice = ("To Claude: 7 item(s) past deadline\n\n- x: green, no PR: open one\n\n"
+                  "<!-- switchboard:ledger keys=ab12 -->")
+        (it,) = items_of(self.gh_with(body=notice, login=rules.BOT_LOGIN, number=340, cid=6746048774))
+        self.assertEqual((it.kind, it.target, it.head), ("TO-CLAUDE", "#340", "6746048774"))
+        self.assertIn("7 item(s) past deadline", it.line)
+        for body in ("To Grok: 1 item(s) past deadline\n\n<!-- switchboard:ledger keys=ab -->",   # not Claude's
+                     "To Claude: a bot comment with no ledger marker"):
+            self.assertEqual(items_of(self.gh_with(body=body, login=rules.BOT_LOGIN, number=340)), [], body)
+        forged = notice   # the marker in a non-bot comment changes nothing: it is read as any ask
+        self.assertEqual([i.kind for i in items_of(self.gh_with(body=forged, number=340))], ["TO-CLAUDE"])
+
+    def test_a_codex_ask_is_the_integrators_to_post(self):
+        tag = switch.MARK.format(kind="ask-codex", pr=256, head=HEAD)
+        marked = comment(5, 256, f"Switchboard: a Codex review of this head is due.\n\n{tag}", login=BOT)
+        s = steered(ref="claude/integrate-j042", comments=[marked])
+        items = [it for it in items_of(FakeGH(), s) if it.kind == "CODEX-ASK"]
+        self.assertEqual(len(items), 1)
+        self.assertIn("post codex review with an at-sign in front on #256", items[0].line)
+        old = comment(5, 256, switch.MARK.format(kind="ask-codex", pr=256, head=OLD_HEAD), login=BOT)
+        self.assertFalse([it for it in items_of(FakeGH(), steered(ref="claude/integrate-j042", comments=[old]))
+                          if it.kind == "CODEX-ASK"])   # an ask for an older head is no item
 
 
 class MuseRouted(unittest.TestCase):

@@ -291,7 +291,8 @@ class Board(unittest.TestCase):
         ctx = {"body": "Supersedes #43, #44 and #9"}
         for draft, closed in ((False, [43]), (True, [])):
             gh, lines = GH(), []
-            me = types.SimpleNamespace(gh=gh, out=lines.append)
+            # J-072: which are open comes from the open-PR listing (#44 is closed, #9 is not a PR)
+            me = types.SimpleNamespace(gh=gh, out=lines.append, listing=lambda path: [{"number": 43}, {"number": 100}])
             facts = types.SimpleNamespace(number=100, draft=draft)
             switch.Switch.close_superseded(me, facts, ctx)
             self.assertEqual(gh.comments, closed)

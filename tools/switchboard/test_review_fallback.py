@@ -6,6 +6,7 @@ No network, no clock, no files: GitHub, the rule check and the time are given.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import pathlib
 import sys
@@ -49,6 +50,10 @@ class FakeGH:
 
     def __init__(self, thread=()):
         self.thread, self.posted, self.writes, self.gets = list(thread), [], [], []
+
+    @contextlib.contextmanager
+    def fresh(self):   # ghapi.GitHub.fresh: this stub has no cache, so every read is already GitHub's own
+        yield self
 
     def paged(self, path, key=""):
         return list(self.thread)
@@ -348,7 +353,9 @@ class PoolSteer(unittest.TestCase):
 
 
 class CodexAsk(unittest.TestCase):
-    def test_codex_is_asked_on_the_pr_with_a_mention(self):
+    def test_codex_is_asked_on_the_pr_without_the_bots_mention(self):
+        # J-072: the switchboard's own "@codex review" never woke Codex (2 of 2, #191 and #150): the ask is recorded
+        # on the PR with its mark, and the integrator's inbox gets a CODEX-ASK item to post the mention itself
         team = rules.team_from_config(dict(AGENTS, agents=dict(AGENTS["agents"], codex={
             "vendor": "openai", "names": ["Codex"], "branch_prefixes": ["codex/"]}),
             review=dict(AGENTS["review"], pool=["codex", "muse"], fallback_after_hours=1)))
@@ -360,8 +367,9 @@ class CodexAsk(unittest.TestCase):
         self.assertEqual(len(gh.posted), 1)
         where, body = gh.posted[0]
         self.assertEqual(where, 10)
-        self.assertTrue(body.startswith("@codex review"))
+        self.assertNotIn("@", body)
         self.assertIn("ask-codex", body)
+        self.assertIn("The integrator posts the Codex review command", body)
 
 
 class PoolFallbackAndLoad(unittest.TestCase):
@@ -426,7 +434,7 @@ class CodexFirst(unittest.TestCase):
         sw = make(gh, team=self.TEAM)
         sw.api_ok = lambda c: api_ok
         sw.review_load = lambda: ({}, {})
-        sw.steer_pr(facts, ctx(comments=list(thread)))
+        sw.steer_pr(facts, dict(ctx(comments=list(thread)), fresh=True))   # GitHub's own facts (J-072: no re-read)
         who = sw.pooled_reviewer(facts, ctx(comments=list(thread)), "anthropic")[1] if rules.needs_review(facts, "anthropic", self.TEAM) else ""
         return gh, who
 
