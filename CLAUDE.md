@@ -95,7 +95,7 @@ him again.
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
   a BLOCK means it is protected.
 - Only real physics, gameplay or test failures block a merge, never wording or commit messages.
-- One owner per job and per function; one integrate branch per job, reused; small fixes ride one batched PR, never one each (11-09). A PR replaced by newer work is
+- One owner per job and per function; one integrate branch per job, reused; small fixes share one PR (11-09). A PR replaced by newer work is
   closed the same hour.
 - Cheap agents may run tests, builds and the rule check; never delete branches, force-push, push to `main`
   or land work.
@@ -109,7 +109,7 @@ him again.
   `helper` or `helper-max`; Cory 11-06), never a separate session: more than two when the work needs it (11-09), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
   max till the system works (11-09); raise it only when he throttles; `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
-- **Context:** the window is 833k (Cory 11-09: compacts near 650k; `/autocompact` sets it live; 11-06 throttle: every call rereads the context);
+- **Context:** the window is 833k (compacts near 650k; `/autocompact` sets it live; every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
