@@ -941,7 +941,7 @@ jobs:
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/matron_figure_test.gd 2>&1 | tee artifacts/matron-figure.log
           if grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log; then exit 1; fi
-          test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 21
+          test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 22
 
       - name: The Matron's feet plant when she walks
         shell: bash
