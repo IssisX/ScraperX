@@ -8,7 +8,7 @@
  *   IN   Mail whose subject starts `MUSE_TO_CLAUDE:` (from an allowed sender, proven by more than the
  *        forgeable From line: see authentic_) is posted as a comment:
  *        on #N when the subject names `#N`, else on the job issue `J-NNN` the subject names, else on
- *        the board #107. Its first line is `**Muse (via email bridge): <subject>**`, so a subject like
+ *        the board #340. Its first line is `**Muse (via email bridge): <subject>**`, so a subject like
  *        `MUSE_TO_CLAUDE: review of #100 @ 1a2b3c4d: LAND` is a verdict the switch reads.
  *
  * Setup (once): Editor > Services (+) > add "Gmail API" (identifier Gmail); Project Settings > Script
@@ -26,7 +26,7 @@
  */
 
 var DEFAULT_REPO = 'IssisX/ScraperX';
-var BOARD_ISSUE = 107;
+var BOARD_ISSUE = 340;
 var WAKE_LABEL = 'wake:muse';
 var DONE_LABEL = 'muse-bridged';
 var BOT_LOGIN = 'github-actions[bot]';
@@ -147,7 +147,7 @@ function inbound_() {
       var rest = subject.slice(at + 'MUSE_TO_CLAUDE:'.length).replace(/[*\r\n`]/g, ' ').replace(/\s+/g, ' ').trim();
       var target = 0;
       var num = rest.match(/#(\d{1,6})\b/);
-      var job = rest.match(/\bJ-\d{3,}\b/);
+      var job = rest.match(/\bJ-\d{3,}[a-z]?\b/);  // J-044b is its own job, like the switchboard reads it
       if (num) {
         target = Number(num[1]);
       } else if (job) {

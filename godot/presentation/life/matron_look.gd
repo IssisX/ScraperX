@@ -9,6 +9,17 @@ extends RefCounted
 const DIR := "res://presentation/life/matron/"
 # How strongly the skin's wrinkle height becomes its normal map.
 const WRINKLE_DEPTH := 3.0
+# The world's rule for a porous surface (main_geometry.gd POROUS_SPECULAR):
+# this renderer's sky reflection adds a rough surface's sheen whatever its
+# colour, so at the default specular (0.5) her cloth, stockings and hair read
+# milky and washed out next to the world. Cloth and hair take the world's
+# porous level; skin keeps its own (f0 about 0.028, specular 0.35).
+const POROUS_SPECULAR := 0.22
+const SKIN_SPECULAR := 0.35
+# Her skin's own tone over skin_a.jpg: the bare texture read chalky next to
+# the world; Cory picked this, the darkest of three, by eye (11-07). The
+# exposure's tints multiply on top of it.
+const SKIN_TONE := Color(0.8, 0.68, 0.6)
 
 var _skin: StandardMaterial3D
 var _cloth: StandardMaterial3D
@@ -165,6 +176,10 @@ func build() -> void:
 		"placket": _cloth, "skirt_cloth": _cloth, "belt": _cloth, "cap": _cloth, "buttons": button, "buckle": steel,
 		"penlight": steel, "pins": steel, "shoes": shoe, "eyes": _eye, "cornea": cornea, "mouth": mouth, "teeth": teeth,
 		"brows": brow, "lashes": lash, "hair": _hair}
+	_skin.metallic_specular = SKIN_SPECULAR
+	_skin.albedo_color = SKIN_TONE
+	for porous: StandardMaterial3D in [_cloth, stocking, shoe, mouth, _hair, brow, lash]:
+		porous.metallic_specular = POROUS_SPECULAR
 
 
 # Each of the body's meshes gets its part's material (a mesh the look does
@@ -239,7 +254,7 @@ func apply_exposure(exposure: float) -> void:
 		return
 	_applied_exposure = e
 	var tints := exposure_tints(e)
-	_skin.albedo_color = tints["skin"]
+	_skin.albedo_color = SKIN_TONE * (tints["skin"] as Color)
 	_skin.roughness = lerpf(0.6, 0.42, e)   # clammy, a waxy sheen
 	_cloth.albedo_color = tints["cloth"]
 	_eye.albedo_color = Color.WHITE.lerp(Color(1.0, 0.84, 0.8), e)

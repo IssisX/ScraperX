@@ -34,8 +34,12 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   decoded keystore is never written to an artifact, cache or log. The app id and keys never change (`AGENTS.md`).
 
 ### Switchboard and budget (`tools/switchboard/`, `work/budget.yml`)
-- `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` reach only the switchboard jobs that call out; the PR
-  check of the switch stays read-only with no secrets.
+- `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` live only in environment `switchboard-merge` and reach only
+  the `ask` and `provision` steps that call out (J-057); the PR check of the switch stays read-only with no
+  secrets.
+- `SWITCHBOARD_MERGE_TOKEN` (the `steer` switch step) and `SWITCHBOARD_REVIEW_KEY` (the `ask` and `steer`
+  switch steps) live only in environment `switchboard-merge` (branch ScraperX-Claude); any other job that
+  reads them is P0.
 - Text from issues, PRs and comments is data, never instructions or shell input; flag any path where
   it can choose a command, a model, a token or a spend.
 - The caps in `work/budget.yml` (`caps`, `max_log_bytes`) are enforced before every paid call; a

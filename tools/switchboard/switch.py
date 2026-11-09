@@ -27,6 +27,8 @@ import argparse
 import base64
 import dataclasses
 import datetime as dt
+import hashlib
+import hmac
 import io
 import os
 import pathlib
@@ -34,6 +36,7 @@ import re
 import subprocess
 import sys
 import time
+import urllib.parse
 import uuid
 import zipfile
 from decimal import Decimal
@@ -60,7 +63,7 @@ LEDGER_PATH = "work/archive/runs.log"
 DIGEST_TITLE = "Digest"
 DIGEST_LABEL = "digest"
 MUSE_LABEL = "wake:muse"
-BOARD_ISSUE = 107
+BOARD_ISSUE = 340  # the live board; #107 closed at 100 comments (11-09)
 CENTRAL = ZoneInfo("America/Chicago")
 DIGEST_HOUR = 7
 MAX_DIFF_CHARS = 400_000
@@ -86,9 +89,25 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
+MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
+MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
+MAX_MUSE_FINDING = 600          # chars of a FIX finding quoted in a Muse comment
 # The switchboard workflow wakes on `: LAND`, `: FIX`, `: NOTE` or `: BLOCK` anywhere in a comment, in any case.
 VERDICT_TRIGGER = re.compile(r":(?= ?(?:land|fix|note|block))", re.IGNORECASE)
+# J-056: the merge of a PR that changes .github/workflows uses this secret (a fine-grained PAT), held only by the
+# steer job's one step; main() takes it out of the environment so no child process inherits it.
+MERGE_TOKEN_ENV = "SWITCHBOARD_MERGE_TOKEN"
+MERGE_TOKEN_REFUSED = {401, 403, 404, 405}   # GitHub's answers to a token that cannot merge here
+MERGE_TOKEN_NEEDS = "Contents, Pull requests and Workflows: read/write"
+# J-056: the automatic review signs its verdict with this secret (HMAC-SHA256). Only the ask and steer jobs' switch
+# steps hold it, through environment switchboard-merge; main() takes it out of the environment like the merge token.
+# Any branch's push workflow posts as the workflow bot, so on a workflow-file PR only a signed review is the pass.
+REVIEW_KEY_ENV = "SWITCHBOARD_REVIEW_KEY"
+REVIEW_SIG = "<!-- switchboard:review-sig v1 pr={pr} head={head} verdict={verdict} mac={mac} -->"
+REVIEW_SIG_LINE = re.compile(r"<!-- switchboard:review-sig v1 pr=(?P<pr>\d{1,9}) head=(?P<head>[0-9a-f]{40}) "
+                             r"verdict=(?P<verdict>LAND|FIX|NOTE|NONE) mac=(?P<mac>[0-9a-f]{64}) -->")
 MAX_FACT_LINES = 25                   # rule_check lines quoted in a review ask
 ACT_WITHIN_DAYS = 3                   # older heads get no new review or ask: J-030 claims or closes them
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"
@@ -147,6 +166,42 @@ def red_jobs(proof: str) -> list[str]:
     return proof[len("red: "):].split(", ") if proof.startswith("red: ") else []
 
 
+def http_status(detail: str) -> int:
+    """The HTTP status in gh's error text ("gh: Not Found (HTTP 404)"), 0 when it names none."""
+    m = re.search(r"\bHTTP (\d{3})\b", detail)
+    return int(m.group(1)) if m else 0
+
+
+class MergeTokenRefused(RuntimeError):
+    """GitHub refused the merge token on a workflow-file PR (J-056): the PR becomes merge-by-hand, with why."""
+
+
+def review_mac(key: str, repo: str, pr: int, head: str, verdict: str) -> str:
+    """HMAC-SHA256 under the review key of one automatic review's canonical message (J-056): the version, the repo,
+    the PR, the whole head sha and the verdict ("NONE" for a security pass that gave none), one per line."""
+    msg = "\n".join(("switchboard-review-sig", "v1", repo, str(pr), head, verdict))
+    return hmac.new(key.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def review_sig(key: str, repo: str, pr: int, head: str, verdict: str) -> str:
+    """The last line of an automatic review's comment: its MAC, never the key."""
+    return REVIEW_SIG.format(pr=pr, head=head, verdict=verdict, mac=review_mac(key, repo, pr, head, verdict))
+
+
+def signed_for(body: str, key: str, repo: str, pr: int, head: str, verdict: str = "") -> bool:
+    """The comment's last line is a review-sig line for this PR, this whole head and (when given) this verdict, and
+    its MAC checks under `key`. Never without a key."""
+    m = REVIEW_SIG_LINE.fullmatch(body.rstrip().rsplit("\n", 1)[-1].strip()) if key else None
+    if not m or int(m["pr"]) != pr or m["head"] != head or (verdict and m["verdict"] != verdict):
+        return False
+    return hmac.compare_digest(m["mac"], review_mac(key, repo, pr, head, m["verdict"]))
+
+
+def signed_verdict(v: rules.Verdict) -> str:
+    """The verdict review() signed for this parsed one: as posted, before a FIX without a repro reads as NOTE."""
+    return "FIX" if v.downgraded else v.verdict
+
+
 def inbox_key(kind: str, target: str, head: str) -> str:
     """One item's key: its kind, its PR (#N) or branch, and the head sha. A hash, so branch text never reaches the marker."""
     import hashlib
@@ -162,16 +217,27 @@ class Steered:
     merge_note: str = ""   # why a MERGE did not happen; "" once merged, or in a dry run
 
 
+def owner_of(ref: str) -> str:
+    """Whose work a branch is: Muse's (fb-bot/), Claude's (claude/), or "" when neither routes it (J-052)."""
+    return "muse" if ref.startswith("fb-bot/") else "claude" if ref.startswith("claude/") else ""
+
+
 @dataclasses.dataclass(frozen=True)
 class InboxItem:
     kind: str     # one of INBOX_ORDER
     target: str   # "#277", or the branch name
     head: str     # the head sha
     line: str     # the inbox line, without the leading "- "
+    dest: str = "claude"   # who it goes to: "muse", "claude", or "both" (J-052)
+    finding: str = ""      # for a FIX: the finding's first 600 chars and its link, for Muse's comment
 
     @property
     def key(self) -> str:
         return inbox_key(self.kind, self.target, self.head)
+
+    @property
+    def muse_key(self) -> str:
+        return inbox_key("muse-" + self.kind, self.target, self.head)
 
 
 def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) -> str:
@@ -186,6 +252,8 @@ def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) ->
 
 class Switch:
     auto_pr_failed: tuple[InboxItem, ...] = ()   # this sweep's AUTO-PR-FAILED items, for the inbox (J-051)
+    merge_token: str = ""                        # SWITCHBOARD_MERGE_TOKEN, set by main() in the steer job only (J-056)
+    review_key: str = ""                         # SWITCHBOARD_REVIEW_KEY, set by main() in the ask and steer jobs (J-056)
 
     def __init__(self, gh: GitHub, root: pathlib.Path, now: dt.datetime, out=print):
         self.gh, self.root, self.now, self.out = gh, root, now, out
@@ -227,8 +295,13 @@ class Switch:
         reviews = self.gh.paged(f"repos/{self.gh.repo}/pulls/{number}/reviews")
         out = []
         for c in comments:
-            v = rules.parse_verdict(c.get("body") or "", c["created_at"], c["user"]["login"], self.team) or \
-                rules.parse_codex_state(c.get("body") or "", c.get("updated_at") or c["created_at"], c["user"]["login"])
+            body = c.get("body") or ""
+            v = rules.parse_verdict(body, c["created_at"], c["user"]["login"], self.team) or \
+                rules.parse_codex_state(body, c.get("updated_at") or c["created_at"], c["user"]["login"])
+            # J-056: an automatic review whose MAC checks for this PR, the whole head it names and its verdict.
+            if v and rules.is_api_review(v) and signed_for(body, self.review_key, self.gh.repo, number, v.sha,
+                                                           signed_verdict(v)):
+                v = dataclasses.replace(v, signed=True)
             if v:
                 out.append(v)
         for r in reviews:
@@ -324,9 +397,17 @@ class Switch:
     def stale(self, facts: rules.PrFacts) -> bool:
         return rules.is_stale(facts.head_committed_at, self.now.strftime("%Y-%m-%dT%H:%M:%SZ"), ACT_WITHIN_DAYS)
 
-    def marked(self, comments: list[dict], kind: str, pr: int, head: str) -> bool:
+    def marked(self, comments: list[dict], kind: str, pr: int, head: str, signed: bool = False) -> bool:
+        """A bot comment carries this mark. `signed` (the security pass, with the review key; J-056): only on a comment
+        the switch signed for this head, so a forged mark cannot stop the real review."""
         tag = MARK.format(kind=kind, pr=pr, head=head)
-        return any(tag in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN for c in comments)
+        return any(tag in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN and
+                   (not signed or self.signed_mark(c.get("body") or "", pr, head)) for c in comments)
+
+    def signed_mark(self, body: str, pr: int, head: str) -> bool:
+        """Its MAC covers this head and the comment's own verdict: a review, or the security pass's note ("NONE")."""
+        v = rules.parse_verdict(body, "", rules.BOT_LOGIN, self.team)
+        return signed_for(body, self.review_key, self.gh.repo, pr, head, signed_verdict(v) if v else "NONE")
 
     # ---------- the ledger (append-only, on its own branch so trunk is never written per call) ----------
     def ledger(self) -> tuple[str, str | None]:
@@ -462,15 +543,16 @@ class Switch:
     def steer_pr(self, facts: rules.PrFacts, ctx: dict, record: list | None = None) -> None:
         """The merge rule and the review asks for one PR; `record` (the sweep's list) gets what was decided."""
         author = self.team.vendor_of_branch(facts.head_ref)
-        d = rules.merge_decision(facts, author, self.team)
+        token, key = bool(self.merge_token), bool(self.review_key)
+        d = rules.merge_decision(facts, author, self.team, token, key)
         if d.action == "WAIT" and d.reasons == ("GitHub is still computing mergeability",):
             time.sleep(3)   # the first read starts GitHub's computation; read once more
             facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
-            d = rules.merge_decision(facts, author, self.team)
+            d = rules.merge_decision(facts, author, self.team, token, key)
         if d.action in ("MERGE", "HUMAN-MERGE"):
             block, never = self.rule_check_block(facts.number, facts.head_sha)
             facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
-            d = rules.merge_decision(facts, author, self.team)
+            d = rules.merge_decision(facts, author, self.team, token, key)
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
         seen = Steered(facts, ctx, d)
@@ -478,7 +560,11 @@ class Switch:
             record.append(seen)
         if d.action == "MERGE":
             seen.merge_note = "the merge step raised an error (see the switchboard log)"   # kept if it raises
-            seen.merge_note = self.merge(facts, ctx, d)
+            try:
+                seen.merge_note = self.merge(facts, ctx, d)
+            except MergeTokenRefused as err:   # the inbox lists it as MERGE-BY-HAND, with GitHub's status (J-056)
+                seen.decision, seen.merge_note = rules.MergeDecision("HUMAN-MERGE", (str(err),), d.land_by), ""
+                self.out(f"HUMAN-MERGE #{facts.number}: {err}")
         if rules.needs_review(facts, author, self.team) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
         elif rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
@@ -595,19 +681,37 @@ class Switch:
         return self._load
 
     def merge(self, facts: rules.PrFacts, ctx: dict, d: rules.MergeDecision) -> str:
-        """Merge at the head. Returns "" when merged (or in a dry run), else why not."""
-        got = self.gh.write("PUT", f"repos/{self.gh.repo}/pulls/{facts.number}/merge",
-                            {"sha": facts.head_sha, "merge_method": "merge",
-                             "commit_title": f"Merge pull request #{facts.number} from {facts.head_ref} (switchboard)"},
-                            f"merge #{facts.number} at @{facts.head_sha[:8]}")
+        """Merge at the head. Returns "" when merged (or in a dry run), else why not.
+
+        A PR that changes .github/workflows merges with the merge token (J-056): the workflow token cannot. That
+        merge pushes to trunk as a person's would, so the push starts the trunk proof and none is dispatched.
+        GitHub refusing the token (401, 403, 404 or 405) raises MergeTokenRefused, which never names the token."""
+        workflows = facts.touches_workflows
+        if workflows and not self.merge_token:
+            return "merge not done: it changes .github/workflows and no merge token is set"
+        put = (f"repos/{self.gh.repo}/pulls/{facts.number}/merge",
+               {"sha": facts.head_sha, "merge_method": "merge",
+                "commit_title": f"Merge pull request #{facts.number} from {facts.head_ref} (switchboard)"},
+               f"merge #{facts.number} at @{facts.head_sha[:8]}" + (" with the merge token" if workflows else ""))
+        try:
+            got = self.gh.write("PUT", *put, token=self.merge_token) if workflows else self.gh.write("PUT", *put)
+        except GitHubError as err:
+            code = http_status(err.detail)
+            if workflows and code in MERGE_TOKEN_REFUSED:
+                raise MergeTokenRefused(f"GitHub refused the merge token (HTTP {code}): {MERGE_TOKEN_ENV} needs "
+                                        f"{MERGE_TOKEN_NEEDS} on {self.gh.repo}") from None
+            raise
         if not self.gh.dry_run and not (got or {}).get("merged"):
             self.out(f"NOTE  #{facts.number} merge not done: {(got or {}).get('message', '')[:200]}")
             return f"merge not done: {(got or {}).get('message', '')[:200]}"
-        # A merge by the workflow token starts no push workflow, so the trunk proof is dispatched.
-        self.gh.write("POST", f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/dispatches",
-                      {"ref": rules.TRUNK}, f"dispatch the proof on {rules.TRUNK}")
+        if workflows:
+            proof = "Its push to trunk starts the trunk proof."
+        else:   # a merge by the workflow token starts no push workflow, so the trunk proof is dispatched
+            self.gh.write("POST", f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/dispatches",
+                          {"ref": rules.TRUNK}, f"dispatch the proof on {rules.TRUNK}")
+            proof = "The trunk proof is dispatched."
         line = (f"Switchboard, {central(self.now)}: merged #{facts.number} at @{facts.head_sha[:8]} "
-                f"({'; '.join(d.reasons)}; proof {ctx['proof_url']}). The trunk proof is dispatched. "
+                f"({'; '.join(d.reasons)}; proof {ctx['proof_url']}). {proof} "
                 f"The owner can overturn any merge.")
         self.gh.comment(facts.number, line, f"merged-note on #{facts.number}")
         if ctx.get("issue"):
@@ -727,6 +831,65 @@ class Switch:
         self.gh.comment(INBOX_PR, body, f"inbox: {len(shown)} new item(s) on #{INBOX_PR}")
         return len(shown)
 
+    def muse_keys(self, comments: list[dict]) -> list[str]:
+        """The muse-<KIND> keys in the switch's own muse markers on these comments, oldest first."""
+        keys: list[str] = []
+        for c in comments:
+            if (c.get("user") or {}).get("login") == rules.BOT_LOGIN:
+                for m in MUSE_KEYS.finditer(c.get("body") or ""):
+                    keys += [k for k in m.group(1).split(",") if k]
+        return list(dict.fromkeys(keys))
+
+    def muse(self, steered: list[Steered]) -> int:
+        """Muse's items (J-052): one comment per fb-bot/ PR or branch with new items, labeled wake:muse so
+        the bridge mails it. A muse-<KIND> key is sent once; a new head is a new key. At most
+        MAX_MUSE_COMMENTS per sweep; the rest come next sweep. Returns how many comments were posted.
+        A key counts as delivered only when its label write succeeded: the marker is edited into the
+        comment after the label lands, so a failed label leaves no marker and the next sweep retries."""
+        reported: set[str] = set()
+        for s in steered:
+            reported |= set(self.muse_keys(s.ctx.get("comments") or []))
+        items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
+        if any(not it.target.startswith("#") for it in items):
+            reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")))
+        seen, new = set(reported), []
+        for it in items:
+            if it.muse_key not in seen:
+                seen.add(it.muse_key)
+                new.append(it)
+        if not new:
+            self.out("MUSE        nothing new")
+            return 0
+        jobs = {f"#{s.facts.number}": s.ctx.get("job") or s.facts.head_ref for s in steered}
+        by_target: dict[str, list[InboxItem]] = {}
+        for it in new:
+            by_target.setdefault(it.target, []).append(it)
+        posted = 0
+        for target, group in sorted(by_target.items()):
+            if posted >= MAX_MUSE_COMMENTS:
+                break
+            where = BOARD_ISSUE if not target.startswith("#") else int(target[1:])
+            name = jobs.get(target) or target
+            kinds = " ".join(sorted({it.kind for it in group}, key=INBOX_ORDER.index))
+            lines = [f"CLAUDE_TO_MUSE: {name} {kinds} on #{where} @ {group[0].head[:8]}", ""]
+            for it in group:
+                lines.append(f"- {it.line}")
+                lines += [f"  {line}" for line in it.finding.split("\n")] if it.finding else []
+            body = re.sub(r"@(?=\w)", "", "\n".join(lines))   # mentions would ping; "@ <sha>" is not one
+            marked = f"{body}\n\n{MUSE_MARK.format(keys=','.join(it.muse_key for it in group))}"
+            self.out(marked)
+            # The marker goes in AFTER the label lands: a failed label leaves no marker, so the next
+            # sweep retries. (Label first is not enough: the bridge could take it before the comment exists.)
+            resp = self.gh.comment(where, body, f"muse: {len(group)} new item(s) on #{where}")
+            self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
+                          f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
+            cid = (resp if isinstance(resp, dict) else {}).get("id")
+            if cid is not None:
+                self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{cid}", {"body": marked},
+                              f"muse: mark #{where} delivered")
+            posted += 1
+        return posted
+
     def inbox_reported(self) -> list[str]:
         """The keys in the switch's own inbox markers, oldest first. Only the inbox PR's newest 200 comments are
         read: the newest marker carries every earlier key forward. A marker by any other login never counts."""
@@ -742,29 +905,85 @@ class Switch:
 
     def inbox_items(self, steered: list[Steered], reported: frozenset[str]) -> list[InboxItem]:
         """Every item that needs the integrator now, listed before or not, in INBOX_ORDER."""
+        return self._items(steered, reported, "")
+
+    def muse_items(self, steered: list[Steered], reported: frozenset[str]) -> list[InboxItem]:
+        """Muse's items (J-052): the fb-bot/ items, keyed muse-<KIND>, in INBOX_ORDER."""
+        return self._items(steered, reported, "muse-")
+
+    def _items(self, steered: list[Steered], reported: frozenset[str], prefix: str) -> list[InboxItem]:
+        """Both audiences' items from one read: prefix "" is the integrator's, "muse-" is Muse's (J-052)."""
         since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
         runs = self.gh.paged(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{since}",
                              "workflow_runs")
         items: list[InboxItem] = []
         for s in steered:
-            items += self.pr_inbox_items(s, runs, reported)
-        items += self.branch_inbox_items(runs, reported)
-        items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
+            items += self.pr_inbox_items(s, runs, reported, prefix)
+        items += self.branch_inbox_items(runs, reported, prefix)
+        if not prefix:
+            items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
+            items += self.ask_inbox_items(reported)
         return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
 
-    def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str]) -> list[InboxItem]:
-        """One PR's items: (a) MERGE-BY-HAND, (b) NOT-MERGED, (c) RED-TWICE and RED-STUCK, (d) FIX on a claude/*
-        PR, and (f) QUIET when nothing else is."""
+    def ask_inbox_items(self, reported: frozenset[str]) -> list[InboxItem]:
+        """TO-CLAUDE (J-052): an ask to the integrator in a comment on an open thread, once per comment id.
+        The first line holds `To Claude` or `proposal`; the bridge's `**Muse (via email bridge): <subject>**`
+        first line counts, since the subject is in it. Every agent posts as IssisX, so the author is read
+        from the body: Claude's posts end with its footer, the switchboard's own are its login, Codex's
+        start with `<!-- codex`."""
+        since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
+        open_threads = {int(i["number"]) for i in
+                        self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")}
+        out: list[InboxItem] = []
+        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/comments?since={since}"):
+            body = c.get("body") or ""
+            if body.lstrip().startswith("<!-- codex"):
+                continue
+            if (c.get("user") or {}).get("login") == rules.BOT_LOGIN:
+                continue
+            if "Generated by [Claude Code]" in body:
+                continue
+            cid = c.get("id")
+            if cid is None:
+                continue
+            try:
+                number = int((c.get("issue_url") or "").rsplit("/", 1)[1])
+            except (ValueError, IndexError):
+                continue
+            if number not in open_threads:
+                continue
+            first = (body.split("\n", 1)[0] or "").strip()
+            low = first.lower()
+            if "to claude" not in low and "proposal" not in low:
+                continue
+            key = inbox_key("TO-CLAUDE", f"#{number}", str(cid))
+            if key in reported:
+                continue
+            out.append(InboxItem("TO-CLAUDE", f"#{number}", str(cid),
+                                 f"TO-CLAUDE #{number} {no_verdict(plain(first[:100]))} "
+                                 f"{c.get('html_url') or ''}"))
+        return out
+
+    def pr_inbox_items(self, s: Steered, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
+        """One PR's items, for one audience (J-052): prefix "" is the integrator's, "muse-" is Muse's.
+        (a) MERGE-BY-HAND, (b) NOT-MERGED, (c) RED, RED-TWICE and RED-STUCK, (d) FIX, (f) QUIET when nothing
+        else is. Each item goes to its owner: MERGE-BY-HAND and AUTO-PR-FAILED to the integrator;
+        NOT-MERGED and RED-TWICE to both on an fb-bot/ PR; the rest to the branch's owner."""
         f, ctx, d, now = s.facts, s.ctx, s.decision, self.now
         if f.number == INBOX_PR or f.head_ref == INBOX_BRANCH:
             return []
+        mine = prefix == "muse-"          # this call is for Muse (fb-bot/ items), not the integrator
+        owner = owner_of(f.head_ref)
         target = f"#{f.number}"
         where = (f"[#{f.number}](https://github.com/{self.gh.repo}/pull/{f.number}) {untrusted(f.head_ref)} "
                  f"head {f.head_sha[:8]}" + (f", {ctx['job']}" if ctx.get("job") else ""))
         proof_link = f"[proof]({ctx['proof_url']})" if ctx.get("proof_url") else "proof"
 
-        def item(kind: str, text: str) -> InboxItem:
-            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}")
+        def item(kind: str, text: str, dest: str = "claude", finding: str = "") -> InboxItem:
+            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}", dest, finding)
+
+        def kept(it: InboxItem) -> bool:
+            return it.dest in ("muse", "both") if mine else it.dest in ("claude", "both")
 
         out: list[InboxItem] = []
         author = self.team.vendor_of_branch(f.head_ref)
@@ -780,38 +999,57 @@ class Switch:
             times = [t for t in (parse_time(ctx.get("proof_done_at") or ""), parse_time(lands[0].created_at)) if t]
             if not times or now - max(times) >= INBOX_READY_AFTER:
                 why = s.merge_note or "; ".join(d.reasons)
-                out.append(item("NOT-MERGED", f"green, LAND by {lands[-1].who}, still open a sweep later: {plain(why)}"))
-        if d.action == "FIX" and f.head_ref.startswith("claude/"):
-            out.append(item("FIX", plain("; ".join(d.reasons))))
+                out.append(item("NOT-MERGED", f"green, LAND by {lands[-1].who}, still open a sweep later: {plain(why)}",
+                                "both" if owner == "muse" else "claude"))
+        if d.action == "FIX" and owner:
+            out.append(item("FIX", plain("; ".join(d.reasons)), owner, self.fix_finding(f, ctx)))
         if d.action == "FIX-CI":
             jobs = red_jobs(f.proof)
-            mine = sorted((r for r in runs if r.get("head_branch") == f.head_ref), key=lambda r: r["created_at"], reverse=True)
-            ids = [r["id"] for r in mine]
-            if inbox_key("RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
-                out.append(InboxItem("RED-TWICE", target, f.head_sha, ""))
-            elif ctx.get("run_id") in ids and ids.index(ctx["run_id"]) + 1 < len(mine):
-                before = self.run_state(mine[ids.index(ctx["run_id"]) + 1])[0]
-                both = [j for j in jobs if j in red_jobs(before)]
-                if both:
-                    out.append(item("RED-TWICE", f"{plain(', '.join(both))} failed on two proofs in a row ({proof_link})"))
-            on_head = [parse_time(r["created_at"]) for r in mine if r.get("head_sha") == f.head_sha]
+            both = "both" if owner == "muse" else "claude"
+            runs_here = sorted((r for r in runs if r.get("head_branch") == f.head_ref), key=lambda r: r["created_at"], reverse=True)
+            ids = [r["id"] for r in runs_here]
+            if inbox_key(prefix + "RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
+                out.append(InboxItem("RED-TWICE", target, f.head_sha, "", both))
+            elif ctx.get("run_id") in ids and ids.index(ctx["run_id"]) + 1 < len(runs_here):
+                before = self.run_state(runs_here[ids.index(ctx["run_id"]) + 1])[0]
+                failed = [j for j in jobs if j in red_jobs(before)]
+                if failed:
+                    out.append(item("RED-TWICE", f"{plain(', '.join(failed))} failed on two proofs in a row ({proof_link})", both))
+            if owner == "muse":
+                out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", "muse"))
+            on_head = [parse_time(r["created_at"]) for r in runs_here if r.get("head_sha") == f.head_sha]
             head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
-            if head_since and now - head_since >= INBOX_RED_STUCK:
+            if head_since and now - head_since >= INBOX_RED_STUCK and owner:
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
-                                             f"{hours(now - head_since)} ({proof_link})"))
-        if not out:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
+                                             f"{hours(now - head_since)} ({proof_link})", owner))
+        if not [it for it in out if kept(it)]:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
             action = ("FIX-CI" if f.proof.startswith("red") else
                       "FIX" if d.action == "FIX" or rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review") else
                       "DISPATCH" if f.proof == "none" else "")
             idle = parse_time(ctx.get("updated_at") or "")
-            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600:
-                out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}"))
-        return out
+            if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600 and owner:
+                out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}", owner))
+        return [it for it in out if kept(it)]
 
-    def branch_inbox_items(self, runs: list[dict], reported: frozenset[str]) -> list[InboxItem]:
+    def fix_finding(self, f: rules.PrFacts, ctx: dict) -> str:
+        """The newest open FIX verdict's first 600 chars and its link, for Muse's comment (J-052)."""
+        fixes = rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review")
+        if not fixes:
+            return ""
+        v = max(fixes, key=lambda x: x.created_at)
+        for c in ctx.get("comments") or []:
+            if c.get("created_at") == v.created_at and (c.get("user") or {}).get("login") == v.author_login:
+                text = no_verdict(plain((c.get("body") or "").strip()[:MAX_MUSE_FINDING]))
+                link = c.get("html_url") or ""
+                return f"{text}\n{link}" if link else text
+        return ""
+
+    def branch_inbox_items(self, runs: list[dict], reported: frozenset[str], prefix: str = "") -> list[InboxItem]:
         """(e) RED-BRANCH: an fb-bot/ or claude/integrate-* branch with no open PR whose head's proof went red an
-        hour ago or more. Only heads proved in the run window are looked at, and only up to MAX_INBOX_BRANCHES."""
+        hour ago or more. Only heads proved in the run window are looked at, and only up to MAX_INBOX_BRANCHES.
+        Each item goes to the branch's owner (J-052)."""
         from urllib.parse import quote
+        mine = prefix == "muse-"
         open_refs = {p["head"]["ref"] for p in self.gh.paged(f"repos/{self.gh.repo}/pulls?state=open")}
         newest: dict[str, dict] = {}
         for r in runs:
@@ -825,7 +1063,7 @@ class Switch:
             run = newest[name]
             head, done = run.get("head_sha") or "", parse_time(run.get("updated_at") or "")
             if (run.get("status") == "completed" and run.get("conclusion") == "success") or not done \
-                    or (self.now - done) < INBOX_BRANCH_RED or inbox_key("RED-BRANCH", name, head) in reported:
+                    or (self.now - done) < INBOX_BRANCH_RED or inbox_key(prefix + "RED-BRANCH", name, head) in reported:
                 continue
             if read >= MAX_INBOX_BRANCHES:
                 self.out(f"INBOX       {MAX_INBOX_BRANCHES} branches read; the rest wait for the next sweep")
@@ -844,8 +1082,9 @@ class Switch:
             if proof.startswith("red") and (self.now - done) >= INBOX_BRANCH_RED:
                 out.append(InboxItem("RED-BRANCH", name, head,
                                      f"RED-BRANCH {untrusted(name)} head {head[:8]}: proof red on "
-                                     f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))"))
-        return out
+                                     f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))",
+                                     owner_of(name)))
+        return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
         """Where review asks live (the job issue, else the PR) and its comments."""
@@ -873,7 +1112,7 @@ class Switch:
                f"**Switchboard → {name}:** review #{facts.number} @ {facts.head_sha[:8]} ({job})"
         body = (f"{head}\n\n{why}Proof is green on the head ({ctx['proof_url']}). Review it with "
                 f"`03_EXECUTION/REVIEW_CHECKLIST.md` and post one verdict on #{facts.number} whose first line is\n"
-                f"`**{name} (review of #{facts.number} @ {facts.head_sha[:8]}): LAND**` (or FIX with command, input, "
+                f"`**{name} (review of #{facts.number} @ {facts.head_sha}): LAND**` (or FIX with command, input, "
                 f"expected, observed; a FIX without them counts as a NOTE).\n\n"
                 f"{self.review_facts(facts, ctx)}\n\n{tag}")
         self.gh.comment(where, body, f"ask {name} to review #{facts.number} on #{where}")
@@ -941,11 +1180,19 @@ class Switch:
             api_turn = rules.needs_review(facts, author, self.team) and self.pooled_reviewer(facts, ctx, author)[1] == rules.API_REVIEWER
         else:
             api_turn = rules.needs_review(facts, author, self.team) and rules.pick_reviewer(author, facts.needs, self.team).route == "claude-api"
-        if api_turn:
-            if self.marked(ctx["comments"], "review", facts.number, facts.head_sha):
+        # J-056: a workflow-file PR merges only on a clean, signed automatic review of its head, so it gets one even
+        # when Codex already reviewed that head and no other review is asked. Every automatic review of such a head is
+        # its security pass, whichever route asked for it (Codex on #297: the API's own turn ran the gameplay prompt).
+        security = facts.touches_workflows
+        signed = security and bool(self.review_key)   # only a mark the switch signed stops a second security pass
+        if api_turn or rules.needs_security_pass(facts):
+            if self.marked(ctx["comments"], "review", facts.number, facts.head_sha, signed=signed):
                 self.out(f"REVIEWED    #{facts.number} automatic review already posted for @{facts.head_sha[:8]}")
+            elif not api_turn:
+                self.out(f"SECURITY    #{facts.number} changes .github/workflows: the automatic review is its security pass")
+                self.review(facts, ctx, author, security=True)
             else:
-                self.review(facts, ctx, author)
+                self.review(facts, ctx, author, security=security)
                 if self.team.pool:
                     self.note_assigned(rules.API_REVIEWER)
         if rules.needs_eye(facts):
@@ -954,22 +1201,35 @@ class Switch:
             else:
                 self.eye(facts, ctx)
 
-    def review(self, facts: rules.PrFacts, ctx: dict, author: str) -> None:
+    def review(self, facts: rules.PrFacts, ctx: dict, author: str, security: bool = False) -> None:
+        """The automatic Claude review of one head. `security`: it is the security pass of a workflow-file PR
+        (J-056), so when it cannot run no other reviewer is asked: no one else can stand in for it."""
         import claude_calls
         key = f"review#{facts.number}@{facts.head_sha[:8]}"
         self.out(f"REVIEW      #{facts.number} author={author}: automatic Claude review")
-        diff = "" if self.gh.dry_run else self.gh.get_text(f"repos/{self.gh.repo}/pulls/{facts.number}", "application/vnd.github.diff")
+        # The diff of the head this review is labeled with, never the PR's head of the moment (J-056): a push between
+        # the sweep's read and this one must not put a clean review of one commit under another's mark. Three dots:
+        # from the merge base, as the PR's own diff is (the two read byte for byte the same on #297).
+        base = urllib.parse.quote(facts.base_ref, safe="/")
+        diff = "" if self.gh.dry_run else self.gh.get_text(f"repos/{self.gh.repo}/compare/{base}...{facts.head_sha}",
+                                                           "application/vnd.github.diff")
         if len(diff) > MAX_DIFF_CHARS:
-            self.ask_review(facts, ctx, self.api_fallback(facts, ctx, author),
-                            f"The diff is {len(diff)} characters, too large for the automatic review. "
-                            + MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha) + " ")
+            self.review_failed(facts, ctx, author, security, f"The diff is {len(diff)} characters, too large for the automatic review. ")
             return
         checklist = (self.root / "03_EXECUTION/REVIEW_CHECKLIST.md").read_text(encoding="utf-8")
-        content = [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
+        # The security pass judges against SECURITY.md with its own prompt (Codex on #297): the gameplay prompt's
+        # LAND would let a secret leak through, since it blocks only physics, gameplay, correctness and tests.
+        guidelines = [claude_calls.text_block("<security_guidelines>\n"
+                                              + (self.root / "SECURITY.md").read_text(encoding="utf-8")
+                                              + "\n</security_guidelines>")] if security else []
+        system = claude_calls.SECURITY_REVIEW_SYSTEM if security else claude_calls.REVIEW_SYSTEM
+        content = guidelines + [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
                    claude_calls.text_block(f"<pr number=\"{facts.number}\" head=\"{facts.head_sha}\" branch=\"{facts.head_ref}\">\n"
                                            f"<title>{ctx['title']}</title>\n<body>\n{ctx['body'][:20000]}\n</body>\n</pr>"),
                    claude_calls.text_block(f"<diff>\n{diff}\n</diff>")]
-        res = self.paid("review", ctx["job"], "review", claude_calls.REVIEW_SYSTEM, content, claude_calls.REVIEW_SCHEMA,
+        # The security pass has its own budget line (max effort); ordinary reviews run at high (Cory, 11-08).
+        call = "security_review" if security else "review"
+        res = self.paid("review", ctx["job"], call, system, content, claude_calls.REVIEW_SCHEMA,
                         self.job_cap(ctx), key)
         if res is None:   # refused by the budget, or a dry run: the next run tries again
             return
@@ -977,19 +1237,37 @@ class Switch:
             why = {"too-large": "The diff is too large for the automatic review. ",
                    "error": "The automatic review failed to run. "}.get(res) if isinstance(res, str) else \
                   f"The automatic review stopped ({res.stop_reason}). "
-            self.ask_review(facts, ctx, self.api_fallback(facts, ctx, author),
-                            why + MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha) + " ")
+            self.review_failed(facts, ctx, author, security, why)
             return
         d = res.data
         verdict = d["verdict"]
-        lines = [f"**Claude (automatic review of #{facts.number} @ {facts.head_sha[:8]}): {verdict}**", "", d["summary"]]
+        # The whole head sha (J-056): a workflow-file PR's gates never read an 8-character prefix.
+        lines = [f"**Claude (automatic review of #{facts.number} @ {facts.head_sha}): {verdict}**", "", d["summary"]]
         if verdict == "FIX":
             lines += [""] + [f"{k}: {d['repro'][k]}" for k in ("command", "input", "expected", "observed")]
         if d["notes"]:
             lines += ["", "Notes (never blocking):"] + [f"- {n}" for n in d["notes"][:12]]
         lines += ["", f"_{res.model} through the API; {central(self.now)}._",
                   MARK.format(kind="review", pr=facts.number, head=facts.head_sha)]
+        if self.review_key:   # the MAC that tells this review from a forged one (J-056); without the key, unsigned
+            lines.append(review_sig(self.review_key, self.gh.repo, facts.number, facts.head_sha, verdict))
         self.gh.comment(facts.number, "\n".join(lines), f"post automatic review {verdict} on #{facts.number}")
+
+    def review_failed(self, facts: rules.PrFacts, ctx: dict, author: str, security: bool, why: str) -> None:
+        """The automatic review could not give a verdict on this head. As the security pass (J-056): one note on the
+        PR with the review's mark, so it is not paid for again on this head, and the PR stays merge-by-hand.
+        Otherwise the next reviewer is asked, with the api-out mark."""
+        if security:
+            self.gh.comment(facts.number, f"Switchboard, {central(self.now)}: the security pass (the automatic Claude "
+                                          f"review of a .github/workflows change) gave no verdict on {facts.head_sha[:8]}. "
+                                          f"{why}The switchboard will not merge this head; it is listed to merge by hand.\n\n"
+                                          + MARK.format(kind="review", pr=facts.number, head=facts.head_sha)
+                                          + ("\n" + review_sig(self.review_key, self.gh.repo, facts.number, facts.head_sha, "NONE")
+                                             if self.review_key else ""),
+                            f"security pass failed on #{facts.number}")
+            return
+        self.ask_review(facts, ctx, self.api_fallback(facts, ctx, author),
+                        why + MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha) + " ")
 
     def eye(self, facts: rules.PrFacts, ctx: dict) -> None:
         import claude_calls
@@ -1016,10 +1294,13 @@ class Switch:
         sets = res.data["sets"]
         expected = set(self.looks["sets"])
         judged = {s["set"] for s in sets}
-        overall = "LAND" if judged == expected and all(s["verdict"] == "LAND" for s in sets) else "FIX"
+        # A set's known defect, owned by a still-open job, blocks only that job's PR (J-068).
+        overall, waived = rules.eye_overall(sets, self.looks["sets"], ctx.get("job") or "", self.jobs())
         lines = [f"**Claude eye (look of #{facts.number} @ {facts.head_sha[:8]}): {overall}**", ""]
         for s in sets:
-            lines.append(f"- {s['set']}: {s['verdict']}; rubric: \"{s['rubric_line']}\"; frame `{s['frame']}`. {s['reason']}")
+            known = f" (known defect of {', '.join(waived[s['set']])}: shown, not blocking this PR)" \
+                if s["verdict"] != "LAND" and s["set"] in waived else ""
+            lines.append(f"- {s['set']}: {s['verdict']}{known}; rubric: \"{s['rubric_line']}\"; frame `{s['frame']}`. {s['reason']}")
         if judged != expected:
             lines.append(f"- sets not judged: {', '.join(sorted(expected - judged)) or '-'}")
         if overall == "FIX":
@@ -1348,7 +1629,7 @@ class Switch:
         for pr in self.target_prs(0, ""):
             facts, ctx = self.pr_facts(pr)
             author = self.team.vendor_of_branch(facts.head_ref)
-            d = rules.merge_decision(facts, author, self.team)
+            d = rules.merge_decision(facts, author, self.team, bool(self.merge_token), bool(self.review_key))
             if d.action == "FIX-CI":
                 red.append(f"#{facts.number} {facts.head_ref}: {facts.proof}")
             if d.action == "HUMAN-MERGE":
@@ -1405,6 +1686,9 @@ def main() -> int:
         ap.error("--sha must be hex")
     now = dt.datetime.now(dt.timezone.utc)
     sw = Switch(GitHub(args.repo, args.dry_run), pathlib.Path(args.root), now)
+    # J-056: out of the environment at once, so git, the rule check and every other gh call never inherit them.
+    sw.merge_token = os.environ.pop(MERGE_TOKEN_ENV, "").strip()
+    sw.review_key = os.environ.pop(REVIEW_KEY_ENV, "").strip()
     sw.out(f"switchboard {args.part}{' DRY RUN' if args.dry_run else ''} at {central(now)} on {args.repo}")
     steer, ask = args.part in ("steer", "all"), args.part in ("ask", "all")
     if args.issue:
@@ -1446,6 +1730,11 @@ def main() -> int:
         except (GitHubError, RuntimeError, KeyError, ValueError) as err:
             failed += 1
             sw.out(f"ERROR       inbox: {type(err).__name__}: {err}")
+        try:   # J-052: Muse's items go to Muse by comment + wake:muse, not only to the integrator's inbox
+            sw.muse(steered)
+        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
+            failed += 1
+            sw.out(f"ERROR       muse: {type(err).__name__}: {err}")
     return 2 if failed else 0
 
 

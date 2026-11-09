@@ -24,7 +24,7 @@ agents:
     wake: issue          # reads its job issue through its own app
   grok:
     vendor: xai
-    names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #107)
+    names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #340)
     branch_prefixes: [grok/, pe/, builder/]
     owner_labels: [owner:grok, owner:pe, owner:builder]
     wake: issue

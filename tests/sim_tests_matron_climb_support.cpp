@@ -299,6 +299,42 @@ void test_matron_climb_support() {
     std::cout << "PASS matron climb support: missing steel, sensor exclusion, actual support removal, blocked ascent and floor recovery\n";
 }
 
+// A post she can climb by friction on its faces: her scan reads it as a
+// riser, and her map holds no other way UP to the deck it stands against:
+// the riser is the only way up. Down she has a way — the deck stands 8 m
+// over a broad floor in open air, and the scan reads that as a survivable
+// free drop (FreeDrop, 15 m/s impact), so the down plan is not empty and is
+// not asserted here. (Stage 1: the scan only; the climb itself is stage 2.)
+void test_matron_riser() {
+    ClimbWorld world;
+    const float g = Matron::kDeckTop;
+    const float deck = g + 8.0F;
+    world.box(Vec3(2.0F, 4.0F, 2.0F), RVec3(0, g + 4.0, -140));                // the deck: x -2..2, z -142..-138, top g + 8
+    world.box(Vec3(0.2F, 4.0F, 0.2F), RVec3(2.5, g + 4.0, -140));              // the riser: x 2.3..2.7, z -140.2..-139.8
+    Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
+                  detail::object_layers::kOnSteel, BodyID());
+    world.awake(matron);
+    matron.set_stage_for_test(Matron::Stage::Dangerous);
+    world.physics.GetBodyInterface().SetPosition(matron.body(), RVec3(6.5, g + Matron::kStandCentre, -137.0),
+                                                 EActivation::Activate);
+    const auto tick = [&] {
+        matron.pre_step(ClimbWorld::dt, Stimulus(RVec3(40, g, -100), 0.0F));
+        world.physics.Update(ClimbWorld::dt, 1, &world.temp, &world.jobs);
+        matron.post_step(ClimbWorld::dt);
+    };
+    for (int i = 0; i < 90 && matron.scanned_routes() == nullptr; ++i) tick();
+    require(matron.scanned_routes() != nullptr, "matron riser: she reads the world");
+    const auto *map = matron.scanned_routes();
+    bool found = false;
+    for (const auto &r : map->risers()) found = found || (std::abs(r.x - 2.5F) < 0.01F && std::abs(r.z + 140.0F) < 0.01F);
+    require(found, "matron riser: her scan finds the post as a riser");
+    const int floor_region = map->region_at(Vec3(6.5F, g, -137.0F));
+    const int deck_region = map->region_at(Vec3(0.0F, deck, -140.0F));
+    require(floor_region >= 0 && deck_region >= 0 && map->plan(floor_region, deck_region).empty(),
+            "matron riser: her map has no other way up to the deck");
+    std::cout << "PASS scraperx_sim matron riser scan: post found, no other way between floor and deck\n";
+}
+
 namespace scraperx::sim {
 struct MatronStateExitAccess {
     static bool check_end_hold_cleans_all(ClimbWorld &world) {

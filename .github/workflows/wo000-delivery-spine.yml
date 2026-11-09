@@ -810,6 +810,38 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/summit-ending-rendered.log; then exit 1; fi
 
+      # The eye's fight_contact and ladder_descent sets (work/looks/sets.yml, J-068):
+      # his PUNCH tap landing on the Matron through his eye (look_matron_fight), her
+      # descent of the grade ladder from cameras about her body
+      # (look_matron_grade_ladder), and the J-059 face injury stills
+      # (injury_shots_test.gd --out). Renders the frames only; the checks
+      # stay in their own steps.
+      - name: Render the eye's fight and ladder stills
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/screenshots/injury
+          for pair in look_matron_fight:fight look_matron_grade_ladder:ladder; do
+            scenario="${pair%%:*}"
+            prefix="${pair#*:}"
+            timeout 400s xvfb-run -a -s "-screen 0 1024x892x24" \
+              tools/godot/godot --path godot --rendering-method gl_compatibility --audio-driver Dummy \
+              --resolution 960x828 --fixed-fps 60 \
+              -- "--uitest=${scenario}" "--capture=${GITHUB_WORKSPACE}/artifacts/screenshots/${prefix}" \
+              2>&1 | tee -a artifacts/eye-stills.log
+            grep -F "SCRAPERX_UITEST PASS ${scenario}" artifacts/eye-stills.log
+          done
+          timeout 180s xvfb-run -a -s "-screen 0 1024x800x24" \
+            tools/godot/godot --path godot --rendering-method gl_compatibility --audio-driver Dummy \
+            --resolution 960x720 --fixed-fps 30 --script res://tests/injury_shots_test.gd \
+            -- "--out=${GITHUB_WORKSPACE}/artifacts/screenshots/injury" 2>&1 | tee -a artifacts/eye-stills.log
+          grep -q '^INJURY PASS (0 failed)$' artifacts/eye-stills.log
+          for frame in fight_punch_contact fight_punch_reaction injury/injury_face_front injury/injury_cheek_front \
+              ladder_grade_ladder_down ladder_grade_ladder_down_side ladder_grade_ladder_down_low; do
+            test -s "artifacts/screenshots/${frame}.png"
+          done
+          if grep -E "SCRIPT ERROR|Parse Error" artifacts/eye-stills.log; then exit 1; fi
+
       - name: Measure the mix a player hears
         shell: bash
         run: |
@@ -909,7 +941,7 @@ jobs:
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/matron_figure_test.gd 2>&1 | tee artifacts/matron-figure.log
           if grep -q '^MATRON_FIGURE FAIL' artifacts/matron-figure.log; then exit 1; fi
-          test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 21
+          test "$(grep -c '^MATRON_FIGURE PASS' artifacts/matron-figure.log)" -eq 22
 
       - name: The Matron's feet plant when she walks
         shell: bash
@@ -957,6 +989,22 @@ jobs:
           if grep -q '^GORE FAIL' artifacts/gore-shots.log; then exit 1; fi
           grep -q '^GORE PASS (0 failed)$' artifacts/gore-shots.log
 
+      - name: Check the injury render marks, bruises and swells per region
+        shell: bash
+        run: |
+          set -euo pipefail
+          # injury_shots_test.gd drives matron_view.gd in a studio deck
+          # with injury dictionaries shaped like the J-044a input
+          # contract (region -> {j_region, j_event}) at each severity
+          # beat. Without --out it saves no PNGs and needs no display;
+          # it quits 1 on any failed check.
+          timeout 180s tools/godot/godot --headless --path godot \
+            --script res://tests/injury_shots_test.gd 2>&1 | tee artifacts/injury-shots.log
+          # Under set -e bash exempts an inverted pipeline, so `! grep -q`
+          # can never fail the step: write it as an explicit if instead.
+          if grep -q '^INJURY FAIL' artifacts/injury-shots.log; then exit 1; fi
+          grep -q '^INJURY PASS (0 failed)$' artifacts/injury-shots.log
+
       - name: Check Matron hold haptics fire once per event
         shell: bash
         run: |
@@ -987,6 +1035,19 @@ jobs:
             --script res://tests/script_load_test.gd 2>&1 | tee artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
+
+      - name: Check the far world reads as a valley (J-021 job 4)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # far_world_test.gd (J-021, job 4): the far world builds the
+          # valley floor's drawn top and the tower's long shadow, the rim
+          # is 12 variants turned by where each stands, and the sky carries
+          # the horizon past the far plane — while the floor's boxes stay
+          # solids. The job-11 water checks run on the job-11 branch.
+          timeout 180s tools/godot/godot --headless --path godot \
+            --script res://tests/far_world_test.gd 2>&1 | tee artifacts/far-world.log
+          grep -q '^FAR_WORLD PASS' artifacts/far-world.log
 
       - name: Fight S1 act test
         shell: bash

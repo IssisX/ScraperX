@@ -3457,6 +3457,14 @@ Matron::Sense Matron::catch_sense(RVec3 &at) const noexcept {
         at = ev_.heard_at;
         return Sense::Hearing;
     }
+    // Touch (J-049, ChatGPT's #278 rule): a hand on him counts as a sensed
+    // position at the contact point — his place, now, not a memory. This is
+    // evidence only: caught() still runs the geometry on it, so a touch past
+    // the 0.85 m catch range still refuses, as the 1.174 m case must.
+    if (body_in_world_ && physics_.WereBodiesInContact(body_, player_)) {
+        at = physics_.GetBodyInterface().GetPosition(player_);
+        return Sense::Touch;
+    }
     if (ev_.sight_age_s <= kCatchMemoryS) {
         at = ev_.last_sight_at;
         return Sense::Sight;

@@ -10,6 +10,9 @@ is traced to a file unless it appears in §7 (unverified).
 > §9.3), she must VISIBLY look damaged (§9.2), and the free punch is
 > now the 1-2 jab-cross (§9.4). The full corrections list is §9.5.
 > Everything else in §1–§8 stands unless §9.5 says otherwise.
+> CHECKPOINTS, 11-05 and 11-07 (rule 34; `J044A_SPEC.md`, the checkpoint contract change): a checkpoint
+> SAVES her injuries, and a restore or reload brings her back as saved, dead included. Every "undamaged"
+> or "`dead_ = false`" restore below is superseded.
 
 Owner rules that bind this design (not re-litigated here):
 - ~~"Knock her down, never dead" (owner 2026-10-19). There is NO health/damage

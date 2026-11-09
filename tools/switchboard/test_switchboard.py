@@ -258,6 +258,11 @@ class Board(unittest.TestCase):
         self.assertEqual(rules.job_of_pr("Fixes it.\nJob: J-012\n"), "J-012")
         self.assertEqual(rules.job_of_pr(None), "")
         self.assertEqual(rules.job_of_title("J-031 Switchboard v0"), "J-031")
+        # a lettered sub-job is its own job, in a PR body, a commit message and an issue title
+        self.assertEqual(rules.job_of_pr("Job: J-044b: the grant is capped at real speed"), "J-044b")
+        self.assertEqual(rules.job_of_title("J-044b Fight math and risk"), "J-044b")
+        self.assertEqual(rules.job_of_pr("Job: J-044bc"), "")
+        self.assertEqual(rules.job_of_title("J-044B upper case is not a job"), "")
         self.assertEqual(rules.budget_override([("budget 12", "IssisX"), ("ok", "IssisX"), ("Budget 15.50\nthanks", "IssisX")], TEAM), "15.50")
         self.assertEqual(rules.budget_override([("my budget 12 is fine", "IssisX")], TEAM), "")
 
@@ -415,6 +420,63 @@ class RepoConfig(unittest.TestCase):
         looks = yaml.safe_load((root / "work/looks/sets.yml").read_text(encoding="utf-8"))
         for s in looks["sets"].values():
             self.assertTrue((root / s["rubric"]).is_file(), s["rubric"])
+            for job in rules.known_defect_jobs(s):   # J-068: a known defect names a job, J-NNN
+                self.assertRegex(job, rules.JOB_TITLE.pattern + "$")
+
+
+class EyeKnownDefect(unittest.TestCase):
+    """J-068: a set's known defect, owned by an open job, blocks only that job's PR; other sets are unchanged."""
+
+    LOOKS = {"artifact_prefix": "godot-audits-", "sets": {
+        "approach": {"rubric": "approach.md", "frames": ["a.png"]},
+        "ladder": {"rubric": "ladder.md", "known_defect": "J-063", "frames": ["l.png"]}}}
+
+    def run_eye(self, verdicts: dict, pr_job: str, open_jobs=("J-063",)) -> tuple[str, str]:
+        import tempfile
+        tmp = pathlib.Path(tempfile.mkdtemp())
+        for name in ("approach.md", "ladder.md"):
+            (tmp / name).write_text("1. a rubric line\n", encoding="utf-8")
+        gh = FakeGH()
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh, sw.now, sw.root, sw.looks, sw.lines = gh, NOW, tmp, self.LOOKS, []
+        sw.out = sw.lines.append
+        sw._jobs = {j: {"number": 1, "title": f"{j} a job", "labels": []} for j in open_jobs}
+        sw.frames = lambda run_id: {"a.png": b"\x89PNG", "l.png": b"\x89PNG"}
+        sw.job_cap = lambda ctx: Decimal("1")
+        answer = {"sets": [{"set": k, "verdict": v, "rubric_line": "1. a rubric line", "frame": "f.png",
+                            "reason": "seen"} for k, v in verdicts.items()]}
+        sw.paid = lambda *a, **k: claude_calls.Result(answer, "end_turn", "claude-opus-5-5", 1, 1)
+        sw.eye(facts(number=9), {"job": pr_job, "run_id": 7, "proof_url": "https://example.invalid/run/7"})
+        self.assertEqual(len(gh.posted), 1)
+        body = gh.posted[0][1]
+        return body.splitlines()[0], body
+
+    def test_owner_jobs_pr_is_blocked_by_its_sets_fix(self):
+        head, body = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-063")
+        self.assertTrue(head.endswith(": FIX**"), head)
+        self.assertNotIn("known defect", body)
+
+    def test_other_pr_is_shown_the_fix_but_not_blocked(self):
+        head, body = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-067")
+        self.assertTrue(head.endswith(": LAND**"), head)
+        self.assertIn("- ladder: FIX (known defect of J-063: shown, not blocking this PR)", body)
+        got = v(body, T1, rules.BOT_LOGIN)   # the merge rule reads the posted comment as an eye LAND
+        self.assertEqual((got.kind, got.verdict), ("eye", "LAND"))
+
+    def test_closed_owner_job_makes_the_set_count_again(self):
+        head, _ = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-067", open_jobs=())
+        self.assertTrue(head.endswith(": FIX**"), head)
+
+    def test_set_without_the_field_is_unchanged(self):
+        head, body = self.run_eye({"approach": "FIX", "ladder": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": FIX**"), head)
+        self.assertNotIn("known defect", body)
+        head, _ = self.run_eye({"approach": "LAND", "ladder": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": LAND**"), head)
+
+    def test_an_unjudged_set_still_blocks(self):
+        head, _ = self.run_eye({"approach": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": FIX**"), head)
 
 
 class SessionBudget(unittest.TestCase):
@@ -1163,7 +1225,7 @@ class ReviewPool(unittest.TestCase):
 
 
 class RepoReviewModel(unittest.TestCase):
-    def test_the_api_review_is_opus_max(self):
+    def test_the_api_review_is_opus_high_and_the_security_pass_max(self):
         try:
             import yaml
         except ImportError:
@@ -1171,7 +1233,10 @@ class RepoReviewModel(unittest.TestCase):
         root = HERE.parents[1]
         b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
         spec = b.calls["review"]
-        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "max", 64000))   # Cory, 11-04
+        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "high", 64000))   # Cory, 11-08
+        sec = b.calls["security_review"]   # the workflow-file PR's security pass keeps max (Cory, 11-08: "split")
+        self.assertEqual((sec.model, sec.effort, sec.max_tokens), ("claude-opus-5-5", "max", 64000))
+        self.assertTrue(money.check(b, [], NOW, "J-1", money.worst_case(b, "security_review", sec.max_input_tokens)).ok)
         # The 64000 reserve passes the caps: the worst case at the full input limit fits one job's cap.
         worst = money.worst_case(b, "review", spec.max_input_tokens)
         self.assertEqual(worst, Decimal("1.880000"))   # 150,000 x $4/MTok + 64,000 x $20/MTok

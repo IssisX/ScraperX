@@ -33,7 +33,7 @@ wrote a comment is read from its first line, and who wrote a PR from its branch 
   `eyes-live`, `matron`, `security`, `orchestrator`) and `hard`. Its body holds the four fields:
   `invariant` (the finish fact), `files` (owned functions), `reach` (tests it reaches), `needs`.
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
-- Issue #107 holds rulings and BLOCKED lines only. The owner's plain comments there are orders.
+- Issue #340 (the board) holds rulings and BLOCKED lines only. The owner's plain comments there are orders.
 - One owner per job: the switch removes a second `owner:*` label and says so.
 
 ## Messages
@@ -63,10 +63,13 @@ It merges a PR into trunk (as the workflow token, a merge commit naming the head
 3. no open `FIX` on that head (per reviewer, its newest verdict on the head);
 4. `tools/rule_check/rule_check.py` finds no `BLOCK` (a protected change: the integrator merges it);
 5. when the job or PR needs `eyes`, the eye's `LAND` on that head;
-6. no merge conflict. A PR that changes `.github/workflows/` is listed as ready for a person to merge:
-   the workflow token cannot push workflow files.
-After a merge it dispatches the proof on trunk (a token merge starts no push workflow) and posts one line
-on the PR and the job issue. The owner can overturn any merge.
+6. no merge conflict. A PR that changes `.github/workflows/` also needs a clean automatic Claude review on
+   that head (the security pass, J-056), and its LAND must be the Codex app's clean review (a typed LAND or
+   the API's own does not count), both naming the whole 40-character head sha; it merges with the
+   `SWITCHBOARD_MERGE_TOKEN` secret, since the workflow token cannot push workflow files; without the
+   secret or those reviews it is listed for a person.
+After a merge it dispatches the proof on trunk (a workflow-token merge starts no push workflow; a merge-token
+merge's push starts it) and posts one line on the PR and the job issue. The owner can overturn any merge.
 
 Reviews (owner's correction 4): a PR whose author is not Claude gets an automatic Claude review through
 the API once its proof is green. A Claude-authored PR is asked of ChatGPT, or of Muse when the job
