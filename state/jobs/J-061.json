@@ -25,6 +25,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T17:35:20Z",
+   "missing": 0,
    "ref": "PR|#337",
    "sends": 1,
    "thread": 337,
@@ -40,12 +41,13 @@
    "attempts": 1,
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-09T18:42:32Z",
    "due": "2026-11-09T18:05:20Z",
    "id": "O-ebe5bf50",
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T17:35:20Z",
+   "missing": 0,
    "ref": "ASK|ask on #312",
    "sends": 1,
    "thread": 312,
@@ -65,5 +67,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T18:42:32Z"
 }

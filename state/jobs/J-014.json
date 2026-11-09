@@ -39,6 +39,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T17:39:57Z",
+   "missing": 0,
    "ref": "BRANCH|fb-bot/integrate-j014-stock-above-396",
    "sends": 1,
    "thread": 121,
@@ -56,5 +57,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T18:42:32Z"
 }

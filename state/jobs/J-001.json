@@ -33,6 +33,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T17:39:57Z",
+   "missing": 0,
    "ref": "PR|#227",
    "sends": 1,
    "thread": 227,
@@ -54,6 +55,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T17:39:57Z",
+   "missing": 0,
    "ref": "ASK|ask on #108",
    "sends": 1,
    "thread": 108,
@@ -73,5 +75,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T18:42:32Z"
 }

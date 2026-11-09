@@ -1,0 +1,38 @@
+{
+ "batches": [
+  {
+   "at": "2026-11-09T18:42:32Z",
+   "keys": [
+    "O-b7eeb2d8",
+    "O-51240df7",
+    "O-da6b6426",
+    "O-45b11271",
+    "O-14a329f7",
+    "O-2359c606",
+    "O-444b981c",
+    "O-9b7db767",
+    "O-6fe8c9ad",
+    "O-ebe5bf50",
+    "gap:2026-11-09T18:08:09Z"
+   ],
+   "live": false,
+   "text": "To Cory: Needs you (11), from the switchboard at 11-09 12:42 PM Central.\n\n- Needs you: J-007 ask on #114: ask from Muse on #114. Claude did not act (2 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-b7eeb2d8\n- Needs you: J-009 ask on #116: ask from Muse on #116. Claude did not act (2 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-51240df7\n- Needs you: J-009 ask on #116: ask from Muse on #116. Claude did not act (2 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-da6b6426\n- Needs you: J-011 ask on #118: ask from Muse on #118. Claude did not act (2 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-45b11271\n- Needs you: J-021 ask on #128: ask from Muse on #128. Claude did not act (1 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-14a329f7\n- Needs you: J-042 ask on #240: ask from Muse on #240. Claude did not act (0 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-2359c606\n- Needs you: J-049 ask on #278: ask from Muse on #278. Claude did not act (0 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-444b981c\n- Needs you: J-049 ask on #278: ask from Muse on #278. Claude did not act (0 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-9b7db767\n- Needs you: J-051 fix: 'claude/integrate-j051-asks-since' is green with no PR: open one. Claude did not act (0 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-6fe8c9ad\n- Needs you: J-061 ask on #312: ask from Muse on #312. Claude did not act (1 send(s) by api, no ack); since 11-09 12:42 PM Central. Done: /ack O-ebe5bf50\n- Needs you: PIPE: no switchboard pass from 11-09 12:08 PM to 11-09 12:42 PM Central (34 min; the clock dispatches every 10 min). The 10-minute trigger (muse_bridge.gs) or its health check is not running; since 11-09 12:08 PM Central."
+  }
+ ],
+ "last_batch": "2026-11-09T18:42:32Z",
+ "last_error": "",
+ "pending": {},
+ "reported": {
+  "O-14a329f7": "2026-11-09T18:42:32Z",
+  "O-2359c606": "2026-11-09T18:42:32Z",
+  "O-444b981c": "2026-11-09T18:42:32Z",
+  "O-45b11271": "2026-11-09T18:42:32Z",
+  "O-51240df7": "2026-11-09T18:42:32Z",
+  "O-6fe8c9ad": "2026-11-09T18:42:32Z",
+  "O-9b7db767": "2026-11-09T18:42:32Z",
+  "O-b7eeb2d8": "2026-11-09T18:42:32Z",
+  "O-da6b6426": "2026-11-09T18:42:32Z",
+  "O-ebe5bf50": "2026-11-09T18:42:32Z",
+  "gap:2026-11-09T18:08:09Z": "2026-11-09T18:42:32Z"
+ }
+}

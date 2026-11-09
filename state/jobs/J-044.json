@@ -8,8 +8,8 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T18:05:20Z",
- "head": "",
+ "deadline": "2026-11-09T20:17:00Z",
+ "head": "55b8b3e22548aa0154f5af13d5978d7d171c304d",
  "issue": 242,
  "job": "J-044",
  "landed": {
@@ -21,7 +21,11 @@
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T18:42:32Z",
+    "by": "claude",
+    "how": "work pushed"
+   },
    "ack_rule": "work|reply|ack",
    "asked": null,
    "attempts": 0,
@@ -33,6 +37,7 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": null,
+   "missing": 0,
    "ref": "JOB|#242",
    "sends": 0,
    "thread": 242,
@@ -40,6 +45,30 @@
    "version": "start:242",
    "via": "api",
    "what": "start J-044"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T18:42:32Z",
+   "dead": "2026-11-09T22:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T20:17:00Z",
+   "id": "O-47eadd6d",
+   "kind": "ruling",
+   "last_error": "",
+   "last_sent": "2026-11-09T18:42:32Z",
+   "missing": 0,
+   "ref": "BRANCH|chatgpt/integrate-j044-review-gate-20261109",
+   "sends": 1,
+   "thread": 347,
+   "to": "claude",
+   "unseen": null,
+   "version": "closed:55b8b3e22548aa0154f5af13d5978d7d171c304d",
+   "via": "session",
+   "what": "`chatgpt/integrate-j044-review-gate-20261109` @ 55b8b3e2: closed #347 without merging at this head: reopen it, or delete the branch"
   }
  ],
  "outcome": null,
@@ -49,6 +78,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-09T17:35:20Z"
+ "state": "working",
+ "updated": "2026-11-09T18:42:32Z"
 }

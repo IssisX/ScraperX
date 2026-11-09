@@ -16,7 +16,7 @@
    "ack": null,
    "ack_rule": "work|reply|ack",
    "asked": null,
-   "attempts": 0,
+   "attempts": 1,
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
    "dead_lettered": null,
@@ -24,9 +24,10 @@
    "id": "O-676e6b21",
    "kind": "start-agent",
    "last_error": "",
-   "last_sent": null,
+   "last_sent": "2026-11-09T18:42:32Z",
+   "missing": 0,
    "ref": "JOB|#228",
-   "sends": 0,
+   "sends": 1,
    "thread": 228,
    "to": "muse",
    "version": "start:228",
@@ -42,5 +43,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T18:42:32Z"
 }

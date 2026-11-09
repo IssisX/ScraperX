@@ -33,6 +33,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T17:35:20Z",
+   "missing": 0,
    "ref": "ASK|ask on #338",
    "sends": 1,
    "thread": 338,
@@ -54,6 +55,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T17:35:20Z",
+   "missing": 0,
    "ref": "ASK|ask on #338",
    "sends": 1,
    "thread": 338,
@@ -75,6 +77,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T17:35:20Z",
+   "missing": 0,
    "ref": "ASK|ask on #338",
    "sends": 1,
    "thread": 338,
@@ -96,6 +99,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
+   "missing": 0,
    "ref": "ASK|ask on #338",
    "sends": 0,
    "thread": 338,
@@ -113,5 +117,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-09T17:39:57Z"
+ "updated": "2026-11-09T18:42:32Z"
 }

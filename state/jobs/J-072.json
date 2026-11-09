@@ -1,17 +1,18 @@
 {
- "attempt": 1,
+ "attempt": 2,
  "blocked": null,
  "branches": {
   "claude/integrate-j072-mail-shape": "8c25d13a1d29462c42c762640b70140eb800e3ed",
   "claude/integrate-j072-pipe-holes": "9435daec64a7ca5f107a397cfcce1325e721a7d5",
-  "claude/integrate-j072-reconciler": "a3e78417ff861e6f124d78888361ff1f6acc2de9"
+  "claude/integrate-j072-reconciler": "a3e78417ff861e6f124d78888361ff1f6acc2de9",
+  "claude/integrate-j072-reconciler-holes": "abc7358c354fbdaba6d39af15ea4e4bec588a639"
  },
  "cancelled": null,
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T18:38:09Z",
- "head": "abc7358c354fbdaba6d39af15ea4e4bec588a639",
+ "deadline": "2026-11-09T20:47:00Z",
+ "head": "0aa97209cfeda56ca9fab6f217acb76878e66e08",
  "issue": 350,
  "job": "J-072",
  "landed": {
@@ -29,6 +30,11 @@
    "a3e78417ff861e6f124d78888361ff1f6acc2de9",
    "merged #358",
    "2026-11-09T17:35:20Z"
+  ],
+  "claude/integrate-j072-reconciler-holes": [
+   "abc7358c354fbdaba6d39af15ea4e4bec588a639",
+   "merged #359",
+   "2026-11-09T18:42:32Z"
   ]
  },
  "obligations": [
@@ -45,6 +51,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T17:35:20Z",
+   "missing": 0,
    "ref": "ASK|ask on #350",
    "sends": 1,
    "thread": 350,
@@ -66,6 +73,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T17:35:20Z",
+   "missing": 0,
    "ref": "ASK|ask on #350",
    "sends": 1,
    "thread": 350,
@@ -75,7 +83,11 @@
    "what": "ask from Claude on #350"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T18:42:32Z",
+    "by": "claude",
+    "how": "PR #360 opened"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
@@ -87,6 +99,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
+   "missing": 0,
    "ref": "BRANCH|claude/integrate-j072-pipe-holes",
    "sends": 0,
    "thread": 350,
@@ -94,17 +107,42 @@
    "version": "open-pr:9435daec64a7ca5f107a397cfcce1325e721a7d5",
    "via": "api",
    "what": "`claude/integrate-j072-pipe-holes` is green with no PR: open one"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T18:42:32Z",
+   "dead": "2026-11-09T22:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T20:47:00Z",
+   "id": "O-a9f91555",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "PR|#360",
+   "sends": 0,
+   "thread": 360,
+   "to": "codex",
+   "unseen": null,
+   "version": "0aa97209cfeda56ca9fab6f217acb76878e66e08",
+   "via": "relay",
+   "what": "review #360 @ 0aa97209"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
- "pr": 359,
+ "pr": 360,
  "pr_done": "",
  "prs": [
-  359
+  359,
+  360
  ],
- "review": "LAND",
- "state": "landable",
- "updated": "2026-11-09T18:08:09Z"
+ "review": "waiting",
+ "state": "review",
+ "updated": "2026-11-09T18:42:32Z"
 }

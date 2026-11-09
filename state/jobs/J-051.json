@@ -33,12 +33,13 @@
    "attempts": 0,
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-09T18:42:32Z",
    "due": "2026-11-09T18:05:20Z",
    "id": "O-6fe8c9ad",
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
+   "missing": 0,
    "ref": "BRANCH|claude/integrate-j051-asks-since",
    "sends": 0,
    "thread": 0,
@@ -56,5 +57,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T18:42:32Z"
 }

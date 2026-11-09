@@ -19,12 +19,13 @@
    "attempts": 1,
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-09T18:42:32Z",
    "due": "2026-11-09T18:05:20Z",
    "id": "O-14a329f7",
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T18:08:09Z",
+   "missing": 0,
    "ref": "ASK|ask on #128",
    "sends": 1,
    "thread": 128,
@@ -42,5 +43,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T18:42:32Z"
 }

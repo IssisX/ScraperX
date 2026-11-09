@@ -24,7 +24,7 @@
    "ack": null,
    "ack_rule": "new-head|reply|ack",
    "asked": null,
-   "attempts": 0,
+   "attempts": 1,
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
    "dead_lettered": null,
@@ -32,9 +32,10 @@
    "id": "O-359455b3",
    "kind": "fix",
    "last_error": "",
-   "last_sent": null,
+   "last_sent": "2026-11-09T18:42:32Z",
+   "missing": 0,
    "ref": "BRANCH|fb-bot/integrate-j044d",
-   "sends": 0,
+   "sends": 1,
    "thread": 0,
    "to": "muse",
    "version": "red:c816ba4ff54bd3c012c21a24266c018f7bc930ae",
@@ -50,5 +51,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T18:42:32Z"
 }
