@@ -303,10 +303,9 @@ def ref_md(it: Item) -> str:
 
 
 def ref_plain(it: Item) -> str:
-    """The item with no link, for mail: Muse's injection check refuses a mail that carries links
-    (work/tasks/mail-to-muse.md), and a refused ledger mail would be the silent drop this ledger exists to end."""
-    if it.kind in ("BRANCH", "SUPERSEDED"):
-        return f"`{clean(it.ref, 80)}`"
+    """The item with no link and no markup, for mail: Muse's injection check refuses a mail that carries links,
+    code marks or hidden text (work/tasks/mail-to-muse.md), and a refused ledger mail would be the silent drop
+    this ledger exists to end (J-072: the 11-09 17:04Z ledger mail was refused)."""
     return clean(it.ref, 80)
 
 
@@ -698,8 +697,12 @@ def notice_body(n: Notice, roster: Roster, now: dt.datetime, board: int) -> tupl
         what = ("twice past" if wake == "email" else "ESCALATED, past twice") if st == 2 else "past"
         lines.append(f"- {ref(it)}{(' ' + it.job) if it.job and it.job not in it.ref else ''}: {clean(it.state, 160)}; "
                      f"{age_text(it.age(now))} old, {what} its {age_text(it.deadline)} deadline")
-    tail = (f"From the switchboard's ledger (the section in #{board}'s body). You hold these: act, or say on the "
-            f"thread why they wait. Each is sent once per stage.")
+    if wake == "email":   # plain wording for Muse's check: no order, no pressure (work/tasks/mail-to-muse.md 6-7)
+        tail = (f"From the switchboard's ledger (the section in #{board}'s body). The next step for each is a PR, a "
+                f"fix, or one line on its issue saying why it waits. Each is sent once per stage.")
+    else:
+        tail = (f"From the switchboard's ledger (the section in #{board}'s body). You hold these: act, or say on the "
+                f"thread why they wait. Each is sent once per stage.")
     persona = sorted({it.holder.name for it, _ in n.items} - {roster.address(n.agent)})
     who = f" for {', '.join(persona)}," if persona else ""
     if wake == "email":
