@@ -36,6 +36,7 @@ RATE_WAIT_MAX_S = 30.0
 CACHE_MAX_BODY = 1_000_000   # bytes of one answer kept for its ETag; larger ones are read in full each time
 CACHE_MAX_ENTRIES = 4000
 CACHE_MAX_TOTAL = 20_000_000   # bytes of bodies saved in all: each run's cache entry stays small in the Actions cache
+CACHE_MAX_AGE_S = 7 * 86400    # an entry no run has read for this long is dropped
 STATUS = re.compile(r"^HTTP/\S+ (\d{3})")
 
 
@@ -82,7 +83,7 @@ class GitHub:
         self.reset: int | None = None       # x-ratelimit-reset (Unix time) of the newest answer
         self.limit: int | None = None       # x-ratelimit-limit: 1,000 an hour for GITHUB_TOKEN, 5,000+ for an App
         self.etags: dict[str, dict] = {}    # path (and Accept) -> {"etag", "body"}
-        self.used: set[str] = set()         # cache keys read or written this run (only these are saved)
+        self.used: set[str] = set()         # cache keys read or written this run (saved first)
         self.state: dict = {}               # the switch's sweep state (switch.py run_sweep), saved with the cache
         self.calls = self.not_modified = 0
 
@@ -99,14 +100,25 @@ class GitHub:
             self.state = got.get("state") if isinstance(got.get("state"), dict) else {}
             got = got.get("etags") if isinstance(got.get("etags"), dict) else {}
         self.etags = {k: v for k, v in got.items()
-                      if isinstance(v, dict) and isinstance(v.get("etag"), str) and isinstance(v.get("body"), str)}
+                      if isinstance(v, dict) and isinstance(v.get("etag"), str) and isinstance(v.get("body"), str)
+                      and isinstance(v.get("t", 0), (int, float))}
 
-    def save_etags(self, path: str) -> None:
+    def save_etags(self, path: str, now: float | None = None) -> None:
+        """Every entry, the most recently used first, within the caps (J-072, Codex on #360: a fast sweep reads no
+        unchanged PR, so keeping only this run's reads dropped every PR's entries, and the next read of a PR that
+        changed was a counted 200 instead of a free 304). An entry carries `t`, the last run that used it."""
+        now = time.time() if now is None else now
+        for k in self.used:
+            if k in self.etags:
+                self.etags[k]["t"] = now
         keep: dict[str, dict] = {}
         total = 0
-        for k in sorted(self.used):   # only what this run read: a path no longer read ages out of the cache
-            entry = self.etags.get(k)
-            if entry is None or len(keep) >= CACHE_MAX_ENTRIES or total + len(entry["body"]) > CACHE_MAX_TOTAL:
+        order = sorted(self.etags, key=lambda k: (k not in self.used, -float(self.etags[k].get("t") or 0), k))
+        for k in order:
+            entry = self.etags[k]
+            if k not in self.used and now - float(entry.get("t") or 0) > CACHE_MAX_AGE_S:
+                continue
+            if len(keep) >= CACHE_MAX_ENTRIES or total + len(entry["body"]) > CACHE_MAX_TOTAL:
                 continue
             keep[k] = entry
             total += len(entry["body"])

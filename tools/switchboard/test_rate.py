@@ -64,19 +64,50 @@ class Conditional(unittest.TestCase):
         self.assertIn(f"If-None-Match: {ETAG}", fake.seen[1])
         self.assertEqual((gh.not_modified, gh.remaining, gh.reset), (1, 4999, 1794248050))
 
-    def test_the_cache_is_carried_between_runs_and_keeps_only_what_was_read(self):
+    def test_an_idle_run_keeps_the_entries_it_did_not_read(self):
+        # Codex on #360: a fast sweep reads no unchanged PR; dropping those entries made the PR's next read a
+        # counted 200 instead of a free 304
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "etags.json")
-            first = client(Gh((answer(200, "[1]", ETag=ETAG), 0, ""), (answer(200, "[2]", ETag='"x"'), 0, "")))
+            pr, comments = "repos/IssisX/ScraperX/pulls/363", "repos/IssisX/ScraperX/issues/363/comments"
+            first = client(Gh((answer(200, '{"n": 363}', ETag='"p"'), 0, ""), (answer(200, "[1]", ETag='"c"'), 0, ""),
+                              (answer(200, "[]", ETag=ETAG), 0, "")))
+            first.get(pr)
+            first.get(comments)
             first.get(PATH)
-            first.get(PATH + "/comments")
-            first.save_etags(path)
-            second = client(Gh((answer(304, "", ETag=ETAG), 1, "gh: HTTP 304")))
-            second.load_etags(path)
-            self.assertEqual(second.get(PATH), [1])
-            second.save_etags(path)
+            first.save_etags(path, now=1000.0)
+            idle = client(Gh((answer(304, "", ETag=ETAG), 1, "gh: HTTP 304")))   # the idle run reads only the listing
+            idle.load_etags(path)
+            idle.get(PATH)
+            idle.save_etags(path, now=1600.0)
+            later = client(Gh((answer(304, "", ETag='"p"'), 1, "gh: HTTP 304"),
+                              (answer(304, "", ETag='"c"'), 1, "gh: HTTP 304")))
+            later.load_etags(path)
+            self.assertEqual(later.get(pr), {"n": 363})
+            self.assertEqual(later.get(comments), [1])
+            self.assertEqual(later.not_modified, 2)   # both free: the idle run kept them
             with open(path, encoding="utf-8") as f:
-                self.assertEqual(list(json.load(f)["etags"]), [f"{PATH}|"])   # the comments path was not read: dropped
+                saved = json.load(f)["etags"]
+            self.assertEqual(list(saved)[0], f"{PATH}|")   # the most recently used first
+            self.assertEqual(saved[f"{PATH}|"]["t"], 1600.0)
+            self.assertEqual(saved[f"{pr}|"]["t"], 1000.0)
+
+    def test_the_cache_keeps_its_caps_and_ages_out_what_no_run_reads(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "etags.json")
+            gh = client(Gh())
+            gh.etags = {"old|": {"etag": '"o"', "body": "[]", "t": 0.0},
+                        "recent|": {"etag": '"r"', "body": "[]", "t": 9 * 86400.0}}
+            gh.save_etags(path, now=10 * 86400.0)
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual(list(json.load(f)["etags"]), ["recent|"])   # unread for 10 days: dropped
+            gh = client(Gh())
+            gh.etags = {f"k{i}|": {"etag": '"e"', "body": "x" * 10, "t": float(i)} for i in range(5)}
+            gh.used = {"k0|"}
+            with mock.patch.object(ghapi, "CACHE_MAX_ENTRIES", 3):
+                gh.save_etags(path, now=100.0)
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual(list(json.load(f)["etags"]), ["k0|", "k4|", "k3|"])   # this run's, then the newest
 
     def test_a_broken_cache_file_is_ignored(self):
         with tempfile.TemporaryDirectory() as d:
@@ -147,7 +178,7 @@ class Sweep(unittest.TestCase):
                 mock.patch("reconciler.sweep") as rec:
             summary = os.path.join(d, "summary.md")
             code = switch.run_sweep(sw, args(**kw), NOW, "", summary)
-            text = open(summary, encoding="utf-8").read() if os.path.exists(summary) else ""
+            text = pathlib.Path(summary).read_text(encoding="utf-8") if os.path.exists(summary) else ""
         return code, text, led, rec
 
     def test_under_the_floor_only_the_merge_path_runs_and_the_run_passes(self):

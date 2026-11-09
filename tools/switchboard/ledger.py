@@ -318,6 +318,7 @@ class Ledger:
     items: list[Item]
     accounted: dict[str, str]        # every input -> the item that holds it, or why it is resolved
     counts: dict[str, int]           # resolved and system inputs, by reason
+    pending: list[dict] = dataclasses.field(default_factory=list)   # run(): the notices a clock will make due
 
     def dropped(self, feed: Feed) -> list[str]:
         """Inputs no item and no reason accounts for: always empty, or the classifier lost something."""
@@ -671,6 +672,101 @@ class Notice:
         return [it.key(st) for it, st in self.items]
 
 
+def send(gh, notices: list[Notice], roster: Roster, now: dt.datetime, board: int, out=print,
+         muse_label: str = "wake:muse") -> list[str]:
+    """Post the notices (at most MAX_NOTICES); returns the keys posted. A failed one is retried next sweep."""
+    posted: list[str] = []
+    for n in notices[:MAX_NOTICES]:
+        wake, text = notice_body(n, roster, now, board)
+        marked = f"{text}\n\n{NOTICE_MARK.format(keys=','.join(n.keys))}"
+        out(marked)
+        try:
+            if wake == "email":   # as switch.py's muse(): the marker goes in after the label lands
+                resp = gh.comment(n.thread, text, f"ledger: {len(n.items)} item(s) to Muse on #{n.thread}")
+                gh.write("POST", f"repos/{gh.repo}/issues/{n.thread}/labels", {"labels": [muse_label]},
+                         f"label #{n.thread} {muse_label} (the bridge emails Muse, then removes it)")
+                cid = (resp if isinstance(resp, dict) else {}).get("id")
+                if cid is not None:
+                    gh.write("PATCH", f"repos/{gh.repo}/issues/comments/{cid}", {"body": marked},
+                             f"ledger: mark #{n.thread} delivered")
+            else:
+                gh.comment(n.thread, marked, f"ledger: {len(n.items)} item(s) to {n.agent} on #{n.thread}")
+        except Exception as err:   # noqa: BLE001  one failed notice never stops the others; it is retried next sweep
+            out(f"ERROR       ledger notice on #{n.thread}: {type(err).__name__}: {err}")
+            continue
+        posted += n.keys
+    return posted
+
+
+# ---------- the clocks between full passes (J-072) ----------
+# A fast sweep reads no ledger input, but a deadline ripens on the clock, not on a read. The full pass keeps each
+# notice a clock will make due (the item, its stage, when); a fast sweep sends the ripe ones from that, with no
+# read, unless something about the item changed since the full pass: then the ledger runs in full.
+def pending(items: list[Item], now: dt.datetime, sent: set[str]) -> list[dict]:
+    """Per item, the next notice owed: one due now and not sent (past MAX_NOTICES or a failed post: the next sweep
+    sends it), else the next stage's, at its time."""
+    out = []
+    for it in items:
+        if not it.holder.agent:
+            continue
+        now_stage = it.stage(now)
+        if now_stage and it.key(now_stage) not in sent:
+            at = now
+        elif now_stage < 2 and it.key(now_stage + 1) not in sent:
+            at = it.clock + (now_stage + 1) * it.deadline
+        else:
+            continue
+        out.append({"at": at.strftime("%Y-%m-%dT%H:%M:%SZ"), "item": item_json(it)})
+    return out
+
+
+def advance(timers: list[dict], posted: Iterable[str], now: dt.datetime) -> list[dict]:
+    """The timers after a fire: one whose notice went out waits for its item's next stage, if any is left."""
+    done = set(posted)
+    keep = []
+    for t in timers:
+        it = item_of(t["item"])
+        if it.key(1) not in done and it.key(2) not in done:
+            keep.append(t)
+        elif it.key(2) not in done:
+            keep.append(dict(t, at=(it.clock + 2 * it.deadline).strftime("%Y-%m-%dT%H:%M:%SZ")))
+    return keep
+
+
+def item_json(it: Item) -> dict:
+    d = dataclasses.asdict(it)
+    for k in ("clock", "touched"):
+        d[k] = d[k].strftime("%Y-%m-%dT%H:%M:%SZ") if d[k] else None
+    d["deadline"] = it.deadline.total_seconds()
+    return d
+
+
+def item_of(d: dict) -> Item:
+    person = lambda p: Person(p["name"], p["agent"]) if p else None   # noqa: E731
+    return Item(d["kind"], d["ref"], d["link"], d["job"], person(d["owner"]), person(d["holder"]), d["state"],
+                parse(d["clock"]), dt.timedelta(seconds=float(d["deadline"])), d["version"], int(d["thread"]),
+                parse(d["touched"]) if d.get("touched") else None, d.get("unmatched") or "")
+
+
+def ripe(timers: list[dict], now: dt.datetime) -> list[dict]:
+    return [t for t in timers if (parse(t.get("at")) or now) <= now]
+
+
+def touched_by(t: dict, dirty: dict) -> bool:
+    """Did anything about this notice's item change since the full pass (a PR read, a comment on its thread, a
+    proof on its branch)? Then its cached state may be wrong, and the ledger runs in full instead."""
+    d = t["item"]
+    refs = {int(r) for r in re.findall(r"#(\d+)", d.get("ref") or "")} | {int(d.get("thread") or 0)}
+    return bool(refs & set(dirty.get("threads") or [])) or (d.get("ref") or "") in set(dirty.get("branches") or [])
+
+
+def fire(gh, timers: list[dict], roster: Roster, now: dt.datetime, board: int, out=print,
+         muse_label: str = "wake:muse") -> list[str]:
+    """Send the ripe cached notices, with no read. Returns the keys posted."""
+    items = [item_of(t["item"]) for t in ripe(timers, now)]
+    return send(gh, due_notices(items, now, set(), roster, board), roster, now, board, out, muse_label)
+
+
 def due_notices(items: list[Item], now: dt.datetime, sent: set[str], roster: Roster, board: int) -> list[Notice]:
     """The notices owed this sweep, the most urgent first: each item past its deadline whose key for its stage was
     never sent, one comment per (thread, holder). Muse reads mail, not threads: hers go in one mail per sweep, on
@@ -738,26 +834,8 @@ def run(gh, feed: Feed, roster: Roster, now: dt.datetime, when: str, out=print, 
     body = board_body() if board_body else (gh.get(f"repos/{gh.repo}/issues/{feed.board}") or {}).get("body") or ""
     old_sent, old_kept = section_state(body)
     sent = set(old_sent) | set(sent_in_comments)
-    posted: list[str] = []
-    for n in due_notices(led.items, now, sent, roster, feed.board)[:MAX_NOTICES]:
-        wake, text = notice_body(n, roster, now, feed.board)
-        marked = f"{text}\n\n{NOTICE_MARK.format(keys=','.join(n.keys))}"
-        out(marked)
-        try:
-            if wake == "email":   # as switch.py's muse(): the marker goes in after the label lands
-                resp = gh.comment(n.thread, text, f"ledger: {len(n.items)} item(s) to Muse on #{n.thread}")
-                gh.write("POST", f"repos/{gh.repo}/issues/{n.thread}/labels", {"labels": [muse_label]},
-                         f"label #{n.thread} {muse_label} (the bridge emails Muse, then removes it)")
-                cid = (resp if isinstance(resp, dict) else {}).get("id")
-                if cid is not None:
-                    gh.write("PATCH", f"repos/{gh.repo}/issues/comments/{cid}", {"body": marked},
-                             f"ledger: mark #{n.thread} delivered")
-            else:
-                gh.comment(n.thread, marked, f"ledger: {len(n.items)} item(s) to {n.agent} on #{n.thread}")
-        except Exception as err:   # noqa: BLE001  one failed notice never stops the others; it is retried next sweep
-            out(f"ERROR       ledger notice on #{n.thread}: {type(err).__name__}: {err}")
-            continue
-        posted += n.keys
+    posted = send(gh, due_notices(led.items, now, sent, roster, feed.board), roster, now, feed.board, out, muse_label)
+    led.pending = pending(led.items, now, sent | set(posted))
     live_keys = {it.key(s) for it in led.items for s in (1, 2)}
     keep_keys = sorted({digest("keep", b) for b in feed.keeps} |
                        ({k for k in old_kept} & {digest("keep", b.name) for b in feed.branches}))

@@ -89,6 +89,7 @@ INBOX_READY_AFTER = dt.timedelta(minutes=15)   # one sweep apart: green with a L
 INBOX_RED_STUCK = dt.timedelta(hours=3)        # FIX-CI with no new head this long
 INBOX_BRANCH_RED = dt.timedelta(hours=1)       # a red integrate branch with no PR this long
 INBOX_RUNS_WINDOW = dt.timedelta(hours=24)     # proof runs read per sweep, as tools/board/sweep.py's branch window
+RED_RUN_KEYS = ("id", "head_branch", "head_sha", "status", "conclusion", "created_at", "updated_at", "html_url")
 QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-hours
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
@@ -137,6 +138,7 @@ REVIEW_KEY_ENV = "SWITCHBOARD_REVIEW_KEY"
 HC_SWEEP_ENV = "HC_SWEEP_URL"
 # J-072: the ETag cache file (ghapi.GitHub.load_etags), carried between runs by the Actions cache in switchboard.yml.
 ETAG_CACHE_ENV = "SWITCHBOARD_ETAG_CACHE"
+BRIDGE_VERSION_ENV = "SWITCHBOARD_BRIDGE_VERSION"   # the dispatch's bridge_version input (switchboard.yml): free each sweep
 # J-072: under this share of the hour's limit (x-ratelimit-limit, read at run time) only the merge path runs
 # (run_sweep); the rest waits. 16% is 160 of GITHUB_TOKEN's 1,000 (the merge path reads about 6 calls a PR) and 800
 # of an App's 5,000.
@@ -1086,6 +1088,17 @@ class Switch:
             self.gh.comment(BOARD_ISSUE, body, f"pipe alarm ({', '.join(new)}) on #{BOARD_ISSUE}")
         return found
 
+    def pipe_ripen(self, at: dt.datetime) -> None:
+        """J-072: the next time a clock alone changes pipe_health's findings; a fast sweep runs it then."""
+        if at > self.now:
+            self.pipe_next = min(at, getattr(self, "pipe_next", None) or at)
+
+    def wake_listing(self) -> list[int]:
+        """The open issues and PRs labeled wake:muse (one read; wake_stuck reads the same path)."""
+        label = urllib.parse.quote(MUSE_LABEL, safe="")
+        got = self.gh.get(f"repos/{self.gh.repo}/issues?state=open&labels={label}&per_page={MAX_WAKE_ISSUES}") or []
+        return sorted(int(it["number"]) for it in got)
+
     def bridge_version_health(self) -> tuple[str, tuple[str, str]] | None:
         """J-072: is the live bridge trunk's? Its clock names each sweep it dispatches "Switchboard sweep (bridge <v>)"
         (switchboard.yml run-name), <v> being the .gs's BRIDGE_VERSION, the hash bridge_version() gives of its own
@@ -1107,7 +1120,10 @@ class Switch:
             m = BRIDGE_RUN.match(r.get("display_title") or "")
             if m and at and self.now - at <= BRIDGE_SEEN:
                 live = m.group(1)
+                if live == want:   # J-072: missing once BRIDGE_SEEN passes with no newer run naming it
+                    self.bridge_until = at + BRIDGE_SEEN + dt.timedelta(seconds=1)
                 break
+        self.bridge_live = live or "none"
         if live == want:
             self.out(f"PIPE        the live bridge is trunk's ({want})")
             return None
@@ -1125,7 +1141,9 @@ class Switch:
         The label's age is read from the issue's events: the first `labeled` after the last `unlabeled`."""
         out: list[tuple[int, dt.datetime]] = []
         label = urllib.parse.quote(MUSE_LABEL, safe="")
-        for it in self.gh.get(f"repos/{self.gh.repo}/issues?state=open&labels={label}&per_page={MAX_WAKE_ISSUES}") or []:
+        listed = self.gh.get(f"repos/{self.gh.repo}/issues?state=open&labels={label}&per_page={MAX_WAKE_ISSUES}") or []
+        self.wake_numbers = sorted(int(it["number"]) for it in listed)   # J-072: a fast sweep compares its own read
+        for it in listed:
             number = int(it["number"])
             on: dt.datetime | None = None
             for e in self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/events"):
@@ -1139,6 +1157,8 @@ class Switch:
                 self.out(f"NOTE  #{number} has {MUSE_LABEL} but no labeled event was read")
             elif self.now - on > PIPE_WAKE_STUCK:
                 out.append((number, on))
+            else:
+                self.pipe_ripen(on + PIPE_WAKE_STUCK + dt.timedelta(seconds=1))
         return sorted(out, key=lambda x: x[1])
 
     def inbound_quiet(self, prev: dt.datetime | None) -> tuple[int, dt.datetime | None, bool] | None:
@@ -1149,7 +1169,7 @@ class Switch:
         start = self.now - PIPE_INBOUND_QUIET
         since = start if prev is None else max(min(start, prev), self.now - PIPE_LOOKBACK)
         stamp = since.strftime("%Y-%m-%dT%H:%M:%SZ")
-        asks, posts = 0, []
+        asks, posts, newest_ask = 0, [], None
         for c in self.gh.paged(f"repos/{self.gh.repo}/issues/comments?since={stamp}&sort=created&direction=desc"):
             at = parse_time(c.get("created_at") or "")
             if at is None:
@@ -1157,12 +1177,18 @@ class Switch:
             body = (c.get("body") or "").lstrip()
             if body.startswith(BRIDGE_POST):
                 posts.append(at)
-            elif body.startswith("CLAUDE_TO_MUSE:") and at >= start:
-                asks += 1
+            elif body.startswith("CLAUDE_TO_MUSE:"):
+                newest_ask = max(at, newest_ask or at)
+                if at >= start:
+                    asks += 1
         last_post = max(posts) if posts else None
+        if last_post is not None and newest_ask is not None and newest_ask > last_post:
+            self.pipe_ripen(last_post + PIPE_INBOUND_QUIET + dt.timedelta(seconds=1))   # quiet a day after the last post
         if not asks or (last_post is not None and last_post >= start):
             return None
         fresh = prev is None or prev < self.now - PIPE_LOOKBACK or (last_post is not None and last_post > prev)
+        if not fresh and prev is not None:
+            self.pipe_ripen(prev + PIPE_LOOKBACK + dt.timedelta(seconds=1))   # an open incident alarms again then
         return asks, last_post, fresh
 
     def inbox_reported(self) -> list[str]:
@@ -1189,13 +1215,14 @@ class Switch:
     def _items(self, steered: list[Steered], reported: frozenset[str], prefix: str) -> list[InboxItem]:
         """Both audiences' items from one read: prefix "" is the integrator's, "muse-" is Muse's (J-052)."""
         since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
-        runs = self.listing(f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{since}",
-                            "workflow_runs")
+        ripe = getattr(self, "ripe_runs", None)   # J-072: a quiet fast sweep checks only the RED-BRANCH runs now ripe
+        runs = ripe if ripe is not None else self.listing(
+            f"repos/{self.gh.repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{since}", "workflow_runs")
         items: list[InboxItem] = []
         for s in steered:
             items += self.pr_inbox_items(s, runs, reported, prefix)
         items += self.branch_inbox_items(runs, reported, prefix)
-        if not prefix:
+        if not prefix and ripe is None:
             items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
             items += self.ask_inbox_items(reported)
         return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
@@ -1275,6 +1302,8 @@ class Switch:
                                              f"{plain('; '.join(d.reasons))}"))
         elif ready and (d.action == "WAIT" or s.merge_note):   # a MERGE that merged (or a dry run's) is no item
             times = [t for t in (parse_time(ctx.get("proof_done_at") or ""), parse_time(lands[0].created_at)) if t]
+            if times:
+                self.ripen(f.number, max(times) + INBOX_READY_AFTER)
             if not times or now - max(times) >= INBOX_READY_AFTER:
                 why = s.merge_note or "; ".join(d.reasons)
                 out.append(item("NOT-MERGED", f"green, LAND by {lands[-1].who}, still open a sweep later: {plain(why)}",
@@ -1302,6 +1331,8 @@ class Switch:
                 out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", "muse"))
             on_head = [parse_time(r["created_at"]) for r in runs_here if r.get("head_sha") == f.head_sha]
             head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
+            if head_since:
+                self.ripen(f.number, head_since + INBOX_RED_STUCK)
             if head_since and now - head_since >= INBOX_RED_STUCK and owner:
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
                                              f"{hours(now - head_since)} ({proof_link})", owner))
@@ -1310,9 +1341,18 @@ class Switch:
                       "FIX" if d.action == "FIX" or rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review") else
                       "DISPATCH" if f.proof == "none" else "")
             idle = parse_time(ctx.get("updated_at") or "")
+            if action and idle:
+                self.ripen(f.number, idle + dt.timedelta(hours=QUIET_HOURS))
             if action and idle and (now - idle).total_seconds() >= QUIET_HOURS * 3600 and owner:
                 out.append(item("QUIET", f"no activity on the PR for {hours(now - idle)} while it is {action}", owner))
         return [it for it in out if kept(it)]
+
+    def ripen(self, number: int, at: dt.datetime) -> None:
+        """J-072: the next time a clock alone changes this PR's inbox items (a fast sweep reads a cold PR again then).
+        Only future times count: one already past fired this sweep."""
+        if at > self.now:
+            got = self.__dict__.setdefault("_ripen", {})
+            got[number] = min(at, got.get(number, at))
 
     def fix_finding(self, f: rules.PrFacts, ctx: dict) -> str:
         """The newest open FIX verdict's first 600 chars and its link, for Muse's comment (J-052)."""
@@ -1342,25 +1382,35 @@ class Switch:
                     newest[name] = r
         out: list[InboxItem] = []
         read = 0
+        pending = self.__dict__.setdefault("red_pending", {})   # J-072: runs that ripen later (switch state "red")
+        checked = self.__dict__.setdefault("_red_checked", {})   # (branch, head) -> its branch head and proof, this run
         for name in sorted(newest):
             run = newest[name]
             head, done = run.get("head_sha") or "", parse_time(run.get("updated_at") or "")
             if (run.get("status") == "completed" and run.get("conclusion") == "success") or not done \
-                    or (self.now - done) < INBOX_BRANCH_RED or inbox_key(prefix + "RED-BRANCH", name, head) in reported:
+                    or inbox_key(prefix + "RED-BRANCH", name, head) in reported:
                 continue
-            if read >= MAX_INBOX_BRANCHES:
+            if (self.now - done) < INBOX_BRANCH_RED:
+                if run.get("status") == "completed":   # red, not yet an hour: a fast sweep checks it when it ripens
+                    pending[name] = {k: run.get(k) for k in RED_RUN_KEYS}
+                continue
+            if (name, head) not in checked and read >= MAX_INBOX_BRANCHES:
                 self.out(f"INBOX       {MAX_INBOX_BRANCHES} branches read; the rest wait for the next sweep")
-                break
-            read += 1
-            try:
-                now_head = self.gh.get(f"repos/{self.gh.repo}/branches/{quote(name, safe='/')}")["commit"]["sha"]
-            except GitHubError as err:
-                if "HTTP 404" in err.detail:   # deleted since its proof ran
-                    continue
-                raise
-            if now_head != head:   # a newer head: its own proof decides, next sweep
+                pending[name] = {k: run.get(k) for k in RED_RUN_KEYS}   # ripe already: the next sweep checks it
                 continue
-            proof, url, _, done_at = self.run_state(run)
+            if (name, head) not in checked:
+                read += 1
+                try:
+                    now_head = self.gh.get(f"repos/{self.gh.repo}/branches/{quote(name, safe='/')}")["commit"]["sha"]
+                except GitHubError as err:
+                    if "HTTP 404" not in err.detail:
+                        raise
+                    now_head = ""   # deleted since its proof ran
+                checked[(name, head)] = (now_head, self.run_state(run) if now_head == head else None)
+            now_head, state = checked[(name, head)]
+            if now_head != head or state is None:   # gone, or a newer head: its own proof decides
+                continue
+            proof, url, _, done_at = state
             done = parse_time(done_at) or done
             if proof.startswith("red") and (self.now - done) >= INBOX_BRANCH_RED:
                 out.append(InboxItem("RED-BRANCH", name, head,
@@ -2066,6 +2116,9 @@ class SweepDelta:
     comments: int                 # comments posted since the last sweep
     finished: set[str]            # branches whose proof run finished since the last sweep
     finished_auto: set[str]       # of those, the auto-open's (fb-bot/integrate-*)
+    threads: set[int] = dataclasses.field(default_factory=set)    # every issue or PR something touched (the ledger's)
+    active: set[str] = dataclasses.field(default_factory=set)     # branches with a proof run started or finished
+    pipe: bool = False            # a CLAUDE_TO_MUSE ask or a bridge post: pipe health reads again
 
 
 def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
@@ -2074,6 +2127,7 @@ def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
     on its branch finished, a comment landed on it, on its job issue or names it, or its last decision was not
     COLD (a clock-driven wait: Codex, the review fallback, a merge). The PR listing is the sweep's own."""
     since = parse_time(state["stamp"]) - SWEEP_OVERLAP
+    now = sw.now
     repo = sw.gh.repo
     got = sw.gh.get(f"repos/{repo}/actions/workflows/{PROOF_WORKFLOW}/runs?created=%3E%3D{iso_z(since - PROOF_SPAN)}"
                     "&per_page=100") or {}
@@ -2083,13 +2137,24 @@ def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
     comments = sw.gh.get(f"repos/{repo}/issues/comments?since={iso_z(since)}&per_page=100") or []
     nums = {p["number"] for p in prs}
     recs = state.get("prs") or {}
+    auto = {b for b in finished if b.startswith(AUTO_PR_PREFIX)}
+    active = finished | {r.get("head_branch") or "" for r in runs if (parse_time(r.get("created_at") or "") or since) >= since}
+    pipe = any((c.get("body") or "").lstrip().startswith(("CLAUDE_TO_MUSE:", BRIDGE_POST)) for c in comments)
+    threads: set[int] = set()
+    for c in comments:
+        try:
+            threads.add(int((c.get("issue_url") or "").rsplit("/", 1)[1]))
+        except (ValueError, IndexError):
+            continue
     if len(runs) >= 100 or len(comments) >= 100:   # more than one page: read everything rather than guess
-        return SweepDelta(set(nums), len(comments), finished, {b for b in finished if b.startswith(AUTO_PR_PREFIX)})
+        return SweepDelta(set(nums), len(comments), finished, auto, threads | set(nums), active, True)
     changed: set[int] = set()
     for p in prs:
         rec = recs.get(str(p["number"]))
+        ripen = parse_time(str(rec.get("ripen") or "")) if isinstance(rec, dict) else None
         if (not isinstance(rec, dict) or rec.get("head") != (p.get("head") or {}).get("sha")
                 or rec.get("updated") != p.get("updated_at") or not rec.get("cold")
+                or (ripen is not None and ripen <= now)   # an inbox clock (NOT-MERGED, RED-STUCK, QUIET) ripened
                 or (p.get("head") or {}).get("ref") in finished):
             changed.add(p["number"])
     by_issue: dict[int, set[int]] = {}
@@ -2103,7 +2168,7 @@ def sweep_delta(sw, prs: list[dict], state: dict) -> SweepDelta:
             continue
         hit = {thread} | by_issue.get(thread, set()) | {int(r) for r in re.findall(r"#(\d{1,6})\b", (c.get("body") or "")[:600])}
         changed |= hit & nums
-    return SweepDelta(changed, len(comments), finished, {b for b in finished if b.startswith(AUTO_PR_PREFIX)})
+    return SweepDelta(changed, len(comments), finished, auto, threads | changed, active, pipe)
 
 
 def pr_record(sw, pr: dict, facts, ctx: dict, seen, ask: bool) -> dict:
@@ -2214,6 +2279,11 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         failed += 1   # no PR could be read: the sweep did not finish
         sw.out(f"ERROR       every one of the {read} PRs read failed: the sweep did not finish")
     quiet = delta is not None and not delta.prs and not delta.comments and not delta.finished
+    timers: dict = dict((state or {}).get("timers") or {}) if delta is not None else {}
+    dirty: dict = dict((state or {}).get("dirty") or {}) if delta is not None else {}
+    if delta is not None:   # what changed since the full pass: a cached ledger notice about it is not sent blind
+        dirty = {"threads": sorted(set(dirty.get("threads") or []) | delta.threads),
+                 "branches": sorted(set(dirty.get("branches") or []) | delta.active)}
 
     def part(name: str, fn, *extra) -> object:
         nonlocal failed
@@ -2231,17 +2301,67 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
 
     if steer and (delta is None or delta.finished_auto):   # a fast sweep: only branches whose proof just finished
         part("auto-open", lambda: sw.auto_open_prs(None if delta is None else delta.finished_auto))
+    red_ripe = [r for r in timers.get("red") or []
+                if (parse_time(str(r.get("updated_at") or "")) or now) + INBOX_BRANCH_RED <= now]
     if steer and not targeted and not quiet:   # the inbox reads a whole sweep, so a run for one PR posts none
         part("inbox", lambda: sw.inbox(steered))
         part("muse", lambda: sw.muse(steered))   # J-052: Muse's items go to Muse by comment + wake:muse
-    if steer and not targeted and delta is None:   # the full pass: everything below reads the whole repo
+        timers["red"] = list(getattr(sw, "red_pending", {}).values())
+    elif steer and not targeted and red_ripe:   # J-072: a quiet sweep, but a red branch's hour is up: just those
+        sw.out(f"RIPE        RED-BRANCH clock: {', '.join(sorted(r.get('head_branch') or '?' for r in red_ripe))}")
+        sw.ripe_runs = red_ripe
+        part("inbox", lambda: sw.inbox(steered))
+        part("muse", lambda: sw.muse(steered))
+        sw.ripe_runs = None
+        fired = {r.get("id") for r in red_ripe}
+        timers["red"] = [r for r in timers.get("red") or [] if r.get("id") not in fired] + \
+            list(getattr(sw, "red_pending", {}).values())
+    pipe_state = dict(timers.get("pipe") or {})
+    bridge_env = os.environ.get(BRIDGE_VERSION_ENV, "").strip()
+    if steer and not targeted and delta is None:
+        run_pipe = True
+    elif steer and not targeted:   # J-072: pipe health's clocks and triggers, from the cached facts
+        if bridge_env and bridge_env == pipe_state.get("live") and pipe_state.get("version_at"):
+            pipe_state["version_at"] = iso_z(now + BRIDGE_SEEN + dt.timedelta(seconds=1))   # this sweep is the clock's
+        at = [parse_time(str(pipe_state.get(k) or "")) for k in ("next_at", "version_at")]
+        wake = part("pipe wake read", sw.wake_listing)
+        run_pipe = (any(t is not None and t <= now for t in at) or delta.pipe
+                    or (bool(bridge_env) and bridge_env != pipe_state.get("live"))
+                    or (wake is not None and wake != pipe_state.get("wake")))
+    else:
+        run_pipe = False
+    if run_pipe:
+        sw.pipe_next = sw.bridge_until = None
         alarms = part("pipe health", sw.pipe_health)   # bridge-health: once per incident on the board
         write_summary(summary, "PIPE ALARM", [plain(a) for a in alarms or []])
+        until = getattr(sw, "bridge_until", None)
+        pipe_state = {"next_at": iso_z(sw.pipe_next) if getattr(sw, "pipe_next", None) else None,
+                      "version_at": iso_z(until) if until else None, "live": getattr(sw, "bridge_live", ""),
+                      "wake": getattr(sw, "wake_numbers", None)}
+    timers["pipe"] = pipe_state
 
-        def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, in #340
-            import ledger as board_ledger
-            board_ledger.sweep(sw, steered, BOARD_ISSUE, MUSE_LABEL, PROOF_WORKFLOW,
-                               {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now))
+    def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, in #340
+        import ledger as board_ledger
+        led = board_ledger.sweep(sw, steered, BOARD_ISSUE, MUSE_LABEL, PROOF_WORKFLOW,
+                                 {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now))
+        timers["ledger"] = list(getattr(led, "pending", None) or [])
+
+    def ledger_clock() -> None:   # J-072: the ledger deadlines that ripened since the full pass, sent from the cache
+        import ledger as board_ledger
+        import yaml
+        ripe = board_ledger.ripe(timers.get("ledger") or [], now)
+        if not ripe:
+            return
+        if any(board_ledger.touched_by(t, dirty) for t in ripe):   # its item changed: read it all, as the full pass
+            sw.out("RIPE        ledger deadline on an item that changed since the full pass: the ledger runs in full")
+            ledger_part()
+            return
+        roster = board_ledger.Roster(yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {})
+        sw.out(f"RIPE        ledger clock: {len(ripe)} deadline(s), sent from the full pass's reading")
+        posted = board_ledger.fire(sw.gh, ripe, roster, now, BOARD_ISSUE, sw.out, MUSE_LABEL)
+        timers["ledger"] = board_ledger.advance(timers.get("ledger") or [], posted, now)
+
+    if steer and not targeted and delta is None:   # the full pass: everything below reads the whole repo
         part("ledger", ledger_part, subprocess.SubprocessError)
         # J-072 stage 1: the shadow reconciler writes only switchboard/state, posts nothing, and never fails the
         # sweep (work/switchboard.yml `reconciler: shadow`; absent is off). Its own reads (about 58) wait under the floor.
@@ -2251,13 +2371,22 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                 reconciler.sweep(sw, steered, BOARD_ISSUE, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH}, {INBOX_PR})
             except Exception as err:   # noqa: BLE001
                 sw.out(f"ERROR       reconciler (shadow, the sweep goes on): {type(err).__name__}: {err}")
+    if steer and not targeted and delta is not None:
+        part("ledger clock", ledger_clock, subprocess.SubprocessError)
     if steer and not (args.pr or args.sha):
         if not args.dry_run:   # J-072: the end of a full non-dry sweep (a run for one PR or sha is not one)
             sweep_heartbeat(hc_sweep, failed, sw.out)
     if not targeted and isinstance(sw.gh.state, dict) and not sw.merge_only:
         open_now = {str(p["number"]) for p in prs}
+        ripen = getattr(sw, "_ripen", {})
+        for k, rec in records.items():   # the inbox's clocks, read after the loop: a cold PR is read again then
+            if int(k) in ripen:
+                rec["ripen"] = iso_z(ripen[int(k)])
+            elif str(k) in {str(p["number"]) for p in prs if delta is None or p["number"] in delta.prs}:
+                rec.pop("ripen", None)   # read this sweep, and no clock is left on it
         sw.gh.state[part_key] = {"stamp": iso_z(now), "full_at": iso_z(now) if delta is None else state["full_at"],
-                                 "prs": {k: v for k, v in records.items() if k in open_now}}
+                                 "prs": {k: v for k, v in records.items() if k in open_now},
+                                 "timers": timers, "dirty": {} if delta is None else dirty}
     write_summary(summary, "Item errors (the sweep finished; each is retried next sweep)",
                   [plain(e[:200]) for e in item_errors])
     write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]

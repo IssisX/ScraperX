@@ -89,6 +89,10 @@ env:
   # J-072: the switch's ETag cache (ghapi.py): restored before and saved after the switch step of ask and steer;
   # a 304 answer does not count against the 5,000-an-hour limit (run 42667757904 hit it).
   SWITCHBOARD_ETAG_CACHE: etags.json
+  # J-072: the live bridge's version, as its clock dispatched this sweep ("" for any other event): the switch checks
+  # it against trunk's every sweep with no read (switch.py BRIDGE_VERSION_ENV). A hex string the clock sends; the
+  # switch only compares it, never runs it.
+  SWITCHBOARD_BRIDGE_VERSION: ${{ inputs.bridge_version }}
 
 jobs:
   # A PR that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
