@@ -21,7 +21,7 @@ Fewer, batched calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): one at a time while over pace (Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). If `effort_level` is not max (his pick till the system works, 11-09; raise it only when he throttles), or ultracode is on, tell Cory once.
+Every run, first: `get_session` (no id). Effort is his pick, read from `get_session` (xhigh, 11-09): mention it only when he throttles; ultracode on: tell him once.
 
 Change the check here, never in the task's prompt. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
