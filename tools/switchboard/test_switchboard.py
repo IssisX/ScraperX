@@ -1236,7 +1236,7 @@ class RepoReviewModel(unittest.TestCase):
         spec = b.calls["review"]
         self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "high", 64000))   # Cory, 11-08
         sec = b.calls["security_review"]   # the workflow-file PR's security pass keeps max (Cory, 11-08: "split")
-        self.assertEqual((sec.model, sec.effort, sec.max_tokens), ("claude-opus-5-5", "max", 64000))
+        self.assertEqual((sec.model, sec.effort, sec.max_tokens), ("claude-opus-5-5", "max", 128000))
         self.assertTrue(money.check(b, [], NOW, "J-1", money.worst_case(b, "security_review", sec.max_input_tokens)).ok)
         # The 64000 reserve passes the caps: the worst case at the full input limit fits one job's cap.
         worst = money.worst_case(b, "review", spec.max_input_tokens)
