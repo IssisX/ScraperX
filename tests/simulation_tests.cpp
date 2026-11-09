@@ -4,6 +4,7 @@
 #include "sim_tests.hpp"
 
 #include <cstdio>
+#include <chrono>
 
 int main() {
     // A line at a time, piped or not: a harness that stops the run early
@@ -590,120 +591,132 @@ int main() {
         return EXIT_SUCCESS;
     }
 
-    run_pulley_static_end();
-    run_matron_exam();
-    run_core_traversal();
-    run_fall_checkpoint();
-    run_world_solids();
-    run_twin_geometry();
-    run_twin();
-    run_twin_balconies();
-    run_well_stage_a();
-    run_well_stage_b();
-    run_well_stage_c();
-    run_well_band();
-    run_step2_movement();
-    run_stack();
-    run_wet_isolation();
-    run_wet_e();
-    run_wet_handling();
-    run_wet_band();
-    run_wet_route();
-    run_water();
-    run_plate_shop();
-    run_plate_band();
-    run_plate_route();
-    run_plate_wreckage();
-    run_facade_crane();
-    run_crane_band();
-    run_crane_route();
-    run_route_pockets();
-    run_crane_wreckage();
-    run_midstack_service();
-    run_service_c4();
-    run_service_n();
-    run_service_c5();
-    run_service_o();
-    run_wreck_way_on();
-    run_service_band();
-    run_service_route();
-    run_determinism();
-    run_slingshot();
-    run_swing();
-    run_c6();
-    run_mast();
-    run_pitman();
-    run_helix();
-    run_high();
-    run_incline();
-    run_wheel();
-    run_save();
-    run_landing();
-    run_jump_buffer();
-    run_parkour_seams();
-    run_teeter();
-    run_edge_stand();
-    run_trapeze();
-    run_tram();
-    run_derrick();
-    run_brachiation();
-    run_pipe_gallery();
-    run_slide();
-    run_speed_vault();
-    run_wall_run();
-    run_wall_climb();
-    run_tuck();
-    run_flow();
-    run_springboard();
-    run_swing_launch();
-    run_slide_jump();
-    run_climb_moves();
-    run_wall_chain();
-    run_up_controls();
-    run_zipline();
-    run_corpse();
-    run_arm_break();
-    run_hook();
-    run_workers();
-    run_c7();
-    run_gust_front_upper();
-    run_summit();
-    run_summit_arm();
-    run_summit_ending();
-    run_matron_player_independence();
-    run_matron_routecraft();
-    run_matron_exam_routecraft();
-    run_matron_exam_climber();
-    run_matron_exam_descent();
-    run_matron_found_climb();
-    run_matron();
-    run_matron_pace();
-    run_matron_unstick();
-    run_matron_traverse();
-    run_matron_pursuit();
+    // Fallthrough timing: wall seconds per group, printed as TIME lines,
+    // so the next shard split is measured, not guessed. Print-only; no bar,
+    // target, assertion, or slice changes. The dispatch branches above
+    // return early, so TIME lines appear only in the bare-binary run
+    // (the athletic_traversal CTest test), never in a slice log.
+    auto timed = [](const char *name, auto run) {
+        const auto start = std::chrono::steady_clock::now();
+        run();
+        const double seconds =
+            std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        std::cout << "TIME scraperx_sim " << name << ' ' << seconds << " s\n";
+    };
+    timed("pulley_static_end", [] { run_pulley_static_end(); });
+    timed("matron_exam", [] { run_matron_exam(); });
+    timed("core_traversal", [] { run_core_traversal(); });
+    timed("fall_checkpoint", [] { run_fall_checkpoint(); });
+    timed("world_solids", [] { run_world_solids(); });
+    timed("twin_geometry", [] { run_twin_geometry(); });
+    timed("twin", [] { run_twin(); });
+    timed("twin_balconies", [] { run_twin_balconies(); });
+    timed("well_stage_a", [] { run_well_stage_a(); });
+    timed("well_stage_b", [] { run_well_stage_b(); });
+    timed("well_stage_c", [] { run_well_stage_c(); });
+    timed("well_band", [] { run_well_band(); });
+    timed("step2_movement", [] { run_step2_movement(); });
+    timed("stack", [] { run_stack(); });
+    timed("wet_isolation", [] { run_wet_isolation(); });
+    timed("wet_e", [] { run_wet_e(); });
+    timed("wet_handling", [] { run_wet_handling(); });
+    timed("wet_band", [] { run_wet_band(); });
+    timed("wet_route", [] { run_wet_route(); });
+    timed("water", [] { run_water(); });
+    timed("plate_shop", [] { run_plate_shop(); });
+    timed("plate_band", [] { run_plate_band(); });
+    timed("plate_route", [] { run_plate_route(); });
+    timed("plate_wreckage", [] { run_plate_wreckage(); });
+    timed("facade_crane", [] { run_facade_crane(); });
+    timed("crane_band", [] { run_crane_band(); });
+    timed("crane_route", [] { run_crane_route(); });
+    timed("route_pockets", [] { run_route_pockets(); });
+    timed("crane_wreckage", [] { run_crane_wreckage(); });
+    timed("midstack_service", [] { run_midstack_service(); });
+    timed("service_c4", [] { run_service_c4(); });
+    timed("service_n", [] { run_service_n(); });
+    timed("service_c5", [] { run_service_c5(); });
+    timed("service_o", [] { run_service_o(); });
+    timed("wreck_way_on", [] { run_wreck_way_on(); });
+    timed("service_band", [] { run_service_band(); });
+    timed("service_route", [] { run_service_route(); });
+    timed("determinism", [] { run_determinism(); });
+    timed("slingshot", [] { run_slingshot(); });
+    timed("swing", [] { run_swing(); });
+    timed("c6", [] { run_c6(); });
+    timed("mast", [] { run_mast(); });
+    timed("pitman", [] { run_pitman(); });
+    timed("helix", [] { run_helix(); });
+    timed("high", [] { run_high(); });
+    timed("incline", [] { run_incline(); });
+    timed("wheel", [] { run_wheel(); });
+    timed("save", [] { run_save(); });
+    timed("landing", [] { run_landing(); });
+    timed("jump_buffer", [] { run_jump_buffer(); });
+    timed("parkour_seams", [] { run_parkour_seams(); });
+    timed("teeter", [] { run_teeter(); });
+    timed("edge_stand", [] { run_edge_stand(); });
+    timed("trapeze", [] { run_trapeze(); });
+    timed("tram", [] { run_tram(); });
+    timed("derrick", [] { run_derrick(); });
+    timed("brachiation", [] { run_brachiation(); });
+    timed("pipe_gallery", [] { run_pipe_gallery(); });
+    timed("slide", [] { run_slide(); });
+    timed("speed_vault", [] { run_speed_vault(); });
+    timed("wall_run", [] { run_wall_run(); });
+    timed("wall_climb", [] { run_wall_climb(); });
+    timed("tuck", [] { run_tuck(); });
+    timed("flow", [] { run_flow(); });
+    timed("springboard", [] { run_springboard(); });
+    timed("swing_launch", [] { run_swing_launch(); });
+    timed("slide_jump", [] { run_slide_jump(); });
+    timed("climb_moves", [] { run_climb_moves(); });
+    timed("wall_chain", [] { run_wall_chain(); });
+    timed("up_controls", [] { run_up_controls(); });
+    timed("zipline", [] { run_zipline(); });
+    timed("corpse", [] { run_corpse(); });
+    timed("arm_break", [] { run_arm_break(); });
+    timed("hook", [] { run_hook(); });
+    timed("workers", [] { run_workers(); });
+    timed("c7", [] { run_c7(); });
+    timed("gust_front_upper", [] { run_gust_front_upper(); });
+    timed("summit", [] { run_summit(); });
+    timed("summit_arm", [] { run_summit_arm(); });
+    timed("summit_ending", [] { run_summit_ending(); });
+    timed("matron_player_independence", [] { run_matron_player_independence(); });
+    timed("matron_routecraft", [] { run_matron_routecraft(); });
+    timed("matron_exam_routecraft", [] { run_matron_exam_routecraft(); });
+    timed("matron_exam_climber", [] { run_matron_exam_climber(); });
+    timed("matron_exam_descent", [] { run_matron_exam_descent(); });
+    timed("matron_found_climb", [] { run_matron_found_climb(); });
+    timed("matron", [] { run_matron(); });
+    timed("matron_pace", [] { run_matron_pace(); });
+    timed("matron_unstick", [] { run_matron_unstick(); });
+    timed("matron_traverse", [] { run_matron_traverse(); });
+    timed("matron_pursuit", [] { run_matron_pursuit(); });
     // run_matron_chase: its own ctest slice (scraperx_sim.matron-chase), so the
     // whole suite's run stays inside its timeout. It still runs on every ctest.
-    run_matron_ring_descent();
-    run_matron_ways();
-    run_matron_climb();
+    timed("matron_ring_descent", [] { run_matron_ring_descent(); });
+    timed("matron_ways", [] { run_matron_ways(); });
+    timed("matron_climb", [] { run_matron_climb(); });
     // run_matron_grab, run_matron_arm, run_matron_fatality: their own ctest
     // slice (scraperx_sim.matron-grab), as matron-chase, since her fatality's
     // runs took the whole suite's run past its timeout. They still run on
     // every ctest.
-    run_strike();
-    run_one_arm_route();
-    run_bay();
-    run_loose_stock();
-    run_look_target();
-    run_body_order();
-    run_fabricated();
-    run_forklift();
-    run_forklift_strain();
-    run_yard_crane();
-    run_yard_crane_magnet();
-    run_yard_crane_spreader();
-    run_machine_hearing();
-    run_ascent();
+    timed("strike", [] { run_strike(); });
+    timed("one_arm_route", [] { run_one_arm_route(); });
+    timed("bay", [] { run_bay(); });
+    timed("loose_stock", [] { run_loose_stock(); });
+    timed("look_target", [] { run_look_target(); });
+    timed("body_order", [] { run_body_order(); });
+    timed("fabricated", [] { run_fabricated(); });
+    timed("forklift", [] { run_forklift(); });
+    timed("forklift_strain", [] { run_forklift_strain(); });
+    timed("yard_crane", [] { run_yard_crane(); });
+    timed("yard_crane_magnet", [] { run_yard_crane_magnet(); });
+    timed("yard_crane_spreader", [] { run_yard_crane_spreader(); });
+    timed("machine_hearing", [] { run_machine_hearing(); });
+    timed("ascent", [] { run_ascent(); });
 
     return EXIT_SUCCESS;
 }
