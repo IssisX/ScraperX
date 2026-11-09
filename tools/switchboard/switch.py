@@ -1910,6 +1910,13 @@ def main() -> int:
             if alarms and summary:
                 with open(summary, "a", encoding="utf-8") as f:
                     f.write("### PIPE ALARM\n\n" + "".join(f"- {plain(a)}\n" for a in alarms))
+        try:   # the ledger (tools/switchboard/ledger.py): every open item, its holder and deadline, in #340's body
+            import ledger as board_ledger
+            board_ledger.sweep(sw, steered, BOARD_ISSUE, MUSE_LABEL, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH},
+                               {INBOX_PR}, central(now))
+        except (GitHubError, RuntimeError, KeyError, ValueError, subprocess.SubprocessError) as err:
+            failed += 1
+            sw.out(f"ERROR       ledger: {type(err).__name__}: {err}")
     return 2 if failed else 0
 
 
