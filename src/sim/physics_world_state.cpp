@@ -496,11 +496,11 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     }
     ok = ok && r.done();
     // The save's bodies past this world's: exactly the pieces of the
-    // stocks its damage says broke, eight each, in the damage's
-    // order. A save with anything else past them is one this world
-    // cannot rebuild, and is refused with nothing changed. The
-    // damage records themselves are validated by the restore below;
-    // anything unshapely here simply fails this equality.
+    // stocks its damage says broke, eight each. A save with anything
+    // else past them is one this world cannot rebuild, and is refused
+    // with nothing changed. The damage records themselves are
+    // validated by the restore below; anything unshapely here simply
+    // fails this equality.
     std::vector<std::uint64_t> expected_pieces;
     for (const stock_damage::StockDamage::SavedDamage &record : saved_damage) {
         if (record.broken == 0) {
@@ -519,12 +519,27 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
             expected_pieces.push_back(stock_damage::piece_entity_for(record.entity, k));
         }
     }
+    // Matched by entity, not by order: the save lists the pieces in
+    // break order, the damage in entity order, and the two differ
+    // when the higher crate breaks first — a save refused for that
+    // alone is a lost save. And only the pieces this world lacks are
+    // made: a load into the world that broke them already has them,
+    // so its extra bodies are none and the count is the missing.
+    std::vector<std::uint64_t> missing_pieces;
+    for (const std::uint64_t piece_entity : expected_pieces) {
+        if (!kit_->body_for_entity(piece_entity).valid()) {
+            missing_pieces.push_back(piece_entity);
+        }
+    }
     const std::size_t extra_bodies = entities.size() > built ? entities.size() - built : 0;
-    const std::size_t pieces_to_make = expected_pieces.size();
-    ok = ok && extra_bodies == expected_pieces.size();
+    const std::size_t pieces_to_make = missing_pieces.size();
+    ok = ok && extra_bodies == pieces_to_make;
     if (ok && extra_bodies > 0) {
-        ok = std::equal(entities.begin() + static_cast<std::ptrdiff_t>(built), entities.end(),
-                        expected_pieces.begin());
+        std::vector<std::uint64_t> extra(entities.begin() + static_cast<std::ptrdiff_t>(built),
+                                         entities.end());
+        std::sort(extra.begin(), extra.end());
+        std::sort(missing_pieces.begin(), missing_pieces.end());
+        ok = extra == missing_pieces;
     }
     // A grip holds a body the save has: one built with its world, or one of
     // its fabricated objects (the kit's last).
@@ -561,7 +576,33 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // spawn at the break geometry around the crate's checkpoint
     // place, at rest; the restore below then sets them moving as
     // saved, where the save holds their states.
-    for (int i = 0; i < loose_stock_->count(); ++i) {
+    //
+    // Made in the save's order, not the stocks': the save lists the
+    // pieces in break order, and the restore applies their states by
+    // kit position — so a crate broken first in the save must come
+    // first here too, or the states (and any grip holding a piece)
+    // land on the wrong bodies. A stock's pieces sit together in the
+    // save, eight in a row, so first appearance orders the stocks;
+    // the stride is piece_entity_for's own 8.
+    std::vector<int> spawn_order;
+    {
+        std::vector<bool> seen(static_cast<std::size_t>(loose_stock_->count()), false);
+        for (std::size_t j = built; j < entities.size(); ++j) {
+            const std::uint64_t piece_entity = entities[j];
+            if (piece_entity < stock_damage::kPieceEntityBase ||
+                piece_entity >= stock_damage::kPieceEntityLimit) {
+                continue;
+            }
+            const std::size_t stock_index = static_cast<std::size_t>(
+                (piece_entity - stock_damage::kPieceEntityBase) / 8U);
+            if (stock_index >= static_cast<std::size_t>(loose_stock_->count()) || seen[stock_index]) {
+                continue;
+            }
+            seen[stock_index] = true;
+            spawn_order.push_back(static_cast<int>(stock_index));
+        }
+    }
+    for (const int i : spawn_order) {
         const std::uint64_t entity = LooseStock::kFirstEntity + static_cast<std::uint64_t>(i);
         if (!stock_damage_.state(entity).broken) {
             continue;

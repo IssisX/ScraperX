@@ -319,6 +319,125 @@ void fabricated_break_case(const scraperx::sim::InitialSpawn spawn, const bool f
     }
 }
 
+// Two crates break in reverse entity order: the save loads. South has
+// the higher entity (kDeckCrateSouth = kDeckCrateNorth + 1), so breaking
+// it first lists the pieces in break order, not entity order — and the
+// save must load into a fresh world and back into the world that broke
+// them, both succeeding.
+void reverse_break_save_case() {
+    const std::string prefix = "stock damage reverse break save: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(2.0);  // the commit lands; the crates are live
+    const std::uint32_t bodies_before = s.kit_body_count();
+    const std::uint64_t south_entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateSouth;
+    const std::uint64_t north_entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const std::uint32_t south = piece(s, LooseStock::kDeckCrateSouth);
+    const std::uint32_t north = piece(s, LooseStock::kDeckCrateNorth);
+    const double south_mass = s.kit_body_mass(south);
+    const double north_mass = s.kit_body_mass(north);
+    // South first: the higher entity breaks first.
+    {
+        const auto at = s.kit_body_position(south);
+        put(s, south, {at.x, at.y + 3.0, at.z});
+        (void)s.advance_frame(1.0);  // the fall, the landing, the break executes
+    }
+    require(s.stock_damage(south_entity).broken, (prefix + "the south crate breaks first").c_str());
+    require(s.kit_body_count() == bodies_before + 8,
+            (prefix + "the south break adds eight pieces").c_str());
+    // Then north.
+    {
+        const auto at = s.kit_body_position(north);
+        put(s, north, {at.x, at.y + 3.0, at.z});
+        (void)s.advance_frame(1.0);  // the fall, the landing, the break executes
+    }
+    require(s.stock_damage(north_entity).broken, (prefix + "the north crate breaks second").c_str());
+    require(s.kit_body_count() == bodies_before + 16,
+            (prefix + "the north break adds eight more pieces").c_str());
+    // Every piece's place and motion, both crates, as the save must carry them.
+    std::array<Vector3, 16> piece_at{};
+    std::array<Vector3, 16> piece_vel{};
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = s.kit_body_index(piece_entity_for(south_entity, k));
+        require(body != 0xFFFFFFFFU, (prefix + "every south piece exists").c_str());
+        piece_at[k] = s.kit_body_position(body);
+        piece_vel[k] = s.kit_body_velocity(body);
+        require(std::abs(s.kit_body_mass(body) - south_mass / 8.0) < 0.01,
+                (prefix + "every south piece keeps its mass share").c_str());
+    }
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = s.kit_body_index(piece_entity_for(north_entity, k));
+        require(body != 0xFFFFFFFFU, (prefix + "every north piece exists").c_str());
+        piece_at[8 + k] = s.kit_body_position(body);
+        piece_vel[8 + k] = s.kit_body_velocity(body);
+        require(std::abs(s.kit_body_mass(body) - north_mass / 8.0) < 0.01,
+                (prefix + "every north piece keeps its mass share").c_str());
+    }
+    const std::uint32_t bodies_after = s.kit_body_count();
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    // A fresh world loads it, pieces in place.
+    {
+        Simulation t(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(t.load_game(bytes.data(), bytes.size()), (prefix + "the fresh world loads the save").c_str());
+        require(t.stock_damage(south_entity).broken && t.stock_damage(north_entity).broken,
+                (prefix + "both crates stay broken").c_str());
+        require(t.kit_body_count() == bodies_after, (prefix + "the piece count matches").c_str());
+        require(!t.kit_body_enabled(south) && !t.kit_body_enabled(north),
+                (prefix + "both crates stay parked").c_str());
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = t.kit_body_index(piece_entity_for(south_entity, k));
+            require(body != 0xFFFFFFFFU, (prefix + "every south piece loads").c_str());
+            const auto pp = t.kit_body_position(body);
+            require(std::hypot(pp.x - piece_at[k].x, pp.y - piece_at[k].y, pp.z - piece_at[k].z) < 0.05,
+                    (prefix + "every south piece keeps its position").c_str());
+            const auto pv = t.kit_body_velocity(body);
+            require(std::hypot(pv.x - piece_vel[k].x, pv.y - piece_vel[k].y, pv.z - piece_vel[k].z) < 0.05,
+                    (prefix + "every south piece keeps its velocity").c_str());
+        }
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = t.kit_body_index(piece_entity_for(north_entity, k));
+            require(body != 0xFFFFFFFFU, (prefix + "every north piece loads").c_str());
+            const auto pp = t.kit_body_position(body);
+            require(std::hypot(pp.x - piece_at[8 + k].x, pp.y - piece_at[8 + k].y,
+                               pp.z - piece_at[8 + k].z) < 0.05,
+                    (prefix + "every north piece keeps its position").c_str());
+            const auto pv = t.kit_body_velocity(body);
+            require(std::hypot(pv.x - piece_vel[8 + k].x, pv.y - piece_vel[8 + k].y,
+                               pv.z - piece_vel[8 + k].z) < 0.05,
+                    (prefix + "every north piece keeps its velocity").c_str());
+        }
+    }
+    // The same world loads it back, making nothing twice.
+    {
+        require(s.load_game(bytes.data(), bytes.size()), (prefix + "the same world loads the save").c_str());
+        require(s.kit_body_count() == bodies_after,
+                (prefix + "the same world makes no second set of pieces").c_str());
+        require(s.stock_damage(south_entity).broken && s.stock_damage(north_entity).broken,
+                (prefix + "both crates stay broken in the same world").c_str());
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = s.kit_body_index(piece_entity_for(south_entity, k));
+            require(body != 0xFFFFFFFFU, (prefix + "every south piece stays").c_str());
+            const auto pp = s.kit_body_position(body);
+            require(std::hypot(pp.x - piece_at[k].x, pp.y - piece_at[k].y, pp.z - piece_at[k].z) < 0.05,
+                    (prefix + "every south piece keeps its position in the same world").c_str());
+            const auto pv = s.kit_body_velocity(body);
+            require(std::hypot(pv.x - piece_vel[k].x, pv.y - piece_vel[k].y, pv.z - piece_vel[k].z) < 0.05,
+                    (prefix + "every south piece keeps its velocity in the same world").c_str());
+        }
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = s.kit_body_index(piece_entity_for(north_entity, k));
+            require(body != 0xFFFFFFFFU, (prefix + "every north piece stays").c_str());
+            const auto pp = s.kit_body_position(body);
+            require(std::hypot(pp.x - piece_at[8 + k].x, pp.y - piece_at[8 + k].y,
+                               pp.z - piece_at[8 + k].z) < 0.05,
+                    (prefix + "every north piece keeps its position in the same world").c_str());
+            const auto pv = s.kit_body_velocity(body);
+            require(std::hypot(pv.x - piece_vel[8 + k].x, pv.y - piece_vel[8 + k].y,
+                               pv.z - piece_vel[8 + k].z) < 0.05,
+                    (prefix + "every north piece keeps its velocity in the same world").c_str());
+        }
+    }
+}
+
 } // namespace
 
 void run_stock_damage() {
@@ -744,4 +863,6 @@ void run_stock_damage() {
     fabricated_break_case(scraperx::sim::InitialSpawn::ExteriorGrade, true, "fabricate first, after commit");
     fabricated_break_case(scraperx::sim::InitialSpawn::HighDrop, false, "break first, before commit");
     fabricated_break_case(scraperx::sim::InitialSpawn::ExteriorGrade, false, "break first, after commit");
+    // ---- (d) two crates break in reverse entity order: the save loads ----
+    reverse_break_save_case();
 }
