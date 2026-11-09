@@ -286,6 +286,14 @@ def ref_md(it: Item) -> str:
     return f"[{clean(it.ref, 40)}]({it.link})" if it.link else clean(it.ref, 40)
 
 
+def ref_plain(it: Item) -> str:
+    """The item with no link, for mail: Muse's injection check refuses a mail that carries links
+    (work/tasks/mail-to-muse.md), and a refused ledger mail would be the silent drop this ledger exists to end."""
+    if it.kind in ("BRANCH", "SUPERSEDED"):
+        return f"`{clean(it.ref, 80)}`"
+    return clean(it.ref, 80)
+
+
 @dataclasses.dataclass
 class Ledger:
     items: list[Item]
@@ -634,18 +642,19 @@ def due_notices(items: list[Item], now: dt.datetime, sent: set[str], roster: Ros
 
 def notice_body(n: Notice, roster: Roster, now: dt.datetime, board: int) -> tuple[str, str]:
     """(the first line's channel, the comment without its marker)."""
+    wake = roster.wake(n.agent)
+    ref = ref_plain if wake == "email" else ref_md
     lines = []
     for it, st in n.items:
-        what = "ESCALATED, past twice" if st == 2 else "past"
-        lines.append(f"- {ref_md(it)}{(' ' + it.job) if it.job and it.job not in it.ref else ''}: {clean(it.state, 160)}; "
+        what = ("twice past" if wake == "email" else "ESCALATED, past twice") if st == 2 else "past"
+        lines.append(f"- {ref(it)}{(' ' + it.job) if it.job and it.job not in it.ref else ''}: {clean(it.state, 160)}; "
                      f"{age_text(it.age(now))} old, {what} its {age_text(it.deadline)} deadline")
     tail = (f"From the switchboard's ledger (the section in #{board}'s body). You hold these: act, or say on the "
             f"thread why they wait. Each is sent once per stage.")
-    wake = roster.wake(n.agent)
     persona = sorted({it.holder.name for it, _ in n.items} - {roster.address(n.agent)})
     who = f" for {', '.join(persona)}," if persona else ""
     if wake == "email":
-        first = f"CLAUDE_TO_MUSE: ledger,{who} {len(n.items)} item(s) of yours past deadline (links below)"
+        first = f"CLAUDE_TO_MUSE: ledger,{who} {len(n.items)} item(s) of yours past deadline"
     elif wake == "mention" and all(it.kind == "PR" for it, _ in n.items):
         first = "@codex review"
     else:

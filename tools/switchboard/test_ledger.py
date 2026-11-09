@@ -273,6 +273,8 @@ class Escalation(unittest.TestCase):
         n, text = gh.comments[0]
         self.assertEqual(n, 340)                             # no job issue: the board
         self.assertTrue(text.startswith("CLAUDE_TO_MUSE: "))
+        self.assertNotIn("http", text)                      # Muse's injection check refuses a mail with links
+        self.assertNotIn("](", text)
         self.assertNotIn(asks.LEDGER_MARK, text)            # the marker goes in after the label (as muse())
         self.assertIn(("POST", "repos/IssisX/ScraperX/issues/340/labels", {"labels": ["wake:muse"]}), gh.writes)
         marked = [b["body"] for m, p, b in gh.writes if p.endswith("/comments/1001")]
@@ -284,7 +286,8 @@ class Escalation(unittest.TestCase):
         gh = FakeGH()
         body = self.sweep(gh, f, NOW + 4.5 * H, body)       # past 2 x 2 h: once more, and ESCALATED
         self.assertEqual(len(gh.comments), 1)
-        self.assertIn("ESCALATED", gh.comments[0][1])
+        self.assertIn("twice past", gh.comments[0][1])     # mail words: no shouted urgency for Muse's check
+        self.assertNotIn("http", gh.comments[0][1])
         esc = body.split("### ESCALATED", 1)[1].split("###", 1)[0]
         self.assertIn("fb-bot/integrate-j044b-x", esc)
         gh = FakeGH()
