@@ -192,6 +192,7 @@ void test_matron_sight() {
     std::cout << "PASS matron sight: eyes at her head, field of view, walls, hearing labeled with an age, stale leads, "
                  "peripheral glimpse\n";
 }
+SCRAPERX_SLICE("matron-sight", test_matron_sight);
 
 // ---- the stalk (matron_stalk.cpp) -------------------------------------------
 namespace {
@@ -390,6 +391,7 @@ void test_matron_stalk() {
     std::cout << "PASS matron stalk: frozen under his gaze, closing when he looks away, her band, no grab in it, "
                  "the attack rule (patience, strike, unaware)\n";
 }
+SCRAPERX_SLICE("matron-stalk", test_matron_stalk, test_matron_ladder_head);
 
 // ---- the ladder he climbs: she goes round and waits at its head ----
 void test_matron_ladder_head() {

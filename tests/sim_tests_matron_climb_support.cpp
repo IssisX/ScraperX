@@ -225,6 +225,7 @@ void run_matron_board_walls() {
     require(passed == runs, "matron board walls: every seeded board walled off, both ways, she replans and arrives");
     std::cout << "PASS matron board walls: " << passed << "/" << runs << "\n";
 }
+SCRAPERX_SLICE("matron-board-walls", run_matron_board_walls);
 
 void test_matron_climb_support() {
     std::array<std::array<float, 6>, 6> recorded{};
@@ -298,6 +299,7 @@ void test_matron_climb_support() {
     run_matron_state_exits();
     std::cout << "PASS matron climb support: missing steel, sensor exclusion, actual support removal, blocked ascent and floor recovery\n";
 }
+SCRAPERX_SLICE("matron-climb-support", test_matron_climb_support);
 
 // A post she can climb by friction on its faces: her scan reads it as a
 // riser, and her map holds no other way UP to the deck it stands against:
@@ -334,6 +336,7 @@ void test_matron_riser() {
             "matron riser: her map has no other way up to the deck");
     std::cout << "PASS scraperx_sim matron riser scan: post found, no other way between floor and deck\n";
 }
+SCRAPERX_SLICE("matron-riser", test_matron_riser);
 
 namespace scraperx::sim {
 struct MatronStateExitAccess {
@@ -717,3 +720,4 @@ void run_matron_state_exits() {
     require(c10, "matron state exits: a set-down blocked three times over open air never lets go over the drop; she walks him on and sets him down on her deck");
     std::cout << "PASS matron state exits: all 10 state-exit groups verified\n";
 }
+SCRAPERX_SLICE("matron-state-exits", run_matron_state_exits);

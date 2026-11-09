@@ -286,6 +286,8 @@ void run_twin() {
             "twin: after a load the leaf still carries the walk to tower one");
     std::cout << "PASS scraperx_sim twin save: the leaf stays down through save and load\n";
 }
+SCRAPERX_GROUP("twin", 70, run_twin);
+SCRAPERX_SELECT("twin", run_twin, run_twin_balconies);
 
 void run_twin_geometry() {
     Simulation s;
@@ -367,6 +369,8 @@ void run_twin_geometry() {
     require(highest + 30.0 < 214.0, "twin: from the ground, the hook's reach stays short of the bridge");
     std::cout << "PASS scraperx_sim twin ground: highest reachable " << highest << " m, the bridge at 220 m out of reach\n";
 }
+SCRAPERX_GROUP("twin_geometry", 60, run_twin_geometry);
+SCRAPERX_SELECT("twin-geometry", run_twin_geometry);
 
 // J-053, the Void Crossing balconies (Claude 2026-11-07 06:13 ruling): five
 // steel balconies on tower two's face at 640, 662, 684, 706, 728 m, each 4 m
@@ -547,3 +551,4 @@ void run_twin_balconies() {
                   << " m stand survives save and load\n";
     }
 }
+SCRAPERX_GROUP("twin_balconies", 80, run_twin_balconies);

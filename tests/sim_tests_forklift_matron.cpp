@@ -650,3 +650,4 @@ void run_forklift_matron() {
     std::cout << "PASS scraperx_sim forklift_matron: ram_ns=" << full.impulse_ns << " creep_blow_mps=" << creep.blow_mps
               << " push_feet_n=" << off.feet_n << " fall_mps=" << off.fall_mps << "\n";
 }
+SCRAPERX_SLICE("forklift-matron", run_forklift_matron);
