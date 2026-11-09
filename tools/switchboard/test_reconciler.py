@@ -1163,31 +1163,43 @@ class ReplayFindings(unittest.TestCase):
         self.assertTrue(R.cory_due(sat + 9 * H + 17 * M, sat + 13 * H + 17 * M))
         self.assertFalse(R.cory_due(None, sat + 22 * H), "Sat-Sun hours end at 9 PM")
 
-    def test_the_first_live_pass_sends_what_shadow_only_recorded(self):
-        # shadow counts its would-be sends: left alone, the first live notice would be the re-send at the due
-        # time (or none), and a manual ask shadow batched for Cory would never reach him
+    def test_the_first_live_pass_floods_no_one_the_backlog_is_one_line_for_cory(self):
+        # the coordinator, 11-09: with 100 dead-letters in the replay's 48 h, the first live pass must not flood Cory
+        # or the agents. Everything live at the cutover is backlog: one line for Cory, counts by holder, never sent
+        # one by one, never dead-lettered. Agents hear only of what is created or ripens after the cutover.
         h = Harness(roster=MROSTER)
-        f = feed(prs=[pr(427, "claude/integrate-j527-x", job="J-527", action="FIX-CI", proof="red: x"),
-                      pr(428, "chatgpt/integrate-j528-x", job="J-528", action="FIX-CI", proof="red: y")])
-        h.run(f, NOW)
-        h.run(f, NOW + 10 * M)
-        self.assertEqual(h.obs("J-527")[0]["sends"], 1)
-        manual = h.obs("J-528")[0]
-        self.assertIn(manual["id"], h.state().cory["reported"])
+        old = [pr(427, "claude/integrate-j527-x", job="J-527", action="FIX-CI", proof="red: x"),
+               pr(428, "chatgpt/integrate-j528-x", job="J-528", action="FIX-CI", proof="red: y"),
+               pr(429, "fb-bot/integrate-j529-x", job="J-529", action="FIX-CI", proof="red: z")]
+        for k in range(0, 10):   # shadow: sent, re-sent, the Muse one dead-lettered
+            h.run(feed(prs=old), NOW + k * H)
+        self.assertTrue(h.obs("J-529", NOW + 9 * H)[0]["dead_lettered"])
         gh = FakeGH()
         h.outbox, h.cory = R.CommentOutbox(gh, MROSTER, 340), R.CoryNotifier(gh, 340)
-        h.run(f, NOW + 90 * M)
-        ob = h.obs("J-527")[0]
+        live = ct(2026, 11, 10, 8, 20)   # Tuesday, just after the 8:17 AM slot
+        h.run(feed(prs=old), live)
+        self.assertEqual(len(gh.comments), 1, "the first live pass posts one message, to Cory")
+        n, body, _ = gh.comments[0]
+        self.assertTrue(body.startswith("To Cory: Needs you ("), body)
+        items = [x for x in body.splitlines() if x.startswith("- Needs you") and "PIPE" not in x]
+        self.assertEqual(len(items), 1, body)   # (the overnight gap in these passes is a PIPE line of its own)
+        self.assertIn("3 item(s) from before the reconciler went live (", items[0])
+        for name in ("Claude 1", "ChatGPT 1", "Muse 1"):
+            self.assertIn(name, body)
+        st = h.state(live)
+        self.assertTrue(all(o.get("backlog") and not o["dead_lettered"] for r in st.records() for o in r["obligations"]))
+        # passes on: the backlog is never sent or dead-lettered; a new item after the cutover is sent
+        new = pr(430, "claude/integrate-j530-y", job="J-530", action="FIX-CI", proof="red: w")
+        for k in range(1, 30):
+            h.run(feed(prs=old + [new]), live + k * 10 * M, comments=gh.bot_comments(live))
         bodies = [b for _, b, _ in gh.comments]
-        self.assertTrue(any(f"id={ob['id']} send=1 attempt=1" in b for b in bodies), "its first real notice")
-        self.assertEqual((ob["sends"], ob.get("sent_by")), (1, "live"))
-        self.assertEqual(ob["due"], L.iso(R.session_due(NOW + 90 * M)), "a fresh clock from the cutover")
-        self.assertTrue(any(b.startswith("To Cory: Needs you") and manual["id"] in b for b in bodies),
-                        "Cory gets what shadow only recorded")
-        self.assertEqual(h.state().cory["mode"], "live")
-        n = len(gh.comments)
-        h.run(f, NOW + 100 * M, comments=gh.bot_comments(NOW + 90 * M))
-        self.assertEqual(len(gh.comments), n, "once: the next live pass sends nothing again")
+        fresh = h.obs("J-530", live)[0]
+        self.assertTrue(any(f"id={fresh['id']} send=1" in b for b in bodies), "a new item is sent")
+        for job in ("J-527", "J-528", "J-529"):
+            ob = h.obs(job, live)[0]
+            self.assertFalse(any(ob["id"] in b for b in bodies if not b.startswith("To Cory")), job)
+            self.assertIsNone(ob["dead_lettered"], job)
+        self.assertEqual(sum(1 for b in bodies if "from before the reconciler went live" in b), 1, "once")
 
 
 if __name__ == "__main__":
