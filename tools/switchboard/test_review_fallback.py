@@ -116,17 +116,17 @@ class FallbackConfig(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
-        # J-072: ChatGPT is `wake: manual`, so Grok is the only polled fallback and nothing is routed to ChatGPT.
-        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("grok",), 1.0))
-        self.assertEqual(team.other_authored_asks, ("grok",))
-        self.assertEqual(team.manual, frozenset({"chatgpt"}))
+        # 11-09: ChatGPT's review task polls hourly, so it is the first fallback, Grok (twice a day) the second.
+        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("chatgpt", "grok"), 1.0))
+        self.assertEqual(team.other_authored_asks, ("chatgpt", "grok"))
+        self.assertEqual(team.manual, frozenset())
         routed = tuple(team.pool) + tuple(team.fallback_order) + tuple(team.human_reviewers) + tuple(team.other_authored_asks)
         self.assertNotIn("muse", routed)
-        self.assertNotIn("chatgpt", routed)
-        for author in ("anthropic", "openai", "meta", "xai"):
-            for api_ok in (True, False):
-                self.assertNotIn("chatgpt", rules.review_rotation(9, author, frozenset(), team, api_ok), (author, api_ok))
-            self.assertNotEqual(rules.next_fallback(["grok"], author, team), "chatgpt")
+        for author in ("anthropic", "meta", "xai"):
+            self.assertEqual(rules.next_fallback([], author, team), "chatgpt", author)
+            self.assertEqual(rules.next_fallback(["chatgpt"], author, team), "" if author == "xai" else "grok", author)
+        # an OpenAI-authored PR (Codex, ChatGPT) never asks ChatGPT: its LAND would not count
+        self.assertEqual(rules.next_fallback([], "openai", team), "grok")
 
 
 class ManualWake(unittest.TestCase):

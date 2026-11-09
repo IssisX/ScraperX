@@ -69,7 +69,7 @@ him again.
   #N> ...` the same hour: the goal and the result wanted, in the shape `work/tasks/mail-to-muse.md` keeps
   (its injection check refused a mail, 11-07); long orders go in `work/tasks/muse.md`. Muse
   answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
-  (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
+  (10 AM and 4 PM) find only comments that START `To Grok:`; Grok Bot (Builder, PE) reads all the time (11-09). ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
 - **Check, then ask; never guess** (11-07: "checks arent expensive and its just laziness"): in code or any
   claim, read the source, file, docs or clock, measure or run it before stating it. Before locking in a hard job's approach, after the second
@@ -106,10 +106,10 @@ him again.
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
-  `helper` or `helper-max`; Cory 11-06), never a separate session: at most two at once (three if acute), each
+  `helper` or `helper-max`; Cory 11-06), never a separate session: more than two when the work needs it (11-09), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  high (Cory 11-07: high as long as nothing is missed; `.claude/settings.json` matches him); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
-- **Context:** sessions compact themselves at 750k (Cory 11-09) (`autoCompactWindow` in `.claude/settings.json`; 11-06 throttle: every call rereads the context);
+  max (Cory 11-09: never ask him again); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
+- **Context:** the window is 833k (Cory 11-09: compacts near 650k; `/autocompact` sets it live; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.

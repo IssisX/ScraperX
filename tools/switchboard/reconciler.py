@@ -79,7 +79,8 @@ WAKEABLE = dt.timedelta(minutes=30)  # the Claude API (reviews); Codex once the 
 EMAIL = dt.timedelta(hours=4)        # Muse, by the mail bridge
 POLL_GRACE = dt.timedelta(hours=1)   # a polled agent: its next run plus this
 CORY = dt.timedelta(minutes=15)      # manual: straight to Cory
-POLL_RUNS = {"grok": ((10, 0), (16, 0))}   # Central (hour, minute) of each polled agent's runs (Grok 10 AM, 4 PM)
+# Central (hour, minute) of each polled agent's runs: Grok 10 AM and 4 PM; ChatGPT's review task hourly at :27 (11-09).
+POLL_RUNS = {"grok": ((10, 0), (16, 0)), "chatgpt": tuple((h, 27) for h in range(24))}
 # The integrator's hourly runs (work/tasks/integrator-hourly.md, Cory 11-06 and 11-08): weekdays 8:17 AM-11:17 PM
 # Central, Sat-Sun 9:17 AM-9:17 PM, none overnight. Keyed by "is a weekend": (first hour, last hour, minute).
 INTEGRATOR_RUNS = {False: (8, 23, 17), True: (9, 21, 17)}
