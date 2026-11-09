@@ -1,4 +1,11 @@
 name: Switchboard
+# J-072: the run says what it is, so a dry run never passes for a sweep. The bridge's watchdog
+# (tools/switchboard/muse_bridge.gs, SWEEP_TITLE) counts only a successful "Switchboard sweep" as alive.
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && (inputs.provision && 'Switchboard provision' ||
+  inputs.dry_run && 'Switchboard DRY run (takes no action)' || inputs.digest && 'Switchboard digest' ||
+  'Switchboard sweep') || github.event_name == 'schedule' && (github.event.schedule == '0 12,13 * * *' &&
+  'Switchboard digest' || 'Switchboard sweep') || format('Switchboard ({0})', github.event_name) }}
 
 # The wake switch and merger of design v3 step B (job J-031). No model decides here: see
 # tools/switchboard/switch.py and work/CONTEXT.md.
@@ -9,30 +16,29 @@ name: Switchboard
 # credential is written to disk. Event text (titles, bodies, labels) reaches the scripts only through
 # env, quoted, never through an expression inside `run:`.
 
+# No workflow_run trigger (J-072). It last fired 11-05 12:11Z: `workflows:` entries are glob patterns, and
+# the proof's name on trunk has a `+` ("...WO-000..013 + ascent..."), which a glob reads as "one or more
+# spaces", so the name never matched once the default branch moved to trunk (main's old name had no
+# glob character). It is not restored: the proof's own wake-switchboard job dispatches a full sweep as it
+# ends, and the Muse bridge dispatches one every 10 min; a targeted workflow_run run in the shared
+# concurrency group below would only replace that pending full sweep. Re-adding it needs `\+` for each `+`.
 on:
-  workflow_run:
-    # GitHub matches this by the workflow's name as registered from the DEFAULT branch's copy of
-    # wo000-delivery-spine.yml (main names it "ScraperX-2 Checkpoint ..."), not trunk's name.
-    # Both are listed so the trigger survives main's copy being renamed to match trunk.
-    # Since 11-05 the default branch is ScraperX-Claude, so these triggers and the schedules below are
-    # read from this file on trunk. GitHub registers them when this file changes on the default branch.
-    workflows:
-      - "ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine"
-      - "ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"
-    types: [completed]
   issue_comment:
     types: [created]
   issues:
     types: [labeled]
   schedule:
-    - cron: "3,18,33,48 * * * *"   # the sweep, every 15 minutes (Actions minutes are free on this public repo)
+    - cron: "3,18,33,48 * * * *"   # the sweep, every 15 minutes; GitHub drops most of these, so the Muse
+                                   # bridge's clock (muse_bridge.gs) dispatches the real one every 10 min
     - cron: "0 12,13 * * *"   # the digest: whichever of these is 7:00 AM Central posts it (CDT, then CST)
   workflow_dispatch:
     inputs:
+      # J-072: false by default. A dispatch is meant (a dry default gave a green run that did nothing); the
+      # bridge's clock and the proof's wake pass dry_run=false anyway, and a dry run is named DRY in the run list.
       dry_run:
-        description: Print every action, take none
+        description: Print every action, take none (the run is then named DRY)
         type: boolean
-        default: true
+        default: false
       digest:
         description: Post (or print) the digest now
         type: boolean
@@ -116,7 +122,6 @@ jobs:
     # (deploys only from ScraperX-Claude), so no branch's copy of any workflow can sign a forged security pass.
     environment: switchboard-merge
     if: >-
-      github.event_name == 'workflow_run' ||
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && github.event.schedule == '3,18,33,48 * * * *') ||
       (github.event_name == 'issues' && github.event.label.name == 'needs:orchestrator') ||
@@ -155,7 +160,6 @@ jobs:
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
-          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           LABEL: ${{ github.event.label.name }}
           DISPATCH_DRY: ${{ inputs.dry_run }}
@@ -164,7 +168,6 @@ jobs:
           set -euo pipefail
           args=(--part "$PART" --repo "$REPO" --root src)
           case "$EVENT" in
-            workflow_run) args+=(--sha "$RUN_SHA") ;;
             issue_comment) args+=(--pr "$ISSUE_NUMBER") ;;
             issues) args+=(--issue "$ISSUE_NUMBER" --label "$LABEL") ;;
             schedule) if [ "$SCHEDULE" = "0 12,13 * * *" ]; then args+=(--digest); fi ;;
@@ -251,11 +254,13 @@ jobs:
           SWITCHBOARD_MERGE_TOKEN: ${{ secrets.SWITCHBOARD_MERGE_TOKEN }}
           # J-056: checks the MAC of the security pass before the merge token is used; taken out the same way.
           SWITCHBOARD_REVIEW_KEY: ${{ secrets.SWITCHBOARD_REVIEW_KEY }}
+          # J-072: optional Healthchecks.io ping URL, pinged once at the end of a full non-dry sweep (/fail when
+          # any part errored); switch.py takes it out of the environment at start. Unset: no ping.
+          HC_SWEEP_URL: ${{ secrets.HC_SWEEP_URL }}
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
-          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           LABEL: ${{ github.event.label.name }}
           DISPATCH_DRY: ${{ inputs.dry_run }}
@@ -264,7 +269,6 @@ jobs:
           set -euo pipefail
           args=(--part "$PART" --repo "$REPO" --root src)
           case "$EVENT" in
-            workflow_run) args+=(--sha "$RUN_SHA") ;;
             issue_comment) args+=(--pr "$ISSUE_NUMBER") ;;
             issues) args+=(--issue "$ISSUE_NUMBER" --label "$LABEL") ;;
             schedule) if [ "$SCHEDULE" = "0 12,13 * * *" ]; then args+=(--digest); fi ;;

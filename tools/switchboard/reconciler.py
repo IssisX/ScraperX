@@ -357,7 +357,7 @@ def observe(p: Pass, roster: L.Roster) -> tuple[dict[str, JobObs], list, dict[in
         newest[r.branch] = r
     for b in feed.branches:
         if (b.name == feed.trunk or b.name in feed.system_branches or b.name.startswith(L.SYSTEM_PREFIXES)
-                or b.name in pr_refs or b.name in superseded):
+                or b.name in pr_refs or b.name in feed.open_heads or b.name in superseded):
             continue
         job = L.job_of_branch(b.name) or rules.job_of_pr(b.job_line)
         if not job:
@@ -371,6 +371,18 @@ def observe(p: Pass, roster: L.Roster) -> tuple[dict[str, JobObs], list, dict[in
         job = thread_job.get(a.thread)
         (get(job).asks if job else loose).append(a)
     return jobs, loose, thread_job
+
+
+def landed_of(b: L.BranchIn, lookups: Lookups) -> str:
+    """"in trunk", "merged #N", "closed #N" or "": the ledger's own reading (ledger.branch_fate, from the trunk
+    compare and closed PRs the feed carries) when it read them, else one lookup."""
+    gone = L.branch_fate(b)[0]
+    if gone == "landed":
+        return "in trunk"
+    m = re.search(r"#(\d+) was (merged|closed)", gone)
+    if m:
+        return f"{m.group(2)} #{m.group(1)}"
+    return "" if (b.vs_trunk or b.closed) else lookups.landed(b.name, b.sha)
 
 
 def owner_of(o: JobObs, rec: dict, roster: L.Roster) -> str:
@@ -812,7 +824,7 @@ def reconcile(state: State, p: Pass, roster: L.Roster, lookups: Lookups, now: dt
             for b, _ in o.branches:
                 seen = rec["landed"].get(b.name)
                 if not seen or seen[0] != b.sha:
-                    how = lookups.landed(b.name, b.sha)
+                    how = landed_of(b, lookups)
                     rec["landed"][b.name] = [b.sha, how, iso(now)]
                     if how:
                         events("landed", job, branch=b.name, sha=b.sha, how=how)

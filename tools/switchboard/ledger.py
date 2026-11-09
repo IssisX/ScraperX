@@ -5,7 +5,9 @@ board's body (#340) by the switchboard each full sweep, so nothing sits unseen u
 Items, from GitHub alone:
   PR          every open PR, from the sweep's own reading (switch.py's Steered list)
   BRANCH      every branch pushed in the last LIVE_DAYS days with no open PR (archive/* and the switch's own
-              branches are counted as system, never listed)
+              branches are counted as system, never listed). One whose head is in trunk (landed) or is the head of
+              a closed PR, merged or not, is resolved and counted; only commits after that PR's head list it again,
+              and its state says how many
   JOB         every open issue labeled `job`
   ASK         every unanswered `To <Name>:` ask (tools/board/asks.py decides what is answered)
   TRUNK       trunk's newest proof run, when it is red
@@ -60,6 +62,7 @@ MAX_SECTION = 6000                     # chars of the visible section before it 
 MAX_BODY = 65000                       # GitHub's issue body limit is 65536
 MAX_PAGES = 10                         # pages read from any cursor or page listing (1000 items)
 MAX_COMMIT_READS = 25                  # head commits read per sweep for a `Job:` line
+CLOSED_WINDOW = dt.timedelta(days=14)  # closed PRs read this far back (by last update), to match branch heads
 MAX_KEYS = 800
 
 START, END = "<!-- ledger:start -->", "<!-- ledger:end -->"
@@ -185,12 +188,24 @@ class PrIn:
     keeps: tuple[str, ...] = ()   # `keep <branch>` lines in the PR's comments
 
 
+@dataclasses.dataclass(frozen=True)
+class ClosedPr:
+    number: int
+    head_sha: str            # the PR's head when it was closed
+    merged: bool
+
+
 @dataclasses.dataclass
 class BranchIn:
     name: str
     sha: str
     pushed_at: dt.datetime
     job_line: str = ""       # the head commit's `Job:` line, read only when the name has no job id
+    # read only for a branch with no open PR (see branch_fate):
+    closed: tuple[ClosedPr, ...] = ()   # closed PRs from this branch, the newest closed first
+    vs_trunk: str = ""       # compare trunk...head status: ahead, behind, identical, diverged; "" when not read
+    ahead_by: int = 0        # commits on the head not in trunk
+    ahead: tuple[str, ...] = ()   # their shas, oldest first (the compare's list)
 
 
 @dataclasses.dataclass
@@ -236,6 +251,7 @@ class Feed:
     system_branches: frozenset[str] = frozenset()
     system_prs: frozenset[int] = frozenset()
     keeps: frozenset[str] = frozenset()   # branches someone said `keep` for
+    open_heads: dict[str, int] = dataclasses.field(default_factory=dict)   # open PRs' head branches, read or not
     problems: tuple[str, ...] = ()   # listings cut short or not read: each is an UNMATCHED item
     board: int = 340
     repo: str = "IssisX/ScraperX"
@@ -316,6 +332,25 @@ def inputs_of(feed: Feed) -> list[str]:
     return out
 
 
+def branch_fate(b: BranchIn) -> tuple[str, str, str]:
+    """A branch with no open PR: (why it is resolved, its count reason, "") or, when it is live, ("", "", what its
+    state says about its newest closed PR). Its head at a closed PR's head is that PR's (merged or not); its head in
+    trunk has landed; only commits after the newest closed PR's head make it live again."""
+    for c in b.closed:
+        if c.head_sha == b.sha:
+            how = "merged" if c.merged else "closed"
+            return f"its PR #{c.number} was {how} at this head", f"branch at its {how} PR's head", ""
+    if b.vs_trunk in ("behind", "identical"):
+        return "landed", "branch landed", ""
+    if not b.closed:
+        return "", "", ""
+    c = b.closed[0]
+    if not b.vs_trunk:
+        return "", "", f"commits after closed PR #{c.number} (not counted: the trunk compare was not read)"
+    n = len(b.ahead) - b.ahead.index(c.head_sha) - 1 if c.head_sha in b.ahead else b.ahead_by
+    return "", "", f"{n} commit{'' if n == 1 else 's'} after closed PR #{c.number}"
+
+
 def classify(feed: Feed, now: dt.datetime, roster: Roster) -> Ledger:
     """Every input in the feed becomes an item or is accounted resolved/system, with a reason. Pure."""
     claude = roster.person("claude")
@@ -335,9 +370,9 @@ def classify(feed: Feed, now: dt.datetime, roster: Roster) -> Ledger:
             acc[i] = it.ident
         return it
 
-    def resolved(inp: str, why: str) -> None:
+    def resolved(inp: str, why: str, count_as: str = "") -> None:
         acc[inp] = why
-        counts[why] = counts.get(why, 0) + 1
+        counts[count_as or why] = counts.get(count_as or why, 0) + 1
 
     # newest run per branch, and per (branch, head)
     newest: dict[str, RunIn] = {}
@@ -363,15 +398,24 @@ def classify(feed: Feed, now: dt.datetime, roster: Roster) -> Ledger:
 
     # ---- branches ----
     groups: dict[tuple[str, bool], list[BranchIn]] = {}
+    settled: set[str] = set()   # landed, or at a closed PR's head: neither listed nor in a superseded group
     for b in feed.branches:
         if b.name == feed.trunk or b.name in feed.system_branches or b.name.startswith(SYSTEM_PREFIXES):
             resolved(f"branch:{b.name}", "system branch")
+            continue
+        gone, count_as, after = ("", "", "") if b.name in pr_refs or b.name in feed.open_heads else branch_fate(b)
+        if gone:
+            resolved(f"branch:{b.name}", gone, count_as)
+            settled.add(b.name)
             continue
         job = job_of_branch(b.name) or rules.job_of_pr(b.job_line)
         if job:
             groups.setdefault((job, "/integrate-protected-" in b.name), []).append(b)
         if b.name in pr_refs:
             acc[f"branch:{b.name}"] = f"PR|#{pr_refs[b.name].number}"
+            continue
+        if b.name in feed.open_heads:   # its PR was not read this sweep: that PR's own item says so
+            acc[f"branch:{b.name}"] = f"PR|#{feed.open_heads[b.name]}"
             continue
         owner = roster.of_branch(b.name)
         run = newest.get(b.name)
@@ -390,6 +434,8 @@ def classify(feed: Feed, now: dt.datetime, roster: Roster) -> Ledger:
             holder = SWITCHBOARD if auto else (owner or claude)
         else:
             state = f"proof {at_head.conclusion}"
+        if after:
+            state = f"{after}; {state}"
         unmatched = ("unknown branch prefix" if owner is None else
                      "" if job else "no job id (branch name or head commit `Job:` line)")
         add(Item("BRANCH", b.name, f"{gh}/tree/{urllib.parse.quote(b.name, safe='/')}", job, owner, holder, state,
@@ -425,6 +471,8 @@ def classify(feed: Feed, now: dt.datetime, roster: Roster) -> Ledger:
                          r.done_at or r.created_at, ACT, r.sha, 0, None), inp)
             else:
                 resolved(inp, "red run resolved (newer trunk run, or its jobs pass)")
+        elif r.branch in settled:
+            resolved(inp, "red run on a landed or closed branch")
         elif r.branch in pr_refs and pr_refs[r.branch].head_sha == r.sha and newest.get(r.branch) is r:
             acc[inp] = f"PR|#{pr_refs[r.branch].number}"
         elif r.branch in live and live[r.branch].sha == r.sha and newest.get(r.branch) is r:
@@ -442,6 +490,7 @@ def classify(feed: Feed, now: dt.datetime, roster: Roster) -> Ledger:
         prs = [p for p in feed.prs if job and rules.job_of_pr(p.job_line) == job]
         branches = [b for b in feed.branches if job and (job_of_branch(b.name) or rules.job_of_pr(b.job_line)) == job]
         touched = max([i.touched] + [p.touched for p in prs] + [b.pushed_at for b in branches])
+        branches = [b for b in branches if b.name not in settled]
         bits = [state] + ([f"{len(prs)} PR"] if prs else []) + ([f"{len(branches)} live branch(es)"] if branches else [])
         unmatched = ("job issue title has no J-NNN" if not job else
                      "no owner: label" if owner is None else "")
@@ -825,7 +874,10 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             keeps |= {m.group("branch") for m in KEEP.finditer(c.get("body") or "")}
 
     # PRs: the sweep's own reading
-    open_prs = [p["number"] for p in gh.paged(f"repos/{repo}/pulls?state=open")]
+    open_list = gh.paged(f"repos/{repo}/pulls?state=open")
+    open_prs = [p["number"] for p in open_list]
+    open_heads = {(p.get("head") or {}).get("ref") or "": p["number"] for p in open_list
+                  if (((p.get("head") or {}).get("repo") or {}).get("full_name") or "") == repo}
     prs: list[PrIn] = []
     for s in steered:
         f, ctx, d = s.facts, s.ctx, s.decision
@@ -876,6 +928,37 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
                 problems.append(f"head commit of {clean(name, 60)} not read ({MAX_COMMIT_READS} per sweep)")
         branches.append(b)
 
+    # a branch with no open PR: at a closed PR's head (from the one closed listing, no per-branch call), else one
+    # trunk compare per head, cached for the sweep: its head in trunk has landed (classify's branch_fate)
+    closed_raw, cut = page_list(gh, f"repos/{repo}/pulls?state=closed&sort=updated&direction=desc",
+                                stop=lambda p: (parse(p.get("updated_at")) or now) < now - CLOSED_WINDOW)
+    if cut:
+        problems.append(f"closed PRs: more than {MAX_PAGES * 100} since {iso(now - CLOSED_WINDOW)}, the rest not read")
+    closed: dict[str, list[tuple[str, ClosedPr]]] = {}
+    for p in closed_raw:
+        h = p.get("head") or {}
+        if ((h.get("repo") or {}).get("full_name") or "") != repo:
+            continue
+        closed.setdefault(h.get("ref") or "", []).append(
+            (p.get("closed_at") or "", ClosedPr(p["number"], h.get("sha") or "", bool(p.get("merged_at")))))
+    compared: dict[str, dict | None] = {}
+    for b in branches:
+        if b.name == rules.TRUNK or b.name in system_branches or b.name.startswith(SYSTEM_PREFIXES) \
+                or b.name in open_heads:
+            continue
+        b.closed = tuple(c for _, c in sorted(closed.get(b.name, []), key=lambda x: x[0], reverse=True))
+        if not b.sha or any(c.head_sha == b.sha for c in b.closed):
+            continue
+        if b.sha not in compared:
+            try:
+                compared[b.sha] = gh.get(f"repos/{repo}/compare/{rules.TRUNK}...{b.sha}") or {}
+            except Exception as err:   # noqa: BLE001  the branch is still listed, as if not landed
+                compared[b.sha] = None
+                problems.append(f"trunk compare of {clean(b.name, 60)}: {type(err).__name__}")
+        got = compared[b.sha] or {}
+        b.vs_trunk, b.ahead_by = got.get("status") or "", int(got.get("ahead_by") or 0)
+        b.ahead = tuple(c.get("sha") or "" for c in got.get("commits") or [])
+
     # proof runs in the window; the newest on a live head (or trunk) is judged by its jobs when it is not green
     raw = gh.paged(f"repos/{repo}/actions/workflows/{proof_workflow}/runs?created=%3E%3D{iso(since_live)}", "workflow_runs")
     if len(raw) >= 500:
@@ -916,7 +999,7 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
              for a in asks.unanswered(stream, open_threads, since_live) if a["login"] != rules.BOT_LOGIN]
 
     feed = Feed(prs, open_prs, branches, issues, found, runs, rules.TRUNK, frozenset(system_branches),
-                frozenset(system_prs), frozenset(keeps), tuple(problems), board, repo)
+                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo)
     return feed, sent
 
 

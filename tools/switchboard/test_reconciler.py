@@ -413,9 +413,22 @@ class Landed(unittest.TestCase):
         h.run(feed(branches=[b], runs=[green]), NOW + 10 * M)
         self.assertEqual(h.lookups.calls, 1, "read once per head")
 
+    def test_the_ledgers_own_trunk_compare_is_the_reader(self):
+        b = L.BranchIn("claude/integrate-j512-done", SHA["d"], t(-3), vs_trunk="behind")
+        live = L.BranchIn("claude/integrate-j513-wip", SHA["c"], t(-3), vs_trunk="ahead", ahead_by=2)
+        h = Harness()
+        green = [L.RunIn(3, "u", x.name, x.sha, t(-3), t(-2.5), "success", "green") for x in (b, live)]
+        h.run(feed(branches=[b, live], runs=green), NOW)
+        jobs = h.state().jobs
+        self.assertEqual((jobs["J-512"]["outcome"], jobs["J-512"]["obligations"]), ("merged", []))
+        self.assertIsNone(jobs["J-513"]["outcome"])
+        self.assertEqual([o["kind"] for o in jobs["J-513"]["obligations"]], ["fix"], "green, no PR: open one")
+        self.assertEqual(h.lookups.calls, 0, "no lookup when the feed read it")
+
     def test_merged_pr_at_the_head_with_the_issue_open_owes_nothing(self):
-        b = L.BranchIn("fb-bot/integrate-j511-x", SHA["e"], t(-3))
-        h = Harness(lookups=FakeLookups(landed={(b.name, b.sha): "merged #300"}))
+        b = L.BranchIn("fb-bot/integrate-j511-x", SHA["e"], t(-3), closed=(L.ClosedPr(300, SHA["e"], True),),
+                       vs_trunk="diverged")
+        h = Harness()
         green = L.RunIn(2, "u", b.name, b.sha, t(-3), t(-2.5), "success", "green")
         h.run(feed(branches=[b], runs=[green], issues=[issue(511, job="J-511", owner="owner:muse")]), NOW)
         rec = h.state().jobs["J-511"]
