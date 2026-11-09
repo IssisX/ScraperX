@@ -108,8 +108,8 @@ him again.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session: more than two when the work needs it (11-09), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  high (Cory 11-07: high as long as nothing is missed; `.claude/settings.json` matches him); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
-- **Context:** sessions compact themselves at 750k (Cory 11-09) (`autoCompactWindow` in `.claude/settings.json`; 11-06 throttle: every call rereads the context);
+  max (Cory 11-09: never ask him again); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
+- **Context:** the window is 750k (Cory's `/autocompact`, 11-09; the file's key did not take; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
