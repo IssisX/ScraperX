@@ -1,16 +1,17 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "claude/integrate-j072-mail-shape": "8c25d13a1d29462c42c762640b70140eb800e3ed",
+  "claude/integrate-j072-pipe-holes": "9435daec64a7ca5f107a397cfcce1325e721a7d5",
   "claude/integrate-j072-reconciler": "a3e78417ff861e6f124d78888361ff1f6acc2de9"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T23:00:00Z",
- "head": "",
+ "deadline": "2026-11-09T18:38:09Z",
+ "head": "abc7358c354fbdaba6d39af15ea4e4bec588a639",
  "issue": 350,
  "job": "J-072",
  "landed": {
@@ -18,6 +19,11 @@
    "8c25d13a1d29462c42c762640b70140eb800e3ed",
    "merged #357",
    "2026-11-09T17:35:20Z"
+  ],
+  "claude/integrate-j072-pipe-holes": [
+   "9435daec64a7ca5f107a397cfcce1325e721a7d5",
+   "",
+   "2026-11-09T18:08:09Z"
   ],
   "claude/integrate-j072-reconciler": [
    "a3e78417ff861e6f124d78888361ff1f6acc2de9",
@@ -67,15 +73,38 @@
    "version": "6746020480",
    "via": "issue",
    "what": "ask from Claude on #350"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T18:08:09Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T18:38:09Z",
+   "id": "O-60fdd284",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "ref": "BRANCH|claude/integrate-j072-pipe-holes",
+   "sends": 0,
+   "thread": 350,
+   "to": "claude",
+   "version": "open-pr:9435daec64a7ca5f107a397cfcce1325e721a7d5",
+   "via": "api",
+   "what": "`claude/integrate-j072-pipe-holes` is green with no PR: open one"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
- "pr": 0,
+ "pr": 359,
  "pr_done": "",
- "prs": [],
- "review": "",
- "state": "merged",
- "updated": "2026-11-09T17:35:20Z"
+ "prs": [
+  359
+ ],
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-09T18:08:09Z"
 }

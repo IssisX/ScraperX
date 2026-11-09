@@ -1,7 +1,9 @@
 {
  "attempt": 1,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-j074-test-registry": "dcab401586e31f11f1667f0dc91bc79294a836b1"
+ },
  "cancelled": null,
  "ci": "green",
  "commands": [],
@@ -10,17 +12,23 @@
  "head": "dcab401586e31f11f1667f0dc91bc79294a836b1",
  "issue": 352,
  "job": "J-074",
- "landed": {},
+ "landed": {
+  "claude/integrate-j074-test-registry": [
+   "dcab401586e31f11f1667f0dc91bc79294a836b1",
+   "merged #353",
+   "2026-11-09T18:08:09Z"
+  ]
+ },
  "obligations": [],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
  "pr": 353,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   353
  ],
  "review": "LAND",
- "state": "landable",
- "updated": "2026-11-09T17:39:57Z"
+ "state": "merged",
+ "updated": "2026-11-09T18:08:09Z"
 }
