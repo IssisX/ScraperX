@@ -2,6 +2,9 @@
 // Members of Simulation::PhysicsWorld (physics_world.hpp).
 
 #include "sim/physics_world.hpp"
+#include <array>
+#include <cstring>
+#include <type_traits>
 
 namespace scraperx::sim {
 
@@ -320,6 +323,59 @@ std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
     return out;
 }
 
+namespace {
+
+// A saved struct's bytes with nothing left to chance: its padding written as
+// zeros and a vector's unused fourth lane as its third (Jolt's own form), so
+// the same state always saves the same bytes. The layout is the struct's
+// own, byte for byte (a save from before still loads).
+template <typename T>
+class CanonicalBytes final {
+public:
+    explicit CanonicalBytes(const T &value) : value_(value) {}
+    template <typename F>
+    CanonicalBytes &field(const F &f) {
+        static_assert(std::is_trivially_copyable_v<F>, "saved as bytes");
+        const auto offset = static_cast<std::size_t>(reinterpret_cast<const std::uint8_t *>(&f) -
+                                                     reinterpret_cast<const std::uint8_t *>(&value_));
+        if constexpr (std::is_same_v<F, JPH::Vec3>) {
+            const float lanes[4] = {f.GetX(), f.GetY(), f.GetZ(), f.GetZ()};
+            std::memcpy(bytes_.data() + offset, lanes, sizeof(lanes));
+        } else {
+            std::memcpy(bytes_.data() + offset, &f, sizeof(F));
+        }
+        covered_ += sizeof(F);
+        return *this;
+    }
+    void write(SaveWriter &w) const { w.out.insert(w.out.end(), bytes_.begin(), bytes_.end()); }
+    [[nodiscard]] std::size_t covered() const noexcept { return covered_; }
+
+private:
+    const T &value_;
+    std::array<std::uint8_t, sizeof(T)> bytes_{};
+    std::size_t covered_ = 0;
+};
+
+static_assert(sizeof(JPH::Vec3) == 16 && sizeof(JPH::RVec3) == 16, "single-precision vectors saved");
+
+void write_body_state(SaveWriter &w, const kit::Kit::BodyState &b) {
+    CanonicalBytes<kit::Kit::BodyState> c(b);
+    c.field(b.position).field(b.rotation).field(b.linear).field(b.angular).field(b.enabled).field(b.asleep);
+    // Every member listed: a new one must be added here (its bytes would be zeros).
+    static_assert(sizeof(kit::Kit::BodyState) == 80, "update write_body_state for a changed BodyState");
+    c.write(w);
+}
+
+void write_slingshot_state(SaveWriter &w, const Slingshot::State &s) {
+    CanonicalBytes<Slingshot::State> c(s);
+    c.field(s.station_available).field(s.seated).field(s.drawing).field(s.released).field(s.guide_latched).field(s.can_retrieve).field(s.recovering).field(s.guided_launch).field(s.track_exit).field(s.release_ready).field(s.ledger_valid).field(s.pouch_pair_excluded).field(s.aim_ready).field(s.aim_locked).field(s.leather_deflection_m).field(s.leather_energy_j).field(s.leather_port_violation_j).field(s.harness_rest_local).field(s.draw_m).field(s.ratchet_draw_m).field(s.energy_j).field(s.work_j).field(s.source_work_j).field(s.source_power_w).field(s.transmission_loss_j).field(s.dissipated_work_j).field(s.kinetic_j).field(s.gravity_j).field(s.energy_residual_j).field(s.retrieval_work_j).field(s.retrieval_source_power_w).field(s.retrieval_braking_work_j).field(s.aim_control_work_j).field(s.aim_source_power_w).field(s.target_yaw_rad).field(s.target_elevation_rad).field(s.max_draw_m).field(s.band_rest_m).field(s.power_limit_w).field(s.yaw_rad).field(s.elevation_rad).field(s.anchor_left).field(s.anchor_right).field(s.pouch_position).field(s.guide_origin).field(s.carrier_origin).field(s.launch_track_start).field(s.launch_track_end).field(s.launch_count);
+    // Every member listed: a new one must be added here (its bytes would be zeros).
+    static_assert(sizeof(Slingshot::State) == 384, "update write_slingshot_state for a changed Slingshot::State");
+    c.write(w);
+}
+
+} // namespace
+
 // The committed checkpoint as bytes (see SaveWriter).
 void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.pod(checkpoint_position_);
@@ -333,7 +389,10 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.list(body_entities());
     const auto &k = checkpoint_.kit;
     const std::size_t built = std::min(kit_built_count(), k.bodies.size());
-    w.list(std::vector<kit::Kit::BodyState>(k.bodies.begin(), k.bodies.begin() + static_cast<std::ptrdiff_t>(built)));
+    w.pod(static_cast<std::uint32_t>(built));
+    for (std::size_t i = 0; i < built; ++i) {
+        write_body_state(w, k.bodies[i]);
+    }
     w.list(k.rope_anchor);
     w.list(k.dog_floor);
     w.list(k.bin_contents);
@@ -345,7 +404,7 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.list(k.cell_air);
     w.list(k.reel_paid);
     w.pod(k.drained);
-    w.pod(checkpoint_.slingshot);
+    write_slingshot_state(w, checkpoint_.slingshot);
     w.pod(checkpoint_.swing);
     w.pod(checkpoint_.bay);
     const auto &v = checkpoint_.vertical;

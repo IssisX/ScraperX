@@ -3585,7 +3585,7 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
                     }
                 }
     }
-    std::sort(edges_.begin(), edges_.end(), [](const Edge &a, const Edge &b) {
+    std::stable_sort(edges_.begin(), edges_.end(), [](const Edge &a, const Edge &b) {
         if (a.from != b.from) return a.from < b.from;
         if (a.to != b.to) return a.to < b.to;
         return a.kind < b.kind;

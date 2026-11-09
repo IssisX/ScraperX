@@ -186,6 +186,7 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     travel_wp_best_ = 1.0e9F;
     travel_wp_stall_s_ = 0.0F;
     travel_rerouted_ = false;
+    travel_walk_is_patch_ = false;
     travel_stuck_ = 0;
     travel_still_at_ = Vec3(physics_.GetBodyInterface().GetPosition(body_)) - Vec3(0.0F, kStandCentre, 0.0F);
     travel_still_s_ = 0.0F;
@@ -293,10 +294,29 @@ void Matron::step_travel(const float dt) {
     // Positive time belongs to quiet arrival; negative time to awaiting a
     // landing. Crossing between them cannot carry elapsed time forward.
     travel_wait_s_ = std::min(travel_wait_s_, 0.0F);
+    // A walk to a move's start follows the floor across regions (a step, a
+    // strip, a plinth on the deck): crossing into another region mid-walk is
+    // not leaving the route — for a walk her feet searched over the floor,
+    // whose waypoints follow the floor, replanning from there sends her back
+    // to where the walk began, forever (the 258-down loop: the walk to the
+    // 269->543 hang_drop crosses region 637, and each crossing replanned her
+    // back down the 637->269 drop). But a walk from the map's patch links
+    // has coarse waypoints searched from the old region, and following them
+    // from the new one can walk her off its edge (the 286 leg: a patch walk
+    // routed her off region 637's edge into the void). That one plans again
+    // from where she stands; a floor walk keeps walking. A replan is for a
+    // move that ended elsewhere, a fall, or a route run out — all of which
+    // reach here with step >= steps or no floor under her.
+    if (under >= 0 && under != travel_.region && travel_.step < travel_.steps) {
+        travel_.region = under;
+        if (travel_walk_is_patch_ && !travel_walk_.empty()) {
+            travel_.step = travel_.steps;   // patch walk, new region: plan again from here
+        }
+    }
     // Off the plan (a fall, a move that ended elsewhere, knocked off her
     // floor partway along a walk): when she is on her feet again, plan from
     // there.
-    if (travel_.region < 0 || travel_.step >= travel_.steps || (under >= 0 && under != travel_.region)) {
+    if (travel_.region < 0 || travel_.step >= travel_.steps) {
         if (under < 0) {
             travel_wait_s_ -= dt;
             if (travel_wait_s_ < -kLandWaitS) {
@@ -315,6 +335,7 @@ void Matron::step_travel(const float dt) {
         travel_.step = 0;
         travel_.steps = static_cast<int>(travel_edges_.size());
         travel_walk_.clear();
+        travel_walk_is_patch_ = false;
         travel_walk_i_ = 0;
         if (travel_edges_.empty()) {
             travel_.active = false;
@@ -355,6 +376,7 @@ void Matron::step_travel(const float dt) {
     // patch to the move's start, handing over to the move's own feet once
     // the rest of the way is floor all along and close.
     if (travel_walk_.empty()) {
+        travel_walk_is_patch_ = false;   // a fresh search is her feet's floor search unless it falls back to patches
         // Her feet's own search over the floor first; the map's patch links
         // for a long way (or where the search finds nothing).
         if (to_start < 40.0F) {
@@ -382,6 +404,7 @@ void Matron::step_travel(const float dt) {
         }
         if (travel_walk_.empty()) {
             travel_walk_ = scanned_->walk_path(feet, e.spec.start);
+            if (!travel_walk_.empty()) travel_walk_is_patch_ = true;
         }
         travel_walk_i_ = 0;
     }

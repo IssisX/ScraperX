@@ -1,5 +1,8 @@
 // The incline, the stone wheel, the teeter, the trapeze, landings, saves, the tram, determinism.
 
+#include <cstring>
+#include <memory>
+#include <vector>
 #include "sim/loose_stock.hpp"
 #include "sim_tests.hpp"
 
@@ -917,6 +920,34 @@ void run_save() {
     }
     std::cout << "PASS scraperx_sim save: bytes=" << bytes.size() << " saved_y=" << saved_at.y << " original_drift_m=" << worst
               << " deck4_y=" << b.snapshot().player_position.y << '\n';
+    // The same game saves the same bytes, whatever the memory it was built in
+    // held before (struct padding and a vector's unused lane included).
+    const auto saved_over = [](const std::uint8_t pattern) {
+        {
+            std::vector<std::unique_ptr<std::uint8_t[]>> dirt;
+            for (std::size_t i = 0; i < 20000; ++i) {
+                const std::size_t size = 16 + (i * 37) % 1024;
+                dirt.emplace_back(new std::uint8_t[size]);
+                std::memset(dirt.back().get(), pattern, size);
+            }
+        }
+        auto sim = std::make_unique<Simulation>(InitialSpawn::Deck154);
+        for (int i = 0; i < 30; ++i) {
+            require(sim->advance_frame(Simulation::kFixedStepSeconds).accepted, "save: tick accepted");
+        }
+        return sim->save_game();
+    };
+    const auto clean = saved_over(0x11), dirty = saved_over(0xEE);
+    std::size_t differing = 0, first = clean.size();
+    for (std::size_t i = 0; i < std::min(clean.size(), dirty.size()); ++i) {
+        if (clean[i] != dirty[i]) {
+            ++differing;
+            first = std::min(first, i);
+        }
+    }
+    std::cout << "  save: bytes differing between two identical games " << differing << " (first at " << first << ")\n";
+    require(clean.size() == dirty.size() && differing == 0, "save: the same game saves the same bytes");
+    std::cout << "PASS scraperx_sim save: same game, same bytes (" << clean.size() << ")\n";
 }
 
 // The traction tram from deck 6: east onto the east bridge, off its open

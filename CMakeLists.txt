@@ -9,6 +9,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# One answer on every device: no fused multiply-add anywhere, ours or Jolt's.
+# Host g++ and arm64 clang fuse a*b+c by different rules (x86-64 g++ under
+# Jolt's -mfma; arm64 clang -ffp-contract=on), so the same tick computed
+# different bits on the phone than CI proved on the host.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-ffp-contract=off)
+endif()
+
 option(SCRAPERX_BUILD_BRIDGE "Build the Godot GDExtension bridge" ON)
 option(SCRAPERX_WITH_JOLT "Compile the pinned Jolt substrate into the native graph" ON)
 
@@ -116,6 +124,10 @@ if(SCRAPERX_WITH_JOLT)
     set(JPH_USE_VK OFF CACHE BOOL "" FORCE)
     set(JPH_USE_MTL OFF CACHE BOOL "" FORCE)
     set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
+    # Jolt then builds with -ffp-contract=off and without -mfma / JPH_USE_FMADD.
+    set(USE_FMADD OFF CACHE BOOL "" FORCE)
+    # Jolt's own trigonometry and ordering, the same bits on x86-64 and arm64.
+    set(CROSS_PLATFORM_DETERMINISTIC ON CACHE BOOL "" FORCE)
 
     FetchContent_Declare(
         jolt
@@ -173,6 +185,23 @@ set_target_properties(scraperx_delivery PROPERTIES POSITION_INDEPENDENT_CODE ON
     C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
 
 option(SCRAPERX_BUILD_TESTS "Build simulation tests regardless of platform" OFF)
+
+# The device determinism digest (tests/determinism_digest.cpp): built for the
+# host and, by the NDK, for arm64; CI requires the two to print the same.
+option(SCRAPERX_BUILD_DIGEST "Build the device determinism digest" OFF)
+if(SCRAPERX_BUILD_DIGEST)
+    add_executable(scraperx_determinism_digest tests/determinism_digest.cpp)
+    target_link_libraries(scraperx_determinism_digest PRIVATE scraperx_sim)
+    if(ANDROID)
+        target_link_options(scraperx_determinism_digest PRIVATE -static)
+    endif()
+    target_compile_options(scraperx_determinism_digest PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wextra>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
+    )
+endif()
 
 if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
     add_executable(scraperx_shared_survival_tests tests/shared_survival_tests.cpp)
