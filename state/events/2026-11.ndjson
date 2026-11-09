@@ -353,3 +353,76 @@
 {"ev": "state", "frm": "proof", "job": "J-071", "t": "2026-11-09T19:54:17Z", "to": "landable"}
 {"attempt": 1, "ev": "would_send", "id": "O-fffc7a1d", "job": "J-072", "ref": "PR|#360", "send": 1, "t": "2026-11-09T19:54:17Z", "to": "codex", "via": "relay"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T19:54:17Z", "tries": 1}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-051ff95f", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #108", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-21f8221d", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #108", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-29ac469b", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #227", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-7d30bc0c", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #108", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-0b508cf9", "job": "J-007", "kind": "ask", "ref": "ASK|ask on #114", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-fbb93e44", "job": "J-007", "kind": "ask", "ref": "ASK|ask on #114", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-cbc26b8c", "job": "J-007", "kind": "ask", "ref": "ASK|ask on #114", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-29e5fd19", "job": "J-011", "kind": "ask", "ref": "ASK|ask on #118", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-5bcd208d", "job": "J-014", "kind": "ask", "ref": "ASK|ask on #121", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-9dc80bbb", "job": "J-049", "kind": "ask", "ref": "ASK|ask on #278", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-d5d4a683", "job": "J-049", "kind": "ask", "ref": "ASK|ask on #278", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-89409b96", "job": "J-052", "kind": "ask", "ref": "ASK|ask on #292", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-d853ce7b", "job": "J-059", "kind": "ask", "ref": "ASK|ask on #307", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-215662fc", "job": "J-059", "kind": "ask", "ref": "ASK|ask on #307", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-4cf87876", "job": "J-060", "kind": "ask", "ref": "ASK|ask on #320", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-a9491323", "job": "J-060", "kind": "ask", "ref": "ASK|ask on #320", "t": "2026-11-09T20:15:38Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-503915c8", "job": "J-060", "kind": "ask", "ref": "ASK|ask on #320", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-b856a33d", "job": "J-063", "kind": "ask", "ref": "ASK|ask on #321", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-8f34d700", "job": "J-063", "kind": "ask", "ref": "ASK|ask on #321", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-7892412a", "job": "J-064", "kind": "ask", "ref": "ASK|ask on #322", "t": "2026-11-09T20:15:38Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-6177b42b", "job": "J-064", "kind": "ask", "ref": "ASK|ask on #322", "t": "2026-11-09T20:15:38Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T23:00:00Z", "ev": "obligation", "id": "O-b9661c8c", "job": "J-064", "kind": "ask", "ref": "ASK|ask on #322", "t": "2026-11-09T20:15:38Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-ae53b52c", "job": "J-064", "kind": "ask", "ref": "ASK|ask on #322", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-6e887f3d", "job": "J-067", "kind": "ask", "ref": "ASK|ask on #328", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"ev": "pr_closed", "how": "merged", "job": "J-071", "pr": 363, "t": "2026-11-09T20:15:38Z"}
+{"due": "2026-11-09T21:15:38Z", "ev": "obligation", "id": "O-e75d3d77", "job": "J-071", "kind": "ask", "ref": "ASK|ask on #338", "t": "2026-11-09T20:15:38Z", "to": "grok_bot", "via": "watch"}
+{"due": "2026-11-09T21:15:38Z", "ev": "obligation", "id": "O-786976a9", "job": "J-071", "kind": "ask", "ref": "ASK|ask on #338", "t": "2026-11-09T20:15:38Z", "to": "grok_bot", "via": "watch"}
+{"due": "2026-11-09T21:15:38Z", "ev": "obligation", "id": "O-fd91413c", "job": "J-071", "kind": "ask", "ref": "ASK|ask on #338", "t": "2026-11-09T20:15:38Z", "to": "grok_bot", "via": "watch"}
+{"due": "2026-11-09T21:15:38Z", "ev": "obligation", "id": "O-de419833", "job": "J-071", "kind": "ask", "ref": "ASK|ask on #338", "t": "2026-11-09T20:15:38Z", "to": "grok_bot", "via": "watch"}
+{"ev": "closed", "id": "O-1bc5b3fe", "job": "J-071", "t": "2026-11-09T20:15:38Z", "why": "reassigned to grok_bot"}
+{"ev": "closed", "id": "O-f3429996", "job": "J-071", "t": "2026-11-09T20:15:38Z", "why": "reassigned to grok_bot"}
+{"ev": "closed", "id": "O-92da9235", "job": "J-071", "t": "2026-11-09T20:15:38Z", "why": "reassigned to grok_bot"}
+{"ev": "closed", "id": "O-2ee36857", "job": "J-071", "t": "2026-11-09T20:15:38Z", "why": "reassigned to grok_bot"}
+{"ev": "pr_closed", "how": "merged", "job": "J-072", "pr": 360, "t": "2026-11-09T20:15:38Z"}
+{"ev": "closed", "id": "O-fffc7a1d", "job": "J-072", "t": "2026-11-09T20:15:38Z", "why": "PR merged"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-9cd9ab9a", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"due": "2026-11-09T21:17:00Z", "ev": "obligation", "id": "O-e02a62eb", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "reply on the thread", "id": "O-29ac469b", "job": "J-001", "t": "2026-11-09T20:15:38Z"}
+{"ev": "acked", "how": "reply on the thread", "id": "O-5bcd208d", "job": "J-014", "t": "2026-11-09T20:15:38Z"}
+{"ev": "acked", "how": "reply on the thread", "id": "O-89409b96", "job": "J-052", "t": "2026-11-09T20:15:38Z"}
+{"ev": "acked", "how": "reply on the thread", "id": "O-a9491323", "job": "J-060", "t": "2026-11-09T20:15:38Z"}
+{"ev": "acked", "how": "reply on the thread", "id": "O-ae53b52c", "job": "J-064", "t": "2026-11-09T20:15:38Z"}
+{"ev": "acked", "how": "reply on the thread", "id": "O-6e887f3d", "job": "J-067", "t": "2026-11-09T20:15:38Z"}
+{"ev": "state", "frm": "proof", "job": "J-051", "t": "2026-11-09T20:15:38Z", "to": "blocked"}
+{"ev": "state", "frm": "landable", "job": "J-071", "t": "2026-11-09T20:15:38Z", "to": "working"}
+{"ev": "state", "frm": "review", "job": "J-072", "t": "2026-11-09T20:15:38Z", "to": "merged"}
+{"ev": "ledger_sent", "job": "", "key": "275c0c14922b6322", "ref": "ASK|ask on #108", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "9068d46aec55d609", "ref": "ASK|ask on #108", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "570193d993b8b3dc", "ref": "ASK|ask on #227", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "65c03700cbce03fd", "ref": "ASK|ask on #292", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "e9635136984d5bf2", "ref": "ASK|ask on #278", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "a1ba7d16b7118826", "ref": "ASK|ask on #278", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "f44333a915fc0da2", "ref": "ASK|ask on #118", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "c8b285ba19add357", "ref": "ASK|ask on #322", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "grok"}
+{"ev": "ledger_sent", "job": "", "key": "178b63ee506d9b78", "ref": "ASK|ask on #321", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "a329eff1d259c4aa", "ref": "ASK|ask on #320", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "902968d267864fe0", "ref": "ASK|ask on #322", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "grok"}
+{"ev": "ledger_sent", "job": "", "key": "38aa82d84e7c0d99", "ref": "ASK|ask on #322", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "grok"}
+{"ev": "ledger_sent", "job": "", "key": "f8bf8ea8d94d995d", "ref": "ASK|ask on #320", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "grok"}
+{"ev": "ledger_sent", "job": "", "key": "43fd152b0891a509", "ref": "ASK|ask on #320", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "cc347957b66b6183", "ref": "ASK|ask on #322", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "", "key": "4c03d11ec8176216", "ref": "ASK|ask on #321", "stage": 2, "t": "2026-11-09T20:15:38Z", "to": "claude"}
+{"attempt": 1, "ev": "would_send", "id": "O-051ff95f", "job": "J-001", "ref": "ASK|ask on #108", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-21f8221d", "job": "J-001", "ref": "ASK|ask on #108", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-7d30bc0c", "job": "J-001", "ref": "ASK|ask on #108", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-0b508cf9", "job": "J-007", "ref": "ASK|ask on #114", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-fbb93e44", "job": "J-007", "ref": "ASK|ask on #114", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-cbc26b8c", "job": "J-007", "ref": "ASK|ask on #114", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-29e5fd19", "job": "J-011", "ref": "ASK|ask on #118", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-9dc80bbb", "job": "J-049", "ref": "ASK|ask on #278", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-d5d4a683", "job": "J-049", "ref": "ASK|ask on #278", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "would_send", "id": "O-d853ce7b", "job": "J-059", "ref": "ASK|ask on #307", "send": 1, "t": "2026-11-09T20:15:38Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T20:15:38Z", "tries": 1}

@@ -288,7 +288,10 @@
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-09T20:15:38Z",
+    "why": "PR merged"
+   },
    "created": "2026-11-09T19:54:17Z",
    "dead": "2026-11-09T23:47:00Z",
    "dead_lettered": null,
@@ -312,7 +315,7 @@
  "outcome_reason": "",
  "owner": "claude",
  "pr": 360,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   359,
   360,
@@ -320,6 +323,6 @@
   362
  ],
  "review": "waiting",
- "state": "review",
- "updated": "2026-11-09T19:54:17Z"
+ "state": "merged",
+ "updated": "2026-11-09T20:15:38Z"
 }

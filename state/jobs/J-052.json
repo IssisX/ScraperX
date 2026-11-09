@@ -25,7 +25,36 @@
    "2026-11-09T17:35:20Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": {
+    "at": "2026-11-07T12:14:06Z",
+    "by": "claude",
+    "how": "reply on the thread"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-07T06:14:16Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-09T20:15:38Z",
+   "dead": "2026-11-09T23:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-09T21:17:00Z",
+   "id": "O-89409b96",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #292",
+   "sends": 0,
+   "thread": 292,
+   "to": "claude",
+   "unseen": null,
+   "version": "6703240484",
+   "via": "session",
+   "what": "ask from Muse on #292"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -34,5 +63,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-09T20:15:38Z"
 }
