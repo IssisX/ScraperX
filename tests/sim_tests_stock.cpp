@@ -614,6 +614,8 @@ void run_loose_stock() {
 
     std::cout << "PASS scraperx_sim stock: pieces=" << pieces << " settle_m=" << worst << " shoved_m=" << shoved << "\n";
 }
+SCRAPERX_GROUP("loose_stock", 980, run_loose_stock);
+SCRAPERX_SELECT("stock", run_loose_stock);
 
 // The eyes' sight line (Simulation::look_target, read by the presentation
 // for what the player's aim rests on): from the 154 m deck a look at the
@@ -654,3 +656,5 @@ void run_look_target() {
     std::cout << "PASS scraperx_sim look target: drum=" << drum << " drum_m=" << hit.distance
               << " deck_y=" << down.point.y << "\n";
 }
+SCRAPERX_GROUP("look_target", 990, run_look_target);
+SCRAPERX_SELECT("look", run_look_target);

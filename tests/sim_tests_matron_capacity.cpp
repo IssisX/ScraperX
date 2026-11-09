@@ -275,3 +275,4 @@ void run_matron_capacity() {
     std::printf("PASS scraperx_sim matron-capacity: 7 falsifiers, m_i = 3000 N x 4, "
                 "single-loss capacity 9000 N >= 8000 N\n");
 }
+SCRAPERX_SLICE("matron-capacity", run_matron_capacity);

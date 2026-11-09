@@ -22,16 +22,15 @@ for u,x in defs.items():
         for c in _ct.get((x[1],x[0][1:]),[]):
             if c.split(':')[0]==u.split(':')[0]: edges[c].add(u)
 # groups
-t=open(R+'/tests/simulation_tests.cpp').read()
-main=t[t.index('int main()'):]
-groups={}
-for m in re.finditer(r'std::string\(only\)\s*==\s*"([^"]+)"\)\s*\{(.*?)return (?:EXIT_SUCCESS|0);',main,re.S):
-    k=m.group(1)
-    if k in groups: k=k+' (shadowed second block: never runs)'
-    groups[k]=re.findall(r'\b(run_\w+|test_\w+)\(\)',m.group(2))
-tail=main[main.rindex('return EXIT_SUCCESS;',0,main.index('run_pulley_static_end();')):] if False else main[main.index('run_pulley_static_end();'):]
-tail=re.sub(r'//.*','',tail)
-default=re.findall(r'\b(run_\w+)\(\)',tail)
+# the groups register themselves in tests/sim_tests_*.cpp (tests/sim_registry.hpp, J-074)
+import glob
+groups={};seq=[]
+for f in sorted(glob.glob(R+'/tests/sim_tests_*.cpp')):
+    t=re.sub(r'//.*','',open(f).read())
+    for m in re.finditer(r'\bSCRAPERX_(?:SELECT|SLICE)\(\s*"([^"]+)"\s*,([^;]*)\)\s*;',t):
+        groups[m.group(1)]=re.findall(r'\b(run_\w+|test_\w+)\b',m.group(2))
+    seq+=[(int(k),fn) for k,fn in re.findall(r'\bSCRAPERX_GROUP\(\s*"[^"]+"\s*,\s*(\d+)\s*,\s*(\w+)\s*\)',t)]
+default=[fn for _,fn in sorted(seq)]
 groups['(all: scraperx_sim.athletic_traversal)']=default
 byname=collections.defaultdict(list)
 for u,(n,c,f,a,b) in defs.items(): byname[n].append(u)

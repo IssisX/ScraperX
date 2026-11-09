@@ -80,3 +80,5 @@ void run_water() {
               << " float_submersion=" << floating.water_submersion << " swim_mps=" << fastest
               << " out_y=" << out.player_position.y << "\n";
 }
+SCRAPERX_GROUP("water", 200, run_water);
+SCRAPERX_SELECT("water", run_water);

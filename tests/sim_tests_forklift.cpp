@@ -183,6 +183,8 @@ void run_forklift() {
     require(runs[0] == runs[1], "forklift: the same inputs end the same, bit for bit");
     std::cout << "PASS scraperx_sim forklift: carried_m=" << table[static_cast<std::size_t>(pallet)].z - runs[0][3] << "\n";
 }
+SCRAPERX_GROUP("forklift", 1020, run_forklift);
+SCRAPERX_SELECT("forklift", run_forklift, run_forklift_strain);
 
 namespace {
 
@@ -342,3 +344,4 @@ void run_forklift_strain() {
     std::cout << "PASS scraperx_sim forklift strain: coil_rise_m=" << light.load_rise_m
               << " stillage_pitch_deg=" << heavy.peak_pitch_rad * 57.2958 << "\n";
 }
+SCRAPERX_GROUP("forklift_strain", 1030, run_forklift_strain);

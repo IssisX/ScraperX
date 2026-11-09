@@ -452,3 +452,6 @@ void run_matron_chase() {
             "matron chase: repeated mode under 85% (owner bar, 17/20 passes)");
     std::cout << "PASS scraperx_sim matron chase\n";
 }
+// Not in the default sequence: its own ctest slice, so the whole
+// suite's run stays inside its timeout. It still runs on every ctest.
+SCRAPERX_SLICE("matron-chase", run_matron_chase);

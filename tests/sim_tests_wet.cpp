@@ -430,6 +430,8 @@ void run_wet_isolation() {
     std::cout << "PASS scraperx_sim AS-007 F: rider_y=" << f_top.player_position.y
               << " gain_J=" << f_gain << " released_J=" << f_released << '\n';
 }
+SCRAPERX_GROUP("wet_isolation", 150, run_wet_isolation);
+SCRAPERX_SELECT("AS-007", run_wet_isolation, run_wet_e, run_wet_handling, run_wet_band, run_wet_route);
 
 // The band in one run on player inputs, from the 220 ring to standing on
 // TP-340, then the header's dump re-arms it.
@@ -500,6 +502,8 @@ void run_wet_band() {
               << " plate_y=" << on_plate.player_position.y << " tank_kg=" << w.d_tank_kg
               << " header_kg=" << w.header_kg << " bucket_kg=" << w.e_bucket_kg << '\n';
 }
+SCRAPERX_GROUP("wet_band", 180, run_wet_band);
+SCRAPERX_SELECT("AS-007-band", run_wet_band);
 
 // AS-007's climbing route: at (x, z) facing (fx, fz), take the hold in front
 // (jumping for it when `jump`) and climb, stick toward it, until standing
@@ -592,6 +596,8 @@ void run_wet_route() {
     std::cout << "PASS scraperx_sim AS-007 route: seconds=" << top.simulation_time_seconds - start
               << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
 }
+SCRAPERX_GROUP("wet_route", 190, run_wet_route);
+SCRAPERX_SELECT("AS-007-route", run_wet_route);
 
 // The hands' handling rules, each falsified on the machine that showed it
 // through the game's input: a taken handle is drawn in to the hands at
@@ -671,6 +677,8 @@ void run_wet_handling() {
     std::cout << "PASS scraperx_sim handling: handle_tick_m=" << worst_handle_tick
               << " spool_peak_mps=" << spool_peak_speed << "\n";
 }
+SCRAPERX_GROUP("wet_handling", 170, run_wet_handling);
+SCRAPERX_SELECT("handling", run_wet_handling);
 
 // ---- AS-007 E, the chiller drop (03_EXECUTION/CLIMB_REDESIGN/chiller_drop_spec.md) ----
 
@@ -1136,3 +1144,5 @@ void run_wet_e() {
               << " still_s=" << up.still_t - up.land_t << " rest_deck=" << up.rest_deck << " rest_60=" << rest_60
               << " empty_rest=" << empty_rest << " gain_J=" << gain << " released_J=" << released << '\n';
 }
+SCRAPERX_GROUP("wet_e", 160, run_wet_e);
+SCRAPERX_SELECT("AS-007-E", run_wet_e);
