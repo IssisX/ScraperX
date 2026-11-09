@@ -8,7 +8,7 @@
  "ci": "red: godot-touch (touch-2)",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T18:05:20Z",
+ "deadline": "2026-11-09T22:17:00Z",
  "head": "8c74524cf4fec539b53d37844b61692179a511d7",
  "issue": 240,
  "job": "J-042",
@@ -77,5 +77,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T18:42:32Z"
+ "updated": "2026-11-09T21:19:08Z"
 }

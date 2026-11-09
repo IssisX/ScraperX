@@ -10,7 +10,7 @@
    "ci": "red: native-tests (athletic-traversal), native-tests (matron-slices-3)",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:17:00Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "b555dd6183ff959d021834b484202ddd83037973",
    "issue": 108,
    "job": "J-001",
@@ -84,7 +84,7 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": null,
-     "missing": 0,
+     "missing": 1,
      "ref": "ASK|ask on #108",
      "sends": 0,
      "thread": 108,
@@ -209,7 +209,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-007": {
    "attempt": 1,
@@ -221,7 +221,7 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:17:00Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "7608a48044263189f60d4c1f655887d53d79618e",
    "issue": 114,
    "job": "J-007",
@@ -370,7 +370,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-008": {
    "attempt": 0,
@@ -414,7 +414,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T18:05:20Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "fdea6e19e6a6eb72c676d617930f06b92e213e0e",
    "issue": 116,
    "job": "J-009",
@@ -507,7 +507,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-011": {
    "attempt": 0,
@@ -517,7 +517,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T18:05:20Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "",
    "issue": 118,
    "job": "J-011",
@@ -608,7 +608,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-013": {
    "attempt": 0,
@@ -653,7 +653,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "c5f783a88a72b8e9ab6a1f950e228b58468d531b",
    "issue": 121,
    "job": "J-014",
@@ -674,7 +674,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T04:56:16Z",
@@ -683,10 +683,11 @@
      "id": "O-073d0de5",
      "kind": "fix",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-j014-stock-above-396",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 121,
      "to": "muse",
      "version": "red:c5f783a88a72b8e9ab6a1f950e228b58468d531b",
@@ -730,7 +731,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T20:15:38Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-015": {
    "attempt": 0,
@@ -743,7 +744,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "aee6d79d91249016e5788e205e16b0958f4bd427",
    "issue": 122,
    "job": "J-015",
@@ -764,7 +765,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T04:56:16Z",
@@ -773,10 +774,11 @@
      "id": "O-25fb6789",
      "kind": "fix",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 122,
      "to": "muse",
      "version": "red:a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
@@ -787,7 +789,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T04:56:16Z",
@@ -796,10 +798,11 @@
      "id": "O-0569d1c6",
      "kind": "fix",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 122,
      "to": "muse",
      "version": "red:aee6d79d91249016e5788e205e16b0958f4bd427",
@@ -807,7 +810,11 @@
      "what": "`fb-bot/integrate-protected-j015-wreck-way-on` proof red: native-tests (athletic-traversal), no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-07T15:21:21Z",
+      "by": "claude",
+      "how": "reply on its thread"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-07T08:19:11Z",
      "attempts": 0,
@@ -895,7 +902,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-016": {
    "attempt": 0,
@@ -905,7 +912,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "",
    "issue": 123,
    "job": "J-016",
@@ -915,7 +922,7 @@
      "ack": null,
      "ack_rule": "work|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T04:56:16Z",
@@ -924,10 +931,11 @@
      "id": "O-188cbb45",
      "kind": "start-agent",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "JOB|#123",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 123,
      "to": "muse",
      "version": "start:123",
@@ -943,7 +951,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-018": {
    "attempt": 0,
@@ -953,7 +961,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "",
    "issue": 125,
    "job": "J-018",
@@ -963,7 +971,7 @@
      "ack": null,
      "ack_rule": "work|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T04:56:16Z",
@@ -972,10 +980,11 @@
      "id": "O-1954c91b",
      "kind": "start-agent",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "JOB|#125",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 125,
      "to": "muse",
      "version": "start:125",
@@ -991,7 +1000,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-021": {
    "attempt": 0,
@@ -1001,7 +1010,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T18:05:20Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "",
    "issue": 128,
    "job": "J-021",
@@ -1011,7 +1020,7 @@
      "ack": null,
      "ack_rule": "reply|ack",
      "asked": "2026-11-09T17:30:05Z",
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T00:17:00Z",
@@ -1020,10 +1029,11 @@
      "id": "O-14a329f7",
      "kind": "ask",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "ASK|ask on #128",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 128,
      "to": "claude",
      "version": "6746841613",
@@ -1039,7 +1049,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-022": {
    "attempt": 0,
@@ -1172,7 +1182,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "",
    "issue": 134,
    "job": "J-027",
@@ -1182,7 +1192,7 @@
      "ack": null,
      "ack_rule": "work|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T04:56:16Z",
@@ -1191,10 +1201,11 @@
      "id": "O-cf78351b",
      "kind": "start-agent",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "JOB|#134",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 134,
      "to": "muse",
      "version": "start:134",
@@ -1210,7 +1221,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-036": {
    "attempt": 0,
@@ -1220,7 +1231,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "",
    "issue": 167,
    "job": "J-036",
@@ -1230,7 +1241,7 @@
      "ack": null,
      "ack_rule": "work|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T04:56:16Z",
@@ -1239,10 +1250,11 @@
      "id": "O-763c3967",
      "kind": "start-agent",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "JOB|#167",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 167,
      "to": "muse",
      "version": "start:167",
@@ -1258,7 +1270,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-038": {
    "attempt": 1,
@@ -1270,7 +1282,7 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T20:17:00Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
    "issue": 169,
    "job": "J-038",
@@ -1286,7 +1298,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T17:35:20Z",
      "dead": "2026-11-10T04:56:16Z",
@@ -1295,10 +1307,11 @@
      "id": "O-61750a48",
      "kind": "fix",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "PR|#299",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 299,
      "to": "muse",
      "version": "fix:4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
@@ -1333,7 +1346,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 0,
+     "attempts": 1,
      "closed": null,
      "created": "2026-11-09T18:42:32Z",
      "dead": "2026-11-10T00:17:00Z",
@@ -1342,10 +1355,11 @@
      "id": "O-15ec66d5",
      "kind": "fix",
      "last_error": "",
-     "last_sent": null,
+     "last_sent": "2026-11-09T21:19:08Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-j038-slice1",
-     "sends": 0,
+     "sends": 1,
+     "sent_by": "shadow",
      "thread": 169,
      "to": "claude",
      "unseen": null,
@@ -1436,7 +1450,7 @@
    ],
    "review": "FIX",
    "state": "proof",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-040": {
    "attempt": 0,
@@ -1446,7 +1460,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "",
    "issue": 228,
    "job": "J-040",
@@ -1484,7 +1498,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-042": {
    "attempt": 1,
@@ -1496,7 +1510,7 @@
    "ci": "red: godot-touch (touch-2)",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T18:05:20Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "8c74524cf4fec539b53d37844b61692179a511d7",
    "issue": 240,
    "job": "J-042",
@@ -1565,7 +1579,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-043": {
    "attempt": 0,
@@ -1628,7 +1642,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T20:17:00Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "55b8b3e22548aa0154f5af13d5978d7d171c304d",
    "issue": 242,
    "job": "J-044",
@@ -1727,7 +1741,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-044b": {
    "attempt": 0,
@@ -1779,7 +1793,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T20:17:00Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "9ffec0984039705be441e06dd4082158461ea8a7",
    "issue": 0,
    "job": "J-044c",
@@ -1880,7 +1894,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-044d": {
    "attempt": 0,
@@ -1892,7 +1906,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "c816ba4ff54bd3c012c21a24266c018f7bc930ae",
    "issue": 0,
    "job": "J-044d",
@@ -1936,7 +1950,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-044l": {
    "attempt": 0,
@@ -1948,7 +1962,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54",
    "issue": 0,
    "job": "J-044l",
@@ -1992,7 +2006,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-045": {
    "attempt": 0,
@@ -2004,7 +2018,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "8ffa47bc1b406ccd06e95c7287f88945b7e02864",
    "issue": 248,
    "job": "J-045",
@@ -2074,7 +2088,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-047": {
    "attempt": 0,
@@ -2131,7 +2145,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T18:05:20Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "9b0a12ea9099fcf76ef1444cc3201c2f9187f6b1",
    "issue": 278,
    "job": "J-049",
@@ -2325,7 +2339,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-050": {
    "attempt": 0,
@@ -2381,7 +2395,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T18:05:20Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "512c76ea5d72481823547a436e86bf6b156ed565",
    "issue": 0,
    "job": "J-051",
@@ -2412,7 +2426,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 0,
+     "missing": 1,
      "ref": "BRANCH|claude/integrate-j051-asks-since",
      "sends": 0,
      "thread": 0,
@@ -2430,7 +2444,7 @@
    "prs": [],
    "review": "",
    "state": "blocked",
-   "updated": "2026-11-09T20:15:38Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-051b": {
    "attempt": 0,
@@ -2571,7 +2585,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "",
    "issue": 293,
    "job": "J-054",
@@ -2609,7 +2623,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-055": {
    "attempt": 0,
@@ -2619,7 +2633,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "",
    "issue": 294,
    "job": "J-055",
@@ -2657,7 +2671,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T18:42:32Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-058": {
    "attempt": 0,
@@ -2709,7 +2723,7 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:35:20Z",
+   "deadline": "2026-11-10T00:56:16Z",
    "head": "6ba64b584a364304a63369f66f9d2644bc53fcde",
    "issue": 307,
    "job": "J-059",
@@ -2877,7 +2891,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-060": {
    "attempt": 0,
@@ -2889,7 +2903,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:17:00Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "",
    "issue": 320,
    "job": "J-060",
@@ -3070,7 +3084,7 @@
    "prs": [],
    "review": "",
    "state": "merged",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-061": {
    "attempt": 1,
@@ -3080,7 +3094,7 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T18:05:20Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "cab5ed4b5aa86cff7ea33fc9b2d0d0854741f9dd",
    "issue": 312,
    "job": "J-061",
@@ -3219,7 +3233,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-063": {
    "attempt": 0,
@@ -3229,7 +3243,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T21:17:00Z",
+   "deadline": "2026-11-09T22:17:00Z",
    "head": "",
    "issue": 321,
    "job": "J-063",
@@ -3348,7 +3362,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T20:56:16Z"
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-064": {
    "attempt": 0,
@@ -3906,7 +3920,7 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-09T20:35:48Z",
+   "deadline": "2026-11-09T21:56:16Z",
    "head": "56617dc53771e4946d1808895cba0f5ff6198ac9",
    "issue": 350,
    "job": "J-072",
@@ -4249,7 +4263,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 0,
+     "missing": 1,
      "ref": "BRANCH|claude/integrate-j072-reconciler-live",
      "sends": 0,
      "thread": 350,
@@ -4273,8 +4287,8 @@
     364
    ],
    "review": "waiting",
-   "state": "proof",
-   "updated": "2026-11-09T20:56:16Z"
+   "state": "merged",
+   "updated": "2026-11-09T21:19:08Z"
   },
   "J-074": {
    "attempt": 1,

@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T21:17:00Z",
+ "deadline": "2026-11-09T22:17:00Z",
  "head": "",
  "issue": 321,
  "job": "J-063",
@@ -125,5 +125,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T20:56:16Z"
+ "updated": "2026-11-09T21:19:08Z"
 }

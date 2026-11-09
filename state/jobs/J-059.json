@@ -10,7 +10,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T21:35:20Z",
+ "deadline": "2026-11-10T00:56:16Z",
  "head": "6ba64b584a364304a63369f66f9d2644bc53fcde",
  "issue": 307,
  "job": "J-059",
@@ -178,5 +178,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-09T20:56:16Z"
+ "updated": "2026-11-09T21:19:08Z"
 }

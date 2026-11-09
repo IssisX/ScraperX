@@ -8,7 +8,7 @@
  "ci": "red: native-tests (athletic-traversal), native-tests (matron-slices-3)",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T21:17:00Z",
+ "deadline": "2026-11-09T22:17:00Z",
  "head": "b555dd6183ff959d021834b484202ddd83037973",
  "issue": 108,
  "job": "J-001",
@@ -82,7 +82,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
@@ -207,5 +207,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T20:56:16Z"
+ "updated": "2026-11-09T21:19:08Z"
 }

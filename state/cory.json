@@ -29,7 +29,7 @@
  ],
  "last_batch": "2026-11-09T20:56:16Z",
  "last_error": "",
- "mode": "live",
+ "mode": "shadow",
  "pending": {},
  "reported": {
   "claude-asks:2026-11-09": "2026-11-09T20:56:16Z"

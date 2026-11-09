@@ -14,7 +14,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T20:35:48Z",
+ "deadline": "2026-11-09T21:56:16Z",
  "head": "56617dc53771e4946d1808895cba0f5ff6198ac9",
  "issue": 350,
  "job": "J-072",
@@ -357,7 +357,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "BRANCH|claude/integrate-j072-reconciler-live",
    "sends": 0,
    "thread": 350,
@@ -381,6 +381,6 @@
   364
  ],
  "review": "waiting",
- "state": "proof",
- "updated": "2026-11-09T20:56:16Z"
+ "state": "merged",
+ "updated": "2026-11-09T21:19:08Z"
 }

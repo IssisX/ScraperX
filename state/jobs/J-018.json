@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T21:35:20Z",
+ "deadline": "2026-11-10T00:56:16Z",
  "head": "",
  "issue": 125,
  "job": "J-018",
@@ -16,7 +16,7 @@
    "ack": null,
    "ack_rule": "work|reply|ack",
    "asked": null,
-   "attempts": 0,
+   "attempts": 1,
    "closed": null,
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
@@ -25,10 +25,11 @@
    "id": "O-1954c91b",
    "kind": "start-agent",
    "last_error": "",
-   "last_sent": null,
+   "last_sent": "2026-11-09T21:19:08Z",
    "missing": 0,
    "ref": "JOB|#125",
-   "sends": 0,
+   "sends": 1,
+   "sent_by": "shadow",
    "thread": 125,
    "to": "muse",
    "version": "start:125",
@@ -44,5 +45,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T18:42:32Z"
+ "updated": "2026-11-09T21:19:08Z"
 }

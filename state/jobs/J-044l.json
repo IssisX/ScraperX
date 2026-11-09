@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T21:35:20Z",
+ "deadline": "2026-11-10T00:56:16Z",
  "head": "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54",
  "issue": 0,
  "job": "J-044l",
@@ -52,5 +52,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T18:42:32Z"
+ "updated": "2026-11-09T21:19:08Z"
 }
