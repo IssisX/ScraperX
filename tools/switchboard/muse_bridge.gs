@@ -23,6 +23,12 @@
  *   MUSE_FROM     optional; only this account's own address can ever post (see authentic_), so a
  *                 list without it posts nothing
  * The token is read from the properties only, sent only to api.github.com, and never logged.
+ *
+ * Health (bridge-health): OUT and IN run apart, so one failing never stops the other, and one issue or
+ * mail thread failing never stops the rest. Each direction keeps its last success and last error in the
+ * script property `health_out` / `health_in`. When one has failed for HEALTH_ALARM_MIN minutes, the
+ * bridge posts ONE comment on the board starting `Claude (integrator): BRIDGE DOWN:` with the error's
+ * first 200 characters (the token cut out), and none again until that direction has worked once.
  */
 
 var DEFAULT_REPO = 'IssisX/ScraperX';
@@ -33,6 +39,11 @@ var BOT_LOGIN = 'github-actions[bot]';
 var MAX_BODY = 60000;
 var MAX_REMEMBERED = 500;
 var MAX_THREADS = 20;
+var MAX_COMMENT_PAGES = 10;     // pages of 100 comments read per wake:muse issue
+var COMMENT_DAYS = 7;           // only comments this new are mailed: an id aged out of the remembered list is never re-sent
+var HEALTH_ALARM_MIN = 30;      // a direction failing this long posts BRIDGE DOWN on the board, once
+var ALARM_HEADER = 'Claude (integrator): BRIDGE DOWN:';
+var DIRECTIONS = { out: 'outbound (wake:muse comments mailed to Muse)', in: 'inbound (MUSE_TO_CLAUDE mail posted to GitHub)' };
 
 function setup() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
@@ -46,11 +57,81 @@ function tick() {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) return;  // the previous tick is still running
   try {
-    outbound_();
-    inbound_();
+    var cfg;
+    try {
+      cfg = props_();
+    } catch (e) {
+      // No token or no account: nothing can be read or posted, so only the properties and the log keep it.
+      var store = PropertiesService.getScriptProperties();
+      failed_(store, null, 'out', e);
+      failed_(store, null, 'in', e);
+      return;
+    }
+    run_(cfg, 'out', outbound_);  // each direction alone: an outbound throw never stops inbound (11-07 to 11-09)
+    run_(cfg, 'in', inbound_);
   } finally {
     lock.releaseLock();
   }
+}
+
+/** One direction, caught: its success or failure goes in health_<dir>, and a long failure posts one alarm. */
+function run_(cfg, dir, fn) {
+  try {
+    fn(cfg);
+  } catch (e) {
+    failed_(cfg.store, cfg, dir, e);
+    return;
+  }
+  var h = health_(cfg.store, dir);
+  h.lastOk = new Date().toISOString();
+  h.failingSince = null;
+  h.alarmed = false;
+  cfg.store.setProperty('health_' + dir, JSON.stringify(h));
+}
+
+function health_(store, dir) {
+  try {
+    return JSON.parse(store.getProperty('health_' + dir) || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+/** Records a failure; when the direction has failed HEALTH_ALARM_MIN minutes and no alarm is out, posts one. */
+function failed_(store, cfg, dir, err) {
+  var h = health_(store, dir);
+  var now = new Date();
+  h.lastErr = clean_(cfg, err);
+  h.lastErrAt = now.toISOString();
+  if (!h.failingSince) h.failingSince = h.lastErrAt;
+  console.error('Muse bridge ' + dir + ' failed: ' + h.lastErr);
+  if (cfg && !h.alarmed && now - new Date(h.failingSince) >= HEALTH_ALARM_MIN * 60000) {
+    try {
+      var since = Utilities.formatDate(new Date(h.failingSince), 'America/Chicago', 'MMM d h:mm a') + ' Central';
+      var last = h.lastOk ? Utilities.formatDate(new Date(h.lastOk), 'America/Chicago', 'MMM d h:mm a') + ' Central' : 'never recorded';
+      gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + BOARD_ISSUE + '/comments', { body:
+        ALARM_HEADER + ' ' + DIRECTIONS[dir] + ' has failed since ' + since + ' (last success ' + last + ').\n\n' +
+        'Last error: ' + h.lastErr + '\n\nThe full error is in the bridge\'s Apps Script Executions log (Cory only). ' +
+        'One alarm per outage: the bridge posts none again until this direction has worked once.' });
+      h.alarmed = true;
+    } catch (e2) {
+      console.error('Muse bridge: the BRIDGE DOWN alarm could not be posted: ' + clean_(cfg, e2));
+    }
+  }
+  store.setProperty('health_' + dir, JSON.stringify(h));
+}
+
+/**
+ * An error's first 200 characters, safe to store and post: the token cut out (it is never in an error
+ * we build, but a service's message could echo a header), no mention, markup or verdict trigger
+ * (a `: FIX` would wake the switchboard), one line.
+ */
+function clean_(cfg, err) {
+  var text = String((err && err.message) || err);
+  if (cfg && cfg.token) text = text.split(cfg.token).join('[token]');
+  text = text.replace(/(gh[pousr]_|github_pat_)[A-Za-z0-9_]+/g, '[token]');
+  text = text.replace(/[\r\n\t]+/g, ' ').replace(/[@`<>*]/g, ' ').replace(/:(?= ?(?:land|fix|note|block))/gi, ' -');
+  return text.replace(/\s+/g, ' ').trim().slice(0, 200);
 }
 
 function props_() {
@@ -106,63 +187,91 @@ function remember_(cfg, key, list, id) {
 }
 
 /** OUT: switchboard comments on `wake:muse` issues become mail to Muse. */
-function outbound_() {
-  var cfg = props_();
+function outbound_(cfg) {
   var sent = remembered_(cfg, 'sent_comment_ids');
   var issues = gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues?state=open&per_page=50&labels=' + encodeURIComponent(WAKE_LABEL));
+  var since = new Date(Date.now() - COMMENT_DAYS * 86400000).toISOString();
+  var errors = [];
   issues.forEach(function (issue) {
-    var comments = gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues/' + issue.number + '/comments?per_page=100');
-    comments.forEach(function (c) {
-      var body = c.body || '';
-      if (c.user.login !== BOT_LOGIN || body.indexOf('CLAUDE_TO_MUSE:') !== 0) return;
-      if (sent.indexOf(String(c.id)) >= 0) return;
-      var subject = body.split('\n')[0].replace(/[\r\n]/g, ' ').slice(0, 200);
-      GmailApp.sendEmail(cfg.to, subject, body + '\n\n' + c.html_url +
-        '\n\nReply by email with the subject `MUSE_TO_CLAUDE: <J-NNN or #N> ...`. For a verdict, end the subject with' +
-        ' `review of #N @ <sha>: LAND` (or FIX with command:, input:, expected:, observed: lines in the body).');
-      remember_(cfg, 'sent_comment_ids', sent, c.id);
-    });
-    gh_(cfg, 'DELETE', 'repos/' + cfg.repo + '/issues/' + issue.number + '/labels/' + encodeURIComponent(WAKE_LABEL));
+    try {  // one issue's failure never stops the others; its label stays on, so the next tick retries it
+      issueComments_(cfg, issue.number, since).forEach(function (c) {
+        var body = c.body || '';
+        if (c.user.login !== BOT_LOGIN || body.indexOf('CLAUDE_TO_MUSE:') !== 0) return;
+        if (sent.indexOf(String(c.id)) >= 0) return;
+        var subject = body.split('\n')[0].replace(/[\r\n]/g, ' ').slice(0, 200);
+        GmailApp.sendEmail(cfg.to, subject, body + '\n\n' + c.html_url +
+          '\n\nReply by email with the subject `MUSE_TO_CLAUDE: <J-NNN or #N> ...`. For a verdict, end the subject with' +
+          ' `review of #N @ <sha>: LAND` (or FIX with command:, input:, expected:, observed: lines in the body).');
+        remember_(cfg, 'sent_comment_ids', sent, c.id);
+      });
+      gh_(cfg, 'DELETE', 'repos/' + cfg.repo + '/issues/' + issue.number + '/labels/' + encodeURIComponent(WAKE_LABEL));
+    } catch (e) {
+      errors.push('#' + issue.number + ': ' + ((e && e.message) || e));
+    }
   });
+  if (errors.length) throw new Error(errors.length + ' of ' + issues.length + ' wake:muse issue(s) failed; ' + errors.join(' | '));
+}
+
+/** An issue's comments updated since `since`, every page up to MAX_COMMENT_PAGES (the switch's own are page 2+ on a long thread). */
+function issueComments_(cfg, number, since) {
+  var out = [];
+  for (var page = 1; page <= MAX_COMMENT_PAGES; page++) {
+    var got = gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues/' + number + '/comments?per_page=100&page=' + page +
+      '&since=' + encodeURIComponent(since)) || [];
+    out = out.concat(got);
+    if (got.length < 100) break;
+  }
+  return out;
 }
 
 /** IN: MUSE_TO_CLAUDE mail becomes a comment on the issue or PR it names. */
-function inbound_() {
-  var cfg = props_();
+function inbound_(cfg) {
   var done = remembered_(cfg, 'posted_message_ids');
   var doneLabel = GmailApp.getUserLabelByName(DONE_LABEL) || GmailApp.createLabel(DONE_LABEL);
   var threads = GmailApp.search('subject:"MUSE_TO_CLAUDE" newer_than:2d', 0, MAX_THREADS);
   var jobs = null;
+  var errors = [];
   threads.forEach(function (thread) {
-    thread.getMessages().forEach(function (m) {
-      if (done.indexOf(m.getId()) >= 0) return;
-      var subject = m.getSubject() || '';
-      var at = subject.indexOf('MUSE_TO_CLAUDE:');
-      if (at < 0) return;
-      if (!authentic_(cfg, m)) {
-        remember_(cfg, 'posted_message_ids', done, m.getId());  // not provably from an allowed sender: never posted
-        console.warn('Muse bridge: skipped message ' + m.getId() + ': sender not allowed or not authenticated');
-        return;
-      }
-      var rest = subject.slice(at + 'MUSE_TO_CLAUDE:'.length).replace(/[*\r\n`]/g, ' ').replace(/\s+/g, ' ').trim();
-      var target = 0;
-      var num = rest.match(/#(\d{1,6})\b/);
-      var job = rest.match(/\bJ-\d{3,}[a-z]?\b/);  // J-044b is its own job, like the switchboard reads it
-      if (num) {
-        target = Number(num[1]);
-      } else if (job) {
+    try {  // one thread's failure never stops the others; posted messages are remembered, so a retry posts no twin
+      inboundThread_(cfg, thread, done, doneLabel, function () {
         if (jobs === null) jobs = gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues?state=open&labels=job&per_page=100');
-        jobs.forEach(function (it) { if (!target && it.title.indexOf(job[0] + ' ') === 0) target = it.number; });
-      }
-      if (!target) target = BOARD_ISSUE;
-      var when = Utilities.formatDate(m.getDate(), 'America/Chicago', 'h:mm a') + ' Central';
-      var text = stripQuoted_(m.getPlainBody() || '').slice(0, MAX_BODY);
-      gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + target + '/comments',
-        { body: '**Muse (via email bridge): ' + rest + '**\n\n' + text + '\n\n_Mailed ' + when + '._' });
-      remember_(cfg, 'posted_message_ids', done, m.getId());
-    });
-    thread.addLabel(doneLabel);
+        return jobs;
+      });
+    } catch (e) {
+      errors.push('thread ' + thread.getId() + ': ' + ((e && e.message) || e));
+    }
   });
+  if (errors.length) throw new Error(errors.length + ' of ' + threads.length + ' MUSE_TO_CLAUDE thread(s) failed; ' + errors.join(' | '));
+}
+
+function inboundThread_(cfg, thread, done, doneLabel, jobList) {
+  thread.getMessages().forEach(function (m) {
+    if (done.indexOf(m.getId()) >= 0) return;
+    var subject = m.getSubject() || '';
+    var at = subject.indexOf('MUSE_TO_CLAUDE:');
+    if (at < 0) return;
+    if (!authentic_(cfg, m)) {
+      remember_(cfg, 'posted_message_ids', done, m.getId());  // not provably from an allowed sender: never posted
+      console.warn('Muse bridge: skipped message ' + m.getId() + ': sender not allowed or not authenticated');
+      return;
+    }
+    var rest = subject.slice(at + 'MUSE_TO_CLAUDE:'.length).replace(/[*\r\n`]/g, ' ').replace(/\s+/g, ' ').trim();
+    var target = 0;
+    var num = rest.match(/#(\d{1,6})\b/);
+    var job = rest.match(/\bJ-\d{3,}[a-z]?\b/);  // J-044b is its own job, like the switchboard reads it
+    if (num) {
+      target = Number(num[1]);
+    } else if (job) {
+      jobList().forEach(function (it) { if (!target && it.title.indexOf(job[0] + ' ') === 0) target = it.number; });
+    }
+    if (!target) target = BOARD_ISSUE;
+    var when = Utilities.formatDate(m.getDate(), 'America/Chicago', 'h:mm a') + ' Central';
+    var text = stripQuoted_(m.getPlainBody() || '').slice(0, MAX_BODY);
+    gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + target + '/comments',
+      { body: '**Muse (via email bridge): ' + rest + '**\n\n' + text + '\n\n_Mailed ' + when + '._' });
+    remember_(cfg, 'posted_message_ids', done, m.getId());
+  });
+  thread.addLabel(doneLabel);
 }
 
 /**

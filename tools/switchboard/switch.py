@@ -10,7 +10,8 @@ Parts (a workflow job runs one; `all` runs both, for a dry run):
          a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
   steer  everything free: the merge rule, review asks to ChatGPT or Muse, one owner:* label per
          issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest, and
-         after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051)
+         after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051),
+         and the Muse mail pipe's health check (a PIPE ALARM on the board, once per incident)
 
 Usage:
   python3 tools/switchboard/switch.py --dry-run                     # every action printed, none taken
@@ -94,6 +95,18 @@ MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
 MAX_MUSE_FINDING = 600          # chars of a FIX finding quoted in a Muse comment
+OLD_BOARDS = (107, 87, 3)       # closed boards: the muse markers on them still count, so a board move never re-sends
+MAX_OLD_BOARD_PAGES = 3         # comment pages read from each closed board (a board closes at 100 comments)
+# The Muse mail pipe's health (bridge-health): the bridge (muse_bridge.gs) is an Apps Script whose errors only Cory
+# can see, so the switch watches what it leaves on GitHub and posts one alarm per incident on the board.
+PIPE_HEADER = "Claude (integrator): PIPE ALARM:"
+PIPE_MARK = "<!-- switchboard:pipe-alarm kinds={kinds} -->"
+PIPE_KINDS = re.compile(r"^<!-- switchboard:pipe-alarm kinds=([a-z,]*) -->$", re.MULTILINE)
+PIPE_WAKE_STUCK = dt.timedelta(minutes=20)    # a wake:muse label this old: the bridge's outbound is stuck (it runs every 5 min)
+PIPE_INBOUND_QUIET = dt.timedelta(hours=24)   # no bridge post this long while asks went to Muse: its inbound is stuck
+PIPE_LOOKBACK = dt.timedelta(days=7)          # how far back an open inbound incident is read; older, it alarms again
+BRIDGE_POST = "**Muse (via email bridge)"     # the first line of every inbound bridge post
+MAX_WAKE_ISSUES = 30                          # wake:muse issues read per sweep (one page)
 # The switchboard workflow wakes on `: LAND`, `: FIX`, `: NOTE` or `: BLOCK` anywhere in a comment, in any case.
 VERDICT_TRIGGER = re.compile(r":(?= ?(?:land|fix|note|block))", re.IGNORECASE)
 # J-056: the merge of a PR that changes .github/workflows uses this secret (a fine-grained PAT), held only by the
@@ -852,6 +865,8 @@ class Switch:
         items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
         if any(not it.target.startswith("#") for it in items):
             reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")))
+            for old in OLD_BOARDS:   # a key sent while an older board was live is still sent (#107 -> #340 re-sent them)
+                reported |= set(self.muse_keys(self.bounded_comments(old, MAX_OLD_BOARD_PAGES)))
         seen, new = set(reported), []
         for it in items:
             if it.muse_key not in seen:
@@ -889,6 +904,110 @@ class Switch:
                               f"muse: mark #{where} delivered")
             posted += 1
         return posted
+
+    def bounded_comments(self, number: int, pages: int) -> list[dict]:
+        """An issue's comments, oldest first, at most `pages` pages of 100."""
+        out: list[dict] = []
+        for page in range(1, pages + 1):
+            got = self.gh.get(f"repos/{self.gh.repo}/issues/{number}/comments?per_page=100&page={page}") or []
+            out += got
+            if len(got) < 100:
+                break
+        return out
+
+    # ---------- the Muse mail pipe's health (bridge-health) ----------
+    def pipe_health(self) -> list[str]:
+        """Each full sweep: is the bridge moving mail both ways? (a) an open issue whose wake:muse label is older
+        than PIPE_WAKE_STUCK: the bridge has not mailed it (outbound stuck). (b) a CLAUDE_TO_MUSE ask in the last
+        PIPE_INBOUND_QUIET with no bridge post in that window (inbound stuck: Muse's mail is not reaching GitHub,
+        which GitHub cannot show directly). Every finding is printed each run; the board gets one PIPE ALARM
+        comment per incident. An outbound incident is new when every label now stuck went on after the last
+        outbound alarm; an inbound one, when a bridge post came after the last inbound alarm (or that alarm is
+        older than PIPE_LOOKBACK). Returns the finding lines."""
+        last: dict[str, dt.datetime] = {}
+        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments"):
+            at = parse_time(c.get("created_at") or "")
+            if (c.get("user") or {}).get("login") != rules.BOT_LOGIN or at is None:
+                continue
+            for m in PIPE_KINDS.finditer(c.get("body") or ""):
+                for kind in filter(None, m.group(1).split(",")):
+                    last[kind] = max(at, last.get(kind, at))
+        found: list[str] = []
+        new: list[str] = []
+        stuck = self.wake_stuck()
+        if stuck:
+            found.append("OUTBOUND STUCK: `wake:muse` has sat on " + ", ".join(
+                f"#{n} since {central(at)} ({hours(self.now - at)})" for n, at in stuck) +
+                ". The bridge removes it within 5 min of mailing Muse, so these asks never reached her.")
+            if "outbound" not in last or min(at for _, at in stuck) > last["outbound"]:
+                new.append("outbound")
+        quiet = self.inbound_quiet(last.get("inbound"))
+        if quiet:
+            asks, last_post, fresh = quiet
+            seen = f"the last one was {central(last_post)}, {hours(self.now - last_post)} ago" if last_post else \
+                "none was seen in the window read"
+            found.append(f"INBOUND STUCK: {asks} CLAUDE_TO_MUSE ask(s) in the last {hours(PIPE_INBOUND_QUIET)} "
+                         f"and no `{BRIDGE_POST.strip('*')}` post ({seen}). Muse's MUSE_TO_CLAUDE mail is not "
+                         "reaching GitHub.")
+            if fresh:
+                new.append("inbound")
+        for line in found:
+            self.out(f"PIPE ALARM  {line}")
+        if not found:
+            self.out("PIPE        healthy")
+        if new:
+            body = "\n".join([f"{PIPE_HEADER} the Muse mail bridge looks down ({central(self.now)}).", ""] +
+                             [f"- {plain(line)}" for line in found] +
+                             ["", "The cause is in the bridge's Apps Script Executions log, which only Cory can open. "
+                              "One alarm per incident; the switch prints the state every sweep.", "",
+                              PIPE_MARK.format(kinds=",".join(new))])
+            self.gh.comment(BOARD_ISSUE, body, f"pipe alarm ({', '.join(new)}) on #{BOARD_ISSUE}")
+        return found
+
+    def wake_stuck(self) -> list[tuple[int, dt.datetime]]:
+        """Open issues and PRs whose wake:muse label has been on longer than PIPE_WAKE_STUCK: (number, labeled at).
+        The label's age is read from the issue's events: the first `labeled` after the last `unlabeled`."""
+        out: list[tuple[int, dt.datetime]] = []
+        label = urllib.parse.quote(MUSE_LABEL, safe="")
+        for it in self.gh.get(f"repos/{self.gh.repo}/issues?state=open&labels={label}&per_page={MAX_WAKE_ISSUES}") or []:
+            number = int(it["number"])
+            on: dt.datetime | None = None
+            for e in self.gh.paged(f"repos/{self.gh.repo}/issues/{number}/events"):
+                if (e.get("label") or {}).get("name") != MUSE_LABEL:
+                    continue
+                if e.get("event") == "unlabeled":
+                    on = None
+                elif e.get("event") == "labeled" and on is None:
+                    on = parse_time(e.get("created_at") or "")
+            if on is None:
+                self.out(f"NOTE  #{number} has {MUSE_LABEL} but no labeled event was read")
+            elif self.now - on > PIPE_WAKE_STUCK:
+                out.append((number, on))
+        return sorted(out, key=lambda x: x[1])
+
+    def inbound_quiet(self, prev: dt.datetime | None) -> tuple[int, dt.datetime | None, bool] | None:
+        """None while the bridge's inbound looks alive. Else (CLAUDE_TO_MUSE asks in the window, the newest bridge
+        post read or None, is this a new incident). `prev` is the last inbound alarm: the read reaches back to it
+        (at most PIPE_LOOKBACK), so a bridge post after it ends that incident. Newest comments first, so a
+        bounded read keeps the window that decides."""
+        start = self.now - PIPE_INBOUND_QUIET
+        since = start if prev is None else max(min(start, prev), self.now - PIPE_LOOKBACK)
+        stamp = since.strftime("%Y-%m-%dT%H:%M:%SZ")
+        asks, posts = 0, []
+        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/comments?since={stamp}&sort=created&direction=desc"):
+            at = parse_time(c.get("created_at") or "")
+            if at is None:
+                continue
+            body = (c.get("body") or "").lstrip()
+            if body.startswith(BRIDGE_POST):
+                posts.append(at)
+            elif body.startswith("CLAUDE_TO_MUSE:") and at >= start:
+                asks += 1
+        last_post = max(posts) if posts else None
+        if not asks or (last_post is not None and last_post >= start):
+            return None
+        fresh = prev is None or prev < self.now - PIPE_LOOKBACK or (last_post is not None and last_post > prev)
+        return asks, last_post, fresh
 
     def inbox_reported(self) -> list[str]:
         """The keys in the switch's own inbox markers, oldest first. Only the inbox PR's newest 200 comments are
@@ -1735,6 +1854,16 @@ def main() -> int:
         except (GitHubError, RuntimeError, KeyError, ValueError) as err:
             failed += 1
             sw.out(f"ERROR       muse: {type(err).__name__}: {err}")
+        try:   # bridge-health: a stuck Muse mail pipe is loud, once per incident on the board, every run here
+            alarms = sw.pipe_health()
+        except (GitHubError, RuntimeError, KeyError, ValueError) as err:
+            failed += 1
+            sw.out(f"ERROR       pipe health: {type(err).__name__}: {err}")
+        else:
+            summary = os.environ.get("GITHUB_STEP_SUMMARY")
+            if alarms and summary:
+                with open(summary, "a", encoding="utf-8") as f:
+                    f.write("### PIPE ALARM\n\n" + "".join(f"- {plain(a)}\n" for a in alarms))
     return 2 if failed else 0
 
 
