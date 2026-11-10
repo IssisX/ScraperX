@@ -235,3 +235,4 @@ void test_matron_honest() {
     std::cout << "PASS matron honest: with her evidence frozen, moving his true position changes none of her "
                  "decisions; the bay's chain is hers by looking; a load held in his hands is never taken\n";
 }
+SCRAPERX_SLICE("matron-honest", test_matron_honest);

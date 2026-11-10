@@ -1251,6 +1251,10 @@ struct Snapshot final {
     double wind_mps = 0.0;
     double wind_force_n = 0.0;
     double wind_peak_force_n = 0.0;   // the most it has pushed, N
+    // The gust front's leading edge above 396 m (J-022): its x, west of the
+    // tower's west face, on the simulation's clock; the mist streak sits
+    // ahead of it and the push follows behind it.
+    double wind_front_x_m = 0.0;
     // Blows from something moving that reached the body's balance
     // (kShoveClosingMps); whether one became a stumble is in stumble_count.
     std::uint64_t shove_count = 0;
@@ -1878,6 +1882,21 @@ public:
     // first: a reader keeps the last sequence it has seen.
     [[nodiscard]] std::vector<ImpactSnapshot> impacts() const;
     [[nodiscard]] std::uint64_t last_impact_sequence() const noexcept;
+    // The tower's machines heard (gap 10): each moving part tracked for hits,
+    // whether it is its stage's running source, and the running noise of the
+    // last step (loudness 0..1, what Matron::hear is given).
+    struct MachinePart {
+        std::uint64_t entity = 0;
+        bool runs = false;
+    };
+    struct MachineNoise {
+        std::uint64_t entity = 0;
+        Vector3 at{};
+        double speed_mps = 0.0;
+        double loudness = 0.0;
+    };
+    [[nodiscard]] std::vector<MachinePart> machine_parts() const;
+    [[nodiscard]] std::vector<MachineNoise> machine_noises() const;
     // The ziplines (sim/zipline.hpp): each line's anchors, where its trolley
     // and its brake block are down it, and the trolley's bar while held.
     struct ZiplineLine {

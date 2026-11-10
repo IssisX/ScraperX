@@ -1048,3 +1048,4 @@ void run_ammo() {
     run_ammo_heavy();
     run_ammo_hold_lift();
 }
+SCRAPERX_SLICE("matron-ammo", run_ammo);

@@ -1,29 +1,29 @@
 # Integrator: the hourly check
 
-It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every 2 hours Sat-Sun, 9:17 AM to 9:17 PM; none
-overnight (Cory 11-06: the weekly limit must last to Sunday night). The full check (every step below) runs at 8:17 AM,
+It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every hour Sat-Sun, 9:17 AM to 9:17 PM (Cory 11-08); none
+overnight (Cory 11-06, 11-07). The full check (every step below) runs at 8:17 AM,
 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light: `git pull`, step 1
 only, and end in one line, with no board edit and no message
 to Cory unless he must act (11-06).
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
-Pace (Cory 11-06: track AND predict, so the limit lasts to Sunday night): every run reads `cost_usd` (get_session); $ per 1%
-comes from the last two meter readings (about $14). Ask Cory for the meter at the 11:17 AM, 5:17 PM and 11:17 PM runs (Sat-Sun
-1:17 and 9:17 PM). Predict: % now + the burn of the last 3 h x daytime hours left (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM), at
+Pace (Cory 11-06: track AND predict, so the limit lasts to Sunday night): every run works out % now itself: the
+last meter reading + (`cost_usd` now - `cost_usd` then) / $ per 1%, the least-squares fit of every reading this week (two
+whole-% readings 2 h apart can't give it: 11-07 they said $30, the fit $13); it is said only when it changes a step. Ask Cory for the meter only at the day's last run or
+within 2% of a checkpoint (11-07): it refits and catches his Claude use outside this session. Predict: % now + the burn of the last 3 h x daytime hours left (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM), at
 each checkpoint (81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM), and the hour it hits 100%. A prediction over a checkpoint
 throttles now, before it is crossed: no new helper, the next full run quiet (answers, merges), Cory gets the prediction and the
 cut in one line. Loosen a step only when two runs predict under.
-Specs, the math of a ruling and research go to ChatGPT or Grok first; the integrator
-checks them, never drafts them (Cory 11-06).
+Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): one at a time while over pace (Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). If `effort_level` is not xhigh (his pick, 11-06 11:20 AM; helpers keep their own effort, set in `.claude/agents/`), or ultracode is on, tell Cory at once. Effort is only his call; Claude never changes it (11-03 to 11-06 it sat at high 45 h).
+Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
 
-The scheduled task only says "do this file"; change the check here. Post only when something changed.
+Change the check here, never in the task's prompt. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 
 1. **Mail and asks first, every run and every event you handle.** The mark is the notes' `Read through:` Unix time.
@@ -41,7 +41,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    (Muse 11-06). So does a mail that changes a ruling.
    Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06: 18 h went unreported).
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
-   the switchboard can't: workflow-file PRs (merge on green plus a LAND), FIX or
+   the switchboard can't (J-056: it merges workflow PRs too): FIX or
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
    vendor (Muse first for physics and game code, then Grok), asked with the facts on its PR.
    A piece that holds 2+ jobs, stuck 6 h or two red proofs with its owner, about an hour's work: take it (Cory 11-06).
@@ -53,12 +53,10 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    six big unstarted jobs in `work/tasks/muse.md`: derive the next from `03_EXECUTION/GAP_LIST.md` and
    Cory's asks, a whole system or set piece, written whole on its own job issue, and mail it. Rule on Muse's
    proposals within the hour. Every hard job's owner has asked the right other agent where it is guessing.
-   Replace the "This hour" section of board #107's body with who got what; never a new comment.
+   Replace the "This hour" section of board #340's body with who got what; never a new comment.
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
-   their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current (asks in flight, merge queue,
-   rulings). Over a cap in CLAUDE.md: trim it now.
-6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM: the setup is tuned, and the
-   search costs more thinking than it saves). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
+   their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current: only what has no other home. Over a cap in CLAUDE.md: trim it now.
+6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM) unless a system keeps failing (11-09). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
    that had nothing to do (a PR event, CI note, helper ping or reminder that changed no step) and stop its
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).

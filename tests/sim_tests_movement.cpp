@@ -108,6 +108,11 @@ void run_brachiation() {
               << " fling_vx=" << before.player_linear_velocity.x << " landed_x=" << landed.player_position.x
               << "\n";
 }
+SCRAPERX_GROUP("brachiation", 570, run_brachiation);
+SCRAPERX_SELECT("parkour-moves", run_brachiation, run_pipe_gallery, run_slide, run_speed_vault, run_wall_run,
+                run_wall_climb, run_tuck, run_flow, run_springboard, run_swing_launch, run_slide_jump,
+                run_climb_moves, run_wall_chain, run_zipline, run_hook, run_workers, run_c7,
+                run_gust_front_upper);
 
 // The pipe gallery in the yard (sim/pipe_gallery.hpp), played: a run along
 // the start stand, a jump from its painted edge for the first pipe, the stick
@@ -174,6 +179,7 @@ void run_pipe_gallery() {
     std::cout << "PASS scraperx_sim pipe gallery: caught_s=" << caught_s << " lip_s=" << ledge_s
               << " top_y=" << top.player_position.y << "\n";
 }
+SCRAPERX_GROUP("pipe_gallery", 580, run_pipe_gallery);
 
 // Parkour step 3: the slide, on the proving ground's crawl beam (a 4 m lane
 // at x = -2 under a beam 1.45 m up at z = -13). Sprinted at and crouched
@@ -229,6 +235,7 @@ void run_slide() {
     std::cout << "PASS scraperx_sim slide: entry_mps=" << va << " after_half_s=" << vb << " ran_out_z=" << ended_z
               << "\n";
 }
+SCRAPERX_GROUP("slide", 590, run_slide);
 
 // Parkour step 3: the speed vault, over the proving ground's 0.95 m rail at
 // x = 5. At a sprint the vault crosses at the run's pace and leaves at it;
@@ -271,6 +278,7 @@ void run_speed_vault() {
     std::cout << "PASS scraperx_sim speed vault: entry_mps=" << entry << " slowest_over_mps=" << slowest
               << " exit_mps=" << exit_speed << "\n";
 }
+SCRAPERX_GROUP("speed_vault", 600, run_speed_vault);
 
 // Parkour step 4: the wall-run, on the proving ground's run wall (12 m long,
 // 4 m tall, its face at z = -26.75, x = -12..0). A sprint along it, a jump
@@ -340,6 +348,7 @@ void run_wall_run() {
     std::cout << "PASS scraperx_sim wall run: steps=" << wall_steps << " air_s=" << wall_air << " away_air_s=" << away_air
               << " far_x=" << wall_x << "\n";
 }
+SCRAPERX_GROUP("wall_run", 610, run_wall_run);
 
 // Parkour step 5: the grappling hook on the proving ground. Taken from its
 // rack beside the monkey bars; fired at a bar it bites round it; reeled, it
@@ -562,6 +571,7 @@ void run_hook() {
     std::cout << "PASS scraperx_sim hook: lifted_m=" << peak_y - y0 << " worst_reel_mps=" << worst_reel
               << " worst_tension_n=" << worst_tension << "\n";
 }
+SCRAPERX_GROUP("hook", 740, run_hook);
 
 // Life L2: the yard crew. Real bodies on grade: they walk their routes with no
 // shove from anything when the player leaves them alone, step out of a walking
@@ -702,6 +712,8 @@ void run_workers() {
                   << " stumbles=" << hit_at.worker_stumbles << "\n";
     }
 }
+SCRAPERX_GROUP("workers", 750, run_workers);
+SCRAPERX_SELECT("workers", run_workers);
 
 // C7, the west face: from the 264 ring to the mast-pitman walkway at
 // 291.25 m on player inputs, the mast's alternative. Its two galleries are
@@ -859,6 +871,59 @@ void run_c7() {
     std::cout << "PASS scraperx_sim c7: seconds=" << top.simulation_time_seconds - start << " pipes=" << one << "+" << two
               << " top_y=" << top.player_position.y << " wind_peak_n=" << top.wind_peak_force_n << "\n";
 }
+SCRAPERX_GROUP("c7", 760, run_c7);
+
+// Gust fronts above 396 m (J-022): a front sweeps west off the tower's west
+// face on the simulation's clock; behind it the gust pushes a body that is
+// off its feet. Below 396 m no front ever acts, at any phase.
+void run_gust_front_upper() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::Snapshot;
+
+    // Above 396 m: wait for a front to reach the 484 ring's west edge, then
+    // jump west off it into the drop while the front passes.
+    Simulation s(InitialSpawn::Ring484North);
+    require(s.advance_frame(1.0).accepted, "gust front: settle");
+    require(walk_to(s, -11.0, -139.6, 6.0, 0.1), "gust front: to the ring's west band");
+    // The front's leading edge is in the snapshot: wait until it is past the
+    // zone's east edge, so the jump lands behind it.
+    require(advance_until(s,
+                          [](const Snapshot &n) { return n.wind_front_x_m < -27.0; },
+                          12.0),
+            "gust front: a front must reach the upper tower within two periods");
+    require(s.set_facing(-1.0, 0.0), "gust front: face west");
+    require(s.set_sprint_input(true), "gust front: sprint");
+    require(s.request_jump(), "gust front: jump");
+    require(hold_stick(s, -1.0, 0.0, -1.0, 0.0, 6.0,
+                       [](const Snapshot &n) { return n.wind_peak_force_n > 20.0; }),
+            "gust front: off the 484 ring the front must push the climber");
+    require(s.snapshot().player_position.y > 396.0, "gust front: the push must happen above 396 m");
+    std::cout << "PASS scraperx_sim gust front: peak_n=" << s.snapshot().wind_peak_force_n
+              << " y=" << s.snapshot().player_position.y << "\n";
+
+    // Below 396 m: the same jump off the 374 ring, after a full front period
+    // has passed, is never pushed.
+    Simulation low(InitialSpawn::Ring374West);
+    require(low.advance_frame(1.0).accepted, "gust front below: settle");
+    require(low.advance_frame(9.0).accepted, "gust front below: a full front period passes");
+    require(low.snapshot().wind_mps == 0.0, "gust front below: no wind below 396 m at any phase");
+    require(low.set_facing(-1.0, 0.0), "gust front below: face west");
+    require(low.set_sprint_input(true), "gust front below: sprint");
+    require(low.request_jump(), "gust front below: jump");
+    require(hold_stick(low, -1.0, 0.0, -1.0, 0.0, 4.0,
+                       [](const Snapshot &n) {
+                           return !n.player_grounded && n.player_position.x < -27.0;
+                       }),
+            "gust front below: the jump must carry the body into the front's footprint");
+    (void)low.advance_frame(1.0);
+    require(low.snapshot().wind_peak_force_n == 0.0,
+            "gust front below: no front may push below 396 m");
+    require(low.snapshot().player_position.y < 396.0, "gust front below: the check must stay below 396 m");
+    std::cout << "PASS scraperx_sim gust front below 396: peak_n=" << low.snapshot().wind_peak_force_n
+              << " y=" << low.snapshot().player_position.y << "\n";
+}
+SCRAPERX_GROUP("gust_front_upper", 770, run_gust_front_upper);
 
 // Jump pressed in the air just before the feet land is kept and spent on the
 // first tick they stand; pressed too early it is gone; it never jumps in the
@@ -917,6 +982,8 @@ void run_jump_buffer() {
     require(!early, "jump buffer: jump pressed 25 ticks before landing must be gone by then");
     std::cout << "PASS scraperx_sim jump buffer: land_tick=" << land_tick << " window_ticks=9\n";
 }
+SCRAPERX_GROUP("jump_buffer", 500, run_jump_buffer);
+SCRAPERX_SELECT("jumpbuffer", run_jump_buffer);
 
 // PARKOUR_MOVE_SET.md, the seams between moves. Each proof fails without its
 // change: a running mantle that stops on top (M5), a lip missed while still
@@ -1072,6 +1139,8 @@ void run_parkour_seams() {
         std::cout << "PASS scraperx_sim parkour precision: landed_x=" << landed << " plain_x=" << plain_landed << "\n";
     }
 }
+SCRAPERX_GROUP("parkour_seams", 510, run_parkour_seams);
+SCRAPERX_SELECT("parkour", run_parkour_seams);
 
 // Mirror's Edge's wall climb (kWallClimbMinimumSpeed): sprinting square at
 // the proving ground's 4 m run wall, a jump with the stick held at it plants
@@ -1138,6 +1207,9 @@ void run_wall_climb() {
     (void)run_at_wall(true, true);
     std::cout << "PASS scraperx_sim wall climb: peak_m=" << held.peak_y << " plain_peak_m=" << let_go.peak_y << "\n";
 }
+SCRAPERX_GROUP("wall_climb", 620, run_wall_climb);
+SCRAPERX_SELECT("climb", run_wall_climb, run_tuck, run_flow, run_springboard, run_swing_launch,
+                run_slide_jump, run_climb_moves, run_wall_chain, run_zipline);
 
 // Mirror's Edge's tuck (kTuckMaximumFallMps): sprinting at the proving
 // ground's crawl beam (its top 1.85 m up), a jump 4.4 m short with Crouch held
@@ -1187,6 +1259,7 @@ void run_tuck() {
     require(straight.tucks == 0 && straight.end_z > -13.0, "tuck: the legs left down, the jump strikes the beam");
     std::cout << "PASS scraperx_sim tuck: clearance_m=" << tucked.lowest_over_beam - 1.85 << "\n";
 }
+SCRAPERX_GROUP("tuck", 630, run_tuck);
 
 // Flow (kFlowSpeedMps): on the open ground east of the start, a sprint held
 // reaches the sprint's 8 m/s at once and gathers on, not at once, to 9; a
@@ -1238,6 +1311,7 @@ void run_flow() {
     require(regathering < 8.5, "flow: let go, it is lost and has to be gathered again");
     std::cout << "PASS scraperx_sim flow: gathered_mps=" << gathered << " kept_mps=" << kept << "\n";
 }
+SCRAPERX_GROUP("flow", 640, run_flow);
 
 // The springboard (kSpringboardMinimumSpeed): sprinting west at the yard's
 // plate stack (its slab on top, 1.1 m up), Jump a stride short of its face
@@ -1297,6 +1371,7 @@ void run_springboard() {
     require(far.springboards == 0, "springboard: 3 m short, a jump from the ground");
     std::cout << "PASS scraperx_sim springboard: soles_peak_m=" << close.soles_peak << "\n";
 }
+SCRAPERX_GROUP("springboard", 650, run_springboard);
 
 // The swing's launch (kSwingLaunchMps): two worlds swing hand over hand to the
 // monkey bars' last bar and come forward on it, rising up the front of the
@@ -1361,6 +1436,7 @@ void run_swing_launch() {
     std::cout << "PASS scraperx_sim swing launch: higher_m=" << a.peak_y - b.peak_y
               << " farther_m=" << a.x_back_down - b.x_back_down << "\n";
 }
+SCRAPERX_GROUP("swing_launch", 660, run_swing_launch);
 
 // The slide jump: Jump out of a slide on the open ground east of the start
 // stands and jumps in one tick, at the slide's speed, so a slide under
@@ -1399,6 +1475,7 @@ void run_slide_jump() {
             "slide jump: the jump goes out of the slide at the slide's speed, a full jump high");
     std::cout << "PASS scraperx_sim slide jump: slide_mps=" << slide_mps << " flown_m=" << flew << "\n";
 }
+SCRAPERX_GROUP("slide_jump", 670, run_slide_jump);
 
 // Off a ladder (the 154 m deck's up to the 176 ring): Crouch held slides
 // the body down the rungs, hands and all, at up to kClimbSlideMps, and the
@@ -1468,6 +1545,7 @@ void run_climb_moves() {
     std::cout << "PASS scraperx_sim climb moves: slide_mps=" << fastest << " side_jump_x_mps="
               << sprung.player_linear_velocity.x << "\n";
 }
+SCRAPERX_GROUP("climb_moves", 680, run_climb_moves);
 
 // The wall-run chain (kWallKicksMax), in the passage between the run wall's
 // south face and the wall facing it 2.5 m across: a sprint jumped along the
@@ -1525,4 +1603,5 @@ void run_wall_chain() {
     require(end.death_count == 0, "wall chain: it comes down on its feet");
     std::cout << "PASS scraperx_sim wall chain: kicks=" << kicks << " air_s=" << air << " highest_m=" << highest << "\n";
 }
+SCRAPERX_GROUP("wall_chain", 690, run_wall_chain);
 

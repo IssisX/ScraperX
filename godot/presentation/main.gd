@@ -24,6 +24,7 @@ const CrewView := preload("res://presentation/life/crew_view.gd")
 const CanopyView := preload("res://presentation/canopy_view.gd")
 const Works := preload("res://presentation/life/works.gd")
 const CloudLayer := preload("res://presentation/cloud_layer.gd")
+const MistStreak := preload("res://presentation/mist_streak.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
@@ -110,6 +111,7 @@ var _quickturn_left := 0.0
 var _sling_goal_yaw := 0.0
 var _sling_goal_elevation := 1.4311699866353502
 var _clouds: Node3D
+var _mist_streak: Node3D
 var _uncanny: Node3D
 var _consent: Control
 var _consent_open := false
@@ -240,6 +242,10 @@ func _ready() -> void:
 	add_child(_works)
 	_clouds = CloudLayer.new()
 	add_child(_clouds)
+	# The gust front's mist streak (J-022 slice 2): on the front, from the native.
+	_mist_streak = MistStreak.new()
+	add_child(_mist_streak)
+	_mist_streak.setup(_native)
 	_works.setup(_vent_tops)
 	for m in _machines.size():
 		if float(_machines[m]["mass"]) >= Works.BEACON_MIN_KG:

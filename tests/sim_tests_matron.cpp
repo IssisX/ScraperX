@@ -372,6 +372,7 @@ void run_matron_collision() {
     require(m.knockdowns == 0 && m.staggers == 0, "matron collision: the player's own body is no blow to her balance");
     std::cout << "PASS scraperx_sim matron collision: closing_mps=" << closing_peak << " shoves=" << m.shoves << "\n";
 }
+SCRAPERX_SELECT("matron-collision", run_matron_collision);
 
 // Her balance (the owner, 2026-10-19: a hard enough blow puts her down for a
 // few seconds, never dead). With the player out of her way on 143 below, she
@@ -614,6 +615,7 @@ void run_matron_balance() {
         std::cout << "PASS scraperx_sim matron heave: blow_mps=" << m.blow_mps << "\n";
     }
 }
+SCRAPERX_SELECT("matron-balance", run_matron_balance);
 
 // The shaft's corner pipe (the owner, 2026-10-19: she comes down the shaft
 // after you; one shaft pipe is hers; you hear her at least 4 s before she
@@ -781,6 +783,7 @@ void run_matron_pipe() {
         std::cout << "PASS scraperx_sim matron pipe toolbox\n";
     }
 }
+SCRAPERX_SELECT("matron-pipe", run_matron_pipe);
 
 // A pest's mischief: the player's toolbox taken and thrown, or carried off.
 void run_matron_mischief() {
@@ -939,6 +942,7 @@ void run_matron_mischief() {
         std::cout << "PASS scraperx_sim matron hoard: from_post_m=" << from_post << "\n";
     }
 }
+SCRAPERX_SELECT("matron-mischief", run_matron_mischief);
 
 // ---- her wrecking (J-016): the drum the player set by the bay's rungs,
 //      too heavy for her hands, she shoves off the lip into the bay through
@@ -1149,6 +1153,7 @@ void run_matron_wreck() {
     std::cout << "PASS scraperx_sim matron wreck: shove_tick=" << a.shove_tick << " peak_push_n=" << a.peak_push_n
               << " peak_feet_n=" << a.peak_force_n << " peak_power_w=" << a.peak_power_w << "\n";
 }
+SCRAPERX_SELECT("matron-wreck", run_matron_wreck);
 
 void run_matron_crash() {
     // ---- a hit on her deck draws her (the owner, 2026-10-18: sound is how she
@@ -1306,6 +1311,7 @@ void run_matron_crash() {
                   << "\n";
     }
 }
+SCRAPERX_SLICE("matron-crash", run_matron_crash);
 
 void run_matron() {
     // ---- asleep: quiet or alone, she stays sealed ------------------------------
@@ -2138,6 +2144,8 @@ void run_matron() {
     }
     run_matron_remaining();
 }
+SCRAPERX_GROUP("matron", 870, run_matron);
+SCRAPERX_SELECT("matron", run_matron);
 
 // ---- a restore brings her back: a long fall ends her, and the world put back has her in it ----
 // Her death is the fall's (kLethalLandingMps); the checkpoint is where she burst out. A death of the player
@@ -2903,6 +2911,7 @@ void run_matron_remaining() {
                 "matron: two identical chases end identically, bit for bit");
     }
 }
+SCRAPERX_SLICE("matron-remaining", run_matron_remaining);
 
 // Her hearing takes the player's real room (03_EXECUTION/UNCANNY/HER_CHART.md; the owner,
 // 2026-10-20: "if my dog barks, her head turns, that would be amazing"). The microphone's
@@ -2983,6 +2992,7 @@ void run_matron_room() {
     std::cout << "PASS scraperx_sim matron room: off_m=" << off_m << " heard=" << loudest << " came_m="
               << at_bark_m - after_m << "\n";
 }
+SCRAPERX_SELECT("matron-room", run_matron_room);
 
 void run_matron_ladder() {
     // ---- climbs: frail, she stands at the ladder's foot looking up; in the Turn she takes
@@ -3080,3 +3090,4 @@ void run_matron_ladder() {
                   << " peak_mps=" << peak_rate << " force=" << max_force << " reach=" << max_reach << "\n";
     }
 }
+SCRAPERX_SLICE("matron-ladder", run_matron_ladder);

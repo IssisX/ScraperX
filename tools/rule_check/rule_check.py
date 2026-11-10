@@ -27,7 +27,7 @@ GEOMETRY_FILE = "src/sim/world_solids.inc"
 
 # (a) test checks
 CHECK_RE = re.compile(r"\b(check|expect|require|assert|fail|FAIL|EXIT_FAILURE|ok\s*&=|ok\s*=\s*false|"
-                      r"passed\s*&=|return\s+false)\b|std::abort|throw\b")
+                      r"passed\s*&=|return\s+false)\b|std::abort|(?<![\w-])throw\b")
 CMP_RE = re.compile(r"(<=|>=|<|>|==|!=)\s*(-?\d+(?:\.\d+)?)F?\b")
 NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?F?\b")
 # (b) per-route / per-deck / per-transition special cases

@@ -301,3 +301,4 @@ void run_matron_budget() {
     require(failures == 0, "matron-budget: her one budget (8 kN, 44 kW) audited, see the lines above");
     std::cout << "PASS scraperx_sim matron-budget: " << kCount << " scenarios, every path within her budget or listed\n";
 }
+SCRAPERX_SLICE("matron-budget", run_matron_budget);

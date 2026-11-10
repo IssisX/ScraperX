@@ -572,6 +572,8 @@ void run_yard_crane() {
     std::cout << "PASS scraperx_sim crane: forked_up_44_m=" << forked_y << " forklift_x=" << driven_x
               << " stall_n=" << stalled_n << "\n";
 }
+SCRAPERX_GROUP("yard_crane", 1040, run_yard_crane);
+SCRAPERX_SELECT("crane", run_yard_crane);
 
 namespace {
 
@@ -928,6 +930,8 @@ void run_yard_crane_magnet() {
     std::cout << "PASS scraperx_sim magnet: slab_held_n=" << took.hold_rated_n << " beam_held_n="
               << on_beam.hold_rated_n << " stack_rose_m=" << rose << " box_held_n=" << on_box.hold_rated_n << "\n";
 }
+SCRAPERX_GROUP("yard_crane_magnet", 1050, run_yard_crane_magnet);
+SCRAPERX_SELECT("magnet", run_yard_crane_magnet);
 
 // The yard crane's container spreader (yard_crane.hpp): rigged by HOOKing the
 // sling on its lug from beside the frame; LOCK in the air turns nothing. Let
@@ -1007,3 +1011,5 @@ void run_yard_crane_spreader() {
             "spreader: raised, the frame leaves the box where it was set down");
     std::cout << "PASS scraperx_sim spreader: lifted_to_y=" << high.y << " set_down_y=" << landed.y << "\n";
 }
+SCRAPERX_GROUP("yard_crane_spreader", 1060, run_yard_crane_spreader);
+SCRAPERX_SELECT("spreader", run_yard_crane_spreader);

@@ -6,6 +6,7 @@ No network, no clock, no files: GitHub, the rule check and the time are given.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import pathlib
 import sys
@@ -49,6 +50,10 @@ class FakeGH:
 
     def __init__(self, thread=()):
         self.thread, self.posted, self.writes, self.gets = list(thread), [], [], []
+
+    @contextlib.contextmanager
+    def fresh(self):   # ghapi.GitHub.fresh: this stub has no cache, so every read is already GitHub's own
+        yield self
 
     def paged(self, path, key=""):
         return list(self.thread)
@@ -116,9 +121,41 @@ class FallbackConfig(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("grok", "chatgpt"), 1.0))
-        self.assertEqual(team.other_authored_asks, ("chatgpt",))
-        self.assertNotIn("muse", tuple(team.pool) + tuple(team.fallback_order) + tuple(team.human_reviewers))
+        # 11-09: ChatGPT's review task polls hourly, so it is the first fallback, Grok (twice a day) the second.
+        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("chatgpt", "grok"), 1.0))
+        self.assertEqual(team.other_authored_asks, ("chatgpt", "grok"))
+        self.assertEqual(team.manual, frozenset())
+        routed = tuple(team.pool) + tuple(team.fallback_order) + tuple(team.human_reviewers) + tuple(team.other_authored_asks)
+        self.assertNotIn("muse", routed)
+        for author in ("anthropic", "meta", "xai"):
+            self.assertEqual(rules.next_fallback([], author, team), "chatgpt", author)
+            self.assertEqual(rules.next_fallback(["chatgpt"], author, team), "" if author == "xai" else "grok", author)
+        # an OpenAI-authored PR (Codex, ChatGPT) never asks ChatGPT: its LAND would not count
+        self.assertEqual(rules.next_fallback([], "openai", team), "grok")
+
+
+class ManualWake(unittest.TestCase):
+    """J-072: an agent with `wake: manual` runs only when Cory starts it, so no review ask is ever routed to it,
+    whatever the lists name: a Claude-authored PR goes to Codex and the API first, then Grok, never ChatGPT."""
+
+    CFG = dict(AGENTS, agents=dict(AGENTS["agents"], chatgpt=dict(AGENTS["agents"]["chatgpt"], wake="manual")),
+               review={"claude_authored_asks": ["chatgpt", "grok"], "other_authored_asks": ["chatgpt", "grok"],
+                       "pool": ["claude-api", "chatgpt"], "api_reviews_claude": True,
+                       "fallback_after_hours": 1, "fallback_order": ["grok", "chatgpt"]})
+    TEAM = rules.team_from_config(CFG)
+
+    def test_never_in_the_rotation_or_the_fallback(self):
+        self.assertEqual(rules.review_rotation(9, "anthropic", frozenset(), self.TEAM, api_ok=True), [rules.API_REVIEWER])
+        self.assertEqual(rules.review_rotation(9, "anthropic", frozenset(), self.TEAM, api_ok=False), ["grok"])
+        self.assertEqual(rules.next_fallback(["grok"], "anthropic", self.TEAM), "")   # nobody left: never ChatGPT
+
+    def test_never_picked_from_the_ask_lists(self):
+        self.assertEqual(rules.pick_reviewer("anthropic", frozenset(), self.TEAM), rules.ReviewPick("ask", "grok"))
+        self.assertEqual(rules.pick_reviewer("meta", frozenset(), self.TEAM), rules.ReviewPick("ask", "grok"))
+
+    def test_a_list_of_only_manual_agents_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "wake: manual"):
+            rules.team_from_config(dict(self.CFG, review={"claude_authored_asks": ["chatgpt"]}))
 
 
 class FallbackPick(unittest.TestCase):
@@ -163,7 +200,7 @@ class Escalation(unittest.TestCase):
         self.assertEqual(number, 138)
         self.assertTrue(body.startswith("To Grok: J-031 review #9 @ 1a2b3c4d"), body[:80])   # what the Grok app answers
         self.assertIn("ChatGPT has not answered in 3 hours", body)
-        self.assertIn("`**Grok (review of #9 @ 1a2b3c4d): LAND**`", body)
+        self.assertIn(f"`**Grok (review of #9 @ {HEAD}): LAND**`", body)   # the whole head (J-056)
         self.assertIn(switch.MARK.format(kind="ask-grok", pr=9, head=HEAD), body)
         self.assertTrue(any(l.startswith("FALLBACK    #9") for l in sw.lines))
         # The next sweep sees both asks: grok's clock has just started, so nothing more is posted.
@@ -316,7 +353,9 @@ class PoolSteer(unittest.TestCase):
 
 
 class CodexAsk(unittest.TestCase):
-    def test_codex_is_asked_on_the_pr_with_a_mention(self):
+    def test_codex_is_asked_on_the_pr_without_the_bots_mention(self):
+        # J-072: the switchboard's own "@codex review" never woke Codex (2 of 2, #191 and #150): the ask is recorded
+        # on the PR with its mark, and the integrator's inbox gets a CODEX-ASK item to post the mention itself
         team = rules.team_from_config(dict(AGENTS, agents=dict(AGENTS["agents"], codex={
             "vendor": "openai", "names": ["Codex"], "branch_prefixes": ["codex/"]}),
             review=dict(AGENTS["review"], pool=["codex", "muse"], fallback_after_hours=1)))
@@ -328,8 +367,9 @@ class CodexAsk(unittest.TestCase):
         self.assertEqual(len(gh.posted), 1)
         where, body = gh.posted[0]
         self.assertEqual(where, 10)
-        self.assertTrue(body.startswith("@codex review"))
+        self.assertNotIn("@", body)
         self.assertIn("ask-codex", body)
+        self.assertIn("The integrator posts the Codex review command", body)
 
 
 class PoolFallbackAndLoad(unittest.TestCase):
@@ -394,7 +434,7 @@ class CodexFirst(unittest.TestCase):
         sw = make(gh, team=self.TEAM)
         sw.api_ok = lambda c: api_ok
         sw.review_load = lambda: ({}, {})
-        sw.steer_pr(facts, ctx(comments=list(thread)))
+        sw.steer_pr(facts, dict(ctx(comments=list(thread)), fresh=True))   # GitHub's own facts (J-072: no re-read)
         who = sw.pooled_reviewer(facts, ctx(comments=list(thread)), "anthropic")[1] if rules.needs_review(facts, "anthropic", self.TEAM) else ""
         return gh, who
 
@@ -461,8 +501,8 @@ class CodexRunning(unittest.TestCase):
         sw.api_ok = lambda c: True
         sw.review_load = lambda: ({}, {})
         reviewed = []
-        sw.review = lambda facts, c, author: reviewed.append(facts.head_sha)
-        sw.marked = lambda *a: False
+        sw.review = lambda facts, c, author, security=False: reviewed.append(facts.head_sha)
+        sw.marked = lambda *a, **kw: False
         sw.stale = lambda facts: False
         c = dict(ctx(comments=list(comments)), proof_done_at=ago(green_minutes_ago / 60))
         sw.ask_pr(pr_facts(), c)

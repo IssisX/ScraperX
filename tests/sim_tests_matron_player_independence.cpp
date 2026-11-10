@@ -255,3 +255,5 @@ void run_matron_player_independence() {
                   << ": five placements, exact per-tick equality\n";
     }
 }
+SCRAPERX_GROUP("matron_player_independence", 810, run_matron_player_independence);
+SCRAPERX_SELECT("matron-player-independence", run_matron_player_independence);

@@ -41,7 +41,32 @@ const WIND_RATE := 0.23
 const WIND_DIR := Vector3(0.93, 0.0, 0.37)
 const HAIR_ITERATIONS := 3
 const HAIR_JUMP_M := 1.0      # a root that moved this far in a frame (a respawn) restarts the hang
-const BACK_RADIUS := 0.17
+# Her upper back for the locks: a sphere, so the push is right in any pose. It
+# was 0.17 m about chest (0, 0.05, -0.05): its surface stood up to 13 cm off
+# her back and rose above her shoulder line under the nape, so the locks
+# landed on it and rolled sideways over her shoulders. Fitted to her measured
+# back (BACK_Z: 9.4 cm behind the bone at mid-back) and kept under the collar
+# band behind her neck (J-067).
+const BACK_CENTRE := Vector3(0.0, -0.02, 0.07)
+const BACK_RADIUS := 0.165
+# J-067: her back in chest-local Y, how far behind the chest bone it reaches
+# within |x| 0.12 (measured on her drawn skin, tunic and collar at the guard,
+# + 6 mm for the strand): the collar ring's radius straight behind her.
+const BACK_Z := [Vector2(-0.29, 0.042), Vector2(-0.21, 0.047), Vector2(-0.17, 0.067), Vector2(-0.13, 0.076),
+	Vector2(-0.09, 0.083), Vector2(-0.05, 0.091), Vector2(-0.01, 0.094), Vector2(0.05, 0.092), Vector2(0.09, 0.085),
+	Vector2(0.13, 0.075), Vector2(0.15, 0.065), Vector2(0.17, 0.045), Vector2(0.19, 0.027), Vector2(0.21, 0.021)]
+# J-067: the neck ring's radius by direction, (neck_lo local Y, radius). It was
+# one 0.095 m cylinder, but neck_lo's axis sits near the back of her neck: the
+# back skin is 2-3.5 cm off it between 3 and 10 cm up, the sides 7-12 cm (her
+# jaw), the front more (measured on her drawn skin, tunic and collar, guard and
+# shuffle, + 6 mm for the strand). The nape locks, rooted at that skin, were
+# walked out level to clear 0.095 and stood out behind her head ("raised",
+# Cory 11-08). Back and side blend by angle; never wider than the old 0.095,
+# which the front keeps.
+const NECK_BACK_R := [Vector2(-0.01, 0.095), Vector2(0.0, 0.085), Vector2(0.01, 0.071), Vector2(0.02, 0.053),
+	Vector2(0.03, 0.042), Vector2(0.04, 0.033), Vector2(0.05, 0.027), Vector2(0.08, 0.028), Vector2(0.09, 0.029),
+	Vector2(0.10, 0.034), Vector2(0.11, 0.046)]
+const NECK_SIDE_R := [Vector2(0.01, 0.095), Vector2(0.02, 0.077), Vector2(0.04, 0.079), Vector2(0.05, 0.095)]
 
 var skel: Skeleton3D
 var view: Node3D
@@ -270,12 +295,25 @@ const GOVERN_BURST_RAD_S := 19.0
 # pulled) faster than this a second (GOVERN_BURST_M_S in a burst)
 const GOVERN_M_S := 3.0
 const GOVERN_BURST_M_S := 5.0
+# Her wrists onto a climb's or her pipe's grip, and back off it: each goes
+# for the point on a critically damped spring (HAND_W) no faster than
+# HAND_MAX_M_S (5 cm a frame at 60 fps), its step at most HAND_DT_MAX
+# (_follow_hand). Only a teleport (fresh_frame) puts a wrist straight on.
+const HAND_W := 30.0
+const HAND_MAX_M_S := 3.0
+const HAND_DT_MAX := 0.1
 var _ride_y := 0.0
 var _ride_v := 0.0
 var _ankle_y := 0.097
 var _plants := {}
 # Each reach's pole (frame, the unit side its middle joint stands out to).
 var _pole := {}
+# Each wrist's follow ("l" / "r": [frame, velocity]), kept while the wrist
+# reaches a grip and while it comes back off one; each wrist where it was
+# last drawn (world), and her skeleton's origin then.
+var _hand_follow := {}
+var _wrist_drawn := {}
+var _skel_was := Vector3.ZERO
 var _governed_bones: Array[int] = []
 var _govern_last: Array[Quaternion] = []
 var _govern_pos: Array[Vector3] = []
@@ -416,6 +454,62 @@ func _reach_chain(a: String, b: String, c: String, target: Vector3, w := 1.0, ke
 	var el2 := _gpos(b)
 	var wr2 := _gpos(c)
 	_turn_bone_global(b, Quaternion((wr2 - el2).normalized(), (want - el2).normalized()))
+
+
+# Her wrist `s` reaching for the world point `at` (a climb's hold, her
+# pipe's grip): the wrist goes to a point that follows `at` (HAND_W, no
+# faster than HAND_MAX_M_S), so a grip taken, moved or swapped is reached
+# over frames, never in one. Each step is taken from where the wrist was
+# drawn last frame (a reach that starts, or one the governor held back, never
+# runs ahead of her drawn hand), so it needs no blend weight. `carry`: the
+# step is taken in her body's frame (a wrist coming back to her pose).
+func _reach_hand(s: String, at: Vector3) -> void:
+	_reach(s, skel.global_transform.affine_inverse() * _follow_hand(s, at), 1.0)
+
+
+func _follow_hand(s: String, at: Vector3, carry := false) -> Vector3:
+	var last: Array = _hand_follow.get(s, [])
+	if view == null or bool(view.fresh_frame) or not _wrist_drawn.has(s):
+		_hand_follow[s] = [_ik_frame, Vector3.ZERO]
+		return at
+	var x: Vector3 = _wrist_drawn[s]
+	if carry:
+		x += skel.global_position - _skel_was
+	var v := Vector3.ZERO
+	if not last.is_empty() and int(last[0]) >= _ik_frame - 1:
+		v = last[1]
+	var dt := clampf(float(view._dt), 0.0, HAND_DT_MAX)
+	if dt > 0.0:
+		var f: Array = view.spring(x, v, at, HAND_W, dt)
+		var to: Vector3 = (f[0] as Vector3) - x
+		var cap := HAND_MAX_M_S * dt
+		if to.length() > cap:
+			x += to.limit_length(cap)
+			v = (f[1] as Vector3).limit_length(HAND_MAX_M_S)
+		else:
+			x = f[0]
+			v = f[1]
+	_hand_follow[s] = [_ik_frame, v]
+	return x
+
+
+# A wrist that reached a grip last frame and does not this frame (the climb
+# or the pipe let go, a second hold dropped): it comes back to where this
+# frame's pass has it on the same follow, and is let go once there.
+func _release_hands() -> void:
+	for s in _hand_follow.keys():
+		var last: Array = _hand_follow[s]
+		if int(last[0]) >= _ik_frame:
+			continue
+		if view == null or bool(view.fresh_frame) or int(last[0]) < _ik_frame - 1:
+			_hand_follow.erase(s)
+			continue
+		var pose := skel.global_transform * _gpos("wr_" + s)
+		var x := _follow_hand(s, pose, true)
+		if x.distance_to(pose) < 0.005:
+			_hand_follow.erase(s)
+		else:
+			_reach(s, skel.global_transform.affine_inverse() * x, 1.0)
 
 
 # Her body's ride onto what is under her (her lower foot on the deck, her
@@ -952,8 +1046,8 @@ func _pipe_feet(data: Dictionary, w: float) -> void:
 	claims |= CLAIM_FEET
 
 
-# `held`: her holds as the view draws them, eased onto each new one (the
-# view's _ease_hands); without it, the native's own holds.
+# `held`: her climb's holds as the view picks them (the view's _ease_hands);
+# without it, the native's own. Her wrists follow them (_reach_hand).
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
 	var prop_intent := int(data.get("carrying", 0)) != 0 or int(data.get("stock_seeking", 0)) != 0
 	var carrying := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
@@ -977,6 +1071,7 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 			var cap := GOVERN_M_S * maxf(float(view._dt), 0.0)
 			skel.set_bone_pose_position(i, last.move_toward(nominal, cap))
 	_contact(data, falling, held)
+	_release_hands()
 	govern()
 	# Only the physical constraint owns attachment. The native handle is the
 	# contact target, not a visual approximation. Finish the wrists AFTER the
@@ -993,6 +1088,9 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 		_finish_prop_wrist("r", _in_arm("r", handle + across, 1.0), wrist_before["r"])
 		if two_hands and wrist_before.has("l"):
 			_finish_prop_wrist("l", _in_arm("l", handle - across, 1.0), wrist_before["l"])
+	for s in ["l", "r"]:
+		_wrist_drawn[s] = skel.global_transform * _gpos("wr_" + s)
+	_skel_was = skel.global_position
 	_prop_arm_pose.clear()
 	if prop_intent:
 		for bone in PROP_ARM_JOINTS:
@@ -1146,8 +1244,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		_ride(lift)
 		if wf > 0.001:
 			_plant_limbs(data, wf, feet_free)
-		var wc := float(view._w_climb) if view != null else 1.0
-		_reach("r", skel.global_transform.affine_inverse() * hand, wc)
+		_reach_hand("r", hand)
 		claims |= CLAIM_HAND
 		# The left wrist goes to a second hold only when the
 		# simulation has her hand on one (contact_hand2_held under
@@ -1166,9 +1263,9 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 			if second:
 				hand_l = held[1] if held.size() >= 2 else (data["contact_hand2"] if truth else data["climb_hand2"])
 				claims |= CLAIM_HAND2
-				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+				_reach_hand("l", hand_l)
 			elif two_handed:
-				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+				_reach_hand("l", hand_l)
 		if down_mask != 0:
 			claims |= CLAIM_PLANTS
 		return
@@ -1184,8 +1281,8 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		into.y = 0.0
 		var side := Vector3.UP.cross(into.normalized()) if into.length() > 0.01 else Vector3.RIGHT
 		_ride(0.0)
-		_reach("r", inv * (grip + side * 0.08), wp)
-		_reach("l", inv * (grip - side * 0.08), wp)
+		_reach_hand("r", grip + side * 0.08)
+		_reach_hand("l", grip - side * 0.08)
 		claims |= CLAIM_HAND | CLAIM_HANG
 		if bool(data.get("contact_braced", false)):
 			var brace: Vector3 = data["contact_brace"]
@@ -1346,7 +1443,6 @@ func step_hair(delta: float) -> void:
 	var chest := bone_world("chest")
 	var belt := bone_world("spine_mid")
 	var neck := bone_world("neck_lo")
-	var back := chest * Vector3(0.0, 0.05, -0.05)
 	var down := head.basis * Vector3.DOWN
 	for ch in _chains:
 		var idx: Array = ch["idx"]
@@ -1384,17 +1480,18 @@ func step_hair(delta: float) -> void:
 				# The point can sit outside the skull and the back while the ribbon
 				# between this point and the one above still cuts through them.
 				q = _segment_outside(above, q, seg, skull, _skull_radius)
-				q = _segment_outside(above, q, seg, back, BACK_RADIUS)
+				q = _segment_outside(above, q, seg, chest * BACK_CENTRE, BACK_RADIUS)
 				# Collar and belt are rings the two spheres do not cover. Walk the
 				# segment out sideways and down. A lift along the chest axis spends
 				# the hang. Measured radii, not a knob: collar 0.138 on chest
-				# local Y 0.091..0.154, buckle 0.192 on spine_mid local Y -0.001..0.042.
-				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138)
+				# local Y 0.091..0.154 (straight behind her, her measured back, BACK_Z),
+				# buckle 0.192 on spine_mid local Y -0.001..0.042.
+				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138, BACK_Z)
 				q = _clear_ring(above, q, seg, belt, -0.001, 0.042, 0.192)
-				# The neck is a cylinder the collar ring does not cover. Measured on
-				# the posed cloth: max radial 0.089, so 0.095 sits the strand just
-				# outside it. Y -0.01..0.105 is the neck on neck_lo.
-				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095)
+				# The neck is a cylinder the collar ring does not cover, 0.095 at its
+				# front, narrower behind and at the sides (NECK_BACK_R, NECK_SIDE_R).
+				# Y -0.01..0.105 is the neck on neck_lo.
+				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095, NECK_BACK_R, NECK_SIDE_R)
 				# The chest front is a slope, not a wider cylinder. A point can be
 				# outside the collar radius and still be in front of the cloth.
 				# Walk it back in the horizontal, never up: aiming the whole lock
@@ -1470,30 +1567,49 @@ func _segment_hits(a: Vector3, d_unit: Vector3, length: float, centre: Vector3, 
 
 # The clothing ring is a slice of a cylinder on a posed bone. If the segment
 # enters it, tilt the child toward the horizontal way out, still downward.
-func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: float, y1: float, radius: float) -> Vector3:
+func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: float, y1: float, radius: float,
+		back_r: Array = [], side_r: Array = []) -> Vector3:
 	var origin := bone.origin
 	var axis := bone.basis.y.normalized()
-	for _guard in 6:
-		if _ring_depth(a, b, origin, axis, y0, y1, radius) <= 0.001:
-			return b
-		var horiz := _ring_out(a, b, origin, axis, y0, y1)
-		horiz = Vector3(horiz.x, 0.0, horiz.z)
-		if horiz.length() < 1e-4:
-			horiz = Vector3(0.0, 0.0, -1.0)
-		horiz = horiz.normalized()
-		var d := b - a
-		if d.length() < 1e-6:
-			d = Vector3.DOWN
-		d = d.normalized()
-		var trial := d + horiz * 0.45
-		trial.y = minf(trial.y, -0.15)
-		if trial.length() < 1e-6:
-			trial = Vector3.DOWN
-		b = a + trial.normalized() * length
-	return b
+	var fwd := bone.basis.z.normalized()
+	if _ring_depth(a, b, origin, axis, y0, y1, radius, fwd, back_r, side_r) <= 0.001:
+		return b
+	var horiz := _ring_out(a, b, origin, axis, y0, y1)
+	horiz = Vector3(horiz.x, 0.0, horiz.z)
+	if horiz.length() < 1e-4:
+		horiz = Vector3(0.0, 0.0, -1.0)
+	horiz = horiz.normalized()
+	var d := b - a
+	if d.length() < 1e-6:
+		d = Vector3.DOWN
+	d = d.normalized()
+	# J-067: the smallest walk out that clears the ring, length exact, the way
+	# _segment_outside swings. Fixed 0.45 steps overshot by up to about 20
+	# degrees a step and left the back locks standing out level ("raised",
+	# Cory 11-08) instead of hanging just outside her neck and collar.
+	var hi := 8.0
+	if _ring_depth(a, _ring_walk(a, d, horiz, hi, length), origin, axis, y0, y1, radius, fwd, back_r, side_r) > 0.001:
+		return _ring_walk(a, d, horiz, hi, length)
+	var lo := 0.0
+	for _i in 14:
+		var mid := (lo + hi) * 0.5
+		if _ring_depth(a, _ring_walk(a, d, horiz, mid, length), origin, axis, y0, y1, radius, fwd, back_r, side_r) > 0.001:
+			lo = mid
+		else:
+			hi = mid
+	return _ring_walk(a, d, horiz, hi, length)
 
 
-func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float, radius: float) -> float:
+func _ring_walk(a: Vector3, d: Vector3, horiz: Vector3, s: float, length: float) -> Vector3:
+	var trial := d + horiz * s
+	trial.y = minf(trial.y, -0.15)
+	if trial.length() < 1e-6:
+		trial = Vector3.DOWN
+	return a + trial.normalized() * length
+
+
+func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float, radius: float,
+		fwd: Vector3 = Vector3.ZERO, back_r: Array = [], side_r: Array = []) -> float:
 	var worst := 0.0
 	for s in 8:
 		var p: Vector3 = a.lerp(b, float(s) / 7.0)
@@ -1501,8 +1617,30 @@ func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: flo
 		if along < y0 - 0.01 or along > y1 + 0.01:
 			continue
 		var radial := (p - origin) - axis * along
-		worst = maxf(worst, radius - radial.length())
+		var r := radius
+		if not back_r.is_empty() and radial.length() > 1e-6:
+			# 1 straight behind, 0 at her sides, below 0 toward the front
+			var c := -radial.normalized().dot(fwd) / 0.7071
+			var side := minf(radius, _taper_at(side_r, along)) if not side_r.is_empty() else radius
+			if c >= 0.0:
+				r = lerpf(side, minf(radius, _taper_at(back_r, along)), minf(c, 1.0))
+			else:
+				r = lerpf(side, radius, minf(-c, 1.0))
+		worst = maxf(worst, r - radial.length())
 	return worst
+
+
+# Piecewise linear in (y, radius) points sorted by y; flat past either end.
+func _taper_at(points: Array, y: float) -> float:
+	var first: Vector2 = points[0]
+	if y <= first.x:
+		return first.y
+	for i in range(1, points.size()):
+		var lo: Vector2 = points[i - 1]
+		var hi: Vector2 = points[i]
+		if y <= hi.x:
+			return lerpf(lo.y, hi.y, (y - lo.x) / maxf(hi.x - lo.x, 1e-6))
+	return (points[points.size() - 1] as Vector2).y
 
 
 func _ring_out(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float) -> Vector3:

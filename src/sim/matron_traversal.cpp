@@ -51,6 +51,8 @@ const char *move_name(const MoveKind kind) noexcept {
     case MoveKind::GapJump: return "gap_jump";
     case MoveKind::LedgeJump: return "ledge_jump";
     case MoveKind::FreeDrop: return "free_drop";
+    case MoveKind::RiserUp: return "riser_up";
+    case MoveKind::RiserDown: return "riser_down";
     }
     return "?";
 }
@@ -1044,6 +1046,8 @@ Climber::Status Climber::step(const float dt) {
     case MoveKind::HangDrop: step_drop(dt, budget, true); break;
     case MoveKind::FreeDrop: step_drop(dt, budget, false); break;
     case MoveKind::GapJump: step_gap(dt, budget); break;
+    case MoveKind::RiserUp:
+    case MoveKind::RiserDown: break;   // her riser is the Matron's own move (matron_pipe.cpp), never begun here
     }
     // M5b: second grip, rung climbs only, maintained after the move's own
     // step and before the view is written. fail()/finish() already cleared
@@ -2424,6 +2428,23 @@ ScanMemo &scan_memo() {
 constexpr std::size_t kScanMemoMaps = 6;
 } // namespace
 
+// The ladder-bar order (see matron_traversal.hpp): a strict total order on
+// (along_x, cross, along, y, half, entity), exact comparisons, no tolerance.
+// Cross is the primary key after along_x, so the chain loop's break on a
+// cross gap over 0.06 m cannot skip a matching bar.
+bool bar_before(const Bar &a, const Bar &b) noexcept {
+    if (a.along_x != b.along_x) return a.along_x < b.along_x;
+    const float ka = a.along_x ? a.c.GetZ() : a.c.GetX();
+    const float kb = b.along_x ? b.c.GetZ() : b.c.GetX();
+    if (ka != kb) return ka < kb;
+    const float la = a.along_x ? a.c.GetX() : a.c.GetZ();
+    const float lb = b.along_x ? b.c.GetX() : b.c.GetZ();
+    if (la != lb) return la < lb;
+    if (a.c.GetY() != b.c.GetY()) return a.c.GetY() < b.c.GetY();
+    if (a.half != b.half) return a.half < b.half;
+    return a.entity < b.entity;
+}
+
 void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits) {
     const auto started = std::chrono::steady_clock::now();
     std::string key = steel_key(physics, bounds, ignore, limits);
@@ -2452,6 +2473,7 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
     edges_.clear();
     ladders_.clear();
     poles_.clear();
+    risers_.clear();
     patch_links_.clear();
     stats_ = ScanStats{};
 
@@ -2484,12 +2506,6 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
     stats_.leaves = static_cast<std::uint32_t>(leaves.size());
 
     // 2. Classify: bars (rungs), poles, walkable tops.
-    struct Bar {
-        Vec3 c;
-        bool along_x;
-        float half;
-        std::uint64_t entity;
-    };
     std::vector<Bar> bars;
     for (const Leaf &leaf : leaves) {
         const Vec3 size = leaf.box.GetSize();
@@ -2502,6 +2518,13 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
         if (sy >= 1.5F && std::max(sx, sz) <= 0.16F) {
             poles_.push_back({mid.GetX(), mid.GetZ(), std::max(sx, sz), leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
             continue;
+        }
+        // A riser: tall, roughly square (its faces level, along x and z), too
+        // thick to wrap, with standing faces she can climb by friction. Recorded in addition to any patch
+        // its top makes, so existing planning over its top is unchanged.
+        if (leaf.axis_aligned && sy >= 5.0F && std::max(sx, sz) > 0.16F && std::max(sx, sz) <= 1.50F && std::min(sx, sz) >= 0.15F &&
+            std::max(sx, sz) <= 3.0F * std::min(sx, sz)) {
+            risers_.push_back({mid.GetX(), mid.GetZ(), 0.5F * sx, 0.5F * sz, leaf.box.mMin.GetY(), leaf.box.mMax.GetY()});
         }
         if (leaf.axis_aligned && std::min(sx, sz) >= 0.18F) {   // a board or ledge down to 0.18 m: her soles fit
             Patch p;
@@ -2539,9 +2562,31 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
                                     return ends >= 2;
                                 }),
                  poles_.end());
+    // A ladder's stile is no riser either, by the same bar-end rule.
+    risers_.erase(std::remove_if(risers_.begin(), risers_.end(),
+                                 [&](const Riser &riser) {
+                                     int ends = 0;
+                                     for (const Bar &bar : bars) {
+                                         const float y = bar.c.GetY();
+                                         if (y < riser.bottom - 0.05F || y > riser.top + 0.05F) {
+                                             continue;
+                                         }
+                                         const Vec3 along = bar.along_x ? Vec3::sAxisX() : Vec3::sAxisZ();
+                                         for (const float side : {-1.0F, 1.0F}) {
+                                             const Vec3 end = bar.c + along * (side * bar.half);
+                                             if (std::hypot(end.GetX() - riser.x, end.GetZ() - riser.z) <=
+                                                 0.5F * std::max(2.0F * riser.half_x, 2.0F * riser.half_z) + 0.12F) {
+                                                 ++ends;
+                                             }
+                                         }
+                                     }
+                                     return ends >= 2;
+                                 }),
+                  risers_.end());
     stats_.patches = static_cast<std::uint32_t>(patches_.size());
     stats_.bars = static_cast<std::uint32_t>(bars.size());
     stats_.poles = static_cast<std::uint32_t>(poles_.size());
+    stats_.risers = static_cast<std::uint32_t>(risers_.size());
 
     // 3a. What stands on a top splits it (split_patches).
     split_patches(physics, ignore, limits);
@@ -2590,16 +2635,7 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
     stats_.usable_patches = static_cast<std::uint32_t>(patches_.size());
 
     // 4. Ladders: bars on one line, stacked at a climbing pitch.
-    std::sort(bars.begin(), bars.end(), [](const Bar &a, const Bar &b) {
-        if (a.along_x != b.along_x) return a.along_x < b.along_x;
-        const float ka = a.along_x ? a.c.GetZ() : a.c.GetX();
-        const float kb = b.along_x ? b.c.GetZ() : b.c.GetX();
-        if (std::abs(ka - kb) > 1.0e-3F) return ka < kb;
-        const float la = a.along_x ? a.c.GetX() : a.c.GetZ();
-        const float lb = b.along_x ? b.c.GetX() : b.c.GetZ();
-        if (std::abs(la - lb) > 1.0e-3F) return la < lb;
-        return a.c.GetY() < b.c.GetY();
-    });
+    std::sort(bars.begin(), bars.end(), bar_before);
     std::vector<bool> used(bars.size(), false);
     for (std::size_t i = 0; i < bars.size(); ++i) {
         if (used[i]) continue;
@@ -3590,13 +3626,15 @@ void AffordanceMap::build_edges(const PhysicsSystem &physics, const Ignore &igno
     });
 }
 
-std::vector<int> AffordanceMap::plan(const int from, const int to, const std::vector<int> &avoid) const {
+std::vector<int> AffordanceMap::plan(const int from, const int to, const std::vector<int> &avoid,
+                                     const std::vector<std::pair<int, Edge>> &extra) const {
     std::vector<int> result;
     if (from < 0 || to < 0 || from >= static_cast<int>(regions_.size()) || to >= static_cast<int>(regions_.size())) {
         return result;
     }
     std::vector<float> dist(regions_.size(), std::numeric_limits<float>::max());
-    std::vector<int> via(regions_.size(), -1);
+    constexpr int kNone = std::numeric_limits<int>::min();   // ids below zero are `extra`'s
+    std::vector<int> via(regions_.size(), kNone);
     using Item = std::pair<float, int>;
     std::priority_queue<Item, std::vector<Item>, std::greater<>> open;
     dist[static_cast<std::size_t>(from)] = 0.0F;
@@ -3659,14 +3697,32 @@ std::vector<int> AffordanceMap::plan(const int from, const int to, const std::ve
                 open.push({nd, it->to});
             }
         }
+        // No structured binding here: Android clang -Werror forbids one
+        // captured by a lambda, and a later edit must not grow one by accident.
+        for (const auto &way : extra) {
+            const Edge &e = way.second;
+            if (e.from != r || e.to < 0 || e.to >= static_cast<int>(regions_.size())) continue;
+            if (std::find(avoid.begin(), avoid.end(), way.first) != avoid.end()) continue;
+            const float nd = d + e.cost;
+            if (nd < dist[static_cast<std::size_t>(e.to)]) {
+                dist[static_cast<std::size_t>(e.to)] = nd;
+                via[static_cast<std::size_t>(e.to)] = way.first;
+                open.push({nd, e.to});
+            }
+        }
     }
-    if (from == to || via[static_cast<std::size_t>(to)] < 0) {
+    if (from == to || via[static_cast<std::size_t>(to)] == kNone) {
         return result;
     }
     for (int r = to; r != from;) {
         const int e = via[static_cast<std::size_t>(r)];
         result.push_back(e);
-        r = edges_[static_cast<std::size_t>(e)].from;
+        if (e >= 0) {
+            r = edges_[static_cast<std::size_t>(e)].from;
+        } else {
+            const auto x = std::find_if(extra.begin(), extra.end(), [e](const std::pair<int, Edge> &p) { return p.first == e; });
+            r = x->second.from;
+        }
     }
     std::reverse(result.begin(), result.end());
     return result;

@@ -11,6 +11,7 @@ The short version:
   never change the app id, keys or repository visibility.
 - Her climbing is general skills only: no per-route, per-deck or per-transition code. Gravity on.
   Every force on her comes from her one budget; no velocity writes; at most 0.20 m per 1/90 s tick.
+- Never guess in code: read the source, measure or run it before leaning on a fact (owner, 11-07).
 - Never weaken, skip or delete a test. Test checks, world geometry and her force/physics limits
   change only by a PR into `ScraperX-Claude`, holding just that change; the integrator merges it
   once green with a second agent's LAND, and the owner can overturn any merge.
@@ -54,6 +55,8 @@ never findings (owner rule, 2026-10-31).
   `.github/workflows/wo000-delivery-spine.yml` (fast-math, FMA contraction, `long double`, unordered
   reductions).
 - A comparator passed to `sort`, `set` or `map` must be a strict weak ordering (no `<=`, NaN-safe).
+- A capped query (a Jolt broad phase or any collector) keeps the N nearest after sorting, never the first N it
+  returns: those come in no order (a crowded forklift ram went unsensed for 89 ticks, 332fed64).
 
 ### Tests and protected changes
 - Tests are never weakened, skipped or deleted. A moved `require`, limit, timeout, tolerance, pin or
@@ -69,6 +72,8 @@ never findings (owner rule, 2026-10-31).
 - Values cross the bridge as bridge types; flag a raw pointer or engine object held across frames.
 - No blocking call (file, network, thread join, long native step) on Godot's main thread.
 - Every allocated node, resource or native handle is freed (`queue_free`, ownership, RAII).
+- Two containers never hold each other (a cycle of Arrays or RefCounted objects is never freed); refer by index
+  (the kit leak on #258, c1f71bdf).
 
 ### Workflows and signing are HIGH risk
 A change to `.github/workflows/`, `.github/actions/`, the APK signing steps or `tools/switchboard/` is
