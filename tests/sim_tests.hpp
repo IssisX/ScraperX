@@ -878,6 +878,7 @@ void run_matron_climb();
 void run_matron_climb_board();
 void run_matron_climb_scan();
 void run_matron_tower_proof();
+void run_ladder_bar_sort();   // J-008: the ladder-bar sort is a strict total order
 void run_matron_ladders();
 void run_matron_chain();
 void run_matron_towers();

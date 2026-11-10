@@ -2373,6 +2373,23 @@ ScanMemo &scan_memo() {
 constexpr std::size_t kScanMemoMaps = 6;
 } // namespace
 
+// The ladder-bar order (see matron_traversal.hpp): a strict total order on
+// (along_x, cross, along, y, half, entity), exact comparisons, no tolerance.
+// Cross is the primary key after along_x, so the chain loop's break on a
+// cross gap over 0.06 m cannot skip a matching bar.
+bool bar_before(const Bar &a, const Bar &b) noexcept {
+    if (a.along_x != b.along_x) return a.along_x < b.along_x;
+    const float ka = a.along_x ? a.c.GetZ() : a.c.GetX();
+    const float kb = b.along_x ? b.c.GetZ() : b.c.GetX();
+    if (ka != kb) return ka < kb;
+    const float la = a.along_x ? a.c.GetX() : a.c.GetZ();
+    const float lb = b.along_x ? b.c.GetX() : b.c.GetZ();
+    if (la != lb) return la < lb;
+    if (a.c.GetY() != b.c.GetY()) return a.c.GetY() < b.c.GetY();
+    if (a.half != b.half) return a.half < b.half;
+    return a.entity < b.entity;
+}
+
 void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits) {
     const auto started = std::chrono::steady_clock::now();
     std::string key = steel_key(physics, bounds, ignore, limits);
@@ -2433,12 +2450,6 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
     stats_.leaves = static_cast<std::uint32_t>(leaves.size());
 
     // 2. Classify: bars (rungs), poles, walkable tops.
-    struct Bar {
-        Vec3 c;
-        bool along_x;
-        float half;
-        std::uint64_t entity;
-    };
     std::vector<Bar> bars;
     for (const Leaf &leaf : leaves) {
         const Vec3 size = leaf.box.GetSize();
@@ -2539,16 +2550,7 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
     stats_.usable_patches = static_cast<std::uint32_t>(patches_.size());
 
     // 4. Ladders: bars on one line, stacked at a climbing pitch.
-    std::stable_sort(bars.begin(), bars.end(), [](const Bar &a, const Bar &b) {
-        if (a.along_x != b.along_x) return a.along_x < b.along_x;
-        const float ka = a.along_x ? a.c.GetZ() : a.c.GetX();
-        const float kb = b.along_x ? b.c.GetZ() : b.c.GetX();
-        if (std::abs(ka - kb) > 1.0e-3F) return ka < kb;
-        const float la = a.along_x ? a.c.GetX() : a.c.GetZ();
-        const float lb = b.along_x ? b.c.GetX() : b.c.GetZ();
-        if (std::abs(la - lb) > 1.0e-3F) return la < lb;
-        return a.c.GetY() < b.c.GetY();
-    });
+    std::sort(bars.begin(), bars.end(), bar_before);
     std::vector<bool> used(bars.size(), false);
     for (std::size_t i = 0; i < bars.size(); ++i) {
         if (used[i]) continue;

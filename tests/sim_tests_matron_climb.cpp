@@ -1,4 +1,5 @@
 #include <sstream>
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdio>
@@ -2278,6 +2279,78 @@ void run_matron_climb_scan() {
     test_floor_split();
     test_tower_scan();
     test_tower_journeys();
+
+// The ladder-bar sort order (J-008): the comparator behind AffordanceMap::scan
+// must be a strict total order, or std::sort over it is undefined and the
+// order differs by stdlib, host vs arm64. The proven counterexample (PR #97):
+// along_x bars with equal along coordinates, A (cross 0, y 2), B (0.0007, 1),
+// C (0.0014, 0): the 1 mm tolerance comparator says A<C, C<B, B<A.
+void run_ladder_bar_sort() {
+    using traversal::Bar;
+    using traversal::bar_before;
+    const auto bar = [](float x, float y, float z, bool along_x, std::uint64_t entity) {
+        Bar b;
+        b.c = JPH::Vec3(x, y, z);
+        b.along_x = along_x;
+        b.half = 0.5F;
+        b.entity = entity;
+        return b;
+    };
+    // The counterexample triple, along_x, equal along coordinate (x = 0).
+    const Bar a = bar(0.0F, 2.0F, 0.0F, true, 1);
+    const Bar b = bar(0.0F, 1.0F, 0.0007F, true, 2);
+    const Bar c = bar(0.0F, 0.0F, 0.0014F, true, 3);
+    // No cycle: the three pairwise orders must agree.
+    require(!(bar_before(a, c) && bar_before(c, b) && bar_before(b, a)),
+            "ladder-bar sort: the bar order must not cycle (A<C, C<B, B<A)");
+    require(bar_before(a, b) && bar_before(b, c) && bar_before(a, c),
+            "ladder-bar sort: the counterexample triple orders A<B<C by cross");
+    // Every input permutation sorts to the same order.
+    const Bar trio[3] = {a, b, c};
+    std::vector<Bar> expected;
+    std::array<int, 3> idx = {0, 1, 2};
+    bool first_perm = true;
+    do {
+        std::vector<Bar> v = {trio[idx[0]], trio[idx[1]], trio[idx[2]]};
+        std::sort(v.begin(), v.end(), bar_before);
+        if (first_perm) {
+            expected = v;
+            first_perm = false;
+            continue;
+        }
+        require(v.size() == expected.size(), "ladder-bar sort: a permutation keeps the bars");
+        for (std::size_t k = 0; k < v.size(); ++k) {
+            require(v[k].entity == expected[k].entity,
+                    "ladder-bar sort: every input order sorts to the same order");
+        }
+    } while (std::next_permutation(idx.begin(), idx.end()));
+    // The mirror triple, along_z: cross is x, along is z.
+    const Bar a2 = bar(0.0F, 2.0F, 0.0F, false, 11);
+    const Bar b2 = bar(0.0007F, 1.0F, 0.0F, false, 12);
+    const Bar c2 = bar(0.0014F, 0.0F, 0.0F, false, 13);
+    require(!(bar_before(a2, c2) && bar_before(c2, b2) && bar_before(b2, a2)),
+            "ladder-bar sort: the mirror triple must not cycle either");
+    require(bar_before(a2, b2) && bar_before(b2, c2) && bar_before(a2, c2),
+            "ladder-bar sort: the mirror triple orders A<B<C by cross");
+    // Cross is the primary key after along_x: a bar further along but nearer
+    // across still sorts first.
+    const Bar d = bar(5.0F, 0.0F, 0.0F, true, 21);
+    const Bar e = bar(0.0F, 0.0F, 1.0F, true, 22);
+    require(bar_before(d, e) && !bar_before(e, d),
+            "ladder-bar sort: cross decides before along");
+    // along_x itself orders first, and ties break on half then entity.
+    const Bar f = bar(1.0F, 2.0F, 3.0F, false, 31);
+    const Bar g = bar(1.0F, 2.0F, 3.0F, true, 32);
+    require(bar_before(f, g) && !bar_before(g, f),
+            "ladder-bar sort: along_x orders before the coordinates");
+    const Bar h = bar(1.0F, 2.0F, 3.0F, true, 41);
+    const Bar i = bar(1.0F, 2.0F, 3.0F, true, 42);
+    require(bar_before(h, i) && !bar_before(i, h),
+            "ladder-bar sort: equal keys break on entity");
+    const Bar j = bar(1.0F, 2.0F, 3.0F, true, 41);
+    require(!bar_before(h, j) && !bar_before(j, h),
+            "ladder-bar sort: identical bars are equivalent");
+    std::cout << "PASS scraperx_sim ladder-bar sort: the bar order is a strict total order\n";
 }
 
 // The whole tower, as her own scan reads it: every deck (a region of 6 m2 or
