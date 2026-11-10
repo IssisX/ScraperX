@@ -7,23 +7,34 @@ group with no slice and no caller runs nowhere in CI, and CI green
 says nothing about it -- the same silent-drop hole the matron-climb
 registration closed. A group can be covered without its own slice:
 its content may run inside another slice's group (board and scan
-run inside matron-climb) or inside the fallthrough (the up-throw
-content runs inside run_up_controls). So this guard checks content,
+run inside matron-climb) or inside another slice's dispatch (the
+up-throw content runs inside run_up_controls, called by the
+athletic-traversal-1 slice). So this guard checks content,
 not registration: for every group, every test function its dispatch
 reaches that asserts something itself -- its own body holds a
-require( -- must also be reachable from a CI entry point, the
-fallthrough plus every slice's dispatch. A dispatch entry that only
+require( -- must also be reachable from a CI entry point, every
+slice's dispatch. A dispatch entry that only
 delegates asserts nothing itself, so it is routing, not content.
 require( is the only assertion marker in tests/.
 
-Layering: this guard trusts the CTest guard to prove the slices and
-the fallthrough actually run in CI. Together they prove every
-group's content runs; neither alone does.
+Layering: this guard trusts the CTest guard to prove the slices
+actually run in CI (each in exactly one shard). Together they prove
+every group's content runs; neither alone does.
 
 The groups register themselves (tests/sim_registry.hpp, J-074): a
 SCRAPERX_SELECT or SCRAPERX_SLICE line is a group's dispatch (a
 SCRAPERX_SLICE is also its CTest slice), and the SCRAPERX_GROUP lines,
-in order of their keys, are the fallthrough (the default sequence).
+in order of their keys, are the default sequence the bare binary runs
+locally. The GROUP lines are NOT a CI entry point: since J-071 step 2
+the default sequence runs in CI only as the two athletic-traversal
+slices, whose dispatches call the first and second half of the
+sequence, and no CI step runs the bare binary. So this guard's CI
+entry points are exactly the slices' dispatches; a group in the
+registry but in no slice's reachable set runs nowhere in CI, however
+many GROUP lines name it. (Before this fix the GROUP lines were
+counted as entry points themselves, so a group dropped from both
+athletic halves still passed -- the same silent-drop hole, reopened
+by the split.)
 All are read from every tests/*.cpp.
 
 Rules, all read from the repo as written:
@@ -34,7 +45,7 @@ Rules, all read from the repo as written:
   - every CTest slice has a SCRAPERX_ONLY dispatch: a slice with
     no dispatch would run the fallthrough, not its group;
   - for every group, every asserting function reachable from its
-    dispatch is reachable from the fallthrough or a slice's dispatch,
+    dispatch is reachable from a slice's dispatch,
     or the group is a known gap (warning, not failure); a known gap
     whose content becomes covered fails as stale.
 
@@ -52,6 +63,7 @@ Usage:
 import argparse
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 # Groups whose content is in no CI entry point for a tracked reason (warning, not failure; stale when covered).
@@ -217,7 +229,14 @@ def check(runner_text, test_dir, cmake_text):
                 f"slice {slice_name} has no SCRAPERX_ONLY dispatch "
                 "(it would run the fallthrough, not its group)"
             )
-    roots = set(fallthrough)
+    roots = set()
+    # CI entry points are exactly the slices' dispatches: every CTest
+    # test runs one SCRAPERX_ONLY dispatch, and no CI step runs the
+    # bare binary's default sequence. The GROUP lines must NOT be
+    # roots: they name the local default sequence, and counting them
+    # as covered hid a group dropped from both athletic halves (the
+    # J-071 step 2 split runs the sequence only through the two
+    # athletic-traversal slice dispatches).
     for slice_name in slices:
         roots.update(dispatch.get(slice_name, []))
     covered = reachable(roots, graph)
@@ -269,13 +288,17 @@ def _self_test():
         "run_alpha": {"test_a"}, "test_beta": {"test_b"}, "run_fall": {"test_a"},
         "test_a": set(), "test_b": set(),
         "run_wrap": {"run_mid"}, "run_mid": {"test_a"},
+        "run_half": {"run_fall"},
     }
     asserts = {
         "run_alpha": False, "test_beta": True, "run_fall": False,
         "test_a": True, "test_b": True, "run_wrap": False, "run_mid": False,
+        "run_half": False,
     }
-    # alpha is not a slice, but its content runs in the fallthrough.
-    covered = reachable(["run_fall", "test_beta"], graph)
+    # alpha is not a slice, but its content runs inside the half slice's
+    # dispatch. The CI entry points are the slices only, never the
+    # GROUP lines themselves.
+    covered = reachable(["run_half", "test_beta"], graph)
     if uncovered_content(["run_alpha"], covered, graph, asserts):
         raise AssertionError("shared content reported as uncovered")
     # A wrapper of a wrapper is routing, not content, when its content is covered.
@@ -294,7 +317,34 @@ def _self_test():
     asserts["test_leaf"] = True
     if uncovered_content(["test_leaf"], covered, graph, asserts) != {"test_leaf"}:
         raise AssertionError("direct leaf-test detection failed")
-    return 8
+    # A group in the registry but in no slice's reachable set runs
+    # nowhere in CI: the old GROUP-line roots hid exactly this (a
+    # group dropped from both athletic halves still passed).
+    with tempfile.TemporaryDirectory() as tmp:
+        half = Path(tmp) / "sim_tests_half.cpp"
+        dropped = (
+            "void run_half() { run_a(); }\n"
+            "void run_a() { require(1); }\n"
+            "void run_b() { require(1); }\n"
+            'SCRAPERX_SLICE("half", run_half);\n'
+            'SCRAPERX_GROUP("a", 10, run_a);\n'
+            'SCRAPERX_GROUP("b", 20, run_b);\n'
+            'SCRAPERX_SELECT("a", run_a);\n'
+            'SCRAPERX_SELECT("b", run_b);\n'
+        )
+        half.write_text(dropped)
+        failures, _warnings, _counts = check("", tmp, "")
+        if not any("group b content runs nowhere in CI" in f for f in failures):
+            raise AssertionError(f"dropped group not flagged: {failures}")
+        # The same registry with the group called by the half passes.
+        half.write_text(dropped.replace(
+            "void run_half() { run_a(); }",
+            "void run_half() { run_a(); run_b(); }",
+        ))
+        failures, _warnings, _counts = check("", tmp, "")
+        if failures:
+            raise AssertionError(f"covered group flagged: {failures}")
+    return 10
 
 
 def main():
