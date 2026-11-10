@@ -666,19 +666,63 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
     return device_onto(s, YardCrane::kMagnetEntity, YardCrane::kMagnetKg, 2.0, x, z);
 }
 
-// The grips' two lists at a save's end ([n][n loads][n][n ratings]): how many
-// grips it holds, 0 if it does not end in them.
-std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
+// Where the grips' two lists start ([n][n loads][n][n ratings]): the offset
+// of the first count, or bytes.size() if the save holds them nowhere the
+// layout lays them out. The lists are not always at the end: a save whose
+// grip holds a load ends in the grip-entities section ("GRIP", one entity
+// per grip) the #372 P1 fix added, so the lists sit just before that mark.
+// A save with neither trailing section still ends in the lists themselves.
+// (A save with a fabricated or damage section between the lists and the
+// entities section is not located here: no test saves a world whose grip
+// holds a load and whose stock is fabricated or damaged.)
+std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
+    const auto word = [&bytes](const std::size_t at, std::uint32_t &out) {
+        if (at + 4 > bytes.size()) {
+            return false;
+        }
+        std::memcpy(&out, bytes.data() + at, 4);
+        return true;
+    };
+    // The grip-entities section, if any, is last: [GRIP][n][n entities].
+    // The lists end where it starts, so the counts read back as n.
+    constexpr std::uint32_t kGripMark = 0x47524950U;
+    for (std::size_t n = 1; n <= 16; ++n) {
+        const std::size_t section = 8 + 8 * n;  // the entities section's bytes
+        if (bytes.size() < 2 * section) {
+            continue;
+        }
+        const std::size_t at = bytes.size() - 2 * section;
+        std::uint32_t mark = 0, count = 0, loads = 0, ratings = 0;
+        if (!word(bytes.size() - section, mark) || mark != kGripMark ||
+            !word(bytes.size() - section + 4, count) || count != n ||
+            !word(at, loads) || !word(at + 4 + 4 * n, ratings) || loads != n || ratings != n) {
+            continue;
+        }
+        return at;
+    }
+    // No entities section: a save from before it ends in the grips.
     for (std::size_t n = 1; n <= 16 && bytes.size() >= 8 + 8 * n; ++n) {
         std::uint32_t loads = 0;
         std::uint32_t ratings = 0;
         std::memcpy(&loads, bytes.data() + bytes.size() - (8 + 8 * n), 4);
         std::memcpy(&ratings, bytes.data() + bytes.size() - (4 + 4 * n), 4);
         if (loads == n && ratings == n) {
-            return n;
+            return bytes.size() - (8 + 8 * n);
         }
     }
-    return 0;
+    return bytes.size();
+}
+
+// The grips' two lists at a save's end ([n][n loads][n][n ratings]): how many
+// grips it holds, 0 if it does not end in them.
+std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
+    const std::size_t at = saved_grips_at(bytes);
+    if (at == bytes.size()) {
+        return 0;
+    }
+    std::uint32_t n = 0;
+    std::memcpy(&n, bytes.data() + at, 4);
+    return n;
 }
 
 // The save as an older build wrote it: without the world's last `drop` kit
@@ -690,7 +734,7 @@ std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
 std::vector<std::uint8_t> older_save(const std::vector<std::uint8_t> &bytes, const std::size_t drop,
                                      const std::size_t keep) {
     const std::size_t n = saved_grips(bytes);
-    const std::size_t section = bytes.size() - (8 + 8 * n);
+    const std::size_t section = saved_grips_at(bytes);
     const std::size_t at = 8 + 8 + sizeof(JPH::RVec3) + 1 + 8 + 8 + 8;
     std::uint32_t entities = 0;
     std::memcpy(&entities, bytes.data() + at, 4);

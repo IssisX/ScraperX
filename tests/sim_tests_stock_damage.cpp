@@ -734,11 +734,19 @@ void spinning_break_keeps_orbital_case() {
     s.debug_spin_kit_body(crate, {0.0, 3.0, 0.0});
     // Step tick by tick: the pieces are spawned after the physics of
     // the break tick, so on the first tick the crate reads broken
-    // their velocities are exactly the spawn velocities.
+    // their velocities are exactly the spawn velocities. The spin is
+    // topped up every tick: the floor eats it on the impact tick and
+    // through the window (friction 0.6, a 1,230 N.s normal impulse),
+    // so without the top-up the break sees a still crate and the
+    // orbital term has nothing to keep. The top-up is angular only:
+    // it cannot move the linear velocity the break is measured from.
     bool broken = false;
     for (int tick = 0; tick < 90 * 3 && !broken; ++tick) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
         broken = s.stock_damage(entity).broken;
+        if (!broken) {
+            s.debug_spin_kit_body(crate, {0.0, 3.0, 0.0});
+        }
     }
     require(broken, (prefix + "the spinning drop breaks the crate").c_str());
     // The orbital angular momentum about the crate's centre: the
@@ -756,6 +764,7 @@ void spinning_break_keeps_orbital_case() {
     // 18.432 kg·m²/s per rad/s: the floor takes some spin in the
     // quiet ticks, but more than a quarter must survive — a break
     // without the term reads ~0.
+    std::cout << "  stock damage spinning break: orbital_y " << orbital_y << "\n";
     require(orbital_y > 5.0, (prefix + "the pieces keep the orbital momentum").c_str());
 }
 
@@ -794,14 +803,23 @@ void death_rewind_resync_case() {
     const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
     const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
     (void)s.advance_frame(2.0);  // the player grounds, a checkpoint commits
-    // Slide the crate along the floor: a checkpoint commits on the
-    // next grounded ticks with the crate moving.
-    const auto home = s.kit_body_position(crate);
-    s.debug_launch_kit_body(crate, home, {3.0, 0.0, 0.0});
-    (void)s.advance_frame(5.0 * Simulation::kFixedStepSeconds);
-    // Kill the player before another commit can catch the crate slow:
-    // the fall kills while the crate is still sliding to rest, so the
-    // death restores the sliding checkpoint.
+    // Ramp the crate to a slide instead of teleporting it there: a
+    // velocity teleport reads as a hit (3 m/s on 160 kg is 480 N.s),
+    // so the launch alone would break it before the death, and the
+    // test would measure the launch, not the rewind. Ramping 0.2 m/s
+    // a tick keeps every tick's peak under the 65 N.s dent line, so
+    // the crate slides without a dent and the window never opens on
+    // a break. West, into the deck: east is the band's rail and the
+    // deck's edge, and a slide that way meets the rail (or the drop
+    // past it) instead of running out.
+    for (int tick = 0; tick < 15; ++tick) {
+        const auto at = s.kit_body_position(crate);
+        s.debug_launch_kit_body(crate, at, {-0.2 * (tick + 1), 0.0, 0.0});
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    // Kill the player: the fall kills while the crate is near rest, so
+    // the death restores the sliding checkpoint and the rewind is a
+    // jump from near rest back to the checkpoint slide.
     s.debug_launch_player({0.0, 62.0, -8.0}, {0.0, 0.0, 0.0});
     const std::uint64_t deaths = s.snapshot().death_count;
     double pre_death_speed = 0.0;
@@ -817,7 +835,24 @@ void death_rewind_resync_case() {
     // slide: 3 m/s on 160 kg is 480 N.s, past the 300 N.s break line,
     // so without the resync the floor contact after it breaks the crate.
     require(pre_death_speed < 1.0, (prefix + "the crate is near rest at the death").c_str());
-    (void)s.advance_frame(3.0);  // the restored slide runs out, the window closes
+    // Diagnostic: when does it break, and what is it doing then?
+    {
+        const auto rv = s.kit_body_velocity(crate);
+        const auto rp = s.kit_body_position(crate);
+        std::cout << "  stock damage death rewind: restored v=(" << rv.x << "," << rv.y << "," << rv.z << ") at ("
+                  << rp.x << "," << rp.y << "," << rp.z << ")\n";
+    }
+    for (int tick = 0; tick < 90 * 3; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        if (s.stock_damage(entity).broken) {
+            const auto v = s.kit_body_velocity(crate);
+            const auto p = s.kit_body_position(crate);
+            std::cout << "  stock damage death rewind: broke at tick " << tick << " v=(" << v.x << "," << v.y
+                      << "," << v.z << ") at (" << p.x << "," << p.y << "," << p.z << ")\n";
+            break;
+        }
+    }
+    // The restored slide runs out, the window closes.
     require(!s.stock_damage(entity).broken, (prefix + "the rewind breaks nothing").c_str());
     require(s.stock_damage(entity).dent_count == 0, (prefix + "the rewind dents nothing").c_str());
 }
@@ -832,8 +867,12 @@ void carried_piece_save_case() {
     require(s.stock_damage(entity).broken, (prefix + "the full ram breaks the crate").c_str());
     (void)s.advance_frame(3.0);
     // Back the truck off the debris, get out, and carry the first piece.
+    // Reverse four seconds, not two: the break's orbital term spreads
+    // the pieces, and one can land in the walk's first metre by the
+    // truck's exit; four seconds clears the truck's corner well south
+    // of the debris (see the break test above).
     (void)s.set_move_input(0.0, -1.0);
-    (void)s.advance_frame(2.0);
+    (void)s.advance_frame(4.0);
     (void)s.set_move_input(0.0, 0.0);
     (void)s.request_forklift_action();
     (void)s.advance_frame(0.5);
@@ -1137,8 +1176,12 @@ void run_stock_damage() {
         // on the stick as-is; asking first would only let go of it.
         // The pick-up reaches 1.20 m from the player's centre, so a
         // standoff 0.9 m south of the piece, faced at it, is enough.
+        // Reverse four seconds, not two: the break's orbital term
+        // spreads the pieces, and one can land in the walk's first
+        // metre by the truck's exit; four seconds clears the truck's
+        // corner well south of the debris.
         (void)s.set_move_input(0.0, -1.0);
-        (void)s.advance_frame(2.0);
+        (void)s.advance_frame(4.0);
         (void)s.set_move_input(0.0, 0.0);
         (void)s.request_forklift_action();
         (void)s.advance_frame(0.5);
