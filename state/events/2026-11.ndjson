@@ -819,3 +819,11 @@
 {"ev": "ledger_sent", "job": "J-001", "key": "81b6b8fc9dd0daf1", "ref": "BRANCH|claude/integrate-j001-hold", "stage": 1, "t": "2026-11-10T05:48:45Z", "to": "claude"}
 {"attempt": 1, "ev": "sent", "id": "O-e3207013", "job": "J-045", "ref": "ASK|ask on #248", "send": 1, "t": "2026-11-10T05:48:45Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T05:48:45Z", "tries": 1}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-0172a738", "job": "J-015", "kind": "ask", "ref": "ASK|ask on #122", "t": "2026-11-10T06:38:52Z", "to": "claude", "via": "session"}
+{"ev": "ledger_sent", "job": "J-015", "key": "25f672ad05c9a226", "ref": "BRANCH|fb-bot/integrate-j015-slice1", "stage": 1, "t": "2026-11-10T06:38:52Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-067", "key": "6ee240701eee2c62", "ref": "BRANCH|fb-bot/integrate-j067-back-hair-fixes", "stage": 1, "t": "2026-11-10T06:38:52Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-069", "key": "92686185453439ca", "ref": "BRANCH|fb-bot/integrate-protected-j069", "stage": 1, "t": "2026-11-10T06:38:52Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "", "key": "310b2f692a93f993", "ref": "ASK|ask on #241", "stage": 1, "t": "2026-11-10T06:38:52Z", "to": "claude"}
+{"attempt": 1, "ev": "sent", "id": "O-0172a738", "job": "J-015", "ref": "ASK|ask on #122", "send": 1, "t": "2026-11-10T06:38:52Z", "to": "claude", "via": "session"}
+{"attempt": 2, "ev": "sent", "id": "O-2c4c2fb5", "job": "J-042", "ref": "ASK|ask on #240", "send": 2, "t": "2026-11-10T06:38:52Z", "to": "chatgpt", "via": "issue"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T06:38:52Z", "tries": 1}

@@ -66,7 +66,7 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": "2026-11-09T20:56:16Z",
-     "missing": 0,
+     "missing": 1,
      "ref": "ASK|ask on #108",
      "sends": 1,
      "sent_by": "live",
@@ -171,7 +171,7 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": null,
-     "missing": 0,
+     "missing": 1,
      "ref": "ASK|ask on #108",
      "sends": 0,
      "thread": 108,
@@ -298,7 +298,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T05:33:50Z"
+   "updated": "2026-11-10T06:38:52Z"
   },
   "J-007": {
    "attempt": 1,
@@ -1141,6 +1141,31 @@
      "version": "6758703080",
      "via": "session",
      "what": "ask from Muse on #122"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-10T06:22:49Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-10T06:38:52Z",
+     "dead": "2026-11-10T17:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-10T15:17:00Z",
+     "id": "O-0172a738",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-10T06:38:52Z",
+     "missing": 0,
+     "ref": "ASK|ask on #122",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 122,
+     "to": "claude",
+     "unseen": null,
+     "version": "6760622255",
+     "via": "session",
+     "what": "ask from Muse on #122"
     }
    ],
    "outcome": null,
@@ -1151,7 +1176,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T05:48:45Z"
+   "updated": "2026-11-10T06:38:52Z"
   },
   "J-016": {
    "attempt": 0,
@@ -2046,7 +2071,7 @@
      "ack": null,
      "ack_rule": "reply|ack",
      "asked": "2026-11-10T04:06:41Z",
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-10T04:48:57Z",
      "dead": "2026-11-10T08:27:00Z",
@@ -2055,10 +2080,10 @@
      "id": "O-2c4c2fb5",
      "kind": "ask",
      "last_error": "",
-     "last_sent": "2026-11-10T04:48:57Z",
+     "last_sent": "2026-11-10T06:38:52Z",
      "missing": 0,
      "ref": "ASK|ask on #240",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 240,
      "to": "chatgpt",
@@ -2942,7 +2967,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 0,
+     "missing": 1,
      "ref": "BRANCH|fb-bot/integrate-j049-pr1",
      "sends": 0,
      "thread": 278,
@@ -3215,7 +3240,7 @@
      "kind": "review",
      "last_error": "",
      "last_sent": "2026-11-10T01:57:56Z",
-     "missing": 1,
+     "missing": 2,
      "ref": "PR|#367",
      "reopened": "2026-11-10T05:33:50Z",
      "sends": 2,
@@ -3238,7 +3263,7 @@
    ],
    "review": "waiting",
    "state": "working",
-   "updated": "2026-11-10T05:48:45Z"
+   "updated": "2026-11-10T06:38:52Z"
   },
   "J-050": {
    "attempt": 0,
@@ -3302,7 +3327,7 @@
     "claude/integrate-j051-asks-since": [
      "512c76ea5d72481823547a436e86bf6b156ed565",
      "",
-     "2026-11-09T23:58:50Z"
+     "2026-11-10T06:38:52Z"
     ],
     "claude/integrate-j051-integrator-inbox": [
      "ae63874c30bd697f08a5b8521fb911d125cfcf1f",
@@ -3346,7 +3371,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T04:48:57Z"
+   "updated": "2026-11-10T06:38:52Z"
   },
   "J-051b": {
    "attempt": 0,

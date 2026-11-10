@@ -64,7 +64,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "ASK|ask on #108",
    "sends": 1,
    "sent_by": "live",
@@ -169,7 +169,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
@@ -296,5 +296,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T05:33:50Z"
+ "updated": "2026-11-10T06:38:52Z"
 }
