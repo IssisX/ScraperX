@@ -561,14 +561,28 @@ void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, con
         const stock_damage::BreakPiece &piece = geometry.pieces[k];
         const JPH::Vec3 offset = rot * JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z);
         const JPH::Vec3 scatter = rot * JPH::Vec3(piece.scatter_x, piece.scatter_y, piece.scatter_z);
-        const kit::BodyIndex piece_body = kit_->add_body(
-            stock_damage::piece_entity_for(entity, k),
-            {kit::Part{JPH::Vec3(piece.half_x, piece.half_y, piece.half_z), JPH::Vec3::sZero(),
-                       JPH::Quat::sIdentity(), kit::Material::Timber, kit::Part::Shape::Box,
-                       piece_mass}},
-            JPH::RVec3(pos.GetX() + offset.GetX(), pos.GetY() + offset.GetY(),
-                       pos.GetZ() + offset.GetZ()),
-            rot, piece_mass, 0.9F);
+        const JPH::RVec3 at(pos.GetX() + offset.GetX(), pos.GetY() + offset.GetY(),
+                            pos.GetZ() + offset.GetZ());
+        const kit::BodyIndex existing =
+            kit_->body_for_entity(stock_damage::piece_entity_for(entity, k));
+        kit::BodyIndex piece_body;
+        if (existing.valid()) {
+            // A piece body already holds this entity: a save taken
+            // before the break parked it on load, and breaking the
+            // restored crate again reuses it instead of making a
+            // second body with the same entity.
+            piece_body = existing;
+            kit_->unpark(piece_body);
+            bodies.SetPositionAndRotation(kit_->body_id(piece_body), at, rot,
+                                          JPH::EActivation::DontActivate);
+        } else {
+            piece_body = kit_->add_body(
+                stock_damage::piece_entity_for(entity, k),
+                {kit::Part{JPH::Vec3(piece.half_x, piece.half_y, piece.half_z), JPH::Vec3::sZero(),
+                           JPH::Quat::sIdentity(), kit::Material::Timber, kit::Part::Shape::Box,
+                           piece_mass}},
+                at, rot, piece_mass, 0.9F);
+        }
         const JPH::BodyID piece_id = kit_->body_id(piece_body);
         bodies.SetLinearVelocity(piece_id, vel + scatter);
         bodies.SetAngularVelocity(piece_id, ang);

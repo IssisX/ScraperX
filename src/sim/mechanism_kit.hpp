@@ -504,6 +504,8 @@ public:
     // Taken out of the world (a thing picked up and kept): parked where it
     // is, drawn no more; a checkpoint keeps it so.
     void park(BodyIndex body) { set_enabled(body, false); }
+    // Back in the world: a parked body re-enters where the caller puts it.
+    void unpark(BodyIndex body) { set_enabled(body, true); }
 
     // ---- read back ------------------------------------------------------
     [[nodiscard]] std::uint32_t body_count() const noexcept {

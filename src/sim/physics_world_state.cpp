@@ -676,6 +676,25 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     for (std::size_t i = 0; i < saved.size() && i < fabricated_.size(); ++i) {
         ordered[fabricated_[i].body.value] = saved[i].state;
     }
+    // A stock the save holds intact, broken since in this world: its
+    // pieces are debris of a break the save predates. The restore below
+    // puts the crate back whole; the pieces must be parked, or the crate
+    // stands whole beside its own debris. (Review of #299 at 4e6ab1f4.)
+    for (int i = 0; i < loose_stock_->count(); ++i) {
+        const std::uint64_t entity = LooseStock::kFirstEntity + static_cast<std::uint64_t>(i);
+        if (stock_damage_.state(entity).broken) {
+            continue;
+        }
+        const stock_damage::BreakGeometry geometry =
+            stock_damage::break_geometry(loose_stock_->placed()[static_cast<std::size_t>(i)].kind);
+        for (std::uint8_t p = 0; p < geometry.count; ++p) {
+            const kit::BodyIndex piece_body =
+                kit_->body_for_entity(stock_damage::piece_entity_for(entity, p));
+            if (piece_body.valid()) {
+                ordered[piece_body.value].enabled = false;
+            }
+        }
+    }
     k.bodies = std::move(ordered);
     checkpoint_position_ = position;
     checkpoint_crouched_ = crouched == 1;

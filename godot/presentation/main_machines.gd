@@ -562,7 +562,9 @@ func _render_hook() -> void:
 # path is the dynamic one; a fabricated body gets an empty node instead
 # (fabricated_view.gd draws it), and a static body likewise — either way
 # exactly one entry is appended, so _kit_bodies and _kit_dynamic stay
-# indexed by body, which the poses pass relies on. The audio entry is
+# indexed by body, which the poses pass relies on. The empty node is
+# parented to _kit_root like the meshed one: an unparented Node3D is
+# never freed on scene teardown. The audio entry is
 # the loop's own condition: a piece is loose stock under MACHINE_MIN_KG,
 # so it gets none.
 func _add_kit_body(body: int) -> void:
@@ -573,6 +575,7 @@ func _add_kit_body(body: int) -> void:
 			push_warning("KitBody%d is not dynamic, no mesh built" % body)
 		var empty := Node3D.new()
 		empty.name = "KitBody%d" % entity
+		_kit_root.add_child(empty)
 		_kit_bodies.append(empty)
 		_kit_dynamic.append(false)
 		return

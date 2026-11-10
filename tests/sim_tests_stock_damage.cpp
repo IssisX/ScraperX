@@ -505,6 +505,62 @@ void fabricated_same_world_load_case() {
     }
 }
 
+// A save taken before a crate breaks, loaded back into the world after
+// the break: the crate comes back whole and the pieces it made are
+// parked, not left enabled beside it — and breaking the restored crate
+// again reuses those pieces instead of making a second set with the
+// same entities. (#299 review of 4e6ab1f4, comments 4513450833 and
+// 4513450847.)
+void pre_break_save_same_world_load_case() {
+    const std::string prefix = "stock damage pre-break save same-world load: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(2.0);  // settle; commits happen
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const double mass = s.kit_body_mass(crate);
+    const std::uint32_t bodies_before = s.kit_body_count();
+    // The save predates the break: its damage holds the crate intact.
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    // The drop breaks the crate on landing, far past the 300 N.s line.
+    const auto at = s.kit_body_position(crate);
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    (void)s.advance_frame(2.0);
+    require(s.stock_damage(entity).broken, (prefix + "the crate breaks").c_str());
+    require(s.kit_body_count() == bodies_before + 8,
+            (prefix + "the break adds eight pieces").c_str());
+    std::array<std::uint32_t, 8> piece_body{};
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        piece_body[k] = s.kit_body_index(piece_entity_for(entity, k));
+        require(piece_body[k] != 0xFFFFFFFFU, (prefix + "every piece exists").c_str());
+    }
+    // Back into the same world: the crate comes back whole, its pieces parked.
+    require(s.load_game(bytes.data(), bytes.size()),
+            (prefix + "the same world loads the pre-break save").c_str());
+    require(!s.stock_damage(entity).broken, (prefix + "the crate is whole again").c_str());
+    require(s.kit_body_enabled(crate), (prefix + "the restored crate is live").c_str());
+    require(s.kit_body_count() == bodies_before + 8,
+            (prefix + "the load makes no second set of pieces").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        require(s.kit_body_index(piece_entity_for(entity, k)) == piece_body[k],
+                (prefix + "every piece keeps its body").c_str());
+        require(!s.kit_body_enabled(piece_body[k]), (prefix + "every piece is parked").c_str());
+    }
+    // Breaking the restored crate again reuses those pieces.
+    const auto at2 = s.kit_body_position(crate);
+    put(s, crate, {at2.x, at2.y + 3.0, at2.z});
+    (void)s.advance_frame(2.0);
+    require(s.stock_damage(entity).broken, (prefix + "the restored crate breaks again").c_str());
+    require(s.kit_body_count() == bodies_before + 8,
+            (prefix + "the second break makes no second set of pieces").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        require(s.kit_body_index(piece_entity_for(entity, k)) == piece_body[k],
+                (prefix + "the second break reuses every piece").c_str());
+        require(s.kit_body_enabled(piece_body[k]), (prefix + "every reused piece is live").c_str());
+        require(std::abs(s.kit_body_mass(piece_body[k]) - mass / 8.0) < 0.01,
+                (prefix + "every reused piece keeps its mass share").c_str());
+    }
+}
+
 } // namespace
 
 void run_stock_damage() {
@@ -934,4 +990,6 @@ void run_stock_damage() {
     reverse_break_save_case();
     // ---- (d) a fabricated object built before the break, loaded back ----
     fabricated_same_world_load_case();
+    // ---- (d) a save taken before the break, loaded back after it ----
+    pre_break_save_same_world_load_case();
 }
