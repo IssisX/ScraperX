@@ -113,6 +113,8 @@ TERMINAL = ("merged", "superseded", "cancelled", "failed")
 STATES = ("accepted", "assigned", "working", "proof", "review", "landable", "blocked") + TERMINAL
 CONFLICT = "merge conflict with the base"
 NOT_AN_ASK = "not an ask"            # why evidence() closes an ask the judge no longer reads as one
+THREAD_CLOSED = "its thread closed"  # why evidence() closes an ask whose issue or PR closed
+INBOX_WINDOW = dt.timedelta(hours=24)   # how far back the integrator's inbox reads comments (switch.py INBOX_RUNS_WINDOW)
 
 CMD = re.compile(r"^[ \t]*(?:/(?P<cmd>ack|blocked|unblock|cancel)\b[ \t]*(?P<arg>[^\n]*)"
                  r"|\**BLOCKED:\**[ \t]*(?P<blk>[^\n]+))", re.MULTILINE | re.IGNORECASE)
@@ -822,10 +824,16 @@ def sync(rec: dict, wants: list[Want], now: dt.datetime, roster: L.Roster, event
             if ob.get("ack") is None and (ob.get("unseen") or ob.get("closed")):
                 was = "unseen" if ob.get("unseen") else ob["closed"]["why"]
                 ob["unseen"], ob["closed"], ob["reopened"] = None, None, iso(now)
-                ob["backlog"] = None   # ripened after the cutover: owed afresh, sent like a new one
-                if not ob.get("dead_lettered"):   # a fresh clock: its dormant time is not the addressee's delay
-                    via, due = due_at(roster, ob["to"], now, ob["kind"])
-                    ob["due"], ob["dead"] = iso(due), iso(dead_time(ob["to"], via, now, due))
+                if was == THREAD_CLOSED:
+                    # its thread was reopened: what the thread held when it closed is old work, not new. Backlog:
+                    # never sent or dead-lettered one by one, counted in Cory's one line (J-072: reopening #350 sent
+                    # "To PE: ask from Claude on #350" twice and one to ChatGPT, for posts of the day before)
+                    ob["backlog"] = iso(now)
+                else:
+                    ob["backlog"] = None   # ripened after the cutover: owed afresh, sent like a new one
+                    if not ob.get("dead_lettered"):   # a fresh clock: its dormant time is not the addressee's delay
+                        via, due = due_at(roster, ob["to"], now, ob["kind"])
+                        ob["due"], ob["dead"] = iso(due), iso(dead_time(ob["to"], via, now, due))
                 events("reopened", rec["job"], id=oid, was=was)
             continue
         via, due = due_at(roster, w.to, now, w.kind)
@@ -921,7 +929,7 @@ def evidence(ob: dict, o: JobObs | None, seen: Seen, rec: dict, now: dt.datetime
     if kind == "ask":   # asks.py drops an ask on any later post by its addressee (#350 hole 7): not an answer
         n = ob["thread"]   # but an ask on a thread that closed is over (the J-072 replay: #107's asks were
         if seen.open_threads is not None and n not in seen.open_threads and seen.issue(n).get("state") == "closed":
-            return "close:its thread closed"   # re-sent and dead-lettered after the board moved to #340)
+            return f"close:{THREAD_CLOSED}"   # re-sent and dead-lettered after the board moved to #340)
         if version in seen.examined and (version, ob["to"]) not in seen.asks_read:
             # the judge read this very comment this pass and it asks this holder nothing: a sentence that says
             # "To Grok asks", or a post that names an ask from its addressee, its answer (tools/board/asks.py)
@@ -1153,7 +1161,8 @@ def cutover(state: State, live: bool, roster: L.Roster, now: dt.datetime, events
     pass (the coordinator, 11-09). So every obligation live at the cutover becomes `backlog`: never sent one by
     one, never dead-lettered, and summed in one line for Cory, counts by holder (needs_you). It leaves the backlog
     only by ripening after the cutover: its want coming back (a reopen) gives it a fresh clock like any new one.
-    Agents get notices only for obligations created or ripened after the cutover. Only batches that really went
+    (An ask whose thread closed and was reopened is the exception: it comes back as backlog, sync.) Agents get
+    notices only for obligations created or ripened after the cutover. Only batches that really went
     count as reported. Runs once (state/cory.json `mode`); a send records `sent_by`."""
     if not live:
         state.cory["mode"] = "shadow"
@@ -1189,15 +1198,75 @@ def before_cutover(state: State, ob: dict) -> bool:
     return not (ob.get("reopened") and at(ob["reopened"]) >= at(cut))   # reopened after the cutover: owed afresh
 
 
+def inbox_carries(body: str) -> bool:
+    """Does the integrator's inbox list this comment as a TO-CLAUDE line (switch.py ask_inbox_items)? Its first
+    line holds `To Claude` or `proposal`, or it is a bridge post (every mail of Muse's wakes the integrator); never
+    Claude's own post (its footer) or Codex's. The same test as the switch's, kept in step by a test that runs
+    both (test_reconciler Noise)."""
+    if body.lstrip().startswith("<!-- codex") or "Generated by [Claude Code]" in body:
+        return False
+    first = (body.split("\n", 1)[0] or "").strip()
+    low = first.lower()
+    return "to claude" in low or "proposal" in low or first.startswith(asks.BRIDGE_POST)
+
+
+def in_claudes_inbox(ob: dict, text: dict, now: dt.datetime) -> bool:
+    """An ask to the integrator that its inbox already carries (J-072: 41 of 93 notices in 16 h were "To Claude: ask
+    from Muse on #N" for a post the inbox had listed as TO-CLAUDE #N). No notice comment goes for it, the first or
+    the re-send; the obligation, its due time, its ack by reply and its dead-letter to Cory stay. Only when this pass
+    read the ask's own text and the inbox does list it: an ask further down a post, or one first seen after the
+    inbox's day, is sent as before."""
+    if ob["kind"] != "ask" or ob["via"] != "session":
+        return False
+    if ob.get("sent_by") == "inbox":
+        return True
+    asked = at(ob.get("asked")) or at(ob["created"])
+    return not ob["sends"] and now - asked < INBOX_WINDOW and inbox_carries(text.get(ob["version"]) or "")
+
+
+def switch_muse_keys(ob: dict) -> list[str]:
+    """The key switch.py's muse() gives its own mail to Muse for the event this obligation is about, when it mails
+    one: a red proof on an fb-bot/ PR (muse-RED), an open FIX on one (muse-FIX), a red fb-bot/ branch with no PR
+    (muse-RED-BRANCH), each for that PR or branch at that head. A merge conflict and a rule-check BLOCK have no
+    Muse item in the switch, so they have no key here and the reconciler's own first notice goes."""
+    if ob["kind"] != "fix" or ob["via"] != "email":
+        return []
+    tag, _, sha = ob["version"].rpartition(":")
+    kind, _, target = ob["ref"].partition("|")
+    item = {("PR", "red"): "RED", ("PR", "fix"): "FIX", ("BRANCH", "red"): "RED-BRANCH"}.get((kind, tag))
+    if not item:
+        return []
+    import switch   # the key and the marker are the switch's own
+    return [switch.inbox_key("muse-" + item, target, sha)]
+
+
+def switch_muse_mails(p: Pass) -> dict[str, dt.datetime]:
+    """{muse key: when}: the keys in the delivered markers of the switch's own Muse comments this pass read (the
+    marker goes in only after the wake:muse label landed, so a key here is a mail the bridge was given)."""
+    import switch
+    out: dict[str, dt.datetime] = {}
+    for c in p.comments:
+        if c.login != rules.BOT_LOGIN or "switchboard:muse" not in c.body:
+            continue
+        for m in switch.MUSE_KEYS.finditer(c.body):
+            for k in filter(None, m.group(1).split(",")):
+                out[k] = min(out.get(k, c.t), c.t)
+    return out
+
+
 def deliver(state: State, p: Pass, outbox, now: dt.datetime, events: Events, memo: dict, out) -> str:
     """Send what is owed: the first send, one re-send at the due time, a dead-letter at twice the due span.
-    Returns "" or "backoff" when GitHub rate-limited a send (the rest wait for the next pass)."""
+    Returns "" or "backoff" when GitHub rate-limited a send (the rest wait for the next pass). No comment goes for
+    what another channel already carries: an ask to the integrator its inbox lists (in_claudes_inbox), and the
+    first notice of a Muse fix the switch's own Muse mail carried (switch_muse_keys)."""
     found = markers(p)
     if isinstance(getattr(outbox, "posted", None), dict):   # a Muse comment a past pass posted: reused, not re-sent
         for key, cid in posted_marks(p).items():
             outbox.posted.setdefault(key, cid)
     budget = MAX_SENDS
     status = ""
+    text = {c.id: c.body for c in p.comments}
+    mailed: dict | None = None   # the switch's own Muse mails, read when the first Muse fix is about to go
     for rec in state.records():
         for ob in rec["obligations"]:
             if not is_open(ob):
@@ -1226,9 +1295,22 @@ def deliver(state: State, p: Pass, outbox, now: dt.datetime, events: Events, mem
                 continue
             if ob.get("dead_lettered"):
                 continue
+            if in_claudes_inbox(ob, text, now):
+                if not ob["sends"]:   # delivered by the inbox's TO-CLAUDE line: no comment of ours, now or at the due time
+                    ob["sends"], ob["attempts"], ob["last_sent"], ob["sent_by"] = 1, 1, iso(now), "inbox"
+                    events("inbox", rec["job"], id=ob["id"], to=ob["to"], via=ob["via"], ref=ob["ref"])
+                continue
             need = ob["sends"] == 0 or (ob["sends"] == 1 and now >= at(ob["due"]))
             if not need or status or budget <= 0:
                 continue
+            keys = switch_muse_keys(ob) if not ob["sends"] else []
+            if keys:   # Muse gets one mail per event: the switch's own mail for it is this obligation's first send
+                mailed = switch_muse_mails(p) if mailed is None else mailed
+                when = min((mailed[k] for k in keys if k in mailed), default=None)
+                if when is not None:
+                    ob["sends"], ob["attempts"], ob["last_sent"], ob["sent_by"] = 1, 1, iso(when), "switch"
+                    events("switch_mail", rec["job"], id=ob["id"], to=ob["to"], via=ob["via"], ref=ob["ref"])
+                    continue   # the one re-send at the due time, and the dead-letter, are still the reconciler's
             budget -= 1
             send, attempt = ob["sends"] + 1, ob["attempts"] + 1
             try:
@@ -1520,8 +1602,8 @@ def needs_you(state: State, roster: L.Roster, now: dt.datetime | None = None) ->
                 continue
             who = roster.address(ob["to"]) if ob["to"] in roster.agents else ob["to"].capitalize()
             if ob.get("dead_lettered"):
-                failed, since = (f"{who} did not act ({ob['sends']} send(s) by {ob['via']}, no ack)",
-                                 ob["dead_lettered"])
+                how = "in its inbox" if ob.get("sent_by") == "inbox" else f"{ob['sends']} send(s) by {ob['via']}"
+                failed, since = f"{who} did not act ({how}, no ack)", ob["dead_lettered"]
             else:
                 failed, since = f"{who} runs only when you start it", ob["created"]
             where = f" on #{ob['thread']}" if ob.get("thread") else ""
