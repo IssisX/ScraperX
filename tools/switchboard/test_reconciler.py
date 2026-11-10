@@ -490,6 +490,14 @@ class Strengthened(unittest.TestCase):
         self.assertIn("Post `@codex review` on #402 yourself", body)
         self.assertNotIn("To Codex", body)
         self.assertEqual(re.findall(r"@[\w-]+", body), ["@codex"], "the one mention is in a code span: no ping")
+        # J-072: with the team token the switch posts the mention itself (switch.codex_mention), so the reconciler
+        # tells the integrator nothing: the obligation is tracked, and no notice is posted for it
+        gh3 = FakeGH()
+        h3 = Harness(outbox=R.CommentOutbox(gh3, RROSTER, 340, relay=False))
+        h3.run(feed(prs=[pr(402, "fb-bot/integrate-j501-y", job="J-501", needs_review=True)]), NOW)
+        rev = h3.obs("J-501", kind="review")[0]
+        self.assertEqual((rev["to"], rev["via"], rev["sends"]), ("codex", "relay", 1))
+        self.assertEqual(gh3.comments, [])
 
     def test_01b_a_partial_muse_send_is_repaired_never_mailed_twice(self):
         # ChatGPT, comment 6752574323: the comment went, then its label or its receipt edit failed. The bridge mails
