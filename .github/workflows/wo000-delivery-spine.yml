@@ -426,44 +426,44 @@ jobs:
           # moves while the rope is on the bollard, and the stage re-rigs);
           # linked, the rider rides 22 m to 176.25 under a brake-only
           # governor, and the payload never out-earns the skip.
-          awk -F'cage_worst=' '/AS-006 A no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+          awk -F'cage_worst=' '/AS-006 A no link/ {split($2,a," "); found=1; exit (a[1]+0 <= 0.05) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
           grep -F "relatched=1 rerigged=1" artifacts/native-falsifiers.log
-          awk -F'floor_y=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 >= 176.20 && a[1]+0 <= 176.30) ? 0 : 1}' \
+          awk -F'floor_y=' '/AS-006 A ride/ {split($2,a," "); found=1; exit (a[1]+0 >= 176.20 && a[1]+0 <= 176.30) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'peak_speed=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 <= 2.6) ? 0 : 1}' \
+          awk -F'peak_speed=' '/AS-006 A ride/ {split($2,a," "); found=1; exit (a[1]+0 <= 2.6) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
           grep -F "rode_on_cage=1" artifacts/native-falsifiers.log
-          awk -F'restored_y=' '/AS-006 A ride/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
+          awk -F'restored_y=' '/AS-006 A ride/ {split($2,a," "); found=1; exit (a[1]+0 >= 177.0) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
           # AS-006 Stages B and C and the band: neither lifts without its link;
           # B's slip hook lets the line run at the top and the boom hangs; each
           # car stands on its dogs flush with its ring; the band rides from the
           # 154 m deck to the 220 ring in one run, re-arms A with C's rubble and
           # rides A again.
-          awk -F'cage_worst=' '/AS-006 B no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+          awk -F'cage_worst=' '/AS-006 B no link/ {split($2,a," "); found=1; exit (a[1]+0 <= 0.05) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'boom_drop=' '/AS-006 B no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+          awk -F'boom_drop=' '/AS-006 B no link/ {split($2,a," "); found=1; exit (a[1]+0 <= 0.05) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'floor_y=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 198.18 && a[1]+0 <= 198.27) ? 0 : 1}' \
+          awk -F'floor_y=' '/AS-006 B ride/ {split($2,a," "); found=1; exit (a[1]+0 >= 198.18 && a[1]+0 <= 198.27) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'boom_angle=' '/AS-006 B ride/ {split($2,a," "); exit (a[1]+0 >= 1.45) ? 0 : 1}' \
+          awk -F'boom_angle=' '/AS-006 B ride/ {split($2,a," "); found=1; exit (a[1]+0 >= 1.45) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
           grep -F "let_go=1 rode_on_cage=1" artifacts/native-falsifiers.log
-          awk -F'platform_worst=' '/AS-006 C no link/ {split($2,a," "); exit (a[1]+0 <= 0.05) ? 0 : 1}' \
+          awk -F'platform_worst=' '/AS-006 C no link/ {split($2,a," "); found=1; exit (a[1]+0 <= 0.05) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'dumpster_kg=' '/AS-006 C no link/ {split($2,a," "); exit (a[1]+0 >= 899) ? 0 : 1}' \
+          awk -F'dumpster_kg=' '/AS-006 C no link/ {split($2,a," "); found=1; exit (a[1]+0 >= 899) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'floor_y=' '/AS-006 C ride/ {split($2,a," "); exit (a[1]+0 >= 220.18 && a[1]+0 <= 220.27) ? 0 : 1}' \
+          awk -F'floor_y=' '/AS-006 C ride/ {split($2,a," "); found=1; exit (a[1]+0 >= 220.18 && a[1]+0 <= 220.27) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'a_cage_rubble_kg=' '/AS-006 C ride/ {split($2,a," "); exit (a[1]+0 >= 899) ? 0 : 1}' \
+          awk -F'a_cage_rubble_kg=' '/AS-006 C ride/ {split($2,a," "); found=1; exit (a[1]+0 >= 899) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
           grep -F "rode_on_platform=1" artifacts/native-falsifiers.log
-          awk -F'y_220=' '/AS-006 band/ {split($2,a," "); exit (a[1]+0 >= 221.0) ? 0 : 1}' \
+          awk -F'y_220=' '/AS-006 band/ {split($2,a," "); found=1; exit (a[1]+0 >= 221.0) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'spilled_kg=' '/AS-006 band/ {split($2,a," "); exit (a[1]+0 >= 899) ? 0 : 1}' \
+          awk -F'spilled_kg=' '/AS-006 band/ {split($2,a," "); found=1; exit (a[1]+0 >= 899) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
-          awk -F'again_y=' '/AS-006 band/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
+          awk -F'again_y=' '/AS-006 band/ {split($2,a," "); found=1; exit (a[1]+0 >= 177.0) ? 0 : 1} END { if (!found) exit 1 }' \
             artifacts/native-falsifiers.log
 
       - name: Run athletic-traversal-2 and verify shard-2 falsifier proof lines
@@ -1055,15 +1055,16 @@ jobs:
           grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
 
-      - name: Check the far world reads as a valley (J-021 job 4)
+      - name: Check the far world and water read as a valley (J-021)
         shell: bash
         run: |
           set -euo pipefail
-          # far_world_test.gd (J-021, job 4): the far world builds the
-          # valley floor's drawn top and the tower's long shadow, the rim
-          # is 12 variants turned by where each stands, and the sky carries
-          # the horizon past the far plane — while the floor's boxes stay
-          # solids. The job-11 water checks run on the job-11 branch.
+          # far_world_test.gd (J-021, jobs 4 and 11): the far world builds
+          # the valley floor's drawn top and the tower's long shadow, the
+          # rim is 12 variants turned by where each stands, the sky carries
+          # the horizon past the far plane, and the yard's water and the
+          # waterfall run through shaders — while the floor's boxes stay
+          # solids and the water stays non-solid paint.
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/far_world_test.gd 2>&1 | tee artifacts/far-world.log
           grep -q '^FAR_WORLD PASS' artifacts/far-world.log

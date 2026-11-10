@@ -33,6 +33,13 @@ const SACCADE_PITCH := 0.05
 const HAIR_DAMP := 0.84
 const HAIR_GRAVITY := Vector3(0.0, -9.81, 0.0)
 const HAIR_STIFFNESS := [0.22, 0.12, 0.07, 0.04, 0.02]
+# J-067: which way each segment's stiffness pulls, from down her head (0) to
+# world down (1). All toward her head's down, the locks held her head's shape
+# when she bent (a stagger, all fours) and stood out off her back like a flat
+# sheet: the pull is about 20x her hair's weight. The roots keep her head's
+# line; the lengths lean to gravity, at most 0.6 of the way (all the way sank
+# them into her when she bent: look_matron_hold 0.101 m). Upright, both are the same.
+const HAIR_HANG := [0.0, 0.15, 0.3, 0.45, 0.6]
 # Each lock its own: its weight and give varied a little, so neighbors never
 # move as one piece; and the wind up on the deck in slow gusts.
 const LOCK_VARY := 0.35
@@ -1535,7 +1542,9 @@ func step_hair(delta: float) -> void:
 		for _it in HAIR_ITERATIONS:
 			for k in range(1, n + 1):
 				var above: Vector3 = pts[k - 1]
-				var q: Vector3 = (pts[k] as Vector3).lerp(above + down * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
+				var rest := down.lerp(Vector3.DOWN, float(HAIR_HANG[k - 1]))
+				rest = rest.normalized() if rest.length() > 1e-6 else Vector3.DOWN
+				var q: Vector3 = (pts[k] as Vector3).lerp(above + rest * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
 				var d := q - above
 				q = above + (d.normalized() if d.length() > 1e-6 else down) * seg
 				# The point can sit outside the skull and the back while the ribbon
