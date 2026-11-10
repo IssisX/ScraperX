@@ -669,6 +669,193 @@ void pre_break_save_rebreak_death_case() {
     }
 }
 
+// A save taken after a pre-break save is loaded back into the same
+// world — the crate whole, its eight pieces parked — must load into
+// a fresh world: the save names the parked pieces but holds no broken
+// record for their stock. (#372 review, P1 physics_world_state.cpp:559.)
+void parked_pieces_save_loads_fresh_case() {
+    const std::string prefix = "stock damage parked pieces save: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const double mass = s.kit_body_mass(crate);
+    const std::uint32_t bodies_before = s.kit_body_count();
+    (void)s.advance_frame(2.0);  // the player grounds, a checkpoint commits
+    const std::vector<std::uint8_t> bytes = s.save_game();  // predates the break
+    const auto at = s.kit_body_position(crate);
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    (void)s.advance_frame(2.0);
+    require(s.stock_damage(entity).broken, (prefix + "the drop breaks the crate").c_str());
+    // Back into the same world: the crate comes back whole, its pieces parked.
+    require(s.load_game(bytes.data(), bytes.size()),
+            (prefix + "the same world loads the pre-break save").c_str());
+    require(!s.stock_damage(entity).broken, (prefix + "the crate is whole again").c_str());
+    require(s.kit_body_count() == bodies_before + 8,
+            (prefix + "the world still holds the eight pieces").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        require(!s.kit_body_enabled(s.kit_body_index(piece_entity_for(entity, k))),
+                (prefix + "every piece is parked").c_str());
+    }
+    // The save after that must load into a fresh world, pieces and all.
+    const std::vector<std::uint8_t> bytes2 = s.save_game();
+    Simulation t(scraperx::sim::InitialSpawn::ExteriorGrade);
+    require(t.load_game(bytes2.data(), bytes2.size()), (prefix + "a fresh world loads the save").c_str());
+    require(!t.stock_damage(entity).broken, (prefix + "the loaded crate is whole").c_str());
+    require(t.kit_body_count() == bodies_before + 8,
+            (prefix + "the loaded world holds the eight pieces").c_str());
+    require(t.kit_body_enabled(crate), (prefix + "the loaded crate is live").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = t.kit_body_index(piece_entity_for(entity, k));
+        require(body != 0xFFFFFFFFU, (prefix + "every piece exists in the loaded world").c_str());
+        require(!t.kit_body_enabled(body), (prefix + "every loaded piece is parked").c_str());
+        require(std::abs(t.kit_body_mass(body) - mass / 8.0) < 0.01,
+                (prefix + "every loaded piece carries an eighth of the mass").c_str());
+    }
+}
+
+// A crate spinning at 3 rad/s about Y breaks on landing: its pieces
+// must carry the orbital velocity their offsets give them, or the
+// break eats the orbital angular momentum — 18.432 kg·m²/s per rad/s
+// for a 160 kg crate, eight pieces at ±0.24 m. (#372 review, P1
+// physics_world.cpp:655.)
+void spinning_break_keeps_orbital_case() {
+    const std::string prefix = "stock damage spinning break: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const double mass = s.kit_body_mass(crate);
+    (void)s.advance_frame(2.0);
+    const auto at = s.kit_body_position(crate);
+    // Dropped from 3 m: it lands at ~7.7 m/s, a 1,230 N.s hit, far
+    // past the 300 N.s break line. The spin is set after the put —
+    // the put zeroes angular velocity — and survives the fall; the
+    // floor takes some of it in the quiet ticks before the window closes.
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    s.debug_spin_kit_body(crate, {0.0, 3.0, 0.0});
+    // Step tick by tick: the pieces are spawned after the physics of
+    // the break tick, so on the first tick the crate reads broken
+    // their velocities are exactly the spawn velocities.
+    bool broken = false;
+    for (int tick = 0; tick < 90 * 3 && !broken; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        broken = s.stock_damage(entity).broken;
+    }
+    require(broken, (prefix + "the spinning drop breaks the crate").c_str());
+    // The orbital angular momentum about the crate's centre: the
+    // scatter sums to zero over the eight pieces and the centre
+    // velocity cancels, so without the orbital term this reads ~0.
+    const auto centre = s.kit_body_position(crate);
+    double orbital_y = 0.0;
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = s.kit_body_index(piece_entity_for(entity, k));
+        require(body != 0xFFFFFFFFU, (prefix + "every piece exists").c_str());
+        const auto p = s.kit_body_position(body);
+        const auto v = s.kit_body_velocity(body);
+        orbital_y += (mass / 8.0) * ((p.z - centre.z) * v.x - (p.x - centre.x) * v.z);
+    }
+    // 18.432 kg·m²/s per rad/s: the floor takes some spin in the
+    // quiet ticks, but more than a quarter must survive — a break
+    // without the term reads ~0.
+    require(orbital_y > 5.0, (prefix + "the pieces keep the orbital momentum").c_str());
+}
+
+// The resync, at the StockDamage level: a velocity jump the rewind
+// causes is not an impact. (#372 review, P1 stock_damage.cpp:245.)
+void damage_resync_case() {
+    const std::string prefix = "stock damage resync: ";
+    StockDamage damage;
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    // A crate falling at 5.45 m/s, observed for a while: the fall
+    // itself is no hit (gravity's share is added back in flight).
+    for (int tick = 0; tick < 30; ++tick) {
+        damage.observe(entity, LooseStock::Kind::Crate, 160.0F, 0.0F, -5.45F, 0.0F, 0.0F, 10.0F, 0.0F,
+                       0.0F, 0.0F, 0.0F, 1.0F, {});
+    }
+    require(!damage.state(entity).broken, (prefix + "free fall breaks nothing").c_str());
+    // The death rewind: the velocity jumps back to the checkpoint's
+    // (here, rest) while the body sits on the floor.
+    damage.resync();
+    ContactHint floor{};
+    floor.struck = entity;
+    floor.normal_y = 1.0F;
+    for (int tick = 0; tick < 10; ++tick) {
+        damage.observe(entity, LooseStock::Kind::Crate, 160.0F, 0.0F, 0.0F, 0.0F, 0.0F, 10.0F, 0.0F,
+                       0.0F, 0.0F, 0.0F, 1.0F, {floor});
+    }
+    require(!damage.state(entity).broken && damage.state(entity).dent_count == 0,
+            (prefix + "the rewind reads as a first sight, not a hit").c_str());
+}
+
+// A death while a crate slides: the rewind must not read the crate's
+// restored velocity as an impact. (#372 review, P1 stock_damage.cpp:245.)
+void death_rewind_resync_case() {
+    const std::string prefix = "stock damage death rewind: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    (void)s.advance_frame(2.0);  // the player grounds, a checkpoint commits
+    // Slide the crate along the floor: a checkpoint commits on the
+    // next grounded ticks with the crate moving.
+    const auto home = s.kit_body_position(crate);
+    s.debug_launch_kit_body(crate, home, {3.0, 0.0, 0.0});
+    (void)s.advance_frame(5.0 * Simulation::kFixedStepSeconds);
+    // Kill the player before another commit can catch the crate slow:
+    // the fall kills while the crate is still sliding to rest, so the
+    // death restores the sliding checkpoint.
+    s.debug_launch_player({0.0, 62.0, -8.0}, {0.0, 0.0, 0.0});
+    const std::uint64_t deaths = s.snapshot().death_count;
+    double pre_death_speed = 0.0;
+    bool died = false;
+    for (std::uint32_t tick = 0; tick < 90 * 6 && !died; ++tick) {
+        const auto v = s.kit_body_velocity(crate);
+        pre_death_speed = std::hypot(v.x, v.y, v.z);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        died = s.snapshot().death_count > deaths;
+    }
+    require(died, (prefix + "the fall kills").c_str());
+    // The rewind jumps the crate from near rest back to its checkpoint
+    // slide: 3 m/s on 160 kg is 480 N.s, past the 300 N.s break line,
+    // so without the resync the floor contact after it breaks the crate.
+    require(pre_death_speed < 1.0, (prefix + "the crate is near rest at the death").c_str());
+    (void)s.advance_frame(3.0);  // the restored slide runs out, the window closes
+    require(!s.stock_damage(entity).broken, (prefix + "the rewind breaks nothing").c_str());
+    require(s.stock_damage(entity).dent_count == 0, (prefix + "the rewind dents nothing").c_str());
+}
+
+// A piece carried at the save loads with its carry: the piece
+// entities are kit entities now, so restore_carry_topology()
+// reattaches them. (#372 review, P1 stock_damage.hpp:127.)
+void carried_piece_save_case() {
+    const std::string prefix = "stock damage carried piece save: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    const std::uint64_t entity = forklift_into(s, Target::Crate, 1.0);
+    require(s.stock_damage(entity).broken, (prefix + "the full ram breaks the crate").c_str());
+    (void)s.advance_frame(3.0);
+    // Back the truck off the debris, get out, and carry the first piece.
+    (void)s.set_move_input(0.0, -1.0);
+    (void)s.advance_frame(2.0);
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.request_forklift_action();
+    (void)s.advance_frame(0.5);
+    require(!s.forklift_state().driving, (prefix + "the truck lets go").c_str());
+    const std::uint32_t first = s.kit_body_index(piece_entity_for(entity, 0));
+    const auto pp = s.kit_body_position(first);
+    require(walk_to(s, pp.x, pp.z - 0.9, 30.0, 0.3), (prefix + "to the first piece").c_str());
+    const auto me = s.snapshot().player_position;
+    (void)s.set_facing(pp.x - me.x, pp.z - me.z);
+    (void)s.advance_frame(0.3);
+    require(s.request_pick_up() && s.advance_frame(0.5).accepted &&
+                s.snapshot().carrying_entity_id == piece_entity_for(entity, 0),
+            (prefix + "the first piece is carried").c_str());
+    (void)s.advance_frame(1.0);  // a checkpoint commits with the carry
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    Simulation t(scraperx::sim::InitialSpawn::ExteriorGrade);
+    require(t.load_game(bytes.data(), bytes.size()), (prefix + "a fresh world loads the save").c_str());
+    require(t.snapshot().carrying_entity_id == piece_entity_for(entity, 0),
+            (prefix + "the loaded world still carries the piece").c_str());
+    require(t.stock_damage(entity).broken, (prefix + "the break rides the save").c_str());
+}
+
 } // namespace
 
 void run_stock_damage() {
@@ -1102,6 +1289,15 @@ void run_stock_damage() {
     pre_break_save_same_world_load_case();
     // ---- (d) that save, a re-break, and a death before the next commit ----
     pre_break_save_rebreak_death_case();
+    // ---- (d) #372 P1s: a save after that rewind loads into a fresh world ----
+    parked_pieces_save_loads_fresh_case();
+    // ---- (d) #372 P1s: a spinning break keeps the orbital momentum ----
+    spinning_break_keeps_orbital_case();
+    // ---- (d) #372 P1s: a death rewind is not an impact ----
+    damage_resync_case();
+    death_rewind_resync_case();
+    // ---- (d) #372 P1s: a carried piece loads with its carry ----
+    carried_piece_save_case();
 }
 
 // J-074 (#352): the group registers itself beside its function, so no
