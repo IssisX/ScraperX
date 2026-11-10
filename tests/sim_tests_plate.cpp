@@ -285,6 +285,7 @@ void run_pulley_static_end() {
             "each load must hang still on its rope, 0.5 m below where it was let go");
     std::cout << "PASS scraperx_sim pulley seam: sag_m=" << worst_sag << " speed=" << worst_speed << '\n';
 }
+SCRAPERX_GROUP("pulley_static_end", 10, run_pulley_static_end);
 
 void run_plate_shop() {
     using scraperx::sim::InitialSpawn;
@@ -394,6 +395,8 @@ void run_plate_shop() {
               << " monolith_angle=" << i_ride.shop_state().i_monolith_angle << " gain_J=" << i_gain
               << " released_J=" << i_released << '\n';
 }
+SCRAPERX_GROUP("plate_shop", 210, run_plate_shop);
+SCRAPERX_SELECT("AS-008", run_plate_shop);
 
 // The band in one run on player inputs: from TP-340 by F's hole, G's rope
 // onto its platform and its pin out, the ride to the 374 ring; round the ring
@@ -434,6 +437,8 @@ void run_plate_band() {
     std::cout << "PASS scraperx_sim AS-008 band: to_484_s=" << top.simulation_time_seconds - start
               << " ring_y=" << top.player_position.y << '\n';
 }
+SCRAPERX_GROUP("plate_band", 220, run_plate_band);
+SCRAPERX_SELECT("AS-008-band", run_plate_band);
 
 // One lane of the 352 -> 374 wall-climb stack (band_plate_shop.cpp
 // build_wall_stack): from its far end a sprint along the lane (x heading `dir`,
@@ -812,6 +817,8 @@ void run_plate_route() {
     std::cout << "PASS scraperx_sim AS-008 route: seconds=" << top.simulation_time_seconds - start
               << " top_y=" << top.player_position.y << " lifts_untouched=1\n";
 }
+SCRAPERX_GROUP("plate_route", 230, run_plate_route);
+SCRAPERX_SELECT("AS-008-route", run_plate_route);
 
 // Takes hold of the wreck `entity` faced from (x, z) along (fx, fz) and climbs
 // it until standing above `top`; false as soon as the hold is not the wreck's.
@@ -906,3 +913,5 @@ void run_plate_wreckage() {
     std::cout << "PASS scraperx_sim AS-008 wreckage H: girder_angle=" << h.shop_state().h_girder_angle
               << " landing_y=" << h.snapshot().player_position.y << '\n';
 }
+SCRAPERX_GROUP("plate_wreckage", 240, run_plate_wreckage);
+SCRAPERX_SELECT("AS-008-wreck", run_plate_wreckage);

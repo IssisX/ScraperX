@@ -191,6 +191,8 @@ void run_matron_pace() {
     std::cout << "PASS scraperx_sim matron pace: paces=" << paces.size() << " top_mps=" << top_speed
               << " worst_step=" << worst_speed_step << " hushes=" << hushes << "\n";
 }
+SCRAPERX_GROUP("matron_pace", 880, run_matron_pace);
+SCRAPERX_SLICE("matron-moves", run_matron_pace, run_matron_unstick);
 
 void run_matron_unstick() {
     // Her patrol round the 154 m deck's loop, the player away up the tower
@@ -256,3 +258,4 @@ void run_matron_unstick() {
     std::cout << "PASS scraperx_sim matron unstick: nodes=" << reached.size() << " stalls=" << m.stalls
               << " longest_still_s=" << worst_still_s << "\n";
 }
+SCRAPERX_GROUP("matron_unstick", 890, run_matron_unstick);

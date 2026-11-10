@@ -12,7 +12,10 @@ std::unique_ptr<Machine> cascade_mast(BuildContext c) {
         box(Vec3(.45f, 20.0f, .45f), Material::Concrete, Vec3(-5.2f, 19.0f, kBackZ)),
         box(Vec3(.45f, 20.0f, .45f), Material::Concrete, Vec3( 5.2f, 19.0f, kBackZ)),
         box(Vec3(5.7f, .35f, .45f), Material::Steel, Vec3(0, 39.0f, kBackZ)),
-        box(Vec3(5.7f, .35f, .45f), Material::Steel, Vec3(0, .5f, kBackZ))
+        // 1.5 m deep, not 0.9 m: her LedgeJump back up to the entry's lip
+        // needs a take-off within 0.7 m of it, and on the 0.9 m beam the
+        // closest she can stand is 0.75 m (route-pockets region 546).
+        box(Vec3(5.7f, .35f, .75f), Material::Steel, Vec3(0, .5f, kBackZ))
     }, Vec3::sZero(), 0);
     auto entry = m->body("entry", {box(Vec3(1.5f, .3f, 2.0f), Material::Concrete)},
                          Vec3(5.3f, 3.0f, 0), 0);

@@ -129,6 +129,110 @@ func _shot(name: String, at: Vector3, look: Vector3, fov: float) -> void:
 	root.get_texture().get_image().save_png(_out.path_join(name + ".png"))
 
 
+# The authored hair, not the sim: the ribbons are thin strands, not flat slabs.
+# The texture carries real strands (several alpha bands across the ribbon, tips
+# that fade instead of a blunt cut); the ribbons are narrow where they sit on
+# her head. The crown is NOT split: the head bone still owns about a third of
+# the mesh (J-067 ruling 2026-11-08 — the split drove strands into her head),
+# so the head share is reported, not bounded. What this check asserts is the
+# authored shape: strands, taper, narrow crown rows. Hair through her body is
+# asserted separately by the scorer (tools/matron_probe/score.py) over the 3
+# probe poses (guard, 110 degree twist, head down): at most 1 of 3 frames with
+# hair inside her, worst 0.040 m, no head hit — the v5 baseline. Reads the
+# seated mesh the figure test already built, so it costs one pass over the hair
+# arrays and no extra poses.
+func _hair_authored(rig: RefCounted) -> void:
+	var bands := 0
+	var tapered := false
+	# Same read as the look itself (matron_look.gd _image): bytes + decode from
+	# buffer, so no "loaded as image file" warning on the res:// path.
+	var img := Image.new()
+	var _bytes := FileAccess.get_file_as_bytes("res://presentation/life/matron/hair_a.png")
+	if _bytes.is_empty() or img.load_png_from_buffer(_bytes) != OK:
+		img = null
+	if img != null and img.get_width() > 0:
+		var w := img.get_width()
+		var h := img.get_height()
+		var mid := h / 2
+		var above := false
+		for x in w:
+			var a := img.get_pixel(x, mid).a
+			if a > 0.45 and not above:
+				bands += 1
+				above = true
+			elif a <= 0.45:
+				above = false
+		var mid_max := 0.0
+		var tip_max := 0.0
+		for x in w:
+			mid_max = maxf(mid_max, img.get_pixel(x, mid).a)
+			tip_max = maxf(tip_max, img.get_pixel(x, h - 1).a)
+		tapered = tip_max < mid_max - 0.05
+	var head_share := 1.0
+	var crown_med := 1.0
+	var crown_p90 := 1.0
+	var skel: Skeleton3D = rig.skel
+	var head_idx := skel.find_bone("head")
+	for m in (_view._figure as Node3D).find_children("hair", "MeshInstance3D", true, false):
+		var mi := m as MeshInstance3D
+		if mi.mesh == null or mi.mesh.get_surface_count() < 1:
+			continue
+		var arr: Array = mi.mesh.surface_get_arrays(0)
+		var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var uvs: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV]
+		var bones: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+		var tris: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+		var n := verts.size()
+		var bpv := int(bones.size() / maxi(n, 1))
+		var on_head := 0
+		for i in n:
+			if int(bones[i * bpv]) == head_idx:
+				on_head += 1
+		head_share = float(on_head) / float(maxi(n, 1))
+		# One row of a ribbon is the two verts a triangle holds at the same v;
+		# each row is found exactly once, in the triangle that carries its edge.
+		# Crown rows are the ones whose middle sits in the crown band (y > 1.64,
+		# the lowest vertex the old seat put on the head bone): that is where
+		# the ribbons sat wide and dense enough to read as a slab.
+		var seen := {}
+		var cw: Array = []
+		for t in range(0, tris.size() - 2, 3):
+			var a := int(tris[t])
+			var b := int(tris[t + 1])
+			var c := int(tris[t + 2])
+			var va := int(roundf(uvs[a].y * 1000.0))
+			var vb := int(roundf(uvs[b].y * 1000.0))
+			var vc := int(roundf(uvs[c].y * 1000.0))
+			var p := -1
+			var q := -1
+			if va == vb:
+				p = a
+				q = b
+			elif vb == vc:
+				p = b
+				q = c
+			elif va == vc:
+				p = a
+				q = c
+			if p < 0:
+				continue
+			var key := "%d_%d" % [mini(p, q), maxi(p, q)]
+			if seen.has(key):
+				continue
+			seen[key] = true
+			var mid := ((verts[p] as Vector3) + (verts[q] as Vector3)) * 0.5
+			if mid.y > 1.64:
+				cw.append((verts[p] as Vector3).distance_to(verts[q]))
+		cw.sort()
+		if not cw.is_empty():
+			crown_med = float(cw[cw.size() / 2])
+			crown_p90 = float(cw[int(float(cw.size()) * 0.9)])
+		break
+	_check(bands >= 3 and tapered and crown_med <= 0.0025 and crown_p90 <= 0.005,
+		"hair_authored",
+		"strands %d bands, taper %s, head owns %.1f%% (reported, not bounded), crown-row width median %.4f m p90 %.4f m" % [bands, str(tapered), head_share * 100.0, crown_med, crown_p90])
+
+
 func _run() -> void:
 	_studio()
 	_view = MatronView.new()
@@ -234,6 +338,7 @@ func _run() -> void:
 	for c in chains.size():
 		swing = maxf(swing, (chains[c]["pts"][chains[c]["pts"].size() - 1] as Vector3).distance_to(before[c]))
 	_check(hang > 0.3 and swing > 0.05, "hair", "tips %.2f m under the roots, %.2f m swing on a turn" % [hang, swing])
+	_hair_authored(rig)
 	# Close shots: face front, three-quarter, her hands.
 	data = _data({"state": 7, "sees_player": true}, 0.0)
 	await _settle(data, 40)

@@ -38,6 +38,13 @@ var _body: Node3D
 var _kit_root: Node3D
 var _kit_bodies: Array[Node3D] = []
 var _kit_dynamic: Array[bool] = []
+# The moving bodies' indices, the only ones _render_kit poses each frame.
+var _kit_dynamic_bodies := PackedInt32Array()
+# get_kit_body_poses' row: body, enabled, basis x, y, z, origin.
+const KIT_POSE_FLOATS := 14
+# Whether get_kit_body_poses has reported every moving body once; until then
+# it is asked for all of them, not only those changed since its last call.
+var _kit_poses_primed := false
 # The kit's machines, for the audio: every moving body of MACHINE_MIN_KG or
 # more, with the point of it farthest from its origin, whose speed is how fast
 # the machine moves.
@@ -57,6 +64,7 @@ const FABRICATED_FIRST_ENTITY := 0x20000
 const FABRICATED_ENTITY_LIMIT := 0x20000 + 32
 var _machines: Array[Dictionary] = []
 var _kit_cables: Array = []
+var _kit_cable_set: MultiMeshInstance3D
 # Per bin: the dust thrown up where its stream of stone lands (null for water).
 var _kit_bin_dust: Array = []
 # The grappling hook's line, from the right hand to the hook, and its head.
@@ -136,6 +144,7 @@ func _build_kit() -> void:
 	var statics_batcher := Batcher.new()
 	statics_batcher.occlusion = _occlusion
 	var started := Time.get_ticks_usec()
+	var shared_meshes := {}
 	for body in int(_native.get_kit_body_count()):
 		var node := Node3D.new()
 		node.name = "KitBody%d" % int(_native.get_kit_body_entity_id(body))
@@ -187,7 +196,18 @@ func _build_kit() -> void:
 				statics_batcher.add(mesh, 0, at, material,
 					bounds.size[bounds.get_longest_axis_index()] <= BATCH_FINE_SIZE)
 		for key in body_groups:
-			var piece := Batcher.instance(body_groups[key][0], body_groups[key][1])
+			# Bodies built alike (the yard's planks, drums, bricks) share one
+			# mesh per material, so _instance_kit_bodies can draw them as one.
+			var share := "%d/%s" % [hash(parts), key] if dynamic and not far_visible else ""
+			var piece: MeshInstance3D
+			if share != "" and shared_meshes.has(share) and shared_meshes[share][0] == parts:
+				piece = MeshInstance3D.new()
+				piece.name = "Batch"
+				piece.mesh = shared_meshes[share][1]
+			else:
+				piece = Batcher.instance(body_groups[key][0], body_groups[key][1])
+				if share != "" and not shared_meshes.has(share):
+					shared_meshes[share] = [parts, piece.mesh]
 			# A moving part is drawn as far as its size carries: a 1 m part to
 			# about 120 m, the 26 m wheel across the whole tower.
 			var extent := piece.get_aabb().size
@@ -199,6 +219,8 @@ func _build_kit() -> void:
 		_kit_root.add_child(node)
 		_kit_bodies.append(node)
 		_kit_dynamic.append(bool(_native.is_kit_body_dynamic(body)))
+		if _kit_dynamic[body]:
+			_kit_dynamic_bodies.append(body)
 		var entity := int(_native.get_kit_body_entity_id(body))
 		var stock := (entity >= STOCK_FIRST_ENTITY and entity < STOCK_ENTITY_LIMIT) or \
 			(entity >= FABRICATED_FIRST_ENTITY and entity < FABRICATED_ENTITY_LIMIT)
@@ -229,17 +251,21 @@ func _build_kit() -> void:
 	var cable := BoxMesh.new()
 	cable.size = Vector3(0.035, 0.035, 1.0)
 	cable.material = _material(Color("1b1916"), 0.6, 0.5)
+	# Every cable's segments, instances of one MultiMesh (J-045, #248); a
+	# segment is its index, cable * KIT_CABLE_SEGMENTS + segment.
+	var cables := MultiMesh.new()
+	cables.transform_format = MultiMesh.TRANSFORM_3D
+	cables.mesh = cable
+	cables.instance_count = int(_native.get_kit_cable_count()) * KIT_CABLE_SEGMENTS
+	_kit_cable_set = MultiMeshInstance3D.new()
+	_kit_cable_set.name = "KitCables"
+	_kit_cable_set.multimesh = cables
+	_kit_root.add_child(_kit_cable_set)
 	for index in int(_native.get_kit_cable_count()):
-		var segments: Array[MeshInstance3D] = []
+		var segments: Array[int] = []
 		for segment in KIT_CABLE_SEGMENTS:
-			var instance := MeshInstance3D.new()
-			instance.name = "KitCable%d_%d" % [index, segment]
-			instance.mesh = cable
-			instance.visible = false
-			# A rope a few centimetres thick: not drawn from afar.
-			instance.visibility_range_end = KIT_CABLE_RANGE
-			_kit_root.add_child(instance)
-			segments.append(instance)
+			segments.append(index * KIT_CABLE_SEGMENTS + segment)
+			cables.set_instance_transform(segments.back(), Transform3D(Basis().scaled(Vector3.ZERO), Vector3.ZERO))
 		_kit_cables.append(segments)
 	var stream_mesh := BoxMesh.new()
 	stream_mesh.size = Vector3(0.12, 0.12, 1.0)
@@ -526,22 +552,67 @@ func _render_hook() -> void:
 func _render_kit() -> void:
 	if _kit_root == null:
 		return
-	for body in _kit_bodies.size():
-		if not _kit_dynamic[body]:
-			continue
+	var eye := _kit_eye()
+	var look_again := eye.distance_squared_to(_kit_instance_eye) > KIT_INSTANCE_LOOK_M * KIT_INSTANCE_LOOK_M
+	if look_again:
+		_kit_instance_eye = eye
+	# Every moving body (J-045 perf_walk: about 640 of them, most at rest, the
+	# largest GDScript cost of a walk), so the pass is kept lean: one native
+	# call names only the bodies shown, hidden or moved since its last call,
+	# with their poses (get_kit_body_poses, 14 floats each); a transform is
+	# set only when it changed (setting a Node3D's transform, even to the same
+	# value, sends every mesh under it a transform change); and a body's
+	# instances are visited only when it moved or was shown or hidden, or,
+	# every body's, when the eye moved on.
+	var instanced := _kit_instances.size()
+	var poses: PackedFloat32Array = _native.get_kit_body_poses(_kit_dynamic_bodies, not _kit_poses_primed)
+	_kit_poses_primed = true
+	for row in range(0, poses.size(), KIT_POSE_FLOATS):
+		var body := int(poses[row])
 		var node: Node3D = _kit_bodies[body]
-		node.visible = bool(_native.is_kit_body_enabled(body))
-		if node.visible:
-			node.transform = _native.get_kit_body_transform(body)
+		var shown := poses[row + 1] > 0.5
+		node.visible = shown
+		var moved := false
+		if shown:
+			var at := Transform3D(Vector3(poses[row + 2], poses[row + 3], poses[row + 4]),
+				Vector3(poses[row + 5], poses[row + 6], poses[row + 7]),
+				Vector3(poses[row + 8], poses[row + 9], poses[row + 10]),
+				Vector3(poses[row + 11], poses[row + 12], poses[row + 13]))
+			moved = at != node.transform
+			if moved:
+				node.transform = at
+		if body < instanced and _kit_instances[body] != null and \
+				(moved or shown != _kit_instanced_shown[body]):
+			_kit_instanced_shown[body] = shown
+			for entry in _kit_instances[body]:
+				_place_kit_instance(entry, eye, moved)
+	if look_again:
+		# The bodies that moved are placed above; this measures every drawn
+		# instance's distance again, as each body's own range would.
+		for body in _kit_dynamic_bodies:
+			if body < instanced and _kit_instances[body] != null:
+				_kit_instanced_shown[body] = _kit_bodies[body].visible
+				for entry in _kit_instances[body]:
+					_place_kit_instance(entry, eye, false)
+	var cables := _kit_cable_set.multimesh if _kit_cable_set != null else null
 	for index in _kit_cables.size():
 		var points: PackedVector3Array = _native.get_kit_cable_points(index)
 		var segments: Array = _kit_cables[index]
 		for segment in segments.size():
-			var instance: MeshInstance3D = segments[segment]
+			# A rope a few centimetres thick: not drawn from afar (to its
+			# middle, KIT_CABLE_RANGE), as each segment's own range did.
+			var at := Transform3D(Basis().scaled(Vector3.ZERO), Vector3.ZERO)
 			if segment + 1 < points.size():
-				_lay_segment(instance, points[segment], points[segment + 1])
-			else:
-				instance.visible = false
+				var from := points[segment]
+				var to := points[segment + 1]
+				var delta := to - from
+				var length := delta.length()
+				if length >= 0.001 and eye.distance_to(from + delta * 0.5) <= KIT_CABLE_RANGE:
+					var along := delta / length
+					var up := Vector3.UP if absf(along.y) < 0.99 else Vector3.RIGHT
+					var side := up.cross(along).normalized()
+					at = Transform3D(Basis(side, along.cross(side), along * length), from + delta * 0.5)
+			cables.set_instance_transform(int(segments[segment]), at)
 	_render_rubble()
 
 # Rubble from the native's bins and piles: a layer on each moving bin's floor
@@ -1140,3 +1211,137 @@ func _render_vents(delta: float, near: bool) -> void:
 			sheet.initial_velocity_max = 3.0 + 7.0 * push
 			sheet.speed_scale = 0.7 + 0.6 * clampf(push, 0.0, 1.0)
 		(vent["mist"] as CPUParticles3D).emitting = flowing or bursting
+
+
+# J-045 (#248): the moving kit bodies built alike drawn as instances. Every
+# body's mesh children that share a mesh, a paint, a shadow and a draw
+# distance become instances of one MultiMesh per far section of the static
+# batches (BATCH_FAR_CELL): one draw where there were dozens. Each instance is
+# posed where its body is (_render_kit) and drawn exactly as far as its own
+# mesh was (its visibility_range_end, measured to its middle). The drawn
+# instances are kept first in their MultiMesh (visible_instance_count), so
+# the ones out of reach cost nothing. Presentation only.
+const KIT_INSTANCE_MIN := 2
+const KIT_INSTANCE_CELL := 64.0
+# A piece drawn farther than this (a big machine's, seen across the tower)
+# stays its own: where it fades out at its range it is a structure, not a
+# speck, and an instance cannot fade. Below it an instance is drawn to the
+# middle of its fade and not past.
+const KIT_INSTANCE_RANGE_MAX := 300.0
+# The eye moves this far before every instance's distance is measured again.
+const KIT_INSTANCE_LOOK_M := 2.0
+# Per kit body: null, or its instances (see _place_kit_instance).
+var _kit_instances: Array = []
+# Per kit body: whether it was shown when its instances were last placed.
+var _kit_instanced_shown: Array[bool] = []
+# The instance packs; an entry names its pack by index here, so no pack and
+# entry hold each other (a cycle of arrays is never freed, and a restart
+# reloads the scene).
+var _kit_packs: Array = []
+var _kit_instance_eye := Vector3.INF
+
+func _kit_eye() -> Vector3:
+	var camera := get_viewport().get_camera_3d()
+	return camera.global_position if camera != null else Vector3.ZERO
+
+func _instance_kit_bodies() -> void:
+	var groups := {}
+	for body in _kit_bodies.size():
+		if not _kit_dynamic[body]:
+			continue
+		var node: Node3D = _kit_bodies[body]
+		var cell := Vector3i((node.transform.origin / KIT_INSTANCE_CELL).floor())
+		for child in node.get_children():
+			var piece := child as MeshInstance3D
+			if piece == null or piece.mesh == null or not piece.visible or piece.get_script() != null \
+					or piece.get_child_count() > 0 or piece.mesh.get_surface_count() != 1 \
+					or piece.visibility_range_end <= 0.0 or piece.visibility_range_end > KIT_INSTANCE_RANGE_MAX:
+				continue
+			var key := "%d/%d/%d/%d/%d/%.2f/%.2f/%d/%s" % [piece.mesh.get_instance_id(),
+				piece.material_override.get_instance_id() if piece.material_override != null else 0,
+				piece.get_surface_override_material(0).get_instance_id() \
+					if piece.get_surface_override_material(0) != null else 0,
+				piece.cast_shadow, piece.layers, piece.visibility_range_end, piece.visibility_range_end_margin,
+				piece.visibility_range_fade_mode, str(cell)]
+			if not groups.has(key):
+				groups[key] = []
+			groups[key].append([body, piece])
+	_kit_instances.resize(_kit_bodies.size())
+	_kit_instanced_shown.resize(_kit_bodies.size())
+	_kit_instanced_shown.fill(true)
+	var made := 0
+	var pieces := 0
+	var eye := _kit_eye()
+	for key in groups:
+		var members: Array = groups[key]
+		if members.size() < KIT_INSTANCE_MIN:
+			continue
+		var first: MeshInstance3D = members[0][1]
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.mesh = first.mesh
+		multimesh.instance_count = members.size()
+		multimesh.visible_instance_count = 0
+		var drawn := MultiMeshInstance3D.new()
+		drawn.name = "KitInstances"
+		drawn.multimesh = multimesh
+		drawn.material_override = first.material_override if first.material_override != null \
+			else first.get_surface_override_material(0)
+		drawn.cast_shadow = first.cast_shadow
+		drawn.layers = first.layers
+		_kit_root.add_child(drawn)
+		# Its draw distance where the piece's fade is half way (FADE_SELF), or
+		# at its end (no fade).
+		var reach := first.visibility_range_end
+		if reach > 0.0 and first.visibility_range_fade_mode != GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED:
+			reach += 0.5 * first.visibility_range_end_margin
+		var centre := first.mesh.get_aabb().get_center()
+		# [MultiMesh, the entry in each slot, how many are drawn].
+		var pack := [multimesh, [], 0]
+		_kit_packs.append(pack)
+		var pack_id := _kit_packs.size() - 1
+		for index in members.size():
+			var body: int = members[index][0]
+			var piece: MeshInstance3D = members[index][1]
+			var node: Node3D = _kit_bodies[body]
+			piece.visible = false
+			if _kit_instances[body] == null:
+				_kit_instances[body] = []
+			var entry := [pack_id, index, piece.transform, reach, piece.transform * centre, false, node]
+			(pack[1] as Array).append(entry)
+			(_kit_instances[body] as Array).append(entry)
+			multimesh.set_instance_transform(index, node.transform * piece.transform)
+		for entry in pack[1]:
+			_place_kit_instance(entry, eye, false)
+		made += 1
+		pieces += members.size()
+	_batch_report += "kit instances %d pieces -> %d multimeshes; " % [pieces, made]
+	print("SCRAPERX_BATCH kit instances %d pieces -> %d multimeshes" % [pieces, made])
+
+# entry: [pack index in _kit_packs, slot, local transform, reach, local centre, drawn, body node].
+# A drawn instance lies in a slot below its pack's count, one out of reach or
+# hidden in one above it; a change swaps it with the slot at the boundary.
+func _place_kit_instance(entry: Array, eye: Vector3, moved: bool) -> void:
+	var node: Node3D = entry[6]
+	var reach: float = entry[3]
+	var shown := node.is_visible_in_tree() and (reach <= 0.0 or \
+		eye.distance_to(node.transform * (entry[4] as Vector3)) <= reach)
+	var pack: Array = _kit_packs[int(entry[0])]
+	var multimesh: MultiMesh = pack[0]
+	if shown != bool(entry[5]):
+		entry[5] = shown
+		var slots: Array = pack[1]
+		var count := int(pack[2])
+		var other_slot := count if shown else count - 1
+		var other: Array = slots[other_slot]
+		var slot := int(entry[1])
+		slots[slot] = other
+		slots[other_slot] = entry
+		other[1] = slot
+		entry[1] = other_slot
+		pack[2] = count + 1 if shown else count - 1
+		multimesh.set_instance_transform(slot, (other[6] as Node3D).transform * (other[2] as Transform3D))
+		multimesh.visible_instance_count = int(pack[2])
+		moved = true
+	if moved and shown:
+		multimesh.set_instance_transform(int(entry[1]), node.transform * (entry[2] as Transform3D))

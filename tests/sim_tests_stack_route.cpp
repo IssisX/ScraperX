@@ -112,6 +112,8 @@ void run_ascent() {
               << " at_220=" << at_220 << " at_340=" << at_340 << " at_484=" << at_484
               << " plate_y=" << top.player_position.y << '\n';
 }
+SCRAPERX_GROUP("ascent", 1080, run_ascent);
+SCRAPERX_SELECT("ascent", run_ascent);
 constexpr double kDeck4Top = 44.0;
 
 // S1's scale plate, in the middle of the cage's floor.
@@ -574,8 +576,8 @@ bool load_s3_pan(scraperx::sim::Simulation &simulation) {
     (void)simulation.set_facing(-1.0, 0.0);
     (void)simulation.advance_frame(0.5);
     // The machines' weights end where the Matron's throwables begin.
-    const std::uint64_t pig = scraperx::sim::LooseStock::kFirstEntity + simulation.loose_stock_count() - 1 -
-                              scraperx::sim::LooseStock::kMatronThrowables;
+    const std::uint64_t pig =
+        scraperx::sim::LooseStock::kFirstEntity + simulation.loose_stock_machine_weights_begin();
     if (simulation.snapshot().carry_target_entity_id != pig) {
         std::cout << "DEBUG load_s3_pan target_id=" << simulation.snapshot().carry_target_entity_id << " not the pig "
                   << pig << "\n";

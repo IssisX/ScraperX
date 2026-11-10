@@ -572,6 +572,8 @@ void run_yard_crane() {
     std::cout << "PASS scraperx_sim crane: forked_up_44_m=" << forked_y << " forklift_x=" << driven_x
               << " stall_n=" << stalled_n << "\n";
 }
+SCRAPERX_GROUP("yard_crane", 1040, run_yard_crane);
+SCRAPERX_SELECT("crane", run_yard_crane);
 
 namespace {
 
@@ -748,16 +750,41 @@ void run_yard_crane_magnet() {
     // and the summit's four ending bodies, in that exact append order.
     // Earlier save-game body indices must still line up.
     const auto last = s.kit_body_count();
-    require(last >= 7 &&
-                s.kit_body_entity(last - 7) == scraperx::sim::TwinTower::kFrameEntity &&
-                s.kit_body_entity(last - 6) == scraperx::sim::TwinTower::kLeafEntity &&
-                s.kit_body_entity(last - 5) == scraperx::sim::TwinTower::kFlagEntity &&
-                s.kit_body_entity(last - 4) == Summit::kLeftBearingEntity &&
-                s.kit_body_entity(last - 3) == Summit::kRightBearingEntity &&
-                s.kit_body_entity(last - 2) == Summit::kEndingFrameEntity &&
-                s.kit_body_entity(last - 1) == Summit::kLastBeamEntity,
+    // The 137 east/west stock bodies are built after the summit (world-b;
+    // run_wet_e_guard pins the same count as kNewEastWest), then the deck-154
+    // forklift's frame and forks (J-041); after them only stock laid later
+    // (J-042: two kinds by her band), each new body appended at the end; so
+    // the tower/summit tail sits 137 bodies before the forklift, and the 137
+    // after it are stock entities.
+    constexpr std::uint32_t kNewEastWest = 137;
+    const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
+    std::uint32_t fork = last;
+    for (std::uint32_t i = 0; i + 1 < last && fork == last; ++i) {
+        fork = s.kit_body_entity(i) == kForklift[0] ? i : last;
+    }
+    require(fork + 1 < last && s.kit_body_entity(fork + 1) == kForklift[1],
+            "magnet: the deck-154 forklift's frame and forks, side by side");
+    bool later_stock = true;
+    for (std::uint32_t i = fork + 2; i < last; ++i) {
+        later_stock = later_stock && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
+    }
+    require(later_stock, "magnet: after the deck-154 forklift, only stock laid later: the kit's last bodies");
+    const auto tail = fork - kNewEastWest;
+    bool east_west = true;
+    for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {
+        east_west = east_west && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
+    }
+    require(east_west, "magnet: the 137 east/west pieces, all stock, sit between the summit and the forklift");
+    require(tail >= 7 &&
+                s.kit_body_entity(tail - 7) == scraperx::sim::TwinTower::kFrameEntity &&
+                s.kit_body_entity(tail - 6) == scraperx::sim::TwinTower::kLeafEntity &&
+                s.kit_body_entity(tail - 5) == scraperx::sim::TwinTower::kFlagEntity &&
+                s.kit_body_entity(tail - 4) == Summit::kLeftBearingEntity &&
+                s.kit_body_entity(tail - 3) == Summit::kRightBearingEntity &&
+                s.kit_body_entity(tail - 2) == Summit::kEndingFrameEntity &&
+                s.kit_body_entity(tail - 1) == Summit::kLastBeamEntity,
             "magnet: the broken bridge and summit rigging append after pre-existing kit bodies");
-    const auto count = last - 7;
+    const auto count = tail - 7;
     constexpr std::uint32_t kBayBodies = 5;
     const auto weights =
         static_cast<std::uint32_t>(LooseStock::kMachineWeights + LooseStock::kMatronThrowables) + kBayBodies;
@@ -903,6 +930,8 @@ void run_yard_crane_magnet() {
     std::cout << "PASS scraperx_sim magnet: slab_held_n=" << took.hold_rated_n << " beam_held_n="
               << on_beam.hold_rated_n << " stack_rose_m=" << rose << " box_held_n=" << on_box.hold_rated_n << "\n";
 }
+SCRAPERX_GROUP("yard_crane_magnet", 1050, run_yard_crane_magnet);
+SCRAPERX_SELECT("magnet", run_yard_crane_magnet);
 
 // The yard crane's container spreader (yard_crane.hpp): rigged by HOOKing the
 // sling on its lug from beside the frame; LOCK in the air turns nothing. Let
@@ -982,3 +1011,5 @@ void run_yard_crane_spreader() {
             "spreader: raised, the frame leaves the box where it was set down");
     std::cout << "PASS scraperx_sim spreader: lifted_to_y=" << high.y << " set_down_y=" << landed.y << "\n";
 }
+SCRAPERX_GROUP("yard_crane_spreader", 1060, run_yard_crane_spreader);
+SCRAPERX_SELECT("spreader", run_yard_crane_spreader);

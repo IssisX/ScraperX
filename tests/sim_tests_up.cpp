@@ -439,7 +439,7 @@ void up_throw() {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
     require(s.advance_frame(0.5).accepted, "up throw: settle");
-    const std::uint32_t first = s.loose_stock_count() - static_cast<std::uint32_t>(LooseStock::kMatronThrowables);
+    const std::uint32_t first = s.loose_stock_throwables_begin();
     const auto throw_one = [&](const std::uint32_t piece, const double pick_x, const double pick_z, const double lo,
                                const double hi, const char *what, const double along_x = 1.0) {
         const std::uint64_t entity = LooseStock::kFirstEntity + piece;
@@ -520,7 +520,10 @@ void run_up_controls() {
                  "jump off, top out, bars, launch, wall kicks, stand, slide jump, trapeze; none under a beam or "
                  "at the wheel; the coyote jump; no kick off an ended wall run; the route hint; deterministic\n";
 }
+SCRAPERX_GROUP("up_controls", 700, run_up_controls);
+SCRAPERX_SELECT("up", run_up_controls);
 
 void run_up_throw() {
     up_throw();
 }
+SCRAPERX_SELECT("up-throw", run_up_throw);

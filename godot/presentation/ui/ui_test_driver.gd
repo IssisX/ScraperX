@@ -129,11 +129,31 @@ const SCENARIOS := {
 	# down (ui_test_act.gd; the crouched case lives in the native sweep
 	# group, see the note there).
 	"touch_matron_sweep": 11,
+	# The fight perf probe (J-044m, #245): punches thrown at her up close on
+	# her deck, Godot's frame times, draw calls and the native step timer
+	# logged and summarized (ui_test_act.gd; no budget asserted yet).
+	"perf_fight": 11,
+	# J-045 (#248), rendered only (measured locally under xvfb, not in CI):
+	# the locker burst after the LOADING card's scan, and the three
+	# full-height tower views Cory's force-close comes in (ui_test_act.gd).
+	"perf_locker": 11,
+	"perf_view_bottom": 8,
+	"perf_view_sling": 8,
+	"perf_view_top": 42,
+	"perf_attrib": 8,
+	"perf_attrib_top": 42,
+	"perf_attrib_locker": 11,
+	# Walking choppiness: frame-time percentiles on a fixed walk-and-look
+	# route across the yard (rendered only, like the probes above).
+	"perf_walk": 8,
 	"touch_bay": 11,
 	# Her corner pipe: she comes down the shaft after the climber, heard on it
 	# 4 s and more before she is there; a drum shoved off the edge onto her as
 	# she climbs back up knocks her off it, alive (ui_test_act.gd).
 	"touch_matron_pipe": 11,
+	# J-041: the forklift on her deck driven into her: woken, called, rammed
+	# at full speed, she goes down at the forks (ui_test_chase.gd).
+	"touch_forklift_ram": 11,
 	"look_matron_locker": 11,
 	"look_bay": 11,
 	"look_matron_hunt": 11,
@@ -146,6 +166,10 @@ const SCENARIOS := {
 	"look_matron_moves": 11,
 	"look_matron_hold": 11,
 	"look_matron_fatal": 11,
+	"look_matron_grade_ladder": 11,
+	# His punch landing on her, through his eye (ui_test_look.gd; CI renders it
+	# for the eye set fight_contact, work/looks/sets.yml).
+	"look_matron_fight": 11,
 	# Loose stock in the yard: a drum carried and set down (look_stock_yard:
 	# renders only, not in CI).
 	"touch_stock": 8,
@@ -173,6 +197,9 @@ const SCENARIOS := {
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
 	"look_summit": 42,
 	"look_summit_ground": 8,
+	# Look only (renders, not in CI): the gust front's mist streak (J-022
+	# slice 2), from I's cage at 419 m on the front's band.
+	"look_mist_streak": 21,
 	# The owner's vertical machines, from the 264 ring's west band where C6
 	# tops out, on their own motors: the cascade mast 27 m up, the walkway out
 	# the west face, the pitman lift 23.6 m, the barrel helix 24 m, the walkway
@@ -457,6 +484,20 @@ func _run() -> void:
 			ok = await _matron_heave_touch(InputRouter.Device.TOUCH)
 		"touch_matron_sweep":
 			ok = await _matron_sweep_touch(InputRouter.Device.TOUCH)
+		"perf_fight":
+			ok = await _perf_fight()
+		"perf_locker":
+			ok = await _perf_locker(InputRouter.Device.TOUCH)
+		"perf_view_bottom":
+			ok = await _perf_view_bottom()
+		"perf_view_sling":
+			ok = await _perf_view_sling(InputRouter.Device.TOUCH)
+		"perf_view_top":
+			ok = await _perf_view_top()
+		"perf_walk":
+			ok = await _perf_walk(InputRouter.Device.TOUCH)
+		"perf_attrib", "perf_attrib_top", "perf_attrib_locker":
+			ok = await _perf_attrib()
 		"touch_matron_pipe":
 			ok = await _matron_pipe_touch(InputRouter.Device.TOUCH)
 		"touch_matron_ride":
@@ -485,12 +526,18 @@ func _run() -> void:
 			ok = await _look_set("hold")
 		"look_matron_fatal":
 			ok = await _look_set("fatal")
+		"look_matron_grade_ladder":
+			ok = await _look_set("grade_ladder")
+		"look_matron_fight":
+			ok = await _look_set("fight")
 		"touch_stock":
 			ok = await _stock_touch(InputRouter.Device.TOUCH)
 		"touch_forklift":
 			ok = await _forklift_touch(InputRouter.Device.TOUCH)
 		"touch_forklift_strain":
 			ok = await _forklift_strain_touch(InputRouter.Device.TOUCH)
+		"touch_forklift_ram":
+			ok = await _forklift_ram_touch(InputRouter.Device.TOUCH)
 		"touch_yard_crane":
 			ok = await _yard_crane_touch(InputRouter.Device.TOUCH)
 		"touch_crane_magnet":
@@ -517,6 +564,8 @@ func _run() -> void:
 			ok = await _look_summit(false)
 		"look_summit_ground":
 			ok = await _look_summit(true)
+		"look_mist_streak":
+			ok = await _look_mist_streak()
 		"touch_machines":
 			ok = await _machines(InputRouter.Device.TOUCH)
 		"touch_high":

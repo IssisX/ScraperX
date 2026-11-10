@@ -20,6 +20,8 @@ var _rubber: StandardMaterial3D
 var _brass: StandardMaterial3D
 var _leather: StandardMaterial3D
 var _bands: Array = []
+var _band_set: MultiMeshInstance3D
+var _anchor_sets: Array = []
 var _anchor_details: Array[Node3D] = []
 var _pouch: Node3D
 var _leather_mesh: MeshInstance3D
@@ -90,12 +92,21 @@ func _build_bands() -> void:
 	band.height = 1.0
 	band.radial_segments = 20
 	band.rings = 1
+	# Both bands' segments, instances of one MultiMesh (J-045, #248: one draw,
+	# not sixteen); a segment is its index, side * BAND_SEGMENTS + segment.
+	var segments := MultiMesh.new()
+	segments.transform_format = MultiMesh.TRANSFORM_3D
+	segments.mesh = band
+	segments.instance_count = 2 * BAND_SEGMENTS
+	_band_set = MultiMeshInstance3D.new()
+	_band_set.name = "RubberBands"
+	_band_set.multimesh = segments
+	_band_set.material_override = _rubber
+	add_child(_band_set)
 	for side in 2:
-		var pieces: Array[MeshInstance3D] = []
+		var pieces: Array[int] = []
 		for segment in BAND_SEGMENTS:
-			var piece := _mesh(self, band, _rubber)
-			piece.name = "RubberBand%d_%d" % [side, segment]
-			pieces.append(piece)
+			pieces.append(side * BAND_SEGMENTS + segment)
 		_bands.append(pieces)
 		# Brass plates and coach bolts where each band is lashed to its tip.
 		var detail := Node3D.new()
@@ -108,23 +119,66 @@ func _build_bands() -> void:
 			bolt.height = 0.11
 			_mesh(detail, bolt, _brass, Vector3(bolt_x, 0.195, 0.0)).scale.y = 0.35
 		_mesh(detail, _box(Vector3(0.62, 0.11, 0.80)), _rubber, Vector3(0.0, -0.09, 0.25))
+		_merge_leaves(detail)
 		_anchor_details.append(detail)
+	# Both anchors' brass and rubber, each one MultiMesh of the two: the
+	# anchor nodes stay, drawing nothing, their instances following them.
+	for index in 2:
+		var first := _anchor_details[0].get_child(index) as MeshInstance3D
+		var pair := MultiMesh.new()
+		pair.transform_format = MultiMesh.TRANSFORM_3D
+		pair.mesh = first.mesh
+		pair.instance_count = 2
+		var drawn := MultiMeshInstance3D.new()
+		drawn.name = "BandAnchors"
+		drawn.multimesh = pair
+		drawn.material_override = first.material_override
+		add_child(drawn)
+		_anchor_sets.append(pair)
+		for side in 2:
+			var part := _anchor_details[side].get_child(index) as MeshInstance3D
+			part.layers = 0
+			pair.set_instance_transform(side, Transform3D(Basis(), _anchor_details[side].position) * part.transform)
 
 
-# A unit cylinder along y stretched from a to b, thinned across by `width`.
-func _segment(instance: MeshInstance3D, a: Vector3, b: Vector3, width: float) -> void:
+# A node's fixed parts as one mesh per material (J-045, #248), in place.
+func _merge_leaves(parent: Node3D) -> void:
+	var tools := {}
+	var materials := {}
+	for child in parent.get_children():
+		var part := child as MeshInstance3D
+		if part == null or part.get_child_count() > 0 or part.mesh == null:
+			continue
+		var key := part.material_override.get_instance_id() if part.material_override != null else 0
+		if not tools.has(key):
+			var tool := SurfaceTool.new()
+			tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+			tools[key] = tool
+			materials[key] = part.material_override
+		(tools[key] as SurfaceTool).append_from(part.mesh, 0, part.transform)
+		parent.remove_child(part)
+		part.queue_free()
+	for key in tools:
+		var merged := MeshInstance3D.new()
+		merged.mesh = (tools[key] as SurfaceTool).commit()
+		merged.material_override = materials[key]
+		parent.add_child(merged)
+
+
+# A unit cylinder along y stretched from a to b, thinned across by `width`
+# (none when they meet): the band segment `index`.
+func _segment(index: int, a: Vector3, b: Vector3, width: float) -> void:
 	var span := b - a
-	if span.length_squared() < 0.000001:
-		instance.visible = false
-		return
-	instance.visible = true
-	var y := span.normalized()
-	var x := y.cross(Vector3.FORWARD)
-	if x.length_squared() < 0.001:
-		x = y.cross(Vector3.RIGHT)
-	x = x.normalized()
-	var z := x.cross(y).normalized()
-	instance.transform = Transform3D(Basis(x * width, y * span.length(), z * width), (a + b) * 0.5)
+	var at := Transform3D(Basis().scaled(Vector3.ZERO), a)
+	if span.length_squared() >= 0.000001:
+		var y := span.normalized()
+		var x := y.cross(Vector3.FORWARD)
+		if x.length_squared() < 0.001:
+			x = y.cross(Vector3.RIGHT)
+		x = x.normalized()
+		var z := x.cross(y).normalized()
+		at = Transform3D(Basis(x * width, y * span.length(), z * width), (a + b) * 0.5)
+	_band_set.multimesh.set_instance_transform(index, at)
 
 
 func _update_bands(state: Dictionary) -> void:
@@ -134,6 +188,9 @@ func _update_bands(state: Dictionary) -> void:
 	for side in 2:
 		var anchor: Vector3 = anchors[side]
 		_anchor_details[side].position = anchor
+		for index in _anchor_sets.size():
+			var part := _anchor_details[side].get_child(index) as MeshInstance3D
+			(_anchor_sets[index] as MultiMesh).set_instance_transform(side, _anchor_details[side].transform * part.transform)
 		var length := (pouch - anchor).length()
 		# Slack, the band hangs; stretched, it thins as rubber does, keeping
 		# its volume.
@@ -157,9 +214,13 @@ func _build_pouch() -> void:
 	_leather_mesh.material_override = _leather
 	_pouch.add_child(_leather_mesh)
 	# The band loops at the rim and their brass keepers.
+	var fittings := Node3D.new()
+	fittings.name = "PouchFittings"
+	_pouch.add_child(fittings)
 	for side in [-1.0, 1.0]:
-		_mesh(_pouch, _box(Vector3(0.055, 0.14, 0.50)), _leather, Vector3(side * 0.84, 0.45, 0.0))
-		_mesh(_pouch, _box(Vector3(0.075, 0.10, 0.20)), _brass, Vector3(side * 0.84, 0.48, 0.0))
+		_mesh(fittings, _box(Vector3(0.055, 0.14, 0.50)), _leather, Vector3(side * 0.84, 0.45, 0.0))
+		_mesh(fittings, _box(Vector3(0.075, 0.10, 0.20)), _brass, Vector3(side * 0.84, 0.48, 0.0))
+	_merge_leaves(fittings)
 
 
 func _rebuild_leather(fold: float) -> void:

@@ -18,7 +18,7 @@ extends RefCounted
 ## transpose. (MultiMesh also keeps them out of main.gd's static batcher,
 ## which recolours vertices.)
 
-const VARIANTS := 8
+const VARIANTS := 12
 const RADIAL := 64
 const RINGS := 32
 # Foot radius over height, the cones' own (main.gd builds every cone so).
@@ -59,7 +59,11 @@ static func draw(parent: Node3D, peaks: Array) -> void:
 		for i in list.size():
 			var spec: Dictionary = list[i]
 			var size := minf(float(spec["height"]), float(spec["radius"]) / ASPECT)
-			var basis := Basis(Vector3.UP, float(spec["variant"]) * 2.39996).scaled(Vector3.ONE * size)
+			# Turned by where it stands as well as by its variant, so two
+			# mountains of one variant never show the same face.
+			var foot: Vector3 = spec["foot"]
+			var turn := float(spec["variant"]) * 2.39996 + fposmod(foot.x * 0.0173 + foot.z * 0.0291, 1.0) * TAU
+			var basis := Basis(Vector3.UP, turn).scaled(Vector3.ONE * size)
 			mm.set_instance_transform(i, Transform3D(basis, spec["foot"]))
 			# Custom data is not colour-converted: the tint goes in linear.
 			var rock: Color = (spec["rock"] as Color).srgb_to_linear()
@@ -85,25 +89,55 @@ render_mode cull_back;
 uniform vec3 snow : source_color = vec3(0.84, 0.865, 0.9);
 uniform vec3 scrub : source_color = vec3(0.17, 0.2, 0.13);
 uniform vec3 scree : source_color = vec3(0.48, 0.47, 0.45);
+uniform vec3 meadow : source_color = vec3(0.247, 0.275, 0.204);
 varying vec4 tint;
 varying float rise;
+varying vec3 world;
+// Three numbers for this mountain, from where it stands: each one wears its
+// scrub, rock bands and tint its own way (job 4: no two neighbours alike).
+varying vec3 own;
+float h21(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+float vn(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), u.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), u.x), u.y);
+}
 void vertex() {
 	tint = INSTANCE_CUSTOM;
 	rise = VERTEX.y;
+	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	vec2 at = MODEL_MATRIX[3].xz * 0.01;
+	own = vec3(h21(at), h21(at + 17.3), h21(at + 41.9));
 }
 void fragment() {
 	float level = clamp((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).y, 0.0, 1.0);
 	float shade = COLOR.r;
 	float gully = COLOR.g;
-	// Rock, in bands across the face.
-	vec3 surface = tint.rgb * shade * (0.88 + 0.12 * sin(rise * 41.0 + shade * 7.0));
+	// Rock, in bands across the face, their spacing and depth its own.
+	float bands = 30.0 + 26.0 * own.y;
+	vec3 rock = tint.rgb * mix(vec3(0.94, 0.97, 1.04), vec3(1.06, 1.0, 0.92), own.z) * (0.9 + 0.2 * own.x);
+	vec3 surface = rock * shade * (0.86 + (0.08 + 0.08 * own.z) * sin(rise * bands + shade * 7.0));
 	// Scree lies on the benches and gentler ground.
-	surface = mix(surface, scree * shade, smoothstep(0.78, 0.93, level) * 0.65);
-	// Scrub and stunted pines low down, where the ground is not too steep.
-	float green = (1.0 - smoothstep(0.16, 0.3, rise + 0.1 * shade - 0.05 * gully)) * smoothstep(0.5, 0.7, level);
+	surface = mix(surface, scree * shade, smoothstep(0.78, 0.93, level) * (0.45 + 0.35 * own.y));
+	// Scrub and stunted pines low down, where the ground is not too steep: how
+	// high it climbs, how ragged its top and how thick, its own.
+	float top = 0.12 + 0.2 * own.x + 0.07 * (vn(world.xz * 0.02) - 0.5);
+	float green = (1.0 - smoothstep(top, top + 0.06 + 0.1 * own.z, rise + 0.1 * shade - 0.07 * gully))
+		* smoothstep(0.5, 0.7, level) * (0.45 + 0.55 * own.z);
 	surface = mix(surface, scrub * (0.75 + 0.4 * shade), green);
+	// At the foot, the cone a climber meets: talus fans run out of the gullies
+	// onto it, and it sinks into the valley's meadow, not a smooth skirt.
+	float foot = 1.0 - smoothstep(0.08, 0.17, rise);
+	float fans = smoothstep(0.5, 0.85, vn(world.xz * 0.025) * 0.7 + gully * 0.6);
+	surface = mix(surface, scree * shade * (0.55 + 0.25 * vn(world.xz * 0.12)), foot * fans * 0.5);
+	surface = mix(surface, meadow * (0.8 + 0.3 * vn(world.xz * 0.05)), 1.0 - smoothstep(0.0, 0.035, rise));
 	// Snow above the snowline, lower in the gullies, only where it can lie.
-	float line = tint.a > 0.0 ? tint.a - 0.14 * gully : 2.0;
+	float line = tint.a > 0.0 ? tint.a - 0.14 * gully - 0.05 * own.y : 2.0;
 	float white = smoothstep(line - 0.03, line + 0.05, rise) * smoothstep(0.32, 0.55, level);
 	surface = mix(surface, snow, white);
 	ALBEDO = surface;

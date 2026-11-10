@@ -248,3 +248,5 @@ void run_matron_exam() {
               << ", panel " << kinds[2] << ", ledge stack " << kinds[3] << "), " << fingerprints.size()
               << " distinct worlds; judge " << judged << " cases\n";
 }
+SCRAPERX_GROUP("matron_exam", 20, run_matron_exam);
+SCRAPERX_SELECT("matron-exam", run_matron_exam);

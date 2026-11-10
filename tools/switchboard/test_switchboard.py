@@ -11,6 +11,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import re
 import sys
 import types
 import unittest
@@ -176,6 +177,17 @@ class MergeRule(unittest.TestCase):
         self.assertEqual(rules.merge_decision(facts(rule_check_block=True), "xai").action, "WAIT")
         self.assertEqual(rules.merge_decision(facts(rule_check_block=None), "xai").action, "WAIT")
 
+    def test_a_declared_protected_change_merges_on_green_and_land(self):
+        protected = "fb-bot/integrate-protected-j033-sweep-scenario"
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True), "xai").action, "MERGE")
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, verdicts=()), "xai").action,
+                         "WAIT")
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, proof="running"), "xai").action,
+                         "WAIT")
+        # A never-edited file (MANIFEST, SHA256SUMS, the Governing Laws) blocks on every branch (Codex P1 on #203).
+        self.assertEqual(rules.merge_decision(facts(head_ref=protected, rule_check_block=True, never_edit=True), "xai").action,
+                         "WAIT")
+
     def test_eyes_need_the_bots_eye_land_on_the_head(self):
         need = frozenset({"eyes"})
         self.assertEqual(rules.merge_decision(facts(needs=need), "xai").action, "WAIT")
@@ -247,8 +259,44 @@ class Board(unittest.TestCase):
         self.assertEqual(rules.job_of_pr("Fixes it.\nJob: J-012\n"), "J-012")
         self.assertEqual(rules.job_of_pr(None), "")
         self.assertEqual(rules.job_of_title("J-031 Switchboard v0"), "J-031")
+        # a lettered sub-job is its own job, in a PR body, a commit message and an issue title
+        self.assertEqual(rules.job_of_pr("Job: J-044b: the grant is capped at real speed"), "J-044b")
+        self.assertEqual(rules.job_of_title("J-044b Fight math and risk"), "J-044b")
+        self.assertEqual(rules.job_of_pr("Job: J-044bc"), "")
+        self.assertEqual(rules.job_of_title("J-044B upper case is not a job"), "")
         self.assertEqual(rules.budget_override([("budget 12", "IssisX"), ("ok", "IssisX"), ("Budget 15.50\nthanks", "IssisX")], TEAM), "15.50")
         self.assertEqual(rules.budget_override([("my budget 12 is fine", "IssisX")], TEAM), "")
+
+    def test_superseded_prs_are_read_from_the_body(self):
+        self.assertEqual(rules.superseded_prs("Drawn-body checks.\nSupersedes #43, per the spec.", 100), [43])
+        self.assertEqual(rules.superseded_prs("supersedes #43 and #44; also Supersedes #43, #45", 100), [43, 44, 45])
+        self.assertEqual(rules.superseded_prs("Supersedes #100", 100), [])
+        self.assertEqual(rules.superseded_prs("Fixes #43. Supersedes nothing.", 100), [])
+        self.assertEqual(rules.superseded_prs(None, 1), [])
+
+    def test_a_ready_pr_closes_the_open_prs_it_supersedes(self):
+        class GH:
+            repo = "IssisX/ScraperX"
+            def __init__(self):
+                self.writes, self.comments = [], []
+            def get(self, path):
+                n = int(path.rsplit("/", 1)[1])
+                if n == 9:
+                    raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+                return {"state": "closed" if n == 44 else "open"}
+            def comment(self, number, body, what=""):
+                self.comments.append(number)
+            def write(self, method, path, body=None, what=""):
+                self.writes.append((method, path, body))
+        ctx = {"body": "Supersedes #43, #44 and #9"}
+        for draft, closed in ((False, [43]), (True, [])):
+            gh, lines = GH(), []
+            # J-072: which are open comes from the open-PR listing (#44 is closed, #9 is not a PR)
+            me = types.SimpleNamespace(gh=gh, out=lines.append, listing=lambda path: [{"number": 43}, {"number": 100}])
+            facts = types.SimpleNamespace(number=100, draft=draft)
+            switch.Switch.close_superseded(me, facts, ctx)
+            self.assertEqual(gh.comments, closed)
+            self.assertEqual(gh.writes, [("PATCH", f"repos/IssisX/ScraperX/pulls/{n}", {"state": "closed"}) for n in closed])
 
     def test_budget_override_ignores_outsiders_and_the_bot(self):
         self.assertEqual(rules.budget_override([("budget 100", "outside-team")], TEAM), "")
@@ -374,6 +422,63 @@ class RepoConfig(unittest.TestCase):
         looks = yaml.safe_load((root / "work/looks/sets.yml").read_text(encoding="utf-8"))
         for s in looks["sets"].values():
             self.assertTrue((root / s["rubric"]).is_file(), s["rubric"])
+            for job in rules.known_defect_jobs(s):   # J-068: a known defect names a job, J-NNN
+                self.assertRegex(job, rules.JOB_TITLE.pattern + "$")
+
+
+class EyeKnownDefect(unittest.TestCase):
+    """J-068: a set's known defect, owned by an open job, blocks only that job's PR; other sets are unchanged."""
+
+    LOOKS = {"artifact_prefix": "godot-audits-", "sets": {
+        "approach": {"rubric": "approach.md", "frames": ["a.png"]},
+        "ladder": {"rubric": "ladder.md", "known_defect": "J-063", "frames": ["l.png"]}}}
+
+    def run_eye(self, verdicts: dict, pr_job: str, open_jobs=("J-063",)) -> tuple[str, str]:
+        import tempfile
+        tmp = pathlib.Path(tempfile.mkdtemp())
+        for name in ("approach.md", "ladder.md"):
+            (tmp / name).write_text("1. a rubric line\n", encoding="utf-8")
+        gh = FakeGH()
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh, sw.now, sw.root, sw.looks, sw.lines = gh, NOW, tmp, self.LOOKS, []
+        sw.out = sw.lines.append
+        sw._jobs = {j: {"number": 1, "title": f"{j} a job", "labels": []} for j in open_jobs}
+        sw.frames = lambda run_id: {"a.png": b"\x89PNG", "l.png": b"\x89PNG"}
+        sw.job_cap = lambda ctx: Decimal("1")
+        answer = {"sets": [{"set": k, "verdict": v, "rubric_line": "1. a rubric line", "frame": "f.png",
+                            "reason": "seen"} for k, v in verdicts.items()]}
+        sw.paid = lambda *a, **k: claude_calls.Result(answer, "end_turn", "claude-opus-5-5", 1, 1)
+        sw.eye(facts(number=9), {"job": pr_job, "run_id": 7, "proof_url": "https://example.invalid/run/7"})
+        self.assertEqual(len(gh.posted), 1)
+        body = gh.posted[0][1]
+        return body.splitlines()[0], body
+
+    def test_owner_jobs_pr_is_blocked_by_its_sets_fix(self):
+        head, body = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-063")
+        self.assertTrue(head.endswith(": FIX**"), head)
+        self.assertNotIn("known defect", body)
+
+    def test_other_pr_is_shown_the_fix_but_not_blocked(self):
+        head, body = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-067")
+        self.assertTrue(head.endswith(": LAND**"), head)
+        self.assertIn("- ladder: FIX (known defect of J-063: shown, not blocking this PR)", body)
+        got = v(body, T1, rules.BOT_LOGIN)   # the merge rule reads the posted comment as an eye LAND
+        self.assertEqual((got.kind, got.verdict), ("eye", "LAND"))
+
+    def test_closed_owner_job_makes_the_set_count_again(self):
+        head, _ = self.run_eye({"approach": "LAND", "ladder": "FIX"}, "J-067", open_jobs=())
+        self.assertTrue(head.endswith(": FIX**"), head)
+
+    def test_set_without_the_field_is_unchanged(self):
+        head, body = self.run_eye({"approach": "FIX", "ladder": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": FIX**"), head)
+        self.assertNotIn("known defect", body)
+        head, _ = self.run_eye({"approach": "LAND", "ladder": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": LAND**"), head)
+
+    def test_an_unjudged_set_still_blocks(self):
+        head, _ = self.run_eye({"approach": "LAND"}, "J-067")
+        self.assertTrue(head.endswith(": FIX**"), head)
 
 
 class SessionBudget(unittest.TestCase):
@@ -1122,7 +1227,7 @@ class ReviewPool(unittest.TestCase):
 
 
 class RepoReviewModel(unittest.TestCase):
-    def test_the_api_review_is_opus_max(self):
+    def test_the_api_review_is_opus_high_and_the_security_pass_max(self):
         try:
             import yaml
         except ImportError:
@@ -1130,7 +1235,10 @@ class RepoReviewModel(unittest.TestCase):
         root = HERE.parents[1]
         b = money.budget_from_config(yaml.safe_load((root / "work/budget.yml").read_text(encoding="utf-8")))
         spec = b.calls["review"]
-        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "max", 64000))   # Cory, 11-04
+        self.assertEqual((spec.model, spec.effort, spec.max_tokens), ("claude-opus-5-5", "high", 64000))   # Cory, 11-08
+        sec = b.calls["security_review"]   # the workflow-file PR's security pass keeps max (Cory, 11-08: "split")
+        self.assertEqual((sec.model, sec.effort, sec.max_tokens), ("claude-opus-5-5", "max", 128000))
+        self.assertTrue(money.check(b, [], NOW, "J-1", money.worst_case(b, "security_review", sec.max_input_tokens)).ok)
         # The 64000 reserve passes the caps: the worst case at the full input limit fits one job's cap.
         worst = money.worst_case(b, "review", spec.max_input_tokens)
         self.assertEqual(worst, Decimal("1.880000"))   # 150,000 x $4/MTok + 64,000 x $20/MTok
@@ -1208,3 +1316,472 @@ class ApiReviewsClaude(unittest.TestCase):
     def test_its_fix_still_blocks(self):
         pr = facts(verdicts=(land("ChatGPT"), self.api("FIX")), head_ref="claude/integrate-x")
         self.assertEqual(rules.merge_decision(pr, "anthropic", self.ON).action, "FIX")
+
+
+class ScopedProof(unittest.TestCase):
+    """ci/proof_scope.py skips the test groups a push does not reach; a skipped job (a job-level `if`, which
+    leaves one skipped record for a whole matrix) reads as passing to the switchboard and to sweep.py."""
+
+    RUNS = {"workflow_runs": [{"id": 7, "status": "completed", "created_at": "2026-11-04T10:00:00Z",
+                               "html_url": "https://x/runs/7", "updated_at": "2026-11-04T10:30:00Z"}]}
+
+    def jobs(self, touch="success"):
+        return {"jobs": [{"name": "scope", "status": "completed", "conclusion": "success"},
+                         {"name": "host-build", "status": "completed", "conclusion": "success"},
+                         {"name": "native-tests", "status": "completed", "conclusion": "skipped"},
+                         {"name": "godot-touch (touch-1)", "status": "completed", "conclusion": touch},
+                         {"name": "godot-touch (touch-2)", "status": "completed", "conclusion": "success"},
+                         {"name": "android-build", "status": "completed", "conclusion": "skipped"},
+                         {"name": "android-apk", "status": "completed", "conclusion": "skipped"},
+                         {"name": "publish-checkpoint", "status": "completed", "conclusion": "skipped"}]}
+
+    def fake_get(self, touch):
+        return lambda path, accept="": self.RUNS if "/runs?head_sha=" in path else self.jobs(touch)
+
+    def switch_proof(self, touch="success"):
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=self.fake_get(touch))
+        return sw.proof("abc")[0]
+
+    def sweep_proof(self, touch="success"):
+        sys.path.insert(0, str(HERE.parent / "board"))
+        try:
+            import sweep
+        finally:
+            sys.path.pop(0)
+        get = self.fake_get(touch)
+        real, sweep.gh = sweep.gh, lambda path: get(path)
+        try:
+            return sweep.proof_state("IssisX/ScraperX", "abc")[0]
+        finally:
+            sweep.gh = real
+
+    def test_skipped_groups_read_green(self):
+        self.assertEqual(self.switch_proof(), "green")
+        self.assertEqual(self.sweep_proof(), "green")
+
+    def test_a_failed_shard_still_reads_red(self):
+        self.assertEqual(self.switch_proof("failure"), "red: godot-touch (touch-1)")
+        self.assertEqual(self.sweep_proof("failure"), "red: godot-touch (touch-1)")
+
+    def with_wake(self, run_status, touch_status):
+        """A run still in progress: the wake job running, touch-1 in touch_status."""
+        runs = {"workflow_runs": [dict(self.RUNS["workflow_runs"][0], status=run_status)]}
+        jobs = self.jobs()
+        jobs["jobs"][3] = dict(jobs["jobs"][3], status=touch_status,
+                               conclusion="success" if touch_status == "completed" else None)
+        jobs["jobs"].append({"name": "wake-switchboard", "status": "in_progress", "conclusion": None})
+        self.fake_get = lambda touch: (lambda path, accept="": runs if "/runs?head_sha=" in path else jobs)
+
+    def test_only_the_wake_job_left_reads_finished(self):
+        self.with_wake("in_progress", "completed")
+        self.assertEqual(self.switch_proof(), "green")
+        self.assertEqual(self.sweep_proof(), "green")
+
+    def test_a_proof_job_still_running_reads_running(self):
+        self.with_wake("in_progress", "in_progress")
+        self.assertEqual(self.switch_proof(), "running")
+        self.assertEqual(self.sweep_proof(), "running")
+
+
+class OldBoardsKeepMuseKeys(unittest.TestCase):
+    """bridge-health: a muse key sent while #107 was the board is still sent after the board moved to #340."""
+
+    NAME = "fb-bot/integrate-j044c-wreck"
+
+    def red_branch(self):
+        import test_inbox as ti
+        gh = ti.FakeGH(runs=[ti.run(40, self.NAME, ti.HEAD, hours=2)], jobs={40: ti.RED_JOBS},
+                       heads={self.NAME: ti.HEAD})
+        return ti, gh, switch.inbox_key("muse-RED-BRANCH", self.NAME, ti.HEAD)
+
+    def test_a_key_marked_on_a_closed_board_is_not_sent_again(self):
+        ti, gh, key = self.red_branch()
+        gh.by_issue[107] = [{"id": 9, "body": "CLAUDE_TO_MUSE: x RED-BRANCH on #107\n\n" +
+                             switch.MUSE_MARK.format(keys=key), "user": {"login": ti.BOT}}]
+        self.assertEqual(ti.make(gh).muse([]), 0)
+        self.assertEqual(gh.posts, [])
+        for old in switch.OLD_BOARDS:
+            self.assertIn(f"repos/IssisX/ScraperX/issues/{old}/comments?per_page=100&page=1", gh.gets)
+
+    def test_a_marker_by_another_login_on_a_closed_board_never_counts(self):
+        ti, gh, key = self.red_branch()
+        gh.by_issue[3] = [{"id": 9, "body": switch.MUSE_MARK.format(keys=key), "user": {"login": "IssisX"}}]
+        self.assertEqual(ti.make(gh).muse([]), 1)
+
+    def test_a_closed_board_read_is_bounded(self):
+        sw = switch.Switch.__new__(switch.Switch)
+        pages = []
+
+        def get(path, accept=""):
+            pages.append(path)
+            return [{"id": i} for i in range(100)]   # every page full: only the bound stops it
+        sw.gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=get)
+        self.assertEqual(len(sw.bounded_comments(107, switch.MAX_OLD_BOARD_PAGES)), 100 * switch.MAX_OLD_BOARD_PAGES)
+        self.assertEqual(len(pages), switch.MAX_OLD_BOARD_PAGES)
+
+
+PIPE_NOW = dt.datetime(2026, 11, 9, 15, 0, tzinfo=dt.timezone.utc)
+
+
+def pipe_at(minutes_ago: float) -> str:
+    return (PIPE_NOW - dt.timedelta(minutes=minutes_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def label_event(event: str, minutes_ago: float, name: str = "wake:muse") -> dict:
+    return {"event": event, "label": {"name": name}, "created_at": pipe_at(minutes_ago)}
+
+
+def pipe_comment(body: str, minutes_ago: float, login: str = rules.BOT_LOGIN) -> dict:
+    return {"body": body, "user": {"login": login}, "created_at": pipe_at(minutes_ago)}
+
+
+class PipeGH:
+    """The reads pipe_health makes: wake:muse issues, their events, the board, repo comments since a time."""
+
+    repo = "IssisX/ScraperX"
+
+    def __init__(self, wake=None, board=(), comments=()):
+        self.wake = dict(wake or {})          # issue number -> its events
+        self.board, self.comments = list(board), list(comments)
+        self.gets, self.posted = [], []
+
+    def get(self, path, accept=""):
+        self.gets.append(path)
+        if path.startswith(f"repos/{self.repo}/issues?") and "labels=wake%3Amuse" in path:
+            return [{"number": n} for n in self.wake]
+        raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+
+    def paged(self, path, key=""):
+        self.gets.append(path)
+        base = path.split("?")[0]
+        if base == f"repos/{self.repo}/issues/{switch.BOARD_ISSUE}/comments":
+            return list(self.board)
+        if base == f"repos/{self.repo}/issues/comments":
+            since = re.search(r"[?&]since=([^&]+)", path).group(1)
+            return [c for c in self.comments if c["created_at"] >= since]
+        m = re.fullmatch(rf"repos/{self.repo}/issues/(\d+)/events", base)
+        if m:
+            return list(self.wake[int(m.group(1))])
+        raise switch.GitHubError("GET", path, "gh: Not Found (HTTP 404)")
+
+    def comment(self, number, body, what=""):
+        self.posted.append((number, body))
+        self.board.append(pipe_comment(body, 0))
+
+
+def pipe_switch(gh, now=PIPE_NOW):
+    sw = switch.Switch.__new__(switch.Switch)
+    sw.gh, sw.now, sw.lines = gh, now, []
+    sw.out = sw.lines.append
+    return sw
+
+
+BRIDGE = "**Muse (via email bridge): J-047 done**\n\nok"
+ASK = "CLAUDE_TO_MUSE: J-047 RED on #344 @ 1a2b3c4d\n\n- red"
+
+
+class PipeHealth(unittest.TestCase):
+    """bridge-health: a stuck Muse mail pipe is loud, once per incident (11-07: #107 sat labeled for 42 h)."""
+
+    def test_a_healthy_pipe_posts_nothing(self):
+        gh = PipeGH(wake={343: [label_event("labeled", 4)]},
+                    comments=[pipe_comment(ASK, 60), pipe_comment(BRIDGE, 30, login="IssisX")])
+        sw = pipe_switch(gh)
+        self.assertEqual(sw.pipe_health(), [])
+        self.assertEqual(gh.posted, [])
+        self.assertIn("PIPE        healthy", sw.lines)
+
+    def test_a_wake_label_older_than_20_min_alarms_once(self):
+        gh = PipeGH(wake={343: [label_event("labeled", 300), label_event("unlabeled", 290), label_event("labeled", 45)],
+                          337: [label_event("labeled", 10)]},
+                    comments=[pipe_comment(BRIDGE, 30, login="IssisX")])
+        (line,) = pipe_switch(gh).pipe_health()
+        self.assertTrue(line.startswith("OUTBOUND STUCK:"))
+        self.assertIn("#343 since 8:15 AM Central (0.8 h)", line)   # the label's latest stint, not its first
+        self.assertNotIn("#337", line)
+        (number, body), = gh.posted
+        self.assertEqual(number, switch.BOARD_ISSUE)
+        self.assertTrue(body.startswith("Claude (integrator): PIPE ALARM:"))
+        self.assertTrue(body.endswith(switch.PIPE_MARK.format(kinds="outbound")))
+        self.assertIsNone(switch.VERDICT_TRIGGER.search(body))   # the alarm cannot wake the switchboard
+        sw = pipe_switch(gh, PIPE_NOW + dt.timedelta(minutes=15))   # next sweep, same incident: printed, not posted
+        self.assertEqual(len(sw.pipe_health()), 1)
+        self.assertEqual(len(gh.posted), 1)
+        self.assertTrue(any(l.startswith("PIPE ALARM  OUTBOUND STUCK") for l in sw.lines))
+
+    def test_a_new_outbound_incident_alarms_again(self):
+        mark = "x\n\n" + switch.PIPE_MARK.format(kinds="outbound")
+        gh = PipeGH(wake={343: [label_event("labeled", 30)]}, board=[pipe_comment(mark, 600)])
+        pipe_switch(gh).pipe_health()   # every label now stuck went on after the last alarm: a new incident
+        self.assertEqual(len(gh.posted), 1)
+        gh = PipeGH(wake={343: [label_event("labeled", 700)], 299: [label_event("labeled", 30)]},
+                    board=[pipe_comment(mark, 600)])
+        pipe_switch(gh).pipe_health()   # #343 was stuck at the last alarm: the same incident
+        self.assertEqual(gh.posted, [])
+
+    def test_an_alarm_marker_by_another_login_never_counts(self):
+        gh = PipeGH(wake={343: [label_event("labeled", 30)]},
+                    board=[pipe_comment("x\n\n" + switch.PIPE_MARK.format(kinds="outbound"), 10, login="IssisX")])
+        pipe_switch(gh).pipe_health()
+        self.assertEqual(len(gh.posted), 1)
+
+    def test_asks_with_no_bridge_post_in_24_h_alarm_once(self):
+        gh = PipeGH(comments=[pipe_comment(BRIDGE, 26 * 60, login="IssisX"), pipe_comment(ASK, 120)])
+        (line,) = pipe_switch(gh).pipe_health()
+        self.assertTrue(line.startswith("INBOUND STUCK: 1 CLAUDE_TO_MUSE ask(s) in the last 24.0 h"))
+        (number, body), = gh.posted
+        self.assertEqual(number, switch.BOARD_ISSUE)
+        self.assertTrue(body.endswith(switch.PIPE_MARK.format(kinds="inbound")))
+        self.assertIsNone(switch.VERDICT_TRIGGER.search(body))
+        gh.comments.append(pipe_comment(ASK, -29 * 60))   # 30 h on, still quiet: the same incident, no repeat
+        self.assertEqual(len(pipe_switch(gh, PIPE_NOW + dt.timedelta(hours=30)).pipe_health()), 1)
+        self.assertEqual(len(gh.posted), 1)
+
+    def test_inbound_recovered_then_stuck_again_is_a_new_incident(self):
+        gh = PipeGH(board=[pipe_comment("x\n\n" + switch.PIPE_MARK.format(kinds="inbound"), 40 * 60)],
+                    comments=[pipe_comment(BRIDGE, 30 * 60, login="IssisX"), pipe_comment(ASK, 60)])
+        pipe_switch(gh).pipe_health()
+        (_, body), = gh.posted
+        self.assertIn("INBOUND STUCK", body)
+
+    def test_no_asks_means_no_inbound_alarm(self):
+        gh = PipeGH(comments=[pipe_comment(BRIDGE, 30 * 60, login="IssisX")])
+        self.assertEqual(pipe_switch(gh).pipe_health(), [])
+        self.assertEqual(gh.posted, [])
+
+
+class FactsGH:
+    """The reads pr_facts makes for PR #256 (job J-042, issue #300): a table by path."""
+
+    repo = "IssisX/ScraperX"
+
+    def __init__(self, pr_comments=(), issue_comments=(), board=(), with_issue=True):
+        self.table = {
+            "repos/IssisX/ScraperX/pulls/256": {"mergeable": True},
+            f"repos/IssisX/ScraperX/commits/{HEAD}": {"commit": {"committer": {"date": T0}}},
+            "repos/IssisX/ScraperX/issues/256/comments": list(pr_comments),
+            "repos/IssisX/ScraperX/pulls/256/reviews": [],
+            "repos/IssisX/ScraperX/pulls/256/files": [],
+            "repos/IssisX/ScraperX/issues/300/comments": list(issue_comments),
+            f"repos/IssisX/ScraperX/issues/{switch.BOARD_ISSUE}/comments": list(board),
+            "repos/IssisX/ScraperX/issues?labels=job&state=open":
+                [{"number": 300, "title": "J-042 windup", "labels": []}] if with_issue else [],
+        }
+
+    def get(self, path, accept=""):
+        if "/actions/workflows/" in path:
+            return {"workflow_runs": []}
+        return self.table[path]
+
+    def paged(self, path, key=""):
+        return list(self.table[path])
+
+
+def bridged(first: str, login: str = "IssisX", at: str = T1) -> dict:
+    return {"body": f"**Muse (via email bridge): {first}**\n\nLooks right.\n\n_Mailed 9:00 AM Central._",
+            "user": {"login": login}, "created_at": at}
+
+
+class BridgedVerdicts(unittest.TestCase):
+    """The bridge's Issues-only token cannot comment on a PR (11-09), so Muse's mailed verdict on #256 lands on the
+    job issue or the board. The switch must still count it for #256, and only for #256."""
+
+    PR = {"number": 256, "head": {"sha": HEAD, "ref": "fb-bot/integrate-j042"}, "base": {"ref": rules.TRUNK},
+          "draft": False, "labels": [], "title": "J-042", "body": "Job: J-042\n"}
+
+    def facts(self, gh):
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.gh, sw.team, sw.review_key, sw._jobs, sw._board = gh, TEAM, "", None, None
+        return sw.pr_facts(self.PR)
+
+    def test_a_verdict_on_the_job_issue_counts_for_its_pr(self):
+        facts, ctx = self.facts(FactsGH(issue_comments=[bridged("J-042 review of #256 @ 1a2b3c4d: LAND")]))
+        (v,) = facts.verdicts
+        self.assertEqual((v.who, v.verdict, v.sha, v.kind), ("Muse", "LAND", "1a2b3c4d", "review"))
+        self.assertTrue(rules.names_head(v, HEAD))
+        self.assertEqual(ctx["comments"], [])   # the PR's own thread is unchanged: markers are read there as before
+
+    def test_a_verdict_on_the_board_counts_when_there_is_no_job_issue(self):
+        gh = FactsGH(board=[bridged("review of #256 @ 1a2b3c4d: FIX")], with_issue=False)
+        gh.table["repos/IssisX/ScraperX/issues/256/comments"] = []
+        facts, _ = self.facts(gh)
+        (v,) = facts.verdicts
+        self.assertEqual((v.who, v.verdict), ("Muse", "NOTE"))   # a FIX with no repro lines reads as a NOTE, as on the PR
+
+    def test_only_bridge_posts_naming_this_pr_count(self):
+        facts, _ = self.facts(FactsGH(
+            issue_comments=[bridged("review of #2560 @ 1a2b3c4d: LAND"),                     # another PR
+                            bridged("J-042 done, see #256: LAND"),                           # not a review of #256
+                            {"body": "**Muse (review of #256 @ 1a2b3c4d): LAND**", "user": {"login": "IssisX"},
+                             "created_at": T1},                                              # not the bridge's
+                            bridged("review of #256 @ 1a2b3c4d: LAND", login="someone")],    # not a verdict login
+            board=[bridged("review of #256 @ 1a2b3c4d: LAND", login="someone")]))
+        self.assertEqual(list(facts.verdicts), [])
+
+    def test_a_verdict_on_the_pr_still_counts_once(self):
+        facts, _ = self.facts(FactsGH(pr_comments=[bridged("review of #256 @ 1a2b3c4d: LAND")]))
+        self.assertEqual(len(facts.verdicts), 1)
+
+
+class MuseAskNeverOnAPr(unittest.TestCase):
+    """A review ask to Muse goes on the job issue, else the board, never on the PR (its wake:muse label stuck the
+    bridge from 11-07 to 11-09: the Issues-only token cannot remove a PR's label)."""
+
+    def test_no_job_issue_asks_on_the_board(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        ((number, body),) = gh.posted
+        self.assertEqual(number, switch.BOARD_ISSUE)
+        self.assertTrue(body.startswith("CLAUDE_TO_MUSE: J-031 review #9 @ 1a2b3c4d"))
+        self.assertEqual(gh.writes, [("POST", f"repos/IssisX/ScraperX/issues/{switch.BOARD_ISSUE}/labels")])
+
+    def test_an_ask_on_the_board_is_found_next_sweep(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        gh2 = rf.FakeGH([dict(rf.ask_comment("muse", 0.5))])   # the board (and the PR) now hold the ask's marker
+        rf.make(gh2).ask_review(rf.pr_facts(), rf.ctx(issue=None), "muse", "")
+        self.assertEqual(gh2.posted, [])
+
+    def test_other_agents_still_ask_on_the_pr(self):
+        import test_review_fallback as rf
+        gh = rf.FakeGH()
+        rf.make(gh).ask_review(rf.pr_facts(), rf.ctx(issue=None), "chatgpt", "")
+        self.assertEqual(gh.posted[0][0], 9)
+
+
+class SweepHeartbeat(unittest.TestCase):
+    """J-072: a full non-dry sweep pings Healthchecks.io once at its end; the URL is a secret and never printed."""
+
+    URL = "https://hc-ping.com/0f0e0d0c-aaaa-bbbb-cccc-123456789abc"
+
+    def ping(self, url, failed, fail_with=None):
+        sent, out = [], []
+
+        def opener(req, timeout):
+            sent.append((req.full_url, req.get_method(), timeout))
+            if fail_with:
+                raise fail_with
+            return types.SimpleNamespace(close=lambda: None)
+        return switch.sweep_heartbeat(url, failed, out.append, opener), sent, out
+
+    def test_unset_is_a_no_op(self):
+        self.assertEqual(self.ping("", 0), (False, [], []))
+
+    def test_success_pings_the_url_and_failure_pings_fail(self):
+        ok, sent, out = self.ping(self.URL, 0)
+        self.assertTrue(ok)
+        self.assertEqual(sent, [(self.URL, "POST", switch.HC_TIMEOUT_S)])
+        ok, sent, out2 = self.ping(self.URL + "/", 2)
+        self.assertEqual(sent[0][0], self.URL + "/fail")
+        self.assertFalse(any("hc-ping" in line for line in out + out2))
+
+    def test_only_https_and_a_broken_ping_never_raises_or_leaks(self):
+        self.assertEqual(self.ping("http://hc-ping.com/x", 0)[1], [])
+        import urllib.error
+        ok, _, out = self.ping(self.URL, 0, urllib.error.URLError(f"refused {self.URL}"))
+        self.assertFalse(ok)
+        self.assertFalse(any("0f0e0d0c" in line for line in out), out)
+
+    def test_main_wires_it_to_the_end_of_a_full_non_dry_steer_sweep_only(self):
+        src = (HERE / "switch.py").read_text(encoding="utf-8")
+        main = src[src.index("def main() -> int:"):]
+        self.assertIn('hc_sweep = os.environ.pop(HC_SWEEP_ENV, "").strip()', main)
+        call = main.index("sweep_heartbeat(hc_sweep, failed, sw.out)")
+        guard = main.rindex("if steer and not (args.pr or args.sha):", 0, call)
+        self.assertIn("if not args.dry_run:", main[guard:call])
+        self.assertLess(main.index("if args.digest or args.force_digest:"), guard)   # a digest returns first
+
+
+SWEPT = dt.datetime(2026, 11, 6, 20, 0, tzinfo=dt.timezone.utc)   # test_inbox.NOW: the fake GitHub's clock
+
+
+class LiveReconcilerRetry(unittest.TestCase):
+    """J-072 (ChatGPT, comment 6752048443): the live reconciler is a part like the ledger. A pass that raised or gave
+    up fails the sweep (heartbeat /fail); one that backed off on the rate limit is left for the next sweep. Either
+    way it is due again at the very next sweep (a full pass), and once it commits it is not run again until due."""
+
+    def sweep(self, whole, now, rec):
+        from unittest import mock
+        import test_inbox
+        import test_sweep_calls as tsc
+        gh = tsc.CountingGH([tsc.pr(n) for n in range(361, 364)], dry_run=False)
+        sw = test_inbox.make(gh, now)
+        sw.root = HERE.parents[1]
+        sw.merge_token = sw.review_key = ""
+        sw._jobs = sw._board = None
+        gh.state = json.loads(json.dumps(whole))
+        gh.remaining = gh.limit = gh.reset = None
+        args = types.SimpleNamespace(part="steer", pr=0, sha="", issue=0, label="", digest=False,
+                                     force_digest=False, dry_run=False)
+        beats: list[int] = []
+        with mock.patch("ledger.sweep", side_effect=tsc.no_ledger), \
+                mock.patch("reconciler.sweep", side_effect=rec), \
+                mock.patch.object(switch, "sweep_heartbeat", side_effect=lambda url, failed, out: beats.append(failed)):
+            status = switch.run_sweep(sw, args, now, "https://hc-ping.com/x")
+        return status, beats, gh.state, sw.lines
+
+    def test_a_failed_or_uncommitted_live_pass_is_due_at_the_next_sweep(self):
+        import reconciler
+        ok = reconciler.Result("committed", "h", {}, 1, 3)
+        for first, want_status, want_beat in (
+                (switch.GitHubError("GET", "x", "gh: (HTTP 502)", 502), 2, 1),
+                (reconciler.Result("gave-up", None, {}, 4, 0), 2, 1),
+                (reconciler.Result("backoff", "h", {}, 1, 2), 0, 0)):
+            with self.subTest(first=getattr(first, "status", type(first).__name__)):
+                calls: list = []
+
+                def rec(*a, first=first, calls=calls):
+                    calls.append(1)
+                    if len(calls) > 1:
+                        return ok
+                    if isinstance(first, Exception):
+                        raise first
+                    return first
+                status, beats, state, lines = self.sweep({}, SWEPT, rec)
+                self.assertEqual((status, beats), (want_status, [want_beat]), lines)
+                self.assertIn("the reconciler", state["steer"]["retry"])
+                status, beats, state, _ = self.sweep(state, SWEPT + dt.timedelta(minutes=10), rec)
+                self.assertEqual(len(calls), 2, "retried at the very next sweep")
+                self.assertEqual((status, beats, state["steer"]["retry"]), (0, [0], []))
+                self.sweep(state, SWEPT + dt.timedelta(minutes=20), rec)
+                self.assertEqual(len(calls), 2, "then not again before the next full pass")
+
+
+class DryRunVisible(unittest.TestCase):
+    """J-072: a dry run names itself, in its job summary and its run-name; only a real sweep is "Switchboard sweep"."""
+
+    def test_a_dry_run_writes_dry_at_the_top_of_the_summary(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "summary.md")
+            switch.note_dry_run(path)
+            self.assertTrue(pathlib.Path(path).read_text(encoding="utf-8").startswith("### DRY RUN"))
+        switch.note_dry_run(None)   # no summary file outside Actions: nothing to write
+
+    @staticmethod
+    def workflow(name="switchboard.yml"):
+        import yaml
+        return yaml.safe_load((HERE.parents[1] / ".github/workflows" / name).read_text(encoding="utf-8"))
+
+    def test_run_name_and_the_bridge_agree_on_the_sweep_title(self):
+        title = re.search(r"var SWEEP_TITLE = '([^']+)'", (HERE / "muse_bridge.gs").read_text(encoding="utf-8")).group(1)
+        run_name = self.workflow()["run-name"]
+        self.assertEqual(title, "Switchboard sweep")
+        self.assertIn(f"'{title}'", run_name)
+        # the dry test comes before the sweep fallback, so a dry dispatch is never named a sweep
+        self.assertLess(run_name.index("inputs.dry_run && 'Switchboard DRY run"), run_name.index(f"'{title}'"))
+
+    def test_a_dispatch_is_real_unless_asked_dry(self):
+        self.assertIs(self.workflow()[True]["workflow_dispatch"]["inputs"]["dry_run"]["default"], False)
+
+    def test_every_workflow_run_name_matches_a_workflow_literally(self):
+        # `workflows:` entries are glob patterns: an unescaped + * ? [ ] ! is not literal, so the proof's
+        # "013 + ascent" never matched its own name (the trigger last fired 11-05). Escaped, `\+` is literal.
+        names = {str(self.workflow(p.name).get("name") or "") for p in (HERE.parents[1] / ".github/workflows").glob("*.yml")}
+        for entry in (self.workflow()[True].get("workflow_run") or {}).get("workflows", []):
+            tokens = re.findall(r"\\.|.", entry, re.DOTALL)
+            self.assertFalse([t for t in tokens if t in "+*?[]!"], f"unescaped glob character in {entry!r}")
+            self.assertIn("".join(t[-1] for t in tokens), names, entry)

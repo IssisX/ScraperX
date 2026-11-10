@@ -2,7 +2,9 @@
 // Members of Simulation::PhysicsWorld (physics_world.hpp).
 
 #include "sim/physics_world.hpp"
+#include "sim/matron_effort.hpp"
 #include "sim/twin_tower.hpp"
+#include <chrono>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 
 namespace scraperx::sim::detail {
@@ -365,9 +367,18 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // What the Matron takes and throws as a pest (matron.hpp): after the
     // weights, so saves made before them line up too.
     loose_stock_->lay_matron_throwables();
+    // The east/west stock dress_tower recorded: last in the table, after
+    // the throwables, so nothing already laid is renumbered and saves
+    // made before it still load (loose_stock.hpp).
+    loose_stock_->append_reserved();
+    // The bands' rings above 396.25 m and the top decks dress_tower
+    // recorded: last in the table, after the east/west stock, so nothing
+    // already laid is renumbered and saves made before them still load.
+    loose_stock_->append_upper();
     {
         std::vector<Matron::Throwable> throwables;
-        for (int i = loose_stock_->count() - LooseStock::kMatronThrowables; i < loose_stock_->count(); ++i) {
+        for (int i = loose_stock_->matron_throwables_begin();
+             i < loose_stock_->matron_throwables_begin() + LooseStock::kMatronThrowables; ++i) {
             const kit::BodyIndex body = loose_stock_->body(i);
             throwables.push_back({kit_->body_id(body), kit_->body_entity(body),
                                   LooseStock::carry_handle(loose_stock_->placed()[static_cast<std::size_t>(i)].kind)});
@@ -377,7 +388,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         // first, then 143, the ring and 132, to her 32. No piece is laid for
         // it: the kit's bodies, saves and stock counts are as they were.
         for (const float deck : {Matron::kDeckTop, 143.0F, Matron::kRingFloor, 132.0F}) {
-            for (int i = 0; i < loose_stock_->count() - LooseStock::kMatronThrowables && throwables.size() < 32; ++i) {
+            for (int i = 0; i < loose_stock_->matron_throwables_begin() && throwables.size() < 32; ++i) {
                 const LooseStock::Placement &p = loose_stock_->placed()[static_cast<std::size_t>(i)];
                 const bool kind = p.kind == LooseStock::Kind::Toolbox || p.kind == LooseStock::Kind::Drum ||
                                   p.kind == LooseStock::Kind::Crate;
@@ -385,6 +396,11 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
                     continue;
                 }
                 const kit::BodyIndex body = loose_stock_->body(i);
+                // A piece with no body yet is not hers to take or shove
+                // yet; skipping it keeps her list the pre-world-b one.
+                if (!body.valid()) {
+                    continue;
+                }
                 throwables.push_back({kit_->body_id(body), kit_->body_entity(body), LooseStock::carry_handle(p.kind)});
             }
         }
@@ -404,7 +420,13 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         impacts_->track(kit_->body_id(body), kit_->body_entity(body), sound, kit_->body_mass(body));
     };
     for (int i = 0; i < loose_stock_->count(); ++i) {
-        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+        const kit::BodyIndex body = loose_stock_->body(i);
+        // Reserved east/west spots have no body yet; they are tracked
+        // below, once built.
+        if (!body.valid()) {
+            continue;
+        }
+        track(body, LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         track(truck->chassis_body(), ImpactSound::Machine);
@@ -413,8 +435,71 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     track(yard_crane_->hook_body(), ImpactSound::Machine);
     track(yard_crane_->magnet_body(), ImpactSound::HeavySteel);
     track(yard_crane_->spreader_body(), ImpactSound::HeavySteel);
+    // The tower's machines (gap 10): each stage's moving parts, after the older
+    // tracked bodies so their order is unchanged. The rider's part is the stage's
+    // running source; its counterweight, boom or leaf is heard only when it strikes.
+    const auto machine = [this](const kit::BodyIndex body, const ImpactSound sound, const bool runs) {
+        (void)impacts_->track_machine(kit_->body_id(body), kit_->body_entity(body), sound,
+                                      kit_->body_mass(body), runs);
+    };
+    constexpr ImpactSound kM = ImpactSound::Machine;
+    constexpr ImpactSound kS = ImpactSound::HeavySteel;
+    machine(well_.a_cage, kM, true);
+    machine(well_.a_skip, kS, false);
+    machine(well_.b_cage, kM, true);
+    machine(well_.b_boom, kS, false);
+    machine(well_.c_platform, kM, true);
+    machine(well_.c_dumpster, ImpactSound::Container, false);
+    machine(wet_.d_platform, kM, true);
+    machine(wet_.e_cab, kM, true);
+    machine(wet_.e_door, kS, false);
+    machine(wet_.e_leaf_east, kS, false);
+    machine(wet_.f_platform, kM, true);
+    machine(wet_.f_accumulator, kS, false);
+    machine(shop_.g_platform, kM, true);
+    machine(shop_.g_tower, kS, false);
+    machine(shop_.h_platform, kM, true);
+    machine(shop_.h_girder, kS, false);
+    machine(shop_.i_cage, kM, true);
+    machine(shop_.i_monolith, kS, false);
+    machine(shop_.i_domino, kS, false);
+    machine(crane_.j_traveler, kM, true);
+    machine(crane_.j_wagon, kS, false);
+    machine(crane_.k_cage, kM, true);
+    machine(crane_.k_jib, kS, false);
+    machine(crane_.l_cab, kM, true);
+    machine(crane_.l_weight, kS, false);
+    machine(service_.m_cage, kM, true);
+    machine(service_.n_cage, kM, true);
+    machine(service_.n_hopper, kS, false);
+    machine(service_.o_cab, kM, true);
+    machine(service_.o_wheel, kS, false);
+    machine(bay_->leaf_body(), kS, false);
 
     summit_->build_ending();
+    // The east/west spots dress_tower reserved: their bodies come next in
+    // the kit's build order, after the bay, the twin tower and the summit,
+    // so every pre-existing body keeps its place. They are heard like any
+    // other stock once built.
+    for (const int i : loose_stock_->realize_reserved()) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
+
+    // The forklift on her deck, 154 (J-041): its two kit bodies after the
+    // east/west pieces, so older saves' lists line up; its hits heard like the rest.
+    forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
+                                                    Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity,
+                                                    Forklift::kDeck154ParkX, Forklift::kDeck154ParkZ, 0.0F,
+                                                    Forklift::kDeck154ParkY));
+    track(forklifts_.back()->chassis_body(), ImpactSound::Machine);
+    track(forklifts_.back()->carriage_body(), ImpactSound::Machine);
+
+    // The upper stock (J-014): its bodies after the deck-154 forklift, so
+    // the forklift keeps its place right after the east/west pieces and
+    // the magnet's pinned append order still holds. Heard like the rest.
+    for (const int i : loose_stock_->realize_upper()) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
 
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);
@@ -519,6 +604,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
     StepCommands commands = requested;
+    effort::begin_tick();   // J-046 measurement only
+    effort_dt_ = delta_seconds;
     // A punch under way owns his hands (physics_world_strike.cpp).
     strike_owns_hands(commands);
     // WO-008: captured before anything this tick can change grounded_, so
@@ -703,12 +790,41 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     summit_->pre_step();
     // What the Matron can hear besides the player (matron.hpp hear): the last
     // step's hits, hardest first, then the yard crane's drives while they run.
+    // A machine part she is on or against (a leaf, a platform, a cage she
+    // steps onto) is struck by her own weight: her own sound, as her body's
+    // within kOwnSoundM is, though its center lies farther off. Read from the
+    // part's bounds, grown by kOwnTouchM, only for a hit (deterministic).
+    const auto matron_on_machine = [this, &bodies](const std::uint64_t entity) {
+        constexpr float kOwnTouchM = 0.3F;
+        const JPH::BodyID part = impacts_->machine_body(entity);
+        if (part.IsInvalid()) {
+            return false;
+        }
+        JPH::AABox box;
+        {
+            const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), part);
+            if (!lock.Succeeded()) {
+                return false;
+            }
+            box = lock.GetBody().GetWorldSpaceBounds();
+        }
+        box.ExpandBy(JPH::Vec3::sReplicate(kOwnTouchM));
+        return box.Contains(JPH::Vec3(bodies.GetPosition(matron_->body())));
+    };
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
         // Her own throw coming down is not a sound to her (matron.hpp).
-        if (loud > 0.0F && hit.entity != matron_->thrown_entity()) {
+        if (loud > 0.0F && hit.entity != matron_->thrown_entity() && !matron_on_machine(hit.entity)) {
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
+    }
+    // The tower's machines while they run; one she rides is her own sound too.
+    for (const ImpactLedger::Running &run : impacts_->running()) {
+        if (matron_on_machine(run.entity)) {
+            continue;
+        }
+        matron_->hear(static_cast<float>(run.at.GetX()), static_cast<float>(run.at.GetY()),
+                      static_cast<float>(run.at.GetZ()), run.loudness);
     }
     for (const YardCrane::Noise &noise : yard_crane_->noises()) {
         if (noise.loudness > 0.0F) {
@@ -756,9 +872,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     matron_->set_player_on_ladder(traversal_state_ == TraversalState::Climbing);
     // His true state, which she cannot open: her perception (matron_perception.hpp)
     // makes her evidence of it.
-    matron_->pre_step(delta_seconds,
-                      Stimulus(player_at, std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
-                                                   static_cast<float>(commands.room_loudness))));
+    {
+        const Stimulus heard(player_at, std::max(matron_loudness(bodies) * bay_->mask_factor(player_at),
+                                                 static_cast<float>(commands.room_loudness)));
+        const auto started = std::chrono::steady_clock::now();
+        matron_->pre_step(delta_seconds, heard);
+        step_spans_.matron_pre_us =
+            std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - started).count();
+    }
     grab_drive(bodies, delta_seconds);
     strike_step(bodies, commands, delta_seconds);
     if (body_hers && !was_grounded_before_tick) {
@@ -781,7 +902,20 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // off them.
     contact_listener_.set_planted_grip(
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
-    physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
+    // His own run is no blow (J-048): up to the flow's speed over his frame,
+    // while his own drive moves him (own_drive_) and nothing has taken him
+    // since the last step.
+    const bool own_drive = own_drive_ && traversal_state_ == TraversalState::None && !sling_controlling &&
+                           !zip_riding_ && grip_ == nullptr && !hook_hauls(commands.hook_reel);
+    contact_listener_.set_own_drive(airborne_inherited_velocity_, own_drive ? kFlowSpeedMps : 0.0F);
+    {
+        const auto started = std::chrono::steady_clock::now();
+        effort_before_update();   // J-046 measurement only: reads, writes nothing
+        physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
+        step_spans_.physics_us =
+            std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - started).count();
+        effort_after_update(delta_seconds);   // J-046 measurement only: reads, writes nothing
+    }
     kit_->post_step(delta_seconds);
     bay_->post_step();
     impacts_->post_step(carried_entity_);
@@ -816,7 +950,12 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     summit_->post_step();
     grab_post_step(bodies, delta_seconds);
-    matron_->post_step(delta_seconds);
+    {
+        const auto started = std::chrono::steady_clock::now();
+        matron_->post_step(delta_seconds);
+        step_spans_.matron_post_us =
+            std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - started).count();
+    }
     if (arms_lost() == 2 && !matron_->claimed() && !matron_->claim_armless()) {
         // No body goes on armless (Cory, 2026-10-27: your second arm gone is
         // the fatality). She claims it (matron_hold.cpp); when she cannot
@@ -844,6 +983,19 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     support_sample_ = support;
     grounded_ = support.grounded;
     support_entity_id_ = support.entity_id;
+    // His own drive (own_drive_): a traversal, a machine or the Matron's
+    // hands take it; on his feet, free of them and within his own run's reach
+    // of his frame, it is his again (a throw's slide past that is still the
+    // throw's); a free flight keeps what started it. (A shove after this,
+    // below, takes it again.)
+    if (traversal_state_ != TraversalState::None || slingshot_->controls_player() || swing_->controls_player() ||
+        trapeze_->controls_player() || zip_riding_ || grip_ != nullptr || hook_hauls(commands.hook_reel) ||
+        matron_->claimed()) {
+        own_drive_ = false;
+    } else if (grounded_ && !own_drive_) {
+        const JPH::Vec3 over = bodies.GetLinearVelocity(player_id_) - airborne_inherited_velocity_;
+        own_drive_ = JPH::Vec3(over.GetX(), 0.0F, over.GetZ()).Length() <= kFlowSpeedMps;
+    }
 
     // WO-008: a genuine (non-traversal, non-jump) landing is the one
     // moment fall consequence is resolved. Traversal-completion landings
@@ -906,8 +1058,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
             shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
         }
     }
-    // Run into something (or run into) hard enough (kHitLethalSpeed): a
-    // death side-on. Softer, a hit the body feels.
+    // A blow (the listener's hit_closing: his own run taken off) hard enough
+    // (kHitLethalSpeed): a death side-on. Softer, a hit the body feels.
     if (!died_this_tick && !hers && hit_closing_mps_ >= kHitLethalSpeed) {
         leave_corpse(bodies, bodies.GetLinearVelocity(player_id_), hit_closing_mps_, true);
         restore_from_checkpoint(bodies);
@@ -957,6 +1109,7 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     update_precision_sight(bodies);
     update_up_move(bodies);
     read_state();
+    effort::end_tick(delta_seconds);   // J-046 measurement only
 }
 
 // The first surface straight below a point within reach, the player's
@@ -1032,6 +1185,7 @@ void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const
     bodies.SetPositionAndRotation(player_id_, at, bodies.GetRotation(player_id_), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(player_id_, velocity, JPH::Vec3::sZero());
     grounded_ = false;
+    own_drive_ = false;   // thrown: what he meets on this flight is a blow
 }
 
 void Simulation::PhysicsWorld::remove_and_destroy(JPH::BodyInterface &bodies, const JPH::BodyID body_id) {
@@ -1410,7 +1564,9 @@ void Simulation::PhysicsWorld::leave_corpse(JPH::BodyInterface &bodies, const JP
 // side she came from.
 void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JPH::Vec3 direction) noexcept {
     const JPH::Vec3 velocity = direction * Matron::kShoveMps + JPH::Vec3(0.0F, Matron::kShoveUpMps, 0.0F);
+    const JPH::Vec3 before = bodies.GetLinearVelocity(player_id_);   // J-046, read only
     bodies.SetLinearVelocity(player_id_, velocity);
+    effort::add_velocity_write(effort::Path::Shove, effort_mass(player_id_), before, velocity, effort_dt_);
     ++stumble_count_;
     landing_response_ = LandingResponse::Stumble;
     landing_loss_ = 0.6 * kLandingMaxLoss;
@@ -1418,6 +1574,7 @@ void Simulation::PhysicsWorld::shove_player(JPH::BodyInterface &bodies, const JP
     ++hit_count_;
     hit_speed_mps_ = Matron::kShoveMps;
     hit_toward_ = -direction;
+    own_drive_ = false;   // the Matron's hands threw him: not his own run until he stands
 }
 
 } // namespace scraperx::sim

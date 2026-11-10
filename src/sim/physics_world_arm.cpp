@@ -9,6 +9,7 @@
 // Simulation::PhysicsWorld.
 
 #include "sim/physics_world.hpp"
+#include "sim/matron_effort.hpp"
 
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyLock.h>
@@ -258,6 +259,9 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     }
     bodies.AddForce(hand2_id_, force);
     bodies.AddForce(matron_->body(), -force);
+    // J-046 measurement only.
+    effort::add_force(effort::Path::Hand2Spring, force,
+                      bodies.GetLinearVelocity(hand2_id_) - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
     JPH::Vec3 throw_v;
     if (matron_->take_arm_throw(throw_v) && arm_in_hand_ != nullptr) {
         destroy_grab_constraint(arm_in_hand_);

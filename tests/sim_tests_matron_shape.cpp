@@ -259,6 +259,10 @@ void shape_audit_at_exit() {
 
 } // namespace
 
+// For a forked child that leaves by _exit (matron-budget, J-046): the same
+// at-exit shape check, run in the child whose ticks it measured.
+void check_matron_shape_audit() { shape_audit_at_exit(); }
+
 void start_matron_shape_audit() {
     Matron::audit_shapes(true);
     std::atexit(shape_audit_at_exit);
@@ -306,3 +310,4 @@ void run_matron_shape() {
     std::cout << "PASS scraperx_sim matron shape fit: her collision capsule within its margins of her drawn body in "
                  "every stance\n";
 }
+SCRAPERX_SLICE("matron-shape", run_matron_shape);

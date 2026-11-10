@@ -21,10 +21,13 @@ import sys
 PROTECTED = {"MANIFEST.txt", "SHA256SUMS.txt", "01_PRODUCT_AUTHORITY/00_GOVERNING_LAWS.md"}
 PROTECTED_RE = [re.compile(r"(^|/)export_presets\.cfg$"), re.compile(r"\.(keystore|jks|pem|key)$"),
                 re.compile(r"^\.github/actions/stable-apk/")]
+# World geometry: every solid the builders make is generated into this file (CI fails when it drifts),
+# so any change to the world's collision shows here. A protected change.
+GEOMETRY_FILE = "src/sim/world_solids.inc"
 
 # (a) test checks
 CHECK_RE = re.compile(r"\b(check|expect|require|assert|fail|FAIL|EXIT_FAILURE|ok\s*&=|ok\s*=\s*false|"
-                      r"passed\s*&=|return\s+false)\b|std::abort|throw\b")
+                      r"passed\s*&=|return\s+false)\b|std::abort|(?<![\w-])throw\b")
 CMP_RE = re.compile(r"(<=|>=|<|>|==|!=)\s*(-?\d+(?:\.\d+)?)F?\b")
 NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?F?\b")
 # (b) per-route / per-deck / per-transition special cases
@@ -120,6 +123,8 @@ def check(files):
     for f in sorted(set(files) | old_paths):
         if f in PROTECTED or any(r.search(f) for r in PROTECTED_RE):
             add("BLOCK", f, 0, "protected-file", "this file is never edited")
+        if f == GEOMETRY_FILE:
+            add("BLOCK", f, 0, "world-geometry", "the world's solids change: a protected change, alone in its PR")
     for f, hunks in files.items():
         is_test = f.startswith("tests/") or "/tests/" in f or f.startswith("godot/presentation/ui/ui_test")
         is_src = f.startswith("src/")

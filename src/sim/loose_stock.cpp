@@ -376,19 +376,30 @@ constexpr float kDeck154 = 154.0F;
 void add_stock_yard(std::vector<LooseStock::Placement> &t) {
     // South of the start, clear of the ground's fixtures (x -20..20, z -12..25
     // is kept empty) and of the yard crew's routes (north of z -12).
-    // Containers: [x, z, tier, along x, paint].
+    // Containers: [x, z, tier, along x, paint, stated load kg]. Three ground
+    // containers, set down by road where a truck could have left them, carry
+    // 10,000 kg each (a 40 ft box's mid load; its max payload is ~26.7 t).
+    // The stacked tier-1s and the crane's laydown stay empty: the yard
+    // crane's 75 kN hoist could not have put a loaded box there. The
+    // probe's own containers ((39, 70), (1.5, 70), (-76, -113)) stay empty,
+    // so its numbers reproduce.
     struct Box {
         float x, z;
         int tier;
         bool along_x;
         std::uint8_t paint;
+        float load_kg = 0.0F;
     };
-    std::vector<Box> containers{{-42.0F, 8.0F, 0, true, 0}, {-42.0F, 10.6F, 0, true, 1}, {-42.0F, 8.0F, 1, true, 2},
-                                {-40.0F, 20.0F, 0, true, 3}, {-40.0F, 20.0F, 1, true, 4},
+    std::vector<Box> containers{{-42.0F, 8.0F, 0, true, 0, 10000.0F},
+                                {-42.0F, 10.6F, 0, true, 1},
+                                {-42.0F, 8.0F, 1, true, 2},
+                                {-40.0F, 20.0F, 0, true, 3, 10000.0F},
+                                {-40.0F, 20.0F, 1, true, 4},
                                 {-54.5F, 14.3F, 0, false, 1}};
     for (int i = 0; i < 7; ++i) {
         const float x = -36.0F + 12.5F * static_cast<float>(i);
-        containers.push_back({x, 70.0F, 0, true, static_cast<std::uint8_t>((i * 3 + 1) % 5)});
+        containers.push_back({x, 70.0F, 0, true, static_cast<std::uint8_t>((i * 3 + 1) % 5),
+                              i == 4 ? 10000.0F : 0.0F});
         if (i == 1 || i == 4 || i == 5) {
             containers.push_back({x, 70.0F, 1, true, static_cast<std::uint8_t>((i * 3 + 3) % 5)});
         }
@@ -396,7 +407,7 @@ void add_stock_yard(std::vector<LooseStock::Placement> &t) {
     constexpr float kContainerHeight = 2.59F;
     for (const Box &c : containers) {
         t.push_back({K::Container, c.paint, c.x, kContainerHeight * static_cast<float>(c.tier), c.z,
-                     c.along_x ? 0.0F : 0.5F * JPH_PI});
+                     c.along_x ? 0.0F : 0.5F * JPH_PI, c.load_kg});
     }
     // Steel beams on sleepers, three layers (paint 0 mill scale, 1 rust).
     for (int layer = 0; layer < 3; ++layer) {
@@ -563,6 +574,7 @@ LooseStock::LooseStock(PhysicsSystem &physics, kit::Kit &kit) : physics_(physics
 }
 
 void LooseStock::lay_crane_steel() {
+    crane_steel_begin_ = count();
     // North of the laydown, 13 m out from the mast; the beams west of it,
     // lying along z clear of the containers.
     add_piece({K::PlateSlab, 0, -64.0F, 0.0F, -124.0F, 0.0F});
@@ -572,11 +584,13 @@ void LooseStock::lay_crane_steel() {
 }
 
 void LooseStock::lay_machine_weights() {
+    machine_weights_begin_ = count();
     // On deck 8's gangway to S3's cage, beside the way in, along it.
     add_piece({K::Pig, 0, -8.9F, 88.0F, -161.8F, 0.5F * JPH_PI});
 }
 
 void LooseStock::lay_matron_throwables() {
+    matron_throwables_begin_ = count();
     // By the north band's outer rail, east and west of the way out and of
     // where a climber arrives up the high riser.
     add_piece({K::Toolbox, 0, -6.5F, kDeck154, -125.0F, 0.2F});
@@ -584,11 +598,29 @@ void LooseStock::lay_matron_throwables() {
     add_piece({K::Drum, 1, -15.0F, kDeck154, -125.2F, 0.0F});
 }
 
+void LooseStock::append_reserved() {
+    east_west_begin_ = count();
+    for (const Placement &p : pending_east_west_) {
+        pieces_.push_back(kit::BodyIndex{});
+        placed_.push_back(p);
+    }
+    pending_east_west_.clear();
+}
+
+void LooseStock::append_upper() {
+    upper_begin_ = count();
+    for (const Placement &p : pending_upper_) {
+        pieces_.push_back(kit::BodyIndex{});
+        placed_.push_back(p);
+    }
+    pending_upper_.clear();
+}
+
 Vec3 LooseStock::carry_handle(const Kind kind) noexcept {
     return make_spec(kind).handle;
 }
 
-void LooseStock::add_piece(const Placement &p) {
+kit::BodyIndex LooseStock::create_body(const Placement &p, const std::uint64_t entity) {
     static const std::array<Spec, kKinds> specs = [] {
         std::array<Spec, kKinds> all;
         for (int k = 0; k < kKinds; ++k) {
@@ -597,10 +629,11 @@ void LooseStock::add_piece(const Placement &p) {
         return all;
     }();
     const Spec &spec = specs[static_cast<std::size_t>(p.kind)];
-    // 4 mm clear of what it lies on, so nothing starts in contact.
+    // 4 mm clear of what it lies on, so nothing starts in contact. The
+    // body's mass is the kind's own plus its stated load, centred.
     const kit::BodyIndex body =
-        kit_.add_body(kFirstEntity + pieces_.size(), spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
-                      Quat::sRotation(Vec3::sAxisY(), p.yaw), spec.mass_kg, spec.friction);
+        kit_.add_body(entity, spec.parts, RVec3(p.x, p.y + spec.half_height + 0.004F, p.z),
+                      Quat::sRotation(Vec3::sAxisY(), p.yaw), spec.mass_kg + p.load_kg, spec.friction);
     if (spec.carried) {
         kit_.set_carry(body, kit::CarryKind::Load, spec.handle);
     }
@@ -611,8 +644,39 @@ void LooseStock::add_piece(const Placement &p) {
         kit_.set_hollow(body);
     }
     kit_.allow_sleeping(body);
-    pieces_.push_back(body);
+    return body;
+}
+
+void LooseStock::add_piece(const Placement &p) {
+    pieces_.push_back(create_body(p, kFirstEntity + pieces_.size()));
     placed_.push_back(p);
+}
+
+std::vector<int> LooseStock::realize_reserved() {
+    // The east/west pieces only, up to where the upper pieces begin: the
+    // upper pieces are realized separately (realize_upper), after the
+    // deck-154 forklift, so the forklift keeps its place right after the
+    // east/west pieces and the magnet's pinned append order still holds.
+    // Until append_upper() runs there is no upper split, so realize them all.
+    const int end = upper_begin_ == 0 ? count() : upper_begin_;
+    return realize_range(0, end);
+}
+
+std::vector<int> LooseStock::realize_upper() {
+    return realize_range(upper_begin_, count());
+}
+
+std::vector<int> LooseStock::realize_range(const int begin, const int end) {
+    std::vector<int> realized;
+    for (int i = begin; i < end; ++i) {
+        const std::size_t at = static_cast<std::size_t>(i);
+        if (pieces_[at].valid()) {
+            continue;
+        }
+        pieces_[at] = create_body(placed_[at], kFirstEntity + at);
+        realized.push_back(i);
+    }
+    return realized;
 }
 
 namespace {
@@ -692,13 +756,19 @@ public:
 
 // Where the spots may be: the stack's deck rings (11 m to 143 m: the 154 m
 // deck has its own seven, set for the Matron) and the upper rings (176 m to
-// 396 m), each a square ring round the shaft centred on (0, -150).
+// 616 m), each a square ring round the shaft centred on (0, -150).
 constexpr float kRingCentreX = 0.0F;
 constexpr float kRingCentreZ = -150.0F;
 // Every spot this far along its ring from the last, at most this many a ring.
 constexpr float kSpotSpacing = 9.0F;
 constexpr int kSpotsPerStackRing = 3;
 constexpr int kSpotsPerUpperRing = 2;
+// The 706 deck and the summit keep their places in the list (so each deck's
+// templates stay as measured) but are not felt for: neither has a floor
+// kMachineClear from every machine, and the search cost 0.8 s each at load.
+constexpr std::array<float, 2> kBareTopDecks{706.1F, 802.64F};
+constexpr std::array<float, 7> kTopDecks{640.25F, 662.1F, 684.1F, 706.1F, 728.1F, 750.1F, 802.64F};
+constexpr int kSpotsPerTopDeck = 1;
 // The decks the yard crane lands loads on (yard_crane.hpp), and their spots:
 // more of them, every other one what only the crane could have brought.
 constexpr std::array<float, 3> kCraneDecks{11.0F, 22.0F, 44.0F};
@@ -742,17 +812,87 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     // The four sides, each by the direction out from the shaft across it.
     const std::array<Vec3, 4> sides = {Vec3(0.0F, 0.0F, 1.0F), Vec3(1.0F, 0.0F, 0.0F), Vec3(0.0F, 0.0F, -1.0F),
                                        Vec3(-1.0F, 0.0F, 0.0F)};
-    int taken = 0;
-    for (std::size_t ring = 0; ring < tops.size(); ++ring) {
-        const float top = tops[ring];
+    // Two passes over the stack and upper rings, then a third over the
+    // bands' rings above 396.25 m and the top decks. The first is the
+    // pre-world-b dress verbatim: one mixed
+    // loop, the world-axis clearance box, one global template count, the
+    // shared per-ring cap. That matters because the old box did accept
+    // east/west spots on the upper rings (the matron-crash piece 246 is
+    // one, on the 176 ring's east band); only the stack bands were bare.
+    // A north/south-first pass would move those upper-ring pieces and
+    // renumber every piece after them. The second pass adds only what
+    // the old box rejected on the stack rings: east/west sides only, the
+    // clearance box following the spot's frame (world-b's fix), its own
+    // template count and a fresh per-ring cap, seeded with the first
+    // pass's spots for the spacing check, so a corner conflict resolves
+    // in favour of the pre-existing spot and no pre-existing piece moves
+    // or renumbers.
+    // The new spots are recorded here and take their table places last
+    // (append_reserved, after the Matron's throwables), so no
+    // pre-existing piece moves or renumbers; their bodies are built next
+    // (realize_reserved, once the bay, the twin tower and the summit
+    // stand), so no pre-existing body moves in the kit's build order.
+    // The third pass dresses only the rings and decks in its own list,
+    // records them the same way (append_upper, after the east/west
+    // pieces), and never touches the first two passes' rings: above
+    // 396.25 m the ring slabs are the bands' own kit bodies, so the
+    // machine-clear box starts 5 cm over the floor there, the edge
+    // search starts at 2 m (the rings taper under the 10 m start), and
+    // the solid top decks are felt for on a 1.5 m grid instead of from
+    // an edge. Their bodies are built after the deck-154 forklift
+    // (realize_upper), so the forklift keeps its place right after the
+    // east/west pieces and no pre-existing body moves either.
+    // `ring_tops` is the rings this pass dresses, `stack_count` how many
+    // of them are stack rings, `deck_first` the first top-deck entry
+    // (ring_tops.size() when the pass has none).
+    const auto dress_pass = [&](const bool legacy, const std::vector<std::vector<RVec3>> &seed,
+                                std::vector<Placement> *collected, const std::vector<float> &ring_tops,
+                                const std::size_t stack_count, const std::size_t deck_first) {
+        const bool upper_pass = deck_first < ring_tops.size();
+        std::vector<std::vector<RVec3>> accepted;
+        int taken = 0;
+        int taken_ew = 0;
+        for (std::size_t ring = 0; ring < ring_tops.size(); ++ring) {
+        // The new pass dresses the stack rings only: those are the bands
+        // the old box left bare, measured zero east and zero west spots on
+        // all 13. The upper rings already carry east/west spots (their
+        // band totals are all above zero), so they keep their legacy
+        // dress untouched.
+        if (!legacy && ring >= stack_count) {
+            accepted.push_back({});
+            continue;
+        }
+        const float top = ring_tops[ring];
+        const bool top_deck = ring >= deck_first;
+        // The 706 deck and the summit have no floor kMachineClear from
+        // every machine: they keep their places in the list but are not
+        // felt for.
+        if (top_deck && std::find(kBareTopDecks.begin(), kBareTopDecks.end(), top) != kBareTopDecks.end()) {
+            accepted.push_back({});
+            continue;
+        }
         const bool crane_deck = std::find(kCraneDecks.begin(), kCraneDecks.end(), top) != kCraneDecks.end();
-        const int most = crane_deck ? kSpotsPerCraneRing : ring < stack_rings ? kSpotsPerStackRing : kSpotsPerUpperRing;
+        const int most = crane_deck        ? kSpotsPerCraneRing
+                         : ring < stack_count ? kSpotsPerStackRing
+                         : top_deck           ? kSpotsPerTopDeck
+                                              : kSpotsPerUpperRing;
         std::vector<RVec3> spots;
+        if (!seed.empty()) {
+            spots = seed[ring];
+        }
+        std::vector<RVec3> mine;
+        int ew_in_ring = 0;
         // Each ring starts on another side and at another place along it, so
         // no two rings are dressed alike.
         for (std::size_t s = 0; s < sides.size(); ++s) {
             const Vec3 out = sides[(s + ring) % sides.size()];
-            if (static_cast<int>(spots.size()) >= most) {
+            // East/west sides run across x, north/south across z; the
+            // clearance box below uses the same split.
+            const bool sideways = std::abs(out.GetX()) > 0.5F;
+            if (!legacy && !sideways) {
+                continue;
+            }
+            if ((legacy ? static_cast<int>(spots.size()) : ew_in_ring) >= most) {
                 break;
             }
             const Vec3 along(out.GetZ(), 0.0F, -out.GetX());
@@ -763,7 +903,7 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
             const auto floor_out = [&](const float d) {
                 return floor_at(kRingCentreX + out.GetX() * d, kRingCentreZ + out.GetZ() * d, top, ignored);
             };
-            for (float d = 10.0F; d < 30.0F; d += 0.5F) {
+            for (float d = top > 400.0F ? 2.0F : 10.0F; d < 30.0F; d += 0.5F) {
                 if (floor_out(d)) {
                     edge = d;
                     for (float back = d - 0.05F; back > d - 0.5F && floor_out(back); back -= 0.05F) {
@@ -772,17 +912,40 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                     break;
                 }
             }
-            if (edge < 0.0F) {
+            if (edge < 0.0F && !top_deck) {
                 continue;
             }
-            const float start = -edge + 2.0F + std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
-            for (float a = start; a <= edge - 2.0F && static_cast<int>(spots.size()) < most; a += 1.5F) {
-                const bool crane_spot = crane_deck && spots.size() % 2 == 0;
+            // A top deck is solid across the shaft: its spots are felt for on
+            // a 1.5 m grid over it instead, every row out from the middle.
+            // Any other ring keeps its single row, at its edge.
+            const float first_row = top_deck ? -24.0F : edge;
+            const float last_row = top_deck ? 24.0F : edge;
+            for (float row = first_row; row <= last_row + 0.01F; row += 1.5F) {
+            // The stagger only moves a ring's spots along its band; on the
+            // tapered upper rings the band is narrower than the stagger, so
+            // the start lands past the stop and no candidate is ever tried
+            // (measured: 616.25 m, edge 2.9 m on all four sides, zero
+            // candidates, every check untouched). On the upper pass the
+            // stagger is taken inside the window the ring actually has, so
+            // at least the window's own candidates are felt for; the end
+            // margins, the spacing, and every later check stand as they were.
+            // The legacy and east/west passes keep their stagger untouched.
+            const float stagger = std::fmod(3.7F * static_cast<float>(ring + s), 7.0F);
+            const float span = 2.0F * edge - 4.0F;
+            const float start = top_deck ? -24.0F
+                                : upper_pass ? -edge + 2.0F + (span > 0.0F ? std::fmod(stagger, span) : 0.0F)
+                                             : -edge + 2.0F + stagger;
+            const float stop = top_deck ? 24.0F : edge - 2.0F;
+            for (float a = start; a <= stop && (legacy ? static_cast<int>(spots.size()) : ew_in_ring) < most;
+                 a += 1.5F) {
+                const bool crane_spot =
+                    crane_deck && ((legacy ? spots.size() : static_cast<std::size_t>(ew_in_ring)) % 2 == 0);
                 const std::vector<SpotTemplate> &kinds = crane_spot ? crane_spot_templates() : spot_templates();
+                const int taken_for_side = legacy ? taken : taken_ew;
                 const SpotTemplate &spot =
-                    kinds[static_cast<std::size_t>(taken + static_cast<int>(ring)) % kinds.size()];
-                const RVec3 origin(kRingCentreX + out.GetX() * edge + along.GetX() * a, top,
-                                   kRingCentreZ + out.GetZ() * edge + along.GetZ() * a);
+                    kinds[static_cast<std::size_t>(taken_for_side + static_cast<int>(ring)) % kinds.size()];
+                const RVec3 origin(kRingCentreX + out.GetX() * row + along.GetX() * a, top,
+                                   kRingCentreZ + out.GetZ() * row + along.GetZ() * a);
                 const auto at = [&](const float u, const float v) {
                     return origin + along * u + out * v;
                 };
@@ -804,13 +967,26 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                     query.CastRay(RRayCast(at(0.0F, 0.4F) + Vec3(0.0F, 1.05F, 0.0F), out * -0.6F), rail);
                 const float near = railed ? 0.15F : 0.6F;
                 const float far = near + spot.depth + kWalkway;
+                // On a top deck most of the grid is off the floor: its first
+                // floor sample (the level check's own) is felt for first.
+                if (top_deck) {
+                    const RVec3 first = at(-0.5F * spot.width, near);
+                    float first_floor = top;
+                    if (!floor_at(static_cast<float>(first.GetX()), static_cast<float>(first.GetZ()), top, first_floor)) {
+                        continue;
+                    }
+                }
                 const RVec3 middle = at(0.0F, near + 0.5F * spot.depth) + Vec3(0.0F, 1.3F, 0.0F);
                 // No machine, nor any body that moves, within kMachineClear of
-                // it.
-                const RefConst<Shape> around =
-                    new BoxShape(Vec3(0.5F * spot.width + kMachineClear, 2.5F, 0.5F * spot.width + kMachineClear));
+                // it. Above 396.25 m the rings are the bands' own kit slabs,
+                // so the box starts 5 cm over the floor there.
+                const bool kit_ring = top > 400.0F;
+                const RefConst<Shape> around = new BoxShape(
+                    Vec3(0.5F * spot.width + kMachineClear, kit_ring ? 1.225F : 2.5F, 0.5F * spot.width + kMachineClear));
                 AnyHitCollisionCollector<CollideShapeCollector> near_it;
-                query.CollideShape(around, Vec3::sReplicate(1.0F), RMat44::sRotationTranslation(Quat::sIdentity(), middle),
+                query.CollideShape(around, Vec3::sReplicate(1.0F),
+                                   RMat44::sRotationTranslation(Quat::sIdentity(),
+                                                                kit_ring ? middle - Vec3(0.0F, 0.025F, 0.0F) : middle),
                                    CollideShapeSettings(), middle, near_it, {}, {}, machines);
                 if (near_it.HadHit()) {
                     continue;
@@ -831,7 +1007,19 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 // Nothing at all in the way above it, from 2 cm over the floor
                 // (a toe plate or a bolted plate lower than a hand's width is
                 // in the way too).
-                const RefConst<Shape> room = new BoxShape(Vec3(0.5F * spot.width, 1.24F, 0.5F * spot.depth));
+                // The clearance box follows the spot's frame, not the world
+                // axes, on the new pass only: width runs along the band,
+                // depth out from the shaft. On the east/west sides the old
+                // world-axis box put width radially, so it crossed the
+                // shaft-edge structure at 17 m and rejected every
+                // east/west candidate on the stack rings — measured
+                // 2026-10-31: zero east and zero west spots on all 13
+                // stack rings, while north/south (where width already ran
+                // along x) dressed fine. The legacy pass keeps the old
+                // box, so its upper-ring east/west spots stand as they were.
+                const RefConst<Shape> room = new BoxShape(
+                    !legacy && sideways ? Vec3(0.5F * spot.depth, 1.24F, 0.5F * spot.width)
+                                        : Vec3(0.5F * spot.width, 1.24F, 0.5F * spot.depth));
                 const RVec3 room_middle = middle - Vec3(0.0F, 1.3F - 1.26F, 0.0F);
                 AnyHitCollisionCollector<CollideShapeCollector> in_the_way;
                 query.CollideShape(room, Vec3::sReplicate(1.0F),
@@ -856,16 +1044,56 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
                 for (std::size_t n = 0; n < spot.pieces.size(); ++n) {
                     const SpotPiece &piece = spot.pieces[n];
                     const RVec3 p = at(piece.along, near + piece.out);
-                    const auto variant =
-                        static_cast<std::uint8_t>((piece.variant + static_cast<std::size_t>(taken) + n) % 3U);
-                    add_piece({piece.kind, variant, static_cast<float>(p.GetX()), floor + piece.up,
-                               static_cast<float>(p.GetZ()), yaw + piece.yaw});
+                    const auto variant = static_cast<std::uint8_t>(
+                        (piece.variant + static_cast<std::size_t>(taken_for_side) + n) % 3U);
+                    const Placement placed{piece.kind, variant, static_cast<float>(p.GetX()), floor + piece.up,
+                                           static_cast<float>(p.GetZ()), yaw + piece.yaw};
+                    if (collected != nullptr) {
+                        collected->push_back(placed);
+                    } else {
+                        add_piece(placed);
+                    }
                 }
                 spots.push_back(origin);
-                ++taken;
+                mine.push_back(origin);
+                if (sideways) {
+                    ++ew_in_ring;
+                }
+                if (legacy) {
+                    ++taken;
+                } else {
+                    ++taken_ew;
+                }
+            }
             }
         }
+        accepted.push_back(std::move(mine));
+        }
+        return accepted;
+    };
+    const std::vector<std::vector<RVec3>> parent_spots = dress_pass(true, {}, nullptr, tops, stack_rings, tops.size());
+    std::vector<Placement> east_west;
+    (void)dress_pass(false, parent_spots, &east_west, tops, stack_rings, tops.size());
+    // Only recorded here: their table places are taken by
+    // append_reserved() after the Matron's throwables, so nothing already
+    // laid is renumbered (see the header). Their bodies are built by
+    // realize_reserved, as before.
+    pending_east_west_ = east_west;
+    // The bands' rings above 396.25 m and the top decks: only recorded
+    // here as well, in their own list. Their table places are taken by
+    // append_upper() after the east/west pieces, so nothing already laid
+    // is renumbered either. Their bodies are built after the deck-154
+    // forklift by realize_upper, so the forklift keeps its place.
+    std::vector<float> upper_tops;
+    for (int k = 0; k <= 9; ++k) {
+        upper_tops.push_back(418.25F + 22.0F * static_cast<float>(k));
     }
+    for (const float deck : kTopDecks) {
+        upper_tops.push_back(deck);
+    }
+    std::vector<Placement> upper;
+    (void)dress_pass(true, {}, &upper, upper_tops, 0, 10);
+    pending_upper_ = upper;
 }
 
 } // namespace scraperx::sim

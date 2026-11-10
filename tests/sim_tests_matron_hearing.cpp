@@ -196,3 +196,4 @@ void test_matron_hearing() {
     require(first == repeat, "matron hearing: identical fixed-step inputs replay identically");
     std::cout << "PASS matron hearing: quiet/loud, obstruction/saturation, wake provenance, hidden motion, expiry, reacquisition, budget, replay\n";
 }
+SCRAPERX_SLICE("matron-hearing", test_matron_hearing);
