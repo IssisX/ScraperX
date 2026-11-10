@@ -1417,8 +1417,9 @@ public:
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
-    // puts her back at her locker at that stage). A dead Matron is kept as hunting,
-    // so a restore brings her back whole.
+    // puts her back at her locker at that stage). A dead Matron is kept as
+    // dead, with the damage she died with, so a restore brings her back as
+    // saved (J-069: her injuries persist through checkpoints, dead included).
     struct Saved {
         State state = State::Dormant;
         float strain_s = 0.0F;
@@ -1426,6 +1427,9 @@ public:
         Stage stage = Stage::Pest;
         float exposure_s = 0.0F;
         std::uint64_t handled = 0;   // the throwables the player has handled, a bit each
+        float damage_ns = 0.0F;         // judged physical impulse, all sources
+        float player_damage_ns = 0.0F;  // the player's share only
+        bool dead = false;              // she lies dead as saved
     };
 
     static constexpr float kKillDamageNs = 6000.0F;
@@ -1848,11 +1852,12 @@ public:
     // end, a death's restore too): a touch is her shove, not a catch.
     void hold_grab_for_test(const bool held) noexcept { grab_held_for_test_ = held; }
     [[nodiscard]] Saved save() const noexcept {
-        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Nor is
-        // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
-        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
-                              state_ == State::Dead;
-        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
+        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Her
+        // death is saved as dead: a checkpoint taken while she lies dead has her dead, as a restore
+        // brings her back as saved (J-069).
+        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down;
+        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
+                damage_ns_, player_damage_ns_, dead_};
     }
     void restore(const Saved &saved);
 
