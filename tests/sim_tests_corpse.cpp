@@ -187,6 +187,10 @@ void run_corpse() {
             "corpse: a loaded game has no corpses");
     std::cout << "PASS scraperx_sim corpse: death_mps=" << dead.death_speed_mps << " rest_head_y=" << head.position.y
               << " hit_y=" << dead.death_point.y << " capped=" << Corpses::kMaxCorpses << "\n";
+    // J-061: the wind function is registered under the corpse SELECT but
+    // runs nowhere in CI unless called here — the group-content guard
+    // fails the host build on it. The corpse group owns it.
+    run_wind_own_drive();
 }
 SCRAPERX_GROUP("corpse", 720, run_corpse);
 SCRAPERX_SELECT("corpse", run_corpse, run_arm_break, run_wind_own_drive);
