@@ -681,6 +681,39 @@ std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
     return 0;
 }
 
+// The grips' two lists at a save's end, read out: the held body per grip
+// (kNone for a grip holding nothing) and its rating. Empty when the save
+// does not end in them.
+struct SavedGrips {
+    std::vector<std::uint32_t> loads;
+    std::vector<float> ratings;
+};
+SavedGrips saved_grips_lists(const std::vector<std::uint8_t> &bytes) {
+    const std::size_t n = saved_grips(bytes);
+    SavedGrips out;
+    if (n == 0) {
+        return out;
+    }
+    const std::size_t section = bytes.size() - (8 + 8 * n);
+    out.loads.resize(n);
+    out.ratings.resize(n);
+    std::memcpy(out.loads.data(), bytes.data() + section + 4, 4 * n);
+    std::memcpy(out.ratings.data(), bytes.data() + section + 8 + 4 * n, 4 * n);
+    return out;
+}
+
+// A kit body's index by its entity (the kit's body list, build order), or
+// kNone when the world has no such body.
+std::uint32_t body_index(const Simulation &s, const std::uint64_t entity) {
+    const std::uint32_t count = s.kit_body_count();
+    for (std::uint32_t i = 0; i < count; ++i) {
+        if (s.kit_body_entity(i) == entity) {
+            return i;
+        }
+    }
+    return scraperx::sim::kit::kNone;
+}
+
 // The save as an older build wrote it: without the world's last `drop` kit
 // bodies (their entities and states) and with only its first `keep` grips (0:
 // from before the grips, its lists ending at the lifts' targets). The layout
@@ -843,7 +876,25 @@ void run_yard_crane_magnet() {
         require(loaded.yard_crane_state().holding_entity == top && loaded.yard_crane_state().magnet_on &&
                     std::abs(there.y - here.y) < 0.05,
                 "magnet: loaded, it holds the slab where it was saved");
-        require(saved_grips(bytes) == 2, "magnet: the save ends in its two grips (the magnet's, the spreader's)");
+        // The save ends in the magnet's and the spreader's grips: find each
+        // by the body it holds, not by counting the grips. The S2 drain fix
+        // adds a third, bolted cart grip (rating 0, it never lets go), which
+        // a count would mistake for one of the two.
+        const auto grips = saved_grips_lists(bytes);
+        const std::uint32_t top_body = body_index(s, top);
+        bool magnet_grip = false;
+        bool spreader_grip = false;
+        for (std::size_t i = 0; i < grips.loads.size(); ++i) {
+            if (grips.loads[i] == top_body && std::abs(grips.ratings[i] - YardCrane::kMagnetRatedN) < 1.0F) {
+                magnet_grip = true;
+            }
+            if (grips.loads[i] == scraperx::sim::kit::kNone &&
+                std::abs(grips.ratings[i] - 4.0F * YardCrane::kTwistlockRatedN) < 1.0F) {
+                spreader_grip = true;
+            }
+        }
+        require(magnet_grip, "magnet: the save ends in the magnet's grip, holding the top slab");
+        require(spreader_grip, "magnet: the save ends in the spreader's grip, holding nothing");
         // As the spreader's build saved it: no machines' weights. Loaded, the
         // slab still hangs on the magnet.
         const std::vector<std::uint8_t> two = older_save(bytes, weights, 2);
@@ -853,11 +904,15 @@ void run_yard_crane_magnet() {
         require(spreader_build.yard_crane_state().holding_entity == top &&
                     std::abs(body_at(spreader_build, top).y - here.y) < 0.05,
                 "magnet: loaded from a save from before the machines' weights, it holds the slab");
-        // As the magnet's build saved it: no spreader, one grip. Loaded, the
-        // slab still hangs on the magnet and the spreader lies as built.
-        const std::vector<std::uint8_t> one = older_save(bytes, 1 + weights, 1);
+        // As the magnet's build saved it: no spreader. Two grips are kept,
+        // not one: the bolted cart grip sits in slot 0 now, so the magnet's
+        // grip (slot 1) is only reached by keeping both; the load must
+        // restore the magnet's hold. Loaded, the slab still hangs on the
+        // magnet and the spreader lies as built.
+        const std::vector<std::uint8_t> pre_spreader = older_save(bytes, 1 + weights, 2);
         Simulation magnet_build(scraperx::sim::InitialSpawn::ExteriorGrade);
-        require(magnet_build.load_game(one.data(), one.size()), "magnet: a save from before the spreader loads");
+        require(magnet_build.load_game(pre_spreader.data(), pre_spreader.size()),
+                "magnet: a save from before the spreader loads");
         (void)magnet_build.advance_frame(2.0);
         const auto spreader = body_at(magnet_build, YardCrane::kSpreaderEntity);
         require(magnet_build.yard_crane_state().holding_entity == top &&
