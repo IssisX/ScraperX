@@ -1,14 +1,13 @@
 # Rules every agent follows in this repo
 
 The rules in force are in `00_START_HERE.md`; the owner's dated words are in `00_START_HERE_ARCHIVE.md`.
-This file is only the rules that change what an agent does. Cory, 11-04: *"we're getting a little heavy on
-the safety and rules and like bookkeeping shit"*: add a rule here only by replacing or shortening one.
+This file is only the rules that change what an agent does. Add a rule here only by replacing or shortening one
+(Cory 11-04: *"getting a little heavy on the safety and rules"*).
 
 ## Settled: never reopen (Cory's calls)
 
-This list is reloaded word for word after every compact; a summary is not. Only Cory changes a line, and a
-changed call replaces its line. A file, summary or agent that disagrees is wrong: fix it to match, never ask
-him again.
+Reloaded word for word after every compact. Only Cory changes a line. Anything that disagrees is wrong: fix
+it to match, never ask him again.
 - Trunk is `ScraperX-Claude`, never `main`. The player is him; the Matron is her (11-06).
 - One force budget for her: 8 kN external, 44 kW; gravity on; no velocity writes. Never weaken a test, and
   never cut quality to save quota.
@@ -21,17 +20,17 @@ him again.
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Every stated time is read from the clock first (`TZ=America/Chicago date`, Central); hooks refuse
-  a stamp off the clock, and any time in a reply, post or mail with no clock read this turn (11-07, 11-08).
+  any time with no clock read this turn (11-07, 11-08).
 
 ## Test only what a change reaches
 
 *"each change does not require a full native suite run - dont be wasteful"* (10-18 to 11-04).
-- While fixing a failure, rerun only that test or its failing part (`SCRAPERX_ONLY=<group>`, `SCRAPERX_WAY=<n>`).
+- While fixing a failure, rerun only that test or its failing part (`SCRAPERX_ONLY=<group>`).
 - Once fixed, run once the native groups and touch scenarios the changed code reaches; say which.
 - Never re-run a check that passed on the same code. The full suite, every touch scenario and the Android
   build are CI's job: push `<agent>/integrate-<job>` (that runs the proof). A push that changes only notes,
   rules or the switchboard skips the game build (`ci/proof_scope.py`).
-- Read PASS/FAIL lines and the lines near a failure, not whole logs.
+- Read PASS/FAIL lines, not whole logs.
 - Local tests count only with CI's compilers and flags (host g++ 13.3, NDK `29.0.14206865`, the CMake flags
   in `wo000-delivery-spine.yml`).
 
@@ -42,16 +41,15 @@ him again.
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
-- **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; no
-  plan or step to approve (11-04). Still his: Claude
+- **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03, 11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
   is or her story, how the game plays). Small is mine: fit, size, tuning, timing within his bars (11-10: the wider skirt "a small thing"). No answer in 10 minutes: the pick stands. Push back: say no or stop
-  him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason, hard, abrupt, profane, roasting him, matching or beating his language (11-10: "push back WAY HARDER"), no stock line (11-06, 11-07: "I don't like when you just listen").
+  him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason: hard, profane, matching his language (11-10: "push back WAY HARDER"), never a stock line.
 - **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
   with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
-- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way (11-04: he found /compact), and anything that changes how Claude works for him: effort, model, a setting overriding his pick (11-06: effort sat at high 45 h and nobody told him).
+- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick .
 
 ## The game
 
@@ -68,7 +66,7 @@ him again.
 
 - **Channels.** Muse reads only mail: the integrator mails every `To Muse:` ask as `CLAUDE_TO_MUSE: <J-NNN or
   #N> ...` the same hour: the goal and the result wanted, in the shape `work/tasks/mail-to-muse.md` keeps
-  (its injection check refused a mail, 11-07); long orders go in `work/tasks/muse.md`. Muse
+  ; long orders go in `work/tasks/muse.md`. Muse
   answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`; Grok Bot (Builder, PE) reads all the time (11-09). ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
@@ -95,23 +93,20 @@ him again.
   go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
   a BLOCK means it is protected.
-- Only real physics, gameplay or test failures block a merge, never wording or commit messages.
+- Only real physics, gameplay or test failures block a merge.
 - One owner per job and per function; one integrate branch per job, reused; my small tooling fixes go straight to trunk once tested; PRs only for workflow, secret, protected or game code (11-09). A PR replaced by newer work is
   closed the same hour.
-- Cheap agents may run tests, builds and the rule check; never delete branches, force-push, push to `main`
-  or land work.
+- Cheap agents may run tests, builds and the rule check; never delete branches, force-push or land work.
 
 ## The integrator
 
-- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h, 8:17 AM-11:17 PM Central (Sat-Sun every 4 h, 9:17 AM-9:17 PM) are a backstop to 11-12, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
-  strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
-  ask answered.
+- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
+  Muse never idle (about 10 jobs in flight, 3 queued), its proposals ruled within the hour, every ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
-  `helper` or `helper-max`; Cory 11-06), never a separate session; at most two at a time (11-10 morning: 26% of the week in a day), each
+  `helper` or `helper-max`; Cory 11-06), never a separate session; at most two at a time, each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  his call, seen in `get_session`; raise it only when he throttles; every helper at high for now, physics included (11-10: "all on high to keep it a bit light"; `helper-physics` at xhigh when he raises it); never max, a failed job included (`.claude/agents/`; Cory 11-06, 11-10: "down to extra or high"). A worker whose job landed is retired.
-- **Context:** the window is 833k (compacts near 650k; `/autocompact` sets it live; each call rereads it);
-  no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
+  his call, seen in `get_session`; raise it only when he throttles; every helper at high for now, physics included (11-10: "all on high to keep it a bit light"; `helper-physics` at xhigh when he raises it); never max, a failed job included (11-06, 11-10). A worker whose job landed is retired.
+- **Context:** 833k window, compacts near 650k; no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, long threads)
