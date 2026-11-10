@@ -893,3 +893,15 @@
 {"ev": "ledger_sent", "job": "J-015", "key": "d084fd033055e69e", "ref": "BRANCH|fb-bot/integrate-protected-j015-slice1", "stage": 1, "t": "2026-11-10T09:29:28Z", "to": "muse"}
 {"attempt": 1, "ev": "sent", "id": "O-4a7cfed7", "job": "J-070", "ref": "ASK|ask on #333", "send": 1, "t": "2026-11-10T09:29:28Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T09:29:28Z", "tries": 1}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-a272f898", "job": "J-015", "kind": "ask", "ref": "ASK|ask on #122", "t": "2026-11-10T10:29:43Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-86f40c81", "job": "J-042", "kind": "ask", "ref": "ASK|ask on #240", "t": "2026-11-10T10:29:43Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T14:29:43Z", "ev": "obligation", "id": "O-a7babbbd", "job": "J-061", "kind": "fix", "ref": "PR|#337", "t": "2026-11-10T10:29:43Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-f1ad9634", "job": "J-061", "t": "2026-11-10T10:29:43Z"}
+{"ev": "acked", "how": "new head", "id": "O-7cd5ce3e", "job": "J-069", "t": "2026-11-10T10:29:43Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-f6c50ed6", "job": "J-042", "t": "2026-11-10T10:29:43Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-2c4c2fb5", "job": "J-042", "t": "2026-11-10T10:29:43Z"}
+{"ev": "state", "frm": "working", "job": "J-069", "t": "2026-11-10T10:29:43Z", "to": "proof"}
+{"attempt": 1, "ev": "sent", "id": "O-a272f898", "job": "J-015", "ref": "ASK|ask on #122", "send": 1, "t": "2026-11-10T10:29:43Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-86f40c81", "job": "J-042", "ref": "ASK|ask on #240", "send": 1, "t": "2026-11-10T10:29:43Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-a7babbbd", "job": "J-061", "ref": "PR|#337", "send": 1, "t": "2026-11-10T10:29:43Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T10:29:43Z", "tries": 1}

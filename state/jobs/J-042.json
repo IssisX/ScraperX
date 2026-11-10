@@ -102,7 +102,11 @@
    "what": "ask from Claude on #240"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T10:32:42Z",
+    "by": "chatgpt",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T03:29:49Z",
    "attempts": 2,
@@ -127,7 +131,11 @@
    "what": "ask from Claude on #240"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T10:32:42Z",
+    "by": "chatgpt",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T04:06:41Z",
    "attempts": 2,
@@ -150,6 +158,31 @@
    "version": "6758686846",
    "via": "issue",
    "what": "ask from Claude on #240"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-10T10:32:42Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T10:29:43Z",
+   "dead": "2026-11-10T17:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T15:17:00Z",
+   "id": "O-86f40c81",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-10T10:29:43Z",
+   "missing": 0,
+   "ref": "ASK|ask on #240",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 240,
+   "to": "claude",
+   "unseen": null,
+   "version": "6765074508",
+   "via": "session",
+   "what": "ask from ChatGPT on #240"
   }
  ],
  "outcome": null,
@@ -163,5 +196,5 @@
  ],
  "review": "",
  "state": "review",
- "updated": "2026-11-10T09:09:09Z"
+ "updated": "2026-11-10T10:29:43Z"
 }

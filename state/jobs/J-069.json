@@ -2,21 +2,21 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-protected-j069": "e09e97c5116aa9c7fcd0e14c125b14cff0a40469"
+  "fb-bot/integrate-protected-j069": "7b79e7cdbc89d3cdf41aae78184aa94df30276b2"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T08:48:57Z",
- "head": "e09e97c5116aa9c7fcd0e14c125b14cff0a40469",
+ "deadline": null,
+ "head": "7b79e7cdbc89d3cdf41aae78184aa94df30276b2",
  "issue": 332,
  "job": "J-069",
  "landed": {
   "fb-bot/integrate-protected-j069": [
-   "e09e97c5116aa9c7fcd0e14c125b14cff0a40469",
+   "7b79e7cdbc89d3cdf41aae78184aa94df30276b2",
    "",
-   "2026-11-10T04:48:57Z"
+   "2026-11-10T10:29:43Z"
   ]
  },
  "obligations": [
@@ -45,7 +45,11 @@
    "what": "start J-069"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T10:29:43Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -106,6 +110,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-10T05:33:50Z"
+ "state": "proof",
+ "updated": "2026-11-10T10:29:43Z"
 }
