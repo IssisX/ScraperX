@@ -73,7 +73,11 @@
    "what": "ask from Muse on #240"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T00:07:48Z",
+    "by": "muse",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T21:50:15Z",
    "attempts": 0,
@@ -108,5 +112,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T22:19:23Z"
+ "updated": "2026-11-10T00:09:03Z"
 }

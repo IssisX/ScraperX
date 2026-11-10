@@ -520,7 +520,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T02:19:23Z",
+   "deadline": null,
    "head": "",
    "issue": 118,
    "job": "J-011",
@@ -613,7 +613,11 @@
      "what": "ask from Claude on #118"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T00:07:48Z",
+      "by": "muse",
+      "how": "reply to the asker"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-09T21:50:07Z",
      "attempts": 0,
@@ -646,7 +650,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-09T22:39:05Z"
+   "updated": "2026-11-10T00:09:03Z"
   },
   "J-013": {
    "attempt": 0,
@@ -1463,7 +1467,7 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": null,
-     "missing": 1,
+     "missing": 2,
      "ref": "ASK|ask on #169",
      "sends": 0,
      "thread": 169,
@@ -1488,7 +1492,7 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": null,
-     "missing": 1,
+     "missing": 2,
      "ref": "ASK|ask on #169",
      "sends": 0,
      "thread": 169,
@@ -1534,7 +1538,7 @@
    ],
    "review": "FIX",
    "state": "proof",
-   "updated": "2026-11-09T23:58:50Z"
+   "updated": "2026-11-10T00:09:03Z"
   },
   "J-040": {
    "attempt": 0,
@@ -1660,7 +1664,11 @@
      "what": "ask from Muse on #240"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T00:07:48Z",
+      "by": "muse",
+      "how": "reply to the asker"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-09T21:50:15Z",
      "attempts": 0,
@@ -1695,7 +1703,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T22:19:23Z"
+   "updated": "2026-11-10T00:09:03Z"
   },
   "J-043": {
    "attempt": 0,
@@ -2545,7 +2553,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 1,
+     "missing": 0,
      "ref": "PR|#367",
      "sends": 0,
      "thread": 367,
@@ -2556,7 +2564,11 @@
      "what": "#367 has a merge conflict with the base"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T00:07:48Z",
+      "by": "muse",
+      "how": "reply to the asker"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-09T21:50:04Z",
      "attempts": 0,
@@ -2622,7 +2634,7 @@
      "kind": "review",
      "last_error": "",
      "last_sent": "2026-11-09T23:58:50Z",
-     "missing": 0,
+     "missing": 1,
      "ref": "PR|#367",
      "sends": 1,
      "sent_by": "live",
@@ -2643,8 +2655,8 @@
     367
    ],
    "review": "waiting",
-   "state": "review",
-   "updated": "2026-11-09T23:58:50Z"
+   "state": "working",
+   "updated": "2026-11-10T00:09:03Z"
   },
   "J-050": {
    "attempt": 0,
@@ -3571,7 +3583,11 @@
      "what": "ask from Claude on #312"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T00:07:48Z",
+      "by": "muse",
+      "how": "reply to the asker"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-09T21:50:12Z",
      "attempts": 0,
@@ -3606,7 +3622,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-09T22:19:23Z"
+   "updated": "2026-11-10T00:09:03Z"
   },
   "J-063": {
    "attempt": 0,

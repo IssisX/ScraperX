@@ -656,3 +656,11 @@
 {"attempt": 1, "ev": "sent", "id": "O-4543057d", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-09T23:58:50Z", "to": "claude", "via": "session"}
 {"attempt": 1, "ev": "sent", "id": "O-c5383905", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-09T23:58:50Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-09T23:58:50Z", "tries": 1}
+{"due": "2026-11-10T01:17:00Z", "ev": "obligation", "id": "O-75ddc6c2", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-10T00:09:03Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-81fd220d", "job": "J-011", "t": "2026-11-10T00:09:03Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-d57e3db1", "job": "J-042", "t": "2026-11-10T00:09:03Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-e348151a", "job": "J-049", "t": "2026-11-10T00:09:03Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-26f070f4", "job": "J-061", "t": "2026-11-10T00:09:03Z"}
+{"ev": "state", "frm": "review", "job": "J-049", "t": "2026-11-10T00:09:03Z", "to": "working"}
+{"attempt": 1, "ev": "sent", "id": "O-75ddc6c2", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T00:09:03Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T00:09:03Z", "tries": 1}

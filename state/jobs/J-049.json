@@ -232,7 +232,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 0,
    "ref": "PR|#367",
    "sends": 0,
    "thread": 367,
@@ -243,7 +243,11 @@
    "what": "#367 has a merge conflict with the base"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T00:07:48Z",
+    "by": "muse",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T21:50:04Z",
    "attempts": 0,
@@ -309,7 +313,7 @@
    "kind": "review",
    "last_error": "",
    "last_sent": "2026-11-09T23:58:50Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "PR|#367",
    "sends": 1,
    "sent_by": "live",
@@ -330,6 +334,6 @@
   367
  ],
  "review": "waiting",
- "state": "review",
- "updated": "2026-11-09T23:58:50Z"
+ "state": "working",
+ "updated": "2026-11-10T00:09:03Z"
 }

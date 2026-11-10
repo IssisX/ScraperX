@@ -143,7 +143,11 @@
    "what": "ask from Claude on #312"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T00:07:48Z",
+    "by": "muse",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T21:50:12Z",
    "attempts": 0,
@@ -178,5 +182,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-09T22:19:23Z"
+ "updated": "2026-11-10T00:09:03Z"
 }
