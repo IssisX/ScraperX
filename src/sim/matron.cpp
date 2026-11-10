@@ -3103,7 +3103,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // line off it onto the ring. The edge guard still
                 // keeps her on what continues under her feet.
                 if (off_its_steel(level_, ax, feet_y_, az) && sidestep_s_ <= 0.0F) {
-                    const traversal::Ignore ignore{body_, player_, moving_layer()};
+                    const traversal::Ignore ignore = walk_ignore();
                     const std::vector<Vec3> steps =
                         traversal::grid_walk(physics_, ignore, traversal::Limits{}, Vec3(ax, feet_y_, az),
                                              Vec3(tx, feet_y_, tz), 3.0F, 0.35F, 6000);
@@ -3447,7 +3447,47 @@ void Matron::post_step(const float dt) {
     refresh_shape_view();
 }
 
-bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
+Matron::Sense Matron::catch_sense(RVec3 &at) const noexcept {
+    // Sight first, then sound, this tick then memory. Breath is a nearness, not a place; a glimpse is no sighting.
+    if (ev_.saw || ev_.sees_far || ev_.close_look) {
+        at = ev_.seen_at;
+        return Sense::Sight;
+    }
+    if (ev_.sound) {
+        at = ev_.heard_at;
+        return Sense::Hearing;
+    }
+    // Touch (J-049, ChatGPT's #278 rule): a hand on him counts as a sensed
+    // position at the contact point — his place, now, not a memory. This is
+    // evidence only: caught() still runs the geometry on it, so a touch past
+    // the 0.85 m catch range still refuses, as the 1.174 m case must.
+    if (body_in_world_ && physics_.WereBodiesInContact(body_, player_)) {
+        at = physics_.GetBodyInterface().GetPosition(player_);
+        return Sense::Touch;
+    }
+    if (ev_.sight_age_s <= kCatchMemoryS) {
+        at = ev_.last_sight_at;
+        return Sense::Sight;
+    }
+    if (ev_.sound_age_s <= kCatchMemoryS) {
+        at = ev_.last_sound_at;
+        return Sense::Hearing;
+    }
+    return Sense::None;
+}
+
+traversal::Ignore Matron::walk_ignore() const noexcept {
+    traversal::Ignore ignore{body_, player_, moving_layer()};
+    // Her feet walk around the place she saw or felt him, while it is fresh; without a fresh sense there is no place to avoid (J-049).
+    RVec3 at;
+    if (knows_where(kCatchMemoryS, at)) {
+        ignore.avoid = true;
+        ignore.avoid_at = Vec3(at);
+    }
+    return ignore;
+}
+
+bool Matron::caught(const bool on_ladder) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
     const Mover *way = holder();
@@ -3463,35 +3503,51 @@ bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    if (on_ladder) {
-        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kStoopReachM;
+    // Zeroed: catch_sense leaves it unwritten on Sense::None, and the
+    // geometry below must read a defined place (the origin, far outside
+    // the catch range) rather than uninitialised memory.
+    RVec3 sensed = RVec3::sZero();
+    const Sense sense = catch_sense(sensed);
+    const bool touching = physics_.WereBodiesInContact(body_, player_);
+    if (sense == Sense::None && !touching) {
+        return false;
     }
-    return distance_xz(float(at.GetX()), float(at.GetZ()), float(player.GetX()), float(player.GetZ())) < kCatchM &&
-           std::abs(at.GetY() - player.GetY()) < 1.4;
+    if (on_ladder) {
+        // The ankle she saw or felt: the sensed centre less 0.82 m; touching, the ankle in her hand.
+        const RVec3 ankle = sense != Sense::None ? sensed - RVec3(0.0, 0.82F, 0.0) : player_ankle_;
+        return Vec3(ankle - (at + shoulder_local())).Length() <= kStoopReachM;
+    }
+    // A catch needs the geometry on the sensed position: contact alone
+    // must not catch her (J-049 — a touch with no fresh sense caught at
+    // 1.174 m, outside the 0.85 m catch range, and shoved 59692 N).
+    return distance_xz(float(at.GetX()), float(at.GetZ()), float(sensed.GetX()), float(sensed.GetZ())) < kCatchM &&
+           std::abs(at.GetY() - sensed.GetY()) < 1.4;
 }
 
-Vec3 Matron::shove_direction(const RVec3 player) const noexcept {
-    const RVec3 at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : player;
-    Vec3 away(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
-    if (away.LengthSq() < 1.0e-4F) {
-        away = Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+Vec3 Matron::shove_direction() const noexcept {
+    RVec3 sensed;
+    if (body_in_world_ && catch_sense(sensed) != Sense::None) {
+        const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+        Vec3 away(float(sensed.GetX() - at.GetX()), 0.0F, float(sensed.GetZ() - at.GetZ()));
+        if (away.LengthSq() < 1.0e-4F) {
+            away = Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+        }
+        away = away.Normalized();
+        if (stage_ != Stage::Dangerous) {
+            return away;
+        }
+        // Dangerous: at the shaft's rim nearest where she sensed him, when it is within reach.
+        const float px = float(sensed.GetX());
+        const float pz = float(sensed.GetZ());
+        const Vec3 to_rim(std::clamp(px, -kShaftHalfM, kShaftHalfM) - px, 0.0F,
+                          std::clamp(pz, kMidZ - kShaftHalfM, kMidZ + kShaftHalfM) - pz);
+        const float reach = to_rim.Length();
+        if (reach < 0.05F || reach > kShoveEdgeReachM) {
+            return away;
+        }
+        return to_rim / reach;
     }
-    away = away.Normalized();
-    if (stage_ != Stage::Dangerous) {
-        return away;
-    }
-    // Dangerous: at the shaft's rim nearest the player (the point of its box
-    // nearest them), when it is within reach; over the shaft already (the
-    // catwalk), or far from its rim, away from her as a pest would.
-    const float px = float(player.GetX());
-    const float pz = float(player.GetZ());
-    const Vec3 to_rim(std::clamp(px, -kShaftHalfM, kShaftHalfM) - px, 0.0F,
-                      std::clamp(pz, kMidZ - kShaftHalfM, kMidZ + kShaftHalfM) - pz);
-    const float reach = to_rim.Length();
-    if (reach < 0.05F || reach > kShoveEdgeReachM) {
-        return away;
-    }
-    return to_rim / reach;
+    return Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
 }
 
 void Matron::set_throwables(std::vector<Throwable> throwables) {
