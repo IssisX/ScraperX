@@ -121,8 +121,12 @@ const Expected kExpected[] = {
     // trunk 2d2ae7d7): the grab's force fell 1578 to 1424 N, its power
     // rose 3950 to 4465 W — the piece's new motion puts the grab at a
     // higher relative speed. The hold itself is NOT listed: J-042 budgets it.
-    {"matron-ammo", Path::GrabSpring, false, true, 1424.0, 4465.0},
-    {"matron-ammo", Path::GrabArm, false, true, 779.0, 1291.0},
+    // Re-measured 11-10 with trunk ac4ec54d merged in (#291 taken over): the
+    // race's grab ran at 1609 N, 4570 W (was 1424 N, 4465 W) and its arm at
+    // 1099 N, 997 W (was 779 N, 1291 W): the same grab, the world's other
+    // changes under it. Still uncharged, still the grab's own leak.
+    {"matron-ammo", Path::GrabSpring, false, true, 1609.0, 4570.0},
+    {"matron-ammo", Path::GrabArm, false, true, 1099.0, 997.0},
 };
 
 constexpr double kGrowth = 1.10;          // a listed leak may not grow past its measured peak by more than this
