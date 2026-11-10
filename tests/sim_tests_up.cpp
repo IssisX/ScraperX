@@ -520,7 +520,10 @@ void run_up_controls() {
                  "jump off, top out, bars, launch, wall kicks, stand, slide jump, trapeze; none under a beam or "
                  "at the wheel; the coyote jump; no kick off an ended wall run; the route hint; deterministic\n";
 }
+SCRAPERX_GROUP("up_controls", 700, run_up_controls);
+SCRAPERX_SELECT("up", run_up_controls);
 
 void run_up_throw() {
     up_throw();
 }
+SCRAPERX_SELECT("up-throw", run_up_throw);

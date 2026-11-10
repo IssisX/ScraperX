@@ -119,6 +119,8 @@ void run_incline() {
               << " unbraked_peak_mps=" << wild_peak << " unbraked_deaths=" << wild.snapshot().death_count
               << " deck3_y=" << end.player_position.y << '\n';
 }
+SCRAPERX_GROUP("incline", 460, run_incline);
+SCRAPERX_SELECT("incline", run_incline);
 
 // The owner's stone wheel, from deck 2: down the ramp to its lower receiver,
 // into the bucket at the bottom, RAISE: the hopper's gate opens, stone pours
@@ -271,6 +273,8 @@ void run_wheel() {
     std::cout << "PASS scraperx_sim wheel: poured_kg=" << poured << " ride_s=" << ride_s << " peak_mps=" << peak
               << " deck4_y=" << end.player_position.y << '\n';
 }
+SCRAPERX_GROUP("wheel", 470, run_wheel);
+SCRAPERX_SELECT("wheel", run_wheel);
 
 // A saved climb (release plan B5): after a real ride on the stone wheel (the
 // wheel turned, stone poured and spilled), the save restores that world in a
@@ -387,6 +391,8 @@ void run_teeter() {
     std::cout << "PASS scraperx_sim teeter: edge_z=" << edge_z << " sprint_far_stop_z=" << sprint_far.stop_z
               << " run_stop_z=" << run_let_go.stop_z << '\n';
 }
+SCRAPERX_GROUP("teeter", 520, run_teeter);
+SCRAPERX_SELECT("teeter", run_teeter);
 
 // Phase 3: the yard's trapeze. Up the ramp onto the launch stand, run off its
 // edge and catch the hanging bar in the air, and swing: held still, the swing
@@ -526,6 +532,8 @@ void run_trapeze() {
               << " residual_J=" << timed.residual << " landed=(" << flown.landed_x << "," << flown.landed_y
               << ")\n";
 }
+SCRAPERX_GROUP("trapeze", 540, run_trapeze);
+SCRAPERX_SELECT("trapeze", run_trapeze);
 
 // Phase 4: landing recovery and the roll, from the 12 m drop over the yard.
 // One drop each way: straight down, forward and unprepared, forward with
@@ -727,6 +735,8 @@ void run_landing() {
               << " planted_travel_m=" << plain.travel_0_6 << " recovering_mps=" << recovering
               << " settled_mps=" << settled << '\n';
 }
+SCRAPERX_GROUP("landing", 490, run_landing);
+SCRAPERX_SELECT("landing", run_landing);
 
 void run_save() {
     using scraperx::sim::InitialSpawn;
@@ -918,6 +928,8 @@ void run_save() {
     std::cout << "PASS scraperx_sim save: bytes=" << bytes.size() << " saved_y=" << saved_at.y << " original_drift_m=" << worst
               << " deck4_y=" << b.snapshot().player_position.y << '\n';
 }
+SCRAPERX_GROUP("save", 480, run_save);
+SCRAPERX_SELECT("save", run_save);
 
 // The traction tram from deck 6: east onto the east bridge, off its open
 // end onto a landing, down the gangway onto the tram's lower receiver. The
@@ -982,6 +994,8 @@ void run_tram() {
     std::cout << "PASS scraperx_sim tram: ride_s=" << ride_s << " head_wait_s=" << head_wait_s
               << " deck8_y=" << end.player_position.y << '\n';
 }
+SCRAPERX_GROUP("tram", 550, run_tram);
+SCRAPERX_SELECT("tram", run_tram);
 
 // The owner's law for this world (plan §2.6 rule 10): the initial state
 // determines the final state. The same start and the same inputs, twice: up
@@ -1020,6 +1034,8 @@ void run_determinism() {
             "determinism: the same start and the same inputs must end in the same state, bit for bit");
     std::cout << "PASS scraperx_sim determinism: words=" << first.size() << " ticks=" << first.front() << '\n';
 }
+SCRAPERX_GROUP("determinism", 380, run_determinism);
+SCRAPERX_SELECT("determinism", run_determinism);
 
 void run_service_band() {
     using scraperx::sim::InitialSpawn;
@@ -1052,6 +1068,8 @@ void run_service_band() {
               << " to_728_s=" << deck728.simulation_time_seconds - start
               << " to_750_s=" << top.simulation_time_seconds - start << " deck_y=" << top.player_position.y << '\n';
 }
+SCRAPERX_GROUP("service_band", 360, run_service_band);
+SCRAPERX_SELECT("AS-010-band", run_service_band);
 
 // AS-010's climbing route, on player inputs: across TP-640 to the ladder,
 // up through the 662 deck's hatch, and up the second ladder through the 684
@@ -1085,3 +1103,5 @@ void run_service_route() {
     std::cout << "PASS scraperx_sim AS-010 route: seconds=" << top.simulation_time_seconds - start
               << " top_y=" << top.player_position.y << " lift_untouched=1\n";
 }
+SCRAPERX_GROUP("service_route", 370, run_service_route);
+SCRAPERX_SELECT("AS-010-route", run_service_route);

@@ -789,3 +789,5 @@ void run_matron_exam_descent() {
     std::cout << "PASS scraperx_sim matron exam descent: " << passed << '/' << kSeeds
               << " unseen courses, all required events in each faulted production journey\n";
 }
+SCRAPERX_GROUP("matron_exam_descent", 850, run_matron_exam_descent);
+SCRAPERX_SLICE("matron-exam-descent", run_matron_exam_descent);

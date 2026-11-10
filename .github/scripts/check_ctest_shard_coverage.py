@@ -81,6 +81,18 @@ def shard_patterns(workflow_text):
 ADD_TEST = re.compile(r"add_test\s*\(\s*NAME\s+(\S+)")
 FOREACH = re.compile(r"foreach\s*\(\s*(\w+)((?:\s+\S+)+)\s*\)")
 ENDFOREACH = re.compile(r"^\s*endforeach\s*\(")
+# The CTest slices CMakeLists.txt registers from the test files (J-074): the
+# list it loops over, and the same match it reads each name with.
+REGISTRY_SLICES = ["IN", "LISTS", "SCRAPERX_SIM_SLICES"]
+SLICE_RE = re.compile(r'SCRAPERX_SLICE\("([^"]+)"')
+
+
+def registry_slices(test_dir):
+    """Return the SCRAPERX_SLICE names in test_dir's sim_tests_*.cpp, as CMake reads them."""
+    names = []
+    for path in sorted(Path(test_dir).glob("sim_tests_*.cpp")):
+        names.extend(SLICE_RE.findall(path.read_text(errors="ignore")))
+    return sorted(names)
 
 
 def list_tests_from_cmakelists(cmakelists):
@@ -88,8 +100,9 @@ def list_tests_from_cmakelists(cmakelists):
 
     Expands add_test lines inside foreach blocks over the block's item
     list, so a slice added to the loop is picked up without editing
-    this script. A name containing an unexpanded variable is a parse
-    failure, never a silently skipped test.
+    this script; the loop over SCRAPERX_SIM_SLICES expands over the
+    SCRAPERX_SLICE names in tests/ beside it. A name containing an
+    unexpanded variable is a parse failure, never a silently skipped test.
     """
     tests = []
     loop_var = None
@@ -100,6 +113,12 @@ def list_tests_from_cmakelists(cmakelists):
         foreach = FOREACH.search(line)
         if foreach is not None:
             loop_var, loop_items = foreach.group(1), foreach.group(2).split()
+            if loop_items == REGISTRY_SLICES:
+                loop_items = registry_slices(Path(cmakelists).parent / "tests")
+                if not loop_items:
+                    raise SystemExit(f"check_ctest_shard_coverage: no SCRAPERX_SLICE found beside {cmakelists}")
+            elif loop_items[:2] == ["IN", "LISTS"]:
+                loop_items = []  # any other list: an add_test in it cannot be expanded
             continue
         if ENDFOREACH.search(line):
             loop_var, loop_items = None, []
@@ -281,6 +300,22 @@ def _self_test():
                    "scraperx_sim.matron-chain", "scraperx_sim.matron-remaining"]:
             raise AssertionError(f"cmake-foreach: got {got}")
 
+    def cmake_registry_foreach():
+        # The slices registered in the test files: the loop over
+        # SCRAPERX_SIM_SLICES expands over their SCRAPERX_SLICE names.
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "tests").mkdir()
+            (Path(tmp) / "tests" / "sim_tests_a.cpp").write_text(
+                'SCRAPERX_SLICE("matron-b", run_b);\nSCRAPERX_SELECT("not-a-slice", run_c);\n'
+                'SCRAPERX_SLICE("matron-a", run_a);\n')
+            (Path(tmp) / "CMakeLists.txt").write_text(
+                "foreach(slice IN LISTS SCRAPERX_SIM_SLICES)\n"
+                "    add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)\n"
+                "endforeach()\n")
+            got = list_tests_from_cmakelists(Path(tmp) / "CMakeLists.txt")
+        if got != ["scraperx_sim.matron-a", "scraperx_sim.matron-b"]:
+            raise AssertionError(f"cmake-registry-foreach: got {got}")
+
     def cmake_unexpanded_var():
         text = "add_test(NAME scraperx_sim.${other} COMMAND scraperx_sim_tests)\n"
         with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as tmp:
@@ -324,6 +359,7 @@ def _self_test():
     case("missing-step", missing_step)
     case("missing-pattern", missing_pattern)
     case("cmake-foreach", cmake_foreach)
+    case("cmake-registry-foreach", cmake_registry_foreach)
     case("cmake-unexpanded-var", cmake_unexpanded_var)
     case("cmake-comment-skipped", cmake_comment_skipped)
     case("cmake-empty", cmake_empty)

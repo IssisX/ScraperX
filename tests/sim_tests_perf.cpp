@@ -140,3 +140,4 @@ void run_perf_step() {
               << " strikes=" << first.strikes << " hits=" << first.hits << " runs_ended=" << first.runs_ended
               << " words=" << first.bits.size() << " step_budget_us=" << budget_us << " (logged, not asserted)\n";
 }
+SCRAPERX_SLICE("perf-step", run_perf_step);

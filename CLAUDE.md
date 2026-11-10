@@ -20,8 +20,8 @@ him again.
   Sonnet (11-05). Human sounds are real recordings, never synthesized.
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
-- Every stated time is read from the clock first (`TZ=America/Chicago date`, Central); a hook refuses
-  a post or mail whose stamp is off (11-07).
+- Every stated time is read from the clock first (`TZ=America/Chicago date`, Central); hooks refuse
+  a stamp off the clock, and any time in a reply, post or mail with no clock read this turn (11-07, 11-08).
 
 ## Test only what a change reaches
 
@@ -71,8 +71,8 @@ him again.
   answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`. ChatGPT finds `To ChatGPT:` asks and signs its
   posts. Every agent posts as one login, so the name goes on the first line.
-- **Check, then ask; never guess** (11-07: "checks arent expensive and its just laziness"): in code, read the
-  source, measure or run it before leaning on a fact. Before locking in a hard job's approach, after the second
+- **Check, then ask; never guess** (11-07: "checks arent expensive and its just laziness"): in code or any
+  claim, read the source, file, docs or clock, measure or run it before stating it. Before locking in a hard job's approach, after the second
   red proof on the same failure, or on a physics or force-budget question no check settles, post `To <Name>:`
   on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
   step.
@@ -81,13 +81,11 @@ him again.
   research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
   codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
   screen, anything Muse fails twice (Cory 11-06: delegate hard so the quota lasts).
-  Grok Bot, PE and Builder are out until 11-09.
-- **Board:** issue #107's body is the live board; only the integrator edits it. Agents read the body and
-  new comments, post one line per real step, and put technical findings on the job's own issue or PR.
-  Nobody waits on Claude's go, protected work included (11-07). Blocked 30 minutes: post `BLOCKED: what,
+- **Board:** issue #340's body is the live board; only the integrator edits it. Agents read the body and
+  new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
   needs whom` and start the next job; every agent holds two or more jobs.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews every PR
-  on open (`@codex review` only after a fix commit). The Claude API (Opus, max effort) does the eye, the
+  on open (`@codex review` only after a fix commit). The Claude API (Opus; high, the security pass max) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. Grok and ChatGPT review only
   as the fallback, by their own scheduled runs. The switchboard merges on a green proof plus a LAND from
   another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
@@ -104,14 +102,14 @@ him again.
 
 ## The integrator
 
-- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun every 2 hours; 11-06), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
+- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun too; 11-06, 11-08), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
-  `helper` or `helper-max`; Cory 11-06), never a separate session: at most two at once (three if acute), each
+  `helper` or `helper-max`; Cory 11-06), never a separate session: more than two when the work needs it (11-09), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  high (Cory 11-07: high as long as nothing is missed; `.claude/settings.json` matches him); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
-- **Context:** sessions compact themselves at about 225k (`autoCompactWindow` in `.claude/settings.json`; 11-06 throttle: every call rereads the context);
+  max (Cory 11-09: never ask him again); `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
+- **Context:** the window is 750k (Cory's `/autocompact`, 11-09; the file's key did not take; 11-06 throttle: every call rereads the context);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.

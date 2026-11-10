@@ -371,6 +371,10 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     // the throwables, so nothing already laid is renumbered and saves
     // made before it still load (loose_stock.hpp).
     loose_stock_->append_reserved();
+    // The bands' rings above 396.25 m and the top decks dress_tower
+    // recorded: last in the table, after the east/west stock, so nothing
+    // already laid is renumbered and saves made before them still load.
+    loose_stock_->append_upper();
     {
         std::vector<Matron::Throwable> throwables;
         for (int i = loose_stock_->matron_throwables_begin();
@@ -473,7 +477,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     machine(bay_->leaf_body(), kS, false);
 
     summit_->build_ending();
-    // The east/west spots dress_tower reserved: their bodies come last in
+    // The east/west spots dress_tower reserved: their bodies come next in
     // the kit's build order, after the bay, the twin tower and the summit,
     // so every pre-existing body keeps its place. They are heard like any
     // other stock once built.
@@ -481,14 +485,21 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
 
-    // The forklift on her deck, 154 (J-041): its two kit bodies after every
-    // other's (the east/west pieces too), so older saves' lists line up; its hits heard like the rest.
+    // The forklift on her deck, 154 (J-041): its two kit bodies after the
+    // east/west pieces, so older saves' lists line up; its hits heard like the rest.
     forklifts_.push_back(std::make_unique<Forklift>(physics_system_, *kit_, object_layers::kMoving, player_id_,
                                                     Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity,
                                                     Forklift::kDeck154ParkX, Forklift::kDeck154ParkZ, 0.0F,
                                                     Forklift::kDeck154ParkY));
     track(forklifts_.back()->chassis_body(), ImpactSound::Machine);
     track(forklifts_.back()->carriage_body(), ImpactSound::Machine);
+
+    // The upper stock (J-014): its bodies after the deck-154 forklift, so
+    // the forklift keeps its place right after the east/west pieces and
+    // the magnet's pinned append order still holds. Heard like the rest.
+    for (const int i : loose_stock_->realize_upper()) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
 
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);

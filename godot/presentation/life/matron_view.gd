@@ -108,8 +108,6 @@ const STATE_CARRY := 13
 const STATE_DANGLE := 14
 const STATE_ARMPLAY := 15
 const STATE_SPARE := 17
-# Her hands onto each new hold: most of the way in a tenth of a second.
-const HAND_EASE := 22.0
 const POSE_KEYS := ["torso", "neck", "head", "jaw", "sh_l", "sh_r", "el_l", "el_r",
 	"hp_l", "hp_r", "kn_l", "kn_r", "an_l", "an_r"]
 
@@ -245,10 +243,9 @@ var _root_off := Vector3.ZERO
 var _root_off_v := Vector3.ZERO
 var _box_v := Vector3.ZERO
 var _burst_tail := 0.0
-# Her two holds as drawn on what she climbs (matron_rig.gd contact reaches
-# for these).
+# Her two holds on what she climbs this frame (matron_rig.gd contact reaches
+# for these, its wrists following them).
 var _held_shown := PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
-var _hands_fresh := true
 # Rendered wrist distance from the authoritative carried handle, in meters.
 # INF when no native prop constraint is active (including the throw tick).
 var prop_hand_error_m := INF
@@ -1247,11 +1244,13 @@ func _ease_figure(centre: Vector3, delta: float) -> void:
 	_figure.global_position = centre + shown * local
 
 
-# Her hands on what she climbs: each reaches its new hold over a moment
-# (HAND_EASE); a new climb, or one far off, starts where its hold is.
-func _ease_hands(data: Dictionary, delta: float) -> void:
+# Her hands on what she climbs: the holds they go for this frame. The rig
+# takes each wrist onto its hold over frames, a new climb's from where her
+# wrist is drawn (matron_rig.gd _follow_hand, no faster than HAND_MAX_M_S),
+# so nothing here jumps them: no restart at a new climb, none for a hold
+# far off.
+func _ease_hands(data: Dictionary) -> void:
 	if not (bool(data.get("climbing", false)) and data.has("climb_hand")):
-		_hands_fresh = true
 		return
 	var want: Vector3 = data["climb_hand"]
 	var want2: Vector3 = data["climb_hand2"] if data.has("climb_hand2") else want
@@ -1261,14 +1260,8 @@ func _ease_hands(data: Dictionary, delta: float) -> void:
 		if bool(data["contact_hand_held"]):
 			want = data["contact_hand"]
 		want2 = data["contact_hand2"] if bool(data.get("contact_hand2_held", false)) else want
-	if _hands_fresh or _pose_fresh or _held_shown[0].distance_to(want) > 1.5 or _held_shown[1].distance_to(want2) > 1.5:
-		_held_shown[0] = want
-		_held_shown[1] = want2
-		_hands_fresh = false
-		return
-	var k := 1.0 - exp(-HAND_EASE * delta)
-	_held_shown[0] = _held_shown[0].lerp(want, k)
-	_held_shown[1] = _held_shown[1].lerp(want2, k)
+	_held_shown[0] = want
+	_held_shown[1] = want2
 
 
 # The contortion layer's bursts: every 1.4-3.6 s one wrong thing (kind 0 the
@@ -2423,11 +2416,12 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_topple(data, centre, delta)
 	_pipe_head_down(data, centre)
 	_ease_figure(centre, delta)
-	_ease_hands(data, delta)
+	_ease_hands(data)
 	_drive_body(data, delta, camera_position, falling)
 	# J-044i: her injuries, from the per-region dictionary J-044g fills.
+	# delta drives the J-059 black-eye pool (the ring darkens over 15 s).
 	if _injury != null:
-		_injury.update(data.get("injury", {}), _rig)
+		_injury.update(data.get("injury", {}), _rig, delta)
 	# A corpse is drawn but makes none of her living sounds (matron_sound.gd: out_near is "out, alive and near").
 	_hear(data, delta, alive, _figure.global_position, player_position, falling)
 

@@ -270,12 +270,25 @@ const GOVERN_BURST_RAD_S := 19.0
 # pulled) faster than this a second (GOVERN_BURST_M_S in a burst)
 const GOVERN_M_S := 3.0
 const GOVERN_BURST_M_S := 5.0
+# Her wrists onto a climb's or her pipe's grip, and back off it: each goes
+# for the point on a critically damped spring (HAND_W) no faster than
+# HAND_MAX_M_S (5 cm a frame at 60 fps), its step at most HAND_DT_MAX
+# (_follow_hand). Only a teleport (fresh_frame) puts a wrist straight on.
+const HAND_W := 30.0
+const HAND_MAX_M_S := 3.0
+const HAND_DT_MAX := 0.1
 var _ride_y := 0.0
 var _ride_v := 0.0
 var _ankle_y := 0.097
 var _plants := {}
 # Each reach's pole (frame, the unit side its middle joint stands out to).
 var _pole := {}
+# Each wrist's follow ("l" / "r": [frame, velocity]), kept while the wrist
+# reaches a grip and while it comes back off one; each wrist where it was
+# last drawn (world), and her skeleton's origin then.
+var _hand_follow := {}
+var _wrist_drawn := {}
+var _skel_was := Vector3.ZERO
 var _governed_bones: Array[int] = []
 var _govern_last: Array[Quaternion] = []
 var _govern_pos: Array[Vector3] = []
@@ -416,6 +429,62 @@ func _reach_chain(a: String, b: String, c: String, target: Vector3, w := 1.0, ke
 	var el2 := _gpos(b)
 	var wr2 := _gpos(c)
 	_turn_bone_global(b, Quaternion((wr2 - el2).normalized(), (want - el2).normalized()))
+
+
+# Her wrist `s` reaching for the world point `at` (a climb's hold, her
+# pipe's grip): the wrist goes to a point that follows `at` (HAND_W, no
+# faster than HAND_MAX_M_S), so a grip taken, moved or swapped is reached
+# over frames, never in one. Each step is taken from where the wrist was
+# drawn last frame (a reach that starts, or one the governor held back, never
+# runs ahead of her drawn hand), so it needs no blend weight. `carry`: the
+# step is taken in her body's frame (a wrist coming back to her pose).
+func _reach_hand(s: String, at: Vector3) -> void:
+	_reach(s, skel.global_transform.affine_inverse() * _follow_hand(s, at), 1.0)
+
+
+func _follow_hand(s: String, at: Vector3, carry := false) -> Vector3:
+	var last: Array = _hand_follow.get(s, [])
+	if view == null or bool(view.fresh_frame) or not _wrist_drawn.has(s):
+		_hand_follow[s] = [_ik_frame, Vector3.ZERO]
+		return at
+	var x: Vector3 = _wrist_drawn[s]
+	if carry:
+		x += skel.global_position - _skel_was
+	var v := Vector3.ZERO
+	if not last.is_empty() and int(last[0]) >= _ik_frame - 1:
+		v = last[1]
+	var dt := clampf(float(view._dt), 0.0, HAND_DT_MAX)
+	if dt > 0.0:
+		var f: Array = view.spring(x, v, at, HAND_W, dt)
+		var to: Vector3 = (f[0] as Vector3) - x
+		var cap := HAND_MAX_M_S * dt
+		if to.length() > cap:
+			x += to.limit_length(cap)
+			v = (f[1] as Vector3).limit_length(HAND_MAX_M_S)
+		else:
+			x = f[0]
+			v = f[1]
+	_hand_follow[s] = [_ik_frame, v]
+	return x
+
+
+# A wrist that reached a grip last frame and does not this frame (the climb
+# or the pipe let go, a second hold dropped): it comes back to where this
+# frame's pass has it on the same follow, and is let go once there.
+func _release_hands() -> void:
+	for s in _hand_follow.keys():
+		var last: Array = _hand_follow[s]
+		if int(last[0]) >= _ik_frame:
+			continue
+		if view == null or bool(view.fresh_frame) or int(last[0]) < _ik_frame - 1:
+			_hand_follow.erase(s)
+			continue
+		var pose := skel.global_transform * _gpos("wr_" + s)
+		var x := _follow_hand(s, pose, true)
+		if x.distance_to(pose) < 0.005:
+			_hand_follow.erase(s)
+		else:
+			_reach(s, skel.global_transform.affine_inverse() * x, 1.0)
 
 
 # Her body's ride onto what is under her (her lower foot on the deck, her
@@ -952,8 +1021,8 @@ func _pipe_feet(data: Dictionary, w: float) -> void:
 	claims |= CLAIM_FEET
 
 
-# `held`: her holds as the view draws them, eased onto each new one (the
-# view's _ease_hands); without it, the native's own holds.
+# `held`: her climb's holds as the view picks them (the view's _ease_hands);
+# without it, the native's own. Her wrists follow them (_reach_hand).
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
 	var prop_intent := int(data.get("carrying", 0)) != 0 or int(data.get("stock_seeking", 0)) != 0
 	var carrying := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
@@ -977,6 +1046,7 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 			var cap := GOVERN_M_S * maxf(float(view._dt), 0.0)
 			skel.set_bone_pose_position(i, last.move_toward(nominal, cap))
 	_contact(data, falling, held)
+	_release_hands()
 	govern()
 	# Only the physical constraint owns attachment. The native handle is the
 	# contact target, not a visual approximation. Finish the wrists AFTER the
@@ -993,6 +1063,9 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 		_finish_prop_wrist("r", _in_arm("r", handle + across, 1.0), wrist_before["r"])
 		if two_hands and wrist_before.has("l"):
 			_finish_prop_wrist("l", _in_arm("l", handle - across, 1.0), wrist_before["l"])
+	for s in ["l", "r"]:
+		_wrist_drawn[s] = skel.global_transform * _gpos("wr_" + s)
+	_skel_was = skel.global_position
 	_prop_arm_pose.clear()
 	if prop_intent:
 		for bone in PROP_ARM_JOINTS:
@@ -1146,8 +1219,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		_ride(lift)
 		if wf > 0.001:
 			_plant_limbs(data, wf, feet_free)
-		var wc := float(view._w_climb) if view != null else 1.0
-		_reach("r", skel.global_transform.affine_inverse() * hand, wc)
+		_reach_hand("r", hand)
 		claims |= CLAIM_HAND
 		# The left wrist goes to a second hold only when the
 		# simulation has her hand on one (contact_hand2_held under
@@ -1166,9 +1238,9 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 			if second:
 				hand_l = held[1] if held.size() >= 2 else (data["contact_hand2"] if truth else data["climb_hand2"])
 				claims |= CLAIM_HAND2
-				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+				_reach_hand("l", hand_l)
 			elif two_handed:
-				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+				_reach_hand("l", hand_l)
 		if down_mask != 0:
 			claims |= CLAIM_PLANTS
 		return
@@ -1184,8 +1256,8 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		into.y = 0.0
 		var side := Vector3.UP.cross(into.normalized()) if into.length() > 0.01 else Vector3.RIGHT
 		_ride(0.0)
-		_reach("r", inv * (grip + side * 0.08), wp)
-		_reach("l", inv * (grip - side * 0.08), wp)
+		_reach_hand("r", grip + side * 0.08)
+		_reach_hand("l", grip - side * 0.08)
 		claims |= CLAIM_HAND | CLAIM_HANG
 		if bool(data.get("contact_braced", false)):
 			var brace: Vector3 = data["contact_brace"]

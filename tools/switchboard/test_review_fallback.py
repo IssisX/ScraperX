@@ -116,9 +116,41 @@ class FallbackConfig(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
-        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("grok", "chatgpt"), 1.0))
-        self.assertEqual(team.other_authored_asks, ("chatgpt",))
-        self.assertNotIn("muse", tuple(team.pool) + tuple(team.fallback_order) + tuple(team.human_reviewers))
+        # J-072: ChatGPT is `wake: manual`, so Grok is the only polled fallback and nothing is routed to ChatGPT.
+        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("grok",), 1.0))
+        self.assertEqual(team.other_authored_asks, ("grok",))
+        self.assertEqual(team.manual, frozenset({"chatgpt"}))
+        routed = tuple(team.pool) + tuple(team.fallback_order) + tuple(team.human_reviewers) + tuple(team.other_authored_asks)
+        self.assertNotIn("muse", routed)
+        self.assertNotIn("chatgpt", routed)
+        for author in ("anthropic", "openai", "meta", "xai"):
+            for api_ok in (True, False):
+                self.assertNotIn("chatgpt", rules.review_rotation(9, author, frozenset(), team, api_ok), (author, api_ok))
+            self.assertNotEqual(rules.next_fallback(["grok"], author, team), "chatgpt")
+
+
+class ManualWake(unittest.TestCase):
+    """J-072: an agent with `wake: manual` runs only when Cory starts it, so no review ask is ever routed to it,
+    whatever the lists name: a Claude-authored PR goes to Codex and the API first, then Grok, never ChatGPT."""
+
+    CFG = dict(AGENTS, agents=dict(AGENTS["agents"], chatgpt=dict(AGENTS["agents"]["chatgpt"], wake="manual")),
+               review={"claude_authored_asks": ["chatgpt", "grok"], "other_authored_asks": ["chatgpt", "grok"],
+                       "pool": ["claude-api", "chatgpt"], "api_reviews_claude": True,
+                       "fallback_after_hours": 1, "fallback_order": ["grok", "chatgpt"]})
+    TEAM = rules.team_from_config(CFG)
+
+    def test_never_in_the_rotation_or_the_fallback(self):
+        self.assertEqual(rules.review_rotation(9, "anthropic", frozenset(), self.TEAM, api_ok=True), [rules.API_REVIEWER])
+        self.assertEqual(rules.review_rotation(9, "anthropic", frozenset(), self.TEAM, api_ok=False), ["grok"])
+        self.assertEqual(rules.next_fallback(["grok"], "anthropic", self.TEAM), "")   # nobody left: never ChatGPT
+
+    def test_never_picked_from_the_ask_lists(self):
+        self.assertEqual(rules.pick_reviewer("anthropic", frozenset(), self.TEAM), rules.ReviewPick("ask", "grok"))
+        self.assertEqual(rules.pick_reviewer("meta", frozenset(), self.TEAM), rules.ReviewPick("ask", "grok"))
+
+    def test_a_list_of_only_manual_agents_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "wake: manual"):
+            rules.team_from_config(dict(self.CFG, review={"claude_authored_asks": ["chatgpt"]}))
 
 
 class FallbackPick(unittest.TestCase):

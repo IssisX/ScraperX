@@ -2,8 +2,10 @@
 
 // The native tests' shared ground: the asserts and walking helpers every
 // test uses, and the declarations of each stage's helpers that other files
-// use (simulation_tests.cpp runs them all, in order; see its main()).
+// use. Each group registers itself beside its function (sim_registry.hpp);
+// simulation_tests.cpp's main() runs the registry.
 
+#include "sim_registry.hpp"
 #include "sim/simulation.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/trapeze.hpp"
@@ -921,6 +923,7 @@ void test_matron_honest();
 void test_matron_stalk();
 void test_matron_ladder_head();
 void test_matron_climb_support();
+void test_matron_riser();
 void run_matron_state_exits();
 void run_matron_crash();
 void run_matron_mischief();
@@ -948,6 +951,7 @@ void run_step2_movement();
 
 void run_twin();
 void run_twin_geometry();
+void run_twin_balconies();
 void run_matron_remaining();
 
 void run_matron_player_independence();

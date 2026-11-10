@@ -466,6 +466,8 @@ void run_strike() {
     }
     std::cout << "PASS scraperx_sim strike: impulse_ns=" << close.impulse_ns << "\n";
 }
+SCRAPERX_GROUP("strike", 950, run_strike);
+SCRAPERX_SELECT("strike", run_strike);
 
 namespace {
 // The low sweep (sim/physics_world_strike.cpp): Punch while crouched. Her
@@ -616,6 +618,7 @@ void run_matron_sweep() {
             "sweep: the same inputs give the same sweep, to the bit");
     std::cout << "PASS scraperx_sim matron sweep: impulse_ns=" << pest.impulse_ns << "\n";
 }
+SCRAPERX_SLICE("matron-sweep", run_matron_sweep);
 
 namespace {
 // The heavy kick: Punch while moving toward her, one kick on the
@@ -770,6 +773,7 @@ void run_matron_kick() {
             "kick: the same inputs give the same kick, to the bit");
     std::cout << "PASS scraperx_sim matron kick: impulse_ns=" << pest.impulse_ns << "\n";
 }
+SCRAPERX_SLICE("matron-kick", run_matron_kick);
 
 void run_matron_jab() {
     constexpr int kHunting = static_cast<int>(scraperx::sim::Matron::State::Hunting);
@@ -943,3 +947,4 @@ void run_matron_jab() {
             "jab: the same inputs give the same jab, to the bit");
     std::cout << "PASS scraperx_sim matron jab: impulse_ns=" << pest.impulse_ns << "\n";
 }
+SCRAPERX_SLICE("matron-jab", run_matron_jab);

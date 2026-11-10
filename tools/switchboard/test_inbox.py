@@ -625,7 +625,7 @@ class AskToClaude(unittest.TestCase):
         self.assertEqual(it.kind, "TO-CLAUDE")
 
     def test_a_closed_thread_gives_none(self):
-        gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[107])
+        gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[switch.BOARD_ISSUE])
         self.assertEqual(items_of(gh), [])
 
 
@@ -644,22 +644,45 @@ class MuseRouted(unittest.TestCase):
         gh = FakeGH()
         self.assertEqual(make(gh).muse([s]), 1)
         (number, posted), = gh.posts
-        self.assertEqual(number, 256)
+        # Never on the PR: the bridge's Issues-only token can neither clear wake:muse there nor comment (11-09).
+        # No job issue here, so the board; the PR and its head stay in the subject line.
+        self.assertEqual(number, switch.BOARD_ISSUE)
         self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: J-042 FIX on #256 @ 1a2b3c4d"))
         self.assertIn("The hold spring is uncharged. " + "x" * 500, posted)
         self.assertNotIn("x" * 650, posted)
         self.assertIn("https://github.com/IssisX/ScraperX/issues/256#issuecomment-99", posted)
         key = switch.inbox_key("muse-FIX", "#256", HEAD)
-        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/256/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/340/labels", {"labels": ["wake:muse"]}))
+        self.assertFalse(any(w[1].startswith("repos/IssisX/ScraperX/issues/256") for w in gh.writes))
         self.assertEqual(gh.writes[1][0], "PATCH")
         self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
         self.assertIn(key, gh.writes[1][2]["body"])
         self.assertNotIn("switchboard:muse keys=", posted)   # posted without its marker; the label comes first
-        self.assertIn(key, gh.by_issue[256][0]["body"])       # the marker is edited in after the label lands
+        self.assertIn(key, gh.by_issue[340][0]["body"])       # the marker is edited in after the label lands
         self.assertEqual(make(gh).inbox([s]), 0)
-        self.assertEqual(make(gh).muse([self.fix_pr(comments=gh.by_issue[256])]), 0)
+        self.assertEqual(make(gh).muse([self.fix_pr()]), 0)   # the board's marker is read: not sent again
         self.assertEqual(len(gh.posts), 1)
-        self.assertEqual(make(gh).muse([self.fix_pr(head=OTHER_HEAD, comments=gh.by_issue[256])]), 1)
+        self.assertEqual(make(gh).muse([self.fix_pr(head=OTHER_HEAD)]), 1)
+
+    def test_a_notice_on_a_pr_with_a_job_issue_goes_on_the_job_issue(self):
+        s = self.fix_pr()
+        s.ctx["issue"] = {"number": 300, "labels": []}
+        gh = FakeGH()
+        self.assertEqual(make(gh).muse([s]), 1)
+        (number, posted), = gh.posts
+        self.assertEqual(number, 300)
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: J-042 FIX on #256 @ 1a2b3c4d"))
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/300/labels", {"labels": ["wake:muse"]}))
+        again = self.fix_pr()
+        again.ctx["issue"] = {"number": 300, "labels": []}
+        self.assertEqual(make(gh).muse([again]), 0)   # the job issue's marker is read: not sent again
+        self.assertEqual(len(gh.posts), 1)
+
+    def test_a_key_marked_on_the_pr_before_the_move_is_not_sent_again(self):
+        key = switch.inbox_key("muse-FIX", "#256", HEAD)
+        old = comment(5, 256, "CLAUDE_TO_MUSE: J-042 FIX on #256\n\n" + switch.MUSE_MARK.format(keys=key), 2.0, BOT)
+        c = comment(99, 256, "**Codex (review of #256 @ 1a2b3c4d): FIX**\n\nx", 1.0, rules.CODEX_LOGIN)
+        self.assertEqual(make(FakeGH()).muse([self.fix_pr(comments=[c, old])]), 0)
 
     def test_a_failed_label_write_is_retried_and_not_mailed_twice(self):
         """A label POST that fails after the comment lands must not lose the notification:
@@ -670,17 +693,17 @@ class MuseRouted(unittest.TestCase):
         with self.assertRaises(switch.GitHubError):
             make(gh).muse([s])
         (number, posted), = gh.posts
-        self.assertEqual(number, 256)
+        self.assertEqual(number, switch.BOARD_ISSUE)
         self.assertNotIn("switchboard:muse keys=", posted)   # no marker: the key is not delivered
         self.assertEqual(gh.writes, [])
-        again = self.fix_pr(comments=gh.by_issue[256])
+        again = self.fix_pr()
         self.assertEqual(make(gh).muse([again]), 1)
         self.assertEqual(len(gh.posts), 2)   # the notification is sent again
         labels = [w for w in gh.writes if w[0] == "POST" and w[1].endswith("/labels")]
         self.assertEqual(len(labels), 1)     # one successful label: one mail
         key = switch.inbox_key("muse-FIX", "#256", HEAD)
-        self.assertIn(key, gh.by_issue[256][-1]["body"])   # the retry marks the key delivered
-        third = self.fix_pr(comments=gh.by_issue[256])
+        self.assertIn(key, gh.by_issue[340][-1]["body"])   # the retry marks the key delivered
+        third = self.fix_pr()
         self.assertEqual(make(gh).muse([third]), 0)
         self.assertEqual(len(gh.posts), 2)
         self.assertEqual(len([w for w in gh.writes if w[0] == "POST" and w[1].endswith("/labels")]), 1)
@@ -725,7 +748,7 @@ class MuseRouted(unittest.TestCase):
         self.assertEqual(make(gh).muse([s]), 1)
         self.assertEqual(make(gh).inbox([s]), 1)
 
-    def test_a_red_branch_with_no_pr_goes_to_muse_on_107(self):
+    def test_a_red_branch_with_no_pr_goes_to_muse_on_the_board(self):
         name = "fb-bot/integrate-j044c-wreck"
         gh = FakeGH(runs=[run(40, name, HEAD, hours=2)], jobs={40: RED_JOBS}, heads={name: HEAD})
         self.assertEqual([(i.kind, i.target) for i in muse_of(gh)], [("RED-BRANCH", name)])
@@ -733,9 +756,9 @@ class MuseRouted(unittest.TestCase):
         self.assertEqual(make(gh).muse([]), 1)
         (number, posted), = gh.posts
         self.assertEqual(number, switch.BOARD_ISSUE)
-        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #107 @ 1a2b3c4d"))
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #340 @ 1a2b3c4d"))
         key = switch.inbox_key("muse-RED-BRANCH", name, HEAD)
-        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/107/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/340/labels", {"labels": ["wake:muse"]}))
         self.assertEqual(gh.writes[1][0], "PATCH")
         self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
         self.assertIn(key, gh.writes[1][2]["body"])
