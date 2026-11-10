@@ -37,7 +37,7 @@ him again.
 
 ## Talking to Cory (he is on a phone)
 
-- Plain, short answers; technical detail only when he asks.
+- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE", "really fucking important").
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent.
