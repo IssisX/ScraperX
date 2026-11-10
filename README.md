@@ -10,7 +10,7 @@ table is in [`00_START_HERE_ARCHIVE.md`](00_START_HERE_ARCHIVE.md)) and never sh
 - **Kernel Work Orders** `WO-000`–`WO-013` in `03_EXECUTION/KERNEL/` — foundational engineering that proves
   one tool type each on the `KX-*` substrate. A **closed set**. All fourteen are in source.
 - **Ascent Slices** `AS-001`–`AS-015` in `03_EXECUTION/ASCENT/` — the actual 1.6 km climb, one Atlas band
-  at a time. Consult issue #3 for current assignments.
+  at a time. Consult issue #340 for current assignments.
 
 `B00`–`B11` are Atlas band IDs — floors of the tower. They are never filenames and never tickets.
 
@@ -31,7 +31,7 @@ mechanics. For example, `src/sim/crew.cpp` creates workers,
 `godot/presentation/main_feel.gd` presents the summit state. Source presence
 alone is not a playthrough or a claim that these features are complete.
 
-**Next work:** use the [assignment board and latest comments on issue #3](https://github.com/IssisX/ScraperX/issues/3),
+**Next work:** use the [assignment board and latest comments on issue #340](https://github.com/IssisX/ScraperX/issues/340),
 check open pull requests, and reconcile candidates against current trunk. The
 [numbered gap list](03_EXECUTION/GAP_LIST.md) records unfinished requirements;
 its source and proof references must be checked against the current revision.
