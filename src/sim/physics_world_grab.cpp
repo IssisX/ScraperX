@@ -735,7 +735,6 @@ void effort_record(const effort::Path p, const JPH::TwoBodyConstraint *c, const 
 
 void Simulation::PhysicsWorld::effort_after_update(const float dt) const noexcept {
     if (!effort::ledger().enabled) return;
-    effort_record(effort::Path::StockHold, matron_->stock_hold(), dt);
     effort_record(effort::Path::GrabArm, hand_arm_.GetPtr(), dt);
     effort_record(effort::Path::Hand2Arm, hand2_arm_.GetPtr(), dt);
     effort_record(effort::Path::Knee, knee_arm_.GetPtr(), dt);

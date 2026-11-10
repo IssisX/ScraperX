@@ -610,8 +610,6 @@ class AskToClaude(unittest.TestCase):
 
     def test_posts_that_are_not_asks_give_none(self):
         cases = [
-            ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-049 leak list**\n\nThe list.", 1.0, "IssisX", 292),
-            ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-042 windup pushed**\n\nBranch pushed.", 1.0, "IssisX", 292),
             (self.ASK, 25.0, "IssisX", 292),
             ("A long ruling\n\nTo Claude: what about this?", 1.0, "IssisX", 292),
             ("<!-- codex review -->\nTo Claude: ...", 1.0, "IssisX", 292),
@@ -620,6 +618,13 @@ class AskToClaude(unittest.TestCase):
         ]
         for body, hours, login, number in cases:
             self.assertEqual(items_of(self.gh_with(body, hours, login, number)), [], body.split("\n")[0][:60])
+
+    def test_every_bridge_post_gives_one_item(self):
+        # 11-10: Muse's "cause 2 needs your ruling" had no "To Claude" in its subject and sat unread all night
+        for body in ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-049 leak list**\n\nThe list.",
+                     "**Muse (via email bridge): J-044d cause 1 fixed; cause 2 needs your ruling**\n\nWhich?"):
+            (it,) = items_of(self.gh_with(body=body))
+            self.assertEqual(it.kind, "TO-CLAUDE", body[:60])
 
     def test_a_proposal_first_line_gives_one_item(self):
         (it,) = items_of(self.gh_with(body="Proposal: let the switchboard wake Claude on asks\n\nDetails."))

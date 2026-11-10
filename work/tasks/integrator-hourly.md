@@ -1,10 +1,9 @@
 # Integrator: the hourly check
 
-It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every hour Sat-Sun, 9:17 AM to 9:17 PM (Cory 11-08); none
-overnight (Cory 11-06, 11-07). The full check (every step below) runs at 8:17 AM,
-11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light: `git pull`, step 1
-only, and end in one line, with no board edit and no message
-to Cory unless he must act (11-06).
+It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on weekdays (Sat-Sun 9:17 AM, 1:17 PM,
+5:17 PM, 9:17 PM), every run full. It is a backstop (Cory 11-10, "drop"): the switchboard inbox wakes the integrator on
+every Muse mail, red proof, review and merge, and it acts then; these runs catch what no event raised. Kept to 11-12,
+then dropped if events covered everything.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
 Pace (Cory 11-06: track AND predict, so the limit lasts to Sunday night): every run works out % now itself: the

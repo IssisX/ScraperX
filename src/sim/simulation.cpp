@@ -270,6 +270,10 @@ std::uint32_t Simulation::loose_stock_throwables_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().matron_throwables_begin());
 }
 
+std::uint32_t Simulation::loose_stock_matron_kinds_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().matron_kinds_begin());
+}
+
 std::uint32_t Simulation::loose_stock_east_west_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().east_west_begin());
 }
@@ -1620,6 +1624,8 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.stock_shoves = view.stock_shoves;
     result.stock_handled = view.stock_handled;
     result.stock_push_force_n = view.stock_push_force_n;
+    result.throw_windup = view.throw_windup;
+    result.stock_thrown = view.stock_thrown;
     result.staggers = view.staggers;
     result.knockdowns = view.knockdowns;
     result.damage_ns = view.damage_ns;

@@ -1270,8 +1270,8 @@ class Switch:
 
     def ask_inbox_items(self, reported: frozenset[str]) -> list[InboxItem]:
         """TO-CLAUDE (J-052): an ask to the integrator in a comment on an open thread, once per comment id.
-        The first line holds `To Claude` or `proposal`; the bridge's `**Muse (via email bridge): <subject>**`
-        first line counts, since the subject is in it. Every agent posts as IssisX, so the author is read
+        The first line holds `To Claude` or `proposal`, or is the bridge's `**Muse (via email bridge):
+        <subject>**`: every Muse mail is to Claude, so every one wakes it. Every agent posts as IssisX, so the author is read
         from the body: Claude's posts end with its footer, the switchboard's own are its login, Codex's
         start with `<!-- codex`."""
         since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -1302,7 +1302,10 @@ class Switch:
                 continue
             first = (body.split("\n", 1)[0] or "").strip()
             low = first.lower()
-            if "to claude" not in low and "proposal" not in low:
+            # Every bridge post is Muse writing to Claude (its subject starts MUSE_TO_CLAUDE): a report or an
+            # ask, it wakes the integrator. Gating it on "To Claude" in the subject left Muse's ruling asks
+            # ("cause 2 needs your ruling", 11-10) unread all night.
+            if "to claude" not in low and "proposal" not in low and not first.startswith(BRIDGE_POST):
                 continue
             key = inbox_key("TO-CLAUDE", f"#{number}", str(cid))
             if key in reported:

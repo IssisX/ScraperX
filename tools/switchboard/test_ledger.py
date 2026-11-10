@@ -351,7 +351,7 @@ class Escalation(unittest.TestCase):
         body = self.sweep(gh, f, NOW, BOARD)
         self.assertEqual(len(gh.comments), 1)
         n, text = gh.comments[0]
-        self.assertEqual(n, 219)                               # on her most urgent item's own thread
+        self.assertEqual(n, 340)   # on the board: an item's thread may be a PR, which the bridge cannot mail from
         self.assertEqual(text.count("\n- "), L.MAX_MAIL_ITEMS)
         gh = FakeGH()
         self.sweep(gh, f, NOW, body)
