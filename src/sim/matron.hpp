@@ -680,6 +680,7 @@ public:
     // over-base carry at 0.4477 m, no crossing.)
     static constexpr float kSwatMinFeetN = 3300.0F;
     static constexpr float kSwatWaitS = 1.6F;
+    static constexpr float kSwatHandM = 0.15F;   // her hand this near his chest: her swat lands (not before)
     // Her mischief as a pest (the owner, 2026-10-19: she carries things off
     // and throws them at you): light stock the player has handled is theirs
     // to her. Hunting as a pest, with the player more than kThrowMinM off,
@@ -1149,6 +1150,7 @@ public:
     static constexpr float kFatalHaulOutM = 0.45F;
     static constexpr float kFatalHaulFaceRad = 0.35F;
     static constexpr float kFatalLeashM = 0.20F;
+    static constexpr float kFatalBesideM = 0.55F;   // the fatality's haul: his collar in beside her, this far to her side
     // His last arm: after her swat she takes his collar, not his ankle, and
     // drags him by it to her edge (HOLD_WITH_REAL_ARMS.md, the fatality).
     static constexpr bool kFatalByCollar = true;
@@ -1840,6 +1842,12 @@ public:
     // A swat draws from the same per-tick force/power account as her feet.
     // The caller applies only this grant and its equal opposite reaction.
     [[nodiscard]] JPH::Vec3 grant_swat_force(JPH::Vec3 wanted, JPH::Vec3 player_point_velocity) noexcept;
+    // Her hand's body where the world has it (beat 1: her swat lands once it
+    // reaches his chest); `present` false while she has no hand body.
+    void set_hand_at(const JPH::RVec3 at, const bool present) noexcept {
+        hand_at_ = at;
+        hand_at_present_ = present;
+    }
     [[nodiscard]] bool take_swat(JPH::Vec3 &dir) noexcept {
         if (!swat_due_) {
             return false;
@@ -2827,6 +2835,8 @@ private:
     JPH::RVec3 player_belt_ = JPH::RVec3::sZero();
     bool swat_due_ = false;
     bool swat_given_ = false;
+    JPH::RVec3 hand_at_ = JPH::RVec3::sZero();   // her hand's body (set_hand_at)
+    bool hand_at_present_ = false;
     int swat_budget_ticks_ = 0;  // ticks her feet yield the budget a swat needs (kSwatTicks, set with swat_due_)
     JPH::Vec3 swat_dir_ = JPH::Vec3::sZero();
     bool player_down_ = false;

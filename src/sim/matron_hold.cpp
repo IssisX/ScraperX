@@ -836,7 +836,10 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                     hold_phase_ = 1;
                     hold_s_ = 0.0F;
                 } else {
-                    if (!swat_given_) {
+                    // Her hand with the swat, to his chest; the swat lands as
+                    // it gets there (kSwatHandM), not as her grab begins.
+                    const RVec3 chest = player + RVec3(0.0, 0.45, 0.0);
+                    if (!swat_given_ && hand_at_present_ && Vec3(hand_at_ - chest).Length() <= kSwatHandM) {
                         swat_given_ = true;
                         swat_due_ = true;
                         swat_dir_ = swat_direction(player);
@@ -847,8 +850,7 @@ void Matron::step_hold(const float dt, const RVec3 player) {
                         swat_budget_ticks_ = kSwatTicks;
                     }
                     stand();
-                    // Her hand with the swat, at his chest.
-                    pose_hand(dt, player + RVec3(0.0, 0.45, 0.0), kHandReachSpeedMps);
+                    pose_hand(dt, chest, kHandReachSpeedMps);
                     if (hold_s_ > kSwatWaitS) {
                         // Still on his feet: no hold.
                         ++grab_misses_;
@@ -1533,6 +1535,36 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // on it, his back to it, his head and shoulders out over the drop.
         hand2_want_ = 2;
         pull2_n_ = hand2_on_ == 2 ? kHandPullN : kHandReachPullN;
+        if (hand2_on_ != 2 && fatal_hold_ && !pin_here_ && rail_up_ >= 0.2F) {
+            // In the fatality at a rail, from where she stands (no turn away
+            // from it, no walk back to it): her first hand hauls his collar in
+            // beside her, on his side of her (round her, not through her, and
+            // no farther out than she stands), leashed to it (kFatalLeashM: a
+            // haul, never a yank); her second hand takes his belt as it comes
+            // into her reach. (A bare lip keeps the haul below: its own over
+            // needs him in front of her.)
+            at_spot();
+            const Vec3 f(std::sin(yaw_), 0.0F, std::cos(yaw_));
+            const Vec3 r(f.GetZ(), 0.0F, -f.GetX());
+            const RVec3 c = player_collar_;
+            const float side = r.Dot(Vec3(c - at)) >= 0.0F ? 1.0F : -1.0F;
+            const RVec3 want = RVec3(at.GetX(), feet + kFatalHaulCollarUpM, at.GetZ()) + r * (side * kFatalBesideM);
+            pose_hand(dt, want, pace * kHandSpeedMps);
+            const Vec3 lead = Vec3(hand_target_ - c);
+            if (lead.Length() > kFatalLeashM) {
+                hand_target_ = c + lead * (kFatalLeashM / lead.Length());
+            }
+            pose_hand2(dt, player_belt_, kHandReachSpeedMps);
+            if (hold_s_ > kPinReachS) {
+                // His belt out of her other hand's reach (steel in the way):
+                // the pin by his collar alone.
+                hand2_want_ = 0;
+                hold_phase_ = 2;
+                hold_s_ = 0.0F;
+                fatal_window_s_ = 0.0F;
+            }
+            break;
+        }
         if (hand2_on_ != 2) {
             // She steps in to his middle (his collar in her first hand), her
             // second hand for his belt.

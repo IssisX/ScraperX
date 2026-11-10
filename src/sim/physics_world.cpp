@@ -874,6 +874,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                                                  : player_ankle(bodies));
     matron_->set_player_collar(player_collar(bodies));
     matron_->set_player_belt(bodies.GetPosition(player_id_));
+    // Her hand's body (beat 1: her swat lands once it reaches his chest).
+    matron_->set_hand_at(hand_id_.IsInvalid() ? JPH::RVec3::sZero() : bodies.GetPosition(hand_id_),
+                         !hand_id_.IsInvalid());
     // Down: off his feet, lying (beat 1 of her hold).
     matron_->set_player_down(player_free_rot_ && bodies.GetRotation(player_id_).RotateAxisY().GetY() < 0.6F);
     // Crouched: low (beat 1 of her hold: no swat to set up).
