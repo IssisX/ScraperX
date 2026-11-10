@@ -35,7 +35,8 @@ ROSTER = L.Roster({"agents": {"muse": {"vendor": "meta", "names": ["Muse"], "bra
 def client(dry_run: bool = False):
     """The real client over a fake `gh`: #9 is a pull request, #138 an issue. Returns (client, its runner)."""
     real = {f"repos/{REPO}/issues/{PR}": {"number": PR, "pull_request": {"url": "x"}},
-            f"repos/{REPO}/issues/{ISSUE}": {"number": ISSUE}}
+            f"repos/{REPO}/issues/{ISSUE}": {"number": ISSUE},
+            f"repos/{REPO}/issues?labels=board&state=open&per_page=100&page=1": [{"number": switch.BOARD_ISSUE}]}
     runner = ct.FakeGh(real)
     return ghapi.GitHub(REPO, dry_run=dry_run, log=lambda line: None, runner=runner, sleep=lambda s: None), runner
 

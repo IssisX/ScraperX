@@ -81,7 +81,7 @@ him again.
   research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
   codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
   screen, anything Muse fails twice (11-06: delegate hard).
-- **Board:** issue #340's body is the live board; only the integrator edits it. Agents read the body and
+- **Board:** the body of the one open issue labeled `board` is the live board; only the integrator edits it. Agents read the body and
   new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
   needs whom` and start the next job; every agent holds two or more jobs.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews every PR

@@ -791,11 +791,16 @@ class Switch:
                 quiet = [self.team.agent_name.get(a, a) for a in asked if a != "codex"]
                 why = (f"{', '.join(quiet)} did not answer in {self.team.fallback_after_hours:g} hours, "
                        f"so you are asked instead. ") if quiet else ""
-                noted = sorted({v.who for v in facts.verdicts if v.kind == "review" and v.verdict == "NOTE"
-                                and rules.names_head(v, facts.head_sha)})
-                if noted:   # a NOTE lands nothing (rules.needs_review): the next reviewer is told what is wanted
-                    why = (f"{', '.join(noted)} gave this head a NOTE (it is on #{facts.number}), which lands "
-                           f"nothing: a LAND or a FIX is asked of you. ") + why
+                # a NOTE lands nothing (rules.needs_review): the next reviewer is told what is wanted. The names are
+                # the team's own (work/agents.yml), never text taken from a comment.
+                noted = sorted({"the automatic Claude review" if rules.is_api_review(v) else
+                                self.team.agent_name.get(self.team.agent_of_name.get(v.who.lower(), ""), "")
+                                for v in facts.verdicts if v.kind == "review" and v.verdict == "NOTE"
+                                and rules.names_head(v, facts.head_sha)} - {""})
+                if noted:
+                    who_noted = ", ".join(noted)
+                    why = (f"{who_noted[0].upper()}{who_noted[1:]} gave this head a NOTE (it is on #{facts.number}), "
+                           f"which lands nothing: a LAND or a FIX is asked of you. ") + why
                 self.ask_review(facts, ctx, who, why)
                 self.note_assigned(who)
         elif rules.needs_review(facts, author, self.team):
@@ -1634,14 +1639,14 @@ class Switch:
         if agent == "codex":   # the Codex app answers "@codex review" on the PR itself
             where, comments = facts.number, ctx["comments"]
         if agent == "muse" and where == facts.number:   # wake:muse never goes on a PR (the bridge's token cannot clear it)
-            where = BOARD_ISSUE
+            where = self.board_issue()
         tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
         if self.marked(comments, f"ask-{agent}", facts.number, facts.head_sha):
             self.out(f"ASKED       #{facts.number} review already asked of {agent} on #{where}")
             return
         name = self.team.agent_name.get(agent, agent)
         job = ctx["job"] or f"PR #{facts.number}"
-        if agent == "codex" and self.codex_mention(facts, tag):
+        if agent == "codex" and self.codex_mention(facts, ctx, tag):
             return
         if agent == "codex":   # J-072: this login's "@codex review" never woke Codex (2 of 2, #191 and #150), so the
             # mark only records the ask; the integrator's inbox gets a CODEX-ASK item and posts the mention itself
@@ -1660,21 +1665,22 @@ class Switch:
                 f"expected, observed; a FIX without them counts as a NOTE).\n\n"
                 f"{self.review_facts(facts, ctx)}\n\n{tag}")
         self.gh.comment(where, body, f"ask {name} to review #{facts.number} on #{where}")
-        if where == BOARD_ISSUE and getattr(self, "_board", None) is not None:   # this run's later reads see the ask
+        if getattr(self, "_board", None) is not None and where == self.board_issue():   # this run's later reads see the ask
             self._board.append({"body": body, "user": {"login": rules.BOT_LOGIN},
                                 "created_at": self.now.strftime("%Y-%m-%dT%H:%M:%SZ")})
         if agent == "muse":
             self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
                           f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
 
-    def codex_mention(self, facts: rules.PrFacts, tag: str) -> bool:
+    def codex_mention(self, facts: rules.PrFacts, ctx: dict, tag: str) -> bool:
         """Post `@codex review` on the PR as the team login, with the team token (J-072). The Codex app answers a
         person's mention and ignores the workflow bot's (2 of 2, #191 and #150), and it reviews by itself only a PR
         a person opened, so the heads the switchboard opens for Muse sat with no Codex review until the integrator
         typed this by hand (#376). The comment is the mention and the ask's mark, nothing else: Codex reads any
         other words as instructions. False when there is no token here or GitHub refused it: the caller then
-        records the ask for the integrator, as before."""
-        if not self.merge_token:
+        records the ask for the integrator, as before. Never on a fork's PR, whoever calls (codex_counts checks it
+        too; a pool or fallback order that named Codex would not pass through that)."""
+        if not self.merge_token or not ctx.get("own_head"):
             return False
         try:
             got = self.gh.write("POST", f"repos/{self.gh.repo}/issues/{facts.number}/comments",

@@ -599,7 +599,8 @@ class NoteLandsNothing(unittest.TestCase):
         gh, sw, facts, c = self.steer([note], asked)
         (where, body), = gh.posted
         self.assertTrue(body.startswith("To ChatGPT: J-031 review #9 @ 1a2b3c4d"), body[:60])
-        self.assertIn("Claude gave this head a NOTE (it is on #9), which lands nothing: a LAND or a FIX is asked", body)
+        self.assertIn("The automatic Claude review gave this head a NOTE (it is on #9), which lands nothing: a LAND "
+                      "or a FIX is asked", body)
         rotation, who, _ = sw.pooled_reviewer(facts, c, "meta")
         self.assertEqual((rotation, who), (["chatgpt", "grok"], "chatgpt"))   # the API is out of this head's rotation
         asked.append(ask_comment("chatgpt", 0.5))   # ChatGPT holds it for the hour: no second reviewer at once
@@ -615,6 +616,7 @@ class NoteLandsNothing(unittest.TestCase):
         (where, body), = gh.posted
         self.assertTrue(body.startswith("To Grok:"), body[:40])
         self.assertEqual(rules.reviewers_done(facts.verdicts, HEAD, self.TEAM), {rules.API_REVIEWER, "chatgpt"})
+        self.assertIn("ChatGPT, the automatic Claude review gave this head a NOTE", body)   # the team's own names
 
     def test_the_paid_review_never_runs_twice_on_a_note(self):
         note = self.verdict("Claude", "NOTE", login=BOT)
@@ -736,6 +738,12 @@ class CodexMention(unittest.TestCase):
     def test_a_forks_pr_never_gets_the_team_logins_mention(self):
         gh, sw = self.steer(own_head=False)
         self.assertEqual((gh.as_team, [b for _, b in gh.posted if "ask-codex" in b]), ([], []))
+        gh = FakeGH([])   # nor by any other caller of ask_review (a pool or fallback order that names Codex)
+        sw = make(gh, team=self.TEAM)
+        sw.merge_token = "t0ken"
+        sw.ask_review(pr_facts(head_ref="muse/integrate-x"), dict(ctx(), own_head=False), "codex", "")
+        self.assertEqual(gh.as_team, [])
+        self.assertNotIn("@", gh.posted[0][1])   # the bot's record for the integrator, with no mention
 
 
 class SettledCalls(unittest.TestCase):
