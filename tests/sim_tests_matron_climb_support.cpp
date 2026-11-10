@@ -1,5 +1,6 @@
 // Minimal real-body falsifiers: an authored route is insufficient without
 // steel, sensors are not steel, and removing real held steel releases load.
+#include "matron_contact_audit.hpp"
 #include "sim_tests.hpp"
 #include "sim/physics_world_support.hpp"
 
@@ -301,6 +302,57 @@ void test_matron_climb_support() {
 }
 SCRAPERX_SLICE("matron-climb-support", test_matron_climb_support);
 
+// ---- a riser that is not the shaft's corner pipe (matron_pipe.cpp) -----------
+// A square post, 0.4 m across, standing on the floor 0.3 m off a solid deck's
+// east face and up to its top 8 m over the floor: no rail, no flange, its foot
+// on the floor she starts on. Nothing else joins the floor and the deck. Her
+// journey (travel_to) takes her up it: her scan's riser, her own decks and
+// line beside it, both hands on its face, her feet braced on it, her hips
+// close to it, by forces alone with gravity on. (Stage 2: the up leg only.
+// The down leg, the drum and the chain are stage 3: the down plan is not
+// empty on trunk — FreeDrop reads the deck-to-floor drop as a way down —
+// and Claude has the ruling on it.)
+namespace {
+scraperx::sim::MatronSnapshot riser_snapshot(const Matron::View &view) {
+    scraperx::sim::MatronSnapshot m;
+    m.alive = view.alive;
+    m.position = {view.x, view.y, view.z};
+    m.on_line = view.on_line;
+    m.climbing = view.climbing;
+    m.climb_hand = {view.climb_hand.GetX(), view.climb_hand.GetY(), view.climb_hand.GetZ()};
+    m.climb_hand2_known = view.climb_hand2_known;
+    m.climb_feet_support_known = view.climb_feet_support_known;
+    m.contact_supported = view.contact_supported;
+    m.contact_feet = {view.contact_feet.GetX(), view.contact_feet.GetY(), view.contact_feet.GetZ()};
+    m.contact_hand_held = view.contact_hand_held;
+    m.contact_hand = {view.contact_hand.GetX(), view.contact_hand.GetY(), view.contact_hand.GetZ()};
+    m.contact_hand2_held = view.contact_hand2_held;
+    m.contact_hand2 = {view.contact_hand2.GetX(), view.contact_hand2.GetY(), view.contact_hand2.GetZ()};
+    m.contact_line = view.contact_line;
+    m.contact_braced = view.contact_braced;
+    m.contact_brace = {view.contact_brace.GetX(), view.contact_brace.GetY(), view.contact_brace.GetZ()};
+    m.climb_move = view.climb_move;
+    m.climb_move_active = view.climb_move_active;
+    m.on_pipe = view.on_pipe;
+    m.pipe_sliding = view.pipe_sliding;
+    m.pipe_stunned = view.pipe_stunned;
+    m.pipe_head_down = view.pipe_head_down;
+    m.pipe_on_face = view.pipe_on_face;
+    m.pipe_axis = {view.pipe_axis.GetX(), 0.0, view.pipe_axis.GetZ()};
+    m.pipe_half_x = view.pipe_half_x;
+    m.pipe_half_z = view.pipe_half_z;
+    return m;
+}
+struct RiserLeg {
+    bool planned = false, arrived = false, on_riser = false;
+    float worst_step = 0.0F, seconds = 0.0F;
+    float worst_hips_m = 0.0F;      // her middle off the face she climbs, on the face
+    float worst_shoulder_m = 0.0F;  // her leading hand off her shoulder, on the face
+    float end_feet_y = 0.0F;
+    MatronContactAudit contacts;
+};
+}
+
 // A post she can climb by friction on its faces: her scan reads it as a
 // riser, and her map holds no other way UP to the deck it stands against:
 // the riser is the only way up. Down she has a way — the deck stands 8 m
@@ -335,6 +387,57 @@ void test_matron_riser() {
     require(floor_region >= 0 && deck_region >= 0 && map->plan(floor_region, deck_region).empty(),
             "matron riser: her map has no other way up to the deck");
     std::cout << "PASS scraperx_sim matron riser scan: post found, no other way between floor and deck\n";
+    // Stage 2: the up leg, by her journey over her map and her risers.
+    const auto leg = [&](const int goal) {
+        RiserLeg r;
+        r.planned = matron.travel_to(goal);
+        if (!r.planned) return r;
+        RVec3 last = world.physics.GetBodyInterface().GetPosition(matron.body());
+        int t = 0;
+        for (; t < 90 * 120 && matron.journey().active; ++t) {
+            tick();
+            const RVec3 now = world.physics.GetBodyInterface().GetPosition(matron.body());
+            r.worst_step = std::max(r.worst_step, float((now - last).Length()));
+            last = now;
+            const Matron::View &v = matron.view();
+            const auto m = riser_snapshot(v);
+            r.contacts.tick(m);
+            r.on_riser = r.on_riser || v.on_pipe;
+            if (v.on_pipe && v.pipe_on_face && v.contact_hand_held && !v.pipe_sliding && !v.pipe_stunned) {
+                // Her middle off the face she climbs: how far out from the
+                // post's square her middle is (the nearest face, level).
+                const float dx = std::max(0.0F, std::abs(float(now.GetX()) - 2.5F) - 0.2F);
+                const float dz = std::max(0.0F, std::abs(float(now.GetZ()) + 140.0F) - 0.2F);
+                r.worst_hips_m = std::max(r.worst_hips_m, std::hypot(dx, dz));
+                const RVec3 shoulder = now + RVec3(0.0, Matron::kHalfHeight - 0.2, 0.0);
+                r.worst_shoulder_m = std::max(r.worst_shoulder_m, float((v.contact_hand - shoulder).Length()));
+            }
+        }
+        r.seconds = float(t) / 90.0F;
+        r.arrived = !matron.journey().active && matron.journey().arrivals > 0;
+        r.end_feet_y = float(last.GetY()) - Matron::kStandCentre;
+        return r;
+    };
+    const RiserLeg up = leg(deck_region);
+    std::cout << "  matron riser up: planned " << up.planned << " arrived " << up.arrived << " on it "
+              << up.on_riser << " in " << up.seconds << " s, feet at " << up.end_feet_y - g << " m, worst step "
+              << up.worst_step << " m, hips off its face at most " << up.worst_hips_m << " m, hand off her shoulder at most "
+              << up.worst_shoulder_m << " m, peak force " << matron.view().pipe_peak_force_n << " N, power "
+              << matron.view().pipe_peak_power_w << " W\n";
+    up.contacts.report("up");
+    const std::uint32_t arrivals_up = matron.journey().arrivals;
+    require(up.planned && up.on_riser && up.arrived, "matron riser: her journey takes the post up");
+    require(up.worst_step <= 0.2F, "matron riser: no tick moves her more than 0.2 m");
+    require(up.contacts.clean(), "matron riser: her exported contacts are hers on it (S6)");
+    require(up.contacts.pipe_face > 0 && up.contacts.braced == up.contacts.pipe_face &&
+                up.contacts.two_hands == up.contacts.pipe_face,
+            "matron riser: both hands on its face and her feet braced on it every tick she climbs it");
+    require(up.worst_hips_m <= Matron::kRadius + 0.13F, "matron riser: her hips close to its face");
+    require(up.worst_shoulder_m <= 0.75F, "matron riser: her arms bent, her grip near her shoulder");
+    require(std::abs(up.end_feet_y - deck) < 0.1F && arrivals_up == 1, "matron riser: up, on the deck");
+    require(matron.view().pipe_peak_force_n <= law::kForceN + 0.5F && matron.view().pipe_peak_power_w <= law::kPowerW + 0.5F,
+            "matron riser: her grip within her one force and power budget");
+    std::cout << "PASS scraperx_sim matron riser: up_s=" << up.seconds << " hips_m=" << up.worst_hips_m << "\n";
 }
 SCRAPERX_SLICE("matron-riser", test_matron_riser);
 

@@ -156,8 +156,9 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     }
     // A new destination cannot take ownership away from hands or feet
     // already executing a move, including a jump between supports.
-    if (climber_ != nullptr && (climber_->status() == traversal::Climber::Status::Running ||
-                                climber_->view().holding)) {
+    if ((climber_ != nullptr && (climber_->status() == traversal::Climber::Status::Running ||
+                                 climber_->view().holding)) ||
+        pipe_phase_ != PipePhase::Off) {
         return false;
     }
     // Accept a free body's destination while she is airborne. A plan from
@@ -166,7 +167,7 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     // then replans from her actual landing before executing any move.
     std::vector<int> route;
     const int from = here >= 0 ? here : travel_.region;
-    if (from >= 0) route = scanned_->plan(from, region, avoid);
+    if (from >= 0) route = plan_with_risers(from, region, avoid);
     if (here >= 0 && route.empty() && here != region) {
         return false;
     }
@@ -192,6 +193,8 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     travel_yield_s_ = 0.0F;
     travel_wait_s_ = 0.0F;
     travel_replans0_ = travel_.replans;   // her counts run on; this journey's replans from here
+    travel_riser_ = false;
+    travel_riser_wait_s_ = 0.0F;
     climber_->cancel();
     drop_stock();
     return true;
@@ -201,6 +204,29 @@ void Matron::step_travel(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     speed_ = 0.0F;
+    // On a riser of hers (matron_pipe.cpp): her hands and feet on it, nothing
+    // else; off it, on along the plan from the deck it took her to, or (her
+    // hands gone) a plan again from where she lands.
+    if (travel_riser_) {
+        if (pipe_phase_ != PipePhase::Off) {
+            ride_pipe(dt);
+            travel_.move = pipe_to_ < pipe_from_ ? traversal::MoveKind::RiserDown : traversal::MoveKind::RiserUp;
+            return;
+        }
+        travel_riser_ = false;
+        travel_wait_s_ = 0.0F;
+        if (pipe_failed_ || travel_.step >= travel_.steps) {
+            ++travel_.moves_failed;
+            travel_.last_failure = traversal::Failure::LostHold;
+            travel_.step = travel_.steps;
+            return;
+        }
+        ++travel_.moves_done;
+        travel_.region = travel_edge(travel_edges_[static_cast<std::size_t>(travel_.step)]).to;
+        ++travel_.step;
+        travel_walk_.clear();
+        return;
+    }
     // The player on a climb she means to take (on it, at its foot, or at
     // its head), as she saw, heard or felt him there just now: the way is
     // theirs. Any climb, from its own line and span.
@@ -217,7 +243,7 @@ void Matron::step_travel(const float dt) {
     // A move not yet off her floor gives way the same as one not begun.
     if (climber_->status() == traversal::Climber::Status::Running && climber_->phase() == 0 &&
         travel_.step < travel_.steps &&
-        player_on(scanned_->edges()[static_cast<std::size_t>(travel_edges_[static_cast<std::size_t>(travel_.step)])].spec)) {
+        player_on(travel_edge(travel_edges_[static_cast<std::size_t>(travel_.step)]).spec)) {
         climber_->cancel();
     }
     // A move under way: her hands and feet on it, nothing else.
@@ -246,7 +272,7 @@ void Matron::step_travel(const float dt) {
             return;
         }
         ++travel_.moves_done;
-        const traversal::Edge &e = scanned_->edges()[static_cast<std::size_t>(travel_edges_[static_cast<std::size_t>(travel_.step)])];
+        const traversal::Edge e = travel_edge(travel_edges_[static_cast<std::size_t>(travel_.step)]);
         if (under == e.to) {
             travel_.region = under;
             ++travel_.step;
@@ -310,7 +336,7 @@ void Matron::step_travel(const float dt) {
             return;
         }
         ++travel_.replans;
-        travel_edges_ = scanned_->plan(under, travel_.goal, travel_avoid_);
+        travel_edges_ = plan_with_risers(under, travel_.goal, travel_avoid_);
         travel_.region = under;
         travel_.step = 0;
         travel_.steps = static_cast<int>(travel_edges_.size());
@@ -323,7 +349,7 @@ void Matron::step_travel(const float dt) {
     }
     travel_wait_s_ = 0.0F;
     // Walk her region to the next move's start, then begin it.
-    const traversal::Edge &e = scanned_->edges()[static_cast<std::size_t>(travel_edges_[static_cast<std::size_t>(travel_.step)])];
+    const traversal::Edge e = travel_edge(travel_edges_[static_cast<std::size_t>(travel_.step)]);
     const Vec3 feet(float(at.GetX()), float(at.GetY()) - kStandCentre, float(at.GetZ()));
     // Giving way: off the climb's foot (her body is not to stand in the
     // player's way onto it) and still until it is clear. Her yielding is
@@ -482,9 +508,89 @@ void Matron::step_travel(const float dt) {
         }
         return;
     }
+    if (e.kind == traversal::MoveKind::RiserUp || e.kind == traversal::MoveKind::RiserDown) {
+        // A riser: right to her stand by it, then her hands onto it (the
+        // edge's top, or from a floor her line stands on, its face).
+        const int way = -travel_edges_[static_cast<std::size_t>(travel_.step)] - 1;
+        pipe_route_ = way / 2;
+        if (to_start > 0.2F) {
+            climber_->walk_between(dt, e.spec.start, std::min(1.0F, 0.3F + 1.5F * to_start));
+            yaw_ = turn_toward(yaw_, std::atan2(e.spec.start.GetX() - feet.GetX(), e.spec.start.GetZ() - feet.GetZ()), kTurnRate, dt);
+            return;
+        }
+        (void)climber_->stand(dt);
+        climb_retry_s_ = 0.0F;
+        if (get_on_pipe(e.kind == traversal::MoveKind::RiserUp ? e.spec.bottom_y : e.spec.top_y,
+                        e.kind == traversal::MoveKind::RiserUp ? e.spec.top_y : e.spec.bottom_y)) {
+            travel_riser_ = true;
+            travel_riser_wait_s_ = 0.0F;
+            travel_walk_.clear();
+            travel_.move = e.kind;
+            return;
+        }
+        // No hold there for her hands a while: not her way from here.
+        travel_riser_wait_s_ += dt;
+        if (travel_riser_wait_s_ > 3.0F) {
+            travel_riser_wait_s_ = 0.0F;
+            ++travel_.moves_failed;
+            travel_.last_failure = traversal::Failure::NoHold;
+            travel_avoid_.push_back(travel_edges_[static_cast<std::size_t>(travel_.step)]);
+            travel_.step = travel_.steps;
+        }
+        return;
+    }
     travel_walk_.clear();
     travel_.move = e.kind;
     climber_->begin(e.spec);
+}
+
+std::vector<int> Matron::plan_with_risers(const int from, const int goal, const std::vector<int> &avoid) {
+    std::vector<int> direct = scanned_->plan(from, goal, avoid);
+    if (!direct.empty() || from == goal || pipe_ruled_out_) {
+        return direct;
+    }
+    // Where the steel offers her map no way: her risers beside it, one graph: a route takes
+    // as many of them as the way needs (a tall riser climbed deck to deck),
+    // each walked to and from over her map.
+    std::vector<std::pair<int, traversal::Edge>> risers;
+    const auto &routes = riser_routes();
+    for (std::size_t i = 0; i < routes.size(); ++i) {
+        for (int down = 0; down < 2; ++down) {
+            const int way = 2 * static_cast<int>(i) + down;
+            if (!pipe_way_open(way)) continue;
+            const RiserDeck &a = down != 0 ? routes[i].hi : routes[i].lo;
+            const RiserDeck &b = down != 0 ? routes[i].lo : routes[i].hi;
+            if (a.region < 0 || b.region < 0 || a.region == b.region) continue;
+            risers.emplace_back(-way - 1, travel_edge(-way - 1));
+        }
+    }
+    return scanned_->plan(from, goal, avoid, risers);
+}
+
+traversal::Edge Matron::travel_edge(const int k) {
+    if (k >= 0) {
+        return scanned_->edges()[static_cast<std::size_t>(k)];
+    }
+    // One of her risers, one way (riser_routes).
+    const int way = -k - 1;
+    const RiserRoute &r = riser_routes()[static_cast<std::size_t>(way / 2)];
+    const bool down = (way % 2) != 0;
+    const RiserDeck &a = down ? r.hi : r.lo;
+    const RiserDeck &b = down ? r.lo : r.hi;
+    traversal::Edge e;
+    e.from = a.region;
+    e.to = b.region;
+    e.kind = down ? traversal::MoveKind::RiserDown : traversal::MoveKind::RiserUp;
+    e.spec.kind = e.kind;
+    e.spec.line = riser_line(r, 0.2F);
+    e.spec.out = r.out;
+    e.spec.bottom_y = r.lo.floor_y;
+    e.spec.top_y = r.hi.floor_y;
+    e.spec.start = a.stand;
+    e.spec.goal = b.stand;
+    e.spec.goal_top = b.floor_y;
+    e.cost = 5.0F + 2.0F * (r.hi.floor_y - r.lo.floor_y);
+    return e;
 }
 
 // Her travel as a way of hers (matron_mover.hpp): to the lead's place (begin),
@@ -505,6 +611,7 @@ MoverStatus Matron::TravelWay::step(const float dt, traversal::Budget & /*budget
 
 void Matron::TravelWay::cancel() {
     m_.travel_.active = false;
+    m_.travel_riser_ = false;   // her hands on a riser keep it (her pipe way has her)
     if (m_.climber_ != nullptr) {
         m_.climber_->cancel();
     }
@@ -522,6 +629,18 @@ MoverView Matron::TravelWay::view() const {
     }
     v.holds_chase = true;
     v.blow_proof = true;
+    if (m_.travel_riser_ && m_.pipe_phase_ != PipePhase::Off) {
+        // On a riser her hands hold her against her weight, as in her hunt
+        // (PipeWay::view): her floor is in her hands, a blow is read.
+        v.drives = true;
+        v.held = true;
+        v.lands = true;
+        v.blow_proof = m_.pipe_phase_ == PipePhase::Slide || m_.pipe_phase_ == PipePhase::Stunned;
+        v.floor_in_hands = true;
+        v.drive_dv = m_.pipe_drive_dv_;
+        v.force_shown = true;
+        v.force_n = m_.pipe_force_n_;
+    }
     if (m_.travel_.goal >= 0 && m_.scanned_ != nullptr &&
         m_.travel_.goal < static_cast<int>(m_.scanned_->regions().size())) {
         v.has_goal = true;

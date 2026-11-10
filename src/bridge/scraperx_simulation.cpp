@@ -1913,6 +1913,10 @@ void ScraperXSimulation::fill_matron_state(godot::Dictionary &out, const sim::Ma
     out[keys("pipe_flanges")] = static_cast<std::int64_t>(state.pipe_flanges);
     out[keys("pipe_slams")] = static_cast<std::int64_t>(state.pipe_slams);
     out[keys("pipe_slam_mps")] = state.pipe_slam_mps;
+    out[keys("pipe_axis")] = to_godot(state.pipe_axis);
+    out[keys("pipe_half_x")] = state.pipe_half_x;
+    out[keys("pipe_half_z")] = state.pipe_half_z;
+    out[keys("pipe_on_face")] = state.pipe_on_face;
     out[keys("catches")] = static_cast<std::int64_t>(state.catches);
     out[keys("planks_fallen")] = static_cast<std::int64_t>(state.planks_fallen);
     out[keys("throw_windup")] = state.throw_windup;
