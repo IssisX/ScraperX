@@ -90,6 +90,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
+   "rechecked": "2026-11-10T04:48:57Z",
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
@@ -294,5 +295,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T03:44:17Z"
+ "updated": "2026-11-10T04:48:57Z"
 }

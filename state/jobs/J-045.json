@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T05:17:00Z",
+ "deadline": "2026-11-10T07:44:17Z",
  "head": "4c626c746e2c93c2050fd300002de1c98f0f0d1a",
  "issue": 248,
  "job": "J-045",
@@ -100,7 +100,11 @@
    "what": "`fb-bot/integrate-j045-first-advance` proof red: godot-touch (touch-2), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T04:19:57Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T03:07:47Z",
    "attempts": 1,
@@ -133,5 +137,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T03:44:17Z"
+ "updated": "2026-11-10T04:48:57Z"
 }

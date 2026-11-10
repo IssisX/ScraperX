@@ -6,7 +6,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T05:17:00Z",
+ "deadline": null,
  "head": "7d55d14675287817bdcc061445d1252b22b021c9",
  "issue": 128,
  "job": "J-021",
@@ -71,7 +71,11 @@
    "what": "ask from Claude on #128"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T04:48:57Z",
+    "by": "claude",
+    "how": "merged"
+   },
    "ack_rule": "merged|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -96,7 +100,11 @@
    "what": "merge #375 by hand"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T04:19:57Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T03:07:49Z",
    "attempts": 1,
@@ -125,11 +133,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 375,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   375
  ],
  "review": "",
- "state": "landable",
- "updated": "2026-11-10T03:44:17Z"
+ "state": "merged",
+ "updated": "2026-11-10T04:48:57Z"
 }

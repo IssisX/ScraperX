@@ -2,6 +2,7 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
+  "fb-bot/integrate-j015-slice1": "2f8b1f21d655f8e11e9648cbba743355c31f2314",
   "fb-bot/integrate-j015-wreck-way-on": "a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
   "fb-bot/integrate-protected-j015-wreck-way-on": "aee6d79d91249016e5788e205e16b0958f4bd427"
  },
@@ -10,10 +11,15 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "aee6d79d91249016e5788e205e16b0958f4bd427",
+ "head": "2f8b1f21d655f8e11e9648cbba743355c31f2314",
  "issue": 122,
  "job": "J-015",
  "landed": {
+  "fb-bot/integrate-j015-slice1": [
+   "2f8b1f21d655f8e11e9648cbba743355c31f2314",
+   "",
+   "2026-11-10T04:48:57Z"
+  ],
   "fb-bot/integrate-j015-wreck-way-on": [
    "a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
    "",
@@ -41,7 +47,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -159,6 +165,56 @@
    "version": "6706849782",
    "via": "session",
    "what": "ask from ChatGPT on #122"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T04:48:57Z",
+   "dead": "2026-11-10T12:48:57Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T08:48:57Z",
+   "id": "O-6b556027",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T04:48:57Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j015-slice1",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 122,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:2f8b1f21d655f8e11e9648cbba743355c31f2314",
+   "via": "email",
+   "what": "`fb-bot/integrate-j015-slice1` proof red: scope, no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-10T04:07:51Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T04:48:57Z",
+   "dead": "2026-11-10T16:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T14:17:00Z",
+   "id": "O-70270309",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-10T04:48:57Z",
+   "missing": 0,
+   "ref": "ASK|ask on #122",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 122,
+   "to": "claude",
+   "unseen": null,
+   "version": "6758703080",
+   "via": "session",
+   "what": "ask from Muse on #122"
   }
  ],
  "outcome": null,
@@ -169,5 +225,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-10T04:48:57Z"
 }

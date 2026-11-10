@@ -1,16 +1,24 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-protected-j069": "e09e97c5116aa9c7fcd0e14c125b14cff0a40469"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
- "head": "",
+ "deadline": "2026-11-10T08:48:57Z",
+ "head": "e09e97c5116aa9c7fcd0e14c125b14cff0a40469",
  "issue": 332,
  "job": "J-069",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-protected-j069": [
+   "e09e97c5116aa9c7fcd0e14c125b14cff0a40469",
+   "",
+   "2026-11-10T04:48:57Z"
+  ]
+ },
  "obligations": [
   {
    "ack": null,
@@ -35,6 +43,56 @@
    "version": "start:332",
    "via": "email",
    "what": "start J-069"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T04:48:57Z",
+   "dead": "2026-11-10T12:48:57Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T08:48:57Z",
+   "id": "O-7cd5ce3e",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T04:48:57Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j069",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 332,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:e09e97c5116aa9c7fcd0e14c125b14cff0a40469",
+   "via": "email",
+   "what": "`fb-bot/integrate-protected-j069` proof red: native-tests (athletic-traversal-2), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-10T04:07:52Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T04:48:57Z",
+   "dead": "2026-11-10T16:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T14:17:00Z",
+   "id": "O-8f5cb7ba",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-10T04:48:57Z",
+   "missing": 0,
+   "ref": "ASK|ask on #332",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 332,
+   "to": "claude",
+   "unseen": null,
+   "version": "6758703434",
+   "via": "session",
+   "what": "ask from Muse on #332"
   }
  ],
  "outcome": null,
@@ -44,6 +102,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-09T17:39:57Z"
+ "state": "working",
+ "updated": "2026-11-10T04:48:57Z"
 }
