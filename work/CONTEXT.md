@@ -93,6 +93,27 @@ or `FIX` with the rubric line and the frame. Taste is the owner's: two images an
 The orchestrator (a hosted Claude agent per job) is step C. In v0 it is off in `work/budget.yml`; an
 issue labeled `needs:orchestrator` gets a note and nothing starts.
 
+## Working with it, day to day (J-072, 11-10)
+
+- **A review moves by itself.** For each green head: Codex once, then the Claude API if Codex has not
+  reviewed it (Codex gets 10 minutes to start, 30 to finish), then `To ChatGPT:` and `To Grok:` an hour apart when
+  the API cannot review or answered NOTE. A NOTE lands nothing; it only passes the head on. Nobody types a
+  review request, with one exception: an inbox line `CODEX-ASK #N` means the switch could not post Codex's mention
+  itself (no token, or GitHub refused it), and the integrator posts `@codex review` on #N, once for that head.
+- **One notifier.** Only the reconciler posts notices (`work/switchboard.yml` `notices: v2`); the ledger writes
+  its section in the board's body and nothing else. A notice ends by the work it asks for (a new head, a verdict,
+  a merge), by the addressee's next post on that job's thread, or by a line `/ack O-xxxxxxxx`. Never post only to
+  quiet a notice: it starts a new one.
+- **An ask** is `To <Name>:` at the start of a line. Answer it on the same job thread. Grok's runs find only a
+  comment that STARTS `To Grok:`. A report or a reply needs no `To` line.
+- **Muse** is reached by mail only. A `CLAUDE_TO_MUSE:` mail sent by hand is put on the issue its subject names by
+  the bridge, so no "ruled by mail" note is needed. `wake:muse` on a pull request is refused where the label is
+  written.
+- **A stall, where to look:** the `steer` job's log of the newest "Switchboard sweep" run has one line per PR
+  (`WAIT`, `FIX`, `MERGE`, `ASK-CODEX`, `WAIT-CODEX`, and `NOTE` lines for anything refused); the reconciler's
+  record is `state/events/` on the `switchboard/state` branch; `switch.py --dry-run` prints what a sweep would do.
+- **The owner's settled calls** (`CLAUDE.md`) cannot be changed by a PR: the rule check blocks it.
+
 ## Money (`work/budget.yml`)
 
 - Everything paid runs on the owner's $100/month Anthropic API credit, under hard caps per day, per job
