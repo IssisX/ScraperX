@@ -1446,7 +1446,8 @@ void run_matron() {
                 "matron: following the climber over the rotten catwalk is the end of her");
         require(crossed.end.planks_fallen >= 1, "matron: a plate she stood on is down");
         require(crossed.deaths == 0, "matron: the climber crossed alive");
-        // She stays dead until something is restored (run_matron_restore: a player's death brings her back).
+        // She stays dead until something is restored (run_matron_restore: a player's death restores the checkpoint
+        // as saved, dead stays dead).
         stand_still(s, 5.0);
         require(s.matron_state().state == kStateDead, "matron: dead, she stays dead");
     }
@@ -2134,10 +2135,9 @@ void run_matron() {
 SCRAPERX_GROUP("matron", 870, run_matron);
 SCRAPERX_SELECT("matron", run_matron);
 
-// ---- a restore brings her back: a long fall ends her, and the world put back has her in it ----
-// Her death is the fall's (kLethalLandingMps); the checkpoint is where she burst out. A death of the player
-// restores that checkpoint, and the restore must not skip her for being dead: she comes back alive, out of
-// her locker as she was at the checkpoint, and hunts again.
+// ---- a restore puts the world back as saved: a long fall ends her, and the world put back has her in it, dead ----
+// Her death is the fall's (kLethalLandingMps); the checkpoint renews while she lies dead (her death lifts the
+// freeze), so a death of the player restores that checkpoint as saved: she stays dead, in the world as saved.
 void run_matron_restore() {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
@@ -2166,21 +2166,13 @@ void run_matron_restore() {
     }
     require(s.snapshot().death_count > deaths_before, "matron restore: the player's fall into the shaft is a death");
     const auto back = s.matron_state();
-    require(back.alive && (back.state == kStateEmerging || back.state == kStateHunting),
-            "matron restore: the restore brings her back alive, out of her locker as she was at the checkpoint");
-    // She acts again: she hunts, and walks away from her locker.
-    bool hunting = false;
-    double walked_m = 0.0;
-    for (int i = 0; i < 40 * static_cast<int>(Simulation::kTickRateHz) && !(hunting && walked_m > 3.0); ++i) {
-        tick(s);
-        const auto m = s.matron_state();
-        require(m.alive, "matron restore: she stays alive once back");
-        hunting = hunting || m.state == kStateHunting;
-        walked_m = std::hypot(m.position.x - back.position.x, m.position.z - back.position.z);
-    }
-    require(hunting && walked_m > 3.0, "matron restore: restored, she hunts again and walks");
-    std::cout << "PASS scraperx_sim matron restore: dead by a 16 m fall, brought back by the restore, hunts again, walked "
-              << walked_m << " m\n";
+    require(!back.alive && back.state == kStateDead,
+            "matron restore: the restore puts the world back as saved, dead stays dead");
+    // She stays dead: the checkpoint the restore put back is the one committed while she lay dead.
+    stand_still(s, 3.0);
+    require(s.matron_state().state == kStateDead && !s.matron_state().alive,
+            "matron restore: dead after the restore, and nothing has brought her back");
+    std::cout << "PASS scraperx_sim matron restore: dead by a 16 m fall, restored dead as saved\n";
 }
 
 void run_matron_remaining() {

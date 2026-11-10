@@ -320,6 +320,9 @@ std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
     return out;
 }
 
+// The Matron's damage in a save follows the grips under this mark ("MAD1").
+constexpr std::uint32_t kMatronDamageMark = 0x314D414DU;
+
 // The committed checkpoint as bytes (see SaveWriter).
 void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.pod(checkpoint_position_);
@@ -359,7 +362,17 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     // what each grip holds and its rating.
     w.list(k.grip_load);
     w.list(k.grip_rating);
-    // Fabricated objects follow the grips with the original save layout.
+    // Her damage meters and whether she is dead, under their own mark, so a
+    // load never reads them as the fabricated objects' mark. A save made
+    // before them ends at the grips and reads as undamaged, alive. The
+    // damage sits before the fabricated objects on purpose: a save without
+    // any is still a prefix of one with them, as the fabricated test pins.
+    w.pod(kMatronDamageMark);
+    w.pod(checkpoint_.matron.damage_ns);
+    w.pod(checkpoint_.matron.player_damage_ns);
+    w.pod(static_cast<std::uint8_t>(checkpoint_.matron.dead ? 1 : 0));
+    // Fabricated objects follow the damage, under their mark, only when the
+    // world holds any.
     write_fabricated(w);
 }
 
@@ -414,11 +427,28 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
              std::all_of(k.grip_rating.begin(), k.grip_rating.end(),
                          [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
     }
-    // After the grips, the fabricated objects: a save of a world with none
-    // (every save made before them) ends before.
+    // After the grips, one mark tells the rest: the Matron's damage (a save
+    // made with it, "MAD1"), the fabricated objects (a save made before it,
+    // "FAB1"), or nothing (a save made before both, which ends here).
     std::vector<SavedFabricated> saved;
     if (ok && !r.done()) {
-        ok = read_fabricated(r, saved);
+        std::uint32_t mark = 0;
+        ok = r.pod(mark);
+        if (ok && mark == kMatronDamageMark) {
+            std::uint8_t dead = 0;
+            ok = r.pod(loaded.matron.damage_ns) && r.pod(loaded.matron.player_damage_ns) && r.pod(dead) &&
+                 dead <= 1 && std::isfinite(loaded.matron.damage_ns) && loaded.matron.damage_ns >= 0.0F &&
+                 std::isfinite(loaded.matron.player_damage_ns) && loaded.matron.player_damage_ns >= 0.0F;
+            loaded.matron.dead = dead == 1;
+            // After her damage, the fabricated objects, if the save holds any.
+            if (ok && !r.done()) {
+                ok = r.pod(mark) && read_fabricated(r, saved, mark);
+            }
+        } else if (ok) {
+            // Not her damage: the fabricated objects, whose mark this is.
+            // A mark that is neither is refused inside read_fabricated.
+            ok = read_fabricated(r, saved, mark);
+        }
     }
     ok = ok && r.done();
     // A grip holds a body the save has: one built with its world, or one of
