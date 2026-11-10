@@ -35,8 +35,8 @@
   ],
   "fb-bot/integrate-protected-j067-scorer": [
    "a43b65ceb91f70465966415054499e6e3f126186",
-   "",
-   "2026-11-10T14:01:28Z"
+   "merged #387",
+   "2026-11-10T18:29:43Z"
   ]
  },
  "obligations": [
@@ -255,5 +255,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T17:29:19Z"
+ "updated": "2026-11-10T18:29:43Z"
 }

@@ -4,16 +4,23 @@
  "branches": {},
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6774794367:78"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T21:29:19Z",
+ "deadline": null,
  "head": "",
  "issue": 130,
  "job": "J-023",
  "landed": {},
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T17:47:53Z",
+    "by": "Muse",
+    "comment": "6774794367",
+    "how": "/ack"
+   },
    "ack_rule": "work|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -46,5 +53,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-10T17:29:19Z"
+ "updated": "2026-11-10T18:29:43Z"
 }

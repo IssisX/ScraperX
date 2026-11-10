@@ -6,9 +6,11 @@
  },
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6774793781:91"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T21:29:19Z",
+ "deadline": null,
  "head": "978ef3924df82a2341218d519a96120ee67534fc",
  "issue": 333,
  "job": "J-070",
@@ -108,7 +110,12 @@
    "what": "ask from Muse on #333"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T17:47:51Z",
+    "by": "Muse",
+    "comment": "6774793781",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -141,5 +148,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T17:29:19Z"
+ "updated": "2026-11-10T18:29:43Z"
 }

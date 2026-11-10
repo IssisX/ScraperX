@@ -4,16 +4,23 @@
  "branches": {},
  "cancelled": null,
  "ci": "green",
- "commands": [],
+ "commands": [
+  "6774478997:0"
+ ],
  "created": "2026-11-10T17:29:19Z",
- "deadline": "2026-11-10T19:17:00Z",
+ "deadline": null,
  "head": "72636224b1d77a3db51516f17d787030825efde1",
  "issue": 385,
  "job": "J-075",
  "landed": {},
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T17:33:51Z",
+    "by": "Muse",
+    "comment": "6774478997",
+    "how": "/ack"
+   },
    "ack_rule": "merged|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -46,7 +53,7 @@
  "prs": [
   386
  ],
- "review": "",
+ "review": "LAND",
  "state": "landable",
- "updated": "2026-11-10T17:29:19Z"
+ "updated": "2026-11-10T18:29:43Z"
 }

@@ -6,13 +6,13 @@
   "fb-bot/integrate-j009-258-down-traversal-flags": "fdea6e19e6a6eb72c676d617930f06b92e213e0e"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [
   "6771165879:578"
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "237ba1703ce562e34e1279b022edf7a7705ff7a6",
+ "head": "c13d8edb9efe4d0aa3c107fdbba296490700de2b",
  "issue": 116,
  "job": "J-009",
  "landed": {
@@ -140,7 +140,11 @@
    "what": "#377 @ 237ba170 has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T18:29:43Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -173,7 +177,7 @@
  "prs": [
   377
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-10T16:19:58Z"
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-10T18:29:43Z"
 }

@@ -3,14 +3,14 @@
  "blocked": null,
  "branches": {
   "claude/integrate-j060-matron-sheen": "71eb04caf76687fe2c250a73bd6211c63222ad7f",
-  "fb-bot/integrate-j060": "4a48164a66ad480eea02493aeca866d3931dd85e"
+  "fb-bot/integrate-j060": "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "4a48164a66ad480eea02493aeca866d3931dd85e",
+ "head": "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e",
  "issue": 320,
  "job": "J-060",
  "landed": {
@@ -20,9 +20,9 @@
    "2026-11-09T17:35:20Z"
   ],
   "fb-bot/integrate-j060": [
-   "4a48164a66ad480eea02493aeca866d3931dd85e",
+   "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e",
    "",
-   "2026-11-10T07:39:04Z"
+   "2026-11-10T18:29:43Z"
   ]
  },
  "obligations": [
@@ -261,6 +261,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-10T15:09:20Z"
+ "state": "proof",
+ "updated": "2026-11-10T18:29:43Z"
 }
