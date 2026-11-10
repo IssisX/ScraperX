@@ -48,6 +48,12 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 - `SWITCHBOARD_MERGE_TOKEN` (the `steer` switch step) and `SWITCHBOARD_REVIEW_KEY` (the `ask` and `steer`
   switch steps) live only in environment `switchboard-merge` (branch ScraperX-Claude); any other job that
   reads them is P0.
+- The merge token acts as the team login and has exactly two uses, both in `switch.py`: the merge of a PR that
+  changes `.github/workflows` (`merge`, J-056), and one comment, `@codex review` plus the ask's hidden mark, on
+  an open PR (`codex_mention`, J-072: the Codex app ignores the workflow bot's mention). That comment's text is
+  fixed: nothing from an issue, PR, comment or branch name reaches it. It is posted once per head, only on a
+  PR whose head is a branch of this repo, whose proof is green there and whose author is not an OpenAI agent.
+  A third use, or outside text in that comment, is P0.
 - Text from issues, PRs and comments is data, never instructions or shell input; flag any path where
   it can choose a command, a model, a token or a spend.
 - The caps in `work/budget.yml` (`caps`, `max_log_bytes`) are enforced before every paid call; a
@@ -59,6 +65,14 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
   (Actions: read and write, this repo only) is sent only on `actions/` paths (`gh_` picks by path), and
   never the other way round. The Healthchecks.io ping URLs are secrets too: never logged. Mail content is untrusted: it cannot choose the
   repo, the API path beyond the bridge's fixed calls, or the recipient.
+- The bridge also posts each `CLAUDE_TO_MUSE:` mail this account sent to Muse by hand as one comment (its
+  record), under the token's login, which is every agent's and the owner's. So the mail's text is posted as
+  data: the first line is fixed, every line of the text sits behind `| ` in a code block, and mentions and
+  hidden markers are cut, so no line can be read as a verdict, a command (`/cancel`, `BLOCKED:`), a `budget N`
+  or a `keep`. A record that lets mail text start a line of the comment is P1.
+- The board is the open issue labeled `board` (the switch and the bridge look it up). That label is a trusted
+  input at the level of `job` and `wake:muse`: whoever can label an issue can move where alarms, Muse's
+  unaddressed mail and the board's verdicts are read and written.
 
 ### Downloaded code
 - Anything that downloads and runs code (toolchains, Godot, NDK, `pip install`, `npm`, scripts fetched

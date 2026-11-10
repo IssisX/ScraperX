@@ -1130,14 +1130,19 @@ func _deck154_truck() -> Transform3D:
 
 
 # The stick's right that steers the truck at `at`: the stick right steers it
-# right of its nose, whatever the view.
+# right of its nose, whatever the view. J-045: gain 3.5 (was 2.0) — the
+# 1-tick first advance shifts her start ~10 cm, so the ram is a knife-edge
+# and the truck under-turns at 2.0 (nose ~15 deg west of the ~34 deg
+# bearing to her, glancing clip, blow 0.00). Measured: gain 3.0 passes
+# thin (blow 0.29), gain 3.5 squares it up (rammed 3.00 m/s, blow 1.05,
+# state 11), gain 4.0 over-turns and she pulls away (blow 0.00).
 func _steer_at(at: Vector3) -> float:
 	var t := _deck154_truck()
 	var nose := t.basis.z
 	var to := at - t.origin
 	var ahead := to.x * nose.x + to.z * nose.z
 	var right := -to.x * nose.z + to.z * nose.x
-	return clampf(2.0 * atan2(right, maxf(ahead, 0.5)), -1.0, 1.0)
+	return clampf(3.5 * atan2(right, maxf(ahead, 0.5)), -1.0, 1.0)
 
 
 func _forklift_ram_touch(device: int) -> bool:
@@ -1583,8 +1588,12 @@ func _crane_spreader(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
 		return _fail("spreader: CRANE did not take the crane")
 	# The hook by the frame's east side, let down until its shackle lies on
-	# the ground there.
-	if not await _crane_hook_over(device, Vector2(frame.x + 1.7, frame.z), 0.3, 120.0):
+	# the ground there. 1.0 m off the frame, not 1.7: the sling is 3.2 m and
+	# the hook swings +-0.7 m on the hoist rope, so at 1.7 m the throat-to-lug
+	# span runs 3.43-3.58 m against the 3.23 m the rope reaches, and HOOK is
+	# offered only while the swing happens to be west; at 1.0 m the span
+	# stays under 3.0 m at every swing phase. (J-045.)
+	if not await _crane_hook_over(device, Vector2(frame.x + 1.0, frame.z), 0.3, 120.0):
 		return _fail("spreader: the hook was not sent by the spreader")
 	if not await _crane_hoist_until(device, -1,
 			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) < 3.4, 60.0):

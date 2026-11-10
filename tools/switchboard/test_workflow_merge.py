@@ -628,6 +628,24 @@ class TheSecurityFindings(unittest.TestCase):
         # Off .github/workflows a typed LAND counts as before.
         self.assertEqual(decide(facts(touches_workflows=False, verdicts=(typed,))).action, "MERGE")
 
+    def test_3b_muse_stands_in_for_codex_only_while_codex_cannot_review(self):
+        # Cory, 11-10 ("muse"): Codex out of quota on #386 left a workflow PR with no reviewer that counts
+        muse = v(f"**Muse (review of #9 @ {HEAD}): LAND**")
+        short = v(f"**Muse (review of #9 @ {HEAD[:8]}): LAND**")
+        d = decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), muse), codex_failed=True))
+        self.assertEqual((d.action, d.land_by), ("MERGE", "Muse"))
+        # not while Codex can review; not on a prefix of the head; not without the security pass; not on Muse's own work
+        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), muse))).action, "HUMAN-MERGE")
+        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(api(), short), codex_failed=True)).action,
+                         "HUMAN-MERGE")
+        self.assertEqual(decide(facts(head_ref="claude/integrate-j075", verdicts=(muse,), codex_failed=True)).action,
+                         "HUMAN-MERGE")
+        self.assertEqual(decide(facts(head_ref="muse/integrate-j056", verdicts=(api(), muse), codex_failed=True)).action,
+                         "HUMAN-MERGE")
+        # the inbox line says what lands it
+        d = decide(facts(head_ref="claude/integrate-j075", verdicts=(api(),), codex_failed=True))
+        self.assertIn(f"review of #9 @ {HEAD}: LAND", d.reasons[0])
+
 
 class ThreadGH(RecordingGH):
     """RecordingGH with a PR thread: switch.verdicts() reads these comments on #9."""

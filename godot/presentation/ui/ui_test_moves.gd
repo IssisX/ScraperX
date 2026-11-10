@@ -1472,7 +1472,8 @@ func _touch_arm_break() -> bool:
 	await _pose("arm_broken")
 	await _tilt(0.0)
 	# Up the ladder one-armed.
-	if not (await _walk_to(device, Vector2(3.5, -128.2), 0.15, 8.0, true) and \
+	if not (await _walk_to(device, Vector2(-4.3, -128.2), 0.15, 4.0, true) and \
+			await _walk_to(device, Vector2(3.5, -128.2), 0.15, 8.0, true) and \
 			await _walk_to(device, Vector2(3.5, -129.8), 0.15, 4.0, true) and \
 			await _walk_to(device, Vector2(5.0, -129.6), 0.08, 4.0, true)):
 		return _fail("the walk to the ladder's foot stalled at %s" % str(_position()))
