@@ -2,7 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "claude/integrate-j001-hold": "167e3ac13407756651084642c272f21ab7e9129d",
+  "claude/integrate-j001-hold": "169d4bce91acc38a2bdbbdb8a03b83b8fe7fee72",
   "fb-bot/j001-pastrail": "59af7cafa92f5528ccf3abb2652d6f5daae3dacb"
  },
  "cancelled": null,
@@ -12,15 +12,15 @@
   "6771165879:210"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T20:17:00Z",
- "head": "167e3ac13407756651084642c272f21ab7e9129d",
+ "deadline": "2026-11-10T22:17:00Z",
+ "head": "169d4bce91acc38a2bdbbdb8a03b83b8fe7fee72",
  "issue": 108,
  "job": "J-001",
  "landed": {
   "claude/integrate-j001-hold": [
-   "167e3ac13407756651084642c272f21ab7e9129d",
+   "169d4bce91acc38a2bdbbdb8a03b83b8fe7fee72",
    "",
-   "2026-11-10T18:29:43Z"
+   "2026-11-10T20:49:16Z"
   ],
   "fb-bot/j001-pastrail": [
    "59af7cafa92f5528ccf3abb2652d6f5daae3dacb",
@@ -374,7 +374,11 @@
    "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T20:49:16Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -422,6 +426,31 @@
    "version": "6774721075",
    "via": "issue",
    "what": "ask from Claude on #108"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T20:49:16Z",
+   "dead": "2026-11-11T00:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T22:17:00Z",
+   "id": "O-4992e630",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T20:49:16Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j001-hold",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 108,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:169d4bce91acc38a2bdbbdb8a03b83b8fe7fee72",
+   "via": "session",
+   "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
   }
  ],
  "outcome": null,
@@ -434,5 +463,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T18:29:43Z"
+ "updated": "2026-11-10T20:49:16Z"
 }

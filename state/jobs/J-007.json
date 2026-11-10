@@ -7,7 +7,9 @@
  },
  "cancelled": null,
  "ci": "green",
- "commands": [],
+ "commands": [
+  "6777897398:72"
+ ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
  "head": "7608a48044263189f60d4c1f655887d53d79618e",
@@ -165,7 +167,12 @@
    "what": "ask from Muse on #114"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T20:02:49Z",
+    "by": "Muse",
+    "comment": "6777897398",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,

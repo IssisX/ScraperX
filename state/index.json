@@ -4,7 +4,7 @@
    "attempt": 1,
    "blocked": null,
    "branches": {
-    "claude/integrate-j001-hold": "167e3ac13407756651084642c272f21ab7e9129d",
+    "claude/integrate-j001-hold": "169d4bce91acc38a2bdbbdb8a03b83b8fe7fee72",
     "fb-bot/j001-pastrail": "59af7cafa92f5528ccf3abb2652d6f5daae3dacb"
    },
    "cancelled": null,
@@ -14,15 +14,15 @@
     "6771165879:210"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T20:17:00Z",
-   "head": "167e3ac13407756651084642c272f21ab7e9129d",
+   "deadline": "2026-11-10T22:17:00Z",
+   "head": "169d4bce91acc38a2bdbbdb8a03b83b8fe7fee72",
    "issue": 108,
    "job": "J-001",
    "landed": {
     "claude/integrate-j001-hold": [
-     "167e3ac13407756651084642c272f21ab7e9129d",
+     "169d4bce91acc38a2bdbbdb8a03b83b8fe7fee72",
      "",
-     "2026-11-10T18:29:43Z"
+     "2026-11-10T20:49:16Z"
     ],
     "fb-bot/j001-pastrail": [
      "59af7cafa92f5528ccf3abb2652d6f5daae3dacb",
@@ -376,7 +376,11 @@
      "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T20:49:16Z",
+      "by": "claude",
+      "how": "new head"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -424,6 +428,31 @@
      "version": "6774721075",
      "via": "issue",
      "what": "ask from Claude on #108"
+    },
+    {
+     "ack": null,
+     "ack_rule": "new-head|reply|ack",
+     "asked": null,
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-10T20:49:16Z",
+     "dead": "2026-11-11T00:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-10T22:17:00Z",
+     "id": "O-4992e630",
+     "kind": "fix",
+     "last_error": "",
+     "last_sent": "2026-11-10T20:49:16Z",
+     "missing": 0,
+     "ref": "BRANCH|claude/integrate-j001-hold",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 108,
+     "to": "claude",
+     "unseen": null,
+     "version": "red:169d4bce91acc38a2bdbbdb8a03b83b8fe7fee72",
+     "via": "session",
+     "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
     }
    ],
    "outcome": null,
@@ -436,7 +465,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T18:29:43Z"
+   "updated": "2026-11-10T20:49:16Z"
   },
   "J-007": {
    "attempt": 1,
@@ -447,7 +476,9 @@
    },
    "cancelled": null,
    "ci": "green",
-   "commands": [],
+   "commands": [
+    "6777897398:72"
+   ],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-10T00:56:16Z",
    "head": "7608a48044263189f60d4c1f655887d53d79618e",
@@ -605,7 +636,12 @@
      "what": "ask from Muse on #114"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T20:02:49Z",
+      "by": "Muse",
+      "comment": "6777897398",
+      "how": "/ack"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -1245,7 +1281,7 @@
    ],
    "created": "2026-11-09T17:35:20Z",
    "deadline": null,
-   "head": "2ba17f22df2342e37f48dc064d47509399463a9a",
+   "head": "2f8b1f21d655f8e11e9648cbba743355c31f2314",
    "issue": 122,
    "job": "J-015",
    "landed": {
@@ -1623,7 +1659,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T18:29:43Z"
+   "updated": "2026-11-10T20:49:16Z"
   },
   "J-016": {
    "attempt": 0,
@@ -2134,7 +2170,9 @@
    },
    "cancelled": null,
    "ci": "green",
-   "commands": [],
+   "commands": [
+    "6777898125:87"
+   ],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-10T18:17:00Z",
    "head": "d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
@@ -2253,7 +2291,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-10T14:01:28Z",
+     "rechecked": "2026-11-10T20:49:16Z",
      "ref": "ASK|ask on #169",
      "sends": 0,
      "thread": 169,
@@ -2279,7 +2317,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-10T14:01:28Z",
+     "rechecked": "2026-11-10T20:49:16Z",
      "ref": "ASK|ask on #169",
      "sends": 0,
      "thread": 169,
@@ -2461,7 +2499,12 @@
      "what": "#372 @ d45ec240 has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T20:02:51Z",
+      "by": "Muse",
+      "comment": "6777898125",
+      "how": "/ack"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 2,
@@ -2493,7 +2536,7 @@
      "closed": null,
      "created": "2026-11-10T16:19:58Z",
      "dead": "2026-11-10T20:17:00Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-10T20:49:16Z",
      "due": "2026-11-10T18:17:00Z",
      "id": "O-e0d043a6",
      "kind": "ruling",
@@ -2522,7 +2565,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-10T18:29:43Z"
+   "updated": "2026-11-10T20:49:16Z"
   },
   "J-040": {
    "attempt": 0,
@@ -4512,11 +4555,11 @@
     "fb-bot/integrate-j059-black-eye": "e34ac5096b438be2f4a8567d4bf52f371857652e"
    },
    "cancelled": null,
-   "ci": "green",
+   "ci": "running",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T21:29:19Z",
-   "head": "8bd05a4ea89ed0e26c89b223cc19e6e9ece5aee4",
+   "deadline": null,
+   "head": "87e31743ea86e2d3a65c5b7dbf7b3bf65364f206",
    "issue": 307,
    "job": "J-059",
    "landed": {
@@ -4794,7 +4837,11 @@
      "what": "#343 has a merge conflict with the base"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T20:49:16Z",
+      "by": "muse",
+      "how": "new head"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -4827,23 +4874,25 @@
    "prs": [
     343
    ],
-   "review": "FIX",
-   "state": "working",
-   "updated": "2026-11-10T17:29:19Z"
+   "review": "",
+   "state": "proof",
+   "updated": "2026-11-10T20:49:16Z"
   },
   "J-060": {
    "attempt": 0,
    "blocked": null,
    "branches": {
     "claude/integrate-j060-matron-sheen": "71eb04caf76687fe2c250a73bd6211c63222ad7f",
-    "fb-bot/integrate-j060": "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e"
+    "fb-bot/integrate-j060": "b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058"
    },
    "cancelled": null,
    "ci": "",
-   "commands": [],
+   "commands": [
+    "6777896865:72"
+   ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T23:39:24Z",
-   "head": "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e",
+   "deadline": "2026-11-11T00:49:16Z",
+   "head": "b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058",
    "issue": 320,
    "job": "J-060",
    "landed": {
@@ -4853,9 +4902,9 @@
      "2026-11-09T17:35:20Z"
     ],
     "fb-bot/integrate-j060": [
-     "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e",
+     "b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058",
      "",
-     "2026-11-10T18:29:43Z"
+     "2026-11-10T20:49:16Z"
     ]
    },
    "obligations": [
@@ -5087,7 +5136,12 @@
      "what": "`fb-bot/integrate-j060` proof red: native-tests (matron-slices-3), no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T20:02:47Z",
+      "by": "Muse",
+      "comment": "6777896865",
+      "how": "/ack"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -5110,6 +5164,31 @@
      "version": "red:4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e",
      "via": "email",
      "what": "`fb-bot/integrate-j060` proof red: godot-touch (touch-2), native-tests (matron-slices-3), no PR"
+    },
+    {
+     "ack": null,
+     "ack_rule": "new-head|reply|ack",
+     "asked": null,
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-10T20:49:16Z",
+     "dead": "2026-11-11T04:49:16Z",
+     "dead_lettered": null,
+     "due": "2026-11-11T00:49:16Z",
+     "id": "O-97ffea90",
+     "kind": "fix",
+     "last_error": "",
+     "last_sent": "2026-11-10T20:49:16Z",
+     "missing": 0,
+     "ref": "BRANCH|fb-bot/integrate-j060",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 320,
+     "to": "muse",
+     "unseen": null,
+     "version": "red:b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058",
+     "via": "email",
+     "what": "`fb-bot/integrate-j060` proof red: native-tests (matron-slices-3), no PR"
     }
    ],
    "outcome": null,
@@ -5120,7 +5199,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T19:39:24Z"
+   "updated": "2026-11-10T20:49:16Z"
   },
   "J-061": {
    "attempt": 1,
@@ -6295,8 +6374,8 @@
    "landed": {
     "fb-bot/integrate-j070-cull": [
      "978ef3924df82a2341218d519a96120ee67534fc",
-     "",
-     "2026-11-10T17:29:19Z"
+     "merged #388",
+     "2026-11-10T20:49:16Z"
     ]
    },
    "obligations": [
@@ -6425,8 +6504,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-10T19:39:24Z"
+   "state": "merged",
+   "updated": "2026-11-10T20:49:16Z"
   },
   "J-071": {
    "attempt": 1,

@@ -8,7 +8,9 @@
  },
  "cancelled": null,
  "ci": "green",
- "commands": [],
+ "commands": [
+  "6777898125:87"
+ ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
  "head": "d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
@@ -127,7 +129,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-10T14:01:28Z",
+   "rechecked": "2026-11-10T20:49:16Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -153,7 +155,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-10T14:01:28Z",
+   "rechecked": "2026-11-10T20:49:16Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -335,7 +337,12 @@
    "what": "#372 @ d45ec240 has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T20:02:51Z",
+    "by": "Muse",
+    "comment": "6777898125",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -367,7 +374,7 @@
    "closed": null,
    "created": "2026-11-10T16:19:58Z",
    "dead": "2026-11-10T20:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-10T20:49:16Z",
    "due": "2026-11-10T18:17:00Z",
    "id": "O-e0d043a6",
    "kind": "ruling",
@@ -396,5 +403,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T18:29:43Z"
+ "updated": "2026-11-10T20:49:16Z"
 }

@@ -1150,3 +1150,19 @@
 {"attempt": 1, "ev": "sent", "id": "O-d1d15094", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 1, "t": "2026-11-10T19:39:24Z", "to": "muse", "via": "email"}
 {"ev": "dead_letter", "id": "O-d1f36275", "job": "", "ref": "ASK|ask on #384", "t": "2026-11-10T19:39:24Z", "to": "chatgpt"}
 {"ev": "pass", "job": "", "jobs": 49, "status": "ok", "t": "2026-11-10T19:39:24Z", "tries": 1}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-d1d15094", "job": "J-060", "t": "2026-11-10T20:49:16Z"}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-f6d1efd3", "job": "J-007", "t": "2026-11-10T20:49:16Z"}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-ef693717", "job": "J-038", "t": "2026-11-10T20:49:16Z"}
+{"due": "2026-11-10T22:17:00Z", "ev": "obligation", "id": "O-4992e630", "job": "J-001", "kind": "fix", "ref": "BRANCH|claude/integrate-j001-hold", "t": "2026-11-10T20:49:16Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "new head", "id": "O-ad4a01c6", "job": "J-001", "t": "2026-11-10T20:49:16Z"}
+{"ev": "acked", "how": "new head", "id": "O-4f63ce0a", "job": "J-059", "t": "2026-11-10T20:49:16Z"}
+{"due": "2026-11-11T00:49:16Z", "ev": "obligation", "id": "O-97ffea90", "job": "J-060", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j060", "t": "2026-11-10T20:49:16Z", "to": "muse", "via": "email"}
+{"branch": "fb-bot/integrate-j070-cull", "ev": "landed", "how": "merged #388", "job": "J-070", "sha": "978ef3924df82a2341218d519a96120ee67534fc", "t": "2026-11-10T20:49:16Z"}
+{"ev": "state", "frm": "working", "job": "J-059", "t": "2026-11-10T20:49:16Z", "to": "proof"}
+{"ev": "state", "frm": "proof", "job": "J-070", "t": "2026-11-10T20:49:16Z", "to": "merged"}
+{"ev": "unmatched", "ident": "PR|#389", "job": "", "t": "2026-11-10T20:49:16Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"attempt": 1, "ev": "sent", "id": "O-4992e630", "job": "J-001", "ref": "BRANCH|claude/integrate-j001-hold", "send": 1, "t": "2026-11-10T20:49:16Z", "to": "claude", "via": "session"}
+{"ev": "dead_letter", "id": "O-e0d043a6", "job": "J-038", "ref": "BRANCH|fb-bot/integrate-protected-j038-slice1", "t": "2026-11-10T20:49:16Z", "to": "claude"}
+{"attempt": 1, "ev": "sent", "id": "O-97ffea90", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 1, "t": "2026-11-10T20:49:16Z", "to": "muse", "via": "email"}
+{"ev": "needs_you", "job": "", "keys": ["O-e0d043a6", "O-ac0bbca6", "O-d1f36275"], "n": 3, "t": "2026-11-10T20:49:16Z"}
+{"ev": "pass", "job": "", "jobs": 49, "status": "ok", "t": "2026-11-10T20:49:16Z", "tries": 1}

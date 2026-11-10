@@ -3,14 +3,16 @@
  "blocked": null,
  "branches": {
   "claude/integrate-j060-matron-sheen": "71eb04caf76687fe2c250a73bd6211c63222ad7f",
-  "fb-bot/integrate-j060": "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e"
+  "fb-bot/integrate-j060": "b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058"
  },
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6777896865:72"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T23:39:24Z",
- "head": "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e",
+ "deadline": "2026-11-11T00:49:16Z",
+ "head": "b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058",
  "issue": 320,
  "job": "J-060",
  "landed": {
@@ -20,9 +22,9 @@
    "2026-11-09T17:35:20Z"
   ],
   "fb-bot/integrate-j060": [
-   "4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e",
+   "b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058",
    "",
-   "2026-11-10T18:29:43Z"
+   "2026-11-10T20:49:16Z"
   ]
  },
  "obligations": [
@@ -254,7 +256,12 @@
    "what": "`fb-bot/integrate-j060` proof red: native-tests (matron-slices-3), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T20:02:47Z",
+    "by": "Muse",
+    "comment": "6777896865",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -277,6 +284,31 @@
    "version": "red:4dc623e6a5ac54d9ac7b6bc23d1d18192a87999e",
    "via": "email",
    "what": "`fb-bot/integrate-j060` proof red: godot-touch (touch-2), native-tests (matron-slices-3), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T20:49:16Z",
+   "dead": "2026-11-11T04:49:16Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T00:49:16Z",
+   "id": "O-97ffea90",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T20:49:16Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j060",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 320,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058",
+   "via": "email",
+   "what": "`fb-bot/integrate-j060` proof red: native-tests (matron-slices-3), no PR"
   }
  ],
  "outcome": null,
@@ -287,5 +319,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T19:39:24Z"
+ "updated": "2026-11-10T20:49:16Z"
 }

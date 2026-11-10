@@ -17,8 +17,8 @@
  "landed": {
   "fb-bot/integrate-j070-cull": [
    "978ef3924df82a2341218d519a96120ee67534fc",
-   "",
-   "2026-11-10T17:29:19Z"
+   "merged #388",
+   "2026-11-10T20:49:16Z"
   ]
  },
  "obligations": [
@@ -147,6 +147,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-10T19:39:24Z"
+ "state": "merged",
+ "updated": "2026-11-10T20:49:16Z"
 }

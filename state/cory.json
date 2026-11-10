@@ -67,9 +67,19 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (2), from the switchboard at 11-10 11:29 AM Central.\n\n- Needs you: J-042 ruling on #291: 'fb-bot/integrate-protected-j042-windup'  8c74524c: closed #291 without merging at this head: reopen it, or delete the . Claude did not act (2 send(s) by session, no ack); since 11-10 11:29 AM Central. Done: /ack O-8184d278\n- Needs you: J-045 ask on #248: ask from Muse on #248. Claude did not act (2 send(s) by session, no ack); since 11-10 11:29 AM Central. Done: /ack O-71c6c5fb\n\nStill standing from earlier batches: 1 (the day's shadow file lists them)."
+  },
+  {
+   "at": "2026-11-10T20:49:16Z",
+   "keys": [
+    "O-e0d043a6",
+    "O-ac0bbca6",
+    "O-d1f36275"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (3), from the switchboard at 11-10 2:49 PM Central.\n\n- Needs you: J-038 ruling on #299: 'fb-bot/integrate-protected-j038-slice1'  4e6ab1f4: closed #299 without merging at this head: reopen it, or delete the . Claude did not act (2 send(s) by session, no ack); since 11-10 2:49 PM Central. Done: /ack O-e0d043a6\n- Needs you: J-049 ruling on #367: 'fb-bot/integrate-protected-j049-pr1'  2d99e906: closed #367 without merging at this head: reopen it, or delete the bra. Claude did not act (2 send(s) by session, no ack); since 11-10 12:29 PM Central. Done: /ack O-ac0bbca6\n- Needs you: thread ask on #384: ask from Claude on #384. ChatGPT did not act (2 send(s) by issue, no ack); since 11-10 1:39 PM Central. Done: /ack O-d1f36275\n\nStill standing from earlier batches: 3 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-10T17:29:19Z",
+ "last_batch": "2026-11-10T20:49:16Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
@@ -80,7 +90,10 @@
   "O-71c6c5fb": "2026-11-10T17:29:19Z",
   "O-8184d278": "2026-11-10T17:29:19Z",
   "O-a34f6e29": "2026-11-10T15:09:20Z",
+  "O-ac0bbca6": "2026-11-10T20:49:16Z",
   "O-d0889dd8": "2026-11-10T15:09:20Z",
+  "O-d1f36275": "2026-11-10T20:49:16Z",
+  "O-e0d043a6": "2026-11-10T20:49:16Z",
   "O-f45193c7": "2026-11-10T15:09:20Z",
   "backlog:2026-11-09T22:19:23Z": "2026-11-09T22:19:23Z",
   "claude-asks:2026-11-09": "2026-11-09T20:56:16Z",
