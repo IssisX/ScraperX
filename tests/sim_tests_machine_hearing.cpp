@@ -111,3 +111,5 @@ void run_machine_hearing() {
     (void)s.advance_frame(10.0);
     std::cout << "  machine hearing: " << s.machine_noises().size() << " running after settling\n";
 }
+SCRAPERX_GROUP("machine_hearing", 1070, run_machine_hearing);
+SCRAPERX_SLICE("machine-hearing", run_machine_hearing);

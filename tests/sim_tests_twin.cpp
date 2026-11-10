@@ -286,6 +286,8 @@ void run_twin() {
             "twin: after a load the leaf still carries the walk to tower one");
     std::cout << "PASS scraperx_sim twin save: the leaf stays down through save and load\n";
 }
+SCRAPERX_GROUP("twin", 70, run_twin);
+SCRAPERX_SELECT("twin", run_twin, run_twin_balconies);
 
 void run_twin_geometry() {
     Simulation s;
@@ -367,3 +369,186 @@ void run_twin_geometry() {
     require(highest + 30.0 < 214.0, "twin: from the ground, the hook's reach stays short of the bridge");
     std::cout << "PASS scraperx_sim twin ground: highest reachable " << highest << " m, the bridge at 220 m out of reach\n";
 }
+SCRAPERX_GROUP("twin_geometry", 60, run_twin_geometry);
+SCRAPERX_SELECT("twin-geometry", run_twin_geometry);
+
+// J-053, the Void Crossing balconies (Claude 2026-11-07 06:13 ruling): five
+// steel balconies on tower two's face at 640, 662, 684, 706, 728 m, each 4 m
+// deep with three rails along each side, an open front edge, and an
+// outboard hook bar below the lip; 728 is reached by hook-climb. Measured
+// glide, step 1 (2026-11-06): walk face contact 665.7/654.4 m, sprint
+// 702.6/691.9 m, flow identical to sprint; no chute dies on the face at
+// 71.78 m/s. The departure is a running jump, not a vault.
+void run_twin_balconies() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    using scraperx::sim::TwinTower;
+    static constexpr double kTops[] = {640.0, 662.0, 684.0, 706.0, 728.0};
+    static constexpr double kHookBarZ = -219.65;
+    static constexpr double kRailHeights[] = {0.35, 0.7, 1.1};
+    static constexpr std::size_t kTopCount = sizeof(kTops) / sizeof(kTops[0]);
+    Simulation s;
+    Simulation::LookHit hit;
+    // The decks are there, at the five heights, on the face, and nowhere
+    // else: no invisible support beside or in front of them.
+    for (const double top : kTops) {
+        require(s.look_target(8.0, top + 5.0, -222.5, 0, -1, 0, 10.0, hit) &&
+                    std::abs(hit.point.y - top) < 0.02 && hit.entity == TwinTower::kFrameEntity &&
+                    hit.normal.y >= 0.55,
+                "twin balconies: the deck top is there at its height");
+        require(s.look_target(2.5, top + 5.0, -222.5, 0, -1, 0, 10.0, hit) &&
+                    std::abs(hit.point.y - top) < 0.02,
+                "twin balconies: the deck reaches its west end");
+        require(s.look_target(13.5, top + 5.0, -222.5, 0, -1, 0, 10.0, hit) &&
+                    std::abs(hit.point.y - top) < 0.02,
+                "twin balconies: the deck reaches its east end");
+        for (const double x : {1.0, 15.0}) {
+            // Nothing at balcony height beside the deck: open air (no hit
+            // in reach) or something far below.
+            require(!s.look_target(x, top + 5.0, -222.5, 0, -1, 0, 150.0, hit) || hit.point.y < top - 10.0,
+                    "twin balconies: no deck beside the balcony");
+        }
+        require(!s.look_target(8.0, top + 5.0, -219.0, 0, -1, 0, 150.0, hit) || hit.point.y < top - 10.0,
+                "twin balconies: no deck in front of the balcony's edge");
+        // Three rails along each side, on posts (the front edge is open:
+        // a glide and the hook-climb mantle cross it, so nothing stands
+        // across it). A ray level toward the front at each rail height
+        // meets open air, not a rail.
+        for (const double side : {2.0, 14.0})
+            for (const double rail : kRailHeights) {
+                // Ray between the posts (posts stand at z -224, -222, -220).
+                require(s.look_target(side, top + rail + 0.15, -223.0, 0, -1, 0, 2.0, hit) &&
+                            std::abs(hit.point.y - (top + rail + 0.06)) < 0.02 &&
+                            hit.entity == TwinTower::kFrameEntity,
+                        "twin balconies: each of the three side rails is at its height");
+                require(!s.look_target(8.0, top + rail, -219.0, 0, 0, -1, 2.0, hit),
+                        "twin balconies: the front edge is open at rail height");
+            }
+        // The climb's mark: the outboard bar, 0.35 m past the edge and
+        // 0.5 m below the deck's top.
+        require(s.look_target(8.0, top - 0.2, kHookBarZ, 0, -1, 0, 2.0, hit) &&
+                    std::abs(hit.point.y - (top - 0.44)) < 0.02 && hit.entity == TwinTower::kFrameEntity,
+                "twin balconies: the hook bar hangs below the deck's lip");
+    }
+    // The chain: from the lower deck's edge, the next deck's hook bar is
+    // inside the hook's 30 m, and what the ray meets is the bar itself:
+    // the ray is aimed at the bar's front face from the edge, so a hit at
+    // the bar's height means it cleared the deck's slab.
+    for (std::size_t i = 0; i + 1 < kTopCount; ++i) {
+        const double top = kTops[i];
+        const double dx = 0.0;
+        const double dy = 22.0 - 0.5 - 1.6;
+        const double dz = (kHookBarZ + 0.06) - -220.3;
+        const double len = std::sqrt(dx * dx + dy * dy + dz * dz);
+        require(s.look_target(8.0, top + 1.6, -220.3, dx / len, dy / len, dz / len, 30.0, hit) &&
+                    hit.entity == TwinTower::kFrameEntity && hit.distance < 30.0 &&
+                    std::abs(hit.point.y - (top + 21.5)) < 0.15,
+                "twin balconies: the next deck's hook bar is inside hook range");
+    }
+    // The glide: a running jump off the 750 deck's edge, chute open, lands
+    // alive on a balcony; walk and sprint, early and late deploy.
+    const auto glide = [](const bool sprint, const double deploy_delay_s) {
+        Simulation g(InitialSpawn::Deck750);
+        require(g.set_facing(0.0, -1.0), "twin balconies: face the void");
+        (void)g.set_move_input(0.0, -1.0);
+        (void)g.set_sprint_input(sprint);
+        require(advance_until(g, [](const Snapshot &n) { return n.player_position.z <= -160.0; }, 10.0),
+                "twin balconies: reach the deck's edge");
+        require(g.request_jump(), "twin balconies: the running jump off the edge");
+        // The delay runs from the edge, not the jump: the jump's apex is
+        // at the edge, so a delay from the jump would open the chute half
+        // a second early and flatter the worst case.
+        require(advance_until(g, [](const Snapshot &n) { return n.player_position.z <= -162.0; }, 3.0),
+                "twin balconies: past the deck's edge");
+        const double t0 = g.snapshot().simulation_time_seconds;
+        require(advance_until(g, [&](const Snapshot &n) { return n.simulation_time_seconds >= t0 + deploy_delay_s; },
+                              5.0),
+                "twin balconies: wait out the deploy delay");
+        require(g.request_parachute(), "twin balconies: open the chute");
+        require(advance_until(g, [](const Snapshot &n) { return n.player_grounded || n.death_count > 0; }, 45.0),
+                "twin balconies: the glide comes down");
+        (void)g.set_move_input(0.0, 0.0);
+        (void)g.set_sprint_input(false);
+        stand(g);
+        const auto n = g.snapshot();
+        double deck = -1.0;
+        for (const double top : kTops) {
+            if (std::abs(n.player_position.y - (top + 0.9)) < 0.6)
+                deck = top;
+        }
+        std::cout << "  twin glide " << (sprint ? "sprint" : "walk") << " delay " << deploy_delay_s << " s: lands "
+                  << n.player_position.y << " m on " << deck << " support=" << n.support_entity_id
+                  << " deaths " << n.death_count << '\n';
+        require(n.death_count == 0 && n.player_grounded && deck > 0.0 &&
+                    n.support_entity_id == TwinTower::kFrameEntity,
+                "twin balconies: the glide lands alive on a balcony");
+        return deck;
+    };
+    const double landed = glide(true, 0.0);
+    require(glide(true, 2.0) > 0.0, "twin balconies: sprint, late deploy, lands");
+    require(glide(false, 0.0) > 0.0, "twin balconies: walk, early deploy, lands");
+    require(glide(false, 2.0) > 0.0, "twin balconies: walk, late deploy, lands");
+    std::cout << "PASS scraperx_sim twin balconies glide: sprint lands on " << landed << " m, all four takeoffs alive\n";
+    // The control: the same sprint off, chute never opened, dies on the
+    // face. No invisible support carries him across.
+    {
+        Simulation c(InitialSpawn::Deck750);
+        require(c.set_facing(0.0, -1.0), "twin balconies control: face the void");
+        (void)c.set_move_input(0.0, -1.0);
+        (void)c.set_sprint_input(true);
+        require(advance_until(c, [](const Snapshot &n) { return n.player_position.z <= -160.0; }, 10.0),
+                "twin balconies control: reach the edge");
+        require(c.request_jump(), "twin balconies control: jump");
+        // The death restores the body to the deck, so the fall is judged
+        // by the lowest height reached on the way down, not by where the
+        // body stands after the restore.
+        double lowest = 1.0e9;
+        bool died = false;
+        for (int tick = 0; tick < 90 * 15 && !died; ++tick) {
+            require(c.advance_frame(Simulation::kFixedStepSeconds).accepted,
+                    "twin balconies control: the fall");
+            const auto n = c.snapshot();
+            lowest = std::min(lowest, n.player_position.y);
+            died = n.death_count > 0;
+        }
+        require(died, "twin balconies control: no chute dies");
+        const auto n = c.snapshot();
+        std::cout << "  twin control: no chute dies, lowest " << lowest << " m\n";
+        require(lowest < 600.0, "twin balconies control: dies below the balconies");
+        (void)n;
+        std::cout << "PASS scraperx_sim twin balconies control: no chute, no crossing\n";
+    }
+    // The checkpoint: saved on the balcony, loaded, still standing on it.
+    {
+        Simulation g(InitialSpawn::Deck750);
+        require(g.set_facing(0.0, -1.0), "twin balconies save: face the void");
+        (void)g.set_move_input(0.0, -1.0);
+        (void)g.set_sprint_input(true);
+        require(advance_until(g, [](const Snapshot &n) { return n.player_position.z <= -160.0; }, 10.0),
+                "twin balconies save: reach the edge");
+        require(g.request_jump(), "twin balconies save: jump");
+        require(advance_until(g, [](const Snapshot &n) { return n.player_position.z <= -162.0; }, 3.0),
+                "twin balconies save: past the deck's edge");
+        require(g.request_parachute(), "twin balconies save: open the chute");
+        require(advance_until(g, [](const Snapshot &n) { return n.player_grounded || n.death_count > 0; }, 45.0),
+                "twin balconies save: come down");
+        (void)g.set_move_input(0.0, 0.0);
+        (void)g.set_sprint_input(false);
+        stand(g);
+        const auto at = g.snapshot();
+        require(at.death_count == 0 && at.player_grounded, "twin balconies save: landed alive");
+        const auto saved = g.save_game();
+        require(!saved.empty(), "twin balconies save: saves on the balcony");
+        Simulation restored(InitialSpawn::Deck750);
+        require(restored.load_game(saved.data(), saved.size()), "twin balconies save: reloads");
+        stand(restored);
+        const auto n = restored.snapshot();
+        require(n.player_grounded && n.death_count == 0 &&
+                    std::abs(n.player_position.y - at.player_position.y) < 0.6 &&
+                    n.support_entity_id == TwinTower::kFrameEntity,
+                "twin balconies save: the stand on the balcony survives save and load");
+        std::cout << "PASS scraperx_sim twin balconies save: " << at.player_position.y
+                  << " m stand survives save and load\n";
+    }
+}
+SCRAPERX_GROUP("twin_balconies", 80, run_twin_balconies);

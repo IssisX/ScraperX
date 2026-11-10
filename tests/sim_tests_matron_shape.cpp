@@ -310,3 +310,4 @@ void run_matron_shape() {
     std::cout << "PASS scraperx_sim matron shape fit: her collision capsule within its margins of her drawn body in "
                  "every stance\n";
 }
+SCRAPERX_SLICE("matron-shape", run_matron_shape);

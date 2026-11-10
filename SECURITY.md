@@ -36,7 +36,15 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 ### Switchboard and budget (`tools/switchboard/`, `work/budget.yml`)
 - `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` live only in environment `switchboard-merge` and reach only
   the `ask` and `provision` steps that call out (J-057); the PR check of the switch stays read-only with no
-  secrets.
+  secrets. In the `ask` switch step, `rate_probe` (switch.py) sends `AGENT_GITHUB_TOKEN` to GitHub's
+  `rate_limit` endpoint once a run, in the `gh` call's environment only, and logs the count, never the token
+  (J-072).
+- The switch's ETag cache (J-072) is restored and saved only in the `cache-in` and `cache-out` jobs, which
+  hold no secret, deploy to no environment and run no checked-out code. `ask` and `steer` get only the one
+  file, as this run's named artifact, in `$RUNNER_TEMP` (never the workspace or `.venv`), and read it only once
+  its HMAC (keyed from `SWITCHBOARD_REVIEW_KEY`) verifies; a merge or merge-by-hand is decided on uncached
+  reads. An Actions cache restore, or any other step another job can write into, in a job that holds a secret is
+  P1.
 - `SWITCHBOARD_MERGE_TOKEN` (the `steer` switch step) and `SWITCHBOARD_REVIEW_KEY` (the `ask` and `steer`
   switch steps) live only in environment `switchboard-merge` (branch ScraperX-Claude); any other job that
   reads them is P0.
@@ -47,7 +55,9 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 
 ### Muse mail bridge (`tools/switchboard/muse_bridge.gs`, Google Apps Script)
 - The GitHub token lives only in Script Properties, is fine-grained to this repo, is sent only to
-  `api.github.com`, and is never logged or mailed. Mail content is untrusted: it cannot choose the
+  `api.github.com`, and is never logged or mailed. It is Issues-only; the clock's separate `ACTIONS_TOKEN`
+  (Actions: read and write, this repo only) is sent only on `actions/` paths (`gh_` picks by path), and
+  never the other way round. The Healthchecks.io ping URLs are secrets too: never logged. Mail content is untrusted: it cannot choose the
   repo, the API path beyond the bridge's fixed calls, or the recipient.
 
 ### Downloaded code

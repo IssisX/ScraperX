@@ -167,6 +167,9 @@ const SCENARIOS := {
 	"look_matron_hold": 11,
 	"look_matron_fatal": 11,
 	"look_matron_grade_ladder": 11,
+	# His punch landing on her, through his eye (ui_test_look.gd; CI renders it
+	# for the eye set fight_contact, work/looks/sets.yml).
+	"look_matron_fight": 11,
 	# Loose stock in the yard: a drum carried and set down (look_stock_yard:
 	# renders only, not in CI).
 	"touch_stock": 8,
@@ -194,6 +197,9 @@ const SCENARIOS := {
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
 	"look_summit": 42,
 	"look_summit_ground": 8,
+	# Look only (renders, not in CI): the gust front's mist streak (J-022
+	# slice 2), from I's cage at 419 m on the front's band.
+	"look_mist_streak": 21,
 	# The owner's vertical machines, from the 264 ring's west band where C6
 	# tops out, on their own motors: the cascade mast 27 m up, the walkway out
 	# the west face, the pitman lift 23.6 m, the barrel helix 24 m, the walkway
@@ -522,6 +528,8 @@ func _run() -> void:
 			ok = await _look_set("fatal")
 		"look_matron_grade_ladder":
 			ok = await _look_set("grade_ladder")
+		"look_matron_fight":
+			ok = await _look_set("fight")
 		"touch_stock":
 			ok = await _stock_touch(InputRouter.Device.TOUCH)
 		"touch_forklift":
@@ -556,6 +564,8 @@ func _run() -> void:
 			ok = await _look_summit(false)
 		"look_summit_ground":
 			ok = await _look_summit(true)
+		"look_mist_streak":
+			ok = await _look_mist_streak()
 		"touch_machines":
 			ok = await _machines(InputRouter.Device.TOUCH)
 		"touch_high":

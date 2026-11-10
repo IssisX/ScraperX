@@ -286,3 +286,4 @@ void run_matron_load() {
         require(deaths_at_break == deaths, "matron load S2 over-base: the carry's resolution killed nobody");
     }
 }
+SCRAPERX_SLICE("matron-load", run_matron_load);

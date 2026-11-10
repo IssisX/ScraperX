@@ -582,6 +582,7 @@ void run_core_traversal() {
               << " rejected=" << blocked_result.rejected_traversal_count
               << " accepted=" << moving.snapshot().accepted_traversal_count << '\n';
 }
+SCRAPERX_GROUP("core_traversal", 30, run_core_traversal);
 
 void run_fall_checkpoint() {
     using scraperx::sim::InitialSpawn;
@@ -744,6 +745,7 @@ void run_fall_checkpoint() {
               << int(!grounded_parachute.snapshot().parachute_deployed)
               << " commits=" << airborne_checkpoint.checkpoint_commit_count << '\n';
 }
+SCRAPERX_GROUP("fall_checkpoint", 40, run_fall_checkpoint);
 
 void run_world_solids() {
     using scraperx::sim::InitialSpawn;
@@ -927,3 +929,4 @@ void run_world_solids() {
               << " under_z=" << under.player_position.z
               << " stood_y=" << beyond.player_position.y << '\n';
 }
+SCRAPERX_GROUP("world_solids", 50, run_world_solids);

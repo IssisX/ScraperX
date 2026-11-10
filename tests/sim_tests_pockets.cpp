@@ -74,3 +74,5 @@ void run_route_pockets() {
             "pockets: every region she can reach below the 352 ring has a usable way back to it");
     std::cout << "PASS scraperx_sim route pockets: reachable=" << reached << "\n";
 }
+SCRAPERX_GROUP("route_pockets", 280, run_route_pockets);
+SCRAPERX_SELECT("route-pockets", run_route_pockets);

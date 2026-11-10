@@ -64,8 +64,8 @@ MATRIX_GATE = re.compile(r"matrix\.shard\s*==\s*['\"]([^'\"]+)['\"]")
 # (godot-touch) already read the proof of; this guard pins the legs
 # that decide whether that proof runs.
 EXPECTED = {
-    "native-tests": ["athletic-traversal", "matron-slices-1",
-                     "matron-slices-2", "matron-slices-3"],
+    "native-tests": ["athletic-traversal-1", "athletic-traversal-2",
+                     "matron-slices-1", "matron-slices-2", "matron-slices-3"],
     "godot-touch": ["touch-1", "touch-2"],
 }
 
@@ -204,9 +204,10 @@ def _self_test():
 
     good = ("name: test\njobs:\n"
             + job("native-tests",
-                  ["athletic-traversal", "matron-slices-1",
-                   "matron-slices-2", "matron-slices-3"],
-                  [("Run athletic_traversal", "athletic-traversal"),
+                  ["athletic-traversal-1", "athletic-traversal-2",
+                   "matron-slices-1", "matron-slices-2", "matron-slices-3"],
+                  [("Run athletic-traversal-1", "athletic-traversal-1"),
+                   ("Run athletic-traversal-2", "athletic-traversal-2"),
                    ("Run CTest Matron slice group 1", "matron-slices-1"),
                    ("Run CTest Matron slice group 2", "matron-slices-2"),
                    ("Run CTest Matron slice group 3", "matron-slices-3")])

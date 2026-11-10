@@ -755,6 +755,10 @@ void run_matron_grab() {
                   << grabbed_at << " s\n";
     }
 }
+// run_matron_grab, run_matron_arm, run_matron_fatality: not in the default
+// sequence but this ctest slice, as matron-chase, since her fatality's runs
+// took the whole suite's run past its timeout. They still run on every ctest.
+SCRAPERX_SLICE("matron-grab", run_matron_grab, run_matron_arm, run_matron_fatality);
 
 void run_matron_arm() {
     // ---- ArmPlay: her other hand on a wrist, the pull, the tear; the arm hers,
@@ -949,6 +953,7 @@ void run_matron_arm() {
         std::cout << "PASS scraperx_sim matron two tears: regrab_after_s=" << second_grab_s - set_down_s << "\n";
     }
 }
+SCRAPERX_SELECT("matron-arm", run_matron_arm);
 
 // The fatality (the owner, 2026-10-28; sim/matron.hpp kFatalTargetS): her
 // second catch, his one arm left. She carries him to the nearest edge with a
@@ -1448,6 +1453,7 @@ void run_matron_fatality() {
         std::cout << "PASS scraperx_sim matron fatality save: load mid-hang == the death's restore\n";
     }
 }
+SCRAPERX_SELECT("matron-fatality", run_matron_fatality);
 
 // One good arm, on a built route (a stub out from a wall, the wall's lip
 // higher, far from the tower): caught one-handed on the lower lip, the hang under the
@@ -1590,3 +1596,5 @@ void run_one_arm_route() {
     }
     std::cout << "PASS scraperx_sim one arm route\n";
 }
+SCRAPERX_GROUP("one_arm_route", 960, run_one_arm_route);
+SCRAPERX_SELECT("one-arm", run_one_arm_route);

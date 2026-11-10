@@ -188,6 +188,8 @@ void run_corpse() {
     std::cout << "PASS scraperx_sim corpse: death_mps=" << dead.death_speed_mps << " rest_head_y=" << head.position.y
               << " hit_y=" << dead.death_point.y << " capped=" << Corpses::kMaxCorpses << "\n";
 }
+SCRAPERX_GROUP("corpse", 720, run_corpse);
+SCRAPERX_SELECT("corpse", run_corpse, run_arm_break, run_wind_own_drive);
 
 // The broken arm (kArmBreakHitSpeed): thrown into a wall a little past a
 // sprint's speed, the arm that took the blow is broken; his own run into it,
@@ -449,6 +451,7 @@ void run_arm_break() {
     std::cout << "PASS scraperx_sim arm break: his own run is no blow, flat out or jumped; a throw and a wrench break an"
                  " arm; one arm climbs at half rate, holds half the grip, reaches no bar\n";
 }
+SCRAPERX_GROUP("arm_break", 730, run_arm_break);
 
 void run_wind_own_drive() {
     using scraperx::sim::InitialSpawn;

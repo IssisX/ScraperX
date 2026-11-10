@@ -181,66 +181,14 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall;-Wextra;-Wpedantic;-Werror>)
     add_test(NAME scraperx_sim.shared_survival COMMAND scraperx_shared_survival_tests)
 
+    # The native test files: every tests/sim_tests_*.cpp, found by the glob, so a new
+    # slice file edits no list here (J-074, #352). Each group registers itself beside
+    # its function (tests/sim_registry.hpp); simulation_tests.cpp runs the registry.
+    file(GLOB SCRAPERX_SIM_TEST_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tests/sim_tests_*.cpp")
     add_executable(scraperx_sim_tests
         tests/simulation_tests.cpp
-        tests/sim_tests_core.cpp
-        tests/sim_tests_well.cpp
-        tests/sim_tests_wreckage.cpp
-        tests/sim_tests_step2.cpp
-        tests/sim_tests_wet.cpp
-        tests/sim_tests_plate.cpp
-        tests/sim_tests_pockets.cpp
         tests/matron_exam.cpp
-        tests/sim_tests_matron_exam.cpp
-        tests/sim_tests_matron_exam_runs.cpp
-        tests/sim_tests_matron_exam_descent.cpp
-        tests/sim_tests_matron_found_climb.cpp
-        tests/sim_tests_crane.cpp
-        tests/sim_tests_service.cpp
-        tests/sim_tests_machines.cpp
-        tests/sim_tests_rides.cpp
-        tests/sim_tests_ground.cpp
-        tests/sim_tests_edge.cpp
-        tests/sim_tests_stack_route.cpp
-        tests/sim_tests_stack.cpp
-        tests/sim_tests_movement.cpp
-        tests/sim_tests_up.cpp
-        tests/sim_tests_summit.cpp
-        tests/sim_tests_matron_player_independence.cpp
-        tests/sim_tests_matron_routecraft.cpp
-        tests/sim_tests_matron.cpp
-        tests/sim_tests_matron_hearing.cpp
-        tests/sim_tests_matron_sight.cpp
-        tests/sim_tests_matron_honest.cpp
-        tests/sim_tests_matron_climb.cpp
-        tests/sim_tests_twin.cpp
-        tests/sim_tests_bay.cpp
-        tests/sim_tests_stock.cpp
-        tests/sim_tests_body_order.cpp
-        tests/sim_tests_fabricated.cpp
-        tests/sim_tests_forklift.cpp
-        tests/sim_tests_forklift_matron.cpp
-        tests/sim_tests_yard_crane.cpp
-        tests/sim_tests_machine_hearing.cpp
-        tests/sim_tests_zipline.cpp
-        tests/sim_tests_corpse.cpp
-        tests/sim_tests_water.cpp
-        tests/sim_tests_matron_moves.cpp
-        tests/sim_tests_matron_grab.cpp
-        tests/sim_tests_matron_ladder_pull.cpp
-        tests/sim_tests_matron_load.cpp
-        tests/sim_tests_matron_budget.cpp
-        tests/sim_tests_matron_capacity.cpp
-        tests/sim_tests_strike.cpp
-        tests/sim_tests_matron_damage.cpp
-        tests/sim_tests_perf.cpp
-        tests/sim_tests_matron_traverse.cpp
-        tests/sim_tests_matron_pursuit.cpp
-        tests/sim_tests_matron_stand.cpp
-        tests/sim_tests_matron_shape.cpp
-        tests/sim_tests_matron_chase.cpp
-        tests/sim_tests_matron_climb.cpp
-        tests/sim_tests_matron_climb_support.cpp
+        ${SCRAPERX_SIM_TEST_FILES}
     )
     add_dependencies(scraperx_sim_tests scraperx_shared_survival_tests)
     target_link_libraries(scraperx_sim_tests PRIVATE scraperx_sim scraperx_delivery)
@@ -253,11 +201,37 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
-    add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
-    foreach(slice matron-damage matron-ladder matron-hearing matron-sight matron-honest matron-stalk matron-climb matron-climb-support matron-state-exits matron-crash matron-tower matron-chain matron-towers matron-board-walls matron-remaining matron-chase matron-ladders matron-stand matron-grab matron-ladder-pull matron-shape matron-load matron-exam-descent matron-sweep matron-kick forklift-matron matron-jab perf-step matron-budget matron-capacity machine-hearing)
+    # J-071 step 2: the default sequence is two SCRAPERX_SLICE CTest tests
+    # (athletic-traversal-1 / athletic-traversal-2 in tests/sim_tests_athletic_shards.cpp),
+    # each under about 900 s. The bare binary still runs every group once, with TIME lines.
+    # Each SCRAPERX_SLICE("<name>", ...) in those files is also its own CTest test,
+    # scraperx_sim.<name>, run with SCRAPERX_ONLY=<name>. A file edited re-runs this
+    # configure, and the post-build check below holds this list to the registry's.
+    set(SCRAPERX_SIM_SLICES)
+    foreach(test_file IN LISTS SCRAPERX_SIM_TEST_FILES)
+        file(READ "${test_file}" test_text)
+        string(REGEX MATCHALL "SCRAPERX_SLICE\\(\"[^\"]+\"" slice_hits "${test_text}")
+        foreach(hit IN LISTS slice_hits)
+            string(REGEX REPLACE "^SCRAPERX_SLICE\\(\"([^\"]+)\"$" "\\1" slice_name "${hit}")
+            list(APPEND SCRAPERX_SIM_SLICES "${slice_name}")
+        endforeach()
+    endforeach()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${SCRAPERX_SIM_TEST_FILES})
+    list(SORT SCRAPERX_SIM_SLICES)
+    foreach(slice IN LISTS SCRAPERX_SIM_SLICES)
         add_test(NAME scraperx_sim.${slice} COMMAND scraperx_sim_tests)
         set_tests_properties(scraperx_sim.${slice} PROPERTIES ENVIRONMENT "SCRAPERX_ONLY=${slice}")
     endforeach()
+    # After each build the binary checks its own registry (a repeated name or key
+    # fails the build) and that its slices are the ones registered above.
+    if(NOT CMAKE_CROSSCOMPILING)
+        string(JOIN "," SCRAPERX_SIM_SLICES_CSV ${SCRAPERX_SIM_SLICES})
+        add_custom_command(TARGET scraperx_sim_tests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} "-DTEST_BINARY=$<TARGET_FILE:scraperx_sim_tests>"
+                    "-DEXPECTED_SLICES=${SCRAPERX_SIM_SLICES_CSV}"
+                    -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/check_registry.cmake"
+            VERBATIM)
+    endif()
     add_executable(scraperx_parkour_flow_tests tests/parkour_flow_tests.cpp)
     target_link_libraries(scraperx_parkour_flow_tests PRIVATE scraperx_sim)
     target_compile_options(scraperx_parkour_flow_tests PRIVATE

@@ -571,7 +571,8 @@ class InboxPrExcluded(unittest.TestCase):
         gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=lambda path: {"state": "open"},
                                    comment=lambda number, body, what="": None,
                                    write=lambda method, path, body=None, what="": closed.append(path))
-        me = types.SimpleNamespace(gh=gh, out=lambda line: None)
+        me = types.SimpleNamespace(gh=gh, out=lambda line: None,   # J-072: both open, in the open-PR listing
+                                   listing=lambda path: [{"number": 282}, {"number": 43}, {"number": 300}])
         switch.Switch.close_superseded(me, types.SimpleNamespace(number=300, draft=False),
                                        {"body": "Supersedes #282 and #43"})
         self.assertEqual(closed, ["repos/IssisX/ScraperX/pulls/43"])
@@ -625,8 +626,32 @@ class AskToClaude(unittest.TestCase):
         self.assertEqual(it.kind, "TO-CLAUDE")
 
     def test_a_closed_thread_gives_none(self):
-        gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[107])
+        gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[switch.BOARD_ISSUE])
         self.assertEqual(items_of(gh), [])
+
+    def test_the_ledgers_notice_to_claude_gives_one_item(self):
+        # J-072: notice 6746048774 on #340 (7 Claude items) never reached the inbox: bot comments were all skipped
+        notice = ("To Claude: 7 item(s) past deadline\n\n- x: green, no PR: open one\n\n"
+                  "<!-- switchboard:ledger keys=ab12 -->")
+        (it,) = items_of(self.gh_with(body=notice, login=rules.BOT_LOGIN, number=340, cid=6746048774))
+        self.assertEqual((it.kind, it.target, it.head), ("TO-CLAUDE", "#340", "6746048774"))
+        self.assertIn("7 item(s) past deadline", it.line)
+        for body in ("To Grok: 1 item(s) past deadline\n\n<!-- switchboard:ledger keys=ab -->",   # not Claude's
+                     "To Claude: a bot comment with no ledger marker"):
+            self.assertEqual(items_of(self.gh_with(body=body, login=rules.BOT_LOGIN, number=340)), [], body)
+        forged = notice   # the marker in a non-bot comment changes nothing: it is read as any ask
+        self.assertEqual([i.kind for i in items_of(self.gh_with(body=forged, number=340))], ["TO-CLAUDE"])
+
+    def test_a_codex_ask_is_the_integrators_to_post(self):
+        tag = switch.MARK.format(kind="ask-codex", pr=256, head=HEAD)
+        marked = comment(5, 256, f"Switchboard: a Codex review of this head is due.\n\n{tag}", login=BOT)
+        s = steered(ref="claude/integrate-j042", comments=[marked])
+        items = [it for it in items_of(FakeGH(), s) if it.kind == "CODEX-ASK"]
+        self.assertEqual(len(items), 1)
+        self.assertIn("post codex review with an at-sign in front on #256", items[0].line)
+        old = comment(5, 256, switch.MARK.format(kind="ask-codex", pr=256, head=OLD_HEAD), login=BOT)
+        self.assertFalse([it for it in items_of(FakeGH(), steered(ref="claude/integrate-j042", comments=[old]))
+                          if it.kind == "CODEX-ASK"])   # an ask for an older head is no item
 
 
 class MuseRouted(unittest.TestCase):
@@ -644,22 +669,45 @@ class MuseRouted(unittest.TestCase):
         gh = FakeGH()
         self.assertEqual(make(gh).muse([s]), 1)
         (number, posted), = gh.posts
-        self.assertEqual(number, 256)
+        # Never on the PR: the bridge's Issues-only token can neither clear wake:muse there nor comment (11-09).
+        # No job issue here, so the board; the PR and its head stay in the subject line.
+        self.assertEqual(number, switch.BOARD_ISSUE)
         self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: J-042 FIX on #256 @ 1a2b3c4d"))
         self.assertIn("The hold spring is uncharged. " + "x" * 500, posted)
         self.assertNotIn("x" * 650, posted)
         self.assertIn("https://github.com/IssisX/ScraperX/issues/256#issuecomment-99", posted)
         key = switch.inbox_key("muse-FIX", "#256", HEAD)
-        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/256/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/340/labels", {"labels": ["wake:muse"]}))
+        self.assertFalse(any(w[1].startswith("repos/IssisX/ScraperX/issues/256") for w in gh.writes))
         self.assertEqual(gh.writes[1][0], "PATCH")
         self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
         self.assertIn(key, gh.writes[1][2]["body"])
         self.assertNotIn("switchboard:muse keys=", posted)   # posted without its marker; the label comes first
-        self.assertIn(key, gh.by_issue[256][0]["body"])       # the marker is edited in after the label lands
+        self.assertIn(key, gh.by_issue[340][0]["body"])       # the marker is edited in after the label lands
         self.assertEqual(make(gh).inbox([s]), 0)
-        self.assertEqual(make(gh).muse([self.fix_pr(comments=gh.by_issue[256])]), 0)
+        self.assertEqual(make(gh).muse([self.fix_pr()]), 0)   # the board's marker is read: not sent again
         self.assertEqual(len(gh.posts), 1)
-        self.assertEqual(make(gh).muse([self.fix_pr(head=OTHER_HEAD, comments=gh.by_issue[256])]), 1)
+        self.assertEqual(make(gh).muse([self.fix_pr(head=OTHER_HEAD)]), 1)
+
+    def test_a_notice_on_a_pr_with_a_job_issue_goes_on_the_job_issue(self):
+        s = self.fix_pr()
+        s.ctx["issue"] = {"number": 300, "labels": []}
+        gh = FakeGH()
+        self.assertEqual(make(gh).muse([s]), 1)
+        (number, posted), = gh.posts
+        self.assertEqual(number, 300)
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: J-042 FIX on #256 @ 1a2b3c4d"))
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/300/labels", {"labels": ["wake:muse"]}))
+        again = self.fix_pr()
+        again.ctx["issue"] = {"number": 300, "labels": []}
+        self.assertEqual(make(gh).muse([again]), 0)   # the job issue's marker is read: not sent again
+        self.assertEqual(len(gh.posts), 1)
+
+    def test_a_key_marked_on_the_pr_before_the_move_is_not_sent_again(self):
+        key = switch.inbox_key("muse-FIX", "#256", HEAD)
+        old = comment(5, 256, "CLAUDE_TO_MUSE: J-042 FIX on #256\n\n" + switch.MUSE_MARK.format(keys=key), 2.0, BOT)
+        c = comment(99, 256, "**Codex (review of #256 @ 1a2b3c4d): FIX**\n\nx", 1.0, rules.CODEX_LOGIN)
+        self.assertEqual(make(FakeGH()).muse([self.fix_pr(comments=[c, old])]), 0)
 
     def test_a_failed_label_write_is_retried_and_not_mailed_twice(self):
         """A label POST that fails after the comment lands must not lose the notification:
@@ -670,17 +718,17 @@ class MuseRouted(unittest.TestCase):
         with self.assertRaises(switch.GitHubError):
             make(gh).muse([s])
         (number, posted), = gh.posts
-        self.assertEqual(number, 256)
+        self.assertEqual(number, switch.BOARD_ISSUE)
         self.assertNotIn("switchboard:muse keys=", posted)   # no marker: the key is not delivered
         self.assertEqual(gh.writes, [])
-        again = self.fix_pr(comments=gh.by_issue[256])
+        again = self.fix_pr()
         self.assertEqual(make(gh).muse([again]), 1)
         self.assertEqual(len(gh.posts), 2)   # the notification is sent again
         labels = [w for w in gh.writes if w[0] == "POST" and w[1].endswith("/labels")]
         self.assertEqual(len(labels), 1)     # one successful label: one mail
         key = switch.inbox_key("muse-FIX", "#256", HEAD)
-        self.assertIn(key, gh.by_issue[256][-1]["body"])   # the retry marks the key delivered
-        third = self.fix_pr(comments=gh.by_issue[256])
+        self.assertIn(key, gh.by_issue[340][-1]["body"])   # the retry marks the key delivered
+        third = self.fix_pr()
         self.assertEqual(make(gh).muse([third]), 0)
         self.assertEqual(len(gh.posts), 2)
         self.assertEqual(len([w for w in gh.writes if w[0] == "POST" and w[1].endswith("/labels")]), 1)
@@ -725,7 +773,7 @@ class MuseRouted(unittest.TestCase):
         self.assertEqual(make(gh).muse([s]), 1)
         self.assertEqual(make(gh).inbox([s]), 1)
 
-    def test_a_red_branch_with_no_pr_goes_to_muse_on_107(self):
+    def test_a_red_branch_with_no_pr_goes_to_muse_on_the_board(self):
         name = "fb-bot/integrate-j044c-wreck"
         gh = FakeGH(runs=[run(40, name, HEAD, hours=2)], jobs={40: RED_JOBS}, heads={name: HEAD})
         self.assertEqual([(i.kind, i.target) for i in muse_of(gh)], [("RED-BRANCH", name)])
@@ -733,9 +781,9 @@ class MuseRouted(unittest.TestCase):
         self.assertEqual(make(gh).muse([]), 1)
         (number, posted), = gh.posts
         self.assertEqual(number, switch.BOARD_ISSUE)
-        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #107 @ 1a2b3c4d"))
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #340 @ 1a2b3c4d"))
         key = switch.inbox_key("muse-RED-BRANCH", name, HEAD)
-        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/107/labels", {"labels": ["wake:muse"]}))
+        self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/340/labels", {"labels": ["wake:muse"]}))
         self.assertEqual(gh.writes[1][0], "PATCH")
         self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
         self.assertIn(key, gh.writes[1][2]["body"])
