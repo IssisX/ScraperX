@@ -2,14 +2,15 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "claude/integrate-j060-matron-sheen": "71eb04caf76687fe2c250a73bd6211c63222ad7f"
+  "claude/integrate-j060-matron-sheen": "71eb04caf76687fe2c250a73bd6211c63222ad7f",
+  "fb-bot/integrate-j060": "4a48164a66ad480eea02493aeca866d3931dd85e"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:17:00Z",
- "head": "",
+ "head": "4a48164a66ad480eea02493aeca866d3931dd85e",
  "issue": 320,
  "job": "J-060",
  "landed": {
@@ -17,6 +18,11 @@
    "71eb04caf76687fe2c250a73bd6211c63222ad7f",
    "merged #310",
    "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-j060": [
+   "4a48164a66ad480eea02493aeca866d3931dd85e",
+   "",
+   "2026-11-10T07:39:04Z"
   ]
  },
  "obligations": [
@@ -209,6 +215,31 @@
    "version": "6752845959",
    "via": "session",
    "what": "ask from ChatGPT on #320"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T07:39:04Z",
+   "dead": "2026-11-10T15:39:04Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T11:39:04Z",
+   "id": "O-e06514f3",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T07:39:04Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j060",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 320,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:4a48164a66ad480eea02493aeca866d3931dd85e",
+   "via": "email",
+   "what": "`fb-bot/integrate-j060` proof red: native-tests (matron-slices-3), no PR"
   }
  ],
  "outcome": null,
@@ -218,6 +249,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "merged",
- "updated": "2026-11-09T22:19:23Z"
+ "state": "working",
+ "updated": "2026-11-10T07:39:04Z"
 }

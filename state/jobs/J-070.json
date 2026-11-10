@@ -1,16 +1,24 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j070-cull": "911af47cca620337237fa8eb234913437a76b779"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
- "head": "",
+ "deadline": "2026-11-10T11:39:04Z",
+ "head": "911af47cca620337237fa8eb234913437a76b779",
  "issue": 333,
  "job": "J-070",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j070-cull": [
+   "911af47cca620337237fa8eb234913437a76b779",
+   "",
+   "2026-11-10T07:39:04Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -40,6 +48,31 @@
    "version": "6755541736",
    "via": "session",
    "what": "ask from Muse on #333"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T07:39:04Z",
+   "dead": "2026-11-10T15:39:04Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T11:39:04Z",
+   "id": "O-c1ca5790",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T07:39:04Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j070-cull",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 333,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:911af47cca620337237fa8eb234913437a76b779",
+   "via": "email",
+   "what": "`fb-bot/integrate-j070-cull` proof red: native-tests (athletic-traversal-2), native-tests (matron-slices-3), no PR"
   }
  ],
  "outcome": null,
@@ -49,6 +82,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-10T02:43:29Z"
+ "state": "working",
+ "updated": "2026-11-10T07:39:04Z"
 }

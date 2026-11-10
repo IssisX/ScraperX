@@ -117,6 +117,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
+   "rechecked": "2026-11-10T07:39:04Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -142,6 +143,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
+   "rechecked": "2026-11-10T07:39:04Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -242,5 +244,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T05:48:45Z"
+ "updated": "2026-11-10T07:39:04Z"
 }

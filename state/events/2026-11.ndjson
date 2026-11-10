@@ -827,3 +827,30 @@
 {"attempt": 1, "ev": "sent", "id": "O-0172a738", "job": "J-015", "ref": "ASK|ask on #122", "send": 1, "t": "2026-11-10T06:38:52Z", "to": "claude", "via": "session"}
 {"attempt": 2, "ev": "sent", "id": "O-2c4c2fb5", "job": "J-042", "ref": "ASK|ask on #240", "send": 2, "t": "2026-11-10T06:38:52Z", "to": "chatgpt", "via": "issue"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T06:38:52Z", "tries": 1}
+{"due": "2026-11-10T11:39:04Z", "ev": "obligation", "id": "O-97ae3d18", "job": "J-015", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j015-slice1", "t": "2026-11-10T07:39:04Z", "to": "muse", "via": "email"}
+{"ev": "unseen", "id": "O-57e630f6", "job": "J-049", "passes": 3, "t": "2026-11-10T07:39:04Z"}
+{"due": "2026-11-10T11:39:04Z", "ev": "obligation", "id": "O-e06514f3", "job": "J-060", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j060", "t": "2026-11-10T07:39:04Z", "to": "muse", "via": "email"}
+{"due": "2026-11-10T11:39:04Z", "ev": "obligation", "id": "O-f1ad9634", "job": "J-061", "kind": "fix", "ref": "PR|#337", "t": "2026-11-10T07:39:04Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-4b031494", "job": "J-061", "t": "2026-11-10T07:39:04Z"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-7a626b74", "job": "J-067", "kind": "ask", "ref": "ASK|ask on #328", "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T11:39:04Z", "ev": "obligation", "id": "O-c1ca5790", "job": "J-070", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j070-cull", "t": "2026-11-10T07:39:04Z", "to": "muse", "via": "email"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-e5e89c0c", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-90f22143", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-20e34f15", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
+{"ev": "state", "frm": "review", "job": "J-042", "t": "2026-11-10T07:39:04Z", "to": "proof"}
+{"ev": "state", "frm": "merged", "job": "J-060", "t": "2026-11-10T07:39:04Z", "to": "working"}
+{"ev": "state", "frm": "assigned", "job": "J-070", "t": "2026-11-10T07:39:04Z", "to": "working"}
+{"ev": "ledger_sent", "job": "J-045", "key": "9af75d28adc3d679", "ref": "BRANCH|fb-bot/integrate-j045-first-advance", "stage": 2, "t": "2026-11-10T07:39:04Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-044l", "key": "2174560074cb125e", "ref": "BRANCH|fb-bot/integrate-protected-j044l-vault", "stage": 2, "t": "2026-11-10T07:39:04Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "", "key": "10ec15eeed68f92e", "ref": "ASK|ask on #128", "stage": 2, "t": "2026-11-10T07:39:04Z", "to": "claude"}
+{"ev": "dead_letter", "id": "O-57ae7ea3", "job": "J-001", "ref": "ASK|ask on #108", "t": "2026-11-10T07:39:04Z", "to": "chatgpt"}
+{"attempt": 1, "ev": "sent", "id": "O-97ae3d18", "job": "J-015", "ref": "BRANCH|fb-bot/integrate-protected-j015-slice1", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "muse", "via": "email"}
+{"ev": "dead_letter", "id": "O-f6c50ed6", "job": "J-042", "ref": "ASK|ask on #240", "t": "2026-11-10T07:39:04Z", "to": "chatgpt"}
+{"attempt": 1, "ev": "sent", "id": "O-e06514f3", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-f1ad9634", "job": "J-061", "ref": "PR|#337", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-7a626b74", "job": "J-067", "ref": "ASK|ask on #328", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-c1ca5790", "job": "J-070", "ref": "BRANCH|fb-bot/integrate-j070-cull", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-e5e89c0c", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-90f22143", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-20e34f15", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T07:39:04Z", "tries": 1}

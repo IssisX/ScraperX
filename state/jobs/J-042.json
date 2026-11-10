@@ -5,11 +5,11 @@
   "fb-bot/integrate-protected-j042-touch2-geometry": "c6b87e787df3b43014b7aeb1e1c57918e8811b3b"
  },
  "cancelled": null,
- "ci": "red: godot-touch (touch-2)",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "6f768d5e67736b15080882d16ad0c4dbe0ead057",
+ "head": "2df3dd9fe6c2c0797512185564f284b6cb1f1128",
  "issue": 240,
  "job": "J-042",
  "landed": {
@@ -109,7 +109,7 @@
    "closed": null,
    "created": "2026-11-10T03:44:17Z",
    "dead": "2026-11-10T07:27:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-10T07:39:04Z",
    "due": "2026-11-10T05:27:00Z",
    "id": "O-f6c50ed6",
    "kind": "ask",
@@ -162,6 +162,6 @@
   374
  ],
  "review": "",
- "state": "review",
- "updated": "2026-11-10T04:48:57Z"
+ "state": "proof",
+ "updated": "2026-11-10T07:39:04Z"
 }

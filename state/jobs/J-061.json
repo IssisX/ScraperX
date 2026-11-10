@@ -3,11 +3,11 @@
  "blocked": null,
  "branches": {},
  "cancelled": null,
- "ci": "green",
+ "ci": "red: scope",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:27:00Z",
- "head": "dba1e58dc929a6d76d1fa50037c35890349680b9",
+ "head": "b52bc11a9ae707d3f1b1e9412fafebfbb4f91858",
  "issue": 312,
  "job": "J-061",
  "landed": {},
@@ -176,7 +176,11 @@
    "what": "ask from Claude on #312"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T07:39:04Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -228,6 +232,31 @@
    "version": "6757393475",
    "via": "session",
    "what": "ask from Muse on #312"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T07:39:04Z",
+   "dead": "2026-11-10T15:39:04Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T11:39:04Z",
+   "id": "O-f1ad9634",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T07:39:04Z",
+   "missing": 0,
+   "ref": "PR|#337",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 337,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:b52bc11a9ae707d3f1b1e9412fafebfbb4f91858",
+   "via": "email",
+   "what": "#337 proof red: scope"
   }
  ],
  "outcome": null,
@@ -240,5 +269,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T03:44:17Z"
+ "updated": "2026-11-10T07:39:04Z"
 }
