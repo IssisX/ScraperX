@@ -272,6 +272,9 @@ private:
     // every one still unbuilt when `band_y` is NaN (the end of the table), or
     // the at_end ones; each once.
     void build_test_extra_solids(JPH::BodyInterface &bodies, double band_y, bool at_end);
+    // Gives her the loose stock she takes and throws or shoves (J-042), once
+    // every piece has its body.
+    void give_matron_stock();
 
     [[nodiscard]] bool mirrors_owned_body(const JPH::AABox &bounds) const;
 
