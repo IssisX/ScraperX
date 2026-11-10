@@ -595,6 +595,63 @@ void rejected_pending_requests() {
     std::cout << "PASS scraperx_sim matron descent pending request: free fall accepted, invalid destinations preserve state\n";
 }
 
+void airborne_request_replans_from_landing() {
+    World w(1);
+    BodyInterface &bodies = w.physics.GetBodyInterface();
+    // A landing floor directly below her start, a different region from the
+    // start platform: losing the start support drops her onto it.
+    const BodyID landing = w.box(Vec3(3.0F, 0.10F, 3.0F),
+                                 Vec3(0.0F, w.course.start_top - 3.10F, -1.4F));
+    require(w.matron->travel_to(Vec3(w.course.world(w.course.bottom()))),
+            "descent request: initial own scan finds the destination");
+    const int goal = w.matron->journey().goal;
+    const int planned_steps = w.matron->journey().steps;
+    const int start_region = w.matron->journey().region;
+    const std::uint32_t replans_before = w.matron->journey().replans;
+    require(planned_steps > 0 && start_region >= 0,
+            "descent request: a supported start plans a route to the bottom");
+    // Losing the starting support leaves her freely falling. The airborne
+    // request is accepted provisionally: the old support's route, region
+    // unknown.
+    bodies.RemoveBody(w.start_support);
+    (void)w.physics.Update(kDt, 1, &w.temp, &w.jobs);
+    require(w.matron->travel_to(goal), "descent request: a free airborne body accepts a pending destination");
+    const Matron::Journey pending = w.matron->journey();
+    require(pending.active && pending.goal == goal && pending.region == -1 && pending.step == 0 &&
+                pending.steps == planned_steps && pending.steps > 0,
+            "descent request: a provisional plan owns no grip or unsupported region");
+    // Let her fall onto the landing floor. The journey only steps from
+    // pre_step, as in the descent loop below.
+    bool landed = false;
+    for (int tick = 0; tick < 90 * 3 && !landed; ++tick) {
+        w.matron->pre_step(kDt, Stimulus(RVec3(1000.0, 1000.0, 1000.0), 0.0F));
+        (void)w.physics.Update(kDt, 1, &w.temp, &w.jobs);
+        w.matron->post_step(kDt);
+        landed = w.on(landing);
+    }
+    require(landed, "descent request: the falling body lands on the floor below its start");
+    // The landing must replan from where she stands: the old support's
+    // provisional route is not hers to execute from a different floor.
+    // Give the journey a few ticks to notice the landing.
+    bool replanned = false;
+    for (int tick = 0; tick < 45 && !replanned; ++tick) {
+        w.matron->pre_step(kDt, Stimulus(RVec3(1000.0, 1000.0, 1000.0), 0.0F));
+        (void)w.physics.Update(kDt, 1, &w.temp, &w.jobs);
+        w.matron->post_step(kDt);
+        replanned = w.matron->journey().replans > replans_before;
+    }
+    const RVec3 world_feet = w.course.world(w.feet());
+    const int landing_region = w.matron->scanned_routes()->region_at(
+        Vec3(float(world_feet.GetX()), float(world_feet.GetY()), float(world_feet.GetZ())));
+    require(replanned, "descent request: landing on a different floor replans from the landing");
+    require(landing_region >= 0 && landing_region != start_region &&
+                w.matron->journey().region == landing_region,
+            "descent request: the replan is rooted at the landing floor, not the old support");
+    std::cout << "PASS scraperx_sim matron descent airborne replan: start_region=" << start_region
+              << " landing_region=" << landing_region << " planned_steps=" << planned_steps
+              << " replans=" << w.matron->journey().replans << '\n';
+}
+
 
 void reject_free_drop_through_overhead_steel() {
     World world(4);
@@ -730,6 +787,7 @@ void survivable_free_drop() {
 
 void run_matron_exam_descent() {
     rejected_pending_requests();
+    airborne_request_replans_from_landing();
     reject_free_drop_through_overhead_steel();
     survivable_free_drop();
     int passed = 0;

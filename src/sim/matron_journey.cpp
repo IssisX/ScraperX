@@ -306,8 +306,13 @@ void Matron::step_travel(const float dt) {
     // routed her off region 637's edge into the void). That one plans again
     // from where she stands; a floor walk keeps walking. A replan is for a
     // move that ended elsewhere, a fall, or a route run out — all of which
-    // reach here with step >= steps or no floor under her.
-    if (under >= 0 && under != travel_.region && travel_.step < travel_.steps) {
+    // reach here with step >= steps or no floor under her — and for a landing
+    // after an airborne accept, which reaches here with the region still
+    // unknown (-1) and a floor under her: the provisional route was planned
+    // from her old support, so the landing must plan again from where she
+    // stands, not keep walking the old route. Only a known region crosses
+    // mid-walk without replanning.
+    if (under >= 0 && travel_.region >= 0 && under != travel_.region && travel_.step < travel_.steps) {
         travel_.region = under;
         if (travel_walk_is_patch_ && !travel_walk_.empty()) {
             travel_.step = travel_.steps;   // patch walk, new region: plan again from here
