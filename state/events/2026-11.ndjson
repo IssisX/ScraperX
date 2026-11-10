@@ -664,3 +664,21 @@
 {"ev": "state", "frm": "review", "job": "J-049", "t": "2026-11-10T00:09:03Z", "to": "working"}
 {"attempt": 1, "ev": "sent", "id": "O-75ddc6c2", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T00:09:03Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T00:09:03Z", "tries": 1}
+{"ev": "unseen", "id": "O-fad020db", "job": "J-038", "passes": 3, "t": "2026-11-10T01:19:00Z"}
+{"ev": "unseen", "id": "O-47ddd352", "job": "J-038", "passes": 3, "t": "2026-11-10T01:19:00Z"}
+{"due": "2026-11-10T03:17:00Z", "ev": "obligation", "id": "O-d72e22d5", "job": "J-070", "kind": "ask", "ref": "ASK|ask on #333", "t": "2026-11-10T01:19:00Z", "to": "claude", "via": "session"}
+{"ev": "job_reopened", "job": "J-071", "t": "2026-11-10T01:19:00Z", "was": "merged", "why": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339"}
+{"ev": "closed", "id": "O-a34f6e29", "job": "J-072", "t": "2026-11-10T01:19:00Z", "why": "its thread closed"}
+{"ev": "closed", "id": "O-1ac5a17e", "job": "J-072", "t": "2026-11-10T01:19:00Z", "why": "its thread closed"}
+{"ev": "closed", "id": "O-4c110438", "job": "J-072", "t": "2026-11-10T01:19:00Z", "why": "its thread closed"}
+{"due": "2026-11-10T03:17:00Z", "ev": "obligation", "id": "O-842fef06", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-10T01:19:00Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "reply naming it", "id": "O-ec9239f5", "job": "J-044", "t": "2026-11-10T01:19:00Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-4543057d", "job": "", "t": "2026-11-10T01:19:00Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-c5383905", "job": "", "t": "2026-11-10T01:19:00Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-75ddc6c2", "job": "", "t": "2026-11-10T01:19:00Z"}
+{"ev": "state", "frm": "working", "job": "J-049", "t": "2026-11-10T01:19:00Z", "to": "review"}
+{"ev": "state", "frm": "assigned", "job": "J-067", "t": "2026-11-10T01:19:00Z", "to": "proof"}
+{"ev": "state", "frm": "merged", "job": "J-071", "t": "2026-11-10T01:19:00Z", "to": "proof"}
+{"attempt": 1, "ev": "sent", "id": "O-d72e22d5", "job": "J-070", "ref": "ASK|ask on #333", "send": 1, "t": "2026-11-10T01:19:00Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-842fef06", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T01:19:00Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T01:19:00Z", "tries": 1}

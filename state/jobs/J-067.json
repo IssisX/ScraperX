@@ -1,13 +1,13 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {},
  "cancelled": null,
- "ci": "",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "",
+ "head": "71c0d8e1260ac5a4bd344d60ef58331910700e1b",
  "issue": 328,
  "job": "J-067",
  "landed": {},
@@ -44,10 +44,12 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
- "pr": 0,
+ "pr": 370,
  "pr_done": "",
- "prs": [],
+ "prs": [
+  370
+ ],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-09T20:15:38Z"
+ "state": "proof",
+ "updated": "2026-11-10T01:19:00Z"
 }

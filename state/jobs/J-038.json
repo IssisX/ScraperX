@@ -110,12 +110,12 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
    "to": "claude",
-   "unseen": null,
+   "unseen": "2026-11-10T01:19:00Z",
    "version": "6698627212",
    "via": "session",
    "what": "ask from Muse on #169"
@@ -135,12 +135,12 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
    "to": "claude",
-   "unseen": null,
+   "unseen": "2026-11-10T01:19:00Z",
    "version": "6698627930",
    "via": "session",
    "what": "ask from Muse on #169"
@@ -181,5 +181,5 @@
  ],
  "review": "FIX",
  "state": "proof",
- "updated": "2026-11-10T00:09:03Z"
+ "updated": "2026-11-10T01:19:00Z"
 }

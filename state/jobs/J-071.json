@@ -6,12 +6,12 @@
   "claude/integrate-j071-ci-timeout": "1db855d65f497782c8d66fe1e108749ddef7c601"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "none",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "5f3cf5b8f1f9724dc997e6130b4bc07cc18a07a1",
- "issue": 338,
+ "head": "8c15936580cad46b448fdc1c85f49277e2ed4d36",
+ "issue": 0,
  "job": "J-071",
  "landed": {
   "builder/j071-s2": [
@@ -235,15 +235,26 @@
    "what": "ask from Claude on #338"
   }
  ],
- "outcome": "merged",
- "outcome_reason": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339",
+ "outcome": null,
+ "outcome_reason": "",
  "owner": "grok_bot",
- "pr": 363,
- "pr_done": "merged",
- "prs": [
-  363
+ "past": [
+  {
+   "at": "2026-11-09T20:56:16Z",
+   "issue": 338,
+   "outcome": "merged",
+   "prs": [
+    363
+   ],
+   "why": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339"
+  }
  ],
- "review": "LAND",
- "state": "merged",
- "updated": "2026-11-09T20:56:16Z"
+ "pr": 369,
+ "pr_done": "",
+ "prs": [
+  369
+ ],
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-10T01:19:00Z"
 }

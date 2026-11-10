@@ -16,7 +16,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T21:56:16Z",
+ "deadline": "2026-11-09T22:17:00Z",
  "head": "56617dc53771e4946d1808895cba0f5ff6198ac9",
  "issue": 350,
  "job": "J-072",
@@ -259,7 +259,10 @@
    "asked": "2026-11-09T16:51:16Z",
    "attempts": 0,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T01:19:00Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-09T19:35:48Z",
    "dead": "2026-11-09T22:56:16Z",
    "dead_lettered": null,
@@ -284,7 +287,10 @@
    "asked": "2026-11-09T16:55:36Z",
    "attempts": 0,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T01:19:00Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-09T19:35:48Z",
    "dead": "2026-11-09T22:56:16Z",
    "dead_lettered": null,
@@ -388,7 +394,10 @@
    "asked": "2026-11-09T22:02:22Z",
    "attempts": 0,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T01:19:00Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-09T22:19:23Z",
    "dead": "2026-11-10T01:27:00Z",
    "dead_lettered": null,
@@ -534,5 +543,5 @@
  ],
  "review": "waiting",
  "state": "proof",
- "updated": "2026-11-09T22:19:23Z"
+ "updated": "2026-11-10T01:19:00Z"
 }

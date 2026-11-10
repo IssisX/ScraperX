@@ -232,7 +232,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "PR|#367",
    "sends": 0,
    "thread": 367,
@@ -313,7 +313,7 @@
    "kind": "review",
    "last_error": "",
    "last_sent": "2026-11-09T23:58:50Z",
-   "missing": 1,
+   "missing": 0,
    "ref": "PR|#367",
    "sends": 1,
    "sent_by": "live",
@@ -334,6 +334,6 @@
   367
  ],
  "review": "waiting",
- "state": "working",
- "updated": "2026-11-10T00:09:03Z"
+ "state": "review",
+ "updated": "2026-11-10T01:19:00Z"
 }
