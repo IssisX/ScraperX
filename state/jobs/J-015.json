@@ -47,7 +47,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
-   "missing": 1,
+   "missing": 2,
    "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -192,7 +192,11 @@
    "what": "`fb-bot/integrate-j015-slice1` proof red: scope, no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T05:18:42Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T04:07:51Z",
    "attempts": 1,
@@ -225,5 +229,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T04:48:57Z"
+ "updated": "2026-11-10T05:33:50Z"
 }

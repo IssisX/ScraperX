@@ -10,7 +10,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T14:17:00Z",
+ "deadline": null,
  "head": "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
  "issue": 328,
  "job": "J-067",
@@ -90,7 +90,11 @@
    "what": "#371: open FIX from Claude (eye)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T05:18:42Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -115,7 +119,11 @@
    "what": "`fb-bot/integrate-j067-back-hair-fixes` proof red: godot-touch (touch-2), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T05:18:42Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T04:07:50Z",
    "attempts": 1,
@@ -151,5 +159,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T04:48:57Z"
+ "updated": "2026-11-10T05:33:50Z"
 }

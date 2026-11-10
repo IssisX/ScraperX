@@ -791,3 +791,21 @@
 {"attempt": 1, "ev": "sent", "id": "O-8f5cb7ba", "job": "J-069", "ref": "ASK|ask on #332", "send": 1, "t": "2026-11-10T04:48:57Z", "to": "claude", "via": "session"}
 {"attempt": 1, "ev": "sent", "id": "O-cf6d46a5", "job": "J-071", "ref": "PR|#373", "send": 1, "t": "2026-11-10T04:48:57Z", "to": "grok_bot", "via": "watch"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T04:48:57Z", "tries": 1}
+{"ev": "reopened", "id": "O-57e630f6", "job": "J-049", "t": "2026-11-10T05:33:50Z", "was": "unseen"}
+{"ev": "closed", "id": "O-cf6d46a5", "job": "J-071", "t": "2026-11-10T05:33:50Z", "why": "proof green at the head"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-7fd37f03", "job": "", "kind": "ask", "ref": "ASK|ask on #340", "t": "2026-11-10T05:33:50Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "reply naming it", "id": "O-70270309", "job": "J-015", "t": "2026-11-10T05:33:50Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-18377365", "job": "J-043", "t": "2026-11-10T05:33:50Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-76b02774", "job": "J-059", "t": "2026-11-10T05:33:50Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-2b4f8744", "job": "J-067", "t": "2026-11-10T05:33:50Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-95e5307f", "job": "J-067", "t": "2026-11-10T05:33:50Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-8f5cb7ba", "job": "J-069", "t": "2026-11-10T05:33:50Z"}
+{"ev": "state", "frm": "working", "job": "J-049", "t": "2026-11-10T05:33:50Z", "to": "review"}
+{"ev": "state", "frm": "working", "job": "J-071", "t": "2026-11-10T05:33:50Z", "to": "landable"}
+{"ev": "ledger_sent", "job": "J-045", "key": "0c711b1b6f059256", "ref": "BRANCH|fb-bot/integrate-j045-first-advance", "stage": 1, "t": "2026-11-10T05:33:50Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "J-044l", "key": "059864e769652344", "ref": "BRANCH|fb-bot/integrate-protected-j044l-vault", "stage": 1, "t": "2026-11-10T05:33:50Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "", "key": "1869c039c2fe4dc6", "ref": "ASK|ask on #128", "stage": 1, "t": "2026-11-10T05:33:50Z", "to": "claude"}
+{"attempt": 2, "ev": "sent", "id": "O-57ae7ea3", "job": "J-001", "ref": "ASK|ask on #108", "send": 2, "t": "2026-11-10T05:33:50Z", "to": "chatgpt", "via": "issue"}
+{"attempt": 2, "ev": "sent", "id": "O-f6c50ed6", "job": "J-042", "ref": "ASK|ask on #240", "send": 2, "t": "2026-11-10T05:33:50Z", "to": "chatgpt", "via": "issue"}
+{"attempt": 1, "ev": "sent", "id": "O-7fd37f03", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T05:33:50Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T05:33:50Z", "tries": 1}

@@ -6,12 +6,12 @@
   "claude/integrate-j071-ci-timeout": "1db855d65f497782c8d66fe1e108749ddef7c601"
  },
  "cancelled": null,
- "ci": "red: godot-touch (touch-2)",
+ "ci": "green",
  "commands": [
   "6757895911:0"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T04:44:17Z",
+ "deadline": null,
  "head": "5206a8ad54a77aa816ef10fc6aa34c400dbb6b89",
  "issue": 0,
  "job": "J-071",
@@ -241,7 +241,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T05:33:50Z",
+    "why": "proof green at the head"
+   },
    "created": "2026-11-10T03:44:17Z",
    "dead": "2026-11-10T05:44:17Z",
    "dead_lettered": null,
@@ -290,7 +293,7 @@
  "prs": [
   373
  ],
- "review": "",
- "state": "working",
- "updated": "2026-11-10T03:44:17Z"
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-10T05:33:50Z"
 }

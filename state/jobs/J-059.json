@@ -10,7 +10,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T05:17:00Z",
+ "deadline": "2026-11-10T07:44:17Z",
  "head": "bce311edbf71af5906f718457334e269ff255e37",
  "issue": 307,
  "job": "J-059",
@@ -198,7 +198,11 @@
    "what": "#343 has a merge conflict with the base"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T05:18:42Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T03:02:47Z",
    "attempts": 1,
@@ -233,5 +237,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T03:44:17Z"
+ "updated": "2026-11-10T05:33:50Z"
 }

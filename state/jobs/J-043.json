@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T14:17:00Z",
+ "deadline": null,
  "head": "",
  "issue": 241,
  "job": "J-043",
@@ -39,7 +39,11 @@
    "what": "ask from Muse on #241"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T05:18:42Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T04:07:53Z",
    "attempts": 1,
@@ -72,5 +76,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-10T04:48:57Z"
+ "updated": "2026-11-10T05:33:50Z"
 }

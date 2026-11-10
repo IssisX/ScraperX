@@ -70,7 +70,11 @@
    "what": "`fb-bot/integrate-protected-j069` proof red: native-tests (athletic-traversal-2), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T05:18:42Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T04:07:52Z",
    "attempts": 1,
@@ -103,5 +107,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T04:48:57Z"
+ "updated": "2026-11-10T05:33:50Z"
 }

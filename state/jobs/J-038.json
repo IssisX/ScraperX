@@ -166,7 +166,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 2,
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -242,5 +242,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T04:48:57Z"
+ "updated": "2026-11-10T05:33:50Z"
 }

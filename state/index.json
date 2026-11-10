@@ -118,6 +118,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
+     "rechecked": "2026-11-10T05:33:50Z",
      "ref": "ASK|ask on #108",
      "sends": 0,
      "thread": 108,
@@ -265,7 +266,7 @@
      "ack": null,
      "ack_rule": "reply|ack",
      "asked": "2026-11-10T03:19:28Z",
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-10T03:44:17Z",
      "dead": "2026-11-10T07:27:00Z",
@@ -274,10 +275,10 @@
      "id": "O-57ae7ea3",
      "kind": "ask",
      "last_error": "",
-     "last_sent": "2026-11-10T03:44:17Z",
+     "last_sent": "2026-11-10T05:33:50Z",
      "missing": 0,
      "ref": "ASK|ask on #108",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 108,
      "to": "chatgpt",
@@ -297,7 +298,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T04:48:57Z"
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-007": {
    "attempt": 1,
@@ -967,7 +968,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
-     "missing": 1,
+     "missing": 2,
      "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
      "sends": 1,
      "sent_by": "shadow",
@@ -1112,7 +1113,11 @@
      "what": "`fb-bot/integrate-j015-slice1` proof red: scope, no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T05:18:42Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-10T04:07:51Z",
      "attempts": 1,
@@ -1145,7 +1150,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T04:48:57Z"
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-016": {
    "attempt": 0,
@@ -1781,7 +1786,7 @@
      "kind": "ask",
      "last_error": "",
      "last_sent": null,
-     "missing": 1,
+     "missing": 2,
      "ref": "ASK|ask on #169",
      "sends": 0,
      "thread": 169,
@@ -1857,7 +1862,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-10T04:48:57Z"
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-040": {
    "attempt": 0,
@@ -2015,7 +2020,7 @@
      "ack": null,
      "ack_rule": "reply|ack",
      "asked": "2026-11-10T03:29:49Z",
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-10T03:44:17Z",
      "dead": "2026-11-10T07:27:00Z",
@@ -2024,10 +2029,10 @@
      "id": "O-f6c50ed6",
      "kind": "ask",
      "last_error": "",
-     "last_sent": "2026-11-10T03:44:17Z",
+     "last_sent": "2026-11-10T05:33:50Z",
      "missing": 0,
      "ref": "ASK|ask on #240",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 240,
      "to": "chatgpt",
@@ -2083,7 +2088,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T14:17:00Z",
+   "deadline": null,
    "head": "",
    "issue": 241,
    "job": "J-043",
@@ -2116,7 +2121,11 @@
      "what": "ask from Muse on #241"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T05:18:42Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-10T04:07:53Z",
      "attempts": 1,
@@ -2149,7 +2158,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-10T04:48:57Z"
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-044": {
    "attempt": 0,
@@ -3098,7 +3107,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 0,
+     "missing": 1,
      "ref": "PR|#367",
      "sends": 0,
      "thread": 367,
@@ -3170,22 +3179,24 @@
      "ack_rule": "verdict|ack",
      "asked": null,
      "attempts": 2,
+     "backlog": null,
      "closed": null,
      "created": "2026-11-09T23:58:50Z",
-     "dead": "2026-11-10T03:47:00Z",
+     "dead": "2026-11-10T17:47:00Z",
      "dead_lettered": null,
-     "due": "2026-11-10T01:47:00Z",
+     "due": "2026-11-10T15:47:00Z",
      "id": "O-57e630f6",
      "kind": "review",
      "last_error": "",
      "last_sent": "2026-11-10T01:57:56Z",
-     "missing": 3,
+     "missing": 0,
      "ref": "PR|#367",
+     "reopened": "2026-11-10T05:33:50Z",
      "sends": 2,
      "sent_by": "live",
      "thread": 367,
      "to": "codex",
-     "unseen": "2026-11-10T03:44:17Z",
+     "unseen": null,
      "version": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
      "via": "relay",
      "what": "review #367 @ 2d99e906"
@@ -3200,8 +3211,8 @@
     367
    ],
    "review": "waiting",
-   "state": "working",
-   "updated": "2026-11-10T03:44:17Z"
+   "state": "review",
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-050": {
    "attempt": 0,
@@ -3590,7 +3601,7 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T05:17:00Z",
+   "deadline": "2026-11-10T07:44:17Z",
    "head": "bce311edbf71af5906f718457334e269ff255e37",
    "issue": 307,
    "job": "J-059",
@@ -3778,7 +3789,11 @@
      "what": "#343 has a merge conflict with the base"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T05:18:42Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-10T03:02:47Z",
      "attempts": 1,
@@ -3813,7 +3828,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T03:44:17Z"
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-060": {
    "attempt": 0,
@@ -4629,7 +4644,7 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T14:17:00Z",
+   "deadline": null,
    "head": "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
    "issue": 328,
    "job": "J-067",
@@ -4709,7 +4724,11 @@
      "what": "#371: open FIX from Claude (eye)"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T05:18:42Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -4734,7 +4753,11 @@
      "what": "`fb-bot/integrate-j067-back-hair-fixes` proof red: godot-touch (touch-2), no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T05:18:42Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-10T04:07:50Z",
      "attempts": 1,
@@ -4770,7 +4793,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-10T04:48:57Z"
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-069": {
    "attempt": 0,
@@ -4844,7 +4867,11 @@
      "what": "`fb-bot/integrate-protected-j069` proof red: native-tests (athletic-traversal-2), no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-10T05:18:42Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-10T04:07:52Z",
      "attempts": 1,
@@ -4877,7 +4904,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T04:48:57Z"
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-070": {
    "attempt": 0,
@@ -4941,12 +4968,12 @@
     "claude/integrate-j071-ci-timeout": "1db855d65f497782c8d66fe1e108749ddef7c601"
    },
    "cancelled": null,
-   "ci": "red: godot-touch (touch-2)",
+   "ci": "green",
    "commands": [
     "6757895911:0"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T04:44:17Z",
+   "deadline": null,
    "head": "5206a8ad54a77aa816ef10fc6aa34c400dbb6b89",
    "issue": 0,
    "job": "J-071",
@@ -5176,7 +5203,10 @@
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-10T05:33:50Z",
+      "why": "proof green at the head"
+     },
      "created": "2026-11-10T03:44:17Z",
      "dead": "2026-11-10T05:44:17Z",
      "dead_lettered": null,
@@ -5225,9 +5255,9 @@
    "prs": [
     373
    ],
-   "review": "",
-   "state": "working",
-   "updated": "2026-11-10T03:44:17Z"
+   "review": "LAND",
+   "state": "landable",
+   "updated": "2026-11-10T05:33:50Z"
   },
   "J-072": {
    "attempt": 5,
