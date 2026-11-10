@@ -232,7 +232,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 0,
    "ref": "PR|#367",
    "sends": 0,
    "thread": 367,
@@ -303,7 +303,7 @@
    "ack": null,
    "ack_rule": "verdict|ack",
    "asked": null,
-   "attempts": 1,
+   "attempts": 2,
    "closed": null,
    "created": "2026-11-09T23:58:50Z",
    "dead": "2026-11-10T03:47:00Z",
@@ -312,10 +312,10 @@
    "id": "O-57e630f6",
    "kind": "review",
    "last_error": "",
-   "last_sent": "2026-11-09T23:58:50Z",
-   "missing": 0,
+   "last_sent": "2026-11-10T01:57:56Z",
+   "missing": 1,
    "ref": "PR|#367",
-   "sends": 1,
+   "sends": 2,
    "sent_by": "live",
    "thread": 367,
    "to": "codex",
@@ -334,6 +334,6 @@
   367
  ],
  "review": "waiting",
- "state": "review",
- "updated": "2026-11-10T01:19:00Z"
+ "state": "working",
+ "updated": "2026-11-10T01:57:56Z"
 }

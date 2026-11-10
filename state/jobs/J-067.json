@@ -1,16 +1,24 @@
 {
- "attempt": 1,
+ "attempt": 2,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-j067-back-hair": "71c0d8e1260ac5a4bd344d60ef58331910700e1b"
+ },
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "71c0d8e1260ac5a4bd344d60ef58331910700e1b",
+ "head": "882e6ac0f4e64350a9657a5715ef76c05235bd60",
  "issue": 328,
  "job": "J-067",
- "landed": {},
+ "landed": {
+  "claude/integrate-j067-back-hair": [
+   "71c0d8e1260ac5a4bd344d60ef58331910700e1b",
+   "merged #370",
+   "2026-11-10T01:57:56Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -44,12 +52,13 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
- "pr": 370,
+ "pr": 371,
  "pr_done": "",
  "prs": [
-  370
+  370,
+  371
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-10T01:19:00Z"
+ "state": "review",
+ "updated": "2026-11-10T01:57:56Z"
 }

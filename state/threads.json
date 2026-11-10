@@ -833,7 +833,11 @@
    "what": "ask from Muse on #340"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T00:56:35Z",
+    "by": "claude",
+    "how": "reply naming the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T00:27:49Z",
    "attempts": 1,
