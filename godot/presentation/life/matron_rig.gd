@@ -37,7 +37,8 @@ const HAIR_STIFFNESS := [0.22, 0.12, 0.07, 0.04, 0.02]
 # world down (1). All toward her head's down, the locks held her head's shape
 # when she bent (a stagger, all fours) and stood out off her back like a flat
 # sheet: the pull is about 20x her hair's weight. The roots keep her head's
-# line; the lengths hang. Upright, both are the same.
+# line; the lengths lean to gravity, at most 0.6 of the way (all the way sank
+# them into her when she bent: look_matron_hold 0.101 m). Upright, both are the same.
 const HAIR_HANG := [0.0, 0.15, 0.3, 0.45, 0.6]
 # Each lock its own: its weight and give varied a little, so neighbors never
 # move as one piece; and the wind up on the deck in slow gusts.
