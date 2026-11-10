@@ -1593,16 +1593,23 @@ class Switch:
         if not self.merge_token:
             return False
         try:
-            self.gh.write("POST", f"repos/{self.gh.repo}/issues/{facts.number}/comments",
-                          {"body": f"{CODEX_MENTION}\n\n{tag}"},
-                          f"ask Codex to review #{facts.number} @{facts.head_sha[:8]} as the team login",
-                          token=self.merge_token)
+            got = self.gh.write("POST", f"repos/{self.gh.repo}/issues/{facts.number}/comments",
+                                {"body": f"{CODEX_MENTION}\n\n{tag}"},
+                                f"ask Codex to review #{facts.number} @{facts.head_sha[:8]} as the team login",
+                                token=self.merge_token)
         except GitHubError as err:
             code = http_status(err.detail)
             if code not in MERGE_TOKEN_REFUSED:
                 raise   # a rate limit or an outage: this PR waits for the next sweep, as any failed write does
             self.out(f"NOTE  #{facts.number} GitHub refused the team token for the Codex mention (HTTP {code}; "
                      f"{MERGE_TOKEN_ENV} needs {MERGE_TOKEN_NEEDS}): the integrator is asked to post it")
+            return False
+        login = str(((got or {}).get("user") or {}).get("login") or "").strip().lower() if isinstance(got, dict) else ""
+        if login and login not in self.team.verdict_logins:
+            # codex_asked reads the mark only from a team login, so a token of any other account would post the
+            # mention again every sweep: the caller's own note (the workflow bot's, with the mark) records the ask
+            self.out(f"NOTE  #{facts.number} the Codex mention was posted by a login that is not in work/agents.yml "
+                     f"verdict_logins: {MERGE_TOKEN_ENV} must be the team login's; the ask is recorded once")
             return False
         return True
 
@@ -1715,9 +1722,10 @@ class Switch:
         if settled and not security:
             guidelines = [claude_calls.text_block(f"<settled_calls>\n{settled}\n</settled_calls>")]
         content = guidelines + [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
-                   claude_calls.text_block(f"<pr number=\"{facts.number}\" head=\"{facts.head_sha}\" branch=\"{facts.head_ref}\">\n"
-                                           f"<title>{ctx['title']}</title>\n<body>\n{ctx['body'][:20000]}\n</body>\n</pr>"),
-                   claude_calls.text_block(f"<diff>\n{diff}\n</diff>")]
+                   claude_calls.text_block(claude_calls.author_text(
+                       f"<pr number=\"{facts.number}\" head=\"{facts.head_sha}\" branch=\"{facts.head_ref}\">\n"
+                       f"<title>{ctx['title']}</title>\n<body>\n{ctx['body'][:20000]}\n</body>\n</pr>")),
+                   claude_calls.text_block(claude_calls.author_text(f"<diff>\n{diff}\n</diff>"))]
         # The security pass has its own budget line (max effort); ordinary reviews run at high (Cory, 11-08).
         call = "security_review" if security else "review"
         res = self.paid("review", ctx["job"], call, system, content, claude_calls.REVIEW_SCHEMA,
