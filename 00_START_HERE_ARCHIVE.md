@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-10 | *"you can stop throttling completely"*; *"I have 3 usage resets we can use"*: no pace throttling and no helper cap; helpers as the work needs (it replaces "only 2 other helpers" of 11-09). | `CLAUDE.md`, The integrator; `work/tasks/integrator-hourly.md` |
 | 11-10 | *"I want to try to make everything event driven as possible"*; *"if everything is event driven then why are we depending on an hourly check?"*; answered "drop": the hourly light runs end; the integrator acts on events (Muse mail, proofs, reviews), and the 3-hourly full runs stay two days as a backstop. Also *"Tear"*: in J-001, when her arm play runs out of re-poses on a pest, she tears the arm off (the tested behavior), not a Spare. | `CLAUDE.md`, The integrator; J-001 #108 |
 | 11-09 | *"when you get it working (as quickly as possible stop dragging it out), have only 2 other helpers when you begin coding again."*: once the collaboration system works, Claude codes again with two helpers at most (it replaces "more than two when the work needs it" from earlier on 11-09). | `CLAUDE.md`, The integrator |
 | 11-09 | *"If it's not complete, we're not using it. Stop fucking saying that."*; *"When I talk about this system, the whole thing, okay, don't say it's working if we're using a part of it."* | Rule 13 |
