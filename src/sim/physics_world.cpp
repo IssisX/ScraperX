@@ -619,11 +619,14 @@ int Simulation::PhysicsWorld::active_forklift() const noexcept {
 void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, const std::uint64_t entity,
                                                   const LooseStock::Kind kind, const JPH::RVec3 pos,
                                                   const JPH::Quat rot, const JPH::Vec3 vel,
-                                                  const JPH::Vec3 ang, const float mass) noexcept {
+                                                  const JPH::Vec3 ang, const float mass,
+                                                  const bool park_parent) noexcept {
     const stock_damage::BreakGeometry geometry = stock_damage::break_geometry(kind);
     const float piece_mass = mass / static_cast<float>(geometry.count);
     JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
-    kit_->park(body);
+    if (park_parent) {
+        kit_->park(body);
+    }
     for (std::uint8_t k = 0; k < geometry.count; ++k) {
         const stock_damage::BreakPiece &piece = geometry.pieces[k];
         const JPH::Vec3 offset = rot * JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z);
@@ -651,7 +654,14 @@ void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, con
                 at, rot, piece_mass, 0.9F);
         }
         const JPH::BodyID piece_id = kit_->body_id(piece_body);
-        bodies.SetLinearVelocity(piece_id, vel + scatter);
+        // The velocity at the piece's own centre, not the parent's:
+        // a rotating crate's pieces keep the orbital velocity their
+        // offset gives them (ang x offset), or the break eats the
+        // orbital angular momentum — 18.432 kg·m²/s for a 160 kg crate
+        // at 1 rad/s about Y, eight pieces at ±0.24 m. The offsets are
+        // symmetric and the scatter sums to zero, so the break still
+        // conserves the intact body's momentum.
+        bodies.SetLinearVelocity(piece_id, vel + ang.Cross(offset) + scatter);
         bodies.SetAngularVelocity(piece_id, ang);
         kit_->set_carry(piece_body, kit::CarryKind::Handle, JPH::Vec3(0.0F, piece.half_y, 0.0F));
         kit_->allow_sleeping(piece_body);
@@ -1286,6 +1296,17 @@ void Simulation::PhysicsWorld::launch_kit_body_for_test(const std::uint32_t body
             stock_damage_.note_placed(entity);
         }
     }
+}
+
+// A spin without a throw: the body's angular velocity set, its linear
+// velocity untouched, so a break can be read for the orbital term its
+// pieces must carry. No impact resync: the ledger tracks linear
+// velocity, which a spin does not change.
+void Simulation::PhysicsWorld::spin_kit_body_for_test(const std::uint32_t body,
+                                                      const JPH::Vec3 angular_velocity) {
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    const JPH::BodyID id = kit_->body_id(kit::BodyIndex{body});
+    bodies.SetAngularVelocity(id, angular_velocity);
 }
 
 void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const JPH::Vec3 velocity) {

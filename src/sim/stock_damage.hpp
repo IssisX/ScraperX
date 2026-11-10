@@ -123,8 +123,10 @@ struct BreakGeometry final {
 // Break-piece entities: after the fabricated range, 8 per stock
 // body, derived from the broken body's own entity, so a restore can
 // never collide two breaks or reuse a restored piece's entity.
-inline constexpr std::uint64_t kPieceEntityBase = 0x20020;
-inline constexpr std::uint64_t kPieceEntityLimit = kPieceEntityBase + 8192;
+// Owned by kit (mechanism_kit.hpp): the entity predicates there
+// must recognize them, and the include runs the other way.
+inline constexpr std::uint64_t kPieceEntityBase = kit::kPieceEntityBase;
+inline constexpr std::uint64_t kPieceEntityLimit = kit::kPieceEntityLimit;
 
 [[nodiscard]] constexpr std::uint64_t piece_entity_for(const std::uint64_t stock_entity,
                                                        const std::uint8_t piece) noexcept {
@@ -175,6 +177,16 @@ public:
     // rewinds a stock to a checkpoint that holds it whole: the damage
     // the rewind discards must not keep the restored body unobservable.
     void clear(std::uint64_t entity) noexcept;
+
+    // Drops the transient observation history for every body — the open
+    // hit windows, the previous velocities, the support and settle
+    // counts, and any break not yet taken — while the recorded damage
+    // (states_) stands. Called by the world after a death rewind:
+    // the bodies are back at their checkpoint velocities, so the next
+    // observation must take those as its baseline, not measure the
+    // rewind itself as an impact. Idempotent with restore(), which
+    // clears the same history when a save is loaded.
+    void resync() noexcept;
 
     // Save form: one record per damaged or broken body (plain data,
     // trivially copyable, so SaveWriter::list holds it).

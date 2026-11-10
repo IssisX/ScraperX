@@ -136,6 +136,7 @@ public:
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
+    void spin_kit_body_for_test(std::uint32_t body, JPH::Vec3 angular_velocity);
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
@@ -727,10 +728,14 @@ private:
     // the geometry's scatter. The stock itself is parked first: a body
     // breaks once, and the pieces are the stock now. Shared by the
     // live break and by a load whose save holds pieces this world
-    // lacks, so the two never drift apart.
+    // lacks, so the two never drift apart. A load may also spawn the
+    // pieces of a stock its save holds intact (park_parent false):
+    // the pieces are the retained debris of a break the save predates
+    // in the damage record, so the crate stays whole and the pieces
+    // are parked by the caller.
     void spawn_break_pieces(kit::BodyIndex body, std::uint64_t entity, LooseStock::Kind kind,
                             const JPH::RVec3 pos, const JPH::Quat rot, const JPH::Vec3 vel,
-                            const JPH::Vec3 ang, float mass) noexcept;
+                            const JPH::Vec3 ang, float mass, bool park_parent = true) noexcept;
 
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept;
 

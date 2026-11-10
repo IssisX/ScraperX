@@ -1811,6 +1811,10 @@ public:
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;
+    // Tests only (never bound to the bridge): kit body `body` spun at
+    // `angular_velocity` (rad/s), its linear velocity untouched — a spin
+    // without a throw, so a break can be read for its orbital term.
+    void debug_spin_kit_body(std::uint32_t body, Vector3 angular_velocity) noexcept;
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;

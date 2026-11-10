@@ -295,6 +295,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     // After her restore, which lets go of the district: its drives as saved.
     bay_->restore(checkpoint_.bay);
     impacts_->resync();
+    stock_damage_.resync();  // the rewind is not an impact: the next observation baselines the restored velocities
     up_move_ = UpMove::None;   // chosen afresh from the restored body by the next tick
     wall_run_seconds_left_ = 0.0;
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
@@ -367,6 +368,10 @@ namespace {
 // world holds damage, so the reader can tell it from the optional
 // fabricated section.
 constexpr std::uint32_t kDamageSaveMark = 0x44414D47U;
+// The grip loads' entities ("GRIP"), written only when a grip holds
+// a load, so a load remaps each grip by the body it held, not by a
+// kit index the break pieces and fabricated objects have shifted.
+constexpr std::uint32_t kGripEntitySaveMark = 0x47524950U;
 } // namespace
 
 void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
@@ -432,6 +437,25 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
         w.pod(kDamageSaveMark);
         w.list(damage);
     }
+    // Last: the entities each grip holds, one per grip (0 for an empty
+    // grip), written only when a grip holds a load, so a save with
+    // empty grips is byte for byte what it was. A load remaps a grip
+    // by this entity, not by its saved kit index: a fabricated object
+    // made before a crate breaks holds a saved index below the
+    // pieces, and a fresh load makes the pieces first, so the index
+    // would weld the magnet to a timber piece instead.
+    if (std::any_of(k.grip_load.begin(), k.grip_load.end(),
+                    [](const std::uint32_t load) { return load != kit::kNone; })) {
+        std::vector<std::uint64_t> grip_entities;
+        grip_entities.reserve(k.grip_load.size());
+        for (const std::uint32_t load : k.grip_load) {
+            grip_entities.push_back(load == kit::kNone || load >= kit_->body_count()
+                                        ? 0
+                                        : kit_->body_entity(kit::BodyIndex{load}));
+        }
+        w.pod(kGripEntitySaveMark);
+        w.list(grip_entities);
+    }
 }
 
 // Reads a saved checkpoint, then restores the world from it as a death
@@ -494,28 +518,42 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
              std::all_of(k.grip_rating.begin(), k.grip_rating.end(),
                          [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
     }
-    // After the grips, the fabricated objects: a save of a world with none
-    // (every save made before them) ends before.
     // After the grips, the fabricated objects (if any), then the
-    // stock damage (if any). A save missing either still loads; one
-    // made before the damage ends before it.
+    // stock damage (if any), then the grip loads' entities (if any).
+    // A save missing any of them still loads; one made before the
+    // damage ends before it.
     std::vector<SavedFabricated> saved;
     if (ok && !r.done()) {
         std::uint32_t mark = 0;
         if (!r.peek(mark)) {
             ok = false;
-        } else if (mark != kDamageSaveMark) {
+        } else if (mark == kDamageSaveMark || mark == kGripEntitySaveMark) {
+            // No fabricated section: damage or grip entities follow.
+        } else {
             // Not damage: the fabricated section, if any
             // (read_fabricated validates its own mark).
             ok = read_fabricated(r, saved);
         }
-        // The damage mark: fabricated is absent.
     }
     std::vector<stock_damage::StockDamage::SavedDamage> saved_damage;
     if (ok && !r.done()) {
         std::uint32_t mark = 0;
-        ok = r.pod(mark) && mark == kDamageSaveMark &&
-             r.list_up_to(saved_damage, loose_stock_->placed().size());
+        if (!r.peek(mark)) {
+            ok = false;
+        } else if (mark == kDamageSaveMark) {
+            ok = r.pod(mark) && r.list_up_to(saved_damage, loose_stock_->placed().size());
+        }
+        // Any other mark: not damage — the grip-entity section below
+        // reads it, or the done check refuses it.
+    }
+    // The grip loads' entities, one per grip in the save's grip order
+    // (0 for an empty grip). A save made before them ends before this.
+    std::vector<std::uint64_t> grip_entities;
+    if (ok && !r.done()) {
+        std::uint32_t mark = 0;
+        ok = r.pod(mark) && mark == kGripEntitySaveMark &&
+             r.list_up_to(grip_entities, c.grip_load.size()) &&
+             grip_entities.size() == k.grip_load.size();
     }
     ok = ok && r.done();
     // The save's bodies past this world's: exactly the pieces of the
@@ -540,6 +578,33 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
             stock_damage::break_geometry(loose_stock_->placed()[stock_index].kind);
         for (std::uint8_t k = 0; k < geometry.count; ++k) {
             expected_pieces.push_back(stock_damage::piece_entity_for(record.entity, k));
+        }
+    }
+    // And the pieces of a stock the damage holds intact: a load into
+    // the world that broke them parks them and clears the break, so
+    // the save after that names the pieces in its body list but holds
+    // no broken record for their stock. Those pieces are expected
+    // too, and the spawn below makes them (parked) for a fresh world;
+    // without them the save is refused for eight extra bodies and
+    // zero missing pieces. A broken record above already names its
+    // stock's pieces, so only intact stocks are added here.
+    for (std::size_t j = built; j < entities.size(); ++j) {
+        const std::uint64_t piece_entity = entities[j];
+        if (piece_entity < stock_damage::kPieceEntityBase ||
+            piece_entity >= stock_damage::kPieceEntityLimit) {
+            continue;
+        }
+        const std::uint64_t stock_entity =
+            LooseStock::kFirstEntity + (piece_entity - stock_damage::kPieceEntityBase) / 8U;
+        bool broken_record = false;
+        for (const stock_damage::StockDamage::SavedDamage &record : saved_damage) {
+            if (record.entity == stock_entity && record.broken != 0) {
+                broken_record = true;
+                break;
+            }
+        }
+        if (!broken_record) {
+            expected_pieces.push_back(piece_entity);
         }
     }
     // Matched by entity, not by order: the save lists the pieces in
@@ -627,9 +692,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     }
     for (const int i : spawn_order) {
         const std::uint64_t entity = LooseStock::kFirstEntity + static_cast<std::uint64_t>(i);
-        if (!stock_damage_.state(entity).broken) {
-            continue;
-        }
+        const bool broken = stock_damage_.state(entity).broken;
         const LooseStock::Kind kind = loose_stock_->placed()[static_cast<std::size_t>(i)].kind;
         const stock_damage::BreakGeometry geometry = stock_damage::break_geometry(kind);
         bool missing = false;
@@ -644,8 +707,13 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         }
         const kit::BodyIndex body = loose_stock_->body(i);
         const auto &crate_state = k.bodies[static_cast<std::size_t>(body.value)];
+        // A broken stock spawns its pieces live, as a break would; an
+        // intact one spawns them only so the world holds the bodies the
+        // save names — the crate stays whole, and the parking below
+        // puts the pieces away. Either way their velocities are the
+        // save's, applied by the state mapping after this.
         spawn_break_pieces(body, entity, kind, crate_state.position, crate_state.rotation,
-                           JPH::Vec3::sZero(), JPH::Vec3::sZero(), kit_->body_mass(body));
+                           JPH::Vec3::sZero(), JPH::Vec3::sZero(), kit_->body_mass(body), broken);
     }
     // The non-fabricated bodies this world holds now, for the grip
     // remap below: bodies added since the save was written (always
@@ -653,10 +721,14 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     const std::size_t built_now = kit_built_count();
     // A grip on a fabricated object holds it where this world's kit has it,
     // after any bodies built since the save — and after the pieces, which
-    // sit between the built bodies and the fabricated ones.
-    for (std::uint32_t &load : k.grip_load) {
-        if (ok && load != kit::kNone && load >= saved_built) {
-            load = static_cast<std::uint32_t>(load - saved_built + built_now);
+    // sit between the built bodies and the fabricated ones. Only for a
+    // save without the grip-entity section: a save with it remaps by
+    // entity after the fabricated objects are made, below.
+    if (grip_entities.empty()) {
+        for (std::uint32_t &load : k.grip_load) {
+            if (ok && load != kit::kNone && load >= saved_built) {
+                load = static_cast<std::uint32_t>(load - saved_built + built_now);
+            }
         }
     }
     // Taken: the save's fabricated objects the world lacks are made, where
@@ -676,6 +748,24 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
             return false;
         }
         fabricated_.push_back(std::move(object));
+    }
+    // The save names each grip's load by entity: remap by the body
+    // that entity holds now, after the pieces above and the fabricated
+    // objects just made — so a fabricated object made before a crate
+    // broke keeps its magnet, whatever the pieces did to the indices.
+    // An empty grip (entity 0) holds nothing; a load whose entity is
+    // no body here keeps its saved index, as the old remap left it.
+    if (!grip_entities.empty()) {
+        for (std::size_t i = 0; i < k.grip_load.size() && i < grip_entities.size(); ++i) {
+            if (grip_entities[i] == 0) {
+                k.grip_load[i] = kit::kNone;
+                continue;
+            }
+            const kit::BodyIndex body = kit_->body_for_entity(grip_entities[i]);
+            if (body.valid()) {
+                k.grip_load[i] = body.value;
+            }
+        }
     }
     // The body states in true kit-index order, as the restore reads
     // them: the save lists the non-fabricated bodies in kit order

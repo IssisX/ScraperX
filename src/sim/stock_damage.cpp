@@ -388,6 +388,14 @@ std::vector<StockDamage::SavedDamage> StockDamage::serialize() const {
     return out;
 }
 
+void StockDamage::resync() noexcept {
+    windows_.clear();
+    prev_vel_.clear();
+    support_ticks_.clear();
+    settle_ticks_.clear();
+    breaks_.clear();
+}
+
 bool StockDamage::restore(const std::vector<SavedDamage> &saved, const std::size_t stock_count) noexcept {
     std::map<std::uint64_t, DamageState> rebuilt;
     for (const SavedDamage &record : saved) {
@@ -418,11 +426,7 @@ bool StockDamage::restore(const std::vector<SavedDamage> &saved, const std::size
         }
     }
     states_ = std::move(rebuilt);
-    windows_.clear();
-    prev_vel_.clear();
-    support_ticks_.clear();
-    settle_ticks_.clear();
-    breaks_.clear();
+    resync();
     return true;
 }
 

@@ -1325,6 +1325,12 @@ void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 a
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
 
+void Simulation::debug_spin_kit_body(const std::uint32_t body, const Vector3 angular_velocity) noexcept {
+    physics_world_->spin_kit_body_for_test(
+        body, JPH::Vec3(static_cast<float>(angular_velocity.x), static_cast<float>(angular_velocity.y),
+                        static_cast<float>(angular_velocity.z)));
+}
+
 void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) noexcept {
     physics_world_->launch_player_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
