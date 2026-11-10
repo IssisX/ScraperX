@@ -349,6 +349,11 @@ void run_matron_ways() {
         const traversal::Edge e = map.edges()[ways[w]];
         const auto st = e.spec.start;
         s.debug_place_matron(Vector3{double(st.GetX()), double(st.GetY()), double(st.GetZ())});
+        // Patrol, not hunt, while she settles: a hunting Matron with the
+        // player in sight starts a travel on the lead (take_way), and a
+        // travel's climber running refuses the travel_to below. The way
+        // itself is what this test measures, not her pursuit.
+        s.debug_matron_patrol();
         for (int i = 0; i < 30; ++i) {
             (void)s.advance_frame(1.0 / 60.0);
         }

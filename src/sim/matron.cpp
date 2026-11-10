@@ -2323,8 +2323,10 @@ bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget)
     } else if (ask(routecraft_way_, true)) {
         return true;
     }
-    // A rung way her scan found off her floor; a line she would only wait at, last.
-    return ask(climb_way_, true) || ask(line_way_, true);
+    // A rung way her scan found off her floor; a travel over her scan, by
+    // hoist where no way of her map joins the floors; a line she would only
+    // wait at, last.
+    return ask(climb_way_, true) || ask(travel_way_, true) || ask(line_way_, true);
 }
 
 bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {

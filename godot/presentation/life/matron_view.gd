@@ -1207,6 +1207,7 @@ func _crawl_retune() -> void:
 func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falling: bool) -> void:
 	if _rig == null:
 		return
+	var fresh := fresh_frame
 	_crawl_retune()
 	_ease_pose(delta)
 	_apply_flinch(delta)
@@ -1235,6 +1236,7 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	fresh_frame = false
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
 	_rig.step_hair(delta)
+	_rig.step_skirt(delta, fresh)
 
 
 # Her joints, hips and limb swell go to this frame's pose on their springs
