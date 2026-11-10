@@ -4,7 +4,7 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794320418 (2026-11-10 8:20 AM Central)
+Read through: 1794330944 (2026-11-10 11:15 AM Central)
 
 ## Now: game code (J-072 gate passed 11-09 5:58 PM: round trip O-319779d9 acked, #350 6754851673)
 Cory 11-09 night: code, two helpers at most, no waste. Landed #370 #371 (J-067 hair), #375. Open: J-042 #374 (protected, draft; foot slide 0.092>0.079 at her toolbox stop: upright release, IK aims the ankle 0.23 up but a later pass (govern?) keeps the drawn sole on the deck; findings #240 6758686846, native built in .claude/worktrees/j042); J-001 on claude/integrate-j001-hold (57 checks red under #227, needs ChatGPT on #108); both wait on ChatGPT. Muse ruled: J-044l trigger sweeps her Lunge path, J-044c gains incompatibility, J-043 hang rail, J-067 back-hair fixes after #371, J-011 skirt thigh capsules.
