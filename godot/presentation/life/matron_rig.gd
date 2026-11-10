@@ -269,8 +269,6 @@ const RIDE_W := 7.0               # rad/s: her body's ride onto her feet, low-pa
 # left, fore left, hind right, fore right) and how high a limb is lifted.
 const PLANT_LIMBS := [["an_l", 0.0], ["wr_l", 0.25], ["an_r", 0.5], ["wr_r", 0.75]]
 const PLANT_LIFT_M := 0.12
-# A limb dragged out from under her steps back in this long, lifted PLANT_LIFT_M.
-const PLANT_STEP_S := 0.25
 # Her feet off her floor (the simulation's): a limb that was held to it goes
 # where its phase has it under her body, eased this fast from where it was drawn.
 const RELEASE_TAU := 0.05
@@ -591,36 +589,18 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 				if w > 0.5 and gait_mps > 0.8:
 					landed.append({"limb": bone, "at": st["lock"], "surface": surface})
 			target = inv * (st["lock"] as Vector3)
-			# Dragged too far from under her (a turn, a hard stop): it steps
-			# back under her, lifted. It used to slide its lock back across
-			# the deck, which the plant check measured as a foot gliding
-			# 0.09 m a frame while she stood (J-042: touch_matron_act, her stop
-			# from 6.8 m/s at the toolbox left a foot 0.69 m behind, 0.092 m
-			# slide over the 0.079 bound).
-			if not st.has("step") and Vector2(target.x - neutral.x, target.z - neutral.z).length() > 1.6 * s_half + 0.1:
-				st["step"] = 0.0
-				st["step_from"] = target
-			if st.has("step"):
-				var k := minf(float(st["step"]) + dt / PLANT_STEP_S, 1.0)
-				var e := k * k * (3.0 - 2.0 * k)
-				target = (st["step_from"] as Vector3).lerp(neutral, e) + Vector3(0.0, PLANT_LIFT_M * sin(PI * k), 0.0)
-				if k >= 1.0:
-					st.erase("step")
-					st.erase("step_from")
-					st["lock"] = xf * target
-				else:
-					st["step"] = k
+			# dragged too far from under her (a turn, a stop): it slides back
+			if Vector2(target.x - neutral.x, target.z - neutral.z).length() > 1.6 * s_half + 0.1:
+				st["lock"] = (st["lock"] as Vector3).lerp(xf * neutral, 1.0 - exp(-6.0 * dt))
+				target = inv * (st["lock"] as Vector3)
 		else:
 			if bool(st["stance"]):
 				st["from"] = inv * (st["lock"] as Vector3)
 			var sw := clampf((u - duty) / (1.0 - duty), 0.0, 1.0)
 			var e := sw * sw * (3.0 - 2.0 * sw)
 			target = (st["from"] as Vector3).lerp(down, e) + Vector3(0.0, lift_h * sin(PI * sw), 0.0)
-		if not now:
-			st.erase("step")
-			st.erase("step_from")
 		st["stance"] = now
-		if now and not free and not st.has("step"):
+		if now and not free:
 			down_mask |= bit
 		bit *= 2
 		st["at"] = target
@@ -642,8 +622,6 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 # comes down again, and plants there. Silent: no claim, no sound.
 const UPLANT_M := 0.03
 const UPLANT_RELEASE_S := 0.15
-# A releasing foot is aimed no farther from the hip than this of its leg, at its lift (J-042).
-const UPLANT_REACH := 0.92
 const UPLANT_LIFT_M := 0.12
 const UPLANT_TRACK_LIFT_M := 0.15
 # A release lifts before it travels: the sole must be off the deck before
@@ -916,19 +894,6 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				else:
 					var lock: Vector3 = st["lock"] as Vector3
 					plant_tgt = inv * lock - skel.get_bone_global_pose(bone_idx["an_" + s]).basis * _sole_offset(s)
-				# A lock her body has left behind past her leg's reach (a hard stop:
-				# J-042's toolbox stop from 6.8 m/s left it 0.64 m behind the hip)
-				# cannot be reached, so a near-straight leg aimed at it can neither
-				# bend nor lift: the foot scraped along the deck once she stood
-				# (0.092 m). The release aims at the nearest point the leg reaches,
-				# so the knee bends and the sole lifts before it travels.
-				var hip := _gpos("hp_" + s)
-				var leg := hip.distance_to(_gpos("kn_" + s)) + _gpos("kn_" + s).distance_to(_gpos("an_" + s))
-				var out := Vector2(plant_tgt.x - hip.x, plant_tgt.z - hip.z)
-				var across := sqrt(maxf(0.0, pow(UPLANT_REACH * leg, 2.0) - pow(hip.y - plant_tgt.y - UPLANT_LIFT_M, 2.0)))
-				if out.length() > across:
-					out = out.normalized() * across
-					plant_tgt = Vector3(hip.x + out.x, plant_tgt.y, hip.z + out.y)
 				# The foot lifts before it travels: sideways travel
 				# waits until UPLANT_TRAVEL_START of the release has
 				# passed, so the sole is off the deck (and no longer
