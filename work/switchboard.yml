@@ -4,6 +4,11 @@
 # records, obligations and a daily diff to the switchboard/state branch. `shadow` posts nothing; `live` (with
 # reconciler.STAGE2_READY) posts its notices and Cory's hourly "Needs you" batch. Absent or any other value is off.
 # Live since J-072's replay of 48 h of real history came back clean (tools/switchboard/replay_reconciler.py,
-# Cory 11-09: live as soon as a test proves it). The ledger's notices keep running alongside for 24 h as the backup;
-# stage 2 adds `notices: v2` here, in the PR that turns them off.
+# Cory 11-09: live as soon as a test proves it).
 reconciler: live
+
+# J-072: one owner of notices. `v2` beside `reconciler: live`: the reconciler is the only notifier, and the ledger
+# (tools/switchboard/ledger.py) only writes its section in the board's body: no "past deadline" comment, no clock
+# for one (reconciler.ledger_notifies). Absent or any other value, or a reconciler that is not live: the ledger
+# posts its own notices as before.
+notices: v2

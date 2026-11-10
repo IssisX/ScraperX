@@ -1564,6 +1564,7 @@ class FactsGH:
             "repos/IssisX/ScraperX/pulls/256/reviews": [],
             "repos/IssisX/ScraperX/pulls/256/files": [],
             "repos/IssisX/ScraperX/issues/300/comments": list(issue_comments),
+            "repos/IssisX/ScraperX/issues?labels=board&state=open": [{"number": switch.BOARD_ISSUE}],
             f"repos/IssisX/ScraperX/issues/{switch.BOARD_ISSUE}/comments": list(board),
             "repos/IssisX/ScraperX/issues?labels=job&state=open":
                 [{"number": 300, "title": "J-042 windup", "labels": []}] if with_issue else [],

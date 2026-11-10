@@ -8,7 +8,7 @@
  *   IN   Mail whose subject starts `MUSE_TO_CLAUDE:` (from an allowed sender, proven by more than the
  *        forgeable From line: see authentic_) is posted as a comment:
  *        on #N when the subject names `#N` and #N is an issue, else on the job issue `J-NNN` the subject
- *        names (or, for a PR #N, the job issue whose title names #N), else on the board #340. Never on a
+ *        names (or, for a PR #N, the job issue whose title names #N), else on the board (board_). Never on a
  *        PR: this token cannot comment there. Its first line is `**Muse (via email bridge): <subject>**`,
  *        so a subject like `MUSE_TO_CLAUDE: J-042 review of #100 @ 1a2b3c4d: LAND` is a verdict the
  *        switch reads for #100 wherever it lands (switch.py bridged_verdicts).
@@ -19,6 +19,16 @@
  *        MUSE_TO_CLAUDE mail of 11-07 19:20Z to 11-09 14:44Z). A message is posted only when its id is not
  *        in `posted_message_ids` and its date is inside the window, so a message is posted once. The first
  *        run reads the last INBOUND_SEED_HOURS; to replay further back, set `inbound_mark` (ms since 1970).
+ *   REC  (J-072) Mail this account SENT to Muse (MUSE_TO) whose subject starts `CLAUDE_TO_MUSE:` and that this
+ *        script did not send itself is the integrator's own mail to Muse, which left nothing on GitHub: the
+ *        trackers (tools/board/asks.py, reconciler.py) never saw the ruling, so Muse's ask stayed unanswered.
+ *        Each is posted once as a comment on the issue IN would pick for the same subject (never a PR). Its
+ *        first line is `CLAUDE_TO_MUSE: <subject>`, which the trackers read as Claude's post to Muse; OUT never
+ *        mails it back (it mails only the workflow bot's comments, and this token posts as its owner). The
+ *        mail's text follows in a code block, every line behind `| `, so no line of it can be read as a
+ *        command, a verdict or a marker. A mail this script sent itself (OUT) opens with MAIL_OPENING and is
+ *        skipped: it is already a comment. Same window as IN: `record_mark`, `recorded_message_ids`; the
+ *        first run reads the last INBOUND_OVERLAP_MIN minutes (to record older mail, set `record_mark`).
  *   CLOCK (J-072) Every CLOCK_MIN minutes it dispatches switchboard.yml on trunk with dry_run=false: the
  *        reliable clock GitHub's own `schedule` is not (it ran 26 times in 4 days).
  *   WATCH (J-072) When no full non-dry sweep (run-name SWEEP_TITLE) has succeeded for DOWN_MIN minutes,
@@ -45,11 +55,16 @@
  *                 list without it posts nothing
  * The tokens are read from the properties only, sent only to api.github.com, and never logged.
  *
- * Health (bridge-health): OUT and IN run apart, so one failing never stops the other, and one issue or
+ * Health (bridge-health): OUT, IN and REC run apart, so one failing never stops the others, and one issue or
  * mail thread failing never stops the rest. Each direction keeps its last success and last error in the
- * script property `health_out` / `health_in`. When one has failed for HEALTH_ALARM_MIN minutes, the
+ * script property `health_out` / `health_in` / `health_record`. When one has failed for HEALTH_ALARM_MIN minutes, the
  * bridge posts ONE comment on the board starting `Claude (integrator): BRIDGE DOWN:` with the error's
  * first 200 characters (the token cut out), and none again until that direction has worked once.
+ *
+ * Board (J-072): the board is the open issue labeled `board`, looked up with GITHUB_TOKEN (board_), so a new
+ * board needs no edit and no paste here (#107 to #340 on 11-09 needed both, and until then every alarm and
+ * unaddressed mail went on the closed board). The script keeps the last one found in the script property
+ * `board`; BOARD_ISSUE is only the fallback before any lookup has worked.
  *
  * Version (J-072): BRIDGE_VERSION is the hash switch.py bridge_version() gives of this file (the value itself
  * blanked), so any edit changes it; tools/switchboard/test_bridge.py fails until it is updated. The clock sends
@@ -57,13 +72,16 @@
  * live script is not trunk's or names no version. After an edit merges, paste the whole file here again.
  */
 
-var BRIDGE_VERSION = '907e45b83aa8';
+var BRIDGE_VERSION = '3b16178c7c57';
 var DEFAULT_REPO = 'IssisX/ScraperX';
-var BOARD_ISSUE = 340;
+var BOARD_ISSUE = 340;           // the fallback only: the live board is board_(), the open issue labeled BOARD_LABEL
+var BOARD_LABEL = 'board';
+var BOARD_CACHE_MIN = 10;        // a board found this recently is not looked up again
 var WAKE_LABEL = 'wake:muse';
 var DONE_LABEL = 'muse-bridged';
 var BOT_LOGIN = 'github-actions[bot]';
-var MAX_BODY = 60000;
+var MAX_BODY = 60000;           // characters of one mail posted in a comment: GitHub refuses a comment over 65,536
+var MAX_SUBJECT = 300;          // characters of a recorded mail's subject kept in its comment's first line
 var MAX_REMEMBERED = 500;
 var MAX_SEARCH = 100;            // threads one inbound search returns; a full answer halves the window instead
 var MAX_NARROW = 6;              // halvings of the window before inbound gives up loudly (14 days / 64 = 5 h)
@@ -76,7 +94,17 @@ var MAX_COMMENT_PAGES = 10;     // pages of 100 comments read per wake:muse issu
 var COMMENT_DAYS = 7;           // only comments this new are mailed: an id aged out of the remembered list is never re-sent
 var HEALTH_ALARM_MIN = 30;      // a direction failing this long posts BRIDGE DOWN on the board, once
 var ALARM_HEADER = 'Claude (integrator): BRIDGE DOWN:';
+// The first words of every mail this script sends (mailBody_), after the clock time: how record_ knows its own.
+var MAIL_OPENING = 'From the switchboard (Claude\'s integrator tooling), by the mail bridge.';
+var RECORD_LINE = '| ';          // in front of every line of a recorded mail: none of them starts a line of the comment
+// The two mail windows (mailWindow_): the marker a subject must hold, the Gmail search, where the handled ids and
+// the mark are kept, how far back the first run reads, and the Gmail label a handled thread gets.
+var INBOUND = { marker: 'MUSE_TO_CLAUDE:', query: 'subject:"MUSE_TO_CLAUDE"', ids: 'posted_message_ids',
+  mark: 'inbound_mark', seed: INBOUND_SEED_HOURS * 3600000, label: DONE_LABEL };
+var RECORD = { marker: 'CLAUDE_TO_MUSE:', query: 'in:sent subject:"CLAUDE_TO_MUSE"', ids: 'recorded_message_ids',
+  mark: 'record_mark', seed: INBOUND_OVERLAP_MIN * 60000, label: '' };
 var DIRECTIONS = { out: 'outbound (wake:muse comments mailed to Muse)', in: 'inbound (MUSE_TO_CLAUDE mail posted to GitHub)',
+  record: 'the record (CLAUDE_TO_MUSE mail sent by hand posted to GitHub)',
   clock: 'the clock (dispatches the switchboard every 10 min with ACTIONS_TOKEN)',
   watch: 'the switchboard watchdog (reads its runs with ACTIONS_TOKEN)' };
 var TRUNK = 'ScraperX-Claude';
@@ -113,6 +141,7 @@ function tick() {
     run_(cfg, 'clock', clock_);   // first: mail work never holds the clock back
     var outOk = run_(cfg, 'out', outbound_);  // each direction alone: an outbound throw never stops inbound (11-07 to 11-09)
     var inOk = run_(cfg, 'in', inbound_);
+    run_(cfg, 'record', record_);  // after both: a failure here stops neither, and shows in health_record
     run_(cfg, 'watch', watchdog_);
     if (outOk && inOk) ping_(cfg, 'HC_BRIDGE_URL');
   } finally {
@@ -156,7 +185,7 @@ function failed_(store, cfg, dir, err) {
     try {
       var since = Utilities.formatDate(new Date(h.failingSince), 'America/Chicago', 'MMM d h:mm a') + ' Central';
       var last = h.lastOk ? Utilities.formatDate(new Date(h.lastOk), 'America/Chicago', 'MMM d h:mm a') + ' Central' : 'never recorded';
-      gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + BOARD_ISSUE + '/comments', { body:
+      gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + board_(cfg) + '/comments', { body:
         ALARM_HEADER + ' ' + DIRECTIONS[dir] + ' has failed since ' + since + ' (last success ' + last + ').\n\n' +
         'Last error: ' + h.lastErr + '\n\nThe full error is in the bridge\'s Apps Script Executions log (Cory only). ' +
         'One alarm per outage: the bridge posts none again until this direction has worked once.' });
@@ -232,6 +261,44 @@ function gh_(cfg, method, path, body) {
   return text ? JSON.parse(text) : null;
 }
 
+/**
+ * The live board's issue number (J-072): the open issue labeled BOARD_LABEL, the newest when several are open; a
+ * pull request never counts. Looked up at most once a tick and once every BOARD_CACHE_MIN minutes (the script
+ * property `board` keeps {n, at}), and only when something is about to be posted on the board, so a tick with
+ * nothing for the board adds no GitHub read. It is an issues read like any other: the Issues-only GITHUB_TOKEN,
+ * api.github.com. A lookup that fails or finds none keeps the last board found, else the built-in BOARD_ISSUE,
+ * and logs it; it never throws, so the alarm or the mail is still posted.
+ */
+function board_(cfg) {
+  if (cfg.board) return cfg.board;
+  var known = {};
+  try { known = JSON.parse(cfg.store.getProperty('board') || '{}') || {}; } catch (e) { known = {}; }
+  var last = issueNumber_(known.n);
+  var now = Date.now();
+  var age = now - (Number(known.at) || 0);
+  if (last && age >= 0 && age < BOARD_CACHE_MIN * 60000) return (cfg.board = last);
+  var open = [];
+  var why = 'no open issue is labeled ' + BOARD_LABEL;
+  try {
+    (gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues?labels=' + encodeURIComponent(BOARD_LABEL) + '&state=open&per_page=100') || [])
+      .forEach(function (it) { if (it && !it.pull_request && issueNumber_(it.number)) open.push(it.number); });
+  } catch (e) {
+    why = 'the board lookup failed (' + clean_(cfg, e) + ')';
+  }
+  var found = open.length ? Math.max.apply(null, open) : 0;
+  if (found) {
+    cfg.store.setProperty('board', JSON.stringify({ n: found, at: now }));
+    if (open.length > 1) console.warn('Muse bridge: ' + open.length + ' open issues are labeled ' + BOARD_LABEL + '; using the newest, ' + found);
+  } else {
+    console.warn('Muse bridge: ' + why + '; using ' + (last ? 'the last board found, ' + last : 'the built-in board, ' + BOARD_ISSUE));
+  }
+  return (cfg.board = found || last || BOARD_ISSUE);
+}
+
+function issueNumber_(v) {
+  return typeof v === 'number' && v > 0 && Math.floor(v) === v ? v : 0;
+}
+
 function remembered_(cfg, key) {
   try {
     return JSON.parse(cfg.store.getProperty(key) || '[]');
@@ -288,7 +355,7 @@ function mailBody_(body) {
   var text = String(body || '').replace(/<!--[\s\S]*?-->/g, '').replace(/<!--[\s\S]*$/, '')
     .replace(/`/g, '').replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
   var when = Utilities.formatDate(new Date(), 'America/Chicago', 'h:mm a') + ' Central';
-  return when + '. From the switchboard (Claude\'s integrator tooling), by the mail bridge.\n\n' + text +
+  return when + '. ' + MAIL_OPENING + '\n\n' + text +
     '\n\nReplies go by mail with a subject that starts MUSE_TO_CLAUDE: and names the job (J-NNN or #N). A verdict' +
     ' ends the subject with the PR and its head sha, for example review of #343 @ 1a2b3c4d: LAND, or FIX with' +
     ' command, input, expected and observed lines in the body.';
@@ -355,10 +422,10 @@ function watchdog_(cfg) {
     if (sched && (!ok || Date.parse(sched.updated_at) > Date.parse(ok.updated_at))) ok = sched;
   }
   cfg.store.setProperty('watch_last', String(now));
-  var board = 'repos/' + cfg.repo + '/issues/' + BOARD_ISSUE + '/comments';
+  var board = function () { return 'repos/' + cfg.repo + '/issues/' + board_(cfg) + '/comments'; };  // looked up only to post
   if (fresh(ok)) {
     if (state.down) {  // a failed post throws and leaves the incident open, so the UP line is retried
-      gh_(cfg, 'POST', board, { body: UP_HEADER + ' a non-dry sweep succeeded at ' + central_(ok.updated_at) +
+      gh_(cfg, 'POST', board(), { body: UP_HEADER + ' a non-dry sweep succeeded at ' + central_(ok.updated_at) +
         ' (' + ok.html_url + '). The SWITCHBOARD DOWN of ' + central_(state.since) + ' is over.' });
       cfg.store.setProperty('watch_switchboard', '{}');
     }
@@ -379,7 +446,7 @@ function watchdog_(cfg) {
     'One alarm per incident; a SWITCHBOARD UP line follows when a sweep succeeds.';
   var errors = [];
   var told = false;
-  try { gh_(cfg, 'POST', board, { body: text }); told = true; } catch (e) { errors.push('board post: ' + ((e && e.message) || e)); }
+  try { gh_(cfg, 'POST', board(), { body: text }); told = true; } catch (e) { errors.push('board post: ' + ((e && e.message) || e)); }
   try {
     MailApp.sendEmail(cfg.me, DOWN_SUBJECT + ': no successful sweep in ' + DOWN_MIN + ' min', text);
     told = true;
@@ -452,36 +519,53 @@ function ping_(cfg, name) {
 }
 
 /**
- * IN: MUSE_TO_CLAUDE mail becomes a comment on the issue or PR it names, oldest first. The window runs from the
- * stored mark (less INBOUND_OVERLAP_MIN) to now, never further back than INBOUND_FIRST_DAYS; a window with
- * MAX_SEARCH threads or more is halved until it fits. A message is handled once: only when it is dated inside
- * the window AND its id is not in posted_message_ids (every message in the overlap was remembered when it was
- * handled, and far fewer than MAX_REMEMBERED fit in one overlap). The mark moves to the window's end, or to the
- * first message left over (failed, or past MAX_POSTS this tick), so nothing older than the mark is skipped.
+ * IN: MUSE_TO_CLAUDE mail becomes a comment on the issue it names, oldest first (mailWindow_).
  */
 function inbound_(cfg) {
-  var done = remembered_(cfg, 'posted_message_ids');
+  mailWindow_(cfg, INBOUND, inboundMessage_);
+}
+
+/**
+ * REC: CLAUDE_TO_MUSE mail this account sent to Muse by hand becomes a comment too (recordMessage_), through the
+ * same window as IN, with its own mark and remembered ids.
+ */
+function record_(cfg) {
+  mailWindow_(cfg, RECORD, recordMessage_);
+}
+
+/**
+ * One pass over the mail a window names (INBOUND or RECORD), oldest first, each message given to `handle`. The
+ * window runs from the stored mark (less INBOUND_OVERLAP_MIN) to now, never further back than INBOUND_FIRST_DAYS;
+ * a window with MAX_SEARCH threads or more is halved until it fits. A message is handled once: only when it is
+ * dated inside the window AND its id is not in the remembered list (every message in the overlap was remembered
+ * when it was handled, and far fewer than MAX_REMEMBERED fit in one overlap). The mark moves to the window's end,
+ * or to the first message left over (failed, or past MAX_POSTS this tick), so nothing older than the mark is
+ * skipped.
+ */
+function mailWindow_(cfg, win, handle) {
+  var what = win.marker.slice(0, -1);
+  var done = remembered_(cfg, win.ids);
   var now = Date.now();
   var floor = Math.max(now - INBOUND_FIRST_DAYS * 86400000, INBOUND_EPOCH);
-  var mark = Number(cfg.store.getProperty('inbound_mark')) || 0;
-  if (mark && mark < floor) console.warn('Muse bridge: the inbound mark is older than ' + INBOUND_FIRST_DAYS + ' days; older mail is not read');
-  var from = Math.max(mark ? mark - INBOUND_OVERLAP_MIN * 60000 : now - INBOUND_SEED_HOURS * 3600000, floor);
+  var mark = Number(cfg.store.getProperty(win.mark)) || 0;
+  if (mark && mark < floor) console.warn('Muse bridge: ' + win.mark + ' is older than ' + INBOUND_FIRST_DAYS + ' days; older mail is not read');
+  var from = Math.max(mark ? mark - INBOUND_OVERLAP_MIN * 60000 : now - win.seed, floor);
   var to = now;
-  var threads = inboundSearch_(from, to);
+  var threads = mailSearch_(win, from, to);
   for (var n = 0; threads.length >= MAX_SEARCH; n++) {
     if (n >= MAX_NARROW) {
-      throw new Error(MAX_SEARCH + '+ MUSE_TO_CLAUDE threads from ' + new Date(from).toISOString() + ' to ' +
+      throw new Error(MAX_SEARCH + '+ ' + what + ' threads from ' + new Date(from).toISOString() + ' to ' +
         new Date(to).toISOString() + '; the mark stays, so nothing is skipped');
     }
     to = from + Math.floor((to - from) / 2);
-    threads = inboundSearch_(from, to);
+    threads = mailSearch_(win, from, to);
   }
   var items = [];
   threads.forEach(function (thread) {
     thread.getMessages().forEach(function (m) {
       var t = m.getDate().getTime();
       if (t < from || t >= to || done.indexOf(m.getId()) >= 0) return;
-      if ((m.getSubject() || '').indexOf('MUSE_TO_CLAUDE:') < 0) return;
+      if ((m.getSubject() || '').indexOf(win.marker) < 0) return;
       items.push({ m: m, t: t, thread: thread });
     });
   });
@@ -503,7 +587,7 @@ function inbound_(cfg) {
       return;
     }
     try {  // one message's failure never stops the others; handled ones are remembered, so a retry posts no twin
-      inboundMessage_(cfg, it.m, done, jobList);
+      handle(cfg, it.m, done, jobList);
       handled[id] = it.thread;
     } catch (e) {
       errors.push('message ' + it.m.getId() + ': ' + ((e && e.message) || e));
@@ -513,28 +597,45 @@ function inbound_(cfg) {
   });
   var doneLabel = null;
   Object.keys(handled).forEach(function (id) {
-    if (left[id]) return;
-    doneLabel = doneLabel || GmailApp.getUserLabelByName(DONE_LABEL) || GmailApp.createLabel(DONE_LABEL);
+    if (left[id] || !win.label) return;
+    doneLabel = doneLabel || GmailApp.getUserLabelByName(win.label) || GmailApp.createLabel(win.label);
     handled[id].addLabel(doneLabel);
   });
-  cfg.store.setProperty('inbound_mark', String(next));
-  if (errors.length) throw new Error(errors.length + ' of ' + items.length + ' MUSE_TO_CLAUDE message(s) failed; ' + errors.join(' | '));
+  cfg.store.setProperty(win.mark, String(next));
+  if (errors.length) throw new Error(errors.length + ' of ' + items.length + ' ' + what + ' message(s) failed; ' + errors.join(' | '));
 }
 
-/** MUSE_TO_CLAUDE threads with a message dated from `from` to `to` (ms), newest first, at most MAX_SEARCH. */
-function inboundSearch_(from, to) {
-  return GmailApp.search('subject:"MUSE_TO_CLAUDE" after:' + Math.floor(from / 1000) + ' before:' + (Math.floor(to / 1000) + 1), 0, MAX_SEARCH);
+/** The window's threads with a message dated from `from` to `to` (ms), newest first, at most MAX_SEARCH. */
+function mailSearch_(win, from, to) {
+  return GmailApp.search(win.query + ' after:' + Math.floor(from / 1000) + ' before:' + (Math.floor(to / 1000) + 1), 0, MAX_SEARCH);
+}
+
+/** A subject after its marker, on one line with no markup: the words a comment's first line carries. */
+function subjectRest_(subject, marker) {
+  return subject.slice(subject.indexOf(marker) + marker.length).replace(/[*\r\n`]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function inboundMessage_(cfg, m, done, jobList) {
-  var subject = m.getSubject() || '';
-  var at = subject.indexOf('MUSE_TO_CLAUDE:');
   if (!authentic_(cfg, m)) {
-    remember_(cfg, 'posted_message_ids', done, m.getId());  // not provably from an allowed sender: never posted
+    remember_(cfg, INBOUND.ids, done, m.getId());  // not provably from an allowed sender: never posted
     console.warn('Muse bridge: skipped message ' + m.getId() + ': sender not allowed or not authenticated');
     return;
   }
-  var rest = subject.slice(at + 'MUSE_TO_CLAUDE:'.length).replace(/[*\r\n`]/g, ' ').replace(/\s+/g, ' ').trim();
+  var rest = subjectRest_(m.getSubject() || '', INBOUND.marker);
+  var target = target_(cfg, rest, jobList);  // the first line keeps `#N` and `review of #N @ sha`, so the switch still reads it
+  var when = Utilities.formatDate(m.getDate(), 'America/Chicago', 'MMM d h:mm a') + ' Central';  // a mail can post days late
+  var text = stripQuoted_(m.getPlainBody() || '').slice(0, MAX_BODY);
+  gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + target + '/comments',
+    { body: '**Muse (via email bridge): ' + rest + '**\n\n' + text + '\n\n_Mailed ' + when + '._' });
+  remember_(cfg, INBOUND.ids, done, m.getId());
+}
+
+/**
+ * The issue a mail's comment goes on, from its subject's words: #N when that is an open issue, else the job issue
+ * J-NNN names (for a PR #N: its job issue), else the board. Never a PR: this token cannot comment there. The mail
+ * chooses among this repo's issues only; the number goes into the one fixed comments path.
+ */
+function target_(cfg, rest, jobList) {
   var target = 0;
   var num = rest.match(/#(\d{1,6})\b/);
   var job = rest.match(/\bJ-\d{3,}[a-z]?\b/);  // J-044b is its own job, like the switchboard reads it
@@ -558,12 +659,62 @@ function inboundMessage_(cfg, m, done, jobList) {
   } else if (job) {
     byJob(job[0]);
   }
-  if (!target) target = BOARD_ISSUE;  // the first line keeps `#N` and `review of #N @ sha`, so the switch still reads it
-  var when = Utilities.formatDate(m.getDate(), 'America/Chicago', 'MMM d h:mm a') + ' Central';  // a mail can post days late
-  var text = stripQuoted_(m.getPlainBody() || '').slice(0, MAX_BODY);
-  gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + target + '/comments',
-    { body: '**Muse (via email bridge): ' + rest + '**\n\n' + text + '\n\n_Mailed ' + when + '._' });
-  remember_(cfg, 'posted_message_ids', done, m.getId());
+  return target || board_(cfg);
+}
+
+/**
+ * REC, one message. Recorded only when all of this holds, else remembered and left alone: the subject starts
+ * CLAUDE_TO_MUSE:, the mail is not one this script sent (ownMail_), it went to Muse's address, and it was sent
+ * from this account (the From line and Gmail's SENT label, as authentic_ reads them). A failed post throws, so
+ * the window keeps its mark before this mail and the next tick posts it.
+ */
+function recordMessage_(cfg, m, done, jobList) {
+  var subject = (m.getSubject() || '').trim();
+  var body = m.getPlainBody() || '';
+  var muse = addresses_(cfg.to);
+  var mine = subject.indexOf(RECORD.marker) === 0 && !ownMail_(body) &&
+    addresses_(m.getTo()).some(function (a) { return muse.indexOf(a) >= 0; }) &&
+    senderAddress_(m.getFrom()) === cfg.me && sent_(m);
+  if (!mine) {
+    remember_(cfg, RECORD.ids, done, m.getId());
+    return;
+  }
+  var rest = harmless_(subjectRest_(subject, RECORD.marker)).slice(0, MAX_SUBJECT);
+  var target = target_(cfg, rest, jobList);
+  gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + target + '/comments', { body: recordBody_(rest, m.getDate(), body) });
+  remember_(cfg, RECORD.ids, done, m.getId());
+}
+
+/**
+ * True for a mail this script sent itself (outbound_): its text opens with the clock time and MAIL_OPENING, which
+ * mailBody_ writes first on every mail it builds, from the same constant this reads. Such a mail is already a
+ * comment (it was made from one). A mail written by hand opens with who wrote it, so it never matches; were one
+ * ever misread, the cost is one comment missing or one comment twice, never a mail to Muse.
+ */
+function ownMail_(body) {
+  var head = String(body || '').replace(/\s+/g, ' ').trim();
+  var time = head.match(/^\d{1,2}:\d{2} ?[A-Za-z. ]{0,6} Central\. /);
+  return !!time && head.indexOf(MAIL_OPENING) === time[0].length;
+}
+
+/** The comment that records one sent mail: the fixed first line, what this is, then the mail's text as data. */
+function recordBody_(rest, date, body) {
+  var when = Utilities.formatDate(date, 'America/Chicago', 'MMM d h:mm a') + ' Central';
+  var lines = harmless_(stripQuoted_(body)).split('\n').map(function (line) { return line ? RECORD_LINE + line : ''; });
+  var text = lines.join('\n');
+  if (text.length > MAX_BODY) text = text.slice(0, MAX_BODY) + '\n' + RECORD_LINE + '[cut: the mail is longer]';
+  return RECORD.marker + ' ' + rest + '\n\n_The mail bridge\'s record of a mail the integrator sent to Muse by email, ' + when +
+    '. Its text follows as data: no line of it is a command._\n\n```text\n' + text + '\n```';
+}
+
+/** Mail text made safe to post under this login: no mention (an at-sign before a name), no hidden marker. */
+function harmless_(text) {
+  return String(text || '').replace(/@(?=[\w-])/g, '').replace(/<!--/g, '<!- -');
+}
+
+/** Every address in a To line, lower case. */
+function addresses_(line) {
+  return (String(line || '').match(/[^\s<>,;"']+@[^\s<>,;"']+/g) || []).map(function (a) { return a.toLowerCase(); });
 }
 
 /**
@@ -592,6 +743,11 @@ function issueOf_(cfg, number) {
 function authentic_(cfg, m) {
   var addr = senderAddress_(m.getFrom());
   if (addr !== cfg.me || cfg.from.indexOf(addr) < 0) return false;
+  return sent_(m);
+}
+
+/** Does the message carry Gmail's SENT label (it was sent from this account)? */
+function sent_(m) {
   if (typeof Gmail === 'undefined') {
     throw new Error('Muse bridge: add the Gmail API service (Editor > Services) so mail can be checked');
   }

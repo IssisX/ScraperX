@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Check that every runnable touch scenario runs in a CI touch shard.
 
-The godot-touch job splits UITEST scenarios across two shards by
-hand-written `for scenario in ...` lists (touch-1, touch-2). A scenario
-in neither list never runs in CI, and CI green would say nothing about
+The godot-touch job splits UITEST scenarios across three shards by
+hand-written `for scenario in ...` lists (touch-1, touch-2, touch-3). A
+scenario in no list never runs in CI, and CI green would say nothing about
 it; a scenario listed twice runs twice. Until now that partition was
 verified by hand each time a list changed. This script is the touch
 counterpart of check_ctest_shard_coverage.py: it reads the shard lists
@@ -69,6 +69,7 @@ from pathlib import Path
 SHARDS = [
     ("touch-1", "Drive control paths through the real input pipeline (shard 1)"),
     ("touch-2", "Drive control paths through the real input pipeline (shard 2)"),
+    ("touch-3", "Drive control paths through the real input pipeline (shard 3)"),
 ]
 
 SKIP_PREFIXES = ("look_", "pad_", "keyboard_")
@@ -210,6 +211,11 @@ def _self_test():
         "            touch_delta touch_hold; do\n"
         "            echo \"$scenario\"\n"
         "          done\n"
+        "      - name: Drive control paths through the real input pipeline (shard 3)\n"
+        "        run: |\n"
+        "          for scenario in touch_epsilon; do\n"
+        "            echo \"$scenario\"\n"
+        "          done\n"
         "  godot-audits-and-mix:\n    steps:\n"
         "      - name: Measure the mix\n"
         "        run: echo mix\n"
@@ -221,6 +227,7 @@ def _self_test():
         '"touch_gamma": {},\n'
         '"touch_delta": {},\n'
         '"touch_hold": {},\n'
+        '"touch_epsilon": {},\n'
         '"audio_mix": {},\n'
         '"look_still": {},\n'
         '"perf_attrib": {},\n'
@@ -239,7 +246,7 @@ def _self_test():
         if verdict["failures"]:
             raise AssertionError(f"valid: expected clean, got {verdict['failures']}")
         if verdict["covered"] != {"touch_alpha", "touch_beta", "touch_gamma",
-                                  "touch_delta", "touch_hold"}:
+                                  "touch_delta", "touch_hold", "touch_epsilon"}:
             raise AssertionError(f"valid: wrong covered set {verdict['covered']}")
         skipped = verdict["skipped"]
         if skipped.get("other CI job or local-only measurement") != ["audio_mix", "perf_attrib"]:
@@ -311,6 +318,28 @@ def _self_test():
             return
         raise AssertionError("missing-step: expected SystemExit")
 
+    def missing_step_3():
+        # touch-3's step gone: its scenarios would silently stop running.
+        text = good_workflow.replace(
+            "      - name: Drive control paths through the real input pipeline (shard 3)\n",
+            "", 1)
+        try:
+            shard_lists(text)
+        except SystemExit as exc:
+            if "Drive control paths through the real input pipeline (shard 3)" not in str(exc):
+                raise AssertionError(f"missing-step-3: wrong message {exc}")
+            return
+        raise AssertionError("missing-step-3: expected SystemExit")
+
+    def duplicate_across_2_3():
+        # touch_gamma listed in shard 2 and again in shard 3.
+        text = good_workflow.replace("for scenario in touch_epsilon;",
+                                     "for scenario in touch_epsilon touch_gamma;", 1)
+        verdict = check_coverage(shard_lists(text),
+                                 registered_scenarios(good_driver))
+        if verdict["failures"] != ["listed twice: touch_gamma"]:
+            raise AssertionError(f"duplicate-across-2-3: got {verdict['failures']}")
+
     def missing_loop():
         text = good_workflow.replace(
             "          for scenario in touch_gamma \\\n"
@@ -367,6 +396,9 @@ def _self_test():
         lists = shard_lists(good_workflow)
         if lists["touch-2"] != ["touch_gamma", "touch_delta", "touch_hold"]:
             raise AssertionError(f"continuation-split: got {lists['touch-2']}")
+        # Shard 2's block ends at shard 3's step: no bleed either way.
+        if lists["touch-3"] != ["touch_epsilon"]:
+            raise AssertionError(f"continuation-split: got touch-3 {lists['touch-3']}")
 
     case("valid", valid)
     case("missing-scenario", missing_scenario)
@@ -375,6 +407,8 @@ def _self_test():
     case("buttons-unregistered", buttons_unregistered)
     case("stale-known-gap", stale_known_gap)
     case("missing-step", missing_step)
+    case("missing-step-3", missing_step_3)
+    case("duplicate-across-2-3", duplicate_across_2_3)
     case("missing-loop", missing_loop)
     case("empty-loop", empty_loop)
     case("missing-job", missing_job)

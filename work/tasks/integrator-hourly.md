@@ -6,20 +6,15 @@ every Muse mail, red proof, review and merge, and it acts then; these runs catch
 then dropped if events covered everything.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
-Pace (Cory 11-06: track AND predict, so the limit lasts to Sunday night): every run works out % now itself: the
-last meter reading + (`cost_usd` now - `cost_usd` then) / $ per 1%, the least-squares fit of every reading this week (two
-whole-% readings 2 h apart can't give it: 11-07 they said $30, the fit $13); it is said only when it changes a step. Ask Cory for the meter only at the day's last run or
-within 2% of a checkpoint (11-07): it refits and catches his Claude use outside this session. Predict: % now + the burn of the last 3 h x daytime hours left (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM), at
-each checkpoint (81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM), and the hour it hits 100%. A prediction over a checkpoint
-throttles now, before it is crossed: no new helper, the next full run quiet (answers, merges), Cory gets the prediction and the
-cut in one line. Loosen a step only when two runs predict under.
+Pace: no throttling (Cory 11-10: "you can stop throttling completely"; he has usage resets to spend). No pace
+prediction, no meter asks, no quiet runs to save quota.
 Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
-Helpers (sub-agents): one at a time while over pace (Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
+Helpers (sub-agents): at most two at a time (11-10), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
 
 Change the check here, never in the task's prompt. Post only when something changed.
@@ -29,8 +24,8 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Note `date +%s`, then mail `after:<mark> (subject:MUSE_TO_CLAUDE OR from:sentry.io OR subject:"Run failed: Switchboard")`
    and `python3 tools/board/asks.py --since <mark + 120>` (no overlap): both list only what came after the mark, so empty means nothing
    new. Act on each, then set the mark to the time you noted less 120 s (mail indexes late; a repeat is in the notes) and push it (never before acting; nothing new: leave it). Muse's mail: act now or hand it
-   to a helper; post its verdicts on GitHub if the bridge has not. Muse's diffs go on `fb-bot/integrate-<job>`
-   (protected: `fb-bot/integrate-protected-<job>`) from the sha it names, then a PR starting `Job: J-NNN`.
+   to a helper; post its verdicts on GitHub if the bridge has not. Muse pushes its own branches (the integrator's
+   pushes to `fb-bot/` are refused); the switchboard opens its PRs.
    Asks: RELAY? = a `To Muse:` post (mail it); REPOST = an ask to Grok not at the start of a comment (repost it
    starting `To Grok:`); an ask to Claude = answer it now. Full runs also run `asks.py --hours 24` and answer any
    ask to Claude still open (a miss); its other lines were handled when first listed.
@@ -52,7 +47,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    six big unstarted jobs in `work/tasks/muse.md`: derive the next from `03_EXECUTION/GAP_LIST.md` and
    Cory's asks, a whole system or set piece, written whole on its own job issue, and mail it. Rule on Muse's
    proposals within the hour. Every hard job's owner has asked the right other agent where it is guessing.
-   Replace the "This hour" section of board #340's body with who got what; never a new comment.
+   Replace the "This hour" section of the board's body (the open issue labeled `board`) with who got what; never a new comment.
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current: only what has no other home. Over a cap in CLAUDE.md: trim it now.
 6. **Stop waste seen this run; no searching for new tools or setups** (Cory 11-06 10 AM) unless a system keeps failing (11-09). Is the weekly pace on track for the Monday 11 AM reset? List every wake-up
@@ -60,12 +55,11 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
 
-Between runs: the switchboard merges by itself; the inbox (#282), PR events on Claude's own PRs and helper reports wake
-the integrator. Mail wakes nothing: only the runs read it. Free Muse takes the builds first.
+Between runs: the switchboard merges by itself; the inbox (#282: every Muse mail the bridge posts, proofs, reviews),
+PR events on Claude's own PRs and helper reports wake the integrator. Free Muse takes the builds first.
 
-Trunk merges on any PR are yours, done the hour it conflicts, and the owner is mailed the new sha. Hand a merge to
-Muse only when the conflict is in its own logic, by a mail that says "Muse: resolve". Never ask for a job and then
-do it yourself: if you take a job back, mail that first (11-05: Muse's merge agent was wasted on #232/#233).
+Trunk merges: each owner merges trunk into its own branch (Muse too, 11-10); the integrator does it only for its
+own and Claude's branches. Never ask for a job and then do it yourself: if you take a job back, mail that first.
 Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can miss a push, #235).
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (#171 merged into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe to PRs you merge yourself
