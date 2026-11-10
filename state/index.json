@@ -93,7 +93,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-10T04:48:57Z",
+     "rechecked": "2026-11-10T11:29:35Z",
      "ref": "ASK|ask on #108",
      "sends": 0,
      "thread": 108,
@@ -299,7 +299,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T08:09:47Z"
+   "updated": "2026-11-10T11:29:35Z"
   },
   "J-007": {
    "attempt": 1,
@@ -1820,6 +1820,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
      "missing": 3,
+     "rechecked": "2026-11-10T11:29:35Z",
      "ref": "BRANCH|fb-bot/integrate-j038-slice1",
      "sends": 1,
      "sent_by": "shadow",
@@ -2002,7 +2003,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T09:09:09Z"
+   "updated": "2026-11-10T11:29:35Z"
   },
   "J-040": {
    "attempt": 0,
@@ -2060,11 +2061,11 @@
     "fb-bot/integrate-protected-j042-touch2-geometry": "c6b87e787df3b43014b7aeb1e1c57918e8811b3b"
    },
    "cancelled": null,
-   "ci": "red: godot-touch (touch-2)",
+   "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-10T00:56:16Z",
-   "head": "eba129c3cb07fc993a2cdc7c2483c543acc4fe7b",
+   "head": "fff08c95de677fe90a15b07f9ae1bdd4cc75162d",
    "issue": 240,
    "job": "J-042",
    "landed": {
@@ -2251,7 +2252,7 @@
    ],
    "review": "",
    "state": "review",
-   "updated": "2026-11-10T10:29:43Z"
+   "updated": "2026-11-10T11:29:35Z"
   },
   "J-043": {
    "attempt": 0,
@@ -2816,6 +2817,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
+     "rechecked": "2026-11-10T11:29:35Z",
      "ref": "BRANCH|fb-bot/integrate-protected-j044l",
      "sends": 0,
      "thread": 0,
@@ -2859,7 +2861,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T04:48:57Z"
+   "updated": "2026-11-10T11:29:35Z"
   },
   "J-045": {
    "attempt": 0,
@@ -3525,7 +3527,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-10T04:48:57Z",
+     "rechecked": "2026-11-10T11:29:35Z",
      "ref": "BRANCH|claude/integrate-j051-asks-since",
      "sends": 0,
      "thread": 0,
@@ -3544,7 +3546,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T06:38:52Z"
+   "updated": "2026-11-10T11:29:35Z"
   },
   "J-051b": {
    "attempt": 0,
@@ -5188,16 +5190,16 @@
    "updated": "2026-11-10T09:09:09Z"
   },
   "J-069": {
-   "attempt": 0,
+   "attempt": 1,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-protected-j069": "7b79e7cdbc89d3cdf41aae78184aa94df30276b2"
    },
    "cancelled": null,
-   "ci": "",
+   "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": null,
+   "deadline": "2026-11-10T15:47:00Z",
    "head": "7b79e7cdbc89d3cdf41aae78184aa94df30276b2",
    "issue": 332,
    "job": "J-069",
@@ -5290,17 +5292,44 @@
      "version": "6758703434",
      "via": "session",
      "what": "ask from Muse on #332"
+    },
+    {
+     "ack": null,
+     "ack_rule": "verdict|ack",
+     "asked": null,
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-10T11:29:35Z",
+     "dead": "2026-11-10T17:47:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-10T15:47:00Z",
+     "id": "O-b98a158d",
+     "kind": "review",
+     "last_error": "",
+     "last_sent": "2026-11-10T11:29:35Z",
+     "missing": 0,
+     "ref": "PR|#376",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 376,
+     "to": "codex",
+     "unseen": null,
+     "version": "land:7b79e7cdbc89d3cdf41aae78184aa94df30276b2",
+     "via": "relay",
+     "what": "#376 @ 7b79e7cd has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
     }
    ],
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 0,
+   "pr": 376,
    "pr_done": "",
-   "prs": [],
+   "prs": [
+    376
+   ],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-10T10:29:43Z"
+   "state": "review",
+   "updated": "2026-11-10T11:29:35Z"
   },
   "J-070": {
    "attempt": 0,

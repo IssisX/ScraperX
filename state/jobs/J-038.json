@@ -91,6 +91,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
+   "rechecked": "2026-11-10T11:29:35Z",
    "ref": "BRANCH|fb-bot/integrate-j038-slice1",
    "sends": 1,
    "sent_by": "shadow",
@@ -273,5 +274,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T09:09:09Z"
+ "updated": "2026-11-10T11:29:35Z"
 }

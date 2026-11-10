@@ -1,14 +1,14 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-protected-j069": "7b79e7cdbc89d3cdf41aae78184aa94df30276b2"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
+ "deadline": "2026-11-10T15:47:00Z",
  "head": "7b79e7cdbc89d3cdf41aae78184aa94df30276b2",
  "issue": 332,
  "job": "J-069",
@@ -101,15 +101,42 @@
    "version": "6758703434",
    "via": "session",
    "what": "ask from Muse on #332"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T11:29:35Z",
+   "dead": "2026-11-10T17:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T15:47:00Z",
+   "id": "O-b98a158d",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-10T11:29:35Z",
+   "missing": 0,
+   "ref": "PR|#376",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 376,
+   "to": "codex",
+   "unseen": null,
+   "version": "land:7b79e7cdbc89d3cdf41aae78184aa94df30276b2",
+   "via": "relay",
+   "what": "#376 @ 7b79e7cd has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 376,
  "pr_done": "",
- "prs": [],
+ "prs": [
+  376
+ ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-10T10:29:43Z"
+ "state": "review",
+ "updated": "2026-11-10T11:29:35Z"
 }

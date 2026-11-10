@@ -42,6 +42,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
+   "rechecked": "2026-11-10T11:29:35Z",
    "ref": "BRANCH|fb-bot/integrate-protected-j044l",
    "sends": 0,
    "thread": 0,
@@ -85,5 +86,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T04:48:57Z"
+ "updated": "2026-11-10T11:29:35Z"
 }
