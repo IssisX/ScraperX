@@ -29,6 +29,11 @@ checklist, workflow, layer or test only to look rigorous.
 
 ## 3. Diagnose before building
 
+For a fight contact, perception, movement or force, determinism, save/load, native-versus-drawn or test-drift
+failure, open only the matching section of `references/ENGINEERING-FAULT-TREES.md` (ChatGPT, 11-10): its rival
+causes and one discriminating probe each. They are hypotheses; check names and numbers at the live head.
+
+
 - **Bug:** reproduce the exact symptom at the right revision; find the first invalid state transition; name at
   least one rival cause; run the cheapest check that separates them; fix the owner of that transition; rerun the
   same failing path. Two failed patches: stop patching and re-trace the whole causal chain. Never fix by
