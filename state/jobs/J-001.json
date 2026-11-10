@@ -65,6 +65,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
    "missing": 3,
+   "rechecked": "2026-11-10T15:09:20Z",
    "ref": "ASK|ask on #108",
    "sends": 1,
    "sent_by": "live",
@@ -76,7 +77,11 @@
    "what": "ask from Muse on #108"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T14:27:18Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-06T21:09:14Z",
    "attempts": 0,
@@ -96,13 +101,17 @@
    "sends": 0,
    "thread": 108,
    "to": "claude",
-   "unseen": "2026-11-09T22:39:05Z",
+   "unseen": null,
    "version": "6695638361",
    "via": "session",
    "what": "ask from Muse on #108"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T14:27:18Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-06T21:29:11Z",
    "attempts": 0,
@@ -122,7 +131,7 @@
    "sends": 0,
    "thread": 108,
    "to": "claude",
-   "unseen": "2026-11-09T23:08:50Z",
+   "unseen": null,
    "version": "6696106838",
    "via": "session",
    "what": "ask from Muse on #108"
@@ -156,7 +165,11 @@
    "what": "ask from ChatGPT on #227"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T14:27:18Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-07T06:14:13Z",
    "attempts": 0,
@@ -171,11 +184,12 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
+   "rechecked": "2026-11-10T15:09:20Z",
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
    "to": "claude",
-   "unseen": "2026-11-10T08:09:47Z",
+   "unseen": null,
    "version": "6703240056",
    "via": "session",
    "what": "ask from Muse on #108"
@@ -297,5 +311,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T11:49:51Z"
+ "updated": "2026-11-10T15:09:20Z"
 }

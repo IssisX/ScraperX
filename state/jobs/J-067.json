@@ -154,7 +154,11 @@
    "what": "ask from Muse on #328"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T13:07:52Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T07:02:50Z",
    "attempts": 1,
@@ -179,7 +183,11 @@
    "what": "ask from Muse on #328"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T13:07:52Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T08:57:51Z",
    "attempts": 1,
@@ -240,5 +248,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T14:01:28Z"
+ "updated": "2026-11-10T15:09:20Z"
 }

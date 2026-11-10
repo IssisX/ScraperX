@@ -3,13 +3,13 @@
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j049-pr1": "ed151a6c1f763dc1ab8ed77db53912790b50c397",
-  "fb-bot/integrate-protected-j049-pr1": "9b0a12ea9099fcf76ef1444cc3201c2f9187f6b1"
+  "fb-bot/integrate-protected-j049-pr1": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078"
  },
  "cancelled": null,
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T02:19:23Z",
+ "deadline": "2026-11-10T16:17:00Z",
  "head": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
  "issue": 278,
  "job": "J-049",
@@ -20,9 +20,9 @@
    "2026-11-09T17:35:20Z"
   ],
   "fb-bot/integrate-protected-j049-pr1": [
-   "9b0a12ea9099fcf76ef1444cc3201c2f9187f6b1",
-   "",
-   "2026-11-09T17:35:20Z"
+   "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
+   "closed #367",
+   "2026-11-10T15:09:20Z"
   ]
  },
  "obligations": [
@@ -42,6 +42,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
+   "rechecked": "2026-11-10T15:09:20Z",
    "ref": "BRANCH|fb-bot/integrate-j049-pr1",
    "sends": 0,
    "thread": 278,
@@ -224,7 +225,10 @@
    "asked": null,
    "attempts": 0,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T15:09:20Z",
+    "why": "PR closed without merging"
+   },
    "created": "2026-11-09T22:19:23Z",
    "dead": "2026-11-10T06:19:23Z",
    "dead_lettered": null,
@@ -306,7 +310,10 @@
    "asked": null,
    "attempts": 2,
    "backlog": null,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T15:09:20Z",
+    "why": "PR closed without merging"
+   },
    "created": "2026-11-09T23:58:50Z",
    "dead": "2026-11-10T17:47:00Z",
    "dead_lettered": null,
@@ -326,17 +333,42 @@
    "version": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
    "via": "relay",
    "what": "review #367 @ 2d99e906"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T15:09:20Z",
+   "dead": "2026-11-10T18:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T16:17:00Z",
+   "id": "O-ac0bbca6",
+   "kind": "ruling",
+   "last_error": "",
+   "last_sent": "2026-11-10T15:09:20Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j049-pr1",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 367,
+   "to": "claude",
+   "unseen": null,
+   "version": "closed:2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j049-pr1` @ 2d99e906: closed #367 without merging at this head: reopen it, or delete the branch"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
  "pr": 367,
- "pr_done": "",
+ "pr_done": "closed",
  "prs": [
   367
  ],
  "review": "waiting",
- "state": "review",
- "updated": "2026-11-10T14:01:28Z"
+ "state": "working",
+ "updated": "2026-11-10T15:09:20Z"
 }

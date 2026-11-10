@@ -81,6 +81,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
+   "rechecked": "2026-11-10T15:09:20Z",
    "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -230,7 +231,11 @@
    "what": "ask from Muse on #122"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T13:07:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T06:22:49Z",
    "attempts": 1,
@@ -284,7 +289,11 @@
    "what": "`fb-bot/integrate-protected-j015-slice1` proof red: native-tests (athletic-traversal-2), native-tests (athletic-traversal-1), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T13:07:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T08:27:47Z",
    "attempts": 1,
@@ -309,7 +318,11 @@
    "what": "ask from Muse on #122"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T13:07:40Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T09:47:55Z",
    "attempts": 1,
@@ -342,5 +355,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T12:25:07Z"
+ "updated": "2026-11-10T15:09:20Z"
 }

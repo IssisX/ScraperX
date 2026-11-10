@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T23:00:00Z",
+ "deadline": null,
  "head": "",
  "issue": 322,
  "job": "J-064",
@@ -21,7 +21,11 @@
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T14:34:13Z",
+    "by": "grok",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-08T13:14:10Z",
    "attempts": 0,
@@ -46,7 +50,11 @@
    "what": "ask from Claude on #322"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T14:34:13Z",
+    "by": "grok",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-08T13:44:01Z",
    "attempts": 0,
@@ -71,7 +79,11 @@
    "what": "ask from Claude on #322"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T14:34:13Z",
+    "by": "grok",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-08T13:58:12Z",
    "attempts": 0,
@@ -161,5 +173,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-10T03:44:17Z"
+ "updated": "2026-11-10T15:09:20Z"
 }

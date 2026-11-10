@@ -10,7 +10,7 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
+ "head": "4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -297,7 +297,11 @@
    "what": "#372 has a merge conflict with the base"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T15:09:20Z",
+    "by": "codex",
+    "how": "a LAND or FIX on the head"
+   },
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
@@ -320,18 +324,43 @@
    "version": "land:d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
    "via": "relay",
    "what": "#372 @ d45ec240 has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T15:09:20Z",
+   "dead": "2026-11-10T23:09:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T19:09:20Z",
+   "id": "O-ef693717",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T14:45:22Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "switch",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
+   "via": "email",
+   "what": "#372: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 372,
+ "pr": 299,
  "pr_done": "",
  "prs": [
   299,
   372
  ],
- "review": "",
- "state": "review",
- "updated": "2026-11-10T14:01:28Z"
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-10T15:09:20Z"
 }

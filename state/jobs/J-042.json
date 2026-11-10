@@ -173,7 +173,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T10:32:42Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T15:09:20Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-10T10:29:43Z",
    "dead": "2026-11-10T17:17:00Z",
    "dead_lettered": null,
@@ -230,5 +233,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T12:25:07Z"
+ "updated": "2026-11-10T15:09:20Z"
 }

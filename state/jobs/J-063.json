@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
+ "deadline": "2026-11-10T19:09:20Z",
  "head": "",
  "issue": 321,
  "job": "J-063",
@@ -124,6 +124,31 @@
    "version": "6722246281",
    "via": "email",
    "what": "ask from Claude on #321"
+  },
+  {
+   "ack": null,
+   "ack_rule": "work|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T15:09:20Z",
+   "dead": "2026-11-10T23:09:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T19:09:20Z",
+   "id": "O-eb9f63ce",
+   "kind": "start-agent",
+   "last_error": "",
+   "last_sent": "2026-11-10T15:09:20Z",
+   "missing": 0,
+   "ref": "JOB|#321",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 321,
+   "to": "muse",
+   "unseen": null,
+   "version": "start:321",
+   "via": "email",
+   "what": "start J-063"
   }
  ],
  "outcome": null,
@@ -134,5 +159,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T22:39:05Z"
+ "updated": "2026-11-10T15:09:20Z"
 }

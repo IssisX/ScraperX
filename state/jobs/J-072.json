@@ -11,21 +11,23 @@
   "claude/integrate-j072-reconciler-golive": "1684160ac43c572e6a7f4a30b7435c39ab88d327",
   "claude/integrate-j072-reconciler-holes": "abc7358c354fbdaba6d39af15ea4e4bec588a639",
   "claude/integrate-j072-reconciler-live": "56617dc53771e4946d1808895cba0f5ff6198ac9",
-  "claude/integrate-j072-review-all-findings": "8bebcd7a313132fd83bef76fbff544a6400681e0"
+  "claude/integrate-j072-review-all-findings": "8bebcd7a313132fd83bef76fbff544a6400681e0",
+  "claude/integrate-j072-trackers": "21b30001fff6ca527e70e719de24d5d5c7197ad0",
+  "claude/j072-handback": "7b6a5755c3bf8d49ee48bc3f0b03d5f0a89d6e75"
  },
  "cancelled": null,
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:17:00Z",
- "head": "3c2445b770503fba7f7caf0d4e078d9cb4877058",
+ "head": "7b6a5755c3bf8d49ee48bc3f0b03d5f0a89d6e75",
  "issue": 350,
  "job": "J-072",
  "landed": {
   "claude/integrate-j072-board-source": [
    "8b68ebd4834fb3db28f79d9916bf2334d52d95aa",
-   "",
-   "2026-11-10T14:01:28Z"
+   "merged #381",
+   "2026-11-10T15:09:20Z"
   ],
   "claude/integrate-j072-chatgpt-wake": [
    "6c21ea5757c4c5040612dac0718b4d5272adbd22",
@@ -71,6 +73,16 @@
    "8bebcd7a313132fd83bef76fbff544a6400681e0",
    "merged #366",
    "2026-11-09T22:19:23Z"
+  ],
+  "claude/integrate-j072-trackers": [
+   "21b30001fff6ca527e70e719de24d5d5c7197ad0",
+   "merged #382",
+   "2026-11-10T15:09:20Z"
+  ],
+  "claude/j072-handback": [
+   "7b6a5755c3bf8d49ee48bc3f0b03d5f0a89d6e75",
+   "",
+   "2026-11-10T15:09:20Z"
   ]
  },
  "obligations": [
@@ -268,7 +280,7 @@
    "closed": null,
    "created": "2026-11-09T19:35:48Z",
    "dead": "2026-11-10T14:59:30Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-10T15:09:20Z",
    "due": "2026-11-10T13:59:30Z",
    "id": "O-a34f6e29",
    "kind": "ask",
@@ -295,7 +307,7 @@
    "closed": null,
    "created": "2026-11-09T19:35:48Z",
    "dead": "2026-11-10T14:59:30Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-10T15:09:20Z",
    "due": "2026-11-10T13:59:30Z",
    "id": "O-1ac5a17e",
    "kind": "ask",
@@ -540,7 +552,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T15:09:20Z",
+    "why": "its PR #381 was merged at this head"
+   },
    "created": "2026-11-10T14:01:28Z",
    "dead": "2026-11-10T17:17:00Z",
    "dead_lettered": null,
@@ -575,6 +590,6 @@
   379
  ],
  "review": "LAND",
- "state": "landable",
- "updated": "2026-11-10T14:01:28Z"
+ "state": "proof",
+ "updated": "2026-11-10T15:09:20Z"
 }

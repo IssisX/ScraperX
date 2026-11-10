@@ -2,7 +2,7 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j045-first-advance": "eed2f73f74f17aa02714e241773c71bee8663cc6"
+  "fb-bot/integrate-j045-first-advance": "257891fd18d85299adb2b18827fea9d5061559f5"
  },
  "cancelled": null,
  "ci": "",
@@ -14,9 +14,9 @@
  "job": "J-045",
  "landed": {
   "fb-bot/integrate-j045-first-advance": [
-   "eed2f73f74f17aa02714e241773c71bee8663cc6",
-   "",
-   "2026-11-10T12:25:07Z"
+   "257891fd18d85299adb2b18827fea9d5061559f5",
+   "merged #380",
+   "2026-11-10T15:09:20Z"
   ]
  },
  "obligations": [
@@ -218,6 +218,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-10T14:01:28Z"
+ "state": "merged",
+ "updated": "2026-11-10T15:09:20Z"
 }

@@ -99,7 +99,11 @@
    "what": "ask from Muse on #116"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T15:09:20Z",
+    "by": "codex",
+    "how": "a LAND or FIX on the head"
+   },
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
@@ -122,6 +126,31 @@
    "version": "land:237ba1703ce562e34e1279b022edf7a7705ff7a6",
    "via": "relay",
    "what": "#377 @ 237ba170 has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T15:09:20Z",
+   "dead": "2026-11-10T23:09:20Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T19:09:20Z",
+   "id": "O-1f270758",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T14:32:55Z",
+   "missing": 0,
+   "ref": "PR|#377",
+   "sends": 1,
+   "sent_by": "switch",
+   "thread": 377,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:237ba1703ce562e34e1279b022edf7a7705ff7a6",
+   "via": "email",
+   "what": "#377: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
@@ -132,7 +161,7 @@
  "prs": [
   377
  ],
- "review": "",
- "state": "review",
- "updated": "2026-11-10T12:59:30Z"
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-10T15:09:20Z"
 }

@@ -44,15 +44,36 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (2), from the switchboard at 11-09 4:19 PM Central.\n\n- Needs you: 55 item(s) from before the reconciler went live (Muse 27, Claude 16, Grok 7, ChatGPT 3, PE 2). None is sent one by one; each leaves the list when it is answered, acked or settled, and the day's state file lists them.\n- Needs you: PIPE: no switchboard pass from 11-09 3:19 PM to 11-09 4:19 PM Central (60 min; the clock dispatches every 10 min). The 10-minute trigger (muse_bridge.gs) or its health check is not running; since 11-09 3:19 PM Central."
+  },
+  {
+   "at": "2026-11-10T15:09:20Z",
+   "keys": [
+    "O-d0889dd8",
+    "O-57ae7ea3",
+    "O-6b556027",
+    "O-f45193c7",
+    "O-a34f6e29",
+    "O-1ac5a17e",
+    "claude-asks:2026-11-10"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (7), from the switchboard at 11-10 9:09 AM Central.\n\n- Needs you: J-001 fix on #108: 'claude/integrate-j001-hold' proof red: godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-tr. Muse did not act (2 send(s) by email, no ack); since 11-10 5:49 AM Central. Done: /ack O-d0889dd8\n- Needs you: J-001 ask on #108: ask from Claude on #108. ChatGPT did not act (2 send(s) by issue, no ack); since 11-10 1:39 AM Central. Done: /ack O-57ae7ea3\n- Needs you: J-015 fix on #122: 'fb-bot/integrate-j015-slice1' proof red: scope, no PR. Muse did not act (2 send(s) by email, no ack); since 11-10 6:59 AM Central. Done: /ack O-6b556027\n- Needs you: J-044l fix: 'fb-bot/integrate-protected-j044l-vault' proof red: godot-touch (touch-2), native-tests (athletic-traversal-2), native-t. Muse did not act (2 send(s) by email, no ack); since 11-10 5:49 AM Central. Done: /ack O-f45193c7\n- Needs you: J-072 ask on #350: ask from Claude on #350. PE did not act (2 send(s) by watch, no ack); since 11-10 9:09 AM Central. Done: /ack O-a34f6e29\n- Needs you: J-072 ask on #350: ask from Claude on #350. PE did not act (2 send(s) by watch, no ack); since 11-10 9:09 AM Central. Done: /ack O-1ac5a17e\n- Needs you: 3 ask(s) to Claude from before today have no reply on their threads (answered by mail?): O-51240df7 O-da6b6426 O-e3207013. The integrator posts each answer on its thread or /acks it; none of these is nagged one by one.\n\nStill standing from earlier batches: 1 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-09T22:19:23Z",
+ "last_batch": "2026-11-10T15:09:20Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
  "reported": {
+  "O-1ac5a17e": "2026-11-10T15:09:20Z",
+  "O-57ae7ea3": "2026-11-10T15:09:20Z",
+  "O-6b556027": "2026-11-10T15:09:20Z",
+  "O-a34f6e29": "2026-11-10T15:09:20Z",
+  "O-d0889dd8": "2026-11-10T15:09:20Z",
+  "O-f45193c7": "2026-11-10T15:09:20Z",
   "backlog:2026-11-09T22:19:23Z": "2026-11-09T22:19:23Z",
   "claude-asks:2026-11-09": "2026-11-09T20:56:16Z",
+  "claude-asks:2026-11-10": "2026-11-10T15:09:20Z",
   "gap:2026-11-09T21:19:08Z": "2026-11-09T22:19:23Z"
  }
 }

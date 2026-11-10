@@ -95,7 +95,7 @@
    "kind": "ruling",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "BRANCH|claude/integrate-j044c-upper-body",
    "sends": 0,
    "thread": 298,
@@ -114,5 +114,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-10T15:09:20Z"
 }
