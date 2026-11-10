@@ -102,7 +102,7 @@ him again.
 
 ## The integrator
 
-- Event-driven first (11-10): every Muse mail, red proof, review and merge wakes the integrator through the switchboard inbox, and it acts then. Timed full runs every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM) are only a backstop, kept to 11-12 then dropped if events cover all, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
+- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h, 8:17 AM-11:17 PM Central (Sat-Sun every 4 h, 9:17 AM-9:17 PM) are a backstop to 11-12, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
