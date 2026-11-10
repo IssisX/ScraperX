@@ -24,8 +24,8 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Note `date +%s`, then mail `after:<mark> (subject:MUSE_TO_CLAUDE OR from:sentry.io OR subject:"Run failed: Switchboard")`
    and `python3 tools/board/asks.py --since <mark + 120>` (no overlap): both list only what came after the mark, so empty means nothing
    new. Act on each, then set the mark to the time you noted less 120 s (mail indexes late; a repeat is in the notes) and push it (never before acting; nothing new: leave it). Muse's mail: act now or hand it
-   to a helper; post its verdicts on GitHub if the bridge has not. Muse's diffs go on `fb-bot/integrate-<job>`
-   (protected: `fb-bot/integrate-protected-<job>`) from the sha it names, then a PR starting `Job: J-NNN`.
+   to a helper; post its verdicts on GitHub if the bridge has not. Muse pushes its own branches (the integrator's
+   pushes to `fb-bot/` are refused); the switchboard opens its PRs.
    Asks: RELAY? = a `To Muse:` post (mail it); REPOST = an ask to Grok not at the start of a comment (repost it
    starting `To Grok:`); an ask to Claude = answer it now. Full runs also run `asks.py --hours 24` and answer any
    ask to Claude still open (a miss); its other lines were handled when first listed.
@@ -55,12 +55,11 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    source: unsubscribe, mute or reroute it. If a real saving shows up that costs no quality, build it and tell
    Cory in one line; if none does, say nothing and build nothing (Cory 11-05: never invent work).
 
-Between runs: the switchboard merges by itself; the inbox (#282), PR events on Claude's own PRs and helper reports wake
-the integrator. Mail wakes nothing: only the runs read it. Free Muse takes the builds first.
+Between runs: the switchboard merges by itself; the inbox (#282: every Muse mail the bridge posts, proofs, reviews),
+PR events on Claude's own PRs and helper reports wake the integrator. Free Muse takes the builds first.
 
-Trunk merges on any PR are yours, done the hour it conflicts, and the owner is mailed the new sha. Hand a merge to
-Muse only when the conflict is in its own logic, by a mail that says "Muse: resolve". Never ask for a job and then
-do it yourself: if you take a job back, mail that first (11-05: Muse's merge agent was wasted on #232/#233).
+Trunk merges: each owner merges trunk into its own branch (Muse too, 11-10); the integrator does it only for its
+own and Claude's branches. Never ask for a job and then do it yourself: if you take a job back, mail that first.
 Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can miss a push, #235).
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (#171 merged into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe to PRs you merge yourself
