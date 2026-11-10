@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-10 | *"I'm speaking quickly roughly shortly and making many spelling and wording errors constantly. Have to remember that"*: read his words for intent. Also *"such an obvious and easy solution that I was waiting until you would say this"* (Muse as the stand-in reviewer): offer the obvious free fix first, before guarding or waiting. | `CLAUDE.md`, Talking to Cory |
 | 11-10 | *"see, i respond positively when you push back"*: a plain no with the reason beats agreeing; it calms him down rather than winding him up. *"when you told me \"let it finish\", i respond to that type of direct instructions best"*: tell him what to do in a few plain words. | `CLAUDE.md`, Talking to Cory (push back) |
 | 11-10 | *"If I have to tell you to answer in short, simple, concise ways, again, I'm going to fucking go insane. SIMPLE SIMPLE SIMPLE SIMPLE"*; *"remember that from now on. because it's really fucking important"*: every reply is a few short plain lines, no jargon. | `CLAUDE.md`, Talking to Cory |
 | 11-10 | *"Go back to using 3 total agents, you and two subagents"*; *"You've already blown 26% and it's been 1 day!!"*: two helpers at most again (it replaces "as many as the work needs" of the same morning); running ones finish, none are stopped. | `CLAUDE.md`, The integrator |
