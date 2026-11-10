@@ -41,6 +41,20 @@ const WIND_RATE := 0.23
 const WIND_DIR := Vector3(0.93, 0.0, 0.37)
 const HAIR_ITERATIONS := 3
 const HAIR_JUMP_M := 1.0      # a root that moved this far in a frame (a respawn) restarts the hang
+# Her upper back for the locks: a sphere, so the push is right in any pose. It
+# was 0.17 m about chest (0, 0.05, -0.05): its surface stood up to 13 cm off
+# her back and rose above her shoulder line under the nape, so the locks
+# landed on it and rolled sideways over her shoulders. Fitted to her measured
+# back (BACK_Z: 9.4 cm behind the bone at mid-back) and kept under the collar
+# band behind her neck (J-067).
+const BACK_CENTRE := Vector3(0.0, -0.02, 0.07)
+const BACK_RADIUS := 0.165
+# J-067: her back in chest-local Y, how far behind the chest bone it reaches
+# within |x| 0.12 (measured on her drawn skin, tunic and collar at the guard,
+# + 6 mm for the strand): the collar ring's radius straight behind her.
+const BACK_Z := [Vector2(-0.29, 0.042), Vector2(-0.21, 0.047), Vector2(-0.17, 0.067), Vector2(-0.13, 0.076),
+	Vector2(-0.09, 0.083), Vector2(-0.05, 0.091), Vector2(-0.01, 0.094), Vector2(0.05, 0.092), Vector2(0.09, 0.085),
+	Vector2(0.13, 0.075), Vector2(0.15, 0.065), Vector2(0.17, 0.045), Vector2(0.19, 0.027), Vector2(0.21, 0.021)]
 # J-067: the neck ring's radius by direction, (neck_lo local Y, radius). It was
 # one 0.095 m cylinder, but neck_lo's axis sits near the back of her neck: the
 # back skin is 2-3.5 cm off it between 3 and 10 cm up, the sides 7-12 cm (her
@@ -1470,12 +1484,13 @@ func step_hair(delta: float) -> void:
 				# Collar and belt are rings the two spheres do not cover. Walk the
 				# segment out sideways and down. A lift along the chest axis spends
 				# the hang. Measured radii, not a knob: collar 0.138 on chest
-				# local Y 0.091..0.154, buckle 0.192 on spine_mid local Y -0.001..0.042.
+				# local Y 0.091..0.154 (straight behind her, her measured back, BACK_Z),
+				# buckle 0.192 on spine_mid local Y -0.001..0.042.
 				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138, BACK_Z)
 				q = _clear_ring(above, q, seg, belt, -0.001, 0.042, 0.192)
-				# The neck is a cylinder the collar ring does not cover. Measured on
-				# the posed cloth: max radial 0.089, so 0.095 sits the strand just
-				# outside it. Y -0.01..0.105 is the neck on neck_lo.
+				# The neck is a cylinder the collar ring does not cover, 0.095 at its
+				# front, narrower behind and at the sides (NECK_BACK_R, NECK_SIDE_R).
+				# Y -0.01..0.105 is the neck on neck_lo.
 				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095, NECK_BACK_R, NECK_SIDE_R)
 				# The chest front is a slope, not a wider cylinder. A point can be
 				# outside the collar radius and still be in front of the cloth.
@@ -1645,22 +1660,6 @@ func _ring_out(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float
 	if out.length() < 1e-4:
 		out = Vector3(a.x - origin.x, 0.0, a.z - origin.z)
 	return out
-
-
-# J-067: her back in chest-local Y, how far behind the chest bone it reaches
-# within |x| 0.12 (measured on her drawn skin, tunic and collar at the guard,
-# + 6 mm for the strand): the collar ring's radius straight behind her.
-# Her upper back for the locks: a sphere, so the push is right in any pose. It
-# was 0.17 m about chest (0, 0.05, -0.05): its surface stood up to 13 cm off
-# her back and rose above her shoulder line under the nape, so the locks
-# landed on it and rolled sideways over her shoulders. Fitted to her measured
-# back (BACK_Z: 9.4 cm behind the bone at mid-back) and kept under the collar
-# band behind her neck.
-const BACK_CENTRE := Vector3(0.0, -0.02, 0.07)
-const BACK_RADIUS := 0.165
-const BACK_Z := [Vector2(-0.29, 0.042), Vector2(-0.21, 0.047), Vector2(-0.17, 0.067), Vector2(-0.13, 0.076),
-	Vector2(-0.09, 0.083), Vector2(-0.05, 0.091), Vector2(-0.01, 0.094), Vector2(0.05, 0.092), Vector2(0.09, 0.085),
-	Vector2(0.13, 0.075), Vector2(0.15, 0.065), Vector2(0.17, 0.045), Vector2(0.19, 0.027), Vector2(0.21, 0.021)]
 
 
 # Front of the chest cloth in chest-local Y, the larger of the guard and the
