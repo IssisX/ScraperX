@@ -36,7 +36,7 @@ function bridge(world) {
       const p = url.replace('https://api.github.com/', '');
       const method = opts.method;
       const body = opts.payload ? JSON.parse(opts.payload) : undefined;
-      calls.push({ method, path: p, body });
+      calls.push({ method, path: p, body, auth: opts.headers && opts.headers.Authorization });
       const got = world.github(method, p, body);
       const code = got === undefined ? 404 : (got && got.__code) || 200;
       const text = got === null || got === undefined ? '' : JSON.stringify(got);
@@ -168,6 +168,110 @@ test('an open incident does not hide a new kind of outage', () => {
   b.props.watch_last = '0';
   b.ctx.watchdog_(b.cfg());   // the same incident again: no second alarm
   assert(b.calls.filter((c) => c.method === 'POST').length === 1, 'one alarm per incident');
+});
+
+// J-072: the board is the open issue labeled `board`, looked up at run time. #107 to #340 (11-09) needed an edit
+// and a paste of this script, and until then it posted on the closed board.
+const BOARDS = `repos/${REPO}/issues?labels=board&state=open&per_page=100`;
+
+function mail(id, subject) {
+  return { getId: () => id, getDate: () => new Date(Date.now() - 60000), getSubject: () => subject,
+    getFrom: () => ME, getPlainBody: () => 'Body.' };
+}
+
+// GitHub with `boards` as the answer to the board lookup (a function is called each time), no job issue, #107 closed
+function boardWorld(boards, ids, extra) {
+  return Object.assign({
+    threads: (ids || ['m1']).map((id) => ({ getId: () => 't' + id, getMessages: () => [mail(id, 'MUSE_TO_CLAUDE: #107 resend')], addLabel() {} })),
+    github: (method, p) => {
+      if (method === 'GET' && p === BOARDS) return typeof boards === 'function' ? boards() : boards;
+      if (method === 'GET' && p === `repos/${REPO}/issues/107`) return { number: 107, state: 'closed' };
+      if (method === 'GET' && p.indexOf('/issues?state=open&labels=job') >= 0) return [];
+      if (method === 'POST' && /issues\/\d+\/comments$/.test(p)) return { id: 9 };
+      return undefined;
+    }
+  }, extra || {});
+}
+const posted = (b) => b.calls.filter((c) => c.method === 'POST').map((c) => c.path);
+const lookups = (b) => b.calls.filter((c) => c.path === BOARDS);
+const minutesAgo = (m) => Date.now() - m * 60000;
+
+test('after the board rolls over, mail for the board goes on the new open issue labeled board', () => {
+  const b = bridge(boardWorld([{ number: 400 }]));   // #340 closed at 100 comments; #400 is open and labeled
+  b.ctx.inbound_(b.cfg());
+  assert(posted(b).length === 1 && posted(b)[0] === `repos/${REPO}/issues/400/comments`, 'posted to: ' + posted(b));
+  assert(JSON.parse(b.props.board).n === 400, 'kept: ' + b.props.board);
+  assert(lookups(b).length === 1 && lookups(b)[0].auth === 'Bearer ghp_fake', 'the lookup carries the Issues token only');
+  assert(!b.calls.some((c) => c.auth !== 'Bearer ghp_fake'), 'no call here carries the Actions token');
+});
+
+test('the board is looked up once a tick, then not again for BOARD_CACHE_MIN minutes', () => {
+  const b = bridge(boardWorld([{ number: 400 }], ['m1', 'm2', 'm3']));
+  b.ctx.inbound_(b.cfg());           // three mails for the board in one tick
+  assert(posted(b).length === 3 && lookups(b).length === 1, 'lookups in one tick: ' + lookups(b).length);
+  b.props.posted_message_ids = '[]';
+  b.props.inbound_mark = '';
+  b.ctx.inbound_(b.cfg());           // the next tick, minutes later: the kept board, no read
+  assert(posted(b).length === 6 && lookups(b).length === 1, 'lookups in the next tick: ' + lookups(b).length);
+  b.props.board = JSON.stringify({ n: 400, at: minutesAgo(b.ctx.BOARD_CACHE_MIN + 1) });
+  b.ctx.board_(b.cfg());
+  assert(lookups(b).length === 2, 'looked up again once the kept one is old');
+});
+
+test('a tick with nothing for the board never looks it up', () => {
+  const now = new Date().toISOString();
+  const ok = [{ display_title: 'Switchboard sweep', status: 'completed', conclusion: 'success', updated_at: now,
+    created_at: now, html_url: 'u' }];
+  const b = bridge({ threads: [], github: (method, p) => {
+    if (method === 'GET' && /actions\/workflows\/switchboard\.yml\/runs/.test(p)) return { workflow_runs: ok };
+    if (method === 'GET' && p.indexOf('/issues?state=open') >= 0) return [];
+    if (method === 'POST' && /dispatches$/.test(p)) return null;
+    return undefined;
+  } });
+  b.ctx.tick();
+  assert(b.calls.length > 0 && lookups(b).length === 0, 'calls: ' + b.calls.map((c) => c.path));
+});
+
+test('two open boards: the newest; a pull request carrying the label is never the board', () => {
+  const b = bridge(boardWorld([{ number: 340 }, { number: 400 }, { number: 999, pull_request: { url: 'x' } }]));
+  assert(b.ctx.board_(b.cfg()) === 400, 'board: ' + b.ctx.board_(b.cfg()));
+  const onlyPr = bridge(boardWorld([{ number: 999, pull_request: { url: 'x' } }]));
+  assert(onlyPr.ctx.board_(onlyPr.cfg()) === 340, 'a PR alone is no board');
+});
+
+test('a failed or empty lookup keeps the last board found, else the built-in one, and never throws', () => {
+  const kept = { board: JSON.stringify({ n: 400, at: minutesAgo(60) }) };
+  [{ __code: 500 }, [], { message: 'not a list' }, [{ number: '401' }, null]].forEach((answer) => {
+    const b = bridge(boardWorld(answer, ['m1'], { props: kept }));
+    b.ctx.inbound_(b.cfg());
+    assert(posted(b)[0] === `repos/${REPO}/issues/400/comments`, JSON.stringify(answer) + ' posted to: ' + posted(b));
+    assert(JSON.parse(b.props.board).n === 400, 'the last board is kept');
+    const cold = bridge(boardWorld(answer));
+    cold.ctx.inbound_(cold.cfg());
+    assert(posted(cold)[0] === `repos/${REPO}/issues/340/comments`, JSON.stringify(answer) + ' cold posted to: ' + posted(cold));
+  });
+  const junk = bridge(boardWorld([], ['m1'], { props: { board: '{not json' } }));
+  assert(junk.ctx.board_(junk.cfg()) === 340, 'a broken property is no board');
+});
+
+test('the SWITCHBOARD DOWN and BRIDGE DOWN alarms go on the looked-up board', () => {
+  const old = new Date(Date.now() - 3 * 3600000).toISOString();
+  const failed = [{ display_title: 'Switchboard sweep', status: 'completed', conclusion: 'failure',
+    updated_at: old, created_at: old, html_url: 'u' }];
+  const runs = runsWorld([], failed);
+  const github = (method, p) => {
+    if (method === 'GET' && p === BOARDS) return [{ number: 400 }];
+    if (method === 'POST' && /issues\/400\/comments$/.test(p)) return { id: 1 };
+    return runs(method, p);
+  };
+  const b = bridge({ github });
+  b.ctx.watchdog_(b.cfg());
+  assert(posted(b).length === 1 && posted(b)[0] === `repos/${REPO}/issues/400/comments`, 'SWITCHBOARD DOWN on: ' + posted(b));
+  const d = bridge({ github, props: { health_out: JSON.stringify({ failingSince: old }) } });
+  const cfg = d.cfg();
+  d.ctx.failed_(cfg.store, cfg, 'out', new Error('boom'));
+  assert(posted(d).length === 1 && posted(d)[0] === `repos/${REPO}/issues/400/comments`, 'BRIDGE DOWN on: ' + posted(d));
+  assert(JSON.parse(d.props.health_out).alarmed === true, 'alarmed once');
 });
 
 results.forEach((r) => console.log(r));

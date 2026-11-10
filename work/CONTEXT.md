@@ -39,9 +39,10 @@ than the author's (`rules.land_counts`).
   `eyes-live`, `matron`, `security`, `orchestrator`) and `hard`. Its body holds the four fields:
   `invariant` (the finish fact), `files` (owned functions), `reach` (tests it reaches), `needs`.
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
-- Issue #340 (the board): its body is the live board (the integrator's section, then the ledger's section,
-  which the switch rewrites); comments hold rulings, BLOCKED lines and asks. The owner's plain comments
-  there are orders. The board issue number is `BOARD_ISSUE` in `tools/switchboard/switch.py`.
+- The board is the one open issue labeled `board` (today #340): its body is the live board (the integrator's
+  section, then the ledger's section, which the switch rewrites); comments hold rulings, BLOCKED lines and
+  asks. The owner's plain comments there are orders. The switch and the Muse bridge find it by that label each
+  run (`Switch.board_issue`, `board_`): a new board needs the label on it and the old one closed, no code.
 - One owner per job: the switch removes a second `owner:*` label and says so.
 
 ## Messages
@@ -61,7 +62,7 @@ than the author's (`rules.land_counts`).
 ## The switch (`.github/workflows/switchboard.yml`, `tools/switchboard/`)
 
 No model decides in it. Its clock is the Muse bridge (`muse_bridge.gs`), which dispatches a real sweep every
-10 minutes and posts SWITCHBOARD DOWN on #340 when none has succeeded for 30 (J-072); the proof's last job
+10 minutes and posts SWITCHBOARD DOWN on the board when none has succeeded for 30 (J-072); the proof's last job
 dispatches one too. It also runs on a verdict comment, an issue labeled `owner:*` or `needs:orchestrator`,
 GitHub's own schedule (which drops most runs), and the digest at 7:00 AM Central. A dispatch is real unless
 `dry_run=true`, and a dry run is named DRY. Every run reads the state from GitHub, so a dropped or repeated run changes nothing.

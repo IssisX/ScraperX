@@ -8,7 +8,7 @@
  *   IN   Mail whose subject starts `MUSE_TO_CLAUDE:` (from an allowed sender, proven by more than the
  *        forgeable From line: see authentic_) is posted as a comment:
  *        on #N when the subject names `#N` and #N is an issue, else on the job issue `J-NNN` the subject
- *        names (or, for a PR #N, the job issue whose title names #N), else on the board #340. Never on a
+ *        names (or, for a PR #N, the job issue whose title names #N), else on the board (board_). Never on a
  *        PR: this token cannot comment there. Its first line is `**Muse (via email bridge): <subject>**`,
  *        so a subject like `MUSE_TO_CLAUDE: J-042 review of #100 @ 1a2b3c4d: LAND` is a verdict the
  *        switch reads for #100 wherever it lands (switch.py bridged_verdicts).
@@ -51,15 +51,22 @@
  * bridge posts ONE comment on the board starting `Claude (integrator): BRIDGE DOWN:` with the error's
  * first 200 characters (the token cut out), and none again until that direction has worked once.
  *
+ * Board (J-072): the board is the open issue labeled `board`, looked up with GITHUB_TOKEN (board_), so a new
+ * board needs no edit and no paste here (#107 to #340 on 11-09 needed both, and until then every alarm and
+ * unaddressed mail went on the closed board). The script keeps the last one found in the script property
+ * `board`; BOARD_ISSUE is only the fallback before any lookup has worked.
+ *
  * Version (J-072): BRIDGE_VERSION is the hash switch.py bridge_version() gives of this file (the value itself
  * blanked), so any edit changes it; tools/switchboard/test_bridge.py fails until it is updated. The clock sends
  * it with each dispatch (input bridge_version, which names the run), and the sweep posts one PIPE ALARM when the
  * live script is not trunk's or names no version. After an edit merges, paste the whole file here again.
  */
 
-var BRIDGE_VERSION = '907e45b83aa8';
+var BRIDGE_VERSION = '8bc222da553e';
 var DEFAULT_REPO = 'IssisX/ScraperX';
-var BOARD_ISSUE = 340;
+var BOARD_ISSUE = 340;           // the fallback only: the live board is board_(), the open issue labeled BOARD_LABEL
+var BOARD_LABEL = 'board';
+var BOARD_CACHE_MIN = 10;        // a board found this recently is not looked up again
 var WAKE_LABEL = 'wake:muse';
 var DONE_LABEL = 'muse-bridged';
 var BOT_LOGIN = 'github-actions[bot]';
@@ -156,7 +163,7 @@ function failed_(store, cfg, dir, err) {
     try {
       var since = Utilities.formatDate(new Date(h.failingSince), 'America/Chicago', 'MMM d h:mm a') + ' Central';
       var last = h.lastOk ? Utilities.formatDate(new Date(h.lastOk), 'America/Chicago', 'MMM d h:mm a') + ' Central' : 'never recorded';
-      gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + BOARD_ISSUE + '/comments', { body:
+      gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + board_(cfg) + '/comments', { body:
         ALARM_HEADER + ' ' + DIRECTIONS[dir] + ' has failed since ' + since + ' (last success ' + last + ').\n\n' +
         'Last error: ' + h.lastErr + '\n\nThe full error is in the bridge\'s Apps Script Executions log (Cory only). ' +
         'One alarm per outage: the bridge posts none again until this direction has worked once.' });
@@ -230,6 +237,44 @@ function gh_(cfg, method, path, body) {
   }
   var text = r.getContentText('UTF-8');
   return text ? JSON.parse(text) : null;
+}
+
+/**
+ * The live board's issue number (J-072): the open issue labeled BOARD_LABEL, the newest when several are open; a
+ * pull request never counts. Looked up at most once a tick and once every BOARD_CACHE_MIN minutes (the script
+ * property `board` keeps {n, at}), and only when something is about to be posted on the board, so a tick with
+ * nothing for the board adds no GitHub read. It is an issues read like any other: the Issues-only GITHUB_TOKEN,
+ * api.github.com. A lookup that fails or finds none keeps the last board found, else the built-in BOARD_ISSUE,
+ * and logs it; it never throws, so the alarm or the mail is still posted.
+ */
+function board_(cfg) {
+  if (cfg.board) return cfg.board;
+  var known = {};
+  try { known = JSON.parse(cfg.store.getProperty('board') || '{}') || {}; } catch (e) { known = {}; }
+  var last = issueNumber_(known.n);
+  var now = Date.now();
+  var age = now - (Number(known.at) || 0);
+  if (last && age >= 0 && age < BOARD_CACHE_MIN * 60000) return (cfg.board = last);
+  var open = [];
+  var why = 'no open issue is labeled ' + BOARD_LABEL;
+  try {
+    (gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues?labels=' + encodeURIComponent(BOARD_LABEL) + '&state=open&per_page=100') || [])
+      .forEach(function (it) { if (it && !it.pull_request && issueNumber_(it.number)) open.push(it.number); });
+  } catch (e) {
+    why = 'the board lookup failed (' + clean_(cfg, e) + ')';
+  }
+  var found = open.length ? Math.max.apply(null, open) : 0;
+  if (found) {
+    cfg.store.setProperty('board', JSON.stringify({ n: found, at: now }));
+    if (open.length > 1) console.warn('Muse bridge: ' + open.length + ' open issues are labeled ' + BOARD_LABEL + '; using the newest, ' + found);
+  } else {
+    console.warn('Muse bridge: ' + why + '; using ' + (last ? 'the last board found, ' + last : 'the built-in board, ' + BOARD_ISSUE));
+  }
+  return (cfg.board = found || last || BOARD_ISSUE);
+}
+
+function issueNumber_(v) {
+  return typeof v === 'number' && v > 0 && Math.floor(v) === v ? v : 0;
 }
 
 function remembered_(cfg, key) {
@@ -355,10 +400,10 @@ function watchdog_(cfg) {
     if (sched && (!ok || Date.parse(sched.updated_at) > Date.parse(ok.updated_at))) ok = sched;
   }
   cfg.store.setProperty('watch_last', String(now));
-  var board = 'repos/' + cfg.repo + '/issues/' + BOARD_ISSUE + '/comments';
+  var board = function () { return 'repos/' + cfg.repo + '/issues/' + board_(cfg) + '/comments'; };  // looked up only to post
   if (fresh(ok)) {
     if (state.down) {  // a failed post throws and leaves the incident open, so the UP line is retried
-      gh_(cfg, 'POST', board, { body: UP_HEADER + ' a non-dry sweep succeeded at ' + central_(ok.updated_at) +
+      gh_(cfg, 'POST', board(), { body: UP_HEADER + ' a non-dry sweep succeeded at ' + central_(ok.updated_at) +
         ' (' + ok.html_url + '). The SWITCHBOARD DOWN of ' + central_(state.since) + ' is over.' });
       cfg.store.setProperty('watch_switchboard', '{}');
     }
@@ -379,7 +424,7 @@ function watchdog_(cfg) {
     'One alarm per incident; a SWITCHBOARD UP line follows when a sweep succeeds.';
   var errors = [];
   var told = false;
-  try { gh_(cfg, 'POST', board, { body: text }); told = true; } catch (e) { errors.push('board post: ' + ((e && e.message) || e)); }
+  try { gh_(cfg, 'POST', board(), { body: text }); told = true; } catch (e) { errors.push('board post: ' + ((e && e.message) || e)); }
   try {
     MailApp.sendEmail(cfg.me, DOWN_SUBJECT + ': no successful sweep in ' + DOWN_MIN + ' min', text);
     told = true;
@@ -558,7 +603,7 @@ function inboundMessage_(cfg, m, done, jobList) {
   } else if (job) {
     byJob(job[0]);
   }
-  if (!target) target = BOARD_ISSUE;  // the first line keeps `#N` and `review of #N @ sha`, so the switch still reads it
+  if (!target) target = board_(cfg);  // the first line keeps `#N` and `review of #N @ sha`, so the switch still reads it
   var when = Utilities.formatDate(m.getDate(), 'America/Chicago', 'MMM d h:mm a') + ' Central';  // a mail can post days late
   var text = stripQuoted_(m.getPlainBody() || '').slice(0, MAX_BODY);
   gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + target + '/comments',
