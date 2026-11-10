@@ -202,7 +202,7 @@ void run_wet_e_guard(const bool expect) {
     // The bodies there were before E's rebuild, in order; and those built
     // since, after them: the bay, the second shaft's access, then summit
     // rigging; last, after world-b's pieces, the forklift on deck 154 (J-041).
-    constexpr std::uint32_t kBodiesBeforeE = 595;
+    constexpr std::uint32_t kBodiesBeforeE = 597;
     Fnv bodies;
     for (std::uint32_t i = 0; i < std::min(world.kit_body_count(), kBodiesBeforeE); ++i) {
         bodies.add(world.kit_body_entity(i));
@@ -217,7 +217,7 @@ void run_wet_e_guard(const bool expect) {
     // Re-pinned for world-b (J-014, #207): 137 new east/west pieces on the
     // stack rings, their table places taken after the Matron's throwables
     // and their bodies built last, after the summit. The bay, twin and summit
-    // bodies still follow the original 595 in order; only the total grows
+    // bodies still follow the original 596 in order; only the total grows
     // by 137, so the sequence check covers exactly those twelve bodies.
     // J-041: then the deck-154 forklift's two bodies, after the east/west
     // pieces (its frame, then its forks).
@@ -304,7 +304,7 @@ void run_wet_e_guard(const bool expect) {
         return;
     }
     // As recorded on the tree before E's rebuild (its parent, 4118862).
-    // Re-pinned for world-b (J-014, #207): the first 595 bodies are the
+    // Re-pinned for world-b (J-014, #207): the first 596 bodies are the
     // same bodies in the same order, but the crane steel, machine weights
     // and throwables carried entities 137 higher (the reserved east/west
     // places sat before them in the table), so the hash over their
@@ -312,9 +312,16 @@ void run_wet_e_guard(const bool expect) {
     // #216): the east/west places take the end of the table, after the
     // throwables, so those entities are their trunk ones again. Before
     // 4824050261233220131, now 3514033760028014323.
-    require(bodies.hash == 3514033760028014323ULL,
+    // Re-pinned for J-015 slice 1 (#122): the S2 cart is now its own body,
+    // so the first 596 bodies are the same bodies in the same order plus
+    // the cart. Before 3514033760028014323, now 871693465045063551.
+    // Re-pinned for the J-015 slice-1 cage-return fix: the S2 drain striker
+    // is one more body before E, so the first 597 bodies are the same bodies
+    // in the same order plus the striker. Before 871693465045063551, now
+    // 13291784286957421329 (measured on the fixed binary, AS-007-E print).
+    require(bodies.hash == 13291784286957421329ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
+    require(since_after, "E guard: the original 597 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is
