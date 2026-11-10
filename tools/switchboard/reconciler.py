@@ -28,7 +28,8 @@ Obligations: id O-<8 hex>, kind (ask|review|ruling|fix|start-agent|ci), to, via
 unseen. Due by wakeability (work/agents.yml `wake`): the Claude API (reviews) 30 min; the integrator (`session`: every
 other Claude obligation) the first of its hourly runs (work/tasks/integrator-hourly.md: 8:17 AM-11:17 PM Central on
 weekdays, 9:17 AM-9:17 PM Sat-Sun) at or after its next run plus 1 h, so nothing falls due overnight; Codex
-(`relay`: its app ignores the bot's mentions, so the integrator posts the mention) the integrator's due plus 30 min;
+(`relay`: its app ignores the bot's mentions; the switch posts the mention with the team token (switch.py
+codex_mention), and only without the token is the integrator told to post it) the integrator's due plus 30 min;
 email (Muse) 4 h; issue with a known schedule (Grok: 10 AM, 4 PM Central) its next run + 1 h; anything else is
 manual and goes straight to Cory. Ack: `/ack O-<id>` from a team login, a proven action (a new head, a verdict on
 the head, a merge), or a reply by the addressee after the obligation that names its O-id. An ask has one judge,
@@ -1075,8 +1076,9 @@ class CommentOutbox:
     The marker on the delivered comment is the receipt: a crash before the state commit never re-sends."""
     live = True
 
-    def __init__(self, gh, roster: L.Roster, board: int):
+    def __init__(self, gh, roster: L.Roster, board: int, relay: bool = True):
         self.gh, self.roster, self.board = gh, roster, board
+        self.relay = relay   # False: the switch posts Codex's mention itself, with the team token (switch.codex_mention)
         self.posted: dict[tuple[str, int], str] = {}   # (id, send): a Muse comment posted, its receipt not yet in
 
     def send(self, rec: dict, ob: dict, send: int, attempt: int) -> None:
@@ -1110,6 +1112,8 @@ class CommentOutbox:
                 self.posted.pop((ob["id"], send), None)
             return
         n = ob["thread"] or self.board
+        if ob["via"] == "relay" and not self.relay:
+            return   # nothing for the integrator to relay: the switch's own ask on the PR is the send (J-072)
         if ob["via"] == "relay":
             # Codex (#350 hole 5): its app does not answer the bot's mentions, so the ask goes to the integrator,
             # who posts the mention as the team login. The mention is in a code span: the bot's post pings no one.
@@ -2069,11 +2073,12 @@ def ledger_notifies(root: pathlib.Path) -> bool:
     return not (mode(root) == "live" and config(root).get("notices") == "v2")
 
 
-def outboxes(live: bool, gh, roster: L.Roster, board: int, mailer: Callable | None = None):
-    """(the notice outbox, Cory's notifier) for a mode: shadow records, live posts."""
+def outboxes(live: bool, gh, roster: L.Roster, board: int, mailer: Callable | None = None, relay: bool = True):
+    """(the notice outbox, Cory's notifier) for a mode: shadow records, live posts. `relay` False: Codex's asks
+    need no relay through the integrator (the switch holds the team token and posts the mention itself)."""
     if not live:
         return ShadowOutbox(), ShadowCory()
-    return CommentOutbox(gh, roster, board), CoryNotifier(gh, board, mailer)
+    return CommentOutbox(gh, roster, board, relay), CoryNotifier(gh, board, mailer)
 
 
 def sweep(sw, steered: list, board: int, proof_workflow: str, system_branches: Iterable[str],
@@ -2088,7 +2093,8 @@ def sweep(sw, steered: list, board: int, proof_workflow: str, system_branches: I
     gh = CountingGH(sw.gh)
     p = read_pass(sw, gh, steered, board, proof_workflow, set(system_branches) | {STATE_BRANCH}, system_prs,
                   roster, cfg)
-    outbox, cory = outboxes(which == "live", sw.gh, roster, board)   # posts go through the switch's own client
+    # posts go through the switch's own client; with the team token the switch asks Codex itself (codex_mention)
+    outbox, cory = outboxes(which == "live", sw.gh, roster, board, relay=not getattr(sw, "merge_token", ""))
     res = run_pass(GitStore(gh), p, roster, GitHubLookups(gh), sw.now, outbox, sw.out, cory=cory)
     sw.out(f"reconciler  {which} pass {res.status}: {res.events} events, {gh.calls} GitHub calls, "
            f"tries {res.tries}; SLO {json.dumps(res.slo, sort_keys=True)}")
@@ -2118,7 +2124,7 @@ def main() -> int:
     before = gh.calls
     cfg = yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {}
     roster = L.Roster(cfg)
-    p = read_pass(sw, gh, steered, switch.BOARD_ISSUE, switch.PROOF_WORKFLOW,
+    p = read_pass(sw, gh, steered, sw.board_issue(), switch.PROOF_WORKFLOW,
                   {switch.LEDGER_BRANCH, switch.INBOX_BRANCH, STATE_BRANCH}, {switch.INBOX_PR}, roster, cfg)
     res = run_pass(LocalStore(pathlib.Path(args.state_dir)), p, roster, GitHubLookups(gh), now, ShadowOutbox())
     print(f"reconciler dry run at {central(now)} Central: {res.status}, {res.events} events, "

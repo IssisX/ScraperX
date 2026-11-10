@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """The ledger: every open item in the collaboration, who holds it, its age and its deadline, written into the
-board's body (#340) by the switchboard each full sweep, so nothing sits unseen until someone sweeps by hand.
+board's body (the open issue labeled `board`) by the switchboard each full sweep, so nothing sits unseen until
+someone sweeps by hand.
 
 Items, from GitHub alone:
   PR          every open PR, from the sweep's own reading (switch.py's Steered list)
@@ -782,6 +783,16 @@ def fire(gh, timers: list[dict], roster: Roster, now: dt.datetime, board: int, o
     return send(gh, due_notices(items, now, set(), roster, board), roster, now, board, out, muse_label)
 
 
+def fires_on_board(timers: list[dict], roster: Roster) -> bool:
+    """Does one of these cached notices go on the board itself (due_notices: mail, or an item with no thread of its
+    own)? A fast sweep reads the board's number from GitHub only then; a notice on a job thread costs no read."""
+    for t in timers:
+        d = t["item"]
+        if not int(d.get("thread") or 0) or roster.wake((d.get("holder") or {}).get("agent") or "") == "email":
+            return True
+    return False
+
+
 def due_notices(items: list[Item], now: dt.datetime, sent: set[str], roster: Roster, board: int) -> list[Notice]:
     """The notices owed this sweep, the most urgent first: each item past its deadline whose key for its stage was
     never sent, one comment per (thread, holder). Muse reads mail, not threads: hers go in one mail per sweep, on
@@ -1253,7 +1264,7 @@ def main() -> int:
         facts, ctx = sw.pr_facts(pr)
         d = rules.merge_decision(facts, sw.team.vendor_of_branch(facts.head_ref), sw.team)
         steered.append(switch.Steered(facts, ctx, d))
-    sweep(sw, steered, switch.BOARD_ISSUE, switch.MUSE_LABEL, switch.PROOF_WORKFLOW,
+    sweep(sw, steered, sw.board_issue(), switch.MUSE_LABEL, switch.PROOF_WORKFLOW,
           {switch.LEDGER_BRANCH, switch.INBOX_BRANCH}, {switch.INBOX_PR}, switch.central(now),
           reconciler.ledger_notifies(sw.root))   # as the switch calls it (work/switchboard.yml `notices`)
     return 0

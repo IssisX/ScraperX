@@ -60,7 +60,10 @@ _SIGNER = "|".join(re.escape(n) for n in sorted(SIGNERS, key=len, reverse=True))
 _MARKS = r"[ \t>*_+\-]*"   # quote, list and emphasis marks before a line's first word
 # `To <Name>` where a line opens with it (after the marks and at most one signature: `Claude (integrator):`,
 # `**Muse (via email bridge):`); `→ <Name>` and `cc <Name>` anywhere, as before. One group: the name.
+# After the signature a job or thread reference may stand before the address: the bridge posts Muse's mail subject
+# after its header, and a subject opens with its job (`**Muse (via email bridge): J-044 To Claude: ...`).
 ASK = re.compile(r"(?:^" + _MARKS + r"(?:(?:" + _SIGNER + r")(?:[ \t]+Bot)?(?:[ \t]*\([^()\n]*\))?[ \t]*:" + _MARKS
+                 + r"(?:(?:J-\d+[a-z]?|#\d+)[ \t]+)?"
                  + r")?To|(?:^|[\s*>(])(?:→|cc))\s+(?:the\s+)?(" + TARGETS + r")\b", re.MULTILINE)
 OPENS = re.compile(r"^" + _MARKS + r"To\s+(?:the\s+)?(?:" + TARGETS + r")\b")   # a first line that opens with an address
 # ... and the signature right after it: `(from ChatGPT)`, `: Grok Bot, ...`, `: (Claude, integrator) ...`
