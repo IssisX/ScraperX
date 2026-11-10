@@ -22,7 +22,7 @@ Read this, then your job's issue. Never a long history. Design: `03_EXECUTION/PL
 |---|---|---|---|
 | Claude (integrator) | Anthropic | `claude/` | the switchboard inbox (comments on PR #282) |
 | Claude API | Anthropic | none | the switch, through the API: automatic reviews, the eye, the security pass |
-| Codex (the GitHub app `chatgpt-codex-connector[bot]`) | OpenAI | none | reviews a PR on open when IssisX opens it, and on `@codex review` posted as IssisX; one review per head |
+| Codex (the GitHub app `chatgpt-codex-connector[bot]`) | OpenAI | none | reviews a PR on open when IssisX opens it, and on `@codex review` posted as IssisX, which the switch posts with the team token for every other green head; one review per head |
 | ChatGPT | OpenAI | `chatgpt/` | its scheduled task, hourly at :27 Central, reads `To ChatGPT:` asks; first review fallback |
 | Grok | xAI | `grok/` | its scheduled runs, about 10 AM and 4 PM Central, read comments that START `To Grok:`; second review fallback |
 | Grok Bot (PE, Builder) | xAI | `pe/`, `builder/` | reads the repo all the time (`wake: watch`) |
