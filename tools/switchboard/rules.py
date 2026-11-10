@@ -206,13 +206,25 @@ def codex_in_flight(comments: Iterable[Mapping], reactions: Iterable[Mapping], h
         sha = str((r or {}).get("commit_sha") or "")
         if r is None or not sha or not head_sha.startswith(sha):
             continue
-        if r.get("status") == "completed":
-            done = True
+        if r.get("status") in ("completed", "failed"):
+            done = True   # a failed review (its usage limit, 11-10 #343) is over, not running
         elif r.get("status"):
             return True
     eyes = any(x.get("content") == "eyes" and (x.get("user") or {}).get("login", "").lower() == CODEX_LOGIN
                for x in reactions)
     return eyes and not done
+
+
+def codex_failed(comments: Iterable[Mapping], head_sha: str) -> bool:
+    """Codex's newest state for this head says its review failed ("We couldn't complete this review"; 11-10 #343:
+    its usage limit). Its turn on the head is over: the review goes on as if Codex were not there."""
+    last = None
+    for c in comments:
+        r = codex_review_state(c.get("body") or "", (c.get("user") or {}).get("login", ""))
+        sha = str((r or {}).get("commit_sha") or "")
+        if r is not None and sha and head_sha.startswith(sha) and r.get("status"):
+            last = r.get("status")
+    return last == "failed"
 
 
 def codex_wait_over(proof_done_at: str, now_iso: str, minutes: float = CODEX_WAIT_MINUTES) -> bool:

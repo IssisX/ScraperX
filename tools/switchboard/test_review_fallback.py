@@ -546,6 +546,16 @@ class CodexRunning(unittest.TestCase):
         self.assertEqual((reviewed, posted), ([HEAD], []))
         self.assertFalse(any(l.startswith("WAIT-CODEX") for l in lines))
 
+    def test_failed_state_on_the_head_falls_back_at_once(self):
+        # 11-10 #343: Codex hit its usage limit and wrote status "failed" for the head; the switch read that as a
+        # running review and held the head for 30 minutes
+        reviewed, posted, lines = self.go([self.state(HEAD, "failed")], green_minutes_ago=1)
+        self.assertEqual(reviewed, [HEAD])
+        self.assertFalse(any(l.startswith("WAIT-CODEX") for l in lines))
+        self.assertFalse(rules.codex_in_flight([self.state(HEAD, "failed")], [self.EYES], HEAD))
+        self.assertFalse(rules.codex_failed([self.state(HEAD, "failed"), self.state(HEAD, "running")], HEAD))
+        self.assertFalse(rules.codex_failed([self.state(OTHER_HEAD, "failed")], HEAD))
+
     def test_running_on_another_head_or_nothing_running_does_not_wait(self):
         self.assertEqual(self.go([self.state(OTHER_HEAD, "running")])[0], [HEAD])
         self.assertEqual(self.go()[0], [HEAD])
