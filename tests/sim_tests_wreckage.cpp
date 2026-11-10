@@ -93,41 +93,59 @@ void run_s2_wreckage() {
     std::cout << "PASS scraperx_sim stack wreckage S2: ride_s=" << ride.seconds << '\n';
 }
 
-// S3 ridden to deck 12 and the rider off: the empty cage must come back down
-// to deck 8 by itself, as S1's does, and stay there at rest. The way on is
-// S3 itself: the cage back at deck 8, ready to be boarded again.
+// S3 ridden to deck 12 and the rider off: the car falls, the cage rises,
+// and the spent machine stays put. S3 has no empty-return mechanism by
+// design — the 3500 kg car holds the 400 kg empty cage up — so the test
+// asserts the spent state, not a return: the car down, the cage up, the
+// brake tripped and holding, nothing moving for its settle time. The way on
+// is the C3 crown trusses and high riser ladder from deck 12.
 void run_s3_wreckage() {
     Simulation s(InitialSpawn::Deck8North);
     (void)s.advance_frame(0.5);
     require(load_s3_pan(s), "S3 wreck: the pig loaded, the brake tripped");
     const S3Ride ride = ride_s3(s, 25.0);
     require(ride.reached_top && ride.rode_on_cage, "S3 wreck: ridden to deck 12");
-    // The rider is off the cage on deck 12 (ride_s3 walks off). The empty
-    // cage must come back down to deck 8 by itself and settle there.
-    bool sent_up = false;
-    bool back = false;
-    for (std::uint32_t tick = 0; tick < 90 * 150 && !back; ++tick) {
+    // The rider is off the cage on deck 12 (ride_s3 walks off). The car has
+    // fallen and the cage has risen; the spent machine must sit still.
+    bool spent = false;
+    for (std::uint32_t tick = 0; tick < 90 * 150 && !spent; ++tick) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
         const auto state = s.stack_state();
-        sent_up = sent_up || state.s3_cage_travel >= 44.0 - 0.01;
+        spent = state.s3_cage_travel >= 44.0 - 0.01 && state.s3_car_travel <= -44.0 + 0.01;
         if (tick % (90 * 15) == 0) {
             std::cout << "S3 wreck t=" << tick / 90 << "s cage_travel=" << state.s3_cage_travel
                       << " car_travel=" << state.s3_car_travel
                       << " brake_latched=" << (state.s3_brake_latched ? 1 : 0)
                       << " rope_tension=" << state.s3_rope_tension << '\n';
         }
-        if (sent_up && std::abs(state.s3_cage_travel) <= 0.02) {
-            back = true;
-        }
     }
-    require(sent_up && back, "S3 wreck: the empty cage came back down to deck 8 by itself");
-    // It must stay down at rest, not pass through on its way back up.
+    require(spent, "S3 wreck: the car fell to the foot, the cage rose to the head");
+    // The rope is still carrying the fall's transient when the car first
+    // reaches the foot — let it die before the spent state is read, or the
+    // baseline is the spike, not the hold.
+    for (std::uint32_t tick = 0; tick < 90 * 5; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    }
+    // The spent state: car down, cage up, brake tripped and holding, nothing
+    // moving for its settle time.
+    const auto settled = s.stack_state();
+    require(std::abs(settled.s3_cage_travel - 44.0) <= 0.1, "S3 wreck: the cage is up at the head");
+    require(std::abs(settled.s3_car_travel + 44.0) <= 0.1, "S3 wreck: the car is down at the foot");
+    require(!settled.s3_brake_latched, "S3 wreck: the brake stays tripped");
     for (std::uint32_t tick = 0; tick < 90 * 10; ++tick) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
-        require(std::abs(s.stack_state().s3_cage_travel) <= 0.02,
-                "S3 wreck: the returned cage stays down at deck 8");
+        const auto state = s.stack_state();
+        require(std::abs(state.s3_cage_travel - settled.s3_cage_travel) <= 0.05,
+                "S3 wreck: the spent cage stays up at the head");
+        require(std::abs(state.s3_car_travel - settled.s3_car_travel) <= 0.05,
+                "S3 wreck: the spent car stays down at the foot");
+        require(!state.s3_brake_latched, "S3 wreck: the brake stays tripped");
+        require(std::abs(state.s3_rope_tension - settled.s3_rope_tension) <= 500.0,
+                "S3 wreck: the spent rope stays in tension");
     }
-    std::cout << "PASS scraperx_sim stack wreckage S3: ride_s=" << ride.seconds << '\n';
+    std::cout << "PASS scraperx_sim stack wreckage S3: ride_s=" << ride.seconds
+              << " cage_travel=" << settled.s3_cage_travel << " car_travel=" << settled.s3_car_travel
+              << " rope_tension=" << settled.s3_rope_tension << '\n';
 }
 
 // F ridden to TP-340 and the rider off: the header's dump thrown over
