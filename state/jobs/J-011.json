@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T04:17:00Z",
+ "deadline": null,
  "head": "",
  "issue": 118,
  "job": "J-011",
@@ -156,7 +156,11 @@
    "what": "ask from Claude on #118"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T02:51:33Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T02:46:43Z",
    "attempts": 1,
@@ -189,5 +193,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-10T02:43:29Z"
+ "updated": "2026-11-10T03:44:17Z"
 }

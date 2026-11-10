@@ -6,11 +6,13 @@
   "claude/integrate-j071-ci-timeout": "1db855d65f497782c8d66fe1e108749ddef7c601"
  },
  "cancelled": null,
- "ci": "none",
- "commands": [],
+ "ci": "red: godot-touch (touch-2)",
+ "commands": [
+  "6757895911:0"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
- "head": "8c15936580cad46b448fdc1c85f49277e2ed4d36",
+ "deadline": "2026-11-10T04:44:17Z",
+ "head": "5206a8ad54a77aa816ef10fc6aa34c400dbb6b89",
  "issue": 0,
  "job": "J-071",
  "landed": {
@@ -233,10 +235,34 @@
    "version": "6747083987",
    "via": "watch",
    "what": "ask from Claude on #338"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-10T03:44:17Z",
+   "dead": "2026-11-10T05:44:17Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T04:44:17Z",
+   "id": "O-cf6d46a5",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "PR|#373",
+   "sends": 0,
+   "thread": 373,
+   "to": "grok_bot",
+   "unseen": null,
+   "version": "red:5206a8ad54a77aa816ef10fc6aa34c400dbb6b89",
+   "via": "watch",
+   "what": "#373 proof red: godot-touch (touch-2)"
   }
  ],
- "outcome": "merged",
- "outcome_reason": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339",
+ "outcome": null,
+ "outcome_reason": "",
  "owner": "grok_bot",
  "past": [
   {
@@ -247,14 +273,23 @@
     363
    ],
    "why": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339"
+  },
+  {
+   "at": "2026-11-10T02:43:29Z",
+   "issue": 0,
+   "outcome": "merged",
+   "prs": [
+    369
+   ],
+   "why": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339"
   }
  ],
- "pr": 369,
- "pr_done": "merged",
+ "pr": 373,
+ "pr_done": "",
  "prs": [
-  369
+  373
  ],
  "review": "",
- "state": "merged",
- "updated": "2026-11-10T02:43:29Z"
+ "state": "working",
+ "updated": "2026-11-10T03:44:17Z"
 }

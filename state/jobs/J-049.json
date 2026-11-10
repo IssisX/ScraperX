@@ -313,13 +313,13 @@
    "kind": "review",
    "last_error": "",
    "last_sent": "2026-11-10T01:57:56Z",
-   "missing": 2,
+   "missing": 3,
    "ref": "PR|#367",
    "sends": 2,
    "sent_by": "live",
    "thread": 367,
    "to": "codex",
-   "unseen": null,
+   "unseen": "2026-11-10T03:44:17Z",
    "version": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
    "via": "relay",
    "what": "review #367 @ 2d99e906"
@@ -335,5 +335,5 @@
  ],
  "review": "waiting",
  "state": "working",
- "updated": "2026-11-10T02:43:29Z"
+ "updated": "2026-11-10T03:44:17Z"
 }

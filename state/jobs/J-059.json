@@ -10,8 +10,8 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
- "head": "6ba64b584a364304a63369f66f9d2644bc53fcde",
+ "deadline": "2026-11-10T05:17:00Z",
+ "head": "bce311edbf71af5906f718457334e269ff255e37",
  "issue": 307,
  "job": "J-059",
  "landed": {
@@ -33,7 +33,11 @@
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T03:44:17Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
@@ -167,6 +171,55 @@
    "version": "6722247887",
    "via": "email",
    "what": "ask from Claude on #307"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T03:44:17Z",
+   "dead": "2026-11-10T11:44:17Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T07:44:17Z",
+   "id": "O-c4e58a65",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T03:44:17Z",
+   "missing": 0,
+   "ref": "PR|#343",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 343,
+   "to": "muse",
+   "unseen": null,
+   "version": "conflict:bce311edbf71af5906f718457334e269ff255e37",
+   "via": "email",
+   "what": "#343 has a merge conflict with the base"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-10T03:02:47Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-10T03:44:17Z",
+   "dead": "2026-11-10T15:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T05:17:00Z",
+   "id": "O-76b02774",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #307",
+   "sends": 0,
+   "thread": 307,
+   "to": "claude",
+   "unseen": null,
+   "version": "6757761707",
+   "via": "session",
+   "what": "ask from Muse on #307"
   }
  ],
  "outcome": null,
@@ -177,7 +230,7 @@
  "prs": [
   343
  ],
- "review": "FIX",
+ "review": "",
  "state": "working",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-10T03:44:17Z"
 }

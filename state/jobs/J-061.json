@@ -3,7 +3,7 @@
  "blocked": null,
  "branches": {},
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:27:00Z",
@@ -201,7 +201,11 @@
    "what": "#337 has a merge conflict with the base"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T03:18:27Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T02:37:49Z",
    "attempts": 1,
@@ -236,5 +240,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T02:43:29Z"
+ "updated": "2026-11-10T03:44:17Z"
 }

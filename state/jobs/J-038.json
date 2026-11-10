@@ -1,5 +1,5 @@
 {
- "attempt": 1,
+ "attempt": 2,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j038-slice1": "94a53394cc5caa83250bc64225f423590935dd48",
@@ -10,7 +10,7 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:17:00Z",
- "head": "4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
+ "head": "474fb0c98aa74df708e476136ca30baf9f917cde",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -90,7 +90,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
-   "missing": 1,
+   "missing": 2,
    "ref": "BRANCH|fb-bot/integrate-j038-slice1",
    "sends": 1,
    "sent_by": "shadow",
@@ -177,7 +177,11 @@
    "what": "ask from Muse on #169"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T03:18:27Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T02:37:51Z",
    "attempts": 1,
@@ -200,17 +204,43 @@
    "version": "6757393844",
    "via": "session",
    "what": "ask from Muse on #169"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T03:44:17Z",
+   "dead": "2026-11-10T11:44:17Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T07:44:17Z",
+   "id": "O-067b4f41",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T03:44:17Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:474fb0c98aa74df708e476136ca30baf9f917cde",
+   "via": "email",
+   "what": "#372: open FIX from Claude (review)"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 299,
+ "pr": 372,
  "pr_done": "",
  "prs": [
-  299
+  299,
+  372
  ],
  "review": "FIX",
- "state": "proof",
- "updated": "2026-11-10T02:43:29Z"
+ "state": "working",
+ "updated": "2026-11-10T03:44:17Z"
 }
