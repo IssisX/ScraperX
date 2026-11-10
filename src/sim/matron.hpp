@@ -1131,7 +1131,9 @@ public:
     // him squared across the rail) while it goes on, him face to face on the
     // rail's top; she tips him over once it is done, after squaring him at
     // most kFatalSquareS.
-    static constexpr float kFatalPinS = 1.0F;
+    static constexpr float kFatalPinS = 0.3F;   // the pin's face to face only: his window is beat 5's hang
+    static constexpr float kFatalFingersSettledMps = 0.3F;   // beat 5 begins once her fingers move no faster
+    static constexpr float kFatalWindowInM = 0.12F;   // the hang's window held this much nearer her than kHangOutM (his punch's reach)
     static constexpr float kFatalSquareS = 0.3F;
     static constexpr float kFatalLiftEarlyS = 0.5F;   // his ankle's lift starts this long before his window ends
     // Her let-go decided at the end of his swing: in toward her deck's face
@@ -2807,6 +2809,7 @@ private:
     int spare_tries_ = 0;                  // set-downs that ran out of time, this hold
     std::uint32_t hold_tears_at_ = 0;      // arm_tears_ as this hold began
     JPH::RVec3 player_ankle_ = JPH::RVec3::sZero();
+    JPH::RVec3 fingers_last_ = JPH::RVec3::sZero();   // the held ankle point last tick (beat 5: her fingers settled)
     JPH::RVec3 player_collar_ = JPH::RVec3::sZero();
     // The five beats (matron_hold.cpp; HOLD_WITH_REAL_ARMS.md).
     Trunk trunk_{};

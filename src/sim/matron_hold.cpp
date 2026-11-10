@@ -1625,6 +1625,10 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // At a rail, the fatality's grips shift for the over kFatalPinS into
         // his window, which goes on till kFatalHangWindowS (above).
         if (fatal_hold_ && !pin_here_ && fatal_window_s_ >= kFatalPinS) {
+            // His window is beat 5's hang now (fatal_hang_): the pin's face
+            // to face ends here, and the over does not wait on it.
+            fatal_window_ = false;
+            fatal_window_s_ = 0.0F;
             if (hand2_on_ == 2) {
                 begin_regrip(Grip::Belt);
             }
@@ -1804,7 +1808,13 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             // rests on its strip till her arm goes out for the let-go.)
             const bool down = !fatal_hold_ || bare_lip_ ||
                               physics_.GetBodyInterface().GetRotation(player_).RotateAxisY().GetY() < -kFatalHangDownY;
-            if (Vec3(hang - hand_target_).Length() < 0.03F && down) {
+            // (In the fatality her fingers themselves come to rest there, not
+            // only her hand's pose: the hang's window starts with him settled
+            // under her hand, not still dropping into it.)
+            const float fingers_mps = Vec3(player_ankle_ - fingers_last_).Length() / std::max(dt, 1.0e-4F);
+            fingers_last_ = player_ankle_;
+            const bool fingers_there = !fatal_hold_ || fingers_mps < kFatalFingersSettledMps;
+            if (Vec3(hang - hand_target_).Length() < 0.03F && down && fingers_there) {
                 hold_phase_ = 7;
                 hold_s_ = 0.0F;
                 if (fatal_hold_) {
@@ -1851,7 +1861,12 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // he is, as he moves, is foreseen to kill; none by kFatalLetGoByS, she
         // hauls him back in for her floor version.
         const bool due = fatal_s_ >= kFatalLetGoFromS;
-        pose_hand(dt, rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM), kHangOutM + kFatalOutM, kHangSideM),
+        // His window first, held a little in from where he came over
+        // (kFatalWindowInM: his shoulder within his punch's reach of her);
+        // then out for the let-go.
+        const bool in_window = fatal_window_s_ < kFatalHangWindowS;
+        pose_hand(dt, rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM),
+                                in_window ? kHangOutM - kFatalWindowInM : kHangOutM + kFatalOutM, kHangSideM),
                   kHandSpeedMps);
         // Decided at the end of his swing (slow, never in toward her deck's
         // face), she standing
