@@ -1130,14 +1130,19 @@ func _deck154_truck() -> Transform3D:
 
 
 # The stick's right that steers the truck at `at`: the stick right steers it
-# right of its nose, whatever the view.
+# right of its nose, whatever the view. J-045: gain 3.5 (was 2.0) — the
+# 1-tick first advance shifts her start ~10 cm, so the ram is a knife-edge
+# and the truck under-turns at 2.0 (nose ~15 deg west of the ~34 deg
+# bearing to her, glancing clip, blow 0.00). Measured: gain 3.0 passes
+# thin (blow 0.29), gain 3.5 squares it up (rammed 3.00 m/s, blow 1.05,
+# state 11), gain 4.0 over-turns and she pulls away (blow 0.00).
 func _steer_at(at: Vector3) -> float:
 	var t := _deck154_truck()
 	var nose := t.basis.z
 	var to := at - t.origin
 	var ahead := to.x * nose.x + to.z * nose.z
 	var right := -to.x * nose.z + to.z * nose.x
-	return clampf(2.0 * atan2(right, maxf(ahead, 0.5)), -1.0, 1.0)
+	return clampf(3.5 * atan2(right, maxf(ahead, 0.5)), -1.0, 1.0)
 
 
 func _forklift_ram_touch(device: int) -> bool:
