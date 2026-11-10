@@ -13,6 +13,14 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-10 | *"Don't, again, give me the option to reply go to stop something, bro."*: an answer word means what it does | Rule 19 |
+| 11-10 | *"I just need you to give me a good guess if you can't give me the real answer."*: a measured estimate, called one, never no number | Rule 20 |
+| 11-10 | *"No, you are faster than Muse. Muse is actually slow ... we are using a faster version of Muse called Muse Spark"*: Muse is free but slow; speed counts when choosing who codes | Rule 61 |
+| 11-10 | *"they have very little roles, as I have to manually do each one, and they are fallbacks"* (ChatGPT and Grok); 11-09: *"I'm not wanting to rely on scheduled tasks"*: no core path depends on them | Rule 61 |
+| 11-10 | *"Put here in chat what I am to give ChatGPT, dude. Stop making me follow your thinking or go into a file"*: a prompt to pass on goes in the chat | `CLAUDE.md`, Talking to Cory |
+| 11-10 | *"I'm so sick of adding money to so many different things"*; *"You could certainly look it up, right?"*; 11-09: *"I wish you would have done the calculations"*: cost looked up before proposing anything paid; prefer what he pays for | Rule 9 |
+| 11-10 | *"tweaking stupid shit that has a .0001 chance of happening, constant security tweaks, As if there is no finish line"*; 11-09: *"just because ChatGPT finds something doesn't mean it's actually something that needs to be fixed"*, *"Why can't we just test it, and if it works, use it?"*: the goal is the finish line; no soak week | Rule 12 |
+| 11-10 | *"You keep thinking it's some tiny side thing"*; *"we shouldn't be being blocked by any game shit right now"*: the system that carries the work comes first while it is broken; once it works, reopen it only for a real failure in use | `scraperx-engineering` skill, "Ship and stop" |
 | 11-10 | *"I'm speaking quickly roughly shortly and making many spelling and wording errors constantly. Have to remember that"*: read his words for intent. Also *"such an obvious and easy solution that I was waiting until you would say this"* (Muse as the stand-in reviewer): offer the obvious free fix first, before guarding or waiting. | `CLAUDE.md`, Talking to Cory |
 | 11-10 | *"see, i respond positively when you push back"*: a plain no with the reason beats agreeing; it calms him down rather than winding him up. *"when you told me \"let it finish\", i respond to that type of direct instructions best"*: tell him what to do in a few plain words. | `CLAUDE.md`, Talking to Cory (push back) |
 | 11-10 | *"If I have to tell you to answer in short, simple, concise ways, again, I'm going to fucking go insane. SIMPLE SIMPLE SIMPLE SIMPLE"*; *"remember that from now on. because it's really fucking important"*: every reply is a few short plain lines, no jargon. | `CLAUDE.md`, Talking to Cory |

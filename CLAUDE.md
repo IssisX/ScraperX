@@ -41,7 +41,7 @@ him again.
 - SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE", "really fucking important").
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
-  pass on goes whole in one copyable block naming the agent.
+  pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; no
   plan or step to approve (11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
