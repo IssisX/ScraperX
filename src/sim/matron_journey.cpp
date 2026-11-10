@@ -518,6 +518,29 @@ void Matron::step_travel(const float dt) {
 // hunt meanwhile.
 bool Matron::TravelWay::begin(const MoverGoal &goal) {
     goal_ = goal;
+    // A travel must not preempt a way of hers that owns the route: where her
+    // scan joins her floor to the lead's by a climb, a pole, a lip or a drop,
+    // that way takes her there on its own feet, and a travel's walk to the
+    // climb's foot can strand her where its feet find no floor to it (a
+    // down-pursuit stalled, re-planning, at the tower's south end). The
+    // travel is for a lead her map joins only by walking, or only by a hoist.
+    if (m_.scanned_ != nullptr) {
+        const int here = m_.region_under();
+        // Not on a region she knows (down, airborne, off her map): no travel
+        // starts here — one begun while she is down would climb past a way's
+        // block, retaking a failed ladder before its time.
+        if (here < 0) {
+            return false;
+        }
+        const int goal_region = m_.scanned_->region_at(Vec3(goal.x, goal.floor_y, goal.z));
+        if (goal_region >= 0 && here != goal_region) {
+            for (const int edge : m_.scanned_->plan(here, goal_region)) {
+                if (m_.scanned_->edges()[static_cast<std::size_t>(edge)].kind != traversal::MoveKind::Walk) {
+                    return false;
+                }
+            }
+        }
+    }
     return m_.travel_to(Vec3(goal.x, goal.floor_y, goal.z));
 }
 
