@@ -103,6 +103,48 @@ Hit hit(const bool punch, const bool stock, const bool test_down) {
     }
     return out;
 }
+void place_after_death() {
+    // J-070: a Matron placed by a debug scenario is drawn where the sim has
+    // her. A kill left dead_ set while place_for_test moved her to Hunting,
+    // so the view (released, and alive or in the Dead state) refused her and
+    // she stayed invisible even metres from the player.
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    for (int i = 0; i < 30; ++i) tick(s);
+    // Kill her with a fall: 60 m over the yard lands past the 16 m/s lethal
+    // landing, on grade or on any deck under her.
+    s.debug_place_matron({0.0, 60.0, 0.0});
+    int dead_tick = -1;
+    for (int i = 0; i < 900; ++i) {
+        tick(s);
+        if (s.matron_state().state == static_cast<int>(Matron::State::Dead)) {
+            dead_tick = i;
+            break;
+        }
+    }
+    require(dead_tick >= 0, "place-after-death: the fall kills her");
+    require(!s.matron_state().alive, "place-after-death: she is dead after the fall");
+    // Debug-place the dead Matron beside the player, as the live look did.
+    const Vector3 p = s.snapshot().player_position;
+    s.debug_place_matron({p.x + 6.0, p.y, p.z - 6.0});
+    for (int i = 0; i < 5; ++i) tick(s);
+    const auto m = s.matron_state();
+    require(m.alive, "place-after-death: a debug-placed Matron is alive");
+    require(m.released, "place-after-death: a debug-placed Matron is released");
+    // She may search before she sees him (no lead survives the kill), but
+    // the view draws any out state: what the fix owes is alive and out, not
+    // the exact hunting state. Dead is the one state that is not drawn.
+    require(m.state != static_cast<int>(Matron::State::Dead),
+            "place-after-death: a debug-placed Matron is not dead");
+    require(m.state >= static_cast<int>(Matron::State::Emerging),
+            "place-after-death: a debug-placed Matron is out where the view draws her");
+    // And she stays that way: the placement does not re-kill her.
+    for (int i = 0; i < 30; ++i) tick(s);
+    const auto m2 = s.matron_state();
+    require(m2.alive && m2.state != static_cast<int>(Matron::State::Dead),
+            "place-after-death: she stays alive and out after placement");
+    std::cout << "PASS matron-damage place-after-death (died tick " << dead_tick << ")\n";
+}
 }
 
 void run_matron_damage() {
@@ -134,5 +176,6 @@ void run_matron_damage() {
     const Hit down = hit(false, true, true);
     require(down.down, "damage: Down trial reached the real Down state");
     std::cout << "PASS matron-damage Down pause\n";
+    place_after_death();
 }
 SCRAPERX_SLICE("matron-damage", run_matron_damage);

@@ -323,6 +323,15 @@ void Matron::place_for_test(const RVec3 feet) {
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
     state_ = State::Hunting;
+    // A placed Matron is a live one: a kill left dead_ set while this put her
+    // to Hunting, and the view (released, and alive or in the Dead state)
+    // rightly refused a Hunting-but-dead Matron, so she stayed invisible even
+    // metres from the player (J-070). On her feet, whatever had her down.
+    dead_ = false;
+    down_for_s_ = 0.0F;
+    if (lying_) {
+        stand_up();
+    }
     turn_ = Turn::None;
     feet_y_ = float(feet.GetY());
     // Her level: the deck she stands on, or (on a ledge between two) the
