@@ -962,3 +962,26 @@
 {"attempt": 1, "ev": "sent", "id": "O-1ac5a17e", "job": "J-072", "ref": "ASK|ask on #350", "send": 1, "t": "2026-11-10T12:59:30Z", "to": "grok_bot", "via": "watch"}
 {"attempt": 1, "ev": "sent", "id": "O-4c110438", "job": "J-072", "ref": "ASK|ask on #350", "send": 1, "t": "2026-11-10T12:59:30Z", "to": "chatgpt", "via": "issue"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T12:59:30Z", "tries": 1}
+{"due": "2026-11-10T15:47:00Z", "ev": "obligation", "id": "O-3c353c80", "job": "J-038", "kind": "review", "ref": "PR|#372", "t": "2026-11-10T14:01:28Z", "to": "codex", "via": "relay"}
+{"ev": "closed", "id": "O-0e0bd735", "job": "J-045", "t": "2026-11-10T14:01:28Z", "why": "PR #380 took it over"}
+{"ev": "reopened", "id": "O-57e630f6", "job": "J-049", "t": "2026-11-10T14:01:28Z", "was": "unseen"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-a70e3d05", "job": "J-067", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j067-scorer", "t": "2026-11-10T14:01:28Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T15:47:00Z", "ev": "obligation", "id": "O-d95783d0", "job": "J-069", "kind": "review", "ref": "PR|#376", "t": "2026-11-10T14:01:28Z", "to": "codex", "via": "relay"}
+{"ev": "closed", "id": "O-b98a158d", "job": "J-069", "t": "2026-11-10T14:01:28Z", "why": "new head 93ca1004"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-79d95375", "job": "J-072", "kind": "fix", "ref": "BRANCH|claude/integrate-j072-board-source", "t": "2026-11-10T14:01:28Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-4a7cfed7", "job": "J-070", "t": "2026-11-10T14:01:28Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-4c110438", "job": "J-072", "t": "2026-11-10T14:01:28Z"}
+{"ev": "state", "frm": "working", "job": "J-038", "t": "2026-11-10T14:01:28Z", "to": "review"}
+{"ev": "state", "frm": "working", "job": "J-049", "t": "2026-11-10T14:01:28Z", "to": "review"}
+{"ev": "state", "frm": "working", "job": "J-069", "t": "2026-11-10T14:01:28Z", "to": "review"}
+{"ev": "state", "frm": "proof", "job": "J-072", "t": "2026-11-10T14:01:28Z", "to": "landable"}
+{"ev": "unmatched", "ident": "PR|#380", "job": "", "t": "2026-11-10T14:01:28Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#378", "job": "", "t": "2026-11-10T14:01:28Z", "why": "no `Job:` line in the PR body (no proof run on its head)"}
+{"attempt": 1, "ev": "sent", "id": "O-3c353c80", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-10T14:01:28Z", "to": "codex", "via": "relay"}
+{"attempt": 2, "ev": "sent", "id": "O-eecd7184", "job": "J-059", "ref": "PR|#343", "send": 2, "t": "2026-11-10T14:01:28Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-a70e3d05", "job": "J-067", "ref": "BRANCH|fb-bot/integrate-protected-j067-scorer", "send": 1, "t": "2026-11-10T14:01:28Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-d95783d0", "job": "J-069", "ref": "PR|#376", "send": 1, "t": "2026-11-10T14:01:28Z", "to": "codex", "via": "relay"}
+{"attempt": 2, "ev": "sent", "id": "O-a34f6e29", "job": "J-072", "ref": "ASK|ask on #350", "send": 2, "t": "2026-11-10T14:01:28Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 2, "ev": "sent", "id": "O-1ac5a17e", "job": "J-072", "ref": "ASK|ask on #350", "send": 2, "t": "2026-11-10T14:01:28Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 1, "ev": "sent", "id": "O-79d95375", "job": "J-072", "ref": "BRANCH|claude/integrate-j072-board-source", "send": 1, "t": "2026-11-10T14:01:28Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T14:01:28Z", "tries": 1}

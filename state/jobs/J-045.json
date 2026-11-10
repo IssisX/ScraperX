@@ -187,7 +187,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T14:01:28Z",
+    "why": "PR #380 took it over"
+   },
    "created": "2026-11-10T12:25:07Z",
    "dead": "2026-11-10T20:25:07Z",
    "dead_lettered": null,
@@ -216,5 +219,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T12:25:07Z"
+ "updated": "2026-11-10T14:01:28Z"
 }

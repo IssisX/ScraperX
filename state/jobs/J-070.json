@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T15:17:00Z",
+ "deadline": null,
  "head": "911af47cca620337237fa8eb234913437a76b779",
  "issue": 333,
  "job": "J-070",
@@ -79,7 +79,11 @@
    "what": "`fb-bot/integrate-j070-cull` proof red: native-tests (athletic-traversal-2), native-tests (matron-slices-3), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T13:07:37Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T09:32:46Z",
    "attempts": 1,
@@ -112,5 +116,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T12:25:07Z"
+ "updated": "2026-11-10T14:01:28Z"
 }

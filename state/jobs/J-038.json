@@ -10,7 +10,7 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "b45584a182e43a6cb4e93c0688fee4f603bdd4af",
+ "head": "d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -118,7 +118,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-10T07:39:04Z",
+   "rechecked": "2026-11-10T14:01:28Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -144,7 +144,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-10T07:39:04Z",
+   "rechecked": "2026-11-10T14:01:28Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -295,6 +295,31 @@
    "version": "conflict:b45584a182e43a6cb4e93c0688fee4f603bdd4af",
    "via": "email",
    "what": "#372 has a merge conflict with the base"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T14:01:28Z",
+   "dead": "2026-11-10T17:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T15:47:00Z",
+   "id": "O-3c353c80",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-10T14:01:28Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "codex",
+   "unseen": null,
+   "version": "land:d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
+   "via": "relay",
+   "what": "#372 @ d45ec240 has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
   }
  ],
  "outcome": null,
@@ -306,7 +331,7 @@
   299,
   372
  ],
- "review": "waiting",
- "state": "working",
- "updated": "2026-11-10T12:59:30Z"
+ "review": "",
+ "state": "review",
+ "updated": "2026-11-10T14:01:28Z"
 }

@@ -4,14 +4,15 @@
  "branches": {
   "claude/integrate-j067-back-hair": "71c0d8e1260ac5a4bd344d60ef58331910700e1b",
   "claude/integrate-j067-hair-bend": "61b13bb62c601455c935e3f4511da5ab1de737a2",
-  "fb-bot/integrate-j067-back-hair-fixes": "25e1bdc52e407caa2c5076082d6eb7e3f442a762"
+  "fb-bot/integrate-j067-back-hair-fixes": "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
+  "fb-bot/integrate-protected-j067-scorer": "a43b65ceb91f70465966415054499e6e3f126186"
  },
  "cancelled": null,
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T15:17:00Z",
- "head": "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
+ "head": "a43b65ceb91f70465966415054499e6e3f126186",
  "issue": 328,
  "job": "J-067",
  "landed": {
@@ -29,6 +30,11 @@
    "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
    "",
    "2026-11-10T04:48:57Z"
+  ],
+  "fb-bot/integrate-protected-j067-scorer": [
+   "a43b65ceb91f70465966415054499e6e3f126186",
+   "",
+   "2026-11-10T14:01:28Z"
   ]
  },
  "obligations": [
@@ -196,6 +202,31 @@
    "version": "6763226135",
    "via": "session",
    "what": "ask from Muse on #328"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T14:01:28Z",
+   "dead": "2026-11-10T17:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T15:17:00Z",
+   "id": "O-a70e3d05",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T14:01:28Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j067-scorer",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 328,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:a43b65ceb91f70465966415054499e6e3f126186",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j067-scorer` proof red, no PR"
   }
  ],
  "outcome": null,
@@ -209,5 +240,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T09:09:09Z"
+ "updated": "2026-11-10T14:01:28Z"
 }
