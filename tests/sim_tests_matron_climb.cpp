@@ -2279,6 +2279,7 @@ void run_matron_climb_scan() {
     test_floor_split();
     test_tower_scan();
     test_tower_journeys();
+}
 
 // The ladder-bar sort order (J-008): the comparator behind AffordanceMap::scan
 // must be a strict total order, or std::sort over it is undefined and the
