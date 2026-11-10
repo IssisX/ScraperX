@@ -399,3 +399,4 @@ void run_step2_movement() {
               << " top_y=" << route_top.player_position.y << " climbs=" << route_top.climb_count
               << " lifts_untouched=1\n";
 }
+SCRAPERX_GROUP("step2_movement", 130, run_step2_movement);

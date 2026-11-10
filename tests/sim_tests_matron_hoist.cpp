@@ -187,3 +187,5 @@ void run_matron_hoist() {
     unreachable_request_keeps_ride();
     pursuit_rides_hoist();
 }
+SCRAPERX_GROUP("matron_hoist", 945, run_matron_hoist);
+SCRAPERX_SLICE("matron-hoist", run_matron_hoist);

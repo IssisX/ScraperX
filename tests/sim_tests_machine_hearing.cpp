@@ -79,21 +79,53 @@ void run_machine_hearing() {
             }
             const std::uint32_t body = s.kit_body_index(part.entity);
             const scraperx::sim::Vector3 at = s.kit_body_position(body);
-            const auto listen = [&](const double off) {
+            // run_only: the far listen isolates the run; the near listen hears
+            // the part (a held part is heard by its hit, not by a run it has
+            // none of). The far check is about the run's reach, and the hit is
+            // a different sound with its own reach — at the far distance the
+            // ear heard the launch's hit (0.768808, carrying 42.28 m), not the
+            // run, so a far listen that read right after each launch failed on
+            // the hit. One launch only, then read in the gap: the launch sets
+            // the part moving, so its run sounds while it flies; the launch's
+            // own hits (a jolt as it takes up, the landing ~0.3 s later) are
+            // one-tick sounds, heard for a frame each. Three frames clear the
+            // launch; the reads that follow hear the run alone, before the
+            // landing.
+            const auto listen = [&](const double off, const bool run_only) {
                 s.debug_place_matron(scraperx::sim::Vector3{at.x + off, at.y, at.z});
                 (void)s.advance_frame(1.0 / 60.0);
                 double heard = 0.0;
-                for (int i = 0; i < 6; ++i) {
+                if (run_only) {
+                    // Measured: the launch's arrest hit is heard at frame +3
+                    // (entity 2100: 0.723004), the run is present at +4..+9
+                    // (speed 0.28 down to 0.14 m/s), and the landing is past
+                    // +9 — so three frames clear the launch and the reads
+                    // that follow hear the run alone, before the landing.
                     s.debug_launch_kit_body(body, s.kit_body_position(body), {0.0, 1.5, 0.0});
                     (void)s.advance_frame(1.0 / 60.0);
-                    heard = std::max(heard, s.matron_state().noise_heard);
+                    (void)s.advance_frame(1.0 / 60.0);
+                    (void)s.advance_frame(1.0 / 60.0);
+                    for (int i = 0; i < 6; ++i) {
+                        (void)s.advance_frame(1.0 / 60.0);
+                        heard = std::max(heard, s.matron_state().noise_heard);
+                    }
+                } else {
+                    for (int i = 0; i < 6; ++i) {
+                        s.debug_launch_kit_body(body, s.kit_body_position(body), {0.0, 1.5, 0.0});
+                        (void)s.advance_frame(1.0 / 60.0);
+                        heard = std::max(heard, s.matron_state().noise_heard);
+                    }
                 }
+                // She is alive at each listen: a dead Matron hears nothing,
+                // so a far listen that passed because she died on the way
+                // down would be vacuous.
+                require(s.matron_state().alive, "machine hearing: she is alive at each listen");
                 (void)s.advance_frame(3.0);
                 return heard;
             };
             const double reach = ImpactLedger::kRunMaxLoudness * Matron::kFullHearingM;
-            const double near = listen(3.0);
-            const double far = listen(reach + 20.0);
+            const double near = listen(3.0, false);
+            const double far = listen(reach + 20.0, true);
             std::cout << "  machine hearing: entity " << part.entity << " heard " << near << " at 3 m, " << far << " at "
                       << reach + 20.0 << " m\n";
             ++checked;
@@ -111,3 +143,5 @@ void run_machine_hearing() {
     (void)s.advance_frame(10.0);
     std::cout << "  machine hearing: " << s.machine_noises().size() << " running after settling\n";
 }
+SCRAPERX_GROUP("machine_hearing", 1070, run_machine_hearing);
+SCRAPERX_SLICE("machine-hearing", run_machine_hearing);

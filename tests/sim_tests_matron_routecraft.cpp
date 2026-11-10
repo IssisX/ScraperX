@@ -899,3 +899,5 @@ void run_matron_routecraft() {
     }
     std::cout<<"PASS: matron-routecraft\n";
 }
+SCRAPERX_GROUP("matron_routecraft", 820, run_matron_routecraft);
+SCRAPERX_SELECT("matron-routecraft", run_matron_routecraft);

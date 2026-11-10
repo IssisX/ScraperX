@@ -740,3 +740,5 @@ void run_fabricated() {
               << " body_order_worlds=" << worlds << " refused=" << refusals << " save_bytes=" << save_bytes
               << " throw_mps=" << throw_mps << '\n';
 }
+SCRAPERX_GROUP("fabricated", 1010, run_fabricated);
+SCRAPERX_SELECT("fabricated", run_fabricated);

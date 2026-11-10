@@ -181,9 +181,12 @@ void run_loose_stock() {
     // tower range would end at dress_end plus the east/west count.
     const int dress_end = static_cast<int>(s.loose_stock_crane_steel_begin());
     const int east_west_begin = static_cast<int>(s.loose_stock_east_west_begin());
+    // The east/west stock ends where J-042's two kinds by her band begin
+    // (laid last of all, on her deck; not tower spots).
+    const int east_west_end = static_cast<int>(s.loose_stock_matron_kinds_begin());
     // The tower's spots end where the yard crane's steel begins (and the
     // machines' weights after it, and the Matron's throwables after them).
-    const int towered = dress_end + (pieces - east_west_begin);
+    const int towered = dress_end + (east_west_end - east_west_begin);
     std::cout << "  stock: " << tabled << " pieces in the table, " << towered - tabled << " in the tower's spots\n";
     require(towered > tabled + 60, "stock: the tower's rings are dressed");
     // The owner's rules for what is up there (2026-10-17): every heavy piece
@@ -194,7 +197,7 @@ void run_loose_stock() {
         const std::array<double, 3> crane_decks{11.0, 22.0, 44.0};
         std::array<int, 3> crane_pieces{};
         int heavy = 0;
-        for (int i = tabled; i < pieces; ++i) {
+        for (int i = tabled; i < east_west_end; ++i) {
             if (i >= dress_end && i < east_west_begin) {
                 continue;
             }
@@ -232,9 +235,10 @@ void run_loose_stock() {
         placed.push_back(piece_at(s, i));
     }
     // The east/west stock takes its table places last (append_reserved, after
-    // the Matron's throwables) and its bodies are built last, in table order
+    // the Matron's throwables) and the upper stock after it
+    // (append_upper), and their bodies are built last, in table order
     // (realize_reserved walks the table in one loop). So the trailing bodies'
-    // entity ids run in build order: each later east/west piece has a later
+    // entity ids run in build order: each later trailing piece has a later
     // body index.
     {
         bool first = true;
@@ -243,12 +247,13 @@ void run_loose_stock() {
             const std::uint32_t body =
                 s.kit_body_index(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i));
             require(body != Simulation::kKitNone && (first || body > prev),
-                    "stock: the east/west stock's bodies are built in table order");
+                    "stock: the trailing stock's bodies are built in table order");
             first = false;
             prev = body;
         }
-        std::cout << "  stock: " << (pieces - east_west_begin) << " east/west pieces, entity ids "
-                  << east_west_begin << ".." << (pieces - 1) << ", built in table order\n";
+        std::cout << "  stock: " << (pieces - east_west_begin)
+                  << " trailing pieces (east/west, then upper), entity ids " << east_west_begin << ".."
+                  << (pieces - 1) << ", built in table order\n";
     }
     // Tower pieces per dress_tower ring, before settling. Rings are the stack
     // rings 11..143 m and the upper rings 176.25..396.25 m, as in
@@ -266,9 +271,20 @@ void run_loose_stock() {
         for (int k = 0; k <= 10; ++k) {
             rings.push_back(176.25 + 22.0 * static_cast<double>(k));
         }
+        // J-014: the bands' rings above 396.25 m, to 616.25 m, gated as well.
+        // The original loop above is left exactly as it was; the new rings
+        // go in their own loop beneath it.
+        for (double top = 418.25; top <= 616.3; top += 22.0) {
+            rings.push_back(top);
+        }
+        // J-014: TP-640 and the midstack decks (706 and the summit have no
+        // spot clear of their machines; see LooseStock kTopDecks).
+        for (const double top : {640.25, 662.1, 684.1, 728.1, 750.1}) {
+            rings.push_back(top);
+        }
         std::vector<int> per_ring(rings.size(), 0);
         int unassigned = 0;
-        for (int i = tabled; i < pieces; ++i) {
+        for (int i = tabled; i < east_west_end; ++i) {
             if (i >= dress_end && i < east_west_begin) {
                 continue;
             }
@@ -343,7 +359,7 @@ void run_loose_stock() {
         for (int k = 0; k <= 10; ++k) rings.push_back(176.25 + 22.0 * static_cast<double>(k));
         std::vector<std::array<int, 4>> per_side(rings.size(), {0, 0, 0, 0});
         int unassigned = 0;
-        for (int i = tabled; i < pieces; ++i) {
+        for (int i = tabled; i < east_west_end; ++i) {
             if (i >= dress_end && i < east_west_begin) {
                 continue;
             }
@@ -601,6 +617,8 @@ void run_loose_stock() {
 
     std::cout << "PASS scraperx_sim stock: pieces=" << pieces << " settle_m=" << worst << " shoved_m=" << shoved << "\n";
 }
+SCRAPERX_GROUP("loose_stock", 980, run_loose_stock);
+SCRAPERX_SELECT("stock", run_loose_stock);
 
 // The eyes' sight line (Simulation::look_target, read by the presentation
 // for what the player's aim rests on): from the 154 m deck a look at the
@@ -641,3 +659,5 @@ void run_look_target() {
     std::cout << "PASS scraperx_sim look target: drum=" << drum << " drum_m=" << hit.distance
               << " deck_y=" << down.point.y << "\n";
 }
+SCRAPERX_GROUP("look_target", 990, run_look_target);
+SCRAPERX_SELECT("look", run_look_target);

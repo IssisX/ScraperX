@@ -21,42 +21,56 @@ agents:
     names: [ChatGPT]
     branch_prefixes: [chatgpt/]
     owner_labels: [owner:chatgpt]
-    wake: issue          # reads its job issue through its own app
+    wake: issue          # its scheduled review task runs hourly at :27 Central and reads "To ChatGPT:" on the board, job
+                         # issues and PRs; it posts replies and LAND/FIX verdicts (ChatGPT on #340, 11-09, comment 6748415623)
   grok:
     vendor: xai
-    names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #107)
-    branch_prefixes: [grok/, pe/, builder/]
-    owner_labels: [owner:grok, owner:pe, owner:builder]
-    wake: issue
+    names: [Grok]
+    branch_prefixes: [grok/]
+    owner_labels: [owner:grok]
+    wake: issue          # scheduled: 10 AM and 4 PM Central, comments that start "To Grok:"
+  grok_bot:
+    vendor: xai
+    names: [PE, Builder]             # PE and ScraperX Builder are Grok Bot (board #340)
+    branch_prefixes: [pe/, builder/]
+    owner_labels: [owner:pe, owner:builder]
+    wake: watch          # reads the repo all the time, not on a schedule (Cory 11-09)
   codex:
     vendor: openai
     names: [Codex]
     branch_prefixes: [codex/]
     owner_labels: []
-    wake: mention        # "@codex review" on the PR
+    wake: mention        # "@codex review" on the PR, from a person's login only: the switch posts it with the
+                         # team token, once per green head (switch.py codex_mention; the bot's own mention never woke it)
   muse:
     vendor: meta
     names: [Muse, FB]                # Muse is FB Bot
     branch_prefixes: [muse/, fb-bot/]
     owner_labels: [owner:muse]
     wake: email          # tools/switchboard/muse_bridge.gs mails it and posts its replies back
+    opens_prs: false     # Muse pushes its branches; the switchboard (else the integrator) opens the PRs (11-05)
 
 review:
-  # Reviews, one mechanism per PR (Cory, 11-04): the Codex app reviews every PR on open, and its summary comment
-  # is the review (rules.parse_codex_state: clean at the exact head is a LAND, unresolved findings a FIX). Only a
-  # head Codex has not reviewed gets the automatic Claude review once its proof is green. Muse is out of the
-  # review pool. The two lists below are read only when `pool` is empty.
-  claude_authored_asks: [chatgpt]
-  other_authored_asks: [chatgpt]
+  # Reviews, one reviewer at a time per head (Cory, 11-04), in this order:
+  #  1. Codex. Its summary comment is the review (rules.parse_codex_state: clean at the exact head is a LAND,
+  #     unresolved findings a FIX). By itself it reviews only the head a person's PR opens at, so the switch asks it
+  #     once for every other green head (the PRs the switchboard opens for Muse, every later push), except on
+  #     OpenAI-authored work, where its LAND would not count. It has 10 minutes to start, 30 to finish.
+  #  2. `pool`: a head Codex has not reviewed by then gets the automatic Claude review.
+  #  3. `fallback_order`, when the API cannot review the head or answered NOTE.
+  # A NOTE lands nothing: it ends that reviewer's turn on the head and the next in line is asked (J-072, #376).
+  # Muse is out of the review pool. The two lists below are read only when `pool` is empty.
+  claude_authored_asks: [chatgpt, grok]
+  other_authored_asks: [chatgpt, grok]
   # Who shares the reviews Codex leaves: the automatic Claude review alone (`claude-api`, work/budget.yml). When
-  # this list is set it replaces claude_authored_asks, other_authored_asks and the fallback escalation.
+  # this list is set it replaces claude_authored_asks and other_authored_asks; fallback_order follows it.
   pool: [claude-api]
   # The automatic Claude review takes Claude's PRs too, and its LAND counts there (Cory, 11-03: "Yes, give it real
   # work, the Claude on GitHub actions"). The Codex app still reviews every PR on open, and its findings block.
   api_reviews_claude: true
-  # The last resort (Cory, 11-04): when neither Codex nor the API can review a head (a budget cap is hit, or the
-  # API call failed or gave no verdict), one ask goes to these, by their own scheduled runs (the comment starts
-  # "To Grok:" or "To ChatGPT:"); one quiet past fallback_after_hours passes it to the other. Never a Claude
-  # agent, never the author's own vendor, never in the normal path.
+  # The last resort (Cory, 11-04): when neither Codex nor the API lands or fixes a head (a budget cap is hit, the
+  # API call failed, or its verdict was a NOTE), one ask goes to ChatGPT or Grok, polled by their own scheduled runs (the
+  # comment starts "To ChatGPT:" or "To Grok:"). Never a Claude agent, never the author's own vendor, never in the normal path. ChatGPT
+  # goes first: its review task runs hourly, Grok's twice a day (11-09).
   fallback_after_hours: 1   # Cory, 11-03: "3 hours seems long"
-  fallback_order: [grok, chatgpt]
+  fallback_order: [chatgpt, grok]

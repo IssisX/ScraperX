@@ -29,6 +29,37 @@ struct TwinTower final {
     static constexpr float kDeckTop = 220.25F;
     static constexpr float kInclineTop = 224.25F;
     static constexpr float kLandingTop = 225.65F;
+    // J-053 balconies (Claude 2026-11-07 06:13): five steel balconies on
+    // the shaft's face, 22 m apart, the first at 640 m so it catches every
+    // measured takeoff (walk face contact 654.4-665.7 m, sprint 691.9-702.6
+    // m); 728 is reached by hook-climb, not by the glide. Each deck is 4 m
+    // deep and 12 m wide about the measured arrival line x 8.4, with three
+    // rails along each side. The depth is 4 m, not the proposal's 3 m: at
+    // 3 m the sprint takeoff's face contact (702.6 m) falls in the dead
+    // band of the 706 deck, too low to clear its edge furniture and too
+    // high to pass under its slab, and the player hangs on the edge
+    // instead of landing; at 4 m the feet cross the edge above the slab.
+    // The front edge is OPEN, by measurement: the sprint glide crosses
+    // the edge plane with its capsule spanning the deck top to 1.8 m
+    // above it (centre 706.97 m at the 706 edge), so any rail or post
+    // across the front is in the capsule's path, and the player hangs on
+    // it motionless (measured: 706.96 m, v ~ 0, never landing). The rails
+    // run along the sides instead, where the glide (x ~ 8.4) and the
+    // hook-climb mantle over the front edge never reach them; the front
+    // is the mantle edge, open by design. The climb's mark is a bar 0.35
+    // m outboard of the edge, hung 0.5 m below the deck's top on two
+    // drop-arms: a bar at the top rail's height is unhittable from the
+    // deck below (a shot at it grazes the upper deck's slab edge with
+    // 0.04 m of clearance against the hook ball's 0.08 m radius), and
+    // below the lip the bar is clear of every measured glide path and of
+    // the slab edge from below.
+    static constexpr float kBalconyWestX = 2.0F;
+    static constexpr float kBalconyEastX = 14.0F;
+    static constexpr float kBalconyEdgeZ = -220.0F;
+    static constexpr float kBalconyHookBarZ = -219.65F;
+    static constexpr float kBalconyHookBarDropM = 0.5F;
+    static constexpr float kBalconyTops[5] = {640.0F, 662.0F, 684.0F, 706.0F, 728.0F};
+    static constexpr float kBalconyRailHeights[3] = {0.35F, 0.7F, 1.1F};
     // The two halves' tips and the open gap between them (z, metres).
     static constexpr float kNearTipZ = -190.0F;
     static constexpr float kFarTipZ = -208.0F;

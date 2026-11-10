@@ -127,11 +127,12 @@ constexpr double kLimpSeconds = 30.0;
 // not the floor under the body: the blow is the closing speed along the
 // contact, less the player's own run's part. His own run is never a blow
 // (J-048; Cory, 11-06: "I can run fast into something and it hurts me. Thats
-// dumb"): on his feet, and in the flight that starts there, his legs' speed
-// over his frame up to kFlowSpeedMps is taken off (physics_world_support.hpp
-// set_own_drive). What
-// the other body brings, a fall's speed, and a throw (the slingshot, a swing,
-// a zipline torn off, a shove) stay a blow. Met side-on or head-on there are
+// dumb"): on his feet, and in the flight that starts there, his self-driven
+// speed (legs, arms, hook; J-061, never wind) up to kFlowSpeedMps is taken
+// off (physics_world_support.hpp set_own_drive). What
+// the other body brings, a fall's speed, a gust's push, and a throw (the
+// slingshot, a swing, a zipline torn off, a shove) stay a blow. Met side-on
+// or head-on there are
 // no legs to spring it, the head and chest take it on steel: kHitLethalSpeed
 // kills (a fall of 5 m onto the face; CHOSEN, half the feet-first
 // kLethalImpactSpeedMps), leaving the body as a fall does. From

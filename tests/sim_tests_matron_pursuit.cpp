@@ -209,6 +209,8 @@ void run_matron_ring_descent() {
     }
     std::cout << "PASS scraperx_sim matron ring descent\n";
 }
+SCRAPERX_GROUP("matron_ring_descent", 920, run_matron_ring_descent);
+SCRAPERX_SELECT("matron-ring-descent", run_matron_ring_descent);
 
 void run_matron_pursuit() {
     // Up: from 132 by the corner pipe to 143 and 154, then the home ladder.
@@ -247,6 +249,8 @@ void run_matron_pursuit() {
     }
     std::cout << "PASS scraperx_sim matron pursuit\n";
 }
+SCRAPERX_GROUP("matron_pursuit", 910, run_matron_pursuit);
+SCRAPERX_SELECT("matron-pursuit", run_matron_pursuit);
 
 // Every way between two of her decks that her scan of the tower finds (a
 // ladder's rungs, a pole, a lip, a hang and drop), end to end and alone: from
@@ -405,3 +409,5 @@ void run_matron_ways() {
     }
     std::cout << "PASS scraperx_sim matron ways: " << taken << " ways\n";
 }
+SCRAPERX_GROUP("matron_ways", 930, run_matron_ways);
+SCRAPERX_SELECT("matron-ways", run_matron_ways);

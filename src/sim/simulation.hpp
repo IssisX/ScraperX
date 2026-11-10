@@ -304,8 +304,10 @@ struct MatronSnapshot final {
     std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
     std::uint32_t throws = 0;   // and threw at the player
     std::uint32_t stock_shoves = 0;     // and shoved off a lip (J-016)
-    std::uint32_t stock_handled = 0;    // her throwables she counts his, a bit each
+    std::uint64_t stock_handled = 0;    // her throwables she counts his, a bit each
     double stock_push_force_n = 0.0;   // her hands' push on it this tick
+    double throw_windup = 0.0;         // rearing back to throw: 0 not, up to 1 as it leaves her hands
+    std::uint64_t stock_thrown = 0;    // her throw whose landing is no sound to her yet, 0 none
     // Her balance (matron.hpp): blows that took it and that took her off her
     // feet this run, the last blow (the change in her speed it made), and
     // down, the way she fell, kneeling where lying did not fit, and how long.
@@ -959,6 +961,10 @@ struct Snapshot final {
     // closing speed.
     std::uint64_t hit_count = 0;
     double hit_speed_mps = 0.0;
+    // The hardest blow this tick, his own drive taken off (the listener's
+    // hit_closing, before the felt threshold): what a wall hit charges,
+    // whether or not it was felt.
+    double hit_closing_mps = 0.0;
     // Riding a zipline's trolley (sim/zipline.hpp): the swing's hands on
     // its bar.
     bool zipline_riding = false;
@@ -1671,6 +1677,8 @@ public:
     [[nodiscard]] std::uint32_t loose_stock_crane_steel_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_machine_weights_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_throwables_begin() const noexcept;
+    // J-042's two kinds by her band, laid last of all (after the east/west stock).
+    [[nodiscard]] std::uint32_t loose_stock_matron_kinds_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_east_west_begin() const noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;

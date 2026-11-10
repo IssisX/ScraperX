@@ -67,6 +67,9 @@ Then:
   session.
 - **Quote** the owner's exact words for each owner lesson (italics), never a paraphrase passed
   off as a quote.
+- **Not every offer is a rule:** a tool or way of working he offers to use at will gets a home (the
+  integrator notes or a task file), never a rule line (11-07: *"Stop making everything I say fucking
+  rules"*); dropping it with no home loses it after a compact.
 - **Classify** each as a **rule** (a guardrail or constraint) or a **skill** (a reusable procedure
   of several steps).
 - **No target count.** The list is as long as the material makes it: never aim for, round to or
