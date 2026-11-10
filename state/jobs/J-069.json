@@ -116,7 +116,7 @@
    "kind": "review",
    "last_error": "",
    "last_sent": "2026-11-10T11:29:35Z",
-   "missing": 1,
+   "missing": 2,
    "ref": "PR|#376",
    "sends": 1,
    "sent_by": "live",
@@ -128,7 +128,11 @@
    "what": "#376 @ 7b79e7cd has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T12:37:52Z",
+    "by": "muse",
+    "how": "reply naming it"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -163,5 +167,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T12:25:07Z"
+ "updated": "2026-11-10T12:59:30Z"
 }

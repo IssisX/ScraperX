@@ -1,12 +1,12 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j009-258-down-traversal": "237ba1703ce562e34e1279b022edf7a7705ff7a6",
   "fb-bot/integrate-j009-258-down-traversal-flags": "fdea6e19e6a6eb72c676d617930f06b92e213e0e"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:17:00Z",
@@ -97,15 +97,42 @@
    "version": "6746950913",
    "via": "session",
    "what": "ask from Muse on #116"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T12:59:30Z",
+   "dead": "2026-11-10T17:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T15:47:00Z",
+   "id": "O-54e6b6b5",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-10T12:59:30Z",
+   "missing": 0,
+   "ref": "PR|#377",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 377,
+   "to": "codex",
+   "unseen": null,
+   "version": "land:237ba1703ce562e34e1279b022edf7a7705ff7a6",
+   "via": "relay",
+   "what": "#377 @ 237ba170 has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 377,
  "pr_done": "",
- "prs": [],
+ "prs": [
+  377
+ ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-10T12:25:07Z"
+ "state": "review",
+ "updated": "2026-11-10T12:59:30Z"
 }

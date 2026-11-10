@@ -1,7 +1,9 @@
 {
  "attempt": 1,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j061-wind-not-own-run": "431c9089a4b538e60a87310271c82f7cc08f74b1"
+ },
  "cancelled": null,
  "ci": "running",
  "commands": [],
@@ -10,7 +12,13 @@
  "head": "431c9089a4b538e60a87310271c82f7cc08f74b1",
  "issue": 312,
  "job": "J-061",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j061-wind-not-own-run": [
+   "431c9089a4b538e60a87310271c82f7cc08f74b1",
+   "merged #337",
+   "2026-11-10T12:59:30Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -296,11 +304,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 337,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   337
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-10T12:25:07Z"
+ "state": "merged",
+ "updated": "2026-11-10T12:59:30Z"
 }
