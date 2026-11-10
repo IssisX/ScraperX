@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-10 | *"shes far from hugging it like a normal person would"*, then *"Hug"*: she climbs close to what she climbs. (A pause he sets holds only that once: *"That was just today."*) | Rule 37 |
 | 11-10 | *"Don't, again, give me the option to reply go to stop something, bro."*: an answer word means what it does | Rule 19 |
 | 11-10 | *"I just need you to give me a good guess if you can't give me the real answer."*: a measured estimate, called one, never no number | Rule 20 |
 | 11-10 | *"No, you are faster than Muse. Muse is actually slow ... we are using a faster version of Muse called Muse Spark"*: Muse is free but slow; speed counts when choosing who codes | Rule 61 |
