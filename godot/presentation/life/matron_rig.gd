@@ -41,7 +41,32 @@ const WIND_RATE := 0.23
 const WIND_DIR := Vector3(0.93, 0.0, 0.37)
 const HAIR_ITERATIONS := 3
 const HAIR_JUMP_M := 1.0      # a root that moved this far in a frame (a respawn) restarts the hang
-const BACK_RADIUS := 0.17
+# Her upper back for the locks: a sphere, so the push is right in any pose. It
+# was 0.17 m about chest (0, 0.05, -0.05): its surface stood up to 13 cm off
+# her back and rose above her shoulder line under the nape, so the locks
+# landed on it and rolled sideways over her shoulders. Fitted to her measured
+# back (BACK_Z: 9.4 cm behind the bone at mid-back) and kept under the collar
+# band behind her neck (J-067).
+const BACK_CENTRE := Vector3(0.0, -0.02, 0.07)
+const BACK_RADIUS := 0.165
+# J-067: her back in chest-local Y, how far behind the chest bone it reaches
+# within |x| 0.12 (measured on her drawn skin, tunic and collar at the guard,
+# + 6 mm for the strand): the collar ring's radius straight behind her.
+const BACK_Z := [Vector2(-0.29, 0.042), Vector2(-0.21, 0.047), Vector2(-0.17, 0.067), Vector2(-0.13, 0.076),
+	Vector2(-0.09, 0.083), Vector2(-0.05, 0.091), Vector2(-0.01, 0.094), Vector2(0.05, 0.092), Vector2(0.09, 0.085),
+	Vector2(0.13, 0.075), Vector2(0.15, 0.065), Vector2(0.17, 0.045), Vector2(0.19, 0.027), Vector2(0.21, 0.021)]
+# J-067: the neck ring's radius by direction, (neck_lo local Y, radius). It was
+# one 0.095 m cylinder, but neck_lo's axis sits near the back of her neck: the
+# back skin is 2-3.5 cm off it between 3 and 10 cm up, the sides 7-12 cm (her
+# jaw), the front more (measured on her drawn skin, tunic and collar, guard and
+# shuffle, + 6 mm for the strand). The nape locks, rooted at that skin, were
+# walked out level to clear 0.095 and stood out behind her head ("raised",
+# Cory 11-08). Back and side blend by angle; never wider than the old 0.095,
+# which the front keeps.
+const NECK_BACK_R := [Vector2(-0.01, 0.095), Vector2(0.0, 0.085), Vector2(0.01, 0.071), Vector2(0.02, 0.053),
+	Vector2(0.03, 0.042), Vector2(0.04, 0.033), Vector2(0.05, 0.027), Vector2(0.08, 0.028), Vector2(0.09, 0.029),
+	Vector2(0.10, 0.034), Vector2(0.11, 0.046)]
+const NECK_SIDE_R := [Vector2(0.01, 0.095), Vector2(0.02, 0.077), Vector2(0.04, 0.079), Vector2(0.05, 0.095)]
 
 var skel: Skeleton3D
 var view: Node3D
@@ -1418,7 +1443,6 @@ func step_hair(delta: float) -> void:
 	var chest := bone_world("chest")
 	var belt := bone_world("spine_mid")
 	var neck := bone_world("neck_lo")
-	var back := chest * Vector3(0.0, 0.05, -0.05)
 	var down := head.basis * Vector3.DOWN
 	for ch in _chains:
 		var idx: Array = ch["idx"]
@@ -1456,17 +1480,18 @@ func step_hair(delta: float) -> void:
 				# The point can sit outside the skull and the back while the ribbon
 				# between this point and the one above still cuts through them.
 				q = _segment_outside(above, q, seg, skull, _skull_radius)
-				q = _segment_outside(above, q, seg, back, BACK_RADIUS)
+				q = _segment_outside(above, q, seg, chest * BACK_CENTRE, BACK_RADIUS)
 				# Collar and belt are rings the two spheres do not cover. Walk the
 				# segment out sideways and down. A lift along the chest axis spends
 				# the hang. Measured radii, not a knob: collar 0.138 on chest
-				# local Y 0.091..0.154, buckle 0.192 on spine_mid local Y -0.001..0.042.
-				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138)
+				# local Y 0.091..0.154 (straight behind her, her measured back, BACK_Z),
+				# buckle 0.192 on spine_mid local Y -0.001..0.042.
+				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138, BACK_Z)
 				q = _clear_ring(above, q, seg, belt, -0.001, 0.042, 0.192)
-				# The neck is a cylinder the collar ring does not cover. Measured on
-				# the posed cloth: max radial 0.089, so 0.095 sits the strand just
-				# outside it. Y -0.01..0.105 is the neck on neck_lo.
-				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095)
+				# The neck is a cylinder the collar ring does not cover, 0.095 at its
+				# front, narrower behind and at the sides (NECK_BACK_R, NECK_SIDE_R).
+				# Y -0.01..0.105 is the neck on neck_lo.
+				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095, NECK_BACK_R, NECK_SIDE_R)
 				# The chest front is a slope, not a wider cylinder. A point can be
 				# outside the collar radius and still be in front of the cloth.
 				# Walk it back in the horizontal, never up: aiming the whole lock
@@ -1542,30 +1567,49 @@ func _segment_hits(a: Vector3, d_unit: Vector3, length: float, centre: Vector3, 
 
 # The clothing ring is a slice of a cylinder on a posed bone. If the segment
 # enters it, tilt the child toward the horizontal way out, still downward.
-func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: float, y1: float, radius: float) -> Vector3:
+func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: float, y1: float, radius: float,
+		back_r: Array = [], side_r: Array = []) -> Vector3:
 	var origin := bone.origin
 	var axis := bone.basis.y.normalized()
-	for _guard in 6:
-		if _ring_depth(a, b, origin, axis, y0, y1, radius) <= 0.001:
-			return b
-		var horiz := _ring_out(a, b, origin, axis, y0, y1)
-		horiz = Vector3(horiz.x, 0.0, horiz.z)
-		if horiz.length() < 1e-4:
-			horiz = Vector3(0.0, 0.0, -1.0)
-		horiz = horiz.normalized()
-		var d := b - a
-		if d.length() < 1e-6:
-			d = Vector3.DOWN
-		d = d.normalized()
-		var trial := d + horiz * 0.45
-		trial.y = minf(trial.y, -0.15)
-		if trial.length() < 1e-6:
-			trial = Vector3.DOWN
-		b = a + trial.normalized() * length
-	return b
+	var fwd := bone.basis.z.normalized()
+	if _ring_depth(a, b, origin, axis, y0, y1, radius, fwd, back_r, side_r) <= 0.001:
+		return b
+	var horiz := _ring_out(a, b, origin, axis, y0, y1)
+	horiz = Vector3(horiz.x, 0.0, horiz.z)
+	if horiz.length() < 1e-4:
+		horiz = Vector3(0.0, 0.0, -1.0)
+	horiz = horiz.normalized()
+	var d := b - a
+	if d.length() < 1e-6:
+		d = Vector3.DOWN
+	d = d.normalized()
+	# J-067: the smallest walk out that clears the ring, length exact, the way
+	# _segment_outside swings. Fixed 0.45 steps overshot by up to about 20
+	# degrees a step and left the back locks standing out level ("raised",
+	# Cory 11-08) instead of hanging just outside her neck and collar.
+	var hi := 8.0
+	if _ring_depth(a, _ring_walk(a, d, horiz, hi, length), origin, axis, y0, y1, radius, fwd, back_r, side_r) > 0.001:
+		return _ring_walk(a, d, horiz, hi, length)
+	var lo := 0.0
+	for _i in 14:
+		var mid := (lo + hi) * 0.5
+		if _ring_depth(a, _ring_walk(a, d, horiz, mid, length), origin, axis, y0, y1, radius, fwd, back_r, side_r) > 0.001:
+			lo = mid
+		else:
+			hi = mid
+	return _ring_walk(a, d, horiz, hi, length)
 
 
-func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float, radius: float) -> float:
+func _ring_walk(a: Vector3, d: Vector3, horiz: Vector3, s: float, length: float) -> Vector3:
+	var trial := d + horiz * s
+	trial.y = minf(trial.y, -0.15)
+	if trial.length() < 1e-6:
+		trial = Vector3.DOWN
+	return a + trial.normalized() * length
+
+
+func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float, radius: float,
+		fwd: Vector3 = Vector3.ZERO, back_r: Array = [], side_r: Array = []) -> float:
 	var worst := 0.0
 	for s in 8:
 		var p: Vector3 = a.lerp(b, float(s) / 7.0)
@@ -1573,8 +1617,30 @@ func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: flo
 		if along < y0 - 0.01 or along > y1 + 0.01:
 			continue
 		var radial := (p - origin) - axis * along
-		worst = maxf(worst, radius - radial.length())
+		var r := radius
+		if not back_r.is_empty() and radial.length() > 1e-6:
+			# 1 straight behind, 0 at her sides, below 0 toward the front
+			var c := -radial.normalized().dot(fwd) / 0.7071
+			var side := minf(radius, _taper_at(side_r, along)) if not side_r.is_empty() else radius
+			if c >= 0.0:
+				r = lerpf(side, minf(radius, _taper_at(back_r, along)), minf(c, 1.0))
+			else:
+				r = lerpf(side, radius, minf(-c, 1.0))
+		worst = maxf(worst, r - radial.length())
 	return worst
+
+
+# Piecewise linear in (y, radius) points sorted by y; flat past either end.
+func _taper_at(points: Array, y: float) -> float:
+	var first: Vector2 = points[0]
+	if y <= first.x:
+		return first.y
+	for i in range(1, points.size()):
+		var lo: Vector2 = points[i - 1]
+		var hi: Vector2 = points[i]
+		if y <= hi.x:
+			return lerpf(lo.y, hi.y, (y - lo.x) / maxf(hi.x - lo.x, 1e-6))
+	return (points[points.size() - 1] as Vector2).y
 
 
 func _ring_out(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float) -> Vector3:
