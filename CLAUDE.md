@@ -87,8 +87,8 @@ him again.
   needs whom` and start the next job; every agent holds two or more jobs.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews each
   green head once, asked by the switchboard. The Claude API (Opus; high, the security pass max) does the eye, the
-  security pass on CI and signing changes, and any head Codex has not reviewed. ChatGPT, then Grok, review only
-  as the fallback or after a NOTE. The switchboard merges on a green proof plus a LAND from
+  security pass on CI and signing changes, and any head Codex has not reviewed. After an API NOTE the integrator
+  rules within the hour (11-10, an inbox NOTE-REVIEW line); ChatGPT, then Grok, only if it has not. The switchboard merges on a green proof plus a LAND from
   another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
   Codex review (Muse's LAND while Codex cannot review, 11-10) and a clean Claude API review, both on the full head sha.
 - **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
