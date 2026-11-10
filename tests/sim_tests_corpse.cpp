@@ -464,6 +464,15 @@ void run_wind_own_drive() {
         Simulation::TestExtraSolid{-40.0, 200.0, -147.0, 12.0F, 0.5F, 5.0F, false},
         Simulation::TestExtraSolid{-65.0, 147.5, -147.0, 1.0F, 77.5F, 5.0F, false},
     };
+    // (5) adds the east wall the steer-back meets: its west face is
+    // x=-57.5, 6.5 m east of the west wall, top 185.0 — under the
+    // sprint's path at that x (he passes above 189), so he only meets it
+    // steering back east.
+    const std::vector<Simulation::TestExtraSolid> rebound_solids = {
+        Simulation::TestExtraSolid{-40.0, 200.0, -147.0, 12.0F, 0.5F, 5.0F, false},
+        Simulation::TestExtraSolid{-65.0, 147.5, -147.0, 1.0F, 77.5F, 5.0F, false},
+        Simulation::TestExtraSolid{-57.0, 147.5, -147.0, 1.0F, 37.5F, 5.0F, false},
+    };
 
     // (1) The same run, no wind: nothing charged.
     {
@@ -536,5 +545,80 @@ void run_wind_own_drive() {
         require(s.snapshot().death_count == 0, "wind: (4) he lives (below lethal)");
     }
 
-    std::cout << "PASS scraperx_sim wind own drive: a gust's push into a wall is a blow; his own run is not\n";
+    // (5) Rebound (Codex P1 on #337): a sprint into the west wall,
+    // stopped, then steered back east in the air into the east wall — the
+    // second hit is his own steering, no blow. On the unfixed code the
+    // tracked self-drive still holds the first run after the wall stopped
+    // it, so the steering cancels it to ~0 and the second hit is charged
+    // in full (a blow past the arm-break speed).
+    {
+        Simulation s(InitialSpawn::ExteriorGrade, rebound_solids);
+        const double lane_z = -147.0;
+        (void)s.debug_launch_player({-32.0, 200.5 + 1.5, lane_z}, {0.0, 0.0, 0.0});
+        require(advance_until(s, [](const Snapshot &n) { return n.player_grounded; }, 2.0),
+                "wind: (5) he lands on the platform");
+        (void)s.advance_frame(0.5);
+        require(s.snapshot().player_grounded, "wind: (5) he settles on the platform");
+        (void)s.set_facing(-1.0, 0.0);
+        (void)s.set_move_input(-1.0, 0.0);
+        (void)s.set_sprint_input(true);
+        const std::uint64_t hits_before = s.snapshot().hit_count;
+        double takeoff_mps = 0.0;
+        double first_closing = 0.0;
+        double second_closing = 0.0;
+        double second_blow = 0.0;
+        bool first_seen = false;
+        bool second_seen = false;
+        bool steering = false;
+        const std::uint32_t budget_ticks = static_cast<std::uint32_t>(12.0 * 90.0);
+        for (std::uint32_t tick = 0; tick < budget_ticks; ++tick) {
+            const Snapshot before = s.snapshot();
+            const double west_into_tick = -before.player_linear_velocity.x;
+            const double east_into_tick = before.player_linear_velocity.x;
+            if (before.player_grounded) takeoff_mps = west_into_tick;
+            if (!s.advance_frame(Simulation::kFixedStepSeconds).accepted) break;
+            const Snapshot after = s.snapshot();
+            if (!first_seen) {
+                // First wall: the westward collapse, as in wind_off_run.
+                if (!after.player_grounded && west_into_tick > 0.5 &&
+                    -after.player_linear_velocity.x < 0.5 * west_into_tick &&
+                    after.player_position.x <= -63.0) {
+                    first_seen = true;
+                    first_closing = west_into_tick;
+                }
+            } else {
+                if (!steering) {
+                    // Stopped at the wall: steer back east, full stick.
+                    steering = true;
+                    (void)s.set_facing(1.0, 0.0);
+                    (void)s.set_move_input(1.0, 0.0);
+                    (void)s.set_sprint_input(false);
+                }
+                second_blow = std::max(second_blow, after.hit_closing_mps);
+                if (!second_seen && east_into_tick > 0.5 &&
+                    after.player_linear_velocity.x < 0.5 * east_into_tick &&
+                    after.player_position.x >= -58.5) {
+                    second_seen = true;
+                    second_closing = east_into_tick;
+                }
+            }
+            if (second_seen && horizontal_speed(after) < 1.0) break;
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        const Snapshot end = s.snapshot();
+        std::cout << "  wind: rebound takeoff=" << takeoff_mps << " first=" << first_closing
+                  << " second=" << second_closing << " blow=" << second_blow
+                  << " hits=" << (end.hit_count - hits_before) << " breaks=" << end.arm_break_count << "\n";
+        require(first_seen, "wind: (5) the run hits the west wall");
+        require(second_seen, "wind: (5) the steer back hits the east wall");
+        require(takeoff_mps >= 7.0 && takeoff_mps <= 9.1, "wind: (5) he sprints off the edge");
+        require(second_closing >= 8.0, "wind: (5) he steers back to a full run's speed");
+        require(second_blow <= 0.4, "wind: (5) his own steering back is no blow");
+        require(end.hit_count - hits_before == 0, "wind: (5) no hit felt");
+        require(end.arm_break_count == 0, "wind: (5) no arm broken");
+        require(end.death_count == 0, "wind: (5) he lives");
+    }
+
+    std::cout << "PASS scraperx_sim wind own drive: a gust's push into a wall is a blow; his own run is not, "
+                 "steered back or no\n";
 }
