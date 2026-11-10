@@ -9,7 +9,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
+ "deadline": "2026-11-10T02:19:23Z",
  "head": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
  "issue": 278,
  "job": "J-049",
@@ -41,11 +41,12 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "BRANCH|fb-bot/integrate-j049-pr1",
    "sends": 0,
    "thread": 278,
    "to": "muse",
+   "unseen": "2026-11-10T08:09:47Z",
    "version": "red:ed151a6c1f763dc1ab8ed77db53912790b50c397",
    "via": "email",
    "what": "`fb-bot/integrate-j049-pr1` proof red: scope, no PR"
@@ -337,5 +338,5 @@
  ],
  "review": "waiting",
  "state": "working",
- "updated": "2026-11-10T07:39:04Z"
+ "updated": "2026-11-10T08:09:47Z"
 }

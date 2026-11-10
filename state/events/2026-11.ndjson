@@ -854,3 +854,17 @@
 {"attempt": 1, "ev": "sent", "id": "O-90f22143", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
 {"attempt": 1, "ev": "sent", "id": "O-20e34f15", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T07:39:04Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T07:39:04Z", "tries": 1}
+{"ev": "unseen", "id": "O-194f9ab3", "job": "J-001", "passes": 3, "t": "2026-11-10T08:09:47Z"}
+{"ev": "unseen", "id": "O-7d30bc0c", "job": "J-001", "passes": 3, "t": "2026-11-10T08:09:47Z"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-71c6c5fb", "job": "J-045", "kind": "ask", "ref": "ASK|ask on #248", "t": "2026-11-10T08:09:47Z", "to": "claude", "via": "session"}
+{"ev": "unseen", "id": "O-21733090", "job": "J-049", "passes": 3, "t": "2026-11-10T08:09:47Z"}
+{"ev": "ledger_sent", "job": "J-001", "key": "cfd9648074ed208c", "ref": "BRANCH|claude/integrate-j001-hold", "stage": 2, "t": "2026-11-10T08:09:47Z", "to": "claude"}
+{"ev": "ledger_sent", "job": "J-015", "key": "bea8cd1b0e636b41", "ref": "BRANCH|fb-bot/integrate-j015-slice1", "stage": 2, "t": "2026-11-10T08:09:47Z", "to": "muse"}
+{"ev": "ledger_sent", "job": "", "key": "f7d35d2dced2c8bc", "ref": "ASK|ask on #241", "stage": 2, "t": "2026-11-10T08:09:47Z", "to": "claude"}
+{"attempt": 2, "ev": "sent", "id": "O-d0889dd8", "job": "J-001", "ref": "BRANCH|claude/integrate-j001-hold", "send": 2, "t": "2026-11-10T08:09:47Z", "to": "muse", "via": "email"}
+{"attempt": 2, "ev": "sent", "id": "O-067b4f41", "job": "J-038", "ref": "PR|#372", "send": 2, "t": "2026-11-10T08:09:47Z", "to": "muse", "via": "email"}
+{"attempt": 2, "ev": "sent", "id": "O-f45193c7", "job": "J-044l", "ref": "BRANCH|fb-bot/integrate-protected-j044l-vault", "send": 2, "t": "2026-11-10T08:09:47Z", "to": "muse", "via": "email"}
+{"attempt": 2, "ev": "sent", "id": "O-9fcd7b62", "job": "J-045", "ref": "BRANCH|fb-bot/integrate-j045-first-advance", "send": 2, "t": "2026-11-10T08:09:47Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-71c6c5fb", "job": "J-045", "ref": "ASK|ask on #248", "send": 1, "t": "2026-11-10T08:09:47Z", "to": "claude", "via": "session"}
+{"attempt": 2, "ev": "sent", "id": "O-c4e58a65", "job": "J-059", "ref": "PR|#343", "send": 2, "t": "2026-11-10T08:09:47Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T08:09:47Z", "tries": 1}
