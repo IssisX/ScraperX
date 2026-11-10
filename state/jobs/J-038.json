@@ -3,14 +3,15 @@
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j038-slice1": "94a53394cc5caa83250bc64225f423590935dd48",
+  "fb-bot/integrate-protected-j038-slice1": "4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
   "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
  },
  "cancelled": null,
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
- "head": "4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
+ "deadline": "2026-11-10T18:17:00Z",
+ "head": "d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -18,6 +19,11 @@
    "94a53394cc5caa83250bc64225f423590935dd48",
    "",
    "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-protected-j038-slice1": [
+   "4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
+   "closed #299",
+   "2026-11-10T16:19:58Z"
   ],
   "fb-bot/integrate-protected-j038-slice1-r3": [
    "474fb0c98aa74df708e476136ca30baf9f917cde",
@@ -32,7 +38,10 @@
    "asked": null,
    "attempts": 1,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T16:19:58Z",
+    "why": "PR closed without merging"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
    "dead_lettered": null,
@@ -349,12 +358,37 @@
    "version": "fix:d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
    "via": "email",
    "what": "#372: open FIX from Codex (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T16:19:58Z",
+   "dead": "2026-11-10T20:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T18:17:00Z",
+   "id": "O-e0d043a6",
+   "kind": "ruling",
+   "last_error": "",
+   "last_sent": "2026-11-10T16:19:58Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j038-slice1",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 299,
+   "to": "claude",
+   "unseen": null,
+   "version": "closed:4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j038-slice1` @ 4e6ab1f4: closed #299 without merging at this head: reopen it, or delete the branch"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 299,
+ "pr": 372,
  "pr_done": "",
  "prs": [
   299,
@@ -362,5 +396,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T15:09:20Z"
+ "updated": "2026-11-10T16:19:58Z"
 }

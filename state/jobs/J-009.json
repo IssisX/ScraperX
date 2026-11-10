@@ -7,9 +7,11 @@
  },
  "cancelled": null,
  "ci": "green",
- "commands": [],
+ "commands": [
+  "6771165879:578"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T22:17:00Z",
+ "deadline": "2026-11-10T00:56:16Z",
  "head": "237ba1703ce562e34e1279b022edf7a7705ff7a6",
  "issue": 116,
  "job": "J-009",
@@ -51,7 +53,12 @@
    "what": "`fb-bot/integrate-j009-258-down-traversal-flags` proof red: native-tests (matron-slices-3), godot-touch (touch-2), native-tests (athletic-traversal), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T15:17:29Z",
+    "by": "Claude",
+    "comment": "6771165879",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:30:09Z",
    "attempts": 2,
@@ -75,7 +82,11 @@
    "what": "ask from Muse on #116"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T15:17:29Z",
+    "by": "claude",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T17:34:45Z",
    "attempts": 2,
@@ -94,6 +105,7 @@
    "sent_by": "live",
    "thread": 116,
    "to": "claude",
+   "unseen": null,
    "version": "6746950913",
    "via": "session",
    "what": "ask from Muse on #116"
@@ -163,5 +175,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T15:09:20Z"
+ "updated": "2026-11-10T16:19:58Z"
 }

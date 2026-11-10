@@ -17,7 +17,9 @@
  },
  "cancelled": null,
  "ci": "green",
- "commands": [],
+ "commands": [
+  "6771165879:489"
+ ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:17:00Z",
  "head": "7b6a5755c3bf8d49ee48bc3f0b03d5f0a89d6e75",
@@ -272,7 +274,12 @@
    "what": "review #360 @ fb9f5141"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T15:17:29Z",
+    "by": "Claude",
+    "comment": "6771165879",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T16:51:16Z",
    "attempts": 2,
@@ -299,7 +306,11 @@
    "what": "ask from Claude on #350"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T15:17:29Z",
+    "by": "grok_bot",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T16:55:36Z",
    "attempts": 2,
@@ -591,5 +602,5 @@
  ],
  "review": "LAND",
  "state": "proof",
- "updated": "2026-11-10T15:09:20Z"
+ "updated": "2026-11-10T16:19:58Z"
 }

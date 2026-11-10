@@ -4,15 +4,17 @@
  "branches": {
   "fb-bot/integrate-j015-slice1": "2f8b1f21d655f8e11e9648cbba743355c31f2314",
   "fb-bot/integrate-j015-wreck-way-on": "a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
-  "fb-bot/integrate-protected-j015-slice1": "47acd9c2b8f3f3e6c6385c115a15ced9436a228e",
+  "fb-bot/integrate-protected-j015-slice1": "2ba17f22df2342e37f48dc064d47509399463a9a",
   "fb-bot/integrate-protected-j015-wreck-way-on": "aee6d79d91249016e5788e205e16b0958f4bd427"
  },
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6771165879:299"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T08:48:57Z",
- "head": "47acd9c2b8f3f3e6c6385c115a15ced9436a228e",
+ "deadline": "2026-11-10T20:19:58Z",
+ "head": "2ba17f22df2342e37f48dc064d47509399463a9a",
  "issue": 122,
  "job": "J-015",
  "landed": {
@@ -27,9 +29,9 @@
    "2026-11-09T17:35:20Z"
   ],
   "fb-bot/integrate-protected-j015-slice1": [
-   "47acd9c2b8f3f3e6c6385c115a15ced9436a228e",
+   "2ba17f22df2342e37f48dc064d47509399463a9a",
    "",
-   "2026-11-10T07:39:04Z"
+   "2026-11-10T16:19:58Z"
   ],
   "fb-bot/integrate-protected-j015-wreck-way-on": [
    "aee6d79d91249016e5788e205e16b0958f4bd427",
@@ -177,7 +179,12 @@
    "what": "ask from ChatGPT on #122"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T15:17:29Z",
+    "by": "Claude",
+    "comment": "6771165879",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -345,6 +352,31 @@
    "version": "6764191003",
    "via": "session",
    "what": "ask from Muse on #122"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T16:19:58Z",
+   "dead": "2026-11-11T00:19:58Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T20:19:58Z",
+   "id": "O-87160314",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T16:19:58Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j015-slice1",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 122,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:2ba17f22df2342e37f48dc064d47509399463a9a",
+   "via": "email",
+   "what": "`fb-bot/integrate-protected-j015-slice1` proof red: native-tests (athletic-traversal-2), godot-touch (touch-2), no PR"
   }
  ],
  "outcome": null,
@@ -355,5 +387,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T15:09:20Z"
+ "updated": "2026-11-10T16:19:58Z"
 }

@@ -7,11 +7,11 @@
   "fb-bot/integrate-j059-black-eye": "e34ac5096b438be2f4a8567d4bf52f371857652e"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T19:09:20Z",
- "head": "1e1488f3cfc5f18864689ec0ba4d5f8bc5e39432",
+ "deadline": null,
+ "head": "8bd05a4ea89ed0e26c89b223cc19e6e9ece5aee4",
  "issue": 307,
  "job": "J-059",
  "landed": {
@@ -260,7 +260,11 @@
    "what": "#343 proof red: scope"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T16:19:58Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -293,7 +297,7 @@
  "prs": [
   343
  ],
- "review": "waiting",
- "state": "working",
- "updated": "2026-11-10T15:09:20Z"
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-10T16:19:58Z"
 }

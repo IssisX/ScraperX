@@ -6,7 +6,9 @@
  },
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6771165879:578"
+ ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T15:17:00Z",
  "head": "eed2f73f74f17aa02714e241773c71bee8663cc6",
@@ -133,7 +135,12 @@
    "what": "ask from Muse on #248"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T15:17:29Z",
+    "by": "Claude",
+    "comment": "6771165879",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T05:42:47Z",
    "attempts": 1,
@@ -161,7 +168,7 @@
    "ack": null,
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T07:42:53Z",
-   "attempts": 1,
+   "attempts": 2,
    "closed": null,
    "created": "2026-11-10T08:09:47Z",
    "dead": "2026-11-10T17:17:00Z",
@@ -170,10 +177,10 @@
    "id": "O-71c6c5fb",
    "kind": "ask",
    "last_error": "",
-   "last_sent": "2026-11-10T08:09:47Z",
+   "last_sent": "2026-11-10T16:19:58Z",
    "missing": 0,
    "ref": "ASK|ask on #248",
-   "sends": 1,
+   "sends": 2,
    "sent_by": "live",
    "thread": 248,
    "to": "claude",

@@ -1,5 +1,5 @@
 {
- "attempt": 1,
+ "attempt": 2,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j049-pr1": "ed151a6c1f763dc1ab8ed77db53912790b50c397",
@@ -10,7 +10,7 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T16:17:00Z",
- "head": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
+ "head": "55195bcdb35947325ddbdbe2ffd43d5d58fd6c7d",
  "issue": 278,
  "job": "J-049",
  "landed": {
@@ -338,7 +338,7 @@
    "ack": null,
    "ack_rule": "reply|ack",
    "asked": null,
-   "attempts": 1,
+   "attempts": 2,
    "closed": null,
    "created": "2026-11-10T15:09:20Z",
    "dead": "2026-11-10T18:17:00Z",
@@ -347,10 +347,10 @@
    "id": "O-ac0bbca6",
    "kind": "ruling",
    "last_error": "",
-   "last_sent": "2026-11-10T15:09:20Z",
+   "last_sent": "2026-11-10T16:19:58Z",
    "missing": 0,
    "ref": "BRANCH|fb-bot/integrate-protected-j049-pr1",
-   "sends": 1,
+   "sends": 2,
    "sent_by": "live",
    "thread": 367,
    "to": "claude",
@@ -358,17 +358,43 @@
    "version": "closed:2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
    "via": "session",
    "what": "`fb-bot/integrate-protected-j049-pr1` @ 2d99e906: closed #367 without merging at this head: reopen it, or delete the branch"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T16:19:58Z",
+   "dead": "2026-11-10T19:27:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T17:27:00Z",
+   "id": "O-d74c5379",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-10T16:19:58Z",
+   "missing": 0,
+   "ref": "PR|#383",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 383,
+   "to": "chatgpt",
+   "unseen": null,
+   "version": "55195bcdb35947325ddbdbe2ffd43d5d58fd6c7d",
+   "via": "issue",
+   "what": "review #383 @ 55195bcd"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 367,
+ "pr": 383,
  "pr_done": "closed",
  "prs": [
-  367
+  367,
+  383
  ],
  "review": "waiting",
- "state": "working",
- "updated": "2026-11-10T15:09:20Z"
+ "state": "review",
+ "updated": "2026-11-10T16:19:58Z"
 }
