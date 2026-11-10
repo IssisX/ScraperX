@@ -288,6 +288,8 @@ void run_service_o() {
               << " min_rope_N=" << ride.min_tension << " empty_apex_m=" << alone.apex
               << " empty_peak_mps=" << alone.peak_speed << " worst_step_m=" << g_path_watch.worst << '\n';
 }
+SCRAPERX_GROUP("service_o", 340, run_service_o);
+SCRAPERX_SELECT("AS-010-o", run_service_o);
 
 // AS-010 on player inputs from the TP-640 start: M hooked on, the chock
 // pulled, the ride, off onto the 662 deck; up C4 to the 684 deck; N's flap
@@ -463,6 +465,8 @@ void run_slingshot() {
               << " work_kJ=" << shot.work / 1000.0 << " apex=" << shot.apex << " peak_mps=" << shot.peak_speed
               << " landed_y=" << end.player_position.y << " short_apex=" << short_shot.apex << '\n';
 }
+SCRAPERX_GROUP("slingshot", 390, run_slingshot);
+SCRAPERX_SELECT("slingshot", run_slingshot);
 
 std::vector<std::uint64_t> world_bits(const scraperx::sim::Simulation &simulation) {
     std::vector<std::uint64_t> bits;

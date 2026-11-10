@@ -1,38 +1,52 @@
 name: Switchboard
+# J-072: the run says what it is, so a dry run never passes for a sweep. The bridge's watchdog
+# (tools/switchboard/muse_bridge.gs, SWEEP_TITLE) counts only a successful "Switchboard sweep" as alive.
+# A sweep the bridge's clock dispatches is named "Switchboard sweep (bridge <BRIDGE_VERSION>)", so the switch can
+# tell a stale or missing live bridge from the repo's (switch.py bridge_version_health).
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && (inputs.provision && 'Switchboard provision' ||
+  inputs.dry_run && 'Switchboard DRY run (takes no action)' || inputs.digest && 'Switchboard digest' ||
+  inputs.bridge_version && format('Switchboard sweep (bridge {0})', inputs.bridge_version) ||
+  'Switchboard sweep') || github.event_name == 'schedule' && (github.event.schedule == '0 12,13 * * *' &&
+  'Switchboard digest' || 'Switchboard sweep') || format('Switchboard ({0})', github.event_name) }}
 
 # The wake switch and merger of design v3 step B (job J-031). No model decides here: see
 # tools/switchboard/switch.py and work/CONTEXT.md.
 #
-# Every event except pull_request runs this file from the DEFAULT branch (`main`), so the switch is
-# live only once this file is on `main` too. Each run checks out trunk (ScraperX-Claude) for the code
+# Every event except pull_request runs this file from the DEFAULT branch, which is trunk (ScraperX-Claude; it
+# was `main` until the default moved, J-072 checked 11-09). Each run checks out trunk for the code
 # and config. No third-party action is used: the checkout is plain git over the public URL, so no
-# credential is written to disk. Event text (titles, bodies, labels) reaches the scripts only through
-# env, quoted, never through an expression inside `run:`.
+# credential is written to disk. The only actions are GitHub's own actions/cache, upload-artifact and
+# download-artifact (J-072, the switch's ETag cache): its file holds GitHub answers the run could read anyway, never
+# a token. Any job on trunk can save an Actions cache entry, and a restore unpacks the whole archive, so the cache
+# is restored and saved only in the cache-in and cache-out jobs, which hold no secret, run no checked-out code and
+# have no token scope beyond deleting old cache entries; ask and steer get the one signed file as this run's
+# artifact in $RUNNER_TEMP, never in the workspace or the venv (the security pass on #360). Event text (titles,
+# bodies, labels) reaches the scripts only through env, quoted, never through an expression inside `run:`.
 
+# No workflow_run trigger (J-072). It last fired 11-05 12:11Z: `workflows:` entries are glob patterns, and
+# the proof's name on trunk has a `+` ("...WO-000..013 + ascent..."), which a glob reads as "one or more
+# spaces", so the name never matched once the default branch moved to trunk (main's old name had no
+# glob character). It is not restored: the proof's own wake-switchboard job dispatches a full sweep as it
+# ends, and the Muse bridge dispatches one every 10 min; a targeted workflow_run run in the shared
+# concurrency group below would only replace that pending full sweep. Re-adding it needs `\+` for each `+`.
 on:
-  workflow_run:
-    # GitHub matches this by the workflow's name as registered from the DEFAULT branch's copy of
-    # wo000-delivery-spine.yml (main names it "ScraperX-2 Checkpoint ..."), not trunk's name.
-    # Both are listed so the trigger survives main's copy being renamed to match trunk.
-    # Since 11-05 the default branch is ScraperX-Claude, so these triggers and the schedules below are
-    # read from this file on trunk. GitHub registers them when this file changes on the default branch.
-    workflows:
-      - "ScraperX-2 Checkpoint — WO-004..006 Fold Stage, Exterior Approach, Coupled Machine"
-      - "ScraperX — full proof path (kernel WO-000..013 + ascent AS-001..AS-002)"
-    types: [completed]
   issue_comment:
     types: [created]
   issues:
     types: [labeled]
   schedule:
-    - cron: "3,18,33,48 * * * *"   # the sweep, every 15 minutes (Actions minutes are free on this public repo)
+    - cron: "3,18,33,48 * * * *"   # the sweep, every 15 minutes; GitHub drops most of these, so the Muse
+                                   # bridge's clock (muse_bridge.gs) dispatches the real one every 10 min
     - cron: "0 12,13 * * *"   # the digest: whichever of these is 7:00 AM Central posts it (CDT, then CST)
   workflow_dispatch:
     inputs:
+      # J-072: false by default. A dispatch is meant (a dry default gave a green run that did nothing); the
+      # bridge's clock and the proof's wake pass dry_run=false anyway, and a dry run is named DRY in the run list.
       dry_run:
-        description: Print every action, take none
+        description: Print every action, take none (the run is then named DRY)
         type: boolean
-        default: true
+        default: false
       digest:
         description: Post (or print) the digest now
         type: boolean
@@ -41,6 +55,11 @@ on:
         description: One-time setup of the hosted API agent (creates its environment, agent and vault)
         type: boolean
         default: false
+      # J-072: sent by the Muse bridge's clock (muse_bridge.gs BRIDGE_VERSION); it only names the run.
+      bridge_version:
+        description: The live Muse bridge's version (set by the bridge's clock; leave empty)
+        type: string
+        default: ""
   pull_request:
     branches: [ScraperX-Claude]
     paths:
@@ -70,6 +89,11 @@ concurrency:
 
 env:
   TRUNK: ScraperX-Claude
+  PYTHONUNBUFFERED: "1"   # J-072: each log line is stamped when printed, so a slow or timed-out step shows where
+  # J-072: the live bridge's version, as its clock dispatched this sweep ("" for any other event): the switch checks
+  # it against trunk's every sweep with no read (switch.py BRIDGE_VERSION_ENV). A hex string the clock sends; the
+  # switch only compares it, never runs it.
+  SWITCHBOARD_BRIDGE_VERSION: ${{ inputs.bridge_version }}
 
 jobs:
   # A PR that changes the switch: its unit tests and a dry run against the live repo. Read-only, no secrets.
@@ -109,21 +133,73 @@ jobs:
           .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO"
           .venv/bin/python src/tools/switchboard/switch.py --dry-run --repo "$REPO" --part steer --force-digest
 
+  # J-072: the switch's ETag cache (ghapi.py; a 304 answer does not count against the hourly limit, and run
+  # 42667757904 hit it). The security pass on #360: any job on trunk can save an entry under these keys, and the
+  # restore unpacks the whole archive, absolute paths too. So it is restored here, in a job with no secret, no token
+  # scope, no checkout and no step of its own code, and only the one file goes on, as an artifact of this run; ask
+  # and steer read it in $RUNNER_TEMP once its MAC checks (ghapi.load_etags). One cache scope: every event but a
+  # pull_request runs on the default branch, trunk, a run on any other ref skips the cache, and the runs are
+  # serialized by the concurrency group, so two states never diverge and fire one cached ledger timer twice.
+  cache-in:
+    if: >-
+      github.ref == 'refs/heads/ScraperX-Claude' && github.event_name != 'pull_request' && !inputs.provision && (
+        github.event_name != 'issues' || startsWith(github.event.label.name, 'owner:') ||
+        github.event.label.name == 'needs:orchestrator'
+      ) && (
+        github.event_name != 'issue_comment' || (github.event.issue.pull_request &&
+          (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
+           contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK') ||
+           contains(github.event.comment.body, 'codex-review-receipt')))
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - name: Restore the ask part's ETag cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ask/etags.json
+          key: switchboard-etags-ask-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: switchboard-etags-ask-
+      - name: Hand on the ask part's file, and nothing else
+        uses: actions/upload-artifact@v4
+        with:
+          name: switchboard-etags-ask
+          path: ask/etags.json
+          if-no-files-found: ignore
+          retention-days: 1
+          overwrite: true
+      - name: Restore the steer part's ETag cache
+        uses: actions/cache/restore@v4
+        with:
+          path: steer/etags.json
+          key: switchboard-etags-steer-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: switchboard-etags-steer-
+      - name: Hand on the steer part's file, and nothing else
+        uses: actions/upload-artifact@v4
+        with:
+          name: switchboard-etags-steer
+          path: steer/etags.json
+          if-no-files-found: ignore
+          retention-days: 1
+          overwrite: true
+
   # The paid part: the automatic Claude review, the eye, the orchestrator (off in v0). The only job
   # holding ANTHROPIC_API_KEY. Its code never merges; contents: write is for the ledger branch.
   ask:
     # J-056: it signs the automatic reviews with SWITCHBOARD_REVIEW_KEY, which lives only in this environment
     # (deploys only from ScraperX-Claude), so no branch's copy of any workflow can sign a forged security pass.
     environment: switchboard-merge
+    needs: cache-in
+    # always(): a cache-in that failed or was skipped (the provision run) is a cold cache, never a skipped ask
     if: >-
-      github.event_name == 'workflow_run' ||
-      github.event_name == 'workflow_dispatch' ||
+      always() && needs.cache-in.result != 'cancelled' && (github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'schedule' && github.event.schedule == '3,18,33,48 * * * *') ||
       (github.event_name == 'issues' && github.event.label.name == 'needs:orchestrator') ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
         (contains(github.event.comment.body, ': LAND') || contains(github.event.comment.body, ': FIX') ||
          contains(github.event.comment.body, ': NOTE') || contains(github.event.comment.body, ': BLOCK') ||
-         contains(github.event.comment.body, 'codex-review-receipt')))
+         contains(github.event.comment.body, 'codex-review-receipt'))))
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -144,6 +220,14 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
             -r src/tools/switchboard/requirements.txt
+      - name: Fetch the signed ETag file from cache-in (J-072)
+        # this run's artifact, into $RUNNER_TEMP: outside the workspace and the venv, so nothing in it is ever
+        # loaded as code; switch.py reads the one file only once its MAC checks. None on a cold start: a cold cache.
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: switchboard-etags-ask
+          path: ${{ runner.temp }}/etags
       - name: Run the switch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -151,11 +235,11 @@ jobs:
           AGENT_GITHUB_TOKEN: ${{ secrets.AGENT_GITHUB_TOKEN }}
           # J-056: signs each automatic review (an HMAC); switch.py takes it out of the environment at start.
           SWITCHBOARD_REVIEW_KEY: ${{ secrets.SWITCHBOARD_REVIEW_KEY }}
+          SWITCHBOARD_ETAG_CACHE: ${{ runner.temp }}/etags/etags.json   # J-072: from cache-in; MAC-checked
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
-          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           LABEL: ${{ github.event.label.name }}
           DISPATCH_DRY: ${{ inputs.dry_run }}
@@ -164,7 +248,6 @@ jobs:
           set -euo pipefail
           args=(--part "$PART" --repo "$REPO" --root src)
           case "$EVENT" in
-            workflow_run) args+=(--sha "$RUN_SHA") ;;
             issue_comment) args+=(--pr "$ISSUE_NUMBER") ;;
             issues) args+=(--issue "$ISSUE_NUMBER" --label "$LABEL") ;;
             schedule) if [ "$SCHEDULE" = "0 12,13 * * *" ]; then args+=(--digest); fi ;;
@@ -173,6 +256,16 @@ jobs:
               if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi ;;
           esac
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
+      - name: Hand the signed ETag file to cache-out (J-072)
+        # never from a dry run: it must not consume or advance the sweep state (switch.py saves no file then either)
+        if: always() && inputs.dry_run != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: switchboard-etags-ask-out
+          path: ${{ runner.temp }}/etags/etags.json
+          if-no-files-found: ignore
+          retention-days: 1
+          overwrite: true
 
   # One-time setup of the hosted API agent (step C): only on a dispatch with provision=true. It prints
   # the new ids to the run summary for work/budget.yml; it never prints a secret.
@@ -208,7 +301,7 @@ jobs:
 
   # The free part: the merge rule, review asks, one owner per issue, the digest. No API key.
   steer:
-    needs: ask
+    needs: [cache-in, ask]
     # J-056 security pass: SWITCHBOARD_MERGE_TOKEN lives only in this environment, which deploys only from
     # ScraperX-Claude, so a branch's copy of this file (pull_request, or a dispatch on another ref) cannot read it.
     environment: switchboard-merge
@@ -241,6 +334,13 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install --quiet --disable-pip-version-check --require-hashes --only-binary=:all: \
             -r src/tools/switchboard/requirements.txt
+      - name: Fetch the signed ETag file from cache-in (J-072)
+        # as in ask: this run's artifact, into $RUNNER_TEMP, read only once its MAC checks
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: switchboard-etags-steer
+          path: ${{ runner.temp }}/etags
       - name: Run the switch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -251,11 +351,14 @@ jobs:
           SWITCHBOARD_MERGE_TOKEN: ${{ secrets.SWITCHBOARD_MERGE_TOKEN }}
           # J-056: checks the MAC of the security pass before the merge token is used; taken out the same way.
           SWITCHBOARD_REVIEW_KEY: ${{ secrets.SWITCHBOARD_REVIEW_KEY }}
+          # J-072: optional Healthchecks.io ping URL, pinged once at the end of a full non-dry sweep (/fail when
+          # any part errored); switch.py takes it out of the environment at start. Unset: no ping.
+          HC_SWEEP_URL: ${{ secrets.HC_SWEEP_URL }}
+          SWITCHBOARD_ETAG_CACHE: ${{ runner.temp }}/etags/etags.json   # J-072: from cache-in; MAC-checked
           PART: ${{ github.job }}
           REPO: ${{ github.repository }}
           EVENT: ${{ github.event_name }}
           SCHEDULE: ${{ github.event.schedule }}
-          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           LABEL: ${{ github.event.label.name }}
           DISPATCH_DRY: ${{ inputs.dry_run }}
@@ -264,7 +367,6 @@ jobs:
           set -euo pipefail
           args=(--part "$PART" --repo "$REPO" --root src)
           case "$EVENT" in
-            workflow_run) args+=(--sha "$RUN_SHA") ;;
             issue_comment) args+=(--pr "$ISSUE_NUMBER") ;;
             issues) args+=(--issue "$ISSUE_NUMBER" --label "$LABEL") ;;
             schedule) if [ "$SCHEDULE" = "0 12,13 * * *" ]; then args+=(--digest); fi ;;
@@ -273,4 +375,70 @@ jobs:
               if [ "$DISPATCH_DRY" != "false" ]; then args+=(--dry-run); fi ;;
           esac
           .venv/bin/python src/tools/switchboard/switch.py "${args[@]}"
+      - name: Hand the signed ETag file to cache-out (J-072)
+        # never from a dry run, as in ask
+        if: always() && inputs.dry_run != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: switchboard-etags-steer-out
+          path: ${{ runner.temp }}/etags/etags.json
+          if-no-files-found: ignore
+          retention-days: 1
+          overwrite: true
+
+  # J-072: the other half of cache-in. Saves the files ask and steer handed on, in a job with no secret, no checkout
+  # and no code of its own; actions: write is for deleting older cache entries and this run's hand-over artifacts.
+  cache-out:
+    needs: [cache-in, ask, steer]
+    if: always() && needs.cache-in.result == 'success' && inputs.dry_run != true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    steps:
+      - name: Fetch the ask part's file
+        uses: actions/download-artifact@v4
+        continue-on-error: true   # none when ask did not run or saved nothing
+        with:
+          name: switchboard-etags-ask-out
+          path: ask
+      - name: Save the ask part's ETag cache
+        if: hashFiles('ask/etags.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: ask/etags.json
+          key: switchboard-etags-ask-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Fetch the steer part's file
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: switchboard-etags-steer-out
+          path: steer
+      - name: Save the steer part's ETag cache
+        if: hashFiles('steer/etags.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: steer/etags.json
+          key: switchboard-etags-steer-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Prune the older ETag caches and this run's hand-over artifacts
+        # One entry a run per part (about 300 a day, each up to ~11 MB compressed) would fill the repo's 10 GB
+        # Actions cache and evict other workflows' caches. Keep each part's 3 newest; delete the rest. The
+        # artifacts only carry the file between this run's jobs (each is kept a day at most anyway).
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          for part in ask steer; do
+            gh api "repos/$REPO/actions/caches?key=switchboard-etags-$part-&sort=created_at&direction=desc&per_page=100" \
+              --jq '.actions_caches[3:][].id' | while read -r id; do
+                gh api -X DELETE "repos/$REPO/actions/caches/$id" > /dev/null || echo "::warning::cache $id not deleted"
+              done
+          done
+          gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name | startswith("switchboard-etags-")) | .id' | while read -r id; do
+              gh api -X DELETE "repos/$REPO/actions/artifacts/$id" > /dev/null || echo "::warning::artifact $id not deleted"
+            done
 

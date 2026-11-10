@@ -22,10 +22,13 @@ VERDICT_HEAD = re.compile(
 SHA_IN_HEAD = re.compile(r"@\s*`?(?P<sha>[0-9a-f]{7,40})\b")
 REPRO_FIELDS = ("command", "input", "expected", "observed")
 REPRO_LINE = re.compile(r"^[\s>*_`-]*(command|input|expected|observed)[*_`]*\s*:", re.IGNORECASE | re.MULTILINE)
-JOB_IN_PR = re.compile(r"^\s*Job:\s*(?P<job>J-\d{3,})\b", re.MULTILINE)
+# A job is J-NNN, or J-NNN plus one letter for a sub-job (J-044b): "J-\d{3,}\b" alone never matched J-044b,
+# so a lettered job's green branch got no auto-PR and its issue was missing from jobs() (11-09).
+JOB_ID = r"J-\d{3,}[a-z]?"
+JOB_IN_PR = re.compile(r"^\s*Job:\s*(?P<job>" + JOB_ID + r")\b", re.MULTILINE)
 # "Supersedes #43", "supersedes #43 and #44", "Supersedes #43, #44": the PRs a PR body says it replaces.
 SUPERSEDES = re.compile(r"\bsupersedes\s+(?P<list>#\d+(?:\s*(?:,|and|&)\s*#\d+)*)", re.IGNORECASE)
-JOB_TITLE = re.compile(r"^(?P<job>J-\d{3,})\b")
+JOB_TITLE = re.compile(r"^(?P<job>" + JOB_ID + r")\b")
 BUDGET_LINE = re.compile(r"^\s*budget\s+(?P<usd>\d{1,4}(?:\.\d{1,2})?)\s*$", re.IGNORECASE | re.MULTILINE)
 
 
@@ -59,6 +62,7 @@ class Team:
     other_authored_asks: Sequence[str] = ()  # agent keys asked, in order, to review work not by Claude
     pool: Sequence[str] = ()               # review.pool: who shares the reviews, one per PR (API_REVIEWER for the API)
     api_reviews_claude: bool = False       # the automatic review also takes Claude's PRs, and its LAND counts there
+    manual: frozenset[str] = frozenset()   # agents with `wake: manual` (they run only when Cory starts them): never asked
 
     def vendor_of_branch(self, ref: str) -> str:
         for prefix, vendor in self.vendor_of_prefix:
@@ -91,12 +95,16 @@ def team_from_config(cfg: Mapping) -> Team:
         for o in a.get("owner_labels", []):
             owners[str(o)] = vendor
     review = cfg.get("review", {})
+    # J-072: an agent with `wake: manual` runs only when Cory starts it, so no review is ever routed to it: it is
+    # dropped from every ask list, the pool and the fallback order, and a review waits on Codex, the API or Grok.
+    manual = frozenset(k for k, a in agents.items() if isinstance(a, Mapping) and a.get("wake") == "manual")
     humans = list(review.get("claude_authored_asks", []))
     for h in humans + [review.get("matron_reviewer", "")]:
         if h and h not in agents:
             raise ValueError(f"agents.yml: review names unknown agent {h!r}")
+    humans = [h for h in humans if h not in manual]
     if not humans:
-        raise ValueError("agents.yml: review.claude_authored_asks must name at least one agent")
+        raise ValueError("agents.yml: review.claude_authored_asks must name at least one agent that is not `wake: manual`")
     logins = cfg.get("verdict_logins")
     if not isinstance(logins, Sequence) or isinstance(logins, str) or not logins:
         raise ValueError("agents.yml: `verdict_logins` must list the GitHub logins whose verdicts count")
@@ -107,6 +115,7 @@ def team_from_config(cfg: Mapping) -> Team:
         if agent_vendor[o] == "anthropic":
             raise ValueError(f"agents.yml: review.other_authored_asks names {o!r}, a Claude agent: the paid "
                              "Claude review is the fallback when no one listed here can take it")
+    others = [o for o in others if o not in manual]
     pool = list(review.get("pool", []))
     api_claude = review.get("api_reviews_claude", False)
     if not isinstance(api_claude, bool):
@@ -118,12 +127,14 @@ def team_from_config(cfg: Mapping) -> Team:
             raise ValueError(f"agents.yml: review.pool names {p!r}, a Claude agent: the Claude API reviews as {API_REVIEWER!r}")
     if len(set(pool)) != len(pool):
         raise ValueError("agents.yml: review.pool names an agent twice")
+    pool = [p for p in pool if p not in manual]
     fallback = list(review.get("fallback_order", []))
     for f in fallback:
         if f not in agents:
             raise ValueError(f"agents.yml: review.fallback_order names unknown agent {f!r}")
         if agent_vendor[f] == "anthropic":
             raise ValueError(f"agents.yml: review.fallback_order names {f!r}, a Claude agent: Claude's work is never reviewed by Claude")
+    fallback = [f for f in fallback if f not in manual]
     try:
         hours = float(review.get("fallback_after_hours", 3))
     except (TypeError, ValueError):
@@ -134,7 +145,7 @@ def team_from_config(cfg: Mapping) -> Team:
     prefixes.sort(key=lambda pv: -len(pv[0]))  # longest prefix wins
     return Team(names, prefixes, owners, humans, review.get("matron_reviewer", ""), agent_vendor,
                 frozenset(str(l).strip().lower() for l in logins), signs, tuple(fallback), hours, tuple(others),
-                tuple(pool), api_claude)
+                tuple(pool), api_claude, manual)
 
 
 def _has_repro(body: str) -> bool:
@@ -415,8 +426,9 @@ def pick_reviewer(author_vendor: str, needs: frozenset[str], team: Team) -> Revi
     A PR by another vendor is asked of the first agent in review.other_authored_asks whose vendor is
     not the author's (Cory, 11-03: Muse is always on and free, so it goes first). Only when none
     fits, or the author is unknown, does it get the paid automatic Claude review through the API. A
-    Claude-authored PR is asked of ChatGPT or Muse on the job issue: Muse first when the job needs
-    matron (its specialty), else the first agent in review.claude_authored_asks.
+    Claude-authored PR is asked on the job issue: the matron reviewer first when the job needs matron
+    (its specialty), else the first agent in review.claude_authored_asks. A `wake: manual` agent is never
+    in those lists (team_from_config drops it).
     """
     if author_vendor != "anthropic":
         if author_vendor != "unknown":

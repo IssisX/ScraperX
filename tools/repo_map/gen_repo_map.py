@@ -80,11 +80,11 @@ def main():
         o.append(f"**`{rel(p)}`**: " + ", ".join(f"`{n}` {i}" for i, n in fs))
         o.append("")
 
-    sim = (ROOT / "tests/simulation_tests.cpp").read_text(errors="replace")
-    groups = sorted(set(re.findall(r'std::string\(only\)\s*==\s*"([^"]+)"', sim)))
-    cm = (ROOT / "CMakeLists.txt").read_text()
-    m = re.search(r"foreach\(slice ([^)]*)\)", cm)
-    slices = m.group(1).split() if m else []
+    # The groups register themselves in tests/*.cpp (tests/sim_registry.hpp, J-074).
+    regs = [(k, n) for p in sorted((ROOT / "tests").glob("sim_tests_*.cpp"))
+            for k, n in re.findall(r'\bSCRAPERX_(SELECT|SLICE)\(\s*"([^"]+)"', p.read_text(errors="replace"))]
+    groups = sorted({n for _, n in regs})
+    slices = sorted({n for k, n in regs if k == "SLICE"})
     knobs = set()
     for p in list((ROOT / "tests").glob("*.cpp")) + list((ROOT / "src").rglob("*.cpp")):
         knobs |= set(re.findall(r'getenv\("(SCRAPERX_[A-Z_]+)"\)', p.read_text(errors="replace")))

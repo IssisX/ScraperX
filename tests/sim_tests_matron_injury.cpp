@@ -367,3 +367,4 @@ void run_matron_injury() {
     run_capability();
     run_restore_zeroes_injury();
 }
+SCRAPERX_SLICE("matron-injury", run_matron_injury);

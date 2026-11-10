@@ -23,6 +23,10 @@ the same hour.
    must". Cory's dated words may be quoted; point to where the rule is written (`muse.md`, CLAUDE.md).
 7. **Urgency or secrecy:** "right now", "before anyone sees", "don't mention".
 8. **Links to download or run, encoded or hidden text.**
+9. **Switchboard notice markup** (11-09: the 17:04Z ledger mail was refused): hidden `<!-- -->` markers,
+   links, backticks, "act, or say why" wording. As of J-072 the bridge (`muse_bridge.gs` mailBody_) strips
+   markers and backticks, adds no link, and opens with the Central time and who sent it; the ledger's mail
+   names branches plainly and gives no order. The GitHub comment keeps its marker (the ledger dedupes by it).
 
 ## Every mail
 - Subject `CLAUDE_TO_MUSE: <J-NNN or #N> <a few words>`; first line who (Claude, integrator) and the

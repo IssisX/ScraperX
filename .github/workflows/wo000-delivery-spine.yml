@@ -308,7 +308,8 @@ jobs:
       fail-fast: false
       matrix:
         shard:
-          - athletic-traversal
+          - athletic-traversal-1
+          - athletic-traversal-2
           - matron-slices-1
           - matron-slices-2
           - matron-slices-3
@@ -329,28 +330,26 @@ jobs:
           chmod +x build/host/scraperx_sim_tests build/host/scraperx_shared_survival_tests build/host/scraperx_parkour_flow_tests
           mkdir -p artifacts
 
-      - name: Run athletic_traversal, shared_survival, parkour_flow and verify all falsifier proof lines
-        if: matrix.shard == 'athletic-traversal'
+      - name: Run athletic-traversal-1, shared_survival, parkour_flow and verify shard-1 falsifier proof lines
+        if: matrix.shard == 'athletic-traversal-1'
         shell: bash
         run: |
           set -euo pipefail
-          # Runs scraperx_sim.shared_survival, scraperx_sim.athletic_traversal, and
-          # scraperx_sim.parkour_flow once via ctest -V so every PASS line is captured
-          # directly without re-running the 14-minute binary a second time.
+          # J-071 step 2: first half of the default sequence (~705 s) plus the
+          # shared_survival and parkour_flow CTest tests.
           ctest --test-dir build/host \
-            -R "^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow)$" \
+            -R "^scraperx_sim\.(shared_survival|athletic-traversal-1|parkour_flow)$" \
             -V --output-on-failure | tee artifacts/native-falsifiers.log
           grep -F "100% tests passed" artifacts/native-falsifiers.log
           grep -F "PASS scraperx_sim parkour flow" artifacts/native-falsifiers.log
           cp artifacts/native-falsifiers.log artifacts/parkour-flow.log
-          cp artifacts/native-falsifiers.log artifacts/native-tests-athletic-traversal.log
+          cp artifacts/native-falsifiers.log artifacts/native-tests-athletic-traversal-1.log
           for proof in \
             "PASS scraperx_sim pulley seam" \
             "PASS scraperx_sim moving-support truth" \
             "PASS scraperx_sim athletic traversal" \
             "PASS scraperx_sim fall/parachute/checkpoint" \
             "PASS scraperx_sim world solids" \
-            "PASS scraperx_sim body order" \
             "PASS scraperx_sim edge stand" \
             "PASS scraperx_sim crouch" \
             "PASS scraperx_sim kerb" \
@@ -419,11 +418,7 @@ jobs:
             "PASS scraperx_sim high" \
             "PASS scraperx_sim incline" \
             "PASS scraperx_sim wheel" \
-            "PASS scraperx_sim tram" \
-            "PASS scraperx_sim look target" \
-            "PASS scraperx_sim fabricated" \
-            "PASS scraperx_sim matron room" \
-            "PASS scraperx_sim ascent 154 to TP-640"
+            "PASS scraperx_sim tram"
           do
             grep -F "${proof}" artifacts/native-falsifiers.log
           done
@@ -471,6 +466,27 @@ jobs:
           awk -F'again_y=' '/AS-006 band/ {split($2,a," "); exit (a[1]+0 >= 177.0) ? 0 : 1}' \
             artifacts/native-falsifiers.log
 
+      - name: Run athletic-traversal-2 and verify shard-2 falsifier proof lines
+        if: matrix.shard == 'athletic-traversal-2'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # J-071 step 2: second half of the default sequence (~706 s).
+          ctest --test-dir build/host \
+            -R "^scraperx_sim\.athletic-traversal-2$" \
+            -V --output-on-failure | tee artifacts/native-falsifiers.log
+          grep -F "100% tests passed" artifacts/native-falsifiers.log
+          cp artifacts/native-falsifiers.log artifacts/native-tests-athletic-traversal-2.log
+          for proof in \
+            "PASS scraperx_sim body order" \
+            "PASS scraperx_sim look target" \
+            "PASS scraperx_sim fabricated" \
+            "PASS scraperx_sim matron room" \
+            "PASS scraperx_sim ascent 154 to TP-640"
+          do
+            grep -F "${proof}" artifacts/native-falsifiers.log
+          done
+
       - name: Run CTest Matron slice group 1 (ladder, hearing, climb-support, crash, tower)
         if: matrix.shard == 'matron-slices-1'
         shell: bash
@@ -497,7 +513,7 @@ jobs:
         run: |
           set -euo pipefail
           ctest --test-dir build/host \
-            -E "^scraperx_sim\.(shared_survival|athletic_traversal|parkour_flow|matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower|matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$" \
+            -E "^scraperx_sim\.(shared_survival|athletic-traversal-1|athletic-traversal-2|parkour_flow|matron-ladder|matron-hearing|matron-climb-support|matron-crash|matron-tower|matron-chain|matron-towers|matron-board-walls|matron-ladders|matron-stand)$" \
             -j 2 --output-on-failure | tee artifacts/native-tests-matron-3.log
           grep -F "100% tests passed" artifacts/native-tests-matron-3.log
           # The fight perf probes (J-044m, #245): perf-step runs in this shard; its per-step
@@ -1036,15 +1052,16 @@ jobs:
           grep -q '^SCRIPT_LOAD PASS scripts' artifacts/script-load.log
           grep -q '^SCRIPT_LOAD PASS bridge' artifacts/script-load.log
 
-      - name: Check the far world reads as a valley (J-021 job 4)
+      - name: Check the far world and water read as a valley (J-021)
         shell: bash
         run: |
           set -euo pipefail
-          # far_world_test.gd (J-021, job 4): the far world builds the
-          # valley floor's drawn top and the tower's long shadow, the rim
-          # is 12 variants turned by where each stands, and the sky carries
-          # the horizon past the far plane — while the floor's boxes stay
-          # solids. The job-11 water checks run on the job-11 branch.
+          # far_world_test.gd (J-021, jobs 4 and 11): the far world builds
+          # the valley floor's drawn top and the tower's long shadow, the
+          # rim is 12 variants turned by where each stands, the sky carries
+          # the horizon past the far plane, and the yard's water and the
+          # waterfall run through shaders — while the floor's boxes stay
+          # solids and the water stays non-solid paint.
           timeout 180s tools/godot/godot --headless --path godot \
             --script res://tests/far_world_test.gd 2>&1 | tee artifacts/far-world.log
           grep -q '^FAR_WORLD PASS' artifacts/far-world.log

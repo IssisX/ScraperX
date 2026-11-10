@@ -2,8 +2,10 @@
 
 // The native tests' shared ground: the asserts and walking helpers every
 // test uses, and the declarations of each stage's helpers that other files
-// use (simulation_tests.cpp runs them all, in order; see its main()).
+// use. Each group registers itself beside its function (sim_registry.hpp);
+// simulation_tests.cpp's main() runs the registry.
 
+#include "sim_registry.hpp"
 #include "sim/simulation.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/trapeze.hpp"
