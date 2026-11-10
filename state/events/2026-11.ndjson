@@ -1180,3 +1180,28 @@
 {"attempt": 1, "ev": "sent", "id": "O-e0e128fa", "job": "J-015", "ref": "PR|#389", "send": 1, "t": "2026-11-10T21:49:17Z", "to": "muse", "via": "email"}
 {"attempt": 1, "ev": "sent", "id": "O-5741705e", "job": "J-059", "ref": "PR|#343", "send": 1, "t": "2026-11-10T21:49:17Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 49, "status": "ok", "t": "2026-11-10T21:49:17Z", "tries": 1}
+{"ev": "job", "job": "J-078", "t": "2026-11-10T22:50:55Z"}
+{"ev": "job", "job": "J-077", "t": "2026-11-10T22:50:55Z"}
+{"ev": "job", "job": "J-076", "t": "2026-11-10T22:50:55Z"}
+{"branch": "fb-bot/integrate-protected-j007-exit-items", "ev": "landed", "how": "merged #315", "job": "J-007", "sha": "dda92e1209de951496792864179a0815fbeeef3c", "t": "2026-11-10T22:50:55Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-007", "pr": 315, "t": "2026-11-10T22:50:55Z"}
+{"ev": "closed", "id": "O-09b5e668", "job": "J-007", "t": "2026-11-10T22:50:55Z", "why": "PR merged"}
+{"ev": "reassigned", "frm": "muse", "job": "J-008", "t": "2026-11-10T22:50:55Z", "to": "grok_bot"}
+{"due": "2026-11-11T02:50:55Z", "ev": "obligation", "id": "O-7b7cf4f6", "job": "J-009", "kind": "fix", "ref": "PR|#377", "t": "2026-11-10T22:50:55Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "verdict on the head", "id": "O-92903078", "job": "J-009", "t": "2026-11-10T22:50:55Z"}
+{"branch": "claude/integrate-j011-skirt-cloth", "ev": "landed", "how": "merged #390", "job": "J-011", "sha": "d9bb8df7da4fae09bc0feff0e32d68c34b0c6693", "t": "2026-11-10T22:50:55Z"}
+{"due": "2026-11-11T02:50:55Z", "ev": "obligation", "id": "O-a2a77fe2", "job": "J-038", "kind": "fix", "ref": "PR|#372", "t": "2026-11-10T22:50:55Z", "to": "muse", "via": "email"}
+{"due": "2026-11-11T02:50:55Z", "ev": "obligation", "id": "O-f200c17a", "job": "J-049", "kind": "fix", "ref": "PR|#383", "t": "2026-11-10T22:50:55Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "verdict on the head", "id": "O-936dbccc", "job": "J-049", "t": "2026-11-10T22:50:55Z"}
+{"ev": "state", "frm": "merged", "job": "J-008", "t": "2026-11-10T22:50:55Z", "to": "proof"}
+{"ev": "state", "frm": "review", "job": "J-009", "t": "2026-11-10T22:50:55Z", "to": "working"}
+{"ev": "state", "frm": "assigned", "job": "J-011", "t": "2026-11-10T22:50:55Z", "to": "merged"}
+{"ev": "state", "frm": "review", "job": "J-049", "t": "2026-11-10T22:50:55Z", "to": "working"}
+{"ev": "state", "frm": "working", "job": "J-067", "t": "2026-11-10T22:50:55Z", "to": "proof"}
+{"ev": "state", "frm": "accepted", "job": "J-076", "t": "2026-11-10T22:50:55Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-077", "t": "2026-11-10T22:50:55Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-078", "t": "2026-11-10T22:50:55Z", "to": "assigned"}
+{"attempt": 1, "ev": "sent", "id": "O-7b7cf4f6", "job": "J-009", "ref": "PR|#377", "send": 1, "t": "2026-11-10T22:50:55Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-a2a77fe2", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-10T22:50:55Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-f200c17a", "job": "J-049", "ref": "PR|#383", "send": 1, "t": "2026-11-10T22:50:55Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-10T22:50:55Z", "tries": 1}

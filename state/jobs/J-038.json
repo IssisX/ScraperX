@@ -7,13 +7,13 @@
   "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [
   "6777898125:87"
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
- "head": "d45ec240037af49d9253e0b51e8b2a8a191fcfbd",
+ "head": "3e3413e284c1958cfb2a48f1d4cb8fa5a8282ac8",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -390,6 +390,31 @@
    "version": "closed:4e6ab1f45e499ca5d7390c2ef05f917f7c69f07a",
    "via": "session",
    "what": "`fb-bot/integrate-protected-j038-slice1` @ 4e6ab1f4: closed #299 without merging at this head: reopen it, or delete the branch"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T22:50:55Z",
+   "dead": "2026-11-11T06:50:55Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T02:50:55Z",
+   "id": "O-a2a77fe2",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T22:50:55Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "conflict:3e3413e284c1958cfb2a48f1d4cb8fa5a8282ac8",
+   "via": "email",
+   "what": "#372 has a merge conflict with the base"
   }
  ],
  "outcome": null,
@@ -401,7 +426,7 @@
   299,
   372
  ],
- "review": "FIX",
+ "review": "",
  "state": "working",
- "updated": "2026-11-10T20:49:16Z"
+ "updated": "2026-11-10T22:50:55Z"
 }

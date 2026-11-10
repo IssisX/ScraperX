@@ -388,7 +388,11 @@
    "what": "review #383 @ 55195bcd"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T22:50:55Z",
+    "by": "grok",
+    "how": "verdict on the head"
+   },
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
@@ -411,6 +415,31 @@
    "version": "55195bcdb35947325ddbdbe2ffd43d5d58fd6c7d",
    "via": "issue",
    "what": "review #383 @ 55195bcd"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T22:50:55Z",
+   "dead": "2026-11-11T06:50:55Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T02:50:55Z",
+   "id": "O-f200c17a",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T22:50:55Z",
+   "missing": 0,
+   "ref": "PR|#383",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 383,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:55195bcdb35947325ddbdbe2ffd43d5d58fd6c7d",
+   "via": "email",
+   "what": "#383: open FIX from Claude (review)"
   }
  ],
  "outcome": null,
@@ -422,7 +451,7 @@
   367,
   383
  ],
- "review": "waiting",
- "state": "review",
- "updated": "2026-11-10T21:49:17Z"
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-10T22:50:55Z"
 }

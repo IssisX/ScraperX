@@ -2,6 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
+  "fb-bot/integrate-protected-j007-exit-items": "dda92e1209de951496792864179a0815fbeeef3c",
   "fb-bot/integrate-protected-j007-item6": "d4c5fbd761b19a6cdbc9f4b79c1a3e508a6a4704",
   "fb-bot/integrate-protected-j007-item6-stage2": "13e58976be24f5fc4ba999f6c86a0a54bec6b809"
  },
@@ -11,11 +12,16 @@
   "6777897398:72"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-11T01:49:17Z",
- "head": "2ad3fb9aa50139788fe78df703983842766277b7",
+ "deadline": null,
+ "head": "13e58976be24f5fc4ba999f6c86a0a54bec6b809",
  "issue": 114,
  "job": "J-007",
  "landed": {
+  "fb-bot/integrate-protected-j007-exit-items": [
+   "dda92e1209de951496792864179a0815fbeeef3c",
+   "merged #315",
+   "2026-11-10T22:50:55Z"
+  ],
   "fb-bot/integrate-protected-j007-item6": [
    "d4c5fbd761b19a6cdbc9f4b79c1a3e508a6a4704",
    "merged #336",
@@ -205,7 +211,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T22:50:55Z",
+    "why": "PR merged"
+   },
    "created": "2026-11-10T21:49:17Z",
    "dead": "2026-11-11T05:49:17Z",
    "dead_lettered": null,
@@ -230,11 +239,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 315,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   315
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T21:49:17Z"
+ "updated": "2026-11-10T22:50:55Z"
 }

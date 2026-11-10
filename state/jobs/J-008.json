@@ -2,6 +2,7 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
+  "builder/integrate-j008": "d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
   "fb-bot/integrate-protected-j008-ladder-bar-sort": "45e16da201b2a1b6f8302a752b6c2a4b7741b212"
  },
  "cancelled": null,
@@ -9,10 +10,15 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "",
+ "head": "d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
  "issue": 115,
  "job": "J-008",
  "landed": {
+  "builder/integrate-j008": [
+   "d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
+   "",
+   "2026-11-10T22:50:55Z"
+  ],
   "fb-bot/integrate-protected-j008-ladder-bar-sort": [
    "45e16da201b2a1b6f8302a752b6c2a4b7741b212",
    "merged #314",
@@ -22,11 +28,11 @@
  "obligations": [],
  "outcome": null,
  "outcome_reason": "",
- "owner": "muse",
+ "owner": "grok_bot",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "merged",
- "updated": "2026-11-09T17:35:20Z"
+ "state": "proof",
+ "updated": "2026-11-10T22:50:55Z"
 }

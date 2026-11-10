@@ -5,6 +5,7 @@
   "claude/integrate-j067-back-hair": "71c0d8e1260ac5a4bd344d60ef58331910700e1b",
   "claude/integrate-j067-hair-bend": "61b13bb62c601455c935e3f4511da5ab1de737a2",
   "fb-bot/integrate-j067-back-hair-fixes": "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
+  "fb-bot/integrate-j067-checkopt": "df0a80949d0d4b2ecf2c73907f4df0162628794c",
   "fb-bot/integrate-protected-j067-scorer": "a43b65ceb91f70465966415054499e6e3f126186"
  },
  "cancelled": null,
@@ -14,7 +15,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
+ "head": "df0a80949d0d4b2ecf2c73907f4df0162628794c",
  "issue": 328,
  "job": "J-067",
  "landed": {
@@ -32,6 +33,11 @@
    "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
    "",
    "2026-11-10T04:48:57Z"
+  ],
+  "fb-bot/integrate-j067-checkopt": [
+   "df0a80949d0d4b2ecf2c73907f4df0162628794c",
+   "",
+   "2026-11-10T22:50:55Z"
   ],
   "fb-bot/integrate-protected-j067-scorer": [
    "a43b65ceb91f70465966415054499e6e3f126186",
@@ -254,6 +260,6 @@
   371
  ],
  "review": "FIX",
- "state": "working",
- "updated": "2026-11-10T18:29:43Z"
+ "state": "proof",
+ "updated": "2026-11-10T22:50:55Z"
 }

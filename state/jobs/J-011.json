@@ -1,7 +1,9 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-j011-skirt-cloth": "d9bb8df7da4fae09bc0feff0e32d68c34b0c6693"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
@@ -10,7 +12,13 @@
  "head": "",
  "issue": 118,
  "job": "J-011",
- "landed": {},
+ "landed": {
+  "claude/integrate-j011-skirt-cloth": [
+   "d9bb8df7da4fae09bc0feff0e32d68c34b0c6693",
+   "merged #390",
+   "2026-11-10T22:50:55Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -217,6 +225,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-10T19:39:24Z"
+ "state": "merged",
+ "updated": "2026-11-10T22:50:55Z"
 }
