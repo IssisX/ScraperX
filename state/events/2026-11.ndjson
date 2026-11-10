@@ -809,3 +809,13 @@
 {"attempt": 2, "ev": "sent", "id": "O-f6c50ed6", "job": "J-042", "ref": "ASK|ask on #240", "send": 2, "t": "2026-11-10T05:33:50Z", "to": "chatgpt", "via": "issue"}
 {"attempt": 1, "ev": "sent", "id": "O-7fd37f03", "job": "", "ref": "ASK|ask on #340", "send": 1, "t": "2026-11-10T05:33:50Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T05:33:50Z", "tries": 1}
+{"ev": "unseen", "id": "O-25fb6789", "job": "J-015", "passes": 3, "t": "2026-11-10T05:48:45Z"}
+{"ev": "unseen", "id": "O-3b1b27ce", "job": "J-038", "passes": 3, "t": "2026-11-10T05:48:45Z"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-e3207013", "job": "J-045", "kind": "ask", "ref": "ASK|ask on #248", "t": "2026-11-10T05:48:45Z", "to": "claude", "via": "session"}
+{"ev": "pr_closed", "how": "merged", "job": "J-071", "pr": 373, "t": "2026-11-10T05:48:45Z"}
+{"ev": "outcome", "job": "J-071", "outcome": "merged", "t": "2026-11-10T05:48:45Z", "why": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339"}
+{"ev": "state", "frm": "review", "job": "J-049", "t": "2026-11-10T05:48:45Z", "to": "working"}
+{"ev": "state", "frm": "landable", "job": "J-071", "t": "2026-11-10T05:48:45Z", "to": "merged"}
+{"ev": "ledger_sent", "job": "J-001", "key": "81b6b8fc9dd0daf1", "ref": "BRANCH|claude/integrate-j001-hold", "stage": 1, "t": "2026-11-10T05:48:45Z", "to": "claude"}
+{"attempt": 1, "ev": "sent", "id": "O-e3207013", "job": "J-045", "ref": "ASK|ask on #248", "send": 1, "t": "2026-11-10T05:48:45Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T05:48:45Z", "tries": 1}

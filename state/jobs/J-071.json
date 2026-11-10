@@ -265,8 +265,8 @@
    "what": "#373 proof red: godot-touch (touch-2)"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339",
  "owner": "grok_bot",
  "past": [
   {
@@ -289,11 +289,11 @@
   }
  ],
  "pr": 373,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   373
  ],
  "review": "LAND",
- "state": "landable",
- "updated": "2026-11-10T05:33:50Z"
+ "state": "merged",
+ "updated": "2026-11-10T05:48:45Z"
 }

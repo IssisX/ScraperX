@@ -47,12 +47,13 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
-   "missing": 2,
+   "missing": 3,
    "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
    "thread": 122,
    "to": "muse",
+   "unseen": "2026-11-10T05:48:45Z",
    "version": "red:a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
    "via": "email",
    "what": "`fb-bot/integrate-j015-wreck-way-on` proof red: native-tests (athletic-traversal), no PR"
@@ -229,5 +230,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T05:33:50Z"
+ "updated": "2026-11-10T05:48:45Z"
 }

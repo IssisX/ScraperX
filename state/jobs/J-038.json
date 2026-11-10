@@ -9,7 +9,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T22:17:00Z",
+ "deadline": "2026-11-10T00:56:16Z",
  "head": "474fb0c98aa74df708e476136ca30baf9f917cde",
  "issue": 169,
  "job": "J-038",
@@ -166,12 +166,12 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
    "to": "claude",
-   "unseen": null,
+   "unseen": "2026-11-10T05:48:45Z",
    "version": "6702256400",
    "via": "session",
    "what": "ask from Muse on #169"
@@ -242,5 +242,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T05:33:50Z"
+ "updated": "2026-11-10T05:48:45Z"
 }
