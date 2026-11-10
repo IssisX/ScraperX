@@ -1166,3 +1166,17 @@
 {"attempt": 1, "ev": "sent", "id": "O-97ffea90", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 1, "t": "2026-11-10T20:49:16Z", "to": "muse", "via": "email"}
 {"ev": "needs_you", "job": "", "keys": ["O-e0d043a6", "O-ac0bbca6", "O-d1f36275"], "n": 3, "t": "2026-11-10T20:49:16Z"}
 {"ev": "pass", "job": "", "jobs": 49, "status": "ok", "t": "2026-11-10T20:49:16Z", "tries": 1}
+{"due": "2026-11-10T23:17:00Z", "ev": "obligation", "id": "O-ccc7effe", "job": "J-001", "kind": "fix", "ref": "BRANCH|claude/integrate-j001-hold", "t": "2026-11-10T21:49:17Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "new head", "id": "O-4992e630", "job": "J-001", "t": "2026-11-10T21:49:17Z"}
+{"due": "2026-11-11T01:49:17Z", "ev": "obligation", "id": "O-09b5e668", "job": "J-007", "kind": "fix", "ref": "PR|#315", "t": "2026-11-10T21:49:17Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-019806f1", "job": "J-007", "t": "2026-11-10T21:49:17Z"}
+{"due": "2026-11-11T01:49:17Z", "ev": "obligation", "id": "O-e0e128fa", "job": "J-015", "kind": "fix", "ref": "PR|#389", "t": "2026-11-10T21:49:17Z", "to": "muse", "via": "email"}
+{"due": "2026-11-11T01:49:17Z", "ev": "obligation", "id": "O-5741705e", "job": "J-059", "kind": "fix", "ref": "PR|#343", "t": "2026-11-10T21:49:17Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "proof", "job": "J-059", "t": "2026-11-10T21:49:17Z", "to": "working"}
+{"ev": "matched", "ident": "PR|#389", "job": "", "t": "2026-11-10T21:49:17Z"}
+{"attempt": 1, "ev": "sent", "id": "O-ccc7effe", "job": "J-001", "ref": "BRANCH|claude/integrate-j001-hold", "send": 1, "t": "2026-11-10T21:49:17Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-09b5e668", "job": "J-007", "ref": "PR|#315", "send": 1, "t": "2026-11-10T21:49:17Z", "to": "muse", "via": "email"}
+{"attempt": 2, "ev": "sent", "id": "O-92903078", "job": "J-009", "ref": "PR|#377", "send": 2, "t": "2026-11-10T21:49:17Z", "to": "codex", "via": "relay"}
+{"attempt": 1, "ev": "sent", "id": "O-e0e128fa", "job": "J-015", "ref": "PR|#389", "send": 1, "t": "2026-11-10T21:49:17Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-5741705e", "job": "J-059", "ref": "PR|#343", "send": 1, "t": "2026-11-10T21:49:17Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 49, "status": "ok", "t": "2026-11-10T21:49:17Z", "tries": 1}

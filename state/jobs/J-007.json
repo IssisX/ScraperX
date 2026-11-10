@@ -6,13 +6,13 @@
   "fb-bot/integrate-protected-j007-item6-stage2": "13e58976be24f5fc4ba999f6c86a0a54bec6b809"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "red: host-build, android-build",
  "commands": [
   "6777897398:72"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
- "head": "7608a48044263189f60d4c1f655887d53d79618e",
+ "deadline": "2026-11-11T01:49:17Z",
+ "head": "2ad3fb9aa50139788fe78df703983842766277b7",
  "issue": 114,
  "job": "J-007",
  "landed": {
@@ -29,7 +29,11 @@
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T21:49:17Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -195,6 +199,31 @@
    "version": "red:13e58976be24f5fc4ba999f6c86a0a54bec6b809",
    "via": "email",
    "what": "`fb-bot/integrate-protected-j007-item6-stage2` proof red: android-build, godot-touch (touch-2), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T21:49:17Z",
+   "dead": "2026-11-11T05:49:17Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T01:49:17Z",
+   "id": "O-09b5e668",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T21:49:17Z",
+   "missing": 0,
+   "ref": "PR|#315",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 315,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:2ad3fb9aa50139788fe78df703983842766277b7",
+   "via": "email",
+   "what": "#315 proof red: host-build, android-build"
   }
  ],
  "outcome": null,
@@ -205,7 +234,7 @@
  "prs": [
   315
  ],
- "review": "FIX",
+ "review": "",
  "state": "working",
- "updated": "2026-11-10T19:39:24Z"
+ "updated": "2026-11-10T21:49:17Z"
 }

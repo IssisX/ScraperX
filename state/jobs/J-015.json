@@ -1,5 +1,5 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j015-slice1": "2f8b1f21d655f8e11e9648cbba743355c31f2314",
@@ -8,14 +8,14 @@
   "fb-bot/integrate-protected-j015-wreck-way-on": "aee6d79d91249016e5788e205e16b0958f4bd427"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [
   "6771165879:299",
   "6773022511:72"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
- "head": "2f8b1f21d655f8e11e9648cbba743355c31f2314",
+ "deadline": "2026-11-11T01:49:17Z",
+ "head": "8c6edced123461bc5cee0b05152c15b74e6abce7",
  "issue": 122,
  "job": "J-015",
  "landed": {
@@ -84,7 +84,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
-   "rechecked": "2026-11-10T15:09:20Z",
+   "rechecked": "2026-11-10T21:49:17Z",
    "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -383,15 +383,42 @@
    "version": "red:2ba17f22df2342e37f48dc064d47509399463a9a",
    "via": "email",
    "what": "`fb-bot/integrate-protected-j015-slice1` proof red: native-tests (athletic-traversal-2), godot-touch (touch-2), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T21:49:17Z",
+   "dead": "2026-11-11T05:49:17Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T01:49:17Z",
+   "id": "O-e0e128fa",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T21:49:17Z",
+   "missing": 0,
+   "ref": "PR|#389",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 389,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:8c6edced123461bc5cee0b05152c15b74e6abce7",
+   "via": "email",
+   "what": "#389: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 389,
  "pr_done": "",
- "prs": [],
- "review": "",
+ "prs": [
+  389
+ ],
+ "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T20:49:16Z"
+ "updated": "2026-11-10T21:49:17Z"
 }
