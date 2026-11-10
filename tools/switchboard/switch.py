@@ -2636,13 +2636,19 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
 
     def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, on the board
         import ledger as board_ledger
+        import reconciler   # J-072: `notices: v2` beside a live reconciler: the ledger writes its section, posts nothing
         led = board_ledger.sweep(sw, steered, sw.board_issue(), MUSE_LABEL, PROOF_WORKFLOW,
-                                 {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now))
+                                 {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now),
+                                 reconciler.ledger_notifies(sw.root))
         timers["ledger"] = list(getattr(led, "pending", None) or [])
 
     def ledger_clock() -> None:   # J-072: the ledger deadlines that ripened since the full pass, sent from the cache
         import ledger as board_ledger
+        import reconciler
         import yaml
+        if not reconciler.ledger_notifies(sw.root):   # `notices: v2`: a cached ledger notice is never fired
+            timers["ledger"] = []
+            return
         ripe = board_ledger.ripe(timers.get("ledger") or [], now)
         if not ripe:
             return

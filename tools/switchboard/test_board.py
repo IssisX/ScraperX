@@ -225,7 +225,8 @@ class Sweep(unittest.TestCase):
         import reconciler
         with mock.patch("ledger.sweep", side_effect=tsc.no_ledger) as led, \
                 mock.patch("reconciler.sweep", return_value=reconciler.Result("committed", "h", {}, 1, 3)) as rec, \
-                mock.patch.object(switch, "sweep_heartbeat"):
+                mock.patch("reconciler.ledger_notifies", return_value=True), \
+                mock.patch.object(switch, "sweep_heartbeat"):   # the ledger's own clock, as when it notifies
             status = switch.run_sweep(sw, args, ti.NOW)
         return status, led, rec, sw
 
