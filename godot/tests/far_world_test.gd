@@ -1,11 +1,9 @@
 extends SceneTree
-## J-021 job 4: the far world (environment job 4, lane C).
-## The basin reads as a real valley out to a real horizon — all of it
-## presentation only: the cones stay the collision, the valley floor's
-## boxes stay solids (hidden, not removed).
-## The job-11 water checks (water_material, the stream/pool in the ground
-## shader, the waterfall and yard water through shaders) live on the
-## job-11 branch, which stacks on this one; the full test is restored there.
+## J-021: the far world and water (environment jobs 4 and 11, lane C).
+## The basin reads as a real valley out to a real horizon, and water reads as
+## water — all of it presentation only: the cones stay the collision, the
+## valley floor's boxes stay solids (hidden, not removed), and standing water
+## stays non-solid paint.
 ##
 ##   tools/godot/godot --headless --path godot --script res://tests/far_world_test.gd
 var _fails := 0
@@ -51,6 +49,8 @@ func _run() -> void:
 			var names := _param_names(ground.shader)
 			_check("tower_low" in names, "ground shader has tower_low")
 			_check("tower_high" in names, "ground shader has tower_high")
+			_check("sky_zenith" in names, "ground shader has sky_zenith")
+			_check("sky_horizon" in names, "ground shader has sky_horizon")
 		# _process is not called here: the node is not in the tree, so
 		# get_viewport() is null. The integration check below calls it on
 		# the FarWorld that _build_basin added to the tree.
@@ -58,7 +58,22 @@ func _run() -> void:
 			var names2 := _param_names(ground.shader)
 			_check("detail" in names2, "ground shader has detail")
 
-	# 2. The horizon past the far plane lives in the sky shader (job 4):
+	# 2. Standing water mirrors the sky (job 11): the shared water material.
+	var water: ShaderMaterial = null
+	if far_script != null:
+		water = far_script.water_material()
+		_check(water != null, "water_material exists")
+		if water != null:
+			var names := _param_names(water.shader)
+			_check("slabs" in names, "water shader has slabs")
+			_check("sky_zenith" in names, "water shader has sky_zenith")
+			_check("sky_horizon" in names, "water shader has sky_horizon")
+			var slabs := [Vector4(-24.0, -70.0, 13.0, 9.0), Vector4(14.0, -36.0, 9.0, 6.0)]
+			water.set_shader_parameter("slabs", slabs)
+			var back = water.get_shader_parameter("slabs")
+			_check(back != null and (back as Array).size() == 2, "water slabs hold two sheets")
+
+	# 3. The horizon past the far plane lives in the sky shader (job 4):
 	# far_world.gd feeds it the eye's height every frame.
 	var sky: Shader = load("res://presentation/sky.gdshader")
 	_check(sky != null, "sky.gdshader loads")
@@ -72,7 +87,7 @@ func _run() -> void:
 			_check("eye_height" in names, "sky has eye_height")
 			_check("horizon_detail" in names, "sky has horizon_detail")
 
-	# 3. The rim is not look-alike cones: 12 variants, and two peaks of one
+	# 4. The rim is not look-alike cones: 12 variants, and two peaks of one
 	# variant never show the same face — the turn depends on where it stands.
 	var mountain: Script = load("res://presentation/mountain_mesh.gd")
 	_check(mountain != null, "mountain_mesh.gd loads")
@@ -100,10 +115,8 @@ func _run() -> void:
 		_check(mountain_text.contains("fposmod(foot.x"), "turn has a term from the foot's x")
 		_check(mountain_text.contains("foot.z * 0.0291"), "turn has a term from the foot's z")
 
-	# 4. The integration: the world builds the far world and hides the floor's
-	# solids (they stay solids). The yard water and waterfall run through
-	# shaders on the job-11 branch; here they are the flat tar/quad they
-	# were, and nothing asserts on them.
+	# 5. The integration: the world builds the far world, hides the floor's
+	# solids (they stay solids), and waters with the shader, not tar.
 	var world_script: Script = load("res://presentation/main_world.gd")
 	_check(world_script != null, "main_world.gd loads")
 	if world_script != null:
@@ -121,17 +134,36 @@ func _run() -> void:
 		var far_node = main.get_node_or_null("FarWorld")
 		_check(far_node != null, "_build_basin adds a FarWorld node")
 		var floors: Array = []
+		var falls: MeshInstance3D = null
+		var standing: MeshInstance3D = null
+		var standing_two: MeshInstance3D = null
 		for child in tower.get_children():
 			# Node names are not unique among siblings (Godot renames the
 			# later ValleyFloor boxes); the part meta is the identity.
 			var part := str(child.get_meta("part", ""))
 			if part == "ValleyFloor":
 				floors.append(child)
+			if part == "Waterfall":
+				falls = child
+			if part == "StandingWater":
+				standing = child
+			if part == "StandingWaterTwo":
+				standing_two = child
 		_check(floors.size() == 4, "four ValleyFloor boxes stand")
 		for floor_box in floors:
 			_check(not (floor_box as MeshInstance3D).visible, "ValleyFloor boxes are hidden, not removed")
+		_check(falls != null, "Waterfall exists")
+		if falls != null:
+			_check((falls.mesh as QuadMesh).material is ShaderMaterial, "Waterfall falls through a shader, not a flat quad")
+		_check(standing != null and standing_two != null, "both standing waters exist")
+		if standing != null:
+			var mat := (standing.mesh as BoxMesh).material
+			_check(mat is ShaderMaterial, "StandingWater wears the water shader, not tar")
+			if mat is ShaderMaterial:
+				var back = (mat as ShaderMaterial).get_shader_parameter("slabs")
+				_check(back != null and (back as Array).size() == 2, "StandingWater slabs are set")
 		# Collision is unchanged: the hidden floor boxes still export as
-		# solids.
+		# solids, and the water still counts as non-solid paint.
 		var solid_script: Script = load("res://presentation/solid_export.gd")
 		if solid_script != null:
 			var collected: Dictionary = solid_script.collect(main)
@@ -140,6 +172,7 @@ func _run() -> void:
 				if String((box as Dictionary).get("part", "")) == "ValleyFloor":
 					valley += 1
 			_check(valley == 4, "solids table still holds four ValleyFloor boxes")
+			_check(int((collected["counts"] as Dictionary)["non_solid"]) >= 2, "standing water still non-solid")
 		# The tower's long shadow has its boxes: the known column and twin
 		# are the first two slices, 16 slices in all.
 		if far_node != null and far_script != null:
