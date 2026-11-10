@@ -39,10 +39,12 @@ than the author's (`rules.land_counts`).
   `eyes-live`, `matron`, `security`, `orchestrator`) and `hard`. Its body holds the four fields:
   `invariant` (the finish fact), `files` (owned functions), `reach` (tests it reaches), `needs`.
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
-- The board is the one open issue labeled `board` (today #340): its body is the live board (the integrator's
+- The board is the one open issue labeled `board` (today #384): its body is the live board (the integrator's
   section, then the ledger's section, which the switch rewrites); comments hold rulings, BLOCKED lines and
   asks. The owner's plain comments there are orders. The switch and the Muse bridge find it by that label each
-  run (`Switch.board_issue`, `board_`): a new board needs the label on it and the old one closed, no code.
+  run (`Switch.board_issue`, `board_`), once per sweep. Rollover, no code: open the new issue with the label and
+  the copied body, take the label off the old one, and close the old one only after the next sweep has finished
+  (11-10: closing #340 mid-sweep let that sweep post a Muse notice and Cory's list on the closed board).
 - One owner per job: the switch removes a second `owner:*` label and says so.
 
 ## Messages
