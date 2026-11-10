@@ -43,6 +43,120 @@ void run_s1_wreckage() {
               << " rider_y=" << s.snapshot().player_position.y << '\n';
 }
 
+// S2 ridden to deck 6 and the rider off: the empty cage must come back down
+// to deck 4 by itself, as S1's does, and stay there at rest. The way on is
+// S2 itself: the cage back at deck 4, ready to be boarded again.
+void run_s2_wreckage() {
+    Simulation s(InitialSpawn::Deck4South);
+    (void)s.advance_frame(0.5);
+    // Slice 1 (J-015): the cart is a tank bolted to the beam, 1500 kg wet.
+    const std::uint32_t cart = s.kit_body_index(Simulation::kStackS2CartEntityId);
+    const std::uint32_t beam = s.kit_body_index(Simulation::kStackS2BeamEntityId);
+    std::cout << "S2 wreck: beam_mass=" << s.kit_body_mass(beam) << " cart_mass=" << s.kit_body_mass(cart)
+              << " cart_water=" << s.stack_state().s2_cart_water_kg << '\n';
+    require(cart < s.kit_body_count(), "S2 wreck: the cart is built");
+    require(std::abs(s.kit_body_mass(beam) - 900.0) < 1.0, "S2 wreck: the beam frame weighs 900 kg");
+    require(std::abs(s.kit_body_mass(cart) - 1500.0) < 1.0, "S2 wreck: the cart weighs 1500 kg wet");
+    require(std::abs(s.stack_state().s2_cart_water_kg - 1250.0) < 1.0,
+            "S2 wreck: the tank holds 1250 kg of water");
+    require(shove_s2_bolt(s), "S2 wreck: the bolt shoved out");
+    const S2Ride ride = ride_s2(s, 20.0);
+    require(ride.reached_top && ride.rode_on_cage, "S2 wreck: ridden to deck 6");
+    // The rider is off the cage on deck 6 (ride_s2 walks off). The empty
+    // cage must come back down to deck 4 by itself and settle there.
+    bool sent_up = false;
+    bool back = false;
+    for (std::uint32_t tick = 0; tick < 90 * 150 && !back; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = s.stack_state();
+        sent_up = sent_up || state.s2_cage_travel >= 22.0 - 0.01;
+        if (tick % (90 * 15) == 0) {
+            std::cout << "S2 wreck t=" << tick / 90 << "s cage_travel=" << state.s2_cage_travel
+                      << " beam_angle=" << state.s2_beam_angle
+                      << " cart_water=" << state.s2_cart_water_kg
+                      << " striker=" << state.s2_drain_striker_angle
+                      << " pawled=" << (state.s2_drain_pawled ? 1 : 0)
+                      << " drained=" << state.s2_drained_kg
+                      << " rope_tension=" << state.s2_rope_tension << '\n';
+        }
+        if (sent_up && std::abs(state.s2_cage_travel) <= 0.02) {
+            back = true;
+        }
+    }
+    require(sent_up && back, "S2 wreck: the empty cage came back down to deck 4 by itself");
+    // It must stay down at rest, not pass through on its way back up.
+    for (std::uint32_t tick = 0; tick < 90 * 10; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        require(std::abs(s.stack_state().s2_cage_travel) <= 0.02,
+                "S2 wreck: the returned cage stays down at deck 4");
+    }
+    std::cout << "PASS scraperx_sim stack wreckage S2: ride_s=" << ride.seconds << '\n';
+}
+
+// S3 ridden to deck 12 and the rider off: the empty cage must come back down
+// to deck 8 by itself, as S1's does, and stay there at rest. The way on is
+// S3 itself: the cage back at deck 8, ready to be boarded again.
+void run_s3_wreckage() {
+    Simulation s(InitialSpawn::Deck8North);
+    (void)s.advance_frame(0.5);
+    require(load_s3_pan(s), "S3 wreck: the pig loaded, the brake tripped");
+    const S3Ride ride = ride_s3(s, 25.0);
+    require(ride.reached_top && ride.rode_on_cage, "S3 wreck: ridden to deck 12");
+    // The rider is off the cage on deck 12 (ride_s3 walks off). The empty
+    // cage must come back down to deck 8 by itself and settle there.
+    bool sent_up = false;
+    bool back = false;
+    for (std::uint32_t tick = 0; tick < 90 * 150 && !back; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = s.stack_state();
+        sent_up = sent_up || state.s3_cage_travel >= 44.0 - 0.01;
+        if (tick % (90 * 15) == 0) {
+            std::cout << "S3 wreck t=" << tick / 90 << "s cage_travel=" << state.s3_cage_travel
+                      << " car_travel=" << state.s3_car_travel
+                      << " brake_latched=" << (state.s3_brake_latched ? 1 : 0)
+                      << " rope_tension=" << state.s3_rope_tension << '\n';
+        }
+        if (sent_up && std::abs(state.s3_cage_travel) <= 0.02) {
+            back = true;
+        }
+    }
+    require(sent_up && back, "S3 wreck: the empty cage came back down to deck 8 by itself");
+    // It must stay down at rest, not pass through on its way back up.
+    for (std::uint32_t tick = 0; tick < 90 * 10; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        require(std::abs(s.stack_state().s3_cage_travel) <= 0.02,
+                "S3 wreck: the returned cage stays down at deck 8");
+    }
+    std::cout << "PASS scraperx_sim stack wreckage S3: ride_s=" << ride.seconds << '\n';
+}
+
+// F ridden to TP-340 and the rider off: the header's dump thrown over
+// brings the spent platform back down to where the way on exists, and
+// re-arms it.
+void run_f_wreckage() {
+    Simulation f(InitialSpawn::WetFPlatform);
+    (void)f.advance_frame(1.0);
+    require(couple_wet_hose(f), "F wreck: the hose coupled");
+    require(pull_wet_stop_valve(f), "F wreck: the stop valve thrown, coupled");
+    require(wait_for(f, 90.0, [&](const scraperx::sim::Snapshot &) {
+                return f.wet_state().f_platform_travel >= 41.95;
+            }),
+            "F wreck: the platform carried to TP-340");
+    require(walk_to(f, 13.0, -137.2, 6.0), "F wreck: off the platform onto TP-340");
+    require(pull_facing(f, 11.6, -137.3, -1.0, 0.0, Simulation::kWetHeaderHandleEntityId, 0.5, 4.0,
+                        [&](const scraperx::sim::Snapshot &) {
+                            return f.wet_state().dump_angle > 1.8;
+                        }),
+            "F wreck: the header's dump thrown");
+    require(wait_for(f, 150.0, [&](const scraperx::sim::Snapshot &) {
+                const auto w = f.wet_state();
+                return w.f_catch_latched && w.f_platform_travel <= 0.05;
+            }),
+            "F wreck: the dump brought the platform back down and re-armed it");
+    std::cout << "PASS scraperx_sim AS-007 wreckage F: platform_travel=" << f.wet_state().f_platform_travel
+              << '\n';
+}
+
 // M's chock pulled with its shackle free: the reel falls its shaft for
 // nothing and the cage stays on TP-640. The way on is the backup ladder from
 // TP-640 up through the 662 deck's hatch.
@@ -390,9 +504,12 @@ void run_wreck_way_on() {
     run_crown_wreckage();
     run_de_wreckage();
     run_s1_wreckage();
+    run_s2_wreckage();
+    run_s3_wreckage();
     run_m_wreckage();
     run_n_wreckage();
     run_o_wreckage();
+    run_f_wreckage();
 }
 SCRAPERX_GROUP("wreck_way_on", 350, run_wreck_way_on);
 SCRAPERX_SELECT("wreck-way-on", run_wreck_way_on);
