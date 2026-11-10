@@ -903,6 +903,8 @@ void run_perf_step();
 void run_matron_sweep();
 void run_matron_kick();
 void run_matron_jab();
+void run_matron_fight_contact(); // J-060: fight contact truth, issue #320
+void run_matron_fight_measure(); // J-060: the BEFORE/AFTER measurement table
 void run_matron_traverse();
 void run_matron_pursuit();
 void run_matron_chase();

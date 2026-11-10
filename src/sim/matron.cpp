@@ -3494,6 +3494,20 @@ Vec3 Matron::shove_direction(const RVec3 player) const noexcept {
     return to_rim / reach;
 }
 
+bool Matron::hand_in_front(const RVec3 player) const noexcept {
+    // Her hand reaches forward, in her facing arc: the flat line to the
+    // player inside kShoveArcCos of her facing (J-060). A player behind
+    // her, or at her side, is out of her hand's reach.
+    const RVec3 at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : player;
+    const Vec3 to(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
+    const float d = to.Length();
+    if (d < 1.0e-3F) {
+        return false;
+    }
+    const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    return to.Dot(facing) > kShoveArcCos * d;
+}
+
 void Matron::set_throwables(std::vector<Throwable> throwables) {
     throwables_ = std::move(throwables);
     if (throwables_.size() > 32) {

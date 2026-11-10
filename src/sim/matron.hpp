@@ -305,6 +305,9 @@ public:
     static constexpr float kFootAccel = 9.0F;
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
+    // Her hand's forward arc for a shove (J-060): the player must be in
+    // front of her, cos 60 degrees, the same arc as the punch's offer.
+    static constexpr float kShoveArcCos = 0.5F;
     static constexpr float kSightM = 9.0F;       // her paces' "close sight" (choose_pace), not her eyes' reach
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
 
@@ -1536,6 +1539,9 @@ public:
         shove_cooldown_s_ = kShoveCooldownSeconds;
     }
     [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
+    // True when the player is in front of her, inside her hand's forward
+    // arc (J-060): a shove is a hand push, and no hand reaches behind her.
+    [[nodiscard]] bool hand_in_front(JPH::RVec3 player) const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
     // Tests only: her pace held at `pace` (0..3) with no hush, or (-1) free:
     // the tests that meet the Turn and the vault at one speed, as written.

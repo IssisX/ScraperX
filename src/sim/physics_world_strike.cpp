@@ -121,6 +121,37 @@ bool Simulation::PhysicsWorld::fist_path_clear(const JPH::RVec3 from, const JPH:
     return !hit.HadHit();
 }
 
+// Her hand's way to his chest is clear (J-060): her hand swept from her
+// shoulder to his chest, so steel between them takes it first. The same
+// ignore set as the fist's path: her body, his body, his hand.
+bool Simulation::PhysicsWorld::shove_reaches(const JPH::RVec3 player) const noexcept {
+    const JPH::BodyID her = matron_->body();
+    if (her.IsInvalid()) {
+        return false;
+    }
+    const JPH::BodyInterface &bodies = physics_system_.GetBodyInterfaceNoLock();
+    const JPH::RVec3 shoulder = bodies.GetPosition(her) + matron_->shoulder_local();
+    const JPH::RVec3 chest = player + bodies.GetRotation(player_id_) * JPH::Vec3(0.0F, kStrikeChestUpM, 0.0F);
+    const JPH::Vec3 span(chest - shoulder);
+    if (span.LengthSq() < 1.0e-6F) {
+        return true;
+    }
+    JPH::SphereShape hand(kStrikeFistRadiusM);
+    hand.SetEmbedded();
+    const JPH::RShapeCast cast(&hand, JPH::Vec3::sReplicate(1.0F), JPH::RMat44::sTranslation(shoulder), span);
+    JPH::ShapeCastSettings settings;
+    JPH::AnyHitCollisionCollector<JPH::CastShapeCollector> hit;
+    JPH::IgnoreMultipleBodiesFilter ignore;
+    ignore.Reserve(3);
+    ignore.IgnoreBody(player_id_);
+    ignore.IgnoreBody(her);
+    if (!hand_id_.IsInvalid()) {
+        ignore.IgnoreBody(hand_id_);
+    }
+    physics_system_.GetNarrowPhaseQuery().CastShape(cast, settings, shoulder, hit, {}, {}, ignore);
+    return !hit.HadHit();
+}
+
 // The fist he can throw with: the right, else the left; none when each is
 // torn off or broken (a broken arm is out of use, held across the belly).
 bool Simulation::PhysicsWorld::fist_usable(const int side) const noexcept {
@@ -388,6 +419,7 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
                     strike_contact_left_ = move_contact_ticks(strike_move_);
                     strike_normal_ = normal;
                     strike_point_ = point;
+                    strike_limb_point_ = point; // the foot meets her ankle here
                     strike_impulse_ns_ = 0.0F;
                     ++strike_hit_count_;
                 }
@@ -404,6 +436,7 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
                     const float ol = off.Length();
                     strike_normal_ = ol > 1.0e-4F ? off / ol : -facing;
                     strike_point_ = q + strike_normal_ * Matron::kRadius;
+                    strike_limb_point_ = foot;
                     strike_impulse_ns_ = 0.0F;
                     ++strike_hit_count_;
                 }
@@ -425,6 +458,7 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
                     const float ol = off.Length();
                     strike_normal_ = ol > 1.0e-4F ? off / ol : -facing;
                     strike_point_ = q + strike_normal_ * Matron::kRadius;
+                    strike_limb_point_ = fist;
                     strike_impulse_ns_ = 0.0F;
                     ++strike_hit_count_;
                 }
@@ -479,6 +513,7 @@ void Simulation::PhysicsWorld::strike_reset() noexcept {
     strike_ready_ = false;
     strike_in_hand_ = false;
     strike_point_ = JPH::RVec3::sZero();
+    strike_limb_point_ = JPH::RVec3::sZero();
     strike_normal_ = JPH::Vec3::sZero();
     strike_impulse_ns_ = 0.0F;
     strike_queued_move_ = 0;
@@ -497,6 +532,7 @@ void Simulation::PhysicsWorld::read_strike_state() noexcept {
     state_.strike_count = strike_count_;
     state_.strike_hit_count = strike_hit_count_;
     state_.strike_hit_point = Vector3{strike_point_.GetX(), strike_point_.GetY(), strike_point_.GetZ()};
+    state_.strike_limb_point = Vector3{strike_limb_point_.GetX(), strike_limb_point_.GetY(), strike_limb_point_.GetZ()};
     state_.strike_hit_normal = Vector3{strike_normal_.GetX(), strike_normal_.GetY(), strike_normal_.GetZ()};
     state_.strike_impulse_ns = strike_impulse_ns_;
 }

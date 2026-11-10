@@ -1085,6 +1085,11 @@ public:
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;
     [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
+    // Her hand's way to his chest is clear (J-060): her hand (a sphere of
+    // kStrikeFistRadiusM) swept from her shoulder, so a rail, a bar or a
+    // wall in the way takes it first. Her body and his are what it is
+    // thrown at, so they are ignored, as is his hand.
+    [[nodiscard]] bool shove_reaches(JPH::RVec3 player) const noexcept;
     bool strike_in_hand_ = false;   // this strike began with him in her hand
     StrikePhase strike_phase_ = StrikePhase::Guard;
     int strike_ticks_ = 0;
@@ -1094,6 +1099,7 @@ public:
     std::uint64_t strike_count_ = 0;
     std::uint64_t strike_hit_count_ = 0;
     JPH::RVec3 strike_point_ = JPH::RVec3::sZero();
+    JPH::RVec3 strike_limb_point_ = JPH::RVec3::sZero(); // J-060 measure: the fist/foot point on the scoring tick
     JPH::Vec3 strike_normal_ = JPH::Vec3::sZero();
     float strike_impulse_ns_ = 0.0F;
     void grab_reset(JPH::BodyInterface &bodies) noexcept;

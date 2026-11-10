@@ -1044,7 +1044,13 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         if (matron_->grab_ready()) {
             matron_->count_catch();
             matron_->begin_grab(bodies.GetPosition(player_id_));
-        } else if (matron_->shoves() && matron_->shove_ready()) {
+        } else if (matron_->shoves() && matron_->shove_ready() &&
+                   // J-060: a shove is a hand push. Her hand reaches only
+                   // forward, in her facing arc, and only when its way to
+                   // his chest is clear of steel. The grab above is her
+                   // core mechanic and is not gated here.
+                   matron_->hand_in_front(bodies.GetPosition(player_id_)) &&
+                   shove_reaches(bodies.GetPosition(player_id_))) {
             // While her hands cannot take hold (a grab's cooldown),
             // short of fully changed: a pest's shove away from her,
             // a dangerous one's at the rim. Not a catch.
