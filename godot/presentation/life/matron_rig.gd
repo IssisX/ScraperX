@@ -1471,6 +1471,13 @@ func step_hair(delta: float) -> void:
 			var vel: Vector3 = (cur - (prev[k] as Vector3)) * damp
 			prev[k] = cur
 			pts[k] = cur + vel + (HAIR_GRAVITY + wind * (float(k) / float(n))) * dt * dt
+		# The push-outs below hold the strand out of her body; they are not a
+		# force. Their displacement must not become velocity, or every frame's
+		# push-out pumps the lock further out and the back locks stand up in
+		# a sheet at a walk. Fold it into prev (mirror in score.py).
+		var uncon: Array = [Vector3.ZERO]
+		for k in range(1, n + 1):
+			uncon.append(pts[k])
 		for _it in HAIR_ITERATIONS:
 			for k in range(1, n + 1):
 				var above: Vector3 = pts[k - 1]
@@ -1498,6 +1505,8 @@ func step_hair(delta: float) -> void:
 				# straight backward dropped the hang under the gate.
 				q = _clear_front(above, q, seg, chest)
 				pts[k] = q
+		for k in range(1, n + 1):
+			prev[k] = (prev[k] as Vector3) + ((pts[k] as Vector3) - (uncon[k] as Vector3))
 		# The bones from the points: each turned from hanging (its rest, down its
 		# parent) to the way its strand now runs.
 		var parent_basis := head.basis
@@ -1574,7 +1583,14 @@ func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: f
 	var fwd := bone.basis.z.normalized()
 	if _ring_depth(a, b, origin, axis, y0, y1, radius, fwd, back_r, side_r) <= 0.001:
 		return b
-	var horiz := _ring_out(a, b, origin, axis, y0, y1)
+	# Out along the parent point's own radial from the ring axis, not the
+	# deepest sample's: the deepest sample flips side near the centre
+	# plane, so adjacent nape locks were pushed to opposite sides and
+	# fanned into a sheet. The parent's radial is stable frame to frame,
+	# so each lock falls in its own plane down the back.
+	var horiz := _ring_parent_out(a, origin, axis)
+	if horiz.length() < 1e-4:
+		horiz = _ring_out(a, b, origin, axis, y0, y1)
 	horiz = Vector3(horiz.x, 0.0, horiz.z)
 	if horiz.length() < 1e-4:
 		horiz = Vector3(0.0, 0.0, -1.0)
@@ -1598,6 +1614,15 @@ func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: f
 		else:
 			hi = mid
 	return _ring_walk(a, d, horiz, hi, length)
+
+
+# The parent point's radial from the ring axis, horizontalized. Stable where
+# the deepest sample's radial flips: the parent was placed by the same rules
+# last iteration, so its side of the axis does not jump.
+func _ring_parent_out(a: Vector3, origin: Vector3, axis: Vector3) -> Vector3:
+	var rel := a - origin
+	var radial := rel - axis * rel.dot(axis)
+	return Vector3(radial.x, 0.0, radial.z)
 
 
 func _ring_walk(a: Vector3, d: Vector3, horiz: Vector3, s: float, length: float) -> Vector3:

@@ -574,6 +574,9 @@ class HairSolver:
             vel = (cur - prev[:, k]) * self.damp[:, None]
             prev[:, k] = cur
             pts[:, k] = cur + vel + (self.g[None, :] + wvec * (k / n)) * dt * dt
+        # Mirror of matron_rig.gd: the push-outs are not a force; fold their
+        # displacement into prev so it never becomes outward velocity.
+        pre = pts[:, 1:].copy()
         for _ in range(self.iters):
             for k in range(1, n + 1):
                 above = pts[:, k - 1]
@@ -591,6 +594,7 @@ class HairSolver:
                 q = _ring_batch(above, q, self.seg, wb[self.neck], -0.01, 0.105, 0.095)
                 q = _front_batch(above, q, self.seg, wb[self.chest])
                 pts[:, k] = q
+        prev[:, 1:] += pts[:, 1:] - pre
         return wind_clock
 
     def bones_from(self, pts, wb):
@@ -710,22 +714,31 @@ def _ring_one(a, b, length, bone, y0, y1, radius):
     for _ in range(6):
         if _ring_depth(a, b, origin, axis, y0, y1, radius) <= 0.001:
             return b
-        best = 1.0e9
-        out = np.zeros(3)
-        for s in range(8):
-            p = a + (b - a) * (s / 7.0)
-            rel = p - origin
-            along = float(np.dot(rel, axis))
-            if along < y0 - 0.01 or along > y1 + 0.01:
-                continue
-            radial = rel - axis * along
-            rl = float(np.linalg.norm(radial))
-            if rl < best:
-                best = rl
-                out = radial
+        # Mirror of matron_rig.gd: out along the parent point's own radial
+        # from the ring axis (stable frame to frame), not the deepest
+        # sample's (flips side near the centre plane and fans the nape locks
+        # into a sheet). Fall back to the deepest sample when degenerate.
+        rel = a - origin
+        radial = rel - axis * float(np.dot(rel, axis))
+        out = np.array([radial[0], 0.0, radial[2]])
         if np.linalg.norm(out) < 1e-4:
-            out = np.array([a[0] - origin[0], 0.0, a[2] - origin[2]])
-        horiz = np.array([out[0], 0.0, out[2]])
+            best = 1.0e9
+            out = np.zeros(3)
+            for s in range(8):
+                p = a + (b - a) * (s / 7.0)
+                rel = p - origin
+                along = float(np.dot(rel, axis))
+                if along < y0 - 0.01 or along > y1 + 0.01:
+                    continue
+                radial = rel - axis * along
+                rl = float(np.linalg.norm(radial))
+                if rl < best:
+                    best = rl
+                    out = radial
+            if np.linalg.norm(out) < 1e-4:
+                out = np.array([a[0] - origin[0], 0.0, a[2] - origin[2]])
+            out = np.array([out[0], 0.0, out[2]])
+        horiz = out
         if np.linalg.norm(horiz) < 1e-4:
             horiz = np.array([0.0, 0.0, -1.0])
         horiz = horiz / np.linalg.norm(horiz)
