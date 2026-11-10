@@ -301,6 +301,7 @@ class PrFacts:
     rule_check_block: bool | None   # None when the rule check could not run
     touches_workflows: bool
     never_edit: bool = False        # the rule check BLOCKs a never-edited file (protected-file): nothing lifts it
+    codex_failed: bool = False      # the Codex app's newest state for this head is "failed" (its usage limit)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -438,11 +439,20 @@ def workflow_merge(pr: PrFacts, author_vendor: str, lands: Sequence[Verdict], me
     api = api_review_on(pr.verdicts, pr.head_sha)
     codex = codex_review_on(pr.verdicts, pr.head_sha)
     cross = codex is not None and codex.verdict == "LAND" and codex.vendor not in ("unknown", author_vendor)
+    # Cory, 11-10 ("muse"): while Codex cannot review this head (its usage limit), Muse's LAND naming the whole
+    # head stands in for it, beside the security pass. Muse is another vendor; its identity is name-only.
+    muse = None if cross or not pr.codex_failed or author_vendor == "meta" else max(
+        (v for v in pr.verdicts if v.kind == "review" and v.vendor == "meta" and names_whole_head(v, pr.head_sha)),
+        key=lambda v: v.created_at, default=None)
+    if muse is not None and muse.verdict == "LAND":
+        codex, cross = muse, True
     why = ("no automatic Claude review on this head (the security pass)" if api is None else
            f"the automatic Claude review on this head is {api.verdict if not api.downgraded else 'FIX or BLOCK'}, "
            f"not LAND (the security pass)" if api.verdict != "LAND" or api.downgraded else
            f"no LAND from a vendor other than {author_vendor} by a login no agent shares: the Codex app's clean review "
-           f"of the whole head (a LAND typed by name, or the API's own, does not count here)" if not cross else "")
+           f"of the whole head (a LAND typed by name, or the API's own, does not count here)" +
+           (f"; Codex could not review it, so Muse's LAND by mail (review of #{pr.number} @ {pr.head_sha}: LAND) "
+            f"stands in" if pr.codex_failed and author_vendor != "meta" else "") if not cross else "")
     if why:
         return MergeDecision("HUMAN-MERGE", (f"ready, but it changes .github/workflows: {why}",), land_by)
     return MergeDecision("MERGE", (f"proof green, LAND by {codex.who} and a clean automatic Claude review ({api.verdict}) "

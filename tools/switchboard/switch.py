@@ -556,7 +556,8 @@ class Switch:
             number=number, head_sha=sha, head_ref=pr["head"]["ref"], base_ref=pr["base"]["ref"], draft=bool(pr["draft"]),
             mergeable=full.get("mergeable"), head_committed_at=commit["commit"]["committer"]["date"], proof=proof,
             verdicts=verdicts, needs=needs, rule_check_block=False,
-            touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files))
+            touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files),
+            codex_failed=rules.codex_failed(comments, sha))
         ctx = {"job": job, "issue": issue, "proof_url": url, "run_id": run_id, "proof_done_at": proof_done_at, "comments": comments,
                "title": pr["title"], "body": pr.get("body") or "", "files": files, "updated_at": pr.get("updated_at") or "",
                "created_at": pr.get("created_at") or "",

@@ -89,7 +89,7 @@ him again.
   security pass on CI and signing changes, and any head Codex has not reviewed. ChatGPT, then Grok, review only
   as the fallback or after a NOTE. The switchboard merges on a green proof plus a LAND from
   another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
-  Codex review and a clean Claude API review, both on the full head sha (the security pass).
+  Codex review (Muse's LAND while Codex cannot review, 11-10) and a clean Claude API review, both on the full head sha.
 - **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
   go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
