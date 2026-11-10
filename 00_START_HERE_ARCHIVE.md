@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-10 | *"see, i respond positively when you push back"*: a plain no with the reason beats agreeing; it calms him down rather than winding him up. | `CLAUDE.md`, Talking to Cory (push back) |
 | 11-10 | *"If I have to tell you to answer in short, simple, concise ways, again, I'm going to fucking go insane. SIMPLE SIMPLE SIMPLE SIMPLE"*; *"remember that from now on. because it's really fucking important"*: every reply is a few short plain lines, no jargon. | `CLAUDE.md`, Talking to Cory |
 | 11-10 | *"Go back to using 3 total agents, you and two subagents"*; *"You've already blown 26% and it's been 1 day!!"*: two helpers at most again (it replaces "as many as the work needs" of the same morning); running ones finish, none are stopped. | `CLAUDE.md`, The integrator |
 | 11-10 | *"you can stop throttling completely"*; *"I have 3 usage resets we can use"*: no pace throttling and no helper cap; helpers as the work needs (it replaces "only 2 other helpers" of 11-09). | `CLAUDE.md`, The integrator; `work/tasks/integrator-hourly.md` |
