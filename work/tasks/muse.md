@@ -42,9 +42,12 @@ your own branches (Cory 11-05) and mail the rest:
   with what you measured, what you ruled out and the one observation that would settle it.
 - Human sounds are real recordings, never synthesized.
 - **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). How: `work/tasks/eye-check.md`. Claude checks the stills.
-- **Trunk merges are the integrator's (11-05).** When one of your PRs conflicts with trunk, the integrator merges
-  trunk in and mails you the new sha; pull it before your next push. Never start an agent for a trunk merge. The
-  one exception: a mail that says "Muse: resolve" (the conflict is in your own logic).
+- **Push, then CI proves (11-10).** Push as soon as the change builds and the groups it reaches pass locally. Never hold a push
+  for a local full proof or a free memory slot: the full proof is CI's job (CLAUDE.md), and a 90-minute local wait stalls the job.
+- **Trunk merges are yours (11-10).** When one of your PRs conflicts with trunk, merge trunk into your branch
+  yourself (a real merge, never a rebase) and push; never wait for the integrator. You push your own branches
+  (CLAUDE.md, settled 11-05), and the integrator's pushes to `fb-bot/` are refused by its safety check, so the
+  old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
 ## Your queue (11-06)
 The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each

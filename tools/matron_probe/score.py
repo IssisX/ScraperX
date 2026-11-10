@@ -224,6 +224,91 @@ def dominant_bone(part):
     return part.bone[np.arange(len(part.v)), np.argmax(part.w, axis=1)]
 
 
+# --- triangle-mesh inside test (J-067 scorer fix) ------------------------------------------------------------
+# The grid's signed distance is a nearest-vertex normal-plane test; in the sparse-vertex mid-back zone it
+# mis-signs hair points hanging in the air behind her back as deep inside. A deep point counts only if the
+# triangle mesh says it is inside her: ray parity per body part (a point inside a part has an odd crossing
+# count in most directions; two or more odd directions guards against one ray grazing a shared edge or
+# vertex), ORed over parts, since the layers overlap (a point inside both skin and tunic crosses twice).
+
+_MESH_DIRS = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], float)
+
+
+def _tri_dist(p, a, b, c):
+    """Distance from point p to each triangle (a, b, c): plane distance where the projection falls inside
+    the triangle, else the distance to the nearest edge. Vectorized over triangles."""
+    ab, ac = b - a, c - a
+    ap = p - a
+    n = np.cross(ab, ac)
+    n = n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+    dist_plane = np.einsum("ij,ij->i", ap, n)
+    proj = p - dist_plane[:, None] * n
+    v0, v1, v2 = b - a, c - a, proj - a
+    d00 = np.einsum("ij,ij->i", v0, v0)
+    d01 = np.einsum("ij,ij->i", v0, v1)
+    d11 = np.einsum("ij,ij->i", v1, v1)
+    d20 = np.einsum("ij,ij->i", v2, v0)
+    d21 = np.einsum("ij,ij->i", v2, v1)
+    den = np.where(np.abs(d00 * d11 - d01 * d01) < 1e-18, 1e-18, d00 * d11 - d01 * d01)
+    v = (d11 * d20 - d01 * d21) / den
+    w = (d00 * d21 - d01 * d20) / den
+    u = 1.0 - v - w
+    inside_tri = (u >= 0) & (v >= 0) & (w >= 0)
+    d = np.where(inside_tri, np.abs(dist_plane), np.inf)
+
+    def seg_dist(p, a, b):
+        ab = b - a
+        t = np.einsum("ij,ij->i", p - a, ab) / np.maximum(np.einsum("ij,ij->i", ab, ab), 1e-18)
+        t = np.clip(t, 0.0, 1.0)
+        return np.linalg.norm(p - (a + t[:, None] * ab), axis=1)
+
+    d = np.minimum(d, seg_dist(p, a, b))
+    d = np.minimum(d, seg_dist(p, b, c))
+    d = np.minimum(d, seg_dist(p, c, a))
+    return d
+
+
+def _ray_hits(p, direction, a, b, c):
+    """Moller-Trumbore ray-triangle crossings along one direction (vectorized over triangles)."""
+    d = np.asarray(direction, float)
+    d = d / np.linalg.norm(d)
+    e1, e2 = b - a, c - a
+    pv = np.cross(d, e2)
+    det = np.einsum("ij,ij->i", e1, pv)
+    ok = np.abs(det) > 1e-12
+    inv = np.zeros(len(a))
+    inv[ok] = 1.0 / det[ok]
+    tv = p - a
+    u = np.einsum("ij,ij->i", tv, pv) * inv
+    qv = np.cross(tv, e1)
+    v = (qv @ d) * inv
+    t = np.einsum("ij,ij->i", e2, qv) * inv
+    hit = ok & (u >= 0) & (v >= 0) & (u + v <= 1) & (t > 1e-6)
+    return int(hit.sum())
+
+
+def mesh_inside(p, parts_tris):
+    """Is point p inside her drawn body, per the triangle mesh? parts_tris is a list of (A, B, C)
+    vertex arrays, one per body part. Returns (inside, nearest-triangle distance). A point is inside if
+    any single part has an odd crossing count in two or more of the six axis directions: per part, so a
+    point inside both skin and tunic (two crossings out) still counts; two directions, so one ray grazing
+    a shared edge or vertex cannot fake it."""
+    dmin = np.inf
+    for (a, b, c) in parts_tris:
+        if len(a):
+            dmin = min(dmin, float(_tri_dist(p, a, b, c).min()))
+    for (a, b, c) in parts_tris:
+        if not len(a):
+            continue
+        odd = 0
+        for dv in _MESH_DIRS:
+            if _ray_hits(p, dv, a, b, c) % 2 == 1:
+                odd += 1
+                if odd >= 2:
+                    return True, dmin
+    return False, dmin
+
+
 def region_names(run, part, dom):
     """A plain body-part name for each vertex, from the bone that moves it most."""
     names = []
@@ -921,6 +1006,24 @@ class Scorer:
             s3, v3, _ = grid.signed(q[d_i], ring=3)
             s[d_i] = np.where(np.isfinite(s3) & (s3 < 0), s3, -GRID_M)
             vi_l[d_i] = v3
+            # J-067: the grid mis-signs deep points in the sparse-vertex mid-back zone, so a deep point
+            # counts only if the triangle mesh says it is inside her. Otherwise it hangs in the air
+            # behind her back and does not count; a mesh-confirmed point keeps its true penetration
+            # depth, the distance to the nearest triangle. Only points that can count are tested: a
+            # bind-pose-inside point is excluded from inside either way, so testing it is wasted work.
+            cand = np.nonzero(deep & ~self.hair_bind_in)[0]
+            if len(cand):
+                tris = []
+                for name, part in self.run.parts.items():
+                    if name in NOT_FOR_HAIR or len(part.tris) == 0:
+                        continue
+                    pos = skin(part, wb)
+                    t = part.tris
+                    tris.append((pos[t[:, 0]], pos[t[:, 1]], pos[t[:, 2]]))
+                for i in cand:
+                    inside_mesh, dmin = mesh_inside(q[i], tris)
+                    s[i] = -dmin if inside_mesh else dmin
+                    st[i] = s[i]
         vi = np.where(vi_l >= 0, idx[np.maximum(vi_l, 0)], -1)
         inside = (st < 0) & ~self.hair_bind_in
         return q, s, vi, inside, deep, bp, bn, grid, idx

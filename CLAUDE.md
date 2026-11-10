@@ -37,7 +37,8 @@ him again.
 
 ## Talking to Cory (he is on a phone)
 
-- Plain, short answers; technical detail only when he asks.
+- He types fast on a phone, with typos: read for what he means, never ask about wording (11-10).
+- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE", "really fucking important").
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent.
@@ -45,7 +46,7 @@ him again.
   plan or step to approve (11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
   look or story, how the game plays). No answer in 10 minutes: the pick stands. Push back: say no or stop
-  him when his idea is wrong or wastes quota, with the reason, blunt, profane, roasting him, no stock line (11-06, 11-07: "I don't like when you just listen").
+  him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason, hard, abrupt, profane, roasting him, matching or beating his language (11-10: "push back WAY HARDER"), no stock line (11-06, 11-07: "I don't like when you just listen").
 - **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
   with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
@@ -81,15 +82,15 @@ him again.
   research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
   codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
   screen, anything Muse fails twice (11-06: delegate hard).
-- **Board:** issue #340's body is the live board; only the integrator edits it. Agents read the body and
+- **Board:** the body of the open issue labeled `board` is the live board; only the integrator edits it. Agents read the body and
   new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
   needs whom` and start the next job; every agent holds two or more jobs.
-- **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews every PR
-  on open (`@codex review` only after a fix commit). The Claude API (Opus; high, the security pass max) does the eye, the
-  security pass on CI and signing changes, and any head Codex has not reviewed. Grok and ChatGPT review only
-  as the fallback, by their own scheduled runs. The switchboard merges on a green proof plus a LAND from
+- **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews each
+  green head once, asked by the switchboard. The Claude API (Opus; high, the security pass max) does the eye, the
+  security pass on CI and signing changes, and any head Codex has not reviewed. ChatGPT, then Grok, review only
+  as the fallback or after a NOTE. The switchboard merges on a green proof plus a LAND from
   another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
-  Codex review and a clean Claude API review, both on the full head sha (the security pass).
+  Codex review (Muse's LAND while Codex cannot review, 11-10) and a clean Claude API review, both on the full head sha.
 - **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
   go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
   proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
@@ -102,13 +103,13 @@ him again.
 
 ## The integrator
 
-- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun too; 11-06, 11-08), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
+- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h, 8:17 AM-11:17 PM Central (Sat-Sun every 4 h, 9:17 AM-9:17 PM) are a backstop to 11-12, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
-  `helper` or `helper-max`; Cory 11-06), never a separate session: at most two while Claude codes (11-09 night), each
+  `helper` or `helper-max`; Cory 11-06), never a separate session; at most two at a time (11-10 morning: 26% of the week in a day), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  his call, seen in `get_session`; raise it only when he throttles; `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
+  his call, seen in `get_session`; raise it only when he throttles; `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests; never max, a failed job included (`.claude/agents/`; Cory 11-06, 11-10: "down to extra or high"). A worker whose job landed is retired.
 - **Context:** the window is 833k (compacts near 650k; `/autocompact` sets it live; each call rereads it);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one

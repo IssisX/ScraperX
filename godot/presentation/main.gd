@@ -122,6 +122,12 @@ var _ci_phase := PHASE_APPROACH
 var _ci_facing := CI_APPROACH_FACING
 var _ci_proof_tick := -1
 var _ci_proof_printed := false
+# J-045: the first advances after the scene build are capped to one fixed
+# tick (the load gap is not play time). The load spans the first frames,
+# so the cap covers the first six advances, not just the first: the
+# quiet-box probe (2026-11-09) showed frames 2-6 each taking 9 steps
+# (eff 0.1000 s) before the cap, frame 1 taking 1 (eff 0.0111 s).
+var _capped_advances := 0
 var _sky_cycle: Node
 
 var _export_solids_path := ""
@@ -493,7 +499,20 @@ func _process(delta: float) -> void:
 	var time_scale := minf(_launch_shot.time_scale(), float(_hold_cam.time_scale()))
 	AudioServer.playback_speed_scale = time_scale
 	var sim_rate := time_scale * float(_hold_cam.fast_forward())
-	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(minf(delta * sim_rate, MAX_SIM_FRAME_DELTA)))
+	# J-045: the first advances after the scene build start from a fresh
+	# accumulator — the load gap is not play time, so the first six frames
+	# each run at most one fixed tick instead of up to nine
+	# (MAX_SIM_FRAME_DELTA). The load spans the first frames: the
+	# quiet-box probe showed frames 2-6 each taking 9 steps before this
+	# extension, frame 1 taking 1.
+	var _advance_cap := MAX_SIM_FRAME_DELTA
+	if _capped_advances < 6 and not freeze_sim:
+		var _one_tick: float = _native.get_fixed_step_seconds()
+		if delta * sim_rate > _one_tick:
+			_advance_cap = _one_tick
+			_capped_advances += 1
+	var eff_delta := minf(delta * sim_rate, _advance_cap)
+	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(eff_delta))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return
