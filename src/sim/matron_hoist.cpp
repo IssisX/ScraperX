@@ -144,6 +144,7 @@ bool Matron::plan_hoist(const int from, const int goal) {
 
 void Matron::step_hoist(const float dt) {
     hoist_hand_n_ = 0.0F;
+    hoist_hand_power_w_ = 0.0F;
     BodyInterface &bodies = physics_.GetBodyInterface();
     if (hoist_.hoist < 0 || hoist_.hoist >= static_cast<int>(hoists_.size())) {
         hoist_.phase = 0;
@@ -240,22 +241,29 @@ void Matron::step_hoist(const float dt) {
             // her one arm's reach (kArmReachM) to the nearest of it.
             const Vec3 shoulder = Vec3(at + shoulder_local());
             if (pb.GetSqDistanceTo(shoulder) < kArmReachM * kArmReachM) {
-                const traversal::Limits budget;
-                const float moving = bodies.GetLinearVelocity(pin.body).Dot(along);
-                const float v = std::max(0.3F, moving);
+                // Her hands push from what her feet left: the one budget's
+                // remainder, charged at her speed against the pin (the push
+                // on it plus its reaction on her).
+                const traversal::Limits law;
+                const float feet_power = climber_->view().power_w;
+                const Vec3 v_pin = bodies.GetLinearVelocity(pin.body);
+                const Vec3 v_her = bodies.GetLinearVelocity(body_);
+                traversal::Budget hand{law.total_force_n - used, used, law.power_w - feet_power, feet_power,
+                                       v_pin - v_her};
                 // A pin that will not give to her shove she leans into,
-                // harder each moment it stands, up to what her one budget
-                // leaves her feet; once it goes, she eases back to a shove.
+                // harder each moment it stands, up to what her hands have
+                // left; once it goes, she eases back to a shove.
+                const float moving = bodies.GetLinearVelocity(pin.body).Dot(along);
                 hoist_.lean_n = moving < kLeanStillMps
-                                    ? std::min(hoist_.lean_n + kLeanRateNps * dt, budget.total_force_n - kHandPushN)
+                                    ? std::min(hoist_.lean_n + kLeanRateNps * dt, std::max(0.0F, hand.left - kHandPushN))
                                     : std::max(0.0F, hoist_.lean_n - kLeanRateNps * dt);
-                const float force =
-                    std::min({kHandPushN + hoist_.lean_n, budget.total_force_n - used, budget.power_w / v});
+                const Vec3 push = hand.take(along * (kHandPushN + hoist_.lean_n));
+                const float force = push.Length();
                 if (force > 0.0F) {
-                    const Vec3 push = along * force;
                     bodies.AddForce(pin.body, push, EActivation::Activate);
                     bodies.AddForce(body_, -push, EActivation::Activate);
                     hoist_hand_n_ = force;
+                    hoist_hand_power_w_ = hand.power_used - feet_power;
                 }
             }
             if (hoist_.t > kWorkGiveUpS) {
@@ -281,15 +289,27 @@ void Matron::step_hoist(const float dt) {
                             floor_top,
                             std::clamp(mid.GetZ() + in.GetZ() * reach, box.mMin.GetZ() + kRadius, box.mMax.GetZ() - kRadius));
             const float used = climber_->walk_between(dt, goal, kBoardMps, 0.0F);
+            // Her hands reach it as they reach anything: from her shoulder,
+            // her one arm's reach (kArmReachM) to the nearest of it.
+            const Vec3 shoulder = Vec3(at + shoulder_local());
             if (distance_xz(feet.GetX(), feet.GetZ(), goal.GetX(), goal.GetZ()) < 0.35F &&
-                hb.mMax.GetY() < feet.GetY() + 1.6F) {
-                const traversal::Limits budget;
-                const float v = std::max(0.3F, -bodies.GetLinearVelocity(handle).GetY());
-                const float force = std::min({0.5F * kMassKg * 9.81F, budget.total_force_n - used, budget.power_w / v});
+                hb.mMax.GetY() < feet.GetY() + 1.6F && hb.GetSqDistanceTo(shoulder) < kArmReachM * kArmReachM) {
+                // Her hands push from what her feet left: the one budget's
+                // remainder, charged at her speed against the handle (the
+                // push on it plus its reaction on her).
+                const traversal::Limits law;
+                const float feet_power = climber_->view().power_w;
+                const Vec3 v_handle = bodies.GetLinearVelocity(handle);
+                const Vec3 v_her = bodies.GetLinearVelocity(body_);
+                traversal::Budget hand{law.total_force_n - used, used, law.power_w - feet_power, feet_power,
+                                       v_handle - v_her};
+                const Vec3 push = hand.take(Vec3(0.0F, -0.5F * kMassKg * 9.81F, 0.0F));
+                const float force = push.Length();
                 if (force > 0.0F) {
-                    bodies.AddForce(handle, Vec3(0.0F, -force, 0.0F), EActivation::Activate);
-                    bodies.AddForce(body_, Vec3(0.0F, force, 0.0F), EActivation::Activate);
+                    bodies.AddForce(handle, push, EActivation::Activate);
+                    bodies.AddForce(body_, -push, EActivation::Activate);
                     hoist_hand_n_ = force;
+                    hoist_hand_power_w_ = hand.power_used - feet_power;
                 }
             }
             if (hoist_.t > kWorkGiveUpS) {

@@ -1586,9 +1586,10 @@ public:
         int hoist = -1;
         std::uint32_t rides = 0;    // rides she finished, this life
         float hand_n = 0.0F;        // her hands' push on what frees it, this tick
+        float hand_power_w = 0.0F;  // that push's power against what it moves, this tick
     };
     [[nodiscard]] HoistView hoist_view() const noexcept {
-        return {hoist_.phase, hoist_.hoist, hoist_rides_, hoist_hand_n_};
+        return {hoist_.phase, hoist_.hoist, hoist_rides_, hoist_hand_n_, hoist_hand_power_w_};
     }
     [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
     struct Journey {
@@ -2471,6 +2472,7 @@ private:
     std::vector<JPH::Vec3> hoist_path_;
     std::size_t hoist_path_i_ = 0;
     float hoist_hand_n_ = 0.0F;
+    float hoist_hand_power_w_ = 0.0F;   // that push's power against what it moves, this tick
     bool hoist_inner_ = false;   // travel_to from the hoist leg itself
     [[nodiscard]] int region_under() const;
     std::vector<traversal::Edge> journey_;

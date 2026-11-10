@@ -167,19 +167,24 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     std::vector<int> route;
     const int from = here >= 0 ? here : travel_.region;
     if (from >= 0) route = scanned_->plan(from, region, avoid);
-    // A new destination ends a hoist leg under way (not one the leg itself
-    // asks for, going on from its landing).
-    if (!hoist_inner_) {
-        hoist_ = {};
-    }
     int target = region;
-    if (here >= 0 && route.empty() && here != region && plan_hoist(here, region)) {
-        // No way of her map joins them: a hoist does. First to its landing.
+    // No way of her map joins them: a hoist does. First to its landing.
+    const bool hoisted = here >= 0 && route.empty() && here != region && plan_hoist(here, region);
+    if (hoisted) {
         target = hoist_.board;
         if (target != here) route = scanned_->plan(here, target, avoid);
     }
     if (here >= 0 && route.empty() && here != target) {
+        // Unreachable: the request changes nothing, and a hoist leg under
+        // way rides on (the reset below runs only once the destination is
+        // accepted).
         return false;
+    }
+    // A new destination ends a hoist leg under way (not one the leg itself
+    // asks for, going on from its landing, and not one this request just
+    // planned).
+    if (!hoisted && !hoist_inner_) {
+        hoist_ = {};
     }
     // Her hands on this body (a respawn gives her a new one). Invalid or
     // unreachable requests above leave her existing controller untouched.
