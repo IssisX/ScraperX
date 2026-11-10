@@ -44,8 +44,8 @@ him again.
   pass on goes whole in one copyable block naming the agent.
 - **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; no
   plan or step to approve (11-04). Still his: Claude
-  sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
-  look or story, how the game plays). No answer in 10 minutes: the pick stands. Push back: say no or stop
+  sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
+  is or her story, how the game plays). Small is mine: fit, size, tuning, timing within his bars (11-10: the wider skirt "a small thing"). No answer in 10 minutes: the pick stands. Push back: say no or stop
   him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason, hard, abrupt, profane, roasting him, matching or beating his language (11-10: "push back WAY HARDER"), no stock line (11-06, 11-07: "I don't like when you just listen").
 - **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
   with no middle ground.
