@@ -45,8 +45,8 @@
    "what": "merge #386 by hand"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "#386 merged",
  "owner": "claude",
  "pr": 386,
  "pr_done": "",
@@ -54,6 +54,6 @@
   386
  ],
  "review": "LAND",
- "state": "landable",
- "updated": "2026-11-10T18:29:43Z"
+ "state": "merged",
+ "updated": "2026-11-10T19:39:24Z"
 }

@@ -6,7 +6,7 @@
   "fb-bot/integrate-j009-258-down-traversal-flags": "fdea6e19e6a6eb72c676d617930f06b92e213e0e"
  },
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [
   "6771165879:578"
  ],
@@ -167,6 +167,31 @@
    "version": "fix:237ba1703ce562e34e1279b022edf7a7705ff7a6",
    "via": "email",
    "what": "#377: open FIX from Codex (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T19:39:24Z",
+   "dead": "2026-11-10T23:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T21:47:00Z",
+   "id": "O-92903078",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-10T19:39:24Z",
+   "missing": 0,
+   "ref": "PR|#377",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 377,
+   "to": "codex",
+   "unseen": null,
+   "version": "c13d8edb9efe4d0aa3c107fdbba296490700de2b",
+   "via": "relay",
+   "what": "review #377 @ c13d8edb"
   }
  ],
  "outcome": null,
@@ -177,7 +202,7 @@
  "prs": [
   377
  ],
- "review": "",
- "state": "proof",
- "updated": "2026-11-10T18:29:43Z"
+ "review": "waiting",
+ "state": "review",
+ "updated": "2026-11-10T19:39:24Z"
 }

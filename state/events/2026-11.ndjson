@@ -1132,3 +1132,21 @@
 {"ev": "dead_letter", "id": "O-ac0bbca6", "job": "J-049", "ref": "BRANCH|fb-bot/integrate-protected-j049-pr1", "t": "2026-11-10T18:29:43Z", "to": "claude"}
 {"attempt": 1, "ev": "sent", "id": "O-936dbccc", "job": "J-049", "ref": "PR|#383", "send": 1, "t": "2026-11-10T18:29:43Z", "to": "grok", "via": "issue"}
 {"ev": "pass", "job": "", "jobs": 49, "status": "ok", "t": "2026-11-10T18:29:43Z", "tries": 1}
+{"due": "2026-11-10T23:39:24Z", "ev": "obligation", "id": "O-f6d1efd3", "job": "J-007", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j007-item6-stage2", "t": "2026-11-10T19:39:24Z", "to": "muse", "via": "email"}
+{"due": "2026-11-10T21:47:00Z", "ev": "obligation", "id": "O-92903078", "job": "J-009", "kind": "review", "ref": "PR|#377", "t": "2026-11-10T19:39:24Z", "to": "codex", "via": "relay"}
+{"ev": "reassigned", "frm": "muse", "job": "J-011", "t": "2026-11-10T19:39:24Z", "to": "claude"}
+{"due": "2026-11-10T23:00:00Z", "ev": "obligation", "id": "O-40f8f8de", "job": "J-011", "kind": "ask", "ref": "ASK|ask on #118", "t": "2026-11-10T19:39:24Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-10T23:39:24Z", "ev": "obligation", "id": "O-d1d15094", "job": "J-060", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j060", "t": "2026-11-10T19:39:24Z", "to": "muse", "via": "email"}
+{"ev": "outcome", "job": "J-075", "outcome": "merged", "t": "2026-11-10T19:39:24Z", "why": "#386 merged"}
+{"ev": "state", "frm": "proof", "job": "J-009", "t": "2026-11-10T19:39:24Z", "to": "review"}
+{"ev": "state", "frm": "proof", "job": "J-060", "t": "2026-11-10T19:39:24Z", "to": "working"}
+{"ev": "state", "frm": "working", "job": "J-070", "t": "2026-11-10T19:39:24Z", "to": "proof"}
+{"ev": "state", "frm": "landable", "job": "J-075", "t": "2026-11-10T19:39:24Z", "to": "merged"}
+{"ev": "unmatched", "ident": "READ|read 1", "job": "", "t": "2026-11-10T19:39:24Z", "why": "a listing was cut short or failed: items may be missing (comments since 2026-11-07T19:39:24Z: more than 1000, the rest not read)"}
+{"attempt": 1, "ev": "sent", "id": "O-f6d1efd3", "job": "J-007", "ref": "BRANCH|fb-bot/integrate-protected-j007-item6-stage2", "send": 1, "t": "2026-11-10T19:39:24Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-92903078", "job": "J-009", "ref": "PR|#377", "send": 1, "t": "2026-11-10T19:39:24Z", "to": "codex", "via": "relay"}
+{"attempt": 1, "ev": "sent", "id": "O-40f8f8de", "job": "J-011", "ref": "ASK|ask on #118", "send": 1, "t": "2026-11-10T19:39:24Z", "to": "grok", "via": "issue"}
+{"attempt": 2, "ev": "sent", "id": "O-ef693717", "job": "J-038", "ref": "PR|#372", "send": 2, "t": "2026-11-10T19:39:24Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-d1d15094", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 1, "t": "2026-11-10T19:39:24Z", "to": "muse", "via": "email"}
+{"ev": "dead_letter", "id": "O-d1f36275", "job": "", "ref": "ASK|ask on #384", "t": "2026-11-10T19:39:24Z", "to": "chatgpt"}
+{"ev": "pass", "job": "", "jobs": 49, "status": "ok", "t": "2026-11-10T19:39:24Z", "tries": 1}
