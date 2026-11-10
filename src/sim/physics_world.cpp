@@ -914,12 +914,14 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // off them.
     contact_listener_.set_planted_grip(
         traversal_state_ == TraversalState::None && !sling_controlling ? planted_grip_ : 0.0F);
-    // His own run is no blow (J-048): up to the flow's speed over his frame,
-    // while his own drive moves him (own_drive_) and nothing has taken him
-    // since the last step.
+    // His own run is no blow (J-048): up to the flow's speed of his own
+    // drive, while his own drive moves him (own_drive_) and nothing has
+    // taken him since the last step. The self-driven velocity (J-061) is
+    // his legs', arms' and hook's speed only — a gust's push is not in it,
+    // so it stays a blow.
     const bool own_drive = own_drive_ && traversal_state_ == TraversalState::None && !sling_controlling &&
                            !zip_riding_ && grip_ == nullptr && !hook_hauls(commands.hook_reel);
-    contact_listener_.set_own_drive(airborne_inherited_velocity_, own_drive ? kFlowSpeedMps : 0.0F);
+    contact_listener_.set_own_drive(self_drive_velocity_, own_drive ? kFlowSpeedMps : 0.0F);
     {
         const auto started = std::chrono::steady_clock::now();
         effort_before_update();   // J-046 measurement only: reads, writes nothing

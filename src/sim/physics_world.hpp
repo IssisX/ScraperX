@@ -826,6 +826,13 @@ public:
     scraperx::sim::kit::RopeIndex rig_rope_;
     SupportSample support_sample_{};
     JPH::Vec3 airborne_inherited_velocity_{JPH::Vec3::sZero()};
+    // His own drive's speed for the listener (J-061): the horizontal speed
+    // his legs, arms and hook give him, never wind or another outside push.
+    // Grounded, it is his speed over his frame; in the air it keeps what
+    // takeoff gave it and only his own inputs move it (apply_locomotion).
+    // The listener takes only this part off a blow, so a gust's push into a
+    // wall stays a blow.
+    JPH::Vec3 self_drive_velocity_{JPH::Vec3::sZero()};
     JPH::Vec3 facing_{JPH::Vec3::sZero()};
     bool grounded_ = false;
     std::uint64_t support_entity_id_ = 0;

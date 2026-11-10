@@ -871,6 +871,7 @@ void run_up_controls();
 void run_zipline();
 void run_corpse();
 void run_arm_break();
+void run_wind_own_drive();
 void run_hook();
 void run_workers();
 void run_c7();
