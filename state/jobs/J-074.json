@@ -20,8 +20,8 @@
   ]
  },
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j074-test-registry: merged #353",
  "owner": "claude",
  "pr": 368,
  "pr_done": "merged",
@@ -31,5 +31,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-09T22:39:05Z"
+ "updated": "2026-11-10T17:29:19Z"
 }

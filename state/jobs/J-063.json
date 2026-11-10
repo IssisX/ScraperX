@@ -4,9 +4,11 @@
  "branches": {},
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6773742956:69"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T19:09:20Z",
+ "deadline": null,
  "head": "",
  "issue": 321,
  "job": "J-063",
@@ -126,7 +128,12 @@
    "what": "ask from Claude on #321"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T17:02:57Z",
+    "by": "Muse",
+    "comment": "6773742956",
+    "how": "/ack"
+   },
    "ack_rule": "work|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -159,5 +166,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-10T16:19:58Z"
+ "updated": "2026-11-10T17:29:19Z"
 }

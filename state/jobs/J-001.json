@@ -12,8 +12,8 @@
   "6771165879:210"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T18:17:00Z",
- "head": "b555dd6183ff959d021834b484202ddd83037973",
+ "deadline": "2026-11-10T19:17:00Z",
+ "head": "34e51f0fa177b8944238da747b83e557a6adeeda",
  "issue": 108,
  "job": "J-001",
  "landed": {
@@ -321,7 +321,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T17:29:19Z",
+    "why": "PR closed without merging"
+   },
    "created": "2026-11-10T16:19:58Z",
    "dead": "2026-11-10T20:17:00Z",
    "dead_lettered": null,
@@ -340,17 +343,42 @@
    "version": "red:b555dd6183ff959d021834b484202ddd83037973",
    "via": "session",
    "what": "#227 proof red: native-tests (athletic-traversal), native-tests (matron-slices-3)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T17:29:19Z",
+   "dead": "2026-11-10T21:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T19:17:00Z",
+   "id": "O-8a2664d3",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T17:29:19Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j001-hold",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 108,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:34e51f0fa177b8944238da747b83e557a6adeeda",
+   "via": "session",
+   "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
  "pr": 227,
- "pr_done": "",
+ "pr_done": "closed",
  "prs": [
   227
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-10T16:19:58Z"
+ "state": "working",
+ "updated": "2026-11-10T17:29:19Z"
 }

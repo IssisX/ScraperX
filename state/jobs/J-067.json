@@ -9,10 +9,12 @@
  },
  "cancelled": null,
  "ci": "green",
- "commands": [],
+ "commands": [
+  "6772849761:0"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T15:17:00Z",
- "head": "a43b65ceb91f70465966415054499e6e3f126186",
+ "deadline": null,
+ "head": "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
  "issue": 328,
  "job": "J-067",
  "landed": {
@@ -212,7 +214,12 @@
    "what": "ask from Muse on #328"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T16:25:31Z",
+    "by": "Muse",
+    "comment": "6772849761",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -248,5 +255,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T15:09:20Z"
+ "updated": "2026-11-10T17:29:19Z"
 }

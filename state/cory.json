@@ -58,9 +58,18 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (7), from the switchboard at 11-10 9:09 AM Central.\n\n- Needs you: J-001 fix on #108: 'claude/integrate-j001-hold' proof red: godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-tr. Muse did not act (2 send(s) by email, no ack); since 11-10 5:49 AM Central. Done: /ack O-d0889dd8\n- Needs you: J-001 ask on #108: ask from Claude on #108. ChatGPT did not act (2 send(s) by issue, no ack); since 11-10 1:39 AM Central. Done: /ack O-57ae7ea3\n- Needs you: J-015 fix on #122: 'fb-bot/integrate-j015-slice1' proof red: scope, no PR. Muse did not act (2 send(s) by email, no ack); since 11-10 6:59 AM Central. Done: /ack O-6b556027\n- Needs you: J-044l fix: 'fb-bot/integrate-protected-j044l-vault' proof red: godot-touch (touch-2), native-tests (athletic-traversal-2), native-t. Muse did not act (2 send(s) by email, no ack); since 11-10 5:49 AM Central. Done: /ack O-f45193c7\n- Needs you: J-072 ask on #350: ask from Claude on #350. PE did not act (2 send(s) by watch, no ack); since 11-10 9:09 AM Central. Done: /ack O-a34f6e29\n- Needs you: J-072 ask on #350: ask from Claude on #350. PE did not act (2 send(s) by watch, no ack); since 11-10 9:09 AM Central. Done: /ack O-1ac5a17e\n- Needs you: 3 ask(s) to Claude from before today have no reply on their threads (answered by mail?): O-51240df7 O-da6b6426 O-e3207013. The integrator posts each answer on its thread or /acks it; none of these is nagged one by one.\n\nStill standing from earlier batches: 1 (the day's shadow file lists them)."
+  },
+  {
+   "at": "2026-11-10T17:29:19Z",
+   "keys": [
+    "O-8184d278",
+    "O-71c6c5fb"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (2), from the switchboard at 11-10 11:29 AM Central.\n\n- Needs you: J-042 ruling on #291: 'fb-bot/integrate-protected-j042-windup'  8c74524c: closed #291 without merging at this head: reopen it, or delete the . Claude did not act (2 send(s) by session, no ack); since 11-10 11:29 AM Central. Done: /ack O-8184d278\n- Needs you: J-045 ask on #248: ask from Muse on #248. Claude did not act (2 send(s) by session, no ack); since 11-10 11:29 AM Central. Done: /ack O-71c6c5fb\n\nStill standing from earlier batches: 1 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-10T15:09:20Z",
+ "last_batch": "2026-11-10T17:29:19Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
@@ -68,6 +77,8 @@
   "O-1ac5a17e": "2026-11-10T15:09:20Z",
   "O-57ae7ea3": "2026-11-10T15:09:20Z",
   "O-6b556027": "2026-11-10T15:09:20Z",
+  "O-71c6c5fb": "2026-11-10T17:29:19Z",
+  "O-8184d278": "2026-11-10T17:29:19Z",
   "O-a34f6e29": "2026-11-10T15:09:20Z",
   "O-d0889dd8": "2026-11-10T15:09:20Z",
   "O-f45193c7": "2026-11-10T15:09:20Z",

@@ -7,10 +7,10 @@
   "fb-bot/integrate-j059-black-eye": "e34ac5096b438be2f4a8567d4bf52f371857652e"
  },
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
+ "deadline": "2026-11-10T21:29:19Z",
  "head": "8bd05a4ea89ed0e26c89b223cc19e6e9ece5aee4",
  "issue": 307,
  "job": "J-059",
@@ -287,6 +287,31 @@
    "version": "conflict:1e1488f3cfc5f18864689ec0ba4d5f8bc5e39432",
    "via": "email",
    "what": "#343 has a merge conflict with the base"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T17:29:19Z",
+   "dead": "2026-11-11T01:29:19Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T21:29:19Z",
+   "id": "O-4f63ce0a",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T16:40:08Z",
+   "missing": 0,
+   "ref": "PR|#343",
+   "sends": 1,
+   "sent_by": "switch",
+   "thread": 343,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:8bd05a4ea89ed0e26c89b223cc19e6e9ece5aee4",
+   "via": "email",
+   "what": "#343: open FIX from Claude (review)"
   }
  ],
  "outcome": null,
@@ -297,7 +322,7 @@
  "prs": [
   343
  ],
- "review": "",
- "state": "proof",
- "updated": "2026-11-10T16:19:58Z"
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-10T17:29:19Z"
 }

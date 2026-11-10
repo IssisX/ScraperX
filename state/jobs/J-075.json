@@ -1,0 +1,52 @@
+{
+ "attempt": 1,
+ "blocked": null,
+ "branches": {},
+ "cancelled": null,
+ "ci": "green",
+ "commands": [],
+ "created": "2026-11-10T17:29:19Z",
+ "deadline": "2026-11-10T19:17:00Z",
+ "head": "72636224b1d77a3db51516f17d787030825efde1",
+ "issue": 385,
+ "job": "J-075",
+ "landed": {},
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "merged|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T17:29:19Z",
+   "dead": "2026-11-10T21:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T19:17:00Z",
+   "id": "O-adddde05",
+   "kind": "ruling",
+   "last_error": "",
+   "last_sent": "2026-11-10T17:29:19Z",
+   "missing": 0,
+   "ref": "PR|#386",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 386,
+   "to": "claude",
+   "unseen": null,
+   "version": "merge:72636224b1d77a3db51516f17d787030825efde1",
+   "via": "session",
+   "what": "merge #386 by hand"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "claude",
+ "pr": 386,
+ "pr_done": "",
+ "prs": [
+  386
+ ],
+ "review": "",
+ "state": "landable",
+ "updated": "2026-11-10T17:29:19Z"
+}

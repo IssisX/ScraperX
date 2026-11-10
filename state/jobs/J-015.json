@@ -10,10 +10,11 @@
  "cancelled": null,
  "ci": "",
  "commands": [
-  "6771165879:299"
+  "6771165879:299",
+  "6773022511:72"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T20:19:58Z",
+ "deadline": null,
  "head": "2ba17f22df2342e37f48dc064d47509399463a9a",
  "issue": 122,
  "job": "J-015",
@@ -354,7 +355,12 @@
    "what": "ask from Muse on #122"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T16:32:52Z",
+    "by": "Muse",
+    "comment": "6773022511",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -387,5 +393,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T16:19:58Z"
+ "updated": "2026-11-10T17:29:19Z"
 }
