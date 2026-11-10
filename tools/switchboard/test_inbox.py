@@ -100,6 +100,8 @@ class FakeGH:
         self.inbox = list(inbox)
         self.comments, self.open_issues = list(comments), list(open_issues)
         self.by_issue: dict[int, list] = {}
+        # the issues labeled `board`, open and closed (Switch.board_issue, old_boards); an entry is a number or an item
+        self.boards, self.closed_boards = [switch.BOARD_ISSUE], []
         self.dry_run = dry_run
         self.gets, self.posts, self.writes, self.log = [], [], [], []
         self._comment_id = 0   # ids the real API returns on a comment POST
@@ -122,6 +124,9 @@ class FakeGH:
             if "direction=desc" in path:
                 fresh = sorted(fresh, key=lambda c: c.get("created_at") or "", reverse=True)
             return fresh[(page - 1) * 100: page * 100]
+        if base == f"repos/{self.repo}/issues" and "labels=board" in path:
+            listed = self.closed_boards if "state=closed" in path else self.boards
+            return [dict(b) if isinstance(b, dict) else {"number": b} for b in listed]
         if base == f"repos/{self.repo}/issues":
             page = re.search(r"[?&]page=(\d+)", path)
             page = int(page.group(1)) if page else 1

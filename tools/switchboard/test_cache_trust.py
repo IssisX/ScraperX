@@ -36,6 +36,8 @@ HEAD = fb.HEAD
 RUNS = f"repos/{REPO}/actions/workflows/{switch.PROOF_WORKFLOW}/runs?head_sha={HEAD}&per_page=5"
 JOBS = f"repos/{REPO}/actions/runs/7/jobs?per_page=50"
 COMMENTS = f"repos/{REPO}/issues/9/comments?per_page=100&page=1"
+BOARDS = f"repos/{REPO}/issues?labels=board&state=open&per_page=100&page=1"   # the board is found by label (board_issue)
+BOARD_COMMENTS = f"repos/{REPO}/issues/{switch.BOARD_ISSUE}/comments?per_page=100&page=1"
 
 
 def codex_clean() -> dict:
@@ -57,7 +59,8 @@ def github(comments: list, conclusion: str) -> dict:
         COMMENTS: comments,
         f"repos/{REPO}/pulls/9/reviews?per_page=100&page=1": [],
         f"repos/{REPO}/issues?labels=job&state=open&per_page=100&page=1": [],
-        f"repos/{REPO}/issues/{switch.BOARD_ISSUE}/comments?per_page=100&page=1": [],
+        BOARDS: [{"number": switch.BOARD_ISSUE}],
+        BOARD_COMMENTS: [],
         f"repos/{REPO}/pulls/9/files?per_page=100&page=1": [{"filename": "tools/x.py"}],
     }
 
@@ -144,6 +147,51 @@ class FreshMerge(unittest.TestCase):
             self.assertIn(path, sw.gh.runner.uncached)
         self.assertTrue(sw.rc_fresh and all(sw.rc_fresh), sw.rc_fresh)
         self.assertFalse(any(path.endswith("/merge") for _, path in writes), writes)
+
+    def test_a_planted_board_never_hides_the_real_boards_fix(self):
+        # J-072: the board is found by label. Muse's mailed FIX on a PR with no job issue is posted on the board, so
+        # a planted listing that names another issue would hide it: the merge facts read the listing fresh too.
+        fix = {"id": 5, "user": {"login": "IssisX"}, "created_at": fb.ago(1), "updated_at": fb.ago(1),
+               "body": f"**Muse (via email bridge): review of #9 @ {HEAD[:8]}: FIX**\n\ncommand: make test\n"
+                       "input: none\nexpected: green\nobserved: red"}
+        real = github([codex_clean()], "success")
+        real[BOARD_COMMENTS] = [fix]
+        real[f"repos/{REPO}/issues/999/comments?per_page=100&page=1"] = []
+        steered, writes, (cached_facts, sw) = sweep_one(real, {BOARDS: [{"number": 999}]})
+        self.assertEqual(rules.merge_decision(cached_facts, "anthropic", fb.CodexFirst.TEAM).action, "MERGE",
+                         "the poisoned cache alone would have merged")
+        self.assertEqual(steered[-1].decision.action, "FIX")
+        self.assertFalse(any(path.endswith("/merge") for _, path in writes), writes)
+        self.assertIn(BOARDS, sw.gh.runner.uncached)
+
+    def test_the_merge_facts_never_take_the_board_from_the_cache_files_state(self):
+        # GitHub lists no open board (the label came off): the sweep state rides in the cache file, so under fresh
+        # the last board it names is not used; the fallback is the code's own
+        real = github([codex_clean()], "success")
+        real[BOARDS] = []
+        gh = ghapi.GitHub(REPO, dry_run=False, log=lambda line: None, runner=FakeGh(real), sleep=lambda s: None)
+        gh.state = {"board": 999}
+        sw = fb.make(gh, team=fb.CodexFirst.TEAM)
+        self.assertEqual(sw.board_issue(), 999)   # an ordinary read: the last board a sweep found
+        sw._board_issue = None
+        with gh.fresh():
+            self.assertEqual(sw.board_issue(), switch.BOARD_ISSUE)
+
+    def test_a_board_read_that_fails_under_fresh_raises_like_any_merge_fact(self):
+        class Down(FakeGh):
+            def __call__(self, args, **kw):
+                if BOARDS in args:
+                    return types.SimpleNamespace(returncode=1, stdout=b"HTTP/2.0 502 Bad Gateway\r\n\r\n{}",
+                                                 stderr=b"gh: Bad Gateway (HTTP 502)")
+                return super().__call__(args, **kw)
+        gh = ghapi.GitHub(REPO, dry_run=False, log=lambda line: None, sleep=lambda s: None,
+                          runner=Down(github([codex_clean()], "success")))
+        sw = fb.make(gh, team=fb.CodexFirst.TEAM)
+        with mock.patch("time.sleep"):   # ghapi's retry of a failed GET
+            self.assertEqual(sw.board_issue(), switch.BOARD_ISSUE)   # an ordinary read falls back, with a warning
+            sw._board_issue = None
+            with gh.fresh(), self.assertRaises(switch.GitHubError):
+                sw.board_issue()
 
     def test_the_rule_check_of_a_merge_runs_under_fresh(self):
         real = github([codex_clean()], "success")

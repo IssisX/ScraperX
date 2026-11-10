@@ -68,7 +68,11 @@ STATE_BRANCH = "switchboard/state"   # the reconciler's own branch (tools/switch
 DIGEST_TITLE = "Digest"
 DIGEST_LABEL = "digest"
 MUSE_LABEL = "wake:muse"
-BOARD_ISSUE = 340  # the live board; #107 closed at 100 comments (11-09)
+# J-072: the live board is Switch.board_issue(), the one open issue labeled BOARD_LABEL, read from GitHub each run,
+# so a board that rolls over at 100 comments needs no code change. BOARD_ISSUE is only the fallback when GitHub
+# names none and no sweep has found one (#340 opened 11-09, when #107 closed).
+BOARD_LABEL = "board"
+BOARD_ISSUE = 340
 CENTRAL = ZoneInfo("America/Chicago")
 DIGEST_HOUR = 7
 MAX_DIFF_CHARS = 400_000
@@ -100,7 +104,8 @@ MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
 MAX_MUSE_FINDING = 600          # chars of a FIX finding quoted in a Muse comment
-OLD_BOARDS = (107, 87, 3)       # closed boards: the muse markers on them still count, so a board move never re-sends
+OLD_BOARDS = (107, 87, 3)       # the boards closed before the label named them: Switch.old_boards() adds the labeled ones
+MAX_OLD_BOARDS = 4              # closed boards whose muse markers still count, the newest first (a move never re-sends)
 MAX_OLD_BOARD_PAGES = 3         # comment pages read from each closed board (a board closes at 100 comments)
 # The Muse mail pipe's health (bridge-health): the bridge (muse_bridge.gs) is an Apps Script whose errors only Cory
 # can see, so the switch watches what it leaves on GitHub and posts one alarm per incident on the board.
@@ -342,20 +347,95 @@ class Switch:
         self._load: tuple[dict[str, int], dict[str, int]] | None = None   # review_load, once per run
         self._claude = None
         self._board: list[dict] | None = None   # the board's comments, once per run (board_comments)
+        self._board_issue: int | None = None    # the board's issue number, once per run (board_issue)
 
     # ---------- facts ----------
     def fresh_facts(self, number: int) -> tuple[rules.PrFacts, dict]:
         """pr_facts for one PR with every read GitHub's own answer (no ETag cache, no per-run memo)."""
-        saved = (self._jobs, getattr(self, "_board", None))
-        self._jobs, self._board = None, None
+        saved = (self._jobs, getattr(self, "_board", None), getattr(self, "_board_issue", None))
+        self._jobs, self._board, self._board_issue = None, None, None
         try:
             with self.gh.fresh():
                 pr = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
                 facts, ctx = self.pr_facts(pr)
         finally:
-            self._jobs, self._board = saved
+            self._jobs, self._board, self._board_issue = saved
         ctx["fresh"] = True
         return facts, ctx
+
+    # ---------- the board (J-072) ----------
+    def board_issue(self) -> int:
+        """The live board's issue number, read once per run: the one open issue labeled BOARD_LABEL (the way
+        work/tasks/README.md tells every agent to find it), so a new board needs no code change (#107 to #340 on
+        11-09 needed one, and a paste into the deployed bridge). Several open: the newest, and a WARN naming them.
+        None, or the read failed: the last board a sweep found (kept in the sweep state, as prior_pr keeps its
+        answers), else BOARD_ISSUE, and a WARN; a sweep never stops over this. A pull request is never the board.
+        Inside gh.fresh() (the merge facts, fresh_facts) nothing from the cache file takes part: the listing is
+        GitHub's own answer, a failed read raises as any other merge fact's does, and the sweep state is not used."""
+        known = getattr(self, "_board_issue", None)
+        if known:
+            return known
+        fresh = getattr(self.gh, "fresh_only", False) is True
+        label = urllib.parse.quote(BOARD_LABEL, safe="")
+        try:   # read as jobs() reads the job issues
+            got = self.gh.paged(f"repos/{self.gh.repo}/issues?labels={label}&state=open")
+            why = f"no open issue is labeled `{BOARD_LABEL}`"
+        except GitHubError as err:
+            if fresh:
+                raise
+            got, why = [], f"the open issues labeled `{BOARD_LABEL}` could not be read ({plain(str(err)[:160])})"
+        found = sorted(self._issue_numbers(got))
+        last = 0 if fresh else self._last_board()
+        if found:
+            board = found[-1]
+            if len(found) > 1:
+                self._board_warn(f"{len(found)} open issues are labeled `{BOARD_LABEL}` "
+                                 f"({', '.join(f'#{n}' for n in found)}): using the newest, #{board}; close the others")
+            if isinstance(getattr(self.gh, "state", None), dict):
+                self.gh.state["board"] = board
+        elif last:
+            board = last
+            self._board_warn(f"{why}: using the last board a sweep found, #{board}")
+        else:
+            board = BOARD_ISSUE
+            self._board_warn(f"{why} and no sweep has found one: using the fallback, #{board}")
+        self._board_issue = board
+        return board
+
+    def board_known(self) -> int:
+        """The board with no read, for a fast sweep's part that sends from the full pass's reading (the ledger clock):
+        this run's if it was read, else the last one a sweep found, else BOARD_ISSUE."""
+        return getattr(self, "_board_issue", None) or self._last_board() or BOARD_ISSUE
+
+    def _last_board(self) -> int:
+        """The last board a sweep found, kept in the sweep state; 0 when it holds none (or anything but a number)."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+        last = state.get("board")
+        return last if type(last) is int and last > 0 else 0
+
+    @staticmethod
+    def _issue_numbers(listing) -> list[int]:
+        """The issue numbers in an issues listing; a pull request (the listing returns those too) is left out."""
+        return [it["number"] for it in (listing if isinstance(listing, list) else [])
+                if isinstance(it, dict) and "pull_request" not in it
+                and type(it.get("number")) is int and it["number"] > 0]
+
+    def _board_warn(self, text: str) -> None:
+        """One WARN line per finding per run (a merge's fresh read resolves the board again)."""
+        told = self.__dict__.setdefault("_board_told", set())
+        if text not in told:
+            told.add(text)
+            self.out(f"WARN        board: {text}")
+
+    def old_boards(self) -> list[int]:
+        """The closed boards whose muse markers still count (muse): the closed issues labeled BOARD_LABEL and the
+        boards closed before the label named them (OLD_BOARDS), the newest MAX_OLD_BOARDS, never the live one. A
+        failed read raises: the muse part is retried next sweep, rather than a key already sent going out again."""
+        label = urllib.parse.quote(BOARD_LABEL, safe="")
+        got = self.gh.get(f"repos/{self.gh.repo}/issues?labels={label}&state=closed&sort=created&direction=desc"
+                          "&per_page=30")   # one page: the newest closed ones
+        closed = (set(self._issue_numbers(got)) | set(OLD_BOARDS)) - {self.board_issue()}
+        return sorted(closed, reverse=True)[:MAX_OLD_BOARDS]
 
     def jobs(self) -> dict[str, dict]:
         """Open issues labeled `job`, by J-NNN."""
@@ -991,13 +1071,14 @@ class Switch:
         for s in steered:
             reported |= set(self.muse_keys(s.ctx.get("comments") or []))
         items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
-        homes = {f"#{s.facts.number}": self.muse_home(s.ctx) for s in steered}
-        wheres = {homes.get(it.target, BOARD_ISSUE) for it in items}
-        for where in sorted(wheres - {BOARD_ISSUE}):   # a job issue: where this sweep's notices on its PRs go
+        homes = {f"#{s.facts.number}": self.muse_home(s.ctx) for s in steered}   # 0: no job issue, so the board
+        board = self.board_issue() if items else 0
+        wheres = {homes.get(it.target) or board for it in items}
+        for where in sorted(wheres - {board}):   # a job issue: where this sweep's notices on its PRs go
             reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{where}/comments")))
-        if BOARD_ISSUE in wheres:
-            reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")))
-            for old in OLD_BOARDS:   # a key sent while an older board was live is still sent (#107 -> #340 re-sent them)
+        if board in wheres:
+            reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{board}/comments")))
+            for old in self.old_boards():   # a key sent while an older board was live is still sent (11-09 re-sent them)
                 reported |= set(self.muse_keys(self.bounded_comments(old, MAX_OLD_BOARD_PAGES)))
         seen, new = set(reported), []
         for it in items:
@@ -1017,7 +1098,7 @@ class Switch:
                 break
             # Never on the PR itself: the bridge's token is Issues-only, so it can neither remove wake:muse from a
             # PR nor comment there (a PR's label stuck the bridge from 11-07 to 11-09). The PR stays in the subject.
-            where = homes.get(target, BOARD_ISSUE)
+            where = homes.get(target) or board
             name = jobs.get(target) or target
             kinds = " ".join(sorted({it.kind for it in group}, key=INBOX_ORDER.index))
             about = target if target.startswith("#") else f"#{where}"
@@ -1042,13 +1123,13 @@ class Switch:
 
     @staticmethod
     def muse_home(ctx: dict) -> int:
-        """Where a Muse notice about a PR goes: its open job issue, else the board. Never the PR (see muse())."""
-        return int((ctx.get("issue") or {}).get("number") or BOARD_ISSUE)
+        """Where a Muse notice about a PR goes: its open job issue, else 0, the board. Never the PR (see muse())."""
+        return int((ctx.get("issue") or {}).get("number") or 0)
 
     def board_comments(self) -> list[dict]:
         """The board's comments, read once per run (the review asks and off-PR verdicts of PRs with no job issue)."""
         if getattr(self, "_board", None) is None:
-            self._board = self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")
+            self._board = self.gh.paged(f"repos/{self.gh.repo}/issues/{self.board_issue()}/comments")
         return self._board
 
     def bridged_verdicts(self, number: int, comments: list[dict]) -> list[rules.Verdict]:
@@ -1087,7 +1168,8 @@ class Switch:
         older than PIPE_LOOKBACK). Returns the finding lines."""
         last: dict[str, dt.datetime] = {}
         told: set[tuple[str, str]] = set()   # (live, trunk) bridge versions already alarmed
-        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments"):
+        board = self.board_issue()
+        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/{board}/comments"):
             at = parse_time(c.get("created_at") or "")
             if (c.get("user") or {}).get("login") != rules.BOT_LOGIN or at is None:
                 continue
@@ -1132,7 +1214,7 @@ class Switch:
                              ["", "The cause is in the bridge's Apps Script Executions log, which only Cory can open. "
                               "One alarm per incident; the switch prints the state every sweep.", "",
                               PIPE_MARK.format(kinds=",".join(new))] + marks)
-            self.gh.comment(BOARD_ISSUE, body, f"pipe alarm ({', '.join(new)}) on #{BOARD_ISSUE}")
+            self.gh.comment(board, body, f"pipe alarm ({', '.join(new)}) on #{board}")
         return found
 
     def pipe_ripen(self, at: dt.datetime) -> None:
@@ -2444,9 +2526,9 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                       "wake": getattr(sw, "wake_numbers", None)}
     timers["pipe"] = pipe_state
 
-    def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, in #340
+    def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, on the board
         import ledger as board_ledger
-        led = board_ledger.sweep(sw, steered, BOARD_ISSUE, MUSE_LABEL, PROOF_WORKFLOW,
+        led = board_ledger.sweep(sw, steered, sw.board_issue(), MUSE_LABEL, PROOF_WORKFLOW,
                                  {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now))
         timers["ledger"] = list(getattr(led, "pending", None) or [])
 
@@ -2462,7 +2544,9 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             return
         roster = board_ledger.Roster(yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {})
         sw.out(f"RIPE        ledger clock: {len(ripe)} deadline(s), sent from the full pass's reading")
-        posted = board_ledger.fire(sw.gh, ripe, roster, now, BOARD_ISSUE, sw.out, MUSE_LABEL)
+        # the board's number is read only when a notice goes on the board itself; one on a job thread costs no read
+        board = sw.board_issue() if board_ledger.fires_on_board(ripe, roster) else sw.board_known()
+        posted = board_ledger.fire(sw.gh, ripe, roster, now, board, sw.out, MUSE_LABEL)
         timers["ledger"] = board_ledger.advance(timers.get("ledger") or [], posted, now)
 
     if steer and not targeted and delta is None:   # the full pass: everything below reads the whole repo
@@ -2472,7 +2556,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         # for the next sweep, and either is due again then. Its own reads (about 58) wait under the floor.
         def reconciler_part() -> None:
             import reconciler
-            res = reconciler.sweep(sw, steered, BOARD_ISSUE, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH}, {INBOX_PR})
+            res = reconciler.sweep(sw, steered, sw.board_issue(), PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH},
+                                   {INBOX_PR})
             status = getattr(res, "status", "")
             if status == "gave-up":
                 raise RuntimeError("the pass was dropped: the state branch kept moving")

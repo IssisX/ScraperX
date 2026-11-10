@@ -2062,7 +2062,7 @@ def main() -> int:
     before = gh.calls
     cfg = yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {}
     roster = L.Roster(cfg)
-    p = read_pass(sw, gh, steered, switch.BOARD_ISSUE, switch.PROOF_WORKFLOW,
+    p = read_pass(sw, gh, steered, sw.board_issue(), switch.PROOF_WORKFLOW,
                   {switch.LEDGER_BRANCH, switch.INBOX_BRANCH, STATE_BRANCH}, {switch.INBOX_PR}, roster, cfg)
     res = run_pass(LocalStore(pathlib.Path(args.state_dir)), p, roster, GitHubLookups(gh), now, ShadowOutbox())
     print(f"reconciler dry run at {central(now)} Central: {res.status}, {res.events} events, "
