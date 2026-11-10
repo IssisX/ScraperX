@@ -44,8 +44,8 @@ him again.
   pass on goes whole in one copyable block naming the agent.
 - **Go with your pick on every call until he says stop** (11-03): build it, then tell him in one line; no
   plan or step to approve (11-04). Still his: Claude
-  sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, her
-  look or story, how the game plays). No answer in 10 minutes: the pick stands. Push back: say no or stop
+  sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
+  is or her story, how the game plays). Small is mine: fit, size, tuning, timing within his bars (11-10: the wider skirt "a small thing"). No answer in 10 minutes: the pick stands. Push back: say no or stop
   him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason, hard, abrupt, profane, roasting him, matching or beating his language (11-10: "push back WAY HARDER"), no stock line (11-06, 11-07: "I don't like when you just listen").
 - **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
   with no middle ground.
@@ -109,7 +109,7 @@ him again.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session; at most two at a time (11-10 morning: 26% of the week in a day), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  his call, seen in `get_session`; raise it only when he throttles; `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests; never max, a failed job included (`.claude/agents/`; Cory 11-06, 11-10: "down to extra or high"). A worker whose job landed is retired.
+  his call, seen in `get_session`; raise it only when he throttles; every helper at high for now, physics included (11-10: "all on high to keep it a bit light"; `helper-physics` at xhigh when he raises it); never max, a failed job included (`.claude/agents/`; Cory 11-06, 11-10: "down to extra or high"). A worker whose job landed is retired.
 - **Context:** the window is 833k (compacts near 650k; `/autocompact` sets it live; each call rereads it);
   no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
