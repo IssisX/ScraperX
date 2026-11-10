@@ -642,6 +642,8 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 # comes down again, and plants there. Silent: no claim, no sound.
 const UPLANT_M := 0.03
 const UPLANT_RELEASE_S := 0.15
+# A releasing foot is aimed no farther from the hip than this of its leg, at its lift (J-042).
+const UPLANT_REACH := 0.92
 const UPLANT_LIFT_M := 0.12
 const UPLANT_TRACK_LIFT_M := 0.15
 # A release lifts before it travels: the sole must be off the deck before
@@ -914,6 +916,19 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				else:
 					var lock: Vector3 = st["lock"] as Vector3
 					plant_tgt = inv * lock - skel.get_bone_global_pose(bone_idx["an_" + s]).basis * _sole_offset(s)
+				# A lock her body has left behind past her leg's reach (a hard stop:
+				# J-042's toolbox stop from 6.8 m/s left it 0.64 m behind the hip)
+				# cannot be reached, so a near-straight leg aimed at it can neither
+				# bend nor lift: the foot scraped along the deck once she stood
+				# (0.092 m). The release aims at the nearest point the leg reaches,
+				# so the knee bends and the sole lifts before it travels.
+				var hip := _gpos("hp_" + s)
+				var leg := hip.distance_to(_gpos("kn_" + s)) + _gpos("kn_" + s).distance_to(_gpos("an_" + s))
+				var out := Vector2(plant_tgt.x - hip.x, plant_tgt.z - hip.z)
+				var across := sqrt(maxf(0.0, pow(UPLANT_REACH * leg, 2.0) - pow(hip.y - plant_tgt.y - UPLANT_LIFT_M, 2.0)))
+				if out.length() > across:
+					out = out.normalized() * across
+					plant_tgt = Vector3(hip.x + out.x, plant_tgt.y, hip.z + out.y)
 				# The foot lifts before it travels: sideways travel
 				# waits until UPLANT_TRAVEL_START of the release has
 				# passed, so the sole is off the deck (and no longer
