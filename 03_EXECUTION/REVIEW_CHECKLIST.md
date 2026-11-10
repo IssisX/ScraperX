@@ -26,8 +26,9 @@ Every REVIEW line gets a one-line verdict from the reviewer.
    time. No velocity is set or added outside it, not even a small one, and a push-off is
    force times time, never a speed change. Check each REVIEW velocity line: is it a read, or does
    the change in speed come from a budgeted force?
-2. **The lunge is its own move**, checked against its own limits (9,800 N, 65 kW), never folded
-   into the general budget or used to cover another move.
+2. **The lunge is one drive among her feet's**, on her one account (8,000 N, 44 kW) like any other
+   drive — checked against that single ceiling, never given its own limits, never folded into
+   another move's account.
 3. **No per-route code.** Nothing keyed on which deck, ladder, route, region or transition she is
    on, by id, name or a world coordinate. Climbing is general skills over the steel she scans. A
    number that only makes sense at one place in the tower is a per-route case.

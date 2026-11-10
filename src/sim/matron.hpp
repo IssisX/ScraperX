@@ -596,12 +596,20 @@ public:
     // lands hard with the noise carrying under kTurnNoiseM to her; then not
     // again for a while. It
     // is no faster on the whole than her usual hunt, only harder to read.
+    // The trigger is situational (J-044l, Claude 2026-11-09): when a loose
+    // body sits on her line to him, she may fire from kTurnTriggerStockM,
+    // the old 13 m, so she drives through it at full speed.
     enum class Turn : std::uint8_t {
         None = 0,
         Windup = 1,
         Lunge = 2,
     };
-    static constexpr float kTurnTriggerM = 13.0F;
+    static constexpr float kTurnTriggerM = 4.5F;
+    static constexpr float kTurnTriggerStockM = 13.0F;  // the old trigger, when loose stock sits on her line
+    // The low line's height over her soles, where her lunge meets floor stock
+    // (a crate is 0.88 m): the same knee ray the Turn's vault and the crate
+    // shove use (matron.cpp).
+    static constexpr float kTurnLowLineM = 0.45F;
     static constexpr float kTurnSightSeconds = 0.5F;
     static constexpr float kTurnNoiseM = 20.0F;
     static constexpr float kTurnNoiseLoudness = 0.95F;   // a landing of 8 m/s or more
@@ -610,13 +618,25 @@ public:
     static constexpr float kTurnCooldownSeconds = 18.0F;
     static constexpr float kTurnCycleSeconds = 0.5F;
     static constexpr float kTurnBurstSeconds = 0.2F;
+    // The Turn lunge's own burst within that cycle (J-044l rework, Claude
+    // 2026-11-07: the burst has to change, inside the one 8 kN / 44 kW
+    // account). A per-tick log through the burst showed the burst ends
+    // early, not the feet losing contact: floor and sole contact hold every
+    // tick, the full 8000 N is granted, and the 44 kW cap binds only from
+    // about 5 m/s — but 0.2 s of push from a standstill reaches only
+    // 6.6 m/s, short of the 8.2 m/s the Turn must peak over. About 0.25 s
+    // of push reaches 8.2 m/s; 0.3 s leaves margin, and the pause is the
+    // cycle's remaining 0.2 s. The pipe's Changed-stage pace keeps the
+    // shared 0.2 s burst (matron_pipe.cpp); only the Turn lunge lengthens.
+    static constexpr float kTurnLungeBurstSeconds = 0.3F;
     static constexpr float kTurnBurstMps = 9.0F;
     static constexpr float kTurnPauseMps = 3.5F;
     static constexpr float kTurnFootAccel = 70.0F;
-    // Lunge push only. Extra force past 9.8 kN did not raise the measured
-    // peak (8.08 m/s at 9.8 kN, 8.10 at 11 kN): the burst's power limit is
-    // the wall. 65 kW on that 0.2 s burst is the stronger push. Walk, climb,
-    // and shove stay on 8 kN and 44 kW.
+    // The Turn lunge draws from her one 8 kN / 44 kW account (J-044l, Cory
+    // 2026-11-06: the lunge fits, no exemption). It used to raise the feet's
+    // account to its own caps; the burst's measured peak did not need them
+    // (8.08 m/s at 9.8 kN, 8.10 at 11 kN: the burst's power limit is the
+    // wall). The constants stay as the upper pins the climb tests assert.
     static constexpr float kTurnLungeForceN = 9800.0F;
     static constexpr float kTurnLungePowerW = 65000.0F;
     // Held to a ramp she is on only until the stall watchdog has had her stalled this long on it
@@ -645,6 +665,13 @@ public:
     // pest hardly ever snaps; fully changed, she hardly stops.
     static constexpr float kTurnCooldownPestSeconds = 45.0F;
     static constexpr float kTurnCooldownChangedSeconds = 4.0F;
+    // A Turn that never reaches the player is a whiff, and costs only this,
+    // whatever the stage: she can turn again when she next closes. A Turn
+    // that touches him costs the stage cooldown (J-044l vault: the lure Turn
+    // whiffed at a sprinting player, and its 45 s Pest cooldown held the
+    // vault Turn until she stood point-blank and the player could no longer
+    // get behind the crate).
+    static constexpr float kTurnCooldownWhiffSeconds = 4.0F;
     // Her look follows the exposure, one way: how long she has been out,
     // over this, is how far the source's work shows on her.
     static constexpr float kExposureFullSeconds = 600.0F;
@@ -1655,6 +1682,14 @@ public:
         push = let_go_push_;
         return true;
     }
+    // A force she puts on another body through a hold (her knee's spring, a
+    // let-go): the force she wants on that body, granted from this tick's
+    // feet_budget_. Returns the force to apply to the other body (capped by
+    // what is left of the account); the equal and opposite reaction is the
+    // return's negative, on her body, for the caller to apply. `relative` is
+    // her velocity less the other body's, for the power cap. Nothing granted,
+    // nothing applied.
+    JPH::Vec3 take_hold_force(JPH::Vec3 want_on_other, JPH::Vec3 relative);
 
     // Her second hand (ArmPlay).
     [[nodiscard]] bool hand2_active() const noexcept {
@@ -1904,6 +1939,10 @@ private:
     void spawn_body();
     void remove_body();
     [[nodiscard]] bool sees(JPH::RVec3 from, JPH::RVec3 to) const;
+    // A loose body on her low line to the player (the Turn's situational
+    // trigger, J-044l): her existing line query at knee height, as the
+    // Turn's vault casts it.
+    [[nodiscard]] bool loose_body_on_line() const;
     // Her sensory frame (kEyeAboveCentreM above): where her eyes are and
     // where her head faces. Closed out of the world, dead, or knocked about.
     [[nodiscard]] Eyes eyes() const;
@@ -2574,6 +2613,7 @@ private:
     float commit_s_ = 0.0F;
     Turn turn_ = Turn::None;
     float turn_s_ = 0.0F;
+    bool turn_touched_ = false;  // this Turn reached the player (within kCatchM)
     float turn_cooldown_s_ = kTurnCooldownSeconds * 0.5F;
     float sight_far_s_ = 0.0F;
     float rage_ = 0.0F;
@@ -2943,7 +2983,6 @@ private:
     // her leg drives, her boarding push, her stagger's catch, her brace and
     // her crawl all draw from it, so together they stay within her Budget.
     traversal::Budget feet_budget_{};
-    bool feet_budget_lunge_ = false;   // the Turn's lunge has raised it to its own caps this tick
     // A standing jump asked of her legs (follow_line): the take-off speed it
     // wants, driven through her planted foot by walk_toward, 0 for none.
     float leg_jump_vy_ = 0.0F;

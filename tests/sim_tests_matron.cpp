@@ -1467,8 +1467,9 @@ void run_matron() {
         double lunge_at = -1.0;
         int turns_started = 0;
         std::uint8_t last_turn = 0;
-        // The lunge is its own move with its own cap; the rest of the Turn
-        // (the wind-up, a leap) stays on her shared one.
+        // The lunge is a drive of her feet on her one account (J-044l, Cory
+        // 2026-11-06: the Turn fits 8 kN, no exemption); the rest of the Turn
+        // (the wind-up, a leap) stays on her shared one too.
         double lunge_force_peak = 0.0, lunge_power_peak = 0.0;
         double turn_force_peak = 0.0, turn_power_peak = 0.0;
         for (int i = 0; i < 75 * static_cast<int>(Simulation::kTickRateHz); ++i) {  // her pace is her own (Pace): longer than at one speed
@@ -1514,9 +1515,9 @@ void run_matron() {
         require(turns_started == 1, "matron: one Turn, then a long quiet spell");
         std::cout << "  matron: the Turn's drive: lunge " << lunge_force_peak << " N, " << lunge_power_peak
                   << " W; the rest of the Turn " << turn_force_peak << " N, " << turn_power_peak << " W\n";
-        require(lunge_force_peak > 0.0 && lunge_force_peak <= law::kLungeForceN + 0.5 &&
-                    lunge_power_peak <= law::kLungePowerW + 0.5,
-                "matron: the lunge is her feet's own drive, within its own 9,800 N and 65 kW");
+        require(lunge_force_peak > 0.0 && lunge_force_peak <= law::kForceN + 0.5 &&
+                    lunge_power_peak <= law::kPowerW + 0.5,
+                "matron: the lunge is her feet's own drive, within her one 8,000 N and 44 kW");
         require(turn_force_peak <= law::kForceN + 0.5 && turn_power_peak <= law::kPowerW + 0.5,
                 "matron: the rest of the Turn stays within her shared force and power cap");
     }
@@ -1852,10 +1853,49 @@ void run_matron() {
         require(go(s, -Matron::kBandX, Matron::kBandNorthZ, true, 8.0, 1.0) &&
                     go(s, -Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) &&
                     go(s, Matron::kBandX, Matron::kBandSouthZ, true, 8.0, 1.0) &&
-                    go(s, 24.4, -167.0, true, 4.0, 0.8) && go(s, 24.4, -157.5, true, 4.0),
+                    go(s, 24.4, -167.0, true, 4.0, 0.8) && go(s, 23.5, -159.0, true, 4.0),
                 "matron vault: a run round the west and south bands and up the east band past the crate");
-        (void)s.set_move_input(0.0, 0.0);
+        // Finish the step and stand still behind the crate BEFORE she enters
+        // the Turn trigger range: the tracked Lunge may not chase a player
+        // who is still stepping (ChatGPT ruling, 2026-11-09 — the 0.9 s
+        // windup fires while a 1.2 s step is still under way, so the Lunge
+        // tracks his moving position and misses the crate). Scenario timing
+        // only: windup, bar, brake and assertions are untouched.
+        //
+        // The step is aimed LATE, not from the band end: she closes at
+        // ~6.5 m/s and her line to the crate swings as she comes round, so
+        // a target fixed when she is 29 m off lands the player ~0.7 m off
+        // her final line and the Lunge passes the crate untouched (first
+        // attempt: crate 0 m moved, 0.71 m off her line at wind-up). The
+        // band run therefore ends at a staging point just past the crate,
+        // and the short step behind it is taken only once she is inside
+        // 20 m — close enough that her line has nearly settled, far
+        // enough that the step finishes before the 13 m trigger.
+        {
+            const auto m0 = s.matron_state().position;
+            const auto c0 = stock(s, LooseStock::kDeckCrateSouth);
+            const auto p0 = s.snapshot().player_position;
+            const double d0 = std::hypot(m0.x - p0.x, m0.z - p0.z);
+            std::cout << "  matron vault: at the staging point, player (" << p0.x << ", " << p0.z << "), crate ("
+                      << c0.x << ", " << c0.z << "), matron (" << m0.x << ", " << m0.z << "), " << d0
+                      << " m apart\n";
+            require(wait_for_her(s, 20.0, 40.0), "matron vault: she closes to the Turn trigger range");
+            const auto m1 = s.matron_state().position;
+            const auto c1 = stock(s, LooseStock::kDeckCrateSouth);
+            const double run1 = std::hypot(c1.x - m1.x, c1.z - m1.z);
+            const double ux1 = (c1.x - m1.x) / run1;
+            const double uz1 = (c1.z - m1.z) / run1;
+            require(go(s, c1.x + ux1 * 1.6, c1.z + uz1 * 1.6, false, 3.0, 0.3),
+                    "matron vault: step behind the crate before the Turn trigger");
+            (void)s.set_move_input(0.0, 0.0);
+            const auto m2 = s.matron_state().position;
+            const auto p2 = s.snapshot().player_position;
+            const double d2 = std::hypot(m2.x - p2.x, m2.z - p2.z);
+            std::cout << "  matron vault: stepped behind the crate, player (" << p2.x << ", " << p2.z
+                      << "), matron (" << m2.x << ", " << m2.z << "), " << d2 << " m apart, standing still\n";
+        }
         bool winding = false;
+        int windup_tick = -1;
         for (int i = 0; i < 45 * static_cast<int>(Simulation::kTickRateHz) && !winding; ++i) {
             // He waits looking on up the band, his face off her as she
             // comes: a face turned to her, seen, is her stalk (matron-stalk,
@@ -1873,21 +1913,32 @@ void run_matron() {
             }
             tick(s);
             winding = s.matron_state().turn == static_cast<std::uint8_t>(Matron::Turn::Windup);
+            if (winding) {
+                windup_tick = i;
+            }
         }
         std::cout << "  matron vault: wind-up " << winding << ", state " << int(s.matron_state().state) << " catches "
                   << s.matron_state().catches << " grabs " << s.matron_state().grabs << " shoves "
                   << s.matron_state().shoves << "\n";
         require(winding, "matron vault: in plain sight up the band she snaps");
-        // In her wind-up the player steps in behind the crate, on her line.
-        const auto m = s.matron_state().position;
-        const auto c = stock(s, LooseStock::kDeckCrateSouth);
-        const double run = std::hypot(c.x - m.x, c.z - m.z);
-        const double ux = (c.x - m.x) / run;
-        const double uz = (c.z - m.z) / run;
-        (void)go(s, c.x + ux * 1.6, c.z + uz * 1.6, false, 3.0, 0.3);
-        (void)s.set_move_input(0.0, 0.0);
+        {
+            const auto m2 = s.matron_state().position;
+            const auto p2 = s.snapshot().player_position;
+            const auto c2 = stock(s, LooseStock::kDeckCrateSouth);
+            const double d2 = std::hypot(m2.x - p2.x, m2.z - p2.z);
+            std::cout << "  matron vault: at wind-up, player (" << p2.x << ", " << p2.z << "), crate ("
+                      << c2.x << ", " << c2.z << "), matron (" << m2.x << ", " << m2.z << "), " << d2
+                      << " m apart, still " << (windup_tick / 90.0) << " s\n";
+        }
+        // He is already standing still behind the crate; no step here.
         const auto planted = stock(s, LooseStock::kDeckCrateSouth);
         const auto vaults_before = s.matron_state().vaults;
+        // Her line at wind-up: the direction she drives along, for the
+        // lateral / along measurement of the throw.
+        const auto m3 = s.matron_state().position;
+        const double run3 = std::hypot(planted.x - m3.x, planted.z - m3.z);
+        const double ux = (planted.x - m3.x) / run3;
+        const double uz = (planted.z - m3.z) / run3;
         const double lx = -uz;
         const double lz = ux;
         bool thrown = false;
@@ -1899,6 +1950,19 @@ void run_matron() {
             lateral = std::abs((now.x - planted.x) * lx + (now.z - planted.z) * lz);
             along = (now.x - planted.x) * ux + (now.z - planted.z) * uz;
             thrown = lateral > 1.0 && std::abs(along) < lateral && now.y > planted.y - 0.5;
+            // Contact trace (ChatGPT ruling): where her path goes after the
+            // wind-up — the Lunge is 3.2 s, so she has the range; if the
+            // crate never moves, this shows whether she reaches its
+            // longitude, passes it laterally, or stops short.
+            if (i % 45 == 0 || thrown) {
+                const auto hm = s.matron_state().position;
+                const auto pp = s.snapshot().player_position;
+                std::cout << "  matron vault: t+" << (i / 90.0) << "s turn " << int(s.matron_state().turn)
+                          << " state " << int(s.matron_state().state) << " matron (" << hm.x << ", " << hm.z
+                          << ") player (" << pp.x << ", " << pp.z << ") crate (" << now.x << ", " << now.z
+                          << ") crate_dist " << std::hypot(now.x - hm.x, now.z - hm.z) << " lateral " << lateral
+                          << "\n";
+            }
         }
         const auto after = stock(s, LooseStock::kDeckCrateSouth);
         std::cout << "  matron vault: crate from (" << planted.x << ", " << planted.z << ") to (" << after.x << ", "

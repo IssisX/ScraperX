@@ -1175,15 +1175,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const Vec3 support_normal = sole.normal;
     const traversal::Limits limits{};
     const bool lunge_push = turn_ == Turn::Lunge && !foot_driving_;
-    const float power_cap = lunge_push ? kTurnLungePowerW : limits.power_w;
-    const float force_cap = lunge_push ? kTurnLungeForceN : limits.total_force_n;
-    // The tick's one account for her feet: the lunge raises it to its own
-    // caps (once a tick), never adds a second account beside it.
-    if (lunge_push && !feet_budget_lunge_) {
-        feet_budget_.left += force_cap - limits.total_force_n;
-        feet_budget_.power_left += power_cap - limits.power_w;
-        feet_budget_lunge_ = true;
-    }
+    // The Turn lunge draws from the tick's one account for her feet (J-044l):
+    // it raises nothing; the lunge is a drive of her feet, and the account
+    // caps it like any other.
     traversal::Budget &budget = feet_budget_;
     bool lunge_draw = lunge_push;   // this tick's drive is the lunge's (see the step up below)
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
@@ -1824,17 +1818,20 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                     // drum walked off deck 154's north edge on it. Leave
                     // it; the walk goes on.
                     if (bodies.GetLinearVelocity(id).Length() <= 2.5F) {
-                        const traversal::Limits budget;
-                        // A shove is never the lunge: it stays on her 8 kN and 22 kW.
-                        const float shove_force = budget.total_force_n;
-                        const float shove_power = budget.power_w;
+                        // A shove is never the lunge: it stays on her 8 kN and 44 kW,
+                        // drawn from the tick's one account (J-044l), with its
+                        // reaction on her.
+                        const float shove_force = limits.total_force_n;
+                        const float shove_power = limits.power_w;
                         const float force_n = std::min(shove_force, shove_power / along);
                         Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                         push /= push.Length();
-                        bodies.AddForce(id, push * force_n, EActivation::Activate);
-                        // J-046 measurement only: charged to no Budget, no reaction on her.
-                        effort::add_force(effort::Path::CrateShove, push * force_n,
-                                          bodies.GetLinearVelocity(id) - velocity, 0.0F, Vec3::sZero());
+                        const Vec3 applied =
+                            take_hold_force(push * force_n, velocity - bodies.GetLinearVelocity(id));
+                        if (applied.LengthSq() > 0.0F) {
+                            bodies.AddForce(id, applied, EActivation::Activate);
+                            bodies.AddForce(body_, -applied);
+                        }
                     }
                 }
             }
@@ -1914,28 +1911,87 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
 void Matron::step_turn(const float dt, const float distance_to_player, const float loudness, const float carried_m) {
     sight_far_s_ = sees_far_ ? sight_far_s_ + dt : 0.0F;
     if (turn_ == Turn::None) {
-        turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
+        // The cooldown ticks in pre_step's preamble (wall-clock); it is not
+        // decremented here.
         // Stalking him her sight does not start the Turn: she is watching him
         // on purpose (matron_stalk.cpp: stalking_, this tick's stalk). His
         // noise still can.
-        const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= kTurnTriggerM &&
+        // The trigger is situational (J-044l, Claude 2026-11-09): a loose body
+        // on her line to him lets her fire from the old 13 m, so she drives
+        // through it at full speed; otherwise 4.5 m, as (b) has it. The line
+        // is only asked when the answer changes the trigger.
+        float trigger_m = kTurnTriggerM;
+        if (distance_to_player > kTurnTriggerM && distance_to_player <= kTurnTriggerStockM &&
+            loose_body_on_line()) {
+            trigger_m = kTurnTriggerStockM;
+        }
+        const bool close_and_clear = sight_far_s_ >= kTurnSightSeconds && distance_to_player <= trigger_m &&
                                      !stalking_;
         const bool hard_landing = loudness >= kTurnNoiseLoudness && carried_m <= kTurnNoiseM;
         if (turn_cooldown_s_ <= 0.0F && (close_and_clear || hard_landing)) {
             turn_ = Turn::Windup;
             turn_s_ = 0.0F;
+            turn_touched_ = false;
         }
         return;
     }
     turn_s_ += dt;
+    // A Turn that reaches the player (her hands within catch range) connects:
+    // it costs the stage cooldown. One that never touches him is a whiff, and
+    // costs only the whiff cooldown, so she can turn again when she next
+    // closes. (A grab cancels the Turn in begin_grab with no cooldown set;
+    // this flag is only read when a Turn runs its full course.)
+    if (distance_to_player < kCatchM) {
+        turn_touched_ = true;
+    }
     if (turn_ == Turn::Windup && turn_s_ >= kTurnWindupSeconds) {
         turn_ = Turn::Lunge;
     }
     if (turn_s_ >= kTurnWindupSeconds + kTurnLungeSeconds) {
         turn_ = Turn::None;
         turn_s_ = 0.0F;
-        turn_cooldown_s_ = turn_cooldown_seconds();
+        turn_cooldown_s_ = turn_touched_ ? turn_cooldown_seconds() : kTurnCooldownWhiffSeconds;
     }
+}
+
+// A loose body on her low line to the player: her existing line query (the
+// narrow-phase ray `sees` casts, across her width) at knee height — the same
+// height the Turn's vault and the crate shove read — with the same stock
+// test they use. A body at the edge of her line still stops her, so the
+// rays run across her width, as `sees` runs them across her head. A hit
+// that is not stock (the player, a wall) clears that ray; only loose stock
+// counts. The ray is flat at her low height: on another level it misses
+// him, and the trigger stays 4.5 m.
+bool Matron::loose_body_on_line() const {
+    if (!body_in_world_ || body_.IsInvalid() || player_.IsInvalid()) {
+        return false;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    if (!bodies.IsAdded(body_) || !bodies.IsAdded(player_)) {
+        return false;
+    }
+    const RVec3 her = bodies.GetPosition(body_);
+    const RVec3 him = bodies.GetPosition(player_);
+    const Vec3 run(float(him.GetX() - her.GetX()), 0.0F, float(him.GetZ() - her.GetZ()));
+    if (run.LengthSq() < 1.0e-6F) {
+        return false;
+    }
+    const float low_y = float(her.GetY()) - kStandCentre + kTurnLowLineM;
+    const Vec3 from(float(her.GetX()), low_y, float(her.GetZ()));
+    const Vec3 across = Vec3(-run.GetZ(), 0.0F, run.GetX()).Normalized() * kRadius;
+    const IgnoreSingleBodyFilter self(body_);
+    for (const float side : {-1.0F, 0.0F, 1.0F}) {
+        RayCastResult hit;
+        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from + across * side, run), hit, {}, {}, self)) {
+            continue;
+        }
+        const std::uint64_t entity = bodies.GetUserData(hit.mBodyID);
+        if (bodies.GetMotionType(hit.mBodyID) == EMotionType::Dynamic &&
+            (kit::is_stock_entity(entity) || kit::is_fabricated_entity(entity))) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Her rage (matron.hpp, the stages): fed by this tick's level at her ear,
@@ -2348,7 +2404,6 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     // Her tick's one account, handed to the way that has her (matron_mover.hpp).
     const traversal::Limits law{};
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
-    feet_budget_lunge_ = false;
     stock_push_force_n_ = 0.0F;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
@@ -2394,6 +2449,11 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     thrown_s_ = std::max(0.0F, thrown_s_ - dt);
     look_s_ = std::max(0.0F, look_s_ - dt);
     climb_retry_s_ = std::max(0.0F, climb_retry_s_ - dt);
+    // The Turn's cooldown ticks in wall-clock time, with every other
+    // cooldown here, not only while she hunts: frozen while she held,
+    // searched or travelled, it outlasted the first approach and the Turn
+    // could only fire point-blank, after the spare's calm (J-044l).
+    turn_cooldown_s_ = std::max(0.0F, turn_cooldown_s_ - dt);
     // A way she took herself (her journey, her bars) has her body until it
     // ends, first in her tick; knocked about, held or dead, it ends.
     for (Mover *way = holder(); way != nullptr && way->view().tick == MoverTick::Owns; way = holder()) {
@@ -3193,7 +3253,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 if (turn_ == Turn::Windup || hands_on) {
                     walk_toward(dt, wx, wz, 0.0F, turn_ != Turn::None ? kTurnFootAccel : kFootAccel);
                 } else if (turn_ == Turn::Lunge) {
-                    const bool burst = std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds;
+                    const bool burst =
+                        std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnLungeBurstSeconds;
                     walk_toward(dt, wx, wz, burst ? kTurnBurstMps : kTurnPauseMps, kTurnFootAccel, true);
                 } else if (hush_step(dt, saw, d, loudness)) {
                     // The player gone quiet: so does she. Still, listening,
@@ -4596,7 +4657,7 @@ void Matron::take_blow(const float dt) {
     }
     // Her balance: her stance, her base, and the step she can take.
     const bool lunge_burst = turn_ == Turn::Lunge &&
-                             std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnBurstSeconds;
+                             std::fmod(turn_s_ - kTurnWindupSeconds, kTurnCycleSeconds) < kTurnLungeBurstSeconds;
     const bool crouched =
         (state_ == State::Hunting && speed_ > 1.0F && stage_ != Stage::Pest) || turn_ == Turn::Lunge;
     const float height = crouched ? kCrouchHeightM : kUprightHeightM;
@@ -4870,6 +4931,17 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
     return granted;
 }
 
+Vec3 Matron::take_hold_force(const Vec3 want_on_other, const Vec3 relative) {
+    if (!body_in_world_ || want_on_other.LengthSq() <= 1.0e-8F) {
+        return Vec3::sZero();
+    }
+    feet_budget_.velocity = relative;
+    // The budget accounts the force on her body: the reaction, the equal and
+    // opposite of what she puts on the other body.
+    const Vec3 granted_reaction = feet_budget_.take(-want_on_other);
+    return -granted_reaction;
+}
+
 void Matron::brace_at_edges(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
@@ -4993,8 +5065,8 @@ void Matron::refresh_view() {
     // (no way showing a hand: the last rung she held).
     view_.climb_hand = shown.hand_shown ? shown.hand : climb_way_.view().hand;
     view_.climb_force_n = shown.force_shown ? shown.force_n : foot_force_n_;
-    // The Turn lunge is its own move with its own cap (kTurnLungeForceN,
-    // kTurnLungePowerW); the report says when the force shown is that drive.
+    // The Turn lunge is a drive of her feet on the one account; the report
+    // says when the force shown is that drive.
     view_.climb_lunge_drive = !shown.force_shown && foot_lunge_;
     view_.foot_power_w = foot_power_w_;
     view_.load_held = load_held_;

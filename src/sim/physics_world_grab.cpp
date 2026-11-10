@@ -301,9 +301,16 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         const bool let_go = matron_->take_let_go(push);
         tear_grip(false);
         if (let_go) {
-            const JPH::Vec3 before = bodies.GetLinearVelocity(player_id_);   // J-046, read only
-            bodies.AddImpulse(player_id_, push * kPlayerMassKg);
-            effort::add_velocity_write(effort::Path::LetGo, kPlayerMassKg, before, before + push, effort_dt_);
+            // The let-go's push draws from her one budget (J-044l): the push
+            // is a velocity change, so its equivalent force is mass * dv / dt,
+            // and what the account grants is the push he gets; the reaction is
+            // on her.
+            const JPH::Vec3 want = push * (kPlayerMassKg / effort_dt_);
+            const JPH::Vec3 applied = matron_->take_hold_force(
+                want, bodies.GetLinearVelocity(matron_->body()) - bodies.GetLinearVelocity(player_id_));
+            const JPH::Vec3 applied_push = applied * (effort_dt_ / kPlayerMassKg);
+            bodies.AddImpulse(player_id_, applied_push * kPlayerMassKg);
+            bodies.AddForce(matron_->body(), -applied);
         }
         destroy_grab_constraint(hand_arm_);
         remove_and_destroy(bodies, hand_id_);
@@ -466,11 +473,15 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     fatality_drive(bodies, 0.0F);
     JPH::Vec3 push;
     if (matron_->take_let_go(push)) {
-        // She lets go: the push is her arm's, at most kReleasePushMps.
+        // She lets go: the push is her arm's, at most kReleasePushMps, drawn
+        // from her one budget (J-044l) like the let-go above.
         tear_grip(false);
-        const JPH::Vec3 before = bodies.GetLinearVelocity(player_id_);   // J-046, read only
-        bodies.AddImpulse(player_id_, push * kPlayerMassKg);
-        effort::add_velocity_write(effort::Path::LetGo, kPlayerMassKg, before, before + push, effort_dt_);
+        const JPH::Vec3 want = push * (kPlayerMassKg / effort_dt_);
+        const JPH::Vec3 applied = matron_->take_hold_force(
+            want, bodies.GetLinearVelocity(matron_->body()) - bodies.GetLinearVelocity(player_id_));
+        const JPH::Vec3 applied_push = applied * (effort_dt_ / kPlayerMassKg);
+        bodies.AddImpulse(player_id_, applied_push * kPlayerMassKg);
+        bodies.AddForce(matron_->body(), -applied);
     }
 }
 
