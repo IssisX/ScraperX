@@ -57,7 +57,8 @@ than the author's (`rules.land_counts`).
   - `NOTE` never blocks. Spelling, wording and commit messages never block (owner, 10-31).
 - Muse writes `MUSE_TO_CLAUDE: J-NNN ...` emails; the bridge posts them on the issue (or on `#N` when
   the subject names one) under a `**Muse (...)**` first line. Write to Muse by asking the switch, which
-  posts `CLAUDE_TO_MUSE: J-NNN ...` and labels the issue `wake:muse`; the bridge mails it.
+  posts `CLAUDE_TO_MUSE: J-NNN ...` and labels the issue `wake:muse`; the bridge mails it. A
+  `CLAUDE_TO_MUSE:` mail sent by hand is recorded by the bridge as a comment on the issue its subject names.
 
 ## The switch (`.github/workflows/switchboard.yml`, `tools/switchboard/`)
 
