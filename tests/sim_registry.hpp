@@ -5,8 +5,8 @@
 // (J-074, #352). simulation_tests.cpp's main() runs the registry.
 //
 //   SCRAPERX_GROUP("twin", 70, run_twin);
-//       A group of the default sequence (the bare-binary run, the CTest test
-//       scraperx_sim.athletic_traversal), printed as its TIME line. The
+//       A group of the default sequence (the bare scraperx_sim_tests run),
+//       printed as its TIME line. The
 //       sequence runs in order of the key, never in registration order:
 //       static initialization across files has no set order. Keys are spaced
 //       by 10, so a new group takes a free key between two others.

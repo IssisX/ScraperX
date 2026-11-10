@@ -201,12 +201,9 @@ if((BUILD_TESTING AND NOT ANDROID) OR SCRAPERX_BUILD_TESTS)
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Wpedantic>
         $<$<CXX_COMPILER_ID:GNU,Clang>:-Werror>
     )
-    add_test(NAME scraperx_sim.athletic_traversal COMMAND scraperx_sim_tests)
-    # The whole default sequence in one process: 1277-1425 s on CI over 11-08/11-09, and
-    # 1500.04 s on trunk b01aab15 (run 42568790108), past CTest's 1500 s default. 1950 s
-    # stays inside the native-tests job's 35 minutes (2100 s) with room for its setup, so
-    # CTest reports the timeout itself. Splitting the sequence across shards is J-071 step 2.
-    set_tests_properties(scraperx_sim.athletic_traversal PROPERTIES TIMEOUT 1950)
+    # J-071 step 2: the default sequence is two SCRAPERX_SLICE CTest tests
+    # (athletic-traversal-1 / athletic-traversal-2 in tests/sim_tests_athletic_shards.cpp),
+    # each under about 900 s. The bare binary still runs every group once, with TIME lines.
     # Each SCRAPERX_SLICE("<name>", ...) in those files is also its own CTest test,
     # scraperx_sim.<name>, run with SCRAPERX_ONLY=<name>. A file edited re-runs this
     # configure, and the post-build check below holds this list to the registry's.

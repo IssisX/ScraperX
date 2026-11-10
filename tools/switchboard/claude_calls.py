@@ -79,6 +79,9 @@ with the command to run, its input, the expected and the observed result, all co
 commit-message points never block (owner, 2026-10-31): put them in `notes` and answer LAND.
 - NOTE: you suspect a problem but cannot give a deterministic repro.
 When the verdict is not FIX, fill every `repro` field with "-".
+Report every blocking finding in one review, never only the first: `repro` shows the most severe, and each other \
+finding you would block on is a note starting "Also blocking:" with its path and why. A fix round costs the team an \
+hour, so a finding held back for the next round is a defect of the review.
 `summary` is at most three sentences. Each note is one sentence."""
 
 SECURITY_REVIEW_SYSTEM = """You are the security pass for one pull request on ScraperX, a physics climbing game (C++ \
@@ -103,7 +106,10 @@ concretely: `command` is the event or call that reaches the hole, `input` the va
 what the guidelines require, `observed` what the diff allows.
 - NOTE: you suspect a security hole but cannot show the path; say why in `summary`. A NOTE holds the merge for a person.
 Style and wording never block: put them in `notes` and answer LAND. When the verdict is not FIX, fill every `repro` \
-field with "-". `summary` is at most three sentences. Each note is one sentence."""
+field with "-". Report every P0 or P1 finding in one review, never only the first: `repro` shows the most severe, and \
+each other one is a note starting "Also blocking:" with its path and why. A fix round costs the team an hour, so a \
+finding held back for the next round is a defect of the review.
+`summary` is at most three sentences. Each note is one sentence."""
 
 EYE_SYSTEM = """You are the eye for ScraperX, a physics climbing game: you judge CI screenshots against a written \
 rubric. For each screenshot set, answer LAND when every rubric line holds in its frames, else FIX naming the first \

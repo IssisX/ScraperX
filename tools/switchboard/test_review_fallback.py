@@ -6,6 +6,7 @@ No network, no clock, no files: GitHub, the rule check and the time are given.
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import pathlib
 import sys
@@ -49,6 +50,10 @@ class FakeGH:
 
     def __init__(self, thread=()):
         self.thread, self.posted, self.writes, self.gets = list(thread), [], [], []
+
+    @contextlib.contextmanager
+    def fresh(self):   # ghapi.GitHub.fresh: this stub has no cache, so every read is already GitHub's own
+        yield self
 
     def paged(self, path, key=""):
         return list(self.thread)
@@ -116,17 +121,17 @@ class FallbackConfig(unittest.TestCase):
         except ImportError:
             self.skipTest("PyYAML not installed")
         team = rules.team_from_config(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
-        # J-072: ChatGPT is `wake: manual`, so Grok is the only polled fallback and nothing is routed to ChatGPT.
-        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("grok",), 1.0))
-        self.assertEqual(team.other_authored_asks, ("grok",))
-        self.assertEqual(team.manual, frozenset({"chatgpt"}))
+        # 11-09: ChatGPT's review task polls hourly, so it is the first fallback, Grok (twice a day) the second.
+        self.assertEqual((team.fallback_order, team.fallback_after_hours), (("chatgpt", "grok"), 1.0))
+        self.assertEqual(team.other_authored_asks, ("chatgpt", "grok"))
+        self.assertEqual(team.manual, frozenset())
         routed = tuple(team.pool) + tuple(team.fallback_order) + tuple(team.human_reviewers) + tuple(team.other_authored_asks)
         self.assertNotIn("muse", routed)
-        self.assertNotIn("chatgpt", routed)
-        for author in ("anthropic", "openai", "meta", "xai"):
-            for api_ok in (True, False):
-                self.assertNotIn("chatgpt", rules.review_rotation(9, author, frozenset(), team, api_ok), (author, api_ok))
-            self.assertNotEqual(rules.next_fallback(["grok"], author, team), "chatgpt")
+        for author in ("anthropic", "meta", "xai"):
+            self.assertEqual(rules.next_fallback([], author, team), "chatgpt", author)
+            self.assertEqual(rules.next_fallback(["chatgpt"], author, team), "" if author == "xai" else "grok", author)
+        # an OpenAI-authored PR (Codex, ChatGPT) never asks ChatGPT: its LAND would not count
+        self.assertEqual(rules.next_fallback([], "openai", team), "grok")
 
 
 class ManualWake(unittest.TestCase):
@@ -348,7 +353,9 @@ class PoolSteer(unittest.TestCase):
 
 
 class CodexAsk(unittest.TestCase):
-    def test_codex_is_asked_on_the_pr_with_a_mention(self):
+    def test_codex_is_asked_on_the_pr_without_the_bots_mention(self):
+        # J-072: the switchboard's own "@codex review" never woke Codex (2 of 2, #191 and #150): the ask is recorded
+        # on the PR with its mark, and the integrator's inbox gets a CODEX-ASK item to post the mention itself
         team = rules.team_from_config(dict(AGENTS, agents=dict(AGENTS["agents"], codex={
             "vendor": "openai", "names": ["Codex"], "branch_prefixes": ["codex/"]}),
             review=dict(AGENTS["review"], pool=["codex", "muse"], fallback_after_hours=1)))
@@ -360,8 +367,9 @@ class CodexAsk(unittest.TestCase):
         self.assertEqual(len(gh.posted), 1)
         where, body = gh.posted[0]
         self.assertEqual(where, 10)
-        self.assertTrue(body.startswith("@codex review"))
+        self.assertNotIn("@", body)
         self.assertIn("ask-codex", body)
+        self.assertIn("The integrator posts the Codex review command", body)
 
 
 class PoolFallbackAndLoad(unittest.TestCase):
@@ -426,7 +434,7 @@ class CodexFirst(unittest.TestCase):
         sw = make(gh, team=self.TEAM)
         sw.api_ok = lambda c: api_ok
         sw.review_load = lambda: ({}, {})
-        sw.steer_pr(facts, ctx(comments=list(thread)))
+        sw.steer_pr(facts, dict(ctx(comments=list(thread)), fresh=True))   # GitHub's own facts (J-072: no re-read)
         who = sw.pooled_reviewer(facts, ctx(comments=list(thread)), "anthropic")[1] if rules.needs_review(facts, "anthropic", self.TEAM) else ""
         return gh, who
 

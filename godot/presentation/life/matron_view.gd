@@ -877,6 +877,9 @@ func _seat_hair(root: Node) -> void:
 			for j in bpv:
 				out_b[i * bpv + j] = b
 				out_w[i * bpv + j] = 1.0 if j == 0 else 0.0
+		var skels := root.find_children("*", "Skeleton3D", true, false)
+		if mi.skin != null and not skels.is_empty():
+			_hair_onto_chains(mi.skin, skels[0] as Skeleton3D, out_v, out_b, bpv)
 		arrays[Mesh.ARRAY_VERTEX] = out_v
 		arrays[Mesh.ARRAY_BONES] = out_b
 		arrays[Mesh.ARRAY_WEIGHTS] = out_w
@@ -890,6 +893,72 @@ func _seat_hair(root: Node) -> void:
 		break
 	if not found:
 		push_error("matron hair seat: no hair mesh")
+
+
+# J-067 (Cory 11-08: the back hair "raised", splitting sideways instead of
+# curving down both sides of her back). Measured in each hair bone's own
+# frame, its vertices sat on average up to 8 cm off its chain, behind it on
+# the back locks, growing toward the tips: the authored hair falls wider than
+# the straight chains that move it. Swung with the chain, that offset stood
+# the back hair out behind her head in a sheet and fanned it sideways, while
+# the chains themselves hung down her back. Each vertex keeps its place within
+# its lock; only the lock's mean offset comes off, blended by height between
+# a bone and the next one up or down, so a ribbon never tears at a joint. The
+# chains' own collision (step_hair) then keeps the locks outside her.
+func _hair_onto_chains(skin: Skin, sk: Skeleton3D, verts: PackedVector3Array, bones: PackedInt32Array, bpv: int) -> void:
+	var binds := skin.get_bind_count()
+	var key := {}        # "chain/k" -> bind index
+	var chain_k := []    # bind index -> Vector2i(chain, k), or (-1, -1)
+	var seg := []        # bind index -> the bone's length to its child
+	for bi in binds:
+		var bname := skin.get_bind_name(bi)
+		if bname == "":
+			bname = sk.get_bone_name(skin.get_bind_bone(bi))
+		var ck := Vector2i(-1, -1)
+		var parts := bname.trim_prefix("hair").split("_")
+		if bname.begins_with("hair") and parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int():
+			ck = Vector2i(int(parts[0]), int(parts[1]))
+			key["%d/%d" % [ck.x, ck.y]] = bi
+		chain_k.append(ck)
+		var b := sk.find_bone(bname)
+		var length := 0.09
+		if b >= 0:
+			for child in sk.get_bone_children(b):
+				length = sk.get_bone_rest(child).origin.length()
+		seg.append(maxf(length, 1e-3))
+	var sum := []
+	var count := []
+	sum.resize(binds)
+	count.resize(binds)
+	for bi in binds:
+		sum[bi] = Vector2.ZERO
+		count[bi] = 0
+	for i in verts.size():
+		var bi := bones[i * bpv]
+		if bi < 0 or bi >= binds or (chain_k[bi] as Vector2i).x < 0:
+			continue
+		var l := skin.get_bind_pose(bi) * verts[i]
+		sum[bi] = (sum[bi] as Vector2) + Vector2(l.x, l.z)
+		count[bi] = int(count[bi]) + 1
+	var mean := []
+	mean.resize(binds)
+	for bi in binds:
+		mean[bi] = (sum[bi] as Vector2) / float(count[bi]) if int(count[bi]) > 0 else Vector2.ZERO
+	for i in verts.size():
+		var bi := bones[i * bpv]
+		if bi < 0 or bi >= binds:
+			continue
+		var ck: Vector2i = chain_k[bi]
+		if ck.x < 0:
+			continue
+		var pose := skin.get_bind_pose(bi)
+		var l := pose * verts[i]
+		var t := clampf(absf(l.y) / float(seg[bi]), 0.0, 1.0)
+		var other := "%d/%d" % [ck.x, ck.y + (1 if l.y < 0.0 else -1)]
+		var m: Vector2 = mean[bi]
+		if key.has(other) and int(count[key[other]]) > 0:
+			m = m.lerp(mean[key[other]], t)
+		verts[i] = pose.affine_inverse() * (l - Vector3(m.x, 0.0, m.y))
 
 
 # Her body: the skinned glTF read at runtime (kept as it is by its .import),

@@ -50,8 +50,14 @@
  * script property `health_out` / `health_in`. When one has failed for HEALTH_ALARM_MIN minutes, the
  * bridge posts ONE comment on the board starting `Claude (integrator): BRIDGE DOWN:` with the error's
  * first 200 characters (the token cut out), and none again until that direction has worked once.
+ *
+ * Version (J-072): BRIDGE_VERSION is the hash switch.py bridge_version() gives of this file (the value itself
+ * blanked), so any edit changes it; tools/switchboard/test_bridge.py fails until it is updated. The clock sends
+ * it with each dispatch (input bridge_version, which names the run), and the sweep posts one PIPE ALARM when the
+ * live script is not trunk's or names no version. After an edit merges, paste the whole file here again.
  */
 
+var BRIDGE_VERSION = '907e45b83aa8';
 var DEFAULT_REPO = 'IssisX/ScraperX';
 var BOARD_ISSUE = 340;
 var WAKE_LABEL = 'wake:muse';
@@ -250,15 +256,20 @@ function outbound_(cfg) {
     // 403 on PR #343's label stopped the whole bridge (11-07 to 11-09). The switch never labels a PR now.
     if (issue.pull_request) return;
     try {  // one issue's failure never stops the others; its label stays on, so the next tick retries it
-      issueComments_(cfg, issue.number, since).forEach(function (c) {
+      unsent_(cfg, issue.number, since, sent).forEach(function (c) {
         var body = c.body || '';
-        if (c.user.login !== BOT_LOGIN || body.indexOf('CLAUDE_TO_MUSE:') !== 0) return;
-        if (sent.indexOf(String(c.id)) >= 0) return;
         var subject = body.split('\n')[0].replace(/[\r\n]/g, ' ').slice(0, 200);
         GmailApp.sendEmail(cfg.to, subject, mailBody_(body));
         remember_(cfg, 'sent_comment_ids', sent, c.id);
       });
       gh_(cfg, 'DELETE', 'repos/' + cfg.repo + '/issues/' + issue.number + '/labels/' + encodeURIComponent(WAKE_LABEL));
+      // J-072 race: a CLAUDE_TO_MUSE posted after the read above got its label POST while the label was still on
+      // (a no-op), and the DELETE took it off: it would never be mailed. Read once more after the DELETE; any
+      // unsent one puts the label back, so the next tick mails it. One posted after this read labels the issue
+      // itself (the switch posts the comment, then the label).
+      if (unsent_(cfg, issue.number, since, sent).length) {
+        gh_(cfg, 'POST', 'repos/' + cfg.repo + '/issues/' + issue.number + '/labels', { labels: [WAKE_LABEL] });
+      }
     } catch (e) {
       errors.push('#' + issue.number + ': ' + ((e && e.message) || e));
     }
@@ -281,6 +292,14 @@ function mailBody_(body) {
     '\n\nReplies go by mail with a subject that starts MUSE_TO_CLAUDE: and names the job (J-NNN or #N). A verdict' +
     ' ends the subject with the PR and its head sha, for example review of #343 @ 1a2b3c4d: LAND, or FIX with' +
     ' command, input, expected and observed lines in the body.';
+}
+
+/** The switch's CLAUDE_TO_MUSE comments on an issue that were not mailed yet, oldest first. */
+function unsent_(cfg, number, since, sent) {
+  return issueComments_(cfg, number, since).filter(function (c) {
+    var body = c.body || '';
+    return c.user.login === BOT_LOGIN && body.indexOf('CLAUDE_TO_MUSE:') === 0 && sent.indexOf(String(c.id)) < 0;
+  });
 }
 
 /** An issue's comments updated since `since`, every page up to MAX_COMMENT_PAGES (the switch's own are page 2+ on a long thread). */
@@ -308,7 +327,7 @@ function clock_(cfg) {
   var last = Number(cfg.store.getProperty('clock_last')) || 0;
   if (Date.now() - last < (CLOCK_MIN - 1) * 60000) return;
   gh_(cfg, 'POST', 'repos/' + cfg.repo + '/actions/workflows/' + WORKFLOW + '/dispatches',
-    { ref: TRUNK, inputs: { dry_run: 'false' } });
+    { ref: TRUNK, inputs: { dry_run: 'false', bridge_version: BRIDGE_VERSION } });
   cfg.store.setProperty('clock_last', String(Date.now()));
   ping_(cfg, 'HC_CLOCK_URL');
 }
@@ -345,10 +364,15 @@ function watchdog_(cfg) {
     }
     return;
   }
-  if (state.down) return;  // one alarm per incident
-  var newest = sweeps_(cfg, 'workflow_dispatch', false)[0];  // the alarm alone pays this read: the newest sweep run, any outcome
+  // Down: the newest sweep run, any outcome, says which incident this is. An open incident hides only the same kind
+  // (J-072: a run of failed sweeps kept one incident open, so a clock that then stopped got no alarm).
+  var newest = sweeps_(cfg, 'workflow_dispatch', false)[0];
+  var kind = incidentKind_(newest, now);
+  if (state.down && state.kind === kind) return;  // one alarm per incident
   var text = DOWN_HEADER + ' no full non-dry sweep has succeeded in ' + DOWN_MIN + ' min (' +
-    (ok ? 'the last at ' + central_(ok.updated_at) : 'none in the runs read') + ').\n\n' +
+    (ok ? 'the last at ' + central_(ok.updated_at) : 'none in the runs read') + '). ' + INCIDENTS[kind] +
+    (state.down ? ' (A new incident: the open one, since ' + central_(state.since) + ', was: ' +
+      (INCIDENTS[state.kind] || 'not named') + ')' : '') + '\n\n' +
     (newest ? 'Newest sweep run: started ' + central_(newest.created_at) + ', ' + newest.status +
       (newest.conclusion ? ' / ' + newest.conclusion : '') + ', ' + newest.html_url + '\n\n' : '') +
     'The bridge dispatches one every ' + CLOCK_MIN + ' min; a red or missing run is in the Actions tab. ' +
@@ -362,8 +386,22 @@ function watchdog_(cfg) {
   } catch (e) {
     errors.push('mail: ' + ((e && e.message) || e));
   }
-  if (told) cfg.store.setProperty('watch_switchboard', JSON.stringify({ down: true, since: new Date(now).toISOString() }));
+  if (told) cfg.store.setProperty('watch_switchboard', JSON.stringify({ down: true, kind: kind, since: new Date(now).toISOString() }));
   if (errors.length) throw new Error('SWITCHBOARD DOWN alarm: ' + errors.join(' | '));
+}
+
+var INCIDENTS = {
+  failing: 'The sweeps run and fail.',
+  stuck: 'A sweep has been queued or running for ' + DOWN_MIN + ' min or more.',
+  missing: 'No sweep has started in ' + DOWN_MIN + ' min: the clock or the dispatch is not reaching GitHub.'
+};
+
+/** Which kind of outage the newest sweep run (any outcome) shows: failing, stuck, or missing (none started lately). */
+function incidentKind_(newest, now) {
+  if (!newest || now - Date.parse(newest.created_at) >= DOWN_MIN * 60000) {
+    return newest && newest.status !== 'completed' ? 'stuck' : 'missing';
+  }
+  return newest.status === 'completed' ? 'failing' : 'stuck';
 }
 
 /**
@@ -373,7 +411,12 @@ function watchdog_(cfg) {
 function sweeps_(cfg, event, okOnly) {
   var got = gh_(cfg, 'GET', 'repos/' + cfg.repo + '/actions/workflows/' + WORKFLOW + '/runs?branch=' + TRUNK +
     '&event=' + event + (okOnly ? '&status=success' : '') + '&per_page=5&exclude_pull_requests=true') || {};
-  return (got.workflow_runs || []).filter(function (r) { return r.display_title === SWEEP_TITLE; });
+  return (got.workflow_runs || []).filter(function (r) { return isSweep_(r.display_title); });
+}
+
+/** A full non-dry sweep's run-name: SWEEP_TITLE, or the clock's own "Switchboard sweep (bridge <version>)" (J-072). */
+function isSweep_(title) {
+  return title === SWEEP_TITLE || String(title || '').indexOf(SWEEP_TITLE + ' (bridge ') === 0;
 }
 
 function newestOk_(runs) {
@@ -495,12 +538,15 @@ function inboundMessage_(cfg, m, done, jobList) {
   var target = 0;
   var num = rest.match(/#(\d{1,6})\b/);
   var job = rest.match(/\bJ-\d{3,}[a-z]?\b/);  // J-044b is its own job, like the switchboard reads it
-  var pr = num ? pullOf_(cfg, Number(num[1])) : null;
+  var record = num ? issueOf_(cfg, Number(num[1])) : null;
+  var pr = record && record.pull_request !== undefined ? record : null;
   var byJob = function (id) {
     jobList().forEach(function (it) { if (!target && it.title.indexOf(id + ' ') === 0) target = it.number; });
   };
   if (num && !pr) {
-    target = Number(num[1]);
+    // J-072: a closed issue is read by no one (the inbox, asks.py and the ledger read open threads only), so mail
+    // about one goes to the board; its first line keeps the #N
+    if (record.state !== 'closed') target = Number(num[1]);
   } else if (pr) {
     // A PR: its job issue, found the way the switch finds it (the PR's `Job:` line, then a job title naming
     // #N), so the switch reads the verdict there; then the subject's J-NNN.
@@ -521,17 +567,18 @@ function inboundMessage_(cfg, m, done, jobList) {
 }
 
 /**
- * #number as a pull request (its issue record, body included), or null when it is an issue. This token cannot
- * comment on a PR, so mail about one goes on its job issue or the board. A 403 or 404 on the read counts as a
- * PR (the token may not see it), with no body; any other error throws,
- * so the thread is retried next tick rather than posted in the wrong place.
+ * #number's issue record (body and state included); a PR's carries `pull_request`. This token cannot comment on a
+ * PR, so mail about one goes on its job issue or the board. A 403 or 404 on the read counts as a PR (the token may
+ * not see it), with no body; any other error throws, so the thread is retried next tick rather than posted in the
+ * wrong place.
  */
-function pullOf_(cfg, number) {
+function issueOf_(cfg, number) {
   try {
-    var it = gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues/' + number);
-    return it && it.pull_request ? it : null;
+    var it = gh_(cfg, 'GET', 'repos/' + cfg.repo + '/issues/' + number) || {};
+    if (it.pull_request === null) delete it.pull_request;
+    return it;
   } catch (e) {
-    if (/HTTP (403|404)\b/.test(String((e && e.message) || e))) return {};
+    if (/HTTP (403|404)\b/.test(String((e && e.message) || e))) return { pull_request: {} };
     throw e;
   }
 }

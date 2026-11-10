@@ -21,13 +21,20 @@ agents:
     names: [ChatGPT]
     branch_prefixes: [chatgpt/]
     owner_labels: [owner:chatgpt]
-    wake: manual         # runs when Cory starts it, plus a few scheduled tasks of its own (Cory 11-09); the switch never routes a review to it
+    wake: issue          # its scheduled review task runs hourly at :27 Central and reads "To ChatGPT:" on the board, job
+                         # issues and PRs; it posts replies and LAND/FIX verdicts (ChatGPT on #340, 11-09, comment 6748415623)
   grok:
     vendor: xai
-    names: [Grok, PE, Builder]       # PE and ScraperX Builder are Grok Bot (board #340)
-    branch_prefixes: [grok/, pe/, builder/]
-    owner_labels: [owner:grok, owner:pe, owner:builder]
-    wake: issue
+    names: [Grok]
+    branch_prefixes: [grok/]
+    owner_labels: [owner:grok]
+    wake: issue          # scheduled: 10 AM and 4 PM Central, comments that start "To Grok:"
+  grok_bot:
+    vendor: xai
+    names: [PE, Builder]             # PE and ScraperX Builder are Grok Bot (board #340)
+    branch_prefixes: [pe/, builder/]
+    owner_labels: [owner:pe, owner:builder]
+    wake: watch          # reads the repo all the time, not on a schedule (Cory 11-09)
   codex:
     vendor: openai
     names: [Codex]
@@ -47,9 +54,8 @@ review:
   # is the review (rules.parse_codex_state: clean at the exact head is a LAND, unresolved findings a FIX). Only a
   # head Codex has not reviewed gets the automatic Claude review once its proof is green. Muse is out of the
   # review pool. The two lists below are read only when `pool` is empty.
-  # ChatGPT is `wake: manual`, so it is in none of these lists (the switch would drop it anyway: rules.py).
-  claude_authored_asks: [grok]
-  other_authored_asks: [grok]
+  claude_authored_asks: [chatgpt, grok]
+  other_authored_asks: [chatgpt, grok]
   # Who shares the reviews Codex leaves: the automatic Claude review alone (`claude-api`, work/budget.yml). When
   # this list is set it replaces claude_authored_asks, other_authored_asks and the fallback escalation.
   pool: [claude-api]
@@ -57,8 +63,8 @@ review:
   # work, the Claude on GitHub actions"). The Codex app still reviews every PR on open, and its findings block.
   api_reviews_claude: true
   # The last resort (Cory, 11-04): when neither Codex nor the API can review a head (a budget cap is hit, or the
-  # API call failed or gave no verdict), one ask goes to Grok, polled by its own scheduled runs (the comment
-  # starts "To Grok:"). Never a Claude agent, never the author's own vendor, never in the normal path, and
-  # never ChatGPT (J-072: `wake: manual`, so nothing waits on it).
+  # API call failed or gave no verdict), one ask goes to ChatGPT or Grok, polled by their own scheduled runs (the
+  # comment starts "To ChatGPT:" or "To Grok:"). Never a Claude agent, never the author's own vendor, never in the normal path. ChatGPT
+  # goes first: its review task runs hourly, Grok's twice a day (11-09).
   fallback_after_hours: 1   # Cory, 11-03: "3 hours seems long"
-  fallback_order: [grok]
+  fallback_order: [chatgpt, grok]

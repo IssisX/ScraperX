@@ -31,6 +31,11 @@ TMP = tempfile.TemporaryDirectory()
 # test_ledger's roster as work/agents.yml has it for the reconciler: Muse cannot open PRs (checked below)
 RROSTER = L.Roster({"agents": {k: dict(v, **({"opens_prs": False} if k == "muse" else {}))
                                for k, v in AGENTS["agents"].items()}})
+# A roster whose ChatGPT runs only when Cory starts it: the fixture for the manual-agent path (Cory's channel).
+# The repo's ChatGPT is polled hourly since 11-09; these tests keep the manual path covered.
+MROSTER = L.Roster({"agents": {k: dict(v, **({"opens_prs": False} if k == "muse" else {}),
+                                       **({"wake": "manual"} if k == "chatgpt" else {}))
+                               for k, v in AGENTS["agents"].items()}})
 CENTRAL = R.CENTRAL
 UTC = dt.timezone.utc
 
@@ -112,6 +117,7 @@ class FakeGH:
         self.comments: list[tuple[int, str, int]] = []
         self.comment_errors: list[Exception] = []
         self.label_errors: list[Exception] = []
+        self.patch_errors: list[Exception] = []
         self.writes: list[tuple[str, str, dict]] = []   # issue writes: labels, comment edits
         self.before_ref_update = None   # called once, just before a ref update (a competing writer)
 
@@ -171,6 +177,8 @@ class FakeGH:
             self.writes.append((method, rest, body))
             return [{"name": n} for n in body["labels"]]
         if method == "PATCH" and rest.startswith("issues/comments/"):
+            if self.patch_errors:
+                raise self.patch_errors.pop(0)
             i = int(rest.rsplit("/", 1)[1]) - 9001
             n, _, k = self.comments[i]
             self.comments[i] = (n, body["body"], k)
@@ -198,9 +206,10 @@ class Harness:
         self.roster = roster or RROSTER
         self.log: list[str] = []
 
-    def run(self, f, now, comments=(), sent=(), tokens=None, **kw):
+    def run(self, f, now, comments=(), sent=(), tokens=None, open_threads=None, **kw):
         p = mk_pass(f, now, comments, sent)
         p.tokens = tokens or {}
+        p.open_threads = open_threads
         return R.run_pass(self.store, p, self.roster, self.lookups, now, self.outbox, self.log.append,
                           cory=self.cory, **kw)
 
@@ -457,10 +466,11 @@ class Strengthened(unittest.TestCase):
         self.assertEqual((ob["attempts"], ob["sends"]), (1, 0), "no label, no receipt: not delivered")
         self.assertNotIn("reconciler:sent", gh.comments[0][1])
         h.run(f, NOW + 10 * M, comments=gh.bot_comments(NOW + 10 * M))
-        self.assertEqual([n for n, _, _ in gh.comments], [500, 500], "on the job's issue, never the PR")
+        # one comment, never a second the bridge would mail again (ChatGPT, comment 6752574323)
+        self.assertEqual([n for n, _, _ in gh.comments], [500], "on the job's issue, never the PR")
         self.assertEqual(gh.writes[0], ("POST", "issues/500/labels", {"labels": ["wake:muse"]}))
-        self.assertEqual(gh.writes[1][:2], ("PATCH", "issues/comments/9002"), "the receipt goes in after the label")
-        body = gh.comments[1][1]
+        self.assertEqual(gh.writes[1][:2], ("PATCH", "issues/comments/9001"), "the receipt goes in after the label")
+        body = gh.comments[0][1]
         self.assertTrue(body.startswith("CLAUDE_TO_MUSE: J-500 "), body)
         self.assertIn(f"id={ob['id']} send=1 attempt=2", body)
         mailed = body.split("\n\n<!--")[0]   # what the bridge mails (it strips the marker too)
@@ -481,9 +491,33 @@ class Strengthened(unittest.TestCase):
         self.assertNotIn("To Codex", body)
         self.assertEqual(re.findall(r"@[\w-]+", body), ["@codex"], "the one mention is in a code span: no ping")
 
-    def test_03_a_dead_letter_reaches_cory_once_in_an_hourly_batch(self):
+    def test_01b_a_partial_muse_send_is_repaired_never_mailed_twice(self):
+        # ChatGPT, comment 6752574323: the comment went, then its label or its receipt edit failed. The bridge mails
+        # each CLAUDE_TO_MUSE comment id once, so a retry that posts a second comment mails Muse twice.
+        for fail in ("label", "receipt"):
+            with self.subTest(fail=fail):
+                gh = FakeGH()
+                h = Harness(outbox=R.CommentOutbox(gh, RROSTER, 340))
+                f = feed(prs=[fb_red(n=401)], issues=[issue(500, owner="owner:muse")])
+                (gh.label_errors if fail == "label" else gh.patch_errors).append(
+                    GitHubError("POST", "x", "HTTP 502: Bad Gateway"))
+                h.run(f, NOW)
+                self.assertEqual(h.obs("J-500")[0]["sends"], 0, "no receipt: not delivered yet")
+                h.outbox = R.CommentOutbox(gh, RROSTER, 340)   # the next sweep's outbox: only GitHub remembers
+                h.run(f, NOW + 10 * M, comments=gh.bot_comments(NOW + 10 * M))
+                h.run(f, NOW + 20 * M, comments=gh.bot_comments(NOW + 20 * M))
+                mails = [b for n, b, _ in gh.comments if b.startswith("CLAUDE_TO_MUSE:")]
+                self.assertEqual(len(mails), 1, "one comment id: one mail")
+                ob = h.obs("J-500", NOW + 20 * M)[0]
+                self.assertEqual((ob["attempts"], ob["sends"]), (2, 1))
+                self.assertIn(f"<!-- reconciler:sent id={ob['id']} send=1 attempt=2 -->", mails[0])
+                self.assertNotIn("reconciler:posted", mails[0])
+                self.assertEqual(gh.writes[-1][:2], ("PATCH", "issues/comments/9001"))
+                self.assertIn(("POST", "issues/500/labels", {"labels": ["wake:muse"]}), gh.writes)
+
+    def test_03_a_dead_letter_reaches_cory_once_in_a_slot_batch(self):
         gh = FakeGH()
-        h = Harness(cory=R.CoryNotifier(gh, 340))
+        h = Harness(roster=MROSTER, cory=R.CoryNotifier(gh, 340))
         a, b, c = (pr(450 + i, f"chatgpt/integrate-j57{i}-x", job=f"J-57{i}", action="FIX-CI", proof="red: x")
                    for i in range(3))
         h.run(feed(prs=[a]), NOW)
@@ -493,10 +527,14 @@ class Strengthened(unittest.TestCase):
         self.assertTrue(body.startswith("To Cory: Needs you (1), from the switchboard at"), body)
         self.assertIn("ChatGPT runs only when you start it", body)
         self.assertRegex(body, r"<!-- reconciler:cory batch=\S+ keys=O-[0-9a-f]{8} -->")
-        for k in range(1, 6):   # a pass every 10 min; the new items wait for the hour
+        for k in range(1, 6):   # a pass every 10 min; the new items wait for the next slot (Monday 2:17 PM)
             h.run(feed(prs=[a, b] if k == 1 else [a, b, c]), NOW + k * 10 * M, comments=gh.bot_comments(NOW))
         self.assertEqual(len(gh.comments), 1, "never one message per item")
         h.run(feed(prs=[a, b, c]), NOW + H, comments=gh.bot_comments(NOW))
+        for k in range(1, 8):   # passes every 10 min up to 2:07 PM: still nothing
+            h.run(feed(prs=[a, b, c]), NOW + H + k * 10 * M, comments=gh.bot_comments(NOW))
+        self.assertEqual(len(gh.comments), 1, "an hour on is not a slot: at most every 3 hours (11-09)")
+        h.run(feed(prs=[a, b, c]), ct(2026, 11, 9, 14, 17), comments=gh.bot_comments(NOW))
         self.assertEqual(len(gh.comments), 2)
         second = gh.comments[1][1]
         self.assertTrue(second.startswith("To Cory: Needs you (2)"), second)
@@ -504,17 +542,17 @@ class Strengthened(unittest.TestCase):
         self.assertIn("J-572", second)
         self.assertNotIn("J-570", second.split("<!--")[0].split("Still standing")[0])
         self.assertIn("Still standing from earlier batches: 1", second)
-        for k in range(7, 14):
-            h.run(feed(prs=[a, b, c]), NOW + k * 10 * M, comments=gh.bot_comments(NOW))
+        for k in range(1, 8):
+            h.run(feed(prs=[a, b, c]), ct(2026, 11, 9, 14, 17) + k * 10 * M, comments=gh.bot_comments(NOW))
         self.assertEqual(len(gh.comments), 2, "each item once")
         self.assertTrue(all(e.get("ev") != "would_notify_cory" for e in h.events()), "live: sent, not would-send")
 
     def test_08_a_retried_commit_posts_nothing_twice(self):
         gh = FakeGH()
         store = R.GitStore(gh)
-        h = Harness(store=store, outbox=R.CommentOutbox(gh, RROSTER, 340), cory=R.CoryNotifier(gh, 340))
+        h = Harness(roster=MROSTER, store=store, outbox=R.CommentOutbox(gh, RROSTER, 340), cory=R.CoryNotifier(gh, 340))
         h.run(feed(issues=[issue(900, job="J-900")]), NOW)
-        other = Harness(store=store)
+        other = Harness(roster=MROSTER, store=store)
         gh.before_ref_update = lambda: other.run(feed(issues=[issue(900, job="J-900")]), NOW + 9 * M)
         f = feed(issues=[issue(900, job="J-900")],
                  prs=[pr(460, "claude/integrate-j902-x", job="J-902", action="FIX-CI", proof="red: x"),
@@ -532,7 +570,7 @@ class Strengthened(unittest.TestCase):
         self.assertEqual(sum(1 for e in evs if e["ev"] == "sent" and e.get("id") == fix["id"]), 1)
         self.assertEqual(sum(1 for e in evs if e["ev"] == "needs_you"), 1)
         # a crash after the post and before any commit: the marker on #340 is the receipt
-        h2 = Harness(cory=R.CoryNotifier(gh, 340))
+        h2 = Harness(roster=MROSTER, cory=R.CoryNotifier(gh, 340))
         h2.run(f, NOW + 3 * H, comments=gh.bot_comments(NOW + 10 * M))
         self.assertEqual(sum(1 for _, b, _ in gh.comments if b.startswith("To Cory:")), 1)
 
@@ -593,7 +631,8 @@ class RedTeam(unittest.TestCase):
                     "6746462436).\n\n_Generated by [Claude Code]_")
         h.run(feed(), NOW + 20 * M, comments=[unrelated, named])
         self.assertEqual(h.state().threads["obligations"][0]["ack"]["how"], "reply naming it")
-        # a ruling: a reply before it is not its answer; one after it, on its own thread, is
+        # a ruling: a reply before it is not its answer; one after it is only when it names it (#360's rule, J-072
+        # replay: a post on the thread that names nothing is not an answer; the merge itself is the proof)
         h2 = Harness()
         f = feed(prs=[pr(422, "fb-bot/integrate-j502-z", job="J-502", action="HUMAN-MERGE")])
         early = cmt(93, 422, NOW - 5 * M, "Claude: looking at it.\n\n_Generated by [Claude Code]_")
@@ -602,12 +641,16 @@ class RedTeam(unittest.TestCase):
         self.assertIsNone(h2.obs("J-502", kind="ruling")[0]["ack"])
         late = cmt(94, 422, NOW + 6 * M, "Claude: merged it by hand.\n\n_Generated by [Claude Code]_")
         h2.run(f, NOW + 10 * M, comments=[early, late])
-        self.assertEqual(h2.obs("J-502", kind="ruling")[0]["ack"]["how"], "reply on the thread")
+        self.assertIsNone(h2.obs("J-502", kind="ruling")[0]["ack"], "a post that names nothing is not an ack")
+        oid = h2.obs("J-502", kind="ruling")[0]["id"]
+        named = cmt(95, 422, NOW + 11 * M, f"Claude: {oid} merged it by hand.\n\n_Generated by [Claude Code]_")
+        h2.run(f, NOW + 15 * M, comments=[early, late, named])
+        self.assertEqual(h2.obs("J-502", kind="ruling")[0]["ack"]["how"], "reply naming it")
 
     def test_c_the_dead_letter_path_failing_is_retried_and_reported(self):
         f = feed(prs=[pr(412, "chatgpt/integrate-j530-x", job="J-530", action="FIX-CI", proof="red: x")])
         gh = FakeGH()
-        h = Harness(cory=R.CoryNotifier(gh, 340))
+        h = Harness(roster=MROSTER, cory=R.CoryNotifier(gh, 340))
         gh.comment_errors.append(GitHubError("POST", "comments", "HTTP 401: Bad credentials"))
         res = h.run(f, NOW)
         self.assertEqual(gh.comments, [])
@@ -626,7 +669,7 @@ class RedTeam(unittest.TestCase):
 
         def down(subject, text):
             raise OSError("mail relay down")
-        h2 = Harness(cory=R.CoryNotifier(gh2, 340, mailer=down))
+        h2 = Harness(roster=MROSTER, cory=R.CoryNotifier(gh2, 340, mailer=down))
         h2.run(f, NOW)
         self.assertEqual(len(gh2.comments), 1)
         self.assertIn("the mail failed", h2.state().cory["last_error"])
@@ -634,23 +677,25 @@ class RedTeam(unittest.TestCase):
             h2.run(f, NOW + k * 10 * M, comments=gh2.bot_comments(NOW))
         self.assertEqual(len(gh2.comments), 1)
         mails = []
-        h3 = Harness(cory=R.CoryNotifier(FakeGH(), 340, mailer=lambda s, t: mails.append((s, t))))
+        h3 = Harness(roster=MROSTER, cory=R.CoryNotifier(FakeGH(), 340, mailer=lambda s, t: mails.append((s, t))))
         h3.run(f, NOW)
         self.assertEqual(len(mails), 1)
         self.assertTrue(mails[0][0].startswith("To Cory: Needs you (1)"))
 
     def test_d_a_clock_that_stopped_is_a_line_for_cory(self):
+        # The reconciler runs on the hourly full pass (11-09 audit: a 25-minute bar read every quiet hour as a dead
+        # clock), so an hour between passes is normal and only a gap past PASS_GAP (90 min) is a line for Cory.
         h = Harness()
         h.run(feed(), NOW)
-        h.run(feed(), NOW + 10 * M)
-        self.assertEqual(h.state().cory["batches"], [])
-        h.run(feed(), NOW + 50 * M)   # 40 minutes with no pass
+        h.run(feed(), NOW + 60 * M)
+        self.assertEqual(h.state().cory["batches"], [], "an hourly pass is not a gap")
+        h.run(feed(), NOW + 160 * M)   # 100 minutes with no pass
         batches = h.state().cory["batches"]
         self.assertEqual(len(batches), 1)
-        self.assertIn(f"PIPE: no switchboard pass from {R.central(NOW + 10 * M)} to {R.central(NOW + 50 * M)} "
-                      "Central (40 min", batches[0]["text"])
-        h.run(feed(), NOW + 60 * M)
-        h.run(feed(), NOW + 3 * H)   # a later gap is its own line, once
+        self.assertIn(f"PIPE: no switchboard pass from {R.central(NOW + 60 * M)} to {R.central(NOW + 160 * M)} "
+                      "Central (100 min", batches[0]["text"])
+        h.run(feed(), NOW + 220 * M)
+        h.run(feed(), NOW + 340 * M)   # a later gap is its own line, once
         texts = [b["text"] for b in h.state().cory["batches"]]
         self.assertEqual(len(texts), 2)
         self.assertIn("(120 min", texts[1])
@@ -759,13 +804,15 @@ class RedTeam(unittest.TestCase):
         root = pathlib.Path(tempfile.mkdtemp(dir=TMP.name))
         (root / "work").mkdir()
         (root / R.CONFIG).write_text("reconciler: live\n")
-        self.assertEqual(R.mode(root), "off", "live reads as off until STAGE2_READY")
         old = R.STAGE2_READY
-        R.STAGE2_READY = True
         try:
+            R.STAGE2_READY = False
+            self.assertEqual(R.mode(root), "off", "live reads as off until STAGE2_READY")
+            R.STAGE2_READY = True
             self.assertEqual(R.mode(root), "live")
         finally:
             R.STAGE2_READY = old
+        self.assertTrue(R.STAGE2_READY, "J-072: the replay's clean verdict set it")
         out, cory = R.outboxes(False, FakeGH(), RROSTER, 340)
         self.assertEqual((out.live, cory.live), (False, False))
         out, cory = R.outboxes(True, FakeGH(), RROSTER, 340)
@@ -837,17 +884,31 @@ class Rules(unittest.TestCase):
         self.assertEqual(R.due_at(ROSTER, "muse", NOW), ("email", NOW + 4 * H))
         # NOW is 12:00 PM Central: Grok's next run is 4 PM Central (22:00 UTC), plus 1 h
         self.assertEqual(R.due_at(ROSTER, "grok", NOW), ("issue", dt.datetime(2026, 11, 9, 23, 0, tzinfo=dt.timezone.utc)))
-        self.assertEqual(R.due_at(ROSTER, "chatgpt", NOW), ("cory", NOW + 15 * M), "manual goes to Cory")
+        # ChatGPT's review task runs hourly at :27 Central: its next run after 12:00 PM is 12:27 PM, plus 1 h
+        self.assertEqual(R.due_at(ROSTER, "chatgpt", NOW), ("issue", ct(2026, 11, 9, 13, 27)))
+        self.assertEqual(R.due_at(MROSTER, "chatgpt", NOW), ("cory", NOW + 15 * M), "manual goes to Cory")
+
+    def test_grok_bot_reads_all_the_time_grok_runs_on_its_schedule(self):
+        # Cory 11-09: Grok Bot (Builder, PE) reads always; Grok runs at 10 AM and 4 PM. The repo file says so.
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        repo = L.Roster(yaml.safe_load((HERE.parents[1] / "work/agents.yml").read_text(encoding="utf-8")))
+        self.assertEqual(repo.wake("grok_bot"), "watch")
+        self.assertEqual(R.due_at(repo, "grok_bot", NOW), ("watch", NOW + H), "Builder and PE: one hour")
+        self.assertEqual(R.due_at(repo, "grok", NOW), ("issue", dt.datetime(2026, 11, 9, 23, 0, tzinfo=dt.timezone.utc)))
+        self.assertEqual(R.due_at(repo, "chatgpt", NOW), ("issue", ct(2026, 11, 9, 13, 27)))
 
     def test_manual_agent_goes_straight_to_cory_never_resent(self):
-        h = Harness()
+        h = Harness(roster=MROSTER)
         f = feed(prs=[pr(412, "chatgpt/integrate-j530-x", job="J-530", action="FIX-CI", proof="red: x")])
         h.run(f, NOW)
         h.run(f, NOW + 3 * H)
         ob = h.obs("J-530")[0]
         self.assertEqual((ob["via"], ob["sends"], ob["dead_lettered"]), ("cory", 1, None))
 
-    def test_reply_on_the_thread_by_the_addressee_acks(self):
+    def test_a_reply_by_the_addressee_acks_only_when_it_names_it(self):
         h = Harness()
         f = feed(prs=[pr(413, "claude/integrate-j500-x", action="FIX-CI", proof="red: x")])
         h.run(f, NOW)
@@ -856,7 +917,11 @@ class Rules(unittest.TestCase):
         self.assertIsNone(h.obs("J-500")[0]["ack"])
         mine = cmt(91, 413, NOW + 12 * M, "Claude (integrator): fixing it now\n\n_Generated by [Claude Code]_")
         h.run(f, NOW + 20 * M, comments=[other, mine])
-        self.assertEqual(h.obs("J-500")[0]["ack"]["how"], "reply on the thread")
+        self.assertIsNone(h.obs("J-500")[0]["ack"], "on its thread, naming nothing: not an ack (#360's rule)")
+        oid = h.obs("J-500")[0]["id"]
+        named = cmt(96, 340, NOW + 22 * M, f"Claude (integrator): {oid} is mine, fixing it now")
+        h.run(f, NOW + 30 * M, comments=[other, mine, named])
+        self.assertEqual(h.obs("J-500")[0]["ack"]["how"], "reply naming it", "a post anywhere that names it")
 
     def test_untrusted_login_cannot_command(self):
         h = Harness()
@@ -882,9 +947,16 @@ class Rules(unittest.TestCase):
         root = pathlib.Path(tempfile.mkdtemp(dir=TMP.name))
         self.assertEqual(R.mode(root), "off")
         (root / "work").mkdir()
-        for text, want in (("reconciler: shadow\n", "shadow"), ("reconciler: live\n", "off"), ("other: 1\n", "off")):
-            (root / R.CONFIG).write_text(text)
-            self.assertEqual(R.mode(root), want, text)
+        old = R.STAGE2_READY
+        try:
+            for ready, live in ((False, "off"), (True, "live")):   # J-072: STAGE2_READY is set; False gates it again
+                R.STAGE2_READY = ready
+                for text, want in (("reconciler: shadow\n", "shadow"), ("reconciler: live\n", live),
+                                   ("other: 1\n", "off")):
+                    (root / R.CONFIG).write_text(text)
+                    self.assertEqual(R.mode(root), want, (ready, text))
+        finally:
+            R.STAGE2_READY = old
 
     def test_shadow_diff_compares_with_what_the_ledger_sent(self):
         h = Harness()
@@ -903,6 +975,276 @@ class Rules(unittest.TestCase):
         self.assertIn("PR|#416 to claude", md)
         self.assertIn("| 10.0 min (2 passes) |", md)
         self.assertEqual(sum(1 for e in h.events() if e["ev"] == "ledger_sent"), 1, "a key is recorded once")
+
+
+# ---------------- the cutover replay's findings (J-072, tools/switchboard/replay_reconciler.py) ----------------
+class ReplayFindings(unittest.TestCase):
+    """Each defect the 48 h replay of real history found, as the case that failed before its fix."""
+
+    def test_an_ask_reply_acks_only_back_to_the_asker_or_naming_it(self):
+        # #360's rule: Muse asks Claude on a job thread; Claude's next post there is to Grok: not an answer (the
+        # old rule acked it, "a reply on the thread" where Claude owed nothing else)
+        h = Harness()
+        ask = L.AskIn("7001", 500, "u", "Claude", "Muse", NOW - 5 * M)
+        f = feed(issues=[issue(500)], asks=[ask])
+        text = cmt(7001, 500, NOW - 5 * M, "**Muse (via email bridge): To Claude: rule on the grip cap**")
+        h.run(f, NOW, comments=[text])
+        to_grok = cmt(7002, 500, NOW + 2 * M, "Claude (integrator): To Grok, check the grip math.")
+        h.run(f, NOW + 10 * M, comments=[text, to_grok])
+        ob = h.obs("J-500", kind="ask")[0]
+        self.assertIsNone(ob["ack"], "a post to someone else is not the answer")
+        back = cmt(7003, 500, NOW + 12 * M, "CLAUDE_TO_MUSE: J-500 the grip cap stays at 3800 N.")
+        h.run(f, NOW + 20 * M, comments=[text, to_grok, back])
+        self.assertEqual(h.obs("J-500", kind="ask")[0]["ack"]["how"], "reply to the asker")
+        # one step short of #360: on the ask's own job thread (never the board), the addressee's next post there,
+        # addressed to no one else, answers it ("Claude: accepted as spec H.4" on #244)
+        h3 = Harness()
+        ask3 = L.AskIn("7004", 500, "u", "Claude", "ChatGPT", NOW - 5 * M)
+        f3 = feed(issues=[issue(500)], asks=[ask3])
+        text3 = cmt(7004, 500, NOW - 5 * M, "To Claude (from ChatGPT): limb maxima are not shares.")
+        h3.run(f3, NOW, comments=[text3])
+        plain = cmt(7005, 500, NOW + 3 * M, "Claude: accepted as spec H.4.\n\n_Generated by [Claude Code]_")
+        h3.run(f3, NOW + 10 * M, comments=[text3, plain])
+        self.assertEqual(h3.obs("J-500", kind="ask")[0]["ack"]["how"], "reply on its thread")
+        # on the board only a post whose first line names the asker (#340, 6743006899); a post to Grok there does not
+        h4 = Harness()
+        ask4 = L.AskIn("7006", 340, "u", "Claude", "Muse", NOW - 5 * M)
+        text4 = cmt(7006, 340, NOW - 5 * M, "**Muse (via email bridge): To Claude: expand-tests ready to land**")
+        to_grok4 = cmt(7007, 340, NOW + M, "Claude (integrator): both To Grok asks above are done.")
+        status = cmt(7008, 340, NOW + 2 * M, "Claude (integrator): merged #343.")
+        h4.run(feed(asks=[ask4]), NOW + 5 * M, comments=[text4, to_grok4, status])
+        self.assertIsNone(h4.state().threads["obligations"][0]["ack"], "the board: a post to Grok, a status line")
+        named = cmt(7009, 340, NOW + 6 * M, "Claude (integrator): Muse, the eight asks above were answered by mail.")
+        h4.run(feed(asks=[ask4]), NOW + 10 * M, comments=[text4, to_grok4, status, named])
+        self.assertEqual(h4.state().threads["obligations"][0]["ack"]["how"], "reply naming the asker")
+        # on another thread: it acks when it names the ask's thread and is addressed back (the old rule read only
+        # the ask's own thread, so an answer elsewhere was never seen and the ask was re-sent)
+        h2 = Harness()
+        ask2 = L.AskIn("7101", 340, "u", "Claude", "Muse", NOW - 5 * M)
+        text2 = cmt(7101, 340, NOW - 5 * M, "**Muse (via email bridge): To Claude: which head do I prove?**")
+        h2.run(feed(asks=[ask2]), NOW, comments=[text2])
+        elsewhere = cmt(7102, 128, NOW + 3 * M, "Claude (integrator) to Muse, cc Muse: on your #340 ask, prove 1a2b3c4d.")
+        h2.run(feed(asks=[ask2]), NOW + 10 * M, comments=[text2, elsewhere])
+        self.assertEqual(h2.state().threads["obligations"][0]["ack"]["how"], "reply to the asker")
+
+    def test_an_ask_asks_py_dropped_is_still_opened_from_the_stream(self):
+        # asks.py on trunk drops an ask on any later post by its addressee on the thread: the feed lists nothing,
+        # yet the ask is unanswered. The reconciler reads asks from the comment stream itself.
+        h = Harness()
+        ask = cmt(7201, 340, NOW - 5 * M, "**Muse (via email bridge): To Claude: refused mail, please resend**")
+        unrelated = cmt(7202, 340, NOW - 4 * M, "Claude (integrator): Grok's asks are answered.")
+        h.run(feed(), NOW, comments=[ask, unrelated], open_threads=frozenset({340}))
+        obs = h.state().threads["obligations"]
+        self.assertEqual([(o["kind"], o["to"], o["version"]) for o in obs], [("ask", "claude", "7201")])
+        self.assertIsNone(obs[0]["ack"])
+
+    def test_an_ask_on_a_thread_that_closed_is_closed_not_resent(self):
+        # the board moved from #107 to #340: an ask on #107 was re-sent and dead-lettered after #107 closed
+        h = Harness()
+        ask = cmt(7301, 107, NOW - 5 * M, "Claude (integrator): To Builder, take J-071 step 2.")
+        h.run(feed(asks=[L.AskIn("7301", 107, "u", "Builder", "Claude", NOW - 5 * M)]), NOW, comments=[ask],
+              open_threads=frozenset({107, 340}))
+        ob = h.state().threads["obligations"][0]
+        self.assertEqual((ob["to"], ob["sends"]), ("grok", 1))
+        h.lookups.i[107] = {"state": "closed", "state_reason": "completed"}
+        h.run(feed(), NOW + 10 * M, comments=[ask], open_threads=frozenset({340}))
+        h.run(feed(), NOW + 20 * H, comments=[ask], open_threads=frozenset({340}))
+        ob = h.state().threads["obligations"][0]
+        self.assertEqual((ob["closed"] or {}).get("why"), "its thread closed")
+        self.assertEqual((ob["sends"], ob["dead_lettered"]), (1, None), "never re-sent, never dead-lettered")
+
+    def test_a_head_that_lands_after_it_was_read_is_landed(self):
+        # fb-bot/integrate-j024-plants: read at its head before its PR opened (not landed), then its PR merged at
+        # that head; the cached first reading made it "green with no PR: open one" after the merge
+        name = "fb-bot/integrate-j524-plants"
+        h = Harness()
+        early = L.BranchIn(name, SHA["c"], t(-1), vs_trunk="ahead", ahead_by=1, ahead=(SHA["c"],))
+        run = L.RunIn(1, "u", name, SHA["c"], t(-1), None, "")
+        h.run(feed(branches=[early], runs=[run]), NOW)
+        self.assertEqual(h.state().jobs["J-524"]["obligations"], [])
+        merged = L.BranchIn(name, SHA["c"], t(-1), closed=(L.ClosedPr(311, SHA["c"], True),))
+        done = L.RunIn(1, "u", name, SHA["c"], t(-1), t(-0.5), "success")
+        h.run(feed(branches=[merged], runs=[done]), NOW + 30 * M)
+        self.assertEqual([o["kind"] for o in h.state().jobs["J-524"]["obligations"]], [], "landed: nothing owed")
+        self.assertEqual(h.state().jobs["J-524"]["landed"][name][1], "merged #311")
+
+    def test_a_verdict_that_is_not_a_land_answers_the_review_and_owes_a_land(self):
+        # #318: the automatic review's NOTE answered the review ask, then the PR sat 10 h waiting for a LAND from
+        # another vendor with no one owing anything, until the integrator asked Codex by hand
+        h = Harness()
+        p1 = pr(425, "fb-bot/integrate-j525-x", job="J-525", needs_review=True)
+        h.run(feed(prs=[p1]), NOW)
+        review = h.obs("J-525", kind="review")[0]
+        self.assertEqual((review["to"], review["via"]), ("codex", "relay"))
+        noted = pr(425, "fb-bot/integrate-j525-x", job="J-525",
+                   reasons=(f"no LAND on @{SHA['a'][:8]} from a vendor other than meta",
+                            "needs:eyes and no eye LAND on this head"))
+        h.run(feed(prs=[noted]), NOW + 10 * M)
+        obs = {o["version"].split(":")[0] if ":" in o["version"] else "review": o for o in h.obs("J-525")}
+        self.assertEqual(obs["review"]["ack"]["how"], "verdict on the head")
+        self.assertEqual((obs["land"]["kind"], obs["land"]["to"], obs["land"]["via"]), ("review", "codex", "relay"))
+        self.assertEqual((obs["eye"]["kind"], obs["eye"]["to"]), ("ruling", "claude"))
+        landed = pr(425, "fb-bot/integrate-j525-x", job="J-525", action="MERGE")
+        h.run(feed(prs=[landed]), NOW + 20 * M)
+        obs = {o["version"].split(":")[0]: o for o in h.obs("J-525") if ":" in o["version"]}
+        self.assertEqual(obs["land"]["ack"]["how"], "a LAND or FIX on the head")
+        self.assertEqual(obs["eye"]["ack"]["how"], "the eye's verdict on the head")
+
+    def test_an_unseen_obligation_still_settles_on_positive_evidence(self):
+        # a review whose PR dropped out of the listing went unseen and then stayed live forever after its PR merged
+        h = Harness()
+        h.run(feed(prs=[pr(426, "fb-bot/integrate-j526-x", job="J-526", needs_review=True)]), NOW)
+        for i in range(1, 4):
+            h.run(feed(issues=[issue(526, job="J-526")]), NOW + i * 10 * M)
+        ob = h.obs("J-526", kind="review")[0]
+        self.assertIsNotNone(ob["unseen"])
+        h.lookups.p[426] = {"merged": True, "state": "closed"}
+        h.run(feed(issues=[issue(526, job="J-526")]), NOW + 2 * H)
+        self.assertIsNone(h.obs("J-526", kind="review")[0]["closed"], "dormant ones are re-read every RECHECK")
+        h.run(feed(issues=[issue(526, job="J-526")]), NOW + 30 * M + R.RECHECK)
+        self.assertEqual(h.obs("J-526", kind="review")[0]["closed"]["why"], "PR merged")
+
+    def test_a_red_branch_with_no_job_id_is_owed_by_its_owner(self):
+        # fb-bot/integrate-traversal-rungdown-bottom-gap: red 37 h, no job id; the ledger notified Muse, the
+        # reconciler owed nothing
+        name = "fb-bot/integrate-traversal-gap"
+        b = L.BranchIn(name, SHA["e"], t(-3), vs_trunk="ahead", ahead_by=1, ahead=(SHA["e"],))
+        run = L.RunIn(2, "u", name, SHA["e"], t(-3), t(-2.5), "failure", "red: native-tests")
+        h = Harness()
+        h.run(feed(branches=[b], runs=[run]), NOW)
+        obs = h.state().threads["obligations"]
+        self.assertEqual([(o["kind"], o["to"], o["ref"]) for o in obs], [("fix", "muse", f"BRANCH|{name}")])
+        landed = L.BranchIn(name, SHA["e"], t(-3), vs_trunk="behind")
+        h.run(feed(branches=[landed], runs=[run]), NOW + 10 * M)
+        self.assertTrue(h.state().threads["obligations"][0]["closed"]["why"].startswith("landed"))
+
+    def test_a_job_id_back_after_its_outcome_starts_a_new_round(self):
+        # J-060's PR #310 merged on 11-07 (outcome merged); #320 opened as J-060 on 11-08 and its asks were never
+        # opened: a terminal record ignored everything after
+        h = Harness()
+        b = L.BranchIn("claude/integrate-j529-sheen", SHA["d"], t(-3), vs_trunk="behind")
+        h.run(feed(branches=[b]), NOW)
+        self.assertEqual(h.state().jobs["J-529"]["outcome"], "merged")
+        ask = L.AskIn("7401", 529, "u", "Muse", "Claude", NOW + 50 * M)
+        f = feed(branches=[b], issues=[issue(529, job="J-529", owner="owner:muse")], asks=[ask])
+        h.run(f, NOW + H)
+        rec = h.state().jobs["J-529"]
+        self.assertEqual((rec["outcome"], rec["issue"], rec["past"][0]["outcome"]), (None, 529, "merged"))
+        self.assertEqual([(o["kind"], o["to"]) for o in rec["obligations"]], [("ask", "muse")])
+        # a cancelled job stays cancelled while its own issue is open
+        h2 = Harness()
+        f2 = feed(issues=[issue(530, job="J-530")])
+        h2.run(f2, NOW, comments=[cmt(7501, 530, NOW - M, "/cancel J-530")])
+        h2.run(f2, NOW + 10 * M)
+        self.assertEqual(h2.state().jobs["J-530"]["outcome"], "cancelled")
+
+    def test_an_old_claude_ask_with_no_reply_is_one_daily_line_never_a_nag(self):
+        # the integrator answers Muse by mail, which GitHub never sees: an ask to Claude from before today with no
+        # reply on its thread is not nagged one by one; Cory gets one line for all of them, once a day
+        h = Harness()
+        old = L.AskIn("7601", 340, "u", "Claude", "Muse", NOW - 20 * H)   # 11-08, 4 PM Central
+        old2 = L.AskIn("7602", 340, "u", "Claude", "Muse", NOW - 19 * H)
+        new = L.AskIn("7603", 340, "u", "Claude", "Muse", NOW - 10 * M)
+        f = feed(asks=[old, old2, new])
+        for i in range(0, 50):
+            h.run(f, NOW + i * 10 * M)
+        obs = {o["version"]: o for o in h.state().threads["obligations"]}
+        self.assertEqual((obs["7601"]["sends"], obs["7601"]["dead_lettered"]), (0, None))
+        self.assertEqual(obs["7603"]["sends"], 2, "today's ask is sent, then re-sent at its due time")
+        texts = [b["text"] for b in h.state().cory["batches"]]
+        lines = [x for t in texts for x in t.splitlines() if "ask(s) to Claude from before today" in x]
+        self.assertEqual(len(lines), 1, "one line, once")
+        self.assertIn(obs["7601"]["id"], lines[0])
+        self.assertIn(obs["7602"]["id"], lines[0])
+
+    def test_two_open_asks_on_a_thread_a_reply_naming_neither_acks_neither(self):
+        # O-f8e65587: two of Muse's asks to Claude open on #107; "Answering Muse's J-044c ask" named neither
+        # specifically and acked her expand-tests ask too. With two or more owed there, only a named reply acks.
+        h = Harness()
+        a1 = L.AskIn("7701", 340, "u", "Claude", "Muse", NOW - 9 * M)
+        a2 = L.AskIn("7702", 340, "u", "Claude", "Muse", NOW - 8 * M)
+        t1 = cmt(7701, 340, NOW - 9 * M, "**Muse (via email bridge): To Claude: expand-tests scope-step pin ready**")
+        t2 = cmt(7702, 340, NOW - 8 * M, "**Muse (via email bridge): To Claude: J-044c wreck fix pushed @ 8657f4f4, "
+                                         "balance red, not from this fix**")
+        f = feed(asks=[a1, a2])
+        h.run(f, NOW, comments=[t1, t2])
+        vague = cmt(7703, 340, NOW + M, "Claude (integrator): Muse, answering your ask: #298 covers it.")
+        h.run(f, NOW + 10 * M, comments=[t1, t2, vague])
+        self.assertEqual([o["ack"] for o in h.state().threads["obligations"]], [None, None])
+        quoted = cmt(7704, 340, NOW + 11 * M, "Claude (integrator): Muse,\n> J-044c wreck fix pushed @ 8657f4f4\n"
+                                               "parked: #298 covers it.")
+        h.run(f, NOW + 20 * M, comments=[t1, t2, vague, quoted])
+        acks = {o["version"]: o["ack"] for o in h.state().threads["obligations"]}
+        self.assertIsNone(acks["7701"])
+        self.assertEqual(acks["7702"]["how"], "reply naming it")
+
+    def test_cory_batches_follow_the_integrators_hours_at_most_every_3_hours(self):
+        # 28 batches in 48 h, some at night, was too many (the coordinator, 11-09)
+        mon = ct(2026, 11, 9, 0, 0)
+        self.assertFalse(R.cory_due(None, mon + 60 * M), "1 AM: none outside the integrator's hours")
+        self.assertFalse(R.cory_due(None, mon + 8 * H + 5 * M), "8:05 AM: the morning batch is at 8:17")
+        self.assertTrue(R.cory_due(None, mon + 8 * H + 17 * M))
+        self.assertFalse(R.cory_due(mon + 8 * H + 17 * M, mon + 10 * H), "one per slot")
+        self.assertTrue(R.cory_due(mon + 8 * H + 17 * M, mon + 11 * H + 17 * M))
+        self.assertTrue(R.cory_due(mon + 8 * H + 17 * M, mon + 10 * H, pipe=True), "a pipe item goes at once")
+        self.assertFalse(R.cory_due(None, mon + 2 * H, pipe=True), "but not at night")
+        sat = ct(2026, 11, 7, 0, 0)
+        self.assertFalse(R.cory_due(sat + 9 * H + 17 * M, sat + 12 * H), "Sat-Sun slots: 9:17, 1:17, 5:17, 9:17")
+        self.assertTrue(R.cory_due(sat + 9 * H + 17 * M, sat + 13 * H + 17 * M))
+        self.assertFalse(R.cory_due(None, sat + 22 * H), "Sat-Sun hours end at 9 PM")
+
+    def test_the_first_live_pass_floods_no_one_the_backlog_is_one_line_for_cory(self):
+        # the coordinator, 11-09: with 100 dead-letters in the replay's 48 h, the first live pass must not flood Cory
+        # or the agents. Everything live at the cutover is backlog: one line for Cory, counts by holder, never sent
+        # one by one, never dead-lettered. Agents hear only of what is created or ripens after the cutover.
+        h = Harness(roster=MROSTER)
+        old = [pr(427, "claude/integrate-j527-x", job="J-527", action="FIX-CI", proof="red: x"),
+               pr(428, "chatgpt/integrate-j528-x", job="J-528", action="FIX-CI", proof="red: y"),
+               pr(429, "fb-bot/integrate-j529-x", job="J-529", action="FIX-CI", proof="red: z")]
+        for k in range(0, 10):   # shadow: sent, re-sent, the Muse one dead-lettered
+            h.run(feed(prs=old), NOW + k * H)
+        self.assertTrue(h.obs("J-529", NOW + 9 * H)[0]["dead_lettered"])
+        gh = FakeGH()
+        h.outbox, h.cory = R.CommentOutbox(gh, MROSTER, 340), R.CoryNotifier(gh, 340)
+        live = ct(2026, 11, 10, 8, 20)   # Tuesday, just after the 8:17 AM slot
+        h.run(feed(prs=old), live)
+        self.assertEqual(len(gh.comments), 1, "the first live pass posts one message, to Cory")
+        n, body, _ = gh.comments[0]
+        self.assertTrue(body.startswith("To Cory: Needs you ("), body)
+        items = [x for x in body.splitlines() if x.startswith("- Needs you") and "PIPE" not in x]
+        self.assertEqual(len(items), 1, body)   # (the overnight gap in these passes is a PIPE line of its own)
+        self.assertIn("3 item(s) from before the reconciler went live (", items[0])
+        for name in ("Claude 1", "ChatGPT 1", "Muse 1"):
+            self.assertIn(name, body)
+        st = h.state(live)
+        self.assertTrue(all(o.get("backlog") and not o["dead_lettered"] for r in st.records() for o in r["obligations"]))
+        # passes on: the backlog is never sent or dead-lettered; a new item after the cutover is sent
+        new = pr(430, "claude/integrate-j530-y", job="J-530", action="FIX-CI", proof="red: w")
+        for k in range(1, 30):
+            h.run(feed(prs=old + [new]), live + k * 10 * M, comments=gh.bot_comments(live))
+        bodies = [b for _, b, _ in gh.comments]
+        fresh = h.obs("J-530", live)[0]
+        self.assertTrue(any(f"id={fresh['id']} send=1" in b for b in bodies), "a new item is sent")
+        for job in ("J-527", "J-528", "J-529"):
+            ob = h.obs(job, live)[0]
+            self.assertFalse(any(ob["id"] in b for b in bodies if not b.startswith("To Cory")), job)
+            self.assertIsNone(ob["dead_lettered"], job)
+        self.assertEqual(sum(1 for b in bodies if "from before the reconciler went live" in b), 1, "once")
+
+    def test_an_item_sent_before_the_cutover_is_never_re_sent_after_it(self):
+        # 11-09 audit: 5 "again: no ack yet" re-sends after the cutover, of items the pre-guard live pass had sent
+        # (their markers set sent_by, so the cutover did not backlog them). Opened before the cutover means backlog.
+        h = Harness(roster=MROSTER)
+        h.run(feed(prs=[pr(431, "fb-bot/integrate-j531-x", job="J-531", action="FIX-CI", proof="red: x")]), NOW)
+        st = h.state(NOW)
+        ob = h.obs("J-531", NOW)[0]
+        cut = R.iso(NOW + H)
+        st.cory.update(mode="live", backlog={"at": cut, "by": {}})
+        self.assertTrue(R.before_cutover(st, dict(ob, sent_by="live", sends=1)))
+        self.assertFalse(R.before_cutover(st, dict(ob, reopened=R.iso(NOW + 2 * H))), "reopened after: owed afresh")
+        self.assertFalse(R.before_cutover(st, dict(ob, created=R.iso(NOW + 2 * H))), "opened after: a new item")
+        st.cory["mode"] = "shadow"
+        self.assertFalse(R.before_cutover(st, ob), "only once live")
 
 
 if __name__ == "__main__":

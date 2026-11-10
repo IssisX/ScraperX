@@ -36,7 +36,15 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 ### Switchboard and budget (`tools/switchboard/`, `work/budget.yml`)
 - `ANTHROPIC_API_KEY` and `AGENT_GITHUB_TOKEN` live only in environment `switchboard-merge` and reach only
   the `ask` and `provision` steps that call out (J-057); the PR check of the switch stays read-only with no
-  secrets.
+  secrets. In the `ask` switch step, `rate_probe` (switch.py) sends `AGENT_GITHUB_TOKEN` to GitHub's
+  `rate_limit` endpoint once a run, in the `gh` call's environment only, and logs the count, never the token
+  (J-072).
+- The switch's ETag cache (J-072) is restored and saved only in the `cache-in` and `cache-out` jobs, which
+  hold no secret, deploy to no environment and run no checked-out code. `ask` and `steer` get only the one
+  file, as this run's named artifact, in `$RUNNER_TEMP` (never the workspace or `.venv`), and read it only once
+  its HMAC (keyed from `SWITCHBOARD_REVIEW_KEY`) verifies; a merge or merge-by-hand is decided on uncached
+  reads. An Actions cache restore, or any other step another job can write into, in a job that holds a secret is
+  P1.
 - `SWITCHBOARD_MERGE_TOKEN` (the `steer` switch step) and `SWITCHBOARD_REVIEW_KEY` (the `ask` and `steer`
   switch steps) live only in environment `switchboard-merge` (branch ScraperX-Claude); any other job that
   reads them is P0.

@@ -119,6 +119,8 @@ class FakeGH:
             page = re.search(r"[?&]page=(\d+)", path)
             page = int(page.group(1)) if page else 1
             fresh = [c for c in self.comments if (c.get("updated_at") or c.get("created_at") or "") >= since]
+            if "direction=desc" in path:
+                fresh = sorted(fresh, key=lambda c: c.get("created_at") or "", reverse=True)
             return fresh[(page - 1) * 100: page * 100]
         if base == f"repos/{self.repo}/issues":
             page = re.search(r"[?&]page=(\d+)", path)
@@ -144,8 +146,16 @@ class FakeGH:
         return self.route(path)
 
     def paged(self, path, key=""):
-        got = self.route(path)
-        return list(got[key] if key else got)
+        if path.split("?")[0] != f"repos/{self.repo}/issues/comments":
+            got = self.route(path)
+            return list(got[key] if key else got)
+        items, sep = [], "&" if "?" in path else "?"
+        for page in range(1, switch.ghapi.MAX_PAGES + 1):   # as ghapi.paged: stops at the cap
+            batch = self.route(f"{path}{sep}page={page}")
+            items.extend(batch)
+            if len(batch) < 100:
+                break
+        return items
 
     def comment(self, number, body, what=""):
         if self.dry_run:
@@ -571,7 +581,8 @@ class InboxPrExcluded(unittest.TestCase):
         gh = types.SimpleNamespace(repo="IssisX/ScraperX", get=lambda path: {"state": "open"},
                                    comment=lambda number, body, what="": None,
                                    write=lambda method, path, body=None, what="": closed.append(path))
-        me = types.SimpleNamespace(gh=gh, out=lambda line: None)
+        me = types.SimpleNamespace(gh=gh, out=lambda line: None,   # J-072: both open, in the open-PR listing
+                                   listing=lambda path: [{"number": 282}, {"number": 43}, {"number": 300}])
         switch.Switch.close_superseded(me, types.SimpleNamespace(number=300, draft=False),
                                        {"body": "Supersedes #282 and #43"})
         self.assertEqual(closed, ["repos/IssisX/ScraperX/pulls/43"])
@@ -609,8 +620,6 @@ class AskToClaude(unittest.TestCase):
 
     def test_posts_that_are_not_asks_give_none(self):
         cases = [
-            ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-049 leak list**\n\nThe list.", 1.0, "IssisX", 292),
-            ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-042 windup pushed**\n\nBranch pushed.", 1.0, "IssisX", 292),
             (self.ASK, 25.0, "IssisX", 292),
             ("A long ruling\n\nTo Claude: what about this?", 1.0, "IssisX", 292),
             ("<!-- codex review -->\nTo Claude: ...", 1.0, "IssisX", 292),
@@ -620,6 +629,21 @@ class AskToClaude(unittest.TestCase):
         for body, hours, login, number in cases:
             self.assertEqual(items_of(self.gh_with(body, hours, login, number)), [], body.split("\n")[0][:60])
 
+    def test_every_bridge_post_gives_one_item(self):
+        # 11-10: Muse's "cause 2 needs your ruling" had no "To Claude" in its subject and sat unread all night
+        for body in ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-049 leak list**\n\nThe list.",
+                     "**Muse (via email bridge): J-044d cause 1 fixed; cause 2 needs your ruling**\n\nWhich?"):
+            (it,) = items_of(self.gh_with(body=body))
+            self.assertEqual(it.kind, "TO-CLAUDE", body[:60])
+
+    def test_an_ask_past_the_listing_cap_still_gives_one_item(self):
+        # 11-10: 620 comments in the window; the oldest-first listing stopped at 500 and the newest asks were lost
+        old = [comment(1000 + i, 292, f"chatter {i}", 2.0, "IssisX") for i in range(switch.COMMENT_LISTING_CAP)]
+        ask = comment(self.CID, 292, self.ASK, 0.5, "IssisX")
+        gh = FakeGH(comments=old + [ask], open_issues=[292])
+        (it,) = items_of(gh)
+        self.assertEqual((it.kind, it.head), ("TO-CLAUDE", str(self.CID)))
+
     def test_a_proposal_first_line_gives_one_item(self):
         (it,) = items_of(self.gh_with(body="Proposal: let the switchboard wake Claude on asks\n\nDetails."))
         self.assertEqual(it.kind, "TO-CLAUDE")
@@ -627,6 +651,30 @@ class AskToClaude(unittest.TestCase):
     def test_a_closed_thread_gives_none(self):
         gh = FakeGH(comments=[comment(self.CID, 292, self.ASK)], open_issues=[switch.BOARD_ISSUE])
         self.assertEqual(items_of(gh), [])
+
+    def test_the_ledgers_notice_to_claude_gives_one_item(self):
+        # J-072: notice 6746048774 on #340 (7 Claude items) never reached the inbox: bot comments were all skipped
+        notice = ("To Claude: 7 item(s) past deadline\n\n- x: green, no PR: open one\n\n"
+                  "<!-- switchboard:ledger keys=ab12 -->")
+        (it,) = items_of(self.gh_with(body=notice, login=rules.BOT_LOGIN, number=340, cid=6746048774))
+        self.assertEqual((it.kind, it.target, it.head), ("TO-CLAUDE", "#340", "6746048774"))
+        self.assertIn("7 item(s) past deadline", it.line)
+        for body in ("To Grok: 1 item(s) past deadline\n\n<!-- switchboard:ledger keys=ab -->",   # not Claude's
+                     "To Claude: a bot comment with no ledger marker"):
+            self.assertEqual(items_of(self.gh_with(body=body, login=rules.BOT_LOGIN, number=340)), [], body)
+        forged = notice   # the marker in a non-bot comment changes nothing: it is read as any ask
+        self.assertEqual([i.kind for i in items_of(self.gh_with(body=forged, number=340))], ["TO-CLAUDE"])
+
+    def test_a_codex_ask_is_the_integrators_to_post(self):
+        tag = switch.MARK.format(kind="ask-codex", pr=256, head=HEAD)
+        marked = comment(5, 256, f"Switchboard: a Codex review of this head is due.\n\n{tag}", login=BOT)
+        s = steered(ref="claude/integrate-j042", comments=[marked])
+        items = [it for it in items_of(FakeGH(), s) if it.kind == "CODEX-ASK"]
+        self.assertEqual(len(items), 1)
+        self.assertIn("post codex review with an at-sign in front on #256", items[0].line)
+        old = comment(5, 256, switch.MARK.format(kind="ask-codex", pr=256, head=OLD_HEAD), login=BOT)
+        self.assertFalse([it for it in items_of(FakeGH(), steered(ref="claude/integrate-j042", comments=[old]))
+                          if it.kind == "CODEX-ASK"])   # an ask for an older head is no item
 
 
 class MuseRouted(unittest.TestCase):
