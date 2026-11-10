@@ -689,3 +689,28 @@
 {"ev": "ledger_sent", "job": "J-049", "key": "bd51140c8c4ca06b", "ref": "PR|#367", "stage": 2, "t": "2026-11-10T01:57:56Z", "to": "codex"}
 {"attempt": 2, "ev": "sent", "id": "O-57e630f6", "job": "J-049", "ref": "PR|#367", "send": 2, "t": "2026-11-10T01:57:56Z", "to": "codex", "via": "relay"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T01:57:56Z", "tries": 1}
+{"due": "2026-11-10T04:17:00Z", "ev": "obligation", "id": "O-b4585170", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #108", "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T04:27:00Z", "ev": "obligation", "id": "O-c7facc18", "job": "J-011", "kind": "ask", "ref": "ASK|ask on #118", "t": "2026-11-10T02:43:29Z", "to": "chatgpt", "via": "issue"}
+{"due": "2026-11-10T04:17:00Z", "ev": "obligation", "id": "O-61709c55", "job": "J-011", "kind": "ask", "ref": "ASK|ask on #118", "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T04:17:00Z", "ev": "obligation", "id": "O-f003c927", "job": "J-038", "kind": "ask", "ref": "ASK|ask on #169", "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"due": "2026-11-10T06:43:29Z", "ev": "obligation", "id": "O-4b031494", "job": "J-061", "kind": "fix", "ref": "PR|#337", "t": "2026-11-10T02:43:29Z", "to": "muse", "via": "email"}
+{"due": "2026-11-10T04:17:00Z", "ev": "obligation", "id": "O-21f8978a", "job": "J-061", "kind": "ask", "ref": "ASK|ask on #312", "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "new head", "id": "O-6de27451", "job": "J-061", "t": "2026-11-10T02:43:29Z"}
+{"due": "2026-11-10T17:00:00Z", "ev": "obligation", "id": "O-ccbcc002", "job": "J-064", "kind": "ask", "ref": "ASK|ask on #322", "t": "2026-11-10T02:43:29Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-10T04:17:00Z", "ev": "obligation", "id": "O-5b2d39c1", "job": "J-067", "kind": "fix", "ref": "PR|#371", "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"ev": "pr_closed", "how": "merged", "job": "J-071", "pr": 369, "t": "2026-11-10T02:43:29Z"}
+{"ev": "outcome", "job": "J-071", "outcome": "merged", "t": "2026-11-10T02:43:29Z", "why": "builder/j071-s2: in trunk; claude/integrate-j071-ci-timeout: merged #339"}
+{"ev": "acked", "how": "reply naming it", "id": "O-b4585170", "job": "J-001", "t": "2026-11-10T02:43:29Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-c7facc18", "job": "J-011", "t": "2026-11-10T02:43:29Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-d72e22d5", "job": "J-070", "t": "2026-11-10T02:43:29Z"}
+{"ev": "state", "frm": "working", "job": "J-044l", "t": "2026-11-10T02:43:29Z", "to": "proof"}
+{"ev": "state", "frm": "review", "job": "J-067", "t": "2026-11-10T02:43:29Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-071", "t": "2026-11-10T02:43:29Z", "to": "merged"}
+{"ev": "ledger_sent", "job": "", "key": "cc0d0d421fd1a8fe", "ref": "ASK|ask on #333", "stage": 1, "t": "2026-11-10T02:43:29Z", "to": "claude"}
+{"attempt": 1, "ev": "sent", "id": "O-61709c55", "job": "J-011", "ref": "ASK|ask on #118", "send": 1, "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-f003c927", "job": "J-038", "ref": "ASK|ask on #169", "send": 1, "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-4b031494", "job": "J-061", "ref": "PR|#337", "send": 1, "t": "2026-11-10T02:43:29Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-21f8978a", "job": "J-061", "ref": "ASK|ask on #312", "send": 1, "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-ccbcc002", "job": "J-064", "ref": "ASK|ask on #322", "send": 1, "t": "2026-11-10T02:43:29Z", "to": "grok", "via": "issue"}
+{"attempt": 1, "ev": "sent", "id": "O-5b2d39c1", "job": "J-067", "ref": "PR|#371", "send": 1, "t": "2026-11-10T02:43:29Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T02:43:29Z", "tries": 1}

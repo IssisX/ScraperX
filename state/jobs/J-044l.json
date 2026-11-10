@@ -2,14 +2,15 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-protected-j044l": "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54"
+  "fb-bot/integrate-protected-j044l": "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54",
+  "fb-bot/integrate-protected-j044l-vault": "868ea822c93527f0d0b5c233a4e04f5ad3c4c1bf"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54",
+ "head": "868ea822c93527f0d0b5c233a4e04f5ad3c4c1bf",
  "issue": 0,
  "job": "J-044l",
  "landed": {
@@ -17,6 +18,11 @@
    "95d4120dc8e8f2fa2839ca323d201b3a0e8e5c54",
    "",
    "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-protected-j044l-vault": [
+   "868ea822c93527f0d0b5c233a4e04f5ad3c4c1bf",
+   "",
+   "2026-11-10T02:43:29Z"
   ]
  },
  "obligations": [
@@ -35,7 +41,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "BRANCH|fb-bot/integrate-protected-j044l",
    "sends": 0,
    "thread": 0,
@@ -52,6 +58,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-09T21:19:08Z"
+ "state": "proof",
+ "updated": "2026-11-10T02:43:29Z"
 }

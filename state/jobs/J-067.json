@@ -8,8 +8,8 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
- "head": "882e6ac0f4e64350a9657a5715ef76c05235bd60",
+ "deadline": "2026-11-10T04:17:00Z",
+ "head": "102aafafb957a853830c13aca0a93f882261d743",
  "issue": 328,
  "job": "J-067",
  "landed": {
@@ -47,6 +47,31 @@
    "version": "6742899670",
    "via": "session",
    "what": "ask from Muse on #328"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T02:43:29Z",
+   "dead": "2026-11-10T14:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T04:17:00Z",
+   "id": "O-5b2d39c1",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T02:43:29Z",
+   "missing": 0,
+   "ref": "PR|#371",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 371,
+   "to": "claude",
+   "unseen": null,
+   "version": "fix:102aafafb957a853830c13aca0a93f882261d743",
+   "via": "session",
+   "what": "#371: open FIX from Claude (eye)"
   }
  ],
  "outcome": null,
@@ -58,7 +83,7 @@
   370,
   371
  ],
- "review": "",
- "state": "review",
- "updated": "2026-11-10T01:57:56Z"
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-10T02:43:29Z"
 }

@@ -3,17 +3,21 @@
  "blocked": null,
  "branches": {},
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:27:00Z",
- "head": "cab5ed4b5aa86cff7ea33fc9b2d0d0854741f9dd",
+ "head": "dba1e58dc929a6d76d1fa50037c35890349680b9",
  "issue": 312,
  "job": "J-061",
  "landed": {},
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T02:43:29Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
@@ -170,6 +174,56 @@
    "version": "6752390302",
    "via": "email",
    "what": "ask from Claude on #312"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T02:43:29Z",
+   "dead": "2026-11-10T10:43:29Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T06:43:29Z",
+   "id": "O-4b031494",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T02:43:29Z",
+   "missing": 0,
+   "ref": "PR|#337",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 337,
+   "to": "muse",
+   "unseen": null,
+   "version": "conflict:dba1e58dc929a6d76d1fa50037c35890349680b9",
+   "via": "email",
+   "what": "#337 has a merge conflict with the base"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-10T02:37:49Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T02:43:29Z",
+   "dead": "2026-11-10T14:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T04:17:00Z",
+   "id": "O-21f8978a",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-10T02:43:29Z",
+   "missing": 0,
+   "ref": "ASK|ask on #312",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 312,
+   "to": "claude",
+   "unseen": null,
+   "version": "6757393475",
+   "via": "session",
+   "what": "ask from Muse on #312"
   }
  ],
  "outcome": null,
@@ -180,7 +234,7 @@
  "prs": [
   337
  ],
- "review": "FIX",
+ "review": "",
  "state": "working",
- "updated": "2026-11-10T00:09:03Z"
+ "updated": "2026-11-10T02:43:29Z"
 }
