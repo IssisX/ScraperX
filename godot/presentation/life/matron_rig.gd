@@ -827,6 +827,14 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				# lift alone leaves a pointed toe 0.06 m up, and a gate
 				# that never opens leaves the foot behind her (act: 0.7 m
 				# behind the hip for the rest of the stop).
+				# The travel starts again from where the ankle is drawn,
+				# not from the release's blend: it lifts straight up first,
+				# and a target that leans toward the moving pose foot while
+				# the toe is down creeps it along the deck (hold 0.068 m).
+				if not st.has("from_an"):
+					var drawn_a: Dictionary = _udrawn.get(s, {})
+					st["from_an"] = drawn_a["an"] if drawn_a.has("an") and int(drawn_a.get("frame", -1)) == _ik_frame - 1 else xf * pose_ankle
+					left = 0.0
 				var raise := float(st.get("raise", 0.0))
 				if _drawn_lift(s, st) >= UPLANT_TRAVEL_H_M:
 					left = minf(1.0, left + dt / UPLANT_RELEASE_S / (1.0 - UPLANT_TRAVEL_START))
@@ -834,8 +842,8 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 					raise = minf(raise + UPLANT_RAISE_M, UPLANT_RAISE_MAX_M)
 				st["travel"] = left
 				st["raise"] = raise
-				var from: Vector3 = inv * (st["lock"] as Vector3) - skel.get_bone_global_pose(bone_idx["an_" + s]).basis * _sole_offset(s)
-				var hold_tgt := from.lerp(pose_ankle, left) + Vector3(0.0, UPLANT_TRACK_LIFT_M + raise, 0.0)
+				var from: Vector3 = inv * (st["from_an"] as Vector3)
+				var hold_tgt := from.lerp(pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), left) + Vector3(0.0, raise * (1.0 - left), 0.0)
 				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, hold_tgt, w, "uplant_" + s)
 				st["frame"] = _ik_frame
 				_uplants[s] = st
@@ -1169,7 +1177,7 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 	for s in ["l", "r"]:
 		var heel: Vector3 = point("an_" + s, "heel")
 		var toe: Vector3 = point("an_" + s, "toe")
-		_udrawn[s] = {"at": (heel + toe) * 0.5, "low": minf(heel.y, toe.y), "frame": _ik_frame}
+		_udrawn[s] = {"at": (heel + toe) * 0.5, "low": minf(heel.y, toe.y), "an": skel.global_transform * _gpos("an_" + s), "frame": _ik_frame}
 
 
 # An actual grasp's terminal wrist contact, corrected only within the
