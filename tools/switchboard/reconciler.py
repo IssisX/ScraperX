@@ -31,12 +31,13 @@ weekdays, 9:17 AM-9:17 PM Sat-Sun) at or after its next run plus 1 h, so nothing
 (`relay`: its app ignores the bot's mentions, so the integrator posts the mention) the integrator's due plus 30 min;
 email (Muse) 4 h; issue with a known schedule (Grok: 10 AM, 4 PM Central) its next run + 1 h; anything else is
 manual and goes straight to Cory. Ack: `/ack O-<id>` from a team login, a proven action (a new head, a verdict on
-the head, a merge), or a reply by the addressee after the obligation, by the rule tools/board/asks.py takes in #360:
-a post anywhere that names it (its O-id; for an ask, the ask's comment id, URL or a quote of it), or, for an ask, a
-reply addressed back to the asker on the ask's thread or on another thread naming it, or (one step short of #360)
-its next post on the ask's own job or PR thread, not the board, addressed to no one else. Any other post is not an ack.
-Asks come from the comment stream itself (asks.py's reading of what an ask is), so an ask asks.py drops as answered
-is still the reconciler's to judge. An obligation closes
+the head, a merge), or a reply by the addressee after the obligation that names its O-id. An ask has one judge,
+tools/board/asks.py, which the ledger's list uses too (read: what an ask is; answer_rule: what answers it): a post
+anywhere that names it (its O-id, the ask's comment id or URL, a quote of it), a reply addressed back to the asker
+on the ask's thread or on another thread naming it, or the addressee's next post on the ask's own job issue or PR,
+not the board, addressed to no one else, which answers every ask to it there. Any other post is not an ack.
+Asks come from the comment stream itself, answered or not, so an ask answered before a pass sees it is opened and
+acked, never missed; one the judge stops reading as an ask (a post that names its addressee's ask) is closed. An obligation closes
 only on positive evidence (merged, closed, answered, the head moved): one missing from a pass is untouched, and
 missing UNSEEN_AFTER passes in a row it reads `unseen` (dormant, not closed); its want coming back reopens it. No
 ack: re-sent once at the due time; at the dead time (twice the due span; for a scheduled agent, its run after the
@@ -57,7 +58,6 @@ from __future__ import annotations
 import base64
 import dataclasses
 import datetime as dt
-import hashlib
 import json
 import pathlib
 import re
@@ -112,6 +112,7 @@ MAX_CMDS = 200                       # command ids kept per record
 TERMINAL = ("merged", "superseded", "cancelled", "failed")
 STATES = ("accepted", "assigned", "working", "proof", "review", "landable", "blocked") + TERMINAL
 CONFLICT = "merge conflict with the base"
+NOT_AN_ASK = "not an ask"            # why evidence() closes an ask the judge no longer reads as one
 
 CMD = re.compile(r"^[ \t]*(?:/(?P<cmd>ack|blocked|unblock|cancel)\b[ \t]*(?P<arg>[^\n]*)"
                  r"|\**BLOCKED:\**[ \t]*(?P<blk>[^\n]+))", re.MULTILINE | re.IGNORECASE)
@@ -140,7 +141,7 @@ def central(t: dt.datetime) -> str:
 
 
 def ob_id(job: str, kind: str, to: str, version: str) -> str:
-    return "O-" + hashlib.sha256(f"{job}|{kind}|{to}|{version}".encode("utf-8")).hexdigest()[:8]
+    return L.ob_id(job, kind, to, version)   # in ledger.py: the ledger knows an ask by this same id
 
 
 # ---------- errors ----------
@@ -304,6 +305,10 @@ class Pass:
     # every open issue and PR (the reader's `issues?state=open` listing); None when not read. With it, asks come
     # from the comment stream, and an ask whose thread closed is closed.
     open_threads: frozenset[int] | None = None
+    # what the judge (tools/board/asks.py read) made of the stream this pass, set by stream_asks: the id of every
+    # comment it read as a possible ask, and the (comment id, holder) of each ask it found, answered or not
+    examined: set = dataclasses.field(default_factory=set)
+    asks_read: set = dataclasses.field(default_factory=set)
 
 
 class Lookups:
@@ -438,7 +443,7 @@ def observe(p: Pass, roster: L.Roster) -> tuple[dict[str, JobObs], list, dict[in
     that name no job: (BranchIn, run state))."""
     feed = p.feed
     jobs: dict[str, JobObs] = {}
-    thread_job: dict[int, str] = {}
+    thread_job = L.thread_jobs(feed.issues, feed.prs, feed.system_prs)   # as the ledger files its asks
     no_job: list = []
 
     def get(job: str) -> JobObs:
@@ -449,7 +454,6 @@ def observe(p: Pass, roster: L.Roster) -> tuple[dict[str, JobObs], list, dict[in
         if job and get(job).issue is None:
             get(job).issue = i
             get(job).threads.add(i.number)
-            thread_job[i.number] = job
     pr_refs = set()
     for pr in feed.prs:
         if pr.number in feed.system_prs:
@@ -459,7 +463,6 @@ def observe(p: Pass, roster: L.Roster) -> tuple[dict[str, JobObs], list, dict[in
         if job:
             get(job).prs.append(pr)
             get(job).threads.add(pr.number)
-            thread_job[pr.number] = job
     superseded = {it.ref for it in p.led.items if it.kind == "SUPERSEDED"}
     newest: dict[str, L.RunIn] = {}
     for r in sorted(feed.runs, key=lambda r: r.created_at):
@@ -479,7 +482,7 @@ def observe(p: Pass, roster: L.Roster) -> tuple[dict[str, JobObs], list, dict[in
     loose = []
     own = own_notices(p)
     found = {(a.cid, a.target) for a in feed.asks}
-    for a in list(feed.asks) + [a for a in stream_asks(p, own) if (a.cid, a.target) not in found]:
+    for a in list(feed.asks) + [a for a in stream_asks(p, own, roster, thread_job) if (a.cid, a.target) not in found]:
         if a.cid in own:
             continue   # the reconciler's own "To <Name>:" notice is not a new ask (it would owe itself forever)
         job = thread_job.get(a.thread)
@@ -487,23 +490,24 @@ def observe(p: Pass, roster: L.Roster) -> tuple[dict[str, JobObs], list, dict[in
     return jobs, loose, thread_job, no_job
 
 
-def stream_asks(p: Pass, own: set[str]) -> list[L.AskIn]:
-    """Every ask in the comment stream on an open thread, answered or not (asks.py's reading of what an ask is:
-    `To <Name>`, `→ <Name>`, `cc <Name>`, never the switchboard's own posts or the ledger's notices). Whether it is
-    answered is acks_by_reply's call: asks.py on trunk drops an ask on any later post by its addressee on the thread
-    (#360), and an ask it drops before a pass sees it would never be opened (the J-072 replay: 51 asks missed)."""
+def stream_asks(p: Pass, own: set[str], roster: L.Roster | None = None, thread_job: dict | None = None) -> list[L.AskIn]:
+    """Every ask in the comment stream on an open thread, answered or not, as the one judge reads the stream
+    (tools/board/asks.py read: a line that opens `To <Name>`, `→ <Name>`, `cc <Name>`; never the switchboard's own
+    posts or the ledger's notices; never a post that names an ask from its addressee, which is its answer). Whether it is
+    answered is acks_by_reply's call, by the same judge's answer_rule: an ask answered before a pass sees it is
+    still opened and then acked, never missed (the J-072 replay: 51 asks missed). Leaves on the pass what the judge
+    read (`examined`, `asks_read`), for evidence()."""
     if p.open_threads is None or p.now is None:
         return []
-    since = p.now - L.LIVE
+    stream = [{"id": c.id, "n": c.thread, "t": c.t, "url": "", "body": c.body, "login": c.login}
+              for c in sorted(p.comments, key=lambda c: (c.t, c.id)) if c.id not in own]
+    judge = L.ask_judge(roster, thread_job or {}) if roster is not None else {}
+    who = judge.get("who") or (lambda name: name.lower())
+    p.examined, p.asks_read = set(), set()
     out = []
-    for c in sorted(p.comments, key=lambda c: (c.t, c.id)):
-        if c.login == rules.BOT_LOGIN or c.id in own or c.thread not in p.open_threads or c.t <= since:
-            continue
-        who = c.author
-        if who == "noise" or asks.LEDGER_MARK in c.body:
-            continue
-        for target in sorted({m.group(1) for m in asks.ASK.finditer(c.body[:4000])} - {who}):
-            out.append(L.AskIn(c.id, c.thread, "", target, who, c.t))
+    for a in asks.read(stream, set(p.open_threads), p.now - L.LIVE, examined=p.examined, **judge):
+        p.asks_read.add((a["id"], who(a["target"])))
+        out.append(L.AskIn(a["id"], a["n"], "", a["target"], a["a"], a["t"]))
     return out
 
 
@@ -772,36 +776,13 @@ def thread_replies(p: Pass, roster: L.Roster) -> Replies:
     return Replies(posts, {c.id: c.body for c in p.comments})
 
 
-BRIDGE_POST = "**Muse (via email bridge)"   # every inbound bridge post starts so: Muse writing to Claude
-QUOTE = re.compile(r"^>\s?(.+)$", re.MULTILINE)
-MIN_QUOTE = 12                              # quoted characters that must be in the ask for a quote to name it
+addressees = asks.addressees   # who a post is addressed to: the one judge's reading (tools/board/asks.py)
 
 
-def addressees(body: str) -> set[str]:
-    """Who a post is addressed to (#360's asks.addressees): its `To <Name>` / `→ <Name>` / `cc <Name>` lines,
-    Muse for a `CLAUDE_TO_MUSE:` post, Claude for a bridge post (Muse's mail is always to Claude)."""
-    text = body.lstrip()
-    out = {m.group(1) for m in asks.ASK.finditer(body[:4000])}
-    if text.startswith("CLAUDE_TO_MUSE:"):
-        out.add("Muse")
-    if text.startswith(BRIDGE_POST) or "MUSE_TO_CLAUDE:" in text.split("\n", 1)[0]:
-        out.add("Claude")
-    return out
-
-
-def names(body: str, ob: dict, ask_text: str) -> bool:
-    """Does a post name this obligation: its O-id, or (an ask) the ask's comment id, its URL, or a quote of it?"""
-    body = body[:4000]
-    if re.search(rf"(?<![\w-]){re.escape(ob['id'])}\b", body):
-        return True
-    if ob["kind"] != "ask":
-        return False
-    cid = ob["version"]
-    if re.search(rf"(?<!\d){re.escape(cid)}(?!\d)", body):   # its id, or its URL (…#issuecomment-<id>)
-        return True
-    flat = " ".join(ask_text.split())
-    return bool(flat) and any(len(q := " ".join(m.group(1).split())) >= MIN_QUOTE and q in flat
-                              for m in QUOTE.finditer(body))
+def names(body: str, ob: dict, ask_text: str = "") -> bool:
+    """Does a post name this obligation by its O-id? (An ask is also named by its comment id, its URL or a quote of
+    it: asks.names_ask, through asks.answer_rule.)"""
+    return bool(re.search(rf"(?<![\w-]){re.escape(ob['id'])}\b", body[:4000]))
 
 
 def markers(p: Pass) -> dict[str, tuple[int, int, dt.datetime]]:
@@ -836,6 +817,8 @@ def sync(rec: dict, wants: list[Want], now: dt.datetime, roster: L.Roster, event
         ob = by_id.get(oid)
         if ob is not None:
             ob["missing"] = 0
+            if (ob.get("closed") or {}).get("why", "").startswith(NOT_AN_ASK):
+                continue   # the judge read it as no ask; a want for it past its answer's time in the stream is not one
             if ob.get("ack") is None and (ob.get("unseen") or ob.get("closed")):
                 was = "unseen" if ob.get("unseen") else ob["closed"]["why"]
                 ob["unseen"], ob["closed"], ob["reopened"] = None, None, iso(now)
@@ -898,6 +881,7 @@ class Seen:
         self.branches = {b.name: b for b in f.branches}
         self.issues = {i.number: i for i in f.issues}
         self.open_threads = p.open_threads
+        self.examined, self.asks_read = p.examined, p.asks_read
         self.heads = dict(f.open_heads) | {pr.head_ref: pr.number for pr in f.prs}
         self.runs: dict[str, L.RunIn] = {}
         for r in sorted(f.runs, key=lambda r: r.created_at):
@@ -938,6 +922,10 @@ def evidence(ob: dict, o: JobObs | None, seen: Seen, rec: dict, now: dt.datetime
         n = ob["thread"]   # but an ask on a thread that closed is over (the J-072 replay: #107's asks were
         if seen.open_threads is not None and n not in seen.open_threads and seen.issue(n).get("state") == "closed":
             return "close:its thread closed"   # re-sent and dead-lettered after the board moved to #340)
+        if version in seen.examined and (version, ob["to"]) not in seen.asks_read:
+            # the judge read this very comment this pass and it asks this holder nothing: a sentence that says
+            # "To Grok asks", or a post that names an ask from its addressee, its answer (tools/board/asks.py)
+            return f"close:{NOT_AN_ASK} to its holder, as the stream reads now"
         asked = at(ob.get("asked")) or at(ob["created"])
         return "owed" if now - asked < L.LIVE else ""
     if refkind == "PR":
@@ -1011,19 +999,6 @@ def evidence(ob: dict, o: JobObs | None, seen: Seen, rec: dict, now: dt.datetime
     return ""
 
 
-def elsewhere(body: str, ob: dict, ask_text: str, replies: Replies) -> bool:
-    """A board post that answers named other asks, not this one: it names other posts' comment ids ("to Muse, on
-    comments 6709306608 and 6710071066"), or names one job (J-NNN) in its opening when this ask names others
-    ("Answering Muse's J-044c ask" is not the answer to her touch_matron_act ask about J-048). A post naming several
-    jobs ("the eight asks the bridge just posted here") is a batch answer and keeps them all."""
-    head = body[:300]
-    ids = {x for x in re.findall(r"(?<!\d)(\d{9,11})(?!\d)", body[:4000]) if x in replies.text}
-    if ids - {ob["version"]}:
-        return True
-    jobs, asked = set(JOB_ID.findall(head)), set(JOB_ID.findall(ask_text[:4000]))
-    return len(jobs) == 1 and bool(asked) and not jobs & asked   # one job named: a post about that job alone
-
-
 def owed_asks(state: State) -> dict[tuple[int, str], int]:
     """(thread, addressee) -> how many open asks it owes there, read before this pass's acks by reply."""
     out: dict[tuple[int, str], int] = {}
@@ -1036,55 +1011,41 @@ def owed_asks(state: State) -> dict[tuple[int, str], int]:
 
 def acks_by_reply(rec: dict, replies: Replies, events: Events, roster: L.Roster, board: int = 0,
                   owes: dict | None = None) -> None:
-    """A reply acks only from the addressee and after the obligation (an ask: after the ask), by #360's rule
-    (tools/board/asks.py): a post anywhere that names it (its O-id; an ask's comment id, URL or a quote of it); for an
-    ask also a reply addressed back to the asker (`To <Asker>`, `→`, `cc`; a CLAUDE_TO_MUSE post is to Muse, a bridge
-    post to Claude) on the ask's thread, or on another thread naming it (`#N`), or the addressee's verdict on a PR
-    the ask names. One step short of #360 (no whiplash), a post on the ask's own thread addressed to no one but the
-    asker answers it: on a job's issue or PR, the addressee's next post there ("Claude: accepted as spec H.4" on #244,
-    eight minutes after ChatGPT's ask there); on the board or a thread that names no job, only one whose first line
-    names the asker ("Claude (integrator): Muse, the eight asks the bridge just posted here were all answered by
-    mail", #340). Under #360 alone the J-072 replay sent 42 answered asks to Cory's first batch; with no step at all
-    the #360 case comes back (Muse's "please resend" dropped by "both To Grok asks above are done", which is to Grok).
-    Anything else is not an ack: a post to someone else, and every other kind of obligation, which only its O-id or
-    a proven action acks (the replay found 10 false acks by "a reply on the thread": a status post, a reply to
-    someone else). And when the addressee owes more than one ask on the thread (`owes`), the step short of #360 acks
-    none of them: only a reply that names one (id, URL, quote), or #360's own reply addressed back to the asker,
-    does ("Answering Muse's J-044c ask" on #107 acked her expand-tests ask too). Applied to #360's addressed-back
-    rule as well, the replay found 4 answered asks nagged and dead-lettered (ChatGPT's "To Claude" replies on #169)."""
+    """A reply acks only after the obligation (an ask: after the ask). For an ask the one judge decides
+    (tools/board/asks.py answer_rule, which the ledger's list uses too, so the two cannot differ): from the
+    addressee, a post anywhere that names it (its O-id, the ask's comment id or URL, or a quote of it), a reply
+    addressed back to the asker on the ask's thread or on another thread naming it (`#N`), its verdict on a PR the
+    ask names; on a job's own issue or PR its next post there addressed to no one but the asker, which answers every
+    ask to it on that thread (J-072: Grok's audit post on #322 answered three; with "owes more than one" as an
+    exception there, all three stayed open and were listed 47 h); on the board or a thread that names no job only a
+    post whose first line names the asker, that names no other post or job, and only when the addressee owes one
+    ask there (`owes`: "Answering Muse's J-044c ask" on #107 acked her expand-tests ask too). Every other kind of
+    obligation is acked by reply only when the addressee names its O-id (the replay found 10 false acks by "a reply
+    on the thread": a status post, a reply to someone else)."""
+    who = L.ask_judge(roster, {})["who"]
     for ob in rec["obligations"]:
         if not is_live(ob) or "reply" not in ob["ack_rule"]:
             continue
-        since = at(ob.get("asked")) if ob["kind"] == "ask" and ob.get("asked") else at(ob["created"])
-        text = replies.text.get(ob["version"], "") if ob["kind"] == "ask" else ""
+        is_ask = ob["kind"] == "ask"
+        since = at(ob.get("asked")) if is_ask and ob.get("asked") else at(ob["created"])
+        text = replies.text.get(ob["version"], "") if is_ask else ""
         asker = ""
-        if ob["kind"] == "ask":
+        if is_ask:
             m = re.search(r"ask from (.+?) on #", ob.get("what") or "")
             asker = poster(text) if text else (m.group(1) if m else "")
+        ask = {"id": ob["version"], "oid": ob["id"], "body": text, "a": asker, "n": ob["thread"]}
         refs = {int(r) for r in re.findall(r"#(\d+)", text[:600])} | {ob["thread"]}
-        signs = {str(n) for n in (roster.agents.get(ob["to"]) or {}).get("names", [])} or {ob["to"].capitalize()}
+        own_thread = bool(rec["job"]) and ob["thread"] not in (0, board)   # a job's own issue or PR, never the board
         for t, n, agent, body in replies.posts:
             if t <= since:
                 continue
-            how = ""
-            verdicts = {(m.group(1), int(m.group(2))) for m in asks.VERDICT.finditer(body[:400])}
-            if ob["kind"] == "ask" and any((s, r) in verdicts for s in signs for r in refs):
-                how = "verdict on a PR it names"
-            elif agent != ob["to"]:
-                continue
-            elif names(body, ob, text):
-                how = "reply naming it"
-            elif asker and asker in addressees(body) and (n == ob["thread"] or
-                                                          re.search(rf"#{ob['thread']}\b", body[:2000])):
-                how = "reply to the asker"
-            elif ob["kind"] == "ask" and (owes or {}).get((ob["thread"], ob["to"]), 0) > 1:
-                continue   # it owes more than one ask on this thread: no step-short ack, only a named one
-            elif ob["kind"] == "ask" and n == ob["thread"] and asker and not (addressees(body) - {asker}):
-                first = body.lstrip().split("\n", 1)[0][:200]   # addressed to no one else, on the ask's thread:
-                if rec["job"] and n not in (0, board):            # a job's own thread: its next post answers
-                    how = "reply on its thread"
-                elif re.search(rf"\b{re.escape(asker)}\b", first) and not elsewhere(body, ob, text, replies):
-                    how = "reply naming the asker"   # the board: only when it names the asker, and not other asks
+            if is_ask:
+                reply = {"a": agent, "n": n, "body": body,
+                         "verdicts": {(m.group(1), int(m.group(2))) for m in asks.VERDICT.finditer(body[:400])}}
+                how = asks.answer_rule(reply, ask, ob["to"], refs, own_thread,
+                                       (owes or {}).get((ob["thread"], ob["to"]), 0), replies.text, who)
+            else:
+                how = "reply naming it" if agent == ob["to"] and names(body, ob) else ""
             if how:
                 ob["ack"] = {"how": how, "at": iso(t), "by": ob["to"]}
                 ob["unseen"] = None
@@ -1973,7 +1934,7 @@ def read_pass(sw, gh: CountingGH, steered: list, board: int, proof_workflow: str
               system_prs: Iterable[int], roster: L.Roster, cfg: dict) -> Pass:
     import types
     shim = types.SimpleNamespace(gh=gh, team=sw.team, run_state=sw.run_state)
-    feed, sent = L.read_feed(shim, steered, sw.now, board, proof_workflow, system_branches, system_prs)
+    feed, sent = L.read_feed(shim, steered, sw.now, board, proof_workflow, system_branches, system_prs, roster)
     led = L.classify(feed, sw.now, roster)
     raw, _ = L.page_list(gh, f"repos/{gh.repo}/issues/comments?since={L.iso(sw.now - L.LIVE)}")   # cached: read once
     comments = []

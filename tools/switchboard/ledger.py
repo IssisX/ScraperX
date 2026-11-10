@@ -33,7 +33,7 @@ hidden marker in the ledger section and in each notice comment's own marker.
 The section between `<!-- ledger:start -->` and `<!-- ledger:end -->` is the only text the ledger writes; the
 markers go under the body's first heading when missing. Nothing is ever closed or deleted.
 
-Usage (a dry run, read-only: prints the section and every notice it would send):
+Usage (a dry run, read-only: prints the section, and every notice it would send when the ledger still notifies):
   python3 tools/switchboard/ledger.py [--repo IssisX/ScraperX]
 """
 
@@ -104,6 +104,13 @@ def clean(text: str, limit: int = 120) -> str:
     """Outside text on one line, with nothing that could mention anyone, close a marker or start markup."""
     text = " ".join(str(text).split())[:limit]
     return text.replace("@", "").replace("<", "(").replace(">", ")").replace("`", "'")
+
+
+def ob_id(job: str, kind: str, to: str, version: str) -> str:
+    """The reconciler's id for one obligation (reconciler.py): O-<8 hex> of its job ("" on a thread that names
+    none), kind, holder (the agent key) and version (an ask: its comment id). It is here, not there, so the ledger
+    knows an ask by the id the reconciler's notices and the team's `/ack` lines carry, with no read of the state."""
+    return "O-" + hashlib.sha256(f"{job}|{kind}|{to}|{version}".encode("utf-8")).hexdigest()[:8]
 
 
 def job_of_branch(name: str) -> str:
@@ -972,9 +979,10 @@ def touched_at(created: str, updated: str, touches: dict[int, dt.datetime], n: i
 
 
 def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: str, system_branches: Iterable[str],
-              system_prs: Iterable[int]) -> tuple[Feed, list[str]]:
+              system_prs: Iterable[int], roster: Roster | None = None) -> tuple[Feed, list[str]]:
     """Everything the ledger needs, read from GitHub through the switch's own client. Returns the feed and the
-    notice keys found in the switchboard's own recent comments."""
+    notice keys found in the switchboard's own recent comments. With the roster, the asks are judged as the
+    reconciler judges them (ask_judge): by job thread, by agent, and by the reconciler's own id for each ask."""
     gh, repo = sw.gh, sw.gh.repo
     problems: list[str] = []
     since_live, since_touch = now - LIVE, now - TOUCH_WINDOW
@@ -1152,12 +1160,45 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             continue
         stream.append({"n": n, "t": parse(c["created_at"]), "url": c.get("html_url") or "", "body": c.get("body") or "",
                        "id": str(c.get("id")), "login": (c.get("user") or {}).get("login")})
+    judge = ask_judge(roster, thread_jobs(issues, prs, frozenset(system_prs))) if roster is not None else {}
     found = [AskIn(a["id"], a["n"], a["url"], a["target"], a["a"], a["t"])
-             for a in asks.unanswered(stream, open_threads, since_live) if a["login"] != rules.BOT_LOGIN]
+             for a in asks.unanswered(stream, open_threads, since_live, **judge) if a["login"] != rules.BOT_LOGIN]
 
     feed = Feed(prs, open_prs, branches, issues, found, runs, rules.TRUNK, frozenset(system_branches),
                 frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo, overlap)
     return feed, sent
+
+
+def thread_jobs(issues: list, prs: list, system_prs: Iterable[int]) -> dict[int, str]:
+    """Each job's own threads -> its job id: the job's issue (the first open one whose title names it) and its open
+    PRs (the `Job:` line, else the branch name). The board, the inbox and any thread that names no job are not in
+    it. The reconciler files its records by this same map (reconciler.observe)."""
+    out: dict[int, str] = {}
+    for i in issues:
+        job = rules.job_of_title(i.title)
+        if job and job not in out.values():
+            out[i.number] = job
+    for pr in prs:
+        if pr.number in system_prs:
+            continue
+        job = rules.job_of_pr(pr.job_line) or job_of_branch(pr.head_ref)
+        if job:
+            out[pr.number] = job
+    return out
+
+
+def ask_judge(roster: Roster, thread_job: dict[int, str]) -> dict:
+    """The keywords tools/board/asks.py's read() and answer_rule() take, from the roster and the job threads, so the
+    ledger and the reconciler put the same questions to the one judge: which threads are a job's own
+    (`job_threads`), which names are one agent (`who`), and the reconciler's id for an ask (`oid`)."""
+    def who(name: str) -> str:
+        p = roster.of_name(name)
+        return p.agent if p else name.lower()
+
+    def oid(comment: dict, target: str) -> str:
+        return ob_id(thread_job.get(comment["n"], ""), "ask", who(target), str(comment.get("id")))
+
+    return {"job_threads": frozenset(thread_job), "who": who, "oid": oid}
 
 
 def lane_groups(branches: list[BranchIn], refs: set[str], system_branches: Iterable[str]) -> dict:
@@ -1191,14 +1232,15 @@ def sweep(sw, steered: list, board: int, muse_label: str, proof_workflow: str, s
           system_prs: Iterable[int], when: str, notify: bool = True) -> Ledger:
     """The switch's one call (switch.py main, after a full steer sweep). `notify` False: the section only (run)."""
     import yaml
-    feed, sent = read_feed(sw, steered, sw.now, board, proof_workflow, system_branches, system_prs)
     roster = Roster(yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {})
+    feed, sent = read_feed(sw, steered, sw.now, board, proof_workflow, system_branches, system_prs, roster)
     return run(sw.gh, feed, roster, sw.now, when, sw.out, muse_label, sent, notify=notify)
 
 
 def main() -> int:
     """A dry run against the live repo: the PRs read as the sweep reads them (without the rule check)."""
     import argparse
+    import reconciler
     import switch
     from ghapi import GitHub
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -1212,7 +1254,8 @@ def main() -> int:
         d = rules.merge_decision(facts, sw.team.vendor_of_branch(facts.head_ref), sw.team)
         steered.append(switch.Steered(facts, ctx, d))
     sweep(sw, steered, switch.BOARD_ISSUE, switch.MUSE_LABEL, switch.PROOF_WORKFLOW,
-          {switch.LEDGER_BRANCH, switch.INBOX_BRANCH}, {switch.INBOX_PR}, switch.central(now))
+          {switch.LEDGER_BRANCH, switch.INBOX_BRANCH}, {switch.INBOX_PR}, switch.central(now),
+          reconciler.ledger_notifies(sw.root))   # as the switch calls it (work/switchboard.yml `notices`)
     return 0
 
 
