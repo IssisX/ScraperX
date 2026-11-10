@@ -2825,7 +2825,8 @@ private:
     float player_damage_ns_ = 0.0F;
     // J-059 #307: per-region injury from where each blow lands (J-044a §D).
     // Monotonic: no heal. Branch A keeps the checkpoint zeroing (restore()
-    // still clears damage); the protected save-contract branch persists it.
+    // still clears damage, and the injury with it); the protected
+    // save-contract branch persists it.
     injury::State injury_{};
     JPH::Vec3 blow_change_ = JPH::Vec3::sZero();
     JPH::Vec3 blow_impulse_ = JPH::Vec3::sZero();

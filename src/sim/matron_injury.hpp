@@ -89,9 +89,11 @@ inline constexpr float kHeadTopM = 0.10F;
 inline constexpr float kHeadBottomM = -0.08F;
 inline constexpr float kNeckBottomM = -0.20F;
 inline constexpr float kChestBottomM = -0.59F;
-// A chin hit is central: the jaw anchor sits on the midline, the cheeks
-// at ±0.055 m.
-inline constexpr float kJawHalfM = 0.02F;
+// A chin hit is central: the jaw anchor sits on the midline at the chin
+// (eye-frame y = kHeadBottomM), the cheeks at ±0.055 m. A midline hit
+// counts as jaw only within the classification radius of the chin point,
+// the same radius the eyes use: a centred forehead or nose blow is face,
+// not jaw.
 
 // Classify a judged contact point (the player's fist: a real contact
 // point, measured by the strike) in her head frame: `eye_mid` is the
@@ -113,7 +115,11 @@ inline constexpr float kJawHalfM = 0.02F;
         const float dxr = x + kEyeLateralM;
         if (dxl * dxl + y * y <= kEyeClassifyM * kEyeClassifyM) return Region::EyeL;
         if (dxr * dxr + y * y <= kEyeClassifyM * kEyeClassifyM) return Region::EyeR;
-        if (std::abs(x) <= kJawHalfM) return Region::Jaw;
+        // Within the classification radius of the chin point: the jaw.
+        // Anywhere else on the midline is face (forehead above, nose below
+        // the eyes): the jaw anchor is the chin, not the whole midline.
+        const float dy_chin = y - kHeadBottomM;
+        if (x * x + dy_chin * dy_chin <= kEyeClassifyM * kEyeClassifyM) return Region::Jaw;
         return x >= 0.0F ? Region::FaceL : Region::FaceR;
     }
     if (y >= kHeadBottomM && y <= kHeadTopM) return Region::Skull;

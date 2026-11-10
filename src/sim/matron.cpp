@@ -4107,6 +4107,13 @@ void Matron::restore(const Saved &saved) {
     // A checkpoint rewind or reload restores her alive and undamaged.
     damage_ns_ = 0.0F;
     player_damage_ns_ = 0.0F;
+    // The injury with it (Branch A checkpoint zeroing): her doses
+    // reconcile with damage_ns_, so a dose left standing past the restore
+    // would outlive the damage it came from and the view would keep a
+    // bruise on an undamaged body. The protected save-contract branch
+    // (J-069) persists damage and injury together through Saved; this
+    // zeroing is only the checkpoint path.
+    injury_ = {};
     {
         remove_body();
         end_hold(saved.state);

@@ -134,6 +134,20 @@ void run_classify() {
             "injury: a fist on her right cheek is face_r");
     require(injury::classify_contact(at(0.0F, -0.05F, 0.10F), eye, fwd) == injury::Region::Jaw,
             "injury: a fist dead on her chin is jaw");
+    require(injury::classify_contact(at(0.0F, -0.06F, 0.10F), eye, fwd) == injury::Region::Jaw,
+            "injury: a fist inside the chin radius is jaw");
+    // -0.07, not the chin point -0.08 itself: the chin point sits exactly
+    // on the head/neck band edge, and the 1.69 m round-trip in `at` can land
+    // a float hair below it, in the neck band. The jaw radius is what the
+    // test pins, not the band edge.
+    require(injury::classify_contact(at(0.0F, -0.07F, 0.10F), eye, fwd) == injury::Region::Jaw,
+            "injury: a fist just above the chin point is jaw");
+    require(injury::classify_contact(at(0.0F, 0.08F, 0.10F), eye, fwd) == injury::Region::FaceL,
+            "injury: a centred forehead blow is face, not jaw");
+    require(injury::classify_contact(at(0.0F, -0.03F, 0.10F), eye, fwd) == injury::Region::FaceL,
+            "injury: a centred nose blow is face, not jaw");
+    require(injury::classify_contact(at(0.0F, -0.04F, 0.10F), eye, fwd) == injury::Region::FaceL,
+            "injury: a fist just above the chin radius is face, not jaw");
     require(injury::classify_contact(at(0.0F, 0.0F, -0.10F), eye, fwd) == injury::Region::Skull,
             "injury: a fist on the back of her head is skull, never an eye");
     require(injury::classify_contact(at(0.0315F, 0.0F, -0.10F), eye, fwd) == injury::Region::Skull,
@@ -271,13 +285,23 @@ void run_mixed_reconciliation() {
 void run_capability() {
     Simulation s(InitialSpawn::Deck154);
     setup(s, 3.0);
-    const Vector3 e = eye_mid(s);
-    const Vector3 chest_at = add(add(e, {0.0, -0.26, 0.0}), scaled(head_fwd(s), kCapsuleSurfaceM));
-    for (int i = 0; i < 18; ++i) blow_at(s, chest_at, 150.0F);  // 2700 N·s to her chest
+    // Re-aimed before every blow, like the eye and face tests: over about
+    // 2 s she drifts and crouches, and a point computed once walks out of
+    // the chest band.
+    const auto chest = [&]() {
+        replace_gap(s);
+        settle_head(s);
+        const Vector3 e = eye_mid(s);
+        return add(add(e, {0.0, -0.26, 0.0}), scaled(head_fwd(s), kCapsuleSurfaceM));
+    };
+    for (int i = 0; i < 18; ++i) blow_at(s, chest(), 150.0F);  // 2700 N·s to her chest
     const auto m = s.matron_state();
     require(std::abs(region(s, injury::Region::Chest) - 2700.0) < 1.0,
             "injury: 18 x 150 N·s to her chest is 2700 in chest");
-    require(m.limb_health[0] == 0.0 && m.limb_health[1] == 0.0,
+    // A float-noise tolerance, not an exact zero: player_ns can come out a
+    // hair under 150 (float Length of a float-cast yaw vector), leaving a
+    // hair of arm. 1e-6 is the float noise, not a gameplay margin.
+    require(m.limb_health[0] <= 1e-6 && m.limb_health[1] <= 1e-6,
             "injury: at 2700 chest dose her arms are spent");
     require(m.limb_health[2] == 1.0 && m.limb_health[3] == 1.0,
             "injury: her legs are whole (no leg regions in slice 1)");
@@ -293,11 +317,44 @@ void run_capability() {
         {3000.0F, static_cast<float>(m.limb_health[3]), true, 1.0F},
     }};
     const capacity::Allocation a = capacity::allocate(limbs, 6000.0F, 6000.0F);
-    require(a.applied_n[0] == 0.0F && a.applied_n[1] == 0.0F,
+    // Spent arms apply nothing, to the same float noise (3000 x 1e-6).
+    require(a.applied_n[0] < 0.01F && a.applied_n[1] < 0.01F,
             "injury: spent arms apply nothing");
     require(std::abs(a.total_n - 6000.0F) < 0.01,
             "injury: the healthy legs cover 6000 honestly, no backfill");
     std::cout << "PASS matron-injury capability\n";
+}
+void run_restore_zeroes_injury() {
+    Simulation s(InitialSpawn::Deck154);
+    setup(s, 3.0);
+    const auto chest = [&]() {
+        replace_gap(s);
+        settle_head(s);
+        const Vector3 e = eye_mid(s);
+        return add(add(e, {0.0, -0.26, 0.0}), scaled(head_fwd(s), kCapsuleSurfaceM));
+    };
+    blow_at(s, chest(), 150.0F);
+    require(std::abs(region(s, injury::Region::Chest) - 150.0) < 0.01,
+            "injury: one 150 N·s blow to her chest is 150 in chest");
+    require(std::abs(s.matron_state().damage_ns - 150.0) < 0.01,
+            "injury: the chest blow is the whole damage before the restore");
+    // A checkpoint restore: launch_matron_for_test restores her from a
+    // fresh Saved (state Hunting), the same Matron::restore the checkpoint
+    // path calls. It clears damage; the injury must clear with it, or the
+    // regions would outlive the damage they reconcile with.
+    const Vector3 p = s.snapshot().player_position;
+    const Vector3 m = s.matron_state().position;
+    s.launch_matron_for_test({p.x, m.y - static_cast<double>(Matron::kStandCentre), p.z + 3.0});
+    for (int i = 0; i < 5; ++i) tick(s);
+    const auto after = s.matron_state();
+    require(after.damage_ns == 0.0, "injury: a checkpoint restore clears damage");
+    require(std::abs(regions_total(s)) < 0.01,
+            "injury: a checkpoint restore clears the injury with the damage");
+    require(std::abs(region(s, injury::Region::Chest)) < 0.01,
+            "injury: her chest dose is gone after the restore");
+    require(after.limb_health[0] == 1.0 && after.limb_health[1] == 1.0,
+            "injury: her arms are whole again after the restore");
+    std::cout << "PASS matron-injury restore zeroes injury\n";
 }
 }  // namespace
 
@@ -308,4 +365,5 @@ void run_matron_injury() {
     run_real_punch();
     run_mixed_reconciliation();
     run_capability();
+    run_restore_zeroes_injury();
 }
