@@ -237,7 +237,7 @@ private:
         Fabricated object;
         scraperx::sim::kit::Kit::BodyState state;
     };
-    bool read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out) const;
+    bool read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out, std::uint32_t mark) const;
     void write_fabricated(SaveWriter &w) const;
 
 private:
@@ -272,6 +272,9 @@ private:
     // every one still unbuilt when `band_y` is NaN (the end of the table), or
     // the at_end ones; each once.
     void build_test_extra_solids(JPH::BodyInterface &bodies, double band_y, bool at_end);
+    // Gives her the loose stock she takes and throws or shoves (J-042), once
+    // every piece has its body.
+    void give_matron_stock();
 
     [[nodiscard]] bool mirrors_owned_body(const JPH::AABox &bounds) const;
 
@@ -823,6 +826,13 @@ public:
     scraperx::sim::kit::RopeIndex rig_rope_;
     SupportSample support_sample_{};
     JPH::Vec3 airborne_inherited_velocity_{JPH::Vec3::sZero()};
+    // His own drive's speed for the listener (J-061): the horizontal speed
+    // his legs, arms and hook give him, never wind or another outside push.
+    // Grounded, it is his speed over his frame; in the air it keeps what
+    // takeoff gave it and only his own inputs move it (apply_locomotion).
+    // The listener takes only this part off a blow, so a gust's push into a
+    // wall stays a blow.
+    JPH::Vec3 self_drive_velocity_{JPH::Vec3::sZero()};
     JPH::Vec3 facing_{JPH::Vec3::sZero()};
     bool grounded_ = false;
     std::uint64_t support_entity_id_ = 0;

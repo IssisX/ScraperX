@@ -643,6 +643,11 @@ const UPLANT_TRAVEL_START := 0.4
 # not on the clock. A frame old it lags the drop by a frame, so the bar
 # sits above the plant band by that drop.
 const UPLANT_TRAVEL_H_M := 0.10
+# A release's travel left unfinished (its sole never cleared that bar)
+# goes on in tracking, raising the foot by this much a frame until it
+# clears, never more than the cap in all.
+const UPLANT_RAISE_M := 0.03
+const UPLANT_RAISE_MAX_M := 0.3
 # The proof pin only holds a foot while the body is nearly still — the
 # check's own plant bar (STILL_MPS). A stepping body must be free to step:
 # pinning a foot mid-stride holds it off the deck (figure carry) and starves
@@ -683,6 +688,18 @@ func _reach_sole(hip: String, knee: String, ankle: String, sole_target: Vector3,
 	# descent so the single pass lands cleanly.
 	var basis := skel.get_bone_global_pose(bone_idx[ankle]).basis
 	_reach_chain(hip, knee, ankle, sole_target - basis * _sole_offset(s), w, key)
+
+
+# How far the drawn sole's lowest point (heel or toe, a frame old) is above
+# the deck its plant locked to. The lowest point, not the midpoint: a foot
+# pointed down has its toe on the deck with its midpoint 0.1 m up, and a
+# gate on the midpoint let it travel with the toe dragging. No fresh drawn
+# sole: up (the gate never holds a foot it cannot see).
+func _drawn_lift(s: String, st: Dictionary) -> float:
+	var drawn: Dictionary = _udrawn.get(s, {})
+	if drawn.is_empty() or int(drawn.get("frame", -1)) != _ik_frame - 1 or not st.has("lock") or not drawn.has("low"):
+		return 1.0
+	return float(drawn["low"]) - float((st["lock"] as Vector3).y)
 
 
 func _sole_skel(s: String) -> Dictionary:
@@ -762,6 +779,11 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				var ls: Vector3 = inv * (st["lock"] as Vector3)
 				dragged = Vector2(ls.x - hip.x, ls.z - hip.z).length() > 0.92 * leg
 			if not down or dragged:
+				# A release the pose started by pressing its sole under the
+				# deck (a hard stop drives the trailing toe 0.09 m into it),
+				# not by lifting it: that foot points down, and its toe is
+				# still on the deck when the release's clock runs out.
+				st["pressed"] = not dragged and float(sole["y"]) <= -UPLANT_M
 				st["releasing"] = true
 				st["rel"] = -dt / UPLANT_RELEASE_S
 				st["frame"] = _ik_frame
@@ -791,6 +813,53 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				dev = Vector2(mv.x - pv.x, mv.z - pv.y + body_step).length()
 				var allow := maxf(2.5 * float(view._gait_mps) * dt, 0.05)
 				slow = dev < 0.5 * allow
+			var left := float(st.get("travel", 1.0))
+			if left < 1.0 and float(view._gait_mps) > UPLANT_STILL_MPS:
+				# She is walking again: the walking plant takes the foot
+				# back (no slide counts under a moving body, and a held
+				# lift would block every touchdown of her stride).
+				st.erase("travel")
+				st.erase("from_an")
+				st.erase("raise")
+				left = 1.0
+			if left < 1.0:
+				# A pressed release ended on its clock with its travel
+				# unfinished: the sole never rose (the foot pointed down,
+				# its toe on the deck). The travel goes on here under the
+				# release's own rule (it advances only while the drawn sole
+				# is up) at the lift's height, and the foot neither touches
+				# down nor pins until it is done: a foot swung forward from
+				# the lock with its toe on the deck is a slide (act 0.092 m
+				# at the toolbox stop). A foot still under the bar is raised further each frame
+				# (UPLANT_RAISE_M) until its sole clears it: the ankle's
+				# lift alone leaves a pointed toe 0.06 m up, and a gate
+				# that never opens leaves the foot behind her (act: 0.7 m
+				# behind the hip for the rest of the stop).
+				# The travel starts again from where the ankle is drawn,
+				# not from the release's blend: it lifts straight up first,
+				# and a target that leans toward the moving pose foot while
+				# the toe is down creeps it along the deck (hold 0.068 m).
+				if not st.has("from_an"):
+					var drawn_a: Dictionary = _udrawn.get(s, {})
+					st["from_an"] = drawn_a["an"] if drawn_a.has("an") and int(drawn_a.get("frame", -1)) == _ik_frame - 1 else xf * pose_ankle
+					left = 0.0
+				var raise := float(st.get("raise", 0.0))
+				if _drawn_lift(s, st) >= UPLANT_TRAVEL_H_M:
+					left = minf(1.0, left + dt / UPLANT_RELEASE_S / (1.0 - UPLANT_TRAVEL_START))
+				else:
+					raise = minf(raise + UPLANT_RAISE_M, UPLANT_RAISE_MAX_M)
+				st["travel"] = left
+				st["raise"] = raise
+				var from: Vector3 = inv * (st["from_an"] as Vector3)
+				# The raise holds for the whole travel: faded as the foot
+				# travels, it let the pointed toe dip back to the deck
+				# mid-step (act 0.089 m at t=169.77).
+				var hold_tgt := from.lerp(pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), left) + Vector3(0.0, raise, 0.0)
+				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, hold_tgt, w, "uplant_" + s)
+				st["frame"] = _ik_frame
+				_uplants[s] = st
+				_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+				continue
 			if down and df >= 3 and slow:
 				var mid: Vector3 = sole["mid"] as Vector3
 				# The lock is where the foot was HELD. When the proof pin
@@ -920,10 +989,16 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				# release still ends on its clock, and the tracking after
 				# it carries any travel left over.
 				var travel := float(st.get("travel", 0.0))
+				# A walking release gates on the drawn sole's midpoint
+				# (its timing is tuned on it); a pressed one on its
+				# lowest point: that foot points down, its toe on the
+				# deck while its midpoint is 0.1 m up.
 				var drawn_h := 1.0
 				var drawn_r: Dictionary = _udrawn.get(s, {})
 				if not drawn_r.is_empty() and int(drawn_r.get("frame", -1)) == _ik_frame - 1 and st.has("lock"):
 					drawn_h = float((drawn_r["at"] as Vector3).y - (st["lock"] as Vector3).y)
+				if bool(st.get("pressed", false)):
+					drawn_h = _drawn_lift(s, st)
 				if drawn_h >= UPLANT_TRAVEL_H_M:
 					travel = minf(travel_tgt, travel + dt / UPLANT_RELEASE_S / (1.0 - UPLANT_TRAVEL_START))
 				st["travel"] = travel
@@ -953,6 +1028,11 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle, w, "uplant_" + s)
 			else:
 				st["tracking"] = true
+				# Only a pressed release whose sole is still down carries
+				# its unfinished travel into tracking; any other hands over
+				# as it always has.
+				if float(st.get("travel", 1.0)) >= 1.0 or not bool(st.get("pressed", false)) or _drawn_lift(s, st) >= UPLANT_TRAVEL_H_M:
+					st.erase("travel")
 				st["frame"] = _ik_frame
 				_uplants[s] = st
 				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), w, "uplant_" + s)
@@ -1108,7 +1188,7 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 	for s in ["l", "r"]:
 		var heel: Vector3 = point("an_" + s, "heel")
 		var toe: Vector3 = point("an_" + s, "toe")
-		_udrawn[s] = {"at": (heel + toe) * 0.5, "frame": _ik_frame}
+		_udrawn[s] = {"at": (heel + toe) * 0.5, "low": minf(heel.y, toe.y), "an": skel.global_transform * _gpos("an_" + s), "frame": _ik_frame}
 
 
 # An actual grasp's terminal wrist contact, corrected only within the

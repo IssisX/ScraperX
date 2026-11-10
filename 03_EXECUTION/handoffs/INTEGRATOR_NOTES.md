@@ -4,12 +4,14 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794273592 (2026-11-10 01:19:52Z, ~7:19 PM Central)
+Read through: 1794320418 (2026-11-10 8:20 AM Central)
 
 ## Now: game code (J-072 gate passed 11-09 5:58 PM: round trip O-319779d9 acked, #350 6754851673)
 Cory 11-09 night: code, two helpers at most, no waste. Landed #370 #371 (J-067 hair), #375. Open: J-042 #374 (protected, draft; foot slide 0.092>0.079 at her toolbox stop: upright release, IK aims the ankle 0.23 up but a later pass (govern?) keeps the drawn sole on the deck; findings #240 6758686846, native built in .claude/worktrees/j042); J-001 on claude/integrate-j001-hold (57 checks red under #227, needs ChatGPT on #108); both wait on ChatGPT. Muse ruled: J-044l trigger sweeps her Lunge path, J-044c gains incompatibility, J-043 hang rail, J-067 back-hair fixes after #371, J-011 skirt thigh capsules.
 
 ## Waiting on me
+- Cory 11-10 9:1x AM: J-072 is THE job, not a side task. Until #350 closes: no game work of any kind, rulings to Muse included; only the collaboration system. "If the collaboration system is not working, then no coding will get done."
+- Cory 11-10 9:46 AM: pause over, all agents resumed (Muse mailed, board #384 6771915794); Muse does #343 (J-059) first. FINISH LINE: #343 merges through the system with no hand step; then close #350, alert Cory, wait for his go. No more system tweaks: fix only what blocks a real job ("stop tweaking stupid shit", "there is a finish line"). ChatGPT break-it dropped. Answers to Cory: short, plain, Central time. J-001 work kept in .claude/worktrees/agent-a89cb2ae2faf07fdd (head 02ec8a0f).
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt; it cracked #298. Give it the hardest work, not only stuck jobs; each prompt says what failed and what was ruled out, bounds its answer length and run time; one combined prompt at a time, never for sport; the prompt goes whole in one block for Cory (11-07, 11-08).
 - Cory 7:12 AM Sun prompt (fight, damage, ladder): repro posted on #320/#321/#322/#307 and mailed (J-060, J-063, J-059 feed). Mine: drawn limbs, eye-check of visible damage, two silent recordings, audio/haptic timing. Kick/sweep and ladder per-tick numbers: Muse measures before and after. Hair done: J-067 #328, PR #329 (eye OK); neck ring mailed to Muse; back-hair split traced to Muse bffb8b38 (one bone per vertex, pushed off cloth), mailed as J-067; #329 red (hair check count over bound) folded into J-067 on fb-bot/integrate-j067, PR #334 opened 6:20 PM (workflow count 21->22, needs Codex + Claude API), #329 closed. Argon answered (on #321, verified): its section 4 is the J-063 design; warp fixes mailed as J-064; tick 14 is test-only.
 - Cory 11-08: American spelling in chat only (#325 closed). Job numbers: read the highest J-NNN on all job issues first.

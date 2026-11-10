@@ -104,15 +104,18 @@ Bay::Bay(JPH::PhysicsSystem &system, kit::Kit &kit) : system_(system), kit_(kit)
     // the shaft's edge girder and one on the outer face's, a pipe between
     // them, and the chain's hanger under it over the leaf's eye. The chain's
     // shackle is made fast on a cleat on the end post of the east rail, by
-    // the leaf's south-east corner.
+    // the leaf's south-east corner. J-042: the pipe rides 0.1 m higher on
+    // its posts (the hanger's strap 0.1 m longer, its eye and the chain where
+    // they were), so a pallet she throws west over the cut clears it: at the
+    // old height its tumbling corner caught the pipe by under 5 cm.
     const float bridge_x = kEyeX;
     for (const float z : {kSouthZ - 0.25F, kNorthZ + 0.1F}) {
-        frame.push_back(span({bridge_x - 0.08F, kTop - 0.15F, z - 0.08F}, {bridge_x + 0.08F, kBridgeY + 0.3F, z + 0.08F},
+        frame.push_back(span({bridge_x - 0.08F, kTop - 0.15F, z - 0.08F}, {bridge_x + 0.08F, kBridgeY + 0.4F, z + 0.08F},
                              Material::Rust));
     }
-    frame.push_back(pipe(0.1F, {bridge_x, kBridgeY + 0.2F, kSouthZ - 0.25F}, {bridge_x, kBridgeY + 0.2F, kNorthZ + 0.1F},
+    frame.push_back(pipe(0.1F, {bridge_x, kBridgeY + 0.3F, kSouthZ - 0.25F}, {bridge_x, kBridgeY + 0.3F, kNorthZ + 0.1F},
                          Material::Galvanised));
-    frame.push_back(span({kEyeX - 0.06F, kBridgeY - 0.05F, kEyeZ - 0.06F}, {kEyeX + 0.06F, kBridgeY + 0.12F, kEyeZ + 0.06F},
+    frame.push_back(span({kEyeX - 0.06F, kBridgeY - 0.05F, kEyeZ - 0.06F}, {kEyeX + 0.06F, kBridgeY + 0.22F, kEyeZ + 0.06F},
                          Material::Steel));
     const float cleat_x = kEastX + 0.06F;
     const float cleat_y = kTop + kRailH - 0.12F;

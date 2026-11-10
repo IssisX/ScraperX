@@ -324,7 +324,7 @@ void run_capability() {
             "injury: the healthy legs cover 6000 honestly, no backfill");
     std::cout << "PASS matron-injury capability\n";
 }
-void run_restore_zeroes_injury() {
+void run_restore_persists_injury() {
     Simulation s(InitialSpawn::Deck154);
     setup(s, 3.0);
     const auto chest = [&]() {
@@ -338,23 +338,26 @@ void run_restore_zeroes_injury() {
             "injury: one 150 N·s blow to her chest is 150 in chest");
     require(std::abs(s.matron_state().damage_ns - 150.0) < 0.01,
             "injury: the chest blow is the whole damage before the restore");
-    // A checkpoint restore: launch_matron_for_test restores her from a
-    // fresh Saved (state Hunting), the same Matron::restore the checkpoint
-    // path calls. It clears damage; the injury must clear with it, or the
-    // regions would outlive the damage they reconcile with.
-    const Vector3 p = s.snapshot().player_position;
-    const Vector3 m = s.matron_state().position;
-    s.launch_matron_for_test({p.x, m.y - static_cast<double>(Matron::kStandCentre), p.z + 3.0});
+    // A checkpoint reload: the checkpoint commits after the blow, the save
+    // carries her damage, and the reload restores her as the checkpoint had
+    // her — damage and injury persist (settled call), they are not cleared.
+    const std::uint64_t commits_before = s.snapshot().checkpoint_commit_count;
+    s.debug_place_matron({0.0, 11.0, 0.0});
+    for (int i = 0; i < 180 && s.snapshot().checkpoint_commit_count == commits_before; ++i) tick(s);
+    require(s.snapshot().checkpoint_commit_count > commits_before,
+            "injury: a checkpoint actually commits after the chest blow");
+    const auto injured_save = s.save_game();
+    require(s.load_game(injured_save.data(), injured_save.size()),
+            "injury: injured checkpoint loads");
     for (int i = 0; i < 5; ++i) tick(s);
     const auto after = s.matron_state();
-    require(after.damage_ns == 0.0, "injury: a checkpoint restore clears damage");
-    require(std::abs(regions_total(s)) < 0.01,
-            "injury: a checkpoint restore clears the injury with the damage");
-    require(std::abs(region(s, injury::Region::Chest)) < 0.01,
-            "injury: her chest dose is gone after the restore");
-    require(after.limb_health[0] == 1.0 && after.limb_health[1] == 1.0,
-            "injury: her arms are whole again after the restore");
-    std::cout << "PASS matron-injury restore zeroes injury\n";
+    require(std::abs(after.damage_ns - 150.0) < 0.01,
+            "injury: a checkpoint reload restores the same damage");
+    require(std::abs(region(s, injury::Region::Chest) - 150.0) < 0.01,
+            "injury: a checkpoint reload restores the chest dose with the damage");
+    require(std::abs(regions_total(s) - after.damage_ns) < 0.01,
+            "injury: regions + unclassified reconcile with damage after reload");
+    std::cout << "PASS matron-injury restore persists injury\n";
 }
 }  // namespace
 
@@ -365,6 +368,6 @@ void run_matron_injury() {
     run_real_punch();
     run_mixed_reconciliation();
     run_capability();
-    run_restore_zeroes_injury();
+    run_restore_persists_injury();
 }
 SCRAPERX_SLICE("matron-injury", run_matron_injury);

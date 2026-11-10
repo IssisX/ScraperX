@@ -776,8 +776,9 @@ def owed_at(h: History, ob: dict, t: dt.datetime, ask_cache: dict) -> tuple[bool
             return True, ""
         if kind == "review":
             vs = verdicts_at(h, h.team, p, t, [])
-            if any(v.kind == "review" and rules.names_head(v, head) for v in vs):
-                return False, f"#{n} has a verdict on the head"
+            # as rules.needs_review: only a LAND or a FIX answers a head; a NOTE lands nothing (J-072, #376)
+            if any(v.kind == "review" and v.verdict in ("LAND", "FIX") and rules.names_head(v, head) for v in vs):
+                return False, f"#{n} has a LAND or a FIX on the head"
         if kind == "ci" and proof != "running":
             return False, f"#{n} proof {proof}"
         return True, ""
