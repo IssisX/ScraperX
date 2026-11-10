@@ -118,6 +118,7 @@ void run_athletic_traversal_2() {
     run_yard_crane_spreader();
     run_machine_hearing();
     run_ascent();
+    run_stock_damage();
 }
 
 SCRAPERX_SLICE("athletic-traversal-1", run_athletic_traversal_1);
