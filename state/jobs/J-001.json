@@ -117,7 +117,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-10T05:33:50Z",
+   "rechecked": "2026-11-10T11:49:51Z",
    "ref": "ASK|ask on #108",
    "sends": 0,
    "thread": 108,
@@ -244,7 +244,7 @@
    "closed": null,
    "created": "2026-11-10T03:44:17Z",
    "dead": "2026-11-10T11:44:17Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-10T11:49:51Z",
    "due": "2026-11-10T07:44:17Z",
    "id": "O-d0889dd8",
    "kind": "fix",
@@ -297,5 +297,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T11:29:35Z"
+ "updated": "2026-11-10T11:49:51Z"
 }

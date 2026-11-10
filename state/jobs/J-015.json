@@ -54,6 +54,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
+   "rechecked": "2026-11-10T11:49:51Z",
    "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -257,7 +258,7 @@
    "ack": null,
    "ack_rule": "new-head|reply|ack",
    "asked": null,
-   "attempts": 1,
+   "attempts": 2,
    "closed": null,
    "created": "2026-11-10T07:39:04Z",
    "dead": "2026-11-10T15:39:04Z",
@@ -266,10 +267,10 @@
    "id": "O-97ae3d18",
    "kind": "fix",
    "last_error": "",
-   "last_sent": "2026-11-10T07:39:04Z",
+   "last_sent": "2026-11-10T11:49:51Z",
    "missing": 0,
    "ref": "BRANCH|fb-bot/integrate-protected-j015-slice1",
-   "sends": 1,
+   "sends": 2,
    "sent_by": "live",
    "thread": 122,
    "to": "muse",
@@ -337,5 +338,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T10:29:43Z"
+ "updated": "2026-11-10T11:49:51Z"
 }

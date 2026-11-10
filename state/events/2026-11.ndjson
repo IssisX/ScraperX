@@ -915,3 +915,10 @@
 {"ev": "ledger_sent", "job": "", "key": "d94a5c21d0765eeb", "ref": "ASK|ask on #328", "stage": 1, "t": "2026-11-10T11:29:35Z", "to": "claude"}
 {"attempt": 1, "ev": "sent", "id": "O-b98a158d", "job": "J-069", "ref": "PR|#376", "send": 1, "t": "2026-11-10T11:29:35Z", "to": "codex", "via": "relay"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T11:29:35Z", "tries": 1}
+{"ev": "dead_letter", "id": "O-d0889dd8", "job": "J-001", "ref": "BRANCH|claude/integrate-j001-hold", "t": "2026-11-10T11:49:51Z", "to": "muse"}
+{"attempt": 2, "ev": "sent", "id": "O-97ae3d18", "job": "J-015", "ref": "BRANCH|fb-bot/integrate-protected-j015-slice1", "send": 2, "t": "2026-11-10T11:49:51Z", "to": "muse", "via": "email"}
+{"ev": "dead_letter", "id": "O-f45193c7", "job": "J-044l", "ref": "BRANCH|fb-bot/integrate-protected-j044l-vault", "t": "2026-11-10T11:49:51Z", "to": "muse"}
+{"ev": "dead_letter", "id": "O-9fcd7b62", "job": "J-045", "ref": "BRANCH|fb-bot/integrate-j045-first-advance", "t": "2026-11-10T11:49:51Z", "to": "muse"}
+{"attempt": 2, "ev": "sent", "id": "O-e06514f3", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 2, "t": "2026-11-10T11:49:51Z", "to": "muse", "via": "email"}
+{"attempt": 2, "ev": "sent", "id": "O-c1ca5790", "job": "J-070", "ref": "BRANCH|fb-bot/integrate-j070-cull", "send": 2, "t": "2026-11-10T11:49:51Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T11:49:51Z", "tries": 1}
