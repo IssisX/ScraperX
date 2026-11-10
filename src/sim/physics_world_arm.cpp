@@ -27,6 +27,12 @@ constexpr float kHandSpringNpm = 3500.0F;
 constexpr float kWrenchSpringScale = 1.3F;
 constexpr float kHandDampNspm = 500.0F;
 constexpr float kWristCloseM = 0.14F;
+// Her hand closes on the wrist once the body has come off the steel and
+// settled, not as it gives: a body let off a snag springs in at her (4.5 m/s
+// measured, at rest again in about 0.5 s), and a wrist taken on the tick it
+// gives is carried in with it against her chest, where her pull cannot tell
+// on the shoulder.
+constexpr float kWristSettleS = 0.6F;
 // The arm, in the body's frame: the shoulder and the wrist hanging past the
 // head (in the hang, below it).
 constexpr float kShoulderUp = 0.45F;
@@ -213,7 +219,7 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     // She re-poses first (step back, weight in it); the snag gives; then
     // the wrist comes to her and she takes it.
     if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 && snag_ == nullptr &&
-        JPH::Vec3(wrist - hand).Length() <= kWristCloseM) {
+        snag_free_s_ >= kWristSettleS && JPH::Vec3(wrist - hand).Length() <= kWristCloseM) {
         JPH::PointConstraintSettings grip;
         grip.mSpace = JPH::EConstraintSpace::WorldSpace;
         grip.mPoint1 = hand;

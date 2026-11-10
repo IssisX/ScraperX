@@ -580,8 +580,11 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
             static_cast<JPH::PointConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition().Length() / std::max(dt, 1.0e-4F);
         snag_over_ticks_ = snag_load > snag_max_n_ ? snag_over_ticks_ + 1 : 0;
         if (snag_over_ticks_ >= 15) {
+            snag_free_s_ = 0.0F;
             destroy_grab_constraint(snag_);   // a test's snag (snag_player_for_test), pulled off
         }
+    } else {
+        snag_free_s_ += dt;
     }
     if (brace_ != nullptr) {
         auto *point = static_cast<JPH::PointConstraint *>(brace_.GetPtr());

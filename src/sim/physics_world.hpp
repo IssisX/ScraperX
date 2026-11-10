@@ -1213,6 +1213,7 @@ private:
     JPH::Ref<JPH::TwoBodyConstraint> snag_;   // snag_player_for_test
     float snag_max_n_ = 0.0F;
     int snag_over_ticks_ = 0;   // consecutive ticks the snag's load passed its max (a sustained pull breaks it, not a spike)
+    float snag_free_s_ = 1.0e9F;   // since the snag gave: the body springs off it, then settles (kWristSettleS)
     // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
     void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at
