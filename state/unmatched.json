@@ -1,7 +1,7 @@
 {
  "BRANCH|fb-bot/expand-presentation-20261107-cheek-angle": {
   "first_seen": "2026-11-09T17:35:20Z",
-  "last_seen": "2026-11-09T23:08:50Z",
+  "last_seen": "2026-11-09T23:58:50Z",
   "why": "no job id (branch name or head commit `Job:` line) (no proof run on its head (not an integrate branch))"
  }
 }

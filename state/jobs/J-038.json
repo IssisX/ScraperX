@@ -110,7 +110,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -135,7 +135,7 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -181,5 +181,5 @@
  ],
  "review": "FIX",
  "state": "proof",
- "updated": "2026-11-09T21:19:08Z"
+ "updated": "2026-11-09T23:58:50Z"
 }

@@ -232,7 +232,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "PR|#367",
    "sends": 0,
    "thread": 367,
@@ -294,6 +294,31 @@
    "version": "6752232762",
    "via": "session",
    "what": "ask from Muse on #278"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-09T23:58:50Z",
+   "dead": "2026-11-10T03:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T01:47:00Z",
+   "id": "O-57e630f6",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-09T23:58:50Z",
+   "missing": 0,
+   "ref": "PR|#367",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 367,
+   "to": "codex",
+   "unseen": null,
+   "version": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
+   "via": "relay",
+   "what": "review #367 @ 2d99e906"
   }
  ],
  "outcome": null,
@@ -305,6 +330,6 @@
   367
  ],
  "review": "waiting",
- "state": "working",
- "updated": "2026-11-09T22:39:05Z"
+ "state": "review",
+ "updated": "2026-11-09T23:58:50Z"
 }

@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T02:19:23Z",
+ "deadline": null,
  "head": "",
  "issue": 128,
  "job": "J-021",
@@ -42,7 +42,11 @@
    "what": "ask from Muse on #128"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-09T23:32:45Z",
+    "by": "muse",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-09T21:50:10Z",
    "attempts": 0,
@@ -75,5 +79,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-09T22:19:23Z"
+ "updated": "2026-11-09T23:58:50Z"
 }
