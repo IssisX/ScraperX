@@ -394,3 +394,5 @@ void run_wreck_way_on() {
     run_n_wreckage();
     run_o_wreckage();
 }
+SCRAPERX_GROUP("wreck_way_on", 350, run_wreck_way_on);
+SCRAPERX_SELECT("wreck-way-on", run_wreck_way_on);

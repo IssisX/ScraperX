@@ -2,8 +2,10 @@
 
 // The native tests' shared ground: the asserts and walking helpers every
 // test uses, and the declarations of each stage's helpers that other files
-// use (simulation_tests.cpp runs them all, in order; see its main()).
+// use. Each group registers itself beside its function (sim_registry.hpp);
+// simulation_tests.cpp's main() runs the registry.
 
+#include "sim_registry.hpp"
 #include "sim/simulation.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/trapeze.hpp"
@@ -758,6 +760,7 @@ void run_forklift();
 void run_forklift_strain();
 void run_forklift_matron();
 void run_yard_crane();
+void run_machine_hearing();
 void run_yard_crane_magnet();
 void run_yard_crane_spreader();
 void run_wet_isolation();
@@ -872,6 +875,7 @@ void run_arm_break();
 void run_hook();
 void run_workers();
 void run_c7();
+void run_gust_front_upper();
 void run_summit();
 void run_summit_arm();
 void run_summit_ending();
@@ -882,6 +886,7 @@ void run_matron_climb();
 void run_matron_climb_board();
 void run_matron_climb_scan();
 void run_matron_tower_proof();
+void run_ladder_bar_sort();   // J-008: the ladder-bar sort is a strict total order
 void run_matron_ladders();
 void run_matron_chain();
 void run_matron_towers();
@@ -892,6 +897,7 @@ void run_matron_unstick();
 void run_matron_grab();
 void run_matron_load();
 void run_matron_budget();   // J-046: her one budget, every path, audited (sim_tests_matron_budget.cpp)
+void run_matron_capacity(); // J-044b H.4: the capacity test, five falsifiers, no motor code (sim_tests_matron_capacity.cpp)
 void run_strike();
 void run_matron_damage();
 void run_perf_step();
@@ -918,6 +924,7 @@ void test_matron_honest();
 void test_matron_stalk();
 void test_matron_ladder_head();
 void test_matron_climb_support();
+void test_matron_riser();
 void run_matron_state_exits();
 void run_matron_crash();
 void run_matron_mischief();
@@ -945,6 +952,7 @@ void run_step2_movement();
 
 void run_twin();
 void run_twin_geometry();
+void run_twin_balconies();
 void run_matron_remaining();
 
 void run_matron_player_independence();

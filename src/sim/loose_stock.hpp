@@ -113,7 +113,10 @@ public:
     // pre-existing body keeps its build order. Their bodies are built by
     // realize_reserved once the bay, the twin tower and the summit stand.
     // Until append_reserved() runs the east/west pieces have no table
-    // place, so east_west_begin() is count().
+    // place, so east_west_begin() is count(). The bands' rings above
+    // 396.25 m and the top decks are recorded the same way, and their
+    // table places are taken by append_upper() after the east/west
+    // pieces; until it runs, upper_begin() is count().
     void dress_tower(const std::vector<JPH::RVec3> &keep_clear, float keep_clear_radius);
     // Takes the east/west places dress_tower recorded, at the end of the
     // table (after the Matron's throwables), so the crane steel, the
@@ -121,9 +124,22 @@ public:
     // the east/west stock existed and saves made before it still load.
     // Their bodies stay unbuilt (invalid BodyIndex) until realize_reserved.
     void append_reserved();
-    // Builds the bodies dress_tower reserved, last in the kit's build
-    // order, and returns their places in the table.
+    // Builds the bodies dress_tower reserved for the east/west pieces,
+    // next in the kit's build order, and returns their places in the
+    // table. The upper pieces are built separately (realize_upper),
+    // after the deck-154 forklift, so the forklift keeps its place right
+    // after the east/west pieces.
     [[nodiscard]] std::vector<int> realize_reserved();
+    // Builds the bodies dress_tower reserved for the upper pieces, after
+    // the deck-154 forklift, and returns their places in the table.
+    [[nodiscard]] std::vector<int> realize_upper();
+    // Takes the upper places dress_tower recorded, at the end of the
+    // table (after the east/west pieces), so the crane steel, the
+    // machine weights, the throwables and the east/west pieces keep the
+    // entities they had before the upper stock existed and saves made
+    // before it still load. Their bodies stay unbuilt (invalid
+    // BodyIndex) until realize_upper.
+    void append_upper();
     // The steel for the yard crane's magnet (yard_crane.hpp), laid in its
     // hook's reach after the tower's stock, so saves made before it line up:
     // two slabs of plate one on the other, and two beams side by side, the
@@ -155,13 +171,15 @@ public:
     }
     // Where each group begins in the table: static, then the tower's
     // spots, then the crane steel, the machine weights, the Matron's
-    // throwables, and last the east/west stock, so saves made before a
-    // group line up. Until append_reserved() runs, the east/west begin
-    // is count().
+    // throwables, then the east/west stock, and last the upper stock, so
+    // saves made before a group line up. Until append_reserved() runs,
+    // the east/west begin is count(); until append_upper() runs, the
+    // upper begin is count().
     [[nodiscard]] int crane_steel_begin() const noexcept { return crane_steel_begin_; }
     [[nodiscard]] int machine_weights_begin() const noexcept { return machine_weights_begin_; }
     [[nodiscard]] int matron_throwables_begin() const noexcept { return matron_throwables_begin_; }
     [[nodiscard]] int east_west_begin() const noexcept { return east_west_begin_; }
+    [[nodiscard]] int upper_begin() const noexcept { return upper_begin_; }
 
     // The pieces as placed, in order (also the order of their entities).
     [[nodiscard]] static const std::vector<Placement> &placements();
@@ -180,15 +198,23 @@ private:
     // The east/west places dress_tower recorded, waiting for
     // append_reserved() to take their table places at the end.
     std::vector<Placement> pending_east_west_;
+    // The bands' rings above 396.25 m and the top decks dress_tower
+    // recorded, waiting for append_upper() to take their table places
+    // after the east/west pieces.
+    std::vector<Placement> pending_upper_;
     // Where each group begins in the table (see the accessors above).
     int crane_steel_begin_ = 0;
     int machine_weights_begin_ = 0;
     int matron_throwables_begin_ = 0;
     int east_west_begin_ = 0;
+    int upper_begin_ = 0;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);
     // Builds one piece's body for an entity already chosen, as placed.
     [[nodiscard]] kit::BodyIndex create_body(const Placement &placement, std::uint64_t entity);
+    // Builds the bodies of the table places in [begin, end) that have
+    // none yet, in table order, and returns their places.
+    [[nodiscard]] std::vector<int> realize_range(int begin, int end);
 };
 
 } // namespace scraperx::sim

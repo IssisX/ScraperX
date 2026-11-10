@@ -135,3 +135,5 @@ void run_matron_traverse() {
     }
     std::cout << "PASS scraperx_sim matron traverse: legs=" << legs.size() << '\n';
 }
+SCRAPERX_GROUP("matron_traverse", 900, run_matron_traverse);
+SCRAPERX_SELECT("matron-traverse", run_matron_traverse);

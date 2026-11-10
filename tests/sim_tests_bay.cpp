@@ -273,3 +273,5 @@ void run_bay() {
         std::cout << "PASS scraperx_sim bay chain: chain_n=" << chain_n << " held_rad=" << held_low << "\n";
     }
 }
+SCRAPERX_GROUP("bay", 970, run_bay);
+SCRAPERX_SELECT("bay", run_bay);

@@ -108,8 +108,6 @@ const STATE_CARRY := 13
 const STATE_DANGLE := 14
 const STATE_ARMPLAY := 15
 const STATE_SPARE := 17
-# Her hands onto each new hold: most of the way in a tenth of a second.
-const HAND_EASE := 22.0
 const POSE_KEYS := ["torso", "neck", "head", "jaw", "sh_l", "sh_r", "el_l", "el_r",
 	"hp_l", "hp_r", "kn_l", "kn_r", "an_l", "an_r"]
 
@@ -188,7 +186,7 @@ var _hold_at2 := Vector3.ZERO
 # prop_short), let down once it is in reach; her pose eased that far toward
 # the stoop (STOOP_*: trunk over her knees, hips down, knees bent).
 var _prop_lean := 0.0
-const PROP_LEAN_UP_S := 3.0
+const PROP_LEAN_UP_S := 4.0
 const PROP_LEAN_DOWN_S := 1.2
 # and raised this long before the stoop would have to start to be drawn by the
 # take (matron_rig.gd prop_take_s): her speed changes on the way, and her drawn
@@ -245,10 +243,9 @@ var _root_off := Vector3.ZERO
 var _root_off_v := Vector3.ZERO
 var _box_v := Vector3.ZERO
 var _burst_tail := 0.0
-# Her two holds as drawn on what she climbs (matron_rig.gd contact reaches
-# for these).
+# Her two holds on what she climbs this frame (matron_rig.gd contact reaches
+# for these, its wrists following them).
 var _held_shown := PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
-var _hands_fresh := true
 # Rendered wrist distance from the authoritative carried handle, in meters.
 # INF when no native prop constraint is active (including the throw tick).
 var prop_hand_error_m := INF
@@ -760,10 +757,12 @@ func _update_planks(data: Dictionary) -> void:
 
 const MatronRig := preload("res://presentation/life/matron_rig.gd")
 const MatronLook := preload("res://presentation/life/matron_look.gd")
+const MatronInjury := preload("res://presentation/life/matron/matron_injury.gd")
 const BODY_FILE := "res://presentation/life/matron/matron.glb"
 const RIG_FILE := "res://presentation/life/matron/matron_rig.json"
 var _rig: RefCounted     # matron_rig.gd: pivots to bones, contact, eyes, hair
 var _look: RefCounted    # matron_look.gd: her materials and the exposure on them
+var _injury: Node3D = null  # matron_injury.gd: per-region bruise, swelling, mark
 
 
 func _build_figure() -> void:
@@ -878,6 +877,9 @@ func _seat_hair(root: Node) -> void:
 			for j in bpv:
 				out_b[i * bpv + j] = b
 				out_w[i * bpv + j] = 1.0 if j == 0 else 0.0
+		var skels := root.find_children("*", "Skeleton3D", true, false)
+		if mi.skin != null and not skels.is_empty():
+			_hair_onto_chains(mi.skin, skels[0] as Skeleton3D, out_v, out_b, bpv)
 		arrays[Mesh.ARRAY_VERTEX] = out_v
 		arrays[Mesh.ARRAY_BONES] = out_b
 		arrays[Mesh.ARRAY_WEIGHTS] = out_w
@@ -891,6 +893,72 @@ func _seat_hair(root: Node) -> void:
 		break
 	if not found:
 		push_error("matron hair seat: no hair mesh")
+
+
+# J-067 (Cory 11-08: the back hair "raised", splitting sideways instead of
+# curving down both sides of her back). Measured in each hair bone's own
+# frame, its vertices sat on average up to 8 cm off its chain, behind it on
+# the back locks, growing toward the tips: the authored hair falls wider than
+# the straight chains that move it. Swung with the chain, that offset stood
+# the back hair out behind her head in a sheet and fanned it sideways, while
+# the chains themselves hung down her back. Each vertex keeps its place within
+# its lock; only the lock's mean offset comes off, blended by height between
+# a bone and the next one up or down, so a ribbon never tears at a joint. The
+# chains' own collision (step_hair) then keeps the locks outside her.
+func _hair_onto_chains(skin: Skin, sk: Skeleton3D, verts: PackedVector3Array, bones: PackedInt32Array, bpv: int) -> void:
+	var binds := skin.get_bind_count()
+	var key := {}        # "chain/k" -> bind index
+	var chain_k := []    # bind index -> Vector2i(chain, k), or (-1, -1)
+	var seg := []        # bind index -> the bone's length to its child
+	for bi in binds:
+		var bname := skin.get_bind_name(bi)
+		if bname == "":
+			bname = sk.get_bone_name(skin.get_bind_bone(bi))
+		var ck := Vector2i(-1, -1)
+		var parts := bname.trim_prefix("hair").split("_")
+		if bname.begins_with("hair") and parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int():
+			ck = Vector2i(int(parts[0]), int(parts[1]))
+			key["%d/%d" % [ck.x, ck.y]] = bi
+		chain_k.append(ck)
+		var b := sk.find_bone(bname)
+		var length := 0.09
+		if b >= 0:
+			for child in sk.get_bone_children(b):
+				length = sk.get_bone_rest(child).origin.length()
+		seg.append(maxf(length, 1e-3))
+	var sum := []
+	var count := []
+	sum.resize(binds)
+	count.resize(binds)
+	for bi in binds:
+		sum[bi] = Vector2.ZERO
+		count[bi] = 0
+	for i in verts.size():
+		var bi := bones[i * bpv]
+		if bi < 0 or bi >= binds or (chain_k[bi] as Vector2i).x < 0:
+			continue
+		var l := skin.get_bind_pose(bi) * verts[i]
+		sum[bi] = (sum[bi] as Vector2) + Vector2(l.x, l.z)
+		count[bi] = int(count[bi]) + 1
+	var mean := []
+	mean.resize(binds)
+	for bi in binds:
+		mean[bi] = (sum[bi] as Vector2) / float(count[bi]) if int(count[bi]) > 0 else Vector2.ZERO
+	for i in verts.size():
+		var bi := bones[i * bpv]
+		if bi < 0 or bi >= binds:
+			continue
+		var ck: Vector2i = chain_k[bi]
+		if ck.x < 0:
+			continue
+		var pose := skin.get_bind_pose(bi)
+		var l := pose * verts[i]
+		var t := clampf(absf(l.y) / float(seg[bi]), 0.0, 1.0)
+		var other := "%d/%d" % [ck.x, ck.y + (1 if l.y < 0.0 else -1)]
+		var m: Vector2 = mean[bi]
+		if key.has(other) and int(count[key[other]]) > 0:
+			m = m.lerp(mean[key[other]], t)
+		verts[i] = pose.affine_inverse() * (l - Vector3(m.x, 0.0, m.y))
 
 
 # Her body: the skinned glTF read at runtime (kept as it is by its .import),
@@ -919,6 +987,8 @@ func _load_body() -> void:
 	_look.dress(root)
 	_rig = MatronRig.new()
 	_rig.setup(skeletons[0] as Skeleton3D, rig_data, self)
+	_injury = MatronInjury.new()
+	add_child(_injury)
 
 
 # Blood on her (gore_view.gd decides how much; matron_look.gd lays it on).
@@ -1243,11 +1313,13 @@ func _ease_figure(centre: Vector3, delta: float) -> void:
 	_figure.global_position = centre + shown * local
 
 
-# Her hands on what she climbs: each reaches its new hold over a moment
-# (HAND_EASE); a new climb, or one far off, starts where its hold is.
-func _ease_hands(data: Dictionary, delta: float) -> void:
+# Her hands on what she climbs: the holds they go for this frame. The rig
+# takes each wrist onto its hold over frames, a new climb's from where her
+# wrist is drawn (matron_rig.gd _follow_hand, no faster than HAND_MAX_M_S),
+# so nothing here jumps them: no restart at a new climb, none for a hold
+# far off.
+func _ease_hands(data: Dictionary) -> void:
 	if not (bool(data.get("climbing", false)) and data.has("climb_hand")):
-		_hands_fresh = true
 		return
 	var want: Vector3 = data["climb_hand"]
 	var want2: Vector3 = data["climb_hand2"] if data.has("climb_hand2") else want
@@ -1257,14 +1329,8 @@ func _ease_hands(data: Dictionary, delta: float) -> void:
 		if bool(data["contact_hand_held"]):
 			want = data["contact_hand"]
 		want2 = data["contact_hand2"] if bool(data.get("contact_hand2_held", false)) else want
-	if _hands_fresh or _pose_fresh or _held_shown[0].distance_to(want) > 1.5 or _held_shown[1].distance_to(want2) > 1.5:
-		_held_shown[0] = want
-		_held_shown[1] = want2
-		_hands_fresh = false
-		return
-	var k := 1.0 - exp(-HAND_EASE * delta)
-	_held_shown[0] = _held_shown[0].lerp(want, k)
-	_held_shown[1] = _held_shown[1].lerp(want2, k)
+	_held_shown[0] = want
+	_held_shown[1] = want2
 
 
 # The contortion layer's bursts: every 1.4-3.6 s one wrong thing (kind 0 the
@@ -2391,6 +2457,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		_figure.visible = false
 		if _rig != null:
 			_rig.down_mask = 0
+		if _injury != null:
+			_injury.set_shown(false)
 		_pose_fresh = true
 		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, falling)
 		return
@@ -2417,8 +2485,12 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_topple(data, centre, delta)
 	_pipe_head_down(data, centre)
 	_ease_figure(centre, delta)
-	_ease_hands(data, delta)
+	_ease_hands(data)
 	_drive_body(data, delta, camera_position, falling)
+	# J-044i: her injuries, from the per-region dictionary J-044g fills.
+	# delta drives the J-059 black-eye pool (the ring darkens over 15 s).
+	if _injury != null:
+		_injury.update(data.get("injury", {}), _rig, delta)
 	# A corpse is drawn but makes none of her living sounds (matron_sound.gd: out_near is "out, alive and near").
 	_hear(data, delta, alive, _figure.global_position, player_position, falling)
 

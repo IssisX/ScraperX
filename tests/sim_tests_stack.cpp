@@ -665,3 +665,5 @@ void run_stack() {
               << " ring220_y=" << band_ring220.player_position.y << " tp340_y=" << band_tp340.player_position.y
               << "\n";
 }
+SCRAPERX_GROUP("stack", 140, run_stack);
+SCRAPERX_SELECT("stack", run_stack);

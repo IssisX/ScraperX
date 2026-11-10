@@ -1449,6 +1449,74 @@ void test_pole_head_down_gap() {
     std::cout << "PASS scraperx_sim matron pole head down gap\n";
 }
 
+// A ladder down whose bottom rung hangs over the floor: the descent is
+// real when her feet reach the floor from a full hang off the bottom rung,
+// or when the rung is within a drop of it — the executor drops off the
+// bottom rung when the floor is in drop range under her feet (step_rung_down
+// lets go at a full hang and finishes on the goal floor), so the scan offers
+// the descent in both cases and the descent must complete to the floor.
+// Her feet at full hang are bottom - hang_below_hold (1.30) - centre above
+// feet (1.05) = bottom - 2.35. A bottom rung past the foot-patch window
+// offers no descent at all.
+void test_rung_down_bottom_gap() {
+    for (const float bottom : {2.30F, 2.95F}) {
+        ClimbWorld w;
+        w.deck(6.0F);
+        w.rungs(bottom, 5.9F);
+        w.spawn(RVec3(0, 6.0F, -2.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-5, -1, -5), Vec3(5, 7, 5)), ignore);
+        const traversal::Edge *up = nullptr;
+        const traversal::Edge *down = nullptr;
+        for (const auto &e : map.edges()) {
+            if (std::abs(e.spec.line.GetZ() - (-0.95F)) > 0.05F) continue;
+            if (e.kind == MoveKind::RungDown) down = &e;
+            if (e.kind == MoveKind::RungUp || e.kind == MoveKind::JumpCatch) up = &e;
+        }
+        require(up != nullptr && down != nullptr, "matron rung down bottom gap: the ladder is found, up and down");
+        std::cout << "  matron rung down bottom gap, bottom rung " << bottom << " m over the floor: down usable " << down->usable
+                  << " (" << down->reason << ")\n";
+        require(down->usable, "matron rung down bottom gap: a descent her feet reach or can drop to is a real descent");
+        Climber climber(w.physics, w.her, ignore);
+        MoveSpec spec = ladder_up(6.0F, bottom, 5.9F);
+        spec.kind = MoveKind::RungDown;
+        spec.start = Vec3(0, 6.0F, -1.35F);
+        spec.goal = Vec3(0, 0, -0.5F);
+        spec.goal_top = 0.0F;
+        climber.begin(spec);
+        const auto st = w.run(climber, 60.0F);
+        const float below = w.settle(1.0F);
+        std::cout << "  matron rung down bottom gap, control: down " << int(st) << " (" << traversal::failure_name(climber.failure())
+                  << ") feet " << below << "\n";
+        require(st == Climber::Status::Done && std::abs(below) < 0.05F,
+                "matron rung down bottom gap: the descent completes to the floor");
+    }
+    // Past the foot-patch window (bottom rung 4.80 m over the floor, past
+    // the 3.64 m a foot patch may sit under it): no descent is offered.
+    {
+        ClimbWorld w;
+        w.deck(6.0F);
+        w.rungs(4.80F, 5.9F);
+        w.spawn(RVec3(0, 6.0F, -2.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-5, -1, -5), Vec3(5, 7, 5)), ignore);
+        const traversal::Edge *down = nullptr;
+        for (const auto &e : map.edges()) {
+            if (std::abs(e.spec.line.GetZ() - (-0.95F)) > 0.05F) continue;
+            if (e.kind == MoveKind::RungDown) down = &e;
+        }
+        std::cout << "  matron rung down bottom gap, bottom rung 4.80 m over the floor: down "
+                  << (down == nullptr ? "absent" : "present") << "\n";
+        require(down == nullptr,
+                "matron rung down bottom gap: no descent off a bottom rung past the foot-patch window");
+    }
+    std::cout << "PASS scraperx_sim matron rung down bottom gap\n";
+}
+
 // Narrow ledges she has never seen (seeded): a board 0.20 to 0.40 m wide
 // over a 6 m drop, from one deck to another a step higher or lower, open
 // both sides or along a wall. Her scan joins the decks across it; her walk
@@ -1923,6 +1991,7 @@ void run_matron_narrow() {
     test_stand_on_board();
     test_knocked_onto_board();
 }
+SCRAPERX_SELECT("matron-narrow", run_matron_narrow);
 
 void run_matron_climb() {
     test_power_budget();
@@ -1944,8 +2013,11 @@ void run_matron_climb() {
     test_rung_gaps();
     test_pole_head_clearance();
     test_pole_head_down_gap();
+    test_rung_down_bottom_gap();
     run_matron_narrow();
 }
+SCRAPERX_GROUP("matron_climb", 940, run_matron_climb);
+SCRAPERX_SLICE("matron-climb", run_matron_climb, run_matron_climb_board, run_matron_climb_scan);
 
 namespace {
 // The scan of the real tower, written out for the inventory comparison
@@ -2159,6 +2231,7 @@ void run_matron_chain() {
     }
     std::cout << "PASS scraperx_sim matron chained exam (ladder, pole, gap, board, ledge, knock-off, replan): " << done << " of 2\n";
 }
+SCRAPERX_SLICE("matron-chain", run_matron_chain);
 
 // Ten unseen towers (seeded measures: deck heights, the pole's place, the
 // gap under the panel, the board's width, the ledge), each climbed from the
@@ -2186,6 +2259,7 @@ void run_matron_towers() {
     }
     std::cout << "PASS scraperx_sim matron unseen towers up and down without a reset: " << done << " of 10\n";
 }
+SCRAPERX_SLICE("matron-towers", run_matron_towers);
 
 // The player's own climbing is untouched by her: the same ladder climb,
 // alone and with her climbing down the stack beside him, takes the
@@ -2277,6 +2351,7 @@ void test_travel_walk_round_player() {
 }
 
 void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); test_travel_walk_round_player(); }
+SCRAPERX_SELECT("matron-climb-board", run_matron_climb_board);
 
 // One deck box, something laid across its top. A curb within a step (and a
 // block on part of it) leaves it one floor; a wall taller than a step across
@@ -2319,12 +2394,87 @@ void run_matron_climb_scan() {
     test_tower_scan();
     test_tower_journeys();
 }
+SCRAPERX_SELECT("matron-climb-scan", run_matron_climb_scan);
 
 // The whole tower, as her own scan reads it: every deck (a region of 6 m2 or
 // more, the largest at its height) and every pair of them her scan joins
 // with no other deck between, she travels up and back down, from wherever
 // the last leg left her. Each leg reports its outcome, its worst step a tick
 // and her gravity. Nothing here names a deck, a ladder or a route.
+// The ladder-bar sort order (J-008): the comparator behind AffordanceMap::scan
+// must be a strict total order, or std::sort over it is undefined and the
+// order differs by stdlib, host vs arm64. The proven counterexample (PR #97):
+// along_x bars with equal along coordinates, A (cross 0, y 2), B (0.0007, 1),
+// C (0.0014, 0): the 1 mm tolerance comparator says A<C, C<B, B<A.
+void run_ladder_bar_sort() {
+    using traversal::Bar;
+    using traversal::bar_before;
+    const auto bar = [](float x, float y, float z, bool along_x, std::uint64_t entity) {
+        Bar b;
+        b.c = JPH::Vec3(x, y, z);
+        b.along_x = along_x;
+        b.half = 0.5F;
+        b.entity = entity;
+        return b;
+    };
+    // The counterexample triple, along_x, equal along coordinate (x = 0).
+    const Bar a = bar(0.0F, 2.0F, 0.0F, true, 1);
+    const Bar b = bar(0.0F, 1.0F, 0.0007F, true, 2);
+    const Bar c = bar(0.0F, 0.0F, 0.0014F, true, 3);
+    // No cycle: the three pairwise orders must agree.
+    require(!(bar_before(a, c) && bar_before(c, b) && bar_before(b, a)),
+            "ladder-bar sort: the bar order must not cycle (A<C, C<B, B<A)");
+    require(bar_before(a, b) && bar_before(b, c) && bar_before(a, c),
+            "ladder-bar sort: the counterexample triple orders A<B<C by cross");
+    // Every input permutation sorts to the same order.
+    const Bar trio[3] = {a, b, c};
+    std::vector<Bar> expected;
+    std::array<int, 3> idx = {0, 1, 2};
+    bool first_perm = true;
+    do {
+        std::vector<Bar> v = {trio[idx[0]], trio[idx[1]], trio[idx[2]]};
+        std::sort(v.begin(), v.end(), bar_before);
+        if (first_perm) {
+            expected = v;
+            first_perm = false;
+            continue;
+        }
+        require(v.size() == expected.size(), "ladder-bar sort: a permutation keeps the bars");
+        for (std::size_t k = 0; k < v.size(); ++k) {
+            require(v[k].entity == expected[k].entity,
+                    "ladder-bar sort: every input order sorts to the same order");
+        }
+    } while (std::next_permutation(idx.begin(), idx.end()));
+    // The mirror triple, along_z: cross is x, along is z.
+    const Bar a2 = bar(0.0F, 2.0F, 0.0F, false, 11);
+    const Bar b2 = bar(0.0007F, 1.0F, 0.0F, false, 12);
+    const Bar c2 = bar(0.0014F, 0.0F, 0.0F, false, 13);
+    require(!(bar_before(a2, c2) && bar_before(c2, b2) && bar_before(b2, a2)),
+            "ladder-bar sort: the mirror triple must not cycle either");
+    require(bar_before(a2, b2) && bar_before(b2, c2) && bar_before(a2, c2),
+            "ladder-bar sort: the mirror triple orders A<B<C by cross");
+    // Cross is the primary key after along_x: a bar further along but nearer
+    // across still sorts first.
+    const Bar d = bar(5.0F, 0.0F, 0.0F, true, 21);
+    const Bar e = bar(0.0F, 0.0F, 1.0F, true, 22);
+    require(bar_before(d, e) && !bar_before(e, d),
+            "ladder-bar sort: cross decides before along");
+    // along_x itself orders first, and ties break on half then entity.
+    const Bar f = bar(1.0F, 2.0F, 3.0F, false, 31);
+    const Bar g = bar(1.0F, 2.0F, 3.0F, true, 32);
+    require(bar_before(f, g) && !bar_before(g, f),
+            "ladder-bar sort: along_x orders before the coordinates");
+    const Bar h = bar(1.0F, 2.0F, 3.0F, true, 41);
+    const Bar i = bar(1.0F, 2.0F, 3.0F, true, 42);
+    require(bar_before(h, i) && !bar_before(i, h),
+            "ladder-bar sort: equal keys break on entity");
+    const Bar j = bar(1.0F, 2.0F, 3.0F, true, 41);
+    require(!bar_before(h, j) && !bar_before(j, h),
+            "ladder-bar sort: identical bars are equivalent");
+    std::cout << "PASS scraperx_sim ladder-bar sort: the bar order is a strict total order\n";
+}
+SCRAPERX_SLICE("ladder-bar-sort", run_ladder_bar_sort);
+
 void run_matron_tower_proof() {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
@@ -2481,6 +2631,7 @@ void run_matron_tower_proof() {
     std::cout << "PASS scraperx_sim matron tower proof: " << 2 * pairs.size() << " legs over " << pairs.size()
               << " deck pairs, " << clean << " clean\n";
 }
+SCRAPERX_SLICE("matron-tower", run_matron_tower_proof);
 
 // Every ladder in the tower, as her own scan reads it: for each one her scan
 // gives a climb up (on the rungs, or a jump for the bottom rung), she goes up
@@ -2593,3 +2744,4 @@ void run_matron_ladders() {
     require(unexpected.empty(), "matron ladders: her scan refuses no ladder beyond the six refused for the world's steel");
     std::cout << "PASS scraperx_sim matron ladders: " << passed << "/" << tried << ", refused " << refused << "\n";
 }
+SCRAPERX_SLICE("matron-ladders", run_matron_ladders);

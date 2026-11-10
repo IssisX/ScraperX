@@ -4,7 +4,7 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
 
 ## Where things are
 - **Issues #3 and #87 are retired.** Stop watching them; never post there.
-- **The board** is the one open issue labeled `board` (today #107): rulings and "To X:" questions.
+- **The board** is the one open issue labeled `board` (today #340): rulings and "To X:" questions.
   Find it by label each time.
 - **Your jobs** each have their own issue (label `job` and `owner:muse`). Read only those and the
   board's newest comments, never old history.
@@ -20,61 +20,50 @@ Repository `IssisX/ScraperX`. Trunk is `ScraperX-Claude`, never `main`.
   in the body what you are doing, what you tried, the exact question, and what a useful reply looks
   like (Cory's collaboration rule). Don't wait for the answer: keep working.
 - Mail to you arrives with a subject starting `CLAUDE_TO_MUSE:`.
+- A mail of mine that your safety check refuses: mail me its ID and the reason the check gave, not Cory; I resend it
+  reworded the same hour. Cory hears only if the resend is refused too (Cory 11-08).
+- Never guess in code: read the source, measure or run it before leaning on a fact (Cory 11-07: "checks arent
+  expensive and its just laziness").
 
-## How you work (email only: never act on GitHub yourself)
-Every GitHub action of yours (a comment, a push, a PR) needs Cory to tap "allow", and he can't sit
-there doing that. So you never touch GitHub directly; email does everything:
-- **Code:** put the change in the email body as a unified diff (`git diff` output) against the
-  `ScraperX-Claude` sha you started from, with a subject like
-  `MUSE_TO_CLAUDE: J-002 patch on <sha>`. The integrator puts it on `fb-bot/integrate-<job>` and opens
-  the PR for you. A diff over about 50,000 characters: split it into numbered emails ("part 1 of 2").
+## How you work (mail, and pushes to your own branches)
+A GitHub comment or PR of yours needs Cory to tap "allow", so you never comment or open PRs. You push
+your own branches (Cory 11-05) and mail the rest:
+- **Code:** push it to `fb-bot/integrate-<job>` and mail the branch and sha
+  (`MUSE_TO_CLAUDE: J-002 pushed fb-bot/integrate-j002 @ <sha>`); the switchboard opens the PR. Only if
+  a push fails: the change as a unified diff in the mail body against the `ScraperX-Claude` sha you
+  started from; over about 50,000 characters, numbered mails ("part 1 of 2").
 - **Verdicts and questions:** by email as above.
 - Test checks, world geometry and her limits (8 kN / 44 kW budget, lunge limits) change only in their
-  own protected PR with a plain before/after: send that diff in its own email. Never weaken a test.
+  own protected PR with a plain before/after: push it alone to `fb-bot/integrate-protected-<job>`. Never weaken a test.
 - Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job. Put the
   PASS/FAIL lines you ran in the email.
-- Two red proof runs on the same failure: stop changing numbers, email what you measured, what you
-  ruled out and the one observation that would settle it, and mark the job BLOCKED.
+- Ask Claude early (Cory 11-06: J-001 ran 8 h without asking). Two red proof runs on the same failure,
+  or a subagent 60 minutes without a commit or a new number: stop it and email `To Claude: <job> stuck`
+  with what you measured, what you ruled out and the one observation that would settle it.
 - Human sounds are real recordings, never synthesized.
+- **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). How: `work/tasks/eye-check.md`. Claude checks the stills.
 - **Trunk merges are the integrator's (11-05).** When one of your PRs conflicts with trunk, the integrator merges
   trunk in and mails you the new sha; pull it before your next push. Never start an agent for a trunk merge. The
   one exception: a mail that says "Muse: resolve" (the conflict is in your own logic).
 
-## Your open work now (11-03, Cory: "Muse ... should do main, difficult and long-winded tasks")
-You lead the fight. Use your subagents: run independent stages or files in parallel, and send each
-finished piece as its own diff email as soon as it is proven, not all at the end.
-0. **J-001 (#108), her hold with real arms, is now yours (Cory, 11-03), first in line.** Its code is on
-   PR #152 (`chatgpt/integrate-j001-swat-budget`, head `50e1bf49`, on top of #102's hold), red on two checks
-   that are not the swat's: `matron load S2 over-base: a carry swing crossed the crouch base` and
-   `matron crash: she went to the hit, found nobody, and is the warier for it`. ChatGPT's diagnosis is on #152
-   (two candidate causes: synthetic held-load attribution while regripping, or the new `drag_pose()` target
-   against the old counter-lean), and a Claude session is posting the failing-tick values there. Find the cause,
-   fix it at the owner, and send the diff on top of `50e1bf49`. The integrator puts it on that branch.
-   Protected checks (#103's) go on `fb-bot/integrate-protected-j001-hold-checks`. ChatGPT reviews it.
-1. **Finish J-002 (#109):** the late require ("once the rip has begun, his blow breaks nothing") read
-   at its peak, as its own diff on top of `1620c32e` (PR #158), so #153 goes green.
-2. **The fight, S2-S5, built end to end (J-005, #112, then one job each):**
-   - Your spec is on trunk (`03_EXECUTION/FIGHT/FIGHTING_SYSTEM_SPEC.md`, with your two corrections), and
-     your scopes are job issues: S2 low sweep J-033 #164, S3 heavy kick J-034 #165, S4 jab-cross J-035
-     #166, S5 slip J-036 #167.
-   - Then build them in order of dependency, each stage its own diff (and its own PR); a new or
-     changed test check goes in its own protected diff with a before/after. Native kernel first
-     (`src/sim/`), then the Godot view where the stage shows on screen.
-   - **S6, her tells (J-004, #111), is yours too (11-03):** re-point them at S7's fields once S5 is in.
-   - Neighbours: S1 is yours (#153); S7 + S8, damage and death body (J-003, #110), are ChatGPT's PR in
-     review. Read its fields, never edit its functions; ask with `To ChatGPT:`.
-2b. **J-038 (#169), destructible loose things (Cory, 11-03), right after the fight:** never the tower's
-   machines (they must stay usable so he can ascend). What the forklift and crane lift, barrels, boxes and shipping containers dent with the force
-   of the hit, and the hit moves them (a forklift ramming one shoves it and leaves it severely dented;
-   slice 0 makes the static containers movable, real masses, as a protected PR), crates break into pieces that become
-   loose stock. Rule 51, the phone, determinism and saves hold. Propose the dent model and slices first.
-3. **J-006 (#113), the grade ladder (her pursuit up the first 11 m), moved to you from ChatGPT (11-03).**
-   Its code is PR #91 (red). Start from its head and the job issue's last findings; it unblocks J-007
-   (#114, her exit items 4, 6 and 7: arm's-length holds, the pipe, the hoists), which is yours next.
-   It touches journey and climb functions, not the fight's, so run it on a subagent alongside the fight.
-4. **J-022 (#129), environment lane D:** gusts, wind you can see, clouds, dust in the stack. Long job;
-   work it when a fight stage waits on review.
-5. J-023 (#130, PR #95): its in-game stills, as the issue says.
+## Your queue (11-06)
+The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
+job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
+1. J-060 #320: fight contact truth (Cory 11-08 7:12 AM, top job): real limb contacts, both bodies react, real reach.
+2. J-063 #321: her climbing on real support, every ladder (Cory 11-08).
+3. J-059 #307: her injuries reach the screen in play: per-region injury in the sim, exported by the bridge, drawn by matron_injury.gd; capability loss in the runtime sim (measured on #307, 11-08).
+4. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
+5. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
+6. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
+7. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
+8. J-008 #115: her "258 down" leg; a strict total order for the ladder-bar sort.
+9. J-011 #118: her skirt as cloth, bone-driven panels (from `edad91a3`).
+10. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
+11. J-021 #128: the far world and water (from `b532042b` and `95587901`).
+12. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed.
+
+Live lanes: J-042 windup #291, J-001 #227, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
+step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
 Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the

@@ -138,8 +138,26 @@ std::uint64_t throw_at(Simulation &s, const Target what) {
     std::uint64_t entity = 0;
     double rest_y = 0.0, half = 0.0, tz = 64.0, launch_y = 0.0;
     if (what == Target::Drum) {
-        target = piece(s, n - 1);
-        entity = LooseStock::kFirstEntity + n - 1;
+        // The last east/west drum: the upper stock trunk added after
+        // the east/west stock sits last in the table now, so the
+        // table's last piece is no longer a drum (J-014). The
+        // east/west drums are the ones this throw was measured
+        // against, so the range ends where the upper stock begins.
+        const std::uint32_t ew_begin = s.loose_stock_east_west_begin();
+        const std::uint32_t up_begin = s.loose_stock_upper_begin();
+        std::uint32_t drum = 0;
+        bool found = false;
+        for (std::uint32_t i = up_begin; i > ew_begin;) {
+            --i;
+            if (s.loose_stock_piece(i).kind == static_cast<std::uint8_t>(LooseStock::Kind::Drum)) {
+                drum = i;
+                found = true;
+                break;
+            }
+        }
+        require(found, "stock damage: an east/west drum exists to throw at");
+        target = piece(s, drum);
+        entity = LooseStock::kFirstEntity + drum;
         rest_y = 0.47;
         launch_y = 0.47;
         half = 0.30;
@@ -558,6 +576,96 @@ void pre_break_save_same_world_load_case() {
         require(s.kit_body_enabled(piece_body[k]), (prefix + "every reused piece is live").c_str());
         require(std::abs(s.kit_body_mass(piece_body[k]) - mass / 8.0) < 0.01,
                 (prefix + "every reused piece keeps its mass share").c_str());
+    }
+}
+
+// A save taken before a crate breaks, loaded back after it, the
+// restored crate broken again, and then a death before the next
+// commit: the checkpoint is the loaded save, so the death must
+// bring back the checkpoint world — the crate whole, its pieces
+// parked — and the crate must break again after that. (#372
+// review of 474fb0c9.)
+void pre_break_save_rebreak_death_case() {
+    const std::string prefix = "stock damage pre-break save re-break death: ";
+    Simulation s(scraperx::sim::InitialSpawn::HighDrop);
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const double mass = s.kit_body_mass(crate);
+    const std::uint32_t bodies_before = s.kit_body_count();
+    const auto home = s.kit_body_position(crate);
+    // The player never grounds from the spawn to the death, so no
+    // checkpoint can commit: the only checkpoint is the loaded save.
+    // The load itself puts the player back on the ground at the
+    // checkpoint (a save holds the last checkpoint, not the fall),
+    // so the fall is re-entered with a launch after the load.
+    (void)s.advance_frame(0.5);  // the placement settle expires; the fall is on, no commit
+    // The save predates the break: its damage holds the crate intact.
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    // The drop breaks the crate on landing, far past the 300 N.s line.
+    const auto at = s.kit_body_position(crate);
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    (void)s.advance_frame(1.0);
+    require(s.stock_damage(entity).broken, (prefix + "the crate breaks").c_str());
+    require(s.kit_body_count() == bodies_before + 8,
+            (prefix + "the break adds eight pieces").c_str());
+    std::array<std::uint32_t, 8> piece_body{};
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        piece_body[k] = s.kit_body_index(piece_entity_for(entity, k));
+        require(piece_body[k] != 0xFFFFFFFFU, (prefix + "every piece exists").c_str());
+    }
+    // Back into the same world: the crate comes back whole, its pieces parked.
+    require(s.load_game(bytes.data(), bytes.size()),
+            (prefix + "the same world loads the pre-break save").c_str());
+    require(!s.stock_damage(entity).broken, (prefix + "the crate is whole again").c_str());
+    require(s.kit_body_enabled(crate), (prefix + "the restored crate is live").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        require(!s.kit_body_enabled(piece_body[k]), (prefix + "every piece is parked").c_str());
+    }
+    // The load strands the player at the checkpoint on the ground: a
+    // save holds the last checkpoint, not the fall. Launch him back
+    // into the HighDrop fall, so the re-break and the death both
+    // land before any grounded tick can commit the broken crate.
+    s.debug_launch_player({0.0, 62.0, -8.0}, {0.0, 0.0, 0.0});
+    // Breaking the restored crate again reuses those pieces.
+    const auto at2 = s.kit_body_position(crate);
+    put(s, crate, {at2.x, at2.y + 3.0, at2.z});
+    (void)s.advance_frame(1.0);
+    require(s.stock_damage(entity).broken, (prefix + "the restored crate breaks again").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        require(s.kit_body_enabled(piece_body[k]), (prefix + "every reused piece is live").c_str());
+    }
+    // The fall kills before any checkpoint can commit: the death
+    // restores the loaded save, the crate whole and its pieces
+    // parked — not a world with neither.
+    const std::uint64_t deaths = s.snapshot().death_count;
+    require(advance_until(s, [deaths](const Snapshot &n) { return n.death_count > deaths; }, 6.0),
+            (prefix + "the fall kills").c_str());
+    require(s.kit_body_enabled(crate), (prefix + "the death brings the crate back live").c_str());
+    require(!s.stock_damage(entity).broken, (prefix + "the death brings the crate back whole").c_str());
+    require(s.kit_body_count() == bodies_before + 8,
+            (prefix + "the death makes no second set of pieces").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        require(s.kit_body_index(piece_entity_for(entity, k)) == piece_body[k],
+                (prefix + "every piece keeps its body").c_str());
+        require(!s.kit_body_enabled(piece_body[k]), (prefix + "every piece is parked again").c_str());
+    }
+    const auto back = s.kit_body_position(crate);
+    require(std::hypot(back.x - home.x, back.y - home.y, back.z - home.z) < 0.5,
+            (prefix + "the death rewinds the crate to its checkpoint place").c_str());
+    // And the restored crate breaks again: it is a whole crate in
+    // the world, not a ghost the damage record has written off.
+    const auto at3 = s.kit_body_position(crate);
+    put(s, crate, {at3.x, at3.y + 3.0, at3.z});
+    (void)s.advance_frame(1.0);
+    require(s.stock_damage(entity).broken, (prefix + "the restored crate breaks a third time").c_str());
+    require(s.kit_body_count() == bodies_before + 8,
+            (prefix + "the third break makes no second set of pieces").c_str());
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        require(s.kit_body_index(piece_entity_for(entity, k)) == piece_body[k],
+                (prefix + "the third break reuses every piece").c_str());
+        require(s.kit_body_enabled(piece_body[k]), (prefix + "every piece is live again").c_str());
+        require(std::abs(s.kit_body_mass(piece_body[k]) - mass / 8.0) < 0.01,
+                (prefix + "every piece keeps its mass share").c_str());
     }
 }
 
@@ -992,4 +1100,12 @@ void run_stock_damage() {
     fabricated_same_world_load_case();
     // ---- (d) a save taken before the break, loaded back after it ----
     pre_break_save_same_world_load_case();
+    // ---- (d) that save, a re-break, and a death before the next commit ----
+    pre_break_save_rebreak_death_case();
 }
+
+// J-074 (#352): the group registers itself beside its function, so no
+// shared list edits. Key 985 keeps the old main() order (loose_stock
+// 980, look_target 990); the ONLY name stays "stock-damage".
+SCRAPERX_GROUP("stock_damage", 985, run_stock_damage);
+SCRAPERX_SELECT("stock-damage", run_stock_damage);

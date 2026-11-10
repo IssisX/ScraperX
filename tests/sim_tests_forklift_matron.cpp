@@ -555,8 +555,9 @@ void run_forklift_matron() {
 
     // Crowded: 32 crates of loose stock (live fabrication) where the truck
     // meets her, so 34 moving bodies in her box, more than sense_near's 32;
-    // against the same second with none. Measured, not yet required: its cut
-    // to the broad phase's first 32 can leave the truck out (#229, Muse's).
+    // against the same second with none. Required now that sense_near keeps
+    // the 32 nearest (#254): the truck is read on every tick it touches her
+    // and the ram still fells her, crates or not.
     const Run control = ram(1, 1.0, 0.0, false, 0);
     print("ram, full speed, dangerous, the crowded case's control", control);
     const Run crowded = ram(1, 1.0, 0.0, std::getenv("SCRAPERX_FM_CROWD") != nullptr, 32);
@@ -564,6 +565,8 @@ void run_forklift_matron() {
     require(control.knockdowns >= 1 && control.missed_ticks == 0,
             "forklift_matron crowded: with no crates the same ram is read and fells her");
     require(crowded.box_moving > 32, "forklift_matron crowded: more moving bodies in her box than sense_near keeps");
+    require(crowded.missed_ticks == 0 && crowded.knockdowns >= 1,
+            "forklift_matron crowded: with 32 crates the truck is still read on every tick it touches her and fells her");
     std::cout << "  forklift_matron crowded: the truck touched her " << crowded.touch_ticks << " ticks, "
               << crowded.missed_ticks << " of them unread by her balance; judged " << crowded.carriage_judged
               << " carriage + " << crowded.chassis_judged << " chassis, knockdowns " << crowded.knockdowns
@@ -647,3 +650,4 @@ void run_forklift_matron() {
     std::cout << "PASS scraperx_sim forklift_matron: ram_ns=" << full.impulse_ns << " creep_blow_mps=" << creep.blow_mps
               << " push_feet_n=" << off.feet_n << " fall_mps=" << off.fall_mps << "\n";
 }
+SCRAPERX_SLICE("forklift-matron", run_forklift_matron);

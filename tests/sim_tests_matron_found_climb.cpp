@@ -476,3 +476,5 @@ void run_matron_found_climb() {
     }
     std::cout << "PASS scraperx_sim matron found climb\n";
 }
+SCRAPERX_GROUP("matron_found_climb", 860, run_matron_found_climb);
+SCRAPERX_SELECT("matron-found-climb", run_matron_found_climb);

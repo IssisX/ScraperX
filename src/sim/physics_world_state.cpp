@@ -239,6 +239,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     // tick, not yet grounded, would catch it and hang the body there.
     regrab_lockout_ticks_ = kReleaseRegrabLockoutTicks;
     slingshot_flight_ = false;
+    own_drive_ = true;   // back on his feet (J-048)
     // The capsule the checkpoint was committed in: a crouched commit's
     // centre is a crouched centre, and may sit under a low ceiling.
     crouched_ = checkpoint_crouched_;
@@ -258,11 +259,32 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     // back where the checkpoint had it, intact, while the damage
     // still says broken. Park it again: a body breaks once, and the
     // pieces the break made are the crate now. Without this the
-    // crate would stand whole beside its own pieces.
+    // crate would stand whole beside its own pieces. But only when
+    // the pieces are actually in the world: a checkpoint that
+    // predates the break holds the pieces parked, so parking the
+    // crate too leaves neither — a whole crate the damage has
+    // written off, unobservable forever. Then the damage is cleared
+    // instead, so the restored world matches its checkpoint.
     for (int i = 0; i < loose_stock_->count(); ++i) {
         const std::uint64_t entity = LooseStock::kFirstEntity + static_cast<std::uint64_t>(i);
-        if (stock_damage_.state(entity).broken) {
+        if (!stock_damage_.state(entity).broken) {
+            continue;
+        }
+        const stock_damage::BreakGeometry geometry =
+            stock_damage::break_geometry(loose_stock_->placed()[static_cast<std::size_t>(i)].kind);
+        bool any_piece_live = false;
+        for (std::uint8_t p = 0; p < geometry.count; ++p) {
+            const kit::BodyIndex piece_body =
+                kit_->body_for_entity(stock_damage::piece_entity_for(entity, p));
+            if (piece_body.valid() && kit_->body_enabled(piece_body)) {
+                any_piece_live = true;
+                break;
+            }
+        }
+        if (any_piece_live) {
             kit_->park(loose_stock_->body(i));
+        } else {
+            stock_damage_.clear(entity);
         }
     }
     slingshot_->restore(checkpoint_.slingshot);
@@ -904,6 +926,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.wind_mps = wind_mps_;
     state_.wind_force_n = wind_force_n_;
     state_.wind_peak_force_n = wind_peak_force_n_;
+    state_.wind_front_x_m = wind_front_x_m_;
     state_.shove_count = shove_count_;
     read_strike_state();
     state_.beam_lean = {beam_lean_.GetX(), 0.0, beam_lean_.GetZ()};

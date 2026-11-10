@@ -169,6 +169,13 @@ public:
     // is not a placement: its landing is a real hit.
     void note_placed(std::uint64_t entity) noexcept;
 
+    // Forgets one stock entirely: its damage, its open hit window, its
+    // last velocity, and its support and settle counts, so the next
+    // sight is a first sight. Called by the world when a restore
+    // rewinds a stock to a checkpoint that holds it whole: the damage
+    // the rewind discards must not keep the restored body unobservable.
+    void clear(std::uint64_t entity) noexcept;
+
     // Save form: one record per damaged or broken body (plain data,
     // trivially copyable, so SaveWriter::list holds it).
     struct SavedDent final {

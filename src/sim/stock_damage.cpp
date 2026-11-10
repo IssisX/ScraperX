@@ -347,6 +347,14 @@ void StockDamage::note_placed(const std::uint64_t entity) noexcept {
     windows_[entity] = Window{};
 }
 
+void StockDamage::clear(const std::uint64_t entity) noexcept {
+    states_.erase(entity);
+    windows_.erase(entity);
+    prev_vel_.erase(entity);
+    support_ticks_.erase(entity);
+    settle_ticks_.erase(entity);
+}
+
 std::vector<BreakAction> StockDamage::take_actions() noexcept {
     std::vector<BreakAction> actions = std::move(breaks_);
     breaks_.clear();

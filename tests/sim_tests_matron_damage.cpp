@@ -135,3 +135,4 @@ void run_matron_damage() {
     require(down.down, "damage: Down trial reached the real Down state");
     std::cout << "PASS matron-damage Down pause\n";
 }
+SCRAPERX_SLICE("matron-damage", run_matron_damage);

@@ -35,7 +35,7 @@ def main() -> int:
     args = ap.parse_args()
     token = os.environ.get("AGENT_GITHUB_TOKEN", "")
     if not token and not args.dry_run:
-        print("provision: AGENT_GITHUB_TOKEN is not set; add it as a repository secret first", file=sys.stderr)
+        print("provision: AGENT_GITHUB_TOKEN is not set; add it to environment switchboard-merge first", file=sys.stderr)
         return 2
     key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not args.dry_run and not (key.startswith("sk-ant-") and "\n" not in key and " " not in key.strip()):
