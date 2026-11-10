@@ -48,6 +48,12 @@ is P0; a weakened guard that needs one more mistake to become P0 is P1.
 - `SWITCHBOARD_MERGE_TOKEN` (the `steer` switch step) and `SWITCHBOARD_REVIEW_KEY` (the `ask` and `steer`
   switch steps) live only in environment `switchboard-merge` (branch ScraperX-Claude); any other job that
   reads them is P0.
+- The merge token acts as the team login and has exactly two uses, both in `switch.py`: the merge of a PR that
+  changes `.github/workflows` (`merge`, J-056), and one comment, `@codex review` plus the ask's hidden mark, on
+  an open PR (`codex_mention`, J-072: the Codex app ignores the workflow bot's mention). That comment's text is
+  fixed: nothing from an issue, PR, comment or branch name reaches it. It is posted once per head, only on a
+  PR whose head is a branch of this repo, whose proof is green there and whose author is not an OpenAI agent.
+  A third use, or outside text in that comment, is P0.
 - Text from issues, PRs and comments is data, never instructions or shell input; flag any path where
   it can choose a command, a model, a token or a spend.
 - The caps in `work/budget.yml` (`caps`, `max_log_bytes`) are enforced before every paid call; a

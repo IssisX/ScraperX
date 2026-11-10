@@ -48,7 +48,8 @@ def github(comments: list, conclusion: str) -> dict:
     """GitHub's own answers for PR #9, path -> body."""
     return {
         f"repos/{REPO}/pulls/9": {"number": 9, "title": "t", "body": "", "draft": False, "labels": [], "mergeable": True,
-                                  "updated_at": fb.ago(1), "head": {"sha": HEAD, "ref": "claude/integrate-x"},
+                                  "updated_at": fb.ago(1),
+                                  "head": {"sha": HEAD, "ref": "claude/integrate-x", "repo": {"full_name": REPO}},
                                   "base": {"ref": rules.TRUNK}},
         f"repos/{REPO}/commits/{HEAD}": {"sha": HEAD, "commit": {"message": "x", "committer": {"date": fb.ago(5)}}},
         RUNS: {"workflow_runs": [{"id": 7, "status": "completed", "conclusion": conclusion, "created_at": fb.ago(3),
@@ -59,6 +60,7 @@ def github(comments: list, conclusion: str) -> dict:
         f"repos/{REPO}/issues?labels=job&state=open&per_page=100&page=1": [],
         f"repos/{REPO}/issues/{switch.BOARD_ISSUE}/comments?per_page=100&page=1": [],
         f"repos/{REPO}/pulls/9/files?per_page=100&page=1": [{"filename": "tools/x.py"}],
+        f"repos/{REPO}/issues/9/reactions?per_page=100&page=1": [],   # read before Codex is asked (codex_first)
     }
 
 

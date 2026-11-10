@@ -77,12 +77,30 @@ Answer LAND, FIX or NOTE:
 - FIX: only for a real physics, gameplay, correctness or test failure you can show deterministically. Fill `repro` \
 with the command to run, its input, the expected and the observed result, all concrete. Spelling, wording, style and \
 commit-message points never block (owner, 2026-10-31): put them in `notes` and answer LAND.
-- NOTE: you suspect a problem but cannot give a deterministic repro.
+- NOTE: you suspect a problem but cannot give a deterministic repro. A NOTE lands nothing: the change then goes \
+to a second reviewer.
+<settled_calls>, when given, are the owner's decisions, already made: a change that carries one out is correct in \
+that respect. Never ask him to confirm one, and never hold a verdict back over one.
 When the verdict is not FIX, fill every `repro` field with "-".
 Report every blocking finding in one review, never only the first: `repro` shows the most severe, and each other \
 finding you would block on is a note starting "Also blocking:" with its path and why. A fix round costs the team an \
 hour, so a finding held back for the next round is a defect of the review.
 `summary` is at most three sentences. Each note is one sentence."""
+
+
+def settled_calls(claude_md: str) -> str:
+    """The owner's settled calls, as CLAUDE.md lists them: the section whose heading starts "## Settled", up to the
+    next "## " heading. "" when the file has no such section (the review then runs without it)."""
+    lines, on = [], False
+    for line in claude_md.splitlines():
+        if line.startswith("## "):
+            if on:
+                break
+            on = line.startswith("## Settled")
+        if on:
+            lines.append(line)
+    return "\n".join(lines).strip()
+
 
 SECURITY_REVIEW_SYSTEM = """You are the security pass for one pull request on ScraperX, a physics climbing game (C++ \
 native kernel, Godot 4.7 presentation). The PR changes `.github/workflows/`, and your LAND, with the Codex app's, lets the \

@@ -129,6 +129,7 @@ VERDICT_TRIGGER = re.compile(r":(?= ?(?:land|fix|note|block))", re.IGNORECASE)
 MERGE_TOKEN_ENV = "SWITCHBOARD_MERGE_TOKEN"
 MERGE_TOKEN_REFUSED = {401, 403, 404, 405}   # GitHub's answers to a token that cannot merge here
 MERGE_TOKEN_NEEDS = "Contents, Pull requests and Workflows: read/write"
+CODEX_MENTION = "@codex review"   # what wakes the Codex app, from a person's login only (codex_mention)
 # J-056: the automatic review signs its verdict with this secret (HMAC-SHA256). Only the ask and steer jobs' switch
 # steps hold it, through environment switchboard-merge; main() takes it out of the environment like the merge token.
 # Any branch's push workflow posts as the workflow bot, so on a workflow-file PR only a signed review is the pass.
@@ -477,7 +478,10 @@ class Switch:
             verdicts=verdicts, needs=needs, rule_check_block=False,
             touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files))
         ctx = {"job": job, "issue": issue, "proof_url": url, "run_id": run_id, "proof_done_at": proof_done_at, "comments": comments,
-               "title": pr["title"], "body": pr.get("body") or "", "files": files, "updated_at": pr.get("updated_at") or ""}
+               "title": pr["title"], "body": pr.get("body") or "", "files": files, "updated_at": pr.get("updated_at") or "",
+               "created_at": pr.get("created_at") or "",
+               # the head is a branch of this repo, not a fork's: only then is the team token ever used for it
+               "own_head": (((pr.get("head") or {}).get("repo") or {}).get("full_name") or "") == self.gh.repo}
         return facts, ctx
 
     def target_prs(self, only_pr: int, only_sha: str) -> list[dict]:
@@ -694,17 +698,24 @@ class Switch:
             return
         if rules.needs_review(facts, author, self.team) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
+        elif rules.needs_review(facts, author, self.team) and self.codex_first(facts, ctx, author):
+            self.out(f"ASK-CODEX   #{facts.number} Codex is asked to review @{facts.head_sha[:8]}, once for this head")
         elif rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
-            self.out(f"WAIT-CODEX  #{facts.number} Codex is reviewing @{facts.head_sha[:8]}: no other review for up to "
-                     f"{rules.CODEX_WAIT_MINUTES} minutes after the proof went green")
+            self.out(f"WAIT-CODEX  #{facts.number} it is Codex's turn on @{facts.head_sha[:8]}: no other review for "
+                     f"{rules.CODEX_START_MINUTES} minutes, or up to {rules.CODEX_WAIT_MINUTES} while its review runs")
         elif rules.needs_review(facts, author, self.team) and self.team.pool:
             _, who, asked = self.pooled_reviewer(facts, ctx, author)
             if not who:
                 self.out(f"NOFALLBACK  #{facts.number} everyone in the pool was asked and nobody answered")
             elif who != rules.API_REVIEWER and who not in asked:
-                quiet = [self.team.agent_name.get(a, a) for a in asked]
+                quiet = [self.team.agent_name.get(a, a) for a in asked if a != "codex"]
                 why = (f"{', '.join(quiet)} did not answer in {self.team.fallback_after_hours:g} hours, "
                        f"so you are asked instead. ") if quiet else ""
+                noted = sorted({v.who for v in facts.verdicts if v.kind == "review" and v.verdict == "NOTE"
+                                and rules.names_head(v, facts.head_sha)})
+                if noted:   # a NOTE lands nothing (rules.needs_review): the next reviewer is told what is wanted
+                    why = (f"{', '.join(noted)} gave this head a NOTE (it is on #{facts.number}), which lands "
+                           f"nothing: a LAND or a FIX is asked of you. ") + why
                 self.ask_review(facts, ctx, who, why)
                 self.note_assigned(who)
         elif rules.needs_review(facts, author, self.team):
@@ -713,13 +724,63 @@ class Switch:
                 self.ask_review(facts, ctx, pick.agent, "")
             self.escalate_review(facts, ctx, author)
 
-    def codex_pending(self, facts: rules.PrFacts, ctx: dict) -> bool:
-        """Codex is still reviewing this head and the proof went green under CODEX_WAIT_MINUTES ago: wait for it
-        rather than pay for a second review (J-031). Past the wait, the review goes on as if Codex were not there."""
-        if rules.codex_wait_over(ctx.get("proof_done_at") or "", self.now.strftime("%Y-%m-%dT%H:%M:%SZ")):
+    def codex_counts(self, author: str, ctx: dict) -> bool:
+        """Is Codex asked to review this PR: it is on the team, its review can land this author's work
+        (rules.land_counts: another vendor's), and the head is a branch of this repo (a fork's PR never gets the
+        team login's mention). Its unasked findings still block anyone's PR."""
+        return bool(ctx.get("own_head")) and self.team.agent_vendor.get("codex") not in (None, "unknown", author)
+
+    def codex_asked(self, facts: rules.PrFacts, ctx: dict) -> str:
+        """When Codex was asked to review this head, "" when it was not: the switch's ask mark for the head (posted
+        with the team token, or by the workflow bot as a note for the integrator), or a team login's own
+        `@codex review` on the PR after the head commit. One ask per head: Codex's usage is limited."""
+        tag = MARK.format(kind="ask-codex", pr=facts.number, head=facts.head_sha)
+        times = []
+        for c in ctx.get("comments") or []:
+            login = ((c.get("user") or {}).get("login") or "").strip().lower()
+            body = c.get("body") or ""
+            if login == rules.BOT_LOGIN.lower():
+                mine = tag in body
+            elif login in self.team.verdict_logins:
+                mine = tag in body or (body.lstrip().lower().startswith(CODEX_MENTION)
+                                       and (c.get("created_at") or "") >= facts.head_committed_at)
+            else:
+                mine = False   # the repo is public: anyone's comment could carry the mark
+            if mine:
+                times.append(c.get("created_at") or "")
+        return max(times, default="")
+
+    def codex_reactions(self, facts: rules.PrFacts, ctx: dict) -> list:
+        """The PR's reactions (Codex puts 👀 on it while it reviews), read once per PR and run."""
+        if "_reactions" not in ctx:
+            ctx["_reactions"] = self.gh.paged(f"repos/{self.gh.repo}/issues/{facts.number}/reactions")
+        return ctx["_reactions"]
+
+    def codex_first(self, facts: rules.PrFacts, ctx: dict, author: str) -> bool:
+        """Codex reviews each green head once, before anyone else is asked or paid (Cory, 11-04). It reviews a PR
+        by itself only when a person's login opens it, and only that first head; the PRs the switchboard opens
+        for Muse and every later head got none (#376, #367), so the switch asks: once per head, and not while
+        Codex is already on it. True when the ask was made in this call."""
+        if not self.codex_counts(author, ctx) or self.codex_asked(facts, ctx):
             return False
-        reactions = self.gh.paged(f"repos/{self.gh.repo}/issues/{facts.number}/reactions")
-        return rules.codex_in_flight(ctx["comments"], reactions, facts.head_sha)
+        if rules.codex_in_flight(ctx.get("comments") or [], self.codex_reactions(facts, ctx), facts.head_sha):
+            return False
+        self.ask_review(facts, ctx, "codex", "")
+        return True
+
+    def codex_pending(self, facts: rules.PrFacts, ctx: dict) -> bool:
+        """It is still Codex's turn on this head (rules.codex_turn): wait for it rather than ask or pay for a
+        second review (J-031). Past the wait, the review goes on as if Codex were not there."""
+        now = self.now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        expected = self.codex_counts(self.team.vendor_of_branch(facts.head_ref), ctx)
+        since = [ctx.get("proof_done_at") or "", self.codex_asked(facts, ctx)]
+        if expected:
+            since.append(ctx.get("created_at") or "")   # a PR the switch just opened was green long before
+        if not rules.codex_turn(since, True, expected, now):
+            return False   # past every wait: no reaction read
+        if rules.codex_turn(since, False, expected, now):
+            return True
+        return rules.codex_in_flight(ctx.get("comments") or [], self.codex_reactions(facts, ctx), facts.head_sha)
 
     def api_ok(self, ctx: dict) -> bool:
         """May the automatic review run today: the worst case of one call fits under every cap."""
@@ -737,8 +798,9 @@ class Switch:
             comments = list(comments) + list(ctx["comments"])   # Codex is asked on the PR itself
         out = MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha)
         api_failed = any(out in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN for c in comments)
+        done = rules.reviewers_done(facts.verdicts, facts.head_sha, self.team)   # a NOTE-giver is not asked twice
         api_ok = (self.api_ok(ctx) if api is None else api) and not api_failed
-        rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, api_ok)
+        rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, api_ok, done)
         asked: dict[str, str] = {}
         for agent in self.team.agent_vendor:
             tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
@@ -1495,6 +1557,8 @@ class Switch:
             return
         name = self.team.agent_name.get(agent, agent)
         job = ctx["job"] or f"PR #{facts.number}"
+        if agent == "codex" and self.codex_mention(facts, tag):
+            return
         if agent == "codex":   # J-072: this login's "@codex review" never woke Codex (2 of 2, #191 and #150), so the
             # mark only records the ask; the integrator's inbox gets a CODEX-ASK item and posts the mention itself
             self.gh.comment(where, f"Switchboard: {job}, head {facts.head_sha[:8]}: a Codex review of this head is due. "
@@ -1519,10 +1583,33 @@ class Switch:
             self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
                           f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
 
+    def codex_mention(self, facts: rules.PrFacts, tag: str) -> bool:
+        """Post `@codex review` on the PR as the team login, with the team token (J-072). The Codex app answers a
+        person's mention and ignores the workflow bot's (2 of 2, #191 and #150), and it reviews by itself only a PR
+        a person opened, so the heads the switchboard opens for Muse sat with no Codex review until the integrator
+        typed this by hand (#376). The comment is the mention and the ask's mark, nothing else: Codex reads any
+        other words as instructions. False when there is no token here or GitHub refused it: the caller then
+        records the ask for the integrator, as before."""
+        if not self.merge_token:
+            return False
+        try:
+            self.gh.write("POST", f"repos/{self.gh.repo}/issues/{facts.number}/comments",
+                          {"body": f"{CODEX_MENTION}\n\n{tag}"},
+                          f"ask Codex to review #{facts.number} @{facts.head_sha[:8]} as the team login",
+                          token=self.merge_token)
+        except GitHubError as err:
+            code = http_status(err.detail)
+            if code not in MERGE_TOKEN_REFUSED:
+                raise   # a rate limit or an outage: this PR waits for the next sweep, as any failed write does
+            self.out(f"NOTE  #{facts.number} GitHub refused the team token for the Codex mention (HTTP {code}; "
+                     f"{MERGE_TOKEN_ENV} needs {MERGE_TOKEN_NEEDS}): the integrator is asked to post it")
+            return False
+        return True
+
     def escalate_review(self, facts: rules.PrFacts, ctx: dict, author: str) -> None:
         """An ask the switchboard made on this head that has had no verdict for review.fallback_after_hours goes
         to the next agent in review.fallback_order, once per head (each ask has its own marker). The caller
-        only gets here while needs_review holds: any verdict on the head, from anyone, ends this."""
+        only gets here while needs_review holds: a LAND or a FIX on the head, from anyone, ends this."""
         where, comments = self.ask_thread(facts, ctx)
         asked: list[tuple[str, str]] = []   # (created_at, agent) of the bot's own asks on this head
         for agent in self.team.agent_vendor:
@@ -1622,6 +1709,11 @@ class Switch:
                                               + (self.root / "SECURITY.md").read_text(encoding="utf-8")
                                               + "\n</security_guidelines>")] if security else []
         system = claude_calls.SECURITY_REVIEW_SYSTEM if security else claude_calls.REVIEW_SYSTEM
+        # The owner's settled calls (CLAUDE.md): #376's review answered NOTE to ask him to confirm one of them
+        # (a dead Matron stays dead, 11-05), and a NOTE lands nothing. The security pass judges by SECURITY.md alone.
+        settled = claude_calls.settled_calls((self.root / "CLAUDE.md").read_text(encoding="utf-8"))
+        if settled and not security:
+            guidelines = [claude_calls.text_block(f"<settled_calls>\n{settled}\n</settled_calls>")]
         content = guidelines + [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
                    claude_calls.text_block(f"<pr number=\"{facts.number}\" head=\"{facts.head_sha}\" branch=\"{facts.head_ref}\">\n"
                                            f"<title>{ctx['title']}</title>\n<body>\n{ctx['body'][:20000]}\n</body>\n</pr>"),
