@@ -117,6 +117,7 @@ class FakeGH:
         self.comments: list[tuple[int, str, int]] = []
         self.comment_errors: list[Exception] = []
         self.label_errors: list[Exception] = []
+        self.patch_errors: list[Exception] = []
         self.writes: list[tuple[str, str, dict]] = []   # issue writes: labels, comment edits
         self.before_ref_update = None   # called once, just before a ref update (a competing writer)
 
@@ -176,6 +177,8 @@ class FakeGH:
             self.writes.append((method, rest, body))
             return [{"name": n} for n in body["labels"]]
         if method == "PATCH" and rest.startswith("issues/comments/"):
+            if self.patch_errors:
+                raise self.patch_errors.pop(0)
             i = int(rest.rsplit("/", 1)[1]) - 9001
             n, _, k = self.comments[i]
             self.comments[i] = (n, body["body"], k)
@@ -463,10 +466,11 @@ class Strengthened(unittest.TestCase):
         self.assertEqual((ob["attempts"], ob["sends"]), (1, 0), "no label, no receipt: not delivered")
         self.assertNotIn("reconciler:sent", gh.comments[0][1])
         h.run(f, NOW + 10 * M, comments=gh.bot_comments(NOW + 10 * M))
-        self.assertEqual([n for n, _, _ in gh.comments], [500, 500], "on the job's issue, never the PR")
+        # one comment, never a second the bridge would mail again (ChatGPT, comment 6752574323)
+        self.assertEqual([n for n, _, _ in gh.comments], [500], "on the job's issue, never the PR")
         self.assertEqual(gh.writes[0], ("POST", "issues/500/labels", {"labels": ["wake:muse"]}))
-        self.assertEqual(gh.writes[1][:2], ("PATCH", "issues/comments/9002"), "the receipt goes in after the label")
-        body = gh.comments[1][1]
+        self.assertEqual(gh.writes[1][:2], ("PATCH", "issues/comments/9001"), "the receipt goes in after the label")
+        body = gh.comments[0][1]
         self.assertTrue(body.startswith("CLAUDE_TO_MUSE: J-500 "), body)
         self.assertIn(f"id={ob['id']} send=1 attempt=2", body)
         mailed = body.split("\n\n<!--")[0]   # what the bridge mails (it strips the marker too)
@@ -486,6 +490,30 @@ class Strengthened(unittest.TestCase):
         self.assertIn("Post `@codex review` on #402 yourself", body)
         self.assertNotIn("To Codex", body)
         self.assertEqual(re.findall(r"@[\w-]+", body), ["@codex"], "the one mention is in a code span: no ping")
+
+    def test_01b_a_partial_muse_send_is_repaired_never_mailed_twice(self):
+        # ChatGPT, comment 6752574323: the comment went, then its label or its receipt edit failed. The bridge mails
+        # each CLAUDE_TO_MUSE comment id once, so a retry that posts a second comment mails Muse twice.
+        for fail in ("label", "receipt"):
+            with self.subTest(fail=fail):
+                gh = FakeGH()
+                h = Harness(outbox=R.CommentOutbox(gh, RROSTER, 340))
+                f = feed(prs=[fb_red(n=401)], issues=[issue(500, owner="owner:muse")])
+                (gh.label_errors if fail == "label" else gh.patch_errors).append(
+                    GitHubError("POST", "x", "HTTP 502: Bad Gateway"))
+                h.run(f, NOW)
+                self.assertEqual(h.obs("J-500")[0]["sends"], 0, "no receipt: not delivered yet")
+                h.outbox = R.CommentOutbox(gh, RROSTER, 340)   # the next sweep's outbox: only GitHub remembers
+                h.run(f, NOW + 10 * M, comments=gh.bot_comments(NOW + 10 * M))
+                h.run(f, NOW + 20 * M, comments=gh.bot_comments(NOW + 20 * M))
+                mails = [b for n, b, _ in gh.comments if b.startswith("CLAUDE_TO_MUSE:")]
+                self.assertEqual(len(mails), 1, "one comment id: one mail")
+                ob = h.obs("J-500", NOW + 20 * M)[0]
+                self.assertEqual((ob["attempts"], ob["sends"]), (2, 1))
+                self.assertIn(f"<!-- reconciler:sent id={ob['id']} send=1 attempt=2 -->", mails[0])
+                self.assertNotIn("reconciler:posted", mails[0])
+                self.assertEqual(gh.writes[-1][:2], ("PATCH", "issues/comments/9001"))
+                self.assertIn(("POST", "issues/500/labels", {"labels": ["wake:muse"]}), gh.writes)
 
     def test_03_a_dead_letter_reaches_cory_once_in_a_slot_batch(self):
         gh = FakeGH()

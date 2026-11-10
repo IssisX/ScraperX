@@ -4,10 +4,10 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794266612 (2026-11-09 23:23:32Z, ~5:23 PM Central)
+Read through: 1794273592 (2026-11-10 01:19:52Z, ~7:19 PM Central)
 
 ## Now: game code (J-072 gate passed 11-09 5:58 PM: round trip O-319779d9 acked, #350 6754851673)
-Cory 11-09 night: code tonight, two helpers at most, no waste. Mine: J-067 back-hair fan (#328; nape roots ~4.4 cm off the neck axis in `matron_rig.gd` `step_hair`; Cory: back hair should curve down both sides of her back), eye-checked.
+Cory 11-09 night: code tonight, two helpers at most, no waste. J-067 back hair: PR #370 (switchboard merges). Follow-up: the flat sheet off her back in a stagger (lengths fully to gravity failed look_matron_hold 0.101 > 0.093; try a gentler blend). Scratch shot scripts: scratchpad/hair/*.gd, body check scratchpad/hair/drawn.sh.
 
 ## Waiting on me
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt; it cracked #298. Give it the hardest work, not only stuck jobs; each prompt says what failed and what was ruled out, bounds its answer length and run time; one combined prompt at a time, never for sport; the prompt goes whole in one block for Cory (11-07, 11-08).
