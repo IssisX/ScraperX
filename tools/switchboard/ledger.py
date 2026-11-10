@@ -19,11 +19,16 @@ issue with no owner, a listing that was cut short) is an UNMATCHED item: never s
 
 Each item has an owner (the issue's `owner:` label, else the branch prefix in work/agents.yml), a holder (who
 acts next), an age and a deadline: 2 h for a red branch, an unanswered ask and a green PR with no review;
-24 h untouched for everything else (stale). Past its deadline the holder is notified once through its own
-channel (Muse: a `CLAUDE_TO_MUSE:` comment plus `wake:muse`, as switch.py's muse(); Codex: `@codex review`;
-the others: a `To <Name>:` comment on the item's thread); past twice the deadline once more, and the item is
-listed under ESCALATED. A notice is sent once per item, version (head, ask, last touch) and stage: the keys
-sent live in a hidden marker in the ledger section and in each notice comment's own marker.
+24 h untouched for everything else (stale). Past twice its deadline an item is listed under ESCALATED.
+
+The ledger is the board's list, not a notifier (J-072: one owner of notices). The reconciler
+(tools/switchboard/reconciler.py) tells each holder, with an ack, one re-send and a dead-letter; with it live and
+`notices: v2` in work/switchboard.yml, run() is called with notify=False and posts nothing. Without that switch
+(the reconciler off or in shadow, or no `notices: v2`) the ledger's old notices are what tells the holder: past
+its deadline once through its own channel (Muse: a `CLAUDE_TO_MUSE:` comment plus `wake:muse`; a Codex-held item
+goes to the integrator; the others: a `To <Name>:` comment on the item's thread), past twice the deadline once
+more. Such a notice is sent once per item, version (head, ask, last touch) and stage: the keys sent live in a
+hidden marker in the ledger section and in each notice comment's own marker.
 
 The section between `<!-- ledger:start -->` and `<!-- ledger:end -->` is the only text the ledger writes; the
 markers go under the body's first heading when missing. Nothing is ever closed or deleted.
@@ -583,7 +588,7 @@ def line(it: Item, now: dt.datetime, holder: bool) -> str:
     return f"- {who}{ref_md(it)}{job} · {clean(it.state, 90)} · {age_text(it.age(now))}{tail}"
 
 
-def section(led: Ledger, now: dt.datetime, when: str, sent: list[str], kept: list[str]) -> str:
+def section(led: Ledger, now: dt.datetime, when: str, sent: list[str], kept: list[str], notify: bool = True) -> str:
     items = led.items
     esc = [it for it in items if it.stage(now) == 2]
     unm = [it for it in items if it.unmatched and it.stage(now) < 2]
@@ -601,9 +606,12 @@ def section(led: Ledger, now: dt.datetime, when: str, sent: list[str], kept: lis
         f"Written by the switchboard at {when}, every sweep (`tools/switchboard/ledger.py`); text between the ledger "
         f"markers is replaced each sweep. **{len(items)} items** ({kinds}): **{len(esc)} escalated**, {past} past "
         f"deadline, {unmatched} unmatched, {stale} stale." + (f" Not listed: {folded}." if folded else ""),
-        "Deadlines: red, an unanswered ask, a green PR with no review 2 h; anything else 24 h untouched. Past it the "
-        "holder is told once; past twice it, again, and it is listed here as ESCALATED. A superseded branch: close it, "
-        "or comment `keep <branch>`.",
+        "Deadlines: red, an unanswered ask, a green PR with no review 2 h; anything else 24 h untouched. " + (
+            "Past it the holder is told once; past twice it, again, and it is listed here as ESCALATED."
+            if notify else
+            "Past twice it an item is listed here as ESCALATED. The ledger sends no notices: the reconciler "
+            "(`tools/switchboard/reconciler.py`) tells each holder.") +
+        " A superseded branch: close it, or comment `keep <branch>`.",
     ]
 
     def order(xs: list[Item]) -> list[Item]:
@@ -827,20 +835,23 @@ def notice_body(n: Notice, roster: Roster, now: dt.datetime, board: int) -> tupl
 
 # ---------- the run ----------
 def run(gh, feed: Feed, roster: Roster, now: dt.datetime, when: str, out=print, muse_label: str = "wake:muse",
-        sent_in_comments: Iterable[str] = (), board_body: Callable[[], str] | None = None) -> Ledger:
+        sent_in_comments: Iterable[str] = (), board_body: Callable[[], str] | None = None, notify: bool = True) -> Ledger:
     """Classify, send the notices owed, rewrite the board's ledger section. Writes go through gh.write and
-    gh.comment, so a dry run only prints them."""
+    gh.comment, so a dry run only prints them. With notify False (the reconciler owns the notices: `notices: v2`
+    in work/switchboard.yml) nothing is posted and no notice clock is kept: only the section is written."""
     led = classify(feed, now, roster)
     body = board_body() if board_body else (gh.get(f"repos/{gh.repo}/issues/{feed.board}") or {}).get("body") or ""
     old_sent, old_kept = section_state(body)
     sent = set(old_sent) | set(sent_in_comments)
-    posted = send(gh, due_notices(led.items, now, sent, roster, feed.board), roster, now, feed.board, out, muse_label)
-    led.pending = pending(led.items, now, sent | set(posted))
+    posted: list[str] = []
+    if notify:
+        posted = send(gh, due_notices(led.items, now, sent, roster, feed.board), roster, now, feed.board, out, muse_label)
+        led.pending = pending(led.items, now, sent | set(posted))
     live_keys = {it.key(s) for it in led.items for s in (1, 2)}
     keep_keys = sorted({digest("keep", b) for b in feed.keeps} |
                        ({k for k in old_kept} & {digest("keep", b.name) for b in feed.branches}))
     keys = [k for k in dict.fromkeys(old_sent + sorted(set(sent_in_comments)) + posted) if k in live_keys]
-    text = section(led, now, when, keys, keep_keys)
+    text = section(led, now, when, keys, keep_keys, notify)
     new = rewrite(body, text)
     if new is None:
         out(f"ERROR       ledger: #{feed.board}'s body has broken ledger markers; not written (fix them by hand)")
@@ -1177,12 +1188,12 @@ def held_by(between: dict, old_vs_trunk: dict, new_vs_trunk: dict, newer: str) -
 
 
 def sweep(sw, steered: list, board: int, muse_label: str, proof_workflow: str, system_branches: Iterable[str],
-          system_prs: Iterable[int], when: str) -> Ledger:
-    """The switch's one call (switch.py main, after a full steer sweep)."""
+          system_prs: Iterable[int], when: str, notify: bool = True) -> Ledger:
+    """The switch's one call (switch.py main, after a full steer sweep). `notify` False: the section only (run)."""
     import yaml
     feed, sent = read_feed(sw, steered, sw.now, board, proof_workflow, system_branches, system_prs)
     roster = Roster(yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {})
-    return run(sw.gh, feed, roster, sw.now, when, sw.out, muse_label, sent)
+    return run(sw.gh, feed, roster, sw.now, when, sw.out, muse_label, sent, notify=notify)
 
 
 def main() -> int:

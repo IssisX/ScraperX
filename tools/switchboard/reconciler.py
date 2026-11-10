@@ -472,7 +472,7 @@ def observe(p: Pass, roster: L.Roster) -> tuple[dict[str, JobObs], list, dict[in
         r = newest.get(b.name)
         run = "none" if r is None or r.sha != b.sha else (
             r.state or ("green" if r.conclusion == "success" else "running" if not r.conclusion else "red"))
-        if not job:   # the ledger lists it UNMATCHED, and still notifies its holder: so is it owed here
+        if not job:   # the ledger lists it UNMATCHED; its holder is owed a notice all the same (branch_wants)
             no_job.append((b, run))
             continue
         get(job).branches.append((b, run))
@@ -2002,15 +2002,28 @@ def read_pass(sw, gh: CountingGH, steered: list, board: int, proof_workflow: str
 STAGE2_READY = True
 
 
-def mode(root: pathlib.Path) -> str:
+def config(root: pathlib.Path) -> dict:
+    """work/switchboard.yml as a dict ({} when the file is missing or empty)."""
     import yaml
     path = pathlib.Path(root) / CONFIG
     if not path.exists():
-        return "off"
-    got = (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("reconciler")
+        return {}
+    got = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return got if isinstance(got, dict) else {}
+
+
+def mode(root: pathlib.Path) -> str:
+    got = config(root).get("reconciler")
     if got == "live" and STAGE2_READY:
         return "live"
     return "shadow" if got == "shadow" else "off"
+
+
+def ledger_notifies(root: pathlib.Path) -> bool:
+    """Does the ledger still post its own "past deadline" notices? Not once the reconciler is live and
+    work/switchboard.yml says `notices: v2`: then the reconciler is the one notifier and the ledger only writes its
+    section in the board's body. Absent, or any other value, or a reconciler that is not live: the ledger notifies."""
+    return not (mode(root) == "live" and config(root).get("notices") == "v2")
 
 
 def outboxes(live: bool, gh, roster: L.Roster, board: int, mailer: Callable | None = None):

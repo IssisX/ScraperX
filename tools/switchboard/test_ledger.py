@@ -358,6 +358,30 @@ class Escalation(unittest.TestCase):
         self.assertEqual(len(gh.comments), 1)
         self.assertEqual(gh.comments[0][1].count("\n- "), 20 - L.MAX_MAIL_ITEMS)   # the rest, none twice
 
+    def test_notices_v2_the_ledger_writes_its_section_and_posts_nothing(self):
+        # J-072: one owner of notices. With the reconciler live and `notices: v2` (work/switchboard.yml) the ledger
+        # posts no notice comment, keeps no clock for one, and still writes the section with the item escalated.
+        f = self.red_branch()
+        gh = FakeGH()
+        led = L.run(gh, f, ROSTER, NOW + 5 * H, "noon", self.out.append, "wake:muse", (), board_body=lambda: BOARD,
+                    notify=False)
+        self.assertEqual(gh.comments, [], "no notice comment")
+        self.assertEqual([p for m, p, _ in gh.writes if "labels" in p], [], "no wake:muse label")
+        self.assertEqual(led.pending, [], "no notice clock for a fast sweep to fire or to force a full pass")
+        (m, path, body), = gh.writes
+        self.assertTrue(path.endswith("/issues/340"))
+        text = body["body"]
+        self.assertIn("### ESCALATED (1)", text)
+        self.assertIn("fb-bot/integrate-j044b-x", text)
+        self.assertIn("The ledger sends no notices", text)
+        self.assertNotIn("holder is told once", text)
+        self.assertEqual(L.section_state(text)[0], [], "no key is recorded as sent")
+        # the default is today's behavior, unchanged: the holder is told
+        gh = FakeGH()
+        led = L.run(gh, f, ROSTER, NOW + 5 * H, "noon", self.out.append, "wake:muse", (), board_body=lambda: BOARD)
+        self.assertEqual(len(gh.comments), 1)
+        self.assertIn("holder is told once", [b["body"] for m, p, b in gh.writes if p.endswith("/issues/340")][-1])
+
     def test_the_switchboard_is_never_told(self):
         f = feed(prs=[pr(6, "fb-bot/integrate-j006", job="J-006", action="MERGE", touched=5)])
         gh = FakeGH()

@@ -94,7 +94,9 @@ def no_ledger(*args, **kw):
     return type("Led", (), {"pending": []})()
 
 
-def sweep(gh, state=None, now=NOW, ledger=no_ledger, whole=None):
+def sweep(gh, state=None, now=NOW, ledger=no_ledger, whole=None, ledger_notifies=True):
+    """One sweep. `ledger_notifies` is what work/switchboard.yml says (reconciler.ledger_notifies): True is the
+    ledger sending its own notices (no `notices: v2`), which the clock tests below are about."""
     from unittest import mock
     sw = test_inbox.make(gh, now)
     sw.root = HERE.parents[1]
@@ -108,7 +110,8 @@ def sweep(gh, state=None, now=NOW, ledger=no_ledger, whole=None):
     read = []
     real = sw.pr_facts
     sw.pr_facts = lambda p: (read.append(p["number"]), real(p))[1]
-    with mock.patch("ledger.sweep", side_effect=ledger):
+    with mock.patch("ledger.sweep", side_effect=ledger), \
+            mock.patch("reconciler.ledger_notifies", return_value=ledger_notifies):
         status = switch.run_sweep(sw, args, now)
     return status, read, sw
 
@@ -297,6 +300,25 @@ class Clocks(unittest.TestCase):
         self.assertEqual(len(gh.calls), IDLE + 1, gh.calls)                 # the post, and no read
         left, = gh.state["steer"]["timers"]["ledger"]                        # it waits for stage 2 now
         self.assertEqual(left["at"], iso(it.clock + 2 * it.deadline))
+
+    def test_notices_v2_a_ripe_ledger_deadline_posts_nothing_and_its_clock_is_dropped(self):
+        # J-072: the reconciler owns notices (`notices: v2`): a ledger timer the cache still holds is not fired
+        _, _, timer = self.ledger_timer()
+        state = last_state(self.prs)
+        state["timers"]["ledger"] = [timer]
+        gh = CountingGH(self.prs, dry_run=False)
+        sweep(gh, state, ledger_notifies=False)
+        self.assertEqual(gh.posts, [])
+        self.assertEqual(len(gh.calls), IDLE, gh.calls)
+        self.assertEqual(gh.state["steer"]["timers"]["ledger"], [])
+
+    def test_notices_v2_the_full_pass_tells_the_ledger_not_to_notify(self):
+        from unittest import mock
+        for notifies in (True, False):
+            full = mock.Mock(side_effect=no_ledger)
+            sweep(CountingGH(self.prs), None, ledger=full, ledger_notifies=notifies)
+            full.assert_called_once()
+            self.assertIs(full.call_args.args[-1], notifies)   # ledger.sweep's last argument: notify
 
     def test_a_ledger_deadline_on_a_changed_item_runs_the_ledger_in_full(self):
         from unittest import mock

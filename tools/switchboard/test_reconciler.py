@@ -958,6 +958,25 @@ class Rules(unittest.TestCase):
         finally:
             R.STAGE2_READY = old
 
+    def test_the_ledger_notifies_unless_the_reconciler_is_live_and_notices_is_v2(self):
+        # J-072: `notices: v2` in work/switchboard.yml turns the ledger's notices off, and only beside a live
+        # reconciler: absent, any other value, shadow or off leave today's behavior
+        root = pathlib.Path(tempfile.mkdtemp(dir=TMP.name))
+        self.assertTrue(R.ledger_notifies(root), "no config file")
+        (root / "work").mkdir()
+        old = R.STAGE2_READY
+        try:
+            for ready, text, want in (
+                    (True, "reconciler: live\n", True), (True, "reconciler: live\nnotices: v1\n", True),
+                    (True, "reconciler: live\nnotices: v2\n", False), (True, "reconciler: shadow\nnotices: v2\n", True),
+                    (True, "notices: v2\n", True), (False, "reconciler: live\nnotices: v2\n", True)):
+                R.STAGE2_READY = ready
+                (root / R.CONFIG).write_text(text)
+                self.assertEqual(R.ledger_notifies(root), want, (ready, text))
+        finally:
+            R.STAGE2_READY = old
+        self.assertFalse(R.ledger_notifies(HERE.parents[1]), "the repo's own file: the reconciler is the one notifier")
+
     def test_shadow_diff_compares_with_what_the_ledger_sent(self):
         h = Harness()
         p = pr(415, "fb-bot/integrate-j500-x", needs_review=True, now=-3)
