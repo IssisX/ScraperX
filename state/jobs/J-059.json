@@ -7,11 +7,11 @@
   "fb-bot/integrate-j059-black-eye": "e34ac5096b438be2f4a8567d4bf52f371857652e"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "red: scope",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T07:44:17Z",
- "head": "bce311edbf71af5906f718457334e269ff255e37",
+ "deadline": "2026-11-10T13:09:09Z",
+ "head": "d2ba52a05562c0ba7c0077c4351568cc8907c113",
  "issue": 307,
  "job": "J-059",
  "landed": {
@@ -173,7 +173,11 @@
    "what": "ask from Claude on #307"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T09:09:09Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -225,6 +229,31 @@
    "version": "6757761707",
    "via": "session",
    "what": "ask from Muse on #307"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T09:09:09Z",
+   "dead": "2026-11-10T17:09:09Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T13:09:09Z",
+   "id": "O-eecd7184",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T09:09:09Z",
+   "missing": 0,
+   "ref": "PR|#343",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 343,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:d2ba52a05562c0ba7c0077c4351568cc8907c113",
+   "via": "email",
+   "what": "#343 proof red: scope"
   }
  ],
  "outcome": null,
@@ -237,5 +266,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T05:33:50Z"
+ "updated": "2026-11-10T09:09:09Z"
 }
