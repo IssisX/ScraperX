@@ -878,6 +878,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     matron_->set_player_down(player_free_rot_ && bodies.GetRotation(player_id_).RotateAxisY().GetY() < 0.6F);
     // Crouched: low (beat 1 of her hold: no swat to set up).
     matron_->set_player_crouched(crouched_);
+    // Driving: at a truck's controls (beat 1 of her hold: no swat; her hand
+    // goes for his ankle on its floor at once).
+    matron_->set_player_driving(active_forklift() >= 0 &&
+                                forklifts_[static_cast<std::size_t>(active_forklift())]->driving());
     // Where his head faces (his facing, his look's pitch): hers to read only
     // through her eyes.
     {

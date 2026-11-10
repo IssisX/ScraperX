@@ -827,10 +827,12 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             if (hold_phase_ == 0) {
                 // Beat 1, down: a man on his feet she knocks down first (her
                 // swat, the world's kSwatN at his chest); on a ladder, down
-                // already, or crouched low, her hand goes for his ankle at
-                // once (a crouched man is already low: no knockdown to set
-                // up, and the swat would only knock him away).
-                if (player_down_ || player_on_ladder_ || player_crouched_ || retake_) {
+                // already, crouched low, or at a truck's controls, her hand
+                // goes for his ankle at once (a crouched man is already low:
+                // no knockdown to set up, and the swat would only knock him
+                // away; a driver stands on the truck's floor, where her swat
+                // only shoves him along it).
+                if (player_down_ || player_on_ladder_ || player_crouched_ || player_driving_ || retake_) {
                     hold_phase_ = 1;
                     hold_s_ = 0.0F;
                 } else {
@@ -1745,7 +1747,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // rail's top: him face to face till it ends.)
         pose_hand(dt, fatal_window_ ? belt_pose(at, feet)
                                   : rail_pose(at, feet, rail_up_ + kBeltUpM + 0.1F, kBeltOutM + kOverPushM, kBeltSideM),
-                  0.8F * kHandSpeedMps);
+                  0.8F * pace * kHandSpeedMps);
         // Square across the rail first: his ankle drawn in behind her till his
         // body points out over it (not along it); then up.
         const Vec3 axis = physics_.GetBodyInterface().GetRotation(player_).RotateAxisY();
@@ -1754,11 +1756,11 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         const RVec3 in = rail_pose(at, feet, rail_up_ + kOverInUpM, kOverInOutM, kHangSideM);
         const RVec3 up = rail_pose(at, feet, rail_up_ + kOverUpM, kOverOutM, kHangSideM);
         if (!square && (fatal_hold_ ? (fatal_window_ && fatal_window_s_ < kFatalHangWindowS - kFatalLiftEarlyS) || hold_s_ < kFatalSquareS : hold_s_ < 1.5F) && !over_up_) {
-            pose_hand2(dt, in, 0.8F * kHandSpeedMps);
+            pose_hand2(dt, in, 0.8F * pace * kHandSpeedMps);
             break;
         }
         over_up_ = true;   // squared (or as square as he comes): up from here
-        pose_hand2(dt, up, 0.8F * kHandSpeedMps);
+        pose_hand2(dt, up, 0.8F * pace * kHandSpeedMps);
         // Going over: his ankle up, his body tipping head down past the rail
         // (her first hand on his middle keeps it at the rail's top till then).
         if (!fatal_window_ && ((Vec3(up - hand2_target_).Length() < 0.1F && (axis.GetY() < -0.2F || past > kOverOutPastM)) ||
@@ -1785,7 +1787,7 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
                 // of her first arm). Over a bare lip both her hands go for his
                 // ankle as it comes.
                 pose_hand2(dt, hand2_on_ == 1 ? rail_pose(at, feet, rail_up_ + 0.45F, kOverOutM + 0.05F, 0.0F) : player_ankle_,
-                           hand2_on_ == 1 ? 0.6F * kHandSpeedMps : kHandReachSpeedMps);
+                           hand2_on_ == 1 ? 0.6F * pace * kHandSpeedMps : kHandReachSpeedMps);
             }
             if (hold_s_ > kHandoffS) {
                 back_in();
@@ -1909,10 +1911,14 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             hold_phase_ = 0;
             hold_s_ = 0.0F;
             spare_walk_ = false;
-        } else if ((decide && !fatal_lethal_) || (hung_window && settled && hold_s_ >= kFatalHangSettleS + 1.0F)) {
+        } else if ((decide && !fatal_lethal_) ||
+                   (hung_window && settled &&
+                    std::min(hold_s_, fatal_window_s_ - kFatalHangWindowS) >= kFatalHangSettleS + 1.0F)) {
             // Not to kill from here, or a second hung here without a let-go
-            // (lying against her deck's face): a step along the edge, and he
-            // settles again there; no spot for it, another second.
+            // (lying against her deck's face), counted from the end of his
+            // window (her arm goes out for the let-go only then): a step
+            // along the edge, and he settles again there; no spot for it,
+            // another second.
             hold_s_ = fatal_shift(feet) ? 0.0F : kFatalHangSettleS;
         }
         break;

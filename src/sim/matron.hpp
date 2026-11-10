@@ -1125,7 +1125,7 @@ public:
     static constexpr float kFatalHangSettleS = 0.25F;   // hanging this long before her fingers open
     // Her pace in the fatality's beats (step_rail), of an ordinary hold's
     // (her walk to her spot and to his collar, her hands hauling him).
-    static constexpr float kFatalPaceScale = 1.6F;
+    static constexpr float kFatalPaceScale = 2.1F;
     // His window at a rail: the pin alone kFatalPinS, then her grips shift
     // for the over (her first hand to his belt, her second to his ankle,
     // him squared across the rail) while it goes on, him face to face on the
@@ -1849,6 +1849,7 @@ public:
     void set_player_down(const bool down) noexcept { player_down_ = down; }
     // His body crouched low (beat 1 of her hold: no swat to set up).
     void set_player_crouched(const bool crouched) noexcept { player_crouched_ = crouched; }
+    void set_player_driving(const bool driving) noexcept { player_driving_ = driving; }
     void set_player_collar(const JPH::RVec3 collar) noexcept { player_collar_ = collar; }
     // Her second hand's grip in the pin: 0 none, 1 his ankle (the handoff
     // before she tips him over), 2 his belt (the haul up onto the rail).
@@ -2825,6 +2826,7 @@ private:
     JPH::Vec3 swat_dir_ = JPH::Vec3::sZero();
     bool player_down_ = false;
     bool player_crouched_ = false;         // crouched low (beat 1: no swat; beat 2: no walk-in)
+    bool player_driving_ = false;          // at a truck's controls, on its floor (beat 1: no swat)
     bool pin_here_ = false;                // no rail: the pin against her, then set down
     bool over_up_ = false;                 // beat 4: his ankle up over the rail's top
     bool back_lifted_ = false;             // back in: his ankle lifted clear over the rail's top
