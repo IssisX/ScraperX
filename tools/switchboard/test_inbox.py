@@ -119,6 +119,8 @@ class FakeGH:
             page = re.search(r"[?&]page=(\d+)", path)
             page = int(page.group(1)) if page else 1
             fresh = [c for c in self.comments if (c.get("updated_at") or c.get("created_at") or "") >= since]
+            if "direction=desc" in path:
+                fresh = sorted(fresh, key=lambda c: c.get("created_at") or "", reverse=True)
             return fresh[(page - 1) * 100: page * 100]
         if base == f"repos/{self.repo}/issues":
             page = re.search(r"[?&]page=(\d+)", path)
@@ -144,8 +146,16 @@ class FakeGH:
         return self.route(path)
 
     def paged(self, path, key=""):
-        got = self.route(path)
-        return list(got[key] if key else got)
+        if path.split("?")[0] != f"repos/{self.repo}/issues/comments":
+            got = self.route(path)
+            return list(got[key] if key else got)
+        items, sep = [], "&" if "?" in path else "?"
+        for page in range(1, switch.ghapi.MAX_PAGES + 1):   # as ghapi.paged: stops at the cap
+            batch = self.route(f"{path}{sep}page={page}")
+            items.extend(batch)
+            if len(batch) < 100:
+                break
+        return items
 
     def comment(self, number, body, what=""):
         if self.dry_run:
@@ -610,8 +620,6 @@ class AskToClaude(unittest.TestCase):
 
     def test_posts_that_are_not_asks_give_none(self):
         cases = [
-            ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-049 leak list**\n\nThe list.", 1.0, "IssisX", 292),
-            ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-042 windup pushed**\n\nBranch pushed.", 1.0, "IssisX", 292),
             (self.ASK, 25.0, "IssisX", 292),
             ("A long ruling\n\nTo Claude: what about this?", 1.0, "IssisX", 292),
             ("<!-- codex review -->\nTo Claude: ...", 1.0, "IssisX", 292),
@@ -620,6 +628,21 @@ class AskToClaude(unittest.TestCase):
         ]
         for body, hours, login, number in cases:
             self.assertEqual(items_of(self.gh_with(body, hours, login, number)), [], body.split("\n")[0][:60])
+
+    def test_every_bridge_post_gives_one_item(self):
+        # 11-10: Muse's "cause 2 needs your ruling" had no "To Claude" in its subject and sat unread all night
+        for body in ("**Muse (via email bridge): MUSE_TO_CLAUDE: J-049 leak list**\n\nThe list.",
+                     "**Muse (via email bridge): J-044d cause 1 fixed; cause 2 needs your ruling**\n\nWhich?"):
+            (it,) = items_of(self.gh_with(body=body))
+            self.assertEqual(it.kind, "TO-CLAUDE", body[:60])
+
+    def test_an_ask_past_the_listing_cap_still_gives_one_item(self):
+        # 11-10: 620 comments in the window; the oldest-first listing stopped at 500 and the newest asks were lost
+        old = [comment(1000 + i, 292, f"chatter {i}", 2.0, "IssisX") for i in range(switch.COMMENT_LISTING_CAP)]
+        ask = comment(self.CID, 292, self.ASK, 0.5, "IssisX")
+        gh = FakeGH(comments=old + [ask], open_issues=[292])
+        (it,) = items_of(gh)
+        self.assertEqual((it.kind, it.head), ("TO-CLAUDE", str(self.CID)))
 
     def test_a_proposal_first_line_gives_one_item(self):
         (it,) = items_of(self.gh_with(body="Proposal: let the switchboard wake Claude on asks\n\nDetails."))

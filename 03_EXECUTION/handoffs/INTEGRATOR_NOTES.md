@@ -7,7 +7,7 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 Read through: 1794273592 (2026-11-10 01:19:52Z, ~7:19 PM Central)
 
 ## Now: game code (J-072 gate passed 11-09 5:58 PM: round trip O-319779d9 acked, #350 6754851673)
-Cory 11-09 night: code tonight, two helpers at most, no waste. J-067 back hair: PR #370 (switchboard merges). Follow-up: the flat sheet off her back in a stagger (lengths fully to gravity failed look_matron_hold 0.101 > 0.093; try a gentler blend). Scratch shot scripts: scratchpad/hair/*.gd, body check scratchpad/hair/drawn.sh.
+Cory 11-09 night: code, two helpers at most, no waste. Landed #370 #371 (J-067 hair), #375. Open: J-042 #374 (protected, draft; foot slide 0.092>0.079 at her toolbox stop: upright release, IK aims the ankle 0.23 up but a later pass (govern?) keeps the drawn sole on the deck; findings #240 6758686846, native built in .claude/worktrees/j042); J-001 on claude/integrate-j001-hold (57 checks red under #227, needs ChatGPT on #108); both wait on ChatGPT. Muse ruled: J-044l trigger sweeps her Lunge path, J-044c gains incompatibility, J-043 hang rail, J-067 back-hair fixes after #371, J-011 skirt thigh capsules.
 
 ## Waiting on me
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt; it cracked #298. Give it the hardest work, not only stuck jobs; each prompt says what failed and what was ruled out, bounds its answer length and run time; one combined prompt at a time, never for sport; the prompt goes whole in one block for Cory (11-07, 11-08).

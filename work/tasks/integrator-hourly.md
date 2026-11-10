@@ -1,26 +1,20 @@
 # Integrator: the hourly check
 
-It fires every hour, 8:17 AM to 11:17 PM Central on weekdays, and every hour Sat-Sun, 9:17 AM to 9:17 PM (Cory 11-08); none
-overnight (Cory 11-06, 11-07). The full check (every step below) runs at 8:17 AM,
-11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM (Sat-Sun 9:17 AM, 1:17 PM, 5:17 PM, 9:17 PM). Every other run is light: `git pull`, step 1
-only, and end in one line, with no board edit and no message
-to Cory unless he must act (11-06).
+It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on weekdays (Sat-Sun 9:17 AM, 1:17 PM,
+5:17 PM, 9:17 PM), every run full. It is a backstop (Cory 11-10, "drop"): the switchboard inbox wakes the integrator on
+every Muse mail, red proof, review and merge, and it acts then; these runs catch what no event raised. Kept to 11-12,
+then dropped if events covered everything.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
-Pace (Cory 11-06: track AND predict, so the limit lasts to Sunday night): every run works out % now itself: the
-last meter reading + (`cost_usd` now - `cost_usd` then) / $ per 1%, the least-squares fit of every reading this week (two
-whole-% readings 2 h apart can't give it: 11-07 they said $30, the fit $13); it is said only when it changes a step. Ask Cory for the meter only at the day's last run or
-within 2% of a checkpoint (11-07): it refits and catches his Claude use outside this session. Predict: % now + the burn of the last 3 h x daytime hours left (Fri to 11:30 PM, Sat-Sun 9 AM-11 PM), at
-each checkpoint (81% Fri 11 PM, 89% Sat 11 PM, 98% Sun 11 PM), and the hour it hits 100%. A prediction over a checkpoint
-throttles now, before it is crossed: no new helper, the next full run quiet (answers, merges), Cory gets the prediction and the
-cut in one line. Loosen a step only when two runs predict under.
+Pace: no throttling (Cory 11-10: "you can stop throttling completely"; he has usage resets to spend). No pace
+prediction, no meter asks, no quiet runs to save quota.
 Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
 How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
 9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
-Helpers (sub-agents): one at a time while over pace (Cory allowed 2). Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
+Helpers (sub-agents): as many as the work needs (11-10), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
 
 Change the check here, never in the task's prompt. Post only when something changed.

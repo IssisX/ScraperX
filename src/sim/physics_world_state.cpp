@@ -298,6 +298,7 @@ void Simulation::PhysicsWorld::restore_from_checkpoint(JPH::BodyInterface &bodie
     support_entity_id_ = 0;
     support_sample_ = {};
     airborne_inherited_velocity_ = JPH::Vec3::sZero();
+    self_drive_velocity_ = JPH::Vec3::sZero();
     air_full_speed_ = kPlayerMaximumRelativeSpeed;
     sprinting_ = false;
     balancing_ = false;
@@ -591,6 +592,7 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.death_side_on = death_side_on_;
     state_.hit_count = hit_count_;
     state_.hit_speed_mps = hit_speed_mps_;
+    state_.hit_closing_mps = hit_closing_mps_;
     state_.zipline_riding = zip_riding_;
     state_.zipline_line = zipline_->state().line;
     state_.zipline_ride_count = zipline_->state().rides;

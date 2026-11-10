@@ -181,9 +181,12 @@ void run_loose_stock() {
     // tower range would end at dress_end plus the east/west count.
     const int dress_end = static_cast<int>(s.loose_stock_crane_steel_begin());
     const int east_west_begin = static_cast<int>(s.loose_stock_east_west_begin());
+    // The east/west stock ends where J-042's two kinds by her band begin
+    // (laid last of all, on her deck; not tower spots).
+    const int east_west_end = static_cast<int>(s.loose_stock_matron_kinds_begin());
     // The tower's spots end where the yard crane's steel begins (and the
     // machines' weights after it, and the Matron's throwables after them).
-    const int towered = dress_end + (pieces - east_west_begin);
+    const int towered = dress_end + (east_west_end - east_west_begin);
     std::cout << "  stock: " << tabled << " pieces in the table, " << towered - tabled << " in the tower's spots\n";
     require(towered > tabled + 60, "stock: the tower's rings are dressed");
     // The owner's rules for what is up there (2026-10-17): every heavy piece
@@ -194,7 +197,7 @@ void run_loose_stock() {
         const std::array<double, 3> crane_decks{11.0, 22.0, 44.0};
         std::array<int, 3> crane_pieces{};
         int heavy = 0;
-        for (int i = tabled; i < pieces; ++i) {
+        for (int i = tabled; i < east_west_end; ++i) {
             if (i >= dress_end && i < east_west_begin) {
                 continue;
             }
@@ -281,7 +284,7 @@ void run_loose_stock() {
         }
         std::vector<int> per_ring(rings.size(), 0);
         int unassigned = 0;
-        for (int i = tabled; i < pieces; ++i) {
+        for (int i = tabled; i < east_west_end; ++i) {
             if (i >= dress_end && i < east_west_begin) {
                 continue;
             }
@@ -356,7 +359,7 @@ void run_loose_stock() {
         for (int k = 0; k <= 10; ++k) rings.push_back(176.25 + 22.0 * static_cast<double>(k));
         std::vector<std::array<int, 4>> per_side(rings.size(), {0, 0, 0, 0});
         int unassigned = 0;
-        for (int i = tabled; i < pieces; ++i) {
+        for (int i = tabled; i < east_west_end; ++i) {
             if (i >= dress_end && i < east_west_begin) {
                 continue;
             }

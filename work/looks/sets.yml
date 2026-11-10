@@ -21,6 +21,9 @@ sets:
       - screenshots/summit_ending_home.png
   fight_contact:
     rubric: work/looks/fight_contact.md
+    # Her reaction frame (arms flung to the frame's edges, a dark hole in her torso) is trunk's own, the
+    # same on trunk and every branch (Muse on #307, 11-09, byte-identical stills); J-060's pose guard fixes it.
+    known_defect: J-060
     frames:
       - screenshots/fight_punch_contact.png
       - screenshots/fight_punch_reaction.png
