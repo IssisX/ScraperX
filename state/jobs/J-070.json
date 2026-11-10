@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T11:39:04Z",
+ "deadline": "2026-11-10T15:17:00Z",
  "head": "911af47cca620337237fa8eb234913437a76b779",
  "issue": 333,
  "job": "J-070",
@@ -50,7 +50,11 @@
    "what": "ask from Muse on #333"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T12:17:52Z",
+    "by": "muse",
+    "how": "reply naming it"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -108,5 +112,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T09:29:28Z"
+ "updated": "2026-11-10T12:25:07Z"
 }

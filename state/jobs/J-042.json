@@ -2,14 +2,15 @@
  "attempt": 2,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-protected-j042-touch2-geometry": "c6b87e787df3b43014b7aeb1e1c57918e8811b3b"
+  "fb-bot/integrate-protected-j042-touch2-geometry": "c6b87e787df3b43014b7aeb1e1c57918e8811b3b",
+  "fb-bot/integrate-protected-j042-windup": "8c74524cf4fec539b53d37844b61692179a511d7"
  },
  "cancelled": null,
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
- "head": "fff08c95de677fe90a15b07f9ae1bdd4cc75162d",
+ "deadline": "2026-11-10T15:17:00Z",
+ "head": "8c74524cf4fec539b53d37844b61692179a511d7",
  "issue": 240,
  "job": "J-042",
  "landed": {
@@ -17,6 +18,11 @@
    "c6b87e787df3b43014b7aeb1e1c57918e8811b3b",
    "merged #300",
    "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-protected-j042-windup": [
+   "8c74524cf4fec539b53d37844b61692179a511d7",
+   "closed #291",
+   "2026-11-10T12:25:07Z"
   ]
  },
  "obligations": [
@@ -26,7 +32,10 @@
    "asked": null,
    "attempts": 0,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T12:25:07Z",
+    "why": "PR closed without merging"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
    "dead_lettered": null,
@@ -183,18 +192,43 @@
    "version": "6765074508",
    "via": "session",
    "what": "ask from ChatGPT on #240"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T12:25:07Z",
+   "dead": "2026-11-10T17:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T15:17:00Z",
+   "id": "O-8184d278",
+   "kind": "ruling",
+   "last_error": "",
+   "last_sent": "2026-11-10T12:25:07Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j042-windup",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 291,
+   "to": "claude",
+   "unseen": null,
+   "version": "closed:8c74524cf4fec539b53d37844b61692179a511d7",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j042-windup` @ 8c74524c: closed #291 without merging at this head: reopen it, or delete the branch"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
  "pr": 374,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   291,
   374
  ],
  "review": "",
- "state": "review",
- "updated": "2026-11-10T11:29:35Z"
+ "state": "working",
+ "updated": "2026-11-10T12:25:07Z"
 }

@@ -922,3 +922,25 @@
 {"attempt": 2, "ev": "sent", "id": "O-e06514f3", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 2, "t": "2026-11-10T11:49:51Z", "to": "muse", "via": "email"}
 {"attempt": 2, "ev": "sent", "id": "O-c1ca5790", "job": "J-070", "ref": "BRANCH|fb-bot/integrate-j070-cull", "send": 2, "t": "2026-11-10T11:49:51Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T11:49:51Z", "tries": 1}
+{"due": "2026-11-10T16:25:07Z", "ev": "obligation", "id": "O-092a7ad2", "job": "J-038", "kind": "fix", "ref": "PR|#372", "t": "2026-11-10T12:25:07Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-29ff4ef2", "job": "J-038", "t": "2026-11-10T12:25:07Z"}
+{"branch": "fb-bot/integrate-protected-j042-windup", "ev": "closed_unmerged", "how": "closed #291", "job": "J-042", "sha": "8c74524cf4fec539b53d37844b61692179a511d7", "t": "2026-11-10T12:25:07Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-042", "pr": 374, "t": "2026-11-10T12:25:07Z"}
+{"due": "2026-11-10T15:17:00Z", "ev": "obligation", "id": "O-8184d278", "job": "J-042", "kind": "ruling", "ref": "BRANCH|fb-bot/integrate-protected-j042-windup", "t": "2026-11-10T12:25:07Z", "to": "claude", "via": "session"}
+{"ev": "closed", "id": "O-4c0d613d", "job": "J-042", "t": "2026-11-10T12:25:07Z", "why": "PR closed without merging"}
+{"due": "2026-11-10T16:25:07Z", "ev": "obligation", "id": "O-0e0bd735", "job": "J-045", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j045-first-advance", "t": "2026-11-10T12:25:07Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-9fcd7b62", "job": "J-045", "t": "2026-11-10T12:25:07Z"}
+{"ev": "acked", "how": "new head", "id": "O-a7babbbd", "job": "J-061", "t": "2026-11-10T12:25:07Z"}
+{"due": "2026-11-10T16:25:07Z", "ev": "obligation", "id": "O-4cdd1a2d", "job": "J-069", "kind": "fix", "ref": "PR|#376", "t": "2026-11-10T12:25:07Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "reply naming it", "id": "O-97ae3d18", "job": "J-015", "t": "2026-11-10T12:25:07Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-e06514f3", "job": "J-060", "t": "2026-11-10T12:25:07Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-c1ca5790", "job": "J-070", "t": "2026-11-10T12:25:07Z"}
+{"ev": "state", "frm": "working", "job": "J-009", "t": "2026-11-10T12:25:07Z", "to": "proof"}
+{"ev": "state", "frm": "review", "job": "J-042", "t": "2026-11-10T12:25:07Z", "to": "working"}
+{"ev": "state", "frm": "working", "job": "J-061", "t": "2026-11-10T12:25:07Z", "to": "proof"}
+{"ev": "state", "frm": "review", "job": "J-069", "t": "2026-11-10T12:25:07Z", "to": "working"}
+{"attempt": 1, "ev": "sent", "id": "O-092a7ad2", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-10T12:25:07Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-8184d278", "job": "J-042", "ref": "BRANCH|fb-bot/integrate-protected-j042-windup", "send": 1, "t": "2026-11-10T12:25:07Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-0e0bd735", "job": "J-045", "ref": "BRANCH|fb-bot/integrate-j045-first-advance", "send": 1, "t": "2026-11-10T12:25:07Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-4cdd1a2d", "job": "J-069", "ref": "PR|#376", "send": 1, "t": "2026-11-10T12:25:07Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 48, "status": "ok", "t": "2026-11-10T12:25:07Z", "tries": 1}

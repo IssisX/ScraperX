@@ -3,11 +3,11 @@
  "blocked": null,
  "branches": {},
  "cancelled": null,
- "ci": "red: host-build",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-09T22:27:00Z",
- "head": "84e38a79b889d5eb4f4b34adc2ae752eadbce29c",
+ "head": "431c9089a4b538e60a87310271c82f7cc08f74b1",
  "issue": 312,
  "job": "J-061",
  "landed": {},
@@ -263,7 +263,11 @@
    "what": "#337 proof red: scope"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T12:25:07Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -297,6 +301,6 @@
   337
  ],
  "review": "",
- "state": "working",
- "updated": "2026-11-10T10:29:43Z"
+ "state": "proof",
+ "updated": "2026-11-10T12:25:07Z"
 }

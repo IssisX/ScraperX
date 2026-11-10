@@ -217,7 +217,11 @@
    "what": "ask from ChatGPT on #320"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T12:17:55Z",
+    "by": "muse",
+    "how": "reply naming it"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -250,5 +254,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T07:39:04Z"
+ "updated": "2026-11-10T12:25:07Z"
 }

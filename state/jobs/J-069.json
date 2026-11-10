@@ -116,7 +116,7 @@
    "kind": "review",
    "last_error": "",
    "last_sent": "2026-11-10T11:29:35Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "PR|#376",
    "sends": 1,
    "sent_by": "live",
@@ -126,6 +126,31 @@
    "version": "land:7b79e7cdbc89d3cdf41aae78184aa94df30276b2",
    "via": "relay",
    "what": "#376 @ 7b79e7cd has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T12:25:07Z",
+   "dead": "2026-11-10T20:25:07Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T16:25:07Z",
+   "id": "O-4cdd1a2d",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T12:25:07Z",
+   "missing": 0,
+   "ref": "PR|#376",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 376,
+   "to": "muse",
+   "unseen": null,
+   "version": "conflict:7b79e7cdbc89d3cdf41aae78184aa94df30276b2",
+   "via": "email",
+   "what": "#376 has a merge conflict with the base"
   }
  ],
  "outcome": null,
@@ -137,6 +162,6 @@
   376
  ],
  "review": "",
- "state": "review",
- "updated": "2026-11-10T11:29:35Z"
+ "state": "working",
+ "updated": "2026-11-10T12:25:07Z"
 }

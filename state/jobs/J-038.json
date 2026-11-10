@@ -6,11 +6,11 @@
   "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
  },
  "cancelled": null,
- "ci": "red: host-build",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "882d5fafe5fd369d0e53c5fc7446233a31700098",
+ "head": "b45584a182e43a6cb4e93c0688fee4f603bdd4af",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -239,7 +239,11 @@
    "what": "#372: open FIX from Claude (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T12:25:07Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -262,6 +266,31 @@
    "version": "red:882d5fafe5fd369d0e53c5fc7446233a31700098",
    "via": "email",
    "what": "#372 proof red: host-build"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T12:25:07Z",
+   "dead": "2026-11-10T20:25:07Z",
+   "dead_lettered": null,
+   "due": "2026-11-10T16:25:07Z",
+   "id": "O-092a7ad2",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T12:25:07Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "conflict:b45584a182e43a6cb4e93c0688fee4f603bdd4af",
+   "via": "email",
+   "what": "#372 has a merge conflict with the base"
   }
  ],
  "outcome": null,
@@ -275,5 +304,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T11:49:51Z"
+ "updated": "2026-11-10T12:25:07Z"
 }

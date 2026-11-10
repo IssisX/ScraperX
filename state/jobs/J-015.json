@@ -255,7 +255,11 @@
    "what": "ask from Muse on #122"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T12:17:53Z",
+    "by": "muse",
+    "how": "reply naming it"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -338,5 +342,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T11:49:51Z"
+ "updated": "2026-11-10T12:25:07Z"
 }
