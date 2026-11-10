@@ -1231,13 +1231,14 @@ def in_claudes_inbox(ob: dict, text: dict, now: dt.datetime) -> bool:
 def switch_muse_keys(ob: dict) -> list[str]:
     """The key switch.py's muse() gives its own mail to Muse for the event this obligation is about, when it mails
     one: a red proof on an fb-bot/ PR (muse-RED), an open FIX on one (muse-FIX), a red fb-bot/ branch with no PR
-    (muse-RED-BRANCH), each for that PR or branch at that head. A merge conflict and a rule-check BLOCK have no
-    Muse item in the switch, so they have no key here and the reconciler's own first notice goes."""
+    (muse-RED-BRANCH), a merge conflict on one (muse-CONFLICT), each for that PR or branch at that head. A rule-check
+    BLOCK has no Muse item in the switch, so it has no key here and the reconciler's own first notice goes."""
     if ob["kind"] != "fix" or ob["via"] != "email":
         return []
     tag, _, sha = ob["version"].rpartition(":")
     kind, _, target = ob["ref"].partition("|")
-    item = {("PR", "red"): "RED", ("PR", "fix"): "FIX", ("BRANCH", "red"): "RED-BRANCH"}.get((kind, tag))
+    item = {("PR", "red"): "RED", ("PR", "fix"): "FIX", ("BRANCH", "red"): "RED-BRANCH",
+            ("PR", "conflict"): "CONFLICT"}.get((kind, tag))
     if not item:
         return []
     import switch   # the key and the marker are the switch's own

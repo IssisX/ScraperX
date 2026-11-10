@@ -1535,8 +1535,9 @@ class Noise(unittest.TestCase):
         branch = {"kind": "fix", "via": "email", "ref": "BRANCH|fb-bot/integrate-j500-x", "version": f"red:{SHA['a']}"}
         self.assertEqual(R.switch_muse_keys(branch),
                          [switch.InboxItem("RED-BRANCH", "fb-bot/integrate-j500-x", SHA["a"], "").muse_key])
-        for other in ({"kind": "fix", "via": "email", "ref": "PR|#401", "version": f"conflict:{SHA['a']}"},
-                      {"kind": "fix", "via": "email", "ref": "PR|#401", "version": f"protect:{SHA['a']}"},
+        conflict = {"kind": "fix", "via": "email", "ref": "PR|#401", "version": f"conflict:{SHA['a']}"}
+        self.assertEqual(R.switch_muse_keys(conflict), [switch.InboxItem("CONFLICT", "#401", SHA["a"], "").muse_key])
+        for other in ({"kind": "fix", "via": "email", "ref": "PR|#401", "version": f"protect:{SHA['a']}"},
                       {"kind": "fix", "via": "session", "ref": "PR|#401", "version": f"red:{SHA['a']}"},
                       {"kind": "ask", "via": "email", "ref": "ASK|ask on #340", "version": "7001"}):
             self.assertEqual(R.switch_muse_keys(other), [], other)

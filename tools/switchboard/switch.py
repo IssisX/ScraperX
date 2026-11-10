@@ -99,7 +99,7 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "CONFLICT", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
 MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
@@ -1519,6 +1519,10 @@ class Switch:
                                 "both" if owner == "muse" else "claude"))
         if d.action == "FIX" and owner:
             out.append(item("FIX", plain("; ".join(d.reasons)), owner, self.fix_finding(f, ctx)))
+        if rules.CONFLICT in d.reasons and owner and not any(it.kind == "NOT-MERGED" for it in out):
+            # 11-10 #343: a conflict was told to its owner only by the reconciler's hourly pass; this sweep tells it now
+            out.append(item("CONFLICT", f"{rules.CONFLICT}: merge {rules.TRUNK} into {plain(f.head_ref)} and push",
+                            owner))
         codex_tag = MARK.format(kind="ask-codex", pr=f.number, head=f.head_sha)
         if any(codex_tag in (c.get("body") or "") and (c.get("user") or {}).get("login") == rules.BOT_LOGIN
                for c in ctx.get("comments") or []) and rules.needs_review(f, author, self.team):

@@ -717,6 +717,20 @@ class MuseRouted(unittest.TestCase):
         self.assertEqual(len(gh.posts), 1)
         self.assertEqual(make(gh).muse([self.fix_pr(head=OTHER_HEAD)]), 1)
 
+    def test_a_merge_conflict_on_an_fb_bot_pr_is_mailed_by_the_sweep(self):
+        # 11-10 #343: only the reconciler's hourly pass told Muse of a conflict; the 10-minute sweep now does
+        s = steered(number=343, ref="fb-bot/integrate-j059-injury-feed", mergeable=False, job="J-059")
+        self.assertIn(rules.CONFLICT, s.decision.reasons)
+        gh = FakeGH()
+        self.assertEqual(make(gh).muse([s]), 1)
+        (_, posted), = gh.posts
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: J-059 CONFLICT on #343 @ 1a2b3c4d"), posted)
+        self.assertIn("merge ScraperX-Claude into fb-bot/integrate-j059-injury-feed and push", posted)
+        self.assertIn(switch.inbox_key("muse-CONFLICT", "#343", HEAD), gh.writes[1][2]["body"])
+        self.assertEqual(make(gh).muse([steered(number=343, ref="fb-bot/integrate-j059-injury-feed",
+                                                mergeable=False, job="J-059")]), 0)   # once per head
+        self.assertEqual(make(gh).inbox([s]), 0)   # Muse's, not the integrator's
+
     def test_a_notice_on_a_pr_with_a_job_issue_goes_on_the_job_issue(self):
         s = self.fix_pr()
         s.ctx["issue"] = {"number": 300, "labels": []}

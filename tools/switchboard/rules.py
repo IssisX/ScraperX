@@ -156,6 +156,7 @@ def _has_repro(body: str) -> bool:
     return all(f in found for f in REPRO_FIELDS)
 
 
+CONFLICT = "merge conflict with the base"   # the reason merge_decision gives; the switch and the reconciler match it
 CODEX_LOGIN = "chatgpt-codex-connector[bot]"   # the Codex GitHub app: reviews a PR a person opens, and on a person's "@codex review"
 _CODEX_STATE = re.compile(r"codex-review-state:v1\s+(\{.*?\})\s*-->", re.DOTALL)
 
@@ -411,7 +412,7 @@ def merge_decision(pr: PrFacts, author_vendor: str, team: Team | None = None,
     elif pr.rule_check_block and "/integrate-protected-" not in pr.head_ref:
         waits.append("rule_check BLOCK on a branch not named <agent>/integrate-protected-<job>")
     if pr.mergeable is False:
-        waits.append("merge conflict with the base")
+        waits.append(CONFLICT)
     elif pr.mergeable is None:
         waits.append("GitHub is still computing mergeability")
     if waits:
