@@ -814,6 +814,14 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				var allow := maxf(2.5 * float(view._gait_mps) * dt, 0.05)
 				slow = dev < 0.5 * allow
 			var left := float(st.get("travel", 1.0))
+			if left < 1.0 and float(view._gait_mps) > UPLANT_STILL_MPS:
+				# She is walking again: the walking plant takes the foot
+				# back (no slide counts under a moving body, and a held
+				# lift would block every touchdown of her stride).
+				st.erase("travel")
+				st.erase("from_an")
+				st.erase("raise")
+				left = 1.0
 			if left < 1.0:
 				# A pressed release ended on its clock with its travel
 				# unfinished: the sole never rose (the foot pointed down,
@@ -843,7 +851,10 @@ func _plant_upright_feet(wf: float, release_only := false) -> void:
 				st["travel"] = left
 				st["raise"] = raise
 				var from: Vector3 = inv * (st["from_an"] as Vector3)
-				var hold_tgt := from.lerp(pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), left) + Vector3(0.0, raise * (1.0 - left), 0.0)
+				# The raise holds for the whole travel: faded as the foot
+				# travels, it let the pointed toe dip back to the deck
+				# mid-step (act 0.089 m at t=169.77).
+				var hold_tgt := from.lerp(pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), left) + Vector3(0.0, raise, 0.0)
 				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, hold_tgt, w, "uplant_" + s)
 				st["frame"] = _ik_frame
 				_uplants[s] = st
