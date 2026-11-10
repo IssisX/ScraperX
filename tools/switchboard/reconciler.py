@@ -119,6 +119,10 @@ OB_ID = re.compile(r"\bO-[0-9a-f]{8}\b")
 JOB_ID = re.compile(r"\bJ-\d{3,}[a-z]?\b")
 SENT_MARK = "<!-- reconciler:sent id={id} send={send} attempt={attempt} -->"
 SENT_RE = re.compile(r"<!-- reconciler:sent id=(O-[0-9a-f]{8}) send=(\d+) attempt=(\d+) -->")
+# A Muse comment posted before its label and receipt landed (ChatGPT, comment 6752574323): a retry reuses it, so
+# the bridge, which mails each CLAUDE_TO_MUSE comment id once, never mails one send twice.
+POSTED_MARK = "<!-- reconciler:posted id={id} send={send} -->"
+POSTED_RE = re.compile(r"<!-- reconciler:posted id=(O-[0-9a-f]{8}) send=(\d+) -->")
 CORY_MARK = "<!-- reconciler:cory batch={batch} keys={keys} -->"
 CORY_RE = re.compile(r"<!-- reconciler:cory batch=(\S+) keys=(\S*) -->")
 
@@ -812,6 +816,12 @@ def markers(p: Pass) -> dict[str, tuple[int, int, dt.datetime]]:
     return out
 
 
+def posted_marks(p: Pass) -> dict[tuple[str, int], str]:
+    """{(obligation id, send): comment id} of the bot's Muse comments still waiting on their label or receipt."""
+    return {(m.group(1), int(m.group(2))): c.id for c in p.comments if c.login == rules.BOT_LOGIN
+            for m in POSTED_RE.finditer(c.body)}
+
+
 def sync(rec: dict, wants: list[Want], now: dt.datetime, roster: L.Roster, events: Events, evidence_of: Callable) \
         -> None:
     """Create the obligations wanted now (a want that comes back reopens its unseen or closed obligation); settle
@@ -1098,6 +1108,7 @@ class CommentOutbox:
 
     def __init__(self, gh, roster: L.Roster, board: int):
         self.gh, self.roster, self.board = gh, roster, board
+        self.posted: dict[tuple[str, int], str] = {}   # (id, send): a Muse comment posted, its receipt not yet in
 
     def send(self, rec: dict, ob: dict, send: int, attempt: int) -> None:
         name = self.roster.address(ob["to"]) if ob["to"] in self.roster.agents else ob["to"].capitalize()
@@ -1109,18 +1120,25 @@ class CommentOutbox:
             # Muse (#350 hole 6): on the job's issue or the board, never a PR (the bridge's token is Issues-only);
             # plain text with no links, code marks or orders (work/tasks/mail-to-muse.md); labelled wake:muse so the
             # bridge mails it. The receipt marker goes in only after the label lands (as switch.py's muse()), so a
-            # failed label leaves no receipt and the next pass sends again.
+            # failed label leaves no receipt and the next pass sends again: into the comment already posted (its
+            # posted marker), never a second one the bridge would mail again.
             where = int(rec.get("issue") or 0) or self.board
             body = strip_mentions(f"CLAUDE_TO_MUSE: {rec['job'] or 'thread'} {what.replace('`', '')}{again}\n\n"
                                   f"From the switchboard's reconciler (Claude). Due {due} Central. When it is "
                                   f"done, reply on this thread or post /ack {ob['id']}.")
-            resp = self.gh.comment(where, body, f"reconciler: {ob['id']} to muse on #{where}")
+            cid = self.posted.get((ob["id"], send))
+            if cid is None:
+                resp = self.gh.comment(where, f"{body}\n\n{POSTED_MARK.format(id=ob['id'], send=send)}",
+                                       f"reconciler: {ob['id']} to muse on #{where}")
+                cid = (resp if isinstance(resp, dict) else {}).get("id")
+                if cid is not None:
+                    self.posted[(ob["id"], send)] = cid
             self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
                           f"label #{where} {MUSE_LABEL} (the bridge mails Muse, then removes it)")
-            cid = (resp if isinstance(resp, dict) else {}).get("id")
             if cid is not None:
                 self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{cid}", {"body": f"{body}\n\n{mark}"},
                               f"reconciler: mark {ob['id']} delivered")
+                self.posted.pop((ob["id"], send), None)
             return
         n = ob["thread"] or self.board
         if ob["via"] == "relay":
@@ -1214,6 +1232,9 @@ def deliver(state: State, p: Pass, outbox, now: dt.datetime, events: Events, mem
     """Send what is owed: the first send, one re-send at the due time, a dead-letter at twice the due span.
     Returns "" or "backoff" when GitHub rate-limited a send (the rest wait for the next pass)."""
     found = markers(p)
+    if isinstance(getattr(outbox, "posted", None), dict):   # a Muse comment a past pass posted: reused, not re-sent
+        for key, cid in posted_marks(p).items():
+            outbox.posted.setdefault(key, cid)
     budget = MAX_SENDS
     status = ""
     for rec in state.records():

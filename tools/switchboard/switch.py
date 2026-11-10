@@ -2453,14 +2453,22 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
 
     if steer and not targeted and delta is None:   # the full pass: everything below reads the whole repo
         part("ledger", ledger_part, subprocess.SubprocessError)
-        # J-072 stage 1: the shadow reconciler writes only switchboard/state, posts nothing, and never fails the
-        # sweep (work/switchboard.yml `reconciler: shadow`; absent is off). Its own reads (about 58) wait under the floor.
-        if not args.dry_run and not low("the reconciler"):
-            try:
-                import reconciler
-                reconciler.sweep(sw, steered, BOARD_ISSUE, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH}, {INBOX_PR})
-            except Exception as err:   # noqa: BLE001
-                sw.out(f"ERROR       reconciler (shadow, the sweep goes on): {type(err).__name__}: {err}")
+        # J-072: the reconciler (work/switchboard.yml `reconciler: live` or `shadow`; absent is off) is a part like the
+        # ledger (ChatGPT, comment 6752048443): a raise or a dropped pass fails the sweep, a rate-limit backoff is left
+        # for the next sweep, and either is due again then. Its own reads (about 58) wait under the floor.
+        def reconciler_part() -> None:
+            import reconciler
+            res = reconciler.sweep(sw, steered, BOARD_ISSUE, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH}, {INBOX_PR})
+            status = getattr(res, "status", "")
+            if status == "gave-up":
+                raise RuntimeError("the pass was dropped: the state branch kept moving")
+            if status == "backoff":
+                skipped.append("the reconciler")
+                not_done.add("the reconciler")
+                sw.out("RATE LIMIT  the reconciler: backed off, left for the next sweep")
+
+        if not args.dry_run:
+            part("the reconciler", reconciler_part, Exception)
     if steer and not targeted and delta is not None:
         part("ledger clock", ledger_clock, subprocess.SubprocessError)
     if steer and not targeted and delta is None and not args.dry_run and "the reconciler" in skipped:
