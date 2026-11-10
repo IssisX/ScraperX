@@ -49,6 +49,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import budget as money  # noqa: E402
 import rules  # noqa: E402
+import ghapi  # noqa: E402
 from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
@@ -501,7 +502,16 @@ class Switch:
         """Every comment updated since `since`, floored to COMMENT_FLOOR (J-072): the URL then repeats for hours, and
         as the listing is oldest first, every page but the newest answers 304. Callers filter to their exact window."""
         floor = comment_floor(since)
-        return self.listing(f"repos/{self.gh.repo}/issues/comments?since={iso_z(floor)}")
+        got = self.listing(f"repos/{self.gh.repo}/issues/comments?since={iso_z(floor)}")
+        if len(got) < COMMENT_LISTING_CAP:
+            return got
+        # The listing is oldest first and paged reads stop at the cap, so a full one has lost its NEWEST comments:
+        # 11-10, 620 comments in the window, the last ~120 (Muse's mails, new asks) were never read and nothing woke
+        # the integrator. Read the window again newest first and merge by id.
+        self.out(f"NOTE        comment listing since {iso_z(floor)} hit its {COMMENT_LISTING_CAP} cap; read newest first too")
+        newest = self.listing(f"repos/{self.gh.repo}/issues/comments?since={iso_z(since)}&sort=created&direction=desc")
+        seen = {c.get("id") for c in got}
+        return got + [c for c in reversed(newest) if c.get("id") not in seen]
 
     def stale(self, facts: rules.PrFacts) -> bool:
         return rules.is_stale(facts.head_committed_at, self.now.strftime("%Y-%m-%dT%H:%M:%SZ"), ACT_WITHIN_DAYS)
@@ -1270,8 +1280,8 @@ class Switch:
 
     def ask_inbox_items(self, reported: frozenset[str]) -> list[InboxItem]:
         """TO-CLAUDE (J-052): an ask to the integrator in a comment on an open thread, once per comment id.
-        The first line holds `To Claude` or `proposal`; the bridge's `**Muse (via email bridge): <subject>**`
-        first line counts, since the subject is in it. Every agent posts as IssisX, so the author is read
+        The first line holds `To Claude` or `proposal`, or is the bridge's `**Muse (via email bridge):
+        <subject>**`: every Muse mail is to Claude, so every one wakes it. Every agent posts as IssisX, so the author is read
         from the body: Claude's posts end with its footer, the switchboard's own are its login, Codex's
         start with `<!-- codex`."""
         since = (self.now - INBOX_RUNS_WINDOW).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -1302,7 +1312,10 @@ class Switch:
                 continue
             first = (body.split("\n", 1)[0] or "").strip()
             low = first.lower()
-            if "to claude" not in low and "proposal" not in low:
+            # Every bridge post is Muse writing to Claude (its subject starts MUSE_TO_CLAUDE): a report or an
+            # ask, it wakes the integrator. Gating it on "To Claude" in the subject left Muse's ruling asks
+            # ("cause 2 needs your ruling", 11-10) unread all night.
+            if "to claude" not in low and "proposal" not in low and not first.startswith(BRIDGE_POST):
                 continue
             key = inbox_key("TO-CLAUDE", f"#{number}", str(cid))
             if key in reported:
@@ -2159,6 +2172,7 @@ COLD_ACTIONS = ("FIX", "FIX-CI", "SKIP")
 FULL_PARTS = frozenset({"ledger", "prs", "the reconciler", "auto-open"})   # need the full pass's reading to redo  # waiting on the author's next head: nothing changes them by the clock
 
 
+COMMENT_LISTING_CAP = ghapi.MAX_PAGES * 100   # a paged listing never returns more (ghapi.paged)
 COMMENT_FLOOR_HOURS = 6   # a comment listing's since: 00, 06, 12 or 18 UTC. An hour's floor changed at every hourly
                           # full pass, so none of its pages was ever a 304 (the warm pass: 9 counted reads)
 

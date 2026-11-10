@@ -102,11 +102,11 @@ him again.
 
 ## The integrator
 
-- Tasks the whole team every 3 hours, 8:17 AM-11:17 PM Central (Sat-Sun every 4 hours, 9:17 AM-9:17 PM), with a light mail-and-asks run every hour between (Sat-Sun too; 11-06, 11-08), unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
+- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h, 8:17 AM-11:17 PM Central (Sat-Sun every 4 h, 9:17 AM-9:17 PM) are a backstop to 11-12, unasked (`work/tasks/integrator-hourly.md`; Cory 11-06): every agent loaded by
   strength, Muse's subagents never idle (about 10 independent jobs in flight, 3 more queued), Muse's proposals ruled on within the hour, every
   ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
-  `helper` or `helper-max`; Cory 11-06), never a separate session: at most two while Claude codes (11-09 night), each
+  `helper` or `helper-max`; Cory 11-06), never a separate session; no throttling, as many as the work needs (11-10), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
   his call, seen in `get_session`; raise it only when he throttles; `helper` at high for non-physics jobs, `helper-physics` at xhigh for physics, forces, her limits, geometry and protected tests, and a job either fails is redone on `helper-max` at max (`.claude/agents/`; Cory 11-06 11:30 AM). A worker whose job landed is retired.
 - **Context:** the window is 833k (compacts near 650k; `/autocompact` sets it live; each call rereads it);

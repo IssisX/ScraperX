@@ -871,6 +871,19 @@ void run_matron_mischief() {
         require(m.throws >= 1 && (nearest < 1.2 || s.snapshot().hit_count > before.hit_count),
                 "matron mischief: and throws it at the player");
         require(s.snapshot().death_count == 0 && m.stage == 0, "matron mischief: a pest's throw is no death");
+        // A throw that strikes him drops the toolbox at his feet, in her way
+        // (#240: aimed from where it leaves her hands, it reaches him; before,
+        // it went high and lay clear). A player steps off it, along the band.
+        for (int i = 0; i < static_cast<int>(0.6 * Simulation::kTickRateHz); ++i) {
+            const auto b = s.kit_body_position(box_body);
+            const auto p = s.snapshot().player_position;
+            if (std::hypot(b.x - p.x, b.z - p.z) > 1.2) {
+                break;
+            }
+            (void)s.set_move_input(0.0, 1.0);
+            tick(s);
+        }
+        (void)s.set_move_input(0.0, 0.0);
         // Then at the player: her hands take hold of them (Cory, 2026-10-27:
         // at any rage, every catch is a grab).
         bool taken = false;

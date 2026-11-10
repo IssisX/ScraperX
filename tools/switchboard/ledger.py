@@ -770,7 +770,7 @@ def fire(gh, timers: list[dict], roster: Roster, now: dt.datetime, board: int, o
 def due_notices(items: list[Item], now: dt.datetime, sent: set[str], roster: Roster, board: int) -> list[Notice]:
     """The notices owed this sweep, the most urgent first: each item past its deadline whose key for its stage was
     never sent, one comment per (thread, holder). Muse reads mail, not threads: hers go in one mail per sweep, on
-    her most urgent item's thread (at most MAX_MAIL_ITEMS; the rest next sweep). The switchboard itself is never
+    the board issue (at most MAX_MAIL_ITEMS; the rest next sweep). The switchboard itself is never
     notified; an item past twice its deadline that was never told at all gets the one (stage 2) notice.
     A holder is addressed by its own name from work/agents.yml (J-072: Builder's notice went out as `To Grok: for
     Builder`, and Grok's runs read only `To Grok:`). A Codex-held item goes to the integrator (`wake: mention`):
@@ -783,9 +783,9 @@ def due_notices(items: list[Item], now: dt.datetime, sent: set[str], roster: Ros
     for it, st in due:
         wake = roster.wake(it.holder.agent)
         if wake == "email":
-            if mail is None:
-                mail = groups.setdefault((it.thread or board, it.holder.agent, ""),
-                                         Notice(it.thread or board, it.holder.agent, []))
+            if mail is None:   # on the board, never the item's thread: that may be a PR, which the bridge
+                # cannot mail from (its token is Issues-only; #337's notice of 11-10 2:59 AM sat unmailed)
+                mail = groups.setdefault((board, it.holder.agent, ""), Notice(board, it.holder.agent, []))
             if len(mail.items) < MAX_MAIL_ITEMS:
                 mail.items.append((it, st))
             continue
