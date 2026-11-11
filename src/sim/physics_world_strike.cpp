@@ -462,11 +462,14 @@ void Simulation::PhysicsWorld::strike_step(JPH::BodyInterface &bodies, const Ste
         bodies.AddForce(struck, dir * force_n, strike_point_, JPH::EActivation::Activate);
         bodies.AddForce(player_id_, -dir * force_n, JPH::EActivation::Activate);
         // J-046 measurement only: his blow, received (not her budget's). It
-        // is a force on her root (the body the ledger holds against Jolt's)
-        // only when it lands there; on a segment, the joint carries it on.
+        // lands on the upper segment it falls on, and the residual read sums
+        // the accumulated force over all six of her bodies (J-044c gains), so
+        // the blow is recorded as on her wherever it lands; the joint
+        // carrying it on does not make it not on her. Charged 0, Blow
+        // unsummed: still not her budget's.
         effort::add_force(effort::Path::Blow, dir * force_n,
                           bodies.GetLinearVelocity(her) - bodies.GetLinearVelocity(player_id_), 0.0F,
-                          struck == her ? dir * force_n : JPH::Vec3::sZero());
+                          dir * force_n);
         strike_impulse_ns_ += force_n * dt;
         // Read by her balance as a blow (matron.cpp take_blow).
         const bool low = static_cast<float>(strike_point_.GetY() - feet_y) < 0.5F;

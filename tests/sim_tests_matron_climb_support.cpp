@@ -314,7 +314,7 @@ void test_matron_riser() {
     world.box(Vec3(2.0F, 4.0F, 2.0F), RVec3(0, g + 4.0, -140));                // the deck: x -2..2, z -142..-138, top g + 8
     world.box(Vec3(0.2F, 4.0F, 0.2F), RVec3(2.5, g + 4.0, -140));              // the riser: x 2.3..2.7, z -140.2..-139.8
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     world.awake(matron);
     matron.set_stage_for_test(Matron::Stage::Dangerous);
     world.physics.GetBodyInterface().SetPosition(matron.body(), RVec3(6.5, g + Matron::kStandCentre, -137.0),

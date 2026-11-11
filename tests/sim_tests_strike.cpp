@@ -625,16 +625,19 @@ void run_matron_upper_body() {
     }
     std::cout << "PASS scraperx_sim matron-upper-body\n";
 }
+SCRAPERX_GROUP("matron_upper_body", 955, run_matron_upper_body);
+SCRAPERX_SLICE("matron-upper-body", run_matron_upper_body);
 
 void run_matron_upper_gains() {
-    // J-044c motor gains (#298, the 12:17 ruling): FrequencyAndDamping
-    // sizes each joint's spring for the two joined bodies only, ignoring
-    // the distal subtree, so the chest-neck joint (neck + head, ~0.28 kg
-    // m^2) got a spring for the neck alone (~0.006 kg m^2) and behaves like
-    // ~3 Hz / zeta 0.15 instead of 20 Hz / zeta 1.0. Falsifier: hold the
-    // root and the chest, pitch the neck and head 15 deg about the
-    // chest-neck joint, release, run 90 ticks. A real overshoot confirms
-    // the claim; a monotone return kills it.
+    // J-044c motor gains (Argon, #242): the swing and twist motors are sized
+    // from separate distal-subtree inertias (f0 20 Hz, zeta 1), and the
+    // whole-body forces are split by mass share, so the root no longer walks
+    // 1.48765x fast and the motors no longer charge internal torque as
+    // external force. Falsifiers: (1) the neck 15 deg release settles within
+    // 45 ticks with under 1 deg overshoot (the old sizing's claim); (2) a 15
+    // deg chest pitch step and a 12 N-s head blow settle all five joints
+    // within 45 ticks with under 1 deg overshoot, external force never over
+    // 8,000 N, feet plus upper power never over 44,000 W.
     const auto pitch_deg = [](const Simulation &s) {
         // Signed pitch of the neck joint, degrees: twice the x of its swing
         // quaternion in her frame (a pure pitch is a rotation about her
@@ -654,6 +657,57 @@ void run_matron_upper_gains() {
             tick(s);
         }
     };
+    // One joint's trace over 90 ticks: equilibrium (mean of the last 10),
+    // overshoot past equilibrium after first crossing it, and the first tick
+    // after which it stays within 1 deg of equilibrium.
+    struct JointSettle {
+        double eq = 0.0;
+        double overshoot = 0.0;
+        int settle_tick = -1;
+    };
+    const auto settle_one = [](const double trace[90], const double start) {
+        JointSettle out;
+        for (int i = 80; i < 90; ++i) {
+            out.eq += trace[i];
+        }
+        out.eq /= 10.0;
+        const double d0 = start - out.eq;
+        bool crossed = false;
+        double extreme = out.eq;
+        for (int i = 0; i < 90; ++i) {
+            const double d = trace[i] - out.eq;
+            if (!crossed && ((d0 > 0.0 && d <= 0.0) || (d0 < 0.0 && d >= 0.0))) {
+                crossed = true;
+            } else if (crossed) {
+                extreme = d0 > 0.0 ? std::min(extreme, trace[i]) : std::max(extreme, trace[i]);
+            }
+        }
+        if (crossed) {
+            out.overshoot = d0 > 0.0 ? out.eq - extreme : extreme - out.eq;
+        } else if (std::abs(d0) < 1e-9) {
+            // Started at equilibrium: any excursion is overshoot.
+            for (int i = 0; i < 90; ++i) {
+                out.overshoot = std::max(out.overshoot, std::abs(trace[i] - out.eq));
+            }
+        }
+        if (out.overshoot < 0.0) {
+            out.overshoot = 0.0;
+        }
+        for (int i = 0; i < 90; ++i) {
+            bool ok = true;
+            for (int j = i; j < 90; ++j) {
+                if (std::abs(trace[j] - out.eq) >= 1.0) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok) {
+                out.settle_tick = i;
+                break;
+            }
+        }
+        return out;
+    };
     Simulation s(InitialSpawn::Deck154);
     place(s);
     // The settled pitch, read live from the bodies (the view is fresh after
@@ -664,6 +718,11 @@ void run_matron_upper_gains() {
     std::cout << "  upper gains: subtree inertia kg m^2 head=" << s.upper_subtree_inertia_for_test(0)
               << " neck=" << s.upper_subtree_inertia_for_test(1) << " chest=" << s.upper_subtree_inertia_for_test(2)
               << " arm_l=" << s.upper_subtree_inertia_for_test(3) << " arm_r=" << s.upper_subtree_inertia_for_test(4)
+              << " twist head=" << s.upper_subtree_twist_inertia_for_test(0)
+              << " neck=" << s.upper_subtree_twist_inertia_for_test(1)
+              << " chest=" << s.upper_subtree_twist_inertia_for_test(2)
+              << " arm_l=" << s.upper_subtree_twist_inertia_for_test(3)
+              << " arm_r=" << s.upper_subtree_twist_inertia_for_test(4)
               << " settled neck pitch deg=" << eq0 << " mag deg=" << mag0 << " head pitch deg=" << head0 << "\n";
     s.debug_hold_upper_root_chest_for_test(true);
     s.debug_pitch_upper_for_test(1, 15.0F);
@@ -721,8 +780,101 @@ void run_matron_upper_gains() {
               << " (90 ticks = 1 s)\n";
     require(overshoot < 1.0, "upper gains: the neck returns without real overshoot");
     require(settle_tick >= 0 && settle_tick <= 45, "upper gains: the neck settles within half a second");
+    // ---- a 15 deg chest pitch step: all five joints settle within 45
+    //      ticks with under 1 deg overshoot, her feet never over 8,000 N,
+    //      feet plus upper power never over 44,000 W. The root is not held:
+    //      the step is posed on a standing Matron, as in play ----
+    {
+        Simulation c(InitialSpawn::Deck154);
+        place(c);
+        double start_pitch[5] = {};
+        for (int j = 0; j < 5; ++j) {
+            start_pitch[j] = c.debug_upper_pitch_for_test(j);
+        }
+        c.debug_pitch_upper_for_test(2, 15.0F);
+        const double chest_start = c.debug_upper_pitch_for_test(2);
+        std::cout << "  upper gains: chest step posed deg=" << chest_start << " (rest " << start_pitch[2] << ")\n";
+        require(std::abs(chest_start - (start_pitch[2] + 15.0)) < 1.0,
+                "upper gains: the pitch sets the chest 15 deg off its rest");
+        double trace5[5][90] = {};
+        double max_feet_n = 0.0;
+        double max_power_w = 0.0;
+        for (int i = 0; i < 90; ++i) {
+            tick(c);
+            const auto m = c.matron_state();
+            for (int j = 0; j < 5; ++j) {
+                trace5[j][i] = c.debug_upper_pitch_for_test(j);
+            }
+            max_feet_n = std::max(max_feet_n, m.feet_push_n);
+            max_power_w = std::max(max_power_w, m.foot_power_w + m.upper_motor_power_w);
+        }
+        int worst_settle = -1;
+        double worst_overshoot = 0.0;
+        for (int j = 0; j < 5; ++j) {
+            // The start for the overshoot is the posed angle: the chest
+            // starts 15 deg off, the rest start at their rest.
+            const double start = j == 2 ? chest_start : start_pitch[j];
+            const JointSettle js2 = settle_one(trace5[j], start);
+            worst_settle = std::max(worst_settle, js2.settle_tick);
+            worst_overshoot = std::max(worst_overshoot, js2.overshoot);
+            std::cout << "  upper gains: chest step joint " << j << " eq deg=" << js2.eq
+                      << " overshoot deg=" << js2.overshoot << " settle tick=" << js2.settle_tick << "\n";
+        }
+        std::cout << "  upper gains: chest step worst settle tick=" << worst_settle
+                  << " worst overshoot deg=" << worst_overshoot << " max feet N=" << max_feet_n
+                  << " max feet+upper W=" << max_power_w << "\n";
+        require(worst_overshoot < 1.0, "upper gains: the chest step returns without real overshoot, any joint");
+        require(worst_settle >= 0 && worst_settle <= 45, "upper gains: the chest step settles within 45 ticks");
+        require(max_feet_n <= 8000.0, "upper gains: the chest step never puts over 8,000 N on her feet");
+        require(max_power_w <= 44000.0, "upper gains: the chest step never draws over 44,000 W, feet plus upper");
+    }
+    // ---- a 12 N-s head blow: the same settle and budget bars. The blow is
+    //      a punch to the face: 12 N-s against her facing, at the head's
+    //      centre ----
+    {
+        Simulation b(InitialSpawn::Deck154);
+        place(b);
+        const auto m0 = b.matron_state();
+        const double fx = std::sin(m0.yaw), fz = std::cos(m0.yaw);
+        const Vector3 head_at{m0.position.x + 0.075 * fx, m0.position.y + 0.61, m0.position.z + 0.075 * fz};
+        double start_pitch[5] = {};
+        for (int j = 0; j < 5; ++j) {
+            start_pitch[j] = b.debug_upper_pitch_for_test(j);
+        }
+        b.debug_upper_impulse(0, Vector3{-12.0 * fx, 0.0, -12.0 * fz}, head_at);
+        double trace5[5][90] = {};
+        double max_feet_n = 0.0;
+        double max_power_w = 0.0;
+        for (int i = 0; i < 90; ++i) {
+            tick(b);
+            const auto m = b.matron_state();
+            for (int j = 0; j < 5; ++j) {
+                trace5[j][i] = b.debug_upper_pitch_for_test(j);
+            }
+            max_feet_n = std::max(max_feet_n, m.feet_push_n);
+            max_power_w = std::max(max_power_w, m.foot_power_w + m.upper_motor_power_w);
+        }
+        int worst_settle = -1;
+        double worst_overshoot = 0.0;
+        for (int j = 0; j < 5; ++j) {
+            const JointSettle js = settle_one(trace5[j], start_pitch[j]);
+            worst_settle = std::max(worst_settle, js.settle_tick);
+            worst_overshoot = std::max(worst_overshoot, js.overshoot);
+            std::cout << "  upper gains: head blow joint " << j << " eq deg=" << js.eq << " overshoot deg="
+                      << js.overshoot << " settle tick=" << js.settle_tick << "\n";
+        }
+        std::cout << "  upper gains: head blow worst settle tick=" << worst_settle
+                  << " worst overshoot deg=" << worst_overshoot << " max feet N=" << max_feet_n
+                  << " max feet+upper W=" << max_power_w << "\n";
+        require(worst_overshoot < 1.0, "upper gains: the head blow returns without real overshoot, any joint");
+        require(worst_settle >= 0 && worst_settle <= 45, "upper gains: the head blow settles within 45 ticks");
+        require(max_feet_n <= 8000.0, "upper gains: the head blow never puts over 8,000 N on her feet");
+        require(max_power_w <= 44000.0, "upper gains: the head blow never draws over 44,000 W, feet plus upper");
+    }
     std::cout << "PASS scraperx_sim matron-upper-gains\n";
 }
+SCRAPERX_GROUP("matron_upper_gains", 957, run_matron_upper_gains);
+SCRAPERX_SLICE("matron-upper-gains", run_matron_upper_gains);
 
 namespace {
 // The low sweep (sim/physics_world_strike.cpp): Punch while crouched. Her

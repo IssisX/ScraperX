@@ -217,7 +217,7 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
         force *= cap / force.Length();
     }
     bodies.AddForce(hand2_id_, force);
-    bodies.AddForce(matron_->body(), -force);
+    matron_->add_body_force(-force);  // J-044c gains: the reaction is a whole-body force, split by mass share
     // J-046 measurement only.
     effort::add_force(effort::Path::Hand2Spring, force,
                       bodies.GetLinearVelocity(hand2_id_) - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);

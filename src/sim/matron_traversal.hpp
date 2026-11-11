@@ -236,6 +236,12 @@ public:
     // her one mass (Limits::mass_kg), so they read that mass's velocity, not
     // the one body's. Unset, the body's own.
     void set_velocity_source(std::function<JPH::Vec3()> source) { velocity_source_ = std::move(source); }
+    // Where a whole-body drive force goes, when the body given above
+    // carries more on joints (her upper chain): the drive is written for
+    // her one mass, so the force is split by mass share across the whole
+    // of her, not put on the one body alone (Matron::add_body_force).
+    // Unset, the force goes to the body alone (the old behaviour).
+    void set_body_force(std::function<void(const JPH::Vec3 &)> sink) { body_force_ = std::move(sink); }
     // The one account of the body it drives, opened once a tick before
     // anything of hers draws on it (the Matron's feet_budget_): step(),
     // walk_between() and stand() then draw from it, after whatever else of
@@ -333,12 +339,17 @@ private:
     // This call's account: the shared one (its velocity set to hers against
     // her support), else `own`, opened full.
     Budget &account(Budget &own);
+    // A whole-body drive force on her: to the body-force sink when set
+    // (Matron::add_body_force, split by mass share), else to the body
+    // alone (the old behaviour, for a Climber built without a Matron).
+    void apply_body_force(const JPH::Vec3 &force);
     // What this call drew from `budget` since `before` was taken: the view's numbers.
     void note_spend(const Budget &budget, const Budget &before);
 
     JPH::PhysicsSystem &physics_;
     JPH::BodyID body_;
     std::function<JPH::Vec3()> velocity_source_;
+    std::function<void(const JPH::Vec3 &)> body_force_;
     Budget *shared_ = nullptr;
     Ignore ignore_;
     Limits limits_;

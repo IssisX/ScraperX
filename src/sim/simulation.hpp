@@ -1828,6 +1828,7 @@ public:
     void debug_hold_upper_root_chest_for_test(bool hold) noexcept;
     void debug_pitch_upper_for_test(int joint, float degrees) noexcept;
     [[nodiscard]] float upper_subtree_inertia_for_test(int joint) const noexcept;
+    [[nodiscard]] float upper_subtree_twist_inertia_for_test(int joint) const noexcept;
     double debug_upper_pitch_for_test(int joint) noexcept;
     // Tests only (never bound to the bridge): an arm broken as a hard hit
     // breaks it (0 the left, 1 the right), out of use a while.

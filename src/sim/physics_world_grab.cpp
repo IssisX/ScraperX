@@ -400,7 +400,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         ladder_pull_power_w_ = std::max(0.0F, force.Dot(relative_v)) + matron_->foot_power_w();
     }
     bodies.AddForce(hand_id_, force);
-    bodies.AddForce(matron_->body(), -force);
+    matron_->add_body_force(-force);  // J-044c gains: the reaction is a whole-body force, split by mass share
     // J-046 measurement only.
     effort::add_force(effort::Path::GrabSpring, force, hand_v - bodies.GetLinearVelocity(matron_->body()), 0.0F, -force);
     // S1 measurement only: report the held body's tip every tick. The
@@ -597,7 +597,11 @@ void Simulation::PhysicsWorld::effort_before_update() const noexcept {
     if (!effort::ledger().enabled) return;
     const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterface(), matron_->body());
     if (lock.Succeeded() && lock.GetBody().IsDynamic() && lock.GetBody().IsInBroadPhase()) {
-        effort::her_force_at_step(lock.GetBody().GetAccumulatedForce());
+        // J-044c gains: her whole body's force, not the root's alone. The
+        // foot pushes, Climber drives and hand-spring reactions are split
+        // by mass share across her six bodies (Matron::add_body_force), so
+        // the residual read must sum them all, as the paths record them.
+        effort::her_force_at_step(lock.GetBody().GetAccumulatedForce() + matron_->upper_accumulated_force());
     }
 }
 

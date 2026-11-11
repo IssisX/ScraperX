@@ -330,6 +330,14 @@ Budget &Climber::account(Budget &own) {
     return own;
 }
 
+void Climber::apply_body_force(const Vec3 &force) {
+    if (body_force_) {
+        body_force_(force);
+        return;
+    }
+    physics_.GetBodyInterface().AddForce(body_, force);
+}
+
 void Climber::note_spend(const Budget &budget, const Budget &before) {
     view_.force_n = budget.used - before.used;
     view_.power_w = budget.power_used - before.power_used;
@@ -676,7 +684,7 @@ bool Climber::drive_leg(const float dt, Budget &budget) {
     const float power_force = (-next_without_push + std::sqrt(next_without_push * next_without_push + 4.0F * q * power)) / (2.0F * q);
     force_n = std::min(force_n, power_force);
     const Vec3 push = budget.take(Vec3(0, std::max(force_n, 0.0F), 0));
-    bodies.AddForce(body_, push);
+    apply_body_force(push);
     if (push.GetY() > 0.0F) ++leg_push_ticks_;
     if (bodies.GetMotionType(foot_.body) == EMotionType::Dynamic) {
         bodies.AddForce(foot_.body, -push, foot_world_);
@@ -712,7 +720,7 @@ void Climber::drive(const float dt, const Vec3 target_centre, const Vec3 target_
         want += Vec3(0.0F, limits_.mass_kg * kGravity, 0.0F);
     }
     const Vec3 force = budget.take(want);
-    bodies.AddForce(body_, force);
+    apply_body_force(force);
     if (two_anchors) {
         push_reaction(0.5F * force, at_hold);
         push_reaction(0.5F * force, hold2_world_);
@@ -788,12 +796,12 @@ float Climber::stand(const float dt) {
         Vec3 want = to_floor * (limits_.mass_kg * 40.0F) - v * (limits_.mass_kg * 8.0F) -
                     across * (v.Dot(across) * limits_.mass_kg * 10.0F);
         if (want.Length() > limits_.foot_force_n) want = want.Normalized() * limits_.foot_force_n;
-        physics_.GetBodyInterface().AddForce(body_, budget.take(want));
+        apply_body_force(budget.take(want));
     } else if (floor_under(c, Vec3::sZero())) {
         // Floor under her middle: feet planted, her drift taken out.
         Vec3 want = -flat(velocity()) * (limits_.mass_kg * 8.0F);
         if (want.Length() > limits_.foot_force_n) want = want.Normalized() * limits_.foot_force_n;
-        physics_.GetBodyInterface().AddForce(body_, budget.take(want));
+        apply_body_force(budget.take(want));
     }
     view_.force_n = budget.used - before.used;
     view_.peak_force_n = std::max(view_.peak_force_n, view_.force_n);
@@ -874,7 +882,7 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
         want = want.Normalized() * limits_.foot_force_n;
     }
     const Vec3 applied = budget.take(want);
-    physics_.GetBodyInterface().AddForce(body_, applied);
+    apply_body_force(applied);
     // A stair or plate edge within her stride in front of her: her leg lifts
     // her onto it, a capped push out of the same budget.
     if (d > 0.05F) {
@@ -900,7 +908,7 @@ void Climber::walk(const float dt, const Vec3 feet_goal, const float speed, Budg
         if (rise > 0.04F && rise <= limits_.step_max_m && (floor_under(c, Vec3::sZero()) || narrow_floor_lean(c, unused))) {
             const float lift = std::clamp(limits_.mass_kg * (kGravity + (1.6F - velocity().GetY()) * 12.0F), 0.0F,
                                           limits_.total_force_n * 0.85F);
-            physics_.GetBodyInterface().AddForce(body_, budget.take(Vec3(0.0F, lift, 0.0F)));
+            apply_body_force(budget.take(Vec3(0.0F, lift, 0.0F)));
         }
     }
 }
@@ -1446,10 +1454,10 @@ Climber::Status Climber::step_dyno(const float dt, Budget &budget) {
             return status_;
         }
         const Vec3 pull = budget.take(Vec3(0.0F, limits_.total_force_n, 0.0F));
-        bodies.AddForce(body_, pull);
+        apply_body_force(pull);
         push_reaction(pull, hold_world_);
         const Vec3 side = flat(line_pos - Vec3(c)) * 400.0F;
-        bodies.AddForce(body_, budget.take(side));
+        apply_body_force(budget.take(side));
         return status_;
     }
     // In the air: the rung over the gap, or (falling back) the one she left.
@@ -1799,7 +1807,7 @@ Climber::Status Climber::step_pole(const float dt, Budget &budget, const bool up
     const Vec3 aim = !up && feet <= spec_.goal_top + 0.3F ? Vec3(spec_.goal.GetX(), 0.0F, spec_.goal.GetZ()) : hug;
     const Vec3 side = flat(aim - c) * (limits_.mass_kg * 20.0F) - flat(rel) * (limits_.mass_kg * 6.0F);
     const Vec3 force = Vec3(0.0F, fy, 0.0F) + budget.take(side);
-    bodies.AddForce(body_, force);
+    apply_body_force(force);
     // J-046 measurement only: her squeeze (charged above, outside take) and
     // the friction it buys on top of the take, with that friction's work.
     effort::add(effort::Path::PoleGrip, std::max(squeeze, std::abs(fy)), fy * rel.GetY(), squeeze,
@@ -1856,7 +1864,7 @@ Climber::Status Climber::step_gap(const float dt, Budget &budget) {
         Vec3 want = (wanted_velocity - flat(budget.velocity)) * (limits_.mass_kg * 16.0F);
         if (want.Length() > limits_.foot_force_n) want = want.Normalized() * limits_.foot_force_n;
         const Vec3 force = budget.take(want);
-        bodies.AddForce(body_, force);
+        apply_body_force(force);
         if (bodies.GetMotionType(floor) == EMotionType::Dynamic) {
             bodies.AddForce(floor, -force, contact);
             view_.support_reaction_n += force.Length();

@@ -325,9 +325,29 @@ void run_matron_grab() {
         double snagged_at = -1.0;
         double torn_at = -1.0;
         bool held_past_reach = false;
+        // J-044c gains (Argon, #242): the first divergent term is the
+        // whole-body foot force, sized for 220 kg, put on the 147.884 kg root
+        // alone — the root walks 1.48765x fast (0.7059 m/s at tick 7, not
+        // 0.7000) and recoils, so her hand target swings with it and the
+        // ArmPlay swing never decays into the snag's window (grip < 2000 N
+        // while his swing is under 0.333 m/s). Both numbers are measured
+        // here, on the same run as the re-pose claim.
+        double speed_at_tick_7 = -1.0;
+        long window_ticks = 0;
         const HoldRun r = hold_run(s, 60.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
             s.debug_set_matron_stage(1);
             (void)s.set_move_input(0.0, 0.0);
+            if (i == 7) {
+                speed_at_tick_7 = m.speed;
+            }
+            if (m.state == kArmPlay) {
+                const auto pv = s.snapshot();
+                const double swing_speed = std::hypot(pv.player_linear_velocity.x, pv.player_linear_velocity.y,
+                                                      pv.player_linear_velocity.z);
+                if (swing_speed <= 0.333 && pv.grip_load_n < 2000.0) {
+                    ++window_ticks;
+                }
+            }
             if (snagged_at < 0.0 && m.state == kArmPlay) {
                 s.debug_snag_player(0.5 * (Matron::kHandPullN + Matron::kGripRipFloorN));
                 snagged_at = i / 90.0;
@@ -340,6 +360,12 @@ void run_matron_grab() {
                 torn_at = i / 90.0;
             }
         });
+        std::cout << "  matron arm snagged: tick 7 speed " << speed_at_tick_7 << " m/s, ArmPlay window ticks "
+                  << window_ticks << "\n";
+        require(std::abs(speed_at_tick_7 - 0.7000) <= 0.001,
+                "matron arm snagged: at tick 7 she walks at 0.7000 m/s, within 0.001");
+        require(window_ticks > 0,
+                "matron arm snagged: the ArmPlay swing decays under 0.333 m/s while grip is under 2000 N");
         std::cout << "  matron arm snagged: snagged at " << snagged_at << " s, held past her reach " << held_past_reach
                   << ", re-poses " << r.m.arm_reposes << ", snag left " << s.debug_player_snagged() << ", torn at "
                   << torn_at << " s, tears " << r.p.arm_tear_count << " claims " << r.m.claims << " deaths "

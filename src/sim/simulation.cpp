@@ -1318,6 +1318,10 @@ float Simulation::upper_subtree_inertia_for_test(const int joint) const noexcept
     return physics_world_->matron().upper_subtree_inertia_for_test(joint);
 }
 
+float Simulation::upper_subtree_twist_inertia_for_test(const int joint) const noexcept {
+    return physics_world_->matron().upper_subtree_twist_inertia_for_test(joint);
+}
+
 double Simulation::debug_upper_pitch_for_test(const int joint) noexcept {
     return physics_world_->matron().debug_upper_pitch_for_test(joint);
 }

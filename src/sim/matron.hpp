@@ -250,14 +250,17 @@ public:
     static constexpr int kUpperDistal[kUpperCount][kUpperCount] = {
         {0, -1, -1, -1, -1}, {1, 0, -1, -1, -1}, {2, 1, 0, 3, 4}, {3, -1, -1, -1, -1}, {4, -1, -1, -1, -1},
     };
-    // J-044c: her upper body's motors draw on her tick's one account
-    // (feet_budget_, 8 kN / 44 kW), last before the solve that uses them,
-    // and may use only what it granted (step_upper_body). A joint's torque is
-    // charged as force over its reach: the push it could make at the far end
-    // of what the joint turns, metres. The head, neck and chest joints each
-    // turn the head above them, so theirs is joint to crown (the head
-    // sphere's top, 1.79 m over her feet); a shoulder's is shoulder to wrist.
-    static constexpr float kUpperReachM[kUpperCount] = {0.146F, 0.251F, 0.413F, 0.481F, 0.481F};
+    // J-044c gains (Argon, #242): her upper body's motors draw only on her
+    // tick's one account (feet_budget_, 8 kN / 44 kW), last before the solve
+    // that uses them, and may use only what it granted (step_upper_body).
+    // Internal couples carry no external force, so no motor torque is ever
+    // charged as force: only the motors' positive mechanical power is
+    // charged, against power_left. A joint's torque is max(the hold floor
+    // below, its granted share) times its cap, so holding still never
+    // switches a joint off. The floor: the largest gravity torque at a 15
+    // degree tilt is ~5 N m, against floors of 12-40 N m, so every joint
+    // holds past 50 degrees of tilt.
+    static constexpr float kMinHoldTorqueFrac = 0.10F;
     static constexpr float kRadius = 0.30F;
     static constexpr float kHalfHeight = 0.75F;
     static constexpr float kStandCentre = kHalfHeight + kRadius;
@@ -809,6 +812,15 @@ public:
     static constexpr float kUprightBaseM = 0.08F;     // frail on her feet: an old woman's narrow, shuffling base
     static constexpr float kCrouchHeightM = 0.55F;
     static constexpr float kCrouchBaseM = 0.45F;
+    // A low blow meets her feet, not her braced stance: she reads crouched
+    // against it only at a full run. Her closing walk peaks at 2.24 m/s and
+    // her full run at 5.11 m/s (matron-sweep, measured gains on/off), so 3.0
+    // sits between them. At 1.0 the read tripped on any closing walk, and
+    // the stiffer upper springs (#298) made her close fast enough that a
+    // low sweep could never fell a faced changed Matron. A blow at body
+    // height keeps the old 1.0 read (kLowHuntMps), so the punch/stock
+    // calibrations (matron-damage) do not move.
+    static constexpr float kCrouchRunMps = 3.0F;
     static constexpr float kCarryPullCapM = 0.10F;  // M4 S2 counter-lean cap: an uncapped pull (~0.74 m) broke tear holds; 0.10 m keeps a real pull without it
     static constexpr float kPestStepM = 0.02F;
     static constexpr float kDangerousStepM = 0.30F;
@@ -1705,8 +1717,15 @@ public:
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
     // Tests only: her head and body turned to face `yaw` (a test's start: her
-    // heading, never a force or a pose of her body).
-    void face_for_test(float yaw) noexcept { yaw_ = yaw; look_s_ = 0.0F; }
+    // heading, never a force or a pose of her body). The chain's baked yaw
+    // follows her facing and the chain is reseated on the root, so a faced
+    // Matron does not carry a chain still pulling toward spawn yaw (J-044c gains).
+    void face_for_test(float yaw) noexcept {
+        yaw_ = yaw;
+        look_s_ = 0.0F;
+        upper_yaw_ = yaw;
+        seat_upper_body();
+    }
     // Her home: the deck (one of her levels' floors, by its top) her locker
     // stands on, where she wakes, and where a restore puts her back. Moves
     // the locker; while she is in it, puts her level, floor and lead there.
@@ -1963,6 +1982,21 @@ public:
     [[nodiscard]] std::uint64_t catches() const noexcept { return catches_; }
     [[nodiscard]] float strain_force_peak_n() const noexcept { return plank_peak_n_; }
     [[nodiscard]] JPH::BodyID body() const noexcept { return body_; }
+    // The force Jolt has accumulated on her five upper segments this step
+    // (through AddForce calls): the effort ledger's residual read sums her
+    // whole body, so the root's read plus this is what the paths recorded.
+    // Zero with no upper body in the world.
+    [[nodiscard]] JPH::Vec3 upper_accumulated_force() const noexcept;
+    // J-044c gains (Argon, #242): a whole-body translation force, split by
+    // mass share across her six bodies (root 0.6722; head 0.0554, neck
+    // 0.0140, chest 0.1596, each arm 0.0494), at each body's centre of mass.
+    // Every part takes its own mass's share, so every part accelerates
+    // alike and the chain does not recoil against the root; the force and
+    // power sums are unchanged, so her budget holds. For every foot push,
+    // Climber root drive, and grab/arm hand-spring reaction on her. Strikes
+    // still hit only the struck segment. With no upper body in the world,
+    // the root takes it all (trunk behaviour).
+    void add_body_force(const JPH::Vec3 force) noexcept;
     friend struct MatronStateExitAccess;
 
 private:
@@ -2229,6 +2263,9 @@ public:
     // The distal subtree inertia (kg m^2) the joint's spring is sized for,
     // read from the shapes at startup. Tests only.
     [[nodiscard]] float upper_subtree_inertia_for_test(int joint) const noexcept;
+    // The same, about the joint's twist axis: the swing and twist motors are
+    // sized from separate inertias (Argon, #242). Tests only.
+    [[nodiscard]] float upper_subtree_twist_inertia_for_test(int joint) const noexcept;
     // A joint's signed pitch (degrees), read live from the bodies' current
     // rotations — no tick needed, so a posed angle reads true before the
     // springs move it. Tests only.
@@ -2641,17 +2678,31 @@ private:
     // J-044c: the five upper segments and their motorized joints, in the
     // kUpperCount order (head, neck, chest, arm L, arm R). They live on the
     // hand layer (meet nothing): only the joints and applied impulses move
-    // them. Their rest frames are baked at placement; turning after that
-    // leaves them facing the placement yaw until J-044d adds facing targets.
+    // them. Their rest frames are baked at placement; face_for_test moves
+    // the baked yaw with her facing and reseats the chain (J-044c gains).
     std::array<JPH::BodyID, kUpperCount> upper_body_{};
     std::array<JPH::Ref<JPH::TwoBodyConstraint>, kUpperCount> upper_joint_{};
     std::array<JPH::Quat, kUpperCount> upper_rest_{};  // rest relative rotation, per segment
     std::array<float, kUpperCount> upper_subtree_inertia_{};  // distal subtree inertia about each joint anchor, read from the shapes at startup (#298)
+    std::array<float, kUpperCount> upper_subtree_twist_inertia_{};  // the same, about each joint's twist axis (Argon, #242)
+    // Each joint's motor axes (twist, plane x twist, plane) in the child
+    // segment's local frame, baked at creation: Jolt's motor lambdas come
+    // back along the constraint frame carried by the child, so the motor
+    // torque vector is rebuilt from these (step_upper_body).
+    std::array<std::array<JPH::Vec3, 3>, kUpperCount> upper_motor_axis_{};
     bool upper_in_world_ = false;
-    float upper_motor_power_w_ = 0.0F;  // last tick's motor work (upper bound), watts
+    float upper_motor_power_w_ = 0.0F;  // last tick's positive motor power, watts
     // The yaw the joints were baked at (create_upper_body): their anchors sit
-    // at it in each parent's frame, so a reseat poses the chain at it too.
+    // at it in each parent's frame. face_for_test moves it with her facing
+    // (J-044c gains), and a reseat is a rigid rotation of the creation pose
+    // to it: the chain's rotations turn with it (upper_rest_transform) and
+    // the root turns by the same delta (seat_upper_body), so the anchors
+    // still meet.
     float upper_yaw_ = 0.0F;
+    // The yaw the root was last turned to by a seat (seat_upper_body): the
+    // root turns only by the delta since this, so a seat at an unchanged yaw
+    // leaves a leaning root alone.
+    float root_seated_yaw_ = 0.0F;
     // The chain hangs on the root's chest joint. A root moved by more than
     // this off that joint at the start of a tick was placed, not moved by
     // the solver (a solved joint is off by millimetres): the chain is seated
@@ -2675,7 +2726,6 @@ private:
     // Her Climber on her root, reading her body's velocity (body_velocity):
     // every Climber of hers is made here.
     void new_climber(traversal::Ignore ignore);
-    [[nodiscard]] float upper_spin(int i) const;  // joint i's spin against its parent, rad/s
     void step_upper_body(const float dt);
     void destroy_upper_body();
     void upper_rest_transform(const int i, JPH::RVec3 &pos, JPH::Quat &rot) const;
