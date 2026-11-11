@@ -1021,6 +1021,7 @@ public:
     static constexpr float kCarrySideM = 0.7F;
     static constexpr float kCarryMaxSeconds = 10.0F;
     static constexpr float kRimStandM = 0.42F;        // her middle this far in from the shaft's rail
+    static constexpr float kWalkStopM = 0.15F;        // her feet drive her only while she is farther than this from where she walks to
     static constexpr float kRimBraceLostM = 2.5F;     // in the rail's beats, this far off her spot: pulled off it
     static constexpr float kRimArriveM = 0.30F;
     static constexpr float kRimBraceM = 0.9F;        // braced: her middle within this of the rail
@@ -1188,9 +1189,10 @@ public:
     // ankle is 640 N m a radian), so he comes to hang still. Easing into the
     // pose (kFatalEaseRate of what is left, a second), she opens the window
     // once his middle is kFatalWindowPastM out past the lip and his shoulder
-    // stays within kFatalReachM of her (the punch's reach less a hand's
-    // width) as he swings. His shoulder, the punch's start, is
-    // kShoulderOfMiddleM along his body's up from his middle.
+    // is within kFatalReachM of her (the punch's reach less a hand's width)
+    // with him hanging still (no faster than kFatalStillMps: a swing passing
+    // through her reach does not open it). His shoulder, the punch's start,
+    // is kShoulderOfMiddleM along his body's up from his middle.
     static constexpr float kFatalStandM = 0.30F;
     static constexpr float kFatalWindowOutM = 0.85F;
     static constexpr float kFatalWindowUpM = 2.9F;
@@ -1198,6 +1200,7 @@ public:
     static constexpr float kFatalEaseRate = 3.0F;
     static constexpr float kFatalWindowPastM = 0.20F;
     static constexpr float kFatalReachM = 0.70F;
+    static constexpr float kFatalStillMps = 0.30F;
     static constexpr float kShoulderOfMiddleM = 0.25F;
     // His window over, she takes him out over the drop toward her let-go's
     // pose (kFatalDropOutM out from her middle and kFatalDropUpM over her

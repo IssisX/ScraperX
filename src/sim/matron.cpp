@@ -1314,7 +1314,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     }
     const float length = std::hypot(dx, dz);
     Vec3 want = Vec3::sZero();
-    if (length > 0.15F) {
+    if (length > kWalkStopM) {
         want = Vec3(dx / length * speed, 0.0F, dz / length * speed);
         yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
     }
