@@ -50,5 +50,37 @@ if apt_try; then
   exit 0
 fi
 
-echo "apt_install: could not install ${missing[*]} from either mirror" >&2
+# Both Ubuntu mirrors unreachable (11-11: archive.ubuntu.com timed out too while packages.microsoft.com
+# answered). Only the two build tools have a fallback that changes no compiler flag:
+#   ninja-build: the PyPI ninja wheel, pinned by version and sha256 (--require-hashes);
+#   ccache:      none, so the compiler launcher is cleared and the build runs uncached (slower, same flags).
+# Anything else (the touch job's X libraries) has no fallback and fails here, named.
+left=()
+for pkg in "${missing[@]}"; do
+  case "$pkg" in
+    ninja-build)
+      req="$(mktemp)"
+      echo "ninja==1.11.1.1 --hash=sha256:84502ec98f02a037a169c4b0d5d86075eaf6afc55e1879003d6cab51ced2ea4b" >"$req"
+      if timeout 180 python3 -m pip install --user --require-hashes --only-binary=:all: -r "$req"; then
+        echo "$HOME/.local/bin" >>"${GITHUB_PATH:-/dev/null}"
+        export PATH="$HOME/.local/bin:$PATH"
+        ninja --version
+      else
+        left+=("$pkg")
+      fi
+      rm -f "$req"
+      ;;
+    ccache)
+      echo "apt_install: no ccache; this build runs without the compiler cache" >&2
+      { echo "CMAKE_CXX_COMPILER_LAUNCHER="; echo "CMAKE_C_COMPILER_LAUNCHER="; } >>"${GITHUB_ENV:-/dev/null}"
+      ;;
+    *)
+      left+=("$pkg")
+      ;;
+  esac
+done
+if [ "${#left[@]}" -eq 0 ]; then
+  exit 0
+fi
+echo "apt_install: could not install ${left[*]} from either mirror, and they have no fallback" >&2
 exit 1
