@@ -168,8 +168,24 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     std::vector<int> route;
     const int from = here >= 0 ? here : travel_.region;
     if (from >= 0) route = plan_with_risers(from, region, avoid);
-    if (here >= 0 && route.empty() && here != region) {
+    int target = region;
+    // No way of her map joins them: a hoist does. First to its landing.
+    const bool hoisted = here >= 0 && route.empty() && here != region && plan_hoist(here, region);
+    if (hoisted) {
+        target = hoist_.board;
+        if (target != here) route = scanned_->plan(here, target, avoid);
+    }
+    if (here >= 0 && route.empty() && here != target) {
+        // Unreachable: the request changes nothing, and a hoist leg under
+        // way rides on (the reset below runs only once the destination is
+        // accepted).
         return false;
+    }
+    // A new destination ends a hoist leg under way (not one the leg itself
+    // asks for, going on from its landing, and not one this request just
+    // planned).
+    if (!hoisted && !hoist_inner_) {
+        hoist_ = {};
     }
     // Her hands on this body (a respawn gives her a new one). Invalid or
     // unreachable requests above leave her existing controller untouched.
@@ -178,7 +194,7 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     travel_edges_ = std::move(route);
     travel_.active = true;   // already there still earns a supported, quiet arrival
     chase_way_held_ = true;  // a travel taken holds the chase window past its own ticks
-    travel_.goal = region;
+    travel_.goal = target;
     travel_.region = here;
     travel_.step = 0;
     travel_.steps = static_cast<int>(travel_edges_.size());
@@ -201,6 +217,10 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
 }
 
 void Matron::step_travel(const float dt) {
+    if (hoist_.phase >= 2) {
+        step_hoist(dt);
+        return;
+    }
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     speed_ = 0.0F;
@@ -311,6 +331,12 @@ void Matron::step_travel(const float dt) {
                            std::abs(velocity.GetY()) < 0.1F && bodies.GetGravityFactor(body_) == 1.0F;
         travel_wait_s_ = quiet ? std::max(travel_wait_s_, 0.0F) + dt : 0.0F;
         if (travel_wait_s_ >= kArrivalStandS) {
+            if (hoist_.phase == 1 && travel_.goal == hoist_.board) {
+                hoist_.phase = 2;   // at the hoist's landing: onto it
+                hoist_.t = 0.0F;
+                travel_wait_s_ = 0.0F;
+                return;
+            }
             ++travel_.arrivals;
             travel_.active = false;
         }
@@ -598,6 +624,29 @@ traversal::Edge Matron::travel_edge(const int k) {
 // hunt meanwhile.
 bool Matron::TravelWay::begin(const MoverGoal &goal) {
     goal_ = goal;
+    // A travel must not preempt a way of hers that owns the route: where her
+    // scan joins her floor to the lead's by a climb, a pole, a lip or a drop,
+    // that way takes her there on its own feet, and a travel's walk to the
+    // climb's foot can strand her where its feet find no floor to it (a
+    // down-pursuit stalled, re-planning, at the tower's south end). The
+    // travel is for a lead her map joins only by walking, or only by a hoist.
+    if (m_.scanned_ != nullptr) {
+        const int here = m_.region_under();
+        // Not on a region she knows (down, airborne, off her map): no travel
+        // starts here — one begun while she is down would climb past a way's
+        // block, retaking a failed ladder before its time.
+        if (here < 0) {
+            return false;
+        }
+        const int goal_region = m_.scanned_->region_at(Vec3(goal.x, goal.floor_y, goal.z));
+        if (goal_region >= 0 && here != goal_region) {
+            for (const int edge : m_.scanned_->plan(here, goal_region)) {
+                if (m_.scanned_->edges()[static_cast<std::size_t>(edge)].kind != traversal::MoveKind::Walk) {
+                    return false;
+                }
+            }
+        }
+    }
     return m_.travel_to(Vec3(goal.x, goal.floor_y, goal.z));
 }
 

@@ -99,7 +99,7 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "CONFLICT", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
 MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
@@ -556,7 +556,8 @@ class Switch:
             number=number, head_sha=sha, head_ref=pr["head"]["ref"], base_ref=pr["base"]["ref"], draft=bool(pr["draft"]),
             mergeable=full.get("mergeable"), head_committed_at=commit["commit"]["committer"]["date"], proof=proof,
             verdicts=verdicts, needs=needs, rule_check_block=False,
-            touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files))
+            touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files),
+            codex_failed=rules.codex_failed(comments, sha))
         ctx = {"job": job, "issue": issue, "proof_url": url, "run_id": run_id, "proof_done_at": proof_done_at, "comments": comments,
                "title": pr["title"], "body": pr.get("body") or "", "files": files, "updated_at": pr.get("updated_at") or "",
                "created_at": pr.get("created_at") or "",
@@ -1519,6 +1520,13 @@ class Switch:
                                 "both" if owner == "muse" else "claude"))
         if d.action == "FIX" and owner:
             out.append(item("FIX", plain("; ".join(d.reasons)), owner, self.fix_finding(f, ctx)))
+        api_note = [v for v in f.verdicts if v.kind == "review" and v.verdict == "NOTE" and v.author_login == rules.BOT_LOGIN
+                    and rules.names_head(v, f.head_sha)]
+        if api_note and f.proof == "green" and rules.needs_review(f, author, self.team):
+            # Cory, 11-10 ("take the backup reviews yourself"): the API was unsure; the integrator rules within the
+            # hour rather than the head waiting on ChatGPT's and Grok's scheduled runs
+            out.append(item("NOTE-REVIEW", f"the automatic Claude review answered NOTE; read it and post "
+                                           f"**Claude (review of #{f.number} @ {f.head_sha}): LAND** or FIX"))
         if rules.CONFLICT in d.reasons and owner and not any(it.kind == "NOT-MERGED" for it in out):
             # 11-10 #343: a conflict was told to its owner only by the reconciler's hourly pass; this sweep tells it now
             out.append(item("CONFLICT", f"{rules.CONFLICT}: merge {rules.TRUNK} into {plain(f.head_ref)} and push",
