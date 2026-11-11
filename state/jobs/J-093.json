@@ -2,26 +2,30 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "claude/integrate-protected-j093": "aaed1791db1d70360e6870a1ac6607f781fe5bde"
+  "claude/integrate-protected-j093": "429133c617a01445d40ea33a55802ed397aa1796"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": "2026-11-11T18:17:00Z",
- "head": "aaed1791db1d70360e6870a1ac6607f781fe5bde",
+ "deadline": null,
+ "head": "429133c617a01445d40ea33a55802ed397aa1796",
  "issue": 411,
  "job": "J-093",
  "landed": {
   "claude/integrate-protected-j093": [
-   "aaed1791db1d70360e6870a1ac6607f781fe5bde",
+   "429133c617a01445d40ea33a55802ed397aa1796",
    "",
-   "2026-11-11T17:16:05Z"
+   "2026-11-11T22:08:00Z"
   ]
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T22:08:00Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -53,6 +57,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T17:16:05Z"
+ "state": "proof",
+ "updated": "2026-11-11T22:08:00Z"
 }

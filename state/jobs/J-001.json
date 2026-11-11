@@ -2,7 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "claude/integrate-j001-hold": "789c6e3834955f3b7119529354e00a0cacb0980a",
+  "claude/integrate-j001-hold": "99b29794627cf1d552a2229fe2d3c0903bb64fb2",
   "fb-bot/j001-pastrail": "59af7cafa92f5528ccf3abb2652d6f5daae3dacb"
  },
  "cancelled": null,
@@ -13,14 +13,14 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T23:00:00Z",
- "head": "789c6e3834955f3b7119529354e00a0cacb0980a",
+ "head": "99b29794627cf1d552a2229fe2d3c0903bb64fb2",
  "issue": 108,
  "job": "J-001",
  "landed": {
   "claude/integrate-j001-hold": [
-   "789c6e3834955f3b7119529354e00a0cacb0980a",
+   "99b29794627cf1d552a2229fe2d3c0903bb64fb2",
    "",
-   "2026-11-11T19:28:50Z"
+   "2026-11-11T22:08:00Z"
   ],
   "fb-bot/j001-pastrail": [
    "59af7cafa92f5528ccf3abb2652d6f5daae3dacb",
@@ -598,7 +598,11 @@
    "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-3), native-tests (athletic-traversal-2), native-tests (matron-slices-3), godot-touch (touch-2), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T22:08:00Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -621,6 +625,31 @@
    "version": "red:789c6e3834955f3b7119529354e00a0cacb0980a",
    "via": "session",
    "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T22:08:00Z",
+   "dead": "2026-11-12T01:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T23:17:00Z",
+   "id": "O-d1c32a4b",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T22:08:00Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j001-hold",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 108,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:99b29794627cf1d552a2229fe2d3c0903bb64fb2",
+   "via": "session",
+   "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3), godot-touch (touch-3), no PR"
   }
  ],
  "outcome": null,
@@ -633,5 +662,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T19:28:50Z"
+ "updated": "2026-11-11T22:08:00Z"
 }

@@ -129,7 +129,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T16:04:39Z",
+   "rechecked": "2026-11-11T22:08:00Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -155,7 +155,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T16:04:39Z",
+   "rechecked": "2026-11-11T22:08:00Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -514,7 +514,7 @@
    "closed": null,
    "created": "2026-11-11T14:01:59Z",
    "dead": "2026-11-11T22:01:59Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-11T22:08:00Z",
    "due": "2026-11-11T18:01:59Z",
    "id": "O-bec9c29b",
    "kind": "fix",
@@ -543,5 +543,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T21:07:56Z"
+ "updated": "2026-11-11T22:08:00Z"
 }

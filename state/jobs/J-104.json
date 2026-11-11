@@ -12,13 +12,13 @@
  "job": "J-104",
  "landed": {},
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "issue closed (completed)",
  "owner": "claude",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-11T18:18:52Z"
+ "state": "merged",
+ "updated": "2026-11-11T22:08:00Z"
 }

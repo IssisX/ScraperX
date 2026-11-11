@@ -1533,3 +1533,29 @@
 {"ev": "dead_letter", "id": "O-a1b6ff0a", "job": "J-102", "ref": "BRANCH|claude/integrate-j102", "t": "2026-11-11T21:07:56Z", "to": "claude"}
 {"ev": "needs_you", "job": "", "keys": ["O-5e98ccfb", "O-2c7fcb6a", "O-dde130cf", "O-d7fa3f70", "O-63e0a689", "O-6f17cffa", "O-5ceb32bd", "O-a1b6ff0a", "gap:2026-11-11T19:28:50Z"], "n": 9, "t": "2026-11-11T21:07:56Z"}
 {"ev": "pass", "job": "", "jobs": 79, "status": "ok", "t": "2026-11-11T21:07:56Z", "tries": 1}
+{"ev": "job", "job": "J-108", "t": "2026-11-11T22:08:00Z"}
+{"due": "2026-11-11T23:17:00Z", "ev": "obligation", "id": "O-d1c32a4b", "job": "J-001", "kind": "fix", "ref": "BRANCH|claude/integrate-j001-hold", "t": "2026-11-11T22:08:00Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "new head", "id": "O-c4674b3e", "job": "J-001", "t": "2026-11-11T22:08:00Z"}
+{"due": "2026-11-12T02:08:00Z", "ev": "obligation", "id": "O-74c27979", "job": "J-085", "kind": "fix", "ref": "PR|#435", "t": "2026-11-11T22:08:00Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T02:08:00Z", "ev": "obligation", "id": "O-1e04e08e", "job": "J-085", "kind": "fix", "ref": "BRANCH|claude/integrate-protected-j085", "t": "2026-11-11T22:08:00Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-9b2ff7a0", "job": "J-085", "t": "2026-11-11T22:08:00Z"}
+{"ev": "acked", "how": "PR #435 opened", "id": "O-78c21f9b", "job": "J-085", "t": "2026-11-11T22:08:00Z"}
+{"due": "2026-11-11T23:17:00Z", "ev": "obligation", "id": "O-8f55f698", "job": "J-092", "kind": "fix", "ref": "PR|#434", "t": "2026-11-11T22:08:00Z", "to": "claude", "via": "session"}
+{"ev": "closed", "id": "O-9fe1a99f", "job": "J-092", "t": "2026-11-11T22:08:00Z", "why": "PR #434 took it over"}
+{"ev": "acked", "how": "new head", "id": "O-5ceb32bd", "job": "J-093", "t": "2026-11-11T22:08:00Z"}
+{"ev": "outcome", "job": "J-104", "outcome": "merged", "t": "2026-11-11T22:08:00Z", "why": "issue closed (completed)"}
+{"due": "2026-11-11T23:17:00Z", "ev": "obligation", "id": "O-32775b74", "job": "J-108", "kind": "fix", "ref": "BRANCH|claude/integrate-protected-j108", "t": "2026-11-11T22:08:00Z", "to": "claude", "via": "session"}
+{"ev": "state", "frm": "proof", "job": "J-085", "t": "2026-11-11T22:08:00Z", "to": "working"}
+{"ev": "state", "frm": "working", "job": "J-093", "t": "2026-11-11T22:08:00Z", "to": "proof"}
+{"ev": "state", "frm": "assigned", "job": "J-094", "t": "2026-11-11T22:08:00Z", "to": "proof"}
+{"ev": "state", "frm": "assigned", "job": "J-104", "t": "2026-11-11T22:08:00Z", "to": "merged"}
+{"ev": "state", "frm": "accepted", "job": "J-108", "t": "2026-11-11T22:08:00Z", "to": "proof"}
+{"attempt": 1, "ev": "sent", "id": "O-d1c32a4b", "job": "J-001", "ref": "BRANCH|claude/integrate-j001-hold", "send": 1, "t": "2026-11-11T22:08:00Z", "to": "claude", "via": "session"}
+{"ev": "dead_letter", "id": "O-bec9c29b", "job": "J-038", "ref": "PR|#372", "t": "2026-11-11T22:08:00Z", "to": "muse"}
+{"attempt": 2, "ev": "sent", "id": "O-9b77f12e", "job": "J-085", "ref": "BRANCH|fb-bot/integrate-j085", "send": 2, "t": "2026-11-11T22:08:00Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-74c27979", "job": "J-085", "ref": "PR|#435", "send": 1, "t": "2026-11-11T22:08:00Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-1e04e08e", "job": "J-085", "ref": "BRANCH|claude/integrate-protected-j085", "send": 1, "t": "2026-11-11T22:08:00Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-8f55f698", "job": "J-092", "ref": "PR|#434", "send": 1, "t": "2026-11-11T22:08:00Z", "to": "claude", "via": "session"}
+{"attempt": 2, "ev": "sent", "id": "O-6cedf3d0", "job": "J-096", "ref": "BRANCH|claude/integrate-j096", "send": 2, "t": "2026-11-11T22:08:00Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-32775b74", "job": "J-108", "ref": "BRANCH|claude/integrate-protected-j108", "send": 1, "t": "2026-11-11T22:08:00Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 80, "status": "ok", "t": "2026-11-11T22:08:00Z", "tries": 1}

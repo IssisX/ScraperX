@@ -1,0 +1,64 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j108": "8a678bff202058b9673505617e61175581013cca",
+  "claude/integrate-protected-j108": "db5c57ed030a68358bfee748019554bed019bd5b"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-11T22:08:00Z",
+ "deadline": "2026-11-11T23:17:00Z",
+ "head": "8a678bff202058b9673505617e61175581013cca",
+ "issue": 0,
+ "job": "J-108",
+ "landed": {
+  "claude/integrate-j108": [
+   "8a678bff202058b9673505617e61175581013cca",
+   "",
+   "2026-11-11T22:08:00Z"
+  ],
+  "claude/integrate-protected-j108": [
+   "db5c57ed030a68358bfee748019554bed019bd5b",
+   "",
+   "2026-11-11T22:08:00Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T22:08:00Z",
+   "dead": "2026-11-12T01:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T23:17:00Z",
+   "id": "O-32775b74",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T22:08:00Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-protected-j108",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 0,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:db5c57ed030a68358bfee748019554bed019bd5b",
+   "via": "session",
+   "what": "`claude/integrate-protected-j108` proof red: native-tests (athletic-traversal-1), no PR"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "claude",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-11T22:08:00Z"
+}

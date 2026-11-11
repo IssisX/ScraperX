@@ -1,16 +1,16 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "claude/integrate-j092": "76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
   "claude/integrate-protected-j092": "94707adf70f99ecd83fbf98e77bdb5464ab58d03"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "red: godot-touch (touch-3), godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3)",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
  "deadline": "2026-11-11T18:17:00Z",
- "head": "94707adf70f99ecd83fbf98e77bdb5464ab58d03",
+ "head": "424d161ce2536438d7d1a76ca613d4b7ccead434",
  "issue": 410,
  "job": "J-092",
  "landed": {
@@ -85,7 +85,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-11T22:08:00Z",
+    "why": "PR #434 took it over"
+   },
    "created": "2026-11-11T19:28:50Z",
    "dead": "2026-11-11T23:17:00Z",
    "dead_lettered": null,
@@ -104,15 +107,42 @@
    "version": "red:94707adf70f99ecd83fbf98e77bdb5464ab58d03",
    "via": "session",
    "what": "`claude/integrate-protected-j092` proof red: host-build, no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T22:08:00Z",
+   "dead": "2026-11-12T01:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T23:17:00Z",
+   "id": "O-8f55f698",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T22:08:00Z",
+   "missing": 0,
+   "ref": "PR|#434",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 434,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:424d161ce2536438d7d1a76ca613d4b7ccead434",
+   "via": "session",
+   "what": "#434 proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3)"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
- "pr": 0,
+ "pr": 434,
  "pr_done": "",
- "prs": [],
+ "prs": [
+  434
+ ],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T19:28:50Z"
+ "updated": "2026-11-11T22:08:00Z"
 }
