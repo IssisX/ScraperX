@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 2026-11-11 | *"sort failures by cause first from now on"* (after J-001 took five passes before its 35 failures were grouped) and *"you are in a loop of constantly making mistakes and saying sorry for them"*: every job with several failures is sorted by first cause before any fix; the integrator checks before it states or rules | `.claude/skills/scraperx-engineering/SKILL.md` section 3 |
 | 2026-11-11 | *"Floor"*: where no usable rail fits her five beats in time (J-001 groups A and B2), her floor version is the fatality; those checks move on a protected branch (J-093) | J-001 #108, J-093 #411 |
 | 2026-11-11 | *"if the inbox is getting cluttered and if it would help to clear it out, please do, but do not ever touch my main inbox"*, and a prompt per mail is *"not good"*: the agent mail lives in his main inbox, so no mail is ever trashed, archived or moved; the earlier cleanup attempt trashed nothing (the connector refused) | `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (Traps) |
 | 2026-11-11 | *"You have two helpers now, I'd like you to up that number to 3+you, and take the hardest things from muse"*: three helpers at a time, and Claude takes the hardest jobs from Muse (after what goes to Argon); he has a full usage reset and two Fable resets to spend | `CLAUDE.md` (The integrator), `work/tasks/integrator-hourly.md` |
