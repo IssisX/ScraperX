@@ -1,7 +1,9 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-j097": "f9ffc06c564214fba31c491a2f886dd069ff1116"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
@@ -10,15 +12,21 @@
  "head": "",
  "issue": 415,
  "job": "J-097",
- "landed": {},
+ "landed": {
+  "claude/integrate-j097": [
+   "f9ffc06c564214fba31c491a2f886dd069ff1116",
+   "in trunk",
+   "2026-11-11T16:04:39Z"
+  ]
+ },
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j097: in trunk",
  "owner": "claude",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-11T15:02:17Z"
+ "state": "merged",
+ "updated": "2026-11-11T16:04:39Z"
 }

@@ -1,24 +1,58 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-j092": "e9eb15d7af4258d0451bcc5e57819c0db3e9b635"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": null,
- "head": "",
+ "deadline": "2026-11-11T17:17:00Z",
+ "head": "e9eb15d7af4258d0451bcc5e57819c0db3e9b635",
  "issue": 410,
  "job": "J-092",
- "landed": {},
- "obligations": [],
+ "landed": {
+  "claude/integrate-j092": [
+   "e9eb15d7af4258d0451bcc5e57819c0db3e9b635",
+   "",
+   "2026-11-11T16:04:39Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T16:04:39Z",
+   "dead": "2026-11-11T19:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T17:17:00Z",
+   "id": "O-f111f555",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T16:04:39Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j092",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 410,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:e9eb15d7af4258d0451bcc5e57819c0db3e9b635",
+   "via": "session",
+   "what": "`claude/integrate-j092` proof red: host-build, no PR"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
- "owner": "muse",
+ "owner": "claude",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-11T14:01:59Z"
+ "state": "working",
+ "updated": "2026-11-11T16:04:39Z"
 }

@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": null,
+ "deadline": "2026-11-11T17:17:00Z",
  "head": "4bb372c417f4c69ed8511cf74816e524d9cc5eaa",
  "issue": 414,
  "job": "J-096",
@@ -19,7 +19,33 @@
    "2026-11-11T15:02:17Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T16:04:39Z",
+   "dead": "2026-11-11T19:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T17:17:00Z",
+   "id": "O-e7322143",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T16:04:39Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j096",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 414,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:4bb372c417f4c69ed8511cf74816e524d9cc5eaa",
+   "via": "session",
+   "what": "`claude/integrate-j096` proof red: host-build, android-build, no PR"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
@@ -27,6 +53,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T15:02:17Z"
+ "state": "working",
+ "updated": "2026-11-11T16:04:39Z"
 }

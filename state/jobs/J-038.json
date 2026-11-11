@@ -129,7 +129,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T09:38:49Z",
+   "rechecked": "2026-11-11T16:04:39Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -155,7 +155,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T09:38:49Z",
+   "rechecked": "2026-11-11T16:04:39Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -543,5 +543,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T14:01:59Z"
+ "updated": "2026-11-11T16:04:39Z"
 }

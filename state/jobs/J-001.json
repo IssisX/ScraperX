@@ -2,7 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "claude/integrate-j001-hold": "67837d5e75eb1225a13ac42943fd188c4494ffe9",
+  "claude/integrate-j001-hold": "46c9c4be8beafd3c1f69fc839f0af13061a4a76a",
   "fb-bot/j001-pastrail": "59af7cafa92f5528ccf3abb2652d6f5daae3dacb"
  },
  "cancelled": null,
@@ -13,14 +13,14 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T23:00:00Z",
- "head": "67837d5e75eb1225a13ac42943fd188c4494ffe9",
+ "head": "46c9c4be8beafd3c1f69fc839f0af13061a4a76a",
  "issue": 108,
  "job": "J-001",
  "landed": {
   "claude/integrate-j001-hold": [
-   "67837d5e75eb1225a13ac42943fd188c4494ffe9",
+   "46c9c4be8beafd3c1f69fc839f0af13061a4a76a",
    "",
-   "2026-11-11T15:02:17Z"
+   "2026-11-11T16:04:39Z"
   ],
   "fb-bot/j001-pastrail": [
    "59af7cafa92f5528ccf3abb2652d6f5daae3dacb",
@@ -579,5 +579,5 @@
  ],
  "review": "",
  "state": "proof",
- "updated": "2026-11-11T15:02:17Z"
+ "updated": "2026-11-11T16:04:39Z"
 }
