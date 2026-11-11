@@ -10,8 +10,8 @@ Work state lives in GitHub: job issues (owner, state, needs:eyes), Muse's queue 
 refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpers at high, the cap (Cory 11-11):
 - J-001 #108: window pose @ 67837d5e and Floor checks on `claude/integrate-protected-j093` @ 56624498 (on top of
   it; land after the hold branch). 9 left (B1 timing x6, two entry-swing reaches, snag setup): pass 6 helper, 9:05 AM.
-- J-096 #414 planks bend (helper a349...): slice 1 on `claude/integrate-j096`.
-- J-090 #408 hook her: pass 1 pushed c755689d (proof 43041899766 was running). Ruled: physics stands (a planted
+- J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
+  before it lands. J-084 #402 (taken from Muse 9:06 AM): helper on `claude/integrate-j084`; J-082 waits on its table.
   Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
   her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
 - J-097 #415 QUEUE-LOW alarm (helper, 9 AM): on `claude/integrate-j097`; I land it on trunk once tested.
