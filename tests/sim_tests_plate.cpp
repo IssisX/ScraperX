@@ -699,7 +699,7 @@ bool run_slide_vault(scraperx::sim::Simulation &route) {
 }
 
 // AS-008's climbing route, on player inputs: from TP-340 by F's hole round the
-// hole and the header to the east band, the ladder to the 352 ring, the wall-climb
+// hole and the header to the east band, the entry pole onto the 352 ring, the wall-climb
 // stack (six lanes, five risers of 4.4 m) onto the 374 ring, then one climb per
 // ring gap to the 484 ring, every lift in the band where it was found.
 void run_plate_route() {
@@ -710,8 +710,8 @@ void run_plate_route() {
     const double start = route.snapshot().simulation_time_seconds;
     require(walk_to(route, 11.0, -138.0, 6.0) && walk_to(route, 10.4, -142.3, 8.0) &&
                 walk_to(route, 13.07, -157.0, 12.0) &&
-                climb_wet_hold(route, 13.07, -158.0, 1.0, 0.0, false, 352.5),
-            "route: across TP-340 and the ladder onto the 352 ring");
+                gantry_pole(route, 13.47, -158.0, 1.0, 0.0, 352.4, "entry pole"),
+            "route: across TP-340 and up the entry pole onto the 352 ring");
     // The stack: lane k spans z in [-153 - 2k, -151 - 2k], heads west for even
     // k (its block's face at x = 4.5) and east for odd k (face at x = 11.0),
     // and the last lane runs east onto the 374 ring.
@@ -819,6 +819,30 @@ void run_plate_route() {
 }
 SCRAPERX_GROUP("plate_route", 230, run_plate_route);
 SCRAPERX_SELECT("AS-008-route", run_plate_route);
+
+// The 340 -> 352 entry pole (band_plate_shop.cpp build_entry_pole) on player
+// inputs: from TP-340 by F's hole round the header to the east band, up the
+// pole 0.14 m off the 352 ring's face, mantled over its edge onto the ring.
+// The ladder this replaces offered no pole grip here, so this fails on the
+// old world: no grip offered at the pole's foot.
+void run_plate_entry() {
+    using scraperx::sim::InitialSpawn;
+    using scraperx::sim::Simulation;
+    Simulation entry(InitialSpawn::PlateTop);
+    (void)entry.advance_frame(1.0);
+    const double start = entry.snapshot().simulation_time_seconds;
+    require(walk_to(entry, 11.0, -138.0, 6.0) && walk_to(entry, 10.4, -142.3, 8.0) &&
+                walk_to(entry, 13.07, -157.0, 12.0) &&
+                gantry_pole(entry, 13.47, -158.0, 1.0, 0.0, 352.4, "entry pole"),
+            "entry: across TP-340 and up the pole onto the 352 ring");
+    const auto top = entry.snapshot();
+    require(standing_above(top, 352.0) && top.player_position.x > 13.6,
+            "entry: standing on the 352 ring, over its inner edge");
+    std::cout << "PASS scraperx_sim AS-008 entry: seconds=" << top.simulation_time_seconds - start
+              << " top_y=" << top.player_position.y << '\n';
+}
+SCRAPERX_GROUP("plate_entry", 1090, run_plate_entry);
+SCRAPERX_SELECT("AS-008-entry", run_plate_entry);
 
 // Takes hold of the wreck `entity` faced from (x, z) along (fx, fz) and climbs
 // it until standing above `top`; false as soon as the hold is not the wreck's.

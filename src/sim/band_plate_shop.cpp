@@ -731,9 +731,25 @@ void build_run(std::vector<Part> &route, std::vector<Part> &frame) {
                          {edge - 0.34F + 0.08F, 440.05F, -158.6F + 0.08F}, Material::Yellow));
 }
 
+// The entry pole, 340 -> 352 (J-082, rules 52 and 53): the ladder off TP-340
+// is gone. A pole 0.14 m off a fascia girder on the 352 ring's inner edge
+// (1.35 m deep and flush with the ring's top: a hang takes 1.2 m), climbed
+// 11.8 m and mantled over the edge onto the ring. The pole is the stage: the
+// longest pole climb on the route, and the only climb in the band.
+void build_entry_pole(std::vector<Part> &route) {
+    const float edge = ring_inner(352.0F);
+    // The pole, 0.16 m square, from the plate to 0.2 m under the ring's top.
+    route.push_back(span({edge - 0.34F - 0.08F, 340.25F, kRouteZ - 0.08F},
+                         {edge - 0.34F + 0.08F, 352.05F, kRouteZ + 0.08F}, Material::Yellow));
+    // The fascia girder on the ring's inner edge, 1.35 m deep and flush with
+    // its top, 2.8 m wide about the pole.
+    route.push_back(span({edge - 0.2F, 350.9F, kRouteZ - 1.4F},
+                         {edge + 0.3F, 352.25F, kRouteZ + 1.4F}, Material::Steel));
+}
+
 void build_climbing_route(kit::Kit &kit, std::vector<Part> &frame) {
     std::vector<Part> route;
-    ladder(route, ring_inner(352.0F) - 0.14F, kRouteZ, false, 340.25F, 352.25F);
+    build_entry_pole(route);
     build_wall_stack(route);
     build_gantry(route);
     for (float h = 396.0F; h < 483.9F; h += 22.0F) {

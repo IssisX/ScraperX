@@ -676,6 +676,31 @@ func _touch_ladder() -> bool:
 		return _fail("ladder: died")
 	return true
 
+# The 340 -> 352 entry pole (J-082): from TP-340 by F's hole round the header
+# to the east band, up the pole 0.14 m off the 352 ring's face, mantled over
+# its edge onto the ring. The pole climb is the stage; the ladder is gone.
+func _touch_entry_pole() -> bool:
+	var device := InputRouter.Device.TOUCH
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not (await _go(device, Vector2(11.0, -138.0), 0.15, 20.0) and await _go(device, Vector2(10.4, -142.3), 0.15, 20.0) and
+			await _go(device, Vector2(13.07, -157.0), 0.15, 20.0) and await _go(device, Vector2(13.47, -158.0), 0.08, 8.0)):
+		return _fail("entry pole: the walk to its foot stalled at %s" % str(_position()))
+	await _face(Vector2(1.0, 0.0))
+	if not await _offered(&"climb", "CLIMB", "HOLD"):
+		return _fail("entry pole: CLIMB HOLD was not offered at its foot")
+	_act(device)
+	if not await _wait_until(func() -> bool: return int(_native().get_traversal_state()) == 4, 1.0):
+		return _fail("entry pole: not taken")
+	_move(device, 1.0)
+	var topped: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()) and _position().y > 352.0, 40.0)
+	_move(device, 0.0)
+	if not topped:
+		return _fail("entry pole: never topped out onto the 352 ring (y %.2f)" % _position().y)
+	_detail = "topped_y=%.2f" % _position().y
+	if int(_native().get_death_count()) != 0:
+		return _fail("entry pole: died")
+	return true
+
 # The faint route hint (a setting, off by default): 3 m short of the 154 m
 # deck's ladder and facing it, nothing is marked while it is off; turned on,
 # the ladder's hold ahead is marked (out of the hands' reach); off again,

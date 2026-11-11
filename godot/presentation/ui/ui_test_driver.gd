@@ -50,6 +50,8 @@ const SCENARIOS := {
 	# A broken arm: flat out into the Matron's locker, then the ladder one-armed.
 	"touch_arm_break": 11,
 	"touch_ladder": 11,
+	# The 340 -> 352 entry pole (J-082): spawn on TP-340.
+	"touch_entry_pole": 19,
 	# The faint route hint: off by default, the ladder's hold marked when on.
 	"touch_route_hint": 11,
 	"touch_pause": 8,
@@ -343,6 +345,8 @@ func _run() -> void:
 			ok = await _touch_wall_kick()
 		"touch_ladder":
 			ok = await _touch_ladder()
+		"touch_entry_pole":
+			ok = await _touch_entry_pole()
 		"touch_route_hint":
 			ok = await _touch_route_hint()
 		"touch_jump":
