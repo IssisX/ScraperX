@@ -847,6 +847,10 @@ public:
     // The deck a story up or down the pipe toward her lead from her deck at
     // `floor_y`, or `floor_y` itself when the lead is not the pipe's.
     [[nodiscard]] static float pipe_next_toward(float floor_y, float lead_y) noexcept;
+    // Whether her lead is a place her map reaches from the pipe's deck `next`
+    // (on it, or a way of hers from it): a lead out on steel no way of hers
+    // reaches from there (a plate over the shaft) is not the pipe's either.
+    [[nodiscard]] bool pipe_serves(float next);
     // Her feet's brace on the riser, hand over hand (matron_contact.cpp): from
     // her shins, this far over her soles, level toward its axis, within her
     // legs' reach (her line is 0.6 m off the riser's west face).
@@ -2138,6 +2142,10 @@ private:
     // corner on her level and onto it. False when it does not go that way, or
     // she is frail.
     bool follow_pipe(float dt, JPH::RVec3 at);
+    // A way of her own map from the floor she stands on to her lead's (the
+    // scan's ladders, poles and mantles, or a hoist), begun nearer her than
+    // the pipe's corner `pipe_off` away: hers over the pipe (J-085).
+    [[nodiscard]] bool own_way_nearer(JPH::RVec3 at, float pipe_off);
     [[nodiscard]] static bool pipe_reaches(float floor_y) noexcept;
     // Her hands on the rail of the deck she is leaving: false (and nothing
     // started) when there is no rail top in her reach.
@@ -2535,6 +2543,8 @@ private:
     };
     [[nodiscard]] bool hoist_footprint(const HoistFeed &h, JPH::AABox &box, float &floor_top) const;
     [[nodiscard]] int hoist_landing(const JPH::AABox &car, float floor_top, JPH::Vec3 &point) const;
+    // The hoist that joins them (as plan_hoist takes it), without taking it.
+    [[nodiscard]] bool find_hoist(int from, int goal, HoistLeg &leg) const;
     bool plan_hoist(int from, int goal);
     void step_hoist(float dt);
     std::vector<HoistFeed> hoists_;
@@ -3005,6 +3015,13 @@ private:
     static constexpr std::uint8_t kPipeWayRetries = 2;
     std::array<PipeWayMemory, 2 * (kPipeDecks - 1)> pipe_ways_{};
     int pipe_waypoint_ = 0;
+    // own_way_nearer's last answer: from region, to region, and where the
+    // way's first move (or the hoist's landing) begins; none when no way.
+    int pipe_serves_from_ = -1, pipe_serves_to_ = -1;   // pipe_serves' last regions, and its answer
+    bool pipe_serves_ok_ = true;
+    int own_way_from_ = -1, own_way_to_ = -1;
+    bool own_way_found_ = false;
+    float own_way_x_ = 0.0F, own_way_z_ = 0.0F;
     float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)
     float pipe_hold_m_ = 0.0F; // her hands' way since the last hold
     float pipe_slide_mps_ = 0.0F;

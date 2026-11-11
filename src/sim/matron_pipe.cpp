@@ -966,6 +966,63 @@ float Matron::pipe_next_toward(const float floor_y, const float lead_y) noexcept
     return deck < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
 }
 
+bool Matron::pipe_serves(const float next) {
+    if (scanned_ == nullptr) {
+        return true;
+    }
+    const int lead = scanned_->region_at(Vec3(heard_x_, lead_floor_, heard_z_));
+    const int far = scanned_->region_near_top(next, 0.3F);
+    if (lead < 0 || far < 0) {
+        return true;   // no floor of her map under the lead (a ladder, the air): the deck is as near as she gets
+    }
+    if (lead != pipe_serves_to_ || far != pipe_serves_from_) {
+        pipe_serves_from_ = far;
+        pipe_serves_to_ = lead;
+        pipe_serves_ok_ = far == lead || std::abs(scanned_->regions()[static_cast<std::size_t>(lead)].top - next) > kPipeLeadM ||
+                          !scanned_->plan(far, lead).empty();
+    }
+    return pipe_serves_ok_;
+}
+
+bool Matron::own_way_nearer(const RVec3 at, const float pipe_off) {
+    if (scanned_ == nullptr) {
+        return false;
+    }
+    const int here = region_under();
+    int goal = scanned_->region_at(Vec3(heard_x_, lead_floor_, heard_z_));
+    if (goal < 0) {
+        goal = scanned_->region_near_top(lead_floor_, 0.3F);
+    }
+    if (here < 0 || goal < 0 || here == goal) {
+        return false;
+    }
+    if (here != own_way_from_ || goal != own_way_to_) {
+        own_way_from_ = here;
+        own_way_to_ = goal;
+        own_way_found_ = false;
+        // Her map's own way there: where its first move off the floor begins.
+        for (const int e : scanned_->plan(here, goal)) {
+            const traversal::Edge &edge = scanned_->edges()[static_cast<std::size_t>(e)];
+            if (edge.kind != traversal::MoveKind::Walk) {
+                own_way_found_ = true;
+                own_way_x_ = edge.spec.start.GetX();
+                own_way_z_ = edge.spec.start.GetZ();
+                break;
+            }
+        }
+        // Or a hoist's landing (matron_hoist.cpp) where no way of the map joins them.
+        HoistLeg leg;
+        if (!own_way_found_ && find_hoist(here, goal, leg)) {
+            own_way_found_ = true;
+            own_way_x_ = leg.board_at.GetX();
+            own_way_z_ = leg.board_at.GetZ();
+        }
+    }
+    // One that failed under her a moment ago she leaves alone, as her plans do.
+    return own_way_found_ && !column_blocked_near(own_way_x_, own_way_z_) &&
+           distance_xz(float(at.GetX()), float(at.GetZ()), own_way_x_, own_way_z_) < pipe_off;
+}
+
 bool Matron::follow_pipe(const float dt, const RVec3 at) {
     // Frail, she cannot take hold of it.
     if (stage_ == Stage::Pest) {
@@ -973,7 +1030,7 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
     }
     const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     const float next = pipe_next_toward(floor_y, lead_floor_);
-    if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next)) {
+    if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next) || !pipe_serves(next)) {
         return false;
     }
     // A way that failed under her a moment ago she leaves alone a while.
@@ -989,6 +1046,11 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
     const float stand_z = raised ? kPipeRailZ : kPipeDeckZ;
     const float off = distance_xz(ax, az, kPipeDeckX, stand_z);
     const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
+    // A way of her own map nearer her than the pipe's corner is hers first:
+    // the pipe is not her only way up (J-085).
+    if (off > 0.25F && own_way_nearer(at, off)) {
+        return false;
+    }
     if (off > 0.25F) {
         // To the rail's corner along her lines, slowing into it.
         float wx = kPipeDeckX;
