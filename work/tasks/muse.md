@@ -59,6 +59,7 @@ Unstarted, in order (11-11 7 AM; new playable content first):
 0c. J-092 #410: drop two tons on her, the probe first; build only if one clean hit reaches 6000 N·s (Cory 11-11).
 0d. J-094 #412: her weight is the only key (Grok idea 1, Cory 11-11): the probe first (plate, him, drum, her at the stop).
 0e. J-095 #413: pull the line out from under her (Grok idea 2, Cory 11-11): the cable becomes a falling rope.
+0f. J-096 #414: things bend under weight: planks, boards, gratings flex by real load and snap (Cory 11-11, asked many times).
 1. J-054 #293: the Counterweight Crossing. Built; push it and let CI's proof be the re-run (no local slot wait).
 2. J-084 #402: one scenario plays the whole climb on the canonical route; its route table is the audit J-082 uses.
 3. J-082 #400: above 340 m every stage is a new physical action, from J-084's table, one band at a time, protected.
