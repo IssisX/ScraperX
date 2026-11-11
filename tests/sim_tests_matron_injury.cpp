@@ -50,6 +50,10 @@ double region(const Simulation &s, const injury::Region r) {
     return s.matron_state().injury_j_region[static_cast<std::size_t>(r)];
 }
 
+double event(const Simulation &s, const injury::Region r) {
+    return s.matron_state().injury_j_event[static_cast<std::size_t>(r)];
+}
+
 double regions_total(const Simulation &s) {
     double sum = 0.0;
     for (const double d : s.matron_state().injury_j_region) sum += d;
@@ -359,6 +363,51 @@ void run_restore_persists_injury() {
             "injury: regions + unclassified reconcile with damage after reload");
     std::cout << "PASS matron-injury restore persists injury\n";
 }
+
+// A punch spread over the strike's three contact ticks: each tick carries
+// one third of the 50 N-s, the way physics_world_strike.cpp delivers it
+// (1500 N held for kStrikeContactTicks = 3). j_region accumulates the
+// whole 50; j_event must be the whole local impact too, not the last
+// tick's 16.7 — the view's red mark needs j_event >= 25 (MARK_EVENT).
+void run_event_accumulates() {
+    Simulation s(InitialSpawn::Deck154);
+    setup(s, 3.0);
+    const auto chest = [&]() {
+        replace_gap(s);
+        settle_head(s);
+        const Vector3 e = eye_mid(s);
+        return add(add(e, {0.0, -0.26, 0.0}), scaled(head_fwd(s), kCapsuleSurfaceM));
+    };
+    const Vector3 at = chest();
+    const auto m0 = s.matron_state();
+    const Vector3 dir{-std::sin(static_cast<float>(m0.yaw)), 0.0, -std::cos(static_cast<float>(m0.yaw))};
+    for (int i = 0; i < 3; ++i) {
+        s.debug_matron_player_blow_at(scaled(dir, 50.0 / 3.0), at, false);
+        tick(s);
+    }
+    for (int i = 0; i < 10; ++i) tick(s);  // let the blow window close
+    require(std::abs(region(s, injury::Region::Chest) - 50.0) < 0.5,
+            "injury: a 50 N-s punch over three ticks is 50 in chest");
+    require(std::abs(event(s, injury::Region::Chest) - 50.0) < 0.5,
+            "injury: the punch's j_event is the whole 50 N-s impact, not one tick's 16.7");
+    require(event(s, injury::Region::Chest) >= 25.0,
+            "injury: the punch's j_event clears the view's 25 N-s red-mark bar");
+    // The event is the LAST local impact, not a running sum: a second,
+    // smaller punch to the same region replaces it.
+    const Vector3 at2 = chest();
+    const auto m1 = s.matron_state();
+    const Vector3 dir2{-std::sin(static_cast<float>(m1.yaw)), 0.0, -std::cos(static_cast<float>(m1.yaw))};
+    for (int i = 0; i < 3; ++i) {
+        s.debug_matron_player_blow_at(scaled(dir2, 30.0 / 3.0), at2, false);
+        tick(s);
+    }
+    for (int i = 0; i < 10; ++i) tick(s);
+    require(std::abs(region(s, injury::Region::Chest) - 80.0) < 0.5,
+            "injury: the second punch brings chest to 80");
+    require(std::abs(event(s, injury::Region::Chest) - 30.0) < 0.5,
+            "injury: the second punch's j_event is its own 30 N-s, not 50 + 30");
+    std::cout << "PASS matron-injury event accumulates\n";
+}
 }  // namespace
 
 void run_matron_injury() {
@@ -369,5 +418,6 @@ void run_matron_injury() {
     run_mixed_reconciliation();
     run_capability();
     run_restore_persists_injury();
+    run_event_accumulates();
 }
 SCRAPERX_SLICE("matron-injury", run_matron_injury);
