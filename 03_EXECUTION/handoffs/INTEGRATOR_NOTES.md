@@ -8,8 +8,8 @@ Read through: 1794409124 (2026-11-11 8:58 AM Central)
 ## Now (11-11, before Cory's compact at about 9 AM)
 Work state lives in GitHub: job issues (owner, state, needs:eyes), Muse's queue (`tools/board/queue_check.py`, floor 8,
 refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpers at high, the cap (Cory 11-11):
-- J-001 #108: hold @ 46c9c4be, protected j093 @ fed81029. 7 left: B1 x6 to Floor (fits Cory's criterion, 0.9 s short),
-  snag setup (test drift), plus the kicking-wins check in the fatality: xhigh helper.
+- J-001 #108: hold @ 8e5c715e, protected j093 @ aaed1791; 1 left (snag setup): ruled her pin holds him over the drop,
+  plus a kicking touch check: xhigh helper.
 - J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
   before it lands. J-084 #402: whole climb PASS (24 stages) @ a94ada14, proof running; touch-2 limit 900 s is a
   workflow change (Codex + API review). J-082 #400 band 1: xhigh helper, protected, on top of j084.
@@ -17,7 +17,8 @@ refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpe
   Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
   her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
 - J-092 #410 slab: step 2 paused @ 76ee77a6 (resume on a free helper). Next free helper: J-103 #422 (switchboard
-  routine, Cory "Teach"), then J-092, then J-090 pass 2. J-102 #421 chase and CI fix #420 (J-101) in flight.
+  routine, Cory "Teach"), then J-092, then J-090 pass 2. J-102 #421: root cause (home deck 1 is an island, 10-28), test @ af538488;
+  J-085 #403 taken from Muse for an xhigh helper (her ways up). CI fix #420 green, awaiting reviews.
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
 
 ## Traps
