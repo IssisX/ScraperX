@@ -384,18 +384,18 @@ void Matron::step_travel(const float dt) {
         // Her feet's own search over the floor first; the map's patch links
         // for a long way (or where the search finds nothing).
         if (to_start < 40.0F) {
-            travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)}, climber_->limits(), feet,
+            travel_walk_ = traversal::grid_walk(physics_, walk_ignore(), climber_->limits(), feet,
                                                  e.spec.start);
         }
         if (travel_walk_.empty() && to_start < 15.0F) {
             // Her feet's search again on a finer grid, close round the way (a
             // narrow top, a board, a gap a coarse cell steps over).
-            travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)},
+            travel_walk_ = traversal::grid_walk(physics_, walk_ignore(),
                                                 climber_->limits(), feet, e.spec.start, 3.0F, 0.1F, 60000);
         }
         if (travel_walk_.empty() && to_start < 15.0F) {
             // And wide (the way round may leave the box round the two).
-            travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)},
+            travel_walk_ = traversal::grid_walk(physics_, walk_ignore(),
                                                 climber_->limits(), feet, e.spec.start, 16.0F, 0.2F, 150000);
         }
         if (travel_walk_.empty() && to_start < 15.0F && to_start > 0.6F) {
@@ -437,9 +437,26 @@ void Matron::step_travel(const float dt) {
         } else {
             travel_wp_stall_s_ += dt;
         }
+        // J-049: a fresh sense of him on her path means the search ran before she knew where he was; search again round the place (a leg, not a waypoint: the path runs through his spot between its points).
+        RVec3 sensed;
+        if (!travel_rerouted_ && knows_where(kCatchMemoryS, sensed)) {
+            const float sx = float(sensed.GetX()), sz = float(sensed.GetZ());
+            for (std::size_t i = travel_walk_i_; i < travel_walk_.size(); ++i) {
+                const Vec3 a = i == 0 ? feet : travel_walk_[i - 1];
+                const Vec3 b = travel_walk_[i];
+                const float dx = b.GetX() - a.GetX(), dz = b.GetZ() - a.GetZ();
+                const float len2 = dx * dx + dz * dz;
+                const float u = len2 > 1.0e-6F ? std::clamp(((sx - a.GetX()) * dx + (sz - a.GetZ()) * dz) / len2, 0.0F, 1.0F) : 0.0F;
+                if (std::hypot(sx - (a.GetX() + u * dx), sz - (a.GetZ() + u * dz)) < 0.7F) {
+                    travel_walk_.clear(); travel_walk_i_ = 0; travel_rerouted_ = true;
+                    travel_wp_best_ = 1.0e9F; travel_wp_stall_s_ = 0.0F;
+                    return;
+                }
+            }
+        }
         if (travel_wp_stall_s_ > 1.5F && to_wp > 1.0F && !travel_rerouted_) {
             // Something on the floor in her way: her feet's search round it.
-            std::vector<Vec3> round = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)},
+            std::vector<Vec3> round = traversal::grid_walk(physics_, walk_ignore(),
                                                             climber_->limits(), feet, travel_walk_[travel_walk_i_], 3.0F);
             travel_rerouted_ = true;
             if (!round.empty()) {

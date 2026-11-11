@@ -713,7 +713,7 @@ void run_matron_routecraft() {
         require(f.matron->request_climb_goal(RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: capture interruption start");
         f.finish_plan();
         require(f.matron->climb_report().force>0,"routecraft: loaded support before capture");
-        f.matron->begin_grab(f.at()+Vec3(0,0,0.5F));
+        f.matron->begin_grab();
         require(f.matron->climb_report().status==MatronRoutecraft::Status::Released && f.matron->climb_report().force==0,"routecraft: capture immediately owns the hands");
     }
     {
