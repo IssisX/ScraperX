@@ -1218,3 +1218,6 @@
 {"attempt": 2, "ev": "sent", "id": "O-40f8f8de", "job": "J-011", "ref": "ASK|ask on #118", "send": 2, "t": "2026-11-10T23:59:09Z", "to": "grok", "via": "issue"}
 {"attempt": 1, "ev": "sent", "id": "O-cecc4274", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-10T23:59:09Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-10T23:59:09Z", "tries": 1}
+{"attempt": 2, "ev": "sent", "id": "O-0d2e9cf6", "job": "J-008", "ref": "BRANCH|builder/integrate-j008", "send": 2, "t": "2026-11-11T01:09:05Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 2, "ev": "sent", "id": "O-97ffea90", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 2, "t": "2026-11-11T01:09:05Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T01:09:05Z", "tries": 1}

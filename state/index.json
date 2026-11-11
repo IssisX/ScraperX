@@ -777,7 +777,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-10T23:59:09Z",
      "dead": "2026-11-11T01:59:09Z",
@@ -786,10 +786,10 @@
      "id": "O-0d2e9cf6",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-10T23:59:09Z",
+     "last_sent": "2026-11-11T01:09:05Z",
      "missing": 0,
      "ref": "BRANCH|builder/integrate-j008",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 115,
      "to": "grok_bot",
@@ -1459,7 +1459,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
      "missing": 3,
-     "rechecked": "2026-11-10T18:29:43Z",
+     "rechecked": "2026-11-11T01:09:05Z",
      "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
      "sends": 1,
      "sent_by": "shadow",
@@ -1822,7 +1822,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-10T21:49:17Z"
+   "updated": "2026-11-11T01:09:05Z"
   },
   "J-016": {
    "attempt": 0,
@@ -2427,7 +2427,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
      "missing": 3,
-     "rechecked": "2026-11-10T18:29:43Z",
+     "rechecked": "2026-11-11T01:09:05Z",
      "ref": "BRANCH|fb-bot/integrate-j038-slice1",
      "sends": 1,
      "sent_by": "shadow",
@@ -2506,7 +2506,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-10T18:29:43Z",
+     "rechecked": "2026-11-11T01:09:05Z",
      "ref": "ASK|ask on #169",
      "sends": 0,
      "thread": 169,
@@ -2781,7 +2781,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-10T23:59:09Z"
+   "updated": "2026-11-11T01:09:05Z"
   },
   "J-040": {
    "attempt": 0,
@@ -3635,7 +3635,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-10T18:29:43Z",
+     "rechecked": "2026-11-11T01:09:05Z",
      "ref": "BRANCH|fb-bot/integrate-protected-j044l",
      "sends": 0,
      "thread": 0,
@@ -3684,7 +3684,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T18:29:43Z"
+   "updated": "2026-11-11T01:09:05Z"
   },
   "J-045": {
    "attempt": 0,
@@ -4504,7 +4504,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-10T18:29:43Z",
+     "rechecked": "2026-11-11T01:09:05Z",
      "ref": "BRANCH|claude/integrate-j051-asks-since",
      "sends": 0,
      "thread": 0,
@@ -4523,7 +4523,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T19:39:24Z"
+   "updated": "2026-11-11T01:09:05Z"
   },
   "J-051b": {
    "attempt": 0,
@@ -5440,7 +5440,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-10T20:49:16Z",
      "dead": "2026-11-11T04:49:16Z",
@@ -5449,10 +5449,10 @@
      "id": "O-97ffea90",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-10T20:49:16Z",
+     "last_sent": "2026-11-11T01:09:05Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-j060",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 320,
      "to": "muse",
