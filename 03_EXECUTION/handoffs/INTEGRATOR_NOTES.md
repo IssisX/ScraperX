@@ -14,7 +14,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
 - J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001. J-092 #410 slab step 2 paused @ 76ee77a6.
   Helpers (resumed in the stopped helpers' worktrees; Cory lifted the 2-at-high throttle, he has resets):
   J-085 part 2 a26c652f (Pest climbs: protected; lower-floor links), J-092 step 2 a617e705, J-001 aee4bded.
-  J-085 part 1 pushed 19ce47f0 (chase deck 1 to 132 m); proof pending. J-103 landed (21a27ea3). Next free: J-108 #427 bait lift (Cory: Claude builds it, xhigh), then J-104 #423, then J-090 pass 2. J-107 #426 shared red: Muse.
+  J-085 part 1 pushed 19ce47f0 (chase deck 1 to 132 m); proof pending. J-103 landed (21a27ea3). Cory 11-11: 2 helpers till his reset (20:50Z); J-001 paused (WIP commit). Next free: J-108 #427 bait lift (Cory: Claude builds it, xhigh), then J-104 #423, then J-090 pass 2. J-107 #426 shared red: Muse.
 - J-085 #403 (her chase; J-102 #421 found home deck 1 is an island since 10-28, test @ af538488): Cory GO: building
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
