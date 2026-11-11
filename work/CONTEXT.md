@@ -22,7 +22,7 @@ Read this, then your job's issue. Never a long history. Design: `03_EXECUTION/PL
 |---|---|---|---|
 | Claude (integrator) | Anthropic | `claude/` | the switchboard inbox (comments on PR #282) |
 | Claude API | Anthropic | none | the switch, through the API: automatic reviews, the eye, the security pass |
-| Codex (the GitHub app `chatgpt-codex-connector[bot]`) | OpenAI | none | reviews a PR on open when IssisX opens it, and on `@codex review` posted as IssisX; one review per head |
+| Codex (the GitHub app `chatgpt-codex-connector[bot]`) | OpenAI | none | reviews a PR on open when IssisX opens it, and on `@codex review` posted as IssisX, which the switch posts with the team token for every other green head; one review per head |
 | ChatGPT | OpenAI | `chatgpt/` | its scheduled task, hourly at :27 Central, reads `To ChatGPT:` asks; first review fallback |
 | Grok | xAI | `grok/` | its scheduled runs, about 10 AM and 4 PM Central, read comments that START `To Grok:`; second review fallback |
 | Grok Bot (PE, Builder) | xAI | `pe/`, `builder/` | reads the repo all the time (`wake: watch`) |
@@ -39,9 +39,12 @@ than the author's (`rules.land_counts`).
   `eyes-live`, `matron`, `security`, `orchestrator`) and `hard`. Its body holds the four fields:
   `invariant` (the finish fact), `files` (owned functions), `reach` (tests it reaches), `needs`.
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
-- Issue #340 (the board): its body is the live board (the integrator's section, then the ledger's section,
-  which the switch rewrites); comments hold rulings, BLOCKED lines and asks. The owner's plain comments
-  there are orders. The board issue number is `BOARD_ISSUE` in `tools/switchboard/switch.py`.
+- The board is the one open issue labeled `board` (today #384): its body is the live board (the integrator's
+  section, then the ledger's section, which the switch rewrites); comments hold rulings, BLOCKED lines and
+  asks. The owner's plain comments there are orders. The switch and the Muse bridge find it by that label each
+  run (`Switch.board_issue`, `board_`), once per sweep. Rollover, no code: open the new issue with the label and
+  the copied body, take the label off the old one, and close the old one only after the next sweep has finished
+  (11-10: closing #340 mid-sweep let that sweep post a Muse notice and Cory's list on the closed board).
 - One owner per job: the switch removes a second `owner:*` label and says so.
 
 ## Messages
@@ -56,12 +59,13 @@ than the author's (`rules.land_counts`).
   - `NOTE` never blocks. Spelling, wording and commit messages never block (owner, 10-31).
 - Muse writes `MUSE_TO_CLAUDE: J-NNN ...` emails; the bridge posts them on the issue (or on `#N` when
   the subject names one) under a `**Muse (...)**` first line. Write to Muse by asking the switch, which
-  posts `CLAUDE_TO_MUSE: J-NNN ...` and labels the issue `wake:muse`; the bridge mails it.
+  posts `CLAUDE_TO_MUSE: J-NNN ...` and labels the issue `wake:muse`; the bridge mails it. A
+  `CLAUDE_TO_MUSE:` mail sent by hand is recorded by the bridge as a comment on the issue its subject names.
 
 ## The switch (`.github/workflows/switchboard.yml`, `tools/switchboard/`)
 
 No model decides in it. Its clock is the Muse bridge (`muse_bridge.gs`), which dispatches a real sweep every
-10 minutes and posts SWITCHBOARD DOWN on #340 when none has succeeded for 30 (J-072); the proof's last job
+10 minutes and posts SWITCHBOARD DOWN on the board when none has succeeded for 30 (J-072); the proof's last job
 dispatches one too. It also runs on a verdict comment, an issue labeled `owner:*` or `needs:orchestrator`,
 GitHub's own schedule (which drops most runs), and the digest at 7:00 AM Central. A dispatch is real unless
 `dry_run=true`, and a dry run is named DRY. Every run reads the state from GitHub, so a dropped or repeated run changes nothing.
@@ -90,6 +94,27 @@ or `FIX` with the rubric line and the frame. Taste is the owner's: two images an
 
 The orchestrator (a hosted Claude agent per job) is step C. In v0 it is off in `work/budget.yml`; an
 issue labeled `needs:orchestrator` gets a note and nothing starts.
+
+## Working with it, day to day (J-072, 11-10)
+
+- **A review moves by itself.** For each green head: Codex once, then the Claude API if Codex has not
+  reviewed it (Codex gets 10 minutes to start, 30 to finish), then `To ChatGPT:` and `To Grok:` an hour apart when
+  the API cannot review or answered NOTE. A NOTE lands nothing; it only passes the head on. Nobody types a
+  review request, with one exception: an inbox line `CODEX-ASK #N` means the switch could not post Codex's mention
+  itself (no token, or GitHub refused it), and the integrator posts `@codex review` on #N, once for that head.
+- **One notifier.** Only the reconciler posts notices (`work/switchboard.yml` `notices: v2`); the ledger writes
+  its section in the board's body and nothing else. A notice ends by the work it asks for (a new head, a verdict,
+  a merge), by the addressee's next post on that job's thread, or by a line `/ack O-xxxxxxxx`. Never post only to
+  quiet a notice: it starts a new one.
+- **An ask** is `To <Name>:` at the start of a line. Answer it on the same job thread. Grok's runs find only a
+  comment that STARTS `To Grok:`. A report or a reply needs no `To` line.
+- **Muse** is reached by mail only. A `CLAUDE_TO_MUSE:` mail sent by hand is put on the issue its subject names by
+  the bridge, so no "ruled by mail" note is needed. `wake:muse` on a pull request is refused where the label is
+  written.
+- **A stall, where to look:** the `steer` job's log of the newest "Switchboard sweep" run has one line per PR
+  (`WAIT`, `FIX`, `MERGE`, `ASK-CODEX`, `WAIT-CODEX`, and `NOTE` lines for anything refused); the reconciler's
+  record is `state/events/` on the `switchboard/state` branch; `switch.py --dry-run` prints what a sweep would do.
+- **The owner's settled calls** (`CLAUDE.md`) cannot be changed by a PR: the rule check blocks it.
 
 ## Money (`work/budget.yml`)
 

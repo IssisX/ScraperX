@@ -255,7 +255,7 @@ private:
         Fabricated object;
         scraperx::sim::kit::Kit::BodyState state;
     };
-    bool read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out) const;
+    bool read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out, std::uint32_t mark) const;
     void write_fabricated(SaveWriter &w) const;
 
 private:

@@ -42,6 +42,8 @@ your own branches (Cory 11-05) and mail the rest:
   with what you measured, what you ruled out and the one observation that would settle it.
 - Human sounds are real recordings, never synthesized.
 - **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). How: `work/tasks/eye-check.md`. Claude checks the stills.
+- **Push, then CI proves (11-10).** Push as soon as the change builds and the groups it reaches pass locally. Never hold a push
+  for a local full proof or a free memory slot: the full proof is CI's job (CLAUDE.md), and a 90-minute local wait stalls the job.
 - **Trunk merges are yours (11-10).** When one of your PRs conflicts with trunk, merge trunk into your branch
   yourself (a real merge, never a rebase) and push; never wait for the integrator. You push your own branches
   (CLAUDE.md, settled 11-05), and the integrator's pushes to `fb-bot/` are refused by its safety check, so the
@@ -57,13 +59,13 @@ job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one
 5. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
 6. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
 7. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
-8. J-008 #115: her "258 down" leg; a strict total order for the ladder-bar sort.
-9. J-011 #118: her skirt as cloth, bone-driven panels (from `edad91a3`).
-10. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
-11. J-021 #128: the far world and water (from `b532042b` and `95587901`).
-12. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed.
+8. J-076 #391: loud machines draw her (A7), every moving machine heard by its measured energy (11-10).
+9. J-077 #392: a hard blow puts her down, proved at every stage (rule 34) (11-10).
+10. J-078 #393: her motion never snaps, measured bone speeds and hand contacts (rule 37) (11-10).
+11. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
+12. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed (J-008 is Grok Bot's, 11-10; J-011 is Claude's; J-021 stays yours, in flight).
 
-Live lanes: J-042 windup #291, J-001 #227, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
+Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")

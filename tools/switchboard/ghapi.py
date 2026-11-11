@@ -34,6 +34,11 @@ from typing import Any
 
 TIMEOUT_S = 60
 MAX_PAGES = 5          # at most 500 items read from any one listing
+# `wake:muse` tells the Muse bridge to mail an issue's CLAUDE_TO_MUSE comments. The bridge's token is Issues-only,
+# so on a pull request the label is never mailed and never cleared (J-072: it sat on #337, #343 and #372 while
+# the notices under it reached no one). Every writer posts on an issue by construction; this is the backstop.
+ISSUE_ONLY_LABELS = frozenset({"wake:muse"})
+_LABELS_PATH = re.compile(r"repos/[^/]+/[^/]+/issues/(\d+)/labels")
 GET_ATTEMPTS = 3       # GETs are idempotent: bounded retry with full jitter on transport failure
 RATE_TRIES = 2         # a rate-limited call is tried this often in all, then left for the next sweep
 RATE_BACKOFF_S = 8.0   # the full-jitter ceiling of a rate-limit retry; a Retry-After up to RATE_WAIT_MAX_S wins
@@ -51,6 +56,10 @@ class GitHubError(RuntimeError):
     def __init__(self, method: str, path: str, detail: str, status: int = 0):
         super().__init__(f"gh api -X {method} {path} failed: {detail[:300]}")
         self.method, self.path, self.detail, self.status = method, path, detail, status
+
+
+class LabelRefused(GitHubError):
+    """A label that only works on an issue was about to go on a pull request (ISSUE_ONLY_LABELS)."""
 
 
 class RateLimited(GitHubError):
@@ -304,8 +313,24 @@ class GitHub:
                 break
         return items
 
+    def is_pull(self, number: int) -> bool:
+        """Is #number a pull request? GitHub's issue record carries `pull_request` for one."""
+        return "pull_request" in (self.get(f"repos/{self.repo}/issues/{number}") or {})
+
+    def _issue_only(self, method: str, path: str, body: Any) -> None:
+        """The one place every label write passes: an ISSUE_ONLY_LABELS label never goes on a pull request."""
+        m = _LABELS_PATH.fullmatch(path)
+        if method != "POST" or not m or not isinstance(body, dict):
+            return
+        stuck = sorted(ISSUE_ONLY_LABELS.intersection(body.get("labels") or ()))
+        if stuck and self.is_pull(int(m.group(1))):
+            raise LabelRefused(method, path, f"#{m.group(1)} is a pull request: `{stuck[0]}` goes on an issue only "
+                                             "(the Muse bridge's token is Issues-only: it never mails from a PR "
+                                             "and cannot take the label off one)")
+
     # writes: printed, never sent, in a dry run
     def write(self, method: str, path: str, body: Any = None, what: str = "", token: str = "") -> Any:
+        self._issue_only(method, path, body)
         if self.dry_run:
             self.log(f"DRY  {method} {path}  {what}".rstrip())
             return None

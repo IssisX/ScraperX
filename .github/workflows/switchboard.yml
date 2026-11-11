@@ -348,6 +348,8 @@ jobs:
           # .github/workflows, which github.token cannot. This step and no other: it runs trunk's switch.py only,
           # never PR-head code (the rule check reads the PR's diff; nothing checks it out). switch.py takes it out
           # of the environment at start, so no child process inherits it.
+          # J-072: its one other use is switch.py codex_mention: the fixed comment "@codex review" on a green PR of
+          # this repo's own branch, once per head (the Codex app ignores this workflow's own login). SECURITY.md.
           SWITCHBOARD_MERGE_TOKEN: ${{ secrets.SWITCHBOARD_MERGE_TOKEN }}
           # J-056: checks the MAC of the security pass before the merge token is used; taken out the same way.
           SWITCHBOARD_REVIEW_KEY: ${{ secrets.SWITCHBOARD_REVIEW_KEY }}

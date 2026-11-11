@@ -38,6 +38,10 @@ DL = sys.argv[1] if len(sys.argv) > 1 else os.path.join("build", "makehuman")
 OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join("godot", "presentation", "life", "matron")
 ASSETS = os.path.join(DL, "assets")
 SOLE = 0.012   # her shoes' sole under the bare foot, metres
+SKIRT_FLARE_M = 0.17    # her skirt's extra radius at the hem, over its cut to her hips (#118)
+SKIRT_FLARE_POW = 1.3   # how that flare grows from her waist (0 there) to the hem
+SKIRT_PANELS = 16       # the skirt cloth's columns round her (matron_skirt.gd NC)
+SKIRT_PLEAT = 0.08      # the pleats' depth at the hem, a share of its radius in and out
 
 # Seventy-seven, heavy in the old way: a soft low belly, a heavy low bust,
 # thick waist and upper arms, but not fat. Little muscle; 1.80 m standing.
@@ -961,12 +965,18 @@ def build():
         rel = sl - np.array([cx, 0, czs])
         rad[i] = (rel[:, [0, 2]] @ U[:, [0, 2]].T).max(0)
     ease = 0.016 + 0.018 * np.clip(ts * 3, 0, 1) + 0.055 * ts ** 1.5   # roomy over her hips and belly
+    # A fuller skirt, flared from the waist (#118, Cory 11-10): in a lunge or the locker crouch her legs
+    # span about 2.8 m round, more than a skirt cut to her hips has, so its lower rings and hem carry
+    # SKIRT_FLARE_M more radius and the cloth (matron_skirt.gd) hangs and folds instead of stretching.
+    ease = ease + SKIRT_FLARE_M * ts ** SKIRT_FLARE_POW
     rad = rad + ease[:, None]
     for i in range(1, nring):
         rad[i] = np.maximum(rad[i], rad[i - 1] - 0.002)
     for _ in range(3):
         rad = 0.25 * np.roll(rad, 1, 1) + 0.5 * rad + 0.25 * np.roll(rad, -1, 1)
-    folds = 1.0 + 0.035 * ts[:, None] ** 1.2 * np.sin(th[None, :] * 11 + 0.6 * np.sin(th[None, :] * 3))
+    # Its folds: SKIRT_PANELS / 2 deep pleats, out at every other panel seam of the cloth (matron_skirt.gd's
+    # columns, one every nseg / SKIRT_PANELS loft columns), so the cloth carries them and they open as she strides.
+    folds = 1.0 + SKIRT_PLEAT * ts[:, None] ** 1.2 * np.cos(th[None, :] * (SKIRT_PANELS // 2))
     rings = []
     for i, t in enumerate(ts):
         y = top_y + (hem_y + raise_m - top_y) * t    # each column ends at its own torn hem

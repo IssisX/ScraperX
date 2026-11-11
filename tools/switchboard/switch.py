@@ -68,7 +68,11 @@ STATE_BRANCH = "switchboard/state"   # the reconciler's own branch (tools/switch
 DIGEST_TITLE = "Digest"
 DIGEST_LABEL = "digest"
 MUSE_LABEL = "wake:muse"
-BOARD_ISSUE = 340  # the live board; #107 closed at 100 comments (11-09)
+# J-072: the live board is Switch.board_issue(), the one open issue labeled BOARD_LABEL, read from GitHub each run,
+# so a board that rolls over at 100 comments needs no code change. BOARD_ISSUE is only the fallback when GitHub
+# names none and no sweep has found one (#340 opened 11-09, when #107 closed).
+BOARD_LABEL = "board"
+BOARD_ISSUE = 340
 CENTRAL = ZoneInfo("America/Chicago")
 DIGEST_HOUR = 7
 MAX_DIFF_CHARS = 400_000
@@ -95,12 +99,13 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
 MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
 MAX_MUSE_FINDING = 600          # chars of a FIX finding quoted in a Muse comment
-OLD_BOARDS = (107, 87, 3)       # closed boards: the muse markers on them still count, so a board move never re-sends
+OLD_BOARDS = (107, 87, 3)       # the boards closed before the label named them: Switch.old_boards() adds the labeled ones
+MAX_OLD_BOARDS = 4              # closed boards whose muse markers still count, the newest first (a move never re-sends)
 MAX_OLD_BOARD_PAGES = 3         # comment pages read from each closed board (a board closes at 100 comments)
 # The Muse mail pipe's health (bridge-health): the bridge (muse_bridge.gs) is an Apps Script whose errors only Cory
 # can see, so the switch watches what it leaves on GitHub and posts one alarm per incident on the board.
@@ -129,6 +134,7 @@ VERDICT_TRIGGER = re.compile(r":(?= ?(?:land|fix|note|block))", re.IGNORECASE)
 MERGE_TOKEN_ENV = "SWITCHBOARD_MERGE_TOKEN"
 MERGE_TOKEN_REFUSED = {401, 403, 404, 405}   # GitHub's answers to a token that cannot merge here
 MERGE_TOKEN_NEEDS = "Contents, Pull requests and Workflows: read/write"
+CODEX_MENTION = "@codex review"   # what wakes the Codex app, from a person's login only (codex_mention)
 # J-056: the automatic review signs its verdict with this secret (HMAC-SHA256). Only the ask and steer jobs' switch
 # steps hold it, through environment switchboard-merge; main() takes it out of the environment like the merge token.
 # Any branch's push workflow posts as the workflow bot, so on a workflow-file PR only a signed review is the pass.
@@ -342,20 +348,95 @@ class Switch:
         self._load: tuple[dict[str, int], dict[str, int]] | None = None   # review_load, once per run
         self._claude = None
         self._board: list[dict] | None = None   # the board's comments, once per run (board_comments)
+        self._board_issue: int | None = None    # the board's issue number, once per run (board_issue)
 
     # ---------- facts ----------
     def fresh_facts(self, number: int) -> tuple[rules.PrFacts, dict]:
         """pr_facts for one PR with every read GitHub's own answer (no ETag cache, no per-run memo)."""
-        saved = (self._jobs, getattr(self, "_board", None))
-        self._jobs, self._board = None, None
+        saved = (self._jobs, getattr(self, "_board", None), getattr(self, "_board_issue", None))
+        self._jobs, self._board, self._board_issue = None, None, None
         try:
             with self.gh.fresh():
                 pr = self.gh.get(f"repos/{self.gh.repo}/pulls/{number}")
                 facts, ctx = self.pr_facts(pr)
         finally:
-            self._jobs, self._board = saved
+            self._jobs, self._board, self._board_issue = saved
         ctx["fresh"] = True
         return facts, ctx
+
+    # ---------- the board (J-072) ----------
+    def board_issue(self) -> int:
+        """The live board's issue number, read once per run: the one open issue labeled BOARD_LABEL (the way
+        work/tasks/README.md tells every agent to find it), so a new board needs no code change (#107 to #340 on
+        11-09 needed one, and a paste into the deployed bridge). Several open: the newest, and a WARN naming them.
+        None, or the read failed: the last board a sweep found (kept in the sweep state, as prior_pr keeps its
+        answers), else BOARD_ISSUE, and a WARN; a sweep never stops over this. A pull request is never the board.
+        Inside gh.fresh() (the merge facts, fresh_facts) nothing from the cache file takes part: the listing is
+        GitHub's own answer, a failed read raises as any other merge fact's does, and the sweep state is not used."""
+        known = getattr(self, "_board_issue", None)
+        if known:
+            return known
+        fresh = getattr(self.gh, "fresh_only", False) is True
+        label = urllib.parse.quote(BOARD_LABEL, safe="")
+        try:   # read as jobs() reads the job issues
+            got = self.gh.paged(f"repos/{self.gh.repo}/issues?labels={label}&state=open")
+            why = f"no open issue is labeled `{BOARD_LABEL}`"
+        except GitHubError as err:
+            if fresh:
+                raise
+            got, why = [], f"the open issues labeled `{BOARD_LABEL}` could not be read ({plain(str(err)[:160])})"
+        found = sorted(self._issue_numbers(got))
+        last = 0 if fresh else self._last_board()
+        if found:
+            board = found[-1]
+            if len(found) > 1:
+                self._board_warn(f"{len(found)} open issues are labeled `{BOARD_LABEL}` "
+                                 f"({', '.join(f'#{n}' for n in found)}): using the newest, #{board}; close the others")
+            if isinstance(getattr(self.gh, "state", None), dict):
+                self.gh.state["board"] = board
+        elif last:
+            board = last
+            self._board_warn(f"{why}: using the last board a sweep found, #{board}")
+        else:
+            board = BOARD_ISSUE
+            self._board_warn(f"{why} and no sweep has found one: using the fallback, #{board}")
+        self._board_issue = board
+        return board
+
+    def board_known(self) -> int:
+        """The board with no read, for a fast sweep's part that sends from the full pass's reading (the ledger clock):
+        this run's if it was read, else the last one a sweep found, else BOARD_ISSUE."""
+        return getattr(self, "_board_issue", None) or self._last_board() or BOARD_ISSUE
+
+    def _last_board(self) -> int:
+        """The last board a sweep found, kept in the sweep state; 0 when it holds none (or anything but a number)."""
+        state = self.gh.state if isinstance(getattr(self.gh, "state", None), dict) else {}
+        last = state.get("board")
+        return last if type(last) is int and last > 0 else 0
+
+    @staticmethod
+    def _issue_numbers(listing) -> list[int]:
+        """The issue numbers in an issues listing; a pull request (the listing returns those too) is left out."""
+        return [it["number"] for it in (listing if isinstance(listing, list) else [])
+                if isinstance(it, dict) and "pull_request" not in it
+                and type(it.get("number")) is int and it["number"] > 0]
+
+    def _board_warn(self, text: str) -> None:
+        """One WARN line per finding per run (a merge's fresh read resolves the board again)."""
+        told = self.__dict__.setdefault("_board_told", set())
+        if text not in told:
+            told.add(text)
+            self.out(f"WARN        board: {text}")
+
+    def old_boards(self) -> list[int]:
+        """The closed boards whose muse markers still count (muse): the closed issues labeled BOARD_LABEL and the
+        boards closed before the label named them (OLD_BOARDS), the newest MAX_OLD_BOARDS, never the live one. A
+        failed read raises: the muse part is retried next sweep, rather than a key already sent going out again."""
+        label = urllib.parse.quote(BOARD_LABEL, safe="")
+        got = self.gh.get(f"repos/{self.gh.repo}/issues?labels={label}&state=closed&sort=created&direction=desc"
+                          "&per_page=30")   # one page: the newest closed ones
+        closed = (set(self._issue_numbers(got)) | set(OLD_BOARDS)) - {self.board_issue()}
+        return sorted(closed, reverse=True)[:MAX_OLD_BOARDS]
 
     def jobs(self) -> dict[str, dict]:
         """Open issues labeled `job`, by J-NNN."""
@@ -475,9 +556,13 @@ class Switch:
             number=number, head_sha=sha, head_ref=pr["head"]["ref"], base_ref=pr["base"]["ref"], draft=bool(pr["draft"]),
             mergeable=full.get("mergeable"), head_committed_at=commit["commit"]["committer"]["date"], proof=proof,
             verdicts=verdicts, needs=needs, rule_check_block=False,
-            touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files))
+            touches_workflows=any(f["filename"].startswith(".github/workflows/") for f in files),
+            codex_failed=rules.codex_failed(comments, sha))
         ctx = {"job": job, "issue": issue, "proof_url": url, "run_id": run_id, "proof_done_at": proof_done_at, "comments": comments,
-               "title": pr["title"], "body": pr.get("body") or "", "files": files, "updated_at": pr.get("updated_at") or ""}
+               "title": pr["title"], "body": pr.get("body") or "", "files": files, "updated_at": pr.get("updated_at") or "",
+               "created_at": pr.get("created_at") or "",
+               # the head is a branch of this repo, not a fork's: only then is the team token ever used for it
+               "own_head": (((pr.get("head") or {}).get("repo") or {}).get("full_name") or "") == self.gh.repo}
         return facts, ctx
 
     def target_prs(self, only_pr: int, only_sha: str) -> list[dict]:
@@ -694,17 +779,29 @@ class Switch:
             return
         if rules.needs_review(facts, author, self.team) and self.stale(facts):
             self.out(f"STALE       #{facts.number} head older than {ACT_WITHIN_DAYS} days: no review asked")
+        elif rules.needs_review(facts, author, self.team) and self.codex_first(facts, ctx, author):
+            self.out(f"ASK-CODEX   #{facts.number} Codex is asked to review @{facts.head_sha[:8]}, once for this head")
         elif rules.needs_review(facts, author, self.team) and self.codex_pending(facts, ctx):
-            self.out(f"WAIT-CODEX  #{facts.number} Codex is reviewing @{facts.head_sha[:8]}: no other review for up to "
-                     f"{rules.CODEX_WAIT_MINUTES} minutes after the proof went green")
+            self.out(f"WAIT-CODEX  #{facts.number} it is Codex's turn on @{facts.head_sha[:8]}: no other review for "
+                     f"{rules.CODEX_START_MINUTES} minutes, or up to {rules.CODEX_WAIT_MINUTES} while its review runs")
         elif rules.needs_review(facts, author, self.team) and self.team.pool:
             _, who, asked = self.pooled_reviewer(facts, ctx, author)
             if not who:
                 self.out(f"NOFALLBACK  #{facts.number} everyone in the pool was asked and nobody answered")
             elif who != rules.API_REVIEWER and who not in asked:
-                quiet = [self.team.agent_name.get(a, a) for a in asked]
+                quiet = [self.team.agent_name.get(a, a) for a in asked if a != "codex"]
                 why = (f"{', '.join(quiet)} did not answer in {self.team.fallback_after_hours:g} hours, "
                        f"so you are asked instead. ") if quiet else ""
+                # a NOTE lands nothing (rules.needs_review): the next reviewer is told what is wanted. The names are
+                # the team's own (work/agents.yml), never text taken from a comment.
+                noted = sorted({"the automatic Claude review" if rules.is_api_review(v) else
+                                self.team.agent_name.get(self.team.agent_of_name.get(v.who.lower(), ""), "")
+                                for v in facts.verdicts if v.kind == "review" and v.verdict == "NOTE"
+                                and rules.names_head(v, facts.head_sha)} - {""})
+                if noted:
+                    who_noted = ", ".join(noted)
+                    why = (f"{who_noted[0].upper()}{who_noted[1:]} gave this head a NOTE (it is on #{facts.number}), "
+                           f"which lands nothing: a LAND or a FIX is asked of you. ") + why
                 self.ask_review(facts, ctx, who, why)
                 self.note_assigned(who)
         elif rules.needs_review(facts, author, self.team):
@@ -713,13 +810,65 @@ class Switch:
                 self.ask_review(facts, ctx, pick.agent, "")
             self.escalate_review(facts, ctx, author)
 
-    def codex_pending(self, facts: rules.PrFacts, ctx: dict) -> bool:
-        """Codex is still reviewing this head and the proof went green under CODEX_WAIT_MINUTES ago: wait for it
-        rather than pay for a second review (J-031). Past the wait, the review goes on as if Codex were not there."""
-        if rules.codex_wait_over(ctx.get("proof_done_at") or "", self.now.strftime("%Y-%m-%dT%H:%M:%SZ")):
+    def codex_counts(self, author: str, ctx: dict) -> bool:
+        """Is Codex asked to review this PR: it is on the team, its review can land this author's work
+        (rules.land_counts: another vendor's), and the head is a branch of this repo (a fork's PR never gets the
+        team login's mention). Its unasked findings still block anyone's PR."""
+        return bool(ctx.get("own_head")) and self.team.agent_vendor.get("codex") not in (None, "unknown", author)
+
+    def codex_asked(self, facts: rules.PrFacts, ctx: dict) -> str:
+        """When Codex was asked to review this head, "" when it was not: the switch's ask mark for the head (posted
+        with the team token, or by the workflow bot as a note for the integrator), or a team login's own
+        `@codex review` on the PR after the head commit. One ask per head: Codex's usage is limited."""
+        tag = MARK.format(kind="ask-codex", pr=facts.number, head=facts.head_sha)
+        times = []
+        for c in ctx.get("comments") or []:
+            login = ((c.get("user") or {}).get("login") or "").strip().lower()
+            body = c.get("body") or ""
+            if login == rules.BOT_LOGIN.lower():
+                mine = tag in body
+            elif login in self.team.verdict_logins:
+                mine = tag in body or (body.lstrip().lower().startswith(CODEX_MENTION)
+                                       and (c.get("created_at") or "") >= facts.head_committed_at)
+            else:
+                mine = False   # the repo is public: anyone's comment could carry the mark
+            if mine:
+                times.append(c.get("created_at") or "")
+        return max(times, default="")
+
+    def codex_reactions(self, facts: rules.PrFacts, ctx: dict) -> list:
+        """The PR's reactions (Codex puts 👀 on it while it reviews), read once per PR and run."""
+        if "_reactions" not in ctx:
+            ctx["_reactions"] = self.gh.paged(f"repos/{self.gh.repo}/issues/{facts.number}/reactions")
+        return ctx["_reactions"]
+
+    def codex_first(self, facts: rules.PrFacts, ctx: dict, author: str) -> bool:
+        """Codex reviews each green head once, before anyone else is asked or paid (Cory, 11-04). It reviews a PR
+        by itself only when a person's login opens it, and only that first head; the PRs the switchboard opens
+        for Muse and every later head got none (#376, #367), so the switch asks: once per head, and not while
+        Codex is already on it. True when the ask was made in this call."""
+        if not self.codex_counts(author, ctx) or self.codex_asked(facts, ctx):
             return False
-        reactions = self.gh.paged(f"repos/{self.gh.repo}/issues/{facts.number}/reactions")
-        return rules.codex_in_flight(ctx["comments"], reactions, facts.head_sha)
+        if rules.codex_in_flight(ctx.get("comments") or [], self.codex_reactions(facts, ctx), facts.head_sha):
+            return False
+        self.ask_review(facts, ctx, "codex", "")
+        return True
+
+    def codex_pending(self, facts: rules.PrFacts, ctx: dict) -> bool:
+        """It is still Codex's turn on this head (rules.codex_turn): wait for it rather than ask or pay for a
+        second review (J-031). Past the wait, the review goes on as if Codex were not there."""
+        if rules.codex_failed(ctx.get("comments") or [], facts.head_sha):
+            return False   # Codex could not review this head (its usage limit): no wait
+        now = self.now.strftime("%Y-%m-%dT%H:%M:%SZ")
+        expected = self.codex_counts(self.team.vendor_of_branch(facts.head_ref), ctx)
+        since = [ctx.get("proof_done_at") or "", self.codex_asked(facts, ctx)]
+        if expected:
+            since.append(ctx.get("created_at") or "")   # a PR the switch just opened was green long before
+        if not rules.codex_turn(since, True, expected, now):
+            return False   # past every wait: no reaction read
+        if rules.codex_turn(since, False, expected, now):
+            return True
+        return rules.codex_in_flight(ctx.get("comments") or [], self.codex_reactions(facts, ctx), facts.head_sha)
 
     def api_ok(self, ctx: dict) -> bool:
         """May the automatic review run today: the worst case of one call fits under every cap."""
@@ -737,8 +886,9 @@ class Switch:
             comments = list(comments) + list(ctx["comments"])   # Codex is asked on the PR itself
         out = MARK.format(kind="api-out", pr=facts.number, head=facts.head_sha)
         api_failed = any(out in (c.get("body") or "") and c["user"]["login"] == rules.BOT_LOGIN for c in comments)
+        done = rules.reviewers_done(facts.verdicts, facts.head_sha, self.team)   # a NOTE-giver is not asked twice
         api_ok = (self.api_ok(ctx) if api is None else api) and not api_failed
-        rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, api_ok)
+        rotation = rules.review_rotation(facts.number, author, facts.needs, self.team, api_ok, done)
         asked: dict[str, str] = {}
         for agent in self.team.agent_vendor:
             tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
@@ -991,13 +1141,14 @@ class Switch:
         for s in steered:
             reported |= set(self.muse_keys(s.ctx.get("comments") or []))
         items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
-        homes = {f"#{s.facts.number}": self.muse_home(s.ctx) for s in steered}
-        wheres = {homes.get(it.target, BOARD_ISSUE) for it in items}
-        for where in sorted(wheres - {BOARD_ISSUE}):   # a job issue: where this sweep's notices on its PRs go
+        homes = {f"#{s.facts.number}": self.muse_home(s.ctx) for s in steered}   # 0: no job issue, so the board
+        board = self.board_issue() if items else 0
+        wheres = {homes.get(it.target) or board for it in items}
+        for where in sorted(wheres - {board}):   # a job issue: where this sweep's notices on its PRs go
             reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{where}/comments")))
-        if BOARD_ISSUE in wheres:
-            reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")))
-            for old in OLD_BOARDS:   # a key sent while an older board was live is still sent (#107 -> #340 re-sent them)
+        if board in wheres:
+            reported |= set(self.muse_keys(self.gh.paged(f"repos/{self.gh.repo}/issues/{board}/comments")))
+            for old in self.old_boards():   # a key sent while an older board was live is still sent (11-09 re-sent them)
                 reported |= set(self.muse_keys(self.bounded_comments(old, MAX_OLD_BOARD_PAGES)))
         seen, new = set(reported), []
         for it in items:
@@ -1017,7 +1168,7 @@ class Switch:
                 break
             # Never on the PR itself: the bridge's token is Issues-only, so it can neither remove wake:muse from a
             # PR nor comment there (a PR's label stuck the bridge from 11-07 to 11-09). The PR stays in the subject.
-            where = homes.get(target, BOARD_ISSUE)
+            where = homes.get(target) or board
             name = jobs.get(target) or target
             kinds = " ".join(sorted({it.kind for it in group}, key=INBOX_ORDER.index))
             about = target if target.startswith("#") else f"#{where}"
@@ -1042,13 +1193,13 @@ class Switch:
 
     @staticmethod
     def muse_home(ctx: dict) -> int:
-        """Where a Muse notice about a PR goes: its open job issue, else the board. Never the PR (see muse())."""
-        return int((ctx.get("issue") or {}).get("number") or BOARD_ISSUE)
+        """Where a Muse notice about a PR goes: its open job issue, else 0, the board. Never the PR (see muse())."""
+        return int((ctx.get("issue") or {}).get("number") or 0)
 
     def board_comments(self) -> list[dict]:
         """The board's comments, read once per run (the review asks and off-PR verdicts of PRs with no job issue)."""
         if getattr(self, "_board", None) is None:
-            self._board = self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments")
+            self._board = self.gh.paged(f"repos/{self.gh.repo}/issues/{self.board_issue()}/comments")
         return self._board
 
     def bridged_verdicts(self, number: int, comments: list[dict]) -> list[rules.Verdict]:
@@ -1087,7 +1238,8 @@ class Switch:
         older than PIPE_LOOKBACK). Returns the finding lines."""
         last: dict[str, dt.datetime] = {}
         told: set[tuple[str, str]] = set()   # (live, trunk) bridge versions already alarmed
-        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/{BOARD_ISSUE}/comments"):
+        board = self.board_issue()
+        for c in self.gh.paged(f"repos/{self.gh.repo}/issues/{board}/comments"):
             at = parse_time(c.get("created_at") or "")
             if (c.get("user") or {}).get("login") != rules.BOT_LOGIN or at is None:
                 continue
@@ -1132,7 +1284,7 @@ class Switch:
                              ["", "The cause is in the bridge's Apps Script Executions log, which only Cory can open. "
                               "One alarm per incident; the switch prints the state every sweep.", "",
                               PIPE_MARK.format(kinds=",".join(new))] + marks)
-            self.gh.comment(BOARD_ISSUE, body, f"pipe alarm ({', '.join(new)}) on #{BOARD_ISSUE}")
+            self.gh.comment(board, body, f"pipe alarm ({', '.join(new)}) on #{board}")
         return found
 
     def pipe_ripen(self, at: dt.datetime) -> None:
@@ -1301,6 +1453,8 @@ class Switch:
                 continue
             if "Generated by [Claude Code]" in body:
                 continue
+            if body.lstrip().startswith("CLAUDE_TO_MUSE:"):   # Claude's own mail to Muse, as the bridge records it
+                continue
             cid = c.get("id")
             if cid is None:
                 continue
@@ -1366,6 +1520,17 @@ class Switch:
                                 "both" if owner == "muse" else "claude"))
         if d.action == "FIX" and owner:
             out.append(item("FIX", plain("; ".join(d.reasons)), owner, self.fix_finding(f, ctx)))
+        api_note = [v for v in f.verdicts if v.kind == "review" and v.verdict == "NOTE" and v.author_login == rules.BOT_LOGIN
+                    and rules.names_head(v, f.head_sha)]
+        if api_note and f.proof == "green" and rules.needs_review(f, author, self.team):
+            # Cory, 11-10 ("take the backup reviews yourself"): the API was unsure; the integrator rules within the
+            # hour rather than the head waiting on ChatGPT's and Grok's scheduled runs
+            out.append(item("NOTE-REVIEW", f"the automatic Claude review answered NOTE; read it and post "
+                                           f"**Claude (review of #{f.number} @ {f.head_sha}): LAND** or FIX"))
+        if rules.CONFLICT in d.reasons and owner and not any(it.kind == "NOT-MERGED" for it in out):
+            # 11-10 #343: a conflict was told to its owner only by the reconciler's hourly pass; this sweep tells it now
+            out.append(item("CONFLICT", f"{rules.CONFLICT}: merge {rules.TRUNK} into {plain(f.head_ref)} and push",
+                            owner))
         codex_tag = MARK.format(kind="ask-codex", pr=f.number, head=f.head_sha)
         if any(codex_tag in (c.get("body") or "") and (c.get("user") or {}).get("login") == rules.BOT_LOGIN
                for c in ctx.get("comments") or []) and rules.needs_review(f, author, self.team):
@@ -1488,13 +1653,15 @@ class Switch:
         if agent == "codex":   # the Codex app answers "@codex review" on the PR itself
             where, comments = facts.number, ctx["comments"]
         if agent == "muse" and where == facts.number:   # wake:muse never goes on a PR (the bridge's token cannot clear it)
-            where = BOARD_ISSUE
+            where = self.board_issue()
         tag = MARK.format(kind=f"ask-{agent}", pr=facts.number, head=facts.head_sha)
         if self.marked(comments, f"ask-{agent}", facts.number, facts.head_sha):
             self.out(f"ASKED       #{facts.number} review already asked of {agent} on #{where}")
             return
         name = self.team.agent_name.get(agent, agent)
         job = ctx["job"] or f"PR #{facts.number}"
+        if agent == "codex" and self.codex_mention(facts, ctx, tag):
+            return
         if agent == "codex":   # J-072: this login's "@codex review" never woke Codex (2 of 2, #191 and #150), so the
             # mark only records the ask; the integrator's inbox gets a CODEX-ASK item and posts the mention itself
             self.gh.comment(where, f"Switchboard: {job}, head {facts.head_sha[:8]}: a Codex review of this head is due. "
@@ -1512,17 +1679,48 @@ class Switch:
                 f"expected, observed; a FIX without them counts as a NOTE).\n\n"
                 f"{self.review_facts(facts, ctx)}\n\n{tag}")
         self.gh.comment(where, body, f"ask {name} to review #{facts.number} on #{where}")
-        if where == BOARD_ISSUE and getattr(self, "_board", None) is not None:   # this run's later reads see the ask
+        if getattr(self, "_board", None) is not None and where == self.board_issue():   # this run's later reads see the ask
             self._board.append({"body": body, "user": {"login": rules.BOT_LOGIN},
                                 "created_at": self.now.strftime("%Y-%m-%dT%H:%M:%SZ")})
         if agent == "muse":
             self.gh.write("POST", f"repos/{self.gh.repo}/issues/{where}/labels", {"labels": [MUSE_LABEL]},
                           f"label #{where} {MUSE_LABEL} (the bridge emails Muse, then removes it)")
 
+    def codex_mention(self, facts: rules.PrFacts, ctx: dict, tag: str) -> bool:
+        """Post `@codex review` on the PR as the team login, with the team token (J-072). The Codex app answers a
+        person's mention and ignores the workflow bot's (2 of 2, #191 and #150), and it reviews by itself only a PR
+        a person opened, so the heads the switchboard opens for Muse sat with no Codex review until the integrator
+        typed this by hand (#376). The comment is the mention and the ask's mark, nothing else: Codex reads any
+        other words as instructions. False when there is no token here or GitHub refused it: the caller then
+        records the ask for the integrator, as before. Never on a fork's PR, whoever calls (codex_counts checks it
+        too; a pool or fallback order that named Codex would not pass through that)."""
+        if not self.merge_token or not ctx.get("own_head"):
+            return False
+        try:
+            got = self.gh.write("POST", f"repos/{self.gh.repo}/issues/{facts.number}/comments",
+                                {"body": f"{CODEX_MENTION}\n\n{tag}"},
+                                f"ask Codex to review #{facts.number} @{facts.head_sha[:8]} as the team login",
+                                token=self.merge_token)
+        except GitHubError as err:
+            code = http_status(err.detail)
+            if code not in MERGE_TOKEN_REFUSED:
+                raise   # a rate limit or an outage: this PR waits for the next sweep, as any failed write does
+            self.out(f"NOTE  #{facts.number} GitHub refused the team token for the Codex mention (HTTP {code}; "
+                     f"{MERGE_TOKEN_ENV} needs {MERGE_TOKEN_NEEDS}): the integrator is asked to post it")
+            return False
+        login = str(((got or {}).get("user") or {}).get("login") or "").strip().lower() if isinstance(got, dict) else ""
+        if login and login not in self.team.verdict_logins:
+            # codex_asked reads the mark only from a team login, so a token of any other account would post the
+            # mention again every sweep: the caller's own note (the workflow bot's, with the mark) records the ask
+            self.out(f"NOTE  #{facts.number} the Codex mention was posted by a login that is not in work/agents.yml "
+                     f"verdict_logins: {MERGE_TOKEN_ENV} must be the team login's; the ask is recorded once")
+            return False
+        return True
+
     def escalate_review(self, facts: rules.PrFacts, ctx: dict, author: str) -> None:
         """An ask the switchboard made on this head that has had no verdict for review.fallback_after_hours goes
         to the next agent in review.fallback_order, once per head (each ask has its own marker). The caller
-        only gets here while needs_review holds: any verdict on the head, from anyone, ends this."""
+        only gets here while needs_review holds: a LAND or a FIX on the head, from anyone, ends this."""
         where, comments = self.ask_thread(facts, ctx)
         asked: list[tuple[str, str]] = []   # (created_at, agent) of the bot's own asks on this head
         for agent in self.team.agent_vendor:
@@ -1622,10 +1820,16 @@ class Switch:
                                               + (self.root / "SECURITY.md").read_text(encoding="utf-8")
                                               + "\n</security_guidelines>")] if security else []
         system = claude_calls.SECURITY_REVIEW_SYSTEM if security else claude_calls.REVIEW_SYSTEM
+        # The owner's settled calls (CLAUDE.md): #376's review answered NOTE to ask him to confirm one of them
+        # (a dead Matron stays dead, 11-05), and a NOTE lands nothing. The security pass judges by SECURITY.md alone.
+        settled = claude_calls.settled_calls((self.root / "CLAUDE.md").read_text(encoding="utf-8"))
+        if settled and not security:
+            guidelines = [claude_calls.text_block(f"<settled_calls>\n{settled}\n</settled_calls>")]
         content = guidelines + [claude_calls.text_block(f"<checklist>\n{checklist}\n</checklist>"),
-                   claude_calls.text_block(f"<pr number=\"{facts.number}\" head=\"{facts.head_sha}\" branch=\"{facts.head_ref}\">\n"
-                                           f"<title>{ctx['title']}</title>\n<body>\n{ctx['body'][:20000]}\n</body>\n</pr>"),
-                   claude_calls.text_block(f"<diff>\n{diff}\n</diff>")]
+                   claude_calls.text_block(claude_calls.author_text(
+                       f"<pr number=\"{facts.number}\" head=\"{facts.head_sha}\" branch=\"{facts.head_ref}\">\n"
+                       f"<title>{ctx['title']}</title>\n<body>\n{ctx['body'][:20000]}\n</body>\n</pr>")),
+                   claude_calls.text_block(claude_calls.author_text(f"<diff>\n{diff}\n</diff>"))]
         # The security pass has its own budget line (max effort); ordinary reviews run at high (Cory, 11-08).
         call = "security_review" if security else "review"
         res = self.paid("review", ctx["job"], call, system, content, claude_calls.REVIEW_SCHEMA,
@@ -2444,15 +2648,21 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                       "wake": getattr(sw, "wake_numbers", None)}
     timers["pipe"] = pipe_state
 
-    def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, in #340
+    def ledger_part() -> None:   # tools/switchboard/ledger.py: every open item, its holder and deadline, on the board
         import ledger as board_ledger
-        led = board_ledger.sweep(sw, steered, BOARD_ISSUE, MUSE_LABEL, PROOF_WORKFLOW,
-                                 {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now))
+        import reconciler   # J-072: `notices: v2` beside a live reconciler: the ledger writes its section, posts nothing
+        led = board_ledger.sweep(sw, steered, sw.board_issue(), MUSE_LABEL, PROOF_WORKFLOW,
+                                 {LEDGER_BRANCH, INBOX_BRANCH, STATE_BRANCH}, {INBOX_PR}, central(now),
+                                 reconciler.ledger_notifies(sw.root))
         timers["ledger"] = list(getattr(led, "pending", None) or [])
 
     def ledger_clock() -> None:   # J-072: the ledger deadlines that ripened since the full pass, sent from the cache
         import ledger as board_ledger
+        import reconciler
         import yaml
+        if not reconciler.ledger_notifies(sw.root):   # `notices: v2`: a cached ledger notice is never fired
+            timers["ledger"] = []
+            return
         ripe = board_ledger.ripe(timers.get("ledger") or [], now)
         if not ripe:
             return
@@ -2462,7 +2672,9 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             return
         roster = board_ledger.Roster(yaml.safe_load((sw.root / "work/agents.yml").read_text(encoding="utf-8")) or {})
         sw.out(f"RIPE        ledger clock: {len(ripe)} deadline(s), sent from the full pass's reading")
-        posted = board_ledger.fire(sw.gh, ripe, roster, now, BOARD_ISSUE, sw.out, MUSE_LABEL)
+        # the board's number is read only when a notice goes on the board itself; one on a job thread costs no read
+        board = sw.board_issue() if board_ledger.fires_on_board(ripe, roster) else sw.board_known()
+        posted = board_ledger.fire(sw.gh, ripe, roster, now, board, sw.out, MUSE_LABEL)
         timers["ledger"] = board_ledger.advance(timers.get("ledger") or [], posted, now)
 
     if steer and not targeted and delta is None:   # the full pass: everything below reads the whole repo
@@ -2472,7 +2684,8 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         # for the next sweep, and either is due again then. Its own reads (about 58) wait under the floor.
         def reconciler_part() -> None:
             import reconciler
-            res = reconciler.sweep(sw, steered, BOARD_ISSUE, PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH}, {INBOX_PR})
+            res = reconciler.sweep(sw, steered, sw.board_issue(), PROOF_WORKFLOW, {LEDGER_BRANCH, INBOX_BRANCH},
+                                   {INBOX_PR})
             status = getattr(res, "status", "")
             if status == "gave-up":
                 raise RuntimeError("the pass was dropped: the state branch kept moving")

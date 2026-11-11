@@ -216,10 +216,13 @@ void Simulation::PhysicsWorld::write_fabricated(SaveWriter &w) const {
 
 // The save's fabricated objects, bounded as a delivery is (the hull file read
 // and its shape built: a save is untrusted too), each in the world, at rest
-// or moving at a finite speed, in the world's own order of entities.
-bool Simulation::PhysicsWorld::read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out) const {
-    std::uint32_t mark = 0, count = 0;
-    if (!r.pod(mark) || mark != kSaveMark || !r.pod(count) || count < 1 || count > fabricated::kMaxObjects) {
+// or moving at a finite speed, in the world's own order of entities. The
+// mark was read by the caller, which tells this section from the Matron's
+// damage written before it.
+bool Simulation::PhysicsWorld::read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out,
+                                               const std::uint32_t mark) const {
+    std::uint32_t count = 0;
+    if (mark != kSaveMark || !r.pod(count) || count < 1 || count > fabricated::kMaxObjects) {
         return false;
     }
     out.resize(count);

@@ -100,6 +100,8 @@ class FakeGH:
         self.inbox = list(inbox)
         self.comments, self.open_issues = list(comments), list(open_issues)
         self.by_issue: dict[int, list] = {}
+        # the issues labeled `board`, open and closed (Switch.board_issue, old_boards); an entry is a number or an item
+        self.boards, self.closed_boards = [switch.BOARD_ISSUE], []
         self.dry_run = dry_run
         self.gets, self.posts, self.writes, self.log = [], [], [], []
         self._comment_id = 0   # ids the real API returns on a comment POST
@@ -122,6 +124,9 @@ class FakeGH:
             if "direction=desc" in path:
                 fresh = sorted(fresh, key=lambda c: c.get("created_at") or "", reverse=True)
             return fresh[(page - 1) * 100: page * 100]
+        if base == f"repos/{self.repo}/issues" and "labels=board" in path:
+            listed = self.closed_boards if "state=closed" in path else self.boards
+            return [dict(b) if isinstance(b, dict) else {"number": b} for b in listed]
         if base == f"repos/{self.repo}/issues":
             page = re.search(r"[?&]page=(\d+)", path)
             page = int(page.group(1)) if page else 1
@@ -711,6 +716,31 @@ class MuseRouted(unittest.TestCase):
         self.assertEqual(make(gh).muse([self.fix_pr()]), 0)   # the board's marker is read: not sent again
         self.assertEqual(len(gh.posts), 1)
         self.assertEqual(make(gh).muse([self.fix_pr(head=OTHER_HEAD)]), 1)
+
+    def test_a_merge_conflict_on_an_fb_bot_pr_is_mailed_by_the_sweep(self):
+        # 11-10 #343: only the reconciler's hourly pass told Muse of a conflict; the 10-minute sweep now does
+        s = steered(number=343, ref="fb-bot/integrate-j059-injury-feed", mergeable=False, job="J-059")
+        self.assertIn(rules.CONFLICT, s.decision.reasons)
+        gh = FakeGH()
+        self.assertEqual(make(gh).muse([s]), 1)
+        (_, posted), = gh.posts
+        self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: J-059 CONFLICT on #343 @ 1a2b3c4d"), posted)
+        self.assertIn("merge ScraperX-Claude into fb-bot/integrate-j059-injury-feed and push", posted)
+        self.assertIn(switch.inbox_key("muse-CONFLICT", "#343", HEAD), gh.writes[1][2]["body"])
+        self.assertEqual(make(gh).muse([steered(number=343, ref="fb-bot/integrate-j059-injury-feed",
+                                                mergeable=False, job="J-059")]), 0)   # once per head
+        self.assertEqual(make(gh).inbox([s]), 0)   # Muse's, not the integrator's
+
+    def test_an_api_note_on_a_green_head_asks_the_integrator(self):
+        # Cory, 11-10: the integrator takes the backup review when the API answers NOTE (#383 waited 2 h on ChatGPT)
+        note = rules.Verdict("anthropic", "Claude", "review", "NOTE", HEAD, ago(0.5), BOT, True)
+        s = steered(number=383, ref="fb-bot/integrate-protected-j049-pr1-r2", verdicts=[note], job="J-049")
+        gh = FakeGH()
+        self.assertEqual([i.kind for i in items_of(gh, s)], ["NOTE-REVIEW"])
+        self.assertEqual([i.kind for i in muse_of(gh, s)], [])
+        # answered: a LAND or FIX on the head ends it
+        self.assertEqual(items_of(FakeGH(), steered(number=383, ref="fb-bot/integrate-j049", verdicts=[note, land()],
+                                                    job="J-049")), [])
 
     def test_a_notice_on_a_pr_with_a_job_issue_goes_on_the_job_issue(self):
         s = self.fix_pr()

@@ -948,6 +948,7 @@ public:
     static constexpr float kShoulderUpM = 1.80F;      // over her feet
     static constexpr float kArmReachM = 1.4F;
     static constexpr float kStoopReachM = 2.1F;
+    static constexpr float kWorkMarginM = 0.15F;      // she works from in reach less this
     static constexpr float kArmRetractMps = 0.9F;
     static constexpr float kHandMassKg = 6.0F;
     static constexpr float kHandSpeedMps = 1.8F;      // her hand's pose moves no faster
@@ -1417,8 +1418,9 @@ public:
     };
 
     // What the checkpoint keeps of her (her state, not her body: a restore
-    // puts her back at her locker at that stage). A dead Matron is kept as hunting,
-    // so a restore brings her back whole.
+    // puts her back at her locker at that stage). A dead Matron is kept as
+    // dead, with the damage she died with, so a restore brings her back as
+    // saved (J-069: her injuries persist through checkpoints, dead included).
     struct Saved {
         State state = State::Dormant;
         float strain_s = 0.0F;
@@ -1426,6 +1428,9 @@ public:
         Stage stage = Stage::Pest;
         float exposure_s = 0.0F;
         std::uint64_t handled = 0;   // the throwables the player has handled, a bit each
+        float damage_ns = 0.0F;         // judged physical impulse, all sources
+        float player_damage_ns = 0.0F;  // the player's share only
+        bool dead = false;              // she lies dead as saved
     };
 
     static constexpr float kKillDamageNs = 6000.0F;
@@ -1595,6 +1600,36 @@ public:
     bool travel_to(int region);
     // The same, with edges her plan leaves out (a ladder with him on it).
     bool travel_to(int region, const std::vector<int> &avoid);
+    // The world's hoists (matron_hoist.cpp), given before pre_step: each a
+    // body on a vertical guide a catch holds, its travel, and what frees the
+    // catch (a pin on its own guide, or a trip line's hanging handle). Her
+    // journeys take one when no way of her map joins two floors: she boards
+    // it, frees it from inside with her hands (a pin shoved clear, a handle
+    // weighed down), rides it and steps off. Read from the kit, never named.
+    struct HoistFeed {
+        struct Pin {
+            JPH::BodyID body;
+            JPH::Vec3 axis = JPH::Vec3::sAxisZ();
+            float travel = 0.0F, clear = 0.0F;
+        };
+        JPH::BodyID car;
+        float axis_y = 1.0F;
+        float min_travel = 0.0F, max_travel = 0.0F, travel = 0.0F;
+        bool held = false;
+        std::vector<Pin> pins;
+        std::vector<JPH::BodyID> weights;
+    };
+    void set_hoists(std::vector<HoistFeed> hoists) { hoists_ = std::move(hoists); }
+    struct HoistView {
+        int phase = 0;              // 0 none, 1 to its stop, 2 boarding, 3 freeing it, 4 riding, 5 stepping off
+        int hoist = -1;
+        std::uint32_t rides = 0;    // rides she finished, this life
+        float hand_n = 0.0F;        // her hands' push on what frees it, this tick
+        float hand_power_w = 0.0F;  // that push's power against what it moves, this tick
+    };
+    [[nodiscard]] HoistView hoist_view() const noexcept {
+        return {hoist_.phase, hoist_.hoist, hoist_rides_, hoist_hand_n_, hoist_hand_power_w_};
+    }
     [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
     struct Journey {
         bool active = false;
@@ -1848,11 +1883,12 @@ public:
     // end, a death's restore too): a touch is her shove, not a catch.
     void hold_grab_for_test(const bool held) noexcept { grab_held_for_test_ = held; }
     [[nodiscard]] Saved save() const noexcept {
-        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Nor is
-        // her death: a checkpoint taken while she lies dead has her hunting, as a restore brings her back.
-        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down ||
-                              state_ == State::Dead;
-        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_};
+        // A hold or knockdown/stagger is never saved: a checkpoint has her after the player. Her
+        // death is saved as dead: a checkpoint taken while she lies dead has her dead, as a restore
+        // brings her back as saved (J-069).
+        const bool kept_out = state_ >= State::Grab || state_ == State::Staggering || state_ == State::Down;
+        return {kept_out ? State::Hunting : state_, strain_s_, rage_, stage_, exposure_s_, handled_,
+                damage_ns_, player_damage_ns_, dead_};
     }
     void restore(const Saved &saved);
 
@@ -2456,6 +2492,28 @@ private:
     static constexpr float kYieldMemoryS = 0.5F;
     static constexpr float kYieldClearM = 1.6F;
     void step_travel(float dt);
+    // matron_hoist.cpp
+    struct HoistLeg {
+        int phase = 0;
+        int hoist = -1;
+        int board = -1, exit = -1, goal = -1;   // regions: its stop's landing, the other's, the journey's end
+        JPH::Vec3 board_at = JPH::Vec3::sZero(), exit_at = JPH::Vec3::sZero();   // the landings' nearest points
+        float from_travel = 0.0F, to_travel = 0.0F;
+        float t = 0.0F, still_s = 0.0F;
+        float lean_n = 0.0F;   // her hands' push past a shove, into a pin that stands
+    };
+    [[nodiscard]] bool hoist_footprint(const HoistFeed &h, JPH::AABox &box, float &floor_top) const;
+    [[nodiscard]] int hoist_landing(const JPH::AABox &car, float floor_top, JPH::Vec3 &point) const;
+    bool plan_hoist(int from, int goal);
+    void step_hoist(float dt);
+    std::vector<HoistFeed> hoists_;
+    HoistLeg hoist_;
+    std::uint32_t hoist_rides_ = 0;
+    std::vector<JPH::Vec3> hoist_path_;
+    std::size_t hoist_path_i_ = 0;
+    float hoist_hand_n_ = 0.0F;
+    float hoist_hand_power_w_ = 0.0F;   // that push's power against what it moves, this tick
+    bool hoist_inner_ = false;   // travel_to from the hoist leg itself
     [[nodiscard]] int region_under() const;
     std::vector<traversal::Edge> journey_;
     std::vector<JPH::Vec3> journey_legs_;

@@ -362,6 +362,9 @@ std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
     return out;
 }
 
+// The Matron's damage in a save follows the grips under this mark ("MAD1").
+constexpr std::uint32_t kMatronDamageMark = 0x314D414DU;
+
 // The committed checkpoint as bytes (see SaveWriter).
 namespace {
 // J-038 stock damage section's mark ("DAMG"), written only when the
@@ -426,7 +429,17 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     // what each grip holds and its rating.
     w.list(k.grip_load);
     w.list(k.grip_rating);
-    // Fabricated objects follow the grips with the original save layout.
+    // Her damage meters and whether she is dead, under their own mark, so a
+    // load never reads them as the fabricated objects' mark. A save made
+    // before them ends at the grips and reads as undamaged, alive. The
+    // damage sits before the fabricated objects on purpose: a save without
+    // any is still a prefix of one with them, as the fabricated test pins.
+    w.pod(kMatronDamageMark);
+    w.pod(checkpoint_.matron.damage_ns);
+    w.pod(checkpoint_.matron.player_damage_ns);
+    w.pod(static_cast<std::uint8_t>(checkpoint_.matron.dead ? 1 : 0));
+    // Fabricated objects follow the damage, under their mark, only when the
+    // world holds any.
     write_fabricated(w);
     // Last: J-038 stock damage, written only when the world holds
     // some, as fabricated objects are: a save of an undamaged world
@@ -518,22 +531,38 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
              std::all_of(k.grip_rating.begin(), k.grip_rating.end(),
                          [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
     }
-    // After the grips, the fabricated objects (if any), then the
-    // stock damage (if any), then the grip loads' entities (if any).
-    // A save missing any of them still loads; one made before the
-    // damage ends before it.
+    // After the grips, her damage under its mark (MAD1), then the
+    // fabricated objects (FAB1, only when the world holds any), then
+    // the stock damage (DAMG, only when the world holds some), then
+    // the grip loads' entities (GRIP, only when a grip holds a load).
+    // A save made before any of them ends before it: before her
+    // damage it ends at the grips, before the fabricated objects at
+    // her damage, and so on — each mark tells what follows.
     std::vector<SavedFabricated> saved;
     if (ok && !r.done()) {
         std::uint32_t mark = 0;
         if (!r.peek(mark)) {
             ok = false;
-        } else if (mark == kDamageSaveMark || mark == kGripEntitySaveMark) {
-            // No fabricated section: damage or grip entities follow.
-        } else {
-            // Not damage: the fabricated section, if any
-            // (read_fabricated validates its own mark).
-            ok = read_fabricated(r, saved);
+        } else if (mark == kMatronDamageMark) {
+            std::uint8_t dead = 0;
+            ok = r.pod(mark) && r.pod(loaded.matron.damage_ns) && r.pod(loaded.matron.player_damage_ns) &&
+                 r.pod(dead) && dead <= 1 && std::isfinite(loaded.matron.damage_ns) &&
+                 loaded.matron.damage_ns >= 0.0F && std::isfinite(loaded.matron.player_damage_ns) &&
+                 loaded.matron.player_damage_ns >= 0.0F;
+            loaded.matron.dead = dead == 1;
         }
+        // Any other mark: not her damage — the sections below read
+        // whichever mark follows, or the done check refuses it.
+    }
+    if (ok && !r.done()) {
+        std::uint32_t mark = 0;
+        if (!r.peek(mark)) {
+            ok = false;
+        } else if (mark == 0x31424146U) {  // "FAB1": the fabricated objects
+            ok = r.pod(mark) && read_fabricated(r, saved, mark);
+        }
+        // Any other mark: not fabricated — the damage section below
+        // reads it, or the done check refuses it.
     }
     std::vector<stock_damage::StockDamage::SavedDamage> saved_damage;
     if (ok && !r.done()) {

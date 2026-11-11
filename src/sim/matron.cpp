@@ -319,6 +319,15 @@ void Matron::place_for_test(const RVec3 feet) {
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
     state_ = State::Hunting;
+    // A placed Matron is a live one: a kill left dead_ set while this put her
+    // to Hunting, and the view (released, and alive or in the Dead state)
+    // rightly refused a Hunting-but-dead Matron, so she stayed invisible even
+    // metres from the player (J-070). On her feet, whatever had her down.
+    dead_ = false;
+    down_for_s_ = 0.0F;
+    if (lying_) {
+        stand_up();
+    }
     turn_ = Turn::None;
     feet_y_ = float(feet.GetY());
     // Her level: the deck she stands on, or (on a ledge between two) the
@@ -2314,8 +2323,10 @@ bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget)
     } else if (ask(routecraft_way_, true)) {
         return true;
     }
-    // A rung way her scan found off her floor; a line she would only wait at, last.
-    return ask(climb_way_, true) || ask(line_way_, true);
+    // A rung way her scan found off her floor; a travel over her scan, by
+    // hoist where no way of her map joins the floors; a line she would only
+    // wait at, last.
+    return ask(climb_way_, true) || ask(travel_way_, true) || ask(line_way_, true);
 }
 
 bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
@@ -4198,14 +4209,19 @@ void Matron::restore(const Saved &saved) {
     // the world being left; it never reaches her after the load.
     clear_player_blow();
     // A restore puts her back as the checkpoint had her, dead or not: the world is put
-    // back and she is part of it (her death is not kept; matron.hpp, Saved).
-    dead_ = false;
-    // A checkpoint rewind or reload restores her alive and undamaged.
-    damage_ns_ = 0.0F;
-    player_damage_ns_ = 0.0F;
+    // back and she is part of it (her death is kept; matron.hpp, Saved).
+    dead_ = saved.dead;
+    damage_ns_ = saved.damage_ns;
+    player_damage_ns_ = saved.player_damage_ns;
     {
         remove_body();
         end_hold(saved.state);
+        // A saved death is a state, not only a flag: the disk save keeps the
+        // meters and the death but not the state, so a dead save restores her
+        // dead whatever state it carries.
+        if (dead_) {
+            state_ = State::Dead;
+        }
         let_go_ = false;
         armplay_done_ = false;
         armplay_reposes_ = 0;
@@ -4395,6 +4411,11 @@ void Matron::restore(const Saved &saved) {
             emerge_s_ = 0.4F;
         }
         restore_planks();
+    }
+    if (damage_lethal_at_ns(damage_ns_)) {
+        dead_ = true;
+        state_ = State::Dead;
+        remove_body();
     }
     refresh_view();
 }

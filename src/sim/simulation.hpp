@@ -1786,11 +1786,22 @@ public:
         std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0, yields = 0;
         std::uint32_t grips = 0, releases = 0, slips = 0, catches = 0, misses = 0;
         double force_n = 0.0, peak_force_n = 0.0;
+        double power_w = 0.0;   // her feet's power this tick, from her climber's account
         bool holding = false;
         std::uint8_t move = 0, last_failure = 0;
         double gravity_factor = 1.0;
     };
     [[nodiscard]] MatronJourney matron_journey() const noexcept;
+    // Her hoist leg (matron.hpp hoist_view): its phase (0 none .. 5 stepping
+    // off), the rides she finished, her hands' push this tick (N) and its
+    // power against what it moves (W).
+    struct MatronHoist {
+        int phase = 0;
+        std::uint32_t rides = 0;
+        float hand_n = 0.0F;
+        float hand_power_w = 0.0F;
+    };
+    [[nodiscard]] MatronHoist matron_hoist() const noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
     // Tests: ArmPlay in a hold (-1 or 1 her rule: every hold while an arm is left; 0 never, the
