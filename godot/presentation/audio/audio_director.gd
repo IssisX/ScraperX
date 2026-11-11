@@ -15,6 +15,11 @@ const SoundBank := preload("res://presentation/audio/sound_bank.gd")
 const HerTakes := preload("res://presentation/audio/her_takes.gd")
 const VoiceLines := preload("res://presentation/audio/voice_lines.gd")
 const MatronSpeech := preload("res://presentation/audio/matron_speech.gd")
+# Her voice is not picked yet (J-089): the owner picks it by ear from
+# godot/presentation/audio/matron_voice_picks/, and until then the gate stays closed and her lines are
+# said silent (matron_speech.gd: the line, caption and mouth timing, no clip plays). Set true with the
+# pick, when the bank is regenerated in the picked voice.
+const MATRON_VOICE_APPROVED := false
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 
 const BUS_EFFECTS := &"Effects"
@@ -165,7 +170,7 @@ var matron_encounter := 0
 # Her spoken lines (matron_speech.gd): the line she says at a moment, one mouth (matron_say). `matron_caption`
 # is the line while it is said; `matron_speech.log` has each line said, and the counts below what her mouth
 # refused or cut, for the scripted runs.
-var matron_speech := MatronSpeech.new()
+var matron_speech := MatronSpeech.new(0, not MATRON_VOICE_APPROVED)
 var matron_caption := ""
 var matron_lines_suppressed := 0   # lines asked for while her mouth was full of what matters as much or more
 var matron_lines_cut := 0          # lines cut off by a sound of her mouth that mattered more
@@ -1282,7 +1287,7 @@ func matron_say(moment: StringName, at: Vector3, volume_db: float = 0.0, priorit
 	if said.is_empty():
 		return 0
 	var stream: AudioStream = null
-	if not _silent and _her_speech != null:
+	if not _silent and _her_speech != null and String(said["clip"]) != "":
 		stream = matron_speech.stream(String(said["clip"]))
 		if stream == null:
 			return 0
