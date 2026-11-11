@@ -740,6 +740,69 @@ struct S3Ride final {
     double worst_margin_j = std::numeric_limits<double>::infinity();
 };
 
+// ---- The canonical climb above 221 m (J-084, #402) --------------------------
+// These ride results live here, not in sim_tests_rides.cpp, so the one
+// whole-climb scenario (sim_tests_canonical_ascent.cpp) can read them
+// without duplicating the structs.
+
+// What one swing of AS-012 saw, from the strap-in to the rack at the 242
+// ring: the seat left on the trip, and the rider ended the ride on the ring.
+struct SwingRide final {
+    bool boarded = false;
+    bool idle_held = false;       // walked in, not strapped: the ram stays on its hook
+    bool strapped = false;
+    bool strapped_held = false;   // strapped, not kicked: nothing moves
+    bool tripped = false;
+    bool struck = false;
+    double hit_after_kick_s = 0.0;
+    double ram_speed_after_blow = 0.0;
+    double apex_floor = 0.0;
+    double held_floor = 0.0;
+    double held_drift = 0.0;
+    int tooth = -1;
+    double peak_g = 0.0;
+    double buffer_loss = 0.0;
+    double residual = 0.0;
+    bool on_242 = false;
+    scraperx::sim::Snapshot end{};
+};
+
+// What a climb of C6 saw on the way, for its falsifiers: the running leap
+// caught the platform lip, and the climb's last grip, on the way to the
+// 264 ring, was a hang.
+struct C6Notes final {
+    bool leap_caught = false;     // the running leap off the kentledge ended in the hands
+    bool balanced_out = false;    // the girder out over the void held the body on its line
+    bool balanced_up = false;     // so did the girder rising to the north
+};
+
+// What one ride of the cascade mast saw, from the deck's Action to the
+// slider stopped at the upper receiver: the rope the cage rode down on
+// paid out, the slider arrived, and the rider ended the ride on the exit.
+struct MastRide final {
+    bool on_entry = false;
+    bool on_deck = false;
+    bool arrived = false;
+    double ride_s = 0.0;
+    double peak_speed = 0.0;
+    double deck_y = 0.0;
+    bool on_exit = false;
+    scraperx::sim::Snapshot end{};
+};
+
+// What one ride to the summit saw, from the parapet vault to the summit
+// receiver: the gondola crossed, the derrick luffed the boom up, and the
+// rider ended the ride standing on the summit.
+struct HighRide final {
+    bool vaulted = false;
+    bool crown_up = false;
+    double crown_s = 0.0;
+    bool on_crown_exit = false;
+    bool derrick_up = false;
+    double derrick_s = 0.0;
+    scraperx::sim::Snapshot end{};
+};
+
 constexpr double kDeck14Top = 154.0;
 
 // ---- Shared stage helpers, defined in their stage's file ---------------------
@@ -827,6 +890,15 @@ void run_pitman();
 void run_helix();
 void run_derrick();
 void run_high();
+bool swing_board(scraperx::sim::Simulation &simulation);
+SwingRide swing_ride(scraperx::sim::Simulation &simulation);
+bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes = nullptr);
+MastRide mast_ride(scraperx::sim::Simulation &simulation);
+bool pitman_ride(scraperx::sim::Simulation &simulation, double *ride_seconds = nullptr);
+bool helix_ride(scraperx::sim::Simulation &simulation, double *ride_seconds = nullptr);
+HighRide high_ride(scraperx::sim::Simulation &simulation);
+void run_canonical_ascent();
+void run_canonical_ascent_matron();
 void run_incline();
 void run_wheel();
 void run_teeter();
