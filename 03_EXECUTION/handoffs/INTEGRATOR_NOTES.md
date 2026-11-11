@@ -13,7 +13,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
   whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
 - J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001.
   Helpers: J-085 part 2 a26c652f, J-108 bait lift aef884d1 (ruled band (a) 385-485 N, keep C5 vault), J-001 aee4bded.
-  J-092 done: PR #434 (protected; workflow PR for touch_slab_trap's shard line follows it). J-085 part 1 pushed 19ce47f0. J-103 landed. Next free: J-104 #423 (+ FAIL lines in red notices), then J-090 pass 2. J-107 #426 shared red: Muse. Muse queue refilled J-109..J-114 (11 unstarted).
+  J-092 done: PR #434 (protected; the workflow PR after it adds touch_slab_trap's shard line AND a CI step running tools/rule_check/test_rule_check.py, J-115 7c65bf3e done). J-085 part 1 pushed 19ce47f0. J-103 landed. Next free: J-104 #423 (+ FAIL lines in red notices), then J-090 pass 2. J-107 #426 shared red: Muse. Muse queue refilled J-109..J-114 (11 unstarted).
 - J-085 #403 (her chase; J-102 #421 found home deck 1 is an island since 10-28, test @ af538488): Cory GO: building
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
