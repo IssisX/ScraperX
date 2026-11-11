@@ -1218,7 +1218,10 @@ void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const
     JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
     release_carry();
     clear_traversal();
-    bodies.SetPositionAndRotation(player_id_, at, bodies.GetRotation(player_id_), JPH::EActivation::Activate);
+    // A placement puts him standing: a tilt carried out of her hold would
+    // otherwise right itself by rolling, which walks him off whatever he
+    // was placed on (matron wreck: off the toolbox before she looks at it).
+    bodies.SetPositionAndRotation(player_id_, at, JPH::Quat::sIdentity(), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(player_id_, velocity, JPH::Vec3::sZero());
     grounded_ = false;
     own_drive_ = false;   // thrown: what he meets on this flight is a blow
