@@ -274,6 +274,39 @@ def red_jobs(proof: str) -> list[str]:
     return proof[len("red: "):].split(", ") if proof.startswith("red: ") else []
 
 
+# J-104: a red notice names the failing tests, read from the failed jobs' logs (Muse's #108 answer: the check
+# annotations name no test inside a red group, so every lane re-ran locally just to learn which one failed).
+FAIL_LOG_JOBS = ("native-tests", "godot-touch")   # the jobs whose logs name their tests
+MAX_FAIL_LINES = 6       # unique FAIL lines per job in a notice
+MAX_FAIL_JOBS = 8        # job logs read per proof run
+MAX_FAIL_CHARS = 200     # of one FAIL line
+MAX_LOG_FAILURES = 2     # log reads that fail in one sweep before the rest are not tried (each has ghapi's timeouts)
+NATIVE_FAIL = re.compile(r"\bFAIL: .*")
+TOUCH_FAIL = re.compile(r"\bSCRAPERX_UITEST FAIL\b.*")
+ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+LOG_UNREAD = "log unread"
+
+
+def fail_lines(log: str, job: str) -> tuple[list[str], int]:
+    """A failed job's unique FAIL lines in log order, at most MAX_FAIL_LINES, and how many more there were: `FAIL: `
+    for native-tests, `SCRAPERX_UITEST FAIL` for godot-touch. The runner's timestamp and colour codes are dropped."""
+    pattern = TOUCH_FAIL if job.startswith("godot-touch") else NATIVE_FAIL
+    found: list[str] = []
+    for line in ANSI.sub("", log).splitlines():
+        m = pattern.search(line)
+        if m and m.group(0).strip() not in found:
+            found.append(m.group(0).strip())
+    return found[:MAX_FAIL_LINES], max(0, len(found) - MAX_FAIL_LINES)
+
+
+def log_text(text: str, limit: int = MAX_FAIL_CHARS) -> str:
+    """A log line in a notice: the branch's own code wrote it, so no backtick, @, angle bracket (no marker this
+    switchboard reads), control character or verdict trigger, bounded."""
+    clean = "".join(ch for ch in text.replace("`", "'") if ch.isprintable() and ch not in "@<>")
+    clean = no_verdict(clean)
+    return clean if len(clean) <= limit else clean[:limit - 3] + "..."
+
+
 def setup_only(jobs: list[dict]) -> str:
     """J-103: where a red proof failed, when every counted job that failed did so in a setup step (SETUP_STEP: the
     package, NDK or render-prerequisite install, a cache restore, the checkout), so an outage of the runners' mirrors,
@@ -365,6 +398,7 @@ class InboxItem:
     line: str     # the inbox line, without the leading "- "
     dest: str = "claude"   # who it goes to: "muse", "claude", or "both" (J-052)
     finding: str = ""      # for a FIX: the finding's first 600 chars and its link, for Muse's comment
+    tests: tuple[str, ...] = ()   # for a red: "<job>: <FAIL line>" per failing test (J-104), already log_text
 
     @property
     def key(self) -> str:
@@ -408,7 +442,9 @@ def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str,
     a hidden marker last."""
     lines = [INBOX_HEADER, "", f"{len(items)} new for the integrator at {when} (each is listed once per head):" if items
              else f"Nothing to decide at {when}: the digest of what did not wake you (the hourly full pass):", ""]
-    lines += [f"- {it.line}" for it in items]
+    for it in items:
+        lines.append(f"- {it.line}")
+        lines += [f"  - {untrusted(t, MAX_FAIL_CHARS + 40)}" for t in it.tests]
     if held:
         lines.append(f"- ({held} more next sweep)")
     if digest:
@@ -558,6 +594,52 @@ class Switch:
         if run_id not in memo or getattr(self.gh, "fresh_only", False):
             memo[run_id] = self.gh.get(f"repos/{self.gh.repo}/actions/runs/{run_id}/jobs?per_page=50")["jobs"]
         return memo[run_id]
+
+    def red_tests(self, run_id) -> tuple[str, ...]:
+        """J-104: the failing tests of one red proof run, for its notice: for each failed native-tests or godot-touch
+        job (at most MAX_FAIL_JOBS), "<job>: <FAIL line>" per unique FAIL line (fail_lines), read from the job's log
+        through the switch's own client and its timeouts. Read once per run, for both audiences (memo). A log that
+        cannot be read never stops the notice: its line says LOG_UNREAD, and after MAX_LOG_FAILURES failed reads in
+        a sweep no more are tried, so a GitHub that hangs costs the sweep a bounded wait."""
+        memo = self.__dict__.setdefault("_red_tests", {})
+        if run_id in memo:
+            return memo[run_id]
+        out: list[str] = []
+        try:
+            jobs = self.run_jobs(run_id) if isinstance(run_id, int) else []
+        except Exception:   # noqa: BLE001  the notice goes without its tests
+            jobs = []
+        failed = [j for j in jobs if (j.get("name") or "").startswith(FAIL_LOG_JOBS)
+                  and j.get("conclusion") not in ("success", "skipped", "cancelled", None)]
+        for j in failed[:MAX_FAIL_JOBS]:
+            name = log_text(j.get("name") or "?", 60)
+            if self.__dict__.get("_log_failures", 0) >= MAX_LOG_FAILURES:
+                out.append(f"{name}: {LOG_UNREAD}")
+                continue
+            try:
+                log = self.gh.get_bytes(f"repos/{self.gh.repo}/actions/jobs/{int(j['id'])}/logs")
+                text = log.decode("utf-8", "replace") if isinstance(log, (bytes, bytearray)) else str(log or "")
+            except Exception as err:   # noqa: BLE001  a refused, missing or timed-out log: the notice still goes
+                self._log_failures = self.__dict__.get("_log_failures", 0) + 1
+                self.out(f"NOTE        the log of {name} in proof run {run_id} was not read ({type(err).__name__})")
+                out.append(f"{name}: {LOG_UNREAD}")
+                continue
+            lines, more = fail_lines(text, j.get("name") or "")
+            out += [f"{name}: {log_text(line)}" for line in lines] or [f"{name}: no FAIL line in its log"]
+            if more:
+                out.append(f"{name}: and {more} more FAIL lines")
+        if len(failed) > MAX_FAIL_JOBS:
+            out.append(f"and {len(failed) - MAX_FAIL_JOBS} more failed test jobs, their logs not read")
+        memo[run_id] = tuple(out)
+        return memo[run_id]
+
+    def red_tests_at(self, sha: str) -> tuple[str, ...]:
+        """red_tests of a head's newest proof run (the reconciler's red notice, J-104); () with no run read."""
+        try:
+            runs = self.head_runs(sha)
+        except Exception:   # noqa: BLE001  the notice goes without its tests
+            return ()
+        return self.red_tests(max(runs, key=lambda r: r["created_at"])["id"]) if runs else ()
 
     def run_state(self, run: dict) -> tuple[str, str, int, str]:
         """One proof run, judged by its jobs: (state, url, run id, finished at)."""
@@ -1295,6 +1377,7 @@ class Switch:
             for it in group:
                 lines.append(f"- {it.line}")
                 lines += [f"  {line}" for line in it.finding.split("\n")] if it.finding else []
+                lines += [f"  {t}" for t in it.tests]
             body = re.sub(r"@(?=\w)", "", "\n".join(lines))   # mentions would ping; "@ <sha>" is not one
             marked = f"{body}\n\n{MUSE_MARK.format(keys=','.join(it.muse_key for it in group))}"
             self.out(marked)
@@ -1659,8 +1742,12 @@ class Switch:
                  f"head {f.head_sha[:8]}" + (f", {ctx['job']}" if ctx.get("job") else ""))
         proof_link = f"[proof]({ctx['proof_url']})" if ctx.get("proof_url") else "proof"
 
-        def item(kind: str, text: str, dest: str = "claude", finding: str = "") -> InboxItem:
-            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}", dest, finding)
+        def item(kind: str, text: str, dest: str = "claude", finding: str = "", run_id=None) -> InboxItem:
+            # J-104: a red item names its failing tests, its logs read only when this audience has not had it yet
+            fresh = run_id is not None and inbox_key(prefix + kind, target, f.head_sha) not in reported
+            wanted = dest in ("muse", "both") if mine else dest in ("claude", "both")
+            return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}", dest, finding,
+                             self.red_tests(run_id) if fresh and wanted else ())
 
         def kept(it: InboxItem) -> bool:
             return it.dest in ("muse", "both") if mine else it.dest in ("claude", "both")
@@ -1712,27 +1799,29 @@ class Switch:
         if d.action == "FIX-CI" and not rerun:
             jobs = red_jobs(f.proof)
             both = "both" if owner == "muse" else "claude"
+            rid = (this or {}).get("id") or ctx.get("run_id")   # the head's red proof run, whose logs name its tests
             ids = [r["id"] for r in runs_here]
             attempt = int((this or {}).get("run_attempt") or 1)
             if inbox_key(prefix + "RED-TWICE", target, f.head_sha) in reported:   # listed at this head: no need to read it again
                 out.append(InboxItem("RED-TWICE", target, f.head_sha, "", both))
             elif attempt >= 2:   # J-103: red again on a re-run of the same head (the switch's one re-run, or a person's)
                 out.append(item("RED-TWICE", f"{plain(', '.join(jobs))} failed again on attempt {attempt} of the same "
-                                             f"proof run ({proof_link})", both))
+                                             f"proof run ({proof_link})", both, run_id=rid))
             elif ctx.get("run_id") in ids and ids.index(ctx["run_id"]) + 1 < len(runs_here):
                 before = self.run_state(runs_here[ids.index(ctx["run_id"]) + 1])[0]
                 failed = [j for j in jobs if j in red_jobs(before)]
                 if failed:
-                    out.append(item("RED-TWICE", f"{plain(', '.join(failed))} failed on two proofs in a row ({proof_link})", both))
+                    out.append(item("RED-TWICE", f"{plain(', '.join(failed))} failed on two proofs in a row ({proof_link})",
+                                    both, run_id=rid))
             if owner == "muse":
-                out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", "muse"))
+                out.append(item("RED", f"proof red on {plain(', '.join(jobs))} ({proof_link})", "muse", run_id=rid))
             on_head = [parse_time(r["created_at"]) for r in runs_here if r.get("head_sha") == f.head_sha]
             head_since = min(on_head) if on_head else parse_time(f.head_committed_at)
             if head_since:
                 self.ripen(f.number, head_since + INBOX_RED_STUCK)
             if head_since and now - head_since >= INBOX_RED_STUCK and owner:
                 out.append(item("RED-STUCK", f"proof red on {plain(', '.join(jobs))}, no new head for "
-                                             f"{hours(now - head_since)} ({proof_link})", owner))
+                                             f"{hours(now - head_since)} ({proof_link})", owner, run_id=rid))
         if not rerun and not [it for it in out if kept(it)]:   # QUIET, as tools/board/sweep.py: FIX, FIX-CI or DISPATCH with the PR untouched for QUIET_HOURS
             action = ("FIX-CI" if f.proof.startswith("red") else
                       "FIX" if d.action == "FIX" or rules.open_fixes(f.verdicts, f.head_sha, f.head_committed_at, "review") else
@@ -1849,7 +1938,7 @@ class Switch:
             now_head, state = checked[(name, head)]
             if now_head != head or state is None:   # gone, or a newer head: its own proof decides
                 continue
-            proof, url, _, done_at = state
+            proof, url, rid, done_at = state
             done = parse_time(done_at) or done
             if proof.startswith("red") and (self.now - done) >= INBOX_BRANCH_RED:
                 # J-103: red only in setup and not yet re-run on this head: re-run once instead (its digest entry is the
@@ -1858,10 +1947,12 @@ class Switch:
                 if rerun:
                     out.append(rerun)
                     continue
+                dest = owner_of(name)
+                wanted = (mine and dest in ("muse", "both")) or (not mine and dest in ("claude", "both"))
                 out.append(InboxItem("RED-BRANCH", name, head,
                                      f"RED-BRANCH {untrusted(name)} head {head[:8]}: proof red on "
                                      f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))",
-                                     owner_of(name)))
+                                     dest, tests=self.red_tests(rid) if wanted else ()))
         return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
