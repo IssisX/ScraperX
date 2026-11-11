@@ -16,18 +16,30 @@ using scraperx::sim::Simulation;
 
 namespace {
 
-// The skip's centre, where it lands: (-10.5, -135). She stands 30 m south
-// of it on the 154 m deck, past the running machines' reach (a run carries
-// at most 0.35 * 55 = 19.25 m) and inside a hard slam's reach.
+// The skip's centre, where it lands: (-10.5, -135). She stands on the
+// south band of the 154 m deck, 36.5 m from it: past the running machines'
+// reach (a run carries at most 0.35 * 55 = 19.25 m) and inside a hard
+// slam's reach. The far spot MUST sit on the south band (z -176..-167):
+// the middle of the deck (x -17..17, z -167..-133) is the open well shaft,
+// and a Matron placed there falls down it and dies before the pull.
 constexpr double kSlamX = -10.5;
 constexpr double kSlamZ = -135.0;
 constexpr double kFarX = -10.5;
-constexpr double kFarZ = -165.0;
+constexpr double kFarZ = -171.5;
 constexpr double kDeckY = 154.0;
 
 double dist_to_slam(const Simulation &simulation) {
     const auto at = simulation.matron_state().position;
     return std::hypot(at.x - kSlamX, at.z - kSlamZ);
+}
+
+// The skip's speed: the ride ends when it has stopped, not when its centre
+// crosses a height — the centre passes 167 m while it is still doing 2 m/s,
+// and the slam is the stop, about a second later. The 0.1 m/s bar is the
+// ledger's own rest bar (ImpactLedger::kRunMinMps).
+double kit_speed(const Simulation &simulation, const std::uint64_t entity) {
+    const auto v = simulation.kit_body_velocity(simulation.kit_body_index(entity));
+    return std::hypot(v.x, std::hypot(v.y, v.z));
 }
 
 // Board and rig Stage A, then put her at the far spot and trip the catch.
@@ -59,11 +71,16 @@ void counterweight_slam_draws_her() {
 
     // The ride, tick by tick: the slam is a one-tick sound, so the ear is
     // read every tick, not sampled. The skip's hit is read from the ledger,
-    // which keeps it.
+    // which keeps it. The slam is the stop, and a leveled stop finishes
+    // after the skip reaches its buffer, so the ride ends when the skip has
+    // stopped (low and slow), and the ear is kept open half a second past
+    // that: breaking at the buffer's height would cut the sound off before
+    // it is read.
     const std::uint64_t seen = s.last_impact_sequence();
     double peak_heard = 0.0;
     double peak_hit_j = 0.0;
     bool rode = false;
+    int settle = 0;
     for (int tick = 0; tick < 40 * 90; ++tick) {
         (void)s.advance_frame(Simulation::kFixedStepSeconds);
         peak_heard = std::max(peak_heard, s.matron_state().noise_heard);
@@ -72,8 +89,11 @@ void counterweight_slam_draws_her() {
                 peak_hit_j = std::max(peak_hit_j, hit.energy_j);
             }
         }
-        if (kit_y(s, Simulation::kWellASkipEntityId) <= 167.0) {
+        if (!rode && kit_y(s, Simulation::kWellASkipEntityId) <= 167.0 &&
+            kit_speed(s, Simulation::kWellASkipEntityId) < 0.1) {
             rode = true;
+            settle = 45;
+        } else if (rode && --settle <= 0) {
             break;
         }
     }
@@ -95,7 +115,12 @@ void counterweight_slam_draws_her() {
     std::cout << "  machine draw: slam: she closes to " << closest << " m of the skip, ends " << dend
               << " m away, state " << static_cast<int>(end.state) << "\n";
     require(end.alive, "machine draw: she is alive after the slam");
-    require(closest < 6.0, "machine draw: the far counterweight slam draws her to it");
+    // She comes to the nearest line she can walk, the north band's centre,
+    // 6.5 m from a sound over the open shaft: she never peers at it, because
+    // Peering stands kVantageM (6.0 m) off a sound she can reach, and this
+    // one she cannot reach. The draw is the 30 m approach, not the last
+    // half metre: measured closest 6.34 m.
+    require(closest < 7.0, "machine draw: the far counterweight slam draws her to it");
 }
 
 void quiet_machine_does_not_draw_her() {
@@ -127,7 +152,11 @@ void quiet_machine_does_not_draw_her() {
               << " m from the skip\n";
     require(s.matron_state().alive, "machine draw: she is alive after the quiet run");
     require(peak_heard == 0.0, "machine draw: the quiet machine at this range is not heard");
-    require(d0 - dend < 3.0, "machine draw: the quiet machine at the same range does not draw her");
+    // She heard nothing, so any closing is her patrol, not a draw: over the
+    // run she shuffles 3.19 m toward the skip on her patrol. The draw this
+    // bar must catch is the slam's 30 m approach, so the bar sits well
+    // clear of the patrol drift and well short of a draw.
+    require(d0 - dend < 5.0, "machine draw: the quiet machine at the same range does not draw her");
 }
 
 } // namespace

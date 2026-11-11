@@ -27,6 +27,7 @@ bool ImpactLedger::track_machine(const JPH::BodyID body, const std::uint64_t ent
     }
     track(body, entity, sound, mass_kg);
     tracked_.back().runs = runs;
+    tracked_.back().machine = true;
     machines_.push_back({entity, runs});
     if (runs) {
         running_.reserve(tracked_.size());
@@ -83,6 +84,35 @@ void ImpactLedger::post_step(const std::uint64_t carried) {
                 running_.push_back({t.entity, bodies.GetCenterOfMassPosition(t.body), speed, run});
             }
         }
+        if (t.machine && t.entity != carried) {
+            // The stop: a machine part that comes to rest after carrying
+            // kinetic energy hit its stop with that energy. The peak is
+            // kept while it moves and counted once the rest is sustained,
+            // so a leveled stop is one hit with the energy it arrived with
+            // and a trajectory apex is never a stop.
+            const float speed = velocity.Length();
+            if (speed >= kRunMinMps) {
+                t.rest_ticks = 0;
+                t.peak_ke_j = std::max(t.peak_ke_j, 0.5F * t.mass_kg * speed * speed);
+            } else if (++t.rest_ticks == kStopRestTicks) {
+                if (t.peak_ke_j > kSilentJ &&
+                    (t.quiet_ticks <= 0 || t.peak_ke_j >= 2.0F * t.last_energy_j)) {
+                    t.quiet_ticks = kQuietTicks;
+                    t.last_energy_j = t.peak_ke_j;
+                    const JPH::RVec3 at = bodies.GetCenterOfMassPosition(t.body);
+                    ImpactSnapshot hit;
+                    hit.entity = t.entity;
+                    hit.at = {static_cast<double>(at.GetX()), static_cast<double>(at.GetY()),
+                              static_cast<double>(at.GetZ())};
+                    hit.energy_j = t.peak_ke_j;
+                    hit.speed_mps = std::sqrt(2.0F * t.peak_ke_j / t.mass_kg);
+                    hit.mass_kg = t.mass_kg;
+                    hit.sound = t.sound;
+                    tick_.push_back(hit);
+                }
+                t.peak_ke_j = 0.0F;
+            }
+        }
         if (t.entity == carried || change < kMinChangeMps) {
             continue;
         }
@@ -126,6 +156,8 @@ void ImpactLedger::resync() {
         t.last_velocity = bodies.GetLinearVelocity(t.body);
         t.quiet_ticks = 0;
         t.last_energy_j = 0.0F;
+        t.peak_ke_j = 0.0F;
+        t.rest_ticks = 0;
     }
     tick_.clear();
     running_.clear();
@@ -138,6 +170,8 @@ void ImpactLedger::resync_body(const std::uint64_t entity) {
             t.last_velocity = bodies.GetLinearVelocity(t.body);
             t.quiet_ticks = 0;
             t.last_energy_j = 0.0F;
+            t.peak_ke_j = 0.0F;
+            t.rest_ticks = 0;
         }
     }
 }
