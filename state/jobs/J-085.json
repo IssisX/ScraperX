@@ -1,17 +1,51 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j085": "f6b850f932787bc65ac461497107ee2e99af2ec7"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
- "head": "",
+ "deadline": "2026-11-11T21:16:05Z",
+ "head": "f6b850f932787bc65ac461497107ee2e99af2ec7",
  "issue": 403,
  "job": "J-085",
- "landed": {},
- "obligations": [],
+ "landed": {
+  "fb-bot/integrate-j085": [
+   "f6b850f932787bc65ac461497107ee2e99af2ec7",
+   "",
+   "2026-11-11T17:16:05Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T17:16:05Z",
+   "dead": "2026-11-12T01:16:05Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T21:16:05Z",
+   "id": "O-9b77f12e",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T17:16:05Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j085",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 403,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:f6b850f932787bc65ac461497107ee2e99af2ec7",
+   "via": "email",
+   "what": "`fb-bot/integrate-j085` proof red: scope, no PR"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -19,6 +53,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-11T12:58:47Z"
+ "state": "working",
+ "updated": "2026-11-11T17:16:05Z"
 }

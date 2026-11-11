@@ -2,7 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "claude/integrate-j001-hold": "46c9c4be8beafd3c1f69fc839f0af13061a4a76a",
+  "claude/integrate-j001-hold": "8e5c715e1e1ca4790037f029d47b12c7a5f849e7",
   "fb-bot/j001-pastrail": "59af7cafa92f5528ccf3abb2652d6f5daae3dacb"
  },
  "cancelled": null,
@@ -13,14 +13,14 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T23:00:00Z",
- "head": "46c9c4be8beafd3c1f69fc839f0af13061a4a76a",
+ "head": "8e5c715e1e1ca4790037f029d47b12c7a5f849e7",
  "issue": 108,
  "job": "J-001",
  "landed": {
   "claude/integrate-j001-hold": [
-   "46c9c4be8beafd3c1f69fc839f0af13061a4a76a",
+   "8e5c715e1e1ca4790037f029d47b12c7a5f849e7",
    "",
-   "2026-11-11T16:04:39Z"
+   "2026-11-11T17:16:05Z"
   ],
   "fb-bot/j001-pastrail": [
    "59af7cafa92f5528ccf3abb2652d6f5daae3dacb",
@@ -71,7 +71,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
    "missing": 3,
-   "rechecked": "2026-11-11T10:39:10Z",
+   "rechecked": "2026-11-11T17:16:05Z",
    "ref": "ASK|ask on #108",
    "sends": 1,
    "sent_by": "live",
@@ -410,7 +410,7 @@
    "closed": null,
    "created": "2026-11-10T18:29:43Z",
    "dead": "2026-11-11T17:00:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-11T17:16:05Z",
    "due": "2026-11-10T23:00:00Z",
    "id": "O-2d379bb7",
    "kind": "ask",
@@ -489,7 +489,7 @@
    "ack": null,
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T20:58:12Z",
-   "attempts": 1,
+   "attempts": 2,
    "closed": null,
    "created": "2026-11-11T02:09:10Z",
    "dead": "2026-11-11T23:00:00Z",
@@ -498,10 +498,10 @@
    "id": "O-0ddace38",
    "kind": "ask",
    "last_error": "",
-   "last_sent": "2026-11-11T02:09:10Z",
+   "last_sent": "2026-11-11T17:16:05Z",
    "missing": 0,
    "ref": "ASK|ask on #108",
-   "sends": 1,
+   "sends": 2,
    "sent_by": "live",
    "thread": 108,
    "to": "grok",
@@ -567,6 +567,31 @@
    "version": "red:ffa9580263704d0a405dd94d5b688f71da000974",
    "via": "session",
    "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-2), native-tests (matron-slices-3), godot-touch (touch-3), native-tests (athletic-traversal-2), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T17:16:05Z",
+   "dead": "2026-11-11T20:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T18:17:00Z",
+   "id": "O-73ac1c72",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T17:16:05Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j001-hold",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 108,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:8e5c715e1e1ca4790037f029d47b12c7a5f849e7",
+   "via": "session",
+   "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-3), native-tests (athletic-traversal-2), native-tests (matron-slices-3), godot-touch (touch-2), no PR"
   }
  ],
  "outcome": null,
@@ -578,6 +603,6 @@
   227
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T16:04:39Z"
+ "state": "working",
+ "updated": "2026-11-11T17:16:05Z"
 }

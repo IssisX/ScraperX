@@ -84,7 +84,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
-   "rechecked": "2026-11-11T10:39:10Z",
+   "rechecked": "2026-11-11T17:16:05Z",
    "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -527,5 +527,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-11T14:01:59Z"
+ "updated": "2026-11-11T17:16:05Z"
 }

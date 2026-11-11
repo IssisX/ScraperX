@@ -1,16 +1,24 @@
 {
  "attempt": 1,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j021": "fd442aa33c8acb2230c1b997edebc0011a212c12"
+ },
  "cancelled": null,
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "7d55d14675287817bdcc061445d1252b22b021c9",
+ "head": "fd442aa33c8acb2230c1b997edebc0011a212c12",
  "issue": 128,
  "job": "J-021",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j021": [
+   "fd442aa33c8acb2230c1b997edebc0011a212c12",
+   "",
+   "2026-11-11T17:16:05Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -138,6 +146,6 @@
   375
  ],
  "review": "",
- "state": "merged",
- "updated": "2026-11-10T04:48:57Z"
+ "state": "proof",
+ "updated": "2026-11-11T17:16:05Z"
 }

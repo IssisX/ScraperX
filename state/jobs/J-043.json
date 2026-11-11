@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-11T18:01:59Z",
+ "deadline": null,
  "head": "",
  "issue": 241,
  "job": "J-043",
@@ -81,13 +81,13 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": "2026-11-11T14:01:59Z",
-   "missing": 2,
+   "missing": 3,
    "ref": "JOB|#241",
    "sends": 1,
    "sent_by": "live",
    "thread": 241,
    "to": "muse",
-   "unseen": null,
+   "unseen": "2026-11-11T17:16:05Z",
    "version": "start:241",
    "via": "email",
    "what": "start J-043"
@@ -101,5 +101,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-11T16:04:39Z"
+ "updated": "2026-11-11T17:16:05Z"
 }

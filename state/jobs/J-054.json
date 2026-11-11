@@ -3,14 +3,14 @@
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j054": "d21261ee2b95844bbd3715d6855c847d3cd67cad",
-  "fb-bot/integrate-protected-j054": "d21261ee2b95844bbd3715d6855c847d3cd67cad"
+  "fb-bot/integrate-protected-j054": "0ceb010e3daee42a5cd918bd60b62a8577ca28c0"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-11T19:02:17Z",
- "head": "d21261ee2b95844bbd3715d6855c847d3cd67cad",
+ "head": "0ceb010e3daee42a5cd918bd60b62a8577ca28c0",
  "issue": 293,
  "job": "J-054",
  "landed": {
@@ -20,9 +20,9 @@
    "2026-11-11T15:02:17Z"
   ],
   "fb-bot/integrate-protected-j054": [
-   "d21261ee2b95844bbd3715d6855c847d3cd67cad",
+   "0ceb010e3daee42a5cd918bd60b62a8577ca28c0",
    "",
-   "2026-11-11T15:02:17Z"
+   "2026-11-11T17:16:05Z"
   ]
  },
  "obligations": [
@@ -116,6 +116,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T15:02:17Z"
+ "state": "proof",
+ "updated": "2026-11-11T17:16:05Z"
 }

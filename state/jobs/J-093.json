@@ -2,24 +2,50 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "claude/integrate-protected-j093": "fed81029d3fef91627e778f977536954ce87f9ee"
+  "claude/integrate-protected-j093": "aaed1791db1d70360e6870a1ac6607f781fe5bde"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": null,
- "head": "fed81029d3fef91627e778f977536954ce87f9ee",
+ "deadline": "2026-11-11T18:17:00Z",
+ "head": "aaed1791db1d70360e6870a1ac6607f781fe5bde",
  "issue": 411,
  "job": "J-093",
  "landed": {
   "claude/integrate-protected-j093": [
-   "fed81029d3fef91627e778f977536954ce87f9ee",
+   "aaed1791db1d70360e6870a1ac6607f781fe5bde",
    "",
-   "2026-11-11T16:04:39Z"
+   "2026-11-11T17:16:05Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T17:16:05Z",
+   "dead": "2026-11-11T20:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T18:17:00Z",
+   "id": "O-5ceb32bd",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T17:16:05Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-protected-j093",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 411,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:aaed1791db1d70360e6870a1ac6607f781fe5bde",
+   "via": "session",
+   "what": "`claude/integrate-protected-j093` proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3), no PR"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
@@ -27,6 +53,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T16:04:39Z"
+ "state": "working",
+ "updated": "2026-11-11T17:16:05Z"
 }

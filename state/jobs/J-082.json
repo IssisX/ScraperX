@@ -1,24 +1,64 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-protected-j082-band1": "04d8eb00bc68a119be73a4a16feacdf731317295",
+  "fb-bot/integrate-protected-j082": "9d24a3df2d7b04cd1cd6c04f6a5d4b0a1ead24a5"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
- "head": "",
+ "deadline": "2026-11-11T18:17:00Z",
+ "head": "04d8eb00bc68a119be73a4a16feacdf731317295",
  "issue": 400,
  "job": "J-082",
- "landed": {},
- "obligations": [],
+ "landed": {
+  "claude/integrate-protected-j082-band1": [
+   "04d8eb00bc68a119be73a4a16feacdf731317295",
+   "",
+   "2026-11-11T17:16:05Z"
+  ],
+  "fb-bot/integrate-protected-j082": [
+   "9d24a3df2d7b04cd1cd6c04f6a5d4b0a1ead24a5",
+   "",
+   "2026-11-11T17:16:05Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T17:16:05Z",
+   "dead": "2026-11-11T20:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T18:17:00Z",
+   "id": "O-63e0a689",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T17:16:05Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j082",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 400,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:9d24a3df2d7b04cd1cd6c04f6a5d4b0a1ead24a5",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j082` proof red: android-build, host-build, no PR"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
- "owner": "muse",
+ "owner": "claude",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-11T12:58:47Z"
+ "state": "proof",
+ "updated": "2026-11-11T17:16:05Z"
 }

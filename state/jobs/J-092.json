@@ -2,26 +2,30 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "claude/integrate-j092": "e9eb15d7af4258d0451bcc5e57819c0db3e9b635"
+  "claude/integrate-j092": "76ee77a616bfcca6b19315e6bfd7f4512a2a3170"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": "2026-11-11T17:17:00Z",
- "head": "e9eb15d7af4258d0451bcc5e57819c0db3e9b635",
+ "deadline": "2026-11-11T18:17:00Z",
+ "head": "76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
  "issue": 410,
  "job": "J-092",
  "landed": {
   "claude/integrate-j092": [
-   "e9eb15d7af4258d0451bcc5e57819c0db3e9b635",
+   "76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
    "",
-   "2026-11-11T16:04:39Z"
+   "2026-11-11T17:16:05Z"
   ]
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T17:16:05Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -44,6 +48,31 @@
    "version": "red:e9eb15d7af4258d0451bcc5e57819c0db3e9b635",
    "via": "session",
    "what": "`claude/integrate-j092` proof red: host-build, no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T17:16:05Z",
+   "dead": "2026-11-11T20:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T18:17:00Z",
+   "id": "O-6f17cffa",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T17:16:05Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j092",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 410,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
+   "via": "session",
+   "what": "`claude/integrate-j092` proof red: scope, no PR"
   }
  ],
  "outcome": null,
@@ -54,5 +83,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T16:04:39Z"
+ "updated": "2026-11-11T17:16:05Z"
 }
