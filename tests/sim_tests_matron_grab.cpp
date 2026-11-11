@@ -834,6 +834,49 @@ void run_matron_grab() {
         require(grabbed, "matron hide: he walks into her and she catches him");
         std::cout << "PASS scraperx_sim matron hide touch: grabbed on the walk-in\n";
     }
+    // ---- J-049 Codex P1: a shove needs current physical reach, not a memory ----
+    // She hears him at a spot, then he is gone before she gets there: the
+    // memory is fresh (under 0.5 s) and her grab is held off, so the shove
+    // branch is the one that runs — but he is 3 m away, out of reach, so no
+    // shove may land on him. Her hands are held while she comes out to
+    // hear it, so no shove fires on a tick when he is still in reach.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        hidden_at(s, 0.75, -130.0, 0.0, -130.0);
+        s.debug_hold_matron_grab(true);  // her hands never take hold: a touch is her shove
+        require(s.set_room_loudness(1.0), "matron shove memory: a noise from the spot");
+        bool heard = false;
+        for (int i = 0; i < 10 * 90 && !heard; ++i) {
+            s.debug_hold_matron_hands(0.1);  // no grab or shove while he is still in reach
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            heard = s.matron_state().noise_heard > 0.0;
+        }
+        require(heard, "matron shove memory: she hears it");
+        require(s.set_room_loudness(0.0), "matron shove memory: quiet again");
+        // He is gone: 3 m east, still on the deck, while the memory is fresh.
+        // Her hands stay held 0.1 s past the move, so the first ticks after it cannot shove him either.
+        s.debug_hold_matron_hands(0.1);
+        (void)s.debug_launch_player(scraperx::sim::Vector3{0.75 + 3.0, 154.95, -130.0},
+                                    scraperx::sim::Vector3{0.0, 0.0, 0.0});
+        // One tick for the snapshot to catch the launch and for him to settle
+        // on the deck: snapshot() is cached per tick, so reading it before
+        // a tick would still show the spot he left, and the move itself
+        // would read as a shove.
+        tick(s);
+        const auto shoves = s.matron_state().shoves;
+        const auto at = s.snapshot().player_position;
+        for (int i = 0; i < 44; ++i) {  // the rest of the 0.5 s memory window
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+        }
+        const auto after = s.snapshot().player_position;
+        require(s.matron_state().shoves == shoves,
+                "matron shove memory: out of reach, a remembered spot shoves nobody");
+        require(std::hypot(after.x - at.x, after.z - at.z) < 0.5,
+                "matron shove memory: out of reach, he is not thrown off his feet");
+        std::cout << "PASS scraperx_sim matron shove memory: no shove in 0.5 s at 3.0 m\n";
+    }
 }
 // run_matron_grab, run_matron_arm, run_matron_fatality: not in the default
 // sequence but this ctest slice, as matron-chase, since her fatality's runs

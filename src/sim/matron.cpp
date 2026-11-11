@@ -3550,6 +3550,19 @@ Vec3 Matron::shove_direction() const noexcept {
     return Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
 }
 
+bool Matron::shove_reach_now(const bool on_ladder) const noexcept {
+    if (!body_in_world_ || dead_) return false;
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    const RVec3 him = physics_.GetBodyInterface().GetPosition(player_);
+    if (on_ladder) {
+        // The ankle she would stoop for: his live ankle, not the sensed one.
+        const RVec3 ankle = him - RVec3(0.0, 0.82F, 0.0);
+        return Vec3(ankle - (at + shoulder_local())).Length() <= kStoopReachM;
+    }
+    return distance_xz(float(at.GetX()), float(at.GetZ()), float(him.GetX()), float(him.GetZ())) < kCatchM &&
+           std::abs(at.GetY() - him.GetY()) < 1.4F;
+}
+
 void Matron::set_throwables(std::vector<Throwable> throwables) {
     throwables_ = std::move(throwables);
     if (throwables_.size() > 32) {

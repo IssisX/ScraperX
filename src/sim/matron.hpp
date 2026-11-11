@@ -1540,6 +1540,10 @@ public:
         shove_cooldown_s_ = kShoveCooldownSeconds;
     }
     [[nodiscard]] JPH::Vec3 shove_direction() const noexcept;
+    // Current physical reach for a shove: the same bars as caught(), but
+    // against his live body, not the sensed position (which can be a memory
+    // up to kCatchMemoryS old).
+    [[nodiscard]] bool shove_reach_now(bool on_ladder = false) const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
     // Tests only: her pace held at `pace` (0..3) with no hush, or (-1) free:
     // the tests that meet the Turn and the vault at one speed, as written.

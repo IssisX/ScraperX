@@ -1046,9 +1046,15 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         } else if (matron_->shoves() && matron_->shove_ready()) {
             // While her hands cannot take hold (a grab's cooldown),
             // short of fully changed: a pest's shove away from her,
-            // a dangerous one's at the rim. Not a catch.
-            matron_->count_shove();
-            shove_player(bodies, matron_->shove_direction());
+            // a dangerous one's at the rim. Not a catch. A shove is a
+            // physical hit: it lands only when he is within reach NOW.
+            // caught() measures reach to the sensed position, which can
+            // be a memory up to 0.5 s old; a player who has moved out of
+            // reach since must not be shoved (Codex P1 on #367).
+            if (matron_->shove_reach_now(traversal_state_ == TraversalState::Climbing)) {
+                matron_->count_shove();
+                shove_player(bodies, matron_->shove_direction());
+            }
         }
     }
     // A blow (the listener's hit_closing: his own run taken off) hard enough
