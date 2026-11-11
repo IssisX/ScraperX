@@ -1423,6 +1423,67 @@ void run_matron_fatality() {
         std::cout << "PASS scraperx_sim matron fatality held on: grip_to_set_down_s=" << r.let_go_s - r.grip_s
                   << " grip_to_death_s=" << r.death_s - r.grip_s << "\n";
     }
+    // ---- kicked free in her fatality (ruling 2 on #108, 11-11: a kicking
+    //      player wins): he kicks from the moment her hand closes on him and
+    //      never stops. A kicking body never hangs still, so his window never
+    //      opens and she hauls him back in for her floor version; his kicks
+    //      must tear her grip at least 0.5 s before her pull would end it.
+    //      Torn free, he lives: no let-go over the drop, no claim, no death,
+    //      no re-take. Her end is measured on a twin run, alike tick for tick,
+    //      whose kicks stop two kick gaps before the tear: when she claims
+    //      that body is when her pull would have ended his ----
+    {
+        int torn_tick = -1;
+        const auto kicking_run = [&](const int stop_tick, int &tear_tick, int &kicks_from, std::uint32_t &retakes) {
+            Simulation s(InitialSpawn::Deck154);
+            one_armed_at_the_rail(s, -159.5);
+            kicks_from = -1;
+            const std::uint32_t retakes_start = s.matron_state().retakes;
+            const FatalRun run = fatal_run(s, 40.0, [&](const int i, const scraperx::sim::MatronSnapshot &m) {
+                s.debug_set_matron_stage(1);
+                if (kicks_from < 0 && m.grip_on) {
+                    kicks_from = i;   // her hand has closed on him: he kicks
+                }
+                const bool kick = kicks_from >= 0 && m.grip_on && (stop_tick < 0 || i < stop_tick);
+                (void)s.set_move_input(kick ? (((i - kicks_from) / 11) % 2 == 0 ? 1.0 : -1.0) : 0.0, 0.0);
+                if (tear_tick < 0 && s.snapshot().grip_tear_count > 0) {
+                    tear_tick = i;
+                }
+            });
+            retakes = run.m.retakes - retakes_start;
+            return run;
+        };
+        int kicks_from = -1;
+        std::uint32_t retakes = 0;
+        const FatalRun r = kicking_run(-1, torn_tick, kicks_from, retakes);
+        report_fatal("matron fatality kicked free", r);
+        const double torn_at = torn_tick / 90.0;
+        const double grip_to_tear = torn_at - r.grip_s;
+        std::cout << "  matron fatality kicked free: kicks from " << kicks_from / 90.0 << " s, " << r.p.thrash_kick_count
+                  << " kicks, grip torn at " << torn_at << " s (" << grip_to_tear << " s after her grip), retakes "
+                  << retakes << "\n";
+        require(kicks_from >= 0 && torn_tick >= 0 && r.p.grip_tear_count >= 1 && r.m.grips_torn >= 1,
+                "matron fatality kicked free: his kicks tear her grip");
+        require(r.release_s < 0.0 && r.m.fatal_release_beat == r.releases_start && r.claimed_s < 0.0 &&
+                    r.m.claims == 0 && retakes == 0,
+                "matron fatality kicked free: no let-go over the drop, no claim, no re-take");
+        require(r.deaths_end == r.deaths_start && r.deaths_held == 0 && !r.p.held_by_matron &&
+                    r.p.runs_ended_by_matron == 0,
+                "matron fatality kicked free: torn free, he lives");
+        require(r.max_step < 0.2, "matron fatality kicked free: no teleport while held");
+        int twin_tear = -1;
+        int twin_kicks_from = -1;
+        std::uint32_t twin_retakes = 0;
+        const FatalRun twin = kicking_run(torn_tick - 2 * 11, twin_tear, twin_kicks_from, twin_retakes);
+        report_fatal("matron fatality kicked free (twin, kicks stopped)", twin);
+        const double her_end = twin.claimed_s >= 0.0 ? twin.claimed_s : twin.release_s;
+        std::cout << "  matron fatality kicked free: the twin's kicks stop at " << (torn_tick - 22) / 90.0
+                  << " s; her pull ends it at " << her_end << " s (path " << twin.path << ")\n";
+        require(twin_tear < 0 && her_end >= 0.0 && her_end - torn_at >= 0.5,
+                "matron fatality kicked free: his kicks tear her grip at least 0.5 s before her pull would end it");
+        std::cout << "PASS scraperx_sim matron fatality kicked free: grip_to_tear_s=" << grip_to_tear
+                  << " tear_to_her_end_s=" << her_end - torn_at << " kicks=" << r.p.thrash_kick_count << "\n";
+    }
     // ---- a save and a load mid-hang: what the death would have been. Two
     //      runs alike to the window's middle save the same bytes; one plays
     //      the fatality out to its death, the other loads its save there; the
