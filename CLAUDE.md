@@ -16,11 +16,11 @@ it to match, never ask him again.
 - Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
   opens and merges the PRs (11-05).
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
-  Sonnet (11-05). Human sounds are real recordings, never synthesized.
+  Sonnet (11-05).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
-- Every stated time is read from the clock first (`TZ=America/Chicago date`, Central); hooks refuse
-  any time with no clock read this turn (11-07, 11-08).
+- Times are never typed: write {NOW}, a hook fills in the Central time; a typed stamp in a post
+  or mail is refused; other times need a `date` read this turn (11-07, 11-11).
 
 ## Test only what a change reaches
 
@@ -49,7 +49,7 @@ it to match, never ask him again.
   with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
-- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick .
+- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
 
 ## The game
 
