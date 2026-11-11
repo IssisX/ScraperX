@@ -8,15 +8,18 @@ No network: the job logs are fake text in the runner's own shape.
 from __future__ import annotations
 
 import pathlib
+import subprocess
 import sys
 import unittest
+from unittest import mock
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import ghapi  # noqa: E402
 import reconciler as R  # noqa: E402
 import switch  # noqa: E402
-from test_inbox import FakeGH, HEAD, make, run  # noqa: E402
+from test_inbox import FakeGH, HEAD, make, run, steered  # noqa: E402
 
 NATIVE_LOG = """\
 2026-11-11T12:04:10.0000000Z ##[group]Run ctest --output-on-failure -L matron-slices-3
@@ -144,15 +147,104 @@ class RedTests(unittest.TestCase):
         self.assertNotIn("`", body)
         self.assertNotIn(": LAND", body)
         self.assertEqual(R.SENT_RE.findall(posted), [])
+        # 502 and 503 have no log here, so the notice is keyed as one with a log unread (InboxItem.unread)
         self.assertEqual(switch.MUSE_KEYS.findall(gh.by_issue[switch.BOARD_ISSUE][0]["body"]),
-                         [switch.inbox_key("muse-RED-BRANCH", NAME, HEAD)])
+                         [switch.inbox_key("muse-RED-BRANCH" + switch.UNREAD_KEY, NAME, HEAD)])
 
     def test_a_github_that_hangs_costs_two_reads_a_sweep_not_one_per_job(self):
-        late = switch.GitHubError("GET", "logs", "timed out after 60s")
-        gh = self.gh(logs={501: late, 502: late, 503: late})
-        got = make(gh).red_tests(40)
+        late = ghapi.TimedOut("GET", "logs", "timed out after 60s")
+        gh = self.gh(logs={501: late, 502: late, 503: late, 601: NATIVE_LOG})
+        gh.jobs[41] = [dict(JOBS[0], id=601)]
+        sw = make(gh)
+        got = sw.red_tests(40)
         self.assertEqual(gh.log_reads, [501, 502])
         self.assertEqual([line.rsplit(": ", 1)[1] for line in got], ["log unread"] * 3)
+        self.assertEqual(sw.red_tests(41), ("native-tests (matron-slices-3): log unread",))
+        self.assertEqual(gh.log_reads, [501, 502], "two timeouts in a sweep: no other run's log is tried")
+
+    def test_a_log_that_fails_to_read_never_stops_another_runs_reads(self):
+        # 11-11, steer job 130849370731: two GitHubErrors on one run's logs left every later notice "log unread"
+        gone = switch.GitHubError("GET", "logs", "gh: HTTP 410")
+        gh = self.gh(logs={501: gone, 502: gone, 503: gone, 601: NATIVE_LOG})
+        gh.jobs[41] = [dict(JOBS[0], id=601)]
+        sw = make(gh)
+        self.assertEqual([line.rsplit(": ", 1)[1] for line in sw.red_tests(40)], ["log unread"] * 3)
+        self.assertEqual(gh.log_reads, [501, 502], "a run stops its own reads after two failures")
+        got = sw.red_tests(41)
+        self.assertEqual(gh.log_reads, [501, 502, 601])
+        self.assertEqual(len(got), 3)
+        self.assertTrue(all(": FAIL: " in line for line in got), got)
+
+    def test_the_note_says_why_a_log_was_not_read_with_no_query_or_token(self):
+        why = ('gh: Get "https://productionresultssa1.blob.core.windows.net/actions-results/x/logs.txt?sv=2025&sig='
+               'SECRETSIG&se=2026" stopped after 10 redirects ghs_abcdefghijklmnopqrstuvwxyz0123 ' + "x" * 400)
+        gh = self.gh(logs={501: switch.GitHubError("GET", "logs", why, 403), 502: TOUCH_LOG, 503: TOUCH_LOG})
+        sw = make(gh)
+        sw.red_tests(40)
+        note, = [line for line in sw.lines if "was not read" in line]
+        self.assertTrue(note.startswith("NOTE        the log of native-tests (matron-slices-3) in proof run 40 was "
+                                        "not read (GitHubError HTTP 403: gh: Get \"https://productionresultssa1.blob."
+                                        "core.windows.net/actions-results/x/logs.txt?[cut]\" stopped after 10 "
+                                        "redirects [token] xxx"), note)
+        self.assertNotIn("SECRETSIG", note)
+        self.assertNotIn("ghs_", note)
+        self.assertLess(len(note), 330, "gh's text is cut to MAX_ERR_CHARS")
+        self.assertTrue(note.endswith("...)"), note)
+
+    def test_an_unread_notice_is_posted_again_once_when_a_later_sweep_reads_it(self):
+        gh = self.gh(logs={})   # every log unread
+        self.assertEqual(make(gh).muse([]), 1)
+        self.assertEqual(make(gh).muse([]), 0, "still unread: no second notice")
+        gh.logs = {501: NATIVE_LOG, 502: TOUCH_LOG, 503: NATIVE_LOG}
+        self.assertEqual(make(gh).muse([]), 1, "read now: the notice once more, with its tests")
+        (_, first), (_, second) = gh.posts
+        self.assertIn("native-tests (matron-slices-3): log unread", first)
+        self.assertNotIn(switch.READ_NOW, first)
+        self.assertIn(switch.READ_NOW, second)
+        self.assertIn("\n  native-tests (matron-slices-3): FAIL: ammo hands", second)
+        self.assertNotIn(switch.LOG_UNREAD, second)
+        self.assertEqual(make(gh).muse([]), 0, "read once: never again")
+
+    def test_the_integrators_inbox_posts_a_read_notice_once_after_an_unread_one(self):
+        mine = "claude/integrate-j104"
+        gh = LogGH({}, runs=[run(41, mine, HEAD, hours=2)], jobs={41: JOBS[:1]}, heads={mine: HEAD})
+        self.assertEqual(make(gh).inbox([]), 1)
+        self.assertEqual(make(gh).inbox([]), 0)
+        gh.logs = {501: NATIVE_LOG}
+        self.assertEqual(make(gh).inbox([]), 1)
+        reads = len(gh.log_reads)
+        self.assertEqual(make(gh).inbox([]), 0)
+        self.assertEqual(len(gh.log_reads), reads, "listed with its tests: its log is not read again")
+        (_, first), (_, second) = gh.posts
+        self.assertIn("`native-tests (matron-slices-3): log unread`", first)
+        self.assertIn(switch.READ_NOW, second)
+        self.assertIn("`native-tests (matron-slices-3): FAIL: ammo hands", second)
+        keys = switch.INBOX_KEYS.findall(second)[0].split(",")
+        self.assertEqual(keys, [switch.inbox_key("RED-BRANCH" + switch.UNREAD_KEY, mine, HEAD),
+                                switch.inbox_key("RED-BRANCH", mine, HEAD)])
+
+    def test_a_pr_red_notice_is_posted_again_once_when_its_logs_read(self):
+        s = steered(ref=NAME, proof="red: native-tests (matron-slices-3)", committed="2026-11-06T19:30:00Z",
+                    run_id=40)
+        self.assertEqual(s.decision.action, "FIX-CI")
+        gh = LogGH({}, runs=[run(40, NAME, HEAD, hours=0.2)], jobs={40: JOBS[:1]})
+        self.assertEqual(make(gh).muse([s]), 1)
+        self.assertEqual(make(gh).muse([s]), 0)
+        gh.logs = {501: NATIVE_LOG}
+        self.assertEqual(make(gh).muse([s]), 1)
+        self.assertEqual(make(gh).muse([s]), 0)
+        (_, first), (_, second) = gh.posts
+        self.assertIn("- RED [#256]", first)
+        self.assertIn("log unread", first)
+        self.assertIn(switch.READ_NOW, second)
+        self.assertIn("FAIL: ammo hands", second)
+
+    def test_a_notice_whose_logs_read_is_keyed_as_before(self):
+        it = switch.InboxItem("RED-BRANCH", NAME, HEAD, "x", "muse", tests=("native-tests (a): FAIL: b",))
+        self.assertEqual((it.key, it.muse_key), (switch.inbox_key("RED-BRANCH", NAME, HEAD),
+                                                 switch.inbox_key("muse-RED-BRANCH", NAME, HEAD)))
+        bare = switch.InboxItem("RED-BRANCH", NAME, HEAD, "x", "muse")
+        self.assertEqual(bare.key, it.key)
 
     def test_a_red_already_listed_reads_no_log(self):
         gh = self.gh()
@@ -160,6 +252,44 @@ class RedTests(unittest.TestCase):
         reported = frozenset({switch.inbox_key("muse-RED-BRANCH", NAME, HEAD)})
         self.assertEqual(sw.muse_items([], reported), [])
         self.assertEqual(gh.log_reads, [])
+
+
+class GhapiReads(unittest.TestCase):
+    """ghapi's binary reads (get_bytes): a timeout is told apart, and a failure always carries some text."""
+
+    def client(self, *answers):
+        calls = []
+
+        def runner(args, **kw):
+            calls.append(args)
+            got = answers[min(len(calls), len(answers)) - 1]
+            if isinstance(got, Exception):
+                raise got
+            return got
+        return ghapi.GitHub("IssisX/ScraperX", False, log=lambda line: None, runner=runner,
+                            sleep=lambda s: None), calls
+
+    def test_a_read_that_times_out_raises_timed_out(self):
+        gh, calls = self.client(subprocess.TimeoutExpired("gh", ghapi.TIMEOUT_S))
+        with mock.patch.object(ghapi.time, "sleep"), self.assertRaises(ghapi.TimedOut) as got:
+            gh.get_bytes("repos/IssisX/ScraperX/actions/jobs/1/logs")
+        self.assertEqual(len(calls), ghapi.GET_ATTEMPTS)
+        self.assertIn("timed out", got.exception.detail)
+
+    def test_an_answer_is_a_plain_github_error_with_gh_s_text(self):
+        gh, calls = self.client(subprocess.CompletedProcess([], 1, b"", b"gh: Not Found (HTTP 404)\n"))
+        with self.assertRaises(ghapi.GitHubError) as got:
+            gh.get_bytes("repos/IssisX/ScraperX/actions/jobs/1/logs")
+        self.assertNotIsInstance(got.exception, ghapi.TimedOut)
+        self.assertEqual(got.exception.detail, "gh: Not Found (HTTP 404)")
+        self.assertEqual(len(calls), 1, "a 4xx is not tried again")
+
+    def test_a_failure_with_no_stderr_still_says_something(self):
+        gh, calls = self.client(subprocess.CompletedProcess([], 2, b"", b""))
+        with mock.patch.object(ghapi.time, "sleep"), self.assertRaises(ghapi.GitHubError) as got:
+            gh.get_bytes("repos/IssisX/ScraperX/actions/jobs/1/logs")
+        self.assertEqual(got.exception.detail, "exit 2, no stderr")
+        self.assertEqual(len(calls), ghapi.GET_ATTEMPTS)
 
 
 class ReconcilerRedNotice(unittest.TestCase):
