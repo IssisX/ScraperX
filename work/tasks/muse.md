@@ -52,18 +52,15 @@ your own branches (Cory 11-05) and mail the rest:
 ## Your queue (11-06)
 The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-1. J-060 #320: fight contact truth (Cory 11-08 7:12 AM, top job): real limb contacts, both bodies react, real reach.
-2. J-063 #321: her climbing on real support, every ladder (Cory 11-08).
-3. J-059 #307: her injuries reach the screen in play: per-region injury in the sim, exported by the bridge, drawn by matron_injury.gd; capability loss in the runtime sim (measured on #307, 11-08).
-4. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
-5. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
-6. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
-7. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
-8. J-076 #391: loud machines draw her (A7), every moving machine heard by its measured energy (11-10).
-9. J-077 #392: a hard blow puts her down, proved at every stage (rule 34) (11-10).
-10. J-078 #393: her motion never snaps, measured bone speeds and hand contacts (rule 37) (11-10).
-11. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
-12. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed (J-008 is Grok Bot's, 11-10; J-011 is Claude's; J-021 stays yours, in flight).
+In flight (finish these): J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face, 11-11), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372. Parked: J-053 #82 (on Grok), J-044l (on Grok), J-060 #320 (on J-044c).
+Unstarted, in order (11-11):
+1. J-079 #397: her hold is a cinematic, a shot per beat (rule 33, gap 8).
+2. J-080 #398: her rage is fed only by sound that reaches her ear (gap 17).
+3. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
+4. J-014 #121: stock above 396 m, now including the high-tower rings 594.25 and 640.25 (11-11, from J-077), on its own protected branch (world content).
+5. J-061 #312: wind on him in the air must not count as his own run.
+6. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
+7. J-021 #128: lane C, the far world and water.
 
 Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
