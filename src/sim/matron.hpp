@@ -839,6 +839,9 @@ public:
     // every story from deck 1 (her home, 11 m) to 154 is the same climb.
     static constexpr float kPipeLowestFloor = kStackPitch;   // the stack's deck 1
     static constexpr int kPipeDecks = static_cast<int>((kDeckTop - kPipeLowestFloor) / kStackPitch + 0.5F) + 1;
+    // A lead this far over or under her deck is the pipe's (the next deck is
+    // nearer it); nearer, a top inside the story, it is her scan's ways'.
+    static constexpr float kPipeLeadM = 0.5F * kStackPitch;
     // Her feet's brace on the riser, hand over hand (matron_contact.cpp): from
     // her shins, this far over her soles, level toward its axis, within her
     // legs' reach (her line is 0.6 m off the riser's west face).

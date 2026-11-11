@@ -961,10 +961,14 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
         return false;
     }
     const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+    // A lead past half the story: the pipe's next deck is nearer it than
+    // hers. One on a top inside the story (a cabinet, a duct, a landing on
+    // the stack's face) is for her scan's own ways from this deck, not a
+    // story up the pipe and back down (J-085).
     float next = floor_y;
-    if (lead_floor_ < floor_y - 0.6F) {
+    if (lead_floor_ < floor_y - kPipeLeadM) {
         next = floor_y - kStackPitch;
-    } else if (lead_floor_ > floor_y + 0.6F) {
+    } else if (lead_floor_ > floor_y + kPipeLeadM) {
         next = floor_y + kStackPitch;
     }
     if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next)) {
