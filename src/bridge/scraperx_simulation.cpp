@@ -343,6 +343,8 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("debug_matron_hear", "at"), &ScraperXSimulation::debug_matron_hear);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_launch_player", "at", "velocity"),
                                 &ScraperXSimulation::debug_launch_player);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_add_flex_plank", "root", "along"),
+                                &ScraperXSimulation::debug_add_flex_plank);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_launch_kit_entity", "entity", "at", "velocity"),
                                 &ScraperXSimulation::debug_launch_kit_entity);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_lose_arm", "side"), &ScraperXSimulation::debug_lose_arm);
@@ -372,6 +374,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_trolleys"), &ScraperXSimulation::get_zipline_trolleys);
     godot::ClassDB::bind_method(godot::D_METHOD("get_zipline_state"), &ScraperXSimulation::get_zipline_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_corpses"), &ScraperXSimulation::get_corpses);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_flex_planks"), &ScraperXSimulation::get_flex_planks);
     godot::ClassDB::bind_method(godot::D_METHOD("get_corpse_plan"), &ScraperXSimulation::get_corpse_plan);
     godot::ClassDB::bind_method(godot::D_METHOD("get_death_state"), &ScraperXSimulation::get_death_state);
     godot::ClassDB::bind_method(godot::D_METHOD("get_hook_state"), &ScraperXSimulation::get_hook_state);
@@ -1726,6 +1729,29 @@ godot::Array ScraperXSimulation::get_corpses() const {
     return out;
 }
 
+// J-096: the bending planks as drawn (godot/presentation/flex_plank_view.gd):
+// each one's size, its hinge that broke (-1 whole) and its segments' poses,
+// root first. Reads only.
+godot::Array ScraperXSimulation::get_flex_planks() const {
+    godot::Array out;
+    for (std::uint32_t index = 0; index < simulation_->flex_plank_count(); ++index) {
+        const sim::Simulation::FlexPlankView view = simulation_->flex_plank(index);
+        godot::Array segments;
+        for (std::size_t i = 0; i < view.segment_position.size(); ++i) {
+            segments.push_back(godot::Transform3D(godot::Basis(to_godot(view.segment_rotation[i])),
+                                                  to_godot(view.segment_position[i])));
+        }
+        godot::Dictionary entry;
+        entry["length"] = view.length_m;
+        entry["width"] = view.width_m;
+        entry["thickness"] = view.thickness_m;
+        entry["snapped_joint"] = view.snapped_joint;
+        entry["segments"] = segments;
+        out.push_back(entry);
+    }
+    return out;
+}
+
 // The climber's proportions (sim/corpse.hpp): each part's capsule radius,
 // half-length and mass, in the parts' order.
 godot::Array ScraperXSimulation::get_corpse_plan() const {
@@ -2142,6 +2168,10 @@ namespace {
     return sim::Vector3{static_cast<double>(value.x), static_cast<double>(value.y), static_cast<double>(value.z)};
 }
 } // namespace
+
+std::int64_t ScraperXSimulation::debug_add_flex_plank(const godot::Vector3 root, const godot::Vector3 along) {
+    return simulation_->debug_add_flex_plank(to_sim(root), static_cast<double>(along.x), static_cast<double>(along.z));
+}
 
 void ScraperXSimulation::debug_place_matron(const godot::Vector3 feet) { simulation_->debug_place_matron(to_sim(feet)); }
 

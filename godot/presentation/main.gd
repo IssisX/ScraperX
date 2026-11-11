@@ -37,6 +37,7 @@ const ForkliftView := preload("res://presentation/forklift_view.gd")
 const CraneView := preload("res://presentation/crane_view.gd")
 const ZiplineView := preload("res://presentation/zipline_view.gd")
 const FabricatedView := preload("res://presentation/fabricated_view.gd")
+const FlexPlankView := preload("res://presentation/flex_plank_view.gd")
 # Her chart: the tower that learns the player (uncanny/uncanny.gd), and the
 # microphone's consent, asked once outside the fiction.
 const Uncanny := preload("res://presentation/uncanny/uncanny.gd")
@@ -280,6 +281,10 @@ func _ready() -> void:
 	_corpse_view = CorpseView.new()
 	add_child(_corpse_view)
 	_corpse_view.setup(_native)
+	# J-096: bending planks, none in the world as built (a test's or the eye check's).
+	var flex_plank_view := FlexPlankView.new()
+	add_child(flex_plank_view)
+	flex_plank_view.setup(_native)
 	# Live fabrication's objects: none in the player's world yet (DESIGN.md,
 	# build step 1); drawn here whenever the native holds any.
 	_fabricated_view = FabricatedView.new()

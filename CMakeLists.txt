@@ -69,6 +69,7 @@ add_library(scraperx_sim STATIC
     src/sim/forklift.cpp
     src/sim/yard_crane.cpp
     src/sim/zipline.cpp
+    src/sim/flex_plank.cpp
     src/sim/corpse.cpp
     src/sim/band_counterweight_well.cpp
     src/sim/band_wet_isolation.cpp

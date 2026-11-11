@@ -7,6 +7,7 @@
 
 #include "sim/physics_world_support.hpp"
 #include "sim/fabricated.hpp"
+#include "sim/flex_plank.hpp"
 #include "sim/matron_traversal.hpp"
 
 #include <array>
@@ -136,6 +137,10 @@ public:
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
+    // J-096 slice 1, tests and the eye check only: a bending plank built
+    // after every body of the world (FlexPlank), its index; -1 when full.
+    int add_flex_plank_for_test(const FlexPlank::Spec &spec);
+    [[nodiscard]] const std::vector<std::unique_ptr<FlexPlank>> &flex_planks() const noexcept { return flex_planks_; }
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
@@ -779,6 +784,8 @@ public:
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;
     std::unique_ptr<Zipline> zipline_;
+    // J-096: bending planks (tests and the eye check only; none in the world as built).
+    std::vector<std::unique_ptr<FlexPlank>> flex_planks_;
     // The bodies deaths left (Corpses); the latest death's place and speed.
     std::unique_ptr<Corpses> corpses_;
     JPH::RVec3 death_point_ = JPH::RVec3::sZero();

@@ -1322,6 +1322,57 @@ void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 a
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
 }
 
+int Simulation::debug_add_flex_plank(const Vector3 root, const double along_x, const double along_z,
+                                     const double length_m, const double width_m,
+                                     const double thickness_m) noexcept {
+    FlexPlank::Spec spec;
+    spec.root = JPH::RVec3(static_cast<float>(root.x), static_cast<float>(root.y), static_cast<float>(root.z));
+    const JPH::Vec3 along(static_cast<float>(along_x), 0.0F, static_cast<float>(along_z));
+    if (!(along.Length() > 1.0e-6F) || !(length_m > 0.0) || !(width_m > 0.0) || !(thickness_m > 0.0)) {
+        return -1;
+    }
+    spec.along = along.Normalized();
+    spec.length_m = static_cast<float>(length_m);
+    spec.width_m = static_cast<float>(width_m);
+    spec.thickness_m = static_cast<float>(thickness_m);
+    return physics_world_->add_flex_plank_for_test(spec);
+}
+
+std::uint32_t Simulation::flex_plank_count() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->flex_planks().size());
+}
+
+Simulation::FlexPlankView Simulation::flex_plank(const std::uint32_t index) const noexcept {
+    FlexPlankView out;
+    const auto &planks = physics_world_->flex_planks();
+    if (index >= planks.size()) {
+        return out;
+    }
+    const FlexPlank &plank = *planks[index];
+    out.length_m = plank.spec().length_m;
+    out.width_m = plank.spec().width_m;
+    out.thickness_m = plank.spec().thickness_m;
+    out.segment_mass_kg = plank.segment_mass_kg();
+    out.tip_stiffness_n_per_m = plank.tip_stiffness_n_per_m();
+    out.joint_stiffness_nm_per_rad = plank.joint_stiffness_nm_per_rad();
+    out.joint_damping_nms_per_rad = plank.joint_damping_nms_per_rad();
+    out.rupture_moment_nm = plank.rupture_moment_nm();
+    out.peak_moment_nm = plank.peak_moment_nm();
+    out.snap_moment_nm = plank.snap_moment_nm();
+    out.snapped_joint = plank.snapped_joint();
+    out.tip = to_sim_vector(plank.tip());
+    const JPH::BodyInterface &bodies = physics_world_->physics_system().GetBodyInterface();
+    static_assert(FlexPlank::kSegments == 4, "FlexPlankView holds four segments");
+    for (int i = 0; i < FlexPlank::kSegments; ++i) {
+        const auto n = static_cast<std::size_t>(i);
+        out.moment_nm[n] = plank.moment_nm(i);
+        out.segment_position[n] = to_sim_vector(bodies.GetPosition(plank.segment(i)));
+        out.segment_rotation[n] = to_sim_quaternion(bodies.GetRotation(plank.segment(i)));
+        out.segment_entity[n] = bodies.GetUserData(plank.segment(i));
+    }
+    return out;
+}
+
 void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) noexcept {
     physics_world_->launch_player_for_test(
         JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),

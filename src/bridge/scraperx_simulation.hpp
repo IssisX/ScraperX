@@ -251,6 +251,8 @@ public:
     [[nodiscard]] bool debug_matron_climb_way(bool pipe, bool down);
     void debug_matron_hear(godot::Vector3 at);
     void debug_launch_player(godot::Vector3 at, godot::Vector3 velocity);
+    // J-096 slice 1, the eye check only: a bending plank (Simulation::debug_add_flex_plank).
+    std::int64_t debug_add_flex_plank(godot::Vector3 root, godot::Vector3 along);
     void debug_launch_kit_entity(std::int64_t entity, godot::Vector3 at, godot::Vector3 velocity);
     void debug_lose_arm(std::int64_t side);
     // Sends her, by her own plan, to the region her scan reads under those feet (false: none, or no plan).
@@ -274,6 +276,8 @@ public:
     [[nodiscard]] godot::PackedFloat32Array get_zipline_trolleys() const;
     [[nodiscard]] godot::Dictionary get_zipline_state() const;
     [[nodiscard]] godot::Array get_corpses() const;
+    // J-096: each bending plank's size and its segments' poses (Simulation::flex_plank).
+    [[nodiscard]] godot::Array get_flex_planks() const;
     [[nodiscard]] godot::Array get_corpse_plan() const;
     [[nodiscard]] godot::Dictionary get_death_state() const;
     [[nodiscard]] godot::Dictionary get_hook_state() const;

@@ -28,6 +28,7 @@
 #include "sim/corpse.hpp"
 #include "sim/matron.hpp"
 #include "sim/bay.hpp"
+#include "sim/flex_plank.hpp"
 #include "sim/vertical/vertical_route.hpp"
 #include "sim/climb_c6.hpp"
 
@@ -207,7 +208,7 @@ struct SupportSample final {
 [[nodiscard]] inline bool entity_is_moving_support(const std::uint64_t entity_id) noexcept {
     using Sim = scraperx::sim::Simulation;
     // Mechanism-kit bodies that move are machines by construction.
-    return scraperx::sim::kit::is_dynamic_entity(entity_id) ||
+    return scraperx::sim::kit::is_dynamic_entity(entity_id) || scraperx::sim::FlexPlank::is_entity(entity_id) ||
            entity_id == Sim::kTranslatingSupportEntityId ||
            entity_id == Sim::kRotatingSupportEntityId ||
            entity_id == Sim::kMovingLedgeEntityId;

@@ -1819,6 +1819,34 @@ public:
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
+    // J-096 slice 1 (#414), tests and the eye check only: a C24 timber
+    // board (sim/flex_plank.hpp) clamped with its top face's centre at
+    // `root` and running out along (along_x, 0, along_z), built after every
+    // body of the world, so the world as built never holds one. It bends
+    // under whatever stands on it and snaps past its strength. Its index,
+    // or -1 when no more fit. Not saved.
+    int debug_add_flex_plank(Vector3 root, double along_x, double along_z, double length_m = 1.2,
+                             double width_m = 0.225, double thickness_m = 0.038) noexcept;
+    struct FlexPlankView final {
+        double length_m = 0.0;
+        double width_m = 0.0;
+        double thickness_m = 0.0;
+        double segment_mass_kg = 0.0;
+        double tip_stiffness_n_per_m = 0.0;     // 3 E I / L^3
+        double joint_stiffness_nm_per_rad = 0.0;
+        double joint_damping_nms_per_rad = 0.0;
+        double rupture_moment_nm = 0.0;         // f_m Z
+        double peak_moment_nm = 0.0;
+        double snap_moment_nm = 0.0;
+        int snapped_joint = -1;                 // the hinge that broke, root = 0; -1 whole
+        Vector3 tip{};                          // the free end's top-face centre
+        std::array<double, 4> moment_nm{};      // each whole hinge's elastic moment now
+        std::array<Vector3, 4> segment_position{};
+        std::array<Quaternion, 4> segment_rotation{};
+        std::array<std::uint64_t, 4> segment_entity{};
+    };
+    [[nodiscard]] std::uint32_t flex_plank_count() const noexcept;
+    [[nodiscard]] FlexPlankView flex_plank(std::uint32_t index) const noexcept;
     // Tests only (never bound to the bridge): the height of the first thing
     // straight under `at` within `depth`, or NaN where nothing is.
     [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
