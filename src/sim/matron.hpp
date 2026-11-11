@@ -847,6 +847,9 @@ public:
     // The lower stack, under her old pipe decks (132 to 154): where her map's
     // own nearer ways come before the pipe (follow_pipe).
     static constexpr float kLowerStackTopM = 132.0F;
+    // Her journey's own scan reaches this far around her and the lead's place
+    // (start_journey_to): a way of her map past it is not one she plans.
+    static constexpr float kJourneyScanMarginM = 12.0F;
     // The deck a story up or down the pipe toward her lead from her deck at
     // `floor_y`, or `floor_y` itself when the lead is not the pipe's.
     [[nodiscard]] static float pipe_next_toward(float floor_y, float lead_y) noexcept;
@@ -3018,13 +3021,15 @@ private:
     static constexpr std::uint8_t kPipeWayRetries = 2;
     std::array<PipeWayMemory, 2 * (kPipeDecks - 1)> pipe_ways_{};
     int pipe_waypoint_ = 0;
-    // own_way_nearer's last answer: from region, to region, and where the
-    // way's first move (or the hoist's landing) begins; none when no way.
     int pipe_serves_from_ = -1, pipe_serves_to_ = -1;   // pipe_serves' last regions, and its answer
     bool pipe_serves_ok_ = true;
+    // own_way_nearer's last answer: from region, to region, and where the
+    // way's first move (or the hoist's landing) begins; none when no way.
+    // A planned way's moves span own_way_lo/hi (x, z); a hoist's has none.
     int own_way_from_ = -1, own_way_to_ = -1;
-    bool own_way_found_ = false;
+    bool own_way_found_ = false, own_way_hoist_ = false;
     float own_way_x_ = 0.0F, own_way_z_ = 0.0F;
+    float own_way_lo_x_ = 0.0F, own_way_hi_x_ = 0.0F, own_way_lo_z_ = 0.0F, own_way_hi_z_ = 0.0F;
     float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)
     float pipe_hold_m_ = 0.0F; // her hands' way since the last hold
     float pipe_slide_mps_ = 0.0F;

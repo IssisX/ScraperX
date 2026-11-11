@@ -142,10 +142,16 @@ void lower_way(const char *name, const Vector3 her, const double goal, const boo
 }
 
 void run_matron_lower_ways() {
+    // C1 and C2's first stories: up onto the cabinet, the jump for the duct's
+    // lip (3.6 m) and its mantle, then the vent stack's pole or the wall
+    // ladder (J-085, with the cabinet and the switchgear 5-10 cm nearer the
+    // ducts: her take-off within her 0.70 m of the lip).
+    lower_way("C1 cabinet, duct and vent stack, 22 -> 33", Vector3{19.0, 22.02, -125.0}, 33.0, false);
+    lower_way("C2 switchgear, duct and wall ladder, 66 -> 77", Vector3{21.0, 66.02, -142.0}, 77.0, false);
     lower_way("C1 davit ladder, 33 -> 44", Vector3{12.5, 33.02, -122.0}, 44.0, false);
     lower_way("C2 rack and davit ladder, 77 -> 88", Vector3{21.0, 77.02, -156.0}, 88.0, false);
     lower_way("S3 hoist, 88 -> 132", Vector3{-8.0, 88.02, -162.0}, 132.0, true);
-    std::cout << "PASS scraperx_sim matron lower ways: the C1 and C2 ladders and the S3 hoist, with the pipe there\n";
+    std::cout << "PASS scraperx_sim matron lower ways: C1 and C2 by their jumps and ladders, and the S3 hoist, with the pipe there\n";
 }
 
 void run_matron_home_pursuit_slice() {

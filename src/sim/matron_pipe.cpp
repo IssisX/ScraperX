@@ -1004,23 +1004,52 @@ bool Matron::own_way_nearer(const RVec3 at, const float pipe_off) {
         own_way_from_ = here;
         own_way_to_ = goal;
         own_way_found_ = false;
-        // Her map's own way there: where its first move off the floor begins.
+        own_way_hoist_ = false;
+        own_way_lo_x_ = own_way_lo_z_ = std::numeric_limits<float>::max();
+        own_way_hi_x_ = own_way_hi_z_ = std::numeric_limits<float>::lowest();
+        const auto span = [&](const Vec3 p) {
+            own_way_lo_x_ = std::min(own_way_lo_x_, p.GetX());
+            own_way_hi_x_ = std::max(own_way_hi_x_, p.GetX());
+            own_way_lo_z_ = std::min(own_way_lo_z_, p.GetZ());
+            own_way_hi_z_ = std::max(own_way_hi_z_, p.GetZ());
+        };
+        // Her map's own way there: where its first move off the floor
+        // begins, and where its moves reach.
         for (const int e : scanned_->plan(here, goal)) {
             const traversal::Edge &edge = scanned_->edges()[static_cast<std::size_t>(e)];
-            if (edge.kind != traversal::MoveKind::Walk) {
+            if (edge.kind == traversal::MoveKind::Walk) {
+                continue;
+            }
+            if (!own_way_found_) {
                 own_way_found_ = true;
                 own_way_x_ = edge.spec.start.GetX();
                 own_way_z_ = edge.spec.start.GetZ();
-                break;
+            }
+            span(edge.spec.start);
+            span(edge.spec.goal);
+            if (edge.spec.line.GetX() != 0.0F || edge.spec.line.GetZ() != 0.0F) {
+                span(edge.spec.line);
             }
         }
         // Or a hoist's landing (matron_hoist.cpp) where no way of the map joins them.
         HoistLeg leg;
         if (!own_way_found_ && find_hoist(here, goal, leg)) {
             own_way_found_ = true;
+            own_way_hoist_ = true;
             own_way_x_ = leg.board_at.GetX();
             own_way_z_ = leg.board_at.GetZ();
         }
+    }
+    // A planned way only where her journey plans it: each of its moves
+    // inside her journey's own scan around her and the lead
+    // (start_journey_to). From the deck 6 landing the C2 pole and ladder up
+    // from the duct lie past it: not hers from there, and the pipe serves.
+    if (own_way_found_ && !own_way_hoist_ &&
+        (own_way_lo_x_ < std::min(float(at.GetX()), heard_x_) - kJourneyScanMarginM ||
+         own_way_hi_x_ > std::max(float(at.GetX()), heard_x_) + kJourneyScanMarginM ||
+         own_way_lo_z_ < std::min(float(at.GetZ()), heard_z_) - kJourneyScanMarginM ||
+         own_way_hi_z_ > std::max(float(at.GetZ()), heard_z_) + kJourneyScanMarginM)) {
+        return false;
     }
     // One that failed under her a moment ago she leaves alone, as her plans do.
     return own_way_found_ && !column_blocked_near(own_way_x_, own_way_z_) &&

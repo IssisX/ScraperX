@@ -540,10 +540,10 @@ bool Matron::start_journey_to(const RVec3 at, const float goal_x, const float go
     }
     journey_wait_ticks_ = 2 * 90;    const float feet = float(at.GetY()) - kStandCentre;
     const traversal::Ignore ignore{body_, player_, static_cast<int>(moving_layer_)};
-    const float lo_x = std::min(float(at.GetX()), goal_x) - 12.0F;
-    const float hi_x = std::max(float(at.GetX()), goal_x) + 12.0F;
-    const float lo_z = std::min(float(at.GetZ()), goal_z) - 12.0F;
-    const float hi_z = std::max(float(at.GetZ()), goal_z) + 12.0F;
+    const float lo_x = std::min(float(at.GetX()), goal_x) - kJourneyScanMarginM;
+    const float hi_x = std::max(float(at.GetX()), goal_x) + kJourneyScanMarginM;
+    const float lo_z = std::min(float(at.GetZ()), goal_z) - kJourneyScanMarginM;
+    const float hi_z = std::max(float(at.GetZ()), goal_z) + kJourneyScanMarginM;
     traversal::AffordanceMap map;
     map.scan(physics_,
              AABox(Vec3(lo_x, std::min(feet, goal_y) - 3.0F, lo_z), Vec3(hi_x, std::max(feet, goal_y) + 4.0F, hi_z)),
