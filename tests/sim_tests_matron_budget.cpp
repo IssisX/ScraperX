@@ -25,6 +25,8 @@
 //
 // The matron-ammo group (J-042, PR #256) joins kScenarios once it lands.
 // J-042: it landed — the ammo group runs here from now on.
+// J-090: the hook in her (matron-hook) joins: her own paths while his line
+// pulls her. The line itself is his, not hers: no path of hers.
 
 #include "sim_tests.hpp"
 #include "sim/matron_effort.hpp"
@@ -57,6 +59,7 @@ const Scenario kScenarios[] = {
     {"matron-mischief", run_matron_mischief}, {"matron-damage", run_matron_damage}, {"strike", run_strike},
     {"matron-sweep", run_matron_sweep},   {"matron-kick", run_matron_kick},     {"matron-jab", run_matron_jab},
     {"matron-ammo", run_ammo},
+    {"matron-hook", run_matron_hook},   // J-090: her paths while his line is in her
 };
 
 // A known leak: the scenario, the path, what is wrong with it (over her

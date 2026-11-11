@@ -901,7 +901,7 @@ void Simulation::PhysicsWorld::hook_pre_step(JPH::BodyInterface &bodies, const S
         // Turning, it takes the line in at kHookReelSpeedMps with at most
         // kHookReelForceN and pays none out (the line's length follows it
         // in); past that force it stalls and holds. Let go, it holds.
-        const float lies = JPH::Vec3(hook_anchor(bodies) - hook_chest(bodies)).Length();
+        const float lies = hook_line_lies(bodies);
         if (commands.hook_reel && lies > kHookLineShortestM) {
             hook_line_->SetMaxLength(std::max(kHookLineShortestM, std::min(hook_line_->GetMaxLength(), lies)));
             hook_line_->SetMotor(kHookReelSpeedMps, kHookReelForceN);
@@ -947,6 +947,7 @@ void Simulation::PhysicsWorld::stow_hook(JPH::BodyInterface &bodies) noexcept {
     hook_state_ = HookState::Stowed;
     hook_tension_n_ = 0.0F;
     hook_bend_count_ = 0;
+    hook_bite_moves_ = false;
 }
 
 JPH::RVec3 Simulation::PhysicsWorld::closest_on_hold(const LeafBox &box, const std::uint32_t long_axis,
@@ -972,6 +973,10 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
                           ? std::abs(hook_line_->GetTotalLambdaPosition() + hook_line_->GetMotorLambda()) / dt
                           : 0.0F;
     if (hook_state_ == HookState::Bitten) {
+        if (hook_bite_moves_ && !bodies.IsAdded(hook_bite_target_)) {
+            stow_hook(bodies);   // her body out of the world: nothing holds the tines
+            return;
+        }
         // The tines' hold on the member (kHookHoldForceN).
         if (hook_tension_n_ > kHookHoldForceN) {
             ++hook_over_ticks_;
@@ -997,7 +1002,39 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
     physics_system_.GetNarrowPhaseQuery().CollideShape(&reach, JPH::Vec3::sReplicate(1.0F),
                                                        JPH::RMat44::sTranslation(at), JPH::CollideShapeSettings(),
                                                        at, hits, {}, {}, filter);
+    // Bitten, the hook is part of what it bit: the line runs from the chest
+    // to the bite on it (a 1.5 kg hook between an 80 kg body and the
+    // structure would only be the solver's weak link).
+    const auto bite_on = [&](const JPH::BodyID held, const JPH::RVec3 bite, const bool moves) {
+        hook_bite_target_ = held;
+        hook_bite_local_ = to_support_local(bodies, held, bite);
+        hook_bite_moves_ = moves;
+        const float length = std::min(kHookLineMaxM, JPH::Vec3(bite - hook_chest(bodies)).Length());
+        physics_system_.RemoveConstraint(hook_line_);
+        hook_line_ = nullptr;
+        bodies.RemoveBody(hook_body_);
+        bodies.DestroyBody(hook_body_);
+        hook_body_ = {};
+        hook_bend_count_ = 0;
+        hook_last_chest_ = hook_chest(bodies);
+        attach_hook_line(bodies, held, bite, length);
+        hook_state_ = HookState::Bitten;
+        hook_over_ticks_ = 0;
+        hook_over_impulse_ = 0.0F;
+        ++hook_bite_count_;
+    };
+    const JPH::BodyID her = matron_ != nullptr ? matron_->body() : JPH::BodyID();
     for (const JPH::CollideShapeResult &hit : hits.mHits) {
+        // J-090: the tines bite into her body where the hook struck it, the
+        // point on her own collision surface, held in her frame from then on.
+        // She is a body like any other on the line: her feet, her footing and
+        // gravity answer its pull (the reel's kHookReelForceN, the tines'
+        // kHookHoldForceN), and nothing else of hers is changed by it.
+        if (!her.IsInvalid() && hit.mBodyID2 == her && bodies.IsAdded(her)) {
+            bite_on(her, at + hit.mContactPointOn2, true);
+            ++hook_matron_bite_count_;
+            return;
+        }
         const JPH::BodyLockRead lock(physics_system_.GetBodyLockInterfaceNoLock(), hit.mBodyID2);
         if (!lock.Succeeded()) {
             continue;
@@ -1012,26 +1049,7 @@ void Simulation::PhysicsWorld::hook_post_step(JPH::BodyInterface &bodies, const 
         if (!leaf_box(body, hit.mSubShapeID2, box) || !box_is_hold(box, long_axis)) {
             continue;
         }
-        const JPH::BodyID held = hit.mBodyID2;
-        // Bitten, the hook is part of the member: the line runs from the
-        // chest to the bite on it (a 1.5 kg hook between an 80 kg body and
-        // the structure would only be the solver's weak link).
-        const JPH::RVec3 bite = closest_on_hold(box, long_axis, at);
-        hook_bite_target_ = held;
-        hook_bite_local_ = to_support_local(bodies, held, bite);
-        const float length = std::min(kHookLineMaxM, JPH::Vec3(bite - hook_chest(bodies)).Length());
-        physics_system_.RemoveConstraint(hook_line_);
-        hook_line_ = nullptr;
-        bodies.RemoveBody(hook_body_);
-        bodies.DestroyBody(hook_body_);
-        hook_body_ = {};
-        hook_bend_count_ = 0;
-        hook_last_chest_ = hook_chest(bodies);
-        attach_hook_line(bodies, held, bite, length);
-        hook_state_ = HookState::Bitten;
-        hook_over_ticks_ = 0;
-        hook_over_impulse_ = 0.0F;
-        ++hook_bite_count_;
+        bite_on(hit.mBodyID2, closest_on_hold(box, long_axis, at), false);
         return;
     }
     if (hook_flight_seconds_ > kHookMissSeconds) {
@@ -1067,6 +1085,7 @@ void Simulation::PhysicsWorld::tear_hook(JPH::BodyInterface &bodies) noexcept {
     hook_over_ticks_ = 0;
     hook_over_impulse_ = 0.0F;
     hook_bite_target_ = {};
+    hook_bite_moves_ = false;
     ++hook_tear_count_;
 }
 
@@ -1098,6 +1117,50 @@ void Simulation::PhysicsWorld::attach_hook_line(JPH::BodyInterface &bodies, cons
     }
     hook_line_ = new kit::RopeConstraint(*chest, *held, settings, true);
     physics_system_.AddConstraint(hook_line_);
+}
+
+// J-090: the line to her body. Unbent, straight to the bite. Bent round the
+// structure, the rope is free to run over its bends both ways: the run from
+// the chest to the nearest bend and the run from the first bend to the bite
+// share one limit (the kit's rope over two fixed sheaves, the bends; static
+// bodies only, see bend_hook_line), so the pull on her is the pull on him,
+// along the line where it leaves the steel for her.
+void Simulation::PhysicsWorld::attach_hook_line_to_bite(JPH::BodyInterface &bodies, const float max_length) noexcept {
+    const JPH::RVec3 bite = hook_end(bodies);
+    if (hook_bend_count_ == 0) {
+        attach_hook_line(bodies, hook_bite_target_, bite, max_length);
+        return;
+    }
+    if (hook_line_ != nullptr) {
+        physics_system_.RemoveConstraint(hook_line_);
+        hook_line_ = nullptr;
+    }
+    JPH::PulleyConstraintSettings settings;
+    settings.mSpace = JPH::EConstraintSpace::WorldSpace;
+    settings.mBodyPoint1 = hook_chest(bodies);
+    settings.mBodyPoint2 = bite;
+    settings.mFixedPoint1 = hook_bend_point(bodies, hook_bend_count_ - 1);
+    settings.mFixedPoint2 = hook_bend_point(bodies, 0);
+    settings.mRatio = 1.0F;
+    settings.mMinLength = 0.0F;
+    settings.mMaxLength = max_length;
+    const JPH::BodyID ids[2] = {player_id_, hook_bite_target_};
+    JPH::BodyLockMultiWrite lock(physics_system_.GetBodyLockInterface(), ids, 2);
+    JPH::Body *chest = lock.GetBody(0);
+    JPH::Body *held = lock.GetBody(1);
+    if (chest == nullptr || held == nullptr) {
+        return;
+    }
+    hook_line_ = new kit::RopeConstraint(*chest, *held, settings, false);
+    physics_system_.AddConstraint(hook_line_);
+}
+
+float Simulation::PhysicsWorld::hook_line_lies(const JPH::BodyInterface &bodies) const noexcept {
+    float lies = JPH::Vec3(hook_anchor(bodies) - hook_chest(bodies)).Length();
+    if (hook_bite_moves_ && hook_bend_count_ > 0) {
+        lies += JPH::Vec3(hook_end(bodies) - hook_bend_point(bodies, 0)).Length();
+    }
+    return lies;
 }
 
 JPH::RVec3 Simulation::PhysicsWorld::hook_bend_point(const JPH::BodyInterface &bodies,
@@ -1162,7 +1225,11 @@ void Simulation::PhysicsWorld::bend_hook_line(JPH::BodyInterface &bodies) noexce
             const float free = hook_line_->GetMaxLength() + bend.laid_m;
             const JPH::BodyID body = first ? hook_bite_target_ : hook_bends_[hook_bend_count_ - 2].body;
             --hook_bend_count_;
-            attach_hook_line(bodies, body, before, free);
+            if (hook_bite_moves_) {
+                attach_hook_line_to_bite(bodies, free);
+            } else {
+                attach_hook_line(bodies, body, before, free);
+            }
             ++hook_unwrap_count_;
         }
     }
@@ -1195,15 +1262,24 @@ void Simulation::PhysicsWorld::bend_hook_line(JPH::BodyInterface &bodies) noexce
             const JPH::RVec3 point = JPH::RRayCast(from, run).GetPointOnRay(edge.mFraction);
             const JPH::RVec3 bend_at = point + surface_normal(edge.mBodyID, edge.mSubShapeID2, point) * kHookWrapStandoffM;
             const float laid = JPH::Vec3(anchor - bend_at).Length();
-            const float free = hook_line_->GetMaxLength() - laid;
-            if (laid > kHookWrapEndM && free > 0.0F) {
+            // To her (a moving bite), the first bend is a sheave: the rope
+            // runs on over it to her, none of it laid (attach_hook_line_to_bite).
+            const bool sheave = hook_bite_moves_ && hook_bend_count_ == 0;
+            const float free = hook_line_->GetMaxLength() - (sheave ? 0.0F : laid);
+            if (hook_bite_moves_ && bodies.GetMotionType(edge.mBodyID) != JPH::EMotionType::Static) {
+                ++hook_bends_refused_;   // a sheave is a fixed point: a line to her bends on static steel only
+            } else if (laid > kHookWrapEndM && free > 0.0F) {
                 HookBend &bend = hook_bends_[hook_bend_count_];
                 bend.body = edge.mBodyID;
                 bend.local = to_support_local(bodies, edge.mBodyID, bend_at);
                 bend.turn = JPH::Vec3(bend_at - anchor).Cross(JPH::Vec3(chest - bend_at));
-                bend.laid_m = laid;
+                bend.laid_m = sheave ? 0.0F : laid;
                 ++hook_bend_count_;
-                attach_hook_line(bodies, edge.mBodyID, bend_at, free);
+                if (hook_bite_moves_) {
+                    attach_hook_line_to_bite(bodies, free);
+                } else {
+                    attach_hook_line(bodies, edge.mBodyID, bend_at, free);
+                }
                 ++hook_wrap_count_;
             }
         }
