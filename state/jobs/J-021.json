@@ -8,7 +8,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
+ "deadline": "2026-11-11T20:17:00Z",
  "head": "fd442aa33c8acb2230c1b997edebc0011a212c12",
  "issue": 128,
  "job": "J-021",
@@ -135,6 +135,31 @@
    "version": "6757835992",
    "via": "session",
    "what": "ask from Muse on #128"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T18:18:52Z",
+   "dead": "2026-11-11T22:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T20:17:00Z",
+   "id": "O-9a350cd9",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T18:18:52Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j021",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 128,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:fd442aa33c8acb2230c1b997edebc0011a212c12",
+   "via": "session",
+   "what": "`fb-bot/integrate-j021` is green with no PR: open one (Muse cannot open PRs)"
   }
  ],
  "outcome": null,
@@ -147,5 +172,5 @@
  ],
  "review": "",
  "state": "proof",
- "updated": "2026-11-11T17:16:05Z"
+ "updated": "2026-11-11T18:18:52Z"
 }

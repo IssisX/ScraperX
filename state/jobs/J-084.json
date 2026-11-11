@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
+ "deadline": "2026-11-11T20:17:00Z",
  "head": "c35a606299748fd83543765921a40de3f903c022",
  "issue": 402,
  "job": "J-084",
@@ -48,6 +48,31 @@
    "version": "red:a94ada14598356c391eeb61ab12c40f04280e71c",
    "via": "session",
    "what": "`claude/integrate-j084` proof red: host-build, android-build, no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T18:18:52Z",
+   "dead": "2026-11-11T22:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T20:17:00Z",
+   "id": "O-f4af1cfb",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T18:18:52Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j084",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 402,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:c35a606299748fd83543765921a40de3f903c022",
+   "via": "session",
+   "what": "`claude/integrate-j084` is green with no PR: open one"
   }
  ],
  "outcome": null,
@@ -58,5 +83,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-11T17:16:05Z"
+ "updated": "2026-11-11T18:18:52Z"
 }

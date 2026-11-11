@@ -107,6 +107,31 @@
    "version": "red:d21261ee2b95844bbd3715d6855c847d3cd67cad",
    "via": "email",
    "what": "`fb-bot/integrate-j054` proof red: scope, no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T18:18:52Z",
+   "dead": "2026-11-12T02:18:52Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T22:18:52Z",
+   "id": "O-7e4f79a3",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T18:18:52Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j054",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 293,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:0ceb010e3daee42a5cd918bd60b62a8577ca28c0",
+   "via": "email",
+   "what": "`fb-bot/integrate-protected-j054` proof red: native-tests (matron-slices-3), native-tests (matron-slices-1), native-tests (athletic-traversal-2), no PR"
   }
  ],
  "outcome": null,
@@ -116,6 +141,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T17:16:05Z"
+ "state": "working",
+ "updated": "2026-11-11T18:18:52Z"
 }

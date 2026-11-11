@@ -2,14 +2,15 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "claude/integrate-j092": "76ee77a616bfcca6b19315e6bfd7f4512a2a3170"
+  "claude/integrate-j092": "76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
+  "claude/integrate-protected-j092": "0d0606a2df4e895ff26fc1beacf0470683c1e2e7"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
  "deadline": "2026-11-11T18:17:00Z",
- "head": "76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
+ "head": "0d0606a2df4e895ff26fc1beacf0470683c1e2e7",
  "issue": 410,
  "job": "J-092",
  "landed": {
@@ -17,6 +18,11 @@
    "76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
    "",
    "2026-11-11T17:16:05Z"
+  ],
+  "claude/integrate-protected-j092": [
+   "0d0606a2df4e895ff26fc1beacf0470683c1e2e7",
+   "",
+   "2026-11-11T18:18:52Z"
   ]
  },
  "obligations": [
@@ -53,7 +59,7 @@
    "ack": null,
    "ack_rule": "new-head|reply|ack",
    "asked": null,
-   "attempts": 1,
+   "attempts": 2,
    "closed": null,
    "created": "2026-11-11T17:16:05Z",
    "dead": "2026-11-11T20:17:00Z",
@@ -62,10 +68,10 @@
    "id": "O-6f17cffa",
    "kind": "fix",
    "last_error": "",
-   "last_sent": "2026-11-11T17:16:05Z",
+   "last_sent": "2026-11-11T18:18:52Z",
    "missing": 0,
    "ref": "BRANCH|claude/integrate-j092",
-   "sends": 1,
+   "sends": 2,
    "sent_by": "live",
    "thread": 410,
    "to": "claude",
@@ -82,6 +88,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T17:16:05Z"
+ "state": "proof",
+ "updated": "2026-11-11T18:18:52Z"
 }

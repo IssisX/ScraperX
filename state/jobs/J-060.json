@@ -11,7 +11,7 @@
   "6777896865:72"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-11T14:17:00Z",
+ "deadline": null,
  "head": "b4ba543bd6f6a314c5e7dcf0b973a63e5cc47058",
  "issue": 320,
  "job": "J-060",
@@ -315,7 +315,11 @@
    "what": "`fb-bot/integrate-j060` proof red: native-tests (matron-slices-3), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T22:52:47Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T21:17:50Z",
    "attempts": 1,
@@ -348,5 +352,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T04:19:09Z"
+ "updated": "2026-11-11T18:18:52Z"
 }
