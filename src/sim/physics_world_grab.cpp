@@ -562,7 +562,7 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         grip_over_ticks_ = grip_load_n_ > Matron::kGripMaxForceN ? grip_over_ticks_ + 1 : 0;
         grip_strain_ns_ = std::max(0.0F, grip_strain_ns_ +
                                              std::max(0.0F, grip_load_n_ - matron_->grip_strain_floor_n()) * dt -
-                                             Matron::kGripStrainDecay * dt);
+                                             matron_->grip_strain_decay() * dt);
         if (grip_over_ticks_ >= 2 || grip_strain_ns_ > Matron::kGripTearNs) {
             tear_grip(true);
         }
