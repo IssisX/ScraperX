@@ -1259,13 +1259,18 @@ void run_matron_fatality() {
     //      every step in her hand a real move; the release beat once; the
     //      checkpoint's restore, the body whole ----
     {
-        const std::array<std::array<double, 2>, 7> spots{{{19.5, -140.0},
-                                                          {20.0, -150.0},
-                                                          {21.0, -155.0},
-                                                          {21.5, -145.0},
-                                                          {21.5, -150.0},
-                                                          {22.5, -145.0},
-                                                          {-6.0, -129.0}}};
+        // Where no rail she can use fits her five beats in time (her catch
+        // too far from one, or no room to hang him out past the lip), her
+        // floor version is the fatality (Cory, 2026-11-11: "Floor"): the
+        // same death and the same restore, no hang demanded (the third
+        // number: 1 the floor version).
+        const std::array<std::array<double, 3>, 7> spots{{{19.5, -140.0, 0.0},
+                                                          {20.0, -150.0, 0.0},
+                                                          {21.0, -155.0, 1.0},
+                                                          {21.5, -145.0, 1.0},
+                                                          {21.5, -150.0, 1.0},
+                                                          {22.5, -145.0, 0.0},
+                                                          {-6.0, -129.0, 1.0}}};
         for (const auto &spot : spots) {
             Simulation s(InitialSpawn::Deck154);
             s.place_matron_home(154.0F);
@@ -1276,6 +1281,24 @@ void run_matron_fatality() {
             (void)std::snprintf(name.data(), name.size(), "(%.1f, %.1f)", spot[0], spot[1]);
             const std::string at(name.data());
             report_fatal(("matron fatality band " + at).c_str(), r);
+            if (spot[2] > 0.5) {
+                // Her floor version: claimed where he lies, nobody let go over
+                // a drop, a death, and the run restarts from the checkpoint,
+                // whole (as "matron fatality floor").
+                require(r.path == static_cast<int>(Matron::FatalPath::Floor) && r.claimed_s > 0.0 &&
+                            r.m.fatal_release_beat == r.releases_start,
+                        ("matron fatality band " + at + ": no rail fits her beats: her floor version, no let-go").c_str());
+                require(r.max_step < 0.2 && r.claimed_step < 0.2,
+                        ("matron fatality band " + at + ": no teleport while held").c_str());
+                require(r.death_s > r.claimed_s && r.deaths_end == r.deaths_start + 1 && r.deaths_held == 0 &&
+                            dist3(r.p.player_position, r.checkpoint) < 0.05 && !r.p.left_arm_lost &&
+                            !r.p.right_arm_lost && r.p.runs_ended_by_matron == 0,
+                        ("matron fatality band " + at + ": a death, and the run restarts from the checkpoint, whole").c_str());
+                std::cout << "PASS scraperx_sim matron fatality band " << at
+                          << ": floor version, grip_to_claim_s=" << r.claimed_s - r.grip_s
+                          << " claim_to_death_s=" << r.death_s - r.claimed_s << " max_step_m=" << r.max_step << "\n";
+                continue;
+            }
             const double length = r.release_s - r.grip_s;
             require(r.path == static_cast<int>(Matron::FatalPath::Hang) && r.release_s > 0.0,
                     ("matron fatality band " + at + ": held out over a drop that kills, and let go").c_str());
