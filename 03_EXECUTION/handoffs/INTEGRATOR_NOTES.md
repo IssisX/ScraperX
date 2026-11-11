@@ -11,14 +11,14 @@ refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpe
 - J-001 #108: window pose @ 67837d5e and Floor checks on `claude/integrate-protected-j093` @ 56624498 (on top of
   it; land after the hold branch). 9 left (B1 timing x6, two entry-swing reaches, snag setup): pass 6 helper, 9:05 AM.
 - J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
-  before it lands. J-084 #402 (taken from Muse 9:06 AM): helper on `claude/integrate-j084`; J-082 waits on its table.
+  before it lands. J-084 #402: whole climb PASS (24 stages) @ a94ada14, proof running; touch-2 limit 900 s is a
+  workflow change (Codex + API review). J-082 #400 band 1: xhigh helper, protected, on top of j084.
 - J-090 #408 hook her: pass 1 c755689d (proof 43041899766). Ruled: physics stands (a planted
   Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
   her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
 - J-092 #410 slab: probe PASS (24,203 N·s, 4x lethal); step 2 build on an xhigh helper; her side is Muse's J-100 #418.
 Gmail filter (Cory, 8:45 AM): agent mail skips his inbox to the label "ScraperX agents" (new mail checked 9 AM).
-- Argon is Gemini (Cory's): reached only by Cory pasting a prompt in chat; the hardest physics (J-001, J-044c).
-- 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
+- Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
