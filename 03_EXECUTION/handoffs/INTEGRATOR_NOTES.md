@@ -6,11 +6,18 @@ At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
 Read through: 1794406889 (2026-11-11 8:21 AM Central)
 
-## Now (11-11)
-Coding with the system (J-072 done 11-10). Work state lives in GitHub, not here: job issues (owner, state, needs:eyes
-for every visual or fight job, so the switchboard holds the merge for the eye), Muse's queue (checked by
-`tools/board/queue_check.py`), my follow-ups as their own job issues (J-093 #411). Dated reminders are scheduled
-tasks (the PAT expiry, the backstop decision), never only a line here.
+## Now (11-11, before Cory's compact at about 9 AM)
+Work state lives in GitHub: job issues (owner, state, needs:eyes), Muse's queue (`tools/board/queue_check.py`, floor 8,
+refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpers at high, the cap (Cory 11-11):
+- J-001 #108 (helper a900...): B1 and group C number-first; then the Floor checks (Cory: "Floor") on
+  `claude/integrate-protected-j093`. Branch `claude/integrate-j001-hold` @ 40e4c452, matron-grab 35 failing.
+- J-096 #414 planks bend (helper a349...): slice 1 on `claude/integrate-j096`.
+- J-090 #408 hook her: pass 1 pushed c755689d (proof 43041899766 was running). Ruled: physics stands (a planted
+  Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
+  her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
+- Next free helper: J-097 (the QUEUE-LOW alarm).
+Gmail filter (Cory set it 8:45 AM): agent mail skips his inbox to the label "ScraperX agents"; older mail may still
+be moving. Never touch his inbox.
 - Argon is Gemini (Cory's): reached only by Cory pasting a prompt in chat; the hardest physics (J-001, J-044c).
 - 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
 
