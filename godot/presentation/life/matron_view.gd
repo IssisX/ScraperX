@@ -108,8 +108,6 @@ const STATE_CARRY := 13
 const STATE_DANGLE := 14
 const STATE_ARMPLAY := 15
 const STATE_SPARE := 17
-# Her hands onto each new hold: most of the way in a tenth of a second.
-const HAND_EASE := 22.0
 const POSE_KEYS := ["torso", "neck", "head", "jaw", "sh_l", "sh_r", "el_l", "el_r",
 	"hp_l", "hp_r", "kn_l", "kn_r", "an_l", "an_r"]
 
@@ -183,6 +181,29 @@ var _w_hold2 := 0.0
 var _w_hold2_v := 0.0
 var _hold_at := Vector3.ZERO
 var _hold_at2 := Vector3.ZERO
+# Her stoop to a prop (the toolbox) her real arm falls short of (0..1):
+# raised while the rig finds the handle past her arm (matron_rig.gd
+# prop_short), let down once it is in reach; her pose eased that far toward
+# the stoop (STOOP_*: trunk over her knees, hips down, knees bent).
+var _prop_lean := 0.0
+const PROP_LEAN_UP_S := 4.0
+const PROP_LEAN_DOWN_S := 1.2
+# and raised this long before the stoop would have to start to be drawn by the
+# take (matron_rig.gd prop_take_s): her speed changes on the way, and her drawn
+# shoulder trails the lean by about 0.25 s (matron_rig.gd govern)
+const PROP_LEAD_S := 1.0
+# trunk past level: the native takes a box at her centre kTakeM (0.85 m) from
+# it, and only this deep a stoop brings its handle inside her real arm there
+const STOOP_PITCH := 1.9
+const STOOP_HIP_Y := 0.45
+const STOOP_KNEES := 2.3
+const STOOP_LEGS := 1.25
+# Her tuck over a rail (pipe_tuck 1): trunk pitch, hips over her soles (in
+# standing units), knees and thighs.
+const TUCK_PITCH := 1.15
+const TUCK_HIP_Y := 0.34
+const TUCK_KNEES := 2.65
+const TUCK_LEGS := 1.35
 # What her hands hold, drawn: a jump of it (the ankle first in her hand, a
 # re-take) eased out over HOLD_BLEND_W, its motion followed as it is.
 var _hold_raw := Vector3.ZERO
@@ -222,17 +243,17 @@ var _root_off := Vector3.ZERO
 var _root_off_v := Vector3.ZERO
 var _box_v := Vector3.ZERO
 var _burst_tail := 0.0
-# Her two holds as drawn on what she climbs (matron_rig.gd contact reaches
-# for these).
+# Her two holds on what she climbs this frame (matron_rig.gd contact reaches
+# for these, its wrists following them).
 var _held_shown := PackedVector3Array([Vector3.ZERO, Vector3.ZERO])
-var _hands_fresh := true
 # Rendered wrist distance from the authoritative carried handle, in meters.
 # INF when no native prop constraint is active (including the throw tick).
 var prop_hand_error_m := INF
 var prop_attached := false
 # Going down a line's bare cable: the sparks off her forearms.
 var _sparks: CPUParticles3D
-var _planks: Array[MeshInstance3D] = []
+var _planks: Array[Node3D] = []
+var _plank_parts: Array = []
 var _plank_bolted: Array[bool] = []
 # The locker.
 var _locker: Node3D
@@ -357,6 +378,67 @@ func _ball(radius: float, material: Material, parent: Node3D, at := Vector3.ZERO
 	return node
 
 
+# The door's bolts and dents, each set one MultiMesh (J-045, #248): each part
+# stays a node (hidden as a bolt pops, scaled as a dent swells) that draws
+# nothing itself, its instance following it (_follow_door_parts).
+var _door_sets: Array = []
+
+func _instance_door_parts() -> void:
+	for parts: Array in [_bolts, _dents]:
+		var first := parts[0] as MeshInstance3D
+		var multimesh := MultiMesh.new()
+		multimesh.transform_format = MultiMesh.TRANSFORM_3D
+		multimesh.mesh = first.mesh
+		multimesh.instance_count = parts.size()
+		var drawn := MultiMeshInstance3D.new()
+		drawn.multimesh = multimesh
+		drawn.material_override = first.material_override
+		_door.add_child(drawn)
+		_door_sets.append([multimesh, parts])
+		for part: MeshInstance3D in parts:
+			part.layers = 0
+	_follow_door_parts()
+
+func _follow_door_parts() -> void:
+	for entry in _door_sets:
+		var parts: Array = entry[1]
+		for k in parts.size():
+			var part := parts[k] as MeshInstance3D
+			(entry[0] as MultiMesh).set_instance_transform(k, part.transform if part.visible \
+				else Transform3D(Basis().scaled(Vector3.ZERO), part.position))
+
+
+# A parent's fixed parts as one mesh per material (J-045, #248: the locker and
+# the catwalk's planks were some 200 draws, seen from the yard). Only leaves
+# nothing else holds: their places and paints are unchanged.
+func _merge_leaves(parent: Node3D, keep: Array = []) -> void:
+	var tools := {}
+	var materials := {}
+	for child in parent.get_children():
+		var part := child as MeshInstance3D
+		if part != null and part.material_override != null and not part.material_override is StandardMaterial3D:
+			continue
+		if part == null or part in keep or part.get_child_count() > 0 or not part.visible or part.mesh == null:
+			continue
+		# Paints made alike (each tick its own) are one paint.
+		var paint := part.material_override as StandardMaterial3D
+		var key: Variant = 0 if paint == null else [paint.albedo_color, paint.roughness, paint.metallic,
+			paint.emission_enabled, paint.emission, paint.emission_energy_multiplier]
+		if not tools.has(key):
+			var tool := SurfaceTool.new()
+			tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+			tools[key] = tool
+			materials[key] = part.material_override
+		(tools[key] as SurfaceTool).append_from(part.mesh, 0, part.transform)
+		parent.remove_child(part)
+		part.queue_free()
+	for key in tools:
+		var merged := MeshInstance3D.new()
+		merged.mesh = (tools[key] as SurfaceTool).commit()
+		merged.material_override = materials[key]
+		parent.add_child(merged)
+
+
 func _pivot(parent: Node3D, at := Vector3.ZERO) -> Node3D:
 	var node := Node3D.new()
 	node.position = at
@@ -416,13 +498,18 @@ func _build_locker() -> void:
 	_box(Vector3(0.5, 0.5, 0.05), worn, gauge)
 	var face := _cyl(0.2, 0.2, 0.03, _material(Color("cfc9b6"), 0.7), gauge, Vector3(0.0, 0.0, -0.035), 20)
 	face.rotation.x = PI * 0.5
+	# The left-hand ticks merge apart from the right-hand ones, so no merged
+	# tick box spans the dial under the LOAD label (the label's board stays the face).
+	var left_ticks := _pivot(gauge)
 	for k in 7:
 		var a := lerpf(-2.2, 2.2, float(k) / 6.0)
-		var tick := _box(Vector3(0.012, 0.045, 0.01), _material(Color("2a2623"), 0.8), gauge, Vector3(sin(a) * 0.16, cos(a) * 0.16, -0.055))
+		var tick := _box(Vector3(0.012, 0.045, 0.01), _material(Color("2a2623"), 0.8), left_ticks if k < 3 else gauge, Vector3(sin(a) * 0.16, cos(a) * 0.16, -0.055))
 		tick.rotation.z = -a
 		if k >= 5:
 			tick.scale = Vector3(1.8, 1.0, 1.0)
 			tick.material_override = _material(Color("b01a12"), 0.6, 0.0, Color("ff2418"), 0.4)
+	_merge_leaves(left_ticks)
+	_merge_leaves(gauge)
 	_needle = _pivot(gauge, Vector3(0.0, 0.0, -0.06))
 	_box(Vector3(0.012, 0.17, 0.008), _material(Color("a31610"), 0.5, 0.0, Color("ff2418"), 0.5), _needle, Vector3(0.0, 0.07, 0.0))
 	_needle.rotation.z = 2.2
@@ -455,6 +542,9 @@ func _build_locker() -> void:
 	_lamp_light.omni_range = 12.0
 	_lamp_light.position = Vector3(0.4, s.y * 0.5 + 0.2, -0.5)
 	_locker.add_child(_lamp_light)
+	_merge_leaves(_door, _bolts + _dents)
+	_instance_door_parts()
+	_merge_leaves(_locker, [_lamp_glass])
 
 
 # Sealed, the native reports the centre she would step out at: home floor
@@ -490,6 +580,7 @@ func _update_locker(data: Dictionary, delta: float) -> void:
 			var push := clampf(strain * 1.4 - 0.15 * float(k), 0.0, 1.0)
 			_dents[k].scale = Vector3(1.0, 1.4, 0.18 + 0.9 * push)
 			_dents[k].position.z = -0.03 - 0.05 * push
+		_follow_door_parts()
 		# The lamp: faster as it climbs.
 		var pulse := 0.5 + 0.5 * sin(_clock * TAU * (1.2 + 7.0 * strain))
 		_lamp_light.light_energy = 0.4 + 4.0 * pulse
@@ -513,6 +604,7 @@ func _update_locker(data: Dictionary, delta: float) -> void:
 	# Bolts pop one by one.
 	while _bolts_seen < popped and _bolts_seen < BOLT_COUNT:
 		_bolts[_bolts_seen].visible = false
+		_follow_door_parts()
 		_bolts_seen += 1
 		bolts_shown_popped = _bolts_seen
 		if _audio != null:
@@ -560,6 +652,7 @@ func _seal_locker() -> void:
 	_work_glass_material.emission_energy_multiplier = 1.4
 	for bolt in _bolts:
 		bolt.visible = true
+	_follow_door_parts()
 	bolts_shown_popped = 0
 
 
@@ -567,19 +660,54 @@ func _seal_locker() -> void:
 
 
 func _build_planks() -> void:
+	# Every plank's plate, rivets and seam are instances (J-045, #248: four
+	# draws for the catwalk, not thirty-three); each plank is a bare node
+	# where the native puts it, and _update_planks poses its instances.
+	var plate_mesh := BoxMesh.new()
+	plate_mesh.size = PLANK_SIZE
+	var rivets := SurfaceTool.new()
+	rivets.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rivet := CylinderMesh.new()
+	rivet.top_radius = 0.035
+	rivet.bottom_radius = 0.035
+	rivet.height = 0.02
+	rivet.radial_segments = 8
+	rivet.rings = 1
+	# Rivets along both edges and a rusted seam: the plate reads as old plate.
+	for k in 6:
+		for side in [-1.0, 1.0]:
+			rivets.append_from(rivet, 0, Transform3D(Basis(), Vector3(-1.3 + 0.52 * float(k), 0.05, side * 0.72)))
+	var seam := BoxMesh.new()
+	seam.size = Vector3(PLANK_SIZE.x, 0.01, 0.06)
+	var sets := [
+		_plank_set(plate_mesh, _material(Color("5e4b3a"), 0.92, 0.35), (PLANKS + 1) / 2, Transform3D()),
+		_plank_set(plate_mesh, _material(Color("4f4235"), 0.92, 0.35), PLANKS / 2, Transform3D()),
+		_plank_set(rivets.commit(), _material(Color("3a3028"), 0.8, 0.6), PLANKS, Transform3D()),
+		_plank_set(seam, _material(Color("2b2018"), 1.0), PLANKS, Transform3D(Basis(), Vector3(0.0, 0.045, 0.0)))]
 	for i in PLANKS:
-		var tone := Color("5e4b3a") if i % 2 == 0 else Color("4f4235")
-		var plate := _box(PLANK_SIZE, _material(tone, 0.92, 0.35), self)
-		# Rivets along both edges and a rusted seam: the plate reads as old plate.
-		var rivet_material := _material(Color("3a3028"), 0.8, 0.6)
-		for k in 6:
-			for side in [-1.0, 1.0]:
-				var rivet := _cyl(0.035, 0.035, 0.02, rivet_material, plate, Vector3(-1.3 + 0.52 * float(k), 0.05, side * 0.72), 8)
-				rivet.scale = Vector3(1.0, 1.0, 1.0)
-		_box(Vector3(PLANK_SIZE.x, 0.01, 0.06), _material(Color("2b2018"), 1.0), plate, Vector3(0.0, 0.045, 0.0))
+		var plate := Node3D.new()
 		plate.visible = false
+		add_child(plate)
 		_planks.append(plate)
 		_plank_bolted.append(true)
+		# Its tone alternates plank by plank, as each plate was painted.
+		_plank_parts.append([[sets[i % 2], i / 2], [sets[2], i], [sets[3], i]])
+
+
+# [MultiMesh, the part's place on its plank]: `count` instances, hidden.
+func _plank_set(mesh: Mesh, material: Material, count: int, local: Transform3D) -> Array:
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.mesh = mesh
+	multimesh.instance_count = count
+	for index in count:
+		multimesh.set_instance_transform(index, Transform3D(Basis().scaled(Vector3.ZERO), Vector3.ZERO))
+	var drawn := MultiMeshInstance3D.new()
+	drawn.name = "Planks"
+	drawn.multimesh = multimesh
+	drawn.material_override = material
+	add_child(drawn)
+	return [multimesh, local]
 
 
 func _build_stencils() -> void:
@@ -611,9 +739,14 @@ func _update_planks(data: Dictionary) -> void:
 		var plate := _planks[i]
 		plate.visible = not gone
 		if gone:
+			for part in _plank_parts[i]:
+				(part[0][0] as MultiMesh).set_instance_transform(int(part[1]),
+					Transform3D(Basis().scaled(Vector3.ZERO), plate.position))
 			continue
 		plate.global_position = Vector3(planks[b], planks[b + 1], planks[b + 2])
 		plate.global_basis = Basis(Quaternion(planks[b + 3], planks[b + 4], planks[b + 5], planks[b + 6]))
+		for part in _plank_parts[i]:
+			(part[0][0] as MultiMesh).set_instance_transform(int(part[1]), plate.transform * (part[0][1] as Transform3D))
 		if _plank_bolted[i] and not bolted and _audio != null:
 			_audio.matron_cue(&"plank_crack", plate.global_position, 3.0, randf_range(0.85, 1.1))
 		_plank_bolted[i] = bolted
@@ -624,10 +757,12 @@ func _update_planks(data: Dictionary) -> void:
 
 const MatronRig := preload("res://presentation/life/matron_rig.gd")
 const MatronLook := preload("res://presentation/life/matron_look.gd")
+const MatronInjury := preload("res://presentation/life/matron/matron_injury.gd")
 const BODY_FILE := "res://presentation/life/matron/matron.glb"
 const RIG_FILE := "res://presentation/life/matron/matron_rig.json"
 var _rig: RefCounted     # matron_rig.gd: pivots to bones, contact, eyes, hair
 var _look: RefCounted    # matron_look.gd: her materials and the exposure on them
+var _injury: Node3D = null  # matron_injury.gd: per-region bruise, swelling, mark
 
 
 func _build_figure() -> void:
@@ -742,6 +877,9 @@ func _seat_hair(root: Node) -> void:
 			for j in bpv:
 				out_b[i * bpv + j] = b
 				out_w[i * bpv + j] = 1.0 if j == 0 else 0.0
+		var skels := root.find_children("*", "Skeleton3D", true, false)
+		if mi.skin != null and not skels.is_empty():
+			_hair_onto_chains(mi.skin, skels[0] as Skeleton3D, out_v, out_b, bpv)
 		arrays[Mesh.ARRAY_VERTEX] = out_v
 		arrays[Mesh.ARRAY_BONES] = out_b
 		arrays[Mesh.ARRAY_WEIGHTS] = out_w
@@ -755,6 +893,72 @@ func _seat_hair(root: Node) -> void:
 		break
 	if not found:
 		push_error("matron hair seat: no hair mesh")
+
+
+# J-067 (Cory 11-08: the back hair "raised", splitting sideways instead of
+# curving down both sides of her back). Measured in each hair bone's own
+# frame, its vertices sat on average up to 8 cm off its chain, behind it on
+# the back locks, growing toward the tips: the authored hair falls wider than
+# the straight chains that move it. Swung with the chain, that offset stood
+# the back hair out behind her head in a sheet and fanned it sideways, while
+# the chains themselves hung down her back. Each vertex keeps its place within
+# its lock; only the lock's mean offset comes off, blended by height between
+# a bone and the next one up or down, so a ribbon never tears at a joint. The
+# chains' own collision (step_hair) then keeps the locks outside her.
+func _hair_onto_chains(skin: Skin, sk: Skeleton3D, verts: PackedVector3Array, bones: PackedInt32Array, bpv: int) -> void:
+	var binds := skin.get_bind_count()
+	var key := {}        # "chain/k" -> bind index
+	var chain_k := []    # bind index -> Vector2i(chain, k), or (-1, -1)
+	var seg := []        # bind index -> the bone's length to its child
+	for bi in binds:
+		var bname := skin.get_bind_name(bi)
+		if bname == "":
+			bname = sk.get_bone_name(skin.get_bind_bone(bi))
+		var ck := Vector2i(-1, -1)
+		var parts := bname.trim_prefix("hair").split("_")
+		if bname.begins_with("hair") and parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int():
+			ck = Vector2i(int(parts[0]), int(parts[1]))
+			key["%d/%d" % [ck.x, ck.y]] = bi
+		chain_k.append(ck)
+		var b := sk.find_bone(bname)
+		var length := 0.09
+		if b >= 0:
+			for child in sk.get_bone_children(b):
+				length = sk.get_bone_rest(child).origin.length()
+		seg.append(maxf(length, 1e-3))
+	var sum := []
+	var count := []
+	sum.resize(binds)
+	count.resize(binds)
+	for bi in binds:
+		sum[bi] = Vector2.ZERO
+		count[bi] = 0
+	for i in verts.size():
+		var bi := bones[i * bpv]
+		if bi < 0 or bi >= binds or (chain_k[bi] as Vector2i).x < 0:
+			continue
+		var l := skin.get_bind_pose(bi) * verts[i]
+		sum[bi] = (sum[bi] as Vector2) + Vector2(l.x, l.z)
+		count[bi] = int(count[bi]) + 1
+	var mean := []
+	mean.resize(binds)
+	for bi in binds:
+		mean[bi] = (sum[bi] as Vector2) / float(count[bi]) if int(count[bi]) > 0 else Vector2.ZERO
+	for i in verts.size():
+		var bi := bones[i * bpv]
+		if bi < 0 or bi >= binds:
+			continue
+		var ck: Vector2i = chain_k[bi]
+		if ck.x < 0:
+			continue
+		var pose := skin.get_bind_pose(bi)
+		var l := pose * verts[i]
+		var t := clampf(absf(l.y) / float(seg[bi]), 0.0, 1.0)
+		var other := "%d/%d" % [ck.x, ck.y + (1 if l.y < 0.0 else -1)]
+		var m: Vector2 = mean[bi]
+		if key.has(other) and int(count[key[other]]) > 0:
+			m = m.lerp(mean[key[other]], t)
+		verts[i] = pose.affine_inverse() * (l - Vector3(m.x, 0.0, m.y))
 
 
 # Her body: the skinned glTF read at runtime (kept as it is by its .import),
@@ -783,6 +987,8 @@ func _load_body() -> void:
 	_look.dress(root)
 	_rig = MatronRig.new()
 	_rig.setup(skeletons[0] as Skeleton3D, rig_data, self)
+	_injury = MatronInjury.new()
+	add_child(_injury)
 
 
 # Blood on her (gore_view.gd decides how much; matron_look.gd lays it on).
@@ -1001,11 +1207,23 @@ func _crawl_retune() -> void:
 func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falling: bool) -> void:
 	if _rig == null:
 		return
+	var fresh := fresh_frame
 	_crawl_retune()
 	_ease_pose(delta)
 	_apply_flinch(delta)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
+	var short := float(_rig.prop_short)
+	if _pose_fresh:
+		_prop_lean = 0.0
+	elif bool(_rig.prop_carried) and (short <= 0.0 or bool(_rig.prop_over)):
+		# the box in her hand and in her reach, or lifted above her shoulder:
+		# she comes up with it as the native lifts it
+		_prop_lean = maxf(0.0, _prop_lean - PROP_LEAN_UP_S * delta)
+	elif short > 0.0 and float(_rig.prop_take_s) <= (1.0 - _prop_lean) / PROP_LEAN_UP_S + PROP_LEAD_S:
+		_prop_lean = minf(1.0, _prop_lean + PROP_LEAN_UP_S * delta)
+	elif short < -0.08:
+		_prop_lean = maxf(0.0, _prop_lean - PROP_LEAN_DOWN_S * delta)
 	prop_attached = int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
 	prop_hand_error_m = INF
 	if prop_attached:
@@ -1018,6 +1236,7 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	fresh_frame = false
 	_rig.aim_eyes(camera_position, bool(data["sees_player"]), _clock)
 	_rig.step_hair(delta)
+	_rig.step_skirt(delta, fresh)
 
 
 # Her joints, hips and limb swell go to this frame's pose on their springs
@@ -1096,11 +1315,13 @@ func _ease_figure(centre: Vector3, delta: float) -> void:
 	_figure.global_position = centre + shown * local
 
 
-# Her hands on what she climbs: each reaches its new hold over a moment
-# (HAND_EASE); a new climb, or one far off, starts where its hold is.
-func _ease_hands(data: Dictionary, delta: float) -> void:
+# Her hands on what she climbs: the holds they go for this frame. The rig
+# takes each wrist onto its hold over frames, a new climb's from where her
+# wrist is drawn (matron_rig.gd _follow_hand, no faster than HAND_MAX_M_S),
+# so nothing here jumps them: no restart at a new climb, none for a hold
+# far off.
+func _ease_hands(data: Dictionary) -> void:
 	if not (bool(data.get("climbing", false)) and data.has("climb_hand")):
-		_hands_fresh = true
 		return
 	var want: Vector3 = data["climb_hand"]
 	var want2: Vector3 = data["climb_hand2"] if data.has("climb_hand2") else want
@@ -1110,14 +1331,8 @@ func _ease_hands(data: Dictionary, delta: float) -> void:
 		if bool(data["contact_hand_held"]):
 			want = data["contact_hand"]
 		want2 = data["contact_hand2"] if bool(data.get("contact_hand2_held", false)) else want
-	if _hands_fresh or _pose_fresh or _held_shown[0].distance_to(want) > 1.5 or _held_shown[1].distance_to(want2) > 1.5:
-		_held_shown[0] = want
-		_held_shown[1] = want2
-		_hands_fresh = false
-		return
-	var k := 1.0 - exp(-HAND_EASE * delta)
-	_held_shown[0] = _held_shown[0].lerp(want, k)
-	_held_shown[1] = _held_shown[1].lerp(want2, k)
+	_held_shown[0] = want
+	_held_shown[1] = want2
 
 
 # The contortion layer's bursts: every 1.4-3.6 s one wrong thing (kind 0 the
@@ -1279,7 +1494,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		legs_fwd = sin(_clock * 27.0) * 0.8
 		legs_back = -sin(_clock * 27.0) * 0.8
 		knees = 0.5
-	elif state == STATE_DOWN and bool(data.get("kneeling", false)):
+	elif (state == STATE_DOWN or state == STATE_DEAD) and bool(data.get("kneeling", false)):
 		# No room to lie: crumpled on her knees, slumped over them, the head
 		# hung, the arms dropped.
 		pitch = 0.95
@@ -1293,7 +1508,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 		head_pitch = 0.65
 		head_roll = 0.35
 		jaw_open = 0.35
-	elif state == STATE_DOWN:
+	elif state == STATE_DOWN or state == STATE_DEAD:
 		# Flat on the steel (the figure toppled in _topple): limbs flung loose
 		# as she landed, one knee drawn up, fingers crawling.
 		pitch = 0.0
@@ -2002,6 +2217,32 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 				arms_fwd = 1.9
 				arms_bend = 0.2
 				arms_splay = 0.35
+	# Over her pipe's rail (matron_pipe.cpp pipe_tuck): tucked, her legs drawn
+	# up under her and her trunk over her knees, so her shoulders come down
+	# to the rail her hands press on (a squat vault); her soles where the
+	# simulation has them.
+	var tuck := clampf(float(data.get("pipe_tuck", 0.0)), 0.0, 1.0) if bool(data.get("on_pipe", false)) else 0.0
+	if tuck > 0.0:
+		pitch = lerpf(pitch, TUCK_PITCH, tuck)
+		hip_y = lerpf(hip_y, TUCK_HIP_Y, tuck)
+		knees = lerpf(knees, TUCK_KNEES, tuck)
+		legs_fwd = lerpf(legs_fwd, TUCK_LEGS, tuck)
+		legs_back = lerpf(legs_back, TUCK_LEGS, tuck)
+		arms_fwd = lerpf(arms_fwd, 0.9, tuck)
+		arms_bend = lerpf(arms_bend, 0.3, tuck)
+		arms_alt = lerpf(arms_alt, 0.0, tuck)
+		bend_alt = lerpf(bend_alt, 0.0, tuck)
+		head_pitch = lerpf(head_pitch, -0.7, tuck)
+	# Stooped to a prop her real arm falls short of (the toolbox on the deck,
+	# matron_rig.gd prop_short): her trunk down over it and her knees bent,
+	# so her hand takes it at her arm's own length (rule 33).
+	if _prop_lean > 0.0:
+		var w := clampf(_prop_lean, 0.0, 1.0)
+		pitch = lerpf(pitch, STOOP_PITCH, w)
+		hip_y = lerpf(hip_y, STOOP_HIP_Y, w)
+		knees = lerpf(knees, STOOP_KNEES, w)
+		legs_fwd = lerpf(legs_fwd, STOOP_LEGS, w)
+		legs_back = lerpf(legs_back, STOOP_LEGS, w)
 	body.position = Vector3(0.0, hip_y, 0.0)
 	# standing, the turn she has not made with her body: her neck round first,
 	# her chest the rest (_turn_yaw)
@@ -2117,7 +2358,7 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 # TOPPLE_S going down, and back up over the last of her time there.
 func _topple(data: Dictionary, centre: Vector3, delta: float) -> void:
 	var want := 0.0
-	if int(data["state"]) == STATE_DOWN and not bool(data.get("kneeling", false)):
+	if (int(data["state"]) == STATE_DOWN or int(data["state"]) == STATE_DEAD) and not bool(data.get("kneeling", false)):
 		var fall_v: Vector2 = data.get("fall", Vector2(0.0, 1.0))
 		var fall_now := Vector3(fall_v.x, 0.0, fall_v.y)
 		if fall_now.length_squared() >= 1.0e-6:
@@ -2157,7 +2398,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	var state := int(data["state"])
 	var alive := bool(data["alive"])
 	var released := bool(data["released"])
-	var out := released and alive and state >= STATE_EMERGING and state != STATE_DEAD
+	# Native released remains true for a dead body only while its collision body exists.
+	var out := released and (alive or state == STATE_DEAD) and state >= STATE_EMERGING
 	# Where she is drawn: between the simulation's last two ticks, as the
 	# player is (an older native without it: the tick's own).
 	var centre: Vector3 = data["position"] if previewing else data.get("render_position", data["position"])
@@ -2217,6 +2459,8 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 		_figure.visible = false
 		if _rig != null:
 			_rig.down_mask = 0
+		if _injury != null:
+			_injury.set_shown(false)
 		_pose_fresh = true
 		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, falling)
 		return
@@ -2243,9 +2487,14 @@ func _update_figure(data: Dictionary, delta: float, camera_position: Vector3, pl
 	_topple(data, centre, delta)
 	_pipe_head_down(data, centre)
 	_ease_figure(centre, delta)
-	_ease_hands(data, delta)
+	_ease_hands(data)
 	_drive_body(data, delta, camera_position, falling)
-	_hear(data, delta, true, _figure.global_position, player_position, falling)
+	# J-044i: her injuries, from the per-region dictionary J-044g fills.
+	# delta drives the J-059 black-eye pool (the ring darkens over 15 s).
+	if _injury != null:
+		_injury.update(data.get("injury", {}), _rig, delta)
+	# A corpse is drawn but makes none of her living sounds (matron_sound.gd: out_near is "out, alive and near").
+	_hear(data, delta, alive, _figure.global_position, player_position, falling)
 
 
 # Her sounds (presentation/audio/matron_sound.gd), every frame whether she
@@ -2298,6 +2547,35 @@ func locker_front_position() -> Vector3:
 
 func figure_shown() -> bool:
 	return _figure != null and _figure.visible
+
+
+# J-045 (#248): her body's materials are compiled by the renderer the first
+# time it draws them, and it first draws her at the locker burst, a stall of
+# seconds on the phone. Under the LOADING card (main.gd _prepare_her, the tree
+# paused, so nothing else moves her) she is drawn for a few frames as a speck
+# at the screen's centre, under the card's word, WARM_SCALE of her size
+# WARM_AT_M in front of the camera: every material and its shadow drawn,
+# nothing seen. warm_down puts her back as she was.
+const WARM_SCALE := 0.002
+const WARM_AT_M := 2.0
+var _warm_saved := {}
+
+
+func warm_up(camera: Camera3D) -> void:
+	if _figure == null or camera == null or not _warm_saved.is_empty():
+		return
+	_warm_saved = {"visible": _figure.visible, "transform": _figure.global_transform}
+	_figure.global_transform = camera.global_transform * \
+		Transform3D(Basis().scaled(Vector3.ONE * WARM_SCALE), Vector3(0.0, 0.0, -WARM_AT_M))
+	_figure.visible = true
+
+
+func warm_down() -> void:
+	if _warm_saved.is_empty():
+		return
+	_figure.global_transform = _warm_saved["transform"]
+	_figure.visible = bool(_warm_saved["visible"])
+	_warm_saved = {}
 
 
 # For the look scenes: the figure posed from made-up data, the native's own
@@ -2375,11 +2653,15 @@ func _apply(data: Dictionary, delta: float, camera_position: Vector3, player_pos
 		_state_age = 0.0
 	_state_age += delta
 	_sync_locker_home(data)
-	var near := camera_position.distance_to(_locker_centre) < DRAW_RANGE_M or camera_position.distance_to(_last_pos) < DRAW_RANGE_M
+	# Her live position too: _last_pos is only seeded inside _update_figure,
+	# which this gate skips, so a teleport far from both the locker and the
+	# stale _last_pos deadlocked her invisible forever. The cull still holds:
+	# past 140 m from her live position she is still skipped.
+	var centre: Vector3 = data.get("render_position", data["position"])
+	var near := camera_position.distance_to(_locker_centre) < DRAW_RANGE_M or camera_position.distance_to(_last_pos) < DRAW_RANGE_M or camera_position.distance_to(centre) < DRAW_RANGE_M
 	visible = near
 	if not near:
 		_last_state = state
-		var centre: Vector3 = data.get("render_position", data["position"])
 		_hear(data, delta, false, centre - Vector3(0.0, STAND_CENTRE, 0.0), player_position, false)
 		return
 	_update_planks(data)

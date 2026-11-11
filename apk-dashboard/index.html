@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0c10">
+  <meta name="color-scheme" content="dark">
+  <link rel="canonical" href="https://scraperx-apks.stix-ww4.chatgpt.site/">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <title>ScraperX APKs</title>
+  <style>
+    :root {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0a0c10;
+      color: #f5f7fa;
+      --muted: #9199a6;
+      --line: #242a34;
+      --panel: #12161d;
+      --panel-2: #171c24;
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --bad: #fb7185;
+    }
+    * { box-sizing: border-box; }
+    html { background: #0a0c10; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% -12%, rgba(74,222,128,.09), transparent 34rem),
+        #0a0c10;
+    }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    .shell {
+      width: min(760px, 100%);
+      margin: 0 auto;
+      padding: max(22px, env(safe-area-inset-top)) 16px max(40px, env(safe-area-inset-bottom));
+    }
+    header { padding: 10px 2px 22px; }
+    .eyebrow {
+      color: #6ee7a0;
+      font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 8px 0 8px;
+      font-size: clamp(30px, 8vw, 48px);
+      line-height: .98;
+      letter-spacing: -.04em;
+    }
+    .intro {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .refresh {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel-2);
+      color: #f5f7fa;
+      padding: 0 14px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    [hidden] { display: none !important; }
+    .refresh:disabled { opacity: .65; cursor: wait; }
+    #checked {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 0;
+    }
+    main { display: grid; gap: 12px; }
+    .card {
+      --accent: #94a3b8;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(255,255,255,.025), transparent 45%), var(--panel);
+      padding: 18px;
+      box-shadow: 0 14px 35px rgba(0,0,0,.18);
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: var(--accent);
+    }
+    .card[data-model="ChatGPT"] { --accent: #10b981; }
+    .card[data-model="Gemini"] { --accent: #7c9cff; }
+    .card[data-model="Claude"] { --accent: #f59e0b; }
+    .card[data-model="Grok"] { --accent: #e5e7eb; }
+    .topline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .model {
+      font-size: 22px;
+      font-weight: 850;
+      letter-spacing: -.025em;
+    }
+    .status {
+      font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .status.ok { color: var(--ok); }
+    .status.sync { color: var(--warn); }
+    .status.bad { color: var(--bad); }
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 14px 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .meta div {
+      min-width: 0;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: #0d1117;
+      border: 1px solid #1e242d;
+    }
+    .meta b {
+      display: block;
+      color: #d8dee8;
+      margin-top: 3px;
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .download {
+      display: flex;
+      min-height: 56px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      border-radius: 14px;
+      background: var(--accent);
+      color: #07090d;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: -.01em;
+    }
+    .download[aria-disabled="true"] {
+      pointer-events: none;
+      opacity: .35;
+    }
+    .details {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+      color: #aab2bf;
+      font-size: 12px;
+      text-decoration: none;
+    }
+    footer {
+      color: #727b89;
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 20px 4px 0;
+      text-align: center;
+    }
+    @media (min-width: 650px) {
+      main { grid-template-columns: 1fr 1fr; }
+      .shell { padding-left: 24px; padding-right: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="eyebrow">ScraperX · latest successful builds</div>
+      <h1>Pick a model.<br>Install the APK.</h1>
+      <p class="intro">No digging through Actions, no artifact archaeology. Download the newest successful build for each model. Install it over the same model's existing game to update.</p>
+      <div class="toolbar">
+        <button class="refresh" id="refresh" type="button">Refresh</button>
+        <button class="refresh" id="install" type="button" hidden>Install dashboard</button>
+        <span id="checked" role="status" aria-live="polite">Checking GitHub…</span>
+      </div>
+    </header>
+    <main id="cards"></main>
+    <footer>
+      New successful builds appear automatically. The dashboard checks again when you reopen it.
+      Install this dashboard from its website in Chrome; no file or local server is needed.
+    </footer>
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>

@@ -97,6 +97,14 @@ public:
     [[nodiscard]] const Snapshot &state() const noexcept {
         return state_;
     }
+    // This step's spans (microseconds, steady_clock) for Simulation's
+    // StepTiming. Written by step(), read by nothing in the sim.
+    struct StepSpans final {
+        double physics_us = 0.0;
+        double matron_pre_us = 0.0;
+        double matron_post_us = 0.0;
+    };
+    [[nodiscard]] const StepSpans &step_spans() const noexcept { return step_spans_; }
 
     [[nodiscard]] bool traversal_committed() const noexcept {
         return traversal_state_ != TraversalState::None;
@@ -229,7 +237,7 @@ private:
         Fabricated object;
         scraperx::sim::kit::Kit::BodyState state;
     };
-    bool read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out) const;
+    bool read_fabricated(SaveReader &r, std::vector<SavedFabricated> &out, std::uint32_t mark) const;
     void write_fabricated(SaveWriter &w) const;
 
 private:
@@ -264,6 +272,9 @@ private:
     // every one still unbuilt when `band_y` is NaN (the end of the table), or
     // the at_end ones; each once.
     void build_test_extra_solids(JPH::BodyInterface &bodies, double band_y, bool at_end);
+    // Gives her the loose stock she takes and throws or shoves (J-042), once
+    // every piece has its body.
+    void give_matron_stock();
 
     [[nodiscard]] bool mirrors_owned_body(const JPH::AABox &bounds) const;
 
@@ -434,6 +445,12 @@ private:
     [[nodiscard]] JPH::RVec3 hook_end(const JPH::BodyInterface &bodies) const noexcept;
 
     void hook_post_step(JPH::BodyInterface &bodies, const float dt) noexcept;
+
+    // The hook's line has him (J-048): bitten, with the reel turning or the
+    // line taking a load, its winch and rope move him, not his legs.
+    [[nodiscard]] bool hook_hauls(const bool reel) const noexcept {
+        return hook_state_ == HookState::Bitten && (reel || hook_tension_n_ > 0.0F);
+    }
 
     void attach_hook_line(JPH::BodyInterface &bodies, JPH::BodyID anchor, JPH::RVec3 at, float max_length) noexcept;
 
@@ -787,6 +804,15 @@ public:
     // Thrown off the slingshot's bands and not yet down: the stick steers by
     // a bounded force instead of air control.
     bool slingshot_flight_ = false;
+    // The player's own drive moves him (J-048, the listener's set_own_drive):
+    // true on his feet with nothing else holding him (no traversal, slingshot,
+    // swing, trapeze, zipline, the hook's line or the Matron's hands), and on
+    // through the free flight that starts there (a jump, a run off an edge); false from
+    // anything else, or a shove or a test's launch, until he stands again
+    // within his own run's reach of his frame (kFlowSpeedMps: a throw's slide
+    // past it is still the throw's). While it holds, his run's own speed is
+    // no blow.
+    bool own_drive_ = true;
     scraperx::sim::bands::CounterweightWell well_{};
     scraperx::sim::bands::WetIsolation wet_{};
     scraperx::sim::bands::PlateShop shop_{};
@@ -800,6 +826,13 @@ public:
     scraperx::sim::kit::RopeIndex rig_rope_;
     SupportSample support_sample_{};
     JPH::Vec3 airborne_inherited_velocity_{JPH::Vec3::sZero()};
+    // His own drive's speed for the listener (J-061): the horizontal speed
+    // his legs, arms and hook give him, never wind or another outside push.
+    // Grounded, it is his speed over his frame; in the air it keeps what
+    // takeoff gave it and only his own inputs move it (apply_locomotion).
+    // The listener takes only this part off a blow, so a gust's push into a
+    // wall stays a blow.
+    JPH::Vec3 self_drive_velocity_{JPH::Vec3::sZero()};
     JPH::Vec3 facing_{JPH::Vec3::sZero()};
     bool grounded_ = false;
     std::uint64_t support_entity_id_ = 0;
@@ -910,6 +943,7 @@ public:
     float wind_mps_ = 0.0F;
     float wind_force_n_ = 0.0F;
     float wind_peak_force_n_ = 0.0F;
+    float wind_front_x_m_ = 0.0F;
     // Phase 4 shoves (take_shove): the last velocity the feet set, whether
     // it was set on the ground, the fastest closing at a side contact this
     // tick, and the blows counted.
@@ -1026,11 +1060,19 @@ public:
     [[nodiscard]] JPH::RVec3 player_ankle(const JPH::BodyInterface &bodies) const noexcept;
     void grab_drive(JPH::BodyInterface &bodies, float dt) noexcept;
     void grab_post_step(JPH::BodyInterface &bodies, float dt) noexcept;
+    // J-046 (#257) measurement only (physics_world_grab.cpp): the effort
+    // ledger's reads of her body and her constraints, around the step. They
+    // read, and write nothing the simulation reads back.
+    void effort_before_update() const noexcept;
+    void effort_after_update(float dt) const noexcept;
+    float effort_mass(JPH::BodyID id) const noexcept;
+    float effort_dt_ = 0.0F;
     // The player's strike (physics_world_strike.cpp).
     enum class StrikePhase : std::uint8_t { Guard = 0, Windup = 1, Reach = 2, Recoil = 3 };
     void strike_step(JPH::BodyInterface &bodies, const StepCommands &commands, float dt) noexcept;
     void read_strike_state() noexcept;
     void strike_reset() noexcept;
+    void strike_begin(std::uint8_t move, int side, bool in_hand) noexcept;
     // A punch under way: no other hand action starts till its recoil ends;
     // the world taking his hands from it (her fingers, a fall) ends it.
     void strike_owns_hands(StepCommands &commands) const noexcept;
@@ -1040,7 +1082,16 @@ public:
     [[nodiscard]] int strike_arm() const noexcept;
     [[nodiscard]] bool fist_usable(int side) const noexcept;
     [[nodiscard]] bool strike_would_land(JPH::RVec3 chest, JPH::Vec3 line, JPH::RVec3 c) const noexcept;
+    [[nodiscard]] bool sweep_would_land(JPH::RVec3 at, JPH::Vec3 facing, JPH::RVec3 c) const noexcept;
+    [[nodiscard]] bool kick_would_land(JPH::RVec3 chest, JPH::Vec3 facing, JPH::RVec3 c) const noexcept;
+    // A sweep's landing geometry, shared by its offer and its contact: the
+    // ankle point and the blow's normal, when it lands.
+    [[nodiscard]] bool sweep_land_point(JPH::RVec3 at, JPH::Vec3 facing, JPH::RVec3 c, JPH::RVec3 *point,
+                                        JPH::Vec3 *normal) const noexcept;
     int strike_side_ = 1;           // the fist this strike is thrown with
+    std::uint8_t strike_move_ = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep, 2 kick, 3 jab, 4 cross
+    std::uint8_t strike_queued_move_ = 0;  // a follow-up queued in recoil: 3 jab, 4 cross, 0 none
+    int strike_grace_ = 0;                // ticks left to press the follow-up after a jab's recoil
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;
     [[nodiscard]] bool fist_path_clear(JPH::RVec3 from, JPH::RVec3 to) const noexcept;
@@ -1244,6 +1295,7 @@ private:
     std::uint64_t teeter_count_ = 0;
 
     Snapshot state_{};
+    StepSpans step_spans_{};
 };
 
 } // namespace scraperx::sim

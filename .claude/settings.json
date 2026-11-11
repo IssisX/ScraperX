@@ -5,7 +5,8 @@
     "deepwiki"
   ],
   "env": {
-    "MCP_TOOL_TIMEOUT": "300000"
+    "MCP_TOOL_TIMEOUT": "300000",
+    "CLAUDE_CODE_EFFORT_LEVEL": "high"
   },
   "permissions": {
     "allow": [
@@ -13,6 +14,7 @@
       "mcp__godot-docs",
       "mcp__deepwiki",
       "Bash",
+      "Bash(gh api -X PUT repos/IssisX/ScraperX/pulls/*/merge *)",
       "Bash(npx --yes skills@1.7.4 find *)",
       "Edit",
       "Write",
@@ -99,6 +101,38 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__github__add_issue_comment|mcp__github__update_issue_comment|mcp__github__create_pull_request|mcp__github__update_pull_request|mcp__github__issue_write|mcp__github__add_reply_to_pull_request_comment|mcp__Gmail__send_message|mcp__Gmail__create_draft|mcp__Gmail__reply|SendMessage|mcp__claude-code-remote__send_message",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_time.py",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__github__add_issue_comment|mcp__github__update_issue_comment|mcp__github__create_pull_request|mcp__github__update_pull_request|mcp__github__issue_write|mcp__github__add_reply_to_pull_request_comment|mcp__Gmail__send_message|mcp__Gmail__create_draft|mcp__Gmail__reply|SendMessage|mcp__claude-code-remote__send_message",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_clock_read.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_clock_read.py"
+          }
+        ]
+      }
     ]
-  }
+  },
+  "autoCompactWindow": 833000
 }

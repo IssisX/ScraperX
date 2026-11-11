@@ -658,6 +658,13 @@ void Simulation::PhysicsWorld::apply_wind(JPH::BodyInterface &bodies, const doub
     const float z = static_cast<float>(at.GetZ());
     wind_mps_ = 0.0F;
     wind_force_n_ = 0.0F;
+    // The gust front above 396 m rides the simulation's clock: a leading edge
+    // sweeping west off the tower's west face, returning every
+    // kGustFrontPeriodS. It is placed here, ahead of any zone, so the view
+    // can read it from the snapshot whatever the body is doing.
+    const double front_phase =
+        std::fmod(t, static_cast<double>(kGustFrontPeriodS)) / static_cast<double>(kGustFrontPeriodS);
+    wind_front_x_m_ = kWindZoneX - kGustFrontSweepM * static_cast<float>(front_phase);
     // The west face's zone, and the summit's: out along the runway arm, west
     // of the deck's end, the same wind takes hold (outward, -x).
     float exposure = 0.0F;
@@ -668,15 +675,24 @@ void Simulation::PhysicsWorld::apply_wind(JPH::BodyInterface &bodies, const doub
                z <= kSummitWindSouthZ) {
         exposure = std::clamp((kSummitWindX - x) / kSummitWindRampM, 0.0F, 1.0F);
     }
-    if (exposure <= 0.0F) {
+    if (exposure > 0.0F) {
+        // Two swells of incommensurate periods: never long calm, now and
+        // then both at once, the full gust.
+        constexpr double kTau = 2.0 * 3.141592653589793;
+        const float gust = static_cast<float>(std::clamp(
+            0.35 + 0.35 * std::sin(kTau * t / 7.3) + 0.3 * std::sin(kTau * t / 2.9 + 1.0), 0.0, 1.0));
+        wind_mps_ = exposure * (kWindBaseMps + (kWindGustMps - kWindBaseMps) * gust);
+    } else if (x <= kWindZoneX && y >= kUpperWindLowY && y < kUpperWindHighY && z >= kWindZoneNorthZ &&
+               z <= kWindZoneSouthZ) {
+        // J-022: above 396 m the gust arrives as the front, not the swell:
+        // calm ahead of it, the full gust filling in behind it over
+        // kGustFrontRampM. The mist streak sits on the front; the push
+        // follows it.
+        const float behind = std::clamp((x - wind_front_x_m_) / kGustFrontRampM, 0.0F, 1.0F);
+        wind_mps_ = behind * kWindGustMps;
+    } else {
         return;
     }
-    // Two swells of incommensurate periods: never long calm, now and
-    // then both at once, the full gust.
-    constexpr double kTau = 2.0 * 3.141592653589793;
-    const float gust = static_cast<float>(std::clamp(
-        0.35 + 0.35 * std::sin(kTau * t / 7.3) + 0.3 * std::sin(kTau * t / 2.9 + 1.0), 0.0, 1.0));
-    wind_mps_ = exposure * (kWindBaseMps + (kWindGustMps - kWindBaseMps) * gust);
     if (grounded_) {
         return;   // standing, the soles' traction takes it
     }
@@ -751,6 +767,30 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
                                                 const StepCommands &commands,
                                                 const float delta_seconds) noexcept {
     JPH::Vec3 player_velocity = bodies.GetLinearVelocity(player_id_);
+    const JPH::Vec3 entered_velocity = player_velocity;
+    // J-061 (Codex P1 on #337): reconcile the tracked self-drive with
+    // what the contact solve took since the feet last set the velocity.
+    // A wall that stops a run removes real momentum the accumulator
+    // never sees: `entered_velocity - last_set_velocity_` is the solve's
+    // change, and the part of it that opposes the tracked drive is drive
+    // the feet no longer have — shrink by that much, never below zero,
+    // never across it. A push in his direction is not his drive either,
+    // so it leaves the tracked component alone. This runs on airborne
+    // ticks only (the grounded branch below overwrites the tracked
+    // velocity outright); `last_set_valid_` is not the guard here — it
+    // is cleared on airborne ticks, which is exactly when the solve's
+    // change must be seen.
+    if (!grounded_) {
+        const JPH::Vec3 given = entered_velocity - last_set_velocity_;
+        const float drive = self_drive_velocity_.Length();
+        if (drive > 0.0F) {
+            const JPH::Vec3 along_drive = self_drive_velocity_ / drive;
+            const float opposed = -given.Dot(along_drive);
+            if (opposed > 0.0F) {
+                self_drive_velocity_ = along_drive * std::max(0.0F, drive - opposed);
+            }
+        }
+    }
     JPH::Vec3 reference_velocity = airborne_inherited_velocity_;
     // Crouched, the legs walk short; tucked in the air, they do not walk at all.
     const double speed_scale = crouched_ && !tucked_ ? kCrouchSpeedScale : 1.0;
@@ -1095,6 +1135,19 @@ bool Simulation::PhysicsWorld::apply_locomotion(JPH::BodyInterface &bodies,
         jump_takeoff_feet_y_ =
             static_cast<float>(bodies.GetPosition(player_id_).GetY()) - kPlayerHalfHeight;
         jump_vault_ticks_left_ = kJumpVaultWindowTicks;
+    }
+    // J-061: the self-driven velocity for the listener's own-drive
+    // allowance. Grounded, it is his speed over his frame (the same
+    // quantity the listener used to derive from the frame velocity); in the
+    // air it keeps what takeoff gave it and only his own inputs move it —
+    // air control and a wall kick change it here, wind and any outside
+    // push never do.
+    if (grounded_) {
+        const JPH::Vec3 relative = player_velocity - reference_velocity;
+        self_drive_velocity_ = JPH::Vec3(relative.GetX(), 0.0F, relative.GetZ());
+    } else {
+        const JPH::Vec3 change = player_velocity - entered_velocity;
+        self_drive_velocity_ += JPH::Vec3(change.GetX(), 0.0F, change.GetZ());
     }
     bodies.SetLinearVelocity(player_id_, player_velocity);
     last_set_velocity_ = player_velocity;

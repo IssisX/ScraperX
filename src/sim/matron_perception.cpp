@@ -50,7 +50,9 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
     ev.climb = -1;
     ev.touch = false;
     ev.seen_age_s = std::min(ev.seen_age_s + dt, Evidence::kNever);
+    ev.sight_age_s = std::min(ev.sight_age_s + dt, Evidence::kNever);
     ev.heard_age_s = std::min(ev.heard_age_s + dt, Evidence::kNever);
+    ev.sound_age_s = std::min(ev.sound_age_s + dt, Evidence::kNever);
 
     const float px = float(player.GetX());
     const float pz = float(player.GetZ());
@@ -59,7 +61,7 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
     // a cage brought her to, the cage she rides with the player in it.
     const bool in_footprint = std::abs(px) < 27.0F && pz < -123.0F && pz > -177.0F;
     const bool on_deck = player.GetY() > m.feet_y_ - 1.0 && player.GetY() < m.feet_y_ + 6.0 && in_footprint;
-    // Or up a ladder from her level (in its column, off its foot's floor).
+    // Or on a ladder joined to her level at either end, ascending or descending.
     int player_climb = -1;
     const float level_floor = m.levels_[static_cast<std::size_t>(m.level_)].floor_y;
     for (int i = 0; i < m.climb_count(); ++i) {
@@ -68,7 +70,9 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
         if (!m.climb_of(i, c, Matron::Ways::Ladders)) {
             continue;
         }
-        if (std::abs(c.foot_y - level_floor) < 0.6F && std::abs(px - c.x) < 1.0F && std::abs(pz - c.z) < 1.0F &&
+        const bool joins_her_floor = std::abs(c.foot_y - level_floor) < 0.6F ||
+                                     std::abs(c.head_y - level_floor) < 0.6F;
+        if (joins_her_floor && std::abs(px - c.x) < 1.0F && std::abs(pz - c.z) < 1.0F &&
             player.GetY() > c.foot_y + 1.3F && player.GetY() < c.head_y + 1.2F) {
             player_climb = i;
         }
@@ -127,13 +131,18 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
         ev.last_heard_at = player;
         ev.heard_age_s = 0.0F;
     }
+    // A sound is a place: it keeps its own age, apart from heard_age_s (breath refreshes that too).
+    if (ev.sound) {
+        ev.last_sound_at = player;
+        ev.sound_age_s = 0.0F;
+    }
 
     // Her eyes, awake and on her feet about the world.
     const bool looking = m.body_in_world_ && (m.state_ == State::Hunting || m.state_ == State::Searching ||
                                               m.state_ == State::Shuffling || m.state_ == State::Guarding ||
                                               m.state_ == State::Peering || m.state_ == State::Unrigging);
     if (looking) {
-        // Seen on her level, or up a climb from it (the straight line to the
+        // Seen on her level, or on a climb from either side (the straight line to the
         // player mostly up it).
         const bool perceivable = on_deck || player_climb >= 0;
         const float flat = xz(float(body_at.GetX()), float(body_at.GetZ()), px, pz);
@@ -161,6 +170,10 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
         ev.seen_at = player;
         ev.last_seen_at = player;
         ev.seen_age_s = 0.0F;
+    }
+    if (ev.saw || ev.sees_far || ev.close_look) {
+        ev.last_sight_at = player;
+        ev.sight_age_s = 0.0F;
     }
     if (ev.saw || ev.glimpsed || ev.sees_far || ev.heard()) {
         ev.climb = player_climb;

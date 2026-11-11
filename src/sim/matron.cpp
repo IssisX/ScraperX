@@ -2,6 +2,7 @@
 // deck (see matron.hpp).
 #include "sim/matron.hpp"
 #include "sim/matron_grip.hpp"
+#include "sim/matron_effort.hpp"
 #include "sim/mechanism_kit.hpp"
 #include <cstdlib>
 
@@ -28,6 +29,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 
 namespace scraperx::sim {
@@ -238,10 +240,6 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
 }
 
 Matron::~Matron() {
-    if (hold_ != nullptr) {
-        physics_.RemoveConstraint(hold_);
-        hold_ = nullptr;
-    }
     BodyInterface &bodies = physics_.GetBodyInterface();
     for (Plank &plank : planks_) {
         if (plank.bolt != nullptr) {
@@ -321,6 +319,15 @@ void Matron::place_for_test(const RVec3 feet) {
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
     state_ = State::Hunting;
+    // A placed Matron is a live one: a kill left dead_ set while this put her
+    // to Hunting, and the view (released, and alive or in the Dead state)
+    // rightly refused a Hunting-but-dead Matron, so she stayed invisible even
+    // metres from the player (J-070). On her feet, whatever had her down.
+    dead_ = false;
+    down_for_s_ = 0.0F;
+    if (lying_) {
+        stand_up();
+    }
     turn_ = Turn::None;
     feet_y_ = float(feet.GetY());
     // Her level: the deck she stands on, or (on a ledge between two) the
@@ -367,7 +374,8 @@ bool Matron::climb_for_test(const bool pipe, const bool down) {
         const float to = floor_y + (down ? -kStackPitch : kStackPitch);
         return pipe_reaches(floor_y) && pipe_reaches(to) && get_on_pipe(floor_y, to);
     }
-    return index >= 0 && take_climb(index, down);
+    const bool started = index >= 0 && take_climb(index, down);
+    return started;
 }
 
 void Matron::remove_body() {
@@ -599,6 +607,59 @@ float Matron::floor_of(const float y) const {
         }
     }
     return best;
+}
+
+// A sound or sighting belongs to the steel below its actual position, not
+// automatically to her own deck. The levels table does not include grade;
+// her collision scan does. Use the closest local top within the player's
+// standing height, without borrowing a distant deck or knowing his state.
+float Matron::floor_at(const float x, const float y, const float z) const {
+    float lowest = std::numeric_limits<float>::max();
+    for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
+    if (y < lowest - 0.5F) {
+        if (scanned_ != nullptr) {
+            float best = std::numeric_limits<float>::max();
+            float floor = 0.0F;
+            bool found = false;
+            for (const traversal::Patch &p : scanned_->patches()) {
+                if (x < p.min_x - 0.05F || x > p.max_x + 0.05F ||
+                    z < p.min_z - 0.05F || z > p.max_z + 0.05F ||
+                    p.top > y + 0.15F || y - p.top > 2.2F) {
+                    continue;
+                }
+                const float distance = std::abs(y - 0.9F - p.top);
+                if (distance < best) {
+                    best = distance;
+                    floor = p.top;
+                    found = true;
+                }
+            }
+            if (found) return floor;
+        }
+        return y - 0.9F;
+    }
+    if (zipline_ != nullptr) {
+        for (const Zipline::Line &line : zipline_->lines()) {
+            const float sx = float(line.stand.GetX());
+            const float sz = float(line.stand.GetZ());
+            const float fx = float(line.ramp_foot.GetX());
+            const float fz = float(line.ramp_foot.GetZ());
+            const float rx = sx - fx;
+            const float rz = sz - fz;
+            const float rlen = std::hypot(rx, rz);
+            if (rlen > 0.1F) {
+                const float along = ((x - fx) * rx + (z - fz) * rz) / rlen;
+                const float across = std::abs((x - fx) * rz - (z - fz) * rx) / rlen;
+                const float stand_y = float(line.stand.GetY());
+                const float top_floor = float(line.top_floor.GetY());
+                if (along >= -0.5F && along <= rlen + 0.85F && across <= 1.2F &&
+                    y >= top_floor - 0.5F && y <= stand_y + 2.5F) {
+                    return top_floor;
+                }
+            }
+        }
+    }
+    return floor_of(y);
 }
 
 bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
@@ -1761,14 +1822,25 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                         dir = side;
                     }
                     const float along = std::max(0.4F, bodies.GetLinearVelocity(id).Dot(dir));
-                    const traversal::Limits budget;
-                    // A shove is never the lunge: it stays on her 8 kN and 22 kW.
-                    const float shove_force = budget.total_force_n;
-                    const float shove_power = budget.power_w;
-                    const float force_n = std::min(shove_force, shove_power / along);
-                    Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
-                    push /= push.Length();
-                    bodies.AddForce(id, push * force_n, EActivation::Activate);
+                    // A body already travelling is not a crate that stopped
+                    // her: shoving it again only launches it (J-016). The
+                    // speed along the shove line is not the test — a body
+                    // crossing the line fast still got shoved, and the pipe
+                    // drum walked off deck 154's north edge on it. Leave
+                    // it; the walk goes on.
+                    if (bodies.GetLinearVelocity(id).Length() <= 2.5F) {
+                        const traversal::Limits budget;
+                        // A shove is never the lunge: it stays on her 8 kN and 22 kW.
+                        const float shove_force = budget.total_force_n;
+                        const float shove_power = budget.power_w;
+                        const float force_n = std::min(shove_force, shove_power / along);
+                        Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
+                        push /= push.Length();
+                        bodies.AddForce(id, push * force_n, EActivation::Activate);
+                        // J-046 measurement only: charged to no Budget, no reaction on her.
+                        effort::add_force(effort::Path::CrateShove, push * force_n,
+                                          bodies.GetLinearVelocity(id) - velocity, 0.0F, Vec3::sZero());
+                    }
                 }
             }
         }
@@ -2251,8 +2323,10 @@ bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget)
     } else if (ask(routecraft_way_, true)) {
         return true;
     }
-    // A rung way her scan found off her floor; a line she would only wait at, last.
-    return ask(climb_way_, true) || ask(line_way_, true);
+    // A rung way her scan found off her floor; a travel over her scan, by
+    // hoist where no way of her map joins the floors; a line she would only
+    // wait at, last.
+    return ask(climb_way_, true) || ask(travel_way_, true) || ask(line_way_, true);
 }
 
 bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
@@ -2274,6 +2348,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     acoustic_queries_ = 0;
     foot_force_n_ = 0.0F;
     foot_power_w_ = 0.0F;
+    edge_brace_n_ = 0.0F;
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
     leg_jump_vy_ = 0.0F;
@@ -2281,6 +2356,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     const traversal::Limits law{};
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     feet_budget_lunge_ = false;
+    stock_push_force_n_ = 0.0F;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     if (const Mover *way = holder(); dead_ || !body_in_world_ || holding_state(state_) || state_ == State::Down ||
                                      state_ == State::Staggering || (way != nullptr && way->view().drives)) {
@@ -2487,11 +2563,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::Dormant: {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
         if (crash.heard) {
-            take_lead(crash.x, crash.z, floor_of(crash.y), crash.loudness, Sense::Hearing);
+            take_lead(crash.x, crash.z, floor_at(crash.x, crash.y, crash.z), crash.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
         } else if (ev.sound && ev.carry_m <= kWakeNoiseM) {
-            take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()), floor_of(float(ev.heard_at.GetY())),
+            take_lead(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
+                      floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())),
                       ev.loudness, Sense::Hearing);
             state_ = State::Straining;
             strain_s_ = 0.0F;
@@ -2554,7 +2631,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         if (ev.seen_holding != 0) {
             for (std::size_t i = 0; i < throwables_.size(); ++i) {
                 if (throwables_[i].entity == ev.seen_holding) {
-                    handled_ |= 1U << i;
+                    handled_ |= std::uint64_t{1} << i;
                 }
             }
         }
@@ -2587,7 +2664,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             look_x_ = px;
             look_z_ = pz;
             look_s_ = 1.0F;
-            take_lead(px, pz, floor_of(float(ev.seen_at.GetY())), 0.0F, Sense::Peripheral);
+            take_lead(px, pz, floor_at(px, float(ev.seen_at.GetY()), pz), 0.0F, Sense::Peripheral);
             wary_ = false;
             state_ = State::Hunting;
         } else if (crash_heard || heard) {
@@ -2599,7 +2676,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             const float sx = crash_first ? crash.x : float(ev.heard_at.GetX());
             const float sy = crash_first ? crash.y : float(ev.heard_at.GetY());
             const float sz = crash_first ? crash.z : float(ev.heard_at.GetZ());
-            const float sfloor = floor_of(sy);
+            const float sfloor = floor_at(sx, sy, sz);
             const float loud = crash_first ? crash.loudness : loudness;
             const bool close = Vec3(RVec3(sx, sy, sz) - at).Length() <= kWaryNoiseM;
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
@@ -2626,9 +2703,11 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // His way on her level, as she perceived it (matron_moves.cpp): each
         // crumb a place she saw or heard him, as old as that evidence.
         if (saw || glimpsed) {
-            drop_crumb(float(ev.seen_at.GetX()), float(ev.seen_at.GetZ()), floor_of(float(ev.seen_at.GetY())));
+            drop_crumb(float(ev.seen_at.GetX()), float(ev.seen_at.GetZ()),
+                       floor_at(float(ev.seen_at.GetX()), float(ev.seen_at.GetY()), float(ev.seen_at.GetZ())));
         } else if (selected_player_sound) {
-            drop_crumb(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()), floor_of(float(ev.heard_at.GetY())));
+            drop_crumb(float(ev.heard_at.GetX()), float(ev.heard_at.GetZ()),
+                       floor_at(float(ev.heard_at.GetX()), float(ev.heard_at.GetY()), float(ev.heard_at.GetZ())));
         }
         // A guess where the player is going: seen or heard riding a line, to
         // its far end.
@@ -2645,15 +2724,18 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // checks from a vantage (wary), but one she goes after by her way there.
         if (ev.climb >= 0 && (saw || selected_player_sound)) {
             const Climb c = climb_spec(ev.climb);
-            heard_x_ = c.top_x;
-            heard_z_ = c.top_z;
-            lead_floor_ = c.head_y;
+            const float my_floor = float(at.GetY()) - kStandCentre;
+            const bool descending = std::abs(my_floor - c.head_y) < 0.6F &&
+                                    float((saw ? ev.seen_at : ev.heard_at).GetY()) < c.head_y + 0.2F;
+            heard_x_ = descending ? c.x : c.top_x;
+            heard_z_ = descending ? c.z : c.top_z;
+            lead_floor_ = descending ? c.foot_y : c.head_y;
             guess_climb_ = ev.climb;
             wary_ = false;
         }
         // Seen up a ladder in a stalk: round to its head by another way, if
         // hers is the shorter (matron_stalk.cpp).
-        if (ev.climb >= 0 && saw) {
+        if (ev.climb >= 0 && saw && lead_floor_ > float(at.GetY()) - kStandCentre + 0.6F) {
             watch_climber(ev.climb, float(ev.seen_at.GetY()), dt);
             if (state_ == State::Hunting && stalk_encounter() && turn_ == Turn::None && !ambush_.active &&
                 !held_in_hunt() && holder() == nullptr) {
@@ -2678,15 +2760,21 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         // (matron.hpp, her mischief); else her hands keep it.
         if (held_ >= 0) {
             const bool at_player = saw && Vec3(ev.seen_at - at).Length() < kCatchM + 0.6F;
-            if (stage_ != Stage::Pest || turn_ != Turn::None || held_in_hunt() || riding_ ||
+            if (turn_ != Turn::None || held_in_hunt() || riding_ ||
                 state_ == State::Unrigging || state_ == State::Peering || at_player) {
                 drop_stock();
             } else {
                 hold_stock(dt);
             }
         }
-        if (throw_windup_s_ >= 0.0F && (!saw || held_ < 0 || state_ != State::Hunting)) {
-            throw_windup_s_ = -1.0F;
+        if (throw_stroke_s_ >= 0.0F) {
+            throw_stroke(dt);
+        }
+        if (throw_windup_s_ >= 0.0F) {
+            windup_blind_s_ = saw ? 0.0F : windup_blind_s_ + dt;
+            if (windup_blind_s_ > kWindupBlindSeconds || held_ < 0 || state_ != State::Hunting) {
+                throw_windup_s_ = -1.0F;
+            }
         }
         // On a way the hunt steps (the corner pipe, a climb, her map's way
         // across the tower) she goes on along it, whatever else she is about;
@@ -2750,7 +2838,14 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         }
         if (state_ == State::Hunting) {
             // Going to look from a vantage is not losing track: she goes on to it.
-            const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+            const float feet_y = float(at.GetY()) - kStandCentre;
+            float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
+            int own_region = -1;
+            if (scanned_ != nullptr) {
+                own_region = scanned_->region_at(Vec3(ax, feet_y, az));
+                if (own_region < 0) own_region = region_under();
+                if (own_region >= 0) floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
+            }
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, no longer frail: chased longer.
             const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
@@ -2763,28 +2858,17 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // lead's floor. The scan's own floor, not the hand-listed
             // levels_ table, says where she stands: a bridge, a board or a
             // duct top is a floor to her scan though it is in no levels_
-            // entry, and a lead on it is not elsewhere to her. Frail, a pest
-            // gets none of this: otherwise the stage rule below would hand
-            // her 40 s she has not earned.
-            const float feet_y = float(at.GetY()) - kStandCentre;
-            float own_floor_y = floor_y;
-            int own_region = -1;
-            if (elsewhere && scanned_ != nullptr) {
-                own_region = scanned_->region_at(Vec3(ax, feet_y, az));
-                if (own_region < 0) {
-                    own_region = region_under();
-                }
-                if (own_region >= 0) {
-                    own_floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
-                }
-            }
-            const bool elsewhere_own = std::abs(lead_floor_ - own_floor_y) > 1.0F;
+            // entry, and a lead on it is not elsewhere to her. The same
+            // scanned route is available to her initial stage: a confirmed
+            // physical way, not her anger, earns the longer pursuit window.
+            const float own_floor_y = floor_y;
+            const bool elsewhere_own = elsewhere;
             const auto toward_lead = [&](const float goal_floor) {
                 return std::abs(goal_floor - lead_floor_) < std::abs(own_floor_y - lead_floor_) ||
                        std::abs(goal_floor - lead_floor_) <= 1.0F;
             };
             bool by_own_way = false;
-            if (stage_ != Stage::Pest && elsewhere_own) {
+            if (elsewhere_own) {
                 // A way of hers that knows the floor it takes her to (a found
                 // climb she is walking to, a journey, a travel), toward her
                 // lead from the floor it sets out from; or one that has her.
@@ -2915,9 +2999,15 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 if (held_ >= 0 && saw && throw_stock(dt, at, ev.seen_at)) {
                     break;
                 }
-                if ((!saw || Vec3(ev.seen_at - at).Length() > kThrowMinM) && fetch_stock(dt, ax, az, allow)) {
+                // Past a pest, only while he is out of her sight: in sight
+                // she hunts him. Light stock she takes; heavy she shoves off
+                // the nearest lip (J-016).
+                const bool mischief =
+                    stage_ == Stage::Pest ? !saw || Vec3(ev.seen_at - at).Length() > kThrowMinM : !saw;
+                if (mischief && (fetch_stock(dt, ax, az, allow) || shove_stock(dt, ax, az, allow))) {
                     break;
                 }
+                stock_shove_ = -1;
                 // In the Turn a gap is no bar: she leaps it. A lead on
                 // another level she has no way to: the place on her own lines
                 // over or under it.
@@ -3023,7 +3113,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // line off it onto the ring. The edge guard still
                 // keeps her on what continues under her feet.
                 if (off_its_steel(level_, ax, feet_y_, az) && sidestep_s_ <= 0.0F) {
-                    const traversal::Ignore ignore{body_, player_, moving_layer()};
+                    const traversal::Ignore ignore = walk_ignore();
                     const std::vector<Vec3> steps =
                         traversal::grid_walk(physics_, ignore, traversal::Limits{}, Vec3(ax, feet_y_, az),
                                              Vec3(tx, feet_y_, tz), 3.0F, 0.35F, 6000);
@@ -3263,8 +3353,9 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     case State::Claimed:
         // Her hold (matron_hold.cpp): her eyes and ears on what is in her hand,
         // and her hands on it: a lead she has, seen, where it is.
-        take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()), floor_of(float(ev.felt_at.GetY())), noise_heard_,
-                  Sense::Touch);
+        take_lead(float(ev.felt_at.GetX()), float(ev.felt_at.GetZ()),
+                  floor_at(float(ev.felt_at.GetX()), float(ev.felt_at.GetY()), float(ev.felt_at.GetZ())),
+                  noise_heard_, Sense::Touch);
         step_hold(dt, ev.felt_at);
         break;
     case State::Staggering:
@@ -3291,6 +3382,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
 
 void Matron::post_step(const float dt) {
     take_blow(dt);
+    // A killed body continues under gravity while the existing Down shape settles.
+    if (dead_ && body_in_world_) down_for_s_ += dt;
     // Her bars let go of her at once (her journey ends in her next tick).
     if (dead_ || state_ == State::Down || state_ == State::Staggering || holding_state(state_)) routecraft_way_.cancel();
     const Mover *held_by = holder();
@@ -3327,7 +3420,21 @@ void Matron::post_step(const float dt) {
         const float vy = bodies.GetLinearVelocity(body_).GetY();
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
-        if (landed_hard || bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+        if (landed_hard) {
+            dead_ = true;
+            state_ = State::Dead;
+            clear_interrupted_actions(false);
+            const Vec3 velocity = bodies.GetLinearVelocity(body_);
+            const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
+            if (flat.LengthSq() > 1.0e-6F) {
+                const Vec3 along = flat.Normalized();
+                fall_x_ = along.GetX();
+                fall_z_ = along.GetZ();
+            }
+            down_for_s_ = 0.0F;
+            lie_down(fall_x_, fall_z_);
+        } else if (bodies.GetPosition(body_).GetY() < kOffTheWorldY) {
+            // No support exists below the world: this body cannot settle.
             drop_stock();
             dead_ = true;
             state_ = State::Dead;
@@ -3350,7 +3457,47 @@ void Matron::post_step(const float dt) {
     refresh_shape_view();
 }
 
-bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
+Matron::Sense Matron::catch_sense(RVec3 &at) const noexcept {
+    // Sight first, then sound, this tick then memory. Breath is a nearness, not a place; a glimpse is no sighting.
+    if (ev_.saw || ev_.sees_far || ev_.close_look) {
+        at = ev_.seen_at;
+        return Sense::Sight;
+    }
+    if (ev_.sound) {
+        at = ev_.heard_at;
+        return Sense::Hearing;
+    }
+    // Touch (J-049, ChatGPT's #278 rule): a hand on him counts as a sensed
+    // position at the contact point — his place, now, not a memory. This is
+    // evidence only: caught() still runs the geometry on it, so a touch past
+    // the 0.85 m catch range still refuses, as the 1.174 m case must.
+    if (body_in_world_ && physics_.WereBodiesInContact(body_, player_)) {
+        at = physics_.GetBodyInterface().GetPosition(player_);
+        return Sense::Touch;
+    }
+    if (ev_.sight_age_s <= kCatchMemoryS) {
+        at = ev_.last_sight_at;
+        return Sense::Sight;
+    }
+    if (ev_.sound_age_s <= kCatchMemoryS) {
+        at = ev_.last_sound_at;
+        return Sense::Hearing;
+    }
+    return Sense::None;
+}
+
+traversal::Ignore Matron::walk_ignore() const noexcept {
+    traversal::Ignore ignore{body_, player_, moving_layer()};
+    // Her feet walk around the place she saw or felt him, while it is fresh; without a fresh sense there is no place to avoid (J-049).
+    RVec3 at;
+    if (knows_where(kCatchMemoryS, at)) {
+        ignore.avoid = true;
+        ignore.avoid_at = Vec3(at);
+    }
+    return ignore;
+}
+
+bool Matron::caught(const bool on_ladder) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
     const Mover *way = holder();
@@ -3366,41 +3513,75 @@ bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    if (on_ladder) {
-        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kStoopReachM;
+    // Zeroed: catch_sense leaves it unwritten on Sense::None, and the gate
+    // below must read a defined place rather than uninitialised memory.
+    RVec3 sensed = RVec3::sZero();
+    const Sense sense = catch_sense(sensed);
+    const bool touching = physics_.WereBodiesInContact(body_, player_);
+    if (sense == Sense::None && !touching) {
+        return false;
     }
-    return distance_xz(float(at.GetX()), float(at.GetZ()), float(player.GetX()), float(player.GetZ())) < kCatchM &&
-           std::abs(at.GetY() - player.GetY()) < 1.4;
+    // The catch is a physical reach, so it needs HIS true position, not the
+    // sensed one: the 0.5 s memory tells her where to go, it must never
+    // catch a player who has moved out of reach since (J-049, Claude's
+    // 14:19 FIX on #383). A touch with no fresh sense still refuses: the
+    // live geometry at 1.174 m is outside the 0.85 m catch range.
+    // No player body (the sight-test harness builds her with BodyID()): the
+    // sensed place is the only one there, and that harness feeds it his true
+    // position every tick, so it is the same measure.
+    const RVec3 him = player_.IsInvalid() ? sensed : physics_.GetBodyInterface().GetPosition(player_);
+    if (on_ladder) {
+        // His live ankle: the centre less 0.82 m, as shove_reach_now does.
+        const RVec3 ankle = him - RVec3(0.0, 0.82F, 0.0);
+        return Vec3(ankle - (at + shoulder_local())).Length() <= kStoopReachM;
+    }
+    return distance_xz(float(at.GetX()), float(at.GetZ()), float(him.GetX()), float(him.GetZ())) < kCatchM &&
+           std::abs(at.GetY() - him.GetY()) < 1.4;
 }
 
-Vec3 Matron::shove_direction(const RVec3 player) const noexcept {
-    const RVec3 at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : player;
-    Vec3 away(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
-    if (away.LengthSq() < 1.0e-4F) {
-        away = Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+Vec3 Matron::shove_direction() const noexcept {
+    RVec3 sensed;
+    if (body_in_world_ && catch_sense(sensed) != Sense::None) {
+        const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+        Vec3 away(float(sensed.GetX() - at.GetX()), 0.0F, float(sensed.GetZ() - at.GetZ()));
+        if (away.LengthSq() < 1.0e-4F) {
+            away = Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+        }
+        away = away.Normalized();
+        if (stage_ != Stage::Dangerous) {
+            return away;
+        }
+        // Dangerous: at the shaft's rim nearest where she sensed him, when it is within reach.
+        const float px = float(sensed.GetX());
+        const float pz = float(sensed.GetZ());
+        const Vec3 to_rim(std::clamp(px, -kShaftHalfM, kShaftHalfM) - px, 0.0F,
+                          std::clamp(pz, kMidZ - kShaftHalfM, kMidZ + kShaftHalfM) - pz);
+        const float reach = to_rim.Length();
+        if (reach < 0.05F || reach > kShoveEdgeReachM) {
+            return away;
+        }
+        return to_rim / reach;
     }
-    away = away.Normalized();
-    if (stage_ != Stage::Dangerous) {
-        return away;
+    return Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+}
+
+bool Matron::shove_reach_now(const bool on_ladder) const noexcept {
+    if (!body_in_world_ || dead_) return false;
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    const RVec3 him = physics_.GetBodyInterface().GetPosition(player_);
+    if (on_ladder) {
+        // The ankle she would stoop for: his live ankle, not the sensed one.
+        const RVec3 ankle = him - RVec3(0.0, 0.82F, 0.0);
+        return Vec3(ankle - (at + shoulder_local())).Length() <= kStoopReachM;
     }
-    // Dangerous: at the shaft's rim nearest the player (the point of its box
-    // nearest them), when it is within reach; over the shaft already (the
-    // catwalk), or far from its rim, away from her as a pest would.
-    const float px = float(player.GetX());
-    const float pz = float(player.GetZ());
-    const Vec3 to_rim(std::clamp(px, -kShaftHalfM, kShaftHalfM) - px, 0.0F,
-                      std::clamp(pz, kMidZ - kShaftHalfM, kMidZ + kShaftHalfM) - pz);
-    const float reach = to_rim.Length();
-    if (reach < 0.05F || reach > kShoveEdgeReachM) {
-        return away;
-    }
-    return to_rim / reach;
+    return distance_xz(float(at.GetX()), float(at.GetZ()), float(him.GetX()), float(him.GetZ())) < kCatchM &&
+           std::abs(at.GetY() - him.GetY()) < 1.4F;
 }
 
 void Matron::set_throwables(std::vector<Throwable> throwables) {
     throwables_ = std::move(throwables);
-    if (throwables_.size() > 32) {
-        throwables_.resize(32);
+    if (throwables_.size() > kMaxThrowables) {
+        throwables_.resize(kMaxThrowables);
     }
     for (Throwable &t : throwables_) {
         const BodyLockRead lock(physics_.GetBodyLockInterface(), t.body);
@@ -3408,6 +3589,12 @@ void Matron::set_throwables(std::vector<Throwable> throwables) {
             lock.Succeeded() && lock.GetBody().IsDynamic() ? lock.GetBody().GetMotionProperties()->GetInverseMass() : 0.0F;
         t.mass_kg = inverse_mass > 0.0F ? 1.0F / inverse_mass : std::numeric_limits<float>::infinity();
         t.laid = lock.Succeeded() ? Vec3(lock.GetBody().GetPosition()) : Vec3::sZero();
+        if (lock.Succeeded()) {
+            const AABox bounds = lock.GetBody().GetShape()->GetLocalBounds();
+            const Vec3 far = Vec3::sMax(-bounds.mMin, bounds.mMax);
+            t.reach_m = std::hypot(far.GetX(), far.GetZ());
+            t.below_handle_m = std::max(0.0F, t.handle.GetY() - bounds.mMin.GetY());
+        }
     }
 }
 
@@ -3416,8 +3603,8 @@ void Matron::notice_moved_stock() {
     const RVec3 at = bodies.GetPosition(body_);
     for (std::size_t i = 0; i < throwables_.size(); ++i) {
         const Throwable &t = throwables_[i];
-        if ((handled_ & (1U << i)) != 0U || static_cast<int>(i) == held_ || static_cast<int>(i) == thrown_ ||
-            t.mass_kg > kTakeMaxKg || !bodies.IsAdded(t.body)) {
+        if ((handled_ & (std::uint64_t{1} << i)) != 0U || static_cast<int>(i) == held_ || static_cast<int>(i) == thrown_ ||
+            t.mass_kg > kStockShoveMaxKg || !bodies.IsAdded(t.body)) {
             continue;
         }
         const RVec3 p = bodies.GetPosition(t.body);
@@ -3426,13 +3613,49 @@ void Matron::notice_moved_stock() {
             continue;
         }
         if (Vec3(p - at).Length() <= kEyeRangeM && look_at(p, kEyeRangeM) == Glimpse::Sight) {
-            handled_ |= 1U << i;
+            handled_ |= std::uint64_t{1} << i;
+        }
+    }
+    // A piece she sees him stand on (a step of his, a leg up) is his too.
+    if (player_.IsInvalid() || !bodies.IsAdded(player_)) {
+        return;
+    }
+    const RVec3 him = bodies.GetPosition(player_);
+    if (Vec3(him - at).Length() > kEyeRangeM) {
+        return;
+    }
+    const IgnoreSingleBodyFilter not_him(player_);
+    RayCastResult under;
+    if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(him, Vec3(0.0F, -1.6F, 0.0F)), under, {}, {}, not_him)) {
+        return;
+    }
+    for (std::size_t i = 0; i < throwables_.size(); ++i) {
+        const Throwable &t = throwables_[i];
+        if (t.body == under.mBodyID && (handled_ & (std::uint64_t{1} << i)) == 0U && t.mass_kg <= kStockShoveMaxKg &&
+            look_at(him, kEyeRangeM) == Glimpse::Sight) {
+            handled_ |= std::uint64_t{1} << i;
         }
     }
 }
 
 Vec3 Matron::hands_offset() const noexcept {
-    return Vec3(std::sin(yaw_) * kHandsOutM, kHandsUpM, std::cos(yaw_) * kHandsOutM);
+    const Vec3 ahead(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    if (throw_windup_s_ >= 0.0F || throw_stroke_s_ >= 0.0F) {
+        // Rearing back and driving the throw: up over her right shoulder
+        // (her right, facing +z with +y up, is -x).
+        const Vec3 right(-ahead.GetZ(), 0.0F, ahead.GetX());
+        // Beside her head if it clears her eyes that way; else over them.
+        float up = kWindupHandsUpM;
+        const int piece = held_ >= 0 ? held_ : thrown_;
+        if (piece >= 0 && static_cast<std::size_t>(piece) < throwables_.size()) {
+            const Throwable &t = throwables_[static_cast<std::size_t>(piece)];
+            if (t.reach_m + 0.5F * kWindupEyeClearM > kWindupHandsSideM) {
+                up = std::max(up, kEyeAboveCentreM + kWindupEyeClearM + t.below_handle_m);
+            }
+        }
+        return ahead * kWindupHandsOutM + right * kWindupHandsSideM + Vec3(0.0F, up, 0.0F);
+    }
+    return ahead * kHandsOutM + Vec3(0.0F, kHandsUpM, 0.0F);
 }
 
 int Matron::stock_to_fetch(const float ax, const float az) const {
@@ -3441,7 +3664,7 @@ int Matron::stock_to_fetch(const float ax, const float az) const {
     float best_m = kSeekStockM;
     for (std::size_t i = 0; i < throwables_.size(); ++i) {
         const Throwable &t = throwables_[i];
-        if ((handled_ & (1U << i)) == 0U || (fetch_refused_ & (1U << i)) != 0U || t.mass_kg > kTakeMaxKg) {
+        if ((handled_ & (std::uint64_t{1} << i)) == 0U || (fetch_refused_ & (std::uint64_t{1} << i)) != 0U || t.mass_kg > kTakeMaxKg) {
             continue;
         }
         const RVec3 p = bodies.GetPosition(t.body);
@@ -3459,7 +3682,7 @@ int Matron::stock_to_fetch(const float ax, const float az) const {
 }
 
 bool Matron::fetch_stock(const float dt, const float ax, const float az, const bool allow_catwalk) {
-    if (held_ >= 0 || stage_ != Stage::Pest || turn_ != Turn::None || wary_ || throw_cooldown_s_ > 0.0F) {
+    if (held_ >= 0 || stock_shove_ >= 0 || turn_ != Turn::None || wary_ || throw_cooldown_s_ > 0.0F) {
         fetch_ = -1;
         return false;
     }
@@ -3491,7 +3714,7 @@ bool Matron::fetch_stock(const float dt, const float ax, const float az, const b
         fetch_stall_s_ += dt;
     }
     if (fetch_stall_s_ >= kFetchStallSeconds) {
-        fetch_refused_ |= 1U << static_cast<unsigned>(fetch_);
+        fetch_refused_ |= std::uint64_t{1} << static_cast<unsigned>(fetch_);
         fetch_refused_s_ = kFetchRetrySeconds;
         fetch_ = -1;
         return false;
@@ -3501,7 +3724,7 @@ bool Matron::fetch_stock(const float dt, const float ax, const float az, const b
         yaw_ = turn_toward(yaw_, std::atan2(px - ax, pz - az), kTurnRate, dt);
         if (!take_stock(fetch_)) {
             // Held fast in another's hands: she gives it up for a while.
-            fetch_refused_ |= 1U << static_cast<unsigned>(fetch_);
+            fetch_refused_ |= std::uint64_t{1} << static_cast<unsigned>(fetch_);
             fetch_refused_s_ = kFetchRetrySeconds;
         }
         fetch_ = -1;
@@ -3519,7 +3742,7 @@ bool Matron::fetch_stock(const float dt, const float ax, const float az, const b
 
 bool Matron::load_held_elsewhere(const BodyID body) const {
     for (const Ref<Constraint> &c : physics_.GetConstraints()) {
-        if (c == nullptr || !c->GetEnabled() || c.GetPtr() == hold_.GetPtr() || c->GetType() != EConstraintType::TwoBodyConstraint) {
+        if (c == nullptr || !c->GetEnabled() || c->GetType() != EConstraintType::TwoBodyConstraint) {
             continue;
         }
         const auto *two = static_cast<const TwoBodyConstraint *>(c.GetPtr());
@@ -3531,7 +3754,7 @@ bool Matron::load_held_elsewhere(const BodyID body) const {
 }
 
 bool Matron::take_stock(const int index) {
-    if (hold_ != nullptr || !body_in_world_ || index < 0) {
+    if (!body_in_world_ || index < 0) {
         return false;
     }
     const Throwable &t = throwables_[static_cast<std::size_t>(index)];
@@ -3551,13 +3774,7 @@ bool Matron::take_stock(const int index) {
         // The hands close on the handle where it is; hold_stock draws it in.
         const RVec3 handle = it->GetWorldTransform() * t.handle;
         hold_offset_ = Vec3(handle - her->GetCenterOfMassPosition());
-        PointConstraintSettings settings;
-        settings.mSpace = EConstraintSpace::LocalToBodyCOM;
-        settings.mPoint1 = RVec3(her->GetRotation().Conjugated() * hold_offset_);
-        settings.mPoint2 = it->GetCenterOfMassTransform().Inversed() * handle;
-        hold_ = static_cast<PointConstraint *>(settings.Create(*her, *it));
     }
-    physics_.AddConstraint(hold_);
     physics_.GetBodyInterface().ActivateBody(t.body);
     held_ = index;
     ++takes_;
@@ -3565,19 +3782,47 @@ bool Matron::take_stock(const int index) {
 }
 
 void Matron::hold_stock(const float dt) {
-    if (hold_ == nullptr || held_ < 0) {
+    if (held_ < 0) {
         return;
     }
     // The hands draw what they took in to a point ahead of her chest.
     const Vec3 want = hands_offset();
     const Vec3 left = want - hold_offset_;
     const float step = kHandsPullMps * dt;
+    const Vec3 before = hold_offset_;
     hold_offset_ = left.Length() > step ? hold_offset_ + left.Normalized() * step : want;
+    // The hold is a force from her one account, hands first: the anchor move
+    // draws in pre_step, ahead of her feet this tick. A spring-damper to the
+    // anchor, its weight borne; short of the grant it lags, past the slip it
+    // leaves her hands. Never a position write, never a teleport. The damper
+    // works against the anchor's velocity — her hand's own, not her centre's:
+    // a piece carried along with the anchor feels no drag. Damped against
+    // her centre it lagged half a metre behind a fast lift (kd/kp times the
+    // 3 m/s anchor) and the pallet's throw missed.
     BodyInterface &bodies = physics_.GetBodyInterface();
-    hold_->SetPoint1(EConstraintSpace::LocalToBodyCOM, RVec3(bodies.GetRotation(body_).Conjugated() * hold_offset_));
-    // Wedged and dragged off the hands: it slips out of them.
+    const RVec3 anchor = bodies.GetCenterOfMassPosition(body_) + hold_offset_;
+    const Vec3 anchor_v = bodies.GetLinearVelocity(body_) + (hold_offset_ - before) / dt;
     const Throwable &t = throwables_[static_cast<std::size_t>(held_)];
     const RVec3 handle = bodies.GetWorldTransform(t.body) * t.handle;
+    const Vec3 handle_v = bodies.GetPointVelocity(t.body, handle);
+    const Vec3 rel = handle_v - anchor_v;
+    const Vec3 want_force = t.mass_kg * (kHoldSpring * Vec3(anchor - handle) - kHoldDamp * rel) -
+                            physics_.GetGravity() * t.mass_kg;
+    // J-042 (Codex P1 on #291): charge and measure the lift with the pair's
+    // relative velocity — the handle against her own centre — not rel. The
+    // reaction -granted acts at her centre of mass, so that is the power the
+    // hand and body pair does. A piece tracking a rising anchor has rel near
+    // 0, so charging with rel read the lift as ~0 W; rel stays for the damper.
+    const Vec3 work_v = handle_v - bodies.GetLinearVelocity(body_);
+    const Vec3 granted = feet_push(dt, want_force, &work_v);
+    if (granted.LengthSq() > 0.0F) {
+        bodies.AddForce(t.body, granted, handle);
+        bodies.AddForce(body_, -granted);
+        // J-046 measurement only: the feet's take above, on through her hands.
+        effort::add_force(effort::Path::StockHold, granted, work_v, granted.Length(), -granted);
+        foot_drive_dv_ -= (granted / kMassKg) * dt;
+    }
+    // Wedged and dragged off the hands: it slips out of them.
     const RVec3 hands = bodies.GetCenterOfMassPosition(body_) + hold_offset_;
     if (Vec3(handle - hands).Length() > kHandsSlipM) {
         drop_stock();
@@ -3593,22 +3838,37 @@ bool Matron::throw_stock(const float dt, const RVec3 at, const RVec3 player) {
     // kThrowMps, on the lower of the two arcs that reach them.
     const auto velocity = [&](Vec3 &v) {
         const BodyInterface &bodies = physics_.GetBodyInterface();
-        const RVec3 from = bodies.GetCenterOfMassPosition(body_) + hands_offset();
-        const Vec3 run(player + RVec3(0.0, 0.1, 0.0) - from);
-        const float across = std::hypot(run.GetX(), run.GetZ());
-        if (across < 0.1F) {
-            return false;
-        }
+        // From where the piece really is in her hands (up over her shoulder
+        // once she has reared back).
+        const RVec3 from = held_ >= 0 ? bodies.GetCenterOfMassPosition(throwables_[static_cast<std::size_t>(held_)].body)
+                                      : bodies.GetCenterOfMassPosition(body_) + hands_offset();
         const float g = physics_.GetGravity().Length();
         const float v2 = kThrowMps * kThrowMps;
-        const float disc = v2 * v2 - g * (g * across * across + 2.0F * run.GetY() * v2);
-        if (disc < 0.0F) {
-            return false;
+        // Its arc starts where it leaves her hands, not where they took it
+        // up: her stroke drives it straight, held up against its weight, up
+        // to the throw's speed over kThrowStrokeSeconds (half that speed's
+        // run on). Aimed from the hands' point it went in high (J-042: by
+        // g x the stroke's half x the flight, 0.75 m at 5 m). A few passes
+        // settle the point it leaves from.
+        RVec3 leaves = from;
+        bool found = false;
+        for (int pass = 0; pass < 3; ++pass) {
+            const Vec3 run(player + RVec3(0.0, 0.1, 0.0) - leaves);
+            const float across = std::hypot(run.GetX(), run.GetZ());
+            if (across < 0.1F) {
+                return false;
+            }
+            const float disc = v2 * v2 - g * (g * across * across + 2.0F * run.GetY() * v2);
+            if (disc < 0.0F) {
+                return false;
+            }
+            const float angle = std::atan((v2 - std::sqrt(disc)) / (g * across));
+            const Vec3 flat(run.GetX() / across, 0.0F, run.GetZ() / across);
+            v = flat * (kThrowMps * std::cos(angle)) + Vec3(0.0F, kThrowMps * std::sin(angle), 0.0F);
+            found = true;
+            leaves = from + RVec3(v * (0.5F * kThrowStrokeSeconds));
         }
-        const float angle = std::atan((v2 - std::sqrt(disc)) / (g * across));
-        const Vec3 flat(run.GetX() / across, 0.0F, run.GetZ() / across);
-        v = flat * (kThrowMps * std::cos(angle)) + Vec3(0.0F, kThrowMps * std::sin(angle), 0.0F);
-        return true;
+        return found;
     };
     const float across = distance_xz(ax, az, px, pz);
     if (throw_windup_s_ < 0.0F) {
@@ -3617,6 +3877,7 @@ bool Matron::throw_stock(const float dt, const RVec3 at, const RVec3 player) {
             return false;
         }
         throw_windup_s_ = 0.0F;
+        windup_blind_s_ = 0.0F;
     }
     // Rearing back, still, turning to them.
     throw_windup_s_ += dt;
@@ -3635,13 +3896,258 @@ bool Matron::throw_stock(const float dt, const RVec3 at, const RVec3 player) {
     return true;
 }
 
+int Matron::stock_to_shove(const float ax, const float az) const {
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    int best = -1;
+    float best_m = kSeekStockM;
+    for (std::size_t i = 0; i < throwables_.size(); ++i) {
+        const Throwable &t = throwables_[i];
+        if ((handled_ & (std::uint64_t{1} << i)) == 0U || (fetch_refused_ & (std::uint64_t{1} << i)) != 0U || t.mass_kg <= kTakeMaxKg ||
+            t.mass_kg > kStockShoveMaxKg || !bodies.IsAdded(t.body)) {
+            continue;
+        }
+        const RVec3 p = bodies.GetPosition(t.body);
+        if (std::abs(float(p.GetY()) - feet_y_) > 1.0F || bodies.GetLinearVelocity(t.body).Length() > 0.3F) {
+            continue;
+        }
+        const float m = distance_xz(ax, az, float(p.GetX()), float(p.GetZ()));
+        Vec3 dir;
+        float lip_m = 0.0F;
+        if (m < best_m && pick_shove_edge(static_cast<int>(i), dir, lip_m)) {
+            best = static_cast<int>(i);
+            best_m = m;
+        }
+    }
+    return best;
+}
+
+bool Matron::pick_shove_edge(const int index, Vec3 &dir, float &lip_m) const {
+    const Throwable &t = throwables_[static_cast<std::size_t>(index)];
+    AABox box;
+    {
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), t.body);
+        if (!lock.Succeeded()) {
+            return false;
+        }
+        box = lock.GetBody().GetWorldSpaceBounds();
+    }
+    const Vec3 half = box.GetExtent();
+    const float r = std::max(half.GetX(), half.GetZ());
+    const RVec3 mid(box.GetCenter());
+    const float floor = box.mMin.GetY();
+    IgnoreMultipleBodiesFilter not_us;
+    not_us.Reserve(3);
+    not_us.IgnoreBody(body_);
+    not_us.IgnoreBody(t.body);
+    if (!player_.IsInvalid()) {
+        not_us.IgnoreBody(player_);
+    }
+    const NarrowPhaseQuery &query = physics_.GetNarrowPhaseQuery();
+    // Floor under (x, z): a top within `depth` under the piece's underside.
+    const auto floored = [&](const float x, const float z, const float depth) {
+        RayCastResult hit;
+        return query.CastRay(RRayCast(RVec3(x, floor + 0.3F, z), Vec3(0.0F, -(0.3F + depth), 0.0F)), hit, {}, {},
+                             not_us);
+    };
+    // How far it goes along `d` before it meets something built in (a rail,
+    // a toe board, a post, a wall): its own bounds swept there, a hair off
+    // the floor it slides on.
+    class BuiltOnly final : public BodyFilter {
+    public:
+        bool ShouldCollideLocked(const Body &body) const override { return body.IsStatic() && !body.IsSensor(); }
+    };
+    const BuiltOnly built;
+    const Vec3 swept(std::max(0.02F, half.GetX() - 0.02F), std::max(0.02F, half.GetY() - 0.04F),
+                     std::max(0.02F, half.GetZ() - 0.02F));
+    const RefConst<Shape> sweep_box = new BoxShape(swept, 0.0F);
+    const RVec3 sweep_from = mid + RVec3(0.0, 0.04, 0.0);
+    const auto clear = [&](const Vec3 &d, const float run) {
+        const RShapeCast cast(sweep_box, Vec3::sReplicate(1.0F), RMat44::sTranslation(sweep_from), d * run);
+        ClosestHitCollisionCollector<CastShapeCollector> hit;
+        query.CastShape(cast, ShapeCastSettings(), sweep_from, hit, {}, {}, built);
+        return hit.HadHit() ? run * hit.mHit.mFraction : run;
+    };
+    const float run = kStockShoveReachM + r;
+    const float back = r + kRadius + kStockShoveHandsM;
+    bool found = false;
+    constexpr int kWays = 16;
+    for (int k = 0; k < kWays; ++k) {
+        const float a = 2.0F * kPi * static_cast<float>(k) / static_cast<float>(kWays);
+        const Vec3 d(std::sin(a), 0.0F, std::cos(a));
+        // Room behind it for her to stand and push.
+        const float sx = float(mid.GetX()) - d.GetX() * back;
+        const float sz = float(mid.GetZ()) - d.GetZ() * back;
+        if (!floored(sx, sz, 0.3F)) {
+            continue;
+        }
+        const float open = clear(d, run);
+        for (float m = r + 0.1F; m + r <= open; m += 0.2F) {
+            const float x = float(mid.GetX()) + d.GetX() * m;
+            const float z = float(mid.GetZ()) + d.GetZ() * m;
+            if (floored(x, z, kStockShoveDropM)) {
+                continue;
+            }
+            // Open air wider than the piece: not a seam it bridges.
+            if (floored(x + d.GetX() * r, z + d.GetZ() * r, kStockShoveDropM)) {
+                break;
+            }
+            if (!found || m - r < lip_m) {
+                found = true;
+                dir = d;
+                lip_m = m - r;
+            }
+            break;
+        }
+    }
+    return found;
+}
+
+bool Matron::shove_stock(const float dt, const float ax, const float az, const bool allow_catwalk) {
+    if (held_ >= 0 || fetch_ >= 0 || turn_ != Turn::None || wary_ || throw_cooldown_s_ > 0.0F) {
+        stock_shove_ = -1;
+        return false;
+    }
+    if (stock_shove_ < 0) {
+        stock_shove_ = stock_to_shove(ax, az);
+        float lip_m = 0.0F;
+        if (stock_shove_ < 0 || !pick_shove_edge(stock_shove_, stock_shove_dir_, lip_m)) {
+            stock_shove_ = -1;
+            return false;
+        }
+        stock_shove_pushing_ = false;
+        stock_shove_best_m_ = std::numeric_limits<float>::max();
+        stock_shove_stall_s_ = 0.0F;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const Throwable &t = throwables_[static_cast<std::size_t>(stock_shove_)];
+    const std::uint64_t bit = std::uint64_t{1} << static_cast<unsigned>(stock_shove_);
+    const RVec3 p = bodies.GetCenterOfMassPosition(t.body);
+    const Vec3 pv = bodies.GetLinearVelocity(t.body);
+    const float px = float(p.GetX());
+    const float pz = float(p.GetZ());
+    // Over the lip and going down: shoved.
+    if (float(p.GetY()) < feet_y_ - 0.5F || (stock_shove_pushing_ && pv.GetY() < -1.0F)) {
+        ++stock_shoves_;
+        throw_cooldown_s_ = kThrowCooldownSeconds;
+        stock_shove_ = -1;
+        return false;
+    }
+    // Gone from her floor, out of her reach, in someone's hands, or sent
+    // flying by something not her: not hers to shove.
+    if (std::abs(float(p.GetY()) - feet_y_) > 1.0F || distance_xz(ax, az, px, pz) > kSeekStockM + kStockShoveReachM ||
+        pv.Length() > 2.5F || load_held_elsewhere(t.body)) {
+        stock_shove_ = -1;
+        return false;
+    }
+    float r = 0.0F;
+    float low = 0.0F;   // the height over its underside she pushes at
+    {
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), t.body);
+        if (!lock.Succeeded()) {
+            stock_shove_ = -1;
+            return false;
+        }
+        const AABox box = lock.GetBody().GetWorldSpaceBounds();
+        const Vec3 half = box.GetExtent();
+        r = std::max(half.GetX(), half.GetZ());
+        low = box.mMin.GetY() + std::min(kStockShoveLowM, half.GetY()) - float(p.GetY());
+    }
+    const Vec3 d = stock_shove_dir_;
+    const float side = Vec3(float(ax) - px, 0.0F, float(az) - pz).Dot(d);   // < 0: she is behind it
+    const float gap = distance_xz(ax, az, px, pz);
+    const bool hands_on = side < 0.0F && gap <= r + kRadius + kStockShoveHandsM + 0.05F &&
+                          -side >= 0.7F * gap;
+    if (hands_on && !stock_shove_pushing_) {
+        stock_shove_pushing_ = true;
+        stock_shove_from_ = p;
+        stock_shove_best_m_ = std::numeric_limits<float>::max();
+        stock_shove_stall_s_ = 0.0F;
+    }
+    if (stock_shove_pushing_ && !hands_on && gap > r + kRadius + 0.6F) {
+        // It got away from her hands: back round behind it.
+        stock_shove_pushing_ = false;
+        stock_shove_best_m_ = std::numeric_limits<float>::max();
+        stock_shove_stall_s_ = 0.0F;
+    }
+    // Getting it no nearer the lip (or herself no nearer its far side), she
+    // gives it up for a while.
+    const float m = stock_shove_pushing_ ? -Vec3(p - stock_shove_from_).Dot(d)
+                                         : distance_xz(ax, az, px - d.GetX() * (r + kRadius + 0.15F),
+                                                       pz - d.GetZ() * (r + kRadius + 0.15F));
+    if (m < stock_shove_best_m_ - 0.05F) {
+        stock_shove_best_m_ = m;
+        stock_shove_stall_s_ = 0.0F;
+    } else {
+        stock_shove_stall_s_ += dt;
+    }
+    if (stock_shove_stall_s_ >= kFetchStallSeconds) {
+        fetch_refused_ |= bit;
+        fetch_refused_s_ = kFetchRetrySeconds;
+        stock_shove_ = -1;
+        return false;
+    }
+    if (!stock_shove_pushing_) {
+        // To its far side; round it, never through it.
+        const float sx = px - d.GetX() * (r + kRadius + 0.15F);
+        const float sz = pz - d.GetZ() * (r + kRadius + 0.15F);
+        float gx = sx;
+        float gz = sz;
+        if (side > -0.5F * r) {
+            const Vec3 across(d.GetZ(), 0.0F, -d.GetX());
+            const float s = Vec3(float(ax) - px, 0.0F, float(az) - pz).Dot(across) >= 0.0F ? 1.0F : -1.0F;
+            gx = px + across.GetX() * s * (r + kRadius + 0.4F) - d.GetX() * 0.3F;
+            gz = pz + across.GetZ() * s * (r + kRadius + 0.4F) - d.GetZ() * 0.3F;
+        }
+        float wx = ax;
+        float wz = az;
+        if (!route_toward(ax, az, gx, gz, allow_catwalk, wx, wz)) {
+            stock_shove_ = -1;
+            return false;
+        }
+        const float to_stand = distance_xz(ax, az, sx, sz);
+        walk_toward(dt, wx, wz, to_stand < 1.0F ? kStockShoveMps : kHuntMps);
+        return true;
+    }
+    // Hands on it: walking it on at a push's pace, facing the lip. Her feet
+    // push on the floor straight (walk_toward, aimed through the piece,
+    // would step up onto it and kick it away), and her brace stops her at
+    // the lip it goes over...
+    yaw_ = turn_toward(yaw_, std::atan2(d.GetX(), d.GetZ()), kTurnRate, dt);
+    const Vec3 her_v = bodies.GetLinearVelocity(body_);
+    const Vec3 flat(her_v.GetX(), 0.0F, her_v.GetZ());
+    const Vec3 pace_dv = d * kStockShoveMps - flat;
+    const float pace_step = kFootAccel * dt;
+    (void)feet_push(dt, (pace_dv.Length() > pace_step ? pace_dv.Normalized() * pace_step : pace_dv) * (kMassKg / dt));
+    target_x_ = float(ax) + d.GetX();
+    target_z_ = float(az) + d.GetZ();
+    // ...and her hands' push on its near face low down (pushed at its middle
+    // a drum tips over its front edge), the force her
+    // feet hold against the floor (her tick's one account), its opposite on
+    // her hands. Her own forces from it balance; the floor takes it.
+    const float mass = t.mass_kg;
+    const float along = pv.Dot(d);
+    const float g = physics_.GetGravity().Length();
+    const float friction = bodies.GetFriction(t.body);
+    const float want = std::max(0.0F, mass * (kStockShoveMps - along) / kStockShoveEaseS + friction * mass * g);
+    const Vec3 granted = feet_push(dt, d * want);
+    if (granted.LengthSq() > 0.0F) {
+        const RVec3 face = p - RVec3(d * r) + RVec3(0.0, low, 0.0);
+        bodies.AddForce(t.body, granted, face);
+        bodies.AddForce(body_, -granted);
+        // J-046 measurement only: the feet's take above, on through her hands.
+        effort::add_force(effort::Path::HandsPush, granted, pv - her_v, granted.Length(), -granted);
+        foot_drive_dv_ -= (granted / kMassKg) * dt;
+        stock_push_force_n_ = granted.Length();
+    }
+    brace_at_edges(dt);
+    speed_ = flat.Length();
+    stride_ += speed_ * dt;
+    return true;
+}
+
 void Matron::release_stock(const Vec3 velocity, const Vec3 spin, const bool thrown) {
     const int index = held_;
     held_ = -1;
-    if (hold_ != nullptr) {
-        physics_.RemoveConstraint(hold_);
-        hold_ = nullptr;
-    }
     if (index < 0) {
         return;
     }
@@ -3649,7 +4155,9 @@ void Matron::release_stock(const Vec3 velocity, const Vec3 spin, const bool thro
     BodyInterface &bodies = physics_.GetBodyInterface();
     bodies.ActivateBody(t.body);
     if (thrown) {
-        bodies.SetLinearAndAngularVelocity(t.body, velocity, spin);
+        (void)spin;
+        throw_v_ = velocity;
+        throw_stroke_s_ = 0.0F;
         thrown_ = index;
         thrown_s_ = kThrowQuietSeconds;
         throw_cooldown_s_ = kThrowCooldownSeconds;
@@ -3657,8 +4165,86 @@ void Matron::release_stock(const Vec3 velocity, const Vec3 spin, const bool thro
     }
 }
 
+void Matron::end_thrown_claim() {
+    if (thrown_ < 0 || thrown_s_ <= 0.0F || !body_in_world_) {
+        return;
+    }
+    const Throwable &t = throwables_[static_cast<std::size_t>(thrown_)];
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    if (!bodies.IsAdded(t.body)) {
+        return;
+    }
+    // In his hands (as of the last tick), or against his body.
+    bool touched = (push_load_ != 0 && push_load_ == t.entity) ||
+                   (!player_.IsInvalid() && bodies.IsAdded(player_) && physics_.WereBodiesInContact(player_, t.body));
+    if (!touched) {
+        // Met by another moving body (a piece thrown at it, a machine): any
+        // dynamic body but hers in contact with it over the last step.
+        AABox box;
+        {
+            const BodyLockRead lock(physics_.GetBodyLockInterface(), t.body);
+            if (!lock.Succeeded()) {
+                return;
+            }
+            box = lock.GetBody().GetWorldSpaceBounds();
+        }
+        box.ExpandBy(Vec3::sReplicate(0.1F));
+        AllHitCollisionCollector<CollideShapeBodyCollector> found;
+        physics_.GetBroadPhaseQuery().CollideAABox(box, found);
+        for (const BodyID id : found.mHits) {
+            if (id == t.body || id == body_ || bodies.GetMotionType(id) != EMotionType::Dynamic || bodies.IsSensor(id)) {
+                continue;
+            }
+            if (physics_.WereBodiesInContact(id, t.body)) {
+                touched = true;
+                break;
+            }
+        }
+    }
+    if (touched) {
+        thrown_s_ = 0.0F;
+    }
+}
+
+void Matron::throw_stroke(const float dt) {
+    if (thrown_ < 0 || !body_in_world_) {
+        throw_stroke_s_ = -1.0F;
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const Throwable &t = throwables_[static_cast<std::size_t>(thrown_)];
+    const Vec3 pv = bodies.GetLinearVelocity(t.body);
+    const RVec3 hands = bodies.GetCenterOfMassPosition(body_) + hands_offset();
+    const float speed = throw_v_.Length();
+    const Vec3 left = throw_v_ - pv;
+    // Up to the throw's speed, out of her hands' reach, or the stroke spent:
+    // it has left them.
+    if (speed < 1.0e-3F || left.Dot(throw_v_ / speed) <= 0.05F * speed ||
+        Vec3(bodies.GetCenterOfMassPosition(t.body) - hands).Length() > kHandsSlipM ||
+        throw_stroke_s_ >= kThrowStrokeSeconds + 0.1F) {
+        throw_stroke_s_ = -1.0F;
+        return;
+    }
+    const float remaining = std::max(kThrowStrokeSeconds - throw_stroke_s_, 2.0F * dt);
+    throw_stroke_s_ += dt;
+    // Her hands hold it up against its weight as they drive it.
+    const Vec3 want = left * (t.mass_kg / remaining) - physics_.GetGravity() * t.mass_kg;
+    const Vec3 granted = feet_push(dt, want, &pv);
+    if (granted.LengthSq() > 0.0F) {
+        bodies.AddForce(t.body, granted);
+        bodies.AddForce(body_, -granted);
+        // J-046 measurement only: the feet's take above, on through her hands.
+        effort::add_force(effort::Path::HandsPush, granted, pv - bodies.GetLinearVelocity(body_), granted.Length(),
+                          -granted);
+        foot_drive_dv_ -= (granted / kMassKg) * dt;
+        stock_push_force_n_ = granted.Length();
+    }
+}
+
 void Matron::drop_stock() {
+    throw_stroke_s_ = -1.0F;
     fetch_ = -1;
+    stock_shove_ = -1;
     throw_windup_s_ = -1.0F;
     release_stock(Vec3::sZero(), Vec3::sZero(), false);
 }
@@ -3697,11 +4283,19 @@ void Matron::restore(const Saved &saved) {
     // the world being left; it never reaches her after the load.
     clear_player_blow();
     // A restore puts her back as the checkpoint had her, dead or not: the world is put
-    // back and she is part of it (her death is not kept; matron.hpp, Saved).
-    dead_ = false;
+    // back and she is part of it (her death is kept; matron.hpp, Saved).
+    dead_ = saved.dead;
+    damage_ns_ = saved.damage_ns;
+    player_damage_ns_ = saved.player_damage_ns;
     {
         remove_body();
         end_hold(saved.state);
+        // A saved death is a state, not only a flag: the disk save keeps the
+        // meters and the death but not the state, so a dead save restores her
+        // dead whatever state it carries.
+        if (dead_) {
+            state_ = State::Dead;
+        }
         let_go_ = false;
         armplay_done_ = false;
         armplay_reposes_ = 0;
@@ -3740,6 +4334,8 @@ void Matron::restore(const Saved &saved) {
         thrown_s_ = 0.0F;
         takes_ = 0;
         throws_ = 0;
+        stock_shoves_ = 0;
+        stock_shove_ = -1;
         speed_ = 0.0F;
         since_heard_s_ = 0.0F;
         pursuit_s_ = 0.0F;
@@ -3890,6 +4486,11 @@ void Matron::restore(const Saved &saved) {
         }
         restore_planks();
     }
+    if (damage_lethal_at_ns(damage_ns_)) {
+        dead_ = true;
+        state_ = State::Dead;
+        remove_body();
+    }
     refresh_view();
 }
 
@@ -3958,8 +4559,12 @@ void Matron::sense_near() {
     };
     std::array<Candidate, 32> candidates{};
     std::size_t count = 0;
+    // The nearest; among equals, by id (the broad phase's order is its own).
+    const auto nearer = [](const Candidate &a, const Candidate &b) {
+        return a.distance != b.distance ? a.distance < b.distance : a.id < b.id;
+    };
     for (const BodyID id : found.mHits) {
-        if (id == body_ || id == player_ || id == held || count == candidates.size()) {
+        if (id == body_ || id == player_ || id == held) {
             continue;
         }
         const BodyLockRead lock(physics_.GetBodyLockInterface(), id);
@@ -3980,7 +4585,7 @@ void Matron::sense_near() {
         if (inverse_mass <= 0.0F) {
             continue;
         }
-        Candidate &c = candidates[count++];
+        Candidate c;
         c.near.body = id;
         c.near.velocity = body.GetLinearVelocity();
         c.near.at = body.GetCenterOfMassPosition();
@@ -3988,12 +4593,18 @@ void Matron::sense_near() {
         c.near.radius = body.GetWorldSpaceBounds().GetExtent().Length();
         c.distance = Vec3(c.near.at - at).Length();
         c.id = id.GetIndexAndSequenceNumber();
+        // Past 32 in her box (a stocked floor), the 32 nearest are kept, not
+        // the broad phase's first 32: what touches her is never crowded out.
+        if (count < candidates.size()) {
+            candidates[count++] = c;
+        } else {
+            Candidate &farthest = *std::max_element(candidates.begin(), candidates.end(), nearer);
+            if (nearer(c, farthest)) {
+                farthest = c;
+            }
+        }
     }
-    // The nearest; among equals, by id (the broad phase's order is its own).
-    std::sort(candidates.begin(), candidates.begin() + static_cast<std::ptrdiff_t>(count),
-              [](const Candidate &a, const Candidate &b) {
-                  return a.distance != b.distance ? a.distance < b.distance : a.id < b.id;
-              });
+    std::sort(candidates.begin(), candidates.begin() + static_cast<std::ptrdiff_t>(count), nearer);
     near_count_ = std::min(count, kMaxNear);
     for (std::size_t i = 0; i < near_count_; ++i) {
         near_[i] = candidates[i].near;
@@ -4027,6 +4638,8 @@ void Matron::take_blow(const float dt) {
     const float feet = float(at.GetY()) - kStandCentre;
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     bool struck = false;
+    float environment_ns = 0.0F;
+    float player_ns = 0.0F;
     Vec3 impulse = Vec3::sZero();
     float above_share = 0.0F;
     for (std::size_t i = 0; i < near_count_; ++i) {
@@ -4059,12 +4672,15 @@ void Matron::take_blow(const float dt) {
         struck = true;
         // What it gave up is hers: along the floor (on the pipe, every way),
         // and a weight's from above.
-        impulse -= (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * (n.mass_kg / kMassKg);
+        const Vec3 given = (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * n.mass_kg;
+        impulse -= given / kMassKg;
         const bool its_low = float(n.at.GetY()) < feet + kLowBlowM;
         const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > at.GetY();
+        const float overhead_ns = its_above ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
         if (its_above) {
-            above_share += std::max(0.0F, its_change.GetY()) * n.mass_kg / kMassKg;
+            above_share += overhead_ns / kMassKg;
         }
+        environment_ns += std::max(given.Length(), overhead_ns);
         if (blow_quiet_ >= kBlowQuietTicks) {
             // A fresh blow: what kind, from where, and whether she faces it.
             blow_low_ = false;
@@ -4088,6 +4704,7 @@ void Matron::take_blow(const float dt) {
         // The player's fist: a striker closing on her by definition, its
         // impulse along the floor hers.
         struck = true;
+        player_ns = player_blow_ns_.Length();
         impulse += Vec3(player_blow_ns_.GetX(), 0.0F, player_blow_ns_.GetZ()) / kMassKg;
         if (blow_quiet_ >= kBlowQuietTicks) {
             blow_low_ = false;
@@ -4112,6 +4729,8 @@ void Matron::take_blow(const float dt) {
             blow_change_ = Vec3::sZero();
             blow_impulse_ = Vec3::sZero();
             blow_above_ = 0.0F;
+            // Window closed: the export closes with it, so the next landing edges again.
+            blow_mps_ = 0.0F;
         }
         return;
     }
@@ -4128,6 +4747,25 @@ void Matron::take_blow(const float dt) {
     blow_by_player_ = blow_by_player_ || player_blow_tag_;
     player_blow_tag_ = false;
     blow_quiet_ = 0;
+    // Judge each real contact impulse once, not the body's response as a second source.
+    damage_ns_ += environment_ns + player_ns;
+    player_damage_ns_ += player_ns;
+    if (damage_lethal_at_ns(damage_ns_)) {
+        dead_ = true;
+        state_ = State::Dead;
+        clear_interrupted_actions(false);
+        // Keep the actual Jolt body in the world. Her existing Down collision
+        // settles on real steel; the rendered collapse follows the same state.
+        const Vec3 fall(impulse.GetX(), 0.0F, impulse.GetZ());
+        if (fall.LengthSq() > 1.0e-6F) {
+            const Vec3 along = fall.Normalized();
+            fall_x_ = along.GetX();
+            fall_z_ = along.GetZ();
+        }
+        down_for_s_ = 0.0F;
+        lie_down(fall_x_, fall_z_);
+        return;
+    }
     if (tagged && his_blow()) {
         return;
     }
@@ -4196,8 +4834,9 @@ void Matron::take_blow(const float dt) {
                         : (prev == State::Peering || prev == State::Grab || prev == State::Release) ? State::Searching
                                                                                                     : prev;
         state_ = State::Staggering;
-        stagger_s_ = kStaggerMinSeconds + (kStaggerMaxSeconds - kStaggerMinSeconds) *
-                                              std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F);
+        stagger_s_ = (kStaggerMinSeconds + (kStaggerMaxSeconds - kStaggerMinSeconds) *
+                                               std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F)) *
+                     damage_recovery_scale_for_ns(damage_ns_);
         ++staggers_;
         rage_ = std::min(1.0F, rage_ + kStaggerRage);
         blow_staggered_ = true;
@@ -4248,7 +4887,7 @@ void Matron::knock_down() {
     clear_interrupted_actions(true);
     state_ = State::Down;
     resume_state_ = State::Searching;
-    down_s_ = down_seconds();
+    down_s_ = down_seconds() * damage_recovery_scale_for_ns(damage_ns_);
     down_for_s_ = 0.0F;
     turn_cooldown_s_ = turn_cooldown_seconds();
     sight_far_s_ = 0.0F;
@@ -4397,7 +5036,7 @@ bool Matron::sole_contact(const RVec3 at, const Vec3 velocity, const float yaw, 
     return false;
 }
 
-Vec3 Matron::feet_push(const float dt, const Vec3 want_force) {
+Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const work_velocity) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     if (!body_in_world_ || dt <= 0.0F || want_force.LengthSq() <= 1.0e-8F) {
         return Vec3::sZero();
@@ -4408,7 +5047,7 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force) {
     if (!sole_contact(at, velocity, yaw_, sole) || !bodies.IsAdded(sole.body)) {
         return Vec3::sZero();   // nothing under her to push on
     }
-    feet_budget_.velocity = velocity - sole.velocity;
+    feet_budget_.velocity = work_velocity != nullptr ? *work_velocity : velocity - sole.velocity;
     const Vec3 granted = feet_budget_.take(want_force);
     if (granted.LengthSq() > 0.0F) {
         bodies.AddForce(body_, granted);
@@ -4461,7 +5100,7 @@ void Matron::brace_at_edges(const float dt) {
         }
     }
     if (stop.LengthSq() > 0.0F) {
-        (void)feet_push(dt, stop * (kMassKg / dt));
+        edge_brace_n_ = std::max(edge_brace_n_, feet_push(dt, stop * (kMassKg / dt)).Length());
     }
 }
 
@@ -4520,7 +5159,7 @@ void Matron::step_knocked(const float dt) {
 void Matron::refresh_view() {
     view_.state = state_;
     view_.alive = !dead_;
-    view_.released = out(state_);
+    view_.released = out(state_) || (state_ == State::Dead && body_in_world_);
     view_.fooled = fooled_;
     view_.wary = wary_ || state_ == State::Peering;
     view_.vaults = vaults_;
@@ -4582,8 +5221,9 @@ void Matron::refresh_view() {
     view_.stock_seek_handle = RVec3::sZero();
     view_.stock_seek_rotation = Quat::sIdentity();
     view_.stock_seek_size = Vec3::sZero();
-    if (held_ < 0 && fetch_ >= 0 && static_cast<std::size_t>(fetch_) < throwables_.size()) {
-        const Throwable &candidate = throwables_[static_cast<std::size_t>(fetch_)];
+    const int seeking = fetch_ >= 0 ? fetch_ : stock_shove_;
+    if (held_ < 0 && seeking >= 0 && static_cast<std::size_t>(seeking) < throwables_.size()) {
+        const Throwable &candidate = throwables_[static_cast<std::size_t>(seeking)];
         const BodyLockRead seek_lock(physics_.GetBodyLockInterface(), candidate.body);
         if (seek_lock.Succeeded()) {
             const Body &piece = seek_lock.GetBody();
@@ -4593,7 +5233,7 @@ void Matron::refresh_view() {
             view_.stock_seek_size = piece.GetShape()->GetLocalBounds().GetSize();
         }
     }
-    if (held_ >= 0 && hold_ != nullptr && body_in_world_) {
+    if (held_ >= 0 && body_in_world_) {
         const Throwable &t = throwables_[static_cast<std::size_t>(held_)];
         const BodyLockRead lock(physics_.GetBodyLockInterface(), t.body);
         if (lock.Succeeded()) {
@@ -4606,13 +5246,25 @@ void Matron::refresh_view() {
     }
     view_.takes = takes_;
     view_.throws = throws_;
+    view_.stock_shoves = stock_shoves_;
+    view_.stock_handled = handled_;
+    view_.stock_push_force_n = stock_push_force_n_;
+    view_.throw_windup = throw_windup_s_ >= 0.0F ? std::min(1.0F, throw_windup_s_ / kThrowWindupSeconds) : 0.0F;
+    view_.stock_thrown = thrown_entity();
     view_.staggers = staggers_;
     view_.knockdowns = knockdowns_;
+    view_.damage_ns = damage_ns_;
+    view_.player_damage_ns = player_damage_ns_;
+    view_.damage_stage = damage_stage_for_ns(damage_ns_);
     view_.blow_mps = blow_mps_;
+    view_.blow_low = blow_low_;
+    view_.riding = riding_;
+    view_.edge_brace_n = edge_brace_n_;
+    view_.feet_push_n = foot_force_n_;
     view_.fall_x = fall_x_;
     view_.fall_z = fall_z_;
     view_.kneeling = kneeling_;
-    view_.down_s = state_ == State::Down ? down_for_s_ : 0.0F;
+    view_.down_s = state_ == State::Down || state_ == State::Dead ? down_for_s_ : 0.0F;
     view_.down_left_s = state_ == State::Down ? std::max(0.0F, down_s_) : 0.0F;
     report_pipe();
     view_.strain = state_ == State::Dormant ? 0.0F : std::min(1.0F, strain_s_ / kStrainSeconds);

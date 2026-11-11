@@ -303,12 +303,24 @@ struct MatronSnapshot final {
     Vector3 stock_seek_size{};
     std::uint32_t takes = 0;    // pieces of the player's stock she took, this run
     std::uint32_t throws = 0;   // and threw at the player
+    std::uint32_t stock_shoves = 0;     // and shoved off a lip (J-016)
+    std::uint64_t stock_handled = 0;    // her throwables she counts his, a bit each
+    double stock_push_force_n = 0.0;   // her hands' push on it this tick
+    double throw_windup = 0.0;         // rearing back to throw: 0 not, up to 1 as it leaves her hands
+    std::uint64_t stock_thrown = 0;    // her throw whose landing is no sound to her yet, 0 none
     // Her balance (matron.hpp): blows that took it and that took her off her
     // feet this run, the last blow (the change in her speed it made), and
     // down, the way she fell, kneeling where lying did not fit, and how long.
     std::uint32_t staggers = 0;
     std::uint32_t knockdowns = 0;
+    double damage_ns = 0.0;
+    double player_damage_ns = 0.0;
+    std::uint8_t damage_stage = 0;
     double blow_mps = 0.0;
+    bool blow_low = false;      // the last blow came at her shins
+    bool riding = false;        // she rides a floor going up or down under her
+    double edge_brace_n = 0.0;  // her feet braced back from an edge this tick
+    double feet_push_n = 0.0;   // all her feet pushed with this tick (read only)
     double fall_x = 0.0, fall_z = 1.0;
     bool kneeling = false;
     double down_s = 0.0;
@@ -328,6 +340,7 @@ struct MatronSnapshot final {
     bool pipe_head_down = false;
     bool pipe_sliding = false;
     bool pipe_stunned = false;
+    double pipe_tuck = 0.0;
     bool pipe_listening = false;
     std::uint32_t pipe_links = 0;
     std::uint32_t pipe_holds = 0;
@@ -877,6 +890,25 @@ enum class FallState : std::uint8_t {
     Parachuting = 2,
 };
 
+// J-044m (#245), the fight perf probes: wall time one span of the fixed step
+// took, in microseconds, on std::chrono::steady_clock (monotonic). The last
+// step's, the most since the Simulation was made, and the running mean over
+// `samples` steps. Measurement only: nothing in the sim reads it, it is not in
+// Snapshot, a save or world_bits, so the determinism hash cannot see it.
+struct StepTimer final {
+    double last_us = 0.0;
+    double max_us = 0.0;
+    double mean_us = 0.0;
+    std::uint64_t samples = 0;
+};
+
+struct StepTiming final {
+    StepTimer step;          // the whole world step (PhysicsWorld::step)
+    StepTimer physics;       // PhysicsSystem::Update inside it
+    StepTimer matron_pre;    // Matron::pre_step
+    StepTimer matron_post;   // Matron::post_step
+};
+
 // One of the yard crew (Life L2, sim/crew.hpp), as the presentation needs it.
 struct WorkerView final {
     Vector3 position{};       // the capsule's center
@@ -929,6 +961,10 @@ struct Snapshot final {
     // closing speed.
     std::uint64_t hit_count = 0;
     double hit_speed_mps = 0.0;
+    // The hardest blow this tick, his own drive taken off (the listener's
+    // hit_closing, before the felt threshold): what a wall hit charges,
+    // whether or not it was felt.
+    double hit_closing_mps = 0.0;
     // Riding a zipline's trolley (sim/zipline.hpp): the swing's hands on
     // its bar.
     bool zipline_riding = false;
@@ -1219,6 +1255,10 @@ struct Snapshot final {
     double wind_mps = 0.0;
     double wind_force_n = 0.0;
     double wind_peak_force_n = 0.0;   // the most it has pushed, N
+    // The gust front's leading edge above 396 m (J-022): its x, west of the
+    // tower's west face, on the simulation's clock; the mist streak sits
+    // ahead of it and the push follows behind it.
+    double wind_front_x_m = 0.0;
     // Blows from something moving that reached the body's balance
     // (kShoveClosingMps); whether one became a stumble is in stumble_count.
     std::uint64_t shove_count = 0;
@@ -1228,6 +1268,7 @@ struct Snapshot final {
     // and the last landing's point, her surface normal there and the
     // impulse it put into her (N*s, force times time).
     std::uint8_t strike_phase = 0;
+    std::uint8_t strike_move = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep
     std::uint32_t strike_phase_ticks = 0;
     bool strike_offered = false;
     std::int8_t strike_arm = 1;   // the fist he throws with: 1 right, 0 left, -1 none usable
@@ -1591,6 +1632,8 @@ public:
 
     [[nodiscard]] AdvanceResult advance_frame(double frame_delta_seconds) noexcept;
     [[nodiscard]] Snapshot snapshot() const noexcept;
+    // The fight perf probes (StepTiming): read-only, never fed back.
+    [[nodiscard]] StepTiming step_timing() const noexcept;
     // Read-only visual pose between fixed ticks. Physics, probes and input keep
     // using snapshot().player_position as their sole authority.
     [[nodiscard]] Vector3 render_player_position() const noexcept;
@@ -1627,6 +1670,16 @@ public:
     };
     [[nodiscard]] std::uint32_t loose_stock_count() const noexcept;
     [[nodiscard]] LooseStockPiece loose_stock_piece(std::uint32_t index) const noexcept;
+    // Where each loose-stock group begins in the table (loose_stock.hpp):
+    // the crane steel, the machine weights, the Matron's throwables, and
+    // the east/west stock, so a test can reach a group without assuming
+    // it is the last.
+    [[nodiscard]] std::uint32_t loose_stock_crane_steel_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_machine_weights_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_throwables_begin() const noexcept;
+    // J-042's two kinds by her band, laid last of all (after the east/west stock).
+    [[nodiscard]] std::uint32_t loose_stock_matron_kinds_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_east_west_begin() const noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;
     // Writes up to capacity points of the cable as drawn (first end, sheaves,
@@ -1727,11 +1780,22 @@ public:
         std::uint32_t moves_done = 0, moves_failed = 0, replans = 0, arrivals = 0, yields = 0;
         std::uint32_t grips = 0, releases = 0, slips = 0, catches = 0, misses = 0;
         double force_n = 0.0, peak_force_n = 0.0;
+        double power_w = 0.0;   // her feet's power this tick, from her climber's account
         bool holding = false;
         std::uint8_t move = 0, last_failure = 0;
         double gravity_factor = 1.0;
     };
     [[nodiscard]] MatronJourney matron_journey() const noexcept;
+    // Her hoist leg (matron.hpp hoist_view): its phase (0 none .. 5 stepping
+    // off), the rides she finished, her hands' push this tick (N) and its
+    // power against what it moves (W).
+    struct MatronHoist {
+        int phase = 0;
+        std::uint32_t rides = 0;
+        float hand_n = 0.0F;
+        float hand_power_w = 0.0F;
+    };
+    [[nodiscard]] MatronHoist matron_hoist() const noexcept;
     // Tests: her hold's choices fixed (spare: -1 her roll, 0 never, 1 always; a dangle's seconds, <0 rolled).
     void debug_matron_hold(int spare, double dangle_seconds) noexcept;
     // Tests: ArmPlay in a hold (-1 or 1 her rule: every hold while an arm is left; 0 never, the
@@ -1774,6 +1838,30 @@ public:
         double hang_overload_impulse = 0.0;
     };
     [[nodiscard]] MatronFixtureSample debug_matron_fixture(const Vector3 *place = nullptr);
+    // Tests only, never bound to the bridge; reads only. What her balance
+    // read over the last step (Matron::sense_near, take_blow): the moving
+    // bodies in her kNearM box now, each one sense_near kept with take_blow's
+    // gates worked the same way, and any moving body touching her it did not
+    // keep (a collision her balance missed).
+    struct MatronStrikerSample {
+        std::uint32_t box_hits = 0;    // the broad phase's hits in her box (not her, not the player)
+        std::uint32_t box_moving = 0;  // of them, what sense_near could keep (moving, solid, meets her)
+        struct Striker {
+            std::uint64_t entity = 0;
+            double kg = 0.0;            // its mass
+            double centre_y = 0.0;      // its centre of mass before the step
+            double feet_y = 0.0;        // her soles after it
+            double closing_mps = 0.0;   // its own speed at her before the step
+            double relative_mps = 0.0;  // the same, less hers
+            double change_mps = 0.0;    // its velocity change over the step, less gravity's
+            bool contact = false;       // in contact with her this step
+            bool low = false;           // its centre under her soles + kLowBlowM
+            bool judged = false;        // past all three gates (change, closing, contact): a blow
+        };
+        std::vector<Striker> kept;                   // the nearest kMaxNear of the first 32
+        std::vector<std::uint64_t> touching_missed;  // moving bodies touching her not kept
+    };
+    [[nodiscard]] MatronStrikerSample debug_matron_strikers();
     // A world started after the beacon was lit before (the profile keeps it).
     void light_summit() noexcept;
     [[nodiscard]] bool set_summit_lower(bool held) noexcept;
@@ -1809,6 +1897,21 @@ public:
     // first: a reader keeps the last sequence it has seen.
     [[nodiscard]] std::vector<ImpactSnapshot> impacts() const;
     [[nodiscard]] std::uint64_t last_impact_sequence() const noexcept;
+    // The tower's machines heard (gap 10): each moving part tracked for hits,
+    // whether it is its stage's running source, and the running noise of the
+    // last step (loudness 0..1, what Matron::hear is given).
+    struct MachinePart {
+        std::uint64_t entity = 0;
+        bool runs = false;
+    };
+    struct MachineNoise {
+        std::uint64_t entity = 0;
+        Vector3 at{};
+        double speed_mps = 0.0;
+        double loudness = 0.0;
+    };
+    [[nodiscard]] std::vector<MachinePart> machine_parts() const;
+    [[nodiscard]] std::vector<MachineNoise> machine_noises() const;
     // The ziplines (sim/zipline.hpp): each line's anchors, where its trolley
     // and its brake block are down it, and the trolley's bar while held.
     struct ZiplineLine {
@@ -1972,6 +2075,7 @@ private:
     bool hook_release_ = false;
     bool hook_take_ = false;
     Snapshot snapshot_{};
+    StepTiming step_timing_{};   // kept across a world rebuilt after she ends a run
     Vector3 previous_player_position_{};
     Vector3 previous_matron_position_{};
     double previous_matron_yaw_ = 0.0;

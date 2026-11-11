@@ -1115,6 +1115,95 @@ func _forklift_touch(device: int) -> bool:
 	return true
 
 
+# touch_forklift_ram (J-041): on her deck, 154. A sprint by her locker wakes
+# her; off to the forklift parked on the east band; she bursts out; a run up
+# the band and back calls her; up onto the truck's floor, DRIVE; she comes for
+# the driver, and the stick held forward, steered at her, rams her at full
+# speed: the forks' blades at her shins, a low blow, and she goes down.
+const DECK154_FORKLIFT_CHASSIS := 2997
+const DECK154_FORKLIFT_X := 24.5
+const DECK154_FORKLIFT_Z := -140.0
+
+
+func _deck154_truck() -> Transform3D:
+	return _native().get_kit_body_transform(int(_native().get_kit_body_index(DECK154_FORKLIFT_CHASSIS)))
+
+
+# The stick's right that steers the truck at `at`: the stick right steers it
+# right of its nose, whatever the view. J-045: gain 3.5 (was 2.0) — the
+# 1-tick first advance shifts her start ~10 cm, so the ram is a knife-edge
+# and the truck under-turns at 2.0 (nose ~15 deg west of the ~34 deg
+# bearing to her, glancing clip, blow 0.00). Measured: gain 3.0 passes
+# thin (blow 0.29), gain 3.5 squares it up (rammed 3.00 m/s, blow 1.05,
+# state 11), gain 4.0 over-turns and she pulls away (blow 0.00).
+func _steer_at(at: Vector3) -> float:
+	var t := _deck154_truck()
+	var nose := t.basis.z
+	var to := at - t.origin
+	var ahead := to.x * nose.x + to.z * nose.z
+	var right := -to.x * nose.z + to.z * nose.x
+	return clampf(3.5 * atan2(right, maxf(ahead, 0.5)), -1.0, 1.0)
+
+
+func _forklift_ram_touch(device: int) -> bool:
+	if not await _wake_matron(device):
+		return false
+	for target in [Vector2(14.0, -129.6), Vector2(22.5, -134.0)]:
+		if not await _go(device, target, 0.3, 30.0):
+			return _fail("the walk to the deck-154 forklift stopped short of %s" % str(target))
+	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 40.0):
+		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
+	# Called from beside the truck (it parks by the band's open edge, off its
+	# walked line): a run down past its wheel and back.
+	if not await _call_her_to(device, Vector2(22.5, -137.0), Vector2(22.5, -141.0)):
+		return _fail("the run down beside the truck and back stalled at %s" % str(_position()))
+	var station_z := DECK154_FORKLIFT_Z - 0.15
+	if not (await _go(device, Vector2(DECK154_FORKLIFT_X - 1.3, station_z), 0.15, 10.0) and \
+			await _go(device, Vector2(DECK154_FORKLIFT_X, station_z), 0.12, 8.0)):
+		return _fail("up onto the deck-154 forklift's floor (at %s)" % str(_position()))
+	await _face(Vector2(0.0, 1.0))
+	if not await _offered(&"drive", "DRIVE", "THE FORKLIFT"):
+		return _fail("DRIVE was not offered at the deck-154 forklift's wheel")
+	_act(device)
+	if not await _wait_until(func() -> bool: return bool(_native().get_forklift_state()["driving"]), 1.0):
+		return _fail("DRIVE did not take the controls")
+	print("SCRAPERX_UITEST forklift_ram: at the wheel, she is at %s (state %d)" % [
+		str(_matron_state()["position"]), int(_matron_state()["state"])])
+	# She comes on down the band, ahead of its forks.
+	var coming: bool = await _wait_until(func() -> bool:
+		var m := _matron_state()
+		var at: Vector3 = m["position"]
+		var t := _deck154_truck().origin
+		return int(m["state"]) == MATRON_STATE_HUNTING and at.z > t.z + 2.0 and \
+			Vector2(at.x, at.z).distance_to(Vector2(t.x, t.z)) < 12.0, 30.0)
+	if not coming:
+		return _fail("she did not come for the driver (state %d at %s)" % [int(_matron_state()["state"]), str(_matron_state()["position"])])
+	var downs := int(_matron_state()["knockdowns"])
+	var low := false
+	var top := 0.0
+	var waited := 0.0
+	while waited < 8.0 and int(_matron_state()["knockdowns"]) == downs and _deck154_truck().origin.z < -129.0:
+		var m := _matron_state()
+		_move_dir(device, Vector2(_steer_at(m["position"]), 1.0))
+		low = low or (float(m["blow_mps"]) > 0.0 and bool(m["blow_low"]))
+		top = maxf(top, float(_native().get_forklift_state()["speed_mps"]))
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	_move_dir(device, Vector2.ZERO)
+	await _seconds(0.3)
+	var m := _matron_state()
+	low = low or bool(m["blow_low"])
+	print("SCRAPERX_UITEST forklift_ram: rammed at up to %.2f m/s, blow %.2f m/s (low %s), impulse %.0f N s, state %d" % [
+		top, float(m["blow_mps"]), str(low), float(m["damage_ns"]), int(m["state"])])
+	if int(m["knockdowns"]) <= downs or not low:
+		return _fail("the ram did not put her down at the forks (knockdowns %d, low %s, state %d)" % [
+			int(m["knockdowns"]), str(low), int(m["state"])])
+	await _look_at_point(m["position"])
+	await _pose("forklift_ram_down")
+	_detail = "rammed_mps=%.2f blow_mps=%.2f impulse_ns=%.0f" % [top, float(m["blow_mps"]), float(m["damage_ns"])]
+	return true
+
+
 func _yard_crane_touch(device: int) -> bool:
 	# East of the laydown's plate stack on its sleepers (the native test's route).
 	for target in [Vector2(-25.0, -40.0), Vector2(-50.0, -100.0), Vector2(-50.0, -125.0)]:
@@ -1499,8 +1588,12 @@ func _crane_spreader(device: int) -> bool:
 	if not await _wait_until(func() -> bool: return bool(_native().get_yard_crane_state()["operating"]), 1.0):
 		return _fail("spreader: CRANE did not take the crane")
 	# The hook by the frame's east side, let down until its shackle lies on
-	# the ground there.
-	if not await _crane_hook_over(device, Vector2(frame.x + 1.7, frame.z), 0.3, 120.0):
+	# the ground there. 1.0 m off the frame, not 1.7: the sling is 3.2 m and
+	# the hook swings +-0.7 m on the hoist rope, so at 1.7 m the throat-to-lug
+	# span runs 3.43-3.58 m against the 3.23 m the rope reaches, and HOOK is
+	# offered only while the swing happens to be west; at 1.0 m the span
+	# stays under 3.0 m at every swing phase. (J-045.)
+	if not await _crane_hook_over(device, Vector2(frame.x + 1.0, frame.z), 0.3, 120.0):
 		return _fail("spreader: the hook was not sent by the spreader")
 	if not await _crane_hoist_until(device, -1,
 			func() -> bool: return float((_native().get_yard_crane_state()["hook"] as Vector3).y) < 3.4, 60.0):

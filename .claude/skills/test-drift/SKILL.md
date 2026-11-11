@@ -14,7 +14,9 @@ The danger is hiding a real bug, so step 1 decides which it is, and step 3 limit
    change moved something a little (a slide that used to carry the player is gone; a container
    lands 1.2 m away). A real bug: a player could no longer do it by touch (the offer never comes
    however the player approaches; the machine no longer lifts). A real bug is fixed in the game,
-   and the test stays as it is.
+   and the test stays as it is. Compare more than positions: a moved spot can change other
+   readings the test leans on (an engine left turning, then revved to 1500 rpm by the same stick,
+   was heard at 0.3503 against her 0.35 stalk loudness, and she charged it; `fda73a63`).
 2. **Never move a bound or weaken what the test proves:** the same machine, the same end state,
    the same numbers checked.
 3. **Close the loop, and only that.** Each tick, act from where things are, as a player would:

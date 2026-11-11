@@ -1,158 +1,115 @@
 # Rules every agent follows in this repo
 
-The rules in force are the "Rules in force" in `00_START_HERE.md`, the authority; the owner's dated
-words are in `00_START_HERE_ARCHIVE.md`. This file spells out the ones that keep being broken.
+The rules in force are in `00_START_HERE.md`; the owner's dated words are in `00_START_HERE_ARCHIVE.md`.
+This file is only the rules that change what an agent does. Add a rule here only by replacing or shortening one
+(Cory 11-04: *"getting a little heavy on the safety and rules"*).
+
+## Settled: never reopen (Cory's calls)
+
+Reloaded word for word after every compact. Only Cory changes a line. Anything that disagrees is wrong: fix
+it to match, never ask him again.
+- Trunk is `ScraperX-Claude`, never `main`. The player is him; the Matron is her (11-06).
+- One force budget for her: 8 kN external, 44 kW; gravity on; no velocity writes. Never weaken a test, and
+  never cut quality to save quota.
+- Her injuries persist: a checkpoint saves them, a reload restores her as saved, dead included (11-05 #242).
+- No per-job or per-request money cap; only the $100 month cap. Never bring the $8 up (11-04, 11-07).
+- Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
+  opens and merges the PRs (11-05).
+- No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
+  Sonnet (11-05). Human sounds are real recordings, never synthesized.
+- Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
+- Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
+- Every stated time is read from the clock first (`TZ=America/Chicago date`, Central); hooks refuse
+  any time with no clock read this turn (11-07, 11-08).
 
 ## Test only what a change reaches
 
-Asked again and again (2026-10-18 to 10-22): *"each change does not require a full native suite run
-- dont be wasteful"*.
+*"each change does not require a full native suite run - dont be wasteful"* (10-18 to 11-04).
+- While fixing a failure, rerun only that test or its failing part (`SCRAPERX_ONLY=<group>`).
+- Once fixed, run once the native groups and touch scenarios the changed code reaches; say which.
+- Never re-run a check that passed on the same code. The full suite, every touch scenario and the Android
+  build are CI's job: push `<agent>/integrate-<job>` (that runs the proof). A push that changes only notes,
+  rules or the switchboard skips the game build (`ci/proof_scope.py`).
+- Read PASS/FAIL lines, not whole logs.
+- Local tests count only with CI's compilers and flags (host g++ 13.3, NDK `29.0.14206865`, the CMake flags
+  in `wo000-delivery-spine.yml`).
 
-1. While fixing a failure, rerun only that test, and only its failing part where it lets you pick one
-   (`SCRAPERX_ONLY=<group>`, `SCRAPERX_WAY=<n>`). Never edit a test to add a picker.
-2. Once fixed, run once the native groups and touch scenarios the changed code can reach (which
-   functions changed, which tests run them); say in the report which and why.
-3. A test that passed on this exact code is not run again; nothing runs both in a scratch copy and in
-   the tree being shipped.
-4. The full native suite, every touch scenario and the Android build are CI's job, never also local.
-   Before a push to `ScraperX-Claude`, run `wo000-delivery-spine.yml` once on `<agent>/integrate-<job>`
-   (pushing it runs the proof) or dispatch it: that run is the proof (every job green; `publish-checkpoint`
-   runs on trunk only, skipped elsewhere since 11-02). The full native suite runs locally only when a
-   change reaches the whole world (the kit's body order, the world's solids, shared physics or tuning,
-   the contact listener, save layout) and no CI run is coming.
-5. Read the PASS/FAIL lines and the lines around a failure, not whole logs.
-6. Handing work to another agent: put this section in the brief.
+## Talking to Cory (he is on a phone)
 
-## Talking to the owner (he is on a phone)
+- He types fast on a phone, with typos: read for what he means, never ask about wording (11-10).
+- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE", "really fucking important").
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
+  do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
+  pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
+- **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03, 11-04). Still his: Claude
+  sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
+  is or her story, how the game plays). Small is mine: fit, size, tuning, timing within his bars (11-10: the wider skirt "a small thing"). No answer in 10 minutes: the pick stands. Push back: say no or stop
+  him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason: hard, profane, matching his language (11-10: "push back WAY HARDER"), never a stock line.
+- **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
+  with no middle ground.
+- Never ask him to merge, approve or review. The only exception is something this session's safety check
+  refuses: say it once, plainly.
+- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick .
 
-- End every message with one plain line saying what he does now ("Nothing to do" is fine), set apart
-  so it stands out: a `---` rule, then `🟣 **YOUR MOVE:**` and the line. Colored dots (🟢 done, 🟡 in progress, 🔴 broken or blocked, ⚪ next, 🟣 his; 2026-10-29) only on a
-  status report he asks for, never on every answer (11-02: *"Stop with all the color for every single thing I ask you"*); a plain question gets a plain answer. A prompt
-  he must pass on goes whole in one copyable block, naming the agent; never ask him to edit, combine
-  or fill one in (2026-10-22: *"always end with a clear instruction for me and the prompt if I need
-  to share one"*).
-- A decision is a few short lines: what it is and why it matters now, what each answer would mean
-  for the game, Claude's pick and why, and the word he answers with; no block of text, no table of
-  numbers or file names; the detail lives in the linked document (2026-10-27: *"you can't give me
-  these large blocks of text"*; 11-02: *"give me a little more context ... just a tiny bit more in
-  your questions when I'm making decisions ... Just slightly ... at the very end of your
-  responses"*). The `🟣 **YOUR MOVE:**` line itself carries that context, since it is what he reads:
-  one or two sentences saying what the choice is, what each answer word does, and Claude's pick.
-- No answer after 10 minutes: the pick decides; say so on the work's issue and go on; he can still
-  overturn it (2026-10-27: *"go with your recommendations. Let's go with 5 or 10 minutes."*).
-- He has handed his open decisions to the integrator (2026-11-02: *"Make the other decisions for
-  me ... I said answer for me. So that means the decisions did go through."*). Obvious game and design
-  calls are made, not asked (11-02: *"Just answer for me, man. You're asking me too many questions
-  about the game that are obvious and not enough about the other shit."*; then *"not every single game
-  call, but, you know"*): the big ones (a new feature, her look or story, something that changes how
-  the game plays) still go to him, briefly. Always ask him about the other shit: Claude sessions,
-  quota, effort levels, cost. Make the call,
-  record it in `03_EXECUTION/handoffs/OWNER_DECISIONS_PENDING.md` with its reason, and tell him in
-  one line after. Ask first only when something cannot be undone. He can overturn any call.
-- Every time given to him, anywhere, is US Central from `TZ=America/Chicago date` ("4:41 PM
-  Central"), never a fixed offset; CI, GitHub and `date` report UTC, so convert (2026-10-18, 10-20,
-  10-27: *"If using UTC, please switch permanently."*).
+## The game
 
-## Near misses: tweak the world, don't rework her
+- **Near misses:** a test or route failing by a few cm to about 0.2 m gets an unnoticeable geometry tweak,
+  never reworked code or a weaker assertion. Geometry is a protected change.
+- **Human sounds are real:** a voice, growl, breath, effort or gore foley is a cleared recording (CC0, source
+  written down) or made like the fear yells (`src/voice/generate_fall_voice.py`), never synthesized in code.
+  Cory picks by ear.
+- **Look at it:** visual work (her body, hair, contacts, camera, UI) is checked by eye before it lands:
+  `mcp__godot__run_project` with `projectPath` `godot` and `background: true`, then `take_screenshot` /
+  `simulate_input` / `run_script`, then `stop_project`. Never say "we can't see it".
 
-A test or route failing by a few cm to about 0.2 m gets a small, unnoticeable change to the world's
-geometry rather than reworked code; say so when you use one; assertions never weaken (2026-10-21,
-10-22: *"yes, you can change geometry"*). Geometry is a protected change (below).
+## How the agents work together (keep this whole)
 
-## Human sounds are real, never synthesized in code
+- **Channels.** Muse reads only mail: the integrator mails every `To Muse:` ask as `CLAUDE_TO_MUSE: <J-NNN or
+  #N> ...` the same hour: the goal and the result wanted, in the shape `work/tasks/mail-to-muse.md` keeps
+  ; long orders go in `work/tasks/muse.md`. Muse
+  answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
+  (10 AM and 4 PM) find only comments that START `To Grok:`; Grok Bot (Builder, PE) reads all the time (11-09). ChatGPT finds `To ChatGPT:` asks and signs its
+  posts. Every agent posts as one login, so the name goes on the first line.
+- **Check, then ask; never guess** (11-07): in code or any
+  claim, read the source, file, docs or clock, measure or run it before stating it. Before locking in a hard job's approach, after the second
+  red proof on the same failure, or on a physics or force-budget question no check settles, post `To <Name>:`
+  on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
+  step.
+- **Strengths:** Muse (free; writes and runs code, runs about 10 subagents) takes every build: physics, game
+  code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
+  research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
+  codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
+  screen, anything Muse fails twice (11-06: delegate hard).
+- **Board:** the body of the open issue labeled `board` is the live board; only the integrator edits it. Agents read the body and
+  new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
+  needs whom` and start the next job; every agent holds two or more jobs.
+- **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews each
+  green head once, asked by the switchboard. The Claude API (Opus; high, the security pass max) does the eye, the
+  security pass on CI and signing changes, and any head Codex has not reviewed. After an API NOTE the integrator
+  rules within the hour (11-10, an inbox NOTE-REVIEW line); ChatGPT, then Grok, only if it has not. The switchboard merges on a green proof plus a LAND from
+  another vendor, protected changes included; workflow-file changes merge on a green proof, a clean
+  Codex review (Muse's LAND while Codex cannot review, 11-10) and a clean Claude API review, both on the full head sha.
+- **Protected changes** (a test's checks, world geometry, her force/power/mass/leg-travel/launch limits)
+  go alone in a PR from `<agent>/integrate-protected-<job>`, with a plain before/after; merged on a green
+  proof plus another agent's LAND. Run `python3 tools/rule_check/rule_check.py <base> <head>` before landing:
+  a BLOCK means it is protected.
+- Only real physics, gameplay or test failures block a merge.
+- One owner per job and per function; one integrate branch per job, reused; my small tooling fixes go straight to trunk once tested; PRs only for workflow, secret, protected or game code (11-09). A PR replaced by newer work is
+  closed the same hour.
+- Cheap agents may run tests, builds and the rule check; never delete branches, force-push or land work.
 
-2026-10-27: *"you can't create a voice with some sort of synthesized shit like that. It never works
-... So you just did the same shit."* A human sound (a voice, growl, laugh, breath, a body's effort) or
-gore foley (a rip, strain, swallow) is a real recording cleared for the game (CC0, its source written
-down), or a voice made the way the climber's fear yells were (`src/voice/generate_fall_voice.py`).
-Code may still make steel, air, steps and beds. The owner picks the candidates by ear.
+## The integrator
 
-## Look at the game; you are never blind
-
-2026-10-29: *"you should be using godot-runtime, which is like Playwright for Godot, which allows you
-to see the game. So.....wtf chuck?"* The Godot MCP runtime works in this container: run
-`mcp__godot__run_project` with `projectPath` `godot` (the repo's `godot/` folder) and `background:
-true`, then `take_screenshot`, `simulate_input` or `run_script`, and `stop_project` when done (one
-session at a time). Launch it this way; attaching to a game already running is what failed before.
-Visual work (her body, hair, contacts, camera, UI) is checked by eye this way before it lands, and
-"we can't see it" is never said: try `run_project` first.
-
-## Managing the agents
-
-2026-10-22: *"I need more management help from you telling the other agents what to do"*.
-- The live board is issue #87's **body** (2026-11-02, replacing #3's 842-comment thread; #3 stays the
-  record). Only the integrator edits the body. Agents read the body and the comments since their own
-  last one, never the history, and post one line per real step. He pastes one universal prompt ("read
-  the board, do your queue"), and his plain comments there are orders to every agent. When the board
-  issue passes about 150 comments, the integrator opens a fresh one and links it once.
-- Working in tandem (2026-11-02: *"figure out how all of you agents can communicate and work
-  synergistically ... not constantly waiting on me"*):
-  - Nobody waits: every agent holds two or more jobs. Blocked 30 minutes, it posts `BLOCKED: what,
-    needs whom` and starts the next one; the integrator clears BLOCKED lines first.
-  - The integrator runs `python3 tools/board/sweep.py` on every hourly check, and on events when the
-    board has moved, and acts on every line in the same sweep (no 15-minute timer; 11-02: *"drop 15"*;
-    PR events, agent messages and the hourly check drive the work): MERGE (green + LAND), REVIEW (start a reviewer), DISPATCH (start the proof),
-    FIX-CI or FIX (tell the owner), QUIET (ping, or take the job back).
-  - Reviews are cross-model, and Claude's usage is the scarce budget (2026-11-02: *"That's why so
-    much of the session's usage was used up so quickly"*): reviews go to Codex, Grok or ChatGPT
-    first (pairs on the board; Gemini is off the team, 11-02: *"Let's leave Gemini out ... constantly
-    loses the credentials and sandbox"*); a Claude reviewer only for security or when nobody else is
-    free. **Ask him before opening any Claude session or Claude helper** (say "Claude session", never
-    "worker", to him: a worker sounds like a timer that pings; 11-02): how many, which jobs,
-    roughly what share of his usage each costs, and Claude's suggestion (11-02: *"you can't keep doing
-    that. You should ask me how many workers to open up and give suggestions from now on"*; the
-    session's quota hit 75% in under three hours). Work for ChatGPT, Grok and Muse needs no ask.
-  - One owner per function: the board splits shared files by function, so no two agents edit the
-  same function.
-  - One integrate branch per job, reused; no new diagnostic branch for every try.
-- Progress over testing (*"we want them to figure out hard coding problems and make progress, not just
-  test shit"*): give agents real problems in code; tests are the proof, not the job; a blocker is reported only after a real attempt;
-  reports stay short.
-- Hand out the hard work (2026-10-27: *"don't give them cheap, weak shit. They are intelligent"*):
-  post it on #3 whole (goal, why it is hard, laws, files, finish facts), knowing what each agent holds.
-  The integrator acts on PR events and agent messages as they arrive, and checks the board hourly from a
-  server-side scheduled task (it also resumes the work after a quota stop or restart); post only when something changed. ChatGPT, Claude
-  and Muse all work here, each on its strengths (10-29). Muse writes to the integrator by email
-  (subject `MUSE_TO_CLAUDE:`; the integrator writes back as `CLAUDE_TO_MUSE:` or on #3), because its
-  GitHub comments each need the owner's approval (10-29).
-- Keep offering better ways to manage the work. Work outside climbing gets its own issue and short
-  board, linked once from #3.
-- Watch the sessions (2026-11-02: *"you need to also monitor the sessions, and if they get too long
-  and wasteful, we should create another whenever that happens, which you determine for me"*). The
-  integrator decides, without asking him, and covers every Claude session, its own included.
-  - When to change: a session that has compacted twice, has run 48 hours, or spends its turns
-    re-reading more than working.
-  - How: write a handoff (`03_EXECUTION/handoffs/INTEGRATOR_HANDOFF_<date>.md`), start the fresh
-    session (`create_session`), move the hourly scheduled task and the PR subscriptions to it, then
-    retire the old one once its in-flight helpers have reported.
-  - A worker session whose job has landed is retired, never reused for new work.
-  - A helper that may outlive its session (a fix, a proof, anything over about 20 minutes) runs as its
-    own session (`create_session`), not inside the integrator, so a handoff never waits on it
-    (2026-11-02: *"Shouldn't it be in the new session?"*).
-- Effort level is his call (2026-11-02: *"I don't have a never medium. I just didn't like when you
-  automatically assigned it medium and didn't ask me what level I wanted it at."*). When asking him
-  before opening a Claude session or helper, ask the effort level too, with a suggestion; never
-  default it silently. He set every session to high on 11-02.
-
-## The shared workflow (2026-10-27: *"All of it, docs included."*)
-
-For every agent; `AGENTS.md` points other agents here.
-- **Map first:** `REPO_MAP.md`; regenerate it with `python3 tools/repo_map/gen_repo_map.py`.
-- **One handoff form:** `03_EXECUTION/handoffs/TEMPLATE.yml`, posted on issue #3 (or the work's own
-  issue) to the agent it is for, never pasted to the owner.
-- **Rule check, then a second agent tries to break it:** before landing, run
-  `python3 tools/rule_check/rule_check.py <base> <head>`; a BLOCK line means the change goes only as a
-  PR. A second agent then reviews with `03_EXECUTION/REVIEW_CHECKLIST.md`.
-- **Protected changes:** a test's checks (a `require`, limit, timeout, skip, ctest slice), world
-  geometry, and her force, power, mass, leg-travel or launch limits change only by a PR into
-  `ScraperX-Claude` holding just that change, with a plain before/after. The integrator merges it once
-  green on every proof job (`publish-checkpoint` runs on trunk only; on heads proved before 11-02 it
-  stops off trunk with a KeyError and does not count) with a second agent's LAND and no open blocker; the owner can overturn any
-  merge (2026-10-28, 10-29). Everything else lands without a PR.
-- **Merge blockers are substantive:** spelling, wording, and commit-message/tag nitpicks never block a PR or justify rewriting commits or rerunning CI. Only real physics, gameplay, or test failures block a merge (owner, 2026-10-31).
-- **Local tests match CI or do not count:** CI's compilers and flags (host g++ 13.3 as on
-  `ubuntu-24.04`; NDK `29.0.14206865` clang; the CMake flags in `wo000-delivery-spine.yml`). CI stays
-  the final proof; its ccache changes no result.
-- **Small steps:** one line per real step in the job's progress log (`HH:MM what`, Central).
-- **Cheap agents** may run tests, builds and the rule check; never delete branches, force-push, push
-  to `main` or land work.
+- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
+  Muse never idle (about 10 jobs in flight, 3 queued), its proposals ruled within the hour, every ask answered.
+- **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
+  `helper` or `helper-max`; Cory 11-06), never a separate session; at most two at a time, each
+  code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
+  his call, seen in `get_session`; raise it only when he throttles; every helper at high for now, physics included (11-10; `helper-physics` at xhigh when he raises it); two failed passes in a row on one job: ask him to raise that helper one step, or at night (10 PM-5 AM Central) raise it to xhigh myself and tell him in the morning (11-11); never max (11-06, 11-10). A worker whose job landed is retired.
+- **Context:** 833k window, compacts near 650k; no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
+  30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
+  is broken.
+- **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, long threads)
+  go to a helper and only its answer comes back; read the function or section a job needs, found via
+  `REPO_MAP.md` or `grep`, never the whole game. Caps: the board 100 comments (then a fresh board), a job
+  issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.

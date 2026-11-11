@@ -102,3 +102,4 @@ void run_matron_ladder_pull() {
     }
     std::cout << "PASS scraperx_sim ladder pull: reachable rungs release only under load; high rung safe\n";
 }
+SCRAPERX_SLICE("matron-ladder-pull", run_matron_ladder_pull);

@@ -145,6 +145,36 @@ TwinTower::Built TwinTower::build(kit::Kit &kit) {
         beam(Vec3(-20.5F, kLandingTop, z), Vec3(-20.5F, 228.5F, z), 0.16F, Material::Galvanised);
     beam(Vec3(-20.5F, 228.5F, -219.7F), Vec3(-20.5F, 228.5F, -216.3F), 0.12F, Material::Yellow);
 
+    // ---- J-053: five balconies up the shaft's face -----------------------
+    // One deck per top in kBalconyTops: a 0.3 m steel deck 4 m out from the
+    // face, three 0.12 m rails along each side on posts, and two brackets
+    // under its outer edge reaching into the solid, as the receiving
+    // platform's brackets do. Nothing existing moves: the balconies are
+    // an addition on the bare face above the 504 FaceBand. The front edge
+    // is open (see the header note): a glide passing under or over the
+    // deck, and the hook-climb mantle onto it, cross the front edge, and
+    // the rails run along the sides instead.
+    for (const float top : kBalconyTops) {
+        box(Vec3(kBalconyWestX, top - 0.3F, face), Vec3(kBalconyEastX, top, kBalconyEdgeZ), Material::Steel);
+        for (const float x : {kBalconyWestX, kBalconyEastX}) {
+            for (const float z : {face, -222.0F, kBalconyEdgeZ})
+                beam(Vec3(x, top, z), Vec3(x, top + 1.1F, z), 0.12F, Material::Galvanised);
+            for (const float rail : kBalconyRailHeights)
+                beam(Vec3(x, top + rail, face), Vec3(x, top + rail, kBalconyEdgeZ), 0.12F, Material::Galvanised);
+        }
+        // The climb's mark: a 0.12 m bar outboard of the edge, hung below
+        // the deck's top on two drop-arms from under the edge, so a shot
+        // from the deck below clears the upper deck's slab edge and no
+        // glide path is clotheslined by it (see the header note).
+        beam(Vec3(kBalconyWestX, top - kBalconyHookBarDropM, kBalconyHookBarZ),
+             Vec3(kBalconyEastX, top - kBalconyHookBarDropM, kBalconyHookBarZ), 0.12F, Material::Yellow);
+        for (const float x : {3.5F, 12.5F})
+            beam(Vec3(x, top - 0.3F, kBalconyEdgeZ), Vec3(x, top - kBalconyHookBarDropM, kBalconyHookBarZ), 0.12F,
+                 Material::Galvanised);
+        for (const float x : {3.5F, 12.5F})
+            beam(Vec3(x, top - 5.0F, face - 0.5F), Vec3(x, top - 0.35F, kBalconyEdgeZ - 0.2F), 0.3F, Material::Rust);
+    }
+
     Built built;
     built.frame = kit.add_body(kFrameEntity, parts, origin, Quat::sIdentity(), 0.0F, 0.8F);
 

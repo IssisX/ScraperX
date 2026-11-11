@@ -7,6 +7,8 @@ extends "res://presentation/main_geometry.gd"
 
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
+const LampGlow := preload("res://presentation/lamp_glow.gd")
+const FarWorld := preload("res://presentation/far_world.gd")
 
 # The neighboring shaft. Mirrors TwinTower in the native world.
 const TWIN_TOWER_CENTER := Vector3(-30.0, 800.0, -264.0)
@@ -47,23 +49,39 @@ func _build_world() -> void:
 	# way a real decades-old industrial site actually weathers.
 	# The yard's asphalt: worn, patched, cracked and stained (yard_ground.gd).
 	var asphalt := YardGround.material()
-	var concrete := _material(Color("4e4841"), 0.0, 0.94, Color.BLACK, 1.0, _bump_concrete)
-	# A real value ladder: near-black iron in shadow, mid rust for the frame,
-	# brighter oxide only where light catches an edge. Bump-mapped: these
-	# cover most of the structure's surface area, so this is where per-pixel
-	# normal detail matters most -- pitted where rusted, smooth where not.
-	var mill_scale := _material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, _bump_smooth)
-	var oxidised := _material(Color("6b3520"), 0.3, 0.92, Color.BLACK, 1.0, _bump_rust)
-	var rust_deep := _material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, _bump_rust)
-	var rust_bright := _material(Color("9a5326"), 0.34, 0.82, Color.BLACK, 1.0, _bump_rust)
-	var galvanised := _material(Color("5a5d5e"), 0.66, 0.5, Color.BLACK, 1.0, _bump_smooth)
-	var faded_yellow := _material(Color("b08a22"), 0.16, 0.68)
-	var hazard := _material(Color("a04d16"), 0.18, 0.76)
-	var tar := _material(Color("0e0f11"), 0.05, 0.62)
-	var timber := _material(Color("4a3420"), 0.02, 0.9, Color.BLACK, 1.0, _bump_timber)
-	# New accents: living colour against the rust. Copper pipe under a thin
-	# patina is smooth.
-	var verdigris := _material(Color("3f6b5c"), 0.42, 0.68, Color.BLACK, 1.0, _bump_smooth)
+	var concrete := _surfaced(Color("4e4841"), 0.0, 0.94, _surface_concrete)
+	# Measured values (linear albedo; physicallybased.info, CC0, which names
+	# its own sources): iron 0.53 and zinc 0.81 as bare metal, fired-clay
+	# brick -- iron oxide -- 0.26/0.10/0.06, concrete 0.51 clean. The sun and
+	# exposure here (sky_cycle.gd, main.tscn) run about 2.5 times a camera's,
+	# so a lit diffuse surface sits that far under its measured value and
+	# the ladder between them is kept: none sits under the rest by a factor of
+	# ten, as mill scale did at 0.012 (environment plan, job 2). A metal shows
+	# the sky at the sky's own exposure, so its value is not lowered for it.
+	# Oxide, paint, timber and patina are not metal (metallic 0): only bare
+	# and galvanised steel are. Mill scale is the forged skin of iron oxide
+	# on new steel, blue-black with a dull sheen: a dark dielectric over the
+	# metal (linear 0.04), a value step under the rust, never a hole. Rust
+	# runs the hematite hue at three values. Each is drawn in its real surface
+	# (main_geometry.gd Surface: rust, mill scale, galvanising, paint, timber,
+	# concrete): these cover most of the structure's surface area, so this is
+	# where per-pixel detail matters most.
+	var mill_scale := _surfaced(Color("36383b"), 0.3, 0.5, _surface_mill_scale)
+	var oxidised := _surfaced(Color("57382a"), 0.0, 0.9, _surface_rust)
+	var rust_deep := _surfaced(Color("3a271d"), 0.0, 0.93, _surface_rust)
+	var rust_bright := _surfaced(Color("6e4630"), 0.0, 0.84, _surface_rust)
+	# Weathered hot-dip zinc: the bright metal (0.81) dulled under its grey
+	# patina of zinc carbonate, part metal, part mineral.
+	var galvanised := _surfaced(Color("6e7274"), 0.75, 0.6, _surface_galvanised)
+	# Paint is not metal: it weathers, grimes and streaks like the steel it
+	# covers (signal yellow and orange, sun-faded and dirtied).
+	var faded_yellow := _surfaced(Color("85600c"), 0.0, 0.6, _surface_paint)
+	var hazard := _surfaced(Color("9a4814"), 0.0, 0.66, _surface_paint)
+	var tar := _material(Color("0e0f11"), 0.0, 0.62)
+	var timber := _surfaced(Color("4a3420"), 0.0, 0.9, _surface_timber)
+	# New accents: living colour against the rust. Copper's patina is a
+	# mineral crust, not metal.
+	var verdigris := _surfaced(Color("3f6b5c"), 0.0, 0.7, _surface_paint)
 	var lichen := _material(Color("57642e"), 0.0, 0.96)
 
 	# Grade and the tower's upper mass: sizes mirror the native Jolt bodies.
@@ -76,7 +94,8 @@ func _build_world() -> void:
 	_build_tower_skin(mill_scale, oxidised, galvanised, faded_yellow, timber)
 	_build_yard(concrete, faded_yellow, tar)
 	_build_mountains_and_waterfall()
-	_build_kellerworks_signage(timber, faded_yellow)
+	# The signs keep their own paint as it was (rule 24: no sign work).
+	_build_kellerworks_signage(timber, _material(Color("b08a22"), 0.16, 0.68))
 	_build_foliage()
 	_build_lighting()
 
@@ -223,9 +242,22 @@ func _build_stack(mill_scale: Material, oxidised: Material, rust_deep: Material,
 						Vector3(cx + face * STACK_HALF_EXTENT, mid_y, cz + mid_along), oxidised)
 					brace_z.rotation = Vector3(-pitch, 0.0, 0.0)
 
+	_build_first_floor_ladder(galvanised)
 	_build_stack_dressing(mill_scale, oxidised, rust_deep, rust_bright, galvanised, faded)
 	_build_stack_megastructure(mill_scale, oxidised, rust_deep, rust_bright, galvanised,
 		faded, timber)
+
+# The grade-to-first-deck inspection ladder is a real static collision path.
+# Rungs and stiles are exported as physical solids, not just visible dressing.
+func _build_first_floor_ladder(metal: Material) -> void:
+	var line_x := 12.0
+	var line_z := STACK_CENTER.z + STACK_HALF_EXTENT + 0.4
+	for side in [-1.0, 1.0]:
+		_add_box("StairStringer", Vector3(0.08, STACK_LEVEL_HEIGHT, 0.08),
+			Vector3(line_x + side * 0.60, STACK_LEVEL_HEIGHT * 0.5, line_z), metal)
+	for rung in range(27):
+		_add_box("GradeLadderRung", Vector3(1.2, 0.08, 0.08),
+			Vector3(line_x, 1.45 + float(rung) * 0.36, line_z), metal)
 
 # Everything that makes the frame read as one vast building rather than a
 # repeated scaffold: splayed footings, clad machine halls with lit windows,
@@ -522,6 +554,30 @@ func _build_tower_skin(mill_scale: Material, oxidised: Material, galvanised: Mat
 	# keeps its original world coordinates. Native bounds: TwinTower.
 	var mass_x := TWIN_TOWER_CENTER.x
 	var face_z := TWIN_TOWER_FACE_Z
+	# Tower two's face (environment plan, job 14): poured concrete, drawn by
+	# its own shader on a copy of the same box. TowerMass stays the part the
+	# solids export reads; it is only no longer drawn, so the batcher leaves
+	# it out (batched, the shaft fell into a far section drawn as one flat
+	# colour). The copy is no part: no new solid, no hold. Not under the
+	# floating audit, which reads the tree as built.
+	var mass := $TowerPresentation.get_node("TowerMass") as MeshInstance3D
+	if get("_audit") == null and mass != null:
+		var concrete := (mass.mesh as BoxMesh).material as StandardMaterial3D
+		var face_material := ShaderMaterial.new()
+		face_material.shader = preload("res://presentation/tower_two_face.gdshader")
+		face_material.set_shader_parameter("base_colour", concrete.albedo_color)
+		face_material.set_shader_parameter("base_roughness", concrete.roughness)
+		var face := MeshInstance3D.new()
+		face.name = "TowerTwoFace"
+		face.mesh = mass.mesh
+		face.material_override = face_material
+		# Out of the lamps' light, as the far batches were; and casting no
+		# shadow, as before (its batch never cast one in the yard's view).
+		face.layers = BATCH_FAR_LAYER
+		face.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(face)
+		face.global_transform = mass.global_transform
+		mass.visible = false
 	var lit_band := _material(Color("2a2521"), 0.1, 0.8, Color("e0a040"), 0.9)
 	var lit_band_dim := _material(Color("242019"), 0.1, 0.8, Color("a86c22"), 0.5)
 	for offset in [-38.0, -19.0, 0.0, 19.0, 38.0]:
@@ -591,13 +647,16 @@ func _build_stack_continuation(oxidised: Material, rust_deep: Material, mill_sca
 			_add_box("UpperLightBand", Vector3(half * 2.0, 0.7, 0.4),
 				Vector3(cx, base_y + 1.2, cz + half + 0.3), faded)
 
-func _build_yard(concrete: Material, faded: Material, tar: Material) -> void:
+func _build_yard(concrete: Material, faded: Material, _tar: Material) -> void:
 	for z in range(-130, 10, 14):
 		_add_box("LaneStripe", Vector3(0.22, 0.02, 7.0), Vector3(-2.0, 0.012, float(z)), faded)
 	for z in [-118.0, -60.0, -16.0]:
 		_add_box("KerbRun", Vector3(86.0, 0.28, 0.5), Vector3(-6.0, 0.14, z), concrete)
-	_add_box("StandingWater", Vector3(26.0, 0.02, 18.0), Vector3(-24.0, 0.021, -70.0), tar)
-	_add_box("StandingWaterTwo", Vector3(18.0, 0.02, 12.0), Vector3(14.0, 0.021, -36.0), tar)
+	# Water lying on the grade (environment job 11; far_world.gd's water).
+	var water := FarWorld.water_material()
+	water.set_shader_parameter("slabs", [Vector4(-24.0, -70.0, 13.0, 9.0), Vector4(14.0, -36.0, 9.0, 6.0)])
+	_add_box("StandingWater", Vector3(26.0, 0.02, 18.0), Vector3(-24.0, 0.021, -70.0), water)
+	_add_box("StandingWaterTwo", Vector3(18.0, 0.02, 12.0), Vector3(14.0, 0.021, -36.0), water)
 	_build_walkway(faded)
 
 # The first cue (release plan item 13): the yard's painted pedestrian
@@ -651,6 +710,7 @@ func _build_lighting() -> void:
 		lamp.light_energy = 3.5
 		lamp.omni_range = 26.0
 		lamp.omni_attenuation = 1.6
+		lamp.set_meta(LampGlow.CONE_META, true)
 		_light_rig.add_child(lamp)
 
 	var cx := STACK_CENTER.x
@@ -666,6 +726,42 @@ func _build_lighting() -> void:
 				[corner_face + Vector3(sx * 0.15, 0.0, 0.0), Vector3(0.3, 0.4, 0.6), Vector3(sx, 0.0, 0.0)]]:
 			_add_box("FloodFitting", mount[1], mount[0], flood_fitting)
 			_tower_foot_flood(mount[0] + (mount[2] as Vector3) * 0.4)
+	# The night's glow round every lamp above, and the obstruction lights
+	# (lamp_glow.gd): cards, not parts or lights. sky_cycle.gd fades it.
+	var glow := LampGlow.new()
+	glow.name = "LampGlow"
+	_light_rig.add_child(glow)
+	glow.build(_light_rig.get_children().filter(func(n: Node) -> bool: return n is OmniLight3D),
+		_obstruction_light_points())
+
+# Where the red obstruction lights hang (lamp_glow.gd): on the neighbouring
+# shaft's four corners every OBSTRUCTION_STEP_M and at its top (TowerMass,
+# _build_world), and on the corner columns of the main frame's continuation
+# (_build_stack_continuation) at its middle tier and its top. Each sits
+# OBSTRUCTION_OUT_M proud of its corner.
+const OBSTRUCTION_STEP_M := 160.0
+const OBSTRUCTION_OUT_M := 0.6
+const TWIN_TOWER_SIZE := Vector3(92.0, 1600.0, 80.0)
+
+func _obstruction_light_points() -> PackedVector3Array:
+	var points := PackedVector3Array()
+	var half := Vector2(TWIN_TOWER_SIZE.x, TWIN_TOWER_SIZE.z) * 0.5 + Vector2.ONE * OBSTRUCTION_OUT_M
+	var y := OBSTRUCTION_STEP_M
+	while y <= TWIN_TOWER_SIZE.y + 0.1:
+		for sx in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				points.append(Vector3(TWIN_TOWER_CENTER.x + sx * half.x, y, TWIN_TOWER_CENTER.z + sz * half.y))
+		y += OBSTRUCTION_STEP_M
+	var base := STACK_LEVEL_COUNT
+	var top := STACK_LEVEL_COUNT + 24
+	for level in [base + 12, top - 1]:
+		var shrink := 1.0 - float(level - base) / float(top - base) * 0.42
+		var corner := (STACK_HALF_EXTENT + STACK_COLUMN_SIZE * 0.5) * shrink + OBSTRUCTION_OUT_M
+		for sx in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				points.append(Vector3(STACK_CENTER.x + sx * corner, float(level + 1) * STACK_LEVEL_HEIGHT,
+					STACK_CENTER.z + sz * corner))
+	return points
 
 # One of the floods at the tower's foot (TOWER_FOOT_FLOOD_Y).
 func _tower_foot_flood(at: Vector3) -> void:
@@ -739,13 +835,20 @@ func _build_basin() -> void:
 	var meadow := _material(Color("3f4634"), 0.0, 0.96, Color.BLACK, 1.0, _bump_concrete)
 	# A frame around the grade (x in [-240, 240], z in [-300, 180]), not a
 	# sheet under it: two surfaces 0.3 m apart z-fight from any distance.
+	# Drawn by far_world.gd (the ground's pattern and the towers' long shadow);
+	# the boxes stay, hidden, as the floor's solids.
 	var floor_y := VALLEY_FLOOR_TOP - 0.5
+	var floor_pieces := []
 	for piece in [
 			[Vector3(5200.0, 1.0, 2400.0), Vector3(0.0, floor_y, -1500.0)],
 			[Vector3(5200.0, 1.0, 2320.0), Vector3(0.0, floor_y, 1340.0)],
 			[Vector3(2360.0, 1.0, 480.0), Vector3(-1420.0, floor_y, -60.0)],
 			[Vector3(2360.0, 1.0, 480.0), Vector3(1420.0, floor_y, -60.0)]]:
-		_add_box("ValleyFloor", piece[0], piece[1], meadow)
+		_add_box("ValleyFloor", piece[0], piece[1], meadow).visible = false
+		floor_pieces.append(piece)
+	var far_world := FarWorld.new()
+	far_world.build(self, floor_pieces, VALLEY_FLOOR_TOP)
+	add_child(far_world)
 
 	var rock := _material(Color("353b41"), 0.03, 0.93)
 	var rock_warm := _material(Color("3d3934"), 0.03, 0.93)
@@ -840,11 +943,38 @@ func _build_foliage() -> void:
 		_add_bush(Vector3(bx, 0.0, bz), rng.randf_range(1.0, 2.0), rng)
 
 func _build_waterfall(at: Vector3) -> void:
-	var falls := StandardMaterial3D.new()
-	falls.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	falls.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	falls.albedo_color = Color(0.86, 0.9, 0.94, 0.55)
-	falls.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Water that falls (environment job 11): streaks run down the sheet, faster
+	# toward its foot, broken and thinning at its edges, white where it is
+	# torn and lit as the face it falls down is.
+	var falls := ShaderMaterial.new()
+	falls.shader = Shader.new()
+	falls.shader.code = """
+shader_type spatial;
+render_mode cull_disabled, depth_draw_never;
+uniform vec3 water : source_color = vec3(0.86, 0.9, 0.94);
+float h21(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+float vn(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), u.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+void fragment() {
+	// UV.y 0 at the lip, 1 at the foot: it falls faster as it goes.
+	float fall = UV.y * UV.y * 6.0 + UV.y * 2.0;
+	float streak = vn(vec2(UV.x * 34.0, fall * 3.0 - TIME * 2.2));
+	streak = streak * 0.6 + vn(vec2(UV.x * 90.0, fall * 7.0 - TIME * 3.4)) * 0.4;
+	float sheet = smoothstep(0.0, 0.18, UV.x) * smoothstep(1.0, 0.82, UV.x);
+	sheet *= smoothstep(0.25, 0.6, vn(vec2(UV.x * 9.0, fall * 0.8 - TIME * 0.9)) + 0.35);
+	ALBEDO = water * (0.78 + 0.3 * streak);
+	ROUGHNESS = 0.35;
+	ALPHA = clamp(sheet * (0.35 + 0.45 * streak) * smoothstep(0.0, 0.03, UV.y), 0.0, 0.85);
+}
+"""
 	var quad := QuadMesh.new()
 	quad.size = Vector2(26.0, 420.0)
 	quad.material = falls

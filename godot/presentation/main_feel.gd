@@ -255,6 +255,8 @@ const HAPTICS := {
 	&"release": [14, 0.30],
 	&"strain": [28, 0.40],
 	&"land": [34, 0.85],
+	&"strike_punch": [14, 0.40],
+	&"strike_land": [24, 0.50],
 	&"chute": [45, 0.7],
 	&"warn": [80, 0.9],
 	&"death": [150, 1.0],
@@ -263,11 +265,15 @@ const HAPTICS := {
 	&"heave": [60, 0.8],   # the chiller drop's car heaving under the feet
 	&"rumble": [20, 0.25],   # its air roaring under the floor while it runs
 	&"splash": [90, 0.9],   # the body going into a pool (water_feel.gd)
+	&"strike_sweep": [30, 0.60],   # the low sweep landing (spec section 8.1 cap)
+	&"strike_kick": [55, 0.80],   # the heavy kick landing (spec section 8.1 cap)
+	&"strike_whiff": [12, 0.25],   # the low sweep missing (spec section 8.1 cap)
+	&"strike_jab": [16, 0.45],   # the jab landing (spec section 8.1 cap)
 }
 
 # Kinds that always get through the throttle: they mark a moment that
 # matters more than whatever buzzed a few milliseconds before.
-const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip", &"matron_grab", &"matron_tear", &"matron_hang"]
+const HAPTIC_PRIORITY: Array[StringName] = [&"land", &"death", &"break", &"warn", &"slip", &"matron_grab", &"matron_tear", &"matron_hang", &"strike_land"]
 const HAPTIC_GAP_MS := 50
 var haptic_counts := {}   # kind -> pulses sent (counted in CI too, never sent there)
 var _haptic_next_ms := 0
@@ -649,6 +655,15 @@ func _layout_hud() -> void:
 		var base := 24.0 if label == _status else 15.0
 		label.add_theme_font_size_override("font_size", int(roundf(base * scale)))
 
+	# The readouts float over the world with no backing, so over bright snow or
+	# the yellow crane they washed out (the eye's FIX on the approach frame,
+	# J-037). A dark ink outline plus a soft drop shadow keeps every glyph's
+	# edge against any sky or steel without a panel that hides the world.
+	for box_path in [^"HUD/TopLeft", ^"HUD/TopRight"]:
+		for child in get_node(box_path).get_children():
+			if child is Label:
+				_ink_edge(child as Label, scale)
+
 	# Below the touch pause button, which owns the top-left corner.
 	var top_left: Control = $HUD/TopLeft
 	top_left.offset_left = gutter
@@ -670,6 +685,19 @@ func _layout_hud() -> void:
 	for child in top_right.get_children():
 		if child is Label:
 			(child as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+# Outline width follows the label's own size (about a fifth of its glyph
+# height, never under 3 px) so the ratio holds from the Fold to the desktop.
+func _ink_edge(label: Label, ui_scale: float) -> void:
+	var size := label.get_theme_font_size("font_size")
+	var edge := maxi(3, int(roundf(float(size) * 0.2)))
+	label.add_theme_constant_override("outline_size", edge)
+	label.add_theme_color_override("font_outline_color", UiStyle.EDGE)
+	label.add_theme_color_override("font_shadow_color", UiStyle.SHADOW)
+	label.add_theme_constant_override("shadow_offset_x", int(roundf(2.0 * ui_scale)))
+	label.add_theme_constant_override("shadow_offset_y", int(roundf(2.0 * ui_scale)))
+	label.add_theme_constant_override("shadow_outline_size", edge + int(roundf(2.0 * ui_scale)))
 
 # --- presentation mirror ----------------------------------------------------
 
@@ -812,6 +840,25 @@ func _apply_camera_feel(position: Vector3, velocity: Vector3, grounded: bool, cr
 	if haul > 1.0:
 		_haul_phase += delta * 2.6
 		dip += -0.018 * clampf(haul / 700.0, 0.0, 1.0) * (0.5 + 0.5 * sin(_haul_phase))
+	# A low sweep (spec §8.2): the view dips toward the sweep side and
+	# lowers ~0.15 m through the strike's phases, easing in over the
+	# windup, full through the reach, easing out over the recoil. Zero
+	# whenever no sweep is under way, so a stationary player still reads
+	# back exactly.
+	var strike: Dictionary = _ctx.get("strike", {})
+	if int(strike.get("move", 0)) == 1:
+		var sphase := int(strike.get("phase", 0))
+		if sphase != 0:
+			var sticks := float(strike.get("phase_ticks", 0))
+			var env := 0.0
+			if sphase == 1:
+				env = smoothstep(0.0, 1.0, clampf(sticks / 16.0, 0.0, 1.0))
+			elif sphase == 2:
+				env = 1.0
+			elif sphase == 3:
+				env = 1.0 - smoothstep(0.0, 1.0, clampf(sticks / 22.0, 0.0, 1.0))
+			dip += -0.15 * env
+			lateral_bob += 0.05 * env * (1.0 if int(strike.get("arm", 1)) == 1 else -1.0)
 	# Reduced motion: what moves the view by itself is turned down.
 	var motion := 0.25 if _reduced_motion else 1.0
 	dip *= motion
@@ -905,12 +952,24 @@ func _feel_strike(delta: float) -> void:
 		var at: Vector3 = strike.get("hit_point", _camera.global_position)
 		var impulse := float(strike.get("impulse", 0.0))
 		_audio.player_strike(edge, at if edge == &"landed" else _camera.global_position, impulse)
+		if edge == &"landed" and int(strike.get("move", 0)) == 1:
+			_haptic(&"strike_sweep", clampf(impulse / 60.0, 0.3, 1.0))
+		if edge == &"landed" and int(strike.get("move", 0)) == 2:
+			_haptic(&"strike_kick", clampf(impulse / 166.7, 0.3, 1.0))
+		if edge == &"landed" and int(strike.get("move", 0)) == 3:
+			_haptic(&"strike_jab", clampf(impulse / 66.7, 0.3, 1.0))
+		if edge == &"missed" and int(strike.get("move", 0)) == 1:
+			_haptic(&"strike_whiff", 0.5)
 		if edge == &"landed":
 			var normal: Vector3 = strike.get("hit_normal", Vector3.ZERO)
 			if _matron_view != null:
 				_matron_view.flinch(normal, impulse)
 			if _gore != null:
 				_gore._on_strike(at, normal, impulse)
+			# Two beats: the fist's contact, then what it earned. The second
+			# fires inside the 50 ms throttle window, so it needs priority.
+			_haptic(&"strike_punch", clampf(impulse / 50.0, 0.3, 1.0))
+			_haptic(&"strike_land", clampf(impulse / 66.7, 0.4, 1.0))
 	if _matron_view != null:
 		_matron_view.hold_frame = _strike_feel.frozen()
 	# Only while the kick is live: writing the basis re-reads the camera's
@@ -960,7 +1019,7 @@ func _feel_hold_events(hold: Dictionary) -> void:
 func _feel_hold(delta: float) -> void:
 	if _matron_view == null or not _native.has_method("get_matron_hold_state"):
 		return
-	var hold: Dictionary = _native.get_matron_hold_state()
+	var hold: Dictionary = _hold_now
 	_feel_hold_events(hold)
 	var ended := int(hold.get("runs_ended_by_matron", 0))
 	if _runs_she_ended >= 0 and ended > _runs_she_ended:
@@ -1018,6 +1077,7 @@ func _feel_gore(her_state: Dictionary, delta: float, hold: Dictionary) -> void:
 	_matron_view.hear_hold(hold)
 
 func _render_snapshot(delta: float = 0.0) -> void:
+	_read_her()
 	var position: Vector3 = _native.get_player_position()
 	var render_position: Vector3 = _native.get_player_render_position()
 	var velocity: Vector3 = _native.get_player_linear_velocity()
@@ -1059,10 +1119,10 @@ func _render_snapshot(delta: float = 0.0) -> void:
 	if _summit_view != null:
 		_summit_view.update_view(_native.get_summit_state(), delta, float(_native.get_simulation_time_seconds()))
 	if _matron_view != null:
-		var her_state: Dictionary = _native.get_matron_state()
+		var her_state: Dictionary = _her_now
 		# Her hold, read once: her hand drawn on the ankle it has, her gore and
 		# her sounds of it.
-		var her_hold: Dictionary = _native.get_matron_hold_state() if _native.has_method("get_matron_hold_state") else {}
+		var her_hold: Dictionary = _hold_now
 		_matron_view.set_hold(her_hold)
 		_matron_view.update_view(her_state, delta, _his_eye(), position)
 		_feel_her(her_state, position)

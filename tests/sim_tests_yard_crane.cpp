@@ -572,6 +572,8 @@ void run_yard_crane() {
     std::cout << "PASS scraperx_sim crane: forked_up_44_m=" << forked_y << " forklift_x=" << driven_x
               << " stall_n=" << stalled_n << "\n";
 }
+SCRAPERX_GROUP("yard_crane", 1040, run_yard_crane);
+SCRAPERX_SELECT("crane", run_yard_crane);
 
 namespace {
 
@@ -664,19 +666,90 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
     return device_onto(s, YardCrane::kMagnetEntity, YardCrane::kMagnetKg, 2.0, x, z);
 }
 
-// The grips' two lists at a save's end ([n][n loads][n][n ratings]): how many
-// grips it holds, 0 if it does not end in them.
-std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
-    for (std::size_t n = 1; n <= 16 && bytes.size() >= 8 + 8 * n; ++n) {
-        std::uint32_t loads = 0;
-        std::uint32_t ratings = 0;
-        std::memcpy(&loads, bytes.data() + bytes.size() - (8 + 8 * n), 4);
-        std::memcpy(&ratings, bytes.data() + bytes.size() - (4 + 4 * n), 4);
-        if (loads == n && ratings == n) {
-            return n;
+// The save's tail since her damage joined it: the grips' two lists ([n][n
+// loads][n][n ratings]), then her damage under its mark (MAD1: the mark,
+// two meters, one dead byte), then the fabricated objects if the world
+// holds any (FAB1: the mark, a count, each an entity, length-first hull
+// bytes, thirteen state numbers, two flag bytes). The offset of the grip
+// lists, or bytes.size() when the save does not hold them so.
+std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
+    const auto word = [&bytes](const std::size_t at, std::uint32_t &out) {
+        if (at + 4 > bytes.size()) {
+            return false;
+        }
+        std::memcpy(&out, bytes.data() + at, 4);
+        return true;
+    };
+    // A fabricated section parses forward from its mark and ends exactly at
+    // the save's end.
+    const auto fabricated_to_end = [&bytes, &word](const std::size_t at) {
+        std::uint32_t mark = 0, count = 0;
+        if (!word(at, mark) || mark != 0x31424146U || !word(at + 4, count) || count < 1 || count > 32) {
+            return false;
+        }
+        std::size_t p = at + 8;
+        for (std::uint32_t i = 0; i < count; ++i) {
+            std::uint32_t len = 0;
+            if (p + 8 + 4 > bytes.size() || !word(p + 8, len)) {
+                return false;
+            }
+            p += 8 + 4 + std::size_t{len} + 13 * 4 + 1 + 1;
+            if (p > bytes.size()) {
+                return false;
+            }
+        }
+        return p == bytes.size();
+    };
+    // Her damage's mark, then the grips just before it, then either the
+    // save's end or a fabricated section to it.
+    constexpr std::uint32_t kDamageMark = 0x314D414DU;
+    for (std::size_t m = 0; m + 13 <= bytes.size(); ++m) {
+        std::uint32_t mark = 0;
+        if (!word(m, mark) || mark != kDamageMark) {
+            continue;
+        }
+        float damage = 0.0F, player = 0.0F;
+        std::uint8_t dead = 0;
+        std::memcpy(&damage, bytes.data() + m + 4, 4);
+        std::memcpy(&player, bytes.data() + m + 8, 4);
+        std::memcpy(&dead, bytes.data() + m + 12, 1);
+        if (!std::isfinite(damage) || !std::isfinite(player) || dead > 1) {
+            continue;
+        }
+        for (std::size_t n = 1; n <= 16 && m >= 8 + 8 * n; ++n) {
+            const std::size_t at = m - (8 + 8 * n);
+            std::uint32_t loads = 0, ratings = 0;
+            if (!word(at, loads) || !word(at + 4 + 4 * n, ratings) || loads != n || ratings != n) {
+                continue;
+            }
+            if (m + 13 == bytes.size() || fabricated_to_end(m + 13)) {
+                return at;
+            }
         }
     }
-    return 0;
+    // A save from before her damage ends in the grips themselves.
+    for (std::size_t n = 1; n <= 16 && bytes.size() >= 8 + 8 * n; ++n) {
+        std::uint32_t loads = 0, ratings = 0;
+        if (!word(bytes.size() - (8 + 8 * n), loads) || !word(bytes.size() - (4 + 4 * n), ratings)) {
+            continue;
+        }
+        if (loads == n && ratings == n) {
+            return bytes.size() - (8 + 8 * n);
+        }
+    }
+    return bytes.size();
+}
+
+// The grips' two lists: how many grips the save holds, 0 if it does not
+// hold them as the layout lays them out.
+std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
+    const std::size_t at = saved_grips_at(bytes);
+    if (at == bytes.size()) {
+        return 0;
+    }
+    std::uint32_t n = 0;
+    std::memcpy(&n, bytes.data() + at, 4);
+    return n;
 }
 
 // The save as an older build wrote it: without the world's last `drop` kit
@@ -688,7 +761,7 @@ std::size_t saved_grips(const std::vector<std::uint8_t> &bytes) {
 std::vector<std::uint8_t> older_save(const std::vector<std::uint8_t> &bytes, const std::size_t drop,
                                      const std::size_t keep) {
     const std::size_t n = saved_grips(bytes);
-    const std::size_t section = bytes.size() - (8 + 8 * n);
+    const std::size_t section = saved_grips_at(bytes);
     const std::size_t at = 8 + 8 + sizeof(JPH::RVec3) + 1 + 8 + 8 + 8;
     std::uint32_t entities = 0;
     std::memcpy(&entities, bytes.data() + at, 4);
@@ -748,16 +821,41 @@ void run_yard_crane_magnet() {
     // and the summit's four ending bodies, in that exact append order.
     // Earlier save-game body indices must still line up.
     const auto last = s.kit_body_count();
-    require(last >= 7 &&
-                s.kit_body_entity(last - 7) == scraperx::sim::TwinTower::kFrameEntity &&
-                s.kit_body_entity(last - 6) == scraperx::sim::TwinTower::kLeafEntity &&
-                s.kit_body_entity(last - 5) == scraperx::sim::TwinTower::kFlagEntity &&
-                s.kit_body_entity(last - 4) == Summit::kLeftBearingEntity &&
-                s.kit_body_entity(last - 3) == Summit::kRightBearingEntity &&
-                s.kit_body_entity(last - 2) == Summit::kEndingFrameEntity &&
-                s.kit_body_entity(last - 1) == Summit::kLastBeamEntity,
+    // The 137 east/west stock bodies are built after the summit (world-b;
+    // run_wet_e_guard pins the same count as kNewEastWest), then the deck-154
+    // forklift's frame and forks (J-041); after them only stock laid later
+    // (J-042: two kinds by her band), each new body appended at the end; so
+    // the tower/summit tail sits 137 bodies before the forklift, and the 137
+    // after it are stock entities.
+    constexpr std::uint32_t kNewEastWest = 137;
+    const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
+    std::uint32_t fork = last;
+    for (std::uint32_t i = 0; i + 1 < last && fork == last; ++i) {
+        fork = s.kit_body_entity(i) == kForklift[0] ? i : last;
+    }
+    require(fork + 1 < last && s.kit_body_entity(fork + 1) == kForklift[1],
+            "magnet: the deck-154 forklift's frame and forks, side by side");
+    bool later_stock = true;
+    for (std::uint32_t i = fork + 2; i < last; ++i) {
+        later_stock = later_stock && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
+    }
+    require(later_stock, "magnet: after the deck-154 forklift, only stock laid later: the kit's last bodies");
+    const auto tail = fork - kNewEastWest;
+    bool east_west = true;
+    for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {
+        east_west = east_west && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
+    }
+    require(east_west, "magnet: the 137 east/west pieces, all stock, sit between the summit and the forklift");
+    require(tail >= 7 &&
+                s.kit_body_entity(tail - 7) == scraperx::sim::TwinTower::kFrameEntity &&
+                s.kit_body_entity(tail - 6) == scraperx::sim::TwinTower::kLeafEntity &&
+                s.kit_body_entity(tail - 5) == scraperx::sim::TwinTower::kFlagEntity &&
+                s.kit_body_entity(tail - 4) == Summit::kLeftBearingEntity &&
+                s.kit_body_entity(tail - 3) == Summit::kRightBearingEntity &&
+                s.kit_body_entity(tail - 2) == Summit::kEndingFrameEntity &&
+                s.kit_body_entity(tail - 1) == Summit::kLastBeamEntity,
             "magnet: the broken bridge and summit rigging append after pre-existing kit bodies");
-    const auto count = last - 7;
+    const auto count = tail - 7;
     constexpr std::uint32_t kBayBodies = 5;
     const auto weights =
         static_cast<std::uint32_t>(LooseStock::kMachineWeights + LooseStock::kMatronThrowables) + kBayBodies;
@@ -816,7 +914,7 @@ void run_yard_crane_magnet() {
         require(loaded.yard_crane_state().holding_entity == top && loaded.yard_crane_state().magnet_on &&
                     std::abs(there.y - here.y) < 0.05,
                 "magnet: loaded, it holds the slab where it was saved");
-        require(saved_grips(bytes) == 2, "magnet: the save ends in its two grips (the magnet's, the spreader's)");
+        require(saved_grips(bytes) == 2, "magnet: the save holds its two grips (the magnet's, the spreader's)");
         // As the spreader's build saved it: no machines' weights. Loaded, the
         // slab still hangs on the magnet.
         const std::vector<std::uint8_t> two = older_save(bytes, weights, 2);
@@ -903,6 +1001,8 @@ void run_yard_crane_magnet() {
     std::cout << "PASS scraperx_sim magnet: slab_held_n=" << took.hold_rated_n << " beam_held_n="
               << on_beam.hold_rated_n << " stack_rose_m=" << rose << " box_held_n=" << on_box.hold_rated_n << "\n";
 }
+SCRAPERX_GROUP("yard_crane_magnet", 1050, run_yard_crane_magnet);
+SCRAPERX_SELECT("magnet", run_yard_crane_magnet);
 
 // The yard crane's container spreader (yard_crane.hpp): rigged by HOOKing the
 // sling on its lug from beside the frame; LOCK in the air turns nothing. Let
@@ -982,3 +1082,5 @@ void run_yard_crane_spreader() {
             "spreader: raised, the frame leaves the box where it was set down");
     std::cout << "PASS scraperx_sim spreader: lifted_to_y=" << high.y << " set_down_y=" << landed.y << "\n";
 }
+SCRAPERX_GROUP("yard_crane_spreader", 1060, run_yard_crane_spreader);
+SCRAPERX_SELECT("spreader", run_yard_crane_spreader);

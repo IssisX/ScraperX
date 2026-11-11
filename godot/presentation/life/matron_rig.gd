@@ -4,14 +4,19 @@ extends RefCounted
 ## sets the same rotations on the same pivots it always has; this copies them
 ## to the bones. Three spine bones and the pelvis share the torso pivot's
 ## rotation (powers of one quaternion, so the chest ends at the torso pivot's
-## exact orientation); two neck bones share the neck pivot's; a pivot's scale
-## (the Turn's long limbs) becomes a slide of the "_x" stretch bones, so the
-## skin lengthens instead of the limb swelling.
+## exact orientation); two neck bones share the neck pivot's; a leg pivot's
+## scale (the Turn's long limbs) becomes a slide of the "_x" stretch bones, so
+## the skin lengthens instead of the limb swelling. An arm pivot's scale
+## wrenches the shoulder out of its socket instead: her arm's bones are never
+## stretched (rule 33).
 ##
 ## Then what the pivots never had: her feet planted on the deck, palms on it on
 ## all fours, hands up to the rung on a ladder (contact); her eyes turned in
-## their sockets onto the player's (aim_eyes); and her hair, hung on chains of
-## bones that gravity, her own motion and her skull and back swing (step_hair).
+## their sockets onto the player's (aim_eyes); her hair, hung on chains of
+## bones that gravity, her own motion and her skull and back swing (step_hair);
+## and her skirt, a cloth proxy round her legs (matron_skirt.gd, step_skirt).
+
+const MatronSkirt := preload("res://presentation/life/matron_skirt.gd")
 
 const PELVIS_SHARE := 0.5
 # Her age in her back: a fixed upper-back hunch (the dowager's hump), the neck
@@ -31,6 +36,13 @@ const SACCADE_PITCH := 0.05
 const HAIR_DAMP := 0.84
 const HAIR_GRAVITY := Vector3(0.0, -9.81, 0.0)
 const HAIR_STIFFNESS := [0.22, 0.12, 0.07, 0.04, 0.02]
+# J-067: which way each segment's stiffness pulls, from down her head (0) to
+# world down (1). All toward her head's down, the locks held her head's shape
+# when she bent (a stagger, all fours) and stood out off her back like a flat
+# sheet: the pull is about 20x her hair's weight. The roots keep her head's
+# line; the lengths lean to gravity, at most 0.6 of the way (all the way sank
+# them into her when she bent: look_matron_hold 0.101 m). Upright, both are the same.
+const HAIR_HANG := [0.0, 0.15, 0.3, 0.45, 0.6]
 # Each lock its own: its weight and give varied a little, so neighbors never
 # move as one piece; and the wind up on the deck in slow gusts.
 const LOCK_VARY := 0.35
@@ -39,7 +51,32 @@ const WIND_RATE := 0.23
 const WIND_DIR := Vector3(0.93, 0.0, 0.37)
 const HAIR_ITERATIONS := 3
 const HAIR_JUMP_M := 1.0      # a root that moved this far in a frame (a respawn) restarts the hang
-const BACK_RADIUS := 0.17
+# Her upper back for the locks: a sphere, so the push is right in any pose. It
+# was 0.17 m about chest (0, 0.05, -0.05): its surface stood up to 13 cm off
+# her back and rose above her shoulder line under the nape, so the locks
+# landed on it and rolled sideways over her shoulders. Fitted to her measured
+# back (BACK_Z: 9.4 cm behind the bone at mid-back) and kept under the collar
+# band behind her neck (J-067).
+const BACK_CENTRE := Vector3(0.0, -0.02, 0.07)
+const BACK_RADIUS := 0.165
+# J-067: her back in chest-local Y, how far behind the chest bone it reaches
+# within |x| 0.12 (measured on her drawn skin, tunic and collar at the guard,
+# + 6 mm for the strand): the collar ring's radius straight behind her.
+const BACK_Z := [Vector2(-0.29, 0.042), Vector2(-0.21, 0.047), Vector2(-0.17, 0.067), Vector2(-0.13, 0.076),
+	Vector2(-0.09, 0.083), Vector2(-0.05, 0.091), Vector2(-0.01, 0.094), Vector2(0.05, 0.092), Vector2(0.09, 0.085),
+	Vector2(0.13, 0.075), Vector2(0.15, 0.065), Vector2(0.17, 0.045), Vector2(0.19, 0.027), Vector2(0.21, 0.021)]
+# J-067: the neck ring's radius by direction, (neck_lo local Y, radius). It was
+# one 0.095 m cylinder, but neck_lo's axis sits near the back of her neck: the
+# back skin is 2-3.5 cm off it between 3 and 10 cm up, the sides 7-12 cm (her
+# jaw), the front more (measured on her drawn skin, tunic and collar, guard and
+# shuffle, + 6 mm for the strand). The nape locks, rooted at that skin, were
+# walked out level to clear 0.095 and stood out behind her head ("raised",
+# Cory 11-08). Back and side blend by angle; never wider than the old 0.095,
+# which the front keeps.
+const NECK_BACK_R := [Vector2(-0.01, 0.095), Vector2(0.0, 0.085), Vector2(0.01, 0.071), Vector2(0.02, 0.053),
+	Vector2(0.03, 0.042), Vector2(0.04, 0.033), Vector2(0.05, 0.027), Vector2(0.08, 0.028), Vector2(0.09, 0.029),
+	Vector2(0.10, 0.034), Vector2(0.11, 0.046)]
+const NECK_SIDE_R := [Vector2(0.01, 0.095), Vector2(0.02, 0.077), Vector2(0.04, 0.079), Vector2(0.05, 0.095)]
 
 var skel: Skeleton3D
 var view: Node3D
@@ -54,6 +91,7 @@ var _chains: Array = []
 var _skull_local := Vector3.ZERO
 var _skull_radius := 0.1
 var _wind_clock := 0.0
+var skirt: RefCounted = null
 
 
 func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
@@ -81,6 +119,14 @@ func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
 	if hair.has("skull"):
 		_skull_local = _v(hair["skull"]) - head_at
 		_skull_radius = float(hair["skull_radius"])
+	var root: Node = skel.get_parent() if skel.get_parent() != null else skel
+	var found := root.find_children("skirt_cloth", "MeshInstance3D", true, false)
+	if not found.is_empty():
+		var cloth := MatronSkirt.new()
+		if cloth.setup(skel, found[0] as MeshInstance3D):
+			skirt = cloth
+	else:
+		push_error("matron rig: her body has no skirt_cloth")
 
 
 func _v(a: Array) -> Vector3:
@@ -173,10 +219,20 @@ func apply() -> void:
 		var leg_s := (p["hp_" + s] as Node3D).scale.y
 		# the shoulder's rest frame hangs the arm just clear of her hips
 		var abd := Quaternion(Vector3(0.0, 0.0, 1.0), float(by_name["sh_" + s].get("abduct", 0.0)))
-		_bone("sh_" + s, _t("sh_" + s), abd * _q("sh_" + s))
-		_bone("sh_%s_x" % s, _t("sh_%s_x" % s) * arm_s, Quaternion.IDENTITY)
+		var sh_rot := abd * _q("sh_" + s)
+		# The Turn's long arms (arm_s over 1): her arm's own bones keep their
+		# length (rule 33: her real arms, never stretched); her shoulder is
+		# wrenched out of its socket along the upper arm by what the arm
+		# would have gained, so the arm still reaches that far out of her.
+		var upper := _t("sh_%s_x" % s)
+		var out := maxf(arm_s - 1.0, 0.0) * (upper.length() + _t("el_%s_x" % s).length())
+		var socket := _t("sh_" + s)
+		if out > 0.0 and upper.length() > 1.0e-4:
+			socket += sh_rot * (upper.normalized() * out)
+		_bone("sh_" + s, socket, sh_rot)
+		_bone("sh_%s_x" % s, upper, Quaternion.IDENTITY)
 		_bone("el_" + s, _t("el_" + s), _q("el_" + s))
-		_bone("el_%s_x" % s, _t("el_%s_x" % s) * arm_s, Quaternion.IDENTITY)
+		_bone("el_%s_x" % s, _t("el_%s_x" % s), Quaternion.IDENTITY)
 		_bone("wr_" + s, _t("wr_" + s), _q("wr_" + s))
 		var chains: Array = p["fingers_" + s]
 		for f in chains.size():
@@ -225,6 +281,7 @@ func bone_world(bone: String) -> Transform3D:
 # all fours, hands on the rung or cable. _pose's angles stay the intent; this
 # bends them just enough to touch what the native says is there.
 const DECK_WRIST_Y := 0.075        # a planted palm's wrist over the deck
+const ANKLE_OVER_SOLE_M := 0.09    # her ankle over her sole, a foot set down
 const HANDS_ON_RUNG_Y := 2.6       # the native's kHandsAboveCentre + kStandCentre
 const RIDE_W := 7.0               # rad/s: her body's ride onto her feet, low-passed
 # On all fours, the order her limbs go down in a cycle of her gait (hind
@@ -257,12 +314,33 @@ const GOVERN_BURST_RAD_S := 19.0
 # pulled) faster than this a second (GOVERN_BURST_M_S in a burst)
 const GOVERN_M_S := 3.0
 const GOVERN_BURST_M_S := 5.0
+# Her wrists onto a climb's or her pipe's grip, and back off it: each goes
+# for the point on a critically damped spring (HAND_W) no faster than
+# HAND_MAX_M_S (5 cm a frame at 60 fps), its step at most HAND_DT_MAX
+# (_follow_hand). Only a teleport (fresh_frame) puts a wrist straight on.
+const HAND_W := 30.0
+const HAND_MAX_M_S := 3.0
+const HAND_DT_MAX := 0.1
 var _ride_y := 0.0
 var _ride_v := 0.0
 var _ankle_y := 0.097
 var _plants := {}
 # Each reach's pole (frame, the unit side its middle joint stands out to).
 var _pole := {}
+# Each wrist's follow ("l" / "r": [frame, velocity]), kept while the wrist
+# reaches a grip and while it comes back off one; each wrist where it was
+# last drawn (world), and her skeleton's origin then.
+var _hand_follow := {}
+# Each wrist's grip-target history ([frame, point, dt] each, newest
+# first, the last five): the slide velocity is read over a four-frame
+# window, because the simulation's contact point advances in a strict
+# two-frame alternation (a small step, then a double step: 1.73 / 3.47
+# m/s on her pipe press). A one-frame read alternates the same way, and
+# the cap kills the fast half, leaving the wrist 0.13 m behind a grip
+# that slides at 2.6 m/s. The window averages the alternation out.
+var _hand_target := {}
+var _wrist_drawn := {}
+var _skel_was := Vector3.ZERO
 var _governed_bones: Array[int] = []
 var _govern_last: Array[Quaternion] = []
 var _govern_pos: Array[Vector3] = []
@@ -285,6 +363,23 @@ var claims := 0
 # The limbs her gait has down this frame (bits 1 an_l, 2 wr_l, 4 an_r, 8 wr_r).
 var down_mask := 0
 var stretch := {"l": 1.0, "r": 1.0}
+# How far the handle of a prop (the toolbox) lies past her real arm, out to
+# HOLD_ARM_OUT of it (negative: within it; -1 with none): walking to it, from
+# where her shoulder will be at the take; carried, from where it is now. The
+# view stoops her to it (matron_view.gd _prop_lean).
+var prop_short := -1.0
+# Seconds until the native takes that prop at her speed (0 once carried; INF
+# with none), so the view's stoop leads the take (matron_view.gd _prop_lean).
+var prop_take_s := INF
+# and whether that handle is above her shoulder (carried and lifted: a stoop
+# only takes her shoulder further from it), and whether she carries it
+var prop_over := false
+var prop_carried := false
+# Where the native takes a prop: her centre within this of it across the
+# ground (matron.cpp kTakeM; mirrored, the native is the authority).
+const PROP_TAKE_M := 0.85
+# Her hand goes out to a prop's handle over this long before the take.
+const PROP_HAND_LEAD_S := 0.35
 # Keep the last governed arm pose while a physical prop is being approached or
 # carried. Restarting the IK from unrelated walk/search poses each frame can
 # pull a wrist off an otherwise stationary handle before govern clips it.
@@ -388,6 +483,86 @@ func _reach_chain(a: String, b: String, c: String, target: Vector3, w := 1.0, ke
 	_turn_bone_global(b, Quaternion((wr2 - el2).normalized(), (want - el2).normalized()))
 
 
+# Her wrist `s` reaching for the world point `at` (a climb's hold, her
+# pipe's grip): the wrist goes to a point that follows `at` (HAND_W, no
+# faster than HAND_MAX_M_S), so a grip taken, moved or swapped is reached
+# over frames, never in one. Each step is taken from where the wrist was
+# drawn last frame (a reach that starts, or one the governor held back, never
+# runs ahead of her drawn hand), so it needs no blend weight. `carry`: the
+# step is taken in her body's frame (a wrist coming back to her pose).
+func _reach_hand(s: String, at: Vector3) -> void:
+	_reach(s, skel.global_transform.affine_inverse() * _follow_hand(s, at), 1.0)
+
+
+func _follow_hand(s: String, at: Vector3, carry := false) -> Vector3:
+	var last: Array = _hand_follow.get(s, [])
+	if view == null or bool(view.fresh_frame) or not _wrist_drawn.has(s):
+		_hand_follow[s] = [_ik_frame, Vector3.ZERO]
+		_hand_target.erase(s)
+		return at
+	var x: Vector3 = _wrist_drawn[s]
+	if carry:
+		x += skel.global_position - _skel_was
+	var v := Vector3.ZERO
+	if not last.is_empty() and int(last[0]) >= _ik_frame - 1:
+		v = last[1]
+	var dt := clampf(float(view._dt), 0.0, HAND_DT_MAX)
+	# A grip that slides steadily (her pipe press runs the rail down at
+	# 2.6 m/s) leaves a critically damped spring behind by 2u/W; aim ahead
+	# by exactly that lag so the wrist sits on the grip, not above it.
+	# The velocity is the target's own motion over the last four frames,
+	# capped at HAND_MAX_M_S, so a new grip (a jump) never feeds forward;
+	# the window must be four consecutive frames or there is no estimate.
+	var aim := at
+	var raw_dt := float(view._dt)
+	var hist: Array = _hand_target.get(s, [])
+	hist.push_front([_ik_frame, at, raw_dt])
+	while hist.size() > 5:
+		hist.pop_back()
+	_hand_target[s] = hist
+	if hist.size() >= 5 and raw_dt > 0.0 and int(hist[4][0]) == _ik_frame - 4:
+		# Elapsed game time from the oldest entry's frame to now is the
+		# four steps since it: the first four entries' dts, not all five.
+		var span := 0.0
+		for i in 4:
+			span += float(hist[i][2])
+		if span > 0.0:
+			var u: Vector3 = (at - (hist[4][1] as Vector3)) / span
+			if u.length() <= HAND_MAX_M_S:
+				aim = at + u * (2.0 / HAND_W)
+	if dt > 0.0:
+		var f: Array = view.spring(x, v, aim, HAND_W, dt)
+		var to: Vector3 = (f[0] as Vector3) - x
+		var cap := HAND_MAX_M_S * dt
+		if to.length() > cap:
+			x += to.limit_length(cap)
+			v = (f[1] as Vector3).limit_length(HAND_MAX_M_S)
+		else:
+			x = f[0]
+			v = f[1]
+	_hand_follow[s] = [_ik_frame, v]
+	return x
+
+
+# A wrist that reached a grip last frame and does not this frame (the climb
+# or the pipe let go, a second hold dropped): it comes back to where this
+# frame's pass has it on the same follow, and is let go once there.
+func _release_hands() -> void:
+	for s in _hand_follow.keys():
+		var last: Array = _hand_follow[s]
+		if int(last[0]) >= _ik_frame:
+			continue
+		if view == null or bool(view.fresh_frame) or int(last[0]) < _ik_frame - 1:
+			_hand_follow.erase(s)
+			continue
+		var pose := skel.global_transform * _gpos("wr_" + s)
+		var x := _follow_hand(s, pose, true)
+		if x.distance_to(pose) < 0.005:
+			_hand_follow.erase(s)
+		else:
+			_reach(s, skel.global_transform.affine_inverse() * x, 1.0)
+
+
 # Her body's ride onto what is under her (her lower foot on the deck, her
 # hands up to the rung), low-passed (RIDE_W): her hips carried smoothly over
 # her feet, never jumped a frame to whichever foot is lowest.
@@ -484,6 +659,466 @@ func _plant_limbs(data: Dictionary, w: float, free := false) -> void:
 		_reach_chain(root_b, mid_b, bone, target, w, "plant_" + bone)
 
 
+# Upright feet, world-locked while they stand (M6 foot-drag fix): the plants
+# above only run on all fours, so upright a stance foot rode the body and
+# the probe measured it travelling ~0.037 m/frame median. A foot down on the
+# deck stays where it was put while her body goes over it, and steps when it
+# must. The pose's swing still decides when a foot comes down (its sole
+# within UPLANT_M of the deck) and when it steps (lifted, or dragged past
+# its leg's reach); this holds only the stance foot's place, never her
+# gait's timing or step length. A stepping foot is never handed back to the
+# pose mid-swing at deck height, where it would count as planted while it
+# travels: it eases off on a low arc like the fours' swing (PLANT_LIFT_M),
+# then tracks the pose's ankle held above the deck until the pose's foot
+# comes down again, and plants there. Silent: no claim, no sound.
+const UPLANT_M := 0.03
+const UPLANT_RELEASE_S := 0.15
+const UPLANT_LIFT_M := 0.12
+const UPLANT_TRACK_LIFT_M := 0.15
+# A release lifts before it travels: the sole must be off the deck before
+# the foot moves sideways, or the deck counts the travel as a slide. The
+# lift needs a few frames to bend a near-straight leg past govern's cap,
+# so sideways travel waits until this much of the release has passed.
+const UPLANT_TRAVEL_START := 0.4
+# ... and the travel only advances while the sole is actually up: the
+# lift alone does not hold it there while the leg reaches forward (the
+# leg stretches and the sole drops back to the deck, act 0.111 m at the
+# unrig), so the travel waits on the drawn sole's height above its lock,
+# not on the clock. A frame old it lags the drop by a frame, so the bar
+# sits above the plant band by that drop.
+const UPLANT_TRAVEL_H_M := 0.10
+# A release's travel left unfinished (its sole never cleared that bar)
+# goes on in tracking, raising the foot by this much a frame until it
+# clears, never more than the cap in all.
+const UPLANT_RAISE_M := 0.03
+const UPLANT_RAISE_MAX_M := 0.3
+# The proof pin only holds a foot while the body is nearly still — the
+# check's own plant bar (STILL_MPS). A stepping body must be free to step:
+# pinning a foot mid-stride holds it off the deck (figure carry) and starves
+# the planted-pair count (studio shuffle).
+const UPLANT_STILL_MPS := 0.15
+# ... and while the foot itself is nearly still in the world (its pose-sole
+# travel this frame, body-corrected — the same dev the slow test measures).
+# A foot travelling fast is mid-step or mid-transition, not settling: the
+# pin's anchor is the drawn sole a frame old, and a foot moving 0.10+ m in
+# that frame strands the anchor — and the lock after it — far behind the
+# stance (figure carry: the lock landed 0.63 m behind the foot, the leg
+# could not reach the deck, lowest sole 0.048 m). A settling foot in the
+# grab travels 0.024–0.034 m/frame; a pose transition travels 0.10+; the
+# bar sits between them, at the slow test's own floor allowance.
+const UPLANT_PIN_DEV_M := 0.05
+var _uplants := {}
+var _uprev := {}
+# The soles as drawn last frame (after govern), world points: the upright
+# plant's proof anchors to where the foot actually is, not where the pose
+# has it — the two differ by ~0.18 m in a grab settle, and a pose anchor
+# yanks the foot across the deck (v2: 0.090 m at frame 33).
+var _udrawn := {}
+
+
+func _sole_offset(s: String) -> Vector3:
+	# The sole's midpoint, in the ankle bone's own space: the probe and the
+	# test measure the sole, not the ankle, and the foot's pitch moves the
+	# sole even when the ankle is held. Holding the sole itself removes
+	# that pitch travel from the measured slide.
+	return (_v(contacts["an_" + s]["heel"]) + _v(contacts["an_" + s]["toe"])) * 0.5
+
+
+func _reach_sole(hip: String, knee: String, ankle: String, sole_target: Vector3, w: float, key: String, s: String) -> void:
+	# Reach the ankle so the SOLE lands on sole_target. One pass: the
+	# ankle's rotation moves the sole as it pitches, so a second pass
+	# does not converge it (govern clips the extra change instead, and
+	# the hold degrades at speed), and the landing below spreads the
+	# descent so the single pass lands cleanly.
+	var basis := skel.get_bone_global_pose(bone_idx[ankle]).basis
+	_reach_chain(hip, knee, ankle, sole_target - basis * _sole_offset(s), w, key)
+
+
+# How far the drawn sole's lowest point (heel or toe, a frame old) is above
+# the deck its plant locked to. The lowest point, not the midpoint: a foot
+# pointed down has its toe on the deck with its midpoint 0.1 m up, and a
+# gate on the midpoint let it travel with the toe dragging. No fresh drawn
+# sole: up (the gate never holds a foot it cannot see).
+func _drawn_lift(s: String, st: Dictionary) -> float:
+	var drawn: Dictionary = _udrawn.get(s, {})
+	if drawn.is_empty() or int(drawn.get("frame", -1)) != _ik_frame - 1 or not st.has("lock") or not drawn.has("low"):
+		return 1.0
+	return float(drawn["low"]) - float((st["lock"] as Vector3).y)
+
+
+func _sole_skel(s: String) -> Dictionary:
+	var i: int = bone_idx["an_" + s]
+	var heel: Vector3 = skel.get_bone_global_pose(i) * _v(contacts["an_" + s]["heel"])
+	var toe: Vector3 = skel.get_bone_global_pose(i) * _v(contacts["an_" + s]["toe"])
+	return {"y": minf(heel.y, toe.y),
+		"mid": Vector3((heel.x + toe.x) * 0.5, 0.0, (heel.z + toe.z) * 0.5)}
+
+
+func _plant_upright_feet(wf: float, release_only := false) -> void:
+	var w := 1.0 - wf
+	if w <= 0.001 or view == null:
+		return
+	var dt: float = float(view._dt)
+	var xf := skel.global_transform
+	var inv := xf.affine_inverse()
+	if bool(view.fresh_frame):
+		_uplants.clear()
+		_uprev.clear()
+		_udrawn.clear()
+	# A plant the fallthrough skipped a frame for (a climb, a leap) is
+	# stale: the foot has gone elsewhere since, so it is dropped, never
+	# dragged back.
+	for s in ["l", "r"]:
+		var old: Dictionary = _uplants.get(s, {})
+		if not old.is_empty() and _ik_frame - int(old.get("frame", 0)) > 1:
+			_uplants.erase(s)
+	for s in ["l", "r"]:
+		var sole := _sole_skel(s)
+		var down := float(sole["y"]) > -UPLANT_M and float(sole["y"]) < UPLANT_M
+		# The pose's own ankle, before this foot is reached for: apply()
+		# reset the bones to the pose's intent this frame, so this is where
+		# the pose has the foot, not where the last plant put it.
+		var pose_ankle := _gpos("an_" + s)
+		var st: Dictionary = _uplants.get(s, {})
+		if release_only and not st.is_empty() and not bool(st.get("releasing", false)):
+			# Taking off with a plant held (or a foot mid-landing, or
+			# tracking): ease it back to the pose over the release,
+			# from where the foot is drawn — never snap it to the pose.
+			# The release branch below runs this same frame (the trigger
+			# frame blends at k = 0, so the foot stays where it is). The
+			# lock is held in skeleton space (body-relative): the world
+			# point it was planted on is behind her now, and chasing it
+			# as the body falls yanks the foot up.
+			var at: Vector3
+			var drawn_r: Dictionary = _udrawn.get(s, {})
+			if not drawn_r.is_empty() and int(drawn_r.get("frame", -1)) == _ik_frame - 1:
+				at = drawn_r["at"] as Vector3
+			elif st.has("lock"):
+				at = st["lock"] as Vector3
+			else:
+				var mid_r: Vector3 = sole["mid"] as Vector3
+				at = xf * Vector3(mid_r.x, 0.0, mid_r.z)
+			st = {"lock": at, "lock_skel": inv * at, "releasing": true, "rel": -dt / UPLANT_RELEASE_S, "frame": _ik_frame}
+			_uplants[s] = st
+		# A hold that ends this frame starts its release blend NOW, in
+		# this frame's releasing branch below — never a frame later. The
+		# old code set releasing and reached nothing that frame, so the
+		# foot snapped from its lock to the pose's foot in one frame
+		# (a 0.19 m jump at the end of a turn, where the crouch into
+		# the next pose takes the sole out of the band). A hold ends
+		# when the sole leaves the band, or when the body drags the lock
+		# past the leg's reach. The trigger frame itself blends at
+		# k = 0, so the foot stays at its lock for that frame instead
+		# of snapping — and the release then runs the old frame count
+		# exactly, so every later touchdown lands on the old beat (the
+		# plant state machine is pose-driven; shifting the release by
+		# even one frame moves later touchdowns by several, which is
+		# what broke the figure test's carry pose under the first cut
+		# of this fix).
+		if st.has("lock") and not bool(st.get("tracking", false)) and not bool(st.get("releasing", false)) and int(st.get("landing", 0)) == 0:
+			var dragged := false
+			if down:
+				var hip := _gpos("hp_" + s)
+				var leg := hip.distance_to(_gpos("kn_" + s)) + _gpos("kn_" + s).distance_to(_gpos("an_" + s))
+				var ls: Vector3 = inv * (st["lock"] as Vector3)
+				dragged = Vector2(ls.x - hip.x, ls.z - hip.z).length() > 0.92 * leg
+			if not down or dragged:
+				# A release the pose started by pressing its sole under the
+				# deck (a hard stop drives the trailing toe 0.09 m into it),
+				# not by lifting it: that foot points down, and its toe is
+				# still on the deck when the release's clock runs out.
+				st["pressed"] = not dragged and float(sole["y"]) <= -UPLANT_M
+				st["releasing"] = true
+				st["rel"] = -dt / UPLANT_RELEASE_S
+				st["frame"] = _ik_frame
+				st.erase("proof")
+				_uplants[s] = st
+		if bool(st.get("tracking", false)):
+			# Touchdown needs three frames of sole on the deck, not one,
+			# and a foot that has nearly stopped in the world, not one
+			# sweeping low through the band: a sole grazing the deck
+			# mid-swing must not plant, or the hold fights the swing and
+			# the foot oscillates. While waiting, the foot keeps
+			# hovering, so no counted frame travels. The pose's sole is
+			# the signal, not its ankle: a dragging toe touches down
+			# while its ankle is still high.
+			var df := int(st.get("down_frames", 0)) + 1 if down else 0
+			st["down_frames"] = df
+			# The foot's world speed this frame, from its skeleton-space
+			# travel plus the body's own advance (skeleton forward is
+			# +Z, so stance travel is -body_step in Z and the deviation
+			# from that is the world travel).
+			var slow := false
+			var dev := -1.0
+			if _uprev.has(s):
+				var pv: Vector2 = _uprev[s] as Vector2
+				var mv: Vector3 = sole["mid"] as Vector3
+				var body_step := float(view._gait_mps) * dt
+				dev = Vector2(mv.x - pv.x, mv.z - pv.y + body_step).length()
+				var allow := maxf(2.5 * float(view._gait_mps) * dt, 0.05)
+				slow = dev < 0.5 * allow
+			var left := float(st.get("travel", 1.0))
+			if left < 1.0 and float(view._gait_mps) > UPLANT_STILL_MPS:
+				# She is walking again: the walking plant takes the foot
+				# back (no slide counts under a moving body, and a held
+				# lift would block every touchdown of her stride).
+				st.erase("travel")
+				st.erase("from_an")
+				st.erase("raise")
+				left = 1.0
+			if left < 1.0:
+				# A pressed release ended on its clock with its travel
+				# unfinished: the sole never rose (the foot pointed down,
+				# its toe on the deck). The travel goes on here under the
+				# release's own rule (it advances only while the drawn sole
+				# is up) at the lift's height, and the foot neither touches
+				# down nor pins until it is done: a foot swung forward from
+				# the lock with its toe on the deck is a slide (act 0.092 m
+				# at the toolbox stop). A foot still under the bar is raised further each frame
+				# (UPLANT_RAISE_M) until its sole clears it: the ankle's
+				# lift alone leaves a pointed toe 0.06 m up, and a gate
+				# that never opens leaves the foot behind her (act: 0.7 m
+				# behind the hip for the rest of the stop).
+				# The travel starts again from where the ankle is drawn,
+				# not from the release's blend: it lifts straight up first,
+				# and a target that leans toward the moving pose foot while
+				# the toe is down creeps it along the deck (hold 0.068 m).
+				if not st.has("from_an"):
+					var drawn_a: Dictionary = _udrawn.get(s, {})
+					st["from_an"] = drawn_a["an"] if drawn_a.has("an") and int(drawn_a.get("frame", -1)) == _ik_frame - 1 else xf * pose_ankle
+					left = 0.0
+				var raise := float(st.get("raise", 0.0))
+				if _drawn_lift(s, st) >= UPLANT_TRAVEL_H_M:
+					left = minf(1.0, left + dt / UPLANT_RELEASE_S / (1.0 - UPLANT_TRAVEL_START))
+				else:
+					raise = minf(raise + UPLANT_RAISE_M, UPLANT_RAISE_MAX_M)
+				st["travel"] = left
+				st["raise"] = raise
+				var from: Vector3 = inv * (st["from_an"] as Vector3)
+				# The raise holds for the whole travel: faded as the foot
+				# travels, it let the pointed toe dip back to the deck
+				# mid-step (act 0.089 m at t=169.77).
+				var hold_tgt := from.lerp(pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), left) + Vector3(0.0, raise, 0.0)
+				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, hold_tgt, w, "uplant_" + s)
+				st["frame"] = _ik_frame
+				_uplants[s] = st
+				_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+				continue
+			if down and df >= 3 and slow:
+				var mid: Vector3 = sole["mid"] as Vector3
+				# The lock is where the foot was HELD. When the proof pin
+				# held it, the foot IS at the proof anchor — as drawn, the
+				# two agree within millimetres — so the lock is the anchor
+				# and the landing is vertical (v3: the grab plants, peak
+				# 0.046 m). When the pin never held it, the foot is where
+				# the pose has it now, and the lock is the pose sole this
+				# frame (the base lock): the drawn sole a frame old is
+				# already stale at speed — 0.05 m at 3 m/s — and a stale
+				# lock starves the planted-pair count and drifts the
+				# landing (drawn-sole lock: shuffle_fast pairs 25/37,
+				# median 0.020 m; proof-anchor-always: pairs 5, and the
+				# release then slides, act 0.103 m).
+				var lock_at: Vector3 = xf * Vector3(mid.x, 0.0, mid.z)
+				if st.has("proof"):
+					lock_at = st["proof"] as Vector3
+				# The landing starts from where the foot is drawn, not
+				# from the tracking height: a foot the proof pin already
+				# seated is at the deck, and lifting it to 0.15 m to land
+				# it again is a visible jump. The drawn sole a frame old
+				# is the foot's height; without a fresh one the old
+				# tracking height stands.
+				var land_from := UPLANT_TRACK_LIFT_M
+				var drawn0: Dictionary = _udrawn.get(s, {})
+				if not drawn0.is_empty() and int(drawn0.get("frame", -1)) == _ik_frame - 1:
+					land_from = clampf((inv * (drawn0["at"] as Vector3)).y, 0.0, UPLANT_TRACK_LIFT_M)
+				st = {"lock": lock_at, "frame": _ik_frame, "landing": 5, "land_from": land_from}
+				_uplants[s] = st
+				# Fall through to the landing branch below, not to the
+				# hold: the foot comes down over five frames, it does
+				# not drop the hover height in one.
+			else:
+				# Still swinging, or still proving the touchdown. From the
+				# first down frame, hold the sole where it went down — but
+				# only while the body is nearly still (UPLANT_STILL_MPS)
+				# and the foot itself is nearly still in the world
+				# (dev < UPLANT_PIN_DEV_M): a travelling foot is
+				# mid-step or mid-transition, and the pin's anchor — the
+				# drawn sole a frame old — is already far behind it.
+				# The check already counts it planted, and the pose's settle
+				# would drag it across the deck for the whole proof (0.066 m
+				# in the grab). The anchor is the sole as DRAWN last frame,
+				# not the pose's sole: in a grab settle the pose's sole sits
+				# ~0.18 m from the drawn one, so a pose anchor yanks the
+				# foot across the deck instead of holding it. The first frame
+				# anchors the XZ and starts down at the landing's rate
+				# (0.03 m a frame); from the second frame the hold resists
+				# the pose, so a one-frame graze is never fought. The anchor
+				# is a world point, so a moving body does not drag it. A drawn
+				# sole from any frame but the last is stale (a climb, a leap)
+				# and is never used.
+				var drawn: Dictionary = _udrawn.get(s, {})
+				var pin_gates := down and not drawn.is_empty() and int(drawn.get("frame", -1)) == _ik_frame - 1 and float(view._gait_mps) <= UPLANT_STILL_MPS and dev >= 0.0 and dev < UPLANT_PIN_DEV_M
+				if pin_gates:
+					if not st.has("proof"):
+						# The pin eases in from where the foot is drawn:
+						# the blend weight starts at the drawn height, so
+						# the first frame only anchors (the sole is already
+						# there) and the descent to the deck takes five
+						# frames at the landing's own rate.
+						var sk: Vector3 = inv * (drawn["at"] as Vector3)
+						st["proof"] = xf * Vector3(sk.x, 0.0, sk.z)
+						st["pin_k"] = clampf(1.0 - sk.y / UPLANT_TRACK_LIFT_M, 0.0, 1.0)
+					var k_in: float = minf(float(st.get("pin_k", 1.0)) + 0.2, 1.0)
+					st["pin_k"] = k_in
+					var tgt: Vector3 = inv * (st["proof"] as Vector3)
+					tgt.y = UPLANT_TRACK_LIFT_M * (1.0 - k_in)
+					_reach_sole("hp_" + s, "kn_" + s, "an_" + s, tgt, w, "uplant_" + s, s)
+				elif st.has("proof"):
+					# The pin eases out the way it came in: five frames
+					# from the deck back to the tracking height, at the
+					# anchor, before the foot is handed back to the pose
+					# — never a one-frame snap either way. A flicker
+					# re-engages from the faded weight, so the blend
+					# never restarts from the top.
+					var k_out: float = maxf(float(st.get("pin_k", 1.0)) - 0.2, 0.0)
+					st["pin_k"] = k_out
+					if k_out <= 0.0:
+						st.erase("proof")
+						st.erase("pin_k")
+						_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), w, "uplant_" + s)
+					else:
+						var tgt2: Vector3 = inv * (st["proof"] as Vector3)
+						tgt2.y = UPLANT_TRACK_LIFT_M * (1.0 - k_out)
+						_reach_sole("hp_" + s, "kn_" + s, "an_" + s, tgt2, w, "uplant_" + s, s)
+				else:
+					# Still swinging, or still proving the touchdown: track
+					# the pose's ankle held above the deck, never handed back
+					# low and fast.
+					st.erase("proof")
+					_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), w, "uplant_" + s)
+				st["frame"] = _ik_frame
+				_uplants[s] = st
+				_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+				continue
+		elif bool(st.get("releasing", false)):
+			var k := clampf(float(st.get("rel", 0.0)) + dt / UPLANT_RELEASE_S, 0.0, 1.0)
+			if k < 1.0:
+				# A takeoff release holds its lock in skeleton space
+				# (body-relative): the world point it was planted on is
+				# behind her now, and chasing it as the body falls yanks
+				# the foot up. A normal release holds its lock in the
+				# world — the foot was planted there.
+				var plant_tgt: Vector3
+				if st.has("lock_skel"):
+					plant_tgt = (st["lock_skel"] as Vector3) - skel.get_bone_global_pose(bone_idx["an_" + s]).basis * _sole_offset(s)
+				else:
+					var lock: Vector3 = st["lock"] as Vector3
+					plant_tgt = inv * lock - skel.get_bone_global_pose(bone_idx["an_" + s]).basis * _sole_offset(s)
+				# The foot lifts before it travels: sideways travel
+				# waits until UPLANT_TRAVEL_START of the release has
+				# passed, so the sole is off the deck (and no longer
+				# counted as planted) before it moves sideways. The
+				# old code travelled from the first frame, while the
+				# near-straight leg could not bend fast enough past
+				# govern's cap to lift the sole — so the sole dragged
+				# along the deck to its new stance.
+				var travel_tgt := clampf((k - UPLANT_TRAVEL_START) / (1.0 - UPLANT_TRAVEL_START), 0.0, 1.0)
+				# ... and the travel only advances while the sole is
+				# actually up: the lift alone does not hold it there
+				# while the leg reaches forward (the leg stretches and
+				# the sole drops back to the deck, act 0.111 m at the
+				# unrig), so the travel waits on the drawn sole's height
+				# above its lock. A low foot holds the travel (the target
+				# stays, the lift bends the knee) until it rises; the
+				# release still ends on its clock, and the tracking after
+				# it carries any travel left over.
+				var travel := float(st.get("travel", 0.0))
+				# A walking release gates on the drawn sole's midpoint
+				# (its timing is tuned on it); a pressed one on its
+				# lowest point: that foot points down, its toe on the
+				# deck while its midpoint is 0.1 m up.
+				var drawn_h := 1.0
+				var drawn_r: Dictionary = _udrawn.get(s, {})
+				if not drawn_r.is_empty() and int(drawn_r.get("frame", -1)) == _ik_frame - 1 and st.has("lock"):
+					drawn_h = float((drawn_r["at"] as Vector3).y - (st["lock"] as Vector3).y)
+				if bool(st.get("pressed", false)):
+					drawn_h = _drawn_lift(s, st)
+				if drawn_h >= UPLANT_TRAVEL_H_M:
+					travel = minf(travel_tgt, travel + dt / UPLANT_RELEASE_S / (1.0 - UPLANT_TRAVEL_START))
+				st["travel"] = travel
+				var tgt := plant_tgt.lerp(pose_ankle, travel)
+				# The arc stays up: its lift eases from the arc's height
+				# into the tracking height, never back down to a low fast
+				# pose ankle at the tail, so the handoff to tracking is
+				# smooth and the foot never snaps forward to a plant. On
+				# a takeoff release the tail eases to the pose instead:
+				# she is airborne, and the foot dangles with her body.
+				if k < 0.7:
+					tgt.y += UPLANT_LIFT_M * sin(PI * k)
+				else:
+					var tail_h := 0.0 if release_only else UPLANT_TRACK_LIFT_M
+					tgt.y += lerpf(UPLANT_LIFT_M * sin(PI * 0.7), tail_h, (k - 0.7) / 0.3)
+				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, tgt, w, "uplant_" + s)
+				st["rel"] = k
+				st["frame"] = _ik_frame
+				_uplants[s] = st
+				_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+				continue
+			if release_only:
+				# The takeoff release ends at the pose, not at the
+				# tracking height: the plant is gone, and the foot
+				# follows the pose from here.
+				_uplants.erase(s)
+				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle, w, "uplant_" + s)
+			else:
+				st["tracking"] = true
+				# Only a pressed release whose sole is still down carries
+				# its unfinished travel into tracking; any other hands over
+				# as it always has.
+				if float(st.get("travel", 1.0)) >= 1.0 or not bool(st.get("pressed", false)) or _drawn_lift(s, st) >= UPLANT_TRAVEL_H_M:
+					st.erase("travel")
+				st["frame"] = _ik_frame
+				_uplants[s] = st
+				_reach_chain("hp_" + s, "kn_" + s, "an_" + s, pose_ankle + Vector3(0.0, UPLANT_TRACK_LIFT_M, 0.0), w, "uplant_" + s)
+			_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+			continue
+		if int(st.get("landing", 0)) > 0:
+			# Touchdown from the hover: the sole comes down over five
+			# frames at the lock's XZ, so the descent is vertical only
+			# and no counted frame travels. A fast drop needs a joint
+			# change at govern's cap, which clips and swings the foot
+			# sideways; five frames keep each step well under it. The
+			# descent starts from where the foot is drawn (land_from),
+			# never from the tracking height when the pin seated it.
+			var n := int(st["landing"])
+			var lock: Vector3 = st["lock"] as Vector3
+			var sole_tgt := inv * lock
+			sole_tgt.y = float(st.get("land_from", UPLANT_TRACK_LIFT_M)) * n / 5.0
+			_reach_sole("hp_" + s, "kn_" + s, "an_" + s, sole_tgt, w, "uplant_" + s, s)
+			st["landing"] = n - 1
+			st["frame"] = _ik_frame
+			_uplants[s] = st
+			_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+			continue
+		if down and not release_only:
+			if st.is_empty():
+				var mid: Vector3 = sole["mid"] as Vector3
+				st = {"lock": xf * Vector3(mid.x, 0.0, mid.z)}
+			# A hold dragged past its leg's reach is already releasing:
+			# the trigger above converts it before this branch runs.
+			var lock: Vector3 = st["lock"] as Vector3
+			_reach_sole("hp_" + s, "kn_" + s, "an_" + s, inv * lock, w, "uplant_" + s, s)
+			st["frame"] = _ik_frame
+			_uplants[s] = st
+		# No final elif: a lifted foot with a state is always a hold,
+		# and the trigger above turns every held foot whose sole left
+		# the band into a release before this point — so there is no
+		# lifted, held, unreleased foot left to handle here. (And the
+		# old branch only updated _uprev, which the line below does
+		# unconditionally anyway.)
+		_uprev[s] = Vector2((sole["mid"] as Vector3).x, (sole["mid"] as Vector3).z)
+
+
 # Her hand on what she holds (the hold: his ankle, and in the rip his arm):
 # the wrist from where her pose has it toward `at_world` as far as `w`, the
 # arm drawn out (upper arm and forearm both, their "_x" bones slid) as long as
@@ -512,8 +1147,38 @@ func hold_reach(s: String, at_world: Vector3, w: float) -> void:
 	_reach(s, want, 1.0, "hold_" + s)
 
 
-# `held`: her holds as the view draws them, eased onto each new one (the
-# view's _ease_hands); without it, the native's own holds.
+# Her hand toward a prop's handle `at_world` as far as `w`, onto the nearest
+# point her real arm has toward it (_in_arm): walking to it, out from
+# HOLD_ARM_OUT of the arm to its whole length as the take comes; carried, its
+# whole length (the native has it in her hand while she slides the last of
+# the way to it).
+func _prop_hand(s: String, at_world: Vector3, w: float, carried: bool) -> void:
+	hold_reach(s, _in_arm(s, at_world, 1.0 if carried else lerpf(HOLD_ARM_OUT, 1.0, w)), w)
+
+
+# The nearest point to `at_world` her real arm (its bones at rest) has from
+# its shoulder, out to `out` of its length.
+func _in_arm(s: String, at_world: Vector3, out: float) -> Vector3:
+	var sh := bone_world("sh_" + s).origin
+	var arm := _t("sh_%s_x" % s).length() + _t("el_%s_x" % s).length()
+	return sh + (at_world - sh).limit_length(out * arm)
+
+
+# Her feet on her pipe's rail's top, perched over it (the simulation's
+# contact_feet there): her soles either side of where it has them.
+func _pipe_feet(data: Dictionary, w: float) -> void:
+	if not bool(data.get("contact_supported", false)):
+		return
+	var inv := skel.global_transform.affine_inverse()
+	var feet: Vector3 = data["contact_feet"] + Vector3(0.0, ANKLE_OVER_SOLE_M, 0.0)
+	var along := Vector3(1.0, 0.0, 0.0)
+	_reach_chain("hp_r", "kn_r", "an_r", inv * (feet + along * 0.1), w, "perch_r")
+	_reach_chain("hp_l", "kn_l", "an_l", inv * (feet - along * 0.1), w, "perch_l")
+	claims |= CLAIM_FEET
+
+
+# `held`: her climb's holds as the view picks them (the view's _ease_hands);
+# without it, the native's own. Her wrists follow them (_reach_hand).
 func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> void:
 	var prop_intent := int(data.get("carrying", 0)) != 0 or int(data.get("stock_seeking", 0)) != 0
 	var carrying := int(data.get("carrying", 0)) != 0 and data.has("stock_handle")
@@ -537,6 +1202,7 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 			var cap := GOVERN_M_S * maxf(float(view._dt), 0.0)
 			skel.set_bone_pose_position(i, last.move_toward(nominal, cap))
 	_contact(data, falling, held)
+	_release_hands()
 	govern()
 	# Only the physical constraint owns attachment. The native handle is the
 	# contact target, not a visual approximation. Finish the wrists AFTER the
@@ -550,14 +1216,23 @@ func contact(data: Dictionary, falling: bool, held := PackedVector3Array()) -> v
 		if two_hands:
 			var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY)
 			across = (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1)
-		_finish_prop_wrist("r", handle + across, wrist_before["r"])
+		_finish_prop_wrist("r", _in_arm("r", handle + across, 1.0), wrist_before["r"])
 		if two_hands and wrist_before.has("l"):
-			_finish_prop_wrist("l", handle - across, wrist_before["l"])
+			_finish_prop_wrist("l", _in_arm("l", handle - across, 1.0), wrist_before["l"])
+	for s in ["l", "r"]:
+		_wrist_drawn[s] = skel.global_transform * _gpos("wr_" + s)
+	_skel_was = skel.global_position
 	_prop_arm_pose.clear()
 	if prop_intent:
 		for bone in PROP_ARM_JOINTS:
 			var i: int = bone_idx[bone]
 			_prop_arm_pose[bone] = [skel.get_bone_pose_rotation(i), skel.get_bone_pose_position(i)]
+	# The soles as drawn this frame (after govern), for the upright plant's
+	# proof anchor next frame: where the foot actually is, not the pose.
+	for s in ["l", "r"]:
+		var heel: Vector3 = point("an_" + s, "heel")
+		var toe: Vector3 = point("an_" + s, "toe")
+		_udrawn[s] = {"at": (heel + toe) * 0.5, "low": minf(heel.y, toe.y), "an": skel.global_transform * _gpos("an_" + s), "frame": _ik_frame}
 
 
 # An actual grasp's terminal wrist contact, corrected only within the
@@ -633,13 +1308,17 @@ func govern() -> void:
 func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void:
 	stretch["l"] = 1.0
 	stretch["r"] = 1.0
+	prop_short = -1.0
+	prop_take_s = INF
+	prop_over = false
+	prop_carried = false
 	landed.clear()
 	claims = 0
 	_ik_frame += 1
 	var state := int(data.get("state", 0))
 	# Laid out on the steel, or turned over head first down her pipe: the figure
 	# itself is turned, and the deck is not under her soles.
-	if (state == 11 and not bool(data.get("kneeling", false))) or bool(data.get("pipe_head_down", false)):
+	if ((state == 11 or state == 6) and not bool(data.get("kneeling", false))) or bool(data.get("pipe_head_down", false)):
 		_plants.clear()
 		down_mask = 0
 		return
@@ -696,8 +1375,7 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		_ride(lift)
 		if wf > 0.001:
 			_plant_limbs(data, wf, feet_free)
-		var wc := float(view._w_climb) if view != null else 1.0
-		_reach("r", skel.global_transform.affine_inverse() * hand, wc)
+		_reach_hand("r", hand)
 		claims |= CLAIM_HAND
 		# The left wrist goes to a second hold only when the
 		# simulation has her hand on one (contact_hand2_held under
@@ -716,9 +1394,9 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 			if second:
 				hand_l = held[1] if held.size() >= 2 else (data["contact_hand2"] if truth else data["climb_hand2"])
 				claims |= CLAIM_HAND2
-				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+				_reach_hand("l", hand_l)
 			elif two_handed:
-				_reach("l", skel.global_transform.affine_inverse() * hand_l, wc)
+				_reach_hand("l", hand_l)
 		if down_mask != 0:
 			claims |= CLAIM_PLANTS
 		return
@@ -734,14 +1412,23 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		into.y = 0.0
 		var side := Vector3.UP.cross(into.normalized()) if into.length() > 0.01 else Vector3.RIGHT
 		_ride(0.0)
-		_reach("r", inv * (grip + side * 0.08), wp)
-		_reach("l", inv * (grip - side * 0.08), wp)
+		_reach_hand("r", grip + side * 0.08)
+		_reach_hand("l", grip - side * 0.08)
 		claims |= CLAIM_HAND | CLAIM_HANG
 		if bool(data.get("contact_braced", false)):
 			var brace: Vector3 = data["contact_brace"]
 			_reach_chain("hp_r", "kn_r", "an_r", inv * (brace + side * 0.12), wp)
 			_reach_chain("hp_l", "kn_l", "an_l", inv * (brace - side * 0.12), wp)
 			claims |= CLAIM_BRACE
+		_pipe_feet(data, wp)
+		_plants.clear()
+		down_mask = 0
+		return
+	if truth and bool(data.get("on_pipe", false)) and bool(data.get("contact_supported", false)) \
+			and not bool(data.get("pipe_sliding", false)) and not bool(data.get("pipe_stunned", false)):
+		# Perched on her pipe's rail, her hands off it: her feet on its top.
+		_ride(0.0)
+		_pipe_feet(data, 1.0)
 		_plants.clear()
 		down_mask = 0
 		return
@@ -774,6 +1461,17 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		claims |= CLAIM_RIDE
 	if view == null:
 		return
+	# Upright feet plant with the weight the fours do not take: at wf = 0
+	# they hold alone; as she goes down, the fours' plants take over.
+	if not airborne and not feet_free:
+		_plant_upright_feet(wf)
+	elif not _uplants.is_empty():
+		# Taking off, or with nothing under her feet: the plants do not
+		# vanish — they release over the release blend, from where the
+		# feet are drawn, so a foot never jumps to the pose in one frame
+		# at takeoff. The call repeats while a release is still running;
+		# each finished release erases its own plant.
+		_plant_upright_feet(wf, true)
 	if wf > 0.001:
 		_plant_limbs(data, wf, feet_free)
 	if down_mask != 0:
@@ -790,12 +1488,36 @@ func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void
 		var size: Vector3 = data.get("stock_size", Vector3.ZERO) if carrying else data.get("stock_seek_size", Vector3.ZERO)
 		var rotation: Quaternion = data.get("stock_rotation", Quaternion.IDENTITY) if carrying else data.get("stock_seek_rotation", Quaternion.IDENTITY)
 		var shoulder: Vector3 = bone_world("sh_r").origin
-		if carrying or shoulder.distance_to(handle) < 2.5:
-			var two_hands := maxf(size.x, size.z) >= 0.38
-			var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
-			hold_reach("r", handle + across, 1.0)
+		var two_hands := maxf(size.x, size.z) >= 0.38
+		var across := (rotation * Vector3.RIGHT) * minf(0.02, size.x * 0.1) if two_hands else Vector3.ZERO
+		var reach := HOLD_ARM_OUT * (_t("sh_r_x").length() + _t("el_r_x").length())
+		var at_take := shoulder
+		prop_take_s = 0.0
+		if seeking:
+			# walking to it: where her shoulder will be when the native takes
+			# it (her centre PROP_TAKE_M across from it), her pose as now
+			var root: Vector3 = data.get("render_position", skel.global_position)
+			var to := Vector2(handle.x - root.x, handle.z - root.z)
+			var ahead := maxf(0.0, to.length() - PROP_TAKE_M)
+			if to.length() > 0.001:
+				var d := to.normalized() * ahead
+				at_take += Vector3(d.x, 0.0, d.y)
+			prop_take_s = ahead / maxf(float(data.get("speed", 0.0)), 0.01)
+		# what her real arm (its bones at rest) falls short of there
+		prop_short = at_take.distance_to(handle + across) - reach
+		prop_over = handle.y > shoulder.y
+		prop_carried = carrying
+		# walking to it, her hand goes out over the last PROP_HAND_LEAD_S
+		# before the take, along her real arm toward the handle and never past
+		# it, so the handle comes into her hand; carried, the native has it in
+		# her hand
+		var w := 1.0
+		if seeking:
+			w = clampf(1.0 - prop_take_s / PROP_HAND_LEAD_S, 0.0, 1.0)
+		if w > 0.001:
+			_prop_hand("r", handle + across, w, carrying)
 			if two_hands:
-				hold_reach("l", handle - across, 1.0)
+				_prop_hand("l", handle - across, w, carrying)
 	# Her hand on the climber's ankle, and in the rip her other on his arm
 	# (the view keeps the last of each while her hand comes off it).
 	if float(view._w_hold) > 0.001:
@@ -852,7 +1574,6 @@ func step_hair(delta: float) -> void:
 	var chest := bone_world("chest")
 	var belt := bone_world("spine_mid")
 	var neck := bone_world("neck_lo")
-	var back := chest * Vector3(0.0, 0.05, -0.05)
 	var down := head.basis * Vector3.DOWN
 	for ch in _chains:
 		var idx: Array = ch["idx"]
@@ -884,23 +1605,26 @@ func step_hair(delta: float) -> void:
 		for _it in HAIR_ITERATIONS:
 			for k in range(1, n + 1):
 				var above: Vector3 = pts[k - 1]
-				var q: Vector3 = (pts[k] as Vector3).lerp(above + down * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
+				var rest := down.lerp(Vector3.DOWN, float(HAIR_HANG[k - 1]))
+				rest = rest.normalized() if rest.length() > 1e-6 else Vector3.DOWN
+				var q: Vector3 = (pts[k] as Vector3).lerp(above + rest * seg, float(HAIR_STIFFNESS[k - 1]) * give / float(HAIR_ITERATIONS))
 				var d := q - above
 				q = above + (d.normalized() if d.length() > 1e-6 else down) * seg
 				# The point can sit outside the skull and the back while the ribbon
 				# between this point and the one above still cuts through them.
 				q = _segment_outside(above, q, seg, skull, _skull_radius)
-				q = _segment_outside(above, q, seg, back, BACK_RADIUS)
+				q = _segment_outside(above, q, seg, chest * BACK_CENTRE, BACK_RADIUS)
 				# Collar and belt are rings the two spheres do not cover. Walk the
 				# segment out sideways and down. A lift along the chest axis spends
 				# the hang. Measured radii, not a knob: collar 0.138 on chest
-				# local Y 0.091..0.154, buckle 0.192 on spine_mid local Y -0.001..0.042.
-				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138)
+				# local Y 0.091..0.154 (straight behind her, her measured back, BACK_Z),
+				# buckle 0.192 on spine_mid local Y -0.001..0.042.
+				q = _clear_ring(above, q, seg, chest, 0.091, 0.154, 0.138, BACK_Z)
 				q = _clear_ring(above, q, seg, belt, -0.001, 0.042, 0.192)
-				# The neck is a cylinder the collar ring does not cover. Measured on
-				# the posed cloth: max radial 0.089, so 0.095 sits the strand just
-				# outside it. Y -0.01..0.105 is the neck on neck_lo.
-				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095)
+				# The neck is a cylinder the collar ring does not cover, 0.095 at its
+				# front, narrower behind and at the sides (NECK_BACK_R, NECK_SIDE_R).
+				# Y -0.01..0.105 is the neck on neck_lo.
+				q = _clear_ring(above, q, seg, neck, -0.01, 0.105, 0.095, NECK_BACK_R, NECK_SIDE_R)
 				# The chest front is a slope, not a wider cylinder. A point can be
 				# outside the collar radius and still be in front of the cloth.
 				# Walk it back in the horizontal, never up: aiming the whole lock
@@ -917,6 +1641,12 @@ func step_hair(delta: float) -> void:
 			var rot := Quaternion(Vector3.DOWN, local_dir) if local_dir.dot(Vector3.DOWN) > -0.999 else Quaternion(Vector3.RIGHT, PI)
 			skel.set_bone_pose_rotation(bi, rot)
 			parent_basis = parent_basis * Basis(rot)
+
+
+## Her skirt's cloth, after her legs are where they will be drawn this frame.
+func step_skirt(delta: float, fresh: bool) -> void:
+	if skirt != null:
+		skirt.step(delta, fresh)
 
 
 func _outside(q: Vector3, centre: Vector3, radius: float) -> Vector3:
@@ -976,30 +1706,49 @@ func _segment_hits(a: Vector3, d_unit: Vector3, length: float, centre: Vector3, 
 
 # The clothing ring is a slice of a cylinder on a posed bone. If the segment
 # enters it, tilt the child toward the horizontal way out, still downward.
-func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: float, y1: float, radius: float) -> Vector3:
+func _clear_ring(a: Vector3, b: Vector3, length: float, bone: Transform3D, y0: float, y1: float, radius: float,
+		back_r: Array = [], side_r: Array = []) -> Vector3:
 	var origin := bone.origin
 	var axis := bone.basis.y.normalized()
-	for _guard in 6:
-		if _ring_depth(a, b, origin, axis, y0, y1, radius) <= 0.001:
-			return b
-		var horiz := _ring_out(a, b, origin, axis, y0, y1)
-		horiz = Vector3(horiz.x, 0.0, horiz.z)
-		if horiz.length() < 1e-4:
-			horiz = Vector3(0.0, 0.0, -1.0)
-		horiz = horiz.normalized()
-		var d := b - a
-		if d.length() < 1e-6:
-			d = Vector3.DOWN
-		d = d.normalized()
-		var trial := d + horiz * 0.45
-		trial.y = minf(trial.y, -0.15)
-		if trial.length() < 1e-6:
-			trial = Vector3.DOWN
-		b = a + trial.normalized() * length
-	return b
+	var fwd := bone.basis.z.normalized()
+	if _ring_depth(a, b, origin, axis, y0, y1, radius, fwd, back_r, side_r) <= 0.001:
+		return b
+	var horiz := _ring_out(a, b, origin, axis, y0, y1)
+	horiz = Vector3(horiz.x, 0.0, horiz.z)
+	if horiz.length() < 1e-4:
+		horiz = Vector3(0.0, 0.0, -1.0)
+	horiz = horiz.normalized()
+	var d := b - a
+	if d.length() < 1e-6:
+		d = Vector3.DOWN
+	d = d.normalized()
+	# J-067: the smallest walk out that clears the ring, length exact, the way
+	# _segment_outside swings. Fixed 0.45 steps overshot by up to about 20
+	# degrees a step and left the back locks standing out level ("raised",
+	# Cory 11-08) instead of hanging just outside her neck and collar.
+	var hi := 8.0
+	if _ring_depth(a, _ring_walk(a, d, horiz, hi, length), origin, axis, y0, y1, radius, fwd, back_r, side_r) > 0.001:
+		return _ring_walk(a, d, horiz, hi, length)
+	var lo := 0.0
+	for _i in 14:
+		var mid := (lo + hi) * 0.5
+		if _ring_depth(a, _ring_walk(a, d, horiz, mid, length), origin, axis, y0, y1, radius, fwd, back_r, side_r) > 0.001:
+			lo = mid
+		else:
+			hi = mid
+	return _ring_walk(a, d, horiz, hi, length)
 
 
-func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float, radius: float) -> float:
+func _ring_walk(a: Vector3, d: Vector3, horiz: Vector3, s: float, length: float) -> Vector3:
+	var trial := d + horiz * s
+	trial.y = minf(trial.y, -0.15)
+	if trial.length() < 1e-6:
+		trial = Vector3.DOWN
+	return a + trial.normalized() * length
+
+
+func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float, radius: float,
+		fwd: Vector3 = Vector3.ZERO, back_r: Array = [], side_r: Array = []) -> float:
 	var worst := 0.0
 	for s in 8:
 		var p: Vector3 = a.lerp(b, float(s) / 7.0)
@@ -1007,8 +1756,30 @@ func _ring_depth(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: flo
 		if along < y0 - 0.01 or along > y1 + 0.01:
 			continue
 		var radial := (p - origin) - axis * along
-		worst = maxf(worst, radius - radial.length())
+		var r := radius
+		if not back_r.is_empty() and radial.length() > 1e-6:
+			# 1 straight behind, 0 at her sides, below 0 toward the front
+			var c := -radial.normalized().dot(fwd) / 0.7071
+			var side := minf(radius, _taper_at(side_r, along)) if not side_r.is_empty() else radius
+			if c >= 0.0:
+				r = lerpf(side, minf(radius, _taper_at(back_r, along)), minf(c, 1.0))
+			else:
+				r = lerpf(side, radius, minf(-c, 1.0))
+		worst = maxf(worst, r - radial.length())
 	return worst
+
+
+# Piecewise linear in (y, radius) points sorted by y; flat past either end.
+func _taper_at(points: Array, y: float) -> float:
+	var first: Vector2 = points[0]
+	if y <= first.x:
+		return first.y
+	for i in range(1, points.size()):
+		var lo: Vector2 = points[i - 1]
+		var hi: Vector2 = points[i]
+		if y <= hi.x:
+			return lerpf(lo.y, hi.y, (y - lo.x) / maxf(hi.x - lo.x, 1e-6))
+	return (points[points.size() - 1] as Vector2).y
 
 
 func _ring_out(a: Vector3, b: Vector3, origin: Vector3, axis: Vector3, y0: float, y1: float) -> Vector3:

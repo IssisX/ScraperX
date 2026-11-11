@@ -1411,6 +1411,113 @@ void test_pole_head_clearance() {
     std::cout << "PASS scraperx_sim matron pole head clearance\n";
 }
 
+// A pole whose head ends under the floor over it: the way up is a mantle
+// off its head, but the way down starts with her hands sliding to that
+// head, and revalidate refuses a hold more than reach_low + 0.6 = 1.40 m
+// under her centre — standing on the floor over it, her centre is 1.05 m
+// over her feet, so a gap over 0.35 m puts the head out of her reach and
+// the down move fails LostHold on its first grip tick, at phase 1, which
+// the journey never avoids: it replans the same dead edge until its 6
+// replans are spent. The scan must not offer the way down past 0.35 m,
+// while the way up (a different transition) keeps its 0.40 m limit.
+void test_pole_head_down_gap() {
+    for (const float gap : {0.30F, 0.38F}) {
+        ClimbWorld w;
+        const float top = 6.0F - gap;
+        w.box(Vec3(2.5F, 3.0F, 2.0F), RVec3(0, 3.0F, 2.4F));            // the deck: top 6.0, face at z 0.4
+        w.box(Vec3(0.05F, 0.5F * top, 0.05F), RVec3(0, 0.5F * top, 0));  // the pole: head 6.0 - gap
+        w.spawn(RVec3(0, 0, -2.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-5, -1, -5), Vec3(5, 9, 5)), ignore);
+        const traversal::Edge *up = nullptr;
+        const traversal::Edge *down = nullptr;
+        for (const auto &e : map.edges()) {
+            if (e.kind == MoveKind::PoleUp) up = &e;
+            if (e.kind == MoveKind::PoleDown) down = &e;
+        }
+        require(up != nullptr && down != nullptr, "matron pole head down: the pole is found, up and down");
+        std::cout << "  matron pole head down, gap " << gap << " m: up usable " << up->usable << " down usable " << down->usable
+                  << " (" << down->reason << ")\n";
+        require(up->usable, "matron pole head down: the way up stays offered at this gap");
+        if (gap > 0.35F) {
+            require(!down->usable, "matron pole head down: no way down off a head more than 0.35 m under the floor");
+        } else {
+            require(down->usable, "matron pole head down: the way down stays offered inside her reach");
+        }
+    }
+    std::cout << "PASS scraperx_sim matron pole head down gap\n";
+}
+
+// A ladder down whose bottom rung hangs over the floor: the descent is
+// real when her feet reach the floor from a full hang off the bottom rung,
+// or when the rung is within a drop of it — the executor drops off the
+// bottom rung when the floor is in drop range under her feet (step_rung_down
+// lets go at a full hang and finishes on the goal floor), so the scan offers
+// the descent in both cases and the descent must complete to the floor.
+// Her feet at full hang are bottom - hang_below_hold (1.30) - centre above
+// feet (1.05) = bottom - 2.35. A bottom rung past the foot-patch window
+// offers no descent at all.
+void test_rung_down_bottom_gap() {
+    for (const float bottom : {2.30F, 2.95F}) {
+        ClimbWorld w;
+        w.deck(6.0F);
+        w.rungs(bottom, 5.9F);
+        w.spawn(RVec3(0, 6.0F, -2.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-5, -1, -5), Vec3(5, 7, 5)), ignore);
+        const traversal::Edge *up = nullptr;
+        const traversal::Edge *down = nullptr;
+        for (const auto &e : map.edges()) {
+            if (std::abs(e.spec.line.GetZ() - (-0.95F)) > 0.05F) continue;
+            if (e.kind == MoveKind::RungDown) down = &e;
+            if (e.kind == MoveKind::RungUp || e.kind == MoveKind::JumpCatch) up = &e;
+        }
+        require(up != nullptr && down != nullptr, "matron rung down bottom gap: the ladder is found, up and down");
+        std::cout << "  matron rung down bottom gap, bottom rung " << bottom << " m over the floor: down usable " << down->usable
+                  << " (" << down->reason << ")\n";
+        require(down->usable, "matron rung down bottom gap: a descent her feet reach or can drop to is a real descent");
+        Climber climber(w.physics, w.her, ignore);
+        MoveSpec spec = ladder_up(6.0F, bottom, 5.9F);
+        spec.kind = MoveKind::RungDown;
+        spec.start = Vec3(0, 6.0F, -1.35F);
+        spec.goal = Vec3(0, 0, -0.5F);
+        spec.goal_top = 0.0F;
+        climber.begin(spec);
+        const auto st = w.run(climber, 60.0F);
+        const float below = w.settle(1.0F);
+        std::cout << "  matron rung down bottom gap, control: down " << int(st) << " (" << traversal::failure_name(climber.failure())
+                  << ") feet " << below << "\n";
+        require(st == Climber::Status::Done && std::abs(below) < 0.05F,
+                "matron rung down bottom gap: the descent completes to the floor");
+    }
+    // Past the foot-patch window (bottom rung 4.80 m over the floor, past
+    // the 3.64 m a foot patch may sit under it): no descent is offered.
+    {
+        ClimbWorld w;
+        w.deck(6.0F);
+        w.rungs(4.80F, 5.9F);
+        w.spawn(RVec3(0, 6.0F, -2.0F));
+        w.settle(0.3F);
+        const traversal::Ignore ignore{w.her, BodyID()};
+        traversal::AffordanceMap map;
+        map.scan(w.physics, AABox(Vec3(-5, -1, -5), Vec3(5, 7, 5)), ignore);
+        const traversal::Edge *down = nullptr;
+        for (const auto &e : map.edges()) {
+            if (std::abs(e.spec.line.GetZ() - (-0.95F)) > 0.05F) continue;
+            if (e.kind == MoveKind::RungDown) down = &e;
+        }
+        std::cout << "  matron rung down bottom gap, bottom rung 4.80 m over the floor: down "
+                  << (down == nullptr ? "absent" : "present") << "\n";
+        require(down == nullptr,
+                "matron rung down bottom gap: no descent off a bottom rung past the foot-patch window");
+    }
+    std::cout << "PASS scraperx_sim matron rung down bottom gap\n";
+}
+
 // Narrow ledges she has never seen (seeded): a board 0.20 to 0.40 m wide
 // over a 6 m drop, from one deck to another a step higher or lower, open
 // both sides or along a wall. Her scan joins the decks across it; her walk
@@ -1885,6 +1992,7 @@ void run_matron_narrow() {
     test_stand_on_board();
     test_knocked_onto_board();
 }
+SCRAPERX_SELECT("matron-narrow", run_matron_narrow);
 
 void run_matron_climb() {
     test_power_budget();
@@ -1905,8 +2013,12 @@ void run_matron_climb() {
     test_wall_across_step();
     test_rung_gaps();
     test_pole_head_clearance();
+    test_pole_head_down_gap();
+    test_rung_down_bottom_gap();
     run_matron_narrow();
 }
+SCRAPERX_GROUP("matron_climb", 940, run_matron_climb);
+SCRAPERX_SLICE("matron-climb", run_matron_climb, run_matron_climb_board, run_matron_climb_scan);
 
 namespace {
 // The scan of the real tower, written out for the inventory comparison
@@ -2120,6 +2232,7 @@ void run_matron_chain() {
     }
     std::cout << "PASS scraperx_sim matron chained exam (ladder, pole, gap, board, ledge, knock-off, replan): " << done << " of 2\n";
 }
+SCRAPERX_SLICE("matron-chain", run_matron_chain);
 
 // Ten unseen towers (seeded measures: deck heights, the pole's place, the
 // gap under the panel, the board's width, the ledge), each climbed from the
@@ -2147,6 +2260,7 @@ void run_matron_towers() {
     }
     std::cout << "PASS scraperx_sim matron unseen towers up and down without a reset: " << done << " of 10\n";
 }
+SCRAPERX_SLICE("matron-towers", run_matron_towers);
 
 // The player's own climbing is untouched by her: the same ladder climb,
 // alone and with her climbing down the stack beside him, takes the
@@ -2238,6 +2352,7 @@ void test_travel_walk_round_player() {
 }
 
 void run_matron_climb_board() { test_narrow_board(); test_player_unchanged(); test_travel_walk_round_player(); }
+SCRAPERX_SELECT("matron-climb-board", run_matron_climb_board);
 
 // One deck box, something laid across its top. A curb within a step (and a
 // block on part of it) leaves it one floor; a wall taller than a step across
@@ -2280,6 +2395,7 @@ void run_matron_climb_scan() {
     test_tower_scan();
     test_tower_journeys();
 }
+SCRAPERX_SELECT("matron-climb-scan", run_matron_climb_scan);
 
 // The ladder-bar sort order (J-008): the comparator behind AffordanceMap::scan
 // must be a strict total order, or std::sort over it is undefined and the
@@ -2354,6 +2470,8 @@ void run_ladder_bar_sort() {
     std::cout << "PASS scraperx_sim ladder-bar sort: the bar order is a strict total order\n";
 }
 
+SCRAPERX_SLICE("ladder-bar-sort", run_ladder_bar_sort);
+
 // The whole tower, as her own scan reads it: every deck (a region of 6 m2 or
 // more, the largest at its height) and every pair of them her scan joins
 // with no other deck between, she travels up and back down, from wherever
@@ -2378,6 +2496,32 @@ void run_matron_tower_proof() {
     decks.erase(std::remove_if(decks.begin(), decks.end(), [&](const int d) {
         return d != home && (map.plan(home, d).empty() || map.plan(d, home).empty());
     }), decks.end());
+    // The tower's spine is pinned, not just counted: the filter above
+    // silently drops a deck that loses its connection, so a world change
+    // that disconnects a ring deck would shrink this proof without failing
+    // it. Ring decks are the big decks (area >= 500 m2; the machine decks
+    // joined to home are <= 45, the outboard strips 180). Measured
+    // 2026-11-06 on trunk 9b9b4113: 13 spine decks joined to home, tops
+    // 132.138..352.248; the next ring up (374.248) is not joined — her
+    // no-lift route ends at the 352 ring by design (J-017: the way up past
+    // it is the player's wall-climb stack, not her route), so it is not
+    // in the list. Trip-proven 2026-11-06: listing 374.248 fails the test
+    // naming that top, before any leg travels.
+    static constexpr float kSpineTops[] = {132.138F, 142.978F, 153.999F, 176.247F, 198.247F, 220.246F,
+                                           242.247F, 264.248F, 286.247F, 308.247F, 330.247F, 340.266F, 352.248F};
+    int spine_found = 0;
+    for (const float top : kSpineTops) {
+        bool found = false;
+        for (const int d : decks) {
+            if (std::abs(regions[static_cast<std::size_t>(d)].top - top) <= 0.5F) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) std::cout << "  matron tower proof: spine deck missing at top " << top << "\n";
+        else ++spine_found;
+    }
+    require(spine_found == 13, "matron tower proof: all spine decks joined to home");
     const auto is_deck = [&](const int id) { return std::find(decks.begin(), decks.end(), id) != decks.end(); };
     struct Pair { int lo, hi; };
     std::vector<Pair> pairs;
@@ -2489,6 +2633,7 @@ void run_matron_tower_proof() {
     std::cout << "PASS scraperx_sim matron tower proof: " << 2 * pairs.size() << " legs over " << pairs.size()
               << " deck pairs, " << clean << " clean\n";
 }
+SCRAPERX_SLICE("matron-tower", run_matron_tower_proof);
 
 // Every ladder in the tower, as her own scan reads it: for each one her scan
 // gives a climb up (on the rungs, or a jump for the bottom rung), she goes up
@@ -2601,3 +2746,4 @@ void run_matron_ladders() {
     require(unexpected.empty(), "matron ladders: her scan refuses no ladder beyond the six refused for the world's steel");
     std::cout << "PASS scraperx_sim matron ladders: " << passed << "/" << tried << ", refused " << refused << "\n";
 }
+SCRAPERX_SLICE("matron-ladders", run_matron_ladders);

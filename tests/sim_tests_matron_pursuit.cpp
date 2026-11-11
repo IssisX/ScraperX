@@ -209,6 +209,8 @@ void run_matron_ring_descent() {
     }
     std::cout << "PASS scraperx_sim matron ring descent\n";
 }
+SCRAPERX_GROUP("matron_ring_descent", 920, run_matron_ring_descent);
+SCRAPERX_SELECT("matron-ring-descent", run_matron_ring_descent);
 
 void run_matron_pursuit() {
     // Up: from 132 by the corner pipe to 143 and 154, then the home ladder.
@@ -247,6 +249,8 @@ void run_matron_pursuit() {
     }
     std::cout << "PASS scraperx_sim matron pursuit\n";
 }
+SCRAPERX_GROUP("matron_pursuit", 910, run_matron_pursuit);
+SCRAPERX_SELECT("matron-pursuit", run_matron_pursuit);
 
 // Every way between two of her decks that her scan of the tower finds (a
 // ladder's rungs, a pole, a lip, a hang and drop), end to end and alone: from
@@ -345,6 +349,11 @@ void run_matron_ways() {
         const traversal::Edge e = map.edges()[ways[w]];
         const auto st = e.spec.start;
         s.debug_place_matron(Vector3{double(st.GetX()), double(st.GetY()), double(st.GetZ())});
+        // Patrol, not hunt, while she settles: a hunting Matron with the
+        // player in sight starts a travel on the lead (take_way), and a
+        // travel's climber running refuses the travel_to below. The way
+        // itself is what this test measures, not her pursuit.
+        s.debug_matron_patrol();
         for (int i = 0; i < 30; ++i) {
             (void)s.advance_frame(1.0 / 60.0);
         }
@@ -400,3 +409,5 @@ void run_matron_ways() {
     }
     std::cout << "PASS scraperx_sim matron ways: " << taken << " ways\n";
 }
+SCRAPERX_GROUP("matron_ways", 930, run_matron_ways);
+SCRAPERX_SELECT("matron-ways", run_matron_ways);

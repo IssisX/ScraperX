@@ -54,6 +54,13 @@ var _arm_vel := Vector3.ZERO
 var _arm_trail := Vector3.INF
 var _leg_last: Array = [Vector3.INF, Vector3.INF]
 var _haul_drip := 0.0
+# J-045: the last full pass was quiet and left nothing shown (update_view
+# skips the next while that holds); the pose the skipped passes would have
+# given the hidden victim.
+var _at_rest := false
+var _skipped := false
+var _rest_position := Vector3.ZERO
+var _rest_rotation := Quaternion.IDENTITY
 # Counters (tests and the sound): each is an edge the gore answered.
 var tears_shown := 0
 var crunches := 0
@@ -107,6 +114,21 @@ func update_view(hold: Dictionary, her: Dictionary, delta: float, camera: Camera
 	fx.camera_position = camera.global_position if camera != null else Vector3.ZERO
 	var position: Vector3 = hold.get("player_position", Vector3.ZERO)
 	var body_q: Quaternion = hold.get("body_rotation", Quaternion.IDENTITY)
+	# J-045 (perf_walk): nothing has happened to him and nothing shows (the
+	# victim and the lens hidden, no blood anywhere), and the last full pass
+	# was the same: that pass would only set it all again to what it is, so
+	# it is skipped. What a pass carries forward is kept: the lens clock, and
+	# where the hidden victim is, put back before the next full pass reads it.
+	if _at_rest and _quiet(hold):
+		_lens_run += delta
+		_rest_position = position
+		_rest_rotation = body_q
+		_skipped = true
+		return
+	if _skipped:
+		_skipped = false
+		victim.global_transform = Transform3D(Basis(_rest_rotation), _rest_position)
+	var quiet_in := _quiet(hold)
 	var claimed := bool(hold.get("claimed", false))
 	var beat := int(hold.get("fatality_beat", -1))
 	var lost := [bool(hold.get("left_arm_lost", false)), bool(hold.get("right_arm_lost", false)),
@@ -222,6 +244,40 @@ func update_view(hold: Dictionary, her: Dictionary, delta: float, camera: Camera
 	if matron_view != null and matron_view.has_method("apply_gore"):
 		matron_view.apply_gore(_apron, clampf(_apron * 2.5, 0.0, 1.0), _smear, _hands,
 			hold.get("matron_hand", Vector3.ZERO), hold.get("matron_hand2", Vector3.ZERO), float(her.get("floor_y", ground_y)))
+	_at_rest = quiet_in and _shows_nothing()
+
+
+# Whether the hold has nothing for the gore: no claim, nothing lost, torn,
+# strained, pinned, crushed or fallen, no beat or edge it has not answered,
+# no severed body, and the view in his eye.
+func _quiet(hold: Dictionary) -> bool:
+	if outside or bool(hold.get("claimed", false)) or bool(hold.get("knee_down", false)) \
+			or bool(hold.get("severed_arm_present", false)):
+		return false
+	if bool(hold.get("left_arm_lost", false)) or bool(hold.get("right_arm_lost", false)) \
+			or bool(hold.get("left_leg_lost", false)) or bool(hold.get("right_leg_lost", false)):
+		return false
+	if float(hold.get("wrist_strain_ns", 0.0)) != 0.0 or hold.get("leg_strain_ns", Vector2.ZERO) != Vector2.ZERO:
+		return false
+	if int(hold.get("arm_tear_count", 0)) != _arm_tears or int(hold.get("leg_tear_count", 0)) != _leg_tears \
+			or int(hold.get("knee_pin_count", 0)) != _pins or int(hold.get("fall_landing_count", 0)) != _landings:
+		return false
+	var edges: PackedInt64Array = hold.get("fatality_beat_edges", PackedInt64Array())
+	if edges.size() == 10 and edges != _edges:
+		return false
+	for leg in hold.get("severed_legs", []):
+		if bool((leg as Dictionary).get("present", false)):
+			return false
+	return true
+
+
+# Whether nothing of the gore is drawn or fading: the state a quiet pass
+# leaves as it found it.
+func _shows_nothing() -> bool:
+	return not _claimed and _crush == 0.0 and _redout == 0.0 and _vignette == 0.0 and _lens_blood == 0.0 \
+		and _smear == 0.0 and _apron == 0.0 and _hands == 0.0 and not lens.visible and not victim.visible \
+		and not victim.hanging and not victim.ruined and not arm_piece.visible \
+		and not leg_pieces[0].visible and not leg_pieces[1].visible
 
 
 func _on_tear(side: int, leg: bool, hold: Dictionary) -> void:

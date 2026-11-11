@@ -15,6 +15,7 @@ const KIND_CABLE_REEL := 15
 const KIND_TOOLBOX := 16
 const KIND_PALLET_REEL := 19
 const KIND_BOTTLE_CAGE := 21
+const KIND_EXTINGUISHER := 23
 # A container's half size along its own x, y, z, its doors at +x.
 const CONTAINER_HALF := Vector3(6.095, 1.295, 1.22)
 # The paints below by name, in the same order (her chart names a piece's
@@ -30,8 +31,10 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	name = "StockView"
 	var ribbed: Texture2D = main._corrugation_texture()
 	var container_paint: Array[Material] = []
-	for colour in [Color("7b3422"), Color("34506b"), Color("42603f"), Color("8d8f88"), Color("9a5a26")]:
-		var material: StandardMaterial3D = main._material(colour, 0.35, 0.78)
+	# Paint, not metal (metallic 0), its colours sun-faded and dirtied the way
+	# a container's are after years in the weather: no candy.
+	for colour in [Color("6a3527"), Color("33465a"), Color("3e5440"), Color("7d7f79"), Color("8a5530")]:
+		var material: StandardMaterial3D = main._material(colour, 0.0, 0.74)
 		material.normal_enabled = true
 		material.normal_texture = ribbed
 		material.uv1_triplanar = true
@@ -45,21 +48,23 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	# Weathered like the rest of the steel: grime and the streaks of rust, the
 	# paint smooth, the rusted beams pitted.
 	var drum_paint: Array[Material] = []
-	for colour in [Color("2c4a73"), Color("a9851f"), Color("7c2a1e")]:
-		drum_paint.append(main._material(colour, 0.35, 0.72, Color.BLACK, 1.0, main._bump_smooth))
+	for colour in [Color("2c4a73"), Color("a07c1c"), Color("72291e")]:
+		drum_paint.append(main._surfaced(colour, 0.0, 0.7, main._surface_paint))
 	var beam_paint: Array[Material] = [
-		main._material(Color("1d1a17"), 0.72, 0.6, Color.BLACK, 1.0, main._bump_smooth),
-		main._material(Color("3b1f13"), 0.28, 0.95, Color.BLACK, 1.0, main._bump_rust)]
+		main._surfaced(Color("36383b"), 0.3, 0.5, main._surface_mill_scale),
+		main._surfaced(Color("3a271d"), 0.0, 0.93, main._surface_rust)]
 	# Gas bottles in their gases' colours (oxygen black, acetylene maroon,
 	# argon blue), their caps left steel; the reels' wound cable black
 	# rubber; the toolboxes red, blue or yellow enamel.
 	var bottle_paint: Array[Material] = []
 	for colour in [Color("1c1c1e"), Color("6b1e24"), Color("2d5f8a")]:
-		bottle_paint.append(main._material(colour, 0.3, 0.55, Color.BLACK, 1.0, main._bump_smooth))
+		bottle_paint.append(main._surfaced(colour, 0.0, 0.55, main._surface_paint))
 	var cable_paint: Material = main._material(Color("141414"), 0.0, 0.82)
+	# The fire extinguisher's bottle signal red, its head and handle steel.
+	var extinguisher_paint: Material = main._surfaced(Color("b01e17"), 0.0, 0.4, main._surface_paint)
 	var toolbox_paint: Array[Material] = []
 	for colour in [Color("a3231c"), Color("1f4f8f"), Color("c9a227")]:
-		toolbox_paint.append(main._material(colour, 0.45, 0.45, Color.BLACK, 1.0, main._bump_smooth))
+		toolbox_paint.append(main._surfaced(colour, 0.0, 0.45, main._surface_paint))
 	var stock: PackedInt32Array = native.get_loose_stock()
 	for i in range(0, stock.size() - 2, 3):
 		var entity := int(native.get_kit_body_entity_id(stock[i]))
@@ -100,6 +105,8 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 				_paint_mesh(body, 3, bottle_paint[variant % bottle_paint.size()])
 			KIND_TOOLBOX:
 				_paint_mesh(body, 0, toolbox_paint[variant % toolbox_paint.size()])
+			KIND_EXTINGUISHER:
+				_paint_mesh(body, 0, extinguisher_paint)
 
 
 # The index-th mesh of the body (see above) only.
