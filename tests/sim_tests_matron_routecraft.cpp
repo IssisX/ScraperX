@@ -67,6 +67,7 @@ struct Fixture {
         Matron::Saved saved; saved.state=Matron::State::Hunting;
         matron->restore(saved);
         physics.GetBodyInterface().SetPosition(matron->body(),start,EActivation::Activate); // fixture initial condition only
+        matron->reseat_upper_body(); // J-044c: her jointed upper body comes with the root, as launch_matron_for_test does
     }
     ~Fixture() {
         matron.reset(); kit.reset();
@@ -81,6 +82,17 @@ struct Fixture {
         for(float y=bottom+0.3F;y<=top;y+=0.3F) box(RVec3(x,y,z),Vec3(0.28F,0.02F,0.02F));
     }
     RVec3 at() { return physics.GetBodyInterface().GetPosition(matron->body()); }
+    // J-044c: a push on her whole body, shared by mass between the root and
+    // her jointed upper body, so it changes her velocity by impulse / kMassKg
+    // as it did when the root was all 220 kg of her.
+    void push(Vec3 impulse) {
+        BodyInterface &bodies=physics.GetBodyInterface();
+        bodies.AddImpulse(matron->body(),impulse*(Matron::kRootMassKg/Matron::kMassKg));
+        for(int i=0;i<Matron::kUpperCount;++i) {
+            const BodyID id=matron->upper_body(i);
+            if(!id.IsInvalid()) bodies.AddImpulse(id,impulse*(Matron::kUpperMassKg[i]/Matron::kMassKg));
+        }
+    }
     void tick(MatronRoutecraft *planner=nullptr,
         unsigned expansion_budget=MatronRoutecraft::kPlanningExpansionsPerTick,
         unsigned transition_budget=MatronRoutecraft::kPlanningTransitionsPerTick,
@@ -427,7 +439,7 @@ void check_sliced_planning() {
         f.box(RVec3(0,153.9,-1),Vec3(3,0.1F,2)); f.ladder(0,154,161);
         MatronRoutecraft planner;
         for(int i=0;i<20;++i) f.tick(&planner); // settle onto real floor contact
-        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(100,0,0));
+        f.push(Vec3(100,0,0));
         const RVec3 start=f.at();
         require(planner.request(f.physics,f.matron->body(),RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: standing wait accepted");
         const auto queries=planner.report().queries;
@@ -450,7 +462,7 @@ void check_sliced_planning() {
         Fixture f(RVec3(0,157,-0.55));
         f.box(RVec3(0,153.9,-1),Vec3(3,0.1F,2)); f.ladder(0,154,161);
         MatronRoutecraft planner;
-        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(100,0,0));
+        f.push(Vec3(100,0,0));
         const Vec3 velocity=f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body());
         require(planner.request(f.physics,f.matron->body(),RVec3(0,160,-0.55),Vec3::sAxisZ()),"routecraft: airborne wait accepted");
         for(int i=0;i<5;++i) {
@@ -658,7 +670,7 @@ void run_matron_routecraft() {
         // The 6.0 m/s downward disturbance drives demand beyond 8 kN and 44 kW
         // (8 kN x 6 m/s = 48 kW; it was 3.0 m/s against the old 22 kW);
         // the shared power cap must bind after the force cap, without a velocity write.
-        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-1320,0)-
+        f.push(Vec3(0,-1320,0)-
             Matron::kMassKg*f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()));
         f.tick();
         require(f.measured_force>MatronRoutecraft::kForce*0.9F &&
@@ -692,7 +704,7 @@ void run_matron_routecraft() {
         const auto saturation_report=f.matron->climb_report();
         f.measured_force=0; f.measured_power=0;
         // -2.6 m/s demands just over 8 kN while 8 kN × 2.6 m/s stays below 44 kW.
-        f.physics.GetBodyInterface().AddImpulse(f.matron->body(),Vec3(0,-572,0)-
+        f.push(Vec3(0,-572,0)-
             Matron::kMassKg*f.physics.GetBodyInterface().GetLinearVelocity(f.matron->body()));
         f.tick();
         if(!(f.measured_force>MatronRoutecraft::kForce-1.0F &&

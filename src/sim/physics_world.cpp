@@ -831,8 +831,10 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     };
     for (const ImpactSnapshot &hit : impacts_->tick()) {
         const float loud = ImpactLedger::loudness(static_cast<float>(hit.energy_j));
-        // Her own throw coming down is not a sound to her (matron.hpp).
-        if (loud > 0.0F && hit.entity != matron_->thrown_entity() && !matron_on_machine(hit.entity)) {
+        // Her own throw coming down, or stock she let go of until it rests,
+        // is not a sound to her (matron.hpp).
+        if (loud > 0.0F && hit.entity != matron_->thrown_entity() && hit.entity != matron_->settling_entity() &&
+            !matron_on_machine(hit.entity)) {
             matron_->hear(static_cast<float>(hit.at.x), static_cast<float>(hit.at.y), static_cast<float>(hit.at.z), loud);
         }
     }

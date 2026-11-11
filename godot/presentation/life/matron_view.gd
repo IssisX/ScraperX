@@ -1203,7 +1203,8 @@ func _crawl_retune() -> void:
 
 # J-044c: the jointed upper body — the sim's joint rotations on top of the
 # pose, so a punch snaps her head for real. upper_q is head, neck, chest,
-# arm L, arm R, each child relative to its parent. The pose sets the pivots
+# arm L, arm R, each its swing off its rest pose in its parent's frame (so at
+# rest she is drawn exactly as posed). The pose sets the pivots
 # fresh every frame, so this never accumulates.
 func _apply_upper_body(data: Dictionary) -> void:
 	var upper: Array = data.get("upper_q", [])
@@ -1211,9 +1212,10 @@ func _apply_upper_body(data: Dictionary) -> void:
 		return
 	var pivots := ["head", "neck", "torso", "sh_l", "sh_r"]
 	for i in 5:
+		# each segment's swing off its rest, in its parent's frame (native)
 		var q: Quaternion = upper[i]
 		var node := _p[pivots[i]] as Node3D
-		node.quaternion = node.quaternion * q
+		node.quaternion = q * node.quaternion
 
 
 # After the pose and wherever the figure was laid (toppled, head down): the

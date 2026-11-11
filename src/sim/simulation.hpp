@@ -327,7 +327,7 @@ struct MatronSnapshot final {
     double upper_root_mass_kg = 0.0;
     double upper_motor_power_w = 0.0;
     Vector3 upper_head_angvel{};
-    Quaternion upper_q[5] = {};  // relative rotations, child to parent, in kUpperCount order
+    Quaternion upper_q[5] = {};  // each segment's swing off rest, in its parent's frame, out of her yaw (kUpperCount order)
     bool riding = false;        // she rides a floor going up or down under her
     double edge_brace_n = 0.0;  // her feet braced back from an edge this tick
     double feet_push_n = 0.0;   // all her feet pushed with this tick (read only)

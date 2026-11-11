@@ -236,6 +236,12 @@ public:
     // her one mass (Limits::mass_kg), so they read that mass's velocity, not
     // the one body's. Unset, the body's own.
     void set_velocity_source(std::function<JPH::Vec3()> source) { velocity_source_ = std::move(source); }
+    // The one account of the body it drives, opened once a tick before
+    // anything of hers draws on it (the Matron's feet_budget_): step(),
+    // walk_between() and stand() then draw from it, after whatever else of
+    // hers took from it this tick (her upper body's motors), instead of each
+    // opening a full one of its own. Unset, each call opens its own (Limits).
+    void share_budget(Budget *account) noexcept { shared_ = account; }
 
     void begin(const MoveSpec &spec);
     void cancel();   // lets go of everything (a fall if she was on steel)
@@ -324,10 +330,16 @@ private:
     Status step_drop(float dt, Budget &budget, bool hang);
     Status step_walk(float dt, Budget &budget);
     Status begin_mantle_from_hang();
+    // This call's account: the shared one (its velocity set to hers against
+    // her support), else `own`, opened full.
+    Budget &account(Budget &own);
+    // What this call drew from `budget` since `before` was taken: the view's numbers.
+    void note_spend(const Budget &budget, const Budget &before);
 
     JPH::PhysicsSystem &physics_;
     JPH::BodyID body_;
     std::function<JPH::Vec3()> velocity_source_;
+    Budget *shared_ = nullptr;
     Ignore ignore_;
     Limits limits_;
     MoveSpec spec_;
