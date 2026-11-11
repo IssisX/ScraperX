@@ -57,6 +57,8 @@ Unstarted, in order (11-11 7 AM; new playable content first):
 0a. J-090 #408: hook her and let the rope decide (Cory 11-11, new feature; fights are spectacular, checked by eye).
 0b. J-091 #409: turn her bay trap back on her at 154 m (Cory 11-11).
 0c. J-092 #410: drop two tons on her, the probe first; build only if one clean hit reaches 6000 N·s (Cory 11-11).
+0d. J-094 #412: her weight is the only key (Grok idea 1, Cory 11-11): the probe first (plate, him, drum, her at the stop).
+0e. J-095 #413: pull the line out from under her (Grok idea 2, Cory 11-11): the cable becomes a falling rope.
 1. J-054 #293: the Counterweight Crossing. Built; push it and let CI's proof be the re-run (no local slot wait).
 2. J-084 #402: one scenario plays the whole climb on the canonical route; its route table is the audit J-082 uses.
 3. J-082 #400: above 340 m every stage is a new physical action, from J-084's table, one band at a time, protected.
@@ -74,11 +76,6 @@ step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #12
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
 Your queue is never allowed to run dry: whenever fewer than six big jobs above are unstarted, the
 integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
-- **G1, her mind runs on evidence (rule 29, `03_EXECUTION/GAP_LIST.md` gap 4):** perception is evidence
-  with an age, rage is fed by sound that reaches her ear, and hiding from her truly works. Find every
-  place her decisions still read his true state (`step_travel`'s `player_on` checks, the braced state,
-  the ankle passed during a hold), route each through what she saw or heard, and prove hiding with
-  runtime scenarios (he hides and she loses him; he makes a sound and she finds him).
 You may propose your own grand tasks too: subject `MUSE_TO_CLAUDE: proposal <title>`, with goal, why it
 matters to the player, files, and finish facts. The integrator rules on it within the hour.
 
