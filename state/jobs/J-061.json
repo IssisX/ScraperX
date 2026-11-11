@@ -8,7 +8,7 @@
  "ci": "running",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T22:27:00Z",
+ "deadline": null,
  "head": "431c9089a4b538e60a87310271c82f7cc08f74b1",
  "issue": 312,
  "job": "J-061",
@@ -110,7 +110,10 @@
    "asked": "2026-11-07T21:15:01Z",
    "attempts": 0,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-11T14:01:59Z",
+    "why": "job merged"
+   },
    "created": "2026-11-09T20:56:16Z",
    "dead": "2026-11-10T00:27:00Z",
    "dead_lettered": null,
@@ -136,7 +139,10 @@
    "asked": "2026-11-09T14:27:26Z",
    "attempts": 0,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-11T14:01:59Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-09T20:56:16Z",
    "dead": "2026-11-10T00:27:00Z",
    "dead_lettered": null,
@@ -301,8 +307,8 @@
    "what": "#337 proof red: host-build"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j061-wind-not-own-run: merged #337",
  "owner": "muse",
  "pr": 337,
  "pr_done": "merged",
@@ -311,5 +317,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-11T12:58:47Z"
+ "updated": "2026-11-11T14:01:59Z"
 }

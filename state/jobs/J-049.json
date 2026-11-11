@@ -452,7 +452,11 @@
    "what": "#383: open FIX from Claude (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-10T22:20:28Z",
+    "by": "claude",
+    "how": "verdict on a PR it names"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-10T21:12:48Z",
    "attempts": 1,
@@ -516,5 +520,5 @@
  ],
  "review": "waiting",
  "state": "working",
- "updated": "2026-11-11T10:39:10Z"
+ "updated": "2026-11-11T14:01:59Z"
 }

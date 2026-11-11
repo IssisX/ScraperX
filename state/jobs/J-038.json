@@ -7,7 +7,7 @@
   "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
  },
  "cancelled": null,
- "ci": "running",
+ "ci": "red: native-tests (matron-slices-3), native-tests (athletic-traversal-2)",
  "commands": [
   "6777898125:87"
  ],
@@ -102,7 +102,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
-   "rechecked": "2026-11-11T07:28:58Z",
+   "rechecked": "2026-11-11T14:01:59Z",
    "ref": "BRANCH|fb-bot/integrate-j038-slice1",
    "sends": 1,
    "sent_by": "shadow",
@@ -181,7 +181,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T07:28:58Z",
+   "rechecked": "2026-11-11T14:01:59Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -505,6 +505,31 @@
    "version": "fix:5f47c941b91807f5955beee5896ee847ce7893d0",
    "via": "email",
    "what": "#372: open FIX from Codex (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T14:01:59Z",
+   "dead": "2026-11-11T22:01:59Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T18:01:59Z",
+   "id": "O-bec9c29b",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T14:01:59Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:13d44d838d84ec31dd9c0380fd51f500e39833de",
+   "via": "email",
+   "what": "#372 proof red: native-tests (matron-slices-3), native-tests (athletic-traversal-2)"
   }
  ],
  "outcome": null,
@@ -517,6 +542,6 @@
   372
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T12:58:47Z"
+ "state": "working",
+ "updated": "2026-11-11T14:01:59Z"
 }

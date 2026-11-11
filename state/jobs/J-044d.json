@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
+ "deadline": null,
  "head": "c816ba4ff54bd3c012c21a24266c018f7bc930ae",
  "issue": 0,
  "job": "J-044d",
@@ -35,11 +35,12 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "BRANCH|fb-bot/integrate-j044d",
    "sends": 0,
    "thread": 0,
    "to": "muse",
+   "unseen": "2026-11-11T14:01:59Z",
    "version": "red:c816ba4ff54bd3c012c21a24266c018f7bc930ae",
    "via": "email",
    "what": "`fb-bot/integrate-j044d` proof red: native-tests (matron-slices-3), native-tests (matron-slices-1), godot-touch (touch-2), native-tests (athletic-traversal), native-tests (matron-slices-2), no PR"
@@ -53,5 +54,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T12:58:47Z"
+ "updated": "2026-11-11T14:01:59Z"
 }

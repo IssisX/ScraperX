@@ -57,7 +57,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
-   "rechecked": "2026-11-11T07:28:58Z",
+   "rechecked": "2026-11-11T14:01:59Z",
    "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -475,7 +475,7 @@
    "closed": null,
    "created": "2026-11-11T05:28:39Z",
    "dead": "2026-11-11T13:28:39Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-11T14:01:59Z",
    "due": "2026-11-11T09:28:39Z",
    "id": "O-75aff563",
    "kind": "fix",
@@ -527,5 +527,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-11T10:39:10Z"
+ "updated": "2026-11-11T14:01:59Z"
 }

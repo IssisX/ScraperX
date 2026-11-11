@@ -2,22 +2,22 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "builder/integrate-j008": "7beab5995e7554d2cab90e093f2534dedd70055f",
+  "builder/integrate-j008": "cb8bd5cd6f01342d673f8f0010a2a3dd2dd55058",
   "fb-bot/integrate-protected-j008-ladder-bar-sort": "45e16da201b2a1b6f8302a752b6c2a4b7741b212"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-11T04:19:08Z",
- "head": "7beab5995e7554d2cab90e093f2534dedd70055f",
+ "deadline": "2026-11-11T15:01:59Z",
+ "head": "cb8bd5cd6f01342d673f8f0010a2a3dd2dd55058",
  "issue": 115,
  "job": "J-008",
  "landed": {
   "builder/integrate-j008": [
-   "7beab5995e7554d2cab90e093f2534dedd70055f",
+   "cb8bd5cd6f01342d673f8f0010a2a3dd2dd55058",
    "",
-   "2026-11-11T03:19:08Z"
+   "2026-11-11T14:01:59Z"
   ],
   "fb-bot/integrate-protected-j008-ladder-bar-sort": [
    "45e16da201b2a1b6f8302a752b6c2a4b7741b212",
@@ -56,7 +56,11 @@
    "what": "`builder/integrate-j008` proof red: native-tests (matron-slices-3), native-tests (athletic-traversal), native-tests (matron-slices-1), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T14:01:59Z",
+    "by": "grok_bot",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -79,6 +83,31 @@
    "version": "red:7beab5995e7554d2cab90e093f2534dedd70055f",
    "via": "watch",
    "what": "`builder/integrate-j008` proof red: native-tests (matron-slices-1), native-tests (athletic-traversal), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T14:01:59Z",
+   "dead": "2026-11-11T16:01:59Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T15:01:59Z",
+   "id": "O-a761b5cb",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T14:01:59Z",
+   "missing": 0,
+   "ref": "BRANCH|builder/integrate-j008",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 115,
+   "to": "grok_bot",
+   "unseen": null,
+   "version": "red:cb8bd5cd6f01342d673f8f0010a2a3dd2dd55058",
+   "via": "watch",
+   "what": "`builder/integrate-j008` proof red: godot-touch (touch-3), native-tests (athletic-traversal-2), native-tests (matron-slices-3), no PR"
   }
  ],
  "outcome": null,
@@ -89,5 +118,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T03:19:08Z"
+ "updated": "2026-11-11T14:01:59Z"
 }

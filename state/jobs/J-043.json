@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
+ "deadline": "2026-11-11T18:01:59Z",
  "head": "",
  "issue": 241,
  "job": "J-043",
@@ -66,6 +66,31 @@
    "version": "6758703680",
    "via": "session",
    "what": "ask from Muse on #241"
+  },
+  {
+   "ack": null,
+   "ack_rule": "work|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T14:01:59Z",
+   "dead": "2026-11-11T22:01:59Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T18:01:59Z",
+   "id": "O-a4c2ffac",
+   "kind": "start-agent",
+   "last_error": "",
+   "last_sent": "2026-11-11T14:01:59Z",
+   "missing": 0,
+   "ref": "JOB|#241",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 241,
+   "to": "muse",
+   "unseen": null,
+   "version": "start:241",
+   "via": "email",
+   "what": "start J-043"
   }
  ],
  "outcome": null,
@@ -76,5 +101,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-10T05:33:50Z"
+ "updated": "2026-11-11T14:01:59Z"
 }
