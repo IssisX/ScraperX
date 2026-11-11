@@ -20,7 +20,7 @@ it to match, never ask him again.
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Times are never typed: write {NOW}, a hook fills in the Central time; any typed time in a post
-  or mail is refused; other times need a `date` read this turn (11-07, 11-11).
+  or mail is refused; replies to Cory carry no clock time at all; other times need a `date` read (11-07, 11-11).
 
 ## Test only what a change reaches
 
