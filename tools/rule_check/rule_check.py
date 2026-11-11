@@ -7,10 +7,11 @@ Usage (from the repository root):
   git diff <a> <b> | python3 tools/rule_check/rule_check.py -   # any unified diff on stdin
 
 Prints one line per finding:  LEVEL file:line rule: text
-  BLOCK   needs the owner: a protected file, a test check removed or loosened, her budget changed.
+  BLOCK   a protected change: a protected file, a test check removed or changed (its text, bound or
+          operator), world geometry changed (a constant or a box of an existing body), her budget changed.
           Those changes go only as a PR into ScraperX-Claude, and only the owner merges it.
   REVIEW  a reviewer must look (possible per-route special case, velocity write, position write,
-          structured binding near a lambda).
+          structured binding near a lambda, new world geometry, a number in another build_* function).
 Exit status: 0 nothing found, 1 REVIEW only, 2 any BLOCK. It reads the diff only; it changes nothing.
 It is a first pass: a clean result does not replace 03_EXECUTION/REVIEW_CHECKLIST.md.
 """
@@ -24,6 +25,21 @@ PROTECTED_RE = [re.compile(r"(^|/)export_presets\.cfg$"), re.compile(r"\.(keysto
 # World geometry: every solid the builders make is generated into this file (CI fails when it drifts),
 # so any change to the world's collision shows here. A protected change.
 GEOMETRY_FILE = "src/sim/world_solids.inc"
+# The native world's builders, a protected change too (J-115). Every line of these files builds the world: the
+# bands (band_*.cpp, the Stack from grade among them) and the climbs and shafts built on their own; in their .hpp
+# files only the lines with a number (their constants) are geometry.
+GEOMETRY_SRC_RE = re.compile(r"^src/sim/(band_\w+|twin_tower|climb_c6|climb_c7|pipe_gallery)\.(cpp|hpp)$")
+# In these files only these functions build the world: the stack's decks and frame, and the generated dressing.
+GEOMETRY_FUNCS = {"src/sim/physics_world.cpp": re.compile(r"\bPhysicsWorld::(build_stack|build_world_solids)\s*\(")}
+# Any other build_* function in src/sim may build world bodies: a number changed in one is REVIEW. Not these: the
+# climber's map, a fabricated shape, her stance shapes.
+BUILD_FN_RE = re.compile(r"\bbuild_\w*\s*\(")
+BUILD_FN_NOT = re.compile(r"\bAffordanceMap::build_|\bbuild_shape\s*\(|\bbuild_stance_shapes\s*\(")
+# A statement that changes what is already built: an assignment to an existing name (not a new add_* kept in it),
+# or a part taken out.
+MUTATE_RE = re.compile(r"^\s*(?:(?P<name>[A-Za-z_]\w*)[\w.\[\]>-]*\s*[-+*/]?=(?!=)|.*\.(?:erase|pop_back|clear)\s*\()")
+NEW_PART_RE = re.compile(r"=\s*(\w+(\.|->))?add_\w+\s*\(")
+LITERAL_RE = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?")
 # CLAUDE.md's "## Settled" section holds the owner's calls: only he changes a line, and the automatic review is told
 # they are his (tools/switchboard claude_calls.settled_calls). A PR that edits the section is never merged by the
 # switch: the finding is a protected-file BLOCK, which nothing lifts.
@@ -61,6 +77,11 @@ LAMBDA_RE = re.compile(r"\[[&=]?[\w&=, ]*\]\s*(\(|\{|mutable)")
 findings = []
 
 
+class Hunk(list):
+    """A hunk's lines as (kind, line number, text); ctx is the text after its @@ header (git's function context)."""
+    ctx = ""
+
+
 def add(level, f, n, rule, text):
     findings.append((level, f, n, rule, text.strip()[:140]))
 
@@ -71,6 +92,52 @@ def skeleton(s):
 
 def nums(s):
     return [float(x.rstrip("Ff")) for x in NUM_RE.findall(s)]
+
+
+def code(t, gd=False):
+    """The line with its comment gone (a comment mark inside a string, after an odd count of quotes, is kept).
+    gd: a GDScript or Python line, whose comments start with #."""
+    s = t if gd else re.sub(r"/\*.*?\*/", "", t)
+    if not gd and re.match(r"\s*(/\*|\*(\s|/|$))", s):
+        return ""
+    for m in re.finditer(r"#" if gd else r"//", s):
+        if s.count('"', 0, m.start()) % 2 == 0:
+            return s[:m.start()].rstrip()
+    return s.rstrip()
+
+
+def norm(t, gd=False):
+    """The line's code with every space gone too: a change that leaves this alone is a comment or a reformat."""
+    return re.sub(r"\s+", "", code(t, gd))
+
+
+def check_lines(h, gd=False, side="-"):
+    """The removed (side "-") or added (side "+") lines of a hunk that belong to a check: a check's own line, or a
+    line of a check that runs on over several lines (its parentheses still open, or a line ended by a backslash)."""
+    out, depth, running = set(), 0, False
+    for kind, n, t in h:
+        if kind not in (" ", side):
+            continue
+        c = code(t, gd)
+        if running or CHECK_RE.search(c) or CMP_RE.search(c):
+            if kind == side:
+                out.add((n, t))
+            depth = (depth if running else 0) + c.count("(") - c.count(")")
+            running = depth > 0 or (gd and c.endswith("\\"))
+    return out
+
+
+BOUND_WORDS = {"tol", "tolerance", "max", "min", "limit", "bound", "margin", "eps", "epsilon", "slack", "within",
+               "least", "most"}
+
+
+def bound_constant(c):
+    """True for a test's named bound: a constant whose name says it is a limit (kMaxDrift, kTolerance, LOOK_MIN_Y)."""
+    m = re.match(r"\s*(?:static\s+)?(?:constexpr|const)\s+(?:[\w:<>,]+[\s&*]+)?(\w+)\s*(?::\s*\w+\s*)?(?::?=|\{)", c)
+    if not m or not LITERAL_RE.search(c[m.end():]):
+        return False
+    words = {w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", m.group(1))}
+    return bool(words & BOUND_WORDS)
 
 
 def loosened(old, new):
@@ -109,7 +176,8 @@ def parse(diff):
         elif line.startswith("@@"):
             m = re.search(r"-(\d+)" if deleted else r"\+(\d+)", line)
             newno = int(m.group(1)) if m else 0
-            hunk = []
+            hunk = Hunk()
+            hunk.ctx = line.split("@@", 2)[2] if line.count("@@") >= 2 else ""
             if cur:
                 files[cur].append(hunk)
         elif hunk is not None and cur:
@@ -151,6 +219,76 @@ def settled_edit(hunks):
     return None
 
 
+def world_geometry(f, hunks, whole, fn_re):
+    """(d) J-115: world geometry. In a world-building file (whole) or function (fn_re), a changed or removed line
+    (a constant or a box of what is built) is a BLOCK, and so is an added statement that changes what is already
+    built (an assignment to a name the addition does not declare, a part erased). Other added lines, a new body or
+    constant, are REVIEW: the reviewer checks they come after the existing bodies and move none. A comment, spacing,
+    or a line moved within its hunk is no change; a line moved to another hunk is REVIEW (the body order changes).
+    In any other build_* function of src/sim a number changed is REVIEW."""
+    header = f.endswith(".hpp")
+
+    def counts(t):
+        c = code(t).strip()
+        if not c or c.startswith("#") or re.fullmatch(r"[{}();,\s]*", c):
+            return False
+        return bool(LITERAL_RE.search(c)) if header else True
+
+    added_all = {norm(t) for h in hunks for k, _, t in h if k == "+" and counts(t)}
+    for h in hunks:
+        fn, lines = h.ctx, []
+        for kind, n, t in h:
+            if re.match(r"[A-Za-z_]", t):
+                fn = t   # a definition at column 0: the lines after it are in it
+            lines.append((kind, n, t, fn))
+        world = [(k, n, t) for k, n, t, fl in lines if counts(t) and (whole or (fn_re and fn_re.search(fl)))]
+        if not world:
+            build = [(k, n, t) for k, n, t, fl in lines if k != " " and LITERAL_RE.search(code(t))
+                     and BUILD_FN_RE.search(fl) and not BUILD_FN_NOT.search(fl)]
+            mine = {norm(t) for k, _, t in build if k == "-"}
+            theirs = {norm(t) for k, _, t in build if k == "+"}
+            moved = [(n, t) for k, n, t in build if norm(t) not in (theirs if k == "-" else mine)]
+            if moved:
+                add("REVIEW", f, moved[0][0], "possible-world-geometry",
+                    "a number changes in a build_* function: if it builds the world, a protected change | " + moved[0][1])
+            continue
+        minus = [(n, t) for k, n, t in world if k == "-"]
+        plus = [(n, t) for k, n, t in world if k == "+"]
+        plus_norm, minus_norm = {norm(t) for _, t in plus}, {norm(t) for _, t in minus}
+        plus_skel = {}
+        for n, t in plus:
+            plus_skel.setdefault(skeleton(code(t)), []).append((n, t))
+        blocked = False
+        for n, t in minus:
+            if norm(t) in plus_norm:
+                continue
+            if norm(t) in added_all:
+                add("REVIEW", f, n, "world-geometry-moved", "built in another place, so the body order changes | " + t)
+                continue
+            pair = plus_skel.get(skeleton(code(t)))
+            pair = pair.pop(0) if pair else None   # paired in order: the first changed line with the first added
+            add("BLOCK", f, pair[0] if pair else n, "world-geometry-changed",
+                (code(t).strip() + " -> " + code(pair[1]).strip() if pair else "removed: " + code(t).strip())
+                + " (an existing body or constant: protected)")
+            blocked = True
+        if blocked:
+            continue
+        new = [(n, t) for n, t in plus if norm(t) not in minus_norm]
+        declared = " ".join(code(t) for _, t in new)
+        for n, t in new:
+            m = MUTATE_RE.match(code(t))
+            name = m and m.group("name")
+            if m and NEW_PART_RE.search(code(t)):
+                continue   # a new body, guide or rope kept in its band's struct: added, not changed
+            if m and not (name and re.search(r"[\w>&*]\s+[&*]?" + re.escape(name) + r"\s*(=|\{|;|\[|:)", declared)):
+                add("BLOCK", f, n, "world-geometry-changed",
+                    "an added statement changes what is built (protected) | " + code(t).strip())
+                blocked = True
+        if new and not blocked:
+            add("REVIEW", f, new[0][0], "world-geometry-added",
+                "new geometry: built after every existing body, moving none? | " + code(new[0][1]).strip())
+
+
 def check(files):
     old_paths = set(files.pop("__old__", []))
     hit = settled_edit(files.get(SETTLED_FILE, []))
@@ -165,29 +303,38 @@ def check(files):
         is_test = f.startswith("tests/") or "/tests/" in f or f.startswith("godot/presentation/ui/ui_test")
         is_src = f.startswith("src/")
         is_cpp = f.endswith((".cpp", ".hpp", ".h", ".inc"))
+        if GEOMETRY_SRC_RE.match(f) or f in GEOMETRY_FUNCS or (f.startswith("src/sim/") and f.endswith(".cpp")):
+            world_geometry(f, hunks, bool(GEOMETRY_SRC_RE.match(f)), GEOMETRY_FUNCS.get(f))
         for h in hunks:
             minus = [(n, t) for k, n, t in h if k == "-"]
             plus = [(n, t) for k, n, t in h if k == "+"]
             plus_text = {t.strip() for _, t in plus}
-            plus_skel = {}
-            for n, t in plus:
-                plus_skel.setdefault(skeleton(t), []).append((n, t))
             hunk_text = "\n".join(t for _, _, t in h)
-            # (a) test checks removed or loosened
+            # (a) test checks removed or changed: a check's line (or a line of a check over several lines), and a
+            # named bound. Moved within the hunk, or only its comment or spacing changed: not a change.
             if is_test:
+                gd = f.endswith((".gd", ".py"))   # a # comment (and // is a division)
+                plus_norm = {norm(t, gd) for _, t in plus}
+                plus_code_skel = {}
+                for n, t in plus:
+                    plus_code_skel.setdefault(skeleton(code(t, gd)), []).append((n, t))
+                checks = check_lines(h, gd)
                 for n, t in minus:
-                    if not (CHECK_RE.search(t) or CMP_RE.search(t)) or t.strip().startswith("//"):
+                    c = code(t, gd)
+                    is_check = (n, t) in checks and c.strip()
+                    if not (is_check or bound_constant(c)) or norm(t, gd) in plus_norm:
                         continue
-                    if t.strip() in plus_text:
-                        continue  # moved, not removed
-                    pair = plus_skel.get(skeleton(t))
+                    rule = "test-check-changed" if is_check else "test-bound-changed"
+                    pair = plus_code_skel.get(skeleton(c))
                     if pair:
-                        why = loosened(t, pair[0][1])
-                        if why:
-                            lvl = "BLOCK" if any("LOOSER" in w or "operator" in w for w in why) else "REVIEW"
-                            add(lvl, f, pair[0][0], "test-tolerance-changed", "; ".join(why) + " | " + pair[0][1])
+                        pn, pt = pair.pop(0) if len(pair) > 1 else pair[0]
+                        why = loosened(c, code(pt, gd)) or ["a number changed"]
+                        add("BLOCK", f, pn, "test-tolerance-changed" if any(
+                            "LOOSER" in w or "operator" in w for w in why) else rule, "; ".join(why) + " | " + pt)
                         continue
-                    add("BLOCK", f, n, "test-check-removed", t)
+                    if is_check and not check_lines(h, gd, "+"):
+                        rule = "test-check-removed"   # no check put in its place
+                    add("BLOCK", f, n, rule, t)
                 for n, t in plus:
                     if re.search(r"getenv\(\"SCRAPERX_(SKIP|LOOSE|TOLERANCE)", t) or re.search(r"\b(skip|disabled?)_?test\b", t, re.I):
                         add("BLOCK", f, n, "test-skip-added", t)
