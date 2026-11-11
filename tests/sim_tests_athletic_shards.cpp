@@ -102,6 +102,7 @@ void run_athletic_traversal_2() {
     run_matron_traverse();
     run_matron_pursuit();
     run_matron_ring_descent();
+    run_matron_pursuit_heights();
     run_matron_ways();
     run_matron_climb();
     run_strike();

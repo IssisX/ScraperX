@@ -30,6 +30,13 @@ constexpr double kWayBlockS = 30.0;
 
 void tick(Simulation &s) { (void)s.advance_frame(Simulation::kFixedStepSeconds); }
 
+struct ChaseEvent {
+    double t = 0.0;        // when it happened, seconds in
+    const char *kind = ""; // "replan", "move failed", "halt"
+    Vector3 pos{};         // where she was
+    double dur_s = 0.0;    // a halt's length, else 0
+};
+
 struct Chase {
     bool let_go = false;          // her hands opened on the climb (let_go_at)
     double fell_mps = 0.0;        // the fastest she fell after it
@@ -40,6 +47,8 @@ struct Chase {
     double worst_step = 0.0;
     std::uint32_t pipe_links = 0, climbs = 0;
     bool alive = true;
+    std::uint32_t replans = 0, moves_failed = 0; // this chase's journey counts
+    std::vector<ChaseEvent> events;              // every replan, failed move and long halt
 };
 
 // Her at `from` (feet), dangerous; the climber standing at `prey` (feet),
@@ -114,6 +123,143 @@ void report(const char *name, const Chase &c) {
               << c.alive << '\n';
 }
 
+struct Spot {
+    int id = -1;
+    float top = 0.0F;
+    float x = 0.0F;
+    float z = 0.0F;
+    float area = 0.0F;
+};
+
+// The largest standing place at a height: the biggest patch of the biggest
+// region whose top is within 8 cm of `want`.
+Spot spot_for(const traversal::AffordanceMap &map, const float want) {
+    Spot best;
+    for (const auto &region : map.regions()) {
+        if (std::abs(region.top - want) > 0.08F || region.area <= best.area) {
+            continue;
+        }
+        float area = 0.0F;
+        float x = 0.0F;
+        float z = 0.0F;
+        for (const int patch_index : region.patches) {
+            const auto &patch = map.patches()[static_cast<std::size_t>(patch_index)];
+            const float patch_area = (patch.max_x - patch.min_x) * (patch.max_z - patch.min_z);
+            if (patch_area > area) {
+                area = patch_area;
+                x = 0.5F * (patch.min_x + patch.max_x);
+                z = 0.5F * (patch.min_z + patch.max_z);
+            }
+        }
+        if (area > 0.0F) {
+            best = Spot{region.id, region.top, x, z, area};
+        }
+    }
+    return best;
+}
+
+// Her at `from` (feet), the climber standing at `prey` (feet), heard there
+// every 8 s. Until she stands beside him, or `seconds`. Arrival is standing
+// on his level within 3 m, off any pipe or rung, for a second. Records every
+// replan, every failed move, and every halt of 5 s or more, each with its
+// place — the pursuit table's rows.
+Chase chase_at(const Vector3 from, const Vector3 prey, const double seconds) {
+    constexpr double kHearEveryS = 8.0;
+    constexpr double kArriveM = 3.0;
+    constexpr double kHaltS = 5.0;
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    require(s.advance_frame(1.0).accepted, "matron pursuit heights: settle");
+    s.debug_launch_player(Vector3{prey.x, prey.y + 0.3, prey.z}, Vector3{0.0, 0.0, 0.0});
+    s.debug_place_matron(from);
+    tick(s);   // her view of herself is refreshed in the step: from here, where she was put
+    Chase c;
+    auto last = s.matron_state().position;
+    const auto climbs0 = s.matron_state().climbs;
+    const auto knockdowns0 = s.matron_state().knockdowns;
+    const std::uint32_t replans_base = s.matron_journey().replans;
+    const std::uint32_t failed_base = s.matron_journey().moves_failed;
+    std::uint32_t replans_seen = replans_base;
+    std::uint32_t failed_seen = failed_base;
+    const int hz = static_cast<int>(Simulation::kTickRateHz);
+    int on_goal = 0;
+    int halt_start = -1;
+    Vector3 halt_pos{};
+    for (int i = 0; i < static_cast<int>(seconds) * hz; ++i) {
+        s.debug_set_matron_stage(1);
+        if (i % (static_cast<int>(kHearEveryS) * hz) == 0) {
+            s.debug_matron_hear(prey);
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        tick(s);
+        const auto m = s.matron_state();
+        const double step = std::hypot(m.position.x - last.x, m.position.y - last.y, m.position.z - last.z);
+        c.worst_step = std::max(c.worst_step, step);
+        last = m.position;
+        if (!m.alive) {
+            c.alive = false;
+            break;
+        }
+        const auto j = s.matron_journey();
+        if (j.replans > replans_seen) {
+            c.events.push_back(ChaseEvent{double(i) / hz, "replan", m.position, 0.0});
+            replans_seen = j.replans;
+        }
+        if (j.moves_failed > failed_seen) {
+            c.events.push_back(ChaseEvent{double(i) / hz, "move failed", m.position, 0.0});
+            failed_seen = j.moves_failed;
+        }
+        if (step < 0.001) {
+            if (halt_start < 0) {
+                halt_start = i;
+                halt_pos = m.position;
+            }
+        } else if (halt_start >= 0) {
+            const double halt_s = double(i - halt_start) / hz;
+            if (halt_s >= kHaltS) {
+                c.events.push_back(ChaseEvent{double(halt_start) / hz, "halt", halt_pos, halt_s});
+            }
+            halt_start = -1;
+        }
+        if (std::getenv("SCRAPERX_PURSUIT_TRACE") != nullptr && i % (5 * hz) == 0) {
+            std::cout << "    t " << i / hz << " at (" << m.position.x << ", " << m.position.y << ", " << m.position.z
+                      << ") floor " << m.floor_y << " state " << int(m.state) << " pipe " << m.on_pipe
+                      << " climbing " << m.climbing << '\n';
+        }
+        const double feet = m.position.y - static_cast<double>(Matron::kStandCentre);
+        const double horizontal = std::hypot(m.position.x - prey.x, m.position.z - prey.z);
+        const bool there = !m.on_pipe && !m.climbing && horizontal < kArriveM && std::abs(feet - prey.y) < 0.6;
+        on_goal = there ? on_goal + 1 : 0;
+        if (on_goal >= hz) {   // a second on his level, beside him
+            c.arrived = true;
+            c.seconds = static_cast<double>(i) / hz;
+            break;
+        }
+    }
+    const auto m = s.matron_state();
+    c.knockdowns = m.knockdowns - knockdowns0;
+    c.pipe_links = m.pipe_links;
+    c.climbs = m.climbs - climbs0;
+    c.replans = s.matron_journey().replans - replans_base;
+    c.moves_failed = s.matron_journey().moves_failed - failed_base;
+    return c;
+}
+
+void report_at(const char *name, const Chase &c) {
+    std::cout << "  matron pursuit heights: " << name << ": arrived " << c.arrived << " in " << c.seconds
+              << " s, pipe " << c.pipe_links << " ways, climbs " << c.climbs << ", replans " << c.replans
+              << ", failed moves " << c.moves_failed << ", worst step " << c.worst_step << " m, alive " << c.alive
+              << '\n';
+    for (const ChaseEvent &e : c.events) {
+        std::cout << "    " << e.kind << " at t " << e.t << " s (" << e.pos.x << ", " << e.pos.y << ", " << e.pos.z
+                  << ")";
+        if (e.dur_s > 0.0) {
+            std::cout << " for " << e.dur_s << " s";
+        }
+        std::cout << '\n';
+    }
+}
+
 } // namespace
 
 // Down the well's route onto the 176 ring, then across that ring to the
@@ -128,41 +274,10 @@ void run_matron_ring_descent() {
     Simulation settle(InitialSpawn::Deck154);
     require(settle.advance_frame(1.0).accepted, "matron ring descent: settle");
     const auto &map = settle.matron_affordances();
-    struct Spot {
-        int id = -1;
-        float top = 0.0F;
-        float x = 0.0F;
-        float z = 0.0F;
-        float area = 0.0F;
-    };
-    const auto spot_for = [&](const float want) {
-        Spot best;
-        for (const auto &region : map.regions()) {
-            if (std::abs(region.top - want) > 0.08F || region.area <= best.area) {
-                continue;
-            }
-            float area = 0.0F;
-            float x = 0.0F;
-            float z = 0.0F;
-            for (const int patch_index : region.patches) {
-                const auto &patch = map.patches()[static_cast<std::size_t>(patch_index)];
-                const float patch_area = (patch.max_x - patch.min_x) * (patch.max_z - patch.min_z);
-                if (patch_area > area) {
-                    area = patch_area;
-                    x = 0.5F * (patch.min_x + patch.max_x);
-                    z = 0.5F * (patch.min_z + patch.max_z);
-                }
-            }
-            if (area > 0.0F) {
-                best = Spot{region.id, region.top, x, z, area};
-            }
-        }
-        return best;
-    };
-    const Spot goal = spot_for(176.25F);
+    const Spot goal = spot_for(map, 176.25F);
     require(goal.id >= 0, "matron ring descent: the 176 ring");
     for (const float from_top : {198.25F, 220.25F}) {
-        const Spot from = spot_for(from_top);
+        const Spot from = spot_for(map, from_top);
         require(from.id >= 0, "matron ring descent: the start ring");
         Simulation s(InitialSpawn::Deck154);
         require(s.advance_frame(1.0).accepted, "matron ring descent: world");
@@ -211,6 +326,80 @@ void run_matron_ring_descent() {
 }
 SCRAPERX_GROUP("matron_ring_descent", 920, run_matron_ring_descent);
 SCRAPERX_SELECT("matron-ring-descent", run_matron_ring_descent);
+
+// Pursuit as a general skill, at heights the older runs never proved: the
+// yard below 132, the 200s, the 300s, the 400s, and the high tower. In each,
+// he stands where a real route took him and she hears him there; she follows
+// by her own ways alone — her pipe, her ladders, her decks — and the run
+// records whether she reaches him, how long it takes, and every place she
+// stops or replans. Gap 21.
+void run_matron_pursuit_heights() {
+    Simulation settle(InitialSpawn::Deck154);
+    require(settle.advance_frame(1.0).accepted, "matron pursuit heights: settle");
+    const auto &map = settle.matron_affordances();
+    const Spot yard = spot_for(map, 0.0F);
+    const Spot r220 = spot_for(map, 220.25F);
+    const Spot r242 = spot_for(map, 242.25F);
+    const Spot r286 = spot_for(map, 286.25F);
+    const Spot r308 = spot_for(map, 308.25F);
+    const Spot r440 = spot_for(map, 440.25F);
+    const Spot r484 = spot_for(map, 484.25F);
+    const Spot r594 = spot_for(map, 594.25F);
+    const Spot r640 = spot_for(map, 640.25F);
+    require(yard.id >= 0, "matron pursuit heights: a yard floor to hunt on");
+    require(r220.id >= 0, "matron pursuit heights: the 220 ring");
+    require(r242.id >= 0, "matron pursuit heights: the 242 ring");
+    require(r286.id >= 0, "matron pursuit heights: the 286 ring");
+    require(r308.id >= 0, "matron pursuit heights: the 308 ring");
+    require(r440.id >= 0, "matron pursuit heights: the 440 ring");
+    require(r484.id >= 0, "matron pursuit heights: the 484 ring");
+    require(r594.id >= 0, "matron pursuit heights: the 594 ring");
+    require(r640.id >= 0, "matron pursuit heights: the 640 plate");
+    std::cout << "  matron pursuit heights: prey spots: yard (" << yard.x << ", " << yard.top << ", " << yard.z
+              << "), 242 (" << r242.x << ", " << r242.top << ", " << r242.z << "), 308 (" << r308.x << ", "
+              << r308.top << ", " << r308.z << "), 484 (" << r484.x << ", " << r484.top << ", " << r484.z
+              << "), 640 (" << r640.x << ", " << r640.top << ", " << r640.z << ")\n";
+    // 1. Down to the yard: she at 132, he on the grade below her decks.
+    {
+        const Chase c = chase_at(Vector3{14.85, 132.0, -131.5}, Vector3{yard.x, yard.top, yard.z}, 300.0);
+        report_at("132 down to the yard", c);
+        require(c.alive && c.arrived, "matron pursuit heights: down to the yard after him");
+        require(c.worst_step < 0.2, "matron pursuit heights: never carried or snapped (a step a tick)");
+    }
+    // 2. The 200s: 220 up to 242, boards out and a ladder on the next face.
+    {
+        const Chase c = chase_at(Vector3{r220.x, r220.top, r220.z}, Vector3{r242.x, r242.top, r242.z}, 180.0);
+        report_at("220 up to 242", c);
+        require(c.alive && c.arrived, "matron pursuit heights: up to 242 after him");
+        require(c.worst_step < 0.2, "matron pursuit heights: never carried or snapped (a step a tick)");
+    }
+    // 3. The 300s: 220 up to 308, four gaps in one hunt — a ladder, a panel
+    // caught with a jump, a bulkhead and a standpipe, then a ladder.
+    {
+        const Chase c = chase_at(Vector3{r220.x, r220.top, r220.z}, Vector3{r308.x, r308.top, r308.z}, 300.0);
+        report_at("220 up to 308", c);
+        require(c.alive && c.arrived, "matron pursuit heights: up to 308 after him");
+        require(c.worst_step < 0.2, "matron pursuit heights: never carried or snapped (a step a tick)");
+    }
+    // 4. The 400s: 440 up to 484, ladders on the next rings' inner faces.
+    {
+        const Chase c = chase_at(Vector3{r440.x, r440.top, r440.z}, Vector3{r484.x, r484.top, r484.z}, 240.0);
+        report_at("440 up to 484", c);
+        require(c.alive && c.arrived, "matron pursuit heights: up to 484 after him");
+        require(c.worst_step < 0.2, "matron pursuit heights: never carried or snapped (a step a tick)");
+    }
+    // 5. The high tower: 594 up to 640, boards and a ladder to 616, then a
+    // ladder up through the 640 plate's hatch.
+    {
+        const Chase c = chase_at(Vector3{r594.x, r594.top, r594.z}, Vector3{r640.x, r640.top, r640.z}, 240.0);
+        report_at("594 up to 640", c);
+        require(c.alive && c.arrived, "matron pursuit heights: up to 640 after him");
+        require(c.worst_step < 0.2, "matron pursuit heights: never carried or snapped (a step a tick)");
+    }
+    std::cout << "PASS scraperx_sim matron pursuit heights\n";
+}
+SCRAPERX_GROUP("matron_pursuit_heights", 940, run_matron_pursuit_heights);
+SCRAPERX_SELECT("matron-pursuit-heights", run_matron_pursuit_heights);
 
 void run_matron_pursuit() {
     // Up: from 132 by the corner pipe to 143 and 154, then the home ladder.

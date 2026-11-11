@@ -913,6 +913,7 @@ void run_matron_shape();
 void start_matron_shape_audit();
 void check_matron_shape_audit();
 void run_matron_ring_descent();
+void run_matron_pursuit_heights();
 void run_matron_ways();
 void run_matron_arm();
 void run_matron_fatality();
