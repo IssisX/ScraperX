@@ -3,6 +3,7 @@
 #include "sim_tests.hpp"
 
 #include "sim/bay.hpp"
+#include "sim/cradle_bay.hpp"
 #include "sim/forklift.hpp"
 #include "sim/summit.hpp"
 #include "sim/twin_tower.hpp"
@@ -210,6 +211,7 @@ void run_wet_e_guard(const bool expect) {
     const std::uint64_t kSince[] = {Bay::kFrameEntity, Bay::kLeafEntity, Bay::kGuardEntity, Bay::kFanEntity,
                                     Bay::kShackleEntity, scraperx::sim::TwinTower::kFrameEntity,
                                     scraperx::sim::TwinTower::kLeafEntity, scraperx::sim::TwinTower::kFlagEntity,
+                                    scraperx::sim::CradleBay::kFrameEntity,
                                     scraperx::sim::Summit::kLeftBearingEntity,
                                     scraperx::sim::Summit::kRightBearingEntity,
                                     scraperx::sim::Summit::kEndingFrameEntity,
@@ -221,16 +223,22 @@ void run_wet_e_guard(const bool expect) {
     // by 137, so the sequence check covers exactly those twelve bodies.
     // J-041: then the deck-154 forklift's two bodies, after the east/west
     // pieces (its frame, then its forks).
+    // J-054 (#293): the ballast drum's body is built with the stock table,
+    // at kit index 320, inside the first 595, so the bay starts one later,
+    // at 596; and the cradle bay's frame (built after the twin tower) sits
+    // between the twin tower and the summit. The sequence check covers
+    // thirteen bodies now, and the forklift still closes it.
+    constexpr std::uint32_t kSinceBase = kBodiesBeforeE + 1;
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
                                        scraperx::sim::Forklift::kDeck154CarriageEntity};
-    const std::uint32_t forklift_at = kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
+    const std::uint32_t forklift_at = kSinceBase + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
     bool since_after = world.kit_body_count() == forklift_at + std::size(kForklift);
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
     }
-    for (std::uint32_t i = kBodiesBeforeE; since_after && i < kBodiesBeforeE + std::size(kSince); ++i) {
-        since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
+    for (std::uint32_t i = kSinceBase; since_after && i < kSinceBase + std::size(kSince); ++i) {
+        since_after = world.kit_body_entity(i) == kSince[i - kSinceBase];
     }
     Fnv lines;
     bool lines_clear = true;
@@ -295,9 +303,14 @@ void run_wet_e_guard(const bool expect) {
     // #216): the east/west places take the end of the table, after the
     // throwables, so those entities are their trunk ones again. Before
     // 4824050261233220131, now 3514033760028014323.
-    require(bodies.hash == 3514033760028014323ULL,
+    // Re-pinned for J-054 (#293): the ballast drum is one more stock body,
+    // built with the table at kit index 320, inside the first 595. The
+    // original bodies keep their order, but the window now holds the drum
+    // and drops the body that was 594th (now at 595, ahead of the bay).
+    // Before 3514033760028014323, now 13951612497788147959.
+    require(bodies.hash == 13951612497788147959ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
+    require(since_after, "E guard: five bay, three twin, one cradle-bay frame, four summit and two deck-154 forklift bodies follow the first 595 in order, starting one later");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is
@@ -318,7 +331,10 @@ void run_wet_e_guard(const bool expect) {
     // over all pieces changes again; every piece stands where it was.
     // Before 9809091706962277184, now 664305694603610712; the count (462)
     // is as before.
-    require(world.loose_stock_count() == 462 && stock.hash == 664305694603610712ULL,
+    // Re-pinned for J-054 (#293): one more piece, the ballast drum staged
+    // on the bay's boarding deck. Before 664305694603610712, now
+    // 11610880747018011724; the count (463) is one more.
+    require(world.loose_stock_count() == 463 && stock.hash == 11610880747018011724ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");

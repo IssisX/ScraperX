@@ -2,6 +2,7 @@
 // Members of Simulation::PhysicsWorld (physics_world.hpp).
 
 #include "sim/physics_world.hpp"
+#include "sim/cradle_bay.hpp"
 #include "sim/matron_effort.hpp"
 #include "sim/twin_tower.hpp"
 #include <chrono>
@@ -408,6 +409,10 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     matron_->set_shared_survival(&bay_->district());
     // Append static exterior access after existing saved kit bodies.
     TwinTower::build(*kit_);
+    // J-054, the counterweight crossing: the bay's frame, off the 220 ring's
+    // south face. Built after the twin tower; its place in the kit order
+    // (between the twin tower and the summit) is pinned by the E guard.
+    CradleBay::build(*kit_);
     // The hits heard (impacts.hpp): every piece of stock, each forklift's frame
     // and forks, the yard crane's hook block. After the tower's stock, so it
     // has them all.

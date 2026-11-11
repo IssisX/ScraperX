@@ -476,6 +476,11 @@ void add_crane_laydown(std::vector<LooseStock::Placement> &t) {
 void add_deck_loads(std::vector<LooseStock::Placement> &t) {
     t.push_back({K::SkidCrate, 1, -21.5F, 44.0F, -151.6F, 0.0F});
     t.push_back({K::PalletReel, 0, -21.5F, 11.0F, -135.4F, 0.0F});
+    // J-054, the counterweight crossing: the ballast drum, staged on the
+    // bay's boarding deck off the 220 ring. A drum is 55 kg; this one
+    // carries 65 kg of load, 120 kg in all, past the carry grip's 80 kg,
+    // so it is dragged, not carried, onto the cradle's near end.
+    t.push_back({K::Drum, 1, 3.0F, 220.25F, -116.0F, 0.0F, 65.0F});
 }
 
 } // namespace
