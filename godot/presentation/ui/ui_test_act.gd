@@ -580,8 +580,17 @@ func _act_down_the_pipe(device: int) -> bool:
 	var cage_eye := Vector3(-11.35, MATRON_DECK_Y + 1.0, -131.4)
 	await _look_at_point(cage_eye)
 	await _act_pose("act_pest_unrigged")
-	var back: bool = await _act_wait(func() -> bool: return int(_matron_state()["pipe_links"]) >= links + 2, 60.0,
-		"up_her_pipe")
+	var up_again := func() -> bool: return int(_matron_state()["pipe_links"]) >= links + 2
+	var back: bool = await _act_wait(up_again, 20.0, "up_her_pipe")
+	if not back:
+		# A pest takes her pipe too (Cory, 11-11), and frail she is slow on
+		# it: off it on 143 after the climber is quiet on her deck. A run
+		# east along her deck over her pipe's corner, heard down the shaft.
+		if not (await _walk_to(device, ACT_BAY_WEST, 0.3, 4.0, true) and \
+				await _sprint_to(device, Vector2(16.0, -128.6), 1.0, 8.0)):
+			return _fail("the run over her pipe's corner stalled at %s" % str(_position()))
+		_move_dir(device, Vector2.ZERO)
+		back = await _act_wait(up_again, 60.0, "up_her_pipe")
 	if not back:
 		return _fail("off her pipe on 143, she never came back up it after the climber (links %d, at %s)" % [
 			int(_matron_state()["pipe_links"]), str(_matron_state()["position"])])
