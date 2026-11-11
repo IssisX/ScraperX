@@ -47,7 +47,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T01:09:05Z",
+   "rechecked": "2026-11-11T07:28:58Z",
    "ref": "BRANCH|claude/integrate-j051-asks-since",
    "sends": 0,
    "thread": 0,
@@ -66,5 +66,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T02:09:10Z"
+ "updated": "2026-11-11T07:28:58Z"
 }
