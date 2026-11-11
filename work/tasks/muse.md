@@ -52,7 +52,7 @@ your own branches (Cory 11-05) and mail the rest:
 ## Your queue (11-06)
 The rule: take the next one yourself; mail the moment fewer than 6 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 5 left`; Cory 11-11: "cant have that happen"). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-In flight (finish these): J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-061 #312, J-021 #128. Parked: J-053 #82 and J-044l (on Grok), J-060 #320 (on J-044c).
+In flight (finish these): J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Parked: J-053 #82 and J-044l (on Grok), J-060 #320 (on J-044c).
 Unstarted, in order (11-11 7 AM; new playable content first):
 0a. J-090 #408: hook her and let the rope decide (Cory 11-11, new feature; fights are spectacular, checked by eye).
 0b. J-091 #409: turn her bay trap back on her at 154 m (Cory 11-11).
