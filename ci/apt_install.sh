@@ -31,7 +31,7 @@ fi
 echo "apt_install: to install: ${missing[*]}"
 
 apt_try() {
-  timeout 240 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 update &&
+  timeout 120 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 update &&
     timeout 420 sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=20 install --yes "${missing[@]}"
 }
 
@@ -40,7 +40,9 @@ if apt_try; then
 fi
 
 echo "apt_install: the runner's mirror failed; retrying on archive.ubuntu.com" >&2
-for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+# GitHub's runners list their mirror in /etc/apt/apt-mirrors.txt (sources use mirror+file:), so that file is
+# rewritten too (11-11: rewriting only the sources files left every request on the azure host).
+for f in /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
   [ -f "$f" ] || continue
   sudo sed -i -E 's#https?://azure\.archive\.ubuntu\.com/#http://archive.ubuntu.com/#g' "$f"
 done
