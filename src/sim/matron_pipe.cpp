@@ -956,10 +956,8 @@ bool Matron::pipe_reaches(const float floor_y) noexcept {
 }
 
 bool Matron::follow_pipe(const float dt, const RVec3 at) {
-    // Frail, she cannot take hold of it.
-    if (stage_ == Stage::Pest) {
-        return false;
-    }
+    // Every stage takes hold of it (Cory, 11-11: she climbs as a pest too);
+    // frail, she goes on it at a pest's slow pace (ride_pipe).
     const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     float next = floor_y;
     if (lead_floor_ < floor_y - 0.6F) {

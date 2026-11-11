@@ -79,7 +79,7 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
     }
     // The world's checkpoint rule (Matron::freezes_checkpoint), not hers to
     // read: he is on her deck, up a ladder from it, or on the deck her corner
-    // pipe is taking her to, or (no longer frail) a deck it joins to hers.
+    // pipe is taking her to, or a deck it joins to hers (at any stage).
     {
         const float player_floor_y = m.floor_of(float(player.GetY()));
         const Mover *taking = m.holder();
@@ -87,7 +87,7 @@ void Perception::take(Matron &m, const Stimulus &now, const float dt) {
             m.body_in_world_ && in_footprint &&
             ((taking != nullptr && taking->view().has_goal &&
               std::abs(player_floor_y - taking->view().goal_floor_y) < 0.1F) ||
-             (m.stage_ != Matron::Stage::Pest && Matron::pipe_reaches(level_floor) &&
+             (Matron::pipe_reaches(level_floor) &&
               Matron::pipe_reaches(player_floor_y) &&
               std::abs(std::abs(player_floor_y - level_floor) - Matron::kStackPitch) < 0.1F));
         m.checkpoint_freeze_ = on_deck || player_climb >= 0 || by_her_pipe;
