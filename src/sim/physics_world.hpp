@@ -160,6 +160,15 @@ public:
     [[nodiscard]] const Corpses &corpses() const noexcept { return *corpses_; }
     [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
     [[nodiscard]] const ImpactLedger &impacts() const noexcept { return *impacts_; }
+    // Tests only (never bound to the bridge): the mass of the free load
+    // in the hands, or 0 — a handle or a shackle is held up by its
+    // hinge or its line, not the hands.
+    [[nodiscard]] float debug_carried_load_mass() const noexcept { return carried_load_mass(); }
+    // Tests only (never bound to the bridge): the parent's motion at the
+    // last break-piece spawn, recorded by spawn_break_pieces.
+    [[nodiscard]] Simulation::BreakParentSample debug_last_break_parent() const noexcept {
+        return last_break_parent_;
+    }
     // J-038 slice 1: a stock body's dent record, empty when undamaged.
     [[nodiscard]] const stock_damage::DamageState &stock_damage_state(const std::uint64_t entity) const noexcept {
         return stock_damage_.state(entity);
@@ -809,6 +818,10 @@ public:
     std::unique_ptr<LooseStock> loose_stock_;
     std::unique_ptr<ImpactLedger> impacts_;
     stock_damage::StockDamage stock_damage_;
+    // The parent's motion at the last break-piece spawn, for the
+    // debug_last_break_parent test read (velocities are creation state,
+    // read here before the parent is parked).
+    Simulation::BreakParentSample last_break_parent_{};
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;
     std::unique_ptr<Zipline> zipline_;

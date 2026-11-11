@@ -905,6 +905,153 @@ void spinning_break_keeps_orbital_case() {
     require(orbital_y > 5.0, (prefix + "the pieces keep the orbital momentum").c_str());
 }
 
+// A crate spinning at 3 rad/s about X breaks on landing: its pieces
+// must not share one spurious velocity. The orbital term is measured
+// from the parent's centre of mass, and the skid crate's origin sits
+// on the ground, ~0.56 m below its centre: measuring the offset from
+// the origin gives every piece the same extra kick (3 rad/s x 0.56 m
+// = 1.68 m/s), so the pieces' mean velocity carries it. The existing
+// Y-spin test cannot see it: about Y the origin-to-centre offset
+// contributes nothing. (#372 review, P1 physics_world.cpp:664.)
+//
+// The mean is asserted against the parent's own motion at the break,
+// read back through debug_last_break_parent: the scatter sums to zero
+// over the eight pieces, so the mean piece velocity is exactly
+// vel + ang x (mean piece position - centre of mass). No drop test can
+// assert the mean alone: a tumbling crate lands on an edge and the
+// impact gives the parent real horizontal velocity, which the pieces
+// correctly inherit (measured 2026-11-11: a tumbled drop reads
+// mean_vx 0.349, mean_vz 0.885 with the fix in place); and a flat
+// landing eats the spin outright (the spawn sees ang 0), so there is
+// nothing to measure. The parent's motion at the break is the only
+// reference that separates the two.
+void spinning_break_no_common_kick_case() {
+    const std::string prefix = "stock damage spinning break X: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const std::uint64_t entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    (void)s.advance_frame(2.0);
+    const auto at = s.kit_body_position(crate);
+    // Dropped from 3 m: it lands at ~7.7 m/s, a 1,230 N.s hit, far
+    // past the 300 N.s break line. The spin is set after the put —
+    // the put zeroes angular velocity — and survives the fall; the
+    // floor takes some of it in the quiet ticks before the window closes.
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    s.debug_spin_kit_body(crate, {3.0, 0.0, 0.0});
+    // Step tick by tick: the pieces are spawned after the physics of
+    // the break tick, so on the first tick the crate reads broken
+    // their velocities are exactly the spawn velocities. The spin is
+    // topped up every tick: the floor eats it on the impact tick and
+    // through the window (friction 0.6, a 1,230 N.s normal impulse),
+    // so without the top-up the break sees a still crate and the
+    // orbital term has nothing to keep. The top-up is angular only:
+    // it cannot move the linear velocity the break is measured from.
+    bool broken = false;
+    for (int tick = 0; tick < 90 * 3 && !broken; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        broken = s.stock_damage(entity).broken;
+        if (!broken) {
+            s.debug_spin_kit_body(crate, {3.0, 0.0, 0.0});
+        }
+    }
+    require(broken, (prefix + "the spinning drop breaks the crate").c_str());
+    // The parent's motion at the break, and the pieces' mean position
+    // and velocity: the scatter sums to zero, so the mean velocity is
+    // the parent's centre-of-mass velocity plus the orbital term
+    // measured from the parent's centre of mass. The origin-measured
+    // term reads 3 rad/s x 0.56 m = 1.68 m/s off this.
+    const Simulation::BreakParentSample parent = s.debug_last_break_parent();
+    double mean_px = 0.0, mean_py = 0.0, mean_pz = 0.0;
+    double mean_vx = 0.0, mean_vy = 0.0, mean_vz = 0.0;
+    for (std::uint32_t k = 0; k < 8; ++k) {
+        const std::uint32_t body = s.kit_body_index(piece_entity_for(entity, k));
+        require(body != 0xFFFFFFFFU, (prefix + "every piece exists").c_str());
+        const auto p = s.kit_body_position(body);
+        const auto v = s.kit_body_velocity(body);
+        mean_px += p.x / 8.0;
+        mean_py += p.y / 8.0;
+        mean_pz += p.z / 8.0;
+        mean_vx += v.x / 8.0;
+        mean_vy += v.y / 8.0;
+        mean_vz += v.z / 8.0;
+    }
+    const double rx = mean_px - parent.centre_of_mass.x;
+    const double ry = mean_py - parent.centre_of_mass.y;
+    const double rz = mean_pz - parent.centre_of_mass.z;
+    const double expect_vx = parent.velocity.x + parent.angular_velocity.y * rz - parent.angular_velocity.z * ry;
+    const double expect_vy = parent.velocity.y + parent.angular_velocity.z * rx - parent.angular_velocity.x * rz;
+    const double expect_vz = parent.velocity.z + parent.angular_velocity.x * ry - parent.angular_velocity.y * rx;
+    const double error = std::hypot(mean_vx - expect_vx, mean_vy - expect_vy, mean_vz - expect_vz);
+    std::cout << "  stock damage spinning break X: mean_vx " << mean_vx << " mean_vz " << mean_vz
+              << " expect_vx " << expect_vx << " expect_vz " << expect_vz << " error " << error << "\n";
+    require(error < 0.05, (prefix + "the pieces share no common kick").c_str());
+}
+
+// A break piece in the hands counts as a free load: it weighs an
+// eighth of the crate, and the hands carry its weight — the carrying
+// speed and acceleration limits, the swing damping and the yaw
+// stabilization all read it. Registered as a handle it reads 0, as if
+// a hinge held it. (#372 review, P1 physics_world.cpp:666.)
+void carried_piece_is_a_load_case() {
+    const std::string prefix = "stock damage carried piece load: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    const std::uint64_t entity = forklift_into(s, Target::Crate, 1.0);
+    require(s.stock_damage(entity).broken, (prefix + "the full ram breaks the crate").c_str());
+    (void)s.advance_frame(3.0);
+    // Back the truck off the debris, get out, and carry the first piece.
+    // Reverse four seconds, not two: the break's orbital term spreads
+    // the pieces, and one can land in the walk's first metre by the
+    // truck's exit; four seconds clears the truck's corner well south
+    // of the debris (see the break test above).
+    (void)s.set_move_input(0.0, -1.0);
+    (void)s.advance_frame(4.0);
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.request_forklift_action();
+    (void)s.advance_frame(0.5);
+    require(!s.forklift_state().driving, (prefix + "the truck lets go").c_str());
+    const std::uint32_t first = s.kit_body_index(piece_entity_for(entity, 0));
+    const auto pp = s.kit_body_position(first);
+    require(walk_to(s, pp.x, pp.z - 0.9, 30.0, 0.3), (prefix + "to the first piece").c_str());
+    const auto me = s.snapshot().player_position;
+    (void)s.set_facing(pp.x - me.x, pp.z - me.z);
+    (void)s.advance_frame(0.3);
+    require(s.request_pick_up() && s.advance_frame(0.5).accepted &&
+                s.snapshot().carrying_entity_id == piece_entity_for(entity, 0),
+            (prefix + "the first piece is carried").c_str());
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateNorth);
+    const double mass = s.kit_body_mass(crate) / 8.0;
+    const double carried = s.debug_carried_load_mass();
+    std::cout << "  stock damage carried piece load: carried_kg " << carried << " piece_kg " << mass << "\n";
+    require(std::abs(carried - mass) < 0.5, (prefix + "the carried piece weighs its eighth").c_str());
+}
+
+// A break piece that lands is heard: the pieces are runtime bodies,
+// and dropping one on the floor must reach the impact ledger — its
+// strike is a sound Matron can hear and presentation can play. Never
+// registered, the pieces land silent. (#372 review, P1
+// physics_world.cpp:664.)
+void broken_pieces_sound_their_landing_case() {
+    const std::string prefix = "stock damage broken pieces heard: ";
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    const std::uint64_t seq_before = s.last_impact_sequence();
+    const std::uint64_t entity = forklift_into(s, Target::Crate, 1.0);
+    require(s.stock_damage(entity).broken, (prefix + "the full ram breaks the crate").c_str());
+    (void)s.advance_frame(1.5);  // the pieces land
+    bool heard = false;
+    for (const auto &hit : s.impacts()) {
+        if (hit.sequence <= seq_before) {
+            continue;
+        }
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            if (hit.entity == piece_entity_for(entity, k)) {
+                heard = true;
+            }
+        }
+    }
+    std::cout << "  stock damage broken pieces heard: " << (heard ? "yes" : "no") << "\n";
+    require(heard, (prefix + "a landing piece reaches the ledger").c_str());
+}
+
 // The resync, at the StockDamage level: a velocity jump the rewind
 // causes is not an impact. (#372 review, P1 stock_damage.cpp:245.)
 void damage_resync_case() {
@@ -1513,6 +1660,12 @@ void run_stock_damage() {
     parked_pieces_save_loads_fresh_case();
     // ---- (d) #372 P1s: a spinning break keeps the orbital momentum ----
     spinning_break_keeps_orbital_case();
+    // ---- (d) #372 P1s: an X-spin break shares no common kick ----
+    spinning_break_no_common_kick_case();
+    // ---- (d) #372 P1s: a break piece in the hands is a load ----
+    carried_piece_is_a_load_case();
+    // ---- (d) #372 P1s: a landing break piece reaches the ledger ----
+    broken_pieces_sound_their_landing_case();
     // ---- (d) #372 P1s: a death rewind is not an impact ----
     damage_resync_case();
     death_rewind_resync_case();

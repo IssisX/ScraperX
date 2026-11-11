@@ -624,6 +624,19 @@ void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, con
     const stock_damage::BreakGeometry geometry = stock_damage::break_geometry(kind);
     const float piece_mass = mass / static_cast<float>(geometry.count);
     JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    // vel is the parent's centre-of-mass velocity, so the orbital term
+    // must be measured from the parent's centre of mass, not its
+    // origin: a SkidCrate's origin sits on the ground with its mass
+    // above it, and ang x offset-from-origin gives every piece the
+    // same spurious translational kick. Read before parking.
+    const JPH::RVec3 parent_com = bodies.GetCenterOfMassPosition(kit_->body_id(body));
+    // Record the spawn's inputs for the test read: the parent's motion
+    // at the break is otherwise unobservable once it is parked.
+    last_break_parent_ = {{static_cast<double>(vel.GetX()), static_cast<double>(vel.GetY()),
+                           static_cast<double>(vel.GetZ())},
+                          {static_cast<double>(ang.GetX()), static_cast<double>(ang.GetY()),
+                           static_cast<double>(ang.GetZ())},
+                          {parent_com.GetX(), parent_com.GetY(), parent_com.GetZ()}};
     if (park_parent) {
         kit_->park(body);
     }
@@ -656,14 +669,39 @@ void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, con
         const JPH::BodyID piece_id = kit_->body_id(piece_body);
         // The velocity at the piece's own centre, not the parent's:
         // a rotating crate's pieces keep the orbital velocity their
-        // offset gives them (ang x offset), or the break eats the
-        // orbital angular momentum — 18.432 kg·m²/s for a 160 kg crate
-        // at 1 rad/s about Y, eight pieces at ±0.24 m. The offsets are
+        // offset gives them (ang x offset-from-COM), or the break eats
+        // the orbital angular momentum — 18.432 kg·m²/s for a 160 kg crate
+        // at 1 rad/s about Y, eight pieces at ±0.24 m. vel is the
+        // parent's centre-of-mass velocity, so the offset is measured
+        // from the parent's centre of mass (parent_com), not its
+        // origin: for a SkidCrate the origin sits on the ground, 0.51 m
+        // below the mass, and the origin-measured term kicks every
+        // piece with the same spurious velocity. The offsets are
         // symmetric and the scatter sums to zero, so the break still
         // conserves the intact body's momentum.
-        bodies.SetLinearVelocity(piece_id, vel + ang.Cross(offset) + scatter);
+        const JPH::Vec3 from_com(static_cast<float>(at.GetX() - parent_com.GetX()),
+                                 static_cast<float>(at.GetY() - parent_com.GetY()),
+                                 static_cast<float>(at.GetZ() - parent_com.GetZ()));
+        bodies.SetLinearVelocity(piece_id, vel + ang.Cross(from_com) + scatter);
         bodies.SetAngularVelocity(piece_id, ang);
-        kit_->set_carry(piece_body, kit::CarryKind::Handle, JPH::Vec3(0.0F, piece.half_y, 0.0F));
+        // A free load, not a handle: the pieces are unsupported loose
+        // bodies, and the carrying limits, swing damping and yaw
+        // stabilization all read carried_load_mass(). Registered as a
+        // handle they read 0, as if a hinge held them — the same Load
+        // registration LooseStock::create_body() gives the intact stock.
+        kit_->set_carry(piece_body, kit::CarryKind::Load, JPH::Vec3(0.0F, piece.half_y, 0.0F));
+        // The ledger only hears bodies it tracks, and it tracks the
+        // stock once at construction: a piece born here is deaf until
+        // it is registered. Track it once with its timber sound and
+        // mass, after its velocity is set so the spawn itself does not
+        // read as a hit; a reused parked piece is already tracked, so
+        // resynchronize its observation instead of registering it twice.
+        if (existing.valid()) {
+            impacts_->resync_body(stock_damage::piece_entity_for(entity, k));
+        } else {
+            impacts_->track(piece_id, stock_damage::piece_entity_for(entity, k),
+                            LooseStock::sound(kind), piece_mass);
+        }
         kit_->allow_sleeping(piece_body);
     }
 }

@@ -1907,6 +1907,21 @@ public:
     // first: a reader keeps the last sequence it has seen.
     [[nodiscard]] std::vector<ImpactSnapshot> impacts() const;
     [[nodiscard]] std::uint64_t last_impact_sequence() const noexcept;
+    // Tests only (never bound to the bridge): the mass of the free load
+    // in the hands, or 0 — a handle or a shackle is held up by its
+    // hinge or its line, not the hands.
+    [[nodiscard]] float debug_carried_load_mass() const noexcept;
+    // Tests only (never bound to the bridge): the parent's motion at the
+    // last break-piece spawn — its centre-of-mass velocity, its angular
+    // velocity, and its world-space centre of mass. A test can check the
+    // spawn's orbital term against the parent's true motion, which no
+    // drop test can separate from the landing impact's own velocity.
+    struct BreakParentSample {
+        Vector3 velocity{};
+        Vector3 angular_velocity{};
+        Vector3 centre_of_mass{};
+    };
+    [[nodiscard]] BreakParentSample debug_last_break_parent() const noexcept;
     // The tower's machines heard (gap 10): each moving part tracked for hits,
     // whether it is its stage's running source, and the running noise of the
     // last step (loudness 0..1, what Matron::hear is given).

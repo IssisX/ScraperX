@@ -980,6 +980,14 @@ std::uint64_t Simulation::last_impact_sequence() const noexcept {
     return physics_world_->impacts().last_sequence();
 }
 
+float Simulation::debug_carried_load_mass() const noexcept {
+    return physics_world_->debug_carried_load_mass();
+}
+
+Simulation::BreakParentSample Simulation::debug_last_break_parent() const noexcept {
+    return physics_world_->debug_last_break_parent();
+}
+
 std::vector<Simulation::MachinePart> Simulation::machine_parts() const {
     std::vector<MachinePart> parts;
     for (const ImpactLedger::Machine &m : physics_world_->impacts().machines()) {
