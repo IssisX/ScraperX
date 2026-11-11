@@ -3,14 +3,15 @@
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j049-pr1": "ed151a6c1f763dc1ab8ed77db53912790b50c397",
-  "fb-bot/integrate-protected-j049-pr1": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078"
+  "fb-bot/integrate-protected-j049-pr1": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
+  "fb-bot/integrate-protected-j049-pr1-r2": "0e2a3a9396fda8304caf1b38a443ae4b290b3274"
  },
  "cancelled": null,
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T16:17:00Z",
- "head": "0e2a3a9396fda8304caf1b38a443ae4b290b3274",
+ "head": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
  "issue": 278,
  "job": "J-049",
  "landed": {
@@ -23,6 +24,11 @@
    "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
    "closed #367",
    "2026-11-10T15:09:20Z"
+  ],
+  "fb-bot/integrate-protected-j049-pr1-r2": [
+   "0e2a3a9396fda8304caf1b38a443ae4b290b3274",
+   "merged #383",
+   "2026-11-11T05:28:39Z"
   ]
  },
  "obligations": [
@@ -475,7 +481,10 @@
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-11T05:28:39Z",
+    "why": "PR merged"
+   },
    "created": "2026-11-11T04:19:09Z",
    "dead": "2026-11-11T16:47:00Z",
    "dead_lettered": null,
@@ -506,6 +515,6 @@
   383
  ],
  "review": "waiting",
- "state": "review",
- "updated": "2026-11-11T04:19:09Z"
+ "state": "working",
+ "updated": "2026-11-11T05:28:39Z"
 }
