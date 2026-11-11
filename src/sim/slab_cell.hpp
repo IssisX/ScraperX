@@ -21,8 +21,15 @@
 // its top 1 m under the ring's steel (175.75), 18.6 m over the top of her
 // body standing, about 2 s of fall.
 //
+// What holds it is in plain view: a short hoist beam bolted under the band
+// along z, the hook block hung from the beam with the trigger's cheeks, and a
+// sheave block for the cord over the trigger's tail and another over the
+// handle. One static kit body; the sling is made fast to it at the hook's
+// eye.
+//
 // Its kit bodies are built after every other the world builds (the slab
-// last in the loose-stock table), so saves made before it line up.
+// last in the loose-stock table, then the frame, the trigger and the
+// handle), so saves made before it line up.
 
 #include "sim/mechanism_kit.hpp"
 
@@ -35,9 +42,8 @@ namespace scraperx::sim {
 struct SlabCell final {
     static constexpr std::uint64_t kTriggerEntity = 2670;
     static constexpr std::uint64_t kHandleEntity = 2671;
-    // The ring's static kit body (its ladder and boards, entity 1004): the
-    // sling is made fast to the ring's steel through it.
-    static constexpr std::uint64_t kRingSteelEntity = 1004;
+    // The frame (beam, hook block, sheave blocks): static, so a static id.
+    static constexpr std::uint64_t kFrameEntity = 1672;
 
     static constexpr float kDeckTop = 154.0F;
     static constexpr float kRingUnderside = 175.75F;   // the 176 ring's north band (world_solids.inc, UpperDeck)
@@ -74,14 +80,16 @@ struct SlabCell final {
     static constexpr float kHandleKg = 3.0F;
 
     kit::BodyIndex slab;
+    kit::BodyIndex frame;
     kit::BodyIndex trigger_body;
     kit::BodyIndex handle;
     kit::RopeIndex sling;
     kit::LeverIndex trigger;
     kit::SlipIndex hook;
 
-    // Hangs `slab_body` (built where LooseStock::lay_hung_slab put it) on
-    // the sling, and builds the trigger, the cord and its handle.
+    // Builds the frame, hangs `slab_body` (built where
+    // LooseStock::lay_hung_slab put it) from it on the sling, and builds the
+    // trigger, the cord and its handle.
     void build(kit::Kit &kit, kit::BodyIndex slab_body);
 };
 
