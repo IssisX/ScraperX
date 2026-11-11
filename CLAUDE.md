@@ -16,40 +16,40 @@ it to match, never ask him again.
 - Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
   opens and merges the PRs (11-05).
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
-  Sonnet (11-05). Human sounds are real recordings, never synthesized.
+  Sonnet (11-05).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
-- Every stated time is read from the clock first (`TZ=America/Chicago date`, Central); hooks refuse
-  any time with no clock read this turn (11-07, 11-08).
+- Times are never typed: write {NOW}, a hook fills in the Central time; a typed stamp in a post
+  or mail is refused; other times need a `date` read this turn (11-07, 11-11).
 
 ## Test only what a change reaches
 
 *"each change does not require a full native suite run - dont be wasteful"* (10-18 to 11-04).
 - While fixing a failure, rerun only that test or its failing part (`SCRAPERX_ONLY=<group>`).
 - Once fixed, run once the native groups and touch scenarios the changed code reaches; say which.
-- Never re-run a check that passed on the same code. The full suite, every touch scenario and the Android
+- Never re-run a passed check on same code. The full suite, every touch scenario and the Android
   build are CI's job: push `<agent>/integrate-<job>` (that runs the proof). A push that changes only notes,
   rules or the switchboard skips the game build (`ci/proof_scope.py`).
-- Read PASS/FAIL lines, not whole logs.
+- Read PASS/FAIL lines, not logs.
 - Local tests count only with CI's compilers and flags (host g++ 13.3, NDK `29.0.14206865`, the CMake flags
   in `wo000-delivery-spine.yml`).
 
 ## Talking to Cory (he is on a phone)
 
 - He types fast on a phone, with typos: read for what he means, never ask about wording (11-10).
-- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE", "really fucking important").
+- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE"). Say progress as what is left, not "pass 6" (11-11).
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03, 11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
-  is or her story, how the game plays). Small is mine: fit, size, tuning, timing within his bars (11-10: the wider skirt "a small thing"). No answer in 10 minutes: the pick stands. Push back: say no or stop
+  is or her story, how the game plays). Small is mine: fit, size, tuning, timing within his bars (11-10). No answer in 10 minutes: the pick stands. Push back: say no or stop
   him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason: hard, profane, matching his language (11-10: "push back WAY HARDER"), never a stock line.
 - **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
   with no middle ground.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
-- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick .
+- Say unasked, the moment you see it: your own mistakes (he does not roast them, 11-07), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
 
 ## The game
 
@@ -103,10 +103,10 @@ it to match, never ask him again.
 - Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
   Muse never idle (about 10 jobs in flight, 3 queued), its proposals ruled within the hour, every ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
-  `helper` or `helper-max`; Cory 11-06), never a separate session; at most two at a time, each
+  `helper` or `helper-max`; Cory 11-06), never a separate session; at most three at a time (11-11), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  his call, seen in `get_session`; raise it only when he throttles; every helper at high for now, physics included (11-10; `helper-physics` at xhigh when he raises it); two failed passes in a row on one job: ask him to raise that helper one step, or at night (10 PM-5 AM Central) raise it to xhigh myself and tell him in the morning (11-11); never max (11-06, 11-10). A worker whose job landed is retired.
-- **Context:** 833k window, compacts near 650k; no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
+  his call, seen in `get_session`; raise it only when he throttles; hard jobs start at xhigh (`helper-physics`): physics, contacts, forces, her limits, geometry, spatial, animation or camera work, protected tests, jobs across several systems, or a job that failed once; the rest `helper` at high (11-11: one xhigh success costs less than high failing twice); never max (11-06, 11-10). A worker whose job landed is retired.
+- **Context:** 600k window, auto-compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, long threads)

@@ -34,6 +34,7 @@ failure, open only the matching section of `references/ENGINEERING-FAULT-TREES.m
 causes and one discriminating probe each. They are hypotheses; check names and numbers at the live head.
 
 
+- **Many failures:** sort every failing check by its first cause before fixing any; fix the biggest cause group first (Cory 11-11).
 - **Bug:** reproduce the exact symptom at the right revision; find the first invalid state transition; name at
   least one rival cause; run the cheapest check that separates them; fix the owner of that transition; rerun the
   same failing path. Two failed patches: stop patching and re-trace the whole causal chain. Never fix by
