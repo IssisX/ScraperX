@@ -67,9 +67,13 @@ void Matron::refresh_contact_view() {
     } else if (routecraft_.owns_motion() && routecraft_.grip(body, sub, local)) {
         held = true;
     } else if (view_.on_pipe && !pipe_support_.IsInvalid() &&
-               (pipe_grip_ == PipeGrip::Rail || pipe_grip_ == PipeGrip::Face || pipe_grip_ == PipeGrip::Lip)) {
+               (pipe_grip_ == PipeGrip::Rail || pipe_grip_ == PipeGrip::Face || pipe_grip_ == PipeGrip::Lip) &&
+               pipe_grip_in_reach(bodies.GetPosition(body_))) {
         // (Stunned on a flange it is her legs that hold it, perched on a
-        // rail her feet: not a hand.)
+        // rail her feet: not a hand. And a mount/dismount rail taken within
+        // climb reach is no hand hold once she has walked past her real
+        // arm's reach of it: the grip stays the step's anchor, not her hand,
+        // so it is not reported as one she holds.)
         body = pipe_support_;
         sub = pipe_member_;
         local = pipe_local_hand_;
