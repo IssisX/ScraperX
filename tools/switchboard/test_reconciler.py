@@ -1598,6 +1598,55 @@ class AckedStaysQuiet(unittest.TestCase):
         self.assertTrue(h.obs("J-500", dead + M, kind="fix")[0]["dead_lettered"])
 
 
+class RoutedByHeadBranch(unittest.TestCase):
+    """11-11, J-085 (owner:muse): the reds on claude/integrate-protected-j085 and #435's Codex FIX (head
+    claude/integrate-j085) went to Muse's mail, and she spent a turn acking "helper's branch, not Muse's"."""
+
+    def muse_job(self, prs=(), branches=(), runs=()):
+        return feed(prs=list(prs), branches=list(branches), runs=list(runs), issues=[issue(500, owner="owner:muse")])
+
+    FIX = dict(action="FIX", reasons=("open FIX from Codex (review)",))
+
+    def claude_items(self):
+        fix = pr(435, "claude/integrate-j500-x", **self.FIX)
+        name = "claude/integrate-protected-j500-x"
+        b = L.BranchIn(name, SHA["e"], t(-3), vs_trunk="ahead", ahead_by=1, ahead=(SHA["e"],))
+        run = L.RunIn(2, "u", name, SHA["e"], t(-3), t(-2.5), "failure", "red: native-tests")
+        return self.muse_job(prs=[fix], branches=[b], runs=[run])
+
+    def test_a_claude_head_on_a_muse_job_goes_to_the_integrator_never_to_muses_mail(self):
+        gh, h = Noise().live()
+        h.run(self.claude_items(), NOW)
+        obs = h.obs("J-500", kind="fix")
+        self.assertEqual(sorted((o["to"], o["ref"]) for o in obs),
+                         [("claude", "BRANCH|claude/integrate-protected-j500-x"), ("claude", "PR|#435")])
+        self.assertNotIn("email", {o["via"] for o in obs})
+        self.assertFalse([b for _, b, _ in gh.comments if b.startswith("CLAUDE_TO_MUSE")])
+
+    def test_an_fb_bot_head_on_a_muse_job_still_goes_to_muse(self):
+        gh, h = Noise().live()
+        h.run(self.muse_job(prs=[pr(436, "fb-bot/integrate-j500-y", **self.FIX), fb_red(n=401)]), NOW)
+        obs = h.obs("J-500", kind="fix")
+        self.assertEqual(sorted((o["to"], o["via"], o["ref"]) for o in obs),
+                         [("muse", "email", "PR|#401"), ("muse", "email", "PR|#436")])
+        self.assertEqual(len([b for _, b, _ in gh.comments if b.startswith("CLAUDE_TO_MUSE")]), 2)
+
+    def test_a_muse_obligation_already_open_on_a_claude_head_moves_to_claude(self):
+        h = Harness()
+        old = R.fixer_of
+        R.fixer_of = lambda ref, owner, author: owner or author or "claude"   # the routing before 11-11
+        try:
+            h.run(self.claude_items(), NOW)
+        finally:
+            R.fixer_of = old
+        self.assertEqual({o["to"] for o in h.obs("J-500", kind="fix")}, {"muse"})
+        h.run(self.claude_items(), NOW + H)
+        fixes = h.obs("J-500", NOW + H, kind="fix")
+        self.assertEqual(sorted((o["to"], R.is_open(o)) for o in fixes),
+                         [("claude", True), ("claude", True), ("muse", False), ("muse", False)])
+        self.assertEqual({o["closed"]["why"] for o in fixes if o["to"] == "muse"}, {"reassigned to claude"})
+
+
 class CommentWindow(unittest.TestCase):
     """J-104: the comment stream a pass reads (ledger.comment_window, for the ledger and the reconciler alike)."""
 

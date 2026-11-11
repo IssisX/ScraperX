@@ -608,6 +608,16 @@ def waiting_wants(pr: L.PrIn, fixer: str, author: str, roster: L.Roster) -> list
     return out
 
 
+def fixer_of(ref: str, owner: str, author: str) -> str:
+    """Who fixes a head: the job's owner (a reassignment moves the work), else the branch's author, else Claude.
+    A claude/ head is always Claude's (switch.owner_of routes the same way): Muse cannot push to it, so mailing
+    her its red or FIX only cost her a turn to ack "helper's branch, not Muse's" (11-11, J-085: owner:muse, and
+    claude/integrate-protected-j085's reds and #435's Codex FIX went to her mail)."""
+    if ref.startswith("claude/"):
+        return "claude"
+    return owner or author or "claude"
+
+
 def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster, landed: set[str],
            closed: dict[str, str] | None = None) -> tuple[str, list[Want]]:
     """The job's state and the obligations it owes now, from what is open. Pure. `closed` maps a branch whose head
@@ -619,7 +629,7 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
     issue_thread = o.issue.number if o.issue else 0
     for pr in sorted(o.prs, key=lambda x: x.number):
         author = (roster.of_branch(pr.head_ref) or L.Person("", "")).agent
-        fixer = owner or author or "claude"
+        fixer = fixer_of(pr.head_ref, owner, author)
         ref, n, h = f"PR|#{pr.number}", pr.number, pr.head_sha
         if CONFLICT in pr.reasons:
             wants.append(Want("fix", fixer, f"conflict:{h}", ref, n, f"#{n} has a {CONFLICT}", "new-head|reply|ack"))
@@ -653,7 +663,7 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
     for b, run in o.branches:
         if b.name in landed:
             continue
-        fixer = owner or (roster.of_branch(b.name) or L.Person("", "")).agent or "claude"
+        fixer = fixer_of(b.name, owner, (roster.of_branch(b.name) or L.Person("", "")).agent)
         ref, n = f"BRANCH|{b.name}", issue_thread
         if b.name in closed:   # its PR was closed at this very head: not landed, and nothing reopens it by itself
             m = re.search(r"#(\d+)", closed[b.name])
