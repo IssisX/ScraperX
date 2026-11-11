@@ -1152,6 +1152,8 @@ public:
 private:
     JPH::Ref<JPH::TwoBodyConstraint> snag_;   // snag_player_for_test
     float snag_max_n_ = 0.0F;
+    int snag_over_ticks_ = 0;   // consecutive ticks the snag's load passed its max (sustained break, not a spike)
+    std::uint32_t snag_reposes_ = 0;   // ArmPlay re-poses when the snag was set (a re-pose pulls it off)
     // The arm on `side` breaks: one good arm (again) from kArmBrokenSeconds.
     void break_arm(int side) noexcept;
     // A landing at `normal_speed` into the ground breaks an ankle at

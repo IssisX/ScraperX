@@ -194,7 +194,12 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
         return;
     }
     const JPH::RVec3 hand = bodies.GetPosition(hand2_id_);
-    if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 &&
+    // While the body is caught on steel, her second hand does not take the
+    // wrist: the catch is what keeps it out of her reach, and taking it
+    // before she frees the body would tear the arm before her re-pose.
+    // She re-poses first (step back, weight in it); the snag gives; then
+    // the wrist comes to her and she takes it.
+    if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 && snag_ == nullptr &&
         JPH::Vec3(wrist - hand).Length() <= kWristCloseM) {
         JPH::PointConstraintSettings grip;
         grip.mSpace = JPH::EConstraintSpace::WorldSpace;
