@@ -1,16 +1,24 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-protected-j093": "5662449824201d59fe77f990b0d9b83a7853dc17"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
  "deadline": null,
- "head": "",
+ "head": "5662449824201d59fe77f990b0d9b83a7853dc17",
  "issue": 411,
  "job": "J-093",
- "landed": {},
+ "landed": {
+  "claude/integrate-protected-j093": [
+   "5662449824201d59fe77f990b0d9b83a7853dc17",
+   "",
+   "2026-11-11T15:02:17Z"
+  ]
+ },
  "obligations": [],
  "outcome": null,
  "outcome_reason": "",
@@ -19,6 +27,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-11T14:01:59Z"
+ "state": "proof",
+ "updated": "2026-11-11T15:02:17Z"
 }

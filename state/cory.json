@@ -96,13 +96,24 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (3), from the switchboard at 11-10 11:28 PM Central.\n\n- Needs you: J-008 fix on #115: 'builder/integrate-j008' proof red: native-tests (matron-slices-1), native-tests (athletic-traversal), no PR. PE did not act (2 send(s) by watch, no ack); since 11-10 11:28 PM Central. Done: /ack O-32c09091\n- Needs you: J-015 ask on #122: ask from Muse on #122. Claude did not act (in its inbox, no ack); since 11-10 11:28 PM Central. Done: /ack O-e05d786e\n- Needs you: J-059 ask on #307: ask from Muse on #307. Claude did not act (in its inbox, no ack); since 11-10 11:28 PM Central. Done: /ack O-62d8217d\n\nStill standing from earlier batches: 6 (the day's shadow file lists them)."
+  },
+  {
+   "at": "2026-11-11T15:02:17Z",
+   "keys": [
+    "O-0b4c9676",
+    "O-75aff563",
+    "claude-asks:2026-11-11"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (3), from the switchboard at 11-11 9:02 AM Central.\n\n- Needs you: J-007 fix on #114: 'fb-bot/integrate-protected-j007-item6-stage2' proof red: native-tests (matron-slices-3), no PR. Muse did not act (2 send(s) by email, no ack); since 11-11 6:58 AM Central. Done: /ack O-0b4c9676\n- Needs you: J-015 fix on #389: #389: open FIX from Codex (review). Muse did not act (2 send(s) by email, no ack); since 11-11 8:01 AM Central. Done: /ack O-75aff563\n- Needs you: 5 ask(s) to Claude from before today have no reply on their threads (answered by mail?): O-71c6c5fb O-e05d786e O-62d8217d O-3bd783e3 O-5c82b109. The integrator posts each answer on its thread or /acks it; none of these is nagged one by one.\n\nStill standing from earlier batches: 5 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-11T05:28:39Z",
+ "last_batch": "2026-11-11T15:02:17Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
  "reported": {
+  "O-0b4c9676": "2026-11-11T15:02:17Z",
   "O-0d2e9cf6": "2026-11-11T02:09:10Z",
   "O-1ac5a17e": "2026-11-10T15:09:20Z",
   "O-32c09091": "2026-11-11T05:28:39Z",
@@ -110,6 +121,7 @@
   "O-62d8217d": "2026-11-11T05:28:39Z",
   "O-6b556027": "2026-11-10T15:09:20Z",
   "O-71c6c5fb": "2026-11-10T17:29:19Z",
+  "O-75aff563": "2026-11-11T15:02:17Z",
   "O-8184d278": "2026-11-10T17:29:19Z",
   "O-a34f6e29": "2026-11-10T15:09:20Z",
   "O-ac0bbca6": "2026-11-10T20:49:16Z",
@@ -122,6 +134,7 @@
   "backlog:2026-11-09T22:19:23Z": "2026-11-09T22:19:23Z",
   "claude-asks:2026-11-09": "2026-11-09T20:56:16Z",
   "claude-asks:2026-11-10": "2026-11-10T15:09:20Z",
+  "claude-asks:2026-11-11": "2026-11-11T15:02:17Z",
   "gap:2026-11-09T21:19:08Z": "2026-11-09T22:19:23Z"
  }
 }

@@ -2,7 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "claude/integrate-j001-hold": "ffa9580263704d0a405dd94d5b688f71da000974",
+  "claude/integrate-j001-hold": "67837d5e75eb1225a13ac42943fd188c4494ffe9",
   "fb-bot/j001-pastrail": "59af7cafa92f5528ccf3abb2652d6f5daae3dacb"
  },
  "cancelled": null,
@@ -13,14 +13,14 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T23:00:00Z",
- "head": "ffa9580263704d0a405dd94d5b688f71da000974",
+ "head": "67837d5e75eb1225a13ac42943fd188c4494ffe9",
  "issue": 108,
  "job": "J-001",
  "landed": {
   "claude/integrate-j001-hold": [
-   "ffa9580263704d0a405dd94d5b688f71da000974",
+   "67837d5e75eb1225a13ac42943fd188c4494ffe9",
    "",
-   "2026-11-11T14:01:59Z"
+   "2026-11-11T15:02:17Z"
   ],
   "fb-bot/j001-pastrail": [
    "59af7cafa92f5528ccf3abb2652d6f5daae3dacb",
@@ -540,7 +540,11 @@
    "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3), godot-touch (touch-3), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T15:02:17Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -574,6 +578,6 @@
   227
  ],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T14:01:59Z"
+ "state": "proof",
+ "updated": "2026-11-11T15:02:17Z"
 }

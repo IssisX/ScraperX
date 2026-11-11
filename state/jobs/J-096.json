@@ -1,24 +1,32 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-j096": "4bb372c417f4c69ed8511cf74816e524d9cc5eaa"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
  "deadline": null,
- "head": "",
+ "head": "4bb372c417f4c69ed8511cf74816e524d9cc5eaa",
  "issue": 414,
  "job": "J-096",
- "landed": {},
+ "landed": {
+  "claude/integrate-j096": [
+   "4bb372c417f4c69ed8511cf74816e524d9cc5eaa",
+   "",
+   "2026-11-11T15:02:17Z"
+  ]
+ },
  "obligations": [],
  "outcome": null,
  "outcome_reason": "",
- "owner": "muse",
+ "owner": "claude",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-11T14:01:59Z"
+ "state": "proof",
+ "updated": "2026-11-11T15:02:17Z"
 }

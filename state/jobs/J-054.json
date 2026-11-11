@@ -2,21 +2,27 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j054": "46b054202896d68b72a503eb96010c7ea93bfc8f"
+  "fb-bot/integrate-j054": "d21261ee2b95844bbd3715d6855c847d3cd67cad",
+  "fb-bot/integrate-protected-j054": "d21261ee2b95844bbd3715d6855c847d3cd67cad"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-11T18:01:59Z",
- "head": "46b054202896d68b72a503eb96010c7ea93bfc8f",
+ "deadline": "2026-11-11T19:02:17Z",
+ "head": "d21261ee2b95844bbd3715d6855c847d3cd67cad",
  "issue": 293,
  "job": "J-054",
  "landed": {
   "fb-bot/integrate-j054": [
-   "46b054202896d68b72a503eb96010c7ea93bfc8f",
+   "d21261ee2b95844bbd3715d6855c847d3cd67cad",
    "",
-   "2026-11-11T14:01:59Z"
+   "2026-11-11T15:02:17Z"
+  ],
+  "fb-bot/integrate-protected-j054": [
+   "d21261ee2b95844bbd3715d6855c847d3cd67cad",
+   "",
+   "2026-11-11T15:02:17Z"
   ]
  },
  "obligations": [
@@ -49,7 +55,11 @@
    "what": "start J-054"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T15:02:17Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -72,6 +82,31 @@
    "version": "red:46b054202896d68b72a503eb96010c7ea93bfc8f",
    "via": "email",
    "what": "`fb-bot/integrate-j054` proof red: scope, no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T15:02:17Z",
+   "dead": "2026-11-11T23:02:17Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T19:02:17Z",
+   "id": "O-2d2453e9",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T15:02:17Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j054",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 293,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:d21261ee2b95844bbd3715d6855c847d3cd67cad",
+   "via": "email",
+   "what": "`fb-bot/integrate-j054` proof red: scope, no PR"
   }
  ],
  "outcome": null,
@@ -82,5 +117,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T14:01:59Z"
+ "updated": "2026-11-11T15:02:17Z"
 }
