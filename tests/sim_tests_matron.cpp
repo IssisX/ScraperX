@@ -732,23 +732,15 @@ PipeRun pipe_run(const std::uint8_t stage, const double drum_at_feet, const doub
 }
 
 void run_matron_pipe() {
-    // A pest too (Cory, 11-11): she takes hold of it and goes the story to
-    // the climber, slow, gravity on her, her grip inside her one budget.
+    // Frail, she cannot take hold of it.
     {
-        const PipeRun r = pipe_run(0, 0.0, 90.0);
-        std::cout << "  matron pipe: a pest with the climber heard below: took the pipe " << r.took << ", arrived "
-                  << r.arrived << " after " << r.warned_s << " s of holds, grip peak " << r.peak_force_n << " N, "
-                  << r.peak_power_w << " W\n";
-        require(r.took && r.arrived && r.alive && r.deaths == 0,
-                "matron pipe: a pest, she takes hold of the pipe and goes the story to 143 after the climber");
-        require(r.peak_force_n > 1000.0 && r.peak_force_n <= law::kForceN + 0.5 && r.peak_power_w <= law::kPowerW + 0.5,
-                "matron pipe: a pest on it, gravity on her, her grip within the shared force and power budget");
-        r.contacts.report("pipe, pest");
-        require(r.contacts.clean(), "matron pipe: a pest's exported contacts are hers on the way (S6)");
-        std::cout << "PASS scraperx_sim matron pipe pest: warned_s=" << r.warned_s << " holds=" << r.holds << "\n";
+        const PipeRun r = pipe_run(0, 0.0, 40.0);
+        std::cout << "  matron pipe: a pest with the climber heard below: took the pipe " << r.took << "\n";
+        require(!r.took && r.alive, "matron pipe: frail, she does not take hold of the pipe");
     }
-    // And up it (J-085): in the game's world, a pest out of her locker on
-    // deck 1 climbs the story to him on deck 2 by her own hands, gravity on.
+    // Frail, she climbs it up after him (Cory, 11-11: she climbs as a pest
+    // too; J-085): in the game's world, a pest out of her locker on deck 1
+    // climbs the story to him on deck 2 by her own hands, slow, gravity on.
     {
         Simulation s(InitialSpawn::ExteriorGrade);
         require(s.advance_frame(1.0).accepted, "matron pipe pest up: settle");
@@ -773,7 +765,8 @@ void run_matron_pipe() {
                 moved = i;
                 s.debug_launch_player(scraperx::sim::Vector3{10.0, 23.2, -128.0}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
             }
-            arrived = out && took && !m.on_pipe && std::abs(m.position.y - static_cast<double>(Matron::kStandCentre) - 22.0) < 0.4;
+            arrived = out && took && !m.on_pipe &&
+                      std::abs(m.position.y - static_cast<double>(Matron::kStandCentre) - 22.0) < 0.4;
             if (arrived) {
                 climb_s = static_cast<double>(i - moved) / hz;
             }
@@ -2433,9 +2426,8 @@ void run_matron_remaining() {
     }
     // ---- through the tower (the owner, 2026-10-18: she is not level-bound): a
     //      walk on the deck below hers, under her, is lost in the deck between;
-    //      a sprint there carries up the shaft to her, and frail she goes
-    //      down the corner pipe to it after him (a pest climbs it too: Cory,
-    //      11-11) ----
+    //      a sprint there carries up the shaft to her, and frail she goes to
+    //      the line down to it and stands on it looking down ----
     {
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
@@ -2484,12 +2476,12 @@ void run_matron_remaining() {
         // A sprint along the same edge: up the shaft to her.
         double heard = 0.0;
         double lead_floor = 0.0;
-        bool took = false;
-        bool down = false;
+        double stand_off = 1.0e9;
+        bool at_stand = false;
         bool frail = true;
-        for (int leg = 0; leg < 18 && !down; ++leg) {
+        for (int leg = 0; leg < 6 && !at_stand; ++leg) {
             const double x = leg % 2 == 0 ? -16.0 : -4.0;
-            for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && !down; ++i) {
+            for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && !at_stand; ++i) {
                 const bool there = steer(s, x, -132.6, true, 0.6);
                 tick(s);
                 const auto m = s.matron_state();
@@ -2498,8 +2490,8 @@ void run_matron_remaining() {
                     lead_floor = m.lead_floor_y;
                 }
                 frail = frail && m.turn == 0 && !m.on_line;
-                took = took || m.on_pipe;
-                down = took && !m.on_pipe && m.alive && std::abs(m.floor_y - 143.0) < 0.1 && m.position.y < 145.0;
+                stand_off = std::hypot(m.position.x - line.stand.x, m.position.z - line.stand.z);
+                at_stand = stand_off < 0.6 && m.position.y > Matron::kDeckTop;
                 if (there) {
                     break;
                 }
@@ -2510,12 +2502,11 @@ void run_matron_remaining() {
         const auto drawn = s.matron_state();
         std::cout << "  matron below: a sprint on 143 heard at loudness " << heard << ", her lead on the level at "
                   << lead_floor << "; she at (" << drawn.position.x << ", " << drawn.position.y << ", "
-                  << drawn.position.z << "), took the pipe " << took << ", down on 143 " << down << ", frail " << frail
-                  << "\n";
+                  << drawn.position.z << "), " << stand_off << " m off the line's stand, frail " << frail << "\n";
         require(heard > 0.75 && std::abs(lead_floor - 143.0) < 0.1,
                 "matron below: a sprint on the deck below carries up the shaft to her, a lead on 143");
-        require(took && down && frail && drawn.alive && s.snapshot().death_count == 0,
-                "matron below: frail, she goes down the corner pipe to 143 after him, alive");
+        require(at_stand && frail && s.snapshot().death_count == 0,
+                "matron below: frail, she goes to the line down to 143 and stands on it");
         std::cout << "PASS scraperx_sim matron below: walk_nearest_m=" << walk_nearest << " sprint_heard=" << heard
                   << " lead_floor=" << lead_floor << "\n";
     }
@@ -2735,8 +2726,8 @@ void run_matron_remaining() {
                   << "\n";
     }
     // ---- two levels down: a sprint on the deck two under hers carries up the
-    //      shaft to her, and frail she goes the way down toward it (the corner
-    //      pipe, a pest's too since Cory's 11-11 call) to the deck between ----
+    //      shaft to her, and frail she goes to the way down toward it (the line
+    //      to the deck between) and stands on it ----
     {
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
@@ -2782,12 +2773,12 @@ void run_matron_remaining() {
                 "matron two below: a walk two decks down is not heard");
         double heard = 0.0;
         double lead_floor = 0.0;
-        bool took = false;
-        bool down = false;
+        double stand_off = 1.0e9;
+        bool at_stand = false;
         bool frail = true;
-        for (int leg = 0; leg < 18 && !down; ++leg) {
+        for (int leg = 0; leg < 6 && !at_stand; ++leg) {
             const double x = leg % 2 == 0 ? -16.0 : -4.0;
-            for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && !down; ++i) {
+            for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) && !at_stand; ++i) {
                 const bool there = steer(s, x, -132.6, true, 0.6);
                 tick(s);
                 const auto m = s.matron_state();
@@ -2796,8 +2787,8 @@ void run_matron_remaining() {
                     lead_floor = m.lead_floor_y;
                 }
                 frail = frail && m.turn == 0 && !m.on_line;
-                took = took || m.on_pipe;
-                down = took && !m.on_pipe && m.alive && std::abs(m.floor_y - 143.0) < 0.1 && m.position.y < 145.0;
+                stand_off = std::hypot(m.position.x - first.stand.x, m.position.z - first.stand.z);
+                at_stand = stand_off < 0.6 && m.position.y > Matron::kDeckTop;
                 if (there) {
                     break;
                 }
@@ -2808,14 +2799,13 @@ void run_matron_remaining() {
         const auto drawn = s.matron_state();
         std::cout << "  matron two below: a sprint on 132 heard at loudness " << heard << ", her lead on the level at "
                   << lead_floor << "; she at (" << drawn.position.x << ", " << drawn.position.y << ", "
-                  << drawn.position.z << "), took the pipe " << took << ", down on 143 " << down << ", frail " << frail
-                  << "\n";
+                  << drawn.position.z << "), " << stand_off << " m off her deck's line's stand, frail " << frail << "\n";
         require(heard > 0.75 && std::abs(lead_floor - 132.0) < 0.1,
                 "matron two below: a sprint two decks down carries up the shaft to her, a lead on 132");
-        require(took && down && frail && drawn.alive && s.snapshot().death_count == 0,
-                "matron two below: frail, she goes the way down toward it (the corner pipe) to the deck between, alive");
+        require(at_stand && frail && s.snapshot().death_count == 0,
+                "matron two below: frail, she goes to the way down toward it (her deck's line) and stands on it");
         std::cout << "PASS scraperx_sim matron two below: sprint_heard=" << heard << " lead_floor=" << lead_floor
-                  << " down_on_143=" << down << "\n";
+                  << " stand_off_m=" << stand_off << "\n";
     }
     // ---- heard where she has no way to: off the riser's bridge the player drops
     //      to 143's plate out over the shaft; she hears the landing up the shaft,

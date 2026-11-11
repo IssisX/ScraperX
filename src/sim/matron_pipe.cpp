@@ -1028,11 +1028,14 @@ bool Matron::own_way_nearer(const RVec3 at, const float pipe_off) {
 }
 
 bool Matron::follow_pipe(const float dt, const RVec3 at) {
-    // Every stage takes hold of it (Cory, 11-11: she climbs as a pest too);
-    // frail, she goes on it at a pest's slow pace (ride_pipe).
     const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
     const float next = pipe_next_toward(floor_y, lead_floor_);
     if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next) || !pipe_serves(next)) {
+        return false;
+    }
+    // Frail, she climbs it up after him, slow (Cory, 11-11: she climbs as a
+    // pest too), but does not take hold of it to go down it.
+    if (stage_ == Stage::Pest && next < floor_y) {
         return false;
     }
     // A way that failed under her a moment ago she leaves alone a while.

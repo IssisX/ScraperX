@@ -2304,24 +2304,9 @@ bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget)
         goal.wait_ok = wait_ok;
         return way.begin(goal) && way.step(dt, budget) != MoverStatus::Idle;
     };
-    // After the climber the way he went, where she saw or heard it: a line
-    // she saw or heard him take (in her Turn, onto its cable after him), or
-    // the shaft's pipe. A pest takes the pipe too (Cory, 11-11), so the line
-    // he went by is asked first, or the pipe would always win; and in her
-    // Turn a ridden line down toward him whose stand is nearer her than the
-    // pipe's corner is the way she goes.
-    bool line_first = guess_line_ >= 0;
-    if (!line_first && turn_ != Turn::None && zipline_ != nullptr) {
-        const float ax = float(at.GetX());
-        const float az = float(at.GetZ());
-        const int best = line_to_take(ax, az);
-        if (best >= 0) {
-            const Zipline::Line &line = zipline_->lines()[static_cast<std::size_t>(best)];
-            line_first = !line.parked && distance_xz(ax, az, float(line.stand.GetX()), float(line.stand.GetZ())) <
-                                             distance_xz(ax, az, kPipeDeckX, kPipeDeckZ);
-        }
-    }
-    if ((line_first && ask(line_way_, false)) || ask(pipe_way_, true)) {
+    // After the climber the way he went, where she saw or heard it: down the
+    // shaft's pipe, or a line he took.
+    if (ask(pipe_way_, true) || (guess_line_ >= 0 && ask(line_way_, false))) {
         return true;
     }
     // Started up a line's ramp, she finishes it: a way found from the ramp
@@ -2862,10 +2847,11 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 if (own_region >= 0) floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
             }
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
-            // A lead the corner pipe goes toward, at any stage: chased longer.
+            // A lead the corner pipe goes toward (frail, only up it): chased longer.
             const float toward = pipe_next_toward(floor_y, lead_floor_);
-            const bool by_pipe = elsewhere && toward != floor_y && pipe_reaches(floor_y) && pipe_reaches(toward) &&
-                                 pipe_serves(toward);
+            const bool by_pipe = elsewhere && toward != floor_y && (stage_ != Stage::Pest || toward > floor_y) &&
+                                 pipe_reaches(floor_y) &&
+                                 pipe_reaches(toward) && pipe_serves(toward);
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
             // walking to, a journey or a travel she is on, a climb she is
