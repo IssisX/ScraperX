@@ -806,6 +806,24 @@ def posted_marks(p: Pass) -> dict[tuple[str, int], str]:
             for m in POSTED_RE.finditer(c.body)}
 
 
+SHA40 = re.compile(r"[0-9a-f]{40}")
+
+
+def changed(rec: dict, w: Want) -> str:
+    """A new obligation's text. J-104: an acked obligation is never sent again while its version holds (its id is
+    the version's); a new head is a new version, so a new obligation, and its notice names what changed since the
+    ack, so the addressee need not work out why the same item came back."""
+    tag, _, head = w.version.rpartition(":")
+    if w.kind == "ask" or not SHA40.fullmatch(head):
+        return w.what
+    prior = next((ob for ob in reversed(rec["obligations"]) if ob.get("ack") and ob["kind"] == w.kind
+                  and ob["to"] == w.to and ob["ref"] == w.ref and ob["version"] != w.version
+                  and ob["version"].rpartition(":")[0] == tag), None)
+    if prior is None:
+        return w.what
+    return f"{w.what} (new head {head[:8]} since {prior['id']} was acked at {prior['version'].rpartition(':')[2][:8]})"
+
+
 def sync(rec: dict, wants: list[Want], now: dt.datetime, roster: L.Roster, events: Events, evidence_of: Callable) \
         -> None:
     """Create the obligations wanted now (a want that comes back reopens its unseen or closed obligation); settle
@@ -839,7 +857,7 @@ def sync(rec: dict, wants: list[Want], now: dt.datetime, roster: L.Roster, event
             continue
         via, due = due_at(roster, w.to, now, w.kind)
         ob = {"id": oid, "kind": w.kind, "to": w.to, "via": via, "ref": w.ref, "thread": w.thread,
-              "version": w.version, "what": w.what, "created": iso(now), "attempts": 0, "sends": 0,
+              "version": w.version, "what": changed(rec, w), "created": iso(now), "attempts": 0, "sends": 0,
               "last_sent": None, "last_error": "", "due": iso(due), "dead": iso(dead_time(w.to, via, now, due)),
               "ack": None, "ack_rule": w.ack_rule, "dead_lettered": None, "closed": None, "asked": iso(w.asked),
               "missing": 0, "unseen": None}
@@ -1076,9 +1094,11 @@ class CommentOutbox:
     The marker on the delivered comment is the receipt: a crash before the state commit never re-sends."""
     live = True
 
-    def __init__(self, gh, roster: L.Roster, board: int, relay: bool = True):
+    def __init__(self, gh, roster: L.Roster, board: int, relay: bool = True,
+                 tests: Callable[[str], tuple] | None = None):
         self.gh, self.roster, self.board = gh, roster, board
         self.relay = relay   # False: the switch posts Codex's mention itself, with the team token (switch.codex_mention)
+        self.tests = tests   # head sha -> its red proof's failing tests (switch.Switch.red_tests_at, J-104)
         self.posted: dict[tuple[str, int], str] = {}   # (id, send): a Muse comment posted, its receipt not yet in
 
     def send(self, rec: dict, ob: dict, send: int, attempt: int) -> None:
@@ -1087,6 +1107,7 @@ class CommentOutbox:
         due = central(at(ob["due"]))
         mark = SENT_MARK.format(id=ob["id"], send=send, attempt=attempt)
         what = ob["what"]
+        failing = self.failing(ob)
         if ob["via"] == "email":
             # Muse (#350 hole 6): on the job's issue or the board, never a PR (the bridge's token is Issues-only);
             # plain text with no links, code marks or orders (work/tasks/mail-to-muse.md); labelled wake:muse so the
@@ -1095,7 +1116,7 @@ class CommentOutbox:
             # posted marker), never a second one the bridge would mail again.
             where = int(rec.get("issue") or 0) or self.board
             body = strip_mentions(f"CLAUDE_TO_MUSE: {rec['job'] or 'thread'} {what.replace('`', '')}{again}\n\n"
-                                  f"From the switchboard's reconciler (Claude). Due {due} Central. When it is "
+                                  f"{failing}From the switchboard's reconciler (Claude). Due {due} Central. When it is "
                                   f"done, reply on this thread or post /ack {ob['id']}.")
             cid = self.posted.get((ob["id"], send))
             if cid is None:
@@ -1121,9 +1142,21 @@ class CommentOutbox:
                     f" Post `@codex review` on #{n} yourself: the Codex app does not answer the bot's mentions."
                     f"\n\nDue {due} Central. Ack with `/ack {ob['id']}` once it is posted.")
         else:
-            body = strip_mentions(f"To {name}:{again} {what}\n\nDue {due} Central. Ack with `/ack {ob['id']}`, "
-                                  "or act.")
+            body = strip_mentions(f"To {name}:{again} {what}\n\n{failing}Due {due} Central. Ack with "
+                                  f"`/ack {ob['id']}`, or act.")
         self.gh.comment(n, f"{body}\n\n{mark}", f"reconciler: {ob['id']} to {ob['to']}")
+
+    def failing(self, ob: dict) -> str:
+        """J-104: a red notice names its failing tests ("<job>: <FAIL line>", already made safe by the switch), or
+        "" for any other notice, or when they cannot be read: the notice goes either way."""
+        tag, _, sha = str(ob.get("version") or "").rpartition(":")
+        if self.tests is None or ob.get("kind") != "fix" or tag != "red":
+            return ""
+        try:
+            lines = list(self.tests(sha))
+        except Exception:   # noqa: BLE001
+            return ""
+        return "Failing tests:\n" + "\n".join(f"- {line}" for line in lines) + "\n\n" if lines else ""
 
 
 def strip_mentions(text: str) -> str:
@@ -2023,7 +2056,12 @@ def read_pass(sw, gh: CountingGH, steered: list, board: int, proof_workflow: str
     shim = types.SimpleNamespace(gh=gh, team=sw.team, run_state=sw.run_state)
     feed, sent = L.read_feed(shim, steered, sw.now, board, proof_workflow, system_branches, system_prs, roster)
     led = L.classify(feed, sw.now, roster)
-    raw, _ = L.page_list(gh, f"repos/{gh.repo}/issues/comments?since={L.iso(sw.now - L.LIVE)}")   # cached: read once
+    # the ledger's own reader and URLs (cached: read once), with its newest-first read once the listing is full
+    # (J-104: reading only the oldest 1,000 of the window missed every /ack and reply after them)
+    raw, cut = L.comment_window(gh, gh.repo, sw.now - L.LIVE, sw.now)
+    if cut:
+        getattr(sw, "out", print)(f"WARN        reconciler: comments since {L.iso(sw.now - L.LIVE)} were more than "
+                                  "both reads hold; the middle of the window was not read")
     comments = []
     for c in raw:
         try:
@@ -2074,12 +2112,13 @@ def ledger_notifies(root: pathlib.Path) -> bool:
     return not (mode(root) == "live" and config(root).get("notices") == "v2")
 
 
-def outboxes(live: bool, gh, roster: L.Roster, board: int, mailer: Callable | None = None, relay: bool = True):
+def outboxes(live: bool, gh, roster: L.Roster, board: int, mailer: Callable | None = None, relay: bool = True,
+             tests: Callable[[str], tuple] | None = None):
     """(the notice outbox, Cory's notifier) for a mode: shadow records, live posts. `relay` False: Codex's asks
     need no relay through the integrator (the switch holds the team token and posts the mention itself)."""
     if not live:
         return ShadowOutbox(), ShadowCory()
-    return CommentOutbox(gh, roster, board, relay), CoryNotifier(gh, board, mailer)
+    return CommentOutbox(gh, roster, board, relay, tests), CoryNotifier(gh, board, mailer)
 
 
 def sweep(sw, steered: list, board: int, proof_workflow: str, system_branches: Iterable[str],
@@ -2095,7 +2134,8 @@ def sweep(sw, steered: list, board: int, proof_workflow: str, system_branches: I
     p = read_pass(sw, gh, steered, board, proof_workflow, set(system_branches) | {STATE_BRANCH}, system_prs,
                   roster, cfg)
     # posts go through the switch's own client; with the team token the switch asks Codex itself (codex_mention)
-    outbox, cory = outboxes(which == "live", sw.gh, roster, board, relay=not getattr(sw, "merge_token", ""))
+    outbox, cory = outboxes(which == "live", sw.gh, roster, board, relay=not getattr(sw, "merge_token", ""),
+                            tests=getattr(sw, "red_tests_at", None))
     res = run_pass(GitStore(gh), p, roster, GitHubLookups(gh), sw.now, outbox, sw.out, cory=cory)
     sw.out(f"reconciler  {which} pass {res.status}: {res.events} events, {gh.calls} GitHub calls, "
            f"tries {res.tries}; SLO {json.dumps(res.slo, sort_keys=True)}")
