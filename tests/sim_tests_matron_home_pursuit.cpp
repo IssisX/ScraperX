@@ -95,6 +95,64 @@ void run_matron_home_pursuit() {
               << *std::max_element(story_s + 2, story_s + kTopDeck + 1) << " s\n";
 }
 
+// J-085 part 2: the pipe is not her only way up the lower stack. Where a way
+// of her own map starts nearer her than the pipe's corner, she takes it with
+// the pipe there: the C1 davit ladder (33 -> 44), the C2 rack and its davit
+// ladder (77 -> 88), the S3 hoist (88 -> 132). Dangerous, a lead heard every
+// 4 s on the deck above; her feet and hands in her one budget, gravity on.
+void lower_way(const char *name, const Vector3 her, const double goal, const bool hoist) {
+    Simulation s(InitialSpawn::Deck154);
+    s.place_matron_home(154.0F);
+    require(s.advance_frame(1.0).accepted, "matron lower ways: settle");
+    (void)s.matron_affordances();
+    const Vector3 him{0.0, goal, -128.5};
+    s.debug_launch_player(Vector3{him.x, him.y + 1.2, him.z}, Vector3{0.0, 0.0, 0.0});
+    s.debug_place_matron(her);
+    (void)s.advance_frame(Simulation::kFixedStepSeconds);
+    const auto m0 = s.matron_state();
+    const int hz = static_cast<int>(Simulation::kTickRateHz);
+    bool there = false, alive = true;
+    double t = 0.0, worst_gravity = 1.0, worst_force = 0.0, worst_power = 0.0;
+    for (int i = 0; i < 120 * hz && !there && alive; ++i) {
+        s.debug_set_matron_stage(1);
+        if (i % (4 * hz) == 0) {
+            s.debug_matron_hear(him);
+        }
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto m = s.matron_state();
+        alive = m.alive;
+        worst_gravity = std::min(worst_gravity, s.debug_matron_gravity_factor());
+        worst_force = std::max(worst_force, s.matron_journey().force_n + double(s.matron_hoist().hand_n));
+        worst_power = std::max(worst_power, s.matron_journey().power_w + double(s.matron_hoist().hand_power_w));
+        t = static_cast<double>(i) / hz;
+        there = !m.on_pipe && std::abs(m.position.y - 1.05 - goal) < 0.4;
+    }
+    const auto m = s.matron_state();
+    const auto climbs = m.climbs - m0.climbs;
+    const auto rides = s.matron_hoist().rides;
+    std::cout << "  matron lower ways: " << name << ": on the deck above " << there << " after " << t << " s, climbs "
+              << climbs << ", hoist rides " << rides << ", pipe links " << m.pipe_links - m0.pipe_links << ", feet and hands "
+              << worst_force << " N " << worst_power << " W\n";
+    require(there && alive, "matron lower ways: by a way of her own map she is on the deck above");
+    require(m.pipe_links == m0.pipe_links && (hoist ? s.matron_hoist().phase > 0 || rides > 0 : climbs > 0),
+            "matron lower ways: her map's own way, nearer her than the pipe, not the pipe");
+    require(worst_gravity == 1.0 && worst_force <= kForceCapN + 1.0 && worst_power <= kPowerCapW + 1.0,
+            "matron lower ways: gravity on, her feet and hands inside her one budget");
+}
+
+void run_matron_lower_ways() {
+    lower_way("C1 davit ladder, 33 -> 44", Vector3{12.5, 33.02, -122.0}, 44.0, false);
+    lower_way("C2 rack and davit ladder, 77 -> 88", Vector3{21.0, 77.02, -156.0}, 88.0, false);
+    lower_way("S3 hoist, 88 -> 132", Vector3{-8.0, 88.02, -162.0}, 132.0, true);
+    std::cout << "PASS scraperx_sim matron lower ways: the C1 and C2 ladders and the S3 hoist, with the pipe there\n";
+}
+
+void run_matron_home_pursuit_slice() {
+    run_matron_home_pursuit();
+    run_matron_lower_ways();
+}
+
 }  // namespace
 
-SCRAPERX_SLICE("matron-home-pursuit", run_matron_home_pursuit);
+SCRAPERX_SLICE("matron-home-pursuit", run_matron_home_pursuit_slice);

@@ -844,6 +844,9 @@ public:
     // it). A top deeper inside a story (the C1 duct 5.3 m over deck 2) is
     // for her scan's own ways, not a story on the pipe and back (J-085).
     static constexpr float kPipeLeadM = 3.0F;
+    // The lower stack, under her old pipe decks (132 to 154): where her map's
+    // own nearer ways come before the pipe (follow_pipe).
+    static constexpr float kLowerStackTopM = 132.0F;
     // The deck a story up or down the pipe toward her lead from her deck at
     // `floor_y`, or `floor_y` itself when the lead is not the pipe's.
     [[nodiscard]] static float pipe_next_toward(float floor_y, float lead_y) noexcept;

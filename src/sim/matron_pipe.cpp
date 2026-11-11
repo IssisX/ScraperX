@@ -971,7 +971,11 @@ bool Matron::pipe_serves(const float next) {
         return true;
     }
     const int lead = scanned_->region_at(Vec3(heard_x_, lead_floor_, heard_z_));
-    const int far = scanned_->region_near_top(next, 0.3F);
+    // The floor she gets off onto there: by the rail's corner, else that deck's largest.
+    int far = scanned_->region_at(Vec3(kPipeDeckX, next, kPipeDeckZ));
+    if (far < 0) {
+        far = scanned_->region_near_top(next, 0.3F);
+    }
     if (lead < 0 || far < 0) {
         return true;   // no floor of her map under the lead (a ladder, the air): the deck is as near as she gets
     }
@@ -1046,9 +1050,10 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
     const float stand_z = raised ? kPipeRailZ : kPipeDeckZ;
     const float off = distance_xz(ax, az, kPipeDeckX, stand_z);
     const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
-    // A way of her own map nearer her than the pipe's corner is hers first:
-    // the pipe is not her only way up (J-085).
-    if (off > 0.25F && own_way_nearer(at, off)) {
+    // On the lower stack a way of her own map nearer her than the pipe's
+    // corner is hers first: the pipe is not her only way up there (J-085).
+    // From her old decks (132 to 154) the pipe stays her way after him.
+    if (off > 0.25F && floor_y < kLowerStackTopM - 0.5F && own_way_nearer(at, off)) {
         return false;
     }
     if (off > 0.25F) {
