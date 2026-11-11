@@ -1260,7 +1260,8 @@ void run_matron_fatality() {
     //      checkpoint's restore, the body whole ----
     {
         // Where no rail she can use fits her five beats in time (her catch
-        // too far from one, or no room to hang him out past the lip), her
+        // too far from one, no room to hang him out past the lip, or a bare
+        // lip, no rail, whose carry and haul leave his window no time), her
         // floor version is the fatality (Cory, 2026-11-11: "Floor"): the
         // same death and the same restore, no hang demanded (the third
         // number: 1 the floor version).
@@ -1269,7 +1270,7 @@ void run_matron_fatality() {
                                                           {21.0, -155.0, 1.0},
                                                           {21.5, -145.0, 1.0},
                                                           {21.5, -150.0, 1.0},
-                                                          {22.5, -145.0, 0.0},
+                                                          {22.5, -145.0, 1.0},
                                                           {-6.0, -129.0, 1.0}}};
         for (const auto &spot : spots) {
             Simulation s(InitialSpawn::Deck154);
