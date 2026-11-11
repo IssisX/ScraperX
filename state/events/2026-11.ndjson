@@ -1293,3 +1293,10 @@
 {"attempt": 2, "ev": "sent", "id": "O-f70eab45", "job": "J-009", "ref": "PR|#377", "send": 2, "t": "2026-11-11T08:29:01Z", "to": "muse", "via": "email"}
 {"attempt": 1, "ev": "sent", "id": "O-26827016", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-11T08:29:01Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T08:29:01Z", "tries": 1}
+{"ev": "job", "job": "J-032", "t": "2026-11-11T09:38:49Z"}
+{"due": "2026-11-11T13:38:49Z", "ev": "obligation", "id": "O-40c9c192", "job": "J-038", "kind": "fix", "ref": "PR|#372", "t": "2026-11-11T09:38:49Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-26827016", "job": "J-038", "t": "2026-11-11T09:38:49Z"}
+{"ev": "state", "frm": "accepted", "job": "J-032", "t": "2026-11-11T09:38:49Z", "to": "proof"}
+{"attempt": 2, "ev": "sent", "id": "O-75aff563", "job": "J-015", "ref": "PR|#389", "send": 2, "t": "2026-11-11T09:38:49Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-40c9c192", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-11T09:38:49Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 53, "status": "ok", "t": "2026-11-11T09:38:49Z", "tries": 1}

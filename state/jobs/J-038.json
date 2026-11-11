@@ -13,7 +13,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
- "head": "0bd4064c2c40ad21246dbf7251bb17d2ddfe0a69",
+ "head": "5f47c941b91807f5955beee5896ee847ce7893d0",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -129,7 +129,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T03:19:08Z",
+   "rechecked": "2026-11-11T09:38:49Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -155,7 +155,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T03:19:08Z",
+   "rechecked": "2026-11-11T09:38:49Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -449,7 +449,11 @@
    "what": "#372: open FIX from Codex (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T09:38:49Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -472,6 +476,31 @@
    "version": "fix:0bd4064c2c40ad21246dbf7251bb17d2ddfe0a69",
    "via": "email",
    "what": "#372: open FIX from Codex (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T09:38:49Z",
+   "dead": "2026-11-11T17:38:49Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T13:38:49Z",
+   "id": "O-40c9c192",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T09:38:49Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:5f47c941b91807f5955beee5896ee847ce7893d0",
+   "via": "email",
+   "what": "#372: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
@@ -485,5 +514,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-11T08:29:01Z"
+ "updated": "2026-11-11T09:38:49Z"
 }

@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-j032": "d74b367ad59b501db473d8e23dac4668ed508eae"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-11T09:38:49Z",
+ "deadline": null,
+ "head": "d74b367ad59b501db473d8e23dac4668ed508eae",
+ "issue": 0,
+ "job": "J-032",
+ "landed": {
+  "fb-bot/integrate-j032": [
+   "d74b367ad59b501db473d8e23dac4668ed508eae",
+   "",
+   "2026-11-11T09:38:49Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-11T09:38:49Z"
+}
