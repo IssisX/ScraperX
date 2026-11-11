@@ -166,8 +166,6 @@ void Simulation::PhysicsWorld::snag_player_for_test(const float max_n) noexcept 
     if (snag_ != nullptr) {
         physics_system_.AddConstraint(snag_);
         snag_max_n_ = max_n;
-        snag_over_ticks_ = 0;
-        snag_reposes_ = matron_->view().arm_reposes;
     }
 }
 
@@ -495,26 +493,10 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
     } else {
         grip_load_n_ = 0.0F;
     }
-    if (snag_ != nullptr) {
-        // A snag gives on a sustained pull, not on a solver spike: the load
-        // at the catch and the body's swing past it spike past the max for
-        // a few ticks while the steady hold sits well under it. The grip's
-        // own over-ticks rule is the same shape; the snag's window is wider
-        // (15 ticks) so a caught body holds till her re-pose pulls it off,
-        // instead of coming free on the catch's jerk.
-        const float snag_load =
-            static_cast<JPH::PointConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition().Length() / std::max(dt, 1.0e-4F);
-        snag_over_ticks_ = snag_load > snag_max_n_ ? snag_over_ticks_ + 1 : 0;
-        // A re-pose pulls it off too: her step back puts her weight in the
-        // drag, and the drag alone (her pull capped at kHandPullN) sits
-        // under the snag's max, so no sustained exceedance ever comes from
-        // it. The re-pose is the break event; the load floor only confirms
-        // she is actually dragging, not breaking a slack snag.
-        constexpr float kSnagReposeDragN = 1.0e3F;
-        if (snag_over_ticks_ >= 15 ||
-            (matron_->view().arm_reposes > snag_reposes_ && snag_load > kSnagReposeDragN)) {
-            destroy_grab_constraint(snag_);   // a test's snag (snag_player_for_test), pulled off
-        }
+    if (snag_ != nullptr &&
+        static_cast<JPH::PointConstraint *>(snag_.GetPtr())->GetTotalLambdaPosition().Length() / std::max(dt, 1.0e-4F) >
+            snag_max_n_) {
+        destroy_grab_constraint(snag_);   // a test's snag (snag_player_for_test), pulled off
     }
     if (brace_ != nullptr) {
         auto *point = static_cast<JPH::PointConstraint *>(brace_.GetPtr());
