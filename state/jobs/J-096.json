@@ -2,21 +2,21 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "claude/integrate-j096": "22c88c85ba5547eb5795cc9893c4507def0d6930"
+  "claude/integrate-j096": "888cda7209267f93563989a37a4be0242ad96a43"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": "2026-11-11T20:17:00Z",
- "head": "22c88c85ba5547eb5795cc9893c4507def0d6930",
+ "deadline": "2026-11-11T21:17:00Z",
+ "head": "888cda7209267f93563989a37a4be0242ad96a43",
  "issue": 414,
  "job": "J-096",
  "landed": {
   "claude/integrate-j096": [
-   "22c88c85ba5547eb5795cc9893c4507def0d6930",
+   "888cda7209267f93563989a37a4be0242ad96a43",
    "",
-   "2026-11-11T17:16:05Z"
+   "2026-11-11T19:28:50Z"
   ]
  },
  "obligations": [
@@ -50,7 +50,11 @@
    "what": "`claude/integrate-j096` proof red: host-build, android-build, no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T19:28:50Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
@@ -72,6 +76,31 @@
    "version": "red:22c88c85ba5547eb5795cc9893c4507def0d6930",
    "via": "session",
    "what": "`claude/integrate-j096` proof red: android-build, no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T19:28:50Z",
+   "dead": "2026-11-11T23:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T21:17:00Z",
+   "id": "O-6cedf3d0",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T19:28:50Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j096",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 414,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:888cda7209267f93563989a37a4be0242ad96a43",
+   "via": "session",
+   "what": "`claude/integrate-j096` is green with no PR: open one"
   }
  ],
  "outcome": null,
@@ -81,6 +110,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T18:18:52Z"
+ "state": "proof",
+ "updated": "2026-11-11T19:28:50Z"
 }

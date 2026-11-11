@@ -1501,3 +1501,18 @@
 {"attempt": 2, "ev": "sent", "id": "O-5ceb32bd", "job": "J-093", "ref": "BRANCH|claude/integrate-protected-j093", "send": 2, "t": "2026-11-11T18:18:52Z", "to": "claude", "via": "session"}
 {"ev": "needs_you", "job": "", "keys": ["O-2d379bb7", "O-a761b5cb"], "n": 2, "t": "2026-11-11T18:18:52Z"}
 {"ev": "pass", "job": "", "jobs": 79, "status": "ok", "t": "2026-11-11T18:18:52Z", "tries": 1}
+{"due": "2026-11-11T21:17:00Z", "ev": "obligation", "id": "O-c4674b3e", "job": "J-001", "kind": "fix", "ref": "BRANCH|claude/integrate-j001-hold", "t": "2026-11-11T19:28:50Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "new head", "id": "O-73ac1c72", "job": "J-001", "t": "2026-11-11T19:28:50Z"}
+{"due": "2026-11-11T23:28:50Z", "ev": "obligation", "id": "O-9b2ff7a0", "job": "J-085", "kind": "fix", "ref": "BRANCH|claude/integrate-protected-j085", "t": "2026-11-11T19:28:50Z", "to": "muse", "via": "email"}
+{"due": "2026-11-11T21:17:00Z", "ev": "obligation", "id": "O-9fe1a99f", "job": "J-092", "kind": "fix", "ref": "BRANCH|claude/integrate-protected-j092", "t": "2026-11-11T19:28:50Z", "to": "claude", "via": "session"}
+{"due": "2026-11-11T21:17:00Z", "ev": "obligation", "id": "O-6cedf3d0", "job": "J-096", "kind": "fix", "ref": "BRANCH|claude/integrate-j096", "t": "2026-11-11T19:28:50Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "new head", "id": "O-079d39ca", "job": "J-096", "t": "2026-11-11T19:28:50Z"}
+{"ev": "state", "frm": "proof", "job": "J-092", "t": "2026-11-11T19:28:50Z", "to": "working"}
+{"ev": "state", "frm": "working", "job": "J-096", "t": "2026-11-11T19:28:50Z", "to": "proof"}
+{"attempt": 1, "ev": "sent", "id": "O-c4674b3e", "job": "J-001", "ref": "BRANCH|claude/integrate-j001-hold", "send": 1, "t": "2026-11-11T19:28:50Z", "to": "claude", "via": "session"}
+{"attempt": 2, "ev": "sent", "id": "O-2d2453e9", "job": "J-054", "ref": "BRANCH|fb-bot/integrate-j054", "send": 2, "t": "2026-11-11T19:28:50Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-9b2ff7a0", "job": "J-085", "ref": "BRANCH|claude/integrate-protected-j085", "send": 1, "t": "2026-11-11T19:28:50Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-9fe1a99f", "job": "J-092", "ref": "BRANCH|claude/integrate-protected-j092", "send": 1, "t": "2026-11-11T19:28:50Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-6cedf3d0", "job": "J-096", "ref": "BRANCH|claude/integrate-j096", "send": 1, "t": "2026-11-11T19:28:50Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-a1b6ff0a", "job": "J-102", "ref": "BRANCH|claude/integrate-j102", "send": 1, "t": "2026-11-11T19:28:50Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 79, "status": "ok", "t": "2026-11-11T19:28:50Z", "tries": 1}
