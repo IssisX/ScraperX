@@ -15,8 +15,10 @@ import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-PAST_MIN = 10
-FUTURE_MIN = 2
+# 11-11: a stamp ahead of the clock can only be a guess (9:07 sent at 9:06, 9:21 at 9:19), so none is allowed;
+# behind it, only the minutes between the read and the send.
+PAST_MIN = 5
+FUTURE_MIN = 0
 TIME = re.compile(r"\b(1[0-2]|0?[1-9]):([0-5]\d)\s*([AaPp])\.?\s*[Mm]\b\.?")
 TAGGED = re.compile(TIME.pattern + r"\s*\(?(Central|CT|CST|CDT)\b")
 TEXT_FIELDS = ("body", "title", "subject", "message")
