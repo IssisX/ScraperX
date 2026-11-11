@@ -119,12 +119,12 @@
    "kind": "ask",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "ASK|ask on #312",
    "sends": 0,
    "thread": 312,
    "to": "chatgpt",
-   "unseen": null,
+   "unseen": "2026-11-10T23:59:09Z",
    "version": "6713106413",
    "via": "issue",
    "what": "ask from Claude on #312"
@@ -310,5 +310,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-10T22:50:55Z"
+ "updated": "2026-11-10T23:59:09Z"
 }

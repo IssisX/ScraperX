@@ -9,7 +9,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
+ "deadline": "2026-11-11T00:59:09Z",
  "head": "d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
  "issue": 115,
  "job": "J-008",
@@ -25,7 +25,33 @@
    "2026-11-09T17:35:20Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T23:59:09Z",
+   "dead": "2026-11-11T01:59:09Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T00:59:09Z",
+   "id": "O-0d2e9cf6",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T23:59:09Z",
+   "missing": 0,
+   "ref": "BRANCH|builder/integrate-j008",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 115,
+   "to": "grok_bot",
+   "unseen": null,
+   "version": "red:d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
+   "via": "watch",
+   "what": "`builder/integrate-j008` proof red: native-tests (matron-slices-3), native-tests (athletic-traversal), native-tests (matron-slices-1), no PR"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "grok_bot",
@@ -33,6 +59,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-10T22:50:55Z"
+ "state": "working",
+ "updated": "2026-11-10T23:59:09Z"
 }

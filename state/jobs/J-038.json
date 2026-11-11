@@ -7,7 +7,7 @@
   "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
  },
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [
   "6777898125:87"
  ],
@@ -396,7 +396,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-10T23:59:09Z",
+    "why": "conflict cleared at the head"
+   },
    "created": "2026-11-10T22:50:55Z",
    "dead": "2026-11-11T06:50:55Z",
    "dead_lettered": null,
@@ -415,6 +418,31 @@
    "version": "conflict:3e3413e284c1958cfb2a48f1d4cb8fa5a8282ac8",
    "via": "email",
    "what": "#372 has a merge conflict with the base"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-10T23:59:09Z",
+   "dead": "2026-11-11T07:59:09Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T03:59:09Z",
+   "id": "O-cecc4274",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-10T23:59:09Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:3e3413e284c1958cfb2a48f1d4cb8fa5a8282ac8",
+   "via": "email",
+   "what": "#372: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
@@ -426,7 +454,7 @@
   299,
   372
  ],
- "review": "",
+ "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T22:50:55Z"
+ "updated": "2026-11-10T23:59:09Z"
 }

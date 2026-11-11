@@ -15,7 +15,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": null,
- "head": "df0a80949d0d4b2ecf2c73907f4df0162628794c",
+ "head": "25e1bdc52e407caa2c5076082d6eb7e3f442a762",
  "issue": 328,
  "job": "J-067",
  "landed": {
@@ -36,8 +36,8 @@
   ],
   "fb-bot/integrate-j067-checkopt": [
    "df0a80949d0d4b2ecf2c73907f4df0162628794c",
-   "",
-   "2026-11-10T22:50:55Z"
+   "merged #394",
+   "2026-11-10T23:59:09Z"
   ],
   "fb-bot/integrate-protected-j067-scorer": [
    "a43b65ceb91f70465966415054499e6e3f126186",
@@ -260,6 +260,6 @@
   371
  ],
  "review": "FIX",
- "state": "proof",
- "updated": "2026-11-10T22:50:55Z"
+ "state": "working",
+ "updated": "2026-11-10T23:59:09Z"
 }
