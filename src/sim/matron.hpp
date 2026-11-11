@@ -2409,6 +2409,7 @@ private:
     float travel_wp_stall_s_ = 0.0F;
     bool travel_rerouted_ = false;
     bool travel_walk_is_patch_ = false;   // this walk came from the map's patch links, not her feet's floor search
+    bool travel_fell_off_path_ = false;   // she left her walk by falling: the next landing on another floor plans again
     int travel_stuck_ = 0;   // fresh searches of her way in a row with no waypoint passed
     JPH::Vec3 travel_still_at_ = JPH::Vec3::sZero();   // where she last moved from on a walk
     float travel_still_s_ = 0.0F;

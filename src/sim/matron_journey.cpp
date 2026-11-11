@@ -187,6 +187,7 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     travel_wp_stall_s_ = 0.0F;
     travel_rerouted_ = false;
     travel_walk_is_patch_ = false;
+    travel_fell_off_path_ = false;
     travel_stuck_ = 0;
     travel_still_at_ = Vec3(physics_.GetBodyInterface().GetPosition(body_)) - Vec3(0.0F, kStandCentre, 0.0F);
     travel_still_s_ = 0.0F;
@@ -312,10 +313,23 @@ void Matron::step_travel(const float dt) {
     // from her old support, so the landing must plan again from where she
     // stands, not keep walking the old route. Only a known region crosses
     // mid-walk without replanning.
+    // The floor she walks from, before this tick's crossing: the off-path
+    // check below judges a landing against it.
+    const int region_before = travel_.region;
+    // Back on her route's floor: a fall that ended where she started
+    // changes nothing — clear the off-path mark.
+    if (under >= 0 && under == travel_.region) travel_fell_off_path_ = false;
     if (under >= 0 && travel_.region >= 0 && under != travel_.region && travel_.step < travel_.steps) {
-        travel_.region = under;
-        if (travel_walk_is_patch_ && !travel_walk_.empty()) {
-            travel_.step = travel_.steps;   // patch walk, new region: plan again from here
+        if (travel_fell_off_path_) {
+            // Fell off her path onto another floor: the old route was
+            // searched from the floor she left. Plan again from here.
+            travel_.step = travel_.steps;
+            travel_fell_off_path_ = false;
+        } else {
+            travel_.region = under;
+            if (travel_walk_is_patch_ && !travel_walk_.empty()) {
+                travel_.step = travel_.steps;   // patch walk, new region: plan again from here
+            }
         }
     }
     // Off the plan (a fall, a move that ended elsewhere, knocked off her
@@ -423,6 +437,16 @@ void Matron::step_travel(const float dt) {
                                       : 0.0F;
         const float path_y = a.GetY() + u * (b.GetY() - a.GetY());
         if (path_y - feet.GetY() > 1.0F) {
+            // She left her path by falling, not by walking it: mark the
+            // landing unplanned. Supported now, this is the landing itself —
+            // if it is not the floor the walk started from, the route is
+            // stale and plans again from here. Still falling, the mark
+            // carries to the landing.
+            if (under >= 0 && under != region_before) {
+                travel_.step = travel_.steps;
+            } else if (under < 0) {
+                travel_fell_off_path_ = true;
+            }
             travel_walk_.clear();
             travel_walk_i_ = 0;
             return;
