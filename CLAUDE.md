@@ -106,7 +106,7 @@ it to match, never ask him again.
   `helper` or `helper-max`; Cory 11-06), never a separate session; at most three at a time (11-11), each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
   his call, seen in `get_session`; raise it only when he throttles; every helper at high for now, physics included (11-10; `helper-physics` at xhigh when he raises it); two failed passes in a row on one job and the cause still unfound: ask him to raise that helper one step (at night, 10 PM-5 AM Central, raise it to xhigh myself and tell him in the morning); cause found: no ask, no raise (11-11); never max (11-06, 11-10). A worker whose job landed is retired.
-- **Context:** at 350k `get_session` used_tokens, ask Cory to compact (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
+- **Context:** 600k window, auto-compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, long threads)
