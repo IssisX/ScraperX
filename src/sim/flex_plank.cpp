@@ -13,7 +13,6 @@ namespace scraperx::sim {
 
 namespace {
 
-constexpr float kGravity = 9.81F;
 // A cantilever's own mass as seen at its tip, its first mode (Rayleigh: 33/140).
 constexpr float kCantileverTipMassShare = 33.0F / 140.0F;
 // Dry planed softwood on boots and steel.
