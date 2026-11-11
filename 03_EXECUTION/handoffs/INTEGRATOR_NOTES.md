@@ -5,9 +5,8 @@ calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never 
 
 Read through: 1794409124 (2026-11-11 8:58 AM Central)
 
-## Now (11-11, before Cory's compact at about 9 AM)
-Work state lives in GitHub: job issues (owner, state, needs:eyes), Muse's queue (`tools/board/queue_check.py`, floor 8,
-refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpers at high, the cap (Cory 11-11):
+## Now (11-11)
+State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). Three helpers, the cap (Cory 11-11):
 - J-001 #108: hold @ 8e5c715e, protected j093 @ aaed1791; 1 left (snag setup): ruled her pin holds him over the drop,
   plus a kicking touch check: xhigh helper.
 - J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
