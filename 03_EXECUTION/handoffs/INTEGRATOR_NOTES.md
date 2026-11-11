@@ -3,21 +3,19 @@
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794409124 (2026-11-11 8:58 AM Central)
+Read through: 1794417360 (2026-11-11 full run)
 
 ## Now (11-11)
 State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). Three helpers, the cap (Cory 11-11):
 - J-001 #108: hold @ 8e5c715e, protected j093 @ aaed1791; 1 left (snag setup): ruled her pin holds him over the drop,
   plus a kicking touch check: xhigh helper.
-- J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
-  before it lands. J-084 #402: whole climb PASS (24 stages) @ a94ada14, proof running; touch-2 limit 900 s is a
-  workflow change (Codex + API review). J-082 #400 STOPPED by Cory ("don't wreck what we have"): parked, nothing landed; never reopen without him.
-- J-090 #408 hook her: pass 1 c755689d (proof 43041899766). Ruled: physics stands (a planted
-  Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
-  her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
-- J-092 #410 slab: step 2 paused @ 76ee77a6 (resume on a free helper). Next free helper: J-103 #422 (switchboard
-  routine, Cory "Teach"), then J-092, then J-090 pass 2. J-102 #421: root cause (home deck 1 is an island, 10-28), test @ af538488;
-  J-085 #403 taken from Muse for an xhigh helper (her ways up). CI fix #420 green, awaiting reviews.
+- J-096 #414 planks slice 1 (trunk merged 22c88c85, proof rerunning); my eye check before it lands. J-084 #402
+  whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
+- J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001. J-092 #410 slab step 2 paused @ 76ee77a6.
+  Helpers now: J-001, J-103 #422 (switchboard routine). Next free: J-092, then J-090 pass 2. CI fix #420 merged.
+- J-085 #403 (her chase; J-102 #421 found home deck 1 is an island since 10-28, test @ af538488): design HELD for
+  Cory (asked "go": she climbs over the deck 6 housing, nothing moves; climbs in every stage). Resume helper
+  a3a1bd36 by SendMessage; its worktree holds the uncommitted trial edit: do not remove it.
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
 
 ## Traps
