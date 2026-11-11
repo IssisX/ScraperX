@@ -117,6 +117,7 @@ void run_athletic_traversal_2() {
     run_yard_crane_magnet();
     run_yard_crane_spreader();
     run_machine_hearing();
+    run_machine_draw();
     run_ascent();
 }
 
