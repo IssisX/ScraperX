@@ -479,6 +479,9 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
     give_matron_stock();
+    // J-082's set pieces (the tipping spar off the south face): the world's
+    // last bodies, so every save written before them still lines up.
+    vertical_->build_set_pieces();
 
     // Tests only: the extra solids built after every body the world builds.
     build_test_extra_solids(bodies, std::numeric_limits<double>::quiet_NaN(), true);

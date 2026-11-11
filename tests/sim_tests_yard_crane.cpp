@@ -835,11 +835,23 @@ void run_yard_crane_magnet() {
     }
     require(fork + 1 < last && s.kit_body_entity(fork + 1) == kForklift[1],
             "magnet: the deck-154 forklift's frame and forks, side by side");
+    // J-082: then the tipping spar's five bodies, the world's very last (its
+    // bearing, two gangways, spar and cabin).
+    const std::uint64_t kSetPieces[] = {
+        scraperx::sim::vertical::Route::kSparStaticFirst, scraperx::sim::vertical::Route::kSparStaticFirst + 1,
+        scraperx::sim::vertical::Route::kSparStaticFirst + 2, scraperx::sim::vertical::Route::kSparDynamicFirst,
+        scraperx::sim::vertical::Route::kSparDynamicFirst + 1};
+    const auto set_pieces_at = last - static_cast<std::uint32_t>(std::size(kSetPieces));
+    bool set_pieces_last = set_pieces_at > fork + 2;
+    for (std::uint32_t i = 0; set_pieces_last && i < std::size(kSetPieces); ++i) {
+        set_pieces_last = s.kit_body_entity(set_pieces_at + i) == kSetPieces[i];
+    }
+    require(set_pieces_last, "magnet: the tipping spar's five bodies are the kit's last");
     bool later_stock = true;
-    for (std::uint32_t i = fork + 2; i < last; ++i) {
+    for (std::uint32_t i = fork + 2; i < set_pieces_at; ++i) {
         later_stock = later_stock && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
     }
-    require(later_stock, "magnet: after the deck-154 forklift, only stock laid later: the kit's last bodies");
+    require(later_stock, "magnet: after the deck-154 forklift, only stock laid later, then the set pieces");
     const auto tail = fork - kNewEastWest;
     bool east_west = true;
     for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {

@@ -238,10 +238,20 @@ void run_wet_e_guard(const bool expect) {
     // (the extinguisher and the pallet), the kit's last two bodies, after the
     // upper pieces.
     constexpr std::uint32_t kMatronKinds = 2;
+    // J-082: then the tipping spar's five bodies, the world's last (its
+    // bearing, lower and upper gangways, spar, cabin), in that order.
+    const std::uint64_t kSetPieces[] = {
+        scraperx::sim::vertical::Route::kSparStaticFirst, scraperx::sim::vertical::Route::kSparStaticFirst + 1,
+        scraperx::sim::vertical::Route::kSparStaticFirst + 2, scraperx::sim::vertical::Route::kSparDynamicFirst,
+        scraperx::sim::vertical::Route::kSparDynamicFirst + 1};
     const std::uint32_t forklift_at =
         kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
     const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift)) + kNewUpper;
-    bool since_after = world.kit_body_count() == kinds_at + kMatronKinds;
+    const std::uint32_t set_pieces_at = kinds_at + kMatronKinds;
+    bool since_after = world.kit_body_count() == set_pieces_at + static_cast<std::uint32_t>(std::size(kSetPieces));
+    for (std::uint32_t i = 0; since_after && i < std::size(kSetPieces); ++i) {
+        since_after = world.kit_body_entity(set_pieces_at + i) == kSetPieces[i];
+    }
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
     }
@@ -330,7 +340,7 @@ void run_wet_e_guard(const bool expect) {
     // 4824050261233220131, now 3514033760028014323.
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, and the tipping spar's five come last");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is

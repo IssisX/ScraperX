@@ -410,7 +410,9 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
               std::isfinite(loaded.bay.restart_s) && loaded.bay.restart_s >= 0.0F && loaded.bay.supplied <= 1 &&
               loaded.bay.leaf_running <= 1 && loaded.bay.fan_running <= 1;
     std::uint32_t controls = 0;
-    ok = ok && r.pod(controls) && controls == current.vertical.controls.size();
+    // A save made before machines placed since (J-082's set pieces, placed
+    // last) holds fewer: those start as built.
+    ok = ok && r.pod(controls) && controls <= current.vertical.controls.size();
     if (ok) {
         loaded.vertical.controls.resize(controls);
         for (std::size_t i = 0; ok && i < controls; ++i) {
@@ -419,7 +421,12 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                         current.vertical.controls[i].target_speeds.size());
         }
     }
-    ok = ok && r.list(loaded.vertical.targets, current.vertical.targets.size());
+    ok = ok && r.list_up_to(loaded.vertical.targets, current.vertical.targets.size()) &&
+         loaded.vertical.targets.size() == controls;
+    for (std::size_t i = controls; ok && i < current.vertical.controls.size(); ++i) {
+        loaded.vertical.controls.push_back(current.vertical.controls[i]);
+        loaded.vertical.targets.push_back(current.vertical.targets[i]);
+    }
     // A save made before the grips ends here: it holds nothing. One made with
     // fewer (before the spreader) holds nothing in the grips built since.
     if (ok && !r.done()) {

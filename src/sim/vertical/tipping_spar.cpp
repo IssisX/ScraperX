@@ -29,7 +29,7 @@ constexpr float kCabinZ = 3.0F;               // the cabin hangs south of the sp
 constexpr float kCabinHalfX = 2.5F;
 constexpr float kCabinHalfZ = 1.5F;
 constexpr float kSpeed = 0.035F;              // rad/s: the cabin at 2.5 m/s
-constexpr float kBrakeTorque = 3.0e6F;        // N m, over the 1.21 MN m peak
+constexpr float kBrakeTorque = 1.8e6F;        // N m, 1.5 x the 1.21 MN m peak
 constexpr float kSparMassKg = 9000.0F;        // a third of it the counterweight
 constexpr float kCabinMassKg = 1200.0F;
 } // namespace

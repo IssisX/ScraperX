@@ -25,6 +25,8 @@ const LIFT_ROLE_EXIT := 3
 const LIFT_SLAB_INCLINE := 5
 # The traction tram shuttles on its own: Action only reads out its wait.
 const LIFT_TRAM := 7
+# J-082's tipping spar: let go from its cabin, then braked by ACTION held.
+const LIFT_SPAR := 8
 # The luffing derrick is worked by the load on its cradle: Action reads it
 # out, and from the lower receiver calls the cradle down.
 const LIFT_DERRICK := 4
@@ -355,6 +357,11 @@ func _read_context() -> Dictionary:
 				action = {"id": &"haul", "icon": &"down", "label": "HAUL DOWN", "detail": "THE CALL LINE"}
 			elif role == LIFT_ROLE_EXIT and lift_travel < 0.99:
 				action = {"id": &"haul", "icon": &"up", "label": "FREE BRAKE", "detail": "IT RISES EMPTY"}
+		elif role == LIFT_ROLE_DECK and lift_machine == LIFT_SPAR and float(lift["target"]) >= 0.5 and lift_travel < 0.999:
+			# Let go, it falls free: ACTION held is its brake.
+			action = {"id": &"haul", "icon": &"down", "label": "BRAKE", "detail": "HOLD TO BRAKE THE FALL"}
+		elif role == LIFT_ROLE_DECK and lift_machine == LIFT_SPAR and float(lift["target"]) < 0.5:
+			action = {"id": &"lift", "icon": &"up", "label": "LET GO", "detail": lift_name}
 		elif role == LIFT_ROLE_DECK:
 			if float(lift["target"]) < 0.5:
 				action = {"id": &"lift", "icon": &"up", "label": "RAISE", "detail": lift_name}

@@ -42,6 +42,10 @@ public:
     // Build-order tail: bodies added after every other kit body so an older
     // save's kit lists still line up (the pitman's deck counterweight).
     void build_late();
+    // J-082's set pieces (the tipping spar): the world's very last bodies, so
+    // every save written before them still lines up; such a save starts them
+    // as built.
+    void build_set_pieces();
 
     [[nodiscard]] Here at(std::uint64_t support) const;
     [[nodiscard]] std::size_t size() const noexcept { return placed_.size(); }
@@ -213,6 +217,8 @@ private:
     int derrick_ = -1;
     float incline_brake_n_ = 0.0F;
     int pitman_ = -1;
+    // The tipping spar: braked by the rider's held ACTION once let go.
+    int spar_ = -1;
     BodyIndex pitman_counterweight_;
     float pitman_haul_n_ = 0.0F;
     kit::BinIndex wheel_skip_bin_{};

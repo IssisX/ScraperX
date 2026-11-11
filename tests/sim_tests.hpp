@@ -803,9 +803,11 @@ struct SparRide final {
     double rider_gain_j = 0.0;
     double cabin_gain_j = 0.0;
     double released_j = 0.0;
+    int braked_ticks = 0;   // ticks the rider held its brake
+    int free_ticks = 0;     // and let it fall free
     scraperx::sim::Snapshot end{};
 };
-SparRide spar_ride(scraperx::sim::Simulation &simulation);
+SparRide spar_ride(scraperx::sim::Simulation &simulation, bool brake);
 void run_spar();
 
 // What one ride to the summit saw, from the parapet vault to the summit

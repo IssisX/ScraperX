@@ -122,10 +122,16 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // From the upper receiver a plate on west to deck 8's east edge beam.
     kit_.add_body(kTramTopPlate, {box(Vec3(1.0F, 0.15F, 2.4F), Material::Galvanised)},
                   RVec3(27.4, 89.85, -161.0), Quat::sIdentity(), 0.0F, 0.8F);
+}
 
+void Route::build_set_pieces() {
+    if (static_cast<int>(placed_.size()) != kSparIndex) {
+        return;
+    }
     // J-082 set piece 1, the tipping spar, unturned: its plane east-west at
     // z -123 off the south face, its bearing at x 7, 415.05 m. The cabin end
     // swings east and up; the counterweight west and down.
+    spar_ = static_cast<int>(placed_.size());
     place("sx.tipping_spar.v1", {RVec3(7.0, 415.05, -123.0), 0.0F}, {kSparStaticFirst, 3}, {kSparDynamicFirst, 2});
 }
 
@@ -421,6 +427,18 @@ void Route::pre_step(float dt, bool action, std::uint64_t support, bool haul) {
             }
             placed_[static_cast<std::size_t>(here.machine)].machine->command({target, true});
         }
+    }
+    if (spar_ >= 0) {
+        // The tipping spar: its motor holds it as found and winds it back
+        // when called down. Let go, it falls free; its brake bites only while
+        // a rider in the cabin holds it (ACTION held, as a hand line is
+        // hauled), and holds the fall to the drive's pace. Unbraked, the fall
+        // runs away. At the top the motor holds it again.
+        const std::size_t s = static_cast<std::size_t>(spar_);
+        const Here here = at(support);
+        const bool braking = haul && here.machine == spar_ && here.role == Role::Deck;
+        const bool released = targets_[s] > .5F;
+        placed_[s].machine->command({targets_[s], !released || braking || travel(s) > .999F});
     }
     if (tram_ >= 0) {
         // The traction tram shuttles on its own: stood at an end for its
