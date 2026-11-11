@@ -105,7 +105,7 @@ it to match, never ask him again.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session; at most two at a time, each
   code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  his call, seen in `get_session`; raise it only when he throttles; every helper at high for now, physics included (11-10; `helper-physics` at xhigh when he raises it); two failed passes in a row on one job: ask him to raise that helper one step, or at night (10 PM-5 AM Central) raise it to xhigh myself and tell him in the morning (11-11); never max (11-06, 11-10). A worker whose job landed is retired.
+  his call, seen in `get_session`; raise it only when he throttles; every helper at high for now, physics included (11-10; `helper-physics` at xhigh when he raises it); two failed passes in a row on one job and the cause still unfound: ask him to raise that helper one step (at night, 10 PM-5 AM Central, raise it to xhigh myself and tell him in the morning); cause found: no ask, no raise (11-11); never max (11-06, 11-10). A worker whose job landed is retired.
 - **Context:** 833k window, compacts near 650k; no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
   30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
   is broken.
