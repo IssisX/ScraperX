@@ -790,6 +790,24 @@ struct MastRide final {
     scraperx::sim::Snapshot end{};
 };
 
+// J-082 set piece 1, the tipping spar (tests/sim_tests_spar.cpp): what one
+// ride from TP-340 to the 484 ring saw, and the energy it moved.
+struct SparRide final {
+    bool boarded = false;
+    bool arrived = false;
+    bool stayed_aboard = true;
+    bool on_cabin_at_top = false;
+    bool on_ring = false;
+    double ride_s = 0.0;
+    double peak_speed = 0.0;
+    double rider_gain_j = 0.0;
+    double cabin_gain_j = 0.0;
+    double released_j = 0.0;
+    scraperx::sim::Snapshot end{};
+};
+SparRide spar_ride(scraperx::sim::Simulation &simulation);
+void run_spar();
+
 // What one ride to the summit saw, from the parapet vault to the summit
 // receiver: the gondola crossed, the derrick luffed the boom up, and the
 // rider ended the ride standing on the summit.

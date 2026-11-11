@@ -177,6 +177,13 @@ public:
     static constexpr std::uint64_t kTramGangway = 1995;
     static constexpr std::uint64_t kTramLanding = 1996;
     static constexpr std::uint64_t kTramTopPlate = 1997;
+    // J-082 set piece 1, the tipping spar on the tower's south face: its
+    // bearing at 415.05 m, 11.3 m off the face; its cabin from a gangway off
+    // TP-340's south edge (340.49 m) up and over to one onto the 484 ring's
+    // south band (484.45 m). Machine index kSparIndex in the route.
+    static constexpr std::uint64_t kSparStaticFirst = 1400;    // bearing, entry, exit
+    static constexpr std::uint64_t kSparDynamicFirst = 2400;   // spar, cabin
+    static constexpr int kSparIndex = 8;
 
 private:
     struct Placed {

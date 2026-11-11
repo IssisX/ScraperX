@@ -17,7 +17,7 @@ const KIT_CARRY_SHACKLE := 1
 const KIT_CARRY_HANDLE := 2
 # The owner's vertical machines (src/sim/vertical/vertical_route.cpp), in
 # route order, and what the player stands on of one (LiftSnapshot.role).
-const LIFT_NAMES := ["CASCADE MAST", "PITMAN LIFT", "BARREL HELIX", "CROWN GONDOLA", "LUFFING DERRICK", "SLAB INCLINE", "STONE WHEEL", "TRACTION TRAM"]
+const LIFT_NAMES := ["CASCADE MAST", "PITMAN LIFT", "BARREL HELIX", "CROWN GONDOLA", "LUFFING DERRICK", "SLAB INCLINE", "STONE WHEEL", "TRACTION TRAM", "TIPPING SPAR"]
 const LIFT_ROLE_DECK := 1
 const LIFT_ROLE_ENTRY := 2
 const LIFT_ROLE_EXIT := 3

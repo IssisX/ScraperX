@@ -489,6 +489,15 @@ func _machines(device: int) -> bool:
 	await _go(device, Vector2(-12.0, -149.0), 0.15, 4.0)
 	await _seconds(1.0)
 	await _pose("machines_tp340")
+	if not _standing_above(341.0):
+		return _fail("machines: not standing on TP-340 (y %.2f)" % _position().y)
+	var tp340_y := _position().y
+	# J-082 set piece 1, the tipping spar: across TP-340 round the header and
+	# out along the gangway off its south edge into the cabin, RAISE lets the
+	# spar go, and off along the upper gangway onto the 484 ring.
+	if not await _spar(device):
+		return false
+	var ring484_y := _position().y
 	var worst_step := _stop_watch(body)
 	if worst_step > 0.25:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step, str(body.get("at", ""))])
@@ -497,11 +506,46 @@ func _machines(device: int) -> bool:
 			float(body["lift"]), str(body.get("lift_at", ""))])
 	if int(_native().get_death_count()) != 0:
 		return _fail("the rider died %d times on the way" % int(_native().get_death_count()))
-	if not _standing_above(341.0):
-		return _fail("machines: not standing on TP-340 (y %.2f)" % _position().y)
-	_detail = "mast_y=%.2f pitman_y=%.2f helix_y=%.2f tp340_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
-		mast_y, pitman_y, helix_y, _position().y, float(int(_native().get_tick_index()) - started) / 90.0,
+	_detail = "mast_y=%.2f pitman_y=%.2f helix_y=%.2f tp340_y=%.2f ring484_y=%.2f seconds=%.1f worst_body_step_m=%.3f worst_view_lift_m=%.3f" % [
+		mast_y, pitman_y, helix_y, tp340_y, ring484_y, float(int(_native().get_tick_index()) - started) / 90.0,
 		worst_step, float(body["lift"])]
+	return true
+
+# The tipping spar (src/sim/vertical/tipping_spar.cpp), machine 8: from
+# TP-340's west side to its lower gangway, into the cabin, RAISE, the ride
+# over the top (about 100 s), and the walk off onto the 484 ring's south band.
+const SPAR := 8
+
+func _spar(device: int) -> bool:
+	# Off G's platform the way the walk came on (its rails run along its north
+	# and south sides), north along TP-340's west strip, then east.
+	for point in [Vector2(-13.8, -149.0), Vector2(-13.8, -140.0), Vector2(5.0, -138.2), Vector2(7.71, -137.4), Vector2(7.71, -128.0),
+			Vector2(7.71, -122.3), Vector2(9.3, -120.2)]:
+		if not await _go(device, point, 0.15, 14.0):
+			return _fail("spar: the walk out to the cabin stalled at %s (bound for %s)" % [str(_position()), str(point)])
+	if not await _offered(&"lift", "RAISE", "TIPPING SPAR"):
+		return _fail("spar: RAISE not offered in the cabin (offered %s)" % _action_label())
+	await _pose("spar_cabin")
+	_act(device)
+	var midway: bool = await _wait_until(func() -> bool:
+			return float(_native().get_lift_state()["travels"][SPAR]) > 0.5, 90.0)
+	if not midway:
+		return _fail("spar: never half way over (lift %s)" % str(_native().get_lift_state()))
+	await _pose("spar_over")
+	var arrived: bool = await _wait_until(func() -> bool:
+			var lift: Dictionary = _native().get_lift_state()
+			return absf(float(lift["travels"][SPAR]) - 1.0) < 0.005 and not bool(lift["moving"]) and \
+				bool(_ctx()["grounded"]), 120.0)
+	if not arrived:
+		return _fail("spar: the cabin never came to the top (at %s, lift %s)" % [str(_position()),
+			str(_native().get_lift_state())])
+	await _pose("spar_top")
+	for point in [Vector2(5.2, -121.0), Vector2(5.2, -130.0), Vector2(5.2, -139.6)]:
+		if not await _go(device, point, 0.15, 10.0):
+			return _fail("spar: the walk off onto the 484 ring stalled at %s" % str(_position()))
+	await _seconds(0.5)
+	if not _standing_above(484.2):
+		return _fail("spar: not standing on the 484 ring (y %.2f)" % _position().y)
 	return true
 
 func _high(device: int) -> bool:

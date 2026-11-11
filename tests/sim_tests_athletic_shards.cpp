@@ -51,6 +51,7 @@ void run_athletic_traversal_1() {
     run_mast();
     run_pitman();
     run_helix();
+    run_spar();
     run_high();
     run_incline();
     run_wheel();

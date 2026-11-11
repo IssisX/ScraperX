@@ -119,6 +119,7 @@ std::unique_ptr<Machine> create(const std::string &id,BuildContext c) {
     if(id=="sx.pitman_lift.v1") return pitman_lift(c);
     if(id=="sx.slab_incline.v1") return slab_incline(c);
     if(id=="sx.stone_wheel.v1") return stone_wheel(c);
+    if(id=="sx.tipping_spar.v1") return tipping_spar(c);
     throw std::invalid_argument("unknown vertical module: "+id);
 }
 }

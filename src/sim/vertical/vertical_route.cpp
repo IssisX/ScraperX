@@ -122,6 +122,11 @@ Route::Route(kit::Kit &kit, PhysicsSystem &world) : kit_(kit), world_(world) {
     // From the upper receiver a plate on west to deck 8's east edge beam.
     kit_.add_body(kTramTopPlate, {box(Vec3(1.0F, 0.15F, 2.4F), Material::Galvanised)},
                   RVec3(27.4, 89.85, -161.0), Quat::sIdentity(), 0.0F, 0.8F);
+
+    // J-082 set piece 1, the tipping spar, unturned: its plane east-west at
+    // z -123 off the south face, its bearing at x 7, 415.05 m. The cabin end
+    // swings east and up; the counterweight west and down.
+    place("sx.tipping_spar.v1", {RVec3(7.0, 415.05, -123.0), 0.0F}, {kSparStaticFirst, 3}, {kSparDynamicFirst, 2});
 }
 
 Route::~Route() = default;

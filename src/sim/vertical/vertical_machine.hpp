@@ -106,5 +106,7 @@ std::unique_ptr<Machine> pitman_lift(BuildContext);
 // The owner's drawings (2026-10-08), built to this API.
 std::unique_ptr<Machine> slab_incline(BuildContext);
 std::unique_ptr<Machine> stone_wheel(BuildContext);
+// J-082's first set piece (tipping_spar.cpp).
+std::unique_ptr<Machine> tipping_spar(BuildContext);
 std::unique_ptr<Machine> create(const std::string &id, BuildContext context);
 } // namespace scraperx::sim::vertical

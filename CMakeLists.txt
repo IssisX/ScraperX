@@ -88,6 +88,7 @@ add_library(scraperx_sim STATIC
     src/sim/vertical/pitman_lift.cpp
     src/sim/vertical/slab_incline.cpp
     src/sim/vertical/stone_wheel.cpp
+    src/sim/vertical/tipping_spar.cpp
 )
 target_include_directories(scraperx_sim PUBLIC src)
 # A Jolt subclass (the rope constraint, the forklift's vehicle controller)
