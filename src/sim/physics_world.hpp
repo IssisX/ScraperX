@@ -454,6 +454,15 @@ private:
 
     void attach_hook_line(JPH::BodyInterface &bodies, JPH::BodyID anchor, JPH::RVec3 at, float max_length) noexcept;
 
+    // J-090: the line to a bite that moves (her body): straight to it, or,
+    // bent, over the nearest bend and the first as two sheaves, the rope
+    // between them laid; `max_length` is the two runs together.
+    void attach_hook_line_to_bite(JPH::BodyInterface &bodies, float max_length) noexcept;
+
+    // The rope the line's limit holds now: the chest to the nearest bend (or
+    // the bite), and, to a moving bite over bends, the first bend to the bite.
+    [[nodiscard]] float hook_line_lies(const JPH::BodyInterface &bodies) const noexcept;
+
     [[nodiscard]] JPH::RVec3 hook_bend_point(const JPH::BodyInterface &bodies, std::uint32_t bend) const noexcept;
 
     [[nodiscard]] JPH::RVec3 hook_anchor(const JPH::BodyInterface &bodies) const noexcept;
@@ -1240,6 +1249,10 @@ private:
     kit::BodyIndex hook_gun_{};
     JPH::BodyID hook_bite_target_;
     JPH::Vec3 hook_bite_local_ = JPH::Vec3::sZero();
+    // J-090: bitten into her body, the bite moves with her: the line runs to
+    // her over its bends as sheaves (attach_hook_line_to_bite).
+    bool hook_bite_moves_ = false;
+    std::uint64_t hook_matron_bite_count_ = 0;
     JPH::Ref<kit::RopeConstraint> hook_line_;
     // The line's bends (see kHookBendsMax), from the bite outward: each held
     // on its body, with the rope laid from it back to the anchor before it

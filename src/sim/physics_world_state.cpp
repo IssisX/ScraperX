@@ -635,6 +635,9 @@ void Simulation::PhysicsWorld::read_state() noexcept {
     state_.hook_fire_count = hook_fire_count_;
     state_.hook_bite_count = hook_bite_count_;
     state_.hook_tear_count = hook_tear_count_;
+    state_.hook_in_matron = hook_state_ == HookState::Bitten && hook_bite_moves_;
+    state_.hook_matron_bite_count = hook_matron_bite_count_;
+    state_.hook_stall_ticks = hook_stall_ticks_;
     static_assert(std::tuple_size<decltype(Snapshot::workers)>::value == Crew::kMaxWorkers,
                   "the snapshot carries every worker the crew can hold");
     state_.worker_count = static_cast<std::uint8_t>(std::min<std::size_t>(crew_->count(), state_.workers.size()));

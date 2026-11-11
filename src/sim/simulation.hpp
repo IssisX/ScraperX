@@ -1005,6 +1005,12 @@ struct Snapshot final {
     std::uint64_t hook_bends_refused = 0;
     // Bites torn or slipped off their member by a load past the tines' hold.
     std::uint64_t hook_tear_count = 0;
+    // J-090: the hook bitten into the Matron's body (hook_position moves with
+    // her), and how many times it has bitten her.
+    bool hook_in_matron = false;
+    std::uint64_t hook_matron_bite_count = 0;
+    // Ticks the reel has turned at its whole kHookReelForceN: stalled.
+    std::uint64_t hook_stall_ticks = 0;
     // The crew: how many, each one, and what the player has made them do.
     std::uint8_t worker_count = 0;
     std::array<WorkerView, 14> workers{};
