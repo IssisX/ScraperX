@@ -1603,9 +1603,10 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
     if (max_nodes < 0) {
         // A probe: 0 no floor within a step, 1 floor but her capsule does not fit, 2 she stands there.
         const traversal::Limits limits{};
-        traversal::Ignore ignore{matron_->body(), player_id_, matron_->moving_layer()};
-        ignore.avoid = true;
-        ignore.avoid_at = JPH::Vec3(physics_system_.GetBodyInterface().GetPosition(player_id_));
+        // The hook avoids him exactly as her real walk does (the same
+        // walk_ignore rule), so the tests exercise the real path (J-049,
+        // Claude's 14:19 FIX on #383): the sensed place, only while fresh.
+        const traversal::Ignore ignore = matron_->walk_ignore();
         JPH::RayCastResult hit;
         const JPH::RVec3 top(from.GetX(), from.GetY() + limits.step_max_m + 0.05F, from.GetZ());
         const float depth = 2.0F * limits.step_max_m + 0.1F;
@@ -1618,9 +1619,7 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
         (void)to;
         return p.empty() ? 1 : 2;
     }
-    traversal::Ignore ignore{matron_->body(), player_id_, matron_->moving_layer()};
-    ignore.avoid = true;
-    ignore.avoid_at = JPH::Vec3(physics_system_.GetBodyInterface().GetPosition(player_id_));
+    traversal::Ignore ignore = matron_->walk_ignore();
     return traversal::grid_walk(physics_system_, ignore, traversal::Limits{}, from,
                                 to, margin, 0.4F, max_nodes)
         .size();

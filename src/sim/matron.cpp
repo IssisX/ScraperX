@@ -3503,25 +3503,30 @@ bool Matron::caught(const bool on_ladder) const noexcept {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    // Zeroed: catch_sense leaves it unwritten on Sense::None, and the
-    // geometry below must read a defined place (the origin, far outside
-    // the catch range) rather than uninitialised memory.
+    // Zeroed: catch_sense leaves it unwritten on Sense::None, and the gate
+    // below must read a defined place rather than uninitialised memory.
     RVec3 sensed = RVec3::sZero();
     const Sense sense = catch_sense(sensed);
     const bool touching = physics_.WereBodiesInContact(body_, player_);
     if (sense == Sense::None && !touching) {
         return false;
     }
+    // The catch is a physical reach, so it needs HIS true position, not the
+    // sensed one: the 0.5 s memory tells her where to go, it must never
+    // catch a player who has moved out of reach since (J-049, Claude's
+    // 14:19 FIX on #383). A touch with no fresh sense still refuses: the
+    // live geometry at 1.174 m is outside the 0.85 m catch range.
+    // No player body (the sight-test harness builds her with BodyID()): the
+    // sensed place is the only one there, and that harness feeds it his true
+    // position every tick, so it is the same measure.
+    const RVec3 him = player_.IsInvalid() ? sensed : physics_.GetBodyInterface().GetPosition(player_);
     if (on_ladder) {
-        // The ankle she saw or felt: the sensed centre less 0.82 m; touching, the ankle in her hand.
-        const RVec3 ankle = sense != Sense::None ? sensed - RVec3(0.0, 0.82F, 0.0) : player_ankle_;
+        // His live ankle: the centre less 0.82 m, as shove_reach_now does.
+        const RVec3 ankle = him - RVec3(0.0, 0.82F, 0.0);
         return Vec3(ankle - (at + shoulder_local())).Length() <= kStoopReachM;
     }
-    // A catch needs the geometry on the sensed position: contact alone
-    // must not catch her (J-049 — a touch with no fresh sense caught at
-    // 1.174 m, outside the 0.85 m catch range, and shoved 59692 N).
-    return distance_xz(float(at.GetX()), float(at.GetZ()), float(sensed.GetX()), float(sensed.GetZ())) < kCatchM &&
-           std::abs(at.GetY() - sensed.GetY()) < 1.4;
+    return distance_xz(float(at.GetX()), float(at.GetZ()), float(him.GetX()), float(him.GetZ())) < kCatchM &&
+           std::abs(at.GetY() - him.GetY()) < 1.4;
 }
 
 Vec3 Matron::shove_direction() const noexcept {

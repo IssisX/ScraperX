@@ -3925,10 +3925,18 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
     bool player_in_way = false;
     if (ignore.avoid) {
         player_at = Vec3(ignore.avoid_at.GetX(), 0.0F, ignore.avoid_at.GetZ());
-        player_radius = 0.35F;
-        player_bottom = ignore.avoid_at.GetY() - 0.9F;
-        player_top = ignore.avoid_at.GetY() + 0.9F;
-        player_in_way = true;
+        // His shape, not a named radius: a capsule's own bounds give it
+        // (J-049, Claude's 14:19 FIX on #383). The place is the sensed one;
+        // the size is his shape's, so it follows him crouching.
+        const Shape *shape = physics.GetBodyInterface().GetShape(ignore.player);
+        if (shape != nullptr) {
+            const AABox bounds = shape->GetLocalBounds();
+            player_radius = 0.5F * std::max(bounds.GetSize().GetX(), bounds.GetSize().GetZ());
+            const float half_y = 0.5F * bounds.GetSize().GetY();
+            player_bottom = ignore.avoid_at.GetY() - half_y;
+            player_top = ignore.avoid_at.GetY() + half_y;
+            player_in_way = true;
+        }
     }
     struct Node {
         float g = std::numeric_limits<float>::max();

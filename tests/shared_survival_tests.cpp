@@ -329,6 +329,13 @@ void matron_transition() {
     auto beam=w.box({1,0.08F,0.4F},at+facing*Vec3(1.45F,0.76F,0),100);
     w.physics.GetBodyInterface().SetRotation(beam,facing,EActivation::Activate);
     w.hinge(beam,at+facing*Vec3(2.45F,0.76F,0),facing*Vec3::sAxisZ());
+    // The caught() check below needs a player in reach: her hostility is the
+    // state gates, and the geometry must be real (J-049, Claude's 14:19 FIX
+    // on #383 — caught() now measures his true position, so the old 3 m
+    // stand-off would fail a check that means "she is hostile beside the
+    // beam"). Put him 0.5 m to her side, opposite the beam (local -x is the
+    // side the beam is not on; the beam sits at local +1.45 m).
+    w.move(player,at+facing*Vec3(-0.5F,0.0F,0.0F));
     SharedSurvival encounter(w.physics,{beam});
     matron.set_shared_survival(&encounter);
     // Her hands go up only in her trap at the bay (matron.hpp, bay.hpp): a

@@ -877,6 +877,61 @@ void run_matron_grab() {
                 "matron shove memory: out of reach, he is not thrown off his feet");
         std::cout << "PASS scraperx_sim matron shove memory: no shove in 0.5 s at 3.0 m\n";
     }
+    // ---- J-049 Claude FIX (16:32): seen at 0.8 m, then out of reach — no catch, no shove ----
+    // Claude's exact numbers: his last sighting 0.3 s old at 0.8 m from her; his
+    // true position 3 m away. She sees him, he sprints out of reach, tick 0.3 s,
+    // read caught() and whether shove_player ran. Both need his true position
+    // within 0.85 m, as before. This replaces the 0.5 s sound version: the sense
+    // here is sight, and the numbers are Claude's. caught_at faces her at him,
+    // so the sighting is real; the room stays quiet, so no sound gives her a
+    // second place. He sprints 3 m west, behind her: 180 degrees off her sight
+    // (kSightHalfFovRad 60, her peripheral 100), so no fresh sight refreshes
+    // the memory in the window — the only place she has is the 0.8 m sighting,
+    // 0.3 s old. The grab is NOT held, so a catch on the remembered spot would
+    // take him. The read of caught() is the counters through step()
+    // (count_catch fires exactly when caught() returns true and the grab
+    // proceeds) plus held_by_matron; shoves is the read of shove_player.
+    {
+        Simulation s(InitialSpawn::Deck154);
+        caught_at(s, 0.8, -130.0, 0.0, -130.0);
+        bool seen = false;
+        for (int i = 0; i < 30 * 90 && !seen; ++i) {
+            s.debug_hold_matron_hands(0.1);  // no grab or shove while he is still in reach
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+            seen = s.matron_state().sees_player;
+        }
+        require(seen, "matron sprint sight: she sees him at 0.8 m");
+        // He is gone: 3 m west, behind her, still on the deck, while the
+        // sighting is fresh. No hands hold past the move: the catch path is
+        // live, so a catch on the remembered spot would take him here. The
+        // last approach hold lingers 0.1 s, so the catch can first fire 0.1 s
+        // in — still inside the 0.3 s to the read.
+        (void)s.debug_launch_player(scraperx::sim::Vector3{-3.0, 154.95, -130.0},
+                                    scraperx::sim::Vector3{0.0, 0.0, 0.0});
+        // One tick for the snapshot to catch the launch and for him to settle
+        // on the deck: snapshot() is cached per tick, so reading it before
+        // a tick would still show the spot he left, and the move itself
+        // would read as a shove.
+        tick(s);
+        const auto catches = s.matron_state().catches;
+        const auto grabs = s.matron_state().grabs;
+        const auto shoves = s.matron_state().shoves;
+        const auto at = s.snapshot().player_position;
+        for (int i = 0; i < 26; ++i) {  // tick 0.3 s from the sighting: 1 settle + 26
+            (void)s.set_move_input(0.0, 0.0);
+            tick(s);
+        }
+        const auto after = s.snapshot().player_position;
+        require(s.matron_state().catches == catches && s.matron_state().grabs == grabs &&
+                    !s.snapshot().held_by_matron,
+                "matron sprint sight: out of reach, a remembered sighting catches nobody");
+        require(s.matron_state().shoves == shoves,
+                "matron sprint sight: out of reach, a remembered sighting shoves nobody");
+        require(std::hypot(after.x - at.x, after.z - at.z) < 0.5,
+                "matron sprint sight: out of reach, he is not thrown off his feet");
+        std::cout << "PASS scraperx_sim matron sprint sight: no catch, no shove, 0.3 s sight at 0.8 m, true 3.0 m\n";
+    }
 }
 // run_matron_grab, run_matron_arm, run_matron_fatality: not in the default
 // sequence but this ctest slice, as matron-chase, since her fatality's runs
