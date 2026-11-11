@@ -50,7 +50,7 @@ your own branches (Cory 11-05) and mail the rest:
   old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
 ## Your queue (11-06)
-The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
+The rule: take the next one yourself; mail the moment fewer than 6 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 5 left`; Cory 11-11: "cant have that happen"). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 In flight (finish these): J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face, 11-11), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372. Parked: J-053 #82 (on Grok), J-044l (on Grok), J-060 #320 (on J-044c).
 Unstarted, in order (11-11):
@@ -66,7 +66,7 @@ Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
-Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the
+Your queue is never allowed to run dry: whenever fewer than six big jobs above are unstarted, the
 integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
 - **G1, her mind runs on evidence (rule 29, `03_EXECUTION/GAP_LIST.md` gap 4):** perception is evidence
   with an age, rage is fed by sound that reaches her ear, and hiding from her truly works. Find every
