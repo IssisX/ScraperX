@@ -1267,10 +1267,16 @@ Simulation::MatronJourney Simulation::matron_journey() const noexcept {
         out.misses = v.misses;
         out.force_n = v.force_n;
         out.peak_force_n = v.peak_force_n;
+        out.power_w = v.power_w;
         out.holding = v.holding;
     }
     out.gravity_factor = physics_world_->matron_gravity_factor();
     return out;
+}
+
+Simulation::MatronHoist Simulation::matron_hoist() const noexcept {
+    const Matron::HoistView v = physics_world_->matron().hoist_view();
+    return {v.phase, v.rides, v.hand_n, v.hand_power_w};
 }
 
 void Simulation::debug_matron_patrol() noexcept {

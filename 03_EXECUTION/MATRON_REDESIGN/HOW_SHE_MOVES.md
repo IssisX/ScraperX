@@ -134,6 +134,12 @@ game playable and the suite green; they can stop after any step without loss.
 - Tests never weaken; a check changes only by the owner's decision, by pull request (issue #3,
   comment 6442285390). World tweaks within about 0.2 m are proposed with numbers; the owner approves.
 - Test only what a change reaches (`CLAUDE.md`); the proof is CI on an `<agent>/integrate-*` branch.
+- Her drawn hair and cloth (11-10, learned the hard way): pull them toward world-down by a blend that
+  grows from 0 at the root to about 0.6 at the tip (the skirt about 60% below the hips), never all the way, or
+  they sink into her when she bends; cloth skin weights sum to exactly 1 and drawn vertices sit on the proxy's
+  surface (16-bit weights 2e-5 short moved vertices 3 mm and the probe read it as stretch). A fix that leaves
+  the measurement unchanged is being undone by a later pass: find that pass before trying again (J-042's
+  0.092 m foot slide survived two fixes because a later pass held the drawn sole to the deck).
 
 ## Open for the owner
 

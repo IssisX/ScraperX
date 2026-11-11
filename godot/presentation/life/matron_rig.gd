@@ -12,8 +12,11 @@ extends RefCounted
 ##
 ## Then what the pivots never had: her feet planted on the deck, palms on it on
 ## all fours, hands up to the rung on a ladder (contact); her eyes turned in
-## their sockets onto the player's (aim_eyes); and her hair, hung on chains of
-## bones that gravity, her own motion and her skull and back swing (step_hair).
+## their sockets onto the player's (aim_eyes); her hair, hung on chains of
+## bones that gravity, her own motion and her skull and back swing (step_hair);
+## and her skirt, a cloth proxy round her legs (matron_skirt.gd, step_skirt).
+
+const MatronSkirt := preload("res://presentation/life/matron_skirt.gd")
 
 const PELVIS_SHARE := 0.5
 # Her age in her back: a fixed upper-back hunch (the dowager's hump), the neck
@@ -88,6 +91,7 @@ var _chains: Array = []
 var _skull_local := Vector3.ZERO
 var _skull_radius := 0.1
 var _wind_clock := 0.0
+var skirt: RefCounted = null
 
 
 func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
@@ -115,6 +119,14 @@ func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
 	if hair.has("skull"):
 		_skull_local = _v(hair["skull"]) - head_at
 		_skull_radius = float(hair["skull_radius"])
+	var root: Node = skel.get_parent() if skel.get_parent() != null else skel
+	var found := root.find_children("skirt_cloth", "MeshInstance3D", true, false)
+	if not found.is_empty():
+		var cloth := MatronSkirt.new()
+		if cloth.setup(skel, found[0] as MeshInstance3D):
+			skirt = cloth
+	else:
+		push_error("matron rig: her body has no skirt_cloth")
 
 
 func _v(a: Array) -> Vector3:
@@ -1612,6 +1624,12 @@ func step_hair(delta: float) -> void:
 			var rot := Quaternion(Vector3.DOWN, local_dir) if local_dir.dot(Vector3.DOWN) > -0.999 else Quaternion(Vector3.RIGHT, PI)
 			skel.set_bone_pose_rotation(bi, rot)
 			parent_basis = parent_basis * Basis(rot)
+
+
+## Her skirt's cloth, after her legs are where they will be drawn this frame.
+func step_skirt(delta: float, fresh: bool) -> void:
+	if skirt != null:
+		skirt.step(delta, fresh)
 
 
 func _outside(q: Vector3, centre: Vector3, radius: float) -> Vector3:
