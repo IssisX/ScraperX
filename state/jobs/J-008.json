@@ -2,22 +2,22 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "builder/integrate-j008": "d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
+  "builder/integrate-j008": "7beab5995e7554d2cab90e093f2534dedd70055f",
   "fb-bot/integrate-protected-j008-ladder-bar-sort": "45e16da201b2a1b6f8302a752b6c2a4b7741b212"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-11T00:59:09Z",
- "head": "d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
+ "deadline": "2026-11-11T04:19:08Z",
+ "head": "7beab5995e7554d2cab90e093f2534dedd70055f",
  "issue": 115,
  "job": "J-008",
  "landed": {
   "builder/integrate-j008": [
-   "d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
+   "7beab5995e7554d2cab90e093f2534dedd70055f",
    "",
-   "2026-11-10T22:50:55Z"
+   "2026-11-11T03:19:08Z"
   ],
   "fb-bot/integrate-protected-j008-ladder-bar-sort": [
    "45e16da201b2a1b6f8302a752b6c2a4b7741b212",
@@ -27,7 +27,11 @@
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T03:19:08Z",
+    "by": "grok_bot",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -50,6 +54,31 @@
    "version": "red:d9c1dbe6ec9fa5071c6650edfa5ae90681efa4f3",
    "via": "watch",
    "what": "`builder/integrate-j008` proof red: native-tests (matron-slices-3), native-tests (athletic-traversal), native-tests (matron-slices-1), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T03:19:08Z",
+   "dead": "2026-11-11T05:19:08Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T04:19:08Z",
+   "id": "O-32c09091",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T03:19:08Z",
+   "missing": 0,
+   "ref": "BRANCH|builder/integrate-j008",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 115,
+   "to": "grok_bot",
+   "unseen": null,
+   "version": "red:7beab5995e7554d2cab90e093f2534dedd70055f",
+   "via": "watch",
+   "what": "`builder/integrate-j008` proof red: native-tests (matron-slices-1), native-tests (athletic-traversal), no PR"
   }
  ],
  "outcome": null,
@@ -60,5 +89,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T23:59:09Z"
+ "updated": "2026-11-11T03:19:08Z"
 }

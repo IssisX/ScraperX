@@ -1233,3 +1233,13 @@
 {"ev": "inbox", "id": "O-62d8217d", "job": "J-059", "ref": "ASK|ask on #307", "t": "2026-11-11T02:09:10Z", "to": "claude", "via": "session"}
 {"ev": "needs_you", "job": "", "keys": ["O-ccc7effe", "O-0d2e9cf6"], "n": 2, "t": "2026-11-11T02:09:10Z"}
 {"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T02:09:10Z", "tries": 1}
+{"due": "2026-11-11T04:19:08Z", "ev": "obligation", "id": "O-32c09091", "job": "J-008", "kind": "fix", "ref": "BRANCH|builder/integrate-j008", "t": "2026-11-11T03:19:08Z", "to": "grok_bot", "via": "watch"}
+{"ev": "acked", "how": "new head", "id": "O-0d2e9cf6", "job": "J-008", "t": "2026-11-11T03:19:08Z"}
+{"ev": "closed", "id": "O-40f8f8de", "job": "J-011", "t": "2026-11-11T03:19:08Z", "why": "its thread closed"}
+{"ev": "outcome", "job": "J-011", "outcome": "merged", "t": "2026-11-11T03:19:08Z", "why": "claude/integrate-j011-skirt-cloth: merged #390"}
+{"due": "2026-11-11T05:17:00Z", "ev": "obligation", "id": "O-a6e44d6f", "job": "J-049", "kind": "ask", "ref": "ASK|ask on #278", "t": "2026-11-11T03:19:08Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-32c09091", "job": "J-008", "ref": "BRANCH|builder/integrate-j008", "send": 1, "t": "2026-11-11T03:19:08Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 2, "ev": "sent", "id": "O-7b7cf4f6", "job": "J-009", "ref": "PR|#377", "send": 2, "t": "2026-11-11T03:19:08Z", "to": "muse", "via": "email"}
+{"attempt": 2, "ev": "sent", "id": "O-f200c17a", "job": "J-049", "ref": "PR|#383", "send": 2, "t": "2026-11-11T03:19:08Z", "to": "muse", "via": "email"}
+{"ev": "inbox", "id": "O-a6e44d6f", "job": "J-049", "ref": "ASK|ask on #278", "t": "2026-11-11T03:19:08Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T03:19:08Z", "tries": 1}
