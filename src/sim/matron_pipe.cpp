@@ -1089,8 +1089,10 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
         return false;
     }
     // Frail, she climbs it up after him, slow (Cory, 11-11: she climbs as a
-    // pest too), but does not take hold of it to go down it.
-    if (stage_ == Stage::Pest && next < floor_y) {
+    // pest too), but does not take hold of it to go down it. Up means over
+    // her feet, not over her levels_ entry: topped out of a ladder onto a
+    // landing over a deck, that entry is still the deck she left.
+    if (stage_ == Stage::Pest && next < float(at.GetY()) - kStandCentre + 1.0F) {
         return false;
     }
     // A way that failed under her a moment ago she leaves alone a while.
