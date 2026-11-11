@@ -102,7 +102,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
-   "rechecked": "2026-11-11T14:01:59Z",
+   "rechecked": "2026-11-11T21:07:56Z",
    "ref": "BRANCH|fb-bot/integrate-j038-slice1",
    "sends": 1,
    "sent_by": "shadow",
@@ -181,7 +181,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T14:01:59Z",
+   "rechecked": "2026-11-11T21:07:56Z",
    "ref": "ASK|ask on #169",
    "sends": 0,
    "thread": 169,
@@ -543,5 +543,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T16:04:39Z"
+ "updated": "2026-11-11T21:07:56Z"
 }
