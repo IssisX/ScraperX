@@ -1287,3 +1287,9 @@
 {"attempt": 1, "ev": "sent", "id": "O-8adc27c8", "job": "J-059", "ref": "PR|#343", "send": 1, "t": "2026-11-11T06:28:54Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T06:28:54Z", "tries": 1}
 {"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T07:28:58Z", "tries": 1}
+{"due": "2026-11-11T12:29:01Z", "ev": "obligation", "id": "O-26827016", "job": "J-038", "kind": "fix", "ref": "PR|#372", "t": "2026-11-11T08:29:01Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-cecc4274", "job": "J-038", "t": "2026-11-11T08:29:01Z"}
+{"attempt": 2, "ev": "sent", "id": "O-0b4c9676", "job": "J-007", "ref": "BRANCH|fb-bot/integrate-protected-j007-item6-stage2", "send": 2, "t": "2026-11-11T08:29:01Z", "to": "muse", "via": "email"}
+{"attempt": 2, "ev": "sent", "id": "O-f70eab45", "job": "J-009", "ref": "PR|#377", "send": 2, "t": "2026-11-11T08:29:01Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-26827016", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-11T08:29:01Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T08:29:01Z", "tries": 1}

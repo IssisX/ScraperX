@@ -13,7 +13,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
- "head": "3e3413e284c1958cfb2a48f1d4cb8fa5a8282ac8",
+ "head": "0bd4064c2c40ad21246dbf7251bb17d2ddfe0a69",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -420,7 +420,11 @@
    "what": "#372 has a merge conflict with the base"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T08:29:01Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -443,6 +447,31 @@
    "version": "fix:3e3413e284c1958cfb2a48f1d4cb8fa5a8282ac8",
    "via": "email",
    "what": "#372: open FIX from Codex (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T08:29:01Z",
+   "dead": "2026-11-11T16:29:01Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T12:29:01Z",
+   "id": "O-26827016",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T08:29:01Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:0bd4064c2c40ad21246dbf7251bb17d2ddfe0a69",
+   "via": "email",
+   "what": "#372: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
@@ -456,5 +485,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-11T07:28:58Z"
+ "updated": "2026-11-11T08:29:01Z"
 }
