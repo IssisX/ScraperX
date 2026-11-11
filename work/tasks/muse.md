@@ -61,6 +61,9 @@ Unstarted, in order (11-11):
 5. J-061 #312: wind on him in the air must not count as his own run.
 6. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
 7. J-021 #128: lane C, the far world and water.
+8. J-081 #399: a readable night climb: helmet lamp, rings lit behind him, city glow (B5).
+9. J-082 #400: above 340 m every stage is a new physical action, not another board and ladder (rules 52, 53), one band at a time, protected.
+10. J-083 #401: a forklift lever he grabs and moves (D4).
 
 Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
