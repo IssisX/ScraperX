@@ -17,6 +17,7 @@ eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug,
 Helpers (sub-agents): at most three at a time (11-11: they take the hardest jobs from Muse, after Argon's), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
 
+Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 
