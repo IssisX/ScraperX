@@ -39,7 +39,6 @@ constexpr float kTurnRate = 7.0F;
 constexpr float kPiF = 3.14159265358979F;
 constexpr float kPipeStallS = 2.5F;
 constexpr float kPipeOverloadS = 0.18F;
-constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.78
 constexpr float kPipeLegsLineN = 800.0F;  // her legs' pull back onto her line while she slides
 // Her legs come down onto a flange: they bear on it, a support, not a grip.
 // What they can take is her one budget (3.7 times her weight); past it they
