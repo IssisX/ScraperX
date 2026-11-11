@@ -1279,3 +1279,10 @@
 {"ev": "dead_letter", "id": "O-62d8217d", "job": "J-059", "ref": "ASK|ask on #307", "t": "2026-11-11T05:28:39Z", "to": "claude"}
 {"ev": "needs_you", "job": "", "keys": ["O-32c09091", "O-e05d786e", "O-62d8217d"], "n": 3, "t": "2026-11-11T05:28:39Z"}
 {"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T05:28:39Z", "tries": 1}
+{"due": "2026-11-11T15:17:00Z", "ev": "obligation", "id": "O-431819e0", "job": "J-007", "kind": "ask", "ref": "ASK|ask on #114", "t": "2026-11-11T06:28:54Z", "to": "claude", "via": "session"}
+{"due": "2026-11-11T15:17:00Z", "ev": "obligation", "id": "O-5c82b109", "job": "J-015", "kind": "ask", "ref": "ASK|ask on #122", "t": "2026-11-11T06:28:54Z", "to": "claude", "via": "session"}
+{"due": "2026-11-11T10:28:54Z", "ev": "obligation", "id": "O-8adc27c8", "job": "J-059", "kind": "fix", "ref": "PR|#343", "t": "2026-11-11T06:28:54Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-5741705e", "job": "J-059", "t": "2026-11-11T06:28:54Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-431819e0", "job": "J-007", "t": "2026-11-11T06:28:54Z"}
+{"attempt": 1, "ev": "sent", "id": "O-8adc27c8", "job": "J-059", "ref": "PR|#343", "send": 1, "t": "2026-11-11T06:28:54Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T06:28:54Z", "tries": 1}

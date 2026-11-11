@@ -10,8 +10,8 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-11T01:49:17Z",
- "head": "87e31743ea86e2d3a65c5b7dbf7b3bf65364f206",
+ "deadline": "2026-11-11T03:17:00Z",
+ "head": "959bf0138f88ae98051ee84cb3d4cc38da95b2d1",
  "issue": 307,
  "job": "J-059",
  "landed": {
@@ -318,7 +318,11 @@
    "what": "#343: open FIX from Claude (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T06:28:54Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -366,6 +370,31 @@
    "version": "6779187533",
    "via": "session",
    "what": "ask from Muse on #307"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T06:28:54Z",
+   "dead": "2026-11-11T14:28:54Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T10:28:54Z",
+   "id": "O-8adc27c8",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T06:28:54Z",
+   "missing": 0,
+   "ref": "PR|#343",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 343,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:959bf0138f88ae98051ee84cb3d4cc38da95b2d1",
+   "via": "email",
+   "what": "#343: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
@@ -378,5 +407,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-11T02:09:10Z"
+ "updated": "2026-11-11T06:28:54Z"
 }

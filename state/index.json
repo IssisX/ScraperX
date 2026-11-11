@@ -810,6 +810,34 @@
      "version": "red:cc50ea37beef9e239f983b39b937fd06cdd05db4",
      "via": "email",
      "what": "`fb-bot/integrate-protected-j007-item6-stage2` proof red: native-tests (matron-slices-3), no PR"
+    },
+    {
+     "ack": {
+      "at": "2026-11-10T21:28:01Z",
+      "by": "claude",
+      "how": "reply to the asker"
+     },
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-10T21:22:46Z",
+     "attempts": 0,
+     "closed": null,
+     "created": "2026-11-11T06:28:54Z",
+     "dead": "2026-11-11T17:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-11T15:17:00Z",
+     "id": "O-431819e0",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": null,
+     "missing": 0,
+     "ref": "ASK|ask on #114",
+     "sends": 0,
+     "thread": 114,
+     "to": "claude",
+     "unseen": null,
+     "version": "6779611005",
+     "via": "session",
+     "what": "ask from Muse on #114"
     }
    ],
    "outcome": null,
@@ -822,7 +850,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T04:19:09Z"
+   "updated": "2026-11-11T06:28:54Z"
   },
   "J-008": {
    "attempt": 0,
@@ -2033,6 +2061,30 @@
      "version": "fix:a949f76fee5c27cdc9c8efc3133030fba2292ee5",
      "via": "email",
      "what": "#389: open FIX from Codex (review)"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-10T21:22:48Z",
+     "attempts": 0,
+     "closed": null,
+     "created": "2026-11-11T06:28:54Z",
+     "dead": "2026-11-11T17:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-11T15:17:00Z",
+     "id": "O-5c82b109",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": null,
+     "missing": 0,
+     "ref": "ASK|ask on #122",
+     "sends": 0,
+     "thread": 122,
+     "to": "claude",
+     "unseen": null,
+     "version": "6779611595",
+     "via": "session",
+     "what": "ask from Muse on #122"
     }
    ],
    "outcome": null,
@@ -2045,7 +2097,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-11T05:28:39Z"
+   "updated": "2026-11-11T06:28:54Z"
   },
   "J-016": {
    "attempt": 0,
@@ -3734,7 +3786,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-10T23:59:09Z",
+     "rechecked": "2026-11-11T06:28:54Z",
      "ref": "BRANCH|claude/integrate-j044c-upper-body",
      "sends": 0,
      "thread": 298,
@@ -3753,7 +3805,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T23:59:09Z"
+   "updated": "2026-11-11T06:28:54Z"
   },
   "J-044d": {
    "attempt": 0,
@@ -5090,8 +5142,8 @@
    "ci": "green",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-11T01:49:17Z",
-   "head": "87e31743ea86e2d3a65c5b7dbf7b3bf65364f206",
+   "deadline": "2026-11-11T03:17:00Z",
+   "head": "959bf0138f88ae98051ee84cb3d4cc38da95b2d1",
    "issue": 307,
    "job": "J-059",
    "landed": {
@@ -5398,7 +5450,11 @@
      "what": "#343: open FIX from Claude (review)"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T06:28:54Z",
+      "by": "muse",
+      "how": "new head"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 2,
@@ -5446,6 +5502,31 @@
      "version": "6779187533",
      "via": "session",
      "what": "ask from Muse on #307"
+    },
+    {
+     "ack": null,
+     "ack_rule": "new-head|reply|ack",
+     "asked": null,
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-11T06:28:54Z",
+     "dead": "2026-11-11T14:28:54Z",
+     "dead_lettered": null,
+     "due": "2026-11-11T10:28:54Z",
+     "id": "O-8adc27c8",
+     "kind": "fix",
+     "last_error": "",
+     "last_sent": "2026-11-11T06:28:54Z",
+     "missing": 0,
+     "ref": "PR|#343",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 343,
+     "to": "muse",
+     "unseen": null,
+     "version": "fix:959bf0138f88ae98051ee84cb3d4cc38da95b2d1",
+     "via": "email",
+     "what": "#343: open FIX from Codex (review)"
     }
    ],
    "outcome": null,
@@ -5458,7 +5539,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-11T02:09:10Z"
+   "updated": "2026-11-11T06:28:54Z"
   },
   "J-060": {
    "attempt": 0,
@@ -5934,6 +6015,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
+     "rechecked": "2026-11-11T06:28:54Z",
      "ref": "ASK|ask on #312",
      "sends": 0,
      "thread": 312,
@@ -6124,7 +6206,7 @@
    ],
    "review": "",
    "state": "merged",
-   "updated": "2026-11-10T23:59:09Z"
+   "updated": "2026-11-11T06:28:54Z"
   },
   "J-063": {
    "attempt": 0,
