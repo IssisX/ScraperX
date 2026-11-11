@@ -1,17 +1,51 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j089": "028f9a9ba9ad9eae341ea25add9627e08e237986"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
- "head": "",
+ "deadline": "2026-11-12T00:17:00Z",
+ "head": "028f9a9ba9ad9eae341ea25add9627e08e237986",
  "issue": 407,
  "job": "J-089",
- "landed": {},
- "obligations": [],
+ "landed": {
+  "fb-bot/integrate-j089": [
+   "028f9a9ba9ad9eae341ea25add9627e08e237986",
+   "",
+   "2026-11-11T23:09:21Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T23:09:21Z",
+   "dead": "2026-11-12T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T00:17:00Z",
+   "id": "O-bc1328fe",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T23:09:21Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j089",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 407,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:028f9a9ba9ad9eae341ea25add9627e08e237986",
+   "via": "session",
+   "what": "`fb-bot/integrate-j089` is green with no PR: open one (Muse cannot open PRs)"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -19,6 +53,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-11T12:58:47Z"
+ "state": "proof",
+ "updated": "2026-11-11T23:09:21Z"
 }

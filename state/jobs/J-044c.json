@@ -9,7 +9,9 @@
  },
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6796659538:62"
+ ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
  "head": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
@@ -115,7 +117,12 @@
    "what": "`claude/integrate-j044c-upper-body` @ 03ad884b: closed #298 without merging at this head: reopen it, or delete the branch"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T13:07:55Z",
+    "by": "Muse",
+    "comment": "6796659538",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,

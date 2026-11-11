@@ -2,28 +2,32 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "claude/integrate-j085": "729ee1390b335b013f4fbb4e641df862baf8b9d7",
-  "claude/integrate-protected-j085": "8e73453a1cd2d7ed07e44387acd8d2a1c2a6d7f7",
+  "claude/integrate-j085": "d73b3795ff72d4e2dc31b37e6517a6d6771b653b",
+  "claude/integrate-protected-j085": "a004d8f7f25078b4fbc7873b1115e43d9b32cb5d",
   "fb-bot/integrate-j085": "f6b850f932787bc65ac461497107ee2e99af2ec7"
  },
  "cancelled": null,
  "ci": "green",
- "commands": [],
+ "commands": [
+  "6802674310:56",
+  "6808490301:78",
+  "6808490702:61"
+ ],
  "created": "2026-11-11T12:58:47Z",
- "deadline": "2026-11-11T21:16:05Z",
- "head": "729ee1390b335b013f4fbb4e641df862baf8b9d7",
+ "deadline": "2026-11-12T00:17:00Z",
+ "head": "a004d8f7f25078b4fbc7873b1115e43d9b32cb5d",
  "issue": 403,
  "job": "J-085",
  "landed": {
   "claude/integrate-j085": [
-   "729ee1390b335b013f4fbb4e641df862baf8b9d7",
-   "",
-   "2026-11-11T19:28:50Z"
+   "d73b3795ff72d4e2dc31b37e6517a6d6771b653b",
+   "merged #435",
+   "2026-11-11T23:09:21Z"
   ],
   "claude/integrate-protected-j085": [
-   "8e73453a1cd2d7ed07e44387acd8d2a1c2a6d7f7",
+   "a004d8f7f25078b4fbc7873b1115e43d9b32cb5d",
    "",
-   "2026-11-11T22:08:00Z"
+   "2026-11-11T23:09:21Z"
   ],
   "fb-bot/integrate-j085": [
    "f6b850f932787bc65ac461497107ee2e99af2ec7",
@@ -33,7 +37,12 @@
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T17:27:58Z",
+    "by": "Muse",
+    "comment": "6802674310",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -116,7 +125,12 @@
    "what": "`claude/integrate-j085` is green with no PR: open one (Muse cannot open PRs)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T22:22:49Z",
+    "by": "Muse",
+    "comment": "6808490702",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -141,7 +155,12 @@
    "what": "#435: open FIX from Codex (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T22:22:47Z",
+    "by": "Muse",
+    "comment": "6808490301",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -164,17 +183,67 @@
    "version": "red:8e73453a1cd2d7ed07e44387acd8d2a1c2a6d7f7",
    "via": "email",
    "what": "`claude/integrate-protected-j085` proof red: native-tests (athletic-traversal-2), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T23:09:21Z",
+   "dead": "2026-11-12T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T00:17:00Z",
+   "id": "O-78ba7695",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T23:09:21Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-protected-j085",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 403,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:a004d8f7f25078b4fbc7873b1115e43d9b32cb5d",
+   "via": "session",
+   "what": "`claude/integrate-protected-j085` proof red: native-tests (athletic-traversal-2), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T23:09:21Z",
+   "dead": "2026-11-12T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T00:17:00Z",
+   "id": "O-ab43ea33",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T23:09:21Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j085",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 403,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:f6b850f932787bc65ac461497107ee2e99af2ec7",
+   "via": "session",
+   "what": "`fb-bot/integrate-j085` proof red: scope, no PR"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
- "owner": "muse",
+ "owner": "claude",
  "pr": 435,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   435
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-11T22:08:00Z"
+ "updated": "2026-11-11T23:09:21Z"
 }

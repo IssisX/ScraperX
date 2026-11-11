@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": null,
+ "deadline": "2026-11-12T00:17:00Z",
  "head": "429133c617a01445d40ea33a55802ed397aa1796",
  "issue": 411,
  "job": "J-093",
@@ -48,6 +48,31 @@
    "version": "red:aaed1791db1d70360e6870a1ac6607f781fe5bde",
    "via": "session",
    "what": "`claude/integrate-protected-j093` proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T23:09:21Z",
+   "dead": "2026-11-12T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T00:17:00Z",
+   "id": "O-f33f597b",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T23:09:21Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-protected-j093",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 411,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:429133c617a01445d40ea33a55802ed397aa1796",
+   "via": "session",
+   "what": "`claude/integrate-protected-j093` proof red: godot-touch (touch-3), native-tests (matron-slices-3), no PR (new head 429133c6 since O-5ceb32bd was acked at aaed1791)"
   }
  ],
  "outcome": null,
@@ -57,6 +82,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T22:08:00Z"
+ "state": "working",
+ "updated": "2026-11-11T23:09:21Z"
 }

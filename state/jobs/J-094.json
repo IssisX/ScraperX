@@ -2,24 +2,50 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j094": "adc20f2fcf62328aa8d8565ca8f28b752240ad74"
+  "fb-bot/integrate-j094": "35a51aeb1d7080cab2663266440e5487dcfae3fe"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": null,
- "head": "adc20f2fcf62328aa8d8565ca8f28b752240ad74",
+ "deadline": "2026-11-12T00:17:00Z",
+ "head": "35a51aeb1d7080cab2663266440e5487dcfae3fe",
  "issue": 412,
  "job": "J-094",
  "landed": {
   "fb-bot/integrate-j094": [
-   "adc20f2fcf62328aa8d8565ca8f28b752240ad74",
+   "35a51aeb1d7080cab2663266440e5487dcfae3fe",
    "",
-   "2026-11-11T22:08:00Z"
+   "2026-11-11T23:09:21Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T23:09:21Z",
+   "dead": "2026-11-12T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T00:17:00Z",
+   "id": "O-f72c7d4b",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T23:09:21Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j094",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 412,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:35a51aeb1d7080cab2663266440e5487dcfae3fe",
+   "via": "session",
+   "what": "`fb-bot/integrate-j094` is green with no PR: open one (Muse cannot open PRs)"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -28,5 +54,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-11T22:08:00Z"
+ "updated": "2026-11-11T23:09:21Z"
 }

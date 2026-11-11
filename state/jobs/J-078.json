@@ -6,9 +6,11 @@
  },
  "cancelled": null,
  "ci": "green",
- "commands": [],
+ "commands": [
+  "6796657784:60"
+ ],
  "created": "2026-11-10T22:50:55Z",
- "deadline": "2026-11-11T16:58:47Z",
+ "deadline": null,
  "head": "ddceb91978ef29a9923148016fa3769f2f55188a",
  "issue": 393,
  "job": "J-078",
@@ -21,7 +23,12 @@
  },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T13:07:50Z",
+    "by": "Muse",
+    "comment": "6796657784",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -44,6 +51,62 @@
    "version": "fix:ddceb91978ef29a9923148016fa3769f2f55188a",
    "via": "email",
    "what": "#396: open FIX from Codex (review)"
+  },
+  {
+   "ack": {
+    "at": "2026-11-11T14:25:12Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-11T11:52:45Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-11T23:09:21Z",
+   "dead": "2026-11-12T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T00:17:00Z",
+   "id": "O-0ba2b7f6",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #393",
+   "sends": 0,
+   "thread": 393,
+   "to": "claude",
+   "unseen": null,
+   "version": "6795074933",
+   "via": "session",
+   "what": "ask from Muse on #393"
+  },
+  {
+   "ack": {
+    "at": "2026-11-11T14:25:12Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-11T13:02:57Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-11T23:09:21Z",
+   "dead": "2026-11-12T02:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T00:17:00Z",
+   "id": "O-a6d2d9f8",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #393",
+   "sends": 0,
+   "thread": 393,
+   "to": "claude",
+   "unseen": null,
+   "version": "6796554271",
+   "via": "session",
+   "what": "ask from Muse on #393"
   }
  ],
  "outcome": null,
@@ -56,5 +119,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-11T12:58:47Z"
+ "updated": "2026-11-11T23:09:21Z"
 }

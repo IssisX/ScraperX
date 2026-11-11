@@ -7,9 +7,12 @@
  },
  "cancelled": null,
  "ci": "",
- "commands": [],
+ "commands": [
+  "6799551646:36",
+  "6804094873:60"
+ ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-11T19:02:17Z",
+ "deadline": null,
  "head": "0ceb010e3daee42a5cd918bd60b62a8577ca28c0",
  "issue": 293,
  "job": "J-054",
@@ -84,7 +87,12 @@
    "what": "`fb-bot/integrate-j054` proof red: scope, no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T15:12:59Z",
+    "by": "Muse",
+    "comment": "6799551646",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -109,7 +117,12 @@
    "what": "`fb-bot/integrate-j054` proof red: scope, no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T18:32:47Z",
+    "by": "Muse",
+    "comment": "6804094873",
+    "how": "/ack"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -142,5 +155,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T18:18:52Z"
+ "updated": "2026-11-11T23:09:21Z"
 }

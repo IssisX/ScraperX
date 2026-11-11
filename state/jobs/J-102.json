@@ -15,8 +15,8 @@
  "landed": {
   "claude/integrate-j102": [
    "af5384888e125bd887b9a899c047bd0d0ed2f334",
-   "",
-   "2026-11-11T17:16:05Z"
+   "in trunk",
+   "2026-11-11T23:09:21Z"
   ]
  },
  "obligations": [
@@ -53,6 +53,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T17:16:05Z"
+ "state": "merged",
+ "updated": "2026-11-11T23:09:21Z"
 }
