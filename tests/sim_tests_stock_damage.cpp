@@ -456,6 +456,143 @@ void reverse_break_save_case() {
     }
 }
 
+// (#372 review, P1 physics_world_state.cpp:491.) A save whose pieces
+// differ from the receiving world's — a different crate broke, or the
+// same crates in a different order — must load: the loader reconciles
+// runtime pieces by entity, and the ordered-prefix check covers only
+// the bodies built with the world. A save refused for that alone is
+// a lost save.
+void different_break_save_loads_case() {
+    const std::string prefix = "stock damage different break save: ";
+    const std::uint64_t north_entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateNorth;
+    const std::uint64_t south_entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateSouth;
+    auto break_crate = [](Simulation &s, const int which) {
+        const std::uint32_t crate = piece(s, which);
+        const auto at = s.kit_body_position(crate);
+        put(s, crate, {at.x, at.y + 3.0, at.z});
+        (void)s.advance_frame(1.0);  // the fall, the landing, the break executes
+    };
+    // (a) The source breaks the north crate; the receiver broke the south.
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(2.0);  // the commit lands; the crates are live
+        const std::uint32_t bodies_before = s.kit_body_count();
+        const std::uint32_t north = piece(s, LooseStock::kDeckCrateNorth);
+        const double north_mass = s.kit_body_mass(north);
+        break_crate(s, LooseStock::kDeckCrateNorth);
+        require(s.stock_damage(north_entity).broken, (prefix + "the north crate breaks").c_str());
+        require(s.kit_body_count() == bodies_before + 8,
+                (prefix + "the north break adds eight pieces").c_str());
+        std::array<Vector3, 8> piece_at{};
+        std::array<Vector3, 8> piece_vel{};
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = s.kit_body_index(piece_entity_for(north_entity, k));
+            require(body != 0xFFFFFFFFU, (prefix + "every north piece exists").c_str());
+            piece_at[k] = s.kit_body_position(body);
+            piece_vel[k] = s.kit_body_velocity(body);
+            require(std::abs(s.kit_body_mass(body) - north_mass / 8.0) < 0.01,
+                    (prefix + "every north piece keeps its mass share").c_str());
+        }
+        const std::vector<std::uint8_t> bytes = s.save_game();
+        Simulation t(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)t.advance_frame(2.0);
+        break_crate(t, LooseStock::kDeckCrateSouth);
+        require(t.stock_damage(south_entity).broken,
+                (prefix + "the receiver broke the south crate").c_str());
+        require(t.load_game(bytes.data(), bytes.size()),
+                (prefix + "the save loads into a world that broke the other crate").c_str());
+        require(t.stock_damage(north_entity).broken, (prefix + "the north crate stays broken").c_str());
+        require(!t.stock_damage(south_entity).broken,
+                (prefix + "the south crate comes back whole").c_str());
+        require(t.kit_body_count() == bodies_before + 16,
+                (prefix + "both sets of pieces are held").c_str());
+        require(t.kit_body_enabled(piece(t, LooseStock::kDeckCrateSouth)),
+                (prefix + "the south crate comes back whole").c_str());
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = t.kit_body_index(piece_entity_for(north_entity, k));
+            require(body != 0xFFFFFFFFU, (prefix + "every north piece loads").c_str());
+            const auto pp = t.kit_body_position(body);
+            require(std::hypot(pp.x - piece_at[k].x, pp.y - piece_at[k].y, pp.z - piece_at[k].z) < 0.05,
+                    (prefix + "every north piece keeps its position").c_str());
+            const auto pv = t.kit_body_velocity(body);
+            require(std::hypot(pv.x - piece_vel[k].x, pv.y - piece_vel[k].y, pv.z - piece_vel[k].z) < 0.05,
+                    (prefix + "every north piece keeps its velocity").c_str());
+            require(!t.kit_body_enabled(t.kit_body_index(piece_entity_for(south_entity, k))),
+                    (prefix + "every south piece is parked").c_str());
+        }
+        // A later round trip holds.
+        const std::vector<std::uint8_t> bytes2 = t.save_game();
+        Simulation u(scraperx::sim::InitialSpawn::ExteriorGrade);
+        require(u.load_game(bytes2.data(), bytes2.size()), (prefix + "the round trip loads").c_str());
+        require(u.kit_body_count() == bodies_before + 16,
+                (prefix + "the round trip keeps both sets of pieces").c_str());
+        require(u.stock_damage(north_entity).broken && !u.stock_damage(south_entity).broken,
+                (prefix + "the round trip keeps the damage").c_str());
+    }
+    // (b) Both break both crates, in opposite orders.
+    {
+        Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)s.advance_frame(2.0);
+        const std::uint32_t bodies_before = s.kit_body_count();
+        break_crate(s, LooseStock::kDeckCrateSouth);  // south first: the higher entity breaks first
+        require(s.stock_damage(south_entity).broken, (prefix + "the south crate breaks first").c_str());
+        break_crate(s, LooseStock::kDeckCrateNorth);
+        require(s.stock_damage(north_entity).broken, (prefix + "the north crate breaks second").c_str());
+        require(s.kit_body_count() == bodies_before + 16,
+                (prefix + "both breaks add sixteen pieces").c_str());
+        std::array<Vector3, 16> piece_at{};
+        std::array<Vector3, 16> piece_vel{};
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = s.kit_body_index(piece_entity_for(south_entity, k));
+            piece_at[k] = s.kit_body_position(body);
+            piece_vel[k] = s.kit_body_velocity(body);
+        }
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = s.kit_body_index(piece_entity_for(north_entity, k));
+            piece_at[8 + k] = s.kit_body_position(body);
+            piece_vel[8 + k] = s.kit_body_velocity(body);
+        }
+        const std::vector<std::uint8_t> bytes = s.save_game();
+        Simulation t(scraperx::sim::InitialSpawn::ExteriorGrade);
+        (void)t.advance_frame(2.0);
+        break_crate(t, LooseStock::kDeckCrateNorth);  // north first: the opposite order
+        require(t.stock_damage(north_entity).broken, (prefix + "the receiver breaks north first").c_str());
+        break_crate(t, LooseStock::kDeckCrateSouth);
+        require(t.stock_damage(south_entity).broken, (prefix + "the receiver breaks south second").c_str());
+        require(t.kit_body_count() == bodies_before + 16,
+                (prefix + "the receiver holds sixteen pieces").c_str());
+        require(t.load_game(bytes.data(), bytes.size()),
+                (prefix + "the save loads into a world that broke the same crates in the other order")
+                    .c_str());
+        require(t.stock_damage(south_entity).broken && t.stock_damage(north_entity).broken,
+                (prefix + "both crates stay broken").c_str());
+        require(t.kit_body_count() == bodies_before + 16,
+                (prefix + "the load makes no second set of pieces").c_str());
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = t.kit_body_index(piece_entity_for(south_entity, k));
+            require(body != 0xFFFFFFFFU, (prefix + "every south piece loads").c_str());
+            const auto pp = t.kit_body_position(body);
+            require(std::hypot(pp.x - piece_at[k].x, pp.y - piece_at[k].y, pp.z - piece_at[k].z) < 0.05,
+                    (prefix + "every south piece keeps its position").c_str());
+            const auto pv = t.kit_body_velocity(body);
+            require(std::hypot(pv.x - piece_vel[k].x, pv.y - piece_vel[k].y, pv.z - piece_vel[k].z) < 0.05,
+                    (prefix + "every south piece keeps its velocity").c_str());
+        }
+        for (std::uint32_t k = 0; k < 8; ++k) {
+            const std::uint32_t body = t.kit_body_index(piece_entity_for(north_entity, k));
+            require(body != 0xFFFFFFFFU, (prefix + "every north piece loads").c_str());
+            const auto pp = t.kit_body_position(body);
+            require(std::hypot(pp.x - piece_at[8 + k].x, pp.y - piece_at[8 + k].y,
+                               pp.z - piece_at[8 + k].z) < 0.05,
+                    (prefix + "every north piece keeps its position").c_str());
+            const auto pv = t.kit_body_velocity(body);
+            require(std::hypot(pv.x - piece_vel[8 + k].x, pv.y - piece_vel[8 + k].y,
+                               pv.z - piece_vel[8 + k].z) < 0.05,
+                    (prefix + "every north piece keeps its velocity").c_str());
+        }
+    }
+}
+
 // A fabricated object built before the break, loaded back into the
 // same world: the crowbar sits at a kit index before the break
 // pieces, so the save's states must land on the right bodies.
@@ -1046,6 +1183,44 @@ void run_stock_damage() {
                     "stock damage: two ticks of opposing contact make the body supported");
         }
     }
+    // ---- (#372 P1) equally aligned hints dent the same spot either order ----
+    // Jolt calls the contact callbacks from its worker threads in no fixed
+    // order, so two hints with equally aligned normals but different
+    // contact points must not pick by arrival: the same impact dented
+    // at Y 0 in one run and Y 1 in the other. The pick breaks the tie
+    // on the contact point, so the dent is the same either way.
+    {
+        const std::uint64_t entity = LooseStock::kFirstEntity;
+        const ContactHint at_y0{entity, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F};
+        const ContactHint at_y1{entity, 0.0F, 1.0F, 0.0F, 1.0F, 0.0F, 0.0F};
+        auto dent_y_for = [&](const std::vector<ContactHint> &order) {
+            StockDamage dmg;
+            auto tick = [&](const float vx, const float vy, const std::vector<ContactHint> &hints) {
+                dmg.observe(entity, K::Container, 3750.0F, vx, vy, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F,
+                            0.0F, 1.0F, hints);
+            };
+            tick(0.0F, 0.0F, {});  // baseline: the spawn, exclusion starts
+            for (int i = 0; i < 20; ++i) {
+                tick(0.0F, 0.0F, {});  // the exclusion runs out
+            }
+            tick(0.77F, 0.0F, order);  // the peak: 2,887 N.s, severe, both hints align
+            for (int i = 0; i < 6; ++i) {
+                // Still sliding at the peak velocity: dropping back to
+                // rest would read as a second 2,887 N.s event and hold
+                // the window open. The window closes on quiet ticks.
+                tick(0.77F, 0.0F, {});
+            }
+            const auto &st = dmg.state(entity);
+            require(st.dent_count == 1 && st.dents[0].tier == Tier::Severe,
+                    "stock damage: the tied-hint hit dents severe");
+            return st.dents[0].point_y;
+        };
+        const float y_forward = dent_y_for({at_y0, at_y1});
+        const float y_reversed = dent_y_for({at_y1, at_y0});
+        require(y_forward == y_reversed,
+                "stock damage: equally aligned hints dent the same spot either order");
+        require(y_forward == 0.0F, "stock damage: the hint tie breaks to the lower contact point");
+    }
     // ---- at rest, nothing dents -----------------------------------------
     {
         Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
@@ -1326,6 +1501,8 @@ void run_stock_damage() {
     fabricated_break_case(scraperx::sim::InitialSpawn::ExteriorGrade, false, "break first, after commit");
     // ---- (d) two crates break in reverse entity order: the save loads ----
     reverse_break_save_case();
+    // ---- (d) #372 review P1: a save whose pieces differ from the receiver's loads ----
+    different_break_save_loads_case();
     // ---- (d) a fabricated object built before the break, loaded back ----
     fabricated_same_world_load_case();
     // ---- (d) a save taken before the break, loaded back after it ----

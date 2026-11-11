@@ -484,23 +484,36 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     std::uint64_t commits = 0, deaths = 0;
     auto &k = loaded.kit;
     const auto &c = current.kit;
-    // The saved world's bodies, by entity, must be this world's first
-    // ones in the same order: then every saved state is its body's. A
-    // world grown since (bodies built last) starts the new ones as built;
-    // one with a body removed or moved is refused. A save made after a
-    // break holds eight bodies more per broken stock — the pieces,
-    // appended last — so the entity list may run past this world's,
-    // and its body states may too; a save made before the break names
-    // the pieces but holds only the built bodies' states.
+    // The saved world's bodies built with it, by entity, must be this
+    // world's first ones in the same order: then every saved state is
+    // its body's. A world grown since (bodies built last) starts the
+    // new ones as built; one with a body removed or moved is refused.
+    // Break pieces are not part of that prefix: they are runtime
+    // bodies, appended after the built ones in break order, so a save
+    // that broke a different crate — or the same crates in a
+    // different order — names different pieces after the prefix, and
+    // the loader reconciles those by entity below. A save made after
+    // a break holds eight bodies more per broken stock, so the entity
+    // list may run past this world's, and its body states may too; a
+    // save made before the break names the pieces but holds only the
+    // built bodies' states.
     std::vector<std::uint64_t> entities;
     const std::vector<std::uint64_t> here = body_entities();
     const std::size_t built = here.size();
+    // The leading run of this world's bodies that are not break
+    // pieces: the built bodies hold the lowest kit indices, and the
+    // pieces follow them, eight per broken stock.
+    std::size_t built_prefix = 0;
+    while (built_prefix < here.size() && (here[built_prefix] < stock_damage::kPieceEntityBase ||
+                                          here[built_prefix] >= stock_damage::kPieceEntityLimit)) {
+        ++built_prefix;
+    }
     bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
               r.pod(loaded.carrying_entity) &&
               r.list_up_to(entities, here.size() + 8 * loose_stock_->placed().size()) &&
-              (entities.size() >= built
+              (entities.size() >= built_prefix
                    ? std::equal(entities.begin(),
-                                entities.begin() + static_cast<std::ptrdiff_t>(built), here.begin())
+                                entities.begin() + static_cast<std::ptrdiff_t>(built_prefix), here.begin())
                    : std::equal(entities.begin(), entities.end(), here.begin())) &&
               r.list_up_to(k.bodies, entities.size()) &&
               (k.bodies.size() == entities.size() || k.bodies.size() == built) &&
@@ -617,7 +630,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // without them the save is refused for eight extra bodies and
     // zero missing pieces. A broken record above already names its
     // stock's pieces, so only intact stocks are added here.
-    for (std::size_t j = built; j < entities.size(); ++j) {
+    for (std::size_t j = built_prefix; j < entities.size(); ++j) {
         const std::uint64_t piece_entity = entities[j];
         if (piece_entity < stock_damage::kPieceEntityBase ||
             piece_entity >= stock_damage::kPieceEntityLimit) {
@@ -648,12 +661,23 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
             missing_pieces.push_back(piece_entity);
         }
     }
-    const std::size_t extra_bodies = entities.size() > built ? entities.size() - built : 0;
+    // The save's pieces this world lacks, by entity: a count past
+    // this world's total says nothing when the pieces differ — a save
+    // that broke a different crate names the same count of pieces as
+    // this world holds, but different ones — so the extra are the
+    // save's pieces this world lacks, and they must be exactly the
+    // missing ones. A piece of a foreign stock, or any body this world
+    // never built, lands in the extra and refuses the save.
+    std::vector<std::uint64_t> extra;
+    for (std::size_t j = built_prefix; j < entities.size(); ++j) {
+        if (!kit_->body_for_entity(entities[j]).valid()) {
+            extra.push_back(entities[j]);
+        }
+    }
+    const std::size_t extra_bodies = extra.size();
     const std::size_t pieces_to_make = missing_pieces.size();
     ok = ok && extra_bodies == pieces_to_make;
     if (ok && extra_bodies > 0) {
-        std::vector<std::uint64_t> extra(entities.begin() + static_cast<std::ptrdiff_t>(built),
-                                         entities.end());
         std::sort(extra.begin(), extra.end());
         std::sort(missing_pieces.begin(), missing_pieces.end());
         ok = extra == missing_pieces;
@@ -704,7 +728,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     std::vector<int> spawn_order;
     {
         std::vector<bool> seen(static_cast<std::size_t>(loose_stock_->count()), false);
-        for (std::size_t j = built; j < entities.size(); ++j) {
+        for (std::size_t j = built_prefix; j < entities.size(); ++j) {
             const std::uint64_t piece_entity = entities[j];
             if (piece_entity < stock_damage::kPieceEntityBase ||
                 piece_entity >= stock_damage::kPieceEntityLimit) {

@@ -188,6 +188,32 @@ bool finite3(const float x, const float y, const float z) noexcept {
     return std::isfinite(x) && std::isfinite(y) && std::isfinite(z);
 }
 
+// The pick among equally aligned hints: Jolt calls the contact
+// callbacks from its worker threads in no fixed order, so "first
+// seen wins" on a tie dents a different spot from run to run. The
+// contact point, then the normal, orders the hints totally: the same
+// impact picks the same hint whatever order the callbacks arrived in.
+// A strict weak ordering (no <=, NaN compares equal to everything,
+// so a bad value keeps the first hint rather than breaking the sort).
+bool hint_before(const ContactHint &a, const ContactHint &b) noexcept {
+    if (a.point_x != b.point_x) {
+        return a.point_x < b.point_x;
+    }
+    if (a.point_y != b.point_y) {
+        return a.point_y < b.point_y;
+    }
+    if (a.point_z != b.point_z) {
+        return a.point_z < b.point_z;
+    }
+    if (a.normal_x != b.normal_x) {
+        return a.normal_x < b.normal_x;
+    }
+    if (a.normal_y != b.normal_y) {
+        return a.normal_y < b.normal_y;
+    }
+    return a.normal_z < b.normal_z;
+}
+
 } // namespace
 
 void StockDamage::observe(const std::uint64_t entity, const LooseStock::Kind kind, const float mass_kg,
@@ -298,7 +324,7 @@ void StockDamage::observe(const std::uint64_t entity, const LooseStock::Kind kin
                         continue;
                     }
                     const float dot = h.normal_x * ix + h.normal_y * iy + h.normal_z * iz;
-                    if (!w.has_hint || dot > best_dot) {
+                    if (!w.has_hint || dot > best_dot || (dot == best_dot && hint_before(h, w.hint))) {
                         w.has_hint = true;
                         best_dot = dot;
                         w.hint = h;
