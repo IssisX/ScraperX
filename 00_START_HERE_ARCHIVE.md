@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 2026-11-11 | *"if it happens during the night when im sleeping, do it automatically. 10pm-5am (nighttime hours)"*: the raise after two failed passes needs no ask at night; the integrator raises the helper to xhigh and tells him in the morning | `00_START_HERE.md` rule 62, `CLAUDE.md` (The integrator) |
 | 2026-11-11 | *"If you fail, what, twice in a row, maybe raise the effort?"* and *"that was the right thing to do without telling me, but you probably should have asked me"*: after J-001 failed five passes at high before going to Argon. Two failed passes in a row: ask him to raise the helper's effort; going to Argon needs no ask | `00_START_HERE.md` rule 62, `CLAUDE.md` (The integrator) |
 | 11-10 | *"If I say pause, you should pause. What the fuck kind of a question is that?"*: a pause he sets holds until he says start | Rule 8 |
 | 11-10 | *"shes far from hugging it like a normal person would"*, then *"Hug"*: she climbs close to what she climbs. | Rule 37 |
