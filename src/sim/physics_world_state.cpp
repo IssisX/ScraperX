@@ -403,7 +403,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
               r.list_up_to(k.bodies, built) && k.bodies.size() == entities.size() &&
               r.list(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
               r.list_up_to(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
-              r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
+              r.bits(k.catch_latched, c.catch_latched.size()) && r.bits_up_to(k.latch_set, c.latch_set.size()) &&
               r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
               r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
               r.pod(k.drained) && r.pod(loaded.slingshot) && r.pod(loaded.swing) && r.pod(loaded.bay) &&
@@ -484,8 +484,43 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
             load = static_cast<std::uint32_t>(load - saved_built + built);
         }
     }
+    // Grips built since the save (the cart's bolt among them) hold as
+    // built: the cart stays bolted to the beam, while a player grip holds
+    // nothing until it is made, as a save from before the grips pins.
+    for (std::size_t index = k.grip_load.size(); ok && index < c.grip_load.size(); ++index) {
+        k.grip_load.push_back(c.grip_load[index]);
+        k.grip_rating.push_back(c.grip_rating[index]);
+    }
+    // A body built since the save that a grip holds rides its device: its
+    // filled pose is where it lay as built, so it is set from the device's
+    // loaded pose composed with the two as they lay at the build, or the
+    // weld would pin it where the device has left (the tank, mid-ride).
+    for (std::size_t grip = 0; ok && grip < k.grip_load.size(); ++grip) {
+        const std::uint32_t load = k.grip_load[grip];
+        if (load == kit::kNone || load < saved_built || load >= built) {
+            continue;
+        }
+        const kit::BodyIndex device = kit_->grip_device(kit::GripIndex{static_cast<std::uint32_t>(grip)});
+        if (!device.valid() || device.value >= saved_built) {
+            continue;
+        }
+        const kit::Kit::BodyState &held = c.bodies[load];
+        const kit::Kit::BodyState &at = k.bodies[device.value];
+        const kit::Kit::BodyState &was = c.bodies[device.value];
+        const JPH::Quat back = was.rotation.Conjugated();
+        const JPH::Vec3 rel = back * JPH::Vec3(held.position - was.position);
+        kit::Kit::BodyState &state = k.bodies[load];
+        state.position = at.position + JPH::RVec3(at.rotation * rel);
+        state.rotation = at.rotation * (back * held.rotation);
+        state.linear = at.linear + at.angular.Cross(at.rotation * rel);
+        state.angular = at.angular;
+    }
     for (std::size_t index = k.bin_contents.size(); ok && index < c.bin_contents.size(); ++index) {
         k.bin_contents.push_back(c.bin_contents[index]);
+    }
+    // A latch built since the save (the drain pawl) starts as built: shut.
+    for (std::size_t index = k.latch_set.size(); ok && index < c.latch_set.size(); ++index) {
+        k.latch_set.push_back(c.latch_set[index]);
     }
     if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
         !std::isfinite(position.GetZ())) {

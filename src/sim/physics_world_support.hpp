@@ -863,6 +863,23 @@ public:
         }
         return true;
     }
+    // Bits that grow in play (the latches), up to `most` of them: a save
+    // from before a latch still loads, the latch starting as built.
+    bool bits_up_to(std::vector<bool> &values, std::size_t most) {
+        std::uint32_t count = 0;
+        if (!pod(count) || count > most) {
+            return false;
+        }
+        values.assign(count, false);
+        for (std::uint32_t i = 0; i < count; ++i) {
+            std::uint8_t value = 0;
+            if (!pod(value) || value > 1) {
+                return false;
+            }
+            values[i] = value == 1;
+        }
+        return true;
+    }
     // Raw bytes, their count first, from `least` to `most` of them.
     bool bytes(std::vector<std::uint8_t> &values, std::size_t least, std::size_t most) {
         std::uint32_t count = 0;

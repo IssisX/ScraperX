@@ -1196,48 +1196,6 @@ void build_s2(kit::Kit &kit, Stack &stack, std::vector<Part> &frame) {
     stack.s2_beam_hinge = kit.add_lever(stack.s2_beam, kS2Pivot, JPH::Vec3::sAxisZ(),
                                         JPH::Vec3::sAxisX(), 0.0F, 1.75F);
 
-    // ---- The drain striker and the tank's drain ------------------------------
-    // Its arm reaches north under the tank's floor at the lower station; a
-    // block south holds it up on its stop until the tank sits on it. About
-    // -x, so the arm's end going down is positive. The pawl holds the gate
-    // open once tripped, and the cage coming home knocks it out.
-    stack.s2_drain_striker_body = kit.add_body(
-        Sim::kStackS2DrainStrikerEntityId,
-        {box(JPH::Vec3(0.05F, 0.03F, 0.35F), JPH::Vec3(0.0F, 0.0F, -0.45F), Material::Hazard),
-         box(JPH::Vec3(0.12F, 0.12F, 0.12F), JPH::Vec3(0.0F, 0.0F, 0.25F), Material::Rust)},
-        kS2DrainStrikerPivot, JPH::Quat::sIdentity(), 12.0F, 0.5F);
-    stack.s2_drain_striker = kit.add_lever(stack.s2_drain_striker_body, kS2DrainStrikerPivot,
-                                           -JPH::Vec3::sAxisX(), -JPH::Vec3::sAxisZ(), 0.0F, 0.6F);
-    stack.s2_drain_pawl = kit.add_latch(stack.s2_drain_striker, kS2DrainLatch, stack.s2_cage_guide,
-                                        kS2DrainPawlKnock);
-
-    // ---- The water tank, bolted to the west arm (J-015 slice 1) --------------
-    // Its own body, so the water's mass can leave it: dry shell 250 kg, a
-    // 1250 kg bin of water when full, 1500 kg wet at the cart's old place on
-    // the arm (t = 0.15, its centre 10.43 m from the fulcrum). The body is
-    // built on the beam's axes, and a grip welds it to the beam, rating 0:
-    // bolted, it never lets go. Its drain gate is the striker above: the
-    // tank sitting at the lower station presses it open, and the water
-    // runs out of the bin's mouth into the sump below.
-    {
-        const JPH::Vec3 west_pt(-10.0F, 11.05F, 0.0F);
-        const JPH::Vec3 east_pt(10.0F, -11.05F, 0.0F);
-        const JPH::Vec3 cart_centre = west_pt * 0.85F + east_pt * 0.15F;
-        const JPH::Vec3 along = (east_pt - west_pt).Normalized();
-        const JPH::Vec3 normal(-along.GetY(), along.GetX(), 0.0F);
-        const JPH::Quat cart_rotation = JPH::Quat::sFromTo(JPH::Vec3::sAxisX(), along);
-        stack.s2_cart = kit.add_body(Sim::kStackS2CartEntityId, s2_cart_parts(),
-                                     kS2Pivot + JPH::RVec3(cart_centre), cart_rotation,
-                                     kS2CartDryMassKg, 0.5F);
-        stack.s2_cart_bin = kit.add_bin(stack.s2_cart, kS2CartWaterKg, kS2CartWaterCapacityKg,
-                                        JPH::Vec3(0.0F, 0.44F, 0.0F), stack.s2_drain_striker,
-                                        kS2DrainGateOpen, kS2DrainGateReach, kS2DrainRate);
-        kit.set_bin_water(stack.s2_cart_bin);
-        const JPH::Vec3 to_cart = cart_centre + normal * 0.86F;
-        stack.s2_cart_grip = kit.add_grip(stack.s2_beam, 0.0F, to_cart.Normalized());
-        (void)kit.grip(stack.s2_cart_grip, stack.s2_cart);
-    }
-
     // ---- The tow rope: connects west arm to east cage -------------------------
     const JPH::RVec3 eye_cage =
         JPH::RVec3(kS2CageX, kS2CageOriginY, kS2CageZ) + JPH::RVec3(kS2CageEyeLocal);
@@ -1833,6 +1791,58 @@ void build_stack(kit::Kit &kit, Stack &stack) {
     build_c3(c3_route);
     (void)kit.add_body(Sim::kStackC3RouteEntityId, c3_route, JPH::RVec3::sZero(), JPH::Quat::sIdentity(),
                        0.0F, 0.8F);
+}
+
+// The S2 drain, built last: the striker and the bolted water tank are new
+// since the build before them, so they are built after every other body —
+// a save from that build still lines up with this world's bodies in order
+// (read_save takes the saved bodies as this world's first ones), and the
+// drain starts as built on an old save: the tank full, the gate shut, the
+// cart bolted where it lay on the beam.
+void build_s2_drain(kit::Kit &kit, Stack &stack) {
+    using Sim = Simulation;
+
+    // ---- The drain striker and the tank's drain ------------------------------
+    // Its arm reaches north under the tank's floor at the lower station; a
+    // block south holds it up on its stop until the tank sits on it. About
+    // -x, so the arm's end going down is positive. The pawl holds the gate
+    // open once tripped, and the cage coming home knocks it out.
+    stack.s2_drain_striker_body = kit.add_body(
+        Sim::kStackS2DrainStrikerEntityId,
+        {box(JPH::Vec3(0.05F, 0.03F, 0.35F), JPH::Vec3(0.0F, 0.0F, -0.45F), Material::Hazard),
+         box(JPH::Vec3(0.12F, 0.12F, 0.12F), JPH::Vec3(0.0F, 0.0F, 0.25F), Material::Rust)},
+        kS2DrainStrikerPivot, JPH::Quat::sIdentity(), 12.0F, 0.5F);
+    stack.s2_drain_striker = kit.add_lever(stack.s2_drain_striker_body, kS2DrainStrikerPivot,
+                                           -JPH::Vec3::sAxisX(), -JPH::Vec3::sAxisZ(), 0.0F, 0.6F);
+    stack.s2_drain_pawl = kit.add_latch(stack.s2_drain_striker, kS2DrainLatch, stack.s2_cage_guide,
+                                        kS2DrainPawlKnock);
+
+    // ---- The water tank, bolted to the west arm (J-015 slice 1) --------------
+    // Its own body, so the water's mass can leave it: dry shell 250 kg, a
+    // 1250 kg bin of water when full, 1500 kg wet at the cart's old place on
+    // the arm (t = 0.15, its centre 10.43 m from the fulcrum). The body is
+    // built on the beam's axes, and a grip welds it to the beam, rating 0:
+    // bolted, it never lets go. Its drain gate is the striker above: the
+    // tank sitting at the lower station presses it open, and the water
+    // runs out of the bin's mouth into the sump below.
+    {
+        const JPH::Vec3 west_pt(-10.0F, 11.05F, 0.0F);
+        const JPH::Vec3 east_pt(10.0F, -11.05F, 0.0F);
+        const JPH::Vec3 cart_centre = west_pt * 0.85F + east_pt * 0.15F;
+        const JPH::Vec3 along = (east_pt - west_pt).Normalized();
+        const JPH::Vec3 normal(-along.GetY(), along.GetX(), 0.0F);
+        const JPH::Quat cart_rotation = JPH::Quat::sFromTo(JPH::Vec3::sAxisX(), along);
+        stack.s2_cart = kit.add_body(Sim::kStackS2CartEntityId, s2_cart_parts(),
+                                     kS2Pivot + JPH::RVec3(cart_centre), cart_rotation,
+                                     kS2CartDryMassKg, 0.5F);
+        stack.s2_cart_bin = kit.add_bin(stack.s2_cart, kS2CartWaterKg, kS2CartWaterCapacityKg,
+                                        JPH::Vec3(0.0F, 0.44F, 0.0F), stack.s2_drain_striker,
+                                        kS2DrainGateOpen, kS2DrainGateReach, kS2DrainRate);
+        kit.set_bin_water(stack.s2_cart_bin);
+        const JPH::Vec3 to_cart = cart_centre + normal * 0.86F;
+        stack.s2_cart_grip = kit.add_grip(stack.s2_beam, 0.0F, to_cart.Normalized());
+        (void)kit.grip(stack.s2_cart_grip, stack.s2_cart);
+    }
 }
 
 } // namespace scraperx::sim::bands

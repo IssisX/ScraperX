@@ -420,6 +420,8 @@ public:
     void set_grip_rating(GripIndex grip, float rating_newtons);
     // The body the grip holds, invalid for none.
     [[nodiscard]] BodyIndex grip_load(GripIndex grip) const noexcept;
+    // The body the grip is mounted on.
+    [[nodiscard]] BodyIndex grip_device(GripIndex grip) const noexcept;
     [[nodiscard]] float grip_rating(GripIndex grip) const noexcept;
     // The hold's pull last step, N; 0 holding nothing.
     [[nodiscard]] float grip_force(GripIndex grip) const noexcept;

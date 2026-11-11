@@ -202,7 +202,9 @@ void run_wet_e_guard(const bool expect) {
     // The bodies there were before E's rebuild, in order; and those built
     // since, after them: the bay, the second shaft's access, then summit
     // rigging; last, after world-b's pieces, the forklift on deck 154 (J-041).
-    constexpr std::uint32_t kBodiesBeforeE = 597;
+    // 595, not 597: the S2 drain (J-015) is built last now, so its striker
+    // and tank no longer sit before E.
+    constexpr std::uint32_t kBodiesBeforeE = 595;
     Fnv bodies;
     for (std::uint32_t i = 0; i < std::min(world.kit_body_count(), kBodiesBeforeE); ++i) {
         bodies.add(world.kit_body_entity(i));
@@ -235,13 +237,16 @@ void run_wet_e_guard(const bool expect) {
     const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
                                        scraperx::sim::Forklift::kDeck154CarriageEntity};
     // J-042: then exactly two pieces of stock laid for the Matron by her band
-    // (the extinguisher and the pallet), the kit's last two bodies, after the
-    // upper pieces.
+    // (the extinguisher and the pallet), after the upper pieces; and last
+    // the S2 drain (J-015: its striker and bolted tank), the kit's last two
+    // bodies, built after every other body so saves from before the drain
+    // still line up.
     constexpr std::uint32_t kMatronKinds = 2;
+    constexpr std::uint32_t kDrainBodies = 2;
     const std::uint32_t forklift_at =
         kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
     const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift)) + kNewUpper;
-    bool since_after = world.kit_body_count() == kinds_at + kMatronKinds;
+    bool since_after = world.kit_body_count() == kinds_at + kMatronKinds + kDrainBodies;
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
     }
@@ -335,9 +340,16 @@ void run_wet_e_guard(const bool expect) {
     // is one more body before E, so the first 597 bodies are the same bodies
     // in the same order plus the striker. Before 871693465045063551, now
     // 13291784286957421329 (measured on the fixed binary, AS-007-E print).
-    require(bodies.hash == 13291784286957421329ULL,
+    // Re-pinned for the J-015 save fix: the drain is built last now, so the
+    // first 595 bodies are the same bodies in the same order minus the
+    // drain, and the hash is the world-b one again. Before
+    // 13291784286957421329, now 3514033760028014323 (from the 597-hash
+    // 3251748120709196495 measured on the fixed binary, AS-007-E print,
+    // with the bay frame and leaf un-fed from the FNV: the round-trip back
+    // to the measured hash is exact).
+    require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 597 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is

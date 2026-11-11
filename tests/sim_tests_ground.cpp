@@ -846,7 +846,7 @@ void run_save() {
     worst = std::max(worst, std::hypot(pa.x - pb.x, pa.y - pb.y, pa.z - pb.z));
     require(worst < 1e-3, "save: the original, restored from its own save, plays on with the fresh ones");
     // A save made before the 137 east/west pieces loads after them: rebuild
-    // that trunk save (608 bodies) from this world's own save (745, the 137
+    // that trunk save (607 bodies) from this world's own save (828, the 137
     // built last) by dropping them off its end and un-shifting the moved entities.
     {
         using scraperx::sim::kit::is_stock_entity;
@@ -855,8 +855,8 @@ void run_save() {
         (void)s.advance_frame(1.0);
         const std::vector<std::uint8_t> now = s.save_game();
         const std::uint32_t built = s.kit_body_count();
-        // Trunk held 596 + 12 bodies (see run_wet_e_guard); the rest are east/west, built last.
-        constexpr std::uint32_t kTrunkBodies = 596 + 12;
+        // Trunk held 595 + 12 bodies (see run_wet_e_guard); the rest are east/west, built last.
+        constexpr std::uint32_t kTrunkBodies = 595 + 12;
         require(built > kTrunkBodies,
                 "save: the world holds the east/west pieces this round trip is about");
         const std::uint32_t east_west = built - kTrunkBodies;
@@ -915,8 +915,52 @@ void run_save() {
                       reinterpret_cast<const std::uint8_t *>(&trunk_count) + 4);
         before.insert(before.end(), now.begin() + static_cast<std::ptrdiff_t>(bodies_at),
                       now.begin() + static_cast<std::ptrdiff_t>(bodies_at + kTrunkBodies * body_state));
-        before.insert(before.end(),
-                      now.begin() + static_cast<std::ptrdiff_t>(bodies_at + built * body_state), now.end());
+        // The grips the trunk's save held: the magnet and the spreader only.
+        // The cart's bolt is built last (J-015), so this world's save holds
+        // a third grip whose load names a body past the trunk's end, and a
+        // save carrying it would be refused. Find the damage mark the grips
+        // precede and re-encode the two lists with the trunk's two entries.
+        constexpr std::uint32_t kDamageMark = 0x314D414DU;
+        std::size_t mark_at = 0;
+        bool mark_found = false;
+        for (std::size_t m = 32; m + 4 <= now.size() && !mark_found; ++m) {
+            std::uint32_t mark = 0;
+            std::memcpy(&mark, now.data() + m, 4);
+            if (mark != kDamageMark) {
+                continue;
+            }
+            std::uint32_t loads = 0, ratings = 0;
+            std::memcpy(&loads, now.data() + m - 32, 4);
+            std::memcpy(&ratings, now.data() + m - 16, 4);
+            mark_found = loads == 3 && ratings == 3;
+            if (mark_found) {
+                mark_at = m;
+            }
+        }
+        require(mark_found, "save: the damage mark after the grips is found in the bytes");
+        std::uint32_t load0 = 0, load1 = 0;
+        float rating0 = 0.0F, rating1 = 0.0F;
+        std::memcpy(&load0, now.data() + mark_at - 28, 4);
+        std::memcpy(&load1, now.data() + mark_at - 24, 4);
+        std::memcpy(&rating0, now.data() + mark_at - 12, 4);
+        std::memcpy(&rating1, now.data() + mark_at - 8, 4);
+        const std::uint32_t two = 2;
+        const std::size_t rest_at = bodies_at + built * body_state;
+        before.insert(before.end(), now.begin() + static_cast<std::ptrdiff_t>(rest_at),
+                      now.begin() + static_cast<std::ptrdiff_t>(mark_at - 32));
+        before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&two),
+                      reinterpret_cast<const std::uint8_t *>(&two) + 4);
+        before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&load0),
+                      reinterpret_cast<const std::uint8_t *>(&load0) + 4);
+        before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&load1),
+                      reinterpret_cast<const std::uint8_t *>(&load1) + 4);
+        before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&two),
+                      reinterpret_cast<const std::uint8_t *>(&two) + 4);
+        before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&rating0),
+                      reinterpret_cast<const std::uint8_t *>(&rating0) + 4);
+        before.insert(before.end(), reinterpret_cast<const std::uint8_t *>(&rating1),
+                      reinterpret_cast<const std::uint8_t *>(&rating1) + 4);
+        before.insert(before.end(), now.begin() + static_cast<std::ptrdiff_t>(mark_at), now.end());
         Simulation t(InitialSpawn::ExteriorGrade);
         (void)t.advance_frame(1.0);
         require(t.load_game(before.data(), before.size()),

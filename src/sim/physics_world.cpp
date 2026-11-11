@@ -478,6 +478,9 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     for (int i = loose_stock_->matron_kinds_begin(); i < loose_stock_->count(); ++i) {
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
+    // J-015: the S2 drain is built last, after every other body, so a save
+    // from before it still lines up with this world's bodies in order.
+    scraperx::sim::bands::build_s2_drain(*kit_, stack_);
     give_matron_stock();
 
     // Tests only: the extra solids built after every body the world builds.

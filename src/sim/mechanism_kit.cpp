@@ -1070,6 +1070,11 @@ BodyIndex Kit::grip_load(const GripIndex grip_index) const noexcept {
     return grip != nullptr ? grip->load : BodyIndex{};
 }
 
+BodyIndex Kit::grip_device(const GripIndex grip_index) const noexcept {
+    const Grip *grip = find(grips_, grip_index);
+    return grip != nullptr ? grip->device : BodyIndex{};
+}
+
 float Kit::grip_rating(const GripIndex grip_index) const noexcept {
     const Grip *grip = find(grips_, grip_index);
     return grip != nullptr ? grip->rating : 0.0F;

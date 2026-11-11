@@ -337,5 +337,9 @@ struct Stack final {
 };
 
 void build_stack(kit::Kit &kit, Stack &stack);
+// The S2 drain (striker + bolted water tank), built after every other body
+// so saves from before the drain still line up; called at the end of the
+// world's build, before the first checkpoint is taken.
+void build_s2_drain(kit::Kit &kit, Stack &stack);
 
 } // namespace scraperx::sim::bands
