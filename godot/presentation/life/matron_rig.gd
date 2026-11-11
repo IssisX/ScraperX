@@ -310,6 +310,13 @@ const SOFT_REACH := 0.08
 # last word on every frame (govern).
 const GOVERN_RAD_S := 11.5
 const GOVERN_BURST_RAD_S := 19.0
+# No bone of hers is DRAWN turning faster than this a second (rule 37): the
+# local cap above is per joint, but a parent and a child both at their caps in
+# the same direction draw the child at their sum (her elbow was drawn at
+# 34 rad/s while each joint sat at its 19 rad/s burst cap), so govern caps
+# each bone's global turn too, at the same bar the check measures. No burst
+# variant: the bar is absolute.
+const JOINT_GLOBAL_RAD_S := 20.0
 # and no bone of hers slides (her hips' ride, her arm drawn out, her shoulder
 # pulled) faster than this a second (GOVERN_BURST_M_S in a burst)
 const GOVERN_M_S := 3.0
@@ -336,6 +343,7 @@ var _skel_was := Vector3.ZERO
 var _governed_bones: Array[int] = []
 var _govern_last: Array[Quaternion] = []
 var _govern_pos: Array[Vector3] = []
+var _govern_last_global: Array[Quaternion] = []
 var governed := 0
 var _ik_frame := 0
 # This frame: the limbs she put down on all fours ({limb: "an_l" / "wr_l" /
@@ -1229,8 +1237,12 @@ func _finish_prop_wrist(side: String, at_world: Vector3, prior: Vector3) -> void
 
 
 # Every bone of her body (not her hair, eyes or fingers) turned this frame
-# no further than GOVERN_RAD_S allows from where it was drawn last frame. The
-# springs, weights and poles keep her well inside it; this is the ceiling
+# no further than GOVERN_RAD_S allows from where it was drawn last frame, and
+# no bone DRAWN turning faster than JOINT_GLOBAL_RAD_S: the local cap is per
+# joint, but a parent and a child both at their caps in the same direction draw
+# the child at their sum (her elbow at 34 rad/s with each joint at its 19 rad/s
+# burst cap), so the global turn is capped too, at the bar the check measures.
+# The springs, weights and poles keep her well inside it; this is the ceiling
 # that holds whatever they missed. `governed`: the bones it held back.
 func govern() -> void:
 	if _governed_bones.is_empty():
@@ -1246,14 +1258,17 @@ func govern() -> void:
 	if reset:
 		_govern_last.resize(_governed_bones.size())
 		_govern_pos.resize(_governed_bones.size())
+		_govern_last_global.resize(_governed_bones.size())
 		for j in _governed_bones.size():
 			_govern_last[j] = skel.get_bone_pose_rotation(_governed_bones[j])
 			_govern_pos[j] = skel.get_bone_pose_position(_governed_bones[j])
+			_govern_last_global[j] = _govern_global(j, _govern_last[j])
 		return
 	# a frame of no time holds her as she was
 	var burst := bool(view.burst_active)
 	var cap := (GOVERN_BURST_RAD_S if burst else GOVERN_RAD_S) * maxf(dt, 0.0)
 	var cap_m := (GOVERN_BURST_M_S if burst else GOVERN_M_S) * maxf(dt, 0.0)
+	var cap_g := JOINT_GLOBAL_RAD_S * maxf(dt, 0.0)
 	for j in _governed_bones.size():
 		var i: int = _governed_bones[j]
 		var q := skel.get_bone_pose_rotation(i)
@@ -1263,7 +1278,20 @@ func govern() -> void:
 			q = was.slerp(q, cap / ang) if ang > 1.0e-6 else was
 			skel.set_bone_pose_rotation(i, q)
 			governed += 1
+		# Her drawn turn is her global one, not her local one: a parent and
+		# a child both at their caps in the same direction draw the child at
+		# their sum. Clip the local turn so the global turn stays at the bar.
+		var gnow: Quaternion = _govern_global(j, q)
+		var gwas: Quaternion = _govern_last_global[j]
+		var gang := gwas.angle_to(gnow)
+		if gang > cap_g:
+			var want: Quaternion = gwas.slerp(gnow, cap_g / gang) if gang > 1.0e-6 else gwas
+			q = _govern_parent_global(j).inverse() * want
+			skel.set_bone_pose_rotation(i, q)
+			governed += 1
+			gnow = want
 		_govern_last[j] = q
+		_govern_last_global[j] = gnow
 		var at := skel.get_bone_pose_position(i)
 		var was_at: Vector3 = _govern_pos[j]
 		if at.distance_to(was_at) > cap_m:
@@ -1271,6 +1299,23 @@ func govern() -> void:
 			skel.set_bone_pose_position(i, at)
 			governed += 1
 		_govern_pos[j] = at
+
+
+# A governed bone's global rotation: its parent's global rotation this frame
+# (already governed: _governed_bones is in skeleton order, parents first) times
+# its local rotation. A bone with no governed parent hangs off the skeleton.
+func _govern_parent_global(j: int) -> Quaternion:
+	var parent: int = skel.get_bone_parent(_governed_bones[j])
+	if parent < 0:
+		return Quaternion.IDENTITY
+	var pj: int = _governed_bones.find(parent)
+	if pj < 0 or pj >= _govern_last_global.size():
+		return Quaternion.IDENTITY
+	return _govern_last_global[pj]
+
+
+func _govern_global(j: int, local: Quaternion) -> Quaternion:
+	return _govern_parent_global(j) * local
 
 
 func _contact(data: Dictionary, falling: bool, held: PackedVector3Array) -> void:
