@@ -1314,6 +1314,10 @@ func _play_matron_ammo(device: int) -> bool:
 			away = Vector2(-1.0, 0.0)
 		var target := Vector2(_position().x, _position().z) + away.normalized() * 4.0
 		await _sprint_to(device, target, 0.5, 3.0)
+	# Her reach for him, if it began before he got away (her swat lands only
+	# once her hand is at his chest, src/sim/matron_hold.cpp), runs out on its
+	# own (Matron::kSwatWaitS, 1.6 s): wait out at most that and a margin.
+	await _wait_until(func() -> bool: return int(_matron_state()["state"]) != MATRON_STATE_GRAB, 2.5)
 	# The ready loop's entry check: she must not be in Grab, and the toolbox
 	# must be in his hands. Either one failing here used to hide for the
 	# ready loop's whole 10 s and fail as "never squared up" with no cause.

@@ -245,7 +245,7 @@ void run_strike() {
     // the rip the punch is offered and thrown, his escape, and lands on her
     // within his limit; once the rip has begun, none.
     constexpr int kGrab = static_cast<int>(scraperx::sim::Matron::State::Grab);
-    constexpr int kCarry = static_cast<int>(scraperx::sim::Matron::State::Carry);
+    constexpr int kDangle = static_cast<int>(scraperx::sim::Matron::State::Dangle);
     constexpr int kArmPlay = static_cast<int>(scraperx::sim::Matron::State::ArmPlay);
     const auto until = [](Simulation &s, const auto &done) {
         for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !done(); ++i) {
@@ -266,8 +266,14 @@ void run_strike() {
         (void)s.request_strike();
         tick(s);
         require(s.snapshot().strike_count == before, "strike: no strike starts during her reach");
-        require(until(s, [&] { return s.matron_state().state == kCarry && s.snapshot().held_by_matron; }),
-                "strike: she carries him in her hand (setup)");
+        // At her rail pin (beat 3, HOLD_WITH_REAL_ARMS.md: face to face, his
+        // fists reach her face), her collar hand on him. In her drag (beat 2)
+        // he lies a body's length off her, by the ankle: his fist falls short.
+        require(until(s, [&] {
+                    const auto m = s.matron_state();
+                    return m.state == kDangle && m.hold_phase >= 1 && s.snapshot().held_by_matron;
+                }),
+                "strike: she pins him in her hand (setup)");
         require(s.snapshot().strike_offered, "strike: in her hand before the rip Action offers the punch (his escape)");
         const std::uint64_t hits = s.snapshot().strike_hit_count;
         const std::uint64_t tears = s.snapshot().grip_tear_count;

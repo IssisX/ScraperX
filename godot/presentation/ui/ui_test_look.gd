@@ -33,6 +33,7 @@ const LOOK_DECK := 154.0
 const LOOK_STAND_CENTRE := 1.05   # her capsule's centre over her soles (Matron::kStandCentre)
 const LOOK_STATE_GRAB := 12
 const LOOK_STATE_DANGLE := 14
+const LOOK_RAIL_X := 17.0       # her east band's shaft rail line (Matron::kShaftHalfM)
 const LOOK_STATE_ARMPLAY := 15
 # Where the grade ladder set puts the climber: on the yard at grade, 24 m
 # from her ladder (x 12, z -123.6), within her figure's draw range.
@@ -304,13 +305,16 @@ func _look_hold(fatal: bool) -> bool:
 		if not await _look_until(func() -> bool: return bool(hold.call()["held"]), 15.0, 0.12):
 			return _fail("grab: her hand never closed on him (state %d)" % int(_matron_state()["state"]))
 		await _look_shot("grab", "her grab: her hand just closed on his ankle by her east band's rail", [60.0, -60.0], 15.0, true)
-		var upside_down := func() -> bool:
+		# Her rail pin (beat 3, HOLD_WITH_REAL_ARMS.md): his back on her east
+		# rail, his middle out past its line (x LOOK_RAIL_X) over the drop.
+		var pinned := func() -> bool:
 			var h: Dictionary = hold.call()
-			var up: Vector3 = Quaternion(h["body_rotation"]) * Vector3.UP
-			return int(h["state"]) == LOOK_STATE_DANGLE and up.y < -0.8
-		if not await _look_until(upside_down, 20.0, 0.6):
-			return _fail("hold: never held out upside down (state %d)" % int(hold.call()["state"]))
-		await _look_shot("hold", "the hold: him upside down by the ankle, held out over the drop", [70.0, -70.0, 110.0, -110.0], 12.0, true)
+			return int(h["state"]) == LOOK_STATE_DANGLE and int(h["hold_beat"]) == 3 and \
+				float((h["player_position"] as Vector3).x) <= LOOK_RAIL_X
+		if not await _look_until(pinned, 20.0, 0.6):
+			return _fail("hold: never pinned out over her rail (state %d, beat %d)" % [int(hold.call()["state"]),
+				int(hold.call()["hold_beat"])])
+		await _look_shot("hold", "the hold: her rail pin, him on his back over the rail, held out over the drop", [70.0, -70.0, 110.0, -110.0], 12.0, true)
 		if not await _look_until(func() -> bool: return int(hold.call()["arm_tear_count"]) >= 1, 40.0, 0.08):
 			return _fail("rip: no arm torn (state %d, beat %d)" % [int(hold.call()["state"]), int(hold.call()["armplay_beat"])])
 		await _look_shot("rip", "the arm rip: his arm just torn from the shoulder in her other hand", [60.0, -60.0, 110.0, -110.0], 12.0, true)
