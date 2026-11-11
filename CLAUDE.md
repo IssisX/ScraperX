@@ -30,14 +30,14 @@ it to match, never ask him again.
 - Never re-run a passed check on same code. The full suite, every touch scenario and the Android
   build are CI's job: push `<agent>/integrate-<job>` (that runs the proof). A push that changes only notes,
   rules or the switchboard skips the game build (`ci/proof_scope.py`).
-- Read PASS/FAIL lines, not whole logs.
+- Read PASS/FAIL lines, not logs.
 - Local tests count only with CI's compilers and flags (host g++ 13.3, NDK `29.0.14206865`, the CMake flags
   in `wo000-delivery-spine.yml`).
 
 ## Talking to Cory (he is on a phone)
 
 - He types fast on a phone, with typos: read for what he means, never ask about wording (11-10).
-- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE", "really fucking important").
+- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE"). Say progress as what is left, never "pass 6" (11-11).
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
