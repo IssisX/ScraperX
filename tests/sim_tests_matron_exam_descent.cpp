@@ -652,6 +652,138 @@ void airborne_request_replans_from_landing() {
               << " replans=" << w.matron->journey().replans << '\n';
 }
 
+// A knock-off partway along a floor walk: she is walking to the first
+// move's start when her floor goes, and lands on another floor below it.
+// The landing must replan from her new region within a tick — the old
+// route was searched from her old floor, not the one she stands on now.
+void knockoff_mid_walk_replans_from_landing() {
+    World w(1);
+    BodyInterface &bodies = w.physics.GetBodyInterface();
+    // A landing floor directly below her start, a different region from the
+    // start platform: losing the start support drops her onto it.
+    const BodyID landing = w.box(Vec3(3.0F, 0.10F, 3.0F),
+                                 Vec3(0.0F, w.course.start_top - 3.10F, -1.4F));
+    // A crate on the start platform, off the jump's run-up: her walk to the
+    // first move's start turns round it, so the walk is a walk in progress
+    // (more than one waypoint) rather than a step straight onto the move.
+    (void)w.box(Vec3(0.25F, 0.25F, 0.25F),
+                Vec3(0.7F, w.course.start_top + 0.25F, -1.75F));
+    // Stand her in the far corner, so the walk to the first move's start is
+    // a real walk across the platform.
+    w.matron->place_for_test(w.course.world(Vec3(1.1F, w.course.start_top, -2.3F)));
+    for (int tick = 0; tick < 18; ++tick) (void)w.physics.Update(kDt, 1, &w.temp, &w.jobs);
+    require(w.on(w.start_support), "knock-off: she stands on the start platform before the walk");
+    require(w.matron->travel_to(Vec3(w.course.world(w.course.bottom()))),
+            "knock-off: initial own scan finds the destination");
+    const int start_region = w.matron->journey().region;
+    const int planned_steps = w.matron->journey().steps;
+    const std::uint32_t replans_before = w.matron->journey().replans;
+    require(planned_steps > 0 && start_region >= 0,
+            "knock-off: a supported start plans a route to the bottom");
+    const auto step_once = [&] {
+        w.matron->pre_step(kDt, Stimulus(RVec3(1000.0, 1000.0, 1000.0), 0.0F));
+        (void)w.physics.Update(kDt, 1, &w.temp, &w.jobs);
+        w.matron->post_step(kDt);
+    };
+    // Tick until she is walking: off her start, still on step 0, still on
+    // the start region, no move begun.
+    const Vec3 placed = w.feet();
+    bool walking = false;
+    for (int tick = 0; tick < 180 && !walking; ++tick) {
+        step_once();
+        const Vec3 f = w.feet();
+        walking = std::hypot(f.GetX() - placed.GetX(), f.GetZ() - placed.GetZ()) > 0.3F &&
+                  w.matron->journey().step == 0 && w.matron->journey().region == start_region &&
+                  (w.matron->climber() == nullptr ||
+                   w.matron->climber()->status() != traversal::Climber::Status::Running);
+    }
+    require(walking, "knock-off: she is walking to the first move's start when her floor goes");
+    // The floor under her goes: a knock-off partway along a floor walk.
+    bodies.RemoveBody(w.start_support);
+    // Tick until the journey sees her on the landing floor, then one tick
+    // more: the landing must replan from her new region within a tick.
+    int landed_tick = -1, replan_tick = -1, box_tick = -1;
+    for (int tick = 0; tick < 90 * 3 && (landed_tick < 0 || tick <= landed_tick + 1); ++tick) {
+        step_once();
+        if (box_tick < 0 && w.on(landing)) box_tick = tick;
+        if (landed_tick < 0 && w.matron->journey().region >= 0 && w.matron->journey().region != start_region)
+            landed_tick = tick;
+        if (replan_tick < 0 && w.matron->journey().replans > replans_before) replan_tick = tick;
+    }
+    const RVec3 world_feet = w.course.world(w.feet());
+    const int landing_region = w.matron->scanned_routes()->region_at(
+        Vec3(float(world_feet.GetX()), float(world_feet.GetY()), float(world_feet.GetZ())));
+    require(box_tick >= 0, "knock-off: the falling body lands on the floor below its start");
+    require(landed_tick >= 0, "knock-off: the journey sees her on the landing floor");
+    require(replan_tick >= 0 && replan_tick <= landed_tick + 1,
+            "knock-off: the landing replans from her new region within a tick");
+    require(landing_region >= 0 && landing_region != start_region &&
+                w.matron->journey().region == landing_region,
+            "knock-off: the replan is rooted at the landing floor, not the old support");
+    std::cout << "PASS scraperx_sim matron descent knock-off replan: start_region=" << start_region
+              << " landing_region=" << landing_region << " planned_steps=" << planned_steps
+              << " landed_tick=" << landed_tick << " replan_tick=" << replan_tick
+              << " replans=" << w.matron->journey().replans << '\n';
+}
+
+// A floor walk that crosses regions as planned: two decks at one height,
+// joined round a strip's end, the strip itself its own region, and a lower
+// deck past a short step down. The walk to the step's start crosses the
+// strip on its own floor; crossing regions as planned replans nothing.
+void planned_walk_crosses_regions_without_replan() {
+    World w(1);
+    const float h = w.course.start_top;
+    // A floor of her own, far from the descent: the near deck, the strip,
+    // the far deck, the link round the strip's end, and the lower deck.
+    const BodyID deck_a = w.box(Vec3(1.5F, 0.10F, 1.15F), Vec3(9.5F, h - 0.10F, 0.15F));
+    (void)w.box(Vec3(0.25F, 0.10F, 0.85F), Vec3(11.51F, h - 0.10F, -0.15F));
+    (void)w.box(Vec3(1.49F, 0.10F, 1.15F), Vec3(13.51F, h - 0.10F, 0.15F));
+    (void)w.box(Vec3(0.51F, 0.10F, 0.15F), Vec3(11.51F, h - 0.10F, 1.15F));
+    (void)w.box(Vec3(1.5F, 0.10F, 1.15F), Vec3(16.5F, h - 0.60F, 0.15F));
+    w.matron->place_for_test(w.course.world(Vec3(9.0F, h, 0.0F)));
+    for (int tick = 0; tick < 18; ++tick) (void)w.physics.Update(kDt, 1, &w.temp, &w.jobs);
+    require(w.on(deck_a), "planned crossing: she stands on the near deck before the walk");
+    require(w.matron->travel_to(Vec3(w.course.world(Vec3(16.5F, h - 0.5F, 0.15F)))),
+            "planned crossing: initial own scan finds the lower deck");
+    const traversal::AffordanceMap *map = w.matron->scanned_routes();
+    require(map != nullptr, "planned crossing: she holds her own scan");
+    const int start_region = w.matron->journey().region;
+    const int goal_region = w.matron->journey().goal;
+    const std::uint32_t replans_before = w.matron->journey().replans;
+    require(w.matron->journey().steps == 1, "planned crossing: the step down is the journey's one move");
+    const std::vector<int> plan = map->plan(start_region, goal_region);
+    require(plan.size() == 1 &&
+                map->edges()[static_cast<std::size_t>(plan[0])].kind == traversal::MoveKind::StepDown,
+            "planned crossing: the one move is a step down onto the lower deck");
+    const auto region_at = [&](const Vec3 local) {
+        const RVec3 wf = w.course.world(local);
+        return map->region_at(Vec3(float(wf.GetX()), float(wf.GetY()), float(wf.GetZ())));
+    };
+    const int strip_region = region_at(Vec3(11.51F, h, -0.15F));
+    require(strip_region >= 0 && strip_region != start_region,
+            "planned crossing: the strip is its own region between the decks");
+    const auto step_once = [&] {
+        w.matron->pre_step(kDt, Stimulus(RVec3(1000.0, 1000.0, 1000.0), 0.0F));
+        (void)w.physics.Update(kDt, 1, &w.temp, &w.jobs);
+        w.matron->post_step(kDt);
+    };
+    bool crossed = false;
+    for (int tick = 0; tick < 90 * 15 && w.matron->journey().arrivals == 0; ++tick) {
+        step_once();
+        if (w.matron->journey().region == strip_region) crossed = true;
+    }
+    require(crossed, "planned crossing: her walk crosses the strip's region");
+    require(w.matron->journey().replans == replans_before,
+            "planned crossing: crossing regions as planned replans nothing");
+    require(w.matron->journey().arrivals == 1, "planned crossing: she arrives on the lower deck");
+    require(w.matron->journey().region == goal_region,
+            "planned crossing: she ends on the lower deck she walked to");
+    std::cout << "PASS scraperx_sim matron descent planned crossing: start_region=" << start_region
+              << " strip_region=" << strip_region << " goal_region=" << goal_region
+              << " replans=" << w.matron->journey().replans << " arrivals=" << w.matron->journey().arrivals
+              << '\n';
+}
+
 
 void reject_free_drop_through_overhead_steel() {
     World world(4);
@@ -788,6 +920,8 @@ void survivable_free_drop() {
 void run_matron_exam_descent() {
     rejected_pending_requests();
     airborne_request_replans_from_landing();
+    knockoff_mid_walk_replans_from_landing();
+    planned_walk_crosses_regions_without_replan();
     reject_free_drop_through_overhead_steel();
     survivable_free_drop();
     int passed = 0;
