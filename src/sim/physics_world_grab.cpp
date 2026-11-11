@@ -169,7 +169,10 @@ void Simulation::PhysicsWorld::snag_player_for_test(const float max_n) noexcept 
 }
 
 JPH::RVec3 Simulation::PhysicsWorld::player_ankle(const JPH::BodyInterface &bodies) const noexcept {
-    return bodies.GetWorldTransform(player_id_) * JPH::Vec3(0.0F, -(kPlayerHalfHeight - 0.08F), 0.0F);
+    // His own shape's foot: crouched, his body is shorter (the standing
+    // body's ankle would sit in the deck under him, out of her fingers).
+    const float half = crouched_ ? kPlayerCrouchHalfHeight : kPlayerHalfHeight;
+    return bodies.GetWorldTransform(player_id_) * JPH::Vec3(0.0F, -(half - 0.08F), 0.0F);
 }
 
 JPH::RVec3 Simulation::PhysicsWorld::player_collar(const JPH::BodyInterface &bodies) const noexcept {

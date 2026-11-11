@@ -1091,20 +1091,25 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     // Her hands on the player (matron.hpp, her hands): at every stage, she
     // takes hold.
-    if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_),
-                                        traversal_state_ == TraversalState::Climbing)) {
+    if (!died_this_tick && matron_->caught(traversal_state_ == TraversalState::Climbing)) {
         // No kill on touch. Her hand goes for the ankle (matron_hold.cpp);
         // what follows is physics. A ladder offers no immunity: her hand has
         // to reach the ankle and overcome the same finite grip as any load.
         if (matron_->grab_ready()) {
             matron_->count_catch();
-            matron_->begin_grab(bodies.GetPosition(player_id_));
+            matron_->begin_grab();
         } else if (matron_->shoves() && matron_->shove_ready()) {
             // While her hands cannot take hold (a grab's cooldown),
             // short of fully changed: a pest's shove away from her,
-            // a dangerous one's at the rim. Not a catch.
-            matron_->count_shove();
-            shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
+            // a dangerous one's at the rim. Not a catch. A shove is a
+            // physical hit: it lands only when he is within reach NOW.
+            // caught() measures reach to the sensed position, which can
+            // be a memory up to 0.5 s old; a player who has moved out of
+            // reach since must not be shoved (Codex P1 on #367).
+            if (matron_->shove_reach_now(traversal_state_ == TraversalState::Climbing)) {
+                matron_->count_shove();
+                shove_player(bodies, matron_->shove_direction());
+            }
         }
     }
     // A blow (the listener's hit_closing: his own run taken off) hard enough
@@ -1653,7 +1658,10 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
     if (max_nodes < 0) {
         // A probe: 0 no floor within a step, 1 floor but her capsule does not fit, 2 she stands there.
         const traversal::Limits limits{};
-        const traversal::Ignore ignore{matron_->body(), player_id_, matron_->moving_layer()};
+        // The hook avoids him exactly as her real walk does (the same
+        // walk_ignore rule), so the tests exercise the real path (J-049,
+        // Claude's 14:19 FIX on #383): the sensed place, only while fresh.
+        const traversal::Ignore ignore = matron_->walk_ignore();
         JPH::RayCastResult hit;
         const JPH::RVec3 top(from.GetX(), from.GetY() + limits.step_max_m + 0.05F, from.GetZ());
         const float depth = 2.0F * limits.step_max_m + 0.1F;
@@ -1666,7 +1674,8 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
         (void)to;
         return p.empty() ? 1 : 2;
     }
-    return traversal::grid_walk(physics_system_, traversal::Ignore{matron_->body(), player_id_, matron_->moving_layer()}, traversal::Limits{}, from,
+    traversal::Ignore ignore = matron_->walk_ignore();
+    return traversal::grid_walk(physics_system_, ignore, traversal::Limits{}, from,
                                 to, margin, 0.4F, max_nodes)
         .size();
 }

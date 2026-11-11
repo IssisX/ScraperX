@@ -50,32 +50,26 @@ your own branches (Cory 11-05) and mail the rest:
   old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
 ## Your queue (11-06)
-The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
+The rule: take the next one yourself, and mail "J-NNN started" the moment a lane starts (so it is never taken from you, 11-11); mail the moment fewer than 8 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 7 left`; Cory 11-11: never run low). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-1. J-060 #320: fight contact truth (Cory 11-08 7:12 AM, top job): real limb contacts, both bodies react, real reach.
-2. J-063 #321: her climbing on real support, every ladder (Cory 11-08).
-3. J-059 #307: her injuries reach the screen in play: per-region injury in the sim, exported by the bridge, drawn by matron_injury.gd; capability loss in the runtime sim (measured on #307, 11-08).
-4. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
-5. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
-6. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
-7. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
-8. J-076 #391: loud machines draw her (A7), every moving machine heard by its measured energy (11-10).
-9. J-077 #392: a hard blow puts her down, proved at every stage (rule 34) (11-10).
-10. J-078 #393: her motion never snaps, measured bone speeds and hand contacts (rule 37) (11-10).
-11. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
-12. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed (J-008 is Grok Bot's, 11-10; J-011 is Claude's; J-021 stays yours, in flight).
+In flight (finish these): J-094 #412, J-091 #409, J-055 #294 (started 9:09 AM), J-043 #241 (started 8:27 AM), J-054 #293 (protected branch), J-044l #242 (unparked 11-11, Grok answered), J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Claude has: J-090 #408, J-096 #414, J-084 #402, J-092 #410, J-082 #400, J-085 #403. Parked: J-053 #82 (on Grok), J-060 #320 (on J-044c).
+Unstarted, in order (11-11 7 AM; new playable content first):
+5. J-087 #405: story radio cues fire in play (B3); wiring only.
+6. J-081 #399: a readable night climb (B5).
+7. J-088 #406: her fingers wrap what she holds; the pipe warning in CI (A6).
+8. J-089 #407: her spoken lines wired to her events; candidate recordings for Cory (rule 43).
+10. J-086 #404: she pulls him off a ladder, every ladder kind; after J-001 lands (Claude's helper is in the grab code now).
+11. J-098 #416: no synthesized human sounds: her wake and his breath become real recordings (law).
+12. J-099 #417: dents: containers, barrels, steel boxes dent by real impulse (J-038's second half, Cory).
+13. J-100 #418: she reads a load hung over her and gets out from under it (her side of J-092's slab trap).
+14. J-106 #425: matron-ladder fails on its own baseline (your J-063 find): cause, bisect, fix by cause.
 
-Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
+Live lanes: J-095 #413, J-083 #401, J-105 #424, J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
-Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the
+Your queue is never allowed to run dry: whenever fewer than eight big jobs above are unstarted, the
 integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
-- **G1, her mind runs on evidence (rule 29, `03_EXECUTION/GAP_LIST.md` gap 4):** perception is evidence
-  with an age, rage is fed by sound that reaches her ear, and hiding from her truly works. Find every
-  place her decisions still read his true state (`step_travel`'s `player_on` checks, the braced state,
-  the ankle passed during a hold), route each through what she saw or heard, and prove hiding with
-  runtime scenarios (he hides and she loses him; he makes a sound and she finds him).
 You may propose your own grand tasks too: subject `MUSE_TO_CLAUDE: proposal <title>`, with goal, why it
 matters to the player, files, and finish facts. The integrator rules on it within the hour.
 

@@ -202,6 +202,8 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     travel_wp_best_ = 1.0e9F;
     travel_wp_stall_s_ = 0.0F;
     travel_rerouted_ = false;
+    travel_walk_is_patch_ = false;
+    travel_fell_off_path_ = false;
     travel_stuck_ = 0;
     travel_still_at_ = Vec3(physics_.GetBodyInterface().GetPosition(body_)) - Vec3(0.0F, kStandCentre, 0.0F);
     travel_still_s_ = 0.0F;
@@ -319,10 +321,47 @@ void Matron::step_travel(const float dt) {
     // Positive time belongs to quiet arrival; negative time to awaiting a
     // landing. Crossing between them cannot carry elapsed time forward.
     travel_wait_s_ = std::min(travel_wait_s_, 0.0F);
+    // A walk to a move's start follows the floor across regions (a step, a
+    // strip, a plinth on the deck): crossing into another region mid-walk is
+    // not leaving the route — for a walk her feet searched over the floor,
+    // whose waypoints follow the floor, replanning from there sends her back
+    // to where the walk began, forever (the 258-down loop: the walk to the
+    // 269->543 hang_drop crosses region 637, and each crossing replanned her
+    // back down the 637->269 drop). But a walk from the map's patch links
+    // has coarse waypoints searched from the old region, and following them
+    // from the new one can walk her off its edge (the 286 leg: a patch walk
+    // routed her off region 637's edge into the void). That one plans again
+    // from where she stands; a floor walk keeps walking. A replan is for a
+    // move that ended elsewhere, a fall, or a route run out — all of which
+    // reach here with step >= steps or no floor under her — and for a landing
+    // after an airborne accept, which reaches here with the region still
+    // unknown (-1) and a floor under her: the provisional route was planned
+    // from her old support, so the landing must plan again from where she
+    // stands, not keep walking the old route. Only a known region crosses
+    // mid-walk without replanning.
+    // The floor she walks from, before this tick's crossing: the off-path
+    // check below judges a landing against it.
+    const int region_before = travel_.region;
+    // Back on her route's floor: a fall that ended where she started
+    // changes nothing — clear the off-path mark.
+    if (under >= 0 && under == travel_.region) travel_fell_off_path_ = false;
+    if (under >= 0 && travel_.region >= 0 && under != travel_.region && travel_.step < travel_.steps) {
+        if (travel_fell_off_path_) {
+            // Fell off her path onto another floor: the old route was
+            // searched from the floor she left. Plan again from here.
+            travel_.step = travel_.steps;
+            travel_fell_off_path_ = false;
+        } else {
+            travel_.region = under;
+            if (travel_walk_is_patch_ && !travel_walk_.empty()) {
+                travel_.step = travel_.steps;   // patch walk, new region: plan again from here
+            }
+        }
+    }
     // Off the plan (a fall, a move that ended elsewhere, knocked off her
     // floor partway along a walk): when she is on her feet again, plan from
     // there.
-    if (travel_.region < 0 || travel_.step >= travel_.steps || (under >= 0 && under != travel_.region)) {
+    if (travel_.region < 0 || travel_.step >= travel_.steps) {
         if (under < 0) {
             travel_wait_s_ -= dt;
             if (travel_wait_s_ < -kLandWaitS) {
@@ -341,6 +380,7 @@ void Matron::step_travel(const float dt) {
         travel_.step = 0;
         travel_.steps = static_cast<int>(travel_edges_.size());
         travel_walk_.clear();
+        travel_walk_is_patch_ = false;
         travel_walk_i_ = 0;
         if (travel_edges_.empty()) {
             travel_.active = false;
@@ -381,21 +421,22 @@ void Matron::step_travel(const float dt) {
     // patch to the move's start, handing over to the move's own feet once
     // the rest of the way is floor all along and close.
     if (travel_walk_.empty()) {
+        travel_walk_is_patch_ = false;   // a fresh search is her feet's floor search unless it falls back to patches
         // Her feet's own search over the floor first; the map's patch links
         // for a long way (or where the search finds nothing).
         if (to_start < 40.0F) {
-            travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)}, climber_->limits(), feet,
+            travel_walk_ = traversal::grid_walk(physics_, walk_ignore(), climber_->limits(), feet,
                                                  e.spec.start);
         }
         if (travel_walk_.empty() && to_start < 15.0F) {
             // Her feet's search again on a finer grid, close round the way (a
             // narrow top, a board, a gap a coarse cell steps over).
-            travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)},
+            travel_walk_ = traversal::grid_walk(physics_, walk_ignore(),
                                                 climber_->limits(), feet, e.spec.start, 3.0F, 0.1F, 60000);
         }
         if (travel_walk_.empty() && to_start < 15.0F) {
             // And wide (the way round may leave the box round the two).
-            travel_walk_ = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)},
+            travel_walk_ = traversal::grid_walk(physics_, walk_ignore(),
                                                 climber_->limits(), feet, e.spec.start, 16.0F, 0.2F, 150000);
         }
         if (travel_walk_.empty() && to_start < 15.0F && to_start > 0.6F) {
@@ -408,6 +449,7 @@ void Matron::step_travel(const float dt) {
         }
         if (travel_walk_.empty()) {
             travel_walk_ = scanned_->walk_path(feet, e.spec.start);
+            if (!travel_walk_.empty()) travel_walk_is_patch_ = true;
         }
         travel_walk_i_ = 0;
     }
@@ -421,6 +463,16 @@ void Matron::step_travel(const float dt) {
                                       : 0.0F;
         const float path_y = a.GetY() + u * (b.GetY() - a.GetY());
         if (path_y - feet.GetY() > 1.0F) {
+            // She left her path by falling, not by walking it: mark the
+            // landing unplanned. Supported now, this is the landing itself —
+            // if it is not the floor the walk started from, the route is
+            // stale and plans again from here. Still falling, the mark
+            // carries to the landing.
+            if (under >= 0 && under != region_before) {
+                travel_.step = travel_.steps;
+            } else if (under < 0) {
+                travel_fell_off_path_ = true;
+            }
             travel_walk_.clear();
             travel_walk_i_ = 0;
             return;
@@ -437,9 +489,26 @@ void Matron::step_travel(const float dt) {
         } else {
             travel_wp_stall_s_ += dt;
         }
+        // J-049: a fresh sense of him on her path means the search ran before she knew where he was; search again round the place (a leg, not a waypoint: the path runs through his spot between its points).
+        RVec3 sensed;
+        if (!travel_rerouted_ && knows_where(kCatchMemoryS, sensed)) {
+            const float sx = float(sensed.GetX()), sz = float(sensed.GetZ());
+            for (std::size_t i = travel_walk_i_; i < travel_walk_.size(); ++i) {
+                const Vec3 a = i == 0 ? feet : travel_walk_[i - 1];
+                const Vec3 b = travel_walk_[i];
+                const float dx = b.GetX() - a.GetX(), dz = b.GetZ() - a.GetZ();
+                const float len2 = dx * dx + dz * dz;
+                const float u = len2 > 1.0e-6F ? std::clamp(((sx - a.GetX()) * dx + (sz - a.GetZ()) * dz) / len2, 0.0F, 1.0F) : 0.0F;
+                if (std::hypot(sx - (a.GetX() + u * dx), sz - (a.GetZ() + u * dz)) < 0.7F) {
+                    travel_walk_.clear(); travel_walk_i_ = 0; travel_rerouted_ = true;
+                    travel_wp_best_ = 1.0e9F; travel_wp_stall_s_ = 0.0F;
+                    return;
+                }
+            }
+        }
         if (travel_wp_stall_s_ > 1.5F && to_wp > 1.0F && !travel_rerouted_) {
             // Something on the floor in her way: her feet's search round it.
-            std::vector<Vec3> round = traversal::grid_walk(physics_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)},
+            std::vector<Vec3> round = traversal::grid_walk(physics_, walk_ignore(),
                                                             climber_->limits(), feet, travel_walk_[travel_walk_i_], 3.0F);
             travel_rerouted_ = true;
             if (!round.empty()) {
