@@ -378,11 +378,13 @@ void run_wet_e_guard(const bool expect) {
     // it was; the count is 540 + 2 and the hash over all pieces is new: now
     // 10019901410837365716 (west of the drum, clear of it).
     // J-054 (#293) merged onto trunk 5ab4e5294: the ballast drum is one more
-    // piece (count 543). The two hashes below are UNMEASURED on the merged
-    // world — the E guard prints the true values; re-pin from that run
-    // before this branch is pushed.
+    // piece (count 543). Re-pinned from the merged-world E-guard run: the
+    // drum sits at kit index 320, inside the first 540, so the before-hash
+    // window holds the drum and drops the piece that was 540th. Before
+    // 16882536141644003327 / 10019901410837365716, now 3916566504577059979 /
+    // 17883043600143711208.
     require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + 1 &&
-                stock_before.hash == 16882536141644003327ULL && stock.hash == 10019901410837365716ULL,
+                stock_before.hash == 3916566504577059979ULL && stock.hash == 17883043600143711208ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");
