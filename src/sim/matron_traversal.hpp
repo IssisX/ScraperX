@@ -382,7 +382,7 @@ struct Patch {   // a walkable top (one leaf of a body)
 struct Bar {   // one rung-like member the scanner reads (a thin long box)
     JPH::Vec3 c = JPH::Vec3::sZero();   // centre
     bool along_x = true;   // the bar's long axis
-    float half{};    // half its long side
+    float half = 0.0F;    // half its long side
     std::uint64_t entity = 0;
 };
 // The ladder-bar order, one authority for the sort in AffordanceMap::scan.
