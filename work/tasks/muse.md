@@ -67,6 +67,7 @@ Unstarted, in order (11-11 7 AM; new playable content first):
 10. J-086 #404: she pulls him off a ladder, every ladder kind; after J-001 lands (Claude's helper is in the grab code now).
 11. J-098 #416: no synthesized human sounds: her wake and his breath become real recordings (law).
 12. J-099 #417: dents: containers, barrels, steel boxes dent by real impulse (J-038's second half, Cory).
+13. J-100 #418: she reads a load hung over her and gets out from under it (her side of J-092's slab trap).
 
 Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
