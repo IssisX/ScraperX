@@ -177,6 +177,27 @@ class WorldGeometry(unittest.TestCase):
         local = BAND_STACK[:12] + ["    float z = -138.0F;", "    z += 0.5F;"] + BAND_STACK[12:]
         self.assertEqual(_edit_findings(self.PATH, BAND_STACK, local), [("REVIEW", "world-geometry-added")])
 
+    def test_a_mechanisms_tuning_is_review_and_a_line_that_also_moves_a_face_blocks(self):
+        old = ["constexpr float kS2BeamMassKg = 2400.0F;",
+               "constexpr float kS2BeamZ0 = -139.00F;",
+               "void build_s2(kit::Kit &kit, Stack &stack) {",
+               "    kit.set_guide_friction(stack.s2_guide, 0.40F);",
+               "    kit.set_guide_friction(stack.s2_guide, 0.40F); route.push_back(span({20.50F, 66.0F, -139.00F}, "
+               "{23.50F, 67.7F, -136.50F}, Material::Steel));",
+               "}"]
+
+        def edit(index, text):
+            new = list(old)
+            new[index] = text
+            return _edit_findings(self.PATH, old, new)
+
+        self.assertEqual(edit(0, "constexpr float kS2BeamMassKg = 900.0F;"), [("REVIEW", "mechanism-tuning-changed")])
+        self.assertEqual(edit(3, "    kit.set_guide_friction(stack.s2_guide, 0.30F);"),
+                         [("REVIEW", "mechanism-tuning-changed")])
+        self.assertEqual(edit(1, "constexpr float kS2BeamZ0 = -139.10F;"), [("BLOCK", "world-geometry-changed")])
+        both = old[4].replace("0.40F", "0.30F").replace("-139.00F", "-139.10F")
+        self.assertEqual(edit(4, both), [("BLOCK", "world-geometry-changed")])
+
     def test_a_comment_only_edit_is_clean(self):
         said = list(BAND_STACK)
         said[4] = "// its south face stands 0.35 m clear of the cabinet so the jump does not meet"

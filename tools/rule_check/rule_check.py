@@ -11,7 +11,8 @@ Prints one line per finding:  LEVEL file:line rule: text
           operator), world geometry changed (a constant or a box of an existing body), her budget changed.
           Those changes go only as a PR into ScraperX-Claude, and only the owner merges it.
   REVIEW  a reviewer must look (possible per-route special case, velocity write, position write,
-          structured binding near a lambda, new world geometry, a number in another build_* function).
+          structured binding near a lambda, new world geometry, a mechanism's tuning number changed (a mass,
+          friction, damping, speed ... in a world-building file), a number in another build_* function).
 Exit status: 0 nothing found, 1 REVIEW only, 2 any BLOCK. It reads the diff only; it changes nothing.
 It is a first pass: a clean result does not replace 03_EXECUTION/REVIEW_CHECKLIST.md.
 """
@@ -39,6 +40,11 @@ BUILD_FN_NOT = re.compile(r"\bAffordanceMap::build_|\bbuild_shape\s*\(|\bbuild_s
 # or a part taken out.
 MUTATE_RE = re.compile(r"^\s*(?:(?P<name>[A-Za-z_]\w*)[\w.\[\]>-]*\s*[-+*/]?=(?!=)|.*\.(?:erase|pop_back|clear)\s*\()")
 NEW_PART_RE = re.compile(r"=\s*(\w+(\.|->))?add_\w+\s*\(")
+# A mechanism's tuning, not geometry: a number on a constant or a call named for one of these (kS2BeamMassKg,
+# set_guide_friction(...), set_damping(...), kCageGovernorSpeed). Her own limits stay BLOCK (budget-number-changed).
+TUNING_WORDS = {"mass", "kg", "friction", "damping", "damp", "stiffness", "stiff", "tension", "speed", "mps", "torque",
+                "time", "delay", "period", "restitution", "drag", "rate", "gain", "spring", "hz", "force", "power"}
+PASS_CALLS = {"max", "min", "clamp", "abs", "sqrt", "static_cast", "float", "double"}   # look past these to the owner
 LITERAL_RE = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?")
 # CLAUDE.md's "## Settled" section holds the owner's calls: only he changes a line, and the automatic review is told
 # they are his (tools/switchboard claude_calls.settled_calls). A PR that edits the section is never merged by the
@@ -219,9 +225,44 @@ def settled_edit(hunks):
     return None
 
 
+def tuning_name(name):
+    return bool({w.lower() for w in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])", name or "")} & TUNING_WORDS)
+
+
+def number_owner_is_tuning(c, pos):
+    """Is the number at c[pos] a mechanism's tuning? Its owner is the innermost call it is an argument of (past
+    max/min/casts), or, outside any call, the constant or name it is given to."""
+    depth, i = 0, pos - 1
+    while i >= 0:
+        ch = c[i]
+        if ch in ")]}":
+            depth += 1
+        elif ch in "([{":
+            if depth:
+                depth -= 1
+            elif ch == "(":
+                m = re.search(r"(\w+)\s*$", c[:i])
+                if m and m.group(1) not in PASS_CALLS:
+                    return tuning_name(m.group(1))
+        i -= 1
+    m = None
+    for m in re.finditer(r"(\w+)\s*(?:=(?!=)|\{)", c[:pos]):
+        pass
+    return bool(m) and tuning_name(m.group(1))
+
+
+def tuning_only(old, new):
+    """For a changed line paired with its new self (the same skeleton): True when every number that changed is a
+    mechanism's tuning, so the change is REVIEW (mechanism-tuning-changed), not world geometry."""
+    a, b = list(NUM_RE.finditer(old)), list(NUM_RE.finditer(new))
+    changed = [y for x, y in zip(a, b) if x.group(0) != y.group(0)]
+    return len(a) == len(b) and bool(changed) and all(number_owner_is_tuning(new, y.start()) for y in changed)
+
+
 def world_geometry(f, hunks, whole, fn_re):
     """(d) J-115: world geometry. In a world-building file (whole) or function (fn_re), a changed or removed line
-    (a constant or a box of what is built) is a BLOCK, and so is an added statement that changes what is already
+    (a constant or a box of what is built: a position, size, extent or the list of bodies) is a BLOCK, unless every
+    number it changes is a mechanism's tuning (a mass, friction, damping, speed ...: REVIEW). So is an added statement that changes what is already
     built (an assignment to a name the addition does not declare, a part erased). Other added lines, a new body or
     constant, are REVIEW: the reviewer checks they come after the existing bodies and move none. A comment, spacing,
     or a line moved within its hunk is no change; a line moved to another hunk is REVIEW (the body order changes).
@@ -258,7 +299,7 @@ def world_geometry(f, hunks, whole, fn_re):
         plus_skel = {}
         for n, t in plus:
             plus_skel.setdefault(skeleton(code(t)), []).append((n, t))
-        blocked = False
+        blocked, tuned = False, set()
         for n, t in minus:
             if norm(t) in plus_norm:
                 continue
@@ -267,13 +308,18 @@ def world_geometry(f, hunks, whole, fn_re):
                 continue
             pair = plus_skel.get(skeleton(code(t)))
             pair = pair.pop(0) if pair else None   # paired in order: the first changed line with the first added
+            if pair and tuning_only(code(t), code(pair[1])):
+                add("REVIEW", f, pair[0], "mechanism-tuning-changed",
+                    code(t).strip() + " -> " + code(pair[1]).strip() + " (a mechanism's tuning, not geometry)")
+                tuned.add(pair)
+                continue
             add("BLOCK", f, pair[0] if pair else n, "world-geometry-changed",
                 (code(t).strip() + " -> " + code(pair[1]).strip() if pair else "removed: " + code(t).strip())
                 + " (an existing body or constant: protected)")
             blocked = True
         if blocked:
             continue
-        new = [(n, t) for n, t in plus if norm(t) not in minus_norm]
+        new = [(n, t) for n, t in plus if norm(t) not in minus_norm and (n, t) not in tuned]
         declared = " ".join(code(t) for _, t in new)
         for n, t in new:
             m = MUTATE_RE.match(code(t))
