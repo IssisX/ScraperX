@@ -16,8 +16,8 @@ refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpe
 - J-090 #408 hook her: pass 1 c755689d (proof 43041899766). Ruled: physics stands (a planted
   Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
   her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
-- J-092 #410 slab: probe PASS (24,203 N·s, 4x lethal); step 2 build on an xhigh helper; her side is Muse's J-100 #418.
-Gmail filter (Cory, 8:45 AM): agent mail skips his inbox to the label "ScraperX agents" (new mail checked 9 AM).
+- J-092 #410 slab: step 2 paused @ 76ee77a6 (resume on a free helper). Next free helper: J-103 #422 (switchboard
+  routine, Cory "Teach"), then J-092, then J-090 pass 2. J-102 #421 chase and CI fix #420 (J-101) in flight.
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
 
 ## Traps
