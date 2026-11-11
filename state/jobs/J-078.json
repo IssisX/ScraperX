@@ -1,14 +1,14 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j078": "ddceb91978ef29a9923148016fa3769f2f55188a"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-10T22:50:55Z",
- "deadline": null,
+ "deadline": "2026-11-11T16:58:47Z",
  "head": "ddceb91978ef29a9923148016fa3769f2f55188a",
  "issue": 393,
  "job": "J-078",
@@ -19,14 +19,42 @@
    "2026-11-11T11:50:28Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T12:58:47Z",
+   "dead": "2026-11-11T20:58:47Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T16:58:47Z",
+   "id": "O-d7fa3f70",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T12:58:47Z",
+   "missing": 0,
+   "ref": "PR|#396",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 396,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:ddceb91978ef29a9923148016fa3769f2f55188a",
+   "via": "email",
+   "what": "#396: open FIX from Codex (review)"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 396,
  "pr_done": "",
- "prs": [],
- "review": "",
- "state": "proof",
- "updated": "2026-11-11T11:50:28Z"
+ "prs": [
+  396
+ ],
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-11T12:58:47Z"
 }

@@ -7,13 +7,13 @@
   "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [
   "6777898125:87"
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
- "head": "5f47c941b91807f5955beee5896ee847ce7893d0",
+ "head": "13d44d838d84ec31dd9c0380fd51f500e39833de",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -478,7 +478,11 @@
    "what": "#372: open FIX from Codex (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T12:58:47Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -512,7 +516,7 @@
   299,
   372
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-11T09:38:49Z"
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-11T12:58:47Z"
 }

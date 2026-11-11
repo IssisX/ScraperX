@@ -7,7 +7,7 @@
   "fb-bot/integrate-j059-black-eye": "e34ac5096b438be2f4a8567d4bf52f371857652e"
  },
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-11T03:17:00Z",
@@ -399,6 +399,31 @@
    "version": "fix:959bf0138f88ae98051ee84cb3d4cc38da95b2d1",
    "via": "email",
    "what": "#343: open FIX from Codex (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T12:58:47Z",
+   "dead": "2026-11-11T20:58:47Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T16:58:47Z",
+   "id": "O-2c7fcb6a",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T12:58:47Z",
+   "missing": 0,
+   "ref": "PR|#343",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 343,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:b1177151bd189a5395de85ba140431a5a61bfb6c",
+   "via": "email",
+   "what": "#343: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
@@ -409,7 +434,7 @@
  "prs": [
   343
  ],
- "review": "",
- "state": "proof",
- "updated": "2026-11-11T11:50:28Z"
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-11T12:58:47Z"
 }

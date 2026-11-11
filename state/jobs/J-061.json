@@ -120,7 +120,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T06:28:54Z",
+   "rechecked": "2026-11-11T12:58:47Z",
    "ref": "ASK|ask on #312",
    "sends": 0,
    "thread": 312,
@@ -311,5 +311,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-11T06:28:54Z"
+ "updated": "2026-11-11T12:58:47Z"
 }

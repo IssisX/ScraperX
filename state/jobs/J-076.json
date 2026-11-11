@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-10T22:50:55Z",
- "deadline": null,
+ "deadline": "2026-11-11T16:58:47Z",
  "head": "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b",
  "issue": 391,
  "job": "J-076",
@@ -19,7 +19,33 @@
    "2026-11-11T11:50:28Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T12:58:47Z",
+   "dead": "2026-11-11T20:58:47Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T16:58:47Z",
+   "id": "O-dde130cf",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T12:58:47Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j076",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 391,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:9caeb5ffaef490bcac8da3afd84b2c4c3698be1b",
+   "via": "email",
+   "what": "`fb-bot/integrate-j076` proof red: native-tests (matron-slices-3), native-tests (athletic-traversal-1), native-tests (athletic-traversal-2), no PR"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -27,6 +53,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T11:50:28Z"
+ "state": "working",
+ "updated": "2026-11-11T12:58:47Z"
 }

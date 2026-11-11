@@ -2,7 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j009-258-down-traversal": "237ba1703ce562e34e1279b022edf7a7705ff7a6",
+  "fb-bot/integrate-j009-258-down-traversal": "cd5154139cf9636138a221870ebdf901b3f869bc",
   "fb-bot/integrate-j009-258-down-traversal-flags": "fdea6e19e6a6eb72c676d617930f06b92e213e0e"
  },
  "cancelled": null,
@@ -12,14 +12,14 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "cd5154139cf9636138a221870ebdf901b3f869bc",
+ "head": "fdea6e19e6a6eb72c676d617930f06b92e213e0e",
  "issue": 116,
  "job": "J-009",
  "landed": {
   "fb-bot/integrate-j009-258-down-traversal": [
-   "237ba1703ce562e34e1279b022edf7a7705ff7a6",
-   "",
-   "2026-11-10T12:25:07Z"
+   "cd5154139cf9636138a221870ebdf901b3f869bc",
+   "merged #377",
+   "2026-11-11T12:58:47Z"
   ],
   "fb-bot/integrate-j009-258-down-traversal-flags": [
    "fdea6e19e6a6eb72c676d617930f06b92e213e0e",
@@ -260,11 +260,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 377,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   377
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T11:50:28Z"
+ "state": "working",
+ "updated": "2026-11-11T12:58:47Z"
 }

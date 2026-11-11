@@ -1314,3 +1314,44 @@
 {"ev": "state", "frm": "assigned", "job": "J-076", "t": "2026-11-11T11:50:28Z", "to": "proof"}
 {"ev": "state", "frm": "assigned", "job": "J-078", "t": "2026-11-11T11:50:28Z", "to": "proof"}
 {"ev": "pass", "job": "", "jobs": 53, "status": "ok", "t": "2026-11-11T11:50:28Z", "tries": 1}
+{"ev": "job", "job": "J-089", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-088", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-087", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-086", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-085", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-084", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-083", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-082", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-081", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-080", "t": "2026-11-11T12:58:47Z"}
+{"ev": "job", "job": "J-079", "t": "2026-11-11T12:58:47Z"}
+{"branch": "fb-bot/integrate-j009-258-down-traversal", "ev": "landed", "how": "merged #377", "job": "J-009", "sha": "cd5154139cf9636138a221870ebdf901b3f869bc", "t": "2026-11-11T12:58:47Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-009", "pr": 377, "t": "2026-11-11T12:58:47Z"}
+{"ev": "acked", "how": "new head", "id": "O-40c9c192", "job": "J-038", "t": "2026-11-11T12:58:47Z"}
+{"due": "2026-11-11T16:58:47Z", "ev": "obligation", "id": "O-5e98ccfb", "job": "J-044c", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j044c-gains2", "t": "2026-11-11T12:58:47Z", "to": "muse", "via": "email"}
+{"due": "2026-11-11T16:58:47Z", "ev": "obligation", "id": "O-2c7fcb6a", "job": "J-059", "kind": "fix", "ref": "PR|#343", "t": "2026-11-11T12:58:47Z", "to": "muse", "via": "email"}
+{"due": "2026-11-11T16:58:47Z", "ev": "obligation", "id": "O-dde130cf", "job": "J-076", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-j076", "t": "2026-11-11T12:58:47Z", "to": "muse", "via": "email"}
+{"due": "2026-11-11T16:58:47Z", "ev": "obligation", "id": "O-d7fa3f70", "job": "J-078", "kind": "fix", "ref": "PR|#396", "t": "2026-11-11T12:58:47Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "proof", "job": "J-009", "t": "2026-11-11T12:58:47Z", "to": "working"}
+{"ev": "state", "frm": "working", "job": "J-038", "t": "2026-11-11T12:58:47Z", "to": "proof"}
+{"ev": "state", "frm": "proof", "job": "J-044c", "t": "2026-11-11T12:58:47Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-059", "t": "2026-11-11T12:58:47Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-076", "t": "2026-11-11T12:58:47Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-078", "t": "2026-11-11T12:58:47Z", "to": "working"}
+{"ev": "state", "frm": "accepted", "job": "J-079", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-080", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-081", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-082", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-083", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-084", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-085", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-086", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-087", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-088", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-089", "t": "2026-11-11T12:58:47Z", "to": "assigned"}
+{"ev": "dead_letter", "id": "O-0b4c9676", "job": "J-007", "ref": "BRANCH|fb-bot/integrate-protected-j007-item6-stage2", "t": "2026-11-11T12:58:47Z", "to": "muse"}
+{"attempt": 1, "ev": "sent", "id": "O-5e98ccfb", "job": "J-044c", "ref": "BRANCH|fb-bot/integrate-j044c-gains2", "send": 1, "t": "2026-11-11T12:58:47Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-2c7fcb6a", "job": "J-059", "ref": "PR|#343", "send": 1, "t": "2026-11-11T12:58:47Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-dde130cf", "job": "J-076", "ref": "BRANCH|fb-bot/integrate-j076", "send": 1, "t": "2026-11-11T12:58:47Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-d7fa3f70", "job": "J-078", "ref": "PR|#396", "send": 1, "t": "2026-11-11T12:58:47Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 64, "status": "ok", "t": "2026-11-11T12:58:47Z", "tries": 1}

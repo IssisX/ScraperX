@@ -103,7 +103,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-11T06:28:54Z",
+   "rechecked": "2026-11-11T12:58:47Z",
    "ref": "BRANCH|claude/integrate-j044c-upper-body",
    "sends": 0,
    "thread": 298,
@@ -112,6 +112,31 @@
    "version": "closed:03ad884b158583568062f454817f5683e2d6be72",
    "via": "session",
    "what": "`claude/integrate-j044c-upper-body` @ 03ad884b: closed #298 without merging at this head: reopen it, or delete the branch"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T12:58:47Z",
+   "dead": "2026-11-11T20:58:47Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T16:58:47Z",
+   "id": "O-5e98ccfb",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T12:58:47Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j044c-gains2",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 0,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:a8b86806c46a6eecad4315aee347994d3c6fbb62",
+   "via": "email",
+   "what": "`fb-bot/integrate-j044c-gains2` proof red: godot-touch (touch-2), godot-touch (touch-3), android-apk, native-tests (matron-slices-1), native-tests (athletic-traversal-2), native-tests (matron-slices-3), no PR"
   }
  ],
  "outcome": null,
@@ -121,6 +146,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T11:50:28Z"
+ "state": "working",
+ "updated": "2026-11-11T12:58:47Z"
 }
