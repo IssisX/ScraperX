@@ -1234,13 +1234,11 @@ public:
     static constexpr float kPinSideM = 0.15F;
     static constexpr float kBeltUpM = 0.35F;
     static constexpr float kBeltOutM = 0.42F;
-    static constexpr float kBeltOutExtraM = 0.15F;  // after the regular pin's beat, its belt hand
-                                                   // this much further out than the fatality's
+    static constexpr float kBeltOutExtraM = 0.15F;  // the regular pin's belt hand further out: his middle
+                                                   // tracks his belt hand, so this sets how far over
+                                                   // the drop the pin delivers him (fatality unchanged)
     static constexpr float kBeltSideM = -0.15F;
-    static constexpr float kPinBalanceM = 0.05F;   // the fatality: his middle balanced on the rail's top
-    // The regular pin: his middle held this far past the rail's line, out
-    // over the drop (ruling (a) on #108, 11-11: at least 0.25 m past it).
-    static constexpr float kPinHeldOutM = 0.30F;
+    static constexpr float kPinBalanceM = 0.05F;
     static constexpr float kPinHereUpM = 1.25F;   // no rail: him held up against her
     static constexpr float kPinWindowS = 2.5F;
     static constexpr float kPinReachS = 3.0F;
@@ -2620,11 +2618,6 @@ private:
     void step_rail(float dt, JPH::RVec3 player, JPH::RVec3 at, float feet);
     [[nodiscard]] JPH::RVec3 pin_pose(JPH::RVec3 at, float feet) const noexcept;
     [[nodiscard]] JPH::RVec3 belt_pose(JPH::RVec3 at, float feet) const noexcept;
-    // The regular pin's beat (her haul to it and its window): him held out
-    // over the drop, kPinHeldOutM past the rail's line.
-    [[nodiscard]] bool pin_held_out() const noexcept {
-        return !fatal_hold_ && state_ == State::Dangle && hold_phase_ <= 2;
-    }
     // His shoulder's distance from her body (her at `at`, his middle at
     // `player`), and so as far as his swing (`swing_v`) carries it: what his
     // punch must reach (kFatalReachM).

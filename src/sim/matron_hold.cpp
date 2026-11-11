@@ -1306,15 +1306,10 @@ RVec3 Matron::rail_pose(const RVec3 at, const float feet, const float up, const 
 }
 
 RVec3 Matron::belt_pose(const RVec3 at, const float feet) const noexcept {
-    // His middle tracks his belt hand, so the belt hand sets how far over
-    // the drop she holds him. In the regular pin's beat (pin_held_out) it
-    // holds his middle kPinHeldOutM past the rail's line, laid out from where
-    // she stands (her walk can stop short of her spot), her reach (within)
-    // bounding it; after it, a little further out than the fatality's.
-    const float short_of_spot = (rim_x_ - float(at.GetX())) * rim_nx_ + (rim_z_ - float(at.GetZ())) * rim_nz_;
-    const float out = pin_held_out() ? kRimStandM + kPinHeldOutM + short_of_spot
-                      : fatal_hold_    ? kBeltOutM
-                                       : kBeltOutM + kBeltOutExtraM;
+    // The regular pin's second hand further out: his middle tracks his
+    // belt hand, so the belt hand sets how far over the drop the pin
+    // delivers him; the fatality's belt hand stays where it was.
+    const float out = fatal_hold_ ? kBeltOutM : kBeltOutM + kBeltOutExtraM;
     return pin_here_ ? rail_pose(at, feet, kPinHereUpM - 0.35F, 0.40F, kBeltSideM)
                      : rail_pose(at, feet, rail_up_ + kBeltUpM, out, kBeltSideM);
 }
@@ -1323,7 +1318,7 @@ RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
     if (pin_here_) {
         return rail_pose(at, feet, kPinHereUpM, 0.50F, kPinSideM);
     }
-    // His middle kept where her pin wants it (`balance` past the rail's
+    // His middle kept balanced on the rail's top (kPinBalanceM past its
     // line): slipping out, her hand on his collar comes in and up; in, out.
     const BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 middle = bodies.GetPosition(player_);
@@ -1333,12 +1328,9 @@ RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
     // the steel, her hand on his collar holds him out where he is, never
     // drawn in after him: her other hand's pull on his wrist then stretches
     // the arm between them. Still caught, she hauls him in.
-    // On the rail's top, except in the regular pin's beat itself, which
-    // holds him out over the drop (pin_held_out).
-    const float balance = pin_held_out() ? kPinHeldOutM : kPinBalanceM;
     const float err = state_ == State::ArmPlay && armplay_reposes_ > 0 && !player_caught_
-                          ? std::min(0.0F, past - balance)
-                          : past - balance;
+                          ? std::min(0.0F, past - kPinBalanceM)
+                          : past - kPinBalanceM;
     // (Firmer back toward the rail in the fatality, whose window must keep
     // him on its top every tick; and in the regular pin too, whose window
     // must bring a body dragged from the deck over the line: the gentler
