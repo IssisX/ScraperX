@@ -16,7 +16,7 @@ tasks (the PAT expiry, the backstop decision), never only a line here.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
-- Gmail is Cory's own main inbox (read-only connector): search only the agent subjects; never read or touch his other mail (11-07).
+- Gmail is Cory's own main inbox: search only the agent subjects; never read or touch his other mail (11-07). Agent mail may be trashed (never deleted for good, never archived) once 2 days old: only single-sender threads from issisx3 whose subject starts `MUSE_TO_CLAUDE:` (bridged, Label_30) or `CLAUDE_TO_MUSE:`; any other thread is left alone (11-11: "Absolutely never ... delete my emails in my main inbox").
 - Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue.
 - Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused.
 - Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's.

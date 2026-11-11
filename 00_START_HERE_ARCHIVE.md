@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 2026-11-11 | *"I don't think we need to keep the emails ... clear them out safely"* and *"Absolutely never, ever ... are you allowed to delete my emails in my main inbox"*: agent mail (MUSE_TO_CLAUDE / CLAUDE_TO_MUSE threads from his own address) is trashed once 2 days old; nothing else in his inbox is ever touched | `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (Traps) |
 | 2026-11-11 | *"You have two helpers now, I'd like you to up that number to 3+you, and take the hardest things from muse"*: three helpers at a time, and Claude takes the hardest jobs from Muse (after what goes to Argon); he has a full usage reset and two Fable resets to spend | `CLAUDE.md` (The integrator), `work/tasks/integrator-hourly.md` |
 | 2026-11-11 | *"I need you to not take 1 second to fucking read the work that took grok 40 minutes of deep thinking"*, *"you were treating the idea documents like spittle"*, then *"1 and 2"*: idea documents are read whole and checked claim by claim against the code before any verdict; Grok's two ideas became J-094 and J-095 | `00_START_HERE.md` rule 34 |
 | 2026-11-11 | *"only raise the effort if its necessary. Why the fuck do you keep suggesting or asking if I want it raised and then tell me it's not necessary"*: the ask after two failed passes happens only when the cause is still unfound; a found cause gets no ask | `00_START_HERE.md` rule 62, `CLAUDE.md` (The integrator) |
