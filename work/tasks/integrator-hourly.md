@@ -15,7 +15,7 @@ Fewer, batched calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): at most three at a time (11-11: they take the hardest jobs from Muse, after Argon's), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
+Every run and event, first: `get_session` (no id); context_usage.used_tokens at 350k or more: the YOUR MOVE line asks Cory to compact (11-11: "Probably shouldn't let the context get that high"). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
 
 Change the check here, never in the task's prompt. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
