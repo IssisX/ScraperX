@@ -1,22 +1,28 @@
 # Integrator notes
 
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
-calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
-At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
+calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794374135 (2026-11-10 11:15 PM Central)
+Read through: 1794409124 (2026-11-11 8:58 AM Central)
 
 ## Now (11-11)
-Coding with the system (J-072 done 11-10). Work state lives in GitHub, not here: job issues (owner, state, needs:eyes
-for every visual or fight job, so the switchboard holds the merge for the eye), Muse's queue (checked by
-`tools/board/queue_check.py`), my follow-ups as their own job issues (J-093 #411). Dated reminders are scheduled
-tasks (the PAT expiry, the backstop decision), never only a line here.
-- Argon is Gemini (Cory's): reached only by Cory pasting a prompt in chat; the hardest physics (J-001, J-044c).
-- 367 archived branches (`archive/branches-20261106` @ 8f2c6a82): deleting them waits on Cory.
+State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). Three helpers, the cap (Cory 11-11):
+- J-001 #108: hold @ 8e5c715e, protected j093 @ aaed1791; 1 left (snag setup): ruled her pin holds him over the drop,
+  plus a kicking touch check: xhigh helper.
+- J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
+  before it lands. J-084 #402: whole climb PASS (24 stages) @ a94ada14, proof running; touch-2 limit 900 s is a
+  workflow change (Codex + API review). J-082 #400 band 1: xhigh helper, protected, on top of j084.
+- J-090 #408 hook her: pass 1 c755689d (proof 43041899766). Ruled: physics stands (a planted
+  Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
+  her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
+- J-092 #410 slab: step 2 paused @ 76ee77a6 (resume on a free helper). Next free helper: J-103 #422 (switchboard
+  routine, Cory "Teach"), then J-092, then J-090 pass 2. J-102 #421: root cause (home deck 1 is an island, 10-28), test @ af538488;
+  J-085 #403 taken from Muse for an xhigh helper (her ways up). CI fix #420 green, awaiting reviews.
+- Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
-- Gmail is Cory's own main inbox (read-only connector): search only the agent subjects; never read or touch his other mail (11-07).
+- Gmail is Cory's own main inbox: search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).
 - Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue.
 - Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused.
 - Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's.

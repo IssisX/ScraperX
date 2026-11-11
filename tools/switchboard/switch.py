@@ -10,7 +10,8 @@ Parts (a workflow job runs one; `all` runs both, for a dry run):
          a non-Claude PR, the eye on a `needs:eyes` PR's screenshots, the orchestrator (off in v0)
   steer  everything free: the merge rule, review asks (never to a `wake: manual` agent), one owner:* label per
          issue, opening PRs for finished fb-bot/integrate-* branches, the 7:00 AM Central digest, and
-         after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051),
+         after a full sweep one comment on the integrator's inbox PR (#282) for what needs it (J-051; QUEUE-LOW when
+         work/tasks/muse.md holds under 8 really-unstarted jobs, J-097),
          and the Muse mail pipe's health check (a PIPE ALARM on the board, once per incident)
 
 Usage:
@@ -50,6 +51,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import budget as money  # noqa: E402
 import rules  # noqa: E402
 import ghapi  # noqa: E402
+import muse_queue  # noqa: E402
 from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
@@ -99,7 +101,7 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET")
 MUSE_MARK = "<!-- switchboard:muse keys={keys} -->"
 MUSE_KEYS = re.compile(r"^<!-- switchboard:muse keys=([0-9a-f,]*) -->$", re.MULTILINE)
 MAX_MUSE_COMMENTS = 10          # Muse comments posted in one sweep; the rest come next sweep
@@ -323,6 +325,18 @@ class InboxItem:
         return inbox_key("muse-" + self.kind, self.target, self.head)
 
 
+def queue_item_record(items: tuple[InboxItem, ...]) -> dict | None:
+    """The QUEUE-LOW item as the sweep state keeps it between counts (J-097); None when the queue was not low."""
+    return {"head": items[0].head, "line": items[0].line} if items else None
+
+
+def queue_item_of(record) -> tuple[InboxItem, ...]:
+    """The QUEUE-LOW item back from the sweep state; () for none or anything malformed."""
+    if not isinstance(record, dict) or not isinstance(record.get("head"), str) or not isinstance(record.get("line"), str):
+        return ()
+    return (InboxItem("QUEUE-LOW", muse_queue.QUEUE_FILE, record["head"], record["line"]),)
+
+
 def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) -> str:
     """The inbox comment: the header line first, one line per item, the keys in a hidden marker last."""
     lines = [INBOX_HEADER, "", f"{len(items)} new for the integrator at {when} (each is listed once per head):", ""]
@@ -335,6 +349,7 @@ def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str) ->
 
 class Switch:
     auto_pr_failed: tuple[InboxItem, ...] = ()   # this sweep's AUTO-PR-FAILED items, for the inbox (J-051)
+    queue_items: tuple[InboxItem, ...] = ()      # this sweep's QUEUE-LOW item, for the inbox (J-097)
     merge_token: str = ""                        # SWITCHBOARD_MERGE_TOKEN, set by main() in the steer job only (J-056)
     review_key: str = ""                         # SWITCHBOARD_REVIEW_KEY, set by main() in the ask and steer jobs (J-056)
 
@@ -1111,11 +1126,13 @@ class Switch:
             if it.key not in seen:
                 seen.add(it.key)
                 new.append(it)
+        self.inbox_keys = set(reported)   # J-097: what the inbox holds after this call (run_sweep's queue clock)
         if not new:
             self.out("INBOX       nothing new")
             return 0
         shown = new[:MAX_INBOX_LINES]
         keys = (reported + [it.key for it in shown])[-MAX_INBOX_KEYS:]
+        self.inbox_keys |= {it.key for it in shown}
         body = inbox_body(shown, len(new) - len(shown), keys, central(self.now))
         self.out(body)
         self.gh.comment(INBOX_PR, body, f"inbox: {len(shown)} new item(s) on #{INBOX_PR}")
@@ -1425,10 +1442,53 @@ class Switch:
         for s in steered:
             items += self.pr_inbox_items(s, runs, reported, prefix)
         items += self.branch_inbox_items(runs, reported, prefix)
+        if not prefix:
+            items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
         if not prefix and ripe is None:
             items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
             items += self.ask_inbox_items(reported)
         return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
+
+    def queue_text(self) -> str:
+        """Trunk's work/tasks/muse.md, read once per run from this checkout; "" (an empty queue) when it cannot be."""
+        if getattr(self, "_queue_text", None) is None:
+            try:
+                self._queue_text = (self.root / muse_queue.QUEUE_FILE).read_text(encoding="utf-8")
+            except OSError as err:
+                self.out(f"NOTE        {muse_queue.QUEUE_FILE} could not be read ({type(err).__name__}): counted as empty")
+                self._queue_text = ""
+        return self._queue_text
+
+    def queue_started(self, delta: "SweepDelta", new_pr: bool) -> bool:
+        """J-097: could this fast sweep's changes have started a queued job? A bridged post (or any mail), a new PR, or
+        a proof run on a branch that names a queued job (`j0NN`). Reads no GitHub: the delta is the sweep's own."""
+        if delta.pipe or new_pr:
+            return True
+        nums = {q.num for q in muse_queue.queue_lines(self.queue_text())}
+        return any(f"j{n}" in b.lower() for b in delta.active for n in nums)
+
+    def queue_check(self, text: str | None = None) -> tuple[InboxItem, ...]:
+        """QUEUE-LOW (J-097, Cory 11-11: "you should be making sure muse DOES NOT RUN LOW ON QUEUE at any point"):
+        fewer than muse_queue.LOW_UNDER really-unstarted jobs in work/tasks/muse.md's Unstarted block (muse_queue's
+        rules, read with this run's client). The item's head is the count and the unstarted jobs, so it is listed once
+        per change, and a queue refilled and run low again is listed again. Sets and returns queue_items."""
+        text = self.queue_text() if text is None else text
+        self.queue_items = ()
+        report = muse_queue.check(self.gh, text, self.now)
+        ok = report.unstarted
+        n = len(ok)
+        for note in report.notes:
+            self.out(f"NOTE        queue check: {plain(note[:200])}")
+        self.out(f"QUEUE       {n} of {len(report.verdicts)} queued job(s) unstarted (QUEUE-LOW under {muse_queue.LOW_UNDER})")
+        if n >= muse_queue.LOW_UNDER:
+            return self.queue_items
+        jobs = sorted(v.line.job for v in ok)
+        taken = [f"{v.line.job} {v.verdict}" for v in report.verdicts if v.verdict != "OK"]
+        line = (f"QUEUE-LOW: {n} unstarted in `{muse_queue.QUEUE_FILE}` (under {muse_queue.LOW_UNDER}): refill to "
+                f"{muse_queue.REFILL_TO}. Unstarted: {', '.join(jobs) or 'none'}"
+                + (f"; taken: {', '.join(taken)}" if taken else ""))
+        self.queue_items = (InboxItem("QUEUE-LOW", muse_queue.QUEUE_FILE, f"{n}:{','.join(jobs)}", line),)
+        return self.queue_items
 
     def ask_inbox_items(self, reported: frozenset[str]) -> list[InboxItem]:
         """TO-CLAUDE (J-052): an ask to the integrator in a comment on an open thread, once per comment id.
@@ -2608,21 +2668,51 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
         part("auto-open", lambda: sw.auto_open_prs(None if delta is None else delta.finished_auto))
     red_ripe = [r for r in timers.get("red") or []
                 if (parse_time(str(r.get("updated_at") or "")) or now) + INBOX_BRANCH_RED <= now]
+    # J-097: Muse's queue is counted on every full pass and on every fast sweep that saw something that can start a
+    # job (a bridged Muse post, a new PR, a proof run on a branch naming a queued job); a sweep with none of those
+    # costs no call (the J-072 budgets). timers["queue"] keeps the last count's item and the key last seen in the
+    # inbox, so a QUEUE-LOW not yet listed wakes even a quiet sweep's inbox.
+    queue_timer = dict(timers.get("queue")) if isinstance(timers.get("queue"), dict) else {}
+    queue_key, inbox_ran = "", False
+    if steer and not targeted:
+        new_pr = delta is not None and any(str(p["number"]) not in (state.get("prs") or {}) for p in prs)
+        count_now = delta is None or sw.queue_started(delta, new_pr)
+        if count_now:
+            part("queue check", sw.queue_check)
+        if "queue check" in not_done or not count_now:
+            sw.queue_items = queue_item_of(queue_timer.get("item"))   # not counted now: the last count stands
+        else:
+            queue_timer = {"item": queue_item_record(sw.queue_items), "listed": queue_timer.get("listed") or ""}
+        queue_key = sw.queue_items[0].key if sw.queue_items else ""
+    queue_due = bool(queue_key) and queue_key != queue_timer.get("listed")
     if steer and not targeted and not quiet:   # the inbox reads a whole sweep, so a run for one PR posts none
+        inbox_ran = True
         part("inbox", lambda: sw.inbox(steered))
         part("muse", lambda: sw.muse(steered))   # J-052: Muse's items go to Muse by comment + wake:muse
         if not not_done & {"inbox", "muse"}:   # a failed read found no red run: the old ones are kept
             timers["red"] = list(getattr(sw, "red_pending", {}).values())
-    elif steer and not targeted and red_ripe:   # J-072: a quiet sweep, but a red branch's hour is up: just those
-        sw.out(f"RIPE        RED-BRANCH clock: {', '.join(sorted(r.get('head_branch') or '?' for r in red_ripe))}")
+    elif steer and not targeted and (red_ripe or queue_due):   # J-072: a quiet sweep, but a clock is up: just those
+        if red_ripe:
+            sw.out(f"RIPE        RED-BRANCH clock: {', '.join(sorted(r.get('head_branch') or '?' for r in red_ripe))}")
+        if queue_due:
+            sw.out("RIPE        QUEUE-LOW: the queue changed and its item is not in the inbox yet")
         sw.ripe_runs = red_ripe
+        inbox_ran = True
         part("inbox", lambda: sw.inbox(steered))
-        part("muse", lambda: sw.muse(steered))
+        if red_ripe:
+            part("muse", lambda: sw.muse(steered))
         sw.ripe_runs = None
-        if not not_done & {"inbox", "muse"}:
+        if red_ripe and not not_done & {"inbox", "muse"}:
             fired = {r.get("id") for r in red_ripe}
             timers["red"] = [r for r in timers.get("red") or [] if r.get("id") not in fired] + \
                 list(getattr(sw, "red_pending", {}).values())
+    if steer and not targeted:
+        if not queue_key or (inbox_ran and "inbox" not in not_done and queue_key in getattr(sw, "inbox_keys", set())):
+            queue_timer["listed"] = queue_key
+        if queue_timer.get("item") or queue_timer.get("listed"):
+            timers["queue"] = queue_timer
+        else:
+            timers.pop("queue", None)
     pipe_state = dict(timers.get("pipe") or {})
     bridge_env = os.environ.get(BRIDGE_VERSION_ENV, "").strip()
     if steer and not targeted and delta is None:
