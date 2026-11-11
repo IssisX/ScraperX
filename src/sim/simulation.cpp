@@ -1455,6 +1455,8 @@ bool Simulation::place_matron_home(const float deck_top) {
 }
 void Simulation::launch_matron_for_test(Vector3 at) { physics_world_->launch_matron_for_test(JPH::RVec3(at.x,at.y,at.z)); }
 
+void Simulation::debug_matron_off() { physics_world_->matron().switch_off_for_test(); }
+
 double Simulation::debug_matron_gravity_factor() const noexcept {
     const Matron &matron = physics_world_->matron();
     return physics_world_->physics_system().GetBodyInterfaceNoLock().GetGravityFactor(matron.body());

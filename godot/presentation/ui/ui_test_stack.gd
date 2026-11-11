@@ -585,9 +585,9 @@ func _stack(device: int) -> bool:
 # summit, on the canonical route (rules 56, 27) -- the Stack, the Well, the
 # swing, C6 and the mast, pitman and helix to TP-340, then the Plate Shop,
 # the Facade Crane, the service lifts and climbs, and the crown gondola and
-# derrick to the summit. The stages above TP-340 are non-canonical and are
-# named so at every checkpoint: they are the only way up today, and J-082
-# replaces them band by band. Each stage reached prints a CHECKPOINT line,
+# derrick to the summit. The stages from TP-340 to the 750 deck (AS-008 to
+# AS-010) are non-canonical and are named so at every checkpoint: they are
+# the only way up today, and J-082 replaces them band by band. Each stage reached prints a CHECKPOINT line,
 # so a run that stops names its stage in the log; the detail line carries
 # every stage's height at the end.
 func _canonical_ascent(device: int) -> bool:
@@ -624,8 +624,21 @@ func _canonical_ascent(device: int) -> bool:
 		return false
 	print("CHECKPOINT touch-canonical-ascent Well C 220 ring y=%.2f canonical" % _position().y)
 	# The canonical swing and west band: AS-012 to the 242 ring, C6 to 264.
+	# The sideways watch rests through the swing: strapped in, the seat
+	# carries the rider up its 28.8 m arc at its own speed, about 21 m/s at
+	# the bottom (0.24 m a native tick, 0.49 m in a two-tick frame,
+	# measured), a body carried, not a snap. The view's lift stays watched.
+	var before_swing := _stop_watch(body)
+	var ride := _watch_body()
 	if not await _swing(device):
 		return false
+	_stop_watch(ride)
+	if float(ride["lift"]) > 0.10:
+		return _fail("on the swing the view jumped %.3f m in one frame beyond the body's own motion (%s)" % [
+			float(ride["lift"]), str(ride.get("lift_at", ""))])
+	var lift_before_swing := float(body["lift"])
+	var at_before_swing := str(body.get("at", ""))
+	body = _watch_body()
 	print("CHECKPOINT touch-canonical-ascent AS-012 swing 242 ring y=%.2f canonical" % _position().y)
 	if not await _c6(device):
 		return false
@@ -671,13 +684,19 @@ func _canonical_ascent(device: int) -> bool:
 	if not await _service_o(device):
 		return false
 	print("CHECKPOINT touch-canonical-ascent Service O 750 deck y=%.2f NON-CANONICAL" % _position().y)
-	# Not canonical: the crown gondola and the luffing derrick to the summit.
+	# Canonical again: the owner's crown gondola and luffing derrick to the
+	# route's top.
 	if not await _high_legs(device):
 		return false
 	if not _standing_above(803.3):
 		return _fail("canonical-ascent: not standing on the derrick's upper receiver (y %.2f)" % _position().y)
-	print("CHECKPOINT touch-canonical-ascent SUMMIT 803.54 y=%.2f NON-CANONICAL" % _position().y)
+	print("CHECKPOINT touch-canonical-ascent crown gondola and luffing derrick, the route's top y=%.2f canonical" %
+		_position().y)
 	var worst_step := _stop_watch(body)
+	if before_swing > worst_step:
+		worst_step = before_swing
+		body["at"] = at_before_swing
+	body["lift"] = maxf(lift_before_swing, float(body["lift"]))
 	if worst_step > 0.25:
 		return _fail("the body jumped %.3f m sideways in one frame (%s)" % [worst_step,
 			str(body.get("at", ""))])

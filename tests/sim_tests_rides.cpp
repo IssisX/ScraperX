@@ -183,7 +183,7 @@ bool report_c6(const scraperx::sim::Simulation &simulation, const char *leg) {
     return false;
 }
 
-bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes = nullptr) {
+bool climb_c6(scraperx::sim::Simulation &simulation, C6Notes *notes) {
     using scraperx::sim::Snapshot;
     using scraperx::sim::TraversalState;
     C6Notes seen;

@@ -1653,6 +1653,15 @@ public:
     // Tests only: her body put standing at `feet`, awake and hunting (a test's
     // start, never a move in play); and a climb of hers begun where she stands.
     void place_for_test(JPH::RVec3 feet);
+    // Tests only: her switched off for a run that climbs without her (a test's
+    // start, never a move in play): dead as a fall leaves her, her body out of
+    // the world, so nothing of hers senses, moves or touches.
+    void switch_off_for_test() {
+        dead_ = true;
+        state_ = State::Dead;
+        remove_body();
+        refresh_view();
+    }
     // Tests only: her head and body turned to face `yaw` (a test's start: her
     // heading, never a force or a pose of her body).
     void face_for_test(float yaw) noexcept { yaw_ = yaw; look_s_ = 0.0F; }

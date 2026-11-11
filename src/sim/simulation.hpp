@@ -2010,6 +2010,9 @@ public:
     std::uint32_t matron_climb_queries() const;
     // Fixture setup only, never exposed to Godot.
     void launch_matron_for_test(Vector3 at);
+    // Fixture setup only, never exposed to Godot: the Matron switched off for
+    // a run without her (Matron::switch_off_for_test).
+    void debug_matron_off();
     // Test setup: put her home (her locker, where she wakes) on the deck whose
     // top is deck_top, kept across a world rebuilt after she ends a run. The
     // game's home is the stack's deck 1 (11 m); tests written for her old
