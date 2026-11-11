@@ -11,7 +11,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
   plus a kicking touch check: xhigh helper.
 - J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
   before it lands. J-084 #402: whole climb PASS (24 stages) @ a94ada14, proof running; touch-2 limit 900 s is a
-  workflow change (Codex + API review). J-082 #400 band 1: xhigh helper, protected, on top of j084.
+  workflow change (Codex + API review). J-082 #400 STOPPED by Cory ("don't wreck what we have"): parked, nothing landed; never reopen without him.
 - J-090 #408 hook her: pass 1 c755689d (proof 43041899766). Ruled: physics stands (a planted
   Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
   her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
