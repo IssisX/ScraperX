@@ -58,10 +58,29 @@ struct Dose {
 
 struct State {
     std::array<Dose, kRegionCount> doses{};
+    // J-059 #343 P1 #2: j_event is the last LOCAL impact — one strike's
+    // whole impulse, not one contact tick's share. A strike delivers its
+    // impulse over several contact ticks (a punch: 3 ticks); the ticks of
+    // one blow belong to one window, opened by begin_event() when take_blow
+    // sees a fresh blow. credit() replaces j_event on a region's first
+    // credit in a window and accumulates within it, so a second strike
+    // replaces the event while j_region keeps accumulating. The window
+    // bookkeeping is runtime-only (never saved): window_ starts at 0 with
+    // every region untouched, and the first begin_event() moves to window
+    // 1, so a region's first credit always replaces.
+    std::uint32_t window_ = 0;
+    std::array<std::uint32_t, kRegionCount> touched_{};
+    void begin_event() noexcept { ++window_; }
     void credit(const Region region, const float impulse_ns) noexcept {
         Dose &d = doses[static_cast<std::size_t>(region)];
         d.j_region += impulse_ns;
-        d.j_event = impulse_ns;
+        const std::size_t i = static_cast<std::size_t>(region);
+        if (touched_[i] != window_) {
+            touched_[i] = window_;
+            d.j_event = impulse_ns;
+        } else {
+            d.j_event += impulse_ns;
+        }
     }
     [[nodiscard]] float total() const noexcept {
         float sum = 0.0F;

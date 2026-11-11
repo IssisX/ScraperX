@@ -4560,6 +4560,10 @@ void Matron::take_blow(const float dt) {
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     bool struck = false;
     float environment_ns = 0.0F;
+    // J-059 #343 P1 #2: environment credits deferred to one array, applied
+    // after the blow window opens below, so one strike's ticks share one
+    // j_event window instead of each tick overwriting it.
+    std::array<float, injury::kRegionCount> env_ns{};
     float player_ns = 0.0F;
     Vec3 impulse = Vec3::sZero();
     float above_share = 0.0F;
@@ -4617,14 +4621,14 @@ void Matron::take_blow(const float dt) {
         environment_ns += std::max(given.Length(), overhead_ns);
         // J-059 #307: each accepted environment impulse is credited once,
         // by its centre against her middle: trunk or unclassified, never a
-        // face (J-044a §D).
-        injury_.credit(injury::classify_striker_centre(
-                           Vec3(static_cast<float>(n.at.GetX()), static_cast<float>(n.at.GetY()),
-                                static_cast<float>(n.at.GetZ())),
-                           Vec3(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
-                                static_cast<float>(at.GetZ())),
-                           eye_fwd),
-                       std::max(given.Length(), overhead_ns));
+        // face (J-044a §D). Deferred into env_ns (applied after the window
+        // opens below) so the strike's ticks share one j_event window.
+        env_ns[static_cast<std::size_t>(injury::classify_striker_centre(
+                   Vec3(static_cast<float>(n.at.GetX()), static_cast<float>(n.at.GetY()),
+                        static_cast<float>(n.at.GetZ())),
+                   Vec3(static_cast<float>(at.GetX()), static_cast<float>(at.GetY()),
+                        static_cast<float>(at.GetZ())),
+                   eye_fwd))] += std::max(given.Length(), overhead_ns);
         if (blow_quiet_ >= kBlowQuietTicks) {
             // A fresh blow: what kind, from where, and whether she faces it.
             blow_low_ = false;
@@ -4683,6 +4687,16 @@ void Matron::take_blow(const float dt) {
         blow_impulse_ = Vec3::sZero();
         blow_above_ = 0.0F;
         blow_by_player_ = false;
+        // A fresh blow opens a new j_event window: the strike's contact
+        // ticks accumulate into one local impact (J-059 #343 P1 #2).
+        injury_.begin_event();
+    }
+    // The environment half of this blow, credited in the window just
+    // opened (or the one still open), once per region.
+    for (std::size_t i = 0; i < injury::kRegionCount; ++i) {
+        if (env_ns[i] > 0.0F) {
+            injury_.credit(static_cast<injury::Region>(i), env_ns[i]);
+        }
     }
     // His own blow, tagged as it landed (player_blow_landed): read with the
     // blow it lands in. In her hold before the rip it frees him whatever its
