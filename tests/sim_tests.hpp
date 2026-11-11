@@ -901,6 +901,7 @@ void run_ammo();   // J-042: her ammo, your ammo (sim_tests_ammo.cpp)
 void run_matron_capacity(); // J-044b H.4: the capacity test, five falsifiers, no motor code (sim_tests_matron_capacity.cpp)
 void run_strike();
 void run_matron_upper_body();  // J-044c: the jointed upper body
+void run_matron_upper_gains(); // J-044c #298: the upper joint springs, sized for their distal subtrees
 void run_matron_damage();
 void run_perf_step();
 void run_matron_sweep();

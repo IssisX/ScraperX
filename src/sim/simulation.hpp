@@ -1822,6 +1822,13 @@ public:
     [[nodiscard]] int upper_constraints_in_system_for_test() const noexcept;
     // J-044c tests only: the neck joint's stored limits (radians).
     void upper_neck_limits_for_test(float &normal, float &plane, float &twist_min, float &twist_max) const noexcept;
+    // J-044c gains test (#298): hold the root and the chest still, pitch a
+    // joint's distal subtree about the joint anchor, and read the subtree
+    // inertia the joint's spring is sized for. Tests only.
+    void debug_hold_upper_root_chest_for_test(bool hold) noexcept;
+    void debug_pitch_upper_for_test(int joint, float degrees) noexcept;
+    [[nodiscard]] float upper_subtree_inertia_for_test(int joint) const noexcept;
+    double debug_upper_pitch_for_test(int joint) noexcept;
     // Tests only (never bound to the bridge): an arm broken as a hard hit
     // breaks it (0 the left, 1 the right), out of use a while.
     void debug_break_arm(int side) noexcept;

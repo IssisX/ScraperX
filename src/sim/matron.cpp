@@ -402,7 +402,9 @@ void Matron::create_upper_body() {
     // scans, sight, floor and fit probes, his probes, all called with the
     // default filters, which pass every layer) must meet only the root, as
     // before the chain. A solid segment inside her own capsule read as
-    // steel to all of them.
+    // steel to all of them. Keep each segment's mass properties: the joint
+    // springs are sized from them below (#298).
+    std::array<MassProperties, kUpperCount> upper_mass{};
     for (int i = 0; i < kUpperCount; ++i) {
         Ref<Shape> proxy;
         if (i == 0) {
@@ -416,6 +418,7 @@ void Matron::create_upper_body() {
         }
         MassProperties mass = proxy->GetMassProperties();
         mass.ScaleToMass(kUpperMassKg[i]);
+        upper_mass[static_cast<std::size_t>(i)] = mass;
         RVec3 pos;
         Quat rot;
         upper_rest_transform(i, pos, rot);
@@ -436,7 +439,9 @@ void Matron::create_upper_body() {
     // chest<-root, arms<-chest. Anchors are the rig joints. Twist is up
     // (the arm's own direction for shoulders), plane is her facing; the
     // target is the rest pose, so the motors hold her upright and return
-    // her after a blow. Gains are prototype: Grok's #244 pins them.
+    // her after a blow. The springs are sized from each joint's distal
+    // subtree inertia (#298), so the nominal 20 Hz / zeta 1.0 is what the
+    // joint actually does.
     const RVec3 feet = bodies.GetPosition(body_) - Vec3(0.0F, kStandCentre, 0.0F);
     const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), upper_yaw_);
     const Vec3 fwd(std::sin(upper_yaw_), 0.0F, std::cos(upper_yaw_));
@@ -445,6 +450,44 @@ void Matron::create_upper_body() {
         Vec3(0.0F, 1.644F, 0.075F),  Vec3(0.0F, 1.541F, 0.04F),  Vec3(0.0F, 1.38F, 0.023F),
         Vec3(-0.157F, 1.446F, 0.058F), Vec3(0.157F, 1.446F, 0.058F),
     };
+    // J-044c gains (#298): each joint's spring is sized for its distal
+    // subtree, not the two joined bodies. FrequencyAndDamping sizes the
+    // spring for the pairwise effective inertia only, so the chest-neck
+    // joint (neck + head about the anchor, ~0.78 kg m^2) got a spring for
+    // the neck alone and behaved like ~3 Hz / zeta 0.15 (measured: a 15 deg
+    // release overshoots 5.5 deg and takes 62 ticks to settle, and the neck
+    // sags 3.4 deg under gravity). StiffnessAndDamping takes k and c
+    // directly, so size them from the subtree inertia read from the shapes
+    // at startup: for each distal body, its inertia about the pitch axis
+    // through its centre plus m*d^2 (d = centre to anchor, perpendicular
+    // to the axis). The pitch axis is the axis the sag and the release
+    // test measure; the arms' sideways swing sees a larger inertia, so
+    // their springs are sized for the pitch direction.
+    const Vec3 pitch_axis = yaw_q * Vec3::sAxisX();
+    for (int i = 0; i < kUpperCount; ++i) {
+        const RVec3 anchor = at(anchors[i]);
+        float inertia = 0.0F;
+        for (int j = 0; j < kUpperCount; ++j) {
+            const int seg = kUpperDistal[i][j];
+            if (seg < 0) {
+                break;
+            }
+            RVec3 com;
+            Quat rot;
+            upper_rest_transform(seg, com, rot);
+            // The pitch axis in the segment's local frame (the proxy shapes
+            // are diagonal in local space: sphere isotropic, capsule along Y).
+            const Vec3 local_axis = rot.Conjugated() * pitch_axis;
+            const Vec3 diag = upper_mass[static_cast<std::size_t>(seg)].mInertia.GetDiagonal3();
+            const float i_cm = local_axis.GetX() * local_axis.GetX() * diag.GetX() +
+                               local_axis.GetY() * local_axis.GetY() * diag.GetY() +
+                               local_axis.GetZ() * local_axis.GetZ() * diag.GetZ();
+            const Vec3 d = Vec3(com - anchor);
+            const float d_perp_sq = d.LengthSq() - d.Dot(pitch_axis) * d.Dot(pitch_axis);
+            inertia += i_cm + kUpperMassKg[static_cast<std::size_t>(seg)] * d_perp_sq;
+        }
+        upper_subtree_inertia_[static_cast<std::size_t>(i)] = inertia;
+    }
     for (int i = 0; i < kUpperCount; ++i) {
         const BodyID parent =
             i == 0 ? upper_body_[1] : (i == 1 || i == 3 || i == 4) ? upper_body_[2] : body_;
@@ -474,15 +517,20 @@ void Matron::create_upper_body() {
         joint.mPlaneHalfConeAngle = kUpperLimits[i][1];
         joint.mTwistMinAngle = -kUpperLimits[i][2];
         joint.mTwistMaxAngle = kUpperLimits[i][2];
-        MotorSettings motor(kUpperMotorHz[i], kUpperMotorDamping);
+        // Sized for the distal subtree (#298): k = I_sub * omega^2,
+        // c = 2 * zeta * I_sub * omega, so the nominal 20 Hz / zeta 1.0 is
+        // what the joint actually does. Torque limits are unchanged.
+        const float omega = 2.0F * kPi * kUpperMotorHz[i];
+        const float inertia = upper_subtree_inertia_[static_cast<std::size_t>(i)];
+        MotorSettings motor(ESpringMode::StiffnessAndDamping, inertia * omega * omega,
+                            2.0F * kUpperMotorDamping * inertia * omega);
         motor.SetTorqueLimit(kUpperMotorTorqueNm[i]);
         joint.mSwingMotorSettings = motor;
         joint.mTwistMotorSettings = motor;
         // The upper chain's inertia ratios are extreme (neck I ~0.008 vs
         // root I ~31), and the default 10 velocity / 2 position steps
         // cannot converge it: the neck flails +-25 deg per tick. The
-        // slingshot uses 40/8 for the same reason; the gains stay
-        // placeholders until Grok's #244 math arrives.
+        // slingshot uses 40/8 for the same reason.
         joint.mNumVelocityStepsOverride = 40;
         joint.mNumPositionStepsOverride = 8;
         const BodyID ids[2] = {parent, upper_body_[static_cast<std::size_t>(i)]};
@@ -750,6 +798,74 @@ void Matron::upper_neck_limits_for_test(float &normal, float &plane, float &twis
     plane = joint->GetPlaneHalfConeAngle();
     twist_min = joint->GetTwistMinAngle();
     twist_max = joint->GetTwistMaxAngle();
+}
+
+void Matron::debug_hold_upper_root_chest_for_test(const bool hold) noexcept {
+    if (!upper_in_world_) {
+        return;
+    }
+    // Static root and chest: the release test then measures one joint's
+    // spring alone, with no recoil into the chest or the root.
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const EMotionType type = hold ? EMotionType::Static : EMotionType::Dynamic;
+    bodies.SetMotionType(body_, type, EActivation::DontActivate);
+    bodies.SetMotionType(upper_body_[2], type, EActivation::DontActivate);
+}
+
+void Matron::debug_pitch_upper_for_test(const int joint, const float degrees) noexcept {
+    if (!upper_in_world_ || joint < 0 || joint >= kUpperCount) {
+        return;
+    }
+    const auto *made = static_cast<const SwingTwistConstraint *>(upper_joint_[static_cast<std::size_t>(joint)].GetPtr());
+    if (made == nullptr) {
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const BodyID parent =
+        joint == 0 ? upper_body_[1] : (joint == 1 || joint == 3 || joint == 4) ? upper_body_[2] : body_;
+    const RVec3 anchor = bodies.GetCenterOfMassTransform(parent) * made->GetLocalSpacePosition1();
+    // Pitch about her right, in world: a forward nod.
+    const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), upper_yaw_);
+    const Quat rot = Quat::sRotation(yaw_q * Vec3::sAxisX(), degrees * kPi / 180.0F);
+    for (int j = 0; j < kUpperCount; ++j) {
+        const int seg = kUpperDistal[joint][j];
+        if (seg < 0) {
+            break;
+        }
+        const BodyID id = upper_body_[static_cast<std::size_t>(seg)];
+        const RVec3 pos = bodies.GetPosition(id);
+        bodies.SetPositionAndRotation(id, anchor + rot * Vec3(pos - anchor), rot * bodies.GetRotation(id),
+                                      EActivation::Activate);
+        bodies.SetLinearAndAngularVelocity(id, Vec3::sZero(), Vec3::sZero());
+        auto *sub = static_cast<TwoBodyConstraint *>(upper_joint_[static_cast<std::size_t>(seg)].GetPtr());
+        if (sub != nullptr) {
+            sub->ResetWarmStart();
+        }
+    }
+}
+
+float Matron::upper_subtree_inertia_for_test(const int joint) const noexcept {
+    if (joint < 0 || joint >= kUpperCount) {
+        return 0.0F;
+    }
+    return upper_subtree_inertia_[static_cast<std::size_t>(joint)];
+}
+
+double Matron::debug_upper_pitch_for_test(const int joint) noexcept {
+    if (!upper_in_world_ || joint < 0 || joint >= kUpperCount) {
+        return 0.0;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const BodyID parent =
+        joint == 0 ? upper_body_[1] : (joint == 1 || joint == 3 || joint == 4) ? upper_body_[2] : body_;
+    const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), upper_yaw_);
+    const Quat rel = bodies.GetRotation(parent).Conjugated() * bodies.GetRotation(upper_body_[static_cast<std::size_t>(joint)]);
+    const Quat rest = upper_rest_[static_cast<std::size_t>(joint)];
+    // rel = swing * rest, the swing in the parent's frame, then out of her
+    // yaw — the same swing the view reports, read live from the bodies.
+    const Quat swing = (rel * rest.Conjugated()).Normalized();
+    const Quat q = (yaw_q.Conjugated() * swing * yaw_q).Normalized();
+    return 2.0 * std::atan2(static_cast<double>(q.GetX()), static_cast<double>(q.GetW())) * 180.0 / kPi;
 }
 
 void Matron::hear_for_test(const RVec3 at) {

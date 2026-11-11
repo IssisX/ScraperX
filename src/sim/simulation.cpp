@@ -1306,6 +1306,22 @@ int Simulation::strike_segment_for_test(const Vector3 at) const noexcept {
     return physics_world_->matron().strike_segment_for_test(JPH::RVec3(at.x, at.y, at.z));
 }
 
+void Simulation::debug_hold_upper_root_chest_for_test(const bool hold) noexcept {
+    physics_world_->matron().debug_hold_upper_root_chest_for_test(hold);
+}
+
+void Simulation::debug_pitch_upper_for_test(const int joint, const float degrees) noexcept {
+    physics_world_->matron().debug_pitch_upper_for_test(joint, degrees);
+}
+
+float Simulation::upper_subtree_inertia_for_test(const int joint) const noexcept {
+    return physics_world_->matron().upper_subtree_inertia_for_test(joint);
+}
+
+double Simulation::debug_upper_pitch_for_test(const int joint) noexcept {
+    return physics_world_->matron().debug_upper_pitch_for_test(joint);
+}
+
 int Simulation::upper_constraints_in_system_for_test() const noexcept {
     return physics_world_->matron().upper_constraints_in_system_for_test();
 }
