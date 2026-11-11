@@ -12,7 +12,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
 - J-096 #414 planks slice 1 (trunk merged 22c88c85, proof rerunning); my eye check before it lands. J-084 #402
   whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
 - J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001. J-092 #410 slab step 2 paused @ 76ee77a6.
-  Helpers now: J-001, J-085, J-092 step 2. J-103 landed (21a27ea3). Next free: J-090 pass 2. CI fix #420 merged.
+  Helpers now: J-001, J-085, J-092 step 2. J-103 landed (21a27ea3). Next free: J-104 #423 (reconciler re-notices), then J-090 pass 2.
 - J-085 #403 (her chase; J-102 #421 found home deck 1 is an island since 10-28, test @ af538488): Cory GO: building
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
