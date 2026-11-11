@@ -73,7 +73,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T20:56:16Z",
      "missing": 3,
-     "rechecked": "2026-11-11T04:19:09Z",
+     "rechecked": "2026-11-11T10:39:10Z",
      "ref": "ASK|ask on #108",
      "sends": 1,
      "sent_by": "live",
@@ -548,7 +548,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T05:28:39Z"
+   "updated": "2026-11-11T10:39:10Z"
   },
   "J-007": {
    "attempt": 1,
@@ -1654,7 +1654,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
      "missing": 3,
-     "rechecked": "2026-11-11T04:19:09Z",
+     "rechecked": "2026-11-11T10:39:10Z",
      "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
      "sends": 1,
      "sent_by": "shadow",
@@ -2097,7 +2097,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-11T07:28:58Z"
+   "updated": "2026-11-11T10:39:10Z"
   },
   "J-016": {
    "attempt": 0,
@@ -2565,20 +2565,20 @@
    "landed": {
     "fb-bot/integrate-j032": [
      "d74b367ad59b501db473d8e23dac4668ed508eae",
-     "",
-     "2026-11-11T09:38:49Z"
+     "merged #395",
+     "2026-11-11T10:39:10Z"
     ]
    },
    "obligations": [],
-   "outcome": null,
-   "outcome_reason": "",
+   "outcome": "merged",
+   "outcome_reason": "fb-bot/integrate-j032: merged #395",
    "owner": "muse",
    "pr": 0,
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-11T09:38:49Z"
+   "state": "merged",
+   "updated": "2026-11-11T10:39:10Z"
   },
   "J-036": {
    "attempt": 0,
@@ -3851,11 +3851,12 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 2,
+     "missing": 3,
      "ref": "BRANCH|fb-bot/integrate-protected-j044c-gains-peaks",
      "sends": 0,
      "thread": 0,
      "to": "muse",
+     "unseen": "2026-11-11T10:39:10Z",
      "version": "red:80b660024eab0ed72499f37e8b84aff77080605b",
      "via": "email",
      "what": "`fb-bot/integrate-protected-j044c-gains-peaks` proof red: native-tests (matron-slices-1), godot-touch (touch-2), native-tests (athletic-traversal), native-tests (matron-slices-3), no PR"
@@ -3895,7 +3896,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T09:38:49Z"
+   "updated": "2026-11-11T10:39:10Z"
   },
   "J-044d": {
    "attempt": 0,
@@ -4375,7 +4376,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-11T04:19:09Z",
+     "rechecked": "2026-11-11T10:39:10Z",
      "ref": "BRANCH|fb-bot/integrate-j049-pr1",
      "sends": 0,
      "thread": 278,
@@ -4843,7 +4844,7 @@
    ],
    "review": "waiting",
    "state": "working",
-   "updated": "2026-11-11T05:28:39Z"
+   "updated": "2026-11-11T10:39:10Z"
   },
   "J-050": {
    "attempt": 0,
@@ -5597,7 +5598,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-11T06:28:54Z",
      "dead": "2026-11-11T14:28:54Z",
@@ -5606,10 +5607,10 @@
      "id": "O-8adc27c8",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-11T06:28:54Z",
+     "last_sent": "2026-11-11T10:39:10Z",
      "missing": 0,
      "ref": "PR|#343",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 343,
      "to": "muse",

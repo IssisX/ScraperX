@@ -71,11 +71,12 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "BRANCH|fb-bot/integrate-protected-j044c-gains-peaks",
    "sends": 0,
    "thread": 0,
    "to": "muse",
+   "unseen": "2026-11-11T10:39:10Z",
    "version": "red:80b660024eab0ed72499f37e8b84aff77080605b",
    "via": "email",
    "what": "`fb-bot/integrate-protected-j044c-gains-peaks` proof red: native-tests (matron-slices-1), godot-touch (touch-2), native-tests (athletic-traversal), native-tests (matron-slices-3), no PR"
@@ -115,5 +116,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T09:38:49Z"
+ "updated": "2026-11-11T10:39:10Z"
 }

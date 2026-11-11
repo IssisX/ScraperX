@@ -15,18 +15,18 @@
  "landed": {
   "fb-bot/integrate-j032": [
    "d74b367ad59b501db473d8e23dac4668ed508eae",
-   "",
-   "2026-11-11T09:38:49Z"
+   "merged #395",
+   "2026-11-11T10:39:10Z"
   ]
  },
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j032: merged #395",
  "owner": "muse",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-11T09:38:49Z"
+ "state": "merged",
+ "updated": "2026-11-11T10:39:10Z"
 }

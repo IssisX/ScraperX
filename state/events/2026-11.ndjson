@@ -1300,3 +1300,9 @@
 {"attempt": 2, "ev": "sent", "id": "O-75aff563", "job": "J-015", "ref": "PR|#389", "send": 2, "t": "2026-11-11T09:38:49Z", "to": "muse", "via": "email"}
 {"attempt": 1, "ev": "sent", "id": "O-40c9c192", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-11T09:38:49Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 53, "status": "ok", "t": "2026-11-11T09:38:49Z", "tries": 1}
+{"branch": "fb-bot/integrate-j032", "ev": "landed", "how": "merged #395", "job": "J-032", "sha": "d74b367ad59b501db473d8e23dac4668ed508eae", "t": "2026-11-11T10:39:10Z"}
+{"ev": "outcome", "job": "J-032", "outcome": "merged", "t": "2026-11-11T10:39:10Z", "why": "fb-bot/integrate-j032: merged #395"}
+{"ev": "unseen", "id": "O-e505dc8d", "job": "J-044c", "passes": 3, "t": "2026-11-11T10:39:10Z"}
+{"ev": "state", "frm": "proof", "job": "J-032", "t": "2026-11-11T10:39:10Z", "to": "merged"}
+{"attempt": 2, "ev": "sent", "id": "O-8adc27c8", "job": "J-059", "ref": "PR|#343", "send": 2, "t": "2026-11-11T10:39:10Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 53, "status": "ok", "t": "2026-11-11T10:39:10Z", "tries": 1}
