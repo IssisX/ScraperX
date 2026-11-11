@@ -327,6 +327,10 @@ void Kit::set_dogs(const GuideIndex guide, const float pitch) {
     guides_[guide.value].dog_pitch = pitch;
 }
 
+void Kit::set_platform(const GuideIndex guide) {
+    guides_[guide.value].platform = true;
+}
+
 void Kit::set_guide_friction(const GuideIndex guide, const float max_friction_force) {
     if (guide.valid() && guides_[guide.value].slider != nullptr) {
         guides_[guide.value].slider->SetMaxFrictionForce(max_friction_force);
@@ -2321,7 +2325,9 @@ std::vector<Kit::HoistInfo> Kit::hoists() const {
                 }
             }
         }
-        if (caught) {
+        h.caught = caught;
+        h.platform = g.platform;
+        if (caught || g.platform) {
             out.push_back(std::move(h));
         }
     }

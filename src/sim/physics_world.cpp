@@ -875,6 +875,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
             f.max_travel = h.max_travel;
             f.travel = h.travel;
             f.held = h.held;
+            f.caught = h.caught;
+            f.platform = h.platform;
             for (const kit::Kit::HoistPin &p : h.pins) {
                 f.pins.push_back({kit_->body_id(p.pin), p.axis, p.travel, p.clear});
             }
@@ -1633,7 +1635,9 @@ const traversal::AffordanceMap &Simulation::PhysicsWorld::matron_affordances() {
     if (!matron_affordances_scanned_) {
         // The whole tower, grade to the crown (bounds generous on every side).
         const JPH::AABox tower = physics_system_.GetBounds();   // the whole world, whatever is in it
-        matron_affordances_.scan(physics_system_, tower, {matron_->body(), player_id_, matron_->moving_layer()});
+        // And the platforms resting at a stop as she looks (J-108): floor where they stand.
+        matron_affordances_.scan(physics_system_, tower, {matron_->body(), player_id_, matron_->moving_layer()}, {},
+                                 matron_->platforms_at_rest());
         matron_affordances_scanned_ = true;
         matron_->set_routes(&matron_affordances_);
     }
