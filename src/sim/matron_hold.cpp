@@ -38,8 +38,12 @@ float turn_to(const float yaw, const float want, const float rate, const float d
     delta = std::clamp(delta, -rate * dt, rate * dt);
     return std::remainder(yaw + delta, 2.0F * kPiF);
 }
-// The player's capsule (physics_world_tuning.hpp: 1.8 m, its middle 0.9 up).
+// The player's capsule (physics_world_tuning.hpp: 1.8 m, its middle 0.9 up,
+// 0.35 m round); the ankle she holds is 0.08 m in from its feet end
+// (physics_world_grab.cpp player_ankle).
 constexpr float kPlayerHalfM = 0.9F;
+constexpr float kPlayerRadiusM = 0.35F;
+constexpr float kPlayerAnkleInM = 0.08F;
 } // namespace
 
 Vec3 Matron::shoulder_local() const noexcept { return Vec3(0.0F, kShoulderUpM - kStandCentre, 0.0F); }
@@ -1463,7 +1467,28 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             fatal_window_s_ = 0.0F;
         }
     }
-    if (fatal_hang_ && hold_phase_ >= 7) {
+    if (fatal_hold_ && !fatal_hang_ && hold_phase_ >= 6 && !regrip_ && grip_point_ == Grip::Ankle && grip_on_) {
+        // His window (beat 5) opens on the first tick he hangs out past the
+        // edge in her hand within his punch's reach of her: head down by his
+        // ankle, his middle kFatalWindowPastM out past the lip, his shoulder
+        // (kShoulderOfMiddleM up his body) within kFatalReachM of her body.
+        // It does not wait for her hand to come to rest at the hang's pose.
+        const BodyInterface &bodies = physics_.GetBodyInterface();
+        const Vec3 up = bodies.GetRotation(player_).RotateAxisY();
+        const RVec3 mid = bodies.GetPosition(player_);
+        const float past = (float(mid.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
+                           (float(mid.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
+        const RVec3 shoulder = mid + up * kShoulderOfMiddleM;
+        const float her_y = std::clamp(float(shoulder.GetY()), float(at.GetY()) - kHalfHeight, float(at.GetY()) + kHalfHeight);
+        const float reach = Vec3(shoulder - RVec3(at.GetX(), her_y, at.GetZ())).Length() - kRadius;
+        if (up.GetY() < -kFatalHangDownY && past >= kFatalWindowPastM && reach <= kFatalReachM) {
+            fatal_window_ = false;
+            fatal_window_paused_ = false;
+            fatal_hang_ = true;
+            fatal_window_s_ = 0.0F;
+        }
+    }
+    if (fatal_hang_ && hold_phase_ >= 6) {
         // Beat 5's hang clock: no expiry clear here, the hang runs till the
         // let-go decision (gated on this clock below).
         fatal_window_s_ += dt;
@@ -1868,9 +1893,10 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             if (Vec3(hang - hand_target_).Length() < 0.03F && down && fingers_there) {
                 hold_phase_ = 7;
                 hold_s_ = 0.0F;
-                if (fatal_hold_) {
-                    // Beat 5's true hang begins: the pin window is over, and
-                    // the test's hang measures from here.
+                if (fatal_hold_ && !fatal_hang_) {
+                    // Beat 5's true hang begins (if his window has not
+                    // already opened): the pin window is over, and the
+                    // test's hang measures from here.
                     fatal_window_ = false;
                     fatal_window_paused_ = false;
                     fatal_hang_ = true;
@@ -1916,8 +1942,18 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // (kFatalWindowInM: his shoulder within his punch's reach of her);
         // then out for the let-go.
         const bool in_window = fatal_window_s_ < kFatalHangWindowS;
-        pose_hand(dt, rail_pose(at, feet, rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM),
-                                in_window ? kHangOutM - kFatalWindowInM : kHangOutM + kFatalOutM, kHangSideM),
+        // His window's pose, worked out from the two bodies: his shoulder (his
+        // ankle in her hand, less the body from ankle to shoulder) no lower
+        // than the low end of her body's axis, so his punch reaches across to
+        // her, not up; his middle clear past the lip by his body's breadth
+        // (no nearer than the old window pose). Her real arm takes it as far
+        // as it goes (bend_to_hands).
+        const float hang_up = rail_up_ + (bare_lip_ ? kBareLipHangUpM : kHangUpM);
+        const float window_up = std::max(hang_up, kStandCentre - kHalfHeight + (kPlayerHalfM - kPlayerAnkleInM) +
+                                                      kShoulderOfMiddleM);
+        const float window_out = std::max(kHangOutM - kFatalWindowInM, kRimStandM + kPlayerRadiusM);
+        pose_hand(dt, rail_pose(at, feet, in_window ? window_up : hang_up,
+                                in_window ? window_out : kHangOutM + kFatalOutM, kHangSideM),
                   kHandSpeedMps);
         // Decided at the end of his swing (slow, never in toward her deck's
         // face), she standing
