@@ -1,64 +1,164 @@
-// The native tests: one executable, every test in order. SCRAPERX_ONLY=<name>
-// runs one group. The tests themselves live in sim_tests_*.cpp.
+// The native tests: one executable. The groups register themselves, each
+// beside its function in its own sim_tests_*.cpp (sim_registry.hpp); this
+// file only runs the registry. SCRAPERX_ONLY=<name> runs one selection,
+// otherwise the default sequence runs, in order of each group's key.
 
 #include "sim_tests.hpp"
 
+#include <chrono>
 #include <cstdio>
+#include <map>
+
+namespace scraperx_tests {
+namespace {
+
+struct Group {
+    std::string name;
+    long order;
+    TestFn fn;
+    std::string fn_name;
+    std::string where;
+};
+
+struct Selection {
+    std::string name;
+    bool ctest_slice;
+    std::vector<TestFn> fns;
+    std::string fn_names;
+    std::string where;
+};
+
+struct Registry {
+    std::vector<Group> groups;
+    std::vector<Selection> selections;
+};
+
+// Filled during static initialization, from every file, in no set order.
+Registry &registry() {
+    static Registry r;
+    return r;
+}
+
+std::string where_of(const char *file, const int line) {
+    return std::string(file) + ":" + std::to_string(line);
+}
+
+bool plain_name(const std::string &name) {
+    return !name.empty() && name.find_first_of(" \t\n;") == std::string::npos;
+}
+
+// Every repeated name, repeated key and empty registration, as one line each.
+std::vector<std::string> registry_errors(const Registry &r) {
+    std::vector<std::string> errors;
+    std::map<std::string, std::string> group_names;
+    std::map<long, std::string> group_keys;
+    for (const Group &g : r.groups) {
+        if (!plain_name(g.name) || g.fn == nullptr) {
+            errors.push_back("group '" + g.name + "' has no plain name or no function (" + g.where + ")");
+        }
+        if (const auto [it, added] = group_names.emplace(g.name, g.where); !added) {
+            errors.push_back("group " + g.name + " registered twice (" + it->second + ", " + g.where + ")");
+        }
+        if (const auto [it, added] = group_keys.emplace(g.order, g.where); !added) {
+            errors.push_back("order key " + std::to_string(g.order) + " used twice (" + it->second + ", " +
+                             g.where + ")");
+        }
+    }
+    std::map<std::string, std::string> selection_names;
+    for (const Selection &s : r.selections) {
+        bool null_fn = s.fns.empty();
+        for (const TestFn fn : s.fns) {
+            null_fn = null_fn || fn == nullptr;
+        }
+        if (!plain_name(s.name) || null_fn) {
+            errors.push_back("SCRAPERX_ONLY name '" + s.name + "' has no plain name or no function (" + s.where + ")");
+        }
+        if (const auto [it, added] = selection_names.emplace(s.name, s.where); !added) {
+            errors.push_back("SCRAPERX_ONLY name " + s.name + " registered twice (" + it->second + ", " + s.where +
+                             ")");
+        }
+    }
+    return errors;
+}
+
+}  // namespace
+
+bool register_group(const char *name, const long order, const TestFn fn, const char *fn_name, const char *file,
+                    const int line) {
+    registry().groups.push_back({name, order, fn, fn_name, where_of(file, line)});
+    return true;
+}
+
+bool register_only(const char *name, const bool ctest_slice, const std::initializer_list<TestFn> fns,
+                   const char *fn_names, const char *file, const int line) {
+    registry().selections.push_back({name, ctest_slice, std::vector<TestFn>(fns), fn_names, where_of(file, line)});
+    return true;
+}
+
+}  // namespace scraperx_tests
 
 int main() {
+    using namespace scraperx_tests;
     // A line at a time, piped or not: a harness that stops the run early
     // still shows every result up to that moment (fully buffered, a group
     // stopped at 90 s showed only its first 14 of 24 passes).
     std::setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
+
+    Registry &r = registry();
+    if (const std::vector<std::string> errors = registry_errors(r); !errors.empty()) {
+        for (const std::string &e : errors) {
+            std::cerr << "FAIL: test registry: " << e << '\n';
+        }
+        return EXIT_FAILURE;
+    }
+    // The order comes from the keys alone (they are unique, checked above).
+    std::sort(r.groups.begin(), r.groups.end(), [](const Group &a, const Group &b) { return a.order < b.order; });
+    std::sort(r.selections.begin(), r.selections.end(),
+              [](const Selection &a, const Selection &b) { return a.name < b.name; });
+
+    // SCRAPERX_LIST=1: the default sequence, in order ("<key> <name> <function>").
+    // SCRAPERX_LIST=only: every SCRAPERX_ONLY name ("<name> <slice|-> <functions>").
+    // SCRAPERX_LIST=slices: the names that are their own CTest tests, one a line.
+    if (const char *list = std::getenv("SCRAPERX_LIST"); list != nullptr && *list != '\0') {
+        const std::string mode(list);
+        if (mode == "only") {
+            for (const Selection &s : r.selections) {
+                std::cout << s.name << '\t' << (s.ctest_slice ? "slice" : "-") << '\t' << s.fn_names << '\n';
+            }
+        } else if (mode == "slices") {
+            for (const Selection &s : r.selections) {
+                if (s.ctest_slice) {
+                    std::cout << s.name << '\n';
+                }
+            }
+        } else if (mode == "1" || mode == "groups") {
+            for (const Group &g : r.groups) {
+                std::cout << g.order << '\t' << g.name << '\t' << g.fn_name << '\n';
+            }
+        } else {
+            std::cerr << "FAIL: SCRAPERX_LIST=" << mode << " is not 1, groups, only or slices\n";
+            return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
+    }
+
+    // An unknown SCRAPERX_ONLY name stops here, before any test: it never
+    // falls through to the whole sequence. Unset or empty runs the sequence.
+    const Selection *only = nullptr;
+    if (const char *name = std::getenv("SCRAPERX_ONLY"); name != nullptr && *name != '\0') {
+        for (const Selection &s : r.selections) {
+            only = s.name == name ? &s : only;
+        }
+        if (only == nullptr) {
+            std::cerr << "FAIL: SCRAPERX_ONLY=" << name
+                      << " names no registered group (SCRAPERX_LIST=only lists every name)\n";
+            return EXIT_FAILURE;
+        }
+    }
+
     // Her collision body audited every tick of every run (matron shape: no
     // tick in the steel, checked at exit; sim_tests_matron_shape.cpp).
     start_matron_shape_audit();
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-remaining") {
-        run_matron_remaining();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb-support") {
-        test_matron_climb_support();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-state-exits") {
-        run_matron_state_exits();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-crash") {
-        run_matron_crash();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-hearing") {
-        test_matron_hearing();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-sight") {
-        test_matron_sight();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-honest") {
-        test_matron_honest();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-stalk") {
-        test_matron_stalk();
-        test_matron_ladder_head();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder") {
-        run_matron_ladder();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-routecraft") { run_matron_routecraft(); return EXIT_SUCCESS; }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin-geometry") {
-        run_twin_geometry();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "twin") {
-        run_twin();
-        return EXIT_SUCCESS;
-    }
     // SCRAPERX_EXTRA_SOLID_Y=<meters>: every world this run builds gets one
     // half-meter static box 300 m east and south of the tower, built with the
     // solids of the 22 m band at that height, touching nothing. The run's
@@ -70,621 +170,23 @@ int main() {
             {{300.0, y, 300.0, 0.5F, 0.5F, 0.5F, false}});
         std::cout << "  every world of this run: one extra solid in the band at " << y << " m\n";
     }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "matron-player-independence") {
-        run_matron_player_independence();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "parkour") {
-        run_parkour_seams();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "jumpbuffer") {
-        run_jump_buffer();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "workers") {
-        run_workers();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "parkour-moves") {
-        run_brachiation();
-        run_pipe_gallery();
-        run_slide();
-        run_speed_vault();
-        run_wall_run();
-        run_wall_climb();
-        run_tuck();
-        run_flow();
-        run_springboard();
-        run_swing_launch();
-        run_slide_jump();
-        run_climb_moves();
-        run_wall_chain();
-        run_zipline();
-        run_hook();
-        run_workers();
-        run_c7();
-        run_gust_front_upper();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "handling") {
-        run_wet_handling();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "stock") {
-        run_loose_stock();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "look") {
-        run_look_target();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "body-order") {
-        run_body_order();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "fabricated") {
-        run_fabricated();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "climb") {
-        run_wall_climb();
-        run_tuck();
-        run_flow();
-        run_springboard();
-        run_swing_launch();
-        run_slide_jump();
-        run_climb_moves();
-        run_wall_chain();
-        run_zipline();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "up") {
-        run_up_controls();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "zipline") {
-        run_zipline();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "corpse") {
-        run_corpse();
-        run_arm_break();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "well") {
-        run_well_stage_a();
-        run_well_stage_b();
-        run_well_stage_c();
-        run_well_band();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "forklift") {
-        run_forklift();
-        run_forklift_strain();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "forklift-matron") {
-        run_forklift_matron();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "crane") {
-        run_yard_crane();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "magnet") {
-        run_yard_crane_magnet();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "spreader") {
-        run_yard_crane_spreader();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "one-arm") {
-        run_one_arm_route();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-fatality") {
-        run_matron_fatality();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-arm") {
-        run_matron_arm();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-damage") { run_matron_damage(); return EXIT_SUCCESS; }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "perf-step") { run_perf_step(); return EXIT_SUCCESS; }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "strike") {
-        run_strike();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-sweep") {
-        run_matron_sweep();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-kick") {
-        run_matron_kick();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-jab") {
-        run_matron_jab();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladder-pull") {
-        run_matron_ladder_pull();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-budget") {
-        run_matron_budget();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-load") {
-        run_matron_load();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-grab") {
-        run_matron_grab();
-        run_matron_arm();
-        run_matron_fatality();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb") {
-        run_matron_climb();
-        run_matron_climb_board();
-        run_matron_climb_scan();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-board-walls") {
-        run_matron_board_walls();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-towers") {
-        run_matron_towers();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-chain") {
-        run_matron_chain();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ladders") {
-        run_matron_ladders();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-tower") {
-        run_matron_tower_proof();
-        return 0;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-narrow") {
-        run_matron_narrow();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb-board") {
-        run_matron_climb_board();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-climb-scan") {
-        run_matron_climb_scan();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-moves") {
-        run_matron_pace();
-        run_matron_unstick();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "water") {
-        run_water();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-traverse") {
-        run_matron_traverse();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-pursuit") {
-        run_matron_pursuit();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-chase") {
-        run_matron_chase();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ring-descent") {
-        run_matron_ring_descent();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-ways") {
-        run_matron_ways();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam-climber") {
-        run_matron_exam_climber();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam-descent") {
-        run_matron_exam_descent();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-found-climb") {
-        run_matron_found_climb();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam-routecraft") {
-        run_matron_exam_routecraft();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-exam") {
-        run_matron_exam();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron") {
-        run_matron();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-shape") {
-        run_matron_shape();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-stand") {
-        run_matron_stand();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "bay") {
-        run_bay();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-collision") {
-        run_matron_collision();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "up-throw") {
-        run_up_throw();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-pipe") {
-        run_matron_pipe();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-room") {
-        run_matron_room();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-balance") {
-        run_matron_balance();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-mischief") {
-        run_matron_mischief();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "matron-wreck") {
-        run_matron_wreck();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit-ending") {
-        run_summit_ending();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "summit") {
-        run_summit();
-        run_summit_arm();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-007") {
-        run_wet_isolation();
-        run_wet_e();
-        run_wet_handling();
-        run_wet_band();
-        run_wet_route();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-007-E") {
-        run_wet_e();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-007-route") {
-        run_wet_route();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-007-band") {
-        run_wet_band();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-008") {
-        run_plate_shop();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-008-band") {
-        run_plate_band();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-008-route") {
-        run_plate_route();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-008-wreck") {
-        run_plate_wreckage();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-009") {
-        run_facade_crane();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-009-band") {
-        run_crane_band();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "route-pockets") {
-        run_route_pockets();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-009-route") {
-        run_crane_route();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-009-wreck") {
-        run_crane_wreckage();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-010") {
-        run_midstack_service();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-010-c5") {
-        run_service_c5();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-010-n") {
-        run_service_n();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-010-o") {
-        run_service_o();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY"); only != nullptr && std::string(only) == "wreck-way-on") {
-        run_wreck_way_on();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "slingshot") {
-        run_slingshot();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "C6") {
-        run_c6();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "mast") {
-        run_mast();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "pitman") {
-        run_pitman();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "helix") {
-        run_helix();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "high") {
-        run_high();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "incline") {
-        run_incline();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "wheel") {
-        run_wheel();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "teeter") {
-        run_teeter();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "edge-stand") {
-        run_edge_stand();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "trapeze") {
-        run_trapeze();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "landing") {
-        run_landing();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "save") {
-        run_save();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "tram") {
-        run_tram();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "derrick") {
-        run_derrick();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "swing") {
-        run_swing();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "determinism") {
-        run_determinism();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-010-band") {
-        run_service_band();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-010-route") {
-        run_service_route();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "AS-010-c4") {
-        run_service_c4();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "stack") {
-        run_stack();
-        return EXIT_SUCCESS;
-    }
-    if (const char *only = std::getenv("SCRAPERX_ONLY");
-        only != nullptr && std::string(only) == "ascent") {
-        run_ascent();
+
+    if (only != nullptr) {
+        for (const TestFn fn : only->fns) {
+            fn();
+        }
         return EXIT_SUCCESS;
     }
 
-    run_pulley_static_end();
-    run_matron_exam();
-    run_core_traversal();
-    run_fall_checkpoint();
-    run_world_solids();
-    run_twin_geometry();
-    run_twin();
-    run_well_stage_a();
-    run_well_stage_b();
-    run_well_stage_c();
-    run_well_band();
-    run_step2_movement();
-    run_stack();
-    run_wet_isolation();
-    run_wet_e();
-    run_wet_handling();
-    run_wet_band();
-    run_wet_route();
-    run_water();
-    run_plate_shop();
-    run_plate_band();
-    run_plate_route();
-    run_plate_wreckage();
-    run_facade_crane();
-    run_crane_band();
-    run_crane_route();
-    run_route_pockets();
-    run_crane_wreckage();
-    run_midstack_service();
-    run_service_c4();
-    run_service_n();
-    run_service_c5();
-    run_service_o();
-    run_wreck_way_on();
-    run_service_band();
-    run_service_route();
-    run_determinism();
-    run_slingshot();
-    run_swing();
-    run_c6();
-    run_mast();
-    run_pitman();
-    run_helix();
-    run_high();
-    run_incline();
-    run_wheel();
-    run_save();
-    run_landing();
-    run_jump_buffer();
-    run_parkour_seams();
-    run_teeter();
-    run_edge_stand();
-    run_trapeze();
-    run_tram();
-    run_derrick();
-    run_brachiation();
-    run_pipe_gallery();
-    run_slide();
-    run_speed_vault();
-    run_wall_run();
-    run_wall_climb();
-    run_tuck();
-    run_flow();
-    run_springboard();
-    run_swing_launch();
-    run_slide_jump();
-    run_climb_moves();
-    run_wall_chain();
-    run_up_controls();
-    run_zipline();
-    run_corpse();
-    run_arm_break();
-    run_hook();
-    run_workers();
-    run_c7();
-    run_gust_front_upper();
-    run_summit();
-    run_summit_arm();
-    run_summit_ending();
-    run_matron_player_independence();
-    run_matron_routecraft();
-    run_matron_exam_routecraft();
-    run_matron_exam_climber();
-    run_matron_exam_descent();
-    run_matron_found_climb();
-    run_matron();
-    run_matron_pace();
-    run_matron_unstick();
-    run_matron_traverse();
-    run_matron_pursuit();
-    // run_matron_chase: its own ctest slice (scraperx_sim.matron-chase), so the
-    // whole suite's run stays inside its timeout. It still runs on every ctest.
-    run_matron_ring_descent();
-    run_matron_ways();
-    run_matron_climb();
-    // run_matron_grab, run_matron_arm, run_matron_fatality: their own ctest
-    // slice (scraperx_sim.matron-grab), as matron-chase, since her fatality's
-    // runs took the whole suite's run past its timeout. They still run on
-    // every ctest.
-    run_strike();
-    run_one_arm_route();
-    run_bay();
-    run_loose_stock();
-    run_look_target();
-    run_body_order();
-    run_fabricated();
-    run_forklift();
-    run_forklift_strain();
-    run_yard_crane();
-    run_yard_crane_magnet();
-    run_yard_crane_spreader();
-    run_ascent();
+    // Wall seconds per group, printed as TIME lines, so the next shard split
+    // is measured, not guessed. Print-only. A SCRAPERX_ONLY run returns above,
+    // so TIME lines appear only in the bare-binary run, never in a slice log.
+    for (const Group &g : r.groups) {
+        const auto start = std::chrono::steady_clock::now();
+        g.fn();
+        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+        std::cout << "TIME scraperx_sim " << g.name << ' ' << seconds << " s\n";
+    }
 
     return EXIT_SUCCESS;
 }

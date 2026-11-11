@@ -24,6 +24,7 @@ const CrewView := preload("res://presentation/life/crew_view.gd")
 const CanopyView := preload("res://presentation/canopy_view.gd")
 const Works := preload("res://presentation/life/works.gd")
 const CloudLayer := preload("res://presentation/cloud_layer.gd")
+const MistStreak := preload("res://presentation/mist_streak.gd")
 const SkyCycleScript := preload("res://presentation/sky_cycle.gd")
 const AudioDirector := preload("res://presentation/audio/audio_director.gd")
 const SlingshotView := preload("res://presentation/slingshot_view.gd")
@@ -110,6 +111,7 @@ var _quickturn_left := 0.0
 var _sling_goal_yaw := 0.0
 var _sling_goal_elevation := 1.4311699866353502
 var _clouds: Node3D
+var _mist_streak: Node3D
 var _uncanny: Node3D
 var _consent: Control
 var _consent_open := false
@@ -120,6 +122,12 @@ var _ci_phase := PHASE_APPROACH
 var _ci_facing := CI_APPROACH_FACING
 var _ci_proof_tick := -1
 var _ci_proof_printed := false
+# J-045: the first advances after the scene build are capped to one fixed
+# tick (the load gap is not play time). The load spans the first frames,
+# so the cap covers the first six advances, not just the first: the
+# quiet-box probe (2026-11-09) showed frames 2-6 each taking 9 steps
+# (eff 0.1000 s) before the cap, frame 1 taking 1 (eff 0.0111 s).
+var _capped_advances := 0
 var _sky_cycle: Node
 
 var _export_solids_path := ""
@@ -240,6 +248,10 @@ func _ready() -> void:
 	add_child(_works)
 	_clouds = CloudLayer.new()
 	add_child(_clouds)
+	# The gust front's mist streak (J-022 slice 2): on the front, from the native.
+	_mist_streak = MistStreak.new()
+	add_child(_mist_streak)
+	_mist_streak.setup(_native)
 	_works.setup(_vent_tops)
 	for m in _machines.size():
 		if float(_machines[m]["mass"]) >= Works.BEACON_MIN_KG:
@@ -487,7 +499,20 @@ func _process(delta: float) -> void:
 	var time_scale := minf(_launch_shot.time_scale(), float(_hold_cam.time_scale()))
 	AudioServer.playback_speed_scale = time_scale
 	var sim_rate := time_scale * float(_hold_cam.fast_forward())
-	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(minf(delta * sim_rate, MAX_SIM_FRAME_DELTA)))
+	# J-045: the first advances after the scene build start from a fresh
+	# accumulator — the load gap is not play time, so the first six frames
+	# each run at most one fixed tick instead of up to nine
+	# (MAX_SIM_FRAME_DELTA). The load spans the first frames: the
+	# quiet-box probe showed frames 2-6 each taking 9 steps before this
+	# extension, frame 1 taking 1.
+	var _advance_cap := MAX_SIM_FRAME_DELTA
+	if _capped_advances < 6 and not freeze_sim:
+		var _one_tick: float = _native.get_fixed_step_seconds()
+		if delta * sim_rate > _one_tick:
+			_advance_cap = _one_tick
+			_capped_advances += 1
+	var eff_delta := minf(delta * sim_rate, _advance_cap)
+	var steps_advanced := 0 if freeze_sim else int(_native.advance_frame(eff_delta))
 	if steps_advanced < 0:
 		_fail_native("SCRAPERX_FRAME_DELTA_REJECTED", 21)
 		return

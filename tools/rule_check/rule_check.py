@@ -24,10 +24,15 @@ PROTECTED_RE = [re.compile(r"(^|/)export_presets\.cfg$"), re.compile(r"\.(keysto
 # World geometry: every solid the builders make is generated into this file (CI fails when it drifts),
 # so any change to the world's collision shows here. A protected change.
 GEOMETRY_FILE = "src/sim/world_solids.inc"
+# CLAUDE.md's "## Settled" section holds the owner's calls: only he changes a line, and the automatic review is told
+# they are his (tools/switchboard claude_calls.settled_calls). A PR that edits the section is never merged by the
+# switch: the finding is a protected-file BLOCK, which nothing lifts.
+SETTLED_FILE = "CLAUDE.md"
+SETTLED_HEADING = "## Settled"
 
 # (a) test checks
 CHECK_RE = re.compile(r"\b(check|expect|require|assert|fail|FAIL|EXIT_FAILURE|ok\s*&=|ok\s*=\s*false|"
-                      r"passed\s*&=|return\s+false)\b|std::abort|throw\b")
+                      r"passed\s*&=|return\s+false)\b|std::abort|(?<![\w-])throw\b")
 CMP_RE = re.compile(r"(<=|>=|<|>|==|!=)\s*(-?\d+(?:\.\d+)?)F?\b")
 NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?F?\b")
 # (b) per-route / per-deck / per-transition special cases
@@ -118,8 +123,39 @@ def parse(diff):
     return files
 
 
+def settled_edit(hunks):
+    """(line, why) of the first change to CLAUDE.md's Settled section, else None. The section runs from its
+    heading to the next "## " heading, and a line's membership is followed in the old file and in the new one: a
+    line added to it, taken from it, or moved in or out of it by a heading added or removed is a change. A hunk
+    that does not show which section a changed line is in (it starts past line 1 with no heading above the
+    change) is reported too: main() reads this file with its whole text as context, so that only happens for a
+    hand-fed diff."""
+    why = "the owner's settled calls change: only he changes a line, and no PR does"
+    for h in hunks:
+        old = new = None if not h or h[0][1] > 1 else False   # None: not known yet; line 1 is above every section
+        for kind, n, text in h:
+            if text.startswith("## "):
+                settled = text.startswith(SETTLED_HEADING)
+                if settled and kind != " ":
+                    return n, why
+                if kind != "+":
+                    old = settled
+                if kind != "-":
+                    new = settled
+            elif kind == "-" and old is not False:
+                return n, why if old else "a change whose section this diff does not show: run with <base> <head>"
+            elif kind == "+" and new is not False:
+                return n, why if new else "a change whose section this diff does not show: run with <base> <head>"
+            elif kind == " " and old != new and None not in (old, new):
+                return n, why   # a heading added or removed above moved this line in or out of the section
+    return None
+
+
 def check(files):
     old_paths = set(files.pop("__old__", []))
+    hit = settled_edit(files.get(SETTLED_FILE, []))
+    if hit:
+        add("BLOCK", SETTLED_FILE, hit[0], "protected-file", hit[1])
     for f in sorted(set(files) | old_paths):
         if f in PROTECTED or any(r.search(f) for r in PROTECTED_RE):
             add("BLOCK", f, 0, "protected-file", "this file is never edited")
@@ -188,7 +224,10 @@ def main():
     else:
         base = a[0] if a else "origin/ScraperX-Claude"
         head = a[1] if len(a) > 1 else "HEAD"
-        diff = subprocess.check_output(["git", "diff", "-U3", f"{base}...{head}"], text=True)
+        diff = subprocess.check_output(["git", "diff", "-U3", f"{base}...{head}", "--", ".", f":(exclude){SETTLED_FILE}"],
+                                       text=True)
+        # CLAUDE.md with its whole text as context, so each change's section is known (settled_edit)
+        diff += subprocess.check_output(["git", "diff", "-U100000", f"{base}...{head}", "--", SETTLED_FILE], text=True)
     check(parse(diff))
     for lvl, f, n, rule, text in findings:
         print(f"{lvl:6} {f}:{n} {rule}: {text}")

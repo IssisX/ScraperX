@@ -171,6 +171,8 @@ void run_well_stage_a() {
               << " energy_margin_J=" << worst_energy_margin
               << " restored_y=" << well_restored.player_position.y << '\n';
 }
+SCRAPERX_GROUP("well_stage_a", 90, run_well_stage_a);
+SCRAPERX_SELECT("well", run_well_stage_a, run_well_stage_b, run_well_stage_c, run_well_band);
 
 void run_well_stage_b() {
     using scraperx::sim::InitialSpawn;
@@ -415,6 +417,7 @@ void run_well_stage_b() {
             "B wreck: over the 220 ring's edge from the boom");
     std::cout << "PASS scraperx_sim AS-006 wreckage B: ring_y=" << b_well.snapshot().player_position.y << '\n';
 }
+SCRAPERX_GROUP("well_stage_b", 100, run_well_stage_b);
 
 void run_well_stage_c() {
     using scraperx::sim::InitialSpawn;
@@ -621,6 +624,7 @@ void run_well_stage_c() {
               << " rode_on_platform=" << int(c_rode_on_platform)
               << " restored_y=" << c_restored.player_position.y << '\n';
 }
+SCRAPERX_GROUP("well_stage_c", 110, run_well_stage_c);
 
 void run_well_band() {
     using scraperx::sim::InitialSpawn;
@@ -814,3 +818,4 @@ void run_well_band() {
             "C wreck: up the bar and onto the dumpster's grate");
     std::cout << "PASS scraperx_sim AS-006 wreckage C: grate_y=" << band.snapshot().player_position.y << '\n';
 }
+SCRAPERX_GROUP("well_band", 120, run_well_band);

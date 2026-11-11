@@ -10,21 +10,27 @@ Read this, then your job's issue. Never a long history. Design: `03_EXECUTION/PL
 - The rules in force are in `00_START_HERE.md`; the owner's dated words are in `00_START_HERE_ARCHIVE.md`;
   `CLAUDE.md` spells out the ones that keep being broken (test only what a change reaches; protected
   changes; near misses; real human sounds; look at the game). They outrank this file.
-- Trunk is `ScraperX-Claude`. The GitHub default branch is `main`, a separate line: workflows that run on
-  issues, comments, schedules and `workflow_run` run from `main`'s copy of their file.
+- Trunk is `ScraperX-Claude`, also the GitHub default branch, so workflows that run on issues, comments,
+  schedules and `workflow_run` run from trunk's copy of their file. Never `main`.
 - The owner is Cory, on a phone. Times to him are US Central (`TZ=America/Chicago date`).
 
 ## The team (`work/agents.yml`)
 
+`work/agents.yml` is the authority; this table only summarizes it.
+
 | Agent | Vendor | Branches | Woken by |
 |---|---|---|---|
-| Claude | Anthropic | `claude/` | the switch, through the API (reviews, the eye; the orchestrator in step C) |
-| ChatGPT | OpenAI | `chatgpt/` | its job issue, read in its own app |
-| Grok (also PE and Builder) | xAI | `grok/`, `pe/`, `builder/` | its job issue |
-| Muse (FB Bot) | Meta | `muse/`, `fb-bot/` | email, through `tools/switchboard/muse_bridge.gs` |
+| Claude (integrator) | Anthropic | `claude/` | the switchboard inbox (comments on PR #282) |
+| Claude API | Anthropic | none | the switch, through the API: automatic reviews, the eye, the security pass |
+| Codex (the GitHub app `chatgpt-codex-connector[bot]`) | OpenAI | none | reviews a PR on open when IssisX opens it, and on `@codex review` posted as IssisX, which the switch posts with the team token for every other green head; one review per head |
+| ChatGPT | OpenAI | `chatgpt/` | its scheduled task, hourly at :27 Central, reads `To ChatGPT:` asks; first review fallback |
+| Grok | xAI | `grok/` | its scheduled runs, about 10 AM and 4 PM Central, read comments that START `To Grok:`; second review fallback |
+| Grok Bot (PE, Builder) | xAI | `pe/`, `builder/` | reads the repo all the time (`wake: watch`) |
+| Muse (FB Bot) | Meta | `muse/`, `fb-bot/` | email only, through `tools/switchboard/muse_bridge.gs` |
 
-Codex is out (no quota). Gemini is off the team. Every agent posts as the same GitHub account, so who
-wrote a comment is read from its first line, and who wrote a PR from its branch prefix.
+Gemini is off the team. Every agent posts as the same GitHub account, so who wrote a comment is read
+from its first line, and who wrote a PR from its branch prefix. A LAND counts only from a vendor other
+than the author's (`rules.land_counts`).
 
 ## The board
 
@@ -33,7 +39,12 @@ wrote a comment is read from its first line, and who wrote a PR from its branch 
   `eyes-live`, `matron`, `security`, `orchestrator`) and `hard`. Its body holds the four fields:
   `invariant` (the finish fact), `files` (owned functions), `reach` (tests it reaches), `needs`.
 - `work/BOARD.md` is generated (`python3 tools/board/gen_board.py > work/BOARD.md`); never edit it.
-- Issue #107 holds rulings and BLOCKED lines only. The owner's plain comments there are orders.
+- The board is the one open issue labeled `board` (today #384): its body is the live board (the integrator's
+  section, then the ledger's section, which the switch rewrites); comments hold rulings, BLOCKED lines and
+  asks. The owner's plain comments there are orders. The switch and the Muse bridge find it by that label each
+  run (`Switch.board_issue`, `board_`), once per sweep. Rollover, no code: open the new issue with the label and
+  the copied body, take the label off the old one, and close the old one only after the next sweep has finished
+  (11-10: closing #340 mid-sweep let that sweep post a Muse notice and Cory's list on the closed board).
 - One owner per job: the switch removes a second `owner:*` label and says so.
 
 ## Messages
@@ -48,13 +59,16 @@ wrote a comment is read from its first line, and who wrote a PR from its branch 
   - `NOTE` never blocks. Spelling, wording and commit messages never block (owner, 10-31).
 - Muse writes `MUSE_TO_CLAUDE: J-NNN ...` emails; the bridge posts them on the issue (or on `#N` when
   the subject names one) under a `**Muse (...)**` first line. Write to Muse by asking the switch, which
-  posts `CLAUDE_TO_MUSE: J-NNN ...` and labels the issue `wake:muse`; the bridge mails it.
+  posts `CLAUDE_TO_MUSE: J-NNN ...` and labels the issue `wake:muse`; the bridge mails it. A
+  `CLAUDE_TO_MUSE:` mail sent by hand is recorded by the bridge as a comment on the issue its subject names.
 
 ## The switch (`.github/workflows/switchboard.yml`, `tools/switchboard/`)
 
-No model decides in it. It runs on: a proof run finishing (`workflow_run`), a PR review, a verdict or
-`budget` comment, an issue labeled `owner:*` or `needs:orchestrator`, every hour at :17, and the digest
-at 7:00 AM Central. Every run reads the state from GitHub, so a dropped or repeated run changes nothing.
+No model decides in it. Its clock is the Muse bridge (`muse_bridge.gs`), which dispatches a real sweep every
+10 minutes and posts SWITCHBOARD DOWN on the board when none has succeeded for 30 (J-072); the proof's last job
+dispatches one too. It also runs on a verdict comment, an issue labeled `owner:*` or `needs:orchestrator`,
+GitHub's own schedule (which drops most runs), and the digest at 7:00 AM Central. A dispatch is real unless
+`dry_run=true`, and a dry run is named DRY. Every run reads the state from GitHub, so a dropped or repeated run changes nothing.
 
 It merges a PR into trunk (as the workflow token, a merge commit naming the head sha) only when all hold:
 1. the proof (`wo000-delivery-spine.yml`) is green on the PR's head (`publish-checkpoint` and
@@ -63,14 +77,16 @@ It merges a PR into trunk (as the workflow token, a merge commit naming the head
 3. no open `FIX` on that head (per reviewer, its newest verdict on the head);
 4. `tools/rule_check/rule_check.py` finds no `BLOCK` (a protected change: the integrator merges it);
 5. when the job or PR needs `eyes`, the eye's `LAND` on that head;
-6. no merge conflict. A PR that changes `.github/workflows/` is listed as ready for a person to merge:
-   the workflow token cannot push workflow files.
-After a merge it dispatches the proof on trunk (a token merge starts no push workflow) and posts one line
-on the PR and the job issue. The owner can overturn any merge.
+6. no merge conflict. A PR that changes `.github/workflows/` also needs a clean automatic Claude review on
+   that head (the security pass, J-056), and its LAND must be the Codex app's clean review (a typed LAND or
+   the API's own does not count), both naming the whole 40-character head sha; it merges with the
+   `SWITCHBOARD_MERGE_TOKEN` secret, since the workflow token cannot push workflow files; without the
+   secret or those reviews it is listed for a person.
+After a merge it dispatches the proof on trunk (a workflow-token merge starts no push workflow; a merge-token
+merge's push starts it) and posts one line on the PR and the job issue. The owner can overturn any merge.
 
-Reviews (owner's correction 4): a PR whose author is not Claude gets an automatic Claude review through
-the API once its proof is green. A Claude-authored PR is asked of ChatGPT, or of Muse when the job
-needs `matron`, on the job issue; the digest lists who it waits on.
+Reviews: who reviews which head, and the fallback when no reviewer answers, are set in `work/agents.yml`
+(`review:`) and decided in `tools/switchboard/rules.py`; read them there, not here.
 
 The eye: when the job needs `eyes`, one Claude vision call judges the proof run's screenshots
 (`work/looks/sets.yml`) against the rubrics in `work/looks/`. It posts `**Claude eye (look of #N @ sha): LAND**`
@@ -78,6 +94,27 @@ or `FIX` with the rubric line and the frame. Taste is the owner's: two images an
 
 The orchestrator (a hosted Claude agent per job) is step C. In v0 it is off in `work/budget.yml`; an
 issue labeled `needs:orchestrator` gets a note and nothing starts.
+
+## Working with it, day to day (J-072, 11-10)
+
+- **A review moves by itself.** For each green head: Codex once, then the Claude API if Codex has not
+  reviewed it (Codex gets 10 minutes to start, 30 to finish), then `To ChatGPT:` and `To Grok:` an hour apart when
+  the API cannot review or answered NOTE. A NOTE lands nothing; it only passes the head on. Nobody types a
+  review request, with one exception: an inbox line `CODEX-ASK #N` means the switch could not post Codex's mention
+  itself (no token, or GitHub refused it), and the integrator posts `@codex review` on #N, once for that head.
+- **One notifier.** Only the reconciler posts notices (`work/switchboard.yml` `notices: v2`); the ledger writes
+  its section in the board's body and nothing else. A notice ends by the work it asks for (a new head, a verdict,
+  a merge), by the addressee's next post on that job's thread, or by a line `/ack O-xxxxxxxx`. Never post only to
+  quiet a notice: it starts a new one.
+- **An ask** is `To <Name>:` at the start of a line. Answer it on the same job thread. Grok's runs find only a
+  comment that STARTS `To Grok:`. A report or a reply needs no `To` line.
+- **Muse** is reached by mail only. A `CLAUDE_TO_MUSE:` mail sent by hand is put on the issue its subject names by
+  the bridge, so no "ruled by mail" note is needed. `wake:muse` on a pull request is refused where the label is
+  written.
+- **A stall, where to look:** the `steer` job's log of the newest "Switchboard sweep" run has one line per PR
+  (`WAIT`, `FIX`, `MERGE`, `ASK-CODEX`, `WAIT-CODEX`, and `NOTE` lines for anything refused); the reconciler's
+  record is `state/events/` on the `switchboard/state` branch; `switch.py --dry-run` prints what a sweep would do.
+- **The owner's settled calls** (`CLAUDE.md`) cannot be changed by a PR: the rule check blocks it.
 
 ## Money (`work/budget.yml`)
 
@@ -107,5 +144,4 @@ sessions hold jobs.
 ## Not in v0
 
 The orchestrator and its tools (`ask`, `run_probe`, `look`); the trunk's screenshot set beside the PR's;
-Grok as an API tool; a `screens` job for new scenes; retiring the hourly scheduled task and the standing
-integrator (only after the switch has run green twice after merge).
+Grok as an API tool; a `screens` job for new scenes.

@@ -270,6 +270,10 @@ std::uint32_t Simulation::loose_stock_throwables_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().matron_throwables_begin());
 }
 
+std::uint32_t Simulation::loose_stock_matron_kinds_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().matron_kinds_begin());
+}
+
 std::uint32_t Simulation::loose_stock_east_west_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().east_west_begin());
 }
@@ -967,6 +971,25 @@ std::uint64_t Simulation::last_impact_sequence() const noexcept {
     return physics_world_->impacts().last_sequence();
 }
 
+std::vector<Simulation::MachinePart> Simulation::machine_parts() const {
+    std::vector<MachinePart> parts;
+    for (const ImpactLedger::Machine &m : physics_world_->impacts().machines()) {
+        parts.push_back({m.entity, m.runs});
+    }
+    return parts;
+}
+
+std::vector<Simulation::MachineNoise> Simulation::machine_noises() const {
+    std::vector<MachineNoise> noises;
+    for (const ImpactLedger::Running &r : physics_world_->impacts().running()) {
+        noises.push_back({r.entity,
+                          {static_cast<double>(r.at.GetX()), static_cast<double>(r.at.GetY()),
+                           static_cast<double>(r.at.GetZ())},
+                          r.speed_mps, r.loudness});
+    }
+    return noises;
+}
+
 std::uint32_t Simulation::forklift_count() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->forklift_count());
 }
@@ -1244,10 +1267,16 @@ Simulation::MatronJourney Simulation::matron_journey() const noexcept {
         out.misses = v.misses;
         out.force_n = v.force_n;
         out.peak_force_n = v.peak_force_n;
+        out.power_w = v.power_w;
         out.holding = v.holding;
     }
     out.gravity_factor = physics_world_->matron_gravity_factor();
     return out;
+}
+
+Simulation::MatronHoist Simulation::matron_hoist() const noexcept {
+    const Matron::HoistView v = physics_world_->matron().hoist_view();
+    return {v.phase, v.rides, v.hand_n, v.hand_power_w};
 }
 
 void Simulation::debug_matron_patrol() noexcept {
@@ -1594,6 +1623,8 @@ MatronSnapshot Simulation::matron_state() const noexcept {
     result.stock_shoves = view.stock_shoves;
     result.stock_handled = view.stock_handled;
     result.stock_push_force_n = view.stock_push_force_n;
+    result.throw_windup = view.throw_windup;
+    result.stock_thrown = view.stock_thrown;
     result.staggers = view.staggers;
     result.knockdowns = view.knockdowns;
     result.damage_ns = view.damage_ns;

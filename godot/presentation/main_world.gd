@@ -8,6 +8,7 @@ extends "res://presentation/main_geometry.gd"
 const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
 const LampGlow := preload("res://presentation/lamp_glow.gd")
+const FarWorld := preload("res://presentation/far_world.gd")
 
 # The neighboring shaft. Mirrors TwinTower in the native world.
 const TWIN_TOWER_CENTER := Vector3(-30.0, 800.0, -264.0)
@@ -646,13 +647,16 @@ func _build_stack_continuation(oxidised: Material, rust_deep: Material, mill_sca
 			_add_box("UpperLightBand", Vector3(half * 2.0, 0.7, 0.4),
 				Vector3(cx, base_y + 1.2, cz + half + 0.3), faded)
 
-func _build_yard(concrete: Material, faded: Material, tar: Material) -> void:
+func _build_yard(concrete: Material, faded: Material, _tar: Material) -> void:
 	for z in range(-130, 10, 14):
 		_add_box("LaneStripe", Vector3(0.22, 0.02, 7.0), Vector3(-2.0, 0.012, float(z)), faded)
 	for z in [-118.0, -60.0, -16.0]:
 		_add_box("KerbRun", Vector3(86.0, 0.28, 0.5), Vector3(-6.0, 0.14, z), concrete)
-	_add_box("StandingWater", Vector3(26.0, 0.02, 18.0), Vector3(-24.0, 0.021, -70.0), tar)
-	_add_box("StandingWaterTwo", Vector3(18.0, 0.02, 12.0), Vector3(14.0, 0.021, -36.0), tar)
+	# Water lying on the grade (environment job 11; far_world.gd's water).
+	var water := FarWorld.water_material()
+	water.set_shader_parameter("slabs", [Vector4(-24.0, -70.0, 13.0, 9.0), Vector4(14.0, -36.0, 9.0, 6.0)])
+	_add_box("StandingWater", Vector3(26.0, 0.02, 18.0), Vector3(-24.0, 0.021, -70.0), water)
+	_add_box("StandingWaterTwo", Vector3(18.0, 0.02, 12.0), Vector3(14.0, 0.021, -36.0), water)
 	_build_walkway(faded)
 
 # The first cue (release plan item 13): the yard's painted pedestrian
@@ -831,13 +835,20 @@ func _build_basin() -> void:
 	var meadow := _material(Color("3f4634"), 0.0, 0.96, Color.BLACK, 1.0, _bump_concrete)
 	# A frame around the grade (x in [-240, 240], z in [-300, 180]), not a
 	# sheet under it: two surfaces 0.3 m apart z-fight from any distance.
+	# Drawn by far_world.gd (the ground's pattern and the towers' long shadow);
+	# the boxes stay, hidden, as the floor's solids.
 	var floor_y := VALLEY_FLOOR_TOP - 0.5
+	var floor_pieces := []
 	for piece in [
 			[Vector3(5200.0, 1.0, 2400.0), Vector3(0.0, floor_y, -1500.0)],
 			[Vector3(5200.0, 1.0, 2320.0), Vector3(0.0, floor_y, 1340.0)],
 			[Vector3(2360.0, 1.0, 480.0), Vector3(-1420.0, floor_y, -60.0)],
 			[Vector3(2360.0, 1.0, 480.0), Vector3(1420.0, floor_y, -60.0)]]:
-		_add_box("ValleyFloor", piece[0], piece[1], meadow)
+		_add_box("ValleyFloor", piece[0], piece[1], meadow).visible = false
+		floor_pieces.append(piece)
+	var far_world := FarWorld.new()
+	far_world.build(self, floor_pieces, VALLEY_FLOOR_TOP)
+	add_child(far_world)
 
 	var rock := _material(Color("353b41"), 0.03, 0.93)
 	var rock_warm := _material(Color("3d3934"), 0.03, 0.93)
@@ -932,11 +943,38 @@ func _build_foliage() -> void:
 		_add_bush(Vector3(bx, 0.0, bz), rng.randf_range(1.0, 2.0), rng)
 
 func _build_waterfall(at: Vector3) -> void:
-	var falls := StandardMaterial3D.new()
-	falls.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	falls.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	falls.albedo_color = Color(0.86, 0.9, 0.94, 0.55)
-	falls.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Water that falls (environment job 11): streaks run down the sheet, faster
+	# toward its foot, broken and thinning at its edges, white where it is
+	# torn and lit as the face it falls down is.
+	var falls := ShaderMaterial.new()
+	falls.shader = Shader.new()
+	falls.shader.code = """
+shader_type spatial;
+render_mode cull_disabled, depth_draw_never;
+uniform vec3 water : source_color = vec3(0.86, 0.9, 0.94);
+float h21(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+float vn(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), u.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+void fragment() {
+	// UV.y 0 at the lip, 1 at the foot: it falls faster as it goes.
+	float fall = UV.y * UV.y * 6.0 + UV.y * 2.0;
+	float streak = vn(vec2(UV.x * 34.0, fall * 3.0 - TIME * 2.2));
+	streak = streak * 0.6 + vn(vec2(UV.x * 90.0, fall * 7.0 - TIME * 3.4)) * 0.4;
+	float sheet = smoothstep(0.0, 0.18, UV.x) * smoothstep(1.0, 0.82, UV.x);
+	sheet *= smoothstep(0.25, 0.6, vn(vec2(UV.x * 9.0, fall * 0.8 - TIME * 0.9)) + 0.35);
+	ALBEDO = water * (0.78 + 0.3 * streak);
+	ROUGHNESS = 0.35;
+	ALPHA = clamp(sheet * (0.35 + 0.45 * streak) * smoothstep(0.0, 0.03, UV.y), 0.0, 0.85);
+}
+"""
 	var quad := QuadMesh.new()
 	quad.size = Vector2(26.0, 420.0)
 	quad.material = falls

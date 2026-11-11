@@ -224,6 +224,140 @@ def dominant_bone(part):
     return part.bone[np.arange(len(part.v)), np.argmax(part.w, axis=1)]
 
 
+# --- triangle-mesh inside test (J-067 scorer fix) ------------------------------------------------------------
+# The grid's signed distance is a nearest-vertex normal-plane test; in the sparse-vertex mid-back zone it
+# mis-signs hair points hanging in the air behind her back as deep inside. A deep point counts only if the
+# triangle mesh says it is inside her: ray parity per body part (a point inside a part has an odd crossing
+# count in most directions; two or more odd directions guards against one ray grazing a shared edge or
+# vertex), ORed over parts, since the layers overlap (a point inside both skin and tunic crosses twice).
+
+_MESH_DIRS = np.array([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]], float)
+
+
+def _tri_dist(p, a, b, c):
+    """Distance from point p to each triangle (a, b, c): plane distance where the projection falls inside
+    the triangle, else the distance to the nearest edge. Vectorized over triangles."""
+    ab, ac = b - a, c - a
+    ap = p - a
+    n = np.cross(ab, ac)
+    n = n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+    dist_plane = np.einsum("ij,ij->i", ap, n)
+    proj = p - dist_plane[:, None] * n
+    v0, v1, v2 = b - a, c - a, proj - a
+    d00 = np.einsum("ij,ij->i", v0, v0)
+    d01 = np.einsum("ij,ij->i", v0, v1)
+    d11 = np.einsum("ij,ij->i", v1, v1)
+    d20 = np.einsum("ij,ij->i", v2, v0)
+    d21 = np.einsum("ij,ij->i", v2, v1)
+    den = np.where(np.abs(d00 * d11 - d01 * d01) < 1e-18, 1e-18, d00 * d11 - d01 * d01)
+    v = (d11 * d20 - d01 * d21) / den
+    w = (d00 * d21 - d01 * d20) / den
+    u = 1.0 - v - w
+    inside_tri = (u >= 0) & (v >= 0) & (w >= 0)
+    d = np.where(inside_tri, np.abs(dist_plane), np.inf)
+
+    def seg_dist(p, a, b):
+        ab = b - a
+        t = np.einsum("ij,ij->i", p - a, ab) / np.maximum(np.einsum("ij,ij->i", ab, ab), 1e-18)
+        t = np.clip(t, 0.0, 1.0)
+        return np.linalg.norm(p - (a + t[:, None] * ab), axis=1)
+
+    d = np.minimum(d, seg_dist(p, a, b))
+    d = np.minimum(d, seg_dist(p, b, c))
+    d = np.minimum(d, seg_dist(p, c, a))
+    return d
+
+
+def _ray_hits(p, direction, a, b, c):
+    """Moller-Trumbore ray-triangle crossings along one direction (vectorized over triangles)."""
+    d = np.asarray(direction, float)
+    d = d / np.linalg.norm(d)
+    e1, e2 = b - a, c - a
+    pv = np.cross(d, e2)
+    det = np.einsum("ij,ij->i", e1, pv)
+    ok = np.abs(det) > 1e-12
+    inv = np.zeros(len(a))
+    inv[ok] = 1.0 / det[ok]
+    tv = p - a
+    u = np.einsum("ij,ij->i", tv, pv) * inv
+    qv = np.cross(tv, e1)
+    v = (qv @ d) * inv
+    t = np.einsum("ij,ij->i", e2, qv) * inv
+    hit = ok & (u >= 0) & (v >= 0) & (u + v <= 1) & (t > 1e-6)
+    return int(hit.sum())
+
+
+def _aabb_dist(p, lo, hi):
+    """Distance from point p to the axis-aligned box [lo, hi] (0 when p is inside it). A lower bound on
+    the distance from p to any triangle inside the box, so a part whose box is farther than the best
+    distance found so far cannot hold the nearest triangle."""
+    off = np.maximum(lo - p, 0.0) + np.maximum(p - hi, 0.0)
+    return float(np.linalg.norm(off))
+
+
+def _ray_hits_aabb(p, direction, lo, hi):
+    """Does the ray from p along direction reach the box [lo, hi] at t > 1e-6? The slab test: a ray
+    that misses the box cannot hit any triangle inside it, so the crossing count for that part and
+    direction is 0. Exact for any mesh, open or closed — it only skips rays that cannot reach the part."""
+    tmin, tmax = -np.inf, np.inf
+    for i in range(3):
+        d = direction[i]
+        if abs(d) < 1e-12:
+            if p[i] < lo[i] or p[i] > hi[i]:
+                return False
+            continue
+        t1 = (lo[i] - p[i]) / d
+        t2 = (hi[i] - p[i]) / d
+        tmin = max(tmin, min(t1, t2))
+        tmax = min(tmax, max(t1, t2))
+        if tmax < tmin:
+            return False
+    return tmax > 1e-6 and tmax >= max(tmin, 1e-6)
+
+
+def mesh_inside(p, parts_tris, parts_aabb=None):
+    """Is point p inside her drawn body, per the triangle mesh? parts_tris is a list of (A, B, C)
+    vertex arrays, one per body part; parts_aabb is the matching list of (lo, hi) boxes, computed once
+    per frame by the caller (or from parts_tris here). Returns (inside, nearest-triangle distance). A
+    point is inside if any single part has an odd crossing count in two or more of the six axis
+    directions: per part, so a point inside both skin and tunic (two crossings out) still counts; two
+    directions, so one ray grazing a shared edge or vertex cannot fake it.
+
+    Two exact prunings, neither of which changes the result: a part whose box is farther than the best
+    distance found so far cannot hold the nearest triangle (the box distance is a lower bound on every
+    triangle in it), so its distance pass is skipped; and a ray that misses a part's box cannot cross
+    any triangle in it, so that direction contributes 0 crossings. Parts are visited nearest-box first
+    so the best distance drops as fast as possible."""
+    if parts_aabb is None:
+        parts_aabb = []
+        for (a, b, c) in parts_tris:
+            parts_aabb.append((np.minimum(np.minimum(a.min(axis=0), b.min(axis=0)), c.min(axis=0)),
+                               np.maximum(np.maximum(a.max(axis=0), b.max(axis=0)), c.max(axis=0))))
+    dists = [_aabb_dist(p, lo, hi) for (lo, hi) in parts_aabb]
+    order = sorted(range(len(parts_tris)), key=lambda k: dists[k])
+    dmin = np.inf
+    for k in order:
+        if dists[k] >= dmin:
+            continue
+        a, b, c = parts_tris[k]
+        if len(a):
+            dmin = min(dmin, float(_tri_dist(p, a, b, c).min()))
+    for k in order:
+        a, b, c = parts_tris[k]
+        if not len(a):
+            continue
+        lo, hi = parts_aabb[k]
+        odd = 0
+        for dv in _MESH_DIRS:
+            if not _ray_hits_aabb(p, dv, lo, hi):
+                continue
+            if _ray_hits(p, dv, a, b, c) % 2 == 1:
+                odd += 1
+                if odd >= 2:
+                    return True, dmin
+    return False, dmin
+
+
 def region_names(run, part, dom):
     """A plain body-part name for each vertex, from the bone that moves it most."""
     names = []
@@ -921,6 +1055,30 @@ class Scorer:
             s3, v3, _ = grid.signed(q[d_i], ring=3)
             s[d_i] = np.where(np.isfinite(s3) & (s3 < 0), s3, -GRID_M)
             vi_l[d_i] = v3
+            # J-067: the grid mis-signs deep points in the sparse-vertex mid-back zone, so a deep point
+            # counts only if the triangle mesh says it is inside her. Otherwise it hangs in the air
+            # behind her back and does not count; a mesh-confirmed point keeps its true penetration
+            # depth, the distance to the nearest triangle. Only points that can count are tested: a
+            # bind-pose-inside point is excluded from inside either way, so testing it is wasted work.
+            cand = np.nonzero(deep & ~self.hair_bind_in)[0]
+            if len(cand):
+                tris = []
+                for name, part in self.run.parts.items():
+                    if name in NOT_FOR_HAIR or len(part.tris) == 0:
+                        continue
+                    pos = skin(part, wb)
+                    t = part.tris
+                    tris.append((pos[t[:, 0]], pos[t[:, 1]], pos[t[:, 2]]))
+                # One box per part, from the skinned triangles above, reused for every candidate point
+                # this frame: mesh_inside prunes by it (a box farther than the best distance cannot hold
+                # the nearest triangle; a ray missing the box cannot cross the part).
+                aabbs = [(np.minimum(np.minimum(a.min(axis=0), b.min(axis=0)), c.min(axis=0)),
+                          np.maximum(np.maximum(a.max(axis=0), b.max(axis=0)), c.max(axis=0)))
+                         for (a, b, c) in tris]
+                for i in cand:
+                    inside_mesh, dmin = mesh_inside(q[i], tris, aabbs)
+                    s[i] = -dmin if inside_mesh else dmin
+                    st[i] = s[i]
         vi = np.where(vi_l >= 0, idx[np.maximum(vi_l, 0)], -1)
         inside = (st < 0) & ~self.hair_bind_in
         return q, s, vi, inside, deep, bp, bn, grid, idx

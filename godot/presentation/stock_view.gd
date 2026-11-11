@@ -15,6 +15,7 @@ const KIND_CABLE_REEL := 15
 const KIND_TOOLBOX := 16
 const KIND_PALLET_REEL := 19
 const KIND_BOTTLE_CAGE := 21
+const KIND_EXTINGUISHER := 23
 # A container's half size along its own x, y, z, its doors at +x.
 const CONTAINER_HALF := Vector3(6.095, 1.295, 1.22)
 # The paints below by name, in the same order (her chart names a piece's
@@ -59,6 +60,8 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 	for colour in [Color("1c1c1e"), Color("6b1e24"), Color("2d5f8a")]:
 		bottle_paint.append(main._surfaced(colour, 0.0, 0.55, main._surface_paint))
 	var cable_paint: Material = main._material(Color("141414"), 0.0, 0.82)
+	# The fire extinguisher's bottle signal red, its head and handle steel.
+	var extinguisher_paint: Material = main._surfaced(Color("b01e17"), 0.0, 0.4, main._surface_paint)
 	var toolbox_paint: Array[Material] = []
 	for colour in [Color("a3231c"), Color("1f4f8f"), Color("c9a227")]:
 		toolbox_paint.append(main._surfaced(colour, 0.0, 0.45, main._surface_paint))
@@ -102,6 +105,8 @@ func setup(main: Node, native: Object, kit_root: Node3D) -> void:
 				_paint_mesh(body, 3, bottle_paint[variant % bottle_paint.size()])
 			KIND_TOOLBOX:
 				_paint_mesh(body, 0, toolbox_paint[variant % toolbox_paint.size()])
+			KIND_EXTINGUISHER:
+				_paint_mesh(body, 0, extinguisher_paint)
 
 
 # The index-th mesh of the body (see above) only.

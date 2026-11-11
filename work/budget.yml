@@ -5,7 +5,7 @@
 caps:
   month_usd: "100.00"   # may not exceed 100: the switch refuses to load a higher number
   day_usd: "100.00"    # no daily limit beyond the month (Cory, 11-03: "A $10 daily cap. That's so little. I don't want that there.")
-  job_usd: "8.00"       # per job, over its life; one comment `budget 12` on the job issue raises it (never above month_usd)
+  job_usd: "100.00"     # no per-job cap beyond the month (Cory 11-04: "the 8 was artificially unknowingly placed"; 11-07: canceled)
 
 # List prices per million tokens. VOLATILE: from the claude-api skill's model table (cached 2026-10-06);
 # check https://platform.claude.com/docs/en/about-claude/pricing when changing a model.
@@ -19,8 +19,12 @@ calls:
   # input x $4/MTok + 64000 x $20/MTok: about $1.30 plus input (at most $0.60 more at 150,000 input tokens).
   # Cory, 11-04: Opus at max effort; streamed so a long think cannot time out (Sonnet xhigh once used all
   # 16,000 max_tokens with no verdict). To flip back, swap this line for the commented one below it.
-  review: {model: claude-opus-5-5, effort: max, max_tokens: 64000, max_input_tokens: 150000}
-  # review: {model: claude-sonnet-5-5, effort: xhigh, max_tokens: 16000, max_input_tokens: 150000}
+  # Cory, 11-08 ("split"): ordinary reviews at high, the security pass (workflow-file PRs) stays at max. At max,
+  # reviews averaged $0.91 with a median of 45,839 output tokens (49 reviews, Nov 3-8); the ledger shows the new cost.
+  review: {model: claude-opus-5-5, effort: high, max_tokens: 64000, max_input_tokens: 150000}
+  # The security pass gets the model's whole 128K output: at 64000 it stopped with no verdict on #360's 1,590-line
+  # diff (11-09). Worst case: 128000 x $20/MTok = $2.56 plus input (at most $0.60).
+  security_review: {model: claude-opus-5-5, effort: max, max_tokens: 128000, max_input_tokens: 150000}
   eye:                  # one vision call on the screenshot sets in work/looks/sets.yml: worst case about $0.40
     model: claude-opus-5-5
     max_tokens: 8000

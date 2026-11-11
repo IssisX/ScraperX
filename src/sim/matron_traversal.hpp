@@ -147,6 +147,8 @@ enum class MoveKind : std::uint8_t {
     GapJump = 9,    // a supported run and short leg drive, then ballistic flight to a lower floor
     LedgeJump = 10, // a jump to a lip; then a hang and its mantle onto the floor over it
     FreeDrop = 11,  // a surveyed, survivable fall from a broad static top onto real support
+    RiserUp = 12,   // up a riser's face hand over hand, feet braced (the Matron's own, matron_pipe.cpp; not the Climber's)
+    RiserDown = 13,
 };
 [[nodiscard]] const char *move_name(MoveKind kind) noexcept;
 
@@ -218,6 +220,8 @@ struct Ignore {
     // Her body's object layer: probes see only what her body collides with
     // (-1: everything).
     int layer = -1;
+    bool avoid = false;
+    JPH::Vec3 avoid_at = JPH::Vec3::sZero();
 };
 
 // The move executor on one body. step() is called once a tick before the
@@ -375,6 +379,21 @@ struct Patch {   // a walkable top (one leaf of a body)
     bool narrow = false;   // under her diameter across (a board: her axis over it)
     int split = -1, split_of = -1;   // a piece of a top split by what stands on it: its floor, and the top
 };
+struct Bar {   // one rung-like member the scanner reads (a thin long box)
+    JPH::Vec3 c = JPH::Vec3::sZero();   // centre
+    bool along_x = true;   // the bar's long axis
+    float half = 0.0F;    // half its long side
+    std::uint64_t entity = 0;
+};
+// The ladder-bar order, one authority for the sort in AffordanceMap::scan.
+// A tolerance here is NOT a strict weak ordering: sub-mm cross offsets with
+// reversed heights cycle (A<C, C<B, B<A), and std::sort over it is undefined
+// — the order then differs by stdlib, host vs arm64. The order must be a
+// strict total order on (along_x, cross, along, y, half, entity), exact
+// comparisons, no tolerance. Cross is the primary key after along_x: the
+// chain loop in scan() breaks when the cross gap passes 0.06 m, so cross
+// must be monotonic in this order or the break skips a matching bar.
+[[nodiscard]] bool bar_before(const Bar &a, const Bar &b) noexcept;
 struct Ladder {   // three or more bars stacked on one line
     float x = 0.0F, z = 0.0F;
     bool along_x = true;   // the rungs' long axis
@@ -386,6 +405,13 @@ struct Ladder {   // three or more bars stacked on one line
 struct Pole {     // a vertical member she can wrap (section up to kPoleMaxSection)
     float x = 0.0F, z = 0.0F;
     float section = 0.0F;
+    float bottom = 0.0F, top = 0.0F;
+};
+struct Riser {    // a tall, roughly square vertical member she can climb by
+                  // friction on its faces (too thick to wrap): its centre,
+                  // half section each way, and the heights it spans
+    float x = 0.0F, z = 0.0F;
+    float half_x = 0.0F, half_z = 0.0F;
     float bottom = 0.0F, top = 0.0F;
 };
 struct Region {
@@ -406,7 +432,7 @@ struct Edge {
 
 struct ScanStats {
     double seconds = 0.0;
-    std::uint32_t bodies = 0, leaves = 0, patches = 0, usable_patches = 0, bars = 0, ladders = 0, poles = 0;
+    std::uint32_t bodies = 0, leaves = 0, patches = 0, usable_patches = 0, bars = 0, ladders = 0, poles = 0, risers = 0;
     std::uint32_t regions = 0, edges = 0, usable_edges = 0, capsule_queries = 0, split_patches = 0;
 };
 
@@ -423,6 +449,7 @@ public:
     [[nodiscard]] const std::vector<Edge> &edges() const noexcept { return edges_; }
     [[nodiscard]] const std::vector<Ladder> &ladders() const noexcept { return ladders_; }
     [[nodiscard]] const std::vector<Pole> &poles() const noexcept { return poles_; }
+    [[nodiscard]] const std::vector<Riser> &risers() const noexcept { return risers_; }
     [[nodiscard]] const std::vector<Patch> &patches() const noexcept { return patches_; }
     [[nodiscard]] const ScanStats &stats() const noexcept { return stats_; }
     // The region whose walkable top is under these feet (within 0.3 m), or -1.
@@ -432,7 +459,11 @@ public:
     // Directed search: the edges, in order, from one region to another
     // (usable edges only). Empty if there is no way.
     // avoid: edges not to take (ones this journey already found it cannot start).
-    [[nodiscard]] std::vector<int> plan(int from, int to, const std::vector<int> &avoid = {}) const;
+    // `extra` holds ways of hers the scan does not hold (her risers), each
+    // with its own id below zero: one search over both, so a route may take
+    // any number of them between the scanned edges.
+    [[nodiscard]] std::vector<int> plan(int from, int to, const std::vector<int> &avoid = {},
+                                        const std::vector<std::pair<int, Edge>> &extra = {}) const;
     // A walk inside one region: patch-to-patch waypoints (feet).
     [[nodiscard]] std::vector<JPH::Vec3> walk_path(JPH::Vec3 from, JPH::Vec3 to) const;
     [[nodiscard]] int patch_at(JPH::Vec3 feet, float tol) const;
@@ -452,6 +483,7 @@ private:
     std::vector<Edge> edges_;
     std::vector<Ladder> ladders_;
     std::vector<Pole> poles_;
+    std::vector<Riser> risers_;
     std::vector<std::vector<int>> patch_links_;
     ScanStats stats_;
 };
