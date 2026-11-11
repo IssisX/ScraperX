@@ -8,8 +8,8 @@ Read through: 1794409124 (2026-11-11 8:58 AM Central)
 ## Now (11-11, before Cory's compact at about 9 AM)
 Work state lives in GitHub: job issues (owner, state, needs:eyes), Muse's queue (`tools/board/queue_check.py`, floor 8,
 refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpers at high, the cap (Cory 11-11):
-- J-001 #108: window pose @ 67837d5e and Floor checks on `claude/integrate-protected-j093` @ 56624498 (on top of
-  it; land after the hold branch). 9 left (B1 timing x6, two entry-swing reaches, snag setup): pass 6 helper, 9:05 AM.
+- J-001 #108: hold @ 46c9c4be, protected j093 @ fed81029. 7 left: B1 x6 to Floor (fits Cory's criterion, 0.9 s short),
+  snag setup (test drift), plus the kicking-wins check in the fatality: xhigh helper.
 - J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
   before it lands. J-084 #402: whole climb PASS (24 stages) @ a94ada14, proof running; touch-2 limit 900 s is a
   workflow change (Codex + API review). J-082 #400 band 1: xhigh helper, protected, on top of j084.
