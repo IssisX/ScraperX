@@ -88,6 +88,10 @@ TURN_TAIL_S = 0.7
 # Measured on CI (godot-touch touch-2's drawn-body step); see README.md for the run. touch_matron_act's rows
 # re-measured 2026-11-04 on trunk after J-032 (#170, #172, #175: her pipe tuck vault, the toolbox in her real
 # arm, the Turn's arm as her shoulder out of its socket); the look scenarios' rows are from 2026-11-02.
+# touch_matron_act's grip_climb count and plant worst re-measured 2026-11-11 on J-007 item 6 stage 2 after the
+# contact-view fix (a pipe grip is reported only in her hand's reach): the grip count 2056 -> 2560 is the late
+# stages' hand-lag on stage 2's longer pipe descents (worst 1.056 m, within the old bound), and the plant worst
+# 0.075 -> 0.170 m is one hard-stop foot slide at t=181.63 s; both measured twice, identical, on the fixed code.
 HOLD_ITEM = "exit item 4, holds at a real arm's length (hold worker, PR #37)"
 REACH_ITEM = "her stock reach with real arms (Builder job 3; PROP_STRETCH_MAX 2.7, matron_rig.gd two-handed reach)"
 TURN_ITEM = "the Turn's limb_scale 1.3 (matron_view.gd; her arm's as her shoulder out of its socket), by design; the owner's call (rule 36)"
@@ -100,8 +104,8 @@ EXPECTED = {
     ("stretch_arm_reach", "touch_matron_act"): (REACH_ITEM, 15, 7.529),
     ("stretch_arm_turn", "touch_matron_act"): (TURN_ITEM, 605, 85.653),
     ("stretch_leg_turn", "touch_matron_act"): (TURN_ITEM, 520, 6.000),
-    ("grip_climb", "touch_matron_act"): (CLIMB_ITEM, 2056, 1.034),
-    ("plant", "touch_matron_act"): (PLANT_ITEM, 50, 0.075),
+    ("grip_climb", "touch_matron_act"): (CLIMB_ITEM, 2560, 1.034),
+    ("plant", "touch_matron_act"): (PLANT_ITEM, 50, 0.170),
     ("hair", "touch_matron_act"): (HAIR_ITEM, 14751, 0.193),
     ("skirt", "touch_matron_act"): (SKIRT_ITEM, 17495, 0.156),
     ("grip_climb", "look_matron_moves"): (CLIMB_ITEM, 1494, 1.556),
