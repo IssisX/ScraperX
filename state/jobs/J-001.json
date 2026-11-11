@@ -2,7 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "claude/integrate-j001-hold": "ca8d162098731e68b81306b9b3c14d5f48d63a8f",
+  "claude/integrate-j001-hold": "cac2f097bb75b1ebeb63dde4a9fcefdc6798703e",
   "fb-bot/j001-pastrail": "59af7cafa92f5528ccf3abb2652d6f5daae3dacb"
  },
  "cancelled": null,
@@ -13,14 +13,14 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T23:00:00Z",
- "head": "ca8d162098731e68b81306b9b3c14d5f48d63a8f",
+ "head": "cac2f097bb75b1ebeb63dde4a9fcefdc6798703e",
  "issue": 108,
  "job": "J-001",
  "landed": {
   "claude/integrate-j001-hold": [
-   "ca8d162098731e68b81306b9b3c14d5f48d63a8f",
+   "cac2f097bb75b1ebeb63dde4a9fcefdc6798703e",
    "",
-   "2026-11-10T21:49:17Z"
+   "2026-11-11T04:19:09Z"
   ],
   "fb-bot/j001-pastrail": [
    "59af7cafa92f5528ccf3abb2652d6f5daae3dacb",
@@ -71,7 +71,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
    "missing": 3,
-   "rechecked": "2026-11-10T21:49:17Z",
+   "rechecked": "2026-11-11T04:19:09Z",
    "ref": "ASK|ask on #108",
    "sends": 1,
    "sent_by": "live",
@@ -457,7 +457,11 @@
    "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T04:19:09Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -516,6 +520,6 @@
   227
  ],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T02:09:10Z"
+ "state": "proof",
+ "updated": "2026-11-11T04:19:09Z"
 }

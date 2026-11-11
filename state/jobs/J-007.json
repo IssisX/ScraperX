@@ -4,7 +4,7 @@
  "branches": {
   "fb-bot/integrate-protected-j007-exit-items": "dda92e1209de951496792864179a0815fbeeef3c",
   "fb-bot/integrate-protected-j007-item6": "d4c5fbd761b19a6cdbc9f4b79c1a3e508a6a4704",
-  "fb-bot/integrate-protected-j007-item6-stage2": "13e58976be24f5fc4ba999f6c86a0a54bec6b809"
+  "fb-bot/integrate-protected-j007-item6-stage2": "cc50ea37beef9e239f983b39b937fd06cdd05db4"
  },
  "cancelled": null,
  "ci": "red: host-build, android-build",
@@ -12,8 +12,8 @@
   "6777897398:72"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
- "head": "13e58976be24f5fc4ba999f6c86a0a54bec6b809",
+ "deadline": "2026-11-11T08:19:09Z",
+ "head": "cc50ea37beef9e239f983b39b937fd06cdd05db4",
  "issue": 114,
  "job": "J-007",
  "landed": {
@@ -28,9 +28,9 @@
    "2026-11-09T17:35:20Z"
   ],
   "fb-bot/integrate-protected-j007-item6-stage2": [
-   "13e58976be24f5fc4ba999f6c86a0a54bec6b809",
+   "cc50ea37beef9e239f983b39b937fd06cdd05db4",
    "",
-   "2026-11-10T19:39:24Z"
+   "2026-11-11T04:19:09Z"
   ]
  },
  "obligations": [
@@ -233,6 +233,31 @@
    "version": "red:2ad3fb9aa50139788fe78df703983842766277b7",
    "via": "email",
    "what": "#315 proof red: host-build, android-build"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T04:19:09Z",
+   "dead": "2026-11-11T12:19:09Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T08:19:09Z",
+   "id": "O-0b4c9676",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T04:19:09Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j007-item6-stage2",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 114,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:cc50ea37beef9e239f983b39b937fd06cdd05db4",
+   "via": "email",
+   "what": "`fb-bot/integrate-protected-j007-item6-stage2` proof red: native-tests (matron-slices-3), no PR"
   }
  ],
  "outcome": null,
@@ -245,5 +270,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-10T22:50:55Z"
+ "updated": "2026-11-11T04:19:09Z"
 }

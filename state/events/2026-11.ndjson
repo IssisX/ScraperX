@@ -1243,3 +1243,24 @@
 {"attempt": 2, "ev": "sent", "id": "O-f200c17a", "job": "J-049", "ref": "PR|#383", "send": 2, "t": "2026-11-11T03:19:08Z", "to": "muse", "via": "email"}
 {"ev": "inbox", "id": "O-a6e44d6f", "job": "J-049", "ref": "ASK|ask on #278", "t": "2026-11-11T03:19:08Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T03:19:08Z", "tries": 1}
+{"ev": "acked", "how": "new head", "id": "O-ccc7effe", "job": "J-001", "t": "2026-11-11T04:19:09Z"}
+{"due": "2026-11-11T08:19:09Z", "ev": "obligation", "id": "O-0b4c9676", "job": "J-007", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j007-item6-stage2", "t": "2026-11-11T04:19:09Z", "to": "muse", "via": "email"}
+{"due": "2026-11-11T08:19:09Z", "ev": "obligation", "id": "O-f70eab45", "job": "J-009", "kind": "fix", "ref": "PR|#377", "t": "2026-11-11T04:19:09Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "new head", "id": "O-7b7cf4f6", "job": "J-009", "t": "2026-11-11T04:19:09Z"}
+{"due": "2026-11-11T14:47:00Z", "ev": "obligation", "id": "O-39517147", "job": "J-015", "kind": "review", "ref": "PR|#389", "t": "2026-11-11T04:19:09Z", "to": "codex", "via": "relay"}
+{"ev": "acked", "how": "new head", "id": "O-e0e128fa", "job": "J-015", "t": "2026-11-11T04:19:09Z"}
+{"due": "2026-11-11T14:47:00Z", "ev": "obligation", "id": "O-333fcf6c", "job": "J-049", "kind": "review", "ref": "PR|#383", "t": "2026-11-11T04:19:09Z", "to": "codex", "via": "relay"}
+{"ev": "acked", "how": "new head", "id": "O-f200c17a", "job": "J-049", "t": "2026-11-11T04:19:09Z"}
+{"due": "2026-11-11T14:17:00Z", "ev": "obligation", "id": "O-3bd783e3", "job": "J-060", "kind": "ask", "ref": "ASK|ask on #320", "t": "2026-11-11T04:19:09Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "reply naming it", "id": "O-97ffea90", "job": "J-060", "t": "2026-11-11T04:19:09Z"}
+{"ev": "state", "frm": "working", "job": "J-001", "t": "2026-11-11T04:19:09Z", "to": "proof"}
+{"ev": "state", "frm": "working", "job": "J-015", "t": "2026-11-11T04:19:09Z", "to": "review"}
+{"ev": "state", "frm": "working", "job": "J-049", "t": "2026-11-11T04:19:09Z", "to": "review"}
+{"attempt": 1, "ev": "sent", "id": "O-0b4c9676", "job": "J-007", "ref": "BRANCH|fb-bot/integrate-protected-j007-item6-stage2", "send": 1, "t": "2026-11-11T04:19:09Z", "to": "muse", "via": "email"}
+{"attempt": 2, "ev": "sent", "id": "O-32c09091", "job": "J-008", "ref": "BRANCH|builder/integrate-j008", "send": 2, "t": "2026-11-11T04:19:09Z", "to": "grok_bot", "via": "watch"}
+{"attempt": 1, "ev": "sent", "id": "O-f70eab45", "job": "J-009", "ref": "PR|#377", "send": 1, "t": "2026-11-11T04:19:09Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-39517147", "job": "J-015", "ref": "PR|#389", "send": 1, "t": "2026-11-11T04:19:09Z", "to": "codex", "via": "relay"}
+{"attempt": 2, "ev": "sent", "id": "O-cecc4274", "job": "J-038", "ref": "PR|#372", "send": 2, "t": "2026-11-11T04:19:09Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-333fcf6c", "job": "J-049", "ref": "PR|#383", "send": 1, "t": "2026-11-11T04:19:09Z", "to": "codex", "via": "relay"}
+{"ev": "inbox", "id": "O-3bd783e3", "job": "J-060", "ref": "ASK|ask on #320", "t": "2026-11-11T04:19:09Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T04:19:09Z", "tries": 1}

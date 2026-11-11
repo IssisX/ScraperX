@@ -12,7 +12,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "c13d8edb9efe4d0aa3c107fdbba296490700de2b",
+ "head": "4ef4ec06e27b1f87a29926908bca78398dd9a210",
  "issue": 116,
  "job": "J-009",
  "landed": {
@@ -198,7 +198,11 @@
    "what": "review #377 @ c13d8edb"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T04:19:09Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -221,6 +225,31 @@
    "version": "fix:c13d8edb9efe4d0aa3c107fdbba296490700de2b",
    "via": "email",
    "what": "#377: open FIX from Claude (review)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-11T04:19:09Z",
+   "dead": "2026-11-11T12:19:09Z",
+   "dead_lettered": null,
+   "due": "2026-11-11T08:19:09Z",
+   "id": "O-f70eab45",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-11T04:19:09Z",
+   "missing": 0,
+   "ref": "PR|#377",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 377,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:4ef4ec06e27b1f87a29926908bca78398dd9a210",
+   "via": "email",
+   "what": "#377: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
@@ -233,5 +262,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-10T22:50:55Z"
+ "updated": "2026-11-11T04:19:09Z"
 }
