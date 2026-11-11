@@ -6,13 +6,13 @@
   "fb-bot/integrate-j009-258-down-traversal-flags": "fdea6e19e6a6eb72c676d617930f06b92e213e0e"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [
   "6771165879:578"
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "4ef4ec06e27b1f87a29926908bca78398dd9a210",
+ "head": "cd5154139cf9636138a221870ebdf901b3f869bc",
  "issue": 116,
  "job": "J-009",
  "landed": {
@@ -227,7 +227,11 @@
    "what": "#377: open FIX from Claude (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T11:50:28Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
@@ -260,7 +264,7 @@
  "prs": [
   377
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-11T04:19:09Z"
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-11T11:50:28Z"
 }

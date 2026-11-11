@@ -953,13 +953,13 @@
     "fb-bot/integrate-j009-258-down-traversal-flags": "fdea6e19e6a6eb72c676d617930f06b92e213e0e"
    },
    "cancelled": null,
-   "ci": "green",
+   "ci": "running",
    "commands": [
     "6771165879:578"
    ],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-10T00:56:16Z",
-   "head": "4ef4ec06e27b1f87a29926908bca78398dd9a210",
+   "head": "cd5154139cf9636138a221870ebdf901b3f869bc",
    "issue": 116,
    "job": "J-009",
    "landed": {
@@ -1174,7 +1174,11 @@
      "what": "#377: open FIX from Claude (review)"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T11:50:28Z",
+      "by": "muse",
+      "how": "new head"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 2,
@@ -1207,9 +1211,9 @@
    "prs": [
     377
    ],
-   "review": "FIX",
-   "state": "working",
-   "updated": "2026-11-11T04:19:09Z"
+   "review": "",
+   "state": "proof",
+   "updated": "2026-11-11T11:50:28Z"
   },
   "J-011": {
    "attempt": 0,
@@ -3784,6 +3788,7 @@
    "branches": {
     "claude/integrate-j044c-upper-body": "03ad884b158583568062f454817f5683e2d6be72",
     "fb-bot/integrate-j044c-gains": "9ffec0984039705be441e06dd4082158461ea8a7",
+    "fb-bot/integrate-j044c-gains2": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
     "fb-bot/integrate-protected-j044c-gains-peaks": "80b660024eab0ed72499f37e8b84aff77080605b"
    },
    "cancelled": null,
@@ -3791,7 +3796,7 @@
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-10T00:56:16Z",
-   "head": "9ffec0984039705be441e06dd4082158461ea8a7",
+   "head": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
    "issue": 0,
    "job": "J-044c",
    "landed": {
@@ -3804,6 +3809,11 @@
      "9ffec0984039705be441e06dd4082158461ea8a7",
      "",
      "2026-11-09T17:35:20Z"
+    ],
+    "fb-bot/integrate-j044c-gains2": [
+     "a8b86806c46a6eecad4315aee347994d3c6fbb62",
+     "",
+     "2026-11-11T11:50:28Z"
     ],
     "fb-bot/integrate-protected-j044c-gains-peaks": [
      "80b660024eab0ed72499f37e8b84aff77080605b",
@@ -3895,8 +3905,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "working",
-   "updated": "2026-11-11T10:39:10Z"
+   "state": "proof",
+   "updated": "2026-11-11T11:50:28Z"
   },
   "J-044d": {
    "attempt": 0,
@@ -3916,7 +3926,7 @@
     "fb-bot/integrate-j044d": [
      "c816ba4ff54bd3c012c21a24266c018f7bc930ae",
      "",
-     "2026-11-09T17:35:20Z"
+     "2026-11-11T11:50:28Z"
     ]
    },
    "obligations": [
@@ -3935,7 +3945,7 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 0,
+     "missing": 1,
      "ref": "BRANCH|fb-bot/integrate-j044d",
      "sends": 0,
      "thread": 0,
@@ -3953,7 +3963,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-09T21:19:08Z"
+   "updated": "2026-11-11T11:50:28Z"
   },
   "J-044l": {
    "attempt": 0,
@@ -5230,11 +5240,11 @@
     "fb-bot/integrate-j059-black-eye": "e34ac5096b438be2f4a8567d4bf52f371857652e"
    },
    "cancelled": null,
-   "ci": "green",
+   "ci": "running",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-11T03:17:00Z",
-   "head": "959bf0138f88ae98051ee84cb3d4cc38da95b2d1",
+   "head": "b1177151bd189a5395de85ba140431a5a61bfb6c",
    "issue": 307,
    "job": "J-059",
    "landed": {
@@ -5595,7 +5605,11 @@
      "what": "ask from Muse on #307"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T11:50:28Z",
+      "by": "muse",
+      "how": "new head"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 2,
@@ -5628,9 +5642,9 @@
    "prs": [
     343
    ],
-   "review": "FIX",
-   "state": "working",
-   "updated": "2026-11-11T06:28:54Z"
+   "review": "",
+   "state": "proof",
+   "updated": "2026-11-11T11:50:28Z"
   },
   "J-060": {
    "attempt": 0,
@@ -8299,16 +8313,24 @@
   "J-076": {
    "attempt": 0,
    "blocked": null,
-   "branches": {},
+   "branches": {
+    "fb-bot/integrate-j076": "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b"
+   },
    "cancelled": null,
    "ci": "",
    "commands": [],
    "created": "2026-11-10T22:50:55Z",
    "deadline": null,
-   "head": "",
+   "head": "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b",
    "issue": 391,
    "job": "J-076",
-   "landed": {},
+   "landed": {
+    "fb-bot/integrate-j076": [
+     "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b",
+     "",
+     "2026-11-11T11:50:28Z"
+    ]
+   },
    "obligations": [],
    "outcome": null,
    "outcome_reason": "",
@@ -8317,8 +8339,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "assigned",
-   "updated": "2026-11-10T22:50:55Z"
+   "state": "proof",
+   "updated": "2026-11-11T11:50:28Z"
   },
   "J-077": {
    "attempt": 0,
@@ -8347,16 +8369,24 @@
   "J-078": {
    "attempt": 0,
    "blocked": null,
-   "branches": {},
+   "branches": {
+    "fb-bot/integrate-j078": "ddceb91978ef29a9923148016fa3769f2f55188a"
+   },
    "cancelled": null,
    "ci": "",
    "commands": [],
    "created": "2026-11-10T22:50:55Z",
    "deadline": null,
-   "head": "",
+   "head": "ddceb91978ef29a9923148016fa3769f2f55188a",
    "issue": 393,
    "job": "J-078",
-   "landed": {},
+   "landed": {
+    "fb-bot/integrate-j078": [
+     "ddceb91978ef29a9923148016fa3769f2f55188a",
+     "",
+     "2026-11-11T11:50:28Z"
+    ]
+   },
    "obligations": [],
    "outcome": null,
    "outcome_reason": "",
@@ -8365,8 +8395,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "assigned",
-   "updated": "2026-11-10T22:50:55Z"
+   "state": "proof",
+   "updated": "2026-11-11T11:50:28Z"
   }
  }
 }

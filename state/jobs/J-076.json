@@ -1,16 +1,24 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j076": "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-10T22:50:55Z",
  "deadline": null,
- "head": "",
+ "head": "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b",
  "issue": 391,
  "job": "J-076",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j076": [
+   "9caeb5ffaef490bcac8da3afd84b2c4c3698be1b",
+   "",
+   "2026-11-11T11:50:28Z"
+  ]
+ },
  "obligations": [],
  "outcome": null,
  "outcome_reason": "",
@@ -19,6 +27,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-10T22:50:55Z"
+ "state": "proof",
+ "updated": "2026-11-11T11:50:28Z"
 }

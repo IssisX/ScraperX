@@ -4,6 +4,7 @@
  "branches": {
   "claude/integrate-j044c-upper-body": "03ad884b158583568062f454817f5683e2d6be72",
   "fb-bot/integrate-j044c-gains": "9ffec0984039705be441e06dd4082158461ea8a7",
+  "fb-bot/integrate-j044c-gains2": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
   "fb-bot/integrate-protected-j044c-gains-peaks": "80b660024eab0ed72499f37e8b84aff77080605b"
  },
  "cancelled": null,
@@ -11,7 +12,7 @@
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
- "head": "9ffec0984039705be441e06dd4082158461ea8a7",
+ "head": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
  "issue": 0,
  "job": "J-044c",
  "landed": {
@@ -24,6 +25,11 @@
    "9ffec0984039705be441e06dd4082158461ea8a7",
    "",
    "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-j044c-gains2": [
+   "a8b86806c46a6eecad4315aee347994d3c6fbb62",
+   "",
+   "2026-11-11T11:50:28Z"
   ],
   "fb-bot/integrate-protected-j044c-gains-peaks": [
    "80b660024eab0ed72499f37e8b84aff77080605b",
@@ -115,6 +121,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T10:39:10Z"
+ "state": "proof",
+ "updated": "2026-11-11T11:50:28Z"
 }

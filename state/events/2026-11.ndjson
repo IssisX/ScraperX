@@ -1306,3 +1306,11 @@
 {"ev": "state", "frm": "proof", "job": "J-032", "t": "2026-11-11T10:39:10Z", "to": "merged"}
 {"attempt": 2, "ev": "sent", "id": "O-8adc27c8", "job": "J-059", "ref": "PR|#343", "send": 2, "t": "2026-11-11T10:39:10Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 53, "status": "ok", "t": "2026-11-11T10:39:10Z", "tries": 1}
+{"ev": "acked", "how": "new head", "id": "O-f70eab45", "job": "J-009", "t": "2026-11-11T11:50:28Z"}
+{"ev": "acked", "how": "new head", "id": "O-8adc27c8", "job": "J-059", "t": "2026-11-11T11:50:28Z"}
+{"ev": "state", "frm": "working", "job": "J-009", "t": "2026-11-11T11:50:28Z", "to": "proof"}
+{"ev": "state", "frm": "working", "job": "J-044c", "t": "2026-11-11T11:50:28Z", "to": "proof"}
+{"ev": "state", "frm": "working", "job": "J-059", "t": "2026-11-11T11:50:28Z", "to": "proof"}
+{"ev": "state", "frm": "assigned", "job": "J-076", "t": "2026-11-11T11:50:28Z", "to": "proof"}
+{"ev": "state", "frm": "assigned", "job": "J-078", "t": "2026-11-11T11:50:28Z", "to": "proof"}
+{"ev": "pass", "job": "", "jobs": 53, "status": "ok", "t": "2026-11-11T11:50:28Z", "tries": 1}
