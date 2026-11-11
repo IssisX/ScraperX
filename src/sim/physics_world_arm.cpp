@@ -218,8 +218,11 @@ void Simulation::PhysicsWorld::arm_drive(JPH::BodyInterface &bodies, const float
     // before she frees the body would tear the arm before her re-pose.
     // She re-poses first (step back, weight in it); the snag gives; then
     // the wrist comes to her and she takes it.
-    if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 && snag_ == nullptr &&
-        snag_free_s_ >= kWristSettleS && JPH::Vec3(wrist - hand).Length() <= kWristCloseM) {
+    // A body that will not come to her first hand's pull (at its cap) she
+    // takes by the wrist as it is, caught or not: her two hands share it.
+    if (matron_->reaching_wrist() && wrist_ == nullptr && side >= 0 &&
+        (matron_->hauling_for_wrist() || (snag_ == nullptr && snag_free_s_ >= kWristSettleS)) &&
+        JPH::Vec3(wrist - hand).Length() <= kWristCloseM) {
         JPH::PointConstraintSettings grip;
         grip.mSpace = JPH::EConstraintSpace::WorldSpace;
         grip.mPoint1 = hand;

@@ -1316,11 +1316,13 @@ RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
     const RVec3 middle = bodies.GetPosition(player_);
     const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
                        (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-    // In her arm play after a re-pose (the snag's step back), her hand on his
-    // collar holds him out where he is, never drawn in after him: her other
-    // hand's pull on his wrist then stretches the arm between them.
-    const float err = state_ == State::ArmPlay && armplay_reposes_ > 0 ? std::min(0.0F, past - kPinBalanceM)
-                                                                       : past - kPinBalanceM;
+    // In her arm play after a re-pose (the snag's step back), once he is off
+    // the steel, her hand on his collar holds him out where he is, never
+    // drawn in after him: her other hand's pull on his wrist then stretches
+    // the arm between them. Still caught, she hauls him in.
+    const float err = state_ == State::ArmPlay && armplay_reposes_ > 0 && !player_caught_
+                          ? std::min(0.0F, past - kPinBalanceM)
+                          : past - kPinBalanceM;
     // (Firmer back toward the rail in the fatality, whose window must keep
     // him on its top every tick; and in the regular pin too, whose window
     // must bring a body dragged from the deck over the line: the gentler
@@ -2009,6 +2011,8 @@ void Matron::finish_dangle() {
 void Matron::wrist_taken() noexcept {
     if (state_ == State::ArmPlay && hold_phase_ == 0) {
         wrist_on_ = true;
+        hand2_hauls_ = false;
+        hand2_want_ = 0;
         wrist_taken_at_ = player_wrist_;
         hold_phase_ = 1;
         hold_s_ = 0.0F;
@@ -2043,16 +2047,21 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         return shoulder + to;
     };
     switch (hold_phase_) {
-    case 0:
+    case 0: {
         // To the wrist. Not at it in kArmReachSeconds (out of her reach: the
         // body caught on steel, or hung past her arm), she re-poses and goes
-        // for it again: she does not give it up.
+        // for it again: she does not give it up. A body that will not come
+        // (her first hand's pull at its cap): her second hand takes his wrist
+        // as it is, caught or not, and pulls with her first, the two sharing
+        // it (physics_world_arm.cpp).
+        hand2_hauls_ = hand2_hauls_ || hand_at_cap_;
         pull2_n_ = kHandReachPullN;
         pose_hand2(dt, reach(player_wrist_), kHandReachSpeedMps);
         if (hold_s_ > kArmReachSeconds) {
             arm_repose(at, player, true);
         }
         break;
+    }
     case 1: {
         // Away from the body, up and out: the shoulder takes it.
         pull2_n_ = std::min(kArmPullMaxN, pull2_n_ + kRipRampNps * dt);
@@ -2207,6 +2216,7 @@ bool Matron::begin_armplay(const State then) {
     hold_s_ = 0.0F;
     hold_phase_ = 0;
     wrist_on_ = false;
+    hand2_hauls_ = false;
     pull2_n_ = kHandReachPullN;
     hand2_target_ = physics_.GetBodyInterface().GetPosition(body_) + shoulder_local();
     hand2_target_v_ = Vec3::sZero();
@@ -2242,6 +2252,8 @@ void Matron::arm_repose(const RVec3 at, const RVec3 player, const bool reseat) {
         // the drop. The arm on, no loop on the steel.
         armplay_done_ = true;
         wrist_on_ = false;
+        hand2_hauls_ = false;
+        hand2_want_ = 0;
         ++spares_;
         state_ = State::Spare;
         hold_s_ = 0.0F;

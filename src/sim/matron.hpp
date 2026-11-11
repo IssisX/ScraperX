@@ -1927,6 +1927,8 @@ public:
     void set_player_braced(const bool braced) noexcept { player_braced_ = braced; }
     void set_player_on_ladder(const bool climbing) noexcept { player_on_ladder_ = climbing; }
     void set_thrash(const float thrash) noexcept { thrash_ = thrash; }
+    void set_hand_at_cap(const bool at_cap) noexcept { hand_at_cap_ = at_cap; }
+    void set_player_caught(const bool caught) noexcept { player_caught_ = caught; }
     void grip_taken() noexcept;
     // S1 measurement: the grab world reports both centres and the held
     // mass every tick, so refresh_view can publish the load's tip.
@@ -1961,6 +1963,8 @@ public:
                hand2_on_ != 0;
     }
     [[nodiscard]] bool reaching_wrist() const noexcept { return state_ == State::ArmPlay && hold_phase_ == 0; }
+    // Reaching for his wrist with a body that will not come to her first hand.
+    [[nodiscard]] bool hauling_for_wrist() const noexcept { return reaching_wrist() && hand2_hauls_; }
     [[nodiscard]] bool pulling_wrist() const noexcept { return state_ == State::ArmPlay && hold_phase_ == 1; }
     [[nodiscard]] JPH::RVec3 hand2_target() const noexcept { return hand2_target_; }
     [[nodiscard]] JPH::Vec3 hand2_target_velocity() const noexcept { return hand2_target_v_; }
@@ -2859,6 +2863,9 @@ private:
     int player_arms_left_ = 2;
     float pull2_n_ = kHandReachPullN;
     bool wrist_on_ = false;
+    bool player_caught_ = false;   // his body caught on steel (the world, every tick)
+    bool hand_at_cap_ = false;   // her first hand's pull at its cap, him in it (the world, every tick)
+    bool hand2_hauls_ = false;   // ArmPlay's reach: the body would not come, her second hand takes his wrist as it is
     bool arm_throw_ = false;
     JPH::Vec3 arm_throw_v_ = JPH::Vec3::sZero();
     int armplay_for_test_ = -1;

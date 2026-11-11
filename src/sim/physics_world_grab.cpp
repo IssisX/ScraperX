@@ -433,6 +433,9 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     if (ladder_pull) {
         cap = std::min(cap, std::max(0.0F, Matron::kLadderPullMaxForceN - matron_->foot_force_n()));
     }
+    // Her hand at its cap with him in it: he does not come to her pull.
+    matron_->set_hand_at_cap(grip_ != nullptr && force.Length() > cap);
+    matron_->set_player_caught(snag_ != nullptr);
     if (force.Length() > cap) {
         force *= cap / force.Length();
     }
