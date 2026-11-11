@@ -316,7 +316,12 @@ const GOVERN_BURST_RAD_S := 19.0
 # 34 rad/s while each joint sat at its 19 rad/s burst cap), so govern caps
 # each bone's global turn too, at the same bar the check measures. No burst
 # variant: the bar is absolute.
-const JOINT_GLOBAL_RAD_S := 20.0
+# The cap sits 0.5% under the bar on purpose: the probe prints each frame's
+# time to 5 decimals, so the check's dt for a true 1/60 s frame can read
+# 0.01666 s, and a bone capped at exactly 20.0 then measures 20.008 rad/s
+# (24 such frame-pairs on the first post-fix recording, every one at an
+# angle of exactly 20/60 rad). At 19.9 the worst measured speed is ~19.91.
+const JOINT_GLOBAL_RAD_S := 19.9
 # and no bone of hers slides (her hips' ride, her arm drawn out, her shoulder
 # pulled) faster than this a second (GOVERN_BURST_M_S in a burst)
 const GOVERN_M_S := 3.0
