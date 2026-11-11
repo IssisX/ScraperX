@@ -54,12 +54,12 @@ The rule: take the next one yourself; mail the moment fewer than 6 are unstarted
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 In flight (finish these): J-044l #242 (unparked 11-11, Grok answered), J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Parked: J-053 #82 (on Grok), J-060 #320 (on J-044c).
 Unstarted, in order (11-11 7 AM; new playable content first):
-0a. J-090 #408: hook her and let the rope decide (Cory 11-11, new feature; fights are spectacular, checked by eye).
+0a. J-090 #408 (Claude took it 11-11, not yours): hook her and let the rope decide (Cory 11-11, new feature; fights are spectacular, checked by eye).
 0b. J-091 #409: turn her bay trap back on her at 154 m (Cory 11-11).
 0c. J-092 #410: drop two tons on her, the probe first; build only if one clean hit reaches 6000 N·s (Cory 11-11).
 0d. J-094 #412: her weight is the only key (Grok idea 1, Cory 11-11): the probe first (plate, him, drum, her at the stop).
 0e. J-095 #413: pull the line out from under her (Grok idea 2, Cory 11-11): the cable becomes a falling rope.
-0f. J-096 #414: things bend under weight: planks, boards, gratings flex by real load and snap (Cory 11-11, asked many times).
+0f. J-096 #414 (Claude took it 11-11, not yours): things bend under weight: planks, boards, gratings flex by real load and snap (Cory 11-11, asked many times).
 1. J-054 #293: the Counterweight Crossing. Built; push it and let CI's proof be the re-run (no local slot wait).
 2. J-084 #402: one scenario plays the whole climb on the canonical route; its route table is the audit J-082 uses.
 3. J-082 #400: above 340 m every stage is a new physical action, from J-084's table, one band at a time, protected.
