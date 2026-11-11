@@ -50,32 +50,26 @@ your own branches (Cory 11-05) and mail the rest:
   old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
 ## Your queue (11-06)
-The rule: take the next one yourself; mail the moment fewer than 6 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 5 left`; Cory 11-11: "cant have that happen"). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
+The rule: take the next one yourself, and mail "J-NNN started" the moment a lane starts (so it is never taken from you, 11-11); mail the moment fewer than 8 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 7 left`; Cory 11-11: never run low). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-In flight (finish these): J-044l #242 (unparked 11-11, Grok answered), J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Parked: J-053 #82 (on Grok), J-060 #320 (on J-044c).
+In flight (finish these): J-094 #412, J-091 #409, J-055 #294 (started 9:09 AM), J-043 #241 (started 8:27 AM), J-054 #293 (protected branch), J-044l #242 (unparked 11-11, Grok answered), J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Claude has: J-090 #408, J-096 #414, J-084 #402, J-092 #410, J-082 #400, J-085 #403. Parked: J-053 #82 (on Grok), J-060 #320 (on J-044c).
 Unstarted, in order (11-11 7 AM; new playable content first):
-0a. J-090 #408 (Claude took it 11-11, not yours): hook her and let the rope decide (Cory 11-11, new feature; fights are spectacular, checked by eye).
-0b. J-091 #409: turn her bay trap back on her at 154 m (Cory 11-11).
-0c. J-092 #410: drop two tons on her, the probe first; build only if one clean hit reaches 6000 N·s (Cory 11-11).
-0d. J-094 #412: her weight is the only key (Grok idea 1, Cory 11-11): the probe first (plate, him, drum, her at the stop).
 0e. J-095 #413: pull the line out from under her (Grok idea 2, Cory 11-11): the cable becomes a falling rope.
-0f. J-096 #414 (Claude took it 11-11, not yours): things bend under weight: planks, boards, gratings flex by real load and snap (Cory 11-11, asked many times).
-1. J-054 #293: the Counterweight Crossing. Built; push it and let CI's proof be the re-run (no local slot wait).
-2. J-084 #402: one scenario plays the whole climb on the canonical route; its route table is the audit J-082 uses.
-3. J-082 #400: above 340 m every stage is a new physical action, from J-084's table, one band at a time, protected.
 4. J-083 #401: a forklift lever he grabs and moves (D4).
 5. J-087 #405: story radio cues fire in play (B3); wiring only.
 6. J-081 #399: a readable night climb (B5).
 7. J-088 #406: her fingers wrap what she holds; the pipe warning in CI (A6).
 8. J-089 #407: her spoken lines wired to her events; candidate recordings for Cory (rule 43).
-9. J-085 #403: she hunts him at every height; after J-063 lands (same climb code).
 10. J-086 #404: she pulls him off a ladder, every ladder kind; after J-001 lands (Claude's helper is in the grab code now).
+11. J-098 #416: no synthesized human sounds: her wake and his breath become real recordings (law).
+12. J-099 #417: dents: containers, barrels, steel boxes dent by real impulse (J-038's second half, Cory).
+13. J-100 #418: she reads a load hung over her and gets out from under it (her side of J-092's slab trap).
 
 Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
-Your queue is never allowed to run dry: whenever fewer than six big jobs above are unstarted, the
+Your queue is never allowed to run dry: whenever fewer than eight big jobs above are unstarted, the
 integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
 You may propose your own grand tasks too: subject `MUSE_TO_CLAUDE: proposal <title>`, with goal, why it
 matters to the player, files, and finish facts. The integrator rules on it within the hour.

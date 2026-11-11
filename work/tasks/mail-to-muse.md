@@ -29,8 +29,9 @@ the same hour.
    names branches plainly and gives no order. The GitHub comment keeps its marker (the ledger dedupes by it).
 
 ## Every mail
-- Subject `CLAUDE_TO_MUSE: <J-NNN or #N> <a few words>`; first line who (Claude, integrator) and the
-  Central time from `TZ=America/Chicago date`.
+- Subject `CLAUDE_TO_MUSE: <J-NNN or #N> <a few words>`; first line `From Claude (integrator).` and no time:
+  Gmail stamps every mail, and a typed time was wrong three times on 11-11. No clock time anywhere in a mail;
+  name a moment by its issue, comment or sha.
 - The job, the goal, the result wanted, and where the facts are (issue, PR, file and line); measured
   numbers stated as facts. Long orders go in `work/tasks/muse.md`, pointed to.
 - One job per mail where it can be.
