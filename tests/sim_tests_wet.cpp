@@ -249,7 +249,6 @@ void run_wet_e_guard(const bool expect) {
     // J-054 (#293): the ballast drum is one more kit body, built at kit index
     // 320, inside the first 595, so the forklift and everything after it sit
     // one place later than on trunk.
-    constexpr std::uint32_t kSinceBase = kBodiesBeforeE + 1;
     const std::uint32_t forklift_at =
         kSinceBase + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
     const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift)) + kNewUpper;
