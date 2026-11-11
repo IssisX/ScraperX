@@ -307,6 +307,7 @@ public:
     static constexpr float kFootAccel = 9.0F;
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
+    static constexpr float kCatchMemoryS = 0.5F;   // a catch sense stays fresh this long
     static constexpr float kSightM = 9.0F;       // her paces' "close sight" (choose_pace), not her eyes' reach
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
 
@@ -1703,7 +1704,10 @@ public:
     void post_step(float dt);
 
     // True once her hands are on the player.
-    [[nodiscard]] bool caught(JPH::RVec3 player, bool on_ladder = false) const noexcept;
+    [[nodiscard]] bool caught(bool on_ladder = false) const noexcept;
+    [[nodiscard]] Sense catch_sense(JPH::RVec3 &at) const noexcept;
+    // Her walk's ignore: her body and his, for the probes — and the place she saw or felt him, while fresh (J-049).
+    [[nodiscard]] traversal::Ignore walk_ignore() const noexcept;
     // While true the checkpoint is not renewed (see above): she is out and
     // alive and the player is on her deck, up a climb from it, or on a deck
     // her corner pipe is taking her to or (no longer frail) joins to hers. A
@@ -1734,7 +1738,11 @@ public:
         ++shoves_;
         shove_cooldown_s_ = kShoveCooldownSeconds;
     }
-    [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
+    [[nodiscard]] JPH::Vec3 shove_direction() const noexcept;
+    // Current physical reach for a shove: the same bars as caught(), but
+    // against his live body, not the sensed position (which can be a memory
+    // up to kCatchMemoryS old).
+    [[nodiscard]] bool shove_reach_now(bool on_ladder = false) const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
     // Tests only: her pace held at `pace` (0..3) with no hush, or (-1) free:
     // the tests that meet the Turn and the vault at one speed, as written.
@@ -1844,7 +1852,7 @@ public:
 
     // The hold's interface to the physics (physics_world_grab.cpp).
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_; }
-    void begin_grab(JPH::RVec3 player);
+    void begin_grab();
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     // Her first hand going for the point it is to close on (grip_point): the
     // ankle of a man who is down (beat 1 done) or on a ladder, or, in a hold,
@@ -2739,6 +2747,8 @@ private:
     float travel_wp_best_ = 1.0e9F;
     float travel_wp_stall_s_ = 0.0F;
     bool travel_rerouted_ = false;
+    bool travel_walk_is_patch_ = false;   // this walk came from the map's patch links, not her feet's floor search
+    bool travel_fell_off_path_ = false;   // she left her walk by falling: the next landing on another floor plans again
     int travel_stuck_ = 0;   // fresh searches of her way in a row with no waypoint passed
     JPH::Vec3 travel_still_at_ = JPH::Vec3::sZero();   // where she last moved from on a walk
     float travel_still_s_ = 0.0F;
