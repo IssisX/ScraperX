@@ -54,6 +54,9 @@ The rule: take the next one yourself; mail the moment fewer than 6 are unstarted
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 In flight (finish these): J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-061 #312, J-021 #128. Parked: J-053 #82 and J-044l (on Grok), J-060 #320 (on J-044c).
 Unstarted, in order (11-11 7 AM; new playable content first):
+0a. J-090 #408: hook her and let the rope decide (Cory 11-11, new feature; fights are spectacular, checked by eye).
+0b. J-091 #409: turn her bay trap back on her at 154 m (Cory 11-11).
+0c. J-092 #410: drop two tons on her, the probe first; build only if one clean hit reaches 6000 N·s (Cory 11-11).
 1. J-054 #293: the Counterweight Crossing. Built; push it and let CI's proof be the re-run (no local slot wait).
 2. J-082 #400: above 340 m every stage is a new physical action, one band at a time, protected (rules 52, 53).
 3. J-084 #402: one scenario plays the whole climb, ground to summit, on the canonical route (rules 56, 27).
