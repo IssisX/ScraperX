@@ -955,16 +955,22 @@ bool Matron::pipe_reaches(const float floor_y) noexcept {
     return std::abs(stories - std::round(stories)) < 0.02F;
 }
 
+float Matron::pipe_next_toward(const float floor_y, const float lead_y) noexcept {
+    // The deck nearest the lead, and the lead on it or on a top within
+    // kPipeLeadM of it: a story toward it. Else (her own deck, or a top deep
+    // inside a story) not the pipe's.
+    const float deck = std::round(lead_y / kStackPitch) * kStackPitch;
+    if (std::abs(deck - floor_y) < 1.0F || std::abs(lead_y - deck) > kPipeLeadM) {
+        return floor_y;
+    }
+    return deck < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
+}
+
 bool Matron::follow_pipe(const float dt, const RVec3 at) {
     // Every stage takes hold of it (Cory, 11-11: she climbs as a pest too);
     // frail, she goes on it at a pest's slow pace (ride_pipe).
     const float floor_y = levels_[static_cast<std::size_t>(level_)].floor_y;
-    float next = floor_y;
-    if (lead_floor_ < floor_y - 0.6F) {
-        next = floor_y - kStackPitch;
-    } else if (lead_floor_ > floor_y + 0.6F) {
-        next = floor_y + kStackPitch;
-    }
+    const float next = pipe_next_toward(floor_y, lead_floor_);
     if (next == floor_y || !pipe_reaches(floor_y) || !pipe_reaches(next)) {
         return false;
     }

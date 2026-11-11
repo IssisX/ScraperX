@@ -2850,8 +2850,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             }
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward, at any stage: chased longer.
-            const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
-            const bool by_pipe = elsewhere && pipe_reaches(floor_y) && pipe_reaches(toward);
+            const float toward = pipe_next_toward(floor_y, lead_floor_);
+            const bool by_pipe = elsewhere && toward != floor_y && pipe_reaches(floor_y) && pipe_reaches(toward);
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
             // walking to, a journey or a travel she is on, a climb she is
