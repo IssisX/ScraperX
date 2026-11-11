@@ -5,6 +5,8 @@ A queue line names a job as `J-NNN #N`. For each one it reports:
   DONE      the issue is closed, or a merged PR's body starts `Job: J-NNN`
   OPEN-PR   an open PR's body starts `Job: J-NNN` (work exists; not unstarted)
   BRANCH    a remote branch names the job (`j0NN`) and moved in the last 72 h (work exists)
+  STARTED   the owner said it started (a bridged Muse post on the issue with "started" in its title line), work
+            that is not pushed yet: never take such a job from its owner
   OK        none of the above: the job is really unstarted
 A line that says it waits ("after J-NNN lands", "on J-NNN") also gets WAITS-ON J-NNN (open) or READY (that job's
 issue is closed, so the integrator tells the owner to start it). Every job on the "Parked:" line is listed with the
@@ -84,6 +86,14 @@ def blocker_state(num: str) -> str:
         f"WAITS-ON J-{num} #{it['number']} (open)"
 
 
+def started(issue: str) -> bool:
+    for c in gh(f"repos/{REPO}/issues/{issue}/comments?per_page=100"):
+        first = (c.get("body") or "").strip().split("\n", 1)[0].lower()
+        if first.startswith("**muse (via email bridge)") and "started" in first and "never started" not in first:
+            return True
+    return False
+
+
 def newest_comment(issue: str) -> str:
     got = gh(f"repos/{REPO}/issues/{issue}/comments?per_page=100")
     people = [c for c in got if not c["user"]["login"].endswith("[bot]")]
@@ -115,6 +125,8 @@ def main() -> int:
             verdict = "OPEN-PR"
         elif branches:
             verdict = "BRANCH " + ",".join(branches)
+        elif started(issue):
+            verdict = "STARTED"
         else:
             verdict = "OK"
         bad += verdict != "OK"
