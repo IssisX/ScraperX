@@ -37,7 +37,7 @@ it to match, never ask him again.
 ## Talking to Cory (he is on a phone)
 
 - He types fast on a phone, with typos: read for what he means, never ask about wording (11-10).
-- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10: "SIMPLE SIMPLE SIMPLE"). Say progress as what is left (11-11).
+- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10). Answer his question first; explain as what happened, why, the fix, in everyday words (11-11). Say progress as what is left (11-11).
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
   do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
@@ -59,8 +59,7 @@ it to match, never ask him again.
   written down) or made like the fear yells (`src/voice/generate_fall_voice.py`), never synthesized in code.
   Cory picks by ear.
 - **Look at it:** visual work (her body, hair, contacts, camera, UI) is checked by eye before it lands:
-  `mcp__godot__run_project` with `projectPath` `godot` and `background: true`, then `take_screenshot` /
-  `simulate_input` / `run_script`, then `stop_project`. Never say "we can't see it".
+  `mcp__godot__run_project` (`projectPath` `godot`, `background: true`), screenshots, `stop_project`.
 
 ## How the agents work together (keep this whole)
 
