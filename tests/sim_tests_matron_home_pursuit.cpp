@@ -96,7 +96,7 @@ void run_matron_home_pursuit() {
 }
 
 // J-085 part 2: the pipe is not her only way up the lower stack. Where a way
-// of her own map starts nearer her than the pipe's corner, she takes it with
+// of her own map has her to him sooner than the pipe would, she takes it with
 // the pipe there: the C1 davit ladder (33 -> 44), the C2 rack and its davit
 // ladder (77 -> 88), the S3 hoist (88 -> 132). Dangerous, a lead heard every
 // 4 s on the deck above; her feet and hands in her one budget, gravity on.
@@ -136,7 +136,7 @@ void lower_way(const char *name, const Vector3 her, const double goal, const boo
               << worst_force << " N " << worst_power << " W\n";
     require(there && alive, "matron lower ways: by a way of her own map she is on the deck above");
     require(m.pipe_links == m0.pipe_links && (hoist ? s.matron_hoist().phase > 0 || rides > 0 : climbs > 0),
-            "matron lower ways: her map's own way, nearer her than the pipe, not the pipe");
+            "matron lower ways: her map's own way, sooner to him than the pipe, not the pipe");
     require(worst_gravity == 1.0 && worst_force <= kForceCapN + 1.0 && worst_power <= kPowerCapW + 1.0,
             "matron lower ways: gravity on, her feet and hands inside her one budget");
 }
