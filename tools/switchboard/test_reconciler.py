@@ -1325,6 +1325,19 @@ class OneJudge(unittest.TestCase):
         self.assertEqual([(o["to"], o["version"]) for o in obs], [("claude", "6752607408")])
         self.assertEqual(obs[0]["ack"]["how"], "reply naming it")
 
+    def test_a_status_ask_whose_pr_merged_is_closed_as_the_ledger_drops_it(self):
+        # 11-11 #116 6794979766: Muse's "FIX pushed" to Claude sat ESCALATED after #377 merged
+        h = Harness()
+        status = cmt(6794979766, 500, NOW - 5 * M, "**Muse (via email bridge): J-500 #377 FIX pushed**\n\nTo Claude: "
+                     "J-500 #377 FIX pushed @ cd515413.")
+        h.run(feed(issues=[issue(500)]), NOW, comments=[status], open_threads=frozenset({500}))
+        ob = h.obs("J-500", kind="ask")[0]
+        self.assertEqual((ob["to"], ob["closed"]), ("claude", None))
+        h.run(feed(issues=[issue(500)], closed={377: (NOW + M, "J-500")}), NOW + 10 * M, comments=[status],
+              open_threads=frozenset({500}))
+        ob = h.obs("J-500", NOW + 10 * M, kind="ask")[0]
+        self.assertTrue((ob["closed"] or {}).get("why", "").startswith(R.asks.PR_CLOSED), ob["closed"])
+
     def test_an_obligation_for_what_the_judge_no_longer_reads_as_an_ask_is_closed_never_sent_again(self):
         # #340 6746481113, "both To Grok asks above are done": owed by Grok as O-6d2a7767 since 11-09
         h = Harness()

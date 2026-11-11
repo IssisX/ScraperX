@@ -203,7 +203,9 @@ class RedTests(unittest.TestCase):
         self.assertIn(switch.READ_NOW, second)
         self.assertIn("\n  native-tests (matron-slices-3): FAIL: ammo hands", second)
         self.assertNotIn(switch.LOG_UNREAD, second)
+        reads = len(gh.log_reads)
         self.assertEqual(make(gh).muse([]), 0, "read once: never again")
+        self.assertEqual(len(gh.log_reads), reads, "sent with its tests: muse() reads no log for it again")
 
     def test_the_integrators_inbox_posts_a_read_notice_once_after_an_unread_one(self):
         mine = "claude/integrate-j104"
@@ -245,6 +247,25 @@ class RedTests(unittest.TestCase):
                                                  switch.inbox_key("muse-RED-BRANCH", NAME, HEAD)))
         bare = switch.InboxItem("RED-BRANCH", NAME, HEAD, "x", "muse")
         self.assertEqual(bare.key, it.key)
+
+    def test_a_muse_notice_already_on_the_board_reads_no_log(self):
+        # 11-11, steer job 130846921120: muse() re-read run 43015272262's logs for a notice it had sent long before
+        gh = self.gh(logs={501: NATIVE_LOG, 502: TOUCH_LOG, 503: NATIVE_LOG})
+        self.assertEqual(make(gh).muse([]), 1)
+        self.assertEqual(gh.log_reads, [501, 502, 503])
+        self.assertEqual(make(gh).muse([]), 0)
+        self.assertEqual(gh.log_reads, [501, 502, 503], "the board's keys are read before any log")
+
+    def test_a_pr_notice_already_on_its_job_issue_reads_no_log(self):
+        s = steered(ref=NAME, proof="red: native-tests (matron-slices-3)", committed="2026-11-06T19:30:00Z",
+                    run_id=40)
+        s.ctx["issue"] = {"number": 391}
+        gh = LogGH({501: NATIVE_LOG}, runs=[run(40, NAME, HEAD, hours=0.2)], jobs={40: JOBS[:1]})
+        self.assertEqual(make(gh).muse([s]), 1)
+        self.assertEqual(gh.posts[0][0], 391)
+        self.assertEqual(gh.log_reads, [501])
+        self.assertEqual(make(gh).muse([s]), 0)
+        self.assertEqual(gh.log_reads, [501], "the job issue's keys are read before any log")
 
     def test_a_red_already_listed_reads_no_log(self):
         gh = self.gh()

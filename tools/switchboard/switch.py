@@ -420,6 +420,9 @@ class InboxItem:
     dest: str = "claude"   # who it goes to: "muse", "claude", or "both" (J-052)
     finding: str = ""      # for a FIX: the finding's first 600 chars and its link, for Muse's comment
     tests: tuple[str, ...] = ()   # for a red: "<job>: <FAIL line>" per failing test (J-104), already log_text
+    # for a red whose logs this audience may want: its proof run, so muse() reads them only once it knows the item
+    # is not sent yet (its keys are on the board and the job issues, read after the items are built)
+    run_id: int | None = dataclasses.field(default=None, compare=False)
 
     @property
     def unread(self) -> str:
@@ -496,6 +499,7 @@ def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str,
 
 
 class Switch:
+    defer_logs = False   # muse() builds its items with no log read, then reads the logs of the unsent ones (J-104)
     auto_pr_failed: tuple[InboxItem, ...] = ()   # this sweep's AUTO-PR-FAILED items, for the inbox (J-051)
     queue_items: tuple[InboxItem, ...] = ()      # this sweep's QUEUE-LOW item, for the inbox (J-097)
     digest_held: tuple[InboxItem, ...] = ()      # digest entries no inbox comment has carried yet (J-103), in the state
@@ -1386,7 +1390,11 @@ class Switch:
         reported: set[str] = set()
         for s in steered:
             reported |= set(self.muse_keys(s.ctx.get("comments") or []))
-        items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
+        self.defer_logs = True   # the keys sent are known only below: no log is read before they are (J-104)
+        try:
+            items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
+        finally:
+            self.defer_logs = False
         homes = {f"#{s.facts.number}": self.muse_home(s.ctx) for s in steered}   # 0: no job issue, so the board
         board = self.board_issue() if items else 0
         wheres = {homes.get(it.target) or board for it in items}
@@ -1398,6 +1406,10 @@ class Switch:
                 reported |= set(self.muse_keys(self.bounded_comments(old, MAX_OLD_BOARD_PAGES)))
         seen, new = set(reported), []
         for it in items:
+            if it.run_id is not None and not it.tests:
+                if inbox_key("muse-" + it.kind, it.target, it.head) in seen:
+                    continue   # sent with its tests (or before UNREAD_KEY): its logs are not read again
+                it = dataclasses.replace(it, tests=self.red_tests(it.run_id))
             if not it.listed(seen, "muse-"):
                 seen.add(it.muse_key)
                 new.append(it.read_now(seen, "muse-"))
@@ -1791,8 +1803,10 @@ class Switch:
             # J-104: a red item names its failing tests, its logs read only when this audience has not had it yet
             fresh = run_id is not None and inbox_key(prefix + kind, target, f.head_sha) not in reported
             wanted = dest in ("muse", "both") if mine else dest in ("claude", "both")
+            read = fresh and wanted
             return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}", dest, finding,
-                             self.red_tests(run_id) if fresh and wanted else ())
+                             self.red_tests(run_id) if read and not self.defer_logs else (),
+                             run_id=run_id if read else None)
 
         def kept(it: InboxItem) -> bool:
             return it.dest in ("muse", "both") if mine else it.dest in ("claude", "both")
@@ -1997,7 +2011,8 @@ class Switch:
                 out.append(InboxItem("RED-BRANCH", name, head,
                                      f"RED-BRANCH {untrusted(name)} head {head[:8]}: proof red on "
                                      f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))",
-                                     dest, tests=self.red_tests(rid) if wanted else ()))
+                                     dest, tests=self.red_tests(rid) if wanted and not self.defer_logs else (),
+                                     run_id=rid if wanted else None))
         return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:

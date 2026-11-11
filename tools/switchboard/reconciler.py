@@ -312,6 +312,7 @@ class Pass:
     # comment it read as a possible ask, and the (comment id, holder) of each ask it found, answered or not
     examined: set = dataclasses.field(default_factory=set)
     asks_read: set = dataclasses.field(default_factory=set)
+    asks_closed: set = dataclasses.field(default_factory=set)   # (comment id, holder) of asks a PR's close answered
 
 
 class Lookups:
@@ -506,9 +507,13 @@ def stream_asks(p: Pass, own: set[str], roster: L.Roster | None = None, thread_j
               for c in sorted(p.comments, key=lambda c: (c.t, c.id)) if c.id not in own]
     judge = L.ask_judge(roster, thread_job or {}) if roster is not None else {}
     who = judge.get("who") or (lambda name: name.lower())
-    p.examined, p.asks_read = set(), set()
+    p.examined, p.asks_read, p.asks_closed = set(), set(), set()
     out = []
-    for a in asks.read(stream, set(p.open_threads), p.now - L.LIVE, examined=p.examined, **judge):
+    for a in asks.read(stream, set(p.open_threads), p.now - L.LIVE, examined=p.examined,
+                       closed=getattr(p.feed, "closed", None) or {}, **judge):
+        if a["answer"] == asks.PR_CLOSED:   # no reply acks it: evidence() closes it (as the ledger drops it)
+            p.asks_closed.add((a["id"], who(a["target"])))
+            continue
         p.asks_read.add((a["id"], who(a["target"])))
         out.append(L.AskIn(a["id"], a["n"], "", a["target"], a["a"], a["t"]))
     return out
@@ -918,7 +923,7 @@ class Seen:
         self.branches = {b.name: b for b in f.branches}
         self.issues = {i.number: i for i in f.issues}
         self.open_threads = p.open_threads
-        self.examined, self.asks_read = p.examined, p.asks_read
+        self.examined, self.asks_read, self.asks_closed = p.examined, p.asks_read, p.asks_closed
         self.heads = dict(f.open_heads) | {pr.head_ref: pr.number for pr in f.prs}
         self.runs: dict[str, L.RunIn] = {}
         for r in sorted(f.runs, key=lambda r: r.created_at):
@@ -959,6 +964,8 @@ def evidence(ob: dict, o: JobObs | None, seen: Seen, rec: dict, now: dt.datetime
         n = ob["thread"]   # but an ask on a thread that closed is over (the J-072 replay: #107's asks were
         if seen.open_threads is not None and n not in seen.open_threads and seen.issue(n).get("state") == "closed":
             return f"close:{THREAD_CLOSED}"   # re-sent and dead-lettered after the board moved to #340)
+        if (version, ob["to"]) in seen.asks_closed:
+            return f"close:{asks.PR_CLOSED}"   # a status ask to the integrator whose PR merged or closed (asks.py)
         if version in seen.examined and (version, ob["to"]) not in seen.asks_read:
             # the judge read this very comment this pass and it asks this holder nothing: a sentence that says
             # "To Grok asks", or a post that names an ask from its addressee, its answer (tools/board/asks.py)
