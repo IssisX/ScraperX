@@ -35,6 +35,7 @@ constexpr float kPipeStallS = 2.5F;
 constexpr float kPipeOverloadS = 0.18F;
 constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.78
 constexpr float kPipeLegsLineN = 800.0F;  // her legs' pull back onto her line while she slides
+constexpr float kHoistRideMps = 1.0F;     // a hoist's car at her pace on it (matron_hoist.cpp's kBoardMps)
 // Her legs come down onto a flange: they bear on it, a support, not a grip.
 // What they can take is her one budget (3.7 times her weight); past it they
 // give and she sinks, but they do not open.
@@ -498,12 +499,10 @@ void Matron::ride_pipe(const float dt) {
             pipe_let_go_y_ = float(at.GetY());
         }
     }
-    float pace = 0.4F;   // gone frail on it: slow
+    float pace = pipe_pace(down);
     if (stage_ == Stage::Changed) {
         const bool burst = std::fmod(pipe_s_, kTurnCycleSeconds) < kTurnBurstSeconds;
         pace = burst ? (down ? kPipeChangedDownBurstMps : kPipeChangedUpBurstMps) : kPipeChangedPauseMps;
-    } else if (stage_ == Stage::Dangerous) {
-        pace = down ? kPipeDownMps : kPipeUpMps;
     }
     // The rail she crosses (Mount: the deck she leaves; else the deck she
     // goes to), her middle perched over it, and her tuck as she rises over it.
@@ -988,7 +987,27 @@ bool Matron::pipe_serves(const float next) {
     return pipe_serves_ok_;
 }
 
-bool Matron::own_way_nearer(const RVec3 at, const float pipe_off) {
+float Matron::pipe_pace(const bool down) const noexcept {
+    if (stage_ == Stage::Changed) {
+        // Its bursts and pauses, over a turn's cycle.
+        const float burst = kTurnBurstSeconds / kTurnCycleSeconds;
+        return burst * (down ? kPipeChangedDownBurstMps : kPipeChangedUpBurstMps) + (1.0F - burst) * kPipeChangedPauseMps;
+    }
+    if (stage_ == Stage::Dangerous) {
+        return down ? kPipeDownMps : kPipeUpMps;
+    }
+    return 0.4F;   // gone frail on it: slow
+}
+
+float Matron::pipe_time_s(const RVec3 at, const float floor_y, const float stand_z) const noexcept {
+    const float stories = std::max(1.0F, std::round(std::abs(lead_floor_ - floor_y) / kStackPitch));
+    const float walk = distance_xz(float(at.GetX()), float(at.GetZ()), kPipeDeckX, stand_z) +
+                       distance_xz(kPipeDeckX, stand_z, heard_x_, heard_z_);
+    const bool down = lead_floor_ < floor_y;
+    return walk / kHuntMps + stories * (kStackPitch / pipe_pace(down) + (down ? kPipeDownExtraS : kPipeUpExtraS));
+}
+
+bool Matron::own_way_sooner(const RVec3 at, const float pipe_s) {
     if (scanned_ == nullptr) {
         return false;
     }
@@ -1003,57 +1022,64 @@ bool Matron::own_way_nearer(const RVec3 at, const float pipe_off) {
     if (here != own_way_from_ || goal != own_way_to_) {
         own_way_from_ = here;
         own_way_to_ = goal;
-        own_way_found_ = false;
+        own_way_moves_.clear();
         own_way_hoist_ = false;
-        own_way_lo_x_ = own_way_lo_z_ = std::numeric_limits<float>::max();
-        own_way_hi_x_ = own_way_hi_z_ = std::numeric_limits<float>::lowest();
-        const auto span = [&](const Vec3 p) {
-            own_way_lo_x_ = std::min(own_way_lo_x_, p.GetX());
-            own_way_hi_x_ = std::max(own_way_hi_x_, p.GetX());
-            own_way_lo_z_ = std::min(own_way_lo_z_, p.GetZ());
-            own_way_hi_z_ = std::max(own_way_hi_z_, p.GetZ());
-        };
-        // Her map's own way there: where its first move off the floor
-        // begins, and where its moves reach.
+        // Her map's own way there: its moves off the floor, each with its
+        // cost (the scan's seconds); her walks between them are on her feet.
         for (const int e : scanned_->plan(here, goal)) {
             const traversal::Edge &edge = scanned_->edges()[static_cast<std::size_t>(e)];
-            if (edge.kind == traversal::MoveKind::Walk) {
-                continue;
-            }
-            if (!own_way_found_) {
-                own_way_found_ = true;
-                own_way_x_ = edge.spec.start.GetX();
-                own_way_z_ = edge.spec.start.GetZ();
-            }
-            span(edge.spec.start);
-            span(edge.spec.goal);
-            if (edge.spec.line.GetX() != 0.0F || edge.spec.line.GetZ() != 0.0F) {
-                span(edge.spec.line);
+            if (edge.kind != traversal::MoveKind::Walk) {
+                own_way_moves_.push_back(OwnMove{edge.spec.start, edge.spec.goal, edge.spec.line, edge.cost});
             }
         }
-        // Or a hoist's landing (matron_hoist.cpp) where no way of the map joins them.
-        HoistLeg leg;
-        if (!own_way_found_ && find_hoist(here, goal, leg)) {
-            own_way_found_ = true;
-            own_way_hoist_ = true;
-            own_way_x_ = leg.board_at.GetX();
-            own_way_z_ = leg.board_at.GetZ();
-        }
+        // Or a hoist (matron_hoist.cpp) where no way of the map joins them.
+        own_way_hoist_ = own_way_moves_.empty() && find_hoist(here, goal, own_way_leg_);
     }
-    // A planned way only where her journey plans it: each of its moves
-    // inside her journey's own scan around her and the lead
-    // (start_journey_to). From the deck 6 landing the C2 pole and ladder up
-    // from the duct lie past it: not hers from there, and the pipe serves.
-    if (own_way_found_ && !own_way_hoist_ &&
-        (own_way_lo_x_ < std::min(float(at.GetX()), heard_x_) - kJourneyScanMarginM ||
-         own_way_hi_x_ > std::max(float(at.GetX()), heard_x_) + kJourneyScanMarginM ||
-         own_way_lo_z_ < std::min(float(at.GetZ()), heard_z_) - kJourneyScanMarginM ||
-         own_way_hi_z_ > std::max(float(at.GetZ()), heard_z_) + kJourneyScanMarginM)) {
+    const float ax = float(at.GetX());
+    const float az = float(at.GetZ());
+    float own_s = 0.0F;
+    if (own_way_hoist_) {
+        // To its landing, the car's travel at her own pace on it (she works
+        // it: matron_hoist.cpp), and off its far landing to him.
+        const Vec3 board = own_way_leg_.board_at;
+        const Vec3 exit = own_way_leg_.exit_at;
+        if (column_blocked_near(board.GetX(), board.GetZ())) {
+            return false;
+        }
+        own_s = (distance_xz(ax, az, board.GetX(), board.GetZ()) + distance_xz(exit.GetX(), exit.GetZ(), heard_x_, heard_z_)) /
+                    kHuntMps +
+                std::abs(exit.GetY() - board.GetY()) / kHoistRideMps;
+        return own_s < pipe_s;
+    }
+    if (own_way_moves_.empty()) {
         return false;
     }
+    // Only a way her journey plans: each of its moves inside the reach of
+    // her journey's own scan around her and the lead (start_journey_to).
+    // From the deck 6 landing the C2 pole and ladder up from the duct lie
+    // past it: not hers from there.
+    const float lo_x = std::min(ax, heard_x_) - kJourneyScanMarginM;
+    const float hi_x = std::max(ax, heard_x_) + kJourneyScanMarginM;
+    const float lo_z = std::min(az, heard_z_) - kJourneyScanMarginM;
+    const float hi_z = std::max(az, heard_z_) + kJourneyScanMarginM;
+    const auto inside = [&](const Vec3 p) {
+        return p.GetX() >= lo_x && p.GetX() <= hi_x && p.GetZ() >= lo_z && p.GetZ() <= hi_z;
+    };
+    float x = ax;
+    float z = az;
+    for (const OwnMove &move : own_way_moves_) {
+        if (!inside(move.start) || !inside(move.goal) ||
+            ((move.line.GetX() != 0.0F || move.line.GetZ() != 0.0F) && !inside(move.line))) {
+            return false;
+        }
+        own_s += distance_xz(x, z, move.start.GetX(), move.start.GetZ()) / kHuntMps + move.cost;
+        x = move.goal.GetX();
+        z = move.goal.GetZ();
+    }
+    own_s += distance_xz(x, z, heard_x_, heard_z_) / kHuntMps;
     // One that failed under her a moment ago she leaves alone, as her plans do.
-    return own_way_found_ && !column_blocked_near(own_way_x_, own_way_z_) &&
-           distance_xz(float(at.GetX()), float(at.GetZ()), own_way_x_, own_way_z_) < pipe_off;
+    const Vec3 first = own_way_moves_.front().start;
+    return !column_blocked_near(first.GetX(), first.GetZ()) && own_s < pipe_s;
 }
 
 bool Matron::follow_pipe(const float dt, const RVec3 at) {
@@ -1080,10 +1106,9 @@ bool Matron::follow_pipe(const float dt, const RVec3 at) {
     const float stand_z = raised ? kPipeRailZ : kPipeDeckZ;
     const float off = distance_xz(ax, az, kPipeDeckX, stand_z);
     const float accel = turn_ != Turn::None ? kTurnFootAccel : kFootAccel;
-    // On the lower stack a way of her own map nearer her than the pipe's
-    // corner is hers first: the pipe is not her only way up there (J-085).
-    // From her old decks (132 to 154) the pipe stays her way after him.
-    if (off > 0.25F && floor_y < kLowerStackTopM - 0.5F && own_way_nearer(at, off)) {
+    // A way of her own map that has her to him sooner than the pipe is hers
+    // first: the pipe is not her only way between decks (J-085).
+    if (off > 0.25F && own_way_sooner(at, pipe_time_s(at, floor_y, stand_z))) {
         return false;
     }
     if (off > 0.25F) {
