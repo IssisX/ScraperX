@@ -115,6 +115,13 @@ def main():
     if not found:
         return 0
 
+    if event == "Stop":
+        # Cory 11-11, after a third wrong time: a reply to him carries no clock time at all. A fresh read did not
+        # stop a time typed from memory, so no read makes a typed time allowed here.
+        print(json.dumps({"decision": "block", "reason": (
+            f"BLOCKED by .claude/hooks/check_clock_read.py: the reply states '{found.group(0)}'. Replies to Cory "
+            "carry no clock times (11-11). Rewrite it without the time.")}))
+        return 0
     read = last_clock_read(rows) if rows else None
     now = datetime.now(timezone.utc)
     if read is not None and (now - read).total_seconds() <= FRESH_MIN * 60:
