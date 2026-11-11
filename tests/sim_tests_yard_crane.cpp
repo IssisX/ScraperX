@@ -668,12 +668,10 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
 
 // The save's tail since her damage joined it: the grips' two lists ([n][n
 // loads][n][n ratings]), then her damage under its mark (MAD1: the mark,
-// two meters, one dead byte), then her per-region injury under its mark
-// (INJ1: the mark, nine j_region, nine j_event; J-059 #343 fix), then the
-// fabricated objects if the world holds any (FAB1: the mark, a count, each
-// an entity, length-first hull bytes, thirteen state numbers, two flag
-// bytes). The offset of the grip lists, or bytes.size() when the save does
-// not hold them so.
+// two meters, one dead byte), then the fabricated objects if the world
+// holds any (FAB1: the mark, a count, each an entity, length-first hull
+// bytes, thirteen state numbers, two flag bytes). The offset of the grip
+// lists, or bytes.size() when the save does not hold them so.
 std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
     const auto word = [&bytes](const std::size_t at, std::uint32_t &out) {
         if (at + 4 > bytes.size()) {
@@ -724,16 +722,7 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
             if (!word(at, loads) || !word(at + 4 + 4 * n, ratings) || loads != n || ratings != n) {
                 continue;
             }
-            // After her damage, her per-region injury, under its own mark
-            // (INJ1, J-059 #343 fix): nine j_region and nine j_event, 72
-            // bytes after the mark. A save made before it ends at the
-            // damage, or at the fabricated objects' mark.
-            std::size_t tail = m + 13;
-            std::uint32_t injury_mark = 0;
-            if (tail + 76 <= bytes.size() && word(tail, injury_mark) && injury_mark == 0x314A4E49U) {
-                tail += 76;
-            }
-            if (tail == bytes.size() || fabricated_to_end(tail)) {
+            if (m + 13 == bytes.size() || fabricated_to_end(m + 13)) {
                 return at;
             }
         }

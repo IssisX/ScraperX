@@ -323,9 +323,6 @@ std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
 
 // The Matron's damage in a save follows the grips under this mark ("MAD1").
 constexpr std::uint32_t kMatronDamageMark = 0x314D414DU;
-// Her per-region injury follows her damage under this mark ("INJ1",
-// J-059 #343 fix): nine regions, j_region and j_event each.
-constexpr std::uint32_t kMatronInjuryMark = 0x314A4E49U;
 
 // The committed checkpoint as bytes (see SaveWriter).
 void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
@@ -375,12 +372,6 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.pod(checkpoint_.matron.damage_ns);
     w.pod(checkpoint_.matron.player_damage_ns);
     w.pod(static_cast<std::uint8_t>(checkpoint_.matron.dead ? 1 : 0));
-    // Her per-region injury, under its own mark, so a save made before it
-    // still loads: it ends at the damage, or at the fabricated objects'
-    // mark (J-059 #343 fix: a reload restores her as saved).
-    w.pod(kMatronInjuryMark);
-    for (const float d : checkpoint_.matron.injury_j_region) w.pod(d);
-    for (const float d : checkpoint_.matron.injury_j_event) w.pod(d);
     // Fabricated objects follow the damage, under their mark, only when the
     // world holds any.
     write_fabricated(w);
@@ -438,9 +429,8 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                          [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
     }
     // After the grips, one mark tells the rest: the Matron's damage (a save
-    // made with it, "MAD1"), then her per-region injury ("INJ1", J-059 #343
-    // fix), then the fabricated objects (a save made before it, "FAB1"), or
-    // nothing (a save made before them, which ends here).
+    // made with it, "MAD1"), the fabricated objects (a save made before it,
+    // "FAB1"), or nothing (a save made before both, which ends here).
     std::vector<SavedFabricated> saved;
     if (ok && !r.done()) {
         std::uint32_t mark = 0;
@@ -451,26 +441,9 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                  dead <= 1 && std::isfinite(loaded.matron.damage_ns) && loaded.matron.damage_ns >= 0.0F &&
                  std::isfinite(loaded.matron.player_damage_ns) && loaded.matron.player_damage_ns >= 0.0F;
             loaded.matron.dead = dead == 1;
-            // After her damage, her per-region injury, under its own mark
-            // (J-059 #343 fix: a reload restores her as saved). A save made
-            // before it ends here, or at the fabricated objects' mark.
+            // After her damage, the fabricated objects, if the save holds any.
             if (ok && !r.done()) {
-                ok = r.pod(mark);
-                if (ok && mark == kMatronInjuryMark) {
-                    for (float &d : loaded.matron.injury_j_region) {
-                        ok = ok && r.pod(d) && std::isfinite(d) && d >= 0.0F;
-                    }
-                    for (float &d : loaded.matron.injury_j_event) {
-                        ok = ok && r.pod(d) && std::isfinite(d) && d >= 0.0F;
-                    }
-                    // After her injury, the fabricated objects, if the save holds any.
-                    if (ok && !r.done()) {
-                        ok = r.pod(mark) && read_fabricated(r, saved, mark);
-                    }
-                } else if (ok) {
-                    // Not her injury: the fabricated objects, whose mark this is.
-                    ok = read_fabricated(r, saved, mark);
-                }
+                ok = r.pod(mark) && read_fabricated(r, saved, mark);
             }
         } else if (ok) {
             // Not her damage: the fabricated objects, whose mark this is.
