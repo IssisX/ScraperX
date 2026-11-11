@@ -325,7 +325,7 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
             float lowest = std::numeric_limits<float>::max();
             for (const Level &level : levels_) lowest = std::min(lowest, level.floor_y);
             const bool frail = stage_ == Stage::Pest && turn_ == Turn::None && lead_floor_ >= lowest - 0.5F;
-            const bool still = std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F;
+            const bool still = std::abs(body_velocity().GetY()) < 0.3F;
             const bool started = !frail && still && journey_way_.begin(MoverGoal{at, heard_x_, heard_z_, lead_floor_, true});
             return started;
         }
@@ -360,7 +360,7 @@ bool Matron::follow_found_climb(const float dt, const RVec3 at) {
     yaw_ = turn_toward(yaw_, std::atan2(found_.facing.GetX(), found_.facing.GetZ()), kTurnRate, dt);
     // A climb starts from her feet on the floor, still: not out of a fall
     // (one that lands at the foot lands first, and its landing counts).
-    if (std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) > 0.3F ||
+    if (std::abs(body_velocity().GetY()) > 0.3F ||
         std::abs(float(at.GetY()) - kStandCentre - found_.from_y) > 0.15F) {
         return true;
     }
@@ -547,7 +547,7 @@ bool Matron::start_journey(const RVec3 at) {
              AABox(Vec3(lo_x, std::min(feet, lead_floor_) - 3.0F, lo_z), Vec3(hi_x, std::max(feet, lead_floor_) + 4.0F, hi_z)),
              ignore);
     if (climber_ == nullptr) {
-        climber_ = std::make_unique<traversal::Climber>(physics_, body_, ignore);
+        new_climber(ignore);
     }
     int from = map.region_at(Vec3(float(at.GetX()), feet, float(at.GetZ())));
     if (from < 0) {

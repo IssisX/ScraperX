@@ -325,7 +325,7 @@ bool Matron::hush_step(const float dt, const bool saw, const float distance, con
     // Standing still while sinking is not listening: she is sliding off
     // a slope edge, and the hush would hold her there until she falls.
     // End any hush, and do not start one, so she walks to solid ground.
-    if (physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() < -0.1F) {
+    if (body_velocity().GetY() < -0.1F) {
         if (hush_s_ > 0.0F) {
             hush_s_ = 0.0F;
             ++creaks_;

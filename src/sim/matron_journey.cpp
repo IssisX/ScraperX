@@ -188,7 +188,7 @@ bool Matron::travel_to(const int region, const std::vector<int> &avoid) {
     }
     // Her hands on this body (a respawn gives her a new one). Invalid or
     // unreachable requests above leave her existing controller untouched.
-    climber_ = std::make_unique<traversal::Climber>(physics_, body_, traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
+    new_climber(traversal::Ignore{body_, player_, static_cast<int>(moving_layer_)});
     travel_avoid_ = avoid;
     travel_edges_ = std::move(route);
     travel_.active = true;   // already there still earns a supported, quiet arrival
@@ -246,7 +246,7 @@ void Matron::step_travel(const float dt) {
         travel_wait_s_ = 0.0F;
         climber_->step(dt);
         travel_.move = climber_->view().kind;
-        const Vec3 v = bodies.GetLinearVelocity(body_);
+        const Vec3 v = body_velocity();
         if (std::abs(v.GetX()) + std::abs(v.GetZ()) > 0.2F) {
             yaw_ = turn_toward(yaw_, std::atan2(v.GetX(), v.GetZ()), kTurnRate, dt);
         }
@@ -299,7 +299,7 @@ void Matron::step_travel(const float dt) {
     if (under == travel_.goal) {
         travel_.region = under;
         travel_.step = travel_.steps;   // support lost during arrival must replan before any further move
-        const Vec3 velocity = bodies.GetLinearVelocity(body_);
+        const Vec3 velocity = body_velocity();
         (void)climber_->stand(dt);
         const bool quiet = !climber_->view().holding && velocity.Length() < kArrivalStillMps &&
                            std::abs(velocity.GetY()) < 0.1F && bodies.GetGravityFactor(body_) == 1.0F;

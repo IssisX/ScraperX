@@ -222,7 +222,7 @@ bool Matron::follow_line(const float dt, const RVec3 at, const bool wait_ok) {
     if (turn_ != Turn::None && !in_reach) {
         // Standing on it: the jump for the cable, a leg stroke of her feet
         // against the stand (walk_toward drives it from her one budget).
-        const Vec3 velocity = physics_.GetBodyInterface().GetLinearVelocity(body_);
+        const Vec3 velocity = body_velocity();
         if (feet < stand_y + 0.08F && std::abs(velocity.GetY()) < 0.2F) {
             leg_jump_vy_ = kCableJumpMps;
         }
@@ -299,7 +299,7 @@ void Matron::ride_line() {
     // still, straight down, onto a floor under her, or while the trolley
     // still carries her on (no faster than kLetGoSwingMps) when that motion
     // comes down on a floor, clear of the shaft.
-    const Vec3 vel = bodies.GetLinearVelocity(body_);
+    const Vec3 vel = body_velocity();
     const Vec3 flat(vel.GetX(), 0.0F, vel.GetZ());
     const float on_run = flat.Dot(run);
     const bool still = std::abs(ride.speed_mps) < 0.3F;

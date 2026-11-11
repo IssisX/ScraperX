@@ -38,7 +38,9 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 
 #include <cstdint>
+#include <functional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace scraperx::sim::traversal {
@@ -229,6 +231,11 @@ public:
     enum class Status : std::uint8_t { Idle = 0, Running = 1, Done = 2, Failed = 3 };
 
     Climber(JPH::PhysicsSystem &physics, JPH::BodyID body, Ignore ignore, Limits limits = {});
+    // The velocity of the whole body she drives, when the body given above
+    // carries more on joints (her upper chain): her drives are written for
+    // her one mass (Limits::mass_kg), so they read that mass's velocity, not
+    // the one body's. Unset, the body's own.
+    void set_velocity_source(std::function<JPH::Vec3()> source) { velocity_source_ = std::move(source); }
 
     void begin(const MoveSpec &spec);
     void cancel();   // lets go of everything (a fall if she was on steel)
@@ -320,6 +327,7 @@ private:
 
     JPH::PhysicsSystem &physics_;
     JPH::BodyID body_;
+    std::function<JPH::Vec3()> velocity_source_;
     Ignore ignore_;
     Limits limits_;
     MoveSpec spec_;

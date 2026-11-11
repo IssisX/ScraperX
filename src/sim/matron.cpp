@@ -22,6 +22,7 @@
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/EmptyShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
@@ -355,7 +356,7 @@ void Matron::place_for_test(const RVec3 feet) {
 void Matron::upper_rest_transform(const int i, RVec3 &pos, Quat &rot) const {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 feet = bodies.GetPosition(body_) - Vec3(0.0F, kStandCentre, 0.0F);
-    const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), yaw_);
+    const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), upper_yaw_);
     const auto at = [&](const Vec3 local) { return feet + yaw_q * local; };
     switch (i) {
     case 0:  // head: sphere, centre just above the head joint
@@ -392,32 +393,41 @@ void Matron::create_upper_body() {
     if (upper_in_world_) {
         return;
     }
+    upper_yaw_ = yaw_;
     BodyInterface &bodies = physics_.GetBodyInterface();
-    // Shapes are proxies sized from the rig: the exact inertia tensors
-    // come from the real collider geometry in J-044d. Masses are set
-    // exactly; inertia is what the collider shape gives.
+    // Proxies sized from the rig give each segment its inertia (the exact
+    // tensors come from the real collider geometry in J-044d); masses are
+    // set exactly. The body itself has no volume (EmptyShape): the root is
+    // the only body of hers that collides, and every scene query (her
+    // scans, sight, floor and fit probes, his probes, all called with the
+    // default filters, which pass every layer) must meet only the root, as
+    // before the chain. A solid segment inside her own capsule read as
+    // steel to all of them.
     for (int i = 0; i < kUpperCount; ++i) {
-        Ref<Shape> shape;
+        Ref<Shape> proxy;
         if (i == 0) {
-            shape = new SphereShape(0.13F);
+            proxy = new SphereShape(0.13F);
         } else if (i == 1) {
-            shape = new CapsuleShape(0.02F, 0.055F);
+            proxy = new CapsuleShape(0.02F, 0.055F);
         } else if (i == 2) {
-            shape = new CapsuleShape(0.10F, 0.20F);
+            proxy = new CapsuleShape(0.10F, 0.20F);
         } else {
-            shape = new CapsuleShape(0.17F, 0.07F);
+            proxy = new CapsuleShape(0.17F, 0.07F);
         }
+        MassProperties mass = proxy->GetMassProperties();
+        mass.ScaleToMass(kUpperMassKg[i]);
         RVec3 pos;
         Quat rot;
         upper_rest_transform(i, pos, rot);
-        BodyCreationSettings settings(shape, pos, rot, EMotionType::Dynamic, hand_layer_);
+        BodyCreationSettings settings(new EmptyShape(proxy->GetCenterOfMass()), pos, rot, EMotionType::Dynamic,
+                                      hand_layer_);
         settings.mAllowSleeping = false;
-        settings.mMotionQuality = EMotionQuality::LinearCast;
+        settings.mMotionQuality = EMotionQuality::Discrete;  // no volume: nothing for a cast to sweep
         settings.mFriction = 0.0F;
         settings.mLinearDamping = 0.0F;
         settings.mUserData = kUpperEntityBase + static_cast<std::uint64_t>(i);
-        settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
-        settings.mMassPropertiesOverride.mMass = kUpperMassKg[i];
+        settings.mOverrideMassProperties = EOverrideMassProperties::MassAndInertiaProvided;
+        settings.mMassPropertiesOverride = mass;
         Body *body = bodies.CreateBody(settings);
         upper_body_[static_cast<std::size_t>(i)] = body->GetID();
         bodies.AddBody(upper_body_[static_cast<std::size_t>(i)], EActivation::Activate);
@@ -428,8 +438,8 @@ void Matron::create_upper_body() {
     // target is the rest pose, so the motors hold her upright and return
     // her after a blow. Gains are prototype: Grok's #244 pins them.
     const RVec3 feet = bodies.GetPosition(body_) - Vec3(0.0F, kStandCentre, 0.0F);
-    const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), yaw_);
-    const Vec3 fwd(std::sin(yaw_), 0.0F, std::cos(yaw_));
+    const Quat yaw_q = Quat::sRotation(Vec3::sAxisY(), upper_yaw_);
+    const Vec3 fwd(std::sin(upper_yaw_), 0.0F, std::cos(upper_yaw_));
     const auto at = [&](const Vec3 local) { return feet + yaw_q * local; };
     const Vec3 anchors[kUpperCount] = {
         Vec3(0.0F, 1.644F, 0.075F),  Vec3(0.0F, 1.541F, 0.04F),  Vec3(0.0F, 1.38F, 0.023F),
@@ -497,14 +507,77 @@ void Matron::seat_upper_body() {
     if (!upper_in_world_) {
         return;
     }
+    // Seated in the rest pose the joints were baked in, moving as the root
+    // moves: a placement carries the whole of her, so no joint is left to
+    // pull a stale segment (or the root) across the gap in the next solve.
     BodyInterface &bodies = physics_.GetBodyInterface();
+    const Vec3 carried = bodies.GetLinearVelocity(body_);
     for (int i = 0; i < kUpperCount; ++i) {
         RVec3 pos;
         Quat rot;
         upper_rest_transform(i, pos, rot);
         bodies.SetPositionAndRotation(upper_body_[static_cast<std::size_t>(i)], pos, rot, EActivation::Activate);
-        bodies.SetLinearAndAngularVelocity(upper_body_[static_cast<std::size_t>(i)], Vec3::sZero(), Vec3::sZero());
+        bodies.SetLinearAndAngularVelocity(upper_body_[static_cast<std::size_t>(i)], carried, Vec3::sZero());
     }
+    for (const Ref<TwoBodyConstraint> &joint : upper_joint_) {
+        if (joint != nullptr) {
+            joint->ResetWarmStart();
+        }
+    }
+}
+
+// The root is the body tests and fixtures place (BodyInterface::SetPosition
+// on body()), and Jolt moves only the body it is told to. A tick that starts
+// with the root off its chest joint by more than a solver ever leaves it was
+// placed since the last solve: the chain is seated on the root again before
+// the solve, which would otherwise close the gap in one step, flinging her.
+void Matron::keep_upper_on_root() {
+    if (!upper_in_world_ || !body_in_world_) {
+        return;
+    }
+    const auto *chest = static_cast<const SwingTwistConstraint *>(upper_joint_[2].GetPtr());
+    if (chest == nullptr) {
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 on_root = bodies.GetCenterOfMassTransform(body_) * chest->GetLocalSpacePosition1();
+    const RVec3 on_chest = bodies.GetCenterOfMassTransform(upper_body_[2]) * chest->GetLocalSpacePosition2();
+    if (Vec3(on_root - on_chest).Length() > kUpperSeatM) {
+        seat_upper_body();
+    }
+}
+
+void Matron::set_root_shape(const Shape *shape, const EActivation activation) {
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const Vec3 before = bodies.GetShape(body_)->GetCenterOfMass();
+    bodies.SetShape(body_, shape, false, activation);
+    const Vec3 moved = shape->GetCenterOfMass() - before;
+    if (!upper_in_world_ || moved.IsNearZero()) {
+        return;
+    }
+    for (const Ref<TwoBodyConstraint> &joint : upper_joint_) {
+        if (joint != nullptr) {
+            joint->NotifyShapeChanged(body_, moved);
+        }
+    }
+}
+
+Vec3 Matron::body_velocity() const {
+    const BodyInterface &bodies = physics_.GetBodyInterface();
+    const Vec3 root = bodies.GetLinearVelocity(body_);
+    if (!upper_in_world_) {
+        return root;
+    }
+    Vec3 momentum = root * kRootMassKg;
+    for (int i = 0; i < kUpperCount; ++i) {
+        momentum += bodies.GetLinearVelocity(upper_body_[static_cast<std::size_t>(i)]) * kUpperMassKg[i];
+    }
+    return momentum / kMassKg;
+}
+
+void Matron::new_climber(const traversal::Ignore ignore) {
+    climber_ = std::make_unique<traversal::Climber>(physics_, body_, ignore);
+    climber_->set_velocity_source([this] { return body_velocity(); });
 }
 
 void Matron::step_upper_body(const float dt) {
@@ -1367,7 +1440,7 @@ void Matron::settle_level() {
     // Steel the ray actually finds is the floor even beside that footprint
     // (a board or a lip the map does not contain).
     BodyInterface &bodies = physics_.GetBodyInterface();
-    if (std::abs(bodies.GetLinearVelocity(body_).GetY()) > 0.6F) {
+    if (std::abs(body_velocity().GetY()) > 0.6F) {
         return;
     }
     const RVec3 here = bodies.GetPosition(body_);
@@ -1462,7 +1535,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     }
     target_x_ = wx;
     target_z_ = wz;
-    Vec3 velocity = bodies.GetLinearVelocity(body_);
+    Vec3 velocity = body_velocity();
     const Vec3 start_v = velocity;
     // Her feet's drive this call: the tick's account (feet_budget_, reset in
     // pre_step) may already carry an earlier push of hers this tick.
@@ -1512,7 +1585,9 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     bool lunge_draw = lunge_push;   // this tick's drive is the lunge's (see the step up below)
     const auto apply_foot_force = [&](const Vec3 want_force, const BodyID on_body, const RVec3 on_point,
                                       const Vec3 slope_slide = Vec3::sZero()) {
-        if (on_body.IsInvalid() || !bodies.IsAdded(on_body)) {
+        // Nothing to push under feet_push's own floor (0.1 mN): her body's
+        // velocity sums six bodies, and the sum's rounding is no step.
+        if (on_body.IsInvalid() || !bodies.IsAdded(on_body) || want_force.LengthSq() <= 1.0e-8F) {
             return Vec3::sZero();
         }
         (void)slope_slide;
@@ -2189,13 +2264,13 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
             }
         }
         if (boarding) {
-            const Vec3 cur = bodies.GetLinearVelocity(body_);
+            const Vec3 cur = body_velocity();
             const Vec3 want_horiz(velocity.GetX() - cur.GetX(), 0.0F, velocity.GetZ() - cur.GetZ());
             const Vec3 want_force = want_horiz * (kMassKg / dt) + Vec3(0.0F, board_fy, 0.0F);
             (void)apply_foot_force(want_force, support_body, support_point);
         } else if (!leapt && !cleared && !climbed) {
             // Planned velocity is `velocity`; the force that earns it through her sole contact.
-            const Vec3 cur = bodies.GetLinearVelocity(body_);
+            const Vec3 cur = body_velocity();
             const Vec3 want_horiz(velocity.GetX() - cur.GetX(), 0.0F, velocity.GetZ() - cur.GetZ());
             Vec3 want_force = want_horiz * (kMassKg / dt);
             Vec3 slope_slide = Vec3::sZero();
@@ -2463,7 +2538,7 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         // A step off the edge (her feet past it, not her lines), then straight
         // down onto the bracket 1.78 m below.
         const float feet = float(at.GetY()) - kStandCentre;
-        Vec3 velocity = bodies.GetLinearVelocity(body_);
+        Vec3 velocity = body_velocity();
         // Off the edge at 0.8 m/s, gained at her walking accel. Writing 0.8
         // in one tick is a snap the pace exam rejects, and it skips the force law.
         // Her feet push it out of the deck while they are on it (her one
@@ -2504,7 +2579,7 @@ bool Matron::trap_step(const float dt, const RVec3 at, const RVec3 player, const
         }
         // The last of it placed foot by foot (her walk stops steering inside
         // 0.15 m): her hands must come under the leaf, not beside it.
-        Vec3 velocity = bodies.GetLinearVelocity(body_);
+        Vec3 velocity = body_velocity();
         const float want_x = std::clamp((Bay::kBraceX - ax) * 4.0F, -0.6F, 0.6F);
         const float want_z = std::clamp((Bay::kBraceZ - az) * 4.0F, -0.6F, 0.6F);
         const float step = kFootAccel * dt;
@@ -2675,6 +2750,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     const traversal::Limits law{};
     feet_budget_ = traversal::Budget{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
     feet_budget_lunge_ = false;
+    keep_upper_on_root();  // a root placed since the last solve takes its chain with it
     step_upper_body(dt);  // J-044c: meter last tick's motor work, then enforce the budget
     stock_push_force_n_ = 0.0F;
     traversal::Budget account{law.total_force_n, 0.0F, law.power_w, 0.0F, Vec3::sZero()};
@@ -3723,7 +3799,7 @@ void Matron::post_step(const float dt) {
                 if (walkable) {
                     feet_y_ = float(down.GetPointOnRay(floor.mFraction).GetY());
                     if (std::abs(float(at.GetY()) - kStandCentre - feet_y_) < 0.025F &&
-                        std::abs(physics_.GetBodyInterface().GetLinearVelocity(body_).GetY()) < 0.3F) {
+                        std::abs(body_velocity().GetY()) < 0.3F) {
                         routecraft_recovering_ = false;
                     }
                 }
@@ -3737,14 +3813,14 @@ void Matron::post_step(const float dt) {
     // way (one she passes is no floor under her).
     if (const Mover *way = holder(); body_in_world_ && !dead_ && !(way != nullptr && way->view().lands)) {
         BodyInterface &bodies = physics_.GetBodyInterface();
-        const float vy = bodies.GetLinearVelocity(body_).GetY();
+        const float vy = body_velocity().GetY();
         const float falling = -fall_vy_;
         const bool landed_hard = falling >= kLethalLandingMps && vy - fall_vy_ > 0.5F * falling;
         if (landed_hard) {
             dead_ = true;
             state_ = State::Dead;
             clear_interrupted_actions(false);
-            const Vec3 velocity = bodies.GetLinearVelocity(body_);
+            const Vec3 velocity = body_velocity();
             const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
             if (flat.LengthSq() > 1.0e-6F) {
                 const Vec3 along = flat.Normalized();
@@ -3763,14 +3839,14 @@ void Matron::post_step(const float dt) {
                    state_ != State::Staggering && !body_in_hold()) {
             // Down hard, alive: down a while, the way she was going (in her
             // hold her own landing takes neither her feet nor him: State).
-            const Vec3 v = bodies.GetLinearVelocity(body_);
+            const Vec3 v = body_velocity();
             const Vec3 way(v.GetX(), 0.0F, v.GetZ());
             fall_x_ = way.LengthSq() > 1.0e-4F ? way.Normalized().GetX() : std::sin(yaw_);
             fall_z_ = way.LengthSq() > 1.0e-4F ? way.Normalized().GetZ() : std::cos(yaw_);
             knock_down();
         }
     }
-    fall_vy_ = body_in_world_ && !dead_ ? physics_.GetBodyInterface().GetLinearVelocity(body_).GetY() : 0.0F;
+    fall_vy_ = body_in_world_ && !dead_ ? body_velocity().GetY() : 0.0F;
     refresh_view();
     // Her collision body for the stance she is in now (matron_shape.cpp).
     step_stance(dt);
@@ -4359,7 +4435,7 @@ bool Matron::shove_stock(const float dt, const float ax, const float az, const b
     // would step up onto it and kick it away), and her brace stops her at
     // the lip it goes over...
     yaw_ = turn_toward(yaw_, std::atan2(d.GetX(), d.GetZ()), kTurnRate, dt);
-    const Vec3 her_v = bodies.GetLinearVelocity(body_);
+    const Vec3 her_v = body_velocity();
     const Vec3 flat(her_v.GetX(), 0.0F, her_v.GetZ());
     const Vec3 pace_dv = d * kStockShoveMps - flat;
     const float pace_step = kFootAccel * dt;
@@ -4702,7 +4778,7 @@ void Matron::restore(const Saved &saved) {
         // On her feet, whatever had her down.
         if (lying_) {
             BodyInterface &bodies = physics_.GetBodyInterface();
-            bodies.SetShape(body_, shape_, false, EActivation::DontActivate);
+            set_root_shape(shape_, EActivation::DontActivate);
             bodies.SetFriction(body_, 0.0F);
         }
         lying_ = false;
@@ -4789,7 +4865,7 @@ void Matron::sense_near() {
     // Her own drive (feet or pipe) is a force the step applies, not a velocity
     // set: what it will change is hers, not a blow's.
     const Mover *way = holder();
-    set_velocity_ = bodies.GetLinearVelocity(body_) + foot_drive_dv_ +
+    set_velocity_ = body_velocity() + foot_drive_dv_ +
                     (way != nullptr ? way->view().drive_dv : Vec3::sZero());
     sensed_ = true;
     const Vec3 centre(at);
@@ -4878,7 +4954,7 @@ void Matron::take_blow(const float dt) {
     }
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
-    const Vec3 velocity = bodies.GetLinearVelocity(body_);
+    const Vec3 velocity = body_velocity();
     const Vec3 change = on_pipe ? velocity - set_velocity_
                                 : Vec3(velocity.GetX() - set_velocity_.GetX(), 0.0F, velocity.GetZ() - set_velocity_.GetZ());
     const float feet = float(at.GetY()) - kStandCentre;
@@ -5215,14 +5291,14 @@ void Matron::lie_down(const float fall_x, const float fall_z) {
         down_b_ = Vec3(0.0F, cy + kKneelHalf, 0.0F);
         down_r_ = kRadius;
     }
-    bodies.SetShape(body_, down_shape_, false, EActivation::Activate);
+    set_root_shape(down_shape_, EActivation::Activate);
     bodies.SetFriction(body_, kDownFriction);
     lying_ = true;
 }
 
 void Matron::stand_up() {
     BodyInterface &bodies = physics_.GetBodyInterface();
-    bodies.SetShape(body_, shape_, false, EActivation::Activate);
+    set_root_shape(shape_, EActivation::Activate);
     bodies.SetFriction(body_, 0.0F);
     lying_ = false;
     kneeling_ = false;
@@ -5288,7 +5364,7 @@ Vec3 Matron::feet_push(const float dt, const Vec3 want_force, const Vec3 *const 
         return Vec3::sZero();
     }
     const RVec3 at = bodies.GetPosition(body_);
-    const Vec3 velocity = bodies.GetLinearVelocity(body_);
+    const Vec3 velocity = body_velocity();
     Sole sole;
     if (!sole_contact(at, velocity, yaw_, sole) || !bodies.IsAdded(sole.body)) {
         return Vec3::sZero();   // nothing under her to push on
@@ -5311,7 +5387,7 @@ void Matron::brace_at_edges(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
     // Where she is going once this tick's pushes of her feet so far act.
-    const Vec3 velocity = bodies.GetLinearVelocity(body_) + foot_drive_dv_;
+    const Vec3 velocity = body_velocity() + foot_drive_dv_;
     IgnoreMultipleBodiesFilter not_us;
     not_us.Reserve(2);
     not_us.IgnoreBody(body_);
@@ -5354,7 +5430,7 @@ void Matron::brace_at_edges(const float dt) {
 void Matron::step_knocked(const float dt) {
     BodyInterface &bodies = physics_.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(body_);
-    const Vec3 velocity = bodies.GetLinearVelocity(body_);
+    const Vec3 velocity = body_velocity();
     Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
     if (state_ == State::Staggering) {
         // Her feet catch her: stopping her at her stage's recovery, the way

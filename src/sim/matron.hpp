@@ -2611,8 +2611,32 @@ private:
     std::array<JPH::Quat, kUpperCount> upper_rest_{};  // rest relative rotation, per segment
     bool upper_in_world_ = false;
     float upper_motor_power_w_ = 0.0F;  // last tick's motor work (upper bound), watts
+    // The yaw the joints were baked at (create_upper_body): their anchors sit
+    // at it in each parent's frame, so a reseat poses the chain at it too.
+    float upper_yaw_ = 0.0F;
+    // The chain hangs on the root's chest joint. A root moved by more than
+    // this off that joint at the start of a tick was placed, not moved by
+    // the solver (a solved joint is off by millimetres): the chain is seated
+    // back on the root before anything is solved (keep_upper_on_root).
+    static constexpr float kUpperSeatM = 0.05F;
     void create_upper_body();
     void seat_upper_body();
+    void keep_upper_on_root();
+    // Every shape the root takes goes through here: Jolt keeps a joint's
+    // anchor relative to the body's centre of mass, so a shape with another
+    // centre of mass (lying, kneeling) moves the chest joint's anchor on the
+    // root unless the joint is told (Constraint::NotifyShapeChanged).
+    void set_root_shape(const JPH::Shape *shape, JPH::EActivation activation);
+    // Her velocity: her whole body's momentum over her one mass (kMassKg,
+    // the mass every drive and gauge of hers is written for). The chain's
+    // joints push the root and the segments both ways, so its sway and its
+    // lag move the root alone while she stands or is struck: read as hers,
+    // the root's velocity made a sway at rest a step her feet braked and
+    // a blow her balance took. With no chain it is the root's.
+    [[nodiscard]] JPH::Vec3 body_velocity() const;
+    // Her Climber on her root, reading her body's velocity (body_velocity):
+    // every Climber of hers is made here.
+    void new_climber(traversal::Ignore ignore);
     void step_upper_body(const float dt);
     void destroy_upper_body();
     void upper_rest_transform(const int i, JPH::RVec3 &pos, JPH::Quat &rot) const;

@@ -328,7 +328,7 @@ void Matron::tear_off_pipe() {
     pipe_stop_y_ = physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)
                        ? float(ray.GetPointOnRay(hit.mFraction).GetY())
                        : -std::numeric_limits<float>::max();
-    pipe_slide_mps_ = std::max(0.0F, -bodies.GetLinearVelocity(body_).GetY());
+    pipe_slide_mps_ = std::max(0.0F, -body_velocity().GetY());
     pipe_support_ = BodyID();
     pipe_grip_ = PipeGrip::None;
     pipe_tuck_ = 0.0F;
@@ -347,7 +347,7 @@ void Matron::ride_pipe(const float dt) {
     const float ax = float(at.GetX());
     const float az = float(at.GetZ());
     const float feet = float(at.GetY()) - kStandCentre;
-    const Vec3 v = bodies.GetLinearVelocity(body_);
+    const Vec3 v = body_velocity();
     const ClimbBodyFilter filter(body_, player_);
     const bool down = pipe_to_ < pipe_from_;
     const bool on_line = distance_xz(ax, az, kPipeLineX, kPipeLineZ) < 0.5F;

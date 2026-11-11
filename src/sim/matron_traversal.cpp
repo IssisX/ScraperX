@@ -294,7 +294,9 @@ Vec3 Budget::take(const Vec3 want) noexcept {
 }
 
 RVec3 Climber::center() const { return physics_.GetBodyInterface().GetCenterOfMassPosition(body_); }
-Vec3 Climber::velocity() const { return physics_.GetBodyInterface().GetLinearVelocity(body_); }
+Vec3 Climber::velocity() const {
+    return velocity_source_ ? velocity_source_() : physics_.GetBodyInterface().GetLinearVelocity(body_);
+}
 
 // Her velocity against what she pushes on: the hold's point velocity at the
 // anchor when holding, else the floor's under her feet. Power is spent only
