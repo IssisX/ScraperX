@@ -532,19 +532,21 @@ bool Matron::RoutecraftWay::let_go() {
 
 namespace scraperx::sim {
 
-bool Matron::start_journey(const RVec3 at) {
+bool Matron::start_journey(const RVec3 at) { return start_journey_to(at, heard_x_, lead_floor_, heard_z_); }
+
+bool Matron::start_journey_to(const RVec3 at, const float goal_x, const float goal_y, const float goal_z) {
     if (journey_wait_ticks_ > 0) {
         return false;
     }
     journey_wait_ticks_ = 2 * 90;    const float feet = float(at.GetY()) - kStandCentre;
     const traversal::Ignore ignore{body_, player_, static_cast<int>(moving_layer_)};
-    const float lo_x = std::min(float(at.GetX()), heard_x_) - 12.0F;
-    const float hi_x = std::max(float(at.GetX()), heard_x_) + 12.0F;
-    const float lo_z = std::min(float(at.GetZ()), heard_z_) - 12.0F;
-    const float hi_z = std::max(float(at.GetZ()), heard_z_) + 12.0F;
+    const float lo_x = std::min(float(at.GetX()), goal_x) - 12.0F;
+    const float hi_x = std::max(float(at.GetX()), goal_x) + 12.0F;
+    const float lo_z = std::min(float(at.GetZ()), goal_z) - 12.0F;
+    const float hi_z = std::max(float(at.GetZ()), goal_z) + 12.0F;
     traversal::AffordanceMap map;
     map.scan(physics_,
-             AABox(Vec3(lo_x, std::min(feet, lead_floor_) - 3.0F, lo_z), Vec3(hi_x, std::max(feet, lead_floor_) + 4.0F, hi_z)),
+             AABox(Vec3(lo_x, std::min(feet, goal_y) - 3.0F, lo_z), Vec3(hi_x, std::max(feet, goal_y) + 4.0F, hi_z)),
              ignore);
     if (climber_ == nullptr) {
         climber_ = std::make_unique<traversal::Climber>(physics_, body_, ignore);
@@ -563,9 +565,9 @@ bool Matron::start_journey(const RVec3 at) {
     // largest region near that height: two surfaces can share a height band
     // (a board beside the platform the sound came from), and aiming at the
     // larger one strands her on the wrong surface with no way across.
-    int to = map.region_at(Vec3(heard_x_, lead_floor_, heard_z_));
+    int to = map.region_at(Vec3(goal_x, goal_y, goal_z));
     if (to < 0) {
-        to = map.region_near_top(lead_floor_, 0.3F);
+        to = map.region_near_top(goal_y, 0.3F);
     }
     if (from < 0 || to < 0 || from == to) {
         return false;
