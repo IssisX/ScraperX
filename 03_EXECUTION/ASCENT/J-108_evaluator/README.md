@@ -41,3 +41,20 @@ Heavier platforms narrow the spread only by slowing it: A and B near 2 t give 1.
   B 316.7, him alone 180 N, governor 1.5 m/s, level 0.5 m/s^2. Every friction from 250 to 600 N arrives at the
   governor's 0.08 m/s creep, in 17.3 to 25.0 s; she alone and both on A land at the creep too. That is a
   sum from the same equation (the evaluator has no governor), and it parts from N's "no governor".
+
+## Ruled and built: option (a), as built (`as_built.json`)
+
+The chain hangs 21.9 m (from A's underside at 684.0 m to the 662 deck); A's guide ends at 21.88 m, just off
+the deck. B's guide runs to 22.4 m, a dog every 0.1 m. INTEGRATED, every case reaching the deck; with him
+gone from B at the top, B stays on its dogs.
+
+| f (N) | 385 | 410 | 435 | 460 | 485 |
+|---|---|---|---|---|---|
+| arrive (m/s) | 2.17 | 1.88 | 1.54 | 1.11 | 0.29 |
+| peak (m/s) | 2.48 | 2.32 | 2.17 | 2.01 | 1.85 |
+| time (s) | 12.4 | 13.1 | 14.0 | 15.2 | 17.7 |
+
+Her alone on A: 6.5 to 6.9 m/s onto the 662 deck (a 2.4 m drop's worth). Both on A: 8.8 to 9.0 m/s (4.2 m),
+both under her 4.6 m drop. The engine (slice `service-bait-lift`, 200 N declared on each guide): A meets
+the deck at 2.0 m/s, peak 2.39 m/s, in 12.5 s, the 385 N case; B coasts to 22.08 m and holds on its
+22.0 m dog, his floor at 706.1.
