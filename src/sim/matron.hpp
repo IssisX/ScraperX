@@ -1965,14 +1965,6 @@ public:
     [[nodiscard]] JPH::RVec3 hand2_target() const noexcept { return hand2_target_; }
     [[nodiscard]] JPH::Vec3 hand2_target_velocity() const noexcept { return hand2_target_v_; }
     [[nodiscard]] float hand2_pull_n() const noexcept { return pull2_n_; }
-    // Her fingers re-seat on his ankle (kGripStrainDecay a second off its
-    // strain) only while her other hand is free to share the hold: with his
-    // wrist in it (the rip), her strength is in the wrench, and every kick's
-    // slip stays in her ankle fingers (J-001, 11-10: a kicking player tears
-    // free before her pull tears his arm).
-    [[nodiscard]] float grip_strain_decay() const noexcept {
-        return state_ == State::ArmPlay && hold_phase_ == 1 && wrist_on_ ? 0.0F : kGripStrainDecay;
-    }
     // She grips it hard in the rip, and in the fatality's hold (only his blow
     // frees him from it: the world's snags on her carry and her heave do not).
     [[nodiscard]] float grip_strain_floor_n() const noexcept {

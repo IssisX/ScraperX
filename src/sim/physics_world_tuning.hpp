@@ -413,6 +413,11 @@ constexpr float kCrawlPostHalf = 0.15F;
 // the tower, not the body; a machine that needs a human's weight must be built
 // around a human's weight.
 constexpr float kPlayerMassKg = 85.0F;
+// In her hand: his kick, kKickNs along his body away from her hand; and his
+// legs' pull against it while he thrashes, along the body
+// (physics_world_grab.cpp; his struggle against the wrist in physics_world_arm.cpp).
+constexpr float kKickNs = 25.0F;
+constexpr float kThrashPullN = 600.0F;
 
 // Traversal reach / clearance rules. Every one of these is a bound on what the
 // native assist may attempt; none of them fabricates geometry.

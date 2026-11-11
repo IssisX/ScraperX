@@ -284,7 +284,12 @@ void Simulation::PhysicsWorld::arm_post_step(JPH::BodyInterface &bodies, const f
     if (wrist_ != nullptr) {
         const JPH::Vec3 lambda = static_cast<JPH::PointConstraint *>(wrist_.GetPtr())->GetTotalLambdaPosition();
         wrist_load_n_ = lambda.Length() / std::max(dt, 1.0e-4F);
-        wrist_strain_ns_ += std::max(0.0F, wrist_load_n_ - Matron::kArmHoldN) * dt;
+        // Her pull, not his own struggle: his thrash is taken out of the
+        // wrist's load, and his kick (along his body, against her anchor
+        // hand) eases his shoulder by what it gives (physics_world_grab.cpp).
+        const float pull_n = std::max(0.0F, wrist_load_n_ - kThrashPullN * thrash_);
+        wrist_strain_ns_ = std::max(0.0F, wrist_strain_ns_ + std::max(0.0F, pull_n - Matron::kArmHoldN) * dt -
+                                              (kick_now_ ? kKickNs : 0.0F));
         if (wrist_strain_ns_ >= Matron::kArmTearNs) {
             sever_arm(bodies);
             matron_->arm_torn();

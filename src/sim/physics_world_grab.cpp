@@ -41,15 +41,12 @@ constexpr float kGripTwistRad = 0.35F;
 // her hand, at most every kKickGapTicks; a twist of kThrashTorqueNm.
 constexpr double kThrashFullRate = 8.0;
 constexpr float kThrashSmoothS = 0.25F;
-constexpr float kKickNs = 25.0F;
 constexpr int kKickGapTicks = 11;
 // Of a kick's impulse, what comes onto her fingers as a slip (the strain).
 constexpr float kKickSlipNs = 12.0F;
 constexpr float kThrashTorqueNm = 40.0F;
 // A thrash past this share of a full one is the player fighting her grip.
 constexpr float kFoughtThrash = 0.15F;
-// And the legs' pull against her hand while thrashing, along the body.
-constexpr float kThrashPullN = 600.0F;
 // The handback: a PD torque to upright, capped; the DOFs lock under
 // kUprightDoneRad with no more than kUprightOverlapM of penetration.
 constexpr float kUprightKp = 900.0F;
@@ -514,13 +511,33 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         }
         // Fought: a kick, a thrash, a brace (a twitch of the stick is not one).
         grip_fought_ = grip_fought_ || kick_now_ || thrash_ > kFoughtThrash || brace_ != nullptr;
-        // Thrash: a kick along the body, away from her hand; a twist.
-        if (kick_now_) {
-            bodies.AddImpulse(player_id_, up * kKickNs);
-            // The heel wrenched in her fingers: they slip a little each time.
-            grip_strain_ns_ += kKickSlipNs;
+        // Thrash: a kick along the body, away from her hand; a twist. His
+        // kick and his thrash push off her: each is a pair, him away from her
+        // hand and her the other way (his, received: not her budget's).
+        JPH::Vec3 away = up;
+        if (!grip_on_ankle_) {
+            const JPH::Vec3 off = JPH::Vec3(player_at - hand);
+            away = off.Length() > 1.0e-3F ? off.Normalized() : up;
         }
-        bodies.AddForce(player_id_, up * (kThrashPullN * thrash_));
+        // In her pull on his wrist her first hand is her anchor alone: what
+        // his kick and his thrash put on it is all against her grip.
+        const bool rip = matron_->pulling_wrist() && wrist_ != nullptr;
+        const float tick_s = std::max(effort_dt_, 1.0e-4F);
+        if (kick_now_) {
+            bodies.AddImpulse(player_id_, away * kKickNs);
+            bodies.AddImpulse(matron_->body(), -away * kKickNs);
+            effort::add_force(effort::Path::Blow, -away * (kKickNs / tick_s),
+                              bodies.GetLinearVelocity(matron_->body()) - bodies.GetLinearVelocity(player_id_), 0.0F,
+                              -away * (kKickNs / tick_s));
+            // The heel wrenched in her fingers: they slip a little each time;
+            // in the rip the whole kick is on them.
+            grip_strain_ns_ += kKickSlipNs + (rip ? kKickNs : 0.0F);
+        }
+        const JPH::Vec3 thrash_f = away * (kThrashPullN * thrash_);
+        bodies.AddForce(player_id_, thrash_f);
+        bodies.AddForce(matron_->body(), -thrash_f);
+        effort::add_force(effort::Path::Blow, -thrash_f,
+                          bodies.GetLinearVelocity(matron_->body()) - bodies.GetLinearVelocity(player_id_), 0.0F, -thrash_f);
         const JPH::Vec3 stick(static_cast<float>(last_stick_x_), 0.0F, static_cast<float>(last_stick_z_));
         JPH::Vec3 axis = up.Cross(stick);
         if (axis.Length() > 1.0e-3F) {
@@ -560,9 +577,12 @@ void Simulation::PhysicsWorld::grab_post_step(JPH::BodyInterface &bodies, const 
         grip_load_n_ = lambda.Length() / std::max(dt, 1.0e-4F);
         grip_peak_n_ = std::max(grip_peak_n_, grip_load_n_);
         grip_over_ticks_ = grip_load_n_ > Matron::kGripMaxForceN ? grip_over_ticks_ + 1 : 0;
-        grip_strain_ns_ = std::max(0.0F, grip_strain_ns_ +
-                                             std::max(0.0F, grip_load_n_ - matron_->grip_strain_floor_n()) * dt -
-                                             matron_->grip_strain_decay() * dt);
+        // In her pull on his wrist his thrash is all on her anchor hand (grab_drive).
+        const float fight_n = matron_->pulling_wrist() && wrist_ != nullptr ? kThrashPullN * thrash_ : 0.0F;
+        grip_strain_ns_ =
+            std::max(0.0F, grip_strain_ns_ +
+                               (std::max(0.0F, grip_load_n_ - matron_->grip_strain_floor_n()) + fight_n) * dt -
+                               Matron::kGripStrainDecay * dt);
         if (grip_over_ticks_ >= 2 || grip_strain_ns_ > Matron::kGripTearNs) {
             tear_grip(true);
         }

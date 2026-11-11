@@ -1085,7 +1085,13 @@ void Matron::step_hold(const float dt, const RVec3 player) {
             }
             pose_hand(dt, in, in_pace * kHandSpeedMps);
             back_lifted_ = back_lifted_ || float(player_ankle_.GetY()) >= feet + rail_up_ + 0.3F || rail_in >= 0.0F;
-            if (rail_in > 0.45F || (pin_here_ && Vec3(in - hand_target_).Length() < 0.05F)) {
+            // Back in once his middle is well in from the rail, or in from
+            // its line with her deck close under his body, whatever hand of
+            // hers has him: by his collar from a spot of her own (her re-poses
+            // stand in for the rail there), his body is on her deck before it
+            // is that far in from her own middle.
+            if (rail_in > 0.45F || (rail_in > 0.0F && deck_close_below(player, feet)) ||
+                (pin_here_ && Vec3(in - hand_target_).Length() < 0.05F)) {
                 hold_phase_ = 1;
                 hold_s_ = 0.0F;
             } else if (hold_s_ > 8.0F) {
@@ -1310,7 +1316,11 @@ RVec3 Matron::pin_pose(const RVec3 at, const float feet) const noexcept {
     const RVec3 middle = bodies.GetPosition(player_);
     const float past = (float(middle.GetX()) - (rim_x_ + rim_nx_ * kRimStandM)) * rim_nx_ +
                        (float(middle.GetZ()) - (rim_z_ + rim_nz_ * kRimStandM)) * rim_nz_;
-    const float err = past - kPinBalanceM;
+    // In her arm play after a re-pose (the snag's step back), her hand on his
+    // collar holds him out where he is, never drawn in after him: her other
+    // hand's pull on his wrist then stretches the arm between them.
+    const float err = state_ == State::ArmPlay && armplay_reposes_ > 0 ? std::min(0.0F, past - kPinBalanceM)
+                                                                       : past - kPinBalanceM;
     // (Firmer back toward the rail in the fatality, whose window must keep
     // him on its top every tick; and in the regular pin too, whose window
     // must bring a body dragged from the deck over the line: the gentler
@@ -1685,8 +1695,13 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
             }
             // Her first hand from his collar to his belt beside her second
             // (his middle held on the rail's top: he cannot slide off it);
-            // her second not on it, her first keeps his collar.
-            if (hand2_on_ == 2) {
+            // her second not on it, her first keeps his collar. With his arm
+            // next (ArmPlay) her first hand keeps his collar: it anchors him
+            // at the shoulder while her other hand wrenches his wrist, the
+            // span between them (collar to wrist) inside her two arms' reach,
+            // where his belt to his wrist is not.
+            const bool arm_next = !fatal_hold_ && player_arms_left_ > 0 && armplay_for_test_ != 0 && !armplay_done_;
+            if (hand2_on_ == 2 && !arm_next) {
                 begin_regrip(Grip::Belt);
             }
             hold_phase_ = 3;
@@ -2056,7 +2071,17 @@ void Matron::step_armplay(const float dt, const RVec3 player, const RVec3 at, co
         // hand holds his body out (the pin), her pull capped (pull2_n_) over
         // the stretch to it (physics_world_arm.cpp kWrenchSpringScale).
         const RVec3 chest = shoulder_of(at, -1.0F) - fwd * 0.2F;
-        const RVec3 wrench = Vec3(chest - player_wrist_).Dot(away) < -0.3F ? chest : player_wrist_ + away * 0.8F;
+        // To her chest only when that stretches the arm: her chest past his
+        // wrist from her first hand, and farther from that hand than his
+        // wrist is from where it holds him (the span she pulls the arm over).
+        // Else straight on away from her first hand.
+        const RVec3 held = grip_point_ == Grip::Collar ? player_collar_
+                           : grip_point_ == Grip::Belt ? player_belt_
+                                                       : player_ankle_;
+        const float span = Vec3(player_wrist_ - held).Length();
+        const bool chest_stretches =
+            Vec3(chest - player_wrist_).Dot(away) > 0.0F && Vec3(chest - hand_target_).Length() > span;
+        const RVec3 wrench = chest_stretches ? chest : player_wrist_ + away * 0.8F;
         // Her wrench builds at half the pace of her reach, not all at once.
         pose_hand2(dt, wrench, 4.0F * kArmPullMoveMps);
         // No give-up: the shoulder not torn kArmPullSeconds into the pull
