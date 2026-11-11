@@ -86,7 +86,7 @@ struct Frame {
 std::vector<Frame> run(const int placement) {
     HonestWorld world;
     Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                  detail::object_layers::kOnSteel, BodyID());
+                  detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
     matron.place_for_test(RVec3(0, HonestWorld::kFloor, -150));
     for (int i = 0; i < kSettle; ++i) {
         matron.face_for_test(0.0F);
@@ -159,7 +159,7 @@ void test_matron_honest() {
         const BodyID leaf = world.physics.GetBodyInterface().CreateAndAddBody(leaf_settings, EActivation::DontActivate);
         world.bodies.push_back(leaf);
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         // West of the bay on its band, facing east over the leaf; he is east
         // of it on her deck, seen and heard.
         matron.place_for_test(RVec3(Bay::kWestX - 2.5F, HonestWorld::kFloor, Bay::kLeafZ));
@@ -197,7 +197,7 @@ void test_matron_honest() {
         const BodyID box = bodies.CreateAndAddBody(box_settings, EActivation::Activate);
         world.bodies.push_back(box);
         Matron matron(world.physics, detail::object_layers::kStatic, detail::object_layers::kMoving,
-                      detail::object_layers::kOnSteel, BodyID());
+                      detail::object_layers::kOnSteel, detail::object_layers::kHand, BodyID());
         matron.set_throwables({Matron::Throwable{box, 9001, Vec3::sZero(), 0.0F, Vec3::sZero()}});
         // Picked up and held still at a crouch's height 1.6 m ahead of her:
         // his hands, a body of their own, hold it on a fixed joint.

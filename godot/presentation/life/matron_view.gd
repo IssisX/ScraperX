@@ -1201,6 +1201,21 @@ func _crawl_retune() -> void:
 	(_p["neck"] as Node3D).rotation.x -= 0.2 * w
 
 
+# J-044c: the jointed upper body — the sim's joint rotations on top of the
+# pose, so a punch snaps her head for real. upper_q is head, neck, chest,
+# arm L, arm R, each child relative to its parent. The pose sets the pivots
+# fresh every frame, so this never accumulates.
+func _apply_upper_body(data: Dictionary) -> void:
+	var upper: Array = data.get("upper_q", [])
+	if upper.size() != 5:
+		return
+	var pivots := ["head", "neck", "torso", "sh_l", "sh_r"]
+	for i in 5:
+		var q: Quaternion = upper[i]
+		var node := _p[pivots[i]] as Node3D
+		node.quaternion = node.quaternion * q
+
+
 # After the pose and wherever the figure was laid (toppled, head down): the
 # pivots onto the bones, her feet and hands onto what is there, her eyes on
 # the player's, her hair swung.
@@ -1211,6 +1226,7 @@ func _drive_body(data: Dictionary, delta: float, camera_position: Vector3, falli
 	_crawl_retune()
 	_ease_pose(delta)
 	_apply_flinch(delta)
+	_apply_upper_body(data)
 	_rig.apply()
 	_rig.contact(data, falling, _held_shown)
 	var short := float(_rig.prop_short)

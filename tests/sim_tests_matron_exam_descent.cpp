@@ -148,7 +148,7 @@ struct World {
         pole = box(Vec3(0.05F, 0.5F * pole_height, 0.05F),
                    Vec3(c.pole_x, c.pole_foot_top + 0.5F * pole_height, c.pole_z()));
         matron = std::make_unique<Matron>(physics, object_layers::kStatic, object_layers::kMoving,
-                                        object_layers::kOnSteel, BodyID());
+                                        object_layers::kOnSteel, object_layers::kHand, BodyID());
         matron->place_for_test(c.world(c.start()));
         matron->set_stage_for_test(Matron::Stage::Dangerous);
         // Initial condition: let gravity put her spawned capsule onto its

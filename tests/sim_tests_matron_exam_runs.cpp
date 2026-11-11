@@ -48,7 +48,7 @@ struct World {
         physics.SetGravity(Vec3(0.0F, -9.81F, 0.0F));
         s = exam::build(physics, seed, object_layers::kStatic, kBaseY);
         matron = std::make_unique<Matron>(physics, object_layers::kStatic, object_layers::kMoving,
-                                          object_layers::kOnSteel, BodyID());
+                                          object_layers::kOnSteel, object_layers::kHand, BodyID());
         Matron::Saved saved;
         saved.state = Matron::State::Hunting;
         matron->restore(saved);
