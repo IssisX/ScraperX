@@ -1543,5 +1543,165 @@ class Noise(unittest.TestCase):
             self.assertEqual(R.switch_muse_keys(other), [], other)
 
 
+class AckedStaysQuiet(unittest.TestCase):
+    """J-104 (#423): O-2c7fcb6a, O-d7fa3f70, O-5e98ccfb and O-dde130cf were /ack'ed by Muse, then re-sent and
+    dead-lettered: the pass read only the oldest 1,000 comments of its 3-day window, so it never saw the acks."""
+    ACK = "**Muse (via email bridge): J-500 #401 proof red ack {oid}**\n\n/ack {oid}\nThe red lane is on it."
+
+    def muse_red(self, sha="a"):
+        return feed(prs=[fb_red(sha)], issues=[issue(500, owner="owner:muse")])
+
+    def notices(self, gh):
+        return [b for _, b, _ in gh.comments if b.startswith("CLAUDE_TO_MUSE")]
+
+    def test_acked_and_unchanged_is_never_sent_again(self):
+        gh, h = Noise().live()
+        h.run(self.muse_red(), NOW)
+        ob, = h.obs("J-500", kind="fix")
+        self.assertEqual(len(self.notices(gh)), 1)
+        ack = cmt(6796658315, 500, NOW + 5 * M, self.ACK.format(oid=ob["id"]))
+        due, dead = R.at(ob["due"]), R.at(ob["dead"])
+        for when in (NOW + 10 * M, due + M, dead + M, dead + 5 * H):
+            h.run(self.muse_red(), when, comments=[ack] + gh.bot_comments(NOW))
+        self.assertEqual(len(self.notices(gh)), 1, "no re-send and no dead-letter after the ack")
+        ob, = h.obs("J-500", kind="fix")
+        self.assertEqual((ob["ack"]["how"], ob["sends"], ob["dead_lettered"]), ("/ack", 1, None))
+        self.assertFalse([e for e in h.events() if e["ev"] in ("dead_letter", "needs_you") and e.get("id") == ob["id"]])
+
+    def test_acked_then_a_new_head_is_sent_once_and_names_what_changed(self):
+        gh, h = Noise().live()
+        h.run(self.muse_red("a"), NOW)
+        old, = h.obs("J-500", kind="fix")
+        ack = cmt(6796658315, 500, NOW + 5 * M, self.ACK.format(oid=old["id"]))
+        h.run(self.muse_red("a"), NOW + 10 * M, comments=[ack] + gh.bot_comments(NOW))
+        for when in (NOW + 2 * H, NOW + 3 * H):   # red again at a new head: a new version, so owed afresh
+            h.run(self.muse_red("b"), when, comments=[ack] + gh.bot_comments(NOW))
+        obs = h.obs("J-500", NOW + 3 * H, kind="fix")
+        new = next(o for o in obs if o["version"] == f"red:{SHA['b']}")
+        self.assertEqual(next(o for o in obs if o["id"] == old["id"])["ack"]["how"], "/ack")
+        self.assertEqual(new["sends"], 1)
+        sent = self.notices(gh)
+        self.assertEqual(len(sent), 2, "the first notice, then one for the new head")
+        self.assertIn(f"(new head {SHA['b'][:8]} since {old['id']} was acked at {SHA['a'][:8]})", sent[1])
+        self.assertNotIn("again: no ack yet", sent[1])
+        self.assertNotIn("new head", sent[0])
+
+    def test_never_acked_follows_todays_deadlines(self):
+        gh, h = Noise().live()
+        h.run(self.muse_red(), NOW)
+        ob, = h.obs("J-500", kind="fix")
+        due, dead = R.at(ob["due"]), R.at(ob["dead"])
+        h.run(self.muse_red(), due + M, comments=gh.bot_comments(NOW))
+        self.assertEqual(len(self.notices(gh)), 2)
+        self.assertIn("(again: no ack yet)", self.notices(gh)[1])
+        h.run(self.muse_red(), dead + M, comments=gh.bot_comments(due + M))
+        self.assertTrue(h.obs("J-500", dead + M, kind="fix")[0]["dead_lettered"])
+
+
+class RoutedByHeadBranch(unittest.TestCase):
+    """11-11, J-085 (owner:muse): the reds on claude/integrate-protected-j085 and #435's Codex FIX (head
+    claude/integrate-j085) went to Muse's mail, and she spent a turn acking "helper's branch, not Muse's"."""
+
+    def muse_job(self, prs=(), branches=(), runs=()):
+        return feed(prs=list(prs), branches=list(branches), runs=list(runs), issues=[issue(500, owner="owner:muse")])
+
+    FIX = dict(action="FIX", reasons=("open FIX from Codex (review)",))
+
+    def claude_items(self):
+        fix = pr(435, "claude/integrate-j500-x", **self.FIX)
+        name = "claude/integrate-protected-j500-x"
+        b = L.BranchIn(name, SHA["e"], t(-3), vs_trunk="ahead", ahead_by=1, ahead=(SHA["e"],))
+        run = L.RunIn(2, "u", name, SHA["e"], t(-3), t(-2.5), "failure", "red: native-tests")
+        return self.muse_job(prs=[fix], branches=[b], runs=[run])
+
+    def test_a_claude_head_on_a_muse_job_goes_to_the_integrator_never_to_muses_mail(self):
+        gh, h = Noise().live()
+        h.run(self.claude_items(), NOW)
+        obs = h.obs("J-500", kind="fix")
+        self.assertEqual(sorted((o["to"], o["ref"]) for o in obs),
+                         [("claude", "BRANCH|claude/integrate-protected-j500-x"), ("claude", "PR|#435")])
+        self.assertNotIn("email", {o["via"] for o in obs})
+        self.assertFalse([b for _, b, _ in gh.comments if b.startswith("CLAUDE_TO_MUSE")])
+
+    def test_an_fb_bot_head_on_a_muse_job_still_goes_to_muse(self):
+        gh, h = Noise().live()
+        h.run(self.muse_job(prs=[pr(436, "fb-bot/integrate-j500-y", **self.FIX), fb_red(n=401)]), NOW)
+        obs = h.obs("J-500", kind="fix")
+        self.assertEqual(sorted((o["to"], o["via"], o["ref"]) for o in obs),
+                         [("muse", "email", "PR|#401"), ("muse", "email", "PR|#436")])
+        self.assertEqual(len([b for _, b, _ in gh.comments if b.startswith("CLAUDE_TO_MUSE")]), 2)
+
+    def test_a_muse_obligation_already_open_on_a_claude_head_moves_to_claude(self):
+        h = Harness()
+        old = R.fixer_of
+        R.fixer_of = lambda ref, owner, author: owner or author or "claude"   # the routing before 11-11
+        try:
+            h.run(self.claude_items(), NOW)
+        finally:
+            R.fixer_of = old
+        self.assertEqual({o["to"] for o in h.obs("J-500", kind="fix")}, {"muse"})
+        h.run(self.claude_items(), NOW + H)
+        fixes = h.obs("J-500", NOW + H, kind="fix")
+        self.assertEqual(sorted((o["to"], R.is_open(o)) for o in fixes),
+                         [("claude", True), ("claude", True), ("muse", False), ("muse", False)])
+        self.assertEqual({o["closed"]["why"] for o in fixes if o["to"] == "muse"}, {"reassigned to claude"})
+
+
+class CommentWindow(unittest.TestCase):
+    """J-104: the comment stream a pass reads (ledger.comment_window, for the ledger and the reconciler alike)."""
+
+    class ListGH:
+        """issues/comments as GitHub lists it: filtered on updated_at by `since`, created order, 100 a page."""
+        repo = REPO
+
+        def __init__(self, comments):
+            self.comments, self.gets = comments, []
+
+        def get(self, path, accept=""):
+            self.gets.append(path)
+            q = dict(kv.split("=", 1) for kv in path.split("?", 1)[1].split("&"))
+            got = sorted((c for c in self.comments if c["updated_at"] >= q["since"]), key=lambda c: c["created_at"],
+                         reverse=q.get("direction") == "desc")
+            page = int(q.get("page", 1))
+            return got[(page - 1) * 100: page * 100]
+
+    @staticmethod
+    def stream(n, newest):
+        """n comments, one a minute, the newest at `newest`."""
+        out = []
+        for i in range(n):
+            when = L.iso(newest - (n - 1 - i) * M)
+            out.append({"id": 1000 + i, "created_at": when, "updated_at": when, "body": f"post {i}",
+                        "issue_url": f"https://api.github.com/repos/{REPO}/issues/500", "user": {"login": "IssisX"}})
+        return out
+
+    def test_a_full_listing_still_reads_the_newest_comments(self):
+        # 1,470 in the window (11-11): the oldest-first listing stops at 1,000; the /ack is the newest of all
+        comments = self.stream(1470, NOW)
+        comments[-1]["body"] = "/ack O-2c7fcb6a"
+        gh = self.ListGH(comments)
+        got, cut = L.comment_window(gh, REPO, NOW - L.LIVE, NOW)
+        self.assertFalse(cut)
+        self.assertEqual([c["id"] for c in got], [c["id"] for c in comments], "every comment, oldest first, once")
+        self.assertEqual(got[-1]["body"], "/ack O-2c7fcb6a")
+        self.assertTrue(gh.gets[0].startswith(f"repos/{REPO}/issues/comments?since=2026-11-0"))
+        self.assertTrue(any("direction=desc" in g for g in gh.gets))
+
+    def test_a_listing_under_the_cap_is_one_read_and_filtered_to_the_window(self):
+        comments = self.stream(300, NOW)
+        gh = self.ListGH(comments)
+        got, cut = L.comment_window(gh, REPO, NOW - 2 * H, NOW)
+        self.assertFalse(cut)
+        self.assertFalse(any("direction=desc" in g for g in gh.gets))
+        self.assertEqual(len(got), 121, "the 6-hour floor's extra comments are dropped")
+
+    def test_more_than_both_reads_hold_is_cut(self):
+        gh = self.ListGH(self.stream(2300, NOW))
+        got, cut = L.comment_window(gh, REPO, NOW - L.LIVE, NOW)
+        self.assertTrue(cut)
+        self.assertEqual(len(got), 2000)
+        self.assertEqual(got[-1]["id"], 1000 + 2299, "the newest are always read")
+
+
 if __name__ == "__main__":
     unittest.main()

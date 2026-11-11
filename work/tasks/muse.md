@@ -54,18 +54,19 @@ The rule: take the next one yourself, and mail "J-NNN started" the moment a lane
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 In flight (finish these): J-094 #412, J-091 #409, J-055 #294 (started 9:09 AM), J-043 #241 (started 8:27 AM), J-054 #293 (protected branch), J-044l #242 (unparked 11-11, Grok answered), J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Claude has: J-090 #408, J-096 #414, J-084 #402, J-092 #410, J-082 #400, J-085 #403. Parked: J-053 #82 (on Grok), J-060 #320 (on J-044c).
 Unstarted, in order (11-11 7 AM; new playable content first):
-0e. J-095 #413: pull the line out from under her (Grok idea 2, Cory 11-11): the cable becomes a falling rope.
-4. J-083 #401: a forklift lever he grabs and moves (D4).
-5. J-087 #405: story radio cues fire in play (B3); wiring only.
-6. J-081 #399: a readable night climb (B5).
-7. J-088 #406: her fingers wrap what she holds; the pipe warning in CI (A6).
-8. J-089 #407: her spoken lines wired to her events; candidate recordings for Cory (rule 43).
 10. J-086 #404: she pulls him off a ladder, every ladder kind; after J-001 lands (Claude's helper is in the grab code now).
 11. J-098 #416: no synthesized human sounds: her wake and his breath become real recordings (law).
 12. J-099 #417: dents: containers, barrels, steel boxes dent by real impulse (J-038's second half, Cory).
 13. J-100 #418: she reads a load hung over her and gets out from under it (her side of J-092's slab trap).
+14. J-106 #425: matron-ladder fails on its own baseline (your J-063 find): cause, bisect, fix by cause.
+15. J-109 #428: a wrecked machine leaves a way on, S1-S3, D-F, M-O (rule 51).
+16. J-110 #429: the summit ending runs end to end (C4): native and touch, stills.
+17. J-111 #430: lived-in spots from 396 m to 750 m (D1); body order re-pin protected.
+18. J-112 #431: she shoves what he placed off an edge, undoable (A3).
+19. J-113 #432: her chart and the mic: five touch scenarios, consent in game (rule 57).
+20. J-114 #433: housekeeping, music_box mesh and box_cord pivot.
 
-Live lanes: J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
+Live lanes: J-107 #426 (first), J-087, J-081, J-088, J-089, J-095 #413, J-083 #401, J-105 #424, J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
