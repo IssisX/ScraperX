@@ -4,7 +4,7 @@ Only what has no other home. A PR's state is on GitHub, a job's on its issue, a 
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`. Write a thing there, never also here.
 At most 30 lines. Older notes, verbatim: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794374135 (2026-11-10 11:15 PM Central)
+Read through: 1794406889 (2026-11-11 8:21 AM Central)
 
 ## Now (11-11)
 Coding with the system (J-072 done 11-10). Work state lives in GitHub, not here: job issues (owner, state, needs:eyes
