@@ -77,13 +77,23 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (3), from the switchboard at 11-10 2:49 PM Central.\n\n- Needs you: J-038 ruling on #299: 'fb-bot/integrate-protected-j038-slice1'  4e6ab1f4: closed #299 without merging at this head: reopen it, or delete the . Claude did not act (2 send(s) by session, no ack); since 11-10 2:49 PM Central. Done: /ack O-e0d043a6\n- Needs you: J-049 ruling on #367: 'fb-bot/integrate-protected-j049-pr1'  2d99e906: closed #367 without merging at this head: reopen it, or delete the bra. Claude did not act (2 send(s) by session, no ack); since 11-10 12:29 PM Central. Done: /ack O-ac0bbca6\n- Needs you: thread ask on #384: ask from Claude on #384. ChatGPT did not act (2 send(s) by issue, no ack); since 11-10 1:39 PM Central. Done: /ack O-d1f36275\n\nStill standing from earlier batches: 3 (the day's shadow file lists them)."
+  },
+  {
+   "at": "2026-11-11T02:09:10Z",
+   "keys": [
+    "O-ccc7effe",
+    "O-0d2e9cf6"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (2), from the switchboard at 11-10 8:09 PM Central.\n\n- Needs you: J-001 fix on #108: 'claude/integrate-j001-hold' proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (matron-slices-3), na. Claude did not act (2 send(s) by session, no ack); since 11-10 8:09 PM Central. Done: /ack O-ccc7effe\n- Needs you: J-008 fix on #115: 'builder/integrate-j008' proof red: native-tests (matron-slices-3), native-tests (athletic-traversal), native-tests (mat. PE did not act (2 send(s) by watch, no ack); since 11-10 8:09 PM Central. Done: /ack O-0d2e9cf6\n\nStill standing from earlier batches: 6 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-10T20:49:16Z",
+ "last_batch": "2026-11-11T02:09:10Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
  "reported": {
+  "O-0d2e9cf6": "2026-11-11T02:09:10Z",
   "O-1ac5a17e": "2026-11-10T15:09:20Z",
   "O-57ae7ea3": "2026-11-10T15:09:20Z",
   "O-6b556027": "2026-11-10T15:09:20Z",
@@ -91,6 +101,7 @@
   "O-8184d278": "2026-11-10T17:29:19Z",
   "O-a34f6e29": "2026-11-10T15:09:20Z",
   "O-ac0bbca6": "2026-11-10T20:49:16Z",
+  "O-ccc7effe": "2026-11-11T02:09:10Z",
   "O-d0889dd8": "2026-11-10T15:09:20Z",
   "O-d1f36275": "2026-11-10T20:49:16Z",
   "O-e0d043a6": "2026-11-10T20:49:16Z",

@@ -466,7 +466,7 @@
      "closed": null,
      "created": "2026-11-10T21:49:17Z",
      "dead": "2026-11-11T01:17:00Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-11T02:09:10Z",
      "due": "2026-11-10T23:17:00Z",
      "id": "O-ccc7effe",
      "kind": "fix",
@@ -482,6 +482,31 @@
      "version": "red:ca8d162098731e68b81306b9b3c14d5f48d63a8f",
      "via": "session",
      "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-10T20:58:12Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-11T02:09:10Z",
+     "dead": "2026-11-11T23:00:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-11T17:00:00Z",
+     "id": "O-0ddace38",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-11T02:09:10Z",
+     "missing": 0,
+     "ref": "ASK|ask on #108",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 108,
+     "to": "grok",
+     "unseen": null,
+     "version": "6779089452",
+     "via": "issue",
+     "what": "ask from Claude on #108"
     }
    ],
    "outcome": null,
@@ -494,7 +519,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-10T21:49:17Z"
+   "updated": "2026-11-11T02:09:10Z"
   },
   "J-007": {
    "attempt": 1,
@@ -781,7 +806,7 @@
      "closed": null,
      "created": "2026-11-10T23:59:09Z",
      "dead": "2026-11-11T01:59:09Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-11T02:09:10Z",
      "due": "2026-11-11T00:59:09Z",
      "id": "O-0d2e9cf6",
      "kind": "fix",
@@ -1790,7 +1815,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-10T21:49:17Z",
      "dead": "2026-11-11T05:49:17Z",
@@ -1799,10 +1824,10 @@
      "id": "O-e0e128fa",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-10T21:49:17Z",
+     "last_sent": "2026-11-11T02:09:10Z",
      "missing": 0,
      "ref": "PR|#389",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 389,
      "to": "muse",
@@ -1810,6 +1835,31 @@
      "version": "fix:8c6edced123461bc5cee0b05152c15b74e6abce7",
      "via": "email",
      "what": "#389: open FIX from Codex (review)"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-10T21:02:51Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-11T02:09:10Z",
+     "dead": "2026-11-11T05:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-11T03:17:00Z",
+     "id": "O-e05d786e",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-11T02:09:10Z",
+     "missing": 0,
+     "ref": "ASK|ask on #122",
+     "sends": 1,
+     "sent_by": "inbox",
+     "thread": 122,
+     "to": "claude",
+     "unseen": null,
+     "version": "6779188088",
+     "via": "session",
+     "what": "ask from Muse on #122"
     }
    ],
    "outcome": null,
@@ -1822,7 +1872,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-11T01:09:05Z"
+   "updated": "2026-11-11T02:09:10Z"
   },
   "J-016": {
    "attempt": 0,
@@ -4479,7 +4529,7 @@
     "claude/integrate-j051-asks-since": [
      "512c76ea5d72481823547a436e86bf6b156ed565",
      "",
-     "2026-11-10T19:39:24Z"
+     "2026-11-11T02:09:10Z"
     ],
     "claude/integrate-j051-integrator-inbox": [
      "ae63874c30bd697f08a5b8521fb911d125cfcf1f",
@@ -4523,7 +4573,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T01:09:05Z"
+   "updated": "2026-11-11T02:09:10Z"
   },
   "J-051b": {
    "attempt": 0,
@@ -5115,7 +5165,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-10T21:49:17Z",
      "dead": "2026-11-11T05:49:17Z",
@@ -5124,10 +5174,10 @@
      "id": "O-5741705e",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-10T21:49:17Z",
+     "last_sent": "2026-11-11T02:09:10Z",
      "missing": 0,
      "ref": "PR|#343",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 343,
      "to": "muse",
@@ -5135,6 +5185,31 @@
      "version": "fix:87e31743ea86e2d3a65c5b7dbf7b3bf65364f206",
      "via": "email",
      "what": "#343: open FIX from Codex (review)"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-10T21:02:49Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-11T02:09:10Z",
+     "dead": "2026-11-11T05:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-11T03:17:00Z",
+     "id": "O-62d8217d",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-11T02:09:10Z",
+     "missing": 0,
+     "ref": "ASK|ask on #307",
+     "sends": 1,
+     "sent_by": "inbox",
+     "thread": 307,
+     "to": "claude",
+     "unseen": null,
+     "version": "6779187533",
+     "via": "session",
+     "what": "ask from Muse on #307"
     }
    ],
    "outcome": null,
@@ -5147,7 +5222,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-10T21:49:17Z"
+   "updated": "2026-11-11T02:09:10Z"
   },
   "J-060": {
    "attempt": 0,

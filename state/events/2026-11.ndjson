@@ -1221,3 +1221,15 @@
 {"attempt": 2, "ev": "sent", "id": "O-0d2e9cf6", "job": "J-008", "ref": "BRANCH|builder/integrate-j008", "send": 2, "t": "2026-11-11T01:09:05Z", "to": "grok_bot", "via": "watch"}
 {"attempt": 2, "ev": "sent", "id": "O-97ffea90", "job": "J-060", "ref": "BRANCH|fb-bot/integrate-j060", "send": 2, "t": "2026-11-11T01:09:05Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T01:09:05Z", "tries": 1}
+{"due": "2026-11-11T17:00:00Z", "ev": "obligation", "id": "O-0ddace38", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #108", "t": "2026-11-11T02:09:10Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-11T03:17:00Z", "ev": "obligation", "id": "O-e05d786e", "job": "J-015", "kind": "ask", "ref": "ASK|ask on #122", "t": "2026-11-11T02:09:10Z", "to": "claude", "via": "session"}
+{"due": "2026-11-11T03:17:00Z", "ev": "obligation", "id": "O-62d8217d", "job": "J-059", "kind": "ask", "ref": "ASK|ask on #307", "t": "2026-11-11T02:09:10Z", "to": "claude", "via": "session"}
+{"ev": "dead_letter", "id": "O-ccc7effe", "job": "J-001", "ref": "BRANCH|claude/integrate-j001-hold", "t": "2026-11-11T02:09:10Z", "to": "claude"}
+{"attempt": 1, "ev": "sent", "id": "O-0ddace38", "job": "J-001", "ref": "ASK|ask on #108", "send": 1, "t": "2026-11-11T02:09:10Z", "to": "grok", "via": "issue"}
+{"ev": "dead_letter", "id": "O-0d2e9cf6", "job": "J-008", "ref": "BRANCH|builder/integrate-j008", "t": "2026-11-11T02:09:10Z", "to": "grok_bot"}
+{"attempt": 2, "ev": "sent", "id": "O-e0e128fa", "job": "J-015", "ref": "PR|#389", "send": 2, "t": "2026-11-11T02:09:10Z", "to": "muse", "via": "email"}
+{"ev": "inbox", "id": "O-e05d786e", "job": "J-015", "ref": "ASK|ask on #122", "t": "2026-11-11T02:09:10Z", "to": "claude", "via": "session"}
+{"attempt": 2, "ev": "sent", "id": "O-5741705e", "job": "J-059", "ref": "PR|#343", "send": 2, "t": "2026-11-11T02:09:10Z", "to": "muse", "via": "email"}
+{"ev": "inbox", "id": "O-62d8217d", "job": "J-059", "ref": "ASK|ask on #307", "t": "2026-11-11T02:09:10Z", "to": "claude", "via": "session"}
+{"ev": "needs_you", "job": "", "keys": ["O-ccc7effe", "O-0d2e9cf6"], "n": 2, "t": "2026-11-11T02:09:10Z"}
+{"ev": "pass", "job": "", "jobs": 52, "status": "ok", "t": "2026-11-11T02:09:10Z", "tries": 1}
