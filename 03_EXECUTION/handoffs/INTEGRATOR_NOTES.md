@@ -11,8 +11,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
   plus a kicking touch check: xhigh helper.
 - J-096 #414 planks slice 1 (trunk merged 22c88c85, proof rerunning); my eye check before it lands. J-084 #402
   whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
-- J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001. J-092 #410 slab step 2 paused @ 76ee77a6.
-  Helpers (resumed in the stopped helpers' worktrees; Cory lifted the 2-at-high throttle, he has resets):
+- J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001.
   Helpers: J-085 part 2 a26c652f, J-108 bait lift aef884d1 (ruled band (a) 385-485 N, keep C5 vault), J-001 aee4bded.
   J-092 done: PR #434 (protected; workflow PR for touch_slab_trap's shard line follows it). J-085 part 1 pushed 19ce47f0. J-103 landed. Next free: J-104 #423 (+ FAIL lines in red notices), then J-090 pass 2. J-107 #426 shared red: Muse. Muse queue refilled J-109..J-114 (11 unstarted).
 - J-085 #403 (her chase; J-102 #421 found home deck 1 is an island since 10-28, test @ af538488): Cory GO: building
