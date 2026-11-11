@@ -870,7 +870,10 @@ func _slab_trap_touch(device: int) -> bool:
 	_act(device)
 	if not await _wait_until(func() -> bool: return int(_native().get_carrying_entity_id()) == SLAB_HANDLE, 0.5):
 		return _fail("GRAB did not take the trip cord's handle")
+	# A look up at the slab on its sling, for the still, and back down.
+	await _tilt(1.0)
 	await _pose("slab_trap_hanging")
+	await _tilt(0.0)
 	if not await _wait_until(func() -> bool: return bool(_matron_state()["released"]), 40.0):
 		return _fail("she never burst out of her locker (strain %.2f)" % float(_matron_state()["strain"]))
 	# She stands still: under his gaze, or at her band once he looked away.
@@ -904,7 +907,8 @@ func _slab_trap_touch(device: int) -> bool:
 		return _fail("stepping back with the trip cord never opened the hook")
 	if int(_native().get_carrying_entity_id()) != SLAB_HANDLE:
 		return _fail("the handle left his hands before the hook opened")
-	await _wait_until(func() -> bool: return _native().get_kit_body_transform(slab).origin.y < 165.0, 3.0)
+	await _tilt(0.4)   # a little up, at it coming down; she still in his gaze
+	await _wait_until(func() -> bool: return _native().get_kit_body_transform(slab).origin.y < 158.0, 3.0)
 	await _pose("slab_trap_falling")
 	var landed: bool = await _wait_until(func() -> bool:
 		return _native().get_kit_body_transform(slab).origin.y < 156.0 and \
