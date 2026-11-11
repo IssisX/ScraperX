@@ -281,6 +281,15 @@ struct MidstackService final {
     kit::BinIndex o_bucket_bin;
     kit::ChainIndex o_chain;
     kit::RopeIndex o_rope;
+
+    // J-108, the bait lift: her weight on A sinks it to the 662 deck and
+    // lifts B, with him on it, to C5's plant floor.
+    kit::BodyIndex bait_a;
+    kit::BodyIndex bait_b;
+    kit::GuideIndex bait_a_guide;
+    kit::GuideIndex bait_b_guide;
+    kit::ChainIndex bait_chain;
+    kit::RopeIndex bait_rope;
 };
 
 void build_midstack_service(kit::Kit &kit, MidstackService &service);
