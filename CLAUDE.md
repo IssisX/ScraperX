@@ -73,7 +73,7 @@ it to match, never ask him again.
   red proof on the same failure, or on a physics or force-budget question no check settles, post `To <Name>:`
   on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working: the job never holds for the answer. A `To <you>:` ask is answered before your next step.
 - **Strengths (11-12):** Muse is free, so most work goes to Muse, debugging included; it is weaker at finding
-  causes and can fail several times first. Claude's helpers take only the hardest, highest-impact jobs: an
+  causes and can fail several times first. Claude's helpers take only the hardest jobs, scored at assignment by `work/tasks/job-routing.md`: an
   unknown cause that blocks 2+ jobs or the climb or her chase, or a Muse job whose fix failed twice on the same
   failure (mail Muse "taking it"); Muse then builds the fix they name. Grok: math and risk. ChatGPT: research,
   specs, review. All helper slots full: the job waits for the next one.
