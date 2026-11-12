@@ -590,6 +590,52 @@ class WorkOf(unittest.TestCase):
         self.assertEqual((w.rows()["J-105"].state, w.rows()["J-105"].next), ("reviewed", "merge #473"))
 
 
+class Owners(unittest.TestCase):
+    """muse_queue's owner checks (test_queue_low.Owners), deleted at the cutover (#476), ported to the machine: the
+    same holes, the same outcome, read from work/plan.md. 11-12: a helper took J-109 and J-038 by mail while Muse's
+    queue and the issues' owner: labels still said Muse's, and Muse built J-109 a second time."""
+
+    def test_work_on_a_job_another_owner_holds_is_a_conflict_owed_by_the_integrator(self):
+        # the old OWNER line. Also: Conflict.test_the_worker_mails_a_start_on_a_job_the_plan_gives_someone_else (the
+        # start by mail), Conflict.test_two_agents_branches_for_one_job (both built it), and
+        # Conflict.test_a_plan_line_with_the_wrong_issue_number (the queue named the job's PR, not its issue)
+        w = World()
+        w.branches.append(br("fb-bot/integrate-j201", "m1"))   # Muse works J-201; the plan gives it to claude
+        r = w.rows()["J-201"]
+        self.assertEqual((r.state, r.owes, r.limit), ("conflict", "integrator", M.NOW))
+        self.assertIn("fb-bot/integrate-j201", r.why)
+        self.assertNotIn("J-201", M.queue(w.model, w.table, "muse"))   # another owner's job is never in Muse's queue
+        w.close("J-101")   # a done job is never listed as a hole
+        self.assertEqual(w.rows()["J-101"].state, "closed")
+
+    def test_a_parked_job_is_held_and_never_work(self):
+        # the old "Parked:" and "Not yours:" lines. Also: States.test_a_held_job_owes_nothing_and_a_job_behind_another_
+        # is_blocked_on_its_owner and Views.test_labels_follow_the_plan (state:parked made from the hold)
+        w = World()
+        r = w.rows()["J-105"]
+        self.assertEqual((r.state, r.owes, r.limit), ("held", "", None))
+        self.assertNotIn("J-105", [a.job for a in M.alarms(w.table, at(72))])
+        q = M.queue(w.model, w.table, "muse")
+        self.assertIn("Held, not to be worked: J-105 #105", q)
+        self.assertNotIn("J-105", q.split("Held, not to be worked:")[0])
+        self.assertIn((105, ("job", "owner:muse", "state:parked"), ()), M.labels(w.model, w.issues))
+
+    def test_an_unlabeled_job_issue_is_still_a_job_and_a_strangers_or_a_pr_is_not(self):
+        # the old NO-LABEL line. Also: Conflict.test_an_open_issue_the_plan_does_not_hold and
+        # Conflict.test_a_strangers_issue_with_a_jobs_title_is_not_a_job
+        w = World()
+        self.assertTrue(all(not i["labels"] for i in w.issues))   # no `job` label on any plan issue
+        self.assertEqual(w.rows()["J-102"].state, "planned")        # each is still read as its job
+        w.issues += [issue(999, "J-999"),                                        # bare and not in the plan: seen
+                     dict(issue(998, "J-998"), author_association="NONE"),      # a stranger's: not a job
+                     dict(issue(997, "J-997"), pull_request={}),                # a PR: not a job issue
+                     {"number": 996, "title": "Board: live jobs (4)", "state": "open", "labels": []}]
+        rows = w.rows()
+        self.assertEqual((rows["J-999"].state, rows["J-999"].owes), ("conflict", "integrator"))
+        self.assertFalse({"J-998", "J-997"} & set(rows))
+        self.assertEqual({n for n, _, _ in M.labels(w.model, w.issues)} & {996, 997, 998, 999}, set())
+
+
 class Views(unittest.TestCase):
     """Labels, the board, the worker's queue and its notice are made from the table."""
 
