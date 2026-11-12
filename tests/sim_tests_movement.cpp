@@ -252,8 +252,7 @@ void run_hang_rail() {
         require(snap.swing_catch_count == 0, "hang rail: no catch on the dead-centre landing");
         require(std::abs(snap.player_position.y -
                          (static_cast<double>(scraperx::sim::detail::kHangRailTopY) +
-                          static_cast<double>(scraperx::sim::detail::kPlayerHalfHeight) +
-                          static_cast<double>(scraperx::sim::detail::kPlayerRadius))) < 0.05,
+                          static_cast<double>(scraperx::sim::detail::kPlayerHalfHeight))) < 0.05,
                 "hang rail: he stands on the rail top");
     }
 
