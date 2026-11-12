@@ -94,7 +94,9 @@ a "Not yours" line in muse.md, a paragraph in the skill and a check to remember 
 4. **Not in the proposal at all:** receipts (R7), fixes closed by a word (R7), rulings kept in mail (R7), the
    alarm flood that hides the record that already exists (R4), and a brake on the planner's own flips (R6).
 
-## B. Design
+## B. Historical design proposal (not the implementation contract)
+
+This section records the original intended mechanism. Section C and actual source take precedence wherever this proposal describes code that has not been built. Do not activate or backfill B merely because its tables say a failure is solved.
 
 Three rules of construction. Everything below follows from them.
 1. **A decision is written once, in one file, by one writer, in one commit.** Who, in what order, held or not.
@@ -315,7 +317,7 @@ labels, board text, mail or inbox item). Live mode is off until Cory approves th
   already in trunk are history, not lanes; whole listings past the client's 500-item cap.
 - `tools/board/plan.py` editor: version check, refuses moving in-flight work without a stated stop-and-push
   handoff, refuses a recent flip without a reason, atomic save.
-- Reconciler: no start mail from an aging record (an integrator ruling instead); an `/ack` or reply on an open
+- Reconciler: quiet assigned jobs do not create a start mail or an integrator ruling; an `/ack` or reply on an open
   FIX is a receipt (`seen`), not a resolution: it stays open until a new head, verdict or closed PR, and can
   still dead-letter. This is live behaviour (the reconciler is live), not shadow.
 - Ledger feed reads every open `J-NNN` issue, labelled `job` or not.
@@ -392,3 +394,26 @@ Include plan <version> in the subject after a plan-change notice. Keep the exist
 **Merges are not the plan's to stop (Cory 11-12):** a hold or a transfer never turns MERGE or HUMAN-MERGE into WAIT. The plan routes new work only; finished work lands on the existing proof, review, security and LAND rules.
 
 **Activation gate:** no `plan: live` until plan validation, live shadow checks, every supported test, and the owner's approval of the WIP limits and the first generated assignments. No gameplay or money decision is authorized by this document.
+
+
+## E. Failure-mode audit addendum: source-level repairs and outstanding release gates
+
+This records changes on the draft PR; it is not cutover authorization. Check the latest head's selftest before claiming green.
+
+**Repaired on this side branch (with targeted regressions):**
+- The plan observer no longer hides a head merely because its PR was closed without merging. Closed-unmerged #389 (J-015) and #367 (J-049) have extant branches with diverged heads. Reconcile that work explicitly or prove it landed.
+- The plan editor now uses the full observer for check, status, give, hold, drop and tidy. Its former five-page branch listing missed fb-bot/integrate-j109 on page six. A regression checks the actual edit with the head only on page six.
+- Drop and tidy require a freshly verified closed issue and no unresolved remote work. A missing listing entry is not proof of completion.
+- The editor preserves the provisional warning and provenance, leaves no-op edits untouched, and does not mistake the initial plan snapshot for a recent ownership flip.
+- Quiet jobs no longer spawn ungated live integrator ruling obligations solely because they age. This prevents an alarm pile on merge; it is not proof of worker start delivery.
+- A plan violation does not independently generate a QUEUE-LOW refill signal.
+
+**Still open and blocking cutover:**
+- Owner conflicts and actual WIP overload have not been reconciled. No jobs were silently parked, transferred or deleted to force the limits to appear satisfied.
+- The plan does not generate labels, board ownership or worker notices. Muse still has a legacy queue; these are competing order stores.
+- Version notice and recipient receipt, UNREAD, MAIL-NOT-FILED, UNPUSHED-SHA, STACKED and started-post-driven UNPUSHED are missing from the live plan path.
+- Shadow findings are printed on full passes, not immediate handoff gates. The ledger still includes legacy job items.
+- A stop-work explanation does not prove the old owner pushed and acknowledged a transfer.
+- Closed-but-unmerged branches need explicit disposition, not automatic exclusion.
+
+**Release gate:** retain draft PR #471 and plan: shadow. No Muse mail, live label changes or branch deletion. Verify the final head's actual selftest and complete the notice/receipt and ownership loop before seeking owner's cutover decision.
