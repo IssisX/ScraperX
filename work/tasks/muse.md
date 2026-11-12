@@ -53,25 +53,24 @@ your own branches (Cory 11-05) and mail the rest:
 The rule: take the next one yourself, and mail "J-NNN started" the moment a lane starts (so it is never taken from you, 11-11); mail the moment fewer than 8 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 7 left`; Cory 11-11: never run low). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 Finish line (rule 56): the finish plan's A5 (`03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md`).
-Finish (in flight): J-043 #241 rail move, J-059 #307 wire-up, J-063 #321, J-127 #451, J-049 #278 parts 2-3, J-098 #416, J-105 #424 step 1 only, J-045, J-053 #82, J-021 #128 waterfall fix only, J-077 (lands as ruled; then its drop scenario), J-078 #396, J-079 #397, J-080 #398 (push, land, then stop). J-044c: stop after the split you hold.
-Not yours (owner:claude, Claude's helpers; never push): J-001, J-015, J-108, J-109, J-137.
+Finish (in flight): J-043 #241 rail move, J-059 #307 wire-up, J-063 #321, J-127 #451, J-049 #278 parts 2-3, J-098 #416, J-105 #424 step 1 only, J-045, J-053 #82 (lip lowered as ruled), J-021 #128 waterfall fix only, J-077 (gate fix as ruled, then its drop scenario), J-078 #396, J-079 #397, J-080 #398 (push, land, then stop), J-117 #439, J-118 #440 (hold waits on J-137), J-133 #459, J-124 #446, J-119 #441, J-125 #448, J-129 #455, J-130 #456, J-132 #458, J-099 #417, J-088 #406 (Claude looks before it lands). J-044c: stop after the split you hold.
+Not yours (owner:claude, Claude's helpers; never push): J-001, J-015, J-090, J-096, J-108, J-109, J-137.
 Done work is never parked (Cory 11-12): J-040, J-044c (as held), J-054, J-055, J-081, J-091, J-094, J-095, J-100, J-014: if the groups it reaches pass locally, push now; if not, mail one line of what is left. J-114: let it land.
-Later (after the Unstarted list, in order): J-044d to k and n, J-060, J-036, J-099, J-022, J-090 pass 2, J-096 past slice 1, J-105 past step 1, J-111, J-112, J-113, J-120 to J-123, J-088, J-086 (until J-001's grab code lands). Close: J-067, J-082.
+Later (in order): J-105 past step 1 (needs Cory's OK), J-086 (until J-001's grab code lands). Close: J-067, J-082.
 Unstarted, in order (11-12):
-1. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely; also her stage on relaunch (save at Dangerous, load fresh, she is still Dangerous).
-2. J-117 #439: a checkpoint on a moving floor restores him on real support.
-3. J-118 #440: leaving the app mid-ride, mid-hold, mid-fall: back to that exact moment. J-116 to J-118 share one save version bump.
-4. J-133 #459: the climb and the ending in one touch run, zero deaths (F4).
-5. J-134 #460: measure her chase above 220 m, band by band (F5).
-6. J-124 #446: the parachute from every deck edge lands him alive (rule 51).
-7. J-119 #441: every control fits every screen: Fold 6 folded and open, a fold mid-climb.
-8. J-125 #448: every shipped sound, voice, model and texture on record; Licences page true.
-9. J-129 #455: the objective core, saved with the checkpoint (missions start; same save bump as J-116).
-10. J-130 #456: Brenner's job lines on the foreman radio, text first.
-11. J-131 #457: the punch list on the pause card and one HUD line.
-12. J-132 #458: missions 1 and 7 proven, one touch scenario each.
-13. J-135 #461: rule_check flags geometry changed through tuning-header constants.
-14. J-136 #468: S2 and S3 recover after an empty send; proposal mail first, build after #466.
+1. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely; also her stage on relaunch (save at Dangerous, load fresh, she is still Dangerous). Shares one save version bump with J-117, J-118, J-129.
+2. J-131 #457: the punch list on the pause card and one HUD line.
+3. J-134 #460: measure her chase above 220 m, band by band (F5).
+4. J-135 #461: rule_check flags geometry changed through tuning-header constants.
+5. J-136 #468: S2 and S3 recover after an empty send; build after #466.
+6. J-044d to k and n #242: the next fighting splits, in order.
+7. J-036 #167: fight S5, the slip.
+8. J-112 #431: she shoves what he placed off an edge (A3, gap 9).
+9. J-113 #432: her chart and the microphone: five touch scenarios pass, consent asked in game.
+10. J-120 #442: the crew proven: native tests for every worker state.
+11. J-121 #443: the kit's rope proven on its own: length, slack, struts, winch, snatch.
+12. J-122 #444: his footsteps sound like what is under him.
+13. J-123 #445: every machine sounds like itself by its real motion.
 Waiting on J-001's grab code landing: J-018 #125.
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
