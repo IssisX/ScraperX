@@ -69,6 +69,7 @@ Unstarted, in order (11-12):
 11. J-131 #457: the punch list on the pause card and one HUD line.
 12. J-132 #458: missions 1 and 7 proven, one touch scenario each.
 13. J-135 #461: rule_check flags geometry changed through tuning-header constants.
+14. J-136 #468: S2 and S3 recover after an empty send; proposal mail first, build after #466.
 Waiting on J-001's grab code landing: J-018 #125.
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
