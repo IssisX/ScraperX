@@ -53,7 +53,7 @@ import budget as money  # noqa: E402
 import rules  # noqa: E402
 import ghapi  # noqa: E402
 import muse_queue  # noqa: E402
-import job_control  # noqa: E402
+import plan as collab_plan  # noqa: E402
 from ghapi import GitHub, GitHubError, RateLimited  # noqa: E402
 
 REPO = "IssisX/ScraperX"
@@ -108,7 +108,7 @@ QUIET_HOURS = 3.0                              # tools/board/sweep.py --quiet-ho
 MAX_INBOX_LINES = 30                           # items in one inbox comment; the rest come next sweep
 MAX_INBOX_KEYS = 600                           # keys carried forward in the newest inbox comment's marker
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
-INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "STARTED", "ACK", "RERUN")
+INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, and on the switch's hourly full pass, so nothing is lost; held between sweeps in the state.
 DIGEST_KINDS = frozenset({"STARTED", "ACK", "RERUN"})
@@ -1037,18 +1037,22 @@ class Switch:
                 block, never = self.rule_check_block(facts.number, facts.head_sha)
                 facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
                 d = rules.merge_decision(facts, author, self.team, token, key)
-        # A review and green proof are not permission to merge work for a job that was
-        # reassigned or parked. Recheck the issue on the merge path, not the queue file.
-        if d.action in ("MERGE", "HUMAN-MERGE") and ctx.get("job") and (
-                facts.head_ref.startswith(("fb-bot/", "claude/"))):
-            job = ctx["job"]
-            with self.gh.fresh():
-                issue = self.jobs().get(job)
-                if issue:
-                    issue = self.gh.get(f"repos/{self.gh.repo}/issues/{issue['number']}")
-            why = job_control.merge_problem(job, facts.head_ref, issue)
+        # After cutover, one versioned plan owns the job, not mutable labels/mail.
+        # A clean proof or LAND cannot bypass a transfer or a hold.
+        if d.action in ("MERGE", "HUMAN-MERGE") and ctx.get("job") and self.plan_mode() == "live":
+            model = self.read_plan()
+            line = model.by_job().get(ctx["job"])
+            ref = facts.head_ref
+            why = ""
+            if line is None:
+                why = f"{ctx['job']}: no plan order"
+            elif line.hold:
+                why = f"{ctx['job']}: held in plan ({line.hold})"
+            elif not (ref.startswith("fb-bot/") if line.owner == "muse" else
+                      ref.startswith(line.owner + "/")):
+                why = f"{ctx['job']}: plan owner {line.owner}, branch {ref}"
             if why:
-                d = rules.MergeDecision("WAIT", (f"job authority: {why}",), d.land_by)
+                d = rules.MergeDecision("WAIT", (f"plan authority: {why}",), d.land_by)
                 self.out(f"HOLD        #{facts.number}: {why}")
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
@@ -1736,11 +1740,50 @@ class Switch:
             items += self.pr_inbox_items(s, runs, reported, prefix)
         items += self.branch_inbox_items(runs, reported, prefix)
         if not prefix:
+            items += getattr(self, "plan_items", ())
             items += self.queue_items   # the last count's QUEUE-LOW, set by run_sweep before the inbox (J-097)
         if not prefix and ripe is None:
             items += self.auto_pr_failed   # set by auto_open_prs earlier in the sweep
             items += self.ask_inbox_items(reported)
         return sorted(items, key=lambda it: INBOX_ORDER.index(it.kind))
+
+    def plan_mode(self) -> str:
+        """Plan projections are shadow-only until Cory authorizes the cutover."""
+        try:
+            import yaml
+            config = yaml.safe_load((self.root / "work/switchboard.yml").read_text(encoding="utf-8")) or {}
+            return config.get("plan") if config.get("plan") in ("shadow", "live") else "off"
+        except (OSError, ValueError):
+            return "off"
+
+    def read_plan(self) -> "collab_plan.Plan":
+        path = self.root / "work/plan.md"
+        try:
+            model = collab_plan.parse(path.read_text(encoding="utf-8"))
+        except OSError as err:
+            raise RuntimeError(f"read collaboration plan {path}: {err}") from err
+        if model.errors:
+            raise RuntimeError("invalid collaboration plan: " + "; ".join(model.errors[:5]))
+        return model
+
+    def plan_check(self) -> None:
+        """Observe the complete order, including bare jobs, remote work and WIP."""
+        self.plan_items = ()
+        if self.plan_mode() == "off":
+            return
+        model = self.read_plan()
+        issues = self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")
+        branches = [b["name"] for b in self.gh.paged(f"repos/{self.gh.repo}/branches")]
+        prs = self.listing(f"repos/{self.gh.repo}/pulls?state=open")
+        problems = collab_plan.findings(model, issues, branches, prs)
+        self.out(f"PLAN        {len(model.lines)} orders, {len(problems)} violation(s), mode={self.plan_mode()}")
+        for finding in problems[:20]:
+            self.out(f"PLAN-BLOCK  {plain(finding[:220])}")
+        if problems and self.plan_mode() == "live":
+            summary = "; ".join(problems[:8])
+            self.plan_items = (InboxItem("PLAN", "work/plan.md",
+                                        model.fingerprint() + ":" + str(len(problems)),
+                                        f"PLAN: {len(problems)} violation(s): {plain(summary[:700])}"),)
 
     def queue_text(self) -> str:
         """Trunk's work/tasks/muse.md, read once per run from this checkout; "" (an empty queue) when it cannot be."""
@@ -1765,27 +1808,28 @@ class Switch:
         fewer than muse_queue.LOW_UNDER really-unstarted jobs in work/tasks/muse.md's Unstarted block (muse_queue's
         rules, read with this run's client). The item's head is the count and the unstarted jobs, so it is listed once
         per change, and a queue refilled and run low again is listed again. Sets and returns queue_items."""
-        # Existing callers may pass legacy queue text while their tests exercise
-        # the old parser. Production never takes orders from a checked-out file.
-        if text is None:
-            self.queue_items = ()
-            raw = self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")
+        # A live plan is the only route for new work. An explicit text argument
+        # remains for the pre-cutover queue parser's regression tests.
+        if text is None and self.plan_mode() == "live":
+            model = self.read_plan()
+            issues = self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")
             branches = [b["name"] for b in self.gh.paged(f"repos/{self.gh.repo}/branches")]
             prs = self.listing(f"repos/{self.gh.repo}/pulls?state=open")
-            inv = job_control.inventory(raw, branches, prs)
-            for problem in inv.violations:
-                self.out(f"JOB-CONTROL {plain(problem[:250])}")
-            jobs = [j.id for j in inv.ready_muse]
-            n = len(jobs)
-            self.out(f"QUEUE       {n} issue-owned ready job(s); Muse WIP {inv.active_muse}/"
-                     f"{job_control.MUSE_WIP_LIMIT}; {len(inv.violations)} defect(s)")
-            if n < muse_queue.LOW_UNDER or inv.violations:
-                line = (f"QUEUE-LOW: {n} issue-owned ready jobs (under {muse_queue.LOW_UNDER}): "
-                        f"refill to {muse_queue.REFILL_TO}. Ready: {', '.join(jobs) or 'none'}"
-                        + (f"; JOB-CONTROL: {'; '.join(inv.violations[:4])}" if inv.violations else ""))
-                self.queue_items = (InboxItem("QUEUE-LOW", "job issues",
-                                              f"{n}:{','.join(jobs)}:{','.join(inv.violations)}", line),)
+            problems = collab_plan.findings(model, issues, branches, prs)
+            open_jobs = {collab_plan.JOB.match(i.get("title") or "").group()
+                         for i in issues if collab_plan.JOB.match(i.get("title") or "")}
+            closed = {ln.job for ln in model.lines if ln.job not in open_jobs}
+            waiting = [ln.job for ln in model.owner_lines("muse")
+                       if collab_plan.status(ln, closed=closed, prs=prs, branches=branches) == "queued"]
+            self.queue_items = ()
+            if len(waiting) < muse_queue.LOW_UNDER or problems:
+                line = (f"QUEUE-LOW: {len(waiting)} live-plan ready jobs "
+                        f"(under {muse_queue.LOW_UNDER}). Ready: {', '.join(waiting) or 'none'}"
+                        + (f"; plan violations: {'; '.join(problems[:5])}" if problems else ""))
+                self.queue_items = (InboxItem("QUEUE-LOW", "work/plan.md",
+                                              model.fingerprint() + ":" + ",".join(waiting), line),)
             return self.queue_items
+        text = self.queue_text() if text is None else text
         self.queue_items = ()
         report = muse_queue.check(self.gh, text, self.now)
         ok = report.unstarted
@@ -3077,6 +3121,9 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             not_done.add(name)
             sw.out(f"ERROR       {name}: {type(err).__name__}: {err}")
         return None
+
+    if steer and not targeted and (delta is None or delta.active):
+        part("plan", sw.plan_check)
 
     if steer and (delta is None or delta.finished_auto):   # a fast sweep: only branches whose proof just finished
         part("auto-open", lambda: sw.auto_open_prs(None if delta is None else delta.finished_auto))
