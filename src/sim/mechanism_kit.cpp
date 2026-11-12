@@ -1866,9 +1866,15 @@ void Kit::capture(Checkpoint &out) const {
 }
 
 void Kit::restore(const Checkpoint &in) {
-    if (in.bodies.size() != bodies_.size()) {
-        return;
-    }
+    // A checkpoint is a prefix of the kit when bodies were built since
+    // it was committed: a crate's break pieces are the only ones, eight
+    // per broken stock, appended last. Restoring the common prefix
+    // rewinds every body the checkpoint knew, and leaves the newer
+    // bodies as they are — refusing the whole restore instead would
+    // leave a death rewinding nothing at all. The ropes, grips and
+    // the rest are indexed by their own counts, which pieces never
+    // change, so they restore in full either way.
+    const std::size_t common = std::min(in.bodies.size(), bodies_.size());
     for (Rope &rope : ropes_) {
         disconnect_rope(rope);
     }
@@ -1879,7 +1885,7 @@ void Kit::restore(const Checkpoint &in) {
         unweld(grip);
     }
     auto &bodies = system_.GetBodyInterface();
-    for (std::size_t index = 0; index < bodies_.size(); ++index) {
+    for (std::size_t index = 0; index < common; ++index) {
         Body &record = bodies_[index];
         const BodyState &state = in.bodies[index];
         if (!record.dynamic) {

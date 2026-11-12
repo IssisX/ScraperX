@@ -5,6 +5,7 @@
 
 #include "sim/loose_stock.hpp"
 #include "sim/physics_world.hpp"
+#include "sim/stock_damage.hpp"
 
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseQuery.h>
 
@@ -278,12 +279,20 @@ std::uint32_t Simulation::loose_stock_east_west_begin() const noexcept {
     return static_cast<std::uint32_t>(physics_world_->loose_stock().east_west_begin());
 }
 
+std::uint32_t Simulation::loose_stock_upper_begin() const noexcept {
+    return static_cast<std::uint32_t>(physics_world_->loose_stock().upper_begin());
+}
+
 Simulation::LooseStockPiece Simulation::loose_stock_piece(const std::uint32_t index) const noexcept {
     const std::vector<LooseStock::Placement> &placed = physics_world_->loose_stock().placed();
     if (index >= placed.size()) {
         return {};
     }
     return {static_cast<std::uint8_t>(placed[index].kind), placed[index].variant};
+}
+
+stock_damage::DamageState Simulation::stock_damage(const std::uint64_t entity) const noexcept {
+    return physics_world_->stock_damage_state(entity);
 }
 
 std::uint32_t Simulation::kit_cable_count() const noexcept {
@@ -981,6 +990,14 @@ std::uint64_t Simulation::last_impact_sequence() const noexcept {
     return physics_world_->impacts().last_sequence();
 }
 
+float Simulation::debug_carried_load_mass() const noexcept {
+    return physics_world_->debug_carried_load_mass();
+}
+
+Simulation::BreakParentSample Simulation::debug_last_break_parent() const noexcept {
+    return physics_world_->debug_last_break_parent();
+}
+
 std::vector<Simulation::MachinePart> Simulation::machine_parts() const {
     std::vector<MachinePart> parts;
     for (const ImpactLedger::Machine &m : physics_world_->impacts().machines()) {
@@ -1334,6 +1351,12 @@ void Simulation::debug_launch_kit_body(const std::uint32_t body, const Vector3 a
     physics_world_->launch_kit_body_for_test(
         body, JPH::RVec3(static_cast<float>(at.x), static_cast<float>(at.y), static_cast<float>(at.z)),
         JPH::Vec3(static_cast<float>(velocity.x), static_cast<float>(velocity.y), static_cast<float>(velocity.z)));
+}
+
+void Simulation::debug_spin_kit_body(const std::uint32_t body, const Vector3 angular_velocity) noexcept {
+    physics_world_->spin_kit_body_for_test(
+        body, JPH::Vec3(static_cast<float>(angular_velocity.x), static_cast<float>(angular_velocity.y),
+                        static_cast<float>(angular_velocity.z)));
 }
 
 void Simulation::debug_launch_player(const Vector3 at, const Vector3 velocity) noexcept {
@@ -1792,6 +1815,8 @@ SwingSnapshot Simulation::swing_state() const noexcept {
     return result;
 }
 
+std::string Simulation::last_load_refusal() const { return last_load_refusal_; }
+
 std::vector<std::uint8_t> Simulation::save_game() const {
     SaveWriter w;
     w.pod(save_format_key());
@@ -1801,6 +1826,7 @@ std::vector<std::uint8_t> Simulation::save_game() const {
 }
 
 bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
+    last_load_refusal_.clear();
     if (data == nullptr) {
         return false;
     }
@@ -1810,6 +1836,7 @@ bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
         return false;
     }
     if (!physics_world_->load_save(r)) {
+        last_load_refusal_ = physics_world_->load_refusal();
         return false;
     }
     tick_index_ = tick;
