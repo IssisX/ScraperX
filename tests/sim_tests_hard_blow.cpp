@@ -156,7 +156,12 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
         const auto m = s.matron_state();
         const auto p = s.snapshot().player_position;
         const double hz = static_cast<double>(Simulation::kTickRateHz);
-        const double lead = 0.22;
+        // No lead on her: she runs at him, so the box meets her torso
+        // head-on if it is thrown at her centre. A lead aims ahead of her
+        // along her instant heading, and she turns toward him as she closes:
+        // the last throw's box met her 0.51 m south of her centre, a graze
+        // worth 0.105 m/s, on a 0.22 s lead.
+        const double lead = 0.0;
         const double ax = m.position.x + (m.position.x - last.x) * hz * lead - p.x;
         const double az = m.position.z + (m.position.z - last.z) * hz * lead - p.z;
         last = m.position;
