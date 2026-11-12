@@ -2847,9 +2847,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 if (own_region >= 0) floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
             }
             const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
-            // A lead the corner pipe goes toward, no longer frail: chased longer.
+            // A lead the corner pipe goes toward (frail, only up it): chased longer.
             const float toward = pipe_next_toward(floor_y, lead_floor_);
-            const bool by_pipe = elsewhere && toward != floor_y && stage_ != Stage::Pest && pipe_reaches(floor_y) &&
+            const bool by_pipe = elsewhere && toward != floor_y && (stage_ != Stage::Pest || toward > floor_y) &&
+                                 pipe_reaches(floor_y) &&
                                  pipe_reaches(toward) && pipe_serves(toward);
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
