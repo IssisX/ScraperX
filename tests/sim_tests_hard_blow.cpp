@@ -542,13 +542,14 @@ void run_hard_blow_hold() {
 // The stock that can do it is reachable along the route at each stage: on
 // every deck the route climbs, a piece the hands carry (at most the carry's
 // grip, LooseStock::heavy) lies on the ring round the shaft. The bands are
-// the tower's own rings: the yard, deck 8's gangway, the stack rings
-// 11..143, her deck 154, the upper rings 176.25..396.25 and the top decks.
-// The 706 deck and the 802.64 summit are bare by design (dress_tower keeps
-// their places but feels for no floor there), so they are not required.
+// the tower's own rings: the yard, the stack rings 11..143 (deck 8 is the
+// 88 m ring, not an 8 m deck), her deck 154, the upper rings 176.25..396.25
+// and the top decks. The 706 deck and the 802.64 summit are bare by design
+// (dress_tower keeps their places but feels for no floor there), so they
+// are not required.
 void run_hard_blow_stock() {
     Simulation s(InitialSpawn::Deck154);
-    static constexpr double kRings[] = {0.0, 8.0, 11.0, 22.0, 33.0, 44.0, 55.0, 66.0, 77.0, 88.0, 99.0,
+    static constexpr double kRings[] = {0.0, 11.0, 22.0, 33.0, 44.0, 55.0, 66.0, 77.0, 88.0, 99.0,
                                         110.0, 121.0, 132.0, 143.0, 154.0, 176.25, 198.25, 220.25, 242.25,
                                         264.25, 286.25, 308.25, 330.25, 352.25, 374.25, 396.25, 640.25,
                                         662.1, 684.1, 728.1, 750.1};
