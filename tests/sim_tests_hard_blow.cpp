@@ -142,21 +142,44 @@ void to_her_post(Simulation &s) {
             "hard blow: crouched round to 143's north edge of the shaft");
     require(until_guarding(s, 120.0) && s.snapshot().death_count == 0,
             "hard blow: she stands guard at her post");
+    // Up again before any pick-up: the round trip crouches, and the pick-up
+    // is an upright act (the matron-heave beat takes its toolbox upright).
+    (void)s.set_crouch_input(false);
+    (void)s.advance_frame(0.3);
 }
 
-// Takes up the piece at `entity` where it lies by the north band: to within
-// the pick-up's reach of it (never onto it: walking into a drum shoves it),
-// facing it, then the pick-up.
+// Takes up the piece at `entity` where it lies by the north band: north to
+// the piece's latitude first, then east along the north edge to it — the
+// straight line from the shaft's north edge runs through her guard post
+// (-10.3, -129). Then the ammo handled_piece's pick-up: face it, look down
+// on it, nudge in until the hands have it.
 void take_up_piece(Simulation &s, const std::uint64_t entity, const char *what) {
     const auto at = s.kit_body_position(s.kit_body_index(entity));
-    require(walk_to(s, at.x, at.z, 20.0, 0.9), what);
+    const auto start = s.snapshot().player_position;
+    require(walk_to(s, start.x, at.z, 20.0, 0.5) && walk_to(s, at.x, at.z, 20.0, 0.3), what);
+    const std::uint32_t body = s.kit_body_index(entity);
+    (void)s.set_look_pitch(-0.5);
+    for (int i = 0; i < static_cast<int>(3.0 * Simulation::kTickRateHz) &&
+                    s.snapshot().carry_target_entity_id != entity;
+         ++i) {
+        const auto b = s.kit_body_position(body);
+        const auto p = s.snapshot().player_position;
+        const double d = std::max(std::hypot(b.x - p.x, b.z - p.z), 1.0e-3);
+        (void)s.set_facing((b.x - p.x) / d, (b.z - p.z) / d);
+        (void)s.set_move_input(d > 0.7 ? 0.3 * (b.x - p.x) / d : 0.0, d > 0.7 ? 0.3 * (b.z - p.z) / d : 0.0);
+        tick(s);
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.advance_frame(0.4);
     const auto me = s.snapshot().player_position;
-    const double d = std::hypot(at.x - me.x, at.z - me.z);
-    (void)s.set_facing((at.x - me.x) / d, (at.z - me.z) / d);
-    (void)s.advance_frame(0.3);
-    require(s.snapshot().carry_target_entity_id == entity && s.request_pick_up(), what);
+    std::cout << "  hard blow take-up: piece " << entity << " at (" << at.x << ", " << at.z << "), he is "
+              << std::hypot(at.x - me.x, at.z - me.z) << " m off, carry target "
+              << s.snapshot().carry_target_entity_id << "\n";
+    require(s.snapshot().carry_target_entity_id == entity, what);
+    require(s.request_pick_up(), what);
     (void)s.advance_frame(0.6);
     require(s.snapshot().carrying_entity_id == entity, what);
+    (void)s.set_look_pitch(0.0);
 }
 
 struct Thrown {
