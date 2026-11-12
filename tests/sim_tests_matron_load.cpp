@@ -221,10 +221,19 @@ void run_matron_load() {
     // measurement), the hold tears an arm and sets down (measured
     // 2026-10-31: max_shift 0.525139 m, tears 0->1, Spare seen, resolved),
     // every grip release is over deck 154, and nobody dies.
+    // Where he waits (J-001, test-drift; the checks are as they were): her
+    // drag runs west along the band's line (z about -128.5). At (2,-129) her
+    // swat, which now lands as her hand reaches his chest, leaves him lying
+    // on that line: she walks through the man she holds, her own grip tears
+    // on its strain twice, and the swing that is left is cut short by her
+    // turn for the rail (0.448 m; 0.434-0.486 m over spots 0.1 m apart).
+    // Half a metre south he lies beside her line: one grip, no tear, and he
+    // swings round behind her (0.500 m; 0.470-0.507 m over z -129.2..-130.2,
+    // x 1.8..2.2, 14 spots, every one across).
     {
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
-        meet_her(s, 2.0, -129.0);
+        meet_her(s, 2.0, -129.5);
         s.debug_matron_hold(0, 3.0);
         constexpr int kSpareState = static_cast<int>(scraperx::sim::Matron::State::Spare);
         const std::uint64_t deaths = s.snapshot().death_count;
