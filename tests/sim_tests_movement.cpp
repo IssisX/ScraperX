@@ -152,18 +152,25 @@ void run_hang_rail() {
         // his lower rim catches the rail's top-west corner and pops him
         // further east, so the catch never sees the rail. Nudge him back
         // west with slow real inputs and re-brake until he stands on the
-        // line: the nudge is slow, so each re-brake drifts him only a few
-        // millimetres, and the loop converges. No teleport: the fall still
-        // starts from a walked, braked stance on the leaf.
+        // line. The nudge is a crawl (0.05 input, world frame), so each
+        // re-brake drifts him only millimetres, and the loop converges.
+        // walk_to cannot do this: steer_toward has a 0.05 m dead zone, so
+        // it can never land tighter than that — the input is driven
+        // directly instead. No teleport: the fall still starts from a
+        // walked, braked stance on the leaf.
         for (int nudge = 0; nudge < 4; ++nudge) {
-            const double dx = static_cast<double>(scraperx::sim::detail::kHangRailX) -
-                              s.snapshot().player_position.x;
+            double dx = static_cast<double>(scraperx::sim::detail::kHangRailX) -
+                        s.snapshot().player_position.x;
             if (std::abs(dx) < 0.02) {
                 break;
             }
-            const double z = s.snapshot().player_position.z;
-            require(walk_to(s, static_cast<double>(scraperx::sim::detail::kHangRailX), z, 3.0, 0.01),
-                    "hang rail: nudge back onto the rail line");
+            for (int step = 0; step < 180 && std::abs(dx) >= 0.01; ++step) {
+                (void)s.set_move_input(dx > 0.0 ? 0.05 : -0.05, 0.0);
+                (void)s.set_facing(dx > 0.0 ? 1.0 : -1.0, 0.0);
+                (void)s.advance_frame(Simulation::kFixedStepSeconds);
+                dx = static_cast<double>(scraperx::sim::detail::kHangRailX) -
+                     s.snapshot().player_position.x;
+            }
             (void)s.set_move_input(0.0, 0.0);
             require(advance_until(s,
                                   [](const Snapshot &n) {
@@ -173,6 +180,8 @@ void run_hang_rail() {
                                   3.0),
                     "hang rail: brake after the nudge");
         }
+        std::cout << "  hang rail: fall starts at x " << s.snapshot().player_position.x << " (rail line "
+                  << static_cast<double>(scraperx::sim::detail::kHangRailX) << ")\n";
         require(std::abs(s.snapshot().player_position.x -
                          static_cast<double>(scraperx::sim::detail::kHangRailX)) < 0.02,
                 "hang rail: the fall starts on the rail line");
