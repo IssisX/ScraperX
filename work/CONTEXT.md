@@ -84,6 +84,10 @@ It merges a PR into trunk (as the workflow token, a merge commit naming the head
    secret or those reviews it is listed for a person.
 After a merge it dispatches the proof on trunk (a workflow-token merge starts no push workflow; a merge-token
 merge's push starts it) and posts one line on the PR and the job issue. The owner can overturn any merge.
+A proof on an integrate branch red only in setup steps (a package, NDK or render-prerequisite install, a restore,
+the checkout) is re-run as a whole run once per head; red again on that head is RED-TWICE as before. That re-run,
+and a Muse mail that only says "J-NNN started" or acks, never wake the integrator alone: they ride as one digest
+line on the next inbox comment that does, or the hourly full pass (J-103).
 
 Reviews: who reviews which head, and the fallback when no reviewer answers, are set in `work/agents.yml`
 (`review:`) and decided in `tools/switchboard/rules.py`; read them there, not here.

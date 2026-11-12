@@ -3,21 +3,19 @@
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794409124 (2026-11-11 8:58 AM Central)
+Read through: 1794449787 (2026-11-11 evening full run)
 
-## Now (11-11, before Cory's compact at about 9 AM)
-Work state lives in GitHub: job issues (owner, state, needs:eyes), Muse's queue (`tools/board/queue_check.py`, floor 8,
-refill to 15), my follow-ups as job issues (J-093 #411, J-097 #415). Three helpers at high, the cap (Cory 11-11):
-- J-001 #108: hold @ 46c9c4be, protected j093 @ fed81029. 7 left: B1 x6 to Floor (fits Cory's criterion, 0.9 s short),
-  snag setup (test drift), plus the kicking-wins check in the fatality: xhigh helper.
-- J-096 #414 planks: slice 1 @ 4bb372c4 (inertia x233 ruled ok, Grok checks); proof 43044737336; my eye check
-  before it lands. J-084 #402: whole climb PASS (24 stages) @ a94ada14, proof running; touch-2 limit 900 s is a
-  workflow change (Codex + API review). J-082 #400 band 1: xhigh helper, protected, on top of j084.
-- J-090 #408 hook her: pass 1 c755689d (proof 43041899766). Ruled: physics stands (a planted
-  Matron is dragged along a lip, not pulled off; she goes over only when not planted). Pass 2 after J-001 lands:
-  her hands on the line, the 67.7 kN one-tick jolt before the 6 kN tear, the touch scenario.
-- J-092 #410 slab: probe PASS (24,203 N·s, 4x lethal); step 2 build on an xhigh helper; her side is Muse's J-100 #418.
-Gmail filter (Cory, 8:45 AM): agent mail skips his inbox to the label "ScraperX agents" (new mail checked 9 AM).
+## Now (11-11)
+State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). Three helpers, the cap (Cory 11-11):
+- J-001 #108: hold @ 8e5c715e, protected j093 @ aaed1791; 1 left (snag setup): ruled her pin holds him over the drop,
+  plus a kicking touch check: xhigh helper.
+- J-096 #414 planks slice 1 (trunk merged 22c88c85, proof rerunning); my eye check before it lands. J-084 #402
+  whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
+- J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001.
+  Helpers: J-092 #434 red-proof fix a50537520df752690 (body order vs magnet guard). J-108 bait lift aef884d1 stopped (Cory: move/drop). J-001 aee4bded paused (Argon/Grok).
+  J-092 landed #434; its CI follow-up #447 (touch_slab_trap in touch-2 + rule_check tests) has green proof, Codex clean, API LAND. Next workflow PR: `persist-credentials: false` on the scope checkout (API note on #447; token is contents:read, low risk).
+- J-085 #403 DONE: #435 + #437 merged, issue closed.
+  (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
 
 ## Traps

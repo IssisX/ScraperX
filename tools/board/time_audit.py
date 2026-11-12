@@ -36,10 +36,16 @@ def to_minutes(h: str, m: str | None, ap: str) -> int:
     return (int(h) % 12 + (12 if ap.lower() == "p" else 0)) * 60 + int(m or 0)
 
 
-MACHINE_LINE = re.compile(r"^_Mailed .* Central\._$", re.M)   # the bridge's own send-time line (muse_bridge.gs)
+# The bridge's own send-time lines (muse_bridge.gs): "_Mailed <date> Central._" under a Muse mail, and
+# "_The mail bridge's record of a mail the integrator sent ... Central. ..._" over a copy of Claude's mail.
+MACHINE_LINE = re.compile(r"^_(Mailed |The mail bridge's record of a mail ).*_$", re.M)
+# The switchboard's watchdog posts (SWITCHBOARD DOWN / UP) sign as the integrator but are written by the workflow.
+MACHINE_POST = ("Claude (integrator): SWITCHBOARD DOWN", "Claude (integrator): SWITCHBOARD UP")
 
 
 def typed_times(text: str, sent: datetime) -> list[str]:
+    if text.startswith(MACHINE_POST):   # the switchboard watchdog's own post: times read from run data, not typed
+        return []
     text = MACHINE_LINE.sub("", text)
     sent_c = sent.astimezone(CENTRAL)
     sent_min = sent_c.hour * 60 + sent_c.minute
