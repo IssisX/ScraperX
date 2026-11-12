@@ -2,7 +2,7 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j125": "f5ebd6c9510d9c55d8cb4e6a23d8c628c6c32581"
+  "fb-bot/integrate-j125": "3be444d203594439bf4e9e48f96ce541032c59b8"
  },
  "cancelled": null,
  "ci": "",
@@ -10,15 +10,15 @@
   "6829929805:68"
  ],
  "created": "2026-11-12T01:29:02Z",
- "deadline": null,
- "head": "f5ebd6c9510d9c55d8cb4e6a23d8c628c6c32581",
+ "deadline": "2026-11-12T21:17:00Z",
+ "head": "3be444d203594439bf4e9e48f96ce541032c59b8",
  "issue": 448,
  "job": "J-125",
  "landed": {
   "fb-bot/integrate-j125": [
-   "f5ebd6c9510d9c55d8cb4e6a23d8c628c6c32581",
+   "3be444d203594439bf4e9e48f96ce541032c59b8",
    "",
-   "2026-11-12T18:09:34Z"
+   "2026-11-12T19:27:38Z"
   ]
  },
  "obligations": [
@@ -51,6 +51,30 @@
    "version": "start:448",
    "via": "email",
    "what": "start J-125"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T19:27:38Z",
+   "dead": "2026-11-12T23:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T21:17:00Z",
+   "id": "O-b28f9022",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j125",
+   "sends": 0,
+   "thread": 448,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:3be444d203594439bf4e9e48f96ce541032c59b8",
+   "via": "session",
+   "what": "`fb-bot/integrate-j125` is green with no PR: open one (Muse cannot open PRs)"
   }
  ],
  "outcome": null,
@@ -61,5 +85,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T18:09:34Z"
+ "updated": "2026-11-12T19:27:38Z"
 }

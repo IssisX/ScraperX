@@ -10,7 +10,7 @@
   "6829929116:68"
  ],
  "created": "2026-11-12T01:29:02Z",
- "deadline": null,
+ "deadline": "2026-11-12T23:27:38Z",
  "head": "ff512d83b6d2c0f4d96ebafa10403799ec1599aa",
  "issue": 446,
  "job": "J-124",
@@ -51,6 +51,30 @@
    "version": "start:446",
    "via": "email",
    "what": "start J-124"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T19:27:38Z",
+   "dead": "2026-11-13T03:27:38Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T23:27:38Z",
+   "id": "O-2e70fef4",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j124",
+   "sends": 0,
+   "thread": 446,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:ff512d83b6d2c0f4d96ebafa10403799ec1599aa",
+   "via": "email",
+   "what": "`fb-bot/integrate-j124` proof red: native-tests (matron-slices-3), no PR"
   }
  ],
  "outcome": null,
@@ -60,6 +84,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T18:09:34Z"
+ "state": "working",
+ "updated": "2026-11-12T19:27:38Z"
 }

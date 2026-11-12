@@ -221,7 +221,7 @@
    "ack": null,
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T14:19:02Z",
-   "attempts": 1,
+   "attempts": 2,
    "closed": null,
    "created": "2026-11-12T14:29:46Z",
    "dead": "2026-11-12T23:00:00Z",
@@ -230,10 +230,10 @@
    "id": "O-b4fd7064",
    "kind": "ask",
    "last_error": "",
-   "last_sent": "2026-11-12T14:29:46Z",
+   "last_sent": "2026-11-12T19:27:38Z",
    "missing": 0,
    "ref": "ASK|ask on #241",
-   "sends": 1,
+   "sends": 2,
    "sent_by": "live",
    "thread": 241,
    "to": "grok",
@@ -243,7 +243,11 @@
    "what": "ask from Claude on #241"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T19:13:03Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T17:02:55Z",
    "attempts": 1,
@@ -271,7 +275,7 @@
    "ack": null,
    "ack_rule": "new-head|reply|ack",
    "asked": null,
-   "attempts": 0,
+   "attempts": 1,
    "closed": null,
    "created": "2026-11-12T18:09:34Z",
    "dead": "2026-11-13T02:09:34Z",
@@ -280,10 +284,11 @@
    "id": "O-f42e35af",
    "kind": "fix",
    "last_error": "",
-   "last_sent": null,
+   "last_sent": "2026-11-12T19:27:38Z",
    "missing": 0,
    "ref": "BRANCH|fb-bot/integrate-protected-j043-rail-stand",
-   "sends": 0,
+   "sends": 1,
+   "sent_by": "live",
    "thread": 241,
    "to": "muse",
    "unseen": null,
@@ -300,5 +305,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T18:09:34Z"
+ "updated": "2026-11-12T19:27:38Z"
 }

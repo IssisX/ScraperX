@@ -2,21 +2,21 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j081": "dc5f9cac0c7c803803ad75d58b1dbb3c6aa86cdf"
+  "fb-bot/integrate-j081": "ea4adb89de6758264f82b63ee0a8b426de63d90c"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": "2026-11-12T22:09:34Z",
- "head": "dc5f9cac0c7c803803ad75d58b1dbb3c6aa86cdf",
+ "deadline": null,
+ "head": "ea4adb89de6758264f82b63ee0a8b426de63d90c",
  "issue": 399,
  "job": "J-081",
  "landed": {
   "fb-bot/integrate-j081": [
-   "dc5f9cac0c7c803803ad75d58b1dbb3c6aa86cdf",
+   "ea4adb89de6758264f82b63ee0a8b426de63d90c",
    "",
-   "2026-11-12T16:58:14Z"
+   "2026-11-12T19:27:38Z"
   ]
  },
  "obligations": [
@@ -50,7 +50,11 @@
    "what": "start J-081"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T19:27:38Z",
+    "by": "muse",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
@@ -81,6 +85,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-12T18:09:34Z"
+ "state": "proof",
+ "updated": "2026-11-12T19:27:38Z"
 }

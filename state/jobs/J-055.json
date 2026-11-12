@@ -28,7 +28,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-12T13:11:40Z",
+   "rechecked": "2026-11-12T19:27:38Z",
    "ref": "JOB|#294",
    "sends": 0,
    "thread": 294,
@@ -74,7 +74,7 @@
    "closed": null,
    "created": "2026-11-12T14:43:28Z",
    "dead": "2026-11-12T18:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-12T19:27:38Z",
    "due": "2026-11-12T16:17:00Z",
    "id": "O-d27a4a0a",
    "kind": "ask",
@@ -99,7 +99,7 @@
    "closed": null,
    "created": "2026-11-12T14:43:28Z",
    "dead": "2026-11-12T18:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-12T19:27:38Z",
    "due": "2026-11-12T16:17:00Z",
    "id": "O-ebd5c0bd",
    "kind": "ask",
@@ -124,7 +124,7 @@
    "closed": null,
    "created": "2026-11-12T15:45:44Z",
    "dead": "2026-11-12T19:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-12T19:27:38Z",
    "due": "2026-11-12T17:17:00Z",
    "id": "O-c13609bc",
    "kind": "ask",
@@ -150,5 +150,5 @@
  "prs": [],
  "review": "",
  "state": "accepted",
- "updated": "2026-11-12T15:45:44Z"
+ "updated": "2026-11-12T19:27:38Z"
 }

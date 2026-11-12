@@ -10,7 +10,7 @@
   "fb-bot/integrate-protected-j015-wreck-way-on": "aee6d79d91249016e5788e205e16b0958f4bd427"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [
   "6771165879:299",
   "6773022511:72",
@@ -18,7 +18,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-12T17:17:00Z",
- "head": "0ab0b03e40adf1b6eb56d8a1109ce5b190e457af",
+ "head": "1a5f74af252641c06a0f25120964b39a25662997",
  "issue": 122,
  "job": "J-015",
  "landed": {
@@ -97,7 +97,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
-   "rechecked": "2026-11-12T13:11:40Z",
+   "rechecked": "2026-11-12T19:27:38Z",
    "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -662,13 +662,13 @@
    "closed": null,
    "created": "2026-11-12T15:45:44Z",
    "dead": "2026-11-12T19:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-12T19:27:38Z",
    "due": "2026-11-12T17:17:00Z",
    "id": "O-5127dbe0",
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-12T18:09:34Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "BRANCH|fb-bot/integrate-j015-slice1",
    "sends": 2,
    "sent_by": "live",
@@ -687,7 +687,7 @@
    "closed": null,
    "created": "2026-11-12T15:45:44Z",
    "dead": "2026-11-12T19:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-12T19:27:38Z",
    "due": "2026-11-12T17:17:00Z",
    "id": "O-214e6190",
    "kind": "ruling",
@@ -712,7 +712,7 @@
    "closed": null,
    "created": "2026-11-12T15:45:44Z",
    "dead": "2026-11-12T19:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-12T19:27:38Z",
    "due": "2026-11-12T17:17:00Z",
    "id": "O-5f8a401c",
    "kind": "ask",
@@ -730,7 +730,11 @@
    "what": "ask from Muse on #122"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T19:27:38Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -766,6 +770,6 @@
   466
  ],
  "review": "",
- "state": "working",
- "updated": "2026-11-12T18:09:34Z"
+ "state": "proof",
+ "updated": "2026-11-12T19:27:38Z"
 }

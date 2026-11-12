@@ -1,15 +1,15 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j079": "d982c18bff0182e7ebc36445ea818ff4fe155adb"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": "2026-11-12T19:17:00Z",
- "head": "d982c18bff0182e7ebc36445ea818ff4fe155adb",
+ "deadline": null,
+ "head": "687ddfdfbe2e0b3d0e649020281151117c8994f2",
  "issue": 397,
  "job": "J-079",
  "landed": {
@@ -46,7 +46,11 @@
    "what": "start J-079"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T19:32:52Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T17:27:58Z",
    "attempts": 1,
@@ -74,10 +78,12 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 473,
  "pr_done": "",
- "prs": [],
+ "prs": [
+  473
+ ],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T18:09:34Z"
+ "updated": "2026-11-12T19:27:38Z"
 }

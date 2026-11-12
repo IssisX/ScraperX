@@ -1,0 +1,32 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "claude/integrate-j137": "b0c06aae40206496e5123330671a598bf6422cf9"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-12T19:27:38Z",
+ "deadline": null,
+ "head": "b0c06aae40206496e5123330671a598bf6422cf9",
+ "issue": 474,
+ "job": "J-137",
+ "landed": {
+  "claude/integrate-j137": [
+   "b0c06aae40206496e5123330671a598bf6422cf9",
+   "",
+   "2026-11-12T19:27:38Z"
+  ]
+ },
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "claude",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-12T19:27:38Z"
+}

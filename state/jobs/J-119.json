@@ -2,7 +2,7 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j119": "aeb08b6664bfcc438d9e4b5387df380d7d7b3688"
+  "fb-bot/integrate-j119": "9b0a5c550c939e80356be38243018ba2540feccb"
  },
  "cancelled": null,
  "ci": "",
@@ -10,15 +10,15 @@
   "6829928509:68"
  ],
  "created": "2026-11-12T01:29:02Z",
- "deadline": null,
- "head": "aeb08b6664bfcc438d9e4b5387df380d7d7b3688",
+ "deadline": "2026-11-12T21:17:00Z",
+ "head": "9b0a5c550c939e80356be38243018ba2540feccb",
  "issue": 441,
  "job": "J-119",
  "landed": {
   "fb-bot/integrate-j119": [
-   "aeb08b6664bfcc438d9e4b5387df380d7d7b3688",
+   "9b0a5c550c939e80356be38243018ba2540feccb",
    "",
-   "2026-11-12T18:09:34Z"
+   "2026-11-12T19:27:38Z"
   ]
  },
  "obligations": [
@@ -51,6 +51,30 @@
    "version": "start:441",
    "via": "email",
    "what": "start J-119"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T19:27:38Z",
+   "dead": "2026-11-12T23:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T21:17:00Z",
+   "id": "O-ba11524f",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j119",
+   "sends": 0,
+   "thread": 441,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:9b0a5c550c939e80356be38243018ba2540feccb",
+   "via": "session",
+   "what": "`fb-bot/integrate-j119` is green with no PR: open one (Muse cannot open PRs)"
   }
  ],
  "outcome": null,
@@ -61,5 +85,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T18:09:34Z"
+ "updated": "2026-11-12T19:27:38Z"
 }
