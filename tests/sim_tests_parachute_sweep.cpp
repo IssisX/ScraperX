@@ -51,8 +51,8 @@ constexpr Face kFaces[] = {
     {"E", 1.0, 0.0},
     {"W", -1.0, 0.0},
 };
-constexpr double kTowerCentreX = 0.0;
-constexpr double kTowerCentreZ = -150.0;
+constexpr double kTowerCenterX = 0.0;
+constexpr double kTowerCenterZ = -150.0;
 // The second tower's face (twin_tower.hpp kFaceZ): a landing at or
 // beyond it is a landing in the second tower.
 constexpr double kSecondTowerFaceZ = -224.0;
@@ -91,8 +91,8 @@ bool probe_edge_line(Simulation &s, const double top, const Face &face, const do
                      double &edge_r, double &edge_support) {
     bool found = false;
     for (double r = 2.0; r <= 40.0; r += 0.5) {
-        const double x = kTowerCentreX + face.dx * r - face.dz * lateral;
-        const double z = kTowerCentreZ + face.dz * r + face.dx * lateral;
+        const double x = kTowerCenterX + face.dx * r - face.dz * lateral;
+        const double z = kTowerCenterZ + face.dz * r + face.dx * lateral;
         const double support = s.debug_support_y(Vector3{x, top + 2.0, z}, 4.0);
         if (std::isnan(support) || std::fabs(support - top) > 0.5) continue;
         edge_r = r;
@@ -113,8 +113,8 @@ bool find_stand(Simulation &s, const double top, const Face &face, double &stand
         if (!probe_edge_line(s, top, face, lateral, edge_r, edge_support)) continue;
         const double stand_r = edge_r - 3.5;
         if (stand_r < 2.0) continue;
-        stand_x = kTowerCentreX + face.dx * stand_r - face.dz * lateral;
-        stand_z = kTowerCentreZ + face.dz * stand_r + face.dx * lateral;
+        stand_x = kTowerCenterX + face.dx * stand_r - face.dz * lateral;
+        stand_z = kTowerCenterZ + face.dz * stand_r + face.dx * lateral;
         stand_support = edge_support;
         s.debug_launch_player(Vector3{stand_x, stand_support + 0.9, stand_z}, Vector3{0.0, 0.0, 0.0});
         for (int tick = 0; tick < 45; ++tick) {
