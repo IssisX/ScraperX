@@ -1303,6 +1303,10 @@ bool Simulation::debug_player_snagged() const noexcept { return physics_world_->
 
 void Simulation::debug_matron_player_blow() noexcept { physics_world_->matron().player_blow_landed(); }
 
+void Simulation::debug_force_strike_move(const std::uint8_t move) noexcept {
+    physics_world_->force_strike_move_for_test(move);
+}
+
 void Simulation::debug_matron_hold(const int spare, const double dangle_seconds) noexcept {
     physics_world_->matron().set_spare_for_test(spare);
     physics_world_->matron().set_dangle_seconds_for_test(static_cast<float>(dangle_seconds));

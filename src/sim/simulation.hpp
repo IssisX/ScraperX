@@ -1813,6 +1813,10 @@ public:
     // Tests only (never bound to the bridge): the blow she takes next tagged
     // as the player's own (his punch's tag, Matron::player_blow_landed).
     void debug_matron_player_blow() noexcept;
+    // Tests only (never bound to the bridge): the next strike press throws
+    // this move whatever the stance would pick (0, the bare punch, on a
+    // free Matron); consumed when the strike begins.
+    void debug_force_strike_move(std::uint8_t move) noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;

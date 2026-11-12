@@ -1,0 +1,547 @@
+// J-077 (issue #392, rule 34): a hard blow from a real object he can swing
+// or drop takes her balance or puts her down for a few seconds, alive, and
+// gives him a window to escape a hold; a bare punch does not. Runtime
+// scenarios per stage, on real throws and a real low blow, never a debug
+// launch. The pest's real thrown toolbox is already proven by the
+// matron-heave beat in sim_tests_matron.cpp (run_matron_balance): a toolbox
+// heaved at a pest coming upright puts her down, up again a few seconds
+// later, nobody dead. This file proves the rest: the dangerous and changed
+// throws, the low drum that downs a changed Matron, the bare punch at every
+// stage, the hold-escape window an object blow opens, and the stock along
+// the route.
+#include "sim_tests.hpp"
+
+#include "sim/loose_stock.hpp"
+#include "sim/matron.hpp"
+
+namespace {
+using scraperx::sim::InitialSpawn;
+using scraperx::sim::LooseStock;
+using scraperx::sim::Matron;
+using scraperx::sim::Simulation;
+using scraperx::sim::UpMove;
+using scraperx::sim::Vector3;
+
+constexpr int kStateStraining = static_cast<int>(Matron::State::Straining);
+constexpr int kStateHunting = static_cast<int>(Matron::State::Hunting);
+constexpr int kStateGuarding = static_cast<int>(Matron::State::Guarding);
+constexpr int kStateGrab = static_cast<int>(Matron::State::Grab);
+constexpr int kStateStaggering = static_cast<int>(Matron::State::Staggering);
+constexpr int kStateDown = static_cast<int>(Matron::State::Down);
+
+void tick(Simulation &s) { (void)s.advance_frame(Simulation::kFixedStepSeconds); }
+
+bool steer(Simulation &s, const double x, const double z, const bool sprint, const double tolerance = 0.4) {
+    const auto now = s.snapshot();
+    const double dx = x - now.player_position.x;
+    const double dz = z - now.player_position.z;
+    const double length = std::hypot(dx, dz);
+    if (length < tolerance) {
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_sprint_input(false);
+        return true;
+    }
+    (void)s.set_move_input(dx / length, dz / length);
+    (void)s.set_facing(dx / length, dz / length);
+    (void)s.set_sprint_input(sprint);
+    return false;
+}
+
+bool go(Simulation &s, const double x, const double z, const bool sprint, const double seconds,
+        const double tolerance = 0.4) {
+    for (int i = 0; i < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        if (steer(s, x, z, sprint, tolerance)) {
+            return true;
+        }
+        tick(s);
+    }
+    return false;
+}
+
+void stand_still(Simulation &s, const double seconds) {
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    (void)s.advance_frame(seconds);
+}
+
+// The line whose top stands on the floor at `floor` (another level's below it).
+std::uint32_t line_from(const Simulation &s, const double floor) {
+    for (std::uint32_t i = 0; i < s.zipline_count(); ++i) {
+        const auto line = s.zipline_line(i);
+        if (std::abs(line.ramp_foot.y - floor) < 0.3 && line.bottom.y < line.top.y - 6.0) {
+            return i;
+        }
+    }
+    return s.zipline_count();
+}
+
+// Rides line `line` down from its stand: the jump for its bar, braked to come
+// into the end's buffer at 5 m/s, and letting go there. True once down on the
+// far band, alive.
+bool ride_line_down(Simulation &s, const Simulation::ZiplineLine &line) {
+    const double run = std::hypot(line.bottom.x - line.top.x, line.bottom.z - line.top.z);
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    (void)s.advance_frame(0.5);
+    (void)s.set_facing((line.bottom.x - line.top.x) / run, (line.bottom.z - line.top.z) / run);
+    (void)s.advance_frame(0.2);
+    if (!(s.request_jump() &&
+          advance_until(s, [](const scraperx::sim::Snapshot &n) { return n.zipline_riding; }, 1.2))) {
+        return false;
+    }
+    const auto deaths = s.snapshot().death_count;
+    for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz); ++i) {
+        const auto n = s.snapshot();
+        const bool braking = n.zipline_riding && n.zipline_along_m > line.length - 12.0 && n.zipline_speed_mps > 5.0;
+        (void)s.set_move_input(0.0, braking ? 1.0 : 0.0);
+        tick(s);
+        const auto m = s.snapshot();
+        if (m.zipline_riding && m.zipline_along_m > line.length - 1.5 && std::abs(m.zipline_speed_mps) < 0.3) {
+            (void)s.request_release();
+        }
+        if (!m.zipline_riding && m.player_grounded && m.player_position.y < line.top.y - 6.0) {
+            (void)s.set_move_input(0.0, 0.0);
+            return m.death_count == deaths;
+        }
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    return false;
+}
+
+// Waits (still) until she stands guard at her post on her deck.
+bool until_guarding(Simulation &s, const double seconds) {
+    constexpr double kPostX = -10.3;
+    constexpr double kPostZ = -129.0;
+    for (int i = 0; i < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        if (m.state == kStateGuarding && std::hypot(m.position.x - kPostX, m.position.z - kPostZ) < 0.6) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Wakes her, rides down to 143, rounds to her post and waits for her guard:
+// the shared start of every throw case below.
+void to_her_post(Simulation &s) {
+    s.place_matron_home(154.0F);
+    s.debug_fix_matron_pace(3);  // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
+    require(s.advance_frame(1.0).accepted, "hard blow: settle");
+    require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
+            "hard blow: a sprint toward her locker wakes her");
+    const auto line = s.zipline_line(line_from(s, Matron::kDeckTop));
+    require(walk_to(s, line.ramp_foot.x, line.ramp_foot.z, 6.0, 0.3) &&
+                walk_to(s, line.stand.x, line.stand.z, 6.0, 0.12),
+            "hard blow: up the line's ramp onto its stand");
+    require(ride_line_down(s, line), "hard blow: down the line to 143 m while she strains");
+    (void)s.set_crouch_input(true);
+    require(go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 40.0, 1.0) &&
+                go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0, 1.0) &&
+                go(s, -16.0, -132.6, false, 20.0, 0.3),
+            "hard blow: crouched round to 143's north edge of the shaft");
+    require(until_guarding(s, 120.0) && s.snapshot().death_count == 0,
+            "hard blow: she stands guard at her post");
+}
+
+// Takes up the piece at `entity` where it lies by the north band: to within
+// the pick-up's reach of it (never onto it: walking into a drum shoves it),
+// facing it, then the pick-up.
+void take_up_piece(Simulation &s, const std::uint64_t entity, const char *what) {
+    const auto at = s.kit_body_position(s.kit_body_index(entity));
+    require(walk_to(s, at.x, at.z, 20.0, 0.9), what);
+    const auto me = s.snapshot().player_position;
+    const double d = std::hypot(at.x - me.x, at.z - me.z);
+    (void)s.set_facing((at.x - me.x) / d, (at.z - me.z) / d);
+    (void)s.advance_frame(0.3);
+    require(s.snapshot().carry_target_entity_id == entity && s.request_pick_up(), what);
+    (void)s.advance_frame(0.6);
+    require(s.snapshot().carrying_entity_id == entity, what);
+}
+
+struct Thrown {
+    bool threw = false;
+    int worst = -1;  // worst the blow did: Down over Staggering, -1 neither
+    double blow_mps = 0.0;
+    int turn_at_hit = -1;  // her Turn when the blow first read, -1 none read
+    std::uint32_t staggers = 0;
+    std::uint32_t knockdowns = 0;
+    bool alive = false;
+    double floor_y = 0.0;  // her floor before the throw, to rise back onto
+    double y = 0.0;        // her height before the throw
+};
+// Throws the piece in his hands at her as she hunts in, holding `stage` the
+// whole way; `look_pitch` aims the throw (0 at her chest, down low). The
+// wait is the matron-heave beat's: still, the piece held, until she comes
+// for him in sight, her stalk keeping her from turning on him; the throw
+// once the piece has come round in front of him and settled, and only while
+// she is not turning (in a wind-up her step is nothing, and any blow over
+// her take bar would put her down instead of staggering her).
+Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
+    Thrown out;
+    const std::uint64_t piece = s.snapshot().carrying_entity_id;
+    const std::uint32_t body = s.kit_body_index(piece);
+    require(walk_to(s, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "hard blow: west along the band with it");
+    bool coming = false;
+    int turned = 0;
+    auto box_was = s.kit_body_position(body);
+    auto last = s.matron_state().position;
+    for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz) && !coming; ++i) {
+        s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+        tick(s);
+        const auto m = s.matron_state();
+        const auto p = s.snapshot().player_position;
+        const double hz = static_cast<double>(Simulation::kTickRateHz);
+        const double lead = 0.22;
+        const double ax = m.position.x + (m.position.x - last.x) * hz * lead - p.x;
+        const double az = m.position.z + (m.position.z - last.z) * hz * lead - p.z;
+        last = m.position;
+        const double d = std::hypot(m.position.x - p.x, m.position.z - p.z);
+        if (m.state == kStateHunting && m.stage == stage && d < 9.0) {
+            if (turned > 0 || (m.stalking && d < 3.4)) {
+                (void)s.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
+                const auto b = s.kit_body_position(body);
+                const bool in_front =
+                    ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
+                ++turned;
+                require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
+                        "hard blow: the piece comes round in front of him");
+                const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
+                box_was = b;
+                coming = in_front && swing < 0.002 && turned >= static_cast<int>(Simulation::kTickRateHz) / 4 &&
+                         m.turn == 0;
+            } else if (m.stalking) {
+                (void)s.set_facing(-(m.position.x - p.x) / d, -(m.position.z - p.z) / d);
+            } else {
+                (void)s.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
+                coming = d < 3.4;
+            }
+        }
+    }
+    require(coming, "hard blow: she comes for him, the piece in his hands");
+    (void)s.set_look_pitch(look_pitch);
+    tick(s);
+    const auto throws0 = s.snapshot().throw_count;
+    const auto stags0 = s.matron_state().staggers;
+    const auto downs0 = s.matron_state().knockdowns;
+    out.floor_y = s.matron_state().floor_y;
+    out.y = s.matron_state().position.y;
+    require(s.snapshot().up_move == UpMove::Throw && s.request_up(), "hard blow: up is THROW with it in the hands");
+    for (int i = 0; i < static_cast<int>(1.2 * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+        tick(s);
+        const auto m = s.matron_state();
+        out.blow_mps = std::max(out.blow_mps, m.blow_mps);
+        if (out.turn_at_hit < 0 && m.blow_mps > 0.0) {
+            out.turn_at_hit = m.turn;
+        }
+        const int state = m.state;
+        if (state == kStateDown || (state == kStateStaggering && out.worst < 0)) {
+            out.worst = state;
+        }
+    }
+    // The throw's release is a tick after the request: the count is read
+    // after the watch, not on the request's own tick.
+    out.threw = s.snapshot().throw_count == throws0 + 1;
+    const auto m = s.matron_state();
+    out.staggers = static_cast<std::uint32_t>(m.staggers - stags0);
+    out.knockdowns = static_cast<std::uint32_t>(m.knockdowns - downs0);
+    out.alive = m.alive;
+    return out;
+}
+
+// Rises again within her stage's time on the steel, on the floor she was
+// knocked down from (her pre-blow floor, not an assumed deck), alive.
+bool rises(Simulation &s, const double floor_y, const double y, const double seconds) {
+    for (int i = 0; i < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        if (m.state != kStateDown && m.state != kStateStaggering) {
+            return m.alive && std::abs(m.floor_y - floor_y) < 0.1 && std::abs(m.position.y - y) < 0.2;
+        }
+    }
+    return false;
+}
+
+}  // namespace
+
+// A bare punch (move 0, his escape in her hand: 1500 N over 3 ticks, 50 N-s,
+// 0.227 m/s over her 220 kg) on a free Matron, at each stage: she takes it
+// on her feet. The punch is forced for one press (debug_force_strike_move):
+// the press would otherwise throw the jab, which does stagger a pest.
+// Creep pace: the slowest closing, the hardest punch the power cap allows.
+void run_hard_blow_punch() {
+    constexpr double kTakeMps = 0.2446;  // upright, any stage: sqrt(g / 1.05) * 0.08
+    for (const int stage : {0, 1, 2}) {
+        Simulation s(InitialSpawn::Deck154);
+        s.place_matron_home(154.0F);
+        for (int i = 0; i < 30; ++i) {
+            tick(s);
+        }
+        const Vector3 p = s.snapshot().player_position;
+        (void)s.set_facing(0.0, 1.0);
+        s.launch_matron_for_test(Vector3{p.x, p.y - 0.20, p.z + 1.05});
+        s.debug_hold_matron_hands(30.0);
+        s.debug_fix_matron_pace(0);  // creep
+        for (int i = 0; i < 5 * static_cast<int>(Simulation::kTickRateHz) &&
+                        s.matron_state().state != kStateHunting;
+             ++i) {
+            tick(s);
+        }
+        require(s.matron_state().state == kStateHunting, "hard blow punch: she hunts (setup)");
+        s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+        bool entered = false;
+        for (int i = 0; i < 10 * static_cast<int>(Simulation::kTickRateHz) && !entered; ++i) {
+            const Vector3 me = s.snapshot().player_position;
+            const Vector3 her = s.matron_state().position;
+            (void)s.set_facing(her.x - me.x, her.z - me.z);
+            tick(s);
+            s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+            const Vector3 now = s.matron_state().position;
+            const Vector3 here = s.snapshot().player_position;
+            entered = s.matron_state().state == kStateHunting &&
+                      std::hypot(now.x - here.x, now.z - here.z) <= 1.15;
+        }
+        require(entered, "hard blow punch: she hunts into punch range (setup)");
+        // The forced move first: the offer is then read for the punch, not
+        // the jab the press would otherwise throw. The move itself is read
+        // while the strike is under way: at guard it reads the next press.
+        s.debug_force_strike_move(0);
+        tick(s);
+        const bool offered = s.snapshot().strike_offered;
+        const std::uint64_t strikes0 = s.snapshot().strike_count;
+        const std::uint64_t hits0 = s.snapshot().strike_hit_count;
+        const std::uint64_t downs0 = s.matron_state().knockdowns;
+        const std::uint64_t stags0 = s.matron_state().staggers;
+        (void)s.request_strike();
+        double peak = 0.0;
+        std::uint8_t move = 255;
+        for (int i = 0; i < 60; ++i) {
+            tick(s);
+            s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+            peak = std::max(peak, s.matron_state().blow_mps);
+            if (s.snapshot().strike_phase != 0) {
+                move = s.snapshot().strike_move;
+            }
+        }
+        const auto &snap = s.snapshot();
+        const auto &m = s.matron_state();
+        std::cout << "  hard blow punch stage " << stage << ": offered=" << offered
+                  << " hits=" << (snap.strike_hit_count - hits0) << " move=" << int(move)
+                  << " impulse_ns=" << snap.strike_impulse_ns << " peak=" << peak << " state=" << int(m.state)
+                  << "\n";
+        require(offered, "hard blow punch: Action offers the punch with her body close in front");
+        require(snap.strike_count - strikes0 == 1 && snap.strike_hit_count - hits0 == 1,
+                "hard blow punch: one press throws one punch, and it lands");
+        require(move == 0, "hard blow punch: the forced press threw the punch, move 0");
+        require(snap.strike_impulse_ns > 0.0 && snap.strike_impulse_ns <= 50.01,
+                "hard blow punch: 1500 N over 3 ticks is at most 50 N-s");
+        require(peak > 0.10 && peak < kTakeMps,
+                "hard blow punch: the blow reads, under her take bar at every stage");
+        require(m.staggers - stags0 == 0 && m.knockdowns - downs0 == 0 && m.state != kStateStaggering &&
+                    m.state != kStateDown,
+                "hard blow punch: a bare punch takes nothing from her balance");
+    }
+    std::cout << "PASS scraperx_sim hard blow punch: no stagger, no knockdown, any stage\n";
+}
+
+// A real thrown toolbox at a dangerous Matron, and a real thrown drum at a
+// fully changed one she faces: each only staggers her, and she has her feet
+// back within a couple of seconds, alive. (The pest's real throw is the
+// matron-heave beat in run_matron_balance: down, up again, nobody dead.)
+void run_hard_blow_throw() {
+    {
+        Simulation s(InitialSpawn::Deck154);
+        to_her_post(s);
+        const std::uint32_t throwables = s.loose_stock_throwables_begin();
+        const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables;
+        take_up_piece(s, toolbox, "hard blow throw: to the toolbox by the north rail");
+        const Thrown by_box = throw_at_her(s, 1, 0.0);
+        const auto m = s.matron_state();
+        std::cout << "  hard blow throw dangerous: threw=" << by_box.threw << " blow=" << by_box.blow_mps
+                  << " m/s, worst=" << by_box.worst << ", staggers=" << by_box.staggers
+                  << ", knockdowns=" << by_box.knockdowns << ", turn at hit=" << by_box.turn_at_hit << "\n";
+        require(by_box.threw, "hard blow throw: the toolbox thrown at a dangerous Matron");
+        require(by_box.worst == kStateStaggering && by_box.staggers == 1 && by_box.knockdowns == 0,
+                "hard blow throw: a toolbox only staggers a dangerous Matron");
+        require(by_box.alive && rises(s, by_box.floor_y, by_box.y, 2.0),
+                "hard blow throw: dangerous, she has her feet back");
+        (void)m;
+    }
+    {
+        Simulation s(InitialSpawn::Deck154);
+        to_her_post(s);
+        const std::uint32_t throwables = s.loose_stock_throwables_begin();
+        const std::uint64_t drum = LooseStock::kFirstEntity + throwables + 2;
+        take_up_piece(s, drum, "hard blow throw: to the drum by the north rail");
+        const Thrown by_drum = throw_at_her(s, 2, 0.0);
+        const auto m = s.matron_state();
+        std::cout << "  hard blow throw changed: threw=" << by_drum.threw << " blow=" << by_drum.blow_mps
+                  << " m/s, worst=" << by_drum.worst << ", staggers=" << by_drum.staggers
+                  << ", knockdowns=" << by_drum.knockdowns << ", turn at hit=" << by_drum.turn_at_hit << "\n";
+        require(by_drum.threw, "hard blow throw: the drum thrown at a fully changed Matron");
+        require(by_drum.worst == kStateStaggering && by_drum.staggers == 1 && by_drum.knockdowns == 0,
+                "hard blow throw: a drum she faces only staggers a fully changed Matron");
+        require(by_drum.alive && rises(s, by_drum.floor_y, by_drum.y, 2.0),
+                "hard blow throw: fully changed, she has her feet back");
+        (void)m;
+    }
+    std::cout << "PASS scraperx_sim hard blow throw: dangerous and changed stagger, alive\n";
+}
+
+// A drum thrown low at a fully changed Matron: low, her step is nothing,
+// and the drum puts her down for her stage's seconds, alive. The escape
+// window is her time on the steel: while she lies there he gets clear, and
+// she takes nobody in it.
+void run_hard_blow_low() {
+    Simulation s(InitialSpawn::Deck154);
+    to_her_post(s);
+    const std::uint32_t throwables = s.loose_stock_throwables_begin();
+    const std::uint64_t drum = LooseStock::kFirstEntity + throwables + 2;
+    take_up_piece(s, drum, "hard blow low: to the drum by the north rail");
+    const auto deaths0 = s.snapshot().death_count;
+    const Thrown low = throw_at_her(s, 2, -0.6);
+    std::cout << "  hard blow low changed: threw=" << low.threw << " blow=" << low.blow_mps
+              << " m/s, worst=" << low.worst << ", staggers=" << low.staggers
+              << ", knockdowns=" << low.knockdowns << ", turn at hit=" << low.turn_at_hit << "\n";
+    require(low.threw, "hard blow low: the drum thrown low at a fully changed Matron");
+    require(low.worst == kStateDown && low.knockdowns == 1 && low.staggers == 0,
+            "hard blow low: a drum at her shins puts a fully changed Matron down");
+    require(low.alive && s.snapshot().death_count == deaths0, "hard blow low: down, alive, nobody dead");
+    // While she lies there he gets clear east along the band, and she takes
+    // nobody in it: her down is her stage's seconds, his window.
+    const auto from = s.snapshot().player_position;
+    const std::uint64_t catches0 = s.matron_state().catches;
+    double moved = 0.0;
+    (void)s.set_sprint_input(true);
+    for (int i = 0; i < static_cast<int>(Matron::kChangedDownSeconds * static_cast<double>(Simulation::kTickRateHz));
+         ++i) {
+        (void)s.set_move_input(1.0, 0.0);
+        (void)s.set_facing(1.0, 0.0);
+        tick(s);
+        const auto p = s.snapshot().player_position;
+        moved = std::max(moved, std::hypot(p.x - from.x, p.z - from.z));
+    }
+    (void)s.set_move_input(0.0, 0.0);
+    (void)s.set_sprint_input(false);
+    std::cout << "  hard blow low: clear " << moved << " m in her " << Matron::kChangedDownSeconds << " s down\n";
+    require(s.matron_state().catches == catches0, "hard blow low: nobody taken while she is down");
+    require(moved >= 2.0, "hard blow low: he gets clear while she is down");
+    require(rises(s, low.floor_y, low.y, 2.0), "hard blow low: up again, on her deck, alive");
+    std::cout << "PASS scraperx_sim hard blow low: down, clear, up again\n";
+}
+
+// She reaches for him with the toolbox in his hands: thrown at her as she
+// reaches, it staggers her, the grab ends before it holds him, and he walks
+// clear with no re-grab inside her cooldown. The object blow opens the
+// escape window her hold would otherwise close.
+void run_hard_blow_hold() {
+    Simulation s(InitialSpawn::Deck154);
+    to_her_post(s);
+    const std::uint32_t throwables = s.loose_stock_throwables_begin();
+    const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables;
+    take_up_piece(s, toolbox, "hard blow hold: to the toolbox by the north rail");
+    require(walk_to(s, -6.0, -129.0, 10.0, 0.15), "hard blow hold: to the meeting spot with the toolbox");
+    s.debug_matron_hold(0, 3.0);
+    bool reaching = false;
+    for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !reaching; ++i) {
+        tick(s);
+        reaching = s.matron_state().state == kStateGrab && !s.snapshot().held_by_matron;
+    }
+    require(reaching, "hard blow hold: she reaches for him (setup)");
+    const auto stags0 = s.matron_state().staggers;
+    const auto grabs0 = s.matron_state().grabs;
+    const auto throws0 = s.snapshot().throw_count;
+    (void)s.set_look_pitch(0.0);
+    {
+        const auto me = s.snapshot().player_position;
+        const auto her = s.matron_state().position;
+        (void)s.set_facing(her.x - me.x, her.z - me.z);
+    }
+    require(s.snapshot().up_move == UpMove::Throw && s.request_up(),
+            "hard blow hold: up is THROW with the toolbox in the hands");
+    int worst = -1;
+    double blow = 0.0;
+    bool ever_held = false;
+    for (int i = 0; i < static_cast<int>(2.0 * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        tick(s);
+        const auto m = s.matron_state();
+        blow = std::max(blow, m.blow_mps);
+        ever_held = ever_held || s.snapshot().held_by_matron;
+        if (m.state == kStateDown || (m.state == kStateStaggering && worst < 0)) {
+            worst = m.state;
+        }
+    }
+    // The throw's release is a tick after the request: the count is read
+    // after the watch, not on the request's own tick.
+    require(s.snapshot().throw_count == throws0 + 1, "hard blow hold: the toolbox thrown as she reaches");
+    const auto m = s.matron_state();
+    std::cout << "  hard blow hold: blow=" << blow << " m/s, worst=" << worst << ", staggers="
+              << (m.staggers - stags0) << ", grabs=" << (m.grabs - grabs0) << ", held=" << ever_held << "\n";
+    require(worst == kStateStaggering && m.staggers - stags0 == 1,
+            "hard blow hold: the toolbox staggers her as she reaches");
+    require(!ever_held && m.grabs - grabs0 == 0, "hard blow hold: the grab never held him");
+    // He walks clear while the grab is on cooldown: no second grab inside
+    // her 1.5 s, and he is 4 m off before she is back on her feet.
+    const auto from = s.snapshot().player_position;
+    require(walk_to(s, 2.0, -129.0, 10.0, 0.3), "hard blow hold: clear of her along the band");
+    const auto away = s.snapshot().player_position;
+    require(std::hypot(away.x - from.x, away.z - from.z) >= 4.0, "hard blow hold: four metres clear");
+    const auto grabs1 = s.matron_state().grabs;
+    stand_still(s, 2.0);
+    require(s.matron_state().grabs == grabs1, "hard blow hold: no re-grab inside her cooldown");
+    std::cout << "PASS scraperx_sim hard blow hold: the grab breaks, he walks clear\n";
+}
+
+// The stock that can do it is reachable along the route at each stage: on
+// every deck the route climbs, a piece the hands carry (at most the carry's
+// grip, LooseStock::heavy) lies on the ring round the shaft. The bands are
+// the tower's own rings: the yard, deck 8's gangway, the stack rings
+// 11..143, her deck 154, the upper rings 176.25..396.25 and the top decks.
+// The 706 deck and the 802.64 summit are bare by design (dress_tower keeps
+// their places but feels for no floor there), so they are not required.
+void run_hard_blow_stock() {
+    Simulation s(InitialSpawn::Deck154);
+    static constexpr double kRings[] = {0.0, 8.0, 11.0, 22.0, 33.0, 44.0, 55.0, 66.0, 77.0, 88.0, 99.0,
+                                        110.0, 121.0, 132.0, 143.0, 154.0, 176.25, 198.25, 220.25, 242.25,
+                                        264.25, 286.25, 308.25, 330.25, 352.25, 374.25, 396.25, 640.25,
+                                        662.1, 684.1, 728.1, 750.1};
+    constexpr std::size_t kBands = sizeof(kRings) / sizeof(kRings[0]);
+    std::size_t counts[kBands] = {};
+    std::uint32_t carryable = 0;
+    for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+        const auto piece = s.loose_stock_piece(i);
+        if (LooseStock::heavy(static_cast<LooseStock::Kind>(piece.kind))) {
+            continue;
+        }
+        ++carryable;
+        const auto pos = s.kit_body_position(s.kit_body_index(LooseStock::kFirstEntity + i));
+        if (std::abs(pos.x) > 35.0 || std::abs(pos.z + 150.0) > 35.0) {
+            continue;  // not on the route's rings round the shaft
+        }
+        for (std::size_t b = 0; b < kBands; ++b) {
+            if (pos.y >= kRings[b] - 0.5 && pos.y <= kRings[b] + 1.5) {
+                ++counts[b];
+                break;
+            }
+        }
+    }
+    std::cout << "  hard blow stock: " << carryable << " carryable pieces in the world\n";
+    for (std::size_t b = 0; b < kBands; ++b) {
+        std::cout << "    ring " << kRings[b] << " m: " << counts[b] << " carryable\n";
+        require(counts[b] >= 1, "hard blow stock: a carryable piece on every deck of the route");
+    }
+    std::cout << "PASS scraperx_sim hard blow stock: a throwable on every deck\n";
+}
+
+void run_hard_blow() {
+    run_hard_blow_punch();
+    run_hard_blow_throw();
+    run_hard_blow_low();
+    run_hard_blow_hold();
+    run_hard_blow_stock();
+    std::cout << "PASS scraperx_sim hard blow\n";
+}
+SCRAPERX_GROUP("hard_blow", 875, run_hard_blow);
+SCRAPERX_SELECT("hard-blow", run_hard_blow);
+SCRAPERX_SLICE("hard-blow", run_hard_blow);
