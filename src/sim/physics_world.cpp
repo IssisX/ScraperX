@@ -872,30 +872,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // room's own sound is not).
     bay_->pre_step(delta_seconds);
     matron_->set_bay(kit_->body_id(bay_->leaf_body()), bay_->leaf_open(), bay_->hooked());
-    // The world's hoists as the kit holds them (matron.hpp set_hoists): every
-    // body on a vertical guide a catch holds, and what frees each catch.
-    {
-        std::vector<Matron::HoistFeed> hoists;
-        for (const kit::Kit::HoistInfo &h : kit_->hoists()) {
-            Matron::HoistFeed f;
-            f.car = kit_->body_id(h.car);
-            f.axis_y = h.axis.GetY();
-            f.min_travel = h.min_travel;
-            f.max_travel = h.max_travel;
-            f.travel = h.travel;
-            f.held = h.held;
-            f.caught = h.caught;
-            f.platform = h.platform;
-            for (const kit::Kit::HoistPin &p : h.pins) {
-                f.pins.push_back({kit_->body_id(p.pin), p.axis, p.travel, p.clear});
-            }
-            for (const kit::BodyIndex w : h.weights) {
-                f.weights.push_back(kit_->body_id(w));
-            }
-            hoists.push_back(std::move(f));
-        }
-        matron_->set_hoists(std::move(hoists));
-    }
+    // The world's hoists as the kit holds them (matron.hpp set_hoists).
+    feed_matron_hoists();
     // Out of her locker, she looks the tower over once (her climbs are what
     // she finds).
     if (matron_->wants_routes()) {
@@ -1640,8 +1618,37 @@ void Simulation::PhysicsWorld::launch_matron_for_test(JPH::RVec3 at) {
     physics_system_.GetBodyInterface().SetPosition(matron_->body(), at, JPH::EActivation::Activate);
 }
 
+// The world's hoists as the kit holds them (matron.hpp set_hoists): every
+// body on a vertical guide a catch holds, and what frees each catch; and the
+// platforms declared floors at their stops (Kit::set_platform).
+void Simulation::PhysicsWorld::feed_matron_hoists() {
+    std::vector<Matron::HoistFeed> hoists;
+    for (const kit::Kit::HoistInfo &h : kit_->hoists()) {
+        Matron::HoistFeed f;
+        f.car = kit_->body_id(h.car);
+        f.axis_y = h.axis.GetY();
+        f.min_travel = h.min_travel;
+        f.max_travel = h.max_travel;
+        f.travel = h.travel;
+        f.held = h.held;
+        f.caught = h.caught;
+        f.platform = h.platform;
+        for (const kit::Kit::HoistPin &p : h.pins) {
+            f.pins.push_back({kit_->body_id(p.pin), p.axis, p.travel, p.clear});
+        }
+        for (const kit::BodyIndex w : h.weights) {
+            f.weights.push_back(kit_->body_id(w));
+        }
+        hoists.push_back(std::move(f));
+    }
+    matron_->set_hoists(std::move(hoists));
+}
+
 const traversal::AffordanceMap &Simulation::PhysicsWorld::matron_affordances() {
     if (!matron_affordances_scanned_) {
+        // Her view of the platforms at rest is the kit's as it stands now,
+        // even when asked before her first step.
+        feed_matron_hoists();
         // The whole tower, grade to the crown (bounds generous on every side).
         const JPH::AABox tower = physics_system_.GetBounds();   // the whole world, whatever is in it
         // And the platforms resting at a stop as she looks (J-108): floor where they stand.

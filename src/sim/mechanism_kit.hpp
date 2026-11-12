@@ -195,8 +195,9 @@ public:
     // Safety dogs on a guide: a pawl drops into a rack tooth every `pitch`
     // of travel, so the body climbs its guide but never falls back more than
     // one tooth. Teeth are counted down from max_travel, so the top of travel
-    // is a tooth.
-    void set_dogs(GuideIndex guide, float pitch);
+    // is a tooth. With `from`, the rack starts there: no tooth below it, so a
+    // jolt near the bottom of travel settles back onto the guide's stop.
+    void set_dogs(GuideIndex guide, float pitch, float from = -1.0e9F);
 
     // A platform on a vertical guide (declared, J-108): while it rests at
     // either end of its travel it is a floor to the Matron, as a hoist's car
@@ -673,6 +674,7 @@ private:
         float peak_speed = 0.0F;
         float dog_pitch = 0.0F;     // 0: no dogs
         float dog_floor = 0.0F;     // the tooth the pawl rests above
+        float dog_from = -1.0e9F;   // the rack's lowest travel (set_dogs)
         bool platform = false;      // a floor to her at its stops (set_platform)
         BodyIndex gap_joint;        // invalid: no rail gap
         JPH::RVec3 gap_seat = JPH::RVec3::sZero();

@@ -323,8 +323,9 @@ GuideIndex Kit::add_guide(const BodyIndex body, const JPH::Vec3 axis, const floa
     return GuideIndex{static_cast<std::uint32_t>(guides_.size() - 1U)};
 }
 
-void Kit::set_dogs(const GuideIndex guide, const float pitch) {
+void Kit::set_dogs(const GuideIndex guide, const float pitch, const float from) {
     guides_[guide.value].dog_pitch = pitch;
+    guides_[guide.value].dog_from = from;
 }
 
 void Kit::set_platform(const GuideIndex guide) {
@@ -1414,7 +1415,7 @@ void Kit::engage_dogs(Guide &guide) {
     const float teeth_below_top =
         std::ceil((guide.max_travel - travel) / guide.dog_pitch - 1.0e-3F);
     const float tooth = guide.max_travel - teeth_below_top * guide.dog_pitch;
-    if (tooth > guide.dog_floor + 1.0e-4F) {
+    if (tooth >= guide.dog_from - 1.0e-4F && tooth > guide.dog_floor + 1.0e-4F) {
         guide.dog_floor = tooth;
     }
 }

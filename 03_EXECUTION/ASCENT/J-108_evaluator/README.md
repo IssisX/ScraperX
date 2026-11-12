@@ -58,3 +58,16 @@ Her alone on A: 6.5 to 6.9 m/s onto the 662 deck (a 2.4 m drop's worth). Both on
 both under her 4.6 m drop. The engine (slice `service-bait-lift`, 200 N declared on each guide): A meets
 the deck at 2.0 m/s, peak 2.39 m/s, in 12.5 s, the 385 N case; B coasts to 22.08 m and holds on its
 22.0 m dog, his floor at 706.1.
+
+## Moved (#427, Cory: "move it"): west of the 706 deck's strip, the 706 deck to the 728 deck
+
+The first spot failed as bait: A and B side by side, so she ran across A and caught him on B. Now the strip,
+A, a level gap of 1.0 m, B, west of the strip over the 684 deck, beside C5 (a climb, no machine of its own):
+N is behind him, O ahead. The travel is the same 21.9 m, so the masses and the table above carry over;
+the 662 deck reads the 684 deck, the plant floor the 728 deck. B's dogs are its top metre only
+(`set_dogs` from 20.9 m), so his jump off A (it jolts A down 0.16 m) settles back onto the stop.
+
+The engine (slice `service-bait-lift`, his inputs and her own hunt): he jumps onto B at 1.8 s; she steps
+onto A at 9.1 s; A meets the 684 deck at 2.0 m/s (peak 2.38) 12.7 s later; B holds on its 22.0 m dog,
+his feet at 728.09; she lands on her feet at 2.38 m/s, no catch. Her alone: 6.83 m/s onto the 684 deck
+(limit 9.50, her 4.6 m drop), then up the backup ladder through the 706 deck's hatch in 41.6 s.
