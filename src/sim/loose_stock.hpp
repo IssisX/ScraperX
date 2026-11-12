@@ -48,7 +48,13 @@ namespace scraperx::sim {
 
 class LooseStock final {
 public:
-    // Kit entities: piece i of the table is kFirstEntity + i.
+    // Kit entities: piece i of the table is kFirstEntity + i. The table is
+    // append-only: a new piece takes the end, in its own group laid after
+    // every other (as lay_matron_kinds and lay_hung_slab do). A piece put
+    // anywhere earlier renumbers every piece after it, and the entity id is
+    // what tests name a piece by and what the solver's contact order is
+    // keyed on (third_party/jolt_patch.cmake), so the renumbered stock
+    // drifts in its last bits across the whole tower (J-107, #426).
     static constexpr std::uint64_t kFirstEntity = kit::kStockEntityBase;
 
     enum class Kind : std::uint8_t {
