@@ -1,4 +1,4 @@
-extends "res://presentation/ui/ui_test_look.gd"
+extends "res://presentation/ui/ui_test_screens.gd"
 
 # Scripted proof that every control path reaches the native authority. Each
 # scenario injects events through the real viewport input pipeline -- the
@@ -19,6 +19,8 @@ const SCENARIOS := {
 	"touch_move_look": 8,
 	"touch_gyro_aim": 8,
 	"touch_climb": 4,
+	# J-119: the same foot of the first climb, facing it, for the screen audit.
+	"touch_screens": 4,
 	"touch_vault": 3,
 	"touch_double_tap_vault": 3,
 	"touch_speed_vault": 3,
@@ -315,7 +317,7 @@ func begin(main: Node, scenario: String, capture_prefix: String) -> bool:
 	if int(SCENARIOS[played]) == 11:
 		main._native.place_matron_home(154.0)
 	# The traversal kernels are authored facing +x (native tests do the same).
-	if played in ["touch_climb", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
+	if played in ["touch_climb", "touch_screens", "touch_vault", "touch_double_tap_vault", "touch_speed_vault", "touch_precision",
 			"touch_wall_run", "touch_hang_drop",
 			"touch_hang_climb", "touch_monkey_bars", "touch_swing_launch", "touch_pipe_gallery"]:
 		main._yaw = -PI * 0.5
@@ -357,6 +359,8 @@ func _run() -> void:
 			ok = await _touch_gyro_aim()
 		"touch_climb":
 			ok = await _touch_climb(&"climb", 2)
+		"touch_screens":
+			ok = await _touch_screens()
 		"touch_vault":
 			ok = await _touch_vault()
 		"touch_double_tap_vault":
