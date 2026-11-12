@@ -562,7 +562,12 @@ void run_hard_blow_stock() {
         }
         ++carryable;
         const auto pos = s.kit_body_position(s.kit_body_index(LooseStock::kFirstEntity + i));
-        if (std::abs(pos.x) > 35.0 || std::abs(pos.z + 150.0) > 35.0) {
+        // The yard is not round the shaft: its stock lies across the ground
+        // (z +8..+70), far from the shaft's rings, so the yard's band counts
+        // every carryable piece at ground level, wherever it lies. The
+        // tower's decks count only the ring round the shaft.
+        const bool yard = pos.y >= kRings[0] - 0.5 && pos.y <= kRings[0] + 1.5;
+        if (!yard && (std::abs(pos.x) > 35.0 || std::abs(pos.z + 150.0) > 35.0)) {
             continue;  // not on the route's rings round the shaft
         }
         for (std::size_t b = 0; b < kBands; ++b) {
