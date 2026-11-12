@@ -64,33 +64,16 @@ void stand_still(Simulation &s, const double seconds) {
     (void)s.advance_frame(seconds);
 }
 
-// Waits (still) until she stands guard at her post on her deck.
-bool until_guarding(Simulation &s, const double seconds) {
-    constexpr double kPostX = -10.3;
-    constexpr double kPostZ = -129.0;
-    for (int i = 0; i < static_cast<int>(seconds * static_cast<double>(Simulation::kTickRateHz)); ++i) {
-        tick(s);
-        const auto m = s.matron_state();
-        if (m.state == kStateGuarding && std::hypot(m.position.x - kPostX, m.position.z - kPostZ) < 0.6) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// Wakes her and waits until she stands guard at her post on this deck:
-// the shared start of every throw case below. All on deck 154, where her
-// throwables lie by the north band — never ride down to 143 first, as the
-// balance test's debug launches do: the pieces are eleven metres above it,
-// out of the hands' reach.
+// Wakes her: the shared start of every throw case below, the
+// matron-heave beat's own opening. No wait for her guard: he stands in the
+// open on this deck and she hunts him instead of guarding, and the throw's
+// wait is written for her hunt, not her post.
 void to_her_post(Simulation &s) {
     s.place_matron_home(154.0F);
     s.debug_fix_matron_pace(3);  // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
     require(s.advance_frame(1.0).accepted, "hard blow: settle");
     require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
             "hard blow: a sprint toward her locker wakes her");
-    require(until_guarding(s, 120.0) && s.snapshot().death_count == 0,
-            "hard blow: she stands guard at her post");
 }
 
 // Takes up the piece at `entity` where it lies by the north band: straight
