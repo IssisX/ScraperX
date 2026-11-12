@@ -379,6 +379,10 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
             if (push.LengthSq() > 0.0F) bodies.AddForce(player_id_, push, chest);
             if (sweep.LengthSq() > 0.0F) bodies.AddForce(player_id_, sweep, feet);
             if ((push + sweep).LengthSq() > 0.0F) bodies.AddForce(matron_->body(), -(push + sweep));
+            // J-046 measurement only: the two takes above put +(push + sweep)
+            // on her in the ledger; on her body it is -(push + sweep) (no new
+            // force, charged above), as her swat on the pipe (matron_pipe.cpp).
+            effort::add(effort::Path::HandsPush, 0.0F, 0.0F, 0.0F, -2.0F * (push + sweep));
         }
     }
     if (matron_->take_regrip_let_go() && grip_ != nullptr) {
