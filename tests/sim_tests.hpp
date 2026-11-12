@@ -916,6 +916,7 @@ void check_matron_shape_audit();
 void run_matron_ring_descent();
 void run_matron_ways();
 void run_matron_same_region();
+void run_matron_heard_lead();
 void run_matron_arm();
 void run_matron_fatality();
 void run_one_arm_route();
