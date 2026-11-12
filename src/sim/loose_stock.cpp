@@ -486,6 +486,9 @@ void add_crane_laydown(std::vector<LooseStock::Placement> &t) {
 // the load it last brought in off the dock: a skid crate on the 44 m deck,
 // a reel on its pallet on the 11 m deck, each a metre and a quarter past its
 // fork tips.
+// Nothing new goes here or anywhere in this table: the tower's dressed
+// stock, the throwables and every later group are numbered after it, so a
+// piece added here renumbers them all (loose_stock.hpp, kFirstEntity; J-107).
 void add_deck_loads(std::vector<LooseStock::Placement> &t) {
     t.push_back({K::SkidCrate, 1, -21.5F, 44.0F, -151.6F, 0.0F});
     t.push_back({K::PalletReel, 0, -21.5F, 11.0F, -135.4F, 0.0F});

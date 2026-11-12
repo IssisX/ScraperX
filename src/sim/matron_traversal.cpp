@@ -2349,7 +2349,8 @@ private:
     std::string &out_;
 };
 
-std::string steel_key(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits) {
+std::string steel_key(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits,
+                      const std::vector<BodyID> &floors) {
     static_assert(std::is_trivially_copyable_v<Limits>);
     std::string key;
     KeyStream out(key);
@@ -2376,6 +2377,19 @@ std::string steel_key(const PhysicsSystem &physics, const AABox &bounds, const I
         // Whether her probes see it at all (this world's layer filters).
         out.Write(layers.bp().ShouldCollide(body.GetBroadPhaseLayer()));
         out.Write(layers.ol().ShouldCollide(body.GetObjectLayer()));
+        out.Write(body.GetUserData());
+        out.Write(body.GetCenterOfMassPosition());
+        out.Write(body.GetRotation());
+        body.GetShape()->SaveWithChildren(out, shapes, materials);
+    }
+    // The moving floors she is given, where they stand now.
+    std::vector<BodyID> given = floors;
+    std::sort(given.begin(), given.end());
+    for (const BodyID id : given) {
+        BodyLockRead lock(physics.GetBodyLockInterface(), id);
+        if (!lock.Succeeded()) continue;
+        const Body &body = lock.GetBody();
+        out.Write(id.GetIndexAndSequenceNumber());
         out.Write(body.GetUserData());
         out.Write(body.GetCenterOfMassPosition());
         out.Write(body.GetRotation());
@@ -2459,9 +2473,10 @@ bool bar_before(const Bar &a, const Bar &b) noexcept {
     return a.entity < b.entity;
 }
 
-void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits) {
+void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore, const Limits &limits,
+                         const std::vector<BodyID> &floors) {
     const auto started = std::chrono::steady_clock::now();
-    std::string key = steel_key(physics, bounds, ignore, limits);
+    std::string key = steel_key(physics, bounds, ignore, limits, floors);
     ScanMemo &memo = scan_memo();
     {
         const std::lock_guard<std::mutex> hold(memo.mutex);
@@ -2473,14 +2488,14 @@ void AffordanceMap::scan(const PhysicsSystem &physics, const AABox &bounds, cons
             }
         }
     }
-    scan_steel(physics, bounds, ignore, limits);
+    scan_steel(physics, bounds, ignore, limits, floors);
     const std::lock_guard<std::mutex> hold(memo.mutex);
     if (memo.maps.size() >= kScanMemoMaps) memo.maps.erase(memo.maps.begin());
     memo.maps.emplace_back(std::move(key), *this);
 }
 
 void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds, const Ignore &ignore,
-                               const Limits &limits) {
+                               const Limits &limits, const std::vector<BodyID> &floors) {
     const auto started = std::chrono::steady_clock::now();
     patches_.clear();
     regions_.clear();
@@ -2491,7 +2506,8 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
     patch_links_.clear();
     stats_ = ScanStats{};
 
-    // 1. Every leaf of every fixed, solid body in the bounds.
+    // 1. Every leaf of every fixed, solid body in the bounds, and of the
+    // moving floors she is given (a platform at rest on its stop).
     BodyListCollector bodies;
     physics.GetBroadPhaseQuery().CollideAABox(bounds, bodies);
     std::sort(bodies.ids.begin(), bodies.ids.end());
@@ -2501,7 +2517,7 @@ void AffordanceMap::scan_steel(const PhysicsSystem &physics, const AABox &bounds
         BodyLockRead lock(physics.GetBodyLockInterface(), id);
         if (!lock.Succeeded()) continue;
         const Body &body = lock.GetBody();
-        if (body.IsSensor() || body.IsDynamic()) continue;
+        if (body.IsSensor() || (body.IsDynamic() && std::find(floors.begin(), floors.end(), id) == floors.end())) continue;
         ++stats_.bodies;
         LeafCollector collector;
         body.GetShape()->CollectTransformedShapes(bounds, body.GetCenterOfMassPosition(), body.GetRotation(),

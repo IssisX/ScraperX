@@ -3,7 +3,7 @@
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794460539 (2026-11-11 last quiet run)
+Read through: 1794492989 (2026-11-11 last quiet run)
 
 ## Now (11-11)
 State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). Three helpers, the cap (Cory 11-11):
@@ -18,7 +18,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. Grok or ChatGPT run an idea workflow on request from a copyable prompt in chat (11-11). 367 archived branches: deleting waits on Cory.
 
-- 11-12 in flight: helpers J-108 (re-pin + proofs, then I open its 2 PRs), J-001 Fable helper done: budget-list branch refused (raised 18 leak rows; peak 13200 N); next J-001 step is charging her second grip to her budget, a new Opus-high helper, ladder fresh; S2 0.5 m staging move held for review; J-107 (taken from Muse: the proof of the new split; report its hours), routing study (writes work/tasks/job-routing.md uncommitted for my review). Fable audit prompt given to Cory (branch fable/finish-audit): on his OK of its finish line, only listed jobs are queued for the current parts. #343 waits on a fresh Codex state.
+- 11-12 in flight (pre-compact): helpers running: J-001 grip charge MAX retry (next fail -> Argon prompt to Cory, then Fable); J-015 helper DONE: F way-on PR #467, #389 replaced by #466 (both draft: mark ready on green CI; #466 needs a LAND); S2/S3 dead-end needs Cory (refill/reset or backup route); a workflow PR must add wreck_way_on to the spine PASS list; J-038 #372 red; J-108 #464 (save-migration fix 1f0f5658, merging trunk conflict). #463 J-108 part 1 MERGED; #462 J-128 flange trim open (CI + eye); #454 J-107 merged; switchboard fix landed. Quota (Cory 11-12): never go slow on purpose; save by fewer helpers and less thinking per step, not by waiting. At 45% of the 5-h window: no new helpers until it resets; lean wakes; unsubscribed #462/#464. 4-h collaboration check scheduled (trig_01Decg7cSKVuf7zYCmGJeEVd); keep the 3-h backstop until it confirms the new alarms. Finish plan on trunk with my 6 answers (no cut date on J-001); parked issues carry state:parked; reconciler skips them. Muse queue: J-116..J-118 started; then J-133, J-134, J-124, J-119, J-125, J-129..J-132, J-135. Fast mode: log shows every reply ran standard; web shows off. AFTER RESET: Fable trial (Cory 11-12) on the next real helper job, medium first, then low if it nails it; tell Cory the job first; judge cause found, fix green first try, time, cost vs Opus high.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.

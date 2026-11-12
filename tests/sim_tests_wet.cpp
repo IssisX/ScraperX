@@ -388,6 +388,10 @@ void run_wet_e_guard(const bool expect) {
     // hash over all pieces is new: now 2030619953479605832 (the slab at
     // z -126.4, off the walkway; 3739843295225240046 when first hung at
     // -127.9).
+    // J-107 (#426): a new piece only ever changes the count and `stock`.
+    // A change that needs stock_before or stock_before_cell re-pinned has
+    // put a piece ahead of others and renumbered them: lay it last instead
+    // (loose_stock.hpp, kFirstEntity).
     require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + kHungSlabs &&
                 stock_before.hash == 16882536141644003327ULL &&
                 stock_before_cell.hash == 10019901410837365716ULL && stock.hash == 2030619953479605832ULL,

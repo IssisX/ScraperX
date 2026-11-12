@@ -239,12 +239,10 @@ var unowned_frames := 0
 # Her limbs put down this frame on all fours (matron_rig.gd landed: limb, world
 # point, surface), for her sounds.
 var plants: Array = []
-var _box_rot := Vector3.ZERO
 var _root_raw := Vector3.ZERO
 var _last_step := 0.0
 var _root_off := Vector3.ZERO
 var _root_off_v := Vector3.ZERO
-var _box_v := Vector3.ZERO
 var _burst_tail := 0.0
 # Her two holds on what she climbs this frame (matron_rig.gd contact reaches
 # for these, its wrists following them).
@@ -839,7 +837,6 @@ func _build_pivots() -> void:
 		var knee := _pivot(hip, Vector3(0.0, -THIGH, 0.0))
 		_p["kn_" + key] = knee
 		_p["an_" + key] = _pivot(knee, Vector3(0.0, -SHIN, 0.0))
-	_p["box_cord"] = _pivot(body, Vector3(-0.2, -0.05, 0.0))
 
 
 # One seating of the hair mesh. The locks were weighted across neighboring
@@ -2315,16 +2312,6 @@ func _pose(data: Dictionary, delta: float, player_position: Vector3, falling: bo
 	_gait_add[10] = Vector3(g_knee_l * knee_flip * gk, 0.0, 0.0)
 	_gait_add[11] = Vector3(g_knee_r * gk, 0.0, 0.0)
 	_gait_hip = g_hip * gk
-	# the box on its cord swings, on a spring, never snapped round
-	var box_want := Vector3(sin(stride * 3.0) * 0.4 + 0.2 * (pitch - 0.7), 0.0, sin(stride * 2.2) * 0.3)
-	if _pose_fresh:
-		_box_rot = box_want
-		_box_v = Vector3.ZERO
-	else:
-		var bs := spring(_box_rot, _box_v, box_want, POSE_W_LIMB, delta)
-		_box_rot = bs[0]
-		_box_v = bs[1]
-	_p["box_cord"].rotation = _box_rot
 	# Fingers: relaxed hooks that curl into claws on the hunt, twitching in the Turn.
 	var curl := 0.35
 	if state == STATE_HUNTING:
