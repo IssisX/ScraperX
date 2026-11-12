@@ -16,9 +16,9 @@ it to match, never ask him again.
 - Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
   opens and merges the PRs (11-05).
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
-  Sonnet (11-05). Hard work climbs one rung per failed try: an Opus helper at high, then xhigh (`helper-physics`), then
-  max (`helper-max`), then an Argon prompt Cory passes on, then, told to Cory first, a Fable 5.2 helper
-  (`model: fable`, high first, while his resets last); nothing waits on a scheduled agent's run (11-12).
+  Sonnet (11-05). Hard work: an Opus helper at high; if it fails, one retry at xhigh or max (Claude's pick); if that
+  fails, an Argon prompt Cory passes on or, told to Cory first, a Fable 5.2 helper (`model: fable`, high
+  first, while his resets last); nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Claude types no clock time (11-11): mail and posts carry their own timestamps; an event is named by its
