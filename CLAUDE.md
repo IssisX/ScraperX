@@ -16,8 +16,9 @@ it to match, never ask him again.
 - Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
   opens and merges the PRs (11-05).
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
-  Sonnet (11-05). A very hard problem goes at once to a Fable 5.2 helper (`model: fable`) or an Argon
-  prompt for Cory; nothing waits on a scheduled agent's run (11-12).
+  Sonnet (11-05). A very hard problem goes at once to Argon (free: a prompt Cory passes on) or, told to Cory
+  before each use, a Fable 5.2 helper (`helper`, `model: fable`: high first; Fable is costly, only while his resets
+  last); nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Claude types no clock time (11-11): mail and posts carry their own timestamps; an event is named by its
@@ -100,11 +101,10 @@ it to match, never ask him again.
   Muse never idle (about 10 jobs in flight, 3 queued), its proposals ruled within the hour, every ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
   `helper` or `helper-max`; Cory 11-06), never a separate session; at most three at a time (11-11), each
-  code-editing one in a worktree. Ask Cory before opening any other Claude session. Effort: integrator
-  his call, seen in `get_session`; raise it only when he throttles; hard jobs start at xhigh (`helper-physics`): physics, contacts, forces, her limits, geometry, spatial, animation or camera work, protected tests, jobs across several systems, or a job that failed once; the rest `helper` at high (11-11: one xhigh success costs less than high failing twice); never max (11-06, 11-10). A worker whose job landed is retired.
-- **Context:** 600k window, auto-compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (only what has no other home, at most
-  30 lines) current; re-read it, this file and the hourly file after a compact. A new session only when one
-  is broken.
+  code-editing one in a worktree. Ask Cory before any other Claude session. Effort: integrator
+  his call, seen in `get_session`; raise it only when he throttles; hard jobs start at xhigh (`helper-physics`): physics, contacts, forces, her limits, geometry, spatial, animation or camera work, protected tests, jobs across several systems, or a job that failed once; the rest `helper` at high (11-11); never max (11-06, 11-10). A worker whose job landed is retired.
+- **Context:** 600k window, compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
+  (only what has no other home, at most 30 lines) current; re-read it, this file and the hourly file after a compact.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, long threads)
   go to a helper and only its answer comes back; read the function or section a job needs, found via
   `REPO_MAP.md` or `grep`, never the whole game. Caps: the board 100 comments (then a fresh board), a job
