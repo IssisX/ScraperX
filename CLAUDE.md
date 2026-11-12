@@ -72,11 +72,12 @@ it to match, never ask him again.
   claim, read the source, file, docs or clock, measure or run it before stating it. Before locking in a hard job's approach, after the second
   red proof on the same failure, or on a physics or force-budget question no check settles, post `To <Name>:`
   on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working: the job never holds for the answer. A `To <you>:` ask is answered before your next step.
-- **Strengths (11-12):** Muse is free, so most work goes to Muse, debugging included; it is weaker at finding
-  causes and can fail several times first. Claude's helpers take only the hardest jobs, scored at assignment by `work/tasks/job-routing.md`: an
-  unknown cause that blocks 2+ jobs or the climb or her chase, or a Muse job whose fix failed twice on the same
-  failure (mail Muse "taking it"); Muse then builds the fix they name. Grok: math and risk. ChatGPT: research,
-  specs, review. All helper slots full: the job waits for the next one.
+- **Strengths (11-12):** Muse is free, so most work goes to it, debugging included; it is weaker at finding
+  causes and can fail several times first. Claude's helpers take the hardest jobs, scored by `work/tasks/job-routing.md`: an
+  unknown cause that blocks 2+ jobs or the climb or her chase, a Muse fix failed twice on the same failure, or
+  any job Muse would take about a week or has held 3 days ("YOU DO IT", 11-12; mail Muse "taking it"); Muse
+  builds the fix they name. Never say "wait longer". Grok: math and risk. ChatGPT: research, specs,
+  review. Slots full: the first slot that frees.
 - **Board:** the body of the open issue labeled `board` is the live board; only the integrator edits it. Agents read the body and
   new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
   needs whom` and start the next job; every agent holds two or more jobs.
