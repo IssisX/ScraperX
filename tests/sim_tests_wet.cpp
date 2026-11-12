@@ -385,10 +385,12 @@ void run_wet_e_guard(const bool expect) {
     // J-092 (#410): the cell's slab, hung 20 m over her deck, takes the end
     // of the table. The first 542 still hash to 10019901410837365716, so
     // every earlier piece stands where it was; the count is 542 + 1 and the
-    // hash over all pieces is new: now 3739843295225240046.
+    // hash over all pieces is new: now 2030619953479605832 (the slab at
+    // z -126.4, off the walkway; 3739843295225240046 when first hung at
+    // -127.9).
     require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + kHungSlabs &&
                 stock_before.hash == 16882536141644003327ULL &&
-                stock_before_cell.hash == 10019901410837365716ULL && stock.hash == 3739843295225240046ULL,
+                stock_before_cell.hash == 10019901410837365716ULL && stock.hash == 2030619953479605832ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");

@@ -846,7 +846,7 @@ func _stock_touch(device: int) -> bool:
 # (matron-slab-trap) holds the numbers; this drives it through the touch
 # controls.
 const SLAB_HANDLE := 2671
-const SLAB_HANDLE_AT := Vector2(4.0, -127.0)
+const SLAB_HANDLE_AT := Vector2(4.0, -125.5)   # SlabCell::kHandleX, kHandleZ
 const SLAB_WATCH := Vector2(1.0, 0.0)    # east, along the band to the cell and her locker
 const SLAB_AWAY := Vector2(0.0, 1.0)
 

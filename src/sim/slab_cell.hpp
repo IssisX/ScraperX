@@ -47,11 +47,14 @@ struct SlabCell final {
 
     static constexpr float kDeckTop = 154.0F;
     static constexpr float kRingUnderside = 175.75F;   // the 176 ring's north band (world_solids.inc, UpperDeck)
-    // The slab's middle over the deck: under the band 1 m in from its inner
-    // edge (-128.91), long side along z across her lane, 0.7 m east of the
-    // ladder's rails (x 5) and 3.2 m west of her locker's face.
+    // The slab's middle over the deck: under the band 2.5 m in from its
+    // inner edge (-128.91), long side along z, 0.7 m east of the ladder's
+    // rails (x 5) and 3.2 m west of her locker's face. On the outer side of
+    // the deck's walkway (J-092, 11-11: 1.5 m south of where it was first
+    // hung), so the cord's handle under it hangs clear of the way he and she
+    // cross between the bay and her locker.
     static constexpr float kSlabX = 6.6F;
-    static constexpr float kSlabZ = -127.9F;
+    static constexpr float kSlabZ = -126.4F;
     static constexpr float kSlabUnderside = kRingUnderside - 1.0F - 0.3F;   // its top 1 m under the steel
     // The hook's eye, where the sling is made fast.
     static constexpr float kHookY = kRingUnderside - 0.45F;
@@ -69,10 +72,14 @@ struct SlabCell final {
     // of the slab over the handle. Holding the handle he stands 3.2 m west
     // of the slab's middle: looked away from, she closes to 3 m of him and
     // holds there (matron_stalk.cpp, kStalkNearM), which is under the slab
-    // when she comes along the band; under his gaze she freezes.
+    // when she comes along the band; under his gaze she freezes. The
+    // handle hangs 1 m in from the deck's outer rail, off the walkway: at
+    // z -127.0 it hung where the ways from the bay's east end to her locker
+    // and to the door cross (3.9, -127.2), and a walk or a carry there
+    // brushed it.
     static constexpr float kSheaveY = kRingUnderside - 0.1F;
     static constexpr float kHandleX = 4.0F;
-    static constexpr float kHandleZ = -127.0F;
+    static constexpr float kHandleZ = -125.5F;
     // The handle's top, where his hands hold what they carry (1.24 m over
     // the deck): taking it draws no cord, stepping back with it does.
     static constexpr float kHandleTopY = kDeckTop + 1.28F;

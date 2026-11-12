@@ -41,12 +41,12 @@ constexpr double kSlabHalfZ = 0.6;
 constexpr double kSlabKg = 2000.0;
 constexpr double kReleaseY = kRingUnderside - kHoistM - kSlabHalfY;   // its centre, let go
 // Her lane under the ring's north band (z -124.91 .. -128.91), east of the
-// bay's cut (x -3.9 .. -0.4) and west of her locker (x 11). South of the slab
-// cell's own hung slab (slab_cell.hpp: z -129.1 .. -126.7 at that height) and
-// its cord (z -127.0): the yard's slab is let go clear of both, not inside
-// the cell's.
+// bay's cut (x -3.9 .. -0.4) and west of her locker (x 11), on her lane's
+// line (Matron::kBandNorthZ). North of the slab cell's own hung slab
+// (slab_cell.hpp: z -127.6 .. -125.2 at that height) and its cord
+// (z -125.5): the yard's slab is let go clear of both, not inside the cell's.
 constexpr double kSpotX = 6.0;
-constexpr double kSpotZ = -125.6;
+constexpr double kSpotZ = -128.5;
 constexpr int kHz = static_cast<int>(Simulation::kTickRateHz);
 
 bool trace() { return std::getenv("SCRAPERX_SLAB_TRACE") != nullptr; }
