@@ -1810,10 +1810,12 @@ class Switch:
                        if collab_plan.status(ln, closed=closed, prs=prs, branches=branches, inactive=r["inactive"],
                                              merged=r["merged"], dormant=r["dormant"]) == "queued"]
             self.queue_items = ()
-            if len(waiting) < muse_queue.LOW_UNDER or problems:
+            # Plan errors are PLAN findings, not a reason to refill Muse's queue.
+            # Conflating the two turns a chronic over-limit/owner conflict into a false start request.
+            if len(waiting) < muse_queue.LOW_UNDER:
                 line = (f"QUEUE-LOW: {len(waiting)} live-plan ready jobs "
                         f"(under {muse_queue.LOW_UNDER}). Ready: {', '.join(waiting) or 'none'}"
-                        + (f"; plan violations: {'; '.join(problems[:5])}" if problems else ""))
+                        + ("; plan blocked: resolve findings before starting more work" if problems else ""))
                 self.queue_items = (InboxItem("QUEUE-LOW", "work/plan.md",
                                               model.fingerprint() + ":" + ",".join(waiting), line),)
             return self.queue_items
