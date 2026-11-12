@@ -481,7 +481,13 @@ void run_hard_blow_hold() {
     bool reaching = false;
     for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !reaching; ++i) {
         tick(s);
-        reaching = s.matron_state().state == kStateGrab && !s.snapshot().held_by_matron;
+        // She reaches, not yet holding, and has come off her lunge: she
+        // arrives in the Grab still carrying its speed, past him and moving
+        // away at the piece's own speed, so a throw released then chases
+        // her and never lands. Wait until she has planted and slowed, still
+        // reaching, before the throw.
+        const auto m = s.matron_state();
+        reaching = m.state == kStateGrab && !s.snapshot().held_by_matron && m.speed <= 1.0;
     }
     require(reaching, "hard blow hold: she reaches for him (setup)");
     const auto stags0 = s.matron_state().staggers;
