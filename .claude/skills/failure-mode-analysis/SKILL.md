@@ -19,6 +19,9 @@ owner matched by `work/tasks/job-routing.md`, the work actually gets done, nothi
 2. **For each one, name how it fails silently.** For example: sent but not read, read but not acted on,
    acted on but not reported, a promise with no home, a state that ages with no alarm, or a check that
    reads the wrong source.
+   Also every fact kept in more than one place (a job's owner lives in a mail, `work/tasks/muse.md` and the issue's
+   `owner:` label): list each copy, and the check that the copies agree. 11-12: a job taken by mail alone left the
+   queue and the label saying Muse's, Muse built J-109 twice, and the 11-11 analysis had not looked for it.
 3. **Prove each hole from the record**, never by guessing. Use a real case: a mail, comment, commit or
    run where it happened or nearly did. A hole with no case is a risk; say it as one.
 4. **Give each hole the cheapest mechanism that would have caught it.** That is a check in
