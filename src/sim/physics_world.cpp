@@ -1434,6 +1434,16 @@ void Simulation::PhysicsWorld::build_stack(JPH::BodyInterface &bodies) {
                       JPH::RVec3(kStackCenterX + side * band_center, slab_y, kStackCenterZ));
             }
         }
+        if (level == kStackLevelCount) {
+            // J-043 (#241): the hang rail under the 154 deck's north band,
+            // along the crossing from the bay to the shaft edge (see
+            // kHangRail* in physics_world_tuning.hpp). A static frame body
+            // like the deck slabs, top flush with the soffit.
+            const float half_len = 0.5F * (kHangRailNorthZ - kHangRailSouthZ);
+            frame(JPH::Vec3(0.5F * kHangRailSection, 0.5F * kHangRailSection, half_len),
+                  JPH::RVec3(kHangRailX, kHangRailTopY - 0.5F * kHangRailSection,
+                             0.5F * (kHangRailNorthZ + kHangRailSouthZ)));
+        }
     }
 
     // Columns: corners and edge mid-spans, one run per story.

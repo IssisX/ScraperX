@@ -761,6 +761,22 @@ constexpr float kStackDeckHalfThickness = 0.25F;
 constexpr float kStackDeckBandDepth = 9.0F;    // walkable perimeter band; leaves a 34 m shaft.
 constexpr float kStackColumnHalf = 0.8F;
 
+// J-043 (#241, Claude 2026-11-08 06:07): the hang rail under deck 154's
+// north band, along the crossing from the bay to the shaft edge. A
+// hold-sized beam per find_grip (section at most kGripMaxSection 0.18 m);
+// 0.12 m keeps her scanner blind to it too (no patch: under 0.18 m wide;
+// no bar: over 0.10 m tall; no pole or riser). Top flush with the deck's
+// soffit (154.00 - 0.50); north end 0.05 m clear of the leaf's south edge
+// (z -129.30) so the leaf's swing never meets it; south end at the shaft
+// edge (z -133.00). She still cannot follow underneath: headroom under
+// the deck is unchanged.
+constexpr float kHangRailX = -2.15F;              // the bay's centre: (Bay::kWestX + Bay::kEastX) / 2
+constexpr float kHangRailSection = 0.12F;
+constexpr float kHangRailTopY =
+    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness;   // the 154 deck's soffit, 153.50
+constexpr float kHangRailNorthZ = -129.35F;       // 0.05 m south of the leaf's south edge
+constexpr float kHangRailSouthZ = -133.00F;      // the shaft edge
+
 // The carry (AS-003 §8.4.3). A carryable is picked up within kCarryReach of
 // the body's centre, at rest, in front of it; it hangs by the middle of its
 // top face from a point at the hands that follows the facing, so it swings.
