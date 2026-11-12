@@ -137,7 +137,11 @@ struct Fixture {
             <<" native_queries="<<r.native_queries-old_queries<<'\n';
         {
             BodyLockRead body(physics.GetBodyLockInterface(),matron->body());
-            const Vec3 force=body.GetBody().GetAccumulatedForce();
+            // J-044c gains: her whole body's accumulated force, not the
+            // root's alone. The feet, Climber and routecraft drives split by
+            // mass share across her six bodies, so the root holds only its
+            // 0.6722 share.
+            const Vec3 force=body.GetBody().GetAccumulatedForce()+matron->upper_accumulated_force();
             // Every force on her is reported: the routecraft's, or (when it has
             // let go of her body) her feet's drive, never both at once.
             const float feet=planner ? 0.0F : matron->foot_force_n();
@@ -381,7 +385,7 @@ void check_sliced_planning() {
             "routecraft: stale future grip or clearance restarts before execution");
         require(planner.report().queries>queries,"routecraft: stale-route replan preserves the cumulative query count");
         BodyLockRead body(f.physics.GetBodyLockInterface(),f.matron->body());
-        require(body.GetBody().GetAccumulatedForce().Length()==0,"routecraft: invalid completed path adds no actual force");
+        require((body.GetBody().GetAccumulatedForce()+f.matron->upper_accumulated_force()).Length()==0,"routecraft: invalid completed path adds no actual force");
     }
     {
         Fixture f(RVec3(0,155.07,-0.55));
