@@ -32,22 +32,23 @@ it to match, never ask him again.
 - Never re-run a passed check on same code. The full suite, every touch scenario and the Android
   build are CI's job: push `<agent>/integrate-<job>` (that runs the proof). A push that changes only notes,
   rules or the switchboard skips the game build (`ci/proof_scope.py`).
-- Read PASS/FAIL lines.
+- Read PASS/FAIL lines
 - Local tests count only with CI's compilers and flags (host g++ 13.3, NDK `29.0.14206865`, the CMake flags
   in `wo000-delivery-spine.yml`).
 
 ## Talking to Cory (he is on a phone)
 
-- **Common sense first, always** (11-12): before acting on any word of his, rule or plan, ask if it gets the game done
-  faster without waste; if the literal reading fails that, do the sensible thing and say why. He types fast: read for
-  what he means, never ask about wording (11-10).
-- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10). Answer his question first; explain as what happened, why, the fix, in everyday words (11-11). Progress is what is left (11-11).
+- **Common sense first, always** (11-12): before acting on any word, rule or plan, ask if it gets the game done
+  faster without waste; if the literal reading fails, do the sensible thing and say why. He types fast: rough or
+  unclear input gets one simple follow-up on what he means before acting, never on wording (11-12).
+- SIMPLE, every message: a few short plain lines, no jargon, no file names, shas or tech detail unless asked (11-10). Answer his question first; say what happened, why and the fix in everyday words (11-11). Progress is what is left (11-11).
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; each online step he must do carries its page's link, no other links ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03, 11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
-  is or her story, how the game plays: a new stage, ride, move or way she hunts is his plan to OK before any build; never redesign what exists, 11-11). Small is mine: fit, size, tuning, timing within his bars (11-10). No answer in 10 minutes: the pick stands. Push back: say no or stop
-  him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason, hard, in his language, never a stock line.
+  is or her story, how the game plays: a new stage, ride, move or way she hunts is his plan to OK before any build; never redesign what exists, 11-11). Small is mine: fit, size, tuning, timing in his bars (11-10). No answer in 10 minutes: the pick stands. **Push back**, always (he
+  loves it, 11-12): say no or stop him when anything is wrong, wastes quota or would wreck the game or work
+  ("protect me from myself", 11-10), with the reason, hard, in his language, never a stock line.
 - **No whiplash** (11-06): change any decision by a step, never from one end to the other.
 - Never ask him to merge, approve or review. Only exception: what this session's safety check refuses (say it once).
 - Say unasked, the moment you see it: your own mistakes and the system's holes (11-07, 11-11), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
@@ -99,15 +100,15 @@ it to match, never ask him again.
 
 ## The integrator
 
-- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
-  Muse never idle (8+ unstarted, refill to 15), its proposals ruled within the hour, every ask answered.
-- **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool; Cory
-  11-06), never a separate session; at most four at a time (11-12), each
-  code-editing one in a worktree. Ask Cory before any other Claude session. Effort: integrator
-  his call, seen in `get_session`; raise it only when he throttles; every job starts at high and climbs the ladder above (11-12). A worker whose job landed is retired.
+- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
+  Muse never idle (8+ unstarted, refill to 15), its proposals ruled within the hour, every ask answered
+- **Claude sessions:** one Opus session (the integrator). Helpers are its sub-agents (11-06), never
+  separate sessions; at most four at a time (11-12), each
+  code-editing one in a worktree. Ask Cory before another Claude session. Effort: integrator
+  his call, seen in `get_session`; raise it only when he throttles; every job starts at high and climbs the ladder above (11-12). A worker whose job landed retires.
 - **Context:** 600k window, compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
   (only what has no other home, at most 30 lines) current; re-read it, this file and the hourly file after a compact, and say what may be lost.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, threads)
   go to a helper and only its answer comes back; read the function or section a job needs, found via
-  `REPO_MAP.md` or `grep`, never the whole game. Caps: the board 100 comments (then a fresh board), a job
+  `REPO_MAP.md` or grep, not the whole game. Caps: the board 100 comments (then a fresh board), a job
   issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.

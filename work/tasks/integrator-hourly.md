@@ -5,14 +5,14 @@ It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on
 red proof, review and merge; these runs catch what no event raised.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
-Pace: no throttling, no pace prediction, no meter asks, no quiet runs to save quota (11-10).
+Pace: no throttling, no pace prediction, no meter asks, no quiet runs (11-10).
 Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
 How: helpers get the important work and long reads, never chores (11-06); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
-Fewer, batched calls; no re-reads.
+Fewer, batched calls.
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode or fast mode on: tell him once (11-12).
+Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once; fast mode: trust the app's /fast line, not get_session (11-12).
 
 Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
@@ -33,7 +33,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    file and line. A failed Switchboard run: read its failing job's error lines; fix it or hand it to a helper.
    Before ruling on or reporting a branch, read its live head (`git ls-remote`) and proof: mail can be an hour old
    (Muse 11-06). So does a mail that changes a ruling.
-   Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06: 18 h went unreported).
+   Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06).
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
    the switchboard can't (J-056: it merges workflow PRs too): FIX or
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
