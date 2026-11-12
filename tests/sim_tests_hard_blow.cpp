@@ -153,7 +153,13 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !reaching; ++i) {
         s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
         tick(s);
-        reaching = s.matron_state().state == kStateGrab && !s.snapshot().held_by_matron;
+        // She reaches, not yet holding, and has come off her lunge: she
+        // arrives in the Grab still carrying its speed (5.7 m/s), past him
+        // and moving away at the piece's own speed, so a throw released
+        // then chases her and never lands. Wait until she has planted and
+        // slowed, still reaching, before the throw.
+        const auto m = s.matron_state();
+        reaching = m.state == kStateGrab && !s.snapshot().held_by_matron && m.speed <= 1.0;
     }
     require(reaching, "hard blow: she reaches for him, the piece in his hands");
     const auto me = s.snapshot().player_position;
