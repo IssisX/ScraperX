@@ -8,6 +8,7 @@
 #include "sim/physics_world_support.hpp"
 #include "sim/fabricated.hpp"
 #include "sim/matron_traversal.hpp"
+#include "sim/slab_cell.hpp"
 
 #include <array>
 #include <set>
@@ -775,6 +776,8 @@ public:
     // The bay on the 154 m deck (bay.hpp): after every other kit body.
     std::unique_ptr<Bay> bay_;
     std::unique_ptr<LooseStock> loose_stock_;
+    // J-092: the slab trap's cell on her deck (slab_cell.hpp), built last.
+    SlabCell slab_cell_;
     std::unique_ptr<ImpactLedger> impacts_;
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;

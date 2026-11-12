@@ -401,8 +401,12 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
               r.pod(loaded.carrying_entity) && r.list_up_to(entities, here.size()) &&
               std::equal(entities.begin(), entities.end(), here.begin()) &&
               r.list_up_to(k.bodies, built) && k.bodies.size() == entities.size() &&
-              r.list(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
-              r.list_up_to(k.bin_contents, c.bin_contents.size()) && r.bits(k.rope_parted, c.rope_parted.size()) &&
+              r.list_up_to(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
+              r.list_up_to(k.bin_contents, c.bin_contents.size()) &&
+              r.bits_up_to(k.rope_parted, c.rope_parted.size()) && k.rope_parted.size() == k.rope_anchor.size() &&
+              // Fewer ropes only from a world with fewer bodies: the ropes
+              // built since (J-092's sling, built with the last bodies).
+              (k.rope_anchor.size() == c.rope_anchor.size() || entities.size() < here.size()) &&
               r.bits(k.catch_latched, c.catch_latched.size()) && r.bits(k.latch_set, c.latch_set.size()) &&
               r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
               r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
@@ -486,6 +490,11 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     }
     for (std::size_t index = k.bin_contents.size(); ok && index < c.bin_contents.size(); ++index) {
         k.bin_contents.push_back(c.bin_contents[index]);
+    }
+    // Ropes built since the save start as built, as the bodies they hold do.
+    for (std::size_t index = k.rope_anchor.size(); ok && index < c.rope_anchor.size(); ++index) {
+        k.rope_anchor.push_back(c.rope_anchor[index]);
+        k.rope_parted.push_back(c.rope_parted[index]);
     }
     if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
         !std::isfinite(position.GetZ())) {

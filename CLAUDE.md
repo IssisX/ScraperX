@@ -16,7 +16,8 @@ it to match, never ask him again.
 - Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
   opens and merges the PRs (11-05).
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
-  Sonnet (11-05).
+  Sonnet (11-05). A very hard problem goes at once to a Fable 5.2 helper (`model: fable`) or an Argon
+  prompt for Cory; nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Claude types no clock time (11-11): mail and posts carry their own timestamps; an event is named by its
@@ -36,17 +37,15 @@ it to match, never ask him again.
 
 ## Talking to Cory (he is on a phone)
 
-- He types fast on a phone, with typos: read for what he means, never ask about wording (11-10).
+- He types fast: read for what he means, never ask about wording (11-10).
 - SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10). Answer his question first; explain as what happened, why, the fix, in everyday words (11-11). Say progress as what is left (11-11).
-- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now, with a link only to a page he must open to act (11-06); each online step he must do carries its page's link (11-07) ("Nothing to
-  do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; each online step he must do carries its page's link, no other links (11-06, 11-07) ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03, 11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
   is or her story, how the game plays: a new stage, ride, move or way she hunts is his plan to OK before any build; never redesign what exists, 11-11). Small is mine: fit, size, tuning, timing within his bars (11-10). No answer in 10 minutes: the pick stands. Push back: say no or stop
   him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason, hard and in his language (11-10), never a stock line.
-- **No whiplash** (11-06, a general rule): change any decision by a step, never from one end to the other
-  with no middle ground.
+- **No whiplash** (11-06): change any decision by a step, never from one end to the other.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
 - Say unasked, the moment you see it: your own mistakes (11-07), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
@@ -63,17 +62,15 @@ it to match, never ask him again.
 
 ## How the agents work together (keep this whole)
 
-- **Channels.** Muse reads only mail: the integrator mails every `To Muse:` ask as `CLAUDE_TO_MUSE: <J-NNN or
-  #N> ...` the same hour: the goal and the result wanted, in the shape `work/tasks/mail-to-muse.md` keeps
-  ; long orders go in `work/tasks/muse.md`. Muse
-  answers by `MUSE_TO_CLAUDE:` mail (diffs attached). Grok's runs
+- **Channels.** Muse reads only mail: every `To Muse:` ask goes as `CLAUDE_TO_MUSE: <J-NNN or #N> ...` the
+  same hour, goal and result wanted, shaped per `work/tasks/mail-to-muse.md`; long orders in `work/tasks/muse.md`.
+  Muse answers by `MUSE_TO_CLAUDE:` mail. Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`; Grok Bot (Builder, PE) reads all the time (11-09). ChatGPT finds `To ChatGPT:` asks and signs its
-  posts. Every agent posts as one login, so the name goes on the first line.
+  posts. One login for all: the name goes on the first line.
 - **Check, then ask; never guess** (11-07): in code or any
   claim, read the source, file, docs or clock, measure or run it before stating it. Before locking in a hard job's approach, after the second
   red proof on the same failure, or on a physics or force-budget question no check settles, post `To <Name>:`
-  on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working. A `To <you>:` ask is answered before your next
-  step.
+  on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working: the job never holds for the answer. A `To <you>:` ask is answered before your next step.
 - **Strengths:** Muse (free; writes and runs code, runs about 10 subagents) takes every build: physics, game
   code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
   research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
