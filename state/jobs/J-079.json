@@ -5,10 +5,10 @@
   "fb-bot/integrate-j079": "d982c18bff0182e7ebc36445ea818ff4fe155adb"
  },
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
+ "deadline": "2026-11-12T22:17:00Z",
  "head": "687ddfdfbe2e0b3d0e649020281151117c8994f2",
  "issue": 397,
  "job": "J-079",
@@ -73,6 +73,31 @@
    "version": "6830931487",
    "via": "session",
    "what": "ask from Muse on #397"
+  },
+  {
+   "ack": null,
+   "ack_rule": "merged|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T20:30:39Z",
+   "dead": "2026-11-13T00:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T22:17:00Z",
+   "id": "O-f8303b30",
+   "kind": "ruling",
+   "last_error": "",
+   "last_sent": "2026-11-12T20:30:39Z",
+   "missing": 0,
+   "ref": "PR|#473",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 473,
+   "to": "claude",
+   "unseen": null,
+   "version": "merge:687ddfdfbe2e0b3d0e649020281151117c8994f2",
+   "via": "session",
+   "what": "merge #473 by hand"
   }
  ],
  "outcome": null,
@@ -84,6 +109,6 @@
   473
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T19:27:38Z"
+ "state": "landable",
+ "updated": "2026-11-12T20:30:39Z"
 }

@@ -62,7 +62,7 @@
    "ack": null,
    "ack_rule": "new-head|reply|ack",
    "asked": null,
-   "attempts": 0,
+   "attempts": 1,
    "closed": null,
    "created": "2026-11-12T18:09:34Z",
    "dead": "2026-11-13T02:09:34Z",
@@ -71,10 +71,11 @@
    "id": "O-18975105",
    "kind": "fix",
    "last_error": "",
-   "last_sent": null,
+   "last_sent": "2026-11-12T20:30:39Z",
    "missing": 0,
    "ref": "BRANCH|fb-bot/integrate-j080",
-   "sends": 0,
+   "sends": 1,
+   "sent_by": "live",
    "thread": 398,
    "to": "muse",
    "unseen": null,
@@ -86,7 +87,7 @@
    "ack": null,
    "ack_rule": "new-head|reply|ack",
    "asked": null,
-   "attempts": 0,
+   "attempts": 1,
    "closed": null,
    "created": "2026-11-12T18:09:34Z",
    "dead": "2026-11-12T21:17:00Z",
@@ -95,10 +96,11 @@
    "id": "O-89c95279",
    "kind": "fix",
    "last_error": "",
-   "last_sent": null,
+   "last_sent": "2026-11-12T20:30:39Z",
    "missing": 0,
    "ref": "BRANCH|fb-bot/integrate-protected-j080",
-   "sends": 0,
+   "sends": 1,
+   "sent_by": "live",
    "thread": 398,
    "to": "claude",
    "unseen": null,
@@ -107,7 +109,11 @@
    "what": "`fb-bot/integrate-protected-j080` is green with no PR: open one (Muse cannot open PRs)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T20:12:46Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T17:37:52Z",
    "attempts": 1,
@@ -140,5 +146,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T18:09:34Z"
+ "updated": "2026-11-12T20:30:39Z"
 }

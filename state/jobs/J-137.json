@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-12T19:27:38Z",
- "deadline": null,
+ "deadline": "2026-11-12T22:17:00Z",
  "head": "b0c06aae40206496e5123330671a598bf6422cf9",
  "issue": 474,
  "job": "J-137",
@@ -19,7 +19,32 @@
    "2026-11-12T19:27:38Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T20:30:39Z",
+   "dead": "2026-11-13T00:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T22:17:00Z",
+   "id": "O-5bbc9af4",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j137",
+   "sends": 0,
+   "thread": 474,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:b0c06aae40206496e5123330671a598bf6422cf9",
+   "via": "session",
+   "what": "`claude/integrate-j137` is green with no PR: open one"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
@@ -28,5 +53,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T19:27:38Z"
+ "updated": "2026-11-12T20:30:39Z"
 }

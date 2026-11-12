@@ -44,7 +44,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
    "missing": 3,
-   "rechecked": "2026-11-12T14:29:46Z",
+   "rechecked": "2026-11-12T20:30:39Z",
    "ref": "BRANCH|fb-bot/integrate-j009-258-down-traversal-flags",
    "sends": 1,
    "sent_by": "live",
@@ -411,5 +411,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-12T14:29:46Z"
+ "updated": "2026-11-12T20:30:39Z"
 }

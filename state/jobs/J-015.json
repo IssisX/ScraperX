@@ -10,7 +10,7 @@
   "fb-bot/integrate-protected-j015-wreck-way-on": "aee6d79d91249016e5788e205e16b0958f4bd427"
  },
  "cancelled": null,
- "ci": "running",
+ "ci": "green",
  "commands": [
   "6771165879:299",
   "6773022511:72",
@@ -757,6 +757,31 @@
    "version": "conflict:0ab0b03e40adf1b6eb56d8a1109ce5b190e457af",
    "via": "session",
    "what": "#466 has a merge conflict with the base"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T20:30:39Z",
+   "dead": "2026-11-13T00:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T22:17:00Z",
+   "id": "O-31dd1f3a",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T20:30:39Z",
+   "missing": 0,
+   "ref": "PR|#466",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 466,
+   "to": "claude",
+   "unseen": null,
+   "version": "fix:1a5f74af252641c06a0f25120964b39a25662997",
+   "via": "session",
+   "what": "#466: open FIX from Codex (review)"
   }
  ],
  "outcome": null,
@@ -769,7 +794,7 @@
   467,
   466
  ],
- "review": "",
- "state": "proof",
- "updated": "2026-11-12T19:27:38Z"
+ "review": "FIX",
+ "state": "working",
+ "updated": "2026-11-12T20:30:39Z"
 }

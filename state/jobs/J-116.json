@@ -1,18 +1,26 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j116": "00a02f3b19f636d37521e246c0055db7c98a8a3c"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [
   "6829010752:44"
  ],
  "created": "2026-11-12T01:29:02Z",
- "deadline": null,
- "head": "",
+ "deadline": "2026-11-13T00:30:39Z",
+ "head": "00a02f3b19f636d37521e246c0055db7c98a8a3c",
  "issue": 438,
  "job": "J-116",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j116": [
+   "00a02f3b19f636d37521e246c0055db7c98a8a3c",
+   "",
+   "2026-11-12T20:30:39Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -43,6 +51,31 @@
    "version": "start:438",
    "via": "email",
    "what": "start J-116"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T20:30:39Z",
+   "dead": "2026-11-13T04:30:39Z",
+   "dead_lettered": null,
+   "due": "2026-11-13T00:30:39Z",
+   "id": "O-6079a6ca",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T20:30:39Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j116",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 438,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:00a02f3b19f636d37521e246c0055db7c98a8a3c",
+   "via": "email",
+   "what": "`fb-bot/integrate-j116` proof red: host-build, no PR"
   }
  ],
  "outcome": null,
@@ -52,6 +85,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T16:58:14Z"
+ "state": "working",
+ "updated": "2026-11-12T20:30:39Z"
 }

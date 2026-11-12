@@ -671,7 +671,11 @@
    "what": "ask from Muse on #307"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T20:30:39Z",
+    "by": "codex",
+    "how": "verdict on the head"
+   },
    "ack_rule": "verdict|ack",
    "asked": null,
    "attempts": 1,
@@ -747,6 +751,31 @@
    "version": "6832442497",
    "via": "session",
    "what": "ask from Muse on #307"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T20:30:39Z",
+   "dead": "2026-11-13T04:30:39Z",
+   "dead_lettered": null,
+   "due": "2026-11-13T00:30:39Z",
+   "id": "O-7f4d62f7",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T19:48:20Z",
+   "missing": 0,
+   "ref": "PR|#343",
+   "sends": 1,
+   "sent_by": "switch",
+   "thread": 343,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:deccc34b51d5352e08de1fcf458a7f0cd96c9e8b",
+   "via": "email",
+   "what": "#343: open FIX from Codex (review) (new head deccc34b since O-2c7fcb6a was acked at b1177151)"
   }
  ],
  "outcome": null,
@@ -757,7 +786,7 @@
  "prs": [
   343
  ],
- "review": "waiting",
- "state": "review",
- "updated": "2026-11-12T19:27:38Z"
+ "review": "FIX",
+ "state": "proof",
+ "updated": "2026-11-12T20:30:39Z"
 }
