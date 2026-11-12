@@ -390,6 +390,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("request_lift_action"), &ScraperXSimulation::request_lift_action);
     godot::ClassDB::bind_method(godot::D_METHOD("get_save_game"), &ScraperXSimulation::get_save_game);
     godot::ClassDB::bind_method(godot::D_METHOD("load_save_game", "bytes"), &ScraperXSimulation::load_save_game);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_save_reject_reason"), &ScraperXSimulation::get_save_reject_reason);
     godot::ClassDB::bind_method(godot::D_METHOD("add_fabricated", "hull", "signature", "model", "at", "yaw"),
                                 &ScraperXSimulation::add_fabricated);
     godot::ClassDB::bind_method(godot::D_METHOD("get_fabricated_refusal"), &ScraperXSimulation::get_fabricated_refusal);
@@ -2223,6 +2224,10 @@ godot::PackedByteArray ScraperXSimulation::get_save_game() const {
 
 bool ScraperXSimulation::load_save_game(const godot::PackedByteArray &bytes) {
     return simulation_->load_game(bytes.ptr(), static_cast<std::size_t>(bytes.size()));
+}
+
+godot::String ScraperXSimulation::get_save_reject_reason() const {
+    return godot::String(simulation_->save_reject_reason().c_str());
 }
 
 godot::Dictionary ScraperXSimulation::get_lift_state() const {

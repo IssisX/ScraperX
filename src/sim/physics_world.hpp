@@ -12,6 +12,7 @@
 
 #include <array>
 #include <set>
+#include <string>
 
 namespace scraperx::sim {
 
@@ -135,6 +136,11 @@ public:
     bool place_matron_home(float deck_top);
     void launch_matron_for_test(JPH::RVec3 at);
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
+    // Tests only: the corpses gone, as a load leaves them (a loaded game has
+    // none). A death restore stands the climber back where the corpse lies,
+    // and the corpse shoves the settle; a relaunch has no corpse to shove
+    // with, so a death-vs-relaunch comparison clears it first.
+    void clear_corpses_for_test() noexcept;
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
@@ -709,13 +715,15 @@ private:
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept;
 
 public:
-    bool load_save(SaveReader &r) { return read_save(r, physics_system_.GetBodyInterface()); }
+    bool load_save(SaveReader &r, std::string *reason = nullptr) {
+        return read_save(r, physics_system_.GetBodyInterface(), reason);
+    }
 
     [[nodiscard]] std::vector<std::uint64_t> body_entities() const;
 
     void write_save(SaveWriter &w) const;
 
-    bool read_save(SaveReader &r, JPH::BodyInterface &bodies);
+    bool read_save(SaveReader &r, JPH::BodyInterface &bodies, std::string *reason);
 
     void read_machine_state() noexcept;
 

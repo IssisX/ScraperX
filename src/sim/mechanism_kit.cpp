@@ -1879,6 +1879,14 @@ void Kit::restore(const Checkpoint &in) {
         if (!state.enabled) {
             set_enabled(body, false);
             record.parked = state.position;
+            // A parked body's turn is saved with it (the capture reads it
+            // off the body), so it is restored with it too: a shackle hooked
+            // at a turn comes back at that turn, not at the identity it was
+            // built with. Without this, a relaunch leaves every hooked
+            // shackle unturned while a death restore keeps the turn it was
+            // hooked at — the two disagree on the same save.
+            bodies.SetPositionAndRotation(record.id, state.position, state.rotation,
+                                          JPH::EActivation::DontActivate);
             continue;
         }
         bodies.SetPositionAndRotation(record.id, state.position, state.rotation,

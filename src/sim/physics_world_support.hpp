@@ -879,6 +879,9 @@ public:
         return true;
     }
     [[nodiscard]] bool done() const noexcept { return at_ == size_; }
+    // Where the next read would start: a test walks the sections with the
+    // production reader and truncates exactly at each section boundary.
+    [[nodiscard]] std::size_t position() const noexcept { return at_; }
 
 private:
     const std::uint8_t *data_;

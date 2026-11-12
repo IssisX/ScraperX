@@ -323,6 +323,8 @@ std::vector<std::uint64_t> Simulation::PhysicsWorld::body_entities() const {
 
 // The Matron's damage in a save follows the grips under this mark ("MAD1").
 constexpr std::uint32_t kMatronDamageMark = 0x314D414DU;
+// Her state, stage and meters follow her damage under this mark ("MAT1").
+constexpr std::uint32_t kMatronStateMark = 0x3154414DU;
 
 // The committed checkpoint as bytes (see SaveWriter).
 void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
@@ -372,15 +374,35 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     w.pod(checkpoint_.matron.damage_ns);
     w.pod(checkpoint_.matron.player_damage_ns);
     w.pod(static_cast<std::uint8_t>(checkpoint_.matron.dead ? 1 : 0));
-    // Fabricated objects follow the damage, under their mark, only when the
+    // Her state, stage and meters, under their own mark ("MAT1"), so a
+    // relaunch puts her back as a death restore would (J-116): a save made
+    // before them ends at the damage and reads her as Dormant, a pest,
+    // unhurt. The damage block above is byte for byte as J-069 wrote it,
+    // and her state sits between the damage and the fabricated objects, so
+    // the prefix property still holds: a save without fabricated is still a
+    // prefix of one with them.
+    w.pod(kMatronStateMark);
+    w.pod(static_cast<std::uint8_t>(checkpoint_.matron.state));
+    w.pod(checkpoint_.matron.strain_s);
+    w.pod(checkpoint_.matron.rage);
+    w.pod(static_cast<std::uint8_t>(checkpoint_.matron.stage));
+    w.pod(checkpoint_.matron.exposure_s);
+    w.pod(checkpoint_.matron.handled);
+    // Fabricated objects follow her state, under their mark, only when the
     // world holds any.
     write_fabricated(w);
 }
 
 // Reads a saved checkpoint, then restores the world from it as a death
 // would (without counting one). Refused, and nothing changed, unless
-// every list matches this world's own.
-bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodies) {
+// every list matches this world's own. When refused, reason (if given)
+// names the section the file failed in, for the load's warning.
+bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodies, std::string *reason) {
+    const auto fail = [&reason](const char *why) {
+        if (reason != nullptr && reason->empty()) {
+            *reason = why;
+        }
+    };
     MachineCheckpoint current{};
     kit_->capture(current.kit);
     current.vertical = vertical_->state();
@@ -413,6 +435,9 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
               r.pod(k.drained) && r.pod(loaded.slingshot) && r.pod(loaded.swing) && r.pod(loaded.bay) &&
               std::isfinite(loaded.bay.restart_s) && loaded.bay.restart_s >= 0.0F && loaded.bay.supplied <= 1 &&
               loaded.bay.leaf_running <= 1 && loaded.bay.fan_running <= 1;
+    if (!ok) {
+        fail("checkpoint bodies");
+    }
     std::uint32_t controls = 0;
     ok = ok && r.pod(controls) && controls == current.vertical.controls.size();
     if (ok) {
@@ -423,7 +448,13 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                         current.vertical.controls[i].target_speeds.size());
         }
     }
+    if (!ok) {
+        fail("vertical controls");
+    }
     ok = ok && r.list(loaded.vertical.targets, current.vertical.targets.size());
+    if (!ok) {
+        fail("vertical targets");
+    }
     // A save made before the grips ends here: it holds nothing. One made with
     // fewer (before the spreader) holds nothing in the grips built since.
     if (ok && !r.done()) {
@@ -432,9 +463,13 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
              std::all_of(k.grip_rating.begin(), k.grip_rating.end(),
                          [](const float rating) { return std::isfinite(rating) && rating >= 0.0F; });
     }
+    if (!ok) {
+        fail("grips");
+    }
     // After the grips, one mark tells the rest: the Matron's damage (a save
-    // made with it, "MAD1"), the fabricated objects (a save made before it,
-    // "FAB1"), or nothing (a save made before both, which ends here).
+    // made with it, "MAD1"), then her state ("MAT1"), then the fabricated
+    // objects (a save made before the damage, "FAB1"), or nothing (a save
+    // made before them all, which ends here).
     std::vector<SavedFabricated> saved;
     if (ok && !r.done()) {
         std::uint32_t mark = 0;
@@ -445,23 +480,68 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
                  dead <= 1 && std::isfinite(loaded.matron.damage_ns) && loaded.matron.damage_ns >= 0.0F &&
                  std::isfinite(loaded.matron.player_damage_ns) && loaded.matron.player_damage_ns >= 0.0F;
             loaded.matron.dead = dead == 1;
-            // After her damage, the fabricated objects, if the save holds any.
+            if (!ok) {
+                fail("matron damage");
+            }
+            // After her damage, her state, stage and meters, if the save
+            // holds them (J-116): a save made before them ends here, or at
+            // the fabricated objects. Her save never holds a hold, a
+            // stagger or a knockdown (Matron::save normalizes those to
+            // Hunting), her rage is clamped 0..1, so anything else is a
+            // file no build of this game wrote.
             if (ok && !r.done()) {
-                ok = r.pod(mark) && read_fabricated(r, saved, mark);
+                ok = r.pod(mark);
+                if (ok && mark == kMatronStateMark) {
+                    std::uint8_t state = 0, stage = 0;
+                    ok = r.pod(state) && state <= static_cast<std::uint8_t>(Matron::State::Unrigging) &&
+                         r.pod(loaded.matron.strain_s) && std::isfinite(loaded.matron.strain_s) &&
+                         loaded.matron.strain_s >= 0.0F && r.pod(loaded.matron.rage) &&
+                         std::isfinite(loaded.matron.rage) && loaded.matron.rage >= 0.0F &&
+                         loaded.matron.rage <= 1.0F && r.pod(stage) &&
+                         stage <= static_cast<std::uint8_t>(Matron::Stage::Changed) &&
+                         r.pod(loaded.matron.exposure_s) && std::isfinite(loaded.matron.exposure_s) &&
+                         loaded.matron.exposure_s >= 0.0F && r.pod(loaded.matron.handled);
+                    loaded.matron.state = static_cast<Matron::State>(state);
+                    loaded.matron.stage = static_cast<Matron::Stage>(stage);
+                    if (!ok) {
+                        fail("matron state");
+                    } else if (!r.done()) {
+                        ok = r.pod(mark);
+                        if (!ok) {
+                            fail("fabricated objects");
+                        }
+                    }
+                }
+                // After her state, the fabricated objects, if the save holds any.
+                if (ok && !r.done()) {
+                    ok = read_fabricated(r, saved, mark);
+                    if (!ok) {
+                        fail("fabricated objects");
+                    }
+                }
             }
         } else if (ok) {
             // Not her damage: the fabricated objects, whose mark this is.
             // A mark that is neither is refused inside read_fabricated.
             ok = read_fabricated(r, saved, mark);
+            if (!ok) {
+                fail("fabricated objects");
+            }
         }
     }
     ok = ok && r.done();
+    if (!ok) {
+        fail("trailing bytes");
+    }
     // A grip holds a body the save has: one built with its world, or one of
     // its fabricated objects (the kit's last).
     const std::size_t saved_built = entities.size();
     ok = ok && std::all_of(k.grip_load.begin(), k.grip_load.end(), [&](const std::uint32_t load) {
              return load == kit::kNone || load < saved_built + saved.size();
          });
+    if (!ok) {
+        fail("grip load");
+    }
     // The world's fabricated objects must be the save's first ones, the same
     // entity made from the same hull file: the save's further ones are made
     // now, if the physics has room for them; the world's further ones stay
@@ -469,8 +549,14 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     for (std::size_t i = 0; ok && i < std::min(fabricated_.size(), saved.size()); ++i) {
         ok = fabricated_[i].entity == saved[i].object.entity && fabricated_[i].data == saved[i].object.data;
     }
+    if (!ok) {
+        fail("fabricated mismatch");
+    }
     const std::size_t to_make = saved.size() > fabricated_.size() ? saved.size() - fabricated_.size() : 0;
     ok = ok && physics_system_.GetNumBodies() + to_make <= physics_system_.GetMaxBodies();
+    if (!ok) {
+        fail("no room");
+    }
     // Bodies added to the world since the save was written (always built
     // last, after every body before them) start as built.
     for (std::size_t index = k.bodies.size(); ok && index < built; ++index) {
@@ -498,6 +584,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     }
     if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
         !std::isfinite(position.GetZ())) {
+        fail("checkpoint position");
         return false;
     }
     // Taken: the save's fabricated objects the world lacks are made, where
@@ -506,6 +593,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         Fabricated object = std::move(saved[i].object);
         object.body = build_fabricated(object, saved[i].state.position, saved[i].state.rotation);
         if (!object.body.valid()) {
+            fail("fabricated build");
             // Not for want of room, which was checked: the world keeps a
             // checkpoint of every body it has, and the save is refused.
             kit::Kit::Checkpoint now;

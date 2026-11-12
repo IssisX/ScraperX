@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <string>
 #include <vector>
 #include <memory>
 
@@ -1819,6 +1820,10 @@ public:
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
+    // Tests only (never bound to the bridge): the corpses gone, as a load
+    // leaves them, so a death restore can be compared against a relaunch
+    // without the corpse shoving the settle.
+    void debug_clear_corpses() noexcept;
     // Tests only (never bound to the bridge): the height of the first thing
     // straight under `at` within `depth`, or NaN where nothing is.
     [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
@@ -1972,6 +1977,10 @@ public:
     // nothing.
     [[nodiscard]] std::vector<std::uint8_t> save_game() const;
     [[nodiscard]] bool load_game(const std::uint8_t *data, std::size_t size);
+    // Why the last load was refused ("format key", "checkpoint bodies", ...),
+    // empty when it was not refused or nothing has been tried. The app's
+    // warning names it; a native test asserts it.
+    [[nodiscard]] const std::string &save_reject_reason() const noexcept { return save_reject_reason_; }
     // Live fabrication (03_EXECUTION/LIVE_FABRICATION/DESIGN.md): an object
     // made outside the simulation, handed in between ticks as data, like a
     // touch. `hull` is its hull file (sim/fabricated.hpp), untrusted: its
@@ -2030,6 +2039,7 @@ private:
     std::vector<TestExtraSolid> test_extra_solids_;
     std::uint64_t runs_ended_by_matron_ = 0;
     std::uint64_t tick_index_ = 0;
+    std::string save_reject_reason_;
     double remainder_seconds_ = 0.0;
     double move_input_x_ = 0.0;
     double move_input_z_ = 0.0;
