@@ -72,6 +72,27 @@ class PlanReads(unittest.TestCase):
         self.assertTrue(any(f.startswith("DORMANT J-103: claude/integrate-j103") for f in found), found)
         self.assertTrue(any(f.startswith("NOT-OWNER J-105: fb-bot/integrate-j105") for f in found), found)
 
+    def test_closed_unmerged_pr_keeps_its_head_visible_as_unresolved_work(self):
+        old = self.sw.gh.paged
+
+        def paged(path, key=""):
+            if "state=closed" in path:
+                return [{"number": 1, "head": {"sha": "s101"},
+                         "merged_at": "2026-11-10T00:00:00Z", "body": "Job: J-101\\n"},
+                        {"number": 2, "head": {"sha": "s105"},
+                         "merged_at": None, "body": "Job: J-105\\n"}]
+            return old(path, key)
+
+        self.sw.gh.paged = paged
+        observed = self.sw.plan_reads(self.model)
+        self.assertIn("s101", observed["inactive"])
+        self.assertNotIn("s105", observed["inactive"])
+        issues = self.sw.gh.paged("/issues?")
+        problems = plan.findings(self.model, issues, observed["branches"], self.sw.listing(""),
+                                 inactive=observed["inactive"], merged=observed["merged"],
+                                 dormant=observed["dormant"])
+        self.assertTrue(any(x.startswith("NOT-OWNER J-105: fb-bot/integrate-j105") for x in problems), problems)
+
     def test_reads_once_per_run(self):
         self.assertIs(self.sw.plan_reads(self.model), self.sw.plan_reads(self.model))
 
