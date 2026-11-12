@@ -220,6 +220,8 @@ struct Ignore {
     // Her body's object layer: probes see only what her body collides with
     // (-1: everything).
     int layer = -1;
+    bool avoid = false;
+    JPH::Vec3 avoid_at = JPH::Vec3::sZero();
 };
 
 // The move executor on one body. step() is called once a tick before the
