@@ -232,16 +232,21 @@ void run_wet_e_guard(const bool expect) {
     // sat 78 places later and the magnet's pinned append order failed.
     // Before forklift_at 822, now 744; the total is still 824.
     constexpr std::uint32_t kNewUpper = 78;
+    // J-014 (#121): three toolboxes on the rings the dress left with no
+    // carryable piece (594.25, 640.25 and 684.1 m), their table places
+    // after the Matron's kinds and their bodies last of all, so the kinds
+    // keep their places and only the total grows by 3.
+    constexpr std::uint32_t kNewHightower = 3;
     const std::uint64_t kForklift[] = {scraperx::sim::Forklift::kDeck154ChassisEntity,
                                        scraperx::sim::Forklift::kDeck154CarriageEntity};
     // J-042: then exactly two pieces of stock laid for the Matron by her band
-    // (the extinguisher and the pallet), the kit's last two bodies, after the
-    // upper pieces.
+    // (the extinguisher and the pallet), after the upper pieces (the
+    // hightower pieces come after them).
     constexpr std::uint32_t kMatronKinds = 2;
     const std::uint32_t forklift_at =
         kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
     const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift)) + kNewUpper;
-    bool since_after = world.kit_body_count() == kinds_at + kMatronKinds;
+    bool since_after = world.kit_body_count() == kinds_at + kMatronKinds + kNewHightower;
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
         since_after = world.kit_body_entity(forklift_at + i) == kForklift[i];
     }
@@ -249,9 +254,9 @@ void run_wet_e_guard(const bool expect) {
         since_after = world.kit_body_entity(i) == kSince[i - kBodiesBeforeE];
     }
     // The 78 upper pieces follow the forklift, in table order, then the
-    // Matron's two, the table's last two pieces.
-    const std::uint32_t upper_first = world.loose_stock_count() - kMatronKinds - kNewUpper;
-    for (std::uint32_t i = 0; since_after && i < kNewUpper + kMatronKinds; ++i) {
+    // Matron's two, then the hightower pieces, the table's last three.
+    const std::uint32_t upper_first = world.loose_stock_count() - kMatronKinds - kNewHightower - kNewUpper;
+    for (std::uint32_t i = 0; since_after && i < kNewUpper + kMatronKinds + kNewHightower; ++i) {
         since_after = world.kit_body_entity(forklift_at + std::size(kForklift) + i) ==
                       Simulation::kLooseStockFirstEntity + upper_first + i;
     }
@@ -361,8 +366,14 @@ void run_wet_e_guard(const bool expect) {
     // still hash to 16882536141644003327, so every earlier piece stands where
     // it was; the count is 540 + 2 and the hash over all pieces is new: now
     // 10019901410837365716 (west of the drum, clear of it).
-    require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds &&
-                stock_before.hash == 16882536141644003327ULL && stock.hash == 10019901410837365716ULL,
+    // Re-pinned for J-014 (#121): three toolboxes on the rings the dress
+    // left with no carryable piece (594.25, 640.25 and 684.1 m) take the
+    // end of the table, after the Matron's kinds. The first 540 still hash
+    // to 16882536141644003327, so every earlier piece stands where it was;
+    // the count is 540 + 2 + 3 and the hash over all pieces is new: now
+    // 11164827445081706258.
+    require(world.loose_stock_count() == kStockBeforeKinds + kMatronKinds + kNewHightower &&
+                stock_before.hash == 16882536141644003327ULL && stock.hash == 11164827445081706258ULL,
             "E guard: every piece of loose stock is built where it was, to the millimeter");
     require(lines_clear && stock_clear,
             "E guard: no zipline's rider room and no piece of stock reaches into E's shaft, duct or bucket");
