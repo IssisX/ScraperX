@@ -150,6 +150,10 @@ const SCENARIOS := {
 	# route across the yard (rendered only, like the probes above).
 	"perf_walk": 8,
 	"touch_bay": 11,
+	# J-092: the slab trap on her deck (src/sim/slab_cell.hpp): GRAB its trip
+	# cord, watched she freezes, looked away from she creeps in under the
+	# slab, a step back opens the hook and 2 t lands on her.
+	"touch_slab_trap": 11,
 	# Her corner pipe: she comes down the shaft after the climber, heard on it
 	# 4 s and more before she is there; a drum shoved off the edge onto her as
 	# she climbs back up knocks her off it, alive (ui_test_act.gd).
@@ -513,6 +517,8 @@ func _run() -> void:
 			ok = await _matron_climb_touch(InputRouter.Device.TOUCH)
 		"touch_bay":
 			ok = await _bay_touch(InputRouter.Device.TOUCH)
+		"touch_slab_trap":
+			ok = await _slab_trap_touch(InputRouter.Device.TOUCH)
 		"look_bay":
 			ok = await _look_matron("bay")
 		"look_matron_locker":

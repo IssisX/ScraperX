@@ -170,6 +170,13 @@ public:
     // starting at matron_kinds_begin().
     void lay_matron_kinds();
     static constexpr int kMatronKinds = 2;
+    // J-092 (#410): the slab the 154 m deck's service cell hangs over her
+    // lane (slab_cell.hpp): one PlateSlab, laid where the cell's sling holds
+    // it, 20 m over the deck. Laid after her kinds, last of all, so every
+    // earlier piece and body keeps its place. The kHungSlabs pieces starting
+    // at hung_slab_begin().
+    void lay_hung_slab();
+    static constexpr int kHungSlabs = 1;
     // Where a hand takes a carried piece of this kind, in its own frame.
     [[nodiscard]] static JPH::Vec3 carry_handle(Kind kind) noexcept;
 
@@ -191,6 +198,7 @@ public:
     [[nodiscard]] int east_west_begin() const noexcept { return east_west_begin_; }
     [[nodiscard]] int upper_begin() const noexcept { return upper_begin_; }
     [[nodiscard]] int matron_kinds_begin() const noexcept { return matron_kinds_begin_; }
+    [[nodiscard]] int hung_slab_begin() const noexcept { return hung_slab_begin_; }
 
     // The pieces as placed, in order (also the order of their entities).
     [[nodiscard]] static const std::vector<Placement> &placements();
@@ -220,6 +228,7 @@ private:
     int east_west_begin_ = 0;
     int upper_begin_ = 0;
     int matron_kinds_begin_ = 0;
+    int hung_slab_begin_ = 0;
     // Puts one piece in the world, as placed.
     void add_piece(const Placement &placement);
     // Builds one piece's body for an entity already chosen, as placed.
