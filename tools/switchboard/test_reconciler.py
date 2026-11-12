@@ -948,7 +948,8 @@ class Rules(unittest.TestCase):
         self.assertEqual((h.state().jobs["J-540"]["state"], h.obs("J-540")), ("assigned", []))
         h.run(feed(issues=[fresh]), NOW + 23 * H)
         starts = h.obs("J-540", NOW + 23 * H)
-        self.assertEqual([(o["kind"], o["to"]) for o in starts], [("start-agent", "muse")])
+        self.assertEqual([(o["kind"], o["to"]) for o in starts], [("ruling", "claude")])
+        self.assertIn("inspect its live issue", starts[0]["what"])
         b = L.BranchIn("fb-bot/integrate-j540-go", SHA["f"], t(23.5))
         h.run(feed(issues=[fresh], branches=[b]), NOW + 24 * H)
         self.assertEqual(h.obs("J-540", NOW + 24 * H)[0]["ack"]["how"], "work pushed")
@@ -960,7 +961,7 @@ class Rules(unittest.TestCase):
         h.run(feed(issues=[parked]), NOW + 30 * H)
         self.assertEqual((h.state().jobs["J-541"]["state"], h.obs("J-541", NOW + 30 * H)), ("accepted", []))
         h.run(feed(issues=[quiet]), NOW + 31 * H)   # unparked and quiet past the grace: the start is owed again
-        self.assertEqual([o["kind"] for o in h.obs("J-541", NOW + 31 * H)], ["start-agent"])
+        self.assertEqual([(o["kind"], o["to"]) for o in h.obs("J-541", NOW + 31 * H)], [("ruling", "claude")])
 
     def test_a_queued_job_has_a_day_before_a_start_is_owed(self):
         h = Harness()
