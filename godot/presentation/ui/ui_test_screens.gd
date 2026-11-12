@@ -149,7 +149,12 @@ func _screens_resize(tag: String, size: Vector2i) -> String:
 	# is the check there. A real resize must move the layout on the frame.
 	if changed and _main._touch.button_center(&"jump") == before:
 		return "%s layout did not move after the resize to %s" % [tag, str(size)]
-	return _audit_layout(tag)
+	var bad: String = _audit_layout(tag)
+	# A still at each size, for the eye check: silent headless, saved under a
+	# real renderer with --capture=<prefix>.
+	if bad.is_empty():
+		await _pose("screens_" + tag.replace(" ", "_"))
+	return bad
 
 
 # The audit at the current size: every button's disc and hit circle inside
