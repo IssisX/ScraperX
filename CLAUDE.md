@@ -76,7 +76,7 @@ it to match, never ask him again.
   causes and can fail several times first. Claude's helpers take only the hardest, highest-impact jobs: an
   unknown cause that blocks 2+ jobs or the climb or her chase, or a Muse job whose fix failed twice on the same
   failure (mail Muse "taking it"); Muse then builds the fix they name. Grok: math and risk. ChatGPT: research,
-  specs, review. All three helper slots full: the job waits for the next one.
+  specs, review. All helper slots full: the job waits for the next one.
 - **Board:** the body of the open issue labeled `board` is the live board; only the integrator edits it. Agents read the body and
   new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
   needs whom` and start the next job; every agent holds two or more jobs.
@@ -100,7 +100,7 @@ it to match, never ask him again.
 - Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
   Muse never idle (8+ unstarted, refill to 15), its proposals ruled within the hour, every ask answered.
 - **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool; Cory
-  11-06), never a separate session; at most three at a time (11-11), each
+  11-06), never a separate session; at most four at a time (11-12), each
   code-editing one in a worktree. Ask Cory before any other Claude session. Effort: integrator
   his call, seen in `get_session`; raise it only when he throttles; every job starts at high and climbs the ladder above (11-12). A worker whose job landed is retired.
 - **Context:** 600k window, compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
