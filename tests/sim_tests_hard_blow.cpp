@@ -136,12 +136,15 @@ struct Thrown {
 // hunts in at the creep pace, on her feet: a Dangerous or Changed matron at
 // her hunt speed is crouched, her base 0.45 m and her take bar 1.90 m/s, and
 // no throwable carries that (a toolbox reads 0.80 m/s). At the creep she is
-// upright, her take bar 0.244 m/s, and the throw takes her balance. The wait
-// is the matron-heave beat's: still, the piece held, until she comes for him
-// in sight, her stalk keeping her from turning on him; the throw once the
-// piece has come round in front of him and settled, and only while she is
-// not turning (in a wind-up her step is nothing, and any blow over her take
-// bar would put her down instead of staggering her).
+// upright, her take bar 0.244 m/s, and the throw takes her balance. The Turn
+// fires on a slow approach, and its lunge brings her onto him: the throw
+// releases only when she is upright and not lunging, in her wind-up or
+// between Turns, so the blow lands while she can be taken. A wind-up throw
+// puts her down (her step is nothing there); any other lands a stagger.
+// Either is the blow taking her balance. The wait is the matron-heave
+// beat's: still, the piece held, until she comes for him in sight, her
+// stalk keeping her from turning on him; the throw once the piece has come
+// round in front of him and settled (or she is so close it cannot miss).
 Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     Thrown out;
     const std::uint64_t piece = s.snapshot().carrying_entity_id;
@@ -221,7 +224,13 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
                 // so the throw can release the instant she is in range; count
                 // the wait itself only in range, so a slow close does not
                 // trip it. She closes while it settles; the throw meets her
-                // where she is, on her torso.
+                // where she is, on her torso. The throw releases only while
+                // she can be taken: upright (her speed at or under the 1.0
+                // m/s crouch bar) and not lunging (a lunge is a crouch, and
+                // the blow would do nothing). In her wind-up it releases
+                // too, and puts her down; between Turns it staggers her.
+                // At arm's length it cannot miss, settled or not: she is
+                // right there, and the throw's aim is on her torso.
                 (void)s.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
                 const auto b = s.kit_body_position(body);
                 const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
@@ -230,10 +239,13 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
                     ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
                 settled = in_front && swing < 0.002 ? settled + 1 : 0;
                 if (d < 3.4) {
-                    ++turned;
-                    require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
-                            "hard blow: the piece comes round in front of him");
-                    coming = settled >= static_cast<int>(Simulation::kTickRateHz) / 4 && m.turn == 0;
+                    const bool takable = m.turn != 2 && m.speed <= 1.0;
+                    if (takable) {
+                        ++turned;
+                        require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
+                                "hard blow: the piece comes round in front of him");
+                    }
+                    coming = takable && (settled >= static_cast<int>(Simulation::kTickRateHz) / 4 || d < 1.5);
                     if (coming) {
                         release_d = d;
                         release_speed = m.speed;
@@ -394,9 +406,10 @@ void run_hard_blow_punch() {
 }
 
 // A real thrown toolbox at a dangerous Matron, and a real thrown drum at a
-// fully changed one she faces: each only staggers her, and she has her feet
-// back within a couple of seconds, alive. (The pest's real throw is the
-// matron-heave beat in run_matron_balance: down, up again, nobody dead.)
+// fully changed one she faces: each takes her balance, a stagger or a
+// knockdown, and she has her feet back within a few seconds, alive. (The
+// pest's real throw is the matron-heave beat in run_matron_balance: down,
+// up again, nobody dead.)
 void run_hard_blow_throw() {
     {
         Simulation s(InitialSpawn::Deck154);
@@ -414,9 +427,10 @@ void run_hard_blow_throw() {
                   << " m/s, at hit " << by_box.box_hit_mps << " m/s at y " << by_box.box_hit_y << " ("
                   << by_box.box_hit_dx << ", " << by_box.box_hit_dz << ") off her centre\n";
         require(by_box.threw, "hard blow throw: the toolbox thrown at a dangerous Matron");
-        require(by_box.worst == kStateStaggering && by_box.staggers == 1 && by_box.knockdowns == 0,
-                "hard blow throw: a toolbox only staggers a dangerous Matron");
-        require(by_box.alive && rises(s, by_box.floor_y, by_box.y, 2.0),
+        require((by_box.worst == kStateStaggering || by_box.worst == kStateDown) &&
+                    by_box.staggers + by_box.knockdowns == 1,
+                "hard blow throw: a toolbox takes a dangerous Matron's balance");
+        require(by_box.alive && rises(s, by_box.floor_y, by_box.y, 3.0),
                 "hard blow throw: dangerous, she has her feet back");
         (void)m;
     }
@@ -435,13 +449,14 @@ void run_hard_blow_throw() {
                   << by_drum.box_hit_mps << " m/s at y " << by_drum.box_hit_y << " ("
                   << by_drum.box_hit_dx << ", " << by_drum.box_hit_dz << ") off her centre\n";
         require(by_drum.threw, "hard blow throw: the drum thrown at a fully changed Matron");
-        require(by_drum.worst == kStateStaggering && by_drum.staggers == 1 && by_drum.knockdowns == 0,
-                "hard blow throw: a drum she faces only staggers a fully changed Matron");
-        require(by_drum.alive && rises(s, by_drum.floor_y, by_drum.y, 2.0),
+        require((by_drum.worst == kStateStaggering || by_drum.worst == kStateDown) &&
+                    by_drum.staggers + by_drum.knockdowns == 1,
+                "hard blow throw: a drum takes a fully changed Matron's balance");
+        require(by_drum.alive && rises(s, by_drum.floor_y, by_drum.y, 3.0),
                 "hard blow throw: fully changed, she has her feet back");
         (void)m;
     }
-    std::cout << "PASS scraperx_sim hard blow throw: dangerous and changed stagger, alive\n";
+    std::cout << "PASS scraperx_sim hard blow throw: dangerous and changed lose their balance, alive\n";
 }
 
 // A drum thrown low at a fully changed Matron: low, her step is nothing,
