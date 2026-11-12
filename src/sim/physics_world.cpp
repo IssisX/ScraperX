@@ -473,11 +473,22 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     }
 
     // J-042: two more kinds by her deck's north band (loose_stock.hpp), their
-    // bodies after every other's (the upper stock's too); heard like the rest.
+    // bodies after the upper stock's (the hightower stock's come after them);
+    // heard like the rest.
     loose_stock_->lay_matron_kinds();
     for (int i = loose_stock_->matron_kinds_begin(); i < loose_stock_->count(); ++i) {
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
+
+    // J-014: the hightower toolboxes (loose_stock.hpp), their table places
+    // after the Matron's kinds, so every earlier piece and body keeps its
+    // place and saves made before them still load; their bodies last of
+    // all. Heard like the rest.
+    loose_stock_->append_hightower();
+    for (const int i : loose_stock_->realize_hightower()) {
+        track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
+    }
+
     give_matron_stock();
 
     // Tests only: the extra solids built after every body the world builds.

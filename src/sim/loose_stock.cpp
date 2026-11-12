@@ -639,6 +639,15 @@ void LooseStock::append_upper() {
     pending_upper_.clear();
 }
 
+void LooseStock::append_hightower() {
+    hightower_begin_ = count();
+    for (const Placement &p : pending_hightower_) {
+        pieces_.push_back(kit::BodyIndex{});
+        placed_.push_back(p);
+    }
+    pending_hightower_.clear();
+}
+
 Vec3 LooseStock::carry_handle(const Kind kind) noexcept {
     return make_spec(kind).handle;
 }
@@ -687,6 +696,10 @@ std::vector<int> LooseStock::realize_reserved() {
 
 std::vector<int> LooseStock::realize_upper() {
     return realize_range(upper_begin_, count());
+}
+
+std::vector<int> LooseStock::realize_hightower() {
+    return realize_range(hightower_begin_, count());
 }
 
 std::vector<int> LooseStock::realize_range(const int begin, const int end) {
@@ -864,7 +877,10 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
     // the solid top decks are felt for on a 1.5 m grid instead of from
     // an edge. Their bodies are built after the deck-154 forklift
     // (realize_upper), so the forklift keeps its place right after the
-    // east/west pieces and no pre-existing body moves either.
+    // east/west pieces and no pre-existing body moves either. A ring the
+    // third pass leaves with no carryable piece then gets one toolbox,
+    // recorded in its own list (append_hightower, after the Matron's
+    // kinds), so nothing already laid moves at all.
     // `ring_tops` is the rings this pass dresses, `stack_count` how many
     // of them are stack rings, `deck_first` the first top-deck entry
     // (ring_tops.size() when the pass has none).
@@ -1115,7 +1131,102 @@ void LooseStock::dress_tower(const std::vector<JPH::RVec3> &keep_clear, const fl
         upper_tops.push_back(deck);
     }
     std::vector<Placement> upper;
-    (void)dress_pass(true, {}, &upper, upper_tops, 0, 10);
+    const std::vector<std::vector<RVec3>> upper_spots = dress_pass(true, {}, &upper, upper_tops, 0, 10);
+    // J-014: a ring above 396.25 m left with no carryable piece gets one
+    // toolbox, in its own list (pending_hightower_), so nothing already
+    // laid moves or renumbers. The toolbox sits by the ring's own spot, at
+    // the first place the floor, the room above it, the machines and the
+    // pieces already there all allow; the offsets tried stay within 3 m of
+    // the spot, inside the spot's own machine-clear box, and the toolbox
+    // is small enough to fit the band the spot stands on.
+    // Level floor under it, felt for at its corners; clear of the pieces
+    // already laid on its ring, of every place the player is put down, of
+    // every machine within kMachineClear, and with nothing at all in the
+    // way above it.
+    const auto clear_for_toolbox = [&](const float x, const float z, const float top, float &floor) {
+        for (const float dx : {-0.3F, 0.3F}) {
+            for (const float dz : {-0.3F, 0.3F}) {
+                float at = top;
+                if (!floor_at(x + dx, z + dz, top, at)) {
+                    return false;
+                }
+                floor = at;
+            }
+        }
+        for (const Placement &p : upper) {
+            if (std::abs(p.y - top) < 3.0F && std::hypot(p.x - x, p.z - z) < 1.2F) {
+                return false;
+            }
+        }
+        for (const Placement &p : pending_hightower_) {
+            if (std::hypot(p.x - x, p.z - z) < 1.2F) {
+                return false;
+            }
+        }
+        for (const RVec3 &point : keep_clear) {
+            if (Vec3(point - RVec3(x, top, z)).Length() < keep_clear_radius) {
+                return false;
+            }
+        }
+        const bool kit_ring = top > 400.0F;
+        const RVec3 middle(x, top + 1.3F, z);
+        const RefConst<Shape> around = new BoxShape(
+            Vec3(0.5F * 0.9F + kMachineClear, kit_ring ? 1.225F : 2.5F, 0.5F * 0.9F + kMachineClear));
+        AnyHitCollisionCollector<CollideShapeCollector> near_it;
+        query.CollideShape(around, Vec3::sReplicate(1.0F),
+                           RMat44::sRotationTranslation(Quat::sIdentity(),
+                                                        kit_ring ? middle - Vec3(0.0F, 0.025F, 0.0F) : middle),
+                           CollideShapeSettings(), middle, near_it, {}, {}, machines);
+        if (near_it.HadHit()) {
+            return false;
+        }
+        const RefConst<Shape> room = new BoxShape(Vec3(0.5F, 1.24F, 0.5F));
+        const RVec3 room_middle(x, top + 1.26F, z);
+        AnyHitCollisionCollector<CollideShapeCollector> in_the_way;
+        query.CollideShape(room, Vec3::sReplicate(1.0F),
+                           RMat44::sRotationTranslation(Quat::sIdentity(), room_middle), CollideShapeSettings(),
+                           room_middle, in_the_way);
+        return !in_the_way.HadHit();
+    };
+    for (std::size_t r = 0; r < upper_tops.size(); ++r) {
+        const float top = upper_tops[r];
+        if (std::find(kBareTopDecks.begin(), kBareTopDecks.end(), top) != kBareTopDecks.end()) {
+            continue;  // Bare by design: the 706 deck and the summit.
+        }
+        bool carryable = false;
+        for (const Placement &p : upper) {
+            if (!heavy(p.kind) && std::abs(p.y - top) < 3.0F) {
+                carryable = true;
+                break;
+            }
+        }
+        if (carryable || upper_spots[r].empty()) {
+            continue;
+        }
+        const RVec3 origin = upper_spots[r][0];
+        // Eight ways out from the spot, near first: the toolbox belongs by
+        // the stock, not alone on the far side of the ring.
+        static constexpr float kDirs[8][2] = {{1.0F, 0.0F}, {-1.0F, 0.0F}, {0.0F, 1.0F}, {0.0F, -1.0F},
+                                              {0.7071F, 0.7071F}, {-0.7071F, 0.7071F},
+                                              {0.7071F, -0.7071F}, {-0.7071F, -0.7071F}};
+        bool placed = false;
+        for (const float distance : {2.0F, 2.5F, 3.0F}) {
+            for (const auto &dir : kDirs) {
+                const float x = static_cast<float>(origin.GetX()) + dir[0] * distance;
+                const float z = static_cast<float>(origin.GetZ()) + dir[1] * distance;
+                float floor = top;
+                if (!clear_for_toolbox(x, z, top, floor)) {
+                    continue;
+                }
+                pending_hightower_.push_back({K::Toolbox, 0, x, floor, z, 0.3F});
+                placed = true;
+                break;
+            }
+            if (placed) {
+                break;
+            }
+        }
+    }
     pending_upper_ = upper;
 }
 
