@@ -3294,7 +3294,8 @@
    "commands": [
     "6777898125:87",
     "6798247735:46",
-    "6816038840:84"
+    "6816038840:84",
+    "6822230580:60"
    ],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-10T18:17:00Z",
@@ -4060,7 +4061,12 @@
      "what": "review #372 @ c639ffb4"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-12T11:22:47Z",
+      "by": "Muse",
+      "comment": "6822230580",
+      "how": "/ack"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -4423,7 +4429,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": null,
+   "deadline": "2026-11-12T17:00:00Z",
    "head": "",
    "issue": 241,
    "job": "J-043",
@@ -4568,6 +4574,31 @@
      "version": "6820168204",
      "via": "session",
      "what": "ask from Muse on #241"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-12T11:51:05Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-12T12:09:50Z",
+     "dead": "2026-11-12T23:00:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-12T17:00:00Z",
+     "id": "O-071091f1",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-12T12:09:50Z",
+     "missing": 0,
+     "ref": "ASK|ask on #241",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 241,
+     "to": "grok",
+     "unseen": null,
+     "version": "6822818270",
+     "via": "issue",
+     "what": "ask from Claude on #241"
     }
    ],
    "outcome": null,
@@ -4578,7 +4609,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-12T10:02:04Z"
+   "updated": "2026-11-12T12:09:50Z"
   },
   "J-044": {
    "attempt": 0,
@@ -7861,17 +7892,17 @@
    "updated": "2026-11-11T14:01:59Z"
   },
   "J-063": {
-   "attempt": 0,
+   "attempt": 1,
    "blocked": null,
    "branches": {},
    "cancelled": null,
-   "ci": "",
+   "ci": "green",
    "commands": [
     "6773742956:69"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": null,
-   "head": "",
+   "deadline": "2026-11-12T16:09:50Z",
+   "head": "4e84c905d76f0fb71646bf1455567f3bb9f0a9be",
    "issue": 321,
    "job": "J-063",
    "landed": {},
@@ -8074,17 +8105,44 @@
      "version": "6810253772",
      "via": "session",
      "what": "ask from Muse on #321"
+    },
+    {
+     "ack": null,
+     "ack_rule": "new-head|reply|ack",
+     "asked": null,
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-12T12:09:50Z",
+     "dead": "2026-11-12T20:09:50Z",
+     "dead_lettered": null,
+     "due": "2026-11-12T16:09:50Z",
+     "id": "O-52e7cccd",
+     "kind": "fix",
+     "last_error": "",
+     "last_sent": "2026-11-12T12:12:49Z",
+     "missing": 0,
+     "ref": "PR|#453",
+     "sends": 1,
+     "sent_by": "switch",
+     "thread": 453,
+     "to": "muse",
+     "unseen": null,
+     "version": "fix:4e84c905d76f0fb71646bf1455567f3bb9f0a9be",
+     "via": "email",
+     "what": "#453: open FIX from Claude (eye)"
     }
    ],
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 0,
+   "pr": 453,
    "pr_done": "",
-   "prs": [],
-   "review": "",
-   "state": "assigned",
-   "updated": "2026-11-12T00:23:47Z"
+   "prs": [
+    453
+   ],
+   "review": "FIX",
+   "state": "working",
+   "updated": "2026-11-12T12:09:50Z"
   },
   "J-064": {
    "attempt": 0,
@@ -10014,7 +10072,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-10T22:50:55Z",
-   "deadline": null,
+   "deadline": "2026-11-12T16:09:50Z",
    "head": "",
    "issue": 392,
    "job": "J-077",
@@ -10047,6 +10105,31 @@
      "version": "6795076270",
      "via": "session",
      "what": "ask from Muse on #392"
+    },
+    {
+     "ack": null,
+     "ack_rule": "work|reply|ack",
+     "asked": null,
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-12T12:09:50Z",
+     "dead": "2026-11-12T20:09:50Z",
+     "dead_lettered": null,
+     "due": "2026-11-12T16:09:50Z",
+     "id": "O-a3dbb88a",
+     "kind": "start-agent",
+     "last_error": "",
+     "last_sent": "2026-11-12T12:09:50Z",
+     "missing": 0,
+     "ref": "JOB|#392",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 392,
+     "to": "muse",
+     "unseen": null,
+     "version": "start:392",
+     "via": "email",
+     "what": "start J-077"
     }
    ],
    "outcome": null,
@@ -10057,7 +10140,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T12:09:50Z"
   },
   "J-078": {
    "attempt": 1,

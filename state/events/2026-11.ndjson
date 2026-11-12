@@ -1827,3 +1827,12 @@
 {"ev": "state", "frm": "review", "job": "J-038", "t": "2026-11-12T11:09:00Z", "to": "working"}
 {"attempt": 1, "ev": "sent", "id": "O-52dcda4f", "job": "J-038", "ref": "PR|#372", "send": 1, "t": "2026-11-12T11:09:00Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T11:09:00Z", "tries": 1}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-52dcda4f", "job": "J-038", "t": "2026-11-12T12:09:50Z"}
+{"due": "2026-11-12T17:00:00Z", "ev": "obligation", "id": "O-071091f1", "job": "J-043", "kind": "ask", "ref": "ASK|ask on #241", "t": "2026-11-12T12:09:50Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-12T16:09:50Z", "ev": "obligation", "id": "O-52e7cccd", "job": "J-063", "kind": "fix", "ref": "PR|#453", "t": "2026-11-12T12:09:50Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T16:09:50Z", "ev": "obligation", "id": "O-a3dbb88a", "job": "J-077", "kind": "start-agent", "ref": "JOB|#392", "t": "2026-11-12T12:09:50Z", "to": "muse", "via": "email"}
+{"ev": "state", "frm": "assigned", "job": "J-063", "t": "2026-11-12T12:09:50Z", "to": "working"}
+{"attempt": 1, "ev": "sent", "id": "O-071091f1", "job": "J-043", "ref": "ASK|ask on #241", "send": 1, "t": "2026-11-12T12:09:50Z", "to": "grok", "via": "issue"}
+{"ev": "switch_mail", "id": "O-52e7cccd", "job": "J-063", "ref": "PR|#453", "t": "2026-11-12T12:09:50Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-a3dbb88a", "job": "J-077", "ref": "JOB|#392", "send": 1, "t": "2026-11-12T12:09:50Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T12:09:50Z", "tries": 1}
