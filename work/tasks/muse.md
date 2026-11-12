@@ -68,6 +68,7 @@ Unstarted, in order (11-12):
 10. J-130 #456: Brenner's job lines on the foreman radio, text first.
 11. J-131 #457: the punch list on the pause card and one HUD line.
 12. J-132 #458: missions 1 and 7 proven, one touch scenario each.
+13. J-135 #461: rule_check flags geometry changed through tuning-header constants.
 Waiting on J-001's grab code landing: J-018 #125.
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
