@@ -15,9 +15,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
 using scraperx::sim::InitialSpawn;
@@ -247,12 +250,80 @@ void bait_her_alone() {
     std::cout << "PASS scraperx_sim bait lift, her alone: lands at " << fall << " m/s (limit " << kHerDropMps
               << "), back up in " << climb_t << " s by " << moves << '\n';
 }
+// A save as a world before the lift wrote it (measured against a save that
+// trunk's own build wrote: its bytes are this world's with exactly these
+// taken out, every list's other entries the same, but solver noise in the
+// 1e-8s): without the kit's last two bodies (A
+// and B: their entities and states), the last rope (the lift's) and the last
+// two guides' dogs (A's and B's). With `bodies` false, the bodies stay and
+// only the dogs go: a save that matches no world. The layout is
+// Simulation::save_game's: the format key, the tick, the checkpoint's
+// position, crouch, commits, deaths and carried entity, then the lists.
+std::vector<std::uint8_t> before_the_lift(const std::vector<std::uint8_t> &bytes, const bool bodies) {
+    using State = scraperx::sim::kit::Kit::BodyState;
+    std::vector<std::uint8_t> out;
+    std::size_t at = 8 + 8 + sizeof(JPH::RVec3) + 1 + 8 + 8 + 8;
+    out.insert(out.end(), bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(at));
+    // One list: its count, less `drop`, then its first elements; the
+    // dropped ones skipped.
+    const auto list = [&](const std::size_t size, const std::uint32_t drop) {
+        std::uint32_t count = 0;
+        std::memcpy(&count, bytes.data() + at, 4);
+        require(count >= drop, "bait lift, old save: the list holds what the lift added");
+        const std::uint32_t kept = count - drop;
+        const auto *k = reinterpret_cast<const std::uint8_t *>(&kept);
+        out.insert(out.end(), k, k + 4);
+        out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(at + 4),
+                   bytes.begin() + static_cast<std::ptrdiff_t>(at + 4 + size * kept));
+        at += 4 + size * count;
+    };
+    std::uint32_t entities = 0;
+    std::memcpy(&entities, bytes.data() + at, 4);
+    std::uint64_t last[2] = {};
+    std::memcpy(last, bytes.data() + at + 4 + 8 * (std::size_t{entities} - 2), 16);
+    require(last[0] == Simulation::kServiceBaitAEntityId && last[1] == Simulation::kServiceBaitBEntityId,
+            "bait lift, old save: A and B are the save's last bodies");
+    const std::uint32_t drop = bodies ? 2 : 0;
+    list(8, drop);                   // the bodies' entities
+    list(sizeof(State), drop);       // their states
+    list(4, bodies ? 1 : 0);         // the ropes' anchors: the lift's rope last
+    list(4, 2);                      // the guides' dogs: A's and B's last
+    list(4, 0);                      // the bins
+    list(1, bodies ? 1 : 0);         // the ropes' parted bits
+    out.insert(out.end(), bytes.begin() + static_cast<std::ptrdiff_t>(at), bytes.end());
+    return out;
+}
+
+void bait_old_save() {
+    // A checkpoint saved before the lift was built loads into this world:
+    // the lift's bodies, rope and dogs start as built, and it stays put.
+    Simulation s(InitialSpawn::Deck706);
+    settle(s, 1.0);
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    const std::vector<std::uint8_t> old = before_the_lift(bytes, true);
+    std::cout << "  bait lift, old save: " << bytes.size() << " bytes now, " << old.size() << " as before the lift\n";
+    Simulation loaded(InitialSpawn::Deck706);
+    require(loaded.load_game(old.data(), old.size()), "bait lift, old save: a save from before the lift loads");
+    settle(loaded, 10.0);
+    const auto lift = loaded.service_state();
+    std::cout << "  bait lift, old save loaded: a=" << lift.bait_a_travel << " b=" << lift.bait_b_travel << '\n';
+    require(std::abs(lift.bait_a_travel) < 0.01 && std::abs(lift.bait_b_travel) < 0.01,
+            "bait lift, old save: loaded, the lift stands as built and stays");
+    // Fewer dogs with every body saved matches no world: refused.
+    const std::vector<std::uint8_t> odd = before_the_lift(bytes, false);
+    Simulation refused(InitialSpawn::Deck706);
+    require(!refused.load_game(odd.data(), odd.size()),
+            "bait lift, old save: fewer dogs with no fewer bodies is refused");
+    require(refused.load_game(bytes.data(), bytes.size()), "bait lift, old save: this world's own save loads");
+    std::cout << "PASS scraperx_sim bait lift: a save from before it loads, the lift as built\n";
+}
 } // namespace
 
 void run_service_bait_lift() {
     bait_stays();
     bait_take();
     bait_her_alone();
+    bait_old_save();
 }
 SCRAPERX_GROUP("service_bait_lift", 335, run_service_bait_lift);
 SCRAPERX_SLICE("service-bait-lift", run_service_bait_lift);
