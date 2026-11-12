@@ -748,9 +748,15 @@ def apply_commands(state: State, p: Pass, thread_job: dict[int, str], events: Ev
                     rec, ob = hit
                     if key in rec["commands"] or not is_open(ob):
                         continue   # a repeat, or already settled: no second transition
-                    ob["ack"] = {"how": "/ack", "at": iso(c.t), "by": c.author, "comment": c.id}
+                    # A receipt of a FIX is not proof that the blocked head changed.
+                    # Keep the obligation open until a new head, verdict or closed PR.
+                    if ob["kind"] == "fix" and ob["version"].startswith("fix:"):
+                        ob["seen"] = {"how": "/ack", "at": iso(c.t), "by": c.author, "comment": c.id}
+                        events("seen", rec["job"], id=oid, how="/ack", by=c.author)
+                    else:
+                        ob["ack"] = {"how": "/ack", "at": iso(c.t), "by": c.author, "comment": c.id}
+                        events("acked", rec["job"], id=oid, how="/ack", by=c.author)
                     rec["commands"] = (rec["commands"] + [key])[-MAX_CMDS:]
-                    events("acked", rec["job"], id=oid, how="/ack", by=c.author)
                 if not ids:
                     unmatched[f"CMD|{c.id}"] = f"/ack with no O-xxxxxxxx id on #{c.thread}"
                 continue
@@ -1098,9 +1104,13 @@ def acks_by_reply(rec: dict, replies: Replies, events: Events, roster: L.Roster,
             else:
                 how = "reply naming it" if agent == ob["to"] and names(body, ob) else ""
             if how:
-                ob["ack"] = {"how": how, "at": iso(t), "by": ob["to"]}
-                ob["unseen"] = None
-                events("acked", rec["job"], id=ob["id"], how=how)
+                if ob["kind"] == "fix" and ob["version"].startswith("fix:"):
+                    ob["seen"] = {"how": how, "at": iso(t), "by": ob["to"]}
+                    events("seen", rec["job"], id=ob["id"], how=how)
+                else:
+                    ob["ack"] = {"how": how, "at": iso(t), "by": ob["to"]}
+                    ob["unseen"] = None
+                    events("acked", rec["job"], id=ob["id"], how=how)
                 break
 
 
@@ -1361,6 +1371,10 @@ def deliver(state: State, p: Pass, outbox, now: dt.datetime, events: Events, mem
                 if not ob["sends"]:   # delivered by the inbox's TO-CLAUDE line: no comment of ours, now or at the due time
                     ob["sends"], ob["attempts"], ob["last_sent"], ob["sent_by"] = 1, 1, iso(now), "inbox"
                     events("inbox", rec["job"], id=ob["id"], to=ob["to"], via=ob["via"], ref=ob["ref"])
+                continue
+            # An acknowledged open FIX needs real code/review evidence, not another
+            # identical nudge. It remains open and can still dead-letter.
+            if ob["kind"] == "fix" and ob["version"].startswith("fix:") and ob.get("seen"):
                 continue
             need = ob["sends"] == 0 or (ob["sends"] == 1 and now >= at(ob["due"]))
             if not need or status or budget <= 0:
