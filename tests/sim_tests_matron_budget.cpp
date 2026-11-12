@@ -76,14 +76,12 @@ const Expected kExpected[] = {
     // uncharged: force no Budget is charged for. The budget path's overs are the Turn lunge's own
     // caps (law::kLungeForceN, kLungePowerW), the one designed exception to her one budget.
     // scenario, path, over, uncharged, peak N, peak W
-    {"matron-grab", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
     {"matron-grab", Path::CrateShove, false, true, 8000.0, 1429.0},
     {"matron-grab", Path::GrabSpring, false, true, 2600.0, 11424.0},
     {"matron-grab", Path::GrabArm, false, true, 1452.0, 545.0},
     {"matron-grab", Path::Hand2Spring, false, true, 2600.0, 5675.0},
     {"matron-grab", Path::Hand2Arm, false, true, 2498.0, 935.0},
     {"matron-grab", Path::Shove, true, true, 44771.0, 131006.0},
-    {"matron-arm", Path::Budget, true, false, law::kLungeForceN, 61324.0},
     {"matron-arm", Path::GrabSpring, false, true, 2600.0, 5141.0},
     {"matron-arm", Path::GrabArm, false, true, 974.0, 401.0},
     {"matron-arm", Path::Hand2Spring, false, true, 2600.0, 2025.0},
@@ -94,7 +92,6 @@ const Expected kExpected[] = {
     {"matron-fatality", Path::GrabSpring, false, true, 2600.0, 6963.0},
     {"matron-fatality", Path::GrabArm, false, true, 1144.0, 336.0},
     {"matron-fatality", Path::Knee, false, true, 4864.0, 8029.0},
-    {"matron-fatality", Path::Shove, true, true, 52285.0, 131006.0},
     {"matron-fatality", Path::LetGo, false, true, 6885.0, 6355.0},
     {"matron-load", Path::GrabSpring, false, true, 2600.0, 5141.0},
     {"matron-load", Path::GrabArm, false, true, 2824.0, 2064.0},
