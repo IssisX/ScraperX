@@ -1765,3 +1765,15 @@
 {"attempt": 1, "ev": "sent", "id": "O-0fe51a2e", "job": "J-098", "ref": "BRANCH|fb-bot/integrate-j098", "send": 1, "t": "2026-11-12T01:29:02Z", "to": "claude", "via": "session"}
 {"ev": "dead_letter", "id": "O-32775b74", "job": "J-108", "ref": "BRANCH|claude/integrate-protected-j108", "t": "2026-11-12T01:29:02Z", "to": "claude"}
 {"ev": "pass", "job": "", "jobs": 90, "status": "ok", "t": "2026-11-12T01:29:02Z", "tries": 1}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-1d85c592", "job": "J-087", "t": "2026-11-12T02:29:16Z"}
+{"due": "2026-11-12T03:29:16Z", "ev": "obligation", "id": "O-a40a97ab", "job": "", "kind": "ask", "ref": "ASK|ask on #378", "t": "2026-11-12T02:29:16Z", "to": "grok_bot", "via": "watch"}
+{"ev": "dead_letter", "id": "O-47e6deff", "job": "J-001", "ref": "ASK|ask on #108", "t": "2026-11-12T02:29:16Z", "to": "claude"}
+{"ev": "dead_letter", "id": "O-b3763b40", "job": "J-001", "ref": "ASK|ask on #108", "t": "2026-11-12T02:29:16Z", "to": "claude"}
+{"ev": "dead_letter", "id": "O-ab43ea33", "job": "J-085", "ref": "BRANCH|fb-bot/integrate-j085", "t": "2026-11-12T02:29:16Z", "to": "claude"}
+{"ev": "dead_letter", "id": "O-bc1328fe", "job": "J-089", "ref": "BRANCH|fb-bot/integrate-j089", "t": "2026-11-12T02:29:16Z", "to": "claude"}
+{"ev": "dead_letter", "id": "O-f33f597b", "job": "J-093", "ref": "BRANCH|claude/integrate-protected-j093", "t": "2026-11-12T02:29:16Z", "to": "claude"}
+{"ev": "dead_letter", "id": "O-f72c7d4b", "job": "J-094", "ref": "BRANCH|fb-bot/integrate-j094", "t": "2026-11-12T02:29:16Z", "to": "claude"}
+{"ev": "dead_letter", "id": "O-a874ef94", "job": "J-108", "ref": "BRANCH|claude/integrate-j108", "t": "2026-11-12T02:29:16Z", "to": "claude"}
+{"attempt": 1, "ev": "sent", "id": "O-a40a97ab", "job": "", "ref": "ASK|ask on #378", "send": 1, "t": "2026-11-12T02:29:16Z", "to": "grok_bot", "via": "watch"}
+{"ev": "needs_you", "job": "", "keys": ["O-d1c32a4b", "O-47e6deff", "O-b3763b40", "O-ab43ea33", "O-bc1328fe", "O-f33f597b", "O-f72c7d4b", "O-32775b74", "O-a874ef94"], "n": 9, "t": "2026-11-12T02:29:16Z"}
+{"ev": "pass", "job": "", "jobs": 90, "status": "ok", "t": "2026-11-12T02:29:16Z", "tries": 1}
