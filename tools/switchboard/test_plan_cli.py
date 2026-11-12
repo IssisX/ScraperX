@@ -41,9 +41,40 @@ class Editor(unittest.TestCase):
         got = editor.change(SOURCE, "move", ["J-102", "J-101"])
         self.assertLess(got.index("J-102"), got.index("J-101"))
 
-    def test_tidy_requires_closed_issue_evidence(self):
-        with self.assertRaisesRegex(ValueError, "explicit verified closed-job input"):
-            editor.change(SOURCE, "tidy", [])
+    def test_closed_job_removal_requires_positive_evidence_and_no_unresolved_head(self):
+        with self.assertRaisesRegex(ValueError, "independently verified closed"):
+            editor.change(SOURCE, "drop", ["J-101"])
+        got = editor.change(SOURCE, "drop", ["J-101"], verified_closed={"J-101"})
+        self.assertNotIn("J-101 muse", got)
+        self.assertIn("J-102 muse", got)
+        with self.assertRaisesRegex(ValueError, "unresolved remote work"):
+            editor.change(SOURCE, "drop", ["J-101"], verified_closed={"J-101"},
+                          branches=["fb-bot/wip-j101"])
+
+    def test_tidy_drops_only_proven_closed_jobs_with_no_active_work(self):
+        self.assertEqual(editor.change(SOURCE, "tidy", []), SOURCE)
+        got = editor.change(SOURCE, "tidy", [], verified_closed={"J-102"})
+        self.assertNotIn("J-102 muse", got)
+        self.assertIn("J-101 muse", got)
+        with self.assertRaisesRegex(ValueError, "unresolved remote work"):
+            editor.change(SOURCE, "tidy", [], verified_closed={"J-102"},
+                          branches=["fb-bot/wip-j102"])
+
+    def test_initial_snapshot_does_not_trigger_a_false_recent_flip(self):
+        path = editor.HERE / "work/plan.md"
+        new = mock.Mock(stdout="COMMIT:one\n+J-101 muse #101 | first\n")
+        changed = mock.Mock(stdout="COMMIT:two\n-J-101 muse #101 | first\n"
+                                   "+J-101 claude #101 | first\n")
+        with mock.patch.object(editor.subprocess, "run", return_value=new):
+            self.assertFalse(editor.recent_flip(path, "J-101"))
+        with mock.patch.object(editor.subprocess, "run", return_value=changed):
+            self.assertTrue(editor.recent_flip(path, "J-101"))
+
+    def test_mutation_preserves_original_provisional_plan_warning(self):
+        preamble = "# PROVISIONAL SHADOW PLAN\n# measured against GitHub\n"
+        got = editor.change(preamble + SOURCE, "hold", ["J-101", "review blocked"])
+        self.assertTrue(got.startswith(preamble))
+        self.assertIn("J-101 muse #101 hold: review blocked", got)
 
     def test_corrupt_source_is_never_edited(self):
         with self.assertRaisesRegex(ValueError, "plan invalid"):
