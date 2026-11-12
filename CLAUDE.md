@@ -15,8 +15,8 @@ it to match, never ask him again.
 - No per-job or per-request money cap; only the $100 month cap. Never bring the $8 up (11-04, 11-07).
 - Nobody waits on Claude's go, protected work included (11-07). Muse pushes its own branches; the switchboard
   opens and merges the PRs (11-05).
-- No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
-  Sonnet (11-05). Hard work: an Opus helper at high; if it fails, one at max (`helper-max`); if that fails, ask Cory
+- No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus; Sonnet only for cheap
+  chores, never game code (11-12). Hard work: an Opus helper at high; if it fails, one at max (`helper-max`); if that fails, ask Cory
   "Argon?" with the whole copyable prompt and a 15-minute `send_later` check; his no or no answer: a Fable 5.2
   helper (`model: fable`, its effort picked by the job via `helper` or `helper-physics`); nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night (11-07).
