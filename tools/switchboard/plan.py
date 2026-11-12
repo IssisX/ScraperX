@@ -255,9 +255,9 @@ def whole(gh, path: str) -> list:
 def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk: str = "ScraperX-Claude",
             errors: tuple = (Exception,)) -> dict:
     """What the plan is checked against, read through `gh` (switch and tools/board/job_status.py share it).
-    `inactive`: heads that are history, not work in flight: every closed PR's head (merged or abandoned), and a
-    job branch whose head is already in trunk (compare says behind or identical; a sha-pinned compare never
-    changes, so its ETag keeps it cheap). `merged`: jobs with a merged `Job: J-NNN` PR. `dormant`: an
+    `inactive`: proven landed heads, not work in flight: merged PR heads and heads already in trunk.
+    A PR closed without merging is NOT evidence of landed work; its branch stays visible until explicitly
+    reconciled or an ancestry compare proves its head is already in trunk. `merged`: jobs with a merged `Job: J-NNN` PR. `dormant`: an
     owner-side head with no PR whose last commit is older than DORMANT_DAYS. A compare that fails or is not
     reached leaves the head live: unproven work is never hidden."""
     repo = gh.repo
@@ -265,7 +265,7 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
     branches = whole(gh, f"repos/{repo}/branches")
     prs = (listing or gh.paged)(f"repos/{repo}/pulls?state=open")
     closed = whole(gh, f"repos/{repo}/pulls?state=closed&base={trunk}")
-    inactive = {p["head"]["sha"] for p in closed if (p.get("head") or {}).get("sha")}
+    inactive = {p["head"]["sha"] for p in closed if p.get("merged_at") and (p.get("head") or {}).get("sha")}
     merged = {m.group(1) for p in closed if p.get("merged_at") if (m := PR_JOB.match(p.get("body") or ""))}
     jobs = set(model.by_job())
     dormant: set[str] = set()
