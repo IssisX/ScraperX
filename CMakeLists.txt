@@ -41,6 +41,7 @@ add_library(scraperx_sim STATIC
     src/sim/physics_world_state.cpp
     src/sim/mechanism_kit.cpp
     src/sim/rope_constraint.cpp
+    src/sim/slab_cell.cpp
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
     src/sim/swing.cpp
