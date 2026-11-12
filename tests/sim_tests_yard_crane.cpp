@@ -671,8 +671,10 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
 
 // The save's tail since her damage joined it: the grips' two lists ([n][n
 // loads][n][n ratings]), then her damage under its mark (MAD1: the mark,
-// two meters, one dead byte), then the fabricated objects if the world
-// holds any (FAB1: the mark, a count, each an entity, length-first hull
+// two meters, one dead byte), then her state under its mark (MAT1: the
+// mark, a state byte, two meters, a stage byte, one more meter and eight
+// handled bytes — 26 bytes since J-116), then the fabricated objects if the
+// world holds any (FAB1: the mark, a count, each an entity, length-first hull
 // bytes, thirteen state numbers, two flag bytes). The offset of the grip
 // lists, or bytes.size() when the save does not hold them so.
 std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
@@ -704,8 +706,11 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
         return p == bytes.size();
     };
     // Her damage's mark, then the grips just before it, then either the
-    // save's end or a fabricated section to it.
+    // save's end, her state (MAT1, 26 bytes) and then the end, or a
+    // fabricated section to it.
     constexpr std::uint32_t kDamageMark = 0x314D414DU;
+    constexpr std::uint32_t kMatronStateMark = 0x3154414DU;
+    constexpr std::size_t kMatronStateBytes = 26;
     for (std::size_t m = 0; m + 13 <= bytes.size(); ++m) {
         std::uint32_t mark = 0;
         if (!word(m, mark) || mark != kDamageMark) {
@@ -726,6 +731,15 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
                 continue;
             }
             if (m + 13 == bytes.size() || fabricated_to_end(m + 13)) {
+                return at;
+            }
+            // Her state sits between her damage and the fabricated
+            // objects: the mark, then its 26 bytes, then the end or a
+            // fabricated section to it.
+            std::uint32_t state_mark = 0;
+            const std::size_t after_state = m + 13 + kMatronStateBytes;
+            if (word(m + 13, state_mark) && state_mark == kMatronStateMark && after_state <= bytes.size() &&
+                (after_state == bytes.size() || fabricated_to_end(after_state))) {
                 return at;
             }
         }

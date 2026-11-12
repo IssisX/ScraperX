@@ -273,6 +273,10 @@ func _save(device: int) -> bool:
 	var mid_s2 := float(_native().get_stack_s2_cage_travel())
 	var mid_deaths := int(_native().get_death_count())
 	var mid_bytes := FileAccess.get_file_as_bytes(path)
+	# Pin the Deck 6 save: the game writes a save every frame the
+	# checkpoint commits change, so riding C2 with autosave on would
+	# overwrite this file with Deck 8 before the relaunch load reads it.
+	_main._save_enabled = false
 	if not await _stack_c2(device):
 		return false
 	if not _main.load_saved_climb():
