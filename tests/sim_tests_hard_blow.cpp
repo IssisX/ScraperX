@@ -193,6 +193,11 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
             release_speed = m.speed;
             release_stalking = m.stalking ? 1 : 0;
         }
+        if (i % static_cast<int>(Simulation::kTickRateHz) == 0) {
+            std::cout << "  hard blow wait: t=" << i / static_cast<int>(Simulation::kTickRateHz) << "s state="
+                      << m.state << " stage=" << int(m.stage) << " d=" << d << " turn=" << m.turn
+                      << " speed=" << m.speed << " settled=" << settled << "\n";
+        }
     }
     require(coming, "hard blow: she bursts, the piece in his hands");
     out.release_m = release_d;
