@@ -581,6 +581,21 @@ void run_hard_blow_stock() {
     std::cout << "  hard blow stock: " << carryable << " carryable pieces in the world\n";
     for (std::size_t b = 0; b < kBands; ++b) {
         std::cout << "    ring " << kRings[b] << " m: " << counts[b] << " carryable\n";
+        if (counts[b] == 0) {
+            // A bare band: list what is at that height anywhere, so a
+            // misplaced window reads as a window error, not a bare deck.
+            for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
+                const auto piece = s.loose_stock_piece(i);
+                if (LooseStock::heavy(static_cast<LooseStock::Kind>(piece.kind))) {
+                    continue;
+                }
+                const auto pos = s.kit_body_position(s.kit_body_index(LooseStock::kFirstEntity + i));
+                if (pos.y >= kRings[b] - 0.5 && pos.y <= kRings[b] + 1.5) {
+                    std::cout << "      at height: kind " << int(piece.kind) << " at (" << pos.x << ", " << pos.y
+                              << ", " << pos.z << ")\n";
+                }
+            }
+        }
         require(counts[b] >= 1, "hard blow stock: a carryable piece on every deck of the route");
     }
     std::cout << "PASS scraperx_sim hard blow stock: a throwable on every deck\n";
