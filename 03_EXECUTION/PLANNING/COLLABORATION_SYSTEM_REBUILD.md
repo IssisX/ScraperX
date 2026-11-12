@@ -1,7 +1,8 @@
 # Collaboration system rebuild (Cory 11-12: "WHAT'S THE REAL PROBLEM")
 
 Scope (Cory 11-12): this file is the diagnosis (A) and the design (B), written so a cheaper helper can build it
-without re-thinking. Nothing is built yet. The mail to Muse and the exact rule edits are not drafted.
+without re-thinking. Part of it is built, in shadow only: section C says exactly what runs and what is still
+only described. The Muse mail and the rule edits are drafts in D, unsent and unapplied.
 Every claim below names its record. Events are named by commit, issue or comment id, never by clock time.
 
 ## A. Diagnosis
@@ -300,6 +301,51 @@ dependency cycle walk (parse), two vendors on one job (`NOT-OWNER`), started wit
 a job issue with no plan line (`NO-LINE`) and, added on removal, two open issues for one job (`DUP-ISSUE`).
 The module and its 14 tests went in one commit; history keeps both.
 
+
+## C. State on this branch (11-12): built, verified, still only described
+
+`work/switchboard.yml` says `plan: shadow`: the sweep prints `PLAN`/`PLAN-BLOCK` lines and writes nothing (no
+labels, board text, mail or inbox item). Live mode is off until Cory approves the cutover.
+
+**Built and tested** (`python3 -m unittest discover -s tools/switchboard -p 'test_*.py'`):
+- `plan.parse/render/fingerprint`, `PLAN-BAD`, `NO-LINE`, `NO-ISSUE`, `DUP-ISSUE`, `NOT-OWNER`, `OVER-LIMIT`,
+  `UNPUSHED` (but see below), `DORMANT`; statuses done, review, held, pushed, started, dormant, contested,
+  landed, waiting, queued (only started, pushed and review are in flight).
+- `plan.observe`, the one read the switch and `tools/board/job_status.py` share: closed-PR heads and heads
+  already in trunk are history, not lanes; whole listings past the client's 500-item cap.
+- `tools/board/plan.py` editor: version check, refuses moving in-flight work without a stated stop-and-push
+  handoff, refuses a recent flip without a reason, atomic save.
+- Reconciler: no start mail from an aging record (an integrator ruling instead); an `/ack` or reply on an open
+  FIX is a receipt (`seen`), not a resolution: it stays open until a new head, verdict or closed PR, and can
+  still dead-letter. This is live behaviour (the reconciler is live), not shadow.
+- Ledger feed reads every open `J-NNN` issue, labelled `job` or not.
+- No merge gate: a hold or transfer never turns MERGE into WAIT (removed 11-12, Cory).
+
+**Failure cases, each with its regression test:**
+
+| Case | Caught by | Test |
+|---|---|---|
+| J-109/J-038 built twice | `NOT-OWNER`, `contested`; listings read whole | `test_plan.test_wrong_vendor_head_detected`, `test_plan_reads.*` |
+| Unlabeled jobs vanish | `NO-LINE`; ledger reads bare issues | `test_plan.test_no_line_detects_bare_issues`, `test_ledger.test_a_job_issue_missing_its_job_label_is_still_read` |
+| Mid-flight change loses work | editor refuses moving in-flight jobs | `test_plan_cli.test_give_requires_pushed_lane_handoff_reason`, `test_hold_fails_if_job_in_review` |
+| Repeated reversals | flip refusal | `test_plan_cli.test_recent_flip_requires_reason` |
+| Stale start for parked jobs | reconciler sends no start mail | `test_reconciler.test_a_parked_job_is_never_owed_a_start` and its neighbours |
+| #343 FIX deadlock | ack is `seen`, not settled | `test_reconciler.test_ack_of_an_unchanged_fix_is_seen_but_not_settled` |
+| False WIP from old branches | `observe` inactive heads, `DORMANT` | `test_plan.test_landed_or_closed_branch_heads_are_not_in_flight`, `test_plan_reads.*` |
+| Local-only head called a trunk failure | **not caught**: `UNPUSHED-SHA` is not built | none |
+
+**Only described, not built** (none may be claimed until it has code and a test):
+- `UNPUSHED-SHA`, `STACKED` (#343's stacked fix), `UNREAD`, `MAIL-NOT-FILED` (B4).
+- `UNPUSHED` has code but the sweep passes no `started` set, so it never fires in a real pass.
+- Labels and the board generated from the plan (B5 writes 1 and 2); today labels are still hand-set, so
+  the plan and the labels are two records until this exists (J-044: plan says claude, label says owner:muse).
+- The versioned plan notice through the Muse bridge, its `plan <ver>` receipt and the undelivered or
+  unacknowledged list (B5 writes 3 and 4). The FIX `seen` receipt is not this.
+- B7's ledger cut (job issues and `wip-*` branches as ledger items) and `test_plan_sweep.py`.
+- Deleting the hand-kept queue in `work/tasks/muse.md` and `muse_queue`'s label checks: D's edits, unapplied,
+  so the old queue is still the order Muse reads.
+- The 500-item cap in `ghapi.paged` still truncates the switch's other branch reads (647 branches on 11-12);
+  only the plan's reads go past it.
 
 ## D. Cutover text for the owner to apply — drafts, not instructions executed
 
