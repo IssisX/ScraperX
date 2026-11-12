@@ -19,7 +19,7 @@ import tempfile
 
 HERE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(HERE / "tools/switchboard"))
-sys.path.insert(0, str(HERE / "tools/board"))
+sys.path.insert(1, str(HERE / "tools/board"))   # after the switchboard: `plan` is its plan.py, never this file
 import plan as core  # noqa: E402
 from ghapi import GitHub  # noqa: E402
 
