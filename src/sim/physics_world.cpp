@@ -487,6 +487,9 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         track(slab, ImpactSound::HeavySteel);
         slab_cell_.build(*kit_, slab);
     }
+    // J-108 (#427): the bait lift's two platforms, the kit's last bodies, so
+    // every body before them keeps its place and older saves line up.
+    scraperx::sim::bands::build_bait_lift(*kit_, service_);
     give_matron_stock();
 
     // Tests only: the extra solids built after every body the world builds.

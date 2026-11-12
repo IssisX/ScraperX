@@ -832,26 +832,34 @@ void run_yard_crane_magnet() {
     // before the forklift, and the 137 after it are stock entities. J-092
     // (#410) then appends the slab cell's frame, trigger and handle, exactly
     // those three, as the kit's very last bodies (run_wet_e_guard pins the
-    // same order).
+    // same order). J-108 (#427) then appends the bait lift's platforms, A
+    // then B, after the cell: re-pinned, before "the slab cell last", now
+    // "the slab cell, then A, then B, last", each body pinned.
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
     const std::uint64_t kSlabCell[] = {SlabCell::kFrameEntity, SlabCell::kTriggerEntity, SlabCell::kHandleEntity};
+    const std::uint64_t kBait[] = {Simulation::kServiceBaitAEntityId, Simulation::kServiceBaitBEntityId};
+    constexpr auto kBaitBodies = static_cast<std::uint32_t>(std::size(kBait));
     constexpr auto kCellBodies = static_cast<std::uint32_t>(std::size(kSlabCell));
+    constexpr auto kTailBodies = kCellBodies + kBaitBodies;
     std::uint32_t fork = last;
     for (std::uint32_t i = 0; i + 1 < last && fork == last; ++i) {
         fork = s.kit_body_entity(i) == kForklift[0] ? i : last;
     }
     require(fork + 1 < last && s.kit_body_entity(fork + 1) == kForklift[1],
             "magnet: the deck-154 forklift's frame and forks, side by side");
-    bool later_stock = fork + 2 + kCellBodies <= last;
-    for (std::uint32_t i = fork + 2; later_stock && i < last - kCellBodies; ++i) {
+    bool later_stock = fork + 2 + kTailBodies <= last;
+    for (std::uint32_t i = fork + 2; later_stock && i < last - kTailBodies; ++i) {
         later_stock = scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
     }
     for (std::uint32_t i = 0; later_stock && i < kCellBodies; ++i) {
-        later_stock = s.kit_body_entity(last - kCellBodies + i) == kSlabCell[i];
+        later_stock = s.kit_body_entity(last - kTailBodies + i) == kSlabCell[i];
+    }
+    for (std::uint32_t i = 0; later_stock && i < kBaitBodies; ++i) {
+        later_stock = s.kit_body_entity(last - kBaitBodies + i) == kBait[i];
     }
     require(later_stock,
-            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle: the kit's last bodies");
+            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle, then the bait lift's A, then B: the kit's last bodies");
     const auto tail = fork - kNewEastWest;
     bool east_west = true;
     for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {
