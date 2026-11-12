@@ -339,7 +339,7 @@ of a changed order (`machine.notice`; its version is a hash of the owner's autho
 | MERGE-BY-HAND hiding the Codex ask (#473) | `reviewed`, gate `codex`: the integrator posts `@codex review` |
 | `queue_check.py`, `muse_queue.py` owner and queue checks | the table; both still run until cutover |
 
-**Shadow.** `work/switchboard.yml` says `plan: shadow`: the full pass of every sixth hour prints `PLAN`,
+**Shadow** (until the cutover; now `plan: live`, section D). `work/switchboard.yml` said `plan: shadow`: the full pass of every sixth hour prints `PLAN`,
 `PLAN-STATE`, `PLAN-LATE`, `PLAN-LABEL` and `PLAN-NOTICE` lines and writes nothing. It runs after every live
 part, only with twice the rate floor left, and an error in it is a printed NOTE, never a failed sweep. One pass
 is about 245 reads on a cold cache (measured 11-12 against the live repo).
@@ -371,7 +371,17 @@ shadow writes nothing and cannot fail the sweep).
   `muse_queue.py`'s and `tools/board/queue_check.py`'s owner checks go in the same change.
 
 
-## D. Cutover text for the owner to apply — drafts, not instructions executed
+## D. Cutover text — APPLIED 11-12 (claude/integrate-collab-cutover, `plan: live`)
+
+Applied on the owner's word ("switch it on once the bookkeeping's done"). Where the text below differs from what
+landed: CLAUDE.md's wording was shortened to stay under its 10 KB cap and "never weaken tests" was left to its
+Settled line; the hourly file keeps step 4's proposal ruling, outside asks and the helper ladder (not job state)
+and adds new jobs with `plan.py add`; muse.md keeps "never wait for Claude's go". `muse_queue.py`'s owner checks
+(OWNER, NO-LABEL) and their tests are deleted; the digest's blocked line reads the machine, so the live label pass
+may take `state:ready|active|blocked` off (only `state:parked`, made from a hold, stays). A hand mail older than
+the plan's last commit is history, not a conflict (`machine.mail_clashes`). Muse's limit is 10. The Muse mail is
+sent by the integrator when this merges. The original drafts follow.
+
 
 The selected design is the **versioned `work/plan.md`**, not the competing `job_control.py` label-state experiment. The plan is one authored record; issue labels are derived. The experimental code must not be enabled as a second order authority. Nothing here sends mail or changes labels.
 

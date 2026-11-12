@@ -1918,8 +1918,11 @@ class Switch:
         a proof run on a branch that names a queued job (`j0NN`). Reads no GitHub: the delta is the sweep's own."""
         if delta.pipe or new_pr:
             return True
-        nums = {q.num for q in muse_queue.queue_lines(self.queue_text())}
-        return any(f"j{n}" in b.lower() for b in delta.active for n in nums)
+        if self.plan_mode() == "live":   # the queue is Muse's lines of work/plan.md, not muse.md's old block
+            jobs = {ln.job.lower().replace("-", "") for ln in self.read_plan().lines if ln.owner == "muse"}
+        else:
+            jobs = {f"j{q.num}" for q in muse_queue.queue_lines(self.queue_text())}
+        return any(j in b.lower() for b in delta.active for j in jobs)
 
     def queue_check(self, text: str | None = None) -> tuple[InboxItem, ...]:
         """QUEUE-LOW (J-097, Cory 11-11: "you should be making sure muse DOES NOT RUN LOW ON QUEUE at any point"):
@@ -2857,6 +2860,15 @@ class Switch:
             issue = got
         self.gh.comment(issue["number"], body, f"digest for {today} on #{issue['number']}")
 
+    def blocked_lines(self) -> list[str]:
+        """The digest's blocked jobs. With `plan: live`, the job machine's `blocked` state (a job it comes `after`
+        is not closed), so the hand-set state:blocked label can come off; otherwise that label, as before."""
+        if self.plan_mode() == "live":
+            return [f"#{r.issue} {r.job}: {r.title[:62]} is blocked on {r.why}"
+                    for r in self.plan_table()[3] if r.state == "blocked"]
+        return [f"#{it['number']} {it['title'][:70]} is blocked" for it in self.jobs().values()
+                if any(lab["name"] == "state:blocked" for lab in it["labels"])]
+
     def digest_text(self, today: str) -> str:
         since = self.now - dt.timedelta(hours=24)
         closed = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=closed&base={rules.TRUNK}&sort=updated&direction=desc")[:100]
@@ -2878,9 +2890,7 @@ class Switch:
                     who = pick.agent if pick.route == "ask" else ""
                 if who and who != rules.API_REVIEWER:
                     asked.append(f"#{facts.number} waits on a review from {who}")
-        for it in self.jobs().values():
-            if any(l["name"] == "state:blocked" for l in it["labels"]):
-                waiting.append(f"#{it['number']} {it['title'][:70]} is blocked")
+        waiting += self.blocked_lines()
         entries = self.entries()
         paused = [e.note for e in entries if e.phase == "refused" and e.ts >= since]
         s = money.spent(entries, self.now, "")

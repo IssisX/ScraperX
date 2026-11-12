@@ -582,10 +582,11 @@ def named_shas(mail: Mail, by_thread: dict[int, str]) -> dict[str, tuple[Post, t
     return out
 
 
-def mail_clashes(model: P.Plan, mail: Mail) -> dict[str, list[str]]:
+def mail_clashes(model: P.Plan, mail: Mail, planned_at: dt.datetime | None = None) -> dict[str, list[str]]:
     """job -> what the mail says that the plan does not hold. The worker mailed a start on a job the plan gives
     someone else or holds (J-109, J-038: taken by mail, built twice). The newest hand mail on a job orders other
-    than the plan says (an order that lives only in a mail)."""
+    than the plan says (an order that lives only in a mail). A hand mail older than the plan's last commit
+    (`planned_at`) is history: the plan was written after it (J-001, J-040, J-043, J-081 at the 11-12 sync)."""
     out: dict[str, list[str]] = {}
     by_job = model.by_job()
     for job, at in started_posts(mail).items():
@@ -601,6 +602,8 @@ def mail_clashes(model: P.Plan, mail: Mail) -> dict[str, list[str]]:
             out.setdefault(job, []).append(f"{mail.worker} mailed that it started; the plan holds it ({ln.hold[:60]})")
     newest: dict[str, Post] = {}   # the newest hand mail that orders something on the job: a later mail that
     for p in mail.posts:           # only mentions it changes nothing (J-109: the taking, then a rulings mail)
+        if planned_at and p.at < planned_at:
+            continue
         if p.hand and (TAKES.search(p.subject) or STOPS.search(p.subject) or GIVES.search(p.subject)):
             for job in dict.fromkeys(JOB_ID.findall(p.subject)):
                 newest[job] = p
@@ -661,7 +664,7 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
                 heads.setdefault(job, []).append(Head(ref, sha, head_at.get(sha)))
     closed = reads.get("closed") or frozenset()
     vers = versions(model, reads.get("issues"))
-    said, wrong = started_posts(mail), mail_clashes(model, mail)
+    said, wrong = started_posts(mail), mail_clashes(model, mail, planned_at)
     named = named_shas(mail, {ln.issue: ln.job for ln in model.lines})
     out: dict[str, Evidence] = {}
     for ln in model.lines:

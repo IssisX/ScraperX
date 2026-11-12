@@ -350,6 +350,19 @@ class Live(Sweeps):
             self.sweep(0.6)
         self.assertEqual(self.hub.writes, [])
 
+    def test_the_digest_reads_blocked_from_the_machine_not_the_label(self):   # cutover: state:blocked can go
+        self.hub.issue(503, "J-503: Labelled blocked, nothing waits", ["job", "state:blocked"])
+        self.hub.issue(504, "J-504: Waits on the first", ["job"])
+        self.write("work/plan.md", PLAN + "J-503 muse #503 | Labelled blocked, nothing waits\n"
+                                          "J-504 muse #504 after J-501 | Waits on the first\n")
+        sw, rows = self.sweep(0.5)
+        self.assertEqual(sw.blocked_lines(), ["#504 J-504: Waits on the first is blocked on J-501"])
+        self.assertNotIn("state:blocked", self.hub.labels(503))   # and the live pass takes the label off
+        self.hub.issue(503, "J-503: Labelled blocked, nothing waits", ["job", "state:blocked"])
+        self.write("work/switchboard.yml", "plan: shadow\n")   # before cutover: the label, as before
+        sw._jobs = None
+        self.assertEqual(sw.blocked_lines(), ["#503 J-503: Labelled blocked, nothing waits is blocked"])
+
 
 class Shadow(Sweeps):
     mode = "shadow"
@@ -422,7 +435,7 @@ class InTheSweep(unittest.TestCase):
         with mock.patch.object(switch.Switch, "plan_mode", lambda self: mode), \
                 mock.patch.object(switch.Switch, "plan_check", plan_check), \
                 mock.patch.object(switch, "rate_probe", rate):
-            status, _, sw = T.sweep(gh, state, now)
+            status, _, sw = T.sweep(gh, state, now, plan_mode=mode)
         return status, seen, gh.state.get("steer"), T
 
     def boom(self):

@@ -338,6 +338,16 @@ class Conflict(unittest.TestCase):
         w.hand(2, "J-102 is yours again, start it")
         self.assertNotEqual(w.rows()["J-102"].state, "conflict")
 
+    def test_a_hand_mail_older_than_the_plan_is_history(self):   # 11-12 sync: J-001, J-040, J-043, J-081
+        w = World()
+        w.hand(-1, "J-102 taking it, not yours")   # the plan (committed at T0) was written after it
+        w.hand(-2, "J-201 is yours, start it")
+        w.hand(-0.5, "J-103 stop, parked")
+        rows = w.rows()
+        self.assertEqual([rows[j].state for j in ("J-102", "J-201", "J-103")], ["planned", "acknowledged", "planned"])
+        w.hand(0.5, "J-102 taking it, not yours")   # an order mailed after the plan still disagrees with it
+        self.conflict(w, "J-102", "hand mail", "still gives it to muse")
+
 
 class Alarm(unittest.TestCase):
     """The only alarm: job J in state S past its limit; the next step belongs to X."""

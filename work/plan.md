@@ -1,5 +1,5 @@
-# PROVISIONAL SHADOW PLAN — NOT ACTIVE UNTIL CORY APPROVES CUTOVER.
-# Derived from live issue labels and existing Muse ordering; conflicts must be reconciled, not guessed.
+# THE LIVE PLAN (cutover 11-12, `plan: live`): the one record of who owns a job, in what order, held or not.
+# Change it only with tools/board/plan.py; mail announces a changed version, never changes ownership.
 # A job's state is computed (tools/switchboard/machine.py), never typed here. Synced 11-12 for cutover, from the
 # owner's rulings, the newest mails and work/tasks/muse.md on trunk (written as they ordered, nothing guessed):
 #   J-044 is muse's (it built J-044c, holds d..k; the gains tune is a later Claude job). J-137 #474 is claude's.
@@ -8,10 +8,11 @@
 #   Still held: J-054, J-055, J-091, J-095 (Later, 17:03 mail); J-112, J-113 and the rest of the unstarted parked
 #     list stay held until a lane frees. J-018 waits for J-001's grab code, as J-086 does.
 # No lane was cut to fit a limit: the counts are the real unlanded work.
+# Muse 10 (integrator, 11-12): no new Muse start until its open count is under 10; nothing in flight is cut.
 limit builder 1
 limit claude 4
 limit grok 1
-limit muse 6
+limit muse 10
 limit unassigned 1
 J-008 builder #115 | Tower "258 down" leg under determinism math, and the stable tie order (#97)
 J-001 claude #108 kept chatgpt/integrate-j001-swat-budget@50e1bf496782 kept fb-bot/integrate-j001-combined-armplay@b555dd6183ff kept fb-bot/integrate-j001-hold@35b67484fd15 | Her hold with real arms (5 beats)

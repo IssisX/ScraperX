@@ -65,7 +65,7 @@ it to match, never ask him again.
 ## How the agents work together (keep this whole)
 
 - **Channels.** Muse reads only mail: every `To Muse:` ask goes as `CLAUDE_TO_MUSE: <J-NNN or #N> ...` the
-  same hour, goal and result wanted, shaped per `work/tasks/mail-to-muse.md`; long orders in `work/tasks/muse.md`.
+  same hour, goal and result wanted, shaped per `work/tasks/mail-to-muse.md`. Job orders live only in work/plan.md; mail announces a new version, never moves ownership.
   Muse answers by `MUSE_TO_CLAUDE:`. Grok's runs
   (10 AM and 4 PM) find only comments that START `To Grok:`; Grok Bot (Builder, PE) reads all the time (11-09). ChatGPT finds `To ChatGPT:` asks and signs its
   posts. One login for all: the name goes on the first line.
@@ -76,12 +76,12 @@ it to match, never ask him again.
 - **Strengths (11-12):** Muse is free, so most work goes to it, debugging included; it is weaker at finding
   causes and can fail several times first. Claude's helpers take the hardest jobs, scored by `work/tasks/job-routing.md`: an
   unknown cause that blocks 2+ jobs or the climb or her chase, a Muse fix failed twice on the same failure, or
-  any job Muse would take about a week or has held 3 days ("YOU DO IT", 11-12; mail Muse "taking it"); Muse
+  any job Muse would take about a week or has held 3 days ("YOU DO IT", 11-12; `plan.py give`); Muse
   builds the fix they name. Never say "wait longer". Grok: math and risk. ChatGPT: research, specs,
   review. Slots full: the first slot that frees.
-- **Board:** the body of the open issue labeled `board` is the live board; only the integrator edits it. Agents read the body and
-  new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
-  needs whom` and start the next job; every agent holds two or more jobs.
+- **Board:** the switchboard generates it from work/plan.md and remote work; nobody hand-edits ownership.
+  Plan changes use tools/board/plan.py, refused mid-flight without a stop-and-push handoff.
+  Never write to fb-bot branches.
 - **Reviews, one per PR:** the switchboard routes PRs whose body starts `Job: J-NNN`. Codex reviews each
   green head once, asked by the switchboard. The Claude API (Opus; high, the security pass max) does the eye, the
   security pass on CI and signing changes, and any head Codex has not reviewed. After an API NOTE the integrator
@@ -99,8 +99,9 @@ it to match, never ask him again.
 
 ## The integrator
 
-- Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
-  Muse never idle (8+ unstarted, refill to 15), its proposals ruled within the hour, every ask answered
+- Event-driven (11-10): Muse mail, proofs, reviews and merges wake it via the inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
+  Muse's proposals ruled within the hour, every ask answered. The switchboard checks Muse's ready-work floor and
+  in-flight ceiling (work/plan.md); when full, finish and land work.
 - **Claude sessions:** one Opus session (the integrator); helpers are its sub-agents
   (11-06), at most four (11-12), each code-editing one in a worktree. Ask Cory before a second session. Effort: integrator
   his call (`get_session`); raise it only when he throttles; jobs start at high and climb the ladder (11-12). A worker whose job landed retires. Stopping a working helper
