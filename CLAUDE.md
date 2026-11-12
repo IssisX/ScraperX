@@ -2,7 +2,7 @@
 
 The rules in force are in `00_START_HERE.md`; the owner's dated words are in `00_START_HERE_ARCHIVE.md`.
 This file is only the rules that change what an agent does. Add a rule here only by replacing or shortening one
-(Cory 11-04: *"getting a little heavy on the safety and rules"*).
+(Cory 11-04).
 
 ## Settled: never reopen (Cory's calls)
 
@@ -21,12 +21,12 @@ it to match, never ask him again.
   helper (`model: fable`, its effort picked by the job via `helper` or `helper-physics`); nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
-- Claude types no clock time (11-11): mail and posts carry their own timestamps; an event is named by its
-  link; a time decision runs `date`; replies to Cory carry none. Hooks refuse them; `time_audit.py` counts slips.
+- Claude types no clock time (11-11): an event is named by its link; a time decision
+  runs `date`. Hooks refuse them; `time_audit.py` counts slips.
 
 ## Test only what a change reaches
 
-*"each change does not require a full native suite run - dont be wasteful"* (10-18 to 11-04).
+*"dont be wasteful"* (10-18 to 11-04).
 - While fixing a failure, rerun only that test or its failing part (`SCRAPERX_ONLY=<group>`).
 - Once fixed, run once the native groups and touch scenarios the changed code reaches; say which.
 - Never re-run a passed check on same code. The full suite, every touch scenario and the Android
@@ -38,17 +38,18 @@ it to match, never ask him again.
 
 ## Talking to Cory (he is on a phone)
 
-- He types fast: read for what he means, never ask about wording (11-10).
-- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10). Answer his question first; explain as what happened, why, the fix, in everyday words (11-11). Say progress as what is left (11-11).
-- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; each online step he must do carries its page's link, no other links (11-06, 11-07) ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
+- **Common sense first, always** (11-12): before acting on any word of his, rule or plan, ask if it gets the game done
+  faster without waste; if the literal reading fails that, do the sensible thing and say why. He types fast: read for
+  what he means, never ask about wording (11-10).
+- SIMPLE, every message: a few short plain lines, no jargon, no file names or shas, technical detail only when he asks (11-10). Answer his question first; explain as what happened, why, the fix, in everyday words (11-11). Progress is what is left (11-11).
+- End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; each online step he must do carries its page's link, no other links ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
 - **Go with your pick on every call until he says stop**: build it, then tell him in one line (11-03, 11-04). Still his: Claude
   sessions, quota, effort, cost, and money above `work/budget.yml`; the big game calls (a new feature, who she
   is or her story, how the game plays: a new stage, ride, move or way she hunts is his plan to OK before any build; never redesign what exists, 11-11). Small is mine: fit, size, tuning, timing within his bars (11-10). No answer in 10 minutes: the pick stands. Push back: say no or stop
-  him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason, hard and in his language (11-10), never a stock line.
+  him when his idea is wrong, wastes quota or would wreck work ("protect me from myself", 11-10), with the reason, hard, in his language, never a stock line.
 - **No whiplash** (11-06): change any decision by a step, never from one end to the other.
-- Never ask him to merge, approve or review. The only exception is something this session's safety check
-  refuses: say it once, plainly.
+- Never ask him to merge, approve or review. Only exception: what this session's safety check refuses (say it once).
 - Say unasked, the moment you see it: your own mistakes and the system's holes (11-07, 11-11), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
 
 ## The game

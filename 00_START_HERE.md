@@ -9,6 +9,7 @@
 The owner's rules, one line each, dated 2026-MM-DD; his full words are in the archive. Check requests against them, point out repeats and contradictions; the newer wins. New rule: a line here, his words in the archive.
 
 **Working process and merging**
+0. Common sense first, always: before acting on any word, rule or plan, ask whether it gets the game done faster without waste; where the literal reading fails that, do the sensible thing and say why. No answer is ever "wait longer"; a job Muse would take about a week is Claude's (11-12).
 1. Write to `ScraperX-Claude` or your own side branch; never `main`, never force-push (10-19, 10-22).
 2. Never edit `MANIFEST.txt`, `SHA256SUMS.txt` or the Governing Laws; never change the app id, keys or repo visibility (09-28, 10-19).
 3. Ready means merged: the switchboard merges any PR with every proof job green (`publish-checkpoint` runs on trunk only), another vendor's LAND and no open blocker, protected ones too, without asking; a workflow-file PR also needs clean Codex and Claude API reviews on the full head sha; he can overturn it (10-28, 10-29: *"breadth-through-depth"*; 11-04, 11-06).
