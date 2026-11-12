@@ -469,7 +469,7 @@ void run_matron_balance() {
             }
         }
         // Down she has no hands: the rage it costs her, and up again.
-        require(m.rage >= Matron::kKnockdownRage - 0.01, "matron balance: a knockdown feeds her rage");
+        require(m.rage < Matron::kKnockdownRage - 0.01, "matron balance: a knockdown does not feed her rage");
         require(rises(static_cast<double>(Matron::kPestDownSeconds) + 2.0), "matron balance: up again, on her deck, alive");
         std::cout << "PASS scraperx_sim matron balance pest: blow_mps=" << m.blow_mps << "\n";
     }
