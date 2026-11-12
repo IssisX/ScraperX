@@ -628,6 +628,111 @@ int Simulation::PhysicsWorld::active_forklift() const noexcept {
     return -1;
 }
 
+void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, const std::uint64_t entity,
+                                                  const LooseStock::Kind kind, const JPH::RVec3 pos,
+                                                  const JPH::Quat rot, const JPH::Vec3 vel,
+                                                  const JPH::Vec3 ang, const float mass,
+                                                  const bool park_parent) noexcept {
+    const stock_damage::BreakGeometry geometry = stock_damage::break_geometry(kind);
+    const float piece_mass = mass / static_cast<float>(geometry.count);
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    // The pieces' own mass centre, in the body's frame: they weigh the
+    // same, so it is the mean of their offsets. The orbital term below
+    // is measured from it (see there).
+    JPH::Vec3 pieces_centre = JPH::Vec3::sZero();
+    for (std::uint8_t k = 0; k < geometry.count; ++k) {
+        const stock_damage::BreakPiece &piece = geometry.pieces[k];
+        pieces_centre += JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z);
+    }
+    if (geometry.count > 0) {
+        pieces_centre /= static_cast<float>(geometry.count);
+    }
+    // The parent's centre of mass, for the test read only. Read
+    // before parking.
+    const JPH::RVec3 parent_com = bodies.GetCenterOfMassPosition(kit_->body_id(body));
+    // Record the spawn's inputs for the test read: the parent's motion
+    // at the break is otherwise unobservable once it is parked.
+    last_break_parent_ = {{static_cast<double>(vel.GetX()), static_cast<double>(vel.GetY()),
+                           static_cast<double>(vel.GetZ())},
+                          {static_cast<double>(ang.GetX()), static_cast<double>(ang.GetY()),
+                           static_cast<double>(ang.GetZ())},
+                          {parent_com.GetX(), parent_com.GetY(), parent_com.GetZ()}};
+    if (park_parent) {
+        kit_->park(body);
+    }
+    for (std::uint8_t k = 0; k < geometry.count; ++k) {
+        const stock_damage::BreakPiece &piece = geometry.pieces[k];
+        const JPH::Vec3 offset = rot * JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z);
+        const JPH::Vec3 scatter = rot * JPH::Vec3(piece.scatter_x, piece.scatter_y, piece.scatter_z);
+        const JPH::RVec3 at(pos.GetX() + offset.GetX(), pos.GetY() + offset.GetY(),
+                            pos.GetZ() + offset.GetZ());
+        const kit::BodyIndex existing =
+            kit_->body_for_entity(stock_damage::piece_entity_for(entity, k));
+        kit::BodyIndex piece_body;
+        if (existing.valid()) {
+            // A piece body already holds this entity: a save taken
+            // before the break parked it on load, and breaking the
+            // restored crate again reuses it instead of making a
+            // second body with the same entity.
+            piece_body = existing;
+            kit_->unpark(piece_body);
+            bodies.SetPositionAndRotation(kit_->body_id(piece_body), at, rot,
+                                          JPH::EActivation::DontActivate);
+        } else {
+            piece_body = kit_->add_body(
+                stock_damage::piece_entity_for(entity, k),
+                {kit::Part{JPH::Vec3(piece.half_x, piece.half_y, piece.half_z), JPH::Vec3::sZero(),
+                           JPH::Quat::sIdentity(), kit::Material::Timber, kit::Part::Shape::Box,
+                           piece_mass}},
+                at, rot, piece_mass, 0.9F);
+        }
+        const JPH::BodyID piece_id = kit_->body_id(piece_body);
+        // The parent's centre-of-mass velocity, plus the orbital
+        // velocity the piece's place gives it in a rotating crate (or
+        // the break eats the orbital angular momentum: 18.432 kg·m²/s
+        // for a 160 kg crate at 1 rad/s about Y, eight pieces at
+        // ±0.24 m), plus its scatter. The orbital term is measured from
+        // the pieces' own mass centre: not the body's origin, which
+        // for a SkidCrate sits on the ground 0.56 m below the box's
+        // middle, and not the parent's centre of mass, which the
+        // runners pull down to 0.513125 m (15 kg at 0.06 m, 145 kg at
+        // 0.56 m) while the eight equal pieces centre on 0.56 m. Either
+        // gives
+        // every piece the same extra ang x offset, travel made from
+        // spin: 22.5 N·s at 3 rad/s from the parent's centre of mass.
+        // Measured from their own mass centre the orbital terms cancel
+        // over the eight equal pieces, and the scatter sums to zero, so
+        // the pieces' linear momentum is exactly the parent's (mass x
+        // vel). Their angular momentum about their own mass centre is
+        // that of the eight blocks turning as one at ang. The blocks
+        // are uniform, so that is not exactly the parent's own: its
+        // runners, bands and posts carry inertia the blocks do not.
+        const JPH::Vec3 from_centre =
+            rot * (JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z) - pieces_centre);
+        bodies.SetLinearVelocity(piece_id, vel + ang.Cross(from_centre) + scatter);
+        bodies.SetAngularVelocity(piece_id, ang);
+        // A free load, not a handle: the pieces are unsupported loose
+        // bodies, and the carrying limits, swing damping and yaw
+        // stabilization all read carried_load_mass(). Registered as a
+        // handle they read 0, as if a hinge held them — the same Load
+        // registration LooseStock::create_body() gives the intact stock.
+        kit_->set_carry(piece_body, kit::CarryKind::Load, JPH::Vec3(0.0F, piece.half_y, 0.0F));
+        // The ledger only hears bodies it tracks, and it tracks the
+        // stock once at construction: a piece born here is deaf until
+        // it is registered. Track it once with its timber sound and
+        // mass, after its velocity is set so the spawn itself does not
+        // read as a hit; a reused parked piece is already tracked, so
+        // resynchronize its observation instead of registering it twice.
+        if (existing.valid()) {
+            impacts_->resync_body(stock_damage::piece_entity_for(entity, k));
+        } else {
+            impacts_->track(piece_id, stock_damage::piece_entity_for(entity, k),
+                            LooseStock::sound(kind), piece_mass);
+        }
+        kit_->allow_sleeping(piece_body);
+    }
+}
+
 void Simulation::PhysicsWorld::step(const StepCommands &requested,
                                     const float delta_seconds,
                                     const double next_time_seconds) noexcept {
@@ -947,6 +1052,53 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     kit_->post_step(delta_seconds);
     bay_->post_step();
     impacts_->post_step(carried_entity_);
+    // J-038 slice 1: stock dents and breaks, from this tick's measured
+    // velocity changes and pre-solve contact hints (stock_damage.hpp).
+    // Only containers, drums and crates are in scope; tower and
+    // structure machines are never stock, so never observed.
+    {
+        const std::vector<stock_damage::ContactHint> hints = contact_listener_.stock_hints();
+        const std::vector<LooseStock::Placement> &placed = loose_stock_->placed();
+        for (int i = 0; i < loose_stock_->count(); ++i) {
+            const LooseStock::Kind kind = placed[static_cast<std::size_t>(i)].kind;
+            if (kind != LooseStock::Kind::Container && kind != LooseStock::Kind::Drum &&
+                kind != LooseStock::Kind::Crate && kind != LooseStock::Kind::SkidCrate) {
+                continue;
+            }
+            const kit::BodyIndex body = loose_stock_->body(i);
+            if (!kit_->body_enabled(body)) {
+                continue;  // parked: already broken, nothing to measure
+            }
+            const JPH::BodyID id = kit_->body_id(body);
+            const JPH::Vec3 vel = bodies.GetLinearVelocity(id);
+            const JPH::RVec3 pos = bodies.GetPosition(id);
+            const JPH::Quat rot = bodies.GetRotation(id);
+            stock_damage_.observe(LooseStock::kFirstEntity + static_cast<std::uint64_t>(i), kind,
+                                  kit_->body_mass(body), vel.GetX(), vel.GetY(), vel.GetZ(),
+                                  static_cast<float>(pos.GetX()), static_cast<float>(pos.GetY()),
+                                  static_cast<float>(pos.GetZ()), rot.GetX(), rot.GetY(), rot.GetZ(), rot.GetW(),
+                                  hints);
+        }
+        // A break decided this tick executes after all observations,
+        // so spawning pieces cannot disturb the tick's measurements.
+        // The pieces are newborn bodies, not a per-tick drive: their
+        // velocities are creation state. Their orbital terms and their
+        // scatter each sum to zero, so the break keeps the intact
+        // body's linear momentum (spawn_break_pieces).
+        // They are deliberately NOT added to Matron's throwables:
+        // that list is build-time, and appending pieces would change
+        // her mischief selection without a ruling.
+        for (const stock_damage::BreakAction &action : stock_damage_.take_actions()) {
+            const kit::BodyIndex body = loose_stock_->body(static_cast<int>(action.stock_index));
+            if (!kit_->body_enabled(body)) {
+                continue;  // already parked: a body breaks once
+            }
+            const JPH::BodyID id = kit_->body_id(body);
+            spawn_break_pieces(body, action.entity, action.kind, bodies.GetPosition(id),
+                               bodies.GetRotation(id), bodies.GetLinearVelocity(id),
+                               bodies.GetAngularVelocity(id), kit_->body_mass(body));
+        }
+    }
     for (const std::unique_ptr<Forklift> &truck : forklifts_) {
         truck->post_step(delta_seconds);
     }
@@ -1206,6 +1358,28 @@ void Simulation::PhysicsWorld::launch_kit_body_for_test(const std::uint32_t body
     bodies.SetPositionAndRotation(id, at, bodies.GetRotation(id), JPH::EActivation::Activate);
     bodies.SetLinearAndAngularVelocity(id, velocity, JPH::Vec3::sZero());
     impacts_->resync_body(kit_->body_entity(kit::BodyIndex{body}));
+    // J-038 slice 1 rework: a zero-velocity launch is a placement,
+    // not a throw — the body is put down at rest, and its settle is
+    // excluded, so being put down never dents it. A launch with
+    // velocity is a throw: its landing is a real hit and dents by
+    // the bands.
+    if (velocity == JPH::Vec3::sZero()) {
+        const std::uint64_t entity = kit_->body_entity(kit::BodyIndex{body});
+        if (kit::is_stock_entity(entity)) {
+            stock_damage_.note_placed(entity);
+        }
+    }
+}
+
+// A spin without a throw: the body's angular velocity set, its linear
+// velocity untouched, so a break can be read for the orbital term its
+// pieces must carry. No impact resync: the ledger tracks linear
+// velocity, which a spin does not change.
+void Simulation::PhysicsWorld::spin_kit_body_for_test(const std::uint32_t body,
+                                                      const JPH::Vec3 angular_velocity) {
+    JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
+    const JPH::BodyID id = kit_->body_id(kit::BodyIndex{body});
+    bodies.SetAngularVelocity(id, angular_velocity);
 }
 
 void Simulation::PhysicsWorld::launch_player_for_test(const JPH::RVec3 at, const JPH::Vec3 velocity) {
