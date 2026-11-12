@@ -116,7 +116,6 @@ CONFLICT = "merge conflict with the base"
 NOT_AN_ASK = "not an ask"            # why evidence() closes an ask the judge no longer reads as one
 THREAD_CLOSED = "its thread closed"  # why evidence() closes an ask whose issue or PR closed
 PARKED_LABEL = "state:parked"            # a job the finish plan parks (11-12): no start notice
-START_GRACE = dt.timedelta(hours=24)    # a queued job waits its turn; only a start owed past this is nagged
 INBOX_WINDOW = dt.timedelta(hours=24)   # how far back the integrator's inbox reads comments (switch.py INBOX_RUNS_WINDOW)
 
 CMD = re.compile(r"^[ \t]*(?:/(?P<cmd>ack|blocked|unblock|cancel)\b[ \t]*(?P<arg>[^\n]*)"
@@ -703,14 +702,10 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
             states.append("accepted")
         elif rec.get("pr_done") == "merged" or any(is_landed(v[1]) for v in rec["landed"].values()):
             states.append("merged")   # its work landed; the issue is still open
-        elif not rec["head"] and not rec["prs"] and now - o.issue.touched < START_GRACE:
-            states.append("assigned")   # queued: the owner has a day before a start is owed (not L.STALE, 4 h)
-        elif not rec["head"] and not rec["prs"]:   # a stale snapshot cannot authorize a new start
-            # Never mail "start" from an aging record: job issue labels are the order,
-            # and a re-plan may have parked or transferred the job meanwhile.
-            wants.append(Want("ruling", "claude", f"idle:{o.issue.number}", f"JOB|#{o.issue.number}",
-                              o.issue.number, f"{o.job} has no remote work: inspect its live issue before routing",
-                              "work|reply|ack"))
+        elif not rec["head"] and not rec["prs"]:
+            # A quiet job is not an instruction to start or an owed integrator ruling. The live
+            # job queue/ledger reports inactivity; a stale owner label cannot authorize new work,
+            # and one pending job must not create a new Claude obligation every time it ages.
             states.append("assigned")
         else:
             states.append("working")
