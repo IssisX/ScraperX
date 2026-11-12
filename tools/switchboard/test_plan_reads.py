@@ -106,6 +106,23 @@ class PlanReads(unittest.TestCase):
                          "pushed")
 
 
+class QueueSignal(unittest.TestCase):
+    def test_owner_conflict_does_not_pretend_the_ready_queue_is_low(self):
+        model = plan.parse("limit muse 6\\n" + "".join(
+            f"J-{n} muse #{n} | ready {n}\\n" for n in range(101, 110)))
+        issues = [{"number": n, "title": f"J-{n} job", "state": "open"} for n in range(101, 110)]
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.plan_mode = lambda: "live"
+        sw.read_plan = lambda: model
+        sw.plan_reads = lambda _: {
+            "issues": issues, "branches": [{"name": "claude/integrate-j109", "commit": {"sha": "foreign"}}],
+            "prs": [], "inactive": frozenset(), "merged": frozenset(), "dormant": frozenset(),
+        }
+        self.assertTrue(any(x.startswith("NOT-OWNER J-109") for x in plan.findings(
+            model, issues, sw.plan_reads(model)["branches"])))
+        self.assertEqual(sw.queue_check(), ())
+
+
 class Whole(unittest.TestCase):
     """11-12: 647 branches, a 500-item paged() cap, and fb-bot/integrate-j109 was never seen."""
 
