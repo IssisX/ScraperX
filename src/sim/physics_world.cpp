@@ -500,6 +500,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
 
     checkpoint_position_ = JPH::RVec3(0.0, 0.9, 0.0);
     commit_machine_checkpoint();
+    as_built_ = checkpoint_.kit;
 
     read_state();
 }

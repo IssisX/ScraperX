@@ -390,6 +390,10 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     std::uint64_t commits = 0, deaths = 0;
     auto &k = loaded.kit;
     const auto &c = current.kit;
+    // What the save lacks (built since it was written) starts as this world
+    // was built, not as the running world has it now: a tank it has drained
+    // since is full again on a save from before the tank (J-015 #466).
+    const auto &b = as_built_;
     // The saved world's bodies, by entity, must be this world's first
     // ones in the same order: then every saved state is its body's. A
     // world grown since (bodies built last) starts the new ones as built;
@@ -397,7 +401,14 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     std::vector<std::uint64_t> entities;
     const std::vector<std::uint64_t> here = body_entities();
     const std::size_t built = here.size();
-    bool ok = r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
+    // Every list is as long as it was built, the fabricated bodies aside.
+    const bool as_built = b.bodies.size() >= built && b.bin_contents.size() == c.bin_contents.size() &&
+                          b.rope_anchor.size() == c.rope_anchor.size() &&
+                          b.rope_parted.size() == c.rope_parted.size() &&
+                          b.latch_set.size() == c.latch_set.size() &&
+                          b.grip_load.size() == c.grip_load.size() &&
+                          b.grip_rating.size() == c.grip_rating.size();
+    bool ok = as_built && r.pod(position) && r.pod(crouched) && crouched <= 1 && r.pod(commits) && r.pod(deaths) &&
               r.pod(loaded.carrying_entity) && r.list_up_to(entities, here.size()) &&
               std::equal(entities.begin(), entities.end(), here.begin()) &&
               r.list_up_to(k.bodies, built) && k.bodies.size() == entities.size() &&
@@ -474,7 +485,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // Bodies added to the world since the save was written (always built
     // last, after every body before them) start as built.
     for (std::size_t index = k.bodies.size(); ok && index < built; ++index) {
-        k.bodies.push_back(c.bodies[index]);
+        k.bodies.push_back(b.bodies[index]);
     }
     // But the S2 drain's striker, from a save from before it: at its open
     // stop, not on its stop inside a tank the save has at the lower station.
@@ -498,8 +509,8 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // built: the cart stays bolted to the beam, while a player grip holds
     // nothing until it is made, as a save from before the grips pins.
     for (std::size_t index = k.grip_load.size(); ok && index < c.grip_load.size(); ++index) {
-        k.grip_load.push_back(c.grip_load[index]);
-        k.grip_rating.push_back(c.grip_rating[index]);
+        k.grip_load.push_back(b.grip_load[index]);
+        k.grip_rating.push_back(b.grip_rating[index]);
     }
     // A body built since the save that a grip holds rides its device: its
     // filled pose is where it lay as built, so it is set from the device's
@@ -514,9 +525,9 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         if (!device.valid() || device.value >= saved_built) {
             continue;
         }
-        const kit::Kit::BodyState &held = c.bodies[load];
+        const kit::Kit::BodyState &held = b.bodies[load];
         const kit::Kit::BodyState &at = k.bodies[device.value];
-        const kit::Kit::BodyState &was = c.bodies[device.value];
+        const kit::Kit::BodyState &was = b.bodies[device.value];
         const JPH::Quat back = was.rotation.Conjugated();
         const JPH::Vec3 rel = back * JPH::Vec3(held.position - was.position);
         kit::Kit::BodyState &state = k.bodies[load];
@@ -526,16 +537,16 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         state.angular = at.angular;
     }
     for (std::size_t index = k.bin_contents.size(); ok && index < c.bin_contents.size(); ++index) {
-        k.bin_contents.push_back(c.bin_contents[index]);
+        k.bin_contents.push_back(b.bin_contents[index]);
     }
     // Ropes built since the save start as built, as the bodies they hold do.
     for (std::size_t index = k.rope_anchor.size(); ok && index < c.rope_anchor.size(); ++index) {
-        k.rope_anchor.push_back(c.rope_anchor[index]);
-        k.rope_parted.push_back(c.rope_parted[index]);
+        k.rope_anchor.push_back(b.rope_anchor[index]);
+        k.rope_parted.push_back(b.rope_parted[index]);
     }
     // A latch built since the save (the drain pawl) starts as built: shut.
     for (std::size_t index = k.latch_set.size(); ok && index < c.latch_set.size(); ++index) {
-        k.latch_set.push_back(c.latch_set[index]);
+        k.latch_set.push_back(b.latch_set[index]);
     }
     if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
         !std::isfinite(position.GetZ())) {

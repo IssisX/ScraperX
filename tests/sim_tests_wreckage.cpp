@@ -582,6 +582,81 @@ void run_s2_upgrade() {
     std::cout << "PASS scraperx_sim stack wreckage S2 upgrade: beam0=" << beam0 << " cage0=" << cage0 << '\n';
 }
 
+// The same save from before the drain, loaded into a world that has ridden
+// S2 since and drained its tank (J-015 #466 Codex P1): the save has no tank,
+// so the tank is full as built, not as dry as the running world's, its gate
+// shut as built. The beam and the cage are where the save has them, and the
+// loaded ride finishes: the cage to deck 6, then home to deck 4 by itself.
+// (Filled from the running world, the tank came back dry with the cage
+// halfway up.)
+void run_s2_upgrade_after_drain() {
+    Simulation s(InitialSpawn::Deck4South);
+    (void)s.advance_frame(0.5);
+    require(shove_s2_bolt(s), "S2 upgrade after the drain: the bolt shoved out");
+    bool halfway = false;
+    double beam0 = 0.0;
+    double cage0 = 0.0;
+    for (std::uint32_t tick = 0; tick < 90 * 30 && !halfway; ++tick) {
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_facing(0.0, -1.0);
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        const auto state = s.stack_state();
+        beam0 = state.s2_beam_angle;
+        cage0 = state.s2_cage_travel;
+        halfway = beam0 >= 0.6 && cage0 >= 8.0;
+    }
+    require(halfway, "S2 upgrade after the drain: halfway up, the beam past 0.6 rad, the cage past 8 m");
+    require(s.snapshot().support_entity_id == Simulation::kStackS2CageEntityId,
+            "S2 upgrade after the drain: the rider is aboard the cage at the save");
+    require(std::abs(s.stack_state().s2_cart_water_kg - 1250.0) < 1.0 && !s.stack_state().s2_drain_pawled,
+            "S2 upgrade after the drain: halfway, the tank still full, its gate shut");
+    const std::vector<std::uint8_t> parent = parent_save(s.save_game(), s);
+    // The cage to deck 6 with the rider on it, then home to deck 4 by itself.
+    const auto finish = [&](const char *what) {
+        bool top = false;
+        for (std::uint32_t tick = 0; tick < 90 * 30 && !top; ++tick) {
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.set_facing(0.0, -1.0);
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            top = s.stack_state().s2_cage_travel >= 22.0 - 0.10;
+        }
+        bool back = false;
+        for (std::uint32_t tick = 0; top && tick < 90 * 150 && !back; ++tick) {
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            back = std::abs(s.stack_state().s2_cage_travel) <= 0.02;
+        }
+        const auto state = s.stack_state();
+        std::cout << "S2 upgrade after the drain: " << what << " top " << top << " back " << back << " cage "
+                  << state.s2_cage_travel << " beam " << state.s2_beam_angle << " water "
+                  << state.s2_cart_water_kg << " pawled " << (state.s2_drain_pawled ? 1 : 0) << '\n';
+        return top && back && s.snapshot().death_count == 0;
+    };
+    // The same world rides on and drains its tank.
+    require(finish("the first ride"), "S2 upgrade after the drain: the first ride reaches deck 6 and comes home");
+    require(s.stack_state().s2_cart_water_kg < 1.0,
+            "S2 upgrade after the drain: the running world's tank is drained before the load");
+    require(s.load_game(parent.data(), parent.size()),
+            "S2 upgrade after the drain: a save from before the drain loads into the drained world");
+    const auto at = s.stack_state();
+    std::cout << "S2 upgrade after the drain: halfway at beam " << beam0 << " cage " << cage0 << "; loaded at beam "
+              << at.s2_beam_angle << " cage " << at.s2_cage_travel << " water " << at.s2_cart_water_kg
+              << " pawled " << (at.s2_drain_pawled ? 1 : 0) << '\n';
+    require(std::abs(at.s2_cart_water_kg - 1250.0) < 1.0,
+            "S2 upgrade after the drain: loaded, the tank holds 1250 kg as built, not the drained world's water");
+    require(std::abs(at.s2_beam_angle - beam0) < 0.05 && std::abs(at.s2_cage_travel - cage0) < 0.2 &&
+                !at.s2_drain_pawled,
+            "S2 upgrade after the drain: loaded mid-ride, the beam and the cage where they were, the gate shut");
+    require(finish("the loaded ride"),
+            "S2 upgrade after the drain: the loaded ride reaches deck 6 and comes home to deck 4, alive");
+    for (std::uint32_t tick = 0; tick < 90 * 10; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        require(std::abs(s.stack_state().s2_cage_travel) <= 0.02,
+                "S2 upgrade after the drain: the returned cage stays down at deck 4");
+    }
+    std::cout << "PASS scraperx_sim stack wreckage S2 upgrade after the drain: beam0=" << beam0
+              << " cage0=" << cage0 << '\n';
+}
+
 // A real save from the build before the drain (trunk 74d84b25, J-015 #389
 // Codex P1): S2 ridden to deck 6, the rider still on the cage, saved 10 s
 // after it arrived (tests/data/s2_top_before_drain.save). That build has no
@@ -629,6 +704,7 @@ void run_wreck_way_on() {
     run_s1_wreckage();
     run_s2_wreckage();
     run_s2_upgrade();
+    run_s2_upgrade_after_drain();
     run_s2_old_save_top();
     run_s3_wreckage();
     run_m_wreckage();
@@ -638,3 +714,4 @@ void run_wreck_way_on() {
 }
 SCRAPERX_GROUP("wreck_way_on", 350, run_wreck_way_on);
 SCRAPERX_SELECT("wreck-way-on", run_wreck_way_on);
+SCRAPERX_SELECT("s2-upgrade-after-drain", run_s2_upgrade_after_drain);
