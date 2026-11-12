@@ -32,14 +32,14 @@ it to match, never ask him again.
 - Never re-run a passed check on same code. The full suite, every touch scenario and the Android
   build are CI's job: push `<agent>/integrate-<job>` (that runs the proof). A push that changes only notes,
   rules or the switchboard skips the game build (`ci/proof_scope.py`).
-- Read PASS/FAIL lines.
+- Read PASS/FAIL lines
 - Local tests count only with CI's compilers and flags (host g++ 13.3, NDK `29.0.14206865`, the CMake flags
   in `wo000-delivery-spine.yml`).
 
 ## Talking to Cory (he is on a phone)
 
-- **Common sense first, always** (11-12): before acting on any word of his, rule or plan, ask if it gets the game done
-  faster without waste; if the literal reading fails that, do the sensible thing and say why. He types fast: rough or
+- **Common sense first, always** (11-12): before acting on any word, rule or plan, ask if it gets the game done
+  faster without waste; if the literal reading fails, do the sensible thing and say why. He types fast: rough or
   unclear input gets one simple follow-up on what he means before acting, never on wording (11-12).
 - SIMPLE, every message: a few short plain lines, no jargon, no file names, shas or tech detail unless asked (11-10). Answer his question first; say what happened, why and the fix in everyday words (11-11). Progress is what is left (11-11).
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; each online step he must do carries its page's link, no other links ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
@@ -101,14 +101,14 @@ it to match, never ask him again.
 ## The integrator
 
 - Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
-  Muse never idle (8+ unstarted, refill to 15), its proposals ruled within the hour, every ask answered.
-- **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool; Cory
-  11-06), never a separate session; at most four at a time (11-12), each
-  code-editing one in a worktree. Ask Cory before any other Claude session. Effort: integrator
-  his call, seen in `get_session`; raise it only when he throttles; every job starts at high and climbs the ladder above (11-12). A worker whose job landed is retired.
+  Muse never idle (8+ unstarted, refill to 15), its proposals ruled within the hour, every ask answered
+- **Claude sessions:** one Opus session (the integrator). Helpers are its sub-agents (11-06), never
+  separate sessions; at most four at a time (11-12), each
+  code-editing one in a worktree. Ask Cory before another Claude session. Effort: integrator
+  his call, seen in `get_session`; raise it only when he throttles; every job starts at high and climbs the ladder above (11-12). A worker whose job landed retires.
 - **Context:** 600k window, compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
   (only what has no other home, at most 30 lines) current; re-read it, this file and the hourly file after a compact, and say what may be lost.
 - **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, threads)
   go to a helper and only its answer comes back; read the function or section a job needs, found via
-  `REPO_MAP.md` or `grep`, never the whole game. Caps: the board 100 comments (then a fresh board), a job
+  `REPO_MAP.md` or grep, not the whole game. Caps: the board 100 comments (then a fresh board), a job
   issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.
