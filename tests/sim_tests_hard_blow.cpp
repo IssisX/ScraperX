@@ -135,7 +135,7 @@ struct Thrown {
 // holding `stage` the whole way; `look_pitch` aims the throw (0 at her
 // chest, down low). A Dangerous or Changed matron at her hunt speed is
 // crouched, her base 0.45 m and her take bar 1.90 m/s, and no throwable
-// carries that (a toolbox reads 0.80 m/s). The throw that lands is the one
+// carries that (a toolbox reads 0.80 m/s). That is physics, not a bug: only a falling or swinging heavy piece knocks a charging matron down.
 // thrown at her burst: she comes out of her locker upright, at the creep,
 // her take bar 0.244 m/s, and he is standing still a few metres off with
 // the piece settled, so the throw is clean and square. A free throw at
