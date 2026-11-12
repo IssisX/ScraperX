@@ -518,6 +518,19 @@ class ReadFeedAsks(unittest.TestCase):
         self.assertEqual(activity.call_count, 2)
         self.assertEqual(L.thread_jobs(f.issues, f.prs, f.system_prs), {128: "J-021", 121: "J-014"})
 
+    def test_a_job_issue_missing_its_job_label_is_still_read(self):
+        """Rebuild failure 2: an open J-NNN issue with no `job` label vanished from reconciliation."""
+        import types
+        from unittest import mock
+        issue = lambda n, title, labels: {"number": n, "title": title, "html_url": f"u{n}",  # noqa: E731
+                                          "created_at": L.iso(ago(90)), "updated_at": L.iso(ago(1)), "labels": labels}
+        issues = [issue(128, "J-021 Environment lane C", [{"name": "job"}]), issue(451, "J-127 a heard lead", []),
+                  issue(340, "Board: live jobs (3)", [])]
+        sw = types.SimpleNamespace(gh=self.GH([], issues), team=None, run_state=None)
+        with mock.patch.object(L, "cursor_pages", return_value=([], False)):
+            f, _ = L.read_feed(sw, [], NOW, 340, "proof.yml", set(), set(), ROSTER)
+        self.assertEqual(sorted(i.number for i in f.issues), [128, 451])
+
 
 class Resolved(unittest.TestCase):
     """A branch with no open PR whose work already landed, or whose PR was closed at its head, is counted with its
