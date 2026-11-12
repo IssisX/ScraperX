@@ -64,6 +64,13 @@ const FABRICATED_FIRST_ENTITY := 0x20000
 const FABRICATED_ENTITY_LIMIT := 0x20000 + 32
 var _machines: Array[Dictionary] = []
 var _kit_cables: Array = []
+# Each cable's thickness against the cable mesh's 3.5 cm (1 for most). The
+# slab trap's trip cord (src/sim/slab_cell.hpp) is a light pull cord, 12 mm:
+# held, it rises straight up past his face, and drawn as thick as a sling
+# it reads as a post in front of the slab's fall.
+var _kit_cable_widths: Array[float] = []
+const SLAB_TRIP_HANDLE := 2671
+const SLAB_TRIP_CORD_WIDTH := 0.012 / 0.035
 var _kit_cable_set: MultiMeshInstance3D
 # Per bin: the dust thrown up where its stream of stone lands (null for water).
 var _kit_bin_dust: Array = []
@@ -261,7 +268,13 @@ func _build_kit() -> void:
 	_kit_cable_set.name = "KitCables"
 	_kit_cable_set.multimesh = cables
 	_kit_root.add_child(_kit_cable_set)
+	var trip_handle := int(_native.get_kit_body_index(SLAB_TRIP_HANDLE))
+	var trip_at: Variant = _native.get_kit_body_transform(trip_handle).origin if trip_handle >= 0 else null
 	for index in int(_native.get_kit_cable_count()):
+		# The trip cord: the cable whose end is made fast to its handle's top.
+		var ends: PackedVector3Array = _native.get_kit_cable_points(index)
+		var cord := trip_at != null and ends.size() > 0 and ends[ends.size() - 1].distance_to(trip_at) < 0.2
+		_kit_cable_widths.append(SLAB_TRIP_CORD_WIDTH if cord else 1.0)
 		var segments: Array[int] = []
 		for segment in KIT_CABLE_SEGMENTS:
 			segments.append(index * KIT_CABLE_SEGMENTS + segment)
@@ -611,7 +624,8 @@ func _render_kit() -> void:
 					var along := delta / length
 					var up := Vector3.UP if absf(along.y) < 0.99 else Vector3.RIGHT
 					var side := up.cross(along).normalized()
-					at = Transform3D(Basis(side, along.cross(side), along * length), from + delta * 0.5)
+					var width: float = _kit_cable_widths[index]
+					at = Transform3D(Basis(side * width, along.cross(side) * width, along * length), from + delta * 0.5)
 			cables.set_instance_transform(int(segments[segment]), at)
 	_render_rubble()
 

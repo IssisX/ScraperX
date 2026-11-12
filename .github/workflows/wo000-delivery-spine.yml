@@ -62,6 +62,14 @@ jobs:
       - name: Checkout exact source
         uses: actions/checkout@v4
 
+      # rule_check's own regression tests first: the gate below trusts its verdict, so a rule_check that
+      # no longer flags a changed check or moved geometry must fail here, not pass a branch silently.
+      - name: Test the rule check itself
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/rule_check/test_rule_check.py
+
       - name: Verify no owner-blocked change rides this branch
         shell: bash
         run: |
@@ -698,7 +706,7 @@ jobs:
           done
           if grep -E "SCRIPT ERROR|Parse Error" artifacts/godot-uitest-touch-1.log; then exit 1; fi
 
-      # Blocking Android delivery gate: the touch control paths (shard 2: stage O, upper climbs, Matron, and the loading bay)
+      # Blocking Android delivery gate: the touch control paths (shard 2: stage O, upper climbs, Matron, the loading bay and the slab trap)
       - name: Drive control paths through the real input pipeline (shard 2)
         if: matrix.shard == 'touch-2'
         shell: bash
@@ -706,7 +714,7 @@ jobs:
           set -euo pipefail
           : > artifacts/godot-uitest-touch-2.log
           for scenario in touch_o touch_slingshot touch_swing touch_c6 touch_c7 touch_summit touch_summit_ending touch_matron touch_matron_ride touch_matron_line touch_matron_climb touch_matron_act touch_matron_heave touch_matron_sweep perf_fight touch_matron_ammo \
-              touch_bay; do
+              touch_bay touch_slab_trap; do
             timeout 400s tools/godot/godot --headless --fixed-fps 60 --path godot \
               -- "--uitest=${scenario}" 2>&1 | tee -a artifacts/godot-uitest-touch-2.log
             grep -F "SCRAPERX_UITEST PASS ${scenario} " artifacts/godot-uitest-touch-2.log

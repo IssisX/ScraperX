@@ -478,6 +478,15 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     for (int i = loose_stock_->matron_kinds_begin(); i < loose_stock_->count(); ++i) {
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
+    // J-092 (#410): the slab trap's service cell on her deck (slab_cell.hpp):
+    // its slab the table's last piece, then its trigger and the cord's
+    // handle, after every other body, so older saves line up.
+    loose_stock_->lay_hung_slab();
+    {
+        const kit::BodyIndex slab = loose_stock_->body(loose_stock_->hung_slab_begin());
+        track(slab, ImpactSound::HeavySteel);
+        slab_cell_.build(*kit_, slab);
+    }
     give_matron_stock();
 
     // Tests only: the extra solids built after every body the world builds.
