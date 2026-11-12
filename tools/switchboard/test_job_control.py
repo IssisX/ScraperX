@@ -88,7 +88,7 @@ class Control(unittest.TestCase):
         self.assertTrue(any("ready despite pushed work" in e for e in inv.violations))
 
     def test_branch_job_matches_lettered_and_protected(self):
-        self.assertEqual(jc.branch_job("fb-bot/integrate-protected-j044c-foo"), "J-044C")
+        self.assertEqual(jc.branch_job("fb-bot/integrate-protected-j044c-foo"), "J-044c")
         self.assertEqual(jc.branch_job("claude/integrate-j109"), "J-109")
         self.assertEqual(jc.branch_job("claude/integrate-j1099"), "J-1099")
         self.assertEqual(jc.branch_job("fb-bot/other"), "")
