@@ -74,6 +74,7 @@ Grip Simulation::PhysicsWorld::find_grip(const JPH::RVec3 centre, const JPH::RVe
         if (distance < best_distance) {
             best_distance = distance;
             best.valid = true;
+            best.level = std::abs(along.GetY()) <= kBarLevelSlope;
             best.body = hit.mBodyID2;
             best.entity_id = body.GetUserData();
             best.point = point;

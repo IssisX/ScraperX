@@ -625,6 +625,9 @@ private:
                                  const JPH::Vec3 facing,
                                  const float min_ahead = 0.5F * kPlayerRadius) const noexcept;
 
+    // A wall face right behind this hold (a rung or pipe on a wall).
+    [[nodiscard]] bool grip_backed_by_wall(const Grip &grip) const noexcept;
+
     [[nodiscard]] JPH::RVec3 hand_aim(const JPH::RVec3 centre, const float height,
                                       const float across) const noexcept;
 

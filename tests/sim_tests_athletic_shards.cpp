@@ -78,6 +78,7 @@ void run_athletic_traversal_1() {
     run_wall_chain();
     run_up_controls();
     run_zipline();
+    run_hang_rail();
 }
 
 void run_athletic_traversal_2() {

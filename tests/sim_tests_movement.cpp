@@ -134,10 +134,22 @@ void run_hang_rail() {
         require(s.advance_frame(1.0).accepted, "hang rail: settle");
         require(walk_to(s, static_cast<double>(scraperx::sim::detail::kHangRailX), -128.5, 20.0, 0.1),
                 "hang rail: walk onto the leaf");
-        // Step off the leaf's south edge, facing south, holding south: the
-        // catch fires as his centre falls past the rail.
+        // Brake to a stop first: the walk leaves eastward velocity that
+        // carries him off the rail line. Then jump the leaf's south handrail
+        // (1.0 m at z -129.26 blocks a step off the edge) and fall onto the
+        // rail line, facing south, holding south: the catch fires as his
+        // centre falls past the rail.
+        (void)s.set_move_input(0.0, 0.0);
+        (void)s.set_sprint_input(false);
+        require(advance_until(s,
+                              [](const Snapshot &n) {
+                                  return std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z) < 0.1;
+                              },
+                              2.0),
+                "hang rail: brake to a stop on the leaf");
         (void)s.set_facing(0.0, -1.0);
         (void)s.set_move_input(0.0, -1.0);
+        require(s.request_jump(), "hang rail: jump the leaf's south handrail");
         bool caught = false;
         int catch_ticks = 0;
         for (int i = 0; i < 3 * static_cast<int>(Simulation::kTickRateHz) && !caught; ++i) {
@@ -227,8 +239,18 @@ void run_hang_rail() {
                 (void)s.advance_frame(Simulation::kFixedStepSeconds);
                 noise_on_top = std::max(noise_on_top, static_cast<double>(s.matron_state().noise_heard));
             }
+            // Same entry as the crossing: brake to a stop, then jump the
+            // leaf's south handrail and fall onto the rail line.
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.set_sprint_input(false);
+            (void)advance_until(s,
+                                [](const Snapshot &n) {
+                                    return std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z) < 0.1;
+                                },
+                                2.0);
             (void)s.set_facing(0.0, -1.0);
             (void)s.set_move_input(0.0, -1.0);
+            (void)s.request_jump();
             bool flipped = false;
             double flip_z = 0.0;
             double flip_her_x = 0.0;
@@ -265,6 +287,7 @@ void run_hang_rail() {
     }
     std::cout << "PASS scraperx_sim hang rail: crossed the bay to the shaft edge, her scan reads nothing under the deck\n";
 }
+SCRAPERX_GROUP("hang_rail", 1090, run_hang_rail);
 
 // The pipe gallery in the yard (sim/pipe_gallery.hpp), played: a run along
 // the start stand, a jump from its painted edge for the first pipe, the stick
@@ -1361,7 +1384,7 @@ void run_wall_climb() {
 }
 SCRAPERX_GROUP("wall_climb", 620, run_wall_climb);
 SCRAPERX_SELECT("climb", run_wall_climb, run_tuck, run_flow, run_springboard, run_swing_launch,
-                run_slide_jump, run_climb_moves, run_wall_chain, run_zipline);
+                run_slide_jump, run_climb_moves, run_wall_chain, run_zipline, run_hang_rail);
 
 // Mirror's Edge's tuck (kTuckMaximumFallMps): sprinting at the proving
 // ground's crawl beam (its top 1.85 m up), a jump 4.4 m short with Crouch held

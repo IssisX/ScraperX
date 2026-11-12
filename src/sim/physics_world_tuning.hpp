@@ -665,6 +665,13 @@ constexpr double kSprintMaximumAngleCos = 0.7071;
 constexpr float kGripMaxSection = 0.18F;
 constexpr float kGripMinLength = 0.25F;
 constexpr float kGripMinBodyMassKg = 400.0F;
+// A bar or rail lies level: its long axis is this close to horizontal. The
+// matron's own bar search uses the same 0.05 slope.
+constexpr float kBarLevelSlope = 0.05F;
+// A hold with a wall face this far behind it is a hold on a wall (a rung or a
+// pipe on a wall): the climb keeps it. Further than this, the hold is a bar or
+// rail in open air, a swing target, not a climb.
+constexpr float kGripWallBehindM = 0.5F;
 // Where a hand looks for a hold: a box this big (across, up, along the
 // facing) round the point it aims at.
 const JPH::Vec3 kGripSearchHalf(0.30F, 0.30F, 0.35F);

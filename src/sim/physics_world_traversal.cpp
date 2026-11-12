@@ -5,6 +5,21 @@
 
 namespace scraperx::sim {
 
+// A hold with a wall face right behind it is a hold on a wall (a rung or a
+// pipe on a wall): the climb keeps it. A hold with open air behind it is a
+// bar or rail in the open, a swing target, not a climb. The ray runs from the
+// hold's axis along the facing, past the hold, for kGripWallBehindM.
+bool Simulation::PhysicsWorld::grip_backed_by_wall(const Grip &grip) const noexcept {
+    if (facing_.IsNearZero()) {
+        return true;
+    }
+    const JPH::IgnoreSingleBodyFilter grip_filter(grip.body);
+    const JPH::IgnoreSingleBodyFilterChained filter(player_id_, grip_filter);
+    JPH::RayCastResult hit;
+    return physics_system_.GetNarrowPhaseQuery().CastRay(
+        JPH::RRayCast(grip.point, facing_ * kGripWallBehindM), hit, {}, {}, filter);
+}
+
 void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const StepCommands &commands) noexcept {
     if (grounded_ || crouched_ || carry_constraint_ != nullptr || regrab_lockout_ticks_ > 0 || dyno_active_ ||
         dyno_no_catch_) {
@@ -40,11 +55,17 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
                                          true);
     if (!probe.valid) {
         // No ledge: a hold reached for in the air is caught and climbed --
-        // rising (M6), only where the first pull up from it is clear.
+        // rising (M6), only where the first pull up from it is clear. A bar
+        // or rail in open air is the exception: the hang catch takes
+        // precedence for it, so the climb must not take it while the fall
+        // still carries the centre down to the swing window below. A hold
+        // with a wall face behind it (a rung or pipe on a wall) keeps the
+        // climb first, and so does a member that is not level.
         const Grip grip = find_grip(
             origin, origin + JPH::Vec3(0.0F, kClimbHandMid, 0.0F) + facing_ * kClimbHandReach,
             facing_);
-        if (grip.valid) {
+        const bool swing_target = grip.valid && grip.level && !grip_backed_by_wall(grip);
+        if (grip.valid && !swing_target) {
             if (rising <= kHangApexSpeed ||
                 climb_move_clear(origin, origin + JPH::Vec3(0.0F, kClimbMoveAim, 0.0F))) {
                 begin_climb(bodies, grip);
