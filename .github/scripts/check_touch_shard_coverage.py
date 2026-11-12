@@ -87,6 +87,18 @@ KNOWN_GAPS = {
         "climber is on 143, so PICK UP is never offered; PR #29 proposes "
         "a staging fix. Wire it into a shard together with a fix"
     ),
+    "touch_mission_1": (
+        "waits on the J-129 hook + bridge objective getter (J-132, #458): "
+        "the done flag cannot turn true in a live game until the per-tick "
+        "hook lands after J-116 (#438) and the bridge exports "
+        "is_objective_done. Wire into touch-1 together with the hook"
+    ),
+    "touch_mission_7": (
+        "waits on the J-129 hook + bridge objective getter (J-132, #458): "
+        "the done flag cannot turn true in a live game until the per-tick "
+        "hook lands after J-116 (#438) and the bridge exports "
+        "is_objective_done. Wire into touch-1 together with the hook"
+    ),
 }
 
 

@@ -71,6 +71,11 @@ const SCENARIOS := {
 	"touch_wet": 16,
 	"pad_wet": 16,
 	"keyboard_wet": 16,
+	# J-132 (#458): missions 1 and 7 proven, one touch scenario each. The
+	# spawn is the mission's own start: mission 1 from grade, like
+	# touch_stack; mission 7 from the 220 ring, like touch_wet.
+	"touch_mission_1": 8,
+	"touch_mission_7": 16,
 	# AS-008, the Plate Shop, on its three machines from TP-340 to the 484 ring.
 	"touch_shop": 19,
 	"pad_shop": 19,
@@ -443,6 +448,8 @@ func _run() -> void:
 			ok = await _wet(InputRouter.Device.GAMEPAD)
 		"keyboard_wet":
 			ok = await _wet(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_mission_7":
+			ok = await _mission_7(InputRouter.Device.TOUCH)
 		"touch_shop":
 			ok = await _shop(InputRouter.Device.TOUCH)
 		"pad_shop":
@@ -621,6 +628,8 @@ func _run() -> void:
 			ok = await _stack(InputRouter.Device.GAMEPAD)
 		"keyboard_stack":
 			ok = await _stack(InputRouter.Device.KEYBOARD_MOUSE)
+		"touch_mission_1":
+			ok = await _mission_1(InputRouter.Device.TOUCH)
 		"fall_voice":
 			ok = await _fall_voice()
 		"audio_mix":
