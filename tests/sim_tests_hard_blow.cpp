@@ -143,6 +143,36 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     const std::uint64_t piece = s.snapshot().carrying_entity_id;
     const std::uint32_t body = s.kit_body_index(piece);
     require(walk_to(s, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "hard blow: west along the band with it");
+    // Let the piece settle in front of him before she closes: the carry
+    // swings it at his side after the walks, and she is still straining
+    // (not yet hunting), so there is time. A throw released while it swings
+    // flies half a metre off her centre. Bounded, and it yields the moment
+    // she is in range: the wait below takes over from there.
+    {
+        const double hz = static_cast<double>(Simulation::kTickRateHz);
+        int settled = 0;
+        auto was = s.kit_body_position(body);
+        for (int i = 0; i < 3 * static_cast<int>(hz) && settled < static_cast<int>(hz) / 4; ++i) {
+            s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
+            tick(s);
+            const auto m = s.matron_state();
+            const auto p = s.snapshot().player_position;
+            const double dx = m.position.x - p.x;
+            const double dz = m.position.z - p.z;
+            const double dd = std::hypot(dx, dz);
+            if (dd > 1.0e-3) {
+                (void)s.set_facing(dx / dd, dz / dd);
+            }
+            if (m.state == kStateHunting && dd < 3.4) {
+                break;
+            }
+            const auto b = s.kit_body_position(body);
+            const bool in_front = dd > 1.0e-3 && ((b.x - p.x) * dx + (b.z - p.z) * dz) / dd > 0.3;
+            const double swing = std::hypot(b.x - was.x, b.z - was.z);
+            was = b;
+            settled = in_front && swing < 0.002 ? settled + 1 : 0;
+        }
+    }
     bool coming = false;
     int turned = 0;
     int settled = 0;
