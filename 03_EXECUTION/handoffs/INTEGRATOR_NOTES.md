@@ -2,26 +2,23 @@
 
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
-
 Read through: 1794492989 (2026-11-11 last quiet run)
 
-## Now (11-11)
-State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). Three helpers, the cap (Cory 11-11):
-- J-001 #108: hold @ 8e5c715e, protected j093 @ aaed1791; 1 left (snag setup): ruled her pin holds him over the drop,
-  plus a kicking touch check: xhigh helper.
-- J-096 #414 planks slice 1 (trunk merged 22c88c85, proof rerunning); my eye check before it lands. J-084 #402
-  whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
-- J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001.
-  Helpers: J-092 #434 red-proof fix a50537520df752690 (body order vs magnet guard). J-108 bait lift: Cory said move it (11-12); new helper resumed it. J-001: Fable helper (11-12). J-043 cause found (beam), Muse builds. J-107 #426 taken from Muse (helper, high): the proof of the new split. Next free helper slot: count Muse's failed tries by job type over two weeks, then write the routing checklist every new job is scored against (Cory 11-12). After it: switchboard hole, a clean Codex receipt (codex-review-receipt, 'Reviewed commit') with no fresh state comment is not counted as LAND (#343 sat 24 h; rules.py parse_codex_state).
-  J-092 landed #434; its CI follow-up #447 (touch_slab_trap in touch-2 + rule_check tests) has green proof, Codex clean, API LAND. Next workflow PR: `persist-credentials: false` on the scope checkout (API note on #447; token is contents:read, low risk).
-- J-085 #403 DONE (#435, #437). J-126 #449 DONE (#450); follow-up J-127 #451 mailed to Muse. J-126 helper worktree build (~3 GB) left: its deletes were refused, not mine to do.
-  (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
-- Argon (Gemini): only via Cory pasting a prompt; hardest physics. Grok or ChatGPT run an idea workflow on request from a copyable prompt in chat (11-11). 367 archived branches: deleting waits on Cory.
-
-- 11-12 in flight (pre-compact): helpers running: J-001 grip charge MAX retry (next fail -> Argon prompt to Cory, then Fable); J-015 helper DONE: F way-on PR #467, #389 replaced by #466 (both draft: mark ready on green CI; #466 needs a LAND); S2/S3 dead-end needs Cory (refill/reset or backup route); a workflow PR must add wreck_way_on to the spine PASS list; J-038 #372 red; J-108 #464 (save-migration fix 1f0f5658, merging trunk conflict). #463 J-108 part 1 MERGED; #462 J-128 flange trim open (CI + eye); #454 J-107 merged; switchboard fix landed. Quota (Cory 11-12): never go slow on purpose; save by fewer helpers and less thinking per step, not by waiting. At 45% of the 5-h window: no new helpers until it resets; lean wakes; unsubscribed #462/#464. 4-h collaboration check scheduled (trig_01Decg7cSKVuf7zYCmGJeEVd); keep the 3-h backstop until it confirms the new alarms. Finish plan on trunk with my 6 answers (no cut date on J-001); parked issues carry state:parked; reconciler skips them. Muse queue: J-116..J-118 started; then J-133, J-134, J-124, J-119, J-125, J-129..J-132, J-135. Fast mode: log shows every reply ran standard; web shows off. Fable trial 1 (low, J-106): right answer in 7 min, 1 build, nothing to fix. Trial 2 (low, J-015 #466 save P1): failing check first, fix passed first try, 2 builds, 3 runs (CI pending). Low looks enough for named-cause fixes. Cory 11-12: building from a finished design goes to Opus (the rebuild build started on Fable low; if it trips, Opus high takes over from that step).
-
-- COLLAB REBUILD (Cory 11-12, "what's the real problem"): Fable helper at high does diagnosis+design ONLY (Cory: no hours of Fable high); a cheaper helper builds from its spec (branch claude/integrate-collab-rebuild, doc 03_EXECUTION/PLANNING/COLLABORATION_SYSTEM_REBUILD.md); it drafts the Muse mail and rule edits, I send/apply. No new jobs assigned until it lands; Muse finishes in-flight work. When it reports: a fresh Fable helper-max checks its diagnosis+design against the record (does each failure class become impossible or machine-caught?) before it lands (Cory 11-12: "high might not be enough").
-- Collab rebuild design DONE (claude/integrate-collab-rebuild @ 2a336fcb, doc COLLABORATION_SYSTEM_REBUILD.md): build steps 1-4 by a cheaper helper after the quota resets. ChatGPT (Cory's pick) builds the rebuild on that branch; I do NOT start a second builder; at the reset I review its head (was 2 fail, 14 errors at d7162036) vs the doc + "fold it in" (no merge gate). Git name sTiX_ww4 is shared by Muse AND ChatGPT: authorship cannot be told apart (a rebuild hole).
+## Now (11-12 handover)
+- Collaboration system LIVE (#471, #476, #477 merged; doc COLLABORATION_SYSTEM_REBUILD.md section C). Priority one until proven
+  (Cory): NO new game code from Claude or helpers till then. Expect many label changes and real conflicts on the first live passes
+  (J-044: fb-bot and claude j044c heads both exist); that is the true state, act on it.
+- Machine gaps left: a job waiting on a question doesn't show it; Grok and Builder have no notice channel; per-pass read bounds.
+  Grok Bot sees only what Cory hands it. Git name sTiX_ww4 is shared by Muse AND ChatGPT: authorship can't be told apart.
+- Paused game work, resume after: J-015 #466 (Codex FIX open, trunk merged; worktree agent-a2ed081112df776e3), J-001 grip charge
+  red (protected; agent-a169bc3f55f0e7fef; next fail -> "Argon?" prompt to Cory, then Fable), J-137 #474 fix on claude/integrate-j137
+  (pin was a test freeze; Muse merges trunk into J-118 after it lands; agent-a1d4035b049d06e9f), J-044c gains tune.
+- Open with Muse: J-053 swing bar up at most 0.2 m (else Cory's game call); J-077 gate fix; J-059 gap-89 edit (protected branch);
+  J-078 #396 open FIX nudged; J-044c held.
+- Session wiring: sessions made by another session hit the depth limit and can't create scheduled tasks or send_later. The old
+  session's overview and both integrator checks are PAUSED (not deleted); the PAT reminder is still on. Cory starts a fresh
+  integrator from the app after the quota resets; it recreates all four on itself and deletes the old ones.
+- Fable low fixed named causes right first try (J-106, J-015). Fable designs, Opus builds from a finished design (Cory 11-12).
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
@@ -31,4 +28,3 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
 - Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's.
 - sweep.py shows only the latest verdict and misses an earlier unfixed P1 from another vendor.
 - The proxy refuses the secrets API; the keys are in the `switchboard-merge` environment. No settings asks to Cory this weekend.
-- 11-12: rebuild is priority one (Cory). Game helpers paused mid-work, resume after: J-015 merge (worktree agent-a2ed081112df776e3, built clean), J-001 red (agent-a169bc3f55f0e7fef), J-137 pin #474 (agent-a1d4035b049d06e9f). Rebuild: Fable lead + 3 Opus pieces on claude/integrate-collab-rebuild-{notice,unpushed,labels}.
