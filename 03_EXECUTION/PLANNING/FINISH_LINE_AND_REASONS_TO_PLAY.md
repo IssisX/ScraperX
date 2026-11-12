@@ -6,8 +6,8 @@ An audit for Cory, 2026-11-12, against trunk `8fb771f6`. It changes no code and 
 
 1. The route the game plays is the route: yes. Rule 56's "not canonical above 221 m" is ended.
 2. The fight is done at today's contact: yes. J-044c to k and n, J-060, J-036 and J-040 are parked.
-3. The hold with real arms (J-001, then J-093) is cut on 11-19: what is green and merged by then stays; the
-   beats that pass are merged and the rest is parked.
+3. The hold with real arms (J-001, then J-093): no cut date (Cory: "we're not gonna wait another week").
+   Each beat lands as soon as it is green; a fix that fails goes up CLAUDE.md's ladder at once.
 4. She must hunt to the summit for "done": no. Done is proven to 340 m (F5 measures above 220 m first).
 5. Park the open set pieces and bring them back as missions: yes, except J-108 (the bait lift, built, in proof)
    and J-043 (the swing, cause found, rail move in build), which finish. "Land what is green" holds for the rest.

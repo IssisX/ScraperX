@@ -54,7 +54,7 @@ The rule: take the next one yourself, and mail "J-NNN started" the moment a lane
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
 Finish line (11-12, rule 56): only the finish plan (`03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md`, A5) is worked for the current parts.
 Finish (in flight): J-043 #241 rail move, J-038 #372 crates break (dents out), J-059 #307 wire-up, J-063 #321, J-015 #389 + J-109 #428 as one (F7), J-049 #278 parts 2-3 (F11), J-098 #416 (F13), J-105 #424 step 1 only (F10), J-045 (F3), J-053 #82, J-021 #128 waterfall fix only, J-077, J-078 #396, J-079 #397, J-080 #398 (push, land, then stop). J-044c: stop after the split you hold; the rest of her jointed body is parked.
-Parked (branches kept; they return as missions or after the finish): J-044d to k and n, J-060, J-036, J-040, J-099, J-022, J-054, J-055, J-091, J-094, J-095, J-100, J-090 pass 2, J-096 past slice 1, J-105 past step 1, J-111, J-113, J-114, J-120 to J-123, J-081, J-088, J-086 (until J-001's hold lands or is cut, 11-19). Close: J-067 (on the scorer), J-082.
+Parked (branches kept; they return as missions or after the finish): J-044d to k and n, J-060, J-036, J-040, J-099, J-022, J-054, J-055, J-091, J-094, J-095, J-100, J-090 pass 2, J-096 past slice 1, J-105 past step 1, J-111, J-113, J-114, J-120 to J-123, J-081, J-088, J-086 (until J-001's grab code lands). Close: J-067 (on the scorer), J-082.
 Unstarted, in order (11-12):
 1. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely; also her stage on relaunch (save at Dangerous, load fresh, she is still Dangerous).
 2. J-117 #439: a checkpoint on a moving floor restores him on real support.
@@ -68,7 +68,7 @@ Unstarted, in order (11-12):
 10. J-130 #456: Brenner's job lines on the foreman radio, text first.
 11. J-131 #457: the punch list on the pause card and one HUD line.
 12. J-132 #458: missions 1 and 7 proven, one touch scenario each.
-Waiting on J-001's hold landing or its cut (11-19): J-018 #125.
+Waiting on J-001's grab code landing: J-018 #125.
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
 Your queue is never allowed to run dry: whenever fewer than eight big jobs above are unstarted, the

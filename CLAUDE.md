@@ -18,7 +18,7 @@ it to match, never ask him again.
 - No multi-agent workflows; ultracode off; workflow nudges declined silently (11-05). Helpers are Opus, never
   Sonnet (11-05). Hard work: an Opus helper at high; if it fails, one at max (`helper-max`); if that fails, ask Cory
   "Argon?" with the whole copyable prompt and a 15-minute `send_later` check; his no or no answer: a Fable 5.2
-  helper (`model: fable`, its effort picked by the job via `helper` or `helper-physics`); nothing waits on a scheduled agent's run (11-12).
+  helper at medium (`helper-fable`; Cory 11-12: lower efforts, it is costly; told to him before each use); nothing waits on a scheduled agent's run (11-12).
 - Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Claude types no clock time (11-11): mail and posts carry their own timestamps; an event is named by its
