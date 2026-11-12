@@ -1,7 +1,9 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j124": "ff512d83b6d2c0f4d96ebafa10403799ec1599aa"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [
@@ -9,10 +11,16 @@
  ],
  "created": "2026-11-12T01:29:02Z",
  "deadline": null,
- "head": "",
+ "head": "ff512d83b6d2c0f4d96ebafa10403799ec1599aa",
  "issue": 446,
  "job": "J-124",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j124": [
+   "ff512d83b6d2c0f4d96ebafa10403799ec1599aa",
+   "",
+   "2026-11-12T18:09:34Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -52,6 +60,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T16:58:14Z"
+ "state": "proof",
+ "updated": "2026-11-12T18:09:34Z"
 }

@@ -1,18 +1,32 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j080": "1b28977dc4937345df4a1a1294b14a3e6c889fcb",
+  "fb-bot/integrate-protected-j080": "ba425084fe727b8f22d6eeb8eb6036a56992732a"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [
   "6825143629:43"
  ],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
- "head": "",
+ "deadline": "2026-11-12T19:17:00Z",
+ "head": "ba425084fe727b8f22d6eeb8eb6036a56992732a",
  "issue": 398,
  "job": "J-080",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j080": [
+   "1b28977dc4937345df4a1a1294b14a3e6c889fcb",
+   "",
+   "2026-11-12T18:09:34Z"
+  ],
+  "fb-bot/integrate-protected-j080": [
+   "ba425084fe727b8f22d6eeb8eb6036a56992732a",
+   "",
+   "2026-11-12T18:09:34Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -43,6 +57,79 @@
    "version": "start:398",
    "via": "email",
    "what": "start J-080"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T18:09:34Z",
+   "dead": "2026-11-13T02:09:34Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T22:09:34Z",
+   "id": "O-18975105",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j080",
+   "sends": 0,
+   "thread": 398,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:1b28977dc4937345df4a1a1294b14a3e6c889fcb",
+   "via": "email",
+   "what": "`fb-bot/integrate-j080` proof red: godot-touch (touch-3), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T18:09:34Z",
+   "dead": "2026-11-12T21:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T19:17:00Z",
+   "id": "O-89c95279",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j080",
+   "sends": 0,
+   "thread": 398,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:ba425084fe727b8f22d6eeb8eb6036a56992732a",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j080` is green with no PR: open one (Muse cannot open PRs)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T17:37:52Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T18:09:34Z",
+   "dead": "2026-11-12T21:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T19:17:00Z",
+   "id": "O-92604635",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-12T18:09:34Z",
+   "missing": 0,
+   "ref": "ASK|ask on #398",
+   "sends": 1,
+   "sent_by": "inbox",
+   "thread": 398,
+   "to": "claude",
+   "unseen": null,
+   "version": "6831175361",
+   "via": "session",
+   "what": "ask from Muse on #398"
   }
  ],
  "outcome": null,
@@ -52,6 +139,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T14:29:46Z"
+ "state": "proof",
+ "updated": "2026-11-12T18:09:34Z"
 }

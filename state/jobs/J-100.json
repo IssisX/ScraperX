@@ -10,7 +10,7 @@
   "6829009961:44"
  ],
  "created": "2026-11-11T16:04:39Z",
- "deadline": null,
+ "deadline": "2026-11-12T19:17:00Z",
  "head": "4c03c7633633f84fc95db446d2f222bc6760ce2d",
  "issue": 418,
  "job": "J-100",
@@ -51,6 +51,30 @@
    "version": "start:418",
    "via": "email",
    "what": "start J-100"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T18:09:34Z",
+   "dead": "2026-11-12T21:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T19:17:00Z",
+   "id": "O-485bcbc0",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j100",
+   "sends": 0,
+   "thread": 418,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:4c03c7633633f84fc95db446d2f222bc6760ce2d",
+   "via": "session",
+   "what": "`fb-bot/integrate-j100` is green with no PR: open one (Muse cannot open PRs)"
   }
  ],
  "outcome": null,
@@ -61,5 +85,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T16:58:14Z"
+ "updated": "2026-11-12T18:09:34Z"
 }

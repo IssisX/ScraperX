@@ -1,7 +1,9 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j119": "aeb08b6664bfcc438d9e4b5387df380d7d7b3688"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [
@@ -9,10 +11,16 @@
  ],
  "created": "2026-11-12T01:29:02Z",
  "deadline": null,
- "head": "",
+ "head": "aeb08b6664bfcc438d9e4b5387df380d7d7b3688",
  "issue": 441,
  "job": "J-119",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j119": [
+   "aeb08b6664bfcc438d9e4b5387df380d7d7b3688",
+   "",
+   "2026-11-12T18:09:34Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -52,6 +60,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T16:58:14Z"
+ "state": "proof",
+ "updated": "2026-11-12T18:09:34Z"
 }

@@ -405,7 +405,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 0,
+   "missing": 1,
    "ref": "BRANCH|claude/integrate-j072-reconciler-live",
    "sends": 0,
    "thread": 350,
@@ -601,6 +601,6 @@
   379
  ],
  "review": "LAND",
- "state": "proof",
- "updated": "2026-11-10T16:19:58Z"
+ "state": "working",
+ "updated": "2026-11-12T18:09:34Z"
 }

@@ -8,7 +8,7 @@
   "6813902923:71"
  ],
  "created": "2026-11-11T15:02:17Z",
- "deadline": "2026-11-12T18:29:46Z",
+ "deadline": null,
  "head": "",
  "issue": 417,
  "job": "J-099",
@@ -86,13 +86,13 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": "2026-11-12T14:43:28Z",
-   "missing": 2,
+   "missing": 3,
    "ref": "JOB|#417",
    "sends": 1,
    "sent_by": "live",
    "thread": 417,
    "to": "muse",
-   "unseen": null,
+   "unseen": "2026-11-12T18:09:34Z",
    "version": "start:417",
    "via": "email",
    "what": "start J-099"
@@ -106,5 +106,5 @@
  "prs": [],
  "review": "",
  "state": "accepted",
- "updated": "2026-11-12T16:58:14Z"
+ "updated": "2026-11-12T18:09:34Z"
 }

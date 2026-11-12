@@ -4,8 +4,9 @@
  "branches": {
   "claude/integrate-j044c-upper-body": "03ad884b158583568062f454817f5683e2d6be72",
   "fb-bot/integrate-j044c-gains": "9ffec0984039705be441e06dd4082158461ea8a7",
-  "fb-bot/integrate-j044c-gains2": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
-  "fb-bot/integrate-protected-j044c-gains-peaks": "80b660024eab0ed72499f37e8b84aff77080605b"
+  "fb-bot/integrate-j044c-gains2": "8604794cd4961293f9e4763c66e10367117222e0",
+  "fb-bot/integrate-protected-j044c-gains-peaks": "80b660024eab0ed72499f37e8b84aff77080605b",
+  "fb-bot/integrate-protected-j044c-routecraft-read": "3c46f6bf70f8e567a836ef916b738557c0c2a139"
  },
  "cancelled": null,
  "ci": "",
@@ -13,8 +14,8 @@
   "6796659538:62"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
- "head": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
+ "deadline": "2026-11-12T22:09:34Z",
+ "head": "3c46f6bf70f8e567a836ef916b738557c0c2a139",
  "issue": 0,
  "job": "J-044c",
  "landed": {
@@ -29,14 +30,19 @@
    "2026-11-09T17:35:20Z"
   ],
   "fb-bot/integrate-j044c-gains2": [
-   "a8b86806c46a6eecad4315aee347994d3c6fbb62",
+   "8604794cd4961293f9e4763c66e10367117222e0",
    "",
-   "2026-11-11T11:50:28Z"
+   "2026-11-12T18:09:34Z"
   ],
   "fb-bot/integrate-protected-j044c-gains-peaks": [
    "80b660024eab0ed72499f37e8b84aff77080605b",
    "",
    "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-protected-j044c-routecraft-read": [
+   "3c46f6bf70f8e567a836ef916b738557c0c2a139",
+   "",
+   "2026-11-12T18:09:34Z"
   ]
  },
  "obligations": [
@@ -147,6 +153,30 @@
    "version": "red:a8b86806c46a6eecad4315aee347994d3c6fbb62",
    "via": "email",
    "what": "`fb-bot/integrate-j044c-gains2` proof red: godot-touch (touch-2), godot-touch (touch-3), android-apk, native-tests (matron-slices-1), native-tests (athletic-traversal-2), native-tests (matron-slices-3), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T18:09:34Z",
+   "dead": "2026-11-13T02:09:34Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T22:09:34Z",
+   "id": "O-5ba43bf8",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j044c-gains2",
+   "sends": 0,
+   "thread": 0,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:8604794cd4961293f9e4763c66e10367117222e0",
+   "via": "email",
+   "what": "`fb-bot/integrate-j044c-gains2` proof red: godot-touch (touch-2), godot-touch (touch-3), native-tests (matron-slices-1), native-tests (athletic-traversal-2), native-tests (matron-slices-3), no PR (new head 8604794c since O-5e98ccfb was acked at a8b86806)"
   }
  ],
  "outcome": null,
@@ -156,6 +186,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-12T14:29:46Z"
+ "state": "proof",
+ "updated": "2026-11-12T18:09:34Z"
 }

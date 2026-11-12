@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
+ "deadline": "2026-11-12T22:09:34Z",
  "head": "dc5f9cac0c7c803803ad75d58b1dbb3c6aa86cdf",
  "issue": 399,
  "job": "J-081",
@@ -48,6 +48,30 @@
    "version": "start:399",
    "via": "email",
    "what": "start J-081"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T18:09:34Z",
+   "dead": "2026-11-13T02:09:34Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T22:09:34Z",
+   "id": "O-142744b8",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j081",
+   "sends": 0,
+   "thread": 399,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:dc5f9cac0c7c803803ad75d58b1dbb3c6aa86cdf",
+   "via": "email",
+   "what": "`fb-bot/integrate-j081` proof red: godot-audits-and-mix, no PR"
   }
  ],
  "outcome": null,
@@ -57,6 +81,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T16:58:14Z"
+ "state": "working",
+ "updated": "2026-11-12T18:09:34Z"
 }
