@@ -2,6 +2,7 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
+  "claude/integrate-j015": "cdc6ec353a9506bebab23387801b5b2af00743f9",
   "fb-bot/integrate-j015-slice1": "2f8b1f21d655f8e11e9648cbba743355c31f2314",
   "fb-bot/integrate-j015-wreck-way-on": "a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
   "fb-bot/integrate-protected-j015-slice1": "2ba17f22df2342e37f48dc064d47509399463a9a",
@@ -20,6 +21,11 @@
  "issue": 122,
  "job": "J-015",
  "landed": {
+  "claude/integrate-j015": [
+   "cdc6ec353a9506bebab23387801b5b2af00743f9",
+   "",
+   "2026-11-12T14:29:46Z"
+  ],
   "fb-bot/integrate-j015-slice1": [
    "2f8b1f21d655f8e11e9648cbba743355c31f2314",
    "",
@@ -652,6 +658,6 @@
   389
  ],
  "review": "FIX",
- "state": "working",
- "updated": "2026-11-12T13:11:40Z"
+ "state": "proof",
+ "updated": "2026-11-12T14:29:46Z"
 }

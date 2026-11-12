@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-12T15:17:00Z",
+ "deadline": "2026-11-12T17:00:00Z",
  "head": "",
  "issue": 82,
  "job": "J-053",
@@ -102,7 +102,11 @@
    "what": "ask from Muse on #82"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T13:18:03Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T13:13:31Z",
    "attempts": 1,
@@ -135,5 +139,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-12T13:11:40Z"
+ "updated": "2026-11-12T14:29:46Z"
 }

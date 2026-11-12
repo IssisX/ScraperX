@@ -8,7 +8,7 @@
   "6773742956:69"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-12T16:09:50Z",
+ "deadline": null,
  "head": "4e84c905d76f0fb71646bf1455567f3bb9f0a9be",
  "issue": 321,
  "job": "J-063",
@@ -218,7 +218,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T14:29:46Z",
+    "why": "a LAND at the head: the switchboard merges it"
+   },
    "created": "2026-11-12T12:09:50Z",
    "dead": "2026-11-12T20:09:50Z",
    "dead_lettered": null,
@@ -247,7 +250,7 @@
  "prs": [
   453
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-12T12:09:50Z"
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-12T14:29:46Z"
 }

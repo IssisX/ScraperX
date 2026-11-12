@@ -2,7 +2,8 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "claude/integrate-j001-hold": "1c1ee92dfbee5279b147ad246a5d4d4cafc1ae81",
+  "claude/integrate-j001-hold": "00ced3c2c07d5b6064aa50811373153c2b0a62c8",
+  "claude/integrate-protected-j001-budget-list": "8f5c6c35467dd8391761bc257589eccb5a0750b4",
   "fb-bot/j001-pastrail": "59af7cafa92f5528ccf3abb2652d6f5daae3dacb"
  },
  "cancelled": null,
@@ -14,14 +15,19 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T23:00:00Z",
- "head": "1c1ee92dfbee5279b147ad246a5d4d4cafc1ae81",
+ "head": "8f5c6c35467dd8391761bc257589eccb5a0750b4",
  "issue": 108,
  "job": "J-001",
  "landed": {
   "claude/integrate-j001-hold": [
-   "1c1ee92dfbee5279b147ad246a5d4d4cafc1ae81",
+   "00ced3c2c07d5b6064aa50811373153c2b0a62c8",
    "",
-   "2026-11-12T13:11:40Z"
+   "2026-11-12T14:29:46Z"
+  ],
+  "claude/integrate-protected-j001-budget-list": [
+   "8f5c6c35467dd8391761bc257589eccb5a0750b4",
+   "",
+   "2026-11-12T14:29:46Z"
   ],
   "fb-bot/j001-pastrail": [
    "59af7cafa92f5528ccf3abb2652d6f5daae3dacb",
@@ -687,7 +693,11 @@
    "what": "ask from Claude on #108"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T13:34:36Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T22:12:19Z",
    "attempts": 1,
@@ -712,7 +722,11 @@
    "what": "ask from ChatGPT on #108"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T13:34:36Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T22:12:26Z",
    "attempts": 1,
@@ -737,7 +751,11 @@
    "what": "ask from ChatGPT on #108"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T14:29:46Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -762,7 +780,11 @@
    "what": "`claude/integrate-j001-hold` proof red: godot-touch (touch-2), godot-touch (touch-3), native-tests (matron-slices-3), native-tests (athletic-traversal-2), no PR (new head 1c1ee92d since O-c4674b3e was acked at 789c6e38)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T13:34:36Z",
+    "by": "claude",
+    "how": "reply on its thread"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T13:13:33Z",
    "attempts": 1,
@@ -785,6 +807,106 @@
    "version": "6824593300",
    "via": "session",
    "what": "ask from ChatGPT on #108"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T18:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T16:17:00Z",
+   "id": "O-b495ff32",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T14:29:46Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j001-hold",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 108,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:00ced3c2c07d5b6064aa50811373153c2b0a62c8",
+   "via": "session",
+   "what": "`claude/integrate-j001-hold` proof red: native-tests (athletic-traversal-2), native-tests (matron-slices-3), godot-touch (touch-2), godot-touch (touch-3), no PR (new head 00ced3c2 since O-d1c32a4b was acked at 99b29794)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T18:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T16:17:00Z",
+   "id": "O-3496ff85",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T14:29:46Z",
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-protected-j001-budget-list",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 108,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:8f5c6c35467dd8391761bc257589eccb5a0750b4",
+   "via": "session",
+   "what": "`claude/integrate-protected-j001-budget-list` proof red: godot-touch (touch-3), no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T13:34:53Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T18:27:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T16:27:00Z",
+   "id": "O-6a4ccacd",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-12T14:29:46Z",
+   "missing": 0,
+   "ref": "ASK|ask on #108",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 108,
+   "to": "chatgpt",
+   "unseen": null,
+   "version": "6825076463",
+   "via": "issue",
+   "what": "ask from Claude on #108"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T13:35:09Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T23:00:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T17:00:00Z",
+   "id": "O-2e80ac51",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-12T14:29:46Z",
+   "missing": 0,
+   "ref": "ASK|ask on #108",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 108,
+   "to": "grok",
+   "unseen": null,
+   "version": "6825082474",
+   "via": "issue",
+   "what": "ask from Claude on #108"
   }
  ],
  "outcome": null,
@@ -797,5 +919,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T13:11:40Z"
+ "updated": "2026-11-12T14:29:46Z"
 }

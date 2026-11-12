@@ -6,12 +6,37 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T17:16:05Z",
- "deadline": null,
+ "deadline": "2026-11-12T16:17:00Z",
  "head": "",
  "issue": 419,
  "job": "J-101",
  "landed": {},
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "work|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T18:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T16:17:00Z",
+   "id": "O-79a9997a",
+   "kind": "start-agent",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "JOB|#419",
+   "sends": 0,
+   "thread": 419,
+   "to": "claude",
+   "unseen": null,
+   "version": "start:419",
+   "via": "session",
+   "what": "start J-101"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "claude",
@@ -20,5 +45,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-11T17:16:05Z"
+ "updated": "2026-11-12T14:29:46Z"
 }

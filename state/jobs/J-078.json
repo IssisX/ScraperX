@@ -2,7 +2,8 @@
  "attempt": 1,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j078": "ddceb91978ef29a9923148016fa3769f2f55188a"
+  "fb-bot/integrate-j078": "ddceb91978ef29a9923148016fa3769f2f55188a",
+  "fb-bot/integrate-protected-j078": "a961cc6822223fef7195023d29cf493fe4e6cd7b"
  },
  "cancelled": null,
  "ci": "green",
@@ -10,8 +11,8 @@
   "6796657784:60"
  ],
  "created": "2026-11-10T22:50:55Z",
- "deadline": null,
- "head": "ddceb91978ef29a9923148016fa3769f2f55188a",
+ "deadline": "2026-11-12T16:17:00Z",
+ "head": "ed5cafadb90d8b504b812446cdf1bd08460d7402",
  "issue": 393,
  "job": "J-078",
  "landed": {
@@ -19,6 +20,11 @@
    "ddceb91978ef29a9923148016fa3769f2f55188a",
    "",
    "2026-11-11T11:50:28Z"
+  ],
+  "fb-bot/integrate-protected-j078": [
+   "a961cc6822223fef7195023d29cf493fe4e6cd7b",
+   "",
+   "2026-11-12T14:29:46Z"
   ]
  },
  "obligations": [
@@ -107,6 +113,56 @@
    "version": "6796554271",
    "via": "session",
    "what": "ask from Muse on #393"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T22:29:46Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T18:29:46Z",
+   "id": "O-22d6728e",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T14:33:23Z",
+   "missing": 0,
+   "ref": "PR|#396",
+   "sends": 1,
+   "sent_by": "switch",
+   "thread": 396,
+   "to": "muse",
+   "unseen": null,
+   "version": "fix:ed5cafadb90d8b504b812446cdf1bd08460d7402",
+   "via": "email",
+   "what": "#396: open FIX from Claude (review) (new head ed5cafad since O-d7fa3f70 was acked at ddceb919)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T18:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T16:17:00Z",
+   "id": "O-3a66534b",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T14:29:46Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j078",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 393,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:a961cc6822223fef7195023d29cf493fe4e6cd7b",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j078` is green with no PR: open one (Muse cannot open PRs)"
   }
  ],
  "outcome": null,
@@ -118,6 +174,6 @@
   396
  ],
  "review": "FIX",
- "state": "working",
- "updated": "2026-11-11T23:09:21Z"
+ "state": "proof",
+ "updated": "2026-11-12T14:29:46Z"
 }

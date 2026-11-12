@@ -2,27 +2,27 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "claude/integrate-j108": "1d700c04b19d51a316a20fe614598142b227bea8",
-  "claude/integrate-protected-j108": "bd124e3c3a2a411b4b0779dbcacf686a313a0a06"
+  "claude/integrate-j108": "bf7e6e79c0dc943f9906402ff149dc5fa49fb73c",
+  "claude/integrate-protected-j108": "9105c47af086c7fdaefb205bc1d1d40ba8276884"
  },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-11T22:08:00Z",
- "deadline": null,
- "head": "1d700c04b19d51a316a20fe614598142b227bea8",
+ "deadline": "2026-11-12T16:17:00Z",
+ "head": "9105c47af086c7fdaefb205bc1d1d40ba8276884",
  "issue": 0,
  "job": "J-108",
  "landed": {
   "claude/integrate-j108": [
-   "1d700c04b19d51a316a20fe614598142b227bea8",
+   "bf7e6e79c0dc943f9906402ff149dc5fa49fb73c",
    "",
-   "2026-11-12T13:11:40Z"
+   "2026-11-12T14:29:46Z"
   ],
   "claude/integrate-protected-j108": [
-   "bd124e3c3a2a411b4b0779dbcacf686a313a0a06",
+   "9105c47af086c7fdaefb205bc1d1d40ba8276884",
    "",
-   "2026-11-12T13:11:40Z"
+   "2026-11-12T14:29:46Z"
   ]
  },
  "obligations": [
@@ -83,6 +83,54 @@
    "version": "open-pr:8a678bff202058b9673505617e61175581013cca",
    "via": "session",
    "what": "`claude/integrate-j108` is green with no PR: open one"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T18:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T16:17:00Z",
+   "id": "O-a019c2d5",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-j108",
+   "sends": 0,
+   "thread": 0,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:bf7e6e79c0dc943f9906402ff149dc5fa49fb73c",
+   "via": "session",
+   "what": "`claude/integrate-j108` is green with no PR: open one (new head bf7e6e79 since O-a874ef94 was acked at 8a678bff)"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T18:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T16:17:00Z",
+   "id": "O-e3e0bbed",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "BRANCH|claude/integrate-protected-j108",
+   "sends": 0,
+   "thread": 0,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:9105c47af086c7fdaefb205bc1d1d40ba8276884",
+   "via": "session",
+   "what": "`claude/integrate-protected-j108` is green with no PR: open one"
   }
  ],
  "outcome": null,
@@ -93,5 +141,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T13:11:40Z"
+ "updated": "2026-11-12T14:29:46Z"
 }

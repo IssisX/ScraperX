@@ -1,0 +1,26 @@
+{
+ "attempt": 1,
+ "blocked": null,
+ "branches": {},
+ "cancelled": null,
+ "ci": "green",
+ "commands": [],
+ "created": "2026-11-12T14:29:46Z",
+ "deadline": null,
+ "head": "a2134c99d4cfc752de464b6c8f1d664a43218f30",
+ "issue": 0,
+ "job": "J-107",
+ "landed": {},
+ "obligations": [],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "claude",
+ "pr": 454,
+ "pr_done": "",
+ "prs": [
+  454
+ ],
+ "review": "LAND",
+ "state": "landable",
+ "updated": "2026-11-12T14:29:46Z"
+}

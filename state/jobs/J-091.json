@@ -11,7 +11,36 @@
  "issue": 409,
  "job": "J-091",
  "landed": {},
- "obligations": [],
+ "obligations": [
+  {
+   "ack": {
+    "at": "2026-11-12T13:32:46Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T13:22:55Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T18:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T16:17:00Z",
+   "id": "O-f32b7b58",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #409",
+   "sends": 0,
+   "thread": 409,
+   "to": "claude",
+   "unseen": null,
+   "version": "6824805467",
+   "via": "session",
+   "what": "ask from Muse on #409"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -20,5 +49,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-11T14:01:59Z"
+ "updated": "2026-11-12T14:29:46Z"
 }

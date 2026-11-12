@@ -42,6 +42,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
+   "rechecked": "2026-11-12T14:29:46Z",
    "ref": "BRANCH|fb-bot/integrate-j014-stock-above-396",
    "sends": 1,
    "sent_by": "shadow",
@@ -89,5 +90,5 @@
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-12T07:49:06Z"
+ "updated": "2026-11-12T14:29:46Z"
 }

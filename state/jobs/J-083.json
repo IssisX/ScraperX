@@ -6,12 +6,38 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
+ "deadline": "2026-11-12T18:29:46Z",
  "head": "",
  "issue": 401,
  "job": "J-083",
  "landed": {},
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "work|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T14:29:46Z",
+   "dead": "2026-11-12T22:29:46Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T18:29:46Z",
+   "id": "O-8f0d1e6a",
+   "kind": "start-agent",
+   "last_error": "",
+   "last_sent": "2026-11-12T14:29:46Z",
+   "missing": 0,
+   "ref": "JOB|#401",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 401,
+   "to": "muse",
+   "unseen": null,
+   "version": "start:401",
+   "via": "email",
+   "what": "start J-083"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -20,5 +46,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-11T12:58:47Z"
+ "updated": "2026-11-12T14:29:46Z"
 }

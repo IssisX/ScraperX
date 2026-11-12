@@ -1855,3 +1855,82 @@
 {"attempt": 1, "ev": "sent", "id": "O-765fb9a0", "job": "J-080", "ref": "JOB|#398", "send": 1, "t": "2026-11-12T13:11:40Z", "to": "muse", "via": "email"}
 {"attempt": 1, "ev": "sent", "id": "O-5fe9ce3c", "job": "J-086", "ref": "JOB|#404", "send": 1, "t": "2026-11-12T13:11:40Z", "to": "muse", "via": "email"}
 {"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T13:11:40Z", "tries": 1}
+{"ev": "job", "job": "J-135", "t": "2026-11-12T14:29:46Z"}
+{"ev": "job", "job": "J-134", "t": "2026-11-12T14:29:46Z"}
+{"ev": "job", "job": "J-133", "t": "2026-11-12T14:29:46Z"}
+{"ev": "job", "job": "J-132", "t": "2026-11-12T14:29:46Z"}
+{"ev": "job", "job": "J-131", "t": "2026-11-12T14:29:46Z"}
+{"ev": "job", "job": "J-130", "t": "2026-11-12T14:29:46Z"}
+{"ev": "job", "job": "J-129", "t": "2026-11-12T14:29:46Z"}
+{"ev": "job", "job": "J-128", "t": "2026-11-12T14:29:46Z"}
+{"ev": "job", "job": "J-107", "t": "2026-11-12T14:29:46Z"}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-b9449b62", "job": "J-043", "t": "2026-11-12T14:29:46Z"}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-5fe9ce3c", "job": "J-086", "t": "2026-11-12T14:29:46Z"}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-765fb9a0", "job": "J-080", "t": "2026-11-12T14:29:46Z"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-b495ff32", "job": "J-001", "kind": "fix", "ref": "BRANCH|claude/integrate-j001-hold", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-3496ff85", "job": "J-001", "kind": "fix", "ref": "BRANCH|claude/integrate-protected-j001-budget-list", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T16:27:00Z", "ev": "obligation", "id": "O-6a4ccacd", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #108", "t": "2026-11-12T14:29:46Z", "to": "chatgpt", "via": "issue"}
+{"due": "2026-11-12T17:00:00Z", "ev": "obligation", "id": "O-2e80ac51", "job": "J-001", "kind": "ask", "ref": "ASK|ask on #108", "t": "2026-11-12T14:29:46Z", "to": "grok", "via": "issue"}
+{"ev": "acked", "how": "new head", "id": "O-f6d2731f", "job": "J-001", "t": "2026-11-12T14:29:46Z"}
+{"ev": "reopened", "id": "O-676e6b21", "job": "J-040", "t": "2026-11-12T14:29:46Z", "was": "unseen"}
+{"due": "2026-11-12T17:00:00Z", "ev": "obligation", "id": "O-b4fd7064", "job": "J-043", "kind": "ask", "ref": "ASK|ask on #241", "t": "2026-11-12T14:29:46Z", "to": "grok", "via": "issue"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-e3a66963", "job": "J-055", "kind": "ask", "ref": "ASK|ask on #294", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"ev": "closed", "id": "O-52e7cccd", "job": "J-063", "t": "2026-11-12T14:29:46Z", "why": "a LAND at the head: the switchboard merges it"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-22d6728e", "job": "J-078", "kind": "fix", "ref": "PR|#396", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-3a66534b", "job": "J-078", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j078", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-ba6513b7", "job": "J-079", "kind": "start-agent", "ref": "JOB|#397", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-34890fdf", "job": "J-081", "kind": "start-agent", "ref": "JOB|#399", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-8f0d1e6a", "job": "J-083", "kind": "start-agent", "ref": "JOB|#401", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-6020d9c3", "job": "J-088", "kind": "start-agent", "ref": "JOB|#406", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-f32b7b58", "job": "J-091", "kind": "ask", "ref": "ASK|ask on #409", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-292de23e", "job": "J-093", "kind": "fix", "ref": "BRANCH|claude/integrate-protected-j093", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "new head", "id": "O-f33f597b", "job": "J-093", "t": "2026-11-12T14:29:46Z"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-3f6ba41f", "job": "J-095", "kind": "start-agent", "ref": "JOB|#413", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-ee10e62c", "job": "J-099", "kind": "start-agent", "ref": "JOB|#417", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-e46367f1", "job": "J-100", "kind": "start-agent", "ref": "JOB|#418", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-79a9997a", "job": "J-101", "kind": "start-agent", "ref": "JOB|#419", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-a019c2d5", "job": "J-108", "kind": "fix", "ref": "BRANCH|claude/integrate-j108", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T16:17:00Z", "ev": "obligation", "id": "O-e3e0bbed", "job": "J-108", "kind": "fix", "ref": "BRANCH|claude/integrate-protected-j108", "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-3c1a381a", "job": "J-116", "kind": "start-agent", "ref": "JOB|#438", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-edc19cdf", "job": "J-117", "kind": "start-agent", "ref": "JOB|#439", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-265aea0e", "job": "J-118", "kind": "start-agent", "ref": "JOB|#440", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-71341bd3", "job": "J-119", "kind": "start-agent", "ref": "JOB|#441", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-98f48da7", "job": "J-120", "kind": "start-agent", "ref": "JOB|#442", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-df46bc0e", "job": "J-121", "kind": "start-agent", "ref": "JOB|#443", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-2ce019c3", "job": "J-122", "kind": "start-agent", "ref": "JOB|#444", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-ea119e93", "job": "J-123", "kind": "start-agent", "ref": "JOB|#445", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-7877a7c1", "job": "J-124", "kind": "start-agent", "ref": "JOB|#446", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T18:29:46Z", "ev": "obligation", "id": "O-9de6440c", "job": "J-125", "kind": "start-agent", "ref": "JOB|#448", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-47e6deff", "job": "J-001", "t": "2026-11-12T14:29:46Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-b3763b40", "job": "J-001", "t": "2026-11-12T14:29:46Z"}
+{"ev": "acked", "how": "reply on its thread", "id": "O-8665c6c1", "job": "J-001", "t": "2026-11-12T14:29:46Z"}
+{"ev": "acked", "how": "reply naming it", "id": "O-c0802440", "job": "J-053", "t": "2026-11-12T14:29:46Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-e3a66963", "job": "J-055", "t": "2026-11-12T14:29:46Z"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-f32b7b58", "job": "J-091", "t": "2026-11-12T14:29:46Z"}
+{"ev": "state", "frm": "working", "job": "J-015", "t": "2026-11-12T14:29:46Z", "to": "proof"}
+{"ev": "state", "frm": "working", "job": "J-059", "t": "2026-11-12T14:29:46Z", "to": "merged"}
+{"ev": "state", "frm": "working", "job": "J-063", "t": "2026-11-12T14:29:46Z", "to": "landable"}
+{"ev": "state", "frm": "working", "job": "J-078", "t": "2026-11-12T14:29:46Z", "to": "proof"}
+{"ev": "state", "frm": "accepted", "job": "J-107", "t": "2026-11-12T14:29:46Z", "to": "landable"}
+{"ev": "state", "frm": "accepted", "job": "J-128", "t": "2026-11-12T14:29:46Z", "to": "proof"}
+{"ev": "state", "frm": "accepted", "job": "J-129", "t": "2026-11-12T14:29:46Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-130", "t": "2026-11-12T14:29:46Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-131", "t": "2026-11-12T14:29:46Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-132", "t": "2026-11-12T14:29:46Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-133", "t": "2026-11-12T14:29:46Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-134", "t": "2026-11-12T14:29:46Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-135", "t": "2026-11-12T14:29:46Z", "to": "assigned"}
+{"ev": "unmatched", "ident": "PR|#343", "job": "", "t": "2026-11-12T14:29:46Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "BRANCH|fable/finish-audit", "job": "", "t": "2026-11-12T14:29:46Z", "why": "unknown branch prefix (no proof run on its head (not an integrate branch))"}
+{"attempt": 1, "ev": "sent", "id": "O-b495ff32", "job": "J-001", "ref": "BRANCH|claude/integrate-j001-hold", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-3496ff85", "job": "J-001", "ref": "BRANCH|claude/integrate-protected-j001-budget-list", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-6a4ccacd", "job": "J-001", "ref": "ASK|ask on #108", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "chatgpt", "via": "issue"}
+{"attempt": 1, "ev": "sent", "id": "O-2e80ac51", "job": "J-001", "ref": "ASK|ask on #108", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "grok", "via": "issue"}
+{"attempt": 1, "ev": "sent", "id": "O-676e6b21", "job": "J-040", "ref": "JOB|#228", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-b4fd7064", "job": "J-043", "ref": "ASK|ask on #241", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "grok", "via": "issue"}
+{"ev": "switch_mail", "id": "O-22d6728e", "job": "J-078", "ref": "PR|#396", "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-3a66534b", "job": "J-078", "ref": "BRANCH|fb-bot/integrate-protected-j078", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-ba6513b7", "job": "J-079", "ref": "JOB|#397", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-34890fdf", "job": "J-081", "ref": "JOB|#399", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-8f0d1e6a", "job": "J-083", "ref": "JOB|#401", "send": 1, "t": "2026-11-12T14:29:46Z", "to": "muse", "via": "email"}
+{"ev": "pass", "job": "", "jobs": 101, "status": "ok", "t": "2026-11-12T14:29:46Z", "tries": 1}
