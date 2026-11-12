@@ -198,11 +198,6 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
             release_speed = m.speed;
             release_stalking = m.stalking ? 1 : 0;
         }
-        if (i % static_cast<int>(Simulation::kTickRateHz) == 0) {
-            std::cout << "  hard blow wait: t=" << i / static_cast<int>(Simulation::kTickRateHz) << "s state="
-                      << m.state << " stage=" << int(m.stage) << " d=" << d << " turn=" << m.turn
-                      << " speed=" << m.speed << " settled=" << settled << "\n";
-        }
     }
     require(coming, "hard blow: she bursts, the piece in his hands");
     out.release_m = release_d;
@@ -544,8 +539,9 @@ void run_hard_blow_hold() {
 // grip, LooseStock::heavy) lies on the ring round the shaft. The bands are
 // the tower's own rings: the yard, the stack rings 11..143 (deck 8 is the
 // 88 m ring, not an 8 m deck), her deck 154, and the upper rings
-// 176.25..616.25. The top decks (640.25 and up, the summit approach) are
-// out of it: 640.25 is dressed only in heavy SkidCrates, no carryable
+// 176.25..396.25 -- the decks where he fights her. The high tower above
+// that (the bands' rings 418.25 m and up, and the top decks) is out of it:
+// 594.25 m and 640.25 m are dressed only in heavy SkidCrates, no carryable
 // piece at all, and adding one is a world-content change for its own
 // protected branch, not this lane. The 706 deck and the 802.64 summit are
 // bare by design (dress_tower keeps their places but feels for no floor
@@ -554,9 +550,7 @@ void run_hard_blow_stock() {
     Simulation s(InitialSpawn::Deck154);
     static constexpr double kRings[] = {0.0, 11.0, 22.0, 33.0, 44.0, 55.0, 66.0, 77.0, 88.0, 99.0,
                                         110.0, 121.0, 132.0, 143.0, 154.0, 176.25, 198.25, 220.25, 242.25,
-                                        264.25, 286.25, 308.25, 330.25, 352.25, 374.25, 396.25, 418.25,
-                                        440.25, 462.25, 484.25, 506.25, 528.25, 550.25, 572.25, 594.25,
-                                        616.25};
+                                        264.25, 286.25, 308.25, 330.25, 352.25, 374.25, 396.25};
     constexpr std::size_t kBands = sizeof(kRings) / sizeof(kRings[0]);
     std::size_t counts[kBands] = {};
     std::uint32_t carryable = 0;
