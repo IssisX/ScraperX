@@ -61,6 +61,8 @@ on:
         type: string
         default: ""
   pull_request:
+    # ready_for_review: a draft skips the live dry run below, so it runs once when the PR is marked ready.
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [ScraperX-Claude]
     paths:
       - "tools/switchboard/**"
@@ -124,7 +126,11 @@ jobs:
             -r src/tools/switchboard/requirements.txt
       - name: Unit tests of the switch's decisions
         run: .venv/bin/python -m unittest discover -s src/tools/switchboard -p 'test_*.py' -v
+      # Cory 11-12, "only run what changed": the dry run costs 550 to 800 calls of the repo's shared hourly
+      # GitHub limit (it starved the live sweep on #476). A draft PR runs only the unit tests above; the dry
+      # run waits until the PR is ready, then runs on each push to it.
       - name: Dry run against the live repo
+        if: ${{ !github.event.pull_request.draft }}
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
