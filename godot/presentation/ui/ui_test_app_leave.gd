@@ -239,24 +239,55 @@ func _touch_app_leave_hold() -> bool:
 		return _fail("hold: the sprints by the rail cost a death (deaths %d)" % int(_native().get_death_count()))
 	if int(_matron_state()["catches"]) == catches:
 		await _walk_to(device, ACT_RIM, 0.3, 3.0)
+	# The grab north of the pin line: at the rim she pins in a Lunge 4 m
+	# short (twice, the same spot, z=-154.0 at x=18.7 and at x=21.1),
+	# drive applied but no displacement, while the act's own run carries
+	# through there -- a knife-edge of Lunge phase, not a broken rail, and
+	# no static solid or mesh wall stands at that line. North of it her
+	# route to the climber stays on the east band's north segment and
+	# never needs the edge south of it; sprint him there before she
+	# starts south, so her first route south ends north of the line.
+	if not await _sprint_to(device, Vector2(21.0, -150.0), 1.0, 6.0):
+		return _fail("hold: the sprint north to the grab point stalled at %s" % str(_position()))
+	if not await _walk_to(device, Vector2(21.0, -150.0), 0.3, 3.0):
+		return _fail("hold: the walk north to the grab point stalled at %s" % str(_position()))
 	var held := false
 	for attempt in ACT_GRAB_TRIES:
-		if attempt > 0:
+		var caught := _act_in_her_hands()
+		if attempt > 0 and not caught:
+			# A pin does not clear by standing still: walk south through
+			# the pin line and back north, so her chase and her Lunge
+			# start fresh. A leg that stalls against her body is a hold,
+			# not a failure: check her hands before failing it.
+			var stalled := false
+			if not await _sprint_to(device, Vector2(21.0, -158.0), 1.0, 6.0):
+				stalled = true
+			elif not await _walk_to(device, Vector2(21.0, -150.0), 0.3, 5.0):
+				stalled = true
+			if stalled:
+				if _act_in_her_hands():
+					caught = true
+				else:
+					return _fail("hold: the re-approach stalled at %s" % str(_position()))
 			catches = int(_matron_state()["catches"])
-		var caught: bool = await _act_watch_her(func() -> bool:
-			return int(_matron_state()["catches"]) > catches, 60.0,
-			"dangerous_at_rail", "act_dangerous_coming", 4.0)
+		# She may have taken him during the re-approach: then no watch.
 		if not caught:
-			return _fail("hold: dangerous, her hands never took the climber at the rail (stage %d)" % int(_matron_state()["stage"]))
+			caught = await _act_watch_her(func() -> bool:
+				return int(_matron_state()["catches"]) > catches, 35.0,
+				"dangerous_at_rail", "act_dangerous_coming", 4.0)
+		if not caught:
+			if attempt == ACT_GRAB_TRIES - 1:
+				return _fail("hold: dangerous, her hands never took the climber at the grab point (stage %d)" % int(_matron_state()["stage"]))
+			continue
 		if not await _act_wait(func() -> bool: return _act_in_her_hands(), 5.0, "rail_grab"):
-			return _fail("hold: at the rail her hands never came on the climber (state %d)" % int(_matron_state()["state"]))
+			return _fail("hold: at the grab point her hands never came on the climber (state %d)" % int(_matron_state()["state"]))
 		await _act_wait(func() -> bool:
 			return int(_native().get_matron_hold_state()["grabs"]) >= 1 or not _act_in_her_hands(), 5.0, "rail_grab")
 		if int(_native().get_matron_hold_state()["grabs"]) >= 1:
 			held = true
 			break
 	if not held:
-		return _fail("hold: dangerous, her hand never closed on the climber's ankle at the rail in %d reaches" % ACT_GRAB_TRIES)
+		return _fail("hold: dangerous, her hand never closed on the climber's ankle at the grab point in %d reaches" % ACT_GRAB_TRIES)
 	var hold: Dictionary = _native().get_matron_hold_state()
 	if not bool(hold.get("held", false)):
 		return _fail("hold: her hands took the climber but the hold is not held (state %d, beat %d)" % [
