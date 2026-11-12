@@ -123,6 +123,8 @@ struct Thrown {
     double floor_y = 0.0;  // her floor before the throw, to rise back onto
     double y = 0.0;        // her height before the throw
     double release_m = 0.0;  // her distance when the throw released
+    double release_speed = 0.0;  // her speed when the throw released
+    int release_stalking = -1;  // whether she stalked (held) at the release
     double box_mps = 0.0;    // the piece's fastest in flight
     double box_hit_mps = 0.0;  // the piece's speed when the blow first read
     double box_hit_y = 0.0;    // the piece's height when the blow first read
@@ -142,6 +144,8 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     bool coming = false;
     int turned = 0;
     double release_d = 0.0;
+    double release_speed = 0.0;
+    int release_stalking = -1;
     auto box_was = s.kit_body_position(body);
     auto last = s.matron_state().position;
     for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz) && !coming; ++i) {
@@ -170,6 +174,8 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
                          m.turn == 0;
                 if (coming) {
                     release_d = d;
+                    release_speed = m.speed;
+                    release_stalking = m.stalking ? 1 : 0;
                 }
             } else if (m.stalking) {
                 (void)s.set_facing(-(m.position.x - p.x) / d, -(m.position.z - p.z) / d);
@@ -178,12 +184,16 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
                 coming = d < 3.4;
                 if (coming) {
                     release_d = d;
+                    release_speed = m.speed;
+                    release_stalking = m.stalking ? 1 : 0;
                 }
             }
         }
     }
     require(coming, "hard blow: she comes for him, the piece in his hands");
     out.release_m = release_d;
+    out.release_speed = release_speed;
+    out.release_stalking = release_stalking;
     (void)s.set_look_pitch(look_pitch);
     tick(s);
     const auto throws0 = s.snapshot().throw_count;
@@ -331,8 +341,9 @@ void run_hard_blow_throw() {
         std::cout << "  hard blow throw dangerous: threw=" << by_box.threw << " blow=" << by_box.blow_mps
                   << " m/s, worst=" << by_box.worst << ", staggers=" << by_box.staggers
                   << ", knockdowns=" << by_box.knockdowns << ", turn at hit=" << by_box.turn_at_hit
-                  << ", release " << by_box.release_m << " m, box max " << by_box.box_mps << " m/s, at hit "
-                  << by_box.box_hit_mps << " m/s at y " << by_box.box_hit_y << "\n";
+                  << ", release " << by_box.release_m << " m, her speed " << by_box.release_speed
+                  << " m/s, stalking " << by_box.release_stalking << ", box max " << by_box.box_mps
+                  << " m/s, at hit " << by_box.box_hit_mps << " m/s at y " << by_box.box_hit_y << "\n";
         require(by_box.threw, "hard blow throw: the toolbox thrown at a dangerous Matron");
         require(by_box.worst == kStateStaggering && by_box.staggers == 1 && by_box.knockdowns == 0,
                 "hard blow throw: a toolbox only staggers a dangerous Matron");
