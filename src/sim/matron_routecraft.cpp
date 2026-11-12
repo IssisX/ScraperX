@@ -146,6 +146,7 @@ MatronRoutecraft::ProbeResult MatronRoutecraft::resume_transition(PhysicsSystem 
 MatronRoutecraft MatronRoutecraft::replacement() const {
     MatronRoutecraft result;
     result.holding_ = holding_;
+    result.body_force_ = body_force_;
     return result;
 }
 bool MatronRoutecraft::request(PhysicsSystem &p, BodyID self, RVec3 goal, Vec3 facing) {
@@ -527,7 +528,7 @@ void MatronRoutecraft::hold(PhysicsSystem &p, BodyID self) {
         if (force.Length() > limit) force *= limit / force.Length();
         const float power = std::abs(force.Dot(velocity));
         if (power > kPower) force *= kPower / power;
-        bodies.AddForce(self, force);
+        apply_body_force(p, self, force);
         effort::add(effort::Path::Routecraft, force.Length(), force.Dot(velocity), 0.0F, force);   // J-046, measurement only
         report_.force = force.Length(); report_.reaction = -force;
         report_.peak_force = std::max(report_.peak_force, report_.force);
@@ -545,6 +546,13 @@ void MatronRoutecraft::hold(PhysicsSystem &p, BodyID self) {
     }
     drive(p, self, *holding_);
 }
+void MatronRoutecraft::apply_body_force(PhysicsSystem &p, BodyID self, const Vec3 &force) {
+    if (body_force_) {
+        body_force_(force);
+        return;
+    }
+    p.GetBodyInterface().AddForce(self, force);
+}
 void MatronRoutecraft::drive(PhysicsSystem &p, BodyID self, const Node &target) {
     auto &bodies = p.GetBodyInterface();
     const RVec3 at = bodies.GetPosition(self);
@@ -555,7 +563,7 @@ void MatronRoutecraft::drive(PhysicsSystem &p, BodyID self, const Node &target) 
     if (force.Length()>kForce) force*=kForce/force.Length();
     const float power=std::abs(force.Dot(velocity));
     if (power>kPower) force*=kPower/power;
-    bodies.AddForce(self,force);
+    apply_body_force(p,self,force);
     effort::add(effort::Path::Routecraft, force.Length(), force.Dot(velocity), 0.0F, force);   // J-046, measurement only
     report_.force=force.Length(); report_.peak_force=std::max(report_.peak_force,report_.force);
     report_.peak_power=std::max(report_.peak_power,std::abs(force.Dot(velocity)));

@@ -5,6 +5,7 @@
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <array>
+#include <functional>
 #include <map>
 #include <optional>
 #include <tuple>
@@ -60,6 +61,11 @@ public:
                (!planning() || holding_.has_value());
     }
     const Report &report() const noexcept { return report_; }
+    // J-044c gains: her whole-body drive, split by mass share like the feet
+    // and Climber drives (Argon, #242). A 220 kg force on the 147.884 kg
+    // root alone drives it 1.48765x fast. The Matron sets this to
+    // add_body_force; unset, the force goes to the body as before.
+    void set_body_force(std::function<void(const JPH::Vec3 &)> sink) { body_force_ = std::move(sink); }
     // The hold her hand has while it holds (its body, member and the point in
     // the body's center-of-mass frame); false when it holds none.
     bool grip(JPH::BodyID &body, JPH::SubShapeID &sub, JPH::Vec3 &local) const noexcept {
@@ -118,6 +124,9 @@ private:
     Cell cell(JPH::RVec3) const;
     void hold(JPH::PhysicsSystem &, JPH::BodyID);
     void drive(JPH::PhysicsSystem &, JPH::BodyID, const Node &);
+    // J-044c gains: the drive/hold force, split by mass share when the
+    // Matron set the hook, else to the body as before.
+    void apply_body_force(JPH::PhysicsSystem &, JPH::BodyID, const JPH::Vec3 &);
     bool valid(JPH::PhysicsSystem &, const Grip &) const;
     bool reach(JPH::PhysicsSystem &, JPH::BodyID, JPH::RVec3, const Grip &, bool count_budget = true) const;
     bool transition(JPH::PhysicsSystem &, JPH::BodyID, JPH::RVec3, const Node &, bool count_budget = true) const;
@@ -125,6 +134,7 @@ private:
                                   const Node &, Transfer &, unsigned &, bool) const;
     bool clear(JPH::PhysicsSystem &, JPH::BodyID, JPH::RVec3, JPH::RVec3, bool count_budget = true) const;
     mutable Report report_;
+    std::function<void(const JPH::Vec3 &)> body_force_;
     mutable bool incomplete_clearance_ = false;
     struct Failed { JPH::RVec3 from, to; };
     std::vector<Failed> failed_;

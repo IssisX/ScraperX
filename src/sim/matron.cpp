@@ -239,6 +239,10 @@ Matron::Matron(PhysicsSystem &physics, const std::uint32_t static_layer, const s
         physics_.AddConstraint(plank.bolt);
     }
     refresh_view();
+    // J-044c gains: the routecraft's whole-body drive and hold are split by
+    // mass share across her six bodies, as the feet and Climber drives are
+    // (Argon, #242).
+    routecraft_.set_body_force([this](const Vec3 &force) { add_body_force(force); });
 }
 
 Matron::~Matron() {
