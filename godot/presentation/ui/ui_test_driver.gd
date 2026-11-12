@@ -149,6 +149,9 @@ const SCENARIOS := {
 	# Walking choppiness: frame-time percentiles on a fixed walk-and-look
 	# route across the yard (rendered only, like the probes above).
 	"perf_walk": 8,
+	# The helmet lamp's frame cost, on and off at the same still midnight
+	# pose (J-081): rendered only, measured locally under xvfb, not in CI.
+	"perf_night": 8,
 	"touch_bay": 11,
 	# Her corner pipe: she comes down the shaft after the climber, heard on it
 	# 4 s and more before she is there; a drum shoved off the edge onto her as
@@ -195,6 +198,9 @@ const SCENARIOS := {
 	# Close up, the smooth finishes and the rough ones (renders only, not in CI).
 	"look_finishes": 8,
 	"look_night_lamps": 8,
+	# The night climb at dusk, midnight and dawn, low, middle and high
+	# (J-081): renders only, not in CI.
+	"look_night_climb": 8,
 	"look_tower_stock_deck2": 25,
 	"look_tower_stock_176": 14,
 	# Look only (renders, not in CI): the summit lit at dusk, from its deck and from the ground.
@@ -501,6 +507,8 @@ func _run() -> void:
 			ok = await _perf_view_top()
 		"perf_walk":
 			ok = await _perf_walk(InputRouter.Device.TOUCH)
+		"perf_night":
+			ok = await _perf_night()
 		"perf_attrib", "perf_attrib_top", "perf_attrib_locker":
 			ok = await _perf_attrib()
 		"touch_matron_pipe":
@@ -561,6 +569,8 @@ func _run() -> void:
 			ok = await _look_finishes()
 		"look_night_lamps":
 			ok = await _look_night_lamps()
+		"look_night_climb":
+			ok = await _look_night_climb()
 		"look_tower_stock_deck2":
 			ok = await _look_tower_stock("tower_stock_deck2")
 		"look_tower_stock_176":
