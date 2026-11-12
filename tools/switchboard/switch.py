@@ -1816,8 +1816,8 @@ class Switch:
             branches = [b["name"] for b in self.gh.paged(f"repos/{self.gh.repo}/branches")]
             prs = self.listing(f"repos/{self.gh.repo}/pulls?state=open")
             problems = collab_plan.findings(model, issues, branches, prs)
-            open_jobs = {collab_plan.JOB.match(i.get("title") or "").group()
-                         for i in issues if collab_plan.JOB.match(i.get("title") or "")}
+            open_jobs = {m.group(1) for i in issues
+                         if (m := re.match(r"^(J-\d{3,}[a-z]?)(?!\w)", i.get("title") or ""))}
             closed = {ln.job for ln in model.lines if ln.job not in open_jobs}
             waiting = [ln.job for ln in model.owner_lines("muse")
                        if collab_plan.status(ln, closed=closed, prs=prs, branches=branches) == "queued"]
