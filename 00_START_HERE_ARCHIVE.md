@@ -13,6 +13,7 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-12 | *"And I want you to answer that stuff for me, I think"*: Cory handed Claude the six finish-audit questions. Claude answered: the played route is the route; the fight is done at today's contact and her jointed upper body is parked; one week (to 11-19) for the hold with real arms; her chase is done at 340 m, not the summit; the open set pieces are parked and return as missions, except the bait lift and the swing, which finish; the story is the punch list. Claude refused the audit's swap of the measured-peak check for the bare law (it weakens a test). | Rule 56 |
 | 11-12 | *"either fable 5.2 or Argon, remember?!"*; *"alert me each time before you're about to use fable"*, *"on high 1st"*; *"WAITING FOR THIS AFTERNOON TO ARRIVE IS ABSOLUTELY DUMB"*: the hardest problems go at once to Argon (free) or, told to him before each use, a Fable 5.2 helper on high; nothing waits on a scheduled agent's run. | CLAUDE.md settled list |
 | 11-12 | *"I don't like how much we're losing in the compactions"* (with 11-11: *"I didn't like before when you said, okay, we compacted and I lost nothing"*): a compact loses detail; what matters goes to its home first, and what may be gone is said. | rule 16 |
 | 11-11 | *"Or grok / Or argon / Or ChatGPT / Not AND / Although i could do 2 different if needed"*: one hard question goes to one outside agent; a second only when needed. | integrator-hourly step 4 |
