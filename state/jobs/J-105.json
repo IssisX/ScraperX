@@ -10,7 +10,7 @@
  "created": "2026-11-12T03:39:03Z",
  "deadline": "2026-11-12T05:17:00Z",
  "head": "d62cd247bb0fdbdde395a8745cedc1fab793766d",
- "issue": 0,
+ "issue": 424,
  "job": "J-105",
  "landed": {
   "fb-bot/integrate-protected-j105": [
@@ -28,7 +28,7 @@
    "closed": null,
    "created": "2026-11-12T03:39:03Z",
    "dead": "2026-11-12T15:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-12T15:45:44Z",
    "due": "2026-11-12T05:17:00Z",
    "id": "O-2f7a1ee2",
    "kind": "fix",
@@ -54,5 +54,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T03:39:03Z"
+ "updated": "2026-11-12T15:45:44Z"
 }

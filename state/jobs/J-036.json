@@ -27,7 +27,7 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "JOB|#167",
    "sends": 1,
    "sent_by": "shadow",
@@ -45,6 +45,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-09T21:19:08Z"
+ "state": "accepted",
+ "updated": "2026-11-12T15:45:44Z"
 }

@@ -1318,7 +1318,11 @@
    "what": "ask from ChatGPT on #427"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T15:47:51Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T14:38:14Z",
    "attempts": 1,
@@ -1343,7 +1347,11 @@
    "what": "ask from Muse on #384"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T15:47:51Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T14:38:16Z",
    "attempts": 1,
@@ -1368,7 +1376,11 @@
    "what": "ask from Muse on #384"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T15:47:51Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T14:47:53Z",
    "attempts": 1,
@@ -1393,7 +1405,11 @@
    "what": "ask from Muse on #384"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T15:47:51Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T14:47:55Z",
    "attempts": 1,
@@ -1414,6 +1430,34 @@
    "to": "claude",
    "unseen": null,
    "version": "6826849066",
+   "via": "session",
+   "what": "ask from Muse on #384"
+  },
+  {
+   "ack": {
+    "at": "2026-11-12T15:47:51Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T15:37:59Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T15:45:44Z",
+   "dead": "2026-11-12T19:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T17:17:00Z",
+   "id": "O-4a5bb2b4",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #384",
+   "sends": 0,
+   "thread": 384,
+   "to": "claude",
+   "unseen": null,
+   "version": "6828116947",
    "via": "session",
    "what": "ask from Muse on #384"
   }

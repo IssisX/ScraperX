@@ -27,7 +27,7 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": "2026-11-12T14:29:46Z",
-   "missing": 1,
+   "missing": 2,
    "rechecked": "2026-11-12T07:49:06Z",
    "ref": "JOB|#228",
    "reopened": "2026-11-12T14:29:46Z",
@@ -77,6 +77,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T14:43:28Z"
+ "state": "accepted",
+ "updated": "2026-11-12T15:45:44Z"
 }

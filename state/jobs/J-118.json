@@ -26,7 +26,7 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": "2026-11-12T14:43:28Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "JOB|#440",
    "sends": 1,
    "sent_by": "live",
@@ -46,5 +46,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-12T14:29:46Z"
+ "updated": "2026-11-12T15:45:44Z"
 }

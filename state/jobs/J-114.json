@@ -10,13 +10,13 @@
  "created": "2026-11-12T14:43:28Z",
  "deadline": null,
  "head": "2afcf57e1e9937f584cd6fac6b68f83191183365",
- "issue": 0,
+ "issue": 433,
  "job": "J-114",
  "landed": {
   "fb-bot/integrate-j114": [
    "2afcf57e1e9937f584cd6fac6b68f83191183365",
-   "",
-   "2026-11-12T14:43:28Z"
+   "merged #465",
+   "2026-11-12T15:45:44Z"
   ]
  },
  "obligations": [],
@@ -27,6 +27,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T14:43:28Z"
+ "state": "accepted",
+ "updated": "2026-11-12T15:45:44Z"
 }

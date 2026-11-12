@@ -61,7 +61,7 @@
    "kind": "ruling",
    "last_error": "",
    "last_sent": null,
-   "missing": 1,
+   "missing": 2,
    "ref": "BRANCH|chatgpt/integrate-j044-review-gate-20261109",
    "sends": 0,
    "thread": 347,
@@ -250,5 +250,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T14:43:28Z"
+ "updated": "2026-11-12T15:45:44Z"
 }

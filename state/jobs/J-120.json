@@ -16,7 +16,7 @@
    "ack": null,
    "ack_rule": "work|reply|ack",
    "asked": null,
-   "attempts": 0,
+   "attempts": 1,
    "closed": null,
    "created": "2026-11-12T14:29:46Z",
    "dead": "2026-11-12T22:29:46Z",
@@ -25,10 +25,11 @@
    "id": "O-98f48da7",
    "kind": "start-agent",
    "last_error": "",
-   "last_sent": null,
-   "missing": 0,
+   "last_sent": "2026-11-12T15:45:44Z",
+   "missing": 1,
    "ref": "JOB|#442",
-   "sends": 0,
+   "sends": 1,
+   "sent_by": "live",
    "thread": 442,
    "to": "muse",
    "unseen": null,
@@ -44,6 +45,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T14:29:46Z"
+ "state": "accepted",
+ "updated": "2026-11-12T15:45:44Z"
 }

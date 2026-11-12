@@ -168,9 +168,17 @@
    ],
    "live": true,
    "text": "To Cory: Needs you (2), from the switchboard at 11-11 11:48 PM Central.\n\n- Needs you: J-098 fix on #416: 'fb-bot/integrate-j098' is green with no PR: open one (Muse cannot open PRs). Claude did not act (2 send(s) by session, no ack); since 11-11 11:48 PM Central. Done: /ack O-0fe51a2e\n- Needs you: thread ask on #378: ask from Grok on #378. PE did not act (2 send(s) by watch, no ack); since 11-11 10:39 PM Central. Done: /ack O-a40a97ab\n\nStill standing from earlier batches: 23 (the day's shadow file lists them)."
+  },
+  {
+   "at": "2026-11-12T15:45:44Z",
+   "keys": [
+    "O-2f7a1ee2"
+   ],
+   "live": true,
+   "text": "To Cory: Needs you (1), from the switchboard at 11-12 9:45 AM Central.\n\n- Needs you: J-105 fix: 'fb-bot/integrate-protected-j105' is green with no PR: open one (Muse cannot open PRs). Claude did not act (2 send(s) by session, no ack); since 11-12 9:45 AM Central. Done: /ack O-2f7a1ee2\n\nStill standing from earlier batches: 19 (the day's shadow file lists them)."
   }
  ],
- "last_batch": "2026-11-12T05:48:38Z",
+ "last_batch": "2026-11-12T15:45:44Z",
  "last_error": "",
  "mode": "live",
  "pending": {},
@@ -181,6 +189,7 @@
   "O-1ac5a17e": "2026-11-10T15:09:20Z",
   "O-2c7fcb6a": "2026-11-11T21:07:56Z",
   "O-2d379bb7": "2026-11-11T18:18:52Z",
+  "O-2f7a1ee2": "2026-11-12T15:45:44Z",
   "O-32775b74": "2026-11-12T02:29:16Z",
   "O-32c09091": "2026-11-11T05:28:39Z",
   "O-47e6deff": "2026-11-12T02:29:16Z",

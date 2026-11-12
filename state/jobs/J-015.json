@@ -1,10 +1,11 @@
 {
- "attempt": 1,
+ "attempt": 3,
  "blocked": null,
  "branches": {
   "claude/integrate-j015": "cdc6ec353a9506bebab23387801b5b2af00743f9",
   "fb-bot/integrate-j015-slice1": "2f8b1f21d655f8e11e9648cbba743355c31f2314",
   "fb-bot/integrate-j015-wreck-way-on": "a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
+  "fb-bot/integrate-protected-j015-magnet-grips": "a949f76fee5c27cdc9c8efc3133030fba2292ee5",
   "fb-bot/integrate-protected-j015-slice1": "2ba17f22df2342e37f48dc064d47509399463a9a",
   "fb-bot/integrate-protected-j015-wreck-way-on": "aee6d79d91249016e5788e205e16b0958f4bd427"
  },
@@ -16,8 +17,8 @@
   "6788124672:51"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": null,
- "head": "a949f76fee5c27cdc9c8efc3133030fba2292ee5",
+ "deadline": "2026-11-12T17:17:00Z",
+ "head": "22818c35ce7b42cf2d5d85234136c4b0c4c51c7d",
  "issue": 122,
  "job": "J-015",
  "landed": {
@@ -35,6 +36,11 @@
    "a280fe6b127c04d9a9ab57d7345b725a00f6fbea",
    "",
    "2026-11-09T17:35:20Z"
+  ],
+  "fb-bot/integrate-protected-j015-magnet-grips": [
+   "a949f76fee5c27cdc9c8efc3133030fba2292ee5",
+   "closed #389",
+   "2026-11-12T15:45:44Z"
   ],
   "fb-bot/integrate-protected-j015-slice1": [
    "2ba17f22df2342e37f48dc064d47509399463a9a",
@@ -647,17 +653,94 @@
    "version": "6792684089",
    "via": "session",
    "what": "ask from Muse on #122"
+  },
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T15:45:44Z",
+   "dead": "2026-11-12T19:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T17:17:00Z",
+   "id": "O-5127dbe0",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T15:45:44Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j015-slice1",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 122,
+   "to": "claude",
+   "unseen": null,
+   "version": "red:2f8b1f21d655f8e11e9648cbba743355c31f2314",
+   "via": "session",
+   "what": "`fb-bot/integrate-j015-slice1` proof red: scope, no PR"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T15:45:44Z",
+   "dead": "2026-11-12T19:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T17:17:00Z",
+   "id": "O-214e6190",
+   "kind": "ruling",
+   "last_error": "",
+   "last_sent": "2026-11-12T15:45:44Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j015-magnet-grips",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 389,
+   "to": "claude",
+   "unseen": null,
+   "version": "closed:a949f76fee5c27cdc9c8efc3133030fba2292ee5",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j015-magnet-grips` @ a949f76f: closed #389 without merging at this head: reopen it, or delete the branch"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T15:23:06Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T15:45:44Z",
+   "dead": "2026-11-12T19:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T17:17:00Z",
+   "id": "O-5f8a401c",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-12T15:45:44Z",
+   "missing": 0,
+   "ref": "ASK|ask on #122",
+   "sends": 1,
+   "sent_by": "inbox",
+   "thread": 122,
+   "to": "claude",
+   "unseen": null,
+   "version": "6827734051",
+   "via": "session",
+   "what": "ask from Muse on #122"
   }
  ],
  "outcome": null,
  "outcome_reason": "",
- "owner": "muse",
- "pr": 389,
+ "owner": "claude",
+ "pr": 466,
  "pr_done": "",
  "prs": [
-  389
+  389,
+  467,
+  466
  ],
- "review": "FIX",
- "state": "proof",
- "updated": "2026-11-12T14:29:46Z"
+ "review": "",
+ "state": "review",
+ "updated": "2026-11-12T15:45:44Z"
 }
