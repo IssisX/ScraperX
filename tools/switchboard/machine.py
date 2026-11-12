@@ -75,7 +75,10 @@ TABLE: dict[tuple[str, str], Rule] = {
     ("reviewed", "eye"): Rule(SWITCH, hours(1), "run the eye on #{pr} @ {sha}"),
     ("reviewed", "wait"): Rule(SWITCH, hours(1), "merge #{pr} once the merge rule clears: {why}"),
     ("*", "claimed"): Rule(OWNER, hours(2), "push {wip}: a start was mailed and no head is on the remote"),
+    ("*", "unpushed"): Rule(OWNER, NOW, "push {why} to GitHub: a mail names it and GitHub does not have it, so it "
+                                        "proves nothing and nobody may act on it"),
     ("*", "codex"): Rule(INTEGRATOR, hours(1), "post `@codex review` on #{pr} (only a person's login wakes Codex)"),
+    ("*", "asked"): Rule(REVIEWER, hours(3), "review #{pr} @ {sha}: Codex was asked, and the merge waits for its clean review"),
     ("*", "fix"): Rule(OWNER, hours(6), "push a head to {ref} that answers the open FIX on #{pr} ({why})"),
     ("*", "stacked"): Rule(OWNER, hours(6), "push the fix onto {ref}: it sits on {why}, which waits for #{pr} to land"),
     ("*", "base"): Rule(OWNER, hours(3), "merge trunk into {ref} and push: #{pr} conflicts with the base"),
@@ -151,6 +154,8 @@ class Evidence:
     notice_at: dt.datetime | None = None       # the notice of that version was sent
     receipt_at: dt.datetime | None = None      # the owner's `plan <version>` came back
     claimed_at: dt.datetime | None = None      # the owner mailed "started"
+    unpushed: str = ""                         # a commit the owner's newest mail names that GitHub does not have
+    unpushed_at: dt.datetime | None = None     # when that mail was filed
     heads: tuple[Head, ...] = ()               # every live head that names the job, whoever pushed it
     work: Work | None = None                   # the owner's proof-bearing head
     merged_at: dt.datetime | None = None       # a `Job:` PR of it merged
@@ -234,6 +239,15 @@ def step(ev: Evidence, lane: str = "", ahead: str = "") -> Step:
     """One job's state and next step, from its evidence alone. `lane`: why the owner may not open a lane for it
     now ("" when it may): the table decides that from every other job's state (table()). `ahead`: who owns the
     job it waits on."""
+    row = _step(ev, lane, ahead)
+    if ev.unpushed and row.state not in ("conflict", "closed", "landed", "held"):
+        # the state stays what GitHub shows; the step is the push, and it is late at once (J-106: a job was
+        # opened on a local "baseline" within minutes)
+        return _row(ev, row.state, "unpushed", ev.unpushed[:12], ev.unpushed_at)
+    return row
+
+
+def _step(ev: Evidence, lane: str, ahead: str) -> Step:
     found = clashes(ev)
     if found:
         return _row(ev, "conflict", why="; ".join(found))
@@ -360,9 +374,11 @@ def when(stamp) -> dt.datetime | None:
 
 
 def work_of(f: "rules.PrFacts", d: "rules.MergeDecision", team: "rules.Team", *, proof_at="", codex_asked: bool = False,
-            stacked: str = "") -> Work:
+            codex_woken: str = "", stacked: str = "") -> Work:
     """An open PR as the steer sweep read it (its facts and the merge rule's decision), as the machine's Work.
-    Nothing is decided here that rules.merge_decision did not decide: this names the gate that is shut."""
+    Nothing is decided here that rules.merge_decision did not decide: this names the gate that is shut.
+    codex_asked: the workflow bot's ask mark is on this head (its mention wakes nobody: the integrator posts).
+    codex_woken: when a person's login asked Codex for this head ("" if none did): the review is then Codex's."""
     author = team.vendor_of_branch(f.head_ref)
     lands = sorted((v for v in f.verdicts if v.kind == "review" and v.verdict == "LAND"
                     and rules.names_head(v, f.head_sha) and rules.land_counts(v, author, team)),
@@ -390,10 +406,12 @@ def work_of(f: "rules.PrFacts", d: "rules.MergeDecision", team: "rules.Team", *,
     if not lands:
         note = any(v.kind == "review" and v.verdict == "NOTE" and v.author_login == rules.BOT_LOGIN
                    and rules.names_head(v, f.head_sha) for v in f.verdicts)
-        return Work(**base, gate="note" if note else "codex" if codex_asked else "", at=proven)
+        return Work(**base, gate="note" if note else "" if codex_woken else "codex" if codex_asked else "", at=proven)
     at = max(t for t in (proven, when(lands[0].created_at)) if t) if proven or when(lands[0].created_at) else None
     if d.action == "MERGE":
         return Work(**base, land=True, at=at)
+    if "the Codex app's clean review" in reasons and codex_woken:
+        return Work(**base, land=True, gate="asked", why=reasons, at=max(t for t in (at, when(codex_woken)) if t))
     gate = ("codex" if "the Codex app's clean review" in reasons else
             "security" if "no automatic Claude review on this head" in reasons else
             "eye" if "no eye LAND" in reasons else
@@ -565,7 +583,7 @@ def named_shas(mail: Mail, by_thread: dict[int, str]) -> dict[str, tuple[Post, t
 def mail_clashes(model: P.Plan, mail: Mail) -> dict[str, list[str]]:
     """job -> what the mail says that the plan does not hold. The worker mailed a start on a job the plan gives
     someone else or holds (J-109, J-038: taken by mail, built twice). The newest hand mail on a job orders other
-    than the plan says (an order that lives only in a mail). A mail names a commit GitHub does not have (J-106)."""
+    than the plan says (an order that lives only in a mail)."""
     out: dict[str, list[str]] = {}
     by_job = model.by_job()
     for job, at in started_posts(mail).items():
@@ -579,9 +597,9 @@ def mail_clashes(model: P.Plan, mail: Mail) -> dict[str, list[str]]:
             out.setdefault(job, []).append(f"{mail.worker} mailed that it started; the plan gives it to {ln.owner}")
         elif ln and ln.hold:
             out.setdefault(job, []).append(f"{mail.worker} mailed that it started; the plan holds it ({ln.hold[:60]})")
-    newest: dict[str, Post] = {}
-    for p in mail.posts:
-        if p.hand:
+    newest: dict[str, Post] = {}   # the newest hand mail that orders something on the job: a later mail that
+    for p in mail.posts:           # only mentions it changes nothing (J-109: the taking, then a rulings mail)
+        if p.hand and (TAKES.search(p.subject) or STOPS.search(p.subject) or GIVES.search(p.subject)):
             for job in dict.fromkeys(JOB_ID.findall(p.subject)):
                 newest[job] = p
     for job, p in newest.items():
@@ -597,11 +615,19 @@ def mail_clashes(model: P.Plan, mail: Mail) -> dict[str, list[str]]:
         elif GIVES.search(p.subject) and not TAKES.search(p.subject) and not STOPS.search(p.subject) \
                 and (not mine or ln.hold):
             out.setdefault(job, []).append(f"{said}; the plan {'holds it' if mine else 'gives it to ' + ln.owner}")
-    for job, sha in mail.missing.items():
-        if job in by_job:
-            out.setdefault(job, []).append(f"{mail.worker}'s mail names commit {sha[:12]}, which is not on GitHub: "
-                                           "a local head proves nothing")
     return out
+
+
+def _unpushed(ln: P.Line, mail: Mail, named: tuple[Post, tuple[str, ...]] | None, mine: list[Head]) -> dict:
+    """The commit the worker's newest mail on its own job names and GitHub does not have, until a head of the
+    job is pushed after that mail (what it does next is then seen on the remote)."""
+    sha = mail.missing.get(ln.job, "")
+    if not sha or ln.owner != mail.worker:
+        return {}
+    said = named[0].at if named else None
+    if said and any(h.at and h.at > said for h in mine):
+        return {}
+    return {"unpushed": sha, "unpushed_at": said}
 
 
 def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None, mail: Mail | None = None,
@@ -634,6 +660,7 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
     closed = reads.get("closed") or frozenset()
     vers = versions(model, reads.get("issues"))
     said, wrong = started_posts(mail), mail_clashes(model, mail)
+    named = named_shas(mail, {ln.issue: ln.job for ln in model.lines})
     out: dict[str, Evidence] = {}
     for ln in model.lines:
         mine = [h for h in heads.get(ln.job, []) if owns(ln.owner, h.ref)]
@@ -658,6 +685,7 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
             version=ver, planned_at=planned_at, notice_at=sent,
             receipt_at=receipt_at(mail, ln.owner, ver, sent) if sent else None,
             claimed_at=said.get(ln.job) if ln.owner == mail.worker else None,
+            **_unpushed(ln, mail, named.get(ln.job), mine),
             heads=tuple(heads.get(ln.job, [])), work=work, merged_at=when((reads.get("merged_at") or {}).get(ln.job)),
             clashes=tuple(wrong.get(ln.job, [])))
     for job, its in titled.items():

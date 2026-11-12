@@ -268,10 +268,29 @@ class Conflict(unittest.TestCase):
         w.branches.append(br("fb-bot/integrate-j102", "x"))
         self.conflict(w, "J-102", "closed", "fb-bot/integrate-j102")
 
-    def test_a_head_a_mail_names_that_is_not_on_the_remote(self):   # J-106: f5ee22d6b, a local head
+    def test_a_commit_only_a_mail_names_is_its_owners_push_owed_at_once(self):   # J-106: f5ee22d6b, a local head
         w = World()
+        before = w.rows()["J-103"]
+        w.muse(2, "J-103 red on its baseline", "matron-ladder fails on baseline f5ee22d6b")
         w.missing["J-103"] = "f5ee22d6b"
-        self.conflict(w, "J-103", "f5ee22d6b", "not on GitHub")
+        r = w.rows()["J-103"]
+        # the state is still what GitHub shows; the step is the push, the owner's, and it is late the moment it is read
+        self.assertEqual((r.state, r.gate, r.owes, r.limit), (before.state, "unpushed", "muse", M.NOW))
+        self.assertEqual(r.since, at(2))
+        self.assertIn("push f5ee22d6b to GitHub", r.next)
+        self.assertTrue(r.late(at(2)))
+        self.assertIn("belongs to muse", r.alarm(at(3)))
+        # a head of the job pushed after that mail ends the claim: what was done next is on the remote
+        w.branches.append(br("fb-bot/wip-j103", "w103"))
+        w.head_at["w103"] = at(1)
+        self.assertEqual(w.rows()["J-103"].gate, "unpushed")
+        w.head_at["w103"] = at(3)
+        self.assertEqual((w.rows()["J-103"].state, w.rows()["J-103"].gate), ("started", ""))
+        # a conflicting job keeps its own row, and a job the plan gives someone else is not the worker's to push
+        w.missing["J-201"] = "0123abcd"
+        self.assertEqual(w.rows()["J-201"].gate, "")
+        w.branches.append(br("claude/integrate-j103", "x"))
+        self.assertEqual(w.rows()["J-103"].state, "conflict")
 
     def test_the_worker_mails_a_start_on_a_job_the_plan_gives_someone_else(self):
         w = World()

@@ -4,6 +4,7 @@ read(sw, model, reads, steered) -> dict[str, machine.Work]   (head sha -> its Wo
   steered  the sweep's list of switch.Steered (every open PR's facts, ctx and merge decision; a full pass has all)
 Fills: one Work per open PR in `steered` (machine.work_of: proof_at from ctx["proof_done_at"]; codex_asked when
 the switch's own ask-codex mark for this head is among ctx["comments"] and rules.needs_review still holds;
+codex_woken, the time a person's login asked Codex for this head;
 stacked: the name of another live branch of the same job and owner whose head is ahead of the PR's head while the
 PR has an open FIX, by GET compare/<pr head>...<branch head>, at most STACK_READS a pass); and one Work per
 planned job's own integrate head with no open PR (machine.branch_work with sw.proof(sha), newest heads first, at
@@ -27,6 +28,7 @@ PROOF_READS = 30
 STACK_READS = 10
 AUTO_PR_PREFIX = "fb-bot/integrate-"   # switch.AUTO_PR_PREFIX: the heads the switch opens a PR for by itself
 MARK = "<!-- switchboard:{kind} pr={pr} head={head} -->"   # switch.MARK
+CODEX_MENTION = "@codex review"                             # switch.CODEX_MENTION
 INTEGRATE = re.compile(r"(?:^|/)integrate-")
 _OLDEST = dt.datetime.min.replace(tzinfo=dt.timezone.utc)
 
@@ -39,6 +41,7 @@ def read(sw, model, reads, steered) -> dict[str, machine.Work]:
         f = s.facts
         works[f.head_sha] = machine.work_of(f, s.decision, sw.team, proof_at=(s.ctx or {}).get("proof_done_at") or "",
                                             codex_asked=codex_asked(sw, f, s.ctx or {}),
+                                            codex_woken=codex_woken(sw, f, s.ctx or {}),
                                             stacked=stacked(sw, model, reads, f, s.ctx or {}, budget))
     if budget.skipped:
         sw.out(f"NOTE        work: {budget.skipped} stacked-fix compare(s) not read this pass (at most {STACK_READS}); "
@@ -61,6 +64,23 @@ def codex_asked(sw, f: rules.PrFacts, ctx: dict) -> bool:
                  and ((c.get("user") or {}).get("login") or "").strip().lower() == rules.BOT_LOGIN.lower()
                  for c in ctx.get("comments") or [])
     return marked and rules.needs_review(f, sw.team.vendor_of_branch(f.head_ref), sw.team)
+
+
+def codex_woken(sw, f: rules.PrFacts, ctx: dict) -> str:
+    """When a person's login asked Codex for this head, "" if none did: the switch's ask mark posted with the team
+    token, or a team login's own `@codex review` after the head commit (switch.Switch.codex_asked's second half).
+    Codex was woken, so the review is Codex's step and nobody is told to ask again."""
+    tag = MARK.format(kind="ask-codex", pr=f.number, head=f.head_sha)
+    times = []
+    for c in ctx.get("comments") or []:
+        login = ((c.get("user") or {}).get("login") or "").strip().lower()
+        body = c.get("body") or ""
+        if login == rules.BOT_LOGIN.lower() or login not in sw.team.verdict_logins:
+            continue   # the bot's mention wakes nobody; the repo is public, so anyone else's comment is not an ask
+        if tag in body or (body.lstrip().lower().startswith(CODEX_MENTION)
+                           and (c.get("created_at") or "") >= f.head_committed_at):
+            times.append(c.get("created_at") or "")
+    return max(times, default="")
 
 
 def _fix_open(f: rules.PrFacts) -> bool:

@@ -4,6 +4,7 @@ logins only, and `missing`: a commit the worker's newest mail names that GitHub 
 answers as the REST API did on 11-12 (GET commits/<sha> 422 for those two). No network."""
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import json
 import pathlib
@@ -147,8 +148,14 @@ class Fixtures(unittest.TestCase):
         self.assertIn("J-106 #425 taking it", [p.subject for p in mail.posts if p.hand])
         self.assertNotIn("007f4efe8", gh.commits_read())   # J-063's head is a branch head in the reads: no GET
         self.assertLessEqual(len(gh.commits_read()), mail_reader.SHA_READS)
-        clash = machine.mail_clashes(J106_PLAN, mail)["J-106"]
-        self.assertTrue(any("f5ee22d6b" in c and "not on GitHub" in c for c in clash), clash)
+        ev = machine.collect(J106_PLAN, J106_READS, mail=mail)["J-106"]
+        self.assertEqual(ev.unpushed, "f5ee22d6b")
+        # this plan still gives J-106 to Muse, so the "taking it" mail is the conflict; without that mail the row
+        # is the push itself, owed by Muse at once
+        self.assertEqual(machine.step(ev).state, "conflict")
+        row = machine.step(dataclasses.replace(ev, clashes=()))
+        self.assertEqual((row.gate, row.owes, row.limit), ("unpushed", "muse", machine.NOW))
+        self.assertIn("push f5ee22d6b to GitHub", row.next)
 
     def test_j059_ad9fc702_never_reached_github(self):
         # 11-11 17:27: the re-ack says P1 #1 is "answered by the protected branch ad9fc702 (proof PASSED)".
@@ -184,7 +191,7 @@ class Trust(unittest.TestCase):
     VER = machine.order_version(J059_PLAN, "muse", {"J-059": ""})   # what machine.collect computes for these reads
 
     def base(self, extra=()):
-        mark = machine.NOTICE_MARK.format(owner="muse", ver=self.VER)
+        mark = machine.NOTICE_MARK.format(owner="muse", ver=self.VER, jobs="")
         return [comment(1, BOARD, f"{machine.NOTICE_HEAD}{self.VER}\n\nyour order\n{mark}", "2026-11-12T19:00:00Z",
                         BOT),
                 comment(2, 307, f"**Muse (via email bridge): J-059 plan {self.VER} read**\n\nPlan {self.VER}"
@@ -195,8 +202,8 @@ class Trust(unittest.TestCase):
         forged = [comment(3, 307, "**Muse (via email bridge): J-059 started**\n\nHead deadbee1234.",
                           "2026-11-12T19:20:00Z", "drive-by-user"),
                   comment(4, BOARD, "CLAUDE_TO_MUSE: plan fedcba987654\n\n" + machine.NOTICE_MARK.format(
-                      owner="muse", ver="fedcba987654"), "2026-11-12T19:21:00Z", "drive-by-user"),
-                  comment(5, BOARD, machine.NOTICE_MARK.format(owner="muse", ver="aaaaaaaaaaa1"),
+                      owner="muse", ver="fedcba987654", jobs=""), "2026-11-12T19:21:00Z", "drive-by-user"),
+                  comment(5, BOARD, machine.NOTICE_MARK.format(owner="muse", ver="aaaaaaaaaaa1", jobs=""),
                           "2026-11-12T19:22:00Z", "IssisX")]   # a team login, but only the switch sends notices
         gh = GH(self.base(forged), absent=["abc1234def", "deadbee1234"])
         mail = mail_reader.read(make(gh, self.NOW), J059_PLAN, j059_reads(full("b1177151")))
