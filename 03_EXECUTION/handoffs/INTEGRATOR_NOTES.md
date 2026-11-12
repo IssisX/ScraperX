@@ -18,7 +18,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. Grok or ChatGPT run an idea workflow on request from a copyable prompt in chat (11-11). 367 archived branches: deleting waits on Cory.
 
-- 11-12 in flight: helpers J-108 (re-pin + proofs, then I open its 2 PRs), J-001 Fable helper done: budget-list branch refused (raised 18 leak rows; peak 13200 N); next J-001 step is charging her second grip to her budget, a new Opus-high helper, ladder fresh; S2 0.5 m staging move held for review; J-107 (taken from Muse: the proof of the new split; report its hours), routing study (writes work/tasks/job-routing.md uncommitted for my review). Fable audit prompt given to Cory (branch fable/finish-audit): on his OK of its finish line, only listed jobs are queued for the current parts. #343 waits on a fresh Codex state.
+- 11-12 in flight: J-108 (re-pin + proofs; then I open its 2 PRs); J-001 grip-charge helper (second hand to her budget; may also clear J-044c's hand2-arm and grab-arm leaks); J-128 helper (taken by job-routing.md). J-107 DONE in about 45 min (cause: J-054 inserts stock mid-table; Muse builds; PR #454 comments). Next free slot: J-044c gains tune after Muse's split. Fable audit running in Cory's session (branch fable/finish-audit): on his OK, only its finish list is queued. #343 waits on Codex.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
