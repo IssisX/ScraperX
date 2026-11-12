@@ -323,8 +323,13 @@ GuideIndex Kit::add_guide(const BodyIndex body, const JPH::Vec3 axis, const floa
     return GuideIndex{static_cast<std::uint32_t>(guides_.size() - 1U)};
 }
 
-void Kit::set_dogs(const GuideIndex guide, const float pitch) {
+void Kit::set_dogs(const GuideIndex guide, const float pitch, const float from) {
     guides_[guide.value].dog_pitch = pitch;
+    guides_[guide.value].dog_from = from;
+}
+
+void Kit::set_platform(const GuideIndex guide) {
+    guides_[guide.value].platform = true;
 }
 
 void Kit::set_guide_friction(const GuideIndex guide, const float max_friction_force) {
@@ -823,6 +828,9 @@ void Kit::pre_step(const float delta_seconds) {
             disconnect_rope(rope);
             rope.parted = true;
             rope.tension = 0.0F;
+            // What it held falls, though it slept hanging there (loose stock
+            // sleeps once at rest): taking the rope away wakes nothing.
+            system_.GetBodyInterface().ActivateBody(bodies_[rope.body1.value].id);
         }
     }
     for (Catch &catch_record : catches_) {
@@ -1412,7 +1420,7 @@ void Kit::engage_dogs(Guide &guide) {
     const float teeth_below_top =
         std::ceil((guide.max_travel - travel) / guide.dog_pitch - 1.0e-3F);
     const float tooth = guide.max_travel - teeth_below_top * guide.dog_pitch;
-    if (tooth > guide.dog_floor + 1.0e-4F) {
+    if (tooth >= guide.dog_from - 1.0e-4F && tooth > guide.dog_floor + 1.0e-4F) {
         guide.dog_floor = tooth;
     }
 }
@@ -2290,6 +2298,49 @@ float Kit::guide_travel(const GuideIndex guide) const noexcept {
     const Guide *record = find(guides_, guide);
     return record != nullptr && record->slider != nullptr ? record->slider->GetCurrentPosition()
                                                           : 0.0F;
+}
+
+std::vector<Kit::HoistInfo> Kit::hoists() const {
+    std::vector<HoistInfo> out;
+    for (const Guide &g : guides_) {
+        if (std::abs(g.axis.GetY()) < 0.9F || g.slider == nullptr) {
+            continue;
+        }
+        HoistInfo h;
+        h.car = g.body;
+        h.axis = g.axis;
+        h.min_travel = g.min_travel;
+        h.max_travel = g.max_travel;
+        h.travel = g.slider->GetCurrentPosition();
+        bool caught = false;
+        for (std::size_t c = 0; c < catches_.size(); ++c) {
+            const Catch &k = catches_[c];
+            if (k.body != g.body) {
+                continue;
+            }
+            caught = true;
+            h.held = h.held || catch_latched(CatchIndex{static_cast<std::uint32_t>(c)});
+            if (k.pin_body.valid()) {
+                for (const Guide &pg : guides_) {
+                    if (pg.body == k.pin_body && pg.slider != nullptr) {
+                        h.pins.push_back({k.pin_body, pg.axis, pg.slider->GetCurrentPosition(), k.pin_tolerance});
+                    }
+                }
+            } else if (const Lever *lever = find(levers_, k.lever); lever != nullptr) {
+                for (const Line &line : lines_) {
+                    if (line.lever_body == lever->body) {
+                        h.weights.push_back(line.handle_body);
+                    }
+                }
+            }
+        }
+        h.caught = caught;
+        h.platform = g.platform;
+        if (caught || g.platform) {
+            out.push_back(std::move(h));
+        }
+    }
+    return out;
 }
 
 float Kit::guide_peak_speed(const GuideIndex guide) const noexcept {

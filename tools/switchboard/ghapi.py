@@ -66,6 +66,11 @@ class RateLimited(GitHubError):
     """GitHub's rate limit answered, RATE_TRIES times: the item waits for the next sweep."""
 
 
+class TimedOut(GitHubError):
+    """A call that failed after at least one of its attempts hit TIMEOUT_S: a GitHub that hangs, not one that answered
+    (the switch bounds how many of these one sweep pays for, switch.py red_tests)."""
+
+
 def split_response(raw: bytes) -> tuple[int, dict[str, str], str]:
     """`gh api -i` output: (status, lower-cased headers, body text). Status 0 when there is no status line."""
     text = raw.decode("utf-8", "replace")
@@ -241,7 +246,7 @@ class GitHub:
             args += ["--input", "-"]
         data = json.dumps(body).encode("utf-8") if body is not None else None
         attempts = GET_ATTEMPTS if method == "GET" else 1
-        rate_tries, attempt, status, detail = 0, 0, 0, ""
+        rate_tries, attempt, status, detail, timed_out = 0, 0, 0, "", False
         while True:
             attempt += 1
             headers: dict[str, str] = {}
@@ -251,11 +256,12 @@ class GitHub:
                 out = (self.runner or subprocess.run)(args, input=data, capture_output=True, timeout=TIMEOUT_S, env=env)
             except subprocess.TimeoutExpired:
                 detail = f"timed out after {TIMEOUT_S}s"
+                timed_out = True
             else:
                 if binary:
                     if out.returncode == 0:
                         return out.stdout
-                    detail = out.stderr.decode("utf-8", "replace").strip()
+                    detail = out.stderr.decode("utf-8", "replace").strip() or f"exit {out.returncode}, no stderr"
                 else:
                     status, headers, text = split_response(out.stdout or b"")
                     if not token:   # another token's call (the merge token) has its own limit: not this run's
@@ -290,7 +296,7 @@ class GitHub:
             time.sleep(random.uniform(0, 2 ** attempt))
         if token:
             detail = detail.replace(token, "[token]")
-        raise GitHubError(method, path, detail, status)
+        raise (TimedOut if timed_out else GitHubError)(method, path, detail, status)
 
     # reads
     def get(self, path: str, accept: str = "") -> Any:

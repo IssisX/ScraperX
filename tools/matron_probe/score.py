@@ -287,21 +287,70 @@ def _ray_hits(p, direction, a, b, c):
     return int(hit.sum())
 
 
-def mesh_inside(p, parts_tris):
+def _aabb_dist(p, lo, hi):
+    """Distance from point p to the axis-aligned box [lo, hi] (0 when p is inside it). A lower bound on
+    the distance from p to any triangle inside the box, so a part whose box is farther than the best
+    distance found so far cannot hold the nearest triangle."""
+    off = np.maximum(lo - p, 0.0) + np.maximum(p - hi, 0.0)
+    return float(np.linalg.norm(off))
+
+
+def _ray_hits_aabb(p, direction, lo, hi):
+    """Does the ray from p along direction reach the box [lo, hi] at t > 1e-6? The slab test: a ray
+    that misses the box cannot hit any triangle inside it, so the crossing count for that part and
+    direction is 0. Exact for any mesh, open or closed — it only skips rays that cannot reach the part."""
+    tmin, tmax = -np.inf, np.inf
+    for i in range(3):
+        d = direction[i]
+        if abs(d) < 1e-12:
+            if p[i] < lo[i] or p[i] > hi[i]:
+                return False
+            continue
+        t1 = (lo[i] - p[i]) / d
+        t2 = (hi[i] - p[i]) / d
+        tmin = max(tmin, min(t1, t2))
+        tmax = min(tmax, max(t1, t2))
+        if tmax < tmin:
+            return False
+    return tmax > 1e-6 and tmax >= max(tmin, 1e-6)
+
+
+def mesh_inside(p, parts_tris, parts_aabb=None):
     """Is point p inside her drawn body, per the triangle mesh? parts_tris is a list of (A, B, C)
-    vertex arrays, one per body part. Returns (inside, nearest-triangle distance). A point is inside if
-    any single part has an odd crossing count in two or more of the six axis directions: per part, so a
-    point inside both skin and tunic (two crossings out) still counts; two directions, so one ray grazing
-    a shared edge or vertex cannot fake it."""
+    vertex arrays, one per body part; parts_aabb is the matching list of (lo, hi) boxes, computed once
+    per frame by the caller (or from parts_tris here). Returns (inside, nearest-triangle distance). A
+    point is inside if any single part has an odd crossing count in two or more of the six axis
+    directions: per part, so a point inside both skin and tunic (two crossings out) still counts; two
+    directions, so one ray grazing a shared edge or vertex cannot fake it.
+
+    Two exact prunings, neither of which changes the result: a part whose box is farther than the best
+    distance found so far cannot hold the nearest triangle (the box distance is a lower bound on every
+    triangle in it), so its distance pass is skipped; and a ray that misses a part's box cannot cross
+    any triangle in it, so that direction contributes 0 crossings. Parts are visited nearest-box first
+    so the best distance drops as fast as possible."""
+    if parts_aabb is None:
+        parts_aabb = []
+        for (a, b, c) in parts_tris:
+            parts_aabb.append((np.minimum(np.minimum(a.min(axis=0), b.min(axis=0)), c.min(axis=0)),
+                               np.maximum(np.maximum(a.max(axis=0), b.max(axis=0)), c.max(axis=0))))
+    dists = [_aabb_dist(p, lo, hi) for (lo, hi) in parts_aabb]
+    order = sorted(range(len(parts_tris)), key=lambda k: dists[k])
     dmin = np.inf
-    for (a, b, c) in parts_tris:
+    for k in order:
+        if dists[k] >= dmin:
+            continue
+        a, b, c = parts_tris[k]
         if len(a):
             dmin = min(dmin, float(_tri_dist(p, a, b, c).min()))
-    for (a, b, c) in parts_tris:
+    for k in order:
+        a, b, c = parts_tris[k]
         if not len(a):
             continue
+        lo, hi = parts_aabb[k]
         odd = 0
         for dv in _MESH_DIRS:
+            if not _ray_hits_aabb(p, dv, lo, hi):
+                continue
             if _ray_hits(p, dv, a, b, c) % 2 == 1:
                 odd += 1
                 if odd >= 2:
@@ -1020,8 +1069,14 @@ class Scorer:
                     pos = skin(part, wb)
                     t = part.tris
                     tris.append((pos[t[:, 0]], pos[t[:, 1]], pos[t[:, 2]]))
+                # One box per part, from the skinned triangles above, reused for every candidate point
+                # this frame: mesh_inside prunes by it (a box farther than the best distance cannot hold
+                # the nearest triangle; a ray missing the box cannot cross the part).
+                aabbs = [(np.minimum(np.minimum(a.min(axis=0), b.min(axis=0)), c.min(axis=0)),
+                          np.maximum(np.maximum(a.max(axis=0), b.max(axis=0)), c.max(axis=0)))
+                         for (a, b, c) in tris]
                 for i in cand:
-                    inside_mesh, dmin = mesh_inside(q[i], tris)
+                    inside_mesh, dmin = mesh_inside(q[i], tris, aabbs)
                     s[i] = -dmin if inside_mesh else dmin
                     st[i] = s[i]
         vi = np.where(vi_l >= 0, idx[np.maximum(vi_l, 0)], -1)

@@ -921,6 +921,7 @@ void start_matron_shape_audit();
 void check_matron_shape_audit();
 void run_matron_ring_descent();
 void run_matron_ways();
+void run_matron_same_region();
 void run_matron_arm();
 void run_matron_fatality();
 void run_one_arm_route();
@@ -940,6 +941,7 @@ void run_matron_wreck();
 void run_matron_collision();
 void run_matron_balance();
 void run_matron_pipe();
+void run_matron_hoist();   // J-007: she rides the hoists her scan finds (sim_tests_matron_hoist.cpp)
 void run_matron_room();
 void run_matron_restore();
 void run_up_throw();

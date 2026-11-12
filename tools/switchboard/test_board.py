@@ -58,9 +58,10 @@ def warns(sw) -> list[str]:
 
 
 def red_branch(**kw):
-    """A red fb-bot branch with no PR: its Muse notice goes on the board. (the fake, the notice's key)"""
+    """A red fb-bot branch with no PR: its Muse notice goes on the board. (the fake, the notice's key: the fake has
+    no job logs, so the notice says "log unread" and is keyed apart, J-104)"""
     gh = gh_with(runs=[ti.run(40, NAME, ti.HEAD, hours=2)], jobs={40: ti.RED_JOBS}, heads={NAME: ti.HEAD}, **kw)
-    return gh, switch.inbox_key("muse-RED-BRANCH", NAME, ti.HEAD)
+    return gh, switch.inbox_key("muse-RED-BRANCH" + switch.UNREAD_KEY, NAME, ti.HEAD)
 
 
 def marked(key: str, number: int) -> dict:

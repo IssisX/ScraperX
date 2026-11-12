@@ -2323,8 +2323,10 @@ bool Matron::take_way(const float dt, const RVec3 at, traversal::Budget &budget)
     } else if (ask(routecraft_way_, true)) {
         return true;
     }
-    // A rung way her scan found off her floor; a line she would only wait at, last.
-    return ask(climb_way_, true) || ask(line_way_, true);
+    // A rung way her scan found off her floor; a travel over her scan, by
+    // hoist where no way of her map joins the floors; a line she would only
+    // wait at, last.
+    return ask(climb_way_, true) || ask(travel_way_, true) || ask(line_way_, true);
 }
 
 bool Matron::request_climb_goal(const RVec3 goal, const Vec3 facing) {
@@ -2842,12 +2844,32 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             if (scanned_ != nullptr) {
                 own_region = scanned_->region_at(Vec3(ax, feet_y, az));
                 if (own_region < 0) own_region = region_under();
+                // Mid step-up on a stair her middle rides past the tread she
+                // stands on and short of the next: the floor her feet feel
+                // (feel_floor, this tick) names it, while she is within a
+                // step of it.
+                if (own_region < 0 && std::abs(feet_y - feet_y_) <= kStepUpM + 0.2F) {
+                    own_region = scanned_->region_at(Vec3(ax, feet_y_, az));
+                }
                 if (own_region >= 0) floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
             }
-            const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
-            // A lead the corner pipe goes toward, no longer frail: chased longer.
-            const float toward = lead_floor_ < floor_y ? floor_y - kStackPitch : floor_y + kStackPitch;
-            const bool by_pipe = elsewhere && stage_ != Stage::Pest && pipe_reaches(floor_y) && pipe_reaches(toward);
+            // A lead on the very region she stands in is not elsewhere, however
+            // far it is above or below that region's area-weighted top (a stair
+            // or ramp of the region rising off a big floor): one region is
+            // tops a step apart and touching, floor her feet walk, so the
+            // scan-walk below takes her to the spot itself. Height says
+            // elsewhere only for a lead off her region (J-126: a lead 3 m up
+            // the region's stair was sent to her ways, and a travel to her own
+            // region stood her still as already there).
+            const int lead_region =
+                (scanned_ != nullptr && own_region >= 0) ? scanned_->region_at(Vec3(heard_x_, lead_floor_, heard_z_)) : -1;
+            const bool same_region = own_region >= 0 && lead_region == own_region;
+            const bool elsewhere = !same_region && std::abs(lead_floor_ - floor_y) > 1.0F;
+            // A lead the corner pipe goes toward (frail, only up it): chased longer.
+            const float toward = pipe_next_toward(floor_y, lead_floor_);
+            const bool by_pipe = elsewhere && toward != floor_y && (stage_ != Stage::Pest || toward > floor_y) &&
+                                 pipe_reaches(floor_y) &&
+                                 pipe_reaches(toward) && pipe_serves(toward);
             // Her own way toward her lead's floor, general (not her map's
             // hand-drawn route, which is test-only now): a found climb she is
             // walking to, a journey or a travel she is on, a climb she is
@@ -3058,10 +3080,43 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     }
                     const bool off_graph = nearest_level > 1.0F || nearest_line > 1.0F;
                     if (off_graph) {
-                        const Vec3 feet(at.GetX(), float(at.GetY()) - kStandCentre, at.GetZ());
+                        Vec3 feet(at.GetX(), float(at.GetY()) - kStandCentre, at.GetZ());
+                        // Mid step-up, from the tread her feet feel (as her
+                        // region above).
+                        if (scanned_->patch_at(feet, 0.4F) < 0 && std::abs(feet_y - feet_y_) <= kStepUpM + 0.2F) {
+                            feet = Vec3(at.GetX(), feet_y_, at.GetZ());
+                        }
                         const Vec3 goal(heard_x_, lead_floor_, heard_z_);
                         const int foot_patch = scanned_->patch_at(feet, 0.4F);
                         const int goal_patch = scanned_->patch_at(goal, 0.4F);
+                        // Him on no floor of hers, at her floor's height (a
+                        // moving floor that is not hers, across a gap from
+                        // her own: J-108's bait lift): as near as she can
+                        // come is the spot of her own floor nearest him,
+                        // within 5 m, and that is where she goes.
+                        // Her lines would take her to their own projection
+                        // of him, on a level that may not be here at all.
+                        Vec3 aim = goal;
+                        int aim_patch = goal_patch;
+                        if (goal_patch < 0 && own_region >= 0 && std::abs(lead_floor_ - feet_y) <= kStepUpM) {
+                            constexpr float kNearestFloorM = 5.0F;
+                            float best = kNearestFloorM;
+                            for (const int i : scanned_->regions()[static_cast<std::size_t>(own_region)].patches) {
+                                const traversal::Patch &p = scanned_->patches()[static_cast<std::size_t>(i)];
+                                if (p.narrow || std::abs(p.top - feet_y) > kStepUpM) continue;
+                                const auto inside = [](const float v, const float lo, const float hi) {
+                                    return lo <= hi ? std::clamp(v, lo, hi) : 0.5F * (lo + hi);
+                                };
+                                const float px = inside(heard_x_, p.min_x + kRadius, p.max_x - kRadius);
+                                const float pz = inside(heard_z_, p.min_z + kRadius, p.max_z - kRadius);
+                                const float d = distance_xz(px, pz, heard_x_, heard_z_);
+                                if (d < best) {
+                                    best = d;
+                                    aim = Vec3(px, p.top, pz);
+                                    aim_patch = i;
+                                }
+                            }
+                        }
                         if (saw && std::abs(lead_floor_ - feet_y) <= kStepUpM && straight_to(ax, az, heard_x_, heard_z_)) {
                             // Him in sight, a step from her floor, and the
                             // steel straight to him clear and under her feet
@@ -3070,13 +3125,13 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                             wx = heard_x_;
                             wz = heard_z_;
                             scan_walk = true;
-                        } else if (foot_patch >= 0 && foot_patch == goal_patch) {
+                        } else if (foot_patch >= 0 && foot_patch == aim_patch) {
                             // The spot is on the very surface under her feet.
-                            wx = heard_x_;
-                            wz = heard_z_;
+                            wx = aim.GetX();
+                            wz = aim.GetZ();
                             scan_walk = true;
                         } else {
-                            const std::vector<Vec3> path = scanned_->walk_path(feet, goal);
+                            const std::vector<Vec3> path = scanned_->walk_path(feet, aim);
                             // Her patches are joined fewest-first, not
                             // shortest: a way round the shaft to a place a
                             // few metres off her own line is no way to it.
@@ -3088,7 +3143,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                 along += distance_xz(last.GetX(), last.GetZ(), p.GetX(), p.GetZ());
                                 last = p;
                             }
-                            const float straight = distance_xz(ax, az, heard_x_, heard_z_);
+                            // The straight line to the spot itself, its rise
+                            // too: a landing over a stair's foot is the
+                            // stair's height away, not nothing.
+                            const float straight = Vec3(Vec3(heard_x_, lead_floor_, heard_z_) - feet).Length();
                             if (path.size() > 1 && along <= 3.0F * straight + 10.0F) {
                                 // First point she is not already standing
                                 // on: 1.2 m, as route_toward uses, not
@@ -3106,12 +3164,53 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                         break;
                                     }
                                 }
+                                // Where the line to it runs over a drop (a
+                                // narrow stair's turn: that point is round
+                                // the corner, and the line crosses the open
+                                // well inside the turn), her aim is 1.2 m
+                                // along the path instead, which keeps to the
+                                // treads (J-126, the leg spiral's landings).
+                                // Only a drop: floor no lower than a step
+                                // under hers all along (a stair going up, a
+                                // machine's floor she boards) keeps her aim.
+                                const IgnoreSingleBodyFilter self_only(body_);
+                                const auto over_drop = [&](const float tx, const float tz) {
+                                    const float length = distance_xz(ax, az, tx, tz);
+                                    const int n = std::max(1, static_cast<int>(length / 0.2F));
+                                    for (int i = 1; i <= n; ++i) {
+                                        const float t = float(i) / float(n);
+                                        RayCastResult down;
+                                        const RVec3 from(ax + (tx - ax) * t, feet_y_ + 0.6F, az + (tz - az) * t);
+                                        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -1.2F, 0.0F)),
+                                                                                    down, {}, {}, self_only) ||
+                                            float(from.GetY()) - 1.2F * down.mFraction < feet_y_ - kStepUpM) {
+                                            return true;
+                                        }
+                                    }
+                                    return false;
+                                };
+                                if (scan_walk && over_drop(wx, wz)) {
+                                    float left = 1.2F;
+                                    float fx = ax;
+                                    float fz = az;
+                                    for (const Vec3 &p : path) {
+                                        const float span = distance_xz(fx, fz, p.GetX(), p.GetZ());
+                                        if (span >= left) {
+                                            wx = fx + (p.GetX() - fx) * (left / span);
+                                            wz = fz + (p.GetZ() - fz) * (left / span);
+                                            break;
+                                        }
+                                        left -= span;
+                                        fx = p.GetX();
+                                        fz = p.GetZ();
+                                    }
+                                }
                 // Steel outside deck_steel_ (the board under a climb she
                 // just finished): a step along the real floor, not a straight
                 // line off it onto the ring. The edge guard still
                 // keeps her on what continues under her feet.
                 if (off_its_steel(level_, ax, feet_y_, az) && sidestep_s_ <= 0.0F) {
-                    const traversal::Ignore ignore{body_, player_, moving_layer()};
+                    const traversal::Ignore ignore = walk_ignore();
                     const std::vector<Vec3> steps =
                         traversal::grid_walk(physics_, ignore, traversal::Limits{}, Vec3(ax, feet_y_, az),
                                              Vec3(tx, feet_y_, tz), 3.0F, 0.35F, 6000);
@@ -3455,7 +3554,47 @@ void Matron::post_step(const float dt) {
     refresh_shape_view();
 }
 
-bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
+Matron::Sense Matron::catch_sense(RVec3 &at) const noexcept {
+    // Sight first, then sound, this tick then memory. Breath is a nearness, not a place; a glimpse is no sighting.
+    if (ev_.saw || ev_.sees_far || ev_.close_look) {
+        at = ev_.seen_at;
+        return Sense::Sight;
+    }
+    if (ev_.sound) {
+        at = ev_.heard_at;
+        return Sense::Hearing;
+    }
+    // Touch (J-049, ChatGPT's #278 rule): a hand on him counts as a sensed
+    // position at the contact point — his place, now, not a memory. This is
+    // evidence only: caught() still runs the geometry on it, so a touch past
+    // the 0.85 m catch range still refuses, as the 1.174 m case must.
+    if (body_in_world_ && physics_.WereBodiesInContact(body_, player_)) {
+        at = physics_.GetBodyInterface().GetPosition(player_);
+        return Sense::Touch;
+    }
+    if (ev_.sight_age_s <= kCatchMemoryS) {
+        at = ev_.last_sight_at;
+        return Sense::Sight;
+    }
+    if (ev_.sound_age_s <= kCatchMemoryS) {
+        at = ev_.last_sound_at;
+        return Sense::Hearing;
+    }
+    return Sense::None;
+}
+
+traversal::Ignore Matron::walk_ignore() const noexcept {
+    traversal::Ignore ignore{body_, player_, moving_layer()};
+    // Her feet walk around the place she saw or felt him, while it is fresh; without a fresh sense there is no place to avoid (J-049).
+    RVec3 at;
+    if (knows_where(kCatchMemoryS, at)) {
+        ignore.avoid = true;
+        ignore.avoid_at = Vec3(at);
+    }
+    return ignore;
+}
+
+bool Matron::caught(const bool on_ladder) const noexcept {
     // Clinging to a moving floor, her hands are on the rail; on the corner
     // pipe, on the steel; on a ladder, on its rungs.
     const Mover *way = holder();
@@ -3471,35 +3610,69 @@ bool Matron::caught(const RVec3 player, const bool on_ladder) const noexcept {
         return false;
     }
     const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
-    if (on_ladder) {
-        return Vec3(player_ankle_ - (at + shoulder_local())).Length() <= kStoopReachM;
+    // Zeroed: catch_sense leaves it unwritten on Sense::None, and the gate
+    // below must read a defined place rather than uninitialised memory.
+    RVec3 sensed = RVec3::sZero();
+    const Sense sense = catch_sense(sensed);
+    const bool touching = physics_.WereBodiesInContact(body_, player_);
+    if (sense == Sense::None && !touching) {
+        return false;
     }
-    return distance_xz(float(at.GetX()), float(at.GetZ()), float(player.GetX()), float(player.GetZ())) < kCatchM &&
-           std::abs(at.GetY() - player.GetY()) < 1.4;
+    // The catch is a physical reach, so it needs HIS true position, not the
+    // sensed one: the 0.5 s memory tells her where to go, it must never
+    // catch a player who has moved out of reach since (J-049, Claude's
+    // 14:19 FIX on #383). A touch with no fresh sense still refuses: the
+    // live geometry at 1.174 m is outside the 0.85 m catch range.
+    // No player body (the sight-test harness builds her with BodyID()): the
+    // sensed place is the only one there, and that harness feeds it his true
+    // position every tick, so it is the same measure.
+    const RVec3 him = player_.IsInvalid() ? sensed : physics_.GetBodyInterface().GetPosition(player_);
+    if (on_ladder) {
+        // His live ankle: the centre less 0.82 m, as shove_reach_now does.
+        const RVec3 ankle = him - RVec3(0.0, 0.82F, 0.0);
+        return Vec3(ankle - (at + shoulder_local())).Length() <= kStoopReachM;
+    }
+    return distance_xz(float(at.GetX()), float(at.GetZ()), float(him.GetX()), float(him.GetZ())) < kCatchM &&
+           std::abs(at.GetY() - him.GetY()) < 1.4;
 }
 
-Vec3 Matron::shove_direction(const RVec3 player) const noexcept {
-    const RVec3 at = body_in_world_ ? physics_.GetBodyInterface().GetPosition(body_) : player;
-    Vec3 away(float(player.GetX() - at.GetX()), 0.0F, float(player.GetZ() - at.GetZ()));
-    if (away.LengthSq() < 1.0e-4F) {
-        away = Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+Vec3 Matron::shove_direction() const noexcept {
+    RVec3 sensed;
+    if (body_in_world_ && catch_sense(sensed) != Sense::None) {
+        const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+        Vec3 away(float(sensed.GetX() - at.GetX()), 0.0F, float(sensed.GetZ() - at.GetZ()));
+        if (away.LengthSq() < 1.0e-4F) {
+            away = Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+        }
+        away = away.Normalized();
+        if (stage_ != Stage::Dangerous) {
+            return away;
+        }
+        // Dangerous: at the shaft's rim nearest where she sensed him, when it is within reach.
+        const float px = float(sensed.GetX());
+        const float pz = float(sensed.GetZ());
+        const Vec3 to_rim(std::clamp(px, -kShaftHalfM, kShaftHalfM) - px, 0.0F,
+                          std::clamp(pz, kMidZ - kShaftHalfM, kMidZ + kShaftHalfM) - pz);
+        const float reach = to_rim.Length();
+        if (reach < 0.05F || reach > kShoveEdgeReachM) {
+            return away;
+        }
+        return to_rim / reach;
     }
-    away = away.Normalized();
-    if (stage_ != Stage::Dangerous) {
-        return away;
+    return Vec3(std::sin(yaw_), 0.0F, std::cos(yaw_));
+}
+
+bool Matron::shove_reach_now(const bool on_ladder) const noexcept {
+    if (!body_in_world_ || dead_) return false;
+    const RVec3 at = physics_.GetBodyInterface().GetPosition(body_);
+    const RVec3 him = physics_.GetBodyInterface().GetPosition(player_);
+    if (on_ladder) {
+        // The ankle she would stoop for: his live ankle, not the sensed one.
+        const RVec3 ankle = him - RVec3(0.0, 0.82F, 0.0);
+        return Vec3(ankle - (at + shoulder_local())).Length() <= kStoopReachM;
     }
-    // Dangerous: at the shaft's rim nearest the player (the point of its box
-    // nearest them), when it is within reach; over the shaft already (the
-    // catwalk), or far from its rim, away from her as a pest would.
-    const float px = float(player.GetX());
-    const float pz = float(player.GetZ());
-    const Vec3 to_rim(std::clamp(px, -kShaftHalfM, kShaftHalfM) - px, 0.0F,
-                      std::clamp(pz, kMidZ - kShaftHalfM, kMidZ + kShaftHalfM) - pz);
-    const float reach = to_rim.Length();
-    if (reach < 0.05F || reach > kShoveEdgeReachM) {
-        return away;
-    }
-    return to_rim / reach;
+    return distance_xz(float(at.GetX()), float(at.GetZ()), float(him.GetX()), float(him.GetZ())) < kCatchM &&
+           std::abs(at.GetY() - him.GetY()) < 1.4F;
 }
 
 void Matron::set_throwables(std::vector<Throwable> throwables) {

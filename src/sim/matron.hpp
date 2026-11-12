@@ -305,6 +305,7 @@ public:
     static constexpr float kFootAccel = 9.0F;
     static constexpr float kCutAccel = 30.0F;   // braking and cutting sideways
     static constexpr float kCatchM = 0.85F;
+    static constexpr float kCatchMemoryS = 0.5F;   // a catch sense stays fresh this long
     static constexpr float kSightM = 9.0F;       // her paces' "close sight" (choose_pace), not her eyes' reach
     static constexpr float kEyesHalfM = 0.15F;   // her two lines of sight, either side of her middle
 
@@ -833,7 +834,32 @@ public:
     static constexpr float kPipeRailTopM = 1.09F;  // the north rail's top over its deck
     static constexpr float kPipeSqueezeN = 4500.0F;
     static constexpr float kPipeFriction = 0.7F;
-    static constexpr float kPipeLowestFloor = 132.0F;   // the stack's deck 12
+    // The riser runs from the grade to her old deck, a flange under each
+    // deck and the shaft's rail and edge beam at each (world_solids.inc):
+    // every story from deck 1 (her home, 11 m) to 154 is the same climb.
+    static constexpr float kPipeLowestFloor = kStackPitch;   // the stack's deck 1
+    static constexpr int kPipeDecks = static_cast<int>((kDeckTop - kPipeLowestFloor) / kStackPitch + 0.5F) + 1;
+    // A lead the pipe goes toward: on another deck than hers, or on a top
+    // within this much of one (machinery standing on it, a perch just under
+    // it). A top deeper inside a story (the C1 duct 5.3 m over deck 2) is
+    // for her scan's own ways, not a story on the pipe and back (J-085).
+    static constexpr float kPipeLeadM = 3.0F;
+    // MEASURED: a story on the pipe takes this much past its travel at her
+    // pace (her get-on over the rail, her holds, her step off). Dangerous:
+    // up 55 to 66, 22 s on it for 11 m at 0.7 m/s; down 154 to 143, 13.28 s
+    // of holds for 11 m at 2.6 m/s (matron pipe).
+    static constexpr float kPipeUpExtraS = 6.3F;
+    static constexpr float kPipeDownExtraS = 9.0F;
+    // Her journey's own scan reaches this far around her and the lead's place
+    // (start_journey_to): a way of her map past it is not one she plans.
+    static constexpr float kJourneyScanMarginM = 12.0F;
+    // The deck a story up or down the pipe toward her lead from her deck at
+    // `floor_y`, or `floor_y` itself when the lead is not the pipe's.
+    [[nodiscard]] static float pipe_next_toward(float floor_y, float lead_y) noexcept;
+    // Whether her lead is a place her map reaches from the pipe's deck `next`
+    // (on it, or a way of hers from it): a lead out on steel no way of hers
+    // reaches from there (a plate over the shaft) is not the pipe's either.
+    [[nodiscard]] bool pipe_serves(float next);
     // Her feet's brace on the riser, hand over hand (matron_contact.cpp): from
     // her shins, this far over her soles, level toward its axis, within her
     // legs' reach (her line is 0.6 m off the riser's west face).
@@ -948,6 +974,7 @@ public:
     static constexpr float kShoulderUpM = 1.80F;      // over her feet
     static constexpr float kArmReachM = 1.4F;
     static constexpr float kStoopReachM = 2.1F;
+    static constexpr float kWorkMarginM = 0.15F;      // she works from in reach less this
     static constexpr float kArmRetractMps = 0.9F;
     static constexpr float kHandMassKg = 6.0F;
     static constexpr float kHandSpeedMps = 1.8F;      // her hand's pose moves no faster
@@ -1543,7 +1570,10 @@ public:
     void post_step(float dt);
 
     // True once her hands are on the player.
-    [[nodiscard]] bool caught(JPH::RVec3 player, bool on_ladder = false) const noexcept;
+    [[nodiscard]] bool caught(bool on_ladder = false) const noexcept;
+    [[nodiscard]] Sense catch_sense(JPH::RVec3 &at) const noexcept;
+    // Her walk's ignore: her body and his, for the probes — and the place she saw or felt him, while fresh (J-049).
+    [[nodiscard]] traversal::Ignore walk_ignore() const noexcept;
     // While true the checkpoint is not renewed (see above): she is out and
     // alive and the player is on her deck, up a climb from it, or on a deck
     // her corner pipe is taking her to or (no longer frail) joins to hers. A
@@ -1574,7 +1604,11 @@ public:
         ++shoves_;
         shove_cooldown_s_ = kShoveCooldownSeconds;
     }
-    [[nodiscard]] JPH::Vec3 shove_direction(JPH::RVec3 player) const noexcept;
+    [[nodiscard]] JPH::Vec3 shove_direction() const noexcept;
+    // Current physical reach for a shove: the same bars as caught(), but
+    // against his live body, not the sensed position (which can be a memory
+    // up to kCatchMemoryS old).
+    [[nodiscard]] bool shove_reach_now(bool on_ladder = false) const noexcept;
     // Tests only (never bound to the bridge): her stage, and the rage it takes.
     // Tests only: her pace held at `pace` (0..3) with no hush, or (-1) free:
     // the tests that meet the Turn and the vault at one speed, as written.
@@ -1599,6 +1633,42 @@ public:
     bool travel_to(int region);
     // The same, with edges her plan leaves out (a ladder with him on it).
     bool travel_to(int region, const std::vector<int> &avoid);
+    // The world's hoists (matron_hoist.cpp), given before pre_step: each a
+    // body on a vertical guide a catch holds, its travel, and what frees the
+    // catch (a pin on its own guide, or a trip line's hanging handle). Her
+    // journeys take one when no way of her map joins two floors: she boards
+    // it, frees it from inside with her hands (a pin shoved clear, a handle
+    // weighed down), rides it and steps off. Read from the kit, never named.
+    struct HoistFeed {
+        struct Pin {
+            JPH::BodyID body;
+            JPH::Vec3 axis = JPH::Vec3::sAxisZ();
+            float travel = 0.0F, clear = 0.0F;
+        };
+        JPH::BodyID car;
+        float axis_y = 1.0F;
+        float min_travel = 0.0F, max_travel = 0.0F, travel = 0.0F;
+        bool held = false;
+        bool caught = true;      // a catch is on it: a hoist she may ride
+        bool platform = false;   // a floor to her at its stops (Kit::set_platform)
+        std::vector<Pin> pins;
+        std::vector<JPH::BodyID> weights;
+    };
+    void set_hoists(std::vector<HoistFeed> hoists) { hoists_ = std::move(hoists); }
+    // The world's platforms (HoistFeed::platform) resting at a stop now, with
+    // a level floor: her scan reads them as floor where they stand
+    // (matron_hoist.cpp, the same view of a car at rest as a hoist's).
+    [[nodiscard]] std::vector<JPH::BodyID> platforms_at_rest() const;
+    struct HoistView {
+        int phase = 0;              // 0 none, 1 to its stop, 2 boarding, 3 freeing it, 4 riding, 5 stepping off
+        int hoist = -1;
+        std::uint32_t rides = 0;    // rides she finished, this life
+        float hand_n = 0.0F;        // her hands' push on what frees it, this tick
+        float hand_power_w = 0.0F;  // that push's power against what it moves, this tick
+    };
+    [[nodiscard]] HoistView hoist_view() const noexcept {
+        return {hoist_.phase, hoist_.hoist, hoist_rides_, hoist_hand_n_, hoist_hand_power_w_};
+    }
     [[nodiscard]] int moving_layer() const noexcept { return static_cast<int>(moving_layer_); }
     struct Journey {
         bool active = false;
@@ -1654,7 +1724,7 @@ public:
 
     // The hold's interface to the physics (physics_world_grab.cpp).
     [[nodiscard]] bool grab_ready() const noexcept { return grab_cooldown_s_ <= 0.0F && !grab_held_for_test_; }
-    void begin_grab(JPH::RVec3 player);
+    void begin_grab();
     [[nodiscard]] bool holding() const noexcept { return holding_state(state_) && body_in_world_ && !dead_; }
     [[nodiscard]] bool reaching() const noexcept { return state_ == State::Grab && !grip_on_; }
     // Knocked off her feet: her body's capsule stands over where she lies.
@@ -2031,7 +2101,8 @@ private:
     // to a level between): to its foot, and in the Turn onto it. False when no
     // climb does.
     bool follow_climb(float dt, JPH::RVec3 at);
-    // The corner pipe's way from one deck to the other (0..3; -1 for none),
+    // The corner pipe's way from one deck to the next one up or down
+    // (0 .. 2 * (kPipeDecks - 1) - 1; -1 for none),
     // and whether it may be tried now (pipe_ways_).
     [[nodiscard]] static int pipe_way(float from_floor, float to_floor) noexcept;
     [[nodiscard]] bool pipe_way_open(int way) const noexcept;
@@ -2070,6 +2141,9 @@ private:
     // (src/sim/matron_traversal.*), its moves done by its Climber out of one
     // capped budget; while it runs it has her body.
     bool start_journey(JPH::RVec3 at);
+    // The same, to the floor under a place of her own choosing (feet height
+    // `goal_y` at x, z): a raised corner of her pipe's (follow_pipe).
+    bool start_journey_to(JPH::RVec3 at, float goal_x, float goal_y, float goal_z);
     void step_journey(float dt);
     void end_journey(bool failed);
     [[nodiscard]] bool journeying() const noexcept { return journey_active_; }
@@ -2083,6 +2157,16 @@ private:
     // corner on her level and onto it. False when it does not go that way, or
     // she is frail.
     bool follow_pipe(float dt, JPH::RVec3 at);
+    // A way of her own map from the floor she stands on to her lead's (the
+    // scan's ladders, poles and mantles, or a hoist) that has her to him
+    // sooner than the pipe would (`pipe_s`, pipe_time_s): hers over the
+    // pipe, at every height (J-085).
+    [[nodiscard]] bool own_way_sooner(JPH::RVec3 at, float pipe_s);
+    // Her pace on the riser at her stage, up or down it (ride_pipe's).
+    [[nodiscard]] float pipe_pace(bool down) const noexcept;
+    // Seconds to him by the pipe: her walk to its corner, each story on it,
+    // and her walk from its corner to where she heard him.
+    [[nodiscard]] float pipe_time_s(JPH::RVec3 at, float floor_y, float stand_z) const noexcept;
     [[nodiscard]] static bool pipe_reaches(float floor_y) noexcept;
     // Her hands on the rail of the deck she is leaving: false (and nothing
     // started) when there is no rail top in her reach.
@@ -2237,6 +2321,11 @@ private:
     // it ends below her within a catch's fall: its height. False where the
     // riser goes on past her (the ray starts in its steel) or nothing is met.
     bool pipe_riser_top_under(JPH::RVec3 at, float &top_y) const;
+    // Whether what she stands on at the rail's corner over `deck` is a top
+    // level with the rail (machinery standing on the deck there, as on deck
+    // 6): she gets on and off the pipe from it as from the rail she perches
+    // on, her feet on it, and steps down off it like any other top.
+    [[nodiscard]] bool pipe_corner_raised(float deck) const;
 
     // A point within her real arm's reach of a shoulder, her middle at `at`
     // and facing her yaw (kPipeShoulder*, kPipeHandReachM).
@@ -2448,6 +2537,8 @@ private:
     float travel_wp_best_ = 1.0e9F;
     float travel_wp_stall_s_ = 0.0F;
     bool travel_rerouted_ = false;
+    bool travel_walk_is_patch_ = false;   // this walk came from the map's patch links, not her feet's floor search
+    bool travel_fell_off_path_ = false;   // she left her walk by falling: the next landing on another floor plans again
     int travel_stuck_ = 0;   // fresh searches of her way in a row with no waypoint passed
     JPH::Vec3 travel_still_at_ = JPH::Vec3::sZero();   // where she last moved from on a walk
     float travel_still_s_ = 0.0F;
@@ -2461,6 +2552,30 @@ private:
     static constexpr float kYieldMemoryS = 0.5F;
     static constexpr float kYieldClearM = 1.6F;
     void step_travel(float dt);
+    // matron_hoist.cpp
+    struct HoistLeg {
+        int phase = 0;
+        int hoist = -1;
+        int board = -1, exit = -1, goal = -1;   // regions: its stop's landing, the other's, the journey's end
+        JPH::Vec3 board_at = JPH::Vec3::sZero(), exit_at = JPH::Vec3::sZero();   // the landings' nearest points
+        float from_travel = 0.0F, to_travel = 0.0F;
+        float t = 0.0F, still_s = 0.0F;
+        float lean_n = 0.0F;   // her hands' push past a shove, into a pin that stands
+    };
+    [[nodiscard]] bool hoist_footprint(const HoistFeed &h, JPH::AABox &box, float &floor_top) const;
+    [[nodiscard]] int hoist_landing(const JPH::AABox &car, float floor_top, JPH::Vec3 &point) const;
+    // The hoist that joins them (as plan_hoist takes it), without taking it.
+    [[nodiscard]] bool find_hoist(int from, int goal, HoistLeg &leg) const;
+    bool plan_hoist(int from, int goal);
+    void step_hoist(float dt);
+    std::vector<HoistFeed> hoists_;
+    HoistLeg hoist_;
+    std::uint32_t hoist_rides_ = 0;
+    std::vector<JPH::Vec3> hoist_path_;
+    std::size_t hoist_path_i_ = 0;
+    float hoist_hand_n_ = 0.0F;
+    float hoist_hand_power_w_ = 0.0F;   // that push's power against what it moves, this tick
+    bool hoist_inner_ = false;   // travel_to from the hoist leg itself
     [[nodiscard]] int region_under() const;
     std::vector<traversal::Edge> journey_;
     std::vector<JPH::Vec3> journey_legs_;
@@ -2909,7 +3024,7 @@ private:
     PipePhase pipe_phase_ = PipePhase::Off;
     float pipe_from_ = 0.0F;   // the floor she got on from, and the one she is going to
     float pipe_to_ = 0.0F;
-    // Her pipe's four ways (pipe_way): one that failed under her is left alone
+    // Her pipe's ways, a story up or down (pipe_way): one that failed under her is left alone
     // kPipeWayBlockS; failed more than kPipeWayRetries times, until a restore;
     // ruled out (a test), for good.
     struct PipeWayMemory {
@@ -2919,8 +3034,21 @@ private:
     };
     static constexpr float kPipeWayBlockS = 30.0F;
     static constexpr std::uint8_t kPipeWayRetries = 2;
-    std::array<PipeWayMemory, 4> pipe_ways_{};
+    std::array<PipeWayMemory, 2 * (kPipeDecks - 1)> pipe_ways_{};
     int pipe_waypoint_ = 0;
+    int pipe_serves_from_ = -1, pipe_serves_to_ = -1;   // pipe_serves' last regions, and its answer
+    bool pipe_serves_ok_ = true;
+    // own_way_sooner's last plan, by its two regions: the moves off the
+    // floor of her map's way (where each begins and ends, and its cost in
+    // seconds), or a hoist's leg where no way of the map joins them.
+    struct OwnMove {
+        JPH::Vec3 start = JPH::Vec3::sZero(), goal = JPH::Vec3::sZero(), line = JPH::Vec3::sZero();
+        float cost = 0.0F;
+    };
+    int own_way_from_ = -1, own_way_to_ = -1;
+    std::vector<OwnMove> own_way_moves_;
+    bool own_way_hoist_ = false;
+    HoistLeg own_way_leg_{};
     float pipe_s_ = 0.0F;      // her clock on it (the changed jerks)
     float pipe_hold_m_ = 0.0F; // her hands' way since the last hold
     float pipe_slide_mps_ = 0.0F;

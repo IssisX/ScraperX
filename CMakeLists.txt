@@ -33,6 +33,7 @@ add_library(scraperx_sim STATIC
     src/sim/matron_moves.cpp
     src/sim/matron_travel.cpp
     src/sim/matron_pipe.cpp
+    src/sim/matron_hoist.cpp
     src/sim/matron_line.cpp
     src/sim/matron_climb.cpp
     src/sim/physics_world_traversal.cpp
@@ -40,6 +41,7 @@ add_library(scraperx_sim STATIC
     src/sim/physics_world_state.cpp
     src/sim/mechanism_kit.cpp
     src/sim/rope_constraint.cpp
+    src/sim/slab_cell.cpp
     src/sim/slingshot.cpp
     src/sim/slingshot_model.cpp
     src/sim/swing.cpp

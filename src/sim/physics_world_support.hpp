@@ -849,22 +849,10 @@ public:
         return true;
     }
     bool bits(std::vector<bool> &values, std::size_t expected) {
-        std::uint32_t count = 0;
-        if (!pod(count) || count != expected) {
-            return false;
-        }
-        values.assign(count, false);
-        for (std::uint32_t i = 0; i < count; ++i) {
-            std::uint8_t value = 0;
-            if (!pod(value) || value > 1) {
-                return false;
-            }
-            values[i] = value == 1;
-        }
-        return true;
+        return bits_up_to(values, expected) && values.size() == expected;
     }
-    // Bits that grow in play (the latches), up to `most` of them: a save
-    // from before a latch still loads, the latch starting as built.
+    // Bits that a later build may have more of (the ropes built since, the
+    // drain pawl), up to `most`.
     bool bits_up_to(std::vector<bool> &values, std::size_t most) {
         std::uint32_t count = 0;
         if (!pod(count) || count > most) {

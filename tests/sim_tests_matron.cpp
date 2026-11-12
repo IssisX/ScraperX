@@ -738,6 +738,48 @@ void run_matron_pipe() {
         std::cout << "  matron pipe: a pest with the climber heard below: took the pipe " << r.took << "\n";
         require(!r.took && r.alive, "matron pipe: frail, she does not take hold of the pipe");
     }
+    // Frail, she climbs it up after him (Cory, 11-11: she climbs as a pest
+    // too; J-085): in the game's world, a pest out of her locker on deck 1
+    // climbs the story to him on deck 2 by her own hands, slow, gravity on.
+    {
+        Simulation s(InitialSpawn::ExteriorGrade);
+        require(s.advance_frame(1.0).accepted, "matron pipe pest up: settle");
+        s.debug_launch_player(scraperx::sim::Vector3{1.0, 12.2, -126.0}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+        const int hz = static_cast<int>(Simulation::kTickRateHz);
+        bool out = false, took = false, arrived = false, alive = true;
+        double peak_force = 0.0, peak_power = 0.0, worst_gravity = 1.0, climb_s = 0.0;
+        int moved = -1;
+        for (int i = 0; i < 150 * hz && !arrived && alive; ++i) {
+            s.debug_set_matron_stage(0);   // held frail the whole way
+            (void)s.set_room_loudness(i % (4 * hz) < hz / 2 ? 1.0 : 0.0);
+            (void)s.set_move_input(0.0, 0.0);
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
+            const auto m = s.matron_state();
+            alive = m.alive;
+            worst_gravity = std::min(worst_gravity, s.debug_matron_gravity_factor());
+            peak_force = std::max(peak_force, m.pipe_peak_force_n);
+            peak_power = std::max(peak_power, m.pipe_peak_power_w);
+            took = took || m.on_pipe;
+            if (!out && m.released) {
+                out = true;
+                moved = i;
+                s.debug_launch_player(scraperx::sim::Vector3{10.0, 23.2, -128.0}, scraperx::sim::Vector3{0.0, 0.0, 0.0});
+            }
+            arrived = out && took && !m.on_pipe &&
+                      std::abs(m.position.y - static_cast<double>(Matron::kStandCentre) - 22.0) < 0.4;
+            if (arrived) {
+                climb_s = static_cast<double>(i - moved) / hz;
+            }
+        }
+        std::cout << "  matron pipe: a pest up from deck 1 to him on deck 2: out " << out << ", took the pipe " << took
+                  << ", on deck 2 " << arrived << " " << climb_s << " s after she came out, grip peak " << peak_force
+                  << " N, " << peak_power << " W, gravity " << worst_gravity << "\n";
+        require(out && took && arrived && alive, "matron pipe: a pest, she takes hold of the pipe and climbs the story to him");
+        require(worst_gravity == 1.0 && peak_force > 1000.0 && peak_force <= law::kForceN + 0.5 &&
+                    peak_power <= law::kPowerW + 0.5,
+                "matron pipe: a pest climbing it, gravity on her, her grip within the shared force and power budget");
+        std::cout << "PASS scraperx_sim matron pipe pest up: climb_s=" << climb_s << "\n";
+    }
     // Dangerous: down it after the climber, heard all the way.
     {
         const PipeRun r = pipe_run(1, 0.0, 60.0);

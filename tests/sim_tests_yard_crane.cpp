@@ -8,6 +8,7 @@
 #include "sim/twin_tower.hpp"
 #include "sim/forklift.hpp"
 #include "sim/loose_stock.hpp"
+#include "sim/slab_cell.hpp"
 #include "sim/summit.hpp"
 #include "sim/yard_crane.hpp"
 #include "sim_tests.hpp"
@@ -16,11 +17,13 @@
 #include <cmath>
 #include <cstring>
 #include <iostream>
+#include <iterator>
 
 using scraperx::sim::Bay;
 using scraperx::sim::Forklift;
 using scraperx::sim::LooseStock;
 using scraperx::sim::Simulation;
+using scraperx::sim::SlabCell;
 using scraperx::sim::Summit;
 using scraperx::sim::YardCrane;
 
@@ -986,25 +989,35 @@ void run_yard_crane_magnet() {
     const auto last = s.kit_body_count();
     // The 137 east/west stock bodies are built after the summit (world-b;
     // run_wet_e_guard pins the same count as kNewEastWest), then the deck-154
-    // forklift's frame and forks (J-041); after them stock laid later (the
-    // upper stock's, then J-042's two kinds by her band), and last the S2
-    // drain (J-015: its striker and bolted tank, built after every other
-    // body so a save from before the drain still lines up); so the
-    // tower/summit tail sits 137 bodies before the forklift, the 137 after
-    // it are stock entities, and the kit's last two bodies are the drain's.
+    // forklift's frame and forks (J-041); after them only stock laid later
+    // (J-042: two kinds by her band; J-092: the slab cell's slab), each new
+    // body appended at the end; so the tower/summit tail sits 137 bodies
+    // before the forklift, and the 137 after it are stock entities. J-092
+    // (#410) then appends the slab cell's frame, trigger and handle, exactly
+    // those three; and last the S2 drain (J-015: its striker and bolted
+    // tank, built after every other body so a save from before the drain
+    // still lines up), the kit's very last two (run_wet_e_guard pins the
+    // same order).
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
+    const std::uint64_t kSlabCell[] = {SlabCell::kFrameEntity, SlabCell::kTriggerEntity, SlabCell::kHandleEntity};
+    constexpr auto kCellBodies = static_cast<std::uint32_t>(std::size(kSlabCell));
     std::uint32_t fork = last;
     for (std::uint32_t i = 0; i + 1 < last && fork == last; ++i) {
         fork = s.kit_body_entity(i) == kForklift[0] ? i : last;
     }
     require(fork + 1 < last && s.kit_body_entity(fork + 1) == kForklift[1],
             "magnet: the deck-154 forklift's frame and forks, side by side");
-    bool later_stock = true;
-    for (std::uint32_t i = fork + 2; i + 2 < last; ++i) {
-        later_stock = later_stock && scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
+    constexpr std::uint32_t kDrainBodies = 2;
+    bool later_stock = fork + 2 + kCellBodies + kDrainBodies <= last;
+    for (std::uint32_t i = fork + 2; later_stock && i < last - kCellBodies - kDrainBodies; ++i) {
+        later_stock = scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
     }
-    require(later_stock, "magnet: after the deck-154 forklift, stock laid later: the kit's last bodies but two");
+    for (std::uint32_t i = 0; later_stock && i < kCellBodies; ++i) {
+        later_stock = s.kit_body_entity(last - kDrainBodies - kCellBodies + i) == kSlabCell[i];
+    }
+    require(later_stock,
+            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle");
     require(s.kit_body_entity(last - 2) == Simulation::kStackS2DrainStrikerEntityId &&
                 s.kit_body_entity(last - 1) == Simulation::kStackS2CartEntityId,
             "magnet: the kit's last two bodies are the S2 drain's striker and tank");

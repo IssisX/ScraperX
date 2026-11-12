@@ -37,9 +37,9 @@ your own branches (Cory 11-05) and mail the rest:
   own protected PR with a plain before/after: push it alone to `fb-bot/integrate-protected-<job>`. Never weaken a test.
 - Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job. Put the
   PASS/FAIL lines you ran in the email.
-- Ask Claude early (Cory 11-06: J-001 ran 8 h without asking). Two red proof runs on the same failure,
-  or a subagent 60 minutes without a commit or a new number: stop it and email `To Claude: <job> stuck`
-  with what you measured, what you ruled out and the one observation that would settle it.
+- Most work is yours, debugging included (11-12). When a fix fails twice on the same failure, or the job blocks
+  2+ others, stop and email `To Claude: <job> stuck` with what you measured, ruled out, and branch and sha.
+  Claude's helpers find the cause; you build the fix they name. Meanwhile take your next lane.
 - Human sounds are real recordings, never synthesized.
 - **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). How: `work/tasks/eye-check.md`. Claude checks the stills.
 - **Push, then CI proves (11-10).** Push as soon as the change builds and the groups it reaches pass locally. Never hold a push
@@ -50,32 +50,30 @@ your own branches (Cory 11-05) and mail the rest:
   old rule (the integrator merges trunk in) stalled every conflict (#376, #372 on 11-10).
 
 ## Your queue (11-06)
-The rule: take the next one yourself; mail when 3 are left (`MUSE_TO_CLAUDE: queue To Claude: 3 left`). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
+The rule: take the next one yourself, and mail "J-NNN started" the moment a lane starts (so it is never taken from you, 11-11); mail the moment fewer than 8 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 7 left`; Cory 11-11: never run low). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-1. J-060 #320: fight contact truth (Cory 11-08 7:12 AM, top job): real limb contacts, both bodies react, real reach.
-2. J-063 #321: her climbing on real support, every ladder (Cory 11-08).
-3. J-059 #307: her injuries reach the screen in play: per-region injury in the sim, exported by the bridge, drawn by matron_injury.gd; capability loss in the runtime sim (measured on #307, 11-08).
-4. J-053 #82: the Void Crossing (Cory 11-06 2:15 PM). Measure the 750 m glide first, post it on #82.
-5. J-054 #293: the Counterweight Crossing (Cory 11-06), a cradle tipped by real mass and torque.
-6. J-007 #114: her exit items 4, 6, 7 (arm's-length holds, the pipe, the hoists).
-7. J-032 #157: her hands within reach (re-measure with the J-028 probe, fix what is left).
-8. J-008 #115: her "258 down" leg; a strict total order for the ladder-bar sort.
-9. J-011 #118: her skirt as cloth, bone-driven panels (from `edad91a3`).
-10. J-024 #131: plants, step 2 (from `builder/integrate-lane-e2` @ `b7c4ca1a`).
-11. J-021 #128: the far world and water (from `b532042b` and `95587901`).
-12. J-009 #116: device determinism (from `fb96ead9`), once J-008's sort is pushed.
-
-Live lanes: J-042 windup #291, J-001 #227, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
-step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
+Finish line (11-12, rule 56): only the finish plan (`03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md`, A5) is worked for the current parts.
+Finish (in flight): J-043 #241 rail move, J-038 #372 crates break (dents out), J-059 #307 wire-up, J-063 #321, J-015 #389 + J-109 #428 as one (F7), J-049 #278 parts 2-3 (F11), J-098 #416 (F13), J-105 #424 step 1 only (F10), J-045 (F3), J-053 #82, J-021 #128 waterfall fix only, J-077, J-078 #396, J-079 #397, J-080 #398 (push, land, then stop). J-044c: stop after the split you hold; the rest of her jointed body is parked.
+Parked (branches kept; they return as missions or after the finish): J-044d to k and n, J-060, J-036, J-040, J-099, J-022, J-054, J-055, J-091, J-094, J-095, J-100, J-090 pass 2, J-096 past slice 1, J-105 past step 1, J-111, J-113, J-114, J-120 to J-123, J-081, J-088, J-086 (until J-001's grab code lands). Close: J-067 (on the scorer), J-082.
+Unstarted, in order (11-12):
+1. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely; also her stage on relaunch (save at Dangerous, load fresh, she is still Dangerous).
+2. J-117 #439: a checkpoint on a moving floor restores him on real support.
+3. J-118 #440: leaving the app mid-ride, mid-hold, mid-fall: back to that exact moment. J-116 to J-118 share one save version bump.
+4. J-133 #459: the climb and the ending in one touch run, zero deaths (F4).
+5. J-134 #460: measure her chase above 220 m, band by band (F5).
+6. J-124 #446: the parachute from every deck edge lands him alive (rule 51).
+7. J-119 #441: every control fits every screen: Fold 6 folded and open, a fold mid-climb.
+8. J-125 #448: every shipped sound, voice, model and texture on record; Licences page true.
+9. J-129 #455: the objective core, saved with the checkpoint (missions start; same save bump as J-116).
+10. J-130 #456: Brenner's job lines on the foreman radio, text first.
+11. J-131 #457: the punch list on the pause card and one HUD line.
+12. J-132 #458: missions 1 and 7 proven, one touch scenario each.
+13. J-135 #461: rule_check flags geometry changed through tuning-header constants.
+Waiting on J-001's grab code landing: J-018 #125.
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
-Your queue is never allowed to run dry: whenever fewer than three big jobs above are unstarted, the
+Your queue is never allowed to run dry: whenever fewer than eight big jobs above are unstarted, the
 integrator derives the next grand task from what Cory asked for and mails it as a new job. Next in line:
-- **G1, her mind runs on evidence (rule 29, `03_EXECUTION/GAP_LIST.md` gap 4):** perception is evidence
-  with an age, rage is fed by sound that reaches her ear, and hiding from her truly works. Find every
-  place her decisions still read his true state (`step_travel`'s `player_on` checks, the braced state,
-  the ankle passed during a hold), route each through what she saw or heard, and prove hiding with
-  runtime scenarios (he hides and she loses him; he makes a sound and she finds him).
 You may propose your own grand tasks too: subject `MUSE_TO_CLAUDE: proposal <title>`, with goal, why it
 matters to the player, files, and finish facts. The integrator rules on it within the hour.
 

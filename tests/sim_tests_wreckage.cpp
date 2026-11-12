@@ -151,7 +151,7 @@ void run_s3_wreckage() {
 // F ridden to TP-340 and the rider off: the header's dump thrown over
 // brings the spent platform back down to where the way on exists, and
 // re-arms it.
-void run_f_wreckage() {
+void run_f_dump_return() {
     Simulation f(InitialSpawn::WetFPlatform);
     (void)f.advance_frame(1.0);
     require(couple_wet_hose(f), "F wreck: the hose coupled");
@@ -590,7 +590,7 @@ void run_wreck_way_on() {
     run_m_wreckage();
     run_n_wreckage();
     run_o_wreckage();
-    run_f_wreckage();
+    run_f_dump_return();
 }
 SCRAPERX_GROUP("wreck_way_on", 350, run_wreck_way_on);
 SCRAPERX_SELECT("wreck-way-on", run_wreck_way_on);

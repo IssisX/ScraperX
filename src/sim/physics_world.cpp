@@ -478,8 +478,18 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
     for (int i = loose_stock_->matron_kinds_begin(); i < loose_stock_->count(); ++i) {
         track(loose_stock_->body(i), LooseStock::sound(loose_stock_->placed()[static_cast<std::size_t>(i)].kind));
     }
-    // J-015: the S2 drain is built last, after every other body, so a save
-    // from before it still lines up with this world's bodies in order.
+    // J-092 (#410): the slab trap's service cell on her deck (slab_cell.hpp):
+    // its slab the table's last piece, then its trigger and the cord's
+    // handle, after every other body, so older saves line up.
+    loose_stock_->lay_hung_slab();
+    {
+        const kit::BodyIndex slab = loose_stock_->body(loose_stock_->hung_slab_begin());
+        track(slab, ImpactSound::HeavySteel);
+        slab_cell_.build(*kit_, slab);
+    }
+    // J-015: the S2 drain is built last, after every other body (the slab
+    // cell among them), so a save from before it still lines up with this
+    // world's bodies in order.
     scraperx::sim::bands::build_s2_drain(*kit_, stack_);
     give_matron_stock();
 
@@ -866,6 +876,8 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     // room's own sound is not).
     bay_->pre_step(delta_seconds);
     matron_->set_bay(kit_->body_id(bay_->leaf_body()), bay_->leaf_open(), bay_->hooked());
+    // The world's hoists as the kit holds them (matron.hpp set_hoists).
+    feed_matron_hoists();
     // Out of her locker, she looks the tower over once (her climbs are what
     // she finds).
     if (matron_->wants_routes()) {
@@ -1059,20 +1071,25 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     }
     // Her hands on the player (matron.hpp, her hands): at every stage, she
     // takes hold.
-    if (!died_this_tick && matron_->caught(bodies.GetPosition(player_id_),
-                                        traversal_state_ == TraversalState::Climbing)) {
+    if (!died_this_tick && matron_->caught(traversal_state_ == TraversalState::Climbing)) {
         // No kill on touch. Her hand goes for the ankle (matron_hold.cpp);
         // what follows is physics. A ladder offers no immunity: her hand has
         // to reach the ankle and overcome the same finite grip as any load.
         if (matron_->grab_ready()) {
             matron_->count_catch();
-            matron_->begin_grab(bodies.GetPosition(player_id_));
+            matron_->begin_grab();
         } else if (matron_->shoves() && matron_->shove_ready()) {
             // While her hands cannot take hold (a grab's cooldown),
             // short of fully changed: a pest's shove away from her,
-            // a dangerous one's at the rim. Not a catch.
-            matron_->count_shove();
-            shove_player(bodies, matron_->shove_direction(bodies.GetPosition(player_id_)));
+            // a dangerous one's at the rim. Not a catch. A shove is a
+            // physical hit: it lands only when he is within reach NOW.
+            // caught() measures reach to the sensed position, which can
+            // be a memory up to 0.5 s old; a player who has moved out of
+            // reach since must not be shoved (Codex P1 on #367).
+            if (matron_->shove_reach_now(traversal_state_ == TraversalState::Climbing)) {
+                matron_->count_shove();
+                shove_player(bodies, matron_->shove_direction());
+            }
         }
     }
     // A blow (the listener's hit_closing: his own run taken off) hard enough
@@ -1605,11 +1622,42 @@ void Simulation::PhysicsWorld::launch_matron_for_test(JPH::RVec3 at) {
     physics_system_.GetBodyInterface().SetPosition(matron_->body(), at, JPH::EActivation::Activate);
 }
 
+// The world's hoists as the kit holds them (matron.hpp set_hoists): every
+// body on a vertical guide a catch holds, and what frees each catch; and the
+// platforms declared floors at their stops (Kit::set_platform).
+void Simulation::PhysicsWorld::feed_matron_hoists() {
+    std::vector<Matron::HoistFeed> hoists;
+    for (const kit::Kit::HoistInfo &h : kit_->hoists()) {
+        Matron::HoistFeed f;
+        f.car = kit_->body_id(h.car);
+        f.axis_y = h.axis.GetY();
+        f.min_travel = h.min_travel;
+        f.max_travel = h.max_travel;
+        f.travel = h.travel;
+        f.held = h.held;
+        f.caught = h.caught;
+        f.platform = h.platform;
+        for (const kit::Kit::HoistPin &p : h.pins) {
+            f.pins.push_back({kit_->body_id(p.pin), p.axis, p.travel, p.clear});
+        }
+        for (const kit::BodyIndex w : h.weights) {
+            f.weights.push_back(kit_->body_id(w));
+        }
+        hoists.push_back(std::move(f));
+    }
+    matron_->set_hoists(std::move(hoists));
+}
+
 const traversal::AffordanceMap &Simulation::PhysicsWorld::matron_affordances() {
     if (!matron_affordances_scanned_) {
+        // Her view of the platforms at rest is the kit's as it stands now,
+        // even when asked before her first step.
+        feed_matron_hoists();
         // The whole tower, grade to the crown (bounds generous on every side).
         const JPH::AABox tower = physics_system_.GetBounds();   // the whole world, whatever is in it
-        matron_affordances_.scan(physics_system_, tower, {matron_->body(), player_id_, matron_->moving_layer()});
+        // And the platforms resting at a stop as she looks (J-108): floor where they stand.
+        matron_affordances_.scan(physics_system_, tower, {matron_->body(), player_id_, matron_->moving_layer()}, {},
+                                 matron_->platforms_at_rest());
         matron_affordances_scanned_ = true;
         matron_->set_routes(&matron_affordances_);
     }
@@ -1621,7 +1669,10 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
     if (max_nodes < 0) {
         // A probe: 0 no floor within a step, 1 floor but her capsule does not fit, 2 she stands there.
         const traversal::Limits limits{};
-        const traversal::Ignore ignore{matron_->body(), player_id_, matron_->moving_layer()};
+        // The hook avoids him exactly as her real walk does (the same
+        // walk_ignore rule), so the tests exercise the real path (J-049,
+        // Claude's 14:19 FIX on #383): the sensed place, only while fresh.
+        const traversal::Ignore ignore = matron_->walk_ignore();
         JPH::RayCastResult hit;
         const JPH::RVec3 top(from.GetX(), from.GetY() + limits.step_max_m + 0.05F, from.GetZ());
         const float depth = 2.0F * limits.step_max_m + 0.1F;
@@ -1634,7 +1685,8 @@ std::size_t Simulation::PhysicsWorld::matron_grid_walk(const JPH::Vec3 from, con
         (void)to;
         return p.empty() ? 1 : 2;
     }
-    return traversal::grid_walk(physics_system_, traversal::Ignore{matron_->body(), player_id_, matron_->moving_layer()}, traversal::Limits{}, from,
+    traversal::Ignore ignore = matron_->walk_ignore();
+    return traversal::grid_walk(physics_system_, ignore, traversal::Limits{}, from,
                                 to, margin, 0.4F, max_nodes)
         .size();
 }

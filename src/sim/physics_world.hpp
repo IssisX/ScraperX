@@ -8,6 +8,7 @@
 #include "sim/physics_world_support.hpp"
 #include "sim/fabricated.hpp"
 #include "sim/matron_traversal.hpp"
+#include "sim/slab_cell.hpp"
 
 #include <array>
 #include <set>
@@ -125,6 +126,9 @@ public:
     // What the tower's steel offers the Matron's climbing (matron_traversal.hpp):
     // read from the real collision geometry the first time it is asked for.
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();
+    // The world's hoists and platforms as the kit holds them, to her
+    // (Matron::set_hoists): every step, and before her first look.
+    void feed_matron_hoists();
     [[nodiscard]] double matron_gravity_factor() const;
     [[nodiscard]] std::size_t matron_grid_walk(JPH::Vec3 from, JPH::Vec3 to, float margin, int max_nodes) const;
     [[nodiscard]] const Bay &bay() const noexcept { return *bay_; }
@@ -775,6 +779,8 @@ public:
     // The bay on the 154 m deck (bay.hpp): after every other kit body.
     std::unique_ptr<Bay> bay_;
     std::unique_ptr<LooseStock> loose_stock_;
+    // J-092: the slab trap's cell on her deck (slab_cell.hpp), built last.
+    SlabCell slab_cell_;
     std::unique_ptr<ImpactLedger> impacts_;
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;

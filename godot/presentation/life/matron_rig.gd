@@ -12,8 +12,11 @@ extends RefCounted
 ##
 ## Then what the pivots never had: her feet planted on the deck, palms on it on
 ## all fours, hands up to the rung on a ladder (contact); her eyes turned in
-## their sockets onto the player's (aim_eyes); and her hair, hung on chains of
-## bones that gravity, her own motion and her skull and back swing (step_hair).
+## their sockets onto the player's (aim_eyes); her hair, hung on chains of
+## bones that gravity, her own motion and her skull and back swing (step_hair);
+## and her skirt, a cloth proxy round her legs (matron_skirt.gd, step_skirt).
+
+const MatronSkirt := preload("res://presentation/life/matron_skirt.gd")
 
 const PELVIS_SHARE := 0.5
 # Her age in her back: a fixed upper-back hunch (the dowager's hump), the neck
@@ -88,6 +91,7 @@ var _chains: Array = []
 var _skull_local := Vector3.ZERO
 var _skull_radius := 0.1
 var _wind_clock := 0.0
+var skirt: RefCounted = null
 
 
 func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
@@ -115,6 +119,14 @@ func setup(skeleton: Skeleton3D, rig: Dictionary, matron_view: Node3D) -> void:
 	if hair.has("skull"):
 		_skull_local = _v(hair["skull"]) - head_at
 		_skull_radius = float(hair["skull_radius"])
+	var root: Node = skel.get_parent() if skel.get_parent() != null else skel
+	var found := root.find_children("skirt_cloth", "MeshInstance3D", true, false)
+	if not found.is_empty():
+		var cloth := MatronSkirt.new()
+		if cloth.setup(skel, found[0] as MeshInstance3D):
+			skirt = cloth
+	else:
+		push_error("matron rig: her body has no skirt_cloth")
 
 
 func _v(a: Array) -> Vector3:
@@ -319,6 +331,14 @@ var _pole := {}
 # reaches a grip and while it comes back off one; each wrist where it was
 # last drawn (world), and her skeleton's origin then.
 var _hand_follow := {}
+# Each wrist's grip-target history ([frame, point, dt] each, newest
+# first, the last five): the slide velocity is read over a four-frame
+# window, because the simulation's contact point advances in a strict
+# two-frame alternation (a small step, then a double step: 1.73 / 3.47
+# m/s on her pipe press). A one-frame read alternates the same way, and
+# the cap kills the fast half, leaving the wrist 0.13 m behind a grip
+# that slides at 2.6 m/s. The window averages the alternation out.
+var _hand_target := {}
 var _wrist_drawn := {}
 var _skel_was := Vector3.ZERO
 var _governed_bones: Array[int] = []
@@ -478,6 +498,7 @@ func _follow_hand(s: String, at: Vector3, carry := false) -> Vector3:
 	var last: Array = _hand_follow.get(s, [])
 	if view == null or bool(view.fresh_frame) or not _wrist_drawn.has(s):
 		_hand_follow[s] = [_ik_frame, Vector3.ZERO]
+		_hand_target.erase(s)
 		return at
 	var x: Vector3 = _wrist_drawn[s]
 	if carry:
@@ -486,8 +507,31 @@ func _follow_hand(s: String, at: Vector3, carry := false) -> Vector3:
 	if not last.is_empty() and int(last[0]) >= _ik_frame - 1:
 		v = last[1]
 	var dt := clampf(float(view._dt), 0.0, HAND_DT_MAX)
+	# A grip that slides steadily (her pipe press runs the rail down at
+	# 2.6 m/s) leaves a critically damped spring behind by 2u/W; aim ahead
+	# by exactly that lag so the wrist sits on the grip, not above it.
+	# The velocity is the target's own motion over the last four frames,
+	# capped at HAND_MAX_M_S, so a new grip (a jump) never feeds forward;
+	# the window must be four consecutive frames or there is no estimate.
+	var aim := at
+	var raw_dt := float(view._dt)
+	var hist: Array = _hand_target.get(s, [])
+	hist.push_front([_ik_frame, at, raw_dt])
+	while hist.size() > 5:
+		hist.pop_back()
+	_hand_target[s] = hist
+	if hist.size() >= 5 and raw_dt > 0.0 and int(hist[4][0]) == _ik_frame - 4:
+		# Elapsed game time from the oldest entry's frame to now is the
+		# four steps since it: the first four entries' dts, not all five.
+		var span := 0.0
+		for i in 4:
+			span += float(hist[i][2])
+		if span > 0.0:
+			var u: Vector3 = (at - (hist[4][1] as Vector3)) / span
+			if u.length() <= HAND_MAX_M_S:
+				aim = at + u * (2.0 / HAND_W)
 	if dt > 0.0:
-		var f: Array = view.spring(x, v, at, HAND_W, dt)
+		var f: Array = view.spring(x, v, aim, HAND_W, dt)
 		var to: Vector3 = (f[0] as Vector3) - x
 		var cap := HAND_MAX_M_S * dt
 		if to.length() > cap:
@@ -1597,6 +1641,12 @@ func step_hair(delta: float) -> void:
 			var rot := Quaternion(Vector3.DOWN, local_dir) if local_dir.dot(Vector3.DOWN) > -0.999 else Quaternion(Vector3.RIGHT, PI)
 			skel.set_bone_pose_rotation(bi, rot)
 			parent_basis = parent_basis * Basis(rot)
+
+
+## Her skirt's cloth, after her legs are where they will be drawn this frame.
+func step_skirt(delta: float, fresh: bool) -> void:
+	if skirt != null:
+		skirt.step(delta, fresh)
 
 
 func _outside(q: Vector3, centre: Vector3, radius: float) -> Vector3:
