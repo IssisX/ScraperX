@@ -1,6 +1,7 @@
 """Every branch listing the switch reads is whole (11-12: 647 branches; ghapi.paged stops at 500 without saying so, and
-fb-bot/integrate-j109 was never seen). The auto-open and the queue check read past the client's cap through
-plan.whole, and a listing longer than plan.ALL_PAGES pages raises instead of being read short. No network."""
+fb-bot/integrate-j109 was never seen). The queue check, and the auto-open once the plan is live, read past the
+client's cap through plan.whole, and a listing longer than plan.ALL_PAGES pages raises instead of being read short.
+While the plan is in shadow the auto-open reads exactly what it reads on trunk. No network."""
 from __future__ import annotations
 
 import datetime as dt
@@ -51,6 +52,7 @@ class AutoOpen(unittest.TestCase):
         gh.__class__ = Paged
         gh.branches = many(647, late_at=640, late_sha=head)
         sw = test_auto_pr.make(gh)
+        sw.plan_mode = lambda: "live"
         self.assertEqual(sw.auto_open_prs(), 1)
         (method, path, body), = gh.writes
         self.assertEqual((path, body["head"]), ("repos/IssisX/ScraperX/pulls", LATE))
@@ -60,9 +62,22 @@ class AutoOpen(unittest.TestCase):
         gh, _ = test_auto_pr.green_setup()
         gh.__class__ = Paged
         gh.branches = many(plan.ALL_PAGES * 100 + 1)
+        sw = test_auto_pr.make(gh)
+        sw.plan_mode = lambda: "live"
         with self.assertRaisesRegex(RuntimeError, f"more than {plan.ALL_PAGES * 100} items"):
-            test_auto_pr.make(gh).auto_open_prs()
+            sw.auto_open_prs()
         self.assertEqual(gh.writes, [])
+
+    def test_in_shadow_or_off_it_reads_what_trunk_reads_and_opens_nothing_new(self):
+        for mode in ("shadow", "off"):
+            gh, head = test_auto_pr.green_setup(n=900, name=LATE, job="J-642")
+            gh.__class__ = Paged
+            gh.branches = many(647, late_at=640, late_sha=head)
+            sw = test_auto_pr.make(gh)
+            sw.plan_mode = lambda mode=mode: mode
+            self.assertEqual(sw.auto_open_prs(), 0, mode)
+            self.assertEqual(gh.writes, [], mode)
+            self.assertEqual([g for g in gh.gets if "/branches" in g], ["repos/IssisX/ScraperX/branches"], mode)
 
 
 class QueueBranches(unittest.TestCase):

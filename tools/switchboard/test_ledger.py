@@ -518,7 +518,7 @@ class ReadFeedAsks(unittest.TestCase):
         self.assertEqual(activity.call_count, 2)
         self.assertEqual(L.thread_jobs(f.issues, f.prs, f.system_prs), {128: "J-021", 121: "J-014"})
 
-    def test_a_job_issue_missing_its_job_label_is_still_read(self):
+    def test_with_the_plan_live_a_job_issue_missing_its_job_label_is_still_read(self):
         """Rebuild failure 2: an open J-NNN issue with no `job` label vanished from reconciliation."""
         import types
         from unittest import mock
@@ -526,10 +526,15 @@ class ReadFeedAsks(unittest.TestCase):
                                           "created_at": L.iso(ago(90)), "updated_at": L.iso(ago(1)), "labels": labels}
         issues = [issue(128, "J-021 Environment lane C", [{"name": "job"}]), issue(451, "J-127 a heard lead", []),
                   issue(340, "Board: live jobs (3)", [])]
-        sw = types.SimpleNamespace(gh=self.GH([], issues), team=None, run_state=None)
+        sw = types.SimpleNamespace(gh=self.GH([], issues), team=None, run_state=None, plan_mode=lambda: "live")
         with mock.patch.object(L, "cursor_pages", return_value=([], False)):
             f, _ = L.read_feed(sw, [], NOW, 340, "proof.yml", set(), set(), ROSTER)
         self.assertEqual(sorted(i.number for i in f.issues), [128, 451])
+        for mode in ("shadow", "off"):   # until the plan is live the jobs are the labelled issues, as before
+            sw = types.SimpleNamespace(gh=self.GH([], issues), team=None, run_state=None, plan_mode=lambda m=mode: m)
+            with mock.patch.object(L, "cursor_pages", return_value=([], False)):
+                f, _ = L.read_feed(sw, [], NOW, 340, "proof.yml", set(), set(), ROSTER)
+            self.assertEqual(sorted(i.number for i in f.issues), [128], mode)
 
 
 class Resolved(unittest.TestCase):

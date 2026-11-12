@@ -79,8 +79,8 @@ def feed(**kw):
     return L.Feed(**base)
 
 
-def mk_pass(f, now, comments=(), sent=()):
-    return R.Pass(f, L.classify(f, now, ROSTER), list(comments), set(sent))
+def mk_pass(f, now, comments=(), sent=(), plan_live=False):
+    return R.Pass(f, L.classify(f, now, ROSTER), list(comments), set(sent), plan_live=plan_live)
 
 
 def cmt(cid, thread, when, body, login="IssisX"):
@@ -208,8 +208,10 @@ class Harness:
         self.roster = roster or RROSTER
         self.log: list[str] = []
 
+    plan_live = False   # work/switchboard.yml `plan: live`: the job machine owns starts, a FIX needs a new head
+
     def run(self, f, now, comments=(), sent=(), tokens=None, open_threads=None, **kw):
-        p = mk_pass(f, now, comments, sent)
+        p = mk_pass(f, now, comments, sent, self.plan_live)
         p.tokens = tokens or {}
         p.open_threads = open_threads
         return R.run_pass(self.store, p, self.roster, self.lookups, now, self.outbox, self.log.append,
@@ -941,8 +943,21 @@ class Rules(unittest.TestCase):
         h.run(f, NOW + 5 * M, comments=[cmt(92, 414, NOW, f"/ack {oid}", login="someone")])
         self.assertIsNone(h.obs("J-500")[0]["ack"])
 
-    def test_quiet_assigned_job_creates_no_unrequested_integrator_ruling(self):
+    def test_start_is_owed_once_an_assigned_job_is_quiet_a_day(self):
         h = Harness()
+        fresh = issue(540, job="J-540", owner="owner:muse")   # touched 2 h ago
+        h.run(feed(issues=[fresh]), NOW)
+        self.assertEqual((h.state().jobs["J-540"]["state"], h.obs("J-540")), ("assigned", []))
+        h.run(feed(issues=[fresh]), NOW + 23 * H)
+        starts = h.obs("J-540", NOW + 23 * H)
+        self.assertEqual([(o["kind"], o["to"]) for o in starts], [("start-agent", "muse")])
+        b = L.BranchIn("fb-bot/integrate-j540-go", SHA["f"], t(23.5))
+        h.run(feed(issues=[fresh], branches=[b]), NOW + 24 * H)
+        self.assertEqual(h.obs("J-540", NOW + 24 * H)[0]["ack"]["how"], "work pushed")
+
+    def test_with_the_plan_live_a_quiet_assigned_job_is_owed_no_start_from_here(self):
+        h = Harness()
+        h.plan_live = True
         fresh = issue(540, job="J-540", owner="owner:muse")
         h.run(feed(issues=[fresh]), NOW)
         self.assertEqual((h.state().jobs["J-540"]["state"], h.obs("J-540")), ("assigned", []))
@@ -958,8 +973,8 @@ class Rules(unittest.TestCase):
         parked = dataclasses.replace(quiet, labels=quiet.labels + (R.PARKED_LABEL,))
         h.run(feed(issues=[parked]), NOW + 30 * H)
         self.assertEqual((h.state().jobs["J-541"]["state"], h.obs("J-541", NOW + 30 * H)), ("accepted", []))
-        h.run(feed(issues=[quiet]), NOW + 31 * H)   # unparked but still queued: no new ruling debt
-        self.assertEqual(h.obs("J-541", NOW + 31 * H), [])
+        h.run(feed(issues=[quiet]), NOW + 31 * H)   # unparked and quiet past the grace: the start is owed again
+        self.assertEqual([o["kind"] for o in h.obs("J-541", NOW + 31 * H)], ["start-agent"])
 
     def test_a_queued_job_has_a_day_before_a_start_is_owed(self):
         h = Harness()
@@ -1573,10 +1588,11 @@ class Noise(unittest.TestCase):
 
 
 class OpenFixRequiresEvidence(unittest.TestCase):
-    """A receipt of a P1 FIX does not close the PR's unresolved work."""
+    """With the plan live, a receipt of a P1 FIX does not close the PR's unresolved work."""
 
     def test_ack_of_an_unchanged_fix_is_seen_but_not_settled(self):
         h = Harness()
+        h.plan_live = True
         f = feed(prs=[pr(401, "fb-bot/integrate-j500", action="FIX",
                          reasons=("unresolved P1",))],
                  issues=[issue(500, owner="owner:muse")])

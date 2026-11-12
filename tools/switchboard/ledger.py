@@ -1189,12 +1189,15 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             except Exception as err:   # noqa: BLE001
                 problems.append(f"proof run {r.id} jobs: {type(err).__name__}")
 
-    # Read every open issue, not only those already labelled job: the missing job label
-    # is itself a collaboration defect and must never make the job disappear.
+    # With the plan live (work/switchboard.yml `plan: live`) every open issue titled J-NNN is a job, labelled or
+    # not: a missing job label is itself a collaboration defect and must never make the job disappear. Until
+    # then the jobs are the issues labelled `job`, as before.
+    plan_live = getattr(sw, "plan_mode", lambda: "off")() == "live"
+    labelled = [] if plan_live else gh.paged(f"repos/{repo}/issues?labels=job&state=open")
     all_open_issues = gh.paged(f"repos/{repo}/issues?state=open")
     issues: list[IssueIn] = []
-    for it in all_open_issues:
-        if "pull_request" in it or not rules.job_of_title(it.get("title") or ""):
+    for it in all_open_issues if plan_live else labelled:
+        if "pull_request" in it or (plan_live and not rules.job_of_title(it.get("title") or "")):
             continue
         labels = tuple(l["name"] for l in it.get("labels") or [])
         issues.append(IssueIn(it["number"], it.get("html_url") or "", it.get("title") or "", labels,

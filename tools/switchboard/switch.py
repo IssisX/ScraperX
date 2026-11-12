@@ -1325,7 +1325,11 @@ class Switch:
         sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
         Returns how many PRs were opened (or would be, in a dry run)."""
         self.auto_pr_failed = ()
-        listed = collab_plan.whole(self.gh, f"repos/{self.gh.repo}/branches")   # every page; past ALL_PAGES it raises
+        # 11-12: 647 branches, and paged() stops at 500 without saying so, so a finished branch past it never got
+        # its PR. Once the plan is live every page is read (past ALL_PAGES it raises). Until then this reads what
+        # it always read: the rebuild changes nothing the live switch does while it is in shadow.
+        path = f"repos/{self.gh.repo}/branches"
+        listed = collab_plan.whole(self.gh, path) if self.plan_mode() == "live" else self.gh.paged(path)
         if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
             alive = {b["name"] for b in listed}
             self.gh.state["prior_pr"] = [n for n in self.gh.state.get("prior_pr") or [] if n in alive]
