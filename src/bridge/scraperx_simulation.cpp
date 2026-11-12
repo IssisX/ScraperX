@@ -335,6 +335,7 @@ void ScraperXSimulation::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("prepare_matron"), &ScraperXSimulation::prepare_matron);
     // TEST-ONLY: the look suite's setup (see the header); nothing in play calls these.
     godot::ClassDB::bind_method(godot::D_METHOD("debug_place_matron", "feet"), &ScraperXSimulation::debug_place_matron);
+    godot::ClassDB::bind_method(godot::D_METHOD("debug_face_matron", "yaw"), &ScraperXSimulation::debug_face_matron);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_hold_matron_hands", "seconds"), &ScraperXSimulation::debug_hold_matron_hands);
     godot::ClassDB::bind_method(godot::D_METHOD("debug_set_matron_stage", "stage"),
                                 &ScraperXSimulation::debug_set_matron_stage);
@@ -2150,6 +2151,7 @@ namespace {
 } // namespace
 
 void ScraperXSimulation::debug_place_matron(const godot::Vector3 feet) { simulation_->debug_place_matron(to_sim(feet)); }
+void ScraperXSimulation::debug_face_matron(const double yaw) { simulation_->debug_face_matron(yaw); }
 
 void ScraperXSimulation::debug_hold_matron_hands(const double seconds) { simulation_->debug_hold_matron_hands(seconds); }
 
