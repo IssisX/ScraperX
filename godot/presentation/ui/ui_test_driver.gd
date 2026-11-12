@@ -45,7 +45,12 @@ const SCENARIOS := {
 	"touch_birds": 8,
 	"touch_workers": 8,
 	"touch_works": 27,
+# touch_chute: the chute in a real free fall, on touch input.
 	"touch_chute": 9,
+	# J-124: the parachute is the way back from a high deck on touch input:
+	# a run off the 484 ring's north edge, CHUTE tapped when offered, the
+	# stick held outward all the way down to the grade.
+	"touch_chute_high": 22,
 	"touch_lethal_feedback": 9,
 	# A broken arm: flat out into the Matron's locker, then the ladder one-armed.
 	"touch_arm_break": 11,
@@ -409,6 +414,8 @@ func _run() -> void:
 			ok = await _touch_works()
 		"touch_chute":
 			ok = await _touch_chute()
+		"touch_chute_high":
+			ok = await _touch_chute_high()
 		"touch_arm_break":
 			ok = await _touch_arm_break()
 		"touch_lethal_feedback":

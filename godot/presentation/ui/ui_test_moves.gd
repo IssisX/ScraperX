@@ -1419,6 +1419,46 @@ func _touch_chute() -> bool:
 		float(_native().get_last_impact_speed_mps())]
 	return true
 
+# touch_chute_high (J-124, #446): the parachute is the way back from a high
+# deck on touch input. From the 484 ring's north band, a sprint off the
+# edge, CHUTE tapped when offered (finger 1: the stick holds finger 0),
+# the stick held outward all the way down, and a landing on the grade
+# alive. The descent is ~55 s; the landing wait is 90 s.
+func _touch_chute_high() -> bool:
+	var device := InputRouter.Device.TOUCH
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	if not await _walk_to(device, Vector2(-3.0, -140.5), 0.15, 10.0, true):
+		return _fail("never reached the 484 ring's north-band run-up")
+	_main._yaw = PI
+	_main._pitch = 0.0
+	if not _stick_sprint():
+		return _fail("sprint never latched for the run off the 484 ring")
+	var off: bool = await _wait_until(func() -> bool: return not bool(_ctx()["grounded"]), 6.0)
+	if not off:
+		return _fail("a sprint at the 484 ring's north edge never left the ground")
+	var reached: bool = await _wait_until(func() -> bool: return _main._touch.is_button_shown(&"chute"), 3.0)
+	if not reached:
+		return _fail("CHUTE never offered in a real free fall from the 484 ring")
+	var offered_at := -_velocity().y
+	await _frames(3)
+	_tap(1, _center(&"chute"))
+	var reached_2: bool = await _wait_until(func() -> bool: return bool(_native().is_parachute_deployed()), 0.2)
+	if not reached_2:
+		return _fail("CHUTE did not deploy the canopy")
+	await _seconds(0.6)
+	if not _main._arms.risers_visible() or _main._arms.hand_poses() != [6, 6]:
+		return _fail("hands are not on the canopy toggles (poses %s)" % str(_main._arms.hand_poses()))
+	await _pose("canopy")
+	var reached_3: bool = await _wait_until(func() -> bool: return bool(_native().is_player_grounded()), 90.0)
+	if not reached_3:
+		return _fail("canopy descent from the 484 ring never landed")
+	await _frames(2)
+	if int(_native().get_death_count()) != 0:
+		return _fail("landed dead at %.1f m/s" % float(_native().get_last_impact_speed_mps()))
+	_detail = "offered_at_mps=%.2f impact_mps=%.2f landed=(%.1f,%.1f,%.1f)" % [offered_at,
+		float(_native().get_last_impact_speed_mps()), _position().x, _position().y, _position().z]
+	return true
+
 # touch_arm_break: on the 154 m deck, flat out on the stick along the north
 # band into the Matron's steel locker is no blow (J-048: his own run never
 # hurts him); thrown into it a little faster, the arm that took it breaks

@@ -696,7 +696,7 @@ jobs:
           : > artifacts/godot-uitest-touch-1.log
           for scenario in touch_jump touch_move_look touch_body touch_gyro_aim touch_climb touch_vault touch_double_tap_vault touch_crouch touch_hang_drop touch_hang_climb touch_monkey_bars touch_swing_launch \
               touch_zipline touch_zipline_slam touch_pipe_gallery touch_slide touch_speed_vault touch_precision touch_wall_run touch_wall_climb touch_tuck touch_flow touch_springboard touch_quickturn \
-              touch_hook touch_hook_rope touch_birds touch_workers touch_works touch_clouds touch_chute touch_lethal_feedback touch_arm_break touch_pause touch_wall_kick touch_ladder \
+              touch_hook touch_hook_rope touch_birds touch_workers touch_works touch_clouds touch_chute touch_chute_high touch_lethal_feedback touch_arm_break touch_pause touch_wall_kick touch_ladder \
               touch_route_hint touch_jump_buttons touch_vault_buttons touch_double_tap_vault_buttons touch_crouch_buttons touch_quickturn_buttons touch_hang_climb_buttons touch_hang_drop_buttons touch_slide_buttons touch_roll_buttons touch_wall_run_buttons touch_trapeze_buttons \
               touch_wall_kick_buttons touch_ladder_buttons touch_rig touch_boom touch_debris touch_photo_id_radio touch_checkpoint touch_save touch_roll touch_roll_reduced touch_trapeze touch_teeter touch_title \
               touch_stack_upper touch_stack touch_wet touch_shop touch_crane touch_service touch_c4 touch_n touch_c5; do
