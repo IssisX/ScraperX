@@ -13,6 +13,15 @@ row here.
 
 | Date | Directive | In force as |
 |---|---|---|
+| 11-12 | *"either fable 5.2 or Argon, remember?!"*; *"alert me each time before you're about to use fable"*, *"on high 1st"*; *"WAITING FOR THIS AFTERNOON TO ARRIVE IS ABSOLUTELY DUMB"*: the hardest problems go at once to Argon (free) or, told to him before each use, a Fable 5.2 helper on high; nothing waits on a scheduled agent's run. | CLAUDE.md settled list |
+| 11-12 | *"I don't like how much we're losing in the compactions"* (with 11-11: *"I didn't like before when you said, okay, we compacted and I lost nothing"*): a compact loses detail; what matters goes to its home first, and what may be gone is said. | rule 16 |
+| 11-11 | *"Or grok / Or argon / Or ChatGPT / Not AND / Although i could do 2 different if needed"*: one hard question goes to one outside agent; a second only when needed. | integrator-hourly step 4 |
+| 11-11 | *"And you tried to hide it, did you not?"*; *"I don't ever ask you or want you to try to 'remember harder'. I know that doesn't work"*; *"I asked about this long ago multiple times and it never made it"*: a hole in the agents' system is named and fixed; a miss is stopped by a check or a tracked home, never by remembering. | rule 10 |
+| 11-11 | *"she does not chase anymore, and that can NOT happen"*: losing her chase is a top regression. | rule 31 |
+| 11-11 | *"use your imagination and creativity"*; *"we can change them a little bit or a lot in some cases?"*; *"not one rope pulling player all the way up? Right?"*; *"I don't want a second slingshot."*; *"the ladders were there for her. We don't need to have some puzzle"*: ways up from what we have, no copies, no puzzles, her way up stays. | rule 52 |
+| 11-11 | *"if I or Matron or anything with mass stands on the end of a plank or something, it should bend a bit"*, with moveable objects and procedural destruction. | rule 51 |
+| 11-11 | *"I asked you to make sure that it wasn't going in the main fucking inbox"*: his filter moves agent mail to a side label. | rule 7 |
+| 11-11 | *"Give me a short overview of what you are doing occasionally."* | rule 20, the overview scheduled task |
 | 2026-11-11 | *"sort failures by cause first from now on"* (after J-001 took five passes before its 35 failures were grouped) and *"you are in a loop of constantly making mistakes and saying sorry for them"*: every job with several failures is sorted by first cause before any fix; the integrator checks before it states or rules | `.claude/skills/scraperx-engineering/SKILL.md` section 3 |
 | 2026-11-11 | *"Floor"*: where no usable rail fits her five beats in time (J-001 groups A and B2), her floor version is the fatality; those checks move on a protected branch (J-093) | J-001 #108, J-093 #411 |
 | 2026-11-11 | *"if the inbox is getting cluttered and if it would help to clear it out, please do, but do not ever touch my main inbox"*, and a prompt per mail is *"not good"*: the agent mail lives in his main inbox, so no mail is ever trashed, archived or moved; the earlier cleanup attempt trashed nothing (the connector refused) | `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` (Traps) |
