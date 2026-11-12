@@ -65,6 +65,7 @@ add_library(scraperx_sim STATIC
     src/sim/matron_traversal.cpp
     src/sim/matron_journey.cpp
     src/sim/loose_stock.cpp
+    src/sim/objectives.cpp
     src/sim/fabricated.cpp
     src/sim/physics_world_fabricated.cpp
     src/sim/impacts.cpp
