@@ -37,9 +37,9 @@ your own branches (Cory 11-05) and mail the rest:
   own protected PR with a plain before/after: push it alone to `fb-bot/integrate-protected-<job>`. Never weaken a test.
 - Test only what your change reaches (`SCRAPERX_ONLY=<group>`); the full suite is CI's job. Put the
   PASS/FAIL lines you ran in the email.
-- Hand causes to Claude (11-12): when a fix fails once, or you would ask "which is it?", stop and email
-  `To Claude: <job> stuck` with what you measured, ruled out, and your branch and sha. Claude's helpers find
-  the cause; you build the fix they name. Meanwhile take your next lane.
+- Most work is yours, debugging included (11-12). When a fix fails twice on the same failure, or the job blocks
+  2+ others, stop and email `To Claude: <job> stuck` with what you measured, ruled out, and branch and sha.
+  Claude's helpers find the cause; you build the fix they name. Meanwhile take your next lane.
 - Human sounds are real recordings, never synthesized.
 - **Look at it (11-07):** a visual change comes with stills from the Godot MCP (pause the CPU jobs first; pick NOT NOW on the microphone screen). How: `work/tasks/eye-check.md`. Claude checks the stills.
 - **Push, then CI proves (11-10).** Push as soon as the change builds and the groups it reaches pass locally. Never hold a push
