@@ -25,7 +25,12 @@ extends "res://presentation/ui/ui_test_look.gd"
 # future shrink has to clear, stated here so the check is not a magic
 # constant in the code below.
 
-# The four screens from the issue, each in portrait and landscape. The
+# The four screens from the issue, each in portrait and landscape, as WINDOW
+# sizes: headless has no window, so DisplayServer.window_set_size is a no-op
+# there and the scenario sizes the root Window instead. The visible canvas
+# is what the stretch mode (canvas_items, expand) computes from the window --
+# 2160 wide in portrait, 1856 tall in landscape -- and _layout reads that,
+# so the audit below validates the layout the player actually sees. The
 # order matters: consecutive entries always differ, so a resize that leaves
 # Jump's center where it was proves _layout did not run.
 const SCREENS: Array = [
@@ -128,15 +133,21 @@ func _touch_screens() -> bool:
 	return true
 
 
-# Resize to `size`, prove the viewport moved and _layout ran on the same
-# frame, and audit the layout there. "" is a pass.
+# Resize the window to `size`, prove it moved and _layout ran on the same
+# frame, and audit the layout there. "" is a pass. The root Window is sized
+# directly: headless has no DisplayServer window (window_get_size is (0, 0)
+# and window_set_size does nothing there), and the visible canvas follows
+# the root size through the stretch mode.
 func _screens_resize(tag: String, size: Vector2i) -> String:
 	var before: Vector2 = _main._touch.button_center(&"jump")
-	DisplayServer.window_set_size(size)
+	var changed: bool = get_tree().root.size != size
+	get_tree().root.size = size
 	await _frames(3)
-	if _viewport_size() != Vector2(size):
-		return "%s resize to %s did not move the viewport (still %s)" % [tag, str(size), str(_viewport_size())]
-	if _main._touch.button_center(&"jump") == before:
+	if get_tree().root.size != size:
+		return "%s resize to %s did not move the window (still %s)" % [tag, str(size), str(get_tree().root.size)]
+	# A resize to the size already there has nothing to move; the audit below
+	# is the check there. A real resize must move the layout on the frame.
+	if changed and _main._touch.button_center(&"jump") == before:
 		return "%s layout did not move after the resize to %s" % [tag, str(size)]
 	return _audit_layout(tag)
 
