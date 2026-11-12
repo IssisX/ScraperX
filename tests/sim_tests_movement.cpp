@@ -147,6 +147,35 @@ void run_hang_rail() {
                               },
                               2.0),
                 "hang rail: brake to a stop on the leaf");
+        // Claude 06:13: start the fall on the rail line. The walk + brake
+        // leaves him ~0.12 m east of it (the brake drift), and from there
+        // his lower rim catches the rail's top-west corner and pops him
+        // further east, so the catch never sees the rail. Nudge him back
+        // west with slow real inputs and re-brake until he stands on the
+        // line: the nudge is slow, so each re-brake drifts him only a few
+        // millimetres, and the loop converges. No teleport: the fall still
+        // starts from a walked, braked stance on the leaf.
+        for (int nudge = 0; nudge < 4; ++nudge) {
+            const double dx = static_cast<double>(scraperx::sim::detail::kHangRailX) -
+                              s.snapshot().player_position.x;
+            if (std::abs(dx) < 0.02) {
+                break;
+            }
+            const double z = s.snapshot().player_position.z;
+            require(walk_to(s, static_cast<double>(scraperx::sim::detail::kHangRailX), z, 3.0, 0.01),
+                    "hang rail: nudge back onto the rail line");
+            (void)s.set_move_input(0.0, 0.0);
+            require(advance_until(s,
+                                  [](const Snapshot &n) {
+                                      return std::hypot(n.player_linear_velocity.x, n.player_linear_velocity.z) <
+                                             0.05;
+                                  },
+                                  3.0),
+                    "hang rail: brake after the nudge");
+        }
+        require(std::abs(s.snapshot().player_position.x -
+                         static_cast<double>(scraperx::sim::detail::kHangRailX)) < 0.02,
+                "hang rail: the fall starts on the rail line");
         (void)s.set_facing(0.0, -1.0);
         (void)s.set_move_input(0.0, -1.0);
         require(s.request_jump(), "hang rail: jump the leaf's south handrail");
