@@ -347,4 +347,6 @@ Include plan <version> in the subject after a plan-change notice. Keep the exist
 - Delete all manual updates of job state in `INTEGRATOR_NOTES.md`; retain only non-derivable context.
 - Preserve independent review, evidence, worktree, test and gameplay constraints unchanged.
 
+**Merges are not the plan's to stop (Cory 11-12):** a hold or a transfer never turns MERGE or HUMAN-MERGE into WAIT. The plan routes new work only; finished work lands on the existing proof, review, security and LAND rules.
+
 **Activation gate:** no `plan: live` until plan validation, live shadow checks, every supported test, and the owner's approval of the WIP limits and the first generated assignments. No gameplay or money decision is authorized by this document.

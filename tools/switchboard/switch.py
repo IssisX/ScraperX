@@ -1030,23 +1030,6 @@ class Switch:
                 block, never = self.rule_check_block(facts.number, facts.head_sha)
                 facts = dataclasses.replace(facts, rule_check_block=block, never_edit=never)
                 d = rules.merge_decision(facts, author, self.team, token, key)
-        # After cutover, one versioned plan owns the job, not mutable labels/mail.
-        # A clean proof or LAND cannot bypass a transfer or a hold.
-        if d.action in ("MERGE", "HUMAN-MERGE") and ctx.get("job") and self.plan_mode() == "live":
-            model = self.read_plan()
-            line = model.by_job().get(ctx["job"])
-            ref = facts.head_ref
-            why = ""
-            if line is None:
-                why = f"{ctx['job']}: no plan order"
-            elif line.hold:
-                why = f"{ctx['job']}: held in plan ({line.hold})"
-            elif not (ref.startswith("fb-bot/") if line.owner == "muse" else
-                      ref.startswith(line.owner + "/")):
-                why = f"{ctx['job']}: plan owner {line.owner}, branch {ref}"
-            if why:
-                d = rules.MergeDecision("WAIT", (f"plan authority: {why}",), d.land_by)
-                self.out(f"HOLD        #{facts.number}: {why}")
         self.out(f"{d.action:<11} #{facts.number} {facts.head_ref} @{facts.head_sha[:8]} author={author} "
                  f"proof={facts.proof} job={ctx['job'] or '-'}: {'; '.join(d.reasons)}")
         seen = Steered(facts, ctx, d)
