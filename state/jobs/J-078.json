@@ -11,7 +11,7 @@
   "6796657784:60"
  ],
  "created": "2026-11-10T22:50:55Z",
- "deadline": "2026-11-12T16:17:00Z",
+ "deadline": null,
  "head": "ed5cafadb90d8b504b812446cdf1bd08460d7402",
  "issue": 393,
  "job": "J-078",
@@ -119,7 +119,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T14:29:46Z",
    "dead": "2026-11-12T22:29:46Z",
    "dead_lettered": null,
@@ -144,7 +147,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T14:29:46Z",
    "dead": "2026-11-12T18:17:00Z",
    "dead_lettered": "2026-11-12T19:27:38Z",
@@ -175,5 +181,5 @@
  ],
  "review": "FIX",
  "state": "proof",
- "updated": "2026-11-12T14:29:46Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

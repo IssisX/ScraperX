@@ -188,8 +188,8 @@
    "what": "#376 @ 93ca1004 has a verdict but no LAND from another vendor: a LAND-capable review from Codex"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-protected-j069: merged #376",
  "owner": "muse",
  "pr": 376,
  "pr_done": "merged",
@@ -198,5 +198,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-10T15:09:20Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

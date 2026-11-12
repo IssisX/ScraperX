@@ -11,7 +11,7 @@
   "6826901106:0"
  ],
  "created": "2026-11-11T22:08:00Z",
- "deadline": "2026-11-12T17:00:00Z",
+ "deadline": null,
  "head": "6d6544976af64518aa6e12238cae40f9638e8fc5",
  "issue": 427,
  "job": "J-108",
@@ -177,7 +177,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T18:46:22Z",
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-12T15:45:44Z",
    "dead": "2026-11-12T23:00:00Z",
    "dead_lettered": null,
@@ -226,8 +229,8 @@
    "what": "ask from ChatGPT on #427"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j108: merged #463; claude/integrate-protected-j108: merged #464",
  "owner": "claude",
  "pr": 464,
  "pr_done": "merged",
@@ -237,5 +240,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-12T16:58:14Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

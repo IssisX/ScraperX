@@ -45,13 +45,13 @@
    "what": "start J-023"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "issue closed (completed)",
  "owner": "muse",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-10T18:29:43Z"
+ "state": "merged",
+ "updated": "2026-11-12T21:45:56Z"
 }

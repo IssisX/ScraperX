@@ -2,7 +2,7 @@
  "attempt": 0,
  "blocked": null,
  "branches": {
-  "fb-bot/integrate-j116": "00a02f3b19f636d37521e246c0055db7c98a8a3c"
+  "fb-bot/integrate-j116": "8ad2d1b4aba1053cb447b5dc7d560152bec02858"
  },
  "cancelled": null,
  "ci": "",
@@ -10,15 +10,15 @@
   "6829010752:44"
  ],
  "created": "2026-11-12T01:29:02Z",
- "deadline": "2026-11-13T00:30:39Z",
- "head": "00a02f3b19f636d37521e246c0055db7c98a8a3c",
+ "deadline": null,
+ "head": "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
  "issue": 438,
  "job": "J-116",
  "landed": {
   "fb-bot/integrate-j116": [
-   "00a02f3b19f636d37521e246c0055db7c98a8a3c",
+   "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
    "",
-   "2026-11-12T20:30:39Z"
+   "2026-11-12T21:45:56Z"
   ]
  },
  "obligations": [
@@ -57,7 +57,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T20:30:39Z",
    "dead": "2026-11-13T04:30:39Z",
    "dead_lettered": null,
@@ -86,5 +89,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T20:30:39Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

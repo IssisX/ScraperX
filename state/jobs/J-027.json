@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
+ "deadline": null,
  "head": "",
  "issue": 134,
  "job": "J-027",
@@ -18,7 +18,10 @@
    "asked": null,
    "attempts": 1,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "issue closed"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
    "dead_lettered": null,
@@ -38,13 +41,13 @@
    "what": "start J-027"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "issue closed (completed)",
  "owner": "muse",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-09T21:19:08Z"
+ "state": "merged",
+ "updated": "2026-11-12T21:45:56Z"
 }

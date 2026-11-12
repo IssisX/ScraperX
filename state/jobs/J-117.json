@@ -1,11 +1,11 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j117": "727ee47462e16bbbc87da036fa2733b484bb3b60"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [
   "6829011816:44"
  ],
@@ -57,7 +57,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T18:09:34Z",
    "dead": "2026-11-12T21:17:00Z",
    "dead_lettered": null,
@@ -85,7 +88,7 @@
    "closed": null,
    "created": "2026-11-12T18:09:34Z",
    "dead": "2026-11-12T21:17:00Z",
-   "dead_lettered": null,
+   "dead_lettered": "2026-11-12T21:45:56Z",
    "due": "2026-11-12T19:17:00Z",
    "id": "O-0f17ee95",
    "kind": "ask",
@@ -106,10 +109,12 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 479,
  "pr_done": "",
- "prs": [],
- "review": "",
- "state": "proof",
- "updated": "2026-11-12T18:09:34Z"
+ "prs": [
+  479
+ ],
+ "review": "waiting",
+ "state": "review",
+ "updated": "2026-11-12T21:45:56Z"
 }

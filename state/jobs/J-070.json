@@ -140,13 +140,13 @@
    "what": "`fb-bot/integrate-j070-cull` proof red, no PR"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j070-cull: merged #388",
  "owner": "muse",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-10T20:49:16Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

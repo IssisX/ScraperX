@@ -17,7 +17,10 @@
    "ack_rule": "work|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T14:29:46Z",
    "dead": "2026-11-12T22:29:46Z",
    "dead_lettered": null,
@@ -46,5 +49,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-12T16:58:14Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

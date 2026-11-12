@@ -9,7 +9,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": "2026-11-11T18:17:00Z",
+ "deadline": null,
  "head": "04d8eb00bc68a119be73a4a16feacdf731317295",
  "issue": 400,
  "job": "J-082",
@@ -31,7 +31,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-11T17:16:05Z",
    "dead": "2026-11-11T20:17:00Z",
    "dead_lettered": "2026-11-11T21:07:56Z",
@@ -56,7 +59,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-11T18:18:52Z",
    "dead": "2026-11-11T22:17:00Z",
    "dead_lettered": "2026-11-11T23:09:21Z",
@@ -85,5 +91,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T18:18:52Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

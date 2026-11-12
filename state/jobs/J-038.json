@@ -16,7 +16,7 @@
   "6822230580:60"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T18:17:00Z",
+ "deadline": null,
  "head": "3e249d09ba7fb66b15ed29e6a272b6583612ba66",
  "issue": 169,
  "job": "J-038",
@@ -101,7 +101,10 @@
    "asked": null,
    "attempts": 1,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-09T18:42:32Z",
    "dead": "2026-11-10T00:17:00Z",
    "dead_lettered": null,
@@ -392,7 +395,10 @@
    "ack_rule": "reply|ack",
    "asked": null,
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-10T16:19:58Z",
    "dead": "2026-11-10T20:17:00Z",
    "dead_lettered": "2026-11-10T20:49:16Z",
@@ -903,7 +909,10 @@
    "ack_rule": "reply|ack",
    "asked": null,
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T16:58:14Z",
    "dead": "2026-11-12T20:17:00Z",
    "dead_lettered": "2026-11-12T20:30:39Z",
@@ -928,7 +937,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T17:28:00Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "its thread closed"
+   },
    "created": "2026-11-12T18:09:34Z",
    "dead": "2026-11-12T21:17:00Z",
    "dead_lettered": null,
@@ -961,5 +973,5 @@
  ],
  "review": "waiting",
  "state": "working",
- "updated": "2026-11-12T18:09:34Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

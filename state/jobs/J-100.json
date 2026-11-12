@@ -1,16 +1,16 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j100": "4c03c7633633f84fc95db446d2f222bc6760ce2d"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [
   "6829009961:44"
  ],
  "created": "2026-11-11T16:04:39Z",
- "deadline": "2026-11-12T19:17:00Z",
+ "deadline": null,
  "head": "4c03c7633633f84fc95db446d2f222bc6760ce2d",
  "issue": 418,
  "job": "J-100",
@@ -57,7 +57,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T18:09:34Z",
    "dead": "2026-11-12T21:17:00Z",
    "dead_lettered": null,
@@ -81,10 +84,12 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 478,
  "pr_done": "",
- "prs": [],
- "review": "",
- "state": "proof",
- "updated": "2026-11-12T18:09:34Z"
+ "prs": [
+  478
+ ],
+ "review": "waiting",
+ "state": "working",
+ "updated": "2026-11-12T21:45:56Z"
 }

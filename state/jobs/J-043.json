@@ -276,7 +276,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T18:09:34Z",
    "dead": "2026-11-13T02:09:34Z",
    "dead_lettered": null,
@@ -305,5 +308,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T19:27:38Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

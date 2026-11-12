@@ -20,13 +20,13 @@
   ]
  },
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j114: merged #465",
  "owner": "muse",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "accepted",
- "updated": "2026-11-12T15:45:44Z"
+ "state": "merged",
+ "updated": "2026-11-12T21:45:56Z"
 }

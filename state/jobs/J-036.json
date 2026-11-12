@@ -18,7 +18,10 @@
    "asked": null,
    "attempts": 1,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
    "dead_lettered": null,
@@ -47,5 +50,5 @@
  "prs": [],
  "review": "",
  "state": "accepted",
- "updated": "2026-11-12T18:09:34Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

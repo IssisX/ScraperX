@@ -15,8 +15,8 @@
  "landed": {
   "fb-bot/integrate-j081": [
    "ea4adb89de6758264f82b63ee0a8b426de63d90c",
-   "",
-   "2026-11-12T19:27:38Z"
+   "merged #475",
+   "2026-11-12T21:45:56Z"
   ]
  },
  "obligations": [
@@ -82,11 +82,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 475,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   475
  ],
  "review": "LAND",
- "state": "landable",
- "updated": "2026-11-12T20:30:39Z"
+ "state": "accepted",
+ "updated": "2026-11-12T21:45:56Z"
 }

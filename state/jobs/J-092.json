@@ -14,7 +14,7 @@
  "ci": "running",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
- "deadline": "2026-11-11T18:17:00Z",
+ "deadline": null,
  "head": "01c70e987b907fb90575f18cfad4e8994fd79092",
  "issue": 410,
  "job": "J-092",
@@ -65,7 +65,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-11T17:16:05Z",
    "dead": "2026-11-11T20:17:00Z",
    "dead_lettered": "2026-11-11T21:07:56Z",
@@ -143,8 +146,8 @@
    "what": "#434 proof red: godot-touch (touch-3), godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3)"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j092: in trunk; claude/integrate-protected-j092: merged #434",
  "owner": "claude",
  "pr": 434,
  "pr_done": "merged",
@@ -152,6 +155,6 @@
   434
  ],
  "review": "",
- "state": "blocked",
- "updated": "2026-11-12T01:29:02Z"
+ "state": "merged",
+ "updated": "2026-11-12T21:45:56Z"
 }

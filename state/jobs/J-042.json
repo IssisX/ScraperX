@@ -1,6 +1,11 @@
 {
  "attempt": 2,
- "blocked": null,
+ "blocked": {
+  "head": "8c74524cf4fec539b53d37844b61692179a511d7",
+  "holder": "cory",
+  "reason": "dead-letter O-8184d278 stands",
+  "since": "2026-11-10T17:29:19Z"
+ },
  "branches": {
   "fb-bot/integrate-protected-j042-touch2-geometry": "c6b87e787df3b43014b7aeb1e1c57918e8811b3b",
   "fb-bot/integrate-protected-j042-windup": "8c74524cf4fec539b53d37844b61692179a511d7"
@@ -232,6 +237,6 @@
   374
  ],
  "review": "",
- "state": "merged",
- "updated": "2026-11-11T21:07:56Z"
+ "state": "blocked",
+ "updated": "2026-11-12T21:45:56Z"
 }

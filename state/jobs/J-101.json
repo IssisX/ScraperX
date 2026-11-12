@@ -1,6 +1,11 @@
 {
  "attempt": 0,
- "blocked": null,
+ "blocked": {
+  "head": "",
+  "holder": "cory",
+  "reason": "dead-letter O-79a9997a stands",
+  "since": "2026-11-12T19:27:38Z"
+ },
  "branches": {},
  "cancelled": null,
  "ci": "",
@@ -45,6 +50,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T16:58:14Z"
+ "state": "blocked",
+ "updated": "2026-11-12T21:45:56Z"
 }

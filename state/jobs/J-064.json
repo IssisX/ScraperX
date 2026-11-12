@@ -165,13 +165,13 @@
    "what": "ask from Claude on #322"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j064-view-snaps: merged #346",
  "owner": "grok",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-10T15:09:20Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

@@ -55,13 +55,13 @@
    "what": "ask from Muse on #129"
   }
  ],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j022-env-d-gusts: merged #302; fb-bot/integrate-j022-mist-streak: merged #317",
  "owner": "muse",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "accepted",
- "updated": "2026-11-12T15:45:44Z"
+ "state": "merged",
+ "updated": "2026-11-12T21:45:56Z"
 }

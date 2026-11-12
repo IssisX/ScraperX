@@ -2328,3 +2328,126 @@
 {"ev": "dead_letter", "id": "O-8cc92a00", "job": "J-127", "ref": "BRANCH|fb-bot/integrate-j127", "t": "2026-11-12T20:30:39Z", "to": "claude"}
 {"ev": "needs_you", "job": "", "keys": ["O-c8233adf", "O-e0c870e4", "O-8cc92a00"], "n": 3, "t": "2026-11-12T20:30:39Z"}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-12T20:30:39Z", "tries": 1}
+{"ev": "closed", "id": "O-b495ff32", "job": "J-001", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-3496ff85", "job": "J-001", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-c8233adf", "job": "J-001", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-a761b5cb", "job": "J-008", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-08afc48d", "job": "J-009", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-073d0de5", "job": "J-014", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-4be92596", "job": "J-014", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-25fb6789", "job": "J-015", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-0569d1c6", "job": "J-015", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-5127dbe0", "job": "J-015", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-214e6190", "job": "J-015", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-31dd1f3a", "job": "J-015", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-188cbb45", "job": "J-016", "t": "2026-11-12T21:45:56Z", "why": "issue closed"}
+{"ev": "outcome", "job": "J-016", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "issue closed (completed)"}
+{"ev": "closed", "id": "O-1954c91b", "job": "J-018", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-9a350cd9", "job": "J-021", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "outcome", "job": "J-022", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "fb-bot/integrate-j022-env-d-gusts: merged #302; fb-bot/integrate-j022-mist-streak: merged #317"}
+{"ev": "outcome", "job": "J-023", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "issue closed (completed)"}
+{"ev": "closed", "id": "O-cf78351b", "job": "J-027", "t": "2026-11-12T21:45:56Z", "why": "issue closed"}
+{"ev": "outcome", "job": "J-027", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "issue closed (completed)"}
+{"ev": "closed", "id": "O-763c3967", "job": "J-036", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-15ec66d5", "job": "J-038", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-e0d043a6", "job": "J-038", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-e0c870e4", "job": "J-038", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-84dbd436", "job": "J-038", "t": "2026-11-12T21:45:56Z", "why": "its thread closed"}
+{"ev": "closed", "id": "O-fab69e0e", "job": "J-040", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-7b9e3274", "job": "J-040", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-f42e35af", "job": "J-043", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-47eadd6d", "job": "J-044", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-ea2aff94", "job": "J-044c", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-e505dc8d", "job": "J-044c", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-fdbc7c74", "job": "J-044c", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-5ba43bf8", "job": "J-044c", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-b69baff4", "job": "J-044c", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-52effe01", "job": "J-044l", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-21733090", "job": "J-049", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-ac0bbca6", "job": "J-049", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "outcome", "job": "J-050", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "fb-bot/integrate-j050-traversal-rungdown-ci-red-fix: merged #288; fb-bot/integrate-protected-j050-traversal-rungdown-bottom-gap-test: merged #290"}
+{"due": "2026-11-12T23:17:00Z", "ev": "obligation", "id": "O-7042d24d", "job": "J-053", "kind": "ask", "ref": "ASK|ask on #82", "t": "2026-11-12T21:45:56Z", "to": "claude", "via": "session"}
+{"ev": "closed", "id": "O-0cd67ef4", "job": "J-055", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-1aad7991", "job": "J-059", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-7f4d62f7", "job": "J-059", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "outcome", "job": "J-064", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "claude/integrate-j064-view-snaps: merged #346"}
+{"ev": "reassigned", "frm": "claude", "job": "J-067", "t": "2026-11-12T21:45:56Z", "to": "muse"}
+{"ev": "outcome", "job": "J-069", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "fb-bot/integrate-protected-j069: merged #376"}
+{"ev": "outcome", "job": "J-070", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "fb-bot/integrate-j070-cull: merged #388"}
+{"ev": "closed", "id": "O-8491b43b", "job": "J-072", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-22d6728e", "job": "J-078", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-3a66534b", "job": "J-078", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "pr_closed", "how": "merged", "job": "J-079", "pr": 473, "t": "2026-11-12T21:45:56Z"}
+{"ev": "closed", "id": "O-ba6513b7", "job": "J-079", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-f8303b30", "job": "J-079", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-18975105", "job": "J-080", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-89c95279", "job": "J-080", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"branch": "fb-bot/integrate-j081", "ev": "landed", "how": "merged #475", "job": "J-081", "sha": "ea4adb89de6758264f82b63ee0a8b426de63d90c", "t": "2026-11-12T21:45:56Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-081", "pr": 475, "t": "2026-11-12T21:45:56Z"}
+{"ev": "closed", "id": "O-63e0a689", "job": "J-082", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-fade16ff", "job": "J-082", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-8f0d1e6a", "job": "J-083", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-f4af1cfb", "job": "J-084", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-ab43ea33", "job": "J-085", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-6020d9c3", "job": "J-088", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-bc1328fe", "job": "J-089", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-afacd49b", "job": "J-090", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-6f17cffa", "job": "J-092", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "outcome", "job": "J-092", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "claude/integrate-j092: in trunk; claude/integrate-protected-j092: merged #434"}
+{"ev": "closed", "id": "O-292de23e", "job": "J-093", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-f72c7d4b", "job": "J-094", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-6cedf3d0", "job": "J-096", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-0fe51a2e", "job": "J-098", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-ee10e62c", "job": "J-099", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-485bcbc0", "job": "J-100", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-a1b6ff0a", "job": "J-102", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-2f7a1ee2", "job": "J-105", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-b07e056d", "job": "J-108", "t": "2026-11-12T21:45:56Z", "why": "its thread closed"}
+{"ev": "outcome", "job": "J-108", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "claude/integrate-j108: merged #463; claude/integrate-protected-j108: merged #464"}
+{"ev": "closed", "id": "O-079c9388", "job": "J-109", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "outcome", "job": "J-114", "outcome": "merged", "t": "2026-11-12T21:45:56Z", "why": "fb-bot/integrate-j114: merged #465"}
+{"ev": "closed", "id": "O-6079a6ca", "job": "J-116", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-beaf1b6c", "job": "J-117", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-b5c36b7e", "job": "J-118", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-ba11524f", "job": "J-119", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-98f48da7", "job": "J-120", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-df46bc0e", "job": "J-121", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-2ce019c3", "job": "J-122", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-ea119e93", "job": "J-123", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-2e70fef4", "job": "J-124", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-b28f9022", "job": "J-125", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-8cc92a00", "job": "J-127", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-213fdfe2", "job": "J-129", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-7ce85c6c", "job": "J-130", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-21c68a6e", "job": "J-131", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-d158b8ab", "job": "J-132", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-6ad5fe5b", "job": "J-133", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-d12e3ad3", "job": "J-134", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-f5d9f621", "job": "J-135", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-5bbc9af4", "job": "J-137", "t": "2026-11-12T21:45:56Z", "why": "the job machine's table owns it (plan: live)"}
+{"ev": "closed", "id": "O-ba0e6c83", "job": "", "t": "2026-11-12T21:45:56Z", "why": "its thread closed"}
+{"ev": "closed", "id": "O-73c4486d", "job": "", "t": "2026-11-12T21:45:56Z", "why": "landed"}
+{"ev": "state", "frm": "assigned", "job": "J-016", "t": "2026-11-12T21:45:56Z", "to": "merged"}
+{"ev": "state", "frm": "accepted", "job": "J-022", "t": "2026-11-12T21:45:56Z", "to": "merged"}
+{"ev": "state", "frm": "assigned", "job": "J-023", "t": "2026-11-12T21:45:56Z", "to": "merged"}
+{"ev": "state", "frm": "assigned", "job": "J-027", "t": "2026-11-12T21:45:56Z", "to": "merged"}
+{"ev": "state", "frm": "merged", "job": "J-042", "t": "2026-11-12T21:45:56Z", "to": "blocked"}
+{"ev": "state", "frm": "working", "job": "J-049", "t": "2026-11-12T21:45:56Z", "to": "merged"}
+{"ev": "state", "frm": "landable", "job": "J-079", "t": "2026-11-12T21:45:56Z", "to": "merged"}
+{"ev": "state", "frm": "landable", "job": "J-081", "t": "2026-11-12T21:45:56Z", "to": "accepted"}
+{"ev": "state", "frm": "blocked", "job": "J-092", "t": "2026-11-12T21:45:56Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-100", "t": "2026-11-12T21:45:56Z", "to": "working"}
+{"ev": "state", "frm": "assigned", "job": "J-101", "t": "2026-11-12T21:45:56Z", "to": "blocked"}
+{"ev": "state", "frm": "accepted", "job": "J-114", "t": "2026-11-12T21:45:56Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-117", "t": "2026-11-12T21:45:56Z", "to": "review"}
+{"ev": "state", "frm": "proof", "job": "J-119", "t": "2026-11-12T21:45:56Z", "to": "landable"}
+{"ev": "state", "frm": "proof", "job": "J-125", "t": "2026-11-12T21:45:56Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-127", "t": "2026-11-12T21:45:56Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-129", "t": "2026-11-12T21:45:56Z", "to": "working"}
+{"ev": "unmatched", "ident": "PR|#483", "job": "", "t": "2026-11-12T21:45:56Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#482", "job": "", "t": "2026-11-12T21:45:56Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#481", "job": "", "t": "2026-11-12T21:45:56Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "matched", "ident": "BRANCH|claude/integrate-collab-plan-sync", "job": "", "t": "2026-11-12T21:45:56Z"}
+{"ev": "inbox", "id": "O-7042d24d", "job": "J-053", "ref": "ASK|ask on #82", "t": "2026-11-12T21:45:56Z", "to": "claude", "via": "session"}
+{"ev": "dead_letter", "id": "O-0f17ee95", "job": "J-117", "ref": "ASK|ask on #439", "t": "2026-11-12T21:45:56Z", "to": "claude"}
+{"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-12T21:45:56Z", "tries": 1}

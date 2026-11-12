@@ -8,7 +8,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": "2026-11-12T22:17:00Z",
+ "deadline": null,
  "head": "687ddfdfbe2e0b3d0e649020281151117c8994f2",
  "issue": 397,
  "job": "J-079",
@@ -25,7 +25,10 @@
    "ack_rule": "work|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T14:29:46Z",
    "dead": "2026-11-12T22:29:46Z",
    "dead_lettered": null,
@@ -79,7 +82,10 @@
    "ack_rule": "merged|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T20:30:39Z",
    "dead": "2026-11-13T00:17:00Z",
    "dead_lettered": null,
@@ -104,11 +110,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 473,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   473
  ],
  "review": "",
- "state": "landable",
- "updated": "2026-11-12T20:30:39Z"
+ "state": "merged",
+ "updated": "2026-11-12T21:45:56Z"
 }

@@ -26,13 +26,13 @@
   ]
  },
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "fb-bot/integrate-j050-traversal-rungdown-ci-red-fix: merged #288; fb-bot/integrate-protected-j050-traversal-rungdown-bottom-gap-test: merged #290",
  "owner": "muse",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
  "state": "merged",
- "updated": "2026-11-09T17:35:20Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

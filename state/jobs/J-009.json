@@ -34,7 +34,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
    "dead_lettered": null,
@@ -411,5 +414,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-12T20:30:39Z"
+ "updated": "2026-11-12T21:45:56Z"
 }

@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-12T15:45:44Z",
- "deadline": "2026-11-12T18:17:00Z",
+ "deadline": null,
  "head": "3f4ee2de843a25f751314d93955b73ebea357032",
  "issue": 451,
  "job": "J-127",
@@ -25,7 +25,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T16:58:14Z",
    "dead": "2026-11-12T20:17:00Z",
    "dead_lettered": "2026-11-12T20:30:39Z",
@@ -52,6 +55,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T16:58:14Z"
+ "state": "working",
+ "updated": "2026-11-12T21:45:56Z"
 }

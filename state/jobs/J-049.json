@@ -10,7 +10,7 @@
  "ci": "green",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T16:17:00Z",
+ "deadline": null,
  "head": "2d99e906e2c3ee6dd0e570728c904f6a7a70f078",
  "issue": 278,
  "job": "J-049",
@@ -38,7 +38,10 @@
    "asked": null,
    "attempts": 0,
    "backlog": "2026-11-09T22:19:23Z",
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-09T17:35:20Z",
    "dead": "2026-11-10T04:56:16Z",
    "dead_lettered": null,
@@ -345,7 +348,10 @@
    "ack_rule": "reply|ack",
    "asked": null,
    "attempts": 2,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-10T15:09:20Z",
    "dead": "2026-11-10T18:17:00Z",
    "dead_lettered": "2026-11-10T18:29:43Z",
@@ -519,6 +525,6 @@
   383
  ],
  "review": "waiting",
- "state": "working",
- "updated": "2026-11-12T19:27:38Z"
+ "state": "merged",
+ "updated": "2026-11-12T21:45:56Z"
 }

@@ -10,7 +10,7 @@
   "6829929116:68"
  ],
  "created": "2026-11-12T01:29:02Z",
- "deadline": "2026-11-12T23:27:38Z",
+ "deadline": null,
  "head": "ff512d83b6d2c0f4d96ebafa10403799ec1599aa",
  "issue": 446,
  "job": "J-124",
@@ -57,7 +57,10 @@
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 0,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T21:45:56Z",
+    "why": "the job machine's table owns it (plan: live)"
+   },
    "created": "2026-11-12T19:27:38Z",
    "dead": "2026-11-13T03:27:38Z",
    "dead_lettered": null,
@@ -85,5 +88,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T19:27:38Z"
+ "updated": "2026-11-12T21:45:56Z"
 }
