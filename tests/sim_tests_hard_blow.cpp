@@ -152,11 +152,16 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     const std::uint64_t piece = s.snapshot().carrying_entity_id;
     const std::uint32_t body = s.kit_body_index(piece);
     s.debug_fix_matron_pace(0);  // creep: she comes out upright, under the crouch bar
-    // A few metres east of her post, on her line: she bursts out of her
-    // locker at (-10.3, -129.0) and he is in throw range the moment she
-    // comes out. The walk is inside her strain, so she is still in the
-    // locker while he gets there.
-    require(walk_to(s, -6.8, -129.0, 10.0, 0.15), "hard blow: to the burst spot with it");
+    // A few metres west of her locker, on her line: she comes out of it at
+    // (11.0, -127.15) and he is in throw range the moment she hunts. The
+    // locker is east, against the north rail; her post (-10.3, -129.0) is
+    // where she guards, not where she wakes. The legs cross the bay on its
+    // leaf, on the band's centreline: a straight line from the piece would
+    // run through the cut. The walk is inside her strain, so she is still
+    // in the locker while he gets there.
+    require(walk_to(s, -4.6, Matron::kBandNorthZ, 10.0, 0.2) &&
+                walk_to(s, 8.0, Matron::kBandNorthZ, 10.0, 0.15),
+            "hard blow: to the burst spot with it");
     bool coming = false;
     int settled = 0;
     double release_d = 0.0;
