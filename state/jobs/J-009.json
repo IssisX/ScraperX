@@ -12,7 +12,7 @@
   "6810841360:55"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
+ "deadline": null,
  "head": "fdea6e19e6a6eb72c676d617930f06b92e213e0e",
  "issue": 116,
  "job": "J-009",
@@ -43,12 +43,13 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
-   "missing": 2,
+   "missing": 3,
    "ref": "BRANCH|fb-bot/integrate-j009-258-down-traversal-flags",
    "sends": 1,
    "sent_by": "live",
    "thread": 116,
    "to": "muse",
+   "unseen": "2026-11-12T07:49:06Z",
    "version": "red:fdea6e19e6a6eb72c676d617930f06b92e213e0e",
    "via": "email",
    "what": "`fb-bot/integrate-j009-258-down-traversal-flags` proof red: native-tests (matron-slices-3), godot-touch (touch-2), native-tests (athletic-traversal), no PR"
@@ -409,5 +410,5 @@
  ],
  "review": "",
  "state": "merged",
- "updated": "2026-11-12T06:49:02Z"
+ "updated": "2026-11-12T07:49:06Z"
 }

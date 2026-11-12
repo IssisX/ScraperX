@@ -13,7 +13,7 @@
   "6796659538:62"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
+ "deadline": null,
  "head": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
  "issue": 0,
  "job": "J-044c",
@@ -55,11 +55,12 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "BRANCH|fb-bot/integrate-j044c-gains",
    "sends": 0,
    "thread": 0,
    "to": "muse",
+   "unseen": "2026-11-12T07:49:06Z",
    "version": "red:9ffec0984039705be441e06dd4082158461ea8a7",
    "via": "email",
    "what": "`fb-bot/integrate-j044c-gains` proof red: godot-touch (touch-2), native-tests (athletic-traversal), native-tests (matron-slices-3), native-tests (matron-slices-1), no PR"
@@ -106,7 +107,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
-   "rechecked": "2026-11-12T01:29:02Z",
+   "rechecked": "2026-11-12T07:49:06Z",
    "ref": "BRANCH|claude/integrate-j044c-upper-body",
    "sends": 0,
    "thread": 298,
@@ -155,5 +156,5 @@
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T06:49:02Z"
+ "updated": "2026-11-12T07:49:06Z"
 }

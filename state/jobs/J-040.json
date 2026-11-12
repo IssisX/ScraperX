@@ -28,6 +28,7 @@
    "last_error": "",
    "last_sent": null,
    "missing": 3,
+   "rechecked": "2026-11-12T07:49:06Z",
    "ref": "JOB|#228",
    "sends": 0,
    "thread": 228,
@@ -75,5 +76,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-12T01:29:02Z"
+ "updated": "2026-11-12T07:49:06Z"
 }

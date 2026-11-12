@@ -1811,3 +1811,7 @@
 {"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T05:48:38Z", "tries": 1}
 {"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-4bdba254", "job": "J-038", "t": "2026-11-12T06:49:02Z"}
 {"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T06:49:02Z", "tries": 1}
+{"ev": "unseen", "id": "O-08afc48d", "job": "J-009", "passes": 3, "t": "2026-11-12T07:49:06Z"}
+{"ev": "unseen", "id": "O-073d0de5", "job": "J-014", "passes": 3, "t": "2026-11-12T07:49:06Z"}
+{"ev": "unseen", "id": "O-ea2aff94", "job": "J-044c", "passes": 3, "t": "2026-11-12T07:49:06Z"}
+{"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T07:49:06Z", "tries": 1}

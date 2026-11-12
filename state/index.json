@@ -1302,7 +1302,7 @@
     "6810841360:55"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T00:56:16Z",
+   "deadline": null,
    "head": "fdea6e19e6a6eb72c676d617930f06b92e213e0e",
    "issue": 116,
    "job": "J-009",
@@ -1333,12 +1333,13 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": "2026-11-09T20:56:16Z",
-     "missing": 2,
+     "missing": 3,
      "ref": "BRANCH|fb-bot/integrate-j009-258-down-traversal-flags",
      "sends": 1,
      "sent_by": "live",
      "thread": 116,
      "to": "muse",
+     "unseen": "2026-11-12T07:49:06Z",
      "version": "red:fdea6e19e6a6eb72c676d617930f06b92e213e0e",
      "via": "email",
      "what": "`fb-bot/integrate-j009-258-down-traversal-flags` proof red: native-tests (matron-slices-3), godot-touch (touch-2), native-tests (athletic-traversal), no PR"
@@ -1699,7 +1700,7 @@
    ],
    "review": "",
    "state": "merged",
-   "updated": "2026-11-12T06:49:02Z"
+   "updated": "2026-11-12T07:49:06Z"
   },
   "J-011": {
    "attempt": 0,
@@ -1977,7 +1978,7 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T00:56:16Z",
+   "deadline": null,
    "head": "c5f783a88a72b8e9ab6a1f950e228b58468d531b",
    "issue": 121,
    "job": "J-014",
@@ -2009,12 +2010,13 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
-     "missing": 2,
+     "missing": 3,
      "ref": "BRANCH|fb-bot/integrate-j014-stock-above-396",
      "sends": 1,
      "sent_by": "shadow",
      "thread": 121,
      "to": "muse",
+     "unseen": "2026-11-12T07:49:06Z",
      "version": "red:c5f783a88a72b8e9ab6a1f950e228b58468d531b",
      "via": "email",
      "what": "`fb-bot/integrate-j014-stock-above-396` proof red: native-tests (athletic-traversal), no PR"
@@ -2056,7 +2058,7 @@
    "prs": [],
    "review": "",
    "state": "merged",
-   "updated": "2026-11-12T06:49:02Z"
+   "updated": "2026-11-12T07:49:06Z"
   },
   "J-015": {
    "attempt": 1,
@@ -4073,6 +4075,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
+     "rechecked": "2026-11-12T07:49:06Z",
      "ref": "JOB|#228",
      "sends": 0,
      "thread": 228,
@@ -4120,7 +4123,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-12T01:29:02Z"
+   "updated": "2026-11-12T07:49:06Z"
   },
   "J-042": {
    "attempt": 2,
@@ -4803,7 +4806,7 @@
     "6796659538:62"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-10T00:56:16Z",
+   "deadline": null,
    "head": "a8b86806c46a6eecad4315aee347994d3c6fbb62",
    "issue": 0,
    "job": "J-044c",
@@ -4845,11 +4848,12 @@
      "kind": "fix",
      "last_error": "",
      "last_sent": null,
-     "missing": 2,
+     "missing": 3,
      "ref": "BRANCH|fb-bot/integrate-j044c-gains",
      "sends": 0,
      "thread": 0,
      "to": "muse",
+     "unseen": "2026-11-12T07:49:06Z",
      "version": "red:9ffec0984039705be441e06dd4082158461ea8a7",
      "via": "email",
      "what": "`fb-bot/integrate-j044c-gains` proof red: godot-touch (touch-2), native-tests (athletic-traversal), native-tests (matron-slices-3), native-tests (matron-slices-1), no PR"
@@ -4896,7 +4900,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-12T01:29:02Z",
+     "rechecked": "2026-11-12T07:49:06Z",
      "ref": "BRANCH|claude/integrate-j044c-upper-body",
      "sends": 0,
      "thread": 298,
@@ -4945,7 +4949,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-12T06:49:02Z"
+   "updated": "2026-11-12T07:49:06Z"
   },
   "J-044d": {
    "attempt": 0,
