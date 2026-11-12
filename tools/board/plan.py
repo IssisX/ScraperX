@@ -119,6 +119,8 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
                 ls.pop(found)
     else:
         raise ValueError(f"unsupported change: {action}")
+    if tuple(ls) == p.lines and limits == p.limits:
+        return source  # a no-op must not reformat the plan or create a phantom version
     result = core.Plan(tuple(ls), limits, ())
     # The provisional warning and reconciliation evidence are part of the file. Editing
     # one order must not silently strip every preceding comment or its shadow-only warning.
