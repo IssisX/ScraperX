@@ -788,15 +788,20 @@ constexpr float kStackColumnHalf = 0.8F;
 // north band, along the crossing from the bay to the shaft edge. A
 // hold-sized beam per find_grip (section at most kGripMaxSection 0.18 m);
 // 0.12 m keeps her scanner blind to it too (no patch: under 0.18 m wide;
-// no bar: over 0.10 m tall; no pole or riser). Top flush with the deck's
-// soffit (154.00 - 0.50); north end 0.05 m clear of the leaf's south edge
-// (z -129.30) so the leaf's swing never meets it; south end at the shaft
-// edge (z -133.00). She still cannot follow underneath: headroom under
-// the deck is unchanged.
+// no bar: over 0.10 m tall; no pole or riser). Top 0.50 m below the deck's
+// soffit (154.00 - 0.50 - 0.50 = 153.00): flush, his capsule top rode at
+// 153.29, inside the ShaftEdgeBeam (y 153.00-153.90), and the beam's north
+// face (z -132.75) pinned his shoulders at z -132.400 — the rail's last
+// 0.25 m and the -132.95 bar sat inside the beam's footprint. At 153.00
+// his capsule top rides 0.21 m under the beam's bottom and his shoulders
+// 0.66 m under it, so he swings the rail to the shaft edge; north end
+// 0.05 m clear of the leaf's south edge (z -129.30) so the leaf's swing
+// never meets it; south end at the shaft edge (z -133.00). She still
+// cannot follow underneath: headroom under the deck is unchanged.
 constexpr float kHangRailX = -2.15F;              // the bay's centre: (Bay::kWestX + Bay::kEastX) / 2
 constexpr float kHangRailSection = 0.12F;
 constexpr float kHangRailTopY =
-    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness;   // the 154 deck's soffit, 153.50
+    kStackLevelCount * kStackLevelHeight - 2.0F * kStackDeckHalfThickness - 0.50F;   // 0.50 m below the soffit, 153.00
 constexpr float kHangRailNorthZ = -129.35F;       // 0.05 m south of the leaf's south edge
 constexpr float kHangRailSouthZ = -133.00F;      // the shaft edge
 
