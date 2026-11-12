@@ -1042,7 +1042,7 @@ def evidence(ob: dict, o: JobObs | None, seen: Seen, rec: dict, now: dt.datetime
         issue = seen.issues.get(n)
         if tag == "assign" and issue is not None and seen.roster.of_labels(issue.labels):
             return "ack:owner labelled"
-        if tag == "start" and o is not None and (o.prs or o.branches):
+        if tag in ("start", "idle") and o is not None and (o.prs or o.branches):
             return "ack:work pushed"
         if issue is None and seen.issue(n).get("state") == "closed":
             return "close:issue closed"
