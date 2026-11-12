@@ -61,7 +61,7 @@ TABLE: dict[tuple[str, str], Rule] = {
     ("acknowledged", ""): Rule(OWNER, hours(24), "start it: push {wip}"),
     ("acknowledged", "queued"): Rule(OWNER, None, "wait for a lane: {why}"),
     ("started", ""): Rule(OWNER, hours(72), "push {integrate} so its proof runs"),
-    ("pushed", "unread"): Rule(SWITCH, None, "read the proof on {ref} @ {sha}"),
+    ("pushed", "unread"): Rule(SWITCH, hours(72), "read the proof on {ref} @ {sha}: it has no PR and no commit in 3 days"),
     ("pushed", "none"): Rule(CI, hours(1), "start the proof on {ref} @ {sha}"),
     ("pushed", "running"): Rule(CI, hours(2), "finish the proof on {ref} @ {sha}"),
     ("pushed", "red"): Rule(OWNER, hours(3), "push a head that fixes the red proof ({why})"),

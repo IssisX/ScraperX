@@ -1,10 +1,11 @@
-"""The switch's plan reads: history and dormant heads leave WIP, real work stays, nothing is hidden."""
+"""The switch's plan reads: landed heads are history, unlanded work stays visible, nothing is hidden."""
 import datetime as dt
 import pathlib
 import sys
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import machine  # noqa: E402
 import plan  # noqa: E402
 import switch  # noqa: E402
 
@@ -27,6 +28,7 @@ class FakeGH:
 
     def __init__(self):
         self.gets = []
+        self.issue = {}
 
     def paged(self, path, key=""):
         if "/issues?" in path:
@@ -41,6 +43,10 @@ class FakeGH:
 
     def get(self, path, accept=""):
         self.gets.append(path)
+        if "/commits?path=" in path:
+            return [{"commit": {"committer": {"date": "2026-11-12T10:00:00Z"}}}]
+        if "/issues/" in path:
+            return self.issue[int(path.rsplit("/", 1)[1])]
         sha = path.rsplit("...", 1)[1]
         if sha == "s102":
             return {"status": "behind", "commits": []}
@@ -54,23 +60,32 @@ class PlanReads(unittest.TestCase):
         self.sw.gh, self.sw.now, self.sw.lines = FakeGH(), NOW, []
         self.sw.out = self.sw.lines.append
         self.sw.listing = lambda path, key="": [{"number": 9, "state": "open", "body": "Job: J-106\n",
-                                                 "head": {"sha": "s106"}}]
+                                                 "head": {"sha": "s106", "ref": "claude/integrate-j106"}}]
         self.model = plan.parse(PLAN)
+
+    def rows(self, r, model=None):
+        model = model or self.model
+        self.table = machine.table(model, machine.collect(model, r, planned_at=r.get("planned_at")))
+        return {x.job: x for x in self.table}
 
     def test_only_real_lanes_count_and_every_job_stays_visible(self):
         r = self.sw.plan_reads(self.model)
         self.assertEqual(r["inactive"], {"s101", "s102"})
-        self.assertEqual(r["dormant"], {"s103"})
+        self.assertEqual(r["head_at"]["s103"], dt.datetime(2026, 11, 1, tzinfo=dt.timezone.utc))
         self.assertFalse(any("s101" in g or "s106" in g for g in self.sw.gh.gets))  # no compare for known heads
-        got = {ln.job: plan.status(ln, prs=self.sw.listing(""), branches=r["branches"], inactive=r["inactive"],
-                                   merged=r["merged"], dormant=r["dormant"]) for ln in self.model.lines}
-        self.assertEqual(got, {"J-101": "landed", "J-102": "queued", "J-103": "dormant", "J-104": "pushed",
-                               "J-105": "contested", "J-106": "review"})
-        found = plan.findings(self.model, self.sw.gh.paged("/issues?"), r["branches"], self.sw.listing(""),
-                              inactive=r["inactive"], merged=r["merged"], dormant=r["dormant"])
-        self.assertFalse(any("OVER-LIMIT" in f for f in found), found)   # J-104 + J-106 = 2/2
-        self.assertTrue(any(f.startswith("DORMANT J-103: claude/integrate-j103") for f in found), found)
-        self.assertTrue(any(f.startswith("NOT-OWNER J-105: fb-bot/integrate-j105") for f in found), found)
+        rows = self.rows(r)
+        self.assertEqual({j: x.state for j, x in rows.items()},
+                         {"J-101": "landed", "J-102": "acknowledged", "J-103": "pushed", "J-104": "pushed",
+                          "J-105": "conflict", "J-106": "pushed"})
+        # A head with no PR and no commit for 3 days (it was DORMANT) is the late job, and it still holds its
+        # lane: it is unlanded work (the plan's own count on 11-12, 7/4 and 17/6, has these in it). A hold or a
+        # `kept` ruling frees the lane; nothing drops out of the count by going quiet.
+        self.assertTrue(rows["J-103"].late(NOW))
+        self.assertIn("no PR and no commit in 3 days", rows["J-103"].next)
+        self.assertFalse(rows["J-104"].late(NOW))
+        self.assertEqual(machine.wip(self.model, self.table)["claude"], (3, 2))   # J-103, J-104, J-106
+        self.assertIn("fb-bot/integrate-j105", rows["J-105"].why)                 # it was NOT-OWNER
+        self.assertEqual(r["planned_at"], dt.datetime(2026, 11, 12, 10, tzinfo=dt.timezone.utc))
 
     def test_closed_unmerged_pr_keeps_its_head_visible_as_unresolved_work(self):
         old = self.sw.gh.paged
@@ -87,11 +102,9 @@ class PlanReads(unittest.TestCase):
         observed = self.sw.plan_reads(self.model)
         self.assertIn("s101", observed["inactive"])
         self.assertNotIn("s105", observed["inactive"])
-        issues = self.sw.gh.paged("/issues?")
-        problems = plan.findings(self.model, issues, observed["branches"], self.sw.listing(""),
-                                 inactive=observed["inactive"], merged=observed["merged"],
-                                 dormant=observed["dormant"])
-        self.assertTrue(any(x.startswith("NOT-OWNER J-105: fb-bot/integrate-j105") for x in problems), problems)
+        row = self.rows(observed)["J-105"]
+        self.assertEqual(row.state, "conflict")
+        self.assertIn("fb-bot/integrate-j105", row.why)
 
     def test_reads_once_per_run(self):
         self.assertIs(self.sw.plan_reads(self.model), self.sw.plan_reads(self.model))
@@ -102,8 +115,17 @@ class PlanReads(unittest.TestCase):
         self.sw.gh.get = boom
         r = self.sw.plan_reads(self.model)
         self.assertEqual(r["inactive"], {"s101"})
-        self.assertEqual(plan.status(self.model.by_job()["J-102"], branches=r["branches"], inactive=r["inactive"]),
-                         "pushed")
+        self.assertEqual(self.rows(r)["J-102"].state, "pushed")
+        self.assertIsNone(r["planned_at"])
+
+    def test_a_line_whose_issue_left_the_listing_is_closed_only_when_read_closed(self):
+        model = plan.parse(PLAN + "J-107 claude #107 | closed\nJ-108 claude #108 | another job's number\n")
+        self.sw.gh.issue = {107: {"number": 107, "state": "closed", "title": "J-107 done"},
+                            108: {"number": 108, "state": "closed", "title": "J-999 not this job"}}
+        r = self.sw.plan_reads(model)
+        self.assertEqual(r["closed"], {"J-107"})
+        rows = self.rows(r, model)
+        self.assertEqual((rows["J-107"].state, rows["J-108"].state), ("closed", "conflict"))
 
 
 class QueueSignal(unittest.TestCase):
@@ -111,16 +133,27 @@ class QueueSignal(unittest.TestCase):
         model = plan.parse("limit muse 6\n" + "".join(
             f"J-{n} muse #{n} | ready {n}\n" for n in range(101, 110)))
         issues = [{"number": n, "title": f"J-{n} job", "state": "open"} for n in range(101, 110)]
+        reads = {"issues": issues, "branches": [{"name": "claude/integrate-j109", "commit": {"sha": "foreign"}}],
+                 "prs": [], "inactive": frozenset()}
+        rows = machine.table(model, machine.collect(model, reads))
         sw = switch.Switch.__new__(switch.Switch)
         sw.plan_mode = lambda: "live"
-        sw.read_plan = lambda: model
-        sw.plan_reads = lambda _: {
-            "issues": issues, "branches": [{"name": "claude/integrate-j109", "commit": {"sha": "foreign"}}],
-            "prs": [], "inactive": frozenset(), "merged": frozenset(), "dormant": frozenset(),
-        }
-        self.assertTrue(any(x.startswith("NOT-OWNER J-109") for x in plan.findings(
-            model, issues, sw.plan_reads(model)["branches"])))
-        self.assertEqual(sw.queue_check(), ())
+        sw.plan_table = lambda steered=(): (model, reads, machine.Mail(), rows)
+        self.assertEqual(rows[-1].state, "conflict")   # it was NOT-OWNER J-109
+        self.assertEqual(sw.queue_check(), ())         # eight unstarted jobs: the conflict is not a low queue
+
+    def test_a_low_queue_is_counted_from_the_table(self):
+        model = plan.parse("limit muse 6\nJ-101 muse #101 | one\nJ-102 muse #102 hold: parked | two\n")
+        issues = [{"number": n, "title": f"J-{n} job", "state": "open"} for n in (101, 102)]
+        rows = machine.table(model, machine.collect(model, {"issues": issues}))
+        sw = switch.Switch.__new__(switch.Switch)
+        sw.plan_mode = lambda: "live"
+        sw.plan_table = lambda steered=(): (model, {}, machine.Mail(), rows)
+        (item,) = sw.queue_check()
+        self.assertEqual(item.kind, "QUEUE-LOW")
+        self.assertIn("1 unstarted Muse jobs", item.line)
+        self.assertIn("J-101", item.line)
+        self.assertNotIn("J-102", item.line)   # a held job is not ready work
 
 
 class Whole(unittest.TestCase):
