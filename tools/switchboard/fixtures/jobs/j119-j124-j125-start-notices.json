@@ -1,0 +1,1346 @@
+{
+ "case": "j119-j124-j125-start-notices",
+ "schema": "scraperx-job-fixture/1",
+ "fetched_at": "2026-11-12T18:40Z/18:50Z (GitHub REST, read only; trunk muse.md history at origin/ScraperX-Claude 31847633)",
+ "repo": "IssisX/ScraperX",
+ "summary": "J-119, J-124 and J-125 were queued Muse jobs (muse.md unstarted #7, #6, #8 behind J-116..J-118, J-133, J-134). At 15:51 the reconciler sent 'start J-NNN' to all three at once, due 12:29 PM Central like the in-flight jobs' notices. Muse acked each 'queued, not started yet' at 16:47, then started them in order once lanes ahead started (J-124 17:28, J-119 17:37, J-125 17:52) and pushed all three within the hour.",
+ "jobs": {
+  "J-119": {
+   "issue": 441,
+   "branches": [
+    "fb-bot/integrate-j119"
+   ],
+   "prs": []
+  },
+  "J-124": {
+   "issue": 446,
+   "branches": [
+    "fb-bot/integrate-j124"
+   ],
+   "prs": []
+  },
+  "J-125": {
+   "issue": 448,
+   "branches": [
+    "fb-bot/integrate-j125"
+   ],
+   "prs": []
+  },
+  "context": "J-116, J-117, J-118, J-133, J-134 are the lanes ahead in Muse's order; only their 'started' mails are kept"
+ },
+ "trust": {
+  "verdict_logins": [
+   "IssisX",
+   "github-actions[bot]"
+  ],
+  "codex_app": "chatgpt-codex-connector[bot]",
+  "dropped_untrusted_comments": {
+   "linear-code[bot]": 4
+  }
+ },
+ "sources": [
+  {
+   "type": "thread",
+   "n": 441,
+   "job": "J-119"
+  },
+  {
+   "type": "thread",
+   "n": 446,
+   "job": "J-124"
+  },
+  {
+   "type": "thread",
+   "n": 448,
+   "job": "J-125"
+  },
+  {
+   "type": "board",
+   "n": 384,
+   "since": "2026-11-12T00:30:00Z",
+   "match_subject": "J-119|J-124|J-125|J-11[678] started|J-13[34] started",
+   "lines": true,
+   "ids": [
+    "c6810923568",
+    "c6825737297"
+   ]
+  },
+  {
+   "type": "runs",
+   "branch": "fb-bot/integrate-j119"
+  },
+  {
+   "type": "runs",
+   "branch": "fb-bot/integrate-j124"
+  },
+  {
+   "type": "runs",
+   "branch": "fb-bot/integrate-j125"
+  },
+  {
+   "type": "musemd",
+   "since": "2026-11-12T00:00Z",
+   "jobs": [
+    "J-119",
+    "J-124",
+    "J-125"
+   ]
+  }
+ ],
+ "probes": [
+  {
+   "what": "work/plan.md (rebuild branch) limit for muse",
+   "result": "limit muse 6"
+  },
+  {
+   "what": "reconciler.py:1046",
+   "result": "a JOB obligation tagged start/idle is acked only by pushed work (a PR or branch)"
+  }
+ ],
+ "events": [
+  {
+   "i": 1,
+   "id": "open441",
+   "t": "2026-11-12T00:36:32Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "issue": 441
+   },
+   "text": "J-119: Every on-screen control fits every screen: the Fold 6 folded and open, a narrow phone, a tablet, and a fold mid-climb",
+   "labels_now": [
+    "job",
+    "owner:muse"
+   ],
+   "body_owner_line": null
+  },
+  {
+   "i": 2,
+   "id": "L441+job@2026-11-12T00:36:33Z",
+   "t": "2026-11-12T00:36:33Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "issue": 441
+   },
+   "label": "job"
+  },
+  {
+   "i": 3,
+   "id": "L441+owner:muse@2026-11-12T00:36:33Z",
+   "t": "2026-11-12T00:36:33Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "issue": 441
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 4,
+   "id": "open446",
+   "t": "2026-11-12T00:37:21Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 446
+   },
+   "text": "J-124: The parachute is the way back from every height: a jump from each deck edge lands him alive",
+   "labels_now": [
+    "job",
+    "owner:muse"
+   ],
+   "body_owner_line": null
+  },
+  {
+   "i": 5,
+   "id": "L446+job@2026-11-12T00:37:23Z",
+   "t": "2026-11-12T00:37:23Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 446
+   },
+   "label": "job"
+  },
+  {
+   "i": 6,
+   "id": "L446+owner:muse@2026-11-12T00:37:23Z",
+   "t": "2026-11-12T00:37:23Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 446
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 7,
+   "id": "open448",
+   "t": "2026-11-12T00:37:30Z",
+   "kind": "issue_opened",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 448
+   },
+   "text": "J-125: Every shipped sound, voice, model and texture has its source on record, and the in-game Licences page tells the truth",
+   "labels_now": [
+    "job",
+    "owner:muse"
+   ],
+   "body_owner_line": null
+  },
+  {
+   "i": 8,
+   "id": "L448+job@2026-11-12T00:37:32Z",
+   "t": "2026-11-12T00:37:32Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 448
+   },
+   "label": "job"
+  },
+  {
+   "i": 9,
+   "id": "L448+owner:muse@2026-11-12T00:37:32Z",
+   "t": "2026-11-12T00:37:32Z",
+   "kind": "label_added",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 448
+   },
+   "label": "owner:muse"
+  },
+  {
+   "i": 10,
+   "id": "md113fa60-J-119",
+   "t": "2026-11-12T00:38:56Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "d113fa60"
+   },
+   "subject": "Muse queue: refilled to 15 (J-116..J-125) [skip ci]",
+   "lines": [
+    "unstarted #10: J-119 #441: every control fits every screen: Fold 6 folded and open, a fold mid-climb."
+   ]
+  },
+  {
+   "i": 11,
+   "id": "md113fa60-J-124",
+   "t": "2026-11-12T00:38:56Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "d113fa60"
+   },
+   "subject": "Muse queue: refilled to 15 (J-116..J-125) [skip ci]",
+   "lines": [
+    "unstarted #15: J-124 #446: the parachute from every deck edge lands him alive (rule 51)."
+   ]
+  },
+  {
+   "i": 12,
+   "id": "md113fa60-J-125",
+   "t": "2026-11-12T00:38:56Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "d113fa60"
+   },
+   "subject": "Muse queue: refilled to 15 (J-116..J-125) [skip ci]",
+   "lines": [
+    "unstarted #16: J-125 #448: every shipped sound, voice, model and texture on record; Licences page true."
+   ]
+  },
+  {
+   "i": 13,
+   "id": "c6810923568",
+   "t": "2026-11-12T00:42:51Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-116",
+    "J-125"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "queue refilled to 15, J-116 to J-125",
+   "text": "From Claude (integrator). Queue refilled: 15 unstarted in work/tasks/muse.md (J-110 to J-114 as before, then the ten below), J-086 still waits on J-001. Each is written whole on its issue, including w",
+   "lines": [
+    "J-116, issue 438: a relaunch puts the world back exactly as a death restore does, and a bad save loads safely.",
+    "J-117, issue 439: a checkpoint taken on a moving floor (cage, tram, forks, loose drum) puts him back on real support.",
+    "J-118, issue 440: leaving the app mid-ride, mid-hold or mid-fall brings him back to that exact moment."
+   ]
+  },
+  {
+   "i": 14,
+   "id": "m7b47c13c-J-119",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "unstarted #7: J-119 #441: every control fits every screen: Fold 6 folded and open, a fold mid-climb."
+   ]
+  },
+  {
+   "i": 15,
+   "id": "m7b47c13c-J-124",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "unstarted #6: J-124 #446: the parachute from every deck edge lands him alive (rule 51)."
+   ]
+  },
+  {
+   "i": 16,
+   "id": "m7b47c13c-J-125",
+   "t": "2026-11-12T13:59:59Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "7b47c13c"
+   },
+   "subject": "Muse queue: the finish plan only; stop list parked; J-129 to J-134 queued [skip ci]",
+   "lines": [
+    "unstarted #8: J-125 #448: every shipped sound, voice, model and texture on record; Licences page true."
+   ]
+  },
+  {
+   "i": 17,
+   "id": "c6825737297",
+   "t": "2026-11-12T14:03:18Z",
+   "kind": "mail_out",
+   "actor": "IssisX",
+   "job": [
+    "J-116",
+    "J-117",
+    "J-118",
+    "J-119",
+    "J-124",
+    "J-125",
+    "J-133",
+    "J-134"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "ready queue: take the next one yourself, no go needed (finish line)",
+   "text": "From Claude (integrator). Goal: finish the parts of the game we already have, then start missions. Cory settled the finish line: the plan is 03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md on",
+   "lines": [
+    "3. Unstarted, in order: J-116, J-117, J-118 (one save version bump for all three; J-116 also checks her stage survives a relaunch), J-133 (the climb and the ending in one touch run), J-134 (measure he"
+   ]
+  },
+  {
+   "i": 18,
+   "id": "c6826602229",
+   "t": "2026-11-12T14:38:14Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-116"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-116 started",
+   "text": "To Claude: J-116 started. Issue #438 (a relaunch puts the world back exactly as a death restore does, and a bad save never breaks a load) verified open, owner:muse. Branch fb-bot/integrate-j116, fresh"
+  },
+  {
+   "i": 19,
+   "id": "c6826602916",
+   "t": "2026-11-12T14:38:16Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-117"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-117 started",
+   "text": "To Claude: J-117 started. Issue #439 (a checkpoint on a moving floor restores him on real support, never in the air or inside steel) verified open, owner:muse. Branch fb-bot/integrate-j117, fresh work"
+  },
+  {
+   "i": 20,
+   "id": "c6826849066",
+   "t": "2026-11-12T14:47:55Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-118 started",
+   "text": "To Claude: J-118 started. Issue #440 (leaving the app mid-anything: a call, the home button or Back during a ride, her hold or a fall, and he comes back to exactly that moment) verified open, owner:mu"
+  },
+  {
+   "i": 21,
+   "id": "c6828449136",
+   "t": "2026-11-12T15:51:05Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "issue": 441
+   },
+   "subject": "J-119 start J-119",
+   "text": "From the switchboard's reconciler (Claude). Due 11-12 12:29 PM Central. When it is done, reply on this thread or post /ack O-71341bd3. <!-- reconciler:sent id=O-71341bd3 send=1 attempt=1 -->",
+   "obligations": [
+    "O-71341bd3",
+    "O-71341bd3"
+   ]
+  },
+  {
+   "i": 22,
+   "id": "L441+wake:muse@2026-11-12T15:51:06Z",
+   "t": "2026-11-12T15:51:06Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "issue": 441
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 23,
+   "id": "c6828454939",
+   "t": "2026-11-12T15:51:18Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 446
+   },
+   "subject": "J-124 start J-124",
+   "text": "From the switchboard's reconciler (Claude). Due 11-12 12:29 PM Central. When it is done, reply on this thread or post /ack O-7877a7c1. <!-- reconciler:sent id=O-7877a7c1 send=1 attempt=1 -->",
+   "obligations": [
+    "O-7877a7c1",
+    "O-7877a7c1"
+   ]
+  },
+  {
+   "i": 24,
+   "id": "L446+wake:muse@2026-11-12T15:51:19Z",
+   "t": "2026-11-12T15:51:19Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 446
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 25,
+   "id": "c6828456075",
+   "t": "2026-11-12T15:51:21Z",
+   "kind": "notice_to_muse",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 448
+   },
+   "subject": "J-125 start J-125",
+   "text": "From the switchboard's reconciler (Claude). Due 11-12 12:29 PM Central. When it is done, reply on this thread or post /ack O-9de6440c. <!-- reconciler:sent id=O-9de6440c send=1 attempt=1 -->",
+   "obligations": [
+    "O-9de6440c",
+    "O-9de6440c"
+   ]
+  },
+  {
+   "i": 26,
+   "id": "L448+wake:muse@2026-11-12T15:51:22Z",
+   "t": "2026-11-12T15:51:22Z",
+   "kind": "label_added",
+   "actor": "github-actions[bot]",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 448
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 27,
+   "id": "L448-wake:muse@2026-11-12T15:52:45Z",
+   "t": "2026-11-12T15:52:45Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 448
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 28,
+   "id": "L446-wake:muse@2026-11-12T15:52:47Z",
+   "t": "2026-11-12T15:52:47Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 446
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 29,
+   "id": "L441-wake:muse@2026-11-12T15:52:59Z",
+   "t": "2026-11-12T15:52:59Z",
+   "kind": "label_removed",
+   "actor": "IssisX",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "issue": 441
+   },
+   "label": "wake:muse"
+  },
+  {
+   "i": 30,
+   "id": "c6829010752",
+   "t": "2026-11-12T16:12:56Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-116"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-116 started",
+   "text": "/ack O-3c1a381a J-116 started 08:35; lane running. _Mailed Nov 12 10:10 AM Central._",
+   "acks": [
+    "O-3c1a381a"
+   ]
+  },
+  {
+   "i": 31,
+   "id": "c6829011816",
+   "t": "2026-11-12T16:12:59Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-117"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-117 started",
+   "text": "/ack O-edc19cdf J-117 started 08:35; lane running. _Mailed Nov 12 10:10 AM Central._",
+   "acks": [
+    "O-edc19cdf"
+   ]
+  },
+  {
+   "i": 32,
+   "id": "c6829012631",
+   "t": "2026-11-12T16:13:01Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-118"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-118 started",
+   "text": "/ack O-265aea0e J-118 started 08:47; lane running. _Mailed Nov 12 10:10 AM Central._",
+   "acks": [
+    "O-265aea0e"
+   ]
+  },
+  {
+   "i": 33,
+   "id": "c6829928509",
+   "t": "2026-11-12T16:47:54Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-119 start — queued, not started yet",
+   "text": "/ack O-71341bd3 J-119 is queued, not started yet. Finish-line order: J-116/J-117/J-118 are running; J-133 (#459) and J-134 (#460) are verified owner:muse and ahead of it; J-124 is ahead of J-119. It s",
+   "lines": [
+    "J-119 is queued, not started yet. Finish-line order: J-116/J-117/J-118 are running; J-133 (#459) and J-134 (#460) are verified owner:muse and ahead of it; J-124 is ahead of J-119. It starts when the l"
+   ],
+   "acks": [
+    "O-71341bd3"
+   ]
+  },
+  {
+   "i": 34,
+   "id": "c6829929116",
+   "t": "2026-11-12T16:47:56Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-124 start — queued, not started yet",
+   "text": "/ack O-7877a7c1 J-124 is queued, not started yet. Finish-line order: J-116/J-117/J-118 are running; J-133 (#459) and J-134 (#460) are verified owner:muse and ahead of it. It starts when the lanes ahea",
+   "lines": [
+    "J-124 is queued, not started yet. Finish-line order: J-116/J-117/J-118 are running; J-133 (#459) and J-134 (#460) are verified owner:muse and ahead of it. It starts when the lanes ahead of it finish."
+   ],
+   "acks": [
+    "O-7877a7c1"
+   ]
+  },
+  {
+   "i": 35,
+   "id": "c6829929805",
+   "t": "2026-11-12T16:47:57Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-125 start — queued, not started yet",
+   "text": "/ack O-9de6440c J-125 is queued, not started yet. Finish-line order: J-116/J-117/J-118 are running; J-133 (#459) and J-134 (#460) are verified owner:muse and ahead of it; J-124 and J-119 are ahead of ",
+   "lines": [
+    "J-125 is queued, not started yet. Finish-line order: J-116/J-117/J-118 are running; J-133 (#459) and J-134 (#460) are verified owner:muse and ahead of it; J-124 and J-119 are ahead of J-125. It starts"
+   ],
+   "acks": [
+    "O-9de6440c"
+   ]
+  },
+  {
+   "i": 36,
+   "id": "c6830552631",
+   "t": "2026-11-12T17:12:52Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-133"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-133 started",
+   "text": "To Claude: J-133 started. Branch fb-bot/integrate-j133, fresh worktree off live trunk. First step: read issue #459 live. _Mailed Nov 12 11:12 AM Central._"
+  },
+  {
+   "i": 37,
+   "id": "c6830553582",
+   "t": "2026-11-12T17:12:55Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-134"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-134 started",
+   "text": "To Claude: J-134 started. Branch fb-bot/integrate-j134, fresh worktree off live trunk. First step: read issue #460 live. _Mailed Nov 12 11:12 AM Central._"
+  },
+  {
+   "i": 38,
+   "id": "c6830933631",
+   "t": "2026-11-12T17:28:03Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-124 started",
+   "text": "To Claude: J-124 started. Branch fb-bot/integrate-j124, fresh worktree off live trunk. First step: find its issue number from the canonical job state, then read the issue live. _Mailed Nov 12 11:26 AM"
+  },
+  {
+   "i": 39,
+   "id": "c6831176017",
+   "t": "2026-11-12T17:37:54Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-119 started",
+   "text": "To Claude: J-119 started. Branch fb-bot/integrate-j119, fresh worktree off live trunk. First step: find its issue number from the canonical job state, then read the issue live. _Mailed Nov 12 11:33 AM"
+  },
+  {
+   "i": 40,
+   "id": "push43273383434",
+   "t": "2026-11-12T17:48:59Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j124",
+    "sha": "5b3eaf14",
+    "run": 43273383434
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 41,
+   "id": "c6831524630",
+   "t": "2026-11-12T17:52:54Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-125 started",
+   "text": "To Claude: J-125 started. Branch fb-bot/integrate-j125, fresh worktree off live trunk. First step: find its issue number from the canonical job state, then read the issue live. _Mailed Nov 12 11:52 AM"
+  },
+  {
+   "i": 42,
+   "id": "push43274240398",
+   "t": "2026-11-12T17:54:02Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j124",
+    "sha": "6c8992e1",
+    "run": 43274240398
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 43,
+   "id": "push43274645304",
+   "t": "2026-11-12T17:56:26Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j124",
+    "sha": "a1c0cda8",
+    "run": 43274645304
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 44,
+   "id": "push43275650096",
+   "t": "2026-11-12T18:02:20Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j124",
+    "sha": "ff512d83",
+    "run": 43275650096
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 45,
+   "id": "c6831867200",
+   "t": "2026-11-12T18:07:51Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-124 pushed @ ff512d83 — exam + touch scenario, local proof blocked on build slot",
+   "text": "To Claude: J-124 pushed — fb-bot/integrate-j124 @ ff512d83b6d2c0f4d96ebafa10403799ec1599aa (4 pushes, each tree-verified live; CI queued on each, earlier runs cancelled as superseded). Issue #446 veri"
+  },
+  {
+   "i": 46,
+   "id": "push43276816463",
+   "t": "2026-11-12T18:09:04Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j125",
+    "sha": "597cc7df",
+    "run": 43276816463
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 47,
+   "id": "push43277403292",
+   "t": "2026-11-12T18:12:25Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j125",
+    "sha": "49b3a014",
+    "run": 43277403292
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 48,
+   "id": "push43277735478",
+   "t": "2026-11-12T18:14:22Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j125",
+    "sha": "e6516299",
+    "run": 43277735478
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 49,
+   "id": "push43277981941",
+   "t": "2026-11-12T18:15:46Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j125",
+    "sha": "f5ebd6c9",
+    "run": 43277981941
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 50,
+   "id": "push43278023800",
+   "t": "2026-11-12T18:16:00Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j119",
+    "sha": "aeb08b66",
+    "run": 43278023800
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 51,
+   "id": "push43278460171",
+   "t": "2026-11-12T18:18:32Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j125",
+    "sha": "8078ea58",
+    "run": 43278460171
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 52,
+   "id": "push43278823440",
+   "t": "2026-11-12T18:20:36Z",
+   "kind": "push",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j125",
+    "sha": "3be444d2",
+    "run": 43278823440
+   },
+   "inferred": "push time = creation of the push-triggered proof run"
+  },
+  {
+   "i": 53,
+   "id": "run43275650096",
+   "t": "2026-11-12T18:31:10Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j124",
+    "sha": "ff512d83",
+    "run": 43275650096
+   },
+   "result": "failure",
+   "trigger": "push",
+   "started": "2026-11-12T18:02:20Z"
+  },
+  {
+   "i": 54,
+   "id": "run43278129935",
+   "t": "2026-11-12T18:41:25Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j119",
+    "sha": "aeb08b66",
+    "run": 43278129935
+   },
+   "result": "failure",
+   "trigger": "workflow_dispatch",
+   "started": "2026-11-12T18:16:38Z"
+  },
+  {
+   "i": 55,
+   "id": "c6832677348",
+   "t": "2026-11-12T18:42:51Z",
+   "kind": "mail_in",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "issue": 384
+   },
+   "subject": "J-125 done — asset credits complete, CI running on @ 3be444d2",
+   "text": "J-125 done. Issue #448, owner:muse verified live. Branch fb-bot/integrate-j125, remote head 3be444d203594439bf4e9e48f96ce541032c59b8 (local 31ffb3b20, tree-verified at every step). Base trunk f4ed6fae",
+   "lines": [
+    "6 commits, all pushed, each Job: J-125:",
+    "Provenance caveat, stated plainly: no fresh libscraperx_native.so existed anywhere (main repo's is Oct 22, stale; the three lanes' builds hadn't produced one). The lane ran touch_title + the probe wit"
+   ]
+  },
+  {
+   "i": 56,
+   "id": "run43278823440",
+   "t": "2026-11-12T18:48:28Z",
+   "kind": "proof",
+   "actor": "IssisX",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "branch": "fb-bot/integrate-j125",
+    "sha": "3be444d2",
+    "run": 43278823440
+   },
+   "result": "success",
+   "trigger": "push",
+   "started": "2026-11-12T18:20:36Z"
+  },
+  {
+   "i": 57,
+   "id": "m881024e8-J-119",
+   "t": "2026-11-12T18:58:39Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-119"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "881024e8"
+   },
+   "subject": "muse.md: started jobs moved to in flight, unstarted refilled (13), J-090/J-096 marked Claude's [skip ci]",
+   "lines": [
+    "Finish (in flight): J-119 #441"
+   ]
+  },
+  {
+   "i": 58,
+   "id": "m881024e8-J-124",
+   "t": "2026-11-12T18:58:39Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-124"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "881024e8"
+   },
+   "subject": "muse.md: started jobs moved to in flight, unstarted refilled (13), J-090/J-096 marked Claude's [skip ci]",
+   "lines": [
+    "Finish (in flight): J-124 #446"
+   ]
+  },
+  {
+   "i": 59,
+   "id": "m881024e8-J-125",
+   "t": "2026-11-12T18:58:39Z",
+   "kind": "plan_edit",
+   "actor": "Claude (integrator, trunk commit)",
+   "job": [
+    "J-125"
+   ],
+   "refs": {
+    "file": "work/tasks/muse.md",
+    "sha": "881024e8"
+   },
+   "subject": "muse.md: started jobs moved to in flight, unstarted refilled (13), J-090/J-096 marked Claude's [skip ci]",
+   "lines": [
+    "Finish (in flight): J-125 #448"
+   ]
+  }
+ ],
+ "expected": [
+  {
+   "at": "m7b47c13c-J-119",
+   "job": "J-119",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "mail the order"
+   },
+   "why": "muse.md unstarted #7",
+   "at_i": 14
+  },
+  {
+   "at": "m7b47c13c-J-124",
+   "job": "J-124",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "mail the order"
+   },
+   "why": "muse.md unstarted #6",
+   "at_i": 15
+  },
+  {
+   "at": "m7b47c13c-J-125",
+   "job": "J-125",
+   "state": "planned",
+   "owner": "muse",
+   "next": {
+    "who": "integrator",
+    "what": "mail the order"
+   },
+   "why": "muse.md unstarted #8",
+   "at_i": 16
+  },
+  {
+   "at": "c6825737297",
+   "job": "J-124",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "start after the lanes ahead"
+   },
+   "why": "finish-line mail gives the order",
+   "note": "same for J-119 and J-125",
+   "at_i": 17
+  },
+  {
+   "at": "c6828449136",
+   "job": "J-119",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "nobody",
+    "what": "no start is owed: J-119 is queued behind lanes Muse is still running"
+   },
+   "why": "reconciler sends 'start J-119' to a queued job",
+   "flags": [
+    "start_notice_for_queued_job"
+   ],
+   "at_i": 21
+  },
+  {
+   "at": "c6828454939",
+   "job": "J-124",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "nobody",
+    "what": "no start is owed"
+   },
+   "why": "same for J-124",
+   "flags": [
+    "start_notice_for_queued_job"
+   ],
+   "at_i": 23
+  },
+  {
+   "at": "c6828456075",
+   "job": "J-125",
+   "state": "told",
+   "owner": "muse",
+   "next": {
+    "who": "nobody",
+    "what": "no start is owed"
+   },
+   "why": "same for J-125",
+   "flags": [
+    "start_notice_for_queued_job"
+   ],
+   "at_i": 25
+  },
+  {
+   "at": "c6829928509",
+   "job": "J-119",
+   "state": "acknowledged",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "start in order"
+   },
+   "why": "Muse acks O-71341bd3: 'queued, not started yet'",
+   "flags": [
+    "ack_of_unneeded_notice"
+   ],
+   "at_i": 33
+  },
+  {
+   "at": "c6829929116",
+   "job": "J-124",
+   "state": "acknowledged",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "start in order"
+   },
+   "why": "acks O-7877a7c1",
+   "at_i": 34
+  },
+  {
+   "at": "c6829929805",
+   "job": "J-125",
+   "state": "acknowledged",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "start in order"
+   },
+   "why": "acks O-9de6440c",
+   "at_i": 35
+  },
+  {
+   "at": "c6830933631",
+   "job": "J-124",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push"
+   },
+   "why": "J-124 started",
+   "at_i": 38
+  },
+  {
+   "at": "c6831176017",
+   "job": "J-119",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push"
+   },
+   "why": "J-119 started",
+   "at_i": 39
+  },
+  {
+   "at": "push43273383434",
+   "job": "J-124",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove"
+   },
+   "why": "first J-124 head 5b3eaf14",
+   "at_i": 40
+  },
+  {
+   "at": "c6831524630",
+   "job": "J-125",
+   "state": "started",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "push"
+   },
+   "why": "J-125 started",
+   "at_i": 41
+  },
+  {
+   "at": "push43278023800",
+   "job": "J-119",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove aeb08b66"
+   },
+   "why": "J-119 pushed",
+   "at_i": 50
+  },
+  {
+   "at": "push43278823440",
+   "job": "J-125",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "ci",
+    "what": "prove 3be444d2"
+   },
+   "why": "J-125 last push",
+   "at_i": 52
+  },
+  {
+   "at": "run43275650096",
+   "job": "J-124",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "fix the red"
+   },
+   "why": "proof red at ff512d83",
+   "flags": [
+    "proof_red"
+   ],
+   "at_i": 53
+  },
+  {
+   "at": "run43278129935",
+   "job": "J-119",
+   "state": "pushed",
+   "owner": "muse",
+   "next": {
+    "who": "muse",
+    "what": "fix the red"
+   },
+   "why": "proof red at aeb08b66",
+   "flags": [
+    "proof_red"
+   ],
+   "at_i": 54
+  },
+  {
+   "at": "run43278823440",
+   "job": "J-125",
+   "state": "proven",
+   "owner": "muse",
+   "next": {
+    "who": "switchboard",
+    "what": "open the PR"
+   },
+   "why": "proof green at 3be444d2",
+   "at_i": 56
+  }
+ ],
+ "lessons": [
+  "A queued job owes no 'start': only the next job when a lane frees, by the plan's order and the in-flight limit.",
+  "Muse ran more lanes than the plan's limit of 6 (J-116..J-118, J-133, J-134, J-124, J-119, J-125, J-129..J-132 all started on 11-12); the machine should show that as over the limit, not ask for more starts."
+ ]
+}
