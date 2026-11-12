@@ -12,3 +12,6 @@ reconciler: live
 # for one (reconciler.ledger_notifies). Absent or any other value, or a reconciler that is not live: the ledger
 # posts its own notices as before.
 notices: v2
+
+# Rebuild only: observe the versioned plan; no labels, board rewrites or Muse mail.
+plan: shadow
