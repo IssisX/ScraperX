@@ -6,7 +6,7 @@
 // matron-heave beat in sim_tests_matron.cpp (run_matron_balance): a toolbox
 // heaved at a pest coming upright puts her down, up again a few seconds
 // later, nobody dead. This file proves the rest: the dangerous and changed
-// throws, the low drum that downs a changed Matron, the bare punch at every
+// throws, the low toolbox that downs a changed Matron, the bare punch at every
 // stage, the hold-escape window an object blow opens, and the stock along
 // the route.
 #include "sim_tests.hpp"
@@ -366,11 +366,12 @@ void run_hard_blow_punch() {
     std::cout << "PASS scraperx_sim hard blow punch: no stagger, no knockdown, any stage\n";
 }
 
-// A real thrown toolbox at a dangerous Matron, and a real thrown drum at a
-// fully changed one she faces: each takes her balance, a stagger or a
+// A real thrown toolbox at a dangerous Matron, and a real thrown toolbox
+// at a fully changed one she faces: each takes her balance, a stagger or a
 // knockdown, and she has her feet back within a few seconds, alive. (The
 // pest's real throw is the matron-heave beat in run_matron_balance: down,
-// up again, nobody dead.)
+// up again, nobody dead.) The drum is too far west to carry to her locker
+// inside her strain; the toolbox is the same blow at either stage.
 void run_hard_blow_throw() {
     {
         Simulation s(InitialSpawn::Deck154);
@@ -399,37 +400,37 @@ void run_hard_blow_throw() {
         Simulation s(InitialSpawn::Deck154);
         to_her_post(s);
         const std::uint32_t throwables = s.loose_stock_throwables_begin();
-        const std::uint64_t drum = LooseStock::kFirstEntity + throwables + 2;
-        take_up_piece(s, drum, "hard blow throw: to the drum by the north rail");
-        const Thrown by_drum = throw_at_her(s, 2, 0.0);
+        const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables + 1;
+        take_up_piece(s, toolbox, "hard blow throw: to the toolbox by the north rail");
+        const Thrown by_box = throw_at_her(s, 2, 0.0);
         const auto m = s.matron_state();
-        std::cout << "  hard blow throw changed: threw=" << by_drum.threw << " blow=" << by_drum.blow_mps
-                  << " m/s, worst=" << by_drum.worst << ", staggers=" << by_drum.staggers
-                  << ", knockdowns=" << by_drum.knockdowns << ", turn at hit=" << by_drum.turn_at_hit
-                  << ", release " << by_drum.release_m << " m, box max " << by_drum.box_mps << " m/s, at hit "
-                  << by_drum.box_hit_mps << " m/s at y " << by_drum.box_hit_y << " ("
-                  << by_drum.box_hit_dx << ", " << by_drum.box_hit_dz << ") off her centre\n";
-        require(by_drum.threw, "hard blow throw: the drum thrown at a fully changed Matron");
-        require((by_drum.worst == kStateStaggering || by_drum.worst == kStateDown) &&
-                    by_drum.staggers + by_drum.knockdowns == 1,
-                "hard blow throw: a drum takes a fully changed Matron's balance");
-        require(by_drum.alive && rises(s, by_drum.floor_y, by_drum.y, 3.0),
+        std::cout << "  hard blow throw changed: threw=" << by_box.threw << " blow=" << by_box.blow_mps
+                  << " m/s, worst=" << by_box.worst << ", staggers=" << by_box.staggers
+                  << ", knockdowns=" << by_box.knockdowns << ", turn at hit=" << by_box.turn_at_hit
+                  << ", release " << by_box.release_m << " m, box max " << by_box.box_mps << " m/s, at hit "
+                  << by_box.box_hit_mps << " m/s at y " << by_box.box_hit_y << " ("
+                  << by_box.box_hit_dx << ", " << by_box.box_hit_dz << ") off her centre\n";
+        require(by_box.threw, "hard blow throw: the toolbox thrown at a fully changed Matron");
+        require((by_box.worst == kStateStaggering || by_box.worst == kStateDown) &&
+                    by_box.staggers + by_box.knockdowns == 1,
+                "hard blow throw: a toolbox takes a fully changed Matron's balance");
+        require(by_box.alive && rises(s, by_box.floor_y, by_box.y, 3.0),
                 "hard blow throw: fully changed, she has her feet back");
         (void)m;
     }
     std::cout << "PASS scraperx_sim hard blow throw: dangerous and changed lose their balance, alive\n";
 }
 
-// A drum thrown low at a fully changed Matron: low, her step is nothing,
-// and the drum puts her down for her stage's seconds, alive. The escape
+// A toolbox thrown low at a fully changed Matron: low, her step is nothing,
+// and the toolbox puts her down for her stage's seconds, alive. The escape
 // window is her time on the steel: while she lies there he gets clear, and
 // she takes nobody in it.
 void run_hard_blow_low() {
     Simulation s(InitialSpawn::Deck154);
     to_her_post(s);
     const std::uint32_t throwables = s.loose_stock_throwables_begin();
-    const std::uint64_t drum = LooseStock::kFirstEntity + throwables + 2;
-    take_up_piece(s, drum, "hard blow low: to the drum by the north rail");
+    const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables + 1;
+    take_up_piece(s, toolbox, "hard blow low: to the toolbox by the north rail");
     const auto deaths0 = s.snapshot().death_count;
     const Thrown low = throw_at_her(s, 2, -0.6);
     std::cout << "  hard blow low changed: threw=" << low.threw << " blow=" << low.blow_mps
@@ -438,9 +439,9 @@ void run_hard_blow_low() {
               << ", release " << low.release_m << " m, box max " << low.box_mps << " m/s, at hit "
               << low.box_hit_mps << " m/s at y " << low.box_hit_y << " (" << low.box_hit_dx << ", "
               << low.box_hit_dz << ") off her centre\n";
-    require(low.threw, "hard blow low: the drum thrown low at a fully changed Matron");
+    require(low.threw, "hard blow low: the toolbox thrown low at a fully changed Matron");
     require(low.worst == kStateDown && low.knockdowns == 1 && low.staggers == 0,
-            "hard blow low: a drum at her shins puts a fully changed Matron down");
+            "hard blow low: a toolbox at her shins puts a fully changed Matron down");
     require(low.alive && s.snapshot().death_count == deaths0, "hard blow low: down, alive, nobody dead");
     // While she lies there he gets clear east along the band, and she takes
     // nobody in it: her down is her stage's seconds, his window.
