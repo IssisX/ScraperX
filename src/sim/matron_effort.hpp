@@ -37,7 +37,7 @@ enum class Path : std::uint8_t {
     Hand2Arm,       // its arm
     Knee,           // her knee's spring, pinning him (the fatality)
     Shove,          // her shove of him: his velocity written
-    LetGo,          // the push as she lets him go: an impulse on him
+    LetGo,          // the push as she lets him go: a force on him from her account (J-001)
     HandsPush,      // her hands on a piece she shoves or throws: the same newtons her feet's take charged
     PlayerGrip,     // her grips on him (ankle, wrist, fist, knee pin): what reaches him through her hands
     Blow,           // his blows on her (strike, kick, jab, sweep): received, not hers

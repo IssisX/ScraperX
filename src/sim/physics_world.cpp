@@ -948,11 +948,13 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
     contact_listener_.set_own_drive(self_drive_velocity_, own_drive ? kFlowSpeedMps : 0.0F);
     {
         const auto started = std::chrono::steady_clock::now();
+        reach_caps_before_update(delta_seconds);   // J-001: her reach limits from her one account
         effort_before_update();   // J-046 measurement only: reads, writes nothing
         physics_system_.Update(delta_seconds, 1, &temp_allocator_, &job_system_);
         step_spans_.physics_us =
             std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - started).count();
         effort_after_update(delta_seconds);   // J-046 measurement only: reads, writes nothing
+        reach_after_update(delta_seconds);   // J-001: what they held, charged
     }
     kit_->post_step(delta_seconds);
     bay_->post_step();

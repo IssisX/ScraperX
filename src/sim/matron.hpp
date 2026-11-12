@@ -1024,6 +1024,14 @@ public:
     static constexpr float kLadderPullMaxForceN = 8000.0F;
     static constexpr float kLadderPullMaxPowerW = 22000.0F;
     static constexpr float kHandReachPullN = 900.0F;
+    // J-001: her second hand's pull on his belt in the fatality's haul and
+    // pin (the ordinary hold's is kHandPullN). Her one budget (8 kN with her
+    // feet and her first hand): at kHandPullN her belt hand, pulling against
+    // her first hand's hold through his body, left her feet too little to
+    // brace the haul, and his window came too late at the band's spots
+    // (matron fatality band (20.0, -150.0)). Measured, CI flags: 1200 to
+    // 1600 N pass every spot, 1000 and 1800 do not; this is the middle.
+    static constexpr float kFatalBeltPullN = 1400.0F;
     static constexpr float kRipRampNps = 2000.0F;     // against a braced player, her pull grows this fast
     static constexpr float kRipMaxN = 3400.0F;
     static constexpr float kGripMaxForceN = 3800.0F;

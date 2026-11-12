@@ -1,4 +1,4 @@
-# Applied by FetchContent to the pinned Jolt checkout (CMakeLists.txt, PATCH_COMMAND). Four patches,
+# Applied by FetchContent to the pinned Jolt checkout (CMakeLists.txt, PATCH_COMMAND). Five patches,
 # each idempotent on its own file: a patched tree is left as it is, and a tree with neither the
 # pinned nor the patched text stops the configure, so a Jolt bump re-checks each instead of
 # silently dropping it.
@@ -99,6 +99,50 @@ if(at_ccd_actor_patched LESS 0)
     endif()
     file(WRITE "${system}" "${text}")
     message(STATUS "jolt_patch.cmake: Matron-only CCD activation, canonical trigger for other bodies")
+endif()
+
+# ---------------------------------------------------------------------------------------------
+# 5. A force limit on DistanceConstraint (J-001). The Matron's arm and knee reach limits are
+# distance constraints between her body and her hand or knee: their force is her muscle's, so it
+# draws from her one budget (8 kN, 44 kW). Upstream a distance constraint's limit has no force
+# cap. SetMaxForce clamps the accumulated lambda to +-(max force * dt) after the limit's own
+# one-sided bounds are set; the default (FLT_MAX) leaves every other distance constraint as it was.
+
+set(distance_h "${JOLT_SOURCE_DIR}/Jolt/Physics/Constraints/DistanceConstraint.h")
+set(distance_cpp "${JOLT_SOURCE_DIR}/Jolt/Physics/Constraints/DistanceConstraint.cpp")
+file(READ "${distance_h}" text_h)
+file(READ "${distance_cpp}" text_cpp)
+set(pinned_h_api
+    "\tinline float\t\t\t\tGetTotalLambdaPosition() const\t\t\t\t\t\t\t\t{ return mAxisConstraint.GetTotalLambda(); }\n")
+set(patched_h_api
+    "\tinline float\t\t\t\tGetTotalLambdaPosition() const\t\t\t\t\t\t\t\t{ return mAxisConstraint.GetTotalLambda(); }\n\n\t/// ScraperX (third_party/jolt_patch.cmake): the most force (N) the limit applies, either way\n\tvoid\t\t\t\t\t\tSetMaxForce(float inMaxForce)\t\t\t\t\t\t\t\t{ mMaxForce = inMaxForce; }\n\tfloat\t\t\t\t\t\tGetMaxForce() const\t\t\t\t\t\t\t\t\t\t\t{ return mMaxForce; }\n")
+set(pinned_h_member "\tfloat\t\t\t\t\t\tmMaxLambda;\n")
+set(patched_h_member "\tfloat\t\t\t\t\t\tmMaxLambda;\n\n\t// ScraperX: force limit (SetMaxForce)\n\tfloat\t\t\t\t\t\tmMaxForce = FLT_MAX;\n")
+set(pinned_cpp
+    "void DistanceConstraint::SetupVelocityConstraint(float inDeltaTime)\n{\n\tCalculateConstraintProperties(inDeltaTime);\n}\n")
+set(patched_cpp
+    "void DistanceConstraint::SetupVelocityConstraint(float inDeltaTime)\n{\n\tCalculateConstraintProperties(inDeltaTime);\n\n\t// ScraperX (third_party/jolt_patch.cmake): the force limit, inside the limit's own bounds\n\tif (mMaxForce < FLT_MAX)\n\t{\n\t\tconst float max_lambda = mMaxForce * inDeltaTime;\n\t\tmMinLambda = max(mMinLambda, -max_lambda);\n\t\tmMaxLambda = min(mMaxLambda, max_lambda);\n\t}\n}\n")
+string(FIND "${text_h}" "SetMaxForce" at_patched_h)
+string(FIND "${text_cpp}" "max_lambda = mMaxForce" at_patched_cpp)
+if(at_patched_h LESS 0 OR at_patched_cpp LESS 0)
+    if(NOT (at_patched_h LESS 0 AND at_patched_cpp LESS 0))
+        message(FATAL_ERROR "jolt_patch.cmake: DistanceConstraint force limit half applied; start from a clean Jolt checkout")
+    endif()
+    foreach(pair IN ITEMS "text_h;pinned_h_api" "text_h;pinned_h_member" "text_cpp;pinned_cpp")
+        list(GET pair 0 file_var)
+        list(GET pair 1 pinned)
+        string(FIND "${${file_var}}" "${${pinned}}" at_pinned)
+        if(at_pinned LESS 0)
+            message(FATAL_ERROR "jolt_patch.cmake: DistanceConstraint no longer holds the pinned text (${pinned}); "
+                                "re-check the force limit on its lambda before bumping Jolt")
+        endif()
+    endforeach()
+    string(REPLACE "${pinned_h_api}" "${patched_h_api}" text_h "${text_h}")
+    string(REPLACE "${pinned_h_member}" "${patched_h_member}" text_h "${text_h}")
+    string(REPLACE "${pinned_cpp}" "${patched_cpp}" text_cpp "${text_cpp}")
+    file(WRITE "${distance_h}" "${text_h}")
+    file(WRITE "${distance_cpp}" "${text_cpp}")
+    message(STATUS "jolt_patch.cmake: DistanceConstraint force limit (SetMaxForce)")
 endif()
 
 # ---------------------------------------------------------------------------------------------

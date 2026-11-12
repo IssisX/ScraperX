@@ -1600,7 +1600,10 @@ void Matron::step_rail(const float dt, const RVec3 player, const RVec3 at, const
         // out past the rail and his belt up on its top: his middle balanced
         // on it, his back to it, his head and shoulders out over the drop.
         hand2_want_ = 2;
-        pull2_n_ = hand2_on_ == 2 ? kHandPullN : kHandReachPullN;
+        // (In the fatality her belt hand pulls kFatalBeltPullN, J-001: within
+        // her one budget its full kHandPullN starves the feet that brace her
+        // haul, and the haul lands later.)
+        pull2_n_ = hand2_on_ == 2 ? (fatal_hold_ ? kFatalBeltPullN : kHandPullN) : kHandReachPullN;
         if (hand2_on_ != 2 && fatal_hold_ && !pin_here_ && rail_up_ >= 0.2F) {
             // In the fatality at a rail, from where she stands (no turn away
             // from it, no walk back to it): her first hand hauls his collar in

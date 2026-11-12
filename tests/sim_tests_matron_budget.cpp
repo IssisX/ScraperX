@@ -3,8 +3,8 @@
 // (src/sim/matron_effort.hpp) adds up the force and power of each path of
 // hers: every Budget::take, the pole's friction, the crate shove, the
 // routecraft drive, the stock hold's constraint (lambda / dt), the grab
-// hand's spring and arm, her second hand's, her knee's, the shove and the
-// let-go (velocity writes: mass * dv / dt). Power is force . velocity, the
+// hand's spring and arm, her second hand's, her knee's, her let-go, and the
+// shove (a velocity write: mass * dv / dt). Power is force . velocity, the
 // positive part, as in her Budget.
 //
 // The scenarios are the groups' own stagings, run as they are (each in its
@@ -75,57 +75,18 @@ const Expected kExpected[] = {
     // Measured 11-05 on trunk 1ebebdb9 (host g++ 13.3, Release). over: some tick past 8 kN or 44 kW;
     // uncharged: force no Budget is charged for. The budget path's overs are the Turn lunge's own
     // caps (law::kLungeForceN, kLungePowerW), the one designed exception to her one budget.
+    // J-001 (11-12): her hands' springs and reach limits, her knee's, her let-go and her crate
+    // shove draw from her one account now (Budget::take_limb, take_external; the reach limits
+    // through the DistanceConstraint force limit, third_party/jolt_patch.cmake): every one of their
+    // rows came back honest (XPASS) and is off the list, with matron-grab's lunge and
+    // matron-fatality's shove, which no longer happen. What is left are the shove (a velocity
+    // write) and the Turn lunge.
     // scenario, path, over, uncharged, peak N, peak W
-    {"matron-grab", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
-    {"matron-grab", Path::GrabSpring, false, true, 2600.0, 11424.0},
-    {"matron-grab", Path::GrabArm, false, true, 1452.0, 545.0},
-    {"matron-grab", Path::Hand2Spring, false, true, 2600.0, 5675.0},
-    {"matron-grab", Path::Hand2Arm, false, true, 2498.0, 935.0},
     {"matron-grab", Path::Shove, true, true, 44771.0, 131006.0},
     {"matron-arm", Path::Budget, true, false, law::kLungeForceN, 61324.0},
-    {"matron-arm", Path::GrabSpring, false, true, 2600.0, 5141.0},
-    {"matron-arm", Path::GrabArm, false, true, 974.0, 401.0},
-    {"matron-arm", Path::Hand2Spring, false, true, 2600.0, 2025.0},
-    {"matron-arm", Path::Hand2Arm, false, true, 1477.0, 400.0},
-    {"matron-arm", Path::Knee, false, true, 5005.0, 9263.0},
     {"matron-arm", Path::Shove, true, true, 44770.0, 131006.0},
-    {"matron-fatality", Path::CrateShove, false, true, 8000.0, 18913.0},
-    {"matron-fatality", Path::GrabSpring, false, true, 2600.0, 6963.0},
-    {"matron-fatality", Path::GrabArm, false, true, 1144.0, 336.0},
-    {"matron-fatality", Path::Knee, false, true, 4864.0, 8029.0},
-    {"matron-fatality", Path::Shove, true, true, 52285.0, 131006.0},
-    {"matron-fatality", Path::LetGo, false, true, 6885.0, 6355.0},
-    {"matron-load", Path::GrabSpring, false, true, 2600.0, 5141.0},
-    {"matron-load", Path::GrabArm, false, true, 2824.0, 2064.0},
-    {"matron-load", Path::Hand2Spring, false, true, 2600.0, 2025.0},
-    {"matron-load", Path::Hand2Arm, false, true, 1477.0, 400.0},
-    {"matron-load", Path::Knee, false, true, 4989.0, 7222.0},
     {"forklift-matron", Path::Budget, true, false, law::kLungeForceN, law::kLungePowerW},
-    {"forklift-matron", Path::GrabSpring, false, true, 1340.0, 1517.0},
-    {"forklift-matron", Path::GrabArm, false, true, 380.0, 368.0},
-    {"matron-mischief", Path::GrabSpring, false, true, 1617.0, 4469.0},
-    {"matron-mischief", Path::GrabArm, false, true, 252.0, 292.0},
-    {"matron-damage", Path::GrabSpring, false, true, 1339.0, 2012.0},
-    {"matron-damage", Path::GrabArm, false, true, 406.0, 389.0},
-    {"strike", Path::GrabSpring, false, true, 2245.0, 3963.0},
-    {"strike", Path::GrabArm, false, true, 974.0, 373.0},
-    {"strike", Path::Hand2Spring, false, true, 900.0, 0.0},
-    {"matron-jab", Path::GrabSpring, false, true, 900.0, 2005.0},
-    {"matron-jab", Path::GrabArm, false, true, 406.0, 389.0},
     {"matron-jab", Path::Shove, true, true, 44770.0, 131006.0},
-    // J-042: the ammo group joins the audit; its grab hand is the grab
-    // scenario's known leak in a briefer hold (she takes him while he races
-    // her for the piece), measured 11-06 on the rebased base, the old rigid
-    // hold. Re-measured after the hold was budgeted (same day, rebased
-    // trunk 2d2ae7d7): the grab's force fell 1578 to 1424 N, its power
-    // rose 3950 to 4465 W — the piece's new motion puts the grab at a
-    // higher relative speed. The hold itself is NOT listed: J-042 budgets it.
-    // Re-measured 11-10 with trunk ac4ec54d merged in (#291 taken over): the
-    // race's grab ran at 1609 N, 4570 W (was 1424 N, 4465 W) and its arm at
-    // 1099 N, 997 W (was 779 N, 1291 W): the same grab, the world's other
-    // changes under it. Still uncharged, still the grab's own leak.
-    {"matron-ammo", Path::GrabSpring, false, true, 1609.0, 4570.0},
-    {"matron-ammo", Path::GrabArm, false, true, 1099.0, 997.0},
 };
 
 constexpr double kGrowth = 1.10;          // a listed leak may not grow past its measured peak by more than this

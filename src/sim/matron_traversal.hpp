@@ -130,6 +130,11 @@ struct Budget {
     // -granted on her, as the limb applies it. `velocity` is the limb's
     // relative to her.
     JPH::Vec3 take_limb(JPH::Vec3 want, std::uint8_t ledger_path) noexcept;
+    // J-001: the same take for a push of hers whose reaction the world does
+    // not put on her (her crate shove): same caps, booked charged under
+    // `ledger_path` with nothing on her. `velocity` is the pushed body's
+    // relative to her.
+    JPH::Vec3 take_external(JPH::Vec3 want, std::uint8_t ledger_path) noexcept;
 
 private:
     JPH::Vec3 grant(JPH::Vec3 want) noexcept;

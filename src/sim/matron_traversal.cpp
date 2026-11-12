@@ -279,6 +279,14 @@ Vec3 Budget::take_limb(const Vec3 want, const std::uint8_t ledger_path) noexcept
     return granted;
 }
 
+Vec3 Budget::take_external(const Vec3 want, const std::uint8_t ledger_path) noexcept {
+    const Vec3 granted = grant(want);
+    const float g = granted.Length();
+    // J-046 measurement only: charged in full, nothing on her.
+    effort::add(static_cast<effort::Path>(ledger_path), g, granted.Dot(velocity), g, Vec3::sZero());
+    return granted;
+}
+
 Vec3 Budget::grant(const Vec3 want) noexcept {
     const float length = want.Length();
     if (length <= 1.0e-6F || left <= 0.0F) {

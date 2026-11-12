@@ -1855,10 +1855,14 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                         const float force_n = std::min(shove_force, shove_power / along);
                         Vec3 push = dir + Vec3(0.0F, 0.08F, 0.0F);
                         push /= push.Length();
-                        bodies.AddForce(id, push * force_n, EActivation::Activate);
-                        // J-046 measurement only: charged to no Budget, no reaction on her.
-                        effort::add_force(effort::Path::CrateShove, push * force_n,
-                                          bodies.GetLinearVelocity(id) - velocity, 0.0F, Vec3::sZero());
+                        // J-001: drawn from her tick's one account (before her
+                        // feet's push below), charged; no reaction on her, as before.
+                        feet_budget_.velocity = bodies.GetLinearVelocity(id) - velocity;
+                        const Vec3 shove = feet_budget_.take_external(
+                            push * force_n, static_cast<std::uint8_t>(effort::Path::CrateShove));
+                        if (shove.LengthSq() > 0.0F) {
+                            bodies.AddForce(id, shove, EActivation::Activate);
+                        }
                     }
                 }
             }

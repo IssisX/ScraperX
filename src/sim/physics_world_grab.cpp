@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 namespace scraperx::sim {
 namespace {
@@ -294,7 +295,7 @@ bool Simulation::PhysicsWorld::grab_pre_step(JPH::BodyInterface &bodies, StepCom
     return held && !ladder_grip;
 }
 
-void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const float /*dt*/) noexcept {
+void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const float dt) noexcept {
     ladder_pull_force_n_ = 0.0F;
     ladder_pull_power_w_ = 0.0F;
     matron_->set_player_braced(brace_ != nullptr);
@@ -308,9 +309,7 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         const bool let_go = matron_->take_let_go(push);
         tear_grip(false);
         if (let_go) {
-            const JPH::Vec3 before = bodies.GetLinearVelocity(player_id_);   // J-046, read only
-            bodies.AddImpulse(player_id_, push * kPlayerMassKg);
-            effort::add_velocity_write(effort::Path::LetGo, kPlayerMassKg, before, before + push, effort_dt_);
+            let_go_push(bodies, push, dt);
         }
         destroy_grab_constraint(hand_arm_);
         remove_and_destroy(bodies, hand_id_);
@@ -578,10 +577,23 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
     if (matron_->take_let_go(push)) {
         // She lets go: the push is her arm's, at most kReleasePushMps.
         tear_grip(false);
-        const JPH::Vec3 before = bodies.GetLinearVelocity(player_id_);   // J-046, read only
-        bodies.AddImpulse(player_id_, push * kPlayerMassKg);
-        effort::add_velocity_write(effort::Path::LetGo, kPlayerMassKg, before, before + push, effort_dt_);
+        let_go_push(bodies, push, dt);
     }
+}
+
+void Simulation::PhysicsWorld::let_go_push(JPH::BodyInterface &bodies, const JPH::Vec3 push, const float dt) noexcept {
+    // J-001: her arm's push as her fingers open (`push` m/s on him, at most
+    // kReleasePushMps), a force over the tick from her one account like her
+    // hand's pull, its reaction on her; never a velocity write.
+    if (dt <= 0.0F || push.LengthSq() <= 0.0F) return;
+    const JPH::Vec3 want = push * (kPlayerMassKg / dt);
+    const JPH::Vec3 relative_v = bodies.GetLinearVelocity(player_id_) - bodies.GetLinearVelocity(matron_->body());
+    matron_->add_limb_want(want, relative_v);
+    traversal::Budget &account = matron_->limb_budget();
+    account.velocity = relative_v;
+    const JPH::Vec3 force = account.take_limb(want, static_cast<std::uint8_t>(effort::Path::LetGo));
+    bodies.AddForce(player_id_, force);
+    bodies.AddForce(matron_->body(), -force);
 }
 
 bool Simulation::PhysicsWorld::body_down_on_ground(JPH::BodyInterface &bodies) const noexcept {
@@ -782,12 +794,90 @@ void effort_record(const effort::Path p, const JPH::TwoBodyConstraint *c, const 
 
 void Simulation::PhysicsWorld::effort_after_update(const float dt) const noexcept {
     if (!effort::ledger().enabled) return;
-    effort_record(effort::Path::GrabArm, hand_arm_.GetPtr(), dt);
-    effort_record(effort::Path::Hand2Arm, hand2_arm_.GetPtr(), dt);
-    effort_record(effort::Path::Knee, knee_arm_.GetPtr(), dt);
+    // (Her reach limits, GrabArm, Hand2Arm and the knee's, are booked
+    // charged by reach_after_update.)
     for (const JPH::TwoBodyConstraint *grip :
          {grip_.GetPtr(), wrist_.GetPtr(), knee_pin_.GetPtr(), fist_.GetPtr(), knot_.GetPtr(), handle_fist_.GetPtr()}) {
         effort_record(effort::Path::PlayerGrip, grip, dt);
+    }
+}
+
+namespace {
+// Her limb's reach limit (a distance constraint, her body first, the limb
+// second): the unit direction from her point to the limb's, and the limb's
+// velocity relative to her there.
+bool reach_axis(const JPH::TwoBodyConstraint *c, JPH::Vec3 &axis, JPH::Vec3 &relative) {
+    if (c == nullptr || !c->IsActive() || c->GetSubType() != JPH::EConstraintSubType::Distance) return false;
+    const JPH::Body *b1 = c->GetBody1();
+    const JPH::Body *b2 = c->GetBody2();
+    const JPH::RVec3 p1 = b1->GetCenterOfMassTransform() * c->GetConstraintToBody1Matrix().GetTranslation();
+    const JPH::RVec3 p2 = b2->GetCenterOfMassTransform() * c->GetConstraintToBody2Matrix().GetTranslation();
+    const JPH::Vec3 d(p2 - p1);
+    axis = d.Length() > 1.0e-5F ? d.Normalized() : JPH::Vec3::sAxisY();
+    relative = b2->GetPointVelocity(p2) - b1->GetPointVelocity(p2);
+    return true;
+}
+
+// A reach limit's least share of her account: one that held nothing last
+// tick still gets a part of it if it comes taut this tick.
+constexpr float kReachShareFloorN = 100.0F;
+} // namespace
+
+void Simulation::PhysicsWorld::reach_caps_before_update(const float dt) noexcept {
+    const std::array<JPH::TwoBodyConstraint *, 3> limits{hand_arm_.GetPtr(), hand2_arm_.GetPtr(), knee_arm_.GetPtr()};
+    if (matron_ == nullptr || dt <= 0.0F || (limits[0] == nullptr && limits[1] == nullptr && limits[2] == nullptr)) return;
+    // What her feet, her springs and her swat have left of her one account
+    // this tick, shared out among her reach limits by what each held the
+    // tick before. Her muscle holds her arm at its reach as it does her
+    // hand's pull: nothing past what is left.
+    traversal::Budget &account = matron_->limb_budget();
+    const float force_left = std::max(0.0F, account.left);
+    const float power_left = std::max(0.0F, account.power_left);
+    std::array<float, 3> weight{};
+    float total = 0.0F;
+    for (std::size_t i = 0; i < limits.size(); ++i) {
+        if (limits[i] == nullptr) continue;
+        weight[i] = reach_force_n_[i] + kReachShareFloorN;
+        total += weight[i];
+    }
+    float held = 0.0F;
+    float held_w = 0.0F;
+    for (std::size_t i = 0; i < limits.size(); ++i) {
+        if (limits[i] == nullptr) continue;
+        const float share = weight[i] / total;
+        float cap = force_left * share;
+        JPH::Vec3 axis;
+        JPH::Vec3 relative;
+        // Its pull draws her limb in: power only while the limb comes in.
+        const float inward = reach_axis(limits[i], axis, relative) ? -axis.Dot(relative) : 0.0F;
+        if (inward > 1.0e-3F) cap = std::min(cap, power_left * share / inward);
+        static_cast<JPH::DistanceConstraint *>(limits[i])->SetMaxForce(cap);
+        held += cap;
+        held_w += cap * std::max(0.0F, inward);
+    }
+    account.left -= held;
+    account.used += held;
+    account.power_left -= held_w;
+    account.power_used += held_w;
+}
+
+void Simulation::PhysicsWorld::reach_after_update(const float dt) noexcept {
+    const std::array<JPH::TwoBodyConstraint *, 3> limits{hand_arm_.GetPtr(), hand2_arm_.GetPtr(), knee_arm_.GetPtr()};
+    constexpr std::array<effort::Path, 3> paths{effort::Path::GrabArm, effort::Path::Hand2Arm, effort::Path::Knee};
+    for (std::size_t i = 0; i < limits.size(); ++i) {
+        reach_force_n_[i] = 0.0F;
+        JPH::Vec3 axis;
+        JPH::Vec3 relative;
+        if (matron_ == nullptr || dt <= 0.0F || !reach_axis(limits[i], axis, relative)) continue;
+        // Its force on her limb over the step (lambda / dt), within the cap
+        // her account gave it: charged, and held back from her feet next tick.
+        const JPH::Vec3 force = axis * (static_cast<const JPH::DistanceConstraint *>(limits[i])->GetTotalLambdaPosition() / dt);
+        const float n = force.Length();
+        reach_force_n_[i] = n;
+        if (n <= 0.0F) continue;
+        matron_->add_limb_want(force, relative);
+        // J-046 measurement: booked as charged; Jolt applies it, not AddForce.
+        effort::add_force(paths[i], force, relative, n, JPH::Vec3::sZero());
     }
 }
 } // namespace scraperx::sim

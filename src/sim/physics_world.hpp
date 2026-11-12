@@ -1077,6 +1077,16 @@ public:
     // read, and write nothing the simulation reads back.
     void effort_before_update() const noexcept;
     void effort_after_update(float dt) const noexcept;
+    // J-001: her arm and knee reach limits (distance constraints, her hand or
+    // knee to her body) draw from her one account like her springs: before
+    // the step each gets a force cap from what her account has left
+    // (reach_caps_before_update), and after it what it applied is charged
+    // to it and held back from her feet next tick (reach_after_update).
+    // J-001: her let-go's push on him, from her one account (physics_world_grab.cpp).
+    void let_go_push(JPH::BodyInterface &bodies, JPH::Vec3 push, float dt) noexcept;
+    void reach_caps_before_update(float dt) noexcept;
+    void reach_after_update(float dt) noexcept;
+    std::array<float, 3> reach_force_n_{};   // each reach limit's force, the tick before (N)
     float effort_mass(JPH::BodyID id) const noexcept;
     float effort_dt_ = 0.0F;
     // The player's strike (physics_world_strike.cpp).
