@@ -40,7 +40,7 @@ BINARY_EXTS = {
 
 SKIP_DIRS = {"addons", ".godot", "tests"}
 
-BACKTICK = re.compile(r"`([^`]+)`")
+BACKTICK = re.compile(r"`([^`\s/]+)`")
 
 
 def recorded_names(directory: Path, root: Path) -> set:
