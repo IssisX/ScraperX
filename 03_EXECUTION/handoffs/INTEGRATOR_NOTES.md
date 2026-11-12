@@ -3,7 +3,7 @@
 Only what has no other home. A PR's state is on GitHub, a job's on its issue, a ruling in its spec or issue, Cory's
 calls in CLAUDE.md's settled list, Muse's orders in `work/tasks/muse.md`; never also here. At most 30 lines. Older: `INTEGRATOR_NOTES_LOG_2026-11-07.md`.
 
-Read through: 1794438975 (2026-11-11 full run)
+Read through: 1794460539 (2026-11-11 last quiet run)
 
 ## Now (11-11)
 State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). Three helpers, the cap (Cory 11-11):
@@ -13,8 +13,8 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
   whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
 - J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001.
   Helpers: J-092 #434 red-proof fix a50537520df752690 (body order vs magnet guard). J-108 bait lift aef884d1 stopped (Cory: move/drop). J-001 aee4bded paused (Argon/Grok).
-  J-092 done: PR #434 (protected; the workflow PR after it adds touch_slab_trap's shard line AND a CI step running tools/rule_check/test_rule_check.py, J-115 7c65bf3e done). J-085 part 1 pushed 19ce47f0. J-103 landed. Next free: J-104 #423 (+ FAIL lines in red notices), then J-090 pass 2. J-107 #426 shared red: Muse. Muse queue refilled J-109..J-114 (11 unstarted).
-- J-085 #403 DONE: #435 + #437 merged, issue closed.
+  J-092 landed #434; its CI follow-up #447 (touch_slab_trap in touch-2 + rule_check tests) has green proof, Codex clean, API LAND. Next workflow PR: `persist-credentials: false` on the scope checkout (API note on #447; token is contents:read, low risk).
+- J-085 #403 DONE (#435, #437). J-126 #449 DONE (#450); follow-up J-127 #451 mailed to Muse. J-126 helper worktree build (~3 GB) left: its deletes were refused, not mine to do.
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
 

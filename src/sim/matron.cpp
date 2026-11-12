@@ -2844,9 +2844,27 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             if (scanned_ != nullptr) {
                 own_region = scanned_->region_at(Vec3(ax, feet_y, az));
                 if (own_region < 0) own_region = region_under();
+                // Mid step-up on a stair her middle rides past the tread she
+                // stands on and short of the next: the floor her feet feel
+                // (feel_floor, this tick) names it, while she is within a
+                // step of it.
+                if (own_region < 0 && std::abs(feet_y - feet_y_) <= kStepUpM + 0.2F) {
+                    own_region = scanned_->region_at(Vec3(ax, feet_y_, az));
+                }
                 if (own_region >= 0) floor_y = scanned_->regions()[static_cast<std::size_t>(own_region)].top;
             }
-            const bool elsewhere = std::abs(lead_floor_ - floor_y) > 1.0F;
+            // A lead on the very region she stands in is not elsewhere, however
+            // far it is above or below that region's area-weighted top (a stair
+            // or ramp of the region rising off a big floor): one region is
+            // tops a step apart and touching, floor her feet walk, so the
+            // scan-walk below takes her to the spot itself. Height says
+            // elsewhere only for a lead off her region (J-126: a lead 3 m up
+            // the region's stair was sent to her ways, and a travel to her own
+            // region stood her still as already there).
+            const int lead_region =
+                (scanned_ != nullptr && own_region >= 0) ? scanned_->region_at(Vec3(heard_x_, lead_floor_, heard_z_)) : -1;
+            const bool same_region = own_region >= 0 && lead_region == own_region;
+            const bool elsewhere = !same_region && std::abs(lead_floor_ - floor_y) > 1.0F;
             // A lead the corner pipe goes toward (frail, only up it): chased longer.
             const float toward = pipe_next_toward(floor_y, lead_floor_);
             const bool by_pipe = elsewhere && toward != floor_y && (stage_ != Stage::Pest || toward > floor_y) &&
@@ -3074,7 +3092,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     }
                     const bool off_graph = nearest_level > 1.0F || nearest_line > 1.0F;
                     if (off_graph) {
-                        const Vec3 feet(at.GetX(), float(at.GetY()) - kStandCentre, at.GetZ());
+                        Vec3 feet(at.GetX(), float(at.GetY()) - kStandCentre, at.GetZ());
+                        // Mid step-up, from the tread her feet feel (as her
+                        // region above).
+                        if (scanned_->patch_at(feet, 0.4F) < 0 && std::abs(feet_y - feet_y_) <= kStepUpM + 0.2F) {
+                            feet = Vec3(at.GetX(), feet_y_, at.GetZ());
+                        }
                         const Vec3 goal(heard_x_, lead_floor_, heard_z_);
                         const int foot_patch = scanned_->patch_at(feet, 0.4F);
                         const int goal_patch = scanned_->patch_at(goal, 0.4F);
@@ -3104,7 +3127,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                 along += distance_xz(last.GetX(), last.GetZ(), p.GetX(), p.GetZ());
                                 last = p;
                             }
-                            const float straight = distance_xz(ax, az, heard_x_, heard_z_);
+                            // The straight line to the spot itself, its rise
+                            // too: a landing over a stair's foot is the
+                            // stair's height away, not nothing.
+                            const float straight = Vec3(Vec3(heard_x_, lead_floor_, heard_z_) - feet).Length();
                             if (path.size() > 1 && along <= 3.0F * straight + 10.0F) {
                                 // First point she is not already standing
                                 // on: 1.2 m, as route_toward uses, not
@@ -3120,6 +3146,47 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                         wz = p.GetZ();
                                         scan_walk = true;
                                         break;
+                                    }
+                                }
+                                // Where the line to it runs over a drop (a
+                                // narrow stair's turn: that point is round
+                                // the corner, and the line crosses the open
+                                // well inside the turn), her aim is 1.2 m
+                                // along the path instead, which keeps to the
+                                // treads (J-126, the leg spiral's landings).
+                                // Only a drop: floor no lower than a step
+                                // under hers all along (a stair going up, a
+                                // machine's floor she boards) keeps her aim.
+                                const IgnoreSingleBodyFilter self_only(body_);
+                                const auto over_drop = [&](const float tx, const float tz) {
+                                    const float length = distance_xz(ax, az, tx, tz);
+                                    const int n = std::max(1, static_cast<int>(length / 0.2F));
+                                    for (int i = 1; i <= n; ++i) {
+                                        const float t = float(i) / float(n);
+                                        RayCastResult down;
+                                        const RVec3 from(ax + (tx - ax) * t, feet_y_ + 0.6F, az + (tz - az) * t);
+                                        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -1.2F, 0.0F)),
+                                                                                    down, {}, {}, self_only) ||
+                                            float(from.GetY()) - 1.2F * down.mFraction < feet_y_ - kStepUpM) {
+                                            return true;
+                                        }
+                                    }
+                                    return false;
+                                };
+                                if (scan_walk && over_drop(wx, wz)) {
+                                    float left = 1.2F;
+                                    float fx = ax;
+                                    float fz = az;
+                                    for (const Vec3 &p : path) {
+                                        const float span = distance_xz(fx, fz, p.GetX(), p.GetZ());
+                                        if (span >= left) {
+                                            wx = fx + (p.GetX() - fx) * (left / span);
+                                            wz = fz + (p.GetZ() - fz) * (left / span);
+                                            break;
+                                        }
+                                        left -= span;
+                                        fx = p.GetX();
+                                        fz = p.GetZ();
                                     }
                                 }
                 // Steel outside deck_steel_ (the board under a climb she
