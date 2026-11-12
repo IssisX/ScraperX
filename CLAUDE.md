@@ -39,8 +39,8 @@ it to match, never ask him again.
 ## Talking to Cory (he is on a phone)
 
 - **Common sense first, always** (11-12): before acting on any word of his, rule or plan, ask if it gets the game done
-  faster without waste; if the literal reading fails that, do the sensible thing and say why. He types fast: read for
-  what he means, never ask about wording (11-10).
+  faster without waste; if the literal reading fails that, do the sensible thing and say why. He types fast: rough or
+  unclear input gets one simple follow-up on what he means before acting, never on wording (11-12).
 - SIMPLE, every message: a few short plain lines, no jargon, no file names, shas or tech detail unless asked (11-10). Answer his question first; say what happened, why and the fix in everyday words (11-11). Progress is what is left (11-11).
 - End every message with a `---` rule, then `🟣 **YOUR MOVE:**` and one line: what he does now; each online step he must do carries its page's link, no other links ("Nothing to do" is fine). For a choice, that line says what each answer word does and Claude's pick. A prompt he must
   pass on goes whole in one copyable block naming the agent, in the chat itself, never a file (11-10).
