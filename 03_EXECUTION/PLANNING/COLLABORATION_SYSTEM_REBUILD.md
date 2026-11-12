@@ -291,18 +291,14 @@ No `.github/workflows/` file changes. Run: `python3 -m unittest discover -s tool
 - **Review capacity is the real ceiling on landing** (Codex's review limit ran out on #343). More of it is money.
 - **One session as planner, ruler and last reviewer** is a sessions question.
 
-### Already on this branch, from another agent (1d9c70c7): not part of this design
+### `job_control.py` (1d9c70c7, another agent): removed 11-12, one state model left
 
-`tools/switchboard/job_control.py` (170 lines, no tests, called by nothing) was pushed to
-`claude/integrate-collab-rebuild` while this was written. It is kept as pushed and unchanged. It takes the other
-road, and the integrator should rule on it before anything is built:
-- Its store is labels, with `state:ready`, `state:active`, `state:parked` typed by hand. That is R4 and point 1
-  above: a typed state, no order, one write per issue.
-- `merge_problem` refuses a merge when the job is parked or the branch is not the owner's. CLAUDE.md says only
-  real physics, gameplay or test failures block a merge, and "done work is never parked" (Cory 11-12).
-- Worth keeping for B2: its `Blocked-by:` cycle walk, its "two vendors have branches" check (B4's `NOT-OWNER`)
-  and "STARTED but no remote branch" (B4's `UNPUSHED`). Its Muse limit is 4; this file proposes 6.
-Two agents on one job's branch is failure 1 happening to this job: `NOT-OWNER` would have listed it.
+It kept a second, label-typed state (`state:ready|active|parked`), was called by nothing, and its
+`merge_problem` (with `test_parked_cannot_merge_even_on_green`) refused merges of parked or reassigned jobs,
+which Cory rejected (merges are not the plan's to stop). Its useful checks live in `plan.findings`: the
+dependency cycle walk (parse), two vendors on one job (`NOT-OWNER`), started with no remote head (`UNPUSHED`),
+a job issue with no plan line (`NO-LINE`) and, added on removal, two open issues for one job (`DUP-ISSUE`).
+The module and its 14 tests went in one commit; history keeps both.
 
 
 ## D. Cutover text for the owner to apply — drafts, not instructions executed

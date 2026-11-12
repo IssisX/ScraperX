@@ -203,6 +203,8 @@ def findings(plan: Plan, issues: list[dict], branches: list[str], prs: list[dict
             continue
         m = re.match(r"^(J-\d{3,}[a-z]?)(?!\w)", issue.get("title") or "")
         if m:
+            if m.group(1) in open_issues:
+                errors.append(f"DUP-ISSUE {m.group(1)}: #{open_issues[m.group(1)]['number']} and #{issue['number']}")
             open_issues[m.group(1)] = issue
             if m.group(1) not in by_job:
                 errors.append(f"NO-LINE {m.group(1)} #{issue['number']}")

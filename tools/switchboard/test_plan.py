@@ -49,6 +49,12 @@ class PlanTests(unittest.TestCase):
                                    self.issue(103, "J-103"), self.issue(109, "J-109")], [])
         self.assertIn("NO-LINE J-109 #109", errors)
 
+    def test_two_open_issues_for_one_job_detected(self):
+        p = plan.parse(self.text)
+        errors = plan.findings(p, [self.issue(101, "J-101"), self.issue(201, "J-101"), self.issue(102, "J-102"),
+                                   self.issue(103, "J-103")], [])
+        self.assertIn("DUP-ISSUE J-101: #101 and #201", errors)
+
     def test_bad_issue_number_not_silently_accepted(self):
         p = plan.parse(self.text)
         errors = plan.findings(p, [self.issue(100, "J-101"), self.issue(102, "J-102"),
