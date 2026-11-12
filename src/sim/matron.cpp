@@ -666,6 +666,30 @@ bool Matron::on_catwalk_line(const float x, const float z, const float margin) {
     return std::abs(z - kMidZ) < 1.4F && std::abs(x) < 17.6F + margin;
 }
 
+// A point out of every costed hung load's footprint (J-100): the rim she
+// stops at, not the load's centre.
+void Matron::clamp_out_of_footprint(float &x, float &z) const {
+    for (const HungLoad &load : hung_loads_) {
+        if (!load.costed) {
+            continue;
+        }
+        const float dx = x - load.x;
+        const float dz = z - load.z;
+        const float dist = std::hypot(dx, dz);
+        if (dist >= load.footprint_r) {
+            continue;
+        }
+        if (dist < 1.0e-6F) {
+            // Dead centre: step east, out of the footprint.
+            x = load.x + load.footprint_r;
+            z = load.z;
+        } else {
+            x = load.x + dx / dist * load.footprint_r;
+            z = load.z + dz / dist * load.footprint_r;
+        }
+    }
+}
+
 bool Matron::route_toward(const float fx, const float fz, const float tx, const float tz, const bool allow_catwalk,
                           float &wx, float &wz, const bool allow_gaps) const {
     const Level &level = levels_[static_cast<std::size_t>(level_)];
@@ -771,6 +795,7 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
     if (prev[static_cast<std::size_t>(to)] < 0 && to != from) {
         wx = tx;
         wz = tz;
+        clamp_out_of_footprint(wx, wz);
         return false;
     }
     std::vector<int> path;
@@ -840,6 +865,7 @@ bool Matron::route_toward(const float fx, const float fz, const float tx, const 
             wz = on_line.z;
         }
     }
+    clamp_out_of_footprint(wx, wz);
     return true;
 }
 
@@ -1131,6 +1157,116 @@ bool Matron::off_its_steel(const int level, const float x, const float feet, con
     return false;   // a level whose steel she does not know: its height is all she has
 }
 
+// A falling hung load she sees with time to clear (J-100): her walk's target
+// and speed are retargeted at the quickest way out of its footprint. The
+// exit is the nearer, in time, of straight away from the load and along her
+// own motion; she dodges only when she clears before it reaches her head.
+bool Matron::hung_load_dodge(float &wx, float &wz, float &go) {
+    // Walking only, on her feet: not held, not riding, not climbing, not on a
+    // line, and not with the player in her hands.
+    const bool walking = state_ == State::Hunting || state_ == State::Searching || state_ == State::Shuffling ||
+                         state_ == State::Guarding || state_ == State::Peering || state_ == State::Unrigging;
+    if (!walking || !body_in_world_ || dead_ || riding_ || on_line_ || climb_ >= 0 ||
+        pipe_phase_ != PipePhase::Off || holder() != nullptr) {
+        return false;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 at = bodies.GetPosition(body_);
+    const float feet = float(at.GetY()) - kStandCentre;
+    const float head = feet + kStandCentre + kHalfHeight;
+    const Vec3 velocity = bodies.GetLinearVelocity(body_);
+    const Vec3 flat(velocity.GetX(), 0.0F, velocity.GetZ());
+    // The time to cover `dist` along `u`: first plant a foot and kill any
+    // speed the wrong way (kCutAccel), then her feet to kHuntMps (kFootAccel),
+    // then at that pace. A speed already past it is kept, not braked away.
+    const auto time_to_clear = [&](const Vec3 &u, float dist) {
+        float v = flat.Dot(u);
+        float t = 0.0F;
+        if (v < 0.0F) {
+            const float tb = -v / kCutAccel;
+            t += tb;
+            dist -= v * tb + 0.5F * kCutAccel * tb * tb;
+            v = 0.0F;
+        }
+        if (v < kHuntMps) {
+            const float ta = (kHuntMps - v) / kFootAccel;
+            const float da = v * ta + 0.5F * kFootAccel * ta * ta;
+            if (da >= dist) {
+                return t + (-v + std::sqrt(v * v + 2.0F * kFootAccel * dist)) / kFootAccel;
+            }
+            t += ta;
+            dist -= da;
+            v = kHuntMps;
+        }
+        return t + dist / std::max(v, 0.1F);
+    };
+    for (const HungLoad &load : hung_loads_) {
+        if (!load.seen || !load.falling) {
+            continue;
+        }
+        const float dx = float(at.GetX()) - load.x;
+        const float dz = float(at.GetZ()) - load.z;
+        const float dist = std::hypot(dx, dz);
+        if (dist >= load.footprint_r) {
+            continue;
+        }
+        const float drop = load.bottom_y - head;
+        if (drop <= 0.0F) {
+            continue;
+        }
+        // Time for the load to reach her head, falling at vy under gravity.
+        const float s = -load.vy;
+        const float t_impact = (-s + std::sqrt(s * s + 2.0F * 9.81F * drop)) / 9.81F;
+        // The way out, along a direction `u`: where her line leaves the
+        // footprint's circle.
+        const auto exit_along = [&](const Vec3 &u, float &exit_dist) {
+            const float along = dx * u.GetX() + dz * u.GetZ();
+            const float inside = dist * dist - load.footprint_r * load.footprint_r;
+            exit_dist = -along + std::sqrt(along * along - inside);
+            return exit_dist > 0.0F;
+        };
+        float best_t = std::numeric_limits<float>::max();
+        Vec3 best_u = Vec3::sZero();
+        float best_exit = 0.0F;
+        // Away from the load.
+        if (dist > 1.0e-6F) {
+            const Vec3 away(dx / dist, 0.0F, dz / dist);
+            float exit_dist = 0.0F;
+            if (exit_along(away, exit_dist)) {
+                const float t = time_to_clear(away, exit_dist);
+                if (t < best_t) {
+                    best_t = t;
+                    best_u = away;
+                    best_exit = exit_dist;
+                }
+            }
+        }
+        // Along her own motion.
+        const float speed_now = flat.Length();
+        if (speed_now > 0.5F) {
+            const Vec3 along_motion = flat / speed_now;
+            float exit_dist = 0.0F;
+            if (exit_along(along_motion, exit_dist)) {
+                const float t = time_to_clear(along_motion, exit_dist);
+                if (t < best_t) {
+                    best_t = t;
+                    best_u = along_motion;
+                    best_exit = exit_dist;
+                }
+            }
+        }
+        if (best_t >= t_impact - 0.05F) {
+            continue;
+        }
+        // Out of the footprint, with a step to spare, at her fastest walk.
+        wx = float(at.GetX()) + best_u.GetX() * (best_exit + 0.5F);
+        wz = float(at.GetZ()) + best_u.GetZ() * (best_exit + 0.5F);
+        go = std::max(go, kHuntMps);
+        return true;
+    }
+    return false;
+}
+
 void Matron::walk_toward(const float dt, float wx, float wz, const float speed, const float foot_accel,
                          const bool turn_moves) {
     BodyInterface &bodies = physics_.GetBodyInterface();
@@ -1140,6 +1276,15 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     if (sidestep_s_ > 0.0F && speed > 0.0F) {
         wx = sidestep_x_;
         wz = sidestep_z_;
+    }
+    // A falling hung load she sees with time to clear (J-100): her walk is
+    // retargeted at the quickest way out of its footprint, at her fastest walk.
+    // Only while she walks: a stand (the stalk's freeze, the windup, the hush)
+    // holds her where she is, and the dodge does not break it (J-092's trap:
+    // frozen under the slab, she takes it).
+    float go = speed;
+    if (speed > 0.0F) {
+        hung_load_dodge(wx, wz, go);
     }
     target_x_ = wx;
     target_z_ = wz;
@@ -1296,7 +1441,7 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
     const float length = std::hypot(dx, dz);
     Vec3 want = Vec3::sZero();
     if (length > 0.15F) {
-        want = Vec3(dx / length * speed, 0.0F, dz / length * speed);
+        want = Vec3(dx / length * go, 0.0F, dz / length * go);
         yaw_ = turn_toward(yaw_, std::atan2(dx, dz), kTurnRate, dt);
     }
     if (floor) {
@@ -1577,6 +1722,24 @@ void Matron::walk_toward(const float dt, float wx, float wz, const float speed, 
                 const float reach = toward * dt + kEdgeMarginM;
                 if (toward > 0.0F && edge_at(side, reach)) {
                     velocity -= side * toward;
+                }
+            }
+            // Nor under a hung load she has read the release of (J-100): where
+            // she is headed, inside her stopping distance of a costed load's
+            // footprint, she plants her feet. Inside it already, the dodge
+            // owns the step, not this brake.
+            for (const HungLoad &load : hung_loads_) {
+                if (!load.costed) {
+                    continue;
+                }
+                const Vec3 to_load(load.x - float(at.GetX()), 0.0F, load.z - float(at.GetZ()));
+                const float gap = to_load.Length() - load.footprint_r;
+                if (gap > 0.0F && gap <= check && way.Dot(to_load) > 0.0F) {
+                    // The drive adds up to foot_accel * dt forward in this
+                    // same tick (the Turn's lunge most of all): the brake
+                    // takes that too, or the lunge coasts through it.
+                    velocity -= way * std::min(going, cut_limit + foot_accel * dt);
+                    break;
                 }
             }
         }
@@ -2477,6 +2640,8 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
     // on nothing of hers has his true state, only this evidence and her memory.
     Perception::take(*this, him, dt);
     const Evidence &ev = ev_;
+    // The heavy loads hung overhead she can see (J-100): rebuilt every tick.
+    sense_hung_loads();
     if (state_ != State::Hunting) {
         hunt_s_ = 0.0F;
         hush_s_ = 0.0F;
@@ -3190,6 +3355,10 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 if (!scan_walk) {
                     route_toward(ax, az, tx, tz, allow, wx, wz, turn_ != Turn::None);
                 }
+                // A hung load she has read the release of (J-100): the way
+                // she walks stops at its rim, whichever way found it (the
+                // scan's patch path sets it straight, past route_toward).
+                clamp_out_of_footprint(wx, wz);
                 // The stalk: his face turned to her, she freezes; turned
                 // away, she closes to her band and holds (matron_stalk.cpp).
                 if (stalk_step(dt, ax, az, feet_y, wx, wz)) {
@@ -4611,6 +4780,117 @@ void Matron::sense_near() {
     for (std::size_t i = 0; i < near_count_; ++i) {
         near_[i] = candidates[i].near;
     }
+}
+
+// The heavy loads hung overhead she can see (J-100 #418): a load counts
+// when it is heavy, its bottom is over her head and under her ceiling, and
+// nothing holds it up. She reads it only when she sees it; it costs in her
+// route choice while she sees it and him near its release (or heard him
+// there). Rebuilt every tick, the nearest eight, by body id.
+void Matron::sense_hung_loads() {
+    hung_loads_.clear();
+    if (!body_in_world_ || dead_) {
+        return;
+    }
+    BodyInterface &bodies = physics_.GetBodyInterface();
+    const RVec3 at = bodies.GetPosition(body_);
+    const float feet = float(at.GetY()) - kStandCentre;
+    const Vec3 centre(at);
+    // Overhead, within sight: a box 100 m across and 22 m tall over her.
+    const Vec3 box_centre(centre.GetX(), feet + 10.0F, centre.GetZ());
+    AllHitCollisionCollector<CollideShapeBodyCollector> found;
+    physics_.GetBroadPhaseQuery().CollideAABox(
+        AABox(box_centre - Vec3(kCommitSightM, 11.0F, kCommitSightM),
+              box_centre + Vec3(kCommitSightM, 11.0F, kCommitSightM)),
+        found);
+    const BodyID held = held_body();
+    const ObjectLayer hers = bodies.GetObjectLayer(body_);
+    const Evidence &ev = ev_;
+    struct Candidate {
+        HungLoad load;
+        float distance;
+        std::uint32_t id;
+    };
+    std::array<Candidate, 8> candidates{};
+    std::size_t count = 0;
+    // The nearest; among equals, by id (the broad phase's order is its own).
+    const auto nearer = [](const Candidate &a, const Candidate &b) {
+        return a.distance != b.distance ? a.distance < b.distance : a.id < b.id;
+    };
+    for (const BodyID id : found.mHits) {
+        if (id == body_ || id == player_ || id == held) {
+            continue;
+        }
+        const BodyLockRead lock(physics_.GetBodyLockInterface(), id);
+        if (!lock.Succeeded()) {
+            continue;
+        }
+        const Body &body = lock.GetBody();
+        if (!body.IsDynamic() || body.IsSensor() ||
+            !physics_.GetObjectLayerPairFilter().ShouldCollide(hers, body.GetObjectLayer())) {
+            continue;
+        }
+        const float inverse_mass = body.GetMotionProperties()->GetInverseMass();
+        if (inverse_mass <= 0.0F || 1.0F / inverse_mass < kHungLoadMinKg) {
+            continue;
+        }
+        const AABox bounds = body.GetWorldSpaceBounds();
+        const float bottom = bounds.mMin.GetY();
+        if (bottom < feet + kHungLoadOverheadM || bottom > feet + kHungLoadCeilingM) {
+            continue;
+        }
+        // Resting on something is not hung: a short ray under its bottom.
+        const Vec3 bc = bounds.GetCenter();
+        RayCastResult support;
+        const IgnoreSingleBodyFilter not_load(id);
+        if (physics_.GetNarrowPhaseQuery().CastRay(
+                RRayCast(RVec3(bc.GetX(), bottom, bc.GetZ()), Vec3(0.0F, -kHungLoadSupportM, 0.0F)), support, {},
+                {}, not_load)) {
+            continue;
+        }
+        const RVec3 load_centre = body.GetCenterOfMassPosition();
+        // GetExtent is already the half size (Jolt AABox): the footprint is
+        // the load's half-diagonal, past her radius and the margin.
+        const Vec3 half = bounds.GetExtent();
+        Candidate c;
+        c.load.body = id;
+        c.load.x = float(load_centre.GetX());
+        c.load.z = float(load_centre.GetZ());
+        c.load.bottom_y = bottom;
+        c.load.centre_y = float(load_centre.GetY());
+        c.load.vy = body.GetLinearVelocity().GetY();
+        c.load.footprint_r = std::hypot(half.GetX(), half.GetZ()) + kRadius + kHungLoadMarginM;
+        c.load.falling = c.load.vy < -kHungLoadFallMps;
+        c.load.seen = look_at(load_centre, kCommitSightM) != Glimpse::None;
+        // The release is evidenced: she sees him at it, or heard him there.
+        const bool saw_release = c.load.seen && ev.sight_age_s < 1.0F &&
+                                 std::hypot(float(ev.last_sight_at.GetX()) - c.load.x,
+                                            float(ev.last_sight_at.GetZ()) - c.load.z) < kHungLoadReleaseM;
+        const bool heard_release = lead_valid_ && lead_sense_ == Sense::Hearing &&
+                                   since_heard_s_ < kHungLoadHeardS &&
+                                   std::hypot(heard_x_ - c.load.x, heard_z_ - c.load.z) < kHungLoadReleaseM;
+        c.load.costed = saw_release || heard_release;
+        c.distance = Vec3(load_centre - at).Length();
+        c.id = id.GetIndexAndSequenceNumber();
+        // Past 8 in her box, the 8 nearest are kept, not the broad phase's
+        // first 8: what hangs over her is never crowded out.
+        if (count < candidates.size()) {
+            candidates[count++] = c;
+        } else {
+            Candidate &farthest = *std::max_element(candidates.begin(), candidates.end(), nearer);
+            if (nearer(c, farthest)) {
+                farthest = c;
+            }
+        }
+    }
+    for (std::size_t i = 0; i < count; ++i) {
+        hung_loads_.push_back(candidates[i].load);
+    }
+    // By body id: the broad phase's order is its own, and the vector has no
+    // fixed size for the sort to trip over (an 8-array would).
+    std::sort(hung_loads_.begin(), hung_loads_.end(), [](const HungLoad &a, const HungLoad &b) {
+        return a.body.GetIndexAndSequenceNumber() < b.body.GetIndexAndSequenceNumber();
+    });
 }
 
 // After the step (matron.hpp, her balance): the change in her speed her feet

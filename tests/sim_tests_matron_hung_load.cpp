@@ -43,10 +43,11 @@ struct Hung {
 
 // One scenario: her at `from`, the climber standing at `prey`, the slab hung
 // at `hang_y` over (10, -128). `release_at_m`: the slab's pin is pulled once
-// she is this close under it (0: never). `needs_still`: pull it only while she
-// stands (the Turn's windup), so the low hang falls on a still target.
+// she is this close under it (0: never). `creep_within_m`: once she is this
+// close under it, her pace is fixed to creep (0.7 m/s), so the low hang falls
+// on a slow target she cannot clear in time (0: never).
 Hung run_hung(const Vector3 from, const Vector3 prey, const double hang_y, const double release_at_m,
-              const double seconds, const bool needs_still) {
+              const double seconds, const double creep_within_m) {
     Simulation s(InitialSpawn::Deck154);
     s.place_matron_home(154.0F);
     require(s.advance_frame(1.0).accepted, "matron hung load: settle");
@@ -58,6 +59,7 @@ Hung run_hung(const Vector3 from, const Vector3 prey, const double hang_y, const
     const std::uint32_t knockdowns0 = s.matron_state().knockdowns;
     const int hz = static_cast<int>(Simulation::kTickRateHz);
     int release_tick = -1;
+    bool creeping = false;
     for (int i = 0; i < static_cast<int>(seconds) * hz; ++i) {
         if (release_tick >= 0 && i >= release_tick + 2 * hz) {
             break;
@@ -76,8 +78,11 @@ Hung run_hung(const Vector3 from, const Vector3 prey, const double hang_y, const
             out.alive = false;
             break;
         }
-        if (release_tick < 0 && release_at_m > 0.0 && d < release_at_m &&
-            (!needs_still || m.speed < 0.5)) {
+        if (!creeping && creep_within_m > 0.0 && d < creep_within_m) {
+            s.debug_fix_matron_pace(0);
+            creeping = true;
+        }
+        if (release_tick < 0 && release_at_m > 0.0 && d < release_at_m) {
             s.debug_release_hung_slab();
             release_tick = i;
             out.released = true;
@@ -96,7 +101,7 @@ void run_matron_hung_load() {
     // under it.
     {
         const Hung h = run_hung(Vector3{1.0, 154.0, -128.0}, Vector3{10.0, 154.0, -128.0}, kHangHigh, 0.0, 15.0,
-                                false);
+                                0.0);
         require(h.alive, "matron hung load: seen hang, him at the release: she lives");
         require(h.min_dist_m > 1.5, "matron hung load: seen hang, him at the release: she never walks under it");
         std::cout << "  matron hung load: seen hang, him at release: min " << h.min_dist_m << " m from the slab\n";
@@ -104,7 +109,7 @@ void run_matron_hung_load() {
     // 2. Does not see him at the release: she walks under it.
     {
         const Hung h = run_hung(Vector3{1.0, 154.0, -128.0}, Vector3{20.0, 154.0, -128.0}, kHangHigh, 0.0, 10.0,
-                                false);
+                                0.0);
         require(h.alive, "matron hung load: him away from the release: she lives");
         require(h.min_dist_m < 1.5, "matron hung load: him away from the release: she walks under the hang");
         std::cout << "  matron hung load: him away from release: min " << h.min_dist_m << " m from the slab\n";
@@ -112,17 +117,17 @@ void run_matron_hung_load() {
     // 3. It falls in her view with a second to spare: she steps clear, unhit.
     {
         const Hung h = run_hung(Vector3{1.0, 154.0, -128.0}, Vector3{20.0, 154.0, -128.0}, kHangHigh, 1.5, 10.0,
-                                false);
+                                0.0);
         require(h.released, "matron hung load: fall in view: the pin was pulled under her");
         require(h.alive && h.knockdowns == 0, "matron hung load: fall in view: she steps clear, unhit");
         require(h.end_dist_m > kRimM, "matron hung load: fall in view: she ends clear of its footprint");
         std::cout << "  matron hung load: fall in view: ends " << h.end_dist_m << " m from the slab\n";
     }
-    // 4. No warning, no time: the low hang falls on her as she stands under
-    // it (the Turn's windup, 13 m from him), and hits her.
+    // 4. No warning, no time: the low hang falls on her as she creeps under
+    // it (0.7 m/s, 0.45 s to fall), and hits her.
     {
-        const Hung h = run_hung(Vector3{1.0, 154.0, -128.0}, Vector3{23.0, 154.0, -128.0}, kHangLow, 1.5, 12.0,
-                                true);
+        const Hung h = run_hung(Vector3{1.0, 154.0, -128.0}, Vector3{23.0, 154.0, -128.0}, kHangLow, 1.0, 12.0,
+                                2.5);
         require(h.released, "matron hung load: no warning: the pin was pulled under her");
         require(h.knockdowns > 0 || !h.alive, "matron hung load: no warning: the low hang hits her");
         std::cout << "  matron hung load: no warning: knockdowns " << h.knockdowns << ", alive " << h.alive
