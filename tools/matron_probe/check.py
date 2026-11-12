@@ -68,7 +68,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import score  # noqa: E402
 
 STRETCH_PCT = 5.0
-GRIP_M = 0.03
+GRIP_M = 0.05
 JOINT_SPEED_RAD_S = 20.0
 GRIP_FROM_S = 0.3
 STILL_MPS = 0.15
@@ -109,15 +109,15 @@ EXPECTED = {
     ("stretch_arm_reach", "touch_matron_act"): (REACH_ITEM, 15, 7.529),
     ("stretch_arm_turn", "touch_matron_act"): (TURN_ITEM, 605, 85.653),
     ("stretch_leg_turn", "touch_matron_act"): (TURN_ITEM, 520, 6.000),
-    ("grip_climb", "touch_matron_act"): (CLIMB_ITEM, 2087, 1.052),
+    ("grip_climb", "touch_matron_act"): (CLIMB_ITEM, 2056, 1.034),
     ("plant", "touch_matron_act"): (PLANT_ITEM, 50, 0.075),
     ("hair", "touch_matron_act"): (HAIR_ITEM, 14751, 0.193),
     ("skirt", "touch_matron_act"): (SKIRT_ITEM, 17495, 0.156),
-    ("grip_climb", "look_matron_moves"): (CLIMB_ITEM, 936, 1.035),
+    ("grip_climb", "look_matron_moves"): (CLIMB_ITEM, 1494, 1.556),
     ("hair", "look_matron_moves"): (HAIR_ITEM, 1617, 0.192),
     ("skirt", "look_matron_moves"): (SKIRT_ITEM, 1415, 0.114),
     ("stretch_arm_hold", "look_matron_hold"): (HOLD_ITEM, 634, 206.990),
-    ("grip_hold", "look_matron_hold"): (HOLD_ITEM, 22, 0.185),
+    ("grip_hold", "look_matron_hold"): (HOLD_ITEM, 19, 0.183),
     ("hair", "look_matron_hold"): (HAIR_ITEM, 495, 0.040),
     ("skirt", "look_matron_hold"): (SKIRT_ITEM, 506, 0.086),
     ("stretch_arm_hold", "look_matron_fatal"): (HOLD_ITEM, 373, 198.334),

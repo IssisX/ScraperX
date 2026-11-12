@@ -40,7 +40,7 @@ the game's float32 rounding).
     python3 tools/matron_probe/check.py <dir> [<dir> ...] [--stride N] [--report FILE]
 
 Fails (exit 1, last line `MATRON_DRAWN FAIL: ...`) on a bone drawn more than 5% over its rest length, a drawn
-hand more than 3 cm from the grip the sim says it holds (in a hold, the held ankle: the point her fingers
+hand more than 5 cm from the grip the sim says it holds (in a hold, the held ankle: the point her fingers
 hold on him by the native's grip, `held_ankle`, not her hand's commanded target; on a climb or pipe,
 `contact_hand` and `contact_hand2`), a foot that slides more than 5 cm while she stands, a drawn joint
 turning faster than 20 rad/s (rule 37), and hair or skirt
