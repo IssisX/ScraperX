@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-10T00:56:16Z",
+ "deadline": null,
  "head": "",
  "issue": 228,
  "job": "J-040",
@@ -27,11 +27,12 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "JOB|#228",
    "sends": 0,
    "thread": 228,
    "to": "muse",
+   "unseen": "2026-11-12T01:29:02Z",
    "version": "start:228",
    "via": "email",
    "what": "start J-040"
@@ -74,5 +75,5 @@
  "prs": [],
  "review": "",
  "state": "assigned",
- "updated": "2026-11-12T00:23:47Z"
+ "updated": "2026-11-12T01:29:02Z"
 }

@@ -1,9 +1,14 @@
 {
  "attempt": 1,
- "blocked": null,
+ "blocked": {
+  "head": "01c70e987b907fb90575f18cfad4e8994fd79092",
+  "holder": "cory",
+  "reason": "dead-letter O-6f17cffa stands",
+  "since": "2026-11-11T21:07:56Z"
+ },
  "branches": {
   "claude/integrate-j092": "76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
-  "claude/integrate-protected-j092": "94707adf70f99ecd83fbf98e77bdb5464ab58d03"
+  "claude/integrate-protected-j092": "01c70e987b907fb90575f18cfad4e8994fd79092"
  },
  "cancelled": null,
  "ci": "running",
@@ -16,13 +21,13 @@
  "landed": {
   "claude/integrate-j092": [
    "76ee77a616bfcca6b19315e6bfd7f4512a2a3170",
-   "",
-   "2026-11-11T17:16:05Z"
+   "in trunk",
+   "2026-11-12T01:29:02Z"
   ],
   "claude/integrate-protected-j092": [
-   "94707adf70f99ecd83fbf98e77bdb5464ab58d03",
-   "",
-   "2026-11-11T19:28:50Z"
+   "01c70e987b907fb90575f18cfad4e8994fd79092",
+   "merged #434",
+   "2026-11-12T01:29:02Z"
   ]
  },
  "obligations": [
@@ -142,11 +147,11 @@
  "outcome_reason": "",
  "owner": "claude",
  "pr": 434,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   434
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T00:23:47Z"
+ "state": "blocked",
+ "updated": "2026-11-12T01:29:02Z"
 }

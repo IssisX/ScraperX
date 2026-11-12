@@ -8,7 +8,8 @@
  "cancelled": null,
  "ci": "running",
  "commands": [
-  "6771165879:578"
+  "6771165879:578",
+  "6810841360:55"
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T00:56:16Z",
@@ -368,7 +369,12 @@
    "what": "ask from Muse on #116"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T00:37:49Z",
+    "by": "Muse",
+    "comment": "6810841360",
+    "how": "/ack"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T23:39:18Z",
    "attempts": 1,

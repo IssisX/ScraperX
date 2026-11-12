@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T15:02:17Z",
- "deadline": null,
+ "deadline": "2026-11-12T03:17:00Z",
  "head": "67caf6d317072e097d9e40bef6ffd5455d86444e",
  "issue": 416,
  "job": "J-098",
@@ -19,7 +19,33 @@
    "2026-11-12T00:23:47Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T01:29:02Z",
+   "dead": "2026-11-12T05:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T03:17:00Z",
+   "id": "O-0fe51a2e",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T01:29:02Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j098",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 416,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:67caf6d317072e097d9e40bef6ffd5455d86444e",
+   "via": "session",
+   "what": "`fb-bot/integrate-j098` is green with no PR: open one (Muse cannot open PRs)"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -28,5 +54,5 @@
  "prs": [],
  "review": "",
  "state": "proof",
- "updated": "2026-11-12T00:23:47Z"
+ "updated": "2026-11-12T01:29:02Z"
 }

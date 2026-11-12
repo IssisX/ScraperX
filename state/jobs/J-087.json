@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-11T12:58:47Z",
- "deadline": null,
+ "deadline": "2026-11-12T05:29:02Z",
  "head": "b29a26844c473f9be9aef41cedaea201cfa66e1b",
  "issue": 405,
  "job": "J-087",
@@ -19,7 +19,33 @@
    "2026-11-12T00:23:47Z"
   ]
  },
- "obligations": [],
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T01:29:02Z",
+   "dead": "2026-11-12T09:29:02Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T05:29:02Z",
+   "id": "O-1d85c592",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T01:29:02Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-j087",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 405,
+   "to": "muse",
+   "unseen": null,
+   "version": "red:b29a26844c473f9be9aef41cedaea201cfa66e1b",
+   "via": "email",
+   "what": "`fb-bot/integrate-j087` proof red: godot-touch (touch-1), godot-touch (touch-2), godot-touch (touch-3), godot-audits-and-mix, no PR"
+  }
+ ],
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
@@ -27,6 +53,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T00:23:47Z"
+ "state": "working",
+ "updated": "2026-11-12T01:29:02Z"
 }
