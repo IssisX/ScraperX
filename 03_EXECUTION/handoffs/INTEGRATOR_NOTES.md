@@ -31,3 +31,4 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
 - Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's.
 - sweep.py shows only the latest verdict and misses an earlier unfixed P1 from another vendor.
 - The proxy refuses the secrets API; the keys are in the `switchboard-merge` environment. No settings asks to Cory this weekend.
+- 11-12: rebuild is priority one (Cory). Game helpers paused mid-work, resume after: J-015 merge (worktree agent-a2ed081112df776e3, built clean), J-001 red (agent-a169bc3f55f0e7fef), J-137 pin #474 (agent-a1d4035b049d06e9f). Rebuild: Fable lead + 3 Opus pieces on claude/integrate-collab-rebuild-{notice,unpushed,labels}.
