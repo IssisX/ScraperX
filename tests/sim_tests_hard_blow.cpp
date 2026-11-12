@@ -543,5 +543,4 @@ void run_hard_blow() {
     std::cout << "PASS scraperx_sim hard blow\n";
 }
 SCRAPERX_GROUP("hard_blow", 875, run_hard_blow);
-SCRAPERX_SELECT("hard-blow", run_hard_blow);
 SCRAPERX_SLICE("hard-blow", run_hard_blow);
