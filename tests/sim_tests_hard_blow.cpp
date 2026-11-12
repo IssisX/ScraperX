@@ -145,6 +145,7 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     require(walk_to(s, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "hard blow: west along the band with it");
     bool coming = false;
     int turned = 0;
+    int settled = 0;
     double release_d = 0.0;
     double release_speed = 0.0;
     int release_stalking = -1;
@@ -171,26 +172,26 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
                 // She holds under his gaze; look away and let her close.
                 (void)s.set_facing(-(m.position.x - p.x) / d, -(m.position.z - p.z) / d);
             } else {
-                // Face her, and throw only once the piece has come round in
-                // front of him and settled there: a throw released while it
-                // still swings at his side flies half a metre off her centre
-                // (the last throw's box met her 0.49 m south, a graze worth
-                // 0.155 m/s), whatever the aim. She closes while it settles;
-                // the throw meets her where she is, on her torso. The
-                // settling count runs only once she is in range, so a slow
-                // close does not trip it.
+                // Face her. The piece settles while she closes, at any
+                // range: the carry swings it at his side after the walk, and
+                // a throw released while it swings flies half a metre off
+                // her centre. Count the settling from the first facing tick,
+                // so the throw can release the instant she is in range; count
+                // the wait itself only in range, so a slow close does not
+                // trip it. She closes while it settles; the throw meets her
+                // where she is, on her torso.
                 (void)s.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
                 const auto b = s.kit_body_position(body);
                 const double swing = std::hypot(b.x - box_was.x, b.z - box_was.z);
                 box_was = b;
+                const bool in_front =
+                    ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
+                settled = in_front && swing < 0.002 ? settled + 1 : 0;
                 if (d < 3.4) {
-                    const bool in_front =
-                        ((b.x - p.x) * (m.position.x - p.x) + (b.z - p.z) * (m.position.z - p.z)) / d > 0.3;
                     ++turned;
                     require(turned < 3 * static_cast<int>(Simulation::kTickRateHz),
                             "hard blow: the piece comes round in front of him");
-                    coming = in_front && swing < 0.002 &&
-                             turned >= static_cast<int>(Simulation::kTickRateHz) / 4 && m.turn == 0;
+                    coming = settled >= static_cast<int>(Simulation::kTickRateHz) / 4 && m.turn == 0;
                     if (coming) {
                         release_d = d;
                         release_speed = m.speed;
@@ -206,6 +207,18 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     out.release_stalking = release_stalking;
     (void)s.set_look_pitch(look_pitch);
     tick(s);
+    // The drawn path's end is the throw's aim: where the ray from his eye
+    // lands. Print it against her centre, so a south aim reads as an aim
+    // error and a centred aim with a south hit reads as a flight error.
+    {
+        const auto path = s.throw_prediction();
+        const auto her = s.matron_state().position;
+        if (!path.empty()) {
+            const auto end = path.back();
+            std::cout << "  hard blow aim: path ends (" << end.x << ", " << end.y << ", " << end.z << "), her centre ("
+                      << her.x << ", " << her.y << ", " << her.z << ")\n";
+        }
+    }
     const auto throws0 = s.snapshot().throw_count;
     const auto stags0 = s.matron_state().staggers;
     const auto downs0 = s.matron_state().knockdowns;
