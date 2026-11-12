@@ -910,6 +910,7 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
     // her ears are not.
     lead_seen_ = sense == Sense::Sight || sense == Sense::Touch;
     lead_sense_ = sense;
+    lead_crash_ = false;  // a crash lead is marked by its caller
     lead_valid_ = true;
     chase_way_held_ = false;  // a fresh lead earns its own chase window
 }
@@ -2682,6 +2683,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
                 // The chase goes on by ear: the same lead, moved on.
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                lead_crash_ = crash_first;
                 wary_ = wary_ && !close;
             } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
@@ -2695,6 +2697,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // her level: another's she cannot see for its deck, she goes
                 // by the way there).
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                lead_crash_ = crash_first;
                 wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
                 state_ = State::Hunting;
@@ -2959,19 +2962,27 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                                          : (lead_seen_ ? lose_track
                                                                         : std::min(lose_track, kAcousticMemorySeconds));
             const float heard_limit = (by_way_held && !wary_) ? lose_track : kAcousticMemorySeconds;
-            // A sound's source reached: she is there, nothing to chase —
-            // she looks about at once instead of standing in the hunt
-            // until the pursuit clock runs out (J-038: the clock alone
-            // held her 7 s at the break point, on top of the 8 s look).
-            // Only a heard lead, on her own level and standing on its
-            // steel: a lead three decks up is not reached because she
-            // stands under it (elsewhere), nor one she is still climbing
-            // toward (her feet off her floor). A seen lead is still hers
-            // to catch, and a wary one still peers from its vantage.
-            if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > heard_limit) ||
-                (!elsewhere && !wary_ && !lead_seen_ &&
-                 distance_xz(ax, az, heard_x_, heard_z_) <= 1.5F &&
-                 std::abs(feet_y - floor_y) <= 1.0F)) {
+            // A crash's place reached (a load's impact she heard, not the
+            // player): she is there and nothing there is to chase, so she
+            // looks about at once instead of standing in the hunt until
+            // the pursuit clock runs out (J-038: the clock alone held her
+            // 7 s at a crate's break, on top of the look). Only on her own
+            // level and standing on its steel (not under a lead decks up,
+            // nor still climbing to it), never wary (that one peers from
+            // its vantage), and only after her mischief has had its turn
+            // (a piece at that place is still hers to take or shove).
+            const bool at_crash = lead_crash_ && !lead_seen_ && !elsewhere && !wary_ &&
+                                  distance_xz(ax, az, heard_x_, heard_z_) <= 1.5F &&
+                                  std::abs(feet_y - floor_y) <= 1.0F;
+            const auto look_about = [&]() {
+                turn_ = Turn::None;
+                turn_s_ = 0.0F;
+                state_ = State::Searching;
+                search_s_ = 0.0F;
+                search_budget_s_ = 1.0e9F;
+                search_trip_s_ = 0.0F;
+            };
+            if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > heard_limit)) {
                 if (elsewhere) {
                     // Gone down a line she could not follow: she searches
                     // where she lost them, at its top.
@@ -3001,12 +3012,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     guess_line_ = -1;
                     guess_climb_ = -1;
                 }
-                turn_ = Turn::None;
-                turn_s_ = 0.0F;
-                state_ = State::Searching;
-                search_s_ = 0.0F;
-                search_budget_s_ = 1.0e9F;
-                search_trip_s_ = 0.0F;
+                look_about();
             } else if (wary_) {
                 // Wary: up to where she can see the place, then she looks.
                 if (distance_xz(ax, az, heard_x_, heard_z_) <= kVantageM &&
@@ -3040,6 +3046,12 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                     break;
                 }
                 stock_shove_ = -1;
+                if (at_crash) {
+                    // At the place, as her look about it stands (Searching).
+                    look_about();
+                    walk_toward(dt, ax, az, 0.0F);
+                    break;
+                }
                 // In the Turn a gap is no bar: she leaps it. A lead on
                 // another level she has no way to: the place on her own lines
                 // over or under it.
@@ -4433,6 +4445,7 @@ void Matron::restore(const Saved &saved) {
         wary_ = false;
         lead_seen_ = false;
         lead_sense_ = Sense::None;
+        lead_crash_ = false;
         glimpsed_ = false;
         end_encounter();
         lead_valid_ = false;
