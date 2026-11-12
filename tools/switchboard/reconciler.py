@@ -115,6 +115,7 @@ STATES = ("accepted", "assigned", "working", "proof", "review", "landable", "blo
 CONFLICT = "merge conflict with the base"
 NOT_AN_ASK = "not an ask"            # why evidence() closes an ask the judge no longer reads as one
 THREAD_CLOSED = "its thread closed"  # why evidence() closes an ask whose issue or PR closed
+TABLE_OWNS = "the job machine's table owns it (plan: live)"   # why a job's non-ask obligation closes once it is live
 PARKED_LABEL = "state:parked"            # a job the finish plan parks (11-12): no start notice
 START_GRACE = dt.timedelta(hours=24)    # a queued job waits its turn; only a start owed past this is nagged
 INBOX_WINDOW = dt.timedelta(hours=24)   # how far back the integrator's inbox reads comments (switch.py INBOX_RUNS_WINDOW)
@@ -316,8 +317,9 @@ class Pass:
     asks_read: set = dataclasses.field(default_factory=set)
     asks_closed: set = dataclasses.field(default_factory=set)   # (comment id, holder) of asks a PR's close answered
     # work/switchboard.yml `plan: live` (the job machine, tools/switchboard/machine.py, is the one that says who
-    # owes a start and when). Until then every rule here is as it was: a quiet job is owed a start after a day,
-    # and an /ack settles a FIX. Live: no start is owed from here, and a FIX stays open until the head changes.
+    # owes each step and when). Until then every rule here is as it was: a quiet job is owed a start after a day,
+    # and an /ack settles a FIX. Live: the table is the one clock for every step a job owes (start, proof, FIX,
+    # review, merge), so a job raises only its asks here, and any other obligation it had is closed as the table's.
     plan_live: bool = False
 
 
@@ -727,6 +729,8 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
         if s in states:
             state = s
             break
+    if plan_live:   # the job machine's table is the one clock for every step a job owes: only asks stay here
+        wants = [w for w in wants if w.kind == "ask"]
     return state, wants
 
 
@@ -752,14 +756,10 @@ def apply_commands(state: State, p: Pass, thread_job: dict[int, str], events: Ev
                     rec, ob = hit
                     if key in rec["commands"] or not is_open(ob):
                         continue   # a repeat, or already settled: no second transition
-                    # With the plan live, a receipt of a FIX is not proof that the blocked head changed:
-                    # the obligation stays open until a new head, verdict or closed PR.
-                    if p.plan_live and ob["kind"] == "fix" and ob["version"].startswith("fix:"):
-                        ob["seen"] = {"how": "/ack", "at": iso(c.t), "by": c.author, "comment": c.id}
-                        events("seen", rec["job"], id=oid, how="/ack", by=c.author)
-                    else:
-                        ob["ack"] = {"how": "/ack", "at": iso(c.t), "by": c.author, "comment": c.id}
-                        events("acked", rec["job"], id=oid, how="/ack", by=c.author)
+                    # (with the plan live no job FIX is an obligation here: the table's gate clears only on a new
+                    # head or verdict, so no /ack can settle one)
+                    ob["ack"] = {"how": "/ack", "at": iso(c.t), "by": c.author, "comment": c.id}
+                    events("acked", rec["job"], id=oid, how="/ack", by=c.author)
                     rec["commands"] = (rec["commands"] + [key])[-MAX_CMDS:]
                 if not ids:
                     unmatched[f"CMD|{c.id}"] = f"/ack with no O-xxxxxxxx id on #{c.thread}"
@@ -1072,7 +1072,7 @@ def owed_asks(state: State) -> dict[tuple[int, str], int]:
 
 
 def acks_by_reply(rec: dict, replies: Replies, events: Events, roster: L.Roster, board: int = 0,
-                  owes: dict | None = None, plan_live: bool = False) -> None:
+                  owes: dict | None = None) -> None:
     """A reply acks only after the obligation (an ask: after the ask). For an ask the one judge decides
     (tools/board/asks.py answer_rule, which the ledger's list uses too, so the two cannot differ): from the
     addressee, a post anywhere that names it (its O-id, the ask's comment id or URL, or a quote of it), a reply
@@ -1109,13 +1109,9 @@ def acks_by_reply(rec: dict, replies: Replies, events: Events, roster: L.Roster,
             else:
                 how = "reply naming it" if agent == ob["to"] and names(body, ob) else ""
             if how:
-                if plan_live and ob["kind"] == "fix" and ob["version"].startswith("fix:"):
-                    ob["seen"] = {"how": how, "at": iso(t), "by": ob["to"]}
-                    events("seen", rec["job"], id=ob["id"], how=how)
-                else:
-                    ob["ack"] = {"how": how, "at": iso(t), "by": ob["to"]}
-                    ob["unseen"] = None
-                    events("acked", rec["job"], id=ob["id"], how=how)
+                ob["ack"] = {"how": how, "at": iso(t), "by": ob["to"]}
+                ob["unseen"] = None
+                events("acked", rec["job"], id=ob["id"], how=how)
                 break
 
 
@@ -1377,10 +1373,6 @@ def deliver(state: State, p: Pass, outbox, now: dt.datetime, events: Events, mem
                     ob["sends"], ob["attempts"], ob["last_sent"], ob["sent_by"] = 1, 1, iso(now), "inbox"
                     events("inbox", rec["job"], id=ob["id"], to=ob["to"], via=ob["via"], ref=ob["ref"])
                 continue
-            # An acknowledged open FIX needs real code/review evidence, not another
-            # identical nudge. It remains open and can still dead-letter.
-            if ob["kind"] == "fix" and ob["version"].startswith("fix:") and ob.get("seen"):
-                continue
             need = ob["sends"] == 0 or (ob["sends"] == 1 and now >= at(ob["due"]))
             if not need or status or budget <= 0:
                 continue
@@ -1562,6 +1554,11 @@ def step(job: str, rec: dict, o: JobObs | None, seen: Seen, roster: L.Roster, lo
     state_now, wants = derive(o, rec, owner, now, roster, landed, closed, plan_live=seen.plan_live)
     if rec.get("cancelled"):
         wants = []
+    if seen.plan_live:   # one alarm for one fact: what the table has a gate for is closed here, never notified twice
+        for ob in rec["obligations"]:
+            if is_live(ob) and ob["kind"] != "ask":
+                ob["closed"] = {"why": TABLE_OWNS, "at": iso(now)}
+                events("closed", job, id=ob["id"], why=TABLE_OWNS)
     sync(rec, wants, now, roster, events, lambda ob: evidence(ob, o, seen, rec, now))
     if rec.get("cancelled") or not live_work:
         finalize(rec, o, lookups, now, events, seen.open_prs)
@@ -1607,7 +1604,7 @@ def reconcile(state: State, p: Pass, roster: L.Roster, lookups: Lookups, now: dt
 
     owes = owed_asks(state)
     for rec in state.records():
-        acks_by_reply(rec, replies, events, roster, p.feed.board, owes, plan_live=p.plan_live)
+        acks_by_reply(rec, replies, events, roster, p.feed.board, owes)
     for job, rec in sorted(state.jobs.items()):
         before = befores[job]
         due = [at(ob["due"]) for ob in rec["obligations"] if is_open(ob)]

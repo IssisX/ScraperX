@@ -61,13 +61,19 @@ class World:
         self.inactive, self.closed, self.merged_at, self.head_at, self.works, self.missing = set(), set(), {}, {}, {}, {}
 
     def version(self, owner: str = "muse") -> str:
-        bodies = {rules.job_of_title(i["title"]): i.get("body") or "" for i in self.issues}
-        return M.order_version(self.model, owner, bodies)
+        return M.order_version(self.model, owner)
 
-    def tell(self, hours: float, owner: str = "muse", ver: str = "") -> None:
+    def tell(self, hours: float, owner: str = "muse", ver: str = "", old: bool = False) -> None:
+        """The switch's notice (or, for a self-told owner, its record) of the plan as it stands, with each job's
+        line hash and times as the switch writes them; `old`: a mark with no jobs, as the switch wrote before."""
         ver = ver or self.version(owner)
+        jobs = "" if old else M.mark_jobs(self.model, self.mail(), owner, at(hours), T0)
         self.comments.append(comment(len(self.comments) + 1, hours, f"{M.NOTICE_HEAD}{ver}\n\n" +
-                                     M.NOTICE_MARK.format(owner=owner, ver=ver, jobs=""), login=rules.BOT_LOGIN))
+                                     M.NOTICE_MARK.format(owner=owner, ver=ver, jobs=jobs), login=rules.BOT_LOGIN))
+
+    def mail(self) -> M.Mail:
+        return M.Mail(tuple(M.posts(self.comments, TEAM.verdict_logins)), tuple(M.sent_notices(self.comments)),
+                      dict(self.missing))
 
     def muse(self, hours: float, subject: str, body: str = "", login: str = "IssisX", thread: int = 340) -> None:
         self.comments.append(comment(len(self.comments) + 1, hours, mail(subject, body), login, thread))
@@ -79,12 +85,12 @@ class World:
         self.issues = [i for i in self.issues if rules.job_of_title(i["title"]) != job]
         self.closed.add(job)
 
-    def rows(self) -> dict[str, M.Step]:
-        post = M.Mail(tuple(M.posts(self.comments, TEAM.verdict_logins)), tuple(M.sent_notices(self.comments)),
-                      dict(self.missing))
+    def rows(self, planned_at: dt.datetime = T0) -> dict[str, M.Step]:
+        post = self.mail()
         reads = {"issues": self.issues, "branches": self.branches, "prs": self.prs, "inactive": frozenset(self.inactive),
                  "closed": frozenset(self.closed), "merged_at": self.merged_at, "head_at": self.head_at}
-        self.table = M.table(self.model, M.collect(self.model, reads, works=self.works, mail=post, planned_at=T0))
+        self.table = M.table(self.model, M.collect(self.model, reads, works=self.works, mail=post,
+                                                        planned_at=planned_at))
         return {r.job: r for r in self.table}
 
 
@@ -136,8 +142,10 @@ class States(unittest.TestCase):
         w.inactive.add("w1")   # the wip head is in trunk too
         w.merged_at["J-101"] = iso(6)
         r = w.rows()["J-101"]
-        self.assertEqual((r.state, r.owes, r.since), ("landed", "integrator", at(6)))
-        self.assertIn("#101", r.next)
+        # merged with the issue still open: a part is left, and the owner owes it (or the close), in a lane
+        self.assertEqual((r.state, r.owes, r.since, r.limit), ("landed", "muse", at(6), M.hours(24)))
+        self.assertIn("start its next part", r.next)
+        self.assertIn("`Closes #101`", r.next)
 
         w.close("J-101")
         r = w.rows()["J-101"]
@@ -252,7 +260,7 @@ class Conflict(unittest.TestCase):
         w.issues.append(dict(issue(999, "J-999"), author_association="FIRST_TIME_CONTRIBUTOR"))
         rows = w.rows()
         self.assertEqual((w.version(), {j: (r.state, r.gate) for j, r in rows.items()}), before)
-        self.assertEqual(M.versions(w.model, w.issues)["muse"], before[0])   # its text is no part of the order
+        self.assertEqual(M.versions(w.model)["muse"], before[0])   # its text is no part of the order
         w.issues[0]["labels"] = [{"name": "job"}]      # the team labeled it: now it is a second issue for J-101
         self.assertEqual(w.rows()["J-101"].state, "conflict")
 
@@ -378,7 +386,8 @@ class Alarm(unittest.TestCase):
         self.assertEqual((r.state, r.gate, r.owes, r.since), ("acknowledged", "claimed", "muse", at(3)))
         self.assertFalse(r.late(at(4.9)))
         self.assertTrue(r.late(at(5.1)))
-        self.assertEqual(M.wip(w.model, w.table)["muse"][0], 0)   # a mail is not a lane
+        # a mailed start holds a granted lane (Grok #471 hole 3: a claim the limit did not count went past it)
+        self.assertEqual(M.wip(w.model, w.table)["muse"][0], 1)
         w.branches.append(br("fb-bot/wip-j101", "w1"))
         self.assertEqual(w.rows()["J-101"].state, "started")
 
@@ -428,7 +437,7 @@ class Version(unittest.TestCase):
         self.assertEqual(M.order_version(a, "muse"), M.order_version(b, "muse"))
         self.assertNotEqual(M.order_version(a, "claude"), M.order_version(b, "claude"))
 
-    def test_owner_order_hold_dependency_limit_and_issue_text_each_change_it(self):
+    def test_owner_order_hold_dependency_and_limit_each_change_it(self):
         base = M.order_version(plan.parse(PLAN), "muse")
         for changed in (PLAN.replace("limit muse 2", "limit muse 3"),
                         PLAN.replace("J-103 muse #103 | third\n", "").replace("J-101 muse", "J-103 muse #103 | third\nJ-101 muse"),
@@ -436,23 +445,38 @@ class Version(unittest.TestCase):
                         PLAN.replace("J-103 muse #103", "J-103 muse #103 after J-102"),
                         PLAN.replace("J-103 muse #103", "J-103 claude #103")):
             self.assertNotEqual(M.order_version(plan.parse(changed), "muse"), base, changed)
-        self.assertNotEqual(M.order_version(plan.parse(PLAN), "muse", {"J-101": "new text"}), base)
 
-    def test_a_changed_order_untells_the_owner_until_the_new_version_is_sent_and_answered(self):
+    def test_an_issues_text_is_no_part_of_the_order(self):   # Grok #471 hole 5: a ticked checkbox minted a version
         w = World()
+        w.tell(1)
+        w.muse(2, f"plan {w.version()}")
+        old, before = w.version(), w.rows()
+        for i in w.issues:
+            i["body"] = "- [x] a box ticked on every job issue"
+        self.assertEqual(w.version(), old)
+        self.assertEqual(M.versions(w.model), {o: M.order_version(w.model, o) for o in w.model.limits})
+        self.assertEqual({j: (r.state, r.since) for j, r in w.rows().items()},
+                         {j: (r.state, r.since) for j, r in before.items()})
+
+    def test_a_changed_line_untells_only_its_own_job_until_the_new_version_is_sent_and_answered(self):
+        w = World()
+        w.close("J-301")
         w.tell(1)
         w.muse(2, f"plan {w.version()}")
         self.assertEqual(w.rows()["J-102"].state, "acknowledged")
         old = w.version()
-        w.issues[2]["body"] = "the job text changed"
+        w.model = plan.parse(PLAN.replace("J-102 muse #102", "J-102 muse #102 after J-301"))
         self.assertNotEqual(w.version(), old)
-        self.assertEqual(w.rows()["J-102"].state, "planned")
+        rows = w.rows()
+        self.assertEqual((rows["J-102"].state, rows["J-103"].state), ("planned", "acknowledged"))   # J-103 is unchanged
         w.tell(3)
         self.assertEqual(w.rows()["J-102"].state, "told")
         w.muse(4, f"plan {old}")   # a receipt for the old version answers nothing
         self.assertEqual(w.rows()["J-102"].state, "told")
         w.muse(5, f"plan {w.version()}")
-        self.assertEqual(w.rows()["J-102"].state, "acknowledged")
+        rows = w.rows()
+        self.assertEqual((rows["J-102"].state, rows["J-102"].since), ("acknowledged", at(5)))
+        self.assertEqual((rows["J-103"].state, rows["J-103"].since), ("acknowledged", at(2)))   # its own clock
 
 
 class MailTrust(unittest.TestCase):
@@ -537,13 +561,13 @@ class WorkOf(unittest.TestCase):
         w = self.work(facts(verdicts=(verdict("openai", "Codex", "LAND", "a" * 40, 2),
                                       verdict("anthropic", "Claude", "FIX", "a" * 40, 3))))
         self.assertEqual((w.state, w.gate, w.at), ("proven", "fix", at(3)))
-        row = M.step(M.Evidence("J-101", plan.parse(PLAN).by_job()["J-101"], (101,), work=w))
+        row = M.step(M.Evidence("J-101", plan.parse(PLAN).by_job()["J-101"], (101,), works=(w,)))
         self.assertEqual((row.owes, row.limit), ("muse", M.hours(6)))
 
     def test_a_fix_whose_answer_sits_on_another_branch_is_said_plainly(self):   # #343: the stacked fix
         w = self.work(facts(number=343, verdicts=(verdict("openai", "Codex", "FIX", "a" * 40, 3),)),
                       stacked="fb-bot/integrate-j101-fix")
-        row = M.step(M.Evidence("J-101", plan.parse(PLAN).by_job()["J-101"], (101,), work=w))
+        row = M.step(M.Evidence("J-101", plan.parse(PLAN).by_job()["J-101"], (101,), works=(w,)))
         self.assertEqual((row.gate, row.owes), ("stacked", "muse"))
         self.assertEqual(row.next, "push the fix onto fb-bot/integrate-j101: it sits on fb-bot/integrate-j101-fix, "
                                    "which waits for #343 to land")
@@ -555,7 +579,7 @@ class WorkOf(unittest.TestCase):
         w = self.work(f, token=True, key=True)
         self.assertEqual((w.state, w.gate), ("reviewed", "codex"))
         ln = plan.parse(PLAN).by_job()["J-201"]
-        row = M.step(M.Evidence("J-201", ln, (201,), work=w))
+        row = M.step(M.Evidence("J-201", ln, (201,), works=(w,)))
         self.assertEqual((row.owes, row.limit), ("integrator", M.hours(1)))
         self.assertEqual(row.next, "post `@codex review` on #473 (only a person's login wakes Codex)")
         self.assertLess(len(row.alarm(at(9))), 200)

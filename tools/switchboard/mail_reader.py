@@ -1,6 +1,6 @@
 """Evidence reader: the filed mail, for the job machine (machine.py). Reads only.
 
-read(sw, model, reads) -> machine.Mail
+read(sw, model, reads, also=()) -> machine.Mail
   sw      the Switch (sw.gh reads, sw.team.verdict_logins, sw.now, sw.out, sw.board_comments(), sw.comments_since())
   model   plan.Plan (work/plan.md)
   reads   plan.observe's answer (issues, branches, prs, ...)
@@ -15,10 +15,13 @@ issue J-NNN names, else on the board (muse_bridge.gs IN and REC); a plan notice 
 receipt or a "started" can be days old and still be the job's state, and the repo files about 600 comments a day,
 so no time window holds a job's mail whole. So each read is a whole thread:
   - the board (sw.board_comments(), read on past the client's 500 cap when it is full: plan.whole);
-  - every open plan job's issue thread with comments (plan.whole each, ETag-cached; at most MAIL_THREADS a pass:
-    over it, read() raises rather than hand the machine a short mail);
+  - every open plan job's issue thread with comments (plan.whole each, ETag-cached; the most recently updated
+    first, at most MAIL_THREADS a pass: the jobs of the threads past it are Mail.unread, and the machine shows
+    each as unread, never as having no mail; nothing raises, so one busy day never silences the whole pass);
   - the last RECENT of repo comments (sw.comments_since: the inbox's own listing, so no extra read), for a mail
-    filed on some other issue its subject named.
+    filed on some other issue its subject named;
+  - `also`: the switch's notice comments (closed boards too while a version is unanswered), so a receipt is read
+    from the same comment set as the notice it answers.
 A read that fails raises: the caller then has no Mail, never an empty one.
 
 Which named hex is a commit claim: machine.NAMED_SHA, less what the mail itself says is not one: a tree
@@ -38,22 +41,27 @@ import rules
 from ghapi import GitHubError, RateLimited
 
 SHA_READS = 10        # GET commits/<sha> a pass; a sha past it is left unchecked (never counted missing) and said
-MAIL_THREADS = 120    # job issue threads read a pass (work/plan.md: 80 lines on 11-12); over it, read() raises
+MAIL_THREADS = 120    # job issue threads read a pass (work/plan.md: 80 lines on 11-12); past it: Mail.unread
 RECENT = dt.timedelta(hours=24)   # switch.INBOX_RUNS_WINDOW: the same comments_since listing the inbox reads
 
 NOT_A_CLAIM = re.compile(r"(?:\btree|\blocal(?:\s+[a-z]+){0,2}|\bplan)\s*:?\s*$", re.IGNORECASE)
 NOTE = "NOTE        mail: "
 
 
-def read(sw, model, reads) -> machine.Mail:
-    comments = _comments(sw, model, reads)
+def read(sw, model, reads, also=()) -> machine.Mail:
+    """`also`: comments the caller read already (the switch's notice comments, closed boards included while a
+    version is unanswered): posts and notices come from one comment set, so a receipt filed on a board that has
+    since closed is read with the notice it answers."""
+    comments, unread = _comments(sw, model, reads, also)
     mail = machine.Mail(posts=tuple(machine.posts(comments, sw.team.verdict_logins)),
-                        notices=tuple(machine.sent_notices(comments)))
+                        notices=tuple(machine.sent_notices(comments)), unread=unread,
+                        bound=MAIL_THREADS if unread else 0)
     return dataclasses.replace(mail, missing=_missing(sw, model, reads, mail))
 
 
-def _comments(sw, model, reads) -> list[dict]:
-    """Every comment of the board, of each open plan job's thread, and of the last RECENT, once each."""
+def _comments(sw, model, reads, also=()) -> tuple[list[dict], frozenset[str]]:
+    """Every comment of the board, of each open plan job's thread (the most recently updated first, at most
+    MAIL_THREADS), of the last RECENT and of `also`, once each; and the jobs whose thread was past the bound."""
     repo = sw.gh.repo
     board = sw.board_issue()
     got = list(sw.board_comments())
@@ -61,19 +69,22 @@ def _comments(sw, model, reads) -> list[dict]:
         got = P.whole(sw.gh, f"repos/{repo}/issues/{board}/comments")
     open_issues = {int(it["number"]): it for it in reads.get("issues") or []
                    if it.get("state", "open") == "open" and it.get("pull_request") is None and it.get("number")}
-    threads = list(dict.fromkeys(
+    threads = sorted(dict.fromkeys(
         ln.issue for ln in model.lines
-        if ln.issue != board and ln.issue in open_issues and int(open_issues[ln.issue].get("comments", 1) or 0)))
-    if len(threads) > MAIL_THREADS:
-        raise RuntimeError(f"mail: {len(threads)} job threads to read, over MAIL_THREADS ({MAIL_THREADS}); "
-                           "refusing to read the mail short")
-    for number in threads:
+        if ln.issue != board and ln.issue in open_issues and int(open_issues[ln.issue].get("comments", 1) or 0)),
+        key=lambda n: open_issues[n].get("updated_at") or "", reverse=True)
+    past = set(threads[MAIL_THREADS:])
+    if past:
+        sw.out(f"{NOTE}{len(past)} job thread(s) past the {MAIL_THREADS}-thread bound not read this pass; their jobs "
+               "show their mail unread (no receipt or start proven)")
+    for number in threads[:MAIL_THREADS]:
         got += P.whole(sw.gh, f"repos/{repo}/issues/{number}/comments")
     got += sw.comments_since(sw.now - RECENT)
+    got += list(also)
     seen: dict = {}
     for c in got:
         seen.setdefault(c.get("id"), c)
-    return list(seen.values())
+    return list(seen.values()), frozenset(ln.job for ln in model.lines if ln.issue in past)
 
 
 def _claims(body: str) -> str:
@@ -106,7 +117,7 @@ def _missing(sw, model, reads, mail: machine.Mail) -> dict[str, str]:
             by_thread.setdefault(int(it["number"]), job)
     claims = machine.Mail(posts=tuple(dataclasses.replace(p, body=_claims(p.body)) for p in mail.posts),
                           worker=mail.worker)
-    named = machine.named_shas(claims, by_thread)
+    named = {P.plan_job(j, by_job): v for j, v in machine.named_shas(claims, by_thread).items()}
     known = {P.branch_sha(b) for b in reads.get("branches") or []}
     known |= {(p.get("head") or {}).get("sha") or "" for p in reads.get("prs") or []}
     known |= set(reads.get("inactive") or ()) | set(reads.get("head_at") or {})

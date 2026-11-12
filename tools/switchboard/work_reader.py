@@ -100,7 +100,8 @@ def stacked(sw, model, reads: dict, f: rules.PrFacts, ctx: dict, budget: _Budget
     (work_of names that gate first), no such branch is ahead, or the compare was not read."""
     if f.base_ref != rules.TRUNK or not _fix_open(f):
         return ""
-    job = ctx.get("job") or P.job_of_branch(f.head_ref)
+    jobs = model.by_job()
+    job = P.plan_job(ctx.get("job") or P.job_of_branch(f.head_ref), jobs)
     if not job:
         return ""
     owner = machine.agent_of(f.head_ref, model.limits)
@@ -110,7 +111,7 @@ def stacked(sw, model, reads: dict, f: rules.PrFacts, ctx: dict, budget: _Budget
     for b in reads.get("branches") or []:
         name, sha = P.branch_name(b), P.branch_sha(b)
         if (name == f.head_ref or not sha or sha == f.head_sha or sha in inactive or sha in seen
-                or P.job_of_branch(name) != job or not machine.owns(owner, name)):
+                or P.plan_job(P.job_of_branch(name), jobs) != job or not machine.owns(owner, name)):
             continue
         seen.add(sha)
         todo.append((name, sha))
@@ -152,7 +153,7 @@ def branch_works(sw, model, reads: dict, steered, known: set[str]) -> dict[str, 
     todo, seen = [], set()
     for b in reads.get("branches") or []:
         name, sha = P.branch_name(b), P.branch_sha(b)
-        line = by_job.get(P.job_of_branch(name))
+        line = by_job.get(P.plan_job(P.job_of_branch(name), by_job))   # a lettered split's head is its base's
         if (line is None or not sha or not INTEGRATE.search(name) or not machine.owns(line.owner, name)
                 or sha in inactive or sha in open_shas or name in open_refs or sha in seen):
             continue

@@ -186,7 +186,7 @@ class Replay:
             issues = [{"number": line.issue, "title": f"{line.job} job", "state": "open",
                        "body": f"queue edit {edits.get(line.job, 0)}"} for line in model.lines
                       if line.issue not in closed_issues]
-            vers = M.versions(model, issues)
+            vers = M.versions(model)
             told = [j for j in e.get("job") or [] if j in model.by_job() and model.by_job()[j].owner == "muse"]
             if kind in ("mail_out", "notice_to_muse") and told and ("muse", vers["muse"]) not in {n[:2] for n in notices}:
                 notices.append(("muse", vers["muse"], t))
@@ -233,7 +233,8 @@ def same(x: dict, row: M.Step) -> bool:
     """Is the machine's row the state the fixture expects? The definitions that differ, each stated once:
       1. Claude writes the plan, so its own jobs need no notice: planned and told read `acknowledged`.
       2. `started` is a branch on the remote. A start that is only a mail, or work on a commit only a mail
-         names, keeps its state and owes a push (gates `claimed`, `unpushed`): the fixture calls that started.
+         names, keeps its state and owes a push (gates `claimed`, `unpushed`); one mailed while every lane is
+         taken is told to park it (gate `no-lane`, on no clock): the fixture calls each of these started.
       3. `reviewed` is a LAND with no FIX open. A head whose review said FIX is `proven` (or `pushed`) with the
          fix owed by its owner (gates `fix`, `stacked`; `unpushed` when the fix is a commit only a mail names):
          the fixture calls that reviewed with fix_open.
@@ -249,7 +250,7 @@ def same(x: dict, row: M.Step) -> bool:
     if want in ("planned", "told") and x["owner"] in M.SELF_TOLD:
         return row.state == "acknowledged"
     if want == "started":
-        return row.gate in ("claimed", "unpushed")
+        return row.gate in ("claimed", "unpushed", "no-lane")
     if want == "reviewed" and (x.get("next") or {}).get("who") == x["owner"]:
         return row.gate in ("fix", "stacked", "unpushed") and row.owes == x["owner"]
     if want == "conflict" and "merge_conflict" in flags:
@@ -292,6 +293,12 @@ EXPLAINED: dict[tuple[str, int, str], str] = {
     ("j109-built-twice", 38, "J-109"): RIDES,
     ("j118-j137-split", 17, "J-118"): ASK,
 }
+# Grok #471 hole 5: the order is work/plan.md alone. An edit of the old queue file that moved no plan line (the
+# fixture's plan_edit, which this replay once read as a new version through the issue's text) is no new order.
+QUEUE_EDIT = ("an edit of the old queue file that changes no plan line is no new order (the version is work/plan.md "
+              "alone, never an issue's text): the notice of event 13 still stands, so the job is told")
+EXPLAINED.update({("j119-j124-j125-start-notices", i, job): QUEUE_EDIT
+                  for i, job in ((14, "J-119"), (15, "J-124"), (16, "J-125"))})
 
 CASES = sorted(p.stem for p in FIXTURES.glob("*.json"))
 REPLAYS = {case: Replay(case) for case in CASES}
