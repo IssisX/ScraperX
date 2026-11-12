@@ -712,7 +712,7 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
                 continue;
             }
             const std::size_t at = grip_at - gap - (8 + 8 * n);
-            if (gap == 13 || gap == 89) {
+            if (gap == 13) {
                 std::uint32_t dmark = 0;
                 float damage = 0.0F, player = 0.0F;
                 std::uint8_t dead = 0;
