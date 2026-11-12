@@ -6,11 +6,11 @@
   "claude/integrate-protected-j092": "94707adf70f99ecd83fbf98e77bdb5464ab58d03"
  },
  "cancelled": null,
- "ci": "red: godot-touch (touch-3), godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3)",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-11T14:01:59Z",
  "deadline": "2026-11-11T18:17:00Z",
- "head": "424d161ce2536438d7d1a76ca613d4b7ccead434",
+ "head": "01c70e987b907fb90575f18cfad4e8994fd79092",
  "issue": 410,
  "job": "J-092",
  "landed": {
@@ -109,7 +109,11 @@
    "what": "`claude/integrate-protected-j092` proof red: host-build, no PR"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T00:23:47Z",
+    "by": "claude",
+    "how": "new head"
+   },
    "ack_rule": "new-head|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -143,6 +147,6 @@
   434
  ],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T22:08:00Z"
+ "state": "proof",
+ "updated": "2026-11-12T00:23:47Z"
 }

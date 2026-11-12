@@ -7,14 +7,14 @@
   "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
  },
  "cancelled": null,
- "ci": "red: native-tests (matron-slices-3), native-tests (athletic-traversal-2)",
+ "ci": "running",
  "commands": [
   "6777898125:87",
   "6798247735:46"
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
- "head": "13d44d838d84ec31dd9c0380fd51f500e39833de",
+ "head": "437dcac64edbf42c04b773cd0d178158ced7eae4",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -542,7 +542,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T04:37:50Z",
    "attempts": 0,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -566,7 +569,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T08:37:53Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -591,7 +597,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T08:42:48Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -616,7 +625,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T09:52:48Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -637,7 +649,11 @@
    "what": "ask from Muse on #169"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T14:17:55Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T12:38:16Z",
    "attempts": 1,
@@ -672,6 +688,6 @@
   372
  ],
  "review": "",
- "state": "working",
- "updated": "2026-11-11T23:09:21Z"
+ "state": "proof",
+ "updated": "2026-11-12T00:23:47Z"
 }

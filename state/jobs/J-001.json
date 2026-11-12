@@ -72,7 +72,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
    "missing": 3,
-   "rechecked": "2026-11-11T17:16:05Z",
+   "rechecked": "2026-11-12T00:23:47Z",
    "ref": "ASK|ask on #108",
    "sends": 1,
    "sent_by": "live",
@@ -636,7 +636,7 @@
    "ack": null,
    "ack_rule": "new-head|reply|ack",
    "asked": null,
-   "attempts": 1,
+   "attempts": 2,
    "closed": null,
    "created": "2026-11-11T22:08:00Z",
    "dead": "2026-11-12T01:17:00Z",
@@ -645,10 +645,10 @@
    "id": "O-d1c32a4b",
    "kind": "fix",
    "last_error": "",
-   "last_sent": "2026-11-11T22:08:00Z",
+   "last_sent": "2026-11-12T00:23:47Z",
    "missing": 0,
    "ref": "BRANCH|claude/integrate-j001-hold",
-   "sends": 1,
+   "sends": 2,
    "sent_by": "live",
    "thread": 108,
    "to": "claude",
@@ -743,5 +743,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T23:09:21Z"
+ "updated": "2026-11-12T00:23:47Z"
 }

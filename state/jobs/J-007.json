@@ -13,7 +13,7 @@
   "6787161772:67"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-12T00:17:00Z",
+ "deadline": null,
  "head": "cc50ea37beef9e239f983b39b937fd06cdd05db4",
  "issue": 114,
  "job": "J-007",
@@ -298,7 +298,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T04:37:48Z",
    "attempts": 0,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -322,7 +325,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T08:42:51Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -353,5 +359,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T23:09:21Z"
+ "updated": "2026-11-12T00:23:47Z"
 }

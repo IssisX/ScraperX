@@ -256,7 +256,11 @@
    "what": "#377: open FIX from Codex (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T04:37:52Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T04:28:04Z",
    "attempts": 0,
@@ -284,7 +288,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T04:37:52Z",
    "attempts": 0,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -308,7 +315,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T08:42:49Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -329,7 +339,11 @@
    "what": "ask from Muse on #116"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T23:39:18Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T11:47:50Z",
    "attempts": 1,
@@ -352,6 +366,31 @@
    "version": "6794979766",
    "via": "session",
    "what": "ask from Muse on #116"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-11T23:39:18Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T00:23:47Z",
+   "dead": "2026-11-12T08:23:47Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T04:23:47Z",
+   "id": "O-0146825c",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-12T00:23:47Z",
+   "missing": 0,
+   "ref": "ASK|ask on #116",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 116,
+   "to": "muse",
+   "unseen": null,
+   "version": "6809868640",
+   "via": "email",
+   "what": "ask from Claude on #116"
   }
  ],
  "outcome": null,
@@ -364,5 +403,5 @@
  ],
  "review": "",
  "state": "working",
- "updated": "2026-11-11T23:09:21Z"
+ "updated": "2026-11-12T00:23:47Z"
 }

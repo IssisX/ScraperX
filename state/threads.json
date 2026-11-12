@@ -1206,6 +1206,34 @@
    "version": "6806879099",
    "via": "session",
    "what": "ask from Muse on #384"
+  },
+  {
+   "ack": {
+    "at": "2026-11-12T00:10:45Z",
+    "by": "claude",
+    "how": "reply naming it"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T00:02:53Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T00:23:47Z",
+   "dead": "2026-11-12T04:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T02:17:00Z",
+   "id": "O-ad056308",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #384",
+   "sends": 0,
+   "thread": 384,
+   "to": "claude",
+   "unseen": null,
+   "version": "6810254652",
+   "via": "session",
+   "what": "ask from Muse on #384"
   }
  ]
 }

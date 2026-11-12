@@ -12,7 +12,7 @@
   "6796658315:60"
  ],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-12T00:17:00Z",
+ "deadline": null,
  "head": "b1177151bd189a5395de85ba140431a5a61bfb6c",
  "issue": 307,
  "job": "J-059",
@@ -437,7 +437,11 @@
    "what": "#343: open FIX from Codex (review)"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T06:42:46Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T06:37:50Z",
    "attempts": 1,
@@ -466,7 +470,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T06:42:46Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -491,7 +498,10 @@
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T10:52:46Z",
    "attempts": 1,
-   "closed": null,
+   "closed": {
+    "at": "2026-11-12T00:23:47Z",
+    "why": "not an ask to its holder, as the stream reads now"
+   },
    "created": "2026-11-11T23:09:21Z",
    "dead": "2026-11-12T02:17:00Z",
    "dead_lettered": null,
@@ -512,7 +522,11 @@
    "what": "ask from Muse on #307"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T13:07:52Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T11:47:49Z",
    "attempts": 1,
@@ -537,7 +551,11 @@
    "what": "ask from Muse on #307"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-11T17:27:51Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-11T13:18:04Z",
    "attempts": 1,
@@ -572,5 +590,5 @@
  ],
  "review": "FIX",
  "state": "working",
- "updated": "2026-11-11T23:09:21Z"
+ "updated": "2026-11-12T00:23:47Z"
 }

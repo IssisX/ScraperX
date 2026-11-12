@@ -74,7 +74,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T20:56:16Z",
      "missing": 3,
-     "rechecked": "2026-11-11T17:16:05Z",
+     "rechecked": "2026-11-12T00:23:47Z",
      "ref": "ASK|ask on #108",
      "sends": 1,
      "sent_by": "live",
@@ -638,7 +638,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-11T22:08:00Z",
      "dead": "2026-11-12T01:17:00Z",
@@ -647,10 +647,10 @@
      "id": "O-d1c32a4b",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-11T22:08:00Z",
+     "last_sent": "2026-11-12T00:23:47Z",
      "missing": 0,
      "ref": "BRANCH|claude/integrate-j001-hold",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 108,
      "to": "claude",
@@ -745,7 +745,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-007": {
    "attempt": 1,
@@ -762,7 +762,7 @@
     "6787161772:67"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-12T00:17:00Z",
+   "deadline": null,
    "head": "cc50ea37beef9e239f983b39b937fd06cdd05db4",
    "issue": 114,
    "job": "J-007",
@@ -1047,7 +1047,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T04:37:48Z",
      "attempts": 0,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -1071,7 +1074,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T08:42:51Z",
      "attempts": 1,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -1102,7 +1108,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-008": {
    "attempt": 0,
@@ -1540,7 +1546,11 @@
      "what": "#377: open FIX from Codex (review)"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T04:37:52Z",
+      "by": "claude",
+      "how": "a later post by the asker, no ask"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T04:28:04Z",
      "attempts": 0,
@@ -1568,7 +1578,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T04:37:52Z",
      "attempts": 0,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -1592,7 +1605,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T08:42:49Z",
      "attempts": 1,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -1613,7 +1629,11 @@
      "what": "ask from Muse on #116"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T23:39:18Z",
+      "by": "claude",
+      "how": "reply to the asker"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T11:47:50Z",
      "attempts": 1,
@@ -1636,6 +1656,31 @@
      "version": "6794979766",
      "via": "session",
      "what": "ask from Muse on #116"
+    },
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-11T23:39:18Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-12T00:23:47Z",
+     "dead": "2026-11-12T08:23:47Z",
+     "dead_lettered": null,
+     "due": "2026-11-12T04:23:47Z",
+     "id": "O-0146825c",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-12T00:23:47Z",
+     "missing": 0,
+     "ref": "ASK|ask on #116",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 116,
+     "to": "muse",
+     "unseen": null,
+     "version": "6809868640",
+     "via": "email",
+     "what": "ask from Claude on #116"
     }
    ],
    "outcome": null,
@@ -1648,7 +1693,7 @@
    ],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-011": {
    "attempt": 0,
@@ -2094,7 +2139,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
      "missing": 3,
-     "rechecked": "2026-11-11T17:16:05Z",
+     "rechecked": "2026-11-12T00:23:47Z",
      "ref": "BRANCH|fb-bot/integrate-protected-j015-wreck-way-on",
      "sends": 1,
      "sent_by": "shadow",
@@ -2662,7 +2707,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-016": {
    "attempt": 0,
@@ -3237,14 +3282,14 @@
     "fb-bot/integrate-protected-j038-slice1-r3": "474fb0c98aa74df708e476136ca30baf9f917cde"
    },
    "cancelled": null,
-   "ci": "red: native-tests (matron-slices-3), native-tests (athletic-traversal-2)",
+   "ci": "running",
    "commands": [
     "6777898125:87",
     "6798247735:46"
    ],
    "created": "2026-11-09T17:35:20Z",
    "deadline": "2026-11-10T18:17:00Z",
-   "head": "13d44d838d84ec31dd9c0380fd51f500e39833de",
+   "head": "437dcac64edbf42c04b773cd0d178158ced7eae4",
    "issue": 169,
    "job": "J-038",
    "landed": {
@@ -3772,7 +3817,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T04:37:50Z",
      "attempts": 0,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -3796,7 +3844,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T08:37:53Z",
      "attempts": 1,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -3821,7 +3872,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T08:42:48Z",
      "attempts": 1,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -3846,7 +3900,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T09:52:48Z",
      "attempts": 1,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -3867,7 +3924,11 @@
      "what": "ask from Muse on #169"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T14:17:55Z",
+      "by": "claude",
+      "how": "a later post by the asker, no ask"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T12:38:16Z",
      "attempts": 1,
@@ -3902,8 +3963,8 @@
     372
    ],
    "review": "",
-   "state": "working",
-   "updated": "2026-11-11T23:09:21Z"
+   "state": "proof",
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-040": {
    "attempt": 0,
@@ -3934,7 +3995,7 @@
      "kind": "start-agent",
      "last_error": "",
      "last_sent": null,
-     "missing": 1,
+     "missing": 2,
      "ref": "JOB|#228",
      "sends": 0,
      "thread": 228,
@@ -3944,7 +4005,11 @@
      "what": "start J-040"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T23:19:01Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T20:57:55Z",
      "attempts": 1,
@@ -3977,7 +4042,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-042": {
    "attempt": 2,
@@ -4727,7 +4792,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-11T17:16:05Z",
+     "rechecked": "2026-11-12T00:23:47Z",
      "ref": "BRANCH|fb-bot/integrate-protected-j044c-gains-peaks",
      "sends": 0,
      "thread": 0,
@@ -4802,7 +4867,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T19:28:50Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-044d": {
    "attempt": 0,
@@ -4822,7 +4887,7 @@
     "fb-bot/integrate-j044d": [
      "c816ba4ff54bd3c012c21a24266c018f7bc930ae",
      "",
-     "2026-11-11T18:18:52Z"
+     "2026-11-12T00:23:47Z"
     ]
    },
    "obligations": [
@@ -4861,7 +4926,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T21:07:56Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-044l": {
    "attempt": 0,
@@ -5290,7 +5355,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-11T17:16:05Z",
+     "rechecked": "2026-11-12T00:23:47Z",
      "ref": "BRANCH|fb-bot/integrate-j049-pr1",
      "sends": 0,
      "thread": 278,
@@ -5762,7 +5827,7 @@
    ],
    "review": "waiting",
    "state": "working",
-   "updated": "2026-11-11T17:16:05Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-050": {
    "attempt": 0,
@@ -6274,6 +6339,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
+     "rechecked": "2026-11-12T00:23:47Z",
      "ref": "JOB|#294",
      "sends": 0,
      "thread": 294,
@@ -6292,7 +6358,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-11T17:16:05Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-058": {
    "attempt": 0,
@@ -6346,7 +6412,7 @@
     "6796658315:60"
    ],
    "created": "2026-11-09T17:35:20Z",
-   "deadline": "2026-11-12T00:17:00Z",
+   "deadline": null,
    "head": "b1177151bd189a5395de85ba140431a5a61bfb6c",
    "issue": 307,
    "job": "J-059",
@@ -6771,7 +6837,11 @@
      "what": "#343: open FIX from Codex (review)"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T06:42:46Z",
+      "by": "claude",
+      "how": "a later post by the asker, no ask"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T06:37:50Z",
      "attempts": 1,
@@ -6800,7 +6870,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T06:42:46Z",
      "attempts": 1,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -6825,7 +6898,10 @@
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T10:52:46Z",
      "attempts": 1,
-     "closed": null,
+     "closed": {
+      "at": "2026-11-12T00:23:47Z",
+      "why": "not an ask to its holder, as the stream reads now"
+     },
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
      "dead_lettered": null,
@@ -6846,7 +6922,11 @@
      "what": "ask from Muse on #307"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T13:07:52Z",
+      "by": "claude",
+      "how": "a later post by the asker, no ask"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T11:47:49Z",
      "attempts": 1,
@@ -6871,7 +6951,11 @@
      "what": "ask from Muse on #307"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-11T17:27:51Z",
+      "by": "claude",
+      "how": "a later post by the asker, no ask"
+     },
      "ack_rule": "reply|ack",
      "asked": "2026-11-11T13:18:04Z",
      "attempts": 1,
@@ -6906,7 +6990,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-060": {
    "attempt": 0,
@@ -7799,6 +7883,34 @@
      "version": "6792489054",
      "via": "session",
      "what": "ask from Muse on #321"
+    },
+    {
+     "ack": {
+      "at": "2026-11-12T00:10:48Z",
+      "by": "claude",
+      "how": "reply naming it"
+     },
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-12T00:02:50Z",
+     "attempts": 0,
+     "closed": null,
+     "created": "2026-11-12T00:23:47Z",
+     "dead": "2026-11-12T04:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-12T02:17:00Z",
+     "id": "O-0eb74512",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": null,
+     "missing": 0,
+     "ref": "ASK|ask on #321",
+     "sends": 0,
+     "thread": 321,
+     "to": "claude",
+     "unseen": null,
+     "version": "6810253772",
+     "via": "session",
+     "what": "ask from Muse on #321"
     }
    ],
    "outcome": null,
@@ -7809,7 +7921,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-064": {
    "attempt": 0,
@@ -10184,7 +10296,7 @@
    "blocked": null,
    "branches": {
     "claude/integrate-j085": "d73b3795ff72d4e2dc31b37e6517a6d6771b653b",
-    "claude/integrate-protected-j085": "a004d8f7f25078b4fbc7873b1115e43d9b32cb5d",
+    "claude/integrate-protected-j085": "7d7ac2858be49ca98f833b98000e0451cdb08ceb",
     "fb-bot/integrate-j085": "f6b850f932787bc65ac461497107ee2e99af2ec7"
    },
    "cancelled": null,
@@ -10196,7 +10308,7 @@
    ],
    "created": "2026-11-11T12:58:47Z",
    "deadline": "2026-11-12T00:17:00Z",
-   "head": "a004d8f7f25078b4fbc7873b1115e43d9b32cb5d",
+   "head": "f6b850f932787bc65ac461497107ee2e99af2ec7",
    "issue": 403,
    "job": "J-085",
    "landed": {
@@ -10206,9 +10318,9 @@
      "2026-11-11T23:09:21Z"
     ],
     "claude/integrate-protected-j085": [
-     "a004d8f7f25078b4fbc7873b1115e43d9b32cb5d",
-     "",
-     "2026-11-11T23:09:21Z"
+     "7d7ac2858be49ca98f833b98000e0451cdb08ceb",
+     "merged #437",
+     "2026-11-12T00:23:47Z"
     ],
     "fb-bot/integrate-j085": [
      "f6b850f932787bc65ac461497107ee2e99af2ec7",
@@ -10366,7 +10478,11 @@
      "what": "`claude/integrate-protected-j085` proof red: native-tests (athletic-traversal-2), no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-12T00:23:47Z",
+      "by": "claude",
+      "how": "new head"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -10394,7 +10510,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
@@ -10403,10 +10519,10 @@
      "id": "O-ab43ea33",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-11T23:09:21Z",
+     "last_sent": "2026-11-12T00:23:47Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-j085",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 403,
      "to": "claude",
@@ -10426,7 +10542,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-11T23:09:21Z"
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-086": {
    "attempt": 0,
@@ -10455,16 +10571,24 @@
   "J-087": {
    "attempt": 0,
    "blocked": null,
-   "branches": {},
+   "branches": {
+    "fb-bot/integrate-j087": "b29a26844c473f9be9aef41cedaea201cfa66e1b"
+   },
    "cancelled": null,
    "ci": "",
    "commands": [],
    "created": "2026-11-11T12:58:47Z",
    "deadline": null,
-   "head": "",
+   "head": "b29a26844c473f9be9aef41cedaea201cfa66e1b",
    "issue": 405,
    "job": "J-087",
-   "landed": {},
+   "landed": {
+    "fb-bot/integrate-j087": [
+     "b29a26844c473f9be9aef41cedaea201cfa66e1b",
+     "",
+     "2026-11-12T00:23:47Z"
+    ]
+   },
    "obligations": [],
    "outcome": null,
    "outcome_reason": "",
@@ -10473,8 +10597,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "assigned",
-   "updated": "2026-11-11T12:58:47Z"
+   "state": "proof",
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-088": {
    "attempt": 0,
@@ -10526,7 +10650,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
@@ -10535,10 +10659,10 @@
      "id": "O-bc1328fe",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-11T23:09:21Z",
+     "last_sent": "2026-11-12T00:23:47Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-j089",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 407,
      "to": "claude",
@@ -10677,11 +10801,11 @@
     "claude/integrate-protected-j092": "94707adf70f99ecd83fbf98e77bdb5464ab58d03"
    },
    "cancelled": null,
-   "ci": "red: godot-touch (touch-3), godot-touch (touch-2), native-tests (athletic-traversal-2), native-tests (matron-slices-3)",
+   "ci": "running",
    "commands": [],
    "created": "2026-11-11T14:01:59Z",
    "deadline": "2026-11-11T18:17:00Z",
-   "head": "424d161ce2536438d7d1a76ca613d4b7ccead434",
+   "head": "01c70e987b907fb90575f18cfad4e8994fd79092",
    "issue": 410,
    "job": "J-092",
    "landed": {
@@ -10780,7 +10904,11 @@
      "what": "`claude/integrate-protected-j092` proof red: host-build, no PR"
     },
     {
-     "ack": null,
+     "ack": {
+      "at": "2026-11-12T00:23:47Z",
+      "by": "claude",
+      "how": "new head"
+     },
      "ack_rule": "new-head|reply|ack",
      "asked": null,
      "attempts": 1,
@@ -10814,8 +10942,8 @@
     434
    ],
    "review": "",
-   "state": "working",
-   "updated": "2026-11-11T22:08:00Z"
+   "state": "proof",
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-093": {
    "attempt": 0,
@@ -10872,7 +11000,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
@@ -10881,10 +11009,10 @@
      "id": "O-f33f597b",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-11T23:09:21Z",
+     "last_sent": "2026-11-12T00:23:47Z",
      "missing": 0,
      "ref": "BRANCH|claude/integrate-protected-j093",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 411,
      "to": "claude",
@@ -10930,7 +11058,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
@@ -10939,10 +11067,10 @@
      "id": "O-f72c7d4b",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-11T23:09:21Z",
+     "last_sent": "2026-11-12T00:23:47Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-j094",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 412,
      "to": "claude",
@@ -11073,7 +11201,7 @@
      "closed": null,
      "created": "2026-11-11T19:28:50Z",
      "dead": "2026-11-11T23:17:00Z",
-     "dead_lettered": null,
+     "dead_lettered": "2026-11-12T00:23:47Z",
      "due": "2026-11-11T21:17:00Z",
      "id": "O-6cedf3d0",
      "kind": "fix",
@@ -11136,16 +11264,24 @@
   "J-098": {
    "attempt": 0,
    "blocked": null,
-   "branches": {},
+   "branches": {
+    "fb-bot/integrate-j098": "67caf6d317072e097d9e40bef6ffd5455d86444e"
+   },
    "cancelled": null,
    "ci": "",
    "commands": [],
    "created": "2026-11-11T15:02:17Z",
    "deadline": null,
-   "head": "",
+   "head": "67caf6d317072e097d9e40bef6ffd5455d86444e",
    "issue": 416,
    "job": "J-098",
-   "landed": {},
+   "landed": {
+    "fb-bot/integrate-j098": [
+     "67caf6d317072e097d9e40bef6ffd5455d86444e",
+     "",
+     "2026-11-12T00:23:47Z"
+    ]
+   },
    "obligations": [],
    "outcome": null,
    "outcome_reason": "",
@@ -11154,8 +11290,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "assigned",
-   "updated": "2026-11-11T15:02:17Z"
+   "state": "proof",
+   "updated": "2026-11-12T00:23:47Z"
   },
   "J-099": {
    "attempt": 0,
@@ -11375,7 +11511,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-11T22:08:00Z",
      "dead": "2026-11-12T01:17:00Z",
@@ -11384,10 +11520,10 @@
      "id": "O-32775b74",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-11T22:08:00Z",
+     "last_sent": "2026-11-12T00:23:47Z",
      "missing": 0,
      "ref": "BRANCH|claude/integrate-protected-j108",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 0,
      "to": "claude",
@@ -11400,7 +11536,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-11T23:09:21Z",
      "dead": "2026-11-12T02:17:00Z",
@@ -11409,10 +11545,10 @@
      "id": "O-a874ef94",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-11T23:09:21Z",
+     "last_sent": "2026-11-12T00:23:47Z",
      "missing": 0,
      "ref": "BRANCH|claude/integrate-j108",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 0,
      "to": "claude",
