@@ -339,8 +339,10 @@ of a changed order (`machine.notice`; its version is a hash of the owner's autho
 | MERGE-BY-HAND hiding the Codex ask (#473) | `reviewed`, gate `codex`: the integrator posts `@codex review` |
 | `queue_check.py`, `muse_queue.py` owner and queue checks | the table; both still run until cutover |
 
-**Shadow.** `work/switchboard.yml` says `plan: shadow`: a full pass prints `PLAN`, `PLAN-STATE`, `PLAN-LATE`,
-`PLAN-LABEL` and `PLAN-NOTICE` lines and writes nothing; an error in it is a printed NOTE, never a failed sweep.
+**Shadow.** `work/switchboard.yml` says `plan: shadow`: the full pass of every sixth hour prints `PLAN`,
+`PLAN-STATE`, `PLAN-LATE`, `PLAN-LABEL` and `PLAN-NOTICE` lines and writes nothing. It runs after every live
+part, only with twice the rate floor left, and an error in it is a printed NOTE, never a failed sweep. One pass
+is about 245 reads on a cold cache (measured 11-12 against the live repo).
 Everything else the rebuild changes in live code waits for `plan: live`: the auto-open's whole branch listing,
 the reconciler's end of start notices and its rule that an `/ack` does not settle a FIX, the ledger's reading of
 job issues with no `job` label, and QUEUE-LOW counted from the table. Merges are never the plan's to stop.

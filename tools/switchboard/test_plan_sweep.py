@@ -399,9 +399,10 @@ class Shadow(Sweeps):
 class InTheSweep(unittest.TestCase):
     """run_sweep itself (test_sweep_calls' harness): where the plan part runs, and what its failure costs."""
 
-    def run_sweep(self, mode: str, check, state=None, remaining=None):
+    def run_sweep(self, mode: str, check, state=None, remaining=None, hour=18):
         from unittest import mock
         import test_sweep_calls as T
+        now = T.NOW if state is not None else T.NOW.replace(hour=hour)   # a kept state is stamped against T.NOW
         gh = T.CountingGH([T.pr(1)])
         seen = []
 
@@ -421,7 +422,7 @@ class InTheSweep(unittest.TestCase):
         with mock.patch.object(switch.Switch, "plan_mode", lambda self: mode), \
                 mock.patch.object(switch.Switch, "plan_check", plan_check), \
                 mock.patch.object(switch, "rate_probe", rate):
-            status, _, sw = T.sweep(gh, state)
+            status, _, sw = T.sweep(gh, state, now)
         return status, seen, gh.state.get("steer"), T
 
     def boom(self):
@@ -431,7 +432,7 @@ class InTheSweep(unittest.TestCase):
         quiet, _, base, T = self.run_sweep("off", lambda: None)
         for check in (lambda: None, self.boom):
             status, seen, state, _ = self.run_sweep("shadow", check)
-            self.assertEqual(seen, [T.iso(T.NOW)])          # one call, and this sweep's state was already written
+            self.assertEqual(seen, [T.iso(T.NOW.replace(hour=18))])   # one call, after this sweep's state was written
             self.assertEqual((status, state), (quiet, base))   # the sweep ends as it does with no plan at all
 
     def test_live_it_runs_before_the_state_is_set_and_a_failure_is_the_sweeps_to_report_and_retry(self):
@@ -446,6 +447,16 @@ class InTheSweep(unittest.TestCase):
         quiet, _, base, _ = self.run_sweep("off", lambda: None, remaining=1)
         status, seen, state, _ = self.run_sweep("shadow", lambda: None, remaining=1)
         self.assertEqual((seen, status, state), ([], quiet, base))
+        floor = switch.rate_floor(1000)
+        _, seen, _, _ = self.run_sweep("shadow", lambda: None, remaining=2 * floor - 1)   # the live parts all ran
+        self.assertEqual(seen, [])
+        _, seen, _, _ = self.run_sweep("shadow", lambda: None, remaining=2 * floor)
+        self.assertEqual(len(seen), 1)
+
+    def test_in_shadow_it_runs_in_the_full_pass_of_every_sixth_hour_and_live_in_every_one(self):
+        ran = {hour: len(self.run_sweep("shadow", lambda: None, hour=hour)[1]) for hour in range(24)}
+        self.assertEqual([h for h, n in ran.items() if n], [0, 6, 12, 18])
+        self.assertEqual({len(self.run_sweep("live", lambda: None, hour=hour)[1]) for hour in (5, 6, 7)}, {1})
 
     def test_a_fast_sweep_never_runs_it(self):
         import test_sweep_calls as T

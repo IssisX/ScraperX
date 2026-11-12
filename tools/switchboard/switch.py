@@ -113,6 +113,10 @@ MAX_INBOX_KEYS = 600                           # keys carried forward in the new
 MAX_INBOX_BRANCHES = 40                        # integrate branches whose proof jobs are read per sweep
 MAX_PLAN_LINES = 20                            # late jobs, label changes printed (and, live, listed) per pass
 MAX_PLAN_LABELS = 20                           # issues whose labels a live pass writes
+# Shadow only prints, and one pass is about 245 reads on a cold cache (11-12, measured: 90 job threads, 60
+# compares, 60 proof reads, the listings), a third of a full pass's own. So in shadow it runs in the full pass of
+# every sixth hour, four times a day, and only with twice the rate floor left. Live, it runs every full pass.
+PLAN_SHADOW_EVERY_H = 6
 INBOX_ORDER = ("MERGE-BY-HAND", "TO-CLAUDE", "PLAN", "QUEUE-LOW", "CODEX-ASK", "NOT-MERGED", "AUTO-PR-FAILED", "NOTE-REVIEW", "CONFLICT", "FIX", "FIX-STUCK", "RED", "RED-TWICE", "RED-STUCK", "RED-BRANCH", "QUIET", "STARTED", "ACK", "RERUN")
 # J-103 (Cory 11-11, "Teach"): kinds that never wake the integrator alone. They ride as one digest line on the next inbox
 # comment that does wake, and on the switch's hourly full pass, so nothing is lost; held between sweeps in the state.
@@ -3396,11 +3400,11 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
                   [plain(e[:200]) for e in item_errors])
     write_summary(summary, "Rate floor", rate_lines() + ([f"rate-limited, left for the next sweep: {', '.join(deferred)}"]
                                                          if deferred else []))
-    if plan_due and sw.plan_mode() == "shadow":
+    if plan_due and sw.plan_mode() == "shadow" and now.hour % PLAN_SHADOW_EVERY_H == 0:
         # Shadow: after every live part, the heartbeat and the sweep state. No live part waits for its reads, and
         # nothing in it fails the sweep, is retried, or changes what the next sweep does.
-        if isinstance(sw.gh.remaining, int) and sw.gh.remaining < floor():
-            sw.out("NOTE        plan (shadow): left out this pass, under the rate floor")
+        if isinstance(sw.gh.remaining, int) and sw.gh.remaining < 2 * floor():
+            sw.out("NOTE        plan (shadow): left out this pass, less than twice the rate floor is left")
         else:
             try:
                 sw.plan_check(steered)
