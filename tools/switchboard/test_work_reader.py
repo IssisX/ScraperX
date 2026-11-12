@@ -104,7 +104,7 @@ def compare(base: str, head: str) -> str:
 
 def row(job: str, work: M.Work) -> M.Step:
     ln = MODEL.by_job()[job]
-    return M.step(M.Evidence(job, ln, (ln.issue,), work=work))
+    return M.step(M.Evidence(job, ln, (ln.issue,), works=(work,)))
 
 
 # ---------- #343 (J-059): the stacked fix and the FIX deadlock ----------

@@ -128,6 +128,16 @@ def job_of_branch(ref: str) -> str:
     return "J-" + key
 
 
+LETTERED = re.compile(r"(J-\d{3,})[a-z]")
+
+
+def plan_job(job: str, jobs) -> str:
+    """The job an id is, against the plan's jobs: itself when the plan has its line, else, for a lettered split
+    (J-044c) whose base (J-044) has a line, the base; else itself (a job the plan does not hold)."""
+    m = LETTERED.fullmatch(job or "")
+    return m.group(1) if m and job not in jobs and m.group(1) in jobs else job
+
+
 def branch_name(ref) -> str:
     return ref if isinstance(ref, str) else ref.get("name") or ""
 
@@ -194,8 +204,11 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
     jobs = set(model.by_job())
     head_at: dict[str, dt.datetime] = {}
     open_heads = {(p.get("head") or {}).get("sha") for p in prs}
-    todo = [b for b in branches if job_of_branch(branch_name(b)) in jobs
-            and (sha := branch_sha(b)) and sha not in inactive and sha not in open_heads]
+    # the plan's jobs first (a lettered split is its base's), then the heads of jobs the plan does not hold: such
+    # a head is a row only once this compare proves it unlanded (machine.collect)
+    todo = sorted((b for b in branches if job_of_branch(branch_name(b))
+                   and (sha := branch_sha(b)) and sha not in inactive and sha not in open_heads),
+                  key=lambda b: plan_job(job_of_branch(branch_name(b)), jobs) not in jobs)
     for b in todo[:COMPARES]:
         sha = branch_sha(b)
         try:
@@ -211,8 +224,13 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
         when = dt.datetime.fromisoformat(stamp.replace("Z", "+00:00")) if stamp else None
         if head.get("sha") == sha and when:
             head_at[sha] = when
-    if len(todo) > COMPARES:
-        out(f"NOTE        plan: {len(todo) - COMPARES} job branch(es) not compared this pass; counted as live")
+    left = todo[COMPARES:]
+    planned = sum(1 for b in left if plan_job(job_of_branch(branch_name(b)), jobs) in jobs)
+    if planned:
+        out(f"NOTE        plan: {planned} job branch(es) not compared this pass; counted as live")
+    if len(left) > planned:
+        out(f"NOTE        plan: {len(left) - planned} branch(es) of jobs the plan does not hold not compared this "
+            "pass; not shown until a compare proves one unlanded")
     open_numbers = {i.get("number") for i in issues if i.get("pull_request") is None}
     gone = [ln for ln in model.lines if ln.issue not in open_numbers]
     done: set[str] = set()

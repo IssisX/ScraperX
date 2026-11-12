@@ -16,6 +16,7 @@ import urllib.parse
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import machine as M  # noqa: E402
+import plan  # noqa: E402
 import rules  # noqa: E402
 import switch  # noqa: E402
 
@@ -197,8 +198,11 @@ class Sweeps(unittest.TestCase):
         return sw, {r.job: r for r in memo[3]} if memo else {}
 
     def version(self) -> str:
-        import plan
-        return M.versions(plan.parse(PLAN), [i for i in self.hub.issues.values() if i["state"] == "open"])["muse"]
+        return M.versions(plan.parse(PLAN))["muse"]
+
+    def jobs(self, hours: float) -> str:
+        """The mark's jobs for Muse's lines first told at T0 + hours."""
+        return ",".join(f"{ln.job}:{M.line_hash(ln)}@{M.stamp(at(hours))}" for ln in plan.parse(PLAN).owner_lines("muse"))
 
     def pr(self, hours: float, verdicts=()) -> "switch.Steered":
         f = rules.PrFacts(number=900, head_sha=I1, head_ref=INTEGRATE, base_ref=rules.TRUNK, draft=False,
@@ -217,7 +221,7 @@ class Live(Sweeps):
         self.assertEqual((rows["J-501"].state, rows["J-501"].owes), ("planned", "switchboard"))
         (notice,) = hub.by(rules.BOT_LOGIN, M.NOTICE_HEAD)
         self.assertTrue(notice["body"].startswith(f"CLAUDE_TO_MUSE: plan {ver}\n"))
-        self.assertIn(M.NOTICE_MARK.format(owner="muse", ver=ver, jobs="J-501,J-502"), notice["body"])
+        self.assertIn(M.NOTICE_MARK.format(owner="muse", ver=ver, jobs=self.jobs(0.5)), notice["body"])
         self.assertIn("Held, not to be worked: J-502", notice["body"])
         self.assertIn("Next, in order: J-501.", notice["body"])
         self.assertTrue(notice["issue_url"].endswith(f"/{BOARD}"))
@@ -266,7 +270,7 @@ class Live(Sweeps):
         self.assertEqual((r.state, r.gate, r.owes, r.since), ("acknowledged", "", "muse", at(4)))
         self.assertEqual(r.next, f"start it: push {WIP}")
         self.assertEqual(sw.plan_items, ())
-        (notice,) = hub.by(rules.BOT_LOGIN, M.NOTICE_MARK.format(owner="muse", ver=ver, jobs="J-501,J-502"))
+        (notice,) = hub.by(rules.BOT_LOGIN, M.NOTICE_MARK.format(owner="muse", ver=ver, jobs=self.jobs(0.5)))
         self.assertIn(M.RECEIPT_MARK.format(owner="muse", ver=ver, at=iso(4), comment=answer["id"]), notice["body"])
         hub.comments.remove(answer)                                     # the mail leaves every window that is read
         _, rows = self.sweep(4.5)
@@ -312,8 +316,9 @@ class Live(Sweeps):
         hub.in_trunk.add(W1)                                            # a merge commit: trunk holds the wip head too
         sw, rows = self.sweep(7.6)
         r = rows["J-501"]
-        self.assertEqual((r.state, r.owes, r.since, r.limit), ("landed", "integrator", at(7.5), M.hours(24)))
-        self.assertEqual(r.next, "close #501, or write on it what is left")
+        self.assertEqual((r.state, r.owes, r.since, r.limit), ("landed", "muse", at(7.5), M.hours(24)))
+        self.assertEqual(r.next, "start its next part: a part merged and #501 is still open (the last part's PR "
+                                 "carries `Closes #501`); if no part is left, close #501")
         self.assertIn("muse**: 0 of 6 lanes in flight", hub.issues[BOARD]["body"])
 
         # 10. closed
@@ -337,7 +342,11 @@ class Live(Sweeps):
         self.assertEqual(len(new), 1)
         self.assertIn("Newly yours: J-503.", new[0]["body"])
         _, rows = self.sweep(2.5)
-        self.assertEqual({rows[j].state for j in ("J-501", "J-503")}, {"told"})   # the old receipt is not this order's
+        # the old receipt is not this order's: the new line is told and owes its receipt; the line that did not
+        # change keeps its state and its own clock (Grok #471 hole 2: any plan commit reset every clock)
+        self.assertEqual((rows["J-503"].state, rows["J-501"].state, rows["J-501"].since), ("told", "acknowledged", at(1)))
+        self.assertIn(f"J-501:{M.line_hash(plan.parse(PLAN).by_job()['J-501'])}@{M.stamp(at(0.5))}!{M.stamp(at(1))}",
+                      new[0]["body"])   # the mark carries the run forward: no older board is needed to read it
 
     def test_a_failed_read_fails_the_part_so_the_sweep_reports_it_and_nothing_is_half_written(self):
         self.hub.fail["branches"] = switch.GitHubError("GET", "branches", "HTTP 502")
@@ -349,6 +358,19 @@ class Live(Sweeps):
         with self.assertRaises(RuntimeError):
             self.sweep(0.6)
         self.assertEqual(self.hub.writes, [])
+
+    def test_the_digest_reads_blocked_from_the_machine_not_the_label(self):   # cutover: state:blocked can go
+        self.hub.issue(503, "J-503: Labelled blocked, nothing waits", ["job", "state:blocked"])
+        self.hub.issue(504, "J-504: Waits on the first", ["job"])
+        self.write("work/plan.md", PLAN + "J-503 muse #503 | Labelled blocked, nothing waits\n"
+                                          "J-504 muse #504 after J-501 | Waits on the first\n")
+        sw, rows = self.sweep(0.5)
+        self.assertEqual(sw.blocked_lines(), ["#504 J-504: Waits on the first is blocked on J-501"])
+        self.assertNotIn("state:blocked", self.hub.labels(503))   # and the live pass takes the label off
+        self.hub.issue(503, "J-503: Labelled blocked, nothing waits", ["job", "state:blocked"])
+        self.write("work/switchboard.yml", "plan: shadow\n")   # before cutover: the label, as before
+        sw._jobs = None
+        self.assertEqual(sw.blocked_lines(), ["#503 J-503: Labelled blocked, nothing waits is blocked"])
 
 
 class Shadow(Sweeps):
@@ -422,7 +444,7 @@ class InTheSweep(unittest.TestCase):
         with mock.patch.object(switch.Switch, "plan_mode", lambda self: mode), \
                 mock.patch.object(switch.Switch, "plan_check", plan_check), \
                 mock.patch.object(switch, "rate_probe", rate):
-            status, _, sw = T.sweep(gh, state, now)
+            status, _, sw = T.sweep(gh, state, now, plan_mode=mode)
         return status, seen, gh.state.get("steer"), T
 
     def boom(self):

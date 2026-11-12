@@ -1588,24 +1588,27 @@ class Noise(unittest.TestCase):
 
 
 class OpenFixRequiresEvidence(unittest.TestCase):
-    """With the plan live, a receipt of a P1 FIX does not close the PR's unresolved work."""
+    """With the plan live, a receipt of a P1 FIX does not close the PR's unresolved work: the FIX is the job
+    machine's gate (machine.work_of: it clears only on a new head or verdict), and the reconciler keeps no second
+    clock for it (Grok #471 hole 7: two alarms for one FIX)."""
 
-    def test_ack_of_an_unchanged_fix_is_seen_but_not_settled(self):
+    def test_with_the_plan_live_a_fix_is_the_tables_alone_and_an_ask_stays(self):
         h = Harness()
-        h.plan_live = True
-        f = feed(prs=[pr(401, "fb-bot/integrate-j500", action="FIX",
-                         reasons=("unresolved P1",))],
+        f = feed(prs=[pr(401, "fb-bot/integrate-j500", action="FIX", reasons=("unresolved P1",))],
                  issues=[issue(500, owner="owner:muse")])
-        h.run(f, NOW)
-        obs = h.obs("J-500", kind="fix")
-        self.assertTrue(any(o["version"].startswith("fix:") for o in obs))
-        oid = next(o["id"] for o in obs if o["version"].startswith("fix:"))
-        receipt = cmt(8801, 401, NOW + M, f"/ack {oid}")
-        h.run(f, NOW + 2 * M, comments=[receipt])
-        again = next(o for o in h.obs("J-500", kind="fix") if o["id"] == oid)
-        self.assertIsNone(again["ack"])
-        self.assertEqual(again["seen"]["how"], "/ack")
-        self.assertTrue(R.is_open(again))
+        h.run(f, NOW)   # before the cutover: the reconciler's own FIX obligation
+        (old,) = [o for o in h.obs("J-500", kind="fix") if o["version"].startswith("fix:")]
+        self.assertTrue(R.is_open(old))
+        h.plan_live = True
+        h.run(f, NOW + M)
+        old = next(o for o in h.obs("J-500", kind="fix") if o["id"] == old["id"])
+        self.assertEqual((old["ack"], old["closed"]["why"]), (None, R.TABLE_OWNS))   # closed as the table's, not acked
+        h.run(f, NOW + 2 * M, comments=[cmt(8801, 401, NOW + M, f"/ack {old['id']}")])
+        self.assertFalse([o for o in h.obs("J-500", NOW + 2 * M) if R.is_live(o) and o["kind"] != "ask"])
+        h2 = Harness()
+        h2.plan_live = True
+        h2.run(f, NOW)
+        self.assertEqual(h2.obs("J-500"), [])   # live from the start: nothing the table gates is raised here
 
 
 class AckedStaysQuiet(unittest.TestCase):

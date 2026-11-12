@@ -260,6 +260,18 @@ class Sweep(unittest.TestCase):
                 test_sweep_calls.sweep(gh, self.state())
             self.assertEqual(counted.call_count, want, name)
 
+    def test_live_a_proof_run_counts_on_a_branch_naming_a_muse_job_of_the_plan(self):   # muse.md's block is gone
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            (root / "work").mkdir()
+            (root / "work/plan.md").write_text("limit muse 2\nlimit claude 1\nJ-501 muse #501 | Muse's\n"
+                                              "J-601 claude #601 | Claude's\n", encoding="utf-8")
+            sw = test_inbox.make(test_sweep_calls.CountingGH(self.prs))
+            sw.root, sw.plan_mode = root, lambda: "live"
+            for name, want in (("fb-bot/integrate-j501-door", True), ("claude/integrate-j601", False)):
+                delta = switch.SweepDelta(set(), 0, set(), set(), active={name})
+                self.assertEqual(sw.queue_started(delta, False), want, name)
+
     def test_a_full_pass_counts(self):
         gh = test_sweep_calls.CountingGH(self.prs)
         with mock.patch.object(switch.Switch, "queue_check", autospec=True, return_value=()) as counted:
@@ -275,8 +287,6 @@ class Cli(unittest.TestCase):
         gh.get = lambda path, accept="": (
             {"items": [{"number": 63, "title": "J-063 chest", "state": "open"}]} if path.startswith("search/issues")
             else gh.route(path))
-        for n in range(500, 503):
-            gh.issues[n]["labels"] = [{"name": "owner:muse"}]
         text = queue(3, extra=" after J-063 lands") + "Parked: J-053 #82 (on Grok).\n"
         gh.by_issue[82] = [test_inbox.comment(5, 82, "To Grok: the bar\nmore")]
         with tempfile.TemporaryDirectory() as d:
@@ -296,51 +306,8 @@ class Cli(unittest.TestCase):
         ])
 
 
-class Owners(unittest.TestCase):
-    """11-12: a helper took J-109 and J-038 by mail while Muse's queue and the issues' owner: labels still said
-    Muse's, and Muse built J-109 a second time. The queue check now lists that hole, and bare J-NNN issues."""
-
-    class GH:
-        repo = REPO
-
-        def __init__(self, issues):
-            self.issues = issues
-
-        def get(self, path, accept=""):
-            if path.startswith("search/issues"):
-                return {"items": [i for i in self.issues.values() if "pull_request" not in i]}
-            return self.issues.get(int(path.rsplit("/", 1)[1]))
-
-    @staticmethod
-    def issue(n, title, *labels, state="open", pr=False):
-        got = {"number": n, "title": title, "state": state, "labels": [{"name": lab} for lab in labels]}
-        return dict(got, pull_request={}) if pr else got
-
-    def test_a_queued_job_another_owner_holds_is_listed(self):
-        gh = self.GH({
-            1: self.issue(1, "J-201 ours", "job", "owner:muse"),
-            2: self.issue(2, "J-202 taken", "job", "owner:claude"),
-            3: self.issue(3, "J-203 bare"),
-            4: self.issue(4, "J-204 done", "job", "owner:claude", state="closed"),
-            9: self.issue(9, "J-205 its PR", pr=True),
-            5: self.issue(5, "J-205 taken too", "job", "owner:claude"),
-        })
-        text = ("Finish (in flight): J-201 #1, J-202 #2, J-204 #4, J-205 #9 (its PR).\n"
-                "Unstarted, in order:\n1. J-203 #3: bare.\n")
-        self.assertEqual(muse_queue.owner_mismatches(gh, text), [
-            "J-202 #2: Muse's queue lists it; its issue says owner:claude",
-            "J-205 #9: Muse's queue lists it; its issue says owner:claude",
-            "J-203 #3: Muse's queue lists it; its issue says no owner: label",
-        ])
-
-    def test_the_parked_line_and_other_lines_are_not_muses_work(self):
-        gh = self.GH({2: self.issue(2, "J-202 taken", "job", "owner:claude")})
-        self.assertEqual(muse_queue.owner_mismatches(gh, "Parked: J-202 #2.\nNot yours: J-202 #2.\n"), [])
-
-    def test_a_bare_job_issue_is_listed_and_prs_and_labelled_ones_are_not(self):
-        issues = [self.issue(1, "J-128: bare"), self.issue(2, "J-129 labelled", "job"),
-                  self.issue(3, "J-130 a PR", pr=True), self.issue(4, "Board: live jobs (4)")]
-        self.assertEqual(muse_queue.unlabeled(issues), ["#1 J-128: bare"])
+# The owner checks' scenarios (another owner's job, the parked line, a bare J-NNN issue) moved with the checks to
+# the job machine at the cutover: test_machine.Owners.
 
 
 if __name__ == "__main__":

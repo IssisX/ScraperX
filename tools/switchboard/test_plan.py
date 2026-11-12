@@ -105,10 +105,12 @@ class PlanTests(unittest.TestCase):
                   branches=["fb-bot/wip-j101", "fb-bot/integrate-j102"])
         self.assertEqual(machine.wip(self.model, self.table)["muse"], (2, 1))
 
-    def test_view_changes_when_job_body_changes(self):
+    def test_view_changes_when_a_line_changes_and_never_with_a_job_body(self):   # the order is work/plan.md alone
         p = plan.parse(self.text)
-        self.assertNotEqual(machine.order_version(p, "muse", {"J-101": "old"}),
-                            machine.order_version(p, "muse", {"J-101": "new"}))
+        self.assertNotEqual(machine.order_version(p, "muse"),
+                            machine.order_version(plan.parse(self.text.replace("J-101 muse #101", "J-101 muse #101 "
+                                                                               "hold: wait")), "muse"))
+        self.assertEqual(machine.versions(p), {o: machine.order_version(p, o) for o in p.limits})
 
     def test_pr_state_beats_unstarted(self):
         pr = {"number": 7, "body": "Job: J-101\n", "state": "open", "head": {"ref": "fb-bot/integrate-j101", "sha": "x"}}

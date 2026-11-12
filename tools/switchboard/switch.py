@@ -1774,26 +1774,26 @@ class Switch:
             model = self.read_plan()
             reads = self.plan_reads(model)
             works = work_reader.read(self, model, reads, list(steered))
-            mail = mail_reader.read(self, model, reads)
             notes = self.plan_notice_comments(model, reads)   # the switch's own notices: never lost to a read window
-            mail = dataclasses.replace(
-                mail, notices=tuple(sorted(set(mail.notices) | set(machine.sent_notices(notes)), key=lambda n: n[2])),
-                receipts={**machine.recorded_receipts(notes), **mail.receipts})
+            mail = mail_reader.read(self, model, reads, also=notes)   # posts and notices from one comment set
+            mail = dataclasses.replace(mail, receipts={**machine.recorded_receipts(notes), **mail.receipts})
             rows = machine.table(model, machine.collect(model, reads, works=works, mail=mail,
                                                         planned_at=reads.get("planned_at")))
             memo = self.__dict__["_plan_table"] = (model, reads, mail, rows)
         return memo
 
     def plan_notice_comments(self, model, reads) -> list[dict]:
-        """The comments that can hold the switch's plan notices: the live board's, and, only while the live board
-        holds no notice of a mail owner's present version, the closed boards' too (a board closes at 100 comments;
-        a notice sent on the last one is still sent, and is not sent again)."""
+        """The comments that can hold the switch's plan marks: the live board's, and, only while the live board
+        holds no mark of an owner's present version, the closed boards' too (a board closes at 100 comments; a
+        notice sent on the last one is still sent, and is not sent again; the receipt filed beside it is read with
+        it, as mail_reader reads these comments too)."""
         memo = self.__dict__.get("_plan_notes")
         if memo is None:
             memo = list(self.board_comments())
-            vers = machine.versions(model, reads["issues"])
-            sent = {(o, v) for o, v, _ in machine.sent_notices(memo)}
-            if any((o, vers[o]) not in sent for o in machine.MAIL_OWNERS & {ln.owner for ln in model.lines}):
+            vers = machine.versions(model)
+            sent = {(n.owner, n.ver) for n in machine.sent_notices(memo)}
+            marked = (machine.MAIL_OWNERS | machine.SELF_TOLD) & {ln.owner for ln in model.lines}
+            if any((o, vers[o]) not in sent for o in marked):
                 for old in self.old_boards():
                     memo += self.bounded_comments(old, MAX_OLD_BOARD_PAGES)
             self.__dict__["_plan_notes"] = memo
@@ -1836,8 +1836,13 @@ class Switch:
             self.out(f"PLAN-LABEL  #{number} add {', '.join(add) or '-'}; remove {', '.join(remove) or '-'}")
         notices, receipts = [], []
         notes = self.plan_notice_comments(model, reads)
-        vers = machine.versions(model, reads["issues"])
-        for owner in sorted(machine.MAIL_OWNERS & {ln.owner for ln in model.lines}):
+        vers = machine.versions(model)
+        owners = {ln.owner for ln in model.lines}
+        seen = [o for o in sorted(machine.SELF_TOLD & owners)   # each job's clock needs its line's first-seen time
+                if not any(n.ver == vers[o] for n in machine.marks(mail, o))]
+        for owner in seen:
+            self.out(f"PLAN-SEEN   {owner} plan {vers[owner]}" + ("" if mode == "live" else " (shadow: not written)"))
+        for owner in sorted(machine.MAIL_OWNERS & owners):
             ver = vers[owner]
             sent = machine.notice_at(mail, owner, ver)
             answer = machine.receipt_post(mail, ver, sent) if sent else None
@@ -1865,7 +1870,12 @@ class Switch:
                 self.gh.write("PATCH", f"repos/{self.gh.repo}/issues/comments/{c['id']}",
                               {"body": f"{c.get('body') or ''}\n{mark}"}, f"plan: record {owner}'s receipt of plan {ver}")
         for owner, ver, text, resend in notices:
-            self.send_plan_notice(model, owner, ver, text, resend)
+            self.send_plan_notice(model, mail, owner, ver, text, resend, reads.get("planned_at"))
+        for owner in seen:
+            mark = machine.NOTICE_MARK.format(owner=owner, ver=vers[owner], jobs=machine.mark_jobs(
+                model, mail, owner, self.now, reads.get("planned_at")))
+            self.gh.comment(self.board_issue(), f"{machine.SELF_HEAD.format(ver=vers[owner], owner=owner)}\n\n{mark}",
+                            f"plan: record plan {vers[owner]} for {owner} on #{self.board_issue()}")
         for number, add, remove in changes[:MAX_PLAN_LABELS]:
             if add:
                 self.gh.write("POST", f"repos/{self.gh.repo}/issues/{number}/labels", {"labels": list(add)},
@@ -1876,11 +1886,12 @@ class Switch:
                               f"plan: take {name} off #{number}")
         self.write_plan_board(board)
 
-    def send_plan_notice(self, model, owner: str, ver: str, text: str, resend: bool) -> None:
+    def send_plan_notice(self, model, mail, owner: str, ver: str, text: str, resend: bool, planned_at=None) -> None:
         """One plan notice to a mail owner, on the board, the way muse() sends: the comment, then the wake:muse
-        label, then the marker (so a failed label leaves no marker and the next pass sends it again)."""
+        label, then the marker (so a failed label leaves no marker and the next pass sends it again). The marker
+        carries each job's line hash and when it was first told and acknowledged (machine.mark_jobs)."""
         where = self.board_issue()
-        jobs = ",".join(ln.job for ln in model.owner_lines(owner))
+        jobs = machine.mark_jobs(model, mail, owner, self.now, planned_at)
         mark = (machine.NOTICE_AGAIN.format(owner=owner, ver=ver) if resend else
                 machine.NOTICE_MARK.format(owner=owner, ver=ver, jobs=jobs))
         resp = self.gh.comment(where, text, f"plan: notice of plan {ver} to {owner} on #{where}")
@@ -1918,8 +1929,11 @@ class Switch:
         a proof run on a branch that names a queued job (`j0NN`). Reads no GitHub: the delta is the sweep's own."""
         if delta.pipe or new_pr:
             return True
-        nums = {q.num for q in muse_queue.queue_lines(self.queue_text())}
-        return any(f"j{n}" in b.lower() for b in delta.active for n in nums)
+        if self.plan_mode() == "live":   # the queue is Muse's lines of work/plan.md, not muse.md's old block
+            jobs = {ln.job.lower().replace("-", "") for ln in self.read_plan().lines if ln.owner == "muse"}
+        else:
+            jobs = {f"j{q.num}" for q in muse_queue.queue_lines(self.queue_text())}
+        return any(j in b.lower() for b in delta.active for j in jobs)
 
     def queue_check(self, text: str | None = None) -> tuple[InboxItem, ...]:
         """QUEUE-LOW (J-097, Cory 11-11: "you should be making sure muse DOES NOT RUN LOW ON QUEUE at any point"):
@@ -2857,6 +2871,15 @@ class Switch:
             issue = got
         self.gh.comment(issue["number"], body, f"digest for {today} on #{issue['number']}")
 
+    def blocked_lines(self) -> list[str]:
+        """The digest's blocked jobs. With `plan: live`, the job machine's `blocked` state (a job it comes `after`
+        is not closed), so the hand-set state:blocked label can come off; otherwise that label, as before."""
+        if self.plan_mode() == "live":
+            return [f"#{r.issue} {r.job}: {r.title[:62]} is blocked on {r.why}"
+                    for r in self.plan_table()[3] if r.state == "blocked"]
+        return [f"#{it['number']} {it['title'][:70]} is blocked" for it in self.jobs().values()
+                if any(lab["name"] == "state:blocked" for lab in it["labels"])]
+
     def digest_text(self, today: str) -> str:
         since = self.now - dt.timedelta(hours=24)
         closed = self.gh.paged(f"repos/{self.gh.repo}/pulls?state=closed&base={rules.TRUNK}&sort=updated&direction=desc")[:100]
@@ -2878,9 +2901,7 @@ class Switch:
                     who = pick.agent if pick.route == "ask" else ""
                 if who and who != rules.API_REVIEWER:
                     asked.append(f"#{facts.number} waits on a review from {who}")
-        for it in self.jobs().values():
-            if any(l["name"] == "state:blocked" for l in it["labels"]):
-                waiting.append(f"#{it['number']} {it['title'][:70]} is blocked")
+        waiting += self.blocked_lines()
         entries = self.entries()
         paused = [e.note for e in entries if e.phase == "refused" and e.ts >= since]
         s = money.spent(entries, self.now, "")

@@ -188,7 +188,7 @@ class Fixtures(unittest.TestCase):
 
 class Trust(unittest.TestCase):
     NOW = "2026-11-12T20:00:00Z"
-    VER = machine.order_version(J059_PLAN, "muse", {"J-059": ""})   # what machine.collect computes for these reads
+    VER = machine.order_version(J059_PLAN, "muse")   # what machine.collect computes for these reads
 
     def base(self, extra=()):
         mark = machine.NOTICE_MARK.format(owner="muse", ver=self.VER, jobs="")
@@ -208,7 +208,7 @@ class Trust(unittest.TestCase):
         gh = GH(self.base(forged), absent=["abc1234def", "deadbee1234"])
         mail = mail_reader.read(make(gh, self.NOW), J059_PLAN, j059_reads(full("b1177151")))
         self.assertEqual([p.id for p in mail.posts], [2])
-        self.assertEqual([(o, v) for o, v, _ in mail.notices], [("muse", self.VER)])
+        self.assertEqual([(o, v) for o, v, *_ in mail.notices], [("muse", self.VER)])
         self.assertEqual(mail.missing, {"J-059": "abc1234def"})
         self.assertNotIn("deadbee1234", gh.commits_read())
         rows = machine.collect(J059_PLAN, j059_reads(full("b1177151")), mail=mail)
@@ -265,12 +265,39 @@ class Bounds(unittest.TestCase):
         self.assertEqual([p.id for p in mail.posts], [9999])   # comment 641 on the board: page 7
         self.assertTrue(any("page=7" in g for g in gh.gets))
 
-    def test_more_threads_than_the_bound_raise_rather_than_read_short(self):
-        n = mail_reader.MAIL_THREADS + 1
+    def test_threads_past_the_bound_are_unread_never_a_raise_and_never_no_mail(self):   # Grok #471 hole 8
+        n = mail_reader.MAIL_THREADS + 2
         model = plan.parse("limit muse 9\n" + "".join(f"J-{600 + i} muse #{600 + i} | job {i}\n" for i in range(n)))
-        gh = GH()
-        with self.assertRaisesRegex(RuntimeError, "MAIL_THREADS"):
-            mail_reader.read(make(gh, self.NOW), model, {"issues": [issue(600 + i, "t") for i in range(n)]})
+        issues = [dict(issue(600 + i, f"J-{600 + i} t"), updated_at=f"2026-11-{1 + i % 9:02d}T00:00:00Z")
+                  for i in range(n)]
+        issues[0]["updated_at"] = "2026-11-12T19:00:00Z"   # the newest thread is read first
+        start = comment(7, 600, "**Muse (via email bridge): J-600 started**\n\nstarted.", "2026-11-12T19:00:00Z")
+        gh = GH([start])
+        sw = make(gh, self.NOW)
+        mail = mail_reader.read(sw, model, {"issues": issues})   # returns: nothing raised
+        self.assertEqual((len(mail.unread), mail.bound), (2, mail_reader.MAIL_THREADS))
+        self.assertNotIn("J-600", mail.unread)
+        self.assertEqual([p.id for p in mail.posts], [7])
+        self.assertTrue(any("2 job thread(s) past the" in ln for ln in sw.lines), sw.lines)
+        rows = {r.job: r for r in machine.table(model, machine.collect(model, {"issues": issues}, mail=mail,
+                                                                                planned_at=sw.now - machine.hours(24)))}
+        for job in mail.unread:   # shown unread on the switch's own clock, never as told-and-silent
+            self.assertEqual((rows[job].gate, rows[job].owes), ("mail-unread", "switchboard"), job)
+        self.assertEqual(rows["J-600"].gate, "claimed")
+        lines = machine.alarm_lines(list(rows.values()), sw.now + machine.hours(9999))
+        self.assertEqual(sum("mail thread" in ln for ln in lines), 1)   # one alarm line for the bound, not one per job
+
+    def test_a_receipt_on_a_closed_board_is_read_with_its_notice(self):   # Grok #471 hole 10: the board rolled over
+        ver = machine.order_version(J059_PLAN, "muse")
+        old_board = [comment(1, 300, f"{machine.NOTICE_HEAD}{ver}\n\n" + machine.NOTICE_MARK.format(
+                         owner="muse", ver=ver, jobs=""), "2026-11-10T19:00:00Z", BOT),
+                     comment(2, 300, f"**Muse (via email bridge): plan {ver} read**\n\nread.", "2026-11-10T19:10:00Z")]
+        gh = GH()   # the live board is new and empty; the 24 h window holds neither
+        mail = mail_reader.read(make(gh, self.NOW), J059_PLAN, {"issues": []}, also=old_board)
+        self.assertEqual([p.id for p in mail.posts], [2])
+        ev = machine.collect(J059_PLAN, {"issues": []}, mail=mail)["J-059"]
+        self.assertEqual(ev.receipt_at, dt.datetime(2026, 11, 10, 19, 10, tzinfo=dt.timezone.utc))
+        self.assertEqual(mail_reader.read(make(GH(), self.NOW), J059_PLAN, {"issues": []}).posts, ())   # without it: lost
 
     def test_a_failed_thread_read_raises_never_an_empty_mail(self):
         gh = GH([comment(2, 307, "**Muse (via email bridge): J-059 started**\n\nstarted.", "2026-11-12T19:00:00Z")],
