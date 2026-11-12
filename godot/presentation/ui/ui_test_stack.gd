@@ -292,8 +292,63 @@ func _save(device: int) -> bool:
 # native state it changed.
 # The foreman's radio (the story): his first line comes as the climber steps
 # into S1's cage, opened by the radio's squelch, shows a while and closes;
-# nothing is said before a machine is touched.
+# nothing is said before a machine is touched. The climb then continues to
+# deck 6, where the stack line comes, and to 154, where her locker bursts
+# and the locker line comes. Every line the HUD shows is recorded the frame
+# it shows, so a line that fires mid-climb is not missed by looking after.
+var _radio_seen := {}
+
+func _radio_watch() -> void:
+	var text := String(_main._hud.radio_text)
+	if not text.is_empty():
+		_radio_seen[text] = true
+
+func _radio_heard(needle: String) -> bool:
+	for text in _radio_seen:
+		if String(text).contains(needle):
+			return true
+	return false
+
+# The stage cue, driven on a fresh radio, not the game's: the first rise of
+# her stage out of Pest says the line once, and no later rise, fall, or
+# re-rise says it again.
+func _radio_stage_drive() -> bool:
+	var probe := ForemanRadio.new()
+	var ctx := {"y": 0.0, "support": 0, "matron_released": false,
+		"matron_stage": 0, "beam_seated": false}
+	probe.update(0.016, ctx)
+	if not String(probe.text).is_empty() or int(probe.lines_said) != 0:
+		probe.free()
+		return _fail("the stage cue spoke with her a pest: '%s'" % String(probe.text))
+	ctx["matron_stage"] = 1
+	probe.update(0.016, ctx)
+	if not String(probe.text).contains("She's quiet") or int(probe.lines_said) != 1:
+		probe.free()
+		return _fail("the first stage rise did not say the stage line (the radio read '%s', %d lines)" % [
+			String(probe.text), int(probe.lines_said)])
+	probe.update(10.0, ctx)
+	probe.update(2.0, ctx)
+	ctx["matron_stage"] = 2
+	probe.update(0.016, ctx)
+	if not String(probe.text).is_empty() or int(probe.lines_said) != 1:
+		probe.free()
+		return _fail("the rise to Changed said the stage line again (the radio read '%s', %d lines)" % [
+			String(probe.text), int(probe.lines_said)])
+	ctx["matron_stage"] = 0
+	probe.update(0.016, ctx)
+	ctx["matron_stage"] = 1
+	probe.update(0.016, ctx)
+	if int(probe.lines_said) != 1:
+		probe.free()
+		return _fail("the stage line repeated after falling back to Pest (%d lines)" % int(probe.lines_said))
+	probe.free()
+	return true
+
 func _touch_radio(device: int) -> bool:
+	if not _radio_stage_drive():
+		return false
+	_radio_seen = {}
+	get_tree().process_frame.connect(_radio_watch)
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _go(device, Vector2(10.0, -117.3), 0.3, 40.0):
 		return _fail("the walk across the yard to S1 stalled at %s" % str(_position()))
@@ -311,24 +366,53 @@ func _touch_radio(device: int) -> bool:
 	if String(_main._hud.radio_who).is_empty():
 		return _fail("the line shows with nobody named as its speaker")
 	await _pose("radio_first_line")
+	# Ride S1 to deck 2; the first line closes on the way up.
+	var legs := {}
+	if not await _stack_s1_ride(device, legs):
+		return false
 	var closed: bool = await _wait_until(func() -> bool: return String(_main._hud.radio_text).is_empty(), 12.0)
 	if not closed:
 		return _fail("the foreman's line never closed")
 	if int(_main._audio.radio_cues) < 2:
 		return _fail("the channel's click was not heard as the line closed")
-	_detail = "lines=%d cues=%d" % [int(_main._radio.lines_said), int(_main._audio.radio_cues)]
+	# C1 and the duct to deck 3, the monorail and the davit's ladder to
+	# deck 4, then S2 to deck 6, where the foreman grumbles.
+	if not await _stack_deck2_to_deck4(device, legs):
+		return false
+	if not await _stack_s2(device):
+		return false
+	var at_deck6 := _position().y
+	var stack_heard: bool = await _wait_until(func() -> bool: return _radio_heard("Get down"), 30.0)
+	if not stack_heard:
+		return _fail("deck 6 did not bring the foreman's stack line (heard %s)" % str(_radio_seen.keys()))
+	# C2 to deck 8, S3 to deck 12, C3 to deck 14, where her locker bursts.
+	if not await _stack_c2(device):
+		return false
+	if not await _stack_s3(device):
+		return false
+	if not await _stack_c3(device):
+		return false
+	var at_deck14 := _position().y
+	var released: bool = await _wait_until(
+		func() -> bool: return bool(_native().get_matron_state()["released"]), 60.0)
+	if not released:
+		return _fail("on deck 14 she never came out of her locker (state %d)" % int(_native().get_matron_state()["state"]))
+	var locker_heard: bool = await _wait_until(func() -> bool: return _radio_heard("What was that?"), 90.0)
+	if not locker_heard:
+		return _fail("her locker bursting did not bring the foreman's locker line (heard %s)" % str(_radio_seen.keys()))
+	if int(_native().get_death_count()) != 0:
+		return _fail("the climber died %d times on the way to 154" % int(_native().get_death_count()))
+	_detail = "lines=%d cues=%d heard=%s deck6_y=%.2f deck14_y=%.2f" % [
+		int(_main._radio.lines_said), int(_main._audio.radio_cues), str(_radio_seen.keys()),
+		at_deck6, at_deck14]
 	return true
 
 
-func _stack(device: int) -> bool:
-	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
-	var body := _watch_body()
-	var started := int(_native().get_tick_index())
-	# S1, the water-balance hoist.
-	if not await _go(device, Vector2(10.0, -117.3), 0.3, 40.0):
-		return _fail("the walk across the yard to S1 stalled at %s" % str(_position()))
-	if not await _go(device, Vector2(10.0, -120.8), 0.1, 6.0):
-		return _fail("the step into S1's cage and onto its plate stalled at %s" % str(_position()))
+# S1's ride, from its plate to deck 2: the valve pawls open, the bucket
+# fills, the cage rises. `legs` takes the height stood on at deck 2. Shared
+# by the full climb and the radio's climb to 154, which boards the cage for
+# the foreman's first line and then rides it up.
+func _stack_s1_ride(device: int, legs: Dictionary) -> bool:
 	var opened: bool = await _wait_until(func() -> bool:
 		return bool(_native().is_stack_s1_valve_pawled()) and \
 			not bool(_native().is_stack_s1_catch_latched()), 1.5)
@@ -364,6 +448,14 @@ func _stack(device: int) -> bool:
 			int(_native().get_support_entity_id())])
 	var at_deck2 := _position().y
 	await _pose("stack_deck2")
+	legs["deck2"] = at_deck2
+	return true
+
+
+# Deck 2 to deck 4: C1, the duct, the vent stack, the monorail and the
+# davit's ladder. `legs` takes the height stood on at deck 4. Shared by the
+# full climb and the radio's climb to 154.
+func _stack_deck2_to_deck4(device: int, legs: Dictionary) -> bool:
 	# C1, the facade: out onto the landing, round the cabinet, up onto it.
 	if not await _go(device, Vector2(21.2, -124.4), 0.15, 20.0) or \
 			not await _go(device, Vector2(21.2, -121.3), 0.15, 6.0) or \
@@ -443,6 +535,26 @@ func _stack(device: int) -> bool:
 			int(_native().get_support_entity_id())])
 	await _pose("stack_deck4")
 	var at_deck4 := _position().y
+	legs["deck4"] = at_deck4
+	return true
+
+
+func _stack(device: int) -> bool:
+	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
+	var body := _watch_body()
+	var started := int(_native().get_tick_index())
+	# S1, the water-balance hoist.
+	if not await _go(device, Vector2(10.0, -117.3), 0.3, 40.0):
+		return _fail("the walk across the yard to S1 stalled at %s" % str(_position()))
+	if not await _go(device, Vector2(10.0, -120.8), 0.1, 6.0):
+		return _fail("the step into S1's cage and onto its plate stalled at %s" % str(_position()))
+	var legs := {}
+	if not await _stack_s1_ride(device, legs):
+		return false
+	if not await _stack_deck2_to_deck4(device, legs):
+		return false
+	var at_deck2 := float(legs["deck2"])
+	var at_deck4 := float(legs["deck4"])
 
 	# Continue upward through the full Stack sequence to Deck 14, then the AS-006 well to Ring 220.
 	if not await _stack_s2(device):

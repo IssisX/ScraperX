@@ -557,6 +557,7 @@ func _process(delta: float) -> void:
 		"y": climber.y,
 		"support": int(_native.get_support_entity_id()),
 		"matron_released": bool(her["released"]),
+		"matron_stage": int(her.get("stage", 0)),
 		"beam_seated": int(_native.get_summit_state()["ending"]) >= 1,
 	})
 	# Where she is, from his eyes, once she is out (Cory's playtest: he lost

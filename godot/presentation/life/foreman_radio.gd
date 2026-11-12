@@ -23,6 +23,7 @@ const LINES := {
 	&"s1_cage": "Miller? It's Saturday. What are you doing on my tower?",
 	&"stack": "Get down before somebody sees you.",
 	&"locker": "What was that? Miller, get away from that locker.",
+	&"stage_up": "She's quiet. Keep it that way.",
 	&"ring_220": "Don't come down. She's below you. The only way off is the top.",
 }
 
@@ -30,6 +31,7 @@ var text := ""         # the line showing; "" between lines
 var who := ""
 var lines_said := 0    # for the tests
 var _said := {}        # beat -> true, once it has been queued
+var _last_stage := 0   # the highest stage seen, so the stage line fires once, on the first rise out of Pest
 var _queue: Array[StringName] = []
 var _left := 0.0       # seconds the line showing has to run
 var _gap := 0.0        # seconds of air between lines
@@ -41,7 +43,8 @@ func setup(audio) -> void:
 
 
 # `ctx`: y (the climber's height, m), support (the entity underfoot),
-# matron_released (she is out of her locker).
+# matron_released (she is out of her locker), matron_stage (her stage as
+# the sim exposes it, 0 Pest, 1 Dangerous, 2 Changed; never a rage number).
 func update(delta: float, ctx: Dictionary) -> void:
 	_watch(ctx)
 	if _left > 0.0:
@@ -89,6 +92,13 @@ func _watch(ctx: Dictionary) -> void:
 	# Her locker bursts open at 154 m: he hears it over the deck intercom.
 	if released:
 		_cue(&"locker")
+	# Her stage, as the sim exposes it (MatronSnapshot.stage, never a rage
+	# number): the first rise out of Pest, once a launch, whatever it rises
+	# to next or falls back to after.
+	var stage_now := int(ctx.get("matron_stage", 0))
+	if stage_now > _last_stage and stage_now >= 1:
+		_cue(&"stage_up")
+	_last_stage = maxi(_last_stage, stage_now)
 	# The 220 ring with her out below: the lifeline.
 	if released and y > 220.5:
 		_cue(&"ring_220")
