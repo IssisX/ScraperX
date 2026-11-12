@@ -312,6 +312,7 @@ class Pass:
     # comment it read as a possible ask, and the (comment id, holder) of each ask it found, answered or not
     examined: set = dataclasses.field(default_factory=set)
     asks_read: set = dataclasses.field(default_factory=set)
+    asks_closed: set = dataclasses.field(default_factory=set)   # (comment id, holder) of asks a PR's close answered
 
 
 class Lookups:
@@ -506,9 +507,13 @@ def stream_asks(p: Pass, own: set[str], roster: L.Roster | None = None, thread_j
               for c in sorted(p.comments, key=lambda c: (c.t, c.id)) if c.id not in own]
     judge = L.ask_judge(roster, thread_job or {}) if roster is not None else {}
     who = judge.get("who") or (lambda name: name.lower())
-    p.examined, p.asks_read = set(), set()
+    p.examined, p.asks_read, p.asks_closed = set(), set(), set()
     out = []
-    for a in asks.read(stream, set(p.open_threads), p.now - L.LIVE, examined=p.examined, **judge):
+    for a in asks.read(stream, set(p.open_threads), p.now - L.LIVE, examined=p.examined,
+                       closed=getattr(p.feed, "closed", None) or {}, **judge):
+        if a["answer"] == asks.PR_CLOSED:   # no reply acks it: evidence() closes it (as the ledger drops it)
+            p.asks_closed.add((a["id"], who(a["target"])))
+            continue
         p.asks_read.add((a["id"], who(a["target"])))
         out.append(L.AskIn(a["id"], a["n"], "", a["target"], a["a"], a["t"]))
     return out
@@ -608,6 +613,16 @@ def waiting_wants(pr: L.PrIn, fixer: str, author: str, roster: L.Roster) -> list
     return out
 
 
+def fixer_of(ref: str, owner: str, author: str) -> str:
+    """Who fixes a head: the job's owner (a reassignment moves the work), else the branch's author, else Claude.
+    A claude/ head is always Claude's (switch.owner_of routes the same way): Muse cannot push to it, so mailing
+    her its red or FIX only cost her a turn to ack "helper's branch, not Muse's" (11-11, J-085: owner:muse, and
+    claude/integrate-protected-j085's reds and #435's Codex FIX went to her mail)."""
+    if ref.startswith("claude/"):
+        return "claude"
+    return owner or author or "claude"
+
+
 def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster, landed: set[str],
            closed: dict[str, str] | None = None) -> tuple[str, list[Want]]:
     """The job's state and the obligations it owes now, from what is open. Pure. `closed` maps a branch whose head
@@ -619,7 +634,7 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
     issue_thread = o.issue.number if o.issue else 0
     for pr in sorted(o.prs, key=lambda x: x.number):
         author = (roster.of_branch(pr.head_ref) or L.Person("", "")).agent
-        fixer = owner or author or "claude"
+        fixer = fixer_of(pr.head_ref, owner, author)
         ref, n, h = f"PR|#{pr.number}", pr.number, pr.head_sha
         if CONFLICT in pr.reasons:
             wants.append(Want("fix", fixer, f"conflict:{h}", ref, n, f"#{n} has a {CONFLICT}", "new-head|reply|ack"))
@@ -653,7 +668,7 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
     for b, run in o.branches:
         if b.name in landed:
             continue
-        fixer = owner or (roster.of_branch(b.name) or L.Person("", "")).agent or "claude"
+        fixer = fixer_of(b.name, owner, (roster.of_branch(b.name) or L.Person("", "")).agent)
         ref, n = f"BRANCH|{b.name}", issue_thread
         if b.name in closed:   # its PR was closed at this very head: not landed, and nothing reopens it by itself
             m = re.search(r"#(\d+)", closed[b.name])
@@ -908,7 +923,7 @@ class Seen:
         self.branches = {b.name: b for b in f.branches}
         self.issues = {i.number: i for i in f.issues}
         self.open_threads = p.open_threads
-        self.examined, self.asks_read = p.examined, p.asks_read
+        self.examined, self.asks_read, self.asks_closed = p.examined, p.asks_read, p.asks_closed
         self.heads = dict(f.open_heads) | {pr.head_ref: pr.number for pr in f.prs}
         self.runs: dict[str, L.RunIn] = {}
         for r in sorted(f.runs, key=lambda r: r.created_at):
@@ -949,6 +964,8 @@ def evidence(ob: dict, o: JobObs | None, seen: Seen, rec: dict, now: dt.datetime
         n = ob["thread"]   # but an ask on a thread that closed is over (the J-072 replay: #107's asks were
         if seen.open_threads is not None and n not in seen.open_threads and seen.issue(n).get("state") == "closed":
             return f"close:{THREAD_CLOSED}"   # re-sent and dead-lettered after the board moved to #340)
+        if (version, ob["to"]) in seen.asks_closed:
+            return f"close:{asks.PR_CLOSED}"   # a status ask to the integrator whose PR merged or closed (asks.py)
         if version in seen.examined and (version, ob["to"]) not in seen.asks_read:
             # the judge read this very comment this pass and it asks this holder nothing: a sentence that says
             # "To Grok asks", or a post that names an ask from its addressee, its answer (tools/board/asks.py)

@@ -280,11 +280,23 @@ FAIL_LOG_JOBS = ("native-tests", "godot-touch")   # the jobs whose logs name the
 MAX_FAIL_LINES = 6       # unique FAIL lines per job in a notice
 MAX_FAIL_JOBS = 8        # job logs read per proof run
 MAX_FAIL_CHARS = 200     # of one FAIL line
-MAX_LOG_FAILURES = 2     # log reads that fail in one sweep before the rest are not tried (each has ghapi's timeouts)
+# A log read that fails never stops reads of other runs' logs. Only a timeout (ghapi.TimedOut: a GitHub that hangs,
+# up to GET_ATTEMPTS x TIMEOUT_S each) counts against the sweep; any other failure (an answer: a 4xx at once, else
+# three quick tries) counts against its own run only. Before (11-11): any two failures in a sweep, on one old run,
+# left every later notice "log unread" with no read tried.
+MAX_LOG_FAILURES = 2      # log reads that time out in one sweep before no more are tried
+MAX_RUN_LOG_FAILURES = 2  # log reads that fail in one proof run before its other jobs' logs are not tried
+MAX_ERR_CHARS = 200       # of gh's error text in a NOTE line
 NATIVE_FAIL = re.compile(r"\bFAIL: .*")
 TOUCH_FAIL = re.compile(r"\bSCRAPERX_UITEST FAIL\b.*")
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 LOG_UNREAD = "log unread"
+# A red notice that went out with a log unread is keyed apart (InboxItem.key): a later sweep that reads the lines posts
+# the notice once more, with them, under the plain key. So once per head and per reading, never more than twice.
+UNREAD_KEY = "+unread"
+READ_NOW = "the failing tests, read now (their logs were unread at the first notice)"
+URL_QUERY = re.compile(r"(https?://[^\s?#\"']+)[?#][^\s\"']*")   # a signed blob URL's query is a credential
+TOKENISH = re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9_]{10,}|github_pat_[A-Za-z0-9_]{10,})")
 
 
 def fail_lines(log: str, job: str) -> tuple[list[str], int]:
@@ -305,6 +317,15 @@ def log_text(text: str, limit: int = MAX_FAIL_CHARS) -> str:
     clean = "".join(ch for ch in text.replace("`", "'") if ch.isprintable() and ch not in "@<>")
     clean = no_verdict(clean)
     return clean if len(clean) <= limit else clean[:limit - 3] + "..."
+
+
+def err_text(err: Exception) -> str:
+    """Why a read failed, for a NOTE line: the exception's kind, its HTTP status when known, and gh's error text on
+    one line, with no URL query or token-shaped text, at most MAX_ERR_CHARS."""
+    detail = " ".join(str(getattr(err, "detail", "") or err).split())
+    detail = TOKENISH.sub("[token]", URL_QUERY.sub(r"\1?[cut]", detail))
+    status = getattr(err, "status", 0)
+    return f"{type(err).__name__}{f' HTTP {status}' if status else ''}: {log_text(detail, MAX_ERR_CHARS) or '-'}"
 
 
 def setup_only(jobs: list[dict]) -> str:
@@ -399,14 +420,37 @@ class InboxItem:
     dest: str = "claude"   # who it goes to: "muse", "claude", or "both" (J-052)
     finding: str = ""      # for a FIX: the finding's first 600 chars and its link, for Muse's comment
     tests: tuple[str, ...] = ()   # for a red: "<job>: <FAIL line>" per failing test (J-104), already log_text
+    # for a red whose logs this audience may want: its proof run, so muse() reads them only once it knows the item
+    # is not sent yet (its keys are on the board and the job issues, read after the items are built)
+    run_id: int | None = dataclasses.field(default=None, compare=False)
+
+    @property
+    def unread(self) -> str:
+        """UNREAD_KEY when a failing test job's log went unread, else "": that notice is keyed apart, so a later sweep
+        that reads the lines posts them once under the plain key (J-104)."""
+        return UNREAD_KEY if any(t.endswith(f": {LOG_UNREAD}") for t in self.tests) else ""
 
     @property
     def key(self) -> str:
-        return inbox_key(self.kind, self.target, self.head)
+        return inbox_key(self.kind + self.unread, self.target, self.head)
+
+    def listed(self, seen, prefix: str = "") -> bool:
+        """Listed before: under its own key, or under the plain key (the lines went out already, or the notice went out
+        before UNREAD_KEY existed), so a log unread now never sends a notice again."""
+        return inbox_key(prefix + self.kind + self.unread, self.target, self.head) in seen \
+            or inbox_key(prefix + self.kind, self.target, self.head) in seen
+
+    def read_now(self, reported, prefix: str = "") -> "InboxItem":
+        """This item, its line saying READ_NOW when its tests read and an earlier notice at this head went out with
+        a log unread (that notice's key is in `reported`)."""
+        if self.tests and not self.unread and inbox_key(prefix + self.kind + UNREAD_KEY, self.target, self.head) \
+                in reported:
+            return dataclasses.replace(self, line=f"{self.line}; {READ_NOW}")
+        return self
 
     @property
     def muse_key(self) -> str:
-        return inbox_key("muse-" + self.kind, self.target, self.head)
+        return inbox_key("muse-" + self.kind + self.unread, self.target, self.head)
 
 
 def queue_item_record(items: tuple[InboxItem, ...]) -> dict | None:
@@ -455,6 +499,7 @@ def inbox_body(items: list[InboxItem], held: int, keys: list[str], when: str,
 
 
 class Switch:
+    defer_logs = False   # muse() builds its items with no log read, then reads the logs of the unsent ones (J-104)
     auto_pr_failed: tuple[InboxItem, ...] = ()   # this sweep's AUTO-PR-FAILED items, for the inbox (J-051)
     queue_items: tuple[InboxItem, ...] = ()      # this sweep's QUEUE-LOW item, for the inbox (J-097)
     digest_held: tuple[InboxItem, ...] = ()      # digest entries no inbox comment has carried yet (J-103), in the state
@@ -599,8 +644,9 @@ class Switch:
         """J-104: the failing tests of one red proof run, for its notice: for each failed native-tests or godot-touch
         job (at most MAX_FAIL_JOBS), "<job>: <FAIL line>" per unique FAIL line (fail_lines), read from the job's log
         through the switch's own client and its timeouts. Read once per run, for both audiences (memo). A log that
-        cannot be read never stops the notice: its line says LOG_UNREAD, and after MAX_LOG_FAILURES failed reads in
-        a sweep no more are tried, so a GitHub that hangs costs the sweep a bounded wait."""
+        cannot be read never stops the notice: its line says LOG_UNREAD and the NOTE line says why (err_text). After
+        MAX_LOG_FAILURES timed-out reads in a sweep no more are tried, so a GitHub that hangs costs the sweep a bounded
+        wait; any other failure stops only its own run's reads, after MAX_RUN_LOG_FAILURES."""
         memo = self.__dict__.setdefault("_red_tests", {})
         if run_id in memo:
             return memo[run_id]
@@ -611,17 +657,20 @@ class Switch:
             jobs = []
         failed = [j for j in jobs if (j.get("name") or "").startswith(FAIL_LOG_JOBS)
                   and j.get("conclusion") not in ("success", "skipped", "cancelled", None)]
+        failures = 0   # this run's failed reads
         for j in failed[:MAX_FAIL_JOBS]:
             name = log_text(j.get("name") or "?", 60)
-            if self.__dict__.get("_log_failures", 0) >= MAX_LOG_FAILURES:
+            if self.__dict__.get("_log_timeouts", 0) >= MAX_LOG_FAILURES or failures >= MAX_RUN_LOG_FAILURES:
                 out.append(f"{name}: {LOG_UNREAD}")
                 continue
             try:
                 log = self.gh.get_bytes(f"repos/{self.gh.repo}/actions/jobs/{int(j['id'])}/logs")
                 text = log.decode("utf-8", "replace") if isinstance(log, (bytes, bytearray)) else str(log or "")
             except Exception as err:   # noqa: BLE001  a refused, missing or timed-out log: the notice still goes
-                self._log_failures = self.__dict__.get("_log_failures", 0) + 1
-                self.out(f"NOTE        the log of {name} in proof run {run_id} was not read ({type(err).__name__})")
+                failures += 1
+                if isinstance(err, ghapi.TimedOut):
+                    self._log_timeouts = self.__dict__.get("_log_timeouts", 0) + 1
+                self.out(f"NOTE        the log of {name} in proof run {run_id} was not read ({err_text(err)})")
                 out.append(f"{name}: {LOG_UNREAD}")
                 continue
             lines, more = fail_lines(text, j.get("name") or "")
@@ -1297,9 +1346,9 @@ class Switch:
         seen = set(reported)
         new: list[InboxItem] = []
         for it in self.inbox_items(steered, frozenset(reported)):
-            if it.key not in seen:
+            if not it.listed(seen):
                 seen.add(it.key)
-                new.append(it)
+                new.append(it.read_now(seen))
         wake = [it for it in new if it.kind not in DIGEST_KINDS]
         held: dict[str, InboxItem] = {}
         for it in list(self.digest_held) + [it for it in new if it.kind in DIGEST_KINDS]:
@@ -1341,7 +1390,11 @@ class Switch:
         reported: set[str] = set()
         for s in steered:
             reported |= set(self.muse_keys(s.ctx.get("comments") or []))
-        items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
+        self.defer_logs = True   # the keys sent are known only below: no log is read before they are (J-104)
+        try:
+            items = [it for it in self.muse_items(steered, frozenset(reported)) if it.line]
+        finally:
+            self.defer_logs = False
         homes = {f"#{s.facts.number}": self.muse_home(s.ctx) for s in steered}   # 0: no job issue, so the board
         board = self.board_issue() if items else 0
         wheres = {homes.get(it.target) or board for it in items}
@@ -1353,9 +1406,13 @@ class Switch:
                 reported |= set(self.muse_keys(self.bounded_comments(old, MAX_OLD_BOARD_PAGES)))
         seen, new = set(reported), []
         for it in items:
-            if it.muse_key not in seen:
+            if it.run_id is not None and not it.tests:
+                if inbox_key("muse-" + it.kind, it.target, it.head) in seen:
+                    continue   # sent with its tests (or before UNREAD_KEY): its logs are not read again
+                it = dataclasses.replace(it, tests=self.red_tests(it.run_id))
+            if not it.listed(seen, "muse-"):
                 seen.add(it.muse_key)
-                new.append(it)
+                new.append(it.read_now(seen, "muse-"))
         if not new:
             self.out("MUSE        nothing new")
             return 0
@@ -1746,8 +1803,10 @@ class Switch:
             # J-104: a red item names its failing tests, its logs read only when this audience has not had it yet
             fresh = run_id is not None and inbox_key(prefix + kind, target, f.head_sha) not in reported
             wanted = dest in ("muse", "both") if mine else dest in ("claude", "both")
+            read = fresh and wanted
             return InboxItem(kind, target, f.head_sha, f"{kind} {where}: {text}", dest, finding,
-                             self.red_tests(run_id) if fresh and wanted else ())
+                             self.red_tests(run_id) if read and not self.defer_logs else (),
+                             run_id=run_id if read else None)
 
         def kept(it: InboxItem) -> bool:
             return it.dest in ("muse", "both") if mine else it.dest in ("claude", "both")
@@ -1952,7 +2011,8 @@ class Switch:
                 out.append(InboxItem("RED-BRANCH", name, head,
                                      f"RED-BRANCH {untrusted(name)} head {head[:8]}: proof red on "
                                      f"{plain(', '.join(red_jobs(proof)))}, no PR for {hours(self.now - done)} ([proof]({url}))",
-                                     dest, tests=self.red_tests(rid) if wanted else ()))
+                                     dest, tests=self.red_tests(rid) if wanted and not self.defer_logs else (),
+                                     run_id=rid if wanted else None))
         return [it for it in out if (mine and it.dest in ("muse", "both")) or (not mine and it.dest in ("claude", "both"))]
 
     def ask_thread(self, facts: rules.PrFacts, ctx: dict) -> tuple[int, list[dict]]:
