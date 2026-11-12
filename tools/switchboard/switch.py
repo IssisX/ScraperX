@@ -1744,16 +1744,53 @@ class Switch:
             raise RuntimeError("invalid collaboration plan: " + "; ".join(model.errors[:5]))
         return model
 
+    PLAN_COMPARES = 60   # trunk-containment reads per pass for job branches no PR accounts for
+
+    def plan_reads(self, model: "collab_plan.Plan") -> dict:
+        """One read of what the plan is checked against, once per run. `inactive` holds the heads that are history,
+        not work in flight: every closed PR's head (merged or abandoned), and a job branch whose head is already in
+        trunk (compare says behind or identical; a sha-pinned compare never changes, so its ETag keeps it cheap).
+        `merged` holds the jobs with a merged `Job: J-NNN` PR. Without this a landed branch counts as pushed forever."""
+        memo = self.__dict__.get("_plan_reads")
+        if memo is not None:
+            return memo
+        repo = self.gh.repo
+        issues = self.gh.paged(f"repos/{repo}/issues?state=open")
+        branches = list(self.gh.paged(f"repos/{repo}/branches"))
+        prs = self.listing(f"repos/{repo}/pulls?state=open")
+        closed = self.gh.paged(f"repos/{repo}/pulls?state=closed&base={rules.TRUNK}")
+        inactive = {p["head"]["sha"] for p in closed if (p.get("head") or {}).get("sha")}
+        merged = {m.group(1) for p in closed if p.get("merged_at")
+                  if (m := collab_plan.PR_JOB.match(p.get("body") or ""))}
+        jobs = set(model.by_job())
+        open_heads = {(p.get("head") or {}).get("sha") for p in prs}
+        todo = [b for b in branches if collab_plan.job_of_branch(collab_plan.branch_name(b)) in jobs
+                and (sha := collab_plan.branch_sha(b)) and sha not in inactive and sha not in open_heads]
+        for b in todo[:self.PLAN_COMPARES]:
+            sha = collab_plan.branch_sha(b)
+            try:
+                cmp = self.gh.get(f"repos/{repo}/compare/{rules.TRUNK}...{sha}")
+            except GitHubError as err:
+                self.out(f"NOTE        plan: compare {collab_plan.branch_name(b)} failed ({err}); counted as live")
+                continue
+            if (cmp or {}).get("status") in ("behind", "identical"):
+                inactive.add(sha)
+        if len(todo) > self.PLAN_COMPARES:
+            self.out(f"NOTE        plan: {len(todo) - self.PLAN_COMPARES} job branch(es) not compared this pass; counted as live")
+        memo = {"issues": issues, "branches": branches, "prs": prs, "inactive": frozenset(inactive),
+                "merged": frozenset(merged)}
+        self.__dict__["_plan_reads"] = memo
+        return memo
+
     def plan_check(self) -> None:
         """Observe the complete order, including bare jobs, remote work and WIP."""
         self.plan_items = ()
         if self.plan_mode() == "off":
             return
         model = self.read_plan()
-        issues = self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")
-        branches = [b["name"] for b in self.gh.paged(f"repos/{self.gh.repo}/branches")]
-        prs = self.listing(f"repos/{self.gh.repo}/pulls?state=open")
-        problems = collab_plan.findings(model, issues, branches, prs)
+        r = self.plan_reads(model)
+        problems = collab_plan.findings(model, r["issues"], r["branches"], r["prs"],
+                                        inactive=r["inactive"], merged=r["merged"])
         self.out(f"PLAN        {len(model.lines)} orders, {len(problems)} violation(s), mode={self.plan_mode()}")
         for finding in problems[:20]:
             self.out(f"PLAN-BLOCK  {plain(finding[:220])}")
@@ -1790,15 +1827,15 @@ class Switch:
         # remains for the pre-cutover queue parser's regression tests.
         if text is None and self.plan_mode() == "live":
             model = self.read_plan()
-            issues = self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")
-            branches = [b["name"] for b in self.gh.paged(f"repos/{self.gh.repo}/branches")]
-            prs = self.listing(f"repos/{self.gh.repo}/pulls?state=open")
-            problems = collab_plan.findings(model, issues, branches, prs)
+            r = self.plan_reads(model)
+            issues, branches, prs = r["issues"], r["branches"], r["prs"]
+            problems = collab_plan.findings(model, issues, branches, prs, inactive=r["inactive"], merged=r["merged"])
             open_jobs = {m.group(1) for i in issues
                          if (m := re.match(r"^(J-\d{3,}[a-z]?)(?!\w)", i.get("title") or ""))}
             closed = {ln.job for ln in model.lines if ln.job not in open_jobs}
             waiting = [ln.job for ln in model.owner_lines("muse")
-                       if collab_plan.status(ln, closed=closed, prs=prs, branches=branches) == "queued"]
+                       if collab_plan.status(ln, closed=closed, prs=prs, branches=branches, inactive=r["inactive"],
+                                             merged=r["merged"]) == "queued"]
             self.queue_items = ()
             if len(waiting) < muse_queue.LOW_UNDER or problems:
                 line = (f"QUEUE-LOW: {len(waiting)} live-plan ready jobs "

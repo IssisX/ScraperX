@@ -120,27 +120,59 @@ def job_of_branch(ref: str) -> str:
     return "J-" + key
 
 
+def branch_name(ref) -> str:
+    return ref if isinstance(ref, str) else ref.get("name") or ""
+
+
+def branch_sha(ref) -> str:
+    return "" if isinstance(ref, str) else (ref.get("commit") or {}).get("sha") or ref.get("sha") or ""
+
+
+def live_refs(job: str, branches, inactive: set[str] | frozenset[str] = frozenset()) -> list[str]:
+    """Branches that carry unlanded work for `job`. A head that is a merged or closed PR's head, or is already
+    in trunk, is history, not work in flight (it would otherwise count forever). A bare name with no sha
+    cannot be proven landed, so it still counts."""
+    return [branch_name(b) for b in branches
+            if job_of_branch(branch_name(b)) == job and not (branch_sha(b) and branch_sha(b) in inactive)]
+
+
+def _open_pr(job: str, prs) -> bool:
+    return any((m := PR_JOB.match(p.get("body") or "")) and m.group(1) == job
+               for p in prs if p.get("state") != "closed")
+
+
 def status(line: Line, *, closed: set[str] | frozenset[str] = frozenset(),
            prs: tuple[dict, ...] | list[dict] = (), branches: tuple[str, ...] | list[str] = (),
-           started: set[str] | frozenset[str] = frozenset()) -> str:
+           started: set[str] | frozenset[str] = frozenset(),
+           inactive: set[str] | frozenset[str] = frozenset(),
+           merged: set[str] | frozenset[str] = frozenset()) -> str:
+    """done, review, held, pushed, started, landed, waiting or queued. Only started, pushed and review are in
+    flight. A hold outranks remote work (the work stays on its branch, nobody is moving it); it never
+    outranks an open PR, which lands on its proof and reviews like any other."""
     if line.job in closed:
         return "done"
-    if any(PR_JOB.match(p.get("body") or "") and PR_JOB.match(p.get("body") or "").group(1) == line.job
-           for p in prs if p.get("state") != "closed"):
+    if _open_pr(line.job, prs):
         return "review"
-    if any(job_of_branch(b if isinstance(b, str) else b.get("name") or "") == line.job for b in branches):
+    if line.hold:
+        return "held"
+    if live_refs(line.job, branches, inactive):
         return "pushed"
     if line.job in started:
         return "started"
-    if line.hold:
-        return "held"
+    if line.job in merged:
+        return "landed"  # its PRs merged, the issue is still open: close it or say what is left
     if any(dep not in closed for dep in line.after):
         return "waiting"
     return "queued"
 
 
+IN_FLIGHT = frozenset({"started", "pushed", "review"})
+
+
 def findings(plan: Plan, issues: list[dict], branches: list[str], prs: list[dict] = (),
-             started: set[str] | frozenset[str] = frozenset()) -> list[str]:
+             started: set[str] | frozenset[str] = frozenset(),
+             inactive: set[str] | frozenset[str] = frozenset(),
+             merged: set[str] | frozenset[str] = frozenset()) -> list[str]:
     """Fail closed on inconsistent observations; do not silently rewrite the order."""
     errors = list(plan.errors)
     by_job = plan.by_job()
@@ -153,29 +185,22 @@ def findings(plan: Plan, issues: list[dict], branches: list[str], prs: list[dict
             open_issues[m.group(1)] = issue
             if m.group(1) not in by_job:
                 errors.append(f"NO-LINE {m.group(1)} #{issue['number']}")
-    seen_branches: dict[str, set[str]] = {}
-    for ref in branches:
-        name = ref if isinstance(ref, str) else ref.get("name") or ""
-        job = job_of_branch(name)
-        if job:
-            seen_branches.setdefault(job, set()).add(name)
     for line in plan.lines:
         issue = open_issues.get(line.job)
         if issue is None or issue.get("number") != line.issue:
             errors.append(f"NO-ISSUE {line.job} #{line.issue}")
-        refs = seen_branches.get(line.job, set())
+        refs = set(live_refs(line.job, branches, inactive))
         foreign = [b for b in refs if not (b.startswith("fb-bot/") if line.owner == "muse" else
                                            b.startswith(line.owner + "/"))]
         if foreign:
             errors.append(f"NOT-OWNER {line.job}: {', '.join(sorted(foreign))}")
-        if line.job in started and not refs and not any(PR_JOB.match(p.get("body") or "") and
-                                                        PR_JOB.match(p.get("body") or "").group(1) == line.job
-                                                        for p in prs):
+        if line.job in started and not refs and not _open_pr(line.job, prs):
             errors.append(f"UNPUSHED {line.job}: started without a remote head")
     closed = {ln.job for ln in plan.lines if ln.job not in open_issues}
     for owner, limit in plan.limits.items():
-        in_flight = [ln.job for ln in plan.owner_lines(owner) if status(ln, closed=closed, prs=prs,
-                     branches=branches, started=started) in {"started", "pushed", "review"}]
+        in_flight = [ln.job for ln in plan.owner_lines(owner) if status(
+                     ln, closed=closed, prs=prs, branches=branches, started=started, inactive=inactive,
+                     merged=merged) in IN_FLIGHT]
         if len(in_flight) > limit:
             errors.append(f"OVER-LIMIT {owner}: {len(in_flight)}/{limit} jobs in flight")
     return errors

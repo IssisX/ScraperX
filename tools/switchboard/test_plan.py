@@ -95,6 +95,40 @@ class PlanTests(unittest.TestCase):
         x = plan.parse(self.text).by_job()["J-101"]
         self.assertEqual(plan.status(x, prs=[{"body":"Job: J-101\n", "state":"open"}]), "review")
 
+    # False WIP overload from historical branches: a branch whose head is a closed or merged PR's head, or is
+    # already in trunk, is history; a bare name with no sha cannot be proven landed and still counts.
+    def br(self, name, sha):
+        return {"name": name, "commit": {"sha": sha}}
+
+    def test_landed_or_closed_branch_heads_are_not_in_flight(self):
+        p = plan.parse("limit claude 1\nJ-101 claude #101 | one\nJ-102 claude #102 | two\n")
+        issues = [self.issue(101, "J-101"), self.issue(102, "J-102")]
+        branches = [self.br("claude/integrate-j101", "aaa"), self.br("claude/integrate-j102", "bbb")]
+        self.assertTrue(any("OVER-LIMIT claude: 2/1" in x for x in plan.findings(p, issues, branches)))
+        errors = plan.findings(p, issues, branches, inactive={"aaa"}, merged={"J-101"})
+        self.assertFalse(any("OVER-LIMIT" in x for x in errors), errors)
+        self.assertEqual(plan.status(p.by_job()["J-101"], branches=branches, inactive={"aaa"}, merged={"J-101"}),
+                         "landed")
+        self.assertEqual(plan.status(p.by_job()["J-102"], branches=branches, inactive={"aaa"}), "pushed")
+
+    def test_unproven_branch_name_still_counts(self):
+        x = plan.parse(self.text).by_job()["J-101"]
+        self.assertEqual(plan.status(x, branches=["fb-bot/wip-j101"], inactive={"aaa"}), "pushed")
+
+    def test_landed_history_from_another_vendor_is_not_duplicate_ownership(self):
+        p = plan.parse(self.text)
+        issues = [self.issue(n, f"J-{n:03d}") for n in (101, 102, 103)]
+        old = [self.br("claude/integrate-j101", "old")]
+        self.assertFalse(any("NOT-OWNER" in x for x in plan.findings(p, issues, old, inactive={"old"})))
+        live = old + [self.br("claude/integrate-protected-j101", "new")]
+        self.assertTrue(any("NOT-OWNER J-101: claude/integrate-protected-j101" in x
+                            for x in plan.findings(p, issues, live, inactive={"old"})))
+
+    def test_hold_outranks_pushed_work_but_never_an_open_pr(self):
+        x = plan.parse(self.text).by_job()["J-103"]
+        self.assertEqual(plan.status(x, branches=[self.br("claude/integrate-j103", "c")]), "held")
+        self.assertEqual(plan.status(x, prs=[{"body": "Job: J-103\n", "state": "open"}]), "review")
+
 
 if __name__ == "__main__":
     unittest.main()
