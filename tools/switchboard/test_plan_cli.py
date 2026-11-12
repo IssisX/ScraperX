@@ -31,7 +31,8 @@ class Editor(unittest.TestCase):
     def test_recent_flip_requires_reason(self):
         with self.assertRaisesRegex(ValueError, "recently changed"):
             editor.change(SOURCE, "release", ["J-101"], flipped=True)
-        self.assertEqual(editor.change(SOURCE, "release", ["J-101"], flipped=True, again="Cory ordered it"), SOURCE)
+        self.assertIn("J-101 muse #101 | first", editor.change(SOURCE, "release", ["J-101"], flipped=True,
+                                                                  again="Cory ordered it"))
 
     def test_limit_and_move_are_deterministic(self):
         got = editor.change(SOURCE, "limit", ["muse", "3"])
