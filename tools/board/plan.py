@@ -120,7 +120,15 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
     else:
         raise ValueError(f"unsupported change: {action}")
     result = core.Plan(tuple(ls), limits, ())
-    normalized = core.render(result)
+    # The provisional warning and reconciliation evidence are part of the file. Editing
+    # one order must not silently strip every preceding comment or its shadow-only warning.
+    preamble = []
+    for line in source.splitlines(keepends=True):
+        if line.lstrip().startswith("#") or not line.strip():
+            preamble.append(line)
+        else:
+            break
+    normalized = "".join(preamble) + core.render(result)
     errors = core.parse(normalized).errors
     if errors:
         raise ValueError("result invalid: " + "; ".join(errors))
