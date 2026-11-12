@@ -128,6 +128,8 @@ struct Thrown {
     double box_mps = 0.0;    // the piece's fastest in flight
     double box_hit_mps = 0.0;  // the piece's speed when the blow first read
     double box_hit_y = 0.0;    // the piece's height when the blow first read
+    double box_hit_dx = 0.0;   // the piece's east-west offset from her centre at the hit
+    double box_hit_dz = 0.0;   // the piece's north-south offset from her centre at the hit
 };
 // Throws the piece in his hands at her as she hunts in, holding `stage` the
 // whole way; `look_pitch` aims the throw (0 at her chest, down low). The
@@ -210,8 +212,11 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
         if (out.turn_at_hit < 0 && m.blow_mps > 0.0) {
             out.turn_at_hit = m.turn;
             const auto bv = s.kit_body_velocity(body);
+            const auto bp = s.kit_body_position(body);
             out.box_hit_mps = std::hypot(bv.x, bv.y, bv.z);
-            out.box_hit_y = s.kit_body_position(body).y;
+            out.box_hit_y = bp.y;
+            out.box_hit_dx = bp.x - m.position.x;
+            out.box_hit_dz = bp.z - m.position.z;
         }
         const auto bv = s.kit_body_velocity(body);
         out.box_mps = std::max(out.box_mps, std::hypot(bv.x, bv.y, bv.z));
@@ -343,7 +348,8 @@ void run_hard_blow_throw() {
                   << ", knockdowns=" << by_box.knockdowns << ", turn at hit=" << by_box.turn_at_hit
                   << ", release " << by_box.release_m << " m, her speed " << by_box.release_speed
                   << " m/s, stalking " << by_box.release_stalking << ", box max " << by_box.box_mps
-                  << " m/s, at hit " << by_box.box_hit_mps << " m/s at y " << by_box.box_hit_y << "\n";
+                  << " m/s, at hit " << by_box.box_hit_mps << " m/s at y " << by_box.box_hit_y << " ("
+                  << by_box.box_hit_dx << ", " << by_box.box_hit_dz << ") off her centre\n";
         require(by_box.threw, "hard blow throw: the toolbox thrown at a dangerous Matron");
         require(by_box.worst == kStateStaggering && by_box.staggers == 1 && by_box.knockdowns == 0,
                 "hard blow throw: a toolbox only staggers a dangerous Matron");
@@ -363,7 +369,8 @@ void run_hard_blow_throw() {
                   << " m/s, worst=" << by_drum.worst << ", staggers=" << by_drum.staggers
                   << ", knockdowns=" << by_drum.knockdowns << ", turn at hit=" << by_drum.turn_at_hit
                   << ", release " << by_drum.release_m << " m, box max " << by_drum.box_mps << " m/s, at hit "
-                  << by_drum.box_hit_mps << " m/s at y " << by_drum.box_hit_y << "\n";
+                  << by_drum.box_hit_mps << " m/s at y " << by_drum.box_hit_y << " ("
+                  << by_drum.box_hit_dx << ", " << by_drum.box_hit_dz << ") off her centre\n";
         require(by_drum.threw, "hard blow throw: the drum thrown at a fully changed Matron");
         require(by_drum.worst == kStateStaggering && by_drum.staggers == 1 && by_drum.knockdowns == 0,
                 "hard blow throw: a drum she faces only staggers a fully changed Matron");
@@ -390,7 +397,8 @@ void run_hard_blow_low() {
               << " m/s, worst=" << low.worst << ", staggers=" << low.staggers
               << ", knockdowns=" << low.knockdowns << ", turn at hit=" << low.turn_at_hit
               << ", release " << low.release_m << " m, box max " << low.box_mps << " m/s, at hit "
-              << low.box_hit_mps << " m/s at y " << low.box_hit_y << "\n";
+              << low.box_hit_mps << " m/s at y " << low.box_hit_y << " (" << low.box_hit_dx << ", "
+              << low.box_hit_dz << ") off her centre\n";
     require(low.threw, "hard blow low: the drum thrown low at a fully changed Matron");
     require(low.worst == kStateDown && low.knockdowns == 1 && low.staggers == 0,
             "hard blow low: a drum at her shins puts a fully changed Matron down");
