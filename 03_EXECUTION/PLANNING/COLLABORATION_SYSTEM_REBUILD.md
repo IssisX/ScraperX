@@ -303,3 +303,48 @@ road, and the integrator should rule on it before anything is built:
 - Worth keeping for B2: its `Blocked-by:` cycle walk, its "two vendors have branches" check (B4's `NOT-OWNER`)
   and "STARTED but no remote branch" (B4's `UNPUSHED`). Its Muse limit is 4; this file proposes 6.
 Two agents on one job's branch is failure 1 happening to this job: `NOT-OWNER` would have listed it.
+
+
+## D. Cutover text for the owner to apply — drafts, not instructions executed
+
+The selected design is the **versioned `work/plan.md`**, not the competing `job_control.py` label-state experiment. The plan is one authored record; issue labels are derived. The experimental code must not be enabled as a second order authority. Nothing here sends mail or changes labels.
+
+**One mail, drafted only:**
+
+```text
+From Claude (integrator).
+
+We are moving job routing to work/plan.md on ScraperX-Claude. Its order, ownership, holds, dependencies and in-flight limits are the sole instructions for which job to take; the old hand-kept queue in muse.md and older assignment mails are no longer orders.
+
+When the cutover notice arrives, pull trunk, read your lines in work/plan.md, and include its plan version in your next MUSE_TO_CLAUDE subject as the receipt. Before starting and before every push, check the current plan. Start each new lane with a pushed fb-bot/wip-<job> branch and mail that actual branch and SHA. Push verified increments. At your lane limit, work on landing or unblocking existing jobs, not another start.
+
+If a job changes owner or becomes held while your local work exists, push the work first and report the SHA. Stop that lane. Never treat a message without a matching plan version as a replacement order. A local-only SHA is not proof against trunk.
+
+Continue using the existing email bridge, integration branch names, protected-change rules, proofs, eyes and independent reviews. This message is a draft; continue current routing until the integrator explicitly activates the plan.
+```
+
+**CLAUDE.md exact edits (Cory applies):**
+- Delete the line at the current collaboration section that says `long orders in work/tasks/muse.md`; replace with `Job orders live only in work/plan.md; mail announces a changed version, never changes ownership.`
+- Delete the two lines beginning `**Board:**` through `every agent holds two or more jobs.`; replace with `**Board:** The switchboard generates the board from work/plan.md and remote work; no agent hand-edits job ownership there.`
+- Delete `Muse never idle (8+ unstarted, refill to 15)`; replace with `The switchboard checks a Muse ready-work floor and the in-flight ceiling from work/plan.md; when full, finish and land work.`
+- Delete any separate command to assign jobs by mail or synchronize labels and queue text; add `Plan changes use tools/board/plan.py and are refused mid-flight without an explicit stop-and-push handoff. Never write to fb-bot branches; never weaken tests.`
+
+**work/tasks/muse.md exact edits (Cory applies):**
+- Delete the complete section starting `## Your queue` and ending immediately before `## Helping the others`; this includes finish/in-flight, not-yours, done, later and unstarted lists plus the grand task reserve.
+- Insert before `## Helping the others`:
+
+```text
+## Your live work
+Read your ordered jobs, holds, dependencies, lane limit and plan version from work/plan.md on ScraperX-Claude. Only that file assigns work; no past mail or queue text does.
+Before starting a lane, push fb-bot/wip-<job> and mail its real SHA. Push every tested increment; an unpushed SHA is not a shared baseline. Check the live plan before each push.
+On a hold or transfer, first push or explicitly report local work; stop only after the new plan and handoff are acknowledged. At your in-flight limit, land, review or unblock, rather than starting another job.
+Include plan <version> in the subject after a plan-change notice. Keep the existing mail bridge and proof rules.
+```
+
+**work/tasks/integrator-hourly.md exact edits (Cory applies):**
+- In step 2, delete the sentence starting `First mail the owner` through `stop if its version is there.`; replace with `Use tools/board/plan.py give only after the old owner pushes and acknowledges a stop; do not change the plan for unpushed active work.`
+- In step 4, delete the paragraph starting `Muse never has fewer than` through the end of `Replace the "This hour" section`; replace with `Run tools/board/plan.py check; repair PLAN-BAD/NO-LINE/NOT-OWNER/OVER-LIMIT/UNPUSHED, then route ready work through the plan only. The switchboard generates the board, labels and Muse notices.`
+- Delete all manual updates of job state in `INTEGRATOR_NOTES.md`; retain only non-derivable context.
+- Preserve independent review, evidence, worktree, test and gameplay constraints unchanged.
+
+**Activation gate:** no `plan: live` until plan validation, live shadow checks, every supported test, and the owner's approval of the WIP limits and the first generated assignments. No gameplay or money decision is authorized by this document.
