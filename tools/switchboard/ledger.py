@@ -20,7 +20,7 @@ issue with no owner, a listing that was cut short) is an UNMATCHED item: never s
 
 Each item has an owner (the issue's `owner:` label, else the branch prefix in work/agents.yml), a holder (who
 acts next), an age and a deadline: 2 h for a red branch, an unanswered ask and a green PR with no review;
-24 h untouched for everything else (stale). Past twice its deadline an item is listed under ESCALATED.
+4 h untouched for everything else (stale; Cory 11-12: nothing sits a day unnoticed). Past twice its deadline an item is listed under ESCALATED.
 
 The ledger is the board's list, not a notifier (J-072: one owner of notices). The reconciler
 (tools/switchboard/reconciler.py) tells each holder, with an ack, one re-send and a dead-letter; with it live and
@@ -59,9 +59,9 @@ import asks  # noqa: E402  tools/board/asks.py: what counts as an ask and as its
 import rules  # noqa: E402
 
 LIVE = dt.timedelta(days=3)            # a branch pushed this recently is live; asks are read this far back
-TOUCH_WINDOW = dt.timedelta(days=2)    # how far back touches are read: past 2 x 24 h an item is escalated anyway
+TOUCH_WINDOW = dt.timedelta(days=2)    # how far back touches are read: past 2 x STALE an item is escalated anyway
 ACT = dt.timedelta(hours=2)            # red branch or PR, unanswered ask, green PR with no review
-STALE = dt.timedelta(hours=24)         # everything else: untouched this long
+STALE = dt.timedelta(hours=4)          # everything else: untouched this long (Cory 11-12, was 24 h)
 MAX_NOTICES = 10                       # notice comments per sweep; the rest come next sweep
 MAX_MAIL_ITEMS = 15                    # items in Muse's one mail per sweep
 MAX_SECTION = 6000                     # chars of the visible section before it collapses to per-holder counts
@@ -617,7 +617,7 @@ def section(led: Ledger, now: dt.datetime, when: str, sent: list[str], kept: lis
         f"Written by the switchboard at {when}, every sweep (`tools/switchboard/ledger.py`); text between the ledger "
         f"markers is replaced each sweep. **{len(items)} items** ({kinds}): **{len(esc)} escalated**, {past} past "
         f"deadline, {unmatched} unmatched, {stale} stale." + (f" Not listed: {folded}." if folded else ""),
-        "Deadlines: red, an unanswered ask, a green PR with no review 2 h; anything else 24 h untouched. " + (
+        "Deadlines: red, an unanswered ask, a green PR with no review 2 h; anything else 4 h untouched. " + (
             "Past it the holder is told once; past twice it, again, and it is listed here as ESCALATED."
             if notify else
             "Past twice it an item is listed here as ESCALATED. The ledger sends no notices: the reconciler "

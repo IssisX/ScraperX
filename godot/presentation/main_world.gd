@@ -507,8 +507,10 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 				Vector3(cx + sx * (inner_half - 1.2),
 					STACK_LEVEL_HEIGHT * STACK_LEVEL_COUNT * 0.5,
 					cz + sz * (inner_half - 1.2)), pipe_material)
+			# A flange 0.05 m proud of the riser across x, 0.20 m along z: her
+			# capsule on her pipe line clears it, her legs land on it (J-128).
 			for level in range(1, STACK_LEVEL_COUNT + 1):
-				_add_box("RiserFlange", Vector3(1.1, 0.35, 1.1),
+				_add_box("RiserFlange", Vector3(0.8, 0.35, 1.1),
 					Vector3(cx + sx * (inner_half - 1.2), float(level) * STACK_LEVEL_HEIGHT - 1.4,
 						cz + sz * (inner_half - 1.2)), mill_scale)
 

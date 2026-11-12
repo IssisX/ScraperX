@@ -115,6 +115,8 @@ STATES = ("accepted", "assigned", "working", "proof", "review", "landable", "blo
 CONFLICT = "merge conflict with the base"
 NOT_AN_ASK = "not an ask"            # why evidence() closes an ask the judge no longer reads as one
 THREAD_CLOSED = "its thread closed"  # why evidence() closes an ask whose issue or PR closed
+PARKED_LABEL = "state:parked"            # a job the finish plan parks (11-12): no start notice
+START_GRACE = dt.timedelta(hours=24)    # a queued job waits its turn; only a start owed past this is nagged
 INBOX_WINDOW = dt.timedelta(hours=24)   # how far back the integrator's inbox reads comments (switch.py INBOX_RUNS_WINDOW)
 
 CMD = re.compile(r"^[ \t]*(?:/(?P<cmd>ack|blocked|unblock|cancel)\b[ \t]*(?P<arg>[^\n]*)"
@@ -693,14 +695,16 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
         else:
             states.append("proof" if run == "running" else "working")
     if o.issue is not None and not states:
-        if not owner:
+        if PARKED_LABEL in o.issue.labels:   # 11-12: the finish plan parks jobs; a parked job is owed no start
+            states.append("accepted")   # held, not started: nothing is owed until the label comes off
+        elif not owner:
             wants.append(Want("ruling", "claude", f"assign:{o.issue.number}", f"JOB|#{o.issue.number}",
                               o.issue.number, f"{o.job} has no owner: label", "owner|reply|ack"))
             states.append("accepted")
         elif rec.get("pr_done") == "merged" or any(is_landed(v[1]) for v in rec["landed"].values()):
             states.append("merged")   # its work landed; the issue is still open
-        elif not rec["head"] and not rec["prs"] and now - o.issue.touched < L.STALE:
-            states.append("assigned")   # just assigned: the owner has a day before a start is owed
+        elif not rec["head"] and not rec["prs"] and now - o.issue.touched < START_GRACE:
+            states.append("assigned")   # queued: the owner has a day before a start is owed (not L.STALE, 4 h)
         elif not rec["head"] and not rec["prs"]:   # quiet a day with no work seen (the feed reads 3 days of pushes)
             wants.append(Want("start-agent", owner, f"start:{o.issue.number}", f"JOB|#{o.issue.number}",
                               o.issue.number, f"start {o.job}", "work|reply|ack"))
