@@ -629,7 +629,9 @@ public:
     // she steps clear of.
     static constexpr float kHungLoadMinKg = 500.0F;   // a load this heavy, hung, is read
     static constexpr float kHungLoadOverheadM = 1.0F; // its bottom this far over her head
-    static constexpr float kHungLoadCeilingM = 12.0F; // and no higher than this over her feet
+    static constexpr float kHungLoadCeilingM = 22.0F; // and no higher than this over her feet: the
+                                                       // production hang's bottom sits 20.45 m over
+                                                       // deck 154 (SlabCell::kSlabUnderside 174.45 m)
     static constexpr float kHungLoadReleaseM = 4.0F;  // him within this of its release: it may fall on her
     static constexpr float kHungLoadHeardS = 1.0F;    // a heard release stays fresh this long
     static constexpr float kHungLoadFallMps = 1.0F;   // falling this fast: it is falling

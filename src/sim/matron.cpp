@@ -4916,12 +4916,12 @@ void Matron::sense_hung_loads() {
     const RVec3 at = bodies.GetPosition(body_);
     const float feet = float(at.GetY()) - kStandCentre;
     const Vec3 centre(at);
-    // Overhead, within sight: a box 100 m across and 22 m tall over her.
-    const Vec3 box_centre(centre.GetX(), feet + 10.0F, centre.GetZ());
+    // Overhead, within sight: a box 100 m across and 24 m tall over her.
+    const Vec3 box_centre(centre.GetX(), feet + 11.0F, centre.GetZ());
     AllHitCollisionCollector<CollideShapeBodyCollector> found;
     physics_.GetBroadPhaseQuery().CollideAABox(
-        AABox(box_centre - Vec3(kCommitSightM, 11.0F, kCommitSightM),
-              box_centre + Vec3(kCommitSightM, 11.0F, kCommitSightM)),
+        AABox(box_centre - Vec3(kCommitSightM, 12.0F, kCommitSightM),
+              box_centre + Vec3(kCommitSightM, 12.0F, kCommitSightM)),
         found);
     const BodyID held = held_body();
     const ObjectLayer hers = bodies.GetObjectLayer(body_);
@@ -4982,11 +4982,13 @@ void Matron::sense_hung_loads() {
         c.load.footprint_r = std::hypot(half.GetX(), half.GetZ()) + kRadius + kHungLoadMarginM;
         c.load.falling = c.load.vy < -kHungLoadFallMps;
         c.load.seen = look_at(load_centre, kCommitSightM) != Glimpse::None;
-        // The release is evidenced: she sees him at it, or heard him there.
+        // The release is evidenced: she sees him at it, or heard him there —
+        // but only for a load she sees. Hearing alone never costs a load she
+        // never perceived: her footsteps would reveal a hidden trap.
         const bool saw_release = c.load.seen && ev.sight_age_s < 1.0F &&
                                  std::hypot(float(ev.last_sight_at.GetX()) - c.load.x,
                                             float(ev.last_sight_at.GetZ()) - c.load.z) < kHungLoadReleaseM;
-        const bool heard_release = lead_valid_ && lead_sense_ == Sense::Hearing &&
+        const bool heard_release = c.load.seen && lead_valid_ && lead_sense_ == Sense::Hearing &&
                                    since_heard_s_ < kHungLoadHeardS &&
                                    std::hypot(heard_x_ - c.load.x, heard_z_ - c.load.z) < kHungLoadReleaseM;
         c.load.costed = saw_release || heard_release;

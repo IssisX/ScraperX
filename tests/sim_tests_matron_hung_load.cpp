@@ -2,12 +2,14 @@
 // Her sight learns a heavy load hung overhead (the scan, matron.cpp); standing
 // under it costs in her route choice while she sees it and him near its
 // release; a falling load she sees with time to clear, she steps clear of;
-// with no warning she is hit. Four scenarios against a test hanging slab
+// with no warning she is hit. Five scenarios against a test hanging slab
 // (a 2000 kg plate, debug_hang_slab), on deck 154's north band, east of the
 // bay's cut: a straight 22 m run at z -128, past her ladder's foot (5, -129.55)
 // and south of her locker (11, -126.2). Not the z -150 catwalk: its plates
 // shear under her 2.2 kN (kBoltShearN 2100 N, matron.hpp) — it carries the
-// climber, never her.
+// climber, never her. The fifth hangs the slab at the production height: its
+// bottom 174.45 m (SlabCell::kSlabUnderside), 20.45 m over her feet — past
+// the old 12 m sensing ceiling.
 #include "sim_tests.hpp"
 
 #include "sim/matron.hpp"
@@ -26,6 +28,9 @@ constexpr double kSlabX = 10.0;
 constexpr double kSlabZ = -128.0;
 // High hang: the slab's bottom 5.75 m over her head, 1.08 s to fall on her.
 constexpr double kHangHigh = 162.0;
+// Production hang: the slab's centre 174.6 m, its bottom 174.45 m — 20.45 m
+// over her feet on deck 154, the 154 deck's slab as it hangs in the game.
+constexpr double kHangProduction = 174.6;
 // Low hang: the slab's bottom 1.0 m over her head, 0.45 s to fall on her.
 constexpr double kHangLow = 157.25;
 // The slab's half-diagonal + her radius + margin: the rim she must not cross.
@@ -133,5 +138,15 @@ void run_matron_hung_load() {
         std::cout << "  matron hung load: no warning: knockdowns " << h.knockdowns << ", alive " << h.alive
                   << "\n";
     }
-    std::cout << "PASS matron hung load: refusal, walk-under, dodge, hit\n";
+    // 5. The production hang: the slab at its real height, its bottom
+    // 20.45 m over her feet. She sees it and him at its release, and stops
+    // at its rim, never under it.
+    {
+        const Hung h = run_hung(Vector3{1.0, 154.0, -128.0}, Vector3{10.0, 154.0, -128.0}, kHangProduction, 0.0,
+                                15.0, 0.0);
+        require(h.alive, "matron hung load: production hang: she lives");
+        require(h.min_dist_m > 1.5, "matron hung load: production hang: she never walks under it");
+        std::cout << "  matron hung load: production hang: min " << h.min_dist_m << " m from the slab\n";
+    }
+    std::cout << "PASS matron hung load: refusal, walk-under, dodge, hit, production-hang\n";
 }
