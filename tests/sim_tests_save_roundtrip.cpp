@@ -1,7 +1,7 @@
 // J-116 (#438): a relaunch puts the world back exactly as a death restore
 // does, and a bad save never breaks a load.
 //
-// The probe (SCRAPERX_ONLY=save-probe) answers, before the fix lands, what
+// The probe (save-probe slice) answers what
 // each climb point's rigging actually commits to the checkpoint, whether the
 // Matron wakes on the rides, and how the player dies at each height. The
 // round-trip test (SCRAPERX_SLICE save-roundtrip) is built on the same rig
@@ -1381,5 +1381,5 @@ void run_save_roundtrip_probe() {
 
 SCRAPERX_GROUP("save_roundtrip", 1090, run_save_roundtrip);
 SCRAPERX_SLICE("save-roundtrip", run_save_roundtrip);
-SCRAPERX_SELECT("save-probe", run_save_roundtrip_probe);
-SCRAPERX_SELECT("save-plain-probe", run_save_plain_probe);
+SCRAPERX_SLICE("save-probe", run_save_roundtrip_probe);
+SCRAPERX_SLICE("save-plain-probe", run_save_plain_probe);
