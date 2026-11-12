@@ -3117,7 +3117,9 @@ def run_sweep(sw, args, now: dt.datetime, hc_sweep: str = "", summary: str | Non
             sw.out(f"ERROR       {name}: {type(err).__name__}: {err}")
         return None
 
-    if steer and not targeted and (delta is None or delta.active):
+    # The plan's whole-repository audit runs on the full pass only. A fast
+    # proof rerun retains its established rate-budget and read count.
+    if steer and not targeted and delta is None:
         part("plan", sw.plan_check)
 
     if steer and (delta is None or delta.finished_auto):   # a fast sweep: only branches whose proof just finished
