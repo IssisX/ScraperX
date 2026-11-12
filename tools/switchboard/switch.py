@@ -1325,7 +1325,7 @@ class Switch:
         sweep's auto-open. `only` (a fast sweep, J-072): just these branches, whose proof run just finished.
         Returns how many PRs were opened (or would be, in a dry run)."""
         self.auto_pr_failed = ()
-        listed = self.gh.paged(f"repos/{self.gh.repo}/branches")
+        listed = collab_plan.whole(self.gh, f"repos/{self.gh.repo}/branches")   # every page; past ALL_PAGES it raises
         if only is None and isinstance(getattr(self.gh, "state", None), dict):   # forget branches that are gone
             alive = {b["name"] for b in listed}
             self.gh.state["prior_pr"] = [n for n in self.gh.state.get("prior_pr") or [] if n in alive]
