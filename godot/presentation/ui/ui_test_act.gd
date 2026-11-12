@@ -1897,6 +1897,25 @@ func _play_summit_ending() -> bool:
 	_detail = "beam=two_bearings sling=free final_caption=once canopy=live home=ground deaths=0"
 	return true
 
+# J-133 (#459): the climb and the ending in one touch run — grade through
+# the summit and the ending to the Home phase, zero deaths. Joins the two
+# existing scripts: _stack plays grade to the derrick's upper receiver
+# (803 m), and _summit_ending plays the ending from where the climber
+# stands there. No summit spawn and no state reset between the halves, so
+# a failure here names the state handed across the join (his position, a
+# machine state, her stage) before anything is changed. This lives here,
+# not in ui_test_stack.gd: the act sees _stack through its base chain
+# (act -> chase -> stack), while the stack cannot see _summit_ending.
+func _stack_ending(device: int) -> bool:
+	if not await _stack(device):
+		return false
+	var stack_detail := _detail
+	if not await _summit_ending():
+		return false
+	_detail = "stack[%s] ending[%s] deaths=%d" % [stack_detail, _detail,
+		int(_native().get_death_count())]
+	return true
+
 # J-045 (#248), phone stability: a per-frame recorder for rendered runs, and
 # the scenarios that use it (the locker burst, the three full-height tower
 # views). Each frame it logs its wall time, the native fixed steps' time

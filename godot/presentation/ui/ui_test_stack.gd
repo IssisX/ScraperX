@@ -563,20 +563,3 @@ func _stack(device: int) -> bool:
 		at_wet_d, at_wet_e, at_tp340, at_shop_g, at_shop_h, at_ring484, at_crane_j, at_crane_k, at_tp640, at_deck662,
 		reached, float(int(_native().get_tick_index()) - started) / 90.0, worst_step, float(body["lift"])]
 	return true
-
-# J-133 (#459): the climb and the ending in one touch run — grade through
-# the summit and the ending to the Home phase, zero deaths. Joins the two
-# existing scripts: _stack plays grade to the derrick's upper receiver
-# (803 m), and _summit_ending plays the ending from where the climber
-# stands there. No summit spawn and no state reset between the halves, so
-# a failure here names the state handed across the join (his position, a
-# machine state, her stage) before anything is changed.
-func _stack_ending(device: int) -> bool:
-	if not await _stack(device):
-		return false
-	var stack_detail := _detail
-	if not await _summit_ending():
-		return false
-	_detail = "stack[%s] ending[%s] deaths=%d" % [stack_detail, _detail,
-		int(_native().get_death_count())]
-	return true
