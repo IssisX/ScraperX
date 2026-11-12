@@ -1,17 +1,17 @@
 {
- "attempt": 0,
+ "attempt": 1,
  "blocked": null,
  "branches": {
   "fb-bot/integrate-j116": "8ad2d1b4aba1053cb447b5dc7d560152bec02858"
  },
  "cancelled": null,
- "ci": "",
+ "ci": "green",
  "commands": [
   "6829010752:44"
  ],
  "created": "2026-11-12T01:29:02Z",
  "deadline": null,
- "head": "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
+ "head": "95dad2f9339725a4821d943c2ae0bdbf031feb35",
  "issue": 438,
  "job": "J-116",
  "landed": {
@@ -84,10 +84,12 @@
  "outcome": null,
  "outcome_reason": "",
  "owner": "muse",
- "pr": 0,
+ "pr": 487,
  "pr_done": "",
- "prs": [],
- "review": "",
+ "prs": [
+  487
+ ],
+ "review": "FIX",
  "state": "working",
- "updated": "2026-11-12T21:45:56Z"
+ "updated": "2026-11-12T22:53:22Z"
 }

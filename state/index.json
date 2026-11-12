@@ -3307,8 +3307,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "assigned",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "accepted",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-021": {
    "attempt": 1,
@@ -12160,8 +12160,8 @@
     475
    ],
    "review": "LAND",
-   "state": "accepted",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "merged",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-082": {
    "attempt": 0,
@@ -12829,8 +12829,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "accepted",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "assigned",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-089": {
    "attempt": 0,
@@ -13804,8 +13804,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "accepted",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "assigned",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-100": {
    "attempt": 1,
@@ -13814,13 +13814,13 @@
     "fb-bot/integrate-j100": "4c03c7633633f84fc95db446d2f222bc6760ce2d"
    },
    "cancelled": null,
-   "ci": "green",
+   "ci": "red: godot-touch (touch-2), native-tests (matron-slices-3), native-tests (athletic-traversal-2), native-tests (matron-slices-1)",
    "commands": [
     "6829009961:44"
    ],
    "created": "2026-11-11T16:04:39Z",
    "deadline": null,
-   "head": "4c03c7633633f84fc95db446d2f222bc6760ce2d",
+   "head": "9458db9fda9562e473e42d1c6ac02682a02b8960",
    "issue": 418,
    "job": "J-100",
    "landed": {
@@ -13898,9 +13898,9 @@
    "prs": [
     478
    ],
-   "review": "waiting",
+   "review": "",
    "state": "working",
-   "updated": "2026-11-12T21:45:56Z"
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-101": {
    "attempt": 0,
@@ -14578,19 +14578,19 @@
    "updated": "2026-11-12T21:45:56Z"
   },
   "J-116": {
-   "attempt": 0,
+   "attempt": 1,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-j116": "8ad2d1b4aba1053cb447b5dc7d560152bec02858"
    },
    "cancelled": null,
-   "ci": "",
+   "ci": "green",
    "commands": [
     "6829010752:44"
    ],
    "created": "2026-11-12T01:29:02Z",
    "deadline": null,
-   "head": "8ad2d1b4aba1053cb447b5dc7d560152bec02858",
+   "head": "95dad2f9339725a4821d943c2ae0bdbf031feb35",
    "issue": 438,
    "job": "J-116",
    "landed": {
@@ -14663,12 +14663,14 @@
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 0,
+   "pr": 487,
    "pr_done": "",
-   "prs": [],
-   "review": "",
+   "prs": [
+    487
+   ],
+   "review": "FIX",
    "state": "working",
-   "updated": "2026-11-12T21:45:56Z"
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-117": {
    "attempt": 1,
@@ -14689,8 +14691,8 @@
    "landed": {
     "fb-bot/integrate-j117": [
      "727ee47462e16bbbc87da036fa2733b484bb3b60",
-     "",
-     "2026-11-12T18:09:34Z"
+     "merged #479",
+     "2026-11-12T22:53:22Z"
     ]
    },
    "obligations": [
@@ -14782,13 +14784,13 @@
    "outcome_reason": "",
    "owner": "muse",
    "pr": 479,
-   "pr_done": "",
+   "pr_done": "merged",
    "prs": [
     479
    ],
    "review": "waiting",
-   "state": "review",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "merged",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-118": {
    "attempt": 0,
@@ -15310,13 +15312,13 @@
    "updated": "2026-11-12T21:45:56Z"
   },
   "J-125": {
-   "attempt": 0,
+   "attempt": 1,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-j125": "3be444d203594439bf4e9e48f96ce541032c59b8"
    },
    "cancelled": null,
-   "ci": "",
+   "ci": "green",
    "commands": [
     "6829929805:68"
    ],
@@ -15394,12 +15396,14 @@
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 0,
+   "pr": 481,
    "pr_done": "",
-   "prs": [],
+   "prs": [
+    481
+   ],
    "review": "",
-   "state": "working",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "landable",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-126": {
    "attempt": 1,
@@ -15452,8 +15456,8 @@
    "landed": {
     "fb-bot/integrate-j127": [
      "3f4ee2de843a25f751314d93955b73ebea357032",
-     "",
-     "2026-11-12T16:58:14Z"
+     "merged #482",
+     "2026-11-12T22:53:22Z"
     ]
    },
    "obligations": [
@@ -15492,8 +15496,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "working",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "merged",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-128": {
    "attempt": 1,
@@ -15546,8 +15550,8 @@
    "landed": {
     "fb-bot/integrate-j129": [
      "6253e5ea8d31ba8872a377326f47899a2ec1b257",
-     "",
-     "2026-11-12T19:27:38Z"
+     "merged #483",
+     "2026-11-12T22:53:22Z"
     ]
    },
    "obligations": [
@@ -15586,17 +15590,17 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "working",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "merged",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-130": {
-   "attempt": 0,
+   "attempt": 1,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-j130": "b96563fc6868f1a4338955ffab1575003f019ef0"
    },
    "cancelled": null,
-   "ci": "",
+   "ci": "green",
    "commands": [],
    "created": "2026-11-12T14:29:46Z",
    "deadline": null,
@@ -15642,21 +15646,23 @@
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 0,
+   "pr": 484,
    "pr_done": "",
-   "prs": [],
+   "prs": [
+    484
+   ],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "landable",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-131": {
-   "attempt": 0,
+   "attempt": 1,
    "blocked": null,
    "branches": {
     "fb-bot/integrate-j131": "23b6ac7050a3f2d2519a6345717c4fa17ef09b24"
    },
    "cancelled": null,
-   "ci": "",
+   "ci": "green",
    "commands": [],
    "created": "2026-11-12T14:29:46Z",
    "deadline": null,
@@ -15702,12 +15708,14 @@
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
-   "pr": 0,
+   "pr": 485,
    "pr_done": "",
-   "prs": [],
+   "prs": [
+    485
+   ],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "landable",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-132": {
    "attempt": 0,
@@ -15726,8 +15734,8 @@
    "landed": {
     "fb-bot/integrate-j132": [
      "92cb82039800aa2a0984455e6cd6c3e43c0dc071",
-     "",
-     "2026-11-12T19:27:38Z"
+     "merged #486",
+     "2026-11-12T22:53:22Z"
     ]
    },
    "obligations": [
@@ -15766,8 +15774,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "merged",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-133": {
    "attempt": 0,
@@ -15854,8 +15862,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "working",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-134": {
    "attempt": 0,
@@ -15914,8 +15922,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "working",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-135": {
    "attempt": 0,
@@ -15974,8 +15982,8 @@
    "pr_done": "",
    "prs": [],
    "review": "",
-   "state": "proof",
-   "updated": "2026-11-12T21:45:56Z"
+   "state": "working",
+   "updated": "2026-11-12T22:53:22Z"
   },
   "J-136": {
    "attempt": 0,

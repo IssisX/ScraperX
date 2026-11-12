@@ -2451,3 +2451,29 @@
 {"ev": "inbox", "id": "O-7042d24d", "job": "J-053", "ref": "ASK|ask on #82", "t": "2026-11-12T21:45:56Z", "to": "claude", "via": "session"}
 {"ev": "dead_letter", "id": "O-0f17ee95", "job": "J-117", "ref": "ASK|ask on #439", "t": "2026-11-12T21:45:56Z", "to": "claude"}
 {"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-12T21:45:56Z", "tries": 1}
+{"branch": "fb-bot/integrate-j117", "ev": "landed", "how": "merged #479", "job": "J-117", "sha": "727ee47462e16bbbc87da036fa2733b484bb3b60", "t": "2026-11-12T22:53:22Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-117", "pr": 479, "t": "2026-11-12T22:53:22Z"}
+{"branch": "fb-bot/integrate-j127", "ev": "landed", "how": "merged #482", "job": "J-127", "sha": "3f4ee2de843a25f751314d93955b73ebea357032", "t": "2026-11-12T22:53:22Z"}
+{"branch": "fb-bot/integrate-j129", "ev": "landed", "how": "merged #483", "job": "J-129", "sha": "6253e5ea8d31ba8872a377326f47899a2ec1b257", "t": "2026-11-12T22:53:22Z"}
+{"branch": "fb-bot/integrate-j132", "ev": "landed", "how": "merged #486", "job": "J-132", "sha": "92cb82039800aa2a0984455e6cd6c3e43c0dc071", "t": "2026-11-12T22:53:22Z"}
+{"ev": "state", "frm": "assigned", "job": "J-018", "t": "2026-11-12T22:53:22Z", "to": "accepted"}
+{"ev": "state", "frm": "accepted", "job": "J-081", "t": "2026-11-12T22:53:22Z", "to": "merged"}
+{"ev": "state", "frm": "accepted", "job": "J-088", "t": "2026-11-12T22:53:22Z", "to": "assigned"}
+{"ev": "state", "frm": "accepted", "job": "J-099", "t": "2026-11-12T22:53:22Z", "to": "assigned"}
+{"ev": "state", "frm": "review", "job": "J-117", "t": "2026-11-12T22:53:22Z", "to": "merged"}
+{"ev": "state", "frm": "working", "job": "J-125", "t": "2026-11-12T22:53:22Z", "to": "landable"}
+{"ev": "state", "frm": "working", "job": "J-127", "t": "2026-11-12T22:53:22Z", "to": "merged"}
+{"ev": "state", "frm": "working", "job": "J-129", "t": "2026-11-12T22:53:22Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-130", "t": "2026-11-12T22:53:22Z", "to": "landable"}
+{"ev": "state", "frm": "proof", "job": "J-131", "t": "2026-11-12T22:53:22Z", "to": "landable"}
+{"ev": "state", "frm": "proof", "job": "J-132", "t": "2026-11-12T22:53:22Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-133", "t": "2026-11-12T22:53:22Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-134", "t": "2026-11-12T22:53:22Z", "to": "working"}
+{"ev": "state", "frm": "proof", "job": "J-135", "t": "2026-11-12T22:53:22Z", "to": "working"}
+{"ev": "unmatched", "ident": "PR|#490", "job": "", "t": "2026-11-12T22:53:22Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#489", "job": "", "t": "2026-11-12T22:53:22Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "unmatched", "ident": "PR|#488", "job": "", "t": "2026-11-12T22:53:22Z", "why": "not read this sweep (see the switchboard log) (the sweep could not read this PR)"}
+{"ev": "matched", "ident": "PR|#481", "job": "", "t": "2026-11-12T22:53:22Z"}
+{"ev": "matched", "ident": "PR|#482", "job": "", "t": "2026-11-12T22:53:22Z"}
+{"ev": "matched", "ident": "PR|#483", "job": "", "t": "2026-11-12T22:53:22Z"}
+{"ev": "pass", "job": "", "jobs": 109, "status": "ok", "t": "2026-11-12T22:53:22Z", "tries": 1}

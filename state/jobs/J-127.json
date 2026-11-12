@@ -15,8 +15,8 @@
  "landed": {
   "fb-bot/integrate-j127": [
    "3f4ee2de843a25f751314d93955b73ebea357032",
-   "",
-   "2026-11-12T16:58:14Z"
+   "merged #482",
+   "2026-11-12T22:53:22Z"
   ]
  },
  "obligations": [
@@ -55,6 +55,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "working",
- "updated": "2026-11-12T21:45:56Z"
+ "state": "merged",
+ "updated": "2026-11-12T22:53:22Z"
 }

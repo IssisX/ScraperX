@@ -17,8 +17,8 @@
  "landed": {
   "fb-bot/integrate-j117": [
    "727ee47462e16bbbc87da036fa2733b484bb3b60",
-   "",
-   "2026-11-12T18:09:34Z"
+   "merged #479",
+   "2026-11-12T22:53:22Z"
   ]
  },
  "obligations": [
@@ -110,11 +110,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 479,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   479
  ],
  "review": "waiting",
- "state": "review",
- "updated": "2026-11-12T21:45:56Z"
+ "state": "merged",
+ "updated": "2026-11-12T22:53:22Z"
 }
