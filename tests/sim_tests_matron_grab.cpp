@@ -456,7 +456,12 @@ void run_matron_grab() {
             const auto m = s.matron_state();
             const auto p = s.snapshot();
             const double under = s.debug_support_y(p.player_position, 2.4);
-            const bool deck_under = !std::isnan(under) && under > 153.4 && under < 154.15;
+            // Her deck's plate (top 154.0), not the shaft's edge beam: the
+            // beam's top is 0.1 m lower (153.90) and half its 0.5 m is past
+            // the rail's line, over the shaft. Her rail pin (J-001) holds his
+            // middle on the rail's top, just past its line (x 16.955), where
+            // only that beam is under him: no floor to be let go onto.
+            const bool deck_under = !std::isnan(under) && under > 153.95 && under < 154.15;
             if (m.state == kSpare && spare_ticks++ == 0) {
                 spare_past_rail = s.debug_player_snagged() && p.player_position.x < Matron::kShaftHalfM && !deck_under;
             }
