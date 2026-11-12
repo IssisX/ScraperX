@@ -405,6 +405,7 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     const bool as_built = b.bodies.size() >= built && b.bin_contents.size() == c.bin_contents.size() &&
                           b.rope_anchor.size() == c.rope_anchor.size() &&
                           b.rope_parted.size() == c.rope_parted.size() &&
+                          b.dog_floor.size() == c.dog_floor.size() &&
                           b.latch_set.size() == c.latch_set.size() &&
                           b.grip_load.size() == c.grip_load.size() &&
                           b.grip_rating.size() == c.grip_rating.size();
@@ -412,12 +413,15 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
               r.pod(loaded.carrying_entity) && r.list_up_to(entities, here.size()) &&
               std::equal(entities.begin(), entities.end(), here.begin()) &&
               r.list_up_to(k.bodies, built) && k.bodies.size() == entities.size() &&
-              r.list_up_to(k.rope_anchor, c.rope_anchor.size()) && r.list(k.dog_floor, c.dog_floor.size()) &&
+              r.list_up_to(k.rope_anchor, c.rope_anchor.size()) && r.list_up_to(k.dog_floor, c.dog_floor.size()) &&
               r.list_up_to(k.bin_contents, c.bin_contents.size()) &&
               r.bits_up_to(k.rope_parted, c.rope_parted.size()) && k.rope_parted.size() == k.rope_anchor.size() &&
               // Fewer ropes only from a world with fewer bodies: the ropes
               // built since (J-092's sling, built with the last bodies).
               (k.rope_anchor.size() == c.rope_anchor.size() || entities.size() < here.size()) &&
+              // Fewer guides, likewise: those built since (J-108's bait
+              // lift, built with the last bodies).
+              (k.dog_floor.size() == c.dog_floor.size() || entities.size() < here.size()) &&
               r.bits(k.catch_latched, c.catch_latched.size()) && r.bits_up_to(k.latch_set, c.latch_set.size()) &&
               r.list_up_to(k.piles, 256) && r.list(k.pool_water, c.pool_water.size()) &&
               r.list(k.cell_air, c.cell_air.size()) && r.list(k.reel_paid, c.reel_paid.size()) &&
@@ -547,6 +551,10 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     // A latch built since the save (the drain pawl) starts as built: shut.
     for (std::size_t index = k.latch_set.size(); ok && index < c.latch_set.size(); ++index) {
         k.latch_set.push_back(b.latch_set[index]);
+    }
+    // Guides built since start on their dogs as built.
+    for (std::size_t index = k.dog_floor.size(); ok && index < c.dog_floor.size(); ++index) {
+        k.dog_floor.push_back(b.dog_floor[index]);
     }
     if (!ok || !std::isfinite(position.GetX()) || !std::isfinite(position.GetY()) ||
         !std::isfinite(position.GetZ())) {

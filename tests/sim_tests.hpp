@@ -940,6 +940,7 @@ void run_matron_mischief();
 void run_matron_wreck();
 void run_matron_collision();
 void run_matron_balance();
+void run_hard_blow();  // J-077: a hard blow puts her down, a bare punch does not (sim_tests_hard_blow.cpp)
 void run_matron_pipe();
 void run_matron_hoist();   // J-007: she rides the hoists her scan finds (sim_tests_matron_hoist.cpp)
 void run_matron_room();

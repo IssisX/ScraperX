@@ -14,8 +14,12 @@ issue is closed, so the integrator tells the owner to start it). Every job on th
 newest non-bot comment on its issue, so an answer that unparks it is seen. Duplicates stay a judgment: no string
 match finds two jobs doing the same thing.
 
+Two holes are listed too (11-12): OWNER, a job the queue tells Muse to work (its "Finish (in flight):" line or the
+Unstarted block) whose open issue is not labelled owner:muse (a job taken by a helper must leave the queue and carry
+owner:claude); NO-LABEL, an open issue titled J-NNN with no `job` label, which the switchboard cannot see.
+
 Usage: python3 tools/board/queue_check.py [work/tasks/muse.md]
-Exit 1 when any line in the "Unstarted" block is not OK, so a stale queue cannot be mailed unseen.
+Exit 1 when any line in the "Unstarted" block is not OK or any hole is listed, so a stale queue cannot be mailed unseen.
 Reads only (REST `gh api`, through tools/switchboard/ghapi.py); writes nothing.
 """
 from __future__ import annotations
@@ -46,10 +50,16 @@ def main() -> int:
         print(f"{verdict:8} {v.line.job} #{v.line.issue}")
     for num, issue in muse_queue.parked(text):
         print(f"PARKED   J-{num} #{issue}  newest: {muse_queue.newest_comment(gh, issue)}")
+    holes = muse_queue.owner_mismatches(gh, text)
+    holes = [f"OWNER    {h}" for h in holes] + [f"NO-LABEL {h}" for h in
+                                                  muse_queue.unlabeled(gh.paged(f"repos/{REPO}/issues?state=open"))]
+    for line in holes:
+        print(line)
     for note in report.notes:
         print(f"NOTE     {note}", file=sys.stderr)
-    print(f"QUEUE {'STALE' if bad else 'CLEAN'}: {bad} not unstarted")
-    return 1 if bad else 0
+    print(f"QUEUE {'STALE' if bad or holes else 'CLEAN'}: {bad} not unstarted"
+          + (f", {len(holes)} owner or label holes" if holes else ""))
+    return 1 if bad or holes else 0
 
 
 if __name__ == "__main__":

@@ -155,7 +155,6 @@ func _place_pivots() -> void:
 	(p["head"] as Node3D).position = _pos("head") - _pos("neck_lo")
 	(p["jaw"] as Node3D).position = _pos("jaw") - _pos("head") - Vector3(0.0, 0.1, 0.0)
 	(p["hump"] as Node3D).position = _pos("hump") - waist
-	(p["box_cord"] as Node3D).position = _pos("box") - body
 	for s in ["l", "r"]:
 		(p["sh_" + s] as Node3D).position = _pos("sh_" + s) - waist
 		(p["el_" + s] as Node3D).position = _t("sh_%s_x" % s)
@@ -248,7 +247,6 @@ func apply() -> void:
 		_bone("kn_%s_x" % s, _t("kn_%s_x" % s) * leg_s, Quaternion.IDENTITY)
 		_bone("an_" + s, _t("an_" + s), _q("an_" + s))
 	_bone("skirt", _t("skirt"), Quaternion.IDENTITY.slerp(_q("rags"), 0.6))
-	_bone("box", _t("box"), pel.inverse() * _q("box_cord"))
 
 
 # Her look (matron_view.gd _turn_yaw): the turn her body has not made, laid

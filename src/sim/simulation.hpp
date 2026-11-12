@@ -805,6 +805,13 @@ struct ServiceState final {
     double o_chain_kg = 0.0;      // chain hanging from the bucket
     double o_bucket_mass = 0.0;   // the bucket, its gravel and its hanging chain
     double o_rope_tension = 0.0;  // N, on the bucket's side of the wheel
+    // J-108, the bait lift.
+    double bait_a_travel = 0.0;      // A's descent from the 706 deck
+    double bait_b_travel = 0.0;      // B's rise from the 706 deck
+    double bait_a_peak_speed = 0.0;
+    double bait_b_peak_speed = 0.0;
+    double bait_chain_kg = 0.0;      // chain hanging from A
+    double bait_rope_tension = 0.0;  // N
 };
 
 // Band 0, the Stack's machine state, for the falsifiers.
@@ -1511,6 +1518,9 @@ public:
     static constexpr std::uint64_t kServiceORamEntityId = 2144;
     static constexpr std::uint64_t kServiceOChockEntityId = 2145;
     static constexpr std::uint64_t kServiceOHandleEntityId = 2146;
+    // J-108, the bait lift west of the 706 deck's strip: her platform A, his B.
+    static constexpr std::uint64_t kServiceBaitAEntityId = 2147;
+    static constexpr std::uint64_t kServiceBaitBEntityId = 2148;
     // Band 0, the Stack (grade -> 154 m): its static structure, then S1, the
     // skip hoist.
     static constexpr std::uint64_t kStackFrameEntityId = 1020;
@@ -1818,6 +1828,10 @@ public:
     // Tests only (never bound to the bridge): the blow she takes next tagged
     // as the player's own (his punch's tag, Matron::player_blow_landed).
     void debug_matron_player_blow() noexcept;
+    // Tests only (never bound to the bridge): the next strike press throws
+    // this move whatever the stance would pick (0, the bare punch, on a
+    // free Matron); consumed when the strike begins.
+    void debug_force_strike_move(std::uint8_t move) noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;

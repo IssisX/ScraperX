@@ -260,6 +260,25 @@ void run_o_wreckage() {
 bool seat_wet_spool(Simulation &simulation);
 
 namespace {
+// The band's climbing route from standing on the 286 ring to TP-340: the
+// last three climbs of climb_wet_route below, copied (that one stays as it is).
+bool climb_wet_route_from_286(Simulation &route) {
+    if (!(walk_to(route, 4.0, -133.0, 6.0, 0.1) && walk_to(route, 4.0, -135.1, 6.0, 0.1) &&
+          climb_wet_hold(route, 3.0, -135.1, 0.0, 1.0, false, 308.5))) {
+        std::cout << "  wet route: short of the 308 ring\n";
+        return false;
+    }
+    if (!(walk_to(route, 1.5, -134.0, 6.0, 0.1) && climb_wet_hold(route, 1.5, -135.95, 0.0, 1.0, true, 330.5))) {
+        std::cout << "  wet route: short of the 330 ring\n";
+        return false;
+    }
+    if (!climb_wet_hold(route, 3.0, -134.9, 0.0, -1.0, false, 340.5)) {
+        std::cout << "  wet route: short of TP-340\n";
+        return false;
+    }
+    return true;
+}
+
 // The band's climbing route, 220 -> TP-340, as run_wet_route climbs it
 // (copied: that test's own steps, the player's limits).
 bool climb_wet_route(Simulation &route) {
@@ -347,6 +366,48 @@ void run_de_wreckage() {
             "D/E wreck: the band's route climbed past both spent lifts to TP-340");
     std::cout << "PASS scraperx_sim AS-007 wreckage D+E: d_travel=" << w.wet_state().d_platform_travel
               << " e_travel=" << w.wet_state().e_cab_travel << " top_y=" << w.snapshot().player_position.y << '\n';
+}
+
+// D and E ridden up the band, then F set off with nobody on it: the hose
+// coupled and the stop valve thrown from F's platform, and the rider back off
+// onto E's cab before the platform has climbed. F goes up empty to TP-340 and
+// stays there. The way on is off the cab's south edge down onto the 286 ring,
+// then the band's climbing route from there to TP-340.
+void run_f_wreckage() {
+    Simulation w(InitialSpawn::Ring220North);
+    (void)w.advance_frame(1.0);
+    require(seat_wet_spool(w) && wait_for(w, 120.0,
+                                          [&](const scraperx::sim::Snapshot &) {
+                                              return w.wet_state().d_platform_travel >= 35.95;
+                                          }),
+            "F wreck: D carries the rider to 256.25");
+    require(drop_into_wet_e(w) && wait_wet_e_top(w, 60.0), "F wreck: E blows the rider up its shaft to 298.25");
+    require(walk_to(w, 13.4, -137.2, 4.0) && walk_to(w, 13.4, -139.9, 6.0) && couple_wet_hose(w) &&
+                pull_wet_stop_valve(w),
+            "F wreck: onto F's platform, its hose coupled and its stop valve thrown");
+    require(walk_to(w, 13.4, -137.2, 4.0, 0.15) && w.wet_state().f_platform_travel < 1.5,
+            "F wreck: back off F's platform onto E's cab as it starts up");
+    const bool f_up = wait_for(w, 90.0, [&](const scraperx::sim::Snapshot &) {
+        return w.wet_state().f_platform_travel >= 41.95;
+    });
+    (void)w.advance_frame(1.0);
+    require(f_up && w.snapshot().player_position.y < 300.0 &&
+                w.snapshot().support_entity_id == Simulation::kWetEDeckEntityId,
+            "F wreck: the platform gone up empty to TP-340, the rider left on E's cab");
+    const double spent = w.wet_state().f_platform_travel;
+    (void)walk_to(w, 13.0, -133.0, 4.0, 0.15);
+    const bool down = wait_for(w, 4.0, [](const scraperx::sim::Snapshot &state) {
+        return state.player_grounded && state.player_position.y > 286.2 && state.player_position.y < 288.0;
+    });
+    const auto ring = w.snapshot();
+    std::cout << "  F wreck: off the cab " << down << " (" << ring.player_position.x << ", " << ring.player_position.y
+              << ", " << ring.player_position.z << ") deaths " << ring.death_count << '\n';
+    require(down && ring.death_count == 0, "F wreck: off E's cab's south edge down onto the 286 ring, alive");
+    require(climb_wet_route_from_286(w) && standing_above(w.snapshot(), 340.4) && w.snapshot().death_count == 0,
+            "F wreck: the band's route climbed from the 286 ring past spent F to TP-340, alive");
+    require(std::abs(w.wet_state().f_platform_travel - spent) < 0.05, "F wreck: the spent platform stays at TP-340");
+    std::cout << "PASS scraperx_sim AS-007 wreckage F: f_travel=" << spent << " ring_y=" << ring.player_position.y
+              << " top_y=" << w.snapshot().player_position.y << '\n';
 }
 
 
@@ -701,6 +762,7 @@ void run_wreck_way_on() {
     run_mast_helix_wreckage();
     run_crown_wreckage();
     run_de_wreckage();
+    run_f_wreckage();
     run_s1_wreckage();
     run_s2_wreckage();
     run_s2_upgrade();

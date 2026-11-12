@@ -487,9 +487,13 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         track(slab, ImpactSound::HeavySteel);
         slab_cell_.build(*kit_, slab);
     }
+    // J-108 (#427): the bait lift's two platforms, after the slab cell, so
+    // every body before them keeps its place and older saves line up.
+    scraperx::sim::bands::build_bait_lift(*kit_, service_);
     // J-015: the S2 drain is built last, after every other body (the slab
-    // cell among them), so a save from before it still lines up with this
-    // world's bodies in order.
+    // cell and the bait lift among them: trunk's saves hold the lift and no
+    // drain), so a save from before it still lines up with this world's
+    // bodies in order.
     scraperx::sim::bands::build_s2_drain(*kit_, stack_);
     give_matron_stock();
 

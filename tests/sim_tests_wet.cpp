@@ -249,11 +249,18 @@ void run_wet_e_guard(const bool expect) {
     constexpr std::uint32_t kHungSlabs = 1;
     const std::uint64_t kSlabCell[] = {scraperx::sim::SlabCell::kFrameEntity, scraperx::sim::SlabCell::kTriggerEntity,
                                        scraperx::sim::SlabCell::kHandleEntity};
+    // J-108 (#427): then the bait lift's two platforms, A (hers) then B
+    // (his), built after the slab cell, the kit's last two bodies and the
+    // only addition. Re-pinned the J-092 way: before, the total was 830 with
+    // the slab cell last; now 832, the cell then A then B, each pinned.
+    const std::uint64_t kBait[] = {Simulation::kServiceBaitAEntityId, Simulation::kServiceBaitBEntityId};
     const std::uint32_t forklift_at =
         kBodiesBeforeE + static_cast<std::uint32_t>(std::size(kSince)) + kNewEastWest;
     const std::uint32_t kinds_at = forklift_at + static_cast<std::uint32_t>(std::size(kForklift)) + kNewUpper;
     const std::uint32_t cell_at = kinds_at + kMatronKinds + kHungSlabs;
-    const std::uint32_t drain_at = cell_at + static_cast<std::uint32_t>(std::size(kSlabCell));
+    const std::uint32_t bait_at = cell_at + static_cast<std::uint32_t>(std::size(kSlabCell));
+    // J-015: the S2 drain's two follow the bait lift's, the kit's last.
+    const std::uint32_t drain_at = bait_at + static_cast<std::uint32_t>(std::size(kBait));
     constexpr std::uint32_t kDrainBodies = 2;
     bool since_after = world.kit_body_count() == drain_at + kDrainBodies;
     for (std::uint32_t i = 0; since_after && i < std::size(kForklift); ++i) {
@@ -272,6 +279,9 @@ void run_wet_e_guard(const bool expect) {
     }
     for (std::uint32_t i = 0; since_after && i < std::size(kSlabCell); ++i) {
         since_after = world.kit_body_entity(cell_at + i) == kSlabCell[i];
+    }
+    for (std::uint32_t i = 0; since_after && i < std::size(kBait); ++i) {
+        since_after = world.kit_body_entity(bait_at + i) == kBait[i];
     }
     since_after = since_after && world.kit_body_entity(drain_at) == Simulation::kStackS2DrainStrikerEntityId &&
                   world.kit_body_entity(drain_at + 1) == Simulation::kStackS2CartEntityId;
@@ -373,7 +383,7 @@ void run_wet_e_guard(const bool expect) {
     // to the measured hash is exact).
     require(bodies.hash == 3514033760028014323ULL,
             "E guard: the kit's bodies stand in the same order as before E's rebuild");
-    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, then the slab cell's, and the S2 drain's last");
+    require(since_after, "E guard: the original 595 bodies precede exactly five bay, three twin, four summit and two deck-154 forklift bodies, then the slab cell's, then the bait lift's A and B, and the S2 drain's last");
     require(world.zipline_count() == 22 && lines.hash == 2122763527019327139ULL,
             "E guard: every zipline is built where it was, to the millimeter");
     // Re-pinned for J-017 (#180): the wall-climb stack on the 352 and 374 rings is

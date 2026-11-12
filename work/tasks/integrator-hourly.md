@@ -5,14 +5,14 @@ It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on
 red proof, review and merge; these runs catch what no event raised.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
-Pace: no throttling, no pace prediction, no meter asks, no quiet runs to save quota (11-10).
+Pace: no throttling, no pace prediction, no meter asks, no quiet runs (11-10).
 Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
 How: helpers get the important work and long reads, never chores (11-06); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
-Fewer, batched calls; no re-reads.
+Fewer, batched calls.
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode or fast mode on: tell him once (11-12).
+Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once; fast mode: trust the app's /fast line, not get_session (11-12).
 
 Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
@@ -33,14 +33,14 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    file and line. A failed Switchboard run: read its failing job's error lines; fix it or hand it to a helper.
    Before ruling on or reporting a branch, read its live head (`git ls-remote`) and proof: mail can be an hour old
    (Muse 11-06). So does a mail that changes a ruling.
-   Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06: 18 h went unreported).
+   Muse 3 h with no mail while its fb-bot branches move: tell Cory at once (11-06).
 2. **Sweep.** `git pull --no-rebase origin ScraperX-Claude`; `python3 tools/board/sweep.py`. Act only where
    the switchboard can't (J-056: it merges workflow PRs too): FIX or
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
    vendor (Muse first for physics and game code, then Grok), asked with the facts on its PR.
    Only the hardest: an unknown cause blocking 2+ jobs, the climb or her chase, or a fix failed twice: take it (11-12).
-   First mail the owner `CLAUDE_TO_MUSE: taking <piece>, stop your lane; if you pushed it, mail the sha`, check its
-   fb-bot branches and mail again before starting and before pushing, and stop if its version is there.
+   First mail the owner `CLAUDE_TO_MUSE: taking <piece>, stop your lane; if you pushed it, mail the sha`, set its issue
+   to owner:claude and drop it from muse.md the same step (11-12: J-109 built twice), check its fb-bot branches and mail again before starting and before pushing, and stop if its version is there.
 3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 4 h with no owner step (11-12)
    gets `To <Name>: close or next step`, and is closed the next hour if nothing comes.
 4. **Task the team.** Every agent holds work matched to its strength (CLAUDE.md). Muse never has fewer than
@@ -64,9 +64,9 @@ own and Claude's branches. Never ask for a job and then do it yourself: if you t
 Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can miss a push, #235).
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (#171 merged into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe to PRs you merge yourself
-and to Claude's own PRs (11-06: #277 sat 2 h on a Codex P1 nobody was woken for). Before `@codex review` or
+and to Claude's own PRs. Before `@codex review` or
 calling a PR clean, read its open review threads (`get_review_comments`), not only the newest review. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
-from one the switchboard merges (11-05: #250-#253 woke it 14 times in 3 min). A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
+from one the switchboard merges. A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
 lines or fewer (branch, sha, PASS/FAIL, what is left); put the numbers and details on the job's issue. Run tests in the foreground; never end a turn waiting on a
-background job." (11-05: they woke it 10 times.) The
+background job." The
 Claude API does reviews and the eye only (the API coder is off); one review per PR.
