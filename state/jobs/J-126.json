@@ -3,11 +3,11 @@
  "blocked": null,
  "branches": {},
  "cancelled": null,
- "ci": "red: host-build",
+ "ci": "running",
  "commands": [],
  "created": "2026-11-12T03:39:03Z",
  "deadline": null,
- "head": "7b609ab69405af49e1c7388e3d13b08568d0c06e",
+ "head": "d751a5bd8ba9b727a3d5a5320902e42bf983a31a",
  "issue": 449,
  "job": "J-126",
  "landed": {},
@@ -21,6 +21,6 @@
   450
  ],
  "review": "",
- "state": "review",
- "updated": "2026-11-12T03:39:03Z"
+ "state": "proof",
+ "updated": "2026-11-12T04:39:07Z"
 }

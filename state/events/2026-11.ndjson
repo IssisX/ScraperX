@@ -1792,3 +1792,7 @@
 {"attempt": 2, "ev": "sent", "id": "O-a40a97ab", "job": "", "ref": "ASK|ask on #378", "send": 2, "t": "2026-11-12T03:39:03Z", "to": "grok_bot", "via": "watch"}
 {"ev": "inbox", "id": "O-c30e881d", "job": "", "ref": "ASK|ask on #384", "t": "2026-11-12T03:39:03Z", "to": "claude", "via": "session"}
 {"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T03:39:03Z", "tries": 1}
+{"by": "Muse", "ev": "acked", "how": "/ack", "id": "O-2ddb7a9e", "job": "J-099", "t": "2026-11-12T04:39:07Z"}
+{"ev": "state", "frm": "review", "job": "J-126", "t": "2026-11-12T04:39:07Z", "to": "proof"}
+{"ev": "dead_letter", "id": "O-a40a97ab", "job": "", "ref": "ASK|ask on #378", "t": "2026-11-12T04:39:07Z", "to": "grok_bot"}
+{"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T04:39:07Z", "tries": 1}
