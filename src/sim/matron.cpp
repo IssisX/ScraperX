@@ -4838,7 +4838,6 @@ void Matron::take_blow(const float dt) {
                                                std::clamp((blow - takes) / std::max(fells - takes, 0.01F), 0.0F, 1.0F)) *
                      damage_recovery_scale_for_ns(damage_ns_);
         ++staggers_;
-        rage_ = std::min(1.0F, rage_ + kStaggerRage);
         blow_staggered_ = true;
         return;
     }
@@ -4894,11 +4893,9 @@ void Matron::knock_down() {
     if (blow_staggered_) {
         // The stagger it began as is this knockdown: counted once.
         --staggers_;
-        rage_ = std::max(0.0F, rage_ - kStaggerRage);
         blow_staggered_ = false;
     }
     ++knockdowns_;
-    rage_ = std::min(1.0F, rage_ + kKnockdownRage);
     blow_quiet_ = kBlowQuietTicks;
     lie_down(fall_x_, fall_z_);
 }
