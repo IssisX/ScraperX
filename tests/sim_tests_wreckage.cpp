@@ -8,7 +8,11 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iostream>
+#include <iterator>
+#include <string>
+#include <vector>
 
 using scraperx::sim::InitialSpawn;
 using scraperx::sim::Simulation;
@@ -578,6 +582,45 @@ void run_s2_upgrade() {
     std::cout << "PASS scraperx_sim stack wreckage S2 upgrade: beam0=" << beam0 << " cage0=" << cage0 << '\n';
 }
 
+// A real save from the build before the drain (trunk 74d84b25, J-015 #389
+// Codex P1): S2 ridden to deck 6, the rider still on the cage, saved 10 s
+// after it arrived (tests/data/s2_top_before_drain.save). That build has no
+// tank and no striker, so the tank here is full at the lower station from
+// the first tick, where the striker stands. Loaded, the cage must not stay
+// held up: the tank drains and the cage comes home to deck 4, as after a
+// ride in this build. (With the striker started as built it was caught in
+// the tank and the cage stayed at 21.98 m for 150 s, the tank dry.)
+void run_s2_old_save_top() {
+#ifndef SCRAPERX_SOURCE_DIR
+#error "SCRAPERX_SOURCE_DIR must name the repository (CMakeLists.txt sets it)"
+#endif
+    std::ifstream in(std::string(SCRAPERX_SOURCE_DIR) + "/tests/data/s2_top_before_drain.save", std::ios::binary);
+    const std::vector<std::uint8_t> bytes{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    require(bytes.size() > 1000, "S2 old save at the top: the save from the build before the drain is read");
+    Simulation s(InitialSpawn::ExteriorGrade);
+    require(s.load_game(bytes.data(), bytes.size()), "S2 old save at the top: it loads");
+    const auto loaded = s.stack_state();
+    std::cout << "S2 old save at the top: loaded cage " << loaded.s2_cage_travel << " beam " << loaded.s2_beam_angle
+              << " water " << loaded.s2_cart_water_kg << " rider_y " << s.snapshot().player_position.y << '\n';
+    require(loaded.s2_cage_travel > 21.9 && loaded.s2_beam_angle > 1.6 &&
+                std::abs(loaded.s2_cart_water_kg - 1250.0) < 1.0 &&
+                s.snapshot().player_position.y > 66.5,
+            "S2 old save at the top: the cage at deck 6 with the rider on it, the tank full as built");
+    bool home = false;
+    double home_s = 0.0;
+    for (std::uint32_t tick = 0; tick < 90 * 60 && !home; ++tick) {
+        (void)s.advance_frame(Simulation::kFixedStepSeconds);
+        home = std::abs(s.stack_state().s2_cage_travel) <= 0.02;
+        home_s = static_cast<double>(tick + 1) / 90.0;
+    }
+    const auto end = s.stack_state();
+    std::cout << "S2 old save at the top: home " << home << " in " << home_s << " s, water " << end.s2_cart_water_kg
+              << " cage " << end.s2_cage_travel << " beam " << end.s2_beam_angle << '\n';
+    require(home && end.s2_cart_water_kg < 1.0 && s.snapshot().death_count == 0,
+            "S2 old save at the top: the tank drained and the cage home at deck 4, the rider alive");
+    std::cout << "PASS scraperx_sim stack wreckage S2 old save at the top: home_s=" << home_s << '\n';
+}
+
 void run_wreck_way_on() {
     run_incline_wreckage();
     run_mast_helix_wreckage();
@@ -586,6 +629,7 @@ void run_wreck_way_on() {
     run_s1_wreckage();
     run_s2_wreckage();
     run_s2_upgrade();
+    run_s2_old_save_top();
     run_s3_wreckage();
     run_m_wreckage();
     run_n_wreckage();
