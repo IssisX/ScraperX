@@ -1595,6 +1595,71 @@ func _perf_fight() -> bool:
 	return true
 
 
+const PERF_NIGHT_FRAMES := 40
+
+
+# perf_night (J-081): renders only, not in CI: the helmet lamp's frame cost
+# on the phone path, measured as the wall/process/draw delta of the same
+# still midnight climb pose with the lamp on and off. The lamp is toggled
+# on its node directly, so no production debug switch is needed; it is on
+# again before the scenario returns. The native step keeps running in both
+# halves, so its cost is the same either side and the delta is the lamp's.
+func _perf_night() -> bool:
+	_main._sky_cycle.set_hour(0.0)
+	_main._sky_cycle.day_minutes = 0.0
+	_main._sky_cycle.set_passed_height(77.0)
+	var hud := _main.get_node("HUD") as CanvasLayer
+	hud.visible = false
+	var held := HeldView.new(_main._camera)
+	add_child(held)
+	held.pose = Transform3D(Basis(), Vector3(0.0, 78.7, -138.0)).looking_at(Vector3(16.4, 79.4, -150.0), Vector3.UP)
+	held.fov = 55.0
+	await _frames(8)
+	var lamp := _main._camera.get_node("HelmetLamp") as SpotLight3D
+	if lamp == null:
+		held.queue_free()
+		hud.visible = true
+		_main._sky_cycle.day_minutes = 24.0
+		return _fail("no HelmetLamp on the camera")
+	var halves := {}
+	for state in [true, false]:
+		lamp.light_energy = 4.0 if state else 0.0
+		lamp.shadow_enabled = state
+		await _frames(6)
+		var series := {"frame_wall_ms": [], "process_ms": [], "draw_calls": []}
+		var frame_started := Time.get_ticks_usec()
+		var frame := 0
+		while frame < PERF_NIGHT_FRAMES:
+			await get_tree().process_frame
+			frame += 1
+			var now := Time.get_ticks_usec()
+			series["frame_wall_ms"].append(float(now - frame_started) / 1000.0)
+			frame_started = now
+			series["process_ms"].append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+			series["draw_calls"].append(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+		halves[state] = series
+	# The lamp back on, as the game left it.
+	lamp.light_energy = 4.0
+	lamp.shadow_enabled = true
+	held.queue_free()
+	hud.visible = true
+	_main._sky_cycle.day_minutes = 24.0
+	for state in [true, false]:
+		var series: Dictionary = halves[state]
+		for key in series:
+			var s := _perf_series_summary(series[key])
+			print("SCRAPERX_PERF perf_night lamp_%s %s n=%d min=%.3f mean=%.3f p95=%.3f max=%.3f" % ["on" if state else "off", key, int(s["n"]), float(s["min"]), float(s["mean"]), float(s["p95"]), float(s["max"])])
+	var on_wall: Dictionary = _perf_series_summary((halves[true] as Dictionary)["frame_wall_ms"])
+	var off_wall: Dictionary = _perf_series_summary((halves[false] as Dictionary)["frame_wall_ms"])
+	var on_draws: Dictionary = _perf_series_summary((halves[true] as Dictionary)["draw_calls"])
+	var off_draws: Dictionary = _perf_series_summary((halves[false] as Dictionary)["draw_calls"])
+	print("SCRAPERX_PERF perf_night delta frame_wall_ms_p95=%.3f draw_calls_max=%d" % [float(on_wall["p95"]) - float(off_wall["p95"]), int(on_draws["max"]) - int(off_draws["max"])])
+	if int((halves[true] as Dictionary)["process_ms"].size()) < PERF_NIGHT_FRAMES or int((halves[false] as Dictionary)["process_ms"].size()) < PERF_NIGHT_FRAMES:
+		return _fail("only %d/%d frames were measured" % [int((halves[true] as Dictionary)["process_ms"].size()), int((halves[false] as Dictionary)["process_ms"].size())])
+	_detail = "frames=%d lamp_on_wall_p95=%.2f lamp_off_wall_p95=%.2f delta_wall_p95=%.2f draws_on_max=%d draws_off_max=%d" % [PERF_NIGHT_FRAMES, float(on_wall["p95"]), float(off_wall["p95"]), float(on_wall["p95"]) - float(off_wall["p95"]), int(on_draws["max"]), int(off_draws["max"])]
+	return true
+
+
 func _matron_pipe_touch(device: int) -> bool:
 	await _wait_until(func() -> bool: return bool(_ctx()["grounded"]), 2.0)
 	if not await _pipe_drum_to_corner(device):

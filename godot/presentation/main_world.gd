@@ -9,6 +9,7 @@ const MountainMesh := preload("res://presentation/mountain_mesh.gd")
 const YardGround := preload("res://presentation/yard_ground.gd")
 const LampGlow := preload("res://presentation/lamp_glow.gd")
 const FarWorld := preload("res://presentation/far_world.gd")
+const SkyCycle := preload("res://presentation/sky_cycle.gd")
 
 # The neighboring shaft. Mirrors TwinTower in the native world.
 const TWIN_TOWER_CENTER := Vector3(-30.0, 800.0, -264.0)
@@ -30,6 +31,9 @@ const DECK_PLANK_PITCH := 1.35
 const DECK_PLANK_WIDTH := 1.1
 const DECK_PLANK_TOP := 0.09
 var _vent_tops := PackedVector3Array()
+# J-081: the stack lamps' fittings, each with its own material so sky_cycle
+# can gate its glow by the deck he has passed: [deck_y, StandardMaterial3D].
+var _lamp_fittings: Array = []
 @onready var _light_rig: Node3D = $LightRig
 
 # --- world ------------------------------------------------------------------
@@ -528,14 +532,21 @@ func _build_stack_dressing(mill_scale: Material, oxidised: Material, rust_deep: 
 					cz - STACK_HALF_EXTENT + 2.2), mill_scale)
 			_vent_tops.append(Vector3(cx + sx * (STACK_HALF_EXTENT - 2.2), y + 2.45,
 				cz - STACK_HALF_EXTENT + 2.2))
+			# Each fitting has its own material (a duplicate of the shared
+			# one), so sky_cycle can dim one fitting without dimming all
+			# fourteen; the batcher takes one batch per material, fourteen
+			# tiny boxes, which is nothing.
+			var fitting_material := lamp_material.duplicate() as StandardMaterial3D
 			_add_box("LampFitting", Vector3(0.5, 0.3, 0.7),
-				Vector3(cx + sx * (inner_half - 0.6), y + 2.6, cz), lamp_material)
+				Vector3(cx + sx * (inner_half - 0.6), y + 2.6, cz), fitting_material)
+			_lamp_fittings.append([y, fitting_material])
 			_add_box("LampStandard", Vector3(0.09, LAMP_ARM_TOP, 0.09),
 				Vector3(cx + sx * inner_half, y + LAMP_ARM_TOP * 0.5, cz), galvanised)
 			_add_box("LampArm", Vector3(0.75, 0.08, 0.08),
 				Vector3(cx + sx * (inner_half - 0.375), y + LAMP_ARM_TOP - 0.04, cz), galvanised)
 			var lamp := OmniLight3D.new()
 			lamp.name = "StackLamp"
+			lamp.set_meta(SkyCycle.STACK_DECK_META, y)
 			lamp.position = Vector3(cx + sx * (inner_half - 0.6), y + 2.4, cz)
 			lamp.light_color = Color(1.0, 0.72, 0.38)
 			lamp.light_energy = 3.2
