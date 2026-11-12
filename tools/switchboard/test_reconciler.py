@@ -7,6 +7,8 @@ No network, no clock: a fake GitHub (with the Git Data API the state branch uses
 
 from __future__ import annotations
 
+import dataclasses
+
 import base64
 import datetime as dt
 import hashlib
@@ -950,6 +952,21 @@ class Rules(unittest.TestCase):
         b = L.BranchIn("fb-bot/integrate-j540-go", SHA["f"], t(23.5))
         h.run(feed(issues=[fresh], branches=[b]), NOW + 24 * H)
         self.assertEqual(h.obs("J-540", NOW + 24 * H)[0]["ack"]["how"], "work pushed")
+
+    def test_a_parked_job_is_never_owed_a_start(self):
+        h = Harness()
+        quiet = issue(541, job="J-541", owner="owner:muse")
+        parked = dataclasses.replace(quiet, labels=quiet.labels + (R.PARKED_LABEL,))
+        h.run(feed(issues=[parked]), NOW + 30 * H)
+        self.assertEqual((h.state().jobs["J-541"]["state"], h.obs("J-541", NOW + 30 * H)), ("accepted", []))
+        h.run(feed(issues=[quiet]), NOW + 31 * H)   # unparked and quiet past the grace: the start is owed again
+        self.assertEqual([o["kind"] for o in h.obs("J-541", NOW + 31 * H)], ["start-agent"])
+
+    def test_a_queued_job_has_a_day_before_a_start_is_owed(self):
+        h = Harness()
+        fresh = issue(542, job="J-542", owner="owner:muse")   # touched 2 h ago
+        h.run(feed(issues=[fresh]), NOW + 6 * H)               # past the 4 h stale bound, inside the day's grace
+        self.assertEqual(h.obs("J-542", NOW + 6 * H), [])
 
     def test_config_key_absent_is_off_and_only_shadow_is_on(self):
         root = pathlib.Path(tempfile.mkdtemp(dir=TMP.name))
