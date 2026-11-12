@@ -3113,6 +3113,34 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                         const Vec3 goal(heard_x_, lead_floor_, heard_z_);
                         const int foot_patch = scanned_->patch_at(feet, 0.4F);
                         const int goal_patch = scanned_->patch_at(goal, 0.4F);
+                        // Him on no floor of hers, at her floor's height (a
+                        // moving floor that is not hers, across a gap from
+                        // her own: J-108's bait lift): as near as she can
+                        // come is the spot of her own floor nearest him,
+                        // within 5 m, and that is where she goes.
+                        // Her lines would take her to their own projection
+                        // of him, on a level that may not be here at all.
+                        Vec3 aim = goal;
+                        int aim_patch = goal_patch;
+                        if (goal_patch < 0 && own_region >= 0 && std::abs(lead_floor_ - feet_y) <= kStepUpM) {
+                            constexpr float kNearestFloorM = 5.0F;
+                            float best = kNearestFloorM;
+                            for (const int i : scanned_->regions()[static_cast<std::size_t>(own_region)].patches) {
+                                const traversal::Patch &p = scanned_->patches()[static_cast<std::size_t>(i)];
+                                if (p.narrow || std::abs(p.top - feet_y) > kStepUpM) continue;
+                                const auto inside = [](const float v, const float lo, const float hi) {
+                                    return lo <= hi ? std::clamp(v, lo, hi) : 0.5F * (lo + hi);
+                                };
+                                const float px = inside(heard_x_, p.min_x + kRadius, p.max_x - kRadius);
+                                const float pz = inside(heard_z_, p.min_z + kRadius, p.max_z - kRadius);
+                                const float d = distance_xz(px, pz, heard_x_, heard_z_);
+                                if (d < best) {
+                                    best = d;
+                                    aim = Vec3(px, p.top, pz);
+                                    aim_patch = i;
+                                }
+                            }
+                        }
                         if (saw && std::abs(lead_floor_ - feet_y) <= kStepUpM && straight_to(ax, az, heard_x_, heard_z_)) {
                             // Him in sight, a step from her floor, and the
                             // steel straight to him clear and under her feet
@@ -3121,13 +3149,13 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                             wx = heard_x_;
                             wz = heard_z_;
                             scan_walk = true;
-                        } else if (foot_patch >= 0 && foot_patch == goal_patch) {
+                        } else if (foot_patch >= 0 && foot_patch == aim_patch) {
                             // The spot is on the very surface under her feet.
-                            wx = heard_x_;
-                            wz = heard_z_;
+                            wx = aim.GetX();
+                            wz = aim.GetZ();
                             scan_walk = true;
                         } else {
-                            const std::vector<Vec3> path = scanned_->walk_path(feet, goal);
+                            const std::vector<Vec3> path = scanned_->walk_path(feet, aim);
                             // Her patches are joined fewest-first, not
                             // shortest: a way round the shaft to a place a
                             // few metres off her own line is no way to it.

@@ -9,6 +9,10 @@ Cory 11-11: *"I think I want you to do a failure mode analysis"*, after a job wa
 pushed. The goal: find every place in the agents' system where work can silently drop, and stop each one
 with a mechanism. Remembering harder is not a mechanism (*"I know that doesn't work"*).
 
+Cory 11-12 named the whole thing **the collaboration system**: who gets what work, Claude and Muse's mail, helpers,
+the switchboard, the stuck-work alarms. *"Make sure this is working"* means the whole loop is closed: every job has an
+owner matched by `work/tasks/job-routing.md`, the work actually gets done, nothing piles up and nothing is missed.
+
 1. **List the hand-offs.** These are: Cory to integrator, integrator to Muse mail, Muse mail to the bridge
    and inbox, asks (`To <Name>:`), proofs, reviews, merges, helper briefs and reports, the queue
    (`work/tasks/muse.md`), the board, scheduled tasks and reminders, and follow-ups promised in chat.

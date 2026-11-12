@@ -126,6 +126,9 @@ public:
     // What the tower's steel offers the Matron's climbing (matron_traversal.hpp):
     // read from the real collision geometry the first time it is asked for.
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();
+    // The world's hoists and platforms as the kit holds them, to her
+    // (Matron::set_hoists): every step, and before her first look.
+    void feed_matron_hoists();
     [[nodiscard]] double matron_gravity_factor() const;
     [[nodiscard]] std::size_t matron_grid_walk(JPH::Vec3 from, JPH::Vec3 to, float margin, int max_nodes) const;
     [[nodiscard]] const Bay &bay() const noexcept { return *bay_; }
