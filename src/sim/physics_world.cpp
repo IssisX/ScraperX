@@ -203,6 +203,7 @@ Simulation::PhysicsWorld::PhysicsWorld(const InitialSpawn initial_spawn,
         JPH::Vec3(0.0F, 0.5F * kPlayerHalfHeight, 0.0F), JPH::Quat::sIdentity(),
         new JPH::CapsuleShape(0.5F * kPlayerHalfHeight - kPlayerRadius, kPlayerRadius));
     grip_region_shape_ = new JPH::BoxShape(kGripSearchHalf);
+    grip_region_shape_bar_ = new JPH::BoxShape(kBarSearchHalf);
     // A climber's moves are swept with a body 5 cm slimmer than the
     // capsule: a body on its holds already touches the rungs it climbs.
     climb_sweep_shape_ =

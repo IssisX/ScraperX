@@ -23,10 +23,12 @@ void Simulation::PhysicsWorld::load_hold(JPH::BodyInterface &bodies) noexcept {
 // round: a box whose two thinner dimensions are at most kGripMaxSection
 // and whose length is at least kGripMinLength, on a static body or one of
 // at least kGripMinBodyMassKg, searched in a kGripSearchHalf box round
-// `aim` squared to `facing`. The point is on the member's axis.
+// `aim` squared to `facing` — or in `region_shape` when given (the bar
+// search's wider, taller box). The point is on the member's axis.
 Grip Simulation::PhysicsWorld::find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
                                          const JPH::Vec3 facing,
-                                         const float min_ahead) const noexcept {
+                                         const float min_ahead,
+                                         const JPH::Shape *region_shape) const noexcept {
     Grip best;
     if (facing.IsNearZero()) {
         return best;
@@ -37,8 +39,9 @@ Grip Simulation::PhysicsWorld::find_grip(const JPH::RVec3 centre, const JPH::RVe
     JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> hits;
     const JPH::IgnoreSingleBodyFilter player_filter(player_id_);
     const JPH::IgnoreSingleBodyFilterChained filter(carried_id_, player_filter);
+    const JPH::Shape *region = region_shape != nullptr ? region_shape : grip_region_shape_.GetPtr();
     physics_system_.GetNarrowPhaseQuery().CollideShape(
-        grip_region_shape_.GetPtr(), JPH::Vec3::sReplicate(1.0F),
+        region, JPH::Vec3::sReplicate(1.0F),
         JPH::RMat44::sRotationTranslation(rotation, aim), settings, aim, hits, {}, {}, filter);
     float best_distance = std::numeric_limits<float>::max();
     for (const JPH::CollideShapeResult &hit : hits.mHits) {

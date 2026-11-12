@@ -582,7 +582,15 @@ constexpr float kHangArmLength = kHangDropBelowLedge - kHangShoulderAboveCentre;
 // last. Monkey bars a metre apart are out of reach from a dead hang (1.14 m)
 // and in reach at the front of a swing: the swing is what carries the body.
 constexpr float kSwingMinHandRise = 0.75F;
-constexpr float kSwingCatchAimRise = 1.10F;
+// J-043 (#241, Claude 2026-11-11): the bar search — the swing catch in
+// try_begin_hang — aims at the middle of its band, 0.70 m over the
+// centre: the band runs from about waist height (the centre) to the
+// overhead top (1.40 m over the centre), so a rail passing his chest or
+// hip while he falls past it is seen. Before this the aim was 1.10 m
+// (kSwingCatchAimRise) and the band stopped 0.80 m over the centre, so a
+// rail below his chest was invisible until he landed on it. The swing
+// gate (kSwingMinHandRise) still decides whether the hands close.
+constexpr float kBarSearchAimRise = 0.70F;
 constexpr float kSwingCatchAimAhead = 0.15F;
 constexpr float kSwingKipForceN = 160.0F;
 constexpr float kSwingKipFromRestMps = 0.05F;
@@ -675,6 +683,14 @@ constexpr float kGripWallBehindM = 0.5F;
 // Where a hand looks for a hold: a box this big (across, up, along the
 // facing) round the point it aims at.
 const JPH::Vec3 kGripSearchHalf(0.30F, 0.30F, 0.35F);
+// J-043 (#241, Claude 2026-11-10 + 2026-11-11): the bar search's own box.
+// Sideways half-width 0.45 m (the climb's 0.30): a rail 0.45-0.5 m beside
+// his line is inside his real arm reach (arm 0.60 m from the shoulder).
+// The band is 0.70 m tall, so with the aim at kBarSearchAimRise it runs
+// from about waist height to the overhead top — the rail is seen while it
+// passes his chest or hip, not only over his head. Forward stays 0.35 m.
+// The climb search keeps kGripSearchHalf.
+const JPH::Vec3 kBarSearchHalf(0.45F, 0.70F, 0.35F);
 // Climbing: the body moves at these rates. Its hands aim this high over its
 // centre, this far in front of it and this far to either side; one hand
 // moves at a time.

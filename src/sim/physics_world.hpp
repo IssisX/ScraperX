@@ -623,7 +623,8 @@ private:
 
     [[nodiscard]] Grip find_grip(const JPH::RVec3 centre, const JPH::RVec3 aim,
                                  const JPH::Vec3 facing,
-                                 const float min_ahead = 0.5F * kPlayerRadius) const noexcept;
+                                 const float min_ahead = 0.5F * kPlayerRadius,
+                                 const JPH::Shape *region_shape = nullptr) const noexcept;
 
     // A wall face right behind this hold (a rung or pipe on a wall).
     [[nodiscard]] bool grip_backed_by_wall(const Grip &grip) const noexcept;
@@ -735,6 +736,7 @@ public:
     JPH::RefConst<JPH::Shape> player_crouch_shape_;
     JPH::RefConst<JPH::Shape> player_torso_shape_;
     JPH::RefConst<JPH::Shape> grip_region_shape_;
+    JPH::RefConst<JPH::Shape> grip_region_shape_bar_;
     JPH::RefConst<JPH::Shape> climb_sweep_shape_;
     JPH::BodyID deck_id_;
     JPH::BodyID translating_support_id_;

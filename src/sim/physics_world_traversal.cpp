@@ -74,14 +74,17 @@ void Simulation::PhysicsWorld::try_begin_hang(JPH::BodyInterface &bodies, const 
         }
         // None in front: a bar or pipe over the head is swung from -- in
         // flight (a jump, or no ground within a step under the soles),
-        // never on a step's brief lift.
+        // never on a step's brief lift. The bar search covers his real
+        // arm reach (J-043): 0.45 m to the side, and its band runs down
+        // past his shoulders to about waist height, so a rail passing his
+        // chest or hip while he falls past it is seen.
         if (!flight_from_jump_ &&
             feet_supported_at(origin, static_cast<float>(origin.GetY()) - active_half_height())) {
             return;
         }
         const Grip bar = find_grip(
-            origin, origin + JPH::Vec3(0.0F, kSwingCatchAimRise, 0.0F) + facing_ * kSwingCatchAimAhead,
-            facing_, -kPlayerRadius);
+            origin, origin + JPH::Vec3(0.0F, kBarSearchAimRise, 0.0F) + facing_ * kSwingCatchAimAhead,
+            facing_, -kPlayerRadius, grip_region_shape_bar_.GetPtr());
         if (bar.valid && bar.point.GetY() - origin.GetY() >= kSwingMinHandRise) {
             begin_swing(bodies, bar);
         }
