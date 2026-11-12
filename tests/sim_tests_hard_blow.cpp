@@ -64,50 +64,6 @@ void stand_still(Simulation &s, const double seconds) {
     (void)s.advance_frame(seconds);
 }
 
-// The line whose top stands on the floor at `floor` (another level's below it).
-std::uint32_t line_from(const Simulation &s, const double floor) {
-    for (std::uint32_t i = 0; i < s.zipline_count(); ++i) {
-        const auto line = s.zipline_line(i);
-        if (std::abs(line.ramp_foot.y - floor) < 0.3 && line.bottom.y < line.top.y - 6.0) {
-            return i;
-        }
-    }
-    return s.zipline_count();
-}
-
-// Rides line `line` down from its stand: the jump for its bar, braked to come
-// into the end's buffer at 5 m/s, and letting go there. True once down on the
-// far band, alive.
-bool ride_line_down(Simulation &s, const Simulation::ZiplineLine &line) {
-    const double run = std::hypot(line.bottom.x - line.top.x, line.bottom.z - line.top.z);
-    (void)s.set_move_input(0.0, 0.0);
-    (void)s.set_sprint_input(false);
-    (void)s.advance_frame(0.5);
-    (void)s.set_facing((line.bottom.x - line.top.x) / run, (line.bottom.z - line.top.z) / run);
-    (void)s.advance_frame(0.2);
-    if (!(s.request_jump() &&
-          advance_until(s, [](const scraperx::sim::Snapshot &n) { return n.zipline_riding; }, 1.2))) {
-        return false;
-    }
-    const auto deaths = s.snapshot().death_count;
-    for (int i = 0; i < 20 * static_cast<int>(Simulation::kTickRateHz); ++i) {
-        const auto n = s.snapshot();
-        const bool braking = n.zipline_riding && n.zipline_along_m > line.length - 12.0 && n.zipline_speed_mps > 5.0;
-        (void)s.set_move_input(0.0, braking ? 1.0 : 0.0);
-        tick(s);
-        const auto m = s.snapshot();
-        if (m.zipline_riding && m.zipline_along_m > line.length - 1.5 && std::abs(m.zipline_speed_mps) < 0.3) {
-            (void)s.request_release();
-        }
-        if (!m.zipline_riding && m.player_grounded && m.player_position.y < line.top.y - 6.0) {
-            (void)s.set_move_input(0.0, 0.0);
-            return m.death_count == deaths;
-        }
-    }
-    (void)s.set_move_input(0.0, 0.0);
-    return false;
-}
-
 // Waits (still) until she stands guard at her post on her deck.
 bool until_guarding(Simulation &s, const double seconds) {
     constexpr double kPostX = -10.3;
@@ -122,41 +78,28 @@ bool until_guarding(Simulation &s, const double seconds) {
     return false;
 }
 
-// Wakes her, rides down to 143, rounds to her post and waits for her guard:
-// the shared start of every throw case below.
+// Wakes her and waits until she stands guard at her post on this deck:
+// the shared start of every throw case below. All on deck 154, where her
+// throwables lie by the north band — never ride down to 143 first, as the
+// balance test's debug launches do: the pieces are eleven metres above it,
+// out of the hands' reach.
 void to_her_post(Simulation &s) {
     s.place_matron_home(154.0F);
     s.debug_fix_matron_pace(3);  // her old one speed: these legs meet her mechanics (paces: run_matron_pace)
     require(s.advance_frame(1.0).accepted, "hard blow: settle");
     require(go(s, 8.0, Matron::kBandNorthZ, true, 4.0, 1.0) && s.matron_state().state == kStateStraining,
             "hard blow: a sprint toward her locker wakes her");
-    const auto line = s.zipline_line(line_from(s, Matron::kDeckTop));
-    require(walk_to(s, line.ramp_foot.x, line.ramp_foot.z, 6.0, 0.3) &&
-                walk_to(s, line.stand.x, line.stand.z, 6.0, 0.12),
-            "hard blow: up the line's ramp onto its stand");
-    require(ride_line_down(s, line), "hard blow: down the line to 143 m while she strains");
-    (void)s.set_crouch_input(true);
-    require(go(s, -Matron::kBandX, Matron::kBandSouthZ, false, 40.0, 1.0) &&
-                go(s, -Matron::kBandX, Matron::kBandNorthZ, false, 60.0, 1.0) &&
-                go(s, -16.0, -132.6, false, 20.0, 0.3),
-            "hard blow: crouched round to 143's north edge of the shaft");
     require(until_guarding(s, 120.0) && s.snapshot().death_count == 0,
             "hard blow: she stands guard at her post");
-    // Up again before any pick-up: the round trip crouches, and the pick-up
-    // is an upright act (the matron-heave beat takes its toolbox upright).
-    (void)s.set_crouch_input(false);
-    (void)s.advance_frame(0.3);
 }
 
-// Takes up the piece at `entity` where it lies by the north band: north to
-// the piece's latitude first, then east along the north edge to it — the
-// straight line from the shaft's north edge runs through her guard post
-// (-10.3, -129). Then the ammo handled_piece's pick-up: face it, look down
-// on it, nudge in until the hands have it.
+// Takes up the piece at `entity` where it lies by the north band: straight
+// to it from the east, where her post never stands in the way, then the
+// ammo handled_piece's pick-up: look down on it, nudge in until the hands
+// have it.
 void take_up_piece(Simulation &s, const std::uint64_t entity, const char *what) {
     const auto at = s.kit_body_position(s.kit_body_index(entity));
-    const auto start = s.snapshot().player_position;
-    require(walk_to(s, start.x, at.z, 20.0, 0.5) && walk_to(s, at.x, at.z, 20.0, 0.3), what);
+    require(walk_to(s, at.x, at.z, 20.0, 0.3), what);
     const std::uint32_t body = s.kit_body_index(entity);
     (void)s.set_look_pitch(-0.5);
     for (int i = 0; i < static_cast<int>(3.0 * Simulation::kTickRateHz) &&
