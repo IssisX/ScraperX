@@ -17,8 +17,8 @@
  "landed": {
   "fb-bot/integrate-j077": [
    "4a81dbcbf2287c7641ed1196bfeeda6efd3f179e",
-   "",
-   "2026-11-12T15:45:44Z"
+   "merged #470",
+   "2026-11-12T16:58:14Z"
   ]
  },
  "obligations": [
@@ -107,6 +107,34 @@
    "version": "6827984478",
    "via": "session",
    "what": "ask from Muse on #392"
+  },
+  {
+   "ack": {
+    "at": "2026-11-12T15:57:55Z",
+    "by": "claude",
+    "how": "reply to the asker"
+   },
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T15:53:04Z",
+   "attempts": 0,
+   "closed": null,
+   "created": "2026-11-12T16:58:14Z",
+   "dead": "2026-11-12T20:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T18:17:00Z",
+   "id": "O-f476991c",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": null,
+   "missing": 0,
+   "ref": "ASK|ask on #392",
+   "sends": 0,
+   "thread": 392,
+   "to": "claude",
+   "unseen": null,
+   "version": "6828499195",
+   "via": "session",
+   "what": "ask from Muse on #392"
   }
  ],
  "outcome": null,
@@ -116,6 +144,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T15:45:44Z"
+ "state": "merged",
+ "updated": "2026-11-12T16:58:14Z"
 }

@@ -10,7 +10,7 @@
   "fb-bot/integrate-protected-j015-wreck-way-on": "aee6d79d91249016e5788e205e16b0958f4bd427"
  },
  "cancelled": null,
- "ci": "green",
+ "ci": "running",
  "commands": [
   "6771165879:299",
   "6773022511:72",
@@ -18,14 +18,14 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-12T17:17:00Z",
- "head": "22818c35ce7b42cf2d5d85234136c4b0c4c51c7d",
+ "head": "0ab0b03e40adf1b6eb56d8a1109ce5b190e457af",
  "issue": 122,
  "job": "J-015",
  "landed": {
   "claude/integrate-j015": [
    "cdc6ec353a9506bebab23387801b5b2af00743f9",
-   "",
-   "2026-11-12T14:29:46Z"
+   "merged #467",
+   "2026-11-12T16:58:14Z"
   ],
   "fb-bot/integrate-j015-slice1": [
    "2f8b1f21d655f8e11e9648cbba743355c31f2314",
@@ -70,7 +70,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
-   "rechecked": "2026-11-12T10:02:04Z",
+   "rechecked": "2026-11-12T16:58:14Z",
    "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
    "sends": 1,
    "sent_by": "shadow",
@@ -741,6 +741,6 @@
   466
  ],
  "review": "",
- "state": "review",
- "updated": "2026-11-12T15:45:44Z"
+ "state": "proof",
+ "updated": "2026-11-12T16:58:14Z"
 }

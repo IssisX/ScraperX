@@ -8,7 +8,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-09T22:17:00Z",
+ "deadline": null,
  "head": "55b8b3e22548aa0154f5af13d5978d7d171c304d",
  "issue": 242,
  "job": "J-044",
@@ -61,12 +61,12 @@
    "kind": "ruling",
    "last_error": "",
    "last_sent": null,
-   "missing": 2,
+   "missing": 3,
    "ref": "BRANCH|chatgpt/integrate-j044-review-gate-20261109",
    "sends": 0,
    "thread": 347,
    "to": "claude",
-   "unseen": null,
+   "unseen": "2026-11-12T16:58:14Z",
    "version": "closed:55b8b3e22548aa0154f5af13d5978d7d171c304d",
    "via": "session",
    "what": "`chatgpt/integrate-j044-review-gate-20261109` @ 55b8b3e2: closed #347 without merging at this head: reopen it, or delete the branch"
@@ -244,11 +244,11 @@
  ],
  "outcome": null,
  "outcome_reason": "",
- "owner": "claude",
+ "owner": "muse",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
  "state": "working",
- "updated": "2026-11-12T15:45:44Z"
+ "updated": "2026-11-12T16:58:14Z"
 }

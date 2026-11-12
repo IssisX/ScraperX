@@ -3,7 +3,7 @@
  "blocked": null,
  "branches": {
   "claude/integrate-j108": "bf7e6e79c0dc943f9906402ff149dc5fa49fb73c",
-  "claude/integrate-protected-j108": "9105c47af086c7fdaefb205bc1d1d40ba8276884"
+  "claude/integrate-protected-j108": "6d6544976af64518aa6e12238cae40f9638e8fc5"
  },
  "cancelled": null,
  "ci": "running",
@@ -22,9 +22,9 @@
    "2026-11-12T15:45:44Z"
   ],
   "claude/integrate-protected-j108": [
-   "9105c47af086c7fdaefb205bc1d1d40ba8276884",
-   "",
-   "2026-11-12T14:29:46Z"
+   "6d6544976af64518aa6e12238cae40f9638e8fc5",
+   "merged #464",
+   "2026-11-12T16:58:14Z"
   ]
  },
  "obligations": [
@@ -230,12 +230,12 @@
  "outcome_reason": "",
  "owner": "claude",
  "pr": 464,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   464,
   463
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T15:45:44Z"
+ "state": "merged",
+ "updated": "2026-11-12T16:58:14Z"
 }

@@ -1,7 +1,9 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-protected-j043-rail-stand": "137352db30319b8e37f9d4aaac72440a2e262492"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [
@@ -9,10 +11,16 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-12T17:00:00Z",
- "head": "",
+ "head": "137352db30319b8e37f9d4aaac72440a2e262492",
  "issue": 241,
  "job": "J-043",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-protected-j043-rail-stand": [
+   "137352db30319b8e37f9d4aaac72440a2e262492",
+   "",
+   "2026-11-12T16:58:14Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -233,6 +241,31 @@
    "version": "6826116728",
    "via": "issue",
    "what": "ask from Claude on #241"
+  },
+  {
+   "ack": null,
+   "ack_rule": "reply|ack",
+   "asked": "2026-11-12T17:02:55Z",
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T16:58:14Z",
+   "dead": "2026-11-12T20:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T18:17:00Z",
+   "id": "O-84d21a9c",
+   "kind": "ask",
+   "last_error": "",
+   "last_sent": "2026-11-12T16:58:14Z",
+   "missing": 0,
+   "ref": "ASK|ask on #241",
+   "sends": 1,
+   "sent_by": "inbox",
+   "thread": 241,
+   "to": "claude",
+   "unseen": null,
+   "version": "6830307226",
+   "via": "session",
+   "what": "ask from Muse on #241"
   }
  ],
  "outcome": null,
@@ -242,6 +275,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T14:29:46Z"
+ "state": "proof",
+ "updated": "2026-11-12T16:58:14Z"
 }

@@ -12,13 +12,13 @@
  "job": "J-106",
  "landed": {},
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "cancelled",
+ "outcome_reason": "issue closed as not planned",
  "owner": "claude",
  "pr": 0,
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "assigned",
- "updated": "2026-11-12T15:45:44Z"
+ "state": "cancelled",
+ "updated": "2026-11-12T16:58:14Z"
 }

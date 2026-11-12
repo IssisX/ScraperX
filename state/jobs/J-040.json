@@ -1,19 +1,31 @@
 {
  "attempt": 0,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-protected-j040": "cc5cd8187bad4dbf6ed766f1f5fc0a2e38096450"
+ },
  "cancelled": null,
  "ci": "",
  "commands": [],
  "created": "2026-11-09T17:35:20Z",
- "deadline": "2026-11-12T18:29:46Z",
- "head": "",
+ "deadline": null,
+ "head": "cc5cd8187bad4dbf6ed766f1f5fc0a2e38096450",
  "issue": 228,
  "job": "J-040",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-protected-j040": [
+   "cc5cd8187bad4dbf6ed766f1f5fc0a2e38096450",
+   "",
+   "2026-11-12T16:58:14Z"
+  ]
+ },
  "obligations": [
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T16:58:14Z",
+    "by": "muse",
+    "how": "work pushed"
+   },
    "ack_rule": "work|reply|ack",
    "asked": null,
    "attempts": 1,
@@ -27,7 +39,7 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": "2026-11-12T14:29:46Z",
-   "missing": 2,
+   "missing": 0,
    "rechecked": "2026-11-12T07:49:06Z",
    "ref": "JOB|#228",
    "reopened": "2026-11-12T14:29:46Z",
@@ -77,6 +89,6 @@
  "pr_done": "",
  "prs": [],
  "review": "",
- "state": "accepted",
- "updated": "2026-11-12T15:45:44Z"
+ "state": "proof",
+ "updated": "2026-11-12T16:58:14Z"
 }

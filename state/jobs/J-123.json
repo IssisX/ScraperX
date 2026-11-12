@@ -6,7 +6,7 @@
  "ci": "",
  "commands": [],
  "created": "2026-11-12T01:29:02Z",
- "deadline": "2026-11-12T18:29:46Z",
+ "deadline": null,
  "head": "",
  "issue": 445,
  "job": "J-123",
@@ -26,13 +26,13 @@
    "kind": "start-agent",
    "last_error": "",
    "last_sent": "2026-11-12T15:45:44Z",
-   "missing": 2,
+   "missing": 3,
    "ref": "JOB|#445",
    "sends": 1,
    "sent_by": "live",
    "thread": 445,
    "to": "muse",
-   "unseen": null,
+   "unseen": "2026-11-12T16:58:14Z",
    "version": "start:445",
    "via": "email",
    "what": "start J-123"
@@ -46,5 +46,5 @@
  "prs": [],
  "review": "",
  "state": "accepted",
- "updated": "2026-11-12T15:45:44Z"
+ "updated": "2026-11-12T16:58:14Z"
 }
