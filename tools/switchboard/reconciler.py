@@ -705,9 +705,12 @@ def derive(o: JobObs, rec: dict, owner: str, now: dt.datetime, roster: L.Roster,
             states.append("merged")   # its work landed; the issue is still open
         elif not rec["head"] and not rec["prs"] and now - o.issue.touched < START_GRACE:
             states.append("assigned")   # queued: the owner has a day before a start is owed (not L.STALE, 4 h)
-        elif not rec["head"] and not rec["prs"]:   # quiet a day with no work seen (the feed reads 3 days of pushes)
-            wants.append(Want("start-agent", owner, f"start:{o.issue.number}", f"JOB|#{o.issue.number}",
-                              o.issue.number, f"start {o.job}", "work|reply|ack"))
+        elif not rec["head"] and not rec["prs"]:   # a stale snapshot cannot authorize a new start
+            # Never mail "start" from an aging record: job issue labels are the order,
+            # and a re-plan may have parked or transferred the job meanwhile.
+            wants.append(Want("ruling", "claude", f"idle:{o.issue.number}", f"JOB|#{o.issue.number}",
+                              o.issue.number, f"{o.job} has no remote work: inspect its live issue before routing",
+                              "work|reply|ack"))
             states.append("assigned")
         else:
             states.append("working")
