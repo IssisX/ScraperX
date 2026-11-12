@@ -910,8 +910,13 @@ public:
         return true;
     }
     bool bits(std::vector<bool> &values, std::size_t expected) {
+        return bits_up_to(values, expected) && values.size() == expected;
+    }
+    // Bits that a later build may have more of (the ropes built since), up
+    // to `most`.
+    bool bits_up_to(std::vector<bool> &values, std::size_t most) {
         std::uint32_t count = 0;
-        if (!pod(count) || count != expected) {
+        if (!pod(count) || count > most) {
             return false;
         }
         values.assign(count, false);

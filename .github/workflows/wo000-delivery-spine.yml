@@ -183,8 +183,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes ninja-build ccache
+          ci/apt_install.sh ninja-build ccache
 
       - name: Build native host graph
         shell: bash
@@ -787,8 +786,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
+          ci/apt_install.sh xvfb libgl1 libx11-6 libxcursor1 libxinerama1 libxrandr2 libxi6
           chmod +x godot/addons/scraperx_native/bin/linux/libscraperx_native.so
           mkdir -p /home/runner/.cache/scraperx-godot tools/godot artifacts
           if ! echo "${GODOT_BINARY_SHA256}  /home/runner/.cache/scraperx-godot/godot.zip" | sha256sum --check 2>/dev/null; then
@@ -1147,8 +1145,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes ninja-build ccache
+          ci/apt_install.sh ninja-build ccache
           SDKMANAGER_PATH="$(find "${ANDROID_HOME}/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
           test -x "${SDKMANAGER_PATH}"
           yes | "${SDKMANAGER_PATH}" --licenses >/dev/null || true

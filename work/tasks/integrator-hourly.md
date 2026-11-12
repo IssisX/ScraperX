@@ -14,9 +14,10 @@ How: helpers get the important work (Claude's 1-2 key jobs, long reads), never c
 Fewer, batched calls; no re-reads; short messages to Cory.
 Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
-Helpers (sub-agents): at most two at a time (11-10), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
+Helpers (sub-agents): at most three at a time (11-11: they take the hardest jobs from Muse, after Argon's), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
 
+Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed.
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 
@@ -44,9 +45,10 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
 3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 24 h with no owner step
    gets `To <Name>: close or next step`, and is closed the next hour if nothing comes.
 4. **Task the team.** Every agent holds work matched to its strength (CLAUDE.md). Muse never has fewer than
-   six big unstarted jobs in `work/tasks/muse.md`: derive the next from `03_EXECUTION/GAP_LIST.md` and
+   eight big unstarted jobs in `work/tasks/muse.md` (count only jobs not started, not in flight, parked or done; under eight, refill to fifteen (the switchboard raises QUEUE-LOW, J-097); Cory 11-11: "cant have that happen"; before any queue mail, `python3 tools/board/queue_check.py` must print QUEUE CLEAN, and no two queued jobs may touch the same function at once; every full run also runs it and acts on each READY line and each PARKED job whose newest comment is an answer): derive the next from `03_EXECUTION/GAP_LIST.md` and
    Cory's asks, a whole system or set piece, written whole on its own job issue, and mail it. Rule on Muse's
-   proposals within the hour. Every hard job's owner has asked the right other agent where it is guessing.
+   proposals within the hour. Every hard job's owner has asked the right other agent where it is guessing. My own
+   and my helpers' jobs too: a job red twice, or a red Muse's branches share, gets a question mailed to Muse that run, plus `To Grok:` (math, risk, a fresh take) or an Argon prompt for Cory (hardest physics) when it is stuck (Cory 11-11).
    Replace the "This hour" section of the board's body (the open issue labeled `board`) with who got what; never a new comment.
 5. **Size and caps.** `get_session` (no id) for this session. Helpers are its sub-agents and end with
    their job. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md` current: only what has no other home. Over a cap in CLAUDE.md: trim it now.

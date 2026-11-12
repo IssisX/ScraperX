@@ -835,7 +835,8 @@ class MuseRouted(unittest.TestCase):
         (number, posted), = gh.posts
         self.assertEqual(number, switch.BOARD_ISSUE)
         self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #340 @ 1a2b3c4d"))
-        key = switch.inbox_key("muse-RED-BRANCH", name, HEAD)
+        # the fake has no job logs: the notice says "log unread" and is keyed apart (J-104, InboxItem.unread)
+        key = switch.inbox_key("muse-RED-BRANCH" + switch.UNREAD_KEY, name, HEAD)
         self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/340/labels", {"labels": ["wake:muse"]}))
         self.assertEqual(gh.writes[1][0], "PATCH")
         self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")

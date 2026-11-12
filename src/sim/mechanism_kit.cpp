@@ -823,6 +823,9 @@ void Kit::pre_step(const float delta_seconds) {
             disconnect_rope(rope);
             rope.parted = true;
             rope.tension = 0.0F;
+            // What it held falls, though it slept hanging there (loose stock
+            // sleeps once at rest): taking the rope away wakes nothing.
+            system_.GetBodyInterface().ActivateBody(bodies_[rope.body1.value].id);
         }
     }
     for (Catch &catch_record : catches_) {

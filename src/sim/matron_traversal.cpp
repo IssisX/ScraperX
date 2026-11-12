@@ -3919,25 +3919,22 @@ std::vector<Vec3> grid_walk(const PhysicsSystem &physics, const Ignore &ignore, 
         }
         return false;
     };
-    // The player, where he stands now: her feet's search reads the real
-    // world, and his body is in it. A cell her body would stand on inside
-    // his capsule is no way for her — a loose crate counts the same way in
-    // these probes, and only the player was excepted, so her walk went
-    // straight through his spot and her body shoved his across the deck.
-    // His shape, not a named radius: a capsule's own bounds give it.
+    // The player, where she believes he stands (J-049): a cell her body would stand on inside his capsule is no way — but only while the sense is fresh.
     Vec3 player_at = Vec3::sZero();
     float player_radius = 0.0F, player_bottom = 0.0F, player_top = 0.0F;
     bool player_in_way = false;
-    if (!ignore.player.IsInvalid()) {
+    if (ignore.avoid) {
+        player_at = Vec3(ignore.avoid_at.GetX(), 0.0F, ignore.avoid_at.GetZ());
+        // His shape, not a named radius: a capsule's own bounds give it
+        // (J-049, Claude's 14:19 FIX on #383). The place is the sensed one;
+        // the size is his shape's, so it follows him crouching.
         const Shape *shape = physics.GetBodyInterface().GetShape(ignore.player);
         if (shape != nullptr) {
             const AABox bounds = shape->GetLocalBounds();
-            const RVec3 centre = physics.GetBodyInterface().GetPosition(ignore.player);
-            player_at = Vec3(float(centre.GetX()), 0.0F, float(centre.GetZ()));
             player_radius = 0.5F * std::max(bounds.GetSize().GetX(), bounds.GetSize().GetZ());
             const float half_y = 0.5F * bounds.GetSize().GetY();
-            player_bottom = float(centre.GetY()) - half_y;
-            player_top = float(centre.GetY()) + half_y;
+            player_bottom = ignore.avoid_at.GetY() - half_y;
+            player_top = ignore.avoid_at.GetY() + half_y;
             player_in_way = true;
         }
     }
