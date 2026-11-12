@@ -4,8 +4,12 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace scraperx::sim {
+namespace stock_damage {
+struct DamageState;
+} // namespace stock_damage
 namespace traversal {
 class AffordanceMap;
 enum class MoveKind : std::uint8_t;
@@ -805,6 +809,13 @@ struct ServiceState final {
     double o_chain_kg = 0.0;      // chain hanging from the bucket
     double o_bucket_mass = 0.0;   // the bucket, its gravel and its hanging chain
     double o_rope_tension = 0.0;  // N, on the bucket's side of the wheel
+    // J-108, the bait lift.
+    double bait_a_travel = 0.0;      // A's descent from the 706 deck
+    double bait_b_travel = 0.0;      // B's rise from the 706 deck
+    double bait_a_peak_speed = 0.0;
+    double bait_b_peak_speed = 0.0;
+    double bait_chain_kg = 0.0;      // chain hanging from A
+    double bait_rope_tension = 0.0;  // N
 };
 
 // Band 0, the Stack's machine state, for the falsifiers.
@@ -1507,6 +1518,9 @@ public:
     static constexpr std::uint64_t kServiceORamEntityId = 2144;
     static constexpr std::uint64_t kServiceOChockEntityId = 2145;
     static constexpr std::uint64_t kServiceOHandleEntityId = 2146;
+    // J-108, the bait lift west of the 706 deck's strip: her platform A, his B.
+    static constexpr std::uint64_t kServiceBaitAEntityId = 2147;
+    static constexpr std::uint64_t kServiceBaitBEntityId = 2148;
     // Band 0, the Stack (grade -> 154 m): its static structure, then S1, the
     // skip hoist.
     static constexpr std::uint64_t kStackFrameEntityId = 1020;
@@ -1671,15 +1685,18 @@ public:
     [[nodiscard]] std::uint32_t loose_stock_count() const noexcept;
     [[nodiscard]] LooseStockPiece loose_stock_piece(std::uint32_t index) const noexcept;
     // Where each loose-stock group begins in the table (loose_stock.hpp):
-    // the crane steel, the machine weights, the Matron's throwables, and
-    // the east/west stock, so a test can reach a group without assuming
-    // it is the last.
+    // the crane steel, the machine weights, the Matron's throwables, the
+    // east/west stock, and the upper stock, so a test can reach a group
+    // without assuming it is the last.
     [[nodiscard]] std::uint32_t loose_stock_crane_steel_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_machine_weights_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_throwables_begin() const noexcept;
     // J-042's two kinds by her band, laid last of all (after the east/west stock).
     [[nodiscard]] std::uint32_t loose_stock_matron_kinds_begin() const noexcept;
     [[nodiscard]] std::uint32_t loose_stock_east_west_begin() const noexcept;
+    [[nodiscard]] std::uint32_t loose_stock_upper_begin() const noexcept;
+    // J-038 slice 1: a stock body's dent record, empty when undamaged.
+    [[nodiscard]] stock_damage::DamageState stock_damage(std::uint64_t entity) const noexcept;
     // Cables are the kit's ropes, then its trip lines.
     [[nodiscard]] std::uint32_t kit_cable_count() const noexcept;
     // Writes up to capacity points of the cable as drawn (first end, sheaves,
@@ -1813,9 +1830,17 @@ public:
     // Tests only (never bound to the bridge): the blow she takes next tagged
     // as the player's own (his punch's tag, Matron::player_blow_landed).
     void debug_matron_player_blow() noexcept;
+    // Tests only (never bound to the bridge): the next strike press throws
+    // this move whatever the stance would pick (0, the bare punch, on a
+    // free Matron); consumed when the strike begins.
+    void debug_force_strike_move(std::uint8_t move) noexcept;
     // Tests only (never bound to the bridge): kit body `body` put at `at` and
     // sent off at `velocity` (a throw without the arms, to meet her balance).
     void debug_launch_kit_body(std::uint32_t body, Vector3 at, Vector3 velocity) noexcept;
+    // Tests only (never bound to the bridge): kit body `body` spun at
+    // `angular_velocity` (rad/s), its linear velocity untouched — a spin
+    // without a throw, so a break can be read for its orbital term.
+    void debug_spin_kit_body(std::uint32_t body, Vector3 angular_velocity) noexcept;
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
@@ -1901,6 +1926,21 @@ public:
     // first: a reader keeps the last sequence it has seen.
     [[nodiscard]] std::vector<ImpactSnapshot> impacts() const;
     [[nodiscard]] std::uint64_t last_impact_sequence() const noexcept;
+    // Tests only (never bound to the bridge): the mass of the free load
+    // in the hands, or 0 — a handle or a shackle is held up by its
+    // hinge or its line, not the hands.
+    [[nodiscard]] float debug_carried_load_mass() const noexcept;
+    // Tests only (never bound to the bridge): the parent's motion at the
+    // last break-piece spawn — its centre-of-mass velocity, its angular
+    // velocity, and its world-space centre of mass. A test can check the
+    // spawn's orbital term against the parent's true motion, which no
+    // drop test can separate from the landing impact's own velocity.
+    struct BreakParentSample {
+        Vector3 velocity{};
+        Vector3 angular_velocity{};
+        Vector3 centre_of_mass{};
+    };
+    [[nodiscard]] BreakParentSample debug_last_break_parent() const noexcept;
     // The tower's machines heard (gap 10): each moving part tracked for hits,
     // whether it is its stage's running source, and the running noise of the
     // last step (loudness 0..1, what Matron::hear is given).
@@ -1976,6 +2016,11 @@ public:
     // nothing.
     [[nodiscard]] std::vector<std::uint8_t> save_game() const;
     [[nodiscard]] bool load_game(const std::uint8_t *data, std::size_t size);
+    // Why the last load_game was refused, where the refusal names itself
+    // (so far: "DAMG record size N bytes, this build reads M", a stock
+    // damage section written by a build whose record differs); empty for
+    // any other refusal and after a load that was taken.
+    [[nodiscard]] std::string last_load_refusal() const;
     // Live fabrication (03_EXECUTION/LIVE_FABRICATION/DESIGN.md): an object
     // made outside the simulation, handed in between ticks as data, like a
     // touch. `hull` is its hull file (sim/fabricated.hpp), untrusted: its
@@ -2081,6 +2126,7 @@ private:
     Snapshot snapshot_{};
     StepTiming step_timing_{};   // kept across a world rebuilt after she ends a run
     Vector3 previous_player_position_{};
+    std::string last_load_refusal_;  // see last_load_refusal()
     Vector3 previous_matron_position_{};
     double previous_matron_yaw_ = 0.0;
     // Her body and facing at the start of this tick, for render_matron_*().

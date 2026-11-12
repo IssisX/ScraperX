@@ -669,12 +669,18 @@ bool magnet_onto(Simulation &s, const double x, const double z) {
     return device_onto(s, YardCrane::kMagnetEntity, YardCrane::kMagnetKg, 2.0, x, z);
 }
 
-// The save's tail since her damage joined it: the grips' two lists ([n][n
-// loads][n][n ratings]), then her damage under its mark (MAD1: the mark,
-// two meters, one dead byte), then the fabricated objects if the world
-// holds any (FAB1: the mark, a count, each an entity, length-first hull
-// bytes, thirteen state numbers, two flag bytes). The offset of the grip
-// lists, or bytes.size() when the save does not hold them so.
+// Where the grips' two lists start ([n][n loads][n][n ratings]): the offset
+// of the first count, or bytes.size() if the save holds them nowhere the
+// layout lays them out. The lists are not always at the end: after them come
+// her damage (MAD1, always written now), the fabricated objects (FAB1),
+// the stock damage (DAMG), and the grip-entities section (GRIP, one entity
+// per grip), each only when the world holds it. A save with a grip-entities
+// section is found from its end, allowing her damage between the lists and
+// it; a save with her damage and no entities section is found from the
+// damage mark, allowing a fabricated section after it. (A save with a
+// fabricated or damage section between the lists and the entities section
+// is not located here: no test saves a world whose grip holds a load and
+// whose stock is fabricated or damaged.)
 std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
     const auto word = [&bytes](const std::size_t at, std::uint32_t &out) {
         if (at + 4 > bytes.size()) {
@@ -683,6 +689,49 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
         std::memcpy(&out, bytes.data() + at, 4);
         return true;
     };
+    // The grip-entities section, if any, is last: [GRIP][n][n entities].
+    // Her damage (MAD1, 13 bytes) may sit between the lists and it: a
+    // save the merged writer made always carries it; an older save does
+    // not. The lists end where the damage (or the section) starts, so
+    // the counts read back as n.
+    constexpr std::uint32_t kGripMark = 0x47524950U;
+    constexpr std::uint32_t kDamageMark = 0x314D414DU;
+    for (std::size_t n = 1; n <= 16; ++n) {
+        const std::size_t section = 8 + 8 * n;  // the entities section's bytes
+        if (bytes.size() < 2 * section) {
+            continue;
+        }
+        const std::size_t grip_at = bytes.size() - section;
+        std::uint32_t mark = 0, count = 0;
+        if (!word(grip_at, mark) || mark != kGripMark || !word(grip_at + 4, count) || count != n) {
+            continue;
+        }
+        for (const std::size_t gap : {std::size_t{0}, std::size_t{13}}) {
+            if (grip_at < gap + 8 + 8 * n) {
+                continue;
+            }
+            const std::size_t at = grip_at - gap - (8 + 8 * n);
+            if (gap == 13) {
+                std::uint32_t dmark = 0;
+                float damage = 0.0F, player = 0.0F;
+                std::uint8_t dead = 0;
+                if (!word(at + 8 + 8 * n, dmark) || dmark != kDamageMark) {
+                    continue;
+                }
+                std::memcpy(&damage, bytes.data() + at + 8 + 8 * n + 4, 4);
+                std::memcpy(&player, bytes.data() + at + 8 + 8 * n + 8, 4);
+                std::memcpy(&dead, bytes.data() + at + 8 + 8 * n + 12, 1);
+                if (!std::isfinite(damage) || !std::isfinite(player) || dead > 1) {
+                    continue;
+                }
+            }
+            std::uint32_t loads = 0, ratings = 0;
+            if (!word(at, loads) || !word(at + 4 + 4 * n, ratings) || loads != n || ratings != n) {
+                continue;
+            }
+            return at;
+        }
+    }
     // A fabricated section parses forward from its mark and ends exactly at
     // the save's end.
     const auto fabricated_to_end = [&bytes, &word](const std::size_t at) {
@@ -705,7 +754,6 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
     };
     // Her damage's mark, then the grips just before it, then either the
     // save's end or a fabricated section to it.
-    constexpr std::uint32_t kDamageMark = 0x314D414DU;
     for (std::size_t m = 0; m + 13 <= bytes.size(); ++m) {
         std::uint32_t mark = 0;
         if (!word(m, mark) || mark != kDamageMark) {
@@ -732,7 +780,8 @@ std::size_t saved_grips_at(const std::vector<std::uint8_t> &bytes) {
     }
     // A save from before her damage ends in the grips themselves.
     for (std::size_t n = 1; n <= 16 && bytes.size() >= 8 + 8 * n; ++n) {
-        std::uint32_t loads = 0, ratings = 0;
+        std::uint32_t loads = 0;
+        std::uint32_t ratings = 0;
         if (!word(bytes.size() - (8 + 8 * n), loads) || !word(bytes.size() - (4 + 4 * n), ratings)) {
             continue;
         }
@@ -832,26 +881,34 @@ void run_yard_crane_magnet() {
     // before the forklift, and the 137 after it are stock entities. J-092
     // (#410) then appends the slab cell's frame, trigger and handle, exactly
     // those three, as the kit's very last bodies (run_wet_e_guard pins the
-    // same order).
+    // same order). J-108 (#427) then appends the bait lift's platforms, A
+    // then B, after the cell: re-pinned, before "the slab cell last", now
+    // "the slab cell, then A, then B, last", each body pinned.
     constexpr std::uint32_t kNewEastWest = 137;
     const std::uint64_t kForklift[] = {Forklift::kDeck154ChassisEntity, Forklift::kDeck154CarriageEntity};
     const std::uint64_t kSlabCell[] = {SlabCell::kFrameEntity, SlabCell::kTriggerEntity, SlabCell::kHandleEntity};
+    const std::uint64_t kBait[] = {Simulation::kServiceBaitAEntityId, Simulation::kServiceBaitBEntityId};
+    constexpr auto kBaitBodies = static_cast<std::uint32_t>(std::size(kBait));
     constexpr auto kCellBodies = static_cast<std::uint32_t>(std::size(kSlabCell));
+    constexpr auto kTailBodies = kCellBodies + kBaitBodies;
     std::uint32_t fork = last;
     for (std::uint32_t i = 0; i + 1 < last && fork == last; ++i) {
         fork = s.kit_body_entity(i) == kForklift[0] ? i : last;
     }
     require(fork + 1 < last && s.kit_body_entity(fork + 1) == kForklift[1],
             "magnet: the deck-154 forklift's frame and forks, side by side");
-    bool later_stock = fork + 2 + kCellBodies <= last;
-    for (std::uint32_t i = fork + 2; later_stock && i < last - kCellBodies; ++i) {
+    bool later_stock = fork + 2 + kTailBodies <= last;
+    for (std::uint32_t i = fork + 2; later_stock && i < last - kTailBodies; ++i) {
         later_stock = scraperx::sim::kit::is_stock_entity(s.kit_body_entity(i));
     }
     for (std::uint32_t i = 0; later_stock && i < kCellBodies; ++i) {
-        later_stock = s.kit_body_entity(last - kCellBodies + i) == kSlabCell[i];
+        later_stock = s.kit_body_entity(last - kTailBodies + i) == kSlabCell[i];
+    }
+    for (std::uint32_t i = 0; later_stock && i < kBaitBodies; ++i) {
+        later_stock = s.kit_body_entity(last - kBaitBodies + i) == kBait[i];
     }
     require(later_stock,
-            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle: the kit's last bodies");
+            "magnet: after the deck-154 forklift, only stock laid later, then the slab cell's frame, trigger and handle, then the bait lift's A, then B: the kit's last bodies");
     const auto tail = fork - kNewEastWest;
     bool east_west = true;
     for (std::uint32_t i = tail; i < tail + kNewEastWest; ++i) {

@@ -38,9 +38,32 @@ var exposure_scale := 1.0
 # the night's exposure (pictures, 2026-10-21: at the day's energy the steel
 # round a lamp stayed black and its glowing head hung in the dark).
 const LAMP_NIGHT_GAIN := 6.0
-var _lamps: Array = []   # [OmniLight3D, the day's energy]
+var _lamps: Array = []   # [OmniLight3D, the day's energy, its deck's y or -1]
 var _glows: Array = []   # lamp_glow.gd nodes on the rig: set_night(0..1)
 var _shadows_on := true
+# J-081: the climb's trail. A stack lamp (its deck's height on the
+# STACK_DECK_META meta, set in main_world.gd) lights at night only once he
+# has climbed past its deck, so the climb below him reads as a trail of
+# light, not a lit shaft. _passed_y is the highest the eye has been; it
+# only ever rises, so a lamp once lit stays lit if he comes back down.
+const STACK_DECK_META := &"stack_deck_y"
+var _passed_y := 0.0
+var _lamp_fittings: Array = []  # [deck_y, StandardMaterial3D, its day emission energy]
+# J-081: his helmet lamp. A real spot on his head, aimed where he looks,
+# on by itself as the light falls (no new button). Shadows only while it
+# is properly on, so it costs nothing by day.
+var _helmet_lamp: SpotLight3D
+var _helmet_lamp_enabled := true
+# Calibrated 2026-11-11 (J-081): a 0.3-albedo face under AgX at exposure
+# 2.85 reads lum 0.073 at 16 m with energy 4.0 -- black on the dark steel,
+# which is why the midnight stills showed no pool on the band ahead. At
+# 60.0 it reads 0.44 at 16 m, 0.82 at 10 m, 0.92 at 5 m: the next ledge
+# reads without the wall 2 m ahead going past white. The eye check tunes
+# this from the stills if it still reads dim or hot.
+const HELMET_LAMP_ENERGY := 60.0
+# J-081: the city to the north (-z, past the summit's runway): a dim warm
+# glow on the horizon and on the cloud undersides at night.
+const CITY_BEARING := Vector2(0.0, -1.0)
 
 var hour := START_HOUR
 # Real minutes per 24 in-game hours; 0 holds the current hour.
@@ -95,9 +118,43 @@ const SHADOW_LEVELS := [
 func add_lamps(rig: Node) -> void:
 	for lamp in rig.get_children():
 		if lamp is OmniLight3D:
-			_lamps.append([lamp, (lamp as OmniLight3D).light_energy])
+			var deck_y := -1.0
+			if lamp.has_meta(STACK_DECK_META):
+				deck_y = float(lamp.get_meta(STACK_DECK_META))
+			_lamps.append([lamp, (lamp as OmniLight3D).light_energy, deck_y])
 		elif lamp.has_method(&"set_night"):
 			_glows.append(lamp)
+	_apply()
+
+
+# The fittings of the stack lamps (main_world.gd): each fitting's own glow
+# follows the same gate as its lamp, or a lit head would hang in the dark
+# over an unlit deck. The base emission is read off the material, so the
+# gate scales whatever the world gave it.
+func add_lamp_fittings(fittings: Array) -> void:
+	_lamp_fittings = []
+	for fitting in fittings:
+		var material := fitting[1] as StandardMaterial3D
+		_lamp_fittings.append([fitting[0], material, material.emission_energy_multiplier])
+	_apply()
+
+
+func set_helmet_lamp(lamp: SpotLight3D) -> void:
+	_helmet_lamp = lamp
+	_apply()
+
+
+# A look scenario that is not his head (look_night_lamps) turns the lamp off
+# for its shots; it is on again after.
+func set_helmet_lamp_enabled(on: bool) -> void:
+	_helmet_lamp_enabled = on
+	_apply()
+
+
+# A look scenario poses the eye at a height he has climbed to; say so, so
+# the trail below it is lit as it would read on the climb.
+func set_passed_height(y: float) -> void:
+	_passed_y = y
 	_apply()
 
 
@@ -169,16 +226,34 @@ func _apply() -> void:
 	_sun.shadow_enabled = _shadows_on and _sun.light_energy > 0.01
 	_fill.light_energy = lerpf(FILL_NIGHT_ENERGY, FILL_DAY_ENERGY, day)
 	var lamp_gain := lerpf(LAMP_NIGHT_GAIN, 1.0, day)
+	var lamp_index := 0
 	for entry in _lamps:
-		(entry[0] as OmniLight3D).light_energy = float(entry[1]) * lamp_gain
+		# A stack lamp lights at night only once he has passed its deck;
+		# by day every lamp keeps the day's energy, as before.
+		var deck_y := float(entry[2])
+		var trail := 1.0 if deck_y < 0.0 or _passed_y >= deck_y else lerpf(0.0, 1.0, day)
+		(entry[0] as OmniLight3D).light_energy = float(entry[1]) * lamp_gain * trail
+		for glow in _glows:
+			if glow.has_method(&"set_lamp_lit"):
+				glow.set_lamp_lit(lamp_index, trail)
+		lamp_index += 1
 	for glow in _glows:
 		glow.set_night(1.0 - day)
+	for fitting in _lamp_fittings:
+		var fit_deck_y := float(fitting[0])
+		var fit_lit := 1.0 if _passed_y >= fit_deck_y else lerpf(0.0, 1.0, day)
+		(fitting[1] as StandardMaterial3D).emission_energy_multiplier = fit_lit * float(fitting[2])
+	if _helmet_lamp != null:
+		_helmet_lamp.light_energy = HELMET_LAMP_ENERGY * (1.0 - day) if _helmet_lamp_enabled else 0.0
+		_helmet_lamp.shadow_enabled = _helmet_lamp_enabled and _helmet_lamp.light_energy > 0.5
 	_fill.light_color = Color(0.30, 0.36, 0.52).lerp(Color(0.58, 0.68, 0.82), day)
 	_sky_material.set_shader_parameter(&"day_factor", sky_day)
 	_sky_material.set_shader_parameter(&"dusk_factor", dusk)
 	_sky_material.set_shader_parameter(&"light_is_moon", is_moon)
 	_sky_material.set_shader_parameter(&"star_factor", stars)
 	_sky_material.set_shader_parameter(&"sun_direction", sun_dir)
+	_sky_material.set_shader_parameter(&"city_glow", 1.0 - day)
+	_sky_material.set_shader_parameter(&"city_bearing", CITY_BEARING)
 	# The ground's bounce, for the ambient's lower half: the yard and slopes
 	# (asphalt, grass and concrete, albedo about 0.25, warm) under the sun's or
 	# moon's light and the sky's. Under a deck, shade is lit from below.
@@ -218,6 +293,8 @@ func _thin_air() -> void:
 	var camera := get_viewport().get_camera_3d()
 	if camera == null:
 		return
+	if camera.global_position.y > _passed_y:
+		_passed_y = camera.global_position.y
 	var depth_end := _air_depth_end * exp(maxf(camera.global_position.y, 0.0) / AIR_THIN_HEIGHT)
 	if absf(depth_end - _environment.fog_depth_end) > 1.0:
 		_environment.fog_depth_end = depth_end

@@ -32,8 +32,8 @@ Scenarios skipped by design, with the in-repo evidence for each:
                 mix"), not in godot-touch.
   perf_top, perf_grade   measured locally, not in CI.
   perf_locker, perf_view_bottom, perf_view_sling, perf_view_top,
-  perf_attrib, perf_attrib_top, perf_attrib_locker, perf_walk
-                rendered only (J-045, #248): measured locally under
+  perf_attrib, perf_attrib_top, perf_attrib_locker, perf_walk, perf_night
+                rendered only (J-045, #248; perf_night J-081): measured locally under
                 xvfb; headless draws nothing.
 
 KNOWN_GAPS names registered touch scenarios that are in no shard for
@@ -76,7 +76,8 @@ SKIP_PREFIXES = ("look_", "pad_", "keyboard_")
 # Run in another CI job, or measured locally only -- not godot-touch.
 SKIP_EXACT = {"audio_mix", "audio_fall", "perf_top", "perf_grade",
               "perf_locker", "perf_view_bottom", "perf_view_sling", "perf_view_top",
-              "perf_attrib", "perf_attrib_top", "perf_attrib_locker", "perf_walk"}
+              "perf_attrib", "perf_attrib_top", "perf_attrib_locker", "perf_walk",
+              "perf_night"}
 
 # Registered touch scenarios in no shard for a tracked reason. Warning,
 # not failure; stale the moment the scenario appears in a shard.
@@ -86,9 +87,6 @@ KNOWN_GAPS = {
         "the drum lies 17.8 m south of where it was set down and the "
         "climber is on 143, so PICK UP is never offered; PR #29 proposes "
         "a staging fix. Wire it into a shard together with a fix"
-    ),
-    "touch_slab_trap": (
-        "shard line lands in a workflow PR right after this PR"
     ),
 }
 

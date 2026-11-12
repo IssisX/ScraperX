@@ -20,7 +20,7 @@ issue with no owner, a listing that was cut short) is an UNMATCHED item: never s
 
 Each item has an owner (the issue's `owner:` label, else the branch prefix in work/agents.yml), a holder (who
 acts next), an age and a deadline: 2 h for a red branch, an unanswered ask and a green PR with no review;
-24 h untouched for everything else (stale). Past twice its deadline an item is listed under ESCALATED.
+4 h untouched for everything else (stale; Cory 11-12: nothing sits a day unnoticed). Past twice its deadline an item is listed under ESCALATED.
 
 The ledger is the board's list, not a notifier (J-072: one owner of notices). The reconciler
 (tools/switchboard/reconciler.py) tells each holder, with an ack, one re-send and a dead-letter; with it live and
@@ -59,9 +59,9 @@ import asks  # noqa: E402  tools/board/asks.py: what counts as an ask and as its
 import rules  # noqa: E402
 
 LIVE = dt.timedelta(days=3)            # a branch pushed this recently is live; asks are read this far back
-TOUCH_WINDOW = dt.timedelta(days=2)    # how far back touches are read: past 2 x 24 h an item is escalated anyway
+TOUCH_WINDOW = dt.timedelta(days=2)    # how far back touches are read: past 2 x STALE an item is escalated anyway
 ACT = dt.timedelta(hours=2)            # red branch or PR, unanswered ask, green PR with no review
-STALE = dt.timedelta(hours=24)         # everything else: untouched this long
+STALE = dt.timedelta(hours=4)          # everything else: untouched this long (Cory 11-12, was 24 h)
 MAX_NOTICES = 10                       # notice comments per sweep; the rest come next sweep
 MAX_MAIL_ITEMS = 15                    # items in Muse's one mail per sweep
 MAX_SECTION = 6000                     # chars of the visible section before it collapses to per-holder counts
@@ -617,7 +617,7 @@ def section(led: Ledger, now: dt.datetime, when: str, sent: list[str], kept: lis
         f"Written by the switchboard at {when}, every sweep (`tools/switchboard/ledger.py`); text between the ledger "
         f"markers is replaced each sweep. **{len(items)} items** ({kinds}): **{len(esc)} escalated**, {past} past "
         f"deadline, {unmatched} unmatched, {stale} stale." + (f" Not listed: {folded}." if folded else ""),
-        "Deadlines: red, an unanswered ask, a green PR with no review 2 h; anything else 24 h untouched. " + (
+        "Deadlines: red, an unanswered ask, a green PR with no review 2 h; anything else 4 h untouched. " + (
             "Past it the holder is told once; past twice it, again, and it is listed here as ESCALATED."
             if notify else
             "Past twice it an item is listed here as ESCALATED. The ledger sends no notices: the reconciler "
@@ -1189,15 +1189,23 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
             except Exception as err:   # noqa: BLE001
                 problems.append(f"proof run {r.id} jobs: {type(err).__name__}")
 
+    # With the plan live (work/switchboard.yml `plan: live`) every open issue of the team's titled J-NNN is a job,
+    # with the `job` label or not: a missing label is itself a collaboration defect and must never make the job
+    # disappear (a stranger's issue with a job's title is not one: the repo is public). Until then the jobs are
+    # the issues that carry the `job` label, as before.
+    plan_live = getattr(sw, "plan_mode", lambda: "off")() == "live"
+    with_label = [] if plan_live else gh.paged(f"repos/{repo}/issues?labels=job&state=open")
+    all_open_issues = gh.paged(f"repos/{repo}/issues?state=open")
     issues: list[IssueIn] = []
-    for it in gh.paged(f"repos/{repo}/issues?labels=job&state=open"):
-        if "pull_request" in it:
+    for it in all_open_issues if plan_live else with_label:
+        if "pull_request" in it or (plan_live and not (rules.job_of_title(it.get("title") or "")
+                                                       and rules.team_issue(it))):
             continue
         labels = tuple(l["name"] for l in it.get("labels") or [])
         issues.append(IssueIn(it["number"], it.get("html_url") or "", it.get("title") or "", labels,
                               touched_at(it.get("created_at"), it.get("updated_at"), touches, it["number"], since_touch)))
 
-    open_threads = {int(i["number"]) for i in gh.paged(f"repos/{repo}/issues?state=open")}
+    open_threads = {int(i["number"]) for i in all_open_issues}
     stream = []
     for c in comments:
         try:
