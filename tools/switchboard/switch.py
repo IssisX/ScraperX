@@ -1765,7 +1765,27 @@ class Switch:
         fewer than muse_queue.LOW_UNDER really-unstarted jobs in work/tasks/muse.md's Unstarted block (muse_queue's
         rules, read with this run's client). The item's head is the count and the unstarted jobs, so it is listed once
         per change, and a queue refilled and run low again is listed again. Sets and returns queue_items."""
-        text = self.queue_text() if text is None else text
+        # Existing callers may pass legacy queue text while their tests exercise
+        # the old parser. Production never takes orders from a checked-out file.
+        if text is None:
+            self.queue_items = ()
+            raw = self.gh.paged(f"repos/{self.gh.repo}/issues?state=open")
+            branches = [b["name"] for b in self.gh.paged(f"repos/{self.gh.repo}/branches")]
+            prs = self.listing(f"repos/{self.gh.repo}/pulls?state=open")
+            inv = job_control.inventory(raw, branches, prs)
+            for problem in inv.violations:
+                self.out(f"JOB-CONTROL {plain(problem[:250])}")
+            jobs = [j.id for j in inv.ready_muse]
+            n = len(jobs)
+            self.out(f"QUEUE       {n} issue-owned ready job(s); Muse WIP {inv.active_muse}/"
+                     f"{job_control.MUSE_WIP_LIMIT}; {len(inv.violations)} defect(s)")
+            if n < muse_queue.LOW_UNDER or inv.violations:
+                line = (f"QUEUE-LOW: {n} issue-owned ready jobs (under {muse_queue.LOW_UNDER}): "
+                        f"refill to {muse_queue.REFILL_TO}. Ready: {', '.join(jobs) or 'none'}"
+                        + (f"; JOB-CONTROL: {'; '.join(inv.violations[:4])}" if inv.violations else ""))
+                self.queue_items = (InboxItem("QUEUE-LOW", "job issues",
+                                              f"{n}:{','.join(jobs)}:{','.join(inv.violations)}", line),)
+            return self.queue_items
         self.queue_items = ()
         report = muse_queue.check(self.gh, text, self.now)
         ok = report.unstarted
