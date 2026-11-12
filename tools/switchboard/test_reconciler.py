@@ -1574,6 +1574,26 @@ class Noise(unittest.TestCase):
             self.assertEqual(R.switch_muse_keys(other), [], other)
 
 
+class OpenFixRequiresEvidence(unittest.TestCase):
+    """A receipt of a P1 FIX does not close the PR's unresolved work."""
+
+    def test_ack_of_an_unchanged_fix_is_seen_but_not_settled(self):
+        h = Harness()
+        f = feed(prs=[pr(401, "fb-bot/integrate-j500", action="FIX",
+                         reasons=("unresolved P1",))],
+                 issues=[issue(500, owner="owner:muse")])
+        h.run(f, NOW)
+        obs = h.obs("J-500", kind="fix")
+        self.assertTrue(any(o["version"].startswith("fix:") for o in obs))
+        oid = next(o["id"] for o in obs if o["version"].startswith("fix:"))
+        receipt = cmt(8801, 401, NOW + M, f"/ack {oid}")
+        h.run(f, NOW + 2 * M, comments=[receipt])
+        again = next(o for o in h.obs("J-500", kind="fix") if o["id"] == oid)
+        self.assertIsNone(again["ack"])
+        self.assertEqual(again["seen"]["how"], "/ack")
+        self.assertTrue(R.is_open(again))
+
+
 class AckedStaysQuiet(unittest.TestCase):
     """J-104 (#423): O-2c7fcb6a, O-d7fa3f70, O-5e98ccfb and O-dde130cf were /ack'ed by Muse, then re-sent and
     dead-lettered: the pass read only the oldest 1,000 comments of its 3-day window, so it never saw the acks."""
