@@ -1,7 +1,9 @@
 {
  "attempt": 1,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "fb-bot/integrate-j063-torso-drive": "4e84c905d76f0fb71646bf1455567f3bb9f0a9be"
+ },
  "cancelled": null,
  "ci": "green",
  "commands": [
@@ -12,7 +14,13 @@
  "head": "4e84c905d76f0fb71646bf1455567f3bb9f0a9be",
  "issue": 321,
  "job": "J-063",
- "landed": {},
+ "landed": {
+  "fb-bot/integrate-j063-torso-drive": [
+   "4e84c905d76f0fb71646bf1455567f3bb9f0a9be",
+   "merged #453",
+   "2026-11-12T14:43:28Z"
+  ]
+ },
  "obligations": [
   {
    "ack": {
@@ -246,11 +254,11 @@
  "outcome_reason": "",
  "owner": "muse",
  "pr": 453,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   453
  ],
  "review": "LAND",
- "state": "landable",
- "updated": "2026-11-12T14:29:46Z"
+ "state": "merged",
+ "updated": "2026-11-12T14:43:28Z"
 }

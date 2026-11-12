@@ -1,7 +1,9 @@
 {
  "attempt": 1,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-j107": "a2134c99d4cfc752de464b6c8f1d664a43218f30"
+ },
  "cancelled": null,
  "ci": "green",
  "commands": [],
@@ -10,17 +12,23 @@
  "head": "a2134c99d4cfc752de464b6c8f1d664a43218f30",
  "issue": 0,
  "job": "J-107",
- "landed": {},
+ "landed": {
+  "claude/integrate-j107": [
+   "a2134c99d4cfc752de464b6c8f1d664a43218f30",
+   "merged #454",
+   "2026-11-12T14:43:28Z"
+  ]
+ },
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j107: merged #454",
  "owner": "claude",
  "pr": 454,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   454
  ],
  "review": "LAND",
- "state": "landable",
- "updated": "2026-11-12T14:29:46Z"
+ "state": "merged",
+ "updated": "2026-11-12T14:43:28Z"
 }
