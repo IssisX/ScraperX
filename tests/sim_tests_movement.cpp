@@ -1,6 +1,7 @@
 // Parkour movement: brachiation, the pipe gallery, slide, speed vault, wall-run, hook, workers, C7, jump buffer, parkour seams.
 
 #include "sim_tests.hpp"
+#include "sim/matron_traversal.hpp"
 #include "sim/physics_world_tuning.hpp"
 
 // Parkour step 2: brachiation on the proving ground's monkey bars (six bars a
@@ -131,7 +132,7 @@ void run_hang_rail() {
     {
         Simulation s(InitialSpawn::Deck154);
         require(s.advance_frame(1.0).accepted, "hang rail: settle");
-        require(walk_to(s, static_cast<double>(scraperx::sim::kHangRailX), -128.5, 20.0, 0.1),
+        require(walk_to(s, static_cast<double>(scraperx::sim::detail::kHangRailX), -128.5, 20.0, 0.1),
                 "hang rail: walk onto the leaf");
         // Step off the leaf's south edge, facing south, holding south: the
         // catch fires as his centre falls past the rail.
@@ -140,7 +141,7 @@ void run_hang_rail() {
         bool caught = false;
         int catch_ticks = 0;
         for (int i = 0; i < 3 * static_cast<int>(Simulation::kTickRateHz) && !caught; ++i) {
-            tick(s);
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
             ++catch_ticks;
             caught = s.snapshot().traversal_state == TraversalState::Swinging;
         }
@@ -150,12 +151,12 @@ void run_hang_rail() {
         bool reached = false;
         int swing_ticks = 0;
         for (int i = 0; i < 15 * static_cast<int>(Simulation::kTickRateHz) && !reached; ++i) {
-            tick(s);
+            (void)s.advance_frame(Simulation::kFixedStepSeconds);
             ++swing_ticks;
             const Snapshot snap = s.snapshot();
             const double hand_z =
                 std::min(snap.traversal_left_hand.z, snap.traversal_right_hand.z);
-            reached = hand_z <= static_cast<double>(scraperx::sim::kHangRailSouthZ) + 0.10 ||
+            reached = hand_z <= static_cast<double>(scraperx::sim::detail::kHangRailSouthZ) + 0.10 ||
                       snap.traversal_state == TraversalState::Hanging;
         }
         const Snapshot snap = s.snapshot();
@@ -176,12 +177,12 @@ void run_hang_rail() {
         s.place_matron_home(154.0F);
         require(s.advance_frame(0.1).accepted, "hang rail: settle for her scan");
         const AffordanceMap &map = s.matron_affordances();
-        const float x0 = scraperx::sim::kHangRailX - 0.5F * scraperx::sim::kHangRailSection;
-        const float x1 = scraperx::sim::kHangRailX + 0.5F * scraperx::sim::kHangRailSection;
-        const float y0 = scraperx::sim::kHangRailTopY - scraperx::sim::kHangRailSection;
-        const float y1 = scraperx::sim::kHangRailTopY;
-        const float z0 = scraperx::sim::kHangRailSouthZ;
-        const float z1 = scraperx::sim::kHangRailNorthZ;
+        const float x0 = scraperx::sim::detail::kHangRailX - 0.5F * scraperx::sim::detail::kHangRailSection;
+        const float x1 = scraperx::sim::detail::kHangRailX + 0.5F * scraperx::sim::detail::kHangRailSection;
+        const float y0 = scraperx::sim::detail::kHangRailTopY - scraperx::sim::detail::kHangRailSection;
+        const float y1 = scraperx::sim::detail::kHangRailTopY;
+        const float z0 = scraperx::sim::detail::kHangRailSouthZ;
+        const float z1 = scraperx::sim::detail::kHangRailNorthZ;
         for (const auto &patch : map.patches()) {
             require(!(patch.top >= y0 && patch.top <= y1 && patch.max_x >= x0 && patch.min_x <= x1 &&
                       patch.max_z >= z0 && patch.min_z <= z1),
@@ -217,13 +218,13 @@ void run_hang_rail() {
     {
         Simulation s(InitialSpawn::Deck154);
         s.place_matron_home(154.0F);
-        s.debug_place_matron({scraperx::sim::kHangRailX, 154.0F, -126.0F});
+        s.debug_place_matron({scraperx::sim::detail::kHangRailX, 154.0F, -126.0F});
         s.debug_face_matron(3.14159265);   // south, down the rail
         if (s.advance_frame(1.0).accepted &&
-            walk_to(s, static_cast<double>(scraperx::sim::kHangRailX), -128.5, 20.0, 0.1)) {
+            walk_to(s, static_cast<double>(scraperx::sim::detail::kHangRailX), -128.5, 20.0, 0.1)) {
             double noise_on_top = 0.0;
             for (int i = 0; i < 90; ++i) {
-                tick(s);
+                (void)s.advance_frame(Simulation::kFixedStepSeconds);
                 noise_on_top = std::max(noise_on_top, static_cast<double>(s.matron_state().noise_heard));
             }
             (void)s.set_facing(0.0, -1.0);
@@ -234,7 +235,7 @@ void run_hang_rail() {
             double flip_her_z = 0.0;
             double noise_under = 0.0;
             for (int i = 0; i < 18 * static_cast<int>(Simulation::kTickRateHz); ++i) {
-                tick(s);
+                (void)s.advance_frame(Simulation::kFixedStepSeconds);
                 const Snapshot snap = s.snapshot();
                 const auto her = s.matron_state();
                 noise_under = std::max(noise_under, static_cast<double>(her.noise_heard));
@@ -246,7 +247,7 @@ void run_hang_rail() {
                 }
                 const double hand_z =
                     std::min(snap.traversal_left_hand.z, snap.traversal_right_hand.z);
-                if (hand_z <= static_cast<double>(scraperx::sim::kHangRailSouthZ) + 0.10 ||
+                if (hand_z <= static_cast<double>(scraperx::sim::detail::kHangRailSouthZ) + 0.10 ||
                     snap.traversal_state == TraversalState::Hanging) {
                     break;
                 }
