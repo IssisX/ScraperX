@@ -432,7 +432,7 @@ void run_hard_blow_low() {
     const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables + 1;
     take_up_piece(s, toolbox, "hard blow low: to the toolbox by the north rail");
     const auto deaths0 = s.snapshot().death_count;
-    const Thrown low = throw_at_her(s, 2, -0.6);
+    const Thrown low = throw_at_her(s, 2, -0.2);
     std::cout << "  hard blow low changed: threw=" << low.threw << " blow=" << low.blow_mps
               << " m/s, worst=" << low.worst << ", staggers=" << low.staggers
               << ", knockdowns=" << low.knockdowns << ", turn at hit=" << low.turn_at_hit
