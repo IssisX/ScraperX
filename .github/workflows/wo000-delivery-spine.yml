@@ -941,6 +941,17 @@ jobs:
             --script res://tests/her_takes_test.gd 2>&1 | tee artifacts/her-takes.log
           grep -F "HER_TAKES PASS fails=0" artifacts/her-takes.log
 
+      - name: Her wake and his breath are recordings
+        shell: bash
+        run: |
+          set -euo pipefail
+          # No human sound is generated in code (rule 41): her wake and his
+          # breath are recorded takes in the bank, and the director's voice
+          # list holds no dead names.
+          timeout 300s tools/godot/godot --headless --path godot \
+            --script res://tests/sound_bank_test.gd 2>&1 | tee artifacts/sound-bank.log
+          grep -F "SOUND_BANK PASS fails=0" artifacts/sound-bank.log
+
       - name: Her lines never repeat
         shell: bash
         run: |
