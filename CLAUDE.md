@@ -19,7 +19,7 @@ it to match, never ask him again.
   Sonnet (11-05). A very hard problem goes at once to Argon (free: a prompt Cory passes on) or, told to Cory
   before each use, a Fable 5.2 helper (`helper`, `model: fable`: high first; Fable is costly, while his
   resets last); nothing waits on a scheduled agent's run (11-12).
-- Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night, every week (11-07).
+- Grok only on work no other agent holds (11-07). The weekly limit lasts to Sunday night (11-07).
 - Quota, effort, model, Claude sessions and money are his calls: suggest, never set them (11-06).
 - Claude types no clock time (11-11): mail and posts carry their own timestamps; an event is named by its
   link; a time decision runs `date`; replies to Cory carry none. Hooks refuse them; `time_audit.py` counts slips.
@@ -49,7 +49,7 @@ it to match, never ask him again.
 - **No whiplash** (11-06): change any decision by a step, never from one end to the other.
 - Never ask him to merge, approve or review. The only exception is something this session's safety check
   refuses: say it once, plainly.
-- Say unasked, the moment you see it: your own mistakes (11-07), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
+- Say unasked, the moment you see it: your own mistakes and the system's holes (11-07, 11-11), a better way, and anything that changes how Claude works for him: effort, model, a setting overriding his pick.
 
 ## The game
 
@@ -98,14 +98,14 @@ it to match, never ask him again.
 ## The integrator
 
 - Event-driven (11-10): Muse mail, proofs, reviews and merges wake the integrator via the switchboard inbox. Full runs every 3 h are a backstop to 11-12 (`work/tasks/integrator-hourly.md`): every agent loaded by strength,
-  Muse never idle (about 10 jobs in flight, 3 queued), its proposals ruled within the hour, every ask answered.
-- **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool, type
-  `helper` or `helper-max`; Cory 11-06), never a separate session; at most three at a time (11-11), each
+  Muse never idle (8+ unstarted, refill to 15), its proposals ruled within the hour, every ask answered.
+- **Claude sessions:** one Opus session (the integrator). A helper is one of its sub-agents (Agent tool; Cory
+  11-06), never a separate session; at most three at a time (11-11), each
   code-editing one in a worktree. Ask Cory before any other Claude session. Effort: integrator
   his call, seen in `get_session`; raise it only when he throttles; hard jobs start at xhigh (`helper-physics`): physics, contacts, forces, her limits, geometry, spatial, animation or camera work, protected tests, jobs across several systems, or a job that failed once; the rest `helper` at high (11-11); never max (11-06, 11-10). A worker whose job landed is retired.
 - **Context:** 600k window, compacts near 480k (11-11); no handoffs. Keep `03_EXECUTION/handoffs/INTEGRATOR_NOTES.md`
-  (only what has no other home, at most 30 lines) current; re-read it, this file and the hourly file after a compact.
-- **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, long threads)
+  (only what has no other home, at most 30 lines) current; re-read it, this file and the hourly file after a compact, and say what may be lost.
+- **Keep reads small:** subscribe only to PRs you merge yourself; big reads (logs, transcripts, threads)
   go to a helper and only its answer comes back; read the function or section a job needs, found via
   `REPO_MAP.md` or `grep`, never the whole game. Caps: the board 100 comments (then a fresh board), a job
   issue or PR 40, this file and the notes 10 KB each, each `work/tasks/` file 8 KB.

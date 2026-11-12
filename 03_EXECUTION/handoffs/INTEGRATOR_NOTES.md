@@ -16,11 +16,11 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
   J-092 landed #434; its CI follow-up #447 (touch_slab_trap in touch-2 + rule_check tests) has green proof, Codex clean, API LAND. Next workflow PR: `persist-credentials: false` on the scope checkout (API note on #447; token is contents:read, low risk).
 - J-085 #403 DONE (#435, #437). J-126 #449 DONE (#450); follow-up J-127 #451 mailed to Muse. J-126 helper worktree build (~3 GB) left: its deletes were refused, not mine to do.
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
-- Argon (Gemini): only via Cory pasting a prompt; hardest physics. 367 archived branches: deleting waits on Cory.
+- Argon (Gemini): only via Cory pasting a prompt; hardest physics. Grok or ChatGPT run an idea workflow on request from a copyable prompt in chat (11-11). 367 archived branches: deleting waits on Cory.
 
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
-- Gmail is Cory's own main inbox: search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).
+- Gmail is Cory's own main inbox: his filter puts agent mail in a side label (11-11); search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).
 - Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue.
 - Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused.
 - Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's.
