@@ -1,5 +1,15 @@
 # PROVISIONAL SHADOW PLAN — NOT ACTIVE UNTIL CORY APPROVES CUTOVER.
 # Derived from live issue labels and existing Muse ordering; conflicts must be reconciled, not guessed.
+# Status is derived (plan.status), never typed here. Reconciled 11-12 against every branch head, open and
+# closed PR and open issue (closed-PR heads and heads already in trunk are history, not lanes):
+#   claude in flight 7/4, all real unlanded remote work: J-015 #466 and J-038 #469 in review; J-001, J-093 pushed;
+#     J-084, J-090, J-096 green since 11-11 with no PR (land them before starting more).
+#   claude landed, issue still open (close it or say what is left): J-101 (#420), J-108 (#463, #464).
+#   claude contested (only another vendor's live head, NOT-OWNER): J-109 (fb-bot/integrate-j109),
+#     J-067 (fb-bot/integrate-j067-back-hair-fixes). Muse heads also sit on J-015, J-038, J-082, J-084.
+#   claude queued: J-044 (its issue labels say owner:muse: the integrator rules which is right), J-102 (empty branch).
+#   muse in flight 15/6 (12 pushed in the last 3 days, 3 in review); dormant (no PR, idle 3+ days): J-009, J-049.
+# Nothing was reassigned, parked or closed to change these numbers.
 limit builder 1
 limit claude 4
 limit grok 1
