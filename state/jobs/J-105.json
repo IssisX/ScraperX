@@ -1,0 +1,58 @@
+{
+ "attempt": 0,
+ "blocked": null,
+ "branches": {
+  "fb-bot/integrate-protected-j105": "d62cd247bb0fdbdde395a8745cedc1fab793766d"
+ },
+ "cancelled": null,
+ "ci": "",
+ "commands": [],
+ "created": "2026-11-12T03:39:03Z",
+ "deadline": "2026-11-12T05:17:00Z",
+ "head": "d62cd247bb0fdbdde395a8745cedc1fab793766d",
+ "issue": 0,
+ "job": "J-105",
+ "landed": {
+  "fb-bot/integrate-protected-j105": [
+   "d62cd247bb0fdbdde395a8745cedc1fab793766d",
+   "",
+   "2026-11-12T03:39:03Z"
+  ]
+ },
+ "obligations": [
+  {
+   "ack": null,
+   "ack_rule": "new-head|reply|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T03:39:03Z",
+   "dead": "2026-11-12T15:17:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T05:17:00Z",
+   "id": "O-2f7a1ee2",
+   "kind": "fix",
+   "last_error": "",
+   "last_sent": "2026-11-12T03:39:03Z",
+   "missing": 0,
+   "ref": "BRANCH|fb-bot/integrate-protected-j105",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 0,
+   "to": "claude",
+   "unseen": null,
+   "version": "open-pr:d62cd247bb0fdbdde395a8745cedc1fab793766d",
+   "via": "session",
+   "what": "`fb-bot/integrate-protected-j105` is green with no PR: open one (Muse cannot open PRs)"
+  }
+ ],
+ "outcome": null,
+ "outcome_reason": "",
+ "owner": "muse",
+ "pr": 0,
+ "pr_done": "",
+ "prs": [],
+ "review": "",
+ "state": "proof",
+ "updated": "2026-11-12T03:39:03Z"
+}

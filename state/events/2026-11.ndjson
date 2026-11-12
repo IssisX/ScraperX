@@ -1777,3 +1777,18 @@
 {"attempt": 1, "ev": "sent", "id": "O-a40a97ab", "job": "", "ref": "ASK|ask on #378", "send": 1, "t": "2026-11-12T02:29:16Z", "to": "grok_bot", "via": "watch"}
 {"ev": "needs_you", "job": "", "keys": ["O-d1c32a4b", "O-47e6deff", "O-b3763b40", "O-ab43ea33", "O-bc1328fe", "O-f33f597b", "O-f72c7d4b", "O-32775b74", "O-a874ef94"], "n": 9, "t": "2026-11-12T02:29:16Z"}
 {"ev": "pass", "job": "", "jobs": 90, "status": "ok", "t": "2026-11-12T02:29:16Z", "tries": 1}
+{"ev": "job", "job": "J-126", "t": "2026-11-12T03:39:03Z"}
+{"ev": "job", "job": "J-105", "t": "2026-11-12T03:39:03Z"}
+{"due": "2026-11-12T07:39:03Z", "ev": "obligation", "id": "O-2ddb7a9e", "job": "J-099", "kind": "ask", "ref": "ASK|ask on #417", "t": "2026-11-12T03:39:03Z", "to": "muse", "via": "email"}
+{"due": "2026-11-12T05:17:00Z", "ev": "obligation", "id": "O-9980fde1", "job": "J-099", "kind": "ask", "ref": "ASK|ask on #417", "t": "2026-11-12T03:39:03Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T05:17:00Z", "ev": "obligation", "id": "O-2f7a1ee2", "job": "J-105", "kind": "fix", "ref": "BRANCH|fb-bot/integrate-protected-j105", "t": "2026-11-12T03:39:03Z", "to": "claude", "via": "session"}
+{"due": "2026-11-12T05:17:00Z", "ev": "obligation", "id": "O-c30e881d", "job": "", "kind": "ask", "ref": "ASK|ask on #384", "t": "2026-11-12T03:39:03Z", "to": "claude", "via": "session"}
+{"ev": "acked", "how": "reply to the asker", "id": "O-9980fde1", "job": "J-099", "t": "2026-11-12T03:39:03Z"}
+{"ev": "state", "frm": "accepted", "job": "J-105", "t": "2026-11-12T03:39:03Z", "to": "proof"}
+{"ev": "state", "frm": "accepted", "job": "J-126", "t": "2026-11-12T03:39:03Z", "to": "review"}
+{"attempt": 2, "ev": "sent", "id": "O-0fe51a2e", "job": "J-098", "ref": "BRANCH|fb-bot/integrate-j098", "send": 2, "t": "2026-11-12T03:39:03Z", "to": "claude", "via": "session"}
+{"attempt": 1, "ev": "sent", "id": "O-2ddb7a9e", "job": "J-099", "ref": "ASK|ask on #417", "send": 1, "t": "2026-11-12T03:39:03Z", "to": "muse", "via": "email"}
+{"attempt": 1, "ev": "sent", "id": "O-2f7a1ee2", "job": "J-105", "ref": "BRANCH|fb-bot/integrate-protected-j105", "send": 1, "t": "2026-11-12T03:39:03Z", "to": "claude", "via": "session"}
+{"attempt": 2, "ev": "sent", "id": "O-a40a97ab", "job": "", "ref": "ASK|ask on #378", "send": 2, "t": "2026-11-12T03:39:03Z", "to": "grok_bot", "via": "watch"}
+{"ev": "inbox", "id": "O-c30e881d", "job": "", "ref": "ASK|ask on #384", "t": "2026-11-12T03:39:03Z", "to": "claude", "via": "session"}
+{"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T03:39:03Z", "tries": 1}

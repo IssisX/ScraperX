@@ -2118,7 +2118,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
      "missing": 3,
-     "rechecked": "2026-11-11T21:07:56Z",
+     "rechecked": "2026-11-12T03:39:03Z",
      "ref": "BRANCH|fb-bot/integrate-j015-wreck-way-on",
      "sends": 1,
      "sent_by": "shadow",
@@ -2713,7 +2713,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-12T00:23:47Z"
+   "updated": "2026-11-12T03:39:03Z"
   },
   "J-016": {
    "attempt": 0,
@@ -3384,7 +3384,7 @@
      "last_error": "",
      "last_sent": "2026-11-09T21:19:08Z",
      "missing": 3,
-     "rechecked": "2026-11-11T21:07:56Z",
+     "rechecked": "2026-11-12T03:39:03Z",
      "ref": "BRANCH|fb-bot/integrate-j038-slice1",
      "sends": 1,
      "sent_by": "shadow",
@@ -4035,7 +4035,7 @@
    ],
    "review": "FIX",
    "state": "working",
-   "updated": "2026-11-12T01:29:02Z"
+   "updated": "2026-11-12T03:39:03Z"
   },
   "J-040": {
    "attempt": 0,
@@ -4979,7 +4979,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-11T21:07:56Z",
+     "rechecked": "2026-11-12T03:39:03Z",
      "ref": "BRANCH|fb-bot/integrate-j044d",
      "sends": 0,
      "thread": 0,
@@ -4998,7 +4998,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-12T00:23:47Z"
+   "updated": "2026-11-12T03:39:03Z"
   },
   "J-044l": {
    "attempt": 0,
@@ -5046,7 +5046,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-11T21:07:56Z",
+     "rechecked": "2026-11-12T03:39:03Z",
      "ref": "BRANCH|fb-bot/integrate-protected-j044l",
      "sends": 0,
      "thread": 0,
@@ -5095,7 +5095,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T21:07:56Z"
+   "updated": "2026-11-12T03:39:03Z"
   },
   "J-045": {
    "attempt": 0,
@@ -5963,7 +5963,7 @@
     "claude/integrate-j051-asks-since": [
      "512c76ea5d72481823547a436e86bf6b156ed565",
      "",
-     "2026-11-11T21:07:56Z"
+     "2026-11-12T03:39:03Z"
     ],
     "claude/integrate-j051-integrator-inbox": [
      "ae63874c30bd697f08a5b8521fb911d125cfcf1f",
@@ -5988,7 +5988,7 @@
      "last_error": "",
      "last_sent": null,
      "missing": 3,
-     "rechecked": "2026-11-11T21:07:56Z",
+     "rechecked": "2026-11-12T03:39:03Z",
      "ref": "BRANCH|claude/integrate-j051-asks-since",
      "sends": 0,
      "thread": 0,
@@ -6007,7 +6007,7 @@
    "prs": [],
    "review": "",
    "state": "working",
-   "updated": "2026-11-11T21:07:56Z"
+   "updated": "2026-11-12T03:39:03Z"
   },
   "J-051b": {
    "attempt": 0,
@@ -11397,7 +11397,7 @@
      "ack": null,
      "ack_rule": "new-head|reply|ack",
      "asked": null,
-     "attempts": 1,
+     "attempts": 2,
      "closed": null,
      "created": "2026-11-12T01:29:02Z",
      "dead": "2026-11-12T05:17:00Z",
@@ -11406,10 +11406,10 @@
      "id": "O-0fe51a2e",
      "kind": "fix",
      "last_error": "",
-     "last_sent": "2026-11-12T01:29:02Z",
+     "last_sent": "2026-11-12T03:39:03Z",
      "missing": 0,
      "ref": "BRANCH|fb-bot/integrate-j098",
-     "sends": 1,
+     "sends": 2,
      "sent_by": "live",
      "thread": 416,
      "to": "claude",
@@ -11437,12 +11437,66 @@
    "ci": "",
    "commands": [],
    "created": "2026-11-11T15:02:17Z",
-   "deadline": null,
+   "deadline": "2026-11-12T07:39:03Z",
    "head": "",
    "issue": 417,
    "job": "J-099",
    "landed": {},
-   "obligations": [],
+   "obligations": [
+    {
+     "ack": null,
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-12T02:40:04Z",
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-12T03:39:03Z",
+     "dead": "2026-11-12T11:39:03Z",
+     "dead_lettered": null,
+     "due": "2026-11-12T07:39:03Z",
+     "id": "O-2ddb7a9e",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": "2026-11-12T03:39:03Z",
+     "missing": 0,
+     "ref": "ASK|ask on #417",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 417,
+     "to": "muse",
+     "unseen": null,
+     "version": "6812769850",
+     "via": "email",
+     "what": "ask from Claude on #417"
+    },
+    {
+     "ack": {
+      "at": "2026-11-12T02:40:04Z",
+      "by": "claude",
+      "how": "reply to the asker"
+     },
+     "ack_rule": "reply|ack",
+     "asked": "2026-11-12T02:37:48Z",
+     "attempts": 0,
+     "closed": null,
+     "created": "2026-11-12T03:39:03Z",
+     "dead": "2026-11-12T15:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-12T05:17:00Z",
+     "id": "O-9980fde1",
+     "kind": "ask",
+     "last_error": "",
+     "last_sent": null,
+     "missing": 0,
+     "ref": "ASK|ask on #417",
+     "sends": 0,
+     "thread": 417,
+     "to": "claude",
+     "unseen": null,
+     "version": "6812736632",
+     "via": "session",
+     "what": "ask from Muse on #417"
+    }
+   ],
    "outcome": null,
    "outcome_reason": "",
    "owner": "muse",
@@ -11451,7 +11505,7 @@
    "prs": [],
    "review": "",
    "state": "assigned",
-   "updated": "2026-11-11T15:02:17Z"
+   "updated": "2026-11-12T03:39:03Z"
   },
   "J-100": {
    "attempt": 0,
@@ -11614,6 +11668,64 @@
    "review": "",
    "state": "merged",
    "updated": "2026-11-11T22:08:00Z"
+  },
+  "J-105": {
+   "attempt": 0,
+   "blocked": null,
+   "branches": {
+    "fb-bot/integrate-protected-j105": "d62cd247bb0fdbdde395a8745cedc1fab793766d"
+   },
+   "cancelled": null,
+   "ci": "",
+   "commands": [],
+   "created": "2026-11-12T03:39:03Z",
+   "deadline": "2026-11-12T05:17:00Z",
+   "head": "d62cd247bb0fdbdde395a8745cedc1fab793766d",
+   "issue": 0,
+   "job": "J-105",
+   "landed": {
+    "fb-bot/integrate-protected-j105": [
+     "d62cd247bb0fdbdde395a8745cedc1fab793766d",
+     "",
+     "2026-11-12T03:39:03Z"
+    ]
+   },
+   "obligations": [
+    {
+     "ack": null,
+     "ack_rule": "new-head|reply|ack",
+     "asked": null,
+     "attempts": 1,
+     "closed": null,
+     "created": "2026-11-12T03:39:03Z",
+     "dead": "2026-11-12T15:17:00Z",
+     "dead_lettered": null,
+     "due": "2026-11-12T05:17:00Z",
+     "id": "O-2f7a1ee2",
+     "kind": "fix",
+     "last_error": "",
+     "last_sent": "2026-11-12T03:39:03Z",
+     "missing": 0,
+     "ref": "BRANCH|fb-bot/integrate-protected-j105",
+     "sends": 1,
+     "sent_by": "live",
+     "thread": 0,
+     "to": "claude",
+     "unseen": null,
+     "version": "open-pr:d62cd247bb0fdbdde395a8745cedc1fab793766d",
+     "via": "session",
+     "what": "`fb-bot/integrate-protected-j105` is green with no PR: open one (Muse cannot open PRs)"
+    }
+   ],
+   "outcome": null,
+   "outcome_reason": "",
+   "owner": "muse",
+   "pr": 0,
+   "pr_done": "",
+   "prs": [],
+   "review": "",
+   "state": "proof",
+   "updated": "2026-11-12T03:39:03Z"
   },
   "J-108": {
    "attempt": 0,
@@ -11943,6 +12055,32 @@
    "review": "",
    "state": "assigned",
    "updated": "2026-11-12T01:29:02Z"
+  },
+  "J-126": {
+   "attempt": 1,
+   "blocked": null,
+   "branches": {},
+   "cancelled": null,
+   "ci": "red: host-build",
+   "commands": [],
+   "created": "2026-11-12T03:39:03Z",
+   "deadline": null,
+   "head": "7b609ab69405af49e1c7388e3d13b08568d0c06e",
+   "issue": 449,
+   "job": "J-126",
+   "landed": {},
+   "obligations": [],
+   "outcome": null,
+   "outcome_reason": "",
+   "owner": "claude",
+   "pr": 450,
+   "pr_done": "",
+   "prs": [
+    450
+   ],
+   "review": "",
+   "state": "review",
+   "updated": "2026-11-12T03:39:03Z"
   }
  }
 }
