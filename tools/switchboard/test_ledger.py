@@ -524,13 +524,14 @@ class ReadFeedAsks(unittest.TestCase):
         from unittest import mock
         issue = lambda n, title, labels: {"number": n, "title": title, "html_url": f"u{n}",  # noqa: E731
                                           "created_at": L.iso(ago(90)), "updated_at": L.iso(ago(1)), "labels": labels}
+        stranger = dict(issue(999, "J-021 Environment lane C", []), author_association="NONE")
         issues = [issue(128, "J-021 Environment lane C", [{"name": "job"}]), issue(451, "J-127 a heard lead", []),
-                  issue(340, "Board: live jobs (3)", [])]
+                  issue(340, "Board: live jobs (3)", []), stranger]
         sw = types.SimpleNamespace(gh=self.GH([], issues), team=None, run_state=None, plan_mode=lambda: "live")
         with mock.patch.object(L, "cursor_pages", return_value=([], False)):
             f, _ = L.read_feed(sw, [], NOW, 340, "proof.yml", set(), set(), ROSTER)
         self.assertEqual(sorted(i.number for i in f.issues), [128, 451])
-        for mode in ("shadow", "off"):   # until the plan is live the jobs are the labelled issues, as before
+        for mode in ("shadow", "off"):   # until the plan is live the jobs are the issues with the label, as before
             sw = types.SimpleNamespace(gh=self.GH([], issues), team=None, run_state=None, plan_mode=lambda m=mode: m)
             with mock.patch.object(L, "cursor_pages", return_value=([], False)):
                 f, _ = L.read_feed(sw, [], NOW, 340, "proof.yml", set(), set(), ROSTER)

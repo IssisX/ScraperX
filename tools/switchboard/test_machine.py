@@ -245,6 +245,17 @@ class Conflict(unittest.TestCase):
         r = self.conflict(w, "J-999", "#999", "no line")
         self.assertEqual(r.owner, "")
 
+    def test_a_strangers_issue_with_a_jobs_title_is_not_a_job(self):   # the repo is public
+        w = World()
+        before = (w.version(), {j: (r.state, r.gate) for j, r in w.rows().items()})
+        w.issues.insert(0, dict(issue(1101, "J-101", body="another order"), author_association="NONE"))
+        w.issues.append(dict(issue(999, "J-999"), author_association="FIRST_TIME_CONTRIBUTOR"))
+        rows = w.rows()
+        self.assertEqual((w.version(), {j: (r.state, r.gate) for j, r in rows.items()}), before)
+        self.assertEqual(M.versions(w.model, w.issues)["muse"], before[0])   # its text is no part of the order
+        w.issues[0]["labels"] = [{"name": "job"}]      # the team labeled it: now it is a second issue for J-101
+        self.assertEqual(w.rows()["J-101"].state, "conflict")
+
     def test_two_open_issues_for_one_job(self):
         w = World()
         w.issues.append(issue(1101, "J-101"))

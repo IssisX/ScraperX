@@ -349,18 +349,20 @@ def order_version(model: P.Plan, owner: str, bodies: dict[str, str] | None = Non
 
 
 def job_issues(issues) -> dict[str, list[dict]]:
-    """job -> the open issues titled with it (a PR is not one)."""
+    """job -> the team's open issues titled with it (a PR is not one, nor is a stranger's issue: rules.team_issue)."""
     titled: dict[str, list[dict]] = {}
     for it in issues or []:
         job = rules.job_of_title(it.get("title") or "")
-        if job and it.get("state", "open") == "open" and it.get("pull_request") is None:
+        if job and it.get("state", "open") == "open" and it.get("pull_request") is None and rules.team_issue(it):
             titled.setdefault(job, []).append(it)
     return titled
 
 
 def versions(model: P.Plan, issues) -> dict[str, str]:
-    """owner -> the version of its order, as the open issues' text stands."""
-    bodies = {job: (its[0].get("body") or "") for job, its in job_issues(issues).items()}
+    """owner -> the version of its order, as the text of each plan line's own issue stands (the issue the plan
+    names by number, never another one that carries the job's title)."""
+    numbered = {it.get("number"): it for its in job_issues(issues).values() for it in its}
+    bodies = {ln.job: (numbered.get(ln.issue) or {}).get("body") or "" for ln in model.lines}
     return {o: order_version(model, o, bodies) for o in model.limits}
 
 

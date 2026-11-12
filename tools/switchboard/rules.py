@@ -705,6 +705,18 @@ def superseded_prs(body: str | None, own: int) -> list[int]:
     return out
 
 
+OUTSIDE = frozenset({"NONE", "CONTRIBUTOR", "FIRST_TIMER", "FIRST_TIME_CONTRIBUTOR", "MANNEQUIN"})
+
+
+def team_issue(issue: dict) -> bool:
+    """Is this issue the team's? The repo is public: anyone can open an issue titled J-NNN, and a stranger's is
+    not a job (it would be a second issue for a real job, or a job the plan never held). The team's is one a
+    login with write access opened (GitHub's author_association, on every issue it returns) or labeled `job`
+    (a label takes write access to set)."""
+    labels = {(lab.get("name") if isinstance(lab, dict) else lab) for lab in issue.get("labels") or []}
+    return "job" in labels or (issue.get("author_association") or "OWNER") not in OUTSIDE
+
+
 def job_of_title(title: str) -> str:
     m = JOB_TITLE.match(title)
     return m.group("job") if m else ""

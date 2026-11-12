@@ -23,7 +23,7 @@ A read that fails raises: the caller then has no Mail, never an empty one.
 
 Which named hex is a commit claim: machine.NAMED_SHA, less what the mail itself says is not one: a tree
 (`tree 8d2ce0d4`), a head it calls local (`local merge commit 9c5a44ee1`, `remote object for local 3696ab5f`:
-it names the pushed head beside it) and a plan version in any case (`Plan 0123456789ab`). An unlabelled local head
+it names the pushed head beside it) and a plan version in any case (`Plan 0123456789ab`). An unlabeled local head
 (`baseline f5ee22d6b`, J-106; `@ ad9fc702`, J-059) is still a claim, and GitHub's 422 shows it is missing.
 """
 from __future__ import annotations

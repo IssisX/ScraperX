@@ -304,50 +304,70 @@ a job issue with no plan line (`NO-LINE`) and, added on removal, two open issues
 The module and its 14 tests went in one commit; history keeps both.
 
 
-## C. State on this branch (11-12): built, verified, still only described
+## C. State on this branch: one job machine, built, in shadow
 
-`work/switchboard.yml` says `plan: shadow`: the sweep prints `PLAN`/`PLAN-BLOCK` lines and writes nothing (no
-labels, board text, mail or inbox item). Live mode is off until Cory approves the cutover.
+Section B is history. What is built is one table, not B's list of checks.
 
-**Built and tested** (`python3 -m unittest discover -s tools/switchboard -p 'test_*.py'`):
-- `plan.parse/render/fingerprint`, `PLAN-BAD`, `NO-LINE`, `NO-ISSUE`, `DUP-ISSUE`, `NOT-OWNER`, `OVER-LIMIT`,
-  `UNPUSHED` (but see below), `DORMANT`; statuses done, review, held, pushed, started, dormant, contested,
-  landed, waiting, queued (only started, pushed and review are in flight).
-- `plan.observe`, the one read the switch and `tools/board/job_status.py` share: closed-PR heads and heads
-  already in trunk are history, not lanes; whole listings past the client's 500-item cap.
-- `tools/board/plan.py` editor: version check, refuses moving in-flight work without a stated stop-and-push
-  handoff, refuses a recent flip without a reason, atomic save.
-- Reconciler: quiet assigned jobs do not create a start mail or an integrator ruling; an `/ack` or reply on an open
-  FIX is a receipt (`seen`), not a resolution: it stays open until a new head, verdict or closed PR, and can
-  still dead-letter. This is live behaviour (the reconciler is live), not shadow.
-- Ledger feed reads every open `J-NNN` issue, labelled `job` or not.
-- No merge gate: a hold or transfer never turns MERGE into WAIT (removed 11-12, Cory).
+**The machine** (`tools/switchboard/machine.py`). Every job is one line of `work/plan.md` with one owner. Its
+state is computed from evidence each pass and typed nowhere: planned, told, acknowledged, started, pushed,
+proven, reviewed, landed, closed, and held, blocked, conflict. `TABLE` gives, for each state and the gate that is
+shut, who owes the next step, how long it may take and what the step is. The one alarm is a job past that limit,
+naming who owes the step (`Step.alarm`). A lane is a job in started to reviewed; an acknowledged job behind full
+lanes is queued and owes nothing.
 
-**Failure cases, each with its regression test:**
+**The evidence** (reads only): `plan.observe` (open issues, every branch, open and merged PRs, heads already in
+trunk, closed issues, when the plan last changed), `work_reader` (each head's proof and the merge rule's own
+decision on its PR), `mail_reader` (the bridge's posts by team logins, the switch's own notices and receipts, a
+commit a mail names that GitHub does not have).
 
-| Case | Caught by | Test |
-|---|---|---|
-| J-109/J-038 built twice | `NOT-OWNER`, `contested`; listings read whole | `test_plan.test_wrong_vendor_head_detected`, `test_plan_reads.*` |
-| Unlabeled jobs vanish | `NO-LINE`; ledger reads bare issues | `test_plan.test_no_line_detects_bare_issues`, `test_ledger.test_a_job_issue_missing_its_job_label_is_still_read` |
-| Mid-flight change loses work | editor refuses moving in-flight jobs | `test_plan_cli.test_give_requires_pushed_lane_handoff_reason`, `test_hold_fails_if_job_in_review` |
-| Repeated reversals | flip refusal | `test_plan_cli.test_recent_flip_requires_reason` |
-| Stale start for parked jobs | reconciler sends no start mail | `test_reconciler.test_a_parked_job_is_never_owed_a_start` and its neighbours |
-| #343 FIX deadlock | ack is `seen`, not settled | `test_reconciler.test_ack_of_an_unchanged_fix_is_seen_but_not_settled` |
-| False WIP from old branches | `observe` inactive heads, `DORMANT` | `test_plan.test_landed_or_closed_branch_heads_are_not_in_flight`, `test_plan_reads.*` |
-| Local-only head called a trunk failure | **not caught**: `UNPUSHED-SHA` is not built | none |
+**The views**, all made from the table: issue labels (`machine.labels`), the board's job section between its
+markers (`machine.board`), a worker's queue (`python3 tools/board/job_status.py --queue muse`), and the notice
+of a changed order (`machine.notice`; its version is a hash of the owner's authored lines only).
 
-**Only described, not built** (none may be claimed until it has code and a test):
-- `UNPUSHED-SHA`, `STACKED` (#343's stacked fix), `UNREAD`, `MAIL-NOT-FILED` (B4).
-- `UNPUSHED` has code but the sweep passes no `started` set, so it never fires in a real pass.
-- Labels and the board generated from the plan (B5 writes 1 and 2); today labels are still hand-set, so
-  the plan and the labels are two records until this exists (J-044: plan says claude, label says owner:muse).
-- The versioned plan notice through the Muse bridge, its `plan <ver>` receipt and the undelivered or
-  unacknowledged list (B5 writes 3 and 4). The FIX `seen` receipt is not this.
-- B7's ledger cut (job issues and `wip-*` branches as ledger items) and `test_plan_sweep.py`.
-- Deleting the hand-kept queue in `work/tasks/muse.md` and `muse_queue`'s label checks: D's edits, unapplied,
-  so the old queue is still the order Muse reads.
-- The 500-item cap in `ghapi.paged` still truncates the switch's other branch reads (647 branches on 11-12);
-  only the plan's reads go past it.
+**What the old checks became:**
+
+| Old check | In the machine |
+|---|---|
+| NOT-OWNER, contested, DUP-ISSUE, NO-LINE, NO-ISSUE, a mail order the plan does not hold | state `conflict`: the integrator's, late at once |
+| OVER-LIMIT | lanes: `acknowledged` with gate `queued`, no clock; the count is shown, nothing is cut |
+| DORMANT, UNREAD | `pushed`, gate `unread`: a head with no PR and no commit in 3 days |
+| UNPUSHED (a start that is only a mail) | gate `claimed`: the owner owes the wip branch in 2 hours |
+| UNPUSHED-SHA (a commit only a mail names) | gate `unpushed`: the owner's push, late at once |
+| STACKED | gate `stacked`: the fix sits on a branch that waits for the PR it fixes |
+| MAIL-NOT-FILED, no receipt | `told` past 2 hours: one re-send, then the alarm |
+| the reconciler's start notices | `acknowledged`: a start is owed in a day, only while a lane is free |
+| MERGE-BY-HAND hiding the Codex ask (#473) | `reviewed`, gate `codex`: the integrator posts `@codex review` |
+| `queue_check.py`, `muse_queue.py` owner and queue checks | the table; both still run until cutover |
+
+**Shadow.** `work/switchboard.yml` says `plan: shadow`: a full pass prints `PLAN`, `PLAN-STATE`, `PLAN-LATE`,
+`PLAN-LABEL` and `PLAN-NOTICE` lines and writes nothing; an error in it is a printed NOTE, never a failed sweep.
+Everything else the rebuild changes in live code waits for `plan: live`: the auto-open's whole branch listing,
+the reconciler's end of start notices and its rule that an `/ack` does not settle a FIX, the ledger's reading of
+job issues with no `job` label, and QUEUE-LOW counted from the table. Merges are never the plan's to stop.
+
+**Tests** (`python3 -m unittest discover -s tools/switchboard -p 'test_*.py'`): `test_machine` (the table and
+its rules), `test_work_reader`, `test_mail_reader`, `test_plan`, `test_plan_reads`, `test_plan_cli`,
+`test_fixtures` (eight real timelines replayed event by event; its `EXPLAINED` lists each step the machine reads
+differently and why), `test_plan_sweep` (one job from its plan line to a closed issue through the live pass;
+shadow writes nothing and cannot fail the sweep).
+
+**Not in the machine:**
+- A question to the integrator (`To Claude:`, "needs your ruling") stays an ask in the ledger; the job's row
+  does not show it.
+- Two jobs built on one branch: only the job the branch and its PR name is seen in flight (J-109 on J-015's).
+- A hold or an order that lives only in mail prose. A taking, a stop and a give-back are read; nothing else is.
+- Grok and Builder have no notice channel: their jobs stay `planned`, the integrator's, with no clock.
+
+**Before `plan: live`:**
+- Cory rules J-044 (the plan says claude, its label says owner:muse) and the lanes over their limits (real
+  unlanded work: land it or hold it in the plan; nothing was cut to fit).
+- Every head of another agent on a job, and every closed issue with unlanded work, is landed, deleted or ruled
+  a record (`python3 tools/board/plan.py keep J-NNN <branch>@<sha>`); until then those jobs are conflicts.
+- Muse is told the two new habits (section D's mail): the receipt `plan <version>` in a mail subject, and a
+  lane that starts with a pushed `fb-bot/wip-<job>` branch.
+- Section D's edits to CLAUDE.md, `work/tasks/muse.md` and the hourly file are applied by Cory, and
+  `muse_queue.py`'s and `tools/board/queue_check.py`'s owner checks go in the same change.
+
 
 ## D. Cutover text for the owner to apply — drafts, not instructions executed
 
@@ -387,33 +407,10 @@ Include plan <version> in the subject after a plan-change notice. Keep the exist
 
 **work/tasks/integrator-hourly.md exact edits (Cory applies):**
 - In step 2, delete the sentence starting `First mail the owner` through `stop if its version is there.`; replace with `Use tools/board/plan.py give only after the old owner pushes and acknowledges a stop; do not change the plan for unpushed active work.`
-- In step 4, delete the paragraph starting `Muse never has fewer than` through the end of `Replace the "This hour" section`; replace with `Run tools/board/plan.py check; repair PLAN-BAD/NO-LINE/NOT-OWNER/OVER-LIMIT/UNPUSHED, then route ready work through the plan only. The switchboard generates the board, labels and Muse notices.`
+- In step 4, delete the paragraph starting `Muse never has fewer than` through the end of `Replace the "This hour" section`; replace with `Run tools/board/plan.py check; rule every LATE line and every conflict, then route ready work through the plan only. The switchboard generates the board, labels and Muse notices.`
 - Delete all manual updates of job state in `INTEGRATOR_NOTES.md`; retain only non-derivable context.
 - Preserve independent review, evidence, worktree, test and gameplay constraints unchanged.
 
 **Merges are not the plan's to stop (Cory 11-12):** a hold or a transfer never turns MERGE or HUMAN-MERGE into WAIT. The plan routes new work only; finished work lands on the existing proof, review, security and LAND rules.
 
 **Activation gate:** no `plan: live` until plan validation, live shadow checks, every supported test, and the owner's approval of the WIP limits and the first generated assignments. No gameplay or money decision is authorized by this document.
-
-
-## E. Failure-mode audit addendum: source-level repairs and outstanding release gates
-
-This records changes on the draft PR; it is not cutover authorization. Check the latest head's selftest before claiming green.
-
-**Repaired on this side branch (with targeted regressions):**
-- The plan observer no longer hides a head merely because its PR was closed without merging. Closed-unmerged #389 (J-015) and #367 (J-049) have extant branches with diverged heads. Reconcile that work explicitly or prove it landed.
-- The plan editor now uses the full observer for check, status, give, hold, drop and tidy. Its former five-page branch listing missed fb-bot/integrate-j109 on page six. A regression checks the actual edit with the head only on page six.
-- Drop and tidy require a freshly verified closed issue and no unresolved remote work. A missing listing entry is not proof of completion.
-- The editor preserves the provisional warning and provenance, leaves no-op edits untouched, and does not mistake the initial plan snapshot for a recent ownership flip.
-- Quiet jobs no longer spawn ungated live integrator ruling obligations solely because they age. This prevents an alarm pile on merge; it is not proof of worker start delivery.
-- A plan violation does not independently generate a QUEUE-LOW refill signal.
-
-**Still open and blocking cutover:**
-- Owner conflicts and actual WIP overload have not been reconciled. No jobs were silently parked, transferred or deleted to force the limits to appear satisfied.
-- The plan does not generate labels, board ownership or worker notices. Muse still has a legacy queue; these are competing order stores.
-- Version notice and recipient receipt, UNREAD, MAIL-NOT-FILED, UNPUSHED-SHA, STACKED and started-post-driven UNPUSHED are missing from the live plan path.
-- Shadow findings are printed on full passes, not immediate handoff gates. The ledger still includes legacy job items.
-- A stop-work explanation does not prove the old owner pushed and acknowledged a transfer.
-- Closed-but-unmerged branches need explicit disposition, not automatic exclusion.
-
-**Release gate:** retain draft PR #471 and plan: shadow. No Muse mail, live label changes or branch deletion. Verify the final head's actual selftest and complete the notice/receipt and ownership loop before seeking owner's cutover decision.
