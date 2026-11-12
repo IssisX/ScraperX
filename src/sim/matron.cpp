@@ -910,6 +910,7 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
     // her ears are not.
     lead_seen_ = sense == Sense::Sight || sense == Sense::Touch;
     lead_sense_ = sense;
+    lead_crash_ = false;  // a fresh lead is his until a crash claims it
     lead_valid_ = true;
     chase_way_held_ = false;  // a fresh lead earns its own chase window
 }
@@ -917,6 +918,7 @@ void Matron::take_lead(const float x, const float z, const float floor, const fl
 void Matron::stand_down() {
     end_encounter();
     lead_valid_ = false;
+    lead_crash_ = false;
     chase_way_held_ = false;
     turn_ = Turn::None;
     turn_s_ = 0.0F;
@@ -2564,6 +2566,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
         const Sound crash = pick(locker_ear, kWakeNoiseM);
         if (crash.heard) {
             take_lead(crash.x, crash.z, floor_at(crash.x, crash.y, crash.z), crash.loudness, Sense::Hearing);
+            lead_crash_ = true;  // woke on a break, not on him
             state_ = State::Straining;
             strain_s_ = 0.0F;
         } else if (ev.sound && ev.carry_m <= kWakeNoiseM) {
@@ -2682,6 +2685,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             if (state_ == State::Hunting && since_heard_s_ < 1.0F) {
                 // The chase goes on by ear: the same lead, moved on.
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                lead_crash_ = crash_first;
                 wary_ = wary_ && !close;
             } else if ((state_ == State::Guarding || state_ == State::Unrigging) && fooled_ >= 2 && !close) {
                 // Fooled twice: a far noise only turns her head.
@@ -2695,6 +2699,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                 // her level: another's she cannot see for its deck, she goes
                 // by the way there).
                 take_lead(sx, sz, sfloor, loud, Sense::Hearing);
+                lead_crash_ = crash_first;
                 wary_ = fooled_ >= 1 && !close && std::abs(sfloor - levels_[static_cast<std::size_t>(level_)].floor_y) <= 1.0F;
                 peer_s_ = 0.0F;
                 state_ = State::Hunting;
@@ -2718,6 +2723,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             heard_z_ = float(end.GetZ());
             lead_floor_ = float(end.GetY());
             guess_line_ = line;
+            lead_crash_ = false;  // the guess is his movement, not the sound
         }
         // Or seen or heard on a climb from her level: where it lets them off
         // over its head. That lead is on another level: not a noise she
@@ -2731,6 +2737,7 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             heard_z_ = descending ? c.z : c.top_z;
             lead_floor_ = descending ? c.foot_y : c.head_y;
             guess_climb_ = ev.climb;
+            lead_crash_ = false;  // the guess is his movement, not the sound
             wary_ = false;
         }
         // Seen up a ladder in a stalk: round to its head by another way, if
@@ -2968,8 +2975,13 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
             // stands under it (elsewhere), nor one she is still climbing
             // toward (her feet off her floor). A seen lead is still hers
             // to catch, and a wary one still peers from its vantage.
+            // Only a crash lead ends here: a break, a drop, a landing is
+            // over when heard, so arriving ends the hunt. A lead from him
+            // is still live — he may still be there, move, or act — so
+            // the hunt goes on: the jab to close into, the shove she
+            // heard, the toolbox to take, the movement to track.
             if (pursuit_s_ > evidence_timeout || (!lead_seen_ && since_heard_s_ > heard_limit) ||
-                (!elsewhere && !wary_ && !lead_seen_ &&
+                (lead_crash_ && !elsewhere && !wary_ && !lead_seen_ &&
                  distance_xz(ax, az, heard_x_, heard_z_) <= 1.5F &&
                  std::abs(feet_y - floor_y) <= 1.0F)) {
                 if (elsewhere) {
@@ -4433,6 +4445,7 @@ void Matron::restore(const Saved &saved) {
         wary_ = false;
         lead_seen_ = false;
         lead_sense_ = Sense::None;
+        lead_crash_ = false;
         glimpsed_ = false;
         end_encounter();
         lead_valid_ = false;
@@ -5073,6 +5086,7 @@ void Matron::stand_up() {
     heard_z_ = float(at.GetZ());
     lead_seen_ = true;
     lead_sense_ = Sense::Touch;   // the blow she felt
+    lead_crash_ = false;  // the lead is where she fell, not a sound
     state_ = State::Searching;
     search_s_ = 0.0F;
     search_budget_s_ = 1.0e9F;

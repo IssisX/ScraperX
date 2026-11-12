@@ -2857,6 +2857,7 @@ private:
     mutable std::uint32_t acoustic_queries_ = 0;
     bool lead_seen_ = false;
     Sense lead_sense_ = Sense::None;
+    bool lead_crash_ = false;  // the lead is a crash (a break, a drop, a landing): over when heard, not him
     bool glimpsed_ = false;
     // The stalk (matron_stalk.cpp).
     bool watched_ = false;

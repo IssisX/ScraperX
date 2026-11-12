@@ -138,6 +138,7 @@ void Matron::notice_ridden_line() {
     pursuit_s_ = 0.0F;
     lead_seen_ = true;
     lead_sense_ = Sense::Sight;
+    lead_crash_ = false;  // a sight lead is him, not a crash
     lead_valid_ = true;
     wary_ = false;
 }
