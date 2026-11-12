@@ -360,6 +360,19 @@ func _act_cam_watch() -> void:
 		_act_cam["clear_min"] = minf(float(_act_cam["clear_min"]), float(cam.clearance))
 	if int(cam.rip_holds) > 0 and bool(cam.rip_active):
 		_act_snap("act_hold_rip")
+	# J-079: a still at each beat of her hold (down, drag, over, hang, pin),
+	# taken the frame its shot is cut to.
+	var beat := int(cam.beat)
+	if beat == 0:
+		_act_snap("act_hold_beat_down")
+	elif beat == 1:
+		_act_snap("act_hold_beat_drag")
+	elif beat == 2:
+		_act_snap("act_hold_beat_over")
+	elif beat == 3:
+		_act_snap("act_hold_beat_hang")
+	elif beat == 4:
+		_act_snap("act_hold_beat_pin")
 	if bool(hold["fatal_hang"]) and float(hold["fatal_window_s"]) >= 0.6:
 		_act_snap("act_hold_hang_window")
 	if int(cam.lets_go_seen) > 0 and float(cam.black()) < 0.05:
@@ -816,6 +829,22 @@ func _act_dangerous_and_changed(device: int) -> bool:
 		_act_cam_watch()
 		return float(_main._hold_cam.black()) < 0.01, 3.0, "fade_in")
 	_act_cam_log()
+	# J-079: third person from her grab to his release or death, and one cut
+	# per beat of her hold. The watch counts the held frames it saw; the
+	# camera counts every beat it entered, whatever the watch's gaps.
+	var cam: RefCounted = _main._hold_cam
+	var entries: PackedInt64Array = cam.beat_entries
+	var cuts := 0
+	for n in entries:
+		cuts += n
+	if int(_act_cam["held"]) == 0 or int(_act_cam["third"]) != int(_act_cam["held"]):
+		return _fail("her hold left first person on %d of %d held frames" % [
+			int(_act_cam["held"]) - int(_act_cam["third"]), int(_act_cam["held"])])
+	for b in 5:
+		if int(entries[b]) < 1:
+			return _fail("her hold never cut to beat %d (entries %s)" % [b, str(entries)])
+	if int(cam.beat_cuts) != cuts:
+		return _fail("her hold's cuts (%d) are not one per beat entry (%d)" % [int(cam.beat_cuts), cuts])
 	if not died:
 		return _fail("fully changed, her second catch never ended in the fatality's death (tears %d, path %d, released %s)" % [
 			int(seen["tears"]), int(seen["path"]), str(seen["released"])])

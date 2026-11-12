@@ -1645,6 +1645,27 @@ var _dread_depth_db := 0.0
 var _dread_amp: AudioEffectAmplify
 
 
+# The hold's mix: while her hands have him the world ducks under her (the
+# Ambience bed: wind, the yard's regions, the welders) and her breath and the
+# steel's creak, on the Effects bus, come forward over it. Her voice is a real
+# recording (matron_breath); nothing here synthesizes one.
+const HOLD_DUCK_DB := 8.0
+var _hold_amp: AudioEffectAmplify
+var _hold_duck_db := 0.0
+
+
+func hold_mix(delta: float, holding: bool) -> void:
+	if _hold_amp == null:
+		var index := AudioServer.get_bus_index(BUS_AMBIENCE)
+		if index < 0:
+			return
+		_hold_amp = AudioEffectAmplify.new()
+		AudioServer.add_bus_effect(index, _hold_amp)
+	_hold_duck_db = move_toward(_hold_duck_db, -HOLD_DUCK_DB if holding else 0.0,
+		delta * (16.0 if holding else 6.0))
+	_hold_amp.volume_db = _hold_duck_db
+
+
 # The duck under her dread: in fast, held, then back slowly; and while she
 # listens near, the yard held down with it.
 func _update_dread(delta: float) -> void:

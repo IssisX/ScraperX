@@ -963,6 +963,13 @@ jobs:
           tools/godot/godot --headless --path godot --script res://tests/rip_shot_probe.gd 2>&1 | tee artifacts/rip-shot-probe.log
           grep -q 'RIP_SHOT PASS' artifacts/rip-shot-probe.log
 
+      - name: Her hold cuts once per beat, third person throughout
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools/godot/godot --headless --path godot --script res://tests/hold_beats_probe.gd 2>&1 | tee artifacts/hold-beats-probe.log
+          grep -q 'HOLD_BEATS PASS' artifacts/hold-beats-probe.log
+
       - name: The Matron's figure, eyes and hair
         shell: bash
         run: |
