@@ -176,10 +176,12 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     {
         const auto path = s.throw_prediction();
         const auto her_now = s.matron_state().position;
+        const auto me_now = s.snapshot().player_position;
         if (!path.empty()) {
             const auto end = path.back();
             std::cout << "  hard blow aim: path ends (" << end.x << ", " << end.y << ", " << end.z << "), her centre ("
-                      << her_now.x << ", " << her_now.y << ", " << her_now.z << ")\n";
+                      << her_now.x << ", " << her_now.y << ", " << her_now.z << "), he is (" << me_now.x << ", "
+                      << me_now.y << ", " << me_now.z << ")\n";
         }
     }
     const auto throws0 = s.snapshot().throw_count;
@@ -188,10 +190,17 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     out.floor_y = s.matron_state().floor_y;
     out.y = s.matron_state().position.y;
     require(s.snapshot().up_move == UpMove::Throw && s.request_up(), "hard blow: up is THROW with it in the hands");
+    double closest = 1.0e9;
+    Vector3 thrown_v{0.0, 0.0, 0.0};
     for (int i = 0; i < static_cast<int>(1.2 * static_cast<double>(Simulation::kTickRateHz)); ++i) {
         s.debug_set_matron_stage(static_cast<std::uint8_t>(stage));
         tick(s);
         const auto m = s.matron_state();
+        const auto bp = s.kit_body_position(body);
+        closest = std::min(closest, std::hypot(bp.x - m.position.x, bp.z - m.position.z));
+        if (i == 1) {
+            thrown_v = s.kit_body_velocity(body);
+        }
         out.blow_mps = std::max(out.blow_mps, m.blow_mps);
         if (out.turn_at_hit < 0 && m.blow_mps > 0.0) {
             out.turn_at_hit = m.turn;
@@ -213,6 +222,10 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     // after the watch, not on the request's own tick.
     out.threw = s.snapshot().throw_count == throws0 + 1;
     const auto m = s.matron_state();
+    const auto bend = s.kit_body_position(body);
+    std::cout << "  hard blow flight: thrown velocity (" << thrown_v.x << ", " << thrown_v.y << ", " << thrown_v.z
+              << "), closest to her centre " << closest << " m, box ends (" << bend.x << ", " << bend.y << ", " << bend.z
+              << "), her centre (" << m.position.x << ", " << m.position.y << ", " << m.position.z << ")\n";
     out.staggers = static_cast<std::uint32_t>(m.staggers - stags0);
     out.knockdowns = static_cast<std::uint32_t>(m.knockdowns - downs0);
     out.alive = m.alive;
