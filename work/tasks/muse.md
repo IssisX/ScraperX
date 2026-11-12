@@ -52,23 +52,23 @@ your own branches (Cory 11-05) and mail the rest:
 ## Your queue (11-06)
 The rule: take the next one yourself, and mail "J-NNN started" the moment a lane starts (so it is never taken from you, 11-11); mail the moment fewer than 8 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 7 left`; Cory 11-11: never run low). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-In flight (finish these): J-094 #412, J-091 #409, J-055 #294, J-043 #241, J-054 #293 (protected branch), J-044l #242, J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Claude has: J-090 #408, J-096 #414, J-084 #402, J-092 #410, J-082 #400. Parked: J-099 #417 (until J-038 slice 1 lands), J-053 #82 (on Grok), J-060 #320 (on J-044c).
-Unstarted, in order (11-12; new playable content first):
-2. J-086 #404: she pulls him off a ladder, every ladder kind; after J-001 lands (Claude's helper is in the grab code now).
-6. J-114 #433: housekeeping, music_box mesh and box_cord pivot.
-7. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely.
-8. J-117 #439: a checkpoint on a moving floor restores him on real support.
-9. J-118 #440: leaving the app mid-ride, mid-hold, mid-fall: back to that exact moment.
-10. J-119 #441: every control fits every screen: Fold 6 folded and open, a fold mid-climb.
-11. J-120 #442: the crew proven: native tests for every worker state and law.
-12. J-121 #443: the kit's rope proven on its own: length, slack, winch, the AS-010 O snatch.
-13. J-122 #444: his footsteps by the real material under him.
-14. J-123 #445: every machine sounds like itself, by its measured motion.
-15. J-124 #446: the parachute from every deck edge lands him alive (rule 51).
-16. J-125 #448: every shipped sound, voice, model and texture on record; Licences page true.
-
-Live lanes: J-127 #451, J-128 #452, J-111 #430, J-112 #431, J-113 #432, J-100 #418, J-106 #425, J-109 #428, J-098 #416, J-087, J-081, J-088, J-089, J-095 #413, J-083 #401, J-105 #424, J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
-step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
+Finish line (11-12, rule 56): only the finish plan (`03_EXECUTION/PLANNING/FINISH_LINE_AND_REASONS_TO_PLAY.md`, A5) is worked for the current parts.
+Finish (in flight): J-043 #241 rail move, J-038 #372 crates break (dents out), J-059 #307 wire-up, J-063 #321, J-015 #389 + J-109 #428 as one (F7), J-049 #278 parts 2-3 (F11), J-098 #416 (F13), J-105 #424 step 1 only (F10), J-045 (F3), J-053 #82, J-021 #128 waterfall fix only, J-077, J-078 #396, J-079 #397, J-080 #398 (push, land, then stop). J-044c: stop after the split you hold; the rest of her jointed body is parked.
+Parked (branches kept; they return as missions or after the finish): J-044d to k and n, J-060, J-036, J-040, J-099, J-022, J-054, J-055, J-091, J-094, J-095, J-100, J-090 pass 2, J-096 past slice 1, J-105 past step 1, J-111, J-113, J-114, J-120 to J-123, J-081, J-088, J-086 (until J-001's hold lands or is cut, 11-19). Close: J-067 (on the scorer), J-082.
+Unstarted, in order (11-12):
+1. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely; also her stage on relaunch (save at Dangerous, load fresh, she is still Dangerous).
+2. J-117 #439: a checkpoint on a moving floor restores him on real support.
+3. J-118 #440: leaving the app mid-ride, mid-hold, mid-fall: back to that exact moment. J-116 to J-118 share one save version bump.
+4. J-133 #459: the climb and the ending in one touch run, zero deaths (F4).
+5. J-134 #460: measure her chase above 220 m, band by band (F5).
+6. J-124 #446: the parachute from every deck edge lands him alive (rule 51).
+7. J-119 #441: every control fits every screen: Fold 6 folded and open, a fold mid-climb.
+8. J-125 #448: every shipped sound, voice, model and texture on record; Licences page true.
+9. J-129 #455: the objective core, saved with the checkpoint (missions start; same save bump as J-116).
+10. J-130 #456: Brenner's job lines on the foreman radio, text first.
+11. J-131 #457: the punch list on the pause card and one HUD line.
+12. J-132 #458: missions 1 and 7 proven, one touch scenario each.
+Waiting on J-001's hold landing or its cut (11-19): J-018 #125.
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
 Your queue is never allowed to run dry: whenever fewer than eight big jobs above are unstarted, the
