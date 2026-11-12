@@ -520,6 +520,12 @@ ServiceState Simulation::service_state() const noexcept {
     out.o_chain_kg = kit.chain_hanging_kg(service.o_chain);
     out.o_bucket_mass = kit.body_mass(service.o_bucket);
     out.o_rope_tension = kit.rope_tension(service.o_rope);
+    out.bait_a_travel = kit.guide_travel(service.bait_a_guide);
+    out.bait_b_travel = kit.guide_travel(service.bait_b_guide);
+    out.bait_a_peak_speed = kit.guide_peak_speed(service.bait_a_guide);
+    out.bait_b_peak_speed = kit.guide_peak_speed(service.bait_b_guide);
+    out.bait_chain_kg = kit.chain_hanging_kg(service.bait_chain);
+    out.bait_rope_tension = kit.rope_tension(service.bait_rope);
     return out;
 }
 
@@ -1319,6 +1325,10 @@ void Simulation::debug_snag_player(const double max_n) noexcept {
 bool Simulation::debug_player_snagged() const noexcept { return physics_world_->player_snagged_for_test(); }
 
 void Simulation::debug_matron_player_blow() noexcept { physics_world_->matron().player_blow_landed(); }
+
+void Simulation::debug_force_strike_move(const std::uint8_t move) noexcept {
+    physics_world_->force_strike_move_for_test(move);
+}
 
 void Simulation::debug_matron_hold(const int spare, const double dangle_seconds) noexcept {
     physics_world_->matron().set_spare_for_test(spare);

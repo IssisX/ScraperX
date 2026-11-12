@@ -141,6 +141,10 @@ public:
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
     void spin_kit_body_for_test(std::uint32_t body, JPH::Vec3 angular_velocity);
+    // Tests only (never bound to the bridge): the next strike press throws
+    // this move whatever the stance would pick (the bare punch, move 0, on a
+    // free Matron); consumed when the strike begins.
+    void force_strike_move_for_test(std::uint8_t move) noexcept;
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
@@ -1143,6 +1147,7 @@ public:
     int strike_side_ = 1;           // the fist this strike is thrown with
     std::uint8_t strike_move_ = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep, 2 kick, 3 jab, 4 cross
     std::uint8_t strike_queued_move_ = 0;  // a follow-up queued in recoil: 3 jab, 4 cross, 0 none
+    std::uint8_t strike_forced_move_ = 255;  // force_strike_move_for_test: the next press throws this move, 255 none
     int strike_grace_ = 0;                // ticks left to press the follow-up after a jab's recoil
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;

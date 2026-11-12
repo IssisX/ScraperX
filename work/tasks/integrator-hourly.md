@@ -39,8 +39,8 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
    vendor (Muse first for physics and game code, then Grok), asked with the facts on its PR.
    Only the hardest: an unknown cause blocking 2+ jobs, the climb or her chase, or a fix failed twice: take it (11-12).
-   First mail the owner `CLAUDE_TO_MUSE: taking <piece>, stop your lane; if you pushed it, mail the sha`, check its
-   fb-bot branches and mail again before starting and before pushing, and stop if its version is there.
+   First mail the owner `CLAUDE_TO_MUSE: taking <piece>, stop your lane; if you pushed it, mail the sha`, set its issue
+   to owner:claude and drop it from muse.md the same step (11-12: J-109 built twice), check its fb-bot branches and mail again before starting and before pushing, and stop if its version is there.
 3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 4 h with no owner step (11-12)
    gets `To <Name>: close or next step`, and is closed the next hour if nothing comes.
 4. **Task the team.** Every agent holds work matched to its strength (CLAUDE.md). Muse never has fewer than
@@ -64,9 +64,9 @@ own and Claude's branches. Never ask for a job and then do it yourself: if you t
 Before a hand merge, check that the PR head equals `git ls-remote` (GitHub can miss a push, #235).
 
 Notes: before merging, check the PR's base is `ScraperX-Claude` (#171 merged into #83, 11-04). Re-run a proof as the whole run (`.../runs/<id>/rerun`), never only its failed jobs. Subscribe to PRs you merge yourself
-and to Claude's own PRs (11-06: #277 sat 2 h on a Codex P1 nobody was woken for). Before `@codex review` or
+and to Claude's own PRs. Before `@codex review` or
 calling a PR clean, read its open review threads (`get_review_comments`), not only the newest review. Opening a PR subscribes you already: never subscribe again, and unsubscribe at once
-from one the switchboard merges (11-05: #250-#253 woke it 14 times in 3 min). A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
+from one the switchboard merges. A helper that edits code runs in a worktree and never subscribes to a PR. Every helper brief ends: "Report to me in 10
 lines or fewer (branch, sha, PASS/FAIL, what is left); put the numbers and details on the job's issue. Run tests in the foreground; never end a turn waiting on a
-background job." (11-05: they woke it 10 times.) The
+background job." The
 Claude API does reviews and the eye only (the API coder is off); one review per PR.
