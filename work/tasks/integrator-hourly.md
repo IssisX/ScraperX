@@ -1,24 +1,23 @@
 # Integrator: the hourly check
 
 It fires at 8:17 AM, 11:17 AM, 2:17 PM, 5:17 PM, 8:17 PM and 11:17 PM Central on weekdays (Sat-Sun 9:17 AM, 1:17 PM,
-5:17 PM, 9:17 PM), every run full. It is a backstop (Cory 11-10, "drop"): the switchboard inbox wakes the integrator on
-every Muse mail, red proof, review and merge, and it acts then; these runs catch what no event raised. Kept to 11-12,
-then dropped if events covered everything.
+5:17 PM, 9:17 PM), every run full. It is a backstop (11-10): the switchboard inbox wakes the integrator on every Muse mail,
+red proof, review and merge; these runs catch what no event raised.
 The day's last run (11:17 PM; Sat-Sun 9:17 PM) is quiet:
 it answers asks and lands merges, no new jobs, no board edits (Cory 11-06).
-Pace: no throttling (Cory 11-10: "you can stop throttling completely"; he has usage resets to spend). No pace
-prediction, no meter asks, no quiet runs to save quota.
+Pace: no throttling, no pace prediction, no meter asks, no quiet runs to save quota (11-10).
 Specs, ruling math and research go to ChatGPT or Grok first; the integrator checks, never drafts them (11-06).
-How: helpers get the important work (Claude's 1-2 key jobs, long reads), never chores (Cory 11-06
-9:30 AM); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
+How: helpers get the important work and long reads, never chores (11-06); the integrator runs its own check-in lean and edits the board only when an owner or a hold changes. No coding inline.
 Fewer, batched calls; no re-reads.
-Quality floor (Cory 11-06 9:45 AM: "don't degrade the quality"): never cut reviews, tests on what a change reaches, checks by
+Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): at most three at a time, on the hardest jobs (11-11), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
 Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
 
 Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
-Change the check here, never in the task's prompt. Post only when something changed.
+Change the check here, never in the task's prompt. Post only when something changed. Each overview also
+says what waits on Claude (asks to Claude over 1 h from `asks.py --hours 48`, Claude's red branches, idle PRs over
+24 h) and each taken job's hours since it was taken; any nonzero pile is acted on that run (11-12).
 Never ask Cory to merge, approve or review; go with your pick on every call. Times in Central.
 
 1. **Mail and asks first, every run and every event you handle.** The mark is the notes' `Read through:` Unix time.
