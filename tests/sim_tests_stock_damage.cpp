@@ -905,26 +905,33 @@ void spinning_break_keeps_orbital_case() {
     require(orbital_y > 5.0, (prefix + "the pieces keep the orbital momentum").c_str());
 }
 
-// A crate spinning at 3 rad/s about X breaks on landing: its pieces
-// must not share one spurious velocity. The orbital term is measured
-// from the parent's centre of mass, and the skid crate's origin sits
-// on the ground, ~0.56 m below its centre: measuring the offset from
-// the origin gives every piece the same extra kick (3 rad/s x 0.56 m
-// = 1.68 m/s), so the pieces' mean velocity carries it. The existing
-// Y-spin test cannot see it: about Y the origin-to-centre offset
-// contributes nothing. (#372 review, P1 physics_world.cpp:664.)
+// A skid crate spinning at 3 rad/s about X breaks on landing: the
+// break must not turn spin into travel. Two ways it can, both caught
+// here, both invisible to the Y-spin test above (about Y neither
+// offset has a lever):
+//  - the orbital term measured from the body's origin, which sits on
+//    the ground ~0.56 m below the box: every piece gets the same
+//    extra 3 rad/s x 0.56 m = 1.68 m/s (#372 review, P1
+//    physics_world.cpp:664);
+//  - the orbital term measured from the parent's centre of mass,
+//    which the runners pull down to local y 0.513125 (15 kg at 0.06 m,
+//    145 kg at 0.56 m), while the eight equal pieces centre on 0.56:
+//    every piece gets the same extra ang x 0.046875 m, 0.140625 m/s
+//    at 3 rad/s, 22.5 N.s over 160 kg from no impulse (#469 review,
+//    P1 physics_world.cpp:694).
+// So the pieces' total linear momentum must be the parent's own,
+// mass x its centre-of-mass velocity, and nothing else: the orbital
+// term is measured from the pieces' own mass centre and the scatter
+// sums to zero.
 //
-// The mean is asserted against the parent's own motion at the break,
-// read back through debug_last_break_parent: the scatter sums to zero
-// over the eight pieces, so the mean piece velocity is exactly
-// vel + ang x (mean piece position - centre of mass). No drop test can
-// assert the mean alone: a tumbling crate lands on an edge and the
-// impact gives the parent real horizontal velocity, which the pieces
-// correctly inherit (measured 2026-11-11: a tumbled drop reads
-// mean_vx 0.349, mean_vz 0.885 with the fix in place); and a flat
-// landing eats the spin outright (the spawn sees ang 0), so there is
-// nothing to measure. The parent's motion at the break is the only
-// reference that separates the two.
+// The parent's motion at the break is read back through
+// debug_last_break_parent. No drop test can assert the mean alone: a
+// tumbling crate lands on an edge and the impact gives the parent real
+// horizontal velocity, which the pieces correctly inherit (measured
+// 2026-11-11: a tumbled drop reads mean_vx 0.349, mean_vz 0.885); and
+// a flat landing eats the spin outright (the spawn sees ang 0), so
+// there is nothing to measure. The parent's motion at the break is the
+// only reference that separates the two.
 void spinning_break_no_common_kick_case() {
     const std::string prefix = "stock damage spinning break X: ";
     Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
@@ -955,36 +962,56 @@ void spinning_break_no_common_kick_case() {
         }
     }
     require(broken, (prefix + "the spinning drop breaks the crate").c_str());
-    // The parent's motion at the break, and the pieces' mean position
-    // and velocity: the scatter sums to zero, so the mean velocity is
-    // the parent's centre-of-mass velocity plus the orbital term
-    // measured from the parent's centre of mass. The origin-measured
-    // term reads 3 rad/s x 0.56 m = 1.68 m/s off this.
+    // The parent's motion at the break against the pieces' on the
+    // tick they are born: their summed momentum, and their mass centre
+    // (for what is at stake: the momentum a term measured from the
+    // parent's centre of mass would add, mass x ang x the offset
+    // between the two mass centres).
     const Simulation::BreakParentSample parent = s.debug_last_break_parent();
-    double mean_px = 0.0, mean_py = 0.0, mean_pz = 0.0;
-    double mean_vx = 0.0, mean_vy = 0.0, mean_vz = 0.0;
+    const double mass = s.kit_body_mass(crate);
+    double pieces_mass = 0.0;
+    double sum_px = 0.0, sum_py = 0.0, sum_pz = 0.0;  // sum of m * position
+    double mom_x = 0.0, mom_y = 0.0, mom_z = 0.0;     // sum of m * velocity
     for (std::uint32_t k = 0; k < 8; ++k) {
         const std::uint32_t body = s.kit_body_index(piece_entity_for(entity, k));
         require(body != 0xFFFFFFFFU, (prefix + "every piece exists").c_str());
+        const double m = s.kit_body_mass(body);
         const auto p = s.kit_body_position(body);
         const auto v = s.kit_body_velocity(body);
-        mean_px += p.x / 8.0;
-        mean_py += p.y / 8.0;
-        mean_pz += p.z / 8.0;
-        mean_vx += v.x / 8.0;
-        mean_vy += v.y / 8.0;
-        mean_vz += v.z / 8.0;
+        pieces_mass += m;
+        sum_px += m * p.x;
+        sum_py += m * p.y;
+        sum_pz += m * p.z;
+        mom_x += m * v.x;
+        mom_y += m * v.y;
+        mom_z += m * v.z;
     }
-    const double rx = mean_px - parent.centre_of_mass.x;
-    const double ry = mean_py - parent.centre_of_mass.y;
-    const double rz = mean_pz - parent.centre_of_mass.z;
-    const double expect_vx = parent.velocity.x + parent.angular_velocity.y * rz - parent.angular_velocity.z * ry;
-    const double expect_vy = parent.velocity.y + parent.angular_velocity.z * rx - parent.angular_velocity.x * rz;
-    const double expect_vz = parent.velocity.z + parent.angular_velocity.x * ry - parent.angular_velocity.y * rx;
-    const double error = std::hypot(mean_vx - expect_vx, mean_vy - expect_vy, mean_vz - expect_vz);
-    std::cout << "  stock damage spinning break X: mean_vx " << mean_vx << " mean_vz " << mean_vz
-              << " expect_vx " << expect_vx << " expect_vz " << expect_vz << " error " << error << "\n";
+    require(std::abs(pieces_mass - mass) < 0.01, (prefix + "the pieces hold the crate's mass").c_str());
+    const double rx = sum_px / pieces_mass - parent.centre_of_mass.x;
+    const double ry = sum_py / pieces_mass - parent.centre_of_mass.y;
+    const double rz = sum_pz / pieces_mass - parent.centre_of_mass.z;
+    const double stake_ns =
+        mass * std::hypot(parent.angular_velocity.y * rz - parent.angular_velocity.z * ry,
+                          parent.angular_velocity.z * rx - parent.angular_velocity.x * rz,
+                          parent.angular_velocity.x * ry - parent.angular_velocity.y * rx);
+    const double mean_vx = mom_x / pieces_mass, mean_vy = mom_y / pieces_mass, mean_vz = mom_z / pieces_mass;
+    const double error = std::hypot(mean_vx - parent.velocity.x, mean_vy - parent.velocity.y,
+                                    mean_vz - parent.velocity.z);
+    const double error_ns = std::hypot(mom_x - mass * parent.velocity.x, mom_y - mass * parent.velocity.y,
+                                       mom_z - mass * parent.velocity.z);
+    std::cout << "  stock damage spinning break X: parent ang (" << parent.angular_velocity.x << ", "
+              << parent.angular_velocity.y << ", " << parent.angular_velocity.z << ") mass centres apart "
+              << std::hypot(rx, ry, rz) << " m, at stake " << stake_ns << " N.s; pieces momentum (" << mom_x
+              << ", " << mom_y << ", " << mom_z << ") parent (" << mass * parent.velocity.x << ", "
+              << mass * parent.velocity.y << ", " << mass * parent.velocity.z << ") error " << error_ns
+              << " N.s, mean velocity error " << error << " m/s\n";
+    // The check has something to catch only while the crate still
+    // spins about a horizontal axis at the break: 7.5 N.s per rad/s.
+    require(stake_ns > 5.0, (prefix + "the crate still spins about a horizontal axis at the break").c_str());
     require(error < 0.05, (prefix + "the pieces share no common kick").c_str());
+    // Float velocities on eight 20 kg pieces round to ~1e-4 N.s; the
+    // parent-centre term reads 7.5 N.s per rad/s. Epsilon 0.01 N.s.
+    require(error_ns < 0.01, (prefix + "the pieces' linear momentum is the parent's").c_str());
 }
 
 // A break piece in the hands counts as a free load: it weighs an

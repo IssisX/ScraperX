@@ -107,7 +107,7 @@ struct BreakPiece final {
     float half_y = 0.0F;
     float half_z = 0.0F;
     float scatter_x = 0.0F;  // symmetric: sums to zero over all
-    float scatter_y = 0.0F;  // pieces, so the break conserves momentum
+    float scatter_y = 0.0F;  // pieces, so it adds no net momentum
     float scatter_z = 0.0F;
 };
 

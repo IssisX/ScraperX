@@ -633,11 +633,19 @@ void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, con
     const stock_damage::BreakGeometry geometry = stock_damage::break_geometry(kind);
     const float piece_mass = mass / static_cast<float>(geometry.count);
     JPH::BodyInterface &bodies = physics_system_.GetBodyInterface();
-    // vel is the parent's centre-of-mass velocity, so the orbital term
-    // must be measured from the parent's centre of mass, not its
-    // origin: a SkidCrate's origin sits on the ground with its mass
-    // above it, and ang x offset-from-origin gives every piece the
-    // same spurious translational kick. Read before parking.
+    // The pieces' own mass centre, in the body's frame: they weigh the
+    // same, so it is the mean of their offsets. The orbital term below
+    // is measured from it (see there).
+    JPH::Vec3 pieces_centre = JPH::Vec3::sZero();
+    for (std::uint8_t k = 0; k < geometry.count; ++k) {
+        const stock_damage::BreakPiece &piece = geometry.pieces[k];
+        pieces_centre += JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z);
+    }
+    if (geometry.count > 0) {
+        pieces_centre /= static_cast<float>(geometry.count);
+    }
+    // The parent's centre of mass, for the test read only. Read
+    // before parking.
     const JPH::RVec3 parent_com = bodies.GetCenterOfMassPosition(kit_->body_id(body));
     // Record the spawn's inputs for the test read: the parent's motion
     // at the break is otherwise unobservable once it is parked.
@@ -676,22 +684,29 @@ void Simulation::PhysicsWorld::spawn_break_pieces(const kit::BodyIndex body, con
                 at, rot, piece_mass, 0.9F);
         }
         const JPH::BodyID piece_id = kit_->body_id(piece_body);
-        // The velocity at the piece's own centre, not the parent's:
-        // a rotating crate's pieces keep the orbital velocity their
-        // offset gives them (ang x offset-from-COM), or the break eats
-        // the orbital angular momentum — 18.432 kg·m²/s for a 160 kg crate
-        // at 1 rad/s about Y, eight pieces at ±0.24 m. vel is the
-        // parent's centre-of-mass velocity, so the offset is measured
-        // from the parent's centre of mass (parent_com), not its
-        // origin: for a SkidCrate the origin sits on the ground, 0.51 m
-        // below the mass, and the origin-measured term kicks every
-        // piece with the same spurious velocity. The offsets are
-        // symmetric and the scatter sums to zero, so the break still
-        // conserves the intact body's momentum.
-        const JPH::Vec3 from_com(static_cast<float>(at.GetX() - parent_com.GetX()),
-                                 static_cast<float>(at.GetY() - parent_com.GetY()),
-                                 static_cast<float>(at.GetZ() - parent_com.GetZ()));
-        bodies.SetLinearVelocity(piece_id, vel + ang.Cross(from_com) + scatter);
+        // The parent's centre-of-mass velocity, plus the orbital
+        // velocity the piece's place gives it in a rotating crate (or
+        // the break eats the orbital angular momentum: 18.432 kg·m²/s
+        // for a 160 kg crate at 1 rad/s about Y, eight pieces at
+        // ±0.24 m), plus its scatter. The orbital term is measured from
+        // the pieces' own mass centre: not the body's origin, which
+        // for a SkidCrate sits on the ground 0.56 m below the box's
+        // middle, and not the parent's centre of mass, which the
+        // runners pull down to 0.513125 m (15 kg at 0.06 m, 145 kg at
+        // 0.56 m) while the eight equal pieces centre on 0.56 m. Either
+        // gives
+        // every piece the same extra ang x offset, travel made from
+        // spin: 22.5 N·s at 3 rad/s from the parent's centre of mass.
+        // Measured from their own mass centre the orbital terms cancel
+        // over the eight equal pieces, and the scatter sums to zero, so
+        // the pieces' linear momentum is exactly the parent's (mass x
+        // vel). Their angular momentum about their own mass centre is
+        // that of the eight blocks turning as one at ang. The blocks
+        // are uniform, so that is not exactly the parent's own: its
+        // runners, bands and posts carry inertia the blocks do not.
+        const JPH::Vec3 from_centre =
+            rot * (JPH::Vec3(piece.offset_x, piece.offset_y, piece.offset_z) - pieces_centre);
+        bodies.SetLinearVelocity(piece_id, vel + ang.Cross(from_centre) + scatter);
         bodies.SetAngularVelocity(piece_id, ang);
         // A free load, not a handle: the pieces are unsupported loose
         // bodies, and the carrying limits, swing damping and yaw
@@ -1064,8 +1079,9 @@ void Simulation::PhysicsWorld::step(const StepCommands &requested,
         // A break decided this tick executes after all observations,
         // so spawning pieces cannot disturb the tick's measurements.
         // The pieces are newborn bodies, not a per-tick drive: their
-        // velocities are creation state, and their scatter sums to
-        // zero, so the break conserves the intact body's momentum.
+        // velocities are creation state. Their orbital terms and their
+        // scatter each sum to zero, so the break keeps the intact
+        // body's linear momentum (spawn_break_pieces).
         // They are deliberately NOT added to Matron's throwables:
         // that list is build-time, and appending pieces would change
         // her mischief selection without a ruling.
