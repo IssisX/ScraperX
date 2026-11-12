@@ -272,6 +272,9 @@ class Feed:
     # work ("" when it does not; absent when not read). Only a held one is SUPERSEDED (J-072: #315 was marked
     # superseded by #336 for sharing J-007 alone, while it was different, live work).
     overlap: dict[tuple[str, str], str] = dataclasses.field(default_factory=dict)
+    # PR number -> (when it merged or closed, its job id or ""), from the issue events read: a status ask to the
+    # integrator that names it or its job is closed by it (tools/board/asks.py read, `closed`)
+    closed: dict[int, tuple[dt.datetime, str]] = dataclasses.field(default_factory=dict)
 
 
 # ---------- items ----------
@@ -951,6 +954,25 @@ def page_list(gh, path: str, stop: Callable[[dict], bool] | None = None) -> tupl
     return items, True
 
 
+def comment_window(gh, repo: str, since: dt.datetime, now: dt.datetime) -> tuple[list, bool]:
+    """Every comment updated since `since`, oldest first, and whether some were not read. The listing goes from a
+    6-hour floor (J-072: the URL then repeats, and its pages answer 304) and is filtered to `since`. GitHub lists it
+    oldest first and page_list stops at MAX_PAGES, so a full listing has lost its NEWEST comments, the ones a pass
+    acts on (J-104: about 1,470 in 3 days, and every /ack, reply and ask past the 1,000th went unread for a day, so
+    acked items were re-sent and dead-lettered). A full listing is read again newest first and merged by id, as the
+    switch's own inbox does (switch.Switch.comments_since). Cut only when both reads were full and never met."""
+    floor = since.astimezone(dt.timezone.utc)
+    floor = floor.replace(hour=floor.hour - floor.hour % 6, minute=0, second=0, microsecond=0)
+    got, cut = page_list(gh, f"repos/{repo}/issues/comments?since={iso(floor)}")
+    if cut:
+        newest, cut = page_list(gh, f"repos/{repo}/issues/comments?since={iso(since)}&sort=created&direction=desc",
+                                lambda c: (parse(c.get("created_at")) or now) < since)
+        ids = {c.get("id") for c in got}
+        cut = cut and not any(c.get("id") in ids for c in newest)
+        got = got + [c for c in reversed(newest) if c.get("id") not in ids]
+    return [c for c in got if (parse(c.get("updated_at") or c.get("created_at")) or now) >= since], cut
+
+
 def touch_times(comments: list[dict], events: list[dict], bot: str) -> dict[int, dt.datetime]:
     """Per thread, the newest touch by anyone but the switchboard's own login (its notices must not reset a clock)."""
     out: dict[int, dt.datetime] = {}
@@ -971,6 +993,22 @@ def touch_times(comments: list[dict], events: list[dict], bot: str) -> dict[int,
         t = parse(e.get("created_at"))
         if n and t and (n not in out or t > out[n]):
             out[n] = t
+    return out
+
+
+def closed_prs(events: list[dict]) -> dict[int, tuple[dt.datetime, str]]:
+    """PR number -> (when it first merged or closed, its job: the body's `Job:` line, else a job id in its title), from
+    the issue events read (asks.py read's `closed`)."""
+    out: dict[int, tuple[dt.datetime, str]] = {}
+    for e in events:
+        it = e.get("issue") or {}
+        t = parse(e.get("created_at"))
+        if e.get("event") not in ("closed", "merged") or "pull_request" not in it or not it.get("number") or not t:
+            continue
+        job = rules.job_of_pr(it.get("body")) or (asks.JOB_ID.findall(it.get("title") or "") or [""])[0]
+        n = int(it["number"])
+        if n not in out or t < out[n][0]:
+            out[n] = (t, job)
     return out
 
 
@@ -998,12 +1036,9 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
     problems: list[str] = []
     since_live, since_touch = now - LIVE, now - TOUCH_WINDOW
 
-    floor = since_live.astimezone(dt.timezone.utc)   # J-072: on a 6-hour floor the URL repeats, and its pages 304
-    floor = floor.replace(hour=floor.hour - floor.hour % 6, minute=0, second=0, microsecond=0)
-    comments, cut = page_list(gh, f"repos/{repo}/issues/comments?since={iso(floor)}")
-    comments = [c for c in comments if (parse(c.get("updated_at") or c.get("created_at")) or now) >= since_live]
+    comments, cut = comment_window(gh, repo, since_live, now)
     if cut:
-        problems.append(f"comments since {iso(since_live)}: more than {MAX_PAGES * 100}, the rest not read")
+        problems.append(f"comments since {iso(since_live)}: more than {2 * MAX_PAGES * 100}, the middle not read")
     events, cut = newest_first(sw, "events", f"repos/{repo}/issues/events", since_touch,
                                lambda e: parse(e.get("created_at")), EVENT_KEYS)
     if cut:
@@ -1172,11 +1207,13 @@ def read_feed(sw, steered: list, now: dt.datetime, board: int, proof_workflow: s
         stream.append({"n": n, "t": parse(c["created_at"]), "url": c.get("html_url") or "", "body": c.get("body") or "",
                        "id": str(c.get("id")), "login": (c.get("user") or {}).get("login")})
     judge = ask_judge(roster, thread_jobs(issues, prs, frozenset(system_prs))) if roster is not None else {}
+    closed = closed_prs(events)
     found = [AskIn(a["id"], a["n"], a["url"], a["target"], a["a"], a["t"])
-             for a in asks.unanswered(stream, open_threads, since_live, **judge) if a["login"] != rules.BOT_LOGIN]
+             for a in asks.unanswered(stream, open_threads, since_live, closed=closed, **judge)
+             if a["login"] != rules.BOT_LOGIN]
 
     feed = Feed(prs, open_prs, branches, issues, found, runs, rules.TRUNK, frozenset(system_branches),
-                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo, overlap)
+                frozenset(system_prs), frozenset(keeps), open_heads, tuple(problems), board, repo, overlap, closed)
     return feed, sent
 
 

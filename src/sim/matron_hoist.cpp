@@ -116,7 +116,7 @@ int Matron::hoist_landing(const AABox &car, const float floor_top, Vec3 &point) 
 
 // A hoist that joins `from` to `goal`: waiting at a stop whose landing she can
 // walk or climb to, its far stop's landing one she can go on from to the goal.
-bool Matron::plan_hoist(const int from, const int goal) {
+bool Matron::find_hoist(const int from, const int goal, HoistLeg &leg) const {
     if (scanned_ == nullptr || from < 0) {
         return false;
     }
@@ -149,20 +149,29 @@ bool Matron::plan_hoist(const int from, const int goal) {
         if (!to_board || !to_goal) {
             continue;
         }
-        hoist_ = {};
-        hoist_path_.clear();
-        hoist_.phase = 1;
-        hoist_.hoist = static_cast<int>(i);
-        hoist_.board = board;
-        hoist_.exit = exit;
-        hoist_.goal = goal;
-        hoist_.board_at = board_at;
-        hoist_.exit_at = exit_at;
-        hoist_.from_travel = h.travel;
-        hoist_.to_travel = other;
+        leg = {};
+        leg.phase = 1;
+        leg.hoist = static_cast<int>(i);
+        leg.board = board;
+        leg.exit = exit;
+        leg.goal = goal;
+        leg.board_at = board_at;
+        leg.exit_at = exit_at;
+        leg.from_travel = h.travel;
+        leg.to_travel = other;
         return true;
     }
     return false;
+}
+
+bool Matron::plan_hoist(const int from, const int goal) {
+    HoistLeg leg;
+    if (!find_hoist(from, goal, leg)) {
+        return false;
+    }
+    hoist_ = leg;
+    hoist_path_.clear();
+    return true;
 }
 
 void Matron::step_hoist(const float dt) {
