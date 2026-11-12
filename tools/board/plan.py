@@ -7,6 +7,7 @@ This CLI never mails agents, changes labels or writes to a remote branch.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 from dataclasses import replace
 import hashlib
 import os
@@ -38,16 +39,17 @@ def recent_flip(path: Path, job: str) -> bool:
     return bool(re.search(rf"^[+-]{re.escape(job)}(?:\s|$)", p.stdout, re.M))
 
 
-def in_flight(job: str, branches: list[str], prs: list[dict]) -> bool:
-    if any(core.job_of_branch(ref if isinstance(ref, str) else ref.get("name") or "") == job
-           for ref in branches):
+def in_flight(job: str, branches: list, prs: list[dict], inactive: set[str] | frozenset[str] = frozenset()) -> bool:
+    """Remote work still needing disposition, including foreign owners and closed-unmerged PR heads."""
+    if core.live_refs(job, branches, inactive):
         return True
-    return any((m := core.PR_JOB.match(pr.get("body") or "")) and m.group(1) == job for pr in prs)
+    return any((m := core.PR_JOB.match(pr.get("body") or "")) and m.group(1) == job
+               for pr in prs if pr.get("state") != "closed")
 
 
-def change(source: str, action: str, args: list[str], *, branches: list[str] = (),
-           prs: list[dict] = (), stop_work: str = "", again: str = "",
-           flipped: bool = False) -> str:
+def change(source: str, action: str, args: list[str], *, branches: list = (),
+           prs: list[dict] = (), inactive: set[str] | frozenset[str] = frozenset(),
+           stop_work: str = "", again: str = "", flipped: bool = False) -> str:
     p = core.parse(source)
     if p.errors:
         raise ValueError("plan invalid: " + "; ".join(p.errors))
@@ -76,7 +78,7 @@ def change(source: str, action: str, args: list[str], *, branches: list[str] = (
             raise ValueError(f"{action} {job}: not found")
         if flipped and not again:
             raise ValueError(f"{action} {job}: recently changed; --again reason is required")
-        if action in {"give", "hold"} and in_flight(job, branches, prs) and not stop_work:
+        if action in {"give", "hold"} and in_flight(job, branches, prs, inactive) and not stop_work:
             raise ValueError(f"{action} {job}: remote work in flight; --stop-work reason is required")
         old = ls[found]
         if action == "give":
@@ -136,15 +138,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         src = ns.plan.read_text(encoding="utf-8")
         parsed = core.parse(src)
+        needs_read = ns.action in {"status", "check", "give", "hold"}
+        observed = core.observe(gh, parsed, dt.datetime.now(dt.timezone.utc),
+                                lambda line: print(line, file=sys.stderr)) if needs_read else None
         if ns.action in {"status", "check"}:
-            gh = GitHub(REPO, dry_run=True, log=lambda line: print(line, file=sys.stderr))
-            issues = gh.paged(f"repos/{REPO}/issues?state=open")
-            branches = [b["name"] for b in gh.paged(f"repos/{REPO}/branches")]
-            prs = gh.paged(f"repos/{REPO}/pulls?state=open")
-            problems = core.findings(parsed, issues, branches, prs)
+            issues, branches, prs = observed["issues"], observed["branches"], observed["prs"]
+            params = {name: observed[name] for name in ("inactive", "merged", "dormant")}
+            problems = core.findings(parsed, issues, branches, prs, **params)
+            open_jobs = {ln.job for ln in parsed.lines if any(
+                i.get("number") == ln.issue and i.get("state", "open") == "open" for i in issues)}
+            closed = {ln.job for ln in parsed.lines if ln.job not in open_jobs}
             for line in parsed.lines:
                 print(f"{line.job} {line.owner} #{line.issue}: "
-                      f"{core.status(line, prs=prs, branches=branches)}")
+                      f"{core.status(line, closed=closed, prs=prs, branches=branches, **params)}")
             for problem in problems:
                 print("PLAN " + problem)
             print(f"PLAN {'BLOCKED' if problems else 'CLEAN'} {parsed.fingerprint()}")
@@ -152,10 +158,10 @@ def main(argv: list[str] | None = None) -> int:
         if not ns.expect or ns.expect != sha(src):
             raise ValueError(f"{ns.action}: --expect {sha(src)} required (stale plan must not overwrite)")
         job = ns.args[0] if ns.args else ""
-        gh = GitHub(REPO, dry_run=True, log=lambda line: print(line, file=sys.stderr))
-        branches = [b["name"] for b in gh.paged(f"repos/{REPO}/branches")] if ns.action in {"give", "hold"} else []
-        prs = gh.paged(f"repos/{REPO}/pulls?state=open") if ns.action in {"give", "hold"} else []
-        result = change(src, ns.action, ns.args, branches=branches, prs=prs,
+        result = change(src, ns.action, ns.args,
+                        branches=observed["branches"] if observed else (),
+                        prs=observed["prs"] if observed else (),
+                        inactive=observed["inactive"] if observed else frozenset(),
                         stop_work=ns.stop_work, again=ns.again,
                         flipped=recent_flip(ns.plan, job) if ns.action in {"give", "hold", "release", "move"} else False)
         write_atomic(ns.plan, src, result)
