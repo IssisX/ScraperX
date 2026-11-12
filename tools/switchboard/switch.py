@@ -1763,6 +1763,7 @@ class Switch:
         merged = {m.group(1) for p in closed if p.get("merged_at")
                   if (m := collab_plan.PR_JOB.match(p.get("body") or ""))}
         jobs = set(model.by_job())
+        dormant: set[str] = set()
         open_heads = {(p.get("head") or {}).get("sha") for p in prs}
         todo = [b for b in branches if collab_plan.job_of_branch(collab_plan.branch_name(b)) in jobs
                 and (sha := collab_plan.branch_sha(b)) and sha not in inactive and sha not in open_heads]
@@ -1775,10 +1776,15 @@ class Switch:
                 continue
             if (cmp or {}).get("status") in ("behind", "identical"):
                 inactive.add(sha)
+                continue
+            head = ((cmp or {}).get("commits") or [{}])[-1]
+            when = parse_time(((head.get("commit") or {}).get("committer") or {}).get("date") or "")
+            if head.get("sha") == sha and when and self.now - when > dt.timedelta(days=collab_plan.DORMANT_DAYS):
+                dormant.add(sha)
         if len(todo) > self.PLAN_COMPARES:
             self.out(f"NOTE        plan: {len(todo) - self.PLAN_COMPARES} job branch(es) not compared this pass; counted as live")
         memo = {"issues": issues, "branches": branches, "prs": prs, "inactive": frozenset(inactive),
-                "merged": frozenset(merged)}
+                "merged": frozenset(merged), "dormant": frozenset(dormant)}
         self.__dict__["_plan_reads"] = memo
         return memo
 
@@ -1790,7 +1796,8 @@ class Switch:
         model = self.read_plan()
         r = self.plan_reads(model)
         problems = collab_plan.findings(model, r["issues"], r["branches"], r["prs"],
-                                        inactive=r["inactive"], merged=r["merged"])
+                                        inactive=r["inactive"], merged=r["merged"],
+                                        dormant=r["dormant"])
         self.out(f"PLAN        {len(model.lines)} orders, {len(problems)} violation(s), mode={self.plan_mode()}")
         for finding in problems[:20]:
             self.out(f"PLAN-BLOCK  {plain(finding[:220])}")
@@ -1829,13 +1836,14 @@ class Switch:
             model = self.read_plan()
             r = self.plan_reads(model)
             issues, branches, prs = r["issues"], r["branches"], r["prs"]
-            problems = collab_plan.findings(model, issues, branches, prs, inactive=r["inactive"], merged=r["merged"])
+            problems = collab_plan.findings(model, issues, branches, prs, inactive=r["inactive"], merged=r["merged"],
+                                        dormant=r["dormant"])
             open_jobs = {m.group(1) for i in issues
                          if (m := re.match(r"^(J-\d{3,}[a-z]?)(?!\w)", i.get("title") or ""))}
             closed = {ln.job for ln in model.lines if ln.job not in open_jobs}
             waiting = [ln.job for ln in model.owner_lines("muse")
                        if collab_plan.status(ln, closed=closed, prs=prs, branches=branches, inactive=r["inactive"],
-                                             merged=r["merged"]) == "queued"]
+                                             merged=r["merged"], dormant=r["dormant"]) == "queued"]
             self.queue_items = ()
             if len(waiting) < muse_queue.LOW_UNDER or problems:
                 line = (f"QUEUE-LOW: {len(waiting)} live-plan ready jobs "

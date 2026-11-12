@@ -128,11 +128,19 @@ def branch_sha(ref) -> str:
     return "" if isinstance(ref, str) else (ref.get("commit") or {}).get("sha") or ref.get("sha") or ""
 
 
+def owns(owner: str, ref: str) -> bool:
+    return ref.startswith("fb-bot/") if owner == "muse" else ref.startswith(owner + "/")
+
+
 def live_refs(job: str, branches, inactive: set[str] | frozenset[str] = frozenset()) -> list[str]:
     """Branches that carry unlanded work for `job`. A head that is a merged or closed PR's head, or is already
     in trunk, is history, not work in flight (it would otherwise count forever). A bare name with no sha
     cannot be proven landed, so it still counts."""
-    return [branch_name(b) for b in branches
+    return [branch_name(b) for b in _live(job, branches, inactive)]
+
+
+def _live(job: str, branches, inactive) -> list:
+    return [b for b in branches
             if job_of_branch(branch_name(b)) == job and not (branch_sha(b) and branch_sha(b) in inactive)]
 
 
@@ -145,20 +153,29 @@ def status(line: Line, *, closed: set[str] | frozenset[str] = frozenset(),
            prs: tuple[dict, ...] | list[dict] = (), branches: tuple[str, ...] | list[str] = (),
            started: set[str] | frozenset[str] = frozenset(),
            inactive: set[str] | frozenset[str] = frozenset(),
-           merged: set[str] | frozenset[str] = frozenset()) -> str:
-    """done, review, held, pushed, started, landed, waiting or queued. Only started, pushed and review are in
-    flight. A hold outranks remote work (the work stays on its branch, nobody is moving it); it never
-    outranks an open PR, which lands on its proof and reviews like any other."""
+           merged: set[str] | frozenset[str] = frozenset(),
+           dormant: set[str] | frozenset[str] = frozenset()) -> str:
+    """done, review, held, pushed, started, dormant, contested, landed, waiting or queued. Only started,
+    pushed and review are in flight. A hold outranks remote work (the work stays on its branch, nobody is
+    moving it); it never outranks an open PR, which lands on its proof and reviews like any other. Only the
+    owner's own branches are the owner's lane: another vendor's live head is `contested` (NOT-OWNER), and an
+    owner's head with no PR and no commit for DORMANT_DAYS (`dormant` shas) is kept and flagged, not counted."""
     if line.job in closed:
         return "done"
     if _open_pr(line.job, prs):
         return "review"
     if line.hold:
         return "held"
-    if live_refs(line.job, branches, inactive):
+    live = _live(line.job, branches, inactive)
+    own = [b for b in live if owns(line.owner, branch_name(b))]
+    if any(not (branch_sha(b) and branch_sha(b) in dormant) for b in own):
         return "pushed"
     if line.job in started:
         return "started"
+    if own:
+        return "dormant"
+    if live:
+        return "contested"
     if line.job in merged:
         return "landed"  # its PRs merged, the issue is still open: close it or say what is left
     if any(dep not in closed for dep in line.after):
@@ -167,12 +184,14 @@ def status(line: Line, *, closed: set[str] | frozenset[str] = frozenset(),
 
 
 IN_FLIGHT = frozenset({"started", "pushed", "review"})
+DORMANT_DAYS = 3   # CLAUDE.md: a job held 3 days goes to a stronger agent
 
 
 def findings(plan: Plan, issues: list[dict], branches: list[str], prs: list[dict] = (),
              started: set[str] | frozenset[str] = frozenset(),
              inactive: set[str] | frozenset[str] = frozenset(),
-             merged: set[str] | frozenset[str] = frozenset()) -> list[str]:
+             merged: set[str] | frozenset[str] = frozenset(),
+             dormant: set[str] | frozenset[str] = frozenset()) -> list[str]:
     """Fail closed on inconsistent observations; do not silently rewrite the order."""
     errors = list(plan.errors)
     by_job = plan.by_job()
@@ -190,17 +209,20 @@ def findings(plan: Plan, issues: list[dict], branches: list[str], prs: list[dict
         if issue is None or issue.get("number") != line.issue:
             errors.append(f"NO-ISSUE {line.job} #{line.issue}")
         refs = set(live_refs(line.job, branches, inactive))
-        foreign = [b for b in refs if not (b.startswith("fb-bot/") if line.owner == "muse" else
-                                           b.startswith(line.owner + "/"))]
+        foreign = [b for b in refs if not owns(line.owner, b)]
         if foreign:
             errors.append(f"NOT-OWNER {line.job}: {', '.join(sorted(foreign))}")
         if line.job in started and not refs and not _open_pr(line.job, prs):
             errors.append(f"UNPUSHED {line.job}: started without a remote head")
+        if status(line, closed=set(), prs=prs, branches=branches, started=started, inactive=inactive,
+                  dormant=dormant) == "dormant":
+            errors.append(f"DORMANT {line.job}: {', '.join(sorted(b for b in refs if owns(line.owner, b)))} "
+                          f"has no PR and no commit in {DORMANT_DAYS} days: land it, hold it or hand it off")
     closed = {ln.job for ln in plan.lines if ln.job not in open_issues}
     for owner, limit in plan.limits.items():
         in_flight = [ln.job for ln in plan.owner_lines(owner) if status(
                      ln, closed=closed, prs=prs, branches=branches, started=started, inactive=inactive,
-                     merged=merged) in IN_FLIGHT]
+                     merged=merged, dormant=dormant) in IN_FLIGHT]
         if len(in_flight) > limit:
             errors.append(f"OVER-LIMIT {owner}: {len(in_flight)}/{limit} jobs in flight")
     return errors
