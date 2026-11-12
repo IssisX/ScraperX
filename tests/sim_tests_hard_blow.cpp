@@ -122,6 +122,10 @@ struct Thrown {
     bool alive = false;
     double floor_y = 0.0;  // her floor before the throw, to rise back onto
     double y = 0.0;        // her height before the throw
+    double release_m = 0.0;  // her distance when the throw released
+    double box_mps = 0.0;    // the piece's fastest in flight
+    double box_hit_mps = 0.0;  // the piece's speed when the blow first read
+    double box_hit_y = 0.0;    // the piece's height when the blow first read
 };
 // Throws the piece in his hands at her as she hunts in, holding `stage` the
 // whole way; `look_pitch` aims the throw (0 at her chest, down low). The
@@ -137,6 +141,7 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
     require(walk_to(s, -6.6, Matron::kBandNorthZ, 10.0, 0.15), "hard blow: west along the band with it");
     bool coming = false;
     int turned = 0;
+    double release_d = 0.0;
     auto box_was = s.kit_body_position(body);
     auto last = s.matron_state().position;
     for (int i = 0; i < 90 * static_cast<int>(Simulation::kTickRateHz) && !coming; ++i) {
@@ -163,15 +168,22 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
                 box_was = b;
                 coming = in_front && swing < 0.002 && turned >= static_cast<int>(Simulation::kTickRateHz) / 4 &&
                          m.turn == 0;
+                if (coming) {
+                    release_d = d;
+                }
             } else if (m.stalking) {
                 (void)s.set_facing(-(m.position.x - p.x) / d, -(m.position.z - p.z) / d);
             } else {
                 (void)s.set_facing(ax / std::hypot(ax, az), az / std::hypot(ax, az));
                 coming = d < 3.4;
+                if (coming) {
+                    release_d = d;
+                }
             }
         }
     }
     require(coming, "hard blow: she comes for him, the piece in his hands");
+    out.release_m = release_d;
     (void)s.set_look_pitch(look_pitch);
     tick(s);
     const auto throws0 = s.snapshot().throw_count;
@@ -187,7 +199,12 @@ Thrown throw_at_her(Simulation &s, const int stage, const double look_pitch) {
         out.blow_mps = std::max(out.blow_mps, m.blow_mps);
         if (out.turn_at_hit < 0 && m.blow_mps > 0.0) {
             out.turn_at_hit = m.turn;
+            const auto bv = s.kit_body_velocity(body);
+            out.box_hit_mps = std::hypot(bv.x, bv.y, bv.z);
+            out.box_hit_y = s.kit_body_position(body).y;
         }
+        const auto bv = s.kit_body_velocity(body);
+        out.box_mps = std::max(out.box_mps, std::hypot(bv.x, bv.y, bv.z));
         const int state = m.state;
         if (state == kStateDown || (state == kStateStaggering && out.worst < 0)) {
             out.worst = state;
@@ -313,7 +330,9 @@ void run_hard_blow_throw() {
         const auto m = s.matron_state();
         std::cout << "  hard blow throw dangerous: threw=" << by_box.threw << " blow=" << by_box.blow_mps
                   << " m/s, worst=" << by_box.worst << ", staggers=" << by_box.staggers
-                  << ", knockdowns=" << by_box.knockdowns << ", turn at hit=" << by_box.turn_at_hit << "\n";
+                  << ", knockdowns=" << by_box.knockdowns << ", turn at hit=" << by_box.turn_at_hit
+                  << ", release " << by_box.release_m << " m, box max " << by_box.box_mps << " m/s, at hit "
+                  << by_box.box_hit_mps << " m/s at y " << by_box.box_hit_y << "\n";
         require(by_box.threw, "hard blow throw: the toolbox thrown at a dangerous Matron");
         require(by_box.worst == kStateStaggering && by_box.staggers == 1 && by_box.knockdowns == 0,
                 "hard blow throw: a toolbox only staggers a dangerous Matron");
@@ -331,7 +350,9 @@ void run_hard_blow_throw() {
         const auto m = s.matron_state();
         std::cout << "  hard blow throw changed: threw=" << by_drum.threw << " blow=" << by_drum.blow_mps
                   << " m/s, worst=" << by_drum.worst << ", staggers=" << by_drum.staggers
-                  << ", knockdowns=" << by_drum.knockdowns << ", turn at hit=" << by_drum.turn_at_hit << "\n";
+                  << ", knockdowns=" << by_drum.knockdowns << ", turn at hit=" << by_drum.turn_at_hit
+                  << ", release " << by_drum.release_m << " m, box max " << by_drum.box_mps << " m/s, at hit "
+                  << by_drum.box_hit_mps << " m/s at y " << by_drum.box_hit_y << "\n";
         require(by_drum.threw, "hard blow throw: the drum thrown at a fully changed Matron");
         require(by_drum.worst == kStateStaggering && by_drum.staggers == 1 && by_drum.knockdowns == 0,
                 "hard blow throw: a drum she faces only staggers a fully changed Matron");
@@ -356,7 +377,9 @@ void run_hard_blow_low() {
     const Thrown low = throw_at_her(s, 2, -0.6);
     std::cout << "  hard blow low changed: threw=" << low.threw << " blow=" << low.blow_mps
               << " m/s, worst=" << low.worst << ", staggers=" << low.staggers
-              << ", knockdowns=" << low.knockdowns << ", turn at hit=" << low.turn_at_hit << "\n";
+              << ", knockdowns=" << low.knockdowns << ", turn at hit=" << low.turn_at_hit
+              << ", release " << low.release_m << " m, box max " << low.box_mps << " m/s, at hit "
+              << low.box_hit_mps << " m/s at y " << low.box_hit_y << "\n";
     require(low.threw, "hard blow low: the drum thrown low at a fully changed Matron");
     require(low.worst == kStateDown && low.knockdowns == 1 && low.staggers == 0,
             "hard blow low: a drum at her shins puts a fully changed Matron down");
