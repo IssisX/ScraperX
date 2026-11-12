@@ -12,7 +12,7 @@ Fewer, batched calls; no re-reads.
 Quality floor (11-06): never cut reviews, tests on what a change reaches, checks by
 eye, or checking a claim before stating it. A slip (a wrong claim, a missed bug, a redo) is told to Cory the same hour.
 Helpers (sub-agents): at most four at a time, on the hardest jobs (11-12), each code-editing one in a worktree. Builds go to Muse first; Claude's own coding goes to a helper, not inline in the integrator's big context.
-Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode on: tell him once.
+Every run, first: `get_session` (no id). Effort is his call, seen in `get_session`: mention it only when he throttles; ultracode or fast mode on: tell him once (11-12).
 
 Overview: a scheduled task (trig_01AEwteT4u8CRyVVb1XmnkcW, :43 past, 6 AM-9 PM Central) has Claude send Cory a 6-line overview (11-11).
 Change the check here, never in the task's prompt. Post only when something changed. Each overview also
@@ -41,7 +41,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    Only the hardest: an unknown cause blocking 2+ jobs, the climb or her chase, or a fix failed twice: take it (11-12).
    First mail the owner `CLAUDE_TO_MUSE: taking <piece>, stop your lane; if you pushed it, mail the sha`, check its
    fb-bot branches and mail again before starting and before pushing, and stop if its version is there.
-3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 4 h with no owner step (Cory 11-12: never a day)
+3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 4 h with no owner step (11-12)
    gets `To <Name>: close or next step`, and is closed the next hour if nothing comes.
 4. **Task the team.** Every agent holds work matched to its strength (CLAUDE.md). Muse never has fewer than
    eight big unstarted jobs in `work/tasks/muse.md` (count only jobs not started, not in flight, parked or done; under eight, refill to fifteen (the switchboard raises QUEUE-LOW, J-097); Cory 11-11: "cant have that happen"; before any queue mail, `python3 tools/board/queue_check.py` must print QUEUE CLEAN, and no two queued jobs may touch the same function at once; every full run also runs it and acts on each READY line and each PARKED job whose newest comment is an answer): derive the next from `03_EXECUTION/GAP_LIST.md` and
