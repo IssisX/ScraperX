@@ -15,7 +15,7 @@
  ],
  "created": "2026-11-09T17:35:20Z",
  "deadline": "2026-11-10T18:17:00Z",
- "head": "437dcac64edbf42c04b773cd0d178158ced7eae4",
+ "head": "c639ffb434bf41fcc6dce8b15fbf9e2ae8ed8ded",
  "issue": 169,
  "job": "J-038",
  "landed": {
@@ -104,7 +104,7 @@
    "last_error": "",
    "last_sent": "2026-11-09T21:19:08Z",
    "missing": 3,
-   "rechecked": "2026-11-12T03:39:03Z",
+   "rechecked": "2026-11-12T10:02:04Z",
    "ref": "BRANCH|fb-bot/integrate-j038-slice1",
    "sends": 1,
    "sent_by": "shadow",
@@ -747,6 +747,31 @@
    "version": "6810667465",
    "via": "email",
    "what": "ask from Claude on #372"
+  },
+  {
+   "ack": null,
+   "ack_rule": "verdict|ack",
+   "asked": null,
+   "attempts": 1,
+   "closed": null,
+   "created": "2026-11-12T10:02:04Z",
+   "dead": "2026-11-12T17:47:00Z",
+   "dead_lettered": null,
+   "due": "2026-11-12T15:47:00Z",
+   "id": "O-cddd136b",
+   "kind": "review",
+   "last_error": "",
+   "last_sent": "2026-11-12T10:02:04Z",
+   "missing": 0,
+   "ref": "PR|#372",
+   "sends": 1,
+   "sent_by": "live",
+   "thread": 372,
+   "to": "codex",
+   "unseen": null,
+   "version": "c639ffb434bf41fcc6dce8b15fbf9e2ae8ed8ded",
+   "via": "relay",
+   "what": "review #372 @ c639ffb4"
   }
  ],
  "outcome": null,
@@ -758,7 +783,7 @@
   299,
   372
  ],
- "review": "FIX",
- "state": "working",
- "updated": "2026-11-12T03:39:03Z"
+ "review": "waiting",
+ "state": "review",
+ "updated": "2026-11-12T10:02:04Z"
 }
