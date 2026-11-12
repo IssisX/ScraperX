@@ -43,7 +43,7 @@
    "kind": "fix",
    "last_error": "",
    "last_sent": "2026-11-09T20:56:16Z",
-   "missing": 0,
+   "missing": 1,
    "ref": "BRANCH|fb-bot/integrate-j009-258-down-traversal-flags",
    "sends": 1,
    "sent_by": "live",
@@ -408,6 +408,6 @@
   377
  ],
  "review": "",
- "state": "working",
- "updated": "2026-11-12T00:23:47Z"
+ "state": "merged",
+ "updated": "2026-11-12T05:48:38Z"
 }

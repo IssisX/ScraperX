@@ -1261,7 +1261,11 @@
    "what": "ask from Grok on #378"
   },
   {
-   "ack": null,
+   "ack": {
+    "at": "2026-11-12T04:52:46Z",
+    "by": "claude",
+    "how": "a later post by the asker, no ask"
+   },
    "ack_rule": "reply|ack",
    "asked": "2026-11-12T03:02:46Z",
    "attempts": 1,

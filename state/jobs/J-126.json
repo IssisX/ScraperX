@@ -1,7 +1,9 @@
 {
  "attempt": 1,
  "blocked": null,
- "branches": {},
+ "branches": {
+  "claude/integrate-j126": "d751a5bd8ba9b727a3d5a5320902e42bf983a31a"
+ },
  "cancelled": null,
  "ci": "running",
  "commands": [],
@@ -10,17 +12,23 @@
  "head": "d751a5bd8ba9b727a3d5a5320902e42bf983a31a",
  "issue": 449,
  "job": "J-126",
- "landed": {},
+ "landed": {
+  "claude/integrate-j126": [
+   "d751a5bd8ba9b727a3d5a5320902e42bf983a31a",
+   "merged #450",
+   "2026-11-12T05:48:38Z"
+  ]
+ },
  "obligations": [],
- "outcome": null,
- "outcome_reason": "",
+ "outcome": "merged",
+ "outcome_reason": "claude/integrate-j126: merged #450",
  "owner": "claude",
  "pr": 450,
- "pr_done": "",
+ "pr_done": "merged",
  "prs": [
   450
  ],
  "review": "",
- "state": "proof",
- "updated": "2026-11-12T04:39:07Z"
+ "state": "merged",
+ "updated": "2026-11-12T05:48:38Z"
 }

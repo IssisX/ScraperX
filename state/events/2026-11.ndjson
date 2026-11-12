@@ -1796,3 +1796,16 @@
 {"ev": "state", "frm": "review", "job": "J-126", "t": "2026-11-12T04:39:07Z", "to": "proof"}
 {"ev": "dead_letter", "id": "O-a40a97ab", "job": "", "ref": "ASK|ask on #378", "t": "2026-11-12T04:39:07Z", "to": "grok_bot"}
 {"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T04:39:07Z", "tries": 1}
+{"branch": "claude/integrate-j126", "ev": "landed", "how": "merged #450", "job": "J-126", "sha": "d751a5bd8ba9b727a3d5a5320902e42bf983a31a", "t": "2026-11-12T05:48:38Z"}
+{"ev": "pr_closed", "how": "merged", "job": "J-126", "pr": 450, "t": "2026-11-12T05:48:38Z"}
+{"ev": "outcome", "job": "J-126", "outcome": "merged", "t": "2026-11-12T05:48:38Z", "why": "claude/integrate-j126: merged #450"}
+{"ev": "acked", "how": "a later post by the asker, no ask", "id": "O-c30e881d", "job": "", "t": "2026-11-12T05:48:38Z"}
+{"ev": "state", "frm": "working", "job": "J-009", "t": "2026-11-12T05:48:38Z", "to": "merged"}
+{"ev": "state", "frm": "working", "job": "J-014", "t": "2026-11-12T05:48:38Z", "to": "merged"}
+{"ev": "state", "frm": "proof", "job": "J-126", "t": "2026-11-12T05:48:38Z", "to": "merged"}
+{"ev": "matched", "ident": "PR|#378", "job": "", "t": "2026-11-12T05:48:38Z"}
+{"attempt": 2, "ev": "sent", "id": "O-4bdba254", "job": "J-038", "ref": "PR|#372", "send": 2, "t": "2026-11-12T05:48:38Z", "to": "muse", "via": "email"}
+{"ev": "dead_letter", "id": "O-0fe51a2e", "job": "J-098", "ref": "BRANCH|fb-bot/integrate-j098", "t": "2026-11-12T05:48:38Z", "to": "claude"}
+{"attempt": 2, "ev": "sent", "id": "O-2f7a1ee2", "job": "J-105", "ref": "BRANCH|fb-bot/integrate-protected-j105", "send": 2, "t": "2026-11-12T05:48:38Z", "to": "claude", "via": "session"}
+{"ev": "needs_you", "job": "", "keys": ["O-0fe51a2e", "O-a40a97ab"], "n": 2, "t": "2026-11-12T05:48:38Z"}
+{"ev": "pass", "job": "", "jobs": 92, "status": "ok", "t": "2026-11-12T05:48:38Z", "tries": 1}
