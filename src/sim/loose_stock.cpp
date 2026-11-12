@@ -1,5 +1,6 @@
 // Loose stock about the tower (see loose_stock.hpp).
 #include "sim/loose_stock.hpp"
+#include "sim/slab_cell.hpp"
 
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/BodyLock.h>
@@ -619,6 +620,12 @@ void LooseStock::lay_matron_kinds() {
     // on end, the pallet flat, its long side along the rail.
     add_piece({K::Extinguisher, 0, -17.0F, kDeck154, -125.1F, 0.0F});
     add_piece({K::Pallet, 0, -18.8F, kDeck154, -125.45F, 0.0F});
+}
+
+void LooseStock::lay_hung_slab() {
+    hung_slab_begin_ = count();
+    // Long side along z, across her lane, where the cell's sling holds it.
+    add_piece({K::PlateSlab, 0, SlabCell::kSlabX, SlabCell::kSlabUnderside, SlabCell::kSlabZ, 0.5F * JPH_PI});
 }
 
 void LooseStock::append_reserved() {

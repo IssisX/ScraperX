@@ -52,19 +52,25 @@ your own branches (Cory 11-05) and mail the rest:
 ## Your queue (11-06)
 The rule: take the next one yourself, and mail "J-NNN started" the moment a lane starts (so it is never taken from you, 11-11); mail the moment fewer than 8 are unstarted (`MUSE_TO_CLAUDE: queue To Claude: 7 left`; Cory 11-11: never run low). When you wait on Claude, the subject has `To Claude` (it wakes him, J-052). Never wait for his go on any step, protected changes included (Cory 11-07: #291 sat 3 h on a go): go with your pick and push it (a protected change on its own protected branch, where review is the gate), say it in the mail; he overrules by mail. Each
 job is written whole in the mail `CLAUDE_TO_MUSE: ready queue: take the next one yourself, no go needed` (11-06).
-In flight (finish these): J-094 #412, J-091 #409, J-055 #294 (started 9:09 AM), J-043 #241 (started 8:27 AM), J-054 #293 (protected branch), J-044l #242 (unparked 11-11, Grok answered), J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Claude has: J-090 #408, J-096 #414, J-084 #402, J-092 #410, J-082 #400, J-085 #403. Parked: J-053 #82 (on Grok), J-060 #320 (on J-044c).
-Unstarted, in order (11-11 7 AM; new playable content first):
-5. J-087 #405: story radio cues fire in play (B3); wiring only.
-6. J-081 #399: a readable night climb (B5).
-7. J-088 #406: her fingers wrap what she holds; the pipe warning in CI (A6).
-8. J-089 #407: her spoken lines wired to her events; candidate recordings for Cory (rule 43).
-10. J-086 #404: she pulls him off a ladder, every ladder kind; after J-001 lands (Claude's helper is in the grab code now).
-11. J-098 #416: no synthesized human sounds: her wake and his breath become real recordings (law).
-12. J-099 #417: dents: containers, barrels, steel boxes dent by real impulse (J-038's second half, Cory).
-13. J-100 #418: she reads a load hung over her and gets out from under it (her side of J-092's slab trap).
-14. J-106 #425: matron-ladder fails on its own baseline (your J-063 find): cause, bisect, fix by cause.
+In flight (finish these): J-094 #412, J-091 #409, J-055 #294, J-043 #241, J-054 #293 (protected branch), J-044l #242, J-044c Argon's three fixes (top lane, 11-11: J-060 waits on it), J-063 #321 (chest at the face), J-059 #307, J-007 #114, J-009 #116, J-015 #389, J-038 #372, J-079 #397, J-080 #398, J-014 #121, J-021 #128. Claude has: J-090 #408, J-096 #414, J-084 #402, J-092 #410, J-082 #400. Parked: J-099 #417 (until J-038 slice 1 lands), J-053 #82 (on Grok), J-060 #320 (on J-044c).
+Unstarted, in order (11-12; new playable content first):
+2. J-086 #404: she pulls him off a ladder, every ladder kind; after J-001 lands (Claude's helper is in the grab code now).
+3. J-111 #430: lived-in spots from 396 m to 750 m (D1); body order re-pin protected.
+4. J-112 #431: she shoves what he placed off an edge, undoable (A3).
+5. J-113 #432: her chart and the mic: five touch scenarios, consent in game (rule 57).
+6. J-114 #433: housekeeping, music_box mesh and box_cord pivot.
+7. J-116 #438: a relaunch restores the world as a death restore does; bad saves load safely.
+8. J-117 #439: a checkpoint on a moving floor restores him on real support.
+9. J-118 #440: leaving the app mid-ride, mid-hold, mid-fall: back to that exact moment.
+10. J-119 #441: every control fits every screen: Fold 6 folded and open, a fold mid-climb.
+11. J-120 #442: the crew proven: native tests for every worker state and law.
+12. J-121 #443: the kit's rope proven on its own: length, slack, winch, the AS-010 O snatch.
+13. J-122 #444: his footsteps by the real material under him.
+14. J-123 #445: every machine sounds like itself, by its measured motion.
+15. J-124 #446: the parachute from every deck edge lands him alive (rule 51).
+16. J-125 #448: every shipped sound, voice, model and texture on record; Licences page true.
 
-Live lanes: J-095 #413, J-083 #401, J-105 #424, J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
+Live lanes: J-107 #426 (first), J-127 #451, J-128 #452, J-100 #418, J-106 #425, J-109 #428, J-098 #416, J-087, J-081, J-088, J-089, J-095 #413, J-083 #401, J-105 #424, J-042 windup #291, J-050 #281, J-038 slice 1, J-044l, J-043 #241, J-045 (sim first
 step), J-022 #129, the wreck fix (J-016 #123), sense_near, J-049 #278, J-013 #120, J-014 #121, J-015 #122. Waiting: J-055 #294 Blast Door (on #291 and J-049); J-018 #125 (on J-001); S5 J-036 #167 and J-040 #228 (on J-044d); J-044e, f, g, k (on c, d).
 
 ## Grand tasks in reserve (Cory, 11-03: "keep constantly tasking it out, with grand derived tasks")
