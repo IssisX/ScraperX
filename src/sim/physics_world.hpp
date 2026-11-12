@@ -137,6 +137,10 @@ public:
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
+    // Tests only (never bound to the bridge): a 2000 kg plate slab hung by a
+    // pin through its lifting eye over `centre`, and the pin pulled (J-100).
+    void hang_slab_for_test(JPH::RVec3 centre);
+    void release_hung_slab_for_test();
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
@@ -1244,6 +1248,9 @@ private:
     JPH::BodyID hook_bite_target_;
     JPH::Vec3 hook_bite_local_ = JPH::Vec3::sZero();
     JPH::Ref<kit::RopeConstraint> hook_line_;
+    // The J-100 test slab (hang_slab_for_test): its body and its pin.
+    JPH::BodyID hung_slab_;
+    JPH::Ref<JPH::PointConstraint> hung_slab_pin_;
     // The line's bends (see kHookBendsMax), from the bite outward: each held
     // on its body, with the rope laid from it back to the anchor before it
     // and the sense the line turned round it.

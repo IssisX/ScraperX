@@ -1819,6 +1819,10 @@ public:
     // Tests only (never bound to the bridge): the player's body put at `at`
     // and sent off at `velocity` (a fall into a pool, met from its start).
     void debug_launch_player(Vector3 at, Vector3 velocity) noexcept;
+    // Tests only (never bound to the bridge): a 2000 kg plate slab hung by a
+    // pin over `centre`, and the pin pulled (J-100).
+    void debug_hang_slab(Vector3 centre) noexcept;
+    void debug_release_hung_slab() noexcept;
     // Tests only (never bound to the bridge): the height of the first thing
     // straight under `at` within `depth`, or NaN where nothing is.
     [[nodiscard]] double debug_support_y(Vector3 at, double depth) const noexcept;
