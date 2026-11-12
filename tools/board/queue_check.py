@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check live issue-owned jobs (no arguments), or audit a legacy queue file (explicit path).
+"""Check every job in an agent's queue file against GitHub before the queue is mailed (Cory 11-11).
 
 The checks live in tools/switchboard/muse_queue.py (J-097), which the switchboard also runs every sweep (a
 QUEUE-LOW inbox item under 8 really-unstarted jobs). A queue line names a job as `J-NNN #N`. For each one it reports:
@@ -18,7 +18,7 @@ Two holes are listed too (11-12): OWNER, a job the queue tells Muse to work (its
 Unstarted block) whose open issue is not labelled owner:muse (a job taken by a helper must leave the queue and carry
 owner:claude); NO-LABEL, an open issue titled J-NNN with no `job` label, which the switchboard cannot see.
 
-Usage: python3 tools/board/queue_check.py\nLegacy audit: python3 tools/board/queue_check.py work/tasks/muse.md
+Usage: python3 tools/board/queue_check.py [work/tasks/muse.md]
 Exit 1 when any line in the "Unstarted" block is not OK or any hole is listed, so a stale queue cannot be mailed unseen.
 Reads only (REST `gh api`, through tools/switchboard/ghapi.py); writes nothing.
 """
@@ -36,12 +36,7 @@ REPO = "IssisX/ScraperX"
 
 
 def main() -> int:
-    # The normal check reads the live issue orders. An explicit queue-file path is
-    # retained only for historical analysis and existing parser regression tests.
-    if len(sys.argv) == 1:
-        import job_status
-        return job_status.main()
-    path = sys.argv[1]
+    path = sys.argv[1] if len(sys.argv) > 1 else muse_queue.QUEUE_FILE
     text = pathlib.Path(path).read_text(encoding="utf-8")
     gh = GitHub(REPO, dry_run=True, log=lambda line: print(line, file=sys.stderr))   # reads only
     report = muse_queue.check(gh, text)

@@ -215,7 +215,7 @@ def _row(ev: Evidence, state: str, gate: str = "", why: str = "", since: dt.date
 
 def clashes(ev: Evidence) -> list[str]:
     """The one conflict rule: every way the evidence can disagree with itself or with the plan."""
-    ln, out = ev.line, list(ev.clashes)
+    ln, out = ev.line, ([] if ev.closed else list(ev.clashes))   # a closed job is not reopened by what a mail says
     if ln is None:
         return out + [f"open issue #{', #'.join(map(str, ev.issues))} is titled {ev.job} and the plan has no line for it"]
     if len(ev.issues) > 1:
@@ -375,6 +375,8 @@ def work_of(f: "rules.PrFacts", d: "rules.MergeDecision", team: "rules.Team", *,
     reasons = "; ".join(d.reasons)
     if f.base_ref != rules.TRUNK:
         return Work(**base, gate="off-trunk", why=f"it is stacked on {f.base_ref}", at=pushed)
+    if f.mergeable is False:   # nothing else can move until trunk is merged in: the proof and the reviews are of an old base
+        return Work(**base, land=bool(lands) and not fixes, gate="base", at=pushed)
     if fixes:
         newest = max(fixes, key=lambda v: v.created_at)
         return Work(**base, gate="stacked" if stacked else "fix",
@@ -385,8 +387,6 @@ def work_of(f: "rules.PrFacts", d: "rules.MergeDecision", team: "rules.Team", *,
         return Work(**base, gate=gate, why=f.proof[5:] if gate == "red" else "", at=when(proof_at) or pushed)
     if f.draft:
         return Work(**base, gate="draft", at=proven)
-    if rules.CONFLICT in d.reasons:
-        return Work(**base, land=bool(lands), gate="base", at=proven)
     if not lands:
         note = any(v.kind == "review" and v.verdict == "NOTE" and v.author_login == rules.BOT_LOGIN
                    and rules.names_head(v, f.head_sha) for v in f.verdicts)
@@ -429,13 +429,14 @@ STARTED = re.compile(r"\bstarted\b", re.IGNORECASE)
 NOT_STARTED = re.compile(r"\b(?:not|never)\s+started\b", re.IGNORECASE)
 # A commit as a mail names one: 7 to 12 hex or the full 40, with a digit and a letter in it. Never an obligation
 # id (O-2c7fcb6a), a plan version (`plan <12 hex>`), or a mail or comment id (16 hex, or the word before says so).
-NAMED_SHA = re.compile(r"(?<![\w-])(?<!plan )(?<!mail )(?<!id )(?=[0-9a-f]*[0-9])(?=[0-9a-f]*[a-f])"
+NAMED_SHA = re.compile(r"(?<![\w-])(?<![Pp][Ll][Aa][Nn] )(?<![Mm]ail )(?<![Ii][Dd] )(?=[0-9a-f]*[0-9])(?=[0-9a-f]*[a-f])"
                        r"(?:[0-9a-f]{40}|[0-9a-f]{7,12})(?![\w-])")
 # What a hand mail orders, by the words in its subject. Mail carries no orders: one that says other than the
 # plan says is conflicting evidence, whichever of the two is right.
-TAKES = re.compile(r"\b(?:taking|taken|not yours|reassign\w*)\b", re.IGNORECASE)
-STOPS = re.compile(r"\b(?:stop\w*|park\w*|hold|held|drop\w*)\b", re.IGNORECASE)
-GIVES = re.compile(r"\b(?:yours|start|build|go ahead|unpark\w*|release\w*)\b", re.IGNORECASE)
+# Only an order's own words count: the game has a hold, a drop, a start and a build of its own.
+TAKES = re.compile(r"\b(?:taking|taken by|not yours|reassign\w*)\b", re.IGNORECASE)
+STOPS = re.compile(r"\b(?:stop (?:that|those|your|the) lanes?|parked|park it)\b", re.IGNORECASE)
+GIVES = re.compile(r"\b(?:is yours|are yours|yours again|back to you|unparked)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -569,6 +570,11 @@ def mail_clashes(model: P.Plan, mail: Mail) -> dict[str, list[str]]:
     by_job = model.by_job()
     for job, at in started_posts(mail).items():
         ln = by_job.get(job)
+        # a start the worker has since been answered on is history: a later hand mail on the job, or a later plan
+        # notice, has told it where the job stands (what it does next is seen on the remote)
+        if any(p.hand and p.at > at and job in JOB_ID.findall(p.subject) for p in mail.posts) or \
+                any(o == mail.worker and sent > at for o, _, sent in mail.notices):
+            continue
         if ln and ln.owner != mail.worker:
             out.setdefault(job, []).append(f"{mail.worker} mailed that it started; the plan gives it to {ln.owner}")
         elif ln and ln.hold:
