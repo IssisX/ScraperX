@@ -18,6 +18,8 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
 - Argon (Gemini): only via Cory pasting a prompt; hardest physics. Grok or ChatGPT run an idea workflow on request from a copyable prompt in chat (11-11). 367 archived branches: deleting waits on Cory.
 
+- 11-12 in flight: helpers J-108 (re-pin + proofs, then I open its 2 PRs), J-001 (Fable, with ChatGPT and Grok input), J-107 (taken from Muse: the proof of the new split; report its hours), routing study (writes work/tasks/job-routing.md uncommitted for my review). Fable audit prompt given to Cory (branch fable/finish-audit): on his OK of its finish line, only listed jobs are queued for the current parts. #343 waits on a fresh Codex state.
+
 ## Traps
 - My hand merges and branch deletes are refused by the safety check; never work around it.
 - Gmail is Cory's own main inbox: his filter puts agent mail in a side label (11-11); search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).
