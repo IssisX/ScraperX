@@ -613,19 +613,12 @@ class Switch:
         return sorted(closed, reverse=True)[:MAX_OLD_BOARDS]
 
     def jobs(self) -> dict[str, dict]:
-        """All open J-NNN issues, including ones missing the job label.
-
-        Missing or ambiguous metadata is a reported defect, never an invisible job.
-        """
+        """PR-review lookup, as before. The plan audit separately finds bare J-NNN issues."""
         if self._jobs is None:
             self._jobs = {}
-            for it in self.gh.paged(f"repos/{self.gh.repo}/issues?state=open"):
-                if "pull_request" not in it and rules.job_of_title(it.get("title") or ""):
-                    job = rules.job_of_title(it["title"])
-                    if job in self._jobs:
-                        self.out(f"ERROR       {job}: multiple open job issues, including #{it['number']}")
-                    else:
-                        self._jobs[job] = it
+            for it in self.gh.paged(f"repos/{self.gh.repo}/issues?labels=job&state=open"):
+                if "pull_request" not in it and rules.job_of_title(it["title"]):
+                    self._jobs[rules.job_of_title(it["title"])] = it
         return self._jobs
 
     def proof(self, sha: str) -> tuple[str, str, int, str]:
@@ -1749,6 +1742,8 @@ class Switch:
 
     def plan_mode(self) -> str:
         """Plan projections are shadow-only until Cory authorizes the cutover."""
+        if not hasattr(self, "root"):
+            return "off"  # isolated merge-rule tests have no checkout
         try:
             import yaml
             config = yaml.safe_load((self.root / "work/switchboard.yml").read_text(encoding="utf-8")) or {}
