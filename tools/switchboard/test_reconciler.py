@@ -941,18 +941,16 @@ class Rules(unittest.TestCase):
         h.run(f, NOW + 5 * M, comments=[cmt(92, 414, NOW, f"/ack {oid}", login="someone")])
         self.assertIsNone(h.obs("J-500")[0]["ack"])
 
-    def test_start_is_owed_once_an_assigned_job_is_quiet_a_day(self):
+    def test_quiet_assigned_job_creates_no_unrequested_integrator_ruling(self):
         h = Harness()
-        fresh = issue(540, job="J-540", owner="owner:muse")   # touched 2 h ago
+        fresh = issue(540, job="J-540", owner="owner:muse")
         h.run(feed(issues=[fresh]), NOW)
         self.assertEqual((h.state().jobs["J-540"]["state"], h.obs("J-540")), ("assigned", []))
         h.run(feed(issues=[fresh]), NOW + 23 * H)
-        starts = h.obs("J-540", NOW + 23 * H)
-        self.assertEqual([(o["kind"], o["to"]) for o in starts], [("ruling", "claude")])
-        self.assertIn("inspect its live issue", starts[0]["what"])
+        self.assertEqual(h.obs("J-540", NOW + 23 * H), [])
         b = L.BranchIn("fb-bot/integrate-j540-go", SHA["f"], t(23.5))
         h.run(feed(issues=[fresh], branches=[b]), NOW + 24 * H)
-        self.assertEqual(h.obs("J-540", NOW + 24 * H)[0]["ack"]["how"], "work pushed")
+        self.assertEqual(h.obs("J-540", NOW + 24 * H), [])
 
     def test_a_parked_job_is_never_owed_a_start(self):
         h = Harness()
@@ -960,8 +958,8 @@ class Rules(unittest.TestCase):
         parked = dataclasses.replace(quiet, labels=quiet.labels + (R.PARKED_LABEL,))
         h.run(feed(issues=[parked]), NOW + 30 * H)
         self.assertEqual((h.state().jobs["J-541"]["state"], h.obs("J-541", NOW + 30 * H)), ("accepted", []))
-        h.run(feed(issues=[quiet]), NOW + 31 * H)   # unparked and quiet past the grace: the start is owed again
-        self.assertEqual([(o["kind"], o["to"]) for o in h.obs("J-541", NOW + 31 * H)], [("ruling", "claude")])
+        h.run(feed(issues=[quiet]), NOW + 31 * H)   # unparked but still queued: no new ruling debt
+        self.assertEqual(h.obs("J-541", NOW + 31 * H), [])
 
     def test_a_queued_job_has_a_day_before_a_start_is_owed(self):
         h = Harness()
