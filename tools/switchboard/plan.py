@@ -1,11 +1,13 @@
-"""Versioned collaboration plan: one authored order, derived status, no network.
+"""Versioned collaboration plan: one authored order, derived status.
 
-Labels, board text and mail are projections. This module never edits GitHub,
+Labels, board text and mail are projections. This module never edits GitHub (observe() only reads, through
+the client it is handed),
 does not infer local work from mail, and rejects ambiguous or cyclic orders.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+import datetime as dt
 import hashlib
 import re
 
@@ -226,6 +228,67 @@ def findings(plan: Plan, issues: list[dict], branches: list[str], prs: list[dict
         if len(in_flight) > limit:
             errors.append(f"OVER-LIMIT {owner}: {len(in_flight)}/{limit} jobs in flight")
     return errors
+
+
+COMPARES = 60   # trunk-containment reads per pass for job branches no PR accounts for
+ALL_PAGES = 30  # a whole listing, past the client's 500-item paged() cap (647 branches on 11-12)
+
+
+def whole(gh, path: str) -> list:
+    """Every item of a listing. gh.paged stops at its page cap without saying so, which silently dropped 147
+    branches (fb-bot/integrate-j109 among them) from every branch check. Reads on past the cap; a listing
+    longer than ALL_PAGES raises rather than be counted short."""
+    items = list(gh.paged(path))
+    if len(items) % 100 or not items:
+        return items
+    sep = "&" if "?" in path else "?"
+    for page in range(len(items) // 100 + 1, ALL_PAGES + 1):
+        batch = gh.get(f"{path}{sep}per_page=100&page={page}") or []
+        items.extend(batch)
+        if len(batch) < 100:
+            return items
+    raise RuntimeError(f"{path}: more than {ALL_PAGES * 100} items, refusing a short count")
+
+
+def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk: str = "ScraperX-Claude",
+            errors: tuple = (Exception,)) -> dict:
+    """What the plan is checked against, read through `gh` (switch and tools/board/job_status.py share it).
+    `inactive`: heads that are history, not work in flight: every closed PR's head (merged or abandoned), and a
+    job branch whose head is already in trunk (compare says behind or identical; a sha-pinned compare never
+    changes, so its ETag keeps it cheap). `merged`: jobs with a merged `Job: J-NNN` PR. `dormant`: an
+    owner-side head with no PR whose last commit is older than DORMANT_DAYS. A compare that fails or is not
+    reached leaves the head live: unproven work is never hidden."""
+    repo = gh.repo
+    issues = whole(gh, f"repos/{repo}/issues?state=open")
+    branches = whole(gh, f"repos/{repo}/branches")
+    prs = (listing or gh.paged)(f"repos/{repo}/pulls?state=open")
+    closed = whole(gh, f"repos/{repo}/pulls?state=closed&base={trunk}")
+    inactive = {p["head"]["sha"] for p in closed if (p.get("head") or {}).get("sha")}
+    merged = {m.group(1) for p in closed if p.get("merged_at") if (m := PR_JOB.match(p.get("body") or ""))}
+    jobs = set(model.by_job())
+    dormant: set[str] = set()
+    open_heads = {(p.get("head") or {}).get("sha") for p in prs}
+    todo = [b for b in branches if job_of_branch(branch_name(b)) in jobs
+            and (sha := branch_sha(b)) and sha not in inactive and sha not in open_heads]
+    for b in todo[:COMPARES]:
+        sha = branch_sha(b)
+        try:
+            cmp = gh.get(f"repos/{repo}/compare/{trunk}...{sha}") or {}
+        except errors as err:
+            out(f"NOTE        plan: compare {branch_name(b)} failed ({err}); counted as live")
+            continue
+        if cmp.get("status") in ("behind", "identical"):
+            inactive.add(sha)
+            continue
+        head = (cmp.get("commits") or [{}])[-1]
+        stamp = ((head.get("commit") or {}).get("committer") or {}).get("date") or ""
+        when = dt.datetime.fromisoformat(stamp.replace("Z", "+00:00")) if stamp else None
+        if head.get("sha") == sha and when and now - when > dt.timedelta(days=DORMANT_DAYS):
+            dormant.add(sha)
+    if len(todo) > COMPARES:
+        out(f"NOTE        plan: {len(todo) - COMPARES} job branch(es) not compared this pass; counted as live")
+    return {"issues": issues, "branches": branches, "prs": prs, "inactive": frozenset(inactive),
+            "merged": frozenset(merged), "dormant": frozenset(dormant)}
 
 
 def view(plan: Plan, owner: str, statuses: dict[str, str], issue_bodies: dict[str, str] | None = None) -> tuple[str, str]:

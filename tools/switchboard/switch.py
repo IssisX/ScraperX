@@ -1744,48 +1744,13 @@ class Switch:
             raise RuntimeError("invalid collaboration plan: " + "; ".join(model.errors[:5]))
         return model
 
-    PLAN_COMPARES = 60   # trunk-containment reads per pass for job branches no PR accounts for
-
     def plan_reads(self, model: "collab_plan.Plan") -> dict:
-        """One read of what the plan is checked against, once per run. `inactive` holds the heads that are history,
-        not work in flight: every closed PR's head (merged or abandoned), and a job branch whose head is already in
-        trunk (compare says behind or identical; a sha-pinned compare never changes, so its ETag keeps it cheap).
-        `merged` holds the jobs with a merged `Job: J-NNN` PR. Without this a landed branch counts as pushed forever."""
+        """collab_plan.observe, once per run: the one read of what the plan is checked against."""
         memo = self.__dict__.get("_plan_reads")
-        if memo is not None:
-            return memo
-        repo = self.gh.repo
-        issues = self.gh.paged(f"repos/{repo}/issues?state=open")
-        branches = list(self.gh.paged(f"repos/{repo}/branches"))
-        prs = self.listing(f"repos/{repo}/pulls?state=open")
-        closed = self.gh.paged(f"repos/{repo}/pulls?state=closed&base={rules.TRUNK}")
-        inactive = {p["head"]["sha"] for p in closed if (p.get("head") or {}).get("sha")}
-        merged = {m.group(1) for p in closed if p.get("merged_at")
-                  if (m := collab_plan.PR_JOB.match(p.get("body") or ""))}
-        jobs = set(model.by_job())
-        dormant: set[str] = set()
-        open_heads = {(p.get("head") or {}).get("sha") for p in prs}
-        todo = [b for b in branches if collab_plan.job_of_branch(collab_plan.branch_name(b)) in jobs
-                and (sha := collab_plan.branch_sha(b)) and sha not in inactive and sha not in open_heads]
-        for b in todo[:self.PLAN_COMPARES]:
-            sha = collab_plan.branch_sha(b)
-            try:
-                cmp = self.gh.get(f"repos/{repo}/compare/{rules.TRUNK}...{sha}")
-            except GitHubError as err:
-                self.out(f"NOTE        plan: compare {collab_plan.branch_name(b)} failed ({err}); counted as live")
-                continue
-            if (cmp or {}).get("status") in ("behind", "identical"):
-                inactive.add(sha)
-                continue
-            head = ((cmp or {}).get("commits") or [{}])[-1]
-            when = parse_time(((head.get("commit") or {}).get("committer") or {}).get("date") or "")
-            if head.get("sha") == sha and when and self.now - when > dt.timedelta(days=collab_plan.DORMANT_DAYS):
-                dormant.add(sha)
-        if len(todo) > self.PLAN_COMPARES:
-            self.out(f"NOTE        plan: {len(todo) - self.PLAN_COMPARES} job branch(es) not compared this pass; counted as live")
-        memo = {"issues": issues, "branches": branches, "prs": prs, "inactive": frozenset(inactive),
-                "merged": frozenset(merged), "dormant": frozenset(dormant)}
-        self.__dict__["_plan_reads"] = memo
+        if memo is None:
+            memo = collab_plan.observe(self.gh, model, self.now, self.out, listing=self.listing,
+                                       trunk=rules.TRUNK, errors=(GitHubError,))
+            self.__dict__["_plan_reads"] = memo
         return memo
 
     def plan_check(self) -> None:

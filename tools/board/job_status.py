@@ -2,6 +2,7 @@
 """Read-only view of the versioned job plan and observed remote work."""
 from __future__ import annotations
 
+import datetime as dt
 import pathlib
 import sys
 
@@ -14,23 +15,23 @@ from ghapi import GitHub  # noqa: E402
 REPO = "IssisX/ScraperX"
 
 
-def report(gh, out=print, content: str | None = None) -> int:
+def report(gh, out=print, content: str | None = None, now: dt.datetime | None = None) -> int:
     source = content if content is not None else (ROOT / "work/plan.md").read_text(encoding="utf-8")
     model = plan.parse(source)
-    issues = gh.paged(f"repos/{gh.repo}/issues?state=open")
-    branches = [b["name"] for b in gh.paged(f"repos/{gh.repo}/branches")]
-    prs = gh.paged(f"repos/{gh.repo}/pulls?state=open")
-    problems = plan.findings(model, issues, branches, prs)
+    r = plan.observe(gh, model, now or dt.datetime.now(dt.timezone.utc), lambda x: print(x, file=sys.stderr))
+    issues, prs = r["issues"], r["prs"]
+    seen = dict(branches=r["branches"], inactive=r["inactive"], merged=r["merged"], dormant=r["dormant"])
+    problems = plan.findings(model, issues, prs=prs, **seen)
     open_jobs = {ln.job for ln in model.lines if any(i.get("number") == ln.issue and
                                                        i.get("state", "open") == "open" for i in issues)}
     closed = {ln.job for ln in model.lines if ln.job not in open_jobs}
+    statuses = {ln.job: plan.status(ln, closed=closed, prs=prs, **seen) for ln in model.lines}
     for ln in model.lines:
-        out(f"{ln.job} #{ln.issue} {ln.owner}: {plan.status(ln, closed=closed, prs=prs, branches=branches)}")
+        out(f"{ln.job} #{ln.issue} {ln.owner}: {statuses[ln.job]}")
     for error in problems:
         out("PLAN-BLOCK " + error)
     for owner, limit in model.limits.items():
-        active = sum(plan.status(ln, closed=closed, prs=prs, branches=branches) in
-                     {"started", "pushed", "review"} for ln in model.owner_lines(owner))
+        active = sum(statuses[ln.job] in plan.IN_FLIGHT for ln in model.owner_lines(owner))
         out(f"WIP {owner}: {active}/{limit}")
     out(f"PLAN {'BLOCKED' if problems else 'CLEAN'} {model.fingerprint()}")
     return 1 if problems else 0

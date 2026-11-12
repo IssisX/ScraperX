@@ -85,5 +85,29 @@ class PlanReads(unittest.TestCase):
                          "pushed")
 
 
+class Whole(unittest.TestCase):
+    """11-12: 647 branches, a 500-item paged() cap, and fb-bot/integrate-j109 was never seen."""
+
+    class Capped:
+        def __init__(self, n):
+            self.all = [{"name": f"b{i}"} for i in range(n)]
+
+        def paged(self, path, key=""):
+            return self.all[:500]
+
+        def get(self, path, accept=""):
+            page = int(path.rsplit("page=", 1)[1])
+            return self.all[(page - 1) * 100:page * 100]
+
+    def test_reads_past_the_client_cap(self):
+        self.assertEqual(len(plan.whole(self.Capped(647), "repos/x/branches")), 647)
+        self.assertEqual(len(plan.whole(self.Capped(500), "repos/x/branches")), 500)
+        self.assertEqual(len(plan.whole(self.Capped(42), "repos/x/branches")), 42)
+
+    def test_refuses_a_short_count(self):
+        with self.assertRaises(RuntimeError):
+            plan.whole(self.Capped(plan.ALL_PAGES * 100 + 1), "repos/x/branches")
+
+
 if __name__ == "__main__":
     unittest.main()
