@@ -139,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
         src = ns.plan.read_text(encoding="utf-8")
         parsed = core.parse(src)
         needs_read = ns.action in {"status", "check", "give", "hold"}
+        gh = GitHub(REPO, dry_run=True, log=lambda line: print(line, file=sys.stderr)) if needs_read else None
         observed = core.observe(gh, parsed, dt.datetime.now(dt.timezone.utc),
                                 lambda line: print(line, file=sys.stderr)) if needs_read else None
         if ns.action in {"status", "check"}:
