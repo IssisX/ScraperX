@@ -33,7 +33,11 @@ constexpr float kTurnRate = 7.0F;
 constexpr float kPiF = 3.14159265358979F;
 constexpr float kPipeStallS = 2.5F;
 constexpr float kPipeOverloadS = 0.18F;
-constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.78
+constexpr float kPipeOffAxisM = 0.85F;    // a hold on the riser or its flange: its corner is 0.49 m off its axis, a flange's 0.68
+// Where her legs bear on a flange: on its top just out from the riser's
+// face (0.35 m off its axis) and in from the flange's (0.40 m, clear of her
+// on her line: world_solids.inc), on her side of it.
+constexpr float kPipeLegsOffAxisM = 0.38F;
 constexpr float kPipeLegsLineN = 800.0F;  // her legs' pull back onto her line while she slides
 constexpr float kHoistRideMps = 1.0F;     // a hoist's car at her pace on it (matron_hoist.cpp's kBoardMps)
 // Her legs come down onto a flange: they bear on it, a support, not a grip.
@@ -355,7 +359,7 @@ void Matron::tear_off_pipe() {
     // The flange under her legs: straight down beside the riser's face, the
     // first top met.
     const ClimbBodyFilter filter(body_, player_);
-    const RRayCast ray(RVec3(kPipeCentreX - 0.45F, feet + 0.05F, at.GetZ()), Vec3(0.0F, -2.0F * kStackPitch, 0.0F));
+    const RRayCast ray(RVec3(kPipeCentreX - kPipeLegsOffAxisM, feet + 0.05F, at.GetZ()), Vec3(0.0F, -2.0F * kStackPitch, 0.0F));
     RayCastResult hit;
     pipe_stop_y_ = physics_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter)
                        ? float(ray.GetPointOnRay(hit.mFraction).GetY())
@@ -440,7 +444,7 @@ void Matron::ride_pipe(const float dt) {
             rage_ = std::min(1.0F, rage_ + kKnockdownRage);
             BodyID flange;
             SubShapeID member;
-            const RVec3 legs(kPipeCentreX - 0.45F, pipe_stop_y_, az);
+            const RVec3 legs(kPipeCentreX - kPipeLegsOffAxisM, pipe_stop_y_, az);
             if (!hand_rests_on(query, legs, filter, flange, member)) {
                 get_off_pipe(true);
                 return;
