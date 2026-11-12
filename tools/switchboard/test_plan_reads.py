@@ -78,9 +78,9 @@ class PlanReads(unittest.TestCase):
         def paged(path, key=""):
             if "state=closed" in path:
                 return [{"number": 1, "head": {"sha": "s101"},
-                         "merged_at": "2026-11-10T00:00:00Z", "body": "Job: J-101\\n"},
+                         "merged_at": "2026-11-10T00:00:00Z", "body": "Job: J-101\n"},
                         {"number": 2, "head": {"sha": "s105"},
-                         "merged_at": None, "body": "Job: J-105\\n"}]
+                         "merged_at": None, "body": "Job: J-105\n"}]
             return old(path, key)
 
         self.sw.gh.paged = paged
@@ -108,8 +108,8 @@ class PlanReads(unittest.TestCase):
 
 class QueueSignal(unittest.TestCase):
     def test_owner_conflict_does_not_pretend_the_ready_queue_is_low(self):
-        model = plan.parse("limit muse 6\\n" + "".join(
-            f"J-{n} muse #{n} | ready {n}\\n" for n in range(101, 110)))
+        model = plan.parse("limit muse 6\n" + "".join(
+            f"J-{n} muse #{n} | ready {n}\n" for n in range(101, 110)))
         issues = [{"number": n, "title": f"J-{n} job", "state": "open"} for n in range(101, 110)]
         sw = switch.Switch.__new__(switch.Switch)
         sw.plan_mode = lambda: "live"
