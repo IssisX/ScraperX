@@ -250,12 +250,7 @@ void run_matron_unstick() {
               << m.longest_stall_s << " s, longest still " << worst_still_s << " s\n";
     require(m.alive, "matron unstick: alive on her deck");
     require(reached.size() == 8, "matron unstick: her patrol reaches every node of the deck's loop");
-    // She hears the break now: the pieces reach the impact ledger, so a
-    // breaking crate is a timber sound she investigates, and the
-    // investigation holds her still. Measured longest still 16 s on the
-    // FIX #2 head (7 s when the pieces were deaf); 20 s keeps the
-    // no-stall bar while leaving 4 s of headroom.
-    require(worst_still_s <= 20.0, "matron unstick: no stall she stays in");
+    require(worst_still_s <= 10.0, "matron unstick: no stall she stays in");
     std::cout << "  matron unstick: her feet's peak " << peak_foot_force_n << " N, " << peak_foot_power_w << " W\n";
     require(gravity_kept && peak_foot_force_n > 500.0 && peak_foot_force_n <= law::kForceN + 0.5 &&
                 peak_foot_power_w <= law::kPowerW + 0.5 && lunge_in_check,
