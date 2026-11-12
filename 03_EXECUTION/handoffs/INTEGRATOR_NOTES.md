@@ -12,7 +12,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
 - J-096 #414 planks slice 1 (trunk merged 22c88c85, proof rerunning); my eye check before it lands. J-084 #402
   whole climb PASS (trunk merged c35a6062); touch-2 900 s limit is a workflow change. J-082 #400 STOPPED by Cory.
 - J-090 #408 hook her pass 1 (trunk merged 708b3c3b); pass 2 after J-001.
-  Helpers: J-092 #434 red-proof fix a50537520df752690 (body order vs magnet guard). J-108 bait lift: Cory said move it (11-12); new helper resumed it. J-001: Fable helper (11-12). J-043 cause found (beam), Muse builds. J-107 #426 taken from Muse (helper, high): the proof of the new split. Next slot: J-038 v2 hunt.
+  Helpers: J-092 #434 red-proof fix a50537520df752690 (body order vs magnet guard). J-108 bait lift: Cory said move it (11-12); new helper resumed it. J-001: Fable helper (11-12). J-043 cause found (beam), Muse builds. J-107 #426 taken from Muse (helper, high): the proof of the new split. Next free helper slot: count Muse's failed tries by job type over two weeks, then write the routing checklist every new job is scored against (Cory 11-12).
   J-092 landed #434; its CI follow-up #447 (touch_slab_trap in touch-2 + rule_check tests) has green proof, Codex clean, API LAND. Next workflow PR: `persist-credentials: false` on the scope checkout (API note on #447; token is contents:read, low risk).
 - J-085 #403 DONE (#435, #437). J-126 #449 DONE (#450); follow-up J-127 #451 mailed to Muse. J-126 helper worktree build (~3 GB) left: its deletes were refused, not mine to do.
   (pipe from deck 1, tops out over the deck 6 housing, climbs in every stage, her other skills linked too).
