@@ -4623,8 +4623,11 @@ void Matron::take_blow(const float dt) {
     // same way, but in all three directions, and only on the pipe itself.
     const bool on_pipe = pipe_way_.status() == MoverStatus::Running;
     const Mover *held_by = holder();
-    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof) ||
-        state_ == State::Down || state_ == State::Emerging) {
+    // J-040 (issue #228): Down and Emerging are no longer a shield. A real
+    // external blow counts in both states; her own contacts are already
+    // excluded by the striker filter (closing >= 0.5 m/s of its own motion
+    // plus contact), so this guard only ever dropped real blows.
+    if (!body_in_world_ || dead_ || riding_ || (held_by != nullptr && held_by->view().blow_proof)) {
         blow_quiet_ = kBlowQuietTicks;
         player_blow_tag_ = false;
         clear_player_blow();
@@ -4636,6 +4639,19 @@ void Matron::take_blow(const float dt) {
     const Vec3 change = on_pipe ? velocity - set_velocity_
                                 : Vec3(velocity.GetX() - set_velocity_.GetX(), 0.0F, velocity.GetZ() - set_velocity_.GetZ());
     const float feet = float(at.GetY()) - kStandCentre;
+    // A weight falling on her is above her body, not above her middle, and
+    // a blow closes on her body, not on her middle. Lying down her middle
+    // stays at standing height while her body is flat, so a slab on her
+    // lying body sits below her middle and reads as moving away from it:
+    // the old checks never fired for her (J-040). The upright references
+    // are unchanged.
+    RVec3 toward_ref = at;
+    float above_y = float(at.GetY());
+    if (lying_) {
+        const AABox body_box = bodies.GetTransformedShape(body_).GetWorldSpaceBounds();
+        above_y = body_box.mMax.GetY();
+        toward_ref = RVec3(body_box.GetCenter());
+    }
     const Vec3 facing(std::sin(yaw_), 0.0F, std::cos(yaw_));
     bool struck = false;
     float environment_ns = 0.0F;
@@ -4653,7 +4669,7 @@ void Matron::take_blow(const float dt) {
         if (its_change.Length() < 0.1F) {
             continue;   // nothing met it this step
         }
-        Vec3 toward(at - n.at);
+        Vec3 toward(toward_ref - n.at);
         const float apart = toward.Length();
         if (apart < 1.0e-3F) {
             continue;
@@ -4675,7 +4691,7 @@ void Matron::take_blow(const float dt) {
         const Vec3 given = (on_pipe ? its_change : Vec3(its_change.GetX(), 0.0F, its_change.GetZ())) * n.mass_kg;
         impulse -= given / kMassKg;
         const bool its_low = float(n.at.GetY()) < feet + kLowBlowM;
-        const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > at.GetY();
+        const bool its_above = n.mass_kg >= kAboveMassKg && n.velocity.GetY() < -kAboveMps && n.at.GetY() > above_y;
         const float overhead_ns = its_above ? std::max(0.0F, its_change.GetY()) * n.mass_kg : 0.0F;
         if (its_above) {
             above_share += overhead_ns / kMassKg;
@@ -4783,6 +4799,12 @@ void Matron::take_blow(const float dt) {
             blow_quiet_ = kBlowQuietTicks;
             pipe_struck(at);
         }
+        return;
+    }
+    if (state_ == State::Down) {
+        // Already down: the blow's damage is counted above, but it neither
+        // staggers her nor re-triggers knock_down(), so the time she lies
+        // there keeps counting down (J-040).
         return;
     }
     // Her balance: her stance, her base, and the step she can take.
