@@ -19,6 +19,7 @@ import tempfile
 
 HERE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(HERE / "tools/switchboard"))
+sys.path.insert(0, str(HERE / "tools/board"))
 import plan as core  # noqa: E402
 from ghapi import GitHub  # noqa: E402
 
@@ -44,9 +45,13 @@ def recent_flip(path: Path, job: str) -> bool:
     return False
 
 
-def in_flight(job: str, branches: list, prs: list[dict], inactive: set[str] | frozenset[str] = frozenset()) -> bool:
-    """Remote work still needing disposition, including foreign owners and closed-unmerged PR heads."""
-    if core.live_refs(job, branches, inactive):
+def in_flight(job: str, branches: list, prs: list[dict], inactive: set[str] | frozenset[str] = frozenset(),
+              kept: tuple = ()) -> bool:
+    """Remote work still needing disposition, including foreign owners and closed-unmerged PR heads. A head the
+    plan keeps as a record (`kept <branch>@<sha>`, still at that sha) has had its disposition."""
+    ruled = {core.branch_sha(b) for b in branches
+             if any(core.branch_name(b) == ref and core.branch_sha(b).startswith(pin) for ref, pin in kept)}
+    if core.live_refs(job, branches, frozenset(inactive) | ruled):
         return True
     return any((m := core.PR_JOB.match(pr.get("body") or "")) and m.group(1) == job
                for pr in prs if pr.get("state") != "closed")
@@ -73,12 +78,12 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
         if owner not in limits or job in p.by_job():
             raise ValueError(f"add {job}: unknown owner or existing job")
         ls.append(core.Line(job, owner, int(issue[1:]), (), "", " ".join(args[3:])))
-    elif action in {"give", "hold", "release", "move", "drop", "tidy"}:
+    elif action in {"give", "hold", "release", "move", "drop", "tidy", "keep"}:
         if action == "tidy":
             if args:
                 raise ValueError("tidy takes no job IDs; it checks remote issue closure")
             stale = [ln.job for ln in ls if ln.job in verified_closed]
-            if any(in_flight(job, branches, prs, inactive) for job in stale):
+            if any(in_flight(job, branches, prs, inactive, p.by_job()[job].kept) for job in stale):
                 raise ValueError("tidy: closed issue still has unresolved remote work; reconcile it first")
             ls = [ln for ln in ls if ln.job not in verified_closed]
         else:
@@ -90,7 +95,7 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
                 raise ValueError(f"{action} {job}: not found")
             if flipped and not again:
                 raise ValueError(f"{action} {job}: recently changed; --again reason is required")
-            if action in {"give", "hold"} and in_flight(job, branches, prs, inactive) and not stop_work:
+            if action in {"give", "hold"} and in_flight(job, branches, prs, inactive, ls[found].kept) and not stop_work:
                 raise ValueError(f"{action} {job}: remote work in flight; --stop-work reason is required")
             old = ls[found]
             if action == "give":
@@ -103,6 +108,15 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
                 ls[found] = replace(old, hold=" ".join(args[1:]))
             elif action == "release":
                 ls[found] = replace(old, hold="")
+            elif action == "keep":
+                # the ruling that clears a conflict: a head of the job stays as a record at this sha, not a lane
+                m = core.KEPT.fullmatch("kept " + args[1]) if len(args) == 2 else None
+                live = {core.branch_name(b): core.branch_sha(b) for b in branches}
+                if not m or core.job_of_branch(m.group(1)) != job:
+                    raise ValueError(f"keep {job}: expected <branch naming the job>@<sha>")
+                if not live.get(m.group(1), "").startswith(m.group(2)):
+                    raise ValueError(f"keep {job}: {m.group(1)} is not on the remote at {m.group(2)}")
+                ls[found] = replace(old, kept=tuple(k for k in old.kept if k[0] != m.group(1)) + ((m.group(1), m.group(2)),))
             elif action == "move":
                 if len(args) != 2 or args[1] not in p.by_job():
                     raise ValueError(f"move {job}: expected another planned job")
@@ -114,7 +128,7 @@ def change(source: str, action: str, args: list[str], *, branches: list = (),
             elif action == "drop":
                 if len(args) != 1 or job not in verified_closed:
                     raise ValueError(f"drop {job}: issue must be independently verified closed")
-                if in_flight(job, branches, prs, inactive):
+                if in_flight(job, branches, prs, inactive, old.kept):
                     raise ValueError(f"drop {job}: unresolved remote work remains")
                 ls.pop(found)
     else:
@@ -160,30 +174,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--expect", help="required plan content fingerprint for mutations")
     ap.add_argument("--stop-work", default="", help="reason for stopping published in-flight work")
     ap.add_argument("--again", default="", help="reason for repeated reassignment or hold")
-    ap.add_argument("action", choices=("status", "check", "add", "give", "hold", "release", "move", "limit", "drop", "tidy"))
+    ap.add_argument("action", choices=("status", "check", "add", "give", "hold", "release", "move", "limit", "drop",
+                                       "tidy", "keep"))
     ap.add_argument("args", nargs="*")
     ns = ap.parse_args(argv)
     try:
         src = ns.plan.read_text(encoding="utf-8")
         parsed = core.parse(src)
-        needs_read = ns.action in {"status", "check", "give", "hold", "drop", "tidy"}
+        if ns.action in {"status", "check"}:   # the job machine's table, from the same plan and reads as the switch
+            import job_status
+            return job_status.report(GitHub(REPO, dry_run=True, log=lambda line: print(line, file=sys.stderr)),
+                                     content=src)
+        needs_read = ns.action in {"give", "hold", "drop", "tidy", "keep"}
         gh = GitHub(REPO, dry_run=True, log=lambda line: print(line, file=sys.stderr)) if needs_read else None
         observed = core.observe(gh, parsed, dt.datetime.now(dt.timezone.utc),
                                 lambda line: print(line, file=sys.stderr)) if needs_read else None
-        if ns.action in {"status", "check"}:
-            issues, branches, prs = observed["issues"], observed["branches"], observed["prs"]
-            params = {name: observed[name] for name in ("inactive", "merged", "dormant")}
-            problems = core.findings(parsed, issues, branches, prs, **params)
-            open_jobs = {ln.job for ln in parsed.lines if any(
-                i.get("number") == ln.issue and i.get("state", "open") == "open" for i in issues)}
-            closed = {ln.job for ln in parsed.lines if ln.job not in open_jobs}
-            for line in parsed.lines:
-                print(f"{line.job} {line.owner} #{line.issue}: "
-                      f"{core.status(line, closed=closed, prs=prs, branches=branches, **params)}")
-            for problem in problems:
-                print("PLAN " + problem)
-            print(f"PLAN {'BLOCKED' if problems else 'CLEAN'} {parsed.fingerprint()}")
-            return 1 if problems else 0
         if not ns.expect or ns.expect != sha(src):
             raise ValueError(f"{ns.action}: --expect {sha(src)} required (stale plan must not overwrite)")
         job = ns.args[0] if ns.args else ""

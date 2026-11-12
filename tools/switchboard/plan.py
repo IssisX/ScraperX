@@ -1,8 +1,8 @@
-"""Versioned collaboration plan: one authored order, derived status.
+"""The collaboration plan: work/plan.md, the one authored record of who owns a job, in what order, held or not.
 
-Labels, board text and mail are projections. This module never edits GitHub (observe() only reads, through
-the client it is handed),
-does not infer local work from mail, and rejects ambiguous or cyclic orders.
+This module parses and renders that file and reads what it is checked against (observe). A job's state is never
+written here: machine.py computes it from the plan and the evidence. Nothing here edits GitHub (observe() only
+reads, through the client it is handed), and an ambiguous or cyclic order is rejected.
 """
 from __future__ import annotations
 
@@ -16,6 +16,9 @@ ORDER = re.compile(r"^(J-\d{3,}[a-z]?)\s+([a-z][a-z0-9-]*)\s+#(\d+)(.*?)\s*\|\s*
 LIMIT = re.compile(r"^limit\s+([a-z][a-z0-9-]*)\s+(\d+)$")
 AFTER = re.compile(r"after\s+((?:J-\d{3,}[a-z]?\s*,?\s*)+)")
 HOLD = re.compile(r"\bhold:\s*(.+)$")
+# The integrator's ruling on another agent's unlanded head for this job: it is kept as a record, not a lane.
+# The sha pins the ruling: once that branch moves, it is unlanded work again.
+KEPT = re.compile(r"\bkept\s+([\w./-]+)@([0-9a-f]{7,40})\b")
 PR_JOB = re.compile(r"^\s*Job:\s*(J-\d{3,}[a-z]?)\b")
 BRANCH_JOB = re.compile(r"(?:^|/)integrate-(?:protected-)?(j\d{3,}[a-z]?)(?![\w])|(?:^|/)wip-(j\d{3,}[a-z]?)(?![\w])", re.I)
 
@@ -28,6 +31,7 @@ class Line:
     after: tuple[str, ...]
     hold: str
     title: str
+    kept: tuple[tuple[str, str], ...] = ()   # (branch, sha) heads ruled a record
 
 
 @dataclass(frozen=True)
@@ -75,11 +79,12 @@ def parse(text: str) -> Plan:
         deps = tuple(dict.fromkeys(re.findall(r"J-\d{3,}[a-z]?", a.group(1)))) if a else ()
         h = HOLD.search(options)
         hold = h.group(1).strip() if h else ""
-        extras = options.replace(a.group(0), "") if a else options
-        extras = extras.replace(h.group(0), "") if h else extras
+        extras = options.replace(h.group(0), "") if h else options
+        kept = tuple(dict.fromkeys(KEPT.findall(extras)))
+        extras = KEPT.sub("", extras.replace(a.group(0), "") if a else extras)
         if extras.strip() or job in deps:
             errors.append(f"line {number}: invalid options or self-dependency for {job}")
-        lines.append(Line(job, owner, int(issue), deps, hold, title))
+        lines.append(Line(job, owner, int(issue), deps, hold, title, kept))
     for ln in lines:
         if ln.owner not in limits:
             errors.append(f"{ln.job}: owner {ln.owner} has no limit")
@@ -109,6 +114,7 @@ def render(plan: Plan) -> str:
     result = [f"limit {owner} {limit}" for owner, limit in sorted(plan.limits.items())]
     for line in plan.lines:
         suffix = (" after " + ", ".join(line.after) if line.after else "")
+        suffix += "".join(f" kept {ref}@{sha}" for ref, sha in line.kept)
         suffix += (" hold: " + line.hold if line.hold else "")
         result.append(f"{line.job} {line.owner} #{line.issue}{suffix} | {line.title}")
     return "\n".join(result) + "\n"
@@ -130,14 +136,10 @@ def branch_sha(ref) -> str:
     return "" if isinstance(ref, str) else (ref.get("commit") or {}).get("sha") or ref.get("sha") or ""
 
 
-def owns(owner: str, ref: str) -> bool:
-    return ref.startswith("fb-bot/") if owner == "muse" else ref.startswith(owner + "/")
-
-
 def live_refs(job: str, branches, inactive: set[str] | frozenset[str] = frozenset()) -> list[str]:
     """Branches that carry unlanded work for `job`. A head that is a merged or closed PR's head, or is already
     in trunk, is history, not work in flight (it would otherwise count forever). A bare name with no sha
-    cannot be proven landed, so it still counts."""
+    cannot be proven landed, so it still counts. (The editor's guard: is there remote work to dispose of?)"""
     return [branch_name(b) for b in _live(job, branches, inactive)]
 
 
@@ -146,93 +148,9 @@ def _live(job: str, branches, inactive) -> list:
             if job_of_branch(branch_name(b)) == job and not (branch_sha(b) and branch_sha(b) in inactive)]
 
 
-def _open_pr(job: str, prs) -> bool:
-    return any((m := PR_JOB.match(p.get("body") or "")) and m.group(1) == job
-               for p in prs if p.get("state") != "closed")
-
-
-def status(line: Line, *, closed: set[str] | frozenset[str] = frozenset(),
-           prs: tuple[dict, ...] | list[dict] = (), branches: tuple[str, ...] | list[str] = (),
-           started: set[str] | frozenset[str] = frozenset(),
-           inactive: set[str] | frozenset[str] = frozenset(),
-           merged: set[str] | frozenset[str] = frozenset(),
-           dormant: set[str] | frozenset[str] = frozenset()) -> str:
-    """done, review, held, pushed, started, dormant, contested, landed, waiting or queued. Only started,
-    pushed and review are in flight. A hold outranks remote work (the work stays on its branch, nobody is
-    moving it); it never outranks an open PR, which lands on its proof and reviews like any other. Only the
-    owner's own branches are the owner's lane: another vendor's live head is `contested` (NOT-OWNER), and an
-    owner's head with no PR and no commit for DORMANT_DAYS (`dormant` shas) is kept and flagged, not counted."""
-    if line.job in closed:
-        return "done"
-    if _open_pr(line.job, prs):
-        return "review"
-    if line.hold:
-        return "held"
-    live = _live(line.job, branches, inactive)
-    own = [b for b in live if owns(line.owner, branch_name(b))]
-    if any(not (branch_sha(b) and branch_sha(b) in dormant) for b in own):
-        return "pushed"
-    if line.job in started:
-        return "started"
-    if own:
-        return "dormant"
-    if live:
-        return "contested"
-    if line.job in merged:
-        return "landed"  # its PRs merged, the issue is still open: close it or say what is left
-    if any(dep not in closed for dep in line.after):
-        return "waiting"
-    return "queued"
-
-
-IN_FLIGHT = frozenset({"started", "pushed", "review"})
-DORMANT_DAYS = 3   # CLAUDE.md: a job held 3 days goes to a stronger agent
-
-
-def findings(plan: Plan, issues: list[dict], branches: list[str], prs: list[dict] = (),
-             started: set[str] | frozenset[str] = frozenset(),
-             inactive: set[str] | frozenset[str] = frozenset(),
-             merged: set[str] | frozenset[str] = frozenset(),
-             dormant: set[str] | frozenset[str] = frozenset()) -> list[str]:
-    """Fail closed on inconsistent observations; do not silently rewrite the order."""
-    errors = list(plan.errors)
-    by_job = plan.by_job()
-    open_issues = {}
-    for issue in issues:
-        if issue.get("state", "open") != "open" or issue.get("pull_request") is not None:
-            continue
-        m = re.match(r"^(J-\d{3,}[a-z]?)(?!\w)", issue.get("title") or "")
-        if m:
-            if m.group(1) in open_issues:
-                errors.append(f"DUP-ISSUE {m.group(1)}: #{open_issues[m.group(1)]['number']} and #{issue['number']}")
-            open_issues[m.group(1)] = issue
-            if m.group(1) not in by_job:
-                errors.append(f"NO-LINE {m.group(1)} #{issue['number']}")
-    for line in plan.lines:
-        issue = open_issues.get(line.job)
-        if issue is None or issue.get("number") != line.issue:
-            errors.append(f"NO-ISSUE {line.job} #{line.issue}")
-        refs = set(live_refs(line.job, branches, inactive))
-        foreign = [b for b in refs if not owns(line.owner, b)]
-        if foreign:
-            errors.append(f"NOT-OWNER {line.job}: {', '.join(sorted(foreign))}")
-        if line.job in started and not refs and not _open_pr(line.job, prs):
-            errors.append(f"UNPUSHED {line.job}: started without a remote head")
-        if status(line, closed=set(), prs=prs, branches=branches, started=started, inactive=inactive,
-                  dormant=dormant) == "dormant":
-            errors.append(f"DORMANT {line.job}: {', '.join(sorted(b for b in refs if owns(line.owner, b)))} "
-                          f"has no PR and no commit in {DORMANT_DAYS} days: land it, hold it or hand it off")
-    closed = {ln.job for ln in plan.lines if ln.job not in open_issues}
-    for owner, limit in plan.limits.items():
-        in_flight = [ln.job for ln in plan.owner_lines(owner) if status(
-                     ln, closed=closed, prs=prs, branches=branches, started=started, inactive=inactive,
-                     merged=merged, dormant=dormant) in IN_FLIGHT]
-        if len(in_flight) > limit:
-            errors.append(f"OVER-LIMIT {owner}: {len(in_flight)}/{limit} jobs in flight")
-    return errors
-
-
+PLAN_FILE = "work/plan.md"
 COMPARES = 60   # trunk-containment reads per pass for job branches no PR accounts for
+CLOSED_READS = 30   # plan lines with no open issue whose issue is read each pass (tidy keeps them few)
 ALL_PAGES = 30  # a whole listing, past the client's 500-item paged() cap (647 branches on 11-12)
 
 
@@ -257,18 +175,24 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
     """What the plan is checked against, read through `gh` (switch and tools/board/job_status.py share it).
     `inactive`: proven landed heads, not work in flight: merged PR heads and heads already in trunk.
     A PR closed without merging is NOT evidence of landed work; its branch stays visible until explicitly
-    reconciled or an ancestry compare proves its head is already in trunk. `merged`: jobs with a merged `Job: J-NNN` PR. `dormant`: an
-    owner-side head with no PR whose last commit is older than DORMANT_DAYS. A compare that fails or is not
-    reached leaves the head live: unproven work is never hidden."""
+    reconciled or an ancestry compare proves its head is already in trunk. `merged_at`: job -> when its newest
+    `Job: J-NNN` PR merged. `head_at`: sha -> its commit time, for the heads compared. `closed`: the jobs whose
+    plan issue is not in the open listing and was read closed under the job's title (a missing listing entry
+    alone proves nothing). A compare that fails or is not reached leaves the head live: unproven work is never
+    hidden."""
     repo = gh.repo
     issues = whole(gh, f"repos/{repo}/issues?state=open")
     branches = whole(gh, f"repos/{repo}/branches")
     prs = (listing or gh.paged)(f"repos/{repo}/pulls?state=open")
     closed = whole(gh, f"repos/{repo}/pulls?state=closed&base={trunk}")
     inactive = {p["head"]["sha"] for p in closed if p.get("merged_at") and (p.get("head") or {}).get("sha")}
-    merged = {m.group(1) for p in closed if p.get("merged_at") if (m := PR_JOB.match(p.get("body") or ""))}
+    merged_at: dict[str, str] = {}
+    for p in closed:
+        m = PR_JOB.match(p.get("body") or "") if p.get("merged_at") else None
+        if m and p["merged_at"] > merged_at.get(m.group(1), ""):
+            merged_at[m.group(1)] = p["merged_at"]
     jobs = set(model.by_job())
-    dormant: set[str] = set()
+    head_at: dict[str, dt.datetime] = {}
     open_heads = {(p.get("head") or {}).get("sha") for p in prs}
     todo = [b for b in branches if job_of_branch(branch_name(b)) in jobs
             and (sha := branch_sha(b)) and sha not in inactive and sha not in open_heads]
@@ -285,19 +209,30 @@ def observe(gh, model: Plan, now: dt.datetime, out=print, *, listing=None, trunk
         head = (cmp.get("commits") or [{}])[-1]
         stamp = ((head.get("commit") or {}).get("committer") or {}).get("date") or ""
         when = dt.datetime.fromisoformat(stamp.replace("Z", "+00:00")) if stamp else None
-        if head.get("sha") == sha and when and now - when > dt.timedelta(days=DORMANT_DAYS):
-            dormant.add(sha)
+        if head.get("sha") == sha and when:
+            head_at[sha] = when
     if len(todo) > COMPARES:
         out(f"NOTE        plan: {len(todo) - COMPARES} job branch(es) not compared this pass; counted as live")
+    open_numbers = {i.get("number") for i in issues if i.get("pull_request") is None}
+    gone = [ln for ln in model.lines if ln.issue not in open_numbers]
+    done: set[str] = set()
+    for ln in gone[:CLOSED_READS]:
+        try:
+            it = gh.get(f"repos/{repo}/issues/{ln.issue}") or {}
+        except errors as err:
+            out(f"NOTE        plan: issue #{ln.issue} ({ln.job}) not read ({err}); not counted as closed")
+            continue
+        if it.get("state") == "closed" and it.get("pull_request") is None and \
+                re.match(rf"^{re.escape(ln.job)}(?!\w)", it.get("title") or ""):
+            done.add(ln.job)
+    if len(gone) > CLOSED_READS:
+        out(f"NOTE        plan: {len(gone) - CLOSED_READS} line(s) with no open issue not read this pass; tidy the plan")
+    planned_at = None
+    try:   # when the order last changed on trunk: the clock of a job nobody has been told about or has started
+        last = gh.get(f"repos/{repo}/commits?path={PLAN_FILE}&sha={trunk}&per_page=1") or [{}]
+        stamp = (((last[0].get("commit") or {}).get("committer") or {}).get("date") or "") if last else ""
+        planned_at = dt.datetime.fromisoformat(stamp.replace("Z", "+00:00")) if stamp else None
+    except errors as err:
+        out(f"NOTE        plan: the plan file's last commit was not read ({err})")
     return {"issues": issues, "branches": branches, "prs": prs, "inactive": frozenset(inactive),
-            "merged": frozenset(merged), "dormant": frozenset(dormant)}
-
-
-def view(plan: Plan, owner: str, statuses: dict[str, str], issue_bodies: dict[str, str] | None = None) -> tuple[str, str]:
-    parts = [f"{ln.job} #{ln.issue} {statuses.get(ln.job, 'unknown')} {ln.title}"
-             for ln in plan.owner_lines(owner)]
-    bodies = issue_bodies or {}
-    parts += [f"{ln.job} body={hashlib.sha256(bodies.get(ln.job, '').encode()).hexdigest()[:12]}"
-              for ln in plan.owner_lines(owner)]
-    text = "\n".join(parts)
-    return text, hashlib.sha256(text.encode()).hexdigest()[:12]
+            "merged_at": merged_at, "head_at": head_at, "closed": frozenset(done), "planned_at": planned_at}

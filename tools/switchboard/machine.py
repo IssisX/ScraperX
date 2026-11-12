@@ -298,7 +298,11 @@ def alarms(rows: list[Step], now: dt.datetime) -> list[Step]:
 
 
 def alarm_lines(rows: list[Step], now: dt.datetime) -> list[str]:
-    """The late rows as inbox lines; jobs late on the very same step share one line."""
+    return [line for _, line in alarm_groups(rows, now)]
+
+
+def alarm_groups(rows: list[Step], now: dt.datetime) -> list[tuple[Step, str]]:
+    """The late rows as (the row, its inbox line); jobs late on the very same notice share one line."""
     groups: dict[tuple, list[Step]] = {}
     for r in alarms(rows, now):
         same = (r.state, r.owes, r.next) if r.state in ("told", "planned") else (r.job,)
@@ -310,7 +314,7 @@ def alarm_lines(rows: list[Step], now: dt.datetime) -> list[str]:
         if len(group) > 1:
             line = line.replace(first.job, f"{first.job} and {len(group) - 1} more "
                                            f"({', '.join(r.job for r in group[1:6])}{', ...' if len(group) > 6 else ''})", 1)
-        out.append(line)
+        out.append((first, line))
     return out
 
 
@@ -328,6 +332,22 @@ def order_text(model: P.Plan, owner: str, bodies: dict[str, str] | None = None) 
 
 def order_version(model: P.Plan, owner: str, bodies: dict[str, str] | None = None) -> str:
     return hashlib.sha256(order_text(model, owner, bodies).encode()).hexdigest()[:12]
+
+
+def job_issues(issues) -> dict[str, list[dict]]:
+    """job -> the open issues titled with it (a PR is not one)."""
+    titled: dict[str, list[dict]] = {}
+    for it in issues or []:
+        job = rules.job_of_title(it.get("title") or "")
+        if job and it.get("state", "open") == "open" and it.get("pull_request") is None:
+            titled.setdefault(job, []).append(it)
+    return titled
+
+
+def versions(model: P.Plan, issues) -> dict[str, str]:
+    """owner -> the version of its order, as the open issues' text stands."""
+    bodies = {job: (its[0].get("body") or "") for job, its in job_issues(issues).items()}
+    return {o: order_version(model, o, bodies) for o in model.limits}
 
 
 def when(stamp) -> dt.datetime | None:
@@ -393,8 +413,14 @@ def branch_work(ref: str, sha: str, proof: str = "unread", at=None, auto_pr: boo
 BRIDGE_POST = "**Muse (via email bridge)"   # switch.BRIDGE_POST: the first line of a mail the bridge posted for Muse
 HAND_MAIL = "CLAUDE_TO_MUSE:"               # the first line of a hand mail to Muse as the bridge records it
 NOTICE_HEAD = "CLAUDE_TO_MUSE: plan "
-NOTICE_MARK = "<!-- switchboard:plan owner={owner} ver={ver} -->"
-NOTICE_SENT = re.compile(r"<!-- switchboard:plan owner=([a-z][a-z0-9-]*) ver=([0-9a-f]{12}) -->")
+NOTICE_MARK = "<!-- switchboard:plan owner={owner} ver={ver} jobs={jobs} -->"
+NOTICE_SENT = re.compile(r"<!-- switchboard:plan owner=([a-z][a-z0-9-]*) ver=([0-9a-f]{12})(?: jobs=([A-Za-z0-9,-]*))? -->")
+NOTICE_AGAIN = "<!-- switchboard:plan-again owner={owner} ver={ver} -->"   # the one re-send of an unanswered version
+# The switch writes this into its own notice once it has seen the receipt, so the receipt outlives the window
+# the mail is read in. It cites the comment that carried it; only the bot's login can have written it.
+RECEIPT_MARK = "<!-- switchboard:plan-receipt owner={owner} ver={ver} at={at} comment={comment} -->"
+RECEIPT_SEEN = re.compile(r"<!-- switchboard:plan-receipt owner=([a-z][a-z0-9-]*) ver=([0-9a-f]{12}) at=(\S+) comment=(\d+) -->")
+PLAN_START, PLAN_END = "<!-- plan:start -->", "<!-- plan:end -->"   # the board body's job section
 NOTICE_MAX = 1200    # characters. 11-12: Muse's safety check refused a long rulings mail; the file is the order
 NOTICE_JOBS = 6      # job ids named per list in a notice; the rest are a count
 JOB_ID = re.compile(r"\bJ-\d{3,}[a-z]?(?![\w])")
@@ -431,6 +457,7 @@ class Mail:
     notices: tuple[tuple[str, str, dt.datetime], ...] = ()
     missing: dict[str, str] = field(default_factory=dict)
     worker: str = "muse"
+    receipts: dict[tuple[str, str], dt.datetime] = field(default_factory=dict)   # (owner, version) -> recorded receipt
 
 
 def posts(comments: list[dict], logins, bot: str = rules.BOT_LOGIN) -> list[Post]:
@@ -465,15 +492,49 @@ def sent_notices(comments: list[dict], bot: str = rules.BOT_LOGIN) -> list[tuple
     return sorted(out, key=lambda n: n[2])
 
 
+def notice_comment(comments: list[dict], owner: str, ver: str, bot: str = rules.BOT_LOGIN) -> dict | None:
+    """The switch's own comment that carried the notice of this version to this owner."""
+    return next((c for c in comments if ((c.get("user") or {}).get("login") or "") == bot and any(
+        m.group(1) == owner and m.group(2) == ver for m in NOTICE_SENT.finditer(c.get("body") or ""))), None)
+
+
+def notice_jobs(comments: list[dict], owner: str, bot: str = rules.BOT_LOGIN) -> list[str] | None:
+    """The jobs the newest notice to `owner` listed as its own; None when no notice says."""
+    found = None
+    for c in sorted(comments, key=lambda c: c.get("created_at") or ""):
+        if ((c.get("user") or {}).get("login") or "") == bot:
+            for m in NOTICE_SENT.finditer(c.get("body") or ""):
+                if m.group(1) == owner and m.group(3) is not None:
+                    found = [j for j in m.group(3).split(",") if j]
+    return found
+
+
+def recorded_receipts(comments: list[dict], bot: str = rules.BOT_LOGIN) -> dict[tuple[str, str], dt.datetime]:
+    """(owner, version) -> when its receipt came, as the switch recorded it on its own notice."""
+    out = {}
+    for c in comments:
+        if ((c.get("user") or {}).get("login") or "") == bot:
+            for m in RECEIPT_SEEN.finditer(c.get("body") or ""):
+                if when(m.group(3)):
+                    out[(m.group(1), m.group(2))] = when(m.group(3))
+    return out
+
+
+def receipt_post(mail: Mail, ver: str, sent: dt.datetime) -> Post | None:
+    """The worker's first mail after the notice that carries `plan <ver>`: the proof that version was read. Read
+    from the subject and the body; a version is 12 hex after the word plan, never a commit."""
+    return next((p for p in mail.posts if not p.hand and p.at >= sent
+                 and ver in {v.lower() for v in PLAN_VER.findall(p.subject + "\n" + p.body)}), None)
+
+
 def notice_at(mail: Mail, owner: str, ver: str) -> dt.datetime | None:
     return next((at for o, v, at in mail.notices if o == owner and v == ver), None)
 
 
-def receipt_at(mail: Mail, ver: str, sent: dt.datetime) -> dt.datetime | None:
-    """The worker's first mail after the notice that carries `plan <ver>`: the proof that version was read. Read
-    from the subject and the body; a version is 12 hex after the word plan, never a commit."""
-    return next((p.at for p in mail.posts if not p.hand and p.at >= sent
-                 and ver in {v.lower() for v in PLAN_VER.findall(p.subject + "\n" + p.body)}), None)
+def receipt_at(mail: Mail, owner: str, ver: str, sent: dt.datetime) -> dt.datetime | None:
+    """When the owner's receipt for this version came: the one the switch recorded, else the mail itself."""
+    post = receipt_post(mail, ver, sent) if owner == mail.worker else None
+    return mail.receipts.get((owner, ver)) or (post.at if post else None)
 
 
 def started_posts(mail: Mail) -> dict[str, dt.datetime]:
@@ -545,18 +606,15 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
     closed). `works`: head sha -> its Work, for the heads whose proof the switch read this pass."""
     works, mail = works or {}, mail or Mail()
     by_job = model.by_job()
-    titled: dict[str, list[dict]] = {}
-    for it in reads.get("issues") or []:
-        job = rules.job_of_title(it.get("title") or "")
-        if job and it.get("state", "open") == "open" and it.get("pull_request") is None:
-            titled.setdefault(job, []).append(it)
-    bodies = {job: (its[0].get("body") or "") for job, its in titled.items()}
+    titled = job_issues(reads.get("issues"))
     inactive, head_at = reads.get("inactive") or frozenset(), reads.get("head_at") or {}
     heads: dict[str, list[Head]] = {}
     for b in reads.get("branches") or []:
         name, sha = P.branch_name(b), P.branch_sha(b)
         job = P.job_of_branch(name)
-        if job and not (sha and sha in inactive):
+        ruled = by_job[job].kept if job in by_job else ()   # a head the plan keeps as a record is not work in flight
+        if job and not (sha and sha in inactive) and not any(
+                name == ref and sha and sha.startswith(pin) for ref, pin in ruled):
             heads.setdefault(job, []).append(Head(name, sha, head_at.get(sha)))
     prs: dict[str, list[dict]] = {}
     for p in reads.get("prs") or []:
@@ -568,7 +626,7 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
             if not any(h.ref == ref for h in heads.get(job, [])):
                 heads.setdefault(job, []).append(Head(ref, sha, head_at.get(sha)))
     closed = reads.get("closed") or frozenset()
-    versions = {o: order_version(model, o, bodies) for o in model.limits}
+    vers = versions(model, reads.get("issues"))
     said, wrong = started_posts(mail), mail_clashes(model, mail)
     out: dict[str, Evidence] = {}
     for ln in model.lines:
@@ -585,14 +643,14 @@ def collect(model: P.Plan, reads: dict, *, works: dict[str, Work] | None = None,
                 tzinfo=dt.timezone.utc)), reverse=True)
             if proofs:
                 work = works.get(proofs[0].sha) or branch_work(proofs[0].ref, proofs[0].sha, at=proofs[0].at)
-        ver = versions.get(ln.owner, "")
+        ver = vers.get(ln.owner, "")
         sent = notice_at(mail, ln.owner, ver)
         out[ln.job] = Evidence(
             job=ln.job, line=ln, issues=tuple(sorted(int(i["number"]) for i in titled.get(ln.job, []))),
             closed=ln.job in closed,
             waits=tuple(j for j in ln.after if j not in closed and (j in by_job or j in titled)),
             version=ver, planned_at=planned_at, notice_at=sent,
-            receipt_at=receipt_at(mail, ver, sent) if sent else None,
+            receipt_at=receipt_at(mail, ln.owner, ver, sent) if sent else None,
             claimed_at=said.get(ln.job) if ln.owner == mail.worker else None,
             heads=tuple(heads.get(ln.job, [])), work=work, merged_at=when((reads.get("merged_at") or {}).get(ln.job)),
             clashes=tuple(wrong.get(ln.job, [])))
@@ -652,6 +710,18 @@ def board(model: P.Plan, rows: list[Step], now: dt.datetime) -> str:
         out.append("**not in the plan**")
         out += [f"- {r.job} {r.state}: {r.why}" for r in strays]
     return "\n".join(out).rstrip() + "\n"
+
+
+def splice(body: str, text: str) -> str | None:
+    """The board body with its job section replaced (added at the end when it has none); None when the markers
+    are broken, so nothing a person wrote is overwritten."""
+    section = f"{PLAN_START}\n{text.rstrip()}\n{PLAN_END}"
+    starts, ends = body.count(PLAN_START), body.count(PLAN_END)
+    if (starts, ends) == (0, 0):
+        return f"{body.rstrip()}\n\n{section}\n" if body.strip() else section + "\n"
+    if (starts, ends) != (1, 1) or body.index(PLAN_START) > body.index(PLAN_END):
+        return None
+    return body[:body.index(PLAN_START)] + section + body[body.index(PLAN_END) + len(PLAN_END):]
 
 
 def queue(model: P.Plan, rows: list[Step], owner: str) -> str:

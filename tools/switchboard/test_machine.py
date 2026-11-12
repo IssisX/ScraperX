@@ -67,7 +67,7 @@ class World:
     def tell(self, hours: float, owner: str = "muse", ver: str = "") -> None:
         ver = ver or self.version(owner)
         self.comments.append(comment(len(self.comments) + 1, hours, f"{M.NOTICE_HEAD}{ver}\n\n" +
-                                     M.NOTICE_MARK.format(owner=owner, ver=ver), login=rules.BOT_LOGIN))
+                                     M.NOTICE_MARK.format(owner=owner, ver=ver, jobs=""), login=rules.BOT_LOGIN))
 
     def muse(self, hours: float, subject: str, body: str = "", login: str = "IssisX", thread: int = 340) -> None:
         self.comments.append(comment(len(self.comments) + 1, hours, mail(subject, body), login, thread))
@@ -430,7 +430,7 @@ class MailTrust(unittest.TestCase):
         w.tell(1)
         self.assertEqual(w.rows()["J-101"].state, "told")
         w2 = World()
-        w2.comments.append(comment(1, 1, f"{M.NOTICE_HEAD}x\n" + M.NOTICE_MARK.format(owner="muse", ver=w2.version())))
+        w2.comments.append(comment(1, 1, f"{M.NOTICE_HEAD}x\n" + M.NOTICE_MARK.format(owner="muse", ver=w2.version(), jobs="")))
         self.assertEqual(w2.rows()["J-101"].state, "planned")
 
     def test_a_start_typed_by_a_stranger_is_not_a_start(self):
