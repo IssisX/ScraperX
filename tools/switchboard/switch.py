@@ -97,6 +97,8 @@ INBOX_READY_AFTER = dt.timedelta(minutes=15)   # one sweep apart: green with a L
 INBOX_RED_STUCK = dt.timedelta(hours=3)        # FIX-CI with no new head this long
 INBOX_FIX_STUCK = dt.timedelta(hours=6)        # FIX with no new head this long, past the reconciler's send and re-send
                                                # (11-12: #389 and #396 each sat a day on a Codex FIX)
+MERGEABLE_READS = 3                            # reads of a PR whose mergeability GitHub is still computing, after the first
+MERGEABLE_WAIT_S = 3.0                         # seconds before each
 INBOX_BRANCH_RED = dt.timedelta(hours=1)       # a red integrate branch with no PR this long
 INBOX_RUNS_WINDOW = dt.timedelta(hours=24)     # proof runs read per sweep, as tools/board/sweep.py's branch window
 RED_RUN_KEYS = ("id", "head_branch", "head_sha", "status", "conclusion", "created_at", "updated_at", "html_url",
@@ -1005,9 +1007,14 @@ class Switch:
         author = self.team.vendor_of_branch(facts.head_ref)
         token, key = bool(self.merge_token), bool(self.review_key)
         d = rules.merge_decision(facts, author, self.team, token, key)
-        if d.action == "WAIT" and d.reasons == ("GitHub is still computing mergeability",):
-            time.sleep(3)   # the first read starts GitHub's computation; read once more
-            facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
+        for _ in range(MERGEABLE_READS):
+            if d.action != "WAIT" or d.reasons != ("GitHub is still computing mergeability",):
+                break
+            # the first read starts GitHub's computation. Trunk moves every few minutes (notes commits), which resets it,
+            # so one read 3 s later was often still null (11-12, #453 in a dry run): read again, GitHub's own answer
+            time.sleep(MERGEABLE_WAIT_S)
+            with self.gh.fresh():
+                facts = dataclasses.replace(facts, mergeable=self.gh.get(f"repos/{self.gh.repo}/pulls/{facts.number}").get("mergeable"))
             d = rules.merge_decision(facts, author, self.team, token, key)
         if d.action in ("MERGE", "HUMAN-MERGE") and not ctx.get("fresh"):
             # J-072, the security pass on #360: the sweep's reads may be answered from the ETag cache, whose file

@@ -7,6 +7,7 @@ from __future__ import annotations
 import pathlib
 import sys
 import unittest
+import unittest.mock
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -39,7 +40,7 @@ input: the frame named above
 expected: the rubric line holds
 observed: it does not (reason above)
 
-_claude-opus-5-5 through the API; 6:08 AM Central. Taste stays the owner's._
+_claude-opus-5-5 through the API. Taste stays the owner's._
 <!-- switchboard:eye pr=453 head={HEAD_453} -->"""
 OPEN_JOBS = ("J-060", "J-063", "J-088")
 
@@ -199,6 +200,35 @@ class FixStuck(unittest.TestCase):
         (it,) = ti.muse_of(ti.FakeGH(), s)
         self.assertIn("unresolved review threads on the diff", it.finding)
         self.assertIn("https://github.com/IssisX/ScraperX/pull/256/files", it.finding)
+
+
+class Answers(dict):
+    """GitHub's answers by path; a callable answer is asked anew at each read."""
+
+    def __getitem__(self, key):
+        got = super().__getitem__(key)
+        return got() if callable(got) else got
+
+
+class Mergeability(unittest.TestCase):
+    """#453 in a dry run (11-12): GitHub was still computing mergeability 3 s after the first read (trunk moves every
+    few minutes and resets it), so the one read again left a ready PR on WAIT."""
+
+    def steer(self, nulls: int) -> list:
+        import test_cache_trust as tc
+        real = Answers(tc.github([tc.codex_clean()], "success"))
+        pr = dict(real[f"repos/{tc.REPO}/pulls/9"])
+        reads = iter([None] * nulls)
+        real[f"repos/{tc.REPO}/pulls/9"] = lambda: dict(pr, mergeable=next(reads, True))
+        with unittest.mock.patch.object(switch.time, "sleep"):
+            steered, writes, _ = tc.sweep_one(real, {})
+        return [steered[-1].decision.action, any(path.endswith("/pulls/9/merge") for _, path in writes)]
+
+    def test_a_pr_still_computing_after_one_read_again_is_merged(self):
+        self.assertEqual(self.steer(nulls=3), ["MERGE", True])   # the listing, the PR read, the first read again
+
+    def test_still_computing_after_every_read_waits(self):
+        self.assertEqual(self.steer(nulls=2 + switch.MERGEABLE_READS), ["WAIT", False])
 
 
 class JobsRead502(unittest.TestCase):
