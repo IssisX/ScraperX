@@ -558,6 +558,9 @@ func _process(delta: float) -> void:
 		"support": int(_native.get_support_entity_id()),
 		"matron_released": bool(her["released"]),
 		"beam_seated": int(_native.get_summit_state()["ending"]) >= 1,
+		# J-130 stub: J-129's done flags (objective index -> bool) land here
+		# when the objective core is hooked up; until then no done line can fire.
+		"objectives_done": {},
 	})
 	# Where she is, from his eyes, once she is out (Cory's playtest: he lost
 	# her a few seconds after she burst out): her bearing off his view, how

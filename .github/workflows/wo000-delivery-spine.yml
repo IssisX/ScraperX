@@ -962,6 +962,18 @@ jobs:
             --script res://tests/matron_speech_test.gd 2>&1 | tee artifacts/matron-speech.log
           grep -F "MATRON_SPEECH PASS fails=0" artifacts/matron-speech.log
 
+      - name: The foreman's job lines on the radio
+        shell: bash
+        run: |
+          set -euo pipefail
+          # J-130: Brenner's job lines for missions 1 and 7, given by place and done by
+          # J-129's flag; a done line shows only for a flag that flips during the launch,
+          # never twice for one done flag, and no line is wider than the longest already
+          # shipping, so the plate fits the Fold folded.
+          timeout 120s tools/godot/godot --headless --path godot \
+            --script res://tests/foreman_radio_test.gd 2>&1 | tee artifacts/foreman-radio.log
+          grep -F "FOREMAN_RADIO PASS fails=0" artifacts/foreman-radio.log
+
       - name: The rip camera enters and returns without a cut or lock
         shell: bash
         run: |
