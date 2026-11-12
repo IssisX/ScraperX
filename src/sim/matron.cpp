@@ -3136,13 +3136,32 @@ void Matron::pre_step(const float dt, const Stimulus &him) {
                                         break;
                                     }
                                 }
-                                // Where the line to it leaves her floor (a
+                                // Where the line to it runs over a drop (a
                                 // narrow stair's turn: that point is round
                                 // the corner, and the line crosses the open
                                 // well inside the turn), her aim is 1.2 m
                                 // along the path instead, which keeps to the
                                 // treads (J-126, the leg spiral's landings).
-                                if (scan_walk && !straight_to(ax, az, wx, wz)) {
+                                // Only a drop: floor no lower than a step
+                                // under hers all along (a stair going up, a
+                                // machine's floor she boards) keeps her aim.
+                                const IgnoreSingleBodyFilter self_only(body_);
+                                const auto over_drop = [&](const float tx, const float tz) {
+                                    const float length = distance_xz(ax, az, tx, tz);
+                                    const int n = std::max(1, static_cast<int>(length / 0.2F));
+                                    for (int i = 1; i <= n; ++i) {
+                                        const float t = float(i) / float(n);
+                                        RayCastResult down;
+                                        const RVec3 from(ax + (tx - ax) * t, feet_y_ + 0.6F, az + (tz - az) * t);
+                                        if (!physics_.GetNarrowPhaseQuery().CastRay(RRayCast(from, Vec3(0.0F, -1.2F, 0.0F)),
+                                                                                    down, {}, {}, self_only) ||
+                                            float(from.GetY()) - 1.2F * down.mFraction < feet_y_ - kStepUpM) {
+                                            return true;
+                                        }
+                                    }
+                                    return false;
+                                };
+                                if (scan_walk && over_drop(wx, wz)) {
                                     float left = 1.2F;
                                     float fx = ax;
                                     float fz = az;
