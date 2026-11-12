@@ -1590,33 +1590,6 @@
    ]
   },
   {
-   "name": "box",
-   "parent": "body",
-   "t": [
-    -0.2,
-    0.07000000000000006,
-    0.0
-   ],
-   "q": [
-    0.0,
-    0.0,
-    0.0,
-    1.0
-   ],
-   "euler": [
-    -0.0,
-    0.0,
-    0.0
-   ],
-   "mode": "copy",
-   "pivot": "box_cord",
-   "pos": [
-    -0.2,
-    1.0519387592214173,
-    0.021482283877903137
-   ]
-  },
-  {
    "name": "eye_l",
    "parent": "head",
    "t": [
@@ -4408,7 +4381,6 @@
    "belt": 512,
    "buckle": 12,
    "shoes": 1333,
-   "music_box": 36,
    "skin": 18601,
    "stockings": 2452,
    "eyes": 1060,
@@ -4419,7 +4391,7 @@
    "lashes": 368,
    "hair": 27220
   },
-  "triangles_total": 74122,
+  "triangles_total": 74086,
   "bones": 161
  },
  "contacts": {

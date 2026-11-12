@@ -8,9 +8,11 @@
 #include "sim/physics_world_support.hpp"
 #include "sim/fabricated.hpp"
 #include "sim/matron_traversal.hpp"
+#include "sim/slab_cell.hpp"
 
 #include <array>
 #include <set>
+#include <string>
 
 namespace scraperx::sim {
 
@@ -125,6 +127,9 @@ public:
     // What the tower's steel offers the Matron's climbing (matron_traversal.hpp):
     // read from the real collision geometry the first time it is asked for.
     [[nodiscard]] const traversal::AffordanceMap &matron_affordances();
+    // The world's hoists and platforms as the kit holds them, to her
+    // (Matron::set_hoists): every step, and before her first look.
+    void feed_matron_hoists();
     [[nodiscard]] double matron_gravity_factor() const;
     [[nodiscard]] std::size_t matron_grid_walk(JPH::Vec3 from, JPH::Vec3 to, float margin, int max_nodes) const;
     [[nodiscard]] const Bay &bay() const noexcept { return *bay_; }
@@ -136,6 +141,11 @@ public:
     void launch_player_for_test(JPH::RVec3 at, JPH::Vec3 velocity);
     [[nodiscard]] float support_y_for_test(JPH::RVec3 at, float depth) const noexcept;
     void launch_kit_body_for_test(std::uint32_t body, JPH::RVec3 at, JPH::Vec3 velocity);
+    void spin_kit_body_for_test(std::uint32_t body, JPH::Vec3 angular_velocity);
+    // Tests only (never bound to the bridge): the next strike press throws
+    // this move whatever the stance would pick (the bare punch, move 0, on a
+    // free Matron); consumed when the strike begins.
+    void force_strike_move_for_test(std::uint8_t move) noexcept;
     [[nodiscard]] Summit &summit() noexcept { return *summit_; }
     [[nodiscard]] const Summit &summit() const noexcept { return *summit_; }
     [[nodiscard]] const Trapeze &trapeze() const noexcept { return *trapeze_; }
@@ -159,6 +169,19 @@ public:
     [[nodiscard]] const Corpses &corpses() const noexcept { return *corpses_; }
     [[nodiscard]] const LooseStock &loose_stock() const noexcept { return *loose_stock_; }
     [[nodiscard]] const ImpactLedger &impacts() const noexcept { return *impacts_; }
+    // Tests only (never bound to the bridge): the mass of the free load
+    // in the hands, or 0 — a handle or a shackle is held up by its
+    // hinge or its line, not the hands.
+    [[nodiscard]] float debug_carried_load_mass() const noexcept { return carried_load_mass(); }
+    // Tests only (never bound to the bridge): the parent's motion at the
+    // last break-piece spawn, recorded by spawn_break_pieces.
+    [[nodiscard]] Simulation::BreakParentSample debug_last_break_parent() const noexcept {
+        return last_break_parent_;
+    }
+    // J-038 slice 1: a stock body's dent record, empty when undamaged.
+    [[nodiscard]] const stock_damage::DamageState &stock_damage_state(const std::uint64_t entity) const noexcept {
+        return stock_damage_.state(entity);
+    }
     // On a forklift's floor within reach of its wheel (that forklift's, or
     // any's).
     [[nodiscard]] bool at_forklift_controls(int index) const noexcept;
@@ -221,9 +244,22 @@ public:
     [[nodiscard]] std::uint32_t bodies_with_entity_in(std::uint64_t first, std::uint64_t limit) const;
 
 private:
-    // The kit's bodies built with the world: every one before the first
-    // fabricated object (those are always the kit's last).
+    // The kit's bodies built with the world, break pieces included: the
+    // count of bodies that are not a fabricated object's. Not a prefix
+    // length — a fabricated object may sit before the break pieces, so
+    // the built bodies are not the kit's first bodies (see body_entities).
     [[nodiscard]] std::size_t kit_built_count() const noexcept { return kit_->body_count() - fabricated_.size(); }
+    // Whether a kit body is a fabricated object's: the built bodies are
+    // every other one, wherever each fabricated body sits in the kit.
+    // A linear scan: at most fabricated::kMaxObjects of them.
+    [[nodiscard]] bool is_fabricated_body(const kit::BodyIndex body) const noexcept {
+        for (const Fabricated &object : fabricated_) {
+            if (object.body == body) {
+                return true;
+            }
+        }
+        return false;
+    }
     // The body of a fabricated object, at `origin` turned `rotation`, as
     // loose stock: carried by the top of its box over its center of mass,
     // swept so a throw never passes through a rail, asleep once at rest,
@@ -705,10 +741,28 @@ private:
 
     void commit_checkpoint(const JPH::BodyInterface &bodies) noexcept;
 
+    // Spawn the carryable pieces of a broken stock, at the break
+    // geometry around (pos, rot), carrying the stock's (vel, ang) plus
+    // the geometry's scatter. The stock itself is parked first: a body
+    // breaks once, and the pieces are the stock now. Shared by the
+    // live break and by a load whose save holds pieces this world
+    // lacks, so the two never drift apart. A load may also spawn the
+    // pieces of a stock its save holds intact (park_parent false):
+    // the pieces are the retained debris of a break the save predates
+    // in the damage record, so the crate stays whole and the pieces
+    // are parked by the caller.
+    void spawn_break_pieces(kit::BodyIndex body, std::uint64_t entity, LooseStock::Kind kind,
+                            const JPH::RVec3 pos, const JPH::Quat rot, const JPH::Vec3 vel,
+                            const JPH::Vec3 ang, float mass, bool park_parent = true) noexcept;
+
     void restore_from_checkpoint(JPH::BodyInterface &bodies) noexcept;
 
 public:
     bool load_save(SaveReader &r) { return read_save(r, physics_system_.GetBodyInterface()); }
+    // Why the last load_save was refused, where the refusal names
+    // itself (so far: a stock damage section whose record size is not
+    // this build's); empty otherwise, and after a load that was taken.
+    [[nodiscard]] const std::string &load_refusal() const noexcept { return load_refusal_; }
 
     [[nodiscard]] std::vector<std::uint64_t> body_entities() const;
 
@@ -775,7 +829,15 @@ public:
     // The bay on the 154 m deck (bay.hpp): after every other kit body.
     std::unique_ptr<Bay> bay_;
     std::unique_ptr<LooseStock> loose_stock_;
+    // J-092: the slab trap's cell on her deck (slab_cell.hpp), built last.
+    SlabCell slab_cell_;
     std::unique_ptr<ImpactLedger> impacts_;
+    stock_damage::StockDamage stock_damage_;
+    // The parent's motion at the last break-piece spawn, for the
+    // debug_last_break_parent test read (velocities are creation state,
+    // read here before the parent is parked).
+    Simulation::BreakParentSample last_break_parent_{};
+    std::string load_refusal_;  // see load_refusal()
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;
     std::unique_ptr<Zipline> zipline_;
@@ -1091,6 +1153,7 @@ public:
     int strike_side_ = 1;           // the fist this strike is thrown with
     std::uint8_t strike_move_ = 0;  // the move under way, or the move a press would throw: 0 punch, 1 sweep, 2 kick, 3 jab, 4 cross
     std::uint8_t strike_queued_move_ = 0;  // a follow-up queued in recoil: 3 jab, 4 cross, 0 none
+    std::uint8_t strike_forced_move_ = 255;  // force_strike_move_for_test: the next press throws this move, 255 none
     int strike_grace_ = 0;                // ticks left to press the follow-up after a jab's recoil
     bool strike_ready_ = false;     // one can be thrown now (the PUNCH button lit)
     [[nodiscard]] bool hands_on_a_machine() const noexcept;

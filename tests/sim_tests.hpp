@@ -752,6 +752,7 @@ bool couple_wet_hose(scraperx::sim::Simulation &simulation);
 bool pull_wet_stop_valve(scraperx::sim::Simulation &simulation);
 bool on_support(const scraperx::sim::Snapshot &state, const std::uint64_t entity);
 void run_loose_stock();
+void run_stock_damage();
 void run_look_target();
 void run_body_order();
 void run_fabricated();
@@ -915,6 +916,7 @@ void start_matron_shape_audit();
 void check_matron_shape_audit();
 void run_matron_ring_descent();
 void run_matron_ways();
+void run_matron_same_region();
 void run_matron_arm();
 void run_matron_fatality();
 void run_one_arm_route();
@@ -933,7 +935,9 @@ void run_matron_mischief();
 void run_matron_wreck();
 void run_matron_collision();
 void run_matron_balance();
+void run_hard_blow();  // J-077: a hard blow puts her down, a bare punch does not (sim_tests_hard_blow.cpp)
 void run_matron_pipe();
+void run_matron_hoist();   // J-007: she rides the hoists her scan finds (sim_tests_matron_hoist.cpp)
 void run_matron_room();
 void run_matron_restore();
 void run_up_throw();

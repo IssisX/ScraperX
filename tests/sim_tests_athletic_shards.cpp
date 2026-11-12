@@ -103,6 +103,7 @@ void run_athletic_traversal_2() {
     run_matron_pursuit();
     run_matron_ring_descent();
     run_matron_ways();
+    run_matron_same_region();
     run_matron_climb();
     run_strike();
     run_one_arm_route();
@@ -118,6 +119,7 @@ void run_athletic_traversal_2() {
     run_yard_crane_spreader();
     run_machine_hearing();
     run_ascent();
+    run_stock_damage();
 }
 
 SCRAPERX_SLICE("athletic-traversal-1", run_athletic_traversal_1);

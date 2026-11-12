@@ -731,6 +731,17 @@ class MuseRouted(unittest.TestCase):
                                                 mergeable=False, job="J-059")]), 0)   # once per head
         self.assertEqual(make(gh).inbox([s]), 0)   # Muse's, not the integrator's
 
+    def test_an_api_note_on_a_green_head_asks_the_integrator(self):
+        # Cory, 11-10: the integrator takes the backup review when the API answers NOTE (#383 waited 2 h on ChatGPT)
+        note = rules.Verdict("anthropic", "Claude", "review", "NOTE", HEAD, ago(0.5), BOT, True)
+        s = steered(number=383, ref="fb-bot/integrate-protected-j049-pr1-r2", verdicts=[note], job="J-049")
+        gh = FakeGH()
+        self.assertEqual([i.kind for i in items_of(gh, s)], ["NOTE-REVIEW"])
+        self.assertEqual([i.kind for i in muse_of(gh, s)], [])
+        # answered: a LAND or FIX on the head ends it
+        self.assertEqual(items_of(FakeGH(), steered(number=383, ref="fb-bot/integrate-j049", verdicts=[note, land()],
+                                                    job="J-049")), [])
+
     def test_a_notice_on_a_pr_with_a_job_issue_goes_on_the_job_issue(self):
         s = self.fix_pr()
         s.ctx["issue"] = {"number": 300, "labels": []}
@@ -824,7 +835,8 @@ class MuseRouted(unittest.TestCase):
         (number, posted), = gh.posts
         self.assertEqual(number, switch.BOARD_ISSUE)
         self.assertTrue(posted.startswith("CLAUDE_TO_MUSE: fb-bot/integrate-j044c-wreck RED-BRANCH on #340 @ 1a2b3c4d"))
-        key = switch.inbox_key("muse-RED-BRANCH", name, HEAD)
+        # the fake has no job logs: the notice says "log unread" and is keyed apart (J-104, InboxItem.unread)
+        key = switch.inbox_key("muse-RED-BRANCH" + switch.UNREAD_KEY, name, HEAD)
         self.assertEqual(gh.writes[0], ("POST", "repos/IssisX/ScraperX/issues/340/labels", {"labels": ["wake:muse"]}))
         self.assertEqual(gh.writes[1][0], "PATCH")
         self.assertEqual(gh.writes[1][1], "repos/IssisX/ScraperX/issues/comments/1")
