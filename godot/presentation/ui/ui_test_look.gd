@@ -298,6 +298,11 @@ func _look_hold(fatal: bool) -> bool:
 	n.debug_launch_player(Vector3(18.0, LOOK_DECK + 0.95, -159.5), Vector3.ZERO)
 	await _look_sim(1.0)
 	n.debug_place_matron(Vector3(18.3, LOOK_DECK, -157.9))
+	if fatal:
+		# Turned to face him, as the native rail tests place her (caught_at,
+		# tests/sim_tests_matron_grab.cpp): the fatality's hang is the catch
+		# those tests measure, not one that starts 5 cm off it.
+		n.debug_face_matron(atan2(18.0 - 18.3, -159.5 - (-157.9)))
 	var hold := func() -> Dictionary:
 		n.debug_set_matron_stage(1)
 		return n.get_matron_hold_state()
