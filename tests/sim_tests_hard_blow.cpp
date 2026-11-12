@@ -76,13 +76,17 @@ void to_her_post(Simulation &s) {
             "hard blow: a sprint toward her locker wakes her");
 }
 
-// Takes up the piece at `entity` where it lies by the north band: straight
-// to it from the east, where her post never stands in the way, then the
-// ammo handled_piece's pick-up: look down on it, nudge in until the hands
-// have it.
+// Takes up the piece at `entity` where it lies by the north band: the
+// matron-heave beat's legs — west along the band on its leaf over the bay's
+// cut, then north to the piece. The straight line does not cross the bay:
+// the cut runs the whole band, x -3.9..-0.4, and the leaf is only on the
+// band's centerline. Then the ammo handled_piece's pick-up: look down on
+// it, nudge in until the hands have it.
 void take_up_piece(Simulation &s, const std::uint64_t entity, const char *what) {
     const auto at = s.kit_body_position(s.kit_body_index(entity));
-    require(walk_to(s, at.x, at.z, 20.0, 0.3), what);
+    require(walk_to(s, 0.4, Matron::kBandNorthZ, 20.0, 0.2) &&
+                walk_to(s, -4.6, Matron::kBandNorthZ, 20.0, 0.2) && walk_to(s, at.x, at.z, 20.0, 0.3),
+            what);
     const std::uint32_t body = s.kit_body_index(entity);
     (void)s.set_look_pitch(-0.5);
     for (int i = 0; i < static_cast<int>(3.0 * Simulation::kTickRateHz) &&
@@ -303,7 +307,7 @@ void run_hard_blow_throw() {
         Simulation s(InitialSpawn::Deck154);
         to_her_post(s);
         const std::uint32_t throwables = s.loose_stock_throwables_begin();
-        const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables;
+        const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables + 1;
         take_up_piece(s, toolbox, "hard blow throw: to the toolbox by the north rail");
         const Thrown by_box = throw_at_her(s, 1, 0.0);
         const auto m = s.matron_state();
@@ -388,7 +392,7 @@ void run_hard_blow_hold() {
     Simulation s(InitialSpawn::Deck154);
     to_her_post(s);
     const std::uint32_t throwables = s.loose_stock_throwables_begin();
-    const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables;
+    const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables + 1;
     take_up_piece(s, toolbox, "hard blow hold: to the toolbox by the north rail");
     require(walk_to(s, -6.0, -129.0, 10.0, 0.15), "hard blow hold: to the meeting spot with the toolbox");
     s.debug_matron_hold(0, 3.0);
