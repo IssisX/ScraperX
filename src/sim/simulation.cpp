@@ -1811,6 +1811,8 @@ SwingSnapshot Simulation::swing_state() const noexcept {
     return result;
 }
 
+std::string Simulation::last_load_refusal() const { return last_load_refusal_; }
+
 std::vector<std::uint8_t> Simulation::save_game() const {
     SaveWriter w;
     w.pod(save_format_key());
@@ -1820,6 +1822,7 @@ std::vector<std::uint8_t> Simulation::save_game() const {
 }
 
 bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
+    last_load_refusal_.clear();
     if (data == nullptr) {
         return false;
     }
@@ -1829,6 +1832,7 @@ bool Simulation::load_game(const std::uint8_t *data, const std::size_t size) {
         return false;
     }
     if (!physics_world_->load_save(r)) {
+        last_load_refusal_ = physics_world_->load_refusal();
         return false;
     }
     tick_index_ = tick;

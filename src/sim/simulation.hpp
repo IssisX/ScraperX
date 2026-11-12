@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <string>
 
 namespace scraperx::sim {
 namespace stock_damage {
@@ -2011,6 +2012,11 @@ public:
     // nothing.
     [[nodiscard]] std::vector<std::uint8_t> save_game() const;
     [[nodiscard]] bool load_game(const std::uint8_t *data, std::size_t size);
+    // Why the last load_game was refused, where the refusal names itself
+    // (so far: "DAMG record size N bytes, this build reads M", a stock
+    // damage section written by a build whose record differs); empty for
+    // any other refusal and after a load that was taken.
+    [[nodiscard]] std::string last_load_refusal() const;
     // Live fabrication (03_EXECUTION/LIVE_FABRICATION/DESIGN.md): an object
     // made outside the simulation, handed in between ticks as data, like a
     // touch. `hull` is its hull file (sim/fabricated.hpp), untrusted: its
@@ -2116,6 +2122,7 @@ private:
     Snapshot snapshot_{};
     StepTiming step_timing_{};   // kept across a world rebuilt after she ends a run
     Vector3 previous_player_position_{};
+    std::string last_load_refusal_;  // see last_load_refusal()
     Vector3 previous_matron_position_{};
     double previous_matron_yaw_ = 0.0;
     // Her body and facing at the start of this tick, for render_matron_*().

@@ -405,9 +405,18 @@ std::vector<StockDamage::SavedDamage> StockDamage::serialize() const {
         saved.dent_count = state.dent_count;
         for (std::uint8_t i = 0; i < state.dent_count; ++i) {
             const Dent &dent = state.dents[i];
-            saved.dents[i] = SavedDent{dent.point_x, dent.point_y, dent.point_z, dent.normal_x,
-                                       dent.normal_y, dent.normal_z, dent.depth_m, dent.radius_m,
-                                       static_cast<std::uint8_t>(dent.tier)};
+            // Field by field into the zeroed record: its spare bytes
+            // stay zero, so the same damage writes the same bytes.
+            SavedDent &out_dent = saved.dents[i];
+            out_dent.point_x = dent.point_x;
+            out_dent.point_y = dent.point_y;
+            out_dent.point_z = dent.point_z;
+            out_dent.normal_x = dent.normal_x;
+            out_dent.normal_y = dent.normal_y;
+            out_dent.normal_z = dent.normal_z;
+            out_dent.depth_m = dent.depth_m;
+            out_dent.radius_m = dent.radius_m;
+            out_dent.tier = static_cast<std::uint8_t>(dent.tier);
         }
         out.push_back(saved);
     }

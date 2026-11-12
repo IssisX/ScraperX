@@ -7,6 +7,7 @@
 #include "sim_tests.hpp"
 
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 
@@ -1206,6 +1207,111 @@ void carried_piece_save_case() {
     require(t.stock_damage(entity).broken, (prefix + "the break rides the save").c_str());
 }
 
+// The save's stock damage section when it is the save's last: the
+// mark ("DAMG"), the record count, the size of one record, then the
+// records. Its offset, or bytes.size() when the save does not end in
+// one. (The grip-entities section follows it only when a grip holds a
+// load, which no world here does.)
+std::size_t damage_section_at(const std::vector<std::uint8_t> &bytes) {
+    constexpr std::size_t kRecord = sizeof(StockDamage::SavedDamage);
+    for (std::size_t n = 1; n <= 64 && bytes.size() >= 12 + n * kRecord; ++n) {
+        const std::size_t at = bytes.size() - (12 + n * kRecord);
+        std::uint32_t mark = 0, count = 0;
+        std::memcpy(&mark, bytes.data() + at, 4);
+        std::memcpy(&count, bytes.data() + at + 4, 4);
+        if (mark == 0x44414D47U && count == n) {
+            return at;
+        }
+    }
+    return bytes.size();
+}
+
+// The damage section's bytes (#469 review): the same damage always
+// writes the same bytes, spare bytes zero; the section says how big its
+// records are, and a section whose records are another size is refused
+// by name with nothing changed; a save from before the section loads.
+void damage_save_bytes_case() {
+    const std::string prefix = "stock damage save bytes: ";
+    constexpr std::size_t kRecord = sizeof(StockDamage::SavedDamage);
+    Simulation s(scraperx::sim::InitialSpawn::ExteriorGrade);
+    (void)s.advance_frame(2.0);  // the player grounds, a checkpoint commits
+    // Before any damage: the save as every build before the section
+    // wrote it, ending without one.
+    const std::vector<std::uint8_t> older = s.save_game();
+    require(damage_section_at(older) == older.size(),
+            (prefix + "an undamaged world's save holds no damage section").c_str());
+    // A dented drum and a broken crate, in one world.
+    const std::uint64_t drum = throw_at(s, Target::Drum);
+    const std::uint32_t crate = piece(s, LooseStock::kDeckCrateSouth);
+    const std::uint64_t crate_entity = LooseStock::kFirstEntity + LooseStock::kDeckCrateSouth;
+    const auto at = s.kit_body_position(crate);
+    put(s, crate, {at.x, at.y + 3.0, at.z});
+    (void)s.advance_frame(2.0);
+    const auto dented = s.stock_damage(drum);
+    require(dented.dent_count >= 1 && !dented.broken, (prefix + "the throw dents the drum").c_str());
+    require(s.stock_damage(crate_entity).broken, (prefix + "the drop breaks the crate").c_str());
+    // The same world saved twice: the same bytes.
+    const std::vector<std::uint8_t> bytes = s.save_game();
+    const std::vector<std::uint8_t> again = s.save_game();
+    require(bytes == again, (prefix + "two saves of the same dented and broken world are byte-identical").c_str());
+    // The section: two records, each of this build's size, and every
+    // spare byte zero (bytes 10-11 and 300-303 of a record; the last
+    // three of each 36-byte dent, which start at byte 12).
+    const std::size_t section = damage_section_at(bytes);
+    require(section != bytes.size(), (prefix + "the save ends in its damage section").c_str());
+    std::uint32_t count = 0, record_bytes = 0;
+    std::memcpy(&count, bytes.data() + section + 4, 4);
+    std::memcpy(&record_bytes, bytes.data() + section + 8, 4);
+    require(count == 2, (prefix + "one record for the drum, one for the crate").c_str());
+    require(record_bytes == kRecord && kRecord == 304,
+            (prefix + "the section says its records are 304 bytes").c_str());
+    bool spare_zero = true;
+    for (std::uint32_t i = 0; i < count; ++i) {
+        const std::uint8_t *record = bytes.data() + section + 12 + i * kRecord;
+        spare_zero = spare_zero && record[10] == 0 && record[11] == 0;
+        for (std::size_t dent = 0; dent < kMaxDents; ++dent) {
+            for (std::size_t b = 33; b < 36; ++b) {
+                spare_zero = spare_zero && record[12 + dent * 36 + b] == 0;
+            }
+        }
+        for (std::size_t b = 300; b < 304; ++b) {
+            spare_zero = spare_zero && record[b] == 0;
+        }
+    }
+    require(spare_zero, (prefix + "every spare byte of a record is zero").c_str());
+    // A section whose records are another size: refused, by name, with
+    // nothing changed in the world that was asked to load it.
+    std::vector<std::uint8_t> doctored = bytes;
+    const std::uint32_t wrong = 300;
+    std::memcpy(doctored.data() + section + 8, &wrong, 4);
+    Simulation t(scraperx::sim::InitialSpawn::ExteriorGrade);
+    const std::uint32_t bodies_before = t.kit_body_count();
+    require(!t.load_game(doctored.data(), doctored.size()),
+            (prefix + "a section whose record size differs is refused").c_str());
+    const std::string refusal = t.last_load_refusal();
+    std::cout << "  stock damage save bytes: " << bytes.size() << " bytes, section at " << section << ", " << count
+              << " records of " << record_bytes << " bytes; doctored refusal: " << refusal << "\n";
+    require(refusal == "DAMG record size 300 bytes, this build reads 304",
+            (prefix + "the refusal names the section and both sizes").c_str());
+    require(t.stock_damage(drum).dent_count == 0 && !t.stock_damage(crate_entity).broken &&
+                t.kit_body_count() == bodies_before,
+            (prefix + "the refused save changes nothing").c_str());
+    // The save as written loads into that same world, and says so.
+    require(t.load_game(bytes.data(), bytes.size()), (prefix + "the save as written loads").c_str());
+    require(t.last_load_refusal().empty(), (prefix + "a load that is taken names no refusal").c_str());
+    const auto loaded = t.stock_damage(drum);
+    require(loaded.dent_count == dented.dent_count && loaded.dents[0].tier == dented.dents[0].tier &&
+                std::abs(loaded.dents[0].depth_m - dented.dents[0].depth_m) < 0.001F &&
+                t.stock_damage(crate_entity).broken,
+            (prefix + "the dent and the break ride the save").c_str());
+    // And the save from before the section still loads: into a fresh
+    // world, every stock whole.
+    Simulation u(scraperx::sim::InitialSpawn::ExteriorGrade);
+    require(u.load_game(older.data(), older.size()), (prefix + "a save from before the section loads").c_str());
+    require(u.stock_damage(drum).dent_count == 0 && !u.stock_damage(crate_entity).broken,
+            (prefix + "the older save loads every stock whole").c_str());
+}
+
 } // namespace
 
 void run_stock_damage() {
@@ -1698,6 +1804,8 @@ void run_stock_damage() {
     death_rewind_resync_case();
     // ---- (d) #372 P1s: a carried piece loads with its carry ----
     carried_piece_save_case();
+    // ---- #469 review: the damage section's bytes, its record size, an older save ----
+    damage_save_bytes_case();
 }
 
 // J-074 (#352): the group registers itself beside its function, so no

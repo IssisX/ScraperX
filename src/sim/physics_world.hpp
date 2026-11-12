@@ -12,6 +12,7 @@
 
 #include <array>
 #include <set>
+#include <string>
 
 namespace scraperx::sim {
 
@@ -758,6 +759,10 @@ private:
 
 public:
     bool load_save(SaveReader &r) { return read_save(r, physics_system_.GetBodyInterface()); }
+    // Why the last load_save was refused, where the refusal names
+    // itself (so far: a stock damage section whose record size is not
+    // this build's); empty otherwise, and after a load that was taken.
+    [[nodiscard]] const std::string &load_refusal() const noexcept { return load_refusal_; }
 
     [[nodiscard]] std::vector<std::uint64_t> body_entities() const;
 
@@ -832,6 +837,7 @@ public:
     // debug_last_break_parent test read (velocities are creation state,
     // read here before the parent is parked).
     Simulation::BreakParentSample last_break_parent_{};
+    std::string load_refusal_;  // see load_refusal()
     std::vector<std::unique_ptr<Forklift>> forklifts_;
     std::unique_ptr<YardCrane> yard_crane_;
     std::unique_ptr<Zipline> zipline_;

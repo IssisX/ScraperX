@@ -369,8 +369,14 @@ constexpr std::uint32_t kMatronDamageMark = 0x314D414DU;
 namespace {
 // J-038 stock damage section's mark ("DAMG"), written only when the
 // world holds damage, so the reader can tell it from the optional
-// fabricated section.
+// fabricated section. After the mark: the record count, then the
+// size of one record in bytes, then the records. The record's size is
+// not in the save's format key (that would refuse every save made
+// before the section existed), so the section carries it: a build
+// whose record differs refuses the section by name instead of
+// misreading it.
 constexpr std::uint32_t kDamageSaveMark = 0x44414D47U;
+constexpr auto kDamageRecordBytes = static_cast<std::uint32_t>(sizeof(stock_damage::StockDamage::SavedDamage));
 // The grip loads' entities ("GRIP"), written only when a grip holds
 // a load, so a load remaps each grip by the body it held, not by a
 // kit index the break pieces and fabricated objects have shifted.
@@ -448,7 +454,11 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
     const std::vector<stock_damage::StockDamage::SavedDamage> damage = stock_damage_.serialize();
     if (!damage.empty()) {
         w.pod(kDamageSaveMark);
-        w.list(damage);
+        w.pod(static_cast<std::uint32_t>(damage.size()));
+        w.pod(kDamageRecordBytes);
+        for (const stock_damage::StockDamage::SavedDamage &record : damage) {
+            w.pod(record);
+        }
     }
     // Last: the entities each grip holds, one per grip (0 for an empty
     // grip), written only when a grip holds a load, so a save with
@@ -475,6 +485,7 @@ void Simulation::PhysicsWorld::write_save(SaveWriter &w) const {
 // would (without counting one). Refused, and nothing changed, unless
 // every list matches this world's own.
 bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodies) {
+    load_refusal_.clear();
     MachineCheckpoint current{};
     kit_->capture(current.kit);
     current.vertical = vertical_->state();
@@ -590,7 +601,23 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
         if (!r.peek(mark)) {
             ok = false;
         } else if (mark == kDamageSaveMark) {
-            ok = r.pod(mark) && r.list_up_to(saved_damage, loose_stock_->placed().size());
+            // The mark, the record count, the size of one record, then
+            // the records. A record of another size is another build's:
+            // refused here, by name, before a byte of it is read.
+            std::uint32_t count = 0, record_bytes = 0;
+            ok = r.pod(mark) && r.pod(count) && r.pod(record_bytes);
+            if (ok && record_bytes != kDamageRecordBytes) {
+                load_refusal_ = "DAMG record size " + std::to_string(record_bytes) + " bytes, this build reads " +
+                                std::to_string(kDamageRecordBytes);
+                ok = false;
+            }
+            ok = ok && count <= loose_stock_->placed().size();
+            if (ok) {
+                saved_damage.resize(count);
+                for (stock_damage::StockDamage::SavedDamage &record : saved_damage) {
+                    ok = ok && r.pod(record);
+                }
+            }
         }
         // Any other mark: not damage — the grip-entity section below
         // reads it, or the done check refuses it.

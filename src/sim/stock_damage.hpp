@@ -189,7 +189,13 @@ public:
     void resync() noexcept;
 
     // Save form: one record per damaged or broken body (plain data,
-    // trivially copyable, so SaveWriter::list holds it).
+    // trivially copyable, so SaveWriter holds it as its bytes). Every
+    // byte of a record is a named member with a zero default, the
+    // spare ones included, so the same damage always writes the same
+    // bytes: a record has no padding the compiler could leave unset
+    // (the asserts below). The record's size is written in the save's
+    // damage section and checked on load (physics_world_state.cpp): a
+    // changed record is refused by name, not misread.
     struct SavedDent final {
         float point_x = 0.0F;
         float point_y = 0.0F;
@@ -200,13 +206,19 @@ public:
         float depth_m = 0.0F;
         float radius_m = 0.0F;
         std::uint8_t tier = 0;
+        std::array<std::uint8_t, 3> spare{};  // always zero
     };
+    static_assert(sizeof(SavedDent) == 8 * sizeof(float) + 1 + 3, "a saved dent has no padding");
     struct SavedDamage final {
         std::uint64_t entity = 0;
         std::uint8_t broken = 0;
         std::uint8_t dent_count = 0;
+        std::array<std::uint8_t, 2> spare{};  // always zero
         std::array<SavedDent, kMaxDents> dents{};
+        std::uint32_t spare_tail = 0;  // always zero
     };
+    static_assert(sizeof(SavedDamage) == 8 + 1 + 1 + 2 + kMaxDents * sizeof(SavedDent) + 4,
+                  "a saved damage record has no padding");
     [[nodiscard]] std::vector<SavedDamage> serialize() const;
     // Validates every record first, then applies: false when a
     // record is not this world's stock, is overfull, or holds a
