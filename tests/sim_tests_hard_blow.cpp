@@ -584,15 +584,16 @@ void run_hard_blow_stock() {
         if (counts[b] == 0) {
             // A bare band: list what is at that height anywhere, so a
             // misplaced window reads as a window error, not a bare deck.
+            // List every piece, heavy or not: a deck dressed only in heavy
+            // iron has no throwable, and that reads differently from a
+            // deck the dress never touched.
             for (std::uint32_t i = 0; i < s.loose_stock_count(); ++i) {
                 const auto piece = s.loose_stock_piece(i);
-                if (LooseStock::heavy(static_cast<LooseStock::Kind>(piece.kind))) {
-                    continue;
-                }
                 const auto pos = s.kit_body_position(s.kit_body_index(LooseStock::kFirstEntity + i));
                 if (pos.y >= kRings[b] - 0.5 && pos.y <= kRings[b] + 1.5) {
-                    std::cout << "      at height: kind " << int(piece.kind) << " at (" << pos.x << ", " << pos.y
-                              << ", " << pos.z << ")\n";
+                    std::cout << "      at height: kind " << int(piece.kind)
+                              << (LooseStock::heavy(static_cast<LooseStock::Kind>(piece.kind)) ? " heavy" : "")
+                              << " at (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
                 }
             }
         }
