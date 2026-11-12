@@ -24,7 +24,7 @@ State is in job issues and Muse's queue (`queue_check.py`, floor 8, refill 15). 
 - My hand merges and branch deletes are refused by the safety check; never work around it.
 - Gmail is Cory's own main inbox: his filter puts agent mail in a side label (11-11); search only the agent subjects; never read, trash, archive or touch any mail there, agent mail included (11-07, 11-11: "do not ever touch my main inbox"; the connector cannot trash anyway, and a prompt per mail is not acceptable to him).
 - Never fix/fixes/close/resolve before #N in a commit: GitHub closes the issue.
-- Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused.
+- Worktrees: `rm` their untracked files, then plain `git worktree remove <path>`; `--force`, `branch -D`, `rm -rf` are refused. Keep a helper's worktree until its PR lands: removing it kills the resume (11-12, #469).
 - Trunk into a conflicting PR: CMake slice lists keep trunk's and append the branch's.
 - sweep.py shows only the latest verdict and misses an earlier unfixed P1 from another vendor.
 - The proxy refuses the secrets API; the keys are in the `switchboard-merge` environment. No settings asks to Cory this weekend.
