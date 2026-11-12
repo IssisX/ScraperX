@@ -899,6 +899,7 @@ constexpr float kS2DrainPawlKnock = 0.5F;  // the cage back within 0.5 m of deck
 // station, so the tank presses it down as it settles; its pivot stands on
 // a bracket from the shaft's south wall.
 const JPH::RVec3 kS2DrainStrikerPivot(-7.42F, 47.82F, -140.10F);
+constexpr float kS2DrainStrikerOpenStop = 0.6F;  // its lever's far stop, rad
 // The sump basin, its floor below the mouth at the lower station, on a
 // bracket from the shaft's south wall; the drain stream lands on it and
 // runs away. Floor at 45.00, not 46.20: the beam's lower chord sweeps down
@@ -1813,7 +1814,8 @@ void build_s2_drain(kit::Kit &kit, Stack &stack) {
          box(JPH::Vec3(0.12F, 0.12F, 0.12F), JPH::Vec3(0.0F, 0.0F, 0.25F), Material::Rust)},
         kS2DrainStrikerPivot, JPH::Quat::sIdentity(), 12.0F, 0.5F);
     stack.s2_drain_striker = kit.add_lever(stack.s2_drain_striker_body, kS2DrainStrikerPivot,
-                                           -JPH::Vec3::sAxisX(), -JPH::Vec3::sAxisZ(), 0.0F, 0.6F);
+                                           -JPH::Vec3::sAxisX(), -JPH::Vec3::sAxisZ(), 0.0F,
+                                           kS2DrainStrikerOpenStop);
     stack.s2_drain_pawl = kit.add_latch(stack.s2_drain_striker, kS2DrainLatch, stack.s2_cage_guide,
                                         kS2DrainPawlKnock);
 
@@ -1843,6 +1845,21 @@ void build_s2_drain(kit::Kit &kit, Stack &stack) {
         stack.s2_cart_grip = kit.add_grip(stack.s2_beam, 0.0F, to_cart.Normalized());
         (void)kit.grip(stack.s2_cart_grip, stack.s2_cart);
     }
+}
+
+// A save from before the drain has no striker. As built, the striker stands
+// on its stop, where the tank at the lower station (the cage up at deck 6)
+// already lies: started there it is caught inside the tank, and it holds the
+// beam up (a save from the build before, taken with the cage at deck 6,
+// loaded with the cage held at 21.98 m for 150 s, the tank drained dry). It
+// starts at its open stop instead, clear under the tank wherever the beam
+// lies: a tank at the lower station then sets it as one arriving does, and
+// with the tank away its block lifts it back onto its stop.
+void pose_s2_drain_striker_open(kit::Kit::BodyState &striker) {
+    striker.position = kS2DrainStrikerPivot;
+    striker.rotation = JPH::Quat::sRotation(-JPH::Vec3::sAxisX(), kS2DrainStrikerOpenStop);
+    striker.linear = JPH::Vec3::sZero();
+    striker.angular = JPH::Vec3::sZero();
 }
 
 } // namespace scraperx::sim::bands

@@ -472,6 +472,12 @@ bool Simulation::PhysicsWorld::read_save(SaveReader &r, JPH::BodyInterface &bodi
     for (std::size_t index = k.bodies.size(); ok && index < built; ++index) {
         k.bodies.push_back(c.bodies[index]);
     }
+    // But the S2 drain's striker, from a save from before it: at its open
+    // stop, not on its stop inside a tank the save has at the lower station.
+    const std::uint32_t striker = stack_.s2_drain_striker_body.value;
+    if (ok && stack_.s2_drain_striker_body.valid() && striker >= saved_built && striker < built) {
+        scraperx::sim::bands::pose_s2_drain_striker_open(k.bodies[striker]);
+    }
     // Then the fabricated objects: the save's as it has them, the world's
     // further ones as they are.
     for (std::size_t i = 0; ok && i < std::max(fabricated_.size(), saved.size()); ++i) {

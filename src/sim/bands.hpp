@@ -341,5 +341,8 @@ void build_stack(kit::Kit &kit, Stack &stack);
 // so saves from before the drain still line up; called at the end of the
 // world's build, before the first checkpoint is taken.
 void build_s2_drain(kit::Kit &kit, Stack &stack);
+// The drain striker's state for a save from before the drain: at its open
+// stop, under the tank wherever the save left the beam (see read_save).
+void pose_s2_drain_striker_open(kit::Kit::BodyState &striker);
 
 } // namespace scraperx::sim::bands
