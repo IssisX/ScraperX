@@ -319,6 +319,15 @@ void Matron::place_for_test(const RVec3 feet) {
     foot_lunge_ = false;
     foot_drive_dv_ = Vec3::sZero();
     state_ = State::Hunting;
+    // A placed Matron is a live one: a kill left dead_ set while this put her
+    // to Hunting, and the view (released, and alive or in the Dead state)
+    // rightly refused a Hunting-but-dead Matron, so she stayed invisible even
+    // metres from the player (J-070). On her feet, whatever had her down.
+    dead_ = false;
+    down_for_s_ = 0.0F;
+    if (lying_) {
+        stand_up();
+    }
     turn_ = Turn::None;
     feet_y_ = float(feet.GetY());
     // Her level: the deck she stands on, or (on a ledge between two) the
@@ -4202,12 +4211,14 @@ void Matron::restore(const Saved &saved) {
     dead_ = saved.dead;
     damage_ns_ = saved.damage_ns;
     player_damage_ns_ = saved.player_damage_ns;
-    // The injury stays: injuries persist through checkpoints (settled call),
-    // so a restore never clears the doses. Saved carries no per-region
-    // injury, so there is nothing to load here; the doses she carries are
-    // kept as-is. (Known gap, save-contract line: a rewind after later hits
-    // can leave injury_ ahead of the restored damage, since Saved has no
-    // injury field to restore from.)
+    // The per-region doses come back as saved (J-059 #343 fix): a restore
+    // overwrites the live doses, it never keeps them, so a reload restores
+    // her as saved (settled call 11-05 #242) and a rewind after later hits
+    // puts the doses back to the checkpoint's, not the later ones.
+    for (std::size_t i = 0; i < injury::kRegionCount; ++i) {
+        injury_.doses[i].j_region = saved.injury_j_region[i];
+        injury_.doses[i].j_event = saved.injury_j_event[i];
+    }
     {
         remove_body();
         end_hold(saved.state);

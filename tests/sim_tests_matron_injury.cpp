@@ -351,6 +351,15 @@ void run_restore_persists_injury() {
     require(s.snapshot().checkpoint_commit_count > commits_before,
             "injury: a checkpoint actually commits after the chest blow");
     const auto injured_save = s.save_game();
+    // A fresh Simulation loads the same bytes: the doses must travel in the
+    // save, not ride on the live Matron — the same-process load above cannot
+    // catch a missing save field, since nothing happens between the save
+    // and the load in the same process.
+    Simulation fresh(InitialSpawn::Deck154);
+    require(fresh.load_game(injured_save.data(), injured_save.size()), "load");
+    for (int i = 0; i < 5; ++i) tick(fresh);
+    require(std::abs(region(fresh, injury::Region::Chest) - 150.0) < 0.01, "fresh reload keeps chest dose");
+    require(std::abs(regions_total(fresh) - fresh.matron_state().damage_ns) < 0.01, "fresh reload reconciles");
     require(s.load_game(injured_save.data(), injured_save.size()),
             "injury: injured checkpoint loads");
     for (int i = 0; i < 5; ++i) tick(s);
@@ -361,6 +370,24 @@ void run_restore_persists_injury() {
             "injury: a checkpoint reload restores the chest dose with the damage");
     require(std::abs(regions_total(s) - after.damage_ns) < 0.01,
             "injury: regions + unclassified reconcile with damage after reload");
+    // Rewind after later hits: a second blow lands after the checkpoint,
+    // then the saved checkpoint loads — damage AND chest must come back to
+    // 150, not stay at 300, and regions must reconcile.
+    blow_at(s, chest(), 150.0F);
+    require(std::abs(s.matron_state().damage_ns - 300.0) < 0.01,
+            "injury: the second blow brings the damage to 300 before the rewind");
+    require(std::abs(region(s, injury::Region::Chest) - 300.0) < 0.01,
+            "injury: the second blow brings the chest dose to 300 before the rewind");
+    require(s.load_game(injured_save.data(), injured_save.size()),
+            "injury: the saved checkpoint loads for the rewind");
+    for (int i = 0; i < 5; ++i) tick(s);
+    const auto rewound = s.matron_state();
+    require(std::abs(rewound.damage_ns - 150.0) < 0.01,
+            "injury: a rewind restores the saved damage, not the later hits");
+    require(std::abs(region(s, injury::Region::Chest) - 150.0) < 0.01,
+            "injury: a rewind restores the saved chest dose, not the later hits");
+    require(std::abs(regions_total(s) - rewound.damage_ns) < 0.01,
+            "injury: regions + unclassified reconcile with damage after a rewind");
     std::cout << "PASS matron-injury restore persists injury\n";
 }
 
