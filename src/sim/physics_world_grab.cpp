@@ -536,9 +536,13 @@ void Simulation::PhysicsWorld::grab_drive(JPH::BodyInterface &bodies, const floa
         if (kick_now_) {
             bodies.AddImpulse(player_id_, away * kKickNs);
             bodies.AddImpulse(matron_->body(), -away * kKickNs);
+            // J-046 measurement only: his kick reaches her as an impulse, so
+            // it is not in the force her body has as Jolt steps (the
+            // residual's other side): the path keeps its newtons, with
+            // nothing added on her there (as a velocity write).
             effort::add_force(effort::Path::Blow, -away * (kKickNs / tick_s),
                               bodies.GetLinearVelocity(matron_->body()) - bodies.GetLinearVelocity(player_id_), 0.0F,
-                              -away * (kKickNs / tick_s));
+                              JPH::Vec3::sZero());
             // The heel wrenched in her fingers: they slip a little each time;
             // in the rip the whole kick is on them.
             grip_strain_ns_ += kKickSlipNs + (rip ? kKickNs : 0.0F);
