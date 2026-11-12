@@ -8,8 +8,8 @@ Read through: 1794492989 (2026-11-11 last quiet run)
 - Collaboration system LIVE (#471, #476, #477 merged; doc COLLABORATION_SYSTEM_REBUILD.md section C). Priority one until proven
   (Cory): NO new game code from Claude or helpers till then. Expect many label changes and real conflicts on the first live passes
   (J-044: fb-bot and claude j044c heads both exist); that is the true state, act on it.
-- FIRST JOB after the reset (Cory yes, 11-12): the switchboard posts to the #282 inbox only when the next step is Claude's, so
-  plain events stop waking (and spending) Claude; add it via plan.py. Other gaps: a job waiting on a question doesn't show it;
+- FIRST JOB after the reset (Cory 11-12): Fable looks at the WHOLE problem fresh, not a pre-picked fix: the #282 inbox woke Claude
+  ~60 times in a day (~120 items), many needing nothing, each wake costly. Find the real cause and fix. Other gaps: a job waiting on a question doesn't show it;
   Grok/Builder have no notice channel; per-pass read bounds; Grok Bot sees only what Cory hands it; sTiX_ww4 = Muse AND ChatGPT.
 - Paused game work, resume after: J-015 #466 (Codex FIX open, trunk merged; worktree agent-a2ed081112df776e3), J-001 grip charge
   red (protected; agent-a169bc3f55f0e7fef; next fail -> "Argon?" prompt to Cory, then Fable), J-137 #474 fix on claude/integrate-j137
