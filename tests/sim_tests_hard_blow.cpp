@@ -476,10 +476,14 @@ void run_hard_blow_hold() {
     const std::uint32_t throwables = s.loose_stock_throwables_begin();
     const std::uint64_t toolbox = LooseStock::kFirstEntity + throwables + 1;
     take_up_piece(s, toolbox, "hard blow hold: to the toolbox by the north rail");
-    require(walk_to(s, -6.0, -129.0, 10.0, 0.15), "hard blow hold: to the meeting spot with the toolbox");
+    s.debug_fix_matron_pace(0);  // creep: she comes out upright, under the crouch bar
+    require(walk_to(s, -4.6, Matron::kBandNorthZ, 10.0, 0.2) &&
+                walk_to(s, 8.0, Matron::kBandNorthZ, 10.0, 0.15),
+            "hard blow hold: to the burst spot with the toolbox");
     s.debug_matron_hold(0, 3.0);
     bool reaching = false;
     for (int i = 0; i < 60 * static_cast<int>(Simulation::kTickRateHz) && !reaching; ++i) {
+        s.debug_set_matron_stage(1);
         tick(s);
         // She reaches, not yet holding, and has come off her lunge: she
         // arrives in the Grab still carrying its speed, past him and moving
@@ -505,6 +509,7 @@ void run_hard_blow_hold() {
     double blow = 0.0;
     bool ever_held = false;
     for (int i = 0; i < static_cast<int>(2.0 * static_cast<double>(Simulation::kTickRateHz)); ++i) {
+        s.debug_set_matron_stage(1);
         tick(s);
         const auto m = s.matron_state();
         blow = std::max(blow, m.blow_mps);
