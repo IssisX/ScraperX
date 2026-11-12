@@ -39,7 +39,7 @@ Never ask Cory to merge, approve or review; go with your pick on every call. Tim
    the switchboard can't (J-056: it merges workflow PRs too): FIX or
    FIX-CI owners who are stuck, QUIET jobs. A job at FIX-CI twice or BLOCKED gets a second opinion from another
    vendor (Muse first for physics and game code, then Grok), asked with the facts on its PR.
-   A piece that holds 2+ jobs, stuck 6 h or two red proofs with its owner, about an hour's work: take it (Cory 11-06).
+   A job whose cause is unknown, or whose owner's fix failed once, or that blocks 2+ jobs: take it (Strengths, 11-12).
    First mail the owner `CLAUDE_TO_MUSE: taking <piece>, stop your lane; if you pushed it, mail the sha`, check its
    fb-bot branches and mail again before starting and before pushing, and stop if its version is there.
 3. **Open PRs don't pile up.** Close a PR the hour newer work replaces it; a PR idle 24 h with no owner step

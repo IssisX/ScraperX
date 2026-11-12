@@ -72,11 +72,11 @@ it to match, never ask him again.
   claim, read the source, file, docs or clock, measure or run it before stating it. Before locking in a hard job's approach, after the second
   red proof on the same failure, or on a physics or force-budget question no check settles, post `To <Name>:`
   on the job's issue or PR (what you did, measured, ruled out, the exact question) and keep working: the job never holds for the answer. A `To <you>:` ask is answered before your next step.
-- **Strengths:** Muse (free; writes and runs code, runs about 10 subagents) takes every build: physics, game
-  code and the native kernel; it leads the fight. Grok: math, risk, a fresh take on a stuck problem. ChatGPT:
-  research, specs, outside libraries, review. Claude integrates (merges, reviews, CI, the game by eye) and
-  codes only 1-2 key jobs: the most important one Muse is not deep into, anything that needs the game on
-  screen, anything Muse fails twice (11-06: delegate hard).
+- **Strengths (11-12):** Muse is not strong at finding causes, so it fails and fails before it succeeds. A job
+  whose cause is unknown (a red shared across branches, her or his physics acting wrong, a new mechanism, a
+  protected test) goes to Claude's helpers from the start; a Muse job becomes Claude's at its first failed
+  fix or first which-is-it ask (mail Muse "taking it"). Muse builds known fixes and new content. Grok: math
+  and risk. ChatGPT: research, specs, review. All three helper slots full: the job waits for the next one.
 - **Board:** the body of the open issue labeled `board` is the live board; only the integrator edits it. Agents read the body and
   new comments, post one line per real step, and put technical findings on the job's own issue or PR. Blocked 30 minutes: post `BLOCKED: what,
   needs whom` and start the next job; every agent holds two or more jobs.
